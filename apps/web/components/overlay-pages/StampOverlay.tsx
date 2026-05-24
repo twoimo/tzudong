@@ -289,7 +289,7 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 rounded-full hover:bg-muted"
+                            className="h-10 w-10 rounded-full bg-muted/45 shadow-none hover:bg-muted"
                             onClick={() => setFilters(prev => ({ ...prev, showUnvisitedOnly: !prev.showUnvisitedOnly }))}
                             title={filters.showUnvisitedOnly ? "모든 맛집 보기" : "안 가본 곳만 보기"}
                             aria-label={filters.showUnvisitedOnly ? "모든 맛집 보기" : "안 가본 곳만 보기"}
@@ -297,10 +297,10 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
                             {filters.showUnvisitedOnly ? <EyeOff className="h-5 w-5 text-muted-foreground" aria-hidden="true" /> : <Eye className="h-5 w-5 text-muted-foreground" aria-hidden="true" />}
                         </Button>
                         <Button
-                            variant="outline"
+                            variant="ghost"
                             size="icon"
                             onClick={() => setIsFilterExpanded(!isFilterExpanded)}
-                            className="relative"
+                            className="relative h-10 w-10 rounded-full bg-muted/45 shadow-none hover:bg-muted"
                             title={isFilterExpanded ? "필터 접기" : "필터 펼치기"}
                             aria-label={isFilterExpanded ? "도장 필터 접기" : "도장 필터 펼치기"}
                         >
@@ -312,7 +312,7 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
                             )}
                         </Button>
                         {onClose && (
-                            <Button variant="ghost" size="icon" onClick={onClose} className="h-9 w-9 hover:bg-muted rounded-full" aria-label="도장 패널 닫기">
+                            <Button variant="ghost" size="icon" onClick={onClose} className="h-10 w-10 rounded-full bg-muted/45 shadow-none hover:bg-muted" aria-label="도장 패널 닫기">
                                 <X className="h-5 w-5" aria-hidden="true" />
                             </Button>
                         )}
@@ -321,10 +321,10 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
 
                 {/* 필터 영역 */}
                 <div className={cn(
-                    "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3 mt-4 overflow-hidden",
+                    "mt-4 grid grid-cols-1 gap-2 overflow-hidden sm:grid-cols-2",
                     !isFilterExpanded && "hidden"
                 )}>
-                        <div className="lg:col-span-2">
+                        <div className="sm:col-span-2">
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
                                 <Input
@@ -334,14 +334,15 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
                                     placeholder="맛집명 검색…"
                                     value={filters.searchQuery}
                                     onChange={(e) => setFilters(prev => ({ ...prev, searchQuery: e.target.value }))}
-                                    className="pl-9"
+                                    className="border-0 bg-muted/45 shadow-none focus-visible:ring-1 focus-visible:ring-primary/40"
+                                    style={{ paddingLeft: '2.5rem' }}
                                 />
                             </div>
                         </div>
 
                         <Popover>
                             <PopoverTrigger asChild>
-                                <Button variant="outline" className="justify-between">
+                                <Button variant="ghost" className="justify-between bg-muted/45 shadow-none hover:bg-muted">
                                     <span className="truncate">지역 {filters.regions.length > 0 && `(${filters.regions.length})`}</span>
                                     <Filter className="ml-2 h-4 w-4" aria-hidden="true" />
                                 </Button>
@@ -371,7 +372,7 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
 
                         <Popover>
                             <PopoverTrigger asChild>
-                                <Button variant="outline" className="justify-between">
+                                <Button variant="ghost" className="justify-between bg-muted/45 shadow-none hover:bg-muted">
                                     <span className="truncate">카테고리 {filters.categories.length > 0 && `(${filters.categories.length})`}</span>
                                     <Filter className="ml-2 h-4 w-4" aria-hidden="true" />
                                 </Button>
@@ -401,7 +402,7 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
 
                         <Popover>
                             <PopoverTrigger asChild>
-                                <Button variant="outline" className="justify-between">
+                                <Button variant="ghost" className="justify-between bg-muted/45 shadow-none hover:bg-muted">
                                     <span className="truncate">
                                         리뷰 {(filters.fanVisitsMin ?? 0) > 0 ? `${filters.fanVisitsMin}개 이상` : "전체"}
                                     </span>
@@ -429,7 +430,7 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
                         </Popover>
 
                         <Button
-                            variant="outline"
+                            variant="ghost"
                             onClick={() => setFilters({
                                 searchQuery: "",
                                 categories: [],
@@ -439,7 +440,7 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
                             })}
                             title="필터 초기화"
                             disabled={activeFilterCount === 0}
-                            className={cn(activeFilterCount === 0 && "opacity-50 cursor-not-allowed")}
+                            className={cn("bg-muted/45 shadow-none hover:bg-muted", activeFilterCount === 0 && "cursor-not-allowed opacity-50")}
                         >
                             필터 초기화
                         </Button>

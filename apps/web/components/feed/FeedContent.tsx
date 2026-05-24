@@ -574,7 +574,7 @@ export default function FeedContent({
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-8 w-8 rounded-full hover:bg-muted"
+                                        className="h-10 w-10 rounded-full bg-muted/45 shadow-none hover:bg-muted"
                                         onClick={() => setShowMyReviewsOnly(!showMyReviewsOnly)}
                                         title={showMyReviewsOnly ? "모든 리뷰 보기" : "내 리뷰만 보기"}
                                         aria-label={showMyReviewsOnly ? "모든 리뷰 보기" : "내 리뷰만 보기"}
@@ -587,16 +587,17 @@ export default function FeedContent({
                                     </Button>
                                 )}
                                 <Button
-                                    variant="outline"
+                                    variant="ghost"
                                     size="icon"
                                     onClick={() => setIsFilterExpanded(!isFilterExpanded)}
+                                    className="h-10 w-10 rounded-full bg-muted/45 shadow-none hover:bg-muted"
                                     title="검색 필터"
                                     aria-label={isFilterExpanded ? "검색 필터 접기" : "검색 필터 펼치기"}
                                 >
                                     <Filter className="h-4 w-4" aria-hidden="true" />
                                 </Button>
                                 {isOverlay && onClose && (
-                                    <Button variant="ghost" size="icon" onClick={onClose} className="h-9 w-9 hover:bg-muted rounded-full" aria-label="리뷰 패널 닫기">
+                                    <Button variant="ghost" size="icon" onClick={onClose} className="h-10 w-10 rounded-full bg-muted/45 shadow-none hover:bg-muted" aria-label="리뷰 패널 닫기">
                                         <X className="h-5 w-5" aria-hidden="true" />
                                     </Button>
                                 )}
@@ -613,7 +614,8 @@ export default function FeedContent({
                                         placeholder="맛집명, 작성자, 내용 검색…"
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="pl-9"
+                                        className="border-0 bg-muted/45 shadow-none focus-visible:ring-1 focus-visible:ring-primary/40"
+                                        style={{ paddingLeft: '2.5rem' }}
                                     />
                                 </div>
                             </div>

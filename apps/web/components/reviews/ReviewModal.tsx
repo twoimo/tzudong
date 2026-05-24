@@ -117,6 +117,7 @@ type DesktopReviewMapPanelDragState = {
 const DESKTOP_REVIEW_MAP_PANEL_VIEWPORT_MARGIN = 16;
 export const DESKTOP_REVIEW_MAP_PANEL_KEYBOARD_STEP = 24;
 const DEFAULT_DESKTOP_REVIEW_MAP_PANEL_POSITION: DesktopReviewMapPanelPosition = { x: 0, y: 0 };
+const REVIEW_MODAL_SCROLLBARLESS_CLASS = "[-ms-overflow-style:'none'] [scrollbar-width:'none'] [&::-webkit-scrollbar]:hidden";
 
 const clampDesktopReviewMapPanelAxis = (value: number, min: number, max: number) => {
     if (max < min) return min;
@@ -1726,7 +1727,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto px-6 py-4">
+                <div className={`flex-1 overflow-y-auto px-6 py-4 ${REVIEW_MODAL_SCROLLBARLESS_CLASS}`}>
                     <div className="space-y-6">
 
                         {/* 중요 공지 - 컴팩트 버전 */}
@@ -1994,7 +1995,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                             </div>
                                         )}
                                         {searchResults.length > 0 && (
-                                            <div className="border rounded-lg overflow-hidden max-h-48 overflow-y-auto">
+                                            <div className={`border rounded-lg overflow-hidden max-h-48 overflow-y-auto ${REVIEW_MODAL_SCROLLBARLESS_CLASS}`}>
                                                 {searchResults.map((result) => (
                                                     <button
                                                         key={result.id}
@@ -2083,7 +2084,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                     <PopoverContent className="w-64" align="start">
                                         <div className="space-y-2">
                                             <h4 className="font-semibold text-sm">카테고리 선택</h4>
-                                            <div className="space-y-2 max-h-48 overflow-y-auto">
+                                            <div className={`space-y-2 max-h-48 overflow-y-auto ${REVIEW_MODAL_SCROLLBARLESS_CLASS}`}>
                                                 {CATEGORIES.map((cat) => (
                                                     <div key={cat} className="flex items-center space-x-2">
                                                         <Checkbox
@@ -2180,7 +2181,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         const reviewSheetContent = isOpen ? (
                     <div
                         ref={mobileScrollRef}
-                        className="h-full overflow-y-auto overscroll-contain bg-background"
+                        className={`h-full overflow-y-auto overscroll-contain bg-background ${REVIEW_MODAL_SCROLLBARLESS_CLASS}`}
                         style={{ WebkitOverflowScrolling: 'touch' }}
                     >
                         <div ref={mobileFrameRef} className={`relative isolate ${mobileSheetStyles.frame}`}>
@@ -2511,7 +2512,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                 </div>
                                             )}
                                             {searchResults.length > 0 && (
-                                                <div className="border rounded-lg overflow-hidden max-h-48 overflow-y-auto">
+                                                <div className={`border rounded-lg overflow-hidden max-h-48 overflow-y-auto ${REVIEW_MODAL_SCROLLBARLESS_CLASS}`}>
                                                     {searchResults.map((result) => (
                                                         <button
                                                             key={result.id}
@@ -2603,7 +2604,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                         <PopoverContent className="w-64" align="start">
                                             <div className="space-y-2">
                                                 <h4 className="font-semibold text-sm">카테고리 선택</h4>
-                                                <div className="space-y-2 max-h-48 overflow-y-auto">
+                                                <div className={`space-y-2 max-h-48 overflow-y-auto ${REVIEW_MODAL_SCROLLBARLESS_CLASS}`}>
                                                     {CATEGORIES.map((cat) => (
                                                         <div key={cat} className="flex items-center space-x-2">
                                                             <Checkbox
@@ -2797,7 +2798,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         <>
             <Dialog open={isOpen} onOpenChange={handleClose}>
                 {isOpen && (
-                    <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-3xl max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-xl border-border/70 p-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl duration-0 data-[state=open]:animate-none data-[state=closed]:animate-none sm:p-6">
+                    <DialogContent className={`w-[calc(100vw-2rem)] sm:max-w-3xl max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-xl border-border/70 p-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl duration-0 data-[state=open]:animate-none data-[state=closed]:animate-none sm:p-6 ${REVIEW_MODAL_SCROLLBARLESS_CLASS}`}>
                         <DialogHeader className="relative space-y-3">
                             {/* 자동 저장 상태 표시 - 좌측 상단 */}
                             {lastSavedAt && (
@@ -3107,7 +3108,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                 </div>
                                             )}
                                             {searchResults.length > 0 && (
-                                                <div className="border rounded-lg overflow-hidden max-h-48 overflow-y-auto">
+                                                <div className={`border rounded-lg overflow-hidden max-h-48 overflow-y-auto ${REVIEW_MODAL_SCROLLBARLESS_CLASS}`}>
                                                     {searchResults.map((result) => (
                                                         <button
                                                             key={result.id}
@@ -3199,7 +3200,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                         <PopoverContent className="w-64" align="start">
                                             <div className="space-y-2">
                                                 <h4 className="font-semibold text-sm">카테고리 선택</h4>
-                                                <div className="space-y-2 max-h-48 overflow-y-auto">
+                                                <div className={`space-y-2 max-h-48 overflow-y-auto ${REVIEW_MODAL_SCROLLBARLESS_CLASS}`}>
                                                     {CATEGORIES.map((cat) => (
                                                         <div key={cat} className="flex items-center space-x-2">
                                                             <Checkbox
