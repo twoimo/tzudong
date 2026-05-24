@@ -54,6 +54,36 @@ describe('naver map toast helpers', () => {
         });
     });
 
+    test('rotates through every banner announcement when multiple notices are exposed', () => {
+        const announcements = [
+            { id: 'a1', title: '첫 공지' },
+            { id: 'a2', title: '둘째 공지' },
+            { id: 'a3', title: '셋째 공지' },
+        ];
+        let currentIndex = 0;
+        const visibleTitles: string[] = [];
+
+        for (let count = 0; count < announcements.length * 2; count += 1) {
+            const plan = resolveNaverAnnouncementToastPlan({
+                announcements,
+                currentIndex,
+            });
+            if (plan.announcement) {
+                visibleTitles.push(plan.announcement.title);
+            }
+            currentIndex = plan.nextIndex;
+        }
+
+        expect(visibleTitles).toEqual([
+            '첫 공지',
+            '둘째 공지',
+            '셋째 공지',
+            '첫 공지',
+            '둘째 공지',
+            '셋째 공지',
+        ]);
+    });
+
     test('does not show announcement toast when there are no announcements', () => {
         expect(resolveNaverAnnouncementToastPlan({
             announcements: [],
