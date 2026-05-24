@@ -44,6 +44,20 @@ describe('map view marker helpers', () => {
         expect(html).toContain('/images/maker-images/chicken.png');
     });
 
+    test('escapes marker image attributes before assigning HTML strings', () => {
+        const html = buildMapViewMarkerHtml({
+            imagePath: '/images/maker-images/chicken.png" onerror="alert(1)',
+            isSelected: false,
+            markerSize: 32,
+            name: '나쁜 "식당" <script>alert(1)</script>',
+        });
+
+        expect(html).toContain('/images/maker-images/chicken.png&quot; onerror=&quot;alert(1)');
+        expect(html).toContain('나쁜 &quot;식당&quot; &lt;script&gt;alert(1)&lt;/script&gt;');
+        expect(html).not.toContain('onerror="alert(1)');
+        expect(html).not.toContain('<script>');
+    });
+
     test('applies selected visual state to marker element', () => {
         const classNames = new Set<string>();
         const innerDiv = {

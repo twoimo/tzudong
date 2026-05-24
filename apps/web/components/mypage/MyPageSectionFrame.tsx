@@ -7,7 +7,8 @@ import { cn } from "@/lib/utils";
 
 export const myPageListCardClass =
   "overflow-hidden border-border/80 bg-card/95 shadow-sm transition-colors hover:bg-secondary/20";
-export const myPageResponsiveListClass = "grid gap-3 xl:grid-cols-2";
+export const myPageResponsiveListClass =
+  "grid gap-3 md:grid-cols-2 xl:grid-cols-3";
 export const myPageListContentClass = "p-4";
 export const myPageCardTitleClass =
   "truncate text-base font-semibold tracking-tight sm:text-lg";
@@ -51,30 +52,36 @@ export function MyPageSectionFrame({
       data-mypage-section-frame={dataSection ?? title}
     >
       <div
-        className="rounded-3xl border border-border/80 bg-card/95 p-4 shadow-sm sm:p-5"
+        className="hidden rounded-3xl border border-border/80 bg-card/95 p-5 shadow-sm md:block"
         data-mypage-section-hero="quiet"
+        data-mypage-section-hero-surface="desktop"
       >
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start justify-between gap-3 sm:flex-row sm:items-start">
           <div className="flex min-w-0 items-start gap-3">
             <span
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary"
+              className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary sm:flex"
               aria-hidden="true"
             >
               <Icon className="h-5 w-5" />
             </span>
             <div className="min-w-0">
-              <p className="text-xs font-semibold text-primary">{eyebrow}</p>
-              <h1 className="mt-1 truncate text-xl font-bold tracking-tight sm:text-2xl">
+              <p className="text-[11px] font-semibold text-primary sm:text-xs">
+                {eyebrow}
+              </p>
+              <h1 className="mt-0.5 truncate text-lg font-bold tracking-tight sm:mt-1 sm:text-2xl">
                 {title}
               </h1>
-              <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+              <p className="mt-1 hidden max-w-2xl text-sm leading-6 text-muted-foreground sm:block">
                 {description}
               </p>
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-2 sm:pt-1">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2 sm:pt-1">
             {countLabel && (
-              <Badge variant="secondary" className="rounded-full px-3 py-1">
+              <Badge
+                variant="secondary"
+                className="border-transparent bg-transparent px-0 py-0 text-xs text-muted-foreground hover:bg-transparent sm:rounded-full sm:bg-secondary sm:px-3 sm:py-1 sm:text-secondary-foreground sm:hover:bg-secondary/80"
+              >
                 {countLabel}
               </Badge>
             )}
@@ -82,6 +89,22 @@ export function MyPageSectionFrame({
           </div>
         </div>
       </div>
+      {(countLabel || action) && (
+        <div
+          className="flex items-center justify-end gap-2 border-b border-border pb-2 md:hidden"
+          data-mypage-section-mobile-controls="integrated-header"
+        >
+          {countLabel && (
+            <Badge
+              variant="secondary"
+              className="border-transparent bg-transparent px-0 py-0 text-xs text-muted-foreground hover:bg-transparent"
+            >
+              {countLabel}
+            </Badge>
+          )}
+          {action}
+        </div>
+      )}
       <div className={cn("space-y-3 sm:space-y-4", contentClassName)}>
         {children}
       </div>
