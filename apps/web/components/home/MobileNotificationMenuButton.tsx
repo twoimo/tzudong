@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useState } from "react";
+import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, CheckCheck, X } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
@@ -115,7 +115,7 @@ export default function MobileNotificationMenuButton({
         align="end"
         className="w-[min(calc(100vw-1rem),22rem)] rounded-2xl border-border bg-card p-2 font-serif shadow-primary z-[110]"
       >
-        <DropdownMenuLabel className="flex items-start justify-between gap-3 rounded-xl bg-muted/40 px-3 py-2.5 text-foreground">
+        <DropdownMenuLabel className="flex items-start justify-between gap-3 px-1 py-1 text-foreground">
           <div className="min-w-0">
             <span className="block font-semibold">알림</span>
             <span className="block text-xs font-normal text-muted-foreground">
@@ -130,7 +130,7 @@ export default function MobileNotificationMenuButton({
               type="button"
               aria-label="모든 알림 읽음 처리"
               onClick={markAllAsRead}
-              className="h-8 shrink-0 rounded-full border border-border/70 bg-background/80 px-2.5 text-xs focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
+              className="h-8 shrink-0 rounded-full px-2.5 text-xs text-muted-foreground hover:bg-transparent hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
             >
               <CheckCheck className="mr-1 h-3 w-3" aria-hidden="true" />
               모두 읽음
@@ -188,50 +188,52 @@ export default function MobileNotificationMenuButton({
           ) : (
             <DropdownMenuGroup>
               {notifications.slice(0, 50).map((notification) => (
-                <Fragment key={notification.id}>
-                  <DropdownMenuItem
-                    aria-label={`${notification.title} 알림 열기${notification.isRead ? "" : ", 읽지 않음"}`}
-                    className={cn(
-                      "flex w-full max-w-full cursor-pointer items-center gap-3 rounded-xl p-2.5 touch-manipulation hover:bg-accent focus:bg-accent",
-                      !notification.isRead && "bg-primary/5",
-                    )}
-                    onSelect={() => handleNotificationItemClick(notification)}
-                  >
-                    <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-                      <div className="flex items-center justify-between gap-2 w-full">
-                        <p className="text-sm font-medium text-foreground truncate">
-                          {notification.title}
-                        </p>
-                        {!notification.isRead && (
-                          <span
-                            className="h-2 w-2 rounded-full bg-red-700 shrink-0"
-                            aria-hidden
-                          />
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {notification.message}
+                <DropdownMenuItem
+                  key={notification.id}
+                  aria-label={`${notification.title} 알림 열기${notification.isRead ? "" : ", 읽지 않음"}`}
+                  className={cn(
+                    "flex w-full max-w-full cursor-pointer items-center gap-2 rounded-xl p-2.5 touch-manipulation hover:bg-accent focus:bg-accent",
+                    !notification.isRead && "bg-primary/5",
+                  )}
+                  onSelect={() => handleNotificationItemClick(notification)}
+                >
+                  <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                    <div className="flex items-center justify-between gap-2 w-full">
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {notification.title}
                       </p>
-                      <p className="text-[11px] text-muted-foreground/70 mt-0.5">
-                        {formatDistanceToNow(notification.createdAt, {
-                          addSuffix: true,
-                          locale: ko,
-                        })}
-                      </p>
+                      {!notification.isRead && (
+                        <span
+                          className="h-2 w-2 rounded-full bg-red-700 shrink-0"
+                          aria-hidden
+                        />
+                      )}
                     </div>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
+                    <p className="text-xs text-muted-foreground truncate">
+                      {notification.message}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground/70 mt-0.5">
+                      {formatDistanceToNow(notification.createdAt, {
+                        addSuffix: true,
+                        locale: ko,
+                      })}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
                     aria-label={`${notification.title} 알림 삭제`}
-                    className="ml-1 mt-1 flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-xs text-muted-foreground touch-manipulation hover:bg-destructive/10 focus:bg-destructive/10 focus:text-destructive"
-                    onSelect={(event) => {
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40"
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onClick={(event) => {
                       event.preventDefault();
+                      event.stopPropagation();
                       removeNotification(notification.id);
                     }}
                   >
                     <X className="h-3.5 w-3.5" aria-hidden="true" />
-                    알림 삭제
-                  </DropdownMenuItem>
-                </Fragment>
+                    <span className="sr-only">알림 삭제</span>
+                  </button>
+                </DropdownMenuItem>
               ))}
             </DropdownMenuGroup>
           )}
