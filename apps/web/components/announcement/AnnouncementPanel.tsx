@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 import { X, ChevronRight, ChevronLeft, Megaphone, Plus, Edit2, Trash2, Calendar, Eye, EyeOff, Bell, BellOff, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -34,7 +33,7 @@ interface AnnouncementPanelProps {
     initialAnnouncement?: Announcement | null;
     isBottomSheet?: boolean;
     hideCloseButton?: boolean;
-    adminActionsMode?: 'inline' | 'console-link';
+    adminActionsMode?: 'inline';
 }
 
 export default function AnnouncementPanel({
@@ -46,12 +45,10 @@ export default function AnnouncementPanel({
     initialAnnouncement,
     isBottomSheet = false,
     hideCloseButton = false,
-    adminActionsMode = 'console-link',
+    adminActionsMode = 'inline',
 }: AnnouncementPanelProps) {
     void isOpen;
-    const router = useRouter();
     const canManageInline = isAdmin && adminActionsMode === 'inline';
-    const showAdminConsoleCta = isAdmin && adminActionsMode === 'console-link';
     const { data: adminAnnouncements = [], isLoading: isAdminAnnouncementsLoading } = useAnnouncementsAdmin(canManageInline);
     const { data: activeAnnouncements = [], isLoading: isActiveAnnouncementsLoading } = useActiveAnnouncements(!canManageInline);
     const createAnnouncement = useCreateAnnouncement();
@@ -288,13 +285,6 @@ function AnnouncementListItemSkeleton({ index }: { index: number }) {
         setViewMode('detail');
     };
 
-    const handleBackToList = () => {
-        setSelectedAnnouncement(null);
-        setDeleteConfirmation('');
-        setToggleConfirmation('');
-        setViewMode('list');
-    };
-
     // 표시할 공지사항 (운영 콘솔: 전체, 공개 읽기 패널: 활성만)
     const allDisplayAnnouncements = useMemo(() => {
         const sorted = [...announcements].sort((a, b) => b.priority - a.priority);
@@ -336,6 +326,18 @@ function AnnouncementListItemSkeleton({ index }: { index: number }) {
                             <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800">게시 {isAnnouncementsLoading ? <InlineCountSkeleton /> : activeCount}</span>
                             <span className="rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 text-xs font-semibold text-orange-800">배너 {isAnnouncementsLoading ? <InlineCountSkeleton /> : bannerCount}</span>
                             <Button type="button" size="sm" className="h-8 rounded-lg" onClick={handleCreate} disabled={isMutating}><Plus className="mr-1 h-4 w-4" aria-hidden="true" />새 공지</Button>
+                            {!hideCloseButton && (
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 rounded-full"
+                                    onClick={onClose}
+                                    aria-label="공지 패널 닫기"
+                                >
+                                    <X className="h-4 w-4" aria-hidden="true" />
+                                </Button>
+                            )}
                         </div>
                     </div>
                     {lastActionMessage && <p role="status" aria-live="polite" className="mt-1 rounded-lg border border-emerald-700/20 bg-emerald-50 px-2 py-1 text-xs text-emerald-900">{lastActionMessage}</p>}
@@ -458,7 +460,7 @@ function AnnouncementListItemSkeleton({ index }: { index: number }) {
     }
 
     return (
-        <div className={`h-full flex flex-col bg-background relative ${isBottomSheet || canManageInline ? '' : 'border-l border-border'}`}>
+        <div className="relative flex h-full flex-col bg-background">
             {/* 플로팅 접기/펼치기 버튼 */}
             {onToggleCollapse && (
                 <button
@@ -476,57 +478,50 @@ function AnnouncementListItemSkeleton({ index }: { index: number }) {
             )}
 
             {/* 헤더 */}
-            <div className="flex items-center justify-between p-4 border-b border-border bg-card">
-                <div className="flex items-center gap-2">
-                    {(viewMode === 'detail' || viewMode === 'edit') ? (
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={handleBackToList}
-                            className="gap-1 -ml-2"
-                            aria-label="공지 목록으로 돌아가기"
-                        >
-                            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-                        </Button>
-                    ) : (
-                        <Megaphone className="h-5 w-5 text-red-800" aria-hidden="true" />
-                    )}
-                    <div>
-                        <h2 className="text-lg font-bold">
-                            {canManageInline ? '공지사항 관리' : '공지사항'}
-                        </h2>
-                        <p className="text-xs text-muted-foreground">
-                            {viewMode === 'list' && '공지사항 목록'}
-                            {viewMode === 'detail' && '상세 보기'}
-                            {viewMode === 'create' && '새 공지사항'}
-                            {viewMode === 'edit' && '공지사항 수정'}
+            <div className="shrink-0 border-b border-border bg-background px-3 py-3 sm:px-5 sm:py-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1 basis-[min(11rem,100%)]">
+                        <h1 className="flex min-w-0 flex-wrap items-center gap-1.5 text-[1.0625rem] font-bold leading-tight text-primary text-balance xs:text-xl sm:gap-2 sm:text-2xl">
+                            <Megaphone className="h-5 w-5 shrink-0 text-primary sm:h-6 sm:w-6" aria-hidden="true" />
+                            <span className="min-w-0 truncate">쯔동여지도 공지</span>
+                            {viewMode === 'list' && (
+                                <span className="shrink-0 text-xs font-normal tabular-nums text-muted-foreground xs:text-sm">
+                                    {isAnnouncementsLoading ? <InlineCountSkeleton /> : `(${allDisplayAnnouncements.length}개)`}
+                                </span>
+                            )}
+                        </h1>
+                        <p className="mt-1 max-w-full text-pretty text-xs leading-5 text-muted-foreground xs:text-sm">
+                            {viewMode === 'list' && '쯔동여지도 소식과 운영 안내를 확인하세요.'}
+                            {viewMode === 'detail' && '공지 내용을 자세히 확인하세요.'}
+                            {viewMode === 'create' && '새 공지사항을 작성합니다.'}
+                            {viewMode === 'edit' && '공지사항 내용을 수정합니다.'}
                         </p>
                     </div>
-                </div>
-                <div className="flex items-center gap-2">
-                    {canManageInline && viewMode === 'list' && (
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleCreate}
-                            disabled={isMutating}
-                            className="gap-1"
-                        >
-                            <Plus className="h-4 w-4" aria-hidden="true" />
-                            새 공지 작성
-                        </Button>
-                    )}
-                    {!hideCloseButton && (
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={onClose}
-                            className="hover:bg-muted"
-                            aria-label="공지 패널 닫기"
-                        >
-                            <X className="h-5 w-5" aria-hidden="true" />
-                        </Button>
-                    )}
+                    <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
+                        {canManageInline && viewMode === 'list' && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleCreate}
+                                disabled={isMutating}
+                                className="h-10 rounded-full px-3 shadow-none"
+                            >
+                                <Plus className="mr-1 h-4 w-4" aria-hidden="true" />
+                                새 공지 작성
+                            </Button>
+                        )}
+                        {!hideCloseButton && (
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={onClose}
+                                className="h-10 w-10 rounded-full bg-muted/45 shadow-none hover:bg-muted"
+                                aria-label="공지 패널 닫기"
+                            >
+                                <X className="h-5 w-5" aria-hidden="true" />
+                            </Button>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -711,26 +706,6 @@ function AnnouncementListItemSkeleton({ index }: { index: number }) {
                                     </Button>
                                 </div>
                             )}
-                            {showAdminConsoleCta && (
-                                <Card className="border-primary/15 bg-primary/5 p-4">
-                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                        <div>
-                                            <h3 className="text-sm font-semibold text-foreground">운영 변경은 관리자 콘솔에서 처리합니다</h3>
-                                            <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                                                헤더 공지 패널은 읽기용입니다. 작성·수정·게시·배너 노출은 통합 콘솔에서 진행하세요.
-                                            </p>
-                                        </div>
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            className="min-h-10 shrink-0 rounded-xl bg-background/80"
-                                            onClick={() => router.push('/admin?module=announcements')}
-                                        >
-                                            공지 관리 열기
-                                        </Button>
-                                    </div>
-                                </Card>
-                            )}
                         </div>
                     </ScrollArea>
                 )}
@@ -831,19 +806,6 @@ function AnnouncementListItemSkeleton({ index }: { index: number }) {
                                                 삭제
                                             </Button>
                                             </div>
-                                        </div>
-                                    )}
-                                    {showAdminConsoleCta && (
-                                        <div className="pt-4 border-t border-border">
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                className="min-h-10 w-full justify-between rounded-xl"
-                                                onClick={() => router.push('/admin?module=announcements')}
-                                            >
-                                                관리자 콘솔에서 공지 관리
-                                                <span aria-hidden="true">→</span>
-                                            </Button>
                                         </div>
                                     )}
                                 </div>

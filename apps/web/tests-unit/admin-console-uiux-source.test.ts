@@ -383,7 +383,6 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       '"reviews"',
       '"storyboard"',
       '"banners"',
-      '"announcements"',
       '"users"',
       '"insights"',
       '"audit"',
@@ -446,23 +445,21 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       '<p className="sr-only" aria-live="polite">',
     );
   });
-  test("keeps announcements above banners in the admin sidebar default order", () => {
+  test("keeps announcement management out of the admin sidebar default order", () => {
     const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
+    const sidebarOrderRouteSource = source("app/api/admin/preferences/sidebar-order/route.ts");
 
-    expect(consoleSource.indexOf('id: "announcements"')).toBeLessThan(
-      consoleSource.indexOf('id: "banners"'),
-    );
-    expect(consoleSource).toContain('          "announcements",');
+    expect(consoleSource).not.toContain('id: "announcements"');
+    expect(consoleSource).not.toContain('          "announcements",');
     expect(consoleSource).toContain('          "storyboard",');
     expect(consoleSource).toContain('          "banners",');
     expect(consoleSource).toContain('          "users",');
     expect(consoleSource).toContain('          "insights",');
     expect(consoleSource).toContain('          "audit",');
-    expect(
-      source("app/api/admin/preferences/sidebar-order/route.ts"),
-    ).toContain(
-      "운영: ['announcements', 'storyboard', 'banners', 'users', 'insights', 'audit']",
+    expect(sidebarOrderRouteSource).toContain(
+      "운영: ['storyboard', 'banners', 'users', 'insights', 'audit']",
     );
+    expect(sidebarOrderRouteSource).not.toContain("'announcements'");
   });
 
   test("adds storyboard generation as an operator-controlled admin module", () => {
@@ -511,7 +508,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(consoleSource).toContain("data-admin-sidebar-order-loading=");
     expect(consoleSource).toContain("useAdBannersAdmin(isAdmin)");
-    expect(consoleSource).toContain("useAnnouncementsAdmin(isAdmin)");
+    expect(consoleSource).not.toContain("useAnnouncementsAdmin(isAdmin)");
     expect(source("hooks/use-ad-banners.tsx")).toContain(
       "export function useAdBannersAdmin(enabled = true)",
     );
@@ -687,8 +684,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(overviewSource).toContain(
       "lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]",
     );
-    expect(consoleSource).toContain(
-      "flex h-full min-h-0 flex-col bg-background",
+    expect(consoleSource).not.toContain(
+      "function AnnouncementWorkspace",
     );
     expect(usersSource).toContain("flex h-full min-h-0 flex-col bg-background");
     expect(usersSource).toContain("gap-2 overflow-y-auto p-2");
@@ -712,8 +709,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       'const AdminBannerModule = dynamic(() => import("@/app/admin/banners/page"), {',
     );
-    expect(consoleSource).toContain("const AdminAnnouncementModule = dynamic(");
-    expect(consoleSource).toContain(
+    expect(consoleSource).not.toContain("const AdminAnnouncementModule = dynamic(");
+    expect(consoleSource).not.toContain(
       '() => import("@/components/announcement/AnnouncementPanel")',
     );
     expect(consoleSource).toContain("const AdminUsersModule = dynamic(");

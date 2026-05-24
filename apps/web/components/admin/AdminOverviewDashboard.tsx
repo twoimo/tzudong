@@ -43,12 +43,7 @@ type AdminOverviewStats = {
   withCoordinates: number | null;
   activeBanners: number | null;
   inactiveBanners: number | null;
-  totalAnnouncements: number | null;
-  activeAnnouncements: number | null;
-  bannerAnnouncements: number | null;
-  inactiveAnnouncements: number | null;
   latestRestaurantUpdate: string | null;
-  latestAnnouncementUpdate: string | null;
   dashboardVideos: DashboardSummaryResponse["videos"] | null;
 };
 
