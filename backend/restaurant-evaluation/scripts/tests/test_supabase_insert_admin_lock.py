@@ -169,7 +169,7 @@ class SupabaseInsertAdminLockTests(unittest.TestCase):
 
         self.assertEqual(["고기", "한식"], record["categories"])
 
-    def test_build_record_aligns_missing_category_verdicts_to_accepted_categories(self):
+    def test_build_record_preserves_missing_category_verdicts_for_pending_pipeline_rows(self):
         incoming = self.make_incoming(
             categories=["한식"],
             evaluation_results={"address_TF": {"eval_value": True}},
@@ -177,16 +177,9 @@ class SupabaseInsertAdminLockTests(unittest.TestCase):
 
         record = supabase_insert.build_record(incoming, "tzuyang")
 
-        self.assertTrue(record["evaluation_results"]["category_validity_TF"]["eval_value"])
-        self.assertEqual(
-            ["한식"],
-            record["evaluation_results"]["category_validity_TF"]["normalized_categories"],
-        )
-        self.assertTrue(record["evaluation_results"]["category_TF"]["eval_value"])
-        self.assertIsNone(record["evaluation_results"]["category_TF"]["category_revision"])
-        self.assertEqual({"eval_value": True}, record["evaluation_results"]["address_TF"])
+        self.assertEqual({"address_TF": {"eval_value": True}}, record["evaluation_results"])
 
-    def test_build_record_overrides_stale_category_mismatch_when_categories_are_accepted(self):
+    def test_build_record_preserves_stale_category_mismatch_for_pending_pipeline_rows(self):
         incoming = self.make_incoming(
             categories=["분식"],
             evaluation_results={
@@ -197,11 +190,11 @@ class SupabaseInsertAdminLockTests(unittest.TestCase):
 
         record = supabase_insert.build_record(incoming, "tzuyang")
 
-        self.assertTrue(record["evaluation_results"]["category_validity_TF"]["eval_value"])
+        self.assertFalse(record["evaluation_results"]["category_validity_TF"]["eval_value"])
         self.assertEqual("stale", record["evaluation_results"]["category_validity_TF"]["reason"])
-        self.assertEqual(["분식"], record["evaluation_results"]["category_validity_TF"]["normalized_categories"])
-        self.assertTrue(record["evaluation_results"]["category_TF"]["eval_value"])
-        self.assertIsNone(record["evaluation_results"]["category_TF"]["category_revision"])
+        self.assertNotIn("normalized_categories", record["evaluation_results"]["category_validity_TF"])
+        self.assertFalse(record["evaluation_results"]["category_TF"]["eval_value"])
+        self.assertEqual(["한식"], record["evaluation_results"]["category_TF"]["category_revision"])
 
     def test_build_record_preserves_category_verdicts_when_no_categories_are_available(self):
         incoming = self.make_incoming(categories=[], evaluation_results={"category_TF": {"eval_value": False}})
@@ -244,7 +237,10 @@ class SupabaseInsertAdminLockTests(unittest.TestCase):
             "road_address": "서울 기존 도로명",
             "lat": 37.11,
             "lng": 127.11,
-            "evaluation_results": {"score": 1},
+            "evaluation_results": {
+                "category_validity_TF": {"eval_value": False, "reason": "stale"},
+                "category_TF": {"eval_value": False, "category_revision": ["분식"]},
+            },
             "youtube_meta": {"publishedAt": "2024-01-01T00:00:00Z"},
             "origin_name": "기존 이름",
             "review_count": 3,
@@ -261,7 +257,13 @@ class SupabaseInsertAdminLockTests(unittest.TestCase):
         self.assertEqual("admin review", merged["tzuyang_review"])
         self.assertEqual("서울 기존 도로명", merged["road_address"])
         self.assertEqual(37.11, merged["lat"])
-        self.assertEqual({"score": 99}, merged["evaluation_results"])
+        self.assertTrue(merged["evaluation_results"]["category_validity_TF"]["eval_value"])
+        self.assertEqual(
+            ["한식"],
+            merged["evaluation_results"]["category_validity_TF"]["normalized_categories"],
+        )
+        self.assertTrue(merged["evaluation_results"]["category_TF"]["eval_value"])
+        self.assertIsNone(merged["evaluation_results"]["category_TF"]["category_revision"])
         self.assertEqual({"publishedAt": "2025-01-02T00:00:00Z"}, merged["youtube_meta"])
         self.assertEqual("새 이름", merged["origin_name"])
         self.assertEqual(3, merged["review_count"])
@@ -326,7 +328,14 @@ class SupabaseInsertAdminLockTests(unittest.TestCase):
         self.assertEqual("trace-new", payload["trace_id"])
         self.assertEqual("새 이름", payload["approved_name"])
         self.assertEqual(["고기"], payload["categories"])
-        self.assertEqual({"score": 99}, payload["evaluation_results"])
+        self.assertEqual(99, payload["evaluation_results"]["score"])
+        self.assertTrue(payload["evaluation_results"]["category_validity_TF"]["eval_value"])
+        self.assertEqual(
+            ["고기"],
+            payload["evaluation_results"]["category_validity_TF"]["normalized_categories"],
+        )
+        self.assertTrue(payload["evaluation_results"]["category_TF"]["eval_value"])
+        self.assertIsNone(payload["evaluation_results"]["category_TF"]["category_revision"])
         self.assertEqual(1, stats["trace_rebinds"])
         self.assertEqual(0, stats["ambiguous_rebind_skips"])
 

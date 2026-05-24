@@ -27,7 +27,7 @@ on:
         default: ''
         type: string
       checkout_ref:
-        description: '검증/수동 실행용 체크아웃 ref (미입력 시 default branch)'
+        description: '보안상 secrets 사용 실행은 default branch만 허용됩니다 (비default ref는 거부)'
         required: false
         default: ''
         type: string
@@ -43,12 +43,11 @@ permissions:
 # GitHub Actions Node 20 deprecation 사전 대응: JS actions를 Node 24 런타임으로 강제
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-  GEMINI_CLI_TRUST_WORKSPACE: "true"
+  GEMINI_CLI_TRUST_WORKSPACE: "false"
 
-# [PERF] 운영(default branch -> data sync) 런은 직렬화하고, 검증용 non-default workflow_dispatch 는 브랜치별로 분리
-# schedule 및 수동 default branch 재실행은 운영 락을 공유하고, 검증 브랜치는 별도 group 으로 실행
+# [SECURITY/PERF] production secrets/data sync runs are serialized on one trusted default-branch lane.
 concurrency:
-  group: ${{ github.event_name == 'workflow_dispatch' && ((github.event.inputs.checkout_ref || github.event.repository.default_branch) != github.event.repository.default_branch && format('daily-crawl-validation-{0}', github.event.inputs.checkout_ref || github.event.repository.default_branch) || 'daily-crawl-pipeline') || 'daily-crawl-pipeline' }}
+  group: daily-crawl-pipeline
   cancel-in-progress: false
 
 jobs:
@@ -62,6 +61,17 @@ jobs:
       # ============================================================
       # 환경 준비 (Setup) - 캐시 최대 활용으로 시간 절약
       # ============================================================
+
+      - name: Guard trusted manual checkout ref
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          REQUESTED_CHECKOUT_REF: ${{ github.event.inputs.checkout_ref || '' }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          if [ -n "$REQUESTED_CHECKOUT_REF" ] && [ "$REQUESTED_CHECKOUT_REF" != "$DEFAULT_BRANCH" ]; then
+            echo "::error::daily-crawler uses production secrets and may only run against the default branch. Use read-only PR/CI validation for non-default refs."
+            exit 1
+          fi
 
       - name: System Setup (Disk + Swap)
         if: env.MAX_CONTEXT_VIDEOS != '-1'
@@ -87,14 +97,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.checkout_ref || github.event.repository.default_branch) || github.event.repository.default_branch }}
+          ref: ${{ github.event.repository.default_branch }}
           fetch-depth: 0
 
       - name: Guard manual default-branch budget posture
         if: github.event_name == 'workflow_dispatch'
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          CHECKOUT_REF: ${{ github.event.inputs.checkout_ref || github.event.repository.default_branch }}
+          CHECKOUT_REF: ${{ github.event.repository.default_branch }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
           ALLOW_BUDGET_RISK: ${{ github.event.inputs.allow_budget_risk || 'false' }}
         run: |
@@ -214,15 +224,14 @@ jobs:
           cache: 'pip'
           cache-dependency-path: backend/restaurant-crawling/scripts/requirements.txt
 
-      # [PERF] Python + Node 의존성 완전 병렬 설치 (yt-dlp 최신화 포함)
+      # [SECURITY/PERF] Python + Node 의존성 병렬 설치 (requirements.txt 고정 버전만 사용)
       - name: Install Dependencies (Python + Node.js)
         env:
           PUPPETEER_CACHE_DIR: /home/runner/.cache/puppeteer
         run: |
-          # Python: pip upgrade + requirements + yt-dlp 최신버전 (백그라운드)
+          # Python: pip upgrade + pinned requirements (백그라운드)
           (python -m pip install --upgrade pip -q && \
-           pip install -r backend/restaurant-crawling/scripts/requirements.txt -q && \
-           pip install -U "yt-dlp[default]" -q && \
+           pip install --requirement backend/restaurant-crawling/scripts/requirements.txt -q && \
            python -m camoufox fetch) &
           PY_PID=$!
           
@@ -239,28 +248,35 @@ jobs:
       # ============================================================
 
       - name: Setup Credentials
+        env:
+          GOOGLE_CREDENTIALS_BASE64: ${{ secrets.GOOGLE_CREDENTIALS_BASE64 }}
+          YOUTUBE_COOKIES_TXT: ${{ secrets.YOUTUBE_COOKIES_TXT }}
+          GDRIVE_RCLONE_CONFIG: ${{ secrets.GDRIVE_RCLONE_CONFIG }}
         run: |
+          set -euo pipefail
+          umask 077
           mkdir -p backend/restaurant-crawling/data ~/.gemini ~/.config/rclone
           
           # Add wrapper to PATH
-          echo "${{ github.workspace }}/backend/bin" >> $GITHUB_PATH
-          chmod +x ${{ github.workspace }}/backend/bin/gemini
+          echo "${{ github.workspace }}/backend/bin" >> "$GITHUB_PATH"
+          chmod +x "${{ github.workspace }}/backend/bin/gemini"
           
           # Google Credentials (optional; kept only for legacy scripts that read credentials.json)
-          if [ -n "${{ secrets.GOOGLE_CREDENTIALS_BASE64 }}" ]; then
-            echo "${{ secrets.GOOGLE_CREDENTIALS_BASE64 }}" | base64 -d > backend/restaurant-crawling/data/credentials.json
+          if [ -n "$GOOGLE_CREDENTIALS_BASE64" ]; then
+            printf '%s' "$GOOGLE_CREDENTIALS_BASE64" | base64 -d > backend/restaurant-crawling/data/credentials.json
           fi
           
           # YouTube Cookies
-          if [ -n "${{ secrets.YOUTUBE_COOKIES_TXT }}" ]; then
-            echo "${{ secrets.YOUTUBE_COOKIES_TXT }}" > backend/restaurant-crawling/data/cookies.txt
+          if [ -n "$YOUTUBE_COOKIES_TXT" ]; then
+            printf '%s' "$YOUTUBE_COOKIES_TXT" > backend/restaurant-crawling/data/cookies.txt
           fi
           
           # Gemini runs through the canonical GEMINI_API_KEY secret. OAuth credential secrets are intentionally unsupported.
           
           # RClone Config
-          if [ -n "${{ secrets.GDRIVE_RCLONE_CONFIG }}" ]; then
-            echo "${{ secrets.GDRIVE_RCLONE_CONFIG }}" | base64 -d > ~/.config/rclone/rclone.conf
+          if [ -n "$GDRIVE_RCLONE_CONFIG" ]; then
+            printf '%s' "$GDRIVE_RCLONE_CONFIG" | base64 -d > ~/.config/rclone/rclone.conf
+            chmod 600 ~/.config/rclone/rclone.conf
           fi
           
           echo "[OK] All credentials configured"
@@ -384,8 +400,8 @@ jobs:
           RUN_DAILY_POLICY_MODE: ${{ github.event.inputs.policy_mode || 'end_to_end' }}
           RUN_DAILY_VERIFY_OPTIONAL_SCENARIO: ${{ github.event.inputs.verify_optional_scenario || '' }}
           RUN_DAILY_VERIFY_REQUIRED_SCENARIO: ${{ github.event.inputs.verify_required_scenario || '' }}
-          RUN_DAILY_EXECUTION_BRANCH: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.checkout_ref || github.event.repository.default_branch) || github.event.repository.default_branch }}
-          RUN_DAILY_TARGET_BRANCH: ${{ github.event_name == 'workflow_dispatch' && ((github.event.inputs.checkout_ref || github.event.repository.default_branch) != github.event.repository.default_branch && (github.event.inputs.checkout_ref || github.event.repository.default_branch) || 'data') || 'data' }}
+          RUN_DAILY_EXECUTION_BRANCH: ${{ github.event.repository.default_branch }}
+          RUN_DAILY_TARGET_BRANCH: data
         run: |
           chmod +x backend/run_daily.sh
           bash backend/run_daily.sh
@@ -426,7 +442,7 @@ jobs:
         # 대량 프레임은 batch 업로드 + strong remote proof + staging/backfill material을 남긴다.
         timeout-minutes: 45
         env:
-          RUN_DAILY_TARGET_BRANCH: ${{ github.event_name == 'workflow_dispatch' && ((github.event.inputs.checkout_ref || github.event.repository.default_branch) != github.event.repository.default_branch && (github.event.inputs.checkout_ref || github.event.repository.default_branch) || 'data') || 'data' }}
+          RUN_DAILY_TARGET_BRANCH: data
           GDRIVE_FRAMES_PATH: "gdrive:04_빠른공유/tzudong_tzuyang_data/frames"
           GDRIVE_STATUS_PATH: "gdrive:04_빠른공유/tzudong_tzuyang_data/status"
           GDRIVE_UPLOAD_MAX_FILES: "0"
@@ -660,16 +676,7 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
           path: |
-            backend/log/cron/current-upload-expected.json
             backend/log/cron/current-upload-status.json
-            backend/log/cron/gdrive-upload-residual-queue.jsonl
-            backend/log/cron/current-upload-files-from.txt
-            backend/log/cron/current-upload-batches.json
-            backend/log/cron/current-upload-verified-files.txt
-            backend/log/cron/current-upload-staging-manifest.json
-            backend/log/cron/current-upload-rclone.log
             backend/log/cron/production-contract-fixture-status.json
             backend/log/cron/gemini-runtime-preflight.json
             backend/log/cron/actions-budget-posture.json
-            backend/log/cron/gdrive-upload-batches/**
-            backend/log/cron/gdrive-upload-staging/**
