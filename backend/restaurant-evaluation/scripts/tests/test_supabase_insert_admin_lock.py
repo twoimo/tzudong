@@ -151,6 +151,23 @@ class SupabaseInsertAdminLockTests(unittest.TestCase):
         data.update(overrides)
         return data
 
+    def test_build_record_flattens_transform_category_lists(self):
+        incoming = self.make_incoming(
+            categories=None,
+            category=["고기", "찜·탕", "고기"],
+        )
+
+        record = supabase_insert.build_record(incoming, "tzuyang")
+
+        self.assertEqual(["고기", "찜·탕"], record["categories"])
+
+    def test_build_record_flattens_nested_categories_field(self):
+        incoming = self.make_incoming(categories=[["고기", "한식"], "한식"])
+
+        record = supabase_insert.build_record(incoming, "tzuyang")
+
+        self.assertEqual(["고기", "한식"], record["categories"])
+
     def test_unreviewed_exact_match_refreshes_pipeline_fields_but_keeps_row_owned_fields(self):
         existing = {
             "id": "row-1",
