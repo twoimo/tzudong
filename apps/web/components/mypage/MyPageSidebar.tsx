@@ -132,7 +132,10 @@ export function MyPageSidebar() {
 
       const oldAvatarUrl = profile?.avatarUrl;
       if (oldAvatarUrl?.includes("profile-avatars")) {
-        const oldPath = oldAvatarUrl.split("profile-avatars/").pop();
+        const oldPath = oldAvatarUrl
+          .split("profile-avatars/")
+          .pop()
+          ?.split("?")[0];
         if (oldPath) {
           await supabase.storage.from("profile-avatars").remove([oldPath]);
         }

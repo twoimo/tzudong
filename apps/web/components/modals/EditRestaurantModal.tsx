@@ -65,6 +65,13 @@ const clampDesktopEditPanelAxis = (value: number, min: number, max: number) => {
     return Math.min(Math.max(value, min), max);
 };
 
+const getDesktopEditPanelFocusableElements = (container: HTMLElement | null) =>
+    Array.from(
+        container?.querySelectorAll<HTMLElement>(
+            'button:not([disabled]), [href], input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+    ).filter((element) => !element.hasAttribute('disabled') && element.getAttribute('aria-hidden') !== 'true');
+
 export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, onClose, restaurant, initialFormData, presentation = 'auto' }: EditRestaurantModalProps) {
     const isMobileOrTablet = useImmediateMobileOrTablet();
     const [editFormData, setEditFormData] = useState(initialFormData);
@@ -372,6 +379,46 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
         moveDesktopEditPanelByKeyboard(move[0], move[1]);
     }, [moveDesktopEditPanelByKeyboard]);
 
+    const handleDesktopEditDialogKeyDown = useCallback((event: ReactKeyboardEvent<HTMLElement>) => {
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            onClose();
+            return;
+        }
+
+        if (event.key !== 'Tab') return;
+
+        const focusableElements = getDesktopEditPanelFocusableElements(desktopEditPanelRef.current);
+        if (focusableElements.length === 0) {
+            event.preventDefault();
+            desktopEditPanelRef.current?.focus({ preventScroll: true });
+            return;
+        }
+
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+        const activeElement = document.activeElement;
+
+        if (event.shiftKey && activeElement === firstElement) {
+            event.preventDefault();
+            lastElement.focus({ preventScroll: true });
+        } else if (!event.shiftKey && activeElement === lastElement) {
+            event.preventDefault();
+            firstElement.focus({ preventScroll: true });
+        }
+    }, [onClose]);
+
+    useEffect(() => {
+        if (!shouldRenderMapPanel || !isOpen) return;
+
+        const frame = window.requestAnimationFrame(() => {
+            const [firstFocusableElement] = getDesktopEditPanelFocusableElements(desktopEditPanelRef.current);
+            (firstFocusableElement ?? desktopEditPanelRef.current)?.focus({ preventScroll: true });
+        });
+
+        return () => window.cancelAnimationFrame(frame);
+    }, [isOpen, shouldRenderMapPanel]);
+
     const handleNextStep = () => {
         const validationError = validateEditRestaurantRequestStep(currentStep, editFormData);
         if (validationError) {
@@ -636,6 +683,9 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
                 className={`${mobileSheetStyles.header}${shouldRenderMapPanel ? ' cursor-move select-none touch-none' : ''}`}
                 data-desktop-map-edit-drag-handle={shouldRenderMapPanel ? "true" : undefined}
                 title={shouldRenderMapPanel ? "빈 영역을 드래그하거나 화살표 키로 수정 요청 창 이동" : undefined}
+                role={shouldRenderMapPanel ? "group" : undefined}
+                tabIndex={shouldRenderMapPanel ? 0 : undefined}
+                aria-label={shouldRenderMapPanel ? "맛집 수정 요청 창 이동 핸들" : undefined}
                 onKeyDown={shouldRenderMapPanel ? handleDesktopEditPanelKeyDown : undefined}
                 onPointerDown={shouldRenderMapPanel ? handleDesktopEditPanelPointerDown : undefined}
                 onPointerMove={shouldRenderMapPanel ? handleDesktopEditPanelPointerMove : undefined}
@@ -731,9 +781,10 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
                 data-desktop-map-edit-panel="true"
                 role="dialog"
                 tabIndex={-1}
+                aria-modal="true"
                 aria-labelledby={mobileTitleId}
                 aria-describedby={validationMessage ? `${mobileDescriptionId} ${validationMessageId}` : mobileDescriptionId}
-                onKeyDown={handleDesktopEditPanelKeyDown}
+                onKeyDown={handleDesktopEditDialogKeyDown}
             >
                 {steppedEditForm}
             </section>
