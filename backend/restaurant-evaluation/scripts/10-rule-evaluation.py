@@ -51,7 +51,6 @@ NAVER_CLIENT_ID = os.getenv("NAVER_CLIENT_ID_BYEON", "")
 NAVER_CLIENT_SECRET = os.getenv("NAVER_CLIENT_SECRET_BYEON", "")
 NCP_KEY_ID = os.getenv("NCP_MAPS_KEY_ID_BYEON", "")
 NCP_KEY = os.getenv("NCP_MAPS_KEY_BYEON", "")
-GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY", "") or os.getenv("NEXT_PUBLIC_GOOGLE_MAPS_API_KEY", "")
 
 LOCAL_URL = "https://openapi.naver.com/v1/search/local.json"
 GEOCODE_URL = "https://maps.apigw.ntruss.com/map-geocode/v2/geocode"
@@ -97,6 +96,7 @@ _gemini_fallback_cache: Dict[str, Dict[str, Any]] = {}
 
 EVIDENCE_PROVIDER_CANDIDATE = "provider_candidate"
 EVIDENCE_SOURCE_GEO = "source_geo"
+EVIDENCE_BROWSER_VERIFICATION = "browser_verification"
 
 PENDING_REASON_INSUFFICIENT = "insufficient_evidence"
 PENDING_REASON_CROSS_COUNTRY = "cross_country_mismatch"
@@ -646,158 +646,40 @@ def evaluate_category_validity(
     return results, evaluation_name_source
 
 
-def google_places_text_search(query: str) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
-    """구글 Places Text Search API 호출"""
-    if not GOOGLE_MAPS_API_KEY:
-        return None, PENDING_REASON_INSUFFICIENT
-    url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
-    params = {
-        "query": query,
-        "key": GOOGLE_MAPS_API_KEY,
-        "language": "ko"
-    }
-    last_reason: Optional[str] = None
-    for attempt in range(3):
-        try:
-            r = requests.get(url, params=params, timeout=8)
-            r.raise_for_status()
-            data = r.json()
-            status = data.get("status")
-            if status == "OK" and data.get("results"):
-                return data["results"][0], None
-            if status == "OVER_QUERY_LIMIT":
-                return None, PENDING_REASON_RATE_LIMITED
-            if status == "REQUEST_DENIED":
-                return None, PENDING_REASON_INSUFFICIENT
-            last_reason = PENDING_REASON_INSUFFICIENT
-            if attempt < 2:
-                time.sleep(1)
-        except requests.Timeout as e:
-            print(f"[WARN] Google Maps API 타임아웃 (시도 {attempt+1}/3): {e}")
-            last_reason = PENDING_REASON_TIMEOUT
-            if attempt < 2:
-                time.sleep(2**attempt)
-        except Exception as e:
-            print(f"[WARN] Google Maps API 실패 (시도 {attempt+1}/3): {e}")
-            last_reason = PENDING_REASON_INSUFFICIENT
-            if attempt < 2:
-                time.sleep(2**attempt)
-    return None, last_reason or PENDING_REASON_INSUFFICIENT
-
-
-def evaluate_with_google_fallback(
+def evaluate_with_browser_review_needed(
     name: str,
     origin_address: str,
     source_lat: Optional[float],
     source_lng: Optional[float],
     naver_fail_msg: str,
 ) -> Dict[str, Any]:
-    """네이버 지도 실패 시 구글 지도로 폴백 평가"""
-    query = f"{name} {_norm_space(origin_address)}"
-    start_time = time.monotonic()
-    google_res, google_failure_reason = google_places_text_search(query)
-    duration_ms = int((time.monotonic() - start_time) * 1000)
-    second_pass = build_second_pass_state(
-        attempted=True,
-        provider="google",
-        timed_out=google_failure_reason == PENDING_REASON_TIMEOUT,
-        rate_limited=google_failure_reason == PENDING_REASON_RATE_LIMITED,
-        duration_ms=duration_ms,
-    )
+    """Return a conservative pending result for the Google Maps browser review queue.
 
-    if google_failure_reason == PENDING_REASON_TIMEOUT:
-        return build_location_result(
-            origin_name=name,
-            origin_address=origin_address,
-            eval_value=False,
-            pending_reason=PENDING_REASON_TIMEOUT,
-            second_pass=second_pass,
-            false_message=f"Naver 실패 ({naver_fail_msg}), Google second pass timeout",
-            evidence_summary=[f"Naver 실패: {naver_fail_msg}", "Google second pass timed out"],
-            match_status="pending",
-        )
-
-    if google_failure_reason == PENDING_REASON_RATE_LIMITED:
-        return build_location_result(
-            origin_name=name,
-            origin_address=origin_address,
-            eval_value=False,
-            pending_reason=PENDING_REASON_RATE_LIMITED,
-            second_pass=second_pass,
-            false_message=f"Naver 실패 ({naver_fail_msg}), Google second pass rate limited",
-            evidence_summary=[f"Naver 실패: {naver_fail_msg}", "Google second pass rate limited"],
-            match_status="pending",
-        )
-
-    if google_res:
-        google_name = google_res.get("name")
-        location = google_res.get("geometry", {}).get("location", {})
-        formatted_address = google_res.get("formatted_address", "")
-        google_lat = _float_or_none(location.get("lat"))
-        google_lng = _float_or_none(location.get("lng"))
-        google_address = {
-            "roadAddress": formatted_address,
-            "jibunAddress": formatted_address,
-            "englishAddress": "",
-            "addressElements": [],
-            "x": str(location.get("lng", "")),
-            "y": str(location.get("lat", "")),
-            "distance": 0.0,
-        }
-        evidence_summary = [f"Naver 실패: {naver_fail_msg}", f"Google candidate: {google_name or 'unknown'}"]
-        evidence_families = [EVIDENCE_PROVIDER_CANDIDATE]
-        pending_reason = None
-
-        if _is_cross_country_mismatch(origin_address, formatted_address):
-            pending_reason = PENDING_REASON_CROSS_COUNTRY
-            evidence_summary.append("Cross-country mismatch between source address and Google candidate")
-        elif (
-            source_lat is not None
-            and source_lng is not None
-            and google_lat is not None
-            and google_lng is not None
-        ):
-            distance = haversine_m(source_lat, source_lng, google_lat, google_lng)
-            google_address["distance"] = distance
-            if distance <= 20.0:
-                evidence_families.append(EVIDENCE_SOURCE_GEO)
-                evidence_summary.append(f"Source geo aligned within {distance:.1f}m")
-            else:
-                pending_reason = PENDING_REASON_INSUFFICIENT
-                evidence_summary.append(f"Source geo mismatch ({distance:.1f}m)")
-        else:
-            pending_reason = PENDING_REASON_INSUFFICIENT
-            evidence_summary.append("Source geo unavailable for independent confirmation")
-
-        return build_location_result(
-            origin_name=name,
-            origin_address=origin_address,
-            eval_value=True,
-            matched_provider="google",
-            matched_name=google_name,
-            naver_name=None,
-            google_name=google_name,
-            matched_address=google_address,
-            evidence_summary=evidence_summary,
-            evidence_families=evidence_families,
-            pending_reason=pending_reason,
-            second_pass=second_pass,
-            false_message=(
-                None
-                if pending_reason is None and _has_independent_evidence(evidence_families)
-                else f"Naver 실패 ({naver_fail_msg}), Google evidence insufficient"
-            ),
-            match_status="matched" if pending_reason is None else "pending",
-        )
-
+    Google Geocoding/Places API usage was intentionally removed. Address
+    recovery for Naver/NCP failures is now handled by the read-only browser
+    review queue under backend/bin/validate_google_maps_browser_candidates.mjs.
+    """
+    evidence_summary = [
+        f"Naver 실패: {naver_fail_msg}",
+        "Google API fallback disabled; route to Google Maps browser review queue",
+    ]
+    if source_lat is not None and source_lng is not None:
+        evidence_summary.append("Source coordinates preserved for browser-review comparison")
     return build_location_result(
         origin_name=name,
         origin_address=origin_address,
         eval_value=False,
         pending_reason=PENDING_REASON_INSUFFICIENT,
-        second_pass=second_pass,
-        false_message=f"Naver 실패 ({naver_fail_msg}), Google 검색 실패",
-        evidence_summary=[f"Naver 실패: {naver_fail_msg}", "Google search returned no usable candidate"],
+        second_pass=build_second_pass_state(
+            attempted=False,
+            provider="playwright",
+            timed_out=False,
+            rate_limited=False,
+            duration_ms=0,
+        ),
+        false_message=f"Naver 실패 ({naver_fail_msg}), Google API fallback disabled; browser review required",
+        evidence_summary=evidence_summary,
+        evidence_families=[EVIDENCE_BROWSER_VERIFICATION],
         match_status="pending",
     )
 
@@ -1069,7 +951,7 @@ def evaluate_one_restaurant(rec: Dict[str, Any]) -> Dict[str, Any]:
     # 검색 결과 합치기
     all_candidates = name_cands + name_addr_cands + name_region_cands
     if not all_candidates:
-        return evaluate_with_google_fallback(
+        return evaluate_with_browser_review_needed(
             name,
             origin_address,
             source_lat,
@@ -1122,7 +1004,7 @@ def evaluate_one_restaurant(rec: Dict[str, Any]) -> Dict[str, Any]:
     # 2단계: 거리 기반 매칭
     if not matched_result:
         if source_lat is None or source_lng is None:
-            return evaluate_with_google_fallback(
+            return evaluate_with_browser_review_needed(
                 name,
                 origin_address,
                 source_lat,
@@ -1174,7 +1056,7 @@ def evaluate_one_restaurant(rec: Dict[str, Any]) -> Dict[str, Any]:
                 )
                 if gemini_result.get("eval_value") is True:
                     return gemini_result
-            return evaluate_with_google_fallback(
+            return evaluate_with_browser_review_needed(
                 name,
                 origin_address,
                 source_lat,

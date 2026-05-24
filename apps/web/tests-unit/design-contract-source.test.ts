@@ -35,7 +35,9 @@ describe('repo design contract source', () => {
     const designSource = repoSource('DESIGN.md');
     const appGlobalsSource = appSource('app/app-globals.css');
     const adminConsoleSource = appSource('components/admin/AdminConsoleOverview.tsx');
+    const adminOverviewSource = appSource('components/admin/AdminOverviewDashboard.tsx');
     const headerSource = appSource('components/layout/Header.tsx');
+    const announcementPanelSource = appSource('components/announcement/AnnouncementPanel.tsx');
 
     expect(designSource).toContain('warm ivory');
     expect(designSource).toContain('red primary');
@@ -45,10 +47,11 @@ describe('repo design contract source', () => {
     expect(appGlobalsSource).toContain('--shadow-primary');
     expect(adminConsoleSource).toContain('rounded-2xl border border-border');
     expect(adminConsoleSource).toContain('shadow-primary');
-    expect(adminConsoleSource).toContain('공지사항');
+    expect(adminConsoleSource).not.toContain('공지사항');
+    expect(announcementPanelSource).toContain('쯔동여지도 공지');
     expect(adminConsoleSource).toContain('사용자 관리');
-    expect(adminConsoleSource).toContain('aria-label="관리자 지도 운영 개요 2분할"');
-    expect(adminConsoleSource).toContain('getNaverIndividualMarkerVisual');
+    expect(adminOverviewSource).toContain('aria-label="관리자 지도 운영 개요 2분할"');
+    expect(adminOverviewSource).toContain('getNaverIndividualMarkerVisual');
     expect(headerSource).toContain('font-serif');
     expect(headerSource).toContain('bg-red-800 hover:bg-red-900');
   });
