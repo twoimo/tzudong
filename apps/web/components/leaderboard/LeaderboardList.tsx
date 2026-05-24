@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Stamp, Trophy, Sparkles } from 'lucide-react';
+import { Heart, Stamp, Trophy, Sparkles } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -45,8 +45,8 @@ export function LeaderboardList({
                                 }
                                 className={cn(
                                 compactLeftPanel
-                                    ? "flex items-center gap-2 pl-2 pr-5 py-4 sm:gap-2.5 sm:pl-2 sm:pr-5 sm:py-4.5 md:pl-2 md:pr-5 lg:gap-2.5 lg:pl-2 lg:pr-5 lg:py-3 transition-colors hover:bg-muted/50 min-w-0"
-                                    : "flex items-center gap-2.5 sm:gap-4 md:gap-5 pl-2 pr-6 sm:px-6 py-4 sm:py-4.5 lg:gap-4 lg:px-6 lg:py-3 transition-colors hover:bg-muted/50 min-w-0",
+                                    ? "flex w-full max-w-full items-center gap-2 overflow-hidden pl-2 pr-5 py-4 sm:gap-2.5 sm:pl-2 sm:pr-5 sm:py-4.5 md:pl-2 md:pr-5 lg:gap-2.5 lg:pl-2 lg:pr-5 lg:py-3 transition-colors hover:bg-muted/50 min-w-0"
+                                    : "flex w-full max-w-full items-center gap-2 sm:gap-4 md:gap-5 overflow-hidden pl-2 pr-4 sm:px-6 py-4 sm:py-4.5 lg:gap-4 lg:px-6 lg:py-3 transition-colors hover:bg-muted/50 min-w-0",
                                 isCurrentUser && "bg-primary/5 border-l-4 border-l-primary"
                             )}
                         >
@@ -63,7 +63,7 @@ export function LeaderboardList({
                         {/* Username */}
                         <div
                             className={cn(
-                                "flex-1 min-w-0 max-w-[42vw] sm:max-w-xs",
+                                "flex-1 min-w-0",
                                 compactLeftPanel && "max-w-none sm:max-w-none"
                             )}
                         >
@@ -96,7 +96,7 @@ export function LeaderboardList({
                         {/* Stats */}
                         <div
                             className={cn(
-                                "flex items-center gap-2 sm:gap-3 md:gap-4 ml-auto min-w-0",
+                                "ml-auto flex shrink-0 items-center gap-1.5 sm:gap-3 md:gap-4",
                                 compactLeftPanel && "gap-1.5 sm:gap-2 md:gap-2"
                             )}
                         >
@@ -113,7 +113,10 @@ export function LeaderboardList({
                                 </span>
                             </div>
                             <div className="flex items-center gap-1 shrink-0">
-                                <span className="text-base lg:text-xs">❤️</span>
+                                <Heart
+                                    className="h-4 w-4 text-red-500 fill-red-500 sm:h-5 sm:w-5 lg:h-3.5 lg:w-3.5"
+                                    aria-hidden="true"
+                                />
                                 <span className="font-bold text-base sm:text-lg lg:text-sm text-red-600">
                                     {user.totalLikes}
                                 </span>
