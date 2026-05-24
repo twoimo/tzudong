@@ -13,6 +13,7 @@ import {
   shouldExpandDesktopLeftPanelForRoute,
 } from "@/lib/desktop-left-panel-entry";
 import {
+  DEFAULT_HOME_MAP_USER_PREFERENCES,
   HOME_MAP_USER_PREFERENCES_EVENT,
   readLastHomeMapUserPreferences,
   readHomeMapUserPreferences,
@@ -154,17 +155,14 @@ export default function HomeClient() {
   const [activeRightPanel, setActiveRightPanel] = useState<PanelType>(null);
   const [selectedAnnouncement, setSelectedAnnouncement] =
     useState<Announcement | null>(null);
-  const [initialHomeMapPreferences] = useState(() =>
-    readLastHomeMapUserPreferences(),
-  );
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(
-    () => initialHomeMapPreferences.desktopPanelDefault === "collapsed",
+    () => DEFAULT_HOME_MAP_USER_PREFERENCES.desktopPanelDefault === "collapsed",
   );
   const [desktopMapLayout, setDesktopMapLayout] = useState<HomeMapLayoutMode>(
-    initialHomeMapPreferences.desktopMapLayout,
+    DEFAULT_HOME_MAP_USER_PREFERENCES.desktopMapLayout,
   );
   const [desktopPanelSide, setDesktopPanelSide] = useState<HomeMapPanelSide>(
-    initialHomeMapPreferences.desktopPanelSide,
+    DEFAULT_HOME_MAP_USER_PREFERENCES.desktopPanelSide,
   );
   const [isAnnouncementSheetOpen, setIsAnnouncementSheetOpen] = useState(false);
   const [isMapFullscreen, setIsMapFullscreen] = useState(false);
@@ -181,6 +179,13 @@ export default function HomeClient() {
   const openDetailPanelRef = useRef<
     (restaurant: Restaurant, focusZoom?: number) => void
   >(() => {});
+
+  useEffect(() => {
+    const preferences = readLastHomeMapUserPreferences();
+    setIsPanelCollapsed(preferences.desktopPanelDefault === "collapsed");
+    setDesktopMapLayout(preferences.desktopMapLayout);
+    setDesktopPanelSide(preferences.desktopPanelSide);
+  }, []);
 
   // [Fix] 마운트 시점 기록 - 라우트 변경 후 돌아왔을 때 지도 강제 리마운트
   const [mapMountKey] = useState(() => Date.now());
@@ -685,6 +690,7 @@ export default function HomeClient() {
         clearRestaurantDetailSelection={clearRestaurantDetailSelection}
         isAdmin={isAdmin}
         isLoggedIn={!!user}
+        isAnnouncementSheetOpen={isAnnouncementSheetOpen}
         mapMode={mapMode}
         closeAllPanels={closeAllPanels}
         openDetailPanelRef={openDetailPanelRef}
