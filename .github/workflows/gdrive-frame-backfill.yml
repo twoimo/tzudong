@@ -88,11 +88,15 @@ jobs:
           rclone version | head -1
 
       - name: Setup rclone credentials
+        env:
+          GDRIVE_RCLONE_CONFIG: ${{ secrets.GDRIVE_RCLONE_CONFIG }}
         run: |
           set -euo pipefail
+          umask 077
           mkdir -p ~/.config/rclone
-          if [ -n "${{ secrets.GDRIVE_RCLONE_CONFIG }}" ]; then
-            echo "${{ secrets.GDRIVE_RCLONE_CONFIG }}" | base64 -d > ~/.config/rclone/rclone.conf
+          if [ -n "$GDRIVE_RCLONE_CONFIG" ]; then
+            printf '%s' "$GDRIVE_RCLONE_CONFIG" | base64 -d > ~/.config/rclone/rclone.conf
+            chmod 600 ~/.config/rclone/rclone.conf
           fi
           test -s ~/.config/rclone/rclone.conf
 
@@ -104,7 +108,13 @@ jobs:
       - name: Backfill staged frame shards
         run: |
           set -euo pipefail
-          STATUS_SCOPE_SAFE="$(printf '%s' "${STATUS_SCOPE:-main}" | tr '/ :' '---')"
+          STATUS_SCOPE_SAFE="${STATUS_SCOPE:-main}"
+          case "$STATUS_SCOPE_SAFE" in
+            ''|*..*|*[!A-Za-z0-9._-]*)
+              echo "::error::status_scope must match [A-Za-z0-9._-]+ and must not contain '..'."
+              exit 1
+              ;;
+          esac
           STATUS_REMOTE="${GDRIVE_STATUS_PATH%/}/$STATUS_SCOPE_SAFE"
           LOCK_REMOTE="$STATUS_REMOTE/backfill.lock.json"
           WORK_DIR="backend/log/cron/gdrive-backfill"
@@ -530,4 +540,5 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
           path: |
-            backend/log/cron/gdrive-backfill/**
+            backend/log/cron/gdrive-backfill/current-upload-status.json
+            backend/log/cron/gdrive-backfill/backfill.lock.json

@@ -718,7 +718,7 @@ describe("mobile and desktop parity source contracts", () => {
       "isInlinePanelViewActive ||",
     );
     expect(homeDesktopControlPanelSource).toContain("shouldShowDesktopMapHome");
-    expect(homeDesktopControlPanelSource).not.toContain(
+    expect(homeDesktopControlPanelSource).toContain(
       'activeLeftPanelView === "map" &&\n    !isPanelOpen &&\n    (isDesktopSearchActive',
     );
     expect(homeDesktopControlPanelSource).toContain(' ? "px-0 py-0"');
@@ -881,10 +881,22 @@ describe("mobile and desktop parity source contracts", () => {
       'data-desktop-map-edit-panel="true"',
     );
     expect(source("components/modals/EditRestaurantModal.tsx")).toContain(
+      'aria-modal="true"',
+    );
+    expect(source("components/modals/EditRestaurantModal.tsx")).toContain(
+      "handleDesktopEditDialogKeyDown",
+    );
+    expect(source("components/modals/EditRestaurantModal.tsx")).toContain(
       "mobileSheetStyles.frame",
     );
     expect(source("components/modals/EditRestaurantModal.tsx")).toContain(
       "data-desktop-map-edit-drag-handle",
+    );
+    expect(source("components/modals/EditRestaurantModal.tsx")).toContain(
+      "tabIndex={shouldRenderMapPanel ? 0 : undefined}",
+    );
+    expect(source("components/modals/EditRestaurantModal.tsx")).toContain(
+      'aria-label={shouldRenderMapPanel ? "맛집 수정 요청 창 이동 핸들" : undefined}',
     );
     const homeMapContainerSource = source(
       "components/home/home-map-container.tsx",

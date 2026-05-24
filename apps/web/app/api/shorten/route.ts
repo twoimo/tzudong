@@ -1,13 +1,61 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient as createSupabaseAdminClient } from '@supabase/supabase-js';
 import { randomInt } from 'node:crypto';
 
 // 환경변수에서 Supabase URL과 Service Role Key 가져오기
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const DEFAULT_SITE_ORIGIN = 'https://www.tzudong.app';
+const SHORTEN_RATE_LIMIT_WINDOW_MS = 60_000;
+const SHORTEN_RATE_LIMIT_MAX_REQUESTS = 20;
+const shortenRateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
+
+export const runtime = 'nodejs';
+
+function getRequesterKey(request: NextRequest) {
+    const forwardedFor = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
+    const realIp = request.headers.get('x-real-ip')?.trim();
+    return forwardedFor || realIp || 'unknown';
+}
+
+function isRateLimited(request: NextRequest) {
+    const now = Date.now();
+    const key = getRequesterKey(request);
+    const bucket = shortenRateLimitBuckets.get(key);
+
+    if (!bucket || bucket.resetAt <= now) {
+        shortenRateLimitBuckets.set(key, { count: 1, resetAt: now + SHORTEN_RATE_LIMIT_WINDOW_MS });
+        return false;
+    }
+
+    bucket.count += 1;
+    if (bucket.count > SHORTEN_RATE_LIMIT_MAX_REQUESTS) {
+        return true;
+    }
+
+    return false;
+}
 
 function getShortUrlOrigin(request: NextRequest) {
-    return process.env.NEXT_PUBLIC_SITE_URL || request.headers.get('origin') || request.nextUrl.origin;
+    const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+    if (configuredSiteUrl) {
+        try {
+            return new URL(configuredSiteUrl).origin;
+        } catch {
+            return DEFAULT_SITE_ORIGIN;
+        }
+    }
+
+    if (process.env.NODE_ENV !== 'production') {
+        const developmentOrigin = request.headers.get('origin') || request.nextUrl.origin;
+        try {
+            return new URL(developmentOrigin).origin;
+        } catch {
+            return DEFAULT_SITE_ORIGIN;
+        }
+    }
+
+    return DEFAULT_SITE_ORIGIN;
 }
 
 function getAllowedShortUrlTarget(targetUrl: string, request: NextRequest) {
@@ -46,6 +94,13 @@ function generateShortCode(): string {
 
 export async function POST(request: NextRequest) {
     try {
+        if (isRateLimited(request)) {
+            return NextResponse.json(
+                { error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
+                { status: 429 }
+            );
+        }
+
         const body = await request.json();
         const { targetUrl } = body;
 
@@ -71,7 +126,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+        const supabase = createSupabaseAdminClient(supabaseUrl, supabaseServiceKey);
 
         const { data: review, error: reviewError } = await supabase
             .from('reviews')

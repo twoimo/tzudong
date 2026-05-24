@@ -172,6 +172,13 @@ const clampDesktopAdminRestaurantPanelAxis = (value: number, min: number, max: n
     return Math.min(Math.max(value, min), max);
 };
 
+const getDesktopAdminRestaurantPanelFocusableElements = (container: HTMLElement | null) =>
+    Array.from(
+        container?.querySelectorAll<HTMLElement>(
+            'button:not([disabled]), [href], input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+    ).filter((element) => !element.hasAttribute('disabled') && element.getAttribute('aria-hidden') !== 'true');
+
 type AddressElement = Record<string, unknown>;
 type AddressElementsValue = AddressElement | AddressElement[] | null;
 
@@ -419,6 +426,48 @@ export function AdminRestaurantModal({
         event.preventDefault();
         moveDesktopAdminRestaurantPanelByKeyboard(move[0], move[1]);
     }, [moveDesktopAdminRestaurantPanelByKeyboard]);
+
+    const handleDesktopAdminRestaurantDialogKeyDown = useCallback((event: ReactKeyboardEvent<HTMLElement>) => {
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            onClose();
+            return;
+        }
+
+        if (event.key !== 'Tab') return;
+
+        const focusableElements = getDesktopAdminRestaurantPanelFocusableElements(desktopAdminRestaurantPanelRef.current);
+        if (focusableElements.length === 0) {
+            event.preventDefault();
+            desktopAdminRestaurantPanelRef.current?.focus({ preventScroll: true });
+            return;
+        }
+
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+        const activeElement = document.activeElement;
+
+        if (event.shiftKey && activeElement === firstElement) {
+            event.preventDefault();
+            lastElement.focus({ preventScroll: true });
+        } else if (!event.shiftKey && activeElement === lastElement) {
+            event.preventDefault();
+            firstElement.focus({ preventScroll: true });
+        }
+    }, [onClose]);
+
+    useEffect(() => {
+        if (!shouldRenderMapPanel || !isOpen) return;
+
+        const frame = window.requestAnimationFrame(() => {
+            const [firstFocusableElement] = getDesktopAdminRestaurantPanelFocusableElements(
+                desktopAdminRestaurantPanelRef.current,
+            );
+            (firstFocusableElement ?? desktopAdminRestaurantPanelRef.current)?.focus({ preventScroll: true });
+        });
+
+        return () => window.cancelAnimationFrame(frame);
+    }, [isOpen, shouldRenderMapPanel]);
 
     const resetForm = () => {
         setFormData({
@@ -903,6 +952,9 @@ export function AdminRestaurantModal({
             className={cn(mobileSheetStyles.header, shouldRenderMapPanel && "cursor-move select-none touch-none")}
             data-desktop-map-admin-restaurant-drag-handle={shouldRenderMapPanel ? "true" : undefined}
             title={shouldRenderMapPanel ? "빈 영역을 드래그하거나 화살표 키로 맛집 수정 창 이동" : undefined}
+            role={shouldRenderMapPanel ? "group" : undefined}
+            tabIndex={shouldRenderMapPanel ? 0 : undefined}
+            aria-label={shouldRenderMapPanel ? "맛집 수정 창 이동 핸들" : undefined}
             onKeyDown={shouldRenderMapPanel ? handleDesktopAdminRestaurantPanelKeyDown : undefined}
             onPointerDown={shouldRenderMapPanel ? handleDesktopAdminRestaurantPanelPointerDown : undefined}
             onPointerMove={shouldRenderMapPanel ? handleDesktopAdminRestaurantPanelPointerMove : undefined}
@@ -1457,9 +1509,10 @@ export function AdminRestaurantModal({
                     data-desktop-map-admin-restaurant-panel="true"
                     role="dialog"
                     tabIndex={-1}
+                    aria-modal="true"
                     aria-labelledby={adminRestaurantTitleId}
                     aria-describedby={adminRestaurantDescriptionId}
-                    onKeyDown={handleDesktopAdminRestaurantPanelKeyDown}
+                    onKeyDown={handleDesktopAdminRestaurantDialogKeyDown}
                 >
                     {adminRestaurantForm}
                 </section>
@@ -1488,4 +1541,3 @@ export function AdminRestaurantModal({
     );
 
 }
-

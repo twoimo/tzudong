@@ -21,6 +21,7 @@ type HomeClientEffectsProps = {
     closeAllPanels: () => void;
     isAdmin: boolean;
     isLoggedIn: boolean;
+    isAnnouncementSheetOpen: boolean;
     mapMode: 'domestic' | 'overseas';
     openDetailPanelRef: MutableRefObject<(restaurant: Restaurant, focusZoom?: number) => void>;
     openPanelRef: MutableRefObject<(panel: PanelType) => void>;
@@ -36,6 +37,7 @@ export default function HomeClientEffects({
     closeAllPanels,
     isAdmin,
     isLoggedIn,
+    isAnnouncementSheetOpen,
     mapMode,
     openDetailPanelRef,
     openPanelRef,
@@ -52,6 +54,7 @@ export default function HomeClientEffects({
     const pendingAnnouncementRequestRef = useRef<{ key: string; promise: Promise<Announcement | null> } | null>(null);
     const pendingRestaurantDeepLinkRequestRef = useRef<{ key: string; promise: Promise<HomeRestaurantDeepLinkResult | null> } | null>(null);
     const pendingCoordinateRequestRef = useRef<{ key: string; promise: Promise<Restaurant | null> } | null>(null);
+    const wasAnnouncementUrlActiveRef = useRef(searchParams.get('panel') === 'announcement');
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -62,10 +65,16 @@ export default function HomeClientEffects({
     }, []);
 
     useEffect(() => {
-        if (searchParams.get('panel') !== 'announcement' && activeRightPanel === 'announcement') {
+        const isAnnouncementUrlActive = searchParams.get('panel') === 'announcement';
+        if (
+            !isAnnouncementUrlActive &&
+            wasAnnouncementUrlActiveRef.current &&
+            (activeRightPanel === 'announcement' || isAnnouncementSheetOpen)
+        ) {
             closeAllPanels();
         }
-    }, [activeRightPanel, closeAllPanels, searchParams]);
+        wasAnnouncementUrlActiveRef.current = isAnnouncementUrlActive;
+    }, [activeRightPanel, closeAllPanels, isAnnouncementSheetOpen, searchParams]);
 
     useEffect(() => {
         const panelParam = searchParams.get('panel');
@@ -101,6 +110,7 @@ export default function HomeClientEffects({
                 lastAnnouncementRequestKeyRef.current = announcementKey;
 
                 if (announcementId) {
+                    setSelectedAnnouncement(null);
                     let request = pendingAnnouncementRequestRef.current;
                     if (request?.key !== announcementKey) {
                         const promise = import('./home-supabase-actions')
@@ -116,9 +126,9 @@ export default function HomeClientEffects({
                     }
 
                     void request.promise.then((announcement) => {
-                        if (isCancelled || lastAnnouncementRequestKeyRef.current !== announcementKey || !announcement) return;
+                        if (isCancelled || lastAnnouncementRequestKeyRef.current !== announcementKey) return;
 
-                        setSelectedAnnouncement(announcement);
+                        setSelectedAnnouncement(announcement ?? null);
                     });
                 } else {
                     setSelectedAnnouncement(null);
