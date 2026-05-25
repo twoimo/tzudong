@@ -8,6 +8,7 @@ import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, Trophy, Eye, EyeOff, L
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
     Table,
     TableBody,
@@ -31,7 +32,7 @@ import { useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-quer
 import { supabase } from "@/integrations/supabase/client";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { cn } from "@/lib/utils";
-import { StampGridSkeleton, StampPageSkeleton } from "@/components/ui/skeleton-loaders";
+import { StampGridSkeleton } from "@/components/ui/skeleton-loaders";
 import { buildRelatedVerifiedReviewCounts, useRestaurants, mergeRestaurants } from "@/hooks/use-restaurants";
 import { useMobileBottomNavAutoHide } from "@/hooks/use-mobile-bottom-nav-auto-hide";
 
@@ -840,7 +841,15 @@ export default function StampPage() {
 
 
     // [Check before render]
-    if (!isMounted || authLoading) return <StampPageSkeleton />;
+    const isStampDynamicLoading =
+        !isMounted ||
+        authLoading ||
+        (isRestaurantsLoading && !searchQuery) ||
+        shouldWaitForStampState;
+    const shouldShowStampFilterToggle = !isMounted || isMobileOrTablet;
+    const shouldShowStampViewToggle = isMounted && !isMobileOrTablet;
+    const shouldShowStampFilters = isMounted && (!isMobileOrTablet || isFilterExpanded);
+
     if (typeof window !== 'undefined' && window.innerWidth > BREAKPOINTS.tabletMax) return null;
 
     return (
@@ -865,9 +874,16 @@ export default function StampPage() {
                                             <Trophy className="h-5 w-5 shrink-0 text-primary sm:h-6 sm:w-6" aria-hidden="true" />
                                             <span className="min-w-0 truncate">쯔동여지도 도장</span>
                                         </h1>
-                                        <span className="shrink-0 text-xs font-normal tabular-nums text-muted-foreground xs:text-sm">
-                                            ({totalRestaurantCount.toLocaleString()}개)
-                                        </span>
+                                        {isRestaurantsLoading ? (
+                                            <Skeleton
+                                                className="h-4 w-12 shrink-0 rounded-full"
+                                                data-stamp-total-count-skeleton="true"
+                                            />
+                                        ) : (
+                                            <span className="shrink-0 text-xs font-normal tabular-nums text-muted-foreground xs:text-sm">
+                                                ({totalRestaurantCount.toLocaleString()}개)
+                                            </span>
+                                        )}
                                     </div>
                                     <p className="mt-1 max-w-full text-pretty text-xs leading-5 text-muted-foreground xs:text-sm">
                                         맛집을 찾아 도장을 찍어보세요!
@@ -890,7 +906,7 @@ export default function StampPage() {
                                         )}
                                     </Button>
                                     {/* Filter Toggle - 모바일/태블릿에서만 헤더에 표시 */}
-                                    {isMobileOrTablet && (
+                                    {shouldShowStampFilterToggle && (
                                         <Button
                                             variant="ghost"
                                             size="icon"
@@ -908,7 +924,7 @@ export default function StampPage() {
                                         </Button>
                                     )}
                                     {/* View Toggle - 데스크톱에서만 표시 */}
-                                    {!isMobileOrTablet && (
+                                    {shouldShowStampViewToggle && (
                                         <Button
                                             variant="ghost"
                                             size="icon"
@@ -929,7 +945,7 @@ export default function StampPage() {
                             {/* 필터 컨트롤 그리드 - 데스크톱에서는 항상 표시, 모바일/태블릿에서는 확장시에만 표시 */}
                             <div className={cn(
                                 "mt-4 grid grid-cols-1 gap-2 overflow-hidden md:grid-cols-2 xl:grid-cols-6",
-                                isMobileOrTablet && !isFilterExpanded && "hidden"
+                                !shouldShowStampFilters && "hidden"
                             )}>
                                 {/* 검색 */}
                                 <div className="md:col-span-2">
@@ -1080,11 +1096,12 @@ export default function StampPage() {
                             </div>
                         </div>
 
-                        <div className="flex-1 min-h-0 px-4 sm:px-6 pt-6 pb-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1.5rem)] md:pb-6 bg-background">
-                            {(isRestaurantsLoading && !searchQuery) ? (
+                        <div
+                            className="flex-1 min-h-0 px-4 sm:px-6 pt-6 pb-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1.5rem)] md:pb-6 bg-background"
+                            data-stamp-loading-behavior="static-shell-dynamic-skeleton"
+                        >
+                            {isStampDynamicLoading ? (
                                 <StampGridSkeleton count={16} showHeader={false} />
-                            ) : shouldWaitForStampState ? (
-                                <StampGridSkeleton count={15} showHeader={false} />
                             ) : viewMode === 'grid' ? (
                                 /* 그리드 뷰 (Grid View) */
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 md:gap-4">
