@@ -167,7 +167,7 @@ describe('admin user-management source contract', () => {
     expect(routeSource).toContain('await requireAdmin()');
     expect(routeSource.indexOf('await requireAdmin()')).toBeLessThan(routeSource.indexOf('createSupabaseServiceRoleClient()'));
     expect(routeSource).toContain(".upsert(");
-    expect(routeSource).toContain("onConflict: 'user_id,preference_key'");
+    expect(routeSource).toContain('onConflict: \"user_id,preference_key\"');
 
     expect(migrationSource).toContain('CREATE TABLE IF NOT EXISTS public.admin_user_preferences');
     expect(migrationSource).toContain('REFERENCES auth.users(id) ON DELETE CASCADE');

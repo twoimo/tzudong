@@ -47,7 +47,7 @@ describe("mobile and desktop parity source contracts", () => {
       "flex gap-2 overflow-x-auto overscroll-x-contain",
     );
     expect(source("app/app-globals.css")).toContain(
-      "grid-template-columns: 16rem minmax(0, 1fr);",
+      "grid-template-columns: fit-content(24rem) minmax(0, 1fr);",
     );
     expect(source("app/app-globals.css")).toContain(
       "grid-template-columns: 4.5rem minmax(0, 1fr);",
@@ -60,7 +60,10 @@ describe("mobile and desktop parity source contracts", () => {
     expect(consoleSource).toContain(
       'data-admin-left-panel-expanded={isCollapsed ? "false" : "true"}',
     );
-    expect(consoleSource).toContain("setIsSidebarCollapsed(false);");
+    expect(consoleSource).toContain("ADMIN_SIDEBAR_COLLAPSED_STORAGE_KEY");
+    expect(consoleSource).toContain(
+      "setIsSidebarCollapsed(isStoredSidebarCollapsed);",
+    );
     expect(consoleSource).toContain("관리자 사이드바 펼치기");
     expect(consoleSource).toContain("관리자 사이드바 접기");
     expect(consoleSource).toContain('aria-controls="admin-console-canvas"');
@@ -580,7 +583,10 @@ describe("mobile and desktop parity source contracts", () => {
       "DESKTOP_FLOATING_NAV_ROW_STARTS",
     );
     expect(homeDesktopControlPanelSource).toContain(
-      'data-desktop-map-floating-nav-row={rowStart === 0 ? "account" : "content"}',
+      "data-desktop-map-floating-nav-row={",
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      'rowStart === 0 ? "account" : "content"',
     );
     expect(homeDesktopControlPanelSource).toContain(
       "DESKTOP_FLOATING_NAV_BUTTON_WIDTH",
@@ -590,6 +596,55 @@ describe("mobile and desktop parity source contracts", () => {
     );
     expect(homeDesktopControlPanelSource).toContain(
       "pointer-events-auto h-9 w-[var(--desktop-floating-nav-button-width)] shrink-0 justify-center rounded-full",
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      "const revealDesktopLeftPanel = useCallback",
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      "onSetPanelCollapsed?.(false);",
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      `revealDesktopLeftPanel();
+      setActiveLeftPanelView(panel);`,
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      `revealDesktopLeftPanel();
+    setActiveProfileUserId(user.id);`,
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      `revealDesktopLeftPanel();
+    setActiveLeftPanelView("bookmarks");`,
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      `revealDesktopLeftPanel();
+    setActiveLeftPanelView("notifications");`,
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      "DESKTOP_LEFT_PANEL_AUTH_TOASTS",
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      'profile: "로그인 후 프로필을 확인할 수 있어요"',
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      'bookmarks: "로그인 후 북마크를 확인할 수 있어요"',
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      'notifications: "로그인 후 알림을 확인할 수 있어요"',
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      'settings: "로그인 후 지도 환경설정을 사용할 수 있어요"',
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      'review: "로그인 후 리뷰를 작성할 수 있어요"',
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      'showDesktopLeftPanelAuthToast("profile");',
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      'showDesktopLeftPanelAuthToast("bookmarks");',
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      'showDesktopLeftPanelAuthToast("notifications");',
     );
     expect(
       homeDesktopControlPanelSource.indexOf(
@@ -675,14 +730,16 @@ describe("mobile and desktop parity source contracts", () => {
     expect(myPageProfileSource).toContain(
       'data-mypage-desktop-tier-dashboard="true"',
     );
-    expect(myPageProfileSource).toContain(
-      "data-mypage-desktop-tier-progress",
-    );
+    expect(myPageProfileSource).toContain("data-mypage-desktop-tier-progress");
     expect(myPageProfileSource).toContain(
       'data-mypage-desktop-tier-metrics="true"',
     );
-    expect(myPageProfileSource).toContain('data-mypage-desktop-recent-activity="true"');
-    expect(myPageProfileSource).toContain('data-mypage-desktop-recent-activity-row="true"');
+    expect(myPageProfileSource).toContain(
+      'data-mypage-desktop-recent-activity="true"',
+    );
+    expect(myPageProfileSource).toContain(
+      'data-mypage-desktop-recent-activity-row="true"',
+    );
     expect(myPageProfileSource).toContain("최근 활동");
     expect(myPageProfileSource).not.toContain("바로 할 수 있는 일");
     expect(myPageProfileSource).not.toContain(
@@ -821,10 +878,28 @@ describe("mobile and desktop parity source contracts", () => {
       "onDeviceLocationClick={handleDeviceLocationClick}",
     );
     expect(source("app/home-client.tsx")).toContain(
-      'const DEVICE_LOCATION_ENABLE_TOAST = "위치 기능을 켜주세요";',
+      'const DEVICE_LOCATION_ENABLE_TOAST = "위치 서비스(GPS) 기능을 켜주세요.";',
     );
     expect(source("app/home-client.tsx")).toContain(
       "toast.error(DEVICE_LOCATION_ENABLE_TOAST);",
+    );
+    expect(source("app/home-client.tsx")).toContain(
+      'toast.info("로그인 후 프로필을 확인할 수 있어요");',
+    );
+    expect(source("app/home-client-effects.tsx")).toContain(
+      "toast.error('맛집 정보를 불러오지 못했어요');",
+    );
+    expect(source("app/home-client-effects.tsx")).toContain(
+      "toast.error('공지사항을 불러오지 못했어요');",
+    );
+    expect(source("app/home-client-effects.tsx")).toContain(
+      "openPanelRef.current('announcement');",
+    );
+    expect(source("app/home-client-effects.tsx")).not.toContain(
+      "togglePanelCollapse();",
+    );
+    expect(source("components/home/MobileControlOverlay.tsx")).toContain(
+      "toast.error('로그인 후 알림을 확인할 수 있어요');",
     );
     expect(source("app/home-client.tsx")).not.toContain(
       "현재 위치를 가져오지 못했어요. 잠시 후 다시 시도해주세요",
