@@ -69,7 +69,12 @@ function normalizeDirectionsPoint(
     return null;
   }
 
-  if (point.lat < -90 || point.lat > 90 || point.lng < -180 || point.lng > 180) {
+  if (
+    point.lat < -90 ||
+    point.lat > 90 ||
+    point.lng < -180 ||
+    point.lng > 180
+  ) {
     return null;
   }
 

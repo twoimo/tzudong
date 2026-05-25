@@ -22,6 +22,14 @@ import {
   type ClusterProperties,
 } from "@/lib/clustering";
 import { cn } from "@/lib/utils";
+import {
+  ADMIN_ROUTE_MODE_OPTIONS,
+  assessAdminRouteReadiness,
+  buildAdminRoutePlan,
+  hasAdminRouteCoordinates,
+  type AdminRouteMode,
+  type AdminRoutePlan,
+} from "@/lib/admin-route-planner";
 import type {
   DashboardRestaurantItem,
   DashboardRestaurantsResponse,
@@ -111,7 +119,9 @@ type AdminNaverMapsApi = {
   LatLng: new (lat: number, lng: number) => unknown;
   Point: new (x: number, y: number) => unknown;
   Marker: new (options: Record<string, unknown>) => AdminNaverMarkerInstance;
-  Polyline?: new (options: Record<string, unknown>) => AdminNaverOverlayInstance;
+  Polyline?: new (
+    options: Record<string, unknown>,
+  ) => AdminNaverOverlayInstance;
   Event: {
     addListener: (
       target: unknown,
@@ -220,12 +230,7 @@ function toAdminMapRestaurant(
 function hasAdminMapCoordinates(
   restaurant: AdminMapRestaurant,
 ): restaurant is AdminMapRestaurant & { lat: number; lng: number } {
-  return (
-    typeof restaurant.lat === "number" &&
-    Number.isFinite(restaurant.lat) &&
-    typeof restaurant.lng === "number" &&
-    Number.isFinite(restaurant.lng)
-  );
+  return hasAdminRouteCoordinates(restaurant);
 }
 
 function getAdminMapCenter(
@@ -303,54 +308,6 @@ function adminRestaurantsToClusterFeatures(
       coordinates: [restaurant.lng, restaurant.lat],
     },
   }));
-}
-
-function calculateDistanceKm(a: AdminMapRestaurant, b: AdminMapRestaurant) {
-  if (!hasAdminMapCoordinates(a) || !hasAdminMapCoordinates(b)) return null;
-
-  const toRadians = (value: number) => (value * Math.PI) / 180;
-  const earthRadiusKm = 6371;
-  const dLat = toRadians(b.lat - a.lat);
-  const dLng = toRadians(b.lng - a.lng);
-  const lat1 = toRadians(a.lat);
-  const lat2 = toRadians(b.lat);
-  const h =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
-
-  return 2 * earthRadiusKm * Math.asin(Math.sqrt(h));
-}
-
-function buildRouteCandidates(
-  selectedRestaurant: AdminMapRestaurant | null,
-  restaurants: AdminMapRestaurant[],
-) {
-  if (!selectedRestaurant) return restaurants.slice(0, 4);
-
-  return restaurants
-    .filter((restaurant) => restaurant.id !== selectedRestaurant.id)
-    .map((restaurant) => ({
-      restaurant,
-      distanceKm: calculateDistanceKm(selectedRestaurant, restaurant),
-      sameCategory: Boolean(
-        selectedRestaurant.category &&
-        restaurant.category === selectedRestaurant.category,
-      ),
-      sameVideo: Boolean(
-        selectedRestaurant.videoId &&
-        restaurant.videoId === selectedRestaurant.videoId,
-      ),
-    }))
-    .sort((a, b) => {
-      if (a.sameVideo !== b.sameVideo) return a.sameVideo ? -1 : 1;
-      if (a.sameCategory !== b.sameCategory) return a.sameCategory ? -1 : 1;
-      return (
-        (a.distanceKm ?? Number.POSITIVE_INFINITY) -
-        (b.distanceKm ?? Number.POSITIVE_INFINITY)
-      );
-    })
-    .slice(0, 4)
-    .map((item) => item.restaurant);
 }
 
 function getAdminYoutubeThumbnailUrl(
@@ -709,7 +666,9 @@ function AdminNaverMapSurface({
 
     if (routePathRestaurants.length < 2 || visualRoutePath.length < 2) return;
 
-    const path = visualRoutePath.map((point) => new maps.LatLng(point.lat, point.lng));
+    const path = visualRoutePath.map(
+      (point) => new maps.LatLng(point.lat, point.lng),
+    );
 
     if (maps.Polyline) {
       routeOverlayRefs.current.push(
@@ -918,18 +877,22 @@ function AdminMapInfoPanelSkeleton() {
 
 function AdminMapInfoPanel({
   selectedRestaurant,
-  routeCandidates,
+  routePlan,
+  routeMode,
   directionsRoute,
   directionsStatus,
   isLoading,
   hasError,
+  onRouteModeChange,
 }: {
   selectedRestaurant: AdminMapRestaurant | null;
-  routeCandidates: AdminMapRestaurant[];
+  routePlan: AdminRoutePlan;
+  routeMode: AdminRouteMode;
   directionsRoute: AdminDirectionsRoute | null;
   directionsStatus: AdminDirectionsStatus;
   isLoading: boolean;
   hasError: boolean;
+  onRouteModeChange: (mode: AdminRouteMode) => void;
 }) {
   const selectedVideoId = selectedRestaurant?.videoId ?? null;
   const selectedThumbnailUrl = getAdminYoutubeThumbnailUrl(selectedVideoId);
@@ -945,15 +908,30 @@ function AdminMapInfoPanel({
   const routeDurationText = formatRouteDuration(
     directionsRoute?.summary?.duration,
   );
-  const routeSummaryText = [routeDistanceText, routeDurationText]
-    .filter(Boolean)
-    .join(" · ");
+  const routeStops = routePlan.stops;
+  const routeAhpAssessment = assessAdminRouteReadiness({
+    mode: routeMode,
+    hasRoadRoute: directionsStatus === "ready",
+    routePlan,
+  });
+  const routeModeOption = ADMIN_ROUTE_MODE_OPTIONS.find(
+    (option) => option.id === routeMode,
+  );
   const routeStatusLabel =
     directionsStatus === "ready"
       ? "실제 도로 경로"
       : directionsStatus === "loading"
         ? "경로 계산 중"
-        : "거리 기반 후보";
+        : routeMode === "driving"
+          ? "거리 기반 후보"
+          : "촬영 초안";
+  const routeSummaryText =
+    directionsStatus === "ready" &&
+    [routeDistanceText, routeDurationText].filter(Boolean).length > 0
+      ? [routeDistanceText, routeDurationText].filter(Boolean).join(" · ")
+      : routeStops.length >= 2
+        ? `${routePlan.summary.totalDistanceKm.toFixed(1)}km · 약 ${adminNumberFormatter.format(routePlan.summary.estimatedMinutes)}분 · ${routeStops.length}곳`
+        : "";
 
   if (isLoading && !selectedRestaurant) {
     return <AdminMapInfoPanelSkeleton />;
@@ -1059,7 +1037,7 @@ function AdminMapInfoPanel({
               </h2>
               <p className="mt-2 text-xs leading-5 text-muted-foreground sm:text-sm">
                 왼쪽 지도에서 마커를 누르면 맛집 상세, 영상 연결, 좌표 상태,
-                동선 후보를 여기서 확인합니다.
+                촬영 동선 후보를 여기서 확인합니다.
               </p>
             </div>
             <Badge
@@ -1103,16 +1081,78 @@ function AdminMapInfoPanel({
           )}
         </div>
 
+        <div
+          className="mt-2 grid grid-cols-3 gap-1 rounded-xl border border-border bg-background/70 p-1"
+          data-admin-route-mode-controls="driving-walking-mixed"
+          aria-label="동선 이동수단 선택"
+        >
+          {ADMIN_ROUTE_MODE_OPTIONS.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              className={cn(
+                "rounded-lg px-2 py-1.5 text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                routeMode === option.id
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+              )}
+              aria-pressed={routeMode === option.id}
+              onClick={() => onRouteModeChange(option.id)}
+            >
+              {option.shortLabel}
+            </button>
+          ))}
+        </div>
+
         {routeSummaryText && (
           <p className="mt-2 text-xs font-semibold text-primary">
             {routeSummaryText}
           </p>
         )}
 
+        <div
+          className="mt-2 rounded-xl border border-primary/15 bg-primary/5 p-2"
+          data-admin-route-readiness-panel="local-heuristic"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[11px] font-bold tracking-[0.12em] text-primary">
+              동선 준비도
+            </p>
+            <Badge
+              variant="outline"
+              className={cn(
+                "rounded-full",
+                routeAhpAssessment.score >= 98
+                  ? "border-emerald-700/25 text-emerald-800"
+                  : "border-amber-700/25 text-amber-800",
+              )}
+            >
+              {routeAhpAssessment.score.toFixed(1)}점 후보
+            </Badge>
+          </div>
+          <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
+            로컬 후보 품질, 도로 경로 확보, 좌표 데이터 충분성 기준의
+            준비도입니다.
+            {routeModeOption
+              ? ` 현재 모드: ${routeModeOption.description}`
+              : null}
+          </p>
+          {routeAhpAssessment.blockers.length > 0 && (
+            <ul className="mt-1.5 space-y-0.5 text-[11px] leading-4 text-muted-foreground">
+              {routeAhpAssessment.blockers.map((blocker) => (
+                <li key={blocker}>• {blocker}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+
         <div>
-          {routeCandidates.length > 0 ? (
-            <ol className="mt-2 space-y-1.5">
-              {routeCandidates.map((restaurant, index) => (
+          {routeStops.length > 1 ? (
+            <ol
+              className="mt-2 space-y-1.5"
+              data-admin-route-stop-list="ordered-shooting-plan"
+            >
+              {routeStops.map((restaurant, index) => (
                 <li
                   key={restaurant.id}
                   className="rounded-xl border border-border bg-background/70 p-2.5"
@@ -1129,6 +1169,17 @@ function AdminMapInfoPanel({
                         {restaurant.address ?? "주소 미입력"} ·{" "}
                         {restaurant.category ?? "카테고리 확인"}
                       </p>
+                      {index > 0 && routePlan.legs[index - 1] && (
+                        <p className="mt-1 text-[11px] font-semibold text-primary">
+                          이전 지점에서{" "}
+                          {routePlan.legs[index - 1].distanceKm.toFixed(1)}km ·
+                          약{" "}
+                          {adminNumberFormatter.format(
+                            routePlan.legs[index - 1].estimatedMinutes,
+                          )}
+                          분
+                        </p>
+                      )}
                     </div>
                   </div>
                 </li>
@@ -1143,7 +1194,9 @@ function AdminMapInfoPanel({
           <p className="mt-2 text-[11px] leading-4 text-muted-foreground">
             {directionsStatus === "ready"
               ? "네이버 Directions 5 기준 실제 도로 주행 경로를 지도에 표시합니다."
-              : "도로 경로 계산 전이나 실패 시에는 같은 영상·카테고리·직선거리 기반 후보를 먼저 표시합니다."}
+              : routeMode === "driving"
+                ? "도로 경로 계산 전이나 실패 시에는 같은 영상·카테고리·직선거리 기반 후보를 먼저 표시합니다."
+                : "네이버 Directions 5는 자동차만 지원하므로 도보·혼합은 근거리 촬영 초안으로 표시합니다."}
           </p>
         </div>
       </section>
@@ -1168,6 +1221,7 @@ export function AdminOverviewDashboard({
     useState<AdminDirectionsRoute | null>(null);
   const [directionsStatus, setDirectionsStatus] =
     useState<AdminDirectionsStatus>("idle");
+  const [routeMode, setRouteMode] = useState<AdminRouteMode>("driving");
   const mapRestaurantsQuery = useQuery({
     queryKey: ["admin-overview", "map-restaurants"],
     queryFn: fetchAdminMapRestaurants,
@@ -1182,37 +1236,49 @@ export function AdminOverviewDashboard({
         .filter(hasAdminMapCoordinates),
     [mapRestaurantsQuery.data?.items],
   );
-  const restaurants = realRestaurants;
   const selectedRestaurant =
-    restaurants.find((restaurant) => restaurant.id === selectedRestaurantId) ??
-    restaurants[0] ??
+    realRestaurants.find(
+      (restaurant) => restaurant.id === selectedRestaurantId,
+    ) ??
+    realRestaurants[0] ??
     null;
-  const routeCandidates = useMemo(
-    () => buildRouteCandidates(selectedRestaurant, restaurants),
-    [restaurants, selectedRestaurant],
+  const routePlan = useMemo(
+    () =>
+      buildAdminRoutePlan({
+        selectedRestaurant,
+        restaurants: realRestaurants,
+        mode: routeMode,
+        maxStops: ADMIN_DIRECTIONS_MAX_POINTS,
+      }),
+    [realRestaurants, routeMode, selectedRestaurant],
   );
+  const restaurantById = useMemo(
+    () =>
+      new Map<string, AdminMapRestaurant & { lat: number; lng: number }>(
+        realRestaurants.map((restaurant) => [restaurant.id, restaurant]),
+      ),
+    [realRestaurants],
+  );
+  const routeStops = useMemo<
+    Array<AdminMapRestaurant & { lat: number; lng: number }>
+  >(
+    () =>
+      routePlan.stops.flatMap((restaurant) => {
+        const matchedRestaurant = restaurantById.get(restaurant.id);
+        return matchedRestaurant ? [matchedRestaurant] : [];
+      }),
+    [restaurantById, routePlan.stops],
+  );
+  const routeCandidates = routeStops.slice(1);
   const routeRequestPoints = useMemo<AdminDirectionsPoint[]>(() => {
     if (!selectedRestaurant || !hasAdminMapCoordinates(selectedRestaurant)) {
       return [];
     }
 
-    const seen = new Set([selectedRestaurant.id]);
-    const candidates = routeCandidates.filter(
-      (
-        restaurant,
-      ): restaurant is AdminMapRestaurant & { lat: number; lng: number } => {
-        if (!hasAdminMapCoordinates(restaurant) || seen.has(restaurant.id)) {
-          return false;
-        }
-        seen.add(restaurant.id);
-        return true;
-      },
-    );
-
-    return [selectedRestaurant, ...candidates]
+    return routeStops
       .slice(0, ADMIN_DIRECTIONS_MAX_POINTS)
       .map(({ lat, lng }) => ({ lat, lng }));
-  }, [routeCandidates, selectedRestaurant]);
+  }, [routeStops, selectedRestaurant]);
   const routeRequestKey = useMemo(
     () =>
       routeRequestPoints
@@ -1224,7 +1290,7 @@ export function AdminOverviewDashboard({
   const hasMapError = hasError || mapRestaurantsQuery.isError;
 
   useEffect(() => {
-    if (routeRequestPoints.length < 2) {
+    if (routeMode !== "driving" || routeRequestPoints.length < 2) {
       setDirectionsRoute(null);
       setDirectionsStatus("idle");
       return;
@@ -1241,13 +1307,16 @@ export function AdminOverviewDashboard({
       })
       .catch((error) => {
         if (controller.signal.aborted) return;
-        console.warn("[Admin Directions] Falling back to route candidates", error);
+        console.warn(
+          "[Admin Directions] Falling back to route candidates",
+          error,
+        );
         setDirectionsRoute(null);
         setDirectionsStatus("fallback");
       });
 
     return () => controller.abort();
-  }, [routeRequestKey, routeRequestPoints]);
+  }, [routeMode, routeRequestKey, routeRequestPoints]);
 
   return (
     <div
@@ -1257,7 +1326,7 @@ export function AdminOverviewDashboard({
     >
       <div className="min-h-[390px] min-w-0 lg:min-h-0">
         <AdminMapOverviewCanvas
-          restaurants={restaurants}
+          restaurants={realRestaurants}
           selectedRestaurant={selectedRestaurant}
           routeCandidates={routeCandidates}
           directionsRoute={directionsRoute}
@@ -1272,11 +1341,13 @@ export function AdminOverviewDashboard({
       <div className="min-h-[420px] min-w-0 lg:min-h-0">
         <AdminMapInfoPanel
           selectedRestaurant={selectedRestaurant}
-          routeCandidates={routeCandidates}
+          routePlan={routePlan}
+          routeMode={routeMode}
           directionsRoute={directionsRoute}
           directionsStatus={directionsStatus}
           isLoading={isMapLoading}
           hasError={hasMapError}
+          onRouteModeChange={setRouteMode}
         />
       </div>
     </div>
