@@ -15,7 +15,7 @@ type HistoryCacheEntry = {
     value: MetricHistoryPoint[];
 };
 
-export type InsightTreemapPeriod = '1D' | '1W' | '2W' | '1M' | '3M' | '6M' | '1Y' | 'ALL';
+export type InsightTreemapPeriod = '30MIN' | '1H' | '6H' | '12H' | '1D' | '1W' | '2W' | '1M' | '3M' | '6M' | '1Y' | 'ALL';
 
 export type InsightTreemapVideoRow = {
     id: string;
@@ -67,7 +67,7 @@ type TreemapRequestOptions = {
 
 type TreemapMetric = 'views' | 'likes' | 'comments' | 'duration';
 
-const CHANGE_PERIOD_OPTIONS: Exclude<InsightTreemapPeriod, 'ALL'>[] = ['1D', '1W', '2W', '1M', '3M', '6M', '1Y'];
+const CHANGE_PERIOD_OPTIONS: Exclude<InsightTreemapPeriod, 'ALL'>[] = ['30MIN', '1H', '6H', '12H', '1D', '1W', '2W', '1M', '3M', '6M', '1Y'];
 
 const VIDEO_CATEGORY_BY_CODE: Record<string, string> = {
     '1': '영화/애니메이션',
@@ -121,15 +121,22 @@ const VIDEO_CATEGORY_BY_NAME: Record<string, string> = {
     'nonprofits & activism': '비영리/사회',
 };
 
-const periodToDays: Record<InsightTreemapPeriod, number | null> = {
-    ALL: null,
-    '1D': 1,
-    '1W': 7,
-    '2W': 14,
-    '1M': 30,
-    '3M': 91,
-    '6M': 182,
-    '1Y': 365,
+const MINUTE_MS = 60 * 1000;
+const HOUR_MS = 60 * MINUTE_MS;
+const DAY_MS = 24 * HOUR_MS;
+
+const periodToMilliseconds: Record<Exclude<InsightTreemapPeriod, 'ALL'>, number> = {
+    '30MIN': 30 * MINUTE_MS,
+    '1H': HOUR_MS,
+    '6H': 6 * HOUR_MS,
+    '12H': 12 * HOUR_MS,
+    '1D': DAY_MS,
+    '1W': 7 * DAY_MS,
+    '2W': 14 * DAY_MS,
+    '1M': 30 * DAY_MS,
+    '3M': 91 * DAY_MS,
+    '6M': 182 * DAY_MS,
+    '1Y': 365 * DAY_MS,
 };
 
 type PeriodCoverage = {
@@ -326,11 +333,11 @@ function getPreviousMetricFromHistory(
     metric: TreemapMetric,
     period: InsightTreemapPeriod,
 ): number | null {
-    const days = periodToDays[period];
-    if (!days) return null;
+    const durationMs = getPeriodDurationMs(period);
+    if (!durationMs) return null;
     if (history.length === 0) return null;
 
-    const targetTs = Date.now() - days * 24 * 60 * 60 * 1000;
+    const targetTs = Date.now() - durationMs;
     for (let index = history.length - 1; index >= 0; index -= 1) {
         const point = history[index];
         if (point.collectedAt > targetTs) {
@@ -365,7 +372,7 @@ function getAvailablePeriods(
     const totals = rowsWithHistory.length;
     const now = Date.now();
     const targets = CHANGE_PERIOD_OPTIONS.map(
-        (period) => now - periodToDays[period]! * 24 * 60 * 60 * 1000,
+        (period) => now - periodToMilliseconds[period],
     );
     const counts = new Array<number>(CHANGE_PERIOD_OPTIONS.length).fill(0);
 
@@ -465,7 +472,11 @@ function normalizeCategory(value: string | null): string {
 
 export function parseTreemapPeriod(value: string | null): InsightTreemapPeriod {
     const normalized = value?.trim().toUpperCase() ?? '';
-    if (normalized === '1D') return '1D';
+    if (normalized === '30MIN' || normalized === '30M' || normalized === '30분') return '30MIN';
+    if (normalized === '1H' || normalized === '1시간') return '1H';
+    if (normalized === '6H' || normalized === '6시간') return '6H';
+    if (normalized === '12H' || normalized === '12시간') return '12H';
+    if (normalized === '1D' || normalized === '1일') return '1D';
     if (normalized === '1W') return '1W';
     if (normalized === '2W') return '2W';
     if (/^(?:[4-9]|[1-9]\d+)W$/.test(normalized)) return '1M';
@@ -476,14 +487,16 @@ export function parseTreemapPeriod(value: string | null): InsightTreemapPeriod {
     return 'ALL';
 }
 
-function getPeriodCutoff(period: InsightTreemapPeriod): Date | null {
-    const days = periodToDays[period];
-    if (!days) return null;
+function getPeriodDurationMs(period: InsightTreemapPeriod): number | null {
+    if (period === 'ALL') return null;
+    return periodToMilliseconds[period] ?? null;
+}
 
-    const date = new Date();
-    date.setDate(date.getDate() - days);
-    date.setHours(0, 0, 0, 0);
-    return date;
+function getPeriodCutoff(period: InsightTreemapPeriod): Date | null {
+    const durationMs = getPeriodDurationMs(period);
+    if (!durationMs) return null;
+
+    return new Date(Date.now() - durationMs);
 }
 
 async function fetchVideosFromSupabase(period: InsightTreemapPeriod = 'ALL'): Promise<VideoDbRow[]> {
