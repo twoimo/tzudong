@@ -55,61 +55,22 @@ const fetchYouTubeMeta = async (youtubeLink: string) => {
     }
 
     try {
-        // YouTube Data API v3 호출
-        const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY || process.env.NEXT_PUBLIC_YOUTUBE_API_KEY_BYEON;
-        if (!apiKey) {
-            console.error('YouTube API key not found');
-            return null;
-        }
-
-        const response = await fetch(
-            `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${videoId}&key=${apiKey}`
-        );
+        const response = await fetch('/api/youtube-meta', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+            },
+            body: JSON.stringify({ youtube_link: youtubeLink }),
+        });
 
         if (!response.ok) {
-            throw new Error('YouTube API request failed');
+            throw new Error('YouTube metadata request failed');
         }
 
-        const data = await response.json();
-
-        if (!data.items || data.items.length === 0) {
-            console.error('Video not found:', videoId);
-            return null;
-        }
-
-        const video = data.items[0];
-        const snippet = video.snippet;
-        const contentDetails = video.contentDetails;
-
-        // ISO 8601 duration을 초로 변환
-        const parseDuration = (duration: string): number => {
-            const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
-            if (!match) return 0;
-
-            const hours = parseInt(match[1] || '0');
-            const minutes = parseInt(match[2] || '0');
-            const seconds = parseInt(match[3] || '0');
-
-            return hours * 3600 + minutes * 60 + seconds;
-        };
-
-        const durationSeconds = parseDuration(contentDetails.duration);
-        const description = snippet.description || '';
-        const adKeywords = ['유료', '광고', '지원', '협찬'];
-        const isAds = adKeywords.some(keyword => description.toLowerCase().includes(keyword));
-
-        return {
-            title: snippet.title,
-            publishedAt: snippet.publishedAt,
-            is_shorts: durationSeconds <= 180,
-            duration: durationSeconds,
-            ads_info: {
-                is_ads: isAds,
-                what_ads: isAds ? '수동 확인 필요' : null  // 간단히 처리 (OpenAI 없이)
-            }
-        };
+        return response.json();
     } catch (error) {
-        console.error('Error fetching YouTube metadata:', error);
+        console.error('Error fetching YouTube metadata:', error, videoId);
         return null;
     }
 };

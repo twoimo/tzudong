@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/require-admin";
+import { getLatestYouTubeChannelSnapshot } from "@/lib/admin/youtube-kpi-snapshots";
 
 export const runtime = "nodejs";
 
-const YOUTUBE_CHANNELS_ENDPOINT = "https://www.googleapis.com/youtube/v3/channels";
+const YOUTUBE_CHANNELS_ENDPOINT =
+  "https://www.googleapis.com/youtube/v3/channels";
 const YOUTUBE_CHANNEL_CACHE_SECONDS = 10 * 60;
 const DEFAULT_TZUYANG_CHANNEL_HANDLE = "@tzuyang6145";
+const YOUTUBE_CHANNEL_FETCH_TIMEOUT_MS = 10_000;
 
 type YouTubeChannelListResponse = {
   items?: Array<{
@@ -31,17 +34,13 @@ function parseYouTubeCount(value: unknown) {
 }
 
 function getYouTubeApiKey() {
-  return (
-    process.env.YOUTUBE_API_KEY ||
-    process.env.NEXT_PUBLIC_YOUTUBE_API_KEY ||
-    process.env.NEXT_PUBLIC_YOUTUBE_API_KEY_BYEON ||
-    null
-  );
+  return process.env.YOUTUBE_API_KEY || null;
 }
 
 function getYouTubeChannelFilter() {
   const channelId =
-    process.env.YOUTUBE_CHANNEL_ID || process.env.NEXT_PUBLIC_YOUTUBE_CHANNEL_ID;
+    process.env.YOUTUBE_CHANNEL_ID ||
+    process.env.NEXT_PUBLIC_YOUTUBE_CHANNEL_ID;
 
   if (channelId) {
     return { name: "id", value: channelId };
@@ -62,6 +61,15 @@ export async function GET() {
 
   const apiKey = getYouTubeApiKey();
   if (!apiKey) {
+    const snapshot = await getLatestYouTubeChannelSnapshot();
+    if (snapshot) {
+      return NextResponse.json(snapshot, {
+        headers: {
+          "Cache-Control": `private, max-age=${YOUTUBE_CHANNEL_CACHE_SECONDS}, stale-while-revalidate=${YOUTUBE_CHANNEL_CACHE_SECONDS * 3}`,
+        },
+      });
+    }
+
     return NextResponse.json(
       { error: "YouTube API key is not configured" },
       { status: 500 },
@@ -73,11 +81,16 @@ export async function GET() {
   url.searchParams.set("part", "snippet,statistics");
   url.searchParams.set(channelFilter.name, channelFilter.value);
   url.searchParams.set("key", apiKey);
+  url.searchParams.set(
+    "fields",
+    "items(id,snippet/title,snippet/customUrl,statistics/subscriberCount,statistics/viewCount,statistics/videoCount,statistics/hiddenSubscriberCount)",
+  );
 
   try {
     const response = await fetch(url, {
       headers: { Accept: "application/json" },
       next: { revalidate: YOUTUBE_CHANNEL_CACHE_SECONDS },
+      signal: AbortSignal.timeout(YOUTUBE_CHANNEL_FETCH_TIMEOUT_MS),
     });
 
     if (!response.ok) {
@@ -118,6 +131,15 @@ export async function GET() {
     );
   } catch (error) {
     console.error("YouTube channel statistics fetch error:", error);
+    const snapshot = await getLatestYouTubeChannelSnapshot();
+    if (snapshot) {
+      return NextResponse.json(snapshot, {
+        headers: {
+          "Cache-Control": `private, max-age=${YOUTUBE_CHANNEL_CACHE_SECONDS}, stale-while-revalidate=${YOUTUBE_CHANNEL_CACHE_SECONDS * 3}`,
+        },
+      });
+    }
+
     return NextResponse.json(
       { error: "Failed to fetch YouTube channel statistics" },
       { status: 502 },
