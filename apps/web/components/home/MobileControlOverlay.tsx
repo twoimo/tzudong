@@ -1038,7 +1038,7 @@ function MobileControlOverlayComponent({
                                     title={searchType === 'name' ? "유튜브 제목으로 검색" : "맛집 이름으로 검색"}
                                     aria-label={searchType === 'name' ? "유튜브 제목 검색으로 전환" : "맛집 이름 검색으로 전환"}
                                     aria-pressed={searchType === 'youtube'}
-                                    className="min-h-11 min-w-11 rounded-full border border-border bg-background hover:bg-secondary/80"
+                                    className={mobileTopIconButtonClass}
                                 >
                                     {searchType === 'name' ? (
                                         <MapPin className="h-4 w-4" aria-hidden="true" />
@@ -1051,7 +1051,7 @@ function MobileControlOverlayComponent({
                                     size="icon"
                                     onClick={handleClose}
                                     aria-label="검색 닫기"
-                                    className="min-h-11 min-w-11 rounded-full border border-border bg-background hover:bg-secondary/80"
+                                    className={mobileTopIconButtonClass}
                                 >
                                     <X className="h-5 w-5" aria-hidden="true" />
                                 </Button>
