@@ -95,7 +95,7 @@ jobs:
           free -h
 
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # actions/checkout@v6
         with:
           ref: ${{ github.event.repository.default_branch }}
           fetch-depth: 0
@@ -197,7 +197,7 @@ jobs:
       # ============================================================
 
       - name: Cache Puppeteer Browser
-        uses: actions/cache@v5
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # actions/cache@v5
         with:
           path: ~/.cache/puppeteer
           key: ${{ runner.os }}-puppeteer-${{ hashFiles('backend/package-lock.json') }}
@@ -206,19 +206,19 @@ jobs:
 
 
       - name: Set up Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # actions/setup-node@v6
         with:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: backend/package-lock.json
 
       - name: Setup Deno
-        uses: denoland/setup-deno@v2
+        uses: denoland/setup-deno@667a34cdef165d8d2b2e98dde39547c9daac7282 # denoland/setup-deno@v2
         with:
           deno-version: v2.x
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # actions/setup-python@v6
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -327,7 +327,7 @@ jobs:
 
       - name: Cache Ollama Models
         if: env.MAX_CONTEXT_VIDEOS != '-1'
-        uses: actions/cache@v5
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # actions/cache@v5
         with:
           path: |
             ~/.ollama
@@ -338,8 +338,14 @@ jobs:
 
       - name: Setup Ollama
         if: env.MAX_CONTEXT_VIDEOS != '-1'
+        env:
+          OLLAMA_INSTALL_VERSION: v0.24.0
+          OLLAMA_INSTALL_SHA256: 25f64b810b947145095956533e1bdf56eacea2673c55a7e586be4515fc882c9f
         run: |
-          curl -fsSL https://ollama.com/install.sh | sh
+          set -euo pipefail
+          curl -fsSLo /tmp/ollama-install.sh "https://github.com/ollama/ollama/releases/download/${OLLAMA_INSTALL_VERSION}/install.sh"
+          echo "${OLLAMA_INSTALL_SHA256}  /tmp/ollama-install.sh" | sha256sum -c -
+          sh /tmp/ollama-install.sh
           # [Fix] 캐시 복원 시 모델 디렉토리 권한 보정 (ollama 사용자에게 소유권 이전)
           if [ -d /usr/share/ollama/.ollama ]; then
             sudo chown -R ollama:ollama /usr/share/ollama/.ollama 2>/dev/null || true
@@ -380,7 +386,7 @@ jobs:
           YOUTUBE_API_KEY_BYEON: ${{ secrets.YOUTUBE_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_API_KEY_BYEON: ${{ secrets.GEMINI_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
           # Supabase
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -670,7 +676,7 @@ jobs:
 
       - name: Upload GDrive Status Artifacts
         if: always()
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # actions/upload-artifact@v7.0.1
         with:
           name: gdrive-upload-status-${{ github.run_id }}
           if-no-files-found: ignore
