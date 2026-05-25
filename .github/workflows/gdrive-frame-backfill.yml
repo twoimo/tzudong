@@ -115,6 +115,15 @@ jobs:
               exit 1
               ;;
           esac
+          case "${MAX_BACKFILL_BATCHES:-1}:${MAX_BACKFILL_ITEMS:-500}" in
+            0:*|*:0)
+              echo "No backfill work requested (MAX_BACKFILL_BATCHES=$MAX_BACKFILL_BATCHES, MAX_BACKFILL_ITEMS=$MAX_BACKFILL_ITEMS)."
+              mkdir -p backend/log/cron/gdrive-backfill
+              printf '%s\n' '{"status":"noop","reason":"zero backfill batch or item limit"}' > backend/log/cron/gdrive-backfill/current-upload-status.json
+              exit 0
+              ;;
+          esac
+
           STATUS_REMOTE="${GDRIVE_STATUS_PATH%/}/$STATUS_SCOPE_SAFE"
           LOCK_REMOTE="$STATUS_REMOTE/backfill.lock.json"
           WORK_DIR="backend/log/cron/gdrive-backfill"
