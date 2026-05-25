@@ -338,7 +338,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain("ADMIN_OVERVIEW_WIDGET_STORAGE_KEY");
     expect(consoleSource).not.toContain("normalizeAdminOverviewWidgetOrder");
     expect(consoleSource).not.toContain("moveAdminOverviewWidget");
-    expect(consoleSource).not.toContain("window.localStorage.setItem(ADMIN_OVERVIEW_WIDGET_STORAGE_KEY");
+    expect(consoleSource).not.toContain(
+      "window.localStorage.setItem(ADMIN_OVERVIEW_WIDGET_STORAGE_KEY",
+    );
     expect(consoleSource).not.toContain("hasLoadedWidgetOrder");
     expect(consoleSource).not.toContain('aria-label="개요 위젯 순서 조정"');
     expect(consoleSource).not.toContain("위로 이동");
@@ -427,7 +429,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(dashboardOrderRouteSource).toContain("admin_dashboard_widget_order");
     expect(dashboardOrderRouteSource).toContain("admin_user_preferences");
-    expect(dashboardOrderRouteSource).toContain("normalizeAdminDashboardWidgetOrder");
+    expect(dashboardOrderRouteSource).toContain(
+      "normalizeAdminDashboardWidgetOrder",
+    );
     expect(consoleSource).toContain("fallbackResponse");
     expect(consoleSource).toContain("/api/insights/treemap");
     expect(consoleSource).toContain("subscriberValue");
@@ -450,18 +454,30 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "조회수, 참여, 참여율을 최근 영상 순서로 정규화해 비교합니다.",
     );
     expect(consoleSource).toContain("상위 영상 영향도 최고 항목은");
-    expect(consoleSource).toContain('data-admin-dashboard-bubble-tooltip="video-title"');
-    expect(consoleSource).toContain("line-clamp-2 font-extrabold leading-5 text-foreground");
+    expect(consoleSource).toContain(
+      'data-admin-dashboard-bubble-tooltip="video-title"',
+    );
+    expect(consoleSource).toContain(
+      "line-clamp-2 font-extrabold leading-5 text-foreground",
+    );
     expect(consoleSource).toContain("formatNumber(row.조회수)");
     expect(consoleSource).toContain("formatNumber(row.참여)");
     expect(consoleSource).toContain("콘텐츠 성과 상위 항목은");
+    expect(consoleSource).toContain("조회수가 높은 순서로 정렬합니다.");
+    expect(consoleSource).toContain("조회수: row.viewCount");
+    expect(consoleSource).not.toContain("댓글: row.commentCount");
     expect(consoleSource).toContain("최근 참여율 지표는");
     expect(consoleSource).toContain("상위 영상 영향도");
     expect(consoleSource).toContain("조회·참여 추이");
     expect(consoleSource).toContain("콘텐츠 성과 TOP 5");
+    expect(consoleSource).toContain('data-admin-dashboard-card-title-delta="true"');
+    expect(consoleSource).toContain('metric={`조회 증감 ${formatDashboardChangeLabel(viewChange)}`}');
+    expect(consoleSource).toContain("(참여 증감 {formatDashboardChangeLabel(engagementChange)})");
     expect(consoleSource).toContain("truncateAdminDashboardAxisLabel");
     expect(consoleSource).toContain("const visibleRows = rows.slice(0, 5)");
-    expect(consoleSource).toContain("label: truncateAdminDashboardAxisLabel(row.label)");
+    expect(consoleSource).toContain(
+      "label: truncateAdminDashboardAxisLabel(row.label)",
+    );
     expect(consoleSource).toContain("interval={0}");
     expect(consoleSource).toContain("긴 제목은 말줄임 처리");
     expect(consoleSource).toContain("참여율 변동");
@@ -469,37 +485,79 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("AdminDashboardKpiCard");
     expect(consoleSource).toContain("AdminDashboardInfoTooltip");
     expect(consoleSource).toContain("DEFAULT_ADMIN_DASHBOARD_WIDGET_ORDER");
-    expect(consoleSource).toContain('data-admin-dashboard-widget-order-trigger="direct-drag"');
-    expect(consoleSource).toContain('data-admin-dashboard-order-mode={');
-    expect(consoleSource).toContain('data-admin-dashboard-direct-reorder-card');
-    expect(consoleSource).toContain('data-admin-dashboard-order-live-status="true"');
-    expect(consoleSource).toContain('data-admin-dashboard-widget-order-reset="true"');
-    expect(consoleSource).toContain("카드를 직접 드래그하면 순서가 자동 저장됩니다.");
+    expect(consoleSource).toContain(
+      'data-admin-dashboard-widget-order-trigger="direct-drag"',
+    );
+    expect(consoleSource).toContain("data-admin-dashboard-order-mode={");
+    expect(consoleSource).toContain("data-admin-dashboard-direct-reorder-card");
+    expect(consoleSource).toContain(
+      'data-admin-dashboard-order-live-status="true"',
+    );
+    expect(consoleSource).toContain(
+      'data-admin-dashboard-widget-order-reset="true"',
+    );
+    expect(consoleSource).toContain(
+      "같은 레이아웃 영역 안에서 카드를 드래그하면 순서가 자동 저장됩니다.",
+    );
+    expect(consoleSource).toContain("ADMIN_DASHBOARD_WIDGET_LAYOUT_GROUPS");
+    expect(consoleSource).toContain(
+      "getAdminDashboardWidgetLayoutGroup(sourceWidgetId)",
+    );
     expect(consoleSource).toContain("getDashboardCardReorderProps");
     expect(consoleSource).toContain("getDashboardReorderCardClassName");
-    expect(consoleSource).toContain("draggable: isDashboardOrderEditorOpen && !isDashboardOrderSaving");
+    expect(consoleSource).toContain(
+      "draggable: isDashboardOrderEditorOpen && !isDashboardOrderSaving",
+    );
     expect(consoleSource).toContain("onDragStart: (event) =>");
-    expect(consoleSource).toContain("moveDraggedDashboardWidget(widgetId, sourceWidgetId)");
-    expect(consoleSource).toContain("/api/admin/preferences/dashboard-widget-order");
-    expect(consoleSource).toContain('style={{ order: getDashboardWidgetOrder("subscribers") }}');
-    expect(consoleSource).toContain('style={{ order: getDashboardWidgetOrder("engagementRate") }}');
-    expect(consoleSource).toContain('reorderProps={getDashboardCardReorderProps("subscribers")}');
-    expect(consoleSource).toContain('{...getDashboardCardReorderProps("impact")}');
-    expect(consoleSource).not.toContain('data-admin-dashboard-widget-order-editor="drag-drop"');
-    expect(consoleSource).toContain("type AdminDashboardCardView = \"chart\" | \"table\"");
+    expect(consoleSource).toContain(
+      "moveDraggedDashboardWidget(widgetId, sourceWidgetId)",
+    );
+    expect(consoleSource).toContain(
+      "/api/admin/preferences/dashboard-widget-order",
+    );
+    expect(consoleSource).toContain(
+      'style={{ order: getDashboardWidgetOrder("subscribers") }}',
+    );
+    expect(consoleSource).toContain(
+      'style={{ order: getDashboardWidgetOrder("engagementRate") }}',
+    );
+    expect(consoleSource).toContain(
+      'reorderProps={getDashboardCardReorderProps("subscribers")}',
+    );
+    expect(consoleSource).toContain(
+      '{...getDashboardCardReorderProps("impact")}',
+    );
+    expect(consoleSource).not.toContain(
+      'data-admin-dashboard-widget-order-editor="drag-drop"',
+    );
+    expect(consoleSource).toContain(
+      'type AdminDashboardCardView = "chart" | "table"',
+    );
     expect(consoleSource).toContain("DEFAULT_ADMIN_DASHBOARD_CARD_VIEWS");
     expect(consoleSource).toContain("function AdminDashboardViewToggle");
-    expect(consoleSource).toContain('data-admin-dashboard-card-view-toggle="true"');
+    expect(consoleSource).toContain(
+      'data-admin-dashboard-card-view-toggle="true"',
+    );
     expect(consoleSource).toContain("그래프");
     expect(consoleSource).toContain("표");
     expect(consoleSource).toContain("function AdminDashboardScrollTable");
     expect(consoleSource).toContain('data-admin-dashboard-table-view="true"');
-    expect(consoleSource).toContain("overflow-auto rounded-xl border border-border/70");
+    expect(consoleSource).toContain(
+      "overflow-y-auto overflow-x-hidden rounded-xl border border-border/70",
+    );
+    expect(consoleSource).toContain(
+      'className="w-full table-fixed border-separate border-spacing-0 text-xs"',
+    );
+    expect(consoleSource).toContain("title={row.title}");
     expect(consoleSource).toContain("sticky top-0 z-10 bg-background");
     expect(consoleSource).toContain("dashboardCardViews");
     expect(consoleSource).toContain('value={getDashboardCardView("impact")}');
-    expect(consoleSource).toContain('value={getDashboardCardView("topContent")}');
-    expect(consoleSource).toContain('value={getDashboardCardView("engagementRate")}');
+    expect(consoleSource).toContain(
+      'value={getDashboardCardView("topContent")}',
+    );
+    expect(consoleSource).toContain(
+      'value={getDashboardCardView("engagementRate")}',
+    );
     expect(consoleSource).toContain('view={getDashboardCardView("ops")}');
     expect(consoleSource).toContain("impactTableRows");
     expect(consoleSource).toContain("trendTableRows");
@@ -509,22 +567,42 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("formatDashboardChangeLabel");
     expect(consoleSource).toContain("calculateDashboardMetricChange");
     expect(consoleSource).toContain("calculateRecentWindowChange");
-    expect(consoleSource).toContain("delta={formatDashboardChangeLabel(viewChange)}");
-    expect(consoleSource).toContain("delta={formatDashboardChangeLabel(likeChange)}");
-    expect(consoleSource).toContain("delta={formatDashboardChangeLabel(commentChange)}");
-    expect(consoleSource).toContain("delta={formatDashboardChangeLabel(videoCountChange)}");
-    expect(consoleSource).toContain('delta={channelStats?.subscriberCount ? "LIVE" : "—"}');
-    expect(consoleSource).toContain('data-admin-dashboard-kpi-delta="timeframe"');
+    expect(consoleSource).toContain(
+      "delta={formatDashboardChangeLabel(viewChange)}",
+    );
+    expect(consoleSource).toContain(
+      "delta={formatDashboardChangeLabel(likeChange)}",
+    );
+    expect(consoleSource).toContain(
+      "delta={formatDashboardChangeLabel(commentChange)}",
+    );
+    expect(consoleSource).toContain(
+      "delta={formatDashboardChangeLabel(videoCountChange)}",
+    );
+    expect(consoleSource).toContain(
+      'delta={channelStats?.subscriberCount ? "LIVE" : "—"}',
+    );
+    expect(consoleSource).toContain(
+      'data-admin-dashboard-kpi-delta="timeframe"',
+    );
     expect(consoleSource).toContain('deltaLabel = "기간 대비"');
     expect(consoleSource).toContain('deltaLabel="실시간"');
-    expect(consoleSource).toContain('title={`${title} ${deltaLabel}: ${delta}`}');
-    expect(consoleSource).toContain("inline-flex shrink-0 items-center gap-1 rounded-full bg-muted/45");
+    expect(consoleSource).toContain(
+      "title={`${title} ${deltaLabel}: ${delta}`}",
+    );
+    expect(consoleSource).toContain(
+      "inline-flex shrink-0 items-center gap-1 rounded-full bg-muted/45",
+    );
     expect(consoleSource).toContain("선택 기간의 최신 절반과 이전 절반");
     expect(consoleSource).toContain('className="h-px bg-border/70"');
     expect(consoleSource).toContain("mb-2 grid shrink-0 gap-2");
-    expect(consoleSource).toContain('data-admin-dashboard-metric-tooltip="true"');
+    expect(consoleSource).toContain(
+      'data-admin-dashboard-metric-tooltip="true"',
+    );
     expect(consoleSource).toContain("X축은 최근 영상 게시일 순서");
-    expect(consoleSource).toContain("Y축은 조회수, 참여, 참여율을 각각 0~100점");
+    expect(consoleSource).toContain(
+      "Y축은 조회수, 참여, 참여율을 각각 0~100점",
+    );
     expect(consoleSource).toContain("참여는 좋아요+댓글");
     expect(consoleSource).toContain("참여율은 (좋아요+댓글)/조회수*100");
     expect(consoleSource).toContain(
@@ -538,9 +616,15 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       consoleSource.indexOf("function AdminDashboardOpsSummaryCard"),
     );
     expect(kpiSparklineSource).toContain("<RechartsTooltip");
-    expect(kpiSparklineSource).toContain("formatRechartsTooltipValue(tooltipValue)");
-    expect(kpiSparklineSource).toContain("labelFormatter={(label) => String(label ?? \"기간\")}");
-    expect(kpiSparklineSource).toContain("contentStyle={adminDashboardTooltipStyle}");
+    expect(kpiSparklineSource).toContain(
+      "formatRechartsTooltipValue(tooltipValue)",
+    );
+    expect(kpiSparklineSource).toContain(
+      'labelFormatter={(label) => String(label ?? "기간")}',
+    );
+    expect(kpiSparklineSource).toContain(
+      "contentStyle={adminDashboardTooltipStyle}",
+    );
     expect(consoleSource).toContain(
       "우측 LIVE는 채널 통계 API 연결이 정상이라는 의미입니다.",
     );
@@ -551,20 +635,32 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("buildAdminDashboardSparklinePoints");
     expect(consoleSource).toContain("AdminDashboardOpsSummaryCard");
     expect(consoleSource).toContain("운영·검수 요약");
-    expect(consoleSource).toContain("같은 섹션 안에서 가장 큰 항목 대비 상대 비중");
+    expect(consoleSource).toContain(
+      "같은 섹션 안에서 가장 큰 항목 대비 상대 비중",
+    );
     expect(consoleSource).toContain(
       "flex h-full min-h-[280px] flex-col p-3.5 text-xs",
     );
     expect(consoleSource).toContain("text-[13px] font-extrabold tabular-nums");
-    expect(consoleSource).toContain('data-admin-dashboard-ops-summary-visual="progress-bars"');
+    expect(consoleSource).toContain(
+      'data-admin-dashboard-ops-summary-visual="progress-bars"',
+    );
     expect(consoleSource).toContain("rawValue: stats.totalRestaurants ?? 0");
     expect(consoleSource).toContain("rawValue: missingCoordinates ?? 0");
     expect(consoleSource).toContain("const maxRawValue = Math.max");
     expect(consoleSource).toContain("const rowPercent = clampDashboardPercent");
-    expect(consoleSource).toContain("grid min-h-0 flex-1 content-stretch gap-3");
-    expect(consoleSource).toContain("grid grid-cols-[5.5rem_minmax(0,1fr)_3rem]");
-    expect(consoleSource).toContain("sectionIndex === 0 ? \"text-teal-700\" : \"text-rose-700\"");
-    expect(consoleSource).not.toContain("rounded-xl border border-border/60 bg-card/45 p-3");
+    expect(consoleSource).toContain(
+      "grid min-h-0 flex-1 content-stretch gap-3",
+    );
+    expect(consoleSource).toContain(
+      "grid grid-cols-[5.5rem_minmax(0,1fr)_3rem]",
+    );
+    expect(consoleSource).toContain(
+      'sectionIndex === 0 ? "text-teal-700" : "text-rose-700"',
+    );
+    expect(consoleSource).not.toContain(
+      "rounded-xl border border-border/60 bg-card/45 p-3",
+    );
     expect(consoleSource).toContain('"lg:col-span-2"');
     expect(consoleSource).toContain('"sm:col-span-2 lg:col-span-3"');
     expect(consoleSource).toContain("flex min-h-[280px] flex-col p-3.5");
@@ -593,23 +689,35 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     const routeSource = source("app/api/admin/youtube-kpis/route.ts");
 
     expect(routeSource).toContain("requireAdmin");
-    expect(routeSource).toContain("https://www.googleapis.com/youtube/v3/channels");
-    expect(routeSource).toContain("https://www.googleapis.com/youtube/v3/playlistItems");
-    expect(routeSource).toContain("https://www.googleapis.com/youtube/v3/videos");
+    expect(routeSource).toContain(
+      "https://www.googleapis.com/youtube/v3/channels",
+    );
+    expect(routeSource).toContain(
+      "https://www.googleapis.com/youtube/v3/playlistItems",
+    );
+    expect(routeSource).toContain(
+      "https://www.googleapis.com/youtube/v3/videos",
+    );
     expect(routeSource).toContain("MAX_YOUTUBE_KPI_PLAYLIST_PAGES");
     expect(routeSource).toContain("parseTreemapPeriod");
     expect(routeSource).toContain("pageToken");
     expect(routeSource).toContain("snippet,statistics,contentDetails");
     expect(routeSource).toContain("previousViewCount: null");
-    expect(routeSource).toContain('"Cache-Control": "private, no-store, max-age=0"');
+    expect(routeSource).toContain(
+      '"Cache-Control": "private, no-store, max-age=0"',
+    );
   });
 
   test("keeps YouTube channel statistics behind an admin-only server route", () => {
     const routeSource = source("app/api/admin/youtube-channel/route.ts");
 
     expect(routeSource).toContain("requireAdmin");
-    expect(routeSource).toContain("https://www.googleapis.com/youtube/v3/channels");
-    expect(routeSource).toContain('url.searchParams.set("part", "snippet,statistics")');
+    expect(routeSource).toContain(
+      "https://www.googleapis.com/youtube/v3/channels",
+    );
+    expect(routeSource).toContain(
+      'url.searchParams.set("part", "snippet,statistics")',
+    );
     expect(routeSource).toContain("subscriberCount");
     expect(routeSource).toContain("hiddenSubscriberCount");
     expect(routeSource).toContain("YOUTUBE_API_KEY");
@@ -823,14 +931,50 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(consoleSource).toContain('data-admin-sidebar-footer-actions="true"');
     expect(consoleSource).toContain('data-admin-sidebar-theme-toggle="true"');
-    expect(consoleSource).toContain('ADMIN_THEME_STORAGE_KEY');
-    expect(consoleSource).toContain('document.documentElement.classList.toggle("dark"');
-    expect(consoleSource).toContain('window.localStorage.setItem(ADMIN_THEME_STORAGE_KEY');
-    expect(consoleSource).toContain('aria-label={isDarkTheme ? "라이트모드로 전환" : "다크모드로 전환"}');
-    expect(consoleSource).toContain('<Moon className="h-3.5 w-3.5" aria-hidden="true" />');
-    expect(consoleSource).toContain('<Sun className="h-3.5 w-3.5" aria-hidden="true" />');
-    expect(appGlobalsSource).toContain('.dark {');
-    expect(appGlobalsSource).toContain('--background: 24 10% 10%;');
+    expect(consoleSource).toContain("ADMIN_THEME_STORAGE_KEY");
+    expect(consoleSource).toContain(
+      'type AdminThemePreference = "light" | "dark" | "system"',
+    );
+    expect(consoleSource).toContain("getNextAdminThemePreference");
+    expect(consoleSource).toContain(
+      'window.matchMedia("(prefers-color-scheme: dark)")',
+    );
+    expect(consoleSource).toContain(
+      'document.documentElement.classList.toggle("dark"',
+    );
+    expect(consoleSource).toContain(
+      "window.localStorage.setItem(ADMIN_THEME_STORAGE_KEY",
+    );
+    expect(consoleSource).toContain("aria-label={themeToggleLabel}");
+    expect(consoleSource).toContain(
+      'aria-pressed={themePreference !== "light"}',
+    );
+    expect(consoleSource).toContain(
+      '<Monitor className="h-3.5 w-3.5" aria-hidden="true" />',
+    );
+    expect(consoleSource).toContain(
+      '<Moon className="h-3.5 w-3.5" aria-hidden="true" />',
+    );
+    expect(consoleSource).toContain(
+      '<Sun className="h-3.5 w-3.5" aria-hidden="true" />',
+    );
+    expect(consoleSource).toContain("ADMIN_SIDEBAR_COLLAPSED_STORAGE_KEY");
+    expect(consoleSource).toContain(
+      "window.localStorage.getItem(ADMIN_SIDEBAR_COLLAPSED_STORAGE_KEY)",
+    );
+    expect(consoleSource).toContain("window.localStorage.setItem(");
+    expect(consoleSource).toContain("ADMIN_SIDEBAR_COLLAPSED_STORAGE_KEY,");
+    expect(consoleSource).toContain("UiTooltipTrigger asChild");
+    expect(consoleSource).toContain(
+      'data-admin-sidebar-collapsed-tooltip="true"',
+    );
+    expect(consoleSource).toContain('side="right"');
+    expect(consoleSource).toContain("getSidebarBadgeClassName");
+    expect(consoleSource).toContain(
+      "data-admin-sidebar-badge-tone={section.label}",
+    );
+    expect(appGlobalsSource).toContain(".dark {");
+    expect(appGlobalsSource).toContain("--background: 24 10% 10%;");
     expect(consoleSource).toContain(
       "relative z-30 flex max-h-[42dvh] w-full shrink-0 flex-col",
     );
@@ -856,7 +1000,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "md:block md:min-h-0 md:flex-1 md:space-y-1.5",
     );
     expect(consoleSource).toContain("min-h-11 min-w-[8.25rem]");
-    expect(consoleSource).toContain("mt-2 flex shrink-0 gap-1.5 pt-0 md:mt-auto md:pt-2");
+    expect(consoleSource).toContain(
+      "mt-2 flex shrink-0 gap-1.5 pt-0 md:mt-auto md:pt-2",
+    );
     expect(consoleSource).toContain("메뉴 순서");
     expect(consoleSource).toContain("초기화");
     expect(consoleSource).toContain("aria-label={`${item.title} 메뉴 앞으로`}");
