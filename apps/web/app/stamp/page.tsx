@@ -37,7 +37,7 @@ import { useMobileBottomNavAutoHide } from "@/hooks/use-mobile-bottom-nav-auto-h
 
 import { BREAKPOINTS, useDeviceType } from "@/hooks/useDeviceType";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
-import { REGIONS, extractRegion, parseCategory, getYouTubeThumbnailUrl, StampFilterState, UserReview } from "@/components/stamp/stamp-utils";
+import { REGIONS, extractRegion, parseCategory, getYouTubeFallbackThumbnailUrl, getYouTubeThumbnailUrl, StampFilterState, UserReview } from "@/components/stamp/stamp-utils";
 import { StampCard } from "@/components/stamp/StampCard";
 import { hasRelatedVerifiedUserReview } from "@/lib/restaurant-visit-matching";
 import {
@@ -135,6 +135,7 @@ interface RestaurantRowProps {
 const RestaurantRow = memo(({ restaurant, isSelected, onClick }: RestaurantRowProps) => {
     const category = parseCategory(restaurant.category || restaurant.categories);
     const thumbnailUrl = restaurant.youtube_link ? getYouTubeThumbnailUrl(restaurant.youtube_link) : null;
+    const fallbackThumbnailUrl = restaurant.youtube_link ? getYouTubeFallbackThumbnailUrl(restaurant.youtube_link) : null;
     const reviewCount = (restaurant as RestaurantWithVerifiedCount).verified_review_count ?? restaurant.review_count ?? 0;
 
     return (
@@ -164,6 +165,11 @@ const RestaurantRow = memo(({ restaurant, isSelected, onClick }: RestaurantRowPr
                                 fill
                                 sizes="96px"
                                 className="object-cover"
+                                style={{ objectFit: 'cover' }}
+                                onError={(event) => {
+                                    if (!fallbackThumbnailUrl || event.currentTarget.src.includes('/hqdefault.jpg')) return;
+                                    event.currentTarget.src = fallbackThumbnailUrl;
+                                }}
                             />
                         </div>
                     )}

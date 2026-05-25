@@ -1716,6 +1716,7 @@ describe("web quality performance source contracts", () => {
     const overlayPanelSource = source("components/layout/OverlayPagePanel.tsx");
     const stampCardSource = source("components/stamp/StampCard.tsx");
     const stampPageSource = source("app/stamp/page.tsx");
+    const stampUtilsSource = source("components/stamp/stamp-utils.ts");
     const stampLoadingSource = source("app/stamp/loading.tsx");
     const skeletonLoadersSource = source("components/ui/skeleton-loaders.tsx");
     const userProfilePanelSource = source(
@@ -1783,6 +1784,12 @@ describe("web quality performance source contracts", () => {
     expect(stampCardSource).toContain("onKeyDown={handleCardKeyDown}");
     expect(stampCardSource).toContain("focus-visible:ring-primary");
     expect(stampCardSource).toContain("transition-[filter,opacity,transform]");
+    expect(stampCardSource).toContain("style={{ objectFit: 'cover' }}");
+    expect(stampCardSource).toContain("getYouTubeFallbackThumbnailUrl");
+    expect(stampPageSource).toContain("style={{ objectFit: 'cover' }}");
+    expect(stampUtilsSource).toContain("mqdefault.jpg");
+    expect(stampUtilsSource).toContain("hqdefault.jpg");
+    expect(stampUtilsSource).not.toContain("/hq720.jpg");
     expect(stampCardSource).toContain("const category = useMemo(");
     expect(stampCardSource).not.toContain("transition-all");
     expect(stampCardSource).not.toContain(
@@ -2206,18 +2213,23 @@ describe("web quality performance source contracts", () => {
     );
     expect(leaderboardOverlaySource).not.toContain("<ScrollArea");
     expect(leaderboardListSource).toContain("compactLeftPanel?: boolean");
+    expect(leaderboardListSource).toContain("mobilePanel?: boolean");
     expect(leaderboardListSource).toContain(
       '? "flex w-full max-w-full items-center gap-2 overflow-hidden pl-2 pr-5',
     );
     expect(leaderboardListSource).toContain("pl-2 pr-2 sm:px-6");
     expect(leaderboardListSource).not.toContain("pl-2 pr-4 sm:px-6");
     expect(leaderboardListSource).not.toContain("px-4 sm:px-6 md:px-6");
-    expect(leaderboardPageSource).toContain('className="pl-2 pr-4 sm:px-6"');
+    expect(leaderboardPageSource).not.toContain("MOBILE_LEADERBOARD_PANEL_LIST_STYLE");
+    expect(leaderboardPageSource).toContain('data-mobile-leaderboard-panel-list="true"');
+    expect(leaderboardPageSource).toContain("mobilePanel");
+    expect(leaderboardPageSource).toContain('className="px-4"');
     expect(leaderboardPageSource).toContain(
       "flex flex-wrap items-start justify-between gap-3",
     );
     expect(leaderboardPageSource).toContain("basis-[min(11rem,100%)]");
-    expect(leaderboardLoadingSource).toContain('className="pl-2 pr-4 sm:px-6"');
+    expect(leaderboardLoadingSource).not.toContain("compactLeftPanel");
+    expect(leaderboardLoadingSource).toContain('className="px-4"');
     expect(leaderboardSkeletonSource).toContain("compactLeftPanel?: boolean");
     expect(leaderboardSkeletonSource).toContain("compactLeftPanel = false");
     expect(leaderboardSkeletonSource).toContain(
@@ -2237,6 +2249,7 @@ describe("web quality performance source contracts", () => {
     expect(leaderboardListSource).toContain("paddingRight: '1.25rem'");
     expect(leaderboardListSource).toContain("? COMPACT_LEFT_PANEL_ROW_STYLE");
     expect(leaderboardListSource).toContain('compactLeftPanel && "w-7 sm:w-7"');
+    expect(leaderboardListSource).toContain('mobilePanel && "w-9 sm:w-10"');
     expect(leaderboardUtilsSource).toContain("getRankIconElement");
     expect(leaderboardUtilsSource).not.toContain("getRankIcon =");
     expect(leaderboardPageSource).toContain(
@@ -3352,6 +3365,7 @@ describe("web quality performance source contracts", () => {
     const mobileBottomNavSource = source(
       "components/layout/MobileBottomNav.tsx",
     );
+    const tailwindConfigSource = source("tailwind.config.ts");
     const nextConfigSource = source("next.config.mjs");
     const nextConfig = (await importWebConfig()).default;
     const configuredHeaders = await nextConfig.headers();
@@ -3714,6 +3728,23 @@ describe("web quality performance source contracts", () => {
       "style={MOBILE_BOTTOM_NAV_BUTTON_STYLE}",
     );
     expect(mobileBottomNavSource).toContain("'mobile-bottom-nav'");
+    expect(mobileBottomNavSource).toContain("'font-serif'");
+    expect(mobileBottomNavSource).not.toContain("MOBILE_BOTTOM_NAV_FONT_FAMILY");
+    expect(mobileBottomNavSource).not.toContain("fontFamily: MOBILE_BOTTOM_NAV_FONT_FAMILY");
+    expect(mobileBottomNavSource).toContain("'text-foreground/65 active:text-foreground'");
+    expect(mobileBottomNavSource).toContain("'text-[12px] font-medium leading-none tracking-tight'");
+    expect(mobileBottomNavSource).toContain("isActive && 'font-semibold'");
+    expect(tailwindConfigSource).toContain("MOBILE_BOTTOM_NAV_CLASSES");
+    expect(tailwindConfigSource).toContain('"text-red-800"');
+    expect(tailwindConfigSource).toContain('"fill-red-800/20"');
+    expect(tailwindConfigSource).toContain('"-z-10"');
+    expect(tailwindConfigSource).toContain('"text-foreground/65"');
+    expect(tailwindConfigSource).toContain('"text-[12px]"');
+    expect(tailwindConfigSource).toContain('"leading-none"');
+    expect(tailwindConfigSource).toContain('"tracking-tight"');
+    expect(tailwindConfigSource).toContain("LEADERBOARD_RANK_ICON_CLASSES");
+    expect(tailwindConfigSource).toContain('"text-yellow-500"');
+    expect(tailwindConfigSource).toContain('"text-amber-600"');
     expect(viewportFixSource).toContain(
       "if (window.CSS?.supports?.('height', '100dvh'))",
     );
@@ -3803,17 +3834,17 @@ describe("web quality performance source contracts", () => {
     );
     expect(leaderboardListSource).toContain('"flex-1 basis-0 min-w-0"');
     expect(leaderboardListSource).toContain(
-      '"ml-auto flex min-w-max shrink-0 items-center gap-1 text-sm tabular-nums',
+      '"ml-auto flex min-w-max shrink-0 items-center gap-1.5 text-base tabular-nums',
     );
     expect(leaderboardListSource).toContain(
       'data-leaderboard-mobile-stats="no-clip"',
     );
-    expect(leaderboardListSource).toContain(
-      "h-3.5 w-3.5 text-red-500 fill-red-500",
-    );
+    expect(leaderboardListSource).toContain('aria-hidden="true">❤️</span>');
     expect(leaderboardListSource).toContain(
       "flex-shrink-0 w-8 sm:w-10",
     );
+    expect(leaderboardListSource).toContain("font-bold text-base");
+    expect(leaderboardListSource).toContain("flex items-center gap-1 shrink-0");
     expect(leaderboardListSource).not.toContain("pl-2 pr-4 sm:px-6");
     expect(leaderboardListSource).not.toContain("max-w-[42vw]");
   });
@@ -3825,8 +3856,8 @@ describe("web quality performance source contracts", () => {
 
     expect(rootLayoutSource).toContain('import { Noto_Serif_KR } from "next/font/google"');
     expect(rootLayoutSource).toContain("variable: '--font-noto-serif-kr'");
-    expect(rootLayoutSource).toContain("preload: false");
-    expect(rootLayoutSource).not.toContain("subsets: ['latin']");
+    expect(rootLayoutSource).toContain("subsets: ['latin']");
+    expect(rootLayoutSource).not.toContain("preload: false");
     expect(rootLayoutSource).toContain("className={notoSerifKr.variable}");
     expect(rootGlobalsSource).toContain(
       "font-family: var(--font-noto-serif-kr, 'Noto Serif KR')",
