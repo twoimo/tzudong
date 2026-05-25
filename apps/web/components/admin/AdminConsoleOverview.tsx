@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
 import {
+  Fragment,
   useCallback,
   useEffect,
   useMemo,
@@ -24,6 +25,7 @@ import {
   Image as ImageIcon,
   MessageSquareText,
   Info,
+  Monitor,
   Moon,
   PanelLeftClose,
   PanelLeftOpen,
@@ -205,12 +207,50 @@ const consoleModules: ConsoleModule[] = [
 const guardedSteps = ["미리보기", "확인", "적용", "재확인", "감사 기록"];
 const SIDEBAR_LABEL_REVEAL_DELAY_MS = 180;
 const ADMIN_THEME_STORAGE_KEY = "tzudong-admin-theme";
+const ADMIN_SIDEBAR_COLLAPSED_STORAGE_KEY = "tzudong-admin-sidebar-collapsed";
 
-type AdminThemePreference = "light" | "dark";
+type AdminThemePreference = "light" | "dark" | "system";
+
+function getSystemThemePreference(): Exclude<AdminThemePreference, "system"> {
+  if (typeof window === "undefined") return "light";
+
+  return window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
+}
 
 function applyAdminThemePreference(theme: AdminThemePreference) {
   if (typeof document === "undefined") return;
-  document.documentElement.classList.toggle("dark", theme === "dark");
+
+  const resolvedTheme = theme === "system" ? getSystemThemePreference() : theme;
+  document.documentElement.classList.toggle("dark", resolvedTheme === "dark");
+}
+
+function normalizeAdminThemePreference(
+  theme: string | null,
+): AdminThemePreference {
+  if (theme === "dark" || theme === "system") return theme;
+
+  return "light";
+}
+
+function getNextAdminThemePreference(
+  currentTheme: AdminThemePreference,
+): AdminThemePreference {
+  if (currentTheme === "light") return "dark";
+  if (currentTheme === "dark") return "system";
+
+  return "light";
+}
+
+function getSidebarBadgeClassName(sectionLabel: string, isActive: boolean) {
+  if (isActive) return "text-primary-foreground/75";
+  if (sectionLabel === "검수") return "text-amber-700 dark:text-amber-300";
+  if (sectionLabel === "운영") return "text-sky-700 dark:text-sky-300";
+  if (sectionLabel === "실험실") return "text-violet-700 dark:text-violet-300";
+  if (sectionLabel === "홈") return "text-emerald-700 dark:text-emerald-300";
+
+  return "text-muted-foreground";
 }
 const sidebarSections: SidebarSection[] = [
   {
@@ -251,9 +291,7 @@ const sidebarSections: SidebarSection[] = [
       },
       ...consoleModules
         .filter((module) =>
-          ["storyboard", "banners", "users", "insights", "audit"].includes(
-            module.id,
-          ),
+          ["storyboard", "banners", "users", "insights"].includes(module.id),
         )
         .map(({ id, title, description, icon, badge }) => ({
           id,
@@ -265,14 +303,23 @@ const sidebarSections: SidebarSection[] = [
     ],
   },
   {
-    label: "보조",
+    label: "실험실",
     items: [
+      ...consoleModules
+        .filter((module) => ["audit"].includes(module.id))
+        .map(({ id, title, description, icon, badge }) => ({
+          id,
+          title,
+          description,
+          icon,
+          badge,
+        })),
       {
         id: "llm",
         title: "운영 보조",
         description: "위험 액션 전 읽기 전용 운영 보조를 확인합니다.",
         icon: Bot,
-        badge: "읽기 전용",
+        badge: "실험 중",
       },
     ],
   },
@@ -338,6 +385,25 @@ const ADMIN_DASHBOARD_WIDGET_LABELS: Record<AdminDashboardWidgetId, string> = {
   engagementRate: "참여율 변동",
 };
 
+const ADMIN_DASHBOARD_WIDGET_LAYOUT_GROUPS = [
+  ["subscribers", "views", "likes", "comments", "videos"],
+  ["impact", "trend"],
+  ["ops", "topContent", "engagementRate"],
+] as const satisfies ReadonlyArray<ReadonlyArray<AdminDashboardWidgetId>>;
+
+const adminDashboardWidgetLayoutGroupMap = new Map<
+  AdminDashboardWidgetId,
+  number
+>(
+  ADMIN_DASHBOARD_WIDGET_LAYOUT_GROUPS.flatMap((group, groupIndex) =>
+    group.map((widgetId) => [widgetId, groupIndex] as const),
+  ),
+);
+
+function getAdminDashboardWidgetLayoutGroup(widgetId: AdminDashboardWidgetId) {
+  return adminDashboardWidgetLayoutGroupMap.get(widgetId) ?? 0;
+}
+
 const DEFAULT_ADMIN_DASHBOARD_CARD_VIEWS: Record<
   AdminDashboardTableWidgetId,
   AdminDashboardCardView
@@ -357,9 +423,10 @@ function normalizeAdminDashboardWidgetOrder(
   value: unknown,
 ): AdminDashboardWidgetId[] {
   const preferredOrder = Array.isArray(value)
-    ? value.filter((item): item is AdminDashboardWidgetId =>
-        typeof item === "string" &&
-        adminDashboardWidgetIdSet.has(item as AdminDashboardWidgetId),
+    ? value.filter(
+        (item): item is AdminDashboardWidgetId =>
+          typeof item === "string" &&
+          adminDashboardWidgetIdSet.has(item as AdminDashboardWidgetId),
       )
     : [];
 
@@ -420,11 +487,15 @@ function normalizeAdminSidebarOrder(
   const usedItemIds = new Set<AdminModuleId>();
   const items = Object.fromEntries(
     DEFAULT_ADMIN_SIDEBAR_ORDER.sections.map((section) => {
+      const sectionItemIds = new Set(
+        DEFAULT_ADMIN_SIDEBAR_ORDER.items[section],
+      );
       const preferredItems = Array.isArray(rawItems[section])
         ? rawItems[section].filter((item): item is AdminModuleId => {
             if (
               typeof item !== "string" ||
               !sidebarItemIdSet.has(item as AdminModuleId) ||
+              !sectionItemIds.has(item as AdminModuleId) ||
               usedItemIds.has(item as AdminModuleId)
             ) {
               return false;
@@ -743,7 +814,7 @@ type AdminDashboardBarRow = {
   label: string;
   value: number;
   likeCount: number;
-  commentCount: number;
+  viewCount: number;
   meta: string;
 };
 
@@ -852,12 +923,16 @@ function calculateRecentWindowChange(
 function calculateDashboardMetricChange(
   videos: InsightTreemapVideoRow[],
   getCurrentValue: (video: InsightTreemapVideoRow) => number,
-  getPreviousValue?: (video: InsightTreemapVideoRow) => number | null | undefined,
+  getPreviousValue?: (
+    video: InsightTreemapVideoRow,
+  ) => number | null | undefined,
 ) {
   if (getPreviousValue) {
     const hasSnapshotComparison = videos.some((video) => {
       const previousValue = getPreviousValue(video);
-      return typeof previousValue === "number" && Number.isFinite(previousValue);
+      return (
+        typeof previousValue === "number" && Number.isFinite(previousValue)
+      );
     });
 
     if (hasSnapshotComparison) {
@@ -954,15 +1029,15 @@ function buildAdminDashboardBarRows(
   videos: InsightTreemapVideoRow[],
 ): AdminDashboardBarRow[] {
   return [...videos]
-    .sort((a, b) => getVideoEngagementTotal(b) - getVideoEngagementTotal(a))
+    .sort((a, b) => b.viewCount - a.viewCount)
     .slice(0, 6)
     .map((video) => ({
       label: video.title,
-      value: getVideoEngagementTotal(video),
+      value: video.viewCount,
       likeCount: video.likeCount,
-      commentCount: video.commentCount,
-      meta: `좋아요 ${formatCompactNumber(video.likeCount)} · 댓글 ${formatCompactNumber(
-        video.commentCount,
+      viewCount: video.viewCount,
+      meta: `조회수 ${formatCompactNumber(video.viewCount)} · 좋아요 ${formatCompactNumber(
+        video.likeCount,
       )}`,
     }));
 }
@@ -1124,10 +1199,10 @@ function AdminDashboardScrollTable<Row>({
 
   return (
     <div
-      className="min-h-0 flex-1 overflow-auto rounded-xl border border-border/70 bg-background"
+      className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden rounded-xl border border-border/70 bg-background"
       data-admin-dashboard-table-view="true"
     >
-      <table className="w-full min-w-[480px] border-separate border-spacing-0 text-xs">
+      <table className="w-full table-fixed border-separate border-spacing-0 text-xs">
         <thead className="sticky top-0 z-10 bg-background">
           <tr>
             {columns.map((column) => (
@@ -1135,7 +1210,7 @@ function AdminDashboardScrollTable<Row>({
                 key={column.key}
                 scope="col"
                 className={cn(
-                  "border-b border-border/70 px-2.5 py-2 text-left text-[11px] font-extrabold text-muted-foreground",
+                  "min-w-0 border-b border-border/70 px-2.5 py-2 text-left text-[11px] font-extrabold text-muted-foreground",
                   column.align === "right" && "text-right",
                   column.className,
                 )}
@@ -1152,7 +1227,7 @@ function AdminDashboardScrollTable<Row>({
                 <td
                   key={column.key}
                   className={cn(
-                    "border-b border-border/45 px-2.5 py-2 align-middle text-foreground last:border-b-0",
+                    "min-w-0 border-b border-border/45 px-2.5 py-2 align-middle text-foreground last:border-b-0",
                     column.align === "right" &&
                       "text-right font-extrabold tabular-nums",
                     column.className,
@@ -1171,10 +1246,12 @@ function AdminDashboardScrollTable<Row>({
 
 function AdminDashboardCardTitle({
   title,
+  metric,
   infoLines,
   action,
 }: {
   title: string;
+  metric?: string;
   infoLines: string[];
   action?: ReactNode;
 }) {
@@ -1184,6 +1261,14 @@ function AdminDashboardCardTitle({
         <div className="flex min-w-0 items-center gap-1.5">
           <p className="truncate text-xs font-extrabold leading-none text-foreground">
             {title}
+            {metric ? (
+              <span
+                className="ml-1 font-extrabold text-muted-foreground"
+                data-admin-dashboard-card-title-delta="true"
+              >
+                ({metric})
+              </span>
+            ) : null}
           </p>
           <AdminDashboardInfoTooltip
             label={`${title} 축과 산정 방식 설명`}
@@ -1370,6 +1455,13 @@ function AdminDashboardOpsSummaryCard({
       rawValue: row.rawValue,
     })),
   );
+  const riskTotal = sections.reduce(
+    (sum, section) =>
+      section.title === "검수 리스크"
+        ? sum + section.rows.reduce((rowSum, row) => rowSum + row.rawValue, 0)
+        : sum,
+    0,
+  );
 
   return (
     <div
@@ -1384,6 +1476,7 @@ function AdminDashboardOpsSummaryCard({
     >
       <AdminDashboardCardTitle
         title="운영·검수 요약"
+        metric={`검수 리스크 ${formatNumber(riskTotal)}`}
         infoLines={[
           "X축 막대는 같은 섹션 안에서 가장 큰 항목 대비 상대 비중입니다.",
           "운영 자산은 영상/맛집/좌표/연결 현황, 검수 리스크는 대기/누락/비활성 항목입니다.",
@@ -1407,8 +1500,9 @@ function AdminDashboardOpsSummaryCard({
             {
               key: "section",
               header: "구분",
+              className: "w-[34%]",
               cell: (row) => (
-                <span className="font-bold text-muted-foreground">
+                <span className="block truncate font-bold text-muted-foreground">
                   {row.section}
                 </span>
               ),
@@ -1416,77 +1510,77 @@ function AdminDashboardOpsSummaryCard({
             {
               key: "label",
               header: "항목",
-              cell: (row) => row.label,
+              className: "w-[38%]",
+              cell: (row) => (
+                <span className="block truncate">{row.label}</span>
+              ),
             },
             {
               key: "value",
               header: "값",
               align: "right",
+              className: "w-[28%]",
               cell: (row) => row.value,
-            },
-            {
-              key: "rawValue",
-              header: "원값",
-              align: "right",
-              cell: (row) => formatNumber(row.rawValue),
             },
           ]}
         />
       ) : (
-      <div className="grid min-h-0 flex-1 content-stretch gap-3">
-        {sections.map((section, sectionIndex) => {
-          const maxRawValue = Math.max(
-            1,
-            ...section.rows.map((row) => row.rawValue),
-          );
-          const barTone = sectionIndex === 0 ? "bg-teal-500" : "bg-rose-500";
-          const labelTone =
-            sectionIndex === 0 ? "text-teal-700" : "text-rose-700";
+        <div className="grid min-h-0 flex-1 content-stretch gap-3">
+          {sections.map((section, sectionIndex) => {
+            const maxRawValue = Math.max(
+              1,
+              ...section.rows.map((row) => row.rawValue),
+            );
+            const barTone = sectionIndex === 0 ? "bg-teal-500" : "bg-rose-500";
+            const labelTone =
+              sectionIndex === 0 ? "text-teal-700" : "text-rose-700";
 
-          return (
-            <div key={section.title} className="grid min-h-0 gap-2">
-              <div className="flex items-center justify-between gap-3">
-                <p className={cn("truncate text-xs font-extrabold", labelTone)}>
-                  {section.title}
-                </p>
-                <span className="shrink-0 text-xs font-black tabular-nums text-foreground">
-                  {section.totalValue}
-                </span>
-              </div>
-              <div className="grid gap-2">
-                {section.rows.map((row) => {
-                  const rowPercent = clampDashboardPercent(
-                    (row.rawValue / maxRawValue) * 100,
-                  );
+            return (
+              <div key={section.title} className="grid min-h-0 gap-2">
+                <div className="flex items-center justify-between gap-3">
+                  <p
+                    className={cn("truncate text-xs font-extrabold", labelTone)}
+                  >
+                    {section.title}
+                  </p>
+                  <span className="shrink-0 text-xs font-black tabular-nums text-foreground">
+                    {section.totalValue}
+                  </span>
+                </div>
+                <div className="grid gap-2">
+                  {section.rows.map((row) => {
+                    const rowPercent = clampDashboardPercent(
+                      (row.rawValue / maxRawValue) * 100,
+                    );
 
-                  return (
-                    <div
-                      key={`${section.title}-${row.label}`}
-                      className="grid grid-cols-[5.5rem_minmax(0,1fr)_3rem] items-center gap-2"
-                    >
-                      <span className="min-w-0 truncate text-muted-foreground">
-                        {row.label}
-                      </span>
+                    return (
                       <div
-                        className="h-1.5 overflow-hidden rounded-full bg-muted"
-                        aria-hidden="true"
+                        key={`${section.title}-${row.label}`}
+                        className="grid grid-cols-[5.5rem_minmax(0,1fr)_3rem] items-center gap-2"
                       >
+                        <span className="min-w-0 truncate text-muted-foreground">
+                          {row.label}
+                        </span>
                         <div
-                          className={cn("h-full rounded-full", barTone)}
-                          style={{ width: `${rowPercent}%` }}
-                        />
+                          className="h-1.5 overflow-hidden rounded-full bg-muted"
+                          aria-hidden="true"
+                        >
+                          <div
+                            className={cn("h-full rounded-full", barTone)}
+                            style={{ width: `${rowPercent}%` }}
+                          />
+                        </div>
+                        <span className="shrink-0 text-right text-[13px] font-extrabold tabular-nums text-foreground">
+                          {row.value}
+                        </span>
                       </div>
-                      <span className="shrink-0 text-right text-[13px] font-extrabold tabular-nums text-foreground">
-                        {row.value}
-                      </span>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
       )}
     </div>
   );
@@ -1716,8 +1810,7 @@ function AdminDashboardGroupedBarChart({
     label: truncateAdminDashboardAxisLabel(row.label),
     title: row.label,
     좋아요: row.likeCount,
-    댓글: row.commentCount,
-    참여: row.value,
+    조회수: row.viewCount,
   }));
 
   if (visibleRows.length === 0) {
@@ -1734,12 +1827,12 @@ function AdminDashboardGroupedBarChart({
     <div
       className="min-h-0 flex-1"
       role="img"
-      aria-label="영상 성과 분석: 상위 참여 영상 막대 그래프"
+      aria-label="영상 성과 분석: 상위 조회 영상 막대 그래프"
       data-admin-dashboard-bar-chart="recharts"
     >
       <p className="sr-only">
-        콘텐츠 성과 상위 항목은 {topRow.label}이며 참여 합계는{" "}
-        {formatNumber(topRow.value)}입니다.
+        콘텐츠 성과 상위 항목은 {topRow.label}이며 조회수는{" "}
+        {formatNumber(topRow.viewCount)}입니다.
       </p>
       <ResponsiveContainer width="100%" height="100%" minHeight={160}>
         <RechartsBarChart data={chartData} margin={adminDashboardChartMargin}>
@@ -1990,8 +2083,18 @@ function AdminDashboardManagementPanel({
   const [draggedDashboardWidgetId, setDraggedDashboardWidgetId] =
     useState<AdminDashboardWidgetId | null>(null);
   const getDashboardWidgetOrder = useCallback(
-    (widgetId: AdminDashboardWidgetId) =>
-      Math.max(0, orderedDashboardWidgetIds.indexOf(widgetId)),
+    (widgetId: AdminDashboardWidgetId) => {
+      const groupIndex = getAdminDashboardWidgetLayoutGroup(widgetId);
+      const groupWidgetIds = ADMIN_DASHBOARD_WIDGET_LAYOUT_GROUPS[groupIndex];
+      const groupWidgetSet = new Set<AdminDashboardWidgetId>(groupWidgetIds);
+      const orderedGroupWidgetIds = orderedDashboardWidgetIds.filter((item) =>
+        groupWidgetSet.has(item),
+      );
+
+      return (
+        groupIndex * 100 + Math.max(0, orderedGroupWidgetIds.indexOf(widgetId))
+      );
+    },
     [orderedDashboardWidgetIds],
   );
   const getDashboardCardView = useCallback(
@@ -2018,9 +2121,19 @@ function AdminDashboardManagementPanel({
         return;
       }
 
-      const currentOrder = normalizeAdminDashboardWidgetOrder(
-        dashboardWidgetOrder,
-      );
+      if (
+        getAdminDashboardWidgetLayoutGroup(sourceWidgetId) !==
+        getAdminDashboardWidgetLayoutGroup(targetWidgetId)
+      ) {
+        setDashboardOrderMessage(
+          "같은 레이아웃 영역 안에서만 순서를 바꿀 수 있습니다. KPI 보드 형태는 유지했습니다.",
+        );
+        setDraggedDashboardWidgetId(null);
+        return;
+      }
+
+      const currentOrder =
+        normalizeAdminDashboardWidgetOrder(dashboardWidgetOrder);
       const nextOrder = currentOrder.filter(
         (widgetId) => widgetId !== sourceWidgetId,
       );
@@ -2033,11 +2146,15 @@ function AdminDashboardManagementPanel({
 
       void persistDashboardWidgetOrder(
         nextOrder,
-        `${ADMIN_DASHBOARD_WIDGET_LABELS[sourceWidgetId]} 카드 순서를 자동 저장했습니다.`,
+        `${ADMIN_DASHBOARD_WIDGET_LABELS[sourceWidgetId]} 카드 순서를 같은 영역 안에서 자동 저장했습니다.`,
       );
       setDraggedDashboardWidgetId(null);
     },
-    [dashboardWidgetOrder, draggedDashboardWidgetId, persistDashboardWidgetOrder],
+    [
+      dashboardWidgetOrder,
+      draggedDashboardWidgetId,
+      persistDashboardWidgetOrder,
+    ],
   );
   const getDashboardReorderCardClassName = useCallback(
     (widgetId: AdminDashboardWidgetId) =>
@@ -2243,9 +2360,8 @@ function AdminDashboardManagementPanel({
     () =>
       barRows.slice(0, 5).map((row) => ({
         title: row.label,
+        views: row.viewCount,
         likes: row.likeCount,
-        comments: row.commentCount,
-        engagement: row.value,
       })),
     [barRows],
   );
@@ -2280,7 +2396,7 @@ function AdminDashboardManagementPanel({
               setDashboardOrderMessage(
                 isDashboardOrderEditorOpen
                   ? "카드 순서 편집을 종료했습니다."
-                  : "카드를 직접 드래그하면 순서가 자동 저장됩니다.",
+                  : "같은 레이아웃 영역 안에서 카드를 드래그하면 순서가 자동 저장됩니다.",
               );
             }}
           >
@@ -2467,6 +2583,7 @@ function AdminDashboardManagementPanel({
         >
           <AdminDashboardCardTitle
             title="상위 영상 영향도"
+            metric={`조회 증감 ${formatDashboardChangeLabel(viewChange)}`}
             infoLines={[
               "X축은 영상별 조회수, Y축은 참여 수입니다.",
               "참여 수는 좋아요 수 + 댓글 수이며, 원 크기도 참여 규모를 의미합니다.",
@@ -2488,14 +2605,19 @@ function AdminDashboardManagementPanel({
                 {
                   key: "title",
                   header: "영상 제목",
+                  className: "w-[52%] max-w-0",
                   cell: (row) => (
-                    <span className="line-clamp-2 font-bold leading-5">
+                    <span
+                      className="block truncate font-bold"
+                      title={row.title}
+                    >
                       {row.title}
                     </span>
                   ),
                 },
                 {
                   key: "views",
+                  className: "w-[18%]",
                   header: "조회수",
                   align: "right",
                   cell: (row) => formatNumber(row.views),
@@ -2504,12 +2626,14 @@ function AdminDashboardManagementPanel({
                   key: "engagement",
                   header: "참여",
                   align: "right",
+                  className: "w-[15%]",
                   cell: (row) => formatNumber(row.engagement),
                 },
                 {
                   key: "engagementRate",
                   header: "참여율",
                   align: "right",
+                  className: "w-[15%]",
                   cell: (row) => formatDashboardPercent(row.engagementRate),
                 },
               ]}
@@ -2530,6 +2654,7 @@ function AdminDashboardManagementPanel({
         >
           <AdminDashboardCardTitle
             title="조회·참여 추이"
+            metric={`조회 증감 ${formatDashboardChangeLabel(viewChange)}`}
             infoLines={[
               "X축은 최근 영상 게시일 순서입니다.",
               "Y축은 조회수, 참여, 참여율을 각각 0~100점으로 정규화한 상대 점수입니다.",
@@ -2564,12 +2689,14 @@ function AdminDashboardManagementPanel({
                   key: "engagement",
                   header: "참여",
                   align: "right",
+                  className: "w-[15%]",
                   cell: (row) => formatNumber(row.engagement),
                 },
                 {
                   key: "engagementRate",
                   header: "참여율",
                   align: "right",
+                  className: "w-[15%]",
                   cell: (row) => formatDashboardPercent(row.engagementRate),
                 },
               ]}
@@ -2623,9 +2750,10 @@ function AdminDashboardManagementPanel({
         >
           <AdminDashboardCardTitle
             title="콘텐츠 성과 TOP 5"
+            metric={`조회 증감 ${formatDashboardChangeLabel(viewChange)}`}
             infoLines={[
-              "X축은 참여 상위 영상 5개의 유튜브 제목이며, 긴 제목은 말줄임 처리합니다.",
-              "Y축은 좋아요 수와 댓글 수이며, 참여 합계가 높은 순서로 정렬합니다.",
+              "X축은 조회수 상위 영상 5개의 유튜브 제목이며, 긴 제목은 말줄임 처리합니다.",
+              "Y축은 좋아요 수와 조회수이며, 조회수가 높은 순서로 정렬합니다.",
             ]}
             action={
               <AdminDashboardViewToggle
@@ -2644,29 +2772,29 @@ function AdminDashboardManagementPanel({
                 {
                   key: "title",
                   header: "영상 제목",
+                  className: "w-[58%] max-w-0",
                   cell: (row) => (
-                    <span className="line-clamp-2 font-bold leading-5">
+                    <span
+                      className="block truncate font-bold"
+                      title={row.title}
+                    >
                       {row.title}
                     </span>
                   ),
                 },
                 {
+                  key: "views",
+                  className: "w-[22%]",
+                  header: "조회수",
+                  align: "right",
+                  cell: (row) => formatNumber(row.views),
+                },
+                {
                   key: "likes",
                   header: "좋아요",
                   align: "right",
+                  className: "w-[20%]",
                   cell: (row) => formatNumber(row.likes),
-                },
-                {
-                  key: "comments",
-                  header: "댓글",
-                  align: "right",
-                  cell: (row) => formatNumber(row.comments),
-                },
-                {
-                  key: "engagement",
-                  header: "참여",
-                  align: "right",
-                  cell: (row) => formatNumber(row.engagement),
                 },
               ]}
             />
@@ -2689,6 +2817,12 @@ function AdminDashboardManagementPanel({
               <div className="flex min-w-0 items-center gap-1.5">
                 <p className="truncate text-xs font-extrabold leading-none text-foreground">
                   참여율 변동
+                  <span
+                    className="ml-1 font-extrabold text-muted-foreground"
+                    data-admin-dashboard-card-title-delta="true"
+                  >
+                    (참여 증감 {formatDashboardChangeLabel(engagementChange)})
+                  </span>
                 </p>
                 <AdminDashboardInfoTooltip
                   label="참여율 변동 축과 산정 방식 설명"
@@ -2700,9 +2834,6 @@ function AdminDashboardManagementPanel({
                 />
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                <span className="text-xs font-extrabold text-muted-foreground">
-                  참여 증감 {formatDashboardChangeLabel(engagementChange)}
-                </span>
                 <AdminDashboardViewToggle
                   value={getDashboardCardView("engagementRate")}
                   onChange={(view) =>
@@ -2891,23 +3022,48 @@ function AdminSidebar({
     useState<AdminThemePreference>("light");
 
   useEffect(() => {
-    const storedTheme = window.localStorage.getItem(ADMIN_THEME_STORAGE_KEY);
-    const initialTheme: AdminThemePreference = storedTheme === "dark" ? "dark" : "light";
+    const initialTheme = normalizeAdminThemePreference(
+      window.localStorage.getItem(ADMIN_THEME_STORAGE_KEY),
+    );
     setThemePreference(initialTheme);
     applyAdminThemePreference(initialTheme);
   }, []);
 
+  useEffect(() => {
+    if (themePreference !== "system") return;
+
+    const systemThemeQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const syncSystemTheme = () => applyAdminThemePreference("system");
+
+    systemThemeQuery.addEventListener("change", syncSystemTheme);
+
+    return () => {
+      systemThemeQuery.removeEventListener("change", syncSystemTheme);
+    };
+  }, [themePreference]);
+
   const toggleThemePreference = () => {
     setThemePreference((currentTheme) => {
-      const nextTheme: AdminThemePreference =
-        currentTheme === "dark" ? "light" : "dark";
+      const nextTheme = getNextAdminThemePreference(currentTheme);
       window.localStorage.setItem(ADMIN_THEME_STORAGE_KEY, nextTheme);
       applyAdminThemePreference(nextTheme);
       return nextTheme;
     });
   };
 
-  const isDarkTheme = themePreference === "dark";
+  const themeToggleLabel =
+    themePreference === "light"
+      ? "다크모드로 전환"
+      : themePreference === "dark"
+        ? "시스템 모드로 전환"
+        : "라이트모드로 전환";
+  const themeToggleText =
+    themePreference === "light"
+      ? "다크"
+      : themePreference === "dark"
+        ? "시스템"
+        : "라이트";
+  const isDarkThemePreference = themePreference === "dark";
 
   return (
     <aside
@@ -3008,10 +3164,8 @@ function AdminSidebar({
               const Icon = item.icon;
               const isActive = activeModuleId === item.id;
               const itemStatus = getItemStatus(item.id);
-
-              return (
+              const menuButton = (
                 <button
-                  key={item.id}
                   type="button"
                   title={item.title}
                   aria-label={
@@ -3055,11 +3209,10 @@ function AdminSidebar({
                     {item.badge && (
                       <span
                         className={cn(
-                          "mt-0.5 block truncate text-[11px] leading-4",
-                          isActive
-                            ? "text-primary-foreground/75"
-                            : "text-muted-foreground",
+                          "mt-0.5 block truncate text-[11px] font-semibold leading-4",
+                          getSidebarBadgeClassName(section.label, isActive),
                         )}
+                        data-admin-sidebar-badge-tone={section.label}
                       >
                         {item.badge}
                       </span>
@@ -3086,6 +3239,29 @@ function AdminSidebar({
                   )}
                 </button>
               );
+
+              if (isCollapsed) {
+                return (
+                  <UiTooltipProvider key={item.id} delayDuration={120}>
+                    <UiTooltip>
+                      <UiTooltipTrigger asChild>{menuButton}</UiTooltipTrigger>
+                      <UiTooltipContent
+                        side="right"
+                        align="center"
+                        className="max-w-[14rem] text-xs"
+                        data-admin-sidebar-collapsed-tooltip="true"
+                      >
+                        <p className="font-bold">{item.title}</p>
+                        {item.badge ? (
+                          <p className="text-muted-foreground">{item.badge}</p>
+                        ) : null}
+                      </UiTooltipContent>
+                    </UiTooltip>
+                  </UiTooltipProvider>
+                );
+              }
+
+              return <Fragment key={item.id}>{menuButton}</Fragment>;
             })}
           </div>
         ))}
@@ -3109,18 +3285,20 @@ function AdminSidebar({
                 ? "md:h-9 md:w-9 md:px-0"
                 : "w-auto shrink-0 justify-center gap-1.5",
             )}
-            aria-label={isDarkTheme ? "라이트모드로 전환" : "다크모드로 전환"}
-            aria-pressed={isDarkTheme}
+            aria-label={themeToggleLabel}
+            aria-pressed={themePreference !== "light"}
             onClick={toggleThemePreference}
             data-admin-sidebar-theme-toggle="true"
           >
-            {isDarkTheme ? (
+            {isDarkThemePreference ? (
+              <Monitor className="h-3.5 w-3.5" aria-hidden="true" />
+            ) : themePreference === "system" ? (
               <Sun className="h-3.5 w-3.5" aria-hidden="true" />
             ) : (
               <Moon className="h-3.5 w-3.5" aria-hidden="true" />
             )}
             <span className={cn("truncate", isCollapsed && "md:sr-only")}>
-              {isDarkTheme ? "라이트" : "다크"}
+              {themeToggleText}
             </span>
           </Button>
           <PopoverTrigger asChild>
@@ -3660,8 +3838,11 @@ export function AdminConsoleOverview() {
   }, [router, searchParams]);
 
   useEffect(() => {
-    setIsSidebarCollapsed(false);
-    setShowSidebarLabels(true);
+    const isStoredSidebarCollapsed =
+      window.localStorage.getItem(ADMIN_SIDEBAR_COLLAPSED_STORAGE_KEY) ===
+      "true";
+    setIsSidebarCollapsed(isStoredSidebarCollapsed);
+    setShowSidebarLabels(!isStoredSidebarCollapsed);
   }, []);
 
   useEffect(() => {
@@ -3679,12 +3860,17 @@ export function AdminConsoleOverview() {
 
   const handleToggleSidebarCollapsed = () => {
     setIsSidebarCollapsed((current) => {
-      if (!current) {
+      const nextSidebarCollapsed = !current;
+      window.localStorage.setItem(
+        ADMIN_SIDEBAR_COLLAPSED_STORAGE_KEY,
+        String(nextSidebarCollapsed),
+      );
+
+      if (nextSidebarCollapsed) {
         setShowSidebarLabels(false);
-        return true;
       }
 
-      return false;
+      return nextSidebarCollapsed;
     });
   };
 

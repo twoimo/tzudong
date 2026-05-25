@@ -152,6 +152,7 @@ export default function HomeMapUserMenu({
   }, []);
 
   const handleLoginClick = useCallback(() => {
+    toast.info("로그인 후 마이페이지를 확인할 수 있어요");
     requestAuthUi({
       source: "desktop-map-user-menu",
       route: "/",
