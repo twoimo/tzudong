@@ -358,10 +358,17 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     const opsSectionSource = sidebarSectionsSource.slice(
       sidebarSectionsSource.indexOf('label: "운영"'),
-      sidebarSectionsSource.indexOf('label: "보조"'),
+      sidebarSectionsSource.indexOf('label: "실험실"'),
+    );
+    const labSectionSource = sidebarSectionsSource.slice(
+      sidebarSectionsSource.indexOf('label: "실험실"'),
     );
     expect(homeSectionSource).not.toContain('id: "routes"');
     expect(opsSectionSource).toContain('id: "routes"');
+    expect(opsSectionSource).not.toContain('"audit"');
+    expect(labSectionSource).toContain('"audit"');
+    expect(labSectionSource).toContain('id: "llm"');
+    expect(labSectionSource).toContain('badge: "실험 중"');
     expect(opsSectionSource.indexOf('id: "routes"')).toBeLessThan(
       opsSectionSource.indexOf('"storyboard"'),
     );
@@ -470,9 +477,15 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("상위 영상 영향도");
     expect(consoleSource).toContain("조회·참여 추이");
     expect(consoleSource).toContain("콘텐츠 성과 TOP 5");
-    expect(consoleSource).toContain('data-admin-dashboard-card-title-delta="true"');
-    expect(consoleSource).toContain('metric={`조회 증감 ${formatDashboardChangeLabel(viewChange)}`}');
-    expect(consoleSource).toContain("(참여 증감 {formatDashboardChangeLabel(engagementChange)})");
+    expect(consoleSource).toContain(
+      'data-admin-dashboard-card-title-delta="true"',
+    );
+    expect(consoleSource).toContain(
+      "metric={`조회 증감 ${formatDashboardChangeLabel(viewChange)}`}",
+    );
+    expect(consoleSource).toContain(
+      "(참여 증감 {formatDashboardChangeLabel(engagementChange)})",
+    );
     expect(consoleSource).toContain("truncateAdminDashboardAxisLabel");
     expect(consoleSource).toContain("const visibleRows = rows.slice(0, 5)");
     expect(consoleSource).toContain(
@@ -867,8 +880,12 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain('"insights",');
     expect(consoleSource).toContain('"audit",');
     expect(sidebarOrderRouteSource).toContain(
-      "운영: ['storyboard', 'banners', 'users', 'insights', 'audit']",
+      'const ADMIN_SIDEBAR_SECTIONS = ["홈", "검수", "운영", "실험실"]',
     );
+    expect(sidebarOrderRouteSource).toContain(
+      '운영: ["storyboard", "banners", "users", "insights"]',
+    );
+    expect(sidebarOrderRouteSource).toContain('실험실: ["audit", "llm"]');
     expect(sidebarOrderRouteSource).not.toContain("'announcements'");
   });
 
@@ -970,6 +987,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(consoleSource).toContain('side="right"');
     expect(consoleSource).toContain("getSidebarBadgeClassName");
+    expect(consoleSource).toContain('sectionLabel === "실험실"');
     expect(consoleSource).toContain(
       "data-admin-sidebar-badge-tone={section.label}",
     );
