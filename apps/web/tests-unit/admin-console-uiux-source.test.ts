@@ -93,16 +93,19 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(detailSource).not.toContain("Tzuyang Review</h4>");
   });
 
-  test("keeps the admin overview as a viewport-bounded two-pane map console", () => {
+  test("keeps route recommendation as a viewport-bounded two-pane map console", () => {
     const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
     const overviewSource = source(
       "components/admin/AdminOverviewDashboard.tsx",
     );
 
-    expect(consoleSource).toContain("const AdminOverviewDashboard = dynamic(");
+    expect(consoleSource).toContain("const AdminRouteRecommendationModule = dynamic(");
     expect(consoleSource).toContain(
       'import("@/components/admin/AdminOverviewDashboard")',
     );
+    expect(consoleSource).toContain('id: "routes"');
+    expect(consoleSource).toContain('title: "맛집 동선 추천"');
+    expect(consoleSource).toContain("AdminDashboardManagementPanel");
     expect(consoleSource).not.toContain("fetchAdminMapRestaurants");
 
     expect(overviewSource).toContain("fetchAdminMapRestaurants");
@@ -177,7 +180,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(overviewSource).toContain("function AdminMapLoadingSkeleton");
     expect(overviewSource).toContain("function AdminMapInfoPanelSkeleton");
     expect(overviewSource).toContain('data-admin-map-info-skeleton="true"');
-    expect(overviewSource).toContain('aria-label="관리자 지도 운영 정보 로딩"');
+    expect(overviewSource).toContain('aria-label="관리자 지도 동선 추천 로딩"');
     expect(overviewSource).toContain("if (isLoading && !selectedRestaurant)");
     expect(overviewSource).toContain('aria-label="관리자 네이버 지도 로딩"');
     expect(overviewSource).toContain('data-admin-map-loading-skeleton="true"');
@@ -202,9 +205,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(overviewSource).not.toContain("Tzudong admin map");
     expect(overviewSource).not.toContain("Selected marker");
     expect(overviewSource).not.toContain("getRestaurantMarkerStyle");
-    expect(overviewSource).toContain("쯔동여지도 홈 · 관리자 전용");
-    expect(overviewSource).toContain("마커 선택 가능");
-    expect(overviewSource).toContain("운영 정보");
+    expect(overviewSource).not.toContain("쯔동여지도 홈 · 관리자 전용");
+    expect(overviewSource).not.toContain("마커 선택 가능");
+    expect(overviewSource).not.toContain("운영 정보");
     expect(overviewSource).toContain("동선 추천 초안");
     expect(overviewSource).not.toContain("1분할");
     expect(overviewSource).not.toContain("3분할");
@@ -318,14 +321,16 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "components/admin/AdminOverviewDashboard.tsx",
     );
 
-    expect(overviewSource).toContain("실제 이동시간 API가 붙기 전까지는");
+    expect(overviewSource).toContain("네이버 Directions 5 기준 실제 도로 주행 경로");
     expect(overviewSource).toContain(
-      "최근 영상 요약은 승인 맛집과 연결된 데이터가 있을 때만",
+      "도로 경로 계산 전이나 실패 시에는 같은 영상·카테고리·직선거리 기반 후보",
     );
-    expect(overviewSource).toContain("표시합니다.");
-    expect(overviewSource).toContain(
+    expect(overviewSource).toContain("fetchAdminDirectionsRoute");
+    expect(overviewSource).toContain("/api/admin/routes/directions");
+    expect(overviewSource).not.toContain(
       'data-admin-creator-layer-controls="active-only"',
     );
+    expect(overviewSource).not.toContain("최근 영상 연결");
     expect(overviewSource).not.toContain("향후 유튜버 A");
     expect(overviewSource).not.toContain("향후 유튜버 B");
     expect(consoleSource).not.toContain("ADMIN_OVERVIEW_WIDGET_STORAGE_KEY");
@@ -337,6 +342,15 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain("위로 이동");
     expect(consoleSource).not.toContain("아래로 이동");
     expect(consoleSource).not.toContain("기본 순서");
+    expect(consoleSource).toContain('title: "대시보드 관리"');
+    expect(consoleSource).toContain('title: "핵심 인사이트"');
+    expect(consoleSource).toContain("fetchAdminDashboardInsightSummary");
+    expect(consoleSource).toContain("/api/insights/treemap");
+    expect(consoleSource).toContain('data-admin-dashboard-realtime-charts="true"');
+    expect(consoleSource).toContain("꺾은선 그래프 · 참여 추이");
+    expect(consoleSource).toContain("원형 그래프 · 참여 구성");
+    expect(consoleSource).toContain("막대 그래프 · 상위 참여 영상");
+    expect(consoleSource).toContain("구독자 실시간 소스 미연결");
     expect(consoleSource).not.toContain("function buildMetricSeries");
   });
 
@@ -565,7 +579,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("buildCanonicalAdminModuleHref");
     expect(consoleSource).toContain("getAdminModuleStateWarning");
     expect(consoleSource).toContain(
-      "알 수 없는 관리자 화면 요청을 개요로 되돌렸습니다.",
+      "알 수 없는 관리자 화면 요청을 대시보드 관리로 되돌렸습니다.",
     );
     expect(consoleSource).toContain(
       "router.replace(buildCanonicalAdminModuleHref(moduleId)",
@@ -583,13 +597,13 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain("window.location.hash");
   });
 
-  test("keeps admin overview as only two source-honest map panes", () => {
+  test("keeps route recommendation as only two source-honest map panes", () => {
     const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
     const overviewSource = source(
       "components/admin/AdminOverviewDashboard.tsx",
     );
 
-    expect(consoleSource).toContain("const AdminOverviewDashboard = dynamic(");
+    expect(consoleSource).toContain("const AdminRouteRecommendationModule = dynamic(");
     expect(overviewSource).toContain(
       'aria-label="관리자 지도 운영 개요 2분할"',
     );
@@ -602,7 +616,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(overviewSource).toContain(
       "지도는 기본 위치로 유지하고 좌표가 있는 맛집만 표시합니다.",
     );
-    expect(overviewSource).toContain("실제 이동시간 API가 붙기 전까지는");
+    expect(overviewSource).toContain("네이버 Directions 5 기준 실제 도로 주행 경로");
     expect(overviewSource).not.toContain("채널별 레이어 확장 슬롯");
     expect(overviewSource).not.toContain("오늘 처리할 일");
     expect(overviewSource).not.toContain(
@@ -622,7 +636,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain("function LatestTzuyangVideosWidget");
   });
 
-  test("keeps selected marker detail split between compact info and YouTube evidence", () => {
+  test("keeps selected marker detail as one thumbnail-first evidence card", () => {
     const overviewSource = source(
       "components/admin/AdminOverviewDashboard.tsx",
     );
@@ -634,18 +648,18 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(overviewSource).toContain('setQuality("hqdefault")');
     expect(overviewSource).toContain(
-      'sizes="(min-width: 1280px) 240px, (min-width: 640px) 50vw, 100vw"',
+      'sizes="(min-width: 1280px) 520px, (min-width: 640px) 100vw, 100vw"',
     );
-    expect(overviewSource).toContain("sm:grid-cols-2");
-    expect(overviewSource).toContain('aria-label="선택 마커 작업"');
-    expect(
-      overviewSource.indexOf('aria-label="선택 마커 작업"'),
-    ).toBeGreaterThan(overviewSource.indexOf("selectedCoordinateText"));
-    expect(overviewSource.indexOf('aria-label="선택 마커 작업"')).toBeLessThan(
-      overviewSource.indexOf("연결 영상 썸네일"),
-    );
-    expect(overviewSource).toContain("연결 영상 썸네일");
+    expect(overviewSource).toContain("object-contain");
+    expect(overviewSource).toContain("relative block aspect-video overflow-hidden bg-background");
+    expect(overviewSource).toContain("function getAdminYoutubeWatchUrl");
+    expect(overviewSource).toContain("const selectedYoutubeUrl =");
+    expect(overviewSource).toContain("group relative block aspect-video");
+    expect(overviewSource).not.toContain('aria-label="선택 마커 작업"');
+    expect(overviewSource).not.toContain("연결 영상 썸네일");
     expect(overviewSource).toContain("원본 YouTube 영상 새 탭에서 열기");
+    expect(overviewSource).not.toContain("원본 영상 열기");
+    expect(overviewSource).not.toContain("맛집 검수");
     expect(overviewSource).toContain("영상 연결 없음");
     expect(overviewSource).not.toContain("selectedMetaItems.map");
   });
