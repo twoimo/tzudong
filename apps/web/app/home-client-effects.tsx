@@ -159,7 +159,6 @@ export default function HomeClientEffects({
                             .then(({ resolveHomeRestaurantDeepLink }) => resolveHomeRestaurantDeepLink(restaurantId))
                             .catch((error) => {
                                 console.error('맛집 조회 실패:', error);
-                                toast.error('맛집 정보를 불러오지 못했어요');
                                 return null;
                             });
                         request = { key: restaurantKey, promise };
