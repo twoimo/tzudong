@@ -34,6 +34,7 @@ import HydratedDetailRestaurant from "@/components/home/HydratedDetailRestaurant
 import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailPanel";
 import { cn } from "@/lib/utils";
 import { requestAuthUi } from "@/lib/auth-ui-events";
+import { toast } from "@/lib/no-toast";
 import { HOME_DESKTOP_INLINE_DETAIL_OPEN_FAILED_EVENT } from "@/lib/desktop-left-panel-entry";
 import {
   DEFAULT_HOME_MAP_USER_PREFERENCES,
@@ -266,6 +267,20 @@ const DESKTOP_FLOATING_NAV_BUTTON_WIDTH = `${Math.max(
   ...DESKTOP_FLOATING_NAV_ITEMS.map((item) => item.label.length * 0.55 + 3.85),
 ).toFixed(2)}rem`;
 
+const DESKTOP_LEFT_PANEL_AUTH_TOASTS = {
+  profile: "로그인 후 프로필을 확인할 수 있어요",
+  bookmarks: "로그인 후 북마크를 확인할 수 있어요",
+  notifications: "로그인 후 알림을 확인할 수 있어요",
+  settings: "로그인 후 지도 환경설정을 사용할 수 있어요",
+  review: "로그인 후 리뷰를 작성할 수 있어요",
+} as const;
+
+const showDesktopLeftPanelAuthToast = (
+  reason: keyof typeof DESKTOP_LEFT_PANEL_AUTH_TOASTS,
+) => {
+  toast.info(DESKTOP_LEFT_PANEL_AUTH_TOASTS[reason]);
+};
+
 const HOME_DESKTOP_DETAIL_RETURN_CAPTURE_EVENT =
   "home:desktop-detail-return-capture";
 
@@ -382,10 +397,13 @@ function DesktopMapSettingsPanel({
 
   const updatePanelSide = useCallback(
     (desktopPanelSide: HomeMapPanelSide) => {
-      persistPreferences({
-        ...preferences,
-        desktopPanelSide,
-      }, { preservePanelCollapse: true });
+      persistPreferences(
+        {
+          ...preferences,
+          desktopPanelSide,
+        },
+        { preservePanelCollapse: true },
+      );
     },
     [persistPreferences, preferences],
   );
@@ -413,8 +431,8 @@ function DesktopMapSettingsPanel({
             지도와 사이드 패널 맞춤 설정
           </h2>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            이 브라우저에서 {user.email ?? "현재 계정"} 기준으로 저장되고,
-            다음 데스크탑 접속부터 같은 배치로 시작합니다.
+            이 브라우저에서 {user.email ?? "현재 계정"} 기준으로 저장되고, 다음
+            데스크탑 접속부터 같은 배치로 시작합니다.
           </p>
         </div>
         <Button
@@ -433,7 +451,10 @@ function DesktopMapSettingsPanel({
         <div className="space-y-4">
           <section className="rounded-2xl border border-border bg-card p-3">
             <div className="flex items-start gap-2">
-              <PanelLeft className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+              <PanelLeft
+                className="mt-0.5 h-4 w-4 shrink-0 text-primary"
+                aria-hidden="true"
+              />
               <div>
                 <h3 className="text-sm font-bold text-foreground">
                   시작 레이아웃 프리셋
@@ -472,7 +493,10 @@ function DesktopMapSettingsPanel({
 
           <section className="rounded-2xl border border-border bg-card p-3">
             <div className="flex items-start gap-2">
-              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+              <MapPin
+                className="mt-0.5 h-4 w-4 shrink-0 text-primary"
+                aria-hidden="true"
+              />
               <div>
                 <h3 className="text-sm font-bold text-foreground">
                   지도 영역 위치
@@ -508,13 +532,17 @@ function DesktopMapSettingsPanel({
 
           <section className="rounded-2xl border border-border bg-card p-3">
             <div className="flex items-start gap-2">
-              <PanelRight className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+              <PanelRight
+                className="mt-0.5 h-4 w-4 shrink-0 text-primary"
+                aria-hidden="true"
+              />
               <div>
                 <h3 className="text-sm font-bold text-foreground">
                   사이드 패널 위치
                 </h3>
                 <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  오른손 조작이나 넓은 화면 취향에 맞춰 패널을 좌우로 옮길 수 있습니다.
+                  오른손 조작이나 넓은 화면 취향에 맞춰 패널을 좌우로 옮길 수
+                  있습니다.
                 </p>
               </div>
             </div>
@@ -543,7 +571,10 @@ function DesktopMapSettingsPanel({
 
           <section className="rounded-2xl border border-border bg-card p-3">
             <div className="flex items-start gap-2">
-              <Gauge className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+              <Gauge
+                className="mt-0.5 h-4 w-4 shrink-0 text-primary"
+                aria-hidden="true"
+              />
               <div>
                 <h3 className="text-sm font-bold text-foreground">
                   사이드 패널 기본 상태
@@ -569,7 +600,9 @@ function DesktopMapSettingsPanel({
                   }
                   aria-pressed={preferences.desktopPanelDefault === value}
                   className="rounded-xl"
-                  onClick={() => updatePanelDefault(value as HomeMapPanelDefault)}
+                  onClick={() =>
+                    updatePanelDefault(value as HomeMapPanelDefault)
+                  }
                 >
                   {label}
                 </Button>
@@ -602,7 +635,9 @@ const DESKTOP_LEFT_PANEL_ROUTE_VIEWS = [
   "notifications",
   "settings",
   "announcement",
-] as const satisfies ReadonlyArray<Exclude<DesktopLeftPanelView, "map" | "adminReviews">>;
+] as const satisfies ReadonlyArray<
+  Exclude<DesktopLeftPanelView, "map" | "adminReviews">
+>;
 
 function isDesktopLeftPanelRouteView(
   value: string | null,
@@ -644,7 +679,11 @@ function buildOptimisticDetailRestaurant(
   restaurant: InlinePanelRestaurant,
 ): Restaurant {
   const categories = restaurant.categories ?? restaurant.category ?? [];
-  const address = restaurant.address ?? restaurant.road_address ?? restaurant.jibun_address ?? "";
+  const address =
+    restaurant.address ??
+    restaurant.road_address ??
+    restaurant.jibun_address ??
+    "";
   const createdAt = restaurant.created_at ?? new Date(0).toISOString();
   const updatedAt = restaurant.updated_at ?? createdAt;
 
@@ -667,7 +706,8 @@ function buildOptimisticDetailRestaurant(
     jibun_address: restaurant.jibun_address ?? null,
     english_address: restaurant.english_address ?? null,
     address_elements: restaurant.address_elements ?? null,
-    geocoding_success: restaurant.geocoding_success ?? Boolean(restaurant.lat && restaurant.lng),
+    geocoding_success:
+      restaurant.geocoding_success ?? Boolean(restaurant.lat && restaurant.lng),
     geocoding_false_stage: restaurant.geocoding_false_stage ?? null,
     is_missing: restaurant.is_missing ?? false,
     is_not_selected: restaurant.is_not_selected ?? false,
@@ -757,6 +797,10 @@ export default function HomeDesktopControlPanel({
   const activeLeftPanelViewRef = useRef(activeLeftPanelView);
   const activeProfileUserIdRef = useRef(activeProfileUserId);
   const activeDetailRestaurantIdRef = useRef<string | null>(null);
+  const revealDesktopLeftPanel = useCallback(() => {
+    onSetPanelCollapsed?.(false);
+    onPanelClick?.("control");
+  }, [onPanelClick, onSetPanelCollapsed]);
   const hasCapturedDetailReturnRef = useRef(false);
   const pendingDetailReturnCaptureRef = useRef(false);
   const detailReturnStateRef = useRef<DesktopDetailReturnState>({
@@ -820,8 +864,8 @@ export default function HomeDesktopControlPanel({
   useEffect(() => {
     if (initialIntent !== "search") return;
 
-    onPanelClick?.("control");
-  }, [initialIntent, onPanelClick]);
+    revealDesktopLeftPanel();
+  }, [initialIntent, revealDesktopLeftPanel]);
 
   useEffect(() => {
     activeLeftPanelViewRef.current = activeLeftPanelView;
@@ -840,11 +884,23 @@ export default function HomeDesktopControlPanel({
   }, [onPanelClick]);
 
   useEffect(() => {
-    window.addEventListener("openAnnouncementDetail", revealAnnouncementLeftPanel);
-    window.addEventListener("openAdminAnnouncements", revealAnnouncementLeftPanel);
+    window.addEventListener(
+      "openAnnouncementDetail",
+      revealAnnouncementLeftPanel,
+    );
+    window.addEventListener(
+      "openAdminAnnouncements",
+      revealAnnouncementLeftPanel,
+    );
     return () => {
-      window.removeEventListener("openAnnouncementDetail", revealAnnouncementLeftPanel);
-      window.removeEventListener("openAdminAnnouncements", revealAnnouncementLeftPanel);
+      window.removeEventListener(
+        "openAnnouncementDetail",
+        revealAnnouncementLeftPanel,
+      );
+      window.removeEventListener(
+        "openAdminAnnouncements",
+        revealAnnouncementLeftPanel,
+      );
     };
   }, [revealAnnouncementLeftPanel]);
 
@@ -861,7 +917,9 @@ export default function HomeDesktopControlPanel({
         isSearchActive: isDesktopSearchActive,
       };
       hasCapturedDetailReturnRef.current = true;
-      pendingDetailReturnCaptureRef.current = Boolean(options.pendingDetailOpen);
+      pendingDetailReturnCaptureRef.current = Boolean(
+        options.pendingDetailOpen,
+      );
     },
     [desktopSearchQuery, desktopSearchType, isDesktopSearchActive],
   );
@@ -892,9 +950,15 @@ export default function HomeDesktopControlPanel({
       setIsInlineDetailOpenPending(false);
       const returnState = detailReturnStateRef.current;
       setActiveLeftPanelView(returnState.view);
+      if (returnState.view !== "map") {
+        onSetPanelCollapsed?.(false);
+      }
       setActiveProfileUserId(returnState.profileUserId || user?.id || null);
       router.replace(
-        getDesktopLeftPanelRoute(returnState.view, returnState.profileUserId || user?.id),
+        getDesktopLeftPanelRoute(
+          returnState.view,
+          returnState.profileUserId || user?.id,
+        ),
         { scroll: false },
       );
     };
@@ -909,7 +973,7 @@ export default function HomeDesktopControlPanel({
         handleInlineDetailOpenFailed,
       );
     };
-  }, [router, user]);
+  }, [onSetPanelCollapsed, router, user]);
 
   useEffect(() => {
     const panelParam = searchParams.get("panel");
@@ -927,6 +991,15 @@ export default function HomeDesktopControlPanel({
         panelParam === "settings") &&
       !user
     ) {
+      showDesktopLeftPanelAuthToast(
+        panelParam === "profile"
+          ? "profile"
+          : panelParam === "bookmarks"
+            ? "bookmarks"
+            : panelParam === "notifications"
+              ? "notifications"
+              : "settings",
+      );
       requestAuthUi({
         source: "desktop-left-panel",
         route: "/",
@@ -945,24 +1018,24 @@ export default function HomeDesktopControlPanel({
     }
 
     setActiveLeftPanelView(panelParam);
+    onSetPanelCollapsed?.(false);
     if (panelParam === "profile") {
       setActiveProfileUserId(searchParams.get("user") || user?.id || null);
     }
-  }, [activeRightPanel, router, searchParams, user]);
-
+  }, [activeRightPanel, onSetPanelCollapsed, router, searchParams, user]);
 
   useEffect(() => {
     if (activeRightPanel === "announcement") {
       setActiveLeftPanelView("announcement");
       setIsDesktopSearchActive(false);
-      onPanelClick?.("control");
+      revealDesktopLeftPanel();
       return;
     }
 
     if (activeRightPanel === "adminReviews" && isAdmin) {
       setActiveLeftPanelView("adminReviews");
       setIsDesktopSearchActive(false);
-      onPanelClick?.("control");
+      revealDesktopLeftPanel();
       return;
     }
 
@@ -975,7 +1048,7 @@ export default function HomeDesktopControlPanel({
     ) {
       setActiveLeftPanelView("map");
     }
-  }, [activeRightPanel, isAdmin, onPanelClick, searchParams]);
+  }, [activeRightPanel, isAdmin, revealDesktopLeftPanel, searchParams]);
 
   useEffect(() => {
     if (!isPanelOpen || !panelRestaurant) {
@@ -1057,9 +1130,10 @@ export default function HomeDesktopControlPanel({
       onPanelClose?.();
     }
 
+    revealDesktopLeftPanel();
     setActiveLeftPanelView("map");
     setIsDesktopSearchActive(true);
-  }, [activeRightPanel, onPanelClose]);
+  }, [activeRightPanel, onPanelClose, revealDesktopLeftPanel]);
 
   const toggleDesktopSearchType = useCallback(() => {
     setDesktopSearchType((current) =>
@@ -1150,24 +1224,29 @@ export default function HomeDesktopControlPanel({
     );
 
     setActiveLeftPanelView(returnView);
+    if (returnView !== "map") {
+      onSetPanelCollapsed?.(false);
+    }
     router.replace(returnRoute, { scroll: false });
     replaceBrowserHistoryRoute(returnRoute);
-  }, [onPanelClose, router, user]);
+  }, [onPanelClose, onSetPanelCollapsed, router, user]);
 
   const handleShortcutClick = useCallback(
-    (panel: Extract<DesktopLeftPanelView, "feed" | "stamp" | "leaderboard">) => {
+    (
+      panel: Extract<DesktopLeftPanelView, "feed" | "stamp" | "leaderboard">,
+    ) => {
       pendingDetailReturnCaptureRef.current = false;
       setIsInlineDetailOpenPending(false);
       if (activeRightPanel !== null) {
         onPanelClose?.();
       }
 
+      revealDesktopLeftPanel();
       setActiveLeftPanelView(panel);
       router.push(`/?panel=${panel}`, { scroll: false });
     },
-    [activeRightPanel, onPanelClose, router],
+    [activeRightPanel, onPanelClose, revealDesktopLeftPanel, router],
   );
-
 
   const handleAdminEditRestaurant = useCallback(() => {
     if (!panelRestaurant) return;
@@ -1186,6 +1265,7 @@ export default function HomeDesktopControlPanel({
     setIsInlineDetailOpenPending(false);
 
     if (!user) {
+      showDesktopLeftPanelAuthToast("profile");
       requestAuthUi({
         source: "desktop-left-panel",
         route: "/",
@@ -1198,16 +1278,18 @@ export default function HomeDesktopControlPanel({
       onPanelClose?.();
     }
 
+    revealDesktopLeftPanel();
     setActiveProfileUserId(user.id);
     setActiveLeftPanelView("profile");
     router.push("/?panel=profile", { scroll: false });
-  }, [activeRightPanel, onPanelClose, router, user]);
+  }, [activeRightPanel, onPanelClose, revealDesktopLeftPanel, router, user]);
 
   const handleBookmarkClick = useCallback(() => {
     pendingDetailReturnCaptureRef.current = false;
     setIsInlineDetailOpenPending(false);
 
     if (!user) {
+      showDesktopLeftPanelAuthToast("bookmarks");
       requestAuthUi({
         source: "desktop-left-panel",
         route: "/",
@@ -1220,15 +1302,17 @@ export default function HomeDesktopControlPanel({
       onPanelClose?.();
     }
 
+    revealDesktopLeftPanel();
     setActiveLeftPanelView("bookmarks");
     router.push("/?panel=bookmarks", { scroll: false });
-  }, [activeRightPanel, onPanelClose, router, user]);
+  }, [activeRightPanel, onPanelClose, revealDesktopLeftPanel, router, user]);
 
   const handleNotificationClick = useCallback(() => {
     pendingDetailReturnCaptureRef.current = false;
     setIsInlineDetailOpenPending(false);
 
     if (!user) {
+      showDesktopLeftPanelAuthToast("notifications");
       requestAuthUi({
         source: "desktop-left-panel",
         route: "/",
@@ -1241,9 +1325,10 @@ export default function HomeDesktopControlPanel({
       onPanelClose?.();
     }
 
+    revealDesktopLeftPanel();
     setActiveLeftPanelView("notifications");
     router.push("/?panel=notifications", { scroll: false });
-  }, [activeRightPanel, onPanelClose, router, user]);
+  }, [activeRightPanel, onPanelClose, revealDesktopLeftPanel, router, user]);
 
   const handleFloatingNavClick = useCallback(
     (panel: (typeof DESKTOP_FLOATING_NAV_ITEMS)[number]["id"]) => {
@@ -1317,13 +1402,14 @@ export default function HomeDesktopControlPanel({
 
   const handleInlinePanelUserOpen = useCallback(
     (userId: string) => {
+      revealDesktopLeftPanel();
       setActiveProfileUserId(userId);
       setActiveLeftPanelView("profile");
       router.push(`/?panel=profile&user=${encodeURIComponent(userId)}`, {
         scroll: false,
       });
     },
-    [router],
+    [revealDesktopLeftPanel, router],
   );
   const hasActiveDetail = isPanelOpen && Boolean(panelRestaurant);
   const isInlinePanelViewActive = activeLeftPanelView !== "map";
@@ -1355,7 +1441,9 @@ export default function HomeDesktopControlPanel({
               <div
                 key={rowStart}
                 className="grid grid-cols-3 gap-2"
-                data-desktop-map-floating-nav-row={rowStart === 0 ? "account" : "content"}
+                data-desktop-map-floating-nav-row={
+                  rowStart === 0 ? "account" : "content"
+                }
               >
                 {DESKTOP_FLOATING_NAV_ITEMS.slice(rowStart, rowStart + 3).map(
                   (item) => {
@@ -1512,14 +1600,26 @@ export default function HomeDesktopControlPanel({
           >
             {isPanelCollapsed ? (
               desktopPanelSide === "right" ? (
-                <ChevronLeft className="h-4 w-4 text-muted-foreground group-hover:text-foreground" aria-hidden="true" />
+                <ChevronLeft
+                  className="h-4 w-4 text-muted-foreground group-hover:text-foreground"
+                  aria-hidden="true"
+                />
               ) : (
-                <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground" aria-hidden="true" />
+                <ChevronRight
+                  className="h-4 w-4 text-muted-foreground group-hover:text-foreground"
+                  aria-hidden="true"
+                />
               )
             ) : desktopPanelSide === "right" ? (
-              <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground" aria-hidden="true" />
+              <ChevronRight
+                className="h-4 w-4 text-muted-foreground group-hover:text-foreground"
+                aria-hidden="true"
+              />
             ) : (
-              <ChevronLeft className="h-4 w-4 text-muted-foreground group-hover:text-foreground" aria-hidden="true" />
+              <ChevronLeft
+                className="h-4 w-4 text-muted-foreground group-hover:text-foreground"
+                aria-hidden="true"
+              />
             )}
           </button>
         )}
@@ -1638,13 +1738,14 @@ export default function HomeDesktopControlPanel({
                   ) => void
                 }
                 onOpenUserProfile={handleInlinePanelUserOpen}
-                onOpenAuth={() =>
+                onOpenAuth={() => {
+                  showDesktopLeftPanelAuthToast("review");
                   requestAuthUi({
                     source: "desktop-left-panel-feed",
                     route: "/",
                     reason: "write-review",
-                  })
-                }
+                  });
+                }}
               />
             ) : activeLeftPanelView === "stamp" && DeferredStampOverlay ? (
               <DeferredStampOverlay

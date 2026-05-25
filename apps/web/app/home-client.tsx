@@ -107,7 +107,7 @@ const requestDesktopDetailReturnCapture = () => {
 };
 
 const HOME_INITIAL_SHELL_INTENT_KEY = "tzudong:home-initial-intent";
-const DEVICE_LOCATION_ENABLE_TOAST = "위치 기능을 켜주세요";
+const DEVICE_LOCATION_ENABLE_TOAST = "위치 서비스(GPS) 기능을 켜주세요.";
 
 function clearAnnouncementPanelUrl() {
   if (typeof window === "undefined") return;
@@ -663,6 +663,7 @@ export default function HomeClient() {
     if (typeof window === "undefined") return;
 
     if (!user) {
+      toast.info("로그인 후 프로필을 확인할 수 있어요");
       requestAuthUi({
         source: "mobile-top-shell",
         route: "/",
@@ -698,7 +699,6 @@ export default function HomeClient() {
         selectedAnnouncement={selectedAnnouncement}
         setMapMode={setMapMode}
         setSelectedAnnouncement={setSelectedAnnouncement}
-        togglePanelCollapse={togglePanelCollapse}
       />
 
       <HomeMapContainer
