@@ -107,7 +107,7 @@ const requestDesktopDetailReturnCapture = () => {
 };
 
 const HOME_INITIAL_SHELL_INTENT_KEY = "tzudong:home-initial-intent";
-const DEVICE_LOCATION_ENABLE_TOAST = "위치 기능을 켜주세요";
+const DEVICE_LOCATION_ENABLE_TOAST = "위치 서비스(GPS) 기능을 켜주세요.";
 
 function clearAnnouncementPanelUrl() {
   if (typeof window === "undefined") return;
