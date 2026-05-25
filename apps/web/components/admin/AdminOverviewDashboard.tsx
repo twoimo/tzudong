@@ -6,7 +6,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Image as ImageIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNaverMaps } from "@/hooks/use-naver-maps";
 import { REGION_MAP_CONFIG } from "@/config/maps";
@@ -32,6 +31,7 @@ import type {
 const ADMIN_OVERVIEW_MAP_PAGE_SIZE = 500;
 const ADMIN_OVERVIEW_CLUSTER_MAX_ZOOM = 13;
 const ADMIN_OVERVIEW_CLUSTER_RADIUS = 56;
+const ADMIN_DIRECTIONS_MAX_POINTS = 7;
 
 type AdminOverviewModuleId = "restaurants" | "submissions" | "reviews";
 
@@ -62,6 +62,24 @@ type AdminMapRestaurant = {
   isMock?: boolean;
 };
 
+type AdminDirectionsPoint = {
+  lat: number;
+  lng: number;
+};
+
+type AdminDirectionsSummary = {
+  distance?: number;
+  duration?: number;
+};
+
+type AdminDirectionsRoute = {
+  provider: "naver-directions5";
+  path: AdminDirectionsPoint[];
+  summary: AdminDirectionsSummary | null;
+};
+
+type AdminDirectionsStatus = "idle" | "loading" | "ready" | "fallback";
+
 type AdminNaverLatLngLike = {
   lat?: (() => number) | number;
   lng?: (() => number) | number;
@@ -79,9 +97,11 @@ type AdminNaverMapInstance = {
   getBounds?: () => AdminNaverBoundsLike | null;
 };
 
-type AdminNaverMarkerInstance = {
+type AdminNaverOverlayInstance = {
   setMap: (map: AdminNaverMapInstance | null) => void;
 };
+
+type AdminNaverMarkerInstance = AdminNaverOverlayInstance;
 
 type AdminNaverMapsApi = {
   Map: new (
@@ -91,6 +111,7 @@ type AdminNaverMapsApi = {
   LatLng: new (lat: number, lng: number) => unknown;
   Point: new (x: number, y: number) => unknown;
   Marker: new (options: Record<string, unknown>) => AdminNaverMarkerInstance;
+  Polyline?: new (options: Record<string, unknown>) => AdminNaverOverlayInstance;
   Event: {
     addListener: (
       target: unknown,
@@ -115,6 +136,27 @@ function formatCount(value: number | null | undefined, unit: string) {
     : "—";
 }
 
+function formatRouteDistance(distanceMeters: number | undefined) {
+  if (typeof distanceMeters !== "number" || !Number.isFinite(distanceMeters)) {
+    return null;
+  }
+
+  if (distanceMeters < 1000) {
+    return `${adminNumberFormatter.format(Math.round(distanceMeters))}m`;
+  }
+
+  return `${(distanceMeters / 1000).toFixed(1)}km`;
+}
+
+function formatRouteDuration(durationMs: number | undefined) {
+  if (typeof durationMs !== "number" || !Number.isFinite(durationMs)) {
+    return null;
+  }
+
+  const minutes = Math.max(1, Math.round(durationMs / 1000 / 60));
+  return `약 ${adminNumberFormatter.format(minutes)}분`;
+}
+
 async function fetchAdminMapRestaurants(): Promise<DashboardRestaurantsResponse> {
   const params = new URLSearchParams({
     limit: String(ADMIN_OVERVIEW_MAP_PAGE_SIZE),
@@ -133,6 +175,28 @@ async function fetchAdminMapRestaurants(): Promise<DashboardRestaurantsResponse>
   }
 
   return response.json() as Promise<DashboardRestaurantsResponse>;
+}
+
+async function fetchAdminDirectionsRoute(
+  points: AdminDirectionsPoint[],
+  signal?: AbortSignal,
+) {
+  const response = await fetch("/api/admin/routes/directions", {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ points, option: "trafast" }),
+    cache: "no-store",
+    signal,
+  });
+
+  if (!response.ok) {
+    throw new Error("admin-directions-route-failed");
+  }
+
+  return response.json() as Promise<AdminDirectionsRoute>;
 }
 
 function toAdminMapRestaurant(
@@ -241,18 +305,6 @@ function adminRestaurantsToClusterFeatures(
   }));
 }
 
-function formatShortDate(value: string | null) {
-  if (!value) return "게시일 확인 필요";
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "게시일 확인 필요";
-
-  return new Intl.DateTimeFormat("ko-KR", {
-    month: "short",
-    day: "numeric",
-  }).format(date);
-}
-
 function calculateDistanceKm(a: AdminMapRestaurant, b: AdminMapRestaurant) {
   if (!hasAdminMapCoordinates(a) || !hasAdminMapCoordinates(b)) return null;
 
@@ -310,6 +362,12 @@ function getAdminYoutubeThumbnailUrl(
     : null;
 }
 
+function getAdminYoutubeWatchUrl(videoId: string | null) {
+  return videoId
+    ? `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`
+    : null;
+}
+
 function AdminYoutubeThumbnailImage({
   restaurantName,
   videoId,
@@ -329,38 +387,10 @@ function AdminYoutubeThumbnailImage({
       src={thumbnailUrl}
       alt={`${restaurantName} 유튜브 썸네일`}
       fill
-      sizes="(min-width: 1280px) 240px, (min-width: 640px) 50vw, 100vw"
-      className="object-cover transition-opacity duration-200 group-hover:opacity-90 motion-reduce:transition-none"
+      sizes="(min-width: 1280px) 520px, (min-width: 640px) 100vw, 100vw"
+      className="object-contain transition-opacity duration-200 group-hover:opacity-90 motion-reduce:transition-none"
       onError={() => setQuality("hqdefault")}
     />
-  );
-}
-
-function AdminCreatorLayerControls({ tzuyangCount }: { tzuyangCount: number }) {
-  return (
-    <div
-      className="grid gap-2"
-      aria-label="유튜버별 지도 레이어"
-      data-admin-creator-layer-controls="active-only"
-    >
-      <div className="rounded-2xl border border-primary/20 bg-primary/5 p-2.5">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-xs font-bold text-primary">쯔양</p>
-          <Badge
-            variant="outline"
-            className="rounded-full border-primary/25 text-primary"
-          >
-            표시
-          </Badge>
-        </div>
-        <p className="mt-1 text-xl font-bold tracking-[-0.04em] text-foreground">
-          {formatCount(tzuyangCount, "곳")}
-        </p>
-        <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">
-          현재 승인 맛집 좌표 기준
-        </p>
-      </div>
-    </div>
   );
 }
 
@@ -386,11 +416,15 @@ function AdminMapLoadingSkeleton() {
 function AdminNaverMapSurface({
   restaurants,
   selectedRestaurant,
+  routeRestaurants,
+  directionsPath,
   isLoading,
   onSelectRestaurant,
 }: {
   restaurants: AdminMapRestaurant[];
   selectedRestaurant: AdminMapRestaurant | null;
+  routeRestaurants: AdminMapRestaurant[];
+  directionsPath: AdminDirectionsPoint[];
   isLoading: boolean;
   onSelectRestaurant: (restaurant: AdminMapRestaurant) => void;
 }) {
@@ -399,6 +433,7 @@ function AdminNaverMapSurface({
   const markerRefs = useRef<
     Array<{ marker: AdminNaverMarkerInstance; listener: unknown }>
   >([]);
+  const routeOverlayRefs = useRef<AdminNaverOverlayInstance[]>([]);
   const idleListenerRef = useRef<unknown>(null);
   const viewportRefreshTimerRef = useRef<number | null>(null);
   const [viewportVersion, setViewportVersion] = useState(0);
@@ -445,6 +480,35 @@ function AdminNaverMapSurface({
   const mapCenter = useMemo(
     () => getAdminMapCenter(visibleRestaurants),
     [visibleRestaurants],
+  );
+  const routePathRestaurants = useMemo<
+    Array<AdminMapRestaurant & { lat: number; lng: number }>
+  >(() => {
+    if (!selectedRestaurant || !hasAdminMapCoordinates(selectedRestaurant)) {
+      return [];
+    }
+
+    const seen = new Set([selectedRestaurant.id]);
+    const candidates = routeRestaurants.filter(
+      (
+        restaurant,
+      ): restaurant is AdminMapRestaurant & { lat: number; lng: number } => {
+        if (!hasAdminMapCoordinates(restaurant) || seen.has(restaurant.id)) {
+          return false;
+        }
+        seen.add(restaurant.id);
+        return true;
+      },
+    );
+
+    return [selectedRestaurant, ...candidates];
+  }, [routeRestaurants, selectedRestaurant]);
+  const visualRoutePath = useMemo(
+    () =>
+      directionsPath.length >= 2
+        ? directionsPath
+        : routePathRestaurants.map(({ lat, lng }) => ({ lat, lng })),
+    [directionsPath, routePathRestaurants],
   );
 
   useEffect(() => {
@@ -527,6 +591,8 @@ function AdminNaverMapSurface({
         window.clearTimeout(viewportRefreshTimerRef.current);
         viewportRefreshTimerRef.current = null;
       }
+      routeOverlayRefs.current.forEach((overlay) => overlay.setMap(null));
+      routeOverlayRefs.current = [];
     };
   }, []);
 
@@ -633,6 +699,54 @@ function AdminNaverMapSurface({
   ]);
 
   useEffect(() => {
+    if (!isLoaded || !mapRef.current) return;
+    const maps = getAdminNaverMaps();
+    const map = mapRef.current;
+    if (!maps) return;
+
+    routeOverlayRefs.current.forEach((overlay) => overlay.setMap(null));
+    routeOverlayRefs.current = [];
+
+    if (routePathRestaurants.length < 2 || visualRoutePath.length < 2) return;
+
+    const path = visualRoutePath.map((point) => new maps.LatLng(point.lat, point.lng));
+
+    if (maps.Polyline) {
+      routeOverlayRefs.current.push(
+        new maps.Polyline({
+          map,
+          path,
+          strokeColor: "#dc2626",
+          strokeOpacity: directionsPath.length >= 2 ? 0.92 : 0.68,
+          strokeWeight: directionsPath.length >= 2 ? 5 : 4,
+          strokeStyle: "solid",
+          zIndex: 260,
+        }),
+      );
+    }
+
+    routePathRestaurants.forEach((restaurant, index) => {
+      const isStart = index === 0;
+      const marker = new maps.Marker({
+        map,
+        position: new maps.LatLng(restaurant.lat, restaurant.lng),
+        title: `${index + 1}. ${restaurant.name}`,
+        zIndex: isStart ? 285 : 275,
+        icon: {
+          content: `<div style="display:flex;height:26px;width:26px;align-items:center;justify-content:center;border-radius:9999px;border:2px solid #fff;background:${isStart ? "#dc2626" : "#111827"};color:#fff;font-size:12px;font-weight:800;box-shadow:0 8px 18px rgba(0,0,0,.28);">${index + 1}</div>`,
+          anchor: new maps.Point(13, 13),
+        },
+      });
+      routeOverlayRefs.current.push(marker);
+    });
+
+    return () => {
+      routeOverlayRefs.current.forEach((overlay) => overlay.setMap(null));
+      routeOverlayRefs.current = [];
+    };
+  }, [directionsPath.length, isLoaded, routePathRestaurants, visualRoutePath]);
+
+  useEffect(() => {
     if (
       !selectedRestaurant ||
       !hasAdminMapCoordinates(selectedRestaurant) ||
@@ -687,6 +801,8 @@ function AdminNaverMapSurface({
 function AdminMapOverviewCanvas({
   restaurants,
   selectedRestaurant,
+  routeCandidates,
+  directionsRoute,
   isLoading,
   hasError,
   onSelectRestaurant,
@@ -694,6 +810,8 @@ function AdminMapOverviewCanvas({
 }: {
   restaurants: AdminMapRestaurant[];
   selectedRestaurant: AdminMapRestaurant | null;
+  routeCandidates: AdminMapRestaurant[];
+  directionsRoute: AdminDirectionsRoute | null;
   isLoading: boolean;
   hasError: boolean;
   onSelectRestaurant: (restaurant: AdminMapRestaurant) => void;
@@ -707,41 +825,9 @@ function AdminMapOverviewCanvas({
     hasError || (!isLoading && visibleRestaurants.length === 0);
   return (
     <section
-      aria-labelledby="admin-map-home-title"
+      aria-label="관리자 지도 운영"
       className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm"
     >
-      <div className="relative z-10 flex shrink-0 flex-col gap-2 border-b border-border bg-card/95 p-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <p className="text-[11px] font-bold tracking-[0.12em] text-primary">
-            관리자 지도 운영
-          </p>
-          <h2
-            id="admin-map-home-title"
-            className="mt-0.5 text-lg font-bold tracking-[-0.04em] text-foreground sm:text-xl"
-          >
-            쯔동여지도 홈 · 관리자 전용
-          </h2>
-          <p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground sm:text-sm">
-            홈에서 사용하는 네이버 지도와 마커 시각을 재사용해 좌표·검수·동선
-            후보를 한 화면에서 이어 봅니다.
-          </p>
-        </div>
-        <div className="flex shrink-0 flex-wrap gap-1.5">
-          <Badge
-            variant="outline"
-            className="rounded-full border-emerald-700/20 bg-emerald-50 text-emerald-800"
-          >
-            관리자 전용
-          </Badge>
-          <Badge
-            variant="outline"
-            className="rounded-full border-primary/25 bg-primary/5 text-primary"
-          >
-            마커 선택 가능
-          </Badge>
-        </div>
-      </div>
-
       <div className="min-h-0 flex-1 overflow-hidden p-2 sm:p-3">
         <div
           className="relative h-full min-h-[360px]"
@@ -750,6 +836,8 @@ function AdminMapOverviewCanvas({
           <AdminNaverMapSurface
             restaurants={visibleRestaurants}
             selectedRestaurant={selectedRestaurant}
+            routeRestaurants={routeCandidates}
+            directionsPath={directionsRoute?.path ?? []}
             isLoading={isLoading}
             onSelectRestaurant={onSelectRestaurant}
           />
@@ -795,7 +883,7 @@ function AdminMapInfoPanelSkeleton() {
       role="status"
       aria-busy="true"
       aria-live="polite"
-      aria-label="관리자 지도 운영 정보 로딩"
+      aria-label="관리자 지도 동선 추천 로딩"
     >
       <section className="shrink-0 rounded-xl border border-border bg-card p-2.5 shadow-sm">
         <div className="grid gap-2 sm:grid-cols-2">
@@ -810,17 +898,16 @@ function AdminMapInfoPanelSkeleton() {
           </div>
         </div>
       </section>
-      <div className="rounded-2xl border border-primary/20 bg-primary/5 p-2.5">
-        <Skeleton className="h-4 w-16 rounded-full motion-reduce:animate-none" />
-        <Skeleton className="mt-2 h-7 w-20 rounded-full motion-reduce:animate-none" />
-      </div>
       <section className="rounded-xl border border-border bg-card p-2.5 shadow-sm lg:min-h-0 lg:flex-1">
-        <Skeleton className="h-5 w-24 rounded-full motion-reduce:animate-none" />
-        <div className="mt-3 grid gap-2 sm:grid-cols-3 lg:grid-cols-1 2xl:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, index) => (
+        <div className="flex items-center justify-between gap-3">
+          <Skeleton className="h-5 w-28 rounded-full motion-reduce:animate-none" />
+          <Skeleton className="h-5 w-20 rounded-full motion-reduce:animate-none" />
+        </div>
+        <div className="mt-3 space-y-1.5">
+          {Array.from({ length: 4 }).map((_, index) => (
             <Skeleton
               key={index}
-              className="h-20 rounded-xl motion-reduce:animate-none"
+              className="h-[4.75rem] rounded-xl motion-reduce:animate-none"
             />
           ))}
         </div>
@@ -830,38 +917,43 @@ function AdminMapInfoPanelSkeleton() {
 }
 
 function AdminMapInfoPanel({
-  stats,
-  restaurants,
   selectedRestaurant,
+  routeCandidates,
+  directionsRoute,
+  directionsStatus,
   isLoading,
   hasError,
-  onSelectModule,
 }: {
-  stats: AdminOverviewStats;
-  restaurants: AdminMapRestaurant[];
   selectedRestaurant: AdminMapRestaurant | null;
+  routeCandidates: AdminMapRestaurant[];
+  directionsRoute: AdminDirectionsRoute | null;
+  directionsStatus: AdminDirectionsStatus;
   isLoading: boolean;
   hasError: boolean;
-  onSelectModule: (moduleId: AdminOverviewModuleId) => void;
 }) {
-  const routeCandidates = buildRouteCandidates(selectedRestaurant, restaurants);
-  const latestVideos = [...(stats.dashboardVideos ?? [])]
-    .sort((a, b) => {
-      const aMs = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
-      const bMs = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
-      return bMs - aMs;
-    })
-    .slice(0, 3);
-  const coordinateRatio =
-    stats.totalRestaurants && stats.withCoordinates != null
-      ? Math.round((stats.withCoordinates / stats.totalRestaurants) * 100)
-      : null;
   const selectedVideoId = selectedRestaurant?.videoId ?? null;
   const selectedThumbnailUrl = getAdminYoutubeThumbnailUrl(selectedVideoId);
+  const selectedYoutubeUrl =
+    selectedRestaurant?.youtubeLink ?? getAdminYoutubeWatchUrl(selectedVideoId);
   const selectedCoordinateText =
     selectedRestaurant?.lat == null || selectedRestaurant?.lng == null
       ? "좌표 확인 필요"
       : `${selectedRestaurant.lat.toFixed(5)}, ${selectedRestaurant.lng.toFixed(5)}`;
+  const routeDistanceText = formatRouteDistance(
+    directionsRoute?.summary?.distance,
+  );
+  const routeDurationText = formatRouteDuration(
+    directionsRoute?.summary?.duration,
+  );
+  const routeSummaryText = [routeDistanceText, routeDurationText]
+    .filter(Boolean)
+    .join(" · ");
+  const routeStatusLabel =
+    directionsStatus === "ready"
+      ? "실제 도로 경로"
+      : directionsStatus === "loading"
+        ? "경로 계산 중"
+        : "거리 기반 후보";
 
   if (isLoading && !selectedRestaurant) {
     return <AdminMapInfoPanelSkeleton />;
@@ -874,147 +966,85 @@ function AdminMapInfoPanel({
         aria-labelledby="admin-map-selected-title"
       >
         {selectedRestaurant ? (
-          <>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <div className="min-w-0 rounded-xl border border-border bg-background/70 p-2.5">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-bold tracking-[0.12em] text-primary">
-                      선택한 마커
+          <div className="overflow-hidden rounded-xl border border-border bg-background/70">
+            <a
+              href={selectedYoutubeUrl ?? undefined}
+              target={selectedYoutubeUrl ? "_blank" : undefined}
+              rel={selectedYoutubeUrl ? "noreferrer" : undefined}
+              aria-label={
+                selectedYoutubeUrl
+                  ? `${selectedRestaurant.name} 원본 YouTube 영상 새 탭에서 열기`
+                  : `${selectedRestaurant.name} 영상 연결 없음`
+              }
+              className={cn(
+                "group relative block aspect-video overflow-hidden bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+                !selectedYoutubeUrl && "pointer-events-none",
+              )}
+            >
+              {selectedVideoId && selectedThumbnailUrl ? (
+                <AdminYoutubeThumbnailImage
+                  key={selectedVideoId}
+                  restaurantName={selectedRestaurant.name}
+                  videoId={selectedVideoId}
+                />
+              ) : (
+                <div className="absolute inset-0 grid place-items-center p-4 text-center">
+                  <div>
+                    <ImageIcon
+                      className="mx-auto h-6 w-6 text-muted-foreground"
+                      aria-hidden="true"
+                    />
+                    <p className="mt-2 text-xs font-bold text-foreground">
+                      영상 연결 없음
                     </p>
-                    <h2
-                      id="admin-map-selected-title"
-                      className="mt-0.5 truncate text-lg font-bold tracking-[-0.04em] text-foreground sm:text-xl"
-                    >
-                      {selectedRestaurant.name}
-                    </h2>
                   </div>
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      "shrink-0 rounded-full",
-                      hasError
-                        ? "border-amber-700/30 text-amber-800"
-                        : "border-emerald-700/20 text-emerald-800",
-                    )}
+                </div>
+              )}
+
+              <Badge
+                variant="outline"
+                className={cn(
+                  "absolute right-3 top-3 rounded-full border-white/30 bg-white/15 text-white shadow-sm backdrop-blur",
+                  hasError && "border-amber-200/50 text-amber-100",
+                )}
+              >
+                {hasError ? "확인 필요" : "선택됨"}
+              </Badge>
+
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/55 to-transparent p-3 text-white">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold tracking-[0.14em] text-white/75">
+                    선택한 마커
+                  </p>
+                  <h2
+                    id="admin-map-selected-title"
+                    className="mt-0.5 truncate text-xl font-bold tracking-[-0.04em]"
                   >
-                    {hasError ? "확인 필요" : "선택됨"}
-                  </Badge>
+                    {selectedRestaurant.name}
+                  </h2>
                 </div>
 
-                <p className="mt-2 line-clamp-2 text-xs leading-5 text-muted-foreground sm:text-sm">
+                <p className="mt-1.5 line-clamp-2 text-xs leading-5 text-white/80">
                   {selectedRestaurant.address ?? "주소 정보 확인 필요"}
                 </p>
 
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  <Badge
-                    variant="outline"
-                    className="max-w-full rounded-full border-primary/20 bg-primary/5 text-primary"
-                  >
-                    <span className="truncate">
-                      {selectedRestaurant.category ?? "카테고리 확인"}
-                    </span>
-                  </Badge>
-                  <Badge
-                    variant="outline"
-                    className="rounded-full border-border bg-card text-muted-foreground"
-                  >
+                <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] font-semibold">
+                  <span className="max-w-full truncate rounded-full bg-white/15 px-2 py-0.5 text-white backdrop-blur">
+                    {selectedRestaurant.category ?? "카테고리 확인"}
+                  </span>
+                  <span className="rounded-full bg-white/15 px-2 py-0.5 text-white/85 backdrop-blur">
                     {selectedRestaurant.status ?? "상태 확인"}
-                  </Badge>
-                </div>
-
-                <dl className="mt-2 grid gap-1.5 text-xs">
-                  <div className="flex min-w-0 items-center justify-between gap-2 rounded-lg border border-border/70 bg-card/70 px-2 py-1.5">
-                    <dt className="shrink-0 text-muted-foreground">좌표</dt>
-                    <dd className="min-w-0 truncate font-mono text-[11px] font-bold text-foreground">
-                      {selectedCoordinateText}
-                    </dd>
-                  </div>
-                  <div className="flex min-w-0 items-center justify-between gap-2 rounded-lg border border-border/70 bg-card/70 px-2 py-1.5">
-                    <dt className="shrink-0 text-muted-foreground">영상 ID</dt>
-                    <dd className="min-w-0 truncate font-bold text-foreground">
-                      {selectedRestaurant.videoId ?? "확인 필요"}
-                    </dd>
-                  </div>
-                </dl>
-
-                <div
-                  className="mt-2 flex flex-wrap gap-1.5"
-                  aria-label="선택 마커 작업"
-                >
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="h-8 rounded-lg px-2.5 text-xs"
-                    onClick={() => onSelectModule("restaurants")}
-                  >
-                    맛집 검수
-                  </Button>
-                  {selectedRestaurant.youtubeLink && (
-                    <a
-                      href={selectedRestaurant.youtubeLink}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex h-8 items-center justify-center rounded-lg border border-border bg-background px-2.5 text-xs font-semibold text-foreground transition hover:border-primary/30 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-                    >
-                      연결 영상 열기
-                    </a>
-                  )}
+                  </span>
+                  <span className="rounded-full bg-black/35 px-2 py-0.5 font-mono text-white/85 backdrop-blur">
+                    {selectedCoordinateText}
+                  </span>
+                  <span className="max-w-full truncate rounded-full bg-black/35 px-2 py-0.5 font-mono text-white/85 backdrop-blur">
+                    {selectedRestaurant.videoId ?? "영상 ID 확인"}
+                  </span>
                 </div>
               </div>
-
-              <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-background/70">
-                {selectedVideoId && selectedThumbnailUrl ? (
-                  <a
-                    href={
-                      selectedRestaurant.youtubeLink ?? selectedThumbnailUrl
-                    }
-                    target="_blank"
-                    rel="noreferrer"
-                    className="group block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-                    aria-label={`${selectedRestaurant.name} 원본 YouTube 영상 새 탭에서 열기`}
-                  >
-                    <div className="relative aspect-video overflow-hidden bg-muted">
-                      <AdminYoutubeThumbnailImage
-                        key={selectedVideoId}
-                        restaurantName={selectedRestaurant.name}
-                        videoId={selectedVideoId}
-                      />
-                      <span className="absolute left-2 top-2 rounded-full bg-background/90 px-2 py-0.5 text-[10px] font-bold text-primary shadow-sm backdrop-blur">
-                        YouTube
-                      </span>
-                      <span className="absolute bottom-2 right-2 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-bold text-white">
-                        원본 열기
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between gap-2 px-2 py-1.5">
-                      <p className="min-w-0 truncate text-[11px] font-bold text-foreground">
-                        연결 영상 썸네일
-                      </p>
-                      <span className="min-w-0 truncate font-mono text-[10px] font-semibold text-muted-foreground">
-                        {selectedVideoId}
-                      </span>
-                    </div>
-                  </a>
-                ) : (
-                  <div className="grid aspect-video place-items-center p-3 text-center">
-                    <div>
-                      <ImageIcon
-                        className="mx-auto h-5 w-5 text-muted-foreground"
-                        aria-hidden="true"
-                      />
-                      <p className="mt-2 text-xs font-bold text-foreground">
-                        영상 연결 없음
-                      </p>
-                      <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
-                        YouTube 링크가 있으면 썸네일을 바로 보여줍니다.
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </>
+            </a>
+          </div>
         ) : (
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -1047,76 +1077,39 @@ function AdminMapInfoPanel({
         )}
       </section>
 
-      <AdminCreatorLayerControls tzuyangCount={restaurants.length} />
-
       <section
         className="rounded-xl border border-border bg-card p-2.5 shadow-sm lg:min-h-0 lg:flex-1 lg:overflow-y-auto"
-        aria-labelledby="admin-map-info-title"
+        aria-labelledby="admin-route-candidates-title"
       >
         <div className="flex items-center justify-between gap-3">
           <h2
-            id="admin-map-info-title"
+            id="admin-route-candidates-title"
             className="text-sm font-bold text-foreground"
           >
-            운영 정보
+            동선 추천 초안
           </h2>
-          {isLoading && (
+          {isLoading ? (
             <Skeleton
               className="h-5 w-20 rounded-full motion-reduce:animate-none"
               aria-hidden="true"
             />
-          )}
-        </div>
-
-        <div className="mt-3 grid gap-2 sm:grid-cols-3 lg:grid-cols-1 2xl:grid-cols-3">
-          {[
-            [
-              "맛집",
-              formatCount(stats.totalRestaurants, "곳"),
-              coordinateRatio == null
-                ? "좌표율 확인 필요"
-                : `좌표율 ${coordinateRatio}%`,
-            ],
-            ["제보", formatCount(stats.pendingSubmissions, "건"), "승인 대기"],
-            ["리뷰", formatCount(stats.pendingReviews, "건"), "미승인 큐"],
-          ].map(([label, value, helper]) => (
-            <button
-              key={label}
-              type="button"
-              onClick={() =>
-                onSelectModule(
-                  label === "맛집"
-                    ? "restaurants"
-                    : label === "제보"
-                      ? "submissions"
-                      : "reviews",
-                )
-              }
-              className="rounded-xl border border-border bg-background/70 p-2.5 text-left transition hover:border-primary/30 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-            >
-              <p className="text-xs font-semibold text-muted-foreground">
-                {label}
-              </p>
-              <p className="mt-1 text-xl font-bold text-foreground">{value}</p>
-              <p className="mt-1 text-[11px] text-muted-foreground">{helper}</p>
-            </button>
-          ))}
-        </div>
-
-        <Separator className="my-3" />
-
-        <div>
-          <div className="flex items-center justify-between gap-3">
-            <h3 className="text-sm font-bold text-foreground">
-              동선 추천 초안
-            </h3>
+          ) : (
             <Badge
               variant="outline"
               className="rounded-full border-primary/25 text-primary"
             >
-              거리 기반 후보
+              {routeStatusLabel}
             </Badge>
-          </div>
+          )}
+        </div>
+
+        {routeSummaryText && (
+          <p className="mt-2 text-xs font-semibold text-primary">
+            {routeSummaryText}
+          </p>
+        )}
+
+        <div>
           {routeCandidates.length > 0 ? (
             <ol className="mt-2 space-y-1.5">
               {routeCandidates.map((restaurant, index) => (
@@ -1148,38 +1141,10 @@ function AdminMapInfoPanel({
             </p>
           )}
           <p className="mt-2 text-[11px] leading-4 text-muted-foreground">
-            실제 이동시간 API가 붙기 전까지는 선택 맛집과의 거리·같은 영상·같은
-            카테고리 기반 후보만 표시합니다.
+            {directionsStatus === "ready"
+              ? "네이버 Directions 5 기준 실제 도로 주행 경로를 지도에 표시합니다."
+              : "도로 경로 계산 전이나 실패 시에는 같은 영상·카테고리·직선거리 기반 후보를 먼저 표시합니다."}
           </p>
-        </div>
-
-        <Separator className="my-3" />
-
-        <div>
-          <h3 className="text-sm font-bold text-foreground">최근 영상 연결</h3>
-          <div className="mt-3 space-y-2">
-            {latestVideos.length > 0 ? (
-              latestVideos.map((video) => (
-                <div
-                  key={video.videoId}
-                  className="rounded-xl border border-border bg-background/70 p-2.5"
-                >
-                  <p className="line-clamp-2 text-xs font-bold leading-5 text-foreground">
-                    {video.title}
-                  </p>
-                  <p className="mt-1 text-[11px] text-muted-foreground">
-                    {formatShortDate(video.publishedAt)} ·{" "}
-                    {formatCount(video.restaurantCount, "곳")}
-                  </p>
-                </div>
-              ))
-            ) : (
-              <p className="rounded-2xl border border-dashed border-border bg-muted/25 p-3 text-xs leading-5 text-muted-foreground">
-                최근 영상 요약은 승인 맛집과 연결된 데이터가 있을 때만
-                표시합니다.
-              </p>
-            )}
-          </div>
         </div>
       </section>
     </aside>
@@ -1187,7 +1152,6 @@ function AdminMapInfoPanel({
 }
 
 export function AdminOverviewDashboard({
-  stats,
   isLoading,
   hasError,
   onSelectModule,
@@ -1200,6 +1164,10 @@ export function AdminOverviewDashboard({
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<
     string | null
   >(null);
+  const [directionsRoute, setDirectionsRoute] =
+    useState<AdminDirectionsRoute | null>(null);
+  const [directionsStatus, setDirectionsStatus] =
+    useState<AdminDirectionsStatus>("idle");
   const mapRestaurantsQuery = useQuery({
     queryKey: ["admin-overview", "map-restaurants"],
     queryFn: fetchAdminMapRestaurants,
@@ -1219,8 +1187,67 @@ export function AdminOverviewDashboard({
     restaurants.find((restaurant) => restaurant.id === selectedRestaurantId) ??
     restaurants[0] ??
     null;
+  const routeCandidates = useMemo(
+    () => buildRouteCandidates(selectedRestaurant, restaurants),
+    [restaurants, selectedRestaurant],
+  );
+  const routeRequestPoints = useMemo<AdminDirectionsPoint[]>(() => {
+    if (!selectedRestaurant || !hasAdminMapCoordinates(selectedRestaurant)) {
+      return [];
+    }
+
+    const seen = new Set([selectedRestaurant.id]);
+    const candidates = routeCandidates.filter(
+      (
+        restaurant,
+      ): restaurant is AdminMapRestaurant & { lat: number; lng: number } => {
+        if (!hasAdminMapCoordinates(restaurant) || seen.has(restaurant.id)) {
+          return false;
+        }
+        seen.add(restaurant.id);
+        return true;
+      },
+    );
+
+    return [selectedRestaurant, ...candidates]
+      .slice(0, ADMIN_DIRECTIONS_MAX_POINTS)
+      .map(({ lat, lng }) => ({ lat, lng }));
+  }, [routeCandidates, selectedRestaurant]);
+  const routeRequestKey = useMemo(
+    () =>
+      routeRequestPoints
+        .map((point) => `${point.lat.toFixed(6)},${point.lng.toFixed(6)}`)
+        .join("|"),
+    [routeRequestPoints],
+  );
   const isMapLoading = isLoading || mapRestaurantsQuery.isLoading;
   const hasMapError = hasError || mapRestaurantsQuery.isError;
+
+  useEffect(() => {
+    if (routeRequestPoints.length < 2) {
+      setDirectionsRoute(null);
+      setDirectionsStatus("idle");
+      return;
+    }
+
+    const controller = new AbortController();
+    setDirectionsStatus("loading");
+
+    fetchAdminDirectionsRoute(routeRequestPoints, controller.signal)
+      .then((route) => {
+        if (controller.signal.aborted) return;
+        setDirectionsRoute(route.path.length >= 2 ? route : null);
+        setDirectionsStatus(route.path.length >= 2 ? "ready" : "fallback");
+      })
+      .catch((error) => {
+        if (controller.signal.aborted) return;
+        console.warn("[Admin Directions] Falling back to route candidates", error);
+        setDirectionsRoute(null);
+        setDirectionsStatus("fallback");
+      });
+
+    return () => controller.abort();
+  }, [routeRequestKey, routeRequestPoints]);
 
   return (
     <div
@@ -1232,6 +1259,8 @@ export function AdminOverviewDashboard({
         <AdminMapOverviewCanvas
           restaurants={restaurants}
           selectedRestaurant={selectedRestaurant}
+          routeCandidates={routeCandidates}
+          directionsRoute={directionsRoute}
           isLoading={isMapLoading}
           hasError={hasMapError}
           onSelectRestaurant={(restaurant) =>
@@ -1242,12 +1271,12 @@ export function AdminOverviewDashboard({
       </div>
       <div className="min-h-[420px] min-w-0 lg:min-h-0">
         <AdminMapInfoPanel
-          stats={stats}
-          restaurants={restaurants}
           selectedRestaurant={selectedRestaurant}
+          routeCandidates={routeCandidates}
+          directionsRoute={directionsRoute}
+          directionsStatus={directionsStatus}
           isLoading={isMapLoading}
           hasError={hasMapError}
-          onSelectModule={onSelectModule}
         />
       </div>
     </div>
