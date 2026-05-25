@@ -1,8 +1,8 @@
-import { StampPageSkeleton } from "@/components/ui/skeleton-loaders";
-
 /**
- * [PERF] 도장 페이지 로딩 UI - 스켈레톤으로 즉각적 페이지 전환
+ * Route fallback intentionally stays empty so direct /stamp loads do not show
+ * a second full-page skeleton before the client page renders its static shell.
+ * The page itself keeps the header visible and scopes skeleton UI to dynamic cards.
  */
 export default function StampLoading() {
-    return <StampPageSkeleton />;
+    return null;
 }
