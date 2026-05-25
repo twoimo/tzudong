@@ -521,6 +521,24 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("참여율 변동");
     expect(consoleSource).toContain("AdminDashboardBubbleChart");
     expect(consoleSource).toContain("AdminDashboardKpiCard");
+    expect(consoleSource).toContain("function AdminDashboardKpiValueSkeleton");
+    expect(consoleSource).toContain("function AdminDashboardPanelBodySkeleton");
+    expect(consoleSource).toContain(
+      'data-admin-dashboard-dynamic-skeleton="kpi"',
+    );
+    expect(consoleSource).toContain(
+      'data-admin-dashboard-dynamic-skeleton="chart"',
+    );
+    expect(consoleSource).toContain(
+      'data-admin-dashboard-dynamic-skeleton="table"',
+    );
+    expect(consoleSource).toContain("pendingSkeletonPeriod");
+    expect(consoleSource).toContain("setPendingSkeletonPeriod(option.value)");
+    expect(consoleSource).toContain(
+      "insightQuery.isLoading || pendingSkeletonPeriod === period",
+    );
+    expect(consoleSource).toContain("isLoading={isChartLoading}");
+    expect(consoleSource).toContain("isLoading={isSubscriberLoading}");
     expect(consoleSource).toContain("AdminDashboardInfoTooltip");
     expect(consoleSource).toContain("DEFAULT_ADMIN_DASHBOARD_WIDGET_ORDER");
     expect(consoleSource).toContain(
