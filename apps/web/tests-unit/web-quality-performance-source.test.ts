@@ -3562,20 +3562,31 @@ describe("web quality performance source contracts", () => {
     expect(appToasterSource).toContain(
       '<ToastProvider swipeDirection="right">',
     );
-    expect(appToasterSource).toContain("<ToastViewport />");
-    expect(toastSource).toContain("top-[calc(env(safe-area-inset-top)+114px)]");
-    expect(toastSource).not.toContain(
+    expect(appToasterSource).toContain("usePathname()");
+    expect(appToasterSource).toContain(
+      "HOME_MAP_TOAST_VIEWPORT_CLASS_NAME",
+    );
+    expect(appToasterSource).toContain(
+      "top-[calc(env(safe-area-inset-top)+114px)]",
+    );
+    expect(appToasterSource).toContain(
+      "APP_MOBILE_TOAST_VIEWPORT_CLASS_NAME",
+    );
+    expect(appToasterSource).toContain(
+      "bottom-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+env(safe-area-inset-bottom)+0.75rem)]",
+    );
+    expect(appToasterSource).toContain(
+      "<ToastViewport className={toastViewportClassName} />",
+    );
+    expect(appToasterSource).not.toContain(
       "top-[calc(env(safe-area-inset-top)+132px)]",
     );
-    expect(toastSource).not.toContain(
+    expect(appToasterSource).not.toContain(
       "top-[calc(env(safe-area-inset-top)+7.25rem)]",
     );
     expect(toastSource).toContain("z-[250]");
     expect(toastSource).toContain("w-[min(300px,calc(100vw-1.5rem))]");
     expect(toastSource).toContain("sm:w-[min(300px,calc(100vw-1.5rem))]");
-    expect(toastSource).not.toContain(
-      "var(--mobile-bottom-nav-effective-height",
-    );
     expect(toastSource).toContain("sm:right-3");
     expect(toastSource).not.toContain("pr-7");
     expect(toastSource).not.toContain("absolute right-2 top-2");
