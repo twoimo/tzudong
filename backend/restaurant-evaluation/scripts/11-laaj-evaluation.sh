@@ -108,6 +108,12 @@ run_gemini_cli_request() {
     fi
 }
 
+has_quota_error() {
+    local file="$1"
+    [ -f "$file" ] || return 1
+    grep -Eqi '429|quota|QUOTA_ERROR|RESOURCE_EXHAUSTED|rate limit|Too Many Requests' "$file"
+}
+
 # ================================
 # 명령어 감지
 # ================================
@@ -414,6 +420,7 @@ SKIPPED_NO_TARGET=0
 SKIPPED_NO_TRANSCRIPT=0
 GEMINI_CALLS=0
 TOTAL_GEMINI_TIME=0
+QUOTA_EXHAUSTED=false
 
 
 
@@ -570,6 +577,10 @@ $TRANSCRIPT
         if [ $EXIT_CODE -eq 0 ]; then
             GEMINI_SUCCESS=true
             log_debug "Node.js 호출 성공"
+        elif [ $EXIT_CODE -eq 42 ]; then
+            QUOTA_EXHAUSTED=true
+            log_warning "Node.js API 할당량 초과(Quota Error) 감지 - CLI fallback을 시도합니다."
+            FORCE_CLI_FALLBACK=true
         else
             log_warning "Node.js 호출 실패 (Code: $EXIT_CODE) - Sticky Fallback 활성화 (이후 CLI 사용)"
             FORCE_CLI_FALLBACK=true
@@ -590,14 +601,17 @@ $TRANSCRIPT
             fi
 
             # Rate Limit 체크
-            ERROR_REPORT=$(ls -t /tmp/gemini-client-error-*.json 2>/dev/null | head -1)
-            if [ -f "$ERROR_REPORT" ] && grep -q "exhausted\|429" "$ERROR_REPORT" 2>/dev/null; then
+            ERROR_REPORT=$(ls -t /tmp/gemini-client-error-*.json 2>/dev/null | head -1 || true)
+            if { [ -n "$ERROR_REPORT" ] && has_quota_error "$ERROR_REPORT"; } || has_quota_error "$TEMP_STDERR"; then
+               QUOTA_EXHAUSTED=true
                if [ "$CURRENT_MODEL" = "$PRIMARY_MODEL" ]; then
                    log_warning "할당량 소진 -> Fallback 모델($FALLBACK_MODEL) 전환"
                    CURRENT_MODEL="$FALLBACK_MODEL"
                    sleep 10
                    if run_gemini_cli_request "$TEMP_PROMPT" "$TEMP_RESPONSE" "$TEMP_STDERR"; then
                        GEMINI_SUCCESS=true
+                   elif has_quota_error "$TEMP_STDERR"; then
+                       QUOTA_EXHAUSTED=true
                    fi
                fi
             elif grep -qi 'timed out\|SIGTERM\|signal 15' "$TEMP_STDERR" 2>/dev/null; then
@@ -677,3 +691,8 @@ log_info "LAAJ 평가 완료: $CHANNEL"
 log_info "성공: $SUCCESS / 실패: $FAILED / 스킵: $SKIPPED_EXISTS"
 log_info "Gemini 호출: $GEMINI_CALLS회 ($(format_duration $TOTAL_GEMINI_TIME))"
 log_info "============================================================"
+
+if [ "$QUOTA_EXHAUSTED" = true ] && [ "$FAILED" -gt 0 ]; then
+    log_warning "LAAJ Gemini quota 초과로 일부 평가가 완료되지 않았습니다. downstream 단계는 run_daily 정책에 맡깁니다."
+    exit 42
+fi

@@ -121,6 +121,7 @@ class GDriveUploadContractTests(unittest.TestCase):
             ("Step 13 (Supabase)", "missing_external_dependency", "end_to_end", "0", "optional_skip"),
             ("Step 08 (Chunk Multimodal)", "quota_exhausted", "end_to_end", "1", "required_failure"),
             ("Step 08 (Chunk Multimodal)", "quota_exhausted", "end_to_end", "0", "optional_skip"),
+            ("Step 11 (LAAJ Evaluation)", "quota_exhausted", "end_to_end", "0", "optional_skip"),
             ("Step 11 (LAAJ Evaluation)", "timeout_incomplete", "local", "0", "optional_skip"),
             ("Step 11 (LAAJ Evaluation)", "timeout_incomplete", "end_to_end", "0", "required_failure"),
             ("New Step", "new_issue", "end_to_end", "0", "required_failure:unknown"),
@@ -430,8 +431,8 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertIn("types: [completed]", workflow)
         self.assertIn("github.event.workflow_run.event == 'schedule'", workflow)
         self.assertIn("github.event.workflow_run.head_branch == 'main'", workflow)
-        self.assertIn("MAX_BACKFILL_BATCHES: ${{ github.event.inputs.max_batches || '1' }}", workflow)
-        self.assertIn("MAX_BACKFILL_ITEMS: ${{ github.event.inputs.max_items || '500' }}", workflow)
+        self.assertIn("MAX_BACKFILL_BATCHES: ${{ github.event.inputs.max_batches || '2' }}", workflow)
+        self.assertIn("MAX_BACKFILL_ITEMS: ${{ github.event.inputs.max_items || '1500' }}", workflow)
         self.assertIn("check_actions_budget.py", workflow)
         self.assertIn("GitHub Actions budget posture", workflow)
         self.assertNotIn("Record budget skip", workflow)
@@ -475,6 +476,7 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertIn("No staged shards to backfill; writing cumulative remote status.", workflow)
         self.assertIn('rclone lsjson "$GDRIVE_FRAMES_PATH"', workflow)
         self.assertIn('--staging-manifest "$STAGING_MANIFEST"', workflow)
+        self.assertIn("::warning::GDrive frame backfill incomplete:", workflow)
         self.assertNotIn('../../../$RCLONE_LOG', workflow)
         self.assertNotIn('../../../$FILES_FROM', workflow)
         self.assertIn('exit "$BACKFILL_EXIT"', workflow)
@@ -485,7 +487,7 @@ class GDriveUploadContractTests(unittest.TestCase):
         crawling_requirements = (REPO_ROOT / "backend" / "restaurant-crawling" / "scripts" / "requirements.txt").read_text(encoding="utf-8")
         pipeline_requirements = (REPO_ROOT / "backend" / "pipeline" / "requirements.txt").read_text(encoding="utf-8")
 
-        self.assertIn("npm audit --audit-level=high", security_workflow)
+        self.assertIn("npm audit --audit-level=moderate", security_workflow)
         self.assertIn("python -m pip_audit", security_workflow)
         self.assertIn("backend/restaurant-crawling/scripts/requirements.txt", security_workflow)
         self.assertIn('directory: "/backend/restaurant-crawling/scripts"', dependabot)
@@ -494,6 +496,16 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertNotIn("\nrequests\n", crawling_requirements)
         self.assertIn("langgraph==", pipeline_requirements)
         self.assertNotIn("langchain-core>=", pipeline_requirements)
+
+    def test_laaj_quota_handling_does_not_abort_on_missing_cli_error_report(self) -> None:
+        laaj_script = (
+            REPO_ROOT / "backend" / "restaurant-evaluation" / "scripts" / "11-laaj-evaluation.sh"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("has_quota_error()", laaj_script)
+        self.assertIn("ERROR_REPORT=$(ls -t /tmp/gemini-client-error-*.json 2>/dev/null | head -1 || true)", laaj_script)
+        self.assertIn('QUOTA_EXHAUSTED=true', laaj_script)
+        self.assertIn('exit 42', laaj_script)
 
     def test_gdrive_upload_status_timeout_records_partial_and_residual_queue(self) -> None:
         frame = self.frames_dir / "pending.jpg"
@@ -1231,6 +1243,35 @@ class RunDailyRegressionTests(unittest.TestCase):
             )
         )
 
+    def test_step11_quota_policy_warns_and_skips_downstream_without_failing_workflow(self) -> None:
+        result = self._run_script(
+            env_overrides={"RUN_DAILY_TEST_LAAJ_EXIT": "42"},
+            force_phase3=True,
+        )
+
+        self.assertEqual(0, result.returncode, self._format_process_output(result))
+        self.assertIn("Gemini LAAJ quota 초과 (exit=42)", result.stdout)
+        self.assertIn("Step 11 quota 초과", result.stdout)
+
+        manifest = self._read_manifest()
+        self.assertEqual("WARN", manifest["finalStatus"])
+        self.assertEqual([], manifest["failedRequiredSteps"])
+        self.assertTrue(
+            any(
+                "Step 11 (LAAJ Evaluation)" in item and "Gemini LAAJ quota 초과" in item
+                for item in manifest["optionalSkips"]
+            )
+        )
+        self.assertTrue(
+            any(
+                event["name"] == "Step 12~13 (Evaluation downstream)"
+                and event["status"] == "downstream_skipped"
+                and event["reason"] == "Step 11 quota 초과"
+                and event["upstreamStep"] == "Step 11 (LAAJ Evaluation)"
+                for event in manifest["stepEvents"]
+            )
+        )
+
     def test_step08_login_expired_exit_records_required_failure_and_downstream_skip(self) -> None:
         result = self._run_script(
             env_overrides={"RUN_DAILY_TEST_CHUNK_EXIT": "44"},
@@ -1690,7 +1731,7 @@ class RunDailyRegressionTests(unittest.TestCase):
             #!/usr/bin/env bash
             echo "LAAJ 평가 완료"
             echo "성공: 0"
-            exit 0
+            exit "${RUN_DAILY_TEST_LAAJ_EXIT:-0}"
             """,
         )
 

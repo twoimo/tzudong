@@ -130,6 +130,16 @@ Step 08은 API quota, Web fallback 로그인, Node 패키지 prerequisite이 모
 - `Step 09~13 (Evaluation)` downstream skip은 Step 08 fail-closed가 의도대로
   작동했다는 증거입니다. 선행 실패 뒤 후속 평가가 계속 실행되면 회귀입니다.
 
+## Step 11 LAAJ Gemini quota 운영 판정
+
+- `Gemini LAAJ quota 초과 (exit=42)`: LAAJ 평가 중 quota가 소진된 상태입니다.
+  workflow는 필수 시스템 장애로 실패시키지 않고 `WARN` 상태로 종료하며,
+  `Step 12~13` downstream 단계를 건너뜁니다. 완료로 간주하지 말고 다음 quota
+  window 또는 키/모델 정책 조정 후 재실행합니다.
+- `11-laaj-evaluation.sh`는 Gemini CLI가 quota 오류를 냈지만
+  `/tmp/gemini-client-error-*.json` 파일을 남기지 않는 경우에도 `set -e`로 즉시
+  abort하지 않아야 합니다. 이 경로는 `exit=42`로 run_daily 정책에 전달됩니다.
+
 로컬에서 API quota live 검증을 시도하기 전에는 secret 값을 출력하지 말고 다음
 사실만 확인합니다.
 

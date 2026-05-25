@@ -36,7 +36,10 @@ The remote status scope is `GDRIVE_STATUS_PATH/<scope>`, where production uses
 Use the `GDrive Frame Backfill` workflow with:
 
 - `status_scope`: normally `main`.
-- `max_batches`: staged shard limit for one run.
+- `max_batches`: staged shard limit for one run. The default is `2` so large
+  residual queues catch up faster without adding more scheduled windows.
+- `max_items`: maximum frame items selected per run. The default is `1500`;
+  set a lower value for a bounded smoke/no-op validation.
 - `dry_run=true`: inspect staged shard work without mutating remote status.
 
 The workflow uses GitHub Actions concurrency plus a remote
@@ -50,6 +53,9 @@ and only then marks paths verified through `write-gdrive-upload-status` with
 - `status=skipped`: safe only when `expectedCount=0` and `pendingBacklogCount=0`.
 - `status=backfill_required`: inspect `operatorMessage.action`,
   `missingLocalCount`, `stagedShardItemCount`, and `pendingLocalCount`.
+  The workflow emits an explicit GitHub warning annotation when
+  `terminalIncomplete=true`; a green job with that warning is not a completed
+  backfill.
 - `completionProof=rclone_exit_zero`: delivery evidence exists, but backfill or
   verification must still run before declaring success.
 - Do not delete staging shards until all covered queue items are

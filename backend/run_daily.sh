@@ -1547,7 +1547,11 @@ if [ "${STEP_10_OK}" = "true" ]; then
       --evaluation-path backend/restaurant-evaluation/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
     STEP_11_EXIT=${PIPESTATUS[0]}
     grep "LAAJ 평가 완료" -A 5 "$LOG_FILE" | tail -n 6 | strip_ansi | while read -r line; do echo "::notice::$line"; done
-    if ! record_exit_if_failed "Step 11 (LAAJ Evaluation)" "$STEP_11_EXIT"; then
+    if [ "$STEP_11_EXIT" -eq 42 ]; then
+        STEP_11_OK=false
+        record_policy_issue "Step 11 (LAAJ Evaluation)" "quota_exhausted" "Gemini LAAJ quota 초과 (exit=42)"
+        record_downstream_skip "Step 12~13 (Evaluation downstream)" "Step 11 quota 초과" "Step 11 (LAAJ Evaluation)"
+    elif ! record_exit_if_failed "Step 11 (LAAJ Evaluation)" "$STEP_11_EXIT"; then
         STEP_11_OK=false
         record_downstream_skip "Step 12~13 (Evaluation downstream)" "Step 11 실패" "Step 11 (LAAJ Evaluation)"
     fi

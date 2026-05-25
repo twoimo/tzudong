@@ -19,12 +19,12 @@ on:
       max_batches:
         description: 'Maximum staged shard archives to process in this run'
         required: false
-        default: '1'
+        default: '2'
         type: string
       max_items:
         description: 'Maximum frame items to process in this run'
         required: false
-        default: '500'
+        default: '1500'
         type: string
       dry_run:
         description: 'Plan only; do not upload or mutate status'
@@ -50,8 +50,8 @@ jobs:
       GDRIVE_FRAMES_PATH: "gdrive:04_빠른공유/tzudong_tzuyang_data/frames"
       GDRIVE_STATUS_PATH: "gdrive:04_빠른공유/tzudong_tzuyang_data/status"
       STATUS_SCOPE: ${{ github.event.inputs.status_scope || 'main' }}
-      MAX_BACKFILL_BATCHES: ${{ github.event.inputs.max_batches || '1' }}
-      MAX_BACKFILL_ITEMS: ${{ github.event.inputs.max_items || '500' }}
+      MAX_BACKFILL_BATCHES: ${{ github.event.inputs.max_batches || '2' }}
+      MAX_BACKFILL_ITEMS: ${{ github.event.inputs.max_items || '1500' }}
       DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
     steps:
       - name: Checkout repository
@@ -115,7 +115,7 @@ jobs:
               exit 1
               ;;
           esac
-          case "${MAX_BACKFILL_BATCHES:-1}:${MAX_BACKFILL_ITEMS:-500}" in
+          case "${MAX_BACKFILL_BATCHES:-2}:${MAX_BACKFILL_ITEMS:-1500}" in
             0:*|*:0)
               echo "No backfill work requested (MAX_BACKFILL_BATCHES=$MAX_BACKFILL_BATCHES, MAX_BACKFILL_ITEMS=$MAX_BACKFILL_ITEMS)."
               mkdir -p backend/log/cron/gdrive-backfill
@@ -294,8 +294,8 @@ jobs:
           from collections import OrderedDict
           from pathlib import Path
           queue_path, plan_path, max_batches_raw, max_items_raw, manifest_dir, staging_manifest_path, expected_path, remote_list_path, verified_path = sys.argv[1:10]
-          max_batches = max(1, int(max_batches_raw or '1'))
-          max_items = max(1, int(max_items_raw or '500'))
+          max_batches = max(1, int(max_batches_raw or '2'))
+          max_items = max(1, int(max_items_raw or '1500'))
           expected = json.load(open(expected_path, encoding='utf-8'))
           remote_entries = json.load(open(remote_list_path, encoding='utf-8'))
           remote_sizes = {str(entry.get('Path', '')): int(entry.get('Size', -1)) for entry in remote_entries if isinstance(entry, dict)}
@@ -538,6 +538,18 @@ jobs:
             cat "$UPLOAD_STATUS"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+
+          python3 - "$UPLOAD_STATUS" <<'PY'
+          import json, sys
+          status_path = sys.argv[1]
+          payload = json.load(open(status_path, encoding='utf-8'))
+          if payload.get('terminalIncomplete'):
+              summary = (payload.get('operatorMessage') or {}).get('summary') or 'GDrive frame backfill remains incomplete.'
+              residual = payload.get('residualCount')
+              verified = payload.get('verifiedCount')
+              expected = payload.get('expectedCount')
+              print(f"::warning::GDrive frame backfill incomplete: {summary} (verified={verified}, residual={residual}, expected={expected})")
+          PY
 
           exit "$BACKFILL_EXIT"
 

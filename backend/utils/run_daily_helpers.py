@@ -274,6 +274,9 @@ def resolve_policy_action(
             return "required_failure"
         return "optional_skip"
 
+    if key == ("Step 11 (LAAJ Evaluation)", "quota_exhausted"):
+        return "optional_skip"
+
     if key in {
         ("Phase 3", "timeout_incomplete"),
         ("Step 11 (LAAJ Evaluation)", "timeout_incomplete"),
