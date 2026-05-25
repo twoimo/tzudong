@@ -35,6 +35,29 @@ const ADMIN_CONSOLE_RESPONSIVE_LAYOUT_CLASSES = [
   "lg:w-14",
   "lg:w-60",
 ] as const;
+const MOBILE_BOTTOM_NAV_CLASSES = [
+  // Direct mobile routes render MobileBottomNav without the home CSS chunk.
+  // Keep the reference bottom-nav typography and active-state utilities present on every route.
+  "-z-10",
+  "text-red-800",
+  "fill-red-800/20",
+  "scale-110",
+  "text-foreground/65",
+  "active:text-foreground",
+  "text-[12px]",
+  "font-medium",
+  "font-semibold",
+  "leading-none",
+  "tracking-tight",
+] as const;
+const LEADERBOARD_RANK_ICON_CLASSES = [
+  // Rank icons are created from a helper, so direct mobile route chunks must keep their color utilities.
+  "text-yellow-500",
+  "text-muted-foreground",
+  "text-amber-600",
+] as const;
+
+
 
 const config: Config = {
   darkMode: "class",
@@ -46,6 +69,8 @@ const config: Config = {
   safelist: [
     ...ADMIN_EVALUATION_RESPONSIVE_DISPLAY_CLASSES,
     ...ADMIN_CONSOLE_RESPONSIVE_LAYOUT_CLASSES,
+    ...MOBILE_BOTTOM_NAV_CLASSES,
+    ...LEADERBOARD_RANK_ICON_CLASSES,
     // MyPage profile desktop matrix depends on display: contents + equal row tracks.
     // Keep these emitted when dev CSS is regenerated incrementally.
     "md:contents",
