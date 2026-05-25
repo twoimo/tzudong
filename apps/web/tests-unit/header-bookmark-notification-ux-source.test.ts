@@ -97,7 +97,32 @@ describe('header bookmark and notification UX source contracts', () => {
     expect(leftPanelNotificationSource).toContain('className="mt-1 max-w-full text-pretty text-xs leading-5 text-muted-foreground"');
     expect(leftPanelNotificationSource).toContain('리뷰·맛집·공지 소식을 바로 확인해요.');
     expect(leftPanelNotificationSource).toContain('text-pretty');
-    expect(leftPanelNotificationSource).toContain('className="mt-3 flex justify-end"');
+    expect(leftPanelNotificationSource).toContain('variant="secondary"');
+    expect(leftPanelNotificationSource).toContain('{isLoading ? "확인 중" : `${notifications.length}개`}');
+    expect(leftPanelNotificationSource).toContain('className="h-7 rounded-full px-2 text-[11px]"');
+    expect(leftPanelNotificationSource).toContain(
+      '"group rounded-xl border border-border bg-card shadow-sm transition-colors hover:bg-accent"',
+    );
+    expect(leftPanelNotificationSource).toContain(
+      '!notification.isRead && "border-primary/30 bg-primary/5 hover:bg-primary/10"',
+    );
+    expect(leftPanelNotificationSource).toContain(
+      'className="flex w-full items-start gap-3 rounded-t-xl p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"',
+    );
+    expect(leftPanelNotificationSource).toContain(
+      'className="mt-0.5 h-9 w-9 shrink-0 rounded-full bg-primary/10 p-2 text-primary"',
+    );
+    expect(leftPanelNotificationSource).toContain('className="h-5 shrink-0 px-1.5 text-[10px] font-normal"');
+    expect(leftPanelNotificationSource).toContain('새 알림');
+    expect(leftPanelNotificationSource).toContain(
+      'className="flex items-center justify-between gap-2 border-t border-border/60 px-3 py-2 text-[11px] text-muted-foreground"',
+    );
+    expect(leftPanelNotificationSource).toContain('className="h-7 rounded-full px-2 text-muted-foreground hover:text-destructive"');
+    expect(leftPanelNotificationSource).toContain('className="sr-only">삭제</span>');
+    expect(leftPanelNotificationSource).not.toContain('className="mt-3 flex justify-end"');
+    expect(leftPanelNotificationSource).not.toContain('variant={unreadCount > 0 ? "destructive" : "secondary"}');
+    expect(leftPanelNotificationSource).not.toContain('className="border-t border-border/60 px-3 py-2 text-right"');
+    expect(leftPanelNotificationSource).not.toContain('className="mt-2 block text-[11px] text-muted-foreground/70"');
     expect(leftPanelNotificationSource).not.toContain('className="grid gap-2"');
     expect(leftPanelNotificationSource).not.toContain('className="min-w-0 flex-1 pt-1"');
     expect(leftPanelNotificationSource).not.toContain('className="truncate text-xs text-muted-foreground"');

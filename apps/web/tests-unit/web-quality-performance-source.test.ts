@@ -1823,10 +1823,19 @@ describe("web quality performance source contracts", () => {
     expect(skeletonLoadersSource).toContain(
       "ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2",
     );
-    expect(stampLoadingSource).toContain("return <StampPageSkeleton />");
+    expect(stampLoadingSource).toContain("return null");
+    expect(stampLoadingSource).not.toContain("StampPageSkeleton");
     expect(stampPageSource).toContain(
-      "if (!isMounted || authLoading) return <StampPageSkeleton />",
+      'data-stamp-loading-behavior="static-shell-dynamic-skeleton"',
     );
+    expect(stampPageSource).toContain("const isStampDynamicLoading =");
+    expect(stampPageSource).toContain("const shouldShowStampFilterToggle = !isMounted || isMobileOrTablet");
+    expect(stampPageSource).toContain("const shouldShowStampViewToggle = isMounted && !isMobileOrTablet");
+    expect(stampPageSource).toContain("const shouldShowStampFilters = isMounted && (!isMobileOrTablet || isFilterExpanded)");
+    expect(stampPageSource).toContain('data-stamp-total-count-skeleton="true"');
+    expect(stampPageSource).toContain('!shouldShowStampFilters && "hidden"');
+    expect(stampPageSource).not.toContain('isMobileOrTablet && !isFilterExpanded && "hidden"');
+    expect(stampPageSource).not.toContain("return <StampPageSkeleton />");
     expect(userProfilePanelSource).toContain("import { StampCard }");
     expect(userProfilePanelSource).toContain("import { ReviewCard }");
     expect(userProfilePanelSource).toContain(
