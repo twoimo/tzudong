@@ -166,19 +166,22 @@ export default function LeaderboardPage() {
 
                 {/* List Content */}
                 <div>
-                    {isLoading ? (
-                        <LeaderboardSkeleton
-                            count={8}
-                            showHeader={false}
-                            className="pl-2 pr-4 sm:px-6"
-                        />
-                    ) : (
-                        <LeaderboardList
-                            users={displayedUsers}
-                            currentUserId={currentUser?.id}
-                            userItemRef={userItemRef}
-                        />
-                    )}
+                    <div data-mobile-leaderboard-panel-list="true">
+                        {isLoading ? (
+                            <LeaderboardSkeleton
+                                count={8}
+                                showHeader={false}
+                                className="px-4"
+                            />
+                        ) : (
+                            <LeaderboardList
+                                users={displayedUsers}
+                                currentUserId={currentUser?.id}
+                                userItemRef={userItemRef}
+                                mobilePanel
+                            />
+                        )}
+                    </div>
                     <div ref={loadMoreRef} className="h-10 flex items-center justify-center">
                         {hasMoreToDisplay && (
                             <span className="text-sm text-muted-foreground" role="status" aria-live="polite">

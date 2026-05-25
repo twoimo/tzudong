@@ -79,8 +79,14 @@ export const extractYouTubeVideoId = (url: string): string | null => {
     return (match && match[2].length === 11) ? match[2] : null;
 };
 
-/** YouTube 썸네일 URL 생성 */
+/** YouTube 썸네일 URL 생성: 16:9 이미지를 사용해 hqdefault 내장 letterbox를 피합니다. */
 export const getYouTubeThumbnailUrl = (url: string): string | null => {
+    const videoId = extractYouTubeVideoId(url);
+    return videoId ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` : null;
+};
+
+/** mqdefault가 없는 예외 영상용 fallback */
+export const getYouTubeFallbackThumbnailUrl = (url: string): string | null => {
     const videoId = extractYouTubeVideoId(url);
     return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null;
 };
