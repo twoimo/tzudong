@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Heart, Stamp, Trophy, Sparkles } from 'lucide-react';
+import { Stamp, Trophy, Sparkles } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -19,6 +19,7 @@ interface LeaderboardListProps {
     onOpenUserProfile?: (userId: string) => void;
     userItemRef?: React.RefObject<HTMLDivElement | null>;
     compactLeftPanel?: boolean;
+    mobilePanel?: boolean;
 }
 
 export function LeaderboardList({
@@ -26,7 +27,8 @@ export function LeaderboardList({
     currentUserId,
     onOpenUserProfile,
     userItemRef,
-    compactLeftPanel = false
+    compactLeftPanel = false,
+    mobilePanel = false
 }: LeaderboardListProps) {
     return (
         <div className="divide-y divide-border">
@@ -46,7 +48,9 @@ export function LeaderboardList({
                                 className={cn(
                                 compactLeftPanel
                                     ? "flex w-full max-w-full items-center gap-2 overflow-hidden pl-2 pr-5 py-4 sm:gap-2.5 sm:pl-2 sm:pr-5 sm:py-4.5 md:pl-2 md:pr-5 lg:gap-2.5 lg:pl-2 lg:pr-5 lg:py-3 transition-colors hover:bg-muted/50 min-w-0"
-                                    : "flex w-full max-w-full items-center gap-1.5 sm:gap-4 md:gap-5 overflow-hidden pl-2 pr-2 sm:px-6 py-4 sm:py-4.5 lg:gap-4 lg:px-6 lg:py-3 transition-colors hover:bg-muted/50 min-w-0",
+                                    : mobilePanel
+                                        ? "flex w-full max-w-full items-center gap-2 overflow-hidden px-4 py-4 sm:gap-4 sm:px-6 sm:py-4.5 transition-colors hover:bg-muted/50 min-w-0"
+                                        : "flex w-full max-w-full items-center gap-1.5 sm:gap-4 md:gap-5 overflow-hidden pl-2 pr-2 sm:px-6 py-4 sm:py-4.5 lg:gap-4 lg:px-6 lg:py-3 transition-colors hover:bg-muted/50 min-w-0",
                                 isCurrentUser && "bg-primary/5 border-l-4 border-l-primary"
                             )}
                         >
@@ -54,7 +58,8 @@ export function LeaderboardList({
                         <div
                             className={cn(
                                 "flex-shrink-0 w-8 sm:w-10 flex items-center justify-center",
-                                compactLeftPanel && "w-7 sm:w-7"
+                                compactLeftPanel && "w-7 sm:w-7",
+                                mobilePanel && "w-9 sm:w-10"
                             )}
                         >
                             {getRankIconElement(user.rank)}
@@ -64,7 +69,8 @@ export function LeaderboardList({
                         <div
                             className={cn(
                                 "flex-1 basis-0 min-w-0",
-                                compactLeftPanel && "max-w-none sm:max-w-none"
+                                compactLeftPanel && "max-w-none sm:max-w-none",
+                                mobilePanel && "max-w-[46vw] xs:max-w-[50vw] sm:max-w-xs"
                             )}
                         >
                             {onOpenUserProfile ? (
@@ -96,29 +102,27 @@ export function LeaderboardList({
                         {/* Stats */}
                         <div
                             className={cn(
-                                "ml-auto flex min-w-max shrink-0 items-center gap-1 text-sm tabular-nums sm:gap-3 sm:text-base md:gap-4",
-                                compactLeftPanel && "gap-1.5 sm:gap-2 md:gap-2"
+                                "ml-auto flex min-w-max shrink-0 items-center gap-1.5 text-base tabular-nums sm:gap-3 sm:text-base md:gap-4",
+                                compactLeftPanel && "gap-1.5 text-[15px] sm:gap-2 md:gap-2",
+                                mobilePanel && "gap-1.5"
                             )}
                             data-leaderboard-mobile-stats="no-clip"
                         >
-                            <div className="flex items-center gap-0.5 shrink-0 sm:gap-1">
-                                <Sparkles className="h-3.5 w-3.5 sm:h-5 sm:w-5 lg:h-3.5 lg:w-3.5 text-amber-500 fill-amber-100" />
-                                <span className="font-bold text-sm sm:text-lg lg:text-sm text-amber-600">
+                            <div className="flex items-center gap-1 shrink-0 sm:gap-1">
+                                <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 lg:h-3.5 lg:w-3.5 text-amber-500 fill-amber-100" />
+                                <span className="font-bold text-base sm:text-lg lg:text-sm text-amber-600">
                                     {user.qualityScore ?? 0}
                                 </span>
                             </div>
-                            <div className="flex items-center gap-0.5 shrink-0 sm:gap-1">
-                                <Stamp className="h-3.5 w-3.5 sm:h-5 sm:w-5 lg:h-3.5 lg:w-3.5 text-muted-foreground" />
-                                <span className="font-bold text-sm sm:text-lg lg:text-sm">
+                            <div className="flex items-center gap-1 shrink-0 sm:gap-1">
+                                <Stamp className="h-4 w-4 sm:h-5 sm:w-5 lg:h-3.5 lg:w-3.5 text-muted-foreground" />
+                                <span className="font-bold text-base sm:text-lg lg:text-sm">
                                     {user.verifiedReviewCount}
                                 </span>
                             </div>
-                            <div className="flex items-center gap-0.5 shrink-0 sm:gap-1">
-                                <Heart
-                                    className="h-3.5 w-3.5 text-red-500 fill-red-500 sm:h-5 sm:w-5 lg:h-3.5 lg:w-3.5"
-                                    aria-hidden="true"
-                                />
-                                <span className="font-bold text-sm sm:text-lg lg:text-sm text-red-600">
+                            <div className="flex items-center gap-1 shrink-0 sm:gap-1">
+                                <span className="text-base leading-none sm:text-lg lg:text-xs" aria-hidden="true">❤️</span>
+                                <span className="font-bold text-base sm:text-lg lg:text-sm text-red-600">
                                     {user.totalLikes}
                                 </span>
                             </div>
