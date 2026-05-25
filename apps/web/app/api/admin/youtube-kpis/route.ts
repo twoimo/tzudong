@@ -1,0 +1,307 @@
+import { NextRequest, NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/auth/require-admin";
+import {
+  parseTreemapPeriod,
+  type InsightTreemapPeriod,
+  type InsightTreemapResponse,
+  type InsightTreemapVideoRow,
+} from "@/lib/public-insights/treemap";
+
+export const runtime = "nodejs";
+
+const YOUTUBE_CHANNELS_ENDPOINT = "https://www.googleapis.com/youtube/v3/channels";
+const YOUTUBE_PLAYLIST_ITEMS_ENDPOINT =
+  "https://www.googleapis.com/youtube/v3/playlistItems";
+const YOUTUBE_VIDEOS_ENDPOINT = "https://www.googleapis.com/youtube/v3/videos";
+const DEFAULT_TZUYANG_CHANNEL_HANDLE = "@tzuyang6145";
+const MAX_YOUTUBE_KPI_PLAYLIST_PAGES = 30;
+const YOUTUBE_BATCH_SIZE = 50;
+const MINUTE_MS = 60 * 1000;
+const HOUR_MS = 60 * MINUTE_MS;
+const DAY_MS = 24 * HOUR_MS;
+
+const periodToMilliseconds: Record<Exclude<InsightTreemapPeriod, "ALL">, number> = {
+  "30MIN": 30 * MINUTE_MS,
+  "1H": HOUR_MS,
+  "6H": 6 * HOUR_MS,
+  "12H": 12 * HOUR_MS,
+  "1D": DAY_MS,
+  "1W": 7 * DAY_MS,
+  "2W": 14 * DAY_MS,
+  "1M": 30 * DAY_MS,
+  "3M": 91 * DAY_MS,
+  "6M": 182 * DAY_MS,
+  "1Y": 365 * DAY_MS,
+};
+
+type YouTubeChannelListResponse = {
+  items?: Array<{
+    contentDetails?: {
+      relatedPlaylists?: {
+        uploads?: string;
+      };
+    };
+  }>;
+};
+
+type YouTubePlaylistItemsResponse = {
+  nextPageToken?: string;
+  items?: Array<{
+    snippet?: {
+      publishedAt?: string;
+      title?: string;
+      resourceId?: {
+        videoId?: string;
+      };
+    };
+    contentDetails?: {
+      videoId?: string;
+      videoPublishedAt?: string;
+    };
+  }>;
+};
+
+type YouTubeVideosResponse = {
+  items?: Array<{
+    id?: string;
+    snippet?: {
+      title?: string;
+      publishedAt?: string;
+      categoryId?: string;
+    };
+    statistics?: {
+      viewCount?: string;
+      likeCount?: string;
+      commentCount?: string;
+    };
+    contentDetails?: {
+      duration?: string;
+    };
+  }>;
+};
+
+type YouTubePlaylistVideo = {
+  id: string;
+  title: string;
+  publishedAt: string | null;
+};
+
+function getYouTubeApiKey() {
+  return (
+    process.env.YOUTUBE_API_KEY ||
+    process.env.NEXT_PUBLIC_YOUTUBE_API_KEY ||
+    process.env.NEXT_PUBLIC_YOUTUBE_API_KEY_BYEON ||
+    null
+  );
+}
+
+function getYouTubeChannelFilter() {
+  const channelId =
+    process.env.YOUTUBE_CHANNEL_ID || process.env.NEXT_PUBLIC_YOUTUBE_CHANNEL_ID;
+
+  if (channelId) return { name: "id", value: channelId };
+
+  return {
+    name: "forHandle",
+    value:
+      process.env.YOUTUBE_CHANNEL_HANDLE ||
+      process.env.NEXT_PUBLIC_YOUTUBE_CHANNEL_HANDLE ||
+      DEFAULT_TZUYANG_CHANNEL_HANDLE,
+  };
+}
+
+function parseYouTubeCount(value: unknown) {
+  if (typeof value !== "string" && typeof value !== "number") return 0;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
+}
+
+function parseYouTubeDurationSeconds(duration: string | undefined) {
+  if (!duration) return 0;
+  const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!match) return 0;
+
+  const hours = Number(match[1] ?? 0);
+  const minutes = Number(match[2] ?? 0);
+  const seconds = Number(match[3] ?? 0);
+  return hours * 3600 + minutes * 60 + seconds;
+}
+
+function getPeriodCutoff(period: InsightTreemapPeriod) {
+  if (period === "ALL") return null;
+  const durationMs = periodToMilliseconds[period];
+  return durationMs ? Date.now() - durationMs : null;
+}
+
+function chunk<T>(items: T[], size: number) {
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+  return chunks;
+}
+
+async function fetchYouTubeJson<T>(url: URL): Promise<T> {
+  const response = await fetch(url, {
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`youtube-api-failed:${response.status}`);
+  }
+
+  return response.json() as Promise<T>;
+}
+
+async function fetchUploadsPlaylistId(apiKey: string) {
+  const channelFilter = getYouTubeChannelFilter();
+  const url = new URL(YOUTUBE_CHANNELS_ENDPOINT);
+  url.searchParams.set("part", "contentDetails");
+  url.searchParams.set(channelFilter.name, channelFilter.value);
+  url.searchParams.set("key", apiKey);
+
+  const payload = await fetchYouTubeJson<YouTubeChannelListResponse>(url);
+  const uploadsPlaylistId =
+    payload.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
+
+  if (!uploadsPlaylistId) {
+    throw new Error("youtube-uploads-playlist-not-found");
+  }
+
+  return uploadsPlaylistId;
+}
+
+async function fetchPlaylistVideos(
+  apiKey: string,
+  playlistId: string,
+  period: InsightTreemapPeriod,
+) {
+  const cutoff = getPeriodCutoff(period);
+  const videos: YouTubePlaylistVideo[] = [];
+  let pageToken: string | undefined;
+  let page = 0;
+  let reachedCutoff = false;
+
+  while (page < MAX_YOUTUBE_KPI_PLAYLIST_PAGES && !reachedCutoff) {
+    const url = new URL(YOUTUBE_PLAYLIST_ITEMS_ENDPOINT);
+    url.searchParams.set("part", "snippet,contentDetails");
+    url.searchParams.set("playlistId", playlistId);
+    url.searchParams.set("maxResults", String(YOUTUBE_BATCH_SIZE));
+    url.searchParams.set("key", apiKey);
+    if (pageToken) url.searchParams.set("pageToken", pageToken);
+
+    const payload = await fetchYouTubeJson<YouTubePlaylistItemsResponse>(url);
+
+    for (const item of payload.items ?? []) {
+      const videoId =
+        item.contentDetails?.videoId ?? item.snippet?.resourceId?.videoId;
+      if (!videoId) continue;
+
+      const publishedAt =
+        item.contentDetails?.videoPublishedAt ?? item.snippet?.publishedAt ?? null;
+      const publishedAtMs = publishedAt ? new Date(publishedAt).getTime() : NaN;
+
+      if (cutoff && Number.isFinite(publishedAtMs) && publishedAtMs < cutoff) {
+        reachedCutoff = true;
+        break;
+      }
+
+      videos.push({
+        id: videoId,
+        title: item.snippet?.title ?? "제목 없음",
+        publishedAt,
+      });
+    }
+
+    pageToken = payload.nextPageToken;
+    if (!pageToken) break;
+    page += 1;
+  }
+
+  return videos;
+}
+
+async function fetchVideoRows(apiKey: string, playlistVideos: YouTubePlaylistVideo[]) {
+  const rows: InsightTreemapVideoRow[] = [];
+  const playlistVideoMap = new Map(playlistVideos.map((video) => [video.id, video]));
+
+  for (const videoChunk of chunk(playlistVideos, YOUTUBE_BATCH_SIZE)) {
+    const url = new URL(YOUTUBE_VIDEOS_ENDPOINT);
+    url.searchParams.set("part", "snippet,statistics,contentDetails");
+    url.searchParams.set("id", videoChunk.map((video) => video.id).join(","));
+    url.searchParams.set("key", apiKey);
+
+    const payload = await fetchYouTubeJson<YouTubeVideosResponse>(url);
+
+    for (const item of payload.items ?? []) {
+      if (!item.id) continue;
+      const fallback = playlistVideoMap.get(item.id);
+
+      rows.push({
+        id: item.id,
+        title: item.snippet?.title ?? fallback?.title ?? "제목 없음",
+        publishedAt: item.snippet?.publishedAt ?? fallback?.publishedAt ?? null,
+        category: item.snippet?.categoryId ?? "YouTube",
+        viewCount: parseYouTubeCount(item.statistics?.viewCount),
+        likeCount: parseYouTubeCount(item.statistics?.likeCount),
+        commentCount: parseYouTubeCount(item.statistics?.commentCount),
+        duration: parseYouTubeDurationSeconds(item.contentDetails?.duration),
+        previousViewCount: null,
+        previousLikeCount: null,
+        previousCommentCount: null,
+        previousDuration: null,
+      });
+    }
+  }
+
+  return rows.sort((a, b) => {
+    const aMs = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+    const bMs = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+    return bMs - aMs;
+  });
+}
+
+export async function GET(request: NextRequest) {
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth.response;
+
+  const apiKey = getYouTubeApiKey();
+  if (!apiKey) {
+    return NextResponse.json(
+      { error: "YouTube API key is not configured" },
+      { status: 500 },
+    );
+  }
+
+  const period = parseTreemapPeriod(request.nextUrl.searchParams.get("period"));
+
+  try {
+    const uploadsPlaylistId = await fetchUploadsPlaylistId(apiKey);
+    const playlistVideos = await fetchPlaylistVideos(
+      apiKey,
+      uploadsPlaylistId,
+      period,
+    );
+    const videos = await fetchVideoRows(apiKey, playlistVideos);
+    const payload: InsightTreemapResponse = {
+      asOf: new Date().toISOString(),
+      period,
+      totalVideos: videos.length,
+      videos,
+      availablePeriods: [],
+    };
+
+    return NextResponse.json(payload, {
+      headers: {
+        "Cache-Control": "private, no-store, max-age=0",
+      },
+    });
+  } catch (error) {
+    console.error("YouTube KPI fetch error:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch live YouTube KPI data" },
+      { status: 502 },
+    );
+  }
+}
