@@ -1841,6 +1841,23 @@ describe("web quality performance source contracts", () => {
     expect(stampPageSource).toContain(
       'data-stamp-loading-behavior="static-shell-dynamic-skeleton"',
     );
+    expect(stampPageSource).toContain("const STAMP_PAGE_SIZE = 5");
+    expect(stampPageSource).toContain(
+      "const [displayLimit, setDisplayLimit] = useState(STAMP_PAGE_SIZE)",
+    );
+    expect(stampPageSource).toContain("setDisplayLimit(STAMP_PAGE_SIZE)");
+    expect(stampPageSource).toContain(
+      "setDisplayLimit(prev => prev + STAMP_PAGE_SIZE)",
+    );
+    expect(stampPageSource).toContain(
+      "StampGridSkeleton count={STAMP_PAGE_SIZE}",
+    );
+    expect(stampPageSource).toContain(
+      "const gridRestaurantLimit = Math.max(displayLimit - guideSlotCount, 0)",
+    );
+    expect(stampPageSource).toContain(
+      "const loadedRestaurantCount = viewMode === 'grid' ? displayedGridRestaurants.length : displayedRestaurants.length",
+    );
     expect(stampPageSource).toContain("const isStampDynamicLoading =");
     expect(stampPageSource).toContain(
       "const shouldShowStampFilterToggle = !isMounted || isMobileOrTablet",
