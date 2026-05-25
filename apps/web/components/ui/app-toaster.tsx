@@ -1,5 +1,6 @@
 'use client';
 
+import { usePathname } from 'next/navigation';
 import {
   Toast,
   ToastClose,
@@ -10,8 +11,17 @@ import {
 } from '@/components/ui/toast';
 import { useToast } from '@/hooks/use-toast';
 
+const HOME_MAP_TOAST_VIEWPORT_CLASS_NAME = 'bottom-auto top-[calc(env(safe-area-inset-top)+114px)]';
+const APP_MOBILE_TOAST_VIEWPORT_CLASS_NAME = 'top-auto bottom-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+env(safe-area-inset-bottom)+0.75rem)]';
+
+const isHomeMapToastRoute = (pathname: string | null) => pathname === '/' || pathname === '/home-frame';
+
 export function AppToaster() {
   const { toasts } = useToast();
+  const pathname = usePathname();
+  const toastViewportClassName = isHomeMapToastRoute(pathname)
+    ? HOME_MAP_TOAST_VIEWPORT_CLASS_NAME
+    : APP_MOBILE_TOAST_VIEWPORT_CLASS_NAME;
 
   return (
     <ToastProvider swipeDirection="right">
@@ -25,7 +35,7 @@ export function AppToaster() {
           <ToastClose />
         </Toast>
       ))}
-      <ToastViewport />
+      <ToastViewport className={toastViewportClassName} />
     </ToastProvider>
   );
 }
