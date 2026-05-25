@@ -1302,6 +1302,96 @@ function AdminDashboardScrollTable<Row>({
   );
 }
 
+function AdminDashboardKpiValueSkeleton() {
+  return (
+    <div
+      className="flex min-h-0 min-w-0 items-center justify-between gap-3"
+      data-admin-dashboard-dynamic-skeleton="kpi"
+      aria-hidden="true"
+    >
+      <div className="min-w-0 flex-1 space-y-2">
+        <Skeleton className="h-8 w-32 max-w-full rounded-full motion-reduce:animate-none" />
+        <Skeleton className="h-3 w-24 max-w-full rounded-full motion-reduce:animate-none" />
+      </div>
+      <Skeleton className="h-11 w-24 shrink-0 rounded-xl motion-reduce:animate-none" />
+    </div>
+  );
+}
+
+function AdminDashboardPanelBodySkeleton({
+  variant = "chart",
+}: {
+  variant?: "chart" | "table" | "ops";
+}) {
+  if (variant === "table") {
+    return (
+      <div
+        className="min-h-0 flex-1 space-y-2 overflow-hidden rounded-xl border border-border/70 bg-background p-3"
+        data-admin-dashboard-dynamic-skeleton="table"
+        aria-hidden="true"
+      >
+        {Array.from({ length: 5 }).map((_, index) => (
+          <div
+            key={index}
+            className="grid grid-cols-[minmax(0,1fr)_4rem_4rem] gap-3"
+          >
+            <Skeleton className="h-4 rounded-full motion-reduce:animate-none" />
+            <Skeleton className="h-4 rounded-full motion-reduce:animate-none" />
+            <Skeleton className="h-4 rounded-full motion-reduce:animate-none" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (variant === "ops") {
+    return (
+      <div
+        className="grid min-h-0 flex-1 gap-3"
+        data-admin-dashboard-dynamic-skeleton="ops"
+        aria-hidden="true"
+      >
+        {Array.from({ length: 2 }).map((_, sectionIndex) => (
+          <div key={sectionIndex} className="grid gap-2">
+            <div className="flex items-center justify-between gap-3">
+              <Skeleton className="h-4 w-20 rounded-full motion-reduce:animate-none" />
+              <Skeleton className="h-4 w-12 rounded-full motion-reduce:animate-none" />
+            </div>
+            {Array.from({ length: 4 }).map((__, rowIndex) => (
+              <div
+                key={rowIndex}
+                className="grid grid-cols-[5.5rem_minmax(0,1fr)_3rem] items-center gap-2"
+              >
+                <Skeleton className="h-3 rounded-full motion-reduce:animate-none" />
+                <Skeleton className="h-2 rounded-full motion-reduce:animate-none" />
+                <Skeleton className="h-3 rounded-full motion-reduce:animate-none" />
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="min-h-0 flex-1 rounded-xl border border-border/70 bg-background p-3"
+      data-admin-dashboard-dynamic-skeleton="chart"
+      aria-hidden="true"
+    >
+      <div className="flex h-full min-h-[8rem] items-end gap-3">
+        {Array.from({ length: 7 }).map((_, index) => (
+          <Skeleton
+            key={index}
+            className="flex-1 rounded-t-xl motion-reduce:animate-none"
+            style={{ height: `${36 + ((index * 17) % 48)}%` }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function AdminDashboardCardTitle({
   title,
   metric,
@@ -1353,6 +1443,7 @@ function AdminDashboardKpiCard({
   tone = "teal",
   sparklineData = [],
   infoLines = [],
+  isLoading = false,
 }: {
   title: string;
   value: string;
@@ -1366,6 +1457,7 @@ function AdminDashboardKpiCard({
   tone?: "teal" | "blue" | "amber" | "rose" | "neutral";
   sparklineData?: AdminDashboardSparklinePoint[];
   infoLines?: string[];
+  isLoading?: boolean;
 }) {
   const safeProgress = clampDashboardPercent(progress);
   const toneClass = {
@@ -1407,7 +1499,13 @@ function AdminDashboardKpiCard({
               />
             ) : null}
           </div>
-          {delta !== undefined ? (
+          {isLoading ? (
+            <Skeleton
+              className="h-5 w-20 shrink-0 rounded-full motion-reduce:animate-none"
+              data-admin-dashboard-dynamic-skeleton="delta"
+              aria-hidden="true"
+            />
+          ) : delta !== undefined ? (
             <span
               className={cn(
                 "inline-flex shrink-0 items-center gap-1 rounded-full bg-muted/45 px-2 py-0.5 text-[11px] font-black leading-none tabular-nums",
@@ -1425,62 +1523,73 @@ function AdminDashboardKpiCard({
         </div>
         <div className="h-px bg-border/70" aria-hidden="true" />
       </div>
-      <div className="flex min-h-0 min-w-0 items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate text-[clamp(1.42rem,1.75vw,2.1rem)] font-black leading-none tracking-[-0.055em] text-foreground">
-            {value}
-          </p>
-          <p className="mt-1.5 truncate text-[11px] font-semibold leading-none text-muted-foreground">
-            {caption}
-          </p>
-        </div>
-        {chartData.length > 1 ? (
-          <div
-            className="h-11 w-24 shrink-0 overflow-hidden"
-            aria-hidden="true"
-            data-admin-dashboard-kpi-sparkline="true"
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart
-                data={chartData}
-                margin={{ top: 4, right: 0, bottom: 0, left: 0 }}
-              >
-                <RechartsTooltip
-                  formatter={(tooltipValue) => [
-                    formatRechartsTooltipValue(tooltipValue),
-                    title,
-                  ]}
-                  labelFormatter={(label) => String(label ?? "기간")}
-                  contentStyle={adminDashboardTooltipStyle}
-                  cursor={{
-                    stroke: toneClass.stroke,
-                    strokeOpacity: 0.32,
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="value"
-                  stroke={toneClass.stroke}
-                  strokeWidth={2}
-                  fill={toneClass.stroke}
-                  fillOpacity={0.28}
-                  dot={false}
-                  isAnimationActive={false}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+      {isLoading ? (
+        <AdminDashboardKpiValueSkeleton />
+      ) : (
+        <div className="flex min-h-0 min-w-0 items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="truncate text-[clamp(1.42rem,1.75vw,2.1rem)] font-black leading-none tracking-[-0.055em] text-foreground">
+              {value}
+            </p>
+            <p className="mt-1.5 truncate text-[11px] font-semibold leading-none text-muted-foreground">
+              {caption}
+            </p>
           </div>
-        ) : null}
-      </div>
-      <div
-        className="h-1.5 overflow-hidden rounded-full bg-muted"
-        aria-hidden="true"
-      >
-        <div
-          className={cn("h-full rounded-full", toneClass.bar)}
-          style={{ width: `${safeProgress}%` }}
+          {chartData.length > 1 ? (
+            <div
+              className="h-11 w-24 shrink-0 overflow-hidden"
+              aria-hidden="true"
+              data-admin-dashboard-kpi-sparkline="true"
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart
+                  data={chartData}
+                  margin={{ top: 4, right: 0, bottom: 0, left: 0 }}
+                >
+                  <RechartsTooltip
+                    formatter={(tooltipValue) => [
+                      formatRechartsTooltipValue(tooltipValue),
+                      title,
+                    ]}
+                    labelFormatter={(label) => String(label ?? "기간")}
+                    contentStyle={adminDashboardTooltipStyle}
+                    cursor={{
+                      stroke: toneClass.stroke,
+                      strokeOpacity: 0.32,
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="value"
+                    stroke={toneClass.stroke}
+                    strokeWidth={2}
+                    fill={toneClass.stroke}
+                    fillOpacity={0.28}
+                    dot={false}
+                    isAnimationActive={false}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          ) : null}
+        </div>
+      )}
+      {isLoading ? (
+        <Skeleton
+          className="h-1.5 rounded-full motion-reduce:animate-none"
+          aria-hidden="true"
         />
-      </div>
+      ) : (
+        <div
+          className="h-1.5 overflow-hidden rounded-full bg-muted"
+          aria-hidden="true"
+        >
+          <div
+            className={cn("h-full rounded-full", toneClass.bar)}
+            style={{ width: `${safeProgress}%` }}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -1492,6 +1601,7 @@ function AdminDashboardOpsSummaryCard({
   reorderProps,
   view = "chart",
   onViewChange,
+  isLoading = false,
 }: {
   sections: Array<{
     title: string;
@@ -1504,6 +1614,7 @@ function AdminDashboardOpsSummaryCard({
   reorderProps?: AdminDashboardCardReorderProps;
   view?: AdminDashboardCardView;
   onViewChange?: (value: AdminDashboardCardView) => void;
+  isLoading?: boolean;
 }) {
   const tableRows = sections.flatMap((section) =>
     section.rows.map((row) => ({
@@ -1549,7 +1660,11 @@ function AdminDashboardOpsSummaryCard({
           ) : null
         }
       />
-      {view === "table" ? (
+      {isLoading ? (
+        <AdminDashboardPanelBodySkeleton
+          variant={view === "table" ? "table" : "ops"}
+        />
+      ) : view === "table" ? (
         <AdminDashboardScrollTable
           rows={tableRows}
           emptyText="표시할 운영·검수 데이터가 없습니다."
@@ -2353,6 +2468,8 @@ function AdminDashboardManagementPanel({
   hasError: boolean;
 }) {
   const [period, setPeriod] = useState<AdminDashboardPeriod>("1M");
+  const [pendingSkeletonPeriod, setPendingSkeletonPeriod] =
+    useState<AdminDashboardPeriod | null>(null);
   const [dashboardCardViews, setDashboardCardViews] = useState(
     DEFAULT_ADMIN_DASHBOARD_CARD_VIEWS,
   );
@@ -2394,6 +2511,21 @@ function AdminDashboardManagementPanel({
     refetchIntervalInBackground: false,
     retry: 1,
   });
+
+  useEffect(() => {
+    if (
+      pendingSkeletonPeriod === period &&
+      !insightQuery.isFetching &&
+      !insightQuery.isLoading
+    ) {
+      setPendingSkeletonPeriod(null);
+    }
+  }, [
+    insightQuery.isFetching,
+    insightQuery.isLoading,
+    pendingSkeletonPeriod,
+    period,
+  ]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -2685,7 +2817,9 @@ function AdminDashboardManagementPanel({
     () => buildAdminDashboardBarRows(videosByViews),
     [videosByViews],
   );
-  const isChartLoading = isLoading || insightQuery.isLoading;
+  const isInsightDynamicLoading =
+    insightQuery.isLoading || pendingSkeletonPeriod === period;
+  const isChartLoading = isLoading || isInsightDynamicLoading;
   const chartHasError = hasError || insightQuery.isError;
   const likeRate = getDashboardRatio(totalLikes, totalViews);
   const commentRate = getDashboardRatio(totalComments, totalViews);
@@ -2863,7 +2997,12 @@ function AdminDashboardManagementPanel({
                 size="sm"
                 className="h-7 rounded-full px-2 text-[11px]"
                 aria-pressed={period === option.value}
-                onClick={() => setPeriod(option.value)}
+                onClick={() => {
+                  if (option.value !== period) {
+                    setPendingSkeletonPeriod(option.value);
+                    setPeriod(option.value);
+                  }
+                }}
               >
                 {option.label}
               </Button>
@@ -2907,6 +3046,7 @@ function AdminDashboardManagementPanel({
           tone={channelStats?.subscriberCount ? "teal" : "neutral"}
           delta={channelStats?.subscriberCount ? "LIVE" : "—"}
           deltaLabel="실시간"
+          isLoading={isSubscriberLoading}
           infoLines={[
             "현재 YouTube 채널 statistics.subscriberCount 값입니다.",
             "타임프레임과 무관한 채널 스냅샷이며 60초 주기로 갱신합니다.",
@@ -2927,6 +3067,7 @@ function AdminDashboardManagementPanel({
           progress={getDashboardChangeProgress(viewChange)}
           tone="blue"
           sparklineData={viewSparklinePoints}
+          isLoading={isChartLoading}
           infoLines={[
             "선택 타임프레임에 업로드된 영상들의 최신 viewCount 합계입니다.",
             "미니 차트 X축은 최근 영상 게시일 순서, Y축은 영상별 조회수입니다.",
@@ -2951,6 +3092,7 @@ function AdminDashboardManagementPanel({
           progress={getDashboardChangeProgress(likeChange)}
           tone="rose"
           sparklineData={likeSparklinePoints}
+          isLoading={isChartLoading}
           infoLines={[
             "선택 타임프레임 영상들의 최신 likeCount 합계입니다.",
             "미니 차트 X축은 최근 영상 게시일 순서, Y축은 영상별 좋아요 수입니다.",
@@ -2975,6 +3117,7 @@ function AdminDashboardManagementPanel({
           progress={getDashboardChangeProgress(commentChange)}
           tone="amber"
           sparklineData={commentSparklinePoints}
+          isLoading={isChartLoading}
           infoLines={[
             "선택 타임프레임 영상들의 최신 commentCount 합계입니다.",
             "미니 차트 X축은 최근 영상 게시일 순서, Y축은 영상별 댓글 수입니다.",
@@ -2995,6 +3138,7 @@ function AdminDashboardManagementPanel({
           progress={getDashboardChangeProgress(videoCountChange)}
           tone="teal"
           sparklineData={videoCountSparklinePoints}
+          isLoading={isChartLoading}
           infoLines={[
             "선택 타임프레임에 업로드된 영상 개수입니다.",
             "미니 차트 X축은 최근 영상 게시일 순서, Y축은 누적 영상 순번입니다.",
@@ -3026,7 +3170,13 @@ function AdminDashboardManagementPanel({
               />
             }
           />
-          {getDashboardCardView("impact") === "table" ? (
+          {isChartLoading ? (
+            <AdminDashboardPanelBodySkeleton
+              variant={
+                getDashboardCardView("impact") === "table" ? "table" : "chart"
+              }
+            />
+          ) : getDashboardCardView("impact") === "table" ? (
             <AdminDashboardScrollTable
               rows={impactTableRows}
               emptyText="표시할 영상 영향도 데이터가 없습니다."
@@ -3098,7 +3248,13 @@ function AdminDashboardManagementPanel({
               />
             }
           />
-          {getDashboardCardView("trend") === "table" ? (
+          {isChartLoading ? (
+            <AdminDashboardPanelBodySkeleton
+              variant={
+                getDashboardCardView("trend") === "table" ? "table" : "chart"
+              }
+            />
+          ) : getDashboardCardView("trend") === "table" ? (
             <AdminDashboardScrollTable
               rows={trendTableRows}
               emptyText="표시할 조회·참여 추이 데이터가 없습니다."
@@ -3167,6 +3323,7 @@ function AdminDashboardManagementPanel({
           style={{ order: getDashboardWidgetOrder("ops") }}
           view={getDashboardCardView("ops")}
           onViewChange={(view) => setDashboardCardView("ops", view)}
+          isLoading={isLoading}
         />
 
         <div
@@ -3193,7 +3350,15 @@ function AdminDashboardManagementPanel({
               />
             }
           />
-          {getDashboardCardView("topContent") === "table" ? (
+          {isChartLoading ? (
+            <AdminDashboardPanelBodySkeleton
+              variant={
+                getDashboardCardView("topContent") === "table"
+                  ? "table"
+                  : "chart"
+              }
+            />
+          ) : getDashboardCardView("topContent") === "table" ? (
             <AdminDashboardScrollTable
               rows={topContentTableRows}
               emptyText="표시할 콘텐츠 성과 데이터가 없습니다."
@@ -3275,7 +3440,15 @@ function AdminDashboardManagementPanel({
             </div>
             <div className="h-px bg-border/70" aria-hidden="true" />
           </div>
-          {getDashboardCardView("engagementRate") === "table" ? (
+          {isChartLoading ? (
+            <AdminDashboardPanelBodySkeleton
+              variant={
+                getDashboardCardView("engagementRate") === "table"
+                  ? "table"
+                  : "chart"
+              }
+            />
+          ) : getDashboardCardView("engagementRate") === "table" ? (
             <AdminDashboardScrollTable
               rows={trendTableRows}
               emptyText="표시할 참여율 변동 데이터가 없습니다."

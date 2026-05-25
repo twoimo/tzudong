@@ -101,6 +101,7 @@ const STAMP_GUIDE_DEMO_RESTAURANT = {
 } as Restaurant;
 const STAMP_GUIDE_DESCRIPTION = "맛집 카드에 리뷰를 남기면 이렇게 도장이 찍혀요.";
 const STAMP_REVIEW_SELECT = 'id,user_id,restaurant_id,visited_at,created_at,content,food_photos,categories,is_verified,is_pinned,is_edited_by_admin,admin_note,like_count';
+const STAMP_PAGE_SIZE = 5;
 
 // StampFilterState 및 UserReview는 stamp-utils에서 import
 
@@ -431,28 +432,30 @@ export default function StampPage() {
         return result;
     }, [allMergedRestaurants, mergedAllRestaurants, searchQuery, filters, sortColumn, sortDirection, isVisited]);
 
-    // --- 클라이언트 측 페이지네이션: 15개씩 표시 (성능 최적화: 렌더링 부하 감소) ---
-    const [displayLimit, setDisplayLimit] = useState(15);
+    // --- 클라이언트 측 페이지네이션: 5개씩 표시 (모바일 무한 스크롤 체감 개선) ---
+    const [displayLimit, setDisplayLimit] = useState(STAMP_PAGE_SIZE);
 
     // 필터 변경 시 표시 개수 리셋
     useEffect(() => {
-        setDisplayLimit(15);
+        setDisplayLimit(STAMP_PAGE_SIZE);
     }, [filters, sortColumn, sortDirection, searchQuery]);
 
     const guideSlotCount = showStampGuide ? 1 : 0;
+    const gridRestaurantLimit = Math.max(displayLimit - guideSlotCount, 0);
     const displayedRestaurants = useMemo(() => {
         return filteredAndSortedRestaurants.slice(0, displayLimit);
     }, [filteredAndSortedRestaurants, displayLimit]);
     const displayedGridRestaurants = useMemo(() => {
-        return filteredAndSortedRestaurants.slice(0, Math.max(displayLimit - guideSlotCount, 0));
-    }, [filteredAndSortedRestaurants, displayLimit, guideSlotCount]);
+        return filteredAndSortedRestaurants.slice(0, gridRestaurantLimit);
+    }, [filteredAndSortedRestaurants, gridRestaurantLimit]);
     const displayedCards = useMemo(() => {
         if (!showStampGuide) return displayedGridRestaurants;
         return [STAMP_GUIDE_DEMO_RESTAURANT, ...displayedGridRestaurants];
     }, [showStampGuide, displayedGridRestaurants]);
 
     // 더 불러올 데이터가 있는지 확인
-    const hasMoreToDisplay = displayLimit < filteredAndSortedRestaurants.length;
+    const loadedRestaurantCount = viewMode === 'grid' ? displayedGridRestaurants.length : displayedRestaurants.length;
+    const hasMoreToDisplay = loadedRestaurantCount < filteredAndSortedRestaurants.length;
 
     // --- 무한 스크롤 옵저버 (Infinite Scroll Observer) ---
     const mainScrollRef = useRef<HTMLDivElement>(null);
@@ -466,7 +469,7 @@ export default function StampPage() {
 
     const loadMoreRestaurants = useCallback(() => {
         if (hasMoreToDisplay) {
-            setDisplayLimit(prev => prev + 15);
+            setDisplayLimit(prev => prev + STAMP_PAGE_SIZE);
         }
     }, [hasMoreToDisplay]);
 
@@ -1101,7 +1104,7 @@ export default function StampPage() {
                             data-stamp-loading-behavior="static-shell-dynamic-skeleton"
                         >
                             {isStampDynamicLoading ? (
-                                <StampGridSkeleton count={16} showHeader={false} />
+                                <StampGridSkeleton count={STAMP_PAGE_SIZE} showHeader={false} />
                             ) : viewMode === 'grid' ? (
                                 /* 그리드 뷰 (Grid View) */
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 md:gap-4">
