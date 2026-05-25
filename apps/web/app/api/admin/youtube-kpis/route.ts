@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/require-admin";
+import { getYouTubeKpiSnapshotData } from "@/lib/admin/youtube-kpi-snapshots";
 import {
+  getInsightTreemapData,
   parseTreemapPeriod,
   type InsightTreemapPeriod,
   type InsightTreemapResponse,
@@ -9,18 +11,23 @@ import {
 
 export const runtime = "nodejs";
 
-const YOUTUBE_CHANNELS_ENDPOINT = "https://www.googleapis.com/youtube/v3/channels";
+const YOUTUBE_CHANNELS_ENDPOINT =
+  "https://www.googleapis.com/youtube/v3/channels";
 const YOUTUBE_PLAYLIST_ITEMS_ENDPOINT =
   "https://www.googleapis.com/youtube/v3/playlistItems";
 const YOUTUBE_VIDEOS_ENDPOINT = "https://www.googleapis.com/youtube/v3/videos";
 const DEFAULT_TZUYANG_CHANNEL_HANDLE = "@tzuyang6145";
 const MAX_YOUTUBE_KPI_PLAYLIST_PAGES = 30;
 const YOUTUBE_BATCH_SIZE = 50;
+const YOUTUBE_FETCH_TIMEOUT_MS = 10_000;
 const MINUTE_MS = 60 * 1000;
 const HOUR_MS = 60 * MINUTE_MS;
 const DAY_MS = 24 * HOUR_MS;
 
-const periodToMilliseconds: Record<Exclude<InsightTreemapPeriod, "ALL">, number> = {
+const periodToMilliseconds: Record<
+  Exclude<InsightTreemapPeriod, "ALL">,
+  number
+> = {
   "30MIN": 30 * MINUTE_MS,
   "1H": HOUR_MS,
   "6H": 6 * HOUR_MS,
@@ -87,17 +94,13 @@ type YouTubePlaylistVideo = {
 };
 
 function getYouTubeApiKey() {
-  return (
-    process.env.YOUTUBE_API_KEY ||
-    process.env.NEXT_PUBLIC_YOUTUBE_API_KEY ||
-    process.env.NEXT_PUBLIC_YOUTUBE_API_KEY_BYEON ||
-    null
-  );
+  return process.env.YOUTUBE_API_KEY || null;
 }
 
 function getYouTubeChannelFilter() {
   const channelId =
-    process.env.YOUTUBE_CHANNEL_ID || process.env.NEXT_PUBLIC_YOUTUBE_CHANNEL_ID;
+    process.env.YOUTUBE_CHANNEL_ID ||
+    process.env.NEXT_PUBLIC_YOUTUBE_CHANNEL_ID;
 
   if (channelId) return { name: "id", value: channelId };
 
@@ -145,6 +148,7 @@ async function fetchYouTubeJson<T>(url: URL): Promise<T> {
   const response = await fetch(url, {
     headers: { Accept: "application/json" },
     cache: "no-store",
+    signal: AbortSignal.timeout(YOUTUBE_FETCH_TIMEOUT_MS),
   });
 
   if (!response.ok) {
@@ -160,6 +164,10 @@ async function fetchUploadsPlaylistId(apiKey: string) {
   url.searchParams.set("part", "contentDetails");
   url.searchParams.set(channelFilter.name, channelFilter.value);
   url.searchParams.set("key", apiKey);
+  url.searchParams.set(
+    "fields",
+    "items(contentDetails/relatedPlaylists/uploads)",
+  );
 
   const payload = await fetchYouTubeJson<YouTubeChannelListResponse>(url);
   const uploadsPlaylistId =
@@ -189,6 +197,10 @@ async function fetchPlaylistVideos(
     url.searchParams.set("playlistId", playlistId);
     url.searchParams.set("maxResults", String(YOUTUBE_BATCH_SIZE));
     url.searchParams.set("key", apiKey);
+    url.searchParams.set(
+      "fields",
+      "nextPageToken,items(contentDetails/videoId,contentDetails/videoPublishedAt,snippet/publishedAt,snippet/resourceId/videoId,snippet/title)",
+    );
     if (pageToken) url.searchParams.set("pageToken", pageToken);
 
     const payload = await fetchYouTubeJson<YouTubePlaylistItemsResponse>(url);
@@ -199,7 +211,9 @@ async function fetchPlaylistVideos(
       if (!videoId) continue;
 
       const publishedAt =
-        item.contentDetails?.videoPublishedAt ?? item.snippet?.publishedAt ?? null;
+        item.contentDetails?.videoPublishedAt ??
+        item.snippet?.publishedAt ??
+        null;
       const publishedAtMs = publishedAt ? new Date(publishedAt).getTime() : NaN;
 
       if (cutoff && Number.isFinite(publishedAtMs) && publishedAtMs < cutoff) {
@@ -222,15 +236,24 @@ async function fetchPlaylistVideos(
   return videos;
 }
 
-async function fetchVideoRows(apiKey: string, playlistVideos: YouTubePlaylistVideo[]) {
+async function fetchVideoRows(
+  apiKey: string,
+  playlistVideos: YouTubePlaylistVideo[],
+) {
   const rows: InsightTreemapVideoRow[] = [];
-  const playlistVideoMap = new Map(playlistVideos.map((video) => [video.id, video]));
+  const playlistVideoMap = new Map(
+    playlistVideos.map((video) => [video.id, video]),
+  );
 
   for (const videoChunk of chunk(playlistVideos, YOUTUBE_BATCH_SIZE)) {
     const url = new URL(YOUTUBE_VIDEOS_ENDPOINT);
     url.searchParams.set("part", "snippet,statistics,contentDetails");
     url.searchParams.set("id", videoChunk.map((video) => video.id).join(","));
     url.searchParams.set("key", apiKey);
+    url.searchParams.set(
+      "fields",
+      "items(id,snippet/title,snippet/publishedAt,snippet/categoryId,statistics/viewCount,statistics/likeCount,statistics/commentCount,contentDetails/duration)",
+    );
 
     const payload = await fetchYouTubeJson<YouTubeVideosResponse>(url);
 
@@ -267,14 +290,41 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   const apiKey = getYouTubeApiKey();
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: "YouTube API key is not configured" },
-      { status: 500 },
-    );
+  const period = parseTreemapPeriod(request.nextUrl.searchParams.get("period"));
+
+  try {
+    const snapshotPayload = await getYouTubeKpiSnapshotData(period);
+    if (snapshotPayload) {
+      return NextResponse.json(snapshotPayload, {
+        headers: {
+          "Cache-Control": "private, max-age=60, stale-while-revalidate=180",
+        },
+      });
+    }
+  } catch (error) {
+    console.warn("YouTube KPI snapshot fallback failed:", error);
   }
 
-  const period = parseTreemapPeriod(request.nextUrl.searchParams.get("period"));
+  if (!apiKey) {
+    try {
+      const fallbackPayload = await getInsightTreemapData(period, {
+        filterByPeriod: period !== "ALL",
+        metricMode: "views",
+      });
+
+      return NextResponse.json(fallbackPayload, {
+        headers: {
+          "Cache-Control": "private, max-age=60, stale-while-revalidate=300",
+        },
+      });
+    } catch (fallbackError) {
+      console.error("YouTube KPI Supabase fallback error:", fallbackError);
+      return NextResponse.json(
+        { error: "YouTube KPI fallback data is unavailable" },
+        { status: 500 },
+      );
+    }
+  }
 
   try {
     const uploadsPlaylistId = await fetchUploadsPlaylistId(apiKey);
@@ -299,9 +349,24 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("YouTube KPI fetch error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch live YouTube KPI data" },
-      { status: 502 },
-    );
+
+    try {
+      const fallbackPayload = await getInsightTreemapData(period, {
+        filterByPeriod: period !== "ALL",
+        metricMode: "views",
+      });
+
+      return NextResponse.json(fallbackPayload, {
+        headers: {
+          "Cache-Control": "private, max-age=60, stale-while-revalidate=300",
+        },
+      });
+    } catch (fallbackError) {
+      console.error("YouTube KPI Supabase fallback error:", fallbackError);
+      return NextResponse.json(
+        { error: "Failed to fetch live YouTube KPI data" },
+        { status: 502 },
+      );
+    }
   }
 }
