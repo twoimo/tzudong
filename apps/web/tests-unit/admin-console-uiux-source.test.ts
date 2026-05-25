@@ -329,6 +329,31 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(overviewSource).toContain("fetchAdminDirectionsRoute");
     expect(overviewSource).toContain("/api/admin/routes/directions");
+    expect(source("lib/admin-route-planner.ts")).toContain('id: "driving"');
+    expect(source("lib/admin-route-planner.ts")).toContain('id: "walking"');
+    expect(source("lib/admin-route-planner.ts")).toContain('id: "mixed"');
+    expect(source("lib/admin-route-planner.ts")).toContain(
+      "네이버 도로 경로 응답 전까지는 직선거리 기반 후보입니다.",
+    );
+    expect(overviewSource).toContain("ADMIN_ROUTE_MODE_OPTIONS");
+    expect(overviewSource).toContain("assessAdminRouteReadiness");
+    expect(overviewSource).toContain("buildAdminRoutePlan");
+    expect(overviewSource).toContain(
+      'data-admin-route-mode-controls="driving-walking-mixed"',
+    );
+    expect(overviewSource).toContain(
+      'data-admin-route-readiness-panel="local-heuristic"',
+    );
+    expect(overviewSource).toContain(
+      'data-admin-route-stop-list="ordered-shooting-plan"',
+    );
+    expect(overviewSource).toContain("동선 준비도");
+    expect(overviewSource).toContain("자동차");
+    expect(overviewSource).toContain("도보");
+    expect(overviewSource).toContain("혼합");
+    expect(overviewSource).toContain(
+      "네이버 Directions 5는 자동차만 지원하므로 도보·혼합은 근거리 촬영 초안",
+    );
     expect(overviewSource).not.toContain(
       'data-admin-creator-layer-controls="active-only"',
     );
@@ -734,7 +759,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(routeSource).toContain("subscriberCount");
     expect(routeSource).toContain("hiddenSubscriberCount");
     expect(routeSource).toContain("YOUTUBE_API_KEY");
-    expect(routeSource).toContain("NEXT_PUBLIC_YOUTUBE_API_KEY");
+    expect(routeSource).not.toContain("NEXT_PUBLIC_YOUTUBE_API_KEY");
     expect(routeSource).toContain("YOUTUBE_CHANNEL_ID");
     expect(routeSource).toContain("YOUTUBE_CHANNEL_HANDLE");
     expect(routeSource).toContain("@tzuyang6145");
@@ -1078,7 +1103,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(overviewSource).toContain(
       "네이버 지도 프레임은 유지한 채 맛집 관리에서 좌표 상태를 확인하세요.",
     );
-    expect(overviewSource).toContain("const restaurants = realRestaurants;");
+    expect(overviewSource).toContain("restaurants: realRestaurants,");
     expect(overviewSource).toContain(
       "지도는 기본 위치로 유지하고 좌표가 있는 맛집만 표시합니다.",
     );

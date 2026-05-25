@@ -20,8 +20,10 @@ import {
   Activity,
   BarChart2,
   Bot,
+  CheckCircle2,
   Clapperboard,
   ClipboardList,
+  ExternalLink,
   Image as ImageIcon,
   MessageSquareText,
   Info,
@@ -33,8 +35,10 @@ import {
   Sun,
   Settings2,
   ScrollText,
+  RefreshCw,
   Store,
   UsersRound,
+  XCircle,
 } from "lucide-react";
 import {
   Area,
@@ -670,6 +674,53 @@ type AdminYouTubeChannelStats = {
   fetchedAt: string;
 };
 
+type AdminYouTubeKpiCollectionRun = {
+  id: number | null;
+  runNumber: number | null;
+  title: string;
+  event: string | null;
+  status: string;
+  conclusion: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+  startedAt: string | null;
+  htmlUrl: string | null;
+};
+
+type AdminYouTubeKpiCollectionJob = {
+  id: number | null;
+  name: string;
+  status: string;
+  conclusion: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  htmlUrl: string | null;
+};
+
+type AdminYouTubeKpiCollectionLogs = {
+  asOf: string;
+  workflow: {
+    available: boolean;
+    repository: string;
+    workflowId: string;
+    runs: AdminYouTubeKpiCollectionRun[];
+    latestJobs: AdminYouTubeKpiCollectionJob[];
+    error: string | null;
+  };
+  snapshot: {
+    available: boolean;
+    bucketStartedAt?: string;
+    fetchedAt?: string;
+    channelId?: string | null;
+    channelTitle?: string | null;
+    subscriberCount?: number | null;
+    viewCount?: number | null;
+    videoCount?: number | null;
+    videoSnapshotCount?: number | null;
+    error?: string | null;
+  };
+};
+
 function buildCanonicalAdminModuleHref(moduleId: AdminModuleId): string {
   const params = new URLSearchParams();
 
@@ -734,7 +785,6 @@ async function fetchDashboardSummary(): Promise<DashboardSummaryResponse> {
 async function fetchAdminYouTubeChannelStats(): Promise<AdminYouTubeChannelStats> {
   const response = await fetch("/api/admin/youtube-channel", {
     headers: { Accept: "application/json" },
-    cache: "no-store",
   });
 
   if (!response.ok) {
@@ -742,6 +792,18 @@ async function fetchAdminYouTubeChannelStats(): Promise<AdminYouTubeChannelStats
   }
 
   return response.json() as Promise<AdminYouTubeChannelStats>;
+}
+
+async function fetchAdminYouTubeKpiCollectionLogs(): Promise<AdminYouTubeKpiCollectionLogs> {
+  const response = await fetch("/api/admin/youtube-kpi-collection-logs", {
+    headers: { Accept: "application/json" },
+  });
+
+  if (!response.ok) {
+    throw new Error("admin-youtube-kpi-collection-logs-failed");
+  }
+
+  return response.json() as Promise<AdminYouTubeKpiCollectionLogs>;
 }
 
 function useAdminOverviewStats(isAdmin: boolean): {
@@ -842,6 +904,13 @@ const adminDashboardDateFormatter = new Intl.DateTimeFormat("ko-KR", {
   day: "numeric",
 });
 
+const adminDashboardDateTimeFormatter = new Intl.DateTimeFormat("ko-KR", {
+  month: "numeric",
+  day: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
 function formatCompactNumber(value: number | null | undefined) {
   return typeof value === "number" && Number.isFinite(value)
     ? adminCompactNumberFormatter.format(value)
@@ -854,6 +923,14 @@ function formatDashboardDateLabel(value: string | null) {
   return Number.isFinite(date.getTime())
     ? adminDashboardDateFormatter.format(date)
     : "날짜 없음";
+}
+
+function formatDashboardDateTime(value: string | null | undefined) {
+  if (!value) return "시간 없음";
+  const date = new Date(value);
+  return Number.isFinite(date.getTime())
+    ? adminDashboardDateTimeFormatter.format(date)
+    : "시간 없음";
 }
 
 function truncateAdminDashboardAxisLabel(value: string, maxLength = 10) {
@@ -968,7 +1045,6 @@ async function fetchAdminDashboardInsightSummary(
     `/api/admin/youtube-kpis?${params.toString()}`,
     {
       headers: { Accept: "application/json" },
-      cache: "no-store",
     },
   );
 
@@ -980,7 +1056,6 @@ async function fetchAdminDashboardInsightSummary(
     `/api/insights/treemap?${params.toString()}`,
     {
       headers: { Accept: "application/json" },
-      cache: "no-store",
     },
   );
 
@@ -992,54 +1067,37 @@ async function fetchAdminDashboardInsightSummary(
 }
 
 function buildAdminDashboardTrendPoints(
-  videos: InsightTreemapVideoRow[],
+  videosByPublishedAt: InsightTreemapVideoRow[],
 ): AdminDashboardTrendPoint[] {
-  return [...videos]
-    .sort((a, b) => {
-      const aMs = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
-      const bMs = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
-      return aMs - bMs;
-    })
-    .slice(-9)
-    .map((video) => ({
-      label: formatDashboardDateLabel(video.publishedAt),
-      value: getVideoEngagementTotal(video),
-      secondaryValue: video.viewCount,
-    }));
+  return videosByPublishedAt.slice(-9).map((video) => ({
+    label: formatDashboardDateLabel(video.publishedAt),
+    value: getVideoEngagementTotal(video),
+    secondaryValue: video.viewCount,
+  }));
 }
 
 function buildAdminDashboardSparklinePoints(
-  videos: InsightTreemapVideoRow[],
+  videosByPublishedAt: InsightTreemapVideoRow[],
   getValue: (video: InsightTreemapVideoRow, index: number) => number,
 ): AdminDashboardSparklinePoint[] {
-  return [...videos]
-    .sort((a, b) => {
-      const aMs = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
-      const bMs = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
-      return aMs - bMs;
-    })
-    .slice(-7)
-    .map((video, index) => ({
-      label: formatDashboardDateLabel(video.publishedAt),
-      value: getValue(video, index),
-    }));
+  return videosByPublishedAt.slice(-7).map((video, index) => ({
+    label: formatDashboardDateLabel(video.publishedAt),
+    value: getValue(video, index),
+  }));
 }
 
 function buildAdminDashboardBarRows(
-  videos: InsightTreemapVideoRow[],
+  videosByViews: InsightTreemapVideoRow[],
 ): AdminDashboardBarRow[] {
-  return [...videos]
-    .sort((a, b) => b.viewCount - a.viewCount)
-    .slice(0, 6)
-    .map((video) => ({
-      label: video.title,
-      value: video.viewCount,
-      likeCount: video.likeCount,
-      viewCount: video.viewCount,
-      meta: `조회수 ${formatCompactNumber(video.viewCount)} · 좋아요 ${formatCompactNumber(
-        video.likeCount,
-      )}`,
-    }));
+  return videosByViews.slice(0, 6).map((video) => ({
+    label: video.title,
+    value: video.viewCount,
+    likeCount: video.likeCount,
+    viewCount: video.viewCount,
+    meta: `조회수 ${formatCompactNumber(video.viewCount)} · 좋아요 ${formatCompactNumber(
+      video.likeCount,
+    )}`,
+  }));
 }
 
 function clampDashboardPercent(value: number | null | undefined) {
@@ -1959,6 +2017,332 @@ function AdminDashboardAreaChart({
   );
 }
 
+function getCollectionLogStatusLabel(
+  status: string,
+  conclusion: string | null,
+) {
+  if (status !== "completed") return "진행 중";
+  if (conclusion === "success") return "성공";
+  if (conclusion === "cancelled") return "취소";
+  if (conclusion) return "실패";
+  return "완료";
+}
+
+function getCollectionLogStatusClassName(
+  status: string,
+  conclusion: string | null,
+) {
+  if (status !== "completed") {
+    return "border-sky-200 bg-sky-50 text-sky-700";
+  }
+  if (conclusion === "success") {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  }
+  if (conclusion === "cancelled") {
+    return "border-muted bg-muted/60 text-muted-foreground";
+  }
+  return "border-destructive/20 bg-destructive/10 text-destructive";
+}
+
+function AdminDashboardCollectionLogPopover({
+  open,
+  logs,
+  isLoading,
+  isFetching,
+  isError,
+  onOpenChange,
+  onRefresh,
+}: {
+  open: boolean;
+  logs: AdminYouTubeKpiCollectionLogs | undefined;
+  isLoading: boolean;
+  isFetching: boolean;
+  isError: boolean;
+  onOpenChange: (open: boolean) => void;
+  onRefresh: () => void;
+}) {
+  const latestRun = logs?.workflow.runs[0];
+  const snapshot = logs?.snapshot;
+  const isWorkflowHealthy = latestRun
+    ? latestRun.status !== "completed" || latestRun.conclusion === "success"
+    : logs?.workflow.available;
+
+  return (
+    <Popover open={open} onOpenChange={onOpenChange}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className={cn(
+            "h-7 w-7 rounded-full p-0 text-muted-foreground hover:text-foreground",
+            isError && "border-destructive/30 text-destructive",
+          )}
+          aria-label="GitHub Actions KPI 데이터 수집 로그 열기"
+          title="데이터 수집 로그"
+          data-admin-dashboard-kpi-collection-log-trigger="true"
+        >
+          <ScrollText className="h-3.5 w-3.5" aria-hidden="true" />
+          <span className="sr-only">데이터 수집 로그</span>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="end"
+        className="w-[min(92vw,28rem)] overflow-hidden rounded-2xl border-border/80 p-0 shadow-xl"
+        data-admin-dashboard-kpi-collection-log-panel="true"
+      >
+        <div className="flex items-start justify-between gap-3 border-b border-border/70 bg-background px-3 py-2.5">
+          <div className="min-w-0">
+            <p className="text-sm font-extrabold text-foreground">
+              데이터 수집 로그
+            </p>
+            <p className="mt-0.5 truncate text-[11px] font-semibold text-muted-foreground">
+              {logs?.workflow.repository ?? "twoimo/tzudong"} ·{" "}
+              {logs?.workflow.workflowId ?? "youtube-kpi-snapshot.yml"}
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+            disabled={isFetching}
+            onClick={onRefresh}
+          >
+            <RefreshCw
+              className={cn("mr-1 h-3.5 w-3.5", isFetching && "animate-spin")}
+              aria-hidden="true"
+            />
+            새로고침
+          </Button>
+        </div>
+
+        <div className="max-h-[70vh] space-y-3 overflow-y-auto p-3">
+          {isLoading ? (
+            <div className="space-y-2">
+              <Skeleton className="h-16 rounded-2xl" />
+              <Skeleton className="h-24 rounded-2xl" />
+              <Skeleton className="h-20 rounded-2xl" />
+            </div>
+          ) : null}
+
+          {!isLoading ? (
+            <>
+              <div className="rounded-2xl border border-border/70 bg-muted/20 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-extrabold text-foreground">
+                    최신 스냅샷
+                  </p>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "rounded-full px-2 py-0.5 text-[10px]",
+                      snapshot?.available
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        : "border-amber-200 bg-amber-50 text-amber-700",
+                    )}
+                  >
+                    {snapshot?.available ? "저장됨" : "대기"}
+                  </Badge>
+                </div>
+                {snapshot?.available ? (
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] sm:grid-cols-4">
+                    <div>
+                      <span className="block text-muted-foreground">
+                        수집 시각
+                      </span>
+                      <span className="mt-0.5 block font-bold text-foreground">
+                        {formatDashboardDateTime(snapshot.fetchedAt)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="block text-muted-foreground">
+                        영상 스냅샷
+                      </span>
+                      <span className="mt-0.5 block font-bold text-foreground">
+                        {formatNumber(snapshot.videoSnapshotCount)}개
+                      </span>
+                    </div>
+                    <div>
+                      <span className="block text-muted-foreground">
+                        구독자
+                      </span>
+                      <span className="mt-0.5 block font-bold text-foreground">
+                        {formatNumber(snapshot.subscriberCount)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="block text-muted-foreground">
+                        조회수
+                      </span>
+                      <span className="mt-0.5 block font-bold text-foreground">
+                        {formatCompactNumber(snapshot.viewCount)}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="mt-2 text-[11px] leading-5 text-muted-foreground">
+                    아직 저장된 KPI 스냅샷이 없거나 마이그레이션 적용 전입니다.
+                  </p>
+                )}
+              </div>
+
+              <div className="rounded-2xl border border-border/70 bg-background p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-extrabold text-foreground">
+                    GitHub Actions 실행
+                  </p>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "rounded-full px-2 py-0.5 text-[10px]",
+                      isWorkflowHealthy
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        : "border-destructive/20 bg-destructive/10 text-destructive",
+                    )}
+                  >
+                    {latestRun
+                      ? getCollectionLogStatusLabel(
+                          latestRun.status,
+                          latestRun.conclusion,
+                        )
+                      : logs?.workflow.available
+                        ? "실행 없음"
+                        : "확인 필요"}
+                  </Badge>
+                </div>
+
+                {!logs?.workflow.available ? (
+                  <p className="mt-2 text-[11px] leading-5 text-muted-foreground">
+                    GitHub Actions 로그를 불러오지 못했습니다. 서버 환경의
+                    저장소/토큰 설정을 확인하세요
+                    {logs?.workflow.error ? ` (${logs.workflow.error})` : ""}.
+                  </p>
+                ) : null}
+
+                {logs?.workflow.runs.length ? (
+                  <div className="mt-2 space-y-2">
+                    {logs.workflow.runs.map((run) => (
+                      <div
+                        key={run.id ?? `${run.runNumber}-${run.createdAt}`}
+                        className="rounded-xl border border-border/70 px-2.5 py-2"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="truncate text-xs font-bold text-foreground">
+                              #{run.runNumber ?? "—"} {run.title}
+                            </p>
+                            <p className="mt-0.5 text-[11px] text-muted-foreground">
+                              {formatDashboardDateTime(
+                                run.startedAt ?? run.createdAt,
+                              )}{" "}
+                              · {run.event ?? "schedule"}
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-1.5">
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "rounded-full px-2 py-0.5 text-[10px]",
+                                getCollectionLogStatusClassName(
+                                  run.status,
+                                  run.conclusion,
+                                ),
+                              )}
+                            >
+                              {run.status !== "completed" ? (
+                                <Activity
+                                  className="mr-1 h-3 w-3"
+                                  aria-hidden="true"
+                                />
+                              ) : run.conclusion === "success" ? (
+                                <CheckCircle2
+                                  className="mr-1 h-3 w-3"
+                                  aria-hidden="true"
+                                />
+                              ) : (
+                                <XCircle
+                                  className="mr-1 h-3 w-3"
+                                  aria-hidden="true"
+                                />
+                              )}
+                              {getCollectionLogStatusLabel(
+                                run.status,
+                                run.conclusion,
+                              )}
+                            </Badge>
+                            {run.htmlUrl ? (
+                              <a
+                                href={run.htmlUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                                aria-label="GitHub Actions 실행 로그 새 탭에서 열기"
+                              >
+                                <ExternalLink
+                                  className="h-3.5 w-3.5"
+                                  aria-hidden="true"
+                                />
+                              </a>
+                            ) : null}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : logs?.workflow.available ? (
+                  <p className="mt-2 text-[11px] leading-5 text-muted-foreground">
+                    아직 실행 기록이 없습니다.
+                  </p>
+                ) : null}
+              </div>
+
+              {logs?.workflow.latestJobs.length ? (
+                <div className="rounded-2xl border border-border/70 bg-background p-3">
+                  <p className="text-xs font-extrabold text-foreground">
+                    최신 실행 Job
+                  </p>
+                  <div className="mt-2 space-y-1.5">
+                    {logs.workflow.latestJobs.map((job) => (
+                      <div
+                        key={job.id ?? job.name}
+                        className="flex items-center justify-between gap-2 text-[11px]"
+                      >
+                        <span className="min-w-0 truncate font-semibold text-foreground">
+                          {job.name}
+                        </span>
+                        <span
+                          className={cn(
+                            "shrink-0 rounded-full px-2 py-0.5 font-bold",
+                            getCollectionLogStatusClassName(
+                              job.status,
+                              job.conclusion,
+                            ),
+                          )}
+                        >
+                          {getCollectionLogStatusLabel(
+                            job.status,
+                            job.conclusion,
+                          )}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              <p className="text-[10px] leading-4 text-muted-foreground">
+                GitHub 실행 로그는 Actions REST API의 workflow runs/jobs를 읽고,
+                저장 성공 여부는 Supabase 최신 스냅샷으로 교차 확인합니다.
+              </p>
+            </>
+          ) : null}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function AdminDashboardManagementPanel({
   stats,
   isLoading,
@@ -1977,6 +2361,7 @@ function AdminDashboardManagementPanel({
   >(DEFAULT_ADMIN_DASHBOARD_WIDGET_ORDER);
   const [isDashboardOrderEditorOpen, setIsDashboardOrderEditorOpen] =
     useState(false);
+  const [isCollectionLogsOpen, setIsCollectionLogsOpen] = useState(false);
   const [isDashboardOrderLoading, setIsDashboardOrderLoading] = useState(false);
   const [isDashboardOrderSaving, setIsDashboardOrderSaving] = useState(false);
   const [dashboardOrderMessage, setDashboardOrderMessage] = useState(
@@ -1997,6 +2382,16 @@ function AdminDashboardManagementPanel({
     queryFn: fetchAdminYouTubeChannelStats,
     staleTime: 60 * 1000,
     refetchInterval: 60 * 1000,
+    retry: 1,
+  });
+
+  const collectionLogsQuery = useQuery({
+    queryKey: ["admin-dashboard-management", "youtube-kpi-collection-logs"],
+    queryFn: fetchAdminYouTubeKpiCollectionLogs,
+    staleTime: 60 * 1000,
+    enabled: isCollectionLogsOpen,
+    refetchInterval: isCollectionLogsOpen ? 60 * 1000 : false,
+    refetchIntervalInBackground: false,
     retry: 1,
   });
 
@@ -2210,6 +2605,19 @@ function AdminDashboardManagementPanel({
     () => insightQuery.data?.videos ?? [],
     [insightQuery.data?.videos],
   );
+  const videosByPublishedAt = useMemo(
+    () =>
+      [...videos].sort((a, b) => {
+        const aMs = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+        const bMs = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+        return aMs - bMs;
+      }),
+    [videos],
+  );
+  const videosByViews = useMemo(
+    () => [...videos].sort((a, b) => b.viewCount - a.viewCount),
+    [videos],
+  );
   const totalLikes = videos.reduce((sum, video) => sum + video.likeCount, 0);
   const totalComments = videos.reduce(
     (sum, video) => sum + video.commentCount,
@@ -2238,29 +2646,45 @@ function AdminDashboardManagementPanel({
   );
   const videoCountChange = calculateDashboardMetricChange(videos, () => 1);
   const trendPoints = useMemo(
-    () => buildAdminDashboardTrendPoints(videos),
-    [videos],
+    () => buildAdminDashboardTrendPoints(videosByPublishedAt),
+    [videosByPublishedAt],
   );
   const viewSparklinePoints = useMemo(
     () =>
-      buildAdminDashboardSparklinePoints(videos, (video) => video.viewCount),
-    [videos],
+      buildAdminDashboardSparklinePoints(
+        videosByPublishedAt,
+        (video) => video.viewCount,
+      ),
+    [videosByPublishedAt],
   );
   const likeSparklinePoints = useMemo(
     () =>
-      buildAdminDashboardSparklinePoints(videos, (video) => video.likeCount),
-    [videos],
+      buildAdminDashboardSparklinePoints(
+        videosByPublishedAt,
+        (video) => video.likeCount,
+      ),
+    [videosByPublishedAt],
   );
   const commentSparklinePoints = useMemo(
     () =>
-      buildAdminDashboardSparklinePoints(videos, (video) => video.commentCount),
-    [videos],
+      buildAdminDashboardSparklinePoints(
+        videosByPublishedAt,
+        (video) => video.commentCount,
+      ),
+    [videosByPublishedAt],
   );
   const videoCountSparklinePoints = useMemo(
-    () => buildAdminDashboardSparklinePoints(videos, (_, index) => index + 1),
-    [videos],
+    () =>
+      buildAdminDashboardSparklinePoints(
+        videosByPublishedAt,
+        (_, index) => index + 1,
+      ),
+    [videosByPublishedAt],
   );
-  const barRows = useMemo(() => buildAdminDashboardBarRows(videos), [videos]);
+  const barRows = useMemo(
+    () => buildAdminDashboardBarRows(videosByViews),
+    [videosByViews],
+  );
   const isChartLoading = isLoading || insightQuery.isLoading;
   const chartHasError = hasError || insightQuery.isError;
   const likeRate = getDashboardRatio(totalLikes, totalViews);
@@ -2331,20 +2755,17 @@ function AdminDashboardManagementPanel({
   ];
   const impactTableRows = useMemo(
     () =>
-      [...videos]
-        .sort((a, b) => b.viewCount - a.viewCount)
-        .slice(0, 5)
-        .map((video) => ({
-          id: video.id,
-          title: video.title,
-          views: video.viewCount,
-          engagement: getVideoEngagementTotal(video),
-          engagementRate: getDashboardRatio(
-            getVideoEngagementTotal(video),
-            video.viewCount,
-          ),
-        })),
-    [videos],
+      videosByViews.slice(0, 5).map((video) => ({
+        id: video.id,
+        title: video.title,
+        views: video.viewCount,
+        engagement: getVideoEngagementTotal(video),
+        engagementRate: getDashboardRatio(
+          getVideoEngagementTotal(video),
+          video.viewCount,
+        ),
+      })),
+    [videosByViews],
   );
   const trendTableRows = useMemo(
     () =>
@@ -2381,6 +2802,15 @@ function AdminDashboardManagementPanel({
           </h1>
         </div>
         <div className="flex shrink-0 flex-wrap items-start justify-end gap-1">
+          <AdminDashboardCollectionLogPopover
+            open={isCollectionLogsOpen}
+            logs={collectionLogsQuery.data}
+            isLoading={collectionLogsQuery.isLoading}
+            isFetching={collectionLogsQuery.isFetching}
+            isError={collectionLogsQuery.isError}
+            onOpenChange={setIsCollectionLogsOpen}
+            onRefresh={() => void collectionLogsQuery.refetch()}
+          />
           <Button
             type="button"
             variant={isDashboardOrderEditorOpen ? "default" : "outline"}
