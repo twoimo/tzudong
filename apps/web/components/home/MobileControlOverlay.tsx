@@ -681,6 +681,19 @@ function MobileControlOverlayComponent({
                         <span className="block font-semibold">알림</span>
                         <span className="block text-xs font-normal text-muted-foreground">로그인하면 알림을 바로 볼 수 있어요</span>
                     </div>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        type="button"
+                        aria-label="알림 로그인 안내"
+                        onClick={() => {
+                            toast.error('로그인 후 알림을 확인할 수 있어요');
+                            onTopShellUserIconClick?.();
+                        }}
+                        className="h-8 shrink-0 rounded-lg px-2 text-xs focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
+                    >
+                        로그인
+                    </Button>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-border" />
                 <ScrollArea className="h-72 max-h-[min(70vh,28rem)]">
