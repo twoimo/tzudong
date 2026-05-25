@@ -619,6 +619,33 @@ describe("mobile and desktop parity source contracts", () => {
       `revealDesktopLeftPanel();
     setActiveLeftPanelView("notifications");`,
     );
+    expect(homeDesktopControlPanelSource).toContain(
+      "DESKTOP_LEFT_PANEL_AUTH_TOASTS",
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      'profile: "로그인 후 프로필을 확인할 수 있어요"',
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      'bookmarks: "로그인 후 북마크를 확인할 수 있어요"',
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      'notifications: "로그인 후 알림을 확인할 수 있어요"',
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      'settings: "로그인 후 지도 환경설정을 사용할 수 있어요"',
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      'review: "로그인 후 리뷰를 작성할 수 있어요"',
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      'showDesktopLeftPanelAuthToast("profile");',
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      'showDesktopLeftPanelAuthToast("bookmarks");',
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      'showDesktopLeftPanelAuthToast("notifications");',
+    );
     expect(
       homeDesktopControlPanelSource.indexOf(
         '{ id: "profile", label: "프로필", icon: UserRound }',
@@ -855,6 +882,24 @@ describe("mobile and desktop parity source contracts", () => {
     );
     expect(source("app/home-client.tsx")).toContain(
       "toast.error(DEVICE_LOCATION_ENABLE_TOAST);",
+    );
+    expect(source("app/home-client.tsx")).toContain(
+      'toast.info("로그인 후 프로필을 확인할 수 있어요");',
+    );
+    expect(source("app/home-client-effects.tsx")).toContain(
+      "toast.error('맛집 정보를 불러오지 못했어요');",
+    );
+    expect(source("app/home-client-effects.tsx")).toContain(
+      "toast.error('공지사항을 불러오지 못했어요');",
+    );
+    expect(source("app/home-client-effects.tsx")).toContain(
+      "openPanelRef.current('announcement');",
+    );
+    expect(source("app/home-client-effects.tsx")).not.toContain(
+      "togglePanelCollapse();",
+    );
+    expect(source("components/home/MobileControlOverlay.tsx")).toContain(
+      "toast.error('로그인 후 알림을 확인할 수 있어요');",
     );
     expect(source("app/home-client.tsx")).not.toContain(
       "현재 위치를 가져오지 못했어요. 잠시 후 다시 시도해주세요",
