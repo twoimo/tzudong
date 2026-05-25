@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
+  Activity,
   BarChart2,
   Bot,
   Clapperboard,
@@ -15,9 +16,10 @@ import {
   MessageSquareText,
   PanelLeftClose,
   PanelLeftOpen,
+  PieChart,
+  Route,
   Settings2,
   ScrollText,
-  Sparkles,
   Store,
   UsersRound,
 } from "lucide-react";
@@ -35,9 +37,15 @@ import { useAdBannersAdmin } from "@/hooks/use-ad-banners";
 import { fetchSupabaseExactCount } from "@/lib/supabase-rest-client";
 import { cn } from "@/lib/utils";
 import type { DashboardSummaryResponse } from "@/types/dashboard";
+import type {
+  InsightTreemapPeriod,
+  InsightTreemapResponse,
+  InsightTreemapVideoRow,
+} from "@/lib/public-insights/treemap";
 
 type AdminModuleId =
   | "overview"
+  | "routes"
   | "restaurants"
   | "submissions"
   | "reviews"
@@ -47,7 +55,7 @@ type AdminModuleId =
   | "insights"
   | "audit"
   | "llm";
-type ConsoleModuleId = Exclude<AdminModuleId, "overview" | "llm">;
+type ConsoleModuleId = Exclude<AdminModuleId, "overview" | "routes" | "llm">;
 
 type ConsoleModule = {
   id: ConsoleModuleId;
@@ -139,13 +147,13 @@ const consoleModules: ConsoleModule[] = [
   },
   {
     id: "insights",
-    title: "인사이트",
+    title: "핵심 인사이트",
     description:
       "조회수/좋아요/댓글/영상 길이 기반 트리맵과 변화 추이를 확인합니다.",
     href: "/insights",
     icon: BarChart2,
     badge: "분석",
-    actionLabel: "인사이트 보기",
+    actionLabel: "핵심 인사이트 보기",
   },
   {
     id: "audit",
@@ -167,9 +175,16 @@ const sidebarSections: SidebarSection[] = [
     items: [
       {
         id: "overview",
-        title: "개요",
-        description: "오늘의 운영 상태와 주요 진입점을 봅니다.",
-        icon: Sparkles,
+        title: "대시보드 관리",
+        description: "구독자·좋아요·댓글 추이를 확인합니다.",
+        icon: Activity,
+      },
+      {
+        id: "routes",
+        title: "맛집 동선 추천",
+        description: "지도에서 맛집 후보와 실제 도로 동선을 관리합니다.",
+        icon: Route,
+        badge: "지도 동선",
       },
     ],
   },
@@ -408,7 +423,7 @@ const InsightsModule = dynamic(() => import("@/app/insights/insights-client"), {
   ssr: false,
 });
 
-const AdminOverviewDashboard = dynamic(
+const AdminRouteRecommendationModule = dynamic(
   () =>
     import("@/components/admin/AdminOverviewDashboard").then(
       (module) => module.AdminOverviewDashboard,
@@ -453,7 +468,7 @@ function getAdminModuleStateWarning(
   const requestedModule = searchParams.get("module");
 
   if (requestedModule && !isAdminModuleId(requestedModule)) {
-    return "알 수 없는 관리자 화면 요청을 개요로 되돌렸습니다.";
+    return "알 수 없는 관리자 화면 요청을 대시보드 관리로 되돌렸습니다.";
   }
 
   return null;
@@ -546,6 +561,555 @@ function useAdminOverviewStats(isAdmin: boolean): {
       bannersQuery.isError,
   };
 }
+
+type AdminDashboardPeriod = Extract<
+  InsightTreemapPeriod,
+  "1W" | "1M" | "3M" | "ALL"
+>;
+
+type AdminDashboardTrendPoint = {
+  label: string;
+  value: number;
+  secondaryValue: number;
+};
+
+type AdminDashboardBarRow = {
+  label: string;
+  value: number;
+  meta: string;
+};
+
+type AdminDashboardDonutSegment = {
+  label: string;
+  value: number;
+  color: string;
+};
+
+const ADMIN_DASHBOARD_PERIOD_OPTIONS: Array<{
+  value: AdminDashboardPeriod;
+  label: string;
+}> = [
+  { value: "1W", label: "1주" },
+  { value: "1M", label: "1개월" },
+  { value: "3M", label: "3개월" },
+  { value: "ALL", label: "전체" },
+];
+
+const adminCompactNumberFormatter = new Intl.NumberFormat("ko-KR", {
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
+const adminDashboardDateFormatter = new Intl.DateTimeFormat("ko-KR", {
+  month: "numeric",
+  day: "numeric",
+});
+
+function formatCompactNumber(value: number | null | undefined) {
+  return typeof value === "number" && Number.isFinite(value)
+    ? adminCompactNumberFormatter.format(value)
+    : "—";
+}
+
+function formatDashboardDateLabel(value: string | null) {
+  if (!value) return "날짜 없음";
+  const date = new Date(value);
+  return Number.isFinite(date.getTime())
+    ? adminDashboardDateFormatter.format(date)
+    : "날짜 없음";
+}
+
+function getVideoEngagementTotal(video: InsightTreemapVideoRow) {
+  return video.likeCount + video.commentCount;
+}
+
+function getPreviousVideoEngagementTotal(video: InsightTreemapVideoRow) {
+  return (video.previousLikeCount ?? 0) + (video.previousCommentCount ?? 0);
+}
+
+function calculateDashboardChange(current: number, previous: number) {
+  if (!Number.isFinite(current) || !Number.isFinite(previous) || previous <= 0) {
+    return null;
+  }
+
+  return ((current - previous) / previous) * 100;
+}
+
+async function fetchAdminDashboardInsightSummary(
+  period: AdminDashboardPeriod,
+): Promise<InsightTreemapResponse> {
+  const params = new URLSearchParams({
+    period,
+    viewMode: "all",
+    metricMode: "views",
+  });
+  const response = await fetch(`/api/insights/treemap?${params.toString()}`, {
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error("admin-dashboard-insight-summary-failed");
+  }
+
+  return response.json() as Promise<InsightTreemapResponse>;
+}
+
+function buildAdminDashboardTrendPoints(
+  videos: InsightTreemapVideoRow[],
+): AdminDashboardTrendPoint[] {
+  return [...videos]
+    .sort((a, b) => {
+      const aMs = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+      const bMs = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+      return aMs - bMs;
+    })
+    .slice(-9)
+    .map((video) => ({
+      label: formatDashboardDateLabel(video.publishedAt),
+      value: getVideoEngagementTotal(video),
+      secondaryValue: video.viewCount,
+    }));
+}
+
+function buildAdminDashboardBarRows(
+  videos: InsightTreemapVideoRow[],
+): AdminDashboardBarRow[] {
+  return [...videos]
+    .sort((a, b) => getVideoEngagementTotal(b) - getVideoEngagementTotal(a))
+    .slice(0, 6)
+    .map((video) => ({
+      label: video.title,
+      value: getVideoEngagementTotal(video),
+      meta: `좋아요 ${formatCompactNumber(video.likeCount)} · 댓글 ${formatCompactNumber(
+        video.commentCount,
+      )}`,
+    }));
+}
+
+function buildAdminDashboardDonutSegments(
+  videos: InsightTreemapVideoRow[],
+  stats: AdminOverviewStats,
+): AdminDashboardDonutSegment[] {
+  const likes = videos.reduce((sum, video) => sum + video.likeCount, 0);
+  const comments = videos.reduce((sum, video) => sum + video.commentCount, 0);
+  const linkedRestaurants = stats.totalRestaurants ?? 0;
+
+  return [
+    { label: "좋아요", value: likes, color: "#dc2626" },
+    { label: "댓글", value: comments, color: "#f97316" },
+    { label: "맛집 연결", value: linkedRestaurants, color: "#2563eb" },
+  ];
+}
+
+function AdminDashboardLineChart({
+  points,
+  ariaLabel,
+}: {
+  points: AdminDashboardTrendPoint[];
+  ariaLabel: string;
+}) {
+  const width = 320;
+  const height = 150;
+  const padding = 18;
+  const maxValue = Math.max(1, ...points.map((point) => point.value));
+  const plottedPoints = points.map((point, index) => {
+    const x =
+      points.length <= 1
+        ? width / 2
+        : padding + (index / (points.length - 1)) * (width - padding * 2);
+    const y =
+      height - padding - (point.value / maxValue) * (height - padding * 2);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
+
+  if (points.length === 0) {
+    return (
+      <div className="flex h-[150px] items-center justify-center rounded-2xl bg-muted/35 text-xs font-semibold text-muted-foreground">
+        표시할 추이 데이터가 없습니다.
+      </div>
+    );
+  }
+
+  return (
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      role="img"
+      aria-label={ariaLabel}
+      className="h-[150px] w-full overflow-visible"
+      data-admin-dashboard-line-chart="true"
+    >
+      <line
+        x1={padding}
+        y1={height - padding}
+        x2={width - padding}
+        y2={height - padding}
+        className="stroke-border"
+        strokeWidth="1"
+      />
+      <polyline
+        points={plottedPoints.join(" ")}
+        fill="none"
+        className="stroke-primary"
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {points.map((point, index) => {
+        const [x, y] = plottedPoints[index].split(",").map(Number);
+        return (
+          <g key={`${point.label}-${index}`}>
+            <circle cx={x} cy={y} r="4" className="fill-primary" />
+            {index === points.length - 1 ? (
+              <text
+                x={Math.min(width - 52, x + 7)}
+                y={Math.max(16, y - 8)}
+                className="fill-foreground text-[11px] font-bold"
+              >
+                {formatCompactNumber(point.value)}
+              </text>
+            ) : null}
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+function AdminDashboardBarChart({ rows }: { rows: AdminDashboardBarRow[] }) {
+  const maxValue = Math.max(1, ...rows.map((row) => row.value));
+
+  if (rows.length === 0) {
+    return (
+      <div className="flex min-h-[220px] items-center justify-center rounded-2xl bg-muted/35 text-xs font-semibold text-muted-foreground">
+        표시할 막대 그래프 데이터가 없습니다.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3" data-admin-dashboard-bar-chart="true">
+      {rows.map((row) => (
+        <div key={row.label} className="grid gap-1.5">
+          <div className="flex items-center justify-between gap-3 text-xs">
+            <span className="min-w-0 truncate font-semibold text-foreground">
+              {row.label}
+            </span>
+            <span className="shrink-0 font-bold text-primary">
+              {formatCompactNumber(row.value)}
+            </span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-muted">
+            <div
+              className="h-full rounded-full bg-primary"
+              style={{ width: `${Math.max(6, (row.value / maxValue) * 100)}%` }}
+            />
+          </div>
+          <p className="truncate text-[11px] text-muted-foreground">
+            {row.meta}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function AdminDashboardDonutChart({
+  segments,
+}: {
+  segments: AdminDashboardDonutSegment[];
+}) {
+  const total = segments.reduce((sum, segment) => sum + segment.value, 0);
+  let cursor = 0;
+  const background = total
+    ? `conic-gradient(${segments
+        .map((segment) => {
+          const start = cursor;
+          const end = cursor + (segment.value / total) * 100;
+          cursor = end;
+          return `${segment.color} ${start}% ${end}%`;
+        })
+        .join(", ")})`
+    : undefined;
+
+  return (
+    <div
+      className="grid gap-4 sm:grid-cols-[150px_minmax(0,1fr)] sm:items-center"
+      data-admin-dashboard-donut-chart="true"
+    >
+      <div
+        className="relative mx-auto flex h-36 w-36 items-center justify-center rounded-full bg-muted/50"
+        style={{ background }}
+        role="img"
+        aria-label="원형 그래프: 좋아요, 댓글, 맛집 연결 구성"
+      >
+        <div className="flex h-20 w-20 flex-col items-center justify-center rounded-full bg-card text-center shadow-sm">
+          <span className="text-[11px] font-semibold text-muted-foreground">
+            합계
+          </span>
+          <span className="text-lg font-black text-foreground">
+            {formatCompactNumber(total)}
+          </span>
+        </div>
+      </div>
+      <div className="space-y-2">
+        {segments.map((segment) => (
+          <div
+            key={segment.label}
+            className="flex items-center justify-between gap-3 text-sm"
+          >
+            <span className="inline-flex min-w-0 items-center gap-2 truncate font-semibold text-foreground">
+              <span
+                className="h-2.5 w-2.5 shrink-0 rounded-full"
+                style={{ backgroundColor: segment.color }}
+                aria-hidden="true"
+              />
+              {segment.label}
+            </span>
+            <span className="shrink-0 font-bold text-muted-foreground">
+              {formatCompactNumber(segment.value)}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AdminDashboardManagementPanel({
+  stats,
+  isLoading,
+  hasError,
+}: {
+  stats: AdminOverviewStats;
+  isLoading: boolean;
+  hasError: boolean;
+}) {
+  const [period, setPeriod] = useState<AdminDashboardPeriod>("1M");
+  const insightQuery = useQuery({
+    queryKey: ["admin-dashboard-management", "insights", period],
+    queryFn: () => fetchAdminDashboardInsightSummary(period),
+    staleTime: 60 * 1000,
+    refetchInterval: 60 * 1000,
+  });
+  const videos = useMemo(
+    () => insightQuery.data?.videos ?? [],
+    [insightQuery.data?.videos],
+  );
+  const totalLikes = videos.reduce((sum, video) => sum + video.likeCount, 0);
+  const totalComments = videos.reduce(
+    (sum, video) => sum + video.commentCount,
+    0,
+  );
+  const totalViews = videos.reduce((sum, video) => sum + video.viewCount, 0);
+  const previousEngagement = videos.reduce(
+    (sum, video) => sum + getPreviousVideoEngagementTotal(video),
+    0,
+  );
+  const currentEngagement = totalLikes + totalComments;
+  const engagementChange = calculateDashboardChange(
+    currentEngagement,
+    previousEngagement,
+  );
+  const trendPoints = useMemo(() => buildAdminDashboardTrendPoints(videos), [videos]);
+  const barRows = useMemo(() => buildAdminDashboardBarRows(videos), [videos]);
+  const donutSegments = useMemo(
+    () => buildAdminDashboardDonutSegments(videos, stats),
+    [stats, videos],
+  );
+  const isChartLoading = isLoading || insightQuery.isLoading;
+  const chartHasError = hasError || insightQuery.isError;
+
+  return (
+    <section
+      className="grid min-h-full gap-3"
+      aria-label="관리자 대시보드 관리"
+      data-admin-dashboard-management="true"
+      data-admin-dashboard-realtime-charts="true"
+    >
+      <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm md:flex-row md:items-start md:justify-between">
+        <div className="min-w-0">
+          <p className="text-[11px] font-bold tracking-[0.12em] text-primary">
+            대시보드 관리
+          </p>
+          <h1 className="mt-1 text-xl font-black tracking-[-0.04em] text-foreground md:text-2xl">
+            쯔양 채널 지표 추이
+          </h1>
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+            조회수·좋아요·댓글은 핵심 인사이트 API를 60초마다 재확인하고,
+            구독자 추이는 채널 통계 API 연결 전까지 출처 공백으로 표시합니다.
+          </p>
+        </div>
+        <div className="flex shrink-0 flex-wrap gap-1.5" aria-label="대시보드 타임프레임">
+          {ADMIN_DASHBOARD_PERIOD_OPTIONS.map((option) => (
+            <Button
+              key={option.value}
+              type="button"
+              variant={period === option.value ? "default" : "outline"}
+              size="sm"
+              className="h-8 rounded-full px-3 text-xs"
+              aria-pressed={period === option.value}
+              onClick={() => setPeriod(option.value)}
+            >
+              {option.label}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      {chartHasError ? (
+        <div className="rounded-2xl border border-destructive/25 bg-destructive/5 px-4 py-3 text-sm font-semibold text-destructive">
+          지표 데이터를 불러오지 못했습니다. 대시보드 정적 영역은 유지합니다.
+        </div>
+      ) : null}
+
+      <div className="grid gap-3 xl:grid-cols-4">
+        <Card className="rounded-2xl border-border shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-bold text-muted-foreground">
+              조회수
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-black tracking-[-0.04em]">
+              {isChartLoading ? "—" : formatCompactNumber(totalViews)}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              선택 타임프레임 영상 합계
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="rounded-2xl border-border shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-bold text-muted-foreground">
+              좋아요
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-black tracking-[-0.04em] text-destructive">
+              {isChartLoading ? "—" : formatCompactNumber(totalLikes)}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              공개 영상 메타 기준
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="rounded-2xl border-border shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-bold text-muted-foreground">
+              댓글
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-black tracking-[-0.04em] text-primary">
+              {isChartLoading ? "—" : formatCompactNumber(totalComments)}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              공개 영상 메타 기준
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="rounded-2xl border-border shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-bold text-muted-foreground">
+              참여 증감
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-black tracking-[-0.04em]">
+              {engagementChange == null
+                ? "—"
+                : `${engagementChange > 0 ? "+" : ""}${engagementChange.toFixed(1)}%`}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              좋아요+댓글 이전 수집값 대비
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-3 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
+        <Card className="rounded-2xl border-border shadow-sm">
+          <CardHeader className="flex-row items-center justify-between gap-3 pb-2">
+            <div>
+              <CardTitle className="text-base font-black">
+                꺾은선 그래프 · 참여 추이
+              </CardTitle>
+              <p className="mt-1 text-xs text-muted-foreground">
+                최근 영상 순서대로 좋아요+댓글 흐름을 표시합니다.
+              </p>
+            </div>
+            <Activity className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
+          </CardHeader>
+          <CardContent>
+            <AdminDashboardLineChart
+              points={trendPoints}
+              ariaLabel="꺾은선 그래프: 좋아요와 댓글 참여 추이"
+            />
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-2xl border-border shadow-sm">
+          <CardHeader className="flex-row items-center justify-between gap-3 pb-2">
+            <div>
+              <CardTitle className="text-base font-black">
+                구독자 추이
+              </CardTitle>
+              <p className="mt-1 text-xs text-muted-foreground">
+                채널 통계 API 연결 전까지 임의 수치를 만들지 않습니다.
+              </p>
+            </div>
+            <Badge variant="secondary" className="rounded-full border-0">
+              연결 대기
+            </Badge>
+          </CardHeader>
+          <CardContent>
+            <div className="flex min-h-[150px] flex-col items-center justify-center rounded-2xl bg-muted/35 text-center">
+              <PieChart className="h-7 w-7 text-muted-foreground" aria-hidden="true" />
+              <p className="mt-2 text-sm font-bold text-foreground">
+                구독자 실시간 소스 미연결
+              </p>
+              <p className="mt-1 max-w-[18rem] text-xs leading-5 text-muted-foreground">
+                YouTube 채널 통계 저장소가 붙으면 같은 타임프레임 버튼에서
+                바로 원형/꺾은선 지표로 확장됩니다.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-3 xl:grid-cols-[minmax(320px,0.9fr)_minmax(0,1.1fr)]">
+        <Card className="rounded-2xl border-border shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-black">
+              원형 그래프 · 참여 구성
+            </CardTitle>
+            <p className="mt-1 text-xs text-muted-foreground">
+              좋아요, 댓글, 맛집 연결 규모를 한눈에 비교합니다.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <AdminDashboardDonutChart segments={donutSegments} />
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-2xl border-border shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-black">
+              막대 그래프 · 상위 참여 영상
+            </CardTitle>
+            <p className="mt-1 text-xs text-muted-foreground">
+              선택 타임프레임에서 좋아요+댓글이 큰 영상을 정렬합니다.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <AdminDashboardBarChart rows={barRows} />
+          </CardContent>
+        </Card>
+      </div>
+    </section>
+  );
+}
+
 
 function AdminSidebar({
   activeModuleId,
@@ -1440,10 +2004,12 @@ export function AdminConsoleOverview() {
 
   const activeModuleLabel =
     activeModuleId === "overview"
-      ? "개요"
-      : activeModuleId === "llm"
-        ? "운영 보조"
-        : activeModule?.title;
+      ? "대시보드 관리"
+      : activeModuleId === "routes"
+        ? "맛집 동선 추천"
+        : activeModuleId === "llm"
+          ? "운영 보조"
+          : activeModule?.title;
 
   return (
     <main
@@ -1490,7 +2056,13 @@ export function AdminConsoleOverview() {
           {authLoading ? (
             <AdminConsoleCanvasSkeleton />
           ) : activeModuleId === "overview" ? (
-            <AdminOverviewDashboard
+            <AdminDashboardManagementPanel
+              stats={stats}
+              isLoading={statsLoading}
+              hasError={statsHasError}
+            />
+          ) : activeModuleId === "routes" ? (
+            <AdminRouteRecommendationModule
               stats={stats}
               isLoading={statsLoading}
               hasError={statsHasError}
