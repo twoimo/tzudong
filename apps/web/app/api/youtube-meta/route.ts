@@ -94,15 +94,25 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Invalid YouTube URL' }, { status: 400 });
         }
 
-        const youtubeApiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY || process.env.NEXT_PUBLIC_YOUTUBE_API_KEY_BYEON;
+        const youtubeApiKey = process.env.YOUTUBE_API_KEY;
         if (!youtubeApiKey) {
             return NextResponse.json({ error: 'YouTube API key not configured' }, { status: 500 });
         }
 
         // YouTube Data API 호출
-        const ytResponse = await fetch(
-            `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,status&id=${videoId}&key=${youtubeApiKey}`
+        const youtubeUrl = new URL('https://www.googleapis.com/youtube/v3/videos');
+        youtubeUrl.searchParams.set('part', 'snippet,contentDetails,status');
+        youtubeUrl.searchParams.set('id', videoId);
+        youtubeUrl.searchParams.set('key', youtubeApiKey);
+        youtubeUrl.searchParams.set(
+            'fields',
+            'items(snippet/title,snippet/publishedAt,snippet/description,contentDetails/duration,status/privacyStatus)'
         );
+
+        const ytResponse = await fetch(youtubeUrl, {
+            headers: { Accept: 'application/json' },
+            signal: AbortSignal.timeout(10_000),
+        });
 
         if (!ytResponse.ok) {
             throw new Error(`YouTube API error: ${ytResponse.status}`);
