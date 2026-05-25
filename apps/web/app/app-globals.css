@@ -55,11 +55,11 @@ All colors MUST be HSL.
 
 /* 성능 최적화: 폰트 로딩 최적화 */
 @font-face {
-  font-family: 'Noto Serif KR';
+  font-family: "Noto Serif KR";
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: local('Noto Serif KR'), local('NotoSerifKR-Regular');
+  src: local("Noto Serif KR"), local("NotoSerifKR-Regular");
 }
 
 @layer base {
@@ -118,14 +118,51 @@ All colors MUST be HSL.
 
     /* Custom tokens */
     --gradient-primary: linear-gradient(135deg, hsl(0 74% 42%), hsl(0 60% 35%));
-    --gradient-secondary: linear-gradient(135deg, hsl(24 6% 90%), hsl(24 10% 85%));
+    --gradient-secondary: linear-gradient(
+      135deg,
+      hsl(24 6% 90%),
+      hsl(24 10% 85%)
+    );
     --shadow-primary: 0 4px 14px 0 rgba(185, 28, 28, 0.2);
     --shadow-glow: 0 0 20px rgba(185, 28, 28, 0.15);
+  }
+
+  .dark {
+    --background: 24 10% 10%;
+    --foreground: 38 30% 96%;
+    --card: 24 9% 13%;
+    --card-foreground: 38 30% 96%;
+    --popover: 24 9% 13%;
+    --popover-foreground: 38 30% 96%;
+    --primary: 0 74% 50%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 24 7% 18%;
+    --secondary-foreground: 38 30% 96%;
+    --muted: 24 7% 18%;
+    --muted-foreground: 24 7% 68%;
+    --accent: 24 7% 18%;
+    --accent-foreground: 38 30% 96%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 24 6% 24%;
+    --input: 24 6% 24%;
+    --ring: 0 74% 54%;
+    --sidebar-background: 24 10% 10%;
+    --sidebar-foreground: 38 30% 96%;
+    --sidebar-primary: 0 74% 50%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 24 7% 18%;
+    --sidebar-accent-foreground: 38 30% 96%;
+    --sidebar-border: 24 6% 24%;
+    --sidebar-ring: 0 74% 54%;
+    --gradient-primary: linear-gradient(135deg, hsl(0 74% 50%), hsl(0 58% 36%));
+    --gradient-secondary: linear-gradient(135deg, hsl(24 7% 18%), hsl(24 7% 24%));
+    --shadow-primary: 0 4px 18px rgba(239, 68, 68, 0.22);
+    --shadow-glow: 0 0 22px rgba(239, 68, 68, 0.16);
   }
 }
 
 @layer base {
-
   /* html과 body에 동적 뷰포트 높이 적용 */
   html {
     /* 모바일 브라우저 뷰포트 문제 해결 */
@@ -144,14 +181,13 @@ All colors MUST be HSL.
     /* 스크롤 방지 (메인 레이아웃에서 처리) */
     overflow: hidden;
   }
-
 }
 
 /* 네이버 지도 마커 최적화 및 스타일 초기화 */
 .marker-icon,
 .custom-marker,
-.marker-icon>div,
-.custom-marker>div,
+.marker-icon > div,
+.custom-marker > div,
 .marker-icon span,
 .custom marker span,
 .marker-icon img,
@@ -164,8 +200,8 @@ All colors MUST be HSL.
 }
 
 /* 네이버 지도 내부의 특정 div들이 불필요한 스타일을 갖지 않도록 강제 */
-div[style*="z-index"]>div>.marker-icon,
-div[style*="z-index"]>div>.custom-marker {
+div[style*="z-index"] > div > .marker-icon,
+div[style*="z-index"] > div > .custom-marker {
   background: none !important;
   border: none !important;
   box-shadow: none !important;
@@ -185,16 +221,19 @@ div[style*="z-index"]>div>.custom-marker {
 
 /* 선택된 마커 애니메이션 */
 @keyframes pulse {
-
   0%,
   100% {
     transform: scale(1.05);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 0 4px rgba(255, 255, 255, 0.9);
+    box-shadow:
+      0 4px 12px rgba(0, 0, 0, 0.5),
+      0 0 0 4px rgba(255, 255, 255, 0.9);
   }
 
   50% {
     transform: scale(1.08);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.6), 0 0 0 5px rgba(255, 255, 255, 1);
+    box-shadow:
+      0 5px 15px rgba(0, 0, 0, 0.6),
+      0 0 0 5px rgba(255, 255, 255, 1);
   }
 }
 
@@ -336,8 +375,15 @@ div[style*="z-index"]>div>.custom-marker {
 
 @media (min-width: 768px) {
   [data-admin-console-layout="sidebar-content"] {
-    grid-template-columns: 16rem minmax(0, 1fr);
+    grid-template-columns: fit-content(24rem) minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr);
+  }
+
+  [data-admin-console-layout="sidebar-content"]
+    > [data-admin-left-panel-expanded="true"] {
+    width: max-content;
+    min-width: 13.5rem;
+    max-width: min(24rem, 32vw);
   }
 
   [data-admin-console-layout="sidebar-content"][data-admin-console-sidebar-collapsed="true"] {
@@ -347,7 +393,7 @@ div[style*="z-index"]>div>.custom-marker {
 
 @media (min-width: 1024px) {
   [data-admin-console-layout="sidebar-content"] {
-    grid-template-columns: 17rem minmax(0, 1fr);
+    grid-template-columns: fit-content(24rem) minmax(0, 1fr);
   }
 
   [data-admin-console-layout="sidebar-content"][data-admin-console-sidebar-collapsed="true"] {
@@ -357,7 +403,7 @@ div[style*="z-index"]>div>.custom-marker {
 
 @media (min-width: 1280px) {
   [data-admin-console-layout="sidebar-content"] {
-    grid-template-columns: 18rem minmax(0, 1fr);
+    grid-template-columns: fit-content(24rem) minmax(0, 1fr);
   }
 
   [data-admin-console-layout="sidebar-content"][data-admin-console-sidebar-collapsed="true"] {
@@ -382,7 +428,6 @@ div[style*="z-index"]>div>.custom-marker {
 
 /* [PERF] 프린트 미디어에서 불필요한 요소 숨김 */
 @media print {
-
   .mobile-bottom-nav,
   nav {
     display: none !important;
@@ -403,9 +448,6 @@ div[style*="z-index"]>div>.custom-marker {
   }
 }
 */
-
-
-
 
 @layer utilities {
   .animate-in {
@@ -431,55 +473,139 @@ div[style*="z-index"]>div>.custom-marker {
   }
 
   .fade-in,
-  .fade-in-0 { --tw-enter-opacity: 0; }
-  .fade-in-80 { --tw-enter-opacity: 0.8; }
+  .fade-in-0 {
+    --tw-enter-opacity: 0;
+  }
+  .fade-in-80 {
+    --tw-enter-opacity: 0.8;
+  }
   .fade-out,
-  .fade-out-0 { --tw-exit-opacity: 0; }
-  .fade-out-80 { --tw-exit-opacity: 0.8; }
+  .fade-out-0 {
+    --tw-exit-opacity: 0;
+  }
+  .fade-out-80 {
+    --tw-exit-opacity: 0.8;
+  }
 
-  .zoom-in { --tw-enter-scale: 0.95; }
-  .zoom-in-90 { --tw-enter-scale: 0.9; }
-  .zoom-in-95 { --tw-enter-scale: 0.95; }
-  .zoom-out-95 { --tw-exit-scale: 0.95; }
+  .zoom-in {
+    --tw-enter-scale: 0.95;
+  }
+  .zoom-in-90 {
+    --tw-enter-scale: 0.9;
+  }
+  .zoom-in-95 {
+    --tw-enter-scale: 0.95;
+  }
+  .zoom-out-95 {
+    --tw-exit-scale: 0.95;
+  }
 
-  .slide-in-from-top { --tw-enter-translate-y: -100%; }
-  .slide-in-from-top-2 { --tw-enter-translate-y: -0.5rem; }
-  .slide-in-from-top-3 { --tw-enter-translate-y: -0.75rem; }
-  .slide-in-from-top-\[48\%\] { --tw-enter-translate-y: -48%; }
-  .slide-in-from-top-full { --tw-enter-translate-y: -100%; }
-  .slide-in-from-bottom { --tw-enter-translate-y: 100%; }
-  .slide-in-from-bottom-2 { --tw-enter-translate-y: 0.5rem; }
-  .slide-in-from-bottom-4 { --tw-enter-translate-y: 1rem; }
-  .slide-in-from-bottom-full { --tw-enter-translate-y: 100%; }
-  .slide-in-from-left { --tw-enter-translate-x: -100%; }
-  .slide-in-from-left-1\/2 { --tw-enter-translate-x: -50%; }
-  .slide-in-from-left-2 { --tw-enter-translate-x: -0.5rem; }
-  .slide-in-from-left-52 { --tw-enter-translate-x: -13rem; }
-  .slide-in-from-right { --tw-enter-translate-x: 100%; }
-  .slide-in-from-right-2 { --tw-enter-translate-x: 0.5rem; }
-  .slide-in-from-right-52 { --tw-enter-translate-x: 13rem; }
+  .slide-in-from-top {
+    --tw-enter-translate-y: -100%;
+  }
+  .slide-in-from-top-2 {
+    --tw-enter-translate-y: -0.5rem;
+  }
+  .slide-in-from-top-3 {
+    --tw-enter-translate-y: -0.75rem;
+  }
+  .slide-in-from-top-\[48\%\] {
+    --tw-enter-translate-y: -48%;
+  }
+  .slide-in-from-top-full {
+    --tw-enter-translate-y: -100%;
+  }
+  .slide-in-from-bottom {
+    --tw-enter-translate-y: 100%;
+  }
+  .slide-in-from-bottom-2 {
+    --tw-enter-translate-y: 0.5rem;
+  }
+  .slide-in-from-bottom-4 {
+    --tw-enter-translate-y: 1rem;
+  }
+  .slide-in-from-bottom-full {
+    --tw-enter-translate-y: 100%;
+  }
+  .slide-in-from-left {
+    --tw-enter-translate-x: -100%;
+  }
+  .slide-in-from-left-1\/2 {
+    --tw-enter-translate-x: -50%;
+  }
+  .slide-in-from-left-2 {
+    --tw-enter-translate-x: -0.5rem;
+  }
+  .slide-in-from-left-52 {
+    --tw-enter-translate-x: -13rem;
+  }
+  .slide-in-from-right {
+    --tw-enter-translate-x: 100%;
+  }
+  .slide-in-from-right-2 {
+    --tw-enter-translate-x: 0.5rem;
+  }
+  .slide-in-from-right-52 {
+    --tw-enter-translate-x: 13rem;
+  }
 
-  .slide-out-to-top { --tw-exit-translate-y: -100%; }
-  .slide-out-to-top-\[48\%\] { --tw-exit-translate-y: -48%; }
-  .slide-out-to-bottom { --tw-exit-translate-y: 100%; }
-  .slide-out-to-left { --tw-exit-translate-x: -100%; }
-  .slide-out-to-left-1\/2 { --tw-exit-translate-x: -50%; }
-  .slide-out-to-left-52 { --tw-exit-translate-x: -13rem; }
-  .slide-out-to-right { --tw-exit-translate-x: 100%; }
-  .slide-out-to-right-52 { --tw-exit-translate-x: 13rem; }
-  .slide-out-to-right-full { --tw-exit-translate-x: 100%; }
+  .slide-out-to-top {
+    --tw-exit-translate-y: -100%;
+  }
+  .slide-out-to-top-\[48\%\] {
+    --tw-exit-translate-y: -48%;
+  }
+  .slide-out-to-bottom {
+    --tw-exit-translate-y: 100%;
+  }
+  .slide-out-to-left {
+    --tw-exit-translate-x: -100%;
+  }
+  .slide-out-to-left-1\/2 {
+    --tw-exit-translate-x: -50%;
+  }
+  .slide-out-to-left-52 {
+    --tw-exit-translate-x: -13rem;
+  }
+  .slide-out-to-right {
+    --tw-exit-translate-x: 100%;
+  }
+  .slide-out-to-right-52 {
+    --tw-exit-translate-x: 13rem;
+  }
+  .slide-out-to-right-full {
+    --tw-exit-translate-x: 100%;
+  }
 
   @keyframes tz-enter {
     from {
       opacity: var(--tw-enter-opacity);
-      transform: translate3d(var(--tw-enter-translate-x), var(--tw-enter-translate-y), 0) scale3d(var(--tw-enter-scale), var(--tw-enter-scale), var(--tw-enter-scale));
+      transform: translate3d(
+          var(--tw-enter-translate-x),
+          var(--tw-enter-translate-y),
+          0
+        )
+        scale3d(
+          var(--tw-enter-scale),
+          var(--tw-enter-scale),
+          var(--tw-enter-scale)
+        );
     }
   }
 
   @keyframes tz-exit {
     to {
       opacity: var(--tw-exit-opacity);
-      transform: translate3d(var(--tw-exit-translate-x), var(--tw-exit-translate-y), 0) scale3d(var(--tw-exit-scale), var(--tw-exit-scale), var(--tw-exit-scale));
+      transform: translate3d(
+          var(--tw-exit-translate-x),
+          var(--tw-exit-translate-y),
+          0
+        )
+        scale3d(
+          var(--tw-exit-scale),
+          var(--tw-exit-scale),
+          var(--tw-exit-scale)
+        );
     }
   }
 }
