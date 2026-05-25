@@ -663,6 +663,7 @@ export default function HomeClient() {
     if (typeof window === "undefined") return;
 
     if (!user) {
+      toast.info("로그인 후 프로필을 확인할 수 있어요");
       requestAuthUi({
         source: "mobile-top-shell",
         route: "/",
@@ -698,7 +699,6 @@ export default function HomeClient() {
         selectedAnnouncement={selectedAnnouncement}
         setMapMode={setMapMode}
         setSelectedAnnouncement={setSelectedAnnouncement}
-        togglePanelCollapse={togglePanelCollapse}
       />
 
       <HomeMapContainer
