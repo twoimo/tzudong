@@ -34,6 +34,7 @@ import HydratedDetailRestaurant from "@/components/home/HydratedDetailRestaurant
 import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailPanel";
 import { cn } from "@/lib/utils";
 import { requestAuthUi } from "@/lib/auth-ui-events";
+import { toast } from "@/lib/no-toast";
 import { HOME_DESKTOP_INLINE_DETAIL_OPEN_FAILED_EVENT } from "@/lib/desktop-left-panel-entry";
 import {
   DEFAULT_HOME_MAP_USER_PREFERENCES,
@@ -265,6 +266,20 @@ const DESKTOP_FLOATING_NAV_BUTTON_WIDTH = `${Math.max(
   5.5,
   ...DESKTOP_FLOATING_NAV_ITEMS.map((item) => item.label.length * 0.55 + 3.85),
 ).toFixed(2)}rem`;
+
+const DESKTOP_LEFT_PANEL_AUTH_TOASTS = {
+  profile: "로그인 후 프로필을 확인할 수 있어요",
+  bookmarks: "로그인 후 북마크를 확인할 수 있어요",
+  notifications: "로그인 후 알림을 확인할 수 있어요",
+  settings: "로그인 후 지도 환경설정을 사용할 수 있어요",
+  review: "로그인 후 리뷰를 작성할 수 있어요",
+} as const;
+
+const showDesktopLeftPanelAuthToast = (
+  reason: keyof typeof DESKTOP_LEFT_PANEL_AUTH_TOASTS,
+) => {
+  toast.info(DESKTOP_LEFT_PANEL_AUTH_TOASTS[reason]);
+};
 
 const HOME_DESKTOP_DETAIL_RETURN_CAPTURE_EVENT =
   "home:desktop-detail-return-capture";
@@ -849,8 +864,8 @@ export default function HomeDesktopControlPanel({
   useEffect(() => {
     if (initialIntent !== "search") return;
 
-    onPanelClick?.("control");
-  }, [initialIntent, onPanelClick]);
+    revealDesktopLeftPanel();
+  }, [initialIntent, revealDesktopLeftPanel]);
 
   useEffect(() => {
     activeLeftPanelViewRef.current = activeLeftPanelView;
@@ -976,6 +991,15 @@ export default function HomeDesktopControlPanel({
         panelParam === "settings") &&
       !user
     ) {
+      showDesktopLeftPanelAuthToast(
+        panelParam === "profile"
+          ? "profile"
+          : panelParam === "bookmarks"
+            ? "bookmarks"
+            : panelParam === "notifications"
+              ? "notifications"
+              : "settings",
+      );
       requestAuthUi({
         source: "desktop-left-panel",
         route: "/",
@@ -1106,9 +1130,10 @@ export default function HomeDesktopControlPanel({
       onPanelClose?.();
     }
 
+    revealDesktopLeftPanel();
     setActiveLeftPanelView("map");
     setIsDesktopSearchActive(true);
-  }, [activeRightPanel, onPanelClose]);
+  }, [activeRightPanel, onPanelClose, revealDesktopLeftPanel]);
 
   const toggleDesktopSearchType = useCallback(() => {
     setDesktopSearchType((current) =>
@@ -1240,6 +1265,7 @@ export default function HomeDesktopControlPanel({
     setIsInlineDetailOpenPending(false);
 
     if (!user) {
+      showDesktopLeftPanelAuthToast("profile");
       requestAuthUi({
         source: "desktop-left-panel",
         route: "/",
@@ -1263,6 +1289,7 @@ export default function HomeDesktopControlPanel({
     setIsInlineDetailOpenPending(false);
 
     if (!user) {
+      showDesktopLeftPanelAuthToast("bookmarks");
       requestAuthUi({
         source: "desktop-left-panel",
         route: "/",
@@ -1285,6 +1312,7 @@ export default function HomeDesktopControlPanel({
     setIsInlineDetailOpenPending(false);
 
     if (!user) {
+      showDesktopLeftPanelAuthToast("notifications");
       requestAuthUi({
         source: "desktop-left-panel",
         route: "/",
@@ -1710,13 +1738,14 @@ export default function HomeDesktopControlPanel({
                   ) => void
                 }
                 onOpenUserProfile={handleInlinePanelUserOpen}
-                onOpenAuth={() =>
+                onOpenAuth={() => {
+                  showDesktopLeftPanelAuthToast("review");
                   requestAuthUi({
                     source: "desktop-left-panel-feed",
                     route: "/",
                     reason: "write-review",
-                  })
-                }
+                  });
+                }}
               />
             ) : activeLeftPanelView === "stamp" && DeferredStampOverlay ? (
               <DeferredStampOverlay
