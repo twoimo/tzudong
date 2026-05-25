@@ -7,6 +7,7 @@ import type { MutableRefObject } from 'react';
 import type { Announcement } from '@/types/announcement';
 import type { Restaurant } from '@/types/restaurant';
 import { requestAuthUi } from '@/lib/auth-ui-events';
+import { toast } from '@/lib/no-toast';
 import { HOME_DESKTOP_INLINE_DETAIL_OPEN_FAILED_EVENT } from '@/lib/desktop-left-panel-entry';
 
 type HomeSupabaseActions = typeof import('./home-supabase-actions');
@@ -28,7 +29,6 @@ type HomeClientEffectsProps = {
     selectedAnnouncement: Announcement | null;
     setMapMode: (mode: 'domestic' | 'overseas') => void;
     setSelectedAnnouncement: (announcement: Announcement | null) => void;
-    togglePanelCollapse: () => void;
 };
 
 export default function HomeClientEffects({
@@ -44,7 +44,6 @@ export default function HomeClientEffects({
     selectedAnnouncement,
     setMapMode,
     setSelectedAnnouncement,
-    togglePanelCollapse,
 }: HomeClientEffectsProps) {
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -115,7 +114,11 @@ export default function HomeClientEffects({
                     if (request?.key !== announcementKey) {
                         const promise = import('./home-supabase-actions')
                             .then(({ fetchHomeAnnouncementById }) => fetchHomeAnnouncementById(announcementId))
-                            .catch(() => null);
+                            .catch((error) => {
+                                console.error('공지사항 조회 실패:', error);
+                                toast.error('공지사항을 불러오지 못했어요');
+                                return null;
+                            });
                         request = { key: announcementKey, promise };
                         pendingAnnouncementRequestRef.current = request;
                         void promise.finally(() => {
@@ -156,6 +159,7 @@ export default function HomeClientEffects({
                             .then(({ resolveHomeRestaurantDeepLink }) => resolveHomeRestaurantDeepLink(restaurantId))
                             .catch((error) => {
                                 console.error('맛집 조회 실패:', error);
+                                toast.error('맛집 정보를 불러오지 못했어요');
                                 return null;
                             });
                         request = { key: restaurantKey, promise };
@@ -168,7 +172,11 @@ export default function HomeClientEffects({
                     }
 
                     void request.promise.then((result) => {
-                        if (isCancelled || lastRestaurantDeepLinkRequestKeyRef.current !== restaurantKey || !result) return;
+                        if (isCancelled || lastRestaurantDeepLinkRequestKeyRef.current !== restaurantKey) return;
+                        if (!result) {
+                            toast.error('맛집 정보를 불러오지 못했어요');
+                            return;
+                        }
 
                         const zoomParam = searchParams.get('z');
                         const focusZoom = zoomParam ? parseFloat(zoomParam) : undefined;
@@ -225,13 +233,18 @@ export default function HomeClientEffects({
                 }
 
                 void request.promise.then((restaurant) => {
-                    if (isCancelled || lastCoordinateRequestKeyRef.current !== coordinateKey || !restaurant) return;
+                    if (isCancelled || lastCoordinateRequestKeyRef.current !== coordinateKey) return;
+                    if (!restaurant) {
+                        toast.error('해당 위치의 맛집을 찾지 못했어요');
+                        return;
+                    }
 
                     schedule(() => {
                         openDetailPanelRef.current(restaurant);
                     }, 500);
                 });
             } else if (isNaN(lat) || isNaN(lng)) {
+                toast.error('지도 좌표 링크가 올바르지 않아요');
                 lastCoordinateRequestKeyRef.current = null;
             } else {
                 registeredCoordinateKey = coordinateKey;
@@ -297,6 +310,7 @@ export default function HomeClientEffects({
     useEffect(() => {
         const handleMyPageOpen = () => {
             if (!isLoggedIn) {
+                toast.info('로그인 후 마이페이지를 확인할 수 있어요');
                 requestAuthUi({ source: 'home-open-mypage-event', route: '/', reason: 'mypage' });
                 return;
             }
@@ -328,7 +342,7 @@ export default function HomeClientEffects({
             const announcement = (event as CustomEvent<Announcement>).detail;
 
             if (activeRightPanel === 'announcement' && selectedAnnouncement?.id === announcement.id) {
-                togglePanelCollapse();
+                openPanelRef.current('announcement');
             } else {
                 flushSync(() => {
                     setSelectedAnnouncement(announcement);
@@ -359,6 +373,7 @@ export default function HomeClientEffects({
                 const result = await resolveHomeBookmarkRestaurantSelection(restaurantId, mode);
                 if (!result) {
                     notifyInlineDetailOpenFailed();
+                    toast.error('맛집 정보를 불러오지 못했어요');
                     return;
                 }
 
@@ -369,6 +384,7 @@ export default function HomeClientEffects({
                 openDetailPanelRef.current(result.restaurant, 13);
             } catch (error) {
                 notifyInlineDetailOpenFailed();
+                toast.error('맛집 정보를 불러오지 못했어요');
                 console.error('맛집 조회 실패:', error);
             }
         };
@@ -398,8 +414,7 @@ export default function HomeClientEffects({
         selectedAnnouncement,
         setMapMode,
         setSelectedAnnouncement,
-        togglePanelCollapse,
-    ]);
+        ]);
 
     return null;
 }
