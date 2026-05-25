@@ -247,6 +247,7 @@ function getSidebarBadgeClassName(sectionLabel: string, isActive: boolean) {
   if (isActive) return "text-primary-foreground/75";
   if (sectionLabel === "검수") return "text-amber-700 dark:text-amber-300";
   if (sectionLabel === "운영") return "text-sky-700 dark:text-sky-300";
+  if (sectionLabel === "실험실") return "text-violet-700 dark:text-violet-300";
   if (sectionLabel === "홈") return "text-emerald-700 dark:text-emerald-300";
 
   return "text-muted-foreground";
@@ -290,9 +291,7 @@ const sidebarSections: SidebarSection[] = [
       },
       ...consoleModules
         .filter((module) =>
-          ["storyboard", "banners", "users", "insights", "audit"].includes(
-            module.id,
-          ),
+          ["storyboard", "banners", "users", "insights"].includes(module.id),
         )
         .map(({ id, title, description, icon, badge }) => ({
           id,
@@ -304,14 +303,23 @@ const sidebarSections: SidebarSection[] = [
     ],
   },
   {
-    label: "보조",
+    label: "실험실",
     items: [
+      ...consoleModules
+        .filter((module) => ["audit"].includes(module.id))
+        .map(({ id, title, description, icon, badge }) => ({
+          id,
+          title,
+          description,
+          icon,
+          badge,
+        })),
       {
         id: "llm",
         title: "운영 보조",
         description: "위험 액션 전 읽기 전용 운영 보조를 확인합니다.",
         icon: Bot,
-        badge: "읽기 전용",
+        badge: "실험 중",
       },
     ],
   },
@@ -479,11 +487,15 @@ function normalizeAdminSidebarOrder(
   const usedItemIds = new Set<AdminModuleId>();
   const items = Object.fromEntries(
     DEFAULT_ADMIN_SIDEBAR_ORDER.sections.map((section) => {
+      const sectionItemIds = new Set(
+        DEFAULT_ADMIN_SIDEBAR_ORDER.items[section],
+      );
       const preferredItems = Array.isArray(rawItems[section])
         ? rawItems[section].filter((item): item is AdminModuleId => {
             if (
               typeof item !== "string" ||
               !sidebarItemIdSet.has(item as AdminModuleId) ||
+              !sectionItemIds.has(item as AdminModuleId) ||
               usedItemIds.has(item as AdminModuleId)
             ) {
               return false;
@@ -1499,7 +1511,9 @@ function AdminDashboardOpsSummaryCard({
               key: "label",
               header: "항목",
               className: "w-[38%]",
-              cell: (row) => <span className="block truncate">{row.label}</span>,
+              cell: (row) => (
+                <span className="block truncate">{row.label}</span>
+              ),
             },
             {
               key: "value",
@@ -2593,7 +2607,10 @@ function AdminDashboardManagementPanel({
                   header: "영상 제목",
                   className: "w-[52%] max-w-0",
                   cell: (row) => (
-                    <span className="block truncate font-bold" title={row.title}>
+                    <span
+                      className="block truncate font-bold"
+                      title={row.title}
+                    >
                       {row.title}
                     </span>
                   ),
@@ -2757,7 +2774,10 @@ function AdminDashboardManagementPanel({
                   header: "영상 제목",
                   className: "w-[58%] max-w-0",
                   cell: (row) => (
-                    <span className="block truncate font-bold" title={row.title}>
+                    <span
+                      className="block truncate font-bold"
+                      title={row.title}
+                    >
                       {row.title}
                     </span>
                   ),
