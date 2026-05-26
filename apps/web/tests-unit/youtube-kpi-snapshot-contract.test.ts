@@ -29,6 +29,8 @@ describe("YouTube KPI snapshot collector contract", () => {
     const collector = readRepoFile("scripts/capture-youtube-kpi-snapshot.mjs");
     expect(collector).toContain("YOUTUBE_FETCH_TIMEOUT_MS");
     expect(collector).toContain("YOUTUBE_FETCH_RETRY_COUNT");
+    expect(collector).toContain("loadLocalEnvFile");
+    expect(collector).not.toContain('import "dotenv/config"');
     expect(collector).toContain('requireEnv("YOUTUBE_API_KEY")');
     expect(collector).toContain("fetchPreviousChannelSnapshot");
     expect(collector).toContain("previous_bucket_started_at");
