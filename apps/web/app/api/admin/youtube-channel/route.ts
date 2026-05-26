@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/require-admin";
 import { getLatestYouTubeChannelSnapshot } from "@/lib/admin/youtube-kpi-snapshots";
+import { parseTreemapPeriod } from "@/lib/public-insights/treemap";
 
 export const runtime = "nodejs";
 
@@ -34,7 +35,11 @@ function parseYouTubeCount(value: unknown) {
 }
 
 function getYouTubeApiKey() {
-  return process.env.YOUTUBE_API_KEY || null;
+  return (
+    process.env.YOUTUBE_API_KEY ||
+    process.env.NEXT_PUBLIC_YOUTUBE_API_KEY ||
+    null
+  );
 }
 
 function getYouTubeChannelFilter() {
@@ -55,13 +60,16 @@ function getYouTubeChannelFilter() {
   };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const auth = await requireAdmin();
   if (!auth.ok) return auth.response;
 
+  const period = parseTreemapPeriod(
+    new URL(request.url).searchParams.get("period"),
+  );
   const apiKey = getYouTubeApiKey();
   if (!apiKey) {
-    const snapshot = await getLatestYouTubeChannelSnapshot();
+    const snapshot = await getLatestYouTubeChannelSnapshot(period);
     if (snapshot) {
       return NextResponse.json(snapshot, {
         headers: {
@@ -111,6 +119,7 @@ export async function GET() {
     }
 
     const statistics = channel.statistics ?? {};
+    const comparisonSnapshot = await getLatestYouTubeChannelSnapshot(period);
 
     return NextResponse.json(
       {
@@ -122,6 +131,15 @@ export async function GET() {
         videoCount: parseYouTubeCount(statistics.videoCount),
         hiddenSubscriberCount: statistics.hiddenSubscriberCount === true,
         fetchedAt: new Date().toISOString(),
+        previousSubscriberCount: comparisonSnapshot?.previousSubscriberCount ?? null,
+        previousViewCount: comparisonSnapshot?.previousViewCount ?? null,
+        previousVideoCount: comparisonSnapshot?.previousVideoCount ?? null,
+        previousBucketStartedAt:
+          comparisonSnapshot?.previousBucketStartedAt ?? null,
+        subscriberDelta: comparisonSnapshot?.subscriberDelta ?? null,
+        viewDelta: comparisonSnapshot?.viewDelta ?? null,
+        videoDelta: comparisonSnapshot?.videoDelta ?? null,
+        comparisonFetchedAt: comparisonSnapshot?.comparisonFetchedAt ?? null,
       },
       {
         headers: {
@@ -131,7 +149,7 @@ export async function GET() {
     );
   } catch (error) {
     console.error("YouTube channel statistics fetch error:", error);
-    const snapshot = await getLatestYouTubeChannelSnapshot();
+    const snapshot = await getLatestYouTubeChannelSnapshot(period);
     if (snapshot) {
       return NextResponse.json(snapshot, {
         headers: {
