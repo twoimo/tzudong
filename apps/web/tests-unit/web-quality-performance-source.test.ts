@@ -19,6 +19,8 @@ const sourceFilesUnder = (relativeDir: string): string[] => {
     return /\.(?:ts|tsx|js|jsx)$/.test(entry.name) ? [relativePath] : [];
   });
 };
+const countSourceMatches = (contents: string, pattern: RegExp) =>
+  contents.match(pattern)?.length ?? 0;
 
 describe("web quality performance source contracts", () => {
   test("map marker HTML keeps image markers with WebP delivery and PNG fallback", () => {
@@ -1735,6 +1737,9 @@ describe("web quality performance source contracts", () => {
     const userProfilePanelSource = source(
       "components/profile/UserProfilePanel.tsx",
     );
+    const userProfileProgressiveSkeletonSource = source(
+      "components/profile/UserProfileProgressiveSkeleton.tsx",
+    );
     const naverMapSource = source("components/map/NaverMapView.tsx");
     const mapViewSidepanelsSource = source(
       "components/map/map-view-sidepanels.tsx",
@@ -1852,6 +1857,9 @@ describe("web quality performance source contracts", () => {
     expect(stampPageSource).toContain(
       "StampGridSkeleton count={STAMP_PAGE_SIZE}",
     );
+    expect(countSourceMatches(stampPageSource, /<StampGridSkeleton\b/g)).toBe(
+      1,
+    );
     expect(stampPageSource).toContain(
       "const gridRestaurantLimit = Math.max(displayLimit - guideSlotCount, 0)",
     );
@@ -1929,11 +1937,14 @@ describe("web quality performance source contracts", () => {
     expect(userProfilePanelSource).not.toContain(
       '<ScrollArea className="h-full">',
     );
-    expect(userProfilePanelSource).toContain(
+    expect(userProfileProgressiveSkeletonSource).toContain(
       "data-user-profile-panel-skeleton",
     );
-    expect(userProfilePanelSource).toContain("data-user-profile-tab-skeleton");
+    expect(userProfileProgressiveSkeletonSource).toContain("data-user-profile-tab-skeleton");
     expect(userProfilePanelSource).toContain(
+      "UserProfileProgressiveSkeleton, UserProfileTabSkeleton",
+    );
+    expect(userProfileProgressiveSkeletonSource).toContain(
       'import { Skeleton } from "@/components/ui/skeleton"',
     );
     expect(userProfilePanelSource).not.toContain(
@@ -2178,7 +2189,11 @@ describe("web quality performance source contracts", () => {
     expect(stampOverlaySource).toContain(
       "const skeletonCardCount = singleColumnCards ? 8 : 16",
     );
+    expect(stampOverlaySource).toContain("shouldShowStampOverlaySkeleton");
     expect(stampOverlaySource).toContain("count={skeletonCardCount}");
+    expect(
+      countSourceMatches(stampOverlaySource, /<StampGridSkeleton\b/g),
+    ).toBe(1);
     expect(stampOverlaySource).toContain(
       "const skeletonGridColumns = singleColumnCards",
     );
@@ -2280,7 +2295,9 @@ describe("web quality performance source contracts", () => {
     );
     expect(leaderboardPageSource).toContain("basis-[min(11rem,100%)]");
     expect(leaderboardLoadingSource).not.toContain("compactLeftPanel");
-    expect(leaderboardLoadingSource).toContain('className="px-4"');
+    expect(leaderboardLoadingSource).toContain("return null");
+    expect(leaderboardLoadingSource).toContain("한 번만");
+    expect(leaderboardPageSource).toContain('className="px-4"');
     expect(leaderboardSkeletonSource).toContain("compactLeftPanel?: boolean");
     expect(leaderboardSkeletonSource).toContain("compactLeftPanel = false");
     expect(leaderboardSkeletonSource).toContain(
@@ -3192,12 +3209,24 @@ describe("web quality performance source contracts", () => {
     expect(myPageProfileSource).not.toContain("sm:h-18 sm:w-18");
   });
 
-  test("page-level loaders keep fullscreen opt-in while map fallbacks stay embedded", () => {
+  test("page-level loaders keep route fallbacks single-owner while map fallbacks stay embedded", () => {
     const globalLoaderSource = source("components/ui/global-loader.tsx");
     const mapSkeletonSource = source("components/skeletons/MapSkeleton.tsx");
+    const globalMapLoadingSource = source("app/global-map/loading.tsx");
+    const globalMapPageSource = source("app/global-map/page.tsx");
+    const resetPasswordLoadingSource = source(
+      "app/auth/reset-password/loading.tsx",
+    );
+    const resetPasswordPageSource = source("app/auth/reset-password/page.tsx");
+    const userProfileLoadingSource = source("app/user/[userId]/loading.tsx");
+    const userProfileSkeletonSource = source(
+      "components/profile/UserProfileProgressiveSkeleton.tsx",
+    );
+    const leaderboardLoadingSource = source("app/leaderboard/loading.tsx");
 
     expect(globalLoaderSource).toContain("h-[var(--full-height,100vh)]");
     expect(mapSkeletonSource).toContain('variant?: "embedded" | "fullscreen"');
+    expect(mapSkeletonSource).toContain('decorative?: boolean');
     expect(mapSkeletonSource).toContain('variant = "embedded"');
     expect(mapSkeletonSource).toContain(
       "fixed inset-0 z-50 h-[var(--full-height,100vh)]",
@@ -3214,12 +3243,75 @@ describe("web quality performance source contracts", () => {
     expect(mapSkeletonSource).not.toContain("rounded-2xl bg-background/90");
     expect(mapSkeletonSource).not.toContain("GlobalLoader");
     expect(mapSkeletonSource).not.toContain("맛있는 발견을 준비하고 있습니다");
-    expect(source("app/auth/reset-password/loading.tsx")).toContain(
-      "<GlobalLoader",
+    expect(resetPasswordLoadingSource).toContain("return null");
+    expect(resetPasswordLoadingSource).toContain("한 번만");
+    expect(resetPasswordLoadingSource).not.toContain(
+      "<ResetPasswordProgressiveSkeleton />",
     );
-    expect(source("app/loading.tsx")).toContain(
-      '<MapSkeleton variant="fullscreen" />',
+    expect(resetPasswordLoadingSource).not.toContain("GlobalLoader");
+    expect(resetPasswordPageSource).toContain(
+      "<ResetPasswordProgressiveSkeleton />",
     );
+    expect(resetPasswordPageSource).not.toContain("animate-spin");
+    expect(source("components/auth/ResetPasswordProgressiveSkeleton.tsx")).toContain(
+      'data-reset-password-progressive-skeleton="true"',
+    );
+    expect(source("components/auth/ResetPasswordProgressiveSkeleton.tsx")).toContain(
+      'role="status"',
+    );
+    expect(globalMapLoadingSource).toContain("return null");
+    expect(globalMapLoadingSource).toContain("한 번만");
+    expect(globalMapLoadingSource).not.toContain("<MapSkeleton");
+    expect(globalMapLoadingSource).not.toContain("GlobalLoader");
+    expect(globalMapPageSource).toContain("function GlobalMapSearchSkeleton()");
+    expect(globalMapPageSource).toContain(
+      'data-global-map-search-skeleton="true"',
+    );
+    expect(globalMapPageSource).toContain("loading: () => null");
+    expect(globalMapPageSource).toContain("<Suspense fallback={null}>");
+    expect(globalMapPageSource).not.toContain(
+      'message="글로벌 지도 모듈을 준비하고 있어요"',
+    );
+    expect(globalMapPageSource).not.toContain(
+      'message={`${country} 지도 캔버스를 준비하고 있어요`}',
+    );
+    expect(globalMapPageSource).not.toContain('variant="fullscreen"');
+    expect(source("components/home/home-map-container.tsx")).toContain(
+      "<Suspense fallback={null}>",
+    );
+    expect(source("components/home/home-map-container.tsx")).not.toContain(
+      "<Suspense fallback={<MapSkeleton />}>",
+    );
+    expect(userProfileLoadingSource).toContain("return null");
+    expect(userProfileLoadingSource).toContain("한 번만");
+    expect(userProfileLoadingSource).not.toContain(
+      "<UserProfileProgressiveSkeleton />",
+    );
+    expect(userProfileLoadingSource).not.toContain("GlobalLoader");
+    expect(userProfileSkeletonSource).toContain(
+      'data-user-profile-route-skeleton="true"',
+    );
+    expect(userProfileSkeletonSource).toContain(
+      'data-user-profile-panel-skeleton="true"',
+    );
+    expect(userProfileSkeletonSource).toContain(
+      "export function UserProfileTabSkeleton",
+    );
+    expect(userProfileSkeletonSource).toContain('live={false}');
+    expect(userProfileSkeletonSource).toContain('role={live ? "status" : undefined}');
+    expect(source("components/profile/UserProfilePanel.tsx")).toContain(
+      "<UserProfileProgressiveSkeleton",
+    );
+    expect(source("components/profile/UserProfilePanel.tsx")).not.toContain(
+      "function UserProfileHeaderSkeleton",
+    );
+    expect(leaderboardLoadingSource).toContain("return null");
+    expect(leaderboardLoadingSource).not.toContain("<LeaderboardSkeleton");
+    expect(source("app/leaderboard/page.tsx")).toContain(
+      "<LeaderboardSkeleton",
+    );
+    expect(source("app/loading.tsx")).toContain("return null");
+    expect(source("app/loading.tsx")).not.toContain("<MapSkeleton");
     expect(source("app/home-client-loader.tsx")).not.toContain("<GlobalLoader");
     expect(source("app/home-client-loader.tsx")).toContain(
       'className="sr-only"',
@@ -3237,6 +3329,132 @@ describe("web quality performance source contracts", () => {
     for (const { relativePath, tag } of appLoaderTags) {
       expect(`${relativePath}: ${tag}`).toContain("fullScreen");
     }
+  });
+
+  test("route loading boundaries keep skeleton ownership single-pass", () => {
+    const loadingFiles = sourceFilesUnder("app")
+      .filter((relativePath) => relativePath.endsWith("/loading.tsx"))
+      .sort();
+    const routeOwnedSkeletonPages = [
+      "app/admin/loading.tsx",
+      "app/loading.tsx",
+      "app/auth/reset-password/loading.tsx",
+      "app/global-map/loading.tsx",
+      "app/insights/loading.tsx",
+      "app/leaderboard/loading.tsx",
+      "app/mypage/loading.tsx",
+      "app/stamp/loading.tsx",
+      "app/user/[userId]/loading.tsx",
+    ];
+
+    expect(loadingFiles).toEqual([
+      "app/admin/loading.tsx",
+      "app/auth/reset-password/loading.tsx",
+      "app/global-map/loading.tsx",
+      "app/insights/loading.tsx",
+      "app/leaderboard/loading.tsx",
+      "app/loading.tsx",
+      "app/mypage/loading.tsx",
+      "app/stamp/loading.tsx",
+      "app/user/[userId]/loading.tsx",
+    ]);
+
+    for (const relativePath of routeOwnedSkeletonPages) {
+      const loadingSource = source(relativePath);
+      expect(loadingSource).toContain("return null");
+      expect(loadingSource).not.toContain("<Skeleton");
+      expect(loadingSource).not.toContain("<MapSkeleton");
+      expect(loadingSource).not.toContain("<LeaderboardSkeleton");
+      expect(loadingSource).not.toContain("<StampPageSkeleton");
+      expect(loadingSource).not.toContain("<UserProfileProgressiveSkeleton");
+      expect(loadingSource).not.toContain("<ResetPasswordProgressiveSkeleton");
+      expect(loadingSource).not.toContain("<GlobalLoader");
+    }
+
+    const skeletonOwnerContracts = [
+      {
+        route: "app/auth/reset-password/loading.tsx",
+        owner: "app/auth/reset-password/page.tsx",
+        marker: "<ResetPasswordProgressiveSkeleton />",
+      },
+      {
+        route: "app/global-map/loading.tsx",
+        owner: "app/global-map/page.tsx",
+        marker: "loading: () => null",
+      },
+      {
+        route: "app/leaderboard/loading.tsx",
+        owner: "app/leaderboard/page.tsx",
+        marker: "<LeaderboardSkeleton",
+      },
+      {
+        route: "app/mypage/loading.tsx",
+        owner: "app/mypage/mypage-layout-content.tsx",
+        marker:
+          'data-mypage-content-loading-behavior="static-shell-dynamic-skeleton"',
+      },
+      {
+        route: "app/stamp/loading.tsx",
+        owner: "app/stamp/page.tsx",
+        marker:
+          'data-stamp-loading-behavior="static-shell-dynamic-skeleton"',
+      },
+      {
+        route: "app/user/[userId]/loading.tsx",
+        owner: "components/profile/UserProfilePanel.tsx",
+        marker: "<UserProfileProgressiveSkeleton",
+      },
+    ];
+
+    for (const { route, owner, marker } of skeletonOwnerContracts) {
+      expect(source(route)).toContain("return null");
+      expect(source(owner)).toContain(marker);
+    }
+
+    expect(source("app/loading.tsx")).toContain("return null");
+    expect(source("app/loading.tsx")).not.toContain("<MapSkeleton");
+    expect(
+      countSourceMatches(
+        source("app/auth/reset-password/page.tsx"),
+        /<ResetPasswordProgressiveSkeleton\s*\/>/g,
+      ),
+    ).toBe(1);
+    expect(
+      countSourceMatches(
+        source("app/auth/reset-password/loading.tsx"),
+        /<ResetPasswordProgressiveSkeleton\b/g,
+      ),
+    ).toBe(0);
+    expect(
+      countSourceMatches(
+        source("app/leaderboard/page.tsx"),
+        /<LeaderboardSkeleton\b/g,
+      ),
+    ).toBe(1);
+    expect(
+      countSourceMatches(
+        source("app/leaderboard/loading.tsx"),
+        /<LeaderboardSkeleton\b/g,
+      ),
+    ).toBe(0);
+    expect(
+      countSourceMatches(
+        source("components/profile/UserProfilePanel.tsx"),
+        /<UserProfileProgressiveSkeleton\b/g,
+      ),
+    ).toBe(1);
+    expect(
+      countSourceMatches(
+        source("app/user/[userId]/loading.tsx"),
+        /<UserProfileProgressiveSkeleton\b/g,
+      ),
+    ).toBe(0);
+    expect(
+      countSourceMatches(
+        source("app/global-map/page.tsx"),
+        /<GlobalMapSearchSkeleton\s*\/>/g,
+      ),
+    ).toBe(1);
   });
 
   test("intent-loaded mobile modal shells do not render desktop dialog on the first client paint", () => {

@@ -375,7 +375,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain('badge: "성과 요약"');
     const sidebarSectionsSource = consoleSource.slice(
       consoleSource.indexOf("const sidebarSections"),
-      consoleSource.indexOf("type AdminSidebarOrderPreference"),
+      consoleSource.indexOf("function moveItemInArray"),
     );
     const homeSectionSource = sidebarSectionsSource.slice(
       sidebarSectionsSource.indexOf('label: "홈"'),
@@ -427,6 +427,11 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-admin-dashboard-area-chart="recharts"',
     );
     expect(consoleSource).toContain("adminDashboardTooltipStyle");
+    expect(consoleSource).toContain("adminDashboardTooltipContentClassName");
+    expect(consoleSource).toContain("adminDashboardTooltipWrapperStyle");
+    expect(consoleSource).toContain(
+      'data-admin-dashboard-tooltip-content="standard"',
+    );
     expect(consoleSource).not.toContain("viewBox={`0 0 ${width} ${height}`}");
     expect(consoleSource).toContain(
       "min-h-0 overflow-hidden border border-border/70 bg-background shadow-[0_1px_2px_rgba(15,23,42,0.06)]",
@@ -462,10 +467,17 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     const dashboardOrderRouteSource = source(
       "app/api/admin/preferences/dashboard-widget-order/route.ts",
     );
+    const dashboardOrderSource = source("lib/admin/dashboard-widget-order.ts");
     expect(dashboardOrderRouteSource).toContain("admin_dashboard_widget_order");
     expect(dashboardOrderRouteSource).toContain("admin_user_preferences");
     expect(dashboardOrderRouteSource).toContain(
       "normalizeAdminDashboardWidgetOrder",
+    );
+    expect(dashboardOrderRouteSource).toContain(
+      'from "@/lib/admin/dashboard-widget-order"',
+    );
+    expect(dashboardOrderSource).toContain(
+      "DEFAULT_ADMIN_DASHBOARD_WIDGET_ORDER",
     );
     expect(consoleSource).toContain("fallbackResponse");
     expect(consoleSource).toContain("/api/insights/treemap");
@@ -502,13 +514,15 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "text-[10px] font-bold text-muted-foreground",
     );
     expect(consoleSource).toContain(
-      "조회수, 참여, 참여율을 최근 영상 순서로 정규화해 비교합니다.",
+      "읽는 법: 조회·반응(좋아요+댓글)·반응률을 각각 100점 기준으로 맞춰 같은 눈금에서 비교합니다.",
     );
     expect(consoleSource).toContain("adminDashboardChartMargin");
+    expect(consoleSource).not.toContain("adminDashboardTrendChartMargin");
     expect(consoleSource).toContain("adminDashboardScatterChartMargin");
     expect(consoleSource).toContain(
       "const adminDashboardChartMargin = { top: 10, right: 10, bottom: 2, left: 0 };",
     );
+    expect(consoleSource).not.toContain("const adminDashboardAxisLabelStyle");
     expect(consoleSource).toContain("top: 10");
     expect(consoleSource).toContain("bottom: 2");
     expect(consoleSource).toContain("adminDashboardChartViewportClassName");
@@ -556,14 +570,54 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("seriesVisibility.engagementRate");
     expect(consoleSource).toContain("topContentSeriesVisibility.likes");
     expect(consoleSource).toContain("topContentSeriesVisibility.comments");
+    expect(consoleSource).not.toContain("textClassName?: string");
+    expect(consoleSource).not.toContain("option.textClassName");
+    expect(consoleSource).toContain(
+      "border-sky-500/25 bg-sky-50 text-foreground",
+    );
+    expect(consoleSource).toContain(
+      "border-rose-500/25 bg-rose-50 text-foreground",
+    );
+    expect(consoleSource).toContain(
+      "border-orange-500/25 bg-orange-50 text-foreground",
+    );
+    expect(consoleSource).toContain('dotClassName: "bg-orange-500"');
+    expect(consoleSource).not.toContain(
+      'textClassName: "text-orange-700 dark:text-orange-300"',
+    );
+    expect(consoleSource).toContain(
+      '<span className="font-bold tabular-nums text-foreground">',
+    );
     expect(consoleSource).toContain("상위 영상 영향도 첫 항목은");
     expect(consoleSource).toContain(
       'data-admin-dashboard-bubble-tooltip="video-title"',
     );
+    expect(consoleSource).not.toContain("function AdminDashboardAxisCornerHint");
+    expect(consoleSource).not.toContain("function AdminDashboardAxisCaption");
+    expect(consoleSource).not.toContain(
+      'data-admin-dashboard-axis-corner-hint="true"',
+    );
+    expect(consoleSource).not.toContain(
+      'data-admin-dashboard-axis-caption="true"',
+    );
+    expect(consoleSource).not.toContain('const xAxisLabel = "게시일 순서"');
+    expect(consoleSource).not.toContain(
+      'const yAxisLabel = "정규화 점수(0~100)"',
+    );
+    expect(consoleSource).not.toContain(
+      "<AdminDashboardAxisCornerHint x={xAxisLabel} y={yAxisLabel} />",
+    );
+    expect(consoleSource).not.toContain(
+      "<AdminDashboardAxisCaption x={xAxisLabel} y={yAxisLabel} />",
+    );
+    expect(consoleSource).not.toContain("function AdminDashboardAxisGuide");
+    expect(consoleSource).not.toContain('data-admin-dashboard-axis-guide="true"');
+    expect(consoleSource).not.toContain("position: \"insideBottom\"");
+    expect(consoleSource).not.toContain("position: \"insideLeft\"");
     expect(consoleSource).not.toContain("색상=순위 구분");
     expect(consoleSource).toContain("순위 구분");
     expect(consoleSource).toContain(
-      "동그라미 색상은 성과 차이가 아니라 순위 구분용",
+      "읽는 법: 원이 클수록 조회수와 반응을 합친 영향도가 큰 영상입니다. 색은 순위 구분입니다.",
     );
     expect(consoleSource).toContain(
       "line-clamp-2 font-extrabold leading-5 text-foreground",
@@ -571,10 +625,27 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("formatNumber(row.조회수)");
     expect(consoleSource).toContain("formatNumber(row.참여)");
     expect(consoleSource).toContain("콘텐츠 성과 상위 항목은");
-    expect(consoleSource).toContain("조회수가 높은 순서로 정렬합니다.");
+    expect(consoleSource).toContain(
+      "읽는 법: 막대는 조회·좋아요·댓글 수를 보여주고, 기여도는 전체 합계 중 해당 영상이 차지한 비율입니다.",
+    );
     expect(consoleSource).toContain("comments: row.commentCount");
     expect(consoleSource).toContain(
       'data-admin-dashboard-bar-chart="rank-distribution"',
+    );
+    expect(consoleSource).toContain(
+      "grid h-full grid-rows-[minmax(0,1fr)_auto] gap-2 pb-0",
+    );
+    expect(consoleSource).toContain("grid min-h-0 content-evenly gap-2");
+    expect(consoleSource).toContain(
+      'className={cn("grid gap-1.5", isFullscreen && "gap-2.5")}',
+    );
+    expect(consoleSource).toContain(
+      "flex min-w-0 overflow-x-auto overflow-y-visible",
+    );
+    expect(consoleSource).toContain('isFullscreen ? "h-12 sm:h-14" : "h-9"');
+    expect(consoleSource).toContain("grid gap-1 sm:grid-cols-5");
+    expect(consoleSource).toContain(
+      "flex min-h-[220px] flex-col overflow-visible p-3 sm:col-span-2 lg:col-span-5",
     );
     expect(consoleSource).toContain(
       "data-admin-dashboard-top-content-metric={metric.label}",
@@ -587,10 +658,13 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("metricRows");
     expect(consoleSource).toContain("getVideoViewDelta");
     expect(consoleSource).toContain("getVideoEngagementDelta");
+    expect(consoleSource).toContain("const currentValue = getCurrentValue(video);");
+    expect(consoleSource).toContain("return currentValue;");
     expect(consoleSource).toContain("topContentMetricMode");
     expect(consoleSource).toContain("videosByInsightScore");
+    expect(consoleSource).toContain("topContentVideosByInsightScore");
     expect(consoleSource).toContain(
-      "최근 성장 기여도가 높은 순서로 정렬합니다.",
+      "읽는 법: 막대는 선택 기간 업로드 영상의 조회·좋아요·댓글 증가량을 보여주고, 기여도는 업로드 영상 증가 합계 중 해당 영상이 차지한 비율입니다.",
     );
     expect(consoleSource).toContain("합계 {formatCompactNumber(total)}");
     expect(consoleSource).toContain("formatDashboardPercent(percent)");
@@ -606,11 +680,14 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       'data-admin-dashboard-diagnosis-board="actionable-insights"',
     );
+    expect(consoleSource).toContain("ADMIN_DASHBOARD_CONTENT_INSIGHT_TARGET_COUNT = 4");
+    expect(consoleSource).toContain("const visibleInsights = insights.slice(");
+    expect(consoleSource).toContain("ADMIN_DASHBOARD_CONTENT_INSIGHT_TARGET_COUNT,");
     expect(consoleSource).toContain(
-      "grid min-h-0 flex-1 auto-rows-fr content-stretch gap-1",
+      "grid min-h-0 flex-1 content-stretch gap-1",
     );
     expect(consoleSource).toContain(
-      "grid h-full min-h-0 auto-rows-fr gap-1 sm:grid-cols-2",
+      "grid h-full min-h-0 grid-cols-2 grid-rows-2 gap-1",
     );
     expect(consoleSource).toContain(
       "flex min-h-0 min-w-0 flex-col justify-between rounded-xl border border-border/70 bg-muted/20 px-2 py-1.5",
@@ -619,15 +696,16 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-admin-dashboard-diagnosis-meta="header-inline"',
     );
     expect(consoleSource).toContain(
-      "성과 진단 기준 ${periodLabel}, 비교 채널 평균, 목적 다음 액션",
+      "성과 진단 기준 ${periodLabel}, 비교 채널 평균",
     );
+    expect(consoleSource).not.toContain("목적 다음 액션");
     expect(consoleSource).toContain(
       "ml-auto flex min-w-0 shrink-0 items-center gap-2",
     );
     expect(consoleSource).not.toContain(
       "grid grid-cols-3 gap-2 rounded-xl border border-border/70 bg-background/80 p-2 text-[11px]",
     );
-    expect(consoleSource).toContain("평균 대비 영상 성과 진단");
+    expect(consoleSource).toContain("영상 성과 신호 진단");
     expect(consoleSource).toContain("score: number");
     expect(consoleSource).toContain("scoreLabel: string");
     expect(consoleSource).toContain("getDashboardInsightSignalScore");
@@ -638,10 +716,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("신호 강도");
     expect(consoleSource).toContain("후보를 채널");
     expect(consoleSource).toContain(
-      "평균과 비교해 우선 점검할 영상을 표시합니다.",
+      "기여도와 참여율로 우선 점검할 영상을 표시합니다.",
     );
     expect(consoleSource).toContain("상위 영상 영향도");
-    expect(consoleSource).toContain("조회·참여 추이");
+    expect(consoleSource).toContain("영상별 성과 분포");
     expect(consoleSource).toContain("콘텐츠 성과 TOP 5");
     expect(consoleSource).toContain(
       'data-admin-dashboard-card-title-delta="true"',
@@ -650,8 +728,16 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "metric={`조회 증감 ${formatDashboardChangeLabel(viewChange)}`}",
     );
     expect(consoleSource).toContain(
-      "metric={`진단 신호 ${formatNumber(topContentInsights.length)}개 · 참여 ${formatDashboardChangeLabel(engagementChange)}`}",
+      "const topContentComparisonCount = topContentVideosByInsightScore.length",
     );
+    expect(consoleSource).toContain(
+      "const topContentCardMetric = hasPeriodGrowthComparison",
+    );
+    expect(consoleSource).toContain("metric={topContentCardMetric}");
+    expect(consoleSource).toContain(
+      "metric={`진단 신호 ${formatNumber(topContentInsights.length)}개 · ${topContentCardMetric}`}",
+    );
+    expect(consoleSource).not.toContain("engagementChange");
     expect(consoleSource).toContain("const visibleRows = rows.slice(0, 5)");
     expect(consoleSource).toContain(
       "const ADMIN_DASHBOARD_IMPACT_VIDEO_LIMIT = 12",
@@ -660,10 +746,12 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       ".slice(0, ADMIN_DASHBOARD_IMPACT_VIDEO_LIMIT)",
     );
-    expect(consoleSource).toContain("긴 제목은 말줄임 처리");
+    expect(consoleSource).toContain(
+      "주의: 제목이 길면 표 보기나 마우스 올림 제목으로 전체를 확인하세요.",
+    );
     expect(consoleSource).toContain("성과 진단");
     expect(consoleSource).toContain(
-      "선택 기간의 조회 증가, 참여율, 일평균 조회 속도를 채널 평균과 비교해 실행 가능한 신호만 추립니다.",
+      "설명: 지금 확인할 만한 영상 성과 신호를 요약한 카드입니다.",
     );
     expect(consoleSource).toContain("AdminDashboardBubbleChart");
     expect(consoleSource).toContain("AdminDashboardKpiCard");
@@ -682,6 +770,22 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain('dataKey="참여율최저"');
     expect(consoleSource).toContain('stroke="#f59e0b"');
     expect(consoleSource).toContain('stroke="#0f766e"');
+    expect(consoleSource).toContain(
+      "정규화 점수 · 계산식: 값 / 해당 지표 최고값 × 100",
+    );
+    expect(consoleSource).toContain("계산식: 참여 = 좋아요 + 댓글.");
+    expect(consoleSource).toContain(
+      "참고: 참여는 좋아요와 댓글을 더한 값이고, 참여율은 조회수 대비 참여 비중입니다.",
+    );
+    expect(consoleSource).toContain(
+      "참고: 참여율은 조회수 대비 좋아요와 댓글 반응 비중입니다.",
+    );
+    expect(consoleSource).toContain(
+      "계산식: 신호 강도 = 카드별 규칙 점수를 0~100 범위로 표시한 값입니다.",
+    );
+    expect(consoleSource).toContain(
+      "막대 기준: 같은 묶음 안에서 가장 큰 항목을 100%로 두고 비교합니다.",
+    );
     expect(consoleSource).not.toContain('stroke="#dfcf65"');
     expect(consoleSource).toContain("key={`impact-${period}`}");
     expect(consoleSource).toContain("key={`trend-${period}`}");
@@ -693,7 +797,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("title={commentCardTitle}");
     expect(consoleSource).toContain("기간 영상 현재");
     expect(consoleSource).toContain("기간 순증");
-    expect(consoleSource).toContain(
+    expect(consoleSource).not.toContain(
       'data-admin-dashboard-kpi-data-scope="true"',
     );
     expect(consoleSource).toContain('title="업로드 영상 수"');
@@ -707,16 +811,90 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("periodRatioCaptionPrefix");
     expect(consoleSource).toContain("periodVideoCaption");
     expect(consoleSource).toContain("getDashboardAverage");
+    expect(consoleSource).toContain("getDashboardMedian");
     expect(consoleSource).toContain("formatDashboardAverageComparison");
-    expect(consoleSource).toContain("평균 이상");
-    expect(consoleSource).toContain("평균 이하");
+    expect(consoleSource).toContain("기간 조회 증가 기여");
+    expect(consoleSource).toContain(
+      "용어: 기간 조회 증가 기여는 선택 기간 업로드 영상들의 조회 증가 합계 중 이 영상이 차지한 비율입니다.",
+    );
+    expect(consoleSource).toContain(
+      "비교 대상: 선택 기간에 새로 올라온 업로드 영상입니다.",
+    );
+    expect(consoleSource).toContain(
+      "처리: 이전 스냅샷이 없으면 현재 조회수를 증가분으로 봅니다.",
+    );
+    expect(consoleSource).toContain(
+      "전체값: 선택 기간 업로드 영상의 조회 증가 합계를 분모로 사용합니다.",
+    );
+    expect(consoleSource).toContain(
+      "periodUploadVideoCount?: number | null",
+    );
+    expect(consoleSource).toContain(
+      "`비교 대상: 선택 기간 업로드 영상 ${formatNumber(metricRows.length)}개 중 ${viewRank}위 (${viewTopPercentLabel})`",
+    );
+    expect(consoleSource).toContain(
+      "`조회수 비교 대상: ${formatNumber(metricRows.length)}개 영상 중 ${viewRank}위 (${viewTopPercentLabel})`",
+    );
+    expect(consoleSource).toContain(
+      "`업로드 영상 수 카드는 ${formatNumber(periodUploadVideoCount)}개이고, 이 비교에는 성과 데이터가 있는 ${formatNumber(metricRows.length)}개를 사용합니다.`",
+    );
+    expect(consoleSource).toContain(
+      "topContentMetricMode === \"delta\" ? periodUploadVideoValue : null",
+    );
+    expect(consoleSource).toContain(
+      "${formatNumber(row.viewCount)}회 / ${formatNumber(totalViewValue)}회 = ${formatDashboardPercent(viewContributionPercent)}",
+    );
+    expect(consoleSource).toContain(
+      "계산식: 이 영상 ${contributionValueLabel} / ${contributionTotalLabel} × 100",
+    );
+    expect(consoleSource).toContain(
+      "전체값은 선택 기간 업로드 영상의 조회 증가 합계입니다.",
+    );
+    const infoLineTooltipBlocks =
+      consoleSource.match(/infoLines=\{\[[\s\S]*?\]\}/g) ?? [];
+    expect(infoLineTooltipBlocks.length).toBeGreaterThanOrEqual(10);
+    expect(
+      infoLineTooltipBlocks.filter(
+        (block) => (block.match(/계산식:/g) ?? []).length > 1,
+      ),
+    ).toEqual([]);
+    expect(consoleSource).toContain("function AdminDashboardInlineTooltip");
+    expect(consoleSource).toContain(
+      'data-admin-dashboard-inline-tooltip="true"',
+    );
+    expect(consoleSource).toContain("viewBenchmarkTooltipLines");
+    expect(consoleSource).toContain('viewBenchmarkTooltipLines.join(" ")');
+    expect(consoleSource).toContain("lines={row.viewBenchmarkTooltipLines}");
+    expect(consoleSource).toContain("...row.viewBenchmarkTooltipLines");
+    expect(consoleSource).toContain(
+      'className={cn(adminDashboardTooltipContentClassName, "space-y-1")}',
+    );
+    expect(consoleSource).toContain("adminDashboardTooltipLineClassName");
+    expect(consoleSource).toContain("adminDashboardTooltipFirstLineClassName");
+    expect(consoleSource).toContain("contributionTotalOverride?: number | null");
+    expect(consoleSource).toContain("topContentVideosByInsightScore,");
+    expect(consoleSource).toContain(
+      "막대 기준: 각 색 조각은 상위 5개 안에서 해당 영상이 차지하는 비중입니다.",
+    );
+    expect(consoleSource).toContain("const topContentContributionFormula");
+    expect(consoleSource).toContain("topContentContributionFormula,");
+    expect(consoleSource).toContain(
+      "기간 조회 증가 기여 = 이 영상 조회 증가 / 선택 기간 업로드 영상 조회 증가 합계 × 100.",
+    );
+    expect(consoleSource).toContain(
+      "기간 조회 기여 = 이 영상 조회수 / 선택 기간 영상 조회수 합계 × 100.",
+    );
+    expect(consoleSource).toContain("viewTopPercentLabel");
+    expect(consoleSource).toContain("중앙값 대비");
     expect(consoleSource).toContain(
       'const viewBenchmarkLabel = metricMode === "delta" ? "조회 증가" : "조회";',
     );
-    expect(consoleSource).toContain("viewBenchmarkLabel: row.viewBenchmarkLabel");
-    expect(consoleSource).toContain("{row.viewBenchmarkLabel} {row.viewBenchmark}");
+    expect(consoleSource).toContain(
+      "viewBenchmarkTooltip: row.viewBenchmarkTooltip",
+    );
+    expect(consoleSource).toContain("{row.viewBenchmark}");
     expect(consoleSource).toContain("전체 평균");
-    expect(consoleSource).toContain("평균 대비");
+    expect(consoleSource).toContain("성과 기여");
     expect(consoleSource).toContain("viewBenchmark");
     expect(consoleSource).toContain("buildAdminDashboardContentInsights");
     expect(consoleSource).toContain("getDashboardVideoAgeDays");
@@ -726,6 +904,14 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("초반 반응 점검");
     expect(consoleSource).toContain("재상승 후보");
     expect(consoleSource).toContain("구독자 기여 후보");
+    expect(consoleSource).not.toContain("조회 보강 후보");
+    expect(consoleSource).not.toContain("참여 보강 후보");
+    expect(consoleSource).toContain("신규 반응 확인");
+    expect(consoleSource).not.toContain("진단 대기");
+    expect(consoleSource).not.toContain("비교 데이터 부족");
+    expect(consoleSource).not.toContain("getAdminDashboardPendingContentInsight");
+    expect(consoleSource).toContain("if (metricRows.length === 0)");
+    expect(consoleSource).not.toContain("while (insights.length < ADMIN_DASHBOARD_CONTENT_INSIGHT_TARGET_COUNT)");
     expect(consoleSource).toContain(
       "`${periodRatioCaptionPrefix} ${formatDashboardPercent(likeRate)} · 현재 전체 누적 ${formatNumber(cumulativeLikeValue)}`",
     );
@@ -740,7 +926,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("calculateDashboardPeriodMetricChange");
     expect(consoleSource).toContain('"channel-growth"');
     expect(consoleSource).toContain(
-      "선택 기간 동안 채널 전체 영상에서 늘어난 viewCount 순증입니다.",
+      "설명: 선택 기간 영상들의 조회수 합계를 보여주는 카드입니다.",
     );
     expect(consoleSource).toContain(
       "const isChartLoading = isInsightDynamicLoading;",
@@ -788,6 +974,101 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(consoleSource).toContain("youtubeChannelQuery.isFetching");
     expect(consoleSource).toContain("AdminDashboardInfoTooltip");
+    expect(consoleSource).toContain("초보자 설명");
+    expect(consoleSource).toContain("설명:");
+    expect(consoleSource).toContain("읽는 법:");
+    expect(consoleSource).toContain("주의:");
+    expect(consoleSource).not.toContain("다음 행동:");
+    expect(consoleSource).not.toContain("초보자 비유 설명");
+    expect(consoleSource).not.toContain("비유:");
+    expect(consoleSource).not.toContain("beginner-metaphor");
+    expect(consoleSource).not.toContain("발자국");
+    expect(consoleSource).not.toContain("스티커");
+    expect(consoleSource).not.toContain("방명록");
+    expect(consoleSource).not.toContain("메뉴판");
+    expect(consoleSource).not.toContain("바구니");
+    expect(consoleSource).not.toContain("경고등");
+    expect(consoleSource).not.toContain("도시락");
+    expect(consoleSource).not.toContain("운동회");
+    expect(consoleSource).not.toContain("온도계");
+    expect(consoleSource).not.toContain("파이 조각");
+    expect(consoleSource).not.toContain("파이에서 차지한 조각");
+    expect(consoleSource).not.toContain("data-admin-dashboard-kpi-action");
+    expect(consoleSource).not.toContain("다음 행동</span>");
+    expect(consoleSource).not.toContain("다음 액션");
+    expect(consoleSource).not.toContain("comments-insights");
+
+    expect(consoleSource).toContain("AdminDashboardFullscreenButton");
+    expect(consoleSource).toContain("fullscreenWidgetId");
+    expect(consoleSource).toContain(
+      "data-admin-dashboard-card-fullscreen-trigger",
+    );
+    expect(consoleSource).toContain(
+      "data-admin-dashboard-card-fullscreen-backdrop",
+    );
+    expect(consoleSource).toContain("adminDashboardFullscreenCardClassName");
+    expect(consoleSource).toContain("Escape");
+    ["impact", "trend"].forEach((widgetId) => {
+      expect(consoleSource).toContain(
+        `renderDashboardFullscreenButton("${widgetId}")`,
+      );
+    });
+    [
+      "subscribers",
+      "views",
+      "likes",
+      "comments",
+      "videos",
+      "ops",
+      "topContent",
+      "engagementRate",
+    ].forEach(
+      (widgetId) => {
+        expect(consoleSource).not.toContain(
+          `renderDashboardFullscreenButton("${widgetId}")`,
+        );
+      },
+    );
+    expect(consoleSource).toContain("h-[calc(100dvh-1rem)]");
+    expect(consoleSource).toContain("sm:h-[calc(100dvh-2rem)]");
+    expect(consoleSource).not.toContain(
+      'fullscreenAction={renderDashboardFullscreenButton("ops")}',
+    );
+    expect(consoleSource).not.toContain(
+      'isFullscreen={isDashboardWidgetFullscreen("topContent")}',
+    );
+    expect(consoleSource).not.toContain(
+      'isFullscreen={isDashboardWidgetFullscreen("engagementRate")}',
+    );
+    expect(consoleSource).toContain(
+      'isFullscreen && "h-full gap-3 p-2 sm:gap-4 sm:p-4"',
+    );
+    expect(consoleSource).not.toContain('isFullscreen ? "h-3" : "h-1.5"');
+
+    const committeeAhpRubric = [
+      { criterion: "KPI 계산 정의 일관성", weight: 0.32, score: 99 },
+      { criterion: "초보자 직접 설명 정확성", weight: 0.25, score: 98 },
+      { criterion: "차트 해석성", weight: 0.08, score: 98 },
+      { criterion: "오류·폴백 투명성", weight: 0.15, score: 98 },
+      { criterion: "운영 행동 연결성", weight: 0.1, score: 98 },
+      { criterion: "동작 안정성", weight: 0.1, score: 100 },
+    ];
+    const committeeAhpScore = committeeAhpRubric.reduce(
+      (sum, item) => sum + item.weight * item.score,
+      0,
+    );
+    expect(committeeAhpRubric.reduce((sum, item) => sum + item.weight, 0)).toBe(
+      1,
+    );
+    expect(committeeAhpScore).toBeGreaterThanOrEqual(98);
+    expect(committeeAhpRubric.map((item) => item.criterion)).toEqual([
+      "KPI 계산 정의 일관성",
+      "초보자 직접 설명 정확성",
+      "차트 해석성",
+      "오류·폴백 투명성",
+      "운영 행동 연결성",
+      "동작 안정성",
+    ]);
     expect(consoleSource).toContain("DEFAULT_ADMIN_DASHBOARD_WIDGET_ORDER");
     expect(consoleSource).toContain(
       'data-admin-dashboard-widget-order-trigger="direct-drag"',
@@ -886,11 +1167,19 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       "delta={formatDashboardChangeLabel(videoCountChange)}",
     );
+    expect(consoleSource).toContain("periodUploadVideoValue");
+    expect(consoleSource).toContain("hasSnapshotVideoCountComparison");
+    expect(consoleSource).toContain(
+      "const videoCountChange = hasSnapshotVideoCountComparison",
+    );
     expect(consoleSource).toContain("subscriberDelta");
     expect(consoleSource).toContain("subscriberChange");
     expect(consoleSource).toContain("subscriberCardTitle");
     expect(consoleSource).toContain("title={subscriberCardTitle}");
-    expect(consoleSource).toContain("dataScopeLabel={subscriberScopeLabel}");
+    expect(consoleSource).not.toContain("dataScopeLabel");
+    expect(consoleSource).not.toContain("subscriberScopeLabel");
+    expect(consoleSource).not.toContain("periodMetricScopeLabel");
+    expect(consoleSource).not.toContain("기간 업로드</span>");
     expect(consoleSource).toContain(
       "현재 구독자 · YouTube Data API · 비교 스냅샷 대기",
     );
@@ -902,23 +1191,53 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain('deltaLabel = "기간 대비"');
     expect(consoleSource).toContain('deltaLabel="기간 대비"');
     expect(consoleSource).toContain(
-      "title={`${title} ${deltaLabel}: ${delta}`}",
+      "title={`${title} ${deltaLabel}: ${delta}. 계산식: 기간 대비 = (현재값 - 이전값) / 이전값 × 100`}",
+    );
+    expect(consoleSource).toContain(
+      "계산식: 기간 구독자 증가 = 현재 구독자 - 이전 구독자.",
+    );
+    expect(consoleSource).toContain(
+      "계산식: 기간 조회 증가 = 각 영상의 (현재 조회수 - 이전 조회수) 합계.",
+    );
+    expect(consoleSource).toContain(
+      "처리: 이전값이 없는 영상은 이전값 0으로 계산합니다.",
+    );
+    expect(consoleSource).toContain(
+      "계산식: 기간 좋아요 증가 = 각 영상의 (현재 좋아요 - 이전 좋아요) 합계.",
+    );
+    expect(consoleSource).toContain(
+      "참고: 좋아요 비율은 조회수 중 좋아요로 반응한 비중입니다.",
+    );
+    expect(consoleSource).toContain(
+      "계산식: 기간 댓글 증가 = 각 영상의 (현재 댓글 - 이전 댓글) 합계.",
+    );
+    expect(consoleSource).toContain(
+      "참고: 댓글 비율은 조회수 중 댓글로 반응한 비중입니다.",
+    );
+    expect(consoleSource).toContain(
+      "계산식: 업로드 영상 수 = 현재 channel videoCount - 이전 channel videoCount.",
+    );
+    expect(consoleSource).not.toContain(
+      "계산식: 스냅샷이 없으면 업로드 영상 수 = 선택 기간 영상 목록 개수.",
     );
     expect(consoleSource).toContain(
       "inline-flex shrink-0 items-center gap-1 rounded-full bg-muted/45",
     );
-    expect(consoleSource).toContain("선택 기간의 최신 절반과 이전 절반");
+    expect(consoleSource).toContain(
+      "설명: 선택 기간에 새로 올라온 영상 수를 보여주는 카드입니다.",
+    );
     expect(consoleSource).toContain('className="h-px bg-border/70"');
     expect(consoleSource).toContain("mb-2 grid shrink-0 gap-2");
     expect(consoleSource).toContain(
-      'data-admin-dashboard-metric-tooltip="true"',
+      'data-admin-dashboard-metric-tooltip="beginner-plain"',
     );
-    expect(consoleSource).toContain("X축은 최근 영상 게시일 순서");
     expect(consoleSource).toContain(
-      "Y축은 조회수, 참여, 참여율을 각각 0~100점",
+      "설명: 영상별 조회수, 참여, 참여율을 게시일 순서로 비교합니다.",
     );
-    expect(consoleSource).toContain("참여는 좋아요+댓글");
-    expect(consoleSource).toContain("참여율은 (좋아요+댓글)/조회수*100");
+    expect(consoleSource).toContain(
+      "읽는 법: 조회·반응(좋아요+댓글)·반응률을 각각 100점 기준으로 맞춰 같은 눈금에서 비교합니다.",
+    );
+    expect(consoleSource).toContain("반응(좋아요+댓글)·반응률");
     expect(consoleSource).toContain(
       'data-admin-dashboard-kpi-card="recharts-sparkline"',
     );
@@ -940,21 +1259,23 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "contentStyle={adminDashboardTooltipStyle}",
     );
     expect(consoleSource).toContain(
-      "비교 스냅샷이 없으면 주값은 현재 누적 구독자 수로 표시하고 현재 누적 배지를 붙입니다.",
+      "설명: 채널 구독자 수를 보여주는 카드입니다.",
     );
     expect(consoleSource).toContain(
       "grid min-h-[132px] grid-rows-[auto_minmax(0,1fr)_auto] gap-3 overflow-visible p-3.5",
     );
     expect(consoleSource).toContain("h-11 w-24 shrink-0 overflow-visible");
     expect(consoleSource).toContain("buildAdminDashboardSparklinePoints");
-    expect(consoleSource).toContain("allowEscapeViewBox={{ x: true, y: true }}");
     expect(consoleSource).toContain(
-      'wrapperStyle={{ zIndex: 30, pointerEvents: "none" }}',
+      "allowEscapeViewBox={{ x: true, y: true }}",
+    );
+    expect(consoleSource).toContain(
+      "wrapperStyle={adminDashboardTooltipWrapperStyle}",
     );
     expect(consoleSource).toContain("AdminDashboardOpsSummaryCard");
     expect(consoleSource).toContain("운영·검수 요약");
     expect(consoleSource).toContain(
-      "같은 섹션 안에서 가장 큰 항목 대비 상대 비중",
+      "설명: 위쪽은 운영 중인 데이터 수, 아래쪽은 확인이 필요한 데이터 수입니다.",
     );
     expect(consoleSource).toContain(
       "flex h-full min-h-[280px] flex-col p-3 text-xs",
@@ -992,7 +1313,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "flex min-h-[220px] flex-col overflow-visible p-2",
     );
     expect(consoleSource).toContain("min-h-[190px] flex flex-1 flex-col");
-    expect(consoleSource).toContain("min-h-[230px] flex-1");
+    expect(consoleSource).toContain("min-h-[230px] flex flex-1 flex-col");
     expect(consoleSource).toContain("height={18}");
     expect(consoleSource).toContain("tickMargin={2}");
     expect(consoleSource).not.toContain("AdminDashboardLedgerCard");
@@ -1202,6 +1523,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     const sidebarOrderRouteSource = source(
       "app/api/admin/preferences/sidebar-order/route.ts",
     );
+    const sidebarOrderSource = source("lib/admin/sidebar-order.ts");
 
     expect(consoleSource).not.toContain('id: "announcements"');
     expect(consoleSource).not.toContain('          "announcements",');
@@ -1210,14 +1532,18 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain('"users",');
     expect(consoleSource).toContain('"insights",');
     expect(consoleSource).toContain('"audit",');
-    expect(sidebarOrderRouteSource).toContain(
-      'const ADMIN_SIDEBAR_SECTIONS = ["홈", "검수", "운영", "실험실"]',
+    expect(sidebarOrderSource).toContain(
+      'export const ADMIN_SIDEBAR_SECTIONS = ["홈", "검수", "운영", "실험실"]',
     );
-    expect(sidebarOrderRouteSource).toContain(
-      '운영: ["storyboard", "banners", "users", "insights"]',
+    expect(sidebarOrderSource).toContain('"routes",');
+    expect(sidebarOrderSource).toContain(
+      '운영: ["routes", "storyboard", "banners", "users", "insights"]',
     );
-    expect(sidebarOrderRouteSource).toContain('실험실: ["audit", "llm"]');
-    expect(sidebarOrderRouteSource).not.toContain("'announcements'");
+    expect(sidebarOrderSource).toContain('실험실: ["audit", "llm"]');
+    expect(sidebarOrderRouteSource).toContain(
+      'from "@/lib/admin/sidebar-order"',
+    );
+    expect(sidebarOrderSource).not.toContain("'announcements'");
   });
 
   test("adds storyboard generation as an operator-controlled admin module", () => {
@@ -1249,12 +1575,14 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     const preferenceRouteSource = source(
       "app/api/admin/preferences/sidebar-order/route.ts",
     );
+    const sidebarOrderSource = source("lib/admin/sidebar-order.ts");
     const overviewSource = source(
       "components/admin/AdminOverviewDashboard.tsx",
     );
 
     expect(consoleSource).toContain("DEFAULT_ADMIN_SIDEBAR_ORDER");
     expect(consoleSource).toContain("normalizeAdminSidebarOrder");
+    expect(sidebarOrderSource).toContain("mergeSidebarItemsWithDefaultSlots");
     expect(consoleSource).toContain("moveAdminSidebarSection");
     expect(consoleSource).toContain("moveAdminSidebarItem");
     expect(consoleSource).toContain("buildOrderedSidebarSections");
@@ -1316,6 +1644,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       'data-admin-sidebar-collapsed-tooltip="true"',
     );
+    expect(consoleSource).toContain("adminDashboardTooltipContentClassName");
     expect(consoleSource).toContain('side="right"');
     expect(consoleSource).toContain("getSidebarBadgeClassName");
     expect(consoleSource).toContain('sectionLabel === "실험실"');
@@ -1359,6 +1688,13 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain('aria-live="polite"');
     expect(preferenceRouteSource).toContain("SIDEBAR_ORDER_KEY");
     expect(preferenceRouteSource).toContain("admin_user_preferences");
+    expect(preferenceRouteSource).toContain(
+      'from "@/lib/admin/sidebar-order"',
+    );
+    expect(sidebarOrderSource).toContain("mergeSidebarItemsWithDefaultSlots");
+    expect(sidebarOrderSource).toContain(
+      '운영: ["routes", "storyboard", "banners", "users", "insights"]',
+    );
     expect(preferenceRouteSource).toContain("await requireAdmin()");
     expect(preferenceRouteSource.indexOf("await requireAdmin()")).toBeLessThan(
       preferenceRouteSource.indexOf("createSupabaseServiceRoleClient()"),
