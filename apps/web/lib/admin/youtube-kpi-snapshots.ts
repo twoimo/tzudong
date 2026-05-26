@@ -109,10 +109,11 @@ async function fetchComparisonBucket(
 async function fetchVideoSnapshotRows(
   bucketStartedAt: string,
   period: InsightTreemapPeriod,
+  { filterByPublishedPeriod = true }: { filterByPublishedPeriod?: boolean } = {},
 ): Promise<VideoSnapshotRow[]> {
   const supabase = createSupabaseServiceRoleClient();
   const rows: VideoSnapshotRow[] = [];
-  const cutoffIso = getPeriodCutoffIso(period);
+  const cutoffIso = filterByPublishedPeriod ? getPeriodCutoffIso(period) : null;
   let page = 0;
 
   while (true) {
@@ -188,11 +189,12 @@ function mapSnapshotRowToVideo(
 
 export async function getYouTubeKpiSnapshotData(
   period: InsightTreemapPeriod,
+  options: { filterByPublishedPeriod?: boolean } = {},
 ): Promise<InsightTreemapResponse | null> {
   const latestBucket = await fetchLatestBucket();
   if (!latestBucket) return null;
 
-  const rows = await fetchVideoSnapshotRows(latestBucket, period);
+  const rows = await fetchVideoSnapshotRows(latestBucket, period, options);
   if (rows.length === 0) return null;
 
   const comparisonBucket = await fetchComparisonBucket(latestBucket, period);
@@ -220,6 +222,14 @@ export type YouTubeChannelKpiSnapshot = {
   videoCount: number | null;
   hiddenSubscriberCount: boolean;
   fetchedAt: string;
+  previousSubscriberCount?: number | null;
+  previousViewCount?: number | null;
+  previousVideoCount?: number | null;
+  previousBucketStartedAt?: string | null;
+  subscriberDelta?: number | null;
+  viewDelta?: number | null;
+  videoDelta?: number | null;
+  comparisonFetchedAt?: string | null;
 };
 
 type ChannelSnapshotRow = {
@@ -230,15 +240,19 @@ type ChannelSnapshotRow = {
   view_count: number | string | null;
   video_count: number | string | null;
   hidden_subscriber_count: boolean | null;
+  previous_bucket_started_at?: string | null;
+  subscriber_delta?: number | string | null;
+  view_delta?: number | string | null;
+  video_delta?: number | string | null;
   bucket_started_at: string;
   fetched_at: string | null;
 };
 
-export async function getLatestYouTubeChannelSnapshot(): Promise<YouTubeChannelKpiSnapshot | null> {
+async function fetchLatestChannelSnapshotRow(): Promise<ChannelSnapshotRow | null> {
   const supabase = createSupabaseServiceRoleClient();
   const { data, error } = await supabase
     .from('youtube_channel_kpi_snapshots')
-    .select('channel_id,channel_title,channel_handle,subscriber_count,view_count,video_count,hidden_subscriber_count,bucket_started_at,fetched_at')
+    .select('channel_id,channel_title,channel_handle,subscriber_count,view_count,video_count,hidden_subscriber_count,previous_bucket_started_at,subscriber_delta,view_delta,video_delta,bucket_started_at,fetched_at')
     .order('bucket_started_at', { ascending: false })
     .limit(1)
     .maybeSingle<ChannelSnapshotRow>();
@@ -248,16 +262,88 @@ export async function getLatestYouTubeChannelSnapshot(): Promise<YouTubeChannelK
     return null;
   }
 
-  if (!data) return null;
+  return data ?? null;
+}
+
+async function fetchComparisonChannelSnapshotRow(
+  latestBucket: string,
+  period: InsightTreemapPeriod,
+): Promise<ChannelSnapshotRow | null> {
+  const durationMs = getPeriodDurationMs(period);
+  if (!durationMs) return null;
+
+  const latestMs = new Date(latestBucket).getTime();
+  if (!Number.isFinite(latestMs)) return null;
+
+  const targetIso = new Date(latestMs - durationMs).toISOString();
+  const supabase = createSupabaseServiceRoleClient();
+  const { data, error } = await supabase
+    .from('youtube_channel_kpi_snapshots')
+    .select('channel_id,channel_title,channel_handle,subscriber_count,view_count,video_count,hidden_subscriber_count,previous_bucket_started_at,subscriber_delta,view_delta,video_delta,bucket_started_at,fetched_at')
+    .lte('bucket_started_at', targetIso)
+    .order('bucket_started_at', { ascending: false })
+    .limit(1)
+    .maybeSingle<ChannelSnapshotRow>();
+
+  if (error) {
+    console.warn('[youtube-kpi-snapshots] comparison channel snapshot unavailable:', error.message);
+    return null;
+  }
+
+  return data ?? null;
+}
+
+function mapChannelSnapshotRow(
+  data: ChannelSnapshotRow,
+  previous?: ChannelSnapshotRow | null,
+): YouTubeChannelKpiSnapshot {
+  const hiddenSubscriberCount = data.hidden_subscriber_count === true;
+  const previousHiddenSubscriberCount = previous?.hidden_subscriber_count === true;
 
   return {
     channelId: data.channel_id,
     title: data.channel_title,
     handle: data.channel_handle,
-    subscriberCount: data.hidden_subscriber_count ? null : toNonNegativeNumber(data.subscriber_count),
+    subscriberCount: hiddenSubscriberCount ? null : toNonNegativeNumber(data.subscriber_count),
     viewCount: toNonNegativeNumber(data.view_count),
     videoCount: toNonNegativeNumber(data.video_count),
-    hiddenSubscriberCount: data.hidden_subscriber_count === true,
+    hiddenSubscriberCount,
     fetchedAt: data.fetched_at ?? data.bucket_started_at,
+    previousSubscriberCount: previous
+      ? previousHiddenSubscriberCount
+        ? null
+        : toNonNegativeNumber(previous.subscriber_count)
+      : null,
+    previousViewCount: previous ? toNonNegativeNumber(previous.view_count) : null,
+    previousVideoCount: previous ? toNonNegativeNumber(previous.video_count) : null,
+    previousBucketStartedAt:
+      data.previous_bucket_started_at ??
+      (previous ? previous.bucket_started_at : null),
+    subscriberDelta:
+      typeof data.subscriber_delta === 'number' ||
+      (typeof data.subscriber_delta === 'string' && data.subscriber_delta.trim())
+        ? Number(data.subscriber_delta)
+        : null,
+    viewDelta:
+      typeof data.view_delta === 'number' ||
+      (typeof data.view_delta === 'string' && data.view_delta.trim())
+        ? Number(data.view_delta)
+        : null,
+    videoDelta:
+      typeof data.video_delta === 'number' ||
+      (typeof data.video_delta === 'string' && data.video_delta.trim())
+        ? Number(data.video_delta)
+        : null,
+    comparisonFetchedAt: previous ? previous.fetched_at ?? previous.bucket_started_at : null,
   };
+}
+
+export async function getLatestYouTubeChannelSnapshot(
+  period: InsightTreemapPeriod = 'ALL',
+): Promise<YouTubeChannelKpiSnapshot | null> {
+  const latest = await fetchLatestChannelSnapshotRow();
+  if (!latest) return null;
+
+  const previous = await fetchComparisonChannelSnapshotRow(latest.bucket_started_at, period);
+  return mapChannelSnapshotRow(latest, previous);
 }
