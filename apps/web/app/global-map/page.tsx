@@ -25,7 +25,7 @@ import { toast } from "@/lib/no-toast";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { useQuery } from "@tanstack/react-query";
 import { mergeRestaurants, RESTAURANT_MERGE_SELECT } from "@/hooks/use-restaurants";
-import { MapSkeleton } from "@/components/skeletons/MapSkeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 import { debugLog as logDebug } from "@/lib/debug-log";
 import { restaurantMatchesOverseasCountry } from "@/lib/overseas-region-matching";
 
@@ -33,7 +33,7 @@ import { restaurantMatchesOverseasCountry } from "@/lib/overseas-region-matching
 const RestaurantSearch = lazy(() => import("@/components/search/RestaurantSearch"));
 const MapView = dynamic(() => import("@/components/map/MapView"), {
     ssr: false,
-    loading: () => <MapSkeleton variant="fullscreen" />,
+    loading: () => null,
 });
 const AdminRestaurantModal = dynamic(
     () => import("@/components/admin/AdminRestaurantModal").then((mod) => ({ default: mod.AdminRestaurantModal })),
@@ -54,6 +54,18 @@ const GLOBAL_COUNTRIES = [
 ] as const;
 
 type GlobalCountry = typeof GLOBAL_COUNTRIES[number];
+
+function GlobalMapSearchSkeleton() {
+    return (
+        <div
+            className="w-full sm:col-span-2 lg:col-span-1"
+            aria-hidden="true"
+            data-global-map-search-skeleton="true"
+        >
+            <Skeleton className="h-10 w-full rounded-md" />
+        </div>
+    );
+}
 
 // 그리드 지역 설정 (글로벌 국가)
 const GRID_COUNTRIES: GlobalCountry[] = ["미국", "일본", "태국", "인도네시아"];
@@ -438,7 +450,7 @@ export default function GlobalMapPage() {
                     />
 
                     {/* 맛집 검색 */}
-                    <Suspense fallback={<div className="w-full h-10 bg-muted animate-pulse rounded sm:col-span-2 lg:col-span-1" />}>
+                    <Suspense fallback={<GlobalMapSearchSkeleton />}>
                         <RestaurantSearch
                             onRestaurantSelect={handleRestaurantSelect}
                             onRestaurantSearch={handleRestaurantSearch}
@@ -465,7 +477,7 @@ export default function GlobalMapPage() {
                 <div className="grid grid-cols-2 grid-rows-2 h-full w-full gap-1 p-1">
                     {GRID_COUNTRIES.map((country) => (
                         <div key={country} className="relative min-h-0 overflow-hidden rounded-md border border-border">
-                            <Suspense fallback={<div className="flex items-center justify-center h-full">지도 로딩 중...</div>}>
+                            <Suspense fallback={null}>
                                 <MapView
                                     filters={filters}
                                     selectedCountry={country}
@@ -490,9 +502,7 @@ export default function GlobalMapPage() {
                 </div>
             ) : (
                 // 단일 지도 모드
-                <Suspense fallback={
-                    <MapSkeleton variant="fullscreen" />
-                }>
+                <Suspense fallback={null}>
                     <PanelGroup direction="horizontal" className="w-full h-full">
                         <Panel id="map-panel" order={1} defaultSize={panelRestaurant && isPanelOpen ? 75 : 100} minSize={40} maxSize={100}>
                             <MapView
