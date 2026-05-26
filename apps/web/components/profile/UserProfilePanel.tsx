@@ -25,7 +25,7 @@ import {
 } from "@/hooks/useUserProfile";
 import { useLeaderboard, LeaderboardUser } from "@/hooks/useLeaderboard";
 import { cn } from "@/lib/utils";
-import { Skeleton } from "@/components/ui/skeleton";
+import { UserProfileProgressiveSkeleton, UserProfileTabSkeleton } from "@/components/profile/UserProfileProgressiveSkeleton";
 import { StampCard } from "@/components/stamp/StampCard";
 import { ReviewCard } from "@/components/reviews/ReviewCard";
 import { useAuth } from "@/contexts/AuthContext";
@@ -134,67 +134,6 @@ const ProfileSectionHeader = memo(function ProfileSectionHeader({ title, descrip
         </div>
     );
 });
-
-function UserProfileHeaderSkeleton({ onClose, showBackButton, onBack }: {
-    onClose?: () => void;
-    showBackButton: boolean;
-    onBack: () => void;
-}) {
-    return (
-        <div className="flex h-full flex-col bg-background" data-user-profile-panel-skeleton="true">
-            <div className="border-b border-border/70 bg-gradient-to-br from-background via-background to-muted/35 p-4">
-                <div className="flex items-center justify-between gap-3">
-                    <div className="flex min-w-0 items-center gap-3">
-                        <Skeleton className="h-12 w-12 shrink-0 rounded-full" />
-                        <div className="min-w-0 space-y-2">
-                            <Skeleton className="h-5 w-32 rounded-full" />
-                            <Skeleton className="h-3 w-44 rounded-full" />
-                        </div>
-                    </div>
-                    {showBackButton && onClose && (
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={onBack}
-                            className="h-10 w-10 shrink-0 rounded-full"
-                            aria-label="프로필 패널 닫기"
-                        >
-                            <X className="h-5 w-5" aria-hidden="true" />
-                        </Button>
-                    )}
-                </div>
-                <div className="mt-4 grid w-full grid-cols-3 gap-2">
-                    {[0, 1, 2].map((item) => (
-                        <div key={item} className="rounded-xl border border-border/60 bg-card/80 px-2.5 py-2.5">
-                            <Skeleton className="h-3 w-12 rounded-full" />
-                            <Skeleton className="mt-2 h-5 w-10 rounded-full" />
-                        </div>
-                    ))}
-                </div>
-            </div>
-            <UserProfileTabSkeleton label="프로필 활동 로딩 중" />
-        </div>
-    );
-}
-
-function UserProfileTabSkeleton({ label }: { label: string }) {
-    return (
-        <div
-            role="status"
-            aria-label={label}
-            className="space-y-3 p-4"
-            data-user-profile-tab-skeleton="true"
-        >
-            {[0, 1, 2].map((item) => (
-                <div key={item} className="rounded-xl border border-border bg-card/80 p-3 shadow-sm">
-                    <Skeleton className="h-4 w-2/3 rounded" />
-                    <Skeleton className="mt-2 h-3 w-full rounded" />
-                    <Skeleton className="mt-2 h-3 w-1/2 rounded" />
-                </div>
-            ))}
-        </div>
-    );
-}
 
 interface UserProfilePanelProps {
     userId: string;
@@ -405,9 +344,8 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
 
     if (profileLoading) {
         return (
-            <UserProfileHeaderSkeleton
-                onClose={onClose}
-                showBackButton={showBackButton}
+            <UserProfileProgressiveSkeleton
+                showCloseButton={showBackButton && Boolean(onClose)}
                 onBack={handleBack}
             />
         );
