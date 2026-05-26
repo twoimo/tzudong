@@ -48,6 +48,11 @@ function parseYouTubeCount(value) {
   return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
 }
 
+function parseNullableYouTubeCount(value) {
+  if (typeof value !== "string" && typeof value !== "number") return null;
+  return parseYouTubeCount(value);
+}
+
 function parseYouTubeDurationSeconds(duration) {
   if (!duration) return 0;
   const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
@@ -217,6 +222,42 @@ async function fetchVideoStats(apiKey, playlistVideos) {
   return rows;
 }
 
+
+async function fetchPreviousChannelSnapshot({
+  supabase,
+  channelId,
+  bucketStartedAt,
+}) {
+  const { data, error } = await supabase
+    .from("youtube_channel_kpi_snapshots")
+    .select(
+      "channel_id,subscriber_count,view_count,video_count,hidden_subscriber_count,bucket_started_at",
+    )
+    .eq("channel_id", channelId)
+    .lt("bucket_started_at", bucketStartedAt)
+    .order("bucket_started_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`previous-channel-snapshot:${error.message}`);
+  }
+
+  return data ?? null;
+}
+
+function getCountDelta(currentValue, previousValue) {
+  if (typeof currentValue !== "number" || !Number.isFinite(currentValue)) {
+    return null;
+  }
+
+  if (typeof previousValue !== "number" || !Number.isFinite(previousValue)) {
+    return null;
+  }
+
+  return currentValue - previousValue;
+}
+
 async function upsertSnapshots({
   supabase,
   channel,
@@ -224,16 +265,41 @@ async function upsertSnapshots({
   bucketStartedAt,
 }) {
   const statistics = channel.statistics ?? {};
+  const isSubscriberHidden = statistics.hiddenSubscriberCount === true;
+  const subscriberCount = isSubscriberHidden
+    ? null
+    : parseYouTubeCount(statistics.subscriberCount);
+  const viewCount = parseYouTubeCount(statistics.viewCount);
+  const videoCount = parseYouTubeCount(statistics.videoCount);
+  const previousChannelSnapshot = await fetchPreviousChannelSnapshot({
+    supabase,
+    channelId: channel.id,
+    bucketStartedAt,
+  });
+  const previousSubscriberCount = previousChannelSnapshot?.hidden_subscriber_count
+    ? null
+    : parseNullableYouTubeCount(previousChannelSnapshot?.subscriber_count);
+  const previousViewCount = parseNullableYouTubeCount(
+    previousChannelSnapshot?.view_count,
+  );
+  const previousVideoCount = parseNullableYouTubeCount(
+    previousChannelSnapshot?.video_count,
+  );
   const channelRow = {
     channel_id: channel.id,
     channel_title: channel.snippet?.title ?? null,
     channel_handle: channel.snippet?.customUrl ?? null,
-    subscriber_count: statistics.hiddenSubscriberCount
+    subscriber_count: subscriberCount,
+    view_count: viewCount,
+    video_count: videoCount,
+    hidden_subscriber_count: isSubscriberHidden,
+    previous_bucket_started_at:
+      previousChannelSnapshot?.bucket_started_at ?? null,
+    subscriber_delta: isSubscriberHidden
       ? null
-      : parseYouTubeCount(statistics.subscriberCount),
-    view_count: parseYouTubeCount(statistics.viewCount),
-    video_count: parseYouTubeCount(statistics.videoCount),
-    hidden_subscriber_count: statistics.hiddenSubscriberCount === true,
+      : getCountDelta(subscriberCount, previousSubscriberCount),
+    view_delta: getCountDelta(viewCount, previousViewCount),
+    video_delta: getCountDelta(videoCount, previousVideoCount),
     bucket_started_at: bucketStartedAt,
     fetched_at: new Date().toISOString(),
     source: "youtube-data-api",
@@ -268,7 +334,15 @@ async function upsertSnapshots({
     if (error) throw new Error(`video-snapshot-upsert:${error.message}`);
   }
 
-  return { channelRows: 1, videoRows: videoRows.length };
+  return {
+    channelRows: 1,
+    videoRows: videoRows.length,
+    previousChannelBucketStartedAt:
+      previousChannelSnapshot?.bucket_started_at ?? null,
+    subscriberDelta: channelRow.subscriber_delta,
+    viewDelta: channelRow.view_delta,
+    videoDelta: channelRow.video_delta,
+  };
 }
 
 async function main() {
