@@ -53,6 +53,10 @@ type ChannelSnapshotRow = {
   view_count: number | string | null;
   video_count: number | string | null;
   hidden_subscriber_count: boolean | null;
+  previous_bucket_started_at?: string | null;
+  subscriber_delta?: number | string | null;
+  view_delta?: number | string | null;
+  video_delta?: number | string | null;
   bucket_started_at: string;
   fetched_at: string | null;
 };
@@ -213,7 +217,7 @@ async function fetchLatestSnapshotStatus() {
     const { data, error } = await supabase
       .from("youtube_channel_kpi_snapshots")
       .select(
-        "channel_id,channel_title,subscriber_count,view_count,video_count,hidden_subscriber_count,bucket_started_at,fetched_at",
+        "channel_id,channel_title,subscriber_count,view_count,video_count,hidden_subscriber_count,previous_bucket_started_at,subscriber_delta,view_delta,video_delta,bucket_started_at,fetched_at",
       )
       .order("bucket_started_at", { ascending: false })
       .limit(1)
@@ -243,6 +247,12 @@ async function fetchLatestSnapshotStatus() {
         : toFiniteNumber(data.subscriber_count),
       viewCount: toFiniteNumber(data.view_count),
       videoCount: toFiniteNumber(data.video_count),
+      previousBucketStartedAt: data.previous_bucket_started_at ?? null,
+      subscriberDelta: data.hidden_subscriber_count
+        ? null
+        : toFiniteNumber(data.subscriber_delta),
+      viewDelta: toFiniteNumber(data.view_delta),
+      videoDelta: toFiniteNumber(data.video_delta),
       videoSnapshotCount: countError ? null : (count ?? 0),
       error: countError?.message ?? null,
     };
