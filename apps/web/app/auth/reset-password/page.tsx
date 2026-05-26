@@ -9,8 +9,8 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { Button } from '@/components/ui/button';
+import { ResetPasswordProgressiveSkeleton } from '@/components/auth/ResetPasswordProgressiveSkeleton';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/lib/no-toast';
@@ -143,19 +143,7 @@ export default function ResetPasswordPage() {
     };
 
     if (isCheckingSession) {
-        return (
-            <Dialog open={true}>
-                <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] sm:max-w-md max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-xl">
-                    <VisuallyHidden>
-                        <DialogTitle>세션 확인 중</DialogTitle>
-                    </VisuallyHidden>
-                    <div className="flex flex-col items-center justify-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
-                        <p className="text-muted-foreground text-sm sm:text-base">세션 확인 중...</p>
-                    </div>
-                </DialogContent>
-            </Dialog>
-        );
+        return <ResetPasswordProgressiveSkeleton />;
     }
 
     if (!isValidSession) {
