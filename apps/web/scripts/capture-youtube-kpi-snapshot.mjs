@@ -1,6 +1,6 @@
 #!/usr/bin/env node
+import { existsSync, readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
-import "dotenv/config";
 
 const YOUTUBE_CHANNELS_ENDPOINT =
   "https://www.googleapis.com/youtube/v3/channels";
@@ -15,6 +15,35 @@ const SUPABASE_BATCH_SIZE = 500;
 const YOUTUBE_FETCH_TIMEOUT_MS = 15_000;
 const YOUTUBE_FETCH_RETRY_COUNT = 2;
 const YOUTUBE_RETRY_BASE_DELAY_MS = 500;
+
+function loadLocalEnvFile(path) {
+  if (!existsSync(path)) return;
+
+  const text = readFileSync(path, "utf8");
+  for (const rawLine of text.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+
+    const separatorIndex = line.indexOf("=");
+    if (separatorIndex <= 0) continue;
+
+    const name = line.slice(0, separatorIndex).trim();
+    let value = line.slice(separatorIndex + 1).trim();
+    if (!name || process.env[name] !== undefined) continue;
+
+    if (
+      (value.startsWith("\"") && value.endsWith("\"")) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+
+    process.env[name] = value;
+  }
+}
+
+loadLocalEnvFile(".env.local");
+loadLocalEnvFile(".env");
 
 function pickEnv(...names) {
   for (const name of names) {

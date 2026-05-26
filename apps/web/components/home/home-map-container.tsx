@@ -4,7 +4,6 @@ import { Suspense, lazy, useState, useCallback, memo, useRef, useEffect, useMemo
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import type { Restaurant, Region } from '@/types/restaurant';
 import type { FilterState } from '@/components/filters/filter-state';
-import { MapSkeleton } from "@/components/skeletons/MapSkeleton";
 import { useDeviceType } from '@/hooks/useDeviceType';
 import { cn } from '@/lib/utils';
 import { OVERSEAS_REGIONS } from "@/constants/overseas-regions";
@@ -1243,7 +1242,7 @@ function HomeMapContainerComponent({
             style={desktopMapLayoutStyle}
         >
             {mapMode === 'domestic' ? (
-                <Suspense fallback={<MapSkeleton />}>
+                <Suspense fallback={null}>
                     <NaverMapView
                         mapFocusZoom={mapFocusZoom} // [New] 줌 레벨 전달
                         filters={filters}
@@ -1269,7 +1268,7 @@ function HomeMapContainerComponent({
                     />
                 </Suspense>
             ) : (
-                <Suspense fallback={<MapSkeleton />}>
+                <Suspense fallback={null}>
                     <OverseasMap
                         mapFocusZoom={mapFocusZoom} // [New] 줌 레벨 전달
                         filters={filters}

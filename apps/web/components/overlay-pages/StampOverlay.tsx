@@ -109,6 +109,8 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
         enabled: !!user?.id,
     });
 
+    // 맛집 데이터
+    const { data: allMergedRestaurants = [], isLoading: isRestaurantsLoading, isError: isRestaurantsError } = useRestaurants({ enabled: true });
     const userVisitedIds = useMemo(() => new Set(userReviewData.map(r => r.restaurant_id)), [userReviewData]);
     const reviewedRestaurantCandidates = useMemo(() => {
         return userReviewData
@@ -122,6 +124,8 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
     }), [reviewedRestaurantCandidates, userVisitedIds]);
     const isUserStampsReady = !user?.id || isUserStampsFetched;
     const shouldWaitForStampState = !!user?.id && !isUserStampsFetched;
+    const shouldShowStampOverlaySkeleton =
+        isRestaurantsLoading || shouldWaitForStampState;
     const skeletonCardCount = singleColumnCards ? 8 : 16;
     const skeletonGridColumns = singleColumnCards
         ? "grid-cols-1 md:gap-3"
@@ -145,8 +149,6 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
         setShowStampGuide(userReviewData.length === 0);
     }, [isUserStampsLoading, user?.id, userReviewData.length]);
 
-    // 맛집 데이터
-    const { data: allMergedRestaurants = [], isLoading: isRestaurantsLoading, isError: isRestaurantsError } = useRestaurants({ enabled: true });
     const deferredSearchQuery = useDeferredValue(filters.searchQuery);
 
     const normalizedCategoriesByRestaurantId = useMemo(() => new Map(
@@ -449,13 +451,7 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
 
             {/* 그리드 */}
             <div className="flex-1 min-h-0 px-4 sm:px-6 pt-6 pb-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1.5rem)] md:pb-6 bg-background">
-                {isRestaurantsLoading ? (
-                    <StampGridSkeleton
-                        count={skeletonCardCount}
-                        showHeader={false}
-                        columns={skeletonGridColumns}
-                    />
-                ) : shouldWaitForStampState ? (
+                {shouldShowStampOverlaySkeleton ? (
                     <StampGridSkeleton
                         count={skeletonCardCount}
                         showHeader={false}
