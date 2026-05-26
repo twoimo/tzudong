@@ -3,21 +3,27 @@ import { memo } from "react";
 type MapSkeletonProps = {
     variant?: "embedded" | "fullscreen";
     message?: string;
+    decorative?: boolean;
 };
 
-function MapSkeletonComponent({ variant = "embedded", message = "지도 화면을 준비하고 있어요" }: MapSkeletonProps) {
+function MapSkeletonComponent({
+    variant = "embedded",
+    message = "지도 화면을 준비하고 있어요",
+    decorative = false,
+}: MapSkeletonProps) {
     const containerClassName = variant === "fullscreen"
         ? "fixed inset-0 z-50 h-[var(--full-height,100vh)] bg-background"
         : "relative h-full min-h-[320px] w-full overflow-hidden bg-background";
 
     return (
         <div
-            role="status"
-            aria-label={message}
-            aria-live="polite"
+            role={decorative ? undefined : "status"}
+            aria-label={decorative ? undefined : message}
+            aria-live={decorative ? undefined : "polite"}
+            aria-hidden={decorative ? true : undefined}
             className={containerClassName}
         >
-            <span className="sr-only">{message}</span>
+            {!decorative && <span className="sr-only">{message}</span>}
         </div>
     );
 }
