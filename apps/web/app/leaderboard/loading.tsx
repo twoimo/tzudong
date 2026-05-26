@@ -1,8 +1,10 @@
-import { LeaderboardSkeleton } from "@/components/ui/skeleton-loaders";
-
 /**
- * [PERF] 랭킹 페이지 로딩 UI - 스켈레톤으로 즉각적 페이지 전환
+ * 랭킹 라우트 로딩 경계.
+ *
+ * route-level Suspense에서는 별도 스켈레톤을 그리지 않습니다.
+ * `app/leaderboard/page.tsx`가 정적 헤더와 `LeaderboardSkeleton`을 한 번만
+ * 소유해 route fallback과 클라이언트 데이터 로딩이 겹치지 않게 합니다.
  */
 export default function LeaderboardLoading() {
-    return <LeaderboardSkeleton count={8} className="px-4" />;
+    return null;
 }
