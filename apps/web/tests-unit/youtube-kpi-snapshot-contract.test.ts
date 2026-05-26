@@ -30,6 +30,10 @@ describe("YouTube KPI snapshot collector contract", () => {
     expect(collector).toContain("YOUTUBE_FETCH_TIMEOUT_MS");
     expect(collector).toContain("YOUTUBE_FETCH_RETRY_COUNT");
     expect(collector).toContain('requireEnv("YOUTUBE_API_KEY")');
+    expect(collector).toContain("fetchPreviousChannelSnapshot");
+    expect(collector).toContain("previous_bucket_started_at");
+    expect(collector).toContain("subscriber_delta");
+    expect(collector).toContain("subscriberDelta");
     expect(collector).not.toContain("NEXT_PUBLIC_YOUTUBE_API_KEY_BYEON");
     expect(workflow).not.toContain("NEXT_PUBLIC_YOUTUBE_API_KEY");
   });
@@ -37,6 +41,9 @@ describe("YouTube KPI snapshot collector contract", () => {
   test("keeps snapshots service-role writable only", () => {
     const migration = readRepoFile(
       "supabase/migrations/20260525143908_create_youtube_kpi_snapshots.sql",
+    );
+    const growthMigration = readRepoFile(
+      "supabase/migrations/20260526083932_add_youtube_channel_growth_snapshot_deltas.sql",
     );
 
     expect(migration).toContain("public.youtube_channel_kpi_snapshots");
@@ -47,14 +54,20 @@ describe("YouTube KPI snapshot collector contract", () => {
     expect(migration).not.toContain(
       "grant select on table public.youtube_video_kpi_snapshots to anon",
     );
+    expect(growthMigration).toContain("subscriber_delta bigint");
+    expect(growthMigration).toContain("previous_bucket_started_at timestamptz");
+    expect(growthMigration).toContain(
+      "youtube_channel_kpi_snapshots_previous_bucket_idx",
+    );
+    expect(growthMigration).not.toContain("grant select on table");
   });
 
   test("admin KPI route can fall back from snapshots/live API to Supabase data for ALL", () => {
     const route = readRepoFile("app/api/admin/youtube-kpis/route.ts");
 
-    expect(route).toContain("getYouTubeKpiSnapshotData(period)");
+    expect(route).toContain("getYouTubeKpiSnapshotData(period, {");
     expect(route).toContain("getInsightTreemapData(period");
-    expect(route).toContain('filterByPeriod: period !== "ALL"');
+    expect(route).toContain('filterByPeriod: !isChannelGrowthScope && period !== "ALL"');
     expect(route).toContain("process.env.YOUTUBE_API_KEY || null");
     expect(route).toContain("YouTube KPI fallback data is unavailable");
   });
@@ -73,8 +86,12 @@ describe("YouTube KPI snapshot collector contract", () => {
     expect(route).toContain("max-age=20");
     expect(route).toContain("youtube-kpi-snapshot.yml");
     expect(route).toContain("youtube_channel_kpi_snapshots");
+    expect(route).toContain("subscriber_delta");
+    expect(route).toContain("previousBucketStartedAt");
     expect(dashboard).toContain("/api/admin/youtube-kpi-collection-logs");
     expect(dashboard).toContain("데이터 수집 로그");
+    expect(dashboard).toContain("구독자 증감");
+    expect(dashboard).toContain("formatSignedNumber(snapshot.subscriberDelta)");
     expect(dashboard).toContain("enabled: isCollectionLogsOpen");
     expect(dashboard).toContain(
       "data-admin-dashboard-kpi-collection-log-trigger",
