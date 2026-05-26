@@ -291,9 +291,13 @@ export async function GET(request: NextRequest) {
 
   const apiKey = getYouTubeApiKey();
   const period = parseTreemapPeriod(request.nextUrl.searchParams.get("period"));
+  const isChannelGrowthScope =
+    request.nextUrl.searchParams.get("scope") === "channel-growth";
 
   try {
-    const snapshotPayload = await getYouTubeKpiSnapshotData(period);
+    const snapshotPayload = await getYouTubeKpiSnapshotData(period, {
+      filterByPublishedPeriod: !isChannelGrowthScope,
+    });
     if (snapshotPayload) {
       return NextResponse.json(snapshotPayload, {
         headers: {
@@ -308,7 +312,7 @@ export async function GET(request: NextRequest) {
   if (!apiKey) {
     try {
       const fallbackPayload = await getInsightTreemapData(period, {
-        filterByPeriod: period !== "ALL",
+        filterByPeriod: !isChannelGrowthScope && period !== "ALL",
         metricMode: "views",
       });
 
@@ -331,7 +335,7 @@ export async function GET(request: NextRequest) {
     const playlistVideos = await fetchPlaylistVideos(
       apiKey,
       uploadsPlaylistId,
-      period,
+      isChannelGrowthScope ? "ALL" : period,
     );
     const videos = await fetchVideoRows(apiKey, playlistVideos);
     const payload: InsightTreemapResponse = {
@@ -352,7 +356,7 @@ export async function GET(request: NextRequest) {
 
     try {
       const fallbackPayload = await getInsightTreemapData(period, {
-        filterByPeriod: period !== "ALL",
+        filterByPeriod: !isChannelGrowthScope && period !== "ALL",
         metricMode: "views",
       });
 
