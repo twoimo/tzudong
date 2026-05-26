@@ -27,6 +27,8 @@ import {
   Image as ImageIcon,
   MessageSquareText,
   Info,
+  Maximize2,
+  Minimize2,
   Monitor,
   Moon,
   PanelLeftClose,
@@ -73,6 +75,17 @@ import {
 } from "@/components/ui/tooltip";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdBannersAdmin } from "@/hooks/use-ad-banners";
+import {
+  DEFAULT_ADMIN_DASHBOARD_WIDGET_ORDER,
+  isAdminDashboardWidgetId,
+  normalizeAdminDashboardWidgetOrder,
+  type AdminDashboardWidgetId,
+} from "@/lib/admin/dashboard-widget-order";
+import {
+  DEFAULT_ADMIN_SIDEBAR_ORDER,
+  normalizeAdminSidebarOrder,
+  type AdminSidebarOrderPreference,
+} from "@/lib/admin/sidebar-order";
 import { fetchSupabaseExactCount } from "@/lib/supabase-rest-client";
 import { cn } from "@/lib/utils";
 import type { DashboardSummaryResponse } from "@/types/dashboard";
@@ -327,22 +340,15 @@ const sidebarSections: SidebarSection[] = [
   },
 ];
 
-type AdminSidebarOrderPreference = {
-  sections: string[];
-  items: Record<string, AdminModuleId[]>;
-};
+function moveItemInArray<T>(items: T[], index: number, direction: -1 | 1): T[] {
+  const nextIndex = index + direction;
+  if (nextIndex < 0 || nextIndex >= items.length) return items;
 
-type AdminDashboardWidgetId =
-  | "subscribers"
-  | "views"
-  | "likes"
-  | "comments"
-  | "videos"
-  | "impact"
-  | "trend"
-  | "ops"
-  | "topContent"
-  | "engagementRate";
+  const nextItems = [...items];
+  const [item] = nextItems.splice(index, 1);
+  nextItems.splice(nextIndex, 0, item);
+  return nextItems;
+}
 
 type AdminDashboardTableWidgetId = Extract<
   AdminDashboardWidgetId,
@@ -365,19 +371,6 @@ type AdminDashboardCardReorderProps = {
   "aria-grabbed": boolean;
   "data-admin-dashboard-direct-reorder-card": AdminDashboardWidgetId;
 };
-
-const DEFAULT_ADMIN_DASHBOARD_WIDGET_ORDER: AdminDashboardWidgetId[] = [
-  "subscribers",
-  "views",
-  "likes",
-  "comments",
-  "videos",
-  "impact",
-  "trend",
-  "ops",
-  "topContent",
-  "engagementRate",
-];
 
 const ADMIN_DASHBOARD_WIDGET_LABELS: Record<AdminDashboardWidgetId, string> = {
   subscribers: "구독자",
@@ -436,26 +429,6 @@ const DEFAULT_ADMIN_DASHBOARD_TOP_CONTENT_SERIES_VISIBILITY: AdminDashboardSerie
     comments: true,
   };
 
-const adminDashboardWidgetIdSet = new Set<AdminDashboardWidgetId>(
-  DEFAULT_ADMIN_DASHBOARD_WIDGET_ORDER,
-);
-
-function normalizeAdminDashboardWidgetOrder(
-  value: unknown,
-): AdminDashboardWidgetId[] {
-  const preferredOrder = Array.isArray(value)
-    ? value.filter(
-        (item): item is AdminDashboardWidgetId =>
-          typeof item === "string" &&
-          adminDashboardWidgetIdSet.has(item as AdminDashboardWidgetId),
-      )
-    : [];
-
-  return Array.from(
-    new Set([...preferredOrder, ...DEFAULT_ADMIN_DASHBOARD_WIDGET_ORDER]),
-  );
-}
-
 function moveAdminDashboardWidget(
   order: AdminDashboardWidgetId[],
   widgetId: AdminDashboardWidgetId,
@@ -464,86 +437,6 @@ function moveAdminDashboardWidget(
   const normalized = normalizeAdminDashboardWidgetOrder(order);
   const index = normalized.indexOf(widgetId);
   return index < 0 ? normalized : moveItemInArray(normalized, index, direction);
-}
-
-const DEFAULT_ADMIN_SIDEBAR_ORDER: AdminSidebarOrderPreference = {
-  sections: sidebarSections.map((section) => section.label),
-  items: Object.fromEntries(
-    sidebarSections.map((section) => [
-      section.label,
-      section.items.map((item) => item.id),
-    ]),
-  ),
-};
-
-const sidebarSectionLabelSet = new Set(
-  sidebarSections.map((section) => section.label),
-);
-const sidebarItemIdSet = new Set(
-  sidebarSections.flatMap((section) => section.items.map((item) => item.id)),
-);
-
-function normalizeAdminSidebarOrder(
-  value: unknown,
-): AdminSidebarOrderPreference {
-  const record =
-    value && typeof value === "object" && !Array.isArray(value)
-      ? (value as Record<string, unknown>)
-      : {};
-  const preferredSections = Array.isArray(record.sections)
-    ? record.sections.filter(
-        (section): section is string =>
-          typeof section === "string" && sidebarSectionLabelSet.has(section),
-      )
-    : [];
-  const sections = Array.from(
-    new Set([...preferredSections, ...DEFAULT_ADMIN_SIDEBAR_ORDER.sections]),
-  );
-  const rawItems =
-    record.items &&
-    typeof record.items === "object" &&
-    !Array.isArray(record.items)
-      ? (record.items as Record<string, unknown>)
-      : {};
-  const usedItemIds = new Set<AdminModuleId>();
-  const items = Object.fromEntries(
-    DEFAULT_ADMIN_SIDEBAR_ORDER.sections.map((section) => {
-      const sectionItemIds = new Set(
-        DEFAULT_ADMIN_SIDEBAR_ORDER.items[section],
-      );
-      const preferredItems = Array.isArray(rawItems[section])
-        ? rawItems[section].filter((item): item is AdminModuleId => {
-            if (
-              typeof item !== "string" ||
-              !sidebarItemIdSet.has(item as AdminModuleId) ||
-              !sectionItemIds.has(item as AdminModuleId) ||
-              usedItemIds.has(item as AdminModuleId)
-            ) {
-              return false;
-            }
-            usedItemIds.add(item as AdminModuleId);
-            return true;
-          })
-        : [];
-      const defaultItems = DEFAULT_ADMIN_SIDEBAR_ORDER.items[section].filter(
-        (item) => !usedItemIds.has(item),
-      );
-      defaultItems.forEach((item) => usedItemIds.add(item));
-      return [section, [...preferredItems, ...defaultItems]];
-    }),
-  );
-
-  return { sections, items };
-}
-
-function moveItemInArray<T>(items: T[], index: number, direction: -1 | 1): T[] {
-  const nextIndex = index + direction;
-  if (nextIndex < 0 || nextIndex >= items.length) return items;
-
-  const nextItems = [...items];
-  const [item] = nextItems.splice(index, 1);
-  nextItems.splice(nextIndex, 0, item);
-  return nextItems;
 }
 
 function moveAdminSidebarSection(
@@ -692,6 +585,9 @@ type AdminYouTubeChannelStats = {
   previousSubscriberCount?: number | null;
   previousViewCount?: number | null;
   previousVideoCount?: number | null;
+  subscriberDelta?: number | null;
+  viewDelta?: number | null;
+  videoDelta?: number | null;
   comparisonFetchedAt?: string | null;
 };
 
@@ -927,7 +823,16 @@ type AdminDashboardBarRow = {
   viewAverage: number;
   likeAverage: number;
   commentAverage: number;
+  viewMedian: number;
+  viewRank: number;
+  totalRows: number;
+  viewContributionPercent: number | null;
+  viewTopPercentLabel: string;
+  viewMedianMultipleLabel: string;
   viewBenchmarkLabel: string;
+  viewBenchmark: string;
+  viewBenchmarkTooltip: string;
+  viewBenchmarkTooltipLines: string[];
   meta: string;
 };
 
@@ -950,6 +855,7 @@ const ADMIN_DASHBOARD_PERIOD_OPTIONS: Array<{
 const ADMIN_DASHBOARD_IMPACT_VIDEO_LIMIT = 12;
 const ADMIN_DASHBOARD_TREND_POINT_LIMIT = 9;
 const ADMIN_DASHBOARD_SPARKLINE_POINT_LIMIT = 7;
+const ADMIN_DASHBOARD_CONTENT_INSIGHT_TARGET_COUNT = 4;
 const ADMIN_DASHBOARD_DAY_MS = 24 * 60 * 60 * 1000;
 
 const adminCompactNumberFormatter = new Intl.NumberFormat("ko-KR", {
@@ -994,10 +900,6 @@ function getVideoEngagementTotal(video: InsightTreemapVideoRow) {
   return video.likeCount + video.commentCount;
 }
 
-function getPreviousVideoEngagementTotal(video: InsightTreemapVideoRow) {
-  return (video.previousLikeCount ?? 0) + (video.previousCommentCount ?? 0);
-}
-
 function getVideoMetricDelta(
   video: InsightTreemapVideoRow,
   getCurrentValue: (video: InsightTreemapVideoRow) => number,
@@ -1005,13 +907,18 @@ function getVideoMetricDelta(
     video: InsightTreemapVideoRow,
   ) => number | null | undefined,
 ) {
+  const currentValue = getCurrentValue(video);
   const previousValue = getPreviousValue(video);
 
-  if (typeof previousValue !== "number" || !Number.isFinite(previousValue)) {
+  if (!Number.isFinite(currentValue)) {
     return null;
   }
 
-  return getCurrentValue(video) - previousValue;
+  if (typeof previousValue !== "number" || !Number.isFinite(previousValue)) {
+    return currentValue;
+  }
+
+  return currentValue - previousValue;
 }
 
 function getVideoViewDelta(video: InsightTreemapVideoRow) {
@@ -1330,6 +1237,8 @@ function buildAdminDashboardChannelGrowthSparklinePoints(
 function buildAdminDashboardBarRows(
   videosByViews: InsightTreemapVideoRow[],
   metricMode: "current" | "delta" = "current",
+  contributionTotalOverride?: number | null,
+  periodUploadVideoCount?: number | null,
 ): AdminDashboardBarRow[] {
   const metricRows = videosByViews.map((video) => {
     const viewCount =
@@ -1356,26 +1265,98 @@ function buildAdminDashboardBarRows(
   const commentAverage = getDashboardAverage(
     metricRows.map((row) => row.commentCount),
   );
+  const viewMedian = getDashboardMedian(metricRows.map((row) => row.viewCount));
+  const calculatedTotalViewValue = metricRows.reduce(
+    (sum, row) => sum + row.viewCount,
+    0,
+  );
+  const totalViewValue =
+    typeof contributionTotalOverride === "number" &&
+    Number.isFinite(contributionTotalOverride) &&
+    contributionTotalOverride > 0
+      ? contributionTotalOverride
+      : calculatedTotalViewValue;
   const metricPrefix = metricMode === "delta" ? "증가" : "";
   const viewBenchmarkLabel = metricMode === "delta" ? "조회 증가" : "조회";
+  const contributionLabel =
+    metricMode === "delta" ? "기간 조회 증가 기여" : "기간 조회 기여";
+  const contributionValueLabel =
+    metricMode === "delta" ? "조회 증가" : "조회수";
+  const contributionTotalLabel =
+    metricMode === "delta"
+      ? "선택 기간 업로드 영상 조회 증가 합계"
+      : "선택 기간 조회수 합계";
+  const contributionTotalSourceLabel =
+    metricMode === "delta"
+      ? "전체값은 선택 기간 업로드 영상의 조회 증가 합계입니다."
+      : "전체값은 선택 기간 영상 조회수 합계입니다.";
+  const hasPeriodUploadVideoCount =
+    typeof periodUploadVideoCount === "number" &&
+    Number.isFinite(periodUploadVideoCount) &&
+    periodUploadVideoCount >= 0;
 
-  return metricRows.slice(0, 6).map((row) => ({
-    label: row.video.title,
-    value: row.viewCount,
-    likeCount: row.likeCount,
-    viewCount: row.viewCount,
-    commentCount: row.commentCount,
-    viewAverage,
-    likeAverage,
-    commentAverage,
-    viewBenchmarkLabel,
-    meta: `조회${metricPrefix} ${formatCompactNumber(row.viewCount)} · ${formatDashboardAverageComparison(
+  return metricRows.slice(0, 6).map((row, index) => {
+    const viewRank = index + 1;
+    const viewContributionPercent =
+      totalViewValue > 0 ? (row.viewCount / totalViewValue) * 100 : null;
+    const viewMedianMultiple =
+      viewMedian > 0 ? row.viewCount / viewMedian : null;
+    const viewTopPercentLabel = getDashboardTopPercentLabel(
+      viewRank,
+      metricRows.length,
+    );
+    const viewMedianMultipleLabel = formatDashboardMultiple(viewMedianMultiple);
+    const averageComparison = formatDashboardAverageComparison(
       row.viewCount,
       viewAverage,
-    )} · 좋아요${metricPrefix} ${formatCompactNumber(
-      row.likeCount,
-    )} · 댓글${metricPrefix} ${formatCompactNumber(row.commentCount)}`,
-  }));
+    );
+    const viewBenchmark = `${formatDashboardContribution(
+      viewContributionPercent,
+    )} · ${viewRank}위 · ${viewTopPercentLabel}`;
+    const comparisonTargetLine =
+      metricMode === "delta"
+        ? `비교 대상: 선택 기간 업로드 영상 ${formatNumber(metricRows.length)}개 중 ${viewRank}위 (${viewTopPercentLabel})`
+        : `조회수 비교 대상: ${formatNumber(metricRows.length)}개 영상 중 ${viewRank}위 (${viewTopPercentLabel})`;
+    const uploadScopeLine =
+      metricMode === "delta" &&
+      hasPeriodUploadVideoCount &&
+      periodUploadVideoCount !== metricRows.length
+        ? `업로드 영상 수 카드는 ${formatNumber(periodUploadVideoCount)}개이고, 이 비교에는 성과 데이터가 있는 ${formatNumber(metricRows.length)}개를 사용합니다.`
+        : null;
+    const viewBenchmarkTooltipLines = [
+      contributionLabel,
+      comparisonTargetLine,
+      ...(uploadScopeLine ? [uploadScopeLine] : []),
+      `${formatNumber(row.viewCount)}회 / ${formatNumber(totalViewValue)}회 = ${formatDashboardPercent(viewContributionPercent)}`,
+      `계산식: 이 영상 ${contributionValueLabel} / ${contributionTotalLabel} × 100`,
+      contributionTotalSourceLabel,
+    ];
+    const viewBenchmarkTooltip = viewBenchmarkTooltipLines.join(" ");
+
+    return {
+      label: row.video.title,
+      value: row.viewCount,
+      likeCount: row.likeCount,
+      viewCount: row.viewCount,
+      commentCount: row.commentCount,
+      viewAverage,
+      likeAverage,
+      commentAverage,
+      viewMedian,
+      viewRank,
+      totalRows: metricRows.length,
+      viewContributionPercent,
+      viewTopPercentLabel,
+      viewMedianMultipleLabel,
+      viewBenchmarkLabel,
+      viewBenchmark,
+      viewBenchmarkTooltip,
+      viewBenchmarkTooltipLines,
+      meta: `조회${metricPrefix} ${formatCompactNumber(row.viewCount)} · ${viewBenchmark} · ${viewMedianMultipleLabel} · 좋아요${metricPrefix} ${formatCompactNumber(
+        row.likeCount,
+      )} · 댓글${metricPrefix} ${formatCompactNumber(row.commentCount)}`,
+    };
+  });
 }
 
 function clampDashboardPercent(value: number | null | undefined) {
@@ -1397,6 +1378,47 @@ function getDashboardAverage(values: number[]) {
   return (
     finiteValues.reduce((sum, value) => sum + value, 0) / finiteValues.length
   );
+}
+
+function getDashboardMedian(values: number[]) {
+  const finiteValues = values
+    .filter((value) => Number.isFinite(value))
+    .sort((a, b) => a - b);
+
+  if (finiteValues.length === 0) return 0;
+
+  const middle = Math.floor(finiteValues.length / 2);
+  if (finiteValues.length % 2 === 1) return finiteValues[middle] ?? 0;
+
+  return ((finiteValues[middle - 1] ?? 0) + (finiteValues[middle] ?? 0)) / 2;
+}
+
+function formatDashboardMultiple(value: number | null | undefined) {
+  if (typeof value !== "number" || !Number.isFinite(value))
+    return "중앙값 비교 대기";
+  if (value >= 20) return "중앙값 대비 20배+";
+  if (value >= 10) return `중앙값 대비 ${value.toFixed(0)}배`;
+  if (value >= 1) return `중앙값 대비 ${value.toFixed(1)}배`;
+  return `중앙값 대비 ${value.toFixed(2)}배`;
+}
+
+function getDashboardTopPercentLabel(rank: number, total: number) {
+  if (
+    !Number.isFinite(rank) ||
+    !Number.isFinite(total) ||
+    rank <= 0 ||
+    total <= 0
+  ) {
+    return "상위권 계산 대기";
+  }
+
+  return `상위 ${Math.max(1, Math.ceil((rank / total) * 100))}%`;
+}
+
+function formatDashboardContribution(value: number | null | undefined) {
+  return typeof value === "number" && Number.isFinite(value)
+    ? `${formatDashboardPercent(value)} 기여`
+    : "기여도 계산 대기";
 }
 
 function getDashboardAverageDeltaPercent(value: number, average: number) {
@@ -1482,6 +1504,7 @@ function buildAdminDashboardContentInsights(
   metricMode: "current" | "delta",
   asOf: string | null | undefined,
   subscriberDelta: number | null,
+  contributionTotalOverride?: number | null,
 ): AdminDashboardContentInsight[] {
   const metricRows = videos
     .map((video) => {
@@ -1508,14 +1531,33 @@ function buildAdminDashboardContentInsights(
     metricRows.map((row) => row.viewsPerDay),
   );
   const metricNoun = metricMode === "delta" ? "증가" : "성과";
-  const strongestView = [...metricRows].sort(
-    (a, b) =>
-      (getDashboardAverageDeltaPercent(b.viewValue, viewAverage) ?? -Infinity) -
-      (getDashboardAverageDeltaPercent(a.viewValue, viewAverage) ?? -Infinity),
-  )[0];
-  const strongestViewScore = strongestView
-    ? getDashboardInsightSignalScore(strongestView.viewValue, viewAverage)
+  const calculatedTotalViewValue = metricRows.reduce(
+    (sum, row) => sum + row.viewValue,
+    0,
+  );
+  const totalViewValue =
+    typeof contributionTotalOverride === "number" &&
+    Number.isFinite(contributionTotalOverride) &&
+    contributionTotalOverride > 0
+      ? contributionTotalOverride
+      : calculatedTotalViewValue;
+  const rankedByView = [...metricRows].sort(
+    (a, b) => b.viewValue - a.viewValue,
+  );
+  const strongestView = rankedByView[0];
+  const strongestViewRank = strongestView
+    ? rankedByView.findIndex((row) => row.video.id === strongestView.video.id) +
+      1
     : 0;
+  const strongestViewContribution =
+    strongestView && totalViewValue > 0
+      ? (strongestView.viewValue / totalViewValue) * 100
+      : null;
+  const strongestViewTopPercentLabel = getDashboardTopPercentLabel(
+    strongestViewRank,
+    metricRows.length,
+  );
+  const strongestViewScore = strongestViewContribution ?? 0;
   const strongestEngagement = [...metricRows].sort(
     (a, b) =>
       (getDashboardAverageDeltaPercent(
@@ -1542,21 +1584,19 @@ function buildAdminDashboardContentInsights(
   const insights: AdminDashboardContentInsight[] = [];
 
   if (strongestView) {
-    const scoreLabel = formatDashboardAverageComparison(
+    const scoreLabel = formatDashboardContribution(strongestViewContribution);
+    const averageComparison = formatDashboardAverageComparison(
       strongestView.viewValue,
       viewAverage,
     );
 
     insights.push({
-      label: "평균 대비",
+      label: "성과 기여",
       title: strongestView.video.title,
-      description: `조회 ${metricNoun} ${scoreLabel} · ${formatCompactNumber(strongestView.viewValue)}`,
+      description: `조회 ${metricNoun} ${scoreLabel} · ${strongestViewRank}위 · ${strongestViewTopPercentLabel}`,
       tone: "emerald",
-      score: getDashboardInsightSignalScore(
-        strongestView.viewValue,
-        viewAverage,
-      ),
-      scoreLabel,
+      score: Math.max(8, Math.min(100, strongestViewScore * 2)),
+      scoreLabel: `${scoreLabel} · 평균 참고 ${averageComparison}`,
     });
   }
 
@@ -1636,7 +1676,36 @@ function buildAdminDashboardContentInsights(
     });
   }
 
-  return insights.slice(0, 4);
+  const addFallbackInsight = (insight: AdminDashboardContentInsight) => {
+    if (insights.length >= ADMIN_DASHBOARD_CONTENT_INSIGHT_TARGET_COUNT) return;
+    if (insights.some((existing) => existing.label === insight.label)) return;
+    insights.push(insight);
+  };
+
+  const newestCandidate = [...metricRows].sort(
+    (a, b) => (a.ageDays ?? Infinity) - (b.ageDays ?? Infinity),
+  )[0];
+
+  if (newestCandidate) {
+    const scoreLabel = formatDashboardAverageComparison(
+      newestCandidate.viewsPerDay,
+      dailyViewAverage,
+    );
+
+    addFallbackInsight({
+      label: "신규 반응 확인",
+      title: newestCandidate.video.title,
+      description: `업로드 ${Math.round(newestCandidate.ageDays ?? 0)}일 · 일평균 조회 ${scoreLabel}`,
+      tone: "sky",
+      score: getDashboardInsightSignalScore(
+        newestCandidate.viewsPerDay,
+        dailyViewAverage,
+      ),
+      scoreLabel,
+    });
+  }
+
+  return insights.slice(0, ADMIN_DASHBOARD_CONTENT_INSIGHT_TARGET_COUNT);
 }
 
 function getDashboardRatio(
@@ -1680,18 +1749,32 @@ const adminDashboardChartViewportClassName =
   "relative h-full min-h-0 w-full overflow-visible [&_.recharts-surface]:overflow-visible [&_.recharts-wrapper]:overflow-visible";
 const adminDashboardTooltipStyle = {
   border: "1px solid hsl(var(--border))",
-  borderRadius: "12px",
-  background: "hsl(var(--background))",
-  boxShadow: "0 10px 30px rgba(15,23,42,0.12)",
+  borderRadius: "14px",
+  background: "hsl(var(--popover))",
+  boxShadow: "0 14px 34px rgba(15,23,42,0.16)",
   color: "hsl(var(--foreground))",
   fontSize: "12px",
-};
+  lineHeight: "1.55",
+  padding: "10px 12px",
+} satisfies CSSProperties;
+const adminDashboardTooltipWrapperStyle = {
+  zIndex: 50,
+  pointerEvents: "none",
+} satisfies CSSProperties;
+const adminDashboardTooltipContentClassName =
+  "max-w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-border bg-popover px-3 py-2 text-xs leading-5 text-popover-foreground shadow-xl";
+const adminDashboardTooltipLineClassName =
+  "whitespace-pre-line break-keep text-muted-foreground";
+const adminDashboardTooltipFirstLineClassName =
+  "font-extrabold text-foreground";
 const adminDashboardGridColor = "hsl(var(--border) / 0.55)";
 const adminDashboardAxisColor = "hsl(var(--muted-foreground))";
 const adminDashboardControlGroupClassName =
   "inline-flex h-7 shrink-0 items-center rounded-full border border-border bg-muted/25 p-0.5";
 const adminDashboardControlButtonClassName =
   "inline-flex h-6 items-center justify-center gap-1 rounded-full px-2.5 text-[11px] font-extrabold leading-none transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
+const adminDashboardFullscreenCardClassName =
+  "fixed inset-2 z-[80] h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] overflow-auto rounded-3xl border-primary/35 bg-card p-4 shadow-2xl sm:inset-4 sm:h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-2rem)]";
 
 function formatRechartsTooltipValue(value: unknown) {
   return typeof value === "number" && Number.isFinite(value)
@@ -1713,8 +1796,8 @@ function AdminDashboardInfoTooltip({
           <button
             type="button"
             className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            aria-label={label}
-            data-admin-dashboard-metric-tooltip="true"
+            aria-label={`${label} · 초보자 설명`}
+            data-admin-dashboard-metric-tooltip="beginner-plain"
           >
             <Info className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
@@ -1722,10 +1805,66 @@ function AdminDashboardInfoTooltip({
         <UiTooltipContent
           side="top"
           align="start"
-          className="max-w-[18rem] space-y-1.5 text-xs leading-5"
+          className={cn(adminDashboardTooltipContentClassName, "space-y-1.5")}
+          data-admin-dashboard-tooltip-content="standard"
         >
-          {lines.map((line) => (
-            <p key={line}>{line}</p>
+          {lines.map((line, index) => (
+            <p
+              key={line}
+              className={cn(
+                adminDashboardTooltipLineClassName,
+                index === 0 && adminDashboardTooltipFirstLineClassName,
+              )}
+            >
+              {line}
+            </p>
+          ))}
+        </UiTooltipContent>
+      </UiTooltip>
+    </UiTooltipProvider>
+  );
+}
+
+function AdminDashboardInlineTooltip({
+  label,
+  lines,
+  className,
+  children,
+}: {
+  label: string;
+  lines: string[];
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <UiTooltipProvider delayDuration={120}>
+      <UiTooltip>
+        <UiTooltipTrigger asChild>
+          <span
+            tabIndex={0}
+            className={className}
+            aria-label={`${label}: ${lines.join(" ")}`}
+            data-admin-dashboard-inline-tooltip="true"
+          >
+            {children}
+          </span>
+        </UiTooltipTrigger>
+        <UiTooltipContent
+          side="top"
+          align="start"
+          className={cn(adminDashboardTooltipContentClassName, "space-y-1")}
+          data-admin-dashboard-tooltip-content="standard"
+        >
+          {lines.map((line, index) => (
+            <p
+              key={line}
+              className={cn(
+                adminDashboardTooltipLineClassName,
+                index === 0 && adminDashboardTooltipFirstLineClassName,
+              )}
+            >
+              {line}
+            </p>
           ))}
         </UiTooltipContent>
       </UiTooltip>
@@ -1767,11 +1906,43 @@ function AdminDashboardViewToggle({
   );
 }
 
+function AdminDashboardFullscreenButton({
+  widgetId,
+  label,
+  isFullscreen,
+  onToggle,
+}: {
+  widgetId: AdminDashboardWidgetId;
+  label: string;
+  isFullscreen: boolean;
+  onToggle: (widgetId: AdminDashboardWidgetId) => void;
+}) {
+  const Icon = isFullscreen ? Minimize2 : Maximize2;
+
+  return (
+    <button
+      type="button"
+      className={cn(
+        adminDashboardControlButtonClassName,
+        "h-7 w-7 shrink-0 border border-border bg-background p-0 text-muted-foreground shadow-sm hover:text-foreground",
+        isFullscreen && "border-primary/50 text-primary",
+      )}
+      aria-label={`${label} 카드 ${isFullscreen ? "전체화면 닫기" : "전체화면으로 보기"}`}
+      aria-pressed={isFullscreen}
+      data-admin-dashboard-card-fullscreen-trigger={widgetId}
+      title={`${label} 카드 ${isFullscreen ? "전체화면 닫기" : "전체화면으로 보기"}`}
+      onClick={() => onToggle(widgetId)}
+    >
+      <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+    </button>
+  );
+}
+
 function AdminDashboardDiagnosisMeta({ periodLabel }: { periodLabel: string }) {
   return (
     <div
       className="hidden min-w-0 max-w-[28rem] items-center justify-end gap-1.5 text-[11px] font-bold leading-none text-muted-foreground lg:flex"
-      aria-label={`성과 진단 기준 ${periodLabel}, 비교 채널 평균, 목적 다음 액션`}
+      aria-label={`성과 진단 기준 ${periodLabel}, 비교 채널 평균`}
       data-admin-dashboard-diagnosis-meta="header-inline"
     >
       <span className="min-w-0 truncate">
@@ -1780,10 +1951,6 @@ function AdminDashboardDiagnosisMeta({ periodLabel }: { periodLabel: string }) {
       <span aria-hidden="true">·</span>
       <span className="min-w-0 truncate">
         비교 <b className="font-black text-foreground">채널 평균</b>
-      </span>
-      <span aria-hidden="true">·</span>
-      <span className="min-w-0 truncate">
-        목적 <b className="font-black text-foreground">다음 액션</b>
       </span>
     </div>
   );
@@ -1796,7 +1963,11 @@ function AdminDashboardSeriesToggle<Key extends string>({
   onToggle,
 }: {
   label: string;
-  options: Array<{ key: Key; label: string; dotClassName: string }>;
+  options: Array<{
+    key: Key;
+    label: string;
+    dotClassName: string;
+  }>;
   visibility: AdminDashboardSeriesVisibility<Key>;
   onToggle: (key: Key) => void;
 }) {
@@ -2090,12 +2261,12 @@ function AdminDashboardCardTitle({
 }
 
 function AdminDashboardKpiCard({
+  widgetId,
   title,
   value,
   caption,
   progress,
   delta,
-  dataScopeLabel,
   deltaLabel = "기간 대비",
   className,
   style,
@@ -2104,13 +2275,15 @@ function AdminDashboardKpiCard({
   sparklineData = [],
   infoLines = [],
   isLoading = false,
+  isFullscreen = false,
+  fullscreenAction,
 }: {
+  widgetId: AdminDashboardWidgetId;
   title: string;
   value: string;
   caption?: string;
   progress: number;
   delta?: string;
-  dataScopeLabel?: string;
   deltaLabel?: string;
   className?: string;
   style?: CSSProperties;
@@ -2119,6 +2292,8 @@ function AdminDashboardKpiCard({
   sparklineData?: AdminDashboardSparklinePoint[];
   infoLines?: string[];
   isLoading?: boolean;
+  isFullscreen?: boolean;
+  fullscreenAction?: ReactNode;
 }) {
   const safeProgress = clampDashboardPercent(progress);
   const toneClass = {
@@ -2158,8 +2333,11 @@ function AdminDashboardKpiCard({
         adminDashboardCardClass,
         "grid min-h-[132px] grid-rows-[auto_minmax(0,1fr)_auto] gap-3 overflow-visible p-3.5",
         className,
+        isFullscreen && adminDashboardFullscreenCardClassName,
       )}
       data-admin-dashboard-kpi-card="recharts-sparkline"
+      data-admin-dashboard-widget-card={widgetId}
+      data-admin-dashboard-card-fullscreen={isFullscreen ? "true" : undefined}
       style={style}
       {...reorderProps}
     >
@@ -2169,14 +2347,6 @@ function AdminDashboardKpiCard({
             <p className="truncate text-xs font-extrabold tracking-[0.04em] text-muted-foreground">
               {title}
             </p>
-            {dataScopeLabel ? (
-              <span
-                className="shrink-0 rounded-full bg-muted/55 px-1.5 py-0.5 text-[10px] font-black leading-none text-muted-foreground"
-                data-admin-dashboard-kpi-data-scope="true"
-              >
-                {dataScopeLabel}
-              </span>
-            ) : null}
             {infoLines.length > 0 ? (
               <AdminDashboardInfoTooltip
                 label={`${title} 지표 설명`}
@@ -2184,27 +2354,30 @@ function AdminDashboardKpiCard({
               />
             ) : null}
           </div>
-          {isLoading ? (
-            <Skeleton
-              className="h-5 w-20 shrink-0 rounded-full motion-reduce:animate-none"
-              data-admin-dashboard-dynamic-skeleton="delta"
-              aria-hidden="true"
-            />
-          ) : delta !== undefined ? (
-            <span
-              className={cn(
-                "inline-flex shrink-0 items-center gap-1 rounded-full bg-muted/45 px-2 py-0.5 text-[11px] font-black leading-none tabular-nums dark:bg-muted/35",
-                toneClass.text,
-              )}
-              data-admin-dashboard-kpi-delta="timeframe"
-              title={`${title} ${deltaLabel}: ${delta}`}
-            >
-              <span className="font-extrabold text-muted-foreground">
-                {deltaLabel}
+          <div className="flex shrink-0 items-center justify-end gap-1">
+            {isLoading ? (
+              <Skeleton
+                className="h-5 w-20 shrink-0 rounded-full motion-reduce:animate-none"
+                data-admin-dashboard-dynamic-skeleton="delta"
+                aria-hidden="true"
+              />
+            ) : delta !== undefined ? (
+              <span
+                className={cn(
+                  "inline-flex shrink-0 items-center gap-1 rounded-full bg-muted/45 px-2 py-0.5 text-[11px] font-black leading-none tabular-nums dark:bg-muted/35",
+                  toneClass.text,
+                )}
+                data-admin-dashboard-kpi-delta="timeframe"
+                title={`${title} ${deltaLabel}: ${delta}. 계산식: 기간 대비 = (현재값 - 이전값) / 이전값 × 100`}
+              >
+                <span className="font-extrabold text-muted-foreground">
+                  {deltaLabel}
+                </span>
+                {delta}
               </span>
-              {delta}
-            </span>
-          ) : null}
+            ) : null}
+            {fullscreenAction}
+          </div>
         </div>
         <div className="h-px bg-border/70" aria-hidden="true" />
       </div>
@@ -2237,11 +2410,11 @@ function AdminDashboardKpiCard({
                     allowEscapeViewBox={{ x: true, y: true }}
                     formatter={(tooltipValue) => [
                       formatRechartsTooltipValue(tooltipValue),
-                      title,
+                      `${title} · 계산식: 점 값 = 해당 기간의 카드 값`,
                     ]}
                     labelFormatter={(label) => String(label ?? "기간")}
                     contentStyle={adminDashboardTooltipStyle}
-                    wrapperStyle={{ zIndex: 30, pointerEvents: "none" }}
+                    wrapperStyle={adminDashboardTooltipWrapperStyle}
                     cursor={{
                       stroke: toneClass.stroke,
                       strokeOpacity: 0.32,
@@ -2269,14 +2442,16 @@ function AdminDashboardKpiCard({
           aria-hidden="true"
         />
       ) : (
-        <div
-          className="h-1.5 overflow-hidden rounded-full bg-muted"
-          aria-hidden="true"
-        >
+        <div className="grid gap-1.5">
           <div
-            className={cn("h-full rounded-full", toneClass.bar)}
-            style={{ width: `${safeProgress}%` }}
-          />
+            className="h-1.5 overflow-hidden rounded-full bg-muted"
+            aria-hidden="true"
+          >
+            <div
+              className={cn("h-full rounded-full", toneClass.bar)}
+              style={{ width: `${safeProgress}%` }}
+            />
+          </div>
         </div>
       )}
     </div>
@@ -2329,6 +2504,7 @@ function AdminDashboardOpsSummaryCard({
         className,
       )}
       data-admin-dashboard-ops-summary-visual="progress-bars"
+      data-admin-dashboard-widget-card="ops"
       style={style}
       {...reorderProps}
     >
@@ -2336,17 +2512,22 @@ function AdminDashboardOpsSummaryCard({
         title="운영·검수 요약"
         metric={`검수 리스크 ${formatNumber(riskTotal)}`}
         infoLines={[
-          "X축 막대는 같은 섹션 안에서 가장 큰 항목 대비 상대 비중입니다.",
-          "운영 자산은 영상/맛집/좌표/연결 현황, 검수 리스크는 대기/누락/비활성 항목입니다.",
+          "설명: 위쪽은 운영 중인 데이터 수, 아래쪽은 확인이 필요한 데이터 수입니다.",
+          "읽는 법: 막대는 같은 묶음 안에서 가장 큰 항목을 기준으로 얼마나 큰지 보여줍니다.",
+          "막대 기준: 같은 묶음 안에서 가장 큰 항목을 100%로 두고 비교합니다.",
+          "계산식: 검수 리스크 합계 = 제보 대기 + 리뷰 대기 + 좌표 미완료 + 비활성 배너.",
+          "주의: 검수 리스크가 큰 항목부터 운영자가 먼저 확인해야 합니다.",
         ]}
         action={
-          onViewChange ? (
-            <AdminDashboardViewToggle
-              value={view}
-              onChange={onViewChange}
-              label="운영·검수 요약"
-            />
-          ) : null
+          <div className="flex flex-wrap items-center justify-end gap-1">
+            {onViewChange ? (
+              <AdminDashboardViewToggle
+                value={view}
+                onChange={onViewChange}
+                label="운영·검수 요약"
+              />
+            ) : null}
+          </div>
         }
       />
       {isLoading ? (
@@ -2408,7 +2589,10 @@ function AdminDashboardOpsSummaryCard({
                 : "text-rose-700 dark:text-rose-300";
 
             return (
-              <div key={section.title} className="grid min-h-0 gap-2">
+              <div
+                key={section.title}
+                className="grid min-h-0 gap-2"
+              >
                 <div className="flex items-center justify-between gap-3">
                   <p
                     className={cn("truncate text-xs font-extrabold", labelTone)}
@@ -2548,41 +2732,43 @@ function AdminDashboardMultiLineChart({
         "min-h-[190px] flex flex-1 flex-col",
       )}
       role="group"
-      aria-label="채널 유동성 분석: 조회수, 참여, 참여율 정규화 추이"
+      aria-label="영상별 성과 분포: 조회수, 참여, 참여율 정규화 비교"
       data-admin-dashboard-line-chart="recharts"
     >
       <p className="sr-only">
-        조회수, 참여, 참여율을 최근 영상 순서로 정규화해 비교합니다. 사용자가 각
-        지표를 숨김/보임 처리할 수 있습니다.
+        조회수, 참여, 참여율을 선택 기간 영상의 게시일 순서로 정규화해
+        비교합니다. 사용자가 각 지표를 숨김/보임 처리할 수 있습니다.
       </p>
-      <ResponsiveContainer width="100%" height="100%" minHeight={180}>
-        <LineChart data={chartData} margin={adminDashboardChartMargin}>
-          <CartesianGrid stroke={adminDashboardGridColor} vertical={false} />
-          <XAxis
-            dataKey="label"
-            tick={{ fill: adminDashboardAxisColor, fontSize: 11 }}
-            tickLine={false}
-            axisLine={false}
-            height={18}
-            tickMargin={2}
-            minTickGap={12}
-          />
-          <YAxis
-            domain={[0, 100]}
-            tick={{ fill: adminDashboardAxisColor, fontSize: 11 }}
-            tickLine={false}
-            axisLine={false}
-            tickMargin={2}
-            width={28}
-          />
-          <RechartsTooltip
-            formatter={(value) => [
-              `${formatRechartsTooltipValue(value)}점`,
-              "",
-            ]}
-            contentStyle={adminDashboardTooltipStyle}
-            cursor={{ stroke: adminDashboardGridColor }}
-          />
+      <div className="min-h-0 flex-1">
+        <ResponsiveContainer width="100%" height="100%" minHeight={180}>
+          <LineChart data={chartData} margin={adminDashboardChartMargin}>
+            <CartesianGrid stroke={adminDashboardGridColor} vertical={false} />
+            <XAxis
+              dataKey="label"
+              tick={{ fill: adminDashboardAxisColor, fontSize: 11 }}
+              tickLine={false}
+              axisLine={false}
+              height={18}
+              tickMargin={2}
+              minTickGap={12}
+            />
+            <YAxis
+              domain={[0, 100]}
+              tick={{ fill: adminDashboardAxisColor, fontSize: 11 }}
+              tickLine={false}
+              axisLine={false}
+              tickMargin={2}
+              width={28}
+            />
+            <RechartsTooltip
+              formatter={(value) => [
+                `${formatRechartsTooltipValue(value)}점`,
+                "정규화 점수 · 계산식: 값 / 해당 지표 최고값 × 100",
+              ]}
+              contentStyle={adminDashboardTooltipStyle}
+              wrapperStyle={adminDashboardTooltipWrapperStyle}
+              cursor={{ stroke: adminDashboardGridColor }}
+            />
           {seriesVisibility.views ? (
             <Line
               type="monotone"
@@ -2661,8 +2847,9 @@ function AdminDashboardMultiLineChart({
               />
             </Line>
           ) : null}
-        </LineChart>
-      </ResponsiveContainer>
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }
@@ -2729,7 +2916,7 @@ function AdminDashboardBubbleChart({
       className={cn(
         adminDashboardVisualizationShellClassName,
         adminDashboardChartViewportClassName,
-        "min-h-[230px] flex-1",
+        "min-h-[230px] flex flex-1 flex-col",
       )}
       role="img"
       aria-label={`성과 분산 분석: 조회수와 참여 규모 상위 ${ADMIN_DASHBOARD_IMPACT_VIDEO_LIMIT}개 버블 차트`}
@@ -2738,57 +2925,63 @@ function AdminDashboardBubbleChart({
       <p className="sr-only">
         상위 영상 영향도 첫 항목은 {topVideo.title}이며 조회수는{" "}
         {formatNumber(chartData[0]?.조회수 ?? 0)}, 참여는{" "}
-        {formatNumber(chartData[0]?.참여 ?? 0)}입니다. 동그라미 색상은 성과
-        차이가 아니라 순위 구분용이며 위치와 크기가 의미값입니다.
+        {formatNumber(chartData[0]?.참여 ?? 0)}입니다. 색은 순위 구분용이고
+        위치와 크기가 의미값입니다.
       </p>
-      <ResponsiveContainer width="100%" height="100%" minHeight={210}>
-        <ScatterChart margin={adminDashboardScatterChartMargin}>
-          <CartesianGrid stroke={adminDashboardGridColor} />
-          <XAxis
-            type="number"
-            dataKey="조회수"
-            name="조회수"
-            domain={[
-              (dataMin: number) => Math.max(0, dataMin * 0.92),
-              (dataMax: number) => Math.max(1, dataMax * 1.08),
-            ]}
-            tickFormatter={formatCompactNumber}
-            tick={{ fill: adminDashboardAxisColor, fontSize: 11 }}
-            tickLine={false}
-            axisLine={false}
-            height={18}
-            tickMargin={2}
-          />
-          <YAxis
-            type="number"
-            dataKey="참여"
-            name="참여"
-            domain={[
-              (dataMin: number) => Math.max(0, dataMin * 0.9),
-              (dataMax: number) => Math.max(1, dataMax * 1.12),
-            ]}
-            tickFormatter={formatCompactNumber}
-            tick={{ fill: adminDashboardAxisColor, fontSize: 11 }}
-            tickLine={false}
-            axisLine={false}
-            tickMargin={2}
-            width={38}
-          />
-          <ZAxis type="number" dataKey="규모" range={[120, 1200]} />
-          <RechartsTooltip
-            cursor={{ stroke: adminDashboardGridColor }}
-            content={({ active, payload }) => {
-              const row = payload?.[0]?.payload as
-                | (typeof chartData)[number]
-                | undefined;
+      <div className="min-h-0 flex-1">
+        <ResponsiveContainer width="100%" height="100%" minHeight={210}>
+          <ScatterChart margin={adminDashboardScatterChartMargin}>
+            <CartesianGrid stroke={adminDashboardGridColor} />
+            <XAxis
+              type="number"
+              dataKey="조회수"
+              name="조회수"
+              domain={[
+                (dataMin: number) => Math.max(0, dataMin * 0.92),
+                (dataMax: number) => Math.max(1, dataMax * 1.08),
+              ]}
+              tickFormatter={formatCompactNumber}
+              tick={{ fill: adminDashboardAxisColor, fontSize: 11 }}
+              tickLine={false}
+              axisLine={false}
+              height={18}
+              tickMargin={2}
+            />
+            <YAxis
+              type="number"
+              dataKey="참여"
+              name="참여"
+              domain={[
+                (dataMin: number) => Math.max(0, dataMin * 0.9),
+                (dataMax: number) => Math.max(1, dataMax * 1.12),
+              ]}
+              tickFormatter={formatCompactNumber}
+              tick={{ fill: adminDashboardAxisColor, fontSize: 11 }}
+              tickLine={false}
+              axisLine={false}
+              tickMargin={2}
+              width={38}
+            />
+            <ZAxis type="number" dataKey="규모" range={[120, 1200]} />
+            <RechartsTooltip
+              cursor={{ stroke: adminDashboardGridColor }}
+              wrapperStyle={adminDashboardTooltipWrapperStyle}
+              content={({ active, payload }) => {
+                const row = payload?.[0]?.payload as
+                  | (typeof chartData)[number]
+                  | undefined;
 
-              if (!active || !row) return null;
+                if (!active || !row) return null;
 
-              return (
-                <div
-                  className="max-w-[280px] rounded-xl border border-border bg-background px-3 py-2 text-xs shadow-lg"
-                  data-admin-dashboard-bubble-tooltip="video-title"
-                >
+                return (
+                  <div
+                    className={cn(
+                      adminDashboardTooltipContentClassName,
+                      "max-w-[280px]",
+                    )}
+                    data-admin-dashboard-bubble-tooltip="video-title"
+                    data-admin-dashboard-tooltip-content="standard"
+                  >
                   <p className="line-clamp-2 font-extrabold leading-5 text-foreground">
                     {row.title}
                   </p>
@@ -2805,11 +2998,14 @@ function AdminDashboardBubbleChart({
                         {formatNumber(row.참여)}
                       </span>
                     </div>
+                    <p className="pt-1 text-[11px] leading-4 text-muted-foreground">
+                      계산식: 참여 = 좋아요 + 댓글. 원 크기는 참여가 클수록 커집니다.
+                    </p>
                   </div>
-                </div>
-              );
-            }}
-          />
+                  </div>
+                );
+              }}
+            />
           <Scatter data={chartData} isAnimationActive={false}>
             <LabelList
               dataKey="조회수최고"
@@ -2829,8 +3025,9 @@ function AdminDashboardBubbleChart({
               <Cell key={entry.title} fill={colors[index % colors.length]} />
             ))}
           </Scatter>
-        </ScatterChart>
-      </ResponsiveContainer>
+          </ScatterChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }
@@ -2838,9 +3035,11 @@ function AdminDashboardBubbleChart({
 function AdminDashboardGroupedBarChart({
   rows,
   seriesVisibility,
+  isFullscreen = false,
 }: {
   rows: AdminDashboardBarRow[];
   seriesVisibility: AdminDashboardSeriesVisibility<AdminDashboardTopContentSeriesKey>;
+  isFullscreen?: boolean;
 }) {
   const visibleRows = rows.slice(0, 5);
 
@@ -2880,19 +3079,22 @@ function AdminDashboardGroupedBarChart({
       seriesKey: "views",
       key: "viewCount",
       label: "조회수",
-      accentClass: "text-sky-700 dark:text-sky-300",
+      labelClass:
+        "border-sky-500/25 bg-sky-50 text-foreground dark:border-sky-400/30 dark:bg-sky-950/35",
     },
     {
       seriesKey: "likes",
       key: "likeCount",
       label: "좋아요",
-      accentClass: "text-rose-700 dark:text-rose-300",
+      labelClass:
+        "border-rose-500/25 bg-rose-50 text-foreground dark:border-rose-400/30 dark:bg-rose-950/35",
     },
     {
       seriesKey: "comments",
       key: "commentCount",
       label: "댓글",
-      accentClass: "text-amber-700 dark:text-amber-300",
+      labelClass:
+        "border-orange-500/25 bg-orange-50 text-foreground dark:border-orange-400/30 dark:bg-orange-950/35",
     },
   ] as const satisfies ReadonlyArray<{
     seriesKey: AdminDashboardTopContentSeriesKey;
@@ -2901,7 +3103,7 @@ function AdminDashboardGroupedBarChart({
       "viewCount" | "likeCount" | "commentCount"
     >;
     label: string;
-    accentClass: string;
+    labelClass: string;
   }>;
   const visibleMetricRows = metricRows.filter(
     (metric) => seriesVisibility[metric.seriesKey],
@@ -2911,7 +3113,8 @@ function AdminDashboardGroupedBarChart({
     <div
       className={cn(
         adminDashboardVisualizationShellClassName,
-        "grid content-start gap-2",
+        "grid h-full grid-rows-[minmax(0,1fr)_auto] gap-2 pb-0",
+        isFullscreen && "gap-4 p-3 sm:gap-5 sm:p-4",
       )}
       role="img"
       aria-label="영상 성과 분석: 상위 5개 영상의 조회수, 좋아요, 댓글 비중 분포"
@@ -2923,7 +3126,12 @@ function AdminDashboardGroupedBarChart({
         {formatNumber(topRow.likeCount)}, 댓글은{" "}
         {formatNumber(topRow.commentCount)}입니다.
       </p>
-      <div className="grid gap-2">
+      <div
+        className={cn(
+          "grid min-h-0 content-evenly gap-2",
+          isFullscreen && "gap-4 sm:gap-5",
+        )}
+      >
         {visibleMetricRows.map((metric) => {
           const total = visibleRows.reduce(
             (sum, row) => sum + row[metric.key],
@@ -2940,14 +3148,14 @@ function AdminDashboardGroupedBarChart({
           return (
             <div
               key={metric.key}
-              className="grid gap-1.5"
+              className={cn("grid gap-1.5", isFullscreen && "gap-2.5")}
               data-admin-dashboard-top-content-metric={metric.label}
             >
               <div className="flex items-center justify-between gap-2">
                 <span
                   className={cn(
-                    "text-[11px] font-black text-muted-foreground",
-                    metric.accentClass,
+                    "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-black leading-none",
+                    metric.labelClass,
                   )}
                 >
                   {metric.label}
@@ -2958,7 +3166,10 @@ function AdminDashboardGroupedBarChart({
                 </span>
               </div>
               <div
-                className="flex h-8 min-w-0 overflow-x-auto overflow-y-visible rounded-xl bg-muted [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                className={cn(
+                  "flex min-w-0 overflow-x-auto overflow-y-visible rounded-xl bg-muted [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+                  isFullscreen ? "h-12 sm:h-14" : "h-9",
+                )}
                 aria-hidden="true"
               >
                 {visibleRows.map((row, index) => {
@@ -2974,7 +3185,11 @@ function AdminDashboardGroupedBarChart({
                           "bg-muted-foreground text-background",
                       )}
                       style={{ width: `${Math.max(8, percent)}%` }}
-                      title={`${row.label} · ${metric.label} ${formatNumber(value)} (${formatDashboardPercent(percent)}) · ${formatDashboardAverageComparison(value, average)}`}
+                      title={
+                        metric.key === "viewCount"
+                          ? `${row.label} · 막대 비중 ${formatDashboardPercent(percent)} · 기여도 ${row.viewBenchmark}`
+                          : `${row.label} · ${metric.label} ${formatNumber(value)} · 막대 비중 ${formatDashboardPercent(percent)} · ${formatDashboardAverageComparison(value, average)}`
+                      }
                     >
                       {percent.toFixed(0)}%
                     </span>
@@ -2985,7 +3200,7 @@ function AdminDashboardGroupedBarChart({
           );
         })}
       </div>
-      <ol className="grid gap-1.5 sm:grid-cols-5">
+      <ol className={cn("grid gap-1 sm:grid-cols-5", isFullscreen && "gap-3")}>
         {visibleRows.map((row, index) => (
           <li key={row.label} className="min-w-0">
             <div className="flex min-w-0 items-center gap-1.5">
@@ -3006,26 +3221,13 @@ function AdminDashboardGroupedBarChart({
             >
               {row.label}
             </p>
-            <p
-              className={cn(
-                "mt-0.5 truncate text-[10px] font-black tabular-nums",
-                getDashboardAverageDeltaPercent(
-                  row.viewCount,
-                  row.viewAverage,
-                ) == null
-                  ? "text-muted-foreground"
-                  : (getDashboardAverageDeltaPercent(
-                        row.viewCount,
-                        row.viewAverage,
-                      ) ?? 0) >= 0
-                    ? "text-emerald-700 dark:text-emerald-300"
-                    : "text-rose-700 dark:text-rose-300",
-              )}
-              title={`${row.viewBenchmarkLabel} 전체 평균 ${formatNumber(Math.round(row.viewAverage))}`}
+            <AdminDashboardInlineTooltip
+              label={`${row.label} 기간 조회 기여`}
+              lines={row.viewBenchmarkTooltipLines}
+              className="mt-0.5 block truncate text-[10px] font-black tabular-nums text-emerald-700 outline-none focus-visible:ring-2 focus-visible:ring-primary dark:text-emerald-300"
             >
-              {row.viewBenchmarkLabel}{" "}
-              {formatDashboardAverageComparison(row.viewCount, row.viewAverage)}
-            </p>
+              {row.viewBenchmark}
+            </AdminDashboardInlineTooltip>
           </li>
         ))}
       </ol>
@@ -3082,10 +3284,12 @@ function AdminDashboardDiagnosisBoard({
   insights,
   metricMode,
   periodLabel,
+  isFullscreen = false,
 }: {
   insights: AdminDashboardContentInsight[];
   metricMode: "current" | "delta";
   periodLabel: string;
+  isFullscreen?: boolean;
 }) {
   const modeLabel =
     metricMode === "delta" ? "기간 순증 평균 대비" : "기간 영상 현재 평균 대비";
@@ -3096,7 +3300,12 @@ function AdminDashboardDiagnosisBoard({
     rose: "bg-rose-500",
   } satisfies Record<AdminDashboardContentInsight["tone"], string>;
 
-  if (insights.length === 0) {
+  const visibleInsights = insights.slice(
+    0,
+    ADMIN_DASHBOARD_CONTENT_INSIGHT_TARGET_COUNT,
+  );
+
+  if (visibleInsights.length === 0) {
     return (
       <div
         className="flex min-h-0 flex-1 items-center justify-center rounded-xl bg-muted/20 text-xs font-semibold text-muted-foreground"
@@ -3109,21 +3318,27 @@ function AdminDashboardDiagnosisBoard({
 
   return (
     <div
-      className="grid min-h-0 flex-1 auto-rows-fr content-stretch gap-1"
+      className={cn(
+        "grid min-h-0 flex-1 content-stretch gap-1",
+        isFullscreen && "h-full gap-3 p-2 sm:gap-4 sm:p-4",
+      )}
       role="img"
-      aria-label="평균 대비 영상 성과 진단"
+      aria-label="영상 성과 신호 진단"
       data-admin-dashboard-diagnosis-board="actionable-insights"
     >
       <p className="sr-only">
         {periodLabel} 기준으로 조회 성장, 참여율, 초반 반응, 롱테일 후보를 채널
-        평균과 비교해 우선 점검할 영상을 표시합니다.
+        기여도와 참여율로 우선 점검할 영상을 표시합니다.
       </p>
-      <div className="grid h-full min-h-0 auto-rows-fr gap-1 sm:grid-cols-2">
-        {insights.map((insight) => (
+      <div className="grid h-full min-h-0 grid-cols-2 grid-rows-2 gap-1">
+        {visibleInsights.map((insight) => (
           <div
             key={`${insight.label}-${insight.title}`}
-            className="flex min-h-0 min-w-0 flex-col justify-between rounded-xl border border-border/70 bg-muted/20 px-2 py-1.5"
-            title={`${insight.label}: ${insight.title} · ${insight.description}`}
+            className={cn(
+              "flex min-h-0 min-w-0 flex-col justify-between rounded-xl border border-border/70 bg-muted/20 px-2 py-1.5",
+              isFullscreen && "px-4 py-3 sm:px-5 sm:py-4",
+            )}
+            title={`${insight.label}: ${insight.title} · ${insight.description}. 계산식: 신호 강도는 기여도, 참여율, 게시 후 경과일 같은 규칙별 점수를 0~100으로 표시합니다.`}
           >
             <div className="flex items-center justify-between gap-2">
               <span className="truncate text-[10px] font-black text-primary">
@@ -3145,7 +3360,10 @@ function AdminDashboardDiagnosisBoard({
             >
               <div className="h-1.5 overflow-hidden rounded-full bg-background/80">
                 <div
-                  className={cn("h-full rounded-full", signalBarClass[insight.tone])}
+                  className={cn(
+                    "h-full rounded-full",
+                    signalBarClass[insight.tone],
+                  )}
                   style={{
                     width: `${Math.max(8, Math.min(100, insight.score))}%`,
                   }}
@@ -3243,8 +3461,12 @@ function AdminDashboardAreaChart({
             width={42}
           />
           <RechartsTooltip
-            formatter={(value) => [`${Number(value).toFixed(2)}%`, "참여율"]}
+            formatter={(value) => [
+              `${Number(value).toFixed(2)}%`,
+              "참여율 · 계산식: 참여 / 조회수 × 100",
+            ]}
             contentStyle={adminDashboardTooltipStyle}
+            wrapperStyle={adminDashboardTooltipWrapperStyle}
             cursor={{ stroke: adminDashboardGridColor }}
           />
           <Area
@@ -3635,6 +3857,8 @@ function AdminDashboardManagementPanel({
   const [dashboardCardViews, setDashboardCardViews] = useState(
     DEFAULT_ADMIN_DASHBOARD_CARD_VIEWS,
   );
+  const [fullscreenWidgetId, setFullscreenWidgetId] =
+    useState<AdminDashboardWidgetId | null>(null);
   const [trendSeriesVisibility, setTrendSeriesVisibility] = useState(
     DEFAULT_ADMIN_DASHBOARD_TREND_SERIES_VISIBILITY,
   );
@@ -3713,6 +3937,19 @@ function AdminDashboardManagementPanel({
     youtubeChannelQuery.isFetching,
     youtubeChannelQuery.isLoading,
   ]);
+
+  useEffect(() => {
+    if (!fullscreenWidgetId) return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setFullscreenWidgetId(null);
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [fullscreenWidgetId]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -3825,6 +4062,30 @@ function AdminDashboardManagementPanel({
     },
     [],
   );
+  const toggleDashboardFullscreenWidget = useCallback(
+    (widgetId: AdminDashboardWidgetId) => {
+      setFullscreenWidgetId((current) =>
+        current === widgetId ? null : widgetId,
+      );
+    },
+    [],
+  );
+  const renderDashboardFullscreenButton = useCallback(
+    (widgetId: AdminDashboardWidgetId) => (
+      <AdminDashboardFullscreenButton
+        widgetId={widgetId}
+        label={ADMIN_DASHBOARD_WIDGET_LABELS[widgetId]}
+        isFullscreen={fullscreenWidgetId === widgetId}
+        onToggle={toggleDashboardFullscreenWidget}
+      />
+    ),
+    [fullscreenWidgetId, toggleDashboardFullscreenWidget],
+  );
+  const isDashboardWidgetFullscreen = useCallback(
+    (widgetId: AdminDashboardWidgetId) => fullscreenWidgetId === widgetId,
+    [fullscreenWidgetId],
+  );
+
   const toggleTrendSeries = useCallback(
     (series: AdminDashboardTrendSeriesKey) => {
       setTrendSeriesVisibility((current) => {
@@ -3933,10 +4194,8 @@ function AdminDashboardManagementPanel({
         if (!isDashboardOrderEditorOpen || isDashboardOrderSaving) return;
         event.preventDefault();
         const rawWidgetId = event.dataTransfer.getData("text/plain");
-        const sourceWidgetId = adminDashboardWidgetIdSet.has(
-          rawWidgetId as AdminDashboardWidgetId,
-        )
-          ? (rawWidgetId as AdminDashboardWidgetId)
+        const sourceWidgetId = isAdminDashboardWidgetId(rawWidgetId)
+          ? rawWidgetId
           : draggedDashboardWidgetId;
         moveDraggedDashboardWidget(widgetId, sourceWidgetId);
       },
@@ -3995,6 +4254,15 @@ function AdminDashboardManagementPanel({
         getNonNegativeMetricDelta(getVideoViewDelta(a)),
     );
   }, [growthVideos, hasPeriodGrowthComparison, videosByViews]);
+  const topContentVideosByInsightScore = useMemo(() => {
+    if (!hasPeriodGrowthComparison) return videosByViews;
+
+    return [...videosByViews].sort(
+      (a, b) =>
+        getNonNegativeMetricDelta(getVideoViewDelta(b)) -
+        getNonNegativeMetricDelta(getVideoViewDelta(a)),
+    );
+  }, [hasPeriodGrowthComparison, videosByViews]);
   const topContentMetricMode = hasPeriodGrowthComparison ? "delta" : "current";
   const periodViewValue = getDashboardPeriodMetricValue(
     growthVideos,
@@ -4032,13 +4300,6 @@ function AdminDashboardManagementPanel({
     (video) => video.commentCount,
     (video) => video.previousCommentCount,
   );
-  const engagementChange = calculateDashboardPeriodMetricChange(
-    growthVideos,
-    period,
-    getVideoEngagementTotal,
-    getPreviousVideoEngagementTotal,
-  );
-  const videoCountChange = calculateDashboardMetricChange(videos, () => 1);
   const trendPoints = useMemo(
     () => buildAdminDashboardTrendPoints(videosByPublishedAt),
     [videosByPublishedAt],
@@ -4117,11 +4378,6 @@ function AdminDashboardManagementPanel({
       ),
     [videosByPublishedAt],
   );
-  const barRows = useMemo(
-    () =>
-      buildAdminDashboardBarRows(videosByInsightScore, topContentMetricMode),
-    [topContentMetricMode, videosByInsightScore],
-  );
   const isInsightDynamicLoading =
     insightQuery.isLoading ||
     growthInsightQuery.isLoading ||
@@ -4169,16 +4425,12 @@ function AdminDashboardManagementPanel({
   const selectedPeriodLabel =
     ADMIN_DASHBOARD_PERIOD_OPTIONS.find((option) => option.value === period)
       ?.label ?? "선택 기간";
-  const periodMetricScopeLabel = hasPeriodGrowthComparison
-    ? "기간 순증"
-    : "기간 영상 현재";
   const periodMetricCaption = hasPeriodGrowthComparison
     ? `${selectedPeriodLabel} · 기간 순증`
     : `${selectedPeriodLabel} · 기간 영상 현재`;
   const periodRatioCaptionPrefix = hasPeriodGrowthComparison
     ? "조회 증가 대비"
     : "조회수 대비";
-  const periodVideoCaption = `${selectedPeriodLabel} 신규 업로드`;
   const channelStats = youtubeChannelQuery.data;
   const subscriberSparklinePoints = useMemo(
     () =>
@@ -4192,6 +4444,48 @@ function AdminDashboardManagementPanel({
     youtubeChannelQuery.isLoading || pendingSkeletonPeriod === period;
   const hasSubscriberCount = channelStats?.subscriberCount != null;
   const cumulativeVideoTotal = channelStats?.videoCount ?? stats.totalVideos;
+  const hasSnapshotVideoCountComparison =
+    period !== "ALL" &&
+    typeof channelStats?.videoCount === "number" &&
+    typeof channelStats.previousVideoCount === "number";
+  const periodUploadVideoValue = hasSnapshotVideoCountComparison
+    ? Math.max(
+        0,
+        (channelStats?.videoCount ?? 0) -
+          (channelStats?.previousVideoCount ?? 0),
+      )
+    : visibleVideoTotal;
+  const periodVideoCaption = hasSnapshotVideoCountComparison
+    ? `${selectedPeriodLabel} · 채널 videoCount 순증 · 현재 ${formatNumber(cumulativeVideoTotal)}`
+    : `${selectedPeriodLabel} 신규 업로드 · 현재 ${formatNumber(cumulativeVideoTotal)}`;
+  const periodUploadVideoProgress =
+    typeof periodUploadVideoValue === "number" && periodUploadVideoValue > 0
+      ? Math.min(100, Math.max(12, periodUploadVideoValue * 6))
+      : 0;
+  const barRows = useMemo(
+    () =>
+      buildAdminDashboardBarRows(
+        topContentVideosByInsightScore,
+        topContentMetricMode,
+        null,
+        topContentMetricMode === "delta" ? periodUploadVideoValue : null,
+      ),
+    [
+      periodUploadVideoValue,
+      topContentVideosByInsightScore,
+      topContentMetricMode,
+    ],
+  );
+  const topContentComparisonCount = topContentVideosByInsightScore.length;
+  const topContentCardMetric = hasPeriodGrowthComparison
+    ? `업로드 영상 ${formatNumber(topContentComparisonCount)}개`
+    : `선택 영상 ${formatNumber(topContentComparisonCount)}개`;
+  const videoCountChange = hasSnapshotVideoCountComparison
+    ? calculateDashboardChange(
+        channelStats?.videoCount ?? 0,
+        channelStats?.previousVideoCount ?? 0,
+      )
+    : null;
   const subscriberDelta =
     period !== "ALL" &&
     typeof channelStats?.subscriberCount === "number" &&
@@ -4211,8 +4505,6 @@ function AdminDashboardManagementPanel({
     : subscriberDelta == null
       ? formatNumber(channelStats?.subscriberCount)
       : formatSignedNumber(subscriberDelta);
-  const subscriberScopeLabel =
-    subscriberDelta == null ? "현재 누적" : "기간 순증";
   const subscriberCaption = isSubscriberLoading
     ? "채널 통계 불러오는 중"
     : !hasSubscriberCount
@@ -4324,10 +4616,10 @@ function AdminDashboardManagementPanel({
         likes: row.likeCount,
         comments: row.commentCount,
         viewBenchmarkLabel: row.viewBenchmarkLabel,
-        viewBenchmark: formatDashboardAverageComparison(
-          row.viewCount,
-          row.viewAverage,
-        ),
+        viewBenchmark: row.viewBenchmark,
+        viewBenchmarkTooltip: row.viewBenchmarkTooltip,
+        viewBenchmarkTooltipLines: row.viewBenchmarkTooltipLines,
+        viewMedianMultipleLabel: row.viewMedianMultipleLabel,
         likeBenchmark: formatDashboardAverageComparison(
           row.likeCount,
           row.likeAverage,
@@ -4355,7 +4647,11 @@ function AdminDashboardManagementPanel({
         key: "views",
         header: "조회수",
         align: "right",
-        cell: (row) => formatNumber(row.views),
+        cell: (row) => (
+          <span className="font-bold tabular-nums text-foreground">
+            {formatNumber(row.views)}
+          </span>
+        ),
       });
     }
 
@@ -4403,7 +4699,11 @@ function AdminDashboardManagementPanel({
         className: "w-[12%]",
         header: "조회수",
         align: "right",
-        cell: (row) => formatNumber(row.views),
+        cell: (row) => (
+          <span className="font-bold tabular-nums text-foreground">
+            {formatNumber(row.views)}
+          </span>
+        ),
       });
     }
 
@@ -4413,7 +4713,11 @@ function AdminDashboardManagementPanel({
         header: "좋아요",
         align: "right",
         className: "w-[12%]",
-        cell: (row) => formatNumber(row.likes),
+        cell: (row) => (
+          <span className="font-bold tabular-nums text-foreground">
+            {formatNumber(row.likes)}
+          </span>
+        ),
       });
     }
 
@@ -4423,21 +4727,30 @@ function AdminDashboardManagementPanel({
         header: "댓글",
         align: "right",
         className: "w-[12%]",
-        cell: (row) => formatNumber(row.comments),
+        cell: (row) => (
+          <span className="font-bold tabular-nums text-foreground">
+            {formatNumber(row.comments)}
+          </span>
+        ),
       });
     }
 
     columns.push({
       key: "benchmark",
-      header: "평균 대비",
+      header: "성과 기여",
       className: "w-[30%]",
       cell: (row) => (
-        <span
-          className="block truncate font-extrabold"
-          title={`${row.viewBenchmarkLabel} ${row.viewBenchmark} · 좋아요 ${row.likeBenchmark} · 댓글 ${row.commentBenchmark}`}
+        <AdminDashboardInlineTooltip
+          label={`${row.title} 성과 기여`}
+          lines={[
+            ...row.viewBenchmarkTooltipLines,
+            `좋아요 ${row.likeBenchmark}`,
+            `댓글 ${row.commentBenchmark}`,
+          ]}
+          className="block truncate font-extrabold outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
-          {row.viewBenchmarkLabel} {row.viewBenchmark}
-        </span>
+          {row.viewBenchmark}
+        </AdminDashboardInlineTooltip>
       ),
     });
 
@@ -4446,16 +4759,17 @@ function AdminDashboardManagementPanel({
   const topContentInsights = useMemo(
     () =>
       buildAdminDashboardContentInsights(
-        videosByInsightScore,
+        topContentVideosByInsightScore,
         topContentMetricMode,
         insightQuery.data?.asOf,
         subscriberDelta,
+        null,
       ),
     [
       insightQuery.data?.asOf,
       subscriberDelta,
+      topContentVideosByInsightScore,
       topContentMetricMode,
-      videosByInsightScore,
     ],
   );
   const diagnosisTableRows = useMemo(
@@ -4468,6 +4782,11 @@ function AdminDashboardManagementPanel({
       })),
     [topContentInsights],
   );
+  const topContentContributionFormula = `계산식: ${
+    hasPeriodGrowthComparison
+      ? "기간 조회 증가 기여 = 이 영상 조회 증가 / 선택 기간 업로드 영상 조회 증가 합계 × 100."
+      : "기간 조회 기여 = 이 영상 조회수 / 선택 기간 영상 조회수 합계 × 100."
+  }`;
   return (
     <section
       className="flex h-full min-h-0 flex-col overflow-y-auto bg-background p-0 font-sans text-foreground lg:overflow-hidden"
@@ -4573,6 +4892,16 @@ function AdminDashboardManagementPanel({
         </div>
       ) : null}
 
+      {fullscreenWidgetId ? (
+        <button
+          type="button"
+          className="fixed inset-0 z-[70] cursor-default bg-background/70 backdrop-blur-sm"
+          aria-label="전체화면 카드 닫기"
+          data-admin-dashboard-card-fullscreen-backdrop="true"
+          onClick={() => setFullscreenWidgetId(null)}
+        />
+      ) : null}
+
       <div
         className="grid min-h-0 flex-1 auto-rows-min grid-cols-1 gap-2 overflow-visible sm:grid-cols-2 lg:grid-cols-10 lg:grid-rows-[132px_minmax(0,1fr)_minmax(0,0.86fr)]"
         data-admin-dashboard-order-mode={
@@ -4580,8 +4909,8 @@ function AdminDashboardManagementPanel({
         }
       >
         <AdminDashboardKpiCard
+          widgetId="subscribers"
           title={subscriberCardTitle}
-          dataScopeLabel={subscriberScopeLabel}
           className={cn(
             "lg:col-span-2",
             getDashboardReorderCardClassName("subscribers"),
@@ -4597,14 +4926,16 @@ function AdminDashboardManagementPanel({
           deltaLabel="기간 대비"
           isLoading={isSubscriberLoading}
           infoLines={[
-            "선택 기간 동안 늘어난 YouTube 채널 statistics.subscriberCount 순증입니다.",
-            "비교 스냅샷이 없으면 주값은 현재 누적 구독자 수로 표시하고 현재 누적 배지를 붙입니다.",
-            "기간 순증과 현재 누적은 카드 제목 옆 배지와 보조 문구로 구분합니다.",
+            "설명: 채널 구독자 수를 보여주는 카드입니다.",
+            "읽는 법: 비교 스냅샷이 있으면 기간 동안 늘어난 구독자 수, 없으면 현재 전체 구독자 수입니다.",
+            "계산식: 기간 구독자 증가 = 현재 구독자 - 이전 구독자.",
+            "참고: 제목 옆 기간 대비는 이전 스냅샷 대비 증감률입니다.",
+            "주의: 제목 옆 변화율은 이전 스냅샷 대비 증가 또는 감소 비율입니다.",
           ]}
         />
         <AdminDashboardKpiCard
+          widgetId="views"
           title={viewCardTitle}
-          dataScopeLabel={periodMetricScopeLabel}
           className={cn(
             "lg:col-span-2",
             getDashboardReorderCardClassName("views"),
@@ -4614,19 +4945,23 @@ function AdminDashboardManagementPanel({
           value={isChartLoading ? "—" : formatNumber(periodViewDisplayValue)}
           caption={`${periodMetricCaption} · 현재 전체 누적 ${formatNumber(cumulativeViewValue)}`}
           delta={formatDashboardChangeLabel(viewChange)}
+          deltaLabel="기간 대비"
           progress={getDashboardChangeProgress(viewChange)}
           tone="blue"
           sparklineData={viewSparklineDisplayPoints}
           isLoading={isChartLoading}
           infoLines={[
-            "선택 기간 동안 채널 전체 영상에서 늘어난 viewCount 순증입니다.",
-            "비교 스냅샷이 없으면 선택 기간 업로드 영상들의 현재 조회수 합계로 표시합니다.",
-            "미니 차트 X축은 영상 게시일 순서, Y축은 배지에 표시된 데이터 범위 기준 값입니다.",
+            "설명: 선택 기간 영상들의 조회수 합계를 보여주는 카드입니다.",
+            "읽는 법: 비교 스냅샷이 있으면 기간 동안 늘어난 조회수, 없으면 선택 기간 영상의 현재 조회수 합계입니다.",
+            "계산식: 기간 조회 증가 = 각 영상의 (현재 조회수 - 이전 조회수) 합계.",
+            "처리: 이전값이 없는 영상은 이전값 0으로 계산합니다.",
+            "참고: 제목 옆 기간 대비는 이전 스냅샷 대비 증감률입니다.",
+            "주의: 아래 작은 선은 영상 게시일 순서에 따른 조회수 흐름입니다.",
           ]}
         />
         <AdminDashboardKpiCard
+          widgetId="likes"
           title={likeCardTitle}
-          dataScopeLabel={periodMetricScopeLabel}
           className={cn(
             "lg:col-span-2",
             getDashboardReorderCardClassName("likes"),
@@ -4640,19 +4975,23 @@ function AdminDashboardManagementPanel({
               : `${periodRatioCaptionPrefix} ${formatDashboardPercent(likeRate)} · 현재 전체 누적 ${formatNumber(cumulativeLikeValue)}`
           }
           delta={formatDashboardChangeLabel(likeChange)}
+          deltaLabel="기간 대비"
           progress={getDashboardChangeProgress(likeChange)}
           tone="rose"
           sparklineData={likeSparklineDisplayPoints}
           isLoading={isChartLoading}
           infoLines={[
-            "선택 기간 동안 채널 전체 영상에서 늘어난 likeCount 순증입니다.",
-            "비교 스냅샷이 없으면 선택 기간 업로드 영상들의 현재 좋아요 합계로 표시합니다.",
-            "미니 차트 X축은 영상 게시일 순서, Y축은 배지에 표시된 데이터 범위 기준 값입니다.",
+            "설명: 선택 기간 영상들의 좋아요 합계를 보여주는 카드입니다.",
+            "읽는 법: 비교 스냅샷이 있으면 기간 동안 늘어난 좋아요 수, 없으면 선택 기간 영상의 현재 좋아요 합계입니다.",
+            "계산식: 기간 좋아요 증가 = 각 영상의 (현재 좋아요 - 이전 좋아요) 합계.",
+            "처리: 이전값이 없는 영상은 이전값 0으로 계산합니다.",
+            "참고: 좋아요 비율은 조회수 중 좋아요로 반응한 비중입니다.",
+            "주의: 조회 대비 비율은 조회수 중 좋아요로 반응한 비중을 뜻합니다.",
           ]}
         />
         <AdminDashboardKpiCard
+          widgetId="comments"
           title={commentCardTitle}
-          dataScopeLabel={periodMetricScopeLabel}
           className={cn(
             "lg:col-span-2",
             getDashboardReorderCardClassName("comments"),
@@ -4666,36 +5005,43 @@ function AdminDashboardManagementPanel({
               : `${periodRatioCaptionPrefix} ${formatDashboardPercent(commentRate)} · 현재 전체 누적 ${formatNumber(cumulativeCommentValue)}`
           }
           delta={formatDashboardChangeLabel(commentChange)}
+          deltaLabel="기간 대비"
           progress={getDashboardChangeProgress(commentChange)}
           tone="amber"
           sparklineData={commentSparklineDisplayPoints}
           isLoading={isChartLoading}
           infoLines={[
-            "선택 기간 동안 채널 전체 영상에서 늘어난 commentCount 순증입니다.",
-            "비교 스냅샷이 없으면 선택 기간 업로드 영상들의 현재 댓글 합계로 표시합니다.",
-            "미니 차트 X축은 영상 게시일 순서, Y축은 배지에 표시된 데이터 범위 기준 값입니다.",
+            "설명: 선택 기간 영상들의 댓글 합계를 보여주는 카드입니다.",
+            "읽는 법: 비교 스냅샷이 있으면 기간 동안 늘어난 댓글 수, 없으면 선택 기간 영상의 현재 댓글 합계입니다.",
+            "계산식: 기간 댓글 증가 = 각 영상의 (현재 댓글 - 이전 댓글) 합계.",
+            "처리: 이전값이 없는 영상은 이전값 0으로 계산합니다.",
+            "참고: 댓글 비율은 조회수 중 댓글로 반응한 비중입니다.",
+            "주의: 조회 대비 댓글 비율은 조회수 중 댓글로 반응한 비중을 뜻합니다.",
           ]}
         />
         <AdminDashboardKpiCard
+          widgetId="videos"
           title="업로드 영상 수"
-          dataScopeLabel="기간 업로드"
           className={cn(
             "lg:col-span-2",
             getDashboardReorderCardClassName("videos"),
           )}
           style={{ order: getDashboardWidgetOrder("videos") }}
           reorderProps={getDashboardCardReorderProps("videos")}
-          value={isChartLoading ? "—" : formatNumber(visibleVideoTotal)}
-          caption={`${periodVideoCaption} · 현재 ${formatNumber(cumulativeVideoTotal)}`}
+          value={isChartLoading ? "—" : formatNumber(periodUploadVideoValue)}
+          caption={periodVideoCaption}
           delta={formatDashboardChangeLabel(videoCountChange)}
-          progress={getDashboardChangeProgress(videoCountChange)}
+          deltaLabel="기간 대비"
+          progress={periodUploadVideoProgress}
           tone="teal"
           sparklineData={videoCountSparklinePoints}
           isLoading={isChartLoading}
           infoLines={[
-            "선택 타임프레임에 새로 업로드된 영상 개수입니다.",
-            "미니 차트 X축은 최근 영상 게시일 순서, Y축은 누적 영상 순번입니다.",
-            "우측 증감은 선택 기간의 최신 절반과 이전 절반 영상 수를 비교합니다.",
+            "설명: 선택 기간에 새로 올라온 영상 수를 보여주는 카드입니다.",
+            "읽는 법: 채널 스냅샷이 있으면 videoCount 차이, 없으면 선택 기간 영상 목록 개수를 사용합니다.",
+            "계산식: 업로드 영상 수 = 현재 channel videoCount - 이전 channel videoCount.",
+            "참고: 스냅샷이 없으면 선택 기간 영상 목록 개수를 대신 사용합니다.",
+            "주의: 업로드 수는 조회수·좋아요·댓글 카드와 함께 봐야 성과를 판단할 수 있습니다.",
           ]}
         />
 
@@ -4704,8 +5050,14 @@ function AdminDashboardManagementPanel({
             adminDashboardCardClass,
             "flex min-h-[280px] flex-col overflow-visible p-3 sm:col-span-2 lg:col-span-3",
             getDashboardReorderCardClassName("impact"),
+            isDashboardWidgetFullscreen("impact") &&
+              adminDashboardFullscreenCardClassName,
           )}
           style={{ order: getDashboardWidgetOrder("impact") }}
+          data-admin-dashboard-widget-card="impact"
+          data-admin-dashboard-card-fullscreen={
+            isDashboardWidgetFullscreen("impact") ? "true" : undefined
+          }
           {...getDashboardCardReorderProps("impact")}
         >
           <AdminDashboardCardTitle
@@ -4713,10 +5065,14 @@ function AdminDashboardManagementPanel({
             metric={`조회 증감 ${formatDashboardChangeLabel(viewChange)}`}
             infoLines={[
               hasPeriodGrowthComparison
-                ? "X축은 선택 기간 조회수 증가, Y축은 참여 증가입니다."
-                : "X축은 영상별 조회수, Y축은 참여 수입니다.",
-              "참여는 좋아요 수 + 댓글 수이며, 원 크기도 참여 규모를 의미합니다.",
-              "동그라미 색상은 성과 차이가 아니라 순위 구분용입니다.",
+                ? "설명: 오른쪽으로 갈수록 조회 증가가 크고, 위로 갈수록 좋아요와 댓글 증가가 큽니다."
+                : "설명: 오른쪽으로 갈수록 조회수가 크고, 위로 갈수록 좋아요와 댓글 합계가 큽니다.",
+              "읽는 법: 원이 클수록 조회수와 반응을 합친 영향도가 큰 영상입니다. 색은 순위 구분입니다.",
+              "계산식: 참여 = 좋아요 + 댓글.",
+              hasPeriodGrowthComparison
+                ? "기간 비교 때는 현재값에서 이전값을 뺀 증가량으로 위치를 잡습니다."
+                : "원 크기는 참여가 클수록 크게 표시됩니다.",
+              "주의: 색보다 위치와 원 크기를 먼저 확인하세요.",
             ]}
             action={
               <div className="flex flex-wrap items-center justify-end gap-1">
@@ -4726,6 +5082,7 @@ function AdminDashboardManagementPanel({
                   onChange={(view) => setDashboardCardView("impact", view)}
                   label="상위 영상 영향도"
                 />
+                {renderDashboardFullscreenButton("impact")}
               </div>
             }
           />
@@ -4759,7 +5116,11 @@ function AdminDashboardManagementPanel({
                   className: "w-[18%]",
                   header: hasPeriodGrowthComparison ? "조회 증가" : "조회수",
                   align: "right",
-                  cell: (row) => formatNumber(row.views),
+                  cell: (row) => (
+                    <span className="font-bold tabular-nums text-foreground">
+                      {formatNumber(row.views)}
+                    </span>
+                  ),
                 },
                 {
                   key: "engagement",
@@ -4791,22 +5152,30 @@ function AdminDashboardManagementPanel({
             adminDashboardCardClass,
             "flex min-h-[280px] flex-col overflow-visible p-3 sm:col-span-2 lg:col-span-4",
             getDashboardReorderCardClassName("trend"),
+            isDashboardWidgetFullscreen("trend") &&
+              adminDashboardFullscreenCardClassName,
           )}
           style={{ order: getDashboardWidgetOrder("trend") }}
+          data-admin-dashboard-widget-card="trend"
+          data-admin-dashboard-card-fullscreen={
+            isDashboardWidgetFullscreen("trend") ? "true" : undefined
+          }
           {...getDashboardCardReorderProps("trend")}
         >
           <AdminDashboardCardTitle
-            title="조회·참여 추이"
+            title="영상별 성과 분포"
             metric={`조회 증감 ${formatDashboardChangeLabel(viewChange)}`}
             infoLines={[
-              "X축은 최근 영상 게시일 순서입니다.",
-              "Y축은 조회수, 참여, 참여율을 각각 0~100점으로 정규화한 상대 점수입니다.",
-              "참여는 좋아요+댓글, 참여율은 (좋아요+댓글)/조회수*100입니다.",
+              "설명: 영상별 조회수, 참여, 참여율을 게시일 순서로 비교합니다.",
+              "읽는 법: 조회·반응(좋아요+댓글)·반응률을 각각 100점 기준으로 맞춰 같은 눈금에서 비교합니다.",
+              "참고: 참여는 좋아요와 댓글을 더한 값이고, 참여율은 조회수 대비 참여 비중입니다.",
+              "계산식: 정규화 점수 = 해당 값 / 해당 지표 최고값 × 100.",
+              "주의: 실제 숫자보다 흐름과 튀는 항목을 찾는 용도입니다.",
             ]}
             action={
               <div className="flex flex-wrap items-center justify-end gap-1">
                 <AdminDashboardSeriesToggle
-                  label="조회·참여 추이"
+                  label="영상별 성과 분포"
                   options={[
                     {
                       key: "views",
@@ -4830,8 +5199,9 @@ function AdminDashboardManagementPanel({
                 <AdminDashboardViewToggle
                   value={getDashboardCardView("trend")}
                   onChange={(view) => setDashboardCardView("trend", view)}
-                  label="조회·참여 추이"
+                  label="영상별 성과 분포"
                 />
+                {renderDashboardFullscreenButton("trend")}
               </div>
             }
           />
@@ -4844,7 +5214,7 @@ function AdminDashboardManagementPanel({
           ) : getDashboardCardView("trend") === "table" ? (
             <AdminDashboardScrollTable
               rows={trendTableRows}
-              emptyText="표시할 조회·참여 추이 데이터가 없습니다."
+              emptyText="표시할 영상별 성과 분포 데이터가 없습니다."
               getRowKey={(row, index) => `${row.label}-${index}`}
               columns={trendTableColumns}
             />
@@ -4898,19 +5268,32 @@ function AdminDashboardManagementPanel({
             getDashboardReorderCardClassName("topContent"),
           )}
           style={{ order: getDashboardWidgetOrder("topContent") }}
+          data-admin-dashboard-widget-card="topContent"
           {...getDashboardCardReorderProps("topContent")}
         >
           <AdminDashboardCardTitle
             title="콘텐츠 성과 TOP 5"
-            metric={`조회 증감 ${formatDashboardChangeLabel(viewChange)}`}
+            metric={topContentCardMetric}
             infoLines={[
+              "설명: 선택 기간 업로드 영상 중 상위 5개의 조회수, 좋아요, 댓글 비중을 비교합니다.",
               hasPeriodGrowthComparison
-                ? "X축은 선택 기간 조회수 증가 상위 영상 5개의 유튜브 제목이며, 긴 제목은 말줄임 처리합니다."
-                : "X축은 조회수 상위 영상 5개의 유튜브 제목이며, 긴 제목은 말줄임 처리합니다.",
+                ? "읽는 법: 막대는 선택 기간 업로드 영상의 조회·좋아요·댓글 증가량을 보여주고, 기여도는 업로드 영상 증가 합계 중 해당 영상이 차지한 비율입니다."
+                : "읽는 법: 막대는 조회·좋아요·댓글 수를 보여주고, 기여도는 전체 합계 중 해당 영상이 차지한 비율입니다.",
+              "막대 기준: 각 색 조각은 상위 5개 안에서 해당 영상이 차지하는 비중입니다.",
+              topContentContributionFormula,
               hasPeriodGrowthComparison
-                ? "Y축은 조회수·좋아요·댓글 증가량이며, 최근 성장 기여도가 높은 순서로 정렬합니다."
-                : "Y축은 조회수·좋아요·댓글 수이며, 조회수가 높은 순서로 정렬합니다.",
-              "각 영상은 선택 기간 전체 영상 평균 대비 이상/이하를 함께 표시합니다.",
+                ? "용어: 기간 조회 증가 기여는 선택 기간 업로드 영상들의 조회 증가 합계 중 이 영상이 차지한 비율입니다."
+                : "용어: 기간 조회 기여는 선택 기간 영상들의 조회수 합계 중 이 영상 조회수가 차지한 비율입니다.",
+              hasPeriodGrowthComparison
+                ? "비교 대상: 선택 기간에 새로 올라온 업로드 영상입니다."
+                : "예시: 영상 20개의 조회수 합계가 1,000회이고 이 영상이 120회면 12% 기여입니다.",
+              hasPeriodGrowthComparison
+                ? "처리: 이전 스냅샷이 없으면 현재 조회수를 증가분으로 봅니다."
+                : "처리: 선택 기간 영상의 현재 조회수를 그대로 사용합니다.",
+              hasPeriodGrowthComparison
+                ? "전체값: 선택 기간 업로드 영상의 조회 증가 합계를 분모로 사용합니다."
+                : "전체값: 선택 기간 영상 조회수 합계를 분모로 사용합니다.",
+              "주의: 제목이 길면 표 보기나 마우스 올림 제목으로 전체를 확인하세요.",
             ]}
             action={
               <div className="flex flex-wrap items-center justify-end gap-1">
@@ -4930,7 +5313,7 @@ function AdminDashboardManagementPanel({
                     {
                       key: "comments",
                       label: "댓글",
-                      dotClassName: "bg-amber-500",
+                      dotClassName: "bg-orange-500",
                     },
                   ]}
                   visibility={topContentSeriesVisibility}
@@ -4974,15 +5357,19 @@ function AdminDashboardManagementPanel({
             getDashboardReorderCardClassName("engagementRate"),
           )}
           style={{ order: getDashboardWidgetOrder("engagementRate") }}
+          data-admin-dashboard-widget-card="engagementRate"
           {...getDashboardCardReorderProps("engagementRate")}
         >
           <AdminDashboardCardTitle
             title="성과 진단"
-            metric={`진단 신호 ${formatNumber(topContentInsights.length)}개 · 참여 ${formatDashboardChangeLabel(engagementChange)}`}
+            metric={`진단 신호 ${formatNumber(topContentInsights.length)}개 · ${topContentCardMetric}`}
             infoLines={[
-              "선택 기간의 조회 증가, 참여율, 일평균 조회 속도를 채널 평균과 비교해 실행 가능한 신호만 추립니다.",
-              "평균 대비는 선택 기간 영상 또는 기간 순증 데이터의 평균을 기준으로 산정합니다.",
-              "초반 반응 점검은 업로드 14일 이내 영상의 일평균 조회 속도가 평균보다 낮은 경우 우선 노출합니다.",
+              "설명: 지금 확인할 만한 영상 성과 신호를 요약한 카드입니다.",
+              "읽는 법: 성과 기여, 참여율, 초반 반응, 재상승 후보를 작은 카드로 분류합니다.",
+              "참고: 성과 기여는 TOP 5와 같은 기준으로 기간 조회 증가 기여도를 봅니다.",
+              "참고: 참여율은 조회수 대비 좋아요와 댓글 반응 비중입니다.",
+              "계산식: 신호 강도 = 카드별 규칙 점수를 0~100 범위로 표시한 값입니다.",
+              "주의: 조회수만 보지 말고 기여도와 참여율을 함께 확인하세요.",
             ]}
             action={
               <div className="ml-auto flex min-w-0 shrink-0 items-center gap-2">
@@ -5424,12 +5811,20 @@ function AdminSidebar({
                       <UiTooltipContent
                         side="right"
                         align="center"
-                        className="max-w-[14rem] text-xs"
+                        className={cn(
+                          adminDashboardTooltipContentClassName,
+                          "max-w-[14rem] space-y-1",
+                        )}
                         data-admin-sidebar-collapsed-tooltip="true"
+                        data-admin-dashboard-tooltip-content="standard"
                       >
-                        <p className="font-bold">{item.title}</p>
+                        <p className={adminDashboardTooltipFirstLineClassName}>
+                          {item.title}
+                        </p>
                         {item.badge ? (
-                          <p className="text-muted-foreground">{item.badge}</p>
+                          <p className={adminDashboardTooltipLineClassName}>
+                            {item.badge}
+                          </p>
                         ) : null}
                       </UiTooltipContent>
                     </UiTooltip>
