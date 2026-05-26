@@ -159,11 +159,13 @@ describe('admin user-management source contract', () => {
 
   test('persists per-admin sidebar ordering with RLS and explicit Data API grants', () => {
     const routeSource = source('app/api/admin/preferences/sidebar-order/route.ts');
+    const sidebarOrderSource = source('lib/admin/sidebar-order.ts');
     const migrationSource = repoSource('backend/supabase/migrations/20260514_admin_sidebar_preferences.sql');
 
     expect(routeSource).toContain('admin_sidebar_order');
-    expect(routeSource).toContain('DEFAULT_ADMIN_SIDEBAR_ORDER');
+    expect(sidebarOrderSource).toContain('DEFAULT_ADMIN_SIDEBAR_ORDER');
     expect(routeSource).toContain('normalizeAdminSidebarOrder');
+    expect(routeSource).toContain('@/lib/admin/sidebar-order');
     expect(routeSource).toContain('await requireAdmin()');
     expect(routeSource.indexOf('await requireAdmin()')).toBeLessThan(routeSource.indexOf('createSupabaseServiceRoleClient()'));
     expect(routeSource).toContain(".upsert(");
