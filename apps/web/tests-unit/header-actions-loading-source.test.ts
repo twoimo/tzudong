@@ -132,8 +132,13 @@ describe("header action loading source contract", () => {
     expect(userMenuSource).toContain(
       "DESKTOP_LEFT_PANEL_EXPAND_ON_ENTRY_EVENT",
     );
-    expect(source("lib/desktop-left-panel-entry.ts")).toContain(
-      'searchParams.get("panel") === "settings"',
+    const desktopLeftPanelEntrySource = source("lib/desktop-left-panel-entry.ts");
+    expect(desktopLeftPanelEntrySource).toContain(
+      "DESKTOP_LEFT_PANEL_ROUTE_PANELS",
+    );
+    expect(desktopLeftPanelEntrySource).toContain('"settings"');
+    expect(desktopLeftPanelEntrySource).toContain(
+      "DESKTOP_LEFT_PANEL_ROUTE_PANELS.has(panel)",
     );
     expect(userMenuSource).toContain("{isAdmin && (");
     expect(userMenuSource).toContain("await signOut();");
