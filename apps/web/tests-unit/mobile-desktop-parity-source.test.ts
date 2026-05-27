@@ -40,23 +40,25 @@ describe("mobile and desktop parity source contracts", () => {
     expect(consoleSource).toContain("shouldRenderAdminShell");
     expect(consoleSource).toContain("관리자 콘솔");
     expect(consoleSource).toContain("현재 화면 · {activeSidebarLabel}");
-    expect(consoleSource).not.toContain("관리자 메뉴");
-    expect(consoleSource).not.toContain("Unified admin console");
-    expect(consoleSource).toContain("relative z-30 flex max-h-[42dvh]");
-    expect(consoleSource).toContain(
-      "flex gap-2 overflow-x-auto overscroll-x-contain",
+    expect(consoleSource).toContain('data-admin-console-mobile-header="true"');
+    expect(consoleSource).toContain('data-admin-console-menu-trigger="hamburger"');
+    expect(consoleSource).not.toContain(
+      'data-admin-console-menu-trigger="desktop-hamburger"',
     );
+    expect(consoleSource).not.toContain("Unified admin console");
+    expect(consoleSource).toContain("md:hidden");
+    expect(consoleSource).toContain("md:flex");
     expect(source("app/app-globals.css")).toContain(
       "grid-template-columns: fit-content(24rem) minmax(0, 1fr);",
     );
     expect(source("app/app-globals.css")).toContain(
       "grid-template-columns: 4.5rem minmax(0, 1fr);",
     );
-    expect(consoleSource).toContain("md:block md:min-h-0 md:flex-1");
     expect(consoleSource).toContain("md:w-full");
     expect(consoleSource).toContain("md:items-center md:px-1.5");
-    expect(consoleSource).toContain("p-2 sm:p-3 md:border-y-0 md:p-4");
-    expect(consoleSource).toContain("min-h-11 min-w-[8.25rem]");
+    expect(consoleSource).toContain("p-2 md:border-y-0 md:p-4");
+    expect(consoleSource).not.toContain("pb-[calc(env(safe-area-inset-bottom)+5.75rem)]");
+    expect(consoleSource).toContain("flex h-14 shrink-0 translate-y-0 transform-gpu items-center gap-2");
     expect(consoleSource).toContain(
       'data-admin-left-panel-expanded={isCollapsed ? "false" : "true"}',
     );
