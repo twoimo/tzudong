@@ -89,3 +89,33 @@ export async function PATCH(request: NextRequest) {
     );
   }
 }
+
+export async function DELETE() {
+  try {
+    const auth = await requireAdmin();
+    if (!auth.ok) return auth.response;
+
+    const supabase = createSupabaseServiceRoleClient();
+    const { error } = await supabase
+      .from("admin_user_preferences")
+      .delete()
+      .eq("user_id", auth.userId)
+      .eq("preference_key", DASHBOARD_WIDGET_ORDER_KEY);
+
+    if (error) throw error;
+
+    return NextResponse.json(
+      { order: normalizeAdminDashboardWidgetOrder(null) },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  } catch (error) {
+    console.error(
+      "[admin/preferences/dashboard-widget-order] failed to reset widget order:",
+      error,
+    );
+    return NextResponse.json(
+      { error: "KPI 카드 순서를 초기화하지 못했습니다." },
+      { status: 500 },
+    );
+  }
+}
