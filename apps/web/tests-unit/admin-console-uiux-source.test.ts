@@ -424,10 +424,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(consoleSource).toContain('data-admin-dashboard-channel-kpi="true"');
     expect(consoleSource).toContain(
-      "flex h-full min-h-0 flex-col overflow-y-auto bg-background p-0 font-sans text-foreground lg:overflow-hidden",
+      "flex h-full min-h-0 min-w-0 flex-col overflow-visible bg-background p-0 font-sans text-foreground lg:overflow-hidden",
     );
     expect(consoleSource).toContain(
-      "grid min-h-0 flex-1 auto-rows-min grid-cols-1 gap-2 overflow-visible sm:grid-cols-2 lg:grid-cols-10 lg:grid-rows-[132px_minmax(0,1fr)_minmax(0,0.86fr)]",
+      "grid min-h-0 min-w-0 flex-1 auto-rows-min grid-cols-1 gap-2 overflow-x-hidden overflow-y-visible sm:grid-cols-2 lg:grid-cols-10 lg:grid-rows-[132px_minmax(0,1fr)_minmax(0,0.86fr)]",
     );
     expect(consoleSource).toContain('activeModuleId === "overview"');
     expect(consoleSource).toContain("overflow-y-auto lg:overflow-hidden");
@@ -458,7 +458,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(consoleSource).not.toContain("viewBox={`0 0 ${width} ${height}`}");
     expect(consoleSource).toContain(
-      "min-h-0 overflow-hidden border border-border/70 bg-background shadow-[0_1px_2px_rgba(15,23,42,0.06)]",
+      "min-h-0 min-w-0 w-full overflow-hidden border border-border/70 bg-background shadow-[0_1px_2px_rgba(15,23,42,0.06)]",
     );
     expect(consoleSource).not.toContain("bg-[#e9ecee]");
     expect(consoleSource).not.toContain(
@@ -503,6 +503,18 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(dashboardOrderRouteSource).toContain(
       'from "@/lib/admin/dashboard-widget-order"',
     );
+    expect(dashboardOrderRouteSource).toContain("export async function GET");
+    expect(dashboardOrderRouteSource).toContain("export async function PATCH");
+    expect(dashboardOrderRouteSource).toContain("export async function DELETE");
+    expect(dashboardOrderRouteSource).toContain(".upsert(");
+    expect(dashboardOrderRouteSource).toContain(
+      '{ onConflict: "user_id,preference_key" }',
+    );
+    expect(dashboardOrderRouteSource).toContain('"Cache-Control": "no-store"');
+    expect(dashboardOrderRouteSource).toContain(".delete()");
+    expect(dashboardOrderRouteSource).toContain(
+      'preference_key", DASHBOARD_WIDGET_ORDER_KEY',
+    );
     expect(dashboardOrderSource).toContain(
       "DEFAULT_ADMIN_DASHBOARD_WIDGET_ORDER",
     );
@@ -520,7 +532,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("YouTube Data API");
     expect(consoleSource).toContain("채널 통계 확인 필요");
     expect(consoleSource).toContain(
-      '<h1 className="text-[1.55rem] font-extrabold leading-tight tracking-[0.01em] text-foreground text-balance md:text-xl">',
+      '<div className="hidden min-w-0 md:block">',
+    );
+    expect(consoleSource).toContain(
+      '<h1 className="text-xl font-extrabold leading-tight tracking-[0.01em] text-foreground text-balance">',
     );
     expect(consoleSource).toContain("text-[clamp(1.42rem,1.75vw,2.1rem)]");
     expect(consoleSource).toContain("function AdminDashboardTooltipPanel");
@@ -585,7 +600,16 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-admin-dashboard-series-toggle="true"',
     );
     expect(consoleSource).toContain(
-      "inline-flex h-7 max-w-full shrink-0 items-center gap-0.5 overflow-x-auto overflow-y-hidden rounded-full border border-transparent bg-transparent p-0",
+      "inline-flex h-7 max-w-full min-w-0 shrink-0 items-center gap-0.5 overflow-x-auto overflow-y-hidden rounded-full border border-transparent bg-transparent p-0",
+    );
+    expect(consoleSource).toContain(
+      'data-admin-dashboard-card-title-row="single-line"',
+    );
+    expect(consoleSource).toContain(
+      "truncate whitespace-nowrap text-xs font-extrabold leading-none text-foreground",
+    );
+    expect(consoleSource).toContain(
+      'data-admin-dashboard-card-title-actions="single-line-scroll"',
     );
     expect(consoleSource).toContain("toggleTrendSeries");
     expect(consoleSource).toContain("toggleTopContentSeries");
@@ -681,7 +705,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain('isFullscreen ? "h-12 sm:h-14" : "h-9"');
     expect(consoleSource).toContain("grid gap-1 sm:grid-cols-5");
     expect(consoleSource).toContain(
-      "flex min-h-[220px] flex-col overflow-visible p-3 sm:col-span-2 lg:col-span-5",
+      "flex min-h-[220px] flex-col overflow-hidden p-3 sm:col-span-2 lg:col-span-5",
     );
     expect(consoleSource).toContain(
       "data-admin-dashboard-top-content-metric={metric.label}",
@@ -1229,6 +1253,12 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       'data-admin-dashboard-widget-order-reset="true"',
     );
+    expect(consoleSource).toContain("const resetDashboardWidgetOrder =");
+    expect(consoleSource).toContain('method: "DELETE"');
+    expect(consoleSource).toContain(
+      "처음 카드 순서로 초기화했습니다. 새로고침해도 처음 상태가 유지됩니다.",
+    );
+    expect(consoleSource).toContain("isDashboardWidgetOrderDefault");
     expect(consoleSource).toContain(
       "같은 레이아웃 영역 안에서 카드를 드래그하면 순서가 자동 저장됩니다.",
     );
@@ -1293,6 +1323,30 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       "ADMIN_DASHBOARD_PROGRESSIVE_INITIAL_ROWS = 40",
     );
+    expect(consoleSource).toContain(
+      "ADMIN_DASHBOARD_MOBILE_PROGRESSIVE_INITIAL_ROWS = 18",
+    );
+    expect(consoleSource).toContain(
+      "ADMIN_DASHBOARD_MOBILE_PROGRESSIVE_BATCH_ROWS = 24",
+    );
+    expect(consoleSource).toContain(
+      "ADMIN_DASHBOARD_MOBILE_PROGRESSIVE_DELAY_MS = 48",
+    );
+    expect(consoleSource).toContain("function AdminDashboardDeferredBody");
+    expect(consoleSource).toContain(
+      'data-admin-dashboard-mobile-deferred="true"',
+    );
+    expect(consoleSource).toContain(
+      "ADMIN_DASHBOARD_MOBILE_DEFER_ROOT_MARGIN",
+    );
+    expect(consoleSource).toContain(
+      "const shouldDeferDashboardHeavyBodies =",
+    );
+    expect(consoleSource).toContain(
+      "isDashboardMobileViewport &&",
+    );
+    expect(consoleSource).toContain("refetchOnWindowFocus: false");
+    expect(consoleSource).toContain("refetchIntervalInBackground: false");
     expect(consoleSource).toContain(
       'data-admin-dashboard-progressive-table="true"',
     );
@@ -1419,7 +1473,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "설명: 선택 기간에 새로 올라온 영상 수를 보여주는 카드입니다.",
     );
     expect(consoleSource).toContain('className="h-px bg-border/70"');
-    expect(consoleSource).toContain("mb-2 grid shrink-0 gap-2");
+    expect(consoleSource).toContain("mb-2 grid min-w-0 shrink-0 gap-2");
     expect(consoleSource).toContain(
       'data-admin-dashboard-metric-tooltip="beginner-plain"',
     );
@@ -1452,7 +1506,16 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "설명: 채널 구독자 수를 보여주는 카드입니다.",
     );
     expect(consoleSource).toContain(
-      "grid min-h-[132px] grid-rows-[auto_minmax(0,1fr)_auto] gap-3 overflow-visible p-3.5",
+      "grid min-h-[132px] grid-rows-[auto_minmax(0,1fr)_auto] gap-3 overflow-hidden p-3 sm:p-3.5",
+    );
+    expect(consoleSource).toContain(
+      'data-admin-dashboard-kpi-title-row="single-line"',
+    );
+    expect(consoleSource).toContain(
+      "truncate whitespace-nowrap text-xs font-extrabold tracking-[0.04em] text-muted-foreground",
+    );
+    expect(consoleSource).toContain(
+      'data-admin-dashboard-kpi-title-actions="single-line-scroll"',
     );
     expect(consoleSource).toContain("h-11 w-24 shrink-0 overflow-visible");
     expect(consoleSource).toContain("buildAdminDashboardSparklinePoints");
@@ -1494,13 +1557,13 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain('"lg:col-span-2"');
     expect(consoleSource).toContain('"sm:col-span-2 lg:col-span-3"');
     expect(consoleSource).toContain(
-      "flex min-h-[280px] flex-col overflow-visible p-3",
+      "flex min-h-[280px] flex-col overflow-hidden p-3",
     );
     expect(consoleSource).toContain(
-      "flex min-h-[220px] flex-col overflow-visible p-3",
+      "flex min-h-[220px] flex-col overflow-hidden p-3",
     );
     expect(consoleSource).toContain(
-      "flex min-h-[220px] flex-col overflow-visible p-2",
+      "flex min-h-[220px] flex-col overflow-hidden p-2",
     );
     expect(consoleSource).toContain("min-h-[190px] flex flex-1 flex-col");
     expect(consoleSource).toContain("min-h-[230px] flex flex-1 flex-col");
@@ -1615,6 +1678,17 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(routeSource).toContain("YOUTUBE_CHANNEL_ID");
     expect(routeSource).toContain("YOUTUBE_CHANNEL_HANDLE");
     expect(routeSource).toContain("@tzuyang6145");
+    expect(routeSource).toContain(
+      "respondWithYouTubeChannelSnapshotFallback",
+    );
+    expect(routeSource).toContain("fallbackSource");
+    expect(routeSource).toContain("supabase-channel-snapshot");
+    expect(routeSource).toContain(
+      "YouTube channel statistics request failed",
+    );
+    expect(routeSource).toContain(
+      "YouTube channel subscriber count was unavailable",
+    );
     expect(routeSource).toContain("Cache-Control");
   });
 
@@ -1678,7 +1752,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-admin-console-layout="sidebar-content"',
     );
     expect(consoleSource).toContain('data-admin-console-content="true"');
-    expect(consoleSource).toContain("p-2 sm:p-3 md:border-y-0 md:p-4");
+    expect(consoleSource).toContain("p-2 md:border-y-0 md:p-4");
+    expect(consoleSource).not.toContain("pb-[calc(env(safe-area-inset-bottom)+5.75rem)]");
     expect(consoleSource).toContain("h-[var(--full-height,100vh)]");
     expect(consoleSource).not.toContain("grid-rows-[auto_minmax(0,1fr)]");
     expect(consoleSource).not.toContain("md:grid-rows-1");
@@ -1713,6 +1788,11 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(appGlobalsSource).toContain(
       "grid-template-rows: auto minmax(0, 1fr);",
     );
+    expect(appGlobalsSource).toContain('@media (max-width: 767px)');
+    expect(appGlobalsSource).toContain(
+      '[data-admin-dashboard-management="true"] .recharts-wrapper',
+    );
+    expect(appGlobalsSource).toContain("max-width: 100% !important;");
     expect(appGlobalsSource).toContain(
       "grid-template-columns: fit-content(24rem) minmax(0, 1fr);",
     );
@@ -1826,8 +1906,41 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "enabled: isAdmin && enabled",
     );
     expect(consoleSource).toContain('data-admin-console-mobile-header="true"');
+    expect(consoleSource).toContain("data-admin-console-mobile-header-visible={");
+    expect(consoleSource).toContain('showMobileHeader ? "true" : "false"');
+    expect(consoleSource).toContain('isMobileHeaderVisible ? "true" : "false"');
+    expect(appGlobalsSource).toContain(
+      '[data-admin-console-layout="sidebar-content"][data-admin-console-mobile-header-visible="false"]',
+    );
+    expect(appGlobalsSource).toContain("grid-template-rows: 0rem minmax(0, 1fr);");
+    expect(appGlobalsSource).toContain(
+      "transition: grid-template-rows 300ms cubic-bezier(0.25, 0.1, 0.25, 1);",
+    );
+    expect(consoleSource).toContain("useMobileBottomNavAutoHide");
+    expect(consoleSource).toContain("getMobileScrollNavVisibilityAction");
+    expect(consoleSource).toContain("const updateMobileHeaderVisibility = useCallback");
+    expect(consoleSource).toContain("canvasRef.current?.scrollTop ?? 0");
+    expect(consoleSource).toContain("window.scrollY");
+    expect(consoleSource).toContain("previousMobileHeaderScrollTopRef.current");
+    expect(consoleSource).toContain('source: "admin-console"');
+    expect(consoleSource).toContain("disabled: !isAdminMobileViewport");
+    expect(consoleSource).toContain("revealOnScrollUp: false");
+    expect(consoleSource).toContain("handleAdminCanvasScroll");
+    expect(consoleSource).toContain("getAdminConsoleScrollTop");
+    expect(consoleSource).toContain("getScrollTop: getAdminConsoleScrollTop");
+    expect(consoleSource).toContain("const handleAdminCanvasTouchMove = useCallback");
+    expect(consoleSource).toContain("onTouchMove={handleAdminCanvasTouchMove}");
+    expect(consoleSource).toContain('canvasElement?.addEventListener("scroll"');
+    expect(consoleSource).toContain("showMobileHeader={isMobileHeaderVisible}");
+    expect(consoleSource).toContain("previousRequestedModuleIdRef.current !== nextModuleId");
+    expect(consoleSource).toContain("transition-[opacity,transform,border-color]");
+    expect(consoleSource).toContain("-translate-y-full");
+    expect(consoleSource).toContain("flex w-full min-w-0 shrink-0 flex-nowrap items-center justify-start gap-1.5 overflow-x-auto");
+    expect(consoleSource).toContain('data-allow-horizontal-scroll="true"');
+    expect(consoleSource).toContain("min-h-0 min-w-0 w-full overflow-hidden border");
+    expect(consoleSource).toContain("overflow-x-hidden overscroll-contain");
     expect(consoleSource).toContain('data-admin-console-menu-trigger="hamburger"');
-    expect(consoleSource).toContain('data-admin-console-menu-trigger="desktop-hamburger"');
+    expect(consoleSource).not.toContain('data-admin-console-menu-trigger="desktop-hamburger"');
     expect(consoleSource).toContain('data-admin-console-menu-dropdown="true"');
     expect(consoleSource).toContain('data-admin-sidebar-order-editor="dropdown"');
     expect(consoleSource).toContain('data-admin-sidebar-theme-toggle="true"');
@@ -2053,7 +2166,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain('data-admin-console-menu-trigger="hamburger"');
     expect(consoleSource).toContain('data-admin-dashboard-period-select-trigger="true"');
     expect(consoleSource).toContain('data-admin-dashboard-period-menu="true"');
-    expect(consoleSource).toContain("p-2 sm:p-3 md:border-y-0 md:p-4");
+    expect(consoleSource).toContain("p-2 md:border-y-0 md:p-4");
+    expect(consoleSource).not.toContain("pb-[calc(env(safe-area-inset-bottom)+5.75rem)]");
     expect(consoleSource).toContain("min-h-[420px] flex-1");
     expect(consoleSource).toContain("overflow-visible md:overflow-hidden");
     expect(consoleSource).toContain("md:h-full md:min-h-0");
