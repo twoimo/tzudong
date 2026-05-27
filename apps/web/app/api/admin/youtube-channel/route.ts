@@ -10,6 +10,9 @@ const YOUTUBE_CHANNELS_ENDPOINT =
 const YOUTUBE_CHANNEL_CACHE_SECONDS = 10 * 60;
 const DEFAULT_TZUYANG_CHANNEL_HANDLE = "@tzuyang6145";
 const YOUTUBE_CHANNEL_FETCH_TIMEOUT_MS = 10_000;
+const youtubeChannelCacheHeaders = {
+  "Cache-Control": `private, max-age=${YOUTUBE_CHANNEL_CACHE_SECONDS}, stale-while-revalidate=${YOUTUBE_CHANNEL_CACHE_SECONDS * 3}`,
+};
 
 type YouTubeChannelListResponse = {
   items?: Array<{
@@ -60,6 +63,37 @@ function getYouTubeChannelFilter() {
   };
 }
 
+async function getYouTubeChannelSnapshotFallback(
+  period: ReturnType<typeof parseTreemapPeriod>,
+) {
+  try {
+    return await getLatestYouTubeChannelSnapshot(period);
+  } catch (error) {
+    console.warn("YouTube channel snapshot fallback unavailable:", error);
+    return null;
+  }
+}
+
+async function respondWithYouTubeChannelSnapshotFallback(
+  period: ReturnType<typeof parseTreemapPeriod>,
+  error: string,
+  status: number,
+) {
+  const snapshot = await getYouTubeChannelSnapshotFallback(period);
+  if (snapshot) {
+    return NextResponse.json(
+      {
+        ...snapshot,
+        fallbackSource: "supabase-channel-snapshot",
+        fallbackReason: error,
+      },
+      { headers: youtubeChannelCacheHeaders },
+    );
+  }
+
+  return NextResponse.json({ error }, { status });
+}
+
 export async function GET(request: Request) {
   const auth = await requireAdmin();
   if (!auth.ok) return auth.response;
@@ -69,18 +103,10 @@ export async function GET(request: Request) {
   );
   const apiKey = getYouTubeApiKey();
   if (!apiKey) {
-    const snapshot = await getLatestYouTubeChannelSnapshot(period);
-    if (snapshot) {
-      return NextResponse.json(snapshot, {
-        headers: {
-          "Cache-Control": `private, max-age=${YOUTUBE_CHANNEL_CACHE_SECONDS}, stale-while-revalidate=${YOUTUBE_CHANNEL_CACHE_SECONDS * 3}`,
-        },
-      });
-    }
-
-    return NextResponse.json(
-      { error: "YouTube API key is not configured" },
-      { status: 500 },
+    return respondWithYouTubeChannelSnapshotFallback(
+      period,
+      "YouTube API key is not configured",
+      500,
     );
   }
 
@@ -102,9 +128,10 @@ export async function GET(request: Request) {
     });
 
     if (!response.ok) {
-      return NextResponse.json(
-        { error: "YouTube channel statistics request failed" },
-        { status: response.status },
+      return respondWithYouTubeChannelSnapshotFallback(
+        period,
+        "YouTube channel statistics request failed",
+        response.status,
       );
     }
 
@@ -112,21 +139,31 @@ export async function GET(request: Request) {
     const channel = payload.items?.[0];
 
     if (!channel) {
-      return NextResponse.json(
-        { error: "YouTube channel was not found" },
-        { status: 404 },
+      return respondWithYouTubeChannelSnapshotFallback(
+        period,
+        "YouTube channel was not found",
+        404,
       );
     }
 
     const statistics = channel.statistics ?? {};
-    const comparisonSnapshot = await getLatestYouTubeChannelSnapshot(period);
+    const liveSubscriberCount = parseYouTubeCount(statistics.subscriberCount);
+    const comparisonSnapshot = await getYouTubeChannelSnapshotFallback(period);
+
+    if (statistics.hiddenSubscriberCount !== true && liveSubscriberCount == null) {
+      return respondWithYouTubeChannelSnapshotFallback(
+        period,
+        "YouTube channel subscriber count was unavailable",
+        502,
+      );
+    }
 
     return NextResponse.json(
       {
         channelId: channel.id ?? null,
         title: channel.snippet?.title ?? null,
         handle: channel.snippet?.customUrl ?? null,
-        subscriberCount: parseYouTubeCount(statistics.subscriberCount),
+        subscriberCount: liveSubscriberCount,
         viewCount: parseYouTubeCount(statistics.viewCount),
         videoCount: parseYouTubeCount(statistics.videoCount),
         hiddenSubscriberCount: statistics.hiddenSubscriberCount === true,
@@ -142,25 +179,15 @@ export async function GET(request: Request) {
         comparisonFetchedAt: comparisonSnapshot?.comparisonFetchedAt ?? null,
       },
       {
-        headers: {
-          "Cache-Control": `private, max-age=${YOUTUBE_CHANNEL_CACHE_SECONDS}, stale-while-revalidate=${YOUTUBE_CHANNEL_CACHE_SECONDS * 3}`,
-        },
+        headers: youtubeChannelCacheHeaders,
       },
     );
   } catch (error) {
     console.error("YouTube channel statistics fetch error:", error);
-    const snapshot = await getLatestYouTubeChannelSnapshot(period);
-    if (snapshot) {
-      return NextResponse.json(snapshot, {
-        headers: {
-          "Cache-Control": `private, max-age=${YOUTUBE_CHANNEL_CACHE_SECONDS}, stale-while-revalidate=${YOUTUBE_CHANNEL_CACHE_SECONDS * 3}`,
-        },
-      });
-    }
-
-    return NextResponse.json(
-      { error: "Failed to fetch YouTube channel statistics" },
-      { status: 502 },
+    return respondWithYouTubeChannelSnapshotFallback(
+      period,
+      "Failed to fetch YouTube channel statistics",
+      502,
     );
   }
 }
