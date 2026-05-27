@@ -24,9 +24,11 @@ import {
   Clapperboard,
   ClipboardList,
   ExternalLink,
+  FileDown,
   Image as ImageIcon,
   MessageSquareText,
   Info,
+  Menu,
   Maximize2,
   Minimize2,
   Monitor,
@@ -35,7 +37,6 @@ import {
   PanelLeftOpen,
   Route,
   Sun,
-  Settings2,
   ScrollText,
   RefreshCw,
   Store,
@@ -755,6 +756,238 @@ function formatCount(value: number | null | undefined, unit: string) {
   return typeof value === "number" && Number.isFinite(value)
     ? `${formatNumber(value)}${unit}`
     : "—";
+}
+
+type AdminDashboardPdfReportMetric = {
+  label: string;
+  value: string;
+  caption: string;
+  visualPercent: number;
+};
+
+type AdminDashboardPdfReportContentRow = {
+  rank: string;
+  title: string;
+  views: string;
+  likes: string;
+  comments: string;
+  contribution: string;
+  barPercent: number;
+};
+
+type AdminDashboardPdfReportInsightRow = {
+  label: string;
+  title: string;
+  description: string;
+  scoreLabel: string;
+  score: number;
+};
+
+type AdminDashboardPdfReportData = {
+  title: string;
+  logoUrl: string;
+  generatedAtLabel: string;
+  periodLabel: string;
+  basisLabel: string;
+  summaryLabel: string;
+  contributionFormula: string;
+  metrics: AdminDashboardPdfReportMetric[];
+  topContents: AdminDashboardPdfReportContentRow[];
+  insights: AdminDashboardPdfReportInsightRow[];
+};
+
+const adminDashboardReportDateFormatter = new Intl.DateTimeFormat("ko-KR", {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+
+function formatAdminDashboardReportGeneratedAt(date = new Date()) {
+  return adminDashboardReportDateFormatter.format(date);
+}
+
+function escapeAdminDashboardReportHtml(
+  value: string | number | null | undefined,
+) {
+  return String(value ?? "—")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function buildAdminDashboardPdfReportHtml(report: AdminDashboardPdfReportData) {
+  const metricCards = report.metrics
+    .map(
+      (metric) => `
+        <section class="metric-card">
+          <p class="metric-label">${escapeAdminDashboardReportHtml(metric.label)}</p>
+          <strong>${escapeAdminDashboardReportHtml(metric.value)}</strong>
+          <span>${escapeAdminDashboardReportHtml(metric.caption)}</span>
+          <div class="mini-bar" aria-label="보고서용 상대 막대"><i style="width:${clampDashboardPercent(metric.visualPercent)}%"></i></div>
+        </section>`,
+    )
+    .join("");
+  const topBars = report.topContents.length
+    ? report.topContents
+        .map(
+          (row) => `
+            <div class="bar-row">
+              <div class="bar-meta">
+                <strong>${escapeAdminDashboardReportHtml(row.rank)} ${escapeAdminDashboardReportHtml(row.title)}</strong>
+                <span>${escapeAdminDashboardReportHtml(row.views)} · ${escapeAdminDashboardReportHtml(row.contribution)}</span>
+              </div>
+              <div class="bar-track"><i style="width:${clampDashboardPercent(row.barPercent)}%"></i></div>
+            </div>`,
+        )
+        .join("")
+    : `<p class="empty">표시할 상위 콘텐츠 시각화가 없습니다.</p>`;
+  const topRows = report.topContents.length
+    ? report.topContents
+        .map(
+          (row) => `
+            <tr>
+              <td class="rank">${escapeAdminDashboardReportHtml(row.rank)}</td>
+              <td>${escapeAdminDashboardReportHtml(row.title)}</td>
+              <td class="num">${escapeAdminDashboardReportHtml(row.views)}</td>
+              <td class="num">${escapeAdminDashboardReportHtml(row.likes)}</td>
+              <td class="num">${escapeAdminDashboardReportHtml(row.comments)}</td>
+              <td>${escapeAdminDashboardReportHtml(row.contribution)}</td>
+            </tr>`,
+        )
+        .join("")
+    : `<tr><td colspan="6" class="empty">표시할 상위 콘텐츠가 없습니다.</td></tr>`;
+  const insightCards = report.insights.length
+    ? report.insights
+        .map(
+          (insight) => `
+            <article class="insight-card">
+              <p class="chip">${escapeAdminDashboardReportHtml(insight.label)}</p>
+              <h3>${escapeAdminDashboardReportHtml(insight.title)}</h3>
+              <p>${escapeAdminDashboardReportHtml(insight.description)}</p>
+              <span>${escapeAdminDashboardReportHtml(insight.scoreLabel)}</span>
+              <div class="diagnosis-meter"><i style="width:${clampDashboardPercent(insight.score)}%"></i></div>
+            </article>`,
+        )
+        .join("")
+    : `<p class="empty">표시할 성과 진단이 없습니다.</p>`;
+
+  return `<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${escapeAdminDashboardReportHtml(report.title)}</title>
+  <style>
+    @page { size: A4; margin: 14mm; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #f7f4ef; color: #211b16; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.45; }
+    main { max-width: 960px; margin: 0 auto; padding: 28px; background: #fffdf9; }
+    header { display: flex; justify-content: space-between; gap: 24px; border-bottom: 2px solid #211b16; padding-bottom: 18px; }
+    h1 { margin: 0; font-size: 28px; letter-spacing: -0.03em; }
+    h2 { margin: 0 0 12px; font-size: 17px; }
+    h3 { margin: 8px 0 6px; font-size: 13px; line-height: 1.35; }
+    .meta { text-align: right; font-size: 12px; color: #6c6259; }
+    .meta strong { display: block; color: #211b16; font-size: 14px; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand img { width: 42px; height: 42px; border-radius: 14px; object-fit: contain; border: 1px solid #e4ddd2; background: #fff; }
+    .summary { margin: 18px 0; padding: 12px 14px; border: 1px solid #ded7cd; border-radius: 16px; background: #faf7f1; color: #5b5148; font-size: 13px; }
+    .metrics { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin: 18px 0; }
+    .metric-card, .insight-card { border: 1px solid #e4ddd2; border-radius: 16px; background: white; padding: 12px; break-inside: avoid; }
+    .metric-label { margin: 0 0 8px; font-size: 11px; color: #766b60; font-weight: 800; }
+    .metric-card strong { display: block; font-size: 20px; letter-spacing: -0.03em; }
+    .metric-card span, .insight-card span { color: #7a7066; font-size: 11px; font-weight: 700; }
+    .mini-bar, .bar-track, .diagnosis-meter { height: 7px; overflow: hidden; border-radius: 999px; background: #eee8df; }
+    .mini-bar { margin-top: 10px; }
+    .mini-bar i, .bar-track i, .diagnosis-meter i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #0ea5e9, #14b8a6); }
+    .report-visual { display: grid; gap: 8px; margin: 12px 0 14px; padding: 12px; border: 1px solid #e4ddd2; border-radius: 16px; background: #fff; }
+    .bar-row { display: grid; grid-template-columns: minmax(0, 1fr) 42%; gap: 12px; align-items: center; break-inside: avoid; }
+    .bar-meta { min-width: 0; }
+    .bar-meta strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+    .bar-meta span { color: #766b60; font-size: 11px; font-weight: 700; }
+    .bar-track { height: 10px; }
+    .diagnosis-meter { margin-top: 10px; height: 8px; }
+    .diagnosis-meter i { background: linear-gradient(90deg, #f59e0b, #10b981); }
+    table { width: 100%; border-collapse: collapse; overflow: hidden; border-radius: 14px; font-size: 12px; }
+    th, td { border-bottom: 1px solid #ebe5dc; padding: 9px 8px; text-align: left; vertical-align: top; }
+    th { background: #f3eee6; color: #5c5248; font-size: 11px; }
+    .rank { width: 42px; font-weight: 900; color: #0f766e; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .section { margin-top: 22px; break-inside: avoid; }
+    .insights { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .chip { display: inline-block; margin: 0; border-radius: 999px; background: #eef8f6; color: #0f766e; padding: 3px 8px; font-size: 10px; font-weight: 900; }
+    .insight-card p:not(.chip) { margin: 0 0 8px; color: #5f564d; font-size: 12px; }
+    .formula { margin-top: 14px; color: #6f665d; font-size: 11px; }
+    .empty { color: #8a8178; text-align: center; padding: 18px; }
+    .print-action { margin-top: 18px; text-align: right; }
+    .print-action button { border: 0; border-radius: 999px; background: #211b16; color: white; padding: 9px 14px; font-weight: 800; cursor: pointer; }
+    @media print { body { background: white; } main { max-width: none; padding: 0; } .print-action { display: none; } }
+    @media (max-width: 820px) { .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } .insights { grid-template-columns: 1fr; } header { flex-direction: column; } .meta { text-align: left; } }  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <div class="brand">
+          <img src="${escapeAdminDashboardReportHtml(report.logoUrl)}" alt="Tzudong 로고" />
+          <h1>${escapeAdminDashboardReportHtml(report.title)}</h1>
+        </div>
+        <p class="summary">${escapeAdminDashboardReportHtml(report.summaryLabel)}</p>
+      </div>
+      <div class="meta">
+        <strong>${escapeAdminDashboardReportHtml(report.periodLabel)}</strong>
+        <span>${escapeAdminDashboardReportHtml(report.generatedAtLabel)}</span><br />
+        <span>${escapeAdminDashboardReportHtml(report.basisLabel)}</span>
+      </div>
+    </header>
+    <section class="metrics" aria-label="핵심 KPI">${metricCards}</section>
+    <section class="section">
+      <h2>콘텐츠 성과 TOP 5</h2>
+      <div class="report-visual" aria-label="콘텐츠 성과 TOP 5 조회수 상대 막대">${topBars}</div>
+      <table>
+        <thead>
+          <tr><th>순위</th><th>영상</th><th>조회</th><th>좋아요</th><th>댓글</th><th>성과 기여</th></tr>
+        </thead>
+        <tbody>${topRows}</tbody>
+      </table>
+      <p class="formula">${escapeAdminDashboardReportHtml(report.contributionFormula)}</p>
+    </section>
+    <section class="section">
+      <h2>성과 진단</h2>
+      <div class="insights">${insightCards}</div>
+    </section>
+    <div class="print-action"><button type="button" onclick="window.print()">PDF로 저장/인쇄</button></div>  </main>
+</body>
+</html>`;
+}
+
+function openAdminDashboardPdfReport(report: AdminDashboardPdfReportData) {
+  if (typeof window === "undefined") return false;
+
+  const reportWindow = window.open("", "_blank", "width=960,height=1200");
+  if (!reportWindow) return false;
+
+  try {
+    const reportWithAbsoluteLogo = {
+      ...report,
+      logoUrl: new URL(report.logoUrl, window.location.origin).href,
+    };
+
+    reportWindow.document.open();
+    reportWindow.document.write(
+      buildAdminDashboardPdfReportHtml(reportWithAbsoluteLogo),
+    );
+    reportWindow.document.close();
+    reportWindow.focus();
+    reportWindow.setTimeout(() => {
+      reportWindow.focus();
+      reportWindow.print();
+    }, 250);
+    return true;
+  } catch {
+    reportWindow.close();
+    return false;
+  }
 }
 
 async function fetchAdminPendingCounts(): Promise<AdminPendingCounts> {
@@ -4460,6 +4693,88 @@ function getCollectionLogStatusClassName(
   return "border-destructive/20 bg-destructive/10 text-destructive";
 }
 
+function AdminDashboardPdfReportButton({ onExport }: { onExport: () => void }) {
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      className="h-7 gap-1 rounded-full px-2 text-[11px] font-bold text-muted-foreground hover:text-foreground"
+      aria-label="KPI 대시보드를 PDF 보고서로 내보내기"
+      data-admin-dashboard-kpi-pdf-export-trigger="true"
+      onClick={onExport}
+    >
+      <FileDown className="h-3.5 w-3.5" aria-hidden="true" />
+      <span className="hidden sm:inline">PDF 보고서</span>
+      <span className="sr-only">PDF 보고서 내보내기</span>
+    </Button>
+  );
+}
+
+function AdminDashboardPeriodSelector({
+  value,
+  onChange,
+}: {
+  value: AdminDashboardPeriod;
+  onChange: (period: AdminDashboardPeriod) => void;
+}) {
+  const selectedOption =
+    ADMIN_DASHBOARD_PERIOD_OPTIONS.find((option) => option.value === value) ??
+    ADMIN_DASHBOARD_PERIOD_OPTIONS[0];
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-7 gap-1 rounded-full px-2 text-[11px] font-bold text-muted-foreground hover:text-foreground"
+          aria-label={`대시보드 타임프레임 설정: ${selectedOption.label}`}
+          data-admin-dashboard-period-select-trigger="true"
+        >
+          <span className="text-muted-foreground">기간</span>
+          <span className="text-foreground">{selectedOption.label}</span>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="end"
+        sideOffset={8}
+        className="w-[min(18rem,calc(100vw-24px))] rounded-2xl border-border bg-card p-2 shadow-primary"
+        aria-label="대시보드 타임프레임 설정"
+        data-admin-dashboard-period-menu="true"
+      >
+        <div className="mb-2 px-1">
+          <p className="text-xs font-bold text-foreground">기간 설정</p>
+          <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">
+            KPI와 차트에 적용할 조회 기간을 선택합니다.
+          </p>
+        </div>
+        <div className="grid grid-cols-3 gap-1" aria-label="대시보드 타임프레임">
+          {ADMIN_DASHBOARD_PERIOD_OPTIONS.map((option) => {
+            const isSelected = option.value === value;
+
+            return (
+              <Button
+                key={option.value}
+                type="button"
+                variant={isSelected ? "default" : "ghost"}
+                size="sm"
+                className="h-8 rounded-xl px-2 text-[11px] font-bold"
+                aria-pressed={isSelected}
+                data-admin-dashboard-period-option={option.value}
+                onClick={() => onChange(option.value)}
+              >
+                {option.label}
+              </Button>
+            );
+          })}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function AdminDashboardCollectionLogPopover({
   open,
   logs,
@@ -5466,18 +5781,15 @@ function AdminDashboardManagementPanel({
       : null;
   const subscriberValue = isSubscriberLoading
     ? "—"
-    : subscriberDelta == null
-      ? formatNumber(channelStats?.subscriberCount)
-      : formatSignedNumber(subscriberDelta);
+    : formatNumber(channelStats?.subscriberCount);
   const subscriberCaption = isSubscriberLoading
     ? "채널 통계 불러오는 중"
     : !hasSubscriberCount
       ? "채널 통계 확인 필요"
       : subscriberDelta == null
         ? "현재 구독자 · YouTube Data API · 비교 스냅샷 대기"
-        : `${selectedPeriodLabel} · 기간 순증 · 현재 누적 ${formatNumber(channelStats?.subscriberCount)}`;
-  const subscriberCardTitle =
-    subscriberDelta == null ? "현재 구독자" : "기간 구독자 증가";
+        : `현재 구독자 · ${selectedPeriodLabel} 기간 순증 ${formatSignedNumber(subscriberDelta)}`;
+  const subscriberCardTitle = "현재 구독자";
   const viewCardTitle = hasPeriodGrowthComparison
     ? "기간 조회 증가"
     : "기간 조회 합계";
@@ -5766,6 +6078,138 @@ function AdminDashboardManagementPanel({
       ? "기간 성과 기여 = 조회 증가 기여×60% + 좋아요 증가 기여×25% + 댓글 증가 기여×15%."
       : "성과 기여 = 조회 기여×60% + 좋아요 기여×25% + 댓글 기여×15%."
   }`;
+  const pdfReportData = useMemo<
+    Omit<AdminDashboardPdfReportData, "generatedAtLabel">
+  >(
+    () => {
+      const metricInputs = [
+        {
+          label: subscriberCardTitle,
+          value: subscriberValue,
+          caption: subscriberCaption,
+          rawValue:
+            typeof subscriberDelta === "number"
+              ? Math.abs(subscriberDelta)
+              : (channelStats?.subscriberCount ?? 0),
+        },
+        {
+          label: viewCardTitle,
+          value: isChartLoading ? "—" : formatNumber(periodViewDisplayValue),
+          caption: `${periodMetricCaption} · 현재 전체 누적 ${formatNumber(cumulativeViewValue)}`,
+          rawValue: periodViewDisplayValue,
+        },
+        {
+          label: likeCardTitle,
+          value: isChartLoading ? "—" : formatNumber(periodLikeDisplayValue),
+          caption: `${periodMetricCaption} · 현재 전체 누적 ${formatNumber(cumulativeLikeValue)}`,
+          rawValue: periodLikeDisplayValue,
+        },
+        {
+          label: commentCardTitle,
+          value: isChartLoading ? "—" : formatNumber(periodCommentDisplayValue),
+          caption: `${periodMetricCaption} · 현재 전체 누적 ${formatNumber(cumulativeCommentValue)}`,
+          rawValue: periodCommentDisplayValue,
+        },
+        {
+          label: "업로드 영상 수",
+          value: isChartLoading ? "—" : formatNumber(periodUploadVideoValue),
+          caption: periodVideoCaption,
+          rawValue: periodUploadVideoValue,
+        },
+      ];
+      const metricMaxValue = Math.max(
+        1,
+        ...metricInputs.map((metric) =>
+          typeof metric.rawValue === "number" && Number.isFinite(metric.rawValue)
+            ? Math.abs(metric.rawValue)
+            : 0,
+        ),
+      );
+      const topReportRows = topContentTableRows.slice(0, 5);
+      const topReportMaxViews = Math.max(
+        1,
+        ...topReportRows.map((row) =>
+          typeof row.views === "number" && Number.isFinite(row.views)
+            ? row.views
+            : 0,
+        ),
+      );
+      return {
+        title: "Tzuyang KPI Dashboard Report",
+        logoUrl: "/logo.webp",
+        periodLabel: selectedPeriodLabel,
+        basisLabel: dashboardViewMetricLabel,
+        summaryLabel: `${selectedPeriodLabel} 기준 핵심 KPI, 상위 콘텐츠, 성과 진단을 한 페이지 보고서로 정리했습니다.`,
+        contributionFormula: topContentContributionFormula,
+        metrics: metricInputs.map((metric) => ({
+          label: metric.label,
+          value: metric.value,
+          caption: metric.caption,
+          visualPercent:
+            typeof metric.rawValue === "number" &&
+            Number.isFinite(metric.rawValue)
+              ? (Math.abs(metric.rawValue) / metricMaxValue) * 100
+              : 0,
+        })),
+        topContents: topReportRows.map((row, index) => ({
+          rank: `#${index + 1}`,
+          title: row.title,
+          views: formatNumber(row.views),
+          likes: formatNumber(row.likes),
+          comments: formatNumber(row.comments),
+          contribution: row.viewBenchmark,
+          barPercent:
+            typeof row.views === "number" && Number.isFinite(row.views)
+              ? (row.views / topReportMaxViews) * 100
+              : 0,
+        })),
+        insights: topContentInsights.map((insight) => ({
+          label: insight.label,
+          title: insight.title,
+          description: insight.description,
+          scoreLabel: insight.scoreLabel,
+          score: insight.score,
+        })),
+      };
+    },
+    [
+      channelStats?.subscriberCount,
+      commentCardTitle,
+      cumulativeCommentValue,
+      cumulativeLikeValue,
+      cumulativeViewValue,
+      dashboardViewMetricLabel,
+      isChartLoading,
+      likeCardTitle,
+      periodCommentDisplayValue,
+      periodLikeDisplayValue,
+      periodMetricCaption,
+      periodUploadVideoValue,
+      periodVideoCaption,
+      periodViewDisplayValue,
+      selectedPeriodLabel,
+      subscriberCaption,
+      subscriberCardTitle,
+      subscriberDelta,
+      subscriberValue,
+      topContentContributionFormula,
+      topContentInsights,
+      topContentTableRows,
+      viewCardTitle,
+    ],
+  );
+  const handleExportPdfReport = useCallback(() => {
+    const opened = openAdminDashboardPdfReport({
+      ...pdfReportData,
+      generatedAtLabel: formatAdminDashboardReportGeneratedAt(),
+    });
+
+    if (!opened) {
+      setDashboardOrderMessage(
+        "PDF 보고서 창을 열지 못했습니다. 브라우저 팝업 허용 상태를 확인해 주세요.",
+      );
+    }
+  }, [pdfReportData]);
   return (
     <section
       className="flex h-full min-h-0 flex-col overflow-y-auto bg-background p-0 font-sans text-foreground lg:overflow-hidden"
@@ -5781,15 +6225,6 @@ function AdminDashboardManagementPanel({
           </h1>
         </div>
         <div className="flex shrink-0 flex-wrap items-start justify-end gap-1">
-          <AdminDashboardCollectionLogPopover
-            open={isCollectionLogsOpen}
-            logs={collectionLogsQuery.data}
-            isLoading={collectionLogsQuery.isLoading}
-            isFetching={collectionLogsQuery.isFetching}
-            isError={collectionLogsQuery.isError}
-            onOpenChange={setIsCollectionLogsOpen}
-            onRefresh={() => void collectionLogsQuery.refetch()}
-          />
           <Button
             type="button"
             variant={isDashboardOrderEditorOpen ? "default" : "outline"}
@@ -5811,6 +6246,7 @@ function AdminDashboardManagementPanel({
           >
             카드 순서
           </Button>
+          <AdminDashboardPdfReportButton onExport={handleExportPdfReport} />
           {isDashboardOrderEditorOpen ? (
             <Button
               type="button"
@@ -5830,29 +6266,24 @@ function AdminDashboardManagementPanel({
             </Button>
           ) : null}
 
-          <div
-            className="flex flex-wrap justify-end gap-1"
-            aria-label="대시보드 타임프레임"
-          >
-            {ADMIN_DASHBOARD_PERIOD_OPTIONS.map((option) => (
-              <Button
-                key={option.value}
-                type="button"
-                variant={period === option.value ? "default" : "outline"}
-                size="sm"
-                className="h-7 rounded-full px-2 text-[11px]"
-                aria-pressed={period === option.value}
-                onClick={() => {
-                  if (option.value !== period) {
-                    setPendingSkeletonPeriod(option.value);
-                    setPeriod(option.value);
-                  }
-                }}
-              >
-                {option.label}
-              </Button>
-            ))}
-          </div>
+          <AdminDashboardPeriodSelector
+            value={period}
+            onChange={(nextPeriod) => {
+              if (nextPeriod !== period) {
+                setPendingSkeletonPeriod(nextPeriod);
+                setPeriod(nextPeriod);
+              }
+            }}
+          />
+          <AdminDashboardCollectionLogPopover
+            open={isCollectionLogsOpen}
+            logs={collectionLogsQuery.data}
+            isLoading={collectionLogsQuery.isLoading}
+            isFetching={collectionLogsQuery.isFetching}
+            isError={collectionLogsQuery.isError}
+            onOpenChange={setIsCollectionLogsOpen}
+            onRefresh={() => void collectionLogsQuery.refetch()}
+          />
         </div>
       </div>
 
@@ -5906,7 +6337,7 @@ function AdminDashboardManagementPanel({
           isLoading={isSubscriberLoading}
           infoLines={[
             "설명: 채널 구독자 수를 보여주는 카드입니다.",
-            "읽는 법: 비교 스냅샷이 있으면 기간 동안 늘어난 구독자 수, 없으면 현재 전체 구독자 수입니다.",
+            "읽는 법: 큰 숫자는 현재 전체 구독자 수입니다. 기간 동안 늘어난 구독자는 우상단의 기간 대비 값과 설명 문구에서 확인합니다.",
             "계산식: 기간 구독자 증가 = 현재 구독자 - 이전 구독자.",
             "참고: 제목 옆 기간 대비는 이전 스냅샷 대비 증감률입니다.",
             "주의: 제목 옆 변화율은 이전 스냅샷 대비 증가 또는 감소 비율입니다.",
@@ -6459,11 +6890,11 @@ function AdminSidebar({
   const [sidebarOrder, setSidebarOrder] = useState<AdminSidebarOrderPreference>(
     DEFAULT_ADMIN_SIDEBAR_ORDER,
   );
-  const [isOrderEditorOpen, setIsOrderEditorOpen] = useState(false);
+  const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
   const [isOrderLoading, setIsOrderLoading] = useState(false);
   const [isOrderSaving, setIsOrderSaving] = useState(false);
   const [sidebarOrderMessage, setSidebarOrderMessage] = useState(
-    "사이드바 순서는 관리자 계정별로 저장됩니다.",
+    "메뉴 순서는 관리자 계정별로 저장됩니다.",
   );
   const orderedSidebarSections = useMemo(
     () => buildOrderedSidebarSections(sidebarOrder),
@@ -6596,13 +7027,14 @@ function AdminSidebar({
     };
   }, [themePreference]);
 
+  const updateThemePreference = useCallback((nextTheme: AdminThemePreference) => {
+    setThemePreference(nextTheme);
+    window.localStorage.setItem(ADMIN_THEME_STORAGE_KEY, nextTheme);
+    applyAdminThemePreference(nextTheme);
+  }, []);
+
   const toggleThemePreference = () => {
-    setThemePreference((currentTheme) => {
-      const nextTheme = getNextAdminThemePreference(currentTheme);
-      window.localStorage.setItem(ADMIN_THEME_STORAGE_KEY, nextTheme);
-      applyAdminThemePreference(nextTheme);
-      return nextTheme;
-    });
+    updateThemePreference(getNextAdminThemePreference(themePreference));
   };
 
   const themeToggleLabel =
@@ -6619,345 +7051,244 @@ function AdminSidebar({
         : "라이트";
   const isDarkThemePreference = themePreference === "dark";
 
-  return (
-    <aside
-      className={cn(
-        "relative z-30 flex max-h-[42dvh] w-full shrink-0 flex-col overflow-x-hidden border-y border-border bg-gradient-to-b from-card via-card to-background/95 p-2 shadow-sm transition-[width,padding] duration-300 motion-reduce:transition-none md:h-full md:max-h-none md:min-h-0 md:w-full md:overflow-y-auto md:border-y-0 md:border-r md:p-2",
-        isCollapsed && "md:items-center md:px-1.5",
-      )}
-      aria-label="관리자 콘솔 사이드바"
-      data-admin-left-panel-expanded={isCollapsed ? "false" : "true"}
-    >
-      <div
+  const handleMenuNavigation = (moduleId: AdminModuleId) => {
+    onSelectModule(moduleId);
+    setIsAdminMenuOpen(false);
+  };
+
+  const renderMenuItem = (
+    item: SidebarSection["items"][number],
+    section: SidebarSection,
+    mode: "dropdown" | "sidebar",
+  ) => {
+    const Icon = item.icon;
+    const isActive = activeModuleId === item.id;
+    const itemStatus = getItemStatus(item.id);
+    const isDropdown = mode === "dropdown";
+    const button = (
+      <button
+        type="button"
+        aria-label={itemStatus ? `${item.title} ${itemStatus.label}` : item.title}
+        aria-current={isActive ? "page" : undefined}
+        aria-controls="admin-console-canvas"
         className={cn(
-          "mb-2 flex min-h-10 items-center gap-2 border-b border-border/70 px-1 pb-2 transition-[border-color] duration-200 motion-reduce:transition-none md:mb-1.5 md:min-h-9 md:pb-1.5",
-          isCollapsed &&
-            "md:min-h-9 md:w-full md:items-center md:justify-center md:border-b-0 md:px-0 md:pb-1",
+          "group relative flex items-center gap-2 overflow-hidden whitespace-nowrap border text-left transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none",
+          isDropdown
+            ? "min-h-10 w-full rounded-xl px-2.5 py-1.5 text-sm"
+            : "min-h-9 w-full rounded-lg px-2 py-1 text-sm",
+          !isDropdown &&
+            isCollapsed &&
+            "md:mx-auto md:h-9 md:min-h-9 md:w-9 md:justify-center md:gap-0 md:px-0",
+          isActive
+            ? "border-primary/20 bg-primary text-primary-foreground shadow-primary"
+            : "border-transparent text-muted-foreground hover:border-primary/15 hover:bg-background/80 hover:text-foreground",
         )}
+        onClick={() =>
+          isDropdown ? handleMenuNavigation(item.id) : onSelectModule(item.id)
+        }
       >
-        <Link
-          href="/"
+        <span
           className={cn(
-            "flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-transparent text-foreground transition hover:border-border hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none",
-            isCollapsed && "md:hidden",
+            "flex shrink-0 items-center justify-center border transition-colors motion-reduce:transition-none",
+            isDropdown ? "h-7 w-7 rounded-lg" : "h-6 w-6 rounded-md",
+            isActive
+              ? "border-primary-foreground/20 bg-primary-foreground/15 text-primary-foreground"
+              : "border-border bg-background/80 text-muted-foreground group-hover:border-primary/20 group-hover:text-primary",
           )}
-          aria-label="쯔동여지도 홈으로 이동"
+          aria-hidden="true"
         >
-          <Image
-            src="/logo.webp"
-            alt=""
-            aria-hidden="true"
-            width={32}
-            height={32}
-            className="h-7 w-7 rounded-lg object-contain"
-            priority
-          />
-        </Link>
-        <div
+          <Icon className={cn(isDropdown ? "h-4 w-4" : "h-3.5 w-3.5")} />
+        </span>
+        <span
           className={cn(
             "min-w-0 flex-1 overflow-hidden whitespace-nowrap transition-opacity duration-100 motion-reduce:transition-none",
-            (!showLabels || isCollapsed) && "md:sr-only",
+            !isDropdown &&
+              (!showLabels || isCollapsed) &&
+              "md:hidden md:w-0 md:flex-none md:opacity-0",
           )}
         >
-          <h2 className="truncate whitespace-nowrap text-sm font-bold tracking-[-0.03em] text-foreground text-pretty">
-            관리자 콘솔
-          </h2>
-          <p className="mt-0.5 truncate text-[11px] leading-4 text-muted-foreground">
-            현재 화면 · {activeSidebarLabel}
+          <span className="block truncate font-semibold leading-5">
+            {item.title}
+          </span>
+          {item.badge && (
+            <span
+              className={cn(
+                "mt-0.5 block truncate text-[11px] font-semibold leading-4",
+                getSidebarBadgeClassName(section.label, isActive),
+              )}
+              data-admin-sidebar-badge-tone={section.label}
+            >
+              {item.badge}
+            </span>
+          )}
+        </span>
+        {itemStatus && (
+          <span
+            className={cn(
+              "ml-auto shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-bold leading-4 transition-all duration-100 motion-reduce:transition-none",
+              itemStatus.urgent
+                ? isActive
+                  ? "border-primary-foreground/30 bg-primary-foreground/15 text-primary-foreground"
+                  : "border-primary/25 bg-primary/5 text-primary"
+                : isActive
+                  ? "border-primary-foreground/20 bg-primary-foreground/10 text-primary-foreground/80"
+                  : "border-border bg-background/80 text-muted-foreground",
+              !isDropdown &&
+                (!showLabels || isCollapsed) &&
+                "md:absolute md:right-1 md:top-1 md:h-2 md:w-2 md:border-0 md:p-0 md:text-[0px]",
+            )}
+            aria-hidden="true"
+          >
+            {itemStatus.value}
+          </span>
+        )}
+      </button>
+    );
+
+    if (mode === "sidebar" && isCollapsed) {
+      return (
+        <UiTooltipProvider key={item.id} delayDuration={120}>
+          <UiTooltip>
+            <UiTooltipTrigger asChild>{button}</UiTooltipTrigger>
+            <UiTooltipContent
+              side="right"
+              align="center"
+              className={adminDashboardTooltipPortalClassName}
+              data-admin-sidebar-collapsed-tooltip="true"
+            >
+              <AdminDashboardTooltipLinesPanel
+                lines={item.badge ? [item.title, item.badge] : [item.title]}
+                dataAttribute="sidebar-collapsed"
+                className="max-w-[14rem]"
+              />
+            </UiTooltipContent>
+          </UiTooltip>
+        </UiTooltipProvider>
+      );
+    }
+
+    return <Fragment key={item.id}>{button}</Fragment>;
+  };
+
+  const renderOrderControls = () => (
+    <div
+      id="admin-sidebar-order-editor"
+      className="rounded-2xl border border-border bg-background/70 p-2"
+      aria-label="메뉴 순서 설정"
+      data-admin-sidebar-order-editor="dropdown"
+    >
+      <div className="mb-2 flex items-center justify-between gap-2 px-1">
+        <div className="min-w-0">
+          <p className="truncate text-xs font-bold text-foreground">메뉴 순서</p>
+          <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+            섹션과 메뉴를 바로 위아래로 옮깁니다.
           </p>
         </div>
         <Button
           type="button"
-          variant="ghost"
+          variant="outline"
           size="sm"
-          className={cn(
-            "ml-auto hidden h-8 w-8 rounded-xl border border-transparent text-muted-foreground hover:border-primary/15 hover:bg-background/80 hover:text-foreground focus-visible:ring-primary focus-visible:ring-offset-background md:inline-flex",
-            isCollapsed && "md:m-0",
-          )}
-          aria-pressed={isCollapsed}
-          aria-expanded={!isCollapsed}
-          aria-controls="admin-console-menu"
-          aria-label={
-            isCollapsed ? "관리자 사이드바 펼치기" : "관리자 사이드바 접기"
+          className="h-7 shrink-0 rounded-lg px-2 text-[11px] font-bold"
+          disabled={!canLoadPreferences || isOrderLoading || isOrderSaving}
+          data-admin-sidebar-order-loading={isOrderLoading ? "true" : "false"}
+          onClick={() =>
+            void persistSidebarOrder(
+              DEFAULT_ADMIN_SIDEBAR_ORDER,
+              "처음 상태로 되돌렸습니다.",
+            )
           }
-          onClick={onToggleCollapsed}
         >
-          {isCollapsed ? (
-            <PanelLeftOpen className="h-4 w-4" aria-hidden="true" />
-          ) : (
-            <PanelLeftClose className="h-4 w-4" aria-hidden="true" />
-          )}
+          초기화
         </Button>
       </div>
 
-      <nav
-        id="admin-console-menu"
-        aria-label="관리자 통합 메뉴"
-        className={cn(
-          "flex gap-2 overflow-x-auto overscroll-x-contain pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden md:block md:min-h-0 md:flex-1 md:space-y-1.5 md:overflow-x-visible md:pb-0",
-          isCollapsed && "md:flex md:w-full md:flex-col md:items-center",
-        )}
-      >
-        {orderedSidebarSections.map((section) => (
+      <div className="space-y-1.5">
+        {orderedSidebarSections.map((section, sectionIndex) => (
           <div
             key={section.label}
-            className={cn(
-              "flex shrink-0 gap-2 md:block md:space-y-1",
-              isCollapsed && "md:flex md:w-full md:flex-col md:items-center",
-            )}
+            className="rounded-xl border border-border bg-card/80 p-1.5"
           >
-            <p
-              className={cn(
-                "sr-only px-2.5 text-[11px] font-semibold tracking-[0.08em] text-muted-foreground transition-opacity duration-100 motion-reduce:transition-none md:not-sr-only",
-                (!showLabels || isCollapsed) && "md:h-px md:px-0 md:opacity-0",
-              )}
-            >
-              {section.label}
-            </p>
-            {section.items.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeModuleId === item.id;
-              const itemStatus = getItemStatus(item.id);
-	              const menuButton = (
-	                <button
-	                  type="button"
-	                  aria-label={
-                    itemStatus
-                      ? `${item.title} ${itemStatus.label}`
-                      : item.title
-                  }
-                  aria-current={isActive ? "page" : undefined}
-                  aria-controls="admin-console-canvas"
-                  className={cn(
-                    "group relative flex min-h-11 min-w-[8.25rem] shrink-0 items-center gap-2 overflow-hidden whitespace-nowrap rounded-xl border px-3 py-2 text-left text-sm transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none md:min-h-9 md:min-w-0 md:w-full md:shrink md:rounded-lg md:px-2 md:py-1",
-                    isCollapsed &&
-                      "md:mx-auto md:h-9 md:min-h-9 md:w-9 md:justify-center md:gap-0 md:px-0",
-                    isActive
-                      ? "border-primary/20 bg-primary text-primary-foreground shadow-primary"
-                      : "border-transparent text-muted-foreground hover:border-primary/15 hover:bg-background/80 hover:text-foreground",
-                  )}
-                  onClick={() => onSelectModule(item.id)}
-                >
-                  <span
-                    className={cn(
-                      "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border transition-colors motion-reduce:transition-none md:h-6 md:w-6 md:rounded-md",
-                      isActive
-                        ? "border-primary-foreground/20 bg-primary-foreground/15 text-primary-foreground"
-                        : "border-border bg-background/80 text-muted-foreground group-hover:border-primary/20 group-hover:text-primary",
-                    )}
-                    aria-hidden="true"
-                  >
-                    <Icon className="h-4 w-4 md:h-3.5 md:w-3.5" />
-                  </span>
-                  <span
-                    className={cn(
-                      "min-w-0 flex-1 overflow-hidden whitespace-nowrap transition-opacity duration-100 motion-reduce:transition-none",
-                      (!showLabels || isCollapsed) &&
-                        "md:hidden md:w-0 md:flex-none md:opacity-0",
-                    )}
-                  >
-                    <span className="block truncate font-semibold leading-5">
-                      {item.title}
-                    </span>
-                    {item.badge && (
-                      <span
-                        className={cn(
-                          "mt-0.5 block truncate text-[11px] font-semibold leading-4",
-                          getSidebarBadgeClassName(section.label, isActive),
-                        )}
-                        data-admin-sidebar-badge-tone={section.label}
-                      >
-                        {item.badge}
-                      </span>
-                    )}
-                  </span>
-                  {itemStatus && (
-                    <span
-                      className={cn(
-                        "ml-auto shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-bold leading-4 transition-all duration-100 motion-reduce:transition-none",
-                        itemStatus.urgent
-                          ? isActive
-                            ? "border-primary-foreground/30 bg-primary-foreground/15 text-primary-foreground"
-                            : "border-primary/25 bg-primary/5 text-primary"
-                          : isActive
-                            ? "border-primary-foreground/20 bg-primary-foreground/10 text-primary-foreground/80"
-                            : "border-border bg-background/80 text-muted-foreground",
-                        (!showLabels || isCollapsed) &&
-                          "md:absolute md:right-1 md:top-1 md:h-2 md:w-2 md:border-0 md:p-0 md:text-[0px]",
-                      )}
-                      aria-hidden="true"
-                    >
-                      {itemStatus.value}
-                    </span>
-                  )}
-                </button>
-              );
-
-              if (isCollapsed) {
-                return (
-                  <UiTooltipProvider key={item.id} delayDuration={120}>
-                    <UiTooltip>
-                      <UiTooltipTrigger asChild>{menuButton}</UiTooltipTrigger>
-                      <UiTooltipContent
-                        side="right"
-                        align="center"
-                        className={adminDashboardTooltipPortalClassName}
-                        data-admin-sidebar-collapsed-tooltip="true"
-                      >
-                        <AdminDashboardTooltipLinesPanel
-                          lines={item.badge ? [item.title, item.badge] : [item.title]}
-                          dataAttribute="sidebar-collapsed"
-                          className="max-w-[14rem]"
-                        />
-                      </UiTooltipContent>
-                    </UiTooltip>
-                  </UiTooltipProvider>
-                );
-              }
-
-              return <Fragment key={item.id}>{menuButton}</Fragment>;
-            })}
-          </div>
-        ))}
-      </nav>
-
-      <Popover open={isOrderEditorOpen} onOpenChange={setIsOrderEditorOpen}>
-        <div
-          className={cn(
-            "mt-2 flex shrink-0 gap-1.5 pt-0 md:mt-auto md:pt-2",
-            isCollapsed && "md:w-full md:flex-col md:items-center",
-          )}
-          data-admin-sidebar-footer-actions="true"
-        >
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className={cn(
-              "min-h-10 rounded-xl border border-border/80 bg-background/75 px-3 text-xs font-bold text-muted-foreground shadow-sm touch-manipulation hover:border-primary/20 hover:bg-background hover:text-foreground focus-visible:ring-primary focus-visible:ring-offset-background md:min-h-8 md:px-2",
-              isCollapsed
-                ? "md:h-9 md:w-9 md:px-0"
-                : "w-auto shrink-0 justify-center gap-1.5",
-            )}
-            aria-label={themeToggleLabel}
-            aria-pressed={themePreference !== "light"}
-            onClick={toggleThemePreference}
-            data-admin-sidebar-theme-toggle="true"
-          >
-            {isDarkThemePreference ? (
-              <Monitor className="h-3.5 w-3.5" aria-hidden="true" />
-            ) : themePreference === "system" ? (
-              <Sun className="h-3.5 w-3.5" aria-hidden="true" />
-            ) : (
-              <Moon className="h-3.5 w-3.5" aria-hidden="true" />
-            )}
-            <span className={cn("truncate", isCollapsed && "md:sr-only")}>
-              {themeToggleText}
-            </span>
-          </Button>
-          <PopoverTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className={cn(
-                "min-h-10 rounded-xl border border-border/80 bg-background/75 px-3 text-xs font-bold text-muted-foreground shadow-sm touch-manipulation hover:border-primary/20 hover:bg-background hover:text-foreground focus-visible:ring-primary focus-visible:ring-offset-background md:min-h-8 md:px-2",
-                isCollapsed
-                  ? "md:h-9 md:w-9 md:px-0"
-                  : "min-w-0 flex-1 justify-start gap-2",
-              )}
-              aria-label="사이드바 메뉴 순서 설정"
-              aria-expanded={isOrderEditorOpen}
-              aria-controls="admin-sidebar-order-editor"
-              disabled={!canLoadPreferences || isOrderLoading}
-              data-admin-sidebar-order-loading={
-                isOrderLoading ? "true" : "false"
-              }
-            >
-              <Settings2 className="h-3.5 w-3.5" aria-hidden="true" />
-              <span className={cn("truncate", isCollapsed && "md:sr-only")}>
-                순서
+            <div className="mb-1 flex items-center justify-between gap-1.5">
+              <span className="truncate text-[11px] font-bold text-muted-foreground">
+                {section.label}
               </span>
-              {!isCollapsed && isOrderLoading ? (
-                <Skeleton
-                  className="ml-auto h-3 w-8 rounded-full motion-reduce:animate-none"
-                  data-admin-sidebar-order-loading="true"
-                  aria-hidden="true"
-                />
-              ) : !isCollapsed ? (
-                <span className="ml-auto text-[10px] font-semibold text-muted-foreground/80">
-                  설정
-                </span>
-              ) : null}
-            </Button>
-          </PopoverTrigger>
-        </div>
-
-        <PopoverContent
-          id="admin-sidebar-order-editor"
-          side="right"
-          align="end"
-          sideOffset={10}
-          className="max-h-[min(620px,calc(100dvh-24px))] w-[min(360px,calc(100vw-24px))] overflow-y-auto rounded-2xl border-border bg-card p-2.5 shadow-primary"
-          aria-label="사이드바 순서 설정"
-        >
-          <div className="mb-2 flex items-center justify-between gap-2 px-1">
-            <div className="min-w-0">
-              <p className="truncate text-xs font-bold text-foreground">
-                메뉴 순서
-              </p>
-              <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                필요할 때만 열어 빠르게 조정합니다.
-              </p>
+              <div className="flex shrink-0 gap-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 rounded-md p-0 text-[11px]"
+                  aria-label={`${section.label} 섹션 앞으로`}
+                  disabled={
+                    !canLoadPreferences ||
+                    isOrderLoading ||
+                    sectionIndex === 0 ||
+                    isOrderSaving
+                  }
+                  onClick={() =>
+                    void persistSidebarOrder(
+                      moveAdminSidebarSection(sidebarOrder, section.label, -1),
+                      `${section.label} 섹션을 앞으로 옮겼습니다.`,
+                    )
+                  }
+                >
+                  ↑
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 rounded-md p-0 text-[11px]"
+                  aria-label={`${section.label} 섹션 뒤로`}
+                  disabled={
+                    !canLoadPreferences ||
+                    isOrderLoading ||
+                    sectionIndex === orderedSidebarSections.length - 1 ||
+                    isOrderSaving
+                  }
+                  onClick={() =>
+                    void persistSidebarOrder(
+                      moveAdminSidebarSection(sidebarOrder, section.label, 1),
+                      `${section.label} 섹션을 뒤로 옮겼습니다.`,
+                    )
+                  }
+                >
+                  ↓
+                </Button>
+              </div>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-7 shrink-0 rounded-lg px-2 text-[11px] font-bold"
-              disabled={!canLoadPreferences || isOrderLoading || isOrderSaving}
-              onClick={() =>
-                void persistSidebarOrder(
-                  DEFAULT_ADMIN_SIDEBAR_ORDER,
-                  "처음 상태로 되돌렸습니다.",
-                )
-              }
-            >
-              초기화
-            </Button>
-          </div>
 
-          <div className="space-y-1.5">
-            {orderedSidebarSections.map((section, sectionIndex) => (
-              <div
-                key={section.label}
-                className="rounded-xl border border-border bg-background/70 p-1.5"
-              >
-                <div className="mb-1 flex items-center justify-between gap-1.5">
-                  <span className="truncate text-[11px] font-bold text-muted-foreground">
-                    {section.label}
+            <div className="space-y-1">
+              {section.items.map((item, itemIndex) => (
+                <div
+                  key={item.id}
+                  className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-1 rounded-lg bg-muted/35 px-2 py-1"
+                >
+                  <span className="min-w-0 truncate text-xs font-semibold text-foreground">
+                    {item.title}
                   </span>
                   <div className="flex shrink-0 gap-1">
                     <Button
                       type="button"
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
                       className="h-6 w-6 rounded-md p-0 text-[11px]"
-                      aria-label={`${section.label} 섹션 앞으로`}
+                      aria-label={`${item.title} 메뉴 앞으로`}
                       disabled={
                         !canLoadPreferences ||
                         isOrderLoading ||
-                        sectionIndex === 0 ||
+                        itemIndex === 0 ||
                         isOrderSaving
                       }
                       onClick={() =>
                         void persistSidebarOrder(
-                          moveAdminSidebarSection(
+                          moveAdminSidebarItem(
                             sidebarOrder,
                             section.label,
+                            item.id,
                             -1,
                           ),
-                          `${section.label} 섹션을 앞으로 옮겼습니다.`,
+                          `${item.title} 메뉴를 앞으로 옮겼습니다.`,
                         )
                       }
                     >
@@ -6965,24 +7296,25 @@ function AdminSidebar({
                     </Button>
                     <Button
                       type="button"
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
                       className="h-6 w-6 rounded-md p-0 text-[11px]"
-                      aria-label={`${section.label} 섹션 뒤로`}
+                      aria-label={`${item.title} 메뉴 뒤로`}
                       disabled={
                         !canLoadPreferences ||
                         isOrderLoading ||
-                        sectionIndex === orderedSidebarSections.length - 1 ||
+                        itemIndex === section.items.length - 1 ||
                         isOrderSaving
                       }
                       onClick={() =>
                         void persistSidebarOrder(
-                          moveAdminSidebarSection(
+                          moveAdminSidebarItem(
                             sidebarOrder,
                             section.label,
+                            item.id,
                             1,
                           ),
-                          `${section.label} 섹션을 뒤로 옮겼습니다.`,
+                          `${item.title} 메뉴를 뒤로 옮겼습니다.`,
                         )
                       }
                     >
@@ -6990,86 +7322,240 @@ function AdminSidebar({
                     </Button>
                   </div>
                 </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
 
-                <div className="space-y-1">
-                  {section.items.map((item, itemIndex) => (
-                    <div
-                      key={item.id}
-                      className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-1 rounded-lg bg-muted/35 px-2 py-1"
-                    >
-                      <span className="min-w-0 truncate text-xs font-semibold text-foreground">
-                        {item.title}
-                      </span>
-                      <div className="flex shrink-0 gap-1">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-6 w-6 rounded-md p-0 text-[11px]"
-                          aria-label={`${item.title} 메뉴 앞으로`}
-                          disabled={
-                            !canLoadPreferences ||
-                            isOrderLoading ||
-                            itemIndex === 0 ||
-                            isOrderSaving
-                          }
-                          onClick={() =>
-                            void persistSidebarOrder(
-                              moveAdminSidebarItem(
-                                sidebarOrder,
-                                section.label,
-                                item.id,
-                                -1,
-                              ),
-                              `${item.title} 메뉴를 앞으로 옮겼습니다.`,
-                            )
-                          }
-                        >
-                          ↑
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-6 w-6 rounded-md p-0 text-[11px]"
-                          aria-label={`${item.title} 메뉴 뒤로`}
-                          disabled={
-                            !canLoadPreferences ||
-                            isOrderLoading ||
-                            itemIndex === section.items.length - 1 ||
-                            isOrderSaving
-                          }
-                          onClick={() =>
-                            void persistSidebarOrder(
-                              moveAdminSidebarItem(
-                                sidebarOrder,
-                                section.label,
-                                item.id,
-                                1,
-                              ),
-                              `${item.title} 메뉴를 뒤로 옮겼습니다.`,
-                            )
-                          }
-                        >
-                          ↓
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
+      <p
+        className="mt-2 rounded-lg bg-muted/40 px-2 py-1.5 text-[11px] leading-5 text-muted-foreground"
+        aria-live="polite"
+      >
+        {sidebarOrderMessage}
+      </p>
+    </div>
+  );
+
+  return (
+    <>
+      <Popover open={isAdminMenuOpen} onOpenChange={setIsAdminMenuOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="fixed right-3 top-3 z-[70] h-9 w-9 rounded-full border-border/80 bg-card/95 p-0 shadow-sm backdrop-blur hover:bg-background focus-visible:ring-primary focus-visible:ring-offset-background"
+            aria-label="관리자 메뉴 열기"
+            aria-expanded={isAdminMenuOpen}
+            aria-controls="admin-console-menu-dropdown"
+            data-admin-console-menu-trigger="hamburger"
+          >
+            <Menu className="h-4 w-4" aria-hidden="true" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          id="admin-console-menu-dropdown"
+          align="end"
+          sideOffset={10}
+          className="max-h-[min(760px,calc(100dvh-24px))] w-[min(25rem,calc(100vw-24px))] overflow-y-auto rounded-2xl border-border bg-card p-2.5 shadow-primary"
+          aria-label="관리자 콘솔 메뉴"
+          data-admin-console-menu-dropdown="true"
+        >
+          <div className="mb-2 flex items-center gap-2 rounded-2xl bg-muted/35 p-2">
+            <Link
+              href="/"
+              className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-background"
+              aria-label="쯔동여지도 홈으로 이동"
+              onClick={() => setIsAdminMenuOpen(false)}
+            >
+              <Image
+                src="/logo.webp"
+                alt=""
+                aria-hidden="true"
+                width={32}
+                height={32}
+                className="h-7 w-7 rounded-lg object-contain"
+                priority
+              />
+            </Link>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-extrabold text-foreground">
+                관리자 콘솔
+              </p>
+              <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                현재 화면 · {activeSidebarLabel}
+              </p>
+            </div>
           </div>
 
-          <p
-            className="mt-2 rounded-lg bg-muted/40 px-2 py-1.5 text-[11px] leading-5 text-muted-foreground"
-            aria-live="polite"
+          <nav className="space-y-2" aria-label="관리자 통합 메뉴">
+            {orderedSidebarSections.map((section) => (
+              <div key={section.label} className="space-y-1">
+                <p className="px-1 text-[11px] font-bold tracking-[0.08em] text-muted-foreground">
+                  {section.label}
+                </p>
+                {section.items.map((item) => renderMenuItem(item, section, "dropdown"))}
+              </div>
+            ))}
+          </nav>
+
+          <div
+            className="mt-2 rounded-2xl border border-border bg-background/70 p-2"
+            data-admin-sidebar-theme-toggle="true"
           >
-            {sidebarOrderMessage}
-          </p>
+            <div className="mb-2 flex items-center justify-between gap-2 px-1">
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-foreground">화면 모드</p>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  라이트, 다크, 시스템 설정을 여기서 바꿉니다.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 shrink-0 rounded-lg px-2 text-[11px] font-bold"
+                aria-label={themeToggleLabel}
+                aria-pressed={themePreference !== "light"}
+                onClick={toggleThemePreference}
+              >
+                {isDarkThemePreference ? (
+                  <Monitor className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+                ) : themePreference === "system" ? (
+                  <Sun className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+                ) : (
+                  <Moon className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+                )}
+                {themeToggleText}
+              </Button>
+            </div>
+            <div className="grid grid-cols-3 gap-1">
+              {([
+                ["light", "라이트", Sun],
+                ["dark", "다크", Moon],
+                ["system", "시스템", Monitor],
+              ] as const).map(([theme, label, Icon]) => (
+                <Button
+                  key={theme}
+                  type="button"
+                  variant={themePreference === theme ? "default" : "outline"}
+                  size="sm"
+                  className="h-8 rounded-xl px-2 text-[11px] font-bold"
+                  aria-pressed={themePreference === theme}
+                  onClick={() => updateThemePreference(theme)}
+                >
+                  <Icon className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+                  {label}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-2">{renderOrderControls()}</div>
         </PopoverContent>
       </Popover>
-    </aside>
+
+      <aside
+        className={cn(
+          "relative z-30 hidden h-full min-h-0 w-full shrink-0 flex-col overflow-x-hidden overflow-y-auto border-r border-border bg-gradient-to-b from-card via-card to-background/95 p-2 shadow-sm transition-[width,padding] duration-300 motion-reduce:transition-none md:flex",
+          isCollapsed && "md:items-center md:px-1.5",
+        )}
+        aria-label="관리자 콘솔 사이드바"
+        data-admin-left-panel-expanded={isCollapsed ? "false" : "true"}
+      >
+        <div
+          className={cn(
+            "mb-1.5 flex min-h-9 items-center gap-2 border-b border-border/70 px-1 pb-1.5 transition-[border-color] duration-200 motion-reduce:transition-none",
+            isCollapsed &&
+              "md:min-h-9 md:w-full md:items-center md:justify-center md:border-b-0 md:px-0 md:pb-1",
+          )}
+        >
+          <Link
+            href="/"
+            className={cn(
+              "flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-transparent text-foreground transition hover:border-border hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none",
+              isCollapsed && "md:hidden",
+            )}
+            aria-label="쯔동여지도 홈으로 이동"
+          >
+            <Image
+              src="/logo.webp"
+              alt=""
+              aria-hidden="true"
+              width={32}
+              height={32}
+              className="h-7 w-7 rounded-lg object-contain"
+              priority
+            />
+          </Link>
+          <div
+            className={cn(
+              "min-w-0 flex-1 overflow-hidden whitespace-nowrap transition-opacity duration-100 motion-reduce:transition-none",
+              (!showLabels || isCollapsed) && "md:sr-only",
+            )}
+          >
+            <h2 className="truncate whitespace-nowrap text-sm font-bold tracking-[-0.03em] text-foreground text-pretty">
+              관리자 콘솔
+            </h2>
+            <p className="mt-0.5 truncate text-[11px] leading-4 text-muted-foreground">
+              현재 화면 · {activeSidebarLabel}
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className={cn(
+              "ml-auto inline-flex h-8 w-8 rounded-xl border border-transparent text-muted-foreground hover:border-primary/15 hover:bg-background/80 hover:text-foreground focus-visible:ring-primary focus-visible:ring-offset-background",
+              isCollapsed && "md:m-0",
+            )}
+            aria-pressed={isCollapsed}
+            aria-expanded={!isCollapsed}
+            aria-controls="admin-console-menu"
+            aria-label={
+              isCollapsed ? "관리자 사이드바 펼치기" : "관리자 사이드바 접기"
+            }
+            onClick={onToggleCollapsed}
+          >
+            {isCollapsed ? (
+              <PanelLeftOpen className="h-4 w-4" aria-hidden="true" />
+            ) : (
+              <PanelLeftClose className="h-4 w-4" aria-hidden="true" />
+            )}
+          </Button>
+        </div>
+
+        <nav
+          id="admin-console-menu"
+          aria-label="관리자 통합 메뉴"
+          className={cn(
+            "block min-h-0 flex-1 space-y-1.5 pb-2",
+            isCollapsed && "md:flex md:w-full md:flex-col md:items-center",
+          )}
+        >
+          {orderedSidebarSections.map((section) => (
+            <div
+              key={section.label}
+              className={cn(
+                "block space-y-1",
+                isCollapsed && "md:flex md:w-full md:flex-col md:items-center",
+              )}
+            >
+              <p
+                className={cn(
+                  "px-2.5 text-[11px] font-semibold tracking-[0.08em] text-muted-foreground transition-opacity duration-100 motion-reduce:transition-none",
+                  (!showLabels || isCollapsed) && "md:h-px md:px-0 md:opacity-0",
+                )}
+              >
+                {section.label}
+              </p>
+              {section.items.map((item) => renderMenuItem(item, section, "sidebar"))}
+            </div>
+          ))}
+        </nav>
+      </aside>
+    </>
   );
 }
 
@@ -7483,7 +7969,7 @@ export function AdminConsoleOverview() {
           tabIndex={-1}
           aria-label="관리자 콘솔 작업 화면"
           className={cn(
-            "h-full min-h-0 min-w-0 overscroll-contain border-y border-border bg-background p-2 sm:p-3 md:border-y-0 md:p-4",
+            "h-full min-h-0 min-w-0 overscroll-contain border-y border-border bg-background p-2 pr-14 sm:p-3 sm:pr-16 md:border-y-0 md:p-4 md:pr-16",
             activeModuleId === "overview"
               ? "overflow-y-auto lg:overflow-hidden"
               : "overflow-y-auto",
