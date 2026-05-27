@@ -524,10 +524,13 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(consoleSource).toContain("text-[clamp(1.42rem,1.75vw,2.1rem)]");
     expect(consoleSource).toContain("function AdminDashboardTooltipPanel");
-    expect(consoleSource).toContain("min-w-44 space-y-1.5");
+    expect(consoleSource).toContain("min-w-44 space-y-1");
     expect(consoleSource).toContain(
-      "text-[11px] font-semibold leading-4 text-muted-foreground",
+      "text-[10px] font-semibold leading-3 text-muted-foreground",
     );
+    expect(consoleSource).toContain("rounded-xl border border-border bg-popover px-2.5 py-1.5");
+    expect(consoleSource).toContain("grid gap-0.5");
+    expect(consoleSource).toContain("gap-x-1.5 gap-y-0");
     expect(consoleSource).toContain("fontSize: 11");
     expect(consoleSource).toContain("toneClass.bar");
     expect(consoleSource).toContain("toneClass.text");
@@ -621,6 +624,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(consoleSource).toContain("상위 영상 영향도 첫 항목은");
     expect(consoleSource).toContain('dataAttribute="bubble-video"');
+    expect(consoleSource).toContain(
+      "계산식: 참여 = 좋아요 + 댓글 · 원 크기 = 참여",
+    );
+    expect(consoleSource).not.toContain('className="max-w-[280px]"');
     expect(consoleSource).not.toContain("function AdminDashboardAxisCornerHint");
     expect(consoleSource).not.toContain("function AdminDashboardAxisCaption");
     expect(consoleSource).not.toContain(
@@ -655,7 +662,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("formatNumber(row.참여)");
     expect(consoleSource).toContain("콘텐츠 성과 상위 항목은");
     expect(consoleSource).toContain(
-      "읽는 법: 막대는 조회·좋아요·댓글 수를 보여주고, 기여도는 전체 합계 중 해당 영상이 차지한 비율입니다.",
+      "읽는 법: 막대는 조회·좋아요·댓글 수를 보여주고, 기여도는 세 지표를 가중 합산한 성과 기여입니다.",
     );
     expect(consoleSource).toContain("comments: row.commentCount");
     expect(consoleSource).toContain(
@@ -685,7 +692,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain('header: "댓글"');
     expect(consoleSource).toContain("rankColors");
     expect(consoleSource).toContain("metricRows");
-    expect(consoleSource).toContain("return metricRows.map((row, index) =>");
+    expect(consoleSource).toContain("return scoredRows.map((row, index) =>");
     expect(consoleSource).toContain("barRows.map((row) => ({");
     expect(consoleSource).toContain("getVideoViewDelta");
     expect(consoleSource).toContain("getVideoEngagementDelta");
@@ -704,7 +711,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "설명: 선택 기간 업로드 영상 안에서 오른쪽으로 갈수록 조회수가 크고, 위로 갈수록 좋아요와 댓글 합계가 큽니다.",
     );
     expect(consoleSource).toContain(
-      "읽는 법: 막대는 선택 기간 업로드 영상의 조회·좋아요·댓글 증가량을 보여주고, 기여도는 업로드 영상 증가 합계 중 해당 영상이 차지한 비율입니다.",
+      "읽는 법: 막대는 선택 기간 업로드 영상의 조회·좋아요·댓글 증가량을 보여주고, 기여도는 세 지표를 가중 합산한 성과 기여입니다.",
     );
     expect(consoleSource).toContain("합계 {formatCompactNumber(total)}");
     expect(consoleSource).toContain("formatDashboardPercent(percent)");
@@ -740,7 +747,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(consoleSource).not.toContain("목적 다음 액션");
     expect(consoleSource).toContain(
-      "ml-auto flex min-w-0 shrink-0 items-center gap-2",
+      "ml-auto flex min-w-fit shrink-0 flex-nowrap items-center gap-2",
+    );
+    expect(consoleSource).toContain(
+      "flex min-w-fit flex-nowrap items-center justify-end gap-1",
     );
     expect(consoleSource).not.toContain(
       "grid grid-cols-3 gap-2 rounded-xl border border-border/70 bg-background/80 p-2 text-[11px]",
@@ -905,43 +915,47 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("getDashboardAverage");
     expect(consoleSource).toContain("getDashboardMedian");
     expect(consoleSource).toContain("formatDashboardAverageComparison");
-    expect(consoleSource).toContain("기간 조회 증가 기여");
+    expect(consoleSource).toContain("기간 성과 기여");
     expect(consoleSource).toContain(
-      "용어: 기간 조회 증가 기여는 선택 기간 업로드 영상들의 조회 증가 합계 중 이 영상이 차지한 비율입니다.",
+      "용어: 조회·좋아요·댓글 증가 기여는 각각 선택 기간 업로드 영상 전체 증가 합계 중 이 영상이 차지한 비율입니다.",
     );
     expect(consoleSource).toContain(
       "비교 대상: 선택 기간에 새로 올라온 업로드 영상입니다.",
     );
     expect(consoleSource).toContain(
-      "처리: 이전 스냅샷이 없으면 현재 조회수를 증가분으로 봅니다.",
+      "처리: 이전 스냅샷이 없으면 현재 조회·좋아요·댓글을 증가분으로 봅니다.",
     );
     expect(consoleSource).toContain(
-      "전체값: 선택 기간 업로드 영상의 조회 증가 합계를 분모로 사용합니다.",
+      "전체값: 선택 기간 업로드 영상의 조회·좋아요·댓글 증가 합계를 각각 분모로 사용합니다.",
     );
     expect(consoleSource).toContain(
       "periodUploadVideoCount?: number | null",
     );
     expect(consoleSource).toContain(
-      "`비교 대상: 선택 기간 업로드 영상 ${formatNumber(metricRows.length)}개 중 ${viewRank}위 (${viewTopPercentLabel})`",
+      "`비교 대상: 선택 기간 업로드 영상 ${formatNumber(scoredRows.length)}개 중 ${viewRank}위 (${viewTopPercentLabel})`",
     );
     expect(consoleSource).toContain(
-      "`조회수 비교 대상: ${formatNumber(metricRows.length)}개 영상 중 ${viewRank}위 (${viewTopPercentLabel})`",
+      "`비교 대상: 선택 기간 영상 ${formatNumber(scoredRows.length)}개 중 ${viewRank}위 (${viewTopPercentLabel})`",
     );
     expect(consoleSource).toContain(
-      "`업로드 영상 수 카드는 ${formatNumber(periodUploadVideoCount)}개이고, 이 비교에는 성과 데이터가 있는 ${formatNumber(metricRows.length)}개를 사용합니다.`",
+      "`업로드 영상 수 카드는 ${formatNumber(periodUploadVideoCount)}개이고, 이 비교에는 성과 데이터가 있는 ${formatNumber(scoredRows.length)}개를 사용합니다.`",
     );
     expect(consoleSource).toContain(
       "topContentMetricMode === \"delta\" ? periodUploadVideoValue : null",
     );
     expect(consoleSource).toContain(
-      "${formatNumber(row.viewCount)}회 / ${formatNumber(totalViewValue)}회 = ${formatDashboardPercent(viewContributionPercent)}",
+      "`조회 ${formatDashboardPercent(row.viewContributionPercent)} · 좋아요 ${formatDashboardPercent(row.likeContributionPercent)} · 댓글 ${formatDashboardPercent(row.commentContributionPercent)}`",
     );
     expect(consoleSource).toContain(
-      "계산식: 이 영상 ${contributionValueLabel} / ${contributionTotalLabel} × 100",
+      "`계산식: 조회×60% + 좋아요×25% + 댓글×15% = ${formatDashboardPercent(row.performanceContributionPercent)}`",
     );
     expect(consoleSource).toContain(
-      "전체값은 선택 기간 업로드 영상의 조회 증가 합계입니다.",
+      "전체값: 조회·좋아요·댓글 증가 합계를 각각 분모로 사용합니다.",
     );
+    expect(consoleSource).toContain(
+      "max-w-[min(26rem,calc(100vw-2rem))]",
+    );
+    expect(consoleSource).toContain("[text-wrap:pretty]");
     const infoLineTooltipBlocks =
       consoleSource.match(/infoLines=\{\[[\s\S]*?\]\}/g) ?? [];
     expect(infoLineTooltipBlocks.length).toBeGreaterThanOrEqual(10);
@@ -962,6 +976,12 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "className={adminDashboardTooltipPortalClassName}",
     );
     expect(consoleSource).toContain('dataAttribute="diagnosis-card"');
+    expect(consoleSource).toContain(
+      'data-admin-dashboard-diagnosis-tooltip-trigger="title"',
+    );
+    expect(consoleSource).toContain('side="top"');
+    expect(consoleSource).toContain("sideOffset={4}");
+    expect(consoleSource).toContain("collisionPadding={12}");
     expect(consoleSource).toContain("adminDashboardTooltipLineClassName");
     expect(consoleSource).toContain("adminDashboardTooltipFirstLineClassName");
     expect(consoleSource).toContain("contributionTotalOverride?: number | null");
@@ -975,15 +995,15 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("const topContentContributionFormula");
     expect(consoleSource).toContain("topContentContributionFormula,");
     expect(consoleSource).toContain(
-      "기간 조회 증가 기여 = 이 영상 조회 증가 / 선택 기간 업로드 영상 조회 증가 합계 × 100.",
+      "기간 성과 기여 = 조회 증가 기여×60% + 좋아요 증가 기여×25% + 댓글 증가 기여×15%.",
     );
     expect(consoleSource).toContain(
-      "기간 조회 기여 = 이 영상 조회수 / 선택 기간 영상 조회수 합계 × 100.",
+      "성과 기여 = 조회 기여×60% + 좋아요 기여×25% + 댓글 기여×15%.",
     );
     expect(consoleSource).toContain("viewTopPercentLabel");
     expect(consoleSource).toContain("중앙값 대비");
     expect(consoleSource).toContain(
-      'const viewBenchmarkLabel = metricMode === "delta" ? "조회 증가" : "조회";',
+      'const viewBenchmarkLabel = metricMode === "delta" ? "성과 증가" : "성과";',
     );
     expect(consoleSource).toContain(
       "viewBenchmarkTooltip: row.viewBenchmarkTooltip",
@@ -1212,27 +1232,38 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       "같은 레이아웃 영역 안에서 카드를 드래그하면 순서가 자동 저장됩니다.",
     );
+    expect(consoleSource).toContain(
+      "원하는 위치로 끌면 즉시 자리가 바뀝니다.",
+    );
     expect(consoleSource).toContain("ADMIN_DASHBOARD_WIDGET_LAYOUT_GROUPS");
     expect(consoleSource).toContain(
       "getAdminDashboardWidgetLayoutGroup(sourceWidgetId)",
     );
     expect(consoleSource).toContain("getDashboardCardReorderProps");
     expect(consoleSource).toContain("getDashboardReorderCardClassName");
+    expect(consoleSource).toContain("getDashboardCardOrderStyle");
+    expect(consoleSource).toContain("viewTransitionName");
+    expect(consoleSource).toContain("updateAdminDashboardOrderWithViewTransition");
+    expect(consoleSource).toContain("moveAdminDashboardWidgetBeforeOrAfter");
     expect(consoleSource).toContain(
       "draggable: isDashboardOrderEditorOpen && !isDashboardOrderSaving",
     );
     expect(consoleSource).toContain("onDragStart: (event) =>");
+    expect(consoleSource).toContain("onDragEnter: (event) =>");
     expect(consoleSource).toContain(
-      "moveDraggedDashboardWidget(widgetId, sourceWidgetId)",
+      "previewDraggedDashboardWidget(widgetId, placement, sourceWidgetId)",
+    );
+    expect(consoleSource).toContain(
+      "finishDraggedDashboardWidget(sourceWidgetId)",
     );
     expect(consoleSource).toContain(
       "/api/admin/preferences/dashboard-widget-order",
     );
     expect(consoleSource).toContain(
-      'style={{ order: getDashboardWidgetOrder("subscribers") }}',
+      'style={getDashboardCardOrderStyle("subscribers")}',
     );
     expect(consoleSource).toContain(
-      'style={{ order: getDashboardWidgetOrder("engagementRate") }}',
+      'style={getDashboardCardOrderStyle("engagementRate")}',
     );
     expect(consoleSource).toContain(
       'reorderProps={getDashboardCardReorderProps("subscribers")}',
