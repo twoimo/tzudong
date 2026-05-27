@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "node scripts/dev-prewarm.mjs --port 8080",
     "dev:clean": "node scripts/clean-next.mjs -- node node_modules/next/dist/bin/next dev --port 8080",
-    "dev:playwright": "node scripts/clean-next.mjs --skip-clean -- node node_modules/next/dist/bin/next dev --port 8080",
+    "dev:playwright": "node scripts/clean-next.mjs -- node node_modules/next/dist/bin/next dev --port 8080",
     "build": "node scripts/clean-next.mjs -- node node_modules/next/dist/bin/next build",
     "start": "node scripts/sync-standalone-static.mjs && node scripts/clean-next.mjs --skip-clean -- node .next/standalone/apps/web/server.js",
     "start:playwright": "node scripts/sync-standalone-static.mjs && PORT=8080 HOSTNAME=localhost node scripts/clean-next.mjs --skip-clean -- node .next/standalone/apps/web/server.js",
