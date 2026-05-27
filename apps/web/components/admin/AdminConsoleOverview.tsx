@@ -3054,13 +3054,13 @@ function AdminDashboardManagementSkeleton() {
       role="status"
       aria-busy="true"
     >
-      <div className="mb-2 flex shrink-0 flex-col gap-0 md:flex-row md:items-start md:justify-between">
-        <div>
-          <h1 className="text-xl font-extrabold tracking-[0.01em] text-foreground text-balance">
+      <div className="mb-2 flex shrink-0 flex-col gap-2 md:flex-row md:items-start md:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-[1.55rem] font-extrabold leading-tight tracking-[0.01em] text-foreground text-balance md:text-xl">
             Tzuyang KPI Dashboard
           </h1>
         </div>
-        <div className="flex shrink-0 flex-wrap items-start justify-end gap-1">
+        <div className="flex w-full shrink-0 flex-wrap items-center justify-end gap-1.5 md:w-auto md:items-start md:gap-1">
           <Button
             type="button"
             variant="outline"
@@ -6218,13 +6218,13 @@ function AdminDashboardManagementPanel({
       data-admin-dashboard-realtime-charts="true"
       data-admin-dashboard-channel-kpi="true"
     >
-      <div className="mb-2 flex shrink-0 flex-col gap-0 md:flex-row md:items-start md:justify-between">
-        <div>
-          <h1 className="text-xl font-extrabold tracking-[0.01em] text-foreground text-balance">
+      <div className="mb-2 flex shrink-0 flex-col gap-2 md:flex-row md:items-start md:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-[1.55rem] font-extrabold leading-tight tracking-[0.01em] text-foreground text-balance md:text-xl">
             Tzuyang KPI Dashboard
           </h1>
         </div>
-        <div className="flex shrink-0 flex-wrap items-start justify-end gap-1">
+        <div className="flex w-full shrink-0 flex-wrap items-center justify-end gap-1.5 md:w-auto md:items-start md:gap-1">
           <Button
             type="button"
             variant={isDashboardOrderEditorOpen ? "default" : "outline"}
@@ -6891,6 +6891,7 @@ function AdminSidebar({
     DEFAULT_ADMIN_SIDEBAR_ORDER,
   );
   const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
+  const [isDesktopAdminMenuOpen, setIsDesktopAdminMenuOpen] = useState(false);
   const [isOrderLoading, setIsOrderLoading] = useState(false);
   const [isOrderSaving, setIsOrderSaving] = useState(false);
   const [sidebarOrderMessage, setSidebarOrderMessage] = useState(
@@ -7054,6 +7055,7 @@ function AdminSidebar({
   const handleMenuNavigation = (moduleId: AdminModuleId) => {
     onSelectModule(moduleId);
     setIsAdminMenuOpen(false);
+    setIsDesktopAdminMenuOpen(false);
   };
 
   const renderMenuItem = (
@@ -7337,32 +7339,16 @@ function AdminSidebar({
     </div>
   );
 
-  return (
-    <>
-      <Popover open={isAdminMenuOpen} onOpenChange={setIsAdminMenuOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="fixed right-3 top-3 z-[70] h-9 w-9 rounded-full border-border/80 bg-card/95 p-0 shadow-sm backdrop-blur hover:bg-background focus-visible:ring-primary focus-visible:ring-offset-background"
-            aria-label="관리자 메뉴 열기"
-            aria-expanded={isAdminMenuOpen}
-            aria-controls="admin-console-menu-dropdown"
-            data-admin-console-menu-trigger="hamburger"
-          >
-            <Menu className="h-4 w-4" aria-hidden="true" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent
-          id="admin-console-menu-dropdown"
-          align="end"
-          sideOffset={10}
-          className="max-h-[min(760px,calc(100dvh-24px))] w-[min(25rem,calc(100vw-24px))] overflow-y-auto rounded-2xl border-border bg-card p-2.5 shadow-primary"
-          aria-label="관리자 콘솔 메뉴"
-          data-admin-console-menu-dropdown="true"
-        >
-          <div className="mb-2 flex items-center gap-2 rounded-2xl bg-muted/35 p-2">
+  const renderAdminMenuContent = (contentId: string) => (
+    <PopoverContent
+      id={contentId}
+      align="end"
+      sideOffset={10}
+      className="max-h-[min(760px,calc(100dvh-24px))] w-[min(25rem,calc(100vw-24px))] overflow-y-auto rounded-2xl border-border bg-card p-2.5 shadow-primary"
+      aria-label="관리자 콘솔 메뉴"
+      data-admin-console-menu-dropdown="true"
+    >
+      <div className="mb-2 flex items-center gap-2 rounded-2xl bg-muted/35 p-2">
             <Link
               href="/"
               className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-background"
@@ -7452,8 +7438,56 @@ function AdminSidebar({
             </div>
           </div>
 
-          <div className="mt-2">{renderOrderControls()}</div>
-        </PopoverContent>
+      <div className="mt-2">{renderOrderControls()}</div>
+    </PopoverContent>
+  );
+
+  return (
+    <>
+      <Popover open={isAdminMenuOpen} onOpenChange={setIsAdminMenuOpen}>
+        <div
+          className="flex min-h-14 shrink-0 items-center gap-2 border-b border-border bg-card/95 px-3 py-2 shadow-sm md:hidden"
+          data-admin-console-mobile-header="true"
+        >
+          <Link
+            href="/"
+            className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-background text-foreground"
+            aria-label="쯔동여지도 홈으로 이동"
+          >
+            <Image
+              src="/logo.webp"
+              alt=""
+              aria-hidden="true"
+              width={32}
+              height={32}
+              className="h-7 w-7 rounded-lg object-contain"
+              priority
+            />
+          </Link>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-extrabold text-foreground">
+              관리자 콘솔
+            </p>
+            <p className="mt-0.5 truncate text-[11px] leading-4 text-muted-foreground">
+              현재 화면 · {activeSidebarLabel}
+            </p>
+          </div>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-10 w-10 shrink-0 rounded-full border-border/80 bg-background/85 p-0 shadow-sm hover:bg-background focus-visible:ring-primary focus-visible:ring-offset-background"
+              aria-label="관리자 메뉴 열기"
+              aria-expanded={isAdminMenuOpen}
+              aria-controls="admin-console-menu-dropdown"
+              data-admin-console-menu-trigger="hamburger"
+            >
+              <Menu className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          </PopoverTrigger>
+        </div>
+        {renderAdminMenuContent("admin-console-menu-dropdown")}
       </Popover>
 
       <aside
@@ -7502,28 +7536,47 @@ function AdminSidebar({
               현재 화면 · {activeSidebarLabel}
             </p>
           </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className={cn(
-              "ml-auto inline-flex h-8 w-8 rounded-xl border border-transparent text-muted-foreground hover:border-primary/15 hover:bg-background/80 hover:text-foreground focus-visible:ring-primary focus-visible:ring-offset-background",
-              isCollapsed && "md:m-0",
-            )}
-            aria-pressed={isCollapsed}
-            aria-expanded={!isCollapsed}
-            aria-controls="admin-console-menu"
-            aria-label={
-              isCollapsed ? "관리자 사이드바 펼치기" : "관리자 사이드바 접기"
-            }
-            onClick={onToggleCollapsed}
-          >
-            {isCollapsed ? (
-              <PanelLeftOpen className="h-4 w-4" aria-hidden="true" />
-            ) : (
-              <PanelLeftClose className="h-4 w-4" aria-hidden="true" />
-            )}
-          </Button>
+          <div className={cn("ml-auto flex shrink-0 items-center gap-1", isCollapsed && "md:m-0")}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="inline-flex h-8 w-8 rounded-xl border border-transparent text-muted-foreground hover:border-primary/15 hover:bg-background/80 hover:text-foreground focus-visible:ring-primary focus-visible:ring-offset-background"
+              aria-pressed={isCollapsed}
+              aria-expanded={!isCollapsed}
+              aria-controls="admin-console-menu"
+              aria-label={
+                isCollapsed ? "관리자 사이드바 펼치기" : "관리자 사이드바 접기"
+              }
+              onClick={onToggleCollapsed}
+            >
+              {isCollapsed ? (
+                <PanelLeftOpen className="h-4 w-4" aria-hidden="true" />
+              ) : (
+                <PanelLeftClose className="h-4 w-4" aria-hidden="true" />
+              )}
+            </Button>
+            <Popover
+              open={isDesktopAdminMenuOpen}
+              onOpenChange={setIsDesktopAdminMenuOpen}
+            >
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="inline-flex h-8 w-8 rounded-xl border border-transparent text-muted-foreground hover:border-primary/15 hover:bg-background/80 hover:text-foreground focus-visible:ring-primary focus-visible:ring-offset-background"
+                  aria-label="관리자 메뉴 열기"
+                  aria-expanded={isDesktopAdminMenuOpen}
+                  aria-controls="admin-console-menu-dropdown-desktop"
+                  data-admin-console-menu-trigger="desktop-hamburger"
+                >
+                  <Menu className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              </PopoverTrigger>
+              {renderAdminMenuContent("admin-console-menu-dropdown-desktop")}
+            </Popover>
+          </div>
         </div>
 
         <nav
@@ -7969,7 +8022,7 @@ export function AdminConsoleOverview() {
           tabIndex={-1}
           aria-label="관리자 콘솔 작업 화면"
           className={cn(
-            "h-full min-h-0 min-w-0 overscroll-contain border-y border-border bg-background p-2 pr-14 sm:p-3 sm:pr-16 md:border-y-0 md:p-4 md:pr-16",
+            "h-full min-h-0 min-w-0 overscroll-contain border-y border-border bg-background p-2 sm:p-3 md:border-y-0 md:p-4",
             activeModuleId === "overview"
               ? "overflow-y-auto lg:overflow-hidden"
               : "overflow-y-auto",
