@@ -361,7 +361,7 @@ div[style*="z-index"] > div > .custom-marker {
 
 /* 관리자 콘솔의 핵심 shell grid는 Tailwind arbitrary grid class 생성 여부에 의존하지 않는다. */
 [data-admin-console-layout="sidebar-content"] {
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
 }
 
 [data-admin-console-content]:focus {
