@@ -25,6 +25,17 @@ describe("mobile scroll nav visibility", () => {
     ).toBe("show");
   });
 
+  test("can keep admin navigation hidden until the scroll frame reaches the top", () => {
+    expect(
+      getMobileScrollNavVisibilityAction({
+        previousScrollTop: 120,
+        currentScrollTop: 84,
+        isHidden: true,
+        revealOnScrollUp: false,
+      }),
+    ).toBe("unchanged");
+  });
+
   test("shows the bottom nav near the top even after it was hidden", () => {
     expect(
       getMobileScrollNavVisibilityAction({
@@ -53,6 +64,8 @@ describe("mobile scroll nav visibility", () => {
 
     expect(hookSource).toContain("hideBottomNav: true");
     expect(hookSource).toContain("headerHideProgress: 1");
+    expect(hookSource).toContain("getScrollTop?: () => number");
+    expect(hookSource).toContain("getScrollTop?.() ?? scrollElement?.scrollTop ?? 0");
     expect(hookSource).not.toContain("headerHideProgress: 0");
   });
 });
