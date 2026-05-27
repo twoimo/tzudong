@@ -3674,6 +3674,8 @@ describe("web quality performance source contracts", () => {
       "/images/:path*",
       "/fonts/:path*",
       "/favicon.ico",
+      "/logo.png",
+      "/logo.webp",
       "/:icon(favicon-32x32|apple-touch-icon).png",
       "/scripts/:path*",
     ]) {
@@ -3697,10 +3699,12 @@ describe("web quality performance source contracts", () => {
       "..",
       "public/apple-touch-icon.png",
     );
+    const logoWebpPath = join(import.meta.dir, "..", "public/logo.webp");
 
     expect(statSync(faviconPath).size).toBeLessThan(16 * 1024);
     expect(statSync(faviconPngPath).size).toBeLessThan(8 * 1024);
     expect(statSync(appleIconPath).size).toBeLessThan(32 * 1024);
+    expect(statSync(logoWebpPath).size).toBeLessThan(80 * 1024);
     expect(layoutSource).toContain(
       "{ url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' }",
     );
@@ -4064,6 +4068,8 @@ describe("web quality performance source contracts", () => {
       "window.requestAnimationFrame(updateViewportHeight)",
     );
     expect(nextConfigSource).toContain("source: '/favicon.ico'");
+    expect(nextConfigSource).toContain("source: '/logo.png'");
+    expect(nextConfigSource).toContain("source: '/logo.webp'");
     expect(nextConfigSource).toContain(
       "source: '/:icon(favicon-32x32|apple-touch-icon).png'",
     );

@@ -119,6 +119,20 @@ const nextConfig = {
                 ],
             },
             {
+                source: '/logo.png',
+                headers: [
+                    ...securityHeaders,
+                    { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+                ],
+            },
+            {
+                source: '/logo.webp',
+                headers: [
+                    ...securityHeaders,
+                    { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+                ],
+            },
+            {
                 source: '/:icon(favicon-32x32|apple-touch-icon).png',
                 headers: [
                     ...securityHeaders,
