@@ -837,7 +837,7 @@ type AdminDashboardBarRow = {
 };
 
 const ADMIN_DASHBOARD_PERIOD_OPTIONS: Array<{
-  value: Exclude<AdminDashboardPeriod, "ALL">;
+  value: AdminDashboardPeriod;
   label: string;
 }> = [
   { value: "30MIN", label: "30분" },
@@ -850,10 +850,14 @@ const ADMIN_DASHBOARD_PERIOD_OPTIONS: Array<{
   { value: "3M", label: "3개월" },
   { value: "6M", label: "6개월" },
   { value: "1Y", label: "1년" },
+  { value: "ALL", label: "전체" },
 ];
 
-const ADMIN_DASHBOARD_IMPACT_VIDEO_LIMIT = 12;
-const ADMIN_DASHBOARD_TREND_POINT_LIMIT = 9;
+const ADMIN_DASHBOARD_IMPACT_FULL_CHART_LIMIT = 60;
+const ADMIN_DASHBOARD_IMPACT_MAX_CHART_LIMIT = 80;
+const ADMIN_DASHBOARD_PROGRESSIVE_INITIAL_ROWS = 40;
+const ADMIN_DASHBOARD_PROGRESSIVE_BATCH_ROWS = 80;
+const ADMIN_DASHBOARD_PROGRESSIVE_DELAY_MS = 24;
 const ADMIN_DASHBOARD_SPARKLINE_POINT_LIMIT = 7;
 const ADMIN_DASHBOARD_CONTENT_INSIGHT_TARGET_COUNT = 4;
 const ADMIN_DASHBOARD_DAY_MS = 24 * 60 * 60 * 1000;
@@ -863,6 +867,7 @@ const adminCompactNumberFormatter = new Intl.NumberFormat("ko-KR", {
   maximumFractionDigits: 1,
 });
 const adminDashboardDateFormatter = new Intl.DateTimeFormat("ko-KR", {
+  year: "2-digit",
   month: "numeric",
   day: "numeric",
 });
@@ -886,6 +891,54 @@ function formatDashboardDateLabel(value: string | null) {
   return Number.isFinite(date.getTime())
     ? adminDashboardDateFormatter.format(date)
     : "날짜 없음";
+}
+
+function getAdminDashboardImpactChartLimit(videoCount: number) {
+  if (!Number.isFinite(videoCount) || videoCount <= 0) return 0;
+  if (videoCount <= ADMIN_DASHBOARD_IMPACT_FULL_CHART_LIMIT) {
+    return videoCount;
+  }
+
+  return Math.min(videoCount, ADMIN_DASHBOARD_IMPACT_MAX_CHART_LIMIT);
+}
+
+function useAdminDashboardProgressiveItems<T>(
+  items: T[],
+  initialCount = ADMIN_DASHBOARD_PROGRESSIVE_INITIAL_ROWS,
+  batchCount = ADMIN_DASHBOARD_PROGRESSIVE_BATCH_ROWS,
+) {
+  const [visibleCount, setVisibleCount] = useState(() =>
+    Math.min(initialCount, items.length),
+  );
+
+  useEffect(() => {
+    let isCancelled = false;
+    let timer: number | undefined;
+
+    setVisibleCount(Math.min(initialCount, items.length));
+    if (items.length <= initialCount) return;
+
+    const scheduleNextBatch = () => {
+      timer = window.setTimeout(() => {
+        if (isCancelled) return;
+
+        setVisibleCount((currentCount) => {
+          const nextCount = Math.min(items.length, currentCount + batchCount);
+          if (nextCount < items.length) scheduleNextBatch();
+          return nextCount;
+        });
+      }, ADMIN_DASHBOARD_PROGRESSIVE_DELAY_MS);
+    };
+
+    scheduleNextBatch();
+
+    return () => {
+      isCancelled = true;
+      if (typeof timer === "number") window.clearTimeout(timer);
+    };
+  }, [batchCount, initialCount, items]);
+
+  return items.slice(0, Math.min(visibleCount, items.length));
 }
 
 function formatDashboardDateTime(value: string | null | undefined) {
@@ -1141,10 +1194,7 @@ async function fetchAdminDashboardInsightSummary(
 function buildAdminDashboardTrendPoints(
   videosByPublishedAt: InsightTreemapVideoRow[],
 ): AdminDashboardTrendPoint[] {
-  return sampleAdminDashboardPeriodPoints(
-    videosByPublishedAt,
-    ADMIN_DASHBOARD_TREND_POINT_LIMIT,
-  ).map((video) => ({
+  return videosByPublishedAt.map((video) => ({
     label: formatDashboardDateLabel(video.publishedAt),
     value: getVideoEngagementTotal(video),
     secondaryValue: video.viewCount,
@@ -1295,7 +1345,7 @@ function buildAdminDashboardBarRows(
     Number.isFinite(periodUploadVideoCount) &&
     periodUploadVideoCount >= 0;
 
-  return metricRows.slice(0, 6).map((row, index) => {
+  return metricRows.map((row, index) => {
     const viewRank = index + 1;
     const viewContributionPercent =
       totalViewValue > 0 ? (row.viewCount / totalViewValue) * 100 : null;
@@ -1747,22 +1797,14 @@ const adminDashboardVisualizationShellClassName =
   "min-h-0 flex-1 overflow-visible rounded-xl p-1 sm:p-1.5";
 const adminDashboardChartViewportClassName =
   "relative h-full min-h-0 w-full overflow-visible [&_.recharts-surface]:overflow-visible [&_.recharts-wrapper]:overflow-visible";
-const adminDashboardTooltipStyle = {
-  border: "1px solid hsl(var(--border))",
-  borderRadius: "14px",
-  background: "hsl(var(--popover))",
-  boxShadow: "0 14px 34px rgba(15,23,42,0.16)",
-  color: "hsl(var(--foreground))",
-  fontSize: "12px",
-  lineHeight: "1.55",
-  padding: "10px 12px",
-} satisfies CSSProperties;
 const adminDashboardTooltipWrapperStyle = {
   zIndex: 50,
   pointerEvents: "none",
 } satisfies CSSProperties;
 const adminDashboardTooltipContentClassName =
   "max-w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-border bg-popover px-3 py-2 text-xs leading-5 text-popover-foreground shadow-xl";
+const adminDashboardTooltipPortalClassName =
+  "border-0 bg-transparent p-0 text-popover-foreground shadow-none";
 const adminDashboardTooltipLineClassName =
   "whitespace-pre-line break-keep text-muted-foreground";
 const adminDashboardTooltipFirstLineClassName =
@@ -1780,6 +1822,204 @@ function formatRechartsTooltipValue(value: unknown) {
   return typeof value === "number" && Number.isFinite(value)
     ? formatCompactNumber(value)
     : String(value ?? "—");
+}
+
+type AdminDashboardLineTooltipPayload = {
+  color?: string;
+  name?: string | number;
+  value?: string | number;
+  payload?: unknown;
+};
+
+type AdminDashboardLineTooltipProps = {
+  active?: boolean;
+  label?: string | number;
+  payload?: AdminDashboardLineTooltipPayload[];
+};
+
+type AdminDashboardTooltipPanelRow = {
+  label: string;
+  value: ReactNode;
+  note?: string;
+  color?: string;
+};
+
+function AdminDashboardTooltipPanel({
+  title,
+  descriptionLines,
+  rows,
+  footer,
+  dataAttribute,
+  className,
+}: {
+  title: ReactNode;
+  descriptionLines?: string[];
+  rows?: AdminDashboardTooltipPanelRow[];
+  footer?: string;
+  dataAttribute?: string;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        adminDashboardTooltipContentClassName,
+        "min-w-44 space-y-1.5",
+        className,
+      )}
+      data-admin-dashboard-tooltip-content="standard"
+      data-admin-dashboard-tooltip-kind={dataAttribute}
+    >
+      <p className={adminDashboardTooltipFirstLineClassName}>{title}</p>
+      {descriptionLines?.length ? (
+        <div className="grid gap-1">
+          {descriptionLines.map((line, index) => (
+            <p
+              key={`${line}-${index}`}
+              className={adminDashboardTooltipLineClassName}
+            >
+              {line}
+            </p>
+          ))}
+        </div>
+      ) : null}
+      {rows?.length ? (
+        <div className="grid gap-1">
+          {rows.map((row) => (
+            <div
+              key={row.label}
+              className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2"
+            >
+              {row.color ? (
+                <span
+                  className="h-2 w-2 rounded-full"
+                  style={{ backgroundColor: row.color }}
+                  aria-hidden="true"
+                />
+              ) : (
+                <span
+                  className="h-2 w-2 rounded-full bg-muted"
+                  aria-hidden="true"
+                />
+              )}
+              <span className="truncate font-bold text-foreground">
+                {row.label}
+              </span>
+              <span className="font-black tabular-nums text-foreground">
+                {row.value}
+              </span>
+              {row.note ? (
+                <span className="col-start-2 col-end-4 truncate text-[11px] font-semibold text-muted-foreground">
+                  {row.note}
+                </span>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      ) : null}
+      {footer ? (
+        <p className="border-t border-border/70 pt-1 text-[11px] font-semibold leading-4 text-muted-foreground">
+          {footer}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function AdminDashboardTooltipLinesPanel({
+  lines,
+  dataAttribute,
+  className,
+}: {
+  lines: string[];
+  dataAttribute?: string;
+  className?: string;
+}) {
+  const [title = "설명", ...details] = lines;
+  const formulaIndex = details.findIndex((line) => line.startsWith("계산식:"));
+  const footer = formulaIndex >= 0 ? details[formulaIndex] : undefined;
+  const descriptionLines = details.filter((_, index) => index !== formulaIndex);
+
+  return (
+    <AdminDashboardTooltipPanel
+      title={title}
+      descriptionLines={descriptionLines}
+      footer={footer}
+      dataAttribute={dataAttribute}
+      className={className}
+    />
+  );
+}
+
+function AdminDashboardKpiSparklineTooltip({
+  active,
+  label,
+  payload,
+  title,
+}: AdminDashboardLineTooltipProps & { title: string }) {
+  const value = payload?.[0]?.value;
+  if (!active || value == null) return null;
+
+  return (
+    <AdminDashboardTooltipPanel
+      title={`${title} · ${String(label ?? "기간")}`}
+      rows={[
+        {
+          label: "값",
+          value: formatRechartsTooltipValue(value),
+          note: "해당 지점의 카드 값",
+          color: payload?.[0]?.color,
+        },
+      ]}
+      footer="계산식: 점 값 = 해당 기간의 카드 값."
+      dataAttribute="kpi-sparkline"
+    />
+  );
+}
+
+const adminDashboardTrendTooltipLabels: Record<string, string> = {
+  조회수: "조회수",
+  참여: "참여",
+  참여율: "참여율",
+};
+
+const adminDashboardTrendTooltipNotes: Record<string, string> = {
+  조회수: "영상 조회수 기준",
+  참여: "좋아요+댓글 기준",
+  참여율: "조회수 대비 참여 기준",
+};
+
+function AdminDashboardTrendTooltip({
+  active,
+  label,
+  payload,
+}: AdminDashboardLineTooltipProps) {
+  if (!active || !payload?.length) return null;
+
+  const rows = payload.filter(
+    (item) =>
+      typeof item.name === "string" &&
+      item.name in adminDashboardTrendTooltipLabels,
+  );
+
+  if (rows.length === 0) return null;
+
+  return (
+    <AdminDashboardTooltipPanel
+      title={String(label ?? "날짜 없음")}
+      rows={rows.map((item) => {
+        const name = String(item.name);
+
+        return {
+          label: adminDashboardTrendTooltipLabels[name] ?? name,
+          value: `${formatRechartsTooltipValue(item.value)}점`,
+          note: adminDashboardTrendTooltipNotes[name],
+          color: item.color,
+        };
+      })}
+      footer="100점은 선택 기간에서 해당 지표가 가장 큰 영상입니다."
+      dataAttribute="trend-simple"
+    />
+  );
 }
 
 function AdminDashboardInfoTooltip({
@@ -1805,20 +2045,12 @@ function AdminDashboardInfoTooltip({
         <UiTooltipContent
           side="top"
           align="start"
-          className={cn(adminDashboardTooltipContentClassName, "space-y-1.5")}
-          data-admin-dashboard-tooltip-content="standard"
+          className={adminDashboardTooltipPortalClassName}
         >
-          {lines.map((line, index) => (
-            <p
-              key={line}
-              className={cn(
-                adminDashboardTooltipLineClassName,
-                index === 0 && adminDashboardTooltipFirstLineClassName,
-              )}
-            >
-              {line}
-            </p>
-          ))}
+          <AdminDashboardTooltipLinesPanel
+            lines={lines}
+            dataAttribute="metric-info"
+          />
         </UiTooltipContent>
       </UiTooltip>
     </UiTooltipProvider>
@@ -1829,11 +2061,13 @@ function AdminDashboardInlineTooltip({
   label,
   lines,
   className,
+  style,
   children,
 }: {
   label: string;
   lines: string[];
   className?: string;
+  style?: CSSProperties;
   children: ReactNode;
 }) {
   return (
@@ -1843,6 +2077,7 @@ function AdminDashboardInlineTooltip({
           <span
             tabIndex={0}
             className={className}
+            style={style}
             aria-label={`${label}: ${lines.join(" ")}`}
             data-admin-dashboard-inline-tooltip="true"
           >
@@ -1852,20 +2087,12 @@ function AdminDashboardInlineTooltip({
         <UiTooltipContent
           side="top"
           align="start"
-          className={cn(adminDashboardTooltipContentClassName, "space-y-1")}
-          data-admin-dashboard-tooltip-content="standard"
+          className={adminDashboardTooltipPortalClassName}
         >
-          {lines.map((line, index) => (
-            <p
-              key={line}
-              className={cn(
-                adminDashboardTooltipLineClassName,
-                index === 0 && adminDashboardTooltipFirstLineClassName,
-              )}
-            >
-              {line}
-            </p>
-          ))}
+          <AdminDashboardTooltipLinesPanel
+            lines={lines}
+            dataAttribute="inline-info"
+          />
         </UiTooltipContent>
       </UiTooltip>
     </UiTooltipProvider>
@@ -1930,7 +2157,6 @@ function AdminDashboardFullscreenButton({
       aria-label={`${label} 카드 ${isFullscreen ? "전체화면 닫기" : "전체화면으로 보기"}`}
       aria-pressed={isFullscreen}
       data-admin-dashboard-card-fullscreen-trigger={widgetId}
-      title={`${label} 카드 ${isFullscreen ? "전체화면 닫기" : "전체화면으로 보기"}`}
       onClick={() => onToggle(widgetId)}
     >
       <Icon className="h-3.5 w-3.5" aria-hidden="true" />
@@ -2001,11 +2227,6 @@ function AdminDashboardSeriesToggle<Key extends string>({
             )}
             aria-pressed={isVisible}
             aria-label={`${option.label} ${isVisible ? "숨기기" : "보이기"}`}
-            title={
-              isLastVisible
-                ? "최소 1개 지표는 표시해야 합니다."
-                : `${option.label} ${isVisible ? "숨기기" : "보이기"}`
-            }
             disabled={isLastVisible}
             onClick={() => onToggle(option.key)}
           >
@@ -2068,11 +2289,13 @@ function AdminDashboardScrollTable<Row>({
   columns,
   getRowKey,
   emptyText,
+  totalRows = rows.length,
 }: {
   rows: Row[];
   columns: Array<AdminDashboardTableColumn<Row>>;
   getRowKey: (row: Row, index: number) => string;
   emptyText: string;
+  totalRows?: number;
 }) {
   if (rows.length === 0) {
     return (
@@ -2085,10 +2308,13 @@ function AdminDashboardScrollTable<Row>({
     );
   }
 
+  const hasMoreRows = rows.length < totalRows;
+
   return (
     <div
       className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden rounded-xl border border-border/70 bg-background"
       data-admin-dashboard-table-view="true"
+      data-admin-dashboard-progressive-table="true"
     >
       <table className="w-full table-fixed border-separate border-spacing-0 text-xs">
         <thead className="sticky top-0 z-10 bg-background">
@@ -2128,6 +2354,11 @@ function AdminDashboardScrollTable<Row>({
           ))}
         </tbody>
       </table>
+      {hasMoreRows ? (
+        <div className="sticky bottom-0 border-t border-border/70 bg-background/95 px-2.5 py-1.5 text-right text-[11px] font-extrabold tabular-nums text-muted-foreground backdrop-blur">
+          추가 행 표시 중 {formatNumber(rows.length)}/{formatNumber(totalRows)}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -2151,7 +2382,14 @@ function AdminDashboardKpiValueSkeleton() {
 function AdminDashboardPanelBodySkeleton({
   variant = "chart",
 }: {
-  variant?: "chart" | "table" | "ops";
+  variant?:
+    | "chart"
+    | "table"
+    | "ops"
+    | "bubble"
+    | "line"
+    | "stacked"
+    | "diagnosis";
 }) {
   if (variant === "table") {
     return (
@@ -2203,6 +2441,145 @@ function AdminDashboardPanelBodySkeleton({
     );
   }
 
+  if (variant === "bubble") {
+    return (
+      <div
+        className="relative min-h-0 flex-1 overflow-hidden rounded-xl border border-border/70 bg-background p-3"
+        data-admin-dashboard-dynamic-skeleton="bubble"
+        aria-hidden="true"
+      >
+        <div className="absolute inset-x-5 bottom-10 h-px bg-border/60" />
+        <div className="absolute inset-y-5 left-10 w-px bg-border/60" />
+        {[
+          ["left-[9%] top-[58%] h-10 w-10", "bg-sky-100 dark:bg-sky-950/45"],
+          ["left-[25%] top-[38%] h-14 w-14", "bg-teal-100 dark:bg-teal-950/45"],
+          ["left-[43%] top-[52%] h-11 w-11", "bg-emerald-100 dark:bg-emerald-950/45"],
+          ["left-[62%] top-[30%] h-16 w-16", "bg-cyan-100 dark:bg-cyan-950/45"],
+          ["left-[78%] top-[62%] h-9 w-9", "bg-blue-100 dark:bg-blue-950/45"],
+        ].map(([positionClassName, colorClassName], index) => (
+          <Skeleton
+            key={index}
+            className={cn(
+              "absolute rounded-full motion-reduce:animate-none",
+              positionClassName,
+              colorClassName,
+            )}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (variant === "line") {
+    return (
+      <div
+        className="min-h-0 flex-1 rounded-xl border border-border/70 bg-background p-3"
+        data-admin-dashboard-dynamic-skeleton="line"
+        aria-hidden="true"
+      >
+        <div className="relative h-full min-h-[8rem] overflow-hidden">
+          <div className="absolute inset-x-1 top-1/4 h-px bg-border/50" />
+          <div className="absolute inset-x-1 top-1/2 h-px bg-border/50" />
+          <div className="absolute inset-x-1 top-3/4 h-px bg-border/50" />
+          <svg
+            className="absolute inset-0 h-full w-full text-muted/80"
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+            focusable="false"
+          >
+            <polyline
+              points="2,68 18,44 34,58 50,30 66,48 82,24 98,38"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <polyline
+              points="2,48 18,56 34,34 50,52 66,26 82,45 98,28"
+              fill="none"
+              stroke="currentColor"
+              strokeOpacity="0.62"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <polyline
+              points="2,75 18,72 34,82 50,61 66,70 82,54 98,63"
+              fill="none"
+              stroke="currentColor"
+              strokeOpacity="0.42"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          {Array.from({ length: 5 }).map((_, index) => (
+            <Skeleton
+              key={index}
+              className="absolute bottom-0 h-2 w-2 rounded-full motion-reduce:animate-none"
+              style={{ left: `${7 + index * 17}%` }}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (variant === "stacked") {
+    return (
+      <div
+        className="grid min-h-0 flex-1 content-evenly gap-2 overflow-hidden rounded-xl border border-border/70 bg-background p-3"
+        data-admin-dashboard-dynamic-skeleton="stacked"
+        aria-hidden="true"
+      >
+        {Array.from({ length: 3 }).map((_, rowIndex) => (
+          <div key={rowIndex} className="grid gap-1.5">
+            <div className="flex items-center justify-between gap-3">
+              <Skeleton className="h-3 w-16 rounded-full motion-reduce:animate-none" />
+              <Skeleton className="h-3 w-24 rounded-full motion-reduce:animate-none" />
+            </div>
+            <div className="flex h-9 overflow-hidden rounded-xl bg-muted/40">
+              {[28, 23, 19, 17, 13].map((width, segmentIndex) => (
+                <Skeleton
+                  key={segmentIndex}
+                  className="h-full rounded-none motion-reduce:animate-none"
+                  style={{
+                    width: `${width + ((rowIndex + segmentIndex) % 3)}%`,
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (variant === "diagnosis") {
+    return (
+      <div
+        className="grid min-h-0 flex-1 grid-cols-2 grid-rows-2 gap-1"
+        data-admin-dashboard-dynamic-skeleton="diagnosis"
+        aria-hidden="true"
+      >
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div
+            key={index}
+            className="flex min-h-0 flex-col justify-between rounded-xl border border-border/70 bg-muted/20 px-2 py-1.5"
+          >
+            <Skeleton className="h-4 w-20 rounded-full motion-reduce:animate-none" />
+            <div className="space-y-1">
+              <Skeleton className="h-3 w-full rounded-full motion-reduce:animate-none" />
+              <Skeleton className="h-3 w-3/4 rounded-full motion-reduce:animate-none" />
+            </div>
+            <Skeleton className="h-1.5 w-full rounded-full motion-reduce:animate-none" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div
       className="min-h-0 flex-1 rounded-xl border border-border/70 bg-background p-3"
@@ -2219,6 +2596,260 @@ function AdminDashboardPanelBodySkeleton({
         ))}
       </div>
     </div>
+  );
+}
+
+function AdminDashboardManagementSkeleton() {
+  const placeholderInfoLines = ["설명: 관리자 KPI 데이터를 불러오는 중입니다."];
+
+  return (
+    <section
+      className="flex h-full min-h-0 flex-col overflow-y-auto bg-background p-0 font-sans text-foreground lg:overflow-hidden"
+      aria-label="관리자 대시보드 (KPI) 로딩 중"
+      data-admin-dashboard-management-skeleton="true"
+      role="status"
+      aria-busy="true"
+    >
+      <div className="mb-2 flex shrink-0 flex-col gap-0 md:flex-row md:items-start md:justify-between">
+        <div>
+          <h1 className="text-xl font-extrabold tracking-[0.01em] text-foreground text-balance">
+            Tzuyang KPI Dashboard
+          </h1>
+        </div>
+        <div className="flex shrink-0 flex-wrap items-start justify-end gap-1">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 rounded-full px-2 text-[11px]"
+            disabled
+          >
+            카드 순서
+          </Button>
+          <div
+            className="flex flex-wrap justify-end gap-1"
+            aria-label="대시보드 타임프레임 로딩 중"
+          >
+            {ADMIN_DASHBOARD_PERIOD_OPTIONS.map((option) => (
+              <Button
+                key={option.value}
+                type="button"
+                variant={option.value === "1M" ? "default" : "outline"}
+                size="sm"
+                className="h-7 rounded-full px-2 text-[11px]"
+                aria-pressed={option.value === "1M"}
+                disabled
+              >
+                {option.label}
+              </Button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid min-h-0 flex-1 auto-rows-min grid-cols-1 gap-2 overflow-visible sm:grid-cols-2 lg:grid-cols-10 lg:grid-rows-[132px_minmax(0,1fr)_minmax(0,0.86fr)]">
+        <AdminDashboardKpiCard
+          widgetId="subscribers"
+          title="현재 구독자"
+          value="—"
+          progress={0}
+          tone="neutral"
+          className="lg:col-span-2"
+          delta="—"
+          deltaLabel="기간 대비"
+          isLoading
+          infoLines={placeholderInfoLines}
+        />
+        <AdminDashboardKpiCard
+          widgetId="views"
+          title="기간 조회 합계"
+          value="—"
+          progress={0}
+          tone="neutral"
+          className="lg:col-span-2"
+          delta="—"
+          deltaLabel="기간 대비"
+          isLoading
+          infoLines={placeholderInfoLines}
+        />
+        <AdminDashboardKpiCard
+          widgetId="likes"
+          title="기간 좋아요 합계"
+          value="—"
+          progress={0}
+          tone="neutral"
+          className="lg:col-span-2"
+          delta="—"
+          deltaLabel="기간 대비"
+          isLoading
+          infoLines={placeholderInfoLines}
+        />
+        <AdminDashboardKpiCard
+          widgetId="comments"
+          title="기간 댓글 합계"
+          value="—"
+          progress={0}
+          tone="neutral"
+          className="lg:col-span-2"
+          delta="—"
+          deltaLabel="기간 대비"
+          isLoading
+          infoLines={placeholderInfoLines}
+        />
+        <AdminDashboardKpiCard
+          widgetId="videos"
+          title="업로드 영상 수"
+          value="—"
+          progress={0}
+          tone="neutral"
+          className="lg:col-span-2"
+          delta="—"
+          deltaLabel="기간 대비"
+          isLoading
+          infoLines={placeholderInfoLines}
+        />
+
+        <div
+          className={cn(
+            adminDashboardCardClass,
+            "flex min-h-[280px] flex-col overflow-visible p-3 sm:col-span-2 lg:col-span-3",
+          )}
+          data-admin-dashboard-skeleton-card="impact"
+        >
+          <AdminDashboardCardTitle
+            title="상위 영상 영향도"
+            metric="현재값 기준 · 전체 0개"
+            infoLines={placeholderInfoLines}
+            action={
+              <div className="flex flex-wrap items-center justify-end gap-1">
+                <AdminDashboardImpactRankLegend />
+                <AdminDashboardViewToggle
+                  value="chart"
+                  onChange={() => undefined}
+                  label="상위 영상 영향도"
+                />
+              </div>
+            }
+          />
+          <AdminDashboardPanelBodySkeleton variant="bubble" />
+        </div>
+
+        <div
+          className={cn(
+            adminDashboardCardClass,
+            "flex min-h-[280px] flex-col overflow-visible p-3 sm:col-span-2 lg:col-span-4",
+          )}
+          data-admin-dashboard-skeleton-card="trend"
+        >
+          <AdminDashboardCardTitle
+            title="영상별 성과 분포"
+            metric="현재값 기준 · 전체 0개"
+            infoLines={placeholderInfoLines}
+            action={
+              <div className="flex flex-wrap items-center justify-end gap-1">
+                <AdminDashboardSeriesToggle
+                  label="영상별 성과 분포"
+                  options={[
+                    { key: "views", label: "조회수", dotClassName: "bg-sky-500" },
+                    { key: "engagement", label: "참여", dotClassName: "bg-teal-500" },
+                    { key: "engagementRate", label: "참여율", dotClassName: "bg-amber-500" },
+                  ]}
+                  visibility={DEFAULT_ADMIN_DASHBOARD_TREND_SERIES_VISIBILITY}
+                  onToggle={() => undefined}
+                />
+                <AdminDashboardViewToggle
+                  value="chart"
+                  onChange={() => undefined}
+                  label="영상별 성과 분포"
+                />
+              </div>
+            }
+          />
+          <AdminDashboardPanelBodySkeleton variant="line" />
+        </div>
+
+        <div
+          className={cn(
+            adminDashboardCardClass,
+            "flex h-full min-h-[280px] flex-col p-3 text-xs sm:col-span-2 lg:col-span-3",
+          )}
+          data-admin-dashboard-skeleton-card="ops"
+        >
+          <AdminDashboardCardTitle
+            title="운영·검수 요약"
+            metric="검수 리스크 0"
+            infoLines={placeholderInfoLines}
+            action={
+              <AdminDashboardViewToggle
+                value="chart"
+                onChange={() => undefined}
+                label="운영·검수 요약"
+              />
+            }
+          />
+          <AdminDashboardPanelBodySkeleton variant="ops" />
+        </div>
+
+        <div
+          className={cn(
+            adminDashboardCardClass,
+            "flex min-h-[220px] flex-col overflow-visible p-3 sm:col-span-2 lg:col-span-5",
+          )}
+          data-admin-dashboard-skeleton-card="topContent"
+        >
+          <AdminDashboardCardTitle
+            title="콘텐츠 성과 TOP 5"
+            metric="선택 영상 0개"
+            infoLines={placeholderInfoLines}
+            action={
+              <div className="flex flex-wrap items-center justify-end gap-1">
+                <AdminDashboardSeriesToggle
+                  label="콘텐츠 성과 TOP 5"
+                  options={[
+                    { key: "views", label: "조회수", dotClassName: "bg-sky-500" },
+                    { key: "likes", label: "좋아요", dotClassName: "bg-rose-500" },
+                    { key: "comments", label: "댓글", dotClassName: "bg-orange-500" },
+                  ]}
+                  visibility={DEFAULT_ADMIN_DASHBOARD_TOP_CONTENT_SERIES_VISIBILITY}
+                  onToggle={() => undefined}
+                />
+                <AdminDashboardViewToggle
+                  value="chart"
+                  onChange={() => undefined}
+                  label="콘텐츠 성과 TOP 5"
+                />
+              </div>
+            }
+          />
+          <AdminDashboardPanelBodySkeleton variant="stacked" />
+        </div>
+
+        <div
+          className={cn(
+            adminDashboardCardClass,
+            "flex min-h-[220px] flex-col overflow-visible p-2 sm:col-span-2 lg:col-span-5",
+          )}
+          data-admin-dashboard-skeleton-card="engagementRate"
+        >
+          <AdminDashboardCardTitle
+            title="성과 진단"
+            metric="진단 신호 0개 · 선택 영상 0개"
+            infoLines={placeholderInfoLines}
+            action={
+              <div className="ml-auto flex min-w-0 shrink-0 items-center gap-2">
+                <AdminDashboardDiagnosisMeta periodLabel="1개월" />
+                <AdminDashboardViewToggle
+                  value="chart"
+                  onChange={() => undefined}
+                  label="성과 진단"
+                />
+              </div>
+            }
+          />
+          <AdminDashboardPanelBodySkeleton variant="diagnosis" />
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -2359,22 +2990,27 @@ function AdminDashboardKpiCard({
               <Skeleton
                 className="h-5 w-20 shrink-0 rounded-full motion-reduce:animate-none"
                 data-admin-dashboard-dynamic-skeleton="delta"
-                aria-hidden="true"
+                aria-label={`${title} 기간 대비 로딩 중`}
               />
             ) : delta !== undefined ? (
-              <span
+              <AdminDashboardInlineTooltip
+                label={`${title} ${deltaLabel}`}
+                lines={[
+                  `${title} ${deltaLabel}: ${delta}`,
+                  "계산식: 기간 대비 = (현재값 - 이전값) / 이전값 × 100",
+                ]}
                 className={cn(
-                  "inline-flex shrink-0 items-center gap-1 rounded-full bg-muted/45 px-2 py-0.5 text-[11px] font-black leading-none tabular-nums dark:bg-muted/35",
+                  "inline-flex shrink-0 items-center gap-1 rounded-full bg-muted/45 px-2 py-0.5 text-[11px] font-black leading-none tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-primary dark:bg-muted/35",
                   toneClass.text,
                 )}
-                data-admin-dashboard-kpi-delta="timeframe"
-                title={`${title} ${deltaLabel}: ${delta}. 계산식: 기간 대비 = (현재값 - 이전값) / 이전값 × 100`}
               >
-                <span className="font-extrabold text-muted-foreground">
-                  {deltaLabel}
+                <span data-admin-dashboard-kpi-delta="timeframe">
+                  <span className="font-extrabold text-muted-foreground">
+                    {deltaLabel}
+                  </span>{" "}
+                  {delta}
                 </span>
-                {delta}
-              </span>
+              </AdminDashboardInlineTooltip>
             ) : null}
             {fullscreenAction}
           </div>
@@ -2408,12 +3044,7 @@ function AdminDashboardKpiCard({
                 >
                   <RechartsTooltip
                     allowEscapeViewBox={{ x: true, y: true }}
-                    formatter={(tooltipValue) => [
-                      formatRechartsTooltipValue(tooltipValue),
-                      `${title} · 계산식: 점 값 = 해당 기간의 카드 값`,
-                    ]}
-                    labelFormatter={(label) => String(label ?? "기간")}
-                    contentStyle={adminDashboardTooltipStyle}
+                    content={<AdminDashboardKpiSparklineTooltip title={title} />}
                     wrapperStyle={adminDashboardTooltipWrapperStyle}
                     cursor={{
                       stroke: toneClass.stroke,
@@ -2674,10 +3305,13 @@ function buildAdminDashboardExtremeLabels(
 function AdminDashboardMultiLineChart({
   points,
   seriesVisibility,
+  totalPointCount = points.length,
 }: {
   points: AdminDashboardTrendPoint[];
   seriesVisibility: AdminDashboardSeriesVisibility<AdminDashboardTrendSeriesKey>;
+  totalPointCount?: number;
 }) {
+  const isDenseChart = points.length > 80;
   const normalizeValues = (values: number[]) => {
     const maxSeriesValue = Math.max(1, ...values);
     return values.map((value) => Math.round((value / maxSeriesValue) * 100));
@@ -2734,10 +3368,13 @@ function AdminDashboardMultiLineChart({
       role="group"
       aria-label="영상별 성과 분포: 조회수, 참여, 참여율 정규화 비교"
       data-admin-dashboard-line-chart="recharts"
+      data-admin-dashboard-progressive-chart="true"
     >
       <p className="sr-only">
-        조회수, 참여, 참여율을 선택 기간 영상의 게시일 순서로 정규화해
-        비교합니다. 사용자가 각 지표를 숨김/보임 처리할 수 있습니다.
+        조회수, 참여, 참여율을 선택 기간 영상의 게시일 순서로 정규화해 비교합니다.
+        현재 {formatNumber(points.length)}개를 표시하고 전체 대상은{" "}
+        {formatNumber(totalPointCount)}개입니다. 사용자가 각 지표를 숨김/보임
+        처리할 수 있습니다.
       </p>
       <div className="min-h-0 flex-1">
         <ResponsiveContainer width="100%" height="100%" minHeight={180}>
@@ -2761,11 +3398,7 @@ function AdminDashboardMultiLineChart({
               width={28}
             />
             <RechartsTooltip
-              formatter={(value) => [
-                `${formatRechartsTooltipValue(value)}점`,
-                "정규화 점수 · 계산식: 값 / 해당 지표 최고값 × 100",
-              ]}
-              contentStyle={adminDashboardTooltipStyle}
+              content={<AdminDashboardTrendTooltip />}
               wrapperStyle={adminDashboardTooltipWrapperStyle}
               cursor={{ stroke: adminDashboardGridColor }}
             />
@@ -2775,8 +3408,8 @@ function AdminDashboardMultiLineChart({
               dataKey="조회수"
               stroke="#5aa6d8"
               strokeWidth={2.4}
-              dot={{ r: 2.4 }}
-              activeDot={{ r: 4 }}
+              dot={isDenseChart ? false : { r: 2.4 }}
+              activeDot={{ r: isDenseChart ? 3 : 4 }}
               isAnimationActive={false}
             >
               <LabelList
@@ -2801,8 +3434,8 @@ function AdminDashboardMultiLineChart({
               dataKey="참여"
               stroke="#57c6ca"
               strokeWidth={2.4}
-              dot={{ r: 2.4 }}
-              activeDot={{ r: 4 }}
+              dot={isDenseChart ? false : { r: 2.4 }}
+              activeDot={{ r: isDenseChart ? 3 : 4 }}
               isAnimationActive={false}
             >
               <LabelList
@@ -2827,8 +3460,8 @@ function AdminDashboardMultiLineChart({
               dataKey="참여율"
               stroke="#f59e0b"
               strokeWidth={2.8}
-              dot={{ r: 2.6 }}
-              activeDot={{ r: 4.2 }}
+              dot={isDenseChart ? false : { r: 2.6 }}
+              activeDot={{ r: isDenseChart ? 3 : 4.2 }}
               isAnimationActive={false}
             >
               <LabelList
@@ -2857,9 +3490,11 @@ function AdminDashboardMultiLineChart({
 function AdminDashboardBubbleChart({
   videos,
   metricMode = "current",
+  displayLimit,
 }: {
   videos: InsightTreemapVideoRow[];
   metricMode?: "current" | "delta";
+  displayLimit: number;
 }) {
   const topVideos = [...videos]
     .sort((a, b) => {
@@ -2872,7 +3507,7 @@ function AdminDashboardBubbleChart({
 
       return b.viewCount - a.viewCount;
     })
-    .slice(0, ADMIN_DASHBOARD_IMPACT_VIDEO_LIMIT);
+    .slice(0, displayLimit);
   const rawChartData = topVideos.map((video) => {
     const viewValue =
       metricMode === "delta"
@@ -2919,7 +3554,7 @@ function AdminDashboardBubbleChart({
         "min-h-[230px] flex flex-1 flex-col",
       )}
       role="img"
-      aria-label={`성과 분산 분석: 조회수와 참여 규모 상위 ${ADMIN_DASHBOARD_IMPACT_VIDEO_LIMIT}개 버블 차트`}
+      aria-label={`성과 분산 분석: 조회수와 참여 규모 ${topVideos.length}개 버블 차트`}
       data-admin-dashboard-bubble-chart="recharts"
     >
       <p className="sr-only">
@@ -2974,35 +3609,30 @@ function AdminDashboardBubbleChart({
                 if (!active || !row) return null;
 
                 return (
-                  <div
-                    className={cn(
-                      adminDashboardTooltipContentClassName,
-                      "max-w-[280px]",
-                    )}
-                    data-admin-dashboard-bubble-tooltip="video-title"
-                    data-admin-dashboard-tooltip-content="standard"
-                  >
-                  <p className="line-clamp-2 font-extrabold leading-5 text-foreground">
-                    {row.title}
-                  </p>
-                  <div className="mt-2 grid gap-1 text-muted-foreground">
-                    <div className="flex items-center justify-between gap-3">
-                      <span>조회수</span>
-                      <span className="font-bold tabular-nums text-foreground">
-                        {formatNumber(row.조회수)}
+                  <AdminDashboardTooltipPanel
+                    title={
+                      <span className="line-clamp-2 leading-5">
+                        {row.title}
                       </span>
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <span>참여</span>
-                      <span className="font-bold tabular-nums text-foreground">
-                        {formatNumber(row.참여)}
-                      </span>
-                    </div>
-                    <p className="pt-1 text-[11px] leading-4 text-muted-foreground">
-                      계산식: 참여 = 좋아요 + 댓글. 원 크기는 참여가 클수록 커집니다.
-                    </p>
-                  </div>
-                  </div>
+                    }
+                    rows={[
+                      {
+                        label: "조회수",
+                        value: formatNumber(row.조회수),
+                        note: "오른쪽일수록 큼",
+                        color: "#5aa6d8",
+                      },
+                      {
+                        label: "참여",
+                        value: formatNumber(row.참여),
+                        note: "좋아요+댓글",
+                        color: "#57c6ca",
+                      },
+                    ]}
+                    footer="계산식: 참여 = 좋아요 + 댓글. 원 크기는 참여가 클수록 커집니다."
+                    dataAttribute="bubble-video"
+                    className="max-w-[280px]"
+                  />
                 );
               }}
             />
@@ -3177,22 +3807,32 @@ function AdminDashboardGroupedBarChart({
                   const percent = total > 0 ? (value / total) * 100 : 0;
 
                   return (
-                    <span
+                    <AdminDashboardInlineTooltip
                       key={`${metric.key}-${row.label}`}
+                      label={`${row.label} ${metric.label} 비중`}
+                      lines={
+                        metric.key === "viewCount"
+                          ? [
+                              `${row.label}`,
+                              `막대 비중: ${formatDashboardPercent(percent)}`,
+                              `성과 기여: ${row.viewBenchmark}`,
+                            ]
+                          : [
+                              `${row.label}`,
+                              `${metric.label}: ${formatNumber(value)}`,
+                              `막대 비중: ${formatDashboardPercent(percent)}`,
+                              formatDashboardAverageComparison(value, average),
+                            ]
+                      }
                       className={cn(
-                        "flex min-w-[8%] items-center justify-center px-0.5 text-[10px] font-black leading-none tabular-nums",
+                        "flex min-w-[8%] items-center justify-center px-0.5 text-[10px] font-black leading-none tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-primary",
                         rankColors[index]?.barClass ??
                           "bg-muted-foreground text-background",
                       )}
                       style={{ width: `${Math.max(8, percent)}%` }}
-                      title={
-                        metric.key === "viewCount"
-                          ? `${row.label} · 막대 비중 ${formatDashboardPercent(percent)} · 기여도 ${row.viewBenchmark}`
-                          : `${row.label} · ${metric.label} ${formatNumber(value)} · 막대 비중 ${formatDashboardPercent(percent)} · ${formatDashboardAverageComparison(value, average)}`
-                      }
                     >
                       {percent.toFixed(0)}%
-                    </span>
+                    </AdminDashboardInlineTooltip>
                   );
                 })}
               </div>
@@ -3256,26 +3896,55 @@ function AdminDashboardContentInsightStrip({
       className="mb-2 grid shrink-0 gap-1.5 sm:grid-cols-2 xl:grid-cols-4"
       data-admin-dashboard-content-insights="average-benchmark"
     >
-      {insights.map((insight) => (
-        <div
-          key={`${insight.label}-${insight.title}`}
-          className={cn(
-            "min-w-0 rounded-xl border px-2.5 py-2",
-            toneClass[insight.tone],
-          )}
-          title={`${insight.label}: ${insight.title} · ${insight.description}`}
-        >
-          <p className="truncate text-[10px] font-black leading-none opacity-75">
-            {insight.label}
-          </p>
-          <p className="mt-1 truncate text-[11px] font-extrabold leading-none">
-            {insight.title}
-          </p>
-          <p className="mt-1 truncate text-[10px] font-bold leading-none opacity-85">
-            {insight.description}
-          </p>
-        </div>
-      ))}
+      {insights.map((insight) => {
+        const tooltipLines = [
+          `${insight.label}: ${insight.title}`,
+          insight.description,
+          `신호 강도: ${insight.scoreLabel}`,
+        ];
+
+        return (
+          <UiTooltipProvider
+            key={`${insight.label}-${insight.title}`}
+            delayDuration={120}
+          >
+            <UiTooltip>
+              <UiTooltipTrigger asChild>
+                <div
+                  tabIndex={0}
+                  className={cn(
+                    "min-w-0 rounded-xl border px-2.5 py-2 outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                    toneClass[insight.tone],
+                  )}
+                  aria-label={tooltipLines.join(" ")}
+                  data-admin-dashboard-diagnosis-tooltip-trigger="true"
+                >
+                  <p className="truncate text-[10px] font-black leading-none opacity-75">
+                    {insight.label}
+                  </p>
+                  <p className="mt-1 truncate text-[11px] font-extrabold leading-none">
+                    {insight.title}
+                  </p>
+                  <p className="mt-1 truncate text-[10px] font-bold leading-none opacity-85">
+                    {insight.description}
+                  </p>
+                </div>
+              </UiTooltipTrigger>
+              <UiTooltipContent
+                side="top"
+                align="start"
+                className={adminDashboardTooltipPortalClassName}
+                data-admin-dashboard-diagnosis-tooltip="standard"
+              >
+                <AdminDashboardTooltipLinesPanel
+                  lines={tooltipLines}
+                  dataAttribute="diagnosis-summary"
+                />
+              </UiTooltipContent>
+            </UiTooltip>
+          </UiTooltipProvider>
+        );
+      })}
     </div>
   );
 }
@@ -3331,53 +4000,83 @@ function AdminDashboardDiagnosisBoard({
         기여도와 참여율로 우선 점검할 영상을 표시합니다.
       </p>
       <div className="grid h-full min-h-0 grid-cols-2 grid-rows-2 gap-1">
-        {visibleInsights.map((insight) => (
-          <div
-            key={`${insight.label}-${insight.title}`}
-            className={cn(
-              "flex min-h-0 min-w-0 flex-col justify-between rounded-xl border border-border/70 bg-muted/20 px-2 py-1.5",
-              isFullscreen && "px-4 py-3 sm:px-5 sm:py-4",
-            )}
-            title={`${insight.label}: ${insight.title} · ${insight.description}. 계산식: 신호 강도는 기여도, 참여율, 게시 후 경과일 같은 규칙별 점수를 0~100으로 표시합니다.`}
-          >
-            <div className="flex items-center justify-between gap-2">
-              <span className="truncate text-[10px] font-black text-primary">
-                {insight.label}
-              </span>
-              <span className="shrink-0 rounded-full bg-background px-2 py-0.5 text-[10px] font-black text-muted-foreground">
-                {modeLabel}
-              </span>
-            </div>
-            <p className="mt-1.5 truncate text-sm font-extrabold text-foreground">
-              {insight.title}
-            </p>
-            <p className="mt-1 truncate text-[11px] font-semibold text-muted-foreground">
-              {insight.description}
-            </p>
-            <div
-              className="mt-1.5 grid gap-1"
-              data-admin-dashboard-diagnosis-visual="signal-bar"
+        {visibleInsights.map((insight) => {
+          const tooltipLines = [
+            `${insight.label}: ${insight.title}`,
+            insight.description,
+            `신호 강도: ${insight.scoreLabel}`,
+            "계산식: 신호 강도 = 카드별 규칙 점수를 0~100으로 표시합니다.",
+          ];
+
+          return (
+            <UiTooltipProvider
+              key={`${insight.label}-${insight.title}`}
+              delayDuration={120}
             >
-              <div className="h-1.5 overflow-hidden rounded-full bg-background/80">
-                <div
-                  className={cn(
-                    "h-full rounded-full",
-                    signalBarClass[insight.tone],
-                  )}
-                  style={{
-                    width: `${Math.max(8, Math.min(100, insight.score))}%`,
-                  }}
-                />
-              </div>
-              <div className="flex items-center justify-between gap-2 text-[10px] font-black leading-none text-muted-foreground">
-                <span>신호 강도</span>
-                <span className="min-w-0 truncate text-foreground">
-                  {insight.scoreLabel}
-                </span>
-              </div>
-            </div>
-          </div>
-        ))}
+              <UiTooltip>
+                <UiTooltipTrigger asChild>
+                  <div
+                    tabIndex={0}
+                    className={cn(
+                      "flex min-h-0 min-w-0 flex-col justify-between rounded-xl border border-border/70 bg-muted/20 px-2 py-1.5 outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                      isFullscreen && "px-4 py-3 sm:px-5 sm:py-4",
+                    )}
+                    aria-label={tooltipLines.join(" ")}
+                    data-admin-dashboard-diagnosis-tooltip-trigger="true"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="truncate text-[10px] font-black text-primary">
+                        {insight.label}
+                      </span>
+                      <span className="shrink-0 rounded-full bg-background px-2 py-0.5 text-[10px] font-black text-muted-foreground">
+                        {modeLabel}
+                      </span>
+                    </div>
+                    <p className="mt-1.5 truncate text-sm font-extrabold text-foreground">
+                      {insight.title}
+                    </p>
+                    <p className="mt-1 truncate text-[11px] font-semibold text-muted-foreground">
+                      {insight.description}
+                    </p>
+                    <div
+                      className="mt-1.5 grid gap-1"
+                      data-admin-dashboard-diagnosis-visual="signal-bar"
+                    >
+                      <div className="h-1.5 overflow-hidden rounded-full bg-background/80">
+                        <div
+                          className={cn(
+                            "h-full rounded-full",
+                            signalBarClass[insight.tone],
+                          )}
+                          style={{
+                            width: `${Math.max(8, Math.min(100, insight.score))}%`,
+                          }}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between gap-2 text-[10px] font-black leading-none text-muted-foreground">
+                        <span>신호 강도</span>
+                        <span className="min-w-0 truncate text-foreground">
+                          {insight.scoreLabel}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </UiTooltipTrigger>
+                <UiTooltipContent
+                  side="top"
+                  align="start"
+                  className={adminDashboardTooltipPortalClassName}
+                  data-admin-dashboard-diagnosis-tooltip="standard"
+                >
+                  <AdminDashboardTooltipLinesPanel
+                    lines={tooltipLines}
+                    dataAttribute="diagnosis-card"
+                  />
+                </UiTooltipContent>
+              </UiTooltip>
+            </UiTooltipProvider>
+          );
+        })}
       </div>
     </div>
   );
@@ -3461,11 +4160,26 @@ function AdminDashboardAreaChart({
             width={42}
           />
           <RechartsTooltip
-            formatter={(value) => [
-              `${Number(value).toFixed(2)}%`,
-              "참여율 · 계산식: 참여 / 조회수 × 100",
-            ]}
-            contentStyle={adminDashboardTooltipStyle}
+            content={({ active, label, payload }) => {
+              const value = payload?.[0]?.value;
+              if (!active || value == null) return null;
+
+              return (
+                <AdminDashboardTooltipPanel
+                  title={String(label ?? "날짜 없음")}
+                  rows={[
+                    {
+                      label: "참여율",
+                      value: `${Number(value).toFixed(2)}%`,
+                      note: "조회수 대비 참여 비율",
+                      color: "#0f766e",
+                    },
+                  ]}
+                  footer="계산식: 참여율 = 참여 / 조회수 × 100."
+                  dataAttribute="engagement-area"
+                />
+              );
+            }}
             wrapperStyle={adminDashboardTooltipWrapperStyle}
             cursor={{ stroke: adminDashboardGridColor }}
           />
@@ -4248,21 +4962,13 @@ function AdminDashboardManagementPanel({
   const videosByInsightScore = useMemo(() => {
     if (!hasPeriodGrowthComparison) return videosByViews;
 
-    return [...growthVideos].sort(
-      (a, b) =>
-        getNonNegativeMetricDelta(getVideoViewDelta(b)) -
-        getNonNegativeMetricDelta(getVideoViewDelta(a)),
-    );
-  }, [growthVideos, hasPeriodGrowthComparison, videosByViews]);
-  const topContentVideosByInsightScore = useMemo(() => {
-    if (!hasPeriodGrowthComparison) return videosByViews;
-
     return [...videosByViews].sort(
       (a, b) =>
         getNonNegativeMetricDelta(getVideoViewDelta(b)) -
         getNonNegativeMetricDelta(getVideoViewDelta(a)),
     );
   }, [hasPeriodGrowthComparison, videosByViews]);
+  const topContentVideosByInsightScore = videosByInsightScore;
   const topContentMetricMode = hasPeriodGrowthComparison ? "delta" : "current";
   const periodViewValue = getDashboardPeriodMetricValue(
     growthVideos,
@@ -4409,6 +5115,12 @@ function AdminDashboardManagementPanel({
     periodCommentDisplayValue,
     periodViewDisplayValue,
   );
+  const dashboardViewMetricLabel =
+    hasPeriodGrowthComparison && viewChange != null
+      ? `조회 증감 ${formatDashboardChangeLabel(viewChange)}`
+      : hasPeriodGrowthComparison
+        ? "조회 증감 계산 대기"
+        : "현재값 기준";
   const cumulativeViewValue = growthVideos.reduce(
     (sum, video) => sum + video.viewCount,
     0,
@@ -4422,12 +5134,31 @@ function AdminDashboardManagementPanel({
     0,
   );
   const visibleVideoTotal = insightQuery.data?.totalVideos ?? stats.totalVideos;
+  const dashboardUploadVideoBasisCount = videos.length;
+  const impactChartVideoLimit = getAdminDashboardImpactChartLimit(
+    videosByInsightScore.length,
+  );
+  const impactDisplayedVideoCount = Math.min(
+    videosByInsightScore.length,
+    impactChartVideoLimit,
+  );
+  const trendDisplayedPointCount = trendPoints.length;
+  const impactMetricLabel =
+    getDashboardCardView("impact") === "table"
+      ? `${dashboardViewMetricLabel} · 전체 ${formatNumber(dashboardUploadVideoBasisCount)}개`
+      : impactDisplayedVideoCount < dashboardUploadVideoBasisCount
+        ? `${dashboardViewMetricLabel} · 상위 ${formatNumber(impactDisplayedVideoCount)}/${formatNumber(dashboardUploadVideoBasisCount)}개`
+        : `${dashboardViewMetricLabel} · 전체 ${formatNumber(dashboardUploadVideoBasisCount)}개`;
+  const trendMetricLabel = `${dashboardViewMetricLabel} · 전체 ${formatNumber(trendDisplayedPointCount)}개`;
   const selectedPeriodLabel =
     ADMIN_DASHBOARD_PERIOD_OPTIONS.find((option) => option.value === period)
       ?.label ?? "선택 기간";
-  const periodMetricCaption = hasPeriodGrowthComparison
-    ? `${selectedPeriodLabel} · 기간 순증`
-    : `${selectedPeriodLabel} · 기간 영상 현재`;
+  const periodMetricCaption =
+    period === "ALL"
+      ? "전체 · 현재 합계"
+      : hasPeriodGrowthComparison
+        ? `${selectedPeriodLabel} · 기간 순증`
+        : `${selectedPeriodLabel} · 기간 영상 현재`;
   const periodRatioCaptionPrefix = hasPeriodGrowthComparison
     ? "조회 증가 대비"
     : "조회수 대비";
@@ -4455,9 +5186,12 @@ function AdminDashboardManagementPanel({
           (channelStats?.previousVideoCount ?? 0),
       )
     : visibleVideoTotal;
-  const periodVideoCaption = hasSnapshotVideoCountComparison
-    ? `${selectedPeriodLabel} · 채널 videoCount 순증 · 현재 ${formatNumber(cumulativeVideoTotal)}`
-    : `${selectedPeriodLabel} 신규 업로드 · 현재 ${formatNumber(cumulativeVideoTotal)}`;
+  const periodVideoCaption =
+    period === "ALL"
+      ? `전체 영상 · 현재 ${formatNumber(cumulativeVideoTotal)}`
+      : hasSnapshotVideoCountComparison
+        ? `${selectedPeriodLabel} · 채널 videoCount 순증 · 현재 ${formatNumber(cumulativeVideoTotal)}`
+        : `${selectedPeriodLabel} 신규 업로드 · 현재 ${formatNumber(cumulativeVideoTotal)}`;
   const periodUploadVideoProgress =
     typeof periodUploadVideoValue === "number" && periodUploadVideoValue > 0
       ? Math.min(100, Math.max(12, periodUploadVideoValue * 6))
@@ -4576,9 +5310,7 @@ function AdminDashboardManagementPanel({
   ];
   const impactTableRows = useMemo(
     () =>
-      videosByInsightScore
-        .slice(0, ADMIN_DASHBOARD_IMPACT_VIDEO_LIMIT)
-        .map((video) => ({
+      videosByInsightScore.map((video) => ({
           id: video.id,
           title: video.title,
           views: hasPeriodGrowthComparison
@@ -4600,17 +5332,26 @@ function AdminDashboardManagementPanel({
   );
   const trendTableRows = useMemo(
     () =>
-      trendPoints.map((point) => ({
-        label: point.label,
-        views: point.secondaryValue,
-        engagement: point.value,
-        engagementRate: getDashboardRatio(point.value, point.secondaryValue),
-      })),
-    [trendPoints],
+      videosByPublishedAt.map((video) => {
+        const views = hasPeriodGrowthComparison
+          ? getNonNegativeMetricDelta(getVideoViewDelta(video))
+          : video.viewCount;
+        const engagement = hasPeriodGrowthComparison
+          ? getNonNegativeMetricDelta(getVideoEngagementDelta(video))
+          : getVideoEngagementTotal(video);
+
+        return {
+          label: formatDashboardDateLabel(video.publishedAt),
+          views,
+          engagement,
+          engagementRate: getDashboardRatio(engagement, views),
+        };
+      }),
+    [hasPeriodGrowthComparison, videosByPublishedAt],
   );
   const topContentTableRows = useMemo(
     () =>
-      barRows.slice(0, 5).map((row) => ({
+      barRows.map((row) => ({
         title: row.label,
         views: row.viewCount,
         likes: row.likeCount,
@@ -4631,6 +5372,14 @@ function AdminDashboardManagementPanel({
       })),
     [barRows],
   );
+  const progressiveImpactTableRows = useAdminDashboardProgressiveItems(
+    impactTableRows,
+  );
+  const progressiveTrendPoints = useAdminDashboardProgressiveItems(trendPoints);
+  const progressiveTrendTableRows =
+    useAdminDashboardProgressiveItems(trendTableRows);
+  const progressiveTopContentTableRows =
+    useAdminDashboardProgressiveItems(topContentTableRows);
   const trendTableColumns = useMemo(() => {
     const columns: Array<
       AdminDashboardTableColumn<(typeof trendTableRows)[number]>
@@ -5062,16 +5811,19 @@ function AdminDashboardManagementPanel({
         >
           <AdminDashboardCardTitle
             title="상위 영상 영향도"
-            metric={`조회 증감 ${formatDashboardChangeLabel(viewChange)}`}
+            metric={impactMetricLabel}
             infoLines={[
               hasPeriodGrowthComparison
-                ? "설명: 오른쪽으로 갈수록 조회 증가가 크고, 위로 갈수록 좋아요와 댓글 증가가 큽니다."
-                : "설명: 오른쪽으로 갈수록 조회수가 크고, 위로 갈수록 좋아요와 댓글 합계가 큽니다.",
+                ? "설명: 선택 기간 업로드 영상 안에서 오른쪽으로 갈수록 조회 증가가 크고, 위로 갈수록 좋아요와 댓글 증가가 큽니다."
+                : "설명: 선택 기간 업로드 영상 안에서 오른쪽으로 갈수록 조회수가 크고, 위로 갈수록 좋아요와 댓글 합계가 큽니다.",
+              impactDisplayedVideoCount < dashboardUploadVideoBasisCount
+                ? `표시: 그래프는 상위 ${formatNumber(impactDisplayedVideoCount)}/${formatNumber(dashboardUploadVideoBasisCount)}개, 표는 전체 ${formatNumber(dashboardUploadVideoBasisCount)}개.`
+                : `표시: 그래프와 표 모두 전체 ${formatNumber(dashboardUploadVideoBasisCount)}개.`,
               "읽는 법: 원이 클수록 조회수와 반응을 합친 영향도가 큰 영상입니다. 색은 순위 구분입니다.",
               "계산식: 참여 = 좋아요 + 댓글.",
               hasPeriodGrowthComparison
                 ? "기간 비교 때는 현재값에서 이전값을 뺀 증가량으로 위치를 잡습니다."
-                : "원 크기는 참여가 클수록 크게 표시됩니다.",
+                : "비교 스냅샷이 없을 때는 증감률 대신 현재 조회수와 현재 반응값으로 위치를 잡습니다.",
               "주의: 색보다 위치와 원 크기를 먼저 확인하세요.",
             ]}
             action={
@@ -5089,12 +5841,13 @@ function AdminDashboardManagementPanel({
           {isChartLoading ? (
             <AdminDashboardPanelBodySkeleton
               variant={
-                getDashboardCardView("impact") === "table" ? "table" : "chart"
+                getDashboardCardView("impact") === "table" ? "table" : "bubble"
               }
             />
           ) : getDashboardCardView("impact") === "table" ? (
             <AdminDashboardScrollTable
-              rows={impactTableRows}
+              rows={progressiveImpactTableRows}
+              totalRows={impactTableRows.length}
               emptyText="표시할 영상 영향도 데이터가 없습니다."
               getRowKey={(row) => row.id}
               columns={[
@@ -5143,6 +5896,7 @@ function AdminDashboardManagementPanel({
               key={`impact-${period}`}
               videos={videosByInsightScore}
               metricMode={topContentMetricMode}
+              displayLimit={impactChartVideoLimit}
             />
           )}
         </div>
@@ -5164,12 +5918,16 @@ function AdminDashboardManagementPanel({
         >
           <AdminDashboardCardTitle
             title="영상별 성과 분포"
-            metric={`조회 증감 ${formatDashboardChangeLabel(viewChange)}`}
+            metric={trendMetricLabel}
             infoLines={[
-              "설명: 영상별 조회수, 참여, 참여율을 게시일 순서로 비교합니다.",
+              "설명: 선택 기간 업로드 영상을 게시일 순서로 놓고 조회수, 참여, 참여율을 비교합니다.",
+              `표시: 그래프와 표 모두 전체 ${formatNumber(dashboardUploadVideoBasisCount)}개.`,
               "읽는 법: 조회·반응(좋아요+댓글)·반응률을 각각 100점 기준으로 맞춰 같은 눈금에서 비교합니다.",
               "참고: 참여는 좋아요와 댓글을 더한 값이고, 참여율은 조회수 대비 참여 비중입니다.",
               "계산식: 정규화 점수 = 해당 값 / 해당 지표 최고값 × 100.",
+              hasPeriodGrowthComparison
+                ? "비교 스냅샷이 있으면 조회 증감률을 제목에 함께 표시합니다."
+                : "비교 스냅샷이 없어서 제목에는 현재값 기준이라고 표시합니다.",
               "주의: 실제 숫자보다 흐름과 튀는 항목을 찾는 용도입니다.",
             ]}
             action={
@@ -5208,12 +5966,13 @@ function AdminDashboardManagementPanel({
           {isChartLoading ? (
             <AdminDashboardPanelBodySkeleton
               variant={
-                getDashboardCardView("trend") === "table" ? "table" : "chart"
+                getDashboardCardView("trend") === "table" ? "table" : "line"
               }
             />
           ) : getDashboardCardView("trend") === "table" ? (
             <AdminDashboardScrollTable
-              rows={trendTableRows}
+              rows={progressiveTrendTableRows}
+              totalRows={trendTableRows.length}
               emptyText="표시할 영상별 성과 분포 데이터가 없습니다."
               getRowKey={(row, index) => `${row.label}-${index}`}
               columns={trendTableColumns}
@@ -5221,7 +5980,8 @@ function AdminDashboardManagementPanel({
           ) : (
             <AdminDashboardMultiLineChart
               key={`trend-${period}`}
-              points={trendPoints}
+              points={progressiveTrendPoints}
+              totalPointCount={trendPoints.length}
               seriesVisibility={trendSeriesVisibility}
             />
           )}
@@ -5275,11 +6035,11 @@ function AdminDashboardManagementPanel({
             title="콘텐츠 성과 TOP 5"
             metric={topContentCardMetric}
             infoLines={[
-              "설명: 선택 기간 업로드 영상 중 상위 5개의 조회수, 좋아요, 댓글 비중을 비교합니다.",
+              "설명: 그래프는 선택 기간 업로드 영상 중 상위 5개를 요약하고, 표는 전체 영상을 보여줍니다.",
               hasPeriodGrowthComparison
                 ? "읽는 법: 막대는 선택 기간 업로드 영상의 조회·좋아요·댓글 증가량을 보여주고, 기여도는 업로드 영상 증가 합계 중 해당 영상이 차지한 비율입니다."
                 : "읽는 법: 막대는 조회·좋아요·댓글 수를 보여주고, 기여도는 전체 합계 중 해당 영상이 차지한 비율입니다.",
-              "막대 기준: 각 색 조각은 상위 5개 안에서 해당 영상이 차지하는 비중입니다.",
+              "막대 기준: 각 색 조각은 그래프에 표시된 상위 5개 안에서 해당 영상이 차지하는 비중입니다.",
               topContentContributionFormula,
               hasPeriodGrowthComparison
                 ? "용어: 기간 조회 증가 기여는 선택 기간 업로드 영상들의 조회 증가 합계 중 이 영상이 차지한 비율입니다."
@@ -5293,7 +6053,7 @@ function AdminDashboardManagementPanel({
               hasPeriodGrowthComparison
                 ? "전체값: 선택 기간 업로드 영상의 조회 증가 합계를 분모로 사용합니다."
                 : "전체값: 선택 기간 영상 조회수 합계를 분모로 사용합니다.",
-              "주의: 제목이 길면 표 보기나 마우스 올림 제목으로 전체를 확인하세요.",
+              "주의: 그래프는 빠른 요약이고, 표 보기는 선택 기간 전체 영상을 확인하는 용도입니다.",
             ]}
             action={
               <div className="flex flex-wrap items-center justify-end gap-1">
@@ -5332,12 +6092,13 @@ function AdminDashboardManagementPanel({
               variant={
                 getDashboardCardView("topContent") === "table"
                   ? "table"
-                  : "chart"
+                  : "stacked"
               }
             />
           ) : getDashboardCardView("topContent") === "table" ? (
             <AdminDashboardScrollTable
-              rows={topContentTableRows}
+              rows={progressiveTopContentTableRows}
+              totalRows={topContentTableRows.length}
               emptyText="표시할 콘텐츠 성과 데이터가 없습니다."
               getRowKey={(row, index) => `${row.title}-${index}`}
               columns={topContentTableColumns}
@@ -5391,7 +6152,7 @@ function AdminDashboardManagementPanel({
               variant={
                 getDashboardCardView("engagementRate") === "table"
                   ? "table"
-                  : "chart"
+                  : "diagnosis"
               }
             />
           ) : getDashboardCardView("engagementRate") === "table" ? (
@@ -5653,7 +6414,7 @@ function AdminSidebar({
           aria-label="쯔동여지도 홈으로 이동"
         >
           <Image
-            src="/logo.png"
+            src="/logo.webp"
             alt=""
             aria-hidden="true"
             width={32}
@@ -5727,11 +6488,10 @@ function AdminSidebar({
               const Icon = item.icon;
               const isActive = activeModuleId === item.id;
               const itemStatus = getItemStatus(item.id);
-              const menuButton = (
-                <button
-                  type="button"
-                  title={item.title}
-                  aria-label={
+	              const menuButton = (
+	                <button
+	                  type="button"
+	                  aria-label={
                     itemStatus
                       ? `${item.title} ${itemStatus.label}`
                       : item.title
@@ -5811,21 +6571,14 @@ function AdminSidebar({
                       <UiTooltipContent
                         side="right"
                         align="center"
-                        className={cn(
-                          adminDashboardTooltipContentClassName,
-                          "max-w-[14rem] space-y-1",
-                        )}
+                        className={adminDashboardTooltipPortalClassName}
                         data-admin-sidebar-collapsed-tooltip="true"
-                        data-admin-dashboard-tooltip-content="standard"
                       >
-                        <p className={adminDashboardTooltipFirstLineClassName}>
-                          {item.title}
-                        </p>
-                        {item.badge ? (
-                          <p className={adminDashboardTooltipLineClassName}>
-                            {item.badge}
-                          </p>
-                        ) : null}
+                        <AdminDashboardTooltipLinesPanel
+                          lines={item.badge ? [item.title, item.badge] : [item.title]}
+                          dataAttribute="sidebar-collapsed"
+                          className="max-w-[14rem]"
+                        />
                       </UiTooltipContent>
                     </UiTooltip>
                   </UiTooltipProvider>
@@ -6359,22 +7112,29 @@ function AdminConsoleCanvasSkeleton() {
 export function AdminConsoleOverview() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const requestedModuleId = getAdminModuleIdFromSearchParams(searchParams);
   const { user, isLoading: authLoading } = useAuth();
-  const shouldRenderAdminShell = authLoading || Boolean(user);
-  const canLoadAdminConsoleData = Boolean(user) && !authLoading;
+  const [hasHydrated, setHasHydrated] = useState(false);
+  const isShellBootstrapping = authLoading || !hasHydrated;
+  const shouldRenderAdminShell = isShellBootstrapping || Boolean(user);
+  const canLoadAdminConsoleData = Boolean(user) && !isShellBootstrapping;
   const {
     stats,
     isLoading: statsLoading,
     hasError: statsHasError,
   } = useAdminOverviewStats(canLoadAdminConsoleData);
   const [activeModuleId, setActiveModuleId] =
-    useState<AdminModuleId>("overview");
+    useState<AdminModuleId>(requestedModuleId);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [showSidebarLabels, setShowSidebarLabels] = useState(true);
   const canvasRef = useRef<HTMLElement | null>(null);
   const activeModule = consoleModules.find(
     (module) => module.id === activeModuleId,
   );
+
+  useEffect(() => {
+    setHasHydrated(true);
+  }, []);
 
   const selectModule = useCallback(
     (moduleId: AdminModuleId) => {
@@ -6394,7 +7154,7 @@ export function AdminConsoleOverview() {
 
   useEffect(() => {
     const stateWarning = getAdminModuleStateWarning(searchParams);
-    const nextModuleId = getAdminModuleIdFromSearchParams(searchParams);
+    const nextModuleId = requestedModuleId;
     const canonicalHref = buildCanonicalAdminModuleHref(nextModuleId);
     const currentQuery = searchParams.toString();
     const currentHref = `/admin${currentQuery ? `?${currentQuery}` : ""}`;
@@ -6406,7 +7166,7 @@ export function AdminConsoleOverview() {
     if (stateWarning || currentHref !== canonicalHref) {
       router.replace(canonicalHref, { scroll: false });
     }
-  }, [router, searchParams]);
+  }, [requestedModuleId, router, searchParams]);
 
   useEffect(() => {
     const isStoredSidebarCollapsed =
@@ -6503,8 +7263,12 @@ export function AdminConsoleOverview() {
           <p className="sr-only" aria-live="polite">
             {activeModuleLabel} 작업 화면으로 전환됨
           </p>
-          {authLoading ? (
-            <AdminConsoleCanvasSkeleton />
+          {isShellBootstrapping ? (
+            activeModuleId === "overview" ? (
+              <AdminDashboardManagementSkeleton />
+            ) : (
+              <AdminConsoleCanvasSkeleton />
+            )
           ) : activeModuleId === "overview" ? (
             <AdminDashboardManagementPanel
               stats={stats}
