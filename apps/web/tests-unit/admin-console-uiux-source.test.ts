@@ -520,7 +520,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("YouTube Data API");
     expect(consoleSource).toContain("채널 통계 확인 필요");
     expect(consoleSource).toContain(
-      '<h1 className="text-xl font-extrabold tracking-[0.01em] text-foreground text-balance">',
+      '<h1 className="text-[1.55rem] font-extrabold leading-tight tracking-[0.01em] text-foreground text-balance md:text-xl">',
     );
     expect(consoleSource).toContain("text-[clamp(1.42rem,1.75vw,2.1rem)]");
     expect(consoleSource).toContain("function AdminDashboardTooltipPanel");
@@ -1678,7 +1678,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-admin-console-layout="sidebar-content"',
     );
     expect(consoleSource).toContain('data-admin-console-content="true"');
-    expect(consoleSource).toContain("p-2 pr-14 sm:p-3 sm:pr-16 md:border-y-0 md:p-4 md:pr-16");
+    expect(consoleSource).toContain("p-2 sm:p-3 md:border-y-0 md:p-4");
     expect(consoleSource).toContain("h-[var(--full-height,100vh)]");
     expect(consoleSource).not.toContain("grid-rows-[auto_minmax(0,1fr)]");
     expect(consoleSource).not.toContain("md:grid-rows-1");
@@ -1711,7 +1711,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "outline: 2px solid hsl(var(--primary));",
     );
     expect(appGlobalsSource).toContain(
-      "grid-template-rows: minmax(0, 1fr);",
+      "grid-template-rows: auto minmax(0, 1fr);",
     );
     expect(appGlobalsSource).toContain(
       "grid-template-columns: fit-content(24rem) minmax(0, 1fr);",
@@ -1825,7 +1825,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(source("hooks/use-ad-banners.tsx")).toContain(
       "enabled: isAdmin && enabled",
     );
+    expect(consoleSource).toContain('data-admin-console-mobile-header="true"');
     expect(consoleSource).toContain('data-admin-console-menu-trigger="hamburger"');
+    expect(consoleSource).toContain('data-admin-console-menu-trigger="desktop-hamburger"');
     expect(consoleSource).toContain('data-admin-console-menu-dropdown="true"');
     expect(consoleSource).toContain('data-admin-sidebar-order-editor="dropdown"');
     expect(consoleSource).toContain('data-admin-sidebar-theme-toggle="true"');
@@ -2051,7 +2053,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain('data-admin-console-menu-trigger="hamburger"');
     expect(consoleSource).toContain('data-admin-dashboard-period-select-trigger="true"');
     expect(consoleSource).toContain('data-admin-dashboard-period-menu="true"');
-    expect(consoleSource).toContain("p-2 pr-14 sm:p-3 sm:pr-16 md:border-y-0 md:p-4 md:pr-16");
+    expect(consoleSource).toContain("p-2 sm:p-3 md:border-y-0 md:p-4");
     expect(consoleSource).toContain("min-h-[420px] flex-1");
     expect(consoleSource).toContain("overflow-visible md:overflow-hidden");
     expect(consoleSource).toContain("md:h-full md:min-h-0");
