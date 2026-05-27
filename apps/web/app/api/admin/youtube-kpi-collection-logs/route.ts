@@ -93,9 +93,9 @@ function getGitHubWorkflowId() {
 
 function getGitHubToken() {
   return (
-    process.env.GITHUB_TOKEN ||
-    process.env.GH_TOKEN ||
     process.env.GITHUB_ACTIONS_TOKEN ||
+    process.env.GH_TOKEN ||
+    process.env.GITHUB_TOKEN ||
     null
   );
 }
