@@ -34,6 +34,29 @@ const ADMIN_CONSOLE_RESPONSIVE_LAYOUT_CLASSES = [
   "lg:w-11",
   "lg:w-14",
   "lg:w-60",
+  // The KPI dashboard is intentionally dense on desktop. If these grid
+  // utilities are dropped during dev CSS regeneration, the desktop dashboard
+  // falls back to a one-column mobile layout and appears broken.
+  "sm:col-span-2",
+  "sm:grid-cols-2",
+  "sm:grid-cols-5",
+  "sm:grid-cols-6",
+  "lg:col-span-2",
+  "lg:col-span-3",
+  "lg:col-span-4",
+  "lg:col-span-5",
+  "lg:flex-row",
+  "lg:grid-cols-10",
+  "lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]",
+  "lg:grid-rows-[132px_minmax(0,1fr)_minmax(0,0.86fr)]",
+  "lg:h-full",
+  "lg:items-start",
+  "lg:justify-between",
+  "lg:min-h-0",
+  "lg:overflow-hidden",
+  "xl:grid-cols-3",
+  "xl:grid-cols-4",
+  "xl:grid-cols-[1.1fr_0.9fr]",
 ] as const;
 const MOBILE_BOTTOM_NAV_CLASSES = [
   // Direct mobile routes render MobileBottomNav without the home CSS chunk.
