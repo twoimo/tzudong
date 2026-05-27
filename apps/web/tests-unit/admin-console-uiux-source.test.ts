@@ -1112,7 +1112,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(': "stacked"');
     expect(consoleSource).toContain(': "diagnosis"');
     expect(consoleSource).toContain("pendingSkeletonPeriod");
-    expect(consoleSource).toContain("setPendingSkeletonPeriod(option.value)");
+    expect(consoleSource).toContain("setPendingSkeletonPeriod(nextPeriod)");
     expect(consoleSource).toContain("growthInsightQuery.isLoading");
     expect(consoleSource).toContain("pendingSkeletonPeriod === period");
     expect(consoleSource).toContain("isLoading={isChartLoading}");
@@ -1368,6 +1368,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       "현재 구독자 · YouTube Data API · 비교 스냅샷 대기",
     );
+    expect(consoleSource).toContain(
+      "`현재 구독자 · ${selectedPeriodLabel} 기간 순증 ${formatSignedNumber(subscriberDelta)}`",
+    );
+    expect(consoleSource).toContain('const subscriberCardTitle = "현재 구독자"');
     expect(consoleSource).toContain("formatSignedNumber(subscriberDelta)");
     expect(consoleSource).toContain('deltaLabel="기간 대비"');
     expect(consoleSource).toContain(
@@ -1510,6 +1514,41 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain("function buildMetricSeries");
   });
 
+  test("adds a polished KPI PDF report export next to collection status", () => {
+    const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
+
+    expect(consoleSource).toContain("FileDown");
+    expect(consoleSource).toContain("function AdminDashboardPdfReportButton");
+    expect(consoleSource).toContain(
+      'data-admin-dashboard-kpi-pdf-export-trigger="true"',
+    );
+    expect(consoleSource).toContain("buildAdminDashboardPdfReportHtml");
+    expect(consoleSource).toContain("openAdminDashboardPdfReport");
+    expect(consoleSource).toContain("window.print()");
+    expect(consoleSource).toContain("Tzuyang KPI Dashboard Report");
+    expect(consoleSource).toContain('logoUrl: "/logo.webp"');
+    expect(consoleSource).toContain('class="brand"');
+    expect(consoleSource).toContain('alt="Tzudong 로고"');
+    expect(consoleSource).toContain("reportWithAbsoluteLogo");
+    expect(consoleSource).toContain("PDF 보고서");
+    expect(consoleSource).toContain("콘텐츠 성과 TOP 5");
+    expect(consoleSource).toContain("성과 진단");
+    expect(consoleSource).toContain('class="report-visual"');
+    expect(consoleSource).toContain('class="bar-track"');
+    expect(consoleSource).toContain('class="diagnosis-meter"');
+    expect(consoleSource).toContain("visualPercent");
+    expect(consoleSource).toContain("barPercent");
+    expect(
+      consoleSource.indexOf("<AdminDashboardPdfReportButton"),
+    ).toBeLessThan(consoleSource.indexOf("<AdminDashboardCollectionLogPopover"));
+    expect(
+      consoleSource.indexOf('data-admin-dashboard-widget-order-trigger="direct-drag"'),
+    ).toBeLessThan(consoleSource.indexOf("<AdminDashboardPdfReportButton"));
+    expect(consoleSource.indexOf("<AdminDashboardPdfReportButton")).toBeLessThan(
+      consoleSource.indexOf('data-admin-dashboard-widget-order-reset="true"'),
+    );
+  });
+
   test("supports sub-day admin KPI dashboard periods in the insights source", () => {
     const treemapSource = source("lib/public-insights/treemap.ts");
 
@@ -1639,7 +1678,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-admin-console-layout="sidebar-content"',
     );
     expect(consoleSource).toContain('data-admin-console-content="true"');
-    expect(consoleSource).toContain("p-2 sm:p-3 md:border-y-0 md:p-4");
+    expect(consoleSource).toContain("p-2 pr-14 sm:p-3 sm:pr-16 md:border-y-0 md:p-4 md:pr-16");
     expect(consoleSource).toContain("h-[var(--full-height,100vh)]");
     expect(consoleSource).not.toContain("grid-rows-[auto_minmax(0,1fr)]");
     expect(consoleSource).not.toContain("md:grid-rows-1");
@@ -1672,7 +1711,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "outline: 2px solid hsl(var(--primary));",
     );
     expect(appGlobalsSource).toContain(
-      "grid-template-rows: auto minmax(0, 1fr);",
+      "grid-template-rows: minmax(0, 1fr);",
     );
     expect(appGlobalsSource).toContain(
       "grid-template-columns: fit-content(24rem) minmax(0, 1fr);",
@@ -1776,9 +1815,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("if (!canLoadPreferences) {");
     expect(consoleSource).toContain("setIsOrderLoading(true);");
     expect(consoleSource).toContain("setIsOrderLoading(false);");
-    expect(consoleSource).toContain(
-      "disabled={!canLoadPreferences || isOrderLoading}",
-    );
+    expect(consoleSource).toContain("isOrderLoading ||");
     expect(consoleSource).toContain("data-admin-sidebar-order-loading=");
     expect(consoleSource).toContain("useAdBannersAdmin(isAdmin)");
     expect(consoleSource).not.toContain("useAnnouncementsAdmin(isAdmin)");
@@ -1788,11 +1825,11 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(source("hooks/use-ad-banners.tsx")).toContain(
       "enabled: isAdmin && enabled",
     );
-    expect(consoleSource).toContain(
-      'aria-controls="admin-sidebar-order-editor"',
-    );
-    expect(consoleSource).toContain('data-admin-sidebar-footer-actions="true"');
+    expect(consoleSource).toContain('data-admin-console-menu-trigger="hamburger"');
+    expect(consoleSource).toContain('data-admin-console-menu-dropdown="true"');
+    expect(consoleSource).toContain('data-admin-sidebar-order-editor="dropdown"');
     expect(consoleSource).toContain('data-admin-sidebar-theme-toggle="true"');
+    expect(consoleSource).not.toContain('data-admin-sidebar-footer-actions="true"');
     expect(consoleSource).toContain("ADMIN_THEME_STORAGE_KEY");
     expect(consoleSource).toContain(
       'type AdminThemePreference = "light" | "dark" | "system"',
@@ -1812,13 +1849,13 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'aria-pressed={themePreference !== "light"}',
     );
     expect(consoleSource).toContain(
-      '<Monitor className="h-3.5 w-3.5" aria-hidden="true" />',
+      '<Monitor className="mr-1 h-3.5 w-3.5" aria-hidden="true" />',
     );
     expect(consoleSource).toContain(
-      '<Moon className="h-3.5 w-3.5" aria-hidden="true" />',
+      '<Moon className="mr-1 h-3.5 w-3.5" aria-hidden="true" />',
     );
     expect(consoleSource).toContain(
-      '<Sun className="h-3.5 w-3.5" aria-hidden="true" />',
+      '<Sun className="mr-1 h-3.5 w-3.5" aria-hidden="true" />',
     );
     expect(consoleSource).toContain("ADMIN_SIDEBAR_COLLAPSED_STORAGE_KEY");
     expect(consoleSource).toContain(
@@ -1841,7 +1878,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(appGlobalsSource).toContain(".dark {");
     expect(appGlobalsSource).toContain("--background: 24 10% 10%;");
     expect(consoleSource).toContain(
-      "relative z-30 flex max-h-[42dvh] w-full shrink-0 flex-col",
+      "relative z-30 hidden h-full min-h-0 w-full shrink-0 flex-col",
     );
     expect(consoleSource).toContain("isCollapsed &&");
     expect(consoleSource).toContain(
@@ -1858,16 +1895,11 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "border border-border bg-transparent text-foreground transition hover:border-border hover:bg-transparent",
     );
     expect(consoleSource).toContain('src="/logo.webp"');
-    expect(consoleSource).toContain(
-      "flex gap-2 overflow-x-auto overscroll-x-contain",
-    );
-    expect(consoleSource).toContain(
-      "md:block md:min-h-0 md:flex-1 md:space-y-1.5",
-    );
-    expect(consoleSource).toContain("min-h-11 min-w-[8.25rem]");
-    expect(consoleSource).toContain(
-      "mt-2 flex shrink-0 gap-1.5 pt-0 md:mt-auto md:pt-2",
-    );
+    expect(consoleSource).toContain('aria-label="관리자 메뉴 열기"');
+    expect(consoleSource).toContain('aria-controls="admin-console-menu-dropdown"');
+    expect(consoleSource).toContain('data-admin-console-menu-dropdown="true"');
+    expect(consoleSource).toContain('data-admin-sidebar-order-editor="dropdown"');
+    expect(consoleSource).toContain("block min-h-0 flex-1 space-y-1.5 pb-2");
     expect(consoleSource).toContain("메뉴 순서");
     expect(consoleSource).toContain("초기화");
     expect(consoleSource).toContain("aria-label={`${item.title} 메뉴 앞으로`}");
@@ -2016,12 +2048,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(source("app/app-globals.css")).toContain(
       "grid-template-columns: fit-content(24rem) minmax(0, 1fr);",
     );
-    expect(consoleSource).toContain("md:inline-flex");
-    expect(consoleSource).toContain(
-      '"flex gap-2 overflow-x-auto overscroll-x-contain',
-    );
-    expect(consoleSource).toContain("min-h-11 min-w-[8.25rem]");
-    expect(consoleSource).toContain("p-2 sm:p-3 md:border-y-0 md:p-4");
+    expect(consoleSource).toContain('data-admin-console-menu-trigger="hamburger"');
+    expect(consoleSource).toContain('data-admin-dashboard-period-select-trigger="true"');
+    expect(consoleSource).toContain('data-admin-dashboard-period-menu="true"');
+    expect(consoleSource).toContain("p-2 pr-14 sm:p-3 sm:pr-16 md:border-y-0 md:p-4 md:pr-16");
     expect(consoleSource).toContain("min-h-[420px] flex-1");
     expect(consoleSource).toContain("overflow-visible md:overflow-hidden");
     expect(consoleSource).toContain("md:h-full md:min-h-0");
