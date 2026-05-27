@@ -13,6 +13,7 @@ import {
   type CSSProperties,
   type DragEventHandler,
   type ReactNode,
+  type TouchEventHandler,
 } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -76,6 +77,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdBannersAdmin } from "@/hooks/use-ad-banners";
+import { useMobileBottomNavAutoHide } from "@/hooks/use-mobile-bottom-nav-auto-hide";
 import {
   DEFAULT_ADMIN_DASHBOARD_WIDGET_ORDER,
   isAdminDashboardWidgetId,
@@ -87,6 +89,7 @@ import {
   normalizeAdminSidebarOrder,
   type AdminSidebarOrderPreference,
 } from "@/lib/admin/sidebar-order";
+import { getMobileScrollNavVisibilityAction } from "@/lib/mobile-scroll-nav-visibility";
 import { fetchSupabaseExactCount } from "@/lib/supabase-rest-client";
 import { cn } from "@/lib/utils";
 import type { DashboardSummaryResponse } from "@/types/dashboard";
@@ -362,6 +365,14 @@ type AdminDashboardTrendSeriesKey = "views" | "engagement" | "engagementRate";
 type AdminDashboardTopContentSeriesKey = "views" | "likes" | "comments";
 
 type AdminDashboardSeriesVisibility<Key extends string> = Record<Key, boolean>;
+type AdminDashboardSkeletonVariant =
+  | "chart"
+  | "table"
+  | "ops"
+  | "bubble"
+  | "line"
+  | "stacked"
+  | "diagnosis";
 
 type AdminDashboardCardReorderProps = {
   draggable: boolean;
@@ -1166,6 +1177,10 @@ const ADMIN_DASHBOARD_IMPACT_MAX_CHART_LIMIT = 80;
 const ADMIN_DASHBOARD_PROGRESSIVE_INITIAL_ROWS = 40;
 const ADMIN_DASHBOARD_PROGRESSIVE_BATCH_ROWS = 80;
 const ADMIN_DASHBOARD_PROGRESSIVE_DELAY_MS = 24;
+const ADMIN_DASHBOARD_MOBILE_PROGRESSIVE_INITIAL_ROWS = 18;
+const ADMIN_DASHBOARD_MOBILE_PROGRESSIVE_BATCH_ROWS = 24;
+const ADMIN_DASHBOARD_MOBILE_PROGRESSIVE_DELAY_MS = 48;
+const ADMIN_DASHBOARD_MOBILE_DEFER_ROOT_MARGIN = "420px 0px";
 const ADMIN_DASHBOARD_SPARKLINE_POINT_LIMIT = 7;
 const ADMIN_DASHBOARD_CONTENT_INSIGHT_TARGET_COUNT = 4;
 const ADMIN_DASHBOARD_DAY_MS = 24 * 60 * 60 * 1000;
@@ -1222,6 +1237,7 @@ function useAdminDashboardProgressiveItems<T>(
   items: T[],
   initialCount = ADMIN_DASHBOARD_PROGRESSIVE_INITIAL_ROWS,
   batchCount = ADMIN_DASHBOARD_PROGRESSIVE_BATCH_ROWS,
+  delayMs = ADMIN_DASHBOARD_PROGRESSIVE_DELAY_MS,
 ) {
   const [visibleCount, setVisibleCount] = useState(() =>
     Math.min(initialCount, items.length),
@@ -1243,7 +1259,7 @@ function useAdminDashboardProgressiveItems<T>(
           if (nextCount < items.length) scheduleNextBatch();
           return nextCount;
         });
-      }, ADMIN_DASHBOARD_PROGRESSIVE_DELAY_MS);
+      }, delayMs);
     };
 
     scheduleNextBatch();
@@ -1252,9 +1268,83 @@ function useAdminDashboardProgressiveItems<T>(
       isCancelled = true;
       if (typeof timer === "number") window.clearTimeout(timer);
     };
-  }, [batchCount, initialCount, items]);
+  }, [batchCount, delayMs, initialCount, items]);
 
   return items.slice(0, Math.min(visibleCount, items.length));
+}
+
+function getIsAdminDashboardMobileViewport() {
+  return (
+    typeof window !== "undefined" &&
+    window.matchMedia("(max-width: 767px)").matches
+  );
+}
+
+function AdminDashboardDeferredBody({
+  enabled,
+  resetKey,
+  variant,
+  children,
+}: {
+  enabled: boolean;
+  resetKey: string;
+  variant: AdminDashboardSkeletonVariant;
+  children: ReactNode;
+}) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [isReady, setIsReady] = useState(() => !enabled);
+
+  useEffect(() => {
+    if (!enabled) {
+      setIsReady(true);
+      return;
+    }
+
+    setIsReady(false);
+
+    const container = containerRef.current;
+    if (!container || !("IntersectionObserver" in window)) {
+      const fallbackTimer = window.setTimeout(() => setIsReady(true), 80);
+      return () => window.clearTimeout(fallbackTimer);
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (
+          entries.some(
+            (entry) => entry.isIntersecting || entry.intersectionRatio > 0,
+          )
+        ) {
+          setIsReady(true);
+          observer.disconnect();
+        }
+      },
+      {
+        root: null,
+        rootMargin: ADMIN_DASHBOARD_MOBILE_DEFER_ROOT_MARGIN,
+        threshold: 0.01,
+      },
+    );
+
+    observer.observe(container);
+
+    return () => observer.disconnect();
+  }, [enabled, resetKey]);
+
+  if (isReady) {
+    return <>{children}</>;
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className="min-h-0 flex-1"
+      data-admin-dashboard-mobile-deferred="true"
+      data-admin-dashboard-mobile-deferred-reset-key={resetKey}
+    >
+      <AdminDashboardPanelBodySkeleton variant={variant} />
+    </div>
+  );
 }
 
 function formatDashboardDateTime(value: string | null | undefined) {
@@ -2228,7 +2318,7 @@ function getDashboardChangeProgress(change: number | null) {
 }
 
 const adminDashboardCardClass =
-  "min-h-0 overflow-hidden border border-border/70 bg-background shadow-[0_1px_2px_rgba(15,23,42,0.06)]";
+  "min-h-0 min-w-0 w-full overflow-hidden border border-border/70 bg-background shadow-[0_1px_2px_rgba(15,23,42,0.06)]";
 
 const adminDashboardChartMargin = { top: 10, right: 10, bottom: 2, left: 0 };
 const adminDashboardScatterChartMargin = {
@@ -2238,7 +2328,7 @@ const adminDashboardScatterChartMargin = {
   left: 0,
 };
 const adminDashboardVisualizationShellClassName =
-  "min-h-0 flex-1 overflow-visible rounded-xl p-1 sm:p-1.5";
+  "min-h-0 flex-1 overflow-hidden rounded-xl p-1 sm:p-1.5";
 const adminDashboardChartViewportClassName =
   "relative h-full min-h-0 w-full overflow-visible [&_.recharts-surface]:overflow-visible [&_.recharts-wrapper]:overflow-visible";
 const adminDashboardTooltipWrapperStyle = {
@@ -2648,10 +2738,11 @@ function AdminDashboardSeriesToggle<Key extends string>({
   return (
     <div
       className={cn(
-        "inline-flex h-7 max-w-full shrink-0 items-center gap-0.5 overflow-x-auto overflow-y-hidden rounded-full border border-transparent bg-transparent p-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        "inline-flex h-7 max-w-full min-w-0 shrink-0 items-center gap-0.5 overflow-x-auto overflow-y-hidden rounded-full border border-transparent bg-transparent p-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
       )}
       aria-label={`${label} 지표 숨김/보임`}
       data-admin-dashboard-series-toggle="true"
+      data-allow-horizontal-scroll="true"
     >
       {options.map((option) => {
         const isVisible = visibility[option.key];
@@ -2826,14 +2917,7 @@ function AdminDashboardKpiValueSkeleton() {
 function AdminDashboardPanelBodySkeleton({
   variant = "chart",
 }: {
-  variant?:
-    | "chart"
-    | "table"
-    | "ops"
-    | "bubble"
-    | "line"
-    | "stacked"
-    | "diagnosis";
+  variant?: AdminDashboardSkeletonVariant;
 }) {
   if (variant === "table") {
     return (
@@ -3048,24 +3132,27 @@ function AdminDashboardManagementSkeleton() {
 
   return (
     <section
-      className="flex h-full min-h-0 flex-col overflow-y-auto bg-background p-0 font-sans text-foreground lg:overflow-hidden"
+      className="flex h-full min-h-0 min-w-0 flex-col overflow-visible bg-background p-0 font-sans text-foreground lg:overflow-hidden"
       aria-label="관리자 대시보드 (KPI) 로딩 중"
       data-admin-dashboard-management-skeleton="true"
       role="status"
       aria-busy="true"
     >
       <div className="mb-2 flex shrink-0 flex-col gap-2 md:flex-row md:items-start md:justify-between">
-        <div className="min-w-0">
-          <h1 className="text-[1.55rem] font-extrabold leading-tight tracking-[0.01em] text-foreground text-balance md:text-xl">
+        <div className="hidden min-w-0 md:block">
+          <h1 className="text-xl font-extrabold leading-tight tracking-[0.01em] text-foreground text-balance">
             Tzuyang KPI Dashboard
           </h1>
         </div>
-        <div className="flex w-full shrink-0 flex-wrap items-center justify-end gap-1.5 md:w-auto md:items-start md:gap-1">
+        <div
+          className="flex w-full min-w-0 shrink-0 flex-nowrap items-center justify-start gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] md:w-auto md:flex-wrap md:items-start md:justify-end md:overflow-visible md:pb-0 md:gap-1 [&::-webkit-scrollbar]:hidden"
+          data-allow-horizontal-scroll="true"
+        >
           <Button
             type="button"
             variant="outline"
             size="sm"
-            className="h-7 rounded-full px-2 text-[11px]"
+            className="h-7 shrink-0 rounded-full px-2 text-[11px]"
             disabled
           >
             카드 순서
@@ -3080,7 +3167,7 @@ function AdminDashboardManagementSkeleton() {
                 type="button"
                 variant={option.value === "1M" ? "default" : "outline"}
                 size="sm"
-                className="h-7 rounded-full px-2 text-[11px]"
+                className="h-7 shrink-0 rounded-full px-2 text-[11px]"
                 aria-pressed={option.value === "1M"}
                 disabled
               >
@@ -3091,7 +3178,7 @@ function AdminDashboardManagementSkeleton() {
         </div>
       </div>
 
-      <div className="grid min-h-0 flex-1 auto-rows-min grid-cols-1 gap-2 overflow-visible sm:grid-cols-2 lg:grid-cols-10 lg:grid-rows-[132px_minmax(0,1fr)_minmax(0,0.86fr)]">
+      <div className="grid min-h-0 min-w-0 flex-1 auto-rows-min grid-cols-1 gap-2 overflow-x-hidden overflow-y-visible sm:grid-cols-2 lg:grid-cols-10 lg:grid-rows-[132px_minmax(0,1fr)_minmax(0,0.86fr)]">
         <AdminDashboardKpiCard
           widgetId="subscribers"
           title="현재 구독자"
@@ -3156,7 +3243,7 @@ function AdminDashboardManagementSkeleton() {
         <div
           className={cn(
             adminDashboardCardClass,
-            "flex min-h-[280px] flex-col overflow-visible p-3 sm:col-span-2 lg:col-span-3",
+            "flex min-h-[280px] flex-col overflow-hidden p-3 sm:col-span-2 lg:col-span-3",
           )}
           data-admin-dashboard-skeleton-card="impact"
         >
@@ -3181,7 +3268,7 @@ function AdminDashboardManagementSkeleton() {
         <div
           className={cn(
             adminDashboardCardClass,
-            "flex min-h-[280px] flex-col overflow-visible p-3 sm:col-span-2 lg:col-span-4",
+            "flex min-h-[280px] flex-col overflow-hidden p-3 sm:col-span-2 lg:col-span-4",
           )}
           data-admin-dashboard-skeleton-card="trend"
         >
@@ -3237,7 +3324,7 @@ function AdminDashboardManagementSkeleton() {
         <div
           className={cn(
             adminDashboardCardClass,
-            "flex min-h-[220px] flex-col overflow-visible p-3 sm:col-span-2 lg:col-span-5",
+            "flex min-h-[220px] flex-col overflow-hidden p-3 sm:col-span-2 lg:col-span-5",
           )}
           data-admin-dashboard-skeleton-card="topContent"
         >
@@ -3271,7 +3358,7 @@ function AdminDashboardManagementSkeleton() {
         <div
           className={cn(
             adminDashboardCardClass,
-            "flex min-h-[220px] flex-col overflow-visible p-2 sm:col-span-2 lg:col-span-5",
+            "flex min-h-[220px] flex-col overflow-hidden p-2 sm:col-span-2 lg:col-span-5",
           )}
           data-admin-dashboard-skeleton-card="engagementRate"
         >
@@ -3309,10 +3396,13 @@ function AdminDashboardCardTitle({
   action?: ReactNode;
 }) {
   return (
-    <div className="mb-2 grid shrink-0 gap-2">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 flex-1 items-center gap-1.5">
-          <p className="truncate text-xs font-extrabold leading-none text-foreground">
+    <div className="mb-2 grid min-w-0 shrink-0 gap-2">
+      <div
+        className="flex min-w-0 items-center justify-between gap-2 overflow-hidden"
+        data-admin-dashboard-card-title-row="single-line"
+      >
+        <div className="flex min-w-0 max-w-full flex-1 items-center gap-1.5">
+          <p className="truncate whitespace-nowrap text-xs font-extrabold leading-none text-foreground">
             {title}
             {metric ? (
               <span
@@ -3329,7 +3419,11 @@ function AdminDashboardCardTitle({
           />
         </div>
         {action ? (
-          <div className="ml-auto flex min-w-fit shrink-0 items-center">
+          <div
+            className="ml-auto flex max-w-[52%] min-w-0 shrink-0 items-center overflow-x-auto [scrollbar-width:none] sm:max-w-none sm:min-w-fit [&::-webkit-scrollbar]:hidden"
+            data-allow-horizontal-scroll="true"
+            data-admin-dashboard-card-title-actions="single-line-scroll"
+          >
             {action}
           </div>
         ) : null}
@@ -3410,7 +3504,7 @@ function AdminDashboardKpiCard({
     <div
       className={cn(
         adminDashboardCardClass,
-        "grid min-h-[132px] grid-rows-[auto_minmax(0,1fr)_auto] gap-3 overflow-visible p-3.5",
+        "grid min-h-[132px] grid-rows-[auto_minmax(0,1fr)_auto] gap-3 overflow-hidden p-3 sm:p-3.5",
         className,
         isFullscreen && adminDashboardFullscreenCardClassName,
       )}
@@ -3421,9 +3515,12 @@ function AdminDashboardKpiCard({
       {...reorderProps}
     >
       <div className="grid gap-1.5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-1.5">
-            <p className="truncate text-xs font-extrabold tracking-[0.04em] text-muted-foreground">
+        <div
+          className="flex min-w-0 items-center justify-between gap-2 overflow-hidden"
+          data-admin-dashboard-kpi-title-row="single-line"
+        >
+          <div className="flex min-w-0 flex-1 items-center gap-1.5">
+            <p className="truncate whitespace-nowrap text-xs font-extrabold tracking-[0.04em] text-muted-foreground">
               {title}
             </p>
             {infoLines.length > 0 ? (
@@ -3433,7 +3530,11 @@ function AdminDashboardKpiCard({
               />
             ) : null}
           </div>
-          <div className="flex shrink-0 items-center justify-end gap-1">
+          <div
+            className="flex max-w-[56%] min-w-0 shrink-0 items-center justify-end gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            data-allow-horizontal-scroll="true"
+            data-admin-dashboard-kpi-title-actions="single-line-scroll"
+          >
             {isLoading ? (
               <Skeleton
                 className="h-5 w-20 shrink-0 rounded-full motion-reduce:animate-none"
@@ -4699,7 +4800,7 @@ function AdminDashboardPdfReportButton({ onExport }: { onExport: () => void }) {
       type="button"
       variant="outline"
       size="sm"
-      className="h-7 gap-1 rounded-full px-2 text-[11px] font-bold text-muted-foreground hover:text-foreground"
+      className="h-7 shrink-0 gap-1 rounded-full px-2 text-[11px] font-bold text-muted-foreground hover:text-foreground"
       aria-label="KPI 대시보드를 PDF 보고서로 내보내기"
       data-admin-dashboard-kpi-pdf-export-trigger="true"
       onClick={onExport}
@@ -4729,7 +4830,7 @@ function AdminDashboardPeriodSelector({
           type="button"
           variant="outline"
           size="sm"
-          className="h-7 gap-1 rounded-full px-2 text-[11px] font-bold text-muted-foreground hover:text-foreground"
+          className="h-7 shrink-0 gap-1 rounded-full px-2 text-[11px] font-bold text-muted-foreground hover:text-foreground"
           aria-label={`대시보드 타임프레임 설정: ${selectedOption.label}`}
           data-admin-dashboard-period-select-trigger="true"
         >
@@ -4823,7 +4924,7 @@ function AdminDashboardCollectionLogPopover({
           variant="outline"
           size="sm"
           className={cn(
-            "h-7 w-7 rounded-full p-0 text-muted-foreground hover:text-foreground",
+            "h-7 w-7 shrink-0 rounded-full p-0 text-muted-foreground hover:text-foreground",
             isError && "border-destructive/30 text-destructive",
           )}
           aria-label="GitHub Actions KPI 데이터 수집 로그 열기"
@@ -5051,9 +5152,20 @@ function AdminDashboardManagementPanel({
   const [dashboardOrderMessage, setDashboardOrderMessage] = useState(
     "카드 순서는 관리자 계정별로 저장됩니다.",
   );
+  const [isDashboardMobileViewport, setIsDashboardMobileViewport] = useState(
+    () => getIsAdminDashboardMobileViewport(),
+  );
   const orderedDashboardWidgetIds = useMemo(
     () => normalizeAdminDashboardWidgetOrder(dashboardWidgetOrder),
     [dashboardWidgetOrder],
+  );
+  const isDashboardWidgetOrderDefault = useMemo(
+    () =>
+      areAdminDashboardWidgetOrdersEqual(
+        orderedDashboardWidgetIds,
+        DEFAULT_ADMIN_DASHBOARD_WIDGET_ORDER,
+      ),
+    [orderedDashboardWidgetIds],
   );
   const latestDashboardWidgetOrderRef = useRef<AdminDashboardWidgetId[]>(
     DEFAULT_ADMIN_DASHBOARD_WIDGET_ORDER,
@@ -5070,6 +5182,8 @@ function AdminDashboardManagementPanel({
     queryFn: () => fetchAdminDashboardInsightSummary(period, "cohort"),
     staleTime: 60 * 1000,
     refetchInterval: 60 * 1000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
   });
   const growthInsightQuery = useQuery({
     queryKey: [
@@ -5081,12 +5195,16 @@ function AdminDashboardManagementPanel({
     queryFn: () => fetchAdminDashboardInsightSummary(period, "channel-growth"),
     staleTime: 60 * 1000,
     refetchInterval: 60 * 1000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
   });
   const youtubeChannelQuery = useQuery({
     queryKey: ["admin-dashboard-management", "youtube-channel", period],
     queryFn: () => fetchAdminYouTubeChannelStats(period),
     staleTime: 60 * 1000,
     refetchInterval: 60 * 1000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
     retry: 1,
   });
 
@@ -5099,6 +5217,20 @@ function AdminDashboardManagementPanel({
     refetchIntervalInBackground: false,
     retry: 1,
   });
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 767px)");
+    const updateIsMobileViewport = () => {
+      setIsDashboardMobileViewport(mediaQuery.matches);
+    };
+
+    updateIsMobileViewport();
+    mediaQuery.addEventListener("change", updateIsMobileViewport);
+
+    return () => {
+      mediaQuery.removeEventListener("change", updateIsMobileViewport);
+    };
+  }, []);
 
   useEffect(() => {
     if (
@@ -5221,6 +5353,42 @@ function AdminDashboardManagementPanel({
     },
     [],
   );
+  const resetDashboardWidgetOrder = useCallback(async () => {
+    const defaultOrder = normalizeAdminDashboardWidgetOrder(null);
+    latestDashboardWidgetOrderRef.current = defaultOrder;
+    setDashboardWidgetOrder(defaultOrder);
+    setDraggedDashboardWidgetId(null);
+    draggedDashboardWidgetIdRef.current = null;
+    dragStartDashboardWidgetOrderRef.current = null;
+    setIsDashboardOrderSaving(true);
+    setDashboardOrderMessage("카드 순서를 처음 상태로 초기화하는 중입니다.");
+
+    try {
+      const response = await fetch(
+        "/api/admin/preferences/dashboard-widget-order",
+        {
+          method: "DELETE",
+          headers: { Accept: "application/json" },
+        },
+      );
+
+      if (!response.ok) throw new Error("dashboard-widget-order-reset-failed");
+
+      const payload = (await response.json()) as { order?: unknown };
+      const resetOrder = normalizeAdminDashboardWidgetOrder(payload.order);
+      latestDashboardWidgetOrderRef.current = resetOrder;
+      setDashboardWidgetOrder(resetOrder);
+      setDashboardOrderMessage(
+        "처음 카드 순서로 초기화했습니다. 새로고침해도 처음 상태가 유지됩니다.",
+      );
+    } catch {
+      setDashboardOrderMessage(
+        "초기화하지 못했습니다. 화면에는 임시 처음 상태가 반영되어 있습니다.",
+      );
+    } finally {
+      setIsDashboardOrderSaving(false);
+    }
+  }, []);
   const [draggedDashboardWidgetId, setDraggedDashboardWidgetId] =
     useState<AdminDashboardWidgetId | null>(null);
   const getDashboardWidgetOrder = useCallback(
@@ -5914,14 +6082,43 @@ function AdminDashboardManagementPanel({
       })),
     [barRows],
   );
+  const dashboardProgressiveInitialRows = isDashboardMobileViewport
+    ? ADMIN_DASHBOARD_MOBILE_PROGRESSIVE_INITIAL_ROWS
+    : ADMIN_DASHBOARD_PROGRESSIVE_INITIAL_ROWS;
+  const dashboardProgressiveBatchRows = isDashboardMobileViewport
+    ? ADMIN_DASHBOARD_MOBILE_PROGRESSIVE_BATCH_ROWS
+    : ADMIN_DASHBOARD_PROGRESSIVE_BATCH_ROWS;
+  const dashboardProgressiveDelayMs = isDashboardMobileViewport
+    ? ADMIN_DASHBOARD_MOBILE_PROGRESSIVE_DELAY_MS
+    : ADMIN_DASHBOARD_PROGRESSIVE_DELAY_MS;
+  const shouldDeferDashboardHeavyBodies =
+    isDashboardMobileViewport &&
+    !isDashboardOrderEditorOpen &&
+    fullscreenWidgetId == null;
   const progressiveImpactTableRows = useAdminDashboardProgressiveItems(
     impactTableRows,
+    dashboardProgressiveInitialRows,
+    dashboardProgressiveBatchRows,
+    dashboardProgressiveDelayMs,
   );
-  const progressiveTrendPoints = useAdminDashboardProgressiveItems(trendPoints);
-  const progressiveTrendTableRows =
-    useAdminDashboardProgressiveItems(trendTableRows);
-  const progressiveTopContentTableRows =
-    useAdminDashboardProgressiveItems(topContentTableRows);
+  const progressiveTrendPoints = useAdminDashboardProgressiveItems(
+    trendPoints,
+    dashboardProgressiveInitialRows,
+    dashboardProgressiveBatchRows,
+    dashboardProgressiveDelayMs,
+  );
+  const progressiveTrendTableRows = useAdminDashboardProgressiveItems(
+    trendTableRows,
+    dashboardProgressiveInitialRows,
+    dashboardProgressiveBatchRows,
+    dashboardProgressiveDelayMs,
+  );
+  const progressiveTopContentTableRows = useAdminDashboardProgressiveItems(
+    topContentTableRows,
+    dashboardProgressiveInitialRows,
+    dashboardProgressiveBatchRows,
+    dashboardProgressiveDelayMs,
+  );
   const trendTableColumns = useMemo(() => {
     const columns: Array<
       AdminDashboardTableColumn<(typeof trendTableRows)[number]>
@@ -6212,24 +6409,27 @@ function AdminDashboardManagementPanel({
   }, [pdfReportData]);
   return (
     <section
-      className="flex h-full min-h-0 flex-col overflow-y-auto bg-background p-0 font-sans text-foreground lg:overflow-hidden"
+      className="flex h-full min-h-0 min-w-0 flex-col overflow-visible bg-background p-0 font-sans text-foreground lg:overflow-hidden"
       aria-label="관리자 대시보드 (KPI)"
       data-admin-dashboard-management="true"
       data-admin-dashboard-realtime-charts="true"
       data-admin-dashboard-channel-kpi="true"
     >
       <div className="mb-2 flex shrink-0 flex-col gap-2 md:flex-row md:items-start md:justify-between">
-        <div className="min-w-0">
-          <h1 className="text-[1.55rem] font-extrabold leading-tight tracking-[0.01em] text-foreground text-balance md:text-xl">
+        <div className="hidden min-w-0 md:block">
+          <h1 className="text-xl font-extrabold leading-tight tracking-[0.01em] text-foreground text-balance">
             Tzuyang KPI Dashboard
           </h1>
         </div>
-        <div className="flex w-full shrink-0 flex-wrap items-center justify-end gap-1.5 md:w-auto md:items-start md:gap-1">
+        <div
+          className="flex w-full min-w-0 shrink-0 flex-nowrap items-center justify-start gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] md:w-auto md:flex-wrap md:items-start md:justify-end md:overflow-visible md:pb-0 md:gap-1 [&::-webkit-scrollbar]:hidden"
+          data-allow-horizontal-scroll="true"
+        >
           <Button
             type="button"
             variant={isDashboardOrderEditorOpen ? "default" : "outline"}
             size="sm"
-            className="h-7 rounded-full px-2 text-[11px]"
+            className="h-7 shrink-0 rounded-full px-2 text-[11px]"
             aria-label="KPI 카드 직접 드래그 순서 설정"
             aria-pressed={isDashboardOrderEditorOpen}
             disabled={isDashboardOrderLoading}
@@ -6247,24 +6447,22 @@ function AdminDashboardManagementPanel({
             카드 순서
           </Button>
           <AdminDashboardPdfReportButton onExport={handleExportPdfReport} />
-          {isDashboardOrderEditorOpen ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-7 rounded-full px-2 text-[11px]"
-              disabled={isDashboardOrderLoading || isDashboardOrderSaving}
-              data-admin-dashboard-widget-order-reset="true"
-              onClick={() =>
-                void persistDashboardWidgetOrder(
-                  DEFAULT_ADMIN_DASHBOARD_WIDGET_ORDER,
-                  "처음 카드 순서로 되돌렸습니다.",
-                )
-              }
-            >
-              초기화
-            </Button>
-          ) : null}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+            disabled={
+              isDashboardOrderLoading ||
+              isDashboardOrderSaving ||
+              isDashboardWidgetOrderDefault
+            }
+            data-admin-dashboard-widget-order-reset="true"
+            aria-label="KPI 카드 순서를 처음 상태로 초기화"
+            onClick={() => void resetDashboardWidgetOrder()}
+          >
+            초기화
+          </Button>
 
           <AdminDashboardPeriodSelector
             value={period}
@@ -6313,7 +6511,7 @@ function AdminDashboardManagementPanel({
       ) : null}
 
       <div
-        className="grid min-h-0 flex-1 auto-rows-min grid-cols-1 gap-2 overflow-visible sm:grid-cols-2 lg:grid-cols-10 lg:grid-rows-[132px_minmax(0,1fr)_minmax(0,0.86fr)]"
+        className="grid min-h-0 min-w-0 flex-1 auto-rows-min grid-cols-1 gap-2 overflow-x-hidden overflow-y-visible sm:grid-cols-2 lg:grid-cols-10 lg:grid-rows-[132px_minmax(0,1fr)_minmax(0,0.86fr)]"
         data-admin-dashboard-order-mode={
           isDashboardOrderEditorOpen ? "direct-drag" : "off"
         }
@@ -6458,7 +6656,7 @@ function AdminDashboardManagementPanel({
         <div
           className={cn(
             adminDashboardCardClass,
-            "flex min-h-[280px] flex-col overflow-visible p-3 sm:col-span-2 lg:col-span-3",
+            "flex min-h-[280px] flex-col overflow-hidden p-3 sm:col-span-2 lg:col-span-3",
             getDashboardReorderCardClassName("impact"),
             isDashboardWidgetFullscreen("impact") &&
               adminDashboardFullscreenCardClassName,
@@ -6499,73 +6697,84 @@ function AdminDashboardManagementPanel({
               </div>
             }
           />
-          {isChartLoading ? (
-            <AdminDashboardPanelBodySkeleton
-              variant={
-                getDashboardCardView("impact") === "table" ? "table" : "bubble"
-              }
-            />
-          ) : getDashboardCardView("impact") === "table" ? (
-            <AdminDashboardScrollTable
-              rows={progressiveImpactTableRows}
-              totalRows={impactTableRows.length}
-              emptyText="표시할 영상 영향도 데이터가 없습니다."
-              getRowKey={(row) => row.id}
-              columns={[
-                {
-                  key: "title",
-                  header: "영상 제목",
-                  className: "w-[34%] max-w-0",
-                  cell: (row) => (
-                    <span
-                      className="block truncate font-bold"
-                      title={row.title}
-                    >
-                      {row.title}
-                    </span>
-                  ),
-                },
-                {
-                  key: "views",
-                  className: "w-[18%]",
-                  header: hasPeriodGrowthComparison ? "조회 증가" : "조회수",
-                  align: "right",
-                  cell: (row) => (
-                    <span className="font-bold tabular-nums text-foreground">
-                      {formatNumber(row.views)}
-                    </span>
-                  ),
-                },
-                {
-                  key: "engagement",
-                  header: hasPeriodGrowthComparison ? "참여 증가" : "참여",
-                  align: "right",
-                  className: "w-[15%]",
-                  cell: (row) => formatNumber(row.engagement),
-                },
-                {
-                  key: "engagementRate",
-                  header: "참여율",
-                  align: "right",
-                  className: "w-[15%]",
-                  cell: (row) => formatDashboardPercent(row.engagementRate),
-                },
-              ]}
-            />
-          ) : (
-            <AdminDashboardBubbleChart
-              key={`impact-${period}`}
-              videos={videosByInsightScore}
-              metricMode={topContentMetricMode}
-              displayLimit={impactChartVideoLimit}
-            />
-          )}
+          <AdminDashboardDeferredBody
+            key={`impact-${period}-${getDashboardCardView("impact")}-${shouldDeferDashboardHeavyBodies}`}
+            enabled={shouldDeferDashboardHeavyBodies}
+            resetKey={`impact-${period}-${getDashboardCardView("impact")}`}
+            variant={
+              getDashboardCardView("impact") === "table" ? "table" : "bubble"
+            }
+          >
+            {isChartLoading ? (
+              <AdminDashboardPanelBodySkeleton
+                variant={
+                  getDashboardCardView("impact") === "table"
+                    ? "table"
+                    : "bubble"
+                }
+              />
+            ) : getDashboardCardView("impact") === "table" ? (
+              <AdminDashboardScrollTable
+                rows={progressiveImpactTableRows}
+                totalRows={impactTableRows.length}
+                emptyText="표시할 영상 영향도 데이터가 없습니다."
+                getRowKey={(row) => row.id}
+                columns={[
+                  {
+                    key: "title",
+                    header: "영상 제목",
+                    className: "w-[34%] max-w-0",
+                    cell: (row) => (
+                      <span
+                        className="block truncate font-bold"
+                        title={row.title}
+                      >
+                        {row.title}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "views",
+                    className: "w-[18%]",
+                    header: hasPeriodGrowthComparison ? "조회 증가" : "조회수",
+                    align: "right",
+                    cell: (row) => (
+                      <span className="font-bold tabular-nums text-foreground">
+                        {formatNumber(row.views)}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "engagement",
+                    header: hasPeriodGrowthComparison ? "참여 증가" : "참여",
+                    align: "right",
+                    className: "w-[15%]",
+                    cell: (row) => formatNumber(row.engagement),
+                  },
+                  {
+                    key: "engagementRate",
+                    header: "참여율",
+                    align: "right",
+                    className: "w-[15%]",
+                    cell: (row) => formatDashboardPercent(row.engagementRate),
+                  },
+                ]}
+              />
+            ) : (
+              <AdminDashboardBubbleChart
+                key={`impact-${period}`}
+                videos={videosByInsightScore}
+                metricMode={topContentMetricMode}
+                displayLimit={impactChartVideoLimit}
+              />
+            )}
+          </AdminDashboardDeferredBody>
         </div>
 
         <div
           className={cn(
             adminDashboardCardClass,
-            "flex min-h-[280px] flex-col overflow-visible p-3 sm:col-span-2 lg:col-span-4",
+            "flex min-h-[280px] flex-col overflow-hidden p-3 sm:col-span-2 lg:col-span-4",
             getDashboardReorderCardClassName("trend"),
             isDashboardWidgetFullscreen("trend") &&
               adminDashboardFullscreenCardClassName,
@@ -6624,28 +6833,37 @@ function AdminDashboardManagementPanel({
               </div>
             }
           />
-          {isChartLoading ? (
-            <AdminDashboardPanelBodySkeleton
-              variant={
-                getDashboardCardView("trend") === "table" ? "table" : "line"
-              }
-            />
-          ) : getDashboardCardView("trend") === "table" ? (
-            <AdminDashboardScrollTable
-              rows={progressiveTrendTableRows}
-              totalRows={trendTableRows.length}
-              emptyText="표시할 영상별 성과 분포 데이터가 없습니다."
-              getRowKey={(row, index) => `${row.label}-${index}`}
-              columns={trendTableColumns}
-            />
-          ) : (
-            <AdminDashboardMultiLineChart
-              key={`trend-${period}`}
-              points={progressiveTrendPoints}
-              totalPointCount={trendPoints.length}
-              seriesVisibility={trendSeriesVisibility}
-            />
-          )}
+          <AdminDashboardDeferredBody
+            key={`trend-${period}-${getDashboardCardView("trend")}-${shouldDeferDashboardHeavyBodies}`}
+            enabled={shouldDeferDashboardHeavyBodies}
+            resetKey={`trend-${period}-${getDashboardCardView("trend")}`}
+            variant={
+              getDashboardCardView("trend") === "table" ? "table" : "line"
+            }
+          >
+            {isChartLoading ? (
+              <AdminDashboardPanelBodySkeleton
+                variant={
+                  getDashboardCardView("trend") === "table" ? "table" : "line"
+                }
+              />
+            ) : getDashboardCardView("trend") === "table" ? (
+              <AdminDashboardScrollTable
+                rows={progressiveTrendTableRows}
+                totalRows={trendTableRows.length}
+                emptyText="표시할 영상별 성과 분포 데이터가 없습니다."
+                getRowKey={(row, index) => `${row.label}-${index}`}
+                columns={trendTableColumns}
+              />
+            ) : (
+              <AdminDashboardMultiLineChart
+                key={`trend-${period}`}
+                points={progressiveTrendPoints}
+                totalPointCount={trendPoints.length}
+                seriesVisibility={trendSeriesVisibility}
+              />
+            )}
+          </AdminDashboardDeferredBody>
         </div>
 
         <AdminDashboardOpsSummaryCard
@@ -6685,7 +6903,7 @@ function AdminDashboardManagementPanel({
         <div
           className={cn(
             adminDashboardCardClass,
-            "flex min-h-[220px] flex-col overflow-visible p-3 sm:col-span-2 lg:col-span-5",
+            "flex min-h-[220px] flex-col overflow-hidden p-3 sm:col-span-2 lg:col-span-5",
             getDashboardReorderCardClassName("topContent"),
           )}
           style={getDashboardCardOrderStyle("topContent")}
@@ -6748,34 +6966,45 @@ function AdminDashboardManagementPanel({
               </div>
             }
           />
-          {isChartLoading ? (
-            <AdminDashboardPanelBodySkeleton
-              variant={
-                getDashboardCardView("topContent") === "table"
-                  ? "table"
-                  : "stacked"
-              }
-            />
-          ) : getDashboardCardView("topContent") === "table" ? (
-            <AdminDashboardScrollTable
-              rows={progressiveTopContentTableRows}
-              totalRows={topContentTableRows.length}
-              emptyText="표시할 콘텐츠 성과 데이터가 없습니다."
-              getRowKey={(row, index) => `${row.title}-${index}`}
-              columns={topContentTableColumns}
-            />
-          ) : (
-            <AdminDashboardGroupedBarChart
-              rows={barRows}
-              seriesVisibility={topContentSeriesVisibility}
-            />
-          )}
+          <AdminDashboardDeferredBody
+            key={`topContent-${period}-${getDashboardCardView("topContent")}-${shouldDeferDashboardHeavyBodies}`}
+            enabled={shouldDeferDashboardHeavyBodies}
+            resetKey={`topContent-${period}-${getDashboardCardView("topContent")}`}
+            variant={
+              getDashboardCardView("topContent") === "table"
+                ? "table"
+                : "stacked"
+            }
+          >
+            {isChartLoading ? (
+              <AdminDashboardPanelBodySkeleton
+                variant={
+                  getDashboardCardView("topContent") === "table"
+                    ? "table"
+                    : "stacked"
+                }
+              />
+            ) : getDashboardCardView("topContent") === "table" ? (
+              <AdminDashboardScrollTable
+                rows={progressiveTopContentTableRows}
+                totalRows={topContentTableRows.length}
+                emptyText="표시할 콘텐츠 성과 데이터가 없습니다."
+                getRowKey={(row, index) => `${row.title}-${index}`}
+                columns={topContentTableColumns}
+              />
+            ) : (
+              <AdminDashboardGroupedBarChart
+                rows={barRows}
+                seriesVisibility={topContentSeriesVisibility}
+              />
+            )}
+          </AdminDashboardDeferredBody>
         </div>
 
         <div
           className={cn(
             adminDashboardCardClass,
-            "flex min-h-[220px] flex-col overflow-visible p-2 sm:col-span-2 lg:col-span-5",
+            "flex min-h-[220px] flex-col overflow-hidden p-2 sm:col-span-2 lg:col-span-5",
             getDashboardReorderCardClassName("engagementRate"),
           )}
           style={getDashboardCardOrderStyle("engagementRate")}
@@ -6808,62 +7037,73 @@ function AdminDashboardManagementPanel({
               </div>
             }
           />
-          {isChartLoading ? (
-            <AdminDashboardPanelBodySkeleton
-              variant={
-                getDashboardCardView("engagementRate") === "table"
-                  ? "table"
-                  : "diagnosis"
-              }
-            />
-          ) : getDashboardCardView("engagementRate") === "table" ? (
-            <AdminDashboardScrollTable
-              rows={diagnosisTableRows}
-              emptyText="표시할 성과 진단 데이터가 없습니다."
-              getRowKey={(row) => row.id}
-              columns={[
-                {
-                  key: "signal",
-                  header: "신호",
-                  className: "w-[22%]",
-                  cell: (row) => (
-                    <span className="block truncate font-bold text-muted-foreground">
-                      {row.signal}
-                    </span>
-                  ),
-                },
-                {
-                  key: "title",
-                  header: "영상",
-                  className: "w-[38%] max-w-0",
-                  cell: (row) => (
-                    <span
-                      className="block truncate font-bold"
-                      title={row.title}
-                    >
-                      {row.title}
-                    </span>
-                  ),
-                },
-                {
-                  key: "description",
-                  header: "판단 근거",
-                  className: "w-[40%] max-w-0",
-                  cell: (row) => (
-                    <span className="block truncate" title={row.description}>
-                      {row.description}
-                    </span>
-                  ),
-                },
-              ]}
-            />
-          ) : (
-            <AdminDashboardDiagnosisBoard
-              insights={topContentInsights}
-              metricMode={topContentMetricMode}
-              periodLabel={selectedPeriodLabel}
-            />
-          )}
+          <AdminDashboardDeferredBody
+            key={`engagementRate-${period}-${getDashboardCardView("engagementRate")}-${shouldDeferDashboardHeavyBodies}`}
+            enabled={shouldDeferDashboardHeavyBodies}
+            resetKey={`engagementRate-${period}-${getDashboardCardView("engagementRate")}`}
+            variant={
+              getDashboardCardView("engagementRate") === "table"
+                ? "table"
+                : "diagnosis"
+            }
+          >
+            {isChartLoading ? (
+              <AdminDashboardPanelBodySkeleton
+                variant={
+                  getDashboardCardView("engagementRate") === "table"
+                    ? "table"
+                    : "diagnosis"
+                }
+              />
+            ) : getDashboardCardView("engagementRate") === "table" ? (
+              <AdminDashboardScrollTable
+                rows={diagnosisTableRows}
+                emptyText="표시할 성과 진단 데이터가 없습니다."
+                getRowKey={(row) => row.id}
+                columns={[
+                  {
+                    key: "signal",
+                    header: "신호",
+                    className: "w-[22%]",
+                    cell: (row) => (
+                      <span className="block truncate font-bold text-muted-foreground">
+                        {row.signal}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "title",
+                    header: "영상",
+                    className: "w-[38%] max-w-0",
+                    cell: (row) => (
+                      <span
+                        className="block truncate font-bold"
+                        title={row.title}
+                      >
+                        {row.title}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "description",
+                    header: "판단 근거",
+                    className: "w-[40%] max-w-0",
+                    cell: (row) => (
+                      <span className="block truncate" title={row.description}>
+                        {row.description}
+                      </span>
+                    ),
+                  },
+                ]}
+              />
+            ) : (
+              <AdminDashboardDiagnosisBoard
+                insights={topContentInsights}
+                metricMode={topContentMetricMode}
+                periodLabel={selectedPeriodLabel}
+              />
+            )}
+          </AdminDashboardDeferredBody>
         </div>
       </div>
     </section>
@@ -6875,6 +7115,7 @@ function AdminSidebar({
   onSelectModule,
   isCollapsed,
   showLabels,
+  showMobileHeader,
   onToggleCollapsed,
   canLoadPreferences,
   stats,
@@ -6883,6 +7124,7 @@ function AdminSidebar({
   onSelectModule: (moduleId: AdminModuleId) => void;
   isCollapsed: boolean;
   showLabels: boolean;
+  showMobileHeader: boolean;
   onToggleCollapsed: () => void;
   canLoadPreferences: boolean;
   stats: AdminOverviewStats;
@@ -6891,7 +7133,6 @@ function AdminSidebar({
     DEFAULT_ADMIN_SIDEBAR_ORDER,
   );
   const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
-  const [isDesktopAdminMenuOpen, setIsDesktopAdminMenuOpen] = useState(false);
   const [isOrderLoading, setIsOrderLoading] = useState(false);
   const [isOrderSaving, setIsOrderSaving] = useState(false);
   const [sidebarOrderMessage, setSidebarOrderMessage] = useState(
@@ -7055,8 +7296,13 @@ function AdminSidebar({
   const handleMenuNavigation = (moduleId: AdminModuleId) => {
     onSelectModule(moduleId);
     setIsAdminMenuOpen(false);
-    setIsDesktopAdminMenuOpen(false);
   };
+
+  useEffect(() => {
+    if (!showMobileHeader) {
+      setIsAdminMenuOpen(false);
+    }
+  }, [showMobileHeader]);
 
   const renderMenuItem = (
     item: SidebarSection["items"][number],
@@ -7446,8 +7692,15 @@ function AdminSidebar({
     <>
       <Popover open={isAdminMenuOpen} onOpenChange={setIsAdminMenuOpen}>
         <div
-          className="flex min-h-14 shrink-0 items-center gap-2 border-b border-border bg-card/95 px-3 py-2 shadow-sm md:hidden"
+          className={cn(
+            "flex h-14 shrink-0 translate-y-0 transform-gpu items-center gap-2 overflow-hidden border-b border-border bg-card/95 px-3 py-2 opacity-100 shadow-sm transition-[opacity,transform,border-color] duration-300 ease-out will-change-transform motion-reduce:transition-none md:hidden",
+            !showMobileHeader &&
+              "pointer-events-none -translate-y-full border-transparent opacity-0",
+          )}
           data-admin-console-mobile-header="true"
+          data-admin-console-mobile-header-visible={
+            showMobileHeader ? "true" : "false"
+          }
         >
           <Link
             href="/"
@@ -7536,47 +7789,28 @@ function AdminSidebar({
               현재 화면 · {activeSidebarLabel}
             </p>
           </div>
-          <div className={cn("ml-auto flex shrink-0 items-center gap-1", isCollapsed && "md:m-0")}>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="inline-flex h-8 w-8 rounded-xl border border-transparent text-muted-foreground hover:border-primary/15 hover:bg-background/80 hover:text-foreground focus-visible:ring-primary focus-visible:ring-offset-background"
-              aria-pressed={isCollapsed}
-              aria-expanded={!isCollapsed}
-              aria-controls="admin-console-menu"
-              aria-label={
-                isCollapsed ? "관리자 사이드바 펼치기" : "관리자 사이드바 접기"
-              }
-              onClick={onToggleCollapsed}
-            >
-              {isCollapsed ? (
-                <PanelLeftOpen className="h-4 w-4" aria-hidden="true" />
-              ) : (
-                <PanelLeftClose className="h-4 w-4" aria-hidden="true" />
-              )}
-            </Button>
-            <Popover
-              open={isDesktopAdminMenuOpen}
-              onOpenChange={setIsDesktopAdminMenuOpen}
-            >
-              <PopoverTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="inline-flex h-8 w-8 rounded-xl border border-transparent text-muted-foreground hover:border-primary/15 hover:bg-background/80 hover:text-foreground focus-visible:ring-primary focus-visible:ring-offset-background"
-                  aria-label="관리자 메뉴 열기"
-                  aria-expanded={isDesktopAdminMenuOpen}
-                  aria-controls="admin-console-menu-dropdown-desktop"
-                  data-admin-console-menu-trigger="desktop-hamburger"
-                >
-                  <Menu className="h-4 w-4" aria-hidden="true" />
-                </Button>
-              </PopoverTrigger>
-              {renderAdminMenuContent("admin-console-menu-dropdown-desktop")}
-            </Popover>
-          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className={cn(
+              "ml-auto inline-flex h-8 w-8 shrink-0 rounded-xl border border-transparent text-muted-foreground hover:border-primary/15 hover:bg-background/80 hover:text-foreground focus-visible:ring-primary focus-visible:ring-offset-background",
+              isCollapsed && "md:m-0",
+            )}
+            aria-pressed={isCollapsed}
+            aria-expanded={!isCollapsed}
+            aria-controls="admin-console-menu"
+            aria-label={
+              isCollapsed ? "관리자 사이드바 펼치기" : "관리자 사이드바 접기"
+            }
+            onClick={onToggleCollapsed}
+          >
+            {isCollapsed ? (
+              <PanelLeftOpen className="h-4 w-4" aria-hidden="true" />
+            ) : (
+              <PanelLeftClose className="h-4 w-4" aria-hidden="true" />
+            )}
+          </Button>
         </div>
 
         <nav
@@ -7896,7 +8130,11 @@ export function AdminConsoleOverview() {
     useState<AdminModuleId>(requestedModuleId);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [showSidebarLabels, setShowSidebarLabels] = useState(true);
+  const [isMobileHeaderVisible, setIsMobileHeaderVisible] = useState(true);
+  const [isAdminMobileViewport, setIsAdminMobileViewport] = useState(false);
   const canvasRef = useRef<HTMLElement | null>(null);
+  const previousMobileHeaderScrollTopRef = useRef(0);
+  const previousRequestedModuleIdRef = useRef(requestedModuleId);
   const activeModule = consoleModules.find(
     (module) => module.id === activeModuleId,
   );
@@ -7905,9 +8143,24 @@ export function AdminConsoleOverview() {
     setHasHydrated(true);
   }, []);
 
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 767px)");
+    const updateIsMobileViewport = () => {
+      setIsAdminMobileViewport(mediaQuery.matches);
+    };
+
+    updateIsMobileViewport();
+    mediaQuery.addEventListener("change", updateIsMobileViewport);
+
+    return () => {
+      mediaQuery.removeEventListener("change", updateIsMobileViewport);
+    };
+  }, []);
+
   const selectModule = useCallback(
     (moduleId: AdminModuleId) => {
       setActiveModuleId(moduleId);
+      setIsMobileHeaderVisible(true);
 
       router.replace(buildCanonicalAdminModuleHref(moduleId), {
         scroll: false,
@@ -7931,6 +8184,11 @@ export function AdminConsoleOverview() {
     setActiveModuleId((current) =>
       current === nextModuleId ? current : nextModuleId,
     );
+
+    if (previousRequestedModuleIdRef.current !== nextModuleId) {
+      previousRequestedModuleIdRef.current = nextModuleId;
+      setIsMobileHeaderVisible(true);
+    }
 
     if (stateWarning || currentHref !== canonicalHref) {
       router.replace(canonicalHref, { scroll: false });
@@ -7974,6 +8232,74 @@ export function AdminConsoleOverview() {
     });
   };
 
+  const getAdminConsoleScrollTop = useCallback(() => {
+    if (typeof window === "undefined") return 0;
+
+    const canvasScrollTop = canvasRef.current?.scrollTop ?? 0;
+    const pageScrollTop = Math.max(
+      window.scrollY,
+      document.documentElement.scrollTop,
+      document.body.scrollTop,
+    );
+
+    return Math.max(canvasScrollTop, pageScrollTop);
+  }, []);
+
+  const updateMobileHeaderVisibility = useCallback(() => {
+    const currentScrollTop = getAdminConsoleScrollTop();
+
+    setIsMobileHeaderVisible((current) => {
+      const action = getMobileScrollNavVisibilityAction({
+        previousScrollTop: previousMobileHeaderScrollTopRef.current,
+        currentScrollTop,
+        isHidden: !current,
+        revealOnScrollUp: false,
+      });
+
+      previousMobileHeaderScrollTopRef.current = currentScrollTop;
+
+      if (action === "hide") return false;
+      if (action === "show") return true;
+
+      return current;
+    });
+  }, [getAdminConsoleScrollTop]);
+
+  const adminBottomNavAutoHide = useMobileBottomNavAutoHide({
+    scrollRef: canvasRef,
+    source: "admin-console",
+    disabled: !isAdminMobileViewport,
+    revealOnScrollUp: false,
+    getScrollTop: getAdminConsoleScrollTop,
+  });
+
+  const handleAdminCanvasScroll = useCallback(() => {
+    updateMobileHeaderVisibility();
+    adminBottomNavAutoHide.onScroll();
+  }, [adminBottomNavAutoHide, updateMobileHeaderVisibility]);
+
+  const handleAdminCanvasTouchMove = useCallback<TouchEventHandler<HTMLElement>>(
+    (event) => {
+      adminBottomNavAutoHide.onTouchMove(event);
+      window.requestAnimationFrame(updateMobileHeaderVisibility);
+    },
+    [adminBottomNavAutoHide, updateMobileHeaderVisibility],
+  );
+
+  useEffect(() => {
+    const canvasElement = canvasRef.current;
+    const handleScroll = () => handleAdminCanvasScroll();
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    canvasElement?.addEventListener("scroll", handleScroll, { passive: true });
+    window.requestAnimationFrame(handleScroll);
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      canvasElement?.removeEventListener("scroll", handleScroll);
+    };
+  }, [handleAdminCanvasScroll]);
+
   if (!shouldRenderAdminShell) {
     return null;
   }
@@ -8005,12 +8331,16 @@ export function AdminConsoleOverview() {
         data-admin-console-sidebar-collapsed={
           isSidebarCollapsed ? "true" : "false"
         }
+        data-admin-console-mobile-header-visible={
+          isMobileHeaderVisible ? "true" : "false"
+        }
       >
         <AdminSidebar
           activeModuleId={activeModuleId}
           onSelectModule={selectModule}
           isCollapsed={isSidebarCollapsed}
           showLabels={showSidebarLabels}
+          showMobileHeader={isMobileHeaderVisible}
           onToggleCollapsed={handleToggleSidebarCollapsed}
           canLoadPreferences={canLoadAdminConsoleData}
           stats={stats}
@@ -8022,12 +8352,15 @@ export function AdminConsoleOverview() {
           tabIndex={-1}
           aria-label="관리자 콘솔 작업 화면"
           className={cn(
-            "h-full min-h-0 min-w-0 overscroll-contain border-y border-border bg-background p-2 sm:p-3 md:border-y-0 md:p-4",
+            "h-full min-h-0 min-w-0 overflow-x-hidden overscroll-contain border-y border-border bg-background p-2 md:border-y-0 md:p-4",
             activeModuleId === "overview"
               ? "overflow-y-auto lg:overflow-hidden"
               : "overflow-y-auto",
           )}
           data-admin-console-content="true"
+          onScroll={handleAdminCanvasScroll}
+          onTouchStart={adminBottomNavAutoHide.onTouchStart}
+          onTouchMove={handleAdminCanvasTouchMove}
         >
           <p className="sr-only" aria-live="polite">
             {activeModuleLabel} 작업 화면으로 전환됨
