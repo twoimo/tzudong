@@ -1,4 +1,10 @@
 import { defineConfig, devices, type PlaywrightTestProject } from '@playwright/test';
+import { randomUUID } from 'node:crypto';
+import {
+    E2E_ADMIN_ROUTE_BYPASS_CONTEXT,
+    E2E_ADMIN_ROUTE_BYPASS_ENV_KEYS,
+    E2E_ADMIN_ROUTE_BYPASS_RUNTIME,
+} from './lib/e2e-admin-route-bypass';
 
 const RESPONSIVE_SPEC = /responsive-overflow\.spec\.ts/;
 const ADMIN_SETUP_SPEC = /tests[\\/]setup[\\/]admin\.setup\.ts/;
@@ -12,6 +18,8 @@ const PLAYWRIGHT_WEB_SERVER_TIMEOUT_MS = Number(
 );
 const PLAYWRIGHT_RESPONSIVE_BROWSER =
     process.env.PLAYWRIGHT_RESPONSIVE_BROWSER ?? 'chromium';
+const E2E_ADMIN_ROUTE_BYPASS_TOKEN =
+    process.env.E2E_ADMIN_ROUTE_BYPASS_TOKEN?.trim() || `playwright-${randomUUID()}`;
 
 type DeviceUse = {
     viewport: { width: number; height: number };
@@ -165,6 +173,7 @@ const responsiveProjects: PlaywrightTestProject[] = responsivePortraitDevices.fl
 });
 
 export default defineConfig({
+    metadata: { e2eAdminRouteBypassToken: E2E_ADMIN_ROUTE_BYPASS_TOKEN },
     testDir: './tests',
     fullyParallel: true,
     forbidOnly: !!process.env.CI,
@@ -206,6 +215,16 @@ export default defineConfig({
         command: PLAYWRIGHT_WEB_SERVER_COMMAND,
         url: PLAYWRIGHT_WEB_SERVER_URL,
         timeout: PLAYWRIGHT_WEB_SERVER_TIMEOUT_MS,
-        reuseExistingServer: !process.env.CI,
+        // KPI/admin runtime guards need a fresh server because stale local dev
+        // processes can carry old auth-bypass env and stale .next chunks. Reuse
+        // stays opt-in for deliberate local debugging only.
+        reuseExistingServer: process.env.PLAYWRIGHT_REUSE_EXISTING_SERVER === '1',
+        env: {
+            ...process.env,
+            [E2E_ADMIN_ROUTE_BYPASS_ENV_KEYS.enabled]: '1',
+            [E2E_ADMIN_ROUTE_BYPASS_ENV_KEYS.context]: E2E_ADMIN_ROUTE_BYPASS_CONTEXT,
+            [E2E_ADMIN_ROUTE_BYPASS_ENV_KEYS.runtime]: E2E_ADMIN_ROUTE_BYPASS_RUNTIME,
+            [E2E_ADMIN_ROUTE_BYPASS_ENV_KEYS.token]: E2E_ADMIN_ROUTE_BYPASS_TOKEN,
+        },
     },
 });
