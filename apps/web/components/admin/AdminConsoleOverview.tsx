@@ -365,6 +365,7 @@ type AdminDashboardSeriesVisibility<Key extends string> = Record<Key, boolean>;
 type AdminDashboardCardReorderProps = {
   draggable: boolean;
   onDragStart: DragEventHandler<HTMLDivElement>;
+  onDragEnter: DragEventHandler<HTMLDivElement>;
   onDragOver: DragEventHandler<HTMLDivElement>;
   onDrop: DragEventHandler<HTMLDivElement>;
   onDragEnd: DragEventHandler<HTMLDivElement>;
@@ -428,6 +429,77 @@ const DEFAULT_ADMIN_DASHBOARD_TOP_CONTENT_SERIES_VISIBILITY: AdminDashboardSerie
     likes: true,
     comments: true,
   };
+
+type AdminDashboardViewTransitionDocument = Document & {
+  startViewTransition?: (updateCallback: () => void) => unknown;
+};
+
+function updateAdminDashboardOrderWithViewTransition(updateCallback: () => void) {
+  if (typeof document === "undefined") {
+    updateCallback();
+    return;
+  }
+
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    updateCallback();
+    return;
+  }
+
+  const startViewTransition = (
+    document as AdminDashboardViewTransitionDocument
+  ).startViewTransition;
+
+  if (!startViewTransition) {
+    updateCallback();
+    return;
+  }
+
+  try {
+    startViewTransition.call(document, updateCallback);
+  } catch {
+    updateCallback();
+  }
+}
+
+function areAdminDashboardWidgetOrdersEqual(
+  left: AdminDashboardWidgetId[],
+  right: AdminDashboardWidgetId[],
+) {
+  return (
+    left.length === right.length &&
+    left.every((item, index) => item === right[index])
+  );
+}
+
+function moveAdminDashboardWidgetBeforeOrAfter(
+  order: AdminDashboardWidgetId[],
+  sourceWidgetId: AdminDashboardWidgetId,
+  targetWidgetId: AdminDashboardWidgetId,
+  placement: "before" | "after",
+) {
+  const normalizedOrder = normalizeAdminDashboardWidgetOrder(order);
+  if (sourceWidgetId === targetWidgetId) return normalizedOrder;
+
+  if (
+    getAdminDashboardWidgetLayoutGroup(sourceWidgetId) !==
+    getAdminDashboardWidgetLayoutGroup(targetWidgetId)
+  ) {
+    return normalizedOrder;
+  }
+
+  const nextOrder = normalizedOrder.filter(
+    (widgetId) => widgetId !== sourceWidgetId,
+  );
+  const targetIndex = nextOrder.indexOf(targetWidgetId);
+  if (targetIndex < 0) return normalizedOrder;
+
+  nextOrder.splice(
+    placement === "after" ? targetIndex + 1 : targetIndex,
+    0,
+    sourceWidgetId,
+  );
+  return nextOrder;
+}
 
 function moveAdminDashboardWidget(
   order: AdminDashboardWidgetId[],
@@ -827,6 +899,9 @@ type AdminDashboardBarRow = {
   viewRank: number;
   totalRows: number;
   viewContributionPercent: number | null;
+  likeContributionPercent: number | null;
+  commentContributionPercent: number | null;
+  performanceContributionPercent: number | null;
   viewTopPercentLabel: string;
   viewMedianMultipleLabel: string;
   viewBenchmarkLabel: string;
@@ -861,6 +936,14 @@ const ADMIN_DASHBOARD_PROGRESSIVE_DELAY_MS = 24;
 const ADMIN_DASHBOARD_SPARKLINE_POINT_LIMIT = 7;
 const ADMIN_DASHBOARD_CONTENT_INSIGHT_TARGET_COUNT = 4;
 const ADMIN_DASHBOARD_DAY_MS = 24 * 60 * 60 * 1000;
+const ADMIN_DASHBOARD_TOP_CONTENT_CONTRIBUTION_WEIGHTS = {
+  views: 0.6,
+  likes: 0.25,
+  comments: 0.15,
+} as const;
+const ADMIN_DASHBOARD_TOP_CONTENT_CONTRIBUTION_WEIGHT_LABEL =
+  "조회 60% · 좋아요 25% · 댓글 15%";
+
 
 const adminCompactNumberFormatter = new Intl.NumberFormat("ko-KR", {
   notation: "compact",
@@ -1320,6 +1403,14 @@ function buildAdminDashboardBarRows(
     (sum, row) => sum + row.viewCount,
     0,
   );
+  const totalLikeValue = metricRows.reduce(
+    (sum, row) => sum + row.likeCount,
+    0,
+  );
+  const totalCommentValue = metricRows.reduce(
+    (sum, row) => sum + row.commentCount,
+    0,
+  );
   const totalViewValue =
     typeof contributionTotalOverride === "number" &&
     Number.isFinite(contributionTotalOverride) &&
@@ -1327,33 +1418,62 @@ function buildAdminDashboardBarRows(
       ? contributionTotalOverride
       : calculatedTotalViewValue;
   const metricPrefix = metricMode === "delta" ? "증가" : "";
-  const viewBenchmarkLabel = metricMode === "delta" ? "조회 증가" : "조회";
+  const viewBenchmarkLabel = metricMode === "delta" ? "성과 증가" : "성과";
   const contributionLabel =
-    metricMode === "delta" ? "기간 조회 증가 기여" : "기간 조회 기여";
-  const contributionValueLabel =
-    metricMode === "delta" ? "조회 증가" : "조회수";
-  const contributionTotalLabel =
-    metricMode === "delta"
-      ? "선택 기간 업로드 영상 조회 증가 합계"
-      : "선택 기간 조회수 합계";
+    metricMode === "delta" ? "기간 성과 기여" : "성과 기여";
   const contributionTotalSourceLabel =
     metricMode === "delta"
-      ? "전체값은 선택 기간 업로드 영상의 조회 증가 합계입니다."
-      : "전체값은 선택 기간 영상 조회수 합계입니다.";
+      ? "전체값: 조회·좋아요·댓글 증가 합계를 각각 분모로 사용합니다."
+      : "전체값: 조회·좋아요·댓글 합계를 각각 분모로 사용합니다.";
   const hasPeriodUploadVideoCount =
     typeof periodUploadVideoCount === "number" &&
     Number.isFinite(periodUploadVideoCount) &&
     periodUploadVideoCount >= 0;
+  const scoredRows = metricRows
+    .map((row) => {
+      const viewContributionPercent = getDashboardMetricContributionPercent(
+        row.viewCount,
+        totalViewValue,
+      );
+      const likeContributionPercent = getDashboardMetricContributionPercent(
+        row.likeCount,
+        totalLikeValue,
+      );
+      const commentContributionPercent = getDashboardMetricContributionPercent(
+        row.commentCount,
+        totalCommentValue,
+      );
+      const performanceContributionPercent =
+        getDashboardWeightedPerformanceContribution({
+          viewContributionPercent,
+          likeContributionPercent,
+          commentContributionPercent,
+        });
 
-  return metricRows.map((row, index) => {
+      return {
+        ...row,
+        viewContributionPercent,
+        likeContributionPercent,
+        commentContributionPercent,
+        performanceContributionPercent,
+      };
+    })
+    .sort((a, b) => {
+      const contributionDelta =
+        (b.performanceContributionPercent ?? -Infinity) -
+        (a.performanceContributionPercent ?? -Infinity);
+      if (contributionDelta !== 0) return contributionDelta;
+
+      return b.viewCount - a.viewCount;
+    });
+
+  return scoredRows.map((row, index) => {
     const viewRank = index + 1;
-    const viewContributionPercent =
-      totalViewValue > 0 ? (row.viewCount / totalViewValue) * 100 : null;
     const viewMedianMultiple =
       viewMedian > 0 ? row.viewCount / viewMedian : null;
     const viewTopPercentLabel = getDashboardTopPercentLabel(
       viewRank,
-      metricRows.length,
+      scoredRows.length,
     );
     const viewMedianMultipleLabel = formatDashboardMultiple(viewMedianMultiple);
     const averageComparison = formatDashboardAverageComparison(
@@ -1361,24 +1481,25 @@ function buildAdminDashboardBarRows(
       viewAverage,
     );
     const viewBenchmark = `${formatDashboardContribution(
-      viewContributionPercent,
+      row.performanceContributionPercent,
     )} · ${viewRank}위 · ${viewTopPercentLabel}`;
     const comparisonTargetLine =
       metricMode === "delta"
-        ? `비교 대상: 선택 기간 업로드 영상 ${formatNumber(metricRows.length)}개 중 ${viewRank}위 (${viewTopPercentLabel})`
-        : `조회수 비교 대상: ${formatNumber(metricRows.length)}개 영상 중 ${viewRank}위 (${viewTopPercentLabel})`;
+        ? `비교 대상: 선택 기간 업로드 영상 ${formatNumber(scoredRows.length)}개 중 ${viewRank}위 (${viewTopPercentLabel})`
+        : `비교 대상: 선택 기간 영상 ${formatNumber(scoredRows.length)}개 중 ${viewRank}위 (${viewTopPercentLabel})`;
     const uploadScopeLine =
       metricMode === "delta" &&
       hasPeriodUploadVideoCount &&
-      periodUploadVideoCount !== metricRows.length
-        ? `업로드 영상 수 카드는 ${formatNumber(periodUploadVideoCount)}개이고, 이 비교에는 성과 데이터가 있는 ${formatNumber(metricRows.length)}개를 사용합니다.`
+      periodUploadVideoCount !== scoredRows.length
+        ? `업로드 영상 수 카드는 ${formatNumber(periodUploadVideoCount)}개이고, 이 비교에는 성과 데이터가 있는 ${formatNumber(scoredRows.length)}개를 사용합니다.`
         : null;
     const viewBenchmarkTooltipLines = [
       contributionLabel,
       comparisonTargetLine,
       ...(uploadScopeLine ? [uploadScopeLine] : []),
-      `${formatNumber(row.viewCount)}회 / ${formatNumber(totalViewValue)}회 = ${formatDashboardPercent(viewContributionPercent)}`,
-      `계산식: 이 영상 ${contributionValueLabel} / ${contributionTotalLabel} × 100`,
+      `조회 ${formatDashboardPercent(row.viewContributionPercent)} · 좋아요 ${formatDashboardPercent(row.likeContributionPercent)} · 댓글 ${formatDashboardPercent(row.commentContributionPercent)}`,
+      `계산식: 조회×60% + 좋아요×25% + 댓글×15% = ${formatDashboardPercent(row.performanceContributionPercent)}`,
+      `가중치: ${ADMIN_DASHBOARD_TOP_CONTENT_CONTRIBUTION_WEIGHT_LABEL}`,
       contributionTotalSourceLabel,
     ];
     const viewBenchmarkTooltip = viewBenchmarkTooltipLines.join(" ");
@@ -1394,8 +1515,11 @@ function buildAdminDashboardBarRows(
       commentAverage,
       viewMedian,
       viewRank,
-      totalRows: metricRows.length,
-      viewContributionPercent,
+      totalRows: scoredRows.length,
+      viewContributionPercent: row.viewContributionPercent,
+      likeContributionPercent: row.likeContributionPercent,
+      commentContributionPercent: row.commentContributionPercent,
+      performanceContributionPercent: row.performanceContributionPercent,
       viewTopPercentLabel,
       viewMedianMultipleLabel,
       viewBenchmarkLabel,
@@ -1469,6 +1593,55 @@ function formatDashboardContribution(value: number | null | undefined) {
   return typeof value === "number" && Number.isFinite(value)
     ? `${formatDashboardPercent(value)} 기여`
     : "기여도 계산 대기";
+}
+
+function getDashboardMetricContributionPercent(value: number, total: number) {
+  if (!Number.isFinite(value) || !Number.isFinite(total) || total <= 0) {
+    return null;
+  }
+
+  return (value / total) * 100;
+}
+
+function getDashboardWeightedPerformanceContribution({
+  viewContributionPercent,
+  likeContributionPercent,
+  commentContributionPercent,
+}: {
+  viewContributionPercent: number | null;
+  likeContributionPercent: number | null;
+  commentContributionPercent: number | null;
+}) {
+  const weightedMetrics: Array<{ value: number; weight: number }> = [
+    {
+      value: viewContributionPercent,
+      weight: ADMIN_DASHBOARD_TOP_CONTENT_CONTRIBUTION_WEIGHTS.views,
+    },
+    {
+      value: likeContributionPercent,
+      weight: ADMIN_DASHBOARD_TOP_CONTENT_CONTRIBUTION_WEIGHTS.likes,
+    },
+    {
+      value: commentContributionPercent,
+      weight: ADMIN_DASHBOARD_TOP_CONTENT_CONTRIBUTION_WEIGHTS.comments,
+    },
+  ].flatMap((metric) =>
+    typeof metric.value === "number" && Number.isFinite(metric.value)
+      ? [{ value: metric.value, weight: metric.weight }]
+      : [],
+  );
+
+  const totalWeight = weightedMetrics.reduce(
+    (sum, metric) => sum + metric.weight,
+    0,
+  );
+
+  if (totalWeight <= 0) return null;
+
+  return weightedMetrics.reduce(
+    (sum, metric) => sum + metric.value * (metric.weight / totalWeight),
+    0,
+  );
 }
 
 function getDashboardAverageDeltaPercent(value: number, average: number) {
@@ -1591,23 +1764,59 @@ function buildAdminDashboardContentInsights(
     contributionTotalOverride > 0
       ? contributionTotalOverride
       : calculatedTotalViewValue;
-  const rankedByView = [...metricRows].sort(
-    (a, b) => b.viewValue - a.viewValue,
+  const totalLikeValue = metricRows.reduce(
+    (sum, row) => sum + row.likeValue,
+    0,
   );
-  const strongestView = rankedByView[0];
-  const strongestViewRank = strongestView
-    ? rankedByView.findIndex((row) => row.video.id === strongestView.video.id) +
-      1
+  const totalCommentValue = metricRows.reduce(
+    (sum, row) => sum + row.commentValue,
+    0,
+  );
+  const metricRowsWithContribution = metricRows.map((row) => {
+    const viewContributionPercent = getDashboardMetricContributionPercent(
+      row.viewValue,
+      totalViewValue,
+    );
+    const likeContributionPercent = getDashboardMetricContributionPercent(
+      row.likeValue,
+      totalLikeValue,
+    );
+    const commentContributionPercent = getDashboardMetricContributionPercent(
+      row.commentValue,
+      totalCommentValue,
+    );
+    const performanceContributionPercent =
+      getDashboardWeightedPerformanceContribution({
+        viewContributionPercent,
+        likeContributionPercent,
+        commentContributionPercent,
+      });
+
+    return {
+      ...row,
+      performanceContributionPercent,
+    };
+  });
+  const rankedByContribution = [...metricRowsWithContribution].sort((a, b) => {
+    const contributionDelta =
+      (b.performanceContributionPercent ?? -Infinity) -
+      (a.performanceContributionPercent ?? -Infinity);
+    if (contributionDelta !== 0) return contributionDelta;
+
+    return b.viewValue - a.viewValue;
+  });
+  const strongestContribution = rankedByContribution[0];
+  const strongestContributionRank = strongestContribution
+    ? rankedByContribution.findIndex(
+        (row) => row.video.id === strongestContribution.video.id,
+      ) + 1
     : 0;
-  const strongestViewContribution =
-    strongestView && totalViewValue > 0
-      ? (strongestView.viewValue / totalViewValue) * 100
-      : null;
-  const strongestViewTopPercentLabel = getDashboardTopPercentLabel(
-    strongestViewRank,
-    metricRows.length,
+  const strongestContributionTopPercentLabel = getDashboardTopPercentLabel(
+    strongestContributionRank,
+    metricRowsWithContribution.length,
   );
-  const strongestViewScore = strongestViewContribution ?? 0;
+  const strongestContributionScore =
+    strongestContribution?.performanceContributionPercent ?? 0;
   const strongestEngagement = [...metricRows].sort(
     (a, b) =>
       (getDashboardAverageDeltaPercent(
@@ -1633,19 +1842,21 @@ function buildAdminDashboardContentInsights(
     .sort((a, b) => b.viewValue - a.viewValue)[0];
   const insights: AdminDashboardContentInsight[] = [];
 
-  if (strongestView) {
-    const scoreLabel = formatDashboardContribution(strongestViewContribution);
+  if (strongestContribution) {
+    const scoreLabel = formatDashboardContribution(
+      strongestContribution.performanceContributionPercent,
+    );
     const averageComparison = formatDashboardAverageComparison(
-      strongestView.viewValue,
+      strongestContribution.viewValue,
       viewAverage,
     );
 
     insights.push({
       label: "성과 기여",
-      title: strongestView.video.title,
-      description: `조회 ${metricNoun} ${scoreLabel} · ${strongestViewRank}위 · ${strongestViewTopPercentLabel}`,
+      title: strongestContribution.video.title,
+      description: `${metricNoun} ${scoreLabel} · ${strongestContributionRank}위 · ${strongestContributionTopPercentLabel}`,
       tone: "emerald",
-      score: Math.max(8, Math.min(100, strongestViewScore * 2)),
+      score: Math.max(8, Math.min(100, strongestContributionScore * 2)),
       scoreLabel: `${scoreLabel} · 평균 참고 ${averageComparison}`,
     });
   }
@@ -1688,7 +1899,7 @@ function buildAdminDashboardContentInsights(
     });
   }
 
-  if (reboundCandidate && reboundCandidate !== strongestView) {
+  if (reboundCandidate && reboundCandidate !== strongestContribution) {
     const scoreLabel = formatDashboardAverageComparison(
       reboundCandidate.viewValue,
       viewAverage,
@@ -1712,16 +1923,16 @@ function buildAdminDashboardContentInsights(
   if (
     typeof subscriberDelta === "number" &&
     subscriberDelta > 0 &&
-    strongestView
+    strongestContribution
   ) {
     insights.push({
       label: "구독자 기여 후보",
-      title: strongestView.video.title,
+      title: strongestContribution.video.title,
       description: `구독자 ${formatSignedNumber(
         subscriberDelta,
-      )} 기간의 조회 ${metricNoun} 1위 후보`,
+      )} 기간의 성과 ${metricNoun} 1위 후보`,
       tone: "emerald",
-      score: Math.max(8, Math.min(100, strongestViewScore)),
+      score: Math.max(8, Math.min(100, strongestContributionScore)),
       scoreLabel: `구독자 ${formatSignedNumber(subscriberDelta)}`,
     });
   }
@@ -1802,11 +2013,11 @@ const adminDashboardTooltipWrapperStyle = {
   pointerEvents: "none",
 } satisfies CSSProperties;
 const adminDashboardTooltipContentClassName =
-  "max-w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-border bg-popover px-3 py-2 text-xs leading-5 text-popover-foreground shadow-xl";
+  "max-w-[min(26rem,calc(100vw-2rem))] rounded-xl border border-border bg-popover px-2.5 py-1.5 text-xs leading-4 text-popover-foreground shadow-xl";
 const adminDashboardTooltipPortalClassName =
   "border-0 bg-transparent p-0 text-popover-foreground shadow-none";
 const adminDashboardTooltipLineClassName =
-  "whitespace-pre-line break-keep text-muted-foreground";
+  "whitespace-normal break-keep text-muted-foreground [text-wrap:pretty]";
 const adminDashboardTooltipFirstLineClassName =
   "font-extrabold text-foreground";
 const adminDashboardGridColor = "hsl(var(--border) / 0.55)";
@@ -1863,7 +2074,7 @@ function AdminDashboardTooltipPanel({
     <div
       className={cn(
         adminDashboardTooltipContentClassName,
-        "min-w-44 space-y-1.5",
+        "min-w-44 space-y-1",
         className,
       )}
       data-admin-dashboard-tooltip-content="standard"
@@ -1871,7 +2082,7 @@ function AdminDashboardTooltipPanel({
     >
       <p className={adminDashboardTooltipFirstLineClassName}>{title}</p>
       {descriptionLines?.length ? (
-        <div className="grid gap-1">
+        <div className="grid gap-0.5">
           {descriptionLines.map((line, index) => (
             <p
               key={`${line}-${index}`}
@@ -1883,11 +2094,11 @@ function AdminDashboardTooltipPanel({
         </div>
       ) : null}
       {rows?.length ? (
-        <div className="grid gap-1">
+        <div className="grid gap-0.5">
           {rows.map((row) => (
             <div
               key={row.label}
-              className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2"
+              className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-1.5 gap-y-0"
             >
               {row.color ? (
                 <span
@@ -1908,7 +2119,7 @@ function AdminDashboardTooltipPanel({
                 {row.value}
               </span>
               {row.note ? (
-                <span className="col-start-2 col-end-4 truncate text-[11px] font-semibold text-muted-foreground">
+                <span className="col-start-2 col-end-4 truncate text-[10px] font-semibold leading-3 text-muted-foreground">
                   {row.note}
                 </span>
               ) : null}
@@ -1917,7 +2128,7 @@ function AdminDashboardTooltipPanel({
         </div>
       ) : null}
       {footer ? (
-        <p className="border-t border-border/70 pt-1 text-[11px] font-semibold leading-4 text-muted-foreground">
+        <p className="border-t border-border/70 pt-0.5 text-[10px] font-semibold leading-3 text-muted-foreground [text-wrap:pretty]">
           {footer}
         </p>
       ) : null}
@@ -2721,7 +2932,7 @@ function AdminDashboardManagementSkeleton() {
             metric="현재값 기준 · 전체 0개"
             infoLines={placeholderInfoLines}
             action={
-              <div className="flex flex-wrap items-center justify-end gap-1">
+              <div className="flex min-w-fit flex-nowrap items-center justify-end gap-1">
                 <AdminDashboardImpactRankLegend />
                 <AdminDashboardViewToggle
                   value="chart"
@@ -2746,7 +2957,7 @@ function AdminDashboardManagementSkeleton() {
             metric="현재값 기준 · 전체 0개"
             infoLines={placeholderInfoLines}
             action={
-              <div className="flex flex-wrap items-center justify-end gap-1">
+              <div className="flex min-w-fit flex-nowrap items-center justify-end gap-1">
                 <AdminDashboardSeriesToggle
                   label="영상별 성과 분포"
                   options={[
@@ -2802,7 +3013,7 @@ function AdminDashboardManagementSkeleton() {
             metric="선택 영상 0개"
             infoLines={placeholderInfoLines}
             action={
-              <div className="flex flex-wrap items-center justify-end gap-1">
+              <div className="flex min-w-fit flex-nowrap items-center justify-end gap-1">
                 <AdminDashboardSeriesToggle
                   label="콘텐츠 성과 TOP 5"
                   options={[
@@ -2836,7 +3047,7 @@ function AdminDashboardManagementSkeleton() {
             metric="진단 신호 0개 · 선택 영상 0개"
             infoLines={placeholderInfoLines}
             action={
-              <div className="ml-auto flex min-w-0 shrink-0 items-center gap-2">
+              <div className="ml-auto flex min-w-fit shrink-0 flex-nowrap items-center gap-2">
                 <AdminDashboardDiagnosisMeta periodLabel="1개월" />
                 <AdminDashboardViewToggle
                   value="chart"
@@ -2867,7 +3078,7 @@ function AdminDashboardCardTitle({
   return (
     <div className="mb-2 grid shrink-0 gap-2">
       <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-1.5">
+        <div className="flex min-w-0 flex-1 items-center gap-1.5">
           <p className="truncate text-xs font-extrabold leading-none text-foreground">
             {title}
             {metric ? (
@@ -2884,7 +3095,11 @@ function AdminDashboardCardTitle({
             lines={infoLines}
           />
         </div>
-        {action}
+        {action ? (
+          <div className="ml-auto flex min-w-fit shrink-0 items-center">
+            {action}
+          </div>
+        ) : null}
       </div>
       <div className="h-px bg-border/70" aria-hidden="true" />
     </div>
@@ -3150,7 +3365,7 @@ function AdminDashboardOpsSummaryCard({
           "주의: 검수 리스크가 큰 항목부터 운영자가 먼저 확인해야 합니다.",
         ]}
         action={
-          <div className="flex flex-wrap items-center justify-end gap-1">
+          <div className="flex min-w-fit flex-nowrap items-center justify-end gap-1">
             {onViewChange ? (
               <AdminDashboardViewToggle
                 value={view}
@@ -3629,9 +3844,8 @@ function AdminDashboardBubbleChart({
                         color: "#57c6ca",
                       },
                     ]}
-                    footer="계산식: 참여 = 좋아요 + 댓글. 원 크기는 참여가 클수록 커집니다."
+                    footer="계산식: 참여 = 좋아요 + 댓글 · 원 크기 = 참여"
                     dataAttribute="bubble-video"
-                    className="max-w-[280px]"
                   />
                 );
               }}
@@ -3862,7 +4076,7 @@ function AdminDashboardGroupedBarChart({
               {row.label}
             </p>
             <AdminDashboardInlineTooltip
-              label={`${row.label} 기간 조회 기여`}
+              label={`${row.label} 성과 기여`}
               lines={row.viewBenchmarkTooltipLines}
               className="mt-0.5 block truncate text-[10px] font-black tabular-nums text-emerald-700 outline-none focus-visible:ring-2 focus-visible:ring-primary dark:text-emerald-300"
             >
@@ -4014,57 +4228,62 @@ function AdminDashboardDiagnosisBoard({
               delayDuration={120}
             >
               <UiTooltip>
-                <UiTooltipTrigger asChild>
-                  <div
-                    tabIndex={0}
-                    className={cn(
-                      "flex min-h-0 min-w-0 flex-col justify-between rounded-xl border border-border/70 bg-muted/20 px-2 py-1.5 outline-none focus-visible:ring-2 focus-visible:ring-primary",
-                      isFullscreen && "px-4 py-3 sm:px-5 sm:py-4",
-                    )}
-                    aria-label={tooltipLines.join(" ")}
-                    data-admin-dashboard-diagnosis-tooltip-trigger="true"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="truncate text-[10px] font-black text-primary">
-                        {insight.label}
-                      </span>
-                      <span className="shrink-0 rounded-full bg-background px-2 py-0.5 text-[10px] font-black text-muted-foreground">
-                        {modeLabel}
-                      </span>
-                    </div>
-                    <p className="mt-1.5 truncate text-sm font-extrabold text-foreground">
+                <div
+                  className={cn(
+                    "flex min-h-0 min-w-0 flex-col justify-between rounded-xl border border-border/70 bg-muted/20 px-2 py-1.5",
+                    isFullscreen && "px-4 py-3 sm:px-5 sm:py-4",
+                  )}
+                  aria-label={tooltipLines.join(" ")}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="truncate text-[10px] font-black text-primary">
+                      {insight.label}
+                    </span>
+                    <span className="shrink-0 rounded-full bg-background px-2 py-0.5 text-[10px] font-black text-muted-foreground">
+                      {modeLabel}
+                    </span>
+                  </div>
+                  <UiTooltipTrigger asChild>
+                    <p
+                      tabIndex={0}
+                      className="mt-1.5 truncate rounded-sm text-sm font-extrabold text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                      aria-label={tooltipLines.join(" ")}
+                      data-admin-dashboard-diagnosis-tooltip-trigger="title"
+                    >
                       {insight.title}
                     </p>
-                    <p className="mt-1 truncate text-[11px] font-semibold text-muted-foreground">
-                      {insight.description}
-                    </p>
-                    <div
-                      className="mt-1.5 grid gap-1"
-                      data-admin-dashboard-diagnosis-visual="signal-bar"
-                    >
-                      <div className="h-1.5 overflow-hidden rounded-full bg-background/80">
-                        <div
-                          className={cn(
-                            "h-full rounded-full",
-                            signalBarClass[insight.tone],
-                          )}
-                          style={{
-                            width: `${Math.max(8, Math.min(100, insight.score))}%`,
-                          }}
-                        />
-                      </div>
-                      <div className="flex items-center justify-between gap-2 text-[10px] font-black leading-none text-muted-foreground">
-                        <span>신호 강도</span>
-                        <span className="min-w-0 truncate text-foreground">
-                          {insight.scoreLabel}
-                        </span>
-                      </div>
+                  </UiTooltipTrigger>
+                  <p className="mt-1 truncate text-[11px] font-semibold text-muted-foreground">
+                    {insight.description}
+                  </p>
+                  <div
+                    className="mt-1.5 grid gap-1"
+                    data-admin-dashboard-diagnosis-visual="signal-bar"
+                  >
+                    <div className="h-1.5 overflow-hidden rounded-full bg-background/80">
+                      <div
+                        className={cn(
+                          "h-full rounded-full",
+                          signalBarClass[insight.tone],
+                        )}
+                        style={{
+                          width: `${Math.max(8, Math.min(100, insight.score))}%`,
+                        }}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between gap-2 text-[10px] font-black leading-none text-muted-foreground">
+                      <span>신호 강도</span>
+                      <span className="min-w-0 truncate text-foreground">
+                        {insight.scoreLabel}
+                      </span>
                     </div>
                   </div>
-                </UiTooltipTrigger>
+                </div>
                 <UiTooltipContent
                   side="top"
                   align="start"
+                  sideOffset={4}
+                  collisionPadding={12}
                   className={adminDashboardTooltipPortalClassName}
                   data-admin-dashboard-diagnosis-tooltip="standard"
                 >
@@ -4259,10 +4478,27 @@ function AdminDashboardCollectionLogPopover({
   onRefresh: () => void;
 }) {
   const latestRun = logs?.workflow.runs[0];
+  const latestJobs = logs?.workflow.latestJobs.slice(0, 3) ?? [];
   const snapshot = logs?.snapshot;
+  const hasSavedSnapshot = Boolean(snapshot?.available);
   const isWorkflowHealthy = latestRun
     ? latestRun.status !== "completed" || latestRun.conclusion === "success"
     : logs?.workflow.available;
+  const collectionStatusLabel = hasSavedSnapshot ? "수집 정상" : "저장 확인 필요";
+  const collectionStatusClassName = hasSavedSnapshot
+    ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-950/40 dark:text-emerald-300"
+    : "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-400/30 dark:bg-amber-950/40 dark:text-amber-300";
+  const workflowStatusLabel = !logs?.workflow.available
+    ? "로그 권한 필요"
+    : latestRun
+      ? getCollectionLogStatusLabel(latestRun.status, latestRun.conclusion)
+      : "실행 없음";
+  const workflowStatusClassName = !logs?.workflow.available
+    ? "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-400/30 dark:bg-amber-950/40 dark:text-amber-300"
+    : getCollectionLogStatusClassName(
+        latestRun?.status ?? "completed",
+        latestRun?.conclusion ?? (isWorkflowHealthy ? "success" : "failure"),
+      );
 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
@@ -4276,7 +4512,6 @@ function AdminDashboardCollectionLogPopover({
             isError && "border-destructive/30 text-destructive",
           )}
           aria-label="GitHub Actions KPI 데이터 수집 로그 열기"
-          title="데이터 수집 로그"
           data-admin-dashboard-kpi-collection-log-trigger="true"
         >
           <ScrollText className="h-3.5 w-3.5" aria-hidden="true" />
@@ -4285,24 +4520,23 @@ function AdminDashboardCollectionLogPopover({
       </PopoverTrigger>
       <PopoverContent
         align="end"
-        className="w-[min(92vw,28rem)] overflow-hidden rounded-2xl border-border/80 p-0 shadow-xl"
-        data-admin-dashboard-kpi-collection-log-panel="true"
+        className="w-[min(92vw,25rem)] overflow-hidden rounded-2xl border-border/80 p-0 shadow-xl"
+        data-admin-dashboard-kpi-collection-log-panel="simple"
       >
         <div className="flex items-start justify-between gap-3 border-b border-border/70 bg-background px-3 py-2.5">
           <div className="min-w-0">
             <p className="text-sm font-extrabold text-foreground">
-              데이터 수집 로그
+              데이터 수집 상태
             </p>
             <p className="mt-0.5 truncate text-[11px] font-semibold text-muted-foreground">
-              {logs?.workflow.repository ?? "twoimo/tzudong"} ·{" "}
-              {logs?.workflow.workflowId ?? "youtube-kpi-snapshot.yml"}
+              Supabase 저장 기준 · {logs?.workflow.workflowId ?? "youtube-kpi-snapshot.yml"}
             </p>
           </div>
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+            className="h-7 shrink-0 rounded-full px-2 text-[11px] font-bold"
             disabled={isFetching}
             onClick={onRefresh}
           >
@@ -4310,243 +4544,155 @@ function AdminDashboardCollectionLogPopover({
               className={cn("mr-1 h-3.5 w-3.5", isFetching && "animate-spin")}
               aria-hidden="true"
             />
-            새로고침
+            갱신
           </Button>
         </div>
 
-        <div className="max-h-[70vh] space-y-3 overflow-y-auto p-3">
+        <div className="max-h-[70vh] space-y-2.5 overflow-y-auto p-3">
           {isLoading ? (
             <div className="space-y-2">
-              <Skeleton className="h-16 rounded-2xl" />
-              <Skeleton className="h-24 rounded-2xl" />
               <Skeleton className="h-20 rounded-2xl" />
+              <Skeleton className="h-16 rounded-2xl" />
             </div>
           ) : null}
 
           {!isLoading ? (
             <>
               <div className="rounded-2xl border border-border/70 bg-muted/20 p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs font-extrabold text-foreground">
-                    최신 스냅샷
-                  </p>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="flex items-center gap-1.5 text-xs font-extrabold text-foreground">
+                      {hasSavedSnapshot ? (
+                        <CheckCircle2
+                          className="h-3.5 w-3.5 text-emerald-600"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <XCircle
+                          className="h-3.5 w-3.5 text-amber-600"
+                          aria-hidden="true"
+                        />
+                      )}
+                      {hasSavedSnapshot
+                        ? "최근 스냅샷 저장됨"
+                        : "저장된 스냅샷 없음"}
+                    </p>
+                    <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
+                      {hasSavedSnapshot
+                        ? `마지막 저장: ${formatDashboardDateTime(snapshot?.fetchedAt)}`
+                        : "수집 결과가 아직 저장되지 않았습니다."}
+                    </p>
+                  </div>
                   <Badge
                     variant="outline"
                     className={cn(
-                      "rounded-full px-2 py-0.5 text-[10px]",
-                      snapshot?.available
-                        ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-950/40 dark:text-emerald-300"
-                        : "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-400/30 dark:bg-amber-950/40 dark:text-amber-300",
+                      "shrink-0 rounded-full px-2 py-0.5 text-[10px]",
+                      collectionStatusClassName,
                     )}
                   >
-                    {snapshot?.available ? "저장됨" : "대기"}
+                    {collectionStatusLabel}
                   </Badge>
                 </div>
-                {snapshot?.available ? (
-                  <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] sm:grid-cols-6">
-                    <div>
-                      <span className="block text-muted-foreground">
-                        수집 시각
-                      </span>
+
+                {hasSavedSnapshot ? (
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
+                    <div className="rounded-xl bg-background/70 px-2 py-1.5">
+                      <span className="block text-muted-foreground">영상</span>
                       <span className="mt-0.5 block font-bold text-foreground">
-                        {formatDashboardDateTime(snapshot.fetchedAt)}
+                        {formatNumber(snapshot?.videoSnapshotCount)}개
                       </span>
                     </div>
-                    <div>
-                      <span className="block text-muted-foreground">
-                        영상 스냅샷
-                      </span>
+                    <div className="rounded-xl bg-background/70 px-2 py-1.5">
+                      <span className="block text-muted-foreground">구독자</span>
                       <span className="mt-0.5 block font-bold text-foreground">
-                        {formatNumber(snapshot.videoSnapshotCount)}개
+                        {formatNumber(snapshot?.subscriberCount)}
                       </span>
                     </div>
-                    <div>
-                      <span className="block text-muted-foreground">
-                        구독자
-                      </span>
+                    <div className="rounded-xl bg-background/70 px-2 py-1.5">
+                      <span className="block text-muted-foreground">총 조회수</span>
                       <span className="mt-0.5 block font-bold text-foreground">
-                        {formatNumber(snapshot.subscriberCount)}
+                        {formatCompactNumber(snapshot?.viewCount)}
                       </span>
                     </div>
-                    <div>
-                      <span className="block text-muted-foreground">
-                        조회수
-                      </span>
+                    <div className="rounded-xl bg-background/70 px-2 py-1.5">
+                      <span className="block text-muted-foreground">조회 증감</span>
                       <span className="mt-0.5 block font-bold text-foreground">
-                        {formatCompactNumber(snapshot.viewCount)}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="block text-muted-foreground">
-                        구독자 증감
-                      </span>
-                      <span className="mt-0.5 block font-bold text-foreground">
-                        {formatSignedNumber(snapshot.subscriberDelta)}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="block text-muted-foreground">
-                        조회 증감
-                      </span>
-                      <span className="mt-0.5 block font-bold text-foreground">
-                        {formatSignedNumber(snapshot.viewDelta)}
+                        {formatSignedNumber(snapshot?.viewDelta)}
                       </span>
                     </div>
                   </div>
-                ) : (
-                  <p className="mt-2 text-[11px] leading-5 text-muted-foreground">
-                    아직 저장된 KPI 스냅샷이 없거나 마이그레이션 적용 전입니다.
-                  </p>
-                )}
+                ) : null}
               </div>
 
               <div className="rounded-2xl border border-border/70 bg-background p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs font-extrabold text-foreground">
-                    GitHub Actions 실행
-                  </p>
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      "rounded-full px-2 py-0.5 text-[10px]",
-                      isWorkflowHealthy
-                        ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-950/40 dark:text-emerald-300"
-                        : "border-destructive/20 bg-destructive/10 text-destructive",
-                    )}
-                  >
-                    {latestRun
-                      ? getCollectionLogStatusLabel(
-                          latestRun.status,
-                          latestRun.conclusion,
-                        )
-                      : logs?.workflow.available
-                        ? "실행 없음"
-                        : "확인 필요"}
-                  </Badge>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-extrabold text-foreground">
+                      GitHub Actions 로그
+                    </p>
+                    <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
+                      {logs?.workflow.available
+                        ? latestRun
+                          ? `최근 실행: #${latestRun.runNumber ?? "—"} · ${formatDashboardDateTime(latestRun.startedAt ?? latestRun.createdAt)}`
+                          : "워크플로는 찾았지만 실행 기록은 아직 없습니다."
+                        : "수집 실패가 아니라, 이 서버가 GitHub 실행 로그를 읽을 권한이 없는 상태입니다."}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <Badge
+                      variant="outline"
+                      className={cn("rounded-full px-2 py-0.5 text-[10px]", workflowStatusClassName)}
+                    >
+                      {workflowStatusLabel}
+                    </Badge>
+                    {latestRun?.htmlUrl ? (
+                      <a
+                        href={latestRun.htmlUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        aria-label="GitHub Actions 실행 로그 새 탭에서 열기"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                      </a>
+                    ) : null}
+                  </div>
                 </div>
 
                 {!logs?.workflow.available ? (
-                  <p className="mt-2 text-[11px] leading-5 text-muted-foreground">
-                    GitHub Actions 로그를 불러오지 못했습니다. 서버 환경의
-                    저장소/토큰 설정을 확인하세요
-                    {logs?.workflow.error ? ` (${logs.workflow.error})` : ""}.
+                  <p className="mt-2 rounded-xl bg-muted/40 px-2 py-1.5 text-[10px] leading-4 text-muted-foreground">
+                    서버 환경 변수에 GitHub 읽기 토큰이 없거나 권한이 부족합니다.
+                    GITHUB_ACTIONS_TOKEN 또는 GH_TOKEN을 설정하면 실행 로그도
+                    표시됩니다.
+                    {logs?.workflow.error ? ` (${logs.workflow.error})` : ""}
                   </p>
                 ) : null}
 
-                {logs?.workflow.runs.length ? (
-                  <div className="mt-2 space-y-2">
-                    {logs.workflow.runs.map((run) => (
-                      <div
-                        key={run.id ?? `${run.runNumber}-${run.createdAt}`}
-                        className="rounded-xl border border-border/70 px-2.5 py-2"
+                {latestJobs.length ? (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {latestJobs.map((job) => (
+                      <span
+                        key={job.id ?? job.name}
+                        className={cn(
+                          "rounded-full border px-2 py-0.5 text-[10px] font-bold",
+                          getCollectionLogStatusClassName(
+                            job.status,
+                            job.conclusion,
+                          ),
+                        )}
                       >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="truncate text-xs font-bold text-foreground">
-                              #{run.runNumber ?? "—"} {run.title}
-                            </p>
-                            <p className="mt-0.5 text-[11px] text-muted-foreground">
-                              {formatDashboardDateTime(
-                                run.startedAt ?? run.createdAt,
-                              )}{" "}
-                              · {run.event ?? "schedule"}
-                            </p>
-                          </div>
-                          <div className="flex shrink-0 items-center gap-1.5">
-                            <Badge
-                              variant="outline"
-                              className={cn(
-                                "rounded-full px-2 py-0.5 text-[10px]",
-                                getCollectionLogStatusClassName(
-                                  run.status,
-                                  run.conclusion,
-                                ),
-                              )}
-                            >
-                              {run.status !== "completed" ? (
-                                <Activity
-                                  className="mr-1 h-3 w-3"
-                                  aria-hidden="true"
-                                />
-                              ) : run.conclusion === "success" ? (
-                                <CheckCircle2
-                                  className="mr-1 h-3 w-3"
-                                  aria-hidden="true"
-                                />
-                              ) : (
-                                <XCircle
-                                  className="mr-1 h-3 w-3"
-                                  aria-hidden="true"
-                                />
-                              )}
-                              {getCollectionLogStatusLabel(
-                                run.status,
-                                run.conclusion,
-                              )}
-                            </Badge>
-                            {run.htmlUrl ? (
-                              <a
-                                href={run.htmlUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="inline-flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                                aria-label="GitHub Actions 실행 로그 새 탭에서 열기"
-                              >
-                                <ExternalLink
-                                  className="h-3.5 w-3.5"
-                                  aria-hidden="true"
-                                />
-                              </a>
-                            ) : null}
-                          </div>
-                        </div>
-                      </div>
+                        {job.name}: {
+                          getCollectionLogStatusLabel(job.status, job.conclusion)
+                        }
+                      </span>
                     ))}
                   </div>
-                ) : logs?.workflow.available ? (
-                  <p className="mt-2 text-[11px] leading-5 text-muted-foreground">
-                    아직 실행 기록이 없습니다.
-                  </p>
                 ) : null}
               </div>
 
-              {logs?.workflow.latestJobs.length ? (
-                <div className="rounded-2xl border border-border/70 bg-background p-3">
-                  <p className="text-xs font-extrabold text-foreground">
-                    최신 실행 Job
-                  </p>
-                  <div className="mt-2 space-y-1.5">
-                    {logs.workflow.latestJobs.map((job) => (
-                      <div
-                        key={job.id ?? job.name}
-                        className="flex items-center justify-between gap-2 text-[11px]"
-                      >
-                        <span className="min-w-0 truncate font-semibold text-foreground">
-                          {job.name}
-                        </span>
-                        <span
-                          className={cn(
-                            "shrink-0 rounded-full px-2 py-0.5 font-bold",
-                            getCollectionLogStatusClassName(
-                              job.status,
-                              job.conclusion,
-                            ),
-                          )}
-                        >
-                          {getCollectionLogStatusLabel(
-                            job.status,
-                            job.conclusion,
-                          )}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-
               <p className="text-[10px] leading-4 text-muted-foreground">
-                GitHub 실행 로그는 Actions REST API의 workflow runs/jobs를 읽고,
-                저장 성공 여부는 Supabase 최신 스냅샷으로 교차 확인합니다.
+                판정 기준: 최신 스냅샷이 저장되어 있으면 대시보드 데이터
+                수집은 정상으로 봅니다.
               </p>
             </>
           ) : null}
@@ -4594,6 +4740,16 @@ function AdminDashboardManagementPanel({
     () => normalizeAdminDashboardWidgetOrder(dashboardWidgetOrder),
     [dashboardWidgetOrder],
   );
+  const latestDashboardWidgetOrderRef = useRef<AdminDashboardWidgetId[]>(
+    DEFAULT_ADMIN_DASHBOARD_WIDGET_ORDER,
+  );
+  const dragStartDashboardWidgetOrderRef = useRef<
+    AdminDashboardWidgetId[] | null
+  >(null);
+  const draggedDashboardWidgetIdRef = useRef<AdminDashboardWidgetId | null>(
+    null,
+  );
+  const hasPersistedDraggedDashboardWidgetRef = useRef(false);
   const insightQuery = useQuery({
     queryKey: ["admin-dashboard-management", "insights", "cohort", period],
     queryFn: () => fetchAdminDashboardInsightSummary(period, "cohort"),
@@ -4651,6 +4807,10 @@ function AdminDashboardManagementPanel({
     youtubeChannelQuery.isFetching,
     youtubeChannelQuery.isLoading,
   ]);
+
+  useEffect(() => {
+    latestDashboardWidgetOrderRef.current = orderedDashboardWidgetIds;
+  }, [orderedDashboardWidgetIds]);
 
   useEffect(() => {
     if (!fullscreenWidgetId) return;
@@ -4711,6 +4871,7 @@ function AdminDashboardManagementPanel({
   const persistDashboardWidgetOrder = useCallback(
     async (nextOrder: AdminDashboardWidgetId[], successMessage: string) => {
       const normalizedOrder = normalizeAdminDashboardWidgetOrder(nextOrder);
+      latestDashboardWidgetOrderRef.current = normalizedOrder;
       setDashboardWidgetOrder(normalizedOrder);
       setIsDashboardOrderSaving(true);
       setDashboardOrderMessage("카드 순서를 저장하는 중입니다.");
@@ -4731,9 +4892,9 @@ function AdminDashboardManagementPanel({
         if (!response.ok) throw new Error("dashboard-widget-order-save-failed");
 
         const payload = (await response.json()) as { order?: unknown };
-        setDashboardWidgetOrder(
-          normalizeAdminDashboardWidgetOrder(payload.order),
-        );
+        const savedOrder = normalizeAdminDashboardWidgetOrder(payload.order);
+        latestDashboardWidgetOrderRef.current = savedOrder;
+        setDashboardWidgetOrder(savedOrder);
         setDashboardOrderMessage(successMessage);
       } catch {
         setDashboardOrderMessage(
@@ -4761,6 +4922,15 @@ function AdminDashboardManagementPanel({
       );
     },
     [orderedDashboardWidgetIds],
+  );
+  const getDashboardCardOrderStyle = useCallback(
+    (widgetId: AdminDashboardWidgetId): CSSProperties => ({
+      order: getDashboardWidgetOrder(widgetId),
+      viewTransitionName: isDashboardOrderEditorOpen
+        ? `admin-dashboard-${widgetId}`
+        : undefined,
+    }),
+    [getDashboardWidgetOrder, isDashboardOrderEditorOpen],
   );
   const getDashboardCardView = useCallback(
     (widgetId: AdminDashboardTableWidgetId) =>
@@ -4830,50 +5000,76 @@ function AdminDashboardManagementPanel({
     },
     [],
   );
-  const moveDraggedDashboardWidget = useCallback(
+  const previewDraggedDashboardWidget = useCallback(
     (
       targetWidgetId: AdminDashboardWidgetId,
-      sourceWidgetId = draggedDashboardWidgetId,
+      placement: "before" | "after",
+      sourceWidgetId = draggedDashboardWidgetIdRef.current,
     ) => {
-      if (!sourceWidgetId || sourceWidgetId === targetWidgetId) {
-        setDraggedDashboardWidgetId(null);
-        return;
-      }
+      if (!sourceWidgetId || sourceWidgetId === targetWidgetId) return;
 
       if (
         getAdminDashboardWidgetLayoutGroup(sourceWidgetId) !==
         getAdminDashboardWidgetLayoutGroup(targetWidgetId)
       ) {
         setDashboardOrderMessage(
-          "같은 레이아웃 영역 안에서만 순서를 바꿀 수 있습니다. KPI 보드 형태는 유지했습니다.",
+          "같은 레이아웃 영역 안에서만 순서를 바꿀 수 있습니다.",
         );
-        setDraggedDashboardWidgetId(null);
         return;
       }
 
-      const currentOrder =
-        normalizeAdminDashboardWidgetOrder(dashboardWidgetOrder);
-      const nextOrder = currentOrder.filter(
-        (widgetId) => widgetId !== sourceWidgetId,
-      );
-      const targetIndex = nextOrder.indexOf(targetWidgetId);
-      nextOrder.splice(
-        targetIndex < 0 ? nextOrder.length : targetIndex,
-        0,
+      const nextOrder = moveAdminDashboardWidgetBeforeOrAfter(
+        latestDashboardWidgetOrderRef.current,
         sourceWidgetId,
+        targetWidgetId,
+        placement,
       );
+
+      if (
+        areAdminDashboardWidgetOrdersEqual(
+          latestDashboardWidgetOrderRef.current,
+          nextOrder,
+        )
+      ) {
+        return;
+      }
+
+      latestDashboardWidgetOrderRef.current = nextOrder;
+      updateAdminDashboardOrderWithViewTransition(() => {
+        setDashboardWidgetOrder(nextOrder);
+      });
+      setDashboardOrderMessage(
+        `${ADMIN_DASHBOARD_WIDGET_LABELS[sourceWidgetId]} 카드를 옮기는 중입니다. 놓으면 저장됩니다.`,
+      );
+    },
+    [],
+  );
+  const finishDraggedDashboardWidget = useCallback(
+    (sourceWidgetId = draggedDashboardWidgetIdRef.current) => {
+      if (hasPersistedDraggedDashboardWidgetRef.current) return;
+      hasPersistedDraggedDashboardWidgetRef.current = true;
+      draggedDashboardWidgetIdRef.current = null;
+      setDraggedDashboardWidgetId(null);
+
+      if (!sourceWidgetId) return;
+
+      const startOrder = dragStartDashboardWidgetOrderRef.current;
+      const nextOrder = normalizeAdminDashboardWidgetOrder(
+        latestDashboardWidgetOrderRef.current,
+      );
+      dragStartDashboardWidgetOrderRef.current = null;
+
+      if (startOrder && areAdminDashboardWidgetOrdersEqual(startOrder, nextOrder)) {
+        setDashboardOrderMessage("카드 순서 변경 없이 편집을 마쳤습니다.");
+        return;
+      }
 
       void persistDashboardWidgetOrder(
         nextOrder,
-        `${ADMIN_DASHBOARD_WIDGET_LABELS[sourceWidgetId]} 카드 순서를 같은 영역 안에서 자동 저장했습니다.`,
+        `${ADMIN_DASHBOARD_WIDGET_LABELS[sourceWidgetId]} 카드 순서를 저장했습니다.`,
       );
-      setDraggedDashboardWidgetId(null);
     },
-    [
-      dashboardWidgetOrder,
-      draggedDashboardWidgetId,
-      persistDashboardWidgetOrder,
-    ],
+    [persistDashboardWidgetOrder],
   );
   const getDashboardReorderCardClassName = useCallback(
     (widgetId: AdminDashboardWidgetId) =>
@@ -4895,14 +5091,47 @@ function AdminDashboardManagementPanel({
           event.preventDefault();
           return;
         }
+        const normalizedOrder = normalizeAdminDashboardWidgetOrder(
+          latestDashboardWidgetOrderRef.current,
+        );
+        latestDashboardWidgetOrderRef.current = normalizedOrder;
+        dragStartDashboardWidgetOrderRef.current = normalizedOrder;
+        draggedDashboardWidgetIdRef.current = widgetId;
+        hasPersistedDraggedDashboardWidgetRef.current = false;
         event.dataTransfer.effectAllowed = "move";
         event.dataTransfer.setData("text/plain", widgetId);
         setDraggedDashboardWidgetId(widgetId);
+        setDashboardOrderMessage(
+          `${ADMIN_DASHBOARD_WIDGET_LABELS[widgetId]} 카드를 잡았습니다. 원하는 위치로 끌면 즉시 자리가 바뀝니다.`,
+        );
+      },
+      onDragEnter: (event) => {
+        if (!isDashboardOrderEditorOpen || isDashboardOrderSaving) return;
+        event.preventDefault();
+        const rawWidgetId = event.dataTransfer.getData("text/plain");
+        const sourceWidgetId = isAdminDashboardWidgetId(rawWidgetId)
+          ? rawWidgetId
+          : draggedDashboardWidgetIdRef.current;
+        previewDraggedDashboardWidget(widgetId, "before", sourceWidgetId);
       },
       onDragOver: (event) => {
         if (!isDashboardOrderEditorOpen || isDashboardOrderSaving) return;
         event.preventDefault();
         event.dataTransfer.dropEffect = "move";
+        const rawWidgetId = event.dataTransfer.getData("text/plain");
+        const sourceWidgetId = isAdminDashboardWidgetId(rawWidgetId)
+          ? rawWidgetId
+          : draggedDashboardWidgetIdRef.current;
+        const rect = event.currentTarget.getBoundingClientRect();
+        const useHorizontalMidpoint = rect.width >= rect.height;
+        const placement = useHorizontalMidpoint
+          ? event.clientX > rect.left + rect.width / 2
+            ? "after"
+            : "before"
+          : event.clientY > rect.top + rect.height / 2
+            ? "after"
+            : "before";
+        previewDraggedDashboardWidget(widgetId, placement, sourceWidgetId);
       },
       onDrop: (event) => {
         if (!isDashboardOrderEditorOpen || isDashboardOrderSaving) return;
@@ -4910,16 +5139,17 @@ function AdminDashboardManagementPanel({
         const rawWidgetId = event.dataTransfer.getData("text/plain");
         const sourceWidgetId = isAdminDashboardWidgetId(rawWidgetId)
           ? rawWidgetId
-          : draggedDashboardWidgetId;
-        moveDraggedDashboardWidget(widgetId, sourceWidgetId);
+          : draggedDashboardWidgetIdRef.current;
+        finishDraggedDashboardWidget(sourceWidgetId);
       },
-      onDragEnd: () => setDraggedDashboardWidgetId(null),
+      onDragEnd: () => finishDraggedDashboardWidget(),
     }),
     [
       draggedDashboardWidgetId,
+      finishDraggedDashboardWidget,
       isDashboardOrderEditorOpen,
       isDashboardOrderSaving,
-      moveDraggedDashboardWidget,
+      previewDraggedDashboardWidget,
     ],
   );
 
@@ -5533,8 +5763,8 @@ function AdminDashboardManagementPanel({
   );
   const topContentContributionFormula = `계산식: ${
     hasPeriodGrowthComparison
-      ? "기간 조회 증가 기여 = 이 영상 조회 증가 / 선택 기간 업로드 영상 조회 증가 합계 × 100."
-      : "기간 조회 기여 = 이 영상 조회수 / 선택 기간 영상 조회수 합계 × 100."
+      ? "기간 성과 기여 = 조회 증가 기여×60% + 좋아요 증가 기여×25% + 댓글 증가 기여×15%."
+      : "성과 기여 = 조회 기여×60% + 좋아요 기여×25% + 댓글 기여×15%."
   }`;
   return (
     <section
@@ -5664,7 +5894,7 @@ function AdminDashboardManagementPanel({
             "lg:col-span-2",
             getDashboardReorderCardClassName("subscribers"),
           )}
-          style={{ order: getDashboardWidgetOrder("subscribers") }}
+          style={getDashboardCardOrderStyle("subscribers")}
           reorderProps={getDashboardCardReorderProps("subscribers")}
           value={subscriberValue}
           caption={subscriberCaption}
@@ -5689,7 +5919,7 @@ function AdminDashboardManagementPanel({
             "lg:col-span-2",
             getDashboardReorderCardClassName("views"),
           )}
-          style={{ order: getDashboardWidgetOrder("views") }}
+          style={getDashboardCardOrderStyle("views")}
           reorderProps={getDashboardCardReorderProps("views")}
           value={isChartLoading ? "—" : formatNumber(periodViewDisplayValue)}
           caption={`${periodMetricCaption} · 현재 전체 누적 ${formatNumber(cumulativeViewValue)}`}
@@ -5715,7 +5945,7 @@ function AdminDashboardManagementPanel({
             "lg:col-span-2",
             getDashboardReorderCardClassName("likes"),
           )}
-          style={{ order: getDashboardWidgetOrder("likes") }}
+          style={getDashboardCardOrderStyle("likes")}
           reorderProps={getDashboardCardReorderProps("likes")}
           value={isChartLoading ? "—" : formatNumber(periodLikeDisplayValue)}
           caption={
@@ -5745,7 +5975,7 @@ function AdminDashboardManagementPanel({
             "lg:col-span-2",
             getDashboardReorderCardClassName("comments"),
           )}
-          style={{ order: getDashboardWidgetOrder("comments") }}
+          style={getDashboardCardOrderStyle("comments")}
           reorderProps={getDashboardCardReorderProps("comments")}
           value={isChartLoading ? "—" : formatNumber(periodCommentDisplayValue)}
           caption={
@@ -5775,7 +6005,7 @@ function AdminDashboardManagementPanel({
             "lg:col-span-2",
             getDashboardReorderCardClassName("videos"),
           )}
-          style={{ order: getDashboardWidgetOrder("videos") }}
+          style={getDashboardCardOrderStyle("videos")}
           reorderProps={getDashboardCardReorderProps("videos")}
           value={isChartLoading ? "—" : formatNumber(periodUploadVideoValue)}
           caption={periodVideoCaption}
@@ -5802,7 +6032,7 @@ function AdminDashboardManagementPanel({
             isDashboardWidgetFullscreen("impact") &&
               adminDashboardFullscreenCardClassName,
           )}
-          style={{ order: getDashboardWidgetOrder("impact") }}
+          style={getDashboardCardOrderStyle("impact")}
           data-admin-dashboard-widget-card="impact"
           data-admin-dashboard-card-fullscreen={
             isDashboardWidgetFullscreen("impact") ? "true" : undefined
@@ -5827,7 +6057,7 @@ function AdminDashboardManagementPanel({
               "주의: 색보다 위치와 원 크기를 먼저 확인하세요.",
             ]}
             action={
-              <div className="flex flex-wrap items-center justify-end gap-1">
+              <div className="flex min-w-fit flex-nowrap items-center justify-end gap-1">
                 <AdminDashboardImpactRankLegend />
                 <AdminDashboardViewToggle
                   value={getDashboardCardView("impact")}
@@ -5909,7 +6139,7 @@ function AdminDashboardManagementPanel({
             isDashboardWidgetFullscreen("trend") &&
               adminDashboardFullscreenCardClassName,
           )}
-          style={{ order: getDashboardWidgetOrder("trend") }}
+          style={getDashboardCardOrderStyle("trend")}
           data-admin-dashboard-widget-card="trend"
           data-admin-dashboard-card-fullscreen={
             isDashboardWidgetFullscreen("trend") ? "true" : undefined
@@ -5931,7 +6161,7 @@ function AdminDashboardManagementPanel({
               "주의: 실제 숫자보다 흐름과 튀는 항목을 찾는 용도입니다.",
             ]}
             action={
-              <div className="flex flex-wrap items-center justify-end gap-1">
+              <div className="flex min-w-fit flex-nowrap items-center justify-end gap-1">
                 <AdminDashboardSeriesToggle
                   label="영상별 성과 분포"
                   options={[
@@ -6015,7 +6245,7 @@ function AdminDashboardManagementPanel({
             getDashboardReorderCardClassName("ops"),
           )}
           reorderProps={getDashboardCardReorderProps("ops")}
-          style={{ order: getDashboardWidgetOrder("ops") }}
+          style={getDashboardCardOrderStyle("ops")}
           view={getDashboardCardView("ops")}
           onViewChange={(view) => setDashboardCardView("ops", view)}
           isLoading={isLoading}
@@ -6027,7 +6257,7 @@ function AdminDashboardManagementPanel({
             "flex min-h-[220px] flex-col overflow-visible p-3 sm:col-span-2 lg:col-span-5",
             getDashboardReorderCardClassName("topContent"),
           )}
-          style={{ order: getDashboardWidgetOrder("topContent") }}
+          style={getDashboardCardOrderStyle("topContent")}
           data-admin-dashboard-widget-card="topContent"
           {...getDashboardCardReorderProps("topContent")}
         >
@@ -6037,26 +6267,26 @@ function AdminDashboardManagementPanel({
             infoLines={[
               "설명: 그래프는 선택 기간 업로드 영상 중 상위 5개를 요약하고, 표는 전체 영상을 보여줍니다.",
               hasPeriodGrowthComparison
-                ? "읽는 법: 막대는 선택 기간 업로드 영상의 조회·좋아요·댓글 증가량을 보여주고, 기여도는 업로드 영상 증가 합계 중 해당 영상이 차지한 비율입니다."
-                : "읽는 법: 막대는 조회·좋아요·댓글 수를 보여주고, 기여도는 전체 합계 중 해당 영상이 차지한 비율입니다.",
+                ? "읽는 법: 막대는 선택 기간 업로드 영상의 조회·좋아요·댓글 증가량을 보여주고, 기여도는 세 지표를 가중 합산한 성과 기여입니다."
+                : "읽는 법: 막대는 조회·좋아요·댓글 수를 보여주고, 기여도는 세 지표를 가중 합산한 성과 기여입니다.",
               "막대 기준: 각 색 조각은 그래프에 표시된 상위 5개 안에서 해당 영상이 차지하는 비중입니다.",
               topContentContributionFormula,
               hasPeriodGrowthComparison
-                ? "용어: 기간 조회 증가 기여는 선택 기간 업로드 영상들의 조회 증가 합계 중 이 영상이 차지한 비율입니다."
-                : "용어: 기간 조회 기여는 선택 기간 영상들의 조회수 합계 중 이 영상 조회수가 차지한 비율입니다.",
+                ? "용어: 조회·좋아요·댓글 증가 기여는 각각 선택 기간 업로드 영상 전체 증가 합계 중 이 영상이 차지한 비율입니다."
+                : "용어: 조회·좋아요·댓글 기여는 각각 선택 기간 영상 전체 합계 중 이 영상이 차지한 비율입니다.",
               hasPeriodGrowthComparison
                 ? "비교 대상: 선택 기간에 새로 올라온 업로드 영상입니다."
-                : "예시: 영상 20개의 조회수 합계가 1,000회이고 이 영상이 120회면 12% 기여입니다.",
+                : "예시: 조회 기여 10%, 좋아요 기여 6%, 댓글 기여 4%라면 가중치를 적용해 하나의 성과 기여로 봅니다.",
               hasPeriodGrowthComparison
-                ? "처리: 이전 스냅샷이 없으면 현재 조회수를 증가분으로 봅니다."
-                : "처리: 선택 기간 영상의 현재 조회수를 그대로 사용합니다.",
+                ? "처리: 이전 스냅샷이 없으면 현재 조회·좋아요·댓글을 증가분으로 봅니다."
+                : "처리: 선택 기간 영상의 현재 조회·좋아요·댓글을 그대로 사용합니다.",
               hasPeriodGrowthComparison
-                ? "전체값: 선택 기간 업로드 영상의 조회 증가 합계를 분모로 사용합니다."
-                : "전체값: 선택 기간 영상 조회수 합계를 분모로 사용합니다.",
+                ? "전체값: 선택 기간 업로드 영상의 조회·좋아요·댓글 증가 합계를 각각 분모로 사용합니다."
+                : "전체값: 선택 기간 영상의 조회·좋아요·댓글 합계를 각각 분모로 사용합니다.",
               "주의: 그래프는 빠른 요약이고, 표 보기는 선택 기간 전체 영상을 확인하는 용도입니다.",
             ]}
             action={
-              <div className="flex flex-wrap items-center justify-end gap-1">
+              <div className="flex min-w-fit flex-nowrap items-center justify-end gap-1">
                 <AdminDashboardSeriesToggle
                   label="콘텐츠 성과 TOP 5"
                   options={[
@@ -6117,7 +6347,7 @@ function AdminDashboardManagementPanel({
             "flex min-h-[220px] flex-col overflow-visible p-2 sm:col-span-2 lg:col-span-5",
             getDashboardReorderCardClassName("engagementRate"),
           )}
-          style={{ order: getDashboardWidgetOrder("engagementRate") }}
+          style={getDashboardCardOrderStyle("engagementRate")}
           data-admin-dashboard-widget-card="engagementRate"
           {...getDashboardCardReorderProps("engagementRate")}
         >
@@ -6127,13 +6357,13 @@ function AdminDashboardManagementPanel({
             infoLines={[
               "설명: 지금 확인할 만한 영상 성과 신호를 요약한 카드입니다.",
               "읽는 법: 성과 기여, 참여율, 초반 반응, 재상승 후보를 작은 카드로 분류합니다.",
-              "참고: 성과 기여는 TOP 5와 같은 기준으로 기간 조회 증가 기여도를 봅니다.",
+              "참고: 성과 기여는 TOP 5와 같은 기준으로 조회·좋아요·댓글 기여를 함께 봅니다.",
               "참고: 참여율은 조회수 대비 좋아요와 댓글 반응 비중입니다.",
               "계산식: 신호 강도 = 카드별 규칙 점수를 0~100 범위로 표시한 값입니다.",
               "주의: 조회수만 보지 말고 기여도와 참여율을 함께 확인하세요.",
             ]}
             action={
-              <div className="ml-auto flex min-w-0 shrink-0 items-center gap-2">
+              <div className="ml-auto flex min-w-fit shrink-0 flex-nowrap items-center gap-2">
                 <AdminDashboardDiagnosisMeta
                   periodLabel={selectedPeriodLabel}
                 />
