@@ -1643,7 +1643,7 @@ export default function HomeDesktopControlPanel({
             >
               <div className="flex h-9 min-w-0 flex-1 items-center justify-start gap-2 rounded-full px-2.5 hover:bg-secondary/80">
                 <Image
-                  src="/logo.png"
+                  src="/logo.webp"
                   alt=""
                   aria-hidden="true"
                   width={26}
