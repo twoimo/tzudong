@@ -90,10 +90,15 @@ describe("YouTube KPI snapshot collector contract", () => {
     expect(route).toContain("youtube_channel_kpi_snapshots");
     expect(route).toContain("subscriber_delta");
     expect(route).toContain("previousBucketStartedAt");
+    expect(route).toContain("process.env.GITHUB_ACTIONS_TOKEN ||");
+    expect(route.indexOf("process.env.GITHUB_ACTIONS_TOKEN")).toBeLessThan(
+      route.indexOf("process.env.GITHUB_TOKEN"),
+    );
     expect(dashboard).toContain("/api/admin/youtube-kpi-collection-logs");
-    expect(dashboard).toContain("데이터 수집 로그");
-    expect(dashboard).toContain("구독자 증감");
-    expect(dashboard).toContain("formatSignedNumber(snapshot.subscriberDelta)");
+    expect(dashboard).toContain("데이터 수집 상태");
+    expect(dashboard).toContain("수집 정상");
+    expect(dashboard).toContain("GITHUB_ACTIONS_TOKEN 또는 GH_TOKEN");
+    expect(dashboard).toContain("formatSignedNumber(snapshot?.viewDelta)");
     expect(dashboard).toContain("enabled: isCollectionLogsOpen");
     expect(dashboard).toContain(
       "data-admin-dashboard-kpi-collection-log-trigger",
