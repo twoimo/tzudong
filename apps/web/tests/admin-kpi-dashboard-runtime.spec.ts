@@ -401,6 +401,88 @@ test.describe('Admin KPI dashboard runtime guard', () => {
         await expectNoRuntimeErrorsAfterHydration(page, runtimeErrors);
     });
 
+    test('모바일 KPI 대시보드는 스크롤 시 관리자 헤더와 바텀 네비게이션을 함께 숨긴다', async ({ page }, testInfo) => {
+        const runtimeErrors = captureRuntimeErrors(page);
+
+        await page.setViewportSize({ width: 390, height: 844 });
+        await installMockAdminSession(page);
+        await mockAdminDashboardApis(page);
+        const bypassToken = getE2EAdminRouteBypassToken(testInfo);
+
+        await page.setExtraHTTPHeaders({
+            [E2E_ADMIN_ROUTE_BYPASS_HEADER]: '1',
+            [E2E_ADMIN_ROUTE_BYPASS_TOKEN_HEADER]: bypassToken,
+        });
+        await gotoAndHidePopup(page, '/admin');
+
+        await expect(page.locator('[data-admin-dashboard-management="true"]')).toBeVisible({
+            timeout: 20000,
+        });
+        const layout = page.locator('[data-admin-console-layout="sidebar-content"]');
+        const mobileHeader = page.locator('[data-admin-console-mobile-header="true"]');
+        const canvas = page.locator('#admin-console-canvas');
+
+        await expect(mobileHeader).toHaveAttribute('data-admin-console-mobile-header-visible', 'true');
+        await expect(layout).toHaveAttribute('data-admin-console-mobile-header-visible', 'true');
+        await expect
+            .poll(() =>
+                page.evaluate(() =>
+                    getComputedStyle(document.documentElement)
+                        .getPropertyValue('--mobile-sheet-hide-bottom-nav')
+                        .trim() || '0',
+                ),
+            )
+            .toBe('0');
+
+        const canvasPaddingBottom = await canvas.evaluate((element) =>
+            Number.parseFloat(getComputedStyle(element).paddingBottom),
+        );
+        expect(canvasPaddingBottom).toBeLessThanOrEqual(16);
+
+        const scrolledTop = await canvas.evaluate((element) => {
+            const spacer = document.createElement('div');
+            spacer.setAttribute('data-admin-scroll-spacer', 'runtime-guard');
+            spacer.style.height = '900px';
+            spacer.style.flex = '0 0 auto';
+            element.appendChild(spacer);
+            element.scrollTop = 520;
+            element.dispatchEvent(new Event('scroll', { bubbles: true }));
+            return element.scrollTop;
+        });
+        expect(scrolledTop).toBeGreaterThan(0);
+
+        await expect(layout).toHaveAttribute('data-admin-console-mobile-header-visible', 'false');
+        await expect(mobileHeader).toHaveAttribute('data-admin-console-mobile-header-visible', 'false');
+        await expect
+            .poll(() =>
+                page.evaluate(() =>
+                    getComputedStyle(document.documentElement)
+                        .getPropertyValue('--mobile-sheet-hide-bottom-nav')
+                        .trim(),
+                ),
+            )
+            .toBe('1');
+
+        await canvas.evaluate((element) => {
+            element.scrollTop = 0;
+            element.dispatchEvent(new Event('scroll', { bubbles: true }));
+        });
+
+        await expect(layout).toHaveAttribute('data-admin-console-mobile-header-visible', 'true');
+        await expect(mobileHeader).toHaveAttribute('data-admin-console-mobile-header-visible', 'true');
+        await expect
+            .poll(() =>
+                page.evaluate(() =>
+                    getComputedStyle(document.documentElement)
+                        .getPropertyValue('--mobile-sheet-hide-bottom-nav')
+                        .trim(),
+                ),
+            )
+            .toBe('0');
+
+        await expectNoRuntimeErrorsAfterHydration(page, runtimeErrors);
+    });
+
     test('KPI 대시보드는 관리자 세션에서 브라우저 런타임 오류 없이 렌더링된다', async ({ page }, testInfo) => {
         const runtimeErrors = captureRuntimeErrors(page);
 

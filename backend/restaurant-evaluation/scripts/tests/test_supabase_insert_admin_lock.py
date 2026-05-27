@@ -151,7 +151,6 @@ class SupabaseInsertAdminLockTests(unittest.TestCase):
         data.update(overrides)
         return data
 
-
     def test_build_record_flattens_transform_category_lists(self):
         incoming = self.make_incoming(
             categories=None,

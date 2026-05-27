@@ -9,6 +9,9 @@ type UseMobileBottomNavAutoHideOptions<T extends HTMLElement> = {
     source: string;
     disabled?: boolean;
     touchThresholdPx?: number;
+    revealOnScrollUp?: boolean;
+    topRevealOffsetPx?: number;
+    getScrollTop?: () => number;
 };
 
 export function useMobileBottomNavAutoHide<T extends HTMLElement>({
@@ -16,6 +19,9 @@ export function useMobileBottomNavAutoHide<T extends HTMLElement>({
     source,
     disabled = false,
     touchThresholdPx = 32,
+    revealOnScrollUp = true,
+    topRevealOffsetPx,
+    getScrollTop,
 }: UseMobileBottomNavAutoHideOptions<T>) {
     const isBottomNavHiddenRef = useRef(false);
     const previousScrollTopRef = useRef(0);
@@ -54,23 +60,28 @@ export function useMobileBottomNavAutoHide<T extends HTMLElement>({
         if (deltaY <= -touchThresholdPx) {
             setBottomNavHidden(true);
             touchStartYRef.current = currentY;
-        } else if (deltaY >= touchThresholdPx) {
+        } else if (
+            revealOnScrollUp &&
+            deltaY >= touchThresholdPx
+        ) {
             setBottomNavHidden(false);
             touchStartYRef.current = currentY;
         }
-    }, [disabled, setBottomNavHidden, touchThresholdPx]);
+    }, [disabled, revealOnScrollUp, setBottomNavHidden, touchThresholdPx]);
 
     const handleScroll = useCallback(() => {
         if (disabled) return;
 
         const scrollElement = scrollRef.current;
-        if (!scrollElement) return;
+        if (!scrollElement && !getScrollTop) return;
 
-        const currentScrollTop = scrollElement.scrollTop;
+        const currentScrollTop = getScrollTop?.() ?? scrollElement?.scrollTop ?? 0;
         const action = getMobileScrollNavVisibilityAction({
             previousScrollTop: previousScrollTopRef.current,
             currentScrollTop,
             isHidden: isBottomNavHiddenRef.current,
+            revealOnScrollUp,
+            topRevealOffsetPx,
         });
 
         previousScrollTopRef.current = currentScrollTop;
@@ -80,24 +91,24 @@ export function useMobileBottomNavAutoHide<T extends HTMLElement>({
         } else if (action === 'show') {
             setBottomNavHidden(false);
         }
-    }, [disabled, scrollRef, setBottomNavHidden]);
+    }, [disabled, getScrollTop, revealOnScrollUp, scrollRef, setBottomNavHidden, topRevealOffsetPx]);
 
     useEffect(() => {
         if (disabled) return;
 
         const scrollElement = scrollRef.current;
-        if (!scrollElement) return;
+        if (!scrollElement && !getScrollTop) return;
 
-        previousScrollTopRef.current = scrollElement.scrollTop;
+        previousScrollTopRef.current = getScrollTop?.() ?? scrollElement?.scrollTop ?? 0;
 
-        scrollElement.addEventListener('scroll', handleScroll, { passive: true });
+        scrollElement?.addEventListener('scroll', handleScroll, { passive: true });
 
         return () => {
-            scrollElement.removeEventListener('scroll', handleScroll);
+            scrollElement?.removeEventListener('scroll', handleScroll);
             isBottomNavHiddenRef.current = false;
             resetMobileSheetLayoutState(source);
         };
-    }, [disabled, handleScroll, scrollRef, source]);
+    }, [disabled, getScrollTop, handleScroll, scrollRef, source]);
 
     return {
         onScroll: handleScroll,

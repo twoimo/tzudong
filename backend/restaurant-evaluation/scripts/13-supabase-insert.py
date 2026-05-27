@@ -103,7 +103,6 @@ def unique_non_empty(values: Iterable[Any]) -> list[Any]:
     return ordered
 
 
-
 def normalize_categories(raw_categories: Any) -> list[str]:
     """Return a flat, de-duplicated category list for Supabase text[] columns."""
 

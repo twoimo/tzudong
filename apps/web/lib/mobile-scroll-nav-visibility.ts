@@ -6,6 +6,7 @@ type MobileScrollNavVisibilityInput = {
     isHidden: boolean;
     thresholdPx?: number;
     topRevealOffsetPx?: number;
+    revealOnScrollUp?: boolean;
 };
 
 const DEFAULT_SCROLL_THRESHOLD_PX = 18;
@@ -17,6 +18,7 @@ export function getMobileScrollNavVisibilityAction({
     isHidden,
     thresholdPx = DEFAULT_SCROLL_THRESHOLD_PX,
     topRevealOffsetPx = DEFAULT_TOP_REVEAL_OFFSET_PX,
+    revealOnScrollUp = true,
 }: MobileScrollNavVisibilityInput): MobileScrollNavVisibilityAction {
     if (currentScrollTop <= topRevealOffsetPx) {
         return isHidden ? 'show' : 'unchanged';
@@ -28,7 +30,7 @@ export function getMobileScrollNavVisibilityAction({
         return isHidden ? 'unchanged' : 'hide';
     }
 
-    if (delta <= -thresholdPx) {
+    if (revealOnScrollUp && delta <= -thresholdPx) {
         return isHidden ? 'show' : 'unchanged';
     }
 
