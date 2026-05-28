@@ -336,6 +336,7 @@ export function SubmissionDetailView({
     const [addressChanged, setAddressChanged] = useState(false);
 
     const isEditSubmission = submission.submission_type === 'edit';
+    const isClosureEditRequest = isEditSubmission && Boolean(submission.admin_notes?.includes('폐업 제보'));
     const pendingItems = submission.items.filter(item => item.item_status === 'pending');
     const hasDuplicateItems = pendingItems.some(item => item.duplicate_check_result?.isDuplicate);
 
@@ -560,7 +561,21 @@ export function SubmissionDetailView({
                     <Badge variant={isEditSubmission ? "secondary" : "default"} className="text-xs">
                         {isEditSubmission ? '수정 요청' : '신규 제보'}
                     </Badge>
+                    {isClosureEditRequest && (
+                        <Badge variant="destructive" className="text-xs">
+                            폐업 제보
+                        </Badge>
+                    )}
                 </div>
+
+                {isClosureEditRequest && (
+                    <div className="rounded-lg border border-orange-200 bg-orange-50 p-3 text-sm text-orange-900 dark:border-orange-950 dark:bg-orange-950/30 dark:text-orange-100">
+                        <p className="font-semibold">사용자가 폐업 가능성을 제보했습니다.</p>
+                        <p className="mt-1 text-xs leading-5">
+                            지도 후보를 그대로 승인하지 말고 현재 영업 여부를 확인한 뒤 노출 유지, 정보 수정, 삭제/비공개 처리를 결정하세요.
+                        </p>
+                    </div>
+                )}
 
                 {/* 수정 요청: 기존 정보 vs 사용자 제출 정보 비교 (이름, 전화, 주소, 카테고리만) */}
                 {isEditSubmission && submission.original_restaurant_data && (

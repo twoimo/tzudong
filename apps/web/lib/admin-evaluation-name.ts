@@ -19,6 +19,48 @@ function firstNonEmptyString(values: Array<unknown>): string | null {
   return null;
 }
 
+
+function normalizeComparableName(value: string | null | undefined): string {
+  return String(value || '')
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/\([^)]*\)|\[[^\]]*\]|（[^）]*）/g, ' ')
+    .replace(/(?:^|\s)(?:구|현|전)(?:\s|$)/g, ' ')
+    .replace(/[\s·・ㆍ._\-–—,，()（）\[\]{}<>《》"'`´’‘“”:：]/g, '')
+    .trim();
+}
+
+function tokenizeComparableName(value: string | null | undefined): string[] {
+  return [...new Set(String(value || '')
+    .normalize('NFKC')
+    .replace(/\(([^)]*)\)|（([^）]*)）/g, ' $1 $2 ')
+    .replace(/[·・ㆍ._\-–—,，\[\]{}<>《》"'`´’‘“”:：]/g, ' ')
+    .split(/\s+/)
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 2 && !['구', '현', '전', '내', '본점'].includes(token)))];
+}
+
+function stripBranchSuffix(token: string): string {
+  return token.replace(/점$/, '').trim();
+}
+
+function hasNameCompatibility(originName: string | null | undefined, candidateName: string | null | undefined): boolean {
+  const origin = normalizeComparableName(originName);
+  const candidate = normalizeComparableName(candidateName);
+  if (!origin || !candidate) return true;
+  if (origin === candidate) return true;
+  if (origin.length >= 3 && candidate.includes(origin)) return true;
+  if (candidate.length >= 3 && origin.includes(candidate)) return true;
+
+  const originTokens = tokenizeComparableName(originName).map(stripBranchSuffix).map(normalizeComparableName).filter(Boolean);
+  const candidateTokens = tokenizeComparableName(candidateName).map(stripBranchSuffix).map(normalizeComparableName).filter(Boolean);
+  return originTokens.some((originToken) => candidateTokens.some((candidateToken) => (
+    originToken === candidateToken
+    || (originToken.length >= 3 && candidateToken.includes(originToken))
+    || (candidateToken.length >= 3 && originToken.includes(candidateToken))
+  )));
+}
+
 function getLocationMatchResult(evaluationResults: EvaluationNameSource['evaluation_results']): LocationMatchResult | null {
   if (!evaluationResults || typeof evaluationResults !== 'object' || Array.isArray(evaluationResults)) {
     return null;
@@ -40,11 +82,13 @@ export function getRuleBasedPassedNaverName(source: EvaluationNameSource): strin
     return null;
   }
 
-  return firstNonEmptyString([
+  const candidateNames = [
     source.naver_name,
     locationMatch?.naver_name,
     locationMatch?.matched_provider === 'naver' ? locationMatch?.matched_name : null,
-  ]);
+  ].filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
+
+  return candidateNames.find((candidateName) => hasNameCompatibility(source.origin_name, candidateName))?.trim() || null;
 }
 
 export function getAdminEvaluationDisplayName(source: EvaluationNameSource): string {
