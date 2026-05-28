@@ -85,6 +85,27 @@ maybe_normalize() {
     fi
 }
 
+ensure_gemini_cli_oauth_settings() {
+    [ -f "$HOME/.gemini/oauth_creds.json" ] || return 0
+    mkdir -p "$HOME/.gemini"
+    "$PYTHON_EXE" - <<'PY'
+import json
+from pathlib import Path
+
+path = Path.home() / ".gemini" / "settings.json"
+try:
+    data = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+except json.JSONDecodeError:
+    data = {}
+
+security = data.setdefault("security", {})
+auth = security.setdefault("auth", {})
+auth["selectedType"] = "oauth-personal"
+path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
+    chmod 600 "$HOME/.gemini/settings.json" || true
+}
+
 run_gemini_cli_request() {
     local prompt_file="$1"
     local response_file="$2"
@@ -98,6 +119,7 @@ run_gemini_cli_request() {
     # OAuth 폴백 시 API Key 대신 인증 파일을 강제 사용하도록 GEMINI_API_KEY 해제
     local env_cmd=""
     if [ -f "$HOME/.gemini/oauth_creds.json" ]; then
+        ensure_gemini_cli_oauth_settings
         env_cmd="env GEMINI_API_KEY="
     fi
 
@@ -268,6 +290,7 @@ if grep -qi "microsoft\|wsl" /proc/version 2>/dev/null; then
                     rm -rf "$HOME/.gemini/oauth_creds.json" || true
                 fi
                 cp "$WIN_OAUTH_FILE" "$HOME/.gemini/oauth_creds.json" || true
+                ensure_gemini_cli_oauth_settings || true
             fi
         fi
     fi
@@ -302,6 +325,7 @@ if [ -z "$GEMINI_API_KEY" ]; then
         if [ -n "${GEMINI_CREDENTIALS_BASE64_2:-}" ]; then
             echo "$GEMINI_CREDENTIALS_BASE64_2" | base64 -d > "$HOME/.gemini/oauth_creds_2.json"
         fi
+        ensure_gemini_cli_oauth_settings
         FORCE_CLI_FALLBACK=true
     else
         log_error "GEMINI_API_KEY 또는 OAuth CLI 자격 증명이 없습니다."
