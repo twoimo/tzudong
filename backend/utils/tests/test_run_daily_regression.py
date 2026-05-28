@@ -311,6 +311,12 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertIn("agy-runtime-preflight.err", daily_workflow)
         self.assertIn("gemini-cli-runtime-preflight.err", daily_workflow)
         self.assertIn("AGY_SETTINGS_JSON: ${{ secrets.AGY_SETTINGS_JSON }}", daily_workflow)
+        self.assertIn("AGY_CREDENTIAL_B64: ${{ secrets.AGY_CREDENTIAL_B64 }}", daily_workflow)
+        self.assertIn("libsecret-tools", daily_workflow)
+        self.assertIn("gnome-keyring", daily_workflow)
+        self.assertIn("dbus-x11", daily_workflow)
+        self.assertIn('secret-tool store --label="Antigravity OAuth token" service gemini username antigravity', daily_workflow)
+        self.assertIn("Antigravity OAuth credential restored to Secret Service", daily_workflow)
 
     def test_env_contract_guard_fails_closed_without_printing_values(self) -> None:
         env = os.environ.copy()
@@ -353,6 +359,7 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertNotIn("stub-service-role", ok.stdout)
 
         env["GEMINI_CREDENTIALS_BASE64"] = "oauth-secret-value"
+        env["AGY_CREDENTIAL_B64"] = "agy-oauth-secret-value"
         oauth_ok = subprocess.run(
             ["/usr/bin/python3", str(ENV_CONTRACT_SOURCE), "--profile", "daily", "--json"],
             capture_output=True,
@@ -363,7 +370,9 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertEqual(0, oauth_ok.returncode, self._format_process_output(oauth_ok))
         oauth_payload = json.loads(oauth_ok.stdout)
         self.assertIn("GEMINI_CREDENTIALS_BASE64", oauth_payload["runtimeAliasesPresent"])
+        self.assertIn("AGY_CREDENTIAL_B64", oauth_payload["runtimeAliasesPresent"])
         self.assertNotIn("oauth-secret-value", oauth_ok.stdout)
+        self.assertNotIn("agy-oauth-secret-value", oauth_ok.stdout)
 
     def test_gdrive_expected_manifest_caps_batch_and_queues_overflow(self) -> None:
         for name in ("a.jpg", "b.jpg", "c.jpg"):
