@@ -160,6 +160,15 @@ is_quota_error() {
     [ -f "$file" ] && grep -qi -E '429|quota|rate limit|RESOURCE_EXHAUSTED|Too Many Requests|exhausted' "$file"
 }
 
+log_cli_error_tail() {
+    local label="$1"
+    local file="$2"
+    if [ -f "$file" ] && [ -s "$file" ]; then
+        log_warning "$label stderr/output tail:"
+        sed -n '1,80p' "$file" >&2
+    fi
+}
+
 # ================================
 # 명령어 감지
 # ================================
@@ -770,6 +779,9 @@ $TRANSCRIPT
                             LAST_SUCCESS_PROVIDER="gemini-cli"
                         elif is_quota_error "$TEMP_STDERR" || is_quota_error "$TEMP_RESPONSE"; then
                             log_warning "Gemini CLI 할당량/레이트리밋 감지 - 다음 파싱 시도 전 응답 유지"
+                            log_cli_error_tail "Gemini CLI JSON 재요청 실패" "$TEMP_STDERR"
+                        else
+                            log_cli_error_tail "Gemini CLI JSON 재요청 실패" "$TEMP_STDERR"
                         fi
                     elif [ "$RETRY_REQUESTED" = false ] && [ -n "$NODE_EXE" ]; then
                         log_warning "Node.js API JSON 전용 재요청"
