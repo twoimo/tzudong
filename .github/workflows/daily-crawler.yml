@@ -408,7 +408,7 @@ jobs:
 
               if command -v gemini >/dev/null 2>&1 && ensure_gemini_cli_oauth_settings; then
                 set +e
-                env GEMINI_API_KEY= timeout --foreground 75s gemini -p "Reply with only: ok" --model gemini-3-flash-preview --output-format json < /dev/null \
+                env GEMINI_API_KEY= timeout --foreground 75s gemini --skip-trust -p "Reply with only: ok" --model gemini-3-flash-preview --output-format json < /dev/null \
                   > backend/log/cron/gemini-cli-runtime-preflight.json \
                   2> backend/log/cron/gemini-cli-runtime-preflight.err
                 GEMINI_CLI_STATUS=$?
@@ -435,13 +435,13 @@ jobs:
             echo "Gemini CLI OAuth status: $GEMINI_CLI_STATUS"
             echo "OAuth fallback status: $OAUTH_STATUS"
             echo
-            echo "```json"
+            echo '```json'
             if [ -s backend/log/cron/gemini-runtime-preflight.json ]; then
               cat backend/log/cron/gemini-runtime-preflight.json
             else
               echo '{"error":"gemini-runtime-preflight.json missing"}'
             fi
-            echo "```"
+            echo '```'
             if [ -s backend/log/cron/agy-runtime-preflight.txt ]; then
               echo
               echo "Antigravity CLI stdout:"

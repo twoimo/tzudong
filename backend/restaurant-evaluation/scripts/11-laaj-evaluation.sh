@@ -124,9 +124,9 @@ run_gemini_cli_request() {
     fi
 
     if command -v timeout >/dev/null 2>&1 && [ "$OS_NAME" != "Windows" ]; then
-        $env_cmd timeout --foreground "$timeout_sec" gemini --model "$CURRENT_MODEL" --output-format json --yolo < "$prompt_file" > "$response_file" 2>"$stderr_file"
+        $env_cmd timeout --foreground "$timeout_sec" gemini --skip-trust --model "$CURRENT_MODEL" --output-format json --yolo < "$prompt_file" > "$response_file" 2>"$stderr_file"
     else
-        $env_cmd gemini --model "$CURRENT_MODEL" --output-format json --yolo < "$prompt_file" > "$response_file" 2>"$stderr_file"
+        $env_cmd gemini --skip-trust --model "$CURRENT_MODEL" --output-format json --yolo < "$prompt_file" > "$response_file" 2>"$stderr_file"
     fi
 }
 
@@ -481,9 +481,9 @@ if [ "$HEALTH_CHECK_PASSED" = false ]; then
             health_check_err="$TEMP_DIR/health_check_err.log"
             set +e
             if command -v timeout >/dev/null 2>&1 && [ "$OS_NAME" != "Windows" ]; then
-                $env_cmd timeout --foreground "${GEMINI_CLI_TIMEOUT_SEC:-240}" gemini -p "1+1=?" --model "$candidate_model" --output-format json < /dev/null > "$HEALTH_CHECK_RESPONSE" 2>"$health_check_err"
+                $env_cmd timeout --foreground "${GEMINI_CLI_TIMEOUT_SEC:-240}" gemini --skip-trust -p "1+1=?" --model "$candidate_model" --output-format json < /dev/null > "$HEALTH_CHECK_RESPONSE" 2>"$health_check_err"
             else
-                $env_cmd gemini -p "1+1=?" --model "$candidate_model" --output-format json < /dev/null > "$HEALTH_CHECK_RESPONSE" 2>"$health_check_err"
+                $env_cmd gemini --skip-trust -p "1+1=?" --model "$candidate_model" --output-format json < /dev/null > "$HEALTH_CHECK_RESPONSE" 2>"$health_check_err"
             fi
             EXIT_CODE=$?
             set -e
