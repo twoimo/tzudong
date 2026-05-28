@@ -10,7 +10,7 @@ describe('receipt OCR normalization', () => {
     expect(isReceiptMetadataItemName('2인(린특)치즈')).toBe(false);
 
     const envelope = buildReceiptOcrEnvelope({
-      provider: 'nvidia_nim',
+      provider: 'gemini',
       model: 'unit-model',
       attempts: [{ model: 'unit-model', ok: true, elapsedMs: 1 }],
       data: {

@@ -1,6 +1,15 @@
 import fs from 'fs';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
+function resolveThinkingLevel(...candidates) {
+    const allowed = new Set(['MINIMAL', 'LOW', 'MEDIUM', 'HIGH']);
+    for (const candidate of candidates) {
+        const value = String(candidate || '').trim().toUpperCase();
+        if (allowed.has(value)) return value;
+    }
+    return 'MEDIUM';
+}
+
 function buildApiKeyPool() {
     const rawPrimary = (process.env.GEMINI_API_KEY || '').trim();
     const rawFallbacks = String(process.env.GEMINI_API_FALLBACK_KEYS || '');
@@ -43,15 +52,21 @@ async function main() {
         console.log("DEBUG: Reading prompt file...");
         const prompt = fs.readFileSync(promptFile, 'utf8');
         console.log(`DEBUG: Prompt Size=${prompt.length}`);
-        const modelName = process.env.PRIMARY_MODEL || 'gemini-3-flash-preview';
+        const modelName = process.env.PRIMARY_MODEL || 'gemini-3.5-flash';
+        const thinkingLevel = resolveThinkingLevel(process.env.LAAJ_THINKING_LEVEL, process.env.GEMINI_THINKING_LEVEL, 'HIGH');
         let lastError = null;
 
         for (let keyIndex = 0; keyIndex < apiKeys.length; keyIndex++) {
             try {
                 console.log(`DEBUG: Initializing GoogleGenerativeAI with key ${keyIndex + 1}/${apiKeys.length}...`);
                 const genAI = new GoogleGenerativeAI(apiKeys[keyIndex]);
-                console.log(`DEBUG: Getting Model=${modelName}...`);
-                const model = genAI.getGenerativeModel({ model: modelName });
+                console.log(`DEBUG: Getting Model=${modelName}, thinkingLevel=${thinkingLevel}...`);
+                const model = genAI.getGenerativeModel({
+                    model: modelName,
+                    generationConfig: {
+                        thinkingConfig: { thinkingLevel },
+                    },
+                });
 
                 console.log("DEBUG: Calling generateContent...");
                 const result = await model.generateContent(prompt);
