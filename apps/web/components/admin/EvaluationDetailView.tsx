@@ -12,6 +12,7 @@ import {
     getAddressConsistencyBadgeClass,
     getAddressConsistencyOperatorGuidance,
     getAddressConsistencyStatus,
+    getAddressConsistencyTriageSignals,
     type AddressConsistencyTriageTone,
 } from '@/lib/admin-address-consistency';
 import {
@@ -331,6 +332,7 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
     const addressConsistency = explainAddressConsistency(record);
     const addressAhp = getAddressConsistencyAhpSummary(record);
     const addressGuidance = getAddressConsistencyOperatorGuidance(record);
+    const addressSignals = getAddressConsistencyTriageSignals(record);
     const addressConsistencyStatus = getAddressConsistencyStatus(record);
     const evaluationCompletenessIssues = getEvaluationCompletenessIssues(record);
     const hasMetricIssue = (key: EvaluationMetricKey) => evaluationCompletenessIssues.some((issue) => issue.key === key);
@@ -520,6 +522,30 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
                                     </div>
                                 )}
                             </div>
+                            {addressSignals.length > 0 && (
+                                <div className="rounded-xl border border-amber-200/70 bg-amber-50/45 p-3">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span className="text-xs font-bold text-amber-950">추가 신호</span>
+                                        {addressSignals.map((signal) => (
+                                            <Badge
+                                                key={`${record.id}-address-signal-${signal.kind}`}
+                                                variant="outline"
+                                                className={cn('h-6 px-2 text-[11px] font-bold', addressGuidanceToneClasses[signal.tone])}
+                                            >
+                                                {signal.label}
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                    <ul className="mt-2 space-y-1 text-xs leading-5 text-amber-950">
+                                        {addressSignals.slice(0, 4).map((signal) => (
+                                            <li key={`${record.id}-address-signal-message-${signal.kind}`} className="break-keep">
+                                                <span className="font-semibold">{signal.label}</span> · {signal.message}
+                                                {signal.evidence.length > 0 ? ` (${signal.evidence.slice(0, 2).join(' / ')})` : ''}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
                             {addressConsistency.evidence.length > 0 && (
                                 <ul className="space-y-1 rounded-lg border border-orange-200/70 bg-orange-50/50 p-2 text-orange-950">
                                     {addressConsistency.evidence.map((item, index) => (
