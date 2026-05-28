@@ -29,8 +29,8 @@ describe('receipt OCR manifest/evaluation harness', () => {
       },
       {
         fixtureId: 'fixture-2',
-        provider: 'nvidia_nim',
-        model: 'qwen/qwen3.5-122b-a10b',
+        provider: 'gemini',
+        model: 'gemini-3.5-flash',
         latencyMs: 3000,
         error: 'timeout',
         gold,
