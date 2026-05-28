@@ -287,6 +287,8 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertNotIn("python-version: '3.10'", daily_workflow)
         self.assertIn("python3 backend/bin/check_env_contract.py --profile daily", daily_workflow)
         self.assertIn("node backend/bin/check_gemini_runtime.mjs", daily_workflow)
+        self.assertIn("python3 backend/bin/run_agy_prompt.py", daily_workflow)
+        self.assertIn("https://antigravity.google/cli/install.sh", daily_workflow)
         self.assertIn("--require-api-available", daily_workflow)
         self.assertIn("allow_budget_risk", daily_workflow)
         self.assertIn("Guard manual default-branch budget posture", daily_workflow)
@@ -299,8 +301,9 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertNotIn("steps.budget.outputs.soft_gate != 'critical'", backfill_workflow)
         self.assertIn("YOUTUBE_API_KEY_BYEON: ${{ secrets.YOUTUBE_API_KEY }}", daily_workflow)
         self.assertIn("GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}", daily_workflow)
-        self.assertNotIn("secrets.GEMINI_CREDENTIALS_BASE64", daily_workflow)
-        self.assertNotIn("secrets.GEMINI_CREDENTIALS_BASE64_2", daily_workflow)
+        self.assertIn("GEMINI_CREDENTIALS_BASE64: ${{ secrets.GEMINI_CREDENTIALS_BASE64 }}", daily_workflow)
+        self.assertIn("GEMINI_CREDENTIALS_BASE64_2: ${{ secrets.GEMINI_CREDENTIALS_BASE64_2 }}", daily_workflow)
+        self.assertIn("AGY_SETTINGS_JSON: ${{ secrets.AGY_SETTINGS_JSON }}", daily_workflow)
 
     def test_env_contract_guard_fails_closed_without_printing_values(self) -> None:
         env = os.environ.copy()
@@ -342,18 +345,18 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertNotIn("stub-gemini", ok.stdout)
         self.assertNotIn("stub-service-role", ok.stdout)
 
-        env["GEMINI_CREDENTIALS_BASE64"] = "removed-secret-value"
-        failed = subprocess.run(
+        env["GEMINI_CREDENTIALS_BASE64"] = "oauth-secret-value"
+        oauth_ok = subprocess.run(
             ["/usr/bin/python3", str(ENV_CONTRACT_SOURCE), "--profile", "daily", "--json"],
             capture_output=True,
             text=True,
             env=env,
             check=False,
         )
-        self.assertNotEqual(0, failed.returncode, self._format_process_output(failed))
-        failed_payload = json.loads(failed.stdout)
-        self.assertEqual(["GEMINI_CREDENTIALS_BASE64"], failed_payload["forbiddenPresent"])
-        self.assertNotIn("removed-secret-value", failed.stdout)
+        self.assertEqual(0, oauth_ok.returncode, self._format_process_output(oauth_ok))
+        oauth_payload = json.loads(oauth_ok.stdout)
+        self.assertIn("GEMINI_CREDENTIALS_BASE64", oauth_payload["runtimeAliasesPresent"])
+        self.assertNotIn("oauth-secret-value", oauth_ok.stdout)
 
     def test_gdrive_expected_manifest_caps_batch_and_queues_overflow(self) -> None:
         for name in ("a.jpg", "b.jpg", "c.jpg"):
@@ -485,7 +488,7 @@ class GDriveUploadContractTests(unittest.TestCase):
         crawling_requirements = (REPO_ROOT / "backend" / "restaurant-crawling" / "scripts" / "requirements.txt").read_text(encoding="utf-8")
         pipeline_requirements = (REPO_ROOT / "backend" / "pipeline" / "requirements.txt").read_text(encoding="utf-8")
 
-        self.assertIn("npm audit --audit-level=high", security_workflow)
+        self.assertIn("npm audit --audit-level=moderate", security_workflow)
         self.assertIn("python -m pip_audit", security_workflow)
         self.assertIn("backend/restaurant-crawling/scripts/requirements.txt", security_workflow)
         self.assertIn('directory: "/backend/restaurant-crawling/scripts"', dependabot)
