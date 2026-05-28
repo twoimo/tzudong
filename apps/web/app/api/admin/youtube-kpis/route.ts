@@ -299,6 +299,41 @@ export async function GET(request: NextRequest) {
       filterByPublishedPeriod: !isChannelGrowthScope,
     });
     if (snapshotPayload) {
+      const snapshotComparisonAvailable =
+        snapshotPayload.meta?.comparisonCoverage?.comparisonAvailable === true;
+      const shouldUseHistoryComparisonFallback =
+        isChannelGrowthScope && period !== "ALL" && !snapshotComparisonAvailable;
+
+      if (shouldUseHistoryComparisonFallback) {
+        const historyComparisonPayload = await getInsightTreemapData(period, {
+          filterByPeriod: false,
+          metricMode: "views",
+        });
+
+        if (
+          historyComparisonPayload.meta?.comparisonCoverage
+            ?.comparisonAvailable === true
+        ) {
+          return NextResponse.json(
+            {
+              ...historyComparisonPayload,
+              meta: {
+                ...historyComparisonPayload.meta,
+                dataSource: "supabase-treemap",
+                fallbackSource: "supabase-treemap",
+                fallbackReasonCode: "snapshot-comparison-unavailable",
+              },
+            } satisfies InsightTreemapResponse,
+            {
+              headers: {
+                "Cache-Control":
+                  "private, max-age=60, stale-while-revalidate=180",
+              },
+            },
+          );
+        }
+      }
+
       return NextResponse.json(snapshotPayload, {
         headers: {
           "Cache-Control": "private, max-age=60, stale-while-revalidate=180",
@@ -316,7 +351,15 @@ export async function GET(request: NextRequest) {
         metricMode: "views",
       });
 
-      return NextResponse.json(fallbackPayload, {
+      return NextResponse.json({
+        ...fallbackPayload,
+        meta: {
+          ...fallbackPayload.meta,
+          dataSource: "supabase-treemap",
+          fallbackSource: "supabase-treemap",
+          fallbackReasonCode: "youtube-api-key-missing",
+        },
+      } satisfies InsightTreemapResponse, {
         headers: {
           "Cache-Control": "private, max-age=60, stale-while-revalidate=300",
         },
@@ -344,6 +387,16 @@ export async function GET(request: NextRequest) {
       totalVideos: videos.length,
       videos,
       availablePeriods: [],
+      meta: {
+        dataSource: "youtube-live",
+        comparisonCoverage: {
+          totalVideos: videos.length,
+          comparedVideos: 0,
+          newVideos: videos.length,
+          missingPreviousVideos: 0,
+          comparisonAvailable: false,
+        },
+      },
     };
 
     return NextResponse.json(payload, {
@@ -360,7 +413,15 @@ export async function GET(request: NextRequest) {
         metricMode: "views",
       });
 
-      return NextResponse.json(fallbackPayload, {
+      return NextResponse.json({
+        ...fallbackPayload,
+        meta: {
+          ...fallbackPayload.meta,
+          dataSource: "supabase-treemap",
+          fallbackSource: "supabase-treemap",
+          fallbackReasonCode: "youtube-live-fetch-failed",
+        },
+      } satisfies InsightTreemapResponse, {
         headers: {
           "Cache-Control": "private, max-age=60, stale-while-revalidate=300",
         },

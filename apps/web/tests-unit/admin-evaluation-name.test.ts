@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import {
+  getAdminEvaluationApprovalName,
   getAdminEvaluationDisplayName,
   getRuleBasedPassedNaverName,
 } from '@/lib/admin-evaluation-name';
@@ -96,5 +97,40 @@ describe('getAdminEvaluationDisplayName', () => {
         evaluation_results: null,
       }),
     ).toBe('원본상호');
+  });
+});
+
+
+describe('getAdminEvaluationApprovalName', () => {
+  test('keeps the admin-edited name when stale provider names still exist', () => {
+    expect(
+      getAdminEvaluationApprovalName({
+        approved_name: '관리자가수정한맛집',
+        restaurant_name: '관리자가수정한맛집',
+        name: '관리자가수정한맛집',
+        naver_name: '이전네이버후보명',
+        google_name: '이전구글후보명',
+        evaluation_results: {
+          location_match_TF: {
+            eval_value: true,
+            naver_name: '이전네이버후보명',
+          },
+        },
+      }),
+    ).toBe('관리자가수정한맛집');
+  });
+
+  test('uses the passed provider name when there is no admin edit', () => {
+    expect(
+      getAdminEvaluationApprovalName({
+        origin_name: '원본상호',
+        naver_name: '검증된네이버후보명',
+        evaluation_results: {
+          location_match_TF: {
+            eval_value: true,
+          },
+        },
+      }),
+    ).toBe('검증된네이버후보명');
   });
 });

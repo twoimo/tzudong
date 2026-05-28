@@ -30,11 +30,36 @@ type YouTubeChannelListResponse = {
   }>;
 };
 
+type ChannelDeltaSource =
+  | "snapshot-delta"
+  | "derived-live-comparison"
+  | "derived-snapshot-comparison"
+  | "unavailable";
+
 function parseYouTubeCount(value: unknown) {
   if (typeof value !== "string" && typeof value !== "number") return null;
 
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function getDerivedLiveDelta(
+  currentValue: number | null,
+  previousValue: number | null | undefined,
+  snapshotDelta: number | null | undefined,
+): { value: number | null; source: ChannelDeltaSource } {
+  if (typeof currentValue === "number" && typeof previousValue === "number") {
+    return {
+      value: currentValue - previousValue,
+      source: "derived-live-comparison",
+    };
+  }
+
+  if (typeof snapshotDelta === "number") {
+    return { value: snapshotDelta, source: "snapshot-delta" };
+  }
+
+  return { value: null, source: "unavailable" };
 }
 
 function getYouTubeApiKey() {
@@ -148,7 +173,24 @@ export async function GET(request: Request) {
 
     const statistics = channel.statistics ?? {};
     const liveSubscriberCount = parseYouTubeCount(statistics.subscriberCount);
+    const liveViewCount = parseYouTubeCount(statistics.viewCount);
+    const liveVideoCount = parseYouTubeCount(statistics.videoCount);
     const comparisonSnapshot = await getYouTubeChannelSnapshotFallback(period);
+    const subscriberDelta = getDerivedLiveDelta(
+      liveSubscriberCount,
+      comparisonSnapshot?.previousSubscriberCount,
+      comparisonSnapshot?.subscriberDelta,
+    );
+    const viewDelta = getDerivedLiveDelta(
+      liveViewCount,
+      comparisonSnapshot?.previousViewCount,
+      comparisonSnapshot?.viewDelta,
+    );
+    const videoDelta = getDerivedLiveDelta(
+      liveVideoCount,
+      comparisonSnapshot?.previousVideoCount,
+      comparisonSnapshot?.videoDelta,
+    );
 
     if (statistics.hiddenSubscriberCount !== true && liveSubscriberCount == null) {
       return respondWithYouTubeChannelSnapshotFallback(
@@ -164,8 +206,8 @@ export async function GET(request: Request) {
         title: channel.snippet?.title ?? null,
         handle: channel.snippet?.customUrl ?? null,
         subscriberCount: liveSubscriberCount,
-        viewCount: parseYouTubeCount(statistics.viewCount),
-        videoCount: parseYouTubeCount(statistics.videoCount),
+        viewCount: liveViewCount,
+        videoCount: liveVideoCount,
         hiddenSubscriberCount: statistics.hiddenSubscriberCount === true,
         fetchedAt: new Date().toISOString(),
         previousSubscriberCount: comparisonSnapshot?.previousSubscriberCount ?? null,
@@ -173,10 +215,16 @@ export async function GET(request: Request) {
         previousVideoCount: comparisonSnapshot?.previousVideoCount ?? null,
         previousBucketStartedAt:
           comparisonSnapshot?.previousBucketStartedAt ?? null,
-        subscriberDelta: comparisonSnapshot?.subscriberDelta ?? null,
-        viewDelta: comparisonSnapshot?.viewDelta ?? null,
-        videoDelta: comparisonSnapshot?.videoDelta ?? null,
+        subscriberDelta: subscriberDelta.value,
+        viewDelta: viewDelta.value,
+        videoDelta: videoDelta.value,
         comparisonFetchedAt: comparisonSnapshot?.comparisonFetchedAt ?? null,
+        deltaSource:
+          subscriberDelta.source !== "unavailable"
+            ? subscriberDelta.source
+            : viewDelta.source !== "unavailable"
+              ? viewDelta.source
+              : videoDelta.source,
       },
       {
         headers: youtubeChannelCacheHeaders,
