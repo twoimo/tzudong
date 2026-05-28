@@ -235,13 +235,17 @@ jobs:
            python -m camoufox fetch) &
           PY_PID=$!
           
-          # Node.js 의존성 (병렬)
-          (cd backend && npm ci --prefer-offline && npm install -g @google/gemini-cli) &
+          # Node.js + OAuth CLI 의존성 (병렬)
+          (cd backend && npm ci --prefer-offline && npm install -g @google/gemini-cli && \
+           curl -fsSL https://antigravity.google/cli/install.sh | bash) &
           NPM_PID=$!
           
           # 모든 설치 완료 대기
           wait $PY_PID $NPM_PID
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           echo "[OK] All dependencies installed"
+          command -v gemini >/dev/null 2>&1 && gemini --version || true
+          "$HOME/.local/bin/agy" --help | head -20 || true
 
       # ============================================================
       # 자격 증명 설정 (Credentials) - 병렬 생성
@@ -252,10 +256,13 @@ jobs:
           GOOGLE_CREDENTIALS_BASE64: ${{ secrets.GOOGLE_CREDENTIALS_BASE64 }}
           YOUTUBE_COOKIES_TXT: ${{ secrets.YOUTUBE_COOKIES_TXT }}
           GDRIVE_RCLONE_CONFIG: ${{ secrets.GDRIVE_RCLONE_CONFIG }}
+          GEMINI_CREDENTIALS_BASE64: ${{ secrets.GEMINI_CREDENTIALS_BASE64 }}
+          GEMINI_CREDENTIALS_BASE64_2: ${{ secrets.GEMINI_CREDENTIALS_BASE64_2 }}
+          AGY_SETTINGS_JSON: ${{ secrets.AGY_SETTINGS_JSON }}
         run: |
           set -euo pipefail
           umask 077
-          mkdir -p backend/restaurant-crawling/data ~/.gemini ~/.config/rclone
+          mkdir -p backend/restaurant-crawling/data ~/.gemini ~/.gemini/antigravity-cli ~/.config/rclone
           
           # Add wrapper to PATH
           echo "${{ github.workspace }}/backend/bin" >> "$GITHUB_PATH"
@@ -271,7 +278,23 @@ jobs:
             printf '%s' "$YOUTUBE_COOKIES_TXT" > backend/restaurant-crawling/data/cookies.txt
           fi
           
-          # Gemini runs through the canonical GEMINI_API_KEY secret. OAuth credential secrets are intentionally unsupported.
+          # Gemini CLI OAuth accounts (optional): backend/bin/gemini rotates oauth_creds_*.json on quota.
+          if [ -n "$GEMINI_CREDENTIALS_BASE64" ]; then
+            printf '%s' "$GEMINI_CREDENTIALS_BASE64" | base64 -d > ~/.gemini/oauth_creds.json
+            chmod 600 ~/.gemini/oauth_creds.json
+          fi
+          if [ -n "$GEMINI_CREDENTIALS_BASE64_2" ]; then
+            printf '%s' "$GEMINI_CREDENTIALS_BASE64_2" | base64 -d > ~/.gemini/oauth_creds_2.json
+            chmod 600 ~/.gemini/oauth_creds_2.json
+          fi
+
+          # Antigravity CLI stores auth in the OS keyring; settings.json controls the selected model.
+          if [ -n "$AGY_SETTINGS_JSON" ]; then
+            printf '%s' "$AGY_SETTINGS_JSON" > ~/.gemini/antigravity-cli/settings.json
+          elif [ ! -f ~/.gemini/antigravity-cli/settings.json ]; then
+            printf '%s\n' '{"model":"Gemini 3.5 Flash (High)","enableTelemetry":false}' > ~/.gemini/antigravity-cli/settings.json
+          fi
+          chmod 600 ~/.gemini/antigravity-cli/settings.json
           
           # RClone Config
           if [ -n "$GDRIVE_RCLONE_CONFIG" ]; then
@@ -295,23 +318,62 @@ jobs:
           RCLONE_CONFIG_BASE64: ${{ secrets.GDRIVE_RCLONE_CONFIG }}
           YOUTUBE_COOKIES_TXT: ${{ secrets.YOUTUBE_COOKIES_TXT }}
           OPENAI_API_KEY_BYEON: ${{ secrets.OPENAI_API_KEY_BYEON }}
+          GEMINI_CREDENTIALS_BASE64: ${{ secrets.GEMINI_CREDENTIALS_BASE64 }}
+          GEMINI_CREDENTIALS_BASE64_2: ${{ secrets.GEMINI_CREDENTIALS_BASE64_2 }}
+          AGY_SETTINGS_JSON: ${{ secrets.AGY_SETTINGS_JSON }}
         run: python3 backend/bin/check_env_contract.py --profile daily
 
-      - name: Preflight Gemini API quota
+      - name: Preflight Gemini/Antigravity AI quota
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_API_KEY_BYEON: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_CREDENTIALS_BASE64: ${{ secrets.GEMINI_CREDENTIALS_BASE64 }}
+          GEMINI_CREDENTIALS_BASE64_2: ${{ secrets.GEMINI_CREDENTIALS_BASE64_2 }}
         run: |
           mkdir -p backend/log/cron
+          set +e
           node backend/bin/check_gemini_runtime.mjs \
             --output backend/log/cron/gemini-runtime-preflight.json \
             --require-api-available
+          API_STATUS=$?
+          set -e
+
+          OAUTH_STATUS=1
+          if [ "$API_STATUS" -ne 0 ]; then
+            echo "[WARN] Gemini API preflight exited $API_STATUS; checking OAuth CLI fallback."
+            if python3 backend/bin/run_agy_prompt.py \
+              --prompt-text "Reply with only: ok" \
+              --output backend/log/cron/agy-runtime-preflight.txt \
+              --stderr-file backend/log/cron/agy-runtime-preflight.err \
+              --print-timeout 45s \
+              --timeout-sec 75; then
+              OAUTH_STATUS=0
+            elif command -v gemini >/dev/null 2>&1 && [ -f "$HOME/.gemini/oauth_creds.json" ]; then
+              env GEMINI_API_KEY= timeout --foreground 75s gemini -p "Reply with only: ok" --model gemini-3-flash-preview --output-format json < /dev/null \
+                > backend/log/cron/gemini-cli-runtime-preflight.json \
+                2> backend/log/cron/gemini-cli-runtime-preflight.err && OAUTH_STATUS=0 || OAUTH_STATUS=$?
+            fi
+          fi
+
+          if [ "$API_STATUS" -ne 0 ] && [ "$OAUTH_STATUS" -ne 0 ]; then
+            echo "::error::Gemini API and OAuth CLI fallbacks are unavailable."
+            exit "$API_STATUS"
+          fi
+
           {
-            echo "### Gemini runtime preflight"
+            echo "### Gemini/Antigravity runtime preflight"
+            echo
+            echo "API status: $API_STATUS"
+            echo "OAuth fallback status: $OAUTH_STATUS"
             echo
             echo "\`\`\`json"
             cat backend/log/cron/gemini-runtime-preflight.json
             echo "\`\`\`"
+            if [ -f backend/log/cron/agy-runtime-preflight.txt ]; then
+              echo
+              echo "Antigravity CLI:"
+              sed -n '1,20p' backend/log/cron/agy-runtime-preflight.txt
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Check production contract fixture drift
@@ -386,6 +448,8 @@ jobs:
           YOUTUBE_API_KEY_BYEON: ${{ secrets.YOUTUBE_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_API_KEY_BYEON: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_CREDENTIALS_BASE64: ${{ secrets.GEMINI_CREDENTIALS_BASE64 }}
+          GEMINI_CREDENTIALS_BASE64_2: ${{ secrets.GEMINI_CREDENTIALS_BASE64_2 }}
           GITHUB_TOKEN: ${{ github.token }}
           # Supabase
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
