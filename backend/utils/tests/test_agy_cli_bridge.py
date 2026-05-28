@@ -31,6 +31,9 @@ class AgyCliBridgeTests(unittest.TestCase):
                 prompt = sys.argv[sys.argv.index("--print") + 1]
                 if "1+1" in prompt or "Reply with only" in prompt:
                     print("2")
+                elif "AGY_AUTH_REQUIRED" in prompt:
+                    print("Authentication required. Please visit the URL to log in:")
+                    print("  https://accounts.google.com/o/oauth2/auth?client_id=fake")
                 elif "AGY_ALWAYS_BAD_JSON" in prompt:
                     state_path = os.environ.get("AGY_FAKE_STATE")
                     count = 0
@@ -116,6 +119,38 @@ class AgyCliBridgeTests(unittest.TestCase):
         self.assertEqual(0, result.returncode, result.stderr + result.stdout)
         self.assertEqual("2", output_file.read_text(encoding="utf-8").strip())
         self.assertNotIn("\x1b", output_file.read_text(encoding="utf-8"))
+
+    def test_bridge_treats_auth_prompt_as_failure(self) -> None:
+        prompt_file = self.tmp / "prompt.txt"
+        output_file = self.tmp / "response.txt"
+        err_file = self.tmp / "response.err"
+        prompt_file.write_text("AGY_AUTH_REQUIRED", encoding="utf-8")
+
+        env = os.environ.copy()
+        env["PATH"] = f"{self.fakebin}{os.pathsep}{env.get('PATH', '')}"
+        result = subprocess.run(
+            [
+                "python3",
+                str(AGY_BRIDGE),
+                "--prompt-file",
+                str(prompt_file),
+                "--output",
+                str(output_file),
+                "--stderr-file",
+                str(err_file),
+                "--print-timeout",
+                "30s",
+                "--timeout-sec",
+                "45",
+            ],
+            capture_output=True,
+            text=True,
+            env=env,
+            check=False,
+        )
+
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("Authentication required", output_file.read_text(encoding="utf-8"))
 
     def test_laaj_uses_agy_oauth_before_gemini_cli_when_api_key_is_absent(self) -> None:
         rel_root = Path("backend") / "restaurant-evaluation" / "tmp" / f"agy-{os.getpid()}"
@@ -338,6 +373,85 @@ class AgyCliBridgeTests(unittest.TestCase):
             self.assertIn("Antigravity CLI JSON 재요청도 파싱 실패 -> Gemini CLI OAuth로 전환", combined)
             self.assertIn("Gemini CLI JSON 전용 재요청", combined)
             self.assertEqual("2", agy_state.read_text(encoding="utf-8").strip())
+            self.assertEqual("1", gemini_state.read_text(encoding="utf-8").strip())
+            output_file = evaluation / "evaluation" / "laaj_results" / f"{video_id}.jsonl"
+            self.assertTrue(output_file.exists())
+            payload = json.loads(output_file.read_text(encoding="utf-8").strip())
+            self.assertIn("visit_authenticity", payload["evaluation_results"])
+        finally:
+            shutil.rmtree(abs_root, ignore_errors=True)
+
+    def test_laaj_falls_back_to_gemini_cli_when_agy_requires_auth(self) -> None:
+        rel_root = Path("backend") / "restaurant-evaluation" / "tmp" / f"agy-auth-fallback-{os.getpid()}"
+        abs_root = PROJECT_ROOT / rel_root
+        crawling = abs_root / "crawl"
+        evaluation = abs_root / "eval"
+        rule_dir = evaluation / "evaluation" / "rule_results"
+        transcript_dir = crawling / "transcript"
+        rule_dir.mkdir(parents=True)
+        transcript_dir.mkdir(parents=True)
+
+        video_id = "agy_auth_fallback_video"
+        rule_payload = {
+            "youtube_link": "https://youtu.be/agy-auth-fallback",
+            "channel_name": "tzuyang",
+            "evaluation_target": {"인증폴백식당": True},
+            "restaurants": [{"origin_name": "인증폴백식당"}],
+            "evaluation_results": {
+                "location_match_TF": [
+                    {"origin_name": "인증폴백식당", "naver_name": "인증폴백식당"}
+                ]
+            },
+            "recollect_version": {"meta": 0},
+        }
+        transcript_payload = {
+            "language": "ko",
+            "transcript": [{"start": 0, "text": "AGY_AUTH_REQUIRED 인증폴백식당을 방문했습니다."}],
+        }
+        (rule_dir / f"{video_id}.jsonl").write_text(
+            json.dumps(rule_payload, ensure_ascii=False) + "\n", encoding="utf-8"
+        )
+        (transcript_dir / f"{video_id}.jsonl").write_text(
+            json.dumps(transcript_payload, ensure_ascii=False) + "\n", encoding="utf-8"
+        )
+        gemini_state = self.tmp / "gemini-auth-fallback-state.txt"
+
+        env = os.environ.copy()
+        env["PATH"] = f"{self.fakebin}{os.pathsep}/usr/bin:/bin"
+        env.pop("GEMINI_API_KEY", None)
+        env.pop("GEMINI_API_KEY_BYEON", None)
+        env["HOME"] = str(self.tmp)
+        (self.tmp / ".gemini").mkdir(exist_ok=True)
+        (self.tmp / ".gemini" / "oauth_creds.json").write_text("{}", encoding="utf-8")
+        env["AGY_BRIDGE_TIMEOUT_SEC"] = "45"
+        env["AGY_PRINT_TIMEOUT"] = "30s"
+        env["LAAJ_PARSE_RETRY_SLEEP_SEC"] = "0"
+        env["GEMINI_FAKE_STATE"] = str(gemini_state)
+
+        try:
+            result = subprocess.run(
+                [
+                    "bash",
+                    str(LAAJ_SCRIPT),
+                    "--channel",
+                    "tzuyang",
+                    "--crawling-path",
+                    str(rel_root / "crawl"),
+                    "--evaluation-path",
+                    str(rel_root / "eval"),
+                ],
+                cwd=PROJECT_ROOT,
+                capture_output=True,
+                text=True,
+                env=env,
+                check=False,
+                timeout=90,
+            )
+
+            combined = result.stdout + result.stderr
+            self.assertEqual(0, result.returncode, combined)
+            self.assertIn("Authentication required", combined)
+            self.assertIn("Gemini CLI 호출", combined)
             self.assertEqual("1", gemini_state.read_text(encoding="utf-8").strip())
             output_file = evaluation / "evaluation" / "laaj_results" / f"{video_id}.jsonl"
             self.assertTrue(output_file.exists())
