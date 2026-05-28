@@ -187,10 +187,16 @@ GITHUB_TOKEN=... python3 backend/bin/check_actions_budget.py \
 - 정말 필요한 운영 수동 실행만 `allow_budget_risk=true`로 명시 override한다.
 - `gdrive-frame-backfill.yml`은 scheduled/automatic run에서 `softGate=critical`이면 expensive backfill step을 skip하고 summary/artifact만 남긴다. Manual `workflow_dispatch`는 operator override로 간주한다.
 
-### Gemini quota preflight
+### Gemini / Antigravity quota preflight
 - `Run Daily Pipeline` 전에 `backend/bin/check_gemini_runtime.mjs --require-api-available`를 실행한다.
-- quota/auth/missing-key는 비디오 처리 전에 fail-fast되어, Step 08에서 긴 작업을 시작한 뒤 quota로 실패하는 비용을 줄인다.
-- preflight report는 `backend/log/cron/gemini-runtime-preflight.json` artifact로 남긴다. API key 값은 출력하지 않는다.
+- Gemini API quota/auth/missing-key가 실패하면 비디오 처리 전 `backend/bin/run_agy_prompt.py`로 Antigravity CLI OAuth를 먼저 확인하고, 그래도 실패하면 Gemini CLI OAuth를 확인한다.
+- LAAJ Step 11의 runtime fallback 순서는 `Node Gemini API -> Antigravity CLI(현재 활성 OAuth 계정, settings model) -> Gemini CLI OAuth`이다. Gemini CLI OAuth는 `~/.gemini/oauth_creds.json`와 `~/.gemini/oauth_creds_*.json`를 `backend/bin/gemini` wrapper가 quota 시 rotation한다.
+- GitHub Actions secret contract:
+  - `GEMINI_API_KEY`: canonical Gemini API key.
+  - `GEMINI_CREDENTIALS_BASE64`: optional Gemini CLI OAuth primary account JSON, base64 encoded.
+  - `GEMINI_CREDENTIALS_BASE64_2`: optional Gemini CLI OAuth backup account JSON, base64 encoded.
+  - `AGY_SETTINGS_JSON`: optional Antigravity CLI settings JSON, for example `{"model":"Gemini 3.5 Flash (High)","enableTelemetry":false}`. It configures model/telemetry only; Antigravity OAuth auth itself is OS-keyring backed and must be validated by the preflight.
+- Preflight reports are written under `backend/log/cron/*runtime-preflight*` and uploaded as artifacts. Secret values must never be printed.
 
 ### Pending geocoding backlog export/correction
 
