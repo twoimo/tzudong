@@ -1634,22 +1634,18 @@ export default function HomeDesktopControlPanel({
           >
             <div
               className={cn(
-                "pointer-events-auto flex h-12 items-center gap-2 rounded-full border border-border bg-background/95 px-2 shadow-lg backdrop-blur-sm",
-                "focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2",
-                activeLeftPanelView === "map" && "ring-2 ring-primary",
+                "pointer-events-auto flex items-center gap-1.5 min-h-11 rounded-full shadow-lg bg-background/95 backdrop-blur-sm border border-border px-1.5",
               )}
               data-desktop-left-panel-search-bar="true"
               onClick={activateDesktopSearch}
             >
-              <div className="flex h-9 min-w-0 flex-1 items-center justify-start gap-2 rounded-full px-2.5 hover:bg-secondary/80">
+              <div className="flex-1 h-9 rounded-full flex items-center gap-2 px-2 bg-secondary/40 min-w-0">
                 <Image
                   src="/logo.webp"
-                  alt=""
-                  aria-hidden="true"
-                  width={26}
-                  height={26}
+                  alt="로고"
+                  width={24}
+                  height={24}
                   className="shrink-0 rounded-md object-contain"
-                  priority
                 />
                 <input
                   ref={desktopSearchInputRef}
@@ -1670,7 +1666,7 @@ export default function HomeDesktopControlPanel({
                   inputMode="search"
                   enterKeyHint="search"
                   autoComplete="off"
-                  className="w-full bg-transparent text-[15px] text-foreground outline-none placeholder:text-muted-foreground"
+                  className="w-full bg-transparent text-sm text-foreground outline-none placeholder:text-foreground/70"
                   aria-label="맛집 검색어 입력"
                 />
                 {desktopSearchQuery && (
@@ -1680,7 +1676,7 @@ export default function HomeDesktopControlPanel({
                       event.stopPropagation();
                       clearDesktopSearch();
                     }}
-                    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-background hover:text-foreground"
+                    className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-background hover:text-foreground"
                     aria-label="검색어 지우기"
                   >
                     <X className="h-3.5 w-3.5" aria-hidden="true" />
@@ -1705,13 +1701,26 @@ export default function HomeDesktopControlPanel({
                     : "맛집 이름 검색으로 전환"
                 }
                 aria-pressed={desktopSearchType === "youtube"}
-                className="h-9 w-9 shrink-0 rounded-full border border-border bg-background p-0 hover:bg-secondary/80"
+                className="h-9 w-9 shrink-0 rounded-full border border-border bg-background hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
               >
                 {desktopSearchType === "name" ? (
                   <MapPin className="h-4 w-4" aria-hidden="true" />
                 ) : (
                   <Video className="h-4 w-4" aria-hidden="true" />
                 )}
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  clearDesktopSearch();
+                  desktopSearchInputRef.current?.blur();
+                }}
+                aria-label="검색 닫기"
+                className="h-9 w-9 shrink-0 rounded-full border border-border bg-background hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
+              >
+                <X className="h-5 w-5" aria-hidden="true" />
               </Button>
             </div>
           </div>

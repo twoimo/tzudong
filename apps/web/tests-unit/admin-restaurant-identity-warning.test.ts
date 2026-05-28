@@ -52,6 +52,23 @@ describe('restaurant identity warnings', () => {
     expect(warnings.find((warning) => warning.rule === 'deleted_same_video_identity')?.severity).toBe('warn');
   });
 
+  test('blocks address-only provider replacements even when visit evidence is positive', () => {
+    const warnings = findRestaurantIdentityWarnings(base({
+      origin_name: '제기식당',
+      naver_name: '소문난냉면',
+      youtube_link: 'https://www.youtube.com/watch?v=aga5WvCMGZk',
+      evaluation_results: {
+        location_match_TF: { eval_value: true },
+        visit_authenticity: { eval_value: 2, eval_basis: '영상에서 제기식당 간판이 보임' },
+        rb_inference_score: { eval_value: 1, eval_basis: '제기식당 방문 근거는 있으나 후보명이 다름' },
+      },
+    }));
+
+    const mismatch = warnings.find((warning) => warning.rule === 'provider_name_mismatch');
+    expect(mismatch?.severity).toBe('block');
+    expect(hasBlockingRestaurantIdentityWarning(warnings)).toBe(true);
+  });
+
   test('allows manual approval name override when it matches the source identity', () => {
     const warnings = findRestaurantIdentityWarnings(base(), [], { approvedNameOverride: '진주식당' });
 
