@@ -58,3 +58,8 @@ export function getAdminEvaluationDisplayName(source: EvaluationNameSource): str
     ]) || '이름 없음'
   );
 }
+
+
+export function getAdminEvaluationApprovalName(source: EvaluationNameSource): string {
+  return getAdminEvaluationDisplayName(source);
+}

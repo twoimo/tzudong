@@ -486,6 +486,10 @@ jobs:
           if [ -f summary.md ]; then
             cat summary.md >> $GITHUB_STEP_SUMMARY
           fi
+          if [ -f backend/log/cron/admin-data-quality-audit.md ]; then
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            cat backend/log/cron/admin-data-quality-audit.md >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Write Actions budget posture ledger
         if: always()
@@ -750,3 +754,5 @@ jobs:
             backend/log/cron/production-contract-fixture-status.json
             backend/log/cron/gemini-runtime-preflight.json
             backend/log/cron/actions-budget-posture.json
+            backend/log/cron/admin-data-quality-audit.json
+            backend/log/cron/admin-data-quality-audit.md
