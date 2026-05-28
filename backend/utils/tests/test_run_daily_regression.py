@@ -305,6 +305,10 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertIn("GEMINI_CREDENTIALS_BASE64: ${{ secrets.GEMINI_CREDENTIALS_BASE64 }}", daily_workflow)
         self.assertIn("GEMINI_CREDENTIALS_BASE64_2: ${{ secrets.GEMINI_CREDENTIALS_BASE64_2 }}", daily_workflow)
         self.assertIn('"selectedType"] = "oauth-personal"', daily_workflow)
+        self.assertIn("Antigravity CLI status: $AGY_STATUS", daily_workflow)
+        self.assertIn("Gemini CLI OAuth preflight exited $GEMINI_CLI_STATUS", daily_workflow)
+        self.assertIn("agy-runtime-preflight.err", daily_workflow)
+        self.assertIn("gemini-cli-runtime-preflight.err", daily_workflow)
         self.assertIn("AGY_SETTINGS_JSON: ${{ secrets.AGY_SETTINGS_JSON }}", daily_workflow)
 
     def test_env_contract_guard_fails_closed_without_printing_values(self) -> None:
