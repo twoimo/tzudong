@@ -156,12 +156,13 @@ export function findRestaurantIdentityWarnings(
   const candidateCompatible = Boolean(originName && candidateName && hasNameCompatibility(originName, candidateName));
 
   if (originName && candidateName && !candidateCompatible) {
+    const severity: RestaurantIdentityWarningSeverity = locationMatched ? 'block' : 'warn';
     warnings.push({
       rule: 'provider_name_mismatch',
-      severity: 'warn',
-      title: '영상 언급명과 지도 후보명이 다릅니다',
-      message: `영상 근거의 원본명은 “${originName}”인데 현재 승인 후보명은 “${candidateName}”입니다. 동명/동주소 후보를 임의 대체하지 말고 원본 장소를 다시 확인하세요.`,
-      evidence: [`origin=${originName}`, `candidate=${candidateName}`],
+      severity,
+      title: locationMatched ? '주소만 맞고 상호명이 다른 후보입니다' : '영상 언급명과 지도 후보명이 다릅니다',
+      message: `영상 근거의 원본명은 “${originName}”인데 현재 승인 후보명은 “${candidateName}”입니다. 주소가 같아도 다른 상호를 자동 승인하지 말고 원본 장소명으로 수정하거나 다시 확인하세요.`,
+      evidence: [`origin=${originName}`, `candidate=${candidateName}`, `locationMatched=${locationMatched}`],
     });
   }
 
