@@ -262,6 +262,55 @@ def _normalize_name_key(text: str) -> str:
     return re.sub(r"[^\w가-힣]+", "", _norm_space(text)).lower()
 
 
+def _tokenize_name_parts(text: str) -> List[str]:
+    normalized = unicodedata.normalize("NFKC", text or "")
+    normalized = re.sub(r"\(([^)]*)\)|（([^）]*)）", r" \1 \2 ", normalized)
+    normalized = re.sub(r"[·・ㆍ._\-–—,，\[\]{}<>《》\"'`´’‘“”:：]", " ", normalized)
+    stopwords = {"구", "현", "전", "내", "본점"}
+    return [
+        token
+        for token in (part.strip() for part in normalized.split())
+        if len(token) >= 2 and token not in stopwords
+    ]
+
+
+def _strip_branch_suffix(token: str) -> str:
+    return re.sub(r"점$", "", token or "").strip()
+
+
+def _provider_names_compatible(origin_name: str, candidate_name: str) -> bool:
+    origin = _normalize_name_key(origin_name)
+    candidate = _normalize_name_key(candidate_name)
+    if not origin or not candidate:
+        return True
+    if origin == candidate:
+        return True
+    if len(origin) >= 3 and origin in candidate:
+        return True
+    if len(candidate) >= 3 and candidate in origin:
+        return True
+
+    origin_tokens = [
+        _normalize_name_key(_strip_branch_suffix(token))
+        for token in _tokenize_name_parts(origin_name)
+    ]
+    candidate_tokens = [
+        _normalize_name_key(_strip_branch_suffix(token))
+        for token in _tokenize_name_parts(candidate_name)
+    ]
+    return any(
+        origin_token
+        and candidate_token
+        and (
+            origin_token == candidate_token
+            or (len(origin_token) >= 3 and origin_token in candidate_token)
+            or (len(candidate_token) >= 3 and candidate_token in origin_token)
+        )
+        for origin_token in origin_tokens
+        for candidate_token in candidate_tokens
+    )
+
+
 def _candidate_address_text(candidate: Dict[str, Any]) -> str:
     return _norm_space(
         " ".join(
@@ -624,9 +673,9 @@ def evaluate_category_validity(
         naver_name = loc_item.get("naver_name")
         google_name = loc_item.get("google_name")
         if origin_name:
-            if naver_name:
+            if naver_name and _provider_names_compatible(origin_name, naver_name):
                 naver_name_map[origin_name] = naver_name
-            if google_name:
+            if google_name and _provider_names_compatible(origin_name, google_name):
                 google_name_map[origin_name] = google_name
 
     results = []
@@ -680,6 +729,35 @@ def evaluate_with_browser_review_needed(
         false_message=f"Naver 실패 ({naver_fail_msg}), Google API fallback disabled; browser review required",
         evidence_summary=evidence_summary,
         evidence_families=[EVIDENCE_BROWSER_VERIFICATION],
+        match_status="pending",
+    )
+
+
+def evaluate_provider_name_mismatch(
+    name: str,
+    origin_address: str,
+    matched_result: Dict[str, Any],
+    match_reason: str,
+) -> Dict[str, Any]:
+    matched_name = _norm_space(str(matched_result.get("title") or ""))
+    false_message = (
+        f"상호명 불일치: 영상 근거명 '{name}'과 네이버 후보명 '{matched_name}'이 다름"
+    )
+    return build_location_result(
+        origin_name=name,
+        origin_address=origin_address,
+        eval_value=False,
+        matched_provider="naver",
+        matched_name=matched_name,
+        naver_name=matched_name,
+        matched_address=None,
+        evidence_summary=[
+            false_message,
+            f"주소/거리 근거({match_reason})만으로 다른 상호를 자동 확정하지 않음",
+        ],
+        evidence_families=[EVIDENCE_PROVIDER_CANDIDATE],
+        pending_reason=PENDING_REASON_INSUFFICIENT,
+        false_message=false_message,
         match_status="pending",
     )
 
@@ -1066,6 +1144,15 @@ def evaluate_one_restaurant(rec: Dict[str, Any]) -> Dict[str, Any]:
 
         matched_result, min_dist = distance_matches[0]
         match_reason = "distance"
+
+    matched_title = _norm_space(str(matched_result.get("title") or ""))
+    if matched_title and not _provider_names_compatible(name, matched_title):
+        return evaluate_provider_name_mismatch(
+            name,
+            origin_address,
+            matched_result,
+            match_reason or "address",
+        )
 
     # 일치하는 결과의 상세 정보 저장
     matched_addr = (
