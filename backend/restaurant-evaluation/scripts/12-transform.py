@@ -24,6 +24,7 @@ import hashlib
 import sys
 import argparse
 import re
+import unicodedata
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timezone, timedelta
@@ -94,6 +95,57 @@ def normalize_evaluation_name(name: Any) -> str:
     if compact.endswith("본점"):
         compact = compact[:-2]
     return compact
+
+
+def tokenize_evaluation_name(name: Any) -> List[str]:
+    if not isinstance(name, str):
+        return []
+    text = unicodedata.normalize("NFKC", name)
+    text = re.sub(r"\(([^)]*)\)|（([^）]*)）", r" \1 \2 ", text)
+    text = re.sub(r"[·・ㆍ._\-–—,，\[\]{}<>《》\"'`´’‘“”:：]", " ", text)
+    stopwords = {"구", "현", "전", "내", "본점"}
+    return [
+        token
+        for token in (part.strip() for part in text.split())
+        if len(token) >= 2 and token not in stopwords
+    ]
+
+
+def strip_branch_suffix(token: str) -> str:
+    return re.sub(r"점$", "", token or "").strip()
+
+
+def are_provider_names_compatible(origin_name: Any, provider_name: Any) -> bool:
+    origin = normalize_evaluation_name(origin_name)
+    provider = normalize_evaluation_name(provider_name)
+    if not origin or not provider:
+        return True
+    if origin == provider:
+        return True
+    if len(origin) >= 3 and origin in provider:
+        return True
+    if len(provider) >= 3 and provider in origin:
+        return True
+
+    origin_tokens = [
+        normalize_evaluation_name(strip_branch_suffix(token))
+        for token in tokenize_evaluation_name(origin_name)
+    ]
+    provider_tokens = [
+        normalize_evaluation_name(strip_branch_suffix(token))
+        for token in tokenize_evaluation_name(provider_name)
+    ]
+    return any(
+        origin_token
+        and provider_token
+        and (
+            origin_token == provider_token
+            or (len(origin_token) >= 3 and origin_token in provider_token)
+            or (len(provider_token) >= 3 and provider_token in origin_token)
+        )
+        for origin_token in origin_tokens
+        for provider_token in provider_tokens
+    )
 
 
 def build_evaluation_name_candidates(
@@ -184,6 +236,8 @@ def resolve_trace_identity(
         or loc_match_item.get("naver_name")
         or loc_match_item.get("google_name")
     )
+    if matched_name and not are_provider_names_compatible(restaurant_name, matched_name):
+        return restaurant_name, "original"
     if matched_provider and matched_name:
         return matched_name, matched_provider
 
