@@ -76,6 +76,26 @@ test('fails the gate for active provider-name mismatches contradicted by video e
   assert.match(renderAuditMarkdown(report), /provider_name_mismatch/);
 });
 
+test('fails the gate for address-only provider-name replacement even with positive visit score', () => {
+  const report = auditRestaurantRows([
+    baseRow({
+      id: 'jegi-wrong-provider',
+      origin_name: '제기식당',
+      naver_name: '소문난냉면',
+      youtube_link: 'https://www.youtube.com/watch?v=aga5WvCMGZk',
+      evaluation_results: {
+        location_match_TF: { eval_value: true },
+        visit_authenticity: { eval_value: 2 },
+        rb_inference_score: { eval_value: 1 },
+      },
+    }),
+  ]);
+
+  assert.equal(report.ok, false);
+  assert.equal(report.counts.identityBlockingRows, 1);
+  assert.match(renderAuditMarkdown(report), /provider_name_mismatch/);
+});
+
 test('warns for stripped branch context without failing the hard gate', () => {
   const report = auditRestaurantRows([
     baseRow({
