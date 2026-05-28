@@ -127,6 +127,34 @@ run_agy_cli_request() {
         --timeout-sec "$timeout_sec"
 }
 
+build_json_retry_prompt() {
+    local source_prompt="$1"
+    local retry_prompt="$2"
+
+    cat "$source_prompt" > "$retry_prompt"
+    cat >> "$retry_prompt" <<'EOF'
+
+<JSON_RETRY_INSTRUCTION>
+이전 응답은 파서에서 거부되었습니다. 이번 응답은 반드시 아래 조건을 지키세요.
+- 설명, 마크다운, 코드펜스, 사과문, 접두사/접미사를 절대 쓰지 마세요.
+- 최상위 값은 JSON 객체 하나여야 합니다.
+- 반드시 visit_authenticity, rb_inference_score, rb_grounding_TF, review_faithfulness_score, category_TF 키를 모두 포함하세요.
+- 각 키의 값은 기존 평가 스키마와 같은 values 배열 구조를 유지하세요.
+- 판단 근거가 부족하면 null 또는 보수적인 값으로 채우되 JSON 형식은 깨지지 않아야 합니다.
+</JSON_RETRY_INSTRUCTION>
+EOF
+}
+
+sleep_before_parse_retry() {
+    local sleep_sec="${LAAJ_PARSE_RETRY_SLEEP_SEC:-10}"
+    if ! [[ "$sleep_sec" =~ ^[0-9]+$ ]]; then
+        sleep_sec=10
+    fi
+    if [ "$sleep_sec" -gt 0 ]; then
+        sleep "$sleep_sec"
+    fi
+}
+
 is_quota_error() {
     local file="$1"
     [ -f "$file" ] && grep -qi -E '429|quota|rate limit|RESOURCE_EXHAUSTED|Too Many Requests|exhausted' "$file"
@@ -611,6 +639,7 @@ $TRANSCRIPT
     # ---------------------------
     GEMINI_START=$(date +%s)
     GEMINI_SUCCESS=false
+    LAST_SUCCESS_PROVIDER=""
 
     # 1. Node.js API 시도 (Sticky Fallback이 아닐 때만)
     if [ "$FORCE_CLI_FALLBACK" = false ] && [ -n "$NODE_EXE" ]; then
@@ -627,6 +656,7 @@ $TRANSCRIPT
 
         if [ $EXIT_CODE -eq 0 ]; then
             GEMINI_SUCCESS=true
+            LAST_SUCCESS_PROVIDER="node"
             log_debug "Node.js 호출 성공"
         else
             log_warning "Node.js 호출 실패 (Code: $EXIT_CODE) - Sticky Fallback 활성화 (이후 CLI 사용)"
@@ -640,6 +670,7 @@ $TRANSCRIPT
 
         if run_agy_cli_request "$TEMP_PROMPT" "$TEMP_RESPONSE" "$TEMP_STDERR"; then
             GEMINI_SUCCESS=true
+            LAST_SUCCESS_PROVIDER="agy"
         else
             log_warning "Antigravity CLI 호출 실패 - Gemini CLI OAuth fallback 확인"
             if [ -f "$TEMP_STDERR" ] && [ -s "$TEMP_STDERR" ]; then
@@ -657,6 +688,7 @@ $TRANSCRIPT
 
         if run_gemini_cli_request "$TEMP_PROMPT" "$TEMP_RESPONSE" "$TEMP_STDERR"; then
             GEMINI_SUCCESS=true
+            LAST_SUCCESS_PROVIDER="gemini-cli"
         else
             # Error logging
             log_error "Gemini CLI Error Output:"
@@ -673,6 +705,7 @@ $TRANSCRIPT
                    sleep 10
                    if run_gemini_cli_request "$TEMP_PROMPT" "$TEMP_RESPONSE" "$TEMP_STDERR"; then
                        GEMINI_SUCCESS=true
+                       LAST_SUCCESS_PROVIDER="gemini-cli"
                    fi
                fi
             elif grep -qi 'timed out\|SIGTERM\|signal 15' "$TEMP_STDERR" 2>/dev/null; then
@@ -707,14 +740,40 @@ $TRANSCRIPT
                 log_success "완료 [$INDEX/$TOTAL] - ${GEMINI_DURATION}s"
                 break
             else
-                # 파싱 실패 시 retry (CLI로 재요청)
+                # 파싱 실패 시 JSON 전용 프롬프트로 같은 provider를 먼저 재요청하고,
+                # agy 응답이 계속 파싱 불가하면 Gemini CLI OAuth로 명시적으로 전환한다.
                 if [ $PARSE_ATTEMPT -lt 3 ]; then
-                    log_warning "파싱 실패 (${PARSE_ATTEMPT}/3) - 재요청..."
-                    sleep 10
-                    if [ "$HAS_GEMINI_CLI" = true ]; then
-                        run_gemini_cli_request "$TEMP_PROMPT" "$TEMP_RESPONSE" "$TEMP_STDERR" >/dev/null 2>&1 || true
-                    elif [ -n "$NODE_EXE" ]; then
-                        "$NODE_EXE" "$(maybe_normalize "$NODE_EXE" "$GEMINI_API_SCRIPT")" "$(maybe_normalize "$NODE_EXE" "$TEMP_PROMPT")" "$(maybe_normalize "$NODE_EXE" "$TEMP_RESPONSE")" 2>/dev/null
+                    log_warning "파싱 실패 (${PARSE_ATTEMPT}/3, provider=${LAST_SUCCESS_PROVIDER:-unknown}) - JSON 전용 재요청..."
+                    sleep_before_parse_retry
+                    RETRY_PROMPT="$TEMP_DIR/eval_prompt_${VIDEO_ID}_json_retry_${PARSE_ATTEMPT}.txt"
+                    build_json_retry_prompt "$TEMP_PROMPT" "$RETRY_PROMPT"
+
+                    RETRY_REQUESTED=false
+                    if [ "$LAST_SUCCESS_PROVIDER" = "agy" ] && [ "$HAS_AGY_CLI" = true ]; then
+                        log_warning "Antigravity CLI JSON 전용 재요청 (모델: ${AGY_MODEL_LABEL})"
+                        if run_agy_cli_request "$RETRY_PROMPT" "$TEMP_RESPONSE" "$TEMP_STDERR"; then
+                            RETRY_REQUESTED=true
+                            LAST_SUCCESS_PROVIDER="agy"
+                        else
+                            log_warning "Antigravity CLI JSON 재요청 실패 - Gemini CLI OAuth fallback 확인"
+                            if is_quota_error "$TEMP_STDERR" || is_quota_error "$TEMP_RESPONSE"; then
+                                log_warning "Antigravity CLI 할당량 소진 감지 -> Gemini CLI OAuth($CURRENT_MODEL)로 전환"
+                            fi
+                        fi
+                    fi
+
+                    if [ "$RETRY_REQUESTED" = false ] && [ "$HAS_GEMINI_CLI" = true ]; then
+                        log_warning "Gemini CLI JSON 전용 재요청 (모델: $CURRENT_MODEL)"
+                        if run_gemini_cli_request "$RETRY_PROMPT" "$TEMP_RESPONSE" "$TEMP_STDERR"; then
+                            LAST_SUCCESS_PROVIDER="gemini-cli"
+                        elif is_quota_error "$TEMP_STDERR" || is_quota_error "$TEMP_RESPONSE"; then
+                            log_warning "Gemini CLI 할당량/레이트리밋 감지 - 다음 파싱 시도 전 응답 유지"
+                        fi
+                    elif [ "$RETRY_REQUESTED" = false ] && [ -n "$NODE_EXE" ]; then
+                        log_warning "Node.js API JSON 전용 재요청"
+                        if "$NODE_EXE" "$(maybe_normalize "$NODE_EXE" "$GEMINI_API_SCRIPT")" "$(maybe_normalize "$NODE_EXE" "$RETRY_PROMPT")" "$(maybe_normalize "$NODE_EXE" "$TEMP_RESPONSE")" 2>"$TEMP_STDERR"; then
+                            LAST_SUCCESS_PROVIDER="node"
+                        fi
                     fi
                 fi
             fi
