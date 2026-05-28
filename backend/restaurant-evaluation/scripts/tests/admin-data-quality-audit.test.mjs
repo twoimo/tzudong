@@ -1,6 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { auditRestaurantRows, renderAuditMarkdown } from '../admin-data-quality-audit.mjs';
+
+const auditCliPath = fileURLToPath(new URL('../admin-data-quality-audit.mjs', import.meta.url));
 
 const baseRow = (overrides = {}) => ({
   id: 'row-1',
@@ -111,4 +118,52 @@ test('warns for stripped branch context without failing the hard gate', () => {
   assert.equal(report.counts.identityWarningRows, 1);
   assert.equal(report.counts.identityBlockingRows, 0);
   assert.equal(report.samples.identityWarningRows[0].warnings[0].rule, 'missing_branch_context');
+});
+
+test('CLI --fail-on-exact reports identity blockers without failing the daily gate', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tzudong-admin-audit-'));
+  try {
+    const inputPath = path.join(tmpDir, 'rows.json');
+    fs.writeFileSync(inputPath, JSON.stringify([
+      baseRow({
+        id: 'identity-only',
+        origin_name: '제기식당',
+        naver_name: '소문난냉면',
+        evaluation_results: { location_match_TF: { eval_value: true } },
+      }),
+    ]), 'utf8');
+
+    const result = spawnSync(process.execPath, [auditCliPath, '--input', inputPath, '--fail-on-exact'], {
+      encoding: 'utf8',
+    });
+
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    assert.match(result.stderr, /identity blocking row\(s\) reported for operator review/);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('CLI --fail-on-identity-blocking keeps the stricter identity gate available', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tzudong-admin-audit-'));
+  try {
+    const inputPath = path.join(tmpDir, 'rows.json');
+    fs.writeFileSync(inputPath, JSON.stringify([
+      baseRow({
+        id: 'identity-hard-fail',
+        origin_name: '제기식당',
+        naver_name: '소문난냉면',
+        evaluation_results: { location_match_TF: { eval_value: true } },
+      }),
+    ]), 'utf8');
+
+    const result = spawnSync(process.execPath, [auditCliPath, '--input', inputPath, '--fail-on-identity-blocking'], {
+      encoding: 'utf8',
+    });
+
+    assert.equal(result.status, 2, result.stderr || result.stdout);
+    assert.match(result.stderr, /Admin data quality gate failed: 1 identity blocking row\(s\)/);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
 });
