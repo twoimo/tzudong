@@ -83,6 +83,49 @@ class TransformAddressMatchRegressionTests(unittest.TestCase):
         self.assertEqual("original", rows[0]["trace_id_name_source"])
         self.assertEqual("후보식당", rows[0]["google_name"])
 
+    def test_transform_keeps_trace_identity_original_for_address_only_name_mismatch(self):
+        original_data = {
+            "youtube_link": "https://www.youtube.com/watch?v=aga5WvCMGZk",
+            "evaluation_results": {
+                "location_match_TF": [
+                    {
+                        "origin_name": "제기식당",
+                        "eval_value": True,
+                        "matched_provider": "naver",
+                        "matched_name": "소문난냉면",
+                        "naver_name": "소문난냉면",
+                        "matched_address": {
+                            "roadAddress": "서울특별시 동대문구 고산자로38길 13",
+                            "jibunAddress": "서울특별시 동대문구 제기동 990",
+                            "x": "127.0",
+                            "y": "37.5",
+                        },
+                    }
+                ],
+                "category_validity_TF": [{"name": "제기식당", "eval_value": True}],
+            },
+            "restaurants": [
+                {
+                    "origin_name": "제기식당",
+                    "address": "서울특별시 동대문구 고산자로38길 13",
+                    "category": "한식",
+                    "reasoning_basis": "영상 00:49에 제기식당 간판이 보임",
+                    "youtuber_review": "리뷰",
+                    "lat": None,
+                    "lng": None,
+                }
+            ],
+            "evaluation_target": {"제기식당": True},
+            "recollect_version": {},
+        }
+
+        rows = transform_mod.transform_json_object(original_data, "results", "tzuyang", meta_cache=None, video_id=None)
+
+        self.assertEqual(1, len(rows))
+        self.assertEqual("original", rows[0]["trace_id_name_source"])
+        self.assertEqual("제기식당", rows[0]["origin_name"])
+        self.assertEqual("소문난냉면", rows[0]["naver_name"])
+
     def test_transform_matches_evaluation_metrics_by_provider_alias(self):
         original_data = {
             "youtube_link": "https://www.youtube.com/watch?v=test1234567",
