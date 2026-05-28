@@ -287,6 +287,21 @@ jobs:
             printf '%s' "$GEMINI_CREDENTIALS_BASE64_2" | base64 -d > ~/.gemini/oauth_creds_2.json
             chmod 600 ~/.gemini/oauth_creds_2.json
           fi
+          if [ -f ~/.gemini/oauth_creds.json ]; then
+            python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path.home() / ".gemini" / "settings.json"
+          try:
+              data = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+          except json.JSONDecodeError:
+              data = {}
+          data.setdefault("security", {}).setdefault("auth", {})["selectedType"] = "oauth-personal"
+          path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+          PY
+            chmod 600 ~/.gemini/settings.json
+          fi
 
           # Antigravity CLI stores auth in the OS keyring; settings.json controls the selected model.
           if [ -n "$AGY_SETTINGS_JSON" ]; then
