@@ -108,6 +108,30 @@ run_gemini_cli_request() {
     fi
 }
 
+run_agy_cli_request() {
+    local prompt_file="$1"
+    local response_file="$2"
+    local stderr_file="$3"
+    local timeout_sec="${AGY_BRIDGE_TIMEOUT_SEC:-360}"
+    local print_timeout="${AGY_PRINT_TIMEOUT:-5m0s}"
+
+    if ! [[ "$timeout_sec" =~ ^[0-9]+$ ]] || [ "$timeout_sec" -lt 1 ]; then
+        timeout_sec=360
+    fi
+
+    "$PYTHON_EXE" "$AGY_BRIDGE_SCRIPT" \
+        --prompt-file "$prompt_file" \
+        --output "$response_file" \
+        --stderr-file "$stderr_file" \
+        --print-timeout "$print_timeout" \
+        --timeout-sec "$timeout_sec"
+}
+
+is_quota_error() {
+    local file="$1"
+    [ -f "$file" ] && grep -qi -E '429|quota|rate limit|RESOURCE_EXHAUSTED|Too Many Requests|exhausted' "$file"
+}
+
 # ================================
 # 명령어 감지
 # ================================
@@ -161,6 +185,7 @@ log_debug "PYTHON: $PYTHON_EXE"
 # ================================
 PROMPT_FILE="$SCRIPT_DIR/../prompts/evaluation_prompt.txt"
 PARSER_SCRIPT="$SCRIPT_DIR/parse_laaj_evaluation.py"
+AGY_BRIDGE_SCRIPT="$PROJECT_ROOT/backend/bin/run_agy_prompt.py"
 
 ENV_FILES=(
     "$PROJECT_ROOT/.env"
@@ -211,23 +236,38 @@ if grep -qi "microsoft\|wsl" /proc/version 2>/dev/null; then
     fi
 fi
 
-# OAuth 설정 체크 (LAAJ 평가는 텍스트 전용이므로 CLI/OAuth 가능)
+# OAuth CLI 확인 (LAAJ 평가는 텍스트 전용이므로 CLI/OAuth 가능)
+HAS_AGY_CLI=false
+AGY_MODEL_LABEL="unavailable"
+if [ -f "$AGY_BRIDGE_SCRIPT" ] && "$PYTHON_EXE" "$AGY_BRIDGE_SCRIPT" --locate-only >/dev/null 2>&1; then
+    HAS_AGY_CLI=true
+    AGY_MODEL_LABEL=$("$PYTHON_EXE" "$AGY_BRIDGE_SCRIPT" --print-config-model 2>/dev/null || echo "Antigravity default model")
+else
+    log_warning "Antigravity CLI(agy) 미설치/미감지 - Gemini CLI OAuth fallback만 사용합니다."
+fi
+
 FORCE_CLI_FALLBACK=false
 
 if [ -z "$GEMINI_API_KEY" ]; then
     if [ -n "$GEMINI_API_KEY_BYEON" ]; then
         export GEMINI_API_KEY="$GEMINI_API_KEY_BYEON"
         log_success "GEMINI_API_KEY 설정 완료 (from GEMINI_API_KEY_BYEON)"
+    elif [ "$HAS_AGY_CLI" = true ]; then
+        log_warning "GEMINI_API_KEY 없음. OAuth 모드(Antigravity CLI 우선)로 강제 전환합니다."
+        FORCE_CLI_FALLBACK=true
     elif [ -f "$HOME/.gemini/oauth_creds.json" ]; then
-        log_warning "GEMINI_API_KEY 없음. OAuth 모드(CLI)로 강제 전환합니다."
+        log_warning "GEMINI_API_KEY 없음. OAuth 모드(Gemini CLI)로 강제 전환합니다."
         FORCE_CLI_FALLBACK=true
     elif [ -n "$GEMINI_CREDENTIALS_BASE64" ]; then
         log_info "GEMINI_CREDENTIALS_BASE64 감지됨 - 인증 파일 생성 중..."
         mkdir -p "$HOME/.gemini"
         echo "$GEMINI_CREDENTIALS_BASE64" | base64 -d > "$HOME/.gemini/oauth_creds.json"
+        if [ -n "${GEMINI_CREDENTIALS_BASE64_2:-}" ]; then
+            echo "$GEMINI_CREDENTIALS_BASE64_2" | base64 -d > "$HOME/.gemini/oauth_creds_2.json"
+        fi
         FORCE_CLI_FALLBACK=true
     else
-        log_error "GEMINI_API_KEY 또는 OAuth 자격 증명이 없습니다."
+        log_error "GEMINI_API_KEY 또는 OAuth CLI 자격 증명이 없습니다."
         exit 1
     fi
 fi
@@ -280,8 +320,8 @@ log_info "============================================================"
 log_info "  LAAJ 음식점 평가 시작 (Cross-Platform)"
 log_info "============================================================"
 log_info "채널: $CHANNEL"
-log_info "모드: $(if [ "$FORCE_CLI_FALLBACK" = true ]; then echo "Gemini CLI only"; else echo "Node.js API + Sticky Fallback"; fi)"
-log_info "모델: $CURRENT_MODEL (fallback: $FALLBACK_MODEL)"
+log_info "모드: $(if [ "$FORCE_CLI_FALLBACK" = true ]; then echo "OAuth CLI first"; else echo "Node.js API + Sticky OAuth Fallback"; fi)"
+log_info "모델: Node/Gemini CLI=$CURRENT_MODEL (fallback: $FALLBACK_MODEL), agy=${AGY_MODEL_LABEL}"
 
 # 필수 파일 확인
 if [ ! -f "$PROMPT_FILE" ]; then
@@ -293,14 +333,14 @@ if [ ! -d "$RULE_RESULTS_DIR" ]; then
     exit 1
 fi
 
-# Gemini CLI 확인 (Fallback용)
+# Gemini CLI 확인 (Antigravity quota 소진 시 Fallback용)
 HAS_GEMINI_CLI=false
 if command -v gemini > /dev/null 2>&1; then
     HAS_GEMINI_CLI=true
 else
-    log_warning "Gemini CLI 미설치 - Node.js API 모드로 진행합니다."
-    if [ -z "$NODE_EXE" ] || [ ! -f "$SCRIPT_DIR/gemini_api_request.mjs" ]; then
-        log_error "Gemini CLI도 없고 Node.js API(gemini_api_request.mjs)도 없습니다. 평가 불가."
+    log_warning "Gemini CLI 미설치 - Antigravity CLI 또는 Node.js API 모드로 진행합니다."
+    if [ "$HAS_AGY_CLI" = false ] && { [ -z "$NODE_EXE" ] || [ ! -f "$SCRIPT_DIR/gemini_api_request.mjs" ]; }; then
+        log_error "Antigravity CLI/Gemini CLI/Node.js API(gemini_api_request.mjs)가 모두 없습니다. 평가 불가."
         exit 1
     fi
 fi
@@ -342,7 +382,25 @@ if [ "$FORCE_CLI_FALLBACK" = false ] && [ -n "$NODE_EXE" ]; then
     fi
 fi
 
-# 2. CLI Check (Fallback or Primary)
+# 2. Antigravity CLI Check (OAuth primary fallback)
+if [ "$HEALTH_CHECK_PASSED" = false ] && [ "$HAS_AGY_CLI" = true ]; then
+    health_check_err="$TEMP_DIR/health_check_err.log"
+    set +e
+    run_agy_cli_request "$HEALTH_CHECK_PROMPT" "$HEALTH_CHECK_RESPONSE" "$health_check_err"
+    EXIT_CODE=$?
+    set -e
+    if [ $EXIT_CODE -eq 0 ]; then
+        HEALTH_CHECK_PASSED=true
+        log_success "Health Check 성공 (Antigravity CLI, model=${AGY_MODEL_LABEL})"
+        rm -f "$health_check_err"
+    else
+        log_warning "Antigravity CLI Health Check 실패 (exit: $EXIT_CODE)"
+        [ -f "$health_check_err" ] && cat "$health_check_err" >&2
+        rm -f "$health_check_err"
+    fi
+fi
+
+# 3. Gemini CLI Check (Agy quota/auth failure fallback)
 if [ "$HEALTH_CHECK_PASSED" = false ]; then
     if [ "$HAS_GEMINI_CLI" = true ]; then
         for candidate_model in "$CURRENT_MODEL" "$FALLBACK_MODEL"; do
@@ -383,7 +441,7 @@ if [ "$HEALTH_CHECK_PASSED" = false ]; then
 
         if [ "$HEALTH_CHECK_PASSED" = false ]; then
             log_warning "Health Check 실패 (Gemini CLI)"
-            log_warning "제미나이 API/CLI가 모두 응답하지 않습니다. 네트워크나 API Key(할당량)를 확인하세요. 평가를 건너뜁니다."
+            log_warning "Antigravity/Gemini API/CLI가 모두 응답하지 않습니다. 네트워크나 OAuth/API Key(할당량)를 확인하세요. 평가를 건너뜁니다."
             exit 0
         fi
     else
@@ -576,7 +634,24 @@ $TRANSCRIPT
         fi
     fi
 
-    # 2. Gemini CLI 시도 (Node 실패 또는 Sticky 모드일 때)
+    # 2. Antigravity CLI 시도 (Node 실패 또는 Sticky 모드일 때)
+    if [ "$GEMINI_SUCCESS" = false ] && [ "$HAS_AGY_CLI" = true ]; then
+        log_debug "Antigravity CLI 호출 (모델: ${AGY_MODEL_LABEL})"
+
+        if run_agy_cli_request "$TEMP_PROMPT" "$TEMP_RESPONSE" "$TEMP_STDERR"; then
+            GEMINI_SUCCESS=true
+        else
+            log_warning "Antigravity CLI 호출 실패 - Gemini CLI OAuth fallback 확인"
+            if [ -f "$TEMP_STDERR" ] && [ -s "$TEMP_STDERR" ]; then
+                cat "$TEMP_STDERR" >&2
+            fi
+            if is_quota_error "$TEMP_STDERR" || is_quota_error "$TEMP_RESPONSE"; then
+                log_warning "Antigravity CLI 할당량 소진 감지 -> Gemini CLI OAuth($CURRENT_MODEL)로 전환"
+            fi
+        fi
+    fi
+
+    # 3. Gemini CLI 시도 (Agy 실패/쿼타 소진 또는 Sticky 모드일 때)
     if [ "$GEMINI_SUCCESS" = false ] && [ "$HAS_GEMINI_CLI" = true ]; then
         log_debug "Gemini CLI 호출 (모델: $CURRENT_MODEL)"
 
@@ -591,7 +666,7 @@ $TRANSCRIPT
 
             # Rate Limit 체크
             ERROR_REPORT=$(ls -t /tmp/gemini-client-error-*.json 2>/dev/null | head -1)
-            if [ -f "$ERROR_REPORT" ] && grep -q "exhausted\|429" "$ERROR_REPORT" 2>/dev/null; then
+            if { [ -f "$ERROR_REPORT" ] && grep -q "exhausted\|429" "$ERROR_REPORT" 2>/dev/null; } || is_quota_error "$TEMP_STDERR"; then
                if [ "$CURRENT_MODEL" = "$PRIMARY_MODEL" ]; then
                    log_warning "할당량 소진 -> Fallback 모델($FALLBACK_MODEL) 전환"
                    CURRENT_MODEL="$FALLBACK_MODEL"

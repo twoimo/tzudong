@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 
 import {
   DEFAULT_ADMIN_DASHBOARD_WIDGET_ORDER,
+  ADMIN_DASHBOARD_DIAGNOSIS_WIDGET_ID,
+  normalizeAdminDashboardWidgetId,
   normalizeAdminDashboardWidgetOrder,
 } from "../lib/admin/dashboard-widget-order";
 
@@ -56,5 +58,16 @@ describe("admin dashboard widget order normalization", () => {
       "topContent",
       "engagementRate",
     ]);
+  });
+
+  test("keeps diagnosis as a semantic alias for the legacy engagementRate widget id", () => {
+    expect(ADMIN_DASHBOARD_DIAGNOSIS_WIDGET_ID).toBe("engagementRate");
+    expect(normalizeAdminDashboardWidgetId("diagnosis")).toBe("engagementRate");
+    expect(
+      normalizeAdminDashboardWidgetOrder(["diagnosis", "engagementRate"]).slice(
+        0,
+        3,
+      ),
+    ).toEqual(["engagementRate", "subscribers", "views"]);
   });
 });
