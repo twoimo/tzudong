@@ -1,0 +1,90 @@
+name: Web Admin CI
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/web-admin-ci.yml'
+      - 'apps/web/app/admin/evaluations/**'
+      - 'apps/web/components/admin/**'
+      - 'apps/web/lib/admin-address-consistency.ts'
+      - 'apps/web/tests-unit/**'
+      - 'apps/web/package.json'
+      - 'apps/web/package-lock.json'
+      - 'apps/web/bun.lock'
+      - 'apps/web/tsconfig.json'
+      - 'apps/web/eslint.config.mjs'
+  push:
+    branches:
+      - main
+      - develop
+      - data
+    paths:
+      - '.github/workflows/web-admin-ci.yml'
+      - 'apps/web/app/admin/evaluations/**'
+      - 'apps/web/components/admin/**'
+      - 'apps/web/lib/admin-address-consistency.ts'
+      - 'apps/web/tests-unit/**'
+      - 'apps/web/package.json'
+      - 'apps/web/package-lock.json'
+      - 'apps/web/bun.lock'
+      - 'apps/web/tsconfig.json'
+      - 'apps/web/eslint.config.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-admin-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  admin-address-consistency:
+    name: Admin address consistency regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: apps/web
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.2.16'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint changed admin address surfaces
+        run: >
+          npx eslint
+          lib/admin-address-consistency.ts
+          app/admin/evaluations/page.tsx
+          components/admin/EvaluationDetailView.tsx
+          components/admin/EvaluationTableNew.tsx
+          tests-unit/admin-address-consistency.test.ts
+          --max-warnings=0
+
+      - name: Typecheck web app
+        run: npx tsc --noEmit --pretty false
+
+      - name: Run admin address regression tests
+        run: >
+          bun test
+          tests-unit/admin-address-consistency.test.ts
+          tests-unit/mobile-desktop-parity-source.test.ts
+          tests-unit/web-quality-performance-source.test.ts
