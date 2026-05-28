@@ -45,6 +45,53 @@ class RuleEvaluationPrecisionLiftTests(unittest.TestCase):
         self.assertEqual("원본식당", category_results[0]["name"])
         self.assertEqual("origin_name", name_sources["원본식당"])
 
+    def test_evaluate_category_validity_ignores_address_only_name_mismatch(self):
+        restaurants = [{"origin_name": "제기식당", "category": "한식"}]
+        location_results = [
+            {
+                "origin_name": "제기식당",
+                "eval_value": True,
+                "naver_name": "소문난냉면",
+            }
+        ]
+
+        category_results, name_sources = rule_eval.evaluate_category_validity(restaurants, location_results)
+
+        self.assertEqual("제기식당", category_results[0]["name"])
+        self.assertEqual("origin_name", name_sources["제기식당"])
+
+    def test_provider_name_compatibility_allows_branch_suffixes(self):
+        self.assertTrue(
+            rule_eval._provider_names_compatible(
+                "정원분식 웨이브파크점",
+                "정원분식",
+            )
+        )
+        self.assertTrue(
+            rule_eval._provider_names_compatible(
+                "진주식당((구) 진주집)",
+                "진주집",
+            )
+        )
+
+    def test_provider_name_compatibility_rejects_unrelated_same_address_candidates(self):
+        self.assertFalse(rule_eval._provider_names_compatible("제기식당", "소문난냉면"))
+        self.assertFalse(rule_eval._provider_names_compatible("진주식당((구) 진주집)", "만나손칼국수"))
+
+    def test_provider_name_mismatch_returns_pending_location_result(self):
+        result = rule_eval.evaluate_provider_name_mismatch(
+            "제기식당",
+            "서울특별시 동대문구 고산자로38길 13",
+            {"title": "소문난냉면"},
+            "exact_jibun",
+        )
+
+        self.assertFalse(result["eval_value"])
+        self.assertEqual("pending", result["match_status"])
+        self.assertEqual(rule_eval.PENDING_REASON_INSUFFICIENT, result["pending_reason"])
+        self.assertEqual("소문난냉면", result["naver_name"])
+        self.assertIn("상호명 불일치", result["falseMessage"])
+
     def test_evaluate_category_validity_accepts_valid_multi_label_categories(self):
         restaurants = [{"origin_name": "복합식당", "category": ["한식", "고기"]}]
 
