@@ -14,6 +14,7 @@ import {
   type DragEventHandler,
   type ReactNode,
   type TouchEventHandler,
+  type WheelEventHandler,
 } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -3132,7 +3133,7 @@ function AdminDashboardManagementSkeleton() {
 
   return (
     <section
-      className="flex h-full min-h-0 min-w-0 flex-col overflow-visible bg-background p-0 font-sans text-foreground lg:overflow-hidden"
+      className="flex min-h-full min-w-0 flex-col overflow-visible bg-background p-0 font-sans text-foreground lg:h-full lg:min-h-0 lg:overflow-hidden"
       aria-label="관리자 대시보드 (KPI) 로딩 중"
       data-admin-dashboard-management-skeleton="true"
       role="status"
@@ -3145,20 +3146,72 @@ function AdminDashboardManagementSkeleton() {
           </h1>
         </div>
         <div
-          className="flex w-full min-w-0 shrink-0 flex-nowrap items-center justify-start gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] md:w-auto md:flex-wrap md:items-start md:justify-end md:overflow-visible md:pb-0 md:gap-1 [&::-webkit-scrollbar]:hidden"
+          className="flex w-full min-w-0 shrink-0 flex-nowrap items-center justify-end gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] md:w-auto md:flex-wrap md:items-start md:justify-end md:overflow-visible md:pb-0 md:gap-1 [&::-webkit-scrollbar]:hidden"
+          data-admin-dashboard-action-bar="true"
+          data-admin-dashboard-action-order="order-reset-report-collection-period"
           data-allow-horizontal-scroll="true"
         >
+          <div
+            className="order-1 flex shrink-0 items-center justify-end gap-1"
+            data-admin-dashboard-action-group="order"
+          >
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+              disabled
+            >
+              카드 순서
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+              disabled
+            >
+              초기화
+            </Button>
+          </div>
+          <div
+            className="order-2 flex shrink-0 items-center justify-end gap-1"
+            data-admin-dashboard-action-group="report"
+          >
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 shrink-0 gap-1 rounded-full px-2 text-[11px] font-bold"
+              disabled
+            >
+              <FileDown className="h-3.5 w-3.5" aria-hidden="true" />
+              <span className="hidden sm:inline">PDF 보고서</span>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 w-7 shrink-0 rounded-full p-0"
+              aria-label="데이터 수집 상태 로딩 중"
+              disabled
+            >
+              <ScrollText className="h-3.5 w-3.5" aria-hidden="true" />
+            </Button>
+          </div>
           <Button
             type="button"
             variant="outline"
             size="sm"
-            className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+            className="order-3 h-7 shrink-0 gap-1 rounded-full px-2 text-[11px] font-bold text-muted-foreground md:hidden"
+            aria-label="대시보드 타임프레임 로딩 중: 1개월"
             disabled
           >
-            카드 순서
+            <span className="text-muted-foreground">기간</span>
+            <span className="text-foreground">1개월</span>
           </Button>
           <div
-            className="flex flex-wrap justify-end gap-1"
+            className="order-3 hidden shrink-0 flex-wrap justify-end gap-1 md:flex"
             aria-label="대시보드 타임프레임 로딩 중"
           >
             {ADMIN_DASHBOARD_PERIOD_OPTIONS.map((option) => (
@@ -4824,55 +4877,81 @@ function AdminDashboardPeriodSelector({
     ADMIN_DASHBOARD_PERIOD_OPTIONS[0];
 
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-7 shrink-0 gap-1 rounded-full px-2 text-[11px] font-bold text-muted-foreground hover:text-foreground"
-          aria-label={`대시보드 타임프레임 설정: ${selectedOption.label}`}
-          data-admin-dashboard-period-select-trigger="true"
-        >
-          <span className="text-muted-foreground">기간</span>
-          <span className="text-foreground">{selectedOption.label}</span>
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent
-        align="end"
-        sideOffset={8}
-        className="w-[min(18rem,calc(100vw-24px))] rounded-2xl border-border bg-card p-2 shadow-primary"
-        aria-label="대시보드 타임프레임 설정"
-        data-admin-dashboard-period-menu="true"
+    <>
+      <div
+        className="order-3 hidden shrink-0 flex-wrap justify-end gap-1 md:flex"
+        aria-label="대시보드 타임프레임"
+        data-admin-dashboard-period-options-inline="desktop"
       >
-        <div className="mb-2 px-1">
-          <p className="text-xs font-bold text-foreground">기간 설정</p>
-          <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">
-            KPI와 차트에 적용할 조회 기간을 선택합니다.
-          </p>
-        </div>
-        <div className="grid grid-cols-3 gap-1" aria-label="대시보드 타임프레임">
-          {ADMIN_DASHBOARD_PERIOD_OPTIONS.map((option) => {
-            const isSelected = option.value === value;
+        {ADMIN_DASHBOARD_PERIOD_OPTIONS.map((option) => {
+          const isSelected = option.value === value;
 
-            return (
-              <Button
-                key={option.value}
-                type="button"
-                variant={isSelected ? "default" : "ghost"}
-                size="sm"
-                className="h-8 rounded-xl px-2 text-[11px] font-bold"
-                aria-pressed={isSelected}
-                data-admin-dashboard-period-option={option.value}
-                onClick={() => onChange(option.value)}
-              >
-                {option.label}
-              </Button>
-            );
-          })}
-        </div>
-      </PopoverContent>
-    </Popover>
+          return (
+            <Button
+              key={option.value}
+              type="button"
+              variant={isSelected ? "default" : "outline"}
+              size="sm"
+              className="h-7 shrink-0 rounded-full px-2 text-[11px] font-bold"
+              aria-pressed={isSelected}
+              data-admin-dashboard-period-option={option.value}
+              onClick={() => onChange(option.value)}
+            >
+              {option.label}
+            </Button>
+          );
+        })}
+      </div>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="order-3 h-7 shrink-0 gap-1 rounded-full px-2 text-[11px] font-bold text-muted-foreground hover:text-foreground md:hidden"
+            aria-label={`대시보드 타임프레임 설정: ${selectedOption.label}`}
+            data-admin-dashboard-period-select-trigger="true"
+          >
+            <span className="text-muted-foreground">기간</span>
+            <span className="text-foreground">{selectedOption.label}</span>
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          align="end"
+          sideOffset={8}
+          className="w-[min(18rem,calc(100vw-24px))] rounded-2xl border-border bg-card p-2 shadow-primary"
+          aria-label="대시보드 타임프레임 설정"
+          data-admin-dashboard-period-menu="true"
+        >
+          <div className="mb-2 px-1">
+            <p className="text-xs font-bold text-foreground">기간 설정</p>
+            <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">
+              KPI와 차트에 적용할 조회 기간을 선택합니다.
+            </p>
+          </div>
+          <div className="grid grid-cols-3 gap-1" aria-label="대시보드 타임프레임">
+            {ADMIN_DASHBOARD_PERIOD_OPTIONS.map((option) => {
+              const isSelected = option.value === value;
+
+              return (
+                <Button
+                  key={option.value}
+                  type="button"
+                  variant={isSelected ? "default" : "ghost"}
+                  size="sm"
+                  className="h-8 rounded-xl px-2 text-[11px] font-bold"
+                  aria-pressed={isSelected}
+                  data-admin-dashboard-period-option={option.value}
+                  onClick={() => onChange(option.value)}
+                >
+                  {option.label}
+                </Button>
+              );
+            })}
+          </div>
+        </PopoverContent>
+      </Popover>
+    </>
   );
 }
 
@@ -6409,7 +6488,7 @@ function AdminDashboardManagementPanel({
   }, [pdfReportData]);
   return (
     <section
-      className="flex h-full min-h-0 min-w-0 flex-col overflow-visible bg-background p-0 font-sans text-foreground lg:overflow-hidden"
+      className="flex min-h-full min-w-0 flex-col overflow-visible bg-background p-0 font-sans text-foreground lg:h-full lg:min-h-0 lg:overflow-hidden"
       aria-label="관리자 대시보드 (KPI)"
       data-admin-dashboard-management="true"
       data-admin-dashboard-realtime-charts="true"
@@ -6422,47 +6501,68 @@ function AdminDashboardManagementPanel({
           </h1>
         </div>
         <div
-          className="flex w-full min-w-0 shrink-0 flex-nowrap items-center justify-start gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] md:w-auto md:flex-wrap md:items-start md:justify-end md:overflow-visible md:pb-0 md:gap-1 [&::-webkit-scrollbar]:hidden"
+          className="flex w-full min-w-0 shrink-0 flex-nowrap items-center justify-end gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] md:w-auto md:flex-wrap md:items-start md:justify-end md:overflow-visible md:pb-0 md:gap-1 [&::-webkit-scrollbar]:hidden"
+          data-admin-dashboard-action-bar="true"
+          data-admin-dashboard-action-order="order-reset-report-collection-period"
           data-allow-horizontal-scroll="true"
         >
-          <Button
-            type="button"
-            variant={isDashboardOrderEditorOpen ? "default" : "outline"}
-            size="sm"
-            className="h-7 shrink-0 rounded-full px-2 text-[11px]"
-            aria-label="KPI 카드 직접 드래그 순서 설정"
-            aria-pressed={isDashboardOrderEditorOpen}
-            disabled={isDashboardOrderLoading}
-            data-admin-dashboard-widget-order-trigger="direct-drag"
-            onClick={() => {
-              setDraggedDashboardWidgetId(null);
-              setIsDashboardOrderEditorOpen((current) => !current);
-              setDashboardOrderMessage(
-                isDashboardOrderEditorOpen
-                  ? "카드 순서 편집을 종료했습니다."
-                  : "같은 레이아웃 영역 안에서 카드를 드래그하면 순서가 자동 저장됩니다.",
-              );
-            }}
+          <div
+            className="order-1 flex shrink-0 items-center justify-end gap-1"
+            data-admin-dashboard-action-group="order"
           >
-            카드 순서
-          </Button>
-          <AdminDashboardPdfReportButton onExport={handleExportPdfReport} />
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-7 shrink-0 rounded-full px-2 text-[11px]"
-            disabled={
-              isDashboardOrderLoading ||
-              isDashboardOrderSaving ||
-              isDashboardWidgetOrderDefault
-            }
-            data-admin-dashboard-widget-order-reset="true"
-            aria-label="KPI 카드 순서를 처음 상태로 초기화"
-            onClick={() => void resetDashboardWidgetOrder()}
+            <Button
+              type="button"
+              variant={isDashboardOrderEditorOpen ? "default" : "outline"}
+              size="sm"
+              className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+              aria-label="KPI 카드 직접 드래그 순서 설정"
+              aria-pressed={isDashboardOrderEditorOpen}
+              disabled={isDashboardOrderLoading}
+              data-admin-dashboard-widget-order-trigger="direct-drag"
+              onClick={() => {
+                setDraggedDashboardWidgetId(null);
+                setIsDashboardOrderEditorOpen((current) => !current);
+                setDashboardOrderMessage(
+                  isDashboardOrderEditorOpen
+                    ? "카드 순서 편집을 종료했습니다."
+                    : "같은 레이아웃 영역 안에서 카드를 드래그하면 순서가 자동 저장됩니다.",
+                );
+              }}
+            >
+              카드 순서
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+              disabled={
+                isDashboardOrderLoading ||
+                isDashboardOrderSaving ||
+                isDashboardWidgetOrderDefault
+              }
+              data-admin-dashboard-widget-order-reset="true"
+              aria-label="KPI 카드 순서를 처음 상태로 초기화"
+              onClick={() => void resetDashboardWidgetOrder()}
+            >
+              초기화
+            </Button>
+          </div>
+          <div
+            className="order-2 flex shrink-0 items-center justify-end gap-1"
+            data-admin-dashboard-action-group="report"
           >
-            초기화
-          </Button>
+            <AdminDashboardPdfReportButton onExport={handleExportPdfReport} />
+            <AdminDashboardCollectionLogPopover
+              open={isCollectionLogsOpen}
+              logs={collectionLogsQuery.data}
+              isLoading={collectionLogsQuery.isLoading}
+              isFetching={collectionLogsQuery.isFetching}
+              isError={collectionLogsQuery.isError}
+              onOpenChange={setIsCollectionLogsOpen}
+              onRefresh={() => void collectionLogsQuery.refetch()}
+            />
+          </div>
 
           <AdminDashboardPeriodSelector
             value={period}
@@ -6472,15 +6572,6 @@ function AdminDashboardManagementPanel({
                 setPeriod(nextPeriod);
               }
             }}
-          />
-          <AdminDashboardCollectionLogPopover
-            open={isCollectionLogsOpen}
-            logs={collectionLogsQuery.data}
-            isLoading={collectionLogsQuery.isLoading}
-            isFetching={collectionLogsQuery.isFetching}
-            isError={collectionLogsQuery.isError}
-            onOpenChange={setIsCollectionLogsOpen}
-            onRefresh={() => void collectionLogsQuery.refetch()}
           />
         </div>
       </div>
@@ -7693,10 +7784,15 @@ function AdminSidebar({
       <Popover open={isAdminMenuOpen} onOpenChange={setIsAdminMenuOpen}>
         <div
           className={cn(
-            "flex h-14 shrink-0 translate-y-0 transform-gpu items-center gap-2 overflow-hidden border-b border-border bg-card/95 px-3 py-2 opacity-100 shadow-sm transition-[opacity,transform,border-color] duration-300 ease-out will-change-transform motion-reduce:transition-none md:hidden",
+            "flex h-14 shrink-0 transform-gpu items-center gap-2 overflow-hidden border-b border-border bg-card/95 px-3 py-2 shadow-sm transition-[transform,border-color] duration-300 ease-out will-change-transform motion-reduce:transition-none md:hidden",
             !showMobileHeader &&
-              "pointer-events-none -translate-y-full border-transparent opacity-0",
+              "pointer-events-none border-transparent",
           )}
+          style={{
+            transform: showMobileHeader
+              ? "translate3d(0, 0, 0)"
+              : "translate3d(0, -120%, 0)",
+          }}
           data-admin-console-mobile-header="true"
           data-admin-console-mobile-header-visible={
             showMobileHeader ? "true" : "false"
@@ -7728,9 +7824,9 @@ function AdminSidebar({
           <PopoverTrigger asChild>
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
               size="sm"
-              className="h-10 w-10 shrink-0 rounded-full border-border/80 bg-background/85 p-0 shadow-sm hover:bg-background focus-visible:ring-primary focus-visible:ring-offset-background"
+              className="h-10 w-10 shrink-0 rounded-lg bg-transparent p-0 shadow-none hover:bg-muted/70 focus-visible:ring-primary focus-visible:ring-offset-background"
               aria-label="관리자 메뉴 열기"
               aria-expanded={isAdminMenuOpen}
               aria-controls="admin-console-menu-dropdown"
@@ -8131,9 +8227,13 @@ export function AdminConsoleOverview() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [showSidebarLabels, setShowSidebarLabels] = useState(true);
   const [isMobileHeaderVisible, setIsMobileHeaderVisible] = useState(true);
-  const [isAdminMobileViewport, setIsAdminMobileViewport] = useState(false);
+  const [isAdminMobileViewport, setIsAdminMobileViewport] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia("(max-width: 767px)").matches;
+  });
   const canvasRef = useRef<HTMLElement | null>(null);
   const previousMobileHeaderScrollTopRef = useRef(0);
+  const adminCanvasTouchStartYRef = useRef<number | null>(null);
   const previousRequestedModuleIdRef = useRef(requestedModuleId);
   const activeModule = consoleModules.find(
     (module) => module.id === activeModuleId,
@@ -8273,17 +8373,86 @@ export function AdminConsoleOverview() {
     getScrollTop: getAdminConsoleScrollTop,
   });
 
+  const setAdminMobileChromeHidden = useCallback(
+    (hidden: boolean) => {
+      if (!isAdminMobileViewport) return;
+
+      setIsMobileHeaderVisible(!hidden);
+      adminBottomNavAutoHide.setBottomNavHidden(hidden);
+    },
+    [adminBottomNavAutoHide, isAdminMobileViewport],
+  );
+
   const handleAdminCanvasScroll = useCallback(() => {
     updateMobileHeaderVisibility();
     adminBottomNavAutoHide.onScroll();
   }, [adminBottomNavAutoHide, updateMobileHeaderVisibility]);
 
+  const handleAdminCanvasWheel = useCallback<WheelEventHandler<HTMLElement>>(
+    (event) => {
+      if (!isAdminMobileViewport) return;
+
+      if (event.deltaY > 18) {
+        setAdminMobileChromeHidden(true);
+        return;
+      }
+
+      if (getAdminConsoleScrollTop() <= 12) {
+        setAdminMobileChromeHidden(false);
+      }
+    },
+    [
+      getAdminConsoleScrollTop,
+      isAdminMobileViewport,
+      setAdminMobileChromeHidden,
+    ],
+  );
+
+  const handleAdminCanvasTouchStart =
+    useCallback<TouchEventHandler<HTMLElement>>(
+      (event) => {
+        adminCanvasTouchStartYRef.current = event.touches[0]?.clientY ?? null;
+        adminBottomNavAutoHide.onTouchStart(event);
+      },
+      [adminBottomNavAutoHide],
+    );
+
   const handleAdminCanvasTouchMove = useCallback<TouchEventHandler<HTMLElement>>(
     (event) => {
+      const startY = adminCanvasTouchStartYRef.current;
+      const currentY = event.touches[0]?.clientY;
+      let handledGestureIntent = false;
+
+      if (
+        isAdminMobileViewport &&
+        startY !== null &&
+        currentY !== undefined
+      ) {
+        const deltaY = currentY - startY;
+
+        if (deltaY <= -24) {
+          setAdminMobileChromeHidden(true);
+          adminCanvasTouchStartYRef.current = currentY;
+          handledGestureIntent = true;
+        } else if (deltaY >= 24 && getAdminConsoleScrollTop() <= 12) {
+          setAdminMobileChromeHidden(false);
+          adminCanvasTouchStartYRef.current = currentY;
+          handledGestureIntent = true;
+        }
+      }
+
       adminBottomNavAutoHide.onTouchMove(event);
-      window.requestAnimationFrame(updateMobileHeaderVisibility);
+      if (!handledGestureIntent) {
+        window.requestAnimationFrame(updateMobileHeaderVisibility);
+      }
     },
-    [adminBottomNavAutoHide, updateMobileHeaderVisibility],
+    [
+      adminBottomNavAutoHide,
+      getAdminConsoleScrollTop,
+      isAdminMobileViewport,
+      setAdminMobileChromeHidden,
+      updateMobileHeaderVisibility,
+    ],
   );
 
   useEffect(() => {
@@ -8359,7 +8528,8 @@ export function AdminConsoleOverview() {
           )}
           data-admin-console-content="true"
           onScroll={handleAdminCanvasScroll}
-          onTouchStart={adminBottomNavAutoHide.onTouchStart}
+          onWheel={handleAdminCanvasWheel}
+          onTouchStart={handleAdminCanvasTouchStart}
           onTouchMove={handleAdminCanvasTouchMove}
         >
           <p className="sr-only" aria-live="polite">
