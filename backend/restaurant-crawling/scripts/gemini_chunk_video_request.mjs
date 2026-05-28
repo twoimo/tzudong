@@ -8,6 +8,15 @@ import path from 'path';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { GoogleAIFileManager, FileState } from '@google/generative-ai/server';
 
+function resolveThinkingLevel(...candidates) {
+    const allowed = new Set(['MINIMAL', 'LOW', 'MEDIUM', 'HIGH']);
+    for (const candidate of candidates) {
+        const value = String(candidate || '').trim().toUpperCase();
+        if (allowed.has(value)) return value;
+    }
+    return 'MEDIUM';
+}
+
 /** 파일 처리 상태 폴링 간격 (밀리초) */
 const POLL_INTERVAL_MS = 3000;
 /** 최대 폴링 시도 횟수 (약 3분 대기 - 긴 영상 처리 대응) */
@@ -103,10 +112,15 @@ async function runSingleAttempt(apiKey, modelName, promptText, videoPath, output
         const processedFile = await waitForProcessing(fileManager, uploadedFile.file.name);
         console.log(`[준비] 비디오 처리 완료: ${processedFile.uri}`);
 
-        console.log(`[생성] Gemini API 호출 중 (모델: ${modelName})...`);
-        const model = genAI.getGenerativeModel({ model: modelName });
-        
-        // 3.1 모델 호환성을 고려하되, 500 에러 유발 가능성이 있는 thinkingConfig는 명시적 제외 (기본값 사용)
+        const thinkingLevel = resolveThinkingLevel(process.env.GEMINI_CHUNK_THINKING_LEVEL, process.env.GEMINI_THINKING_LEVEL, 'MEDIUM');
+        console.log(`[생성] Gemini API 호출 중 (모델: ${modelName}, thinkingLevel: ${thinkingLevel})...`);
+        const model = genAI.getGenerativeModel({
+            model: modelName,
+            generationConfig: {
+                thinkingConfig: { thinkingLevel },
+            },
+        });
+
         const result = await fetchWithTimeout(() => model.generateContent([
             { text: promptText },
             {
@@ -167,7 +181,7 @@ async function main() {
         process.exit(1);
     }
 
-    const modelName = process.env.CURRENT_MODEL || 'gemini-3-flash-preview';
+    const modelName = process.env.CURRENT_MODEL || 'gemini-3.5-flash';
     console.log(`[Gemini] 모델: ${modelName}, 비디오: ${path.basename(videoPath)}`);
 
     const promptText = fs.readFileSync(promptFile, 'utf8');
