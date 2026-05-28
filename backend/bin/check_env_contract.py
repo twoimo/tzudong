@@ -30,6 +30,9 @@ PROFILES = {
         "allowed_aliases": [
             "GEMINI_API_KEY_BYEON",
             "YOUTUBE_API_KEY",
+            "GEMINI_CREDENTIALS_BASE64",
+            "GEMINI_CREDENTIALS_BASE64_2",
+            "AGY_SETTINGS_JSON",
         ],
     },
     "gdrive-backfill": {
@@ -45,8 +48,6 @@ FORBIDDEN_ENV_NAMES = [
     "WEB_GEMINI_MODEL",
     "KAKAO_REST_API_KEY",
     "NEXT_PUBLIC_YOUTUBE_API_KEY",
-    "GEMINI_CREDENTIALS_BASE64",
-    "GEMINI_CREDENTIALS_BASE64_2",
 ]
 
 
@@ -58,6 +59,15 @@ RUNTIME_ALIAS_NOTES = {
     "YOUTUBE_API_KEY": (
         "canonical GitHub secret name; run_daily currently consumes "
         "YOUTUBE_API_KEY_BYEON"
+    ),
+    "GEMINI_CREDENTIALS_BASE64": (
+        "optional Gemini CLI OAuth primary account; runtime file only, not an API key replacement"
+    ),
+    "GEMINI_CREDENTIALS_BASE64_2": (
+        "optional Gemini CLI OAuth backup account for backend/bin/gemini rotation"
+    ),
+    "AGY_SETTINGS_JSON": (
+        "optional Antigravity CLI settings.json override; auth itself remains keyring-backed"
     ),
 }
 

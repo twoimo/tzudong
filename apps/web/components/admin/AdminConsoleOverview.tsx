@@ -674,6 +674,11 @@ type AdminYouTubeChannelStats = {
   viewDelta?: number | null;
   videoDelta?: number | null;
   comparisonFetchedAt?: string | null;
+  deltaSource?:
+    | "snapshot-delta"
+    | "derived-live-comparison"
+    | "derived-snapshot-comparison"
+    | "unavailable";
 };
 
 type AdminYouTubeKpiCollectionRun = {
@@ -1185,6 +1190,21 @@ const ADMIN_DASHBOARD_MOBILE_DEFER_ROOT_MARGIN = "420px 0px";
 const ADMIN_DASHBOARD_SPARKLINE_POINT_LIMIT = 7;
 const ADMIN_DASHBOARD_CONTENT_INSIGHT_TARGET_COUNT = 4;
 const ADMIN_DASHBOARD_DAY_MS = 24 * 60 * 60 * 1000;
+const ADMIN_DASHBOARD_PERIOD_DURATION_MS: Record<
+  Exclude<AdminDashboardPeriod, "ALL">,
+  number
+> = {
+  "30MIN": 30 * 60 * 1000,
+  "1H": 60 * 60 * 1000,
+  "6H": 6 * 60 * 60 * 1000,
+  "12H": 12 * 60 * 60 * 1000,
+  "1D": ADMIN_DASHBOARD_DAY_MS,
+  "1W": 7 * ADMIN_DASHBOARD_DAY_MS,
+  "1M": 30 * ADMIN_DASHBOARD_DAY_MS,
+  "3M": 91 * ADMIN_DASHBOARD_DAY_MS,
+  "6M": 182 * ADMIN_DASHBOARD_DAY_MS,
+  "1Y": 365 * ADMIN_DASHBOARD_DAY_MS,
+};
 const ADMIN_DASHBOARD_TOP_CONTENT_CONTRIBUTION_WEIGHTS = {
   views: 0.6,
   likes: 0.25,
@@ -1356,6 +1376,34 @@ function formatDashboardDateTime(value: string | null | undefined) {
     : "시간 없음";
 }
 
+function getAdminDashboardDataSourceLabel(
+  source: NonNullable<InsightTreemapResponse["meta"]>["dataSource"] | undefined,
+) {
+  if (source === "youtube-snapshot") return "스냅샷";
+  if (source === "youtube-live") return "실시간";
+  if (source === "supabase-treemap") return "Supabase";
+  if (source === "public-treemap-fallback") return "공개 폴백";
+  return "출처 확인 중";
+}
+
+function getAdminDashboardCoverageLabel(
+  coverage:
+    | NonNullable<InsightTreemapResponse["meta"]>["comparisonCoverage"]
+    | undefined,
+) {
+  if (!coverage || !coverage.comparisonAvailable) return "비교 대기";
+  return `비교 ${formatNumber(coverage.comparedVideos)}/${formatNumber(coverage.totalVideos)}`;
+}
+
+function getAdminDashboardDeltaSourceLabel(
+  source: AdminYouTubeChannelStats["deltaSource"],
+) {
+  if (source === "snapshot-delta") return "수집 delta";
+  if (source === "derived-live-comparison") return "실시간-스냅샷 비교";
+  if (source === "derived-snapshot-comparison") return "스냅샷 재계산";
+  return "delta 대기";
+}
+
 function getVideoEngagementTotal(video: InsightTreemapVideoRow) {
   return video.likeCount + video.commentCount;
 }
@@ -1375,6 +1423,10 @@ function getVideoMetricDelta(
   }
 
   if (typeof previousValue !== "number" || !Number.isFinite(previousValue)) {
+    if (video.comparisonStatus === "missing_previous") {
+      return null;
+    }
+
     return currentValue;
   }
 
@@ -1448,6 +1500,8 @@ function getDashboardPeriodMetricValue(
   }
 
   return videos.reduce((sum, video) => {
+    if (video.comparisonStatus === "missing_previous") return sum;
+
     const previousValue = getPreviousValue(video);
     const safePreviousValue =
       typeof previousValue === "number" && Number.isFinite(previousValue)
@@ -1522,10 +1576,14 @@ function calculateDashboardMetricChange(
 
     if (hasSnapshotComparison) {
       const currentTotal = videos.reduce(
-        (sum, video) => sum + getCurrentValue(video),
+        (sum, video) =>
+          video.comparisonStatus === "missing_previous"
+            ? sum
+            : sum + getCurrentValue(video),
         0,
       );
       const previousTotal = videos.reduce((sum, video) => {
+        if (video.comparisonStatus === "missing_previous") return sum;
         const previousValue = getPreviousValue(video);
         return sum + (typeof previousValue === "number" ? previousValue : 0);
       }, 0);
@@ -1557,6 +1615,50 @@ function calculateDashboardPeriodMetricChange(
     getCurrentValue,
     getPreviousValue,
   );
+}
+
+function getAdminDashboardPeriodDurationMs(period: AdminDashboardPeriod) {
+  if (period === "ALL") return null;
+  return ADMIN_DASHBOARD_PERIOD_DURATION_MS[period] ?? null;
+}
+
+function countDashboardPublishedVideosInWindow(
+  videos: InsightTreemapVideoRow[],
+  windowStartMs: number,
+  windowEndMs: number,
+) {
+  return videos.reduce((count, video) => {
+    const publishedAtMs = getVideoPublishedTime(video);
+    if (publishedAtMs >= windowStartMs && publishedAtMs < windowEndMs) {
+      return count + 1;
+    }
+
+    return count;
+  }, 0);
+}
+
+function calculateDashboardUploadCountChange(
+  videos: InsightTreemapVideoRow[],
+  period: AdminDashboardPeriod,
+) {
+  const durationMs = getAdminDashboardPeriodDurationMs(period);
+  if (!durationMs || videos.length === 0) return null;
+
+  const now = Date.now();
+  const currentWindowStartMs = now - durationMs;
+  const previousWindowStartMs = currentWindowStartMs - durationMs;
+  const currentCount = countDashboardPublishedVideosInWindow(
+    videos,
+    currentWindowStartMs,
+    now,
+  );
+  const previousCount = countDashboardPublishedVideosInWindow(
+    videos,
+    previousWindowStartMs,
+    currentWindowStartMs,
+  );
+
+  return calculateDashboardChange(currentCount, previousCount);
 }
 
 async function fetchAdminDashboardInsightSummary(
@@ -1595,7 +1697,17 @@ async function fetchAdminDashboardInsightSummary(
     throw new Error("admin-dashboard-insight-summary-failed");
   }
 
-  return fallbackResponse.json() as Promise<InsightTreemapResponse>;
+  const fallbackPayload = (await fallbackResponse.json()) as InsightTreemapResponse;
+
+  return {
+    ...fallbackPayload,
+    meta: {
+      ...fallbackPayload.meta,
+      dataSource: "public-treemap-fallback",
+      fallbackSource: "public-insights-treemap",
+      fallbackReasonCode: `admin-youtube-kpis-${liveResponse.status}`,
+    },
+  };
 }
 
 function buildAdminDashboardTrendPoints(
@@ -1653,8 +1765,12 @@ function buildAdminDashboardPeriodDeltaSparklinePoints(
 
   if (!hasComparison) return [];
 
+  const comparableVideos = videosByPublishedAt.filter(
+    (video) => video.comparisonStatus !== "missing_previous",
+  );
+
   return sampleAdminDashboardPeriodPoints(
-    videosByPublishedAt,
+    comparableVideos,
     ADMIN_DASHBOARD_SPARKLINE_POINT_LIMIT,
   ).map((video) => {
     const previousValue = getPreviousValue(video);
@@ -3557,7 +3673,7 @@ function AdminDashboardKpiCard({
     <div
       className={cn(
         adminDashboardCardClass,
-        "grid min-h-[132px] grid-rows-[auto_minmax(0,1fr)_auto] gap-3 overflow-hidden p-3 sm:p-3.5",
+        "relative z-0 grid min-h-[132px] grid-rows-[auto_minmax(0,1fr)_auto] gap-3 overflow-visible p-3 sm:p-3.5 hover:z-20 focus-within:z-20",
         className,
         isFullscreen && adminDashboardFullscreenCardClassName,
       )}
@@ -4865,6 +4981,58 @@ function AdminDashboardPdfReportButton({ onExport }: { onExport: () => void }) {
   );
 }
 
+function AdminDashboardDataConfidenceBadge({
+  meta,
+  channelStats,
+}: {
+  meta: InsightTreemapResponse["meta"] | undefined;
+  channelStats: AdminYouTubeChannelStats | undefined;
+}) {
+  const coverage = meta?.comparisonCoverage;
+  const sourceLabel = getAdminDashboardDataSourceLabel(meta?.dataSource);
+  const coverageLabel = getAdminDashboardCoverageLabel(coverage);
+  const deltaSourceLabel = getAdminDashboardDeltaSourceLabel(
+    channelStats?.deltaSource,
+  );
+  const tooltipLines = [
+    `데이터 출처: ${sourceLabel}`,
+    `비교 커버리지: ${coverageLabel}`,
+    `최신 버킷: ${formatDashboardDateTime(meta?.latestBucketStartedAt ?? null)}`,
+    `비교 버킷: ${formatDashboardDateTime(meta?.comparisonBucketStartedAt ?? null)}`,
+    `신규 영상: ${formatNumber(coverage?.newVideos ?? 0)}개`,
+    `비교값 없음: ${formatNumber(coverage?.missingPreviousVideos ?? 0)}개`,
+    `채널 delta 원천: ${deltaSourceLabel}`,
+    meta?.fallbackReasonCode
+      ? `폴백 사유: ${meta.fallbackReasonCode}`
+      : "폴백 사유: 없음",
+  ];
+  const badgeTone =
+    meta?.dataSource === "public-treemap-fallback"
+      ? "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-400/30 dark:bg-amber-950/40 dark:text-amber-300"
+      : coverage?.missingPreviousVideos
+        ? "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-400/30 dark:bg-sky-950/40 dark:text-sky-300"
+        : "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-950/40 dark:text-emerald-300";
+
+  return (
+    <AdminDashboardInlineTooltip
+      label="KPI 데이터 출처와 비교 커버리지"
+      lines={tooltipLines}
+      className="order-2 shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-primary"
+    >
+      <Badge
+        variant="outline"
+        className={cn(
+          "h-7 rounded-full px-2 py-0 text-[10px] font-black",
+          badgeTone,
+        )}
+        data-admin-dashboard-data-confidence="true"
+      >
+        {sourceLabel} · {coverageLabel}
+      </Badge>
+    </AdminDashboardInlineTooltip>
+  );
+}
+
 function AdminDashboardPeriodSelector({
   value,
   onChange,
@@ -5760,7 +5928,11 @@ function AdminDashboardManagementPanel({
         getNonNegativeMetricDelta(getVideoViewDelta(a)),
     );
   }, [hasPeriodGrowthComparison, videosByViews]);
-  const topContentVideosByInsightScore = videosByInsightScore;
+  const topContentVideosByInsightScore = hasPeriodGrowthComparison
+    ? videosByInsightScore.filter(
+        (video) => video.comparisonStatus !== "missing_previous",
+      )
+    : videosByInsightScore;
   const topContentMetricMode = hasPeriodGrowthComparison ? "delta" : "current";
   const periodViewValue = getDashboardPeriodMetricValue(
     growthVideos,
@@ -5970,19 +6142,16 @@ function AdminDashboardManagementPanel({
   const hasSnapshotVideoCountComparison =
     period !== "ALL" &&
     typeof channelStats?.videoCount === "number" &&
-    typeof channelStats.previousVideoCount === "number";
+    (typeof channelStats.previousVideoCount === "number" ||
+      typeof channelStats.videoDelta === "number");
   const periodUploadVideoValue = hasSnapshotVideoCountComparison
-    ? Math.max(
-        0,
-        (channelStats?.videoCount ?? 0) -
-          (channelStats?.previousVideoCount ?? 0),
-      )
+    ? Math.max(0, channelStats?.videoDelta ?? 0)
     : visibleVideoTotal;
   const periodVideoCaption =
     period === "ALL"
       ? `전체 영상 · 현재 ${formatNumber(cumulativeVideoTotal)}`
       : hasSnapshotVideoCountComparison
-        ? `${selectedPeriodLabel} · 채널 videoCount 순증 · 현재 ${formatNumber(cumulativeVideoTotal)}`
+        ? `${selectedPeriodLabel} · 채널 videoCount 순증 · ${getAdminDashboardDeltaSourceLabel(channelStats?.deltaSource)} · 현재 ${formatNumber(cumulativeVideoTotal)}`
         : `${selectedPeriodLabel} 신규 업로드 · 현재 ${formatNumber(cumulativeVideoTotal)}`;
   const periodUploadVideoProgress =
     typeof periodUploadVideoValue === "number" && periodUploadVideoValue > 0
@@ -6006,17 +6175,24 @@ function AdminDashboardManagementPanel({
   const topContentCardMetric = hasPeriodGrowthComparison
     ? `업로드 영상 ${formatNumber(topContentComparisonCount)}개`
     : `선택 영상 ${formatNumber(topContentComparisonCount)}개`;
-  const videoCountChange = hasSnapshotVideoCountComparison
-    ? calculateDashboardChange(
-        channelStats?.videoCount ?? 0,
-        channelStats?.previousVideoCount ?? 0,
-      )
-    : null;
+  const uploadCountCohortChange = calculateDashboardUploadCountChange(
+    growthVideos,
+    period,
+  );
+  const videoCountChange =
+    period !== "ALL" &&
+    typeof channelStats?.videoCount === "number" &&
+    typeof channelStats.previousVideoCount === "number"
+      ? calculateDashboardChange(
+          channelStats.videoCount,
+          channelStats.previousVideoCount,
+        )
+      : uploadCountCohortChange;
   const subscriberDelta =
     period !== "ALL" &&
-    typeof channelStats?.subscriberCount === "number" &&
-    typeof channelStats.previousSubscriberCount === "number"
-      ? channelStats.subscriberCount - channelStats.previousSubscriberCount
+    typeof channelStats?.subscriberDelta === "number" &&
+    Number.isFinite(channelStats.subscriberDelta)
+      ? channelStats.subscriberDelta
       : null;
   const subscriberChange =
     typeof subscriberDelta === "number" &&
@@ -6034,8 +6210,8 @@ function AdminDashboardManagementPanel({
     : !hasSubscriberCount
       ? "채널 통계 확인 필요"
       : subscriberDelta == null
-        ? "현재 구독자 · YouTube Data API · 비교 스냅샷 대기"
-        : `현재 구독자 · ${selectedPeriodLabel} 기간 순증 ${formatSignedNumber(subscriberDelta)}`;
+        ? `현재 구독자 · YouTube Data API · ${getAdminDashboardDeltaSourceLabel(channelStats?.deltaSource)}`
+        : `현재 구독자 · ${selectedPeriodLabel} 기간 순증 ${formatSignedNumber(subscriberDelta)} · ${getAdminDashboardDeltaSourceLabel(channelStats?.deltaSource)}`;
   const subscriberCardTitle = "현재 구독자";
   const viewCardTitle = hasPeriodGrowthComparison
     ? "기간 조회 증가"
@@ -6563,6 +6739,10 @@ function AdminDashboardManagementPanel({
               onRefresh={() => void collectionLogsQuery.refetch()}
             />
           </div>
+          <AdminDashboardDataConfidenceBadge
+            meta={insightQuery.data?.meta}
+            channelStats={channelStats}
+          />
 
           <AdminDashboardPeriodSelector
             value={period}
@@ -6627,8 +6807,8 @@ function AdminDashboardManagementPanel({
           infoLines={[
             "설명: 채널 구독자 수를 보여주는 카드입니다.",
             "읽는 법: 큰 숫자는 현재 전체 구독자 수입니다. 기간 동안 늘어난 구독자는 우상단의 기간 대비 값과 설명 문구에서 확인합니다.",
-            "계산식: 기간 구독자 증가 = 현재 구독자 - 이전 구독자.",
-            "참고: 제목 옆 기간 대비는 이전 스냅샷 대비 증감률입니다.",
+            "계산식: 기간 구독자 증가 = API가 제공한 delta를 우선 사용하고, 없을 때만 현재 구독자 - 이전 구독자로 계산합니다.",
+            `참고: 채널 delta 원천은 ${getAdminDashboardDeltaSourceLabel(channelStats?.deltaSource)}입니다.`,
             "주의: 제목 옆 변화율은 이전 스냅샷 대비 증가 또는 감소 비율입니다.",
           ]}
         />
@@ -6653,7 +6833,8 @@ function AdminDashboardManagementPanel({
             "설명: 선택 기간 영상들의 조회수 합계를 보여주는 카드입니다.",
             "읽는 법: 비교 스냅샷이 있으면 기간 동안 늘어난 조회수, 없으면 선택 기간 영상의 현재 조회수 합계입니다.",
             "계산식: 기간 조회 증가 = 각 영상의 (현재 조회수 - 이전 조회수) 합계.",
-            "처리: 이전값이 없는 영상은 이전값 0으로 계산합니다.",
+            "처리: 비교 버킷 이후 신규 영상은 이전값 0으로 보고, 비교 버킷 이전 영상인데 이전값이 없으면 비교 불가로 분리합니다.",
+            `비교 커버리지: ${getAdminDashboardCoverageLabel(insightQuery.data?.meta?.comparisonCoverage)}.`,
             "참고: 제목 옆 기간 대비는 이전 스냅샷 대비 증감률입니다.",
             "주의: 아래 작은 선은 영상 게시일 순서에 따른 조회수 흐름입니다.",
           ]}
@@ -6683,7 +6864,8 @@ function AdminDashboardManagementPanel({
             "설명: 선택 기간 영상들의 좋아요 합계를 보여주는 카드입니다.",
             "읽는 법: 비교 스냅샷이 있으면 기간 동안 늘어난 좋아요 수, 없으면 선택 기간 영상의 현재 좋아요 합계입니다.",
             "계산식: 기간 좋아요 증가 = 각 영상의 (현재 좋아요 - 이전 좋아요) 합계.",
-            "처리: 이전값이 없는 영상은 이전값 0으로 계산합니다.",
+            "처리: 비교 버킷 이후 신규 영상은 이전값 0으로 보고, 비교 버킷 이전 영상인데 이전값이 없으면 비교 불가로 분리합니다.",
+            `비교 커버리지: ${getAdminDashboardCoverageLabel(insightQuery.data?.meta?.comparisonCoverage)}.`,
             "참고: 좋아요 비율은 조회수 중 좋아요로 반응한 비중입니다.",
             "주의: 조회 대비 비율은 조회수 중 좋아요로 반응한 비중을 뜻합니다.",
           ]}
@@ -6713,7 +6895,8 @@ function AdminDashboardManagementPanel({
             "설명: 선택 기간 영상들의 댓글 합계를 보여주는 카드입니다.",
             "읽는 법: 비교 스냅샷이 있으면 기간 동안 늘어난 댓글 수, 없으면 선택 기간 영상의 현재 댓글 합계입니다.",
             "계산식: 기간 댓글 증가 = 각 영상의 (현재 댓글 - 이전 댓글) 합계.",
-            "처리: 이전값이 없는 영상은 이전값 0으로 계산합니다.",
+            "처리: 비교 버킷 이후 신규 영상은 이전값 0으로 보고, 비교 버킷 이전 영상인데 이전값이 없으면 비교 불가로 분리합니다.",
+            `비교 커버리지: ${getAdminDashboardCoverageLabel(insightQuery.data?.meta?.comparisonCoverage)}.`,
             "참고: 댓글 비율은 조회수 중 댓글로 반응한 비중입니다.",
             "주의: 조회 대비 댓글 비율은 조회수 중 댓글로 반응한 비중을 뜻합니다.",
           ]}
@@ -6738,8 +6921,8 @@ function AdminDashboardManagementPanel({
           infoLines={[
             "설명: 선택 기간에 새로 올라온 영상 수를 보여주는 카드입니다.",
             "읽는 법: 채널 스냅샷이 있으면 videoCount 차이, 없으면 선택 기간 영상 목록 개수를 사용합니다.",
-            "계산식: 업로드 영상 수 = 현재 channel videoCount - 이전 channel videoCount.",
-            "참고: 스냅샷이 없으면 선택 기간 영상 목록 개수를 대신 사용합니다.",
+            "계산식: 업로드 영상 수 = API가 제공한 videoDelta를 우선 사용하고, 없을 때만 현재 channel videoCount - 이전 channel videoCount로 계산합니다.",
+            `참고: 채널 delta 원천은 ${getAdminDashboardDeltaSourceLabel(channelStats?.deltaSource)}입니다.`,
             "주의: 업로드 수는 조회수·좋아요·댓글 카드와 함께 봐야 성과를 판단할 수 있습니다.",
           ]}
         />
