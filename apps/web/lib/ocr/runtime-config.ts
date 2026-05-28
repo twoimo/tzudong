@@ -1,7 +1,6 @@
 import { getGeminiOcrModels } from '@/lib/ocr/gemini';
-import { getNvidiaNimOcrModels } from '@/lib/ocr/nvidia-nim';
 
-export const OCR_ROUTING_PROVIDERS = ['gemini', 'nvidia_nim'] as const;
+export const OCR_ROUTING_PROVIDERS = ['gemini'] as const;
 export const OCR_ROUTING_MODES = ['automatic', 'manual'] as const;
 
 export type OcrRoutingProvider = (typeof OCR_ROUTING_PROVIDERS)[number];
@@ -36,7 +35,6 @@ const ENV_PROVIDER_KEYS: Record<OcrRoutingProvider, readonly string[]> = {
     'GOOGLE_API_KEY',
     'NEXT_PUBLIC_GOOGLE_API_KEY',
   ],
-  nvidia_nim: ['NVIDIA_NIM_API_KEY'],
 };
 
 function sanitizeText(value: unknown): string | null {
@@ -49,31 +47,20 @@ function normalizeRoutingMode(value: unknown): OcrRoutingMode {
   return value === 'manual' ? 'manual' : 'automatic';
 }
 
-function normalizeOcrRoutingProvider(value: unknown): OcrRoutingProvider | null {
-  return typeof value === 'string' && (OCR_ROUTING_PROVIDERS as readonly string[]).includes(value)
-    ? (value as OcrRoutingProvider)
-    : null;
-}
-
 function getEnvRoutingMode(env: NodeJS.ProcessEnv): OcrRoutingMode {
   return normalizeRoutingMode(env.OCR_ROUTING_MODE ?? env.RECEIPT_OCR_ROUTING_MODE);
 }
 
-function getEnvManualProvider(env: NodeJS.ProcessEnv): OcrRoutingProvider {
-  return normalizeOcrRoutingProvider(env.OCR_MANUAL_PROVIDER ?? env.RECEIPT_OCR_PROVIDER) ?? 'gemini';
+function getOcrProviderOrder(_env: NodeJS.ProcessEnv, _routingMode: OcrRoutingMode): OcrRoutingProvider[] {
+  return ['gemini'];
 }
 
-function getOcrProviderOrder(env: NodeJS.ProcessEnv, routingMode: OcrRoutingMode): OcrRoutingProvider[] {
-  if (routingMode === 'manual') return [getEnvManualProvider(env)];
-  return ['gemini', 'nvidia_nim'];
+function getOcrFallbackModels(_provider: OcrRoutingProvider, env: NodeJS.ProcessEnv): string[] {
+  return getGeminiOcrModels(env);
 }
 
-function getOcrFallbackModels(provider: OcrRoutingProvider, env: NodeJS.ProcessEnv): string[] {
-  return provider === 'gemini' ? getGeminiOcrModels(env) : getNvidiaNimOcrModels(env);
-}
-
-function getManualModel(provider: OcrRoutingProvider, env: NodeJS.ProcessEnv, routingMode: OcrRoutingMode): string[] {
-  if (routingMode !== 'manual' || getEnvManualProvider(env) !== provider) return [];
+function getManualModel(env: NodeJS.ProcessEnv, routingMode: OcrRoutingMode): string[] {
+  if (routingMode !== 'manual') return [];
   const manualModel = sanitizeText(env.OCR_MANUAL_MODEL ?? env.RECEIPT_OCR_MODEL);
   return manualModel ? [manualModel] : [];
 }
@@ -99,7 +86,7 @@ async function resolveOcrProviderCandidate(input: {
   env: NodeJS.ProcessEnv;
 }): Promise<OcrAiRuntimeConfigCandidate> {
   const { provider, routingMode, env } = input;
-  const models = [...new Set([...getManualModel(provider, env, routingMode), ...getOcrFallbackModels(provider, env)])].filter(Boolean);
+  const models = [...new Set([...getManualModel(env, routingMode), ...getOcrFallbackModels(provider, env)])].filter(Boolean);
   const credentialCandidates = getEnvFallbackSecrets(provider, env);
   const primaryCredential = credentialCandidates[0];
 
