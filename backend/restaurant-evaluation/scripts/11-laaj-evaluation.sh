@@ -749,7 +749,7 @@ $TRANSCRIPT
                     build_json_retry_prompt "$TEMP_PROMPT" "$RETRY_PROMPT"
 
                     RETRY_REQUESTED=false
-                    if [ "$LAST_SUCCESS_PROVIDER" = "agy" ] && [ "$HAS_AGY_CLI" = true ]; then
+                    if [ "$LAST_SUCCESS_PROVIDER" = "agy" ] && [ "$HAS_AGY_CLI" = true ] && [ "$PARSE_ATTEMPT" -eq 1 ]; then
                         log_warning "Antigravity CLI JSON 전용 재요청 (모델: ${AGY_MODEL_LABEL})"
                         if run_agy_cli_request "$RETRY_PROMPT" "$TEMP_RESPONSE" "$TEMP_STDERR"; then
                             RETRY_REQUESTED=true
@@ -760,6 +760,8 @@ $TRANSCRIPT
                                 log_warning "Antigravity CLI 할당량 소진 감지 -> Gemini CLI OAuth($CURRENT_MODEL)로 전환"
                             fi
                         fi
+                    elif [ "$LAST_SUCCESS_PROVIDER" = "agy" ] && [ "$HAS_GEMINI_CLI" = true ]; then
+                        log_warning "Antigravity CLI JSON 재요청도 파싱 실패 -> Gemini CLI OAuth로 전환"
                     fi
 
                     if [ "$RETRY_REQUESTED" = false ] && [ "$HAS_GEMINI_CLI" = true ]; then
