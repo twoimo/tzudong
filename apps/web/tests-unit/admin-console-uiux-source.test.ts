@@ -424,7 +424,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(consoleSource).toContain('data-admin-dashboard-channel-kpi="true"');
     expect(consoleSource).toContain(
-      "flex h-full min-h-0 min-w-0 flex-col overflow-visible bg-background p-0 font-sans text-foreground lg:overflow-hidden",
+      "flex min-h-full min-w-0 flex-col overflow-visible bg-background p-0 font-sans text-foreground lg:h-full lg:min-h-0 lg:overflow-hidden",
     );
     expect(consoleSource).toContain(
       "grid min-h-0 min-w-0 flex-1 auto-rows-min grid-cols-1 gap-2 overflow-x-hidden overflow-y-visible sm:grid-cols-2 lg:grid-cols-10 lg:grid-rows-[132px_minmax(0,1fr)_minmax(0,0.86fr)]",
@@ -1596,19 +1596,44 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("PDF 보고서");
     expect(consoleSource).toContain("콘텐츠 성과 TOP 5");
     expect(consoleSource).toContain("성과 진단");
+    expect(consoleSource).toContain('data-admin-dashboard-action-bar="true"');
+    expect(consoleSource).toContain(
+      'data-admin-dashboard-action-order="order-reset-report-collection-period"',
+    );
+    expect(consoleSource).toContain('data-admin-dashboard-action-group="order"');
+    expect(consoleSource).toContain('data-admin-dashboard-action-group="report"');
+    expect(consoleSource).toContain(
+      "order-1 flex shrink-0 items-center justify-end gap-1",
+    );
+    expect(consoleSource).toContain(
+      "order-2 flex shrink-0 items-center justify-end gap-1",
+    );
+    expect(consoleSource).toContain("order-3 h-7 shrink-0 gap-1");
+    expect(consoleSource).toContain(
+      'data-admin-dashboard-period-options-inline="desktop"',
+    );
+    expect(consoleSource).toContain("md:hidden");
+    expect(consoleSource).toContain("hidden shrink-0 flex-wrap justify-end gap-1 md:flex");
     expect(consoleSource).toContain('class="report-visual"');
     expect(consoleSource).toContain('class="bar-track"');
     expect(consoleSource).toContain('class="diagnosis-meter"');
     expect(consoleSource).toContain("visualPercent");
     expect(consoleSource).toContain("barPercent");
     expect(
+      consoleSource.indexOf('data-admin-dashboard-widget-order-trigger="direct-drag"'),
+    ).toBeLessThan(
+      consoleSource.indexOf('data-admin-dashboard-widget-order-reset="true"'),
+    );
+    expect(
+      consoleSource.indexOf('data-admin-dashboard-widget-order-reset="true"'),
+    ).toBeLessThan(consoleSource.indexOf("<AdminDashboardPdfReportButton"));
+    expect(
       consoleSource.indexOf("<AdminDashboardPdfReportButton"),
     ).toBeLessThan(consoleSource.indexOf("<AdminDashboardCollectionLogPopover"));
     expect(
-      consoleSource.indexOf('data-admin-dashboard-widget-order-trigger="direct-drag"'),
-    ).toBeLessThan(consoleSource.indexOf("<AdminDashboardPdfReportButton"));
-    expect(consoleSource.indexOf("<AdminDashboardPdfReportButton")).toBeLessThan(
-      consoleSource.indexOf('data-admin-dashboard-widget-order-reset="true"'),
+      consoleSource.indexOf("<AdminDashboardCollectionLogPopover"),
+    ).toBeLessThan(
+      consoleSource.indexOf("<AdminDashboardPeriodSelector"),
     );
   });
 
@@ -1914,7 +1939,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(appGlobalsSource).toContain("grid-template-rows: 0rem minmax(0, 1fr);");
     expect(appGlobalsSource).toContain(
-      "transition: grid-template-rows 300ms cubic-bezier(0.25, 0.1, 0.25, 1);",
+      "transition: grid-template-rows 300ms cubic-bezier(0.22, 1, 0.36, 1);",
     );
     expect(consoleSource).toContain("useMobileBottomNavAutoHide");
     expect(consoleSource).toContain("getMobileScrollNavVisibilityAction");
@@ -1928,18 +1953,29 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("handleAdminCanvasScroll");
     expect(consoleSource).toContain("getAdminConsoleScrollTop");
     expect(consoleSource).toContain("getScrollTop: getAdminConsoleScrollTop");
+    expect(consoleSource).toContain("const [isAdminMobileViewport, setIsAdminMobileViewport] = useState(() =>");
+    expect(consoleSource).toContain('window.matchMedia("(max-width: 767px)").matches');
+    expect(consoleSource).toContain("const setAdminMobileChromeHidden = useCallback");
+    expect(consoleSource).toContain("const handleAdminCanvasWheel = useCallback");
+    expect(consoleSource).toContain("onWheel={handleAdminCanvasWheel}");
+    expect(consoleSource).toContain("adminCanvasTouchStartYRef");
+    expect(consoleSource).toContain("setAdminMobileChromeHidden(true)");
     expect(consoleSource).toContain("const handleAdminCanvasTouchMove = useCallback");
+    expect(consoleSource).toContain("onTouchStart={handleAdminCanvasTouchStart}");
     expect(consoleSource).toContain("onTouchMove={handleAdminCanvasTouchMove}");
     expect(consoleSource).toContain('canvasElement?.addEventListener("scroll"');
     expect(consoleSource).toContain("showMobileHeader={isMobileHeaderVisible}");
     expect(consoleSource).toContain("previousRequestedModuleIdRef.current !== nextModuleId");
-    expect(consoleSource).toContain("transition-[opacity,transform,border-color]");
-    expect(consoleSource).toContain("-translate-y-full");
-    expect(consoleSource).toContain("flex w-full min-w-0 shrink-0 flex-nowrap items-center justify-start gap-1.5 overflow-x-auto");
+    expect(consoleSource).toContain("transition-[transform,border-color]");
+    expect(consoleSource).toContain("translate3d(0, -120%, 0)");
+    expect(consoleSource).toContain("flex w-full min-w-0 shrink-0 flex-nowrap items-center justify-end gap-1.5 overflow-x-auto");
     expect(consoleSource).toContain('data-allow-horizontal-scroll="true"');
     expect(consoleSource).toContain("min-h-0 min-w-0 w-full overflow-hidden border");
     expect(consoleSource).toContain("overflow-x-hidden overscroll-contain");
     expect(consoleSource).toContain('data-admin-console-menu-trigger="hamburger"');
+    expect(consoleSource).toContain('variant="ghost"');
+    expect(consoleSource).toContain("rounded-lg bg-transparent p-0 shadow-none");
+    expect(consoleSource).not.toContain("rounded-full border-border/80 bg-background/85 p-0 shadow-sm");
     expect(consoleSource).not.toContain('data-admin-console-menu-trigger="desktop-hamburger"');
     expect(consoleSource).toContain('data-admin-console-menu-dropdown="true"');
     expect(consoleSource).toContain('data-admin-sidebar-order-editor="dropdown"');
