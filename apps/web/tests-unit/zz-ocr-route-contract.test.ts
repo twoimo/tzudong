@@ -7,9 +7,9 @@ import { RECEIPT_OCR_EXTRACTION_SCHEMA_VERSION, RECEIPT_OCR_RAW_CACHE_KIND } fro
 describe('OCR extract route normalization/cache contract', () => {
   test('builds cacheable success metadata with raw and normalized OCR envelopes after provider fallback', () => {
     const envelope = buildReceiptOcrEnvelope({
-      provider: 'nvidia_nim',
-      model: 'nim-model',
-      attempts: [{ model: 'bad-gemini', ok: false, elapsedMs: 10, error: 'invalid key' }, { model: 'nim-model', ok: true, elapsedMs: 50 }],
+      provider: 'gemini',
+      model: 'gemini-3.5-flash',
+      attempts: [{ model: 'bad-gemini', ok: false, elapsedMs: 10, error: 'invalid key' }, { model: 'gemini-3.5-flash', ok: true, elapsedMs: 50 }],
       data: {
         store_name: '천안초밥 시시린',
         date: '2025-12-15',
@@ -34,13 +34,13 @@ describe('OCR extract route normalization/cache contract', () => {
       fileSize: 1000,
       compressedSize: 900,
       savings: '10%',
-      provider: 'nvidia_nim',
-      model: 'nim-model',
+      provider: 'gemini',
+      model: 'gemini-3.5-flash',
       promptVersion: 'receipt-extraction-v2',
       preprocessVersion: 'receipt-image-1600w-q90-original-first-v3',
       routingMode: 'automatic',
       normalizationVersion: envelope.normalization_version,
-      credentialSource: 'NVIDIA_NIM_API_KEY',
+      credentialSource: 'GEMINI_API_KEY',
       fallbackUsed: true,
       forceRefresh: false,
       envelope,

@@ -2,6 +2,15 @@ import fs from 'fs';
 import path from 'path';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
+function resolveThinkingLevel(...candidates) {
+    const allowed = new Set(['MINIMAL', 'LOW', 'MEDIUM', 'HIGH']);
+    for (const candidate of candidates) {
+        const value = String(candidate || '').trim().toUpperCase();
+        if (allowed.has(value)) return value;
+    }
+    return 'MEDIUM';
+}
+
 /**
  * 히트맵 프레임 디렉토리 구조를 재귀 탐색하여 이미지 파일 목록을 수집
  * 구조: {videoId}/{recollectId}/{segIdx}/{ext}/{quality_fps}/frame_*.jpg
@@ -107,12 +116,13 @@ async function main() {
         const genAI = new GoogleGenerativeAI(apiKey);
         
         // 환경변수 CURRENT_MODEL 우선, 없으면 기본 모델 사용
-        const modelName = process.env.CURRENT_MODEL || 'gemini-3-flash-preview'; 
-        console.log(`DEBUG: Getting Model=${modelName}...`);
+        const modelName = process.env.CURRENT_MODEL || 'gemini-3.5-flash';
+        const thinkingLevel = resolveThinkingLevel(process.env.GEMINI_THINKING_LEVEL, 'MEDIUM');
+        console.log(`DEBUG: Getting Model=${modelName}, thinkingLevel=${thinkingLevel}...`);
         const model = genAI.getGenerativeModel({
             model: modelName,
             generationConfig: {
-                thinkingConfig: { thinkingLevel: "HIGH" }
+                thinkingConfig: { thinkingLevel }
             }
         });
 
