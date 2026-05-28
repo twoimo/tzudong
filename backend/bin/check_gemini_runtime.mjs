@@ -4,7 +4,7 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 function parseArgs(argv) {
-  const args = { output: '', model: process.env.CURRENT_MODEL || process.env.PRIMARY_MODEL || 'gemini-3-flash-preview', requireApiAvailable: false, checkedAt: '' };
+  const args = { output: '', model: process.env.CURRENT_MODEL || process.env.PRIMARY_MODEL || 'gemini-3.5-flash', requireApiAvailable: false, checkedAt: '' };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === '--output') args.output = argv[++i] || '';
@@ -13,6 +13,15 @@ function parseArgs(argv) {
     else if (arg === '--require-api-available') args.requireApiAvailable = true;
   }
   return args;
+}
+
+function resolveThinkingLevel(...candidates) {
+  const allowed = new Set(['MINIMAL', 'LOW', 'MEDIUM', 'HIGH']);
+  for (const candidate of candidates) {
+    const value = String(candidate || '').trim().toUpperCase();
+    if (allowed.has(value)) return value;
+  }
+  return 'MEDIUM';
 }
 
 function redact(value) {
@@ -31,10 +40,16 @@ function classifyError(error) {
 
 async function buildReport(args) {
   const apiKey = (process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY_BYEON || '').trim();
+  const thinkingLevel = resolveThinkingLevel(
+    process.env.GEMINI_PREFLIGHT_THINKING_LEVEL,
+    process.env.GEMINI_THINKING_LEVEL,
+    'MEDIUM',
+  );
   const report = {
     schemaVersion: 1,
     checkedAt: args.checkedAt || new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'),
     model: args.model,
+    thinkingLevel,
     hasApiKey: Boolean(apiKey),
     status: 'unknown',
   };
@@ -49,6 +64,9 @@ async function buildReport(args) {
     const response = await ai.models.generateContent({
       model: args.model,
       contents: 'Reply with only: ok',
+      config: {
+        thinkingConfig: { thinkingLevel },
+      },
     });
     const text = String(response?.text || '').trim();
     return { ...report, status: 'ok', responsePreview: text.slice(0, 40) };
