@@ -4,8 +4,7 @@ import { createClient as createSupabaseJsClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import sharp from 'sharp';
 import { debugLog } from '@/lib/debug-log';
-import { callGeminiReceiptOcr, GeminiOcrError } from '@/lib/ocr/gemini';
-import { callNvidiaNimReceiptOcr, NIM_OCR_DEFAULT_MODEL, NvidiaNimOcrError } from '@/lib/ocr/nvidia-nim';
+import { callGeminiReceiptOcr, GEMINI_OCR_FALLBACK_MODEL, GeminiOcrError } from '@/lib/ocr/gemini';
 import {
     RECEIPT_OCR_EXTRACTION_PROMPT,
     RECEIPT_OCR_PREPROCESS_VERSION,
@@ -121,7 +120,7 @@ export async function POST(req: Request) {
     let buffer: Buffer | null = null;
     let accessToken: string | null = null;
     let authenticatedUserId: string | null = null;
-    let failureModel = `${NIM_OCR_DEFAULT_MODEL}:fail`;
+    let failureModel = `${GEMINI_OCR_FALLBACK_MODEL}:fail`;
     let failureProvider = 'unknown';
 
     try {
@@ -129,11 +128,11 @@ export async function POST(req: Request) {
         const providerCandidates = [aiRuntime, ...aiRuntime.fallbackCandidates];
         const runnableCandidates = providerCandidates.filter(candidate => hasRunnableOcrCredentials([candidate]));
         const effectiveCandidates = runnableCandidates.length ? runnableCandidates : providerCandidates;
-        failureModel = `${effectiveCandidates[0]?.model || effectiveCandidates[0]?.models[0] || NIM_OCR_DEFAULT_MODEL}:fail`;
+        failureModel = `${effectiveCandidates[0]?.model || effectiveCandidates[0]?.models[0] || GEMINI_OCR_FALLBACK_MODEL}:fail`;
         failureProvider = effectiveCandidates[0]?.provider ?? 'unknown';
         if (!hasRunnableOcrCredentials(runnableCandidates)) {
             return NextResponse.json(
-                { error: 'OCR API 키가 설정되지 않았습니다. Gemini 또는 NVIDIA NIM 키를 확인해주세요.' },
+                { error: 'Gemini OCR API 키가 설정되지 않았습니다.' },
                 { status: 500 }
             );
         }
@@ -272,21 +271,13 @@ export async function POST(req: Request) {
             const credentials = getRunnableCredentials({ candidate, routingMode: aiRuntime.routingMode });
             for (const credential of credentials) {
                 try {
-                    ocrResult = candidate.provider === 'gemini'
-                        ? await callGeminiReceiptOcr({
-                            apiKey: credential.apiKey,
-                            imageBase64: base64Image,
-                            mimeType: 'image/jpeg',
-                            prompt: OCR_PROMPT,
-                            env: { ...process.env, GEMINI_OCR_MODEL: candidate.models.join(',') },
-                        })
-                        : await callNvidiaNimReceiptOcr({
-                            apiKey: credential.apiKey,
-                            imageBase64: base64Image,
-                            mimeType: 'image/jpeg',
-                            prompt: OCR_PROMPT,
-                            env: { ...process.env, NVIDIA_NIM_OCR_MODEL: candidate.models.join(',') },
-                        });
+                    ocrResult = await callGeminiReceiptOcr({
+                        apiKey: credential.apiKey,
+                        imageBase64: base64Image,
+                        mimeType: 'image/jpeg',
+                        prompt: OCR_PROMPT,
+                        env: { ...process.env, GEMINI_OCR_MODEL: candidate.models.join(',') },
+                    });
                     usedCandidate = candidate;
                     usedCredentialSource = credential.sourceName ?? credential.source;
                     break;
@@ -295,7 +286,7 @@ export async function POST(req: Request) {
                         provider: candidate.provider,
                         credential_source: credential.sourceName ?? credential.source,
                         error: error instanceof Error ? error.message : String(error),
-                        attempts: error instanceof NvidiaNimOcrError || error instanceof GeminiOcrError ? error.attempts : undefined,
+                        attempts: error instanceof GeminiOcrError ? error.attempts : undefined,
                     });
                     if (aiRuntime.routingMode === 'manual') throw error;
                 }
@@ -350,7 +341,7 @@ export async function POST(req: Request) {
     } catch (error: unknown) {
         const errorMessage = getErrorMessage(error);
         console.error('OCR 처리 오류:', errorMessage);
-        if (error instanceof NvidiaNimOcrError || error instanceof GeminiOcrError) {
+        if (error instanceof GeminiOcrError) {
             console.error('OCR provider attempts:', error.attempts);
         }
 

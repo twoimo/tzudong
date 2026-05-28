@@ -2,6 +2,15 @@ import fs from 'fs';
 import path from 'path';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
+function resolveThinkingLevel(...candidates) {
+    const allowed = new Set(['MINIMAL', 'LOW', 'MEDIUM', 'HIGH']);
+    for (const candidate of candidates) {
+        const value = String(candidate || '').trim().toUpperCase();
+        if (allowed.has(value)) return value;
+    }
+    return 'MEDIUM';
+}
+
 async function main() {
     const args = process.argv.slice(2);
     // Usage: node final_merge_chunk.mjs <prompt_file> <output_file> <json_data_file> <transcript_file>
@@ -46,12 +55,18 @@ async function main() {
             .replace('{FULL_TRANSCRIPT}', fullTranscriptText);
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        const modelName = process.env.CURRENT_MODEL || 'gemini-3-flash-preview';
-        
+        const modelName = process.env.CURRENT_MODEL || 'gemini-3.5-flash';
+        const thinkingLevel = resolveThinkingLevel(
+            process.env.GEMINI_FINAL_MERGE_THINKING_LEVEL,
+            process.env.GEMINI_THINKING_LEVEL,
+            'HIGH',
+        );
+
         const model = genAI.getGenerativeModel({
             model: modelName,
             generationConfig: {
                 responseMimeType: "application/json",
+                thinkingConfig: { thinkingLevel },
             }
         });
 
