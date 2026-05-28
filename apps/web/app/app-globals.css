@@ -376,7 +376,7 @@ div[style*="z-index"] > div > .custom-marker {
 @media (max-width: 767px) {
   [data-admin-console-layout="sidebar-content"] {
     grid-template-rows: 3.5rem minmax(0, 1fr);
-    transition: grid-template-rows 300ms cubic-bezier(0.25, 0.1, 0.25, 1);
+    transition: grid-template-rows 300ms cubic-bezier(0.22, 1, 0.36, 1);
     will-change: grid-template-rows;
   }
 
