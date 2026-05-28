@@ -22,6 +22,7 @@ PRODUCTION_FIXTURE_CHECK_SOURCE = BACKEND_ROOT / "bin" / "check_production_contr
 ACTIONS_BUDGET_CHECK_SOURCE = BACKEND_ROOT / "bin" / "check_actions_budget.py"
 DAILY_CRAWLER_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "daily-crawler.yml"
 GDRIVE_BACKFILL_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "gdrive-frame-backfill.yml"
+CHUNK_MULTIMODAL_SCRIPT = BACKEND_ROOT / "restaurant-crawling" / "scripts" / "08-chunk-multimodal-crawling.sh"
 
 
 class GDriveUploadContractTests(unittest.TestCase):
@@ -497,6 +498,14 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertNotIn("\nrequests\n", crawling_requirements)
         self.assertIn("langgraph==", pipeline_requirements)
         self.assertNotIn("langchain-core>=", pipeline_requirements)
+
+    def test_chunk_multimodal_only_uses_chrome_impersonation_when_available(self) -> None:
+        script = CHUNK_MULTIMODAL_SCRIPT.read_text(encoding="utf-8")
+
+        self.assertIn("--list-impersonate-targets", script)
+        self.assertIn("yt_impersonate_flags=(--impersonate Chrome)", script)
+        self.assertIn("Chrome impersonation target unavailable", script)
+        self.assertIn('"${yt_impersonate_flags[@]}"', script)
 
     def test_gdrive_upload_status_timeout_records_partial_and_residual_queue(self) -> None:
         frame = self.frames_dir / "pending.jpg"
