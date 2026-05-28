@@ -453,6 +453,8 @@ class AgyCliBridgeTests(unittest.TestCase):
             self.assertIn("Authentication required", combined)
             self.assertIn("Gemini CLI 호출", combined)
             self.assertEqual("1", gemini_state.read_text(encoding="utf-8").strip())
+            settings = json.loads((self.tmp / ".gemini" / "settings.json").read_text(encoding="utf-8"))
+            self.assertEqual("oauth-personal", settings["security"]["auth"]["selectedType"])
             output_file = evaluation / "evaluation" / "laaj_results" / f"{video_id}.jsonl"
             self.assertTrue(output_file.exists())
             payload = json.loads(output_file.read_text(encoding="utf-8").strip())
