@@ -6,6 +6,7 @@ export interface EditRequestDraft {
     userId: string;
     restaurantId: string;
     currentStep?: 1 | 2 | 3;
+    requestKind?: 'edit' | 'closure';
     name: string;
     address: string;
     phone: string;
