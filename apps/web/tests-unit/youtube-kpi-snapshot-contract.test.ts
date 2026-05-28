@@ -68,10 +68,33 @@ describe("YouTube KPI snapshot collector contract", () => {
     const route = readRepoFile("app/api/admin/youtube-kpis/route.ts");
 
     expect(route).toContain("getYouTubeKpiSnapshotData(period, {");
+    expect(route).toContain("shouldUseHistoryComparisonFallback");
+    expect(route).toContain('fallbackReasonCode: "snapshot-comparison-unavailable"');
     expect(route).toContain("getInsightTreemapData(period");
     expect(route).toContain('filterByPeriod: !isChannelGrowthScope && period !== "ALL"');
     expect(route).toContain("process.env.YOUTUBE_API_KEY || null");
     expect(route).toContain("YouTube KPI fallback data is unavailable");
+    expect(route).toContain('dataSource: "youtube-live"');
+    expect(route).toContain('fallbackReasonCode: "youtube-api-key-missing"');
+    expect(route).toContain('fallbackReasonCode: "youtube-live-fetch-failed"');
+    expect(readRepoFile("lib/admin/youtube-kpi-snapshots.ts")).toContain(
+      "buildSnapshotComparisonCoverage",
+    );
+  });
+
+  test("admin channel KPI route exposes a single delta source for dashboard cards", () => {
+    const route = readRepoFile("app/api/admin/youtube-channel/route.ts");
+    const dashboard = readRepoFile("components/admin/AdminConsoleOverview.tsx");
+
+    expect(route).toContain("getDerivedLiveDelta");
+    expect(route).toContain('source: "derived-live-comparison"');
+    expect(route).toContain("deltaSource:");
+    expect(readRepoFile("lib/admin/youtube-kpi-snapshots.ts")).toContain(
+      "preferStoredDelta: period === 'ALL'",
+    );
+    expect(dashboard).toContain("channelStats?.subscriberDelta");
+    expect(dashboard).toContain("channelStats?.videoDelta");
+    expect(dashboard).toContain("getAdminDashboardDeltaSourceLabel");
   });
 
   test("admin KPI dashboard exposes GitHub Actions collection logs", () => {

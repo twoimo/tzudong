@@ -1,5 +1,6 @@
 import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
 import type {
+  InsightTreemapComparisonCoverage,
   InsightTreemapPeriod,
   InsightTreemapResponse,
   InsightTreemapVideoRow,
@@ -167,9 +168,28 @@ async function fetchPreviousSnapshotMap(
   return result;
 }
 
+function getSnapshotComparisonStatus(
+  row: VideoSnapshotRow,
+  previous: VideoSnapshotRow | undefined,
+  comparisonBucketStartedAt: string | null,
+): InsightTreemapVideoRow['comparisonStatus'] {
+  if (!comparisonBucketStartedAt) return 'not_applicable';
+  if (previous) return 'compared';
+
+  const publishedAtMs = row.published_at ? new Date(row.published_at).getTime() : Number.NaN;
+  const comparisonBucketMs = new Date(comparisonBucketStartedAt).getTime();
+
+  if (Number.isFinite(publishedAtMs) && Number.isFinite(comparisonBucketMs) && publishedAtMs > comparisonBucketMs) {
+    return 'new';
+  }
+
+  return 'missing_previous';
+}
+
 function mapSnapshotRowToVideo(
   row: VideoSnapshotRow,
   previous: VideoSnapshotRow | undefined,
+  comparisonBucketStartedAt: string | null,
 ): InsightTreemapVideoRow {
   return {
     id: row.video_id,
@@ -184,6 +204,43 @@ function mapSnapshotRowToVideo(
     previousLikeCount: previous ? toNonNegativeNumber(previous.like_count) : null,
     previousCommentCount: previous ? toNonNegativeNumber(previous.comment_count) : null,
     previousDuration: previous ? Math.floor(toNonNegativeNumber(previous.duration_seconds)) : null,
+    comparisonStatus: getSnapshotComparisonStatus(row, previous, comparisonBucketStartedAt),
+  };
+}
+
+function buildSnapshotComparisonCoverage(
+  rows: VideoSnapshotRow[],
+  previousMap: Map<string, VideoSnapshotRow>,
+  latestBucketStartedAt: string,
+  comparisonBucketStartedAt: string | null,
+): InsightTreemapComparisonCoverage {
+  let newVideos = 0;
+  let missingPreviousVideos = 0;
+
+  for (const row of rows) {
+    if (previousMap.has(row.video_id)) continue;
+
+    const comparisonStatus = getSnapshotComparisonStatus(
+      row,
+      undefined,
+      comparisonBucketStartedAt,
+    );
+
+    if (comparisonStatus === 'new') {
+      newVideos += 1;
+    } else if (comparisonStatus === 'missing_previous') {
+      missingPreviousVideos += 1;
+    }
+  }
+
+  return {
+    latestBucketStartedAt,
+    comparisonBucketStartedAt,
+    totalVideos: rows.length,
+    comparedVideos: previousMap.size,
+    newVideos,
+    missingPreviousVideos,
+    comparisonAvailable: Boolean(comparisonBucketStartedAt && previousMap.size > 0),
   };
 }
 
@@ -202,7 +259,15 @@ export async function getYouTubeKpiSnapshotData(
     comparisonBucket,
     rows.map((row) => row.video_id),
   );
-  const videos = rows.map((row) => mapSnapshotRowToVideo(row, previousMap.get(row.video_id)));
+  const videos = rows.map((row) =>
+    mapSnapshotRowToVideo(row, previousMap.get(row.video_id), comparisonBucket),
+  );
+  const comparisonCoverage = buildSnapshotComparisonCoverage(
+    rows,
+    previousMap,
+    latestBucket,
+    comparisonBucket,
+  );
 
   return {
     asOf: latestBucket,
@@ -210,6 +275,12 @@ export async function getYouTubeKpiSnapshotData(
     totalVideos: videos.length,
     videos,
     availablePeriods: [],
+    meta: {
+      dataSource: 'youtube-snapshot',
+      latestBucketStartedAt: latestBucket,
+      comparisonBucketStartedAt: comparisonBucket,
+      comparisonCoverage,
+    },
   };
 }
 
@@ -230,6 +301,7 @@ export type YouTubeChannelKpiSnapshot = {
   viewDelta?: number | null;
   videoDelta?: number | null;
   comparisonFetchedAt?: string | null;
+  deltaSource?: 'snapshot-delta' | 'derived-snapshot-comparison' | 'unavailable';
 };
 
 type ChannelSnapshotRow = {
@@ -293,48 +365,99 @@ async function fetchComparisonChannelSnapshotRow(
   return data ?? null;
 }
 
+function parseNullableFiniteNumber(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function getStoredOrDerivedDelta(
+  storedDelta: unknown,
+  currentValue: number | null,
+  previousValue: number | null,
+  { preferStoredDelta = false }: { preferStoredDelta?: boolean } = {},
+) {
+  const parsedStoredDelta = parseNullableFiniteNumber(storedDelta);
+  if (preferStoredDelta && parsedStoredDelta != null) {
+    return { value: parsedStoredDelta, source: 'snapshot-delta' as const };
+  }
+
+  if (typeof currentValue === 'number' && typeof previousValue === 'number') {
+    return {
+      value: currentValue - previousValue,
+      source: 'derived-snapshot-comparison' as const,
+    };
+  }
+
+  return { value: null, source: 'unavailable' as const };
+}
+
 function mapChannelSnapshotRow(
   data: ChannelSnapshotRow,
   previous?: ChannelSnapshotRow | null,
+  { preferStoredDelta = false }: { preferStoredDelta?: boolean } = {},
 ): YouTubeChannelKpiSnapshot {
   const hiddenSubscriberCount = data.hidden_subscriber_count === true;
   const previousHiddenSubscriberCount = previous?.hidden_subscriber_count === true;
+  const subscriberCount = hiddenSubscriberCount ? null : toNonNegativeNumber(data.subscriber_count);
+  const previousSubscriberCount = previous
+    ? previousHiddenSubscriberCount
+      ? null
+      : toNonNegativeNumber(previous.subscriber_count)
+    : null;
+  const viewCount = toNonNegativeNumber(data.view_count);
+  const previousViewCount = previous ? toNonNegativeNumber(previous.view_count) : null;
+  const videoCount = toNonNegativeNumber(data.video_count);
+  const previousVideoCount = previous ? toNonNegativeNumber(previous.video_count) : null;
+  const subscriberDelta = getStoredOrDerivedDelta(
+    data.subscriber_delta,
+    subscriberCount,
+    previousSubscriberCount,
+    { preferStoredDelta },
+  );
+  const viewDelta = getStoredOrDerivedDelta(
+    data.view_delta,
+    viewCount,
+    previousViewCount,
+    { preferStoredDelta },
+  );
+  const videoDelta = getStoredOrDerivedDelta(
+    data.video_delta,
+    videoCount,
+    previousVideoCount,
+    { preferStoredDelta },
+  );
 
   return {
     channelId: data.channel_id,
     title: data.channel_title,
     handle: data.channel_handle,
-    subscriberCount: hiddenSubscriberCount ? null : toNonNegativeNumber(data.subscriber_count),
-    viewCount: toNonNegativeNumber(data.view_count),
-    videoCount: toNonNegativeNumber(data.video_count),
+    subscriberCount,
+    viewCount,
+    videoCount,
     hiddenSubscriberCount,
     fetchedAt: data.fetched_at ?? data.bucket_started_at,
-    previousSubscriberCount: previous
-      ? previousHiddenSubscriberCount
-        ? null
-        : toNonNegativeNumber(previous.subscriber_count)
-      : null,
-    previousViewCount: previous ? toNonNegativeNumber(previous.view_count) : null,
-    previousVideoCount: previous ? toNonNegativeNumber(previous.video_count) : null,
-    previousBucketStartedAt:
-      data.previous_bucket_started_at ??
-      (previous ? previous.bucket_started_at : null),
-    subscriberDelta:
-      typeof data.subscriber_delta === 'number' ||
-      (typeof data.subscriber_delta === 'string' && data.subscriber_delta.trim())
-        ? Number(data.subscriber_delta)
+    previousSubscriberCount,
+    previousViewCount,
+    previousVideoCount,
+    previousBucketStartedAt: previous
+      ? previous.bucket_started_at
+      : preferStoredDelta
+        ? data.previous_bucket_started_at ?? null
         : null,
-    viewDelta:
-      typeof data.view_delta === 'number' ||
-      (typeof data.view_delta === 'string' && data.view_delta.trim())
-        ? Number(data.view_delta)
-        : null,
-    videoDelta:
-      typeof data.video_delta === 'number' ||
-      (typeof data.video_delta === 'string' && data.video_delta.trim())
-        ? Number(data.video_delta)
-        : null,
+    subscriberDelta: subscriberDelta.value,
+    viewDelta: viewDelta.value,
+    videoDelta: videoDelta.value,
     comparisonFetchedAt: previous ? previous.fetched_at ?? previous.bucket_started_at : null,
+    deltaSource:
+      subscriberDelta.source !== 'unavailable'
+        ? subscriberDelta.source
+        : viewDelta.source !== 'unavailable'
+          ? viewDelta.source
+          : videoDelta.source,
   };
 }
 
@@ -345,5 +468,7 @@ export async function getLatestYouTubeChannelSnapshot(
   if (!latest) return null;
 
   const previous = await fetchComparisonChannelSnapshotRow(latest.bucket_started_at, period);
-  return mapChannelSnapshotRow(latest, previous);
+  return mapChannelSnapshotRow(latest, previous, {
+    preferStoredDelta: period === 'ALL',
+  });
 }
