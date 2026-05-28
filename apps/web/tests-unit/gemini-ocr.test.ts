@@ -2,7 +2,9 @@ import { describe, expect, test } from 'bun:test';
 import {
   buildGeminiReceiptOcrParts,
   callGeminiReceiptOcr,
-  GEMINI_OCR_DEFAULT_MODEL,
+  GEMINI_OCR_FALLBACK_MODEL,
+  getGeminiOcrDefaultModel,
+  getGeminiOcrThinkingLevel,
   GeminiOcrError,
   getGeminiOcrModels,
 } from '@/lib/ocr/gemini';
@@ -16,9 +18,21 @@ import {
 
 describe('gemini receipt ocr helper', () => {
   test('defaults to gemini-3.5-flash as the authoritative OCR baseline', () => {
-    expect(GEMINI_OCR_DEFAULT_MODEL).toBe('gemini-3.5-flash');
+    expect(GEMINI_OCR_FALLBACK_MODEL).toBe('gemini-3.5-flash');
+    expect(getGeminiOcrDefaultModel({} as NodeJS.ProcessEnv)).toBe('gemini-3.5-flash');
+    expect(getGeminiOcrDefaultModel({ GEMINI_OCR_DEFAULT_MODEL: 'gemini-env-default' } as NodeJS.ProcessEnv)).toBe('gemini-env-default');
     expect(getGeminiOcrModels({} as NodeJS.ProcessEnv)).toEqual(['gemini-3.5-flash']);
+    expect(getGeminiOcrModels({ GEMINI_OCR_DEFAULT_MODEL: 'gemini-env-default' } as NodeJS.ProcessEnv)).toEqual(['gemini-env-default']);
     expect(getGeminiOcrModels({ GEMINI_OCR_MODEL: ' a, b ,, c ' } as NodeJS.ProcessEnv)).toEqual(['a', 'b', 'c']);
+  });
+
+
+
+  test('defaults OCR thinking to medium and allows env override', () => {
+    expect(getGeminiOcrThinkingLevel({} as NodeJS.ProcessEnv)).toBe('MEDIUM');
+    expect(getGeminiOcrThinkingLevel({ GEMINI_THINKING_LEVEL: 'high' } as NodeJS.ProcessEnv)).toBe('HIGH');
+    expect(getGeminiOcrThinkingLevel({ GEMINI_THINKING_LEVEL: 'high', GEMINI_OCR_THINKING_LEVEL: 'medium' } as NodeJS.ProcessEnv)).toBe('MEDIUM');
+    expect(getGeminiOcrThinkingLevel({ GEMINI_OCR_THINKING_LEVEL: 'invalid' } as NodeJS.ProcessEnv)).toBe('MEDIUM');
   });
 
   test('builds Gemini multimodal parts without exposing secrets', () => {
@@ -43,13 +57,13 @@ describe('gemini receipt ocr helper', () => {
       mimeType: 'image/jpeg',
       prompt: 'read',
       env: { GEMINI_OCR_MODEL: 'gemini-3.5-flash' } as NodeJS.ProcessEnv,
-      generateContentImpl: async ({ model }) => {
-        seenModels.push(model);
+      generateContentImpl: async ({ model, thinkingLevel }) => {
+        seenModels.push(`${model}:${thinkingLevel}`);
         return '{"store_name":"데일리픽스 강남본점","date":"2026-04-25","time":"12:30","total_amount":"11,500원","items":[{"name":"아메리카노","price":"4,500"}],"confidence":0.94}';
       },
     });
 
-    expect(seenModels).toEqual(['gemini-3.5-flash']);
+    expect(seenModels).toEqual(['gemini-3.5-flash:MEDIUM']);
     expect(result.model).toBe('gemini-3.5-flash');
     expect(result.data).toMatchObject({
       store_name: '데일리픽스 강남본점',
@@ -69,14 +83,14 @@ describe('gemini receipt ocr helper', () => {
       mimeType: 'image/jpeg',
       prompt: 'read',
       env: { GEMINI_OCR_MODEL: 'bad-model,good-model' } as NodeJS.ProcessEnv,
-      generateContentImpl: async ({ model }) => {
-        seenModels.push(model);
+      generateContentImpl: async ({ model, thinkingLevel }) => {
+        seenModels.push(`${model}:${thinkingLevel}`);
         if (model === 'bad-model') throw new Error('model unavailable');
         return '{"store_name":"스시린 불당본점","confidence":0.9}';
       },
     });
 
-    expect(seenModels).toEqual(['bad-model', 'good-model']);
+    expect(seenModels).toEqual(['bad-model:MEDIUM', 'good-model:MEDIUM']);
     expect(result.model).toBe('good-model');
     expect(result.attempts).toHaveLength(2);
     expect(result.data.store_name).toBe('스시린 불당본점');
@@ -141,8 +155,8 @@ describe('ocr cache versioning', () => {
 
     expect(doesOcrCacheMetadataMatch({
       cache_kind: RECEIPT_OCR_RAW_CACHE_KIND,
-      provider: 'nvidia_nim',
-      model: 'gemini-3.5-flash',
+      provider: 'gemini',
+      model: 'other-model',
       prompt_version: 'receipt-extraction-v1',
       preprocess_version: 'receipt-image-1600w-q85-v2',
       extraction_schema_version: RECEIPT_OCR_EXTRACTION_SCHEMA_VERSION,

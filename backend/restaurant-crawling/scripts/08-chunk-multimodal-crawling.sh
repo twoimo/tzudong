@@ -43,9 +43,12 @@ for env_file in "$PROJECT_ROOT/.env" "$PROJECT_ROOT/../.env"; do
 done
 
 # Gemini 모델 설정
-export PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3-flash-preview}"
+export PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3.5-flash}"
 export FALLBACK_MODEL="${FALLBACK_MODEL:-gemini-3-flash-preview}"
 export CURRENT_MODEL="$PRIMARY_MODEL"
+export GEMINI_THINKING_LEVEL="${GEMINI_THINKING_LEVEL:-MEDIUM}"
+export GEMINI_CHUNK_THINKING_LEVEL="${GEMINI_CHUNK_THINKING_LEVEL:-$GEMINI_THINKING_LEVEL}"
+export GEMINI_FINAL_MERGE_THINKING_LEVEL="${GEMINI_FINAL_MERGE_THINKING_LEVEL:-HIGH}"
 export TZ="Asia/Seoul"
 # 로그 모드: normal(기본) | debug
 LOG_VERBOSITY="${CRAWL_LOG_VERBOSITY:-normal}"
@@ -1053,7 +1056,7 @@ main() {
     fi
 
     log_info "모델: $CURRENT_MODEL (fallback: $FALLBACK_MODEL)"
-    log_info "모드: 청크 비디오 멀티모달 (thinkingLevel: HIGH)"
+    log_info "모드: 청크 비디오 멀티모달 (chunk thinkingLevel: $GEMINI_CHUNK_THINKING_LEVEL, final merge: $GEMINI_FINAL_MERGE_THINKING_LEVEL)"
 
     # 헬스 체크 (임시 파일은 $TEMP_BASE 경로 통일)
     local hc_response="$TEMP_BASE/hc_response.json"
@@ -1070,7 +1073,7 @@ main() {
 import { GoogleGenAI } from '@google/genai';
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const r = await ai.models.generateContent({
-    model: process.env.CURRENT_MODEL || 'gemini-3-flash-preview',
+    model: process.env.CURRENT_MODEL || 'gemini-3.5-flash',
     contents: '1+1=?'
 });
 console.log(r.text);

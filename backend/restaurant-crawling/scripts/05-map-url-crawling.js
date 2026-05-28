@@ -43,6 +43,15 @@ function log(level, msg) {
     console.log(`[${time}] ${tags[level] || '[LOG]'} ${msg}`);
 }
 
+function resolveThinkingLevel(...candidates) {
+    const allowed = new Set(['MINIMAL', 'LOW', 'MEDIUM', 'HIGH']);
+    for (const candidate of candidates) {
+        const value = String(candidate || '').trim().toUpperCase();
+        if (allowed.has(value)) return value;
+    }
+    return 'MEDIUM';
+}
+
 // config 로드
 function loadChannelsConfig() {
     const configPath = path.resolve(__dirname, '../../config/channels.yaml');
@@ -688,7 +697,14 @@ ${placeNames.join('\n')}
         log('info', `Gemini API 호출 시도 (${naverPlaces.length}개 장소)`);
         try {
             const genAI = new GoogleGenerativeAI(geminiApiKey);
-            const model = genAI.getGenerativeModel({ model: process.env.PRIMARY_MODEL || 'gemini-3-flash-preview' });
+            const thinkingLevel = resolveThinkingLevel(process.env.GEMINI_MAP_THINKING_LEVEL, process.env.GEMINI_THINKING_LEVEL, 'HIGH');
+            const model = genAI.getGenerativeModel({
+                model: process.env.PRIMARY_MODEL || 'gemini-3.5-flash',
+                generationConfig: {
+                    thinkingConfig: { thinkingLevel },
+                },
+            });
+            log('info', `Gemini thinkingLevel=${thinkingLevel}`);
 
             const result = await model.generateContent(prompt);
             const response = await result.response;
@@ -711,7 +727,7 @@ ${placeNames.join('\n')}
     const maxRetries = 3;
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-            const model = process.env.PRIMARY_MODEL || 'gemini-3-flash-preview';
+            const model = process.env.PRIMARY_MODEL || 'gemini-3.5-flash';
             const cliResult = execSync(`gemini --model ${model} --output-format json --yolo`, {
                 input: prompt,
                 timeout: 120000,
