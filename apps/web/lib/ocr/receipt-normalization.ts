@@ -1,7 +1,4 @@
-import type {
-  NvidiaNimReceiptOcrAttempt,
-  NvidiaNimReceiptOcrData,
-} from '@/lib/ocr/nvidia-nim';
+import type { ReceiptOcrAttempt, ReceiptOcrData } from '@/lib/ocr/types';
 import type { OcrRoutingProvider } from '@/lib/ocr/runtime-config';
 import type { OcrRestaurantMatchCandidate } from '@/lib/ocr/restaurant-matching';
 
@@ -49,10 +46,10 @@ export type ReceiptOcrEnvelope = {
   raw: {
     provider: OcrRoutingProvider;
     model: string;
-    fields: NvidiaNimReceiptOcrData;
-    attempts: NvidiaNimReceiptOcrAttempt[];
+    fields: ReceiptOcrData;
+    attempts: ReceiptOcrAttempt[];
   };
-  normalized: NvidiaNimReceiptOcrData;
+  normalized: ReceiptOcrData;
   matched_restaurant_candidates: OcrRestaurantMatchCandidate[];
   applied_correction: OcrAppliedCorrection[];
   field_trust: OcrFieldTrust[];
@@ -88,10 +85,10 @@ export function isReceiptMetadataItemName(name: string): boolean {
 }
 
 export function normalizeReceiptItems(
-  items: NvidiaNimReceiptOcrData['items'],
-): { items?: NonNullable<NvidiaNimReceiptOcrData['items']>; removed: NonNullable<NvidiaNimReceiptOcrData['items']> } {
-  const removed: NonNullable<NvidiaNimReceiptOcrData['items']> = [];
-  const kept: NonNullable<NvidiaNimReceiptOcrData['items']> = [];
+  items: ReceiptOcrData['items'],
+): { items?: NonNullable<ReceiptOcrData['items']>; removed: NonNullable<ReceiptOcrData['items']> } {
+  const removed: NonNullable<ReceiptOcrData['items']> = [];
+  const kept: NonNullable<ReceiptOcrData['items']> = [];
 
   for (const item of items ?? []) {
     if (isReceiptMetadataItemName(item.name)) {
@@ -155,15 +152,15 @@ function pickStoreTrust(input: {
 export function buildReceiptOcrEnvelope(input: {
   provider: OcrRoutingProvider;
   model: string;
-  attempts: NvidiaNimReceiptOcrAttempt[];
-  data: NvidiaNimReceiptOcrData;
+  attempts: ReceiptOcrAttempt[];
+  data: ReceiptOcrData;
   matchedRestaurantCandidates?: OcrRestaurantMatchCandidate[];
 }): ReceiptOcrEnvelope {
   const matchedCandidates = [...(input.matchedRestaurantCandidates ?? [])]
     .sort((a, b) => b.score - a.score)
     .slice(0, 5);
   const topCandidate = matchedCandidates[0];
-  const normalized: NvidiaNimReceiptOcrData = { ...input.data };
+  const normalized: ReceiptOcrData = { ...input.data };
   const applied: OcrAppliedCorrection[] = [];
   const fieldTrust: OcrFieldTrust[] = [];
 
@@ -306,7 +303,7 @@ export function buildReceiptOcrEnvelope(input: {
   };
 }
 
-export function flattenReceiptOcrEnvelope(envelope: ReceiptOcrEnvelope): NvidiaNimReceiptOcrData & ReceiptOcrEnvelope {
+export function flattenReceiptOcrEnvelope(envelope: ReceiptOcrEnvelope): ReceiptOcrData & ReceiptOcrEnvelope {
   return {
     ...envelope.normalized,
     ...envelope,

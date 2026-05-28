@@ -1,32 +1,48 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import {
   extractJsonObject,
-  normalizeNvidiaNimOcrData,
-  type NvidiaNimReceiptOcrAttempt,
-  type NvidiaNimReceiptOcrData,
-  type NvidiaNimReceiptOcrResult,
-} from '@/lib/ocr/nvidia-nim';
+  normalizeReceiptOcrData,
+  type ReceiptOcrAttempt,
+  type ReceiptOcrData,
+  type ReceiptOcrResult,
+} from '@/lib/ocr/types';
 
-export const GEMINI_OCR_DEFAULT_MODEL = 'gemini-3.5-flash';
+export const GEMINI_OCR_FALLBACK_MODEL = 'gemini-3.5-flash';
+export const GEMINI_OCR_DEFAULT_THINKING_LEVEL = 'MEDIUM';
+export type GeminiOcrThinkingLevel = 'LOW' | 'MEDIUM' | 'HIGH';
 
 export class GeminiOcrError extends Error {
-  attempts: NvidiaNimReceiptOcrAttempt[];
+  attempts: ReceiptOcrAttempt[];
 
-  constructor(attempts: NvidiaNimReceiptOcrAttempt[]) {
+  constructor(attempts: ReceiptOcrAttempt[]) {
     super('Gemini OCR 호출 실패');
     this.name = 'GeminiOcrError';
     this.attempts = attempts;
   }
 }
 
-export function getGeminiOcrModels(env: NodeJS.ProcessEnv = process.env): string[] {
-  const configured = env.GEMINI_OCR_MODEL
+function sanitizeCsv(value: string | undefined): string[] {
+  return value
     ?.split(',')
     .map((model) => model.trim())
-    .filter(Boolean);
+    .filter(Boolean) ?? [];
+}
 
-  if (configured?.length) return configured;
-  return [GEMINI_OCR_DEFAULT_MODEL];
+export function getGeminiOcrDefaultModel(env: NodeJS.ProcessEnv = process.env): string {
+  return env.GEMINI_OCR_DEFAULT_MODEL?.trim() || GEMINI_OCR_FALLBACK_MODEL;
+}
+
+export function getGeminiOcrModels(env: NodeJS.ProcessEnv = process.env): string[] {
+  const configured = sanitizeCsv(env.GEMINI_OCR_MODEL);
+  if (configured.length) return configured;
+  return [getGeminiOcrDefaultModel(env)];
+}
+
+export function getGeminiOcrThinkingLevel(env: NodeJS.ProcessEnv = process.env): GeminiOcrThinkingLevel {
+  const configured = (env.GEMINI_OCR_THINKING_LEVEL ?? env.GEMINI_THINKING_LEVEL ?? '').trim().toUpperCase();
+  return configured === 'LOW' || configured === 'MEDIUM' || configured === 'HIGH'
+    ? configured
+    : GEMINI_OCR_DEFAULT_THINKING_LEVEL;
 }
 
 export function buildGeminiReceiptOcrParts(input: {
@@ -42,6 +58,7 @@ export function buildGeminiReceiptOcrParts(input: {
 
 type GeminiGenerateContentImpl = (input: {
   model: string;
+  thinkingLevel: GeminiOcrThinkingLevel;
   parts: ReturnType<typeof buildGeminiReceiptOcrParts>;
   signal?: AbortSignal;
 }) => Promise<string>;
@@ -55,15 +72,18 @@ function parseTimeoutMs(env: NodeJS.ProcessEnv = process.env): number {
 async function generateWithSdk(input: {
   apiKey: string;
   model: string;
+  thinkingLevel: GeminiOcrThinkingLevel;
   parts: ReturnType<typeof buildGeminiReceiptOcrParts>;
 }) {
   const genAI = new GoogleGenerativeAI(input.apiKey);
+  const generationConfig = {
+    temperature: 0,
+    responseMimeType: 'application/json',
+    thinkingConfig: { thinkingLevel: input.thinkingLevel },
+  };
   const model = genAI.getGenerativeModel({
     model: input.model,
-    generationConfig: {
-      temperature: 0,
-      responseMimeType: 'application/json',
-    },
+    generationConfig,
   });
   const result = await model.generateContent(input.parts);
   return result.response.text();
@@ -77,13 +97,14 @@ export async function callGeminiReceiptOcr(input: {
   env?: NodeJS.ProcessEnv;
   signal?: AbortSignal;
   generateContentImpl?: GeminiGenerateContentImpl;
-}): Promise<NvidiaNimReceiptOcrResult> {
+}): Promise<ReceiptOcrResult> {
   const apiKey = input.apiKey?.trim();
   if (!apiKey) throw new Error('Gemini OCR API 키가 설정되지 않았습니다.');
 
   const env = input.env ?? process.env;
   const timeoutMs = parseTimeoutMs(env);
-  const attempts: NvidiaNimReceiptOcrAttempt[] = [];
+  const thinkingLevel = getGeminiOcrThinkingLevel(env);
+  const attempts: ReceiptOcrAttempt[] = [];
 
   for (const model of getGeminiOcrModels(env)) {
     const startedAt = Date.now();
@@ -100,9 +121,9 @@ export async function callGeminiReceiptOcr(input: {
         mimeType: input.mimeType,
       });
       const text = await (input.generateContentImpl
-        ? input.generateContentImpl({ model, parts, signal: controller.signal })
-        : generateWithSdk({ apiKey, model, parts }));
-      const data: NvidiaNimReceiptOcrData = normalizeNvidiaNimOcrData(extractJsonObject(text));
+        ? input.generateContentImpl({ model, thinkingLevel, parts, signal: controller.signal })
+        : generateWithSdk({ apiKey, model, thinkingLevel, parts }));
+      const data: ReceiptOcrData = normalizeReceiptOcrData(extractJsonObject(text));
       attempts.push({ model, ok: true, elapsedMs: Date.now() - startedAt });
       return { data, model, attempts };
     } catch (error) {
