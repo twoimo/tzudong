@@ -142,6 +142,9 @@ jobs:
           command -v ffmpeg >/dev/null 2>&1 || missing_packages+=(ffmpeg)
           command -v jq >/dev/null 2>&1 || missing_packages+=(jq)
           command -v rclone >/dev/null 2>&1 || missing_packages+=(rclone)
+          command -v secret-tool >/dev/null 2>&1 || missing_packages+=(libsecret-tools)
+          command -v gnome-keyring-daemon >/dev/null 2>&1 || missing_packages+=(gnome-keyring)
+          command -v dbus-launch >/dev/null 2>&1 || missing_packages+=(dbus-x11)
 
           if [ ${#missing_packages[@]} -eq 0 ]; then
             echo "[OK] System dependencies already available"
@@ -186,6 +189,9 @@ jobs:
           command -v ffmpeg >/dev/null 2>&1
           command -v jq >/dev/null 2>&1
           command -v rclone >/dev/null 2>&1
+          command -v secret-tool >/dev/null 2>&1
+          command -v gnome-keyring-daemon >/dev/null 2>&1
+          command -v dbus-launch >/dev/null 2>&1
 
           echo "[OK] Installed missing packages: ${missing_packages[*]}"
           ffmpeg -version | head -1 || true
@@ -259,6 +265,7 @@ jobs:
           GEMINI_CREDENTIALS_BASE64: ${{ secrets.GEMINI_CREDENTIALS_BASE64 }}
           GEMINI_CREDENTIALS_BASE64_2: ${{ secrets.GEMINI_CREDENTIALS_BASE64_2 }}
           AGY_SETTINGS_JSON: ${{ secrets.AGY_SETTINGS_JSON }}
+          AGY_CREDENTIAL_B64: ${{ secrets.AGY_CREDENTIAL_B64 }}
         run: |
           set -euo pipefail
           umask 077
@@ -303,6 +310,30 @@ jobs:
             chmod 600 ~/.gemini/settings.json
           fi
 
+          start_secret_service() {
+            if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then
+              eval "$(dbus-launch --sh-syntax)"
+            fi
+            export DBUS_SESSION_BUS_ADDRESS
+            echo "DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS" >> "$GITHUB_ENV"
+            if [ -n "${DBUS_SESSION_BUS_PID:-}" ]; then
+              export DBUS_SESSION_BUS_PID
+              echo "DBUS_SESSION_BUS_PID=$DBUS_SESSION_BUS_PID" >> "$GITHUB_ENV"
+            fi
+
+            # Create/unlock an empty-password CI keyring and keep the daemon alive for later steps.
+            eval "$(printf '\n' | gnome-keyring-daemon --unlock 2>/dev/null || true)"
+            eval "$(gnome-keyring-daemon --start --components=secrets 2>/dev/null || true)"
+            if [ -n "${GNOME_KEYRING_CONTROL:-}" ]; then
+              export GNOME_KEYRING_CONTROL
+              echo "GNOME_KEYRING_CONTROL=$GNOME_KEYRING_CONTROL" >> "$GITHUB_ENV"
+            fi
+            if [ -n "${SSH_AUTH_SOCK:-}" ]; then
+              export SSH_AUTH_SOCK
+              echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> "$GITHUB_ENV"
+            fi
+          }
+
           # Antigravity CLI stores auth in the OS keyring; settings.json controls the selected model.
           if [ -n "$AGY_SETTINGS_JSON" ]; then
             printf '%s' "$AGY_SETTINGS_JSON" > ~/.gemini/antigravity-cli/settings.json
@@ -310,6 +341,22 @@ jobs:
             printf '%s\n' '{"model":"Gemini 3.5 Flash (High)","enableTelemetry":false}' > ~/.gemini/antigravity-cli/settings.json
           fi
           chmod 600 ~/.gemini/antigravity-cli/settings.json
+
+          if [ -n "${AGY_CREDENTIAL_B64:-}" ]; then
+            start_secret_service
+            agy_credential_file=$(mktemp)
+            trap 'rm -f "$agy_credential_file"' EXIT
+            printf '%s' "$AGY_CREDENTIAL_B64" | base64 -d > "$agy_credential_file"
+            secret-tool store --label="Antigravity OAuth token" service gemini username antigravity < "$agy_credential_file"
+            if secret-tool lookup service gemini username antigravity >/dev/null; then
+              echo "[OK] Antigravity OAuth credential restored to Secret Service"
+            else
+              echo "::error::Antigravity OAuth credential could not be read back from Secret Service"
+              exit 1
+            fi
+          else
+            echo "[WARN] AGY_CREDENTIAL_B64 is not set; Antigravity CLI may prompt for OAuth in CI."
+          fi
           
           # RClone Config
           if [ -n "$GDRIVE_RCLONE_CONFIG" ]; then
@@ -336,6 +383,7 @@ jobs:
           GEMINI_CREDENTIALS_BASE64: ${{ secrets.GEMINI_CREDENTIALS_BASE64 }}
           GEMINI_CREDENTIALS_BASE64_2: ${{ secrets.GEMINI_CREDENTIALS_BASE64_2 }}
           AGY_SETTINGS_JSON: ${{ secrets.AGY_SETTINGS_JSON }}
+          AGY_CREDENTIAL_B64: ${{ secrets.AGY_CREDENTIAL_B64 }}
         run: python3 backend/bin/check_env_contract.py --profile daily
 
       - name: Preflight Gemini/Antigravity AI quota
