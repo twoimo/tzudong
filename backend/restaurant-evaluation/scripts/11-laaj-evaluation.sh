@@ -278,9 +278,11 @@ fi
 
 # Gemini API 키 및 모델 설정
 export GEMINI_API_KEY="${GEMINI_API_KEY:-$GEMINI_API_KEY_BYEON}"
-export PRIMARY_MODEL="gemini-3-flash-preview"
-export FALLBACK_MODEL="${LAAJ_FALLBACK_MODEL:-gemini-3.1-pro-preview}"
+export PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3.5-flash}"
+export FALLBACK_MODEL="${LAAJ_FALLBACK_MODEL:-gemini-3-flash-preview}"
 export CURRENT_MODEL="$PRIMARY_MODEL"
+export GEMINI_THINKING_LEVEL="${GEMINI_THINKING_LEVEL:-MEDIUM}"
+export LAAJ_THINKING_LEVEL="${LAAJ_THINKING_LEVEL:-HIGH}"
 export TZ="Asia/Seoul"
 
 # ================================
@@ -321,7 +323,7 @@ log_info "  LAAJ 음식점 평가 시작 (Cross-Platform)"
 log_info "============================================================"
 log_info "채널: $CHANNEL"
 log_info "모드: $(if [ "$FORCE_CLI_FALLBACK" = true ]; then echo "OAuth CLI first"; else echo "Node.js API + Sticky OAuth Fallback"; fi)"
-log_info "모델: Node/Gemini CLI=$CURRENT_MODEL (fallback: $FALLBACK_MODEL), agy=${AGY_MODEL_LABEL}"
+log_info "모델: Node/Gemini CLI=$CURRENT_MODEL (fallback: $FALLBACK_MODEL), thinkingLevel=$LAAJ_THINKING_LEVEL, agy=${AGY_MODEL_LABEL}"
 
 # 필수 파일 확인
 if [ ! -f "$PROMPT_FILE" ]; then

@@ -11,7 +11,7 @@ import {
   RECEIPT_OCR_RAW_CACHE_KIND,
   type OcrCacheMetadata,
 } from '@/lib/ocr/cache-version';
-import type { NvidiaNimReceiptOcrAttempt, NvidiaNimReceiptOcrData } from '@/lib/ocr/nvidia-nim';
+import type { ReceiptOcrAttempt, ReceiptOcrData } from '@/lib/ocr/types';
 
 export type OcrSuccessLogMetadata = {
   cache_kind: typeof RECEIPT_OCR_RAW_CACHE_KIND;
@@ -164,16 +164,16 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
 
-function isReceiptOcrData(value: unknown): value is NvidiaNimReceiptOcrData {
+function isReceiptOcrData(value: unknown): value is ReceiptOcrData {
   return isObject(value);
 }
 
-function isReceiptOcrAttempts(value: unknown): value is NvidiaNimReceiptOcrAttempt[] {
+function isReceiptOcrAttempts(value: unknown): value is ReceiptOcrAttempt[] {
   return Array.isArray(value);
 }
 
 function isOcrRoutingProvider(value: unknown): value is OcrRoutingProvider {
-  return value === 'gemini' || value === 'nvidia_nim';
+  return value === 'gemini';
 }
 
 export async function buildOcrResponseFromRawCache(input: {
@@ -181,7 +181,7 @@ export async function buildOcrResponseFromRawCache(input: {
   selectedRestaurantContext?: SelectedRestaurantContext | null;
   lookupCallbacks?: ReturnType<typeof createRestaurantLookupCallbacks>;
 }): Promise<{
-  responsePayload: NvidiaNimReceiptOcrData & ReceiptOcrEnvelope;
+  responsePayload: ReceiptOcrData & ReceiptOcrEnvelope;
   envelope: ReceiptOcrEnvelope;
   restaurantLookupStats: OcrRestaurantLookupStats;
 } | null> {
