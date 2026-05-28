@@ -1588,6 +1588,18 @@ if [ "${STEP_10_OK}" = "true" ]; then
                 if [ $STEP_13_EXIT -eq 0 ]; then
                     grep "성공 (Insert):" "$LOG_FILE" | tail -n 1 | strip_ansi | while read -r line; do echo "::notice::DB Sync - $line"; done
                 fi
+
+                if [ $STEP_13_EXIT -eq 0 ]; then
+                    log "INFO" "[Step 13.1] Admin data quality gate..."
+                    ADMIN_DATA_QUALITY_JSON="$LOG_DIR/admin-data-quality-audit.json"
+                    ADMIN_DATA_QUALITY_MD="$LOG_DIR/admin-data-quality-audit.md"
+                    node backend/restaurant-evaluation/scripts/admin-data-quality-audit.mjs \
+                      --output "$ADMIN_DATA_QUALITY_JSON" \
+                      --markdown "$ADMIN_DATA_QUALITY_MD" \
+                      --fail-on-exact 2>&1 | tee -a "$LOG_FILE"
+                    STEP_13_QUALITY_EXIT=${PIPESTATUS[0]}
+                    record_exit_if_failed "Step 13.1 (Admin Data Quality Gate)" "$STEP_13_QUALITY_EXIT"
+                fi
             fi
             step_end "Step 13 (Supabase)"
             echo "::endgroup::"
