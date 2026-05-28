@@ -1,9 +1,9 @@
 import { normalizeOcrRestaurantName } from '@/lib/ocr/restaurant-matching';
-import type { NvidiaNimReceiptOcrData } from '@/lib/ocr/nvidia-nim';
+import type { ReceiptOcrData } from '@/lib/ocr/types';
 
 export type ReceiptOcrRedactionStatus = 'redacted' | 'no_sensitive_fields_detected' | 'unreviewed' | 'contains_sensitive_fields';
 
-export type ReceiptOcrGoldLabel = Required<Pick<NvidiaNimReceiptOcrData, 'store_name' | 'date' | 'time' | 'total_amount'>> & {
+export type ReceiptOcrGoldLabel = Required<Pick<ReceiptOcrData, 'store_name' | 'date' | 'time' | 'total_amount'>> & {
   canonical_store_name?: string;
   items?: Array<{ name: string; price: number | null }>;
   restaurant_id?: string;
@@ -38,8 +38,8 @@ export type ReceiptOcrEvaluationObservation = {
   model: string;
   latencyMs: number;
   error?: string;
-  raw?: NvidiaNimReceiptOcrData;
-  normalized?: NvidiaNimReceiptOcrData;
+  raw?: ReceiptOcrData;
+  normalized?: ReceiptOcrData;
   gold: ReceiptOcrGoldLabel;
 };
 
@@ -66,7 +66,7 @@ function closeNameScore(actual: string | undefined, expected: string | undefined
   return len ? Math.max(0, same / len - 0.15) : 0;
 }
 
-function itemScore(actual: NvidiaNimReceiptOcrData['items'], expected: ReceiptOcrGoldLabel['items']): number {
+function itemScore(actual: ReceiptOcrData['items'], expected: ReceiptOcrGoldLabel['items']): number {
   if (!expected?.length) return actual?.length ? 0.5 : 1;
   if (!actual?.length) return 0;
   const expectedTotal = expected.reduce((sum, item) => sum + (item.price ?? 0), 0);
@@ -77,8 +77,8 @@ function itemScore(actual: NvidiaNimReceiptOcrData['items'], expected: ReceiptOc
 }
 
 export function scoreReceiptOcrResult(input: {
-  raw: NvidiaNimReceiptOcrData;
-  normalized?: NvidiaNimReceiptOcrData;
+  raw: ReceiptOcrData;
+  normalized?: ReceiptOcrData;
   gold: ReceiptOcrGoldLabel;
 }): ReceiptOcrScoreBreakdown {
   const normalized = input.normalized ?? input.raw;
