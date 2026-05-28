@@ -58,7 +58,8 @@ describe("mobile and desktop parity source contracts", () => {
     expect(consoleSource).toContain("md:items-center md:px-1.5");
     expect(consoleSource).toContain("p-2 md:border-y-0 md:p-4");
     expect(consoleSource).not.toContain("pb-[calc(env(safe-area-inset-bottom)+5.75rem)]");
-    expect(consoleSource).toContain("flex h-14 shrink-0 translate-y-0 transform-gpu items-center gap-2");
+    expect(consoleSource).toContain("flex h-14 shrink-0 transform-gpu items-center gap-2");
+    expect(consoleSource).toContain("translate3d(0, 0, 0)");
     expect(consoleSource).toContain(
       'data-admin-left-panel-expanded={isCollapsed ? "false" : "true"}',
     );
@@ -119,15 +120,15 @@ describe("mobile and desktop parity source contracts", () => {
     expect(tableSource).not.toContain("Tzuyang Review");
   });
 
-  test("admin evaluation destructive actions use inline typed confirmation across breakpoints", () => {
+  test("admin evaluation delete is immediate while restore keeps inline typed confirmation", () => {
     const evaluationsSource = source("app/admin/evaluations/page.tsx");
 
-    expect(evaluationsSource).toContain(
-      "const EVALUATION_DELETE_CONFIRMATION = '검수삭제'",
-    );
+    expect(evaluationsSource).not.toContain("EVALUATION_DELETE_CONFIRMATION");
+    expect(evaluationsSource).not.toContain("검수삭제");
     expect(evaluationsSource).toContain(
       "const EVALUATION_RESTORE_CONFIRMATION = '검수복원'",
     );
+    expect(evaluationsSource).toContain("휴지통 아이콘 클릭 즉시 status를 'deleted'로 변경");
     expect(evaluationsSource).toContain('role="region"');
     expect(evaluationsSource).toContain('aria-label="검수 항목 작업 확인"');
     expect(evaluationsSource).toContain(

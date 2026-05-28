@@ -725,7 +725,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("topContentMetricMode");
     expect(consoleSource).toContain("videosByInsightScore");
     expect(consoleSource).toContain(
-      "const topContentVideosByInsightScore = videosByInsightScore;",
+      'video.comparisonStatus !== "missing_previous"',
     );
     expect(consoleSource).toContain("topContentVideosByInsightScore");
     expect(consoleSource).toContain(
@@ -947,8 +947,13 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "비교 대상: 선택 기간에 새로 올라온 업로드 영상입니다.",
     );
     expect(consoleSource).toContain(
-      "처리: 이전 스냅샷이 없으면 현재 조회·좋아요·댓글을 증가분으로 봅니다.",
+      "처리: 비교 버킷 이후 신규 영상은 이전값 0으로 보고, 비교 버킷 이전 영상인데 이전값이 없으면 비교 불가로 분리합니다.",
     );
+    expect(consoleSource).toContain(
+      'data-admin-dashboard-data-confidence="true"',
+    );
+    expect(consoleSource).toContain("fallbackReasonCode");
+    expect(consoleSource).toContain("getAdminDashboardCoverageLabel");
     expect(consoleSource).toContain(
       "전체값: 선택 기간 업로드 영상의 조회·좋아요·댓글 증가 합계를 각각 분모로 사용합니다.",
     );
@@ -1407,9 +1412,15 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "delta={formatDashboardChangeLabel(videoCountChange)}",
     );
     expect(consoleSource).toContain("periodUploadVideoValue");
+    expect(consoleSource).toContain("calculateDashboardUploadCountChange");
+    expect(consoleSource).toContain("uploadCountCohortChange");
     expect(consoleSource).toContain("hasSnapshotVideoCountComparison");
+    expect(consoleSource).toContain("channelStats?.videoDelta");
     expect(consoleSource).toContain(
-      "const videoCountChange = hasSnapshotVideoCountComparison",
+      "typeof channelStats.previousVideoCount === \"number\"",
+    );
+    expect(consoleSource).toContain(
+      "getAdminDashboardDeltaSourceLabel(channelStats?.deltaSource)",
     );
     expect(consoleSource).toContain("subscriberDelta");
     expect(consoleSource).toContain("subscriberChange");
@@ -1420,10 +1431,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain("periodMetricScopeLabel");
     expect(consoleSource).not.toContain("기간 업로드</span>");
     expect(consoleSource).toContain(
-      "현재 구독자 · YouTube Data API · 비교 스냅샷 대기",
+      "현재 구독자 · YouTube Data API · ${getAdminDashboardDeltaSourceLabel(channelStats?.deltaSource)}",
     );
     expect(consoleSource).toContain(
-      "`현재 구독자 · ${selectedPeriodLabel} 기간 순증 ${formatSignedNumber(subscriberDelta)}`",
+      "`현재 구독자 · ${selectedPeriodLabel} 기간 순증 ${formatSignedNumber(subscriberDelta)} · ${getAdminDashboardDeltaSourceLabel(channelStats?.deltaSource)}`",
     );
     expect(consoleSource).toContain('const subscriberCardTitle = "현재 구독자"');
     expect(consoleSource).toContain("formatSignedNumber(subscriberDelta)");
@@ -1440,13 +1451,13 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "title={`${title} ${deltaLabel}: ${delta}. 계산식: 기간 대비 = (현재값 - 이전값) / 이전값 × 100`}",
     );
     expect(consoleSource).toContain(
-      "계산식: 기간 구독자 증가 = 현재 구독자 - 이전 구독자.",
+      "계산식: 기간 구독자 증가 = API가 제공한 delta를 우선 사용하고, 없을 때만 현재 구독자 - 이전 구독자로 계산합니다.",
     );
     expect(consoleSource).toContain(
       "계산식: 기간 조회 증가 = 각 영상의 (현재 조회수 - 이전 조회수) 합계.",
     );
     expect(consoleSource).toContain(
-      "처리: 이전값이 없는 영상은 이전값 0으로 계산합니다.",
+      "처리: 비교 버킷 이후 신규 영상은 이전값 0으로 보고, 비교 버킷 이전 영상인데 이전값이 없으면 비교 불가로 분리합니다.",
     );
     expect(consoleSource).toContain(
       "계산식: 기간 좋아요 증가 = 각 영상의 (현재 좋아요 - 이전 좋아요) 합계.",
@@ -1461,7 +1472,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "참고: 댓글 비율은 조회수 중 댓글로 반응한 비중입니다.",
     );
     expect(consoleSource).toContain(
-      "계산식: 업로드 영상 수 = 현재 channel videoCount - 이전 channel videoCount.",
+      "계산식: 업로드 영상 수 = API가 제공한 videoDelta를 우선 사용하고, 없을 때만 현재 channel videoCount - 이전 channel videoCount로 계산합니다.",
     );
     expect(consoleSource).not.toContain(
       "계산식: 스냅샷이 없으면 업로드 영상 수 = 선택 기간 영상 목록 개수.",
@@ -1506,7 +1517,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "설명: 채널 구독자 수를 보여주는 카드입니다.",
     );
     expect(consoleSource).toContain(
-      "grid min-h-[132px] grid-rows-[auto_minmax(0,1fr)_auto] gap-3 overflow-hidden p-3 sm:p-3.5",
+      "relative z-0 grid min-h-[132px] grid-rows-[auto_minmax(0,1fr)_auto] gap-3 overflow-visible p-3 sm:p-3.5 hover:z-20 focus-within:z-20",
     );
     expect(consoleSource).toContain(
       'data-admin-dashboard-kpi-title-row="single-line"',

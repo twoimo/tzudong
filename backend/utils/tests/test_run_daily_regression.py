@@ -489,7 +489,7 @@ class GDriveUploadContractTests(unittest.TestCase):
         crawling_requirements = (REPO_ROOT / "backend" / "restaurant-crawling" / "scripts" / "requirements.txt").read_text(encoding="utf-8")
         pipeline_requirements = (REPO_ROOT / "backend" / "pipeline" / "requirements.txt").read_text(encoding="utf-8")
 
-        self.assertIn("npm audit --audit-level=high", security_workflow)
+        self.assertIn("npm audit --audit-level=moderate", security_workflow)
         self.assertIn("python -m pip_audit", security_workflow)
         self.assertIn("backend/restaurant-crawling/scripts/requirements.txt", security_workflow)
         self.assertIn('directory: "/backend/restaurant-crawling/scripts"', dependabot)
