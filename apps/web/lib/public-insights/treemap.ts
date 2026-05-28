@@ -30,6 +30,32 @@ export type InsightTreemapVideoRow = {
     previousLikeCount: number | null;
     previousCommentCount: number | null;
     previousDuration: number | null;
+    comparisonStatus?: 'compared' | 'new' | 'missing_previous' | 'not_applicable';
+};
+
+export type InsightTreemapDataSource =
+    | 'youtube-snapshot'
+    | 'youtube-live'
+    | 'supabase-treemap'
+    | 'public-treemap-fallback';
+
+export type InsightTreemapComparisonCoverage = {
+    latestBucketStartedAt?: string | null;
+    comparisonBucketStartedAt?: string | null;
+    totalVideos: number;
+    comparedVideos: number;
+    newVideos: number;
+    missingPreviousVideos: number;
+    comparisonAvailable: boolean;
+};
+
+export type InsightTreemapResponseMeta = {
+    dataSource: InsightTreemapDataSource;
+    latestBucketStartedAt?: string | null;
+    comparisonBucketStartedAt?: string | null;
+    comparisonCoverage?: InsightTreemapComparisonCoverage;
+    fallbackReasonCode?: string | null;
+    fallbackSource?: string | null;
 };
 
 export type InsightTreemapResponse = {
@@ -38,6 +64,7 @@ export type InsightTreemapResponse = {
     totalVideos: number;
     videos: InsightTreemapVideoRow[];
     availablePeriods?: InsightTreemapPeriod[];
+    meta?: InsightTreemapResponseMeta;
 };
 
 type VideoDbRow = {
@@ -351,6 +378,25 @@ function getPreviousMetricFromHistory(
     return null;
 }
 
+function getComparisonStatusFromHistory(
+    row: VideoDbRow,
+    previousValue: number | null,
+    period: InsightTreemapPeriod,
+): InsightTreemapVideoRow['comparisonStatus'] {
+    if (previousValue != null) return 'compared';
+
+    const durationMs = getPeriodDurationMs(period);
+    if (!durationMs) return 'not_applicable';
+
+    const publishedAtMs = row.published_at ? Date.parse(row.published_at) : Number.NaN;
+    const comparisonTargetMs = Date.now() - durationMs;
+    if (Number.isFinite(publishedAtMs) && publishedAtMs > comparisonTargetMs) {
+        return 'new';
+    }
+
+    return 'missing_previous';
+}
+
 function getLatestMetricValueFromHistory(history: MetricHistoryPoint[], metric: TreemapMetric): number | null {
     const lastPoint = history.at(-1);
     if (!lastPoint) return null;
@@ -596,6 +642,7 @@ export async function getInsightTreemapData(
                 previousLikeCount: null,
                 previousCommentCount: null,
                 previousDuration: null,
+                comparisonStatus: 'not_applicable',
             }));
 
             return {
@@ -604,6 +651,16 @@ export async function getInsightTreemapData(
                 totalVideos: videos.length,
                 videos,
                 availablePeriods: [],
+                meta: {
+                    dataSource: 'supabase-treemap',
+                    comparisonCoverage: {
+                        totalVideos: videos.length,
+                        comparedVideos: 0,
+                        newVideos: videos.length,
+                        missingPreviousVideos: 0,
+                        comparisonAvailable: false,
+                    },
+                },
             };
         }
 
@@ -613,20 +670,39 @@ export async function getInsightTreemapData(
         }));
         const availablePeriods = getAvailablePeriods(rowsWithHistory, metricMode);
 
-        const videos: InsightTreemapVideoRow[] = rowsWithHistory.map(({ row, history }) => ({
-            id: row.id,
-            title: normalizeTitle(row.title),
-            publishedAt: row.published_at,
-            category: normalizeCategory(row.category),
-            viewCount: getLatestMetricValueFromHistory(history, 'views') ?? toNonNegativeNumber(row.view_count),
-            likeCount: getLatestMetricValueFromHistory(history, 'likes') ?? toNonNegativeNumber(row.like_count),
-            commentCount: getLatestMetricValueFromHistory(history, 'comments') ?? toNonNegativeNumber(row.comment_count),
-            duration: parseDurationToSeconds(row.duration),
-            previousViewCount: getPreviousMetricFromHistory(history, 'views', period),
-            previousLikeCount: getPreviousMetricFromHistory(history, 'likes', period),
-            previousCommentCount: getPreviousMetricFromHistory(history, 'comments', period),
-            previousDuration: getPreviousMetricFromHistory(history, 'duration', period),
-        }));
+        const videos: InsightTreemapVideoRow[] = rowsWithHistory.map(({ row, history }) => {
+            const previousViewCount = getPreviousMetricFromHistory(history, 'views', period);
+            const previousLikeCount = getPreviousMetricFromHistory(history, 'likes', period);
+            const previousCommentCount = getPreviousMetricFromHistory(history, 'comments', period);
+            const previousDuration = getPreviousMetricFromHistory(history, 'duration', period);
+            const previousMetricValue =
+                metricMode === 'views'
+                    ? previousViewCount
+                    : metricMode === 'likes'
+                      ? previousLikeCount
+                      : metricMode === 'comments'
+                        ? previousCommentCount
+                        : previousDuration;
+
+            return {
+                id: row.id,
+                title: normalizeTitle(row.title),
+                publishedAt: row.published_at,
+                category: normalizeCategory(row.category),
+                viewCount: getLatestMetricValueFromHistory(history, 'views') ?? toNonNegativeNumber(row.view_count),
+                likeCount: getLatestMetricValueFromHistory(history, 'likes') ?? toNonNegativeNumber(row.like_count),
+                commentCount: getLatestMetricValueFromHistory(history, 'comments') ?? toNonNegativeNumber(row.comment_count),
+                duration: parseDurationToSeconds(row.duration),
+                previousViewCount,
+                previousLikeCount,
+                previousCommentCount,
+                previousDuration,
+                comparisonStatus: getComparisonStatusFromHistory(row, previousMetricValue, period),
+            };
+        });
+        const comparedVideos = videos.filter((video) => video.comparisonStatus === 'compared').length;
+        const newVideos = videos.filter((video) => video.comparisonStatus === 'new').length;
+        const missingPreviousVideos = videos.filter((video) => video.comparisonStatus === 'missing_previous').length;
 
         return {
             asOf: new Date().toISOString(),
@@ -634,6 +710,16 @@ export async function getInsightTreemapData(
             totalVideos: videos.length,
             videos,
             availablePeriods,
+            meta: {
+                dataSource: 'supabase-treemap',
+                comparisonCoverage: {
+                    totalVideos: videos.length,
+                    comparedVideos,
+                    newVideos,
+                    missingPreviousVideos,
+                    comparisonAvailable: comparedVideos > 0,
+                },
+            },
         };
     })();
 
@@ -644,4 +730,3 @@ export async function getInsightTreemapData(
 
     return result;
 }
-

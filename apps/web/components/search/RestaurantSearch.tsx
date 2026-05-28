@@ -16,6 +16,11 @@ import {
   KOREAN_RESTAURANT_REGIONS,
   POPULAR_RESTAURANTS_QUERY_KEY,
 } from "@/lib/popular-restaurants";
+import {
+  RESTAURANT_DISCOVERY_INVALIDATED_EVENT,
+  RESTAURANT_DISCOVERY_INVALIDATED_STORAGE_KEY,
+  RESTAURANT_SEARCH_QUERY_KEY_PREFIX,
+} from "@/lib/restaurant-discovery-cache";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -187,7 +192,7 @@ const RestaurantSearch = ({
   // 메모이제이션된 쿼리 키 (debouncedSearchQuery 사용)
   const queryKey = useMemo(
     () => [
-      "restaurant-search",
+      ...RESTAURANT_SEARCH_QUERY_KEY_PREFIX,
       trimmedDebouncedSearchQuery,
       searchType,
       categoryFilterKey,
@@ -295,9 +300,39 @@ const RestaurantSearch = ({
       }
     },
     enabled: trimmedDebouncedSearchQuery.length >= MIN_SEARCH_QUERY_LENGTH,
-    staleTime: 1000 * 60 * 5, // 5분간 캐시
+    staleTime: 0, // 관리자 승인/수정 직후 기존 빈 검색 결과를 재사용하지 않음
     gcTime: 1000 * 60 * 10, // 10분간 메모리 보존
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
+
+  useEffect(() => {
+    const invalidateSearch = () => {
+      void queryClient.invalidateQueries({
+        queryKey: RESTAURANT_SEARCH_QUERY_KEY_PREFIX,
+      });
+    };
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === RESTAURANT_DISCOVERY_INVALIDATED_STORAGE_KEY) {
+        invalidateSearch();
+      }
+    };
+
+    window.addEventListener(
+      RESTAURANT_DISCOVERY_INVALIDATED_EVENT,
+      invalidateSearch,
+    );
+    window.addEventListener("storage", handleStorage);
+
+    return () => {
+      window.removeEventListener(
+        RESTAURANT_DISCOVERY_INVALIDATED_EVENT,
+        invalidateSearch,
+      );
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, [queryClient]);
 
   // [OPTIMIZATION] 외부 클릭 핸들러 안정화 (useCallback 사용)
   const handleClickOutside = useCallback((event: MouseEvent) => {
