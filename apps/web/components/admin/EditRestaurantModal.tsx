@@ -18,6 +18,18 @@ import {
   formatActiveRestaurantIdentityConflictMessage,
   isActiveRestaurantIdentityConflictError,
 } from '@/lib/admin-restaurant-update-conflict';
+import {
+  fetchSameVideoDuplicateWarningCandidates,
+  formatSameVideoDuplicateWarning,
+  type SameVideoDuplicateWarningCandidate,
+} from '@/lib/admin-same-video-duplicate-warning';
+import {
+  findRestaurantIdentityWarnings,
+  formatRestaurantIdentityWarning,
+  hasBlockingRestaurantIdentityWarning,
+  type RestaurantIdentityWarning,
+  type RestaurantIdentityWarningRow,
+} from '@/lib/admin-restaurant-identity-warning';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   AlertDialog,
@@ -123,6 +135,8 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
     name: string;
     address: string;
   } | null>(null);
+  const [sameVideoDuplicateWarnings, setSameVideoDuplicateWarnings] = useState<SameVideoDuplicateWarningCandidate[]>([]);
+  const [restaurantIdentityWarningRows, setRestaurantIdentityWarningRows] = useState<RestaurantIdentityWarningRow[]>([]);
 
 
   // 재지오코딩 - 네이버
@@ -329,9 +343,14 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       return;
     }
 
+    if (notifyRestaurantIdentityWarning('승인')) {
+      return;
+    }
+
     try {
       setLoading(true);
       const adminUserId = requireAdminUserId();
+      notifySameVideoDuplicateWarning('승인');
 
       // 기존 레스토랑 업데이트 (승인 처리)
       if (!record.restaurant_info) {
@@ -343,6 +362,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       }
 
       const trimmedName = formData.name.trim();
+      const trimmedYoutubeLink = formData.youtube_link.trim();
 
       if (!trimmedName) {
         toast({
@@ -362,7 +382,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         trimmedName,
         selectedResult.jibun_address,
         record.id,
-        record.youtube_link // YouTube 링크도 함께 전달
+        trimmedYoutubeLink || record.youtube_link // YouTube 링크도 함께 전달
       );
 
 
@@ -371,7 +391,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
 
 
         // 🔥 수정: 유튜브 링크 비교 로직 개선
-        const currentYoutubeLink = record.youtube_link?.trim() || null;
+        const currentYoutubeLink = (trimmedYoutubeLink || record.youtube_link || '').trim() || null;
         const matchedYoutubeLink = duplicateCheck.matchedRestaurant?.youtube_link?.trim() || null;
 
 
@@ -470,8 +490,8 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       lng: parseFloat(selectedResult.x),
       phone: trimmedPhone || null,
       categories: selectedCategories, // 선택된 카테고리 배열
-      youtube_link: record.youtube_link,
-      tzuyang_review: trimmedTzuyangReview || record.restaurant_info?.tzuyang_review || null,
+      youtube_link: formData.youtube_link.trim() || record.youtube_link || null,
+      tzuyang_review: trimmedTzuyangReview || null,
       status: 'approved', // 승인 상태로 변경
       geocoding_success: true, // 지오코딩 성공으로 설정
       geocoding_false_stage: null, // 지오코딩 성공 시 NULL (체크 제약 준수)
@@ -513,6 +533,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       approved_name: trimmedName, // 관리자 승인 이름 업데이트
       restaurant_name: trimmedName, // 별칭도 업데이트
       categories: selectedCategories, // 카테고리 업데이트 추가
+      youtube_link: formData.youtube_link.trim() || record.youtube_link || undefined,
       road_address: selectedResult.road_address,
       jibun_address: selectedResult.jibun_address,
       english_address: selectedResult.english_address,
@@ -531,7 +552,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         name: trimmedName,
         phone: trimmedPhone || null,
         category: selectedCategories[0] || record.restaurant_info.category, // 첫 번째 카테고리 사용
-        tzuyang_review: trimmedTzuyangReview || record.restaurant_info.tzuyang_review,
+        tzuyang_review: trimmedTzuyangReview,
         naver_address_info: {
           road_address: selectedResult.road_address,
           jibun_address: selectedResult.jibun_address,
@@ -555,6 +576,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       setLoading(true);
       const adminUserId = requireAdminUserId();
       const updatedAt = new Date().toISOString();
+      notifySameVideoDuplicateWarning('수정 저장');
 
       const trimmedName = formData.name.trim();
       const trimmedPhone = formData.phone.trim();
@@ -570,10 +592,21 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         return;
       }
 
+      if (addressChanged) {
+        toast({
+          variant: 'destructive',
+          title: '주소 저장 전 재지오코딩 필요',
+          description: '주소가 변경되었습니다. 재지오코딩 후 저장해야 지도 좌표와 주소가 같이 반영됩니다.',
+        });
+        return;
+      }
+
+      const trimmedYoutubeLink = formData.youtube_link.trim();
+
       const identityConflict = await findActiveRestaurantIdentityConflict({
         restaurantId: record.id,
         restaurantName: trimmedName,
-        youtubeLink: record.youtube_link || formData.youtube_link || null,
+        youtubeLink: trimmedYoutubeLink || record.youtube_link || null,
       });
 
       if (identityConflict) {
@@ -651,6 +684,8 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       const updateData: Record<string, unknown> = {
         approved_name: trimmedName,
         phone: trimmedPhone || null,
+        youtube_link: trimmedYoutubeLink || null,
+        tzuyang_review: trimmedTzuyangReview || null,
         updated_by_admin_id: adminUserId,
         updated_at: updatedAt,
       };
@@ -670,12 +705,6 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         updateData.geocoding_success = true;
         updateData.geocoding_false_stage = null;
       }
-
-      // 쯔양 리뷰 업데이트 (text 타입)
-      if (trimmedTzuyangReview) {
-        updateData.tzuyang_review = trimmedTzuyangReview;
-      }
-
 
 
       const { error: updateError } = await supabase
@@ -706,9 +735,10 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         updated_at: updatedAt,
         restaurant_name: trimmedName, // 별칭도 업데이트
         categories: selectedCategories, // 카테고리 업데이트 추가
-        // 🔥 주소 필드 항상 포함 (제보 수정 시 필요)
-        road_address: trimmedAddress,
-        youtube_link: formData.youtube_link.trim() || undefined, // 유튜브 링크 추가
+        // 주소는 재지오코딩 결과가 없으면 기존 DB 주소를 유지
+        road_address: record.road_address || trimmedAddress || null,
+        jibun_address: record.jibun_address || null,
+        youtube_link: trimmedYoutubeLink || undefined, // 유튜브 링크 추가
       };
 
       // restaurant_info 객체도 업데이트
@@ -718,7 +748,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
           name: trimmedName,
           phone: trimmedPhone || null,
           category: selectedCategories[0] || record.restaurant_info.category, // 첫 번째 카테고리 사용
-          tzuyang_review: trimmedTzuyangReview || record.restaurant_info.tzuyang_review,
+          tzuyang_review: trimmedTzuyangReview,
         };
       }
 
@@ -780,6 +810,38 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
     setGeocodingError(null);
     setInitialAddress('');
     setAddressChanged(false);
+    setSameVideoDuplicateWarnings([]);
+    setRestaurantIdentityWarningRows([]);
+  };
+
+  const currentRestaurantIdentityWarnings: RestaurantIdentityWarning[] = record
+    ? findRestaurantIdentityWarnings(record, restaurantIdentityWarningRows, {
+        approvedNameOverride: formData.name,
+      })
+    : [];
+
+  const notifySameVideoDuplicateWarning = (actionLabel: string) => {
+    const message = formatSameVideoDuplicateWarning(sameVideoDuplicateWarnings);
+    if (!message) return;
+
+    toast({
+      title: `같은 영상 중복 후보 확인 후 ${actionLabel}`,
+      description: message,
+    });
+  };
+
+  const notifyRestaurantIdentityWarning = (actionLabel: string) => {
+    const message = formatRestaurantIdentityWarning(currentRestaurantIdentityWarnings);
+    if (!message) return false;
+
+    const hasBlockingWarning = hasBlockingRestaurantIdentityWarning(currentRestaurantIdentityWarnings);
+    toast({
+      variant: hasBlockingWarning ? 'destructive' : 'default',
+      title: hasBlockingWarning ? `${actionLabel} 차단: 장소명 검증 필요` : `${actionLabel} 전 장소명 확인`,
+      description: message,
+    });
+
+    return hasBlockingWarning;
   };
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -862,6 +924,66 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
     }
   }, [open, record]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const currentYoutubeLink = formData.youtube_link.trim() || record?.youtube_link || '';
+
+    if (!open || !record?.id || !currentYoutubeLink) {
+      setSameVideoDuplicateWarnings([]);
+      setRestaurantIdentityWarningRows([]);
+      return;
+    }
+
+    fetchSameVideoDuplicateWarningCandidates({
+      id: record.id,
+      approved_name: record.approved_name,
+      origin_name: record.origin_name,
+      naver_name: record.naver_name,
+      google_name: record.google_name,
+      name: record.name,
+      restaurant_name: record.restaurant_name,
+      phone: record.phone || record.restaurant_info?.phone || null,
+      status: record.status,
+      road_address: record.road_address,
+      jibun_address: record.jibun_address,
+      youtube_link: currentYoutubeLink,
+      updated_by_admin_id: record.updated_by_admin_id,
+      lat: record.lat,
+      lng: record.lng,
+    })
+      .then((candidates) => {
+        if (!cancelled) setSameVideoDuplicateWarnings(candidates);
+      })
+      .catch((error) => {
+        console.warn('같은 영상 중복 후보 조회 실패:', error);
+        if (!cancelled) setSameVideoDuplicateWarnings([]);
+      });
+
+    void (async () => {
+      const videoId = currentYoutubeLink.match(/[?&]v=([A-Za-z0-9_-]{6,})/)?.[1] || '';
+      if (!videoId) {
+        setRestaurantIdentityWarningRows([]);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('restaurants')
+        .select('id, approved_name, origin_name, naver_name, google_name, status, youtube_link, reasoning_basis, evaluation_results')
+        .ilike('youtube_link', `%${videoId}%`);
+
+      if (error) throw error;
+      if (!cancelled) setRestaurantIdentityWarningRows((data || []) as RestaurantIdentityWarningRow[]);
+    })().catch((error: unknown) => {
+      console.warn('장소명 검증 경고 조회 실패:', error);
+      if (!cancelled) setRestaurantIdentityWarningRows([]);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [formData.youtube_link, open, record]);
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className={`${ADMIN_MODAL_CONTENT_MD_FLEX} !overflow-hidden`}>
@@ -884,6 +1006,36 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
             />
             {record?.youtube_meta && (
               <p className="text-sm text-muted-foreground">영상 제목: {record.youtube_meta.title}</p>
+            )}
+            {currentRestaurantIdentityWarnings.length > 0 && (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">
+                <p className="font-semibold">장소명 검증 경고 {currentRestaurantIdentityWarnings.length}건</p>
+                <p className="mt-1 text-xs leading-5">
+                  {formatRestaurantIdentityWarning(currentRestaurantIdentityWarnings)}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {currentRestaurantIdentityWarnings.slice(0, 3).map((warning) => (
+                    <Badge key={warning.rule} variant="outline" className="border-red-300 bg-white/70 text-red-900">
+                      {warning.severity === 'block' ? '차단' : '확인'} · {warning.rule}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+            {sameVideoDuplicateWarnings.length > 0 && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                <p className="font-semibold">같은 영상 중복 후보 {sameVideoDuplicateWarnings.length}건</p>
+                <p className="mt-1 text-xs leading-5">
+                  승인/삭제/수정 전 같은 맛집인지 확인하세요. 별도 필터는 만들지 않고 현재 작업 중에만 알려드립니다.
+                </p>
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {sameVideoDuplicateWarnings.slice(0, 3).map((candidate) => (
+                    <Badge key={candidate.id} variant="outline" className="border-amber-300 bg-white/70 text-amber-900">
+                      {candidate.name} · {candidate.rule}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
 
