@@ -26,6 +26,14 @@ ANSI_RE = re.compile(
     r"|\x1b\[[0-?]*[ -/]*[@-~]"
     r"|\x1b[@-_]"
 )
+AUTH_REQUIRED_RE = re.compile(
+    r"Authentication required|Please visit the URL to log in|accounts\.google\.com/o/oauth2/auth",
+    re.IGNORECASE,
+)
+QUOTA_RE = re.compile(
+    r"429|quota|rate limit|RESOURCE_EXHAUSTED|Too Many Requests|exhausted",
+    re.IGNORECASE,
+)
 
 
 def _is_wsl() -> bool:
@@ -127,6 +135,15 @@ def strip_terminal_noise(raw: bytes) -> str:
     return "\n".join(line for line in lines if line.strip()).strip()
 
 
+def classify_cli_failure(clean: str) -> int:
+    """Return a non-zero shell status for textual agy failures that exit 0."""
+    if AUTH_REQUIRED_RE.search(clean):
+        return 125
+    if QUOTA_RE.search(clean):
+        return 75
+    return 0
+
+
 def compatible_cwd(agy_path: str) -> str:
     cwd = os.getcwd()
     if agy_path.lower().endswith(".exe") and cwd.startswith("/home/"):
@@ -185,6 +202,13 @@ def run_with_pty(cmd: list[str], timeout_sec: int, cwd: str) -> tuple[int, bytes
             if not chunk:
                 continue
             captured.extend(chunk)
+            if b"Authentication required" in captured or b"accounts.google.com/o/oauth2/auth" in captured:
+                process.send_signal(signal.SIGTERM)
+                try:
+                    process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                return 125, bytes(captured)
             if b"\x1b[6n" in chunk:
                 os.write(master_fd, b"\x1b[1;1R")
     finally:
@@ -256,6 +280,9 @@ def main(argv: list[str] | None = None) -> int:
         print(clean)
     if args.stderr_file:
         Path(args.stderr_file).write_text(clean + ("\n" if clean else ""), encoding="utf-8")
+    classified_failure = classify_cli_failure(clean)
+    if classified_failure:
+        return classified_failure
     return code
 
 
