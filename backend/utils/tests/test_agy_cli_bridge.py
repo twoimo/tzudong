@@ -31,6 +31,18 @@ class AgyCliBridgeTests(unittest.TestCase):
                 prompt = sys.argv[sys.argv.index("--print") + 1]
                 if "1+1" in prompt or "Reply with only" in prompt:
                     print("2")
+                elif "AGY_RETRY_BAD_JSON" in prompt:
+                    state_path = os.environ.get("AGY_FAKE_STATE")
+                    count = 0
+                    if state_path and os.path.exists(state_path):
+                        count = int(open(state_path, encoding="utf-8").read().strip() or "0")
+                    if state_path:
+                        with open(state_path, "w", encoding="utf-8") as fh:
+                            fh.write(str(count + 1))
+                    if count == 0:
+                        print("평가 결과는 아래와 같습니다. JSON이 아닙니다.")
+                    else:
+                        print('{"visit_authenticity":{"values":[]},"rb_inference_score":{"values":[]},"rb_grounding_TF":{"values":[]},"review_faithfulness_score":{"values":[]},"category_TF":{"values":[]}}')
                 else:
                     print('{"visit_authenticity":{"values":[]},"rb_inference_score":{"values":[]},"rb_grounding_TF":{"values":[]},"review_faithfulness_score":{"values":[]},"category_TF":{"values":[]}}')
                 """
@@ -140,6 +152,81 @@ class AgyCliBridgeTests(unittest.TestCase):
 
             self.assertEqual(0, result.returncode, result.stdout + result.stderr)
             self.assertIn("Antigravity CLI", result.stdout + result.stderr)
+            output_file = evaluation / "evaluation" / "laaj_results" / f"{video_id}.jsonl"
+            self.assertTrue(output_file.exists())
+            payload = json.loads(output_file.read_text(encoding="utf-8").strip())
+            self.assertIn("visit_authenticity", payload["evaluation_results"])
+        finally:
+            shutil.rmtree(abs_root, ignore_errors=True)
+
+    def test_laaj_retries_agy_with_strict_json_prompt_after_parse_failure(self) -> None:
+        rel_root = Path("backend") / "restaurant-evaluation" / "tmp" / f"agy-retry-{os.getpid()}"
+        abs_root = PROJECT_ROOT / rel_root
+        crawling = abs_root / "crawl"
+        evaluation = abs_root / "eval"
+        rule_dir = evaluation / "evaluation" / "rule_results"
+        transcript_dir = crawling / "transcript"
+        rule_dir.mkdir(parents=True)
+        transcript_dir.mkdir(parents=True)
+
+        video_id = "agy_retry_video"
+        rule_payload = {
+            "youtube_link": "https://youtu.be/agy-retry",
+            "channel_name": "tzuyang",
+            "evaluation_target": {"재시도식당": True},
+            "restaurants": [{"origin_name": "재시도식당"}],
+            "evaluation_results": {
+                "location_match_TF": [
+                    {"origin_name": "재시도식당", "naver_name": "재시도식당"}
+                ]
+            },
+            "recollect_version": {"meta": 0},
+        }
+        transcript_payload = {
+            "language": "ko",
+            "transcript": [{"start": 0, "text": "AGY_RETRY_BAD_JSON 재시도식당을 방문했습니다."}],
+        }
+        (rule_dir / f"{video_id}.jsonl").write_text(
+            json.dumps(rule_payload, ensure_ascii=False) + "\n", encoding="utf-8"
+        )
+        (transcript_dir / f"{video_id}.jsonl").write_text(
+            json.dumps(transcript_payload, ensure_ascii=False) + "\n", encoding="utf-8"
+        )
+        state_file = self.tmp / "agy-state.txt"
+
+        env = os.environ.copy()
+        env["PATH"] = f"{self.fakebin}{os.pathsep}/usr/bin:/bin"
+        env.pop("GEMINI_API_KEY", None)
+        env.pop("GEMINI_API_KEY_BYEON", None)
+        env["AGY_BRIDGE_TIMEOUT_SEC"] = "45"
+        env["AGY_PRINT_TIMEOUT"] = "30s"
+        env["LAAJ_PARSE_RETRY_SLEEP_SEC"] = "0"
+        env["AGY_FAKE_STATE"] = str(state_file)
+
+        try:
+            result = subprocess.run(
+                [
+                    "bash",
+                    str(LAAJ_SCRIPT),
+                    "--channel",
+                    "tzuyang",
+                    "--crawling-path",
+                    str(rel_root / "crawl"),
+                    "--evaluation-path",
+                    str(rel_root / "eval"),
+                ],
+                cwd=PROJECT_ROOT,
+                capture_output=True,
+                text=True,
+                env=env,
+                check=False,
+                timeout=90,
+            )
+
+            combined = result.stdout + result.stderr
+            self.assertEqual(0, result.returncode, combined)
+            self.assertIn("Antigravity CLI JSON 전용 재요청", combined)
+            self.assertEqual("2", state_file.read_text(encoding="utf-8").strip())
             output_file = evaluation / "evaluation" / "laaj_results" / f"{video_id}.jsonl"
             self.assertTrue(output_file.exists())
             payload = json.loads(output_file.read_text(encoding="utf-8").strip())
