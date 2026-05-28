@@ -19,6 +19,7 @@ import { fileURLToPath } from 'url';
 import sharp from 'sharp';
 import { requireAdmin } from '@/lib/auth/require-admin';
 import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
+import { getGeminiOcrModels, getGeminiOcrThinkingLevel } from '@/lib/ocr/gemini';
 
 export const runtime = 'nodejs';
 
@@ -289,7 +290,17 @@ export async function POST(request: Request) {
 
         // 5. Gemini OCR 실행
         const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
+        const geminiOcrModel = getGeminiOcrModels(process.env)[0];
+        const geminiOcrThinkingLevel = getGeminiOcrThinkingLevel(process.env);
+        const generationConfig = {
+            temperature: 0,
+            responseMimeType: 'application/json',
+            thinkingConfig: { thinkingLevel: geminiOcrThinkingLevel },
+        };
+        const model = genAI.getGenerativeModel({
+            model: geminiOcrModel,
+            generationConfig,
+        });
 
         const finalImagePath = preprocessResult.warped || tempInputPath;
         const finalImageBuffer = fs.readFileSync(/* turbopackIgnore: true */ finalImagePath);

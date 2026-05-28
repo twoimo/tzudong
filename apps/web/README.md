@@ -40,6 +40,14 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 NEXT_PUBLIC_NAVER_CLIENT_ID=your_naver_client_id
 NEXT_NAVER_CLIENT_SECRET=your_naver_client_secret
 
+# Receipt OCR (Gemini-only)
+GEMINI_API_KEY=your_gemini_api_key
+# Optional: comma-separated model failover list. If unset, GEMINI_OCR_DEFAULT_MODEL or gemini-3.5-flash is used.
+GEMINI_OCR_MODEL=gemini-3.5-flash
+GEMINI_OCR_DEFAULT_MODEL=gemini-3.5-flash
+# Optional: LOW, MEDIUM, or HIGH. Defaults to MEDIUM; overrides GEMINI_THINKING_LEVEL for receipt OCR only.
+GEMINI_OCR_THINKING_LEVEL=MEDIUM
+
 # Storyboard Agent (옵션)
 STORYBOARD_AGENT_REMOTE_ENABLED=false
 STORYBOARD_AGENT_API_URL=http://localhost:8001

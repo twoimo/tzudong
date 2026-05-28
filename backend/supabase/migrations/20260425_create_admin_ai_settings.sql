@@ -1,7 +1,7 @@
 create table if not exists public.admin_ai_settings (
   id text primary key,
   routing_mode text not null default 'automatic' check (routing_mode in ('automatic', 'manual')),
-  manual_provider text null check (manual_provider in ('gemini', 'openai', 'nvidia_nim')),
+  manual_provider text null check (manual_provider in ('gemini', 'openai')),
   manual_model text null,
   candidate_models jsonb not null default '[]'::jsonb,
   updated_at timestamptz not null default timezone('utc', now()),
@@ -10,7 +10,7 @@ create table if not exists public.admin_ai_settings (
 );
 
 create table if not exists public.admin_ai_provider_keys (
-  provider text primary key check (provider in ('gemini', 'openai', 'nvidia_nim')),
+  provider text primary key check (provider in ('gemini', 'openai')),
   -- Stored as an AES-GCM encrypted blob by the web admin API.
   -- Legacy plaintext rows are read for backward compatibility but new writes are encrypted.
   api_key text not null,
