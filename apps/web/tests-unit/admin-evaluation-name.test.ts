@@ -46,6 +46,22 @@ describe('getRuleBasedPassedNaverName', () => {
       }),
     ).toBeNull();
   });
+
+  test('skips stale top-level naver_name and uses compatible matched provider name', () => {
+    expect(
+      getRuleBasedPassedNaverName({
+        origin_name: '제기식당',
+        naver_name: '소문난냉면',
+        evaluation_results: {
+          location_match_TF: {
+            eval_value: true,
+            matched_provider: 'naver',
+            matched_name: '제기식당',
+          },
+        },
+      }),
+    ).toBe('제기식당');
+  });
 });
 
 describe('getAdminEvaluationDisplayName', () => {
@@ -67,14 +83,29 @@ describe('getAdminEvaluationDisplayName', () => {
     expect(
       getAdminEvaluationDisplayName({
         origin_name: '원본상호',
-        naver_name: '네이버상호',
+        naver_name: '원본상호 본점',
         evaluation_results: {
           location_match_TF: {
             eval_value: true,
           },
         },
       }),
-    ).toBe('네이버상호');
+    ).toBe('원본상호 본점');
+  });
+
+  test('ignores an address-only provider name mismatch', () => {
+    expect(
+      getAdminEvaluationDisplayName({
+        origin_name: '제기식당',
+        naver_name: '소문난냉면',
+        evaluation_results: {
+          location_match_TF: {
+            eval_value: true,
+            naver_name: '소문난냉면',
+          },
+        },
+      }),
+    ).toBe('제기식당');
   });
 
   test('falls back to the current record name when no approved or passed naver name exists', () => {
@@ -124,13 +155,13 @@ describe('getAdminEvaluationApprovalName', () => {
     expect(
       getAdminEvaluationApprovalName({
         origin_name: '원본상호',
-        naver_name: '검증된네이버후보명',
+        naver_name: '원본상호 본점',
         evaluation_results: {
           location_match_TF: {
             eval_value: true,
           },
         },
       }),
-    ).toBe('검증된네이버후보명');
+    ).toBe('원본상호 본점');
   });
 });

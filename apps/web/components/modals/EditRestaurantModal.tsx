@@ -20,8 +20,13 @@ import { MOBILE_FULL_FORM_SHEET, mobileSheetStyles } from "@/components/ui/mobil
 import { useImmediateMobileOrTablet } from "@/hooks/useDeviceType";
 import {
     EDIT_RESTAURANT_REQUEST_STEPS,
+    EDIT_RESTAURANT_REQUEST_KIND_OPTIONS,
+    EDIT_RESTAURANT_REQUEST_CLOSURE_HELPER_TEXT,
+    EDIT_RESTAURANT_REQUEST_EDIT_HELPER_TEXT,
+    getEditRestaurantRequestAdminNote,
     validateEditRestaurantRequest,
     validateEditRestaurantRequestStep,
+    type EditRestaurantRequestFormData,
     type EditRestaurantRequestStep,
 } from "@/lib/edit-restaurant-request-flow";
 
@@ -29,12 +34,8 @@ interface EditRestaurantModalProps {
     isOpen: boolean;
     onClose: () => void;
     restaurant: Restaurant | null;
-    initialFormData: {
-        name: string;
-        address: string;
-        phone: string;
-        category: string[];
-        youtube_reviews: { youtube_link: string; tzuyang_review: string; restaurant_id: string }[];
+    initialFormData: Omit<EditRestaurantRequestFormData, 'requestKind'> & {
+        requestKind?: EditRestaurantRequestFormData['requestKind'];
     };
     presentation?: 'auto' | 'map-panel';
 }
@@ -74,7 +75,10 @@ const getDesktopEditPanelFocusableElements = (container: HTMLElement | null) =>
 
 export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, onClose, restaurant, initialFormData, presentation = 'auto' }: EditRestaurantModalProps) {
     const isMobileOrTablet = useImmediateMobileOrTablet();
-    const [editFormData, setEditFormData] = useState(initialFormData);
+    const [editFormData, setEditFormData] = useState<EditRestaurantRequestFormData>({
+        ...initialFormData,
+        requestKind: initialFormData.requestKind ?? 'edit',
+    });
     const [isCategoryPopoverOpen, setIsCategoryPopoverOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -87,7 +91,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
     const desktopEditPanelDragRef = useRef<DesktopEditPanelDragState | null>(null);
     const shouldRenderMapPanel = presentation === 'map-panel' && !isMobileOrTablet;
 
-    const handleEditFormChange = (field: string, value: string | string[]) => {
+    const handleEditFormChange = (field: keyof EditRestaurantRequestFormData, value: string | string[]) => {
         setValidationMessage(null);
         setEditFormData(prev => ({
             ...prev,
@@ -136,6 +140,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
                     restaurant_address: editFormData.address.trim() || null,
                     restaurant_phone: editFormData.phone.trim() || null,
                     restaurant_categories: editFormData.category,
+                    admin_notes: getEditRestaurantRequestAdminNote(editFormData),
                     // target_restaurant_id는 submission 레벨이 아닌 items 레벨에서 저장
                 } as never)
                 .select('id')
@@ -189,6 +194,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
                     phone: draft.phone,
                     category: draft.category,
                     youtube_reviews: draft.youtube_reviews,
+                    requestKind: draft.requestKind ?? 'edit',
                 });
                 if (draft.currentStep && EDIT_RESTAURANT_REQUEST_STEPS.some((step) => step.id === draft.currentStep)) {
                     setCurrentStep(draft.currentStep);
@@ -224,6 +230,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
                 phone: editFormData.phone,
                 category: editFormData.category,
                 youtube_reviews: editFormData.youtube_reviews,
+                requestKind: editFormData.requestKind,
                 currentStep,
             });
             setLastSavedAt(new Date());
@@ -466,6 +473,67 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
         </div>
     );
 
+    const renderRequestKindPicker = () => (
+        <div className="space-y-2">
+            <Label>요청 유형</Label>
+            <div className="grid gap-2 sm:grid-cols-2">
+                {EDIT_RESTAURANT_REQUEST_KIND_OPTIONS.map((option) => {
+                    const isSelected = editFormData.requestKind === option.value;
+                    return (
+                        <button
+                            key={option.value}
+                            type="button"
+                            aria-pressed={isSelected}
+                            onClick={() => handleEditFormChange('requestKind', option.value)}
+                            className={`rounded-xl border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
+                                isSelected
+                                    ? option.value === 'closure'
+                                        ? 'border-orange-300 bg-orange-50 text-orange-950 dark:border-orange-800 dark:bg-orange-950/30 dark:text-orange-100'
+                                        : 'border-primary/40 bg-primary/5 text-foreground'
+                                    : 'border-border bg-background hover:bg-secondary/60'
+                            }`}
+                        >
+                            <span className="block text-sm font-semibold">{option.label}</span>
+                            <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                                {option.description}
+                            </span>
+                        </button>
+                    );
+                })}
+            </div>
+        </div>
+    );
+
+    const renderCurrentRestaurantSnapshot = () => (
+        <div className="rounded-xl border bg-muted/40 p-3 text-sm">
+            <p className="font-semibold text-foreground">현재 등록 정보로 폐업 여부를 제보합니다</p>
+            <dl className="mt-3 space-y-2">
+                <div className="flex gap-3">
+                    <dt className="w-16 shrink-0 text-muted-foreground">상호</dt>
+                    <dd className="break-words">{editFormData.name || restaurant?.name || '-'}</dd>
+                </div>
+                <div className="flex gap-3">
+                    <dt className="w-16 shrink-0 text-muted-foreground">주소</dt>
+                    <dd className="break-words">
+                        {editFormData.address || restaurant?.road_address || restaurant?.jibun_address || '-'}
+                    </dd>
+                </div>
+                <div className="flex gap-3">
+                    <dt className="w-16 shrink-0 text-muted-foreground">전화</dt>
+                    <dd className="break-words">{editFormData.phone || restaurant?.phone || '-'}</dd>
+                </div>
+                <div className="flex gap-3">
+                    <dt className="w-16 shrink-0 text-muted-foreground">카테고리</dt>
+                    <dd className="flex flex-wrap gap-1">
+                        {editFormData.category.length > 0
+                            ? editFormData.category.map((category) => <Badge key={category} variant="outline" className="text-xs">{category}</Badge>)
+                            : '-'}
+                    </dd>
+                </div>
+            </dl>
+        </div>
+    );
+
     const renderMobileCategoryPicker = () => (
         <div className="space-y-2">
             <Label>
@@ -519,54 +587,69 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
 
     const renderMobileBasicStep = () => (
         <div className="space-y-4">
-            <div className="rounded-xl border bg-muted/40 p-3 text-sm text-muted-foreground">
-                기존 맛집 정보를 기준으로 잘못된 이름, 주소, 전화번호, 카테고리를 수정해주세요.
-            </div>
+            {renderRequestKindPicker()}
 
-            <div className="space-y-2">
-                <Label htmlFor="edit-mobile-name">
-                    맛집 이름 <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                    id="edit-mobile-name"
-                    value={editFormData.name}
-                    onChange={(e) => handleEditFormChange('name', e.target.value)}
-                    placeholder="맛집 이름을 입력해주세요"
-                    autoComplete="organization"
-                    enterKeyHint="next"
-                    required
-                />
-            </div>
+            {editFormData.requestKind === 'closure' && (
+                <div className="rounded-xl border border-orange-200 bg-orange-50 p-3 text-sm text-orange-900 dark:border-orange-950 dark:bg-orange-950/30 dark:text-orange-100">
+                    {EDIT_RESTAURANT_REQUEST_CLOSURE_HELPER_TEXT}
+                </div>
+            )}
 
-            <div className="space-y-2">
-                <Label htmlFor="edit-mobile-address">
-                    주소 <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                    id="edit-mobile-address"
-                    value={editFormData.address}
-                    onChange={(e) => handleEditFormChange('address', e.target.value)}
-                    placeholder="주소를 입력해주세요"
-                    autoComplete="street-address"
-                    enterKeyHint="next"
-                    required
-                />
-            </div>
+            {editFormData.requestKind === 'edit' && (
+                <div className="rounded-xl border bg-muted/40 p-3 text-sm text-muted-foreground">
+                    {EDIT_RESTAURANT_REQUEST_EDIT_HELPER_TEXT}
+                </div>
+            )}
 
-            <div className="space-y-2">
-                <Label htmlFor="edit-mobile-phone">전화번호</Label>
-                <Input
-                    id="edit-mobile-phone"
-                    type="tel"
-                    value={editFormData.phone}
-                    onChange={(e) => handleEditFormChange('phone', e.target.value)}
-                    placeholder="전화번호를 입력해주세요"
-                    autoComplete="tel"
-                    enterKeyHint="next"
-                />
-            </div>
+            {editFormData.requestKind === 'closure' ? renderCurrentRestaurantSnapshot() : (
+                <>
 
-            {renderMobileCategoryPicker()}
+                    <div className="space-y-2">
+                        <Label htmlFor="edit-mobile-name">
+                            맛집 이름 <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                            id="edit-mobile-name"
+                            value={editFormData.name}
+                            onChange={(e) => handleEditFormChange('name', e.target.value)}
+                            placeholder="맛집 이름을 입력해주세요"
+                            autoComplete="organization"
+                            enterKeyHint="next"
+                            required
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="edit-mobile-address">
+                            주소 <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                            id="edit-mobile-address"
+                            value={editFormData.address}
+                            onChange={(e) => handleEditFormChange('address', e.target.value)}
+                            placeholder="주소를 입력해주세요"
+                            autoComplete="street-address"
+                            enterKeyHint="next"
+                            required
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="edit-mobile-phone">전화번호</Label>
+                        <Input
+                            id="edit-mobile-phone"
+                            type="tel"
+                            value={editFormData.phone}
+                            onChange={(e) => handleEditFormChange('phone', e.target.value)}
+                            placeholder="전화번호를 입력해주세요"
+                            autoComplete="tel"
+                            enterKeyHint="next"
+                        />
+                    </div>
+
+                    {renderMobileCategoryPicker()}
+                </>
+            )}
         </div>
     );
 
@@ -619,6 +702,12 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
                 <p className="text-sm font-semibold text-foreground">제출 전 확인</p>
                 <dl className="mt-3 space-y-2 text-sm">
                     <div className="flex gap-3">
+                        <dt className="w-16 shrink-0 text-muted-foreground">유형</dt>
+                        <dd className="break-words">
+                            {editFormData.requestKind === 'closure' ? '폐업 제보' : '정보 수정'}
+                        </dd>
+                    </div>
+                    <div className="flex gap-3">
                         <dt className="w-16 shrink-0 text-muted-foreground">상호</dt>
                         <dd className="break-words">{editFormData.name || '-'}</dd>
                     </div>
@@ -660,7 +749,9 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
             </div>
 
             <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-900 dark:border-red-950 dark:bg-red-950/30 dark:text-red-100">
-                제출 후에는 관리자 검토를 거쳐 지도 정보에 반영돼요. 기존 맛집 삭제나 병합이 필요한 경우 관리자 검토에서 처리됩니다.
+                {editFormData.requestKind === 'closure'
+                    ? '제출 후에는 관리자 검토에서 폐업 여부를 확인한 뒤 지도 노출/삭제/보류를 결정합니다.'
+                    : '제출 후에는 관리자 검토를 거쳐 지도 정보에 반영돼요. 기존 맛집 삭제나 병합이 필요한 경우 관리자 검토에서 처리됩니다.'}
             </div>
         </div>
     );
@@ -850,123 +941,141 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
                             <div className="space-y-4 p-4 bg-muted rounded-lg">
                                 <h3 className="font-semibold text-lg">공통 정보</h3>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="name">
-                                        맛집 이름 <span className="text-red-500">*</span>
-                                    </Label>
-                                    <Input
-                                        id="name"
-                                        value={editFormData.name}
-                                        onChange={(e) => handleEditFormChange('name', e.target.value)}
-                                        placeholder="맛집 이름을 입력해주세요"
-                                        required
-                                    />
-                                </div>
+                                {renderRequestKindPicker()}
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="address">
-                                        주소 <span className="text-red-500">*</span>
-                                    </Label>
-                                    <Input
-                                        id="address"
-                                        value={editFormData.address}
-                                        onChange={(e) => handleEditFormChange('address', e.target.value)}
-                                        placeholder="주소를 입력해주세요"
-                                        required
-                                    />
-                                </div>
+                                {editFormData.requestKind === 'closure' && (
+                                    <div className="rounded-xl border border-orange-200 bg-orange-50 p-3 text-sm text-orange-900 dark:border-orange-950 dark:bg-orange-950/30 dark:text-orange-100">
+                                        {EDIT_RESTAURANT_REQUEST_CLOSURE_HELPER_TEXT}
+                                    </div>
+                                )}
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="phone">전화번호</Label>
-                                    <Input
-                                        id="phone"
-                                        value={editFormData.phone}
-                                        onChange={(e) => handleEditFormChange('phone', e.target.value)}
-                                        placeholder="전화번호를 입력해주세요"
-                                    />
-                                </div>
+                                {editFormData.requestKind === 'edit' && (
+                                    <div className="rounded-xl border bg-background/70 p-3 text-sm text-muted-foreground">
+                                        {EDIT_RESTAURANT_REQUEST_EDIT_HELPER_TEXT}
+                                    </div>
+                                )}
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="category">
-                                        카테고리 <span className="text-red-500">*</span>
-                                    </Label>
-                                    <Popover open={isCategoryPopoverOpen} onOpenChange={setIsCategoryPopoverOpen} modal={true}>
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                variant="outline"
-                                                role="combobox"
-                                                aria-expanded={isCategoryPopoverOpen}
-                                                className="w-full justify-between"
-                                                type="button"
-                                            >
-                                                {editFormData.category.length > 0
-                                                    ? `${editFormData.category.length}개 선택됨`
-                                                    : "카테고리를 선택해주세요"
-                                                }
-                                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent
-                                            className="w-full p-0 z-[200]"
-                                            align="start"
-                                            onInteractOutside={(e) => {
-                                                // Dialog 내부 클릭 시 Popover가 닫히지 않도록 방지
-                                                e.preventDefault();
-                                            }}
-                                        >
-                                            <Command>
-                                                <CommandInput placeholder="카테고리 검색..." />
-                                                <CommandList>
-                                                    <CommandEmpty>카테고리를 찾을 수 없습니다.</CommandEmpty>
-                                                    <CommandGroup>
-                                                        {[
-                                                            "한식", "중식", "일식", "양식", "분식", "치킨·피자",
-                                                            "고기", "족발·보쌈", "돈까스·회", "아시안",
-                                                            "패스트푸드", "카페·디저트", "기타"
-                                                        ].map((category) => {
-                                                            const isSelected = editFormData.category.includes(category);
-                                                            return (
-                                                                <CommandItem
-                                                                    key={category}
-                                                                    onSelect={() => {
-                                                                        const newCategories = isSelected
-                                                                            ? editFormData.category.filter(c => c !== category)
-                                                                            : [...editFormData.category, category];
-                                                                        handleEditFormChange('category', newCategories);
-                                                                    }}
-                                                                >
-                                                                    <Check
-                                                                        className={`mr-2 h-4 w-4 ${isSelected ? "opacity-100" : "opacity-0"}`}
-                                                                    />
-                                                                    {category}
-                                                                </CommandItem>
-                                                            );
-                                                        })}
-                                                    </CommandGroup>
-                                                </CommandList>
-                                            </Command>
-                                        </PopoverContent>
-                                    </Popover>
-                                    {editFormData.category.length > 0 && (
-                                        <div className="flex flex-wrap gap-1 mt-2">
-                                            {editFormData.category.map((category) => (
-                                                <Badge key={category} variant="secondary" className="text-xs">
-                                                    {category}
-                                                    <button
-                                                        type="button"
-                                                        className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
-                                                        onClick={() => {
-                                                            const newCategories = editFormData.category.filter(c => c !== category);
-                                                            handleEditFormChange('category', newCategories);
-                                                        }}
-                                                    >
-                                                        <X className="h-3 w-3" />
-                                                    </button>
-                                                </Badge>
-                                            ))}
+                                {editFormData.requestKind === 'closure' ? renderCurrentRestaurantSnapshot() : (
+                                    <>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="name">
+                                                맛집 이름 <span className="text-red-500">*</span>
+                                            </Label>
+                                            <Input
+                                                id="name"
+                                                value={editFormData.name}
+                                                onChange={(e) => handleEditFormChange('name', e.target.value)}
+                                                placeholder="맛집 이름을 입력해주세요"
+                                                required
+                                            />
                                         </div>
-                                    )}
-                                </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="address">
+                                                주소 <span className="text-red-500">*</span>
+                                            </Label>
+                                            <Input
+                                                id="address"
+                                                value={editFormData.address}
+                                                onChange={(e) => handleEditFormChange('address', e.target.value)}
+                                                placeholder="주소를 입력해주세요"
+                                                required
+                                            />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="phone">전화번호</Label>
+                                            <Input
+                                                id="phone"
+                                                value={editFormData.phone}
+                                                onChange={(e) => handleEditFormChange('phone', e.target.value)}
+                                                placeholder="전화번호를 입력해주세요"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="category">
+                                                카테고리 <span className="text-red-500">*</span>
+                                            </Label>
+                                            <Popover open={isCategoryPopoverOpen} onOpenChange={setIsCategoryPopoverOpen} modal={true}>
+                                                <PopoverTrigger asChild>
+                                                    <Button
+                                                        variant="outline"
+                                                        role="combobox"
+                                                        aria-expanded={isCategoryPopoverOpen}
+                                                        className="w-full justify-between"
+                                                        type="button"
+                                                    >
+                                                        {editFormData.category.length > 0
+                                                            ? `${editFormData.category.length}개 선택됨`
+                                                            : "카테고리를 선택해주세요"
+                                                        }
+                                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                    </Button>
+                                                </PopoverTrigger>
+                                                <PopoverContent
+                                                    className="w-full p-0 z-[200]"
+                                                    align="start"
+                                                    onInteractOutside={(e) => {
+                                                        // Dialog 내부 클릭 시 Popover가 닫히지 않도록 방지
+                                                        e.preventDefault();
+                                                    }}
+                                                >
+                                                    <Command>
+                                                        <CommandInput placeholder="카테고리 검색..." />
+                                                        <CommandList>
+                                                            <CommandEmpty>카테고리를 찾을 수 없습니다.</CommandEmpty>
+                                                            <CommandGroup>
+                                                                {[
+                                                                    "한식", "중식", "일식", "양식", "분식", "치킨·피자",
+                                                                    "고기", "족발·보쌈", "돈까스·회", "아시안",
+                                                                    "패스트푸드", "카페·디저트", "기타"
+                                                                ].map((category) => {
+                                                                    const isSelected = editFormData.category.includes(category);
+                                                                    return (
+                                                                        <CommandItem
+                                                                            key={category}
+                                                                            onSelect={() => {
+                                                                                const newCategories = isSelected
+                                                                                    ? editFormData.category.filter(c => c !== category)
+                                                                                    : [...editFormData.category, category];
+                                                                                handleEditFormChange('category', newCategories);
+                                                                            }}
+                                                                        >
+                                                                            <Check
+                                                                                className={`mr-2 h-4 w-4 ${isSelected ? "opacity-100" : "opacity-0"}`}
+                                                                            />
+                                                                            {category}
+                                                                        </CommandItem>
+                                                                    );
+                                                                })}
+                                                            </CommandGroup>
+                                                        </CommandList>
+                                                    </Command>
+                                                </PopoverContent>
+                                            </Popover>
+                                            {editFormData.category.length > 0 && (
+                                                <div className="flex flex-wrap gap-1 mt-2">
+                                                    {editFormData.category.map((category) => (
+                                                        <Badge key={category} variant="secondary" className="text-xs">
+                                                            {category}
+                                                            <button
+                                                                type="button"
+                                                                className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
+                                                                onClick={() => {
+                                                                    const newCategories = editFormData.category.filter(c => c !== category);
+                                                                    handleEditFormChange('category', newCategories);
+                                                                }}
+                                                            >
+                                                                <X className="h-3 w-3" />
+                                                            </button>
+                                                        </Badge>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </>
+                                )}
                             </div>
 
                             {/* 유튜브 영상별 정보 */}
