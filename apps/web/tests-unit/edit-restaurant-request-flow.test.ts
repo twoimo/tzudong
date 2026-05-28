@@ -1,12 +1,18 @@
 import { describe, expect, test } from 'bun:test';
 
 import {
+    CLOSED_RESTAURANT_REQUEST_ADMIN_NOTE,
+    EDIT_RESTAURANT_REQUEST_CLOSURE_HELPER_TEXT,
+    EDIT_RESTAURANT_REQUEST_EDIT_HELPER_TEXT,
+    EDIT_RESTAURANT_REQUEST_KIND_OPTIONS,
+    getEditRestaurantRequestAdminNote,
     validateEditRestaurantRequest,
     validateEditRestaurantRequestStep,
     type EditRestaurantRequestFormData,
 } from '../lib/edit-restaurant-request-flow';
 
 const validFormData: EditRestaurantRequestFormData = {
+    requestKind: 'edit',
     name: '데일리픽스 강남본점',
     address: '서울특별시 강남구 논현로85길 70',
     phone: '02-1234-5678',
@@ -37,5 +43,39 @@ describe('edit restaurant request flow validation', () => {
 
     test('accepts a complete three-step edit request', () => {
         expect(validateEditRestaurantRequest(validFormData)).toBeNull();
+    });
+
+    test('allows closure reports to skip all edit-only basic fields', () => {
+        expect(validateEditRestaurantRequestStep(1, {
+            ...validFormData,
+            requestKind: 'closure',
+            name: '',
+            address: '',
+            phone: '',
+            category: [],
+        })).toBeNull();
+        expect(validateEditRestaurantRequest({
+            ...validFormData,
+            requestKind: 'closure',
+            name: '',
+            address: '',
+            phone: '',
+            category: [],
+        })).toBeNull();
+    });
+
+    test('adds an admin-visible closure note only for closure reports', () => {
+        expect(getEditRestaurantRequestAdminNote(validFormData)).toBeNull();
+        expect(getEditRestaurantRequestAdminNote({
+            ...validFormData,
+            requestKind: 'closure',
+        })).toBe(CLOSED_RESTAURANT_REQUEST_ADMIN_NOTE);
+    });
+
+    test('explains relocation edits and no-input closure reports', () => {
+        expect(EDIT_RESTAURANT_REQUEST_KIND_OPTIONS.find((option) => option.value === 'edit')?.description).toContain('가게 이전');
+        expect(EDIT_RESTAURANT_REQUEST_KIND_OPTIONS.find((option) => option.value === 'closure')?.description).toContain('추가 입력 없이');
+        expect(EDIT_RESTAURANT_REQUEST_EDIT_HELPER_TEXT).toContain('실제 위치가 바뀐 경우');
+        expect(EDIT_RESTAURANT_REQUEST_CLOSURE_HELPER_TEXT).toContain('새로 입력하거나 고치지 않아도 됩니다');
     });
 });

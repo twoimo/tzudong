@@ -48,7 +48,7 @@ function resolveIdentityName(row) {
 }
 
 function displayName(row) {
-  return row.approved_name || row.naver_name || row.google_name || row.origin_name || '(이름 없음)';
+  return row.approved_name || row.origin_name || row.naver_name || row.google_name || '(이름 없음)';
 }
 
 function addressText(row) {
@@ -244,7 +244,8 @@ function identityWarningsForRow(row, rows) {
   const compatible = originName && candidateName ? hasNameCompatibility(originName, candidateName) : true;
 
   if (originName && candidateName && !compatible) {
-    warnings.push({ rule: 'provider_name_mismatch', severity: 'warn', message: `origin=${originName}, candidate=${candidateName}` });
+    const severity = getBooleanEvalValue(row, 'location_match_TF') === true ? 'block' : 'warn';
+    warnings.push({ rule: 'provider_name_mismatch', severity, message: `origin=${originName}, candidate=${candidateName}` });
   }
 
   if (originName && candidateName && compatible) {
