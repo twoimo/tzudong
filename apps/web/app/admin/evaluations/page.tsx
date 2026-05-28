@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { EvaluationRecord, EvaluationRecordStatus, CategoryStats, LocationMatchResult } from '@/types/evaluation';
+import { EvaluationRecord, EvaluationRecordStatus, CategoryStats } from '@/types/evaluation';
 import { extractVideoIdFromYoutubeLink } from '../../../lib/dashboard/helpers';
 import { getLocationMatchFalseMessage, hasLaajMetrics, hasRuleMetrics, toNotSelectionReason } from '../../../lib/dashboard/classifiers';
 import { CategorySidebar } from '@/components/admin/CategorySidebar';
@@ -32,9 +32,24 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { checkRestaurantDuplicate } from '@/lib/db-conflict-checker';
 import { debugLog } from '@/lib/debug-log';
-import { getAdminEvaluationDisplayName } from '@/lib/admin-evaluation-name';
+import { getAdminEvaluationApprovalName, getAdminEvaluationDisplayName } from '@/lib/admin-evaluation-name';
 import { getAddressConsistencyStatus } from '@/lib/admin-address-consistency';
 import { needsEvaluationRerun } from '@/lib/admin-evaluation-completeness';
+import {
+  MISSING_EVALUATION_AUTO_DELETE_MESSAGE,
+  getMissingEvaluationAutoDeleteReason,
+  shouldAutoDeleteMissingEvaluationRecord,
+} from '@/lib/admin-auto-delete-missing-evaluation';
+import {
+  findSameVideoDuplicateWarningCandidates,
+  formatSameVideoDuplicateWarning,
+} from '@/lib/admin-same-video-duplicate-warning';
+import {
+  findRestaurantIdentityWarnings,
+  formatRestaurantIdentityWarning,
+  hasBlockingRestaurantIdentityWarning,
+} from '@/lib/admin-restaurant-identity-warning';
+import { invalidateRestaurantDiscoveryQueries } from '@/lib/restaurant-discovery-cache';
 import { RESTAURANT_MERGE_SELECT } from '@/hooks/use-restaurants';
 import {
   AlertDialog,
@@ -76,10 +91,9 @@ const EVALUATION_RECORD_STATUS_SET = new Set<EvaluationRecordStatus>([
   'geocoding_failed',
   'not_selected',
 ]);
-const EVALUATION_DELETE_CONFIRMATION = '검수삭제';
 const EVALUATION_RESTORE_CONFIRMATION = '검수복원';
 type PendingRecordAction = {
-  kind: 'delete' | 'restore';
+  kind: 'restore';
   record: EvaluationRecord;
 };
 const ADMIN_SUBMISSION_SELECT = [
@@ -430,6 +444,39 @@ function AdminEvaluationPage({
     setRecordActionConfirmation('');
   };
 
+  const getSameVideoDuplicateWarnings = useCallback((record: EvaluationRecord) => {
+    return findSameVideoDuplicateWarningCandidates(record, allRecords);
+  }, [allRecords]);
+
+  const notifySameVideoDuplicateWarning = useCallback((record: EvaluationRecord, actionLabel: string) => {
+    const message = formatSameVideoDuplicateWarning(getSameVideoDuplicateWarnings(record));
+    if (!message) return;
+
+    toast({
+      title: `같은 영상 중복 후보 확인 후 ${actionLabel}`,
+      description: message,
+    });
+  }, [getSameVideoDuplicateWarnings, toast]);
+
+  const getRestaurantIdentityWarnings = useCallback((record: EvaluationRecord) => {
+    return findRestaurantIdentityWarnings(record, allRecords);
+  }, [allRecords]);
+
+  const notifyRestaurantIdentityWarning = useCallback((record: EvaluationRecord, actionLabel: string) => {
+    const warnings = getRestaurantIdentityWarnings(record);
+    const message = formatRestaurantIdentityWarning(warnings);
+    if (!message) return false;
+
+    const hasBlockingWarning = hasBlockingRestaurantIdentityWarning(warnings);
+    toast({
+      variant: hasBlockingWarning ? 'destructive' : 'default',
+      title: hasBlockingWarning ? `${actionLabel} 차단: 장소명 검증 필요` : `${actionLabel} 전 장소명 확인`,
+      description: message,
+    });
+
+    return hasBlockingWarning;
+  }, [getRestaurantIdentityWarnings, toast]);
+
   // 테이블 뷰 토글 상태
   const [isAlternateView, setIsAlternateView] = useState(false);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
@@ -693,12 +740,12 @@ function AdminEvaluationPage({
 
           switch (evalFilters.status) {
             case 'missing':
-              // Missing: is_missing이 true인 레코드
-              match = r.is_missing === true;
+              // Missing: 삭제 처리되지 않은 missing 레코드만 표시
+              match = r.status !== 'deleted' && r.is_missing === true;
               break;
             case 'not_selected':
-              // 평가 미대상: is_not_selected가 true인 레코드
-              match = r.is_not_selected === true;
+              // 평가 미대상: 삭제 처리되지 않은 평가 미대상 레코드만 표시
+              match = r.status !== 'deleted' && r.is_not_selected === true;
               break;
             case 'ready_for_approval':
               // 승인 대기: 모든 평가 항목이 최고 점수를 받은 레코드 + status가 pending이거나 hold인 경우만
@@ -1055,10 +1102,51 @@ function AdminEvaluationPage({
         };
       });
 
-      setAllRecords(records as unknown as EvaluationRecord[]);
+      let typedRecords = records as unknown as EvaluationRecord[];
+      const autoDeleteTargets = typedRecords.filter(shouldAutoDeleteMissingEvaluationRecord);
+
+      if (autoDeleteTargets.length > 0 && user?.id) {
+        const updatedAt = new Date().toISOString();
+        const autoDeleteIds = autoDeleteTargets.map((record) => record.id);
+
+        const { error: autoDeleteError } = await supabase
+          .from('restaurants')
+          // @ts-expect-error Supabase update inference is stale in the local generated client types.
+          .update({
+            status: 'deleted',
+            db_error_message: MISSING_EVALUATION_AUTO_DELETE_MESSAGE,
+            updated_by_admin_id: user.id,
+            updated_at: updatedAt,
+          })
+          .in('id', autoDeleteIds);
+
+        if (autoDeleteError) throw autoDeleteError;
+
+        const autoDeleteIdSet = new Set(autoDeleteIds);
+        typedRecords = typedRecords.map((record) => (
+          autoDeleteIdSet.has(record.id)
+            ? {
+                ...record,
+                status: 'deleted',
+                db_error_message: MISSING_EVALUATION_AUTO_DELETE_MESSAGE,
+                updated_by_admin_id: user.id,
+                updated_at: updatedAt,
+              }
+            : record
+        ));
+
+        const reasonSummary = [...new Set(autoDeleteTargets
+          .map(getMissingEvaluationAutoDeleteReason)
+          .filter(Boolean))].join(' · ');
+        toast({
+          title: '미발견 맛집 자동 삭제',
+          description: `${autoDeleteTargets.length}건을 삭제 상태로 전환했습니다.${reasonSummary ? ` (${reasonSummary})` : ''}`,
+        });
+      }
+
+      setAllRecords(typedRecords);
 
       // 통계 계산 (전체 레코드 기준)
-      const typedRecords = records as unknown as EvaluationRecord[];
       const deletedCount = typedRecords.filter(r => r.status === 'deleted').length;
 
       const newStats: CategoryStats = {
@@ -1066,7 +1154,7 @@ function AdminEvaluationPage({
         pending: typedRecords.filter(r => r.status === 'pending').length,
         approved: typedRecords.filter(r => r.status === 'approved').length,
         hold: typedRecords.filter(r => r.status === 'hold').length,
-        missing: typedRecords.filter(r => r.is_missing).length,
+        missing: typedRecords.filter(r => r.status !== 'deleted' && r.is_missing).length,
         db_conflict: typedRecords.filter(r => r.status === 'db_conflict').length,
         ready_for_approval: typedRecords.filter(r =>
           r.evaluation_results?.visit_authenticity?.eval_value === 1 &&
@@ -1078,7 +1166,7 @@ function AdminEvaluationPage({
           r.evaluation_results?.category_TF?.eval_value === true &&
           (r.status === 'pending' || r.status === 'hold') // 승인되지 않은 것만
         ).length,
-        not_selected: typedRecords.filter(r => r.is_not_selected).length,
+        not_selected: typedRecords.filter(r => r.status !== 'deleted' && r.is_not_selected).length,
         deleted: deletedCount,
       };
       setStats(newStats);
@@ -1107,7 +1195,7 @@ function AdminEvaluationPage({
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, user?.id]);
 
   // 초기 데이터 로드
   useEffect(() => {
@@ -1149,8 +1237,8 @@ function AdminEvaluationPage({
         r.evaluation_results?.category_TF?.eval_value === true &&
         (r.status === 'pending' || r.status === 'hold') // 승인되지 않은 것만
       ).length,
-      missing: allRecords.filter(r => r.is_missing).length,
-      not_selected: allRecords.filter(r => r.is_not_selected).length,
+      missing: allRecords.filter(r => r.status !== 'deleted' && r.is_missing).length,
+      not_selected: allRecords.filter(r => r.status !== 'deleted' && r.is_not_selected).length,
       deleted: deletedCount,
     };
 
@@ -1204,9 +1292,14 @@ function AdminEvaluationPage({
       return;
     }
 
+    if (notifyRestaurantIdentityWarning(record, '승인')) {
+      return;
+    }
+
     try {
       setLoading(true);
       const adminUserId = requireAdminUserId();
+      notifySameVideoDuplicateWarning(record, '승인');
 
       // YouTube 링크 추출 (단일 값)
       const youtubeLink = record.youtube_link || '';
@@ -1319,28 +1412,9 @@ function AdminEvaluationPage({
 
   // 실제 승인 처리 실행 (중복 확인 후 재사용)
   const performApproval = async (record: EvaluationRecord, adminUserId: string) => {
-    // Approved Name 추출 로직
-    // 1. DB 컬럼(naver_name, google_name)을 최우선으로 사용
-    let approvedName: string | null = record.naver_name || record.google_name || null;
-
-    // 2. 컬럼이 없는 경우 evaluation_results에서 추출 시도 (Fallback)
-    if (!approvedName) {
-      const locationMatch = record.evaluation_results?.location_match_TF as LocationMatchResult | undefined;
-      if (locationMatch) {
-        if (locationMatch.matched_name) {
-          approvedName = locationMatch.matched_name;
-        } else if (locationMatch.google_name) {
-          approvedName = locationMatch.google_name;
-        } else if (locationMatch.name && !['Location Match', '주소 정합성', 'location_match_TF'].includes(locationMatch.name)) {
-          approvedName = locationMatch.name;
-        }
-      }
-    }
-
-    // 3. 그래도 없으면 기존 이름 사용 (매우 드문 케이스)
-    if (!approvedName) {
-      approvedName = record.restaurant_name || record.name || '이름 없음';
-    }
+    // 승인명은 관리자 수정값(approved_name)을 최우선으로 사용한다.
+    // 수정 후 승인 시 naver_name/google_name이 이전 후보명으로 남아 있어도 지도 노출명은 관리자 확정명을 따라야 한다.
+    const approvedName = getAdminEvaluationApprovalName(record);
 
     debugLog('🚀 승인 요청 시작:', {
       id: record.id,
@@ -1401,30 +1475,19 @@ function AdminEvaluationPage({
       title: '승인 완료',
       description: `✅ "${approvedName}" 맛집이 승인되었습니다`,
     });
+    void invalidateRestaurantDiscoveryQueries(queryClient);
   };
 
   // 삭제 핸들러 (Soft Delete)
   const handleDelete = async (record: EvaluationRecord) => {
-    if (pendingRecordAction?.kind !== 'delete' || pendingRecordAction.record.id !== record.id) {
-      setPendingRecordAction({ kind: 'delete', record });
-      setRecordActionConfirmation('');
-      return;
-    }
-
-    if (recordActionConfirmation !== EVALUATION_DELETE_CONFIRMATION) {
-      toast({
-        variant: 'destructive',
-        title: '확인 문구가 필요합니다',
-        description: `"${EVALUATION_DELETE_CONFIRMATION}"를 입력한 뒤 삭제를 적용하세요.`,
-      });
-      return;
-    }
+    notifyRestaurantIdentityWarning(record, '삭제');
+    notifySameVideoDuplicateWarning(record, '삭제');
 
     try {
       const adminUserId = requireAdminUserId();
       const updatedAt = new Date().toISOString();
 
-      // Soft Delete: status를 'deleted'로 변경
+      // Soft Delete: 휴지통 아이콘 클릭 즉시 status를 'deleted'로 변경
       const { error } = await supabase
         .from('restaurants')
         // @ts-expect-error Supabase update inference is stale in the local generated client types.
@@ -1448,7 +1511,8 @@ function AdminEvaluationPage({
         title: '삭제 완료',
         description: `"${record.restaurant_name || record.name}"이(가) 삭제되었습니다`,
       });
-      clearPendingRecordAction();
+      void invalidateRestaurantDiscoveryQueries(queryClient);
+      if (pendingRecordAction?.record.id === record.id) clearPendingRecordAction();
     } catch (error: unknown) {
       toast({
         variant: 'destructive',
@@ -1519,6 +1583,7 @@ function AdminEvaluationPage({
         title: '복원 완료',
         description: `"${record.restaurant_name || record.name}"이(가) 미처리 상태로 복원되었습니다`,
       });
+      void invalidateRestaurantDiscoveryQueries(queryClient);
       clearPendingRecordAction();
     } catch (error: unknown) {
       console.error('복원 실패:', error);
@@ -2056,7 +2121,7 @@ function AdminEvaluationPage({
         );
       }
       queryClient.invalidateQueries({ queryKey: ['admin-submissions-inline'] });
-      queryClient.invalidateQueries({ queryKey: ['restaurants'] });
+      void invalidateRestaurantDiscoveryQueries(queryClient);
       if (currentSubmissionIndex >= submissionsData.length - 1 && currentSubmissionIndex > 0) {
         setCurrentSubmissionIndex(currentSubmissionIndex - 1);
       }
@@ -2238,7 +2303,7 @@ function AdminEvaluationPage({
         queryKey: ['admin-submissions-inline'],
         refetchType: 'all',
       });
-      queryClient.invalidateQueries({ queryKey: ['restaurants'] });
+      void invalidateRestaurantDiscoveryQueries(queryClient);
       setEditingSubmission(null);
       setEditModalOpen(false);
       debugLog('[Update Submission Success]', submission.id);
@@ -2258,13 +2323,17 @@ function AdminEvaluationPage({
     return null;
   }
 
-  const pendingRecordActionRequiredPhrase = pendingRecordAction?.kind === 'delete'
-    ? EVALUATION_DELETE_CONFIRMATION
-    : EVALUATION_RESTORE_CONFIRMATION;
-  const pendingRecordActionVerb = pendingRecordAction?.kind === 'delete' ? '삭제' : '복원';
+  const pendingRecordActionRequiredPhrase = EVALUATION_RESTORE_CONFIRMATION;
+  const pendingRecordActionVerb = '복원';
   const pendingRecordActionName = pendingRecordAction
     ? (pendingRecordAction.record.restaurant_name || pendingRecordAction.record.name || '선택한 검수 항목')
     : '';
+  const pendingRecordActionDuplicateWarnings = pendingRecordAction
+    ? getSameVideoDuplicateWarnings(pendingRecordAction.record)
+    : [];
+  const pendingRecordActionIdentityWarnings = pendingRecordAction
+    ? getRestaurantIdentityWarnings(pendingRecordAction.record)
+    : [];
 
   return (
     <div
@@ -2404,6 +2473,32 @@ function AdminEvaluationPage({
                 <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
                   모바일과 데스크톱 모두 같은 흐름으로 처리합니다. 아래 문구를 입력한 뒤 적용하세요.
                 </p>
+                {pendingRecordActionIdentityWarnings.length > 0 && (
+                  <div className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs leading-5 text-red-900">
+                    <p className="font-semibold">장소명 검증 경고 {pendingRecordActionIdentityWarnings.length}건</p>
+                    <p>{formatRestaurantIdentityWarning(pendingRecordActionIdentityWarnings)}</p>
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {pendingRecordActionIdentityWarnings.slice(0, 3).map((warning) => (
+                        <Badge key={warning.rule} variant="outline" className="border-red-300 bg-white/70 text-red-900">
+                          {warning.severity === 'block' ? '차단' : '확인'} · {warning.rule}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {pendingRecordActionDuplicateWarnings.length > 0 && (
+                  <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">
+                    <p className="font-semibold">같은 영상 중복 후보 {pendingRecordActionDuplicateWarnings.length}건이 있습니다.</p>
+                    <p>복원 적용 전 같은 맛집 관계인지 확인하세요. 별도 필터 없이 현재 작업 확인 단계에서만 알려드립니다.</p>
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {pendingRecordActionDuplicateWarnings.slice(0, 3).map((candidate) => (
+                        <Badge key={candidate.id} variant="outline" className="border-amber-300 bg-white/70 text-amber-900">
+                          {candidate.name} · {candidate.rule}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
                 <Input
@@ -2425,15 +2520,11 @@ function AdminEvaluationPage({
                 </Button>
                 <Button
                   type="button"
-                  variant={pendingRecordAction.kind === 'delete' ? 'destructive' : 'default'}
+                  variant="default"
                   size="sm"
                   className="h-9"
                   onClick={() => {
-                    if (pendingRecordAction.kind === 'delete') {
-                      void handleDelete(pendingRecordAction.record);
-                    } else {
-                      void handleRestore(pendingRecordAction.record);
-                    }
+                    void handleRestore(pendingRecordAction.record);
                   }}
                   disabled={loading || recordActionConfirmation !== pendingRecordActionRequiredPhrase}
                 >
@@ -2524,6 +2615,7 @@ function AdminEvaluationPage({
         onOpenChange={setMissingFormOpen}
         onSuccess={(recordId, updates) => {
           updateRecordInState(recordId, updates);
+          void invalidateRestaurantDiscoveryQueries(queryClient);
         }}
       />
 
@@ -2534,6 +2626,7 @@ function AdminEvaluationPage({
         onOpenChange={setConflictPanelOpen}
         onSuccess={(recordId, updates) => {
           updateRecordInState(recordId, updates);
+          void invalidateRestaurantDiscoveryQueries(queryClient);
         }}
       />
 
@@ -2561,7 +2654,7 @@ function AdminEvaluationPage({
           } else {
             // 사용자 제보가 아닌 경우 쿼리만 무효화
             queryClient.invalidateQueries({ queryKey: ['admin-submissions-inline'] });
-            queryClient.invalidateQueries({ queryKey: ['restaurants'] });
+            void invalidateRestaurantDiscoveryQueries(queryClient);
           }
         }}
       />
