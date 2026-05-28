@@ -439,17 +439,21 @@ test.describe('Admin KPI dashboard runtime guard', () => {
         );
         expect(canvasPaddingBottom).toBeLessThanOrEqual(16);
 
-        const scrolledTop = await canvas.evaluate((element) => {
+        await canvas.evaluate((element) => {
             const spacer = document.createElement('div');
             spacer.setAttribute('data-admin-scroll-spacer', 'runtime-guard');
             spacer.style.height = '900px';
             spacer.style.flex = '0 0 auto';
             element.appendChild(spacer);
-            element.scrollTop = 520;
-            element.dispatchEvent(new Event('scroll', { bubbles: true }));
-            return element.scrollTop;
         });
-        expect(scrolledTop).toBeGreaterThan(0);
+        const box = await canvas.boundingBox();
+        expect(box).not.toBeNull();
+
+        await page.mouse.move(
+            (box?.x ?? 0) + Math.min(160, (box?.width ?? 320) / 2),
+            (box?.y ?? 0) + Math.min(220, (box?.height ?? 440) / 2),
+        );
+        await page.mouse.wheel(0, 520);
 
         await expect(layout).toHaveAttribute('data-admin-console-mobile-header-visible', 'false');
         await expect(mobileHeader).toHaveAttribute('data-admin-console-mobile-header-visible', 'false');
