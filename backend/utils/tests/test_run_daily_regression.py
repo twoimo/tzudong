@@ -503,6 +503,8 @@ class GDriveUploadContractTests(unittest.TestCase):
         script = CHUNK_MULTIMODAL_SCRIPT.read_text(encoding="utf-8")
 
         self.assertIn("--list-impersonate-targets", script)
+        self.assertIn("grep -Eq", script)
+        self.assertIn("^[[:space:]]*Chrome-", script)
         self.assertIn("yt_impersonate_flags=(--impersonate Chrome)", script)
         self.assertIn("Chrome impersonation target unavailable", script)
         self.assertIn('"${yt_impersonate_flags[@]}"', script)

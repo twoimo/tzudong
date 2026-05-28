@@ -458,7 +458,7 @@ download_video() {
         yt_quiet_flags=(--no-progress --no-warnings)
     fi
     local yt_impersonate_flags=()
-    if $yt_dlp_cmd --list-impersonate-targets 2>/dev/null | grep -Eiq '(^|[[:space:]])chrome([-[:space:]]|$)'; then
+    if $yt_dlp_cmd --list-impersonate-targets 2>/dev/null | grep -Eq '^[[:space:]]*Chrome-[^[:space:]]+[[:space:]]'; then
         yt_impersonate_flags=(--impersonate Chrome)
     else
         log_warn "yt-dlp Chrome impersonation target unavailable → continuing without impersonation"
