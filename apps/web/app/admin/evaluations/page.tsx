@@ -807,6 +807,8 @@ function AdminEvaluationPage({
         true: 'true',
         false_match: 'false',
         false_geocode: 'failed',
+        review: 'review',
+        candidate: 'candidate',
       };
       const targetStatus = targetStatusByFilter[evalFilters.geocoding_success];
       if (targetStatus) {
