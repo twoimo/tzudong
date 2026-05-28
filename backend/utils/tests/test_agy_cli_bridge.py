@@ -87,6 +87,29 @@ class AgyCliBridgeTests(unittest.TestCase):
     def tearDown(self) -> None:
         shutil.rmtree(self.tmp, ignore_errors=True)
 
+
+    def test_gemini_wrapper_selects_oauth_personal_when_oauth_creds_exist(self) -> None:
+        env = os.environ.copy()
+        env["PATH"] = f"{self.fakebin}{os.pathsep}/usr/bin:/bin"
+        env["HOME"] = str(self.tmp)
+        gemini_dir = self.tmp / ".gemini"
+        gemini_dir.mkdir(exist_ok=True)
+        (gemini_dir / "oauth_creds.json").write_text("{}", encoding="utf-8")
+
+        result = subprocess.run(
+            ["bash", str(PROJECT_ROOT / "backend" / "bin" / "gemini"), "-p", "Reply with JSON"],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            env=env,
+            check=False,
+            timeout=30,
+        )
+
+        self.assertEqual(0, result.returncode, result.stderr + result.stdout)
+        settings = json.loads((gemini_dir / "settings.json").read_text(encoding="utf-8"))
+        self.assertEqual("oauth-personal", settings["security"]["auth"]["selectedType"])
+
     def test_bridge_answers_terminal_cursor_query_and_captures_print_output(self) -> None:
         prompt_file = self.tmp / "prompt.txt"
         output_file = self.tmp / "response.txt"
