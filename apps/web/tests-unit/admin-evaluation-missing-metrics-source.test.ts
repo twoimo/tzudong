@@ -32,7 +32,9 @@ describe('admin evaluation missing metric UI contracts', () => {
     expect(combined).not.toContain('전체 재평가');
     expect(combined).not.toContain('일괄 재평가');
     expect(combined).not.toMatch(/rerunAll|resetAll|bulkRerun|bulkEvaluation/i);
-    expect(pageSource).toContain('검수삭제');
+    expect(pageSource).not.toContain('검수삭제');
+    expect(pageSource).not.toContain('EVALUATION_DELETE_CONFIRMATION');
     expect(pageSource).toContain('검수복원');
+    expect(pageSource).toContain('shouldAutoDeleteMissingEvaluationRecord');
   });
 });
