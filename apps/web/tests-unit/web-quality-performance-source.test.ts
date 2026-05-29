@@ -1007,15 +1007,10 @@ describe("web quality performance source contracts", () => {
       "flex-1 h-9 rounded-full flex items-center gap-2 px-2 bg-secondary/40 min-w-0",
     );
     expect(homeDesktopControlPanelSource).toContain(
-      "inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-background hover:text-foreground",
-    );
-    expect(homeDesktopControlPanelSource).toContain(
       "h-9 w-9 shrink-0 rounded-full border border-border bg-background hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary touch-manipulation",
     );
-    expect(
-      homeDesktopControlPanelSource.indexOf('aria-label="검색어 지우기"'),
-    ).toBeLessThan(
-      homeDesktopControlPanelSource.indexOf("toggleDesktopSearchType();"),
+    expect(homeDesktopControlPanelSource).not.toContain(
+      'aria-label="검색어 지우기"',
     );
     expect(homeDesktopControlPanelSource).toContain('aria-label="검색 닫기"');
     expect(homeDesktopControlPanelSource).toContain('alt="로고"');
