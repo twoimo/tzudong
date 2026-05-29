@@ -1669,19 +1669,6 @@ export default function HomeDesktopControlPanel({
                   className="w-full bg-transparent text-sm text-foreground outline-none placeholder:text-foreground/70"
                   aria-label="맛집 검색어 입력"
                 />
-                {desktopSearchQuery && (
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      clearDesktopSearch();
-                    }}
-                    className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-background hover:text-foreground"
-                    aria-label="검색어 지우기"
-                  >
-                    <X className="h-3.5 w-3.5" aria-hidden="true" />
-                  </button>
-                )}
               </div>
               <Button
                 variant="ghost"
