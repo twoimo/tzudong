@@ -38,6 +38,8 @@ import {
 import {
   needsEvaluationRerun,
 } from '@/lib/admin-evaluation-completeness';
+import { extractVideoIdFromYoutubeLink } from '@/lib/dashboard/helpers';
+import { getYoutubeThumbnailCandidates, shouldTryNextYoutubeThumbnailCandidate } from '@/lib/youtube-thumbnail';
 
 interface EvaluationTableProps {
   records: EvaluationRecord[];
@@ -94,24 +96,6 @@ const FILTER_TOOLTIPS = {
 
   category_TF: `일치: 현재 카테고리가 영상 내용과 일치함
 불일치: 현재 카테고리가 영상 내용과 맞지 않음`
-};
-
-// 유틸리티 함수: YouTube 비디오 ID 추출 (컴포넌트 외부)
-const getYoutubeVideoId = (url: string | undefined): string | null => {
-  if (!url) return null;
-  const patterns = [
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})(?:[?&].*)?/,
-    /(?:youtube\.com\/(?:embed|v)\/)([a-zA-Z0-9_-]{11})/,
-    /(?:m\.youtube\.com\/watch\?v=|youtube\.com\/.*[?&]v=)([a-zA-Z0-9_-]{11})/,
-    /(?:youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
-  ];
-  for (const pattern of patterns) {
-    const match = url.match(pattern);
-    if (match && match[1] && match[1].length === 11) {
-      return match[1];
-    }
-  }
-  return null;
 };
 
 // 유틸리티 함수: 상태 뱃지 반환 (컴포넌트 외부)
@@ -310,7 +294,7 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
     },
     ref
   ) {
-    const videoId = getYoutubeVideoId(record.youtube_link);
+    const videoId = extractVideoIdFromYoutubeLink(record.youtube_link);
     // 썸네일 로딩 트리거
     useEffect(() => {
       if (videoId && !thumbnailState) {
@@ -931,52 +915,54 @@ export function EvaluationTable({
 
   const loadThumbnail = useCallback((videoId: string) => {
     // 이미 로딩 중이거나 완료된 경우 스킵
-    if (loadingThumbnailsRef.current.has(videoId)) {
+    if (
+      loadingThumbnailsRef.current.has(videoId) ||
+      thumbnailDataRef.current[videoId]?.state === 'loaded' ||
+      thumbnailDataRef.current[videoId]?.state === 'error'
+    ) {
       return;
     }
 
-    // 함수형 업데이트로 현재 상태 확인
-    setThumbnailData(prev => {
-      if (prev[videoId]?.state === 'loaded' || prev[videoId]?.state === 'error') {
-        return prev;
+    loadingThumbnailsRef.current.add(videoId);
+    setThumbnailData(prev => ({ ...prev, [videoId]: { state: 'loading' } }));
+
+    const candidates = getYoutubeThumbnailCandidates(videoId);
+    let candidateIndex = 0;
+
+    const tryNextThumbnail = () => {
+      const thumbnailUrl = candidates[candidateIndex];
+      if (!thumbnailUrl) {
+        loadingThumbnailsRef.current.delete(videoId);
+        setThumbnailData(p => ({ ...p, [videoId]: { state: 'error' } }));
+        return;
       }
 
-      // 로딩 시작
-      loadingThumbnailsRef.current.add(videoId);
+      const img = new Image();
+      img.onload = () => {
+        if (
+          shouldTryNextYoutubeThumbnailCandidate({
+            naturalWidth: img.naturalWidth,
+            naturalHeight: img.naturalHeight,
+            candidateIndex,
+            totalCandidates: candidates.length,
+          })
+        ) {
+          candidateIndex += 1;
+          tryNextThumbnail();
+          return;
+        }
 
-      // 가장 확실한 썸네일부터 시도: default -> hqdefault -> mqdefault -> maxresdefault
-      const tryThumbnail = (quality: string) => {
-        const img = new Image();
-        const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/${quality}.jpg`;
-
-        img.onload = () => {
-          loadingThumbnailsRef.current.delete(videoId);
-          setThumbnailData(p => ({ ...p, [videoId]: { state: 'loaded', url: thumbnailUrl } }));
-        };
-
-        img.onerror = () => {
-          // 다음 품질 시도
-          if (quality === 'default') {
-            tryThumbnail('hqdefault');
-          } else if (quality === 'hqdefault') {
-            tryThumbnail('mqdefault');
-          } else if (quality === 'mqdefault') {
-            tryThumbnail('maxresdefault');
-          } else {
-            // 모든 시도 실패
-            loadingThumbnailsRef.current.delete(videoId);
-            setThumbnailData(p => ({ ...p, [videoId]: { state: 'error' } }));
-          }
-        };
-
-        img.src = thumbnailUrl;
+        loadingThumbnailsRef.current.delete(videoId);
+        setThumbnailData(p => ({ ...p, [videoId]: { state: 'loaded', url: thumbnailUrl } }));
       };
+      img.onerror = () => {
+        candidateIndex += 1;
+        tryNextThumbnail();
+      };
+      img.src = thumbnailUrl;
+    };
 
-      // default부터 시작 (모든 영상에 존재)
-      tryThumbnail('default');
-
-      return { ...prev, [videoId]: { state: 'loading' } };
-    });
+    tryNextThumbnail();
   }, []); // 의존성 배열 비움 - 함수형 업데이트 사용으로 상태 의존성 제거
 
   // 레코드가 변경될 때 더 이상 표시되지 않는 썸네일 데이터 정리
@@ -984,7 +970,7 @@ export function EvaluationTable({
     if (records && records.length > 0) {
       const currentVideoIds = new Set<string>();
       records.forEach(record => {
-        const videoId = getYoutubeVideoId(record.youtube_link);
+        const videoId = extractVideoIdFromYoutubeLink(record.youtube_link);
         if (videoId) {
           currentVideoIds.add(videoId);
         }
@@ -1006,7 +992,7 @@ export function EvaluationTable({
   // 모바일 카드 뷰에서도 썸네일이 보이도록 선로딩
   useEffect(() => {
     records.forEach((record) => {
-      const videoId = getYoutubeVideoId(record.youtube_link);
+      const videoId = extractVideoIdFromYoutubeLink(record.youtube_link);
       if (videoId && !thumbnailDataRef.current[videoId] && !loadingThumbnailsRef.current.has(videoId)) {
         loadThumbnail(videoId);
       }
@@ -1239,7 +1225,7 @@ export function EvaluationTable({
     <>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:hidden">
         {records.map((record) => {
-        const videoId = getYoutubeVideoId(record.youtube_link);
+        const videoId = extractVideoIdFromYoutubeLink(record.youtube_link);
         const thumbnailInfo = videoId ? thumbnailData[videoId] : null;
         const isExpanded = expandedId === record.id;
         const visitValue = getMobileMetricDisplayValue(record, record.evaluation_results?.visit_authenticity?.eval_value);
@@ -1314,8 +1300,12 @@ export function EvaluationTable({
                         className="object-cover"
                       />
                     ) : (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent motion-reduce:animate-none" />
+                      <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                        {thumbnailInfo?.state === 'error' ? (
+                          <ExternalLink className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                        ) : (
+                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent motion-reduce:animate-none" />
+                        )}
                       </div>
                     )}
                   </div>
@@ -1770,7 +1760,7 @@ export function EvaluationTable({
               </TableRow>
             ) : (
               records.flatMap((record) => {
-                const videoId = getYoutubeVideoId(record.youtube_link);
+                const videoId = extractVideoIdFromYoutubeLink(record.youtube_link);
 
                 // 썸네일 정보 조회
                 const thumbnailInfo = videoId ? thumbnailData[videoId] : null;
