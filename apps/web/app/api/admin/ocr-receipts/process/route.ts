@@ -112,26 +112,26 @@ function runPythonPreprocess(inputPath: string, outputDir: string): Promise<Reco
 
         const proc = spawn(python, [/* turbopackIgnore: true */ preprocessScriptPath, inputPath, outputDir]);
         let stdout = '';
-        let stderr = '';
 
         proc.stdout.on('data', (data) => {
             stdout += data.toString();
         });
 
-        proc.stderr.on('data', (data) => {
-            stderr += data.toString();
+        proc.stderr.on('data', () => {
+            // Drain stderr so the child process cannot block, but do not store or
+            // log raw OCR/preprocess output that may include user-provided image text.
         });
 
         proc.on('close', (code) => {
             if (code !== 0) {
-                reject(new Error(`Python 스크립트 실패 (code ${code}): ${stderr}`));
+                reject(new Error(`Python 스크립트 실패 (code ${code})`));
                 return;
             }
             try {
                 const result = JSON.parse(stdout.trim());
                 resolve(result);
             } catch {
-                reject(new Error(`Python 출력 파싱 실패: ${stdout}`));
+                reject(new Error('Python 출력 파싱 실패'));
             }
         });
     });
@@ -155,7 +155,7 @@ async function uploadToStorage(localPath: string, storagePath: string): Promise<
         });
 
     if (error) {
-        console.error(`업로드 실패 (${storagePath}):`, error.message);
+        console.error('업로드 실패:', storagePath);
         return null;
     }
 
@@ -369,7 +369,7 @@ export async function POST(request: Request) {
             .eq('id', reviewId);
 
         if (updateError) {
-            throw new Error(`DB 업데이트 실패: ${updateError.message}`);
+            throw new Error('DB 업데이트 실패');
         }
 
         // 9. OCR 성공 후: 이미지를 WebP로 압축하여 스토리지 용량 절약
@@ -428,7 +428,7 @@ export async function POST(request: Request) {
     } catch (err) {
         console.error('OCR 처리 오류:', err);
         return NextResponse.json(
-            { error: err instanceof Error ? err.message : 'Unknown error' },
+            { error: 'OCR 처리에 실패했습니다.' },
             { status: 500 }
         );
     } finally {

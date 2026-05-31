@@ -29,6 +29,7 @@ describe('admin address consistency explanations', () => {
 
     expect(getAddressConsistencyLabel({ geocoding_success: false, geocoding_false_stage: 2 })).toBe('False');
     expect(getAddressConsistencyDisplayLabel({ geocoding_success: false, geocoding_false_stage: 2 })).toBe('불일치');
+    expect(getAddressConsistencyDisplayLabel({ geocoding_success: true })).toBe('일치');
     expect(explanation.headline).toContain('불일치');
     expect(explanation.reason).toBe('2단계 실패: 20m 이내 후보 없음');
     expect(explanation.evidence).toContain('원본 주소: 경기도 안양시');
@@ -129,7 +130,7 @@ describe('admin address consistency explanations', () => {
     expect(isGeocodeRecoveredReviewQueue(record)).toBe(true);
     expect(getAddressConsistencyReviewQueueInfo(record)).toEqual({
       queue: 'geocode_recovered_review',
-      label: '추가 확인',
+      label: '검토',
       reason: '주소 지오코딩은 회복됐지만 지도 상호 후보가 없습니다.',
     });
   });
@@ -175,7 +176,7 @@ describe('admin address consistency explanations', () => {
         },
       },
     })).toMatchObject({
-      label: '추가 확인',
+      label: '검토',
       tone: 'info',
     });
   });
@@ -202,10 +203,10 @@ describe('admin address consistency explanations', () => {
     } as const;
 
     expect(getAddressConsistencyLabel(record)).toBe('Review');
-    expect(getAddressConsistencyDisplayLabel(record)).toBe('추가 확인');
+    expect(getAddressConsistencyDisplayLabel(record)).toBe('검토');
     expect(explainAddressConsistency(record)).toMatchObject({
-      label: '추가 확인',
-      headline: expect.stringContaining('추가 확인'),
+      label: '검토',
+      headline: expect.stringContaining('검토'),
       reason: '주소 지오코딩은 회복됐지만 지도 상호 후보가 없습니다.',
     });
   });
@@ -243,14 +244,14 @@ describe('admin address consistency explanations', () => {
     } as const;
 
     expect(getAddressConsistencyLabel(record)).toBe('Candidate');
-    expect(getAddressConsistencyDisplayLabel(record)).toBe('승격 후보');
+    expect(getAddressConsistencyDisplayLabel(record)).toBe('검토');
     expect(canApproveAddressConsistencyRecord(record)).toBe(false);
     expect(getAddressConsistencyOperatorGuidance(record)).toMatchObject({
-      label: '승격 후보',
+      label: '검토',
       tone: 'info',
     });
     expect(explainAddressConsistency(record)).toMatchObject({
-      label: '승격 후보',
+      label: '검토',
       headline: expect.stringContaining('자동 일치 처리하지 않고'),
       reason: expect.stringContaining('AHP 98.6점'),
     });
@@ -308,7 +309,7 @@ describe('admin address consistency explanations', () => {
     ]));
   });
 
-  test('summarizes optional AHP 98+ review metadata with guarded fallback', () => {
+  test('summarizes optional AHP 98+ review metadata with guarded redaction', () => {
     expect(getAddressConsistencyAhpSummary({
       geocoding_success: false,
       geocoding_false_stage: 2,
