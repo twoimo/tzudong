@@ -58,6 +58,58 @@ const ADMIN_CONSOLE_RESPONSIVE_LAYOUT_CLASSES = [
   "xl:grid-cols-4",
   "xl:grid-cols-[1.1fr_0.9fr]",
 ] as const;
+const ADMIN_DASHBOARD_STYLE_CLASSES = [
+  // The KPI dashboard builds several color/status classes from typed arrays.
+  // In dev, incomplete Tailwind regeneration can omit those literal classes
+  // from the route CSS chunk, leaving bars gray and badges unstyled.
+  "font-sans",
+  "md:block",
+  "md:flex",
+  "md:hidden",
+  "md:flex-row",
+  "md:flex-wrap",
+  "md:items-start",
+  "md:justify-between",
+  "md:gap-1",
+  "md:w-auto",
+  "md:overflow-visible",
+  "md:pb-0",
+  "sm:inline",
+  "bg-sky-50",
+  "bg-sky-500",
+  "bg-teal-500",
+  "bg-rose-50",
+  "bg-rose-500",
+  "bg-orange-50",
+  "bg-amber-500",
+  "bg-amber-600",
+  "bg-violet-500",
+  "text-white",
+  "text-teal-700",
+  "text-rose-700",
+  "border-sky-500/25",
+  "border-rose-500/25",
+  "border-orange-500/25",
+  "dark:bg-sky-400",
+  "dark:bg-sky-500",
+  "dark:bg-sky-950/35",
+  "dark:bg-teal-400",
+  "dark:bg-teal-500",
+  "dark:bg-rose-400",
+  "dark:bg-rose-500",
+  "dark:bg-rose-950/35",
+  "dark:bg-orange-950/35",
+  "dark:bg-amber-400",
+  "dark:bg-amber-500",
+  "dark:bg-violet-400",
+  "dark:bg-violet-500",
+  "dark:text-white",
+  "dark:text-teal-300",
+  "dark:text-rose-300",
+  "dark:border-sky-400/30",
+  "dark:border-rose-400/30",
+  "dark:border-orange-400/30",
+] as const;
 const MOBILE_BOTTOM_NAV_CLASSES = [
   // Direct mobile routes render MobileBottomNav without the home CSS chunk.
   // Keep the reference bottom-nav typography and active-state utilities present on every route.
@@ -92,6 +144,7 @@ const config: Config = {
   safelist: [
     ...ADMIN_EVALUATION_RESPONSIVE_DISPLAY_CLASSES,
     ...ADMIN_CONSOLE_RESPONSIVE_LAYOUT_CLASSES,
+    ...ADMIN_DASHBOARD_STYLE_CLASSES,
     ...MOBILE_BOTTOM_NAV_CLASSES,
     ...LEADERBOARD_RANK_ICON_CLASSES,
     // MyPage profile desktop matrix depends on display: contents + equal row tracks.
