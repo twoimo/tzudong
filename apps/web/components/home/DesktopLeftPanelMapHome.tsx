@@ -1,7 +1,11 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { Clock, MapPin, TrendingUp } from 'lucide-react';
 
 import { StampCard } from '@/components/stamp/StampCard';
@@ -15,7 +19,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { incrementSearchCount } from '@/lib/search-count';
 import {
-  fetchLatestRestaurants,
+  fetchLatestRestaurantPage,
   fetchPopularRestaurants,
   getLatestRestaurantsQueryKey,
   getPopularRestaurantsQueryKey,
@@ -32,11 +36,10 @@ type DesktopLeftPanelMapHomeProps = {
 };
 
 const POPULAR_RESTAURANT_LIMIT = 5;
-const POPULAR_RESTAURANT_QUERY_LIMIT = 20;
-const LATEST_RESTAURANT_LIMIT = 10;
-const LATEST_RESTAURANT_QUERY_LIMIT = 24;
-const LATEST_RESTAURANT_DEDUPED_QUERY_LIMIT =
-  LATEST_RESTAURANT_LIMIT + POPULAR_RESTAURANT_LIMIT;
+const POPULAR_RESTAURANT_QUERY_LIMIT = 60;
+const LATEST_RESTAURANT_INITIAL_RENDER_COUNT = 3;
+const LATEST_RESTAURANT_RENDER_BATCH_SIZE = 3;
+const LATEST_RESTAURANT_PAGE_FETCH_LIMIT = 12;
 const latestRestaurantSortOptions: Array<{
   value: LatestRestaurantSort;
   label: string;
@@ -97,6 +100,10 @@ export default function DesktopLeftPanelMapHome({
   >({});
   const [latestRestaurantSort, setLatestRestaurantSort] =
     useState<LatestRestaurantSort>('latest');
+  const [visibleLatestRestaurantCount, setVisibleLatestRestaurantCount] =
+    useState(LATEST_RESTAURANT_INITIAL_RENDER_COUNT);
+  const latestRestaurantScrollRootRef = useRef<HTMLDivElement | null>(null);
+  const latestRestaurantLoadMoreRef = useRef<HTMLDivElement | null>(null);
   const desktopLeftPanelHomePopularQueryKey = useMemo(
     () =>
       getPopularRestaurantsQueryKey({
@@ -109,7 +116,7 @@ export default function DesktopLeftPanelMapHome({
   const desktopLeftPanelHomeLatestQueryKey = useMemo(
     () =>
       getLatestRestaurantsQueryKey({
-        limit: LATEST_RESTAURANT_DEDUPED_QUERY_LIMIT,
+        limit: LATEST_RESTAURANT_PAGE_FETCH_LIMIT,
         sort: latestRestaurantSort,
         selectedRegion,
         isKoreanOnly,
@@ -134,34 +141,151 @@ export default function DesktopLeftPanelMapHome({
     staleTime: 1000 * 60 * 10,
     gcTime: 1000 * 60 * 30,
   });
-  const { data: latestRestaurants = [], isLoading: isLatestLoading } = useQuery({
+  const {
+    data: latestRestaurantPages,
+    fetchNextPage: fetchNextLatestRestaurantPage,
+    hasNextPage: hasNextLatestRestaurantPage,
+    isFetchingNextPage: isFetchingNextLatestRestaurantPage,
+    isLoading: isLatestLoading,
+  } = useInfiniteQuery({
     queryKey: desktopLeftPanelHomeLatestQueryKey,
-    queryFn: async () => {
+    initialPageParam: 0,
+    queryFn: async ({ pageParam }) => {
       try {
-        return await fetchLatestRestaurants({
-          limit: LATEST_RESTAURANT_DEDUPED_QUERY_LIMIT,
-          fetchLimit: LATEST_RESTAURANT_QUERY_LIMIT,
+        return await fetchLatestRestaurantPage({
+          offset: Number(pageParam) || 0,
+          fetchLimit: LATEST_RESTAURANT_PAGE_FETCH_LIMIT,
           sort: latestRestaurantSort,
           selectedRegion,
           isKoreanOnly,
         });
       } catch (error) {
         console.warn('좌측 패널 최신 맛집 조회 실패:', error);
-        return [];
+        return {
+          restaurants: [],
+          nextOffset: null,
+          hasMore: false,
+        };
       }
     },
+    getNextPageParam: (lastPage) => lastPage.nextOffset ?? undefined,
     staleTime: 1000 * 60 * 10,
     gcTime: 1000 * 60 * 30,
   });
+  const latestRestaurants = useMemo(
+    () =>
+      latestRestaurantPages?.pages.flatMap((page) => page.restaurants) ?? [],
+    [latestRestaurantPages],
+  );
   const visibleLatestRestaurants = useMemo(() => {
     const popularRestaurantIds = new Set(
       popularRestaurants.map((restaurant) => restaurant.id),
     );
+    const seenRestaurantIds = new Set<string>();
+    const dedupedRestaurants: Restaurant[] = [];
 
-    return latestRestaurants
-      .filter((restaurant) => !popularRestaurantIds.has(restaurant.id))
-      .slice(0, LATEST_RESTAURANT_LIMIT);
+    latestRestaurants.forEach((restaurant) => {
+      if (
+        popularRestaurantIds.has(restaurant.id) ||
+        seenRestaurantIds.has(restaurant.id)
+      ) {
+        return;
+      }
+
+      seenRestaurantIds.add(restaurant.id);
+      dedupedRestaurants.push(restaurant);
+    });
+
+    return dedupedRestaurants;
   }, [latestRestaurants, popularRestaurants]);
+  const renderedLatestRestaurants = useMemo(
+    () => visibleLatestRestaurants.slice(0, visibleLatestRestaurantCount),
+    [visibleLatestRestaurantCount, visibleLatestRestaurants],
+  );
+  const hasBufferedLatestRestaurants =
+    visibleLatestRestaurantCount < visibleLatestRestaurants.length;
+  const hasMoreLatestRestaurants =
+    hasBufferedLatestRestaurants || Boolean(hasNextLatestRestaurantPage);
+
+  useEffect(() => {
+    setVisibleLatestRestaurantCount(LATEST_RESTAURANT_INITIAL_RENDER_COUNT);
+  }, [isKoreanOnly, latestRestaurantSort, selectedRegion]);
+
+  const showMoreLatestRestaurants = useCallback(() => {
+    if (hasBufferedLatestRestaurants) {
+      setVisibleLatestRestaurantCount((currentCount) =>
+        Math.min(
+          currentCount + LATEST_RESTAURANT_RENDER_BATCH_SIZE,
+          visibleLatestRestaurants.length,
+        ),
+      );
+      return;
+    }
+
+    if (hasNextLatestRestaurantPage && !isFetchingNextLatestRestaurantPage) {
+      void fetchNextLatestRestaurantPage();
+    }
+  }, [
+    fetchNextLatestRestaurantPage,
+    hasBufferedLatestRestaurants,
+    hasNextLatestRestaurantPage,
+    isFetchingNextLatestRestaurantPage,
+    visibleLatestRestaurants.length,
+  ]);
+
+  useEffect(() => {
+    if (
+      isLatestLoading ||
+      visibleLatestRestaurants.length > 0 ||
+      !hasNextLatestRestaurantPage ||
+      isFetchingNextLatestRestaurantPage
+    ) {
+      return;
+    }
+
+    void fetchNextLatestRestaurantPage();
+  }, [
+    fetchNextLatestRestaurantPage,
+    hasNextLatestRestaurantPage,
+    isFetchingNextLatestRestaurantPage,
+    isLatestLoading,
+    visibleLatestRestaurants.length,
+  ]);
+
+  useEffect(() => {
+    const loadMoreNode = latestRestaurantLoadMoreRef.current;
+    if (
+      !loadMoreNode ||
+      isLatestLoading ||
+      !hasMoreLatestRestaurants ||
+      typeof IntersectionObserver === 'undefined'
+    ) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          showMoreLatestRestaurants();
+        }
+      },
+      {
+        root: latestRestaurantScrollRootRef.current,
+        rootMargin: '240px 0px',
+      },
+    );
+
+    observer.observe(loadMoreNode);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [
+    hasMoreLatestRestaurants,
+    isLatestLoading,
+    showMoreLatestRestaurants,
+    renderedLatestRestaurants.length,
+  ]);
 
   const handleRestaurantOpen = useCallback(
     (restaurant: Restaurant) => {
@@ -195,6 +319,7 @@ export default function DesktopLeftPanelMapHome({
     >
       <div
         className="h-full overflow-y-auto pb-4"
+        ref={latestRestaurantScrollRootRef}
         data-desktop-left-panel-home-scroll="true"
       >
         <div
@@ -302,7 +427,7 @@ export default function DesktopLeftPanelMapHome({
                 <span>최근 추가된 맛집</span>
               </h2>
               <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">
-                도장 카드처럼 한눈에 보는 맛집 10곳
+                먼저 3곳을 보여주고 스크롤하면 이어서 불러와요
               </p>
             </div>
             <Select
@@ -343,32 +468,64 @@ export default function DesktopLeftPanelMapHome({
                 aria-label="최근 추가된 맛집 로딩 중"
                 data-desktop-left-panel-latest-skeleton="true"
               >
-                {Array.from({ length: LATEST_RESTAURANT_LIMIT }, (_, index) => (
-                  <DesktopRestaurantCardSkeleton key={index} />
-                ))}
+                {Array.from(
+                  { length: LATEST_RESTAURANT_INITIAL_RENDER_COUNT },
+                  (_, index) => (
+                    <DesktopRestaurantCardSkeleton key={index} />
+                  ),
+                )}
               </div>
             ) : visibleLatestRestaurants.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-border bg-muted/20 px-3 py-5 text-center text-xs text-muted-foreground">
                 새로 추가된 맛집이 준비되면 최신순으로 보여드릴게요.
               </div>
             ) : (
-              visibleLatestRestaurants.map((restaurant) => (
-                <StampCard
-                  key={restaurant.id}
-                  restaurant={restaurant}
-                  isVisited={false}
-                  isUserStampsReady={false}
-                  currentThumbnailIndex={
-                    latestThumbnailIndexes[restaurant.id] ?? 0
-                  }
-                  onThumbnailChange={handleLatestThumbnailChange}
-                  onClick={handleRestaurantOpen}
-                  size="default"
-                  stampSize="compact"
-                  showAddress
-                  categoryFallback="맛집"
-                />
-              ))
+              <>
+                {renderedLatestRestaurants.map((restaurant) => (
+                  <StampCard
+                    key={restaurant.id}
+                    restaurant={restaurant}
+                    isVisited={false}
+                    isUserStampsReady={false}
+                    currentThumbnailIndex={
+                      latestThumbnailIndexes[restaurant.id] ?? 0
+                    }
+                    onThumbnailChange={handleLatestThumbnailChange}
+                    onClick={handleRestaurantOpen}
+                    size="default"
+                    stampSize="compact"
+                    showAddress
+                    categoryFallback="맛집"
+                  />
+                ))}
+                {hasMoreLatestRestaurants ? (
+                  <div
+                    ref={latestRestaurantLoadMoreRef}
+                    className="rounded-2xl border border-dashed border-border bg-muted/20 px-3 py-3 text-center"
+                    data-desktop-left-panel-latest-load-more="true"
+                  >
+                    {isFetchingNextLatestRestaurantPage ? (
+                      <div
+                        className="grid grid-cols-1 gap-3"
+                        role="status"
+                        aria-live="polite"
+                        aria-label="최근 추가된 맛집 추가 로딩 중"
+                      >
+                        <DesktopRestaurantCardSkeleton />
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={showMoreLatestRestaurants}
+                        className="text-xs font-semibold text-primary transition-colors hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                        aria-label="최근 추가된 맛집 더 보기"
+                      >
+                        스크롤하면 더 보여드릴게요
+                      </button>
+                    )}
+                  </div>
+                ) : null}
+              </>
             )}
           </div>
         </div>

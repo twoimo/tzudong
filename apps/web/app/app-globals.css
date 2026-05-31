@@ -106,6 +106,7 @@ All colors MUST be HSL.
     --mobile-sheet-header-progress: 0;
     --mobile-sheet-header-offset: 0px;
     --app-header-height: 56px;
+    --admin-sidebar-expanded-max-width: min(18rem, 28vw);
 
     --sidebar-background: 38 30% 98%;
     --sidebar-foreground: 24 10% 10%;
@@ -422,15 +423,15 @@ div[style*="z-index"] > div > .custom-marker {
 
 @media (min-width: 768px) {
   [data-admin-console-layout="sidebar-content"] {
-    grid-template-columns: fit-content(24rem) minmax(0, 1fr);
+    grid-template-columns: fit-content(var(--admin-sidebar-expanded-max-width)) minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr);
   }
 
   [data-admin-console-layout="sidebar-content"]
     > [data-admin-left-panel-expanded="true"] {
     width: max-content;
-    min-width: 13.5rem;
-    max-width: min(24rem, 32vw);
+    min-width: 14.25rem;
+    max-width: var(--admin-sidebar-expanded-max-width);
   }
 
   [data-admin-console-layout="sidebar-content"][data-admin-console-sidebar-collapsed="true"] {
@@ -440,7 +441,7 @@ div[style*="z-index"] > div > .custom-marker {
 
 @media (min-width: 1024px) {
   [data-admin-console-layout="sidebar-content"] {
-    grid-template-columns: fit-content(24rem) minmax(0, 1fr);
+    grid-template-columns: fit-content(var(--admin-sidebar-expanded-max-width)) minmax(0, 1fr);
   }
 
   [data-admin-console-layout="sidebar-content"][data-admin-console-sidebar-collapsed="true"] {
@@ -450,7 +451,7 @@ div[style*="z-index"] > div > .custom-marker {
 
 @media (min-width: 1280px) {
   [data-admin-console-layout="sidebar-content"] {
-    grid-template-columns: fit-content(24rem) minmax(0, 1fr);
+    grid-template-columns: fit-content(var(--admin-sidebar-expanded-max-width)) minmax(0, 1fr);
   }
 
   [data-admin-console-layout="sidebar-content"][data-admin-console-sidebar-collapsed="true"] {

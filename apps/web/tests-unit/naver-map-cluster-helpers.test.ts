@@ -7,6 +7,9 @@ import {
     getSeoulDistrictTargetZoom,
     getSuperclusterTargetZoom,
     quantizeNaverClusterZoom,
+    resolveNaverIslandClusterViewportByRegion,
+    resolveNaverIslandClusterViewportForRestaurants,
+    resolveNaverIslandFitBoundsOptions,
     resolveNaverClusterBoundsBbox,
     resolveNaverClusterUpdateBbox,
     shouldHideInSeoulDistrictMode,
@@ -35,6 +38,52 @@ describe('naver map cluster helpers', () => {
         expect(getSuperclusterTargetZoom(8, 7, 12)).toBe(14);
         expect(getSuperclusterTargetZoom(8, 12, 12)).toBe(14);
         expect(getSuperclusterTargetZoom(8, 15, 12)).toBe(15);
+    });
+
+    test('resolves island cluster viewport by region name or restaurant candidates', () => {
+        expect(resolveNaverIslandClusterViewportByRegion('제주특별자치도')?.center).toEqual({
+            lat: 33.3625,
+            lng: 126.5339,
+        });
+        expect(resolveNaverIslandClusterViewportByRegion('경상북도 울릉도')?.maxZoom).toBe(12);
+        expect(resolveNaverIslandClusterViewportByRegion('서울특별시')).toBeNull();
+
+        expect(resolveNaverIslandClusterViewportForRestaurants([
+            { road_address: '제주특별자치도 제주시 애월읍', lat: 33.45, lng: 126.31 },
+            { road_address: '제주 서귀포시 성산읍', lat: 33.43, lng: 126.93 },
+        ])?.maxZoom).toBe(10);
+        expect(resolveNaverIslandClusterViewportForRestaurants([
+            { road_address: '경상북도 울릉군 울릉읍', lat: 37.48, lng: 130.9 },
+        ])?.maxZoom).toBe(12);
+        expect(resolveNaverIslandClusterViewportForRestaurants([
+            { road_address: '서울특별시 강남구', lat: 37.5, lng: 127.0 },
+        ])).toBeNull();
+    });
+
+    test('builds fitBounds margins that leave room for mobile sheets and desktop panels', () => {
+        expect(resolveNaverIslandFitBoundsOptions({
+            isMobileOrTablet: true,
+            maxZoom: 10,
+            viewportOffset: 0,
+        })).toEqual({
+            top: 80,
+            right: 48,
+            bottom: 168,
+            left: 48,
+            maxZoom: 10,
+        });
+
+        expect(resolveNaverIslandFitBoundsOptions({
+            isMobileOrTablet: false,
+            maxZoom: 12,
+            viewportOffset: 360.2,
+        })).toEqual({
+            top: 72,
+            right: 72,
+            bottom: 72,
+            left: 433,
+            maxZoom: 12,
+        });
     });
 
     test('quantizes supercluster zoom buckets in two-level steps', () => {

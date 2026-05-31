@@ -79,6 +79,7 @@ describe('naver map render plan helpers', () => {
         const restaurants = [makeRestaurant({ id: 'visible' })];
         const ids = buildRenderTargetIdsForSignature({
             activeSearchedRestaurant: makeRestaurant({ id: 'searched', lat: 38, lng: 128 }),
+            selectedRestaurant: null,
             clusters: [],
             displayRestaurantIds: new Set(['visible']),
             displayRestaurants: restaurants,
@@ -94,6 +95,49 @@ describe('naver map render plan helpers', () => {
         expect(ids[0]).toContain('restaurant-visible');
         expect(ids[1]).toContain('searched-searched');
         expect(ids[2]).toContain('regional-서울:2:37.500000:127.000000');
+    });
+
+    test('includes visit count in marker render signature', () => {
+        const ids = buildRenderTargetIdsForSignature({
+            activeSearchedRestaurant: null,
+            selectedRestaurant: null,
+            clusters: [],
+            displayRestaurantIds: new Set(['multi-visit']),
+            displayRestaurants: [makeRestaurant({
+                id: 'multi-visit',
+                mergedYoutubeLinks: ['https://youtu.be/one', 'https://youtu.be/two'],
+            })],
+            mergedRestaurantById: new Map(),
+            nextIsClusterMode: false,
+            nextIsRegionalClusterMode: false,
+            nextIsSeoulDistrictMode: false,
+            regionalClusters: [],
+            restaurantById: new Map(),
+            seoulClustersToRender: [],
+            seoulIndividualIds: [],
+        });
+
+        expect(ids[0]).toContain('restaurant-multi-visit:37.500000:127.000000:한식:2');
+    });
+
+    test('includes selected restaurant outside display data in marker render signature', () => {
+        const ids = buildRenderTargetIdsForSignature({
+            activeSearchedRestaurant: null,
+            selectedRestaurant: makeRestaurant({ id: 'selected', lat: 38, lng: 128 }),
+            clusters: [],
+            displayRestaurantIds: new Set(['visible']),
+            displayRestaurants: [makeRestaurant({ id: 'visible' })],
+            mergedRestaurantById: new Map(),
+            nextIsClusterMode: false,
+            nextIsRegionalClusterMode: false,
+            nextIsSeoulDistrictMode: false,
+            regionalClusters: [],
+            restaurantById: new Map(),
+            seoulClustersToRender: [],
+            seoulIndividualIds: [],
+        });
+
+        expect(ids.some((id) => id.includes('selected-selected'))).toBe(true);
     });
 
     test('reports marker render performance only for large development marker sets', () => {
