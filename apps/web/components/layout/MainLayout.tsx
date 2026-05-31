@@ -110,6 +110,7 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
 
   const shouldSuppressNoncriticalChrome =
     pathname?.startsWith("/auth/") ||
+    pathname?.startsWith("/admin") ||
     pathname === "/feed" ||
     pathname === "/stamp" ||
     pathname === "/leaderboard";
