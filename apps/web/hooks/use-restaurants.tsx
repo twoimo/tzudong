@@ -556,7 +556,7 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
         queryFn: async () => {
             // [OPTIMIZATION] 필요한 필드만 선택하여 네트워크 전송량 및 파싱 시간 감소
             const selectFields = compact
-                ? "id, name:approved_name, approved_name, lat, lng, road_address, jibun_address, categories, review_count, status"
+                ? "id, name:approved_name, approved_name, lat, lng, road_address, jibun_address, categories, review_count, youtube_link, tzuyang_review, status"
                 : "id, name:approved_name, lat, lng, road_address, jibun_address, categories, phone, review_count, youtube_link, tzuyang_review, youtube_meta, english_address, status, created_at";
 
             const query: Array<[string, string | number]> = [

@@ -254,15 +254,6 @@ function normalizeAdminThemePreference(
   return "light";
 }
 
-function getNextAdminThemePreference(
-  currentTheme: AdminThemePreference,
-): AdminThemePreference {
-  if (currentTheme === "light") return "dark";
-  if (currentTheme === "dark") return "system";
-
-  return "light";
-}
-
 function getSidebarBadgeClassName(sectionLabel: string, isActive: boolean) {
   if (isActive) return "text-primary-foreground/75";
   if (sectionLabel === "검수") return "text-amber-700 dark:text-amber-300";
@@ -7549,24 +7540,6 @@ function AdminSidebar({
     applyAdminThemePreference(nextTheme);
   }, []);
 
-  const toggleThemePreference = () => {
-    updateThemePreference(getNextAdminThemePreference(themePreference));
-  };
-
-  const themeToggleLabel =
-    themePreference === "light"
-      ? "다크모드로 전환"
-      : themePreference === "dark"
-        ? "시스템 모드로 전환"
-        : "라이트모드로 전환";
-  const themeToggleText =
-    themePreference === "light"
-      ? "다크"
-      : themePreference === "dark"
-        ? "시스템"
-        : "라이트";
-  const isDarkThemePreference = themePreference === "dark";
-
   const handleMenuNavigation = (moduleId: AdminModuleId) => {
     onSelectModule(moduleId);
     setIsAdminMenuOpen(false);
@@ -7692,12 +7665,12 @@ function AdminSidebar({
     return <Fragment key={item.id}>{button}</Fragment>;
   };
 
-  const renderOrderControls = () => (
+  const renderOrderControls = (placement: "dropdown" | "sidebar") => (
     <div
       id="admin-sidebar-order-editor"
       className="rounded-2xl border border-border bg-background/70 p-2"
       aria-label="메뉴 순서 설정"
-      data-admin-sidebar-order-editor="dropdown"
+      data-admin-sidebar-order-editor={placement}
     >
       <div className="mb-2 flex items-center justify-between gap-2 px-1">
         <div className="min-w-0">
@@ -7859,6 +7832,51 @@ function AdminSidebar({
     </div>
   );
 
+  const renderThemeControls = (placement: "dropdown" | "sidebar") => {
+    const isSidebarPlacement = placement === "sidebar";
+    const isCompactSidebar = isSidebarPlacement && isCollapsed;
+
+    return (
+      <div
+        className={cn(
+          "border border-border bg-white p-1 shadow-inner dark:bg-card",
+          isCompactSidebar
+            ? "flex w-full flex-col items-center gap-1 rounded-2xl"
+            : "grid w-full grid-cols-3 gap-1 rounded-full",
+        )}
+        aria-label="화면 모드 선택"
+        data-admin-sidebar-theme-toggle="true"
+        data-admin-sidebar-preference-placement={placement}
+        data-admin-sidebar-theme-layout={placement}
+      >
+        {([
+          ["light", "화이트 모드", Sun],
+          ["dark", "다크모드", Moon],
+          ["system", "시스템 설정", Monitor],
+        ] as const).map(([theme, label, Icon]) => (
+          <Button
+            key={theme}
+            type="button"
+            variant="ghost"
+            size="sm"
+            className={cn(
+              "h-8 rounded-full border border-transparent p-0 text-muted-foreground shadow-none transition-[background-color,color,box-shadow,transform] duration-150 hover:bg-background/80 hover:text-foreground focus-visible:ring-primary focus-visible:ring-offset-background",
+              isCompactSidebar ? "w-9" : "w-full min-w-0",
+              themePreference === theme &&
+                "bg-primary text-primary-foreground shadow-primary hover:bg-primary hover:text-primary-foreground",
+            )}
+            aria-label={`${label}으로 변경`}
+            aria-pressed={themePreference === theme}
+            onClick={() => updateThemePreference(theme)}
+          >
+            <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+            <span className="sr-only">{label}</span>
+          </Button>
+        ))}
+      </div>
+    );
+  };
+
   const renderAdminMenuContent = (contentId: string) => (
     <PopoverContent
       id={contentId}
@@ -7906,59 +7924,9 @@ function AdminSidebar({
             ))}
           </nav>
 
-          <div
-            className="mt-2 rounded-2xl border border-border bg-background/70 p-2"
-            data-admin-sidebar-theme-toggle="true"
-          >
-            <div className="mb-2 flex items-center justify-between gap-2 px-1">
-              <div className="min-w-0">
-                <p className="text-xs font-bold text-foreground">화면 모드</p>
-                <p className="mt-0.5 text-[11px] text-muted-foreground">
-                  라이트, 다크, 시스템 설정을 여기서 바꿉니다.
-                </p>
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-7 shrink-0 rounded-lg px-2 text-[11px] font-bold"
-                aria-label={themeToggleLabel}
-                aria-pressed={themePreference !== "light"}
-                onClick={toggleThemePreference}
-              >
-                {isDarkThemePreference ? (
-                  <Monitor className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
-                ) : themePreference === "system" ? (
-                  <Sun className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
-                ) : (
-                  <Moon className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
-                )}
-                {themeToggleText}
-              </Button>
-            </div>
-            <div className="grid grid-cols-3 gap-1">
-              {([
-                ["light", "라이트", Sun],
-                ["dark", "다크", Moon],
-                ["system", "시스템", Monitor],
-              ] as const).map(([theme, label, Icon]) => (
-                <Button
-                  key={theme}
-                  type="button"
-                  variant={themePreference === theme ? "default" : "outline"}
-                  size="sm"
-                  className="h-8 rounded-xl px-2 text-[11px] font-bold"
-                  aria-pressed={themePreference === theme}
-                  onClick={() => updateThemePreference(theme)}
-                >
-                  <Icon className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
-                  {label}
-                </Button>
-              ))}
-            </div>
-          </div>
+          <div className="mt-2">{renderThemeControls("dropdown")}</div>
 
-      <div className="mt-2">{renderOrderControls()}</div>
+      <div className="mt-2">{renderOrderControls("dropdown")}</div>
     </PopoverContent>
   );
 
@@ -8024,8 +7992,8 @@ function AdminSidebar({
 
       <aside
         className={cn(
-          "relative z-30 hidden h-full min-h-0 w-full shrink-0 flex-col overflow-x-hidden overflow-y-auto border-r border-border bg-gradient-to-b from-card via-card to-background/95 p-2 shadow-sm transition-[width,padding] duration-300 motion-reduce:transition-none md:flex",
-          isCollapsed && "md:items-center md:px-1.5",
+          "relative z-30 hidden h-full min-h-0 w-max shrink-0 flex-col overflow-x-hidden overflow-y-auto border-r border-border bg-gradient-to-b from-card via-card to-background/95 p-2 shadow-sm transition-[width,padding] duration-300 motion-reduce:transition-none md:flex md:min-w-[14.25rem] md:max-w-[var(--admin-sidebar-expanded-max-width)]",
+          isCollapsed && "md:w-[4.5rem] md:max-w-[4.5rem] md:items-center md:px-1.5",
         )}
         aria-label="관리자 콘솔 사이드바"
         data-admin-left-panel-expanded={isCollapsed ? "false" : "true"}
@@ -8064,7 +8032,7 @@ function AdminSidebar({
             <h2 className="truncate whitespace-nowrap text-sm font-bold tracking-[-0.03em] text-foreground text-pretty">
               관리자 콘솔
             </h2>
-            <p className="mt-0.5 truncate text-[11px] leading-4 text-muted-foreground">
+            <p className="mt-0.5 whitespace-nowrap text-[11px] leading-4 text-muted-foreground">
               현재 화면 · {activeSidebarLabel}
             </p>
           </div>
@@ -8120,6 +8088,94 @@ function AdminSidebar({
             </div>
           ))}
         </nav>
+
+        <div
+          className={cn(
+            "mt-auto border-t border-border/70 pt-2",
+            isCollapsed
+              ? "flex w-full flex-col items-center gap-1.5"
+              : "space-y-2",
+          )}
+          data-admin-sidebar-footer-actions="true"
+          aria-label="관리자 사이드바 설정"
+        >
+          {isCollapsed ? (
+            <>
+              {renderThemeControls("sidebar")}
+
+              <Popover>
+                <UiTooltipProvider delayDuration={120}>
+                  <UiTooltip>
+                    <UiTooltipTrigger asChild>
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-9 w-9 rounded-lg border border-border bg-background/70 p-0 text-muted-foreground hover:text-foreground"
+                          aria-label="메뉴 순서 설정 열기"
+                          data-admin-sidebar-order-trigger="collapsed"
+                        >
+                          <Menu className="h-4 w-4" aria-hidden="true" />
+                        </Button>
+                      </PopoverTrigger>
+                    </UiTooltipTrigger>
+                    <UiTooltipContent
+                      side="right"
+                      align="center"
+                      className={adminDashboardTooltipPortalClassName}
+                      data-admin-sidebar-collapsed-tooltip="true"
+                    >
+                      <AdminDashboardTooltipLinesPanel
+                        lines={["메뉴 순서", "섹션과 메뉴 위치 변경"]}
+                        dataAttribute="sidebar-collapsed"
+                        className="max-w-[14rem]"
+                      />
+                    </UiTooltipContent>
+                  </UiTooltip>
+                </UiTooltipProvider>
+                <PopoverContent
+                  side="right"
+                  align="end"
+                  sideOffset={10}
+                  className="max-h-[min(760px,calc(100dvh-24px))] w-[min(24rem,calc(100vw-24px))] overflow-y-auto rounded-2xl border-border bg-card p-2.5 shadow-primary"
+                  aria-label="메뉴 순서 설정"
+                >
+                  {renderOrderControls("sidebar")}
+                </PopoverContent>
+              </Popover>
+            </>
+          ) : (
+            <>
+              {renderThemeControls("sidebar")}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-9 w-full justify-start rounded-xl px-3 text-xs font-bold"
+                    aria-label="메뉴 순서 설정 열기"
+                    data-admin-sidebar-order-trigger="expanded"
+                  >
+                    <Menu className="mr-2 h-3.5 w-3.5" aria-hidden="true" />
+                    메뉴 순서 설정
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  side="right"
+                  align="end"
+                  sideOffset={10}
+                  className="max-h-[min(760px,calc(100dvh-24px))] w-[min(24rem,calc(100vw-24px))] overflow-y-auto rounded-2xl border-border bg-card p-2.5 shadow-primary"
+                  aria-label="메뉴 순서 설정"
+                >
+                  {renderOrderControls("sidebar")}
+                </PopoverContent>
+              </Popover>
+            </>
+          )}
+        </div>
+
       </aside>
     </>
   );

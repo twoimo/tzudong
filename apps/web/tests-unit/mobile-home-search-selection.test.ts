@@ -157,8 +157,8 @@ describe('mobile home search selection helpers', () => {
     });
 
     test('adds active searched restaurant to swipe candidates when it is outside display ids', () => {
-        const visibleRestaurant = makeRestaurant({ id: 'visible-1' });
-        const searchedRestaurant = makeRestaurant({ id: 'search-1' });
+        const visibleRestaurant = makeRestaurant({ id: 'visible-1', name: '보이는 식당', lat: 37.4, lng: 127.1 });
+        const searchedRestaurant = makeRestaurant({ id: 'search-1', name: '검색 식당', lat: 37.6, lng: 127.2 });
 
         expect(buildRestaurantsForSwipe({
             activeSearchedRestaurant: searchedRestaurant,
@@ -175,6 +175,38 @@ describe('mobile home search selection helpers', () => {
             displayRestaurantIds: new Set([searchedRestaurant.id]),
             displayRestaurants: [searchedRestaurant],
         }).map((restaurant) => restaurant.id)).toEqual(['search-1']);
+    });
+
+    test('keeps selected search result in swipe candidates after search ownership is released', () => {
+        const visibleRestaurant = makeRestaurant({ id: 'visible-1', name: '보이는 식당', lat: 37.4, lng: 127.1 });
+        const selectedRestaurant = makeRestaurant({ id: 'selected-search-result', name: '선택 식당', lat: 37.6, lng: 127.2 });
+
+        expect(buildRestaurantsForSwipe({
+            activeSearchedRestaurant: null,
+            selectedRestaurant,
+            displayRestaurantIds: new Set([visibleRestaurant.id]),
+            displayRestaurants: [visibleRestaurant],
+        }).map((restaurant) => restaurant.id)).toEqual(['visible-1', 'selected-search-result']);
+    });
+
+    test('does not duplicate selected restaurant that matches an existing display restaurant', () => {
+        const displayRestaurant = makeRestaurant({
+            id: 'canonical-display-id',
+            mergedRestaurants: [{ id: 'selected-search-result' } as NonNullable<Restaurant['mergedRestaurants']>[number]],
+        });
+        const selectedRestaurant = makeRestaurant({
+            id: 'selected-search-result',
+            name: displayRestaurant.name,
+            lat: displayRestaurant.lat,
+            lng: displayRestaurant.lng,
+        });
+
+        expect(buildRestaurantsForSwipe({
+            activeSearchedRestaurant: null,
+            selectedRestaurant,
+            displayRestaurantIds: new Set([displayRestaurant.id]),
+            displayRestaurants: [displayRestaurant],
+        }).map((restaurant) => restaurant.id)).toEqual(['canonical-display-id']);
     });
 
     test('adds the nearest fallback restaurant when only one visible restaurant remains after search', () => {
