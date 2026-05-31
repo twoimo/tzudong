@@ -2,6 +2,7 @@ export const ADMIN_SIDEBAR_SECTIONS = ["홈", "검수", "운영", "실험실"] a
 export const ADMIN_SIDEBAR_ITEM_IDS = [
   "overview",
   "restaurants",
+  "restaurant-refresh-history",
   "submissions",
   "reviews",
   "routes",
@@ -25,7 +26,7 @@ export const DEFAULT_ADMIN_SIDEBAR_ORDER: AdminSidebarOrderPreference = {
   sections: [...ADMIN_SIDEBAR_SECTIONS],
   items: {
     홈: ["overview"],
-    검수: ["restaurants", "submissions", "reviews"],
+    검수: ["restaurants", "restaurant-refresh-history", "submissions", "reviews"],
     운영: ["routes", "storyboard", "banners", "users", "insights"],
     실험실: ["audit", "llm"],
   },
