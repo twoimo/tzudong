@@ -21,6 +21,12 @@ describe("admin sidebar order normalization", () => {
       "users",
       "insights",
     ]);
+
+    expect(DEFAULT_ADMIN_SIDEBAR_ORDER.items["실험실"]).toEqual([
+      "audit",
+      "youtube-thumbnail-generator",
+      "llm",
+    ]);
   });
 
   test("inserts newly known default items at their default slot on old saved orders", () => {
@@ -47,6 +53,12 @@ describe("admin sidebar order normalization", () => {
       "banners",
       "users",
       "insights",
+    ]);
+
+    expect(normalized.items["실험실"]).toEqual([
+      "audit",
+      "youtube-thumbnail-generator",
+      "llm",
     ]);
   });
 
