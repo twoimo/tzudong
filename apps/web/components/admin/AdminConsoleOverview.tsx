@@ -8038,7 +8038,7 @@ function AdminSidebar({
 
       <aside
         className={cn(
-          "scrollbar-hide relative z-30 hidden h-full min-h-0 w-max shrink-0 flex-col overflow-x-hidden overflow-y-auto overscroll-contain border-r border-border bg-gradient-to-b from-card via-card to-background/95 p-2 shadow-sm transition-[width,padding] duration-300 motion-reduce:transition-none md:flex",
+          "relative z-30 hidden h-full min-h-0 w-max shrink-0 flex-col overflow-hidden border-r border-border bg-gradient-to-b from-card via-card to-background/95 p-2 shadow-sm transition-[width,padding] duration-300 motion-reduce:transition-none md:flex",
           isCollapsed
             ? "md:w-[4.5rem] md:min-w-[4.5rem] md:max-w-[4.5rem] md:items-center md:px-1.5"
             : "md:min-w-[14.25rem] md:max-w-[var(--admin-sidebar-expanded-max-width)]",
@@ -8109,39 +8109,47 @@ function AdminSidebar({
           </Button>
         </div>
 
-        <nav
-          id="admin-console-menu"
-          aria-label="관리자 통합 메뉴"
+        <div
           className={cn(
-            "block min-h-0 flex-1 space-y-3 pt-2 pb-3",
-            isCollapsed && "md:flex md:w-full md:flex-col md:items-center",
+            "scrollbar-hide min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain pb-4 pt-2",
+            isCollapsed && "md:w-full",
           )}
-          data-admin-sidebar-section-list="spacious"
+          data-admin-sidebar-menu-scroll="hidden-scrollbar"
         >
-          {orderedSidebarSections.map((section) => (
-            <div
-              key={section.label}
-              className={cn(
-                "block space-y-1.5",
-                isCollapsed && "md:flex md:w-full md:flex-col md:items-center",
-              )}
-            >
-              <p
+          <nav
+            id="admin-console-menu"
+            aria-label="관리자 통합 메뉴"
+            className={cn(
+              "block space-y-3",
+              isCollapsed && "md:flex md:w-full md:flex-col md:items-center",
+            )}
+            data-admin-sidebar-section-list="spacious"
+          >
+            {orderedSidebarSections.map((section) => (
+              <div
+                key={section.label}
                 className={cn(
-                  "px-2.5 text-[11px] font-semibold tracking-[0.08em] text-muted-foreground transition-opacity duration-100 motion-reduce:transition-none",
-                  (!showLabels || isCollapsed) && "md:h-px md:px-0 md:opacity-0",
+                  "block space-y-1.5",
+                  isCollapsed && "md:flex md:w-full md:flex-col md:items-center",
                 )}
               >
-                {section.label}
-              </p>
-              {section.items.map((item) => renderMenuItem(item, section, "sidebar"))}
-            </div>
-          ))}
-        </nav>
+                <p
+                  className={cn(
+                    "px-2.5 text-[11px] font-semibold tracking-[0.08em] text-muted-foreground transition-opacity duration-100 motion-reduce:transition-none",
+                    (!showLabels || isCollapsed) && "md:h-px md:px-0 md:opacity-0",
+                  )}
+                >
+                  {section.label}
+                </p>
+                {section.items.map((item) => renderMenuItem(item, section, "sidebar"))}
+              </div>
+            ))}
+          </nav>
+        </div>
 
         <div
           className={cn(
-            "mt-auto border-t border-dashed border-border/70 pt-4",
+            "shrink-0 border-t border-dashed border-border/70 pt-4",
             isCollapsed
               ? "flex w-full flex-col items-center gap-2.5"
               : "space-y-3",
