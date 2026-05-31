@@ -38,6 +38,12 @@ import {
     isOcrForceRefreshRequested,
     OCR_DAILY_QUOTA,
 } from '@/lib/ocr/quota';
+import {
+    authenticateOcrRequest,
+    getOcrUploadRejectionForRequest,
+    OCR_MAX_INPUT_PIXELS,
+    readOcrImageFile,
+} from '@/lib/ocr/request-security';
 
 // --- 설정 ---
 
@@ -45,7 +51,7 @@ import {
 async function optimizeImage(buffer: Buffer): Promise<{ optimized: Buffer; savings: string }> {
     try {
         const originalSize = buffer.length;
-        const metadata = await sharp(buffer).metadata();
+        const metadata = await sharp(buffer, { limitInputPixels: OCR_MAX_INPUT_PIXELS }).metadata();
 
         // 영수증 OCR은 작은 글자/흐린 잉크가 핵심이라 과압축 시 모델이
         // 가게명·메뉴명을 오인식한다. 이미 2MB 이하이고 1800px 이하인
@@ -58,12 +64,12 @@ async function optimizeImage(buffer: Buffer): Promise<{ optimized: Buffer; savin
         // 큰 이미지만 완만하게 축소한다. 1024px/70%는 영수증 글자에 손실이 커서 피한다.
         let optimized: Buffer;
         if (metadata.width && metadata.width > 1600) {
-            optimized = await sharp(buffer)
+            optimized = await sharp(buffer, { limitInputPixels: OCR_MAX_INPUT_PIXELS })
                 .resize({ width: 1600 })
                 .jpeg({ quality: 85 })
                 .toBuffer();
         } else {
-            optimized = await sharp(buffer)
+            optimized = await sharp(buffer, { limitInputPixels: OCR_MAX_INPUT_PIXELS })
                 .jpeg({ quality: 85 })
                 .toBuffer();
         }
@@ -124,6 +130,19 @@ export async function POST(req: Request) {
     let failureProvider = 'unknown';
 
     try {
+        const uploadRejection = getOcrUploadRejectionForRequest(req.headers);
+        if (uploadRejection) {
+            return NextResponse.json({ error: uploadRejection.error }, { status: uploadRejection.status });
+        }
+
+        const auth = await authenticateOcrRequest(req);
+        if (!auth.ok) {
+            return NextResponse.json({ error: auth.error }, { status: auth.status });
+        }
+        const { supabase, user } = auth;
+        accessToken = auth.accessToken;
+        authenticatedUserId = user.id;
+
         const aiRuntime = await resolveOcrAiRuntimeConfig();
         const providerCandidates = [aiRuntime, ...aiRuntime.fallbackCandidates];
         const runnableCandidates = providerCandidates.filter(candidate => hasRunnableOcrCredentials([candidate]));
@@ -146,41 +165,11 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: '이미지가 제공되지 않았습니다' }, { status: 400 });
         }
 
-        if (!file.type.startsWith('image/')) {
-            return NextResponse.json({ error: '유효하지 않은 파일 형식입니다' }, { status: 400 });
+        const imageReadResult = await readOcrImageFile(file);
+        if (!imageReadResult.ok) {
+            return NextResponse.json({ error: imageReadResult.error }, { status: imageReadResult.status });
         }
-
-        const arrayBuffer = await file.arrayBuffer();
-        buffer = Buffer.from(arrayBuffer);
-
-        // [보안] 1. 사용자 인증 확인
-        const supabase = await createClient();
-        const {
-            data: { user: initialUser },
-            error: authError
-        } = await supabase.auth.getUser();
-        let user = initialUser;
-
-        if (!authError && user) {
-            const { data: { session } } = await supabase.auth.getSession();
-            accessToken = session?.access_token ?? null;
-        }
-
-        if (authError || !user) {
-            const authHeader = req.headers.get('Authorization');
-            if (authHeader?.startsWith('Bearer ')) {
-                const token = authHeader.split(' ')[1];
-                const { data: { user: headerUser }, error: headerError } = await supabase.auth.getUser(token);
-                if (headerError || !headerUser) {
-                    return NextResponse.json({ error: '로그인이 필요한 서비스입니다 (Token Invalid)' }, { status: 401 });
-                }
-                user = headerUser;
-                accessToken = token;
-            } else {
-                return NextResponse.json({ error: '로그인이 필요한 서비스입니다' }, { status: 401 });
-            }
-        }
-        authenticatedUserId = user.id;
+        buffer = imageReadResult.buffer;
 
         // [비용 절감] 2. 이미지 해시 계산 (캐싱용)
         const hashBuffer = crypto.createHash('sha256').update(buffer).digest();

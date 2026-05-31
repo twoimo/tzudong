@@ -44,8 +44,8 @@ export async function POST() {
         );
 
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error('GitHub API 오류:', response.status, errorText);
+            await response.text().catch(() => null);
+            console.error('GitHub API 오류:', response.status);
             return NextResponse.json(
                 { error: `GitHub Actions 트리거 실패: ${response.status}` },
                 { status: response.status }
@@ -60,7 +60,7 @@ export async function POST() {
     } catch (err) {
         console.error('OCR 트리거 오류:', err);
         return NextResponse.json(
-            { error: err instanceof Error ? err.message : 'Unknown error' },
+            { error: 'OCR 처리를 시작하지 못했습니다.' },
             { status: 500 }
         );
     }
@@ -97,8 +97,9 @@ export async function GET() {
         });
 
     } catch (err) {
+        console.error('OCR 처리 상태 조회 오류:', err);
         return NextResponse.json(
-            { error: err instanceof Error ? err.message : 'Unknown error' },
+            { error: 'OCR 처리 상태를 조회하지 못했습니다.' },
             { status: 500 }
         );
     }

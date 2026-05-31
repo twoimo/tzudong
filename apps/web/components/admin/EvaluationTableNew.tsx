@@ -649,7 +649,7 @@ export function EvaluationTable({
                 behavior: 'smooth'
               });
             } else {
-              // fallback
+              // Use native centering when scrollIntoView cannot honor the sticky header offset.
               rowElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
           }
@@ -1131,18 +1131,16 @@ export function EvaluationTable({
             {renderFilterDropdown(
               "geocoding_success",
               "주소 확인",
-              `확인됨 = 주소 근거와 좌표가 승인 가능한 수준으로 맞음
+              `일치 = 주소 근거와 좌표가 승인 가능한 수준으로 맞음
 불일치 = 후보는 찾았지만 원본 주소·좌표 조건을 통과하지 못함
-승격 후보 = 복수 근거가 강하지만 자동 일치가 아니라 사람 확인 후 정정 승인 대상
-추가 확인 = 주소는 회복됐지만 상호 후보 근거가 부족해 사람 확인이 필요함
+검토 = 복수 근거가 강하거나 주소는 회복됐지만 사람 확인이 필요함
 실패 = 주소 후보나 좌표를 만들지 못해 원본 주소 확인이 필요함
 삭제/Missing/미선택은 주소 불일치 집계에서 제외됨`,
               [
                 { value: 'all', label: '전체' },
-                { value: 'true', label: '확인됨' },
+                { value: 'true', label: '일치' },
                 { value: 'false_match', label: '불일치' },
-                { value: 'candidate', label: '승격 후보' },
-                { value: 'review', label: '추가 확인' },
+                { value: 'review', label: '검토' },
                 { value: 'false_geocode', label: '실패' },
               ]
             )}
@@ -1689,18 +1687,16 @@ export function EvaluationTable({
                 {renderFilterDropdown(
                   "geocoding_success",
                   "주소 확인",
-                  `확인됨 = 주소 근거와 좌표가 승인 가능한 수준으로 맞음
+                  `일치 = 주소 근거와 좌표가 승인 가능한 수준으로 맞음
 불일치 = 후보는 찾았지만 원본 주소·좌표 조건을 통과하지 못함
-승격 후보 = 복수 근거가 강하지만 자동 일치가 아니라 사람 확인 후 정정 승인 대상
-추가 확인 = 주소는 회복됐지만 상호 후보 근거가 부족해 사람 확인이 필요함
+검토 = 복수 근거가 강하거나 주소는 회복됐지만 사람 확인이 필요함
 실패 = 주소 후보나 좌표를 만들지 못해 원본 주소 확인이 필요함
 삭제/Missing/미선택은 주소 불일치 집계에서 제외됨`,
                   [
                     { value: 'all', label: '전체' },
-                    { value: 'true', label: '확인됨' },
+                    { value: 'true', label: '일치' },
                     { value: 'false_match', label: '불일치' },
-                    { value: 'candidate', label: '승격 후보' },
-                    { value: 'review', label: '추가 확인' },
+                    { value: 'review', label: '검토' },
                     { value: 'false_geocode', label: '실패' },
                   ]
                 )}
