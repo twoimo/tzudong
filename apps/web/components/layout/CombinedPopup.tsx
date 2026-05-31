@@ -1,13 +1,18 @@
 'use client';
 
-import { useState, useEffect, useCallback, memo, useRef } from 'react';
+import { useState, useEffect, useCallback, memo, useMemo, useRef } from 'react';
 import Image from 'next/image';
-import { Scroll, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { openExternalUrl } from '@/lib/open-external-url';
-import { Button } from '@/components/ui/button';
 import { usePopupAdBanners } from '@/hooks/use-ad-banners';
 import { AdBanner } from '@/types/ad-banner';
+import {
+    buildPopupBannerLoopSlides,
+    filterPopupBannersWithPosterMedia,
+    getPopupBannerInitialTrackIndex,
+    getPopupBannerLoopResetIndex,
+} from '@/lib/ad-banner-carousel-helpers';
 
 // 로컬 스토리지 키
 const DISMISSED_DATE_KEY = 'combinedPopup_dismissedDate';
@@ -73,11 +78,13 @@ SlideIndicator.displayName = 'SlideIndicator';
 const BannerSlide = memo(({
     banner,
     isActive,
+    shouldLoadImage,
     onClick,
     onVideoEnded
 }: {
     banner: AdBanner;
     isActive: boolean;
+    shouldLoadImage: boolean;
     onClick: () => void;
     onVideoEnded?: () => void;
 }) => {
@@ -126,7 +133,7 @@ const BannerSlide = memo(({
                     preload="metadata"
                     onEnded={onVideoEnded}
                 />
-            ) : banner.image_url && isActive ? (
+            ) : banner.image_url && shouldLoadImage ? (
                 /* 이미지 배너 (우선순위 2) */
                 <div className="relative h-full w-full">
                     <Image
@@ -140,42 +147,7 @@ const BannerSlide = memo(({
                         decoding="async"
                     />
                 </div>
-            ) : (
-                /* 텍스트 전용 배너 (Fallback) */
-                <>
-                    <div
-                        className="absolute inset-0 opacity-40 dark:opacity-0 pointer-events-none transition-opacity"
-                        style={{
-                            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.1'/%3E%3C/svg%3E")`,
-                        }}
-                    />
-                    <div className="absolute inset-2 border-2 border-double border-border rounded-md pointer-events-none dark:border-transparent" />
-                    <div className="relative h-full flex flex-col items-center justify-center text-center p-6">
-                        <Scroll className="w-8 h-8 text-muted-foreground mb-3 opacity-60" />
-                        <h2 className="text-xl font-serif font-bold text-foreground mb-2 tracking-wide">
-                            {banner.title}
-                        </h2>
-                        {banner.description && (
-                            <p className="text-sm font-serif text-foreground/80 whitespace-pre-line leading-relaxed">
-                                {banner.description}
-                            </p>
-                        )}
-                        {banner.link_url && (
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="mt-4 font-serif"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onClick();
-                                }}
-                            >
-                                자세히 보기
-                            </Button>
-                        )}
-                    </div>
-                </>
-            )}
+            ) : null}
         </div>
     );
 });
@@ -184,6 +156,8 @@ BannerSlide.displayName = 'BannerSlide';
 const CombinedPopupComponent = () => {
     const [isVisible, setIsVisible] = useState(false);
     const [currentSlide, setCurrentSlide] = useState(0);
+    const [trackSlide, setTrackSlide] = useState(0);
+    const [isLoopResetting, setIsLoopResetting] = useState(false);
     const [isAutoPlaying, setIsAutoPlaying] = useState(true);
     const [isDragging, setIsDragging] = useState(false);
     const [canLoadBanners, setCanLoadBanners] = useState(false);
@@ -197,6 +171,12 @@ const CombinedPopupComponent = () => {
 
     // 배너 데이터
     const { data: banners = [] } = usePopupAdBanners({ enabled: canLoadBanners });
+    const posterBanners = useMemo(() => filterPopupBannersWithPosterMedia(banners), [banners]);
+    const carouselSlides = useMemo(() => buildPopupBannerLoopSlides(posterBanners), [posterBanners]);
+    const posterBannerSignature = useMemo(
+        () => posterBanners.map((banner) => banner.id).join('|'),
+        [posterBanners],
+    );
 
     // 오늘 이미 닫았는지 확인
     const shouldShowPopup = useCallback(() => {
@@ -230,7 +210,7 @@ const CombinedPopupComponent = () => {
 
     // 팝업 표시
     useEffect(() => {
-        if (!canLoadBanners || banners.length === 0 || hasShownRef.current) return;
+        if (!canLoadBanners || posterBanners.length === 0 || hasShownRef.current) return;
 
         if (shouldShowPopup()) {
             const timer = setTimeout(() => {
@@ -239,24 +219,31 @@ const CombinedPopupComponent = () => {
             }, 500);
             return () => clearTimeout(timer);
         }
-    }, [banners.length, canLoadBanners, shouldShowPopup]);
+    }, [posterBanners.length, canLoadBanners, shouldShowPopup]);
+
+    useEffect(() => {
+        setCurrentSlide(0);
+        setTrackSlide(getPopupBannerInitialTrackIndex(posterBanners.length));
+        setIsLoopResetting(false);
+    }, [posterBanners.length, posterBannerSignature]);
 
     // 자동 슬라이드 (영상 배너가 아닐 때만)
     useEffect(() => {
-        if (!isAutoPlaying || !isVisible || banners.length <= 1) return;
+        if (!isAutoPlaying || !isVisible || posterBanners.length <= 1) return;
 
         // 현재 배너가 영상이면 자동 슬라이드 건너뛰기 (영상 종료 시 onVideoEnded로 처리)
-        const currentBanner = banners[currentSlide];
+        const currentBanner = posterBanners[currentSlide];
         if (currentBanner?.video_url) return;
 
         timeoutRef.current = setTimeout(() => {
-            setCurrentSlide((prev) => (prev + 1) % banners.length);
+            setCurrentSlide((prev) => (prev + 1) % posterBanners.length);
+            setTrackSlide((prev) => prev + 1);
         }, 4000);
 
         return () => {
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
         };
-    }, [isAutoPlaying, isVisible, currentSlide, banners]);
+    }, [isAutoPlaying, isVisible, currentSlide, posterBanners]);
 
     // 팝업 닫기
     const handleClose = useCallback((e?: React.MouseEvent) => {
@@ -274,21 +261,39 @@ const CombinedPopupComponent = () => {
     // 슬라이드 이동
     const goToSlide = useCallback((index: number) => {
         setCurrentSlide(index);
+        setTrackSlide(posterBanners.length > 1 ? index + 1 : index);
         setIsAutoPlaying(false);
         // 사용자 인터렉션 후 잠시 뒤 자동 재생 재개
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
         const timer = setTimeout(() => setIsAutoPlaying(true), 8000);
         return () => clearTimeout(timer);
-    }, []);
+    }, [posterBanners.length]);
 
     // 다음/이전 슬라이드
     const nextSlide = useCallback(() => {
-        setCurrentSlide((prev) => (prev + 1) % banners.length);
-    }, [banners.length]);
+        if (posterBanners.length <= 1) return;
+        setCurrentSlide((prev) => (prev + 1) % posterBanners.length);
+        setTrackSlide((prev) => prev + 1);
+    }, [posterBanners.length]);
 
     const prevSlide = useCallback(() => {
-        setCurrentSlide((prev) => (prev - 1 + banners.length) % banners.length);
-    }, [banners.length]);
+        if (posterBanners.length <= 1) return;
+        setCurrentSlide((prev) => (prev - 1 + posterBanners.length) % posterBanners.length);
+        setTrackSlide((prev) => prev - 1);
+    }, [posterBanners.length]);
+
+    const handleTrackTransitionEnd = useCallback(() => {
+        const resetIndex = getPopupBannerLoopResetIndex(trackSlide, posterBanners.length);
+        if (resetIndex === null) return;
+
+        setIsLoopResetting(true);
+        setTrackSlide(resetIndex);
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                setIsLoopResetting(false);
+            });
+        });
+    }, [posterBanners.length, trackSlide]);
 
     // 배너 클릭
     const handleBannerClick = useCallback((banner: AdBanner) => {
@@ -316,12 +321,12 @@ const CombinedPopupComponent = () => {
 
         if ((e.key === 'Enter' || e.key === ' ') && !isDragging) {
             e.preventDefault();
-            const currentBanner = banners[currentSlide];
+            const currentBanner = posterBanners[currentSlide];
             if (currentBanner) {
                 handleBannerClick(currentBanner);
             }
         }
-    }, [banners, currentSlide, handleBannerClick, isDragging, nextSlide, prevSlide]);
+    }, [posterBanners, currentSlide, handleBannerClick, isDragging, nextSlide, prevSlide]);
 
     // [OPTIMIZATION] Memoized swipe config
     const minSwipeDistance = 50;
@@ -380,7 +385,7 @@ const CombinedPopupComponent = () => {
     }, [isDragging]);
 
     // 표시 조건 체크
-    if (!isVisible || banners.length === 0) {
+    if (!isVisible || posterBanners.length === 0) {
         return null;
     }
 
@@ -413,20 +418,23 @@ const CombinedPopupComponent = () => {
                 >
                     <div
                         className={cn(
-                            "flex w-full h-full transition-transform duration-500 ease-out",
+                            "flex w-full h-full",
+                            isLoopResetting ? "transition-none" : "transition-transform duration-500 ease-out",
                             isDragging ? "cursor-grabbing" : "cursor-grab"
                         )}
-                        style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+                        style={{ transform: `translateX(-${trackSlide * 100}%)` }}
                         ref={slideContainerRef}
+                        onTransitionEnd={handleTrackTransitionEnd}
                     >
-                        {banners.map((banner, index) => (
+                        {carouselSlides.map(({ banner, key }, index) => (
                             <BannerSlide
-                                key={banner.id}
+                                key={key}
                                 banner={banner}
-                                isActive={index === currentSlide}
+                                isActive={index === trackSlide}
+                                shouldLoadImage={Math.abs(index - trackSlide) <= 1}
                                 onClick={() => !isDragging && handleBannerClick(banner)}
                                 onVideoEnded={() => {
-                                    if (banners.length > 1 && index === currentSlide) {
+                                    if (posterBanners.length > 1 && index === trackSlide) {
                                         nextSlide();
                                     }
                                 }}
@@ -435,7 +443,7 @@ const CombinedPopupComponent = () => {
                     </div>
 
                     {/* 데스크탑 네비게이션 버튼 (마우스 오버 시 표시) */}
-                    {banners.length > 1 && (
+                    {posterBanners.length > 1 && (
                         <>
                             <button
                                 type="button"
@@ -459,7 +467,7 @@ const CombinedPopupComponent = () => {
 
                 {/* 슬라이드 인디케이터 */}
                 <SlideIndicator
-                    count={banners.length}
+                    count={posterBanners.length}
                     current={currentSlide}
                     onSelect={goToSlide}
                 />

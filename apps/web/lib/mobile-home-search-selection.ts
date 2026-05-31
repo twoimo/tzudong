@@ -178,18 +178,27 @@ type BuildPostSearchSwipeCandidatesInput = {
 
 export const buildRestaurantsForSwipe = ({
     activeSearchedRestaurant,
+    selectedRestaurant,
     displayRestaurantIds,
     displayRestaurants,
 }: {
     activeSearchedRestaurant: Restaurant | null;
+    selectedRestaurant?: Restaurant | null;
     displayRestaurantIds: Set<string>;
     displayRestaurants: Restaurant[];
 }): Restaurant[] => {
-    if (!activeSearchedRestaurant || displayRestaurantIds.has(activeSearchedRestaurant.id)) {
-        return displayRestaurants;
-    }
+    const pinnedRestaurants = [activeSearchedRestaurant, selectedRestaurant].filter(Boolean) as Restaurant[];
+    if (pinnedRestaurants.length === 0) return displayRestaurants;
 
-    return [...displayRestaurants, activeSearchedRestaurant];
+    const restaurantsForSwipe = [...displayRestaurants];
+    pinnedRestaurants.forEach((restaurant) => {
+        if (displayRestaurantIds.has(restaurant.id)) return;
+        if (restaurantsForSwipe.some((candidate) => isSameRestaurantSelection(candidate, restaurant))) return;
+
+        restaurantsForSwipe.push(restaurant);
+    });
+
+    return restaurantsForSwipe;
 };
 
 export const buildPostSearchSwipeCandidates = ({
