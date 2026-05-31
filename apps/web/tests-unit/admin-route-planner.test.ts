@@ -97,6 +97,24 @@ describe("admin route planner", () => {
     expect(plan.warnings.join(" ")).toContain("도보 선호 거리 1.2km");
   });
 
+  test("respects the operator-selected maximum stop count", () => {
+    const plan = buildAdminRoutePlan({
+      selectedRestaurant: selected,
+      restaurants: [
+        selected,
+        nearbySameVideo,
+        nearbySameCategory,
+        farRestaurant,
+      ],
+      mode: "mixed",
+      maxStops: 3,
+    });
+
+    expect(plan.stops).toHaveLength(3);
+    expect(plan.summary.stopCount).toBe(3);
+    expect(plan.legs).toHaveLength(2);
+  });
+
   test("AHP assessment reaches the 98 gate only when road route and enough stops are present", () => {
     const plan = buildAdminRoutePlan({
       selectedRestaurant: selected,

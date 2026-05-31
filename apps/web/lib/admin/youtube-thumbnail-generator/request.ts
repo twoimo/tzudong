@@ -1,5 +1,16 @@
-import type { ThumbnailGeneratorPayload, ThumbnailReferenceImage, ThumbnailTextLayer } from './types';
-import { ThumbnailGenerationError, THUMBNAIL_PROVIDER_IDS } from './types';
+import type {
+  ThumbnailBriefPreset,
+  ThumbnailGeneratorPayload,
+  ThumbnailReferenceImage,
+  ThumbnailReferenceRole,
+  ThumbnailTextLayer,
+} from './types';
+import {
+  ThumbnailGenerationError,
+  THUMBNAIL_BRIEF_PRESETS,
+  THUMBNAIL_PROVIDER_IDS,
+  THUMBNAIL_REFERENCE_ROLES,
+} from './types';
 import { isThumbnailProviderId } from './providers';
 
 export const THUMBNAIL_MAX_TOTAL_BYTES = 33_554_432;
@@ -12,6 +23,25 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function toStringValue(value: unknown, maxLength: number) {
   return typeof value === 'string' ? value.trim().slice(0, maxLength) : '';
+}
+
+function isThumbnailBriefPreset(value: unknown): value is ThumbnailBriefPreset {
+  return typeof value === 'string' && (THUMBNAIL_BRIEF_PRESETS as readonly string[]).includes(value);
+}
+
+function isThumbnailReferenceRole(value: unknown): value is ThumbnailReferenceRole {
+  return typeof value === 'string' && (THUMBNAIL_REFERENCE_ROLES as readonly string[]).includes(value);
+}
+
+function parseStylePreset(value: unknown): ThumbnailBriefPreset {
+  return isThumbnailBriefPreset(value) ? value : 'tzuyang-food-travel-collage';
+}
+
+function parseReferenceImageRoles(value: unknown): ThumbnailReferenceRole[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .slice(0, THUMBNAIL_MAX_FILES)
+    .map((role) => (isThumbnailReferenceRole(role) ? role : 'other'));
 }
 
 function parseTextLayers(value: unknown): ThumbnailTextLayer[] {
@@ -52,7 +82,8 @@ export function parseThumbnailPayload(value: unknown): ThumbnailGeneratorPayload
     topic,
     headline,
     subHeadline: toStringValue(value.subHeadline, 80) || undefined,
-    stylePreset: 'tzuyang-food-travel-collage',
+    stylePreset: parseStylePreset(value.stylePreset),
+    referenceImageRoles: parseReferenceImageRoles(value.referenceImageRoles),
     acknowledgedSafety: value.acknowledgedSafety === true,
     textLayers: parseTextLayers(value.textLayers),
   };
@@ -85,7 +116,10 @@ export function detectImageMime(bytes: Uint8Array): ThumbnailReferenceImage['mim
   return null;
 }
 
-export async function readThumbnailReferenceImages(files: File[]): Promise<ThumbnailReferenceImage[]> {
+export async function readThumbnailReferenceImages(
+  files: File[],
+  roles: readonly ThumbnailReferenceRole[] = [],
+): Promise<ThumbnailReferenceImage[]> {
   if (files.length > THUMBNAIL_MAX_FILES) throw new ThumbnailGenerationError('invalid_text', '참고 이미지는 최대 8개까지 업로드할 수 있습니다.', 400);
   let totalBytes = 0;
   const images: ThumbnailReferenceImage[] = [];
@@ -96,7 +130,7 @@ export async function readThumbnailReferenceImages(files: File[]): Promise<Thumb
     const bytes = new Uint8Array(await file.arrayBuffer());
     const mime = detectImageMime(bytes);
     if (!mime) throw new ThumbnailGenerationError('invalid_text', 'PNG/JPEG/WebP 이미지만 업로드할 수 있습니다.', 415);
-    images.push({ name: `reference-${index + 1}`, mime, bytes, role: 'other' });
+    images.push({ name: `reference-${index + 1}`, mime, bytes, role: roles[index] ?? 'other' });
   }
   return images;
 }
