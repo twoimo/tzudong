@@ -2050,6 +2050,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain('data-admin-sidebar-footer-actions="true"');
     expect(consoleSource).toContain('data-admin-sidebar-section-list="spacious"');
     expect(consoleSource).toContain('data-admin-sidebar-footer-separator="spacious"');
+    expect(consoleSource).toContain('data-admin-sidebar-scroll="hidden-scrollbar"');
+    expect(consoleSource).toContain("scrollbar-hide relative z-30 hidden h-full min-h-0 w-max shrink-0 flex-col overflow-x-hidden overflow-y-auto overscroll-contain");
+    expect(source("app/app-globals.css")).toContain(".scrollbar-hide::-webkit-scrollbar");
     expect(consoleSource).toContain("border-t border-dashed border-border/70 pt-4");
     expect(consoleSource).toContain('data-admin-sidebar-preference-placement={placement}');
     expect(consoleSource).toContain('data-admin-sidebar-theme-layout={placement}');
@@ -2148,6 +2151,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain('data-admin-sidebar-footer-actions="true"');
     expect(consoleSource).toContain('data-admin-sidebar-section-list="spacious"');
     expect(consoleSource).toContain('data-admin-sidebar-footer-separator="spacious"');
+    expect(consoleSource).toContain('data-admin-sidebar-scroll="hidden-scrollbar"');
+    expect(consoleSource).toContain("scrollbar-hide relative z-30 hidden h-full min-h-0 w-max shrink-0 flex-col overflow-x-hidden overflow-y-auto overscroll-contain");
+    expect(source("app/app-globals.css")).toContain(".scrollbar-hide::-webkit-scrollbar");
     expect(consoleSource).toContain("border-t border-dashed border-border/70 pt-4");
     expect(consoleSource).toContain("renderThemeControls(\"sidebar\")");
     expect(consoleSource).toContain("renderOrderControls(\"sidebar\")");
