@@ -4,10 +4,13 @@ on:
   pull_request:
     paths:
       - '.github/workflows/web-admin-ci.yml'
+      - '.github/workflows/restaurant-refresh-cron.yml'
       - 'apps/web/app/admin/evaluations/**'
       - 'apps/web/components/admin/**'
+      - 'apps/web/app/api/admin/restaurant-refresh-history/**'
       - 'apps/web/lib/admin-address-consistency.ts'
       - 'apps/web/tests-unit/**'
+      - 'apps/web/scripts/restaurant-refresh-cron.mjs'
       - 'apps/web/package.json'
       - 'apps/web/package-lock.json'
       - 'apps/web/bun.lock'
@@ -19,6 +22,8 @@ on:
       - 'backend/bin/naver_scrapling_fetch.py'
       - 'backend/bin/build_tzuyang_operator_review_package.mjs'
       - 'backend/bin/validate_tzuyang_address_evidence_ledger.mjs'
+      - 'backend/supabase/migrations/20260531105250_restaurant_refresh_history.sql'
+      - 'apps/web/supabase/migrations/20260531105250_restaurant_refresh_history.sql'
       - 'backend/restaurant-evaluation/scripts/tests/tzuyang-case-review-pack.test.mjs'
       - 'backend/restaurant-evaluation/scripts/tests/tzuyang-operator-review-package.test.mjs'
       - 'backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger.test.mjs'
@@ -30,10 +35,13 @@ on:
       - data
     paths:
       - '.github/workflows/web-admin-ci.yml'
+      - '.github/workflows/restaurant-refresh-cron.yml'
       - 'apps/web/app/admin/evaluations/**'
       - 'apps/web/components/admin/**'
+      - 'apps/web/app/api/admin/restaurant-refresh-history/**'
       - 'apps/web/lib/admin-address-consistency.ts'
       - 'apps/web/tests-unit/**'
+      - 'apps/web/scripts/restaurant-refresh-cron.mjs'
       - 'apps/web/package.json'
       - 'apps/web/package-lock.json'
       - 'apps/web/bun.lock'
@@ -45,10 +53,15 @@ on:
       - 'backend/bin/naver_scrapling_fetch.py'
       - 'backend/bin/build_tzuyang_operator_review_package.mjs'
       - 'backend/bin/validate_tzuyang_address_evidence_ledger.mjs'
+      - 'backend/supabase/migrations/20260531105250_restaurant_refresh_history.sql'
+      - 'apps/web/supabase/migrations/20260531105250_restaurant_refresh_history.sql'
       - 'backend/restaurant-evaluation/scripts/tests/tzuyang-case-review-pack.test.mjs'
       - 'backend/restaurant-evaluation/scripts/tests/tzuyang-operator-review-package.test.mjs'
       - 'backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger.test.mjs'
       - 'backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger-cli-fixture.mjs'
+  schedule:
+    # Weekly freshness/admin regression guard: Mondays 03:17 KST (Sundays 18:17 UTC).
+    - cron: '17 18 * * 0'
   workflow_dispatch:
 
 permissions:
@@ -115,6 +128,10 @@ jobs:
           components/admin/EvaluationTableNew.tsx
           tests-unit/admin-address-consistency.test.ts
           tests-unit/admin-evaluation-address-filter-source.test.ts
+          tests-unit/admin-restaurant-refresh-history-source.test.ts
+          tests-unit/admin-sidebar-order.test.ts
+          scripts/restaurant-refresh-cron.mjs
+          tests-unit/restaurant-refresh-cron.test.ts
           --max-warnings=0
 
       - name: Typecheck web app
@@ -146,5 +163,8 @@ jobs:
           bun test
           tests-unit/admin-address-consistency.test.ts
           tests-unit/admin-evaluation-address-filter-source.test.ts
+          tests-unit/admin-restaurant-refresh-history-source.test.ts
+          tests-unit/admin-sidebar-order.test.ts
+          tests-unit/restaurant-refresh-cron.test.ts
           tests-unit/mobile-desktop-parity-source.test.ts
           tests-unit/web-quality-performance-source.test.ts
