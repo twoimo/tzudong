@@ -284,6 +284,7 @@ describe("mobile and desktop parity source contracts", () => {
       "components/overlay-pages/StampOverlay.tsx",
     );
     const stampPageSource = source("app/stamp/page.tsx");
+    const stampCardSource = source("components/stamp/StampCard.tsx");
     const overlayLayoutSource = source("components/layout/OverlayLayout.tsx");
     const detailPanelSource = source(
       "components/restaurant/RestaurantDetailPanel.tsx",
@@ -807,6 +808,16 @@ describe("mobile and desktop parity source contracts", () => {
     );
     expect(stampOverlaySource).toContain(
       'data-stamp-guide-loading-card="desktop-left-panel"',
+    );
+    expect(stampCardSource).toContain('data-stamp-guide-badge="true"');
+    expect(stampCardSource).toContain('data-stamp-guide-close="true"');
+    expect(stampCardSource).toContain('aria-label="가이드 닫기"');
+    expect(stampOverlaySource).toContain(
+      "isUserStampsReady={isGuideCard ? true : isUserStampsReady}",
+    );
+    expect(stampOverlaySource).toContain('guideLabel={isGuideCard ? "가이드" : undefined}');
+    expect(stampOverlaySource).toContain(
+      "onGuideClose={isGuideCard ? dismissStampGuide : undefined}",
     );
     expect(stampPageSource).toContain("showStampGuide && (");
     expect(stampOverlaySource).toContain("showStampGuide && (");
