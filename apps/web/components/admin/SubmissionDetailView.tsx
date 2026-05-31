@@ -23,6 +23,8 @@ import { cn } from '@/lib/utils';
 import { RESTAURANT_CATEGORIES } from '@/constants/categories';
 import { formatCategoryText } from '@/lib/category-utils';
 import { supabase } from '@/integrations/supabase/client';
+import { extractVideoIdFromYoutubeLink } from '@/lib/dashboard/helpers';
+import { getYoutubeThumbnailUrl } from '@/lib/youtube-thumbnail';
 
 // ==================== 타입 정의 ====================
 
@@ -184,20 +186,6 @@ interface SubmissionDetailViewProps {
 }
 
 // ==================== 유틸리티 함수 ====================
-
-function getYoutubeVideoId(url: string | undefined): string | null {
-    if (!url) return null;
-    const patterns = [
-        /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})(?:[?&].*)?/,
-        /(?:youtube\.com\/(?:embed|v)\/)([a-zA-Z0-9_-]{11})/,
-        /(?:youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
-    ];
-    for (const pattern of patterns) {
-        const match = url.match(pattern);
-        if (match && match[1]) return match[1];
-    }
-    return null;
-}
 
 function extractCityDistrictGu(address: string): string | null {
     // 공백 기준으로 분리하여 앞 2~3어절 추출 (시/도 + 시/군/구 + 읍/면/동/도로명)
@@ -806,7 +794,7 @@ export function SubmissionDetailView({
                     </div>
 
                     {submission.items.map((item) => {
-                        const videoId = getYoutubeVideoId(itemDecisions[item.id]?.youtube_link || item.youtube_link);
+                        const videoId = extractVideoIdFromYoutubeLink(itemDecisions[item.id]?.youtube_link || item.youtube_link);
                         const decision = itemDecisions[item.id];
                         const isPending = item.item_status === 'pending';
                         const metaData = decision?.metaData;
@@ -913,7 +901,7 @@ export function SubmissionDetailView({
                                                 className="flex-shrink-0"
                                             >
                                                 <Image
-                                                    src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`}
+                                                    src={getYoutubeThumbnailUrl(videoId, 'hqdefault') || ''}
                                                     alt="YouTube thumbnail"
                                                     width={128}
                                                     height={80}
@@ -981,7 +969,7 @@ export function SubmissionDetailView({
 
                                         {/* 기존 YouTube 썸네일 + 메타데이터 */}
                                         {(() => {
-                                            const originalVideoId = getYoutubeVideoId(item.original_restaurant?.youtube_link || undefined);
+                                            const originalVideoId = extractVideoIdFromYoutubeLink(item.original_restaurant?.youtube_link || undefined);
                                             const originalMeta = item.original_restaurant?.youtube_meta;
                                             return (
                                                 <div className="flex gap-3 mb-3">
@@ -993,7 +981,7 @@ export function SubmissionDetailView({
                                                             className="flex-shrink-0"
                                                         >
                                                             <Image
-                                                                src={`https://img.youtube.com/vi/${originalVideoId}/mqdefault.jpg`}
+                                                                src={getYoutubeThumbnailUrl(originalVideoId, 'hqdefault') || ''}
                                                                 alt="기존 YouTube thumbnail"
                                                                 width={128}
                                                                 height={80}
