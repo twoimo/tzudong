@@ -104,6 +104,7 @@ type AdminModuleId =
   | "overview"
   | "routes"
   | "restaurants"
+  | "restaurant-refresh-history"
   | "submissions"
   | "reviews"
   | "storyboard"
@@ -146,6 +147,17 @@ const consoleModules: ConsoleModule[] = [
     icon: Store,
     badge: "데이터 검수",
     actionLabel: "맛집 데이터 검수",
+    priority: "urgent",
+  },
+  {
+    id: "restaurant-refresh-history",
+    title: "맛집 최신화",
+    description:
+      "승인된 맛집의 상호명, 전화번호, 폐업·이전 후보와 과거 변경 이력을 관리합니다.",
+    href: "/admin?module=restaurant-refresh-history",
+    icon: RefreshCw,
+    badge: "기록 관리",
+    actionLabel: "최신화 이력 보기",
     priority: "urgent",
   },
   {
@@ -280,7 +292,7 @@ const sidebarSections: SidebarSection[] = [
     label: "검수",
     items: consoleModules
       .filter((module) =>
-        ["restaurants", "submissions", "reviews"].includes(module.id),
+        ["restaurants", "restaurant-refresh-history", "submissions", "reviews"].includes(module.id),
       )
       .map(({ id, title, description, icon, badge }) => ({
         id,
@@ -599,6 +611,17 @@ const AdminEvaluationModule = dynamic(
 const AdminBannerModule = dynamic(() => import("@/app/admin/banners/page"), {
   ssr: false,
 });
+
+const AdminRestaurantRefreshHistoryModule = dynamic(
+  () =>
+    import("@/components/admin/AdminRestaurantRefreshHistoryPanel").then(
+      (module) => module.AdminRestaurantRefreshHistoryPanel,
+    ),
+  {
+    ssr: false,
+    loading: () => <AdminConsoleCanvasSkeleton />,
+  },
+);
 
 const AdminUsersModule = dynamic(
   () => import("@/components/admin/AdminUsersPanel"),
@@ -8377,6 +8400,8 @@ function InlineModulePanel({ module }: { module: ConsoleModule }) {
             initialView="evaluations"
           />
         );
+      case "restaurant-refresh-history":
+        return <AdminRestaurantRefreshHistoryModule key="restaurant-refresh-history" />;
       case "submissions":
         return (
           <AdminEvaluationModule
