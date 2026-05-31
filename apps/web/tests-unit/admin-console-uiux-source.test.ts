@@ -2060,9 +2060,11 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain('data-admin-sidebar-section-list="spacious"');
     expect(consoleSource).toContain('data-admin-sidebar-footer-separator="spacious"');
     expect(consoleSource).toContain('data-admin-sidebar-scroll="hidden-scrollbar"');
-    expect(consoleSource).toContain("scrollbar-hide relative z-30 hidden h-full min-h-0 w-max shrink-0 flex-col overflow-x-hidden overflow-y-auto overscroll-contain");
+    expect(consoleSource).toContain("relative z-30 hidden h-full min-h-0 w-max shrink-0 flex-col overflow-hidden");
+    expect(consoleSource).toContain('data-admin-sidebar-menu-scroll="hidden-scrollbar"');
+    expect(consoleSource).toContain("scrollbar-hide min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain pb-4 pt-2");
     expect(source("app/app-globals.css")).toContain(".scrollbar-hide::-webkit-scrollbar");
-    expect(consoleSource).toContain("border-t border-dashed border-border/70 pt-4");
+    expect(consoleSource).toContain("shrink-0 border-t border-dashed border-border/70 pt-4");
     expect(consoleSource).toContain('data-admin-sidebar-preference-placement={placement}');
     expect(consoleSource).toContain('data-admin-sidebar-theme-layout={placement}');
     expect(consoleSource).toContain(
@@ -2161,12 +2163,14 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain('data-admin-sidebar-section-list="spacious"');
     expect(consoleSource).toContain('data-admin-sidebar-footer-separator="spacious"');
     expect(consoleSource).toContain('data-admin-sidebar-scroll="hidden-scrollbar"');
-    expect(consoleSource).toContain("scrollbar-hide relative z-30 hidden h-full min-h-0 w-max shrink-0 flex-col overflow-x-hidden overflow-y-auto overscroll-contain");
+    expect(consoleSource).toContain("relative z-30 hidden h-full min-h-0 w-max shrink-0 flex-col overflow-hidden");
+    expect(consoleSource).toContain('data-admin-sidebar-menu-scroll="hidden-scrollbar"');
+    expect(consoleSource).toContain("scrollbar-hide min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain pb-4 pt-2");
     expect(source("app/app-globals.css")).toContain(".scrollbar-hide::-webkit-scrollbar");
-    expect(consoleSource).toContain("border-t border-dashed border-border/70 pt-4");
+    expect(consoleSource).toContain("shrink-0 border-t border-dashed border-border/70 pt-4");
     expect(consoleSource).toContain("renderThemeControls(\"sidebar\")");
     expect(consoleSource).toContain("renderOrderControls(\"sidebar\")");
-    expect(consoleSource).toContain("block min-h-0 flex-1 space-y-3 pt-2 pb-3");
+    expect(consoleSource).toContain("block space-y-3");
     expect(consoleSource).toContain("메뉴 순서");
     expect(consoleSource).toContain("초기화");
     expect(consoleSource).toContain("aria-label={`${item.title} 메뉴 앞으로`}");
