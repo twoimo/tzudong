@@ -41,8 +41,21 @@ describe("admin restaurant refresh history source contracts", () => {
     );
     expect(panelSource).toContain("상호명·전화번호·폐업·이전");
     expect(panelSource).toContain(
-      "후보 생성 → 운영자 판단 → guarded apply → readback/recrawl",
+      'data-admin-restaurant-refresh-management-structure="header-list-detail"',
     );
+    expect(panelSource).toContain(
+      'data-admin-restaurant-refresh-list="management-like"',
+    );
+    expect(panelSource).toContain(
+      'data-admin-restaurant-refresh-detail="management-like"',
+    );
+    expect(panelSource).toContain("맛집 관리 동일 구조");
+    expect(panelSource).toContain("후보 생성 → 운영자 판단 →");
+    expect(panelSource).toContain("guarded apply → readback/recrawl");
+    expect(panelSource).toContain(
+      "왼쪽 목록에서 후보를 선택하고 오른쪽 상세 패널에서",
+    );
+    expect(panelSource).toContain("왼쪽 목록에서 후보를 선택하세요");
     expect(panelSource).toContain("승인 맛집 점검 job 또는 수동");
     expect(panelSource).toContain("후보 기록이 생성되면");
     expect(panelSource).toContain("운영자 결정 기록");
@@ -52,7 +65,7 @@ describe("admin restaurant refresh history source contracts", () => {
     expect(panelSource).toContain(
       "폐업 의심 후보는 네이버 미검색 신호일 뿐 폐업 확정이",
     );
-    expect(panelSource).toContain("아니므로 guarded apply를 막습니다.");
+    expect(panelSource).toContain("guarded apply를 막습니다.");
     expect(panelSource).toContain("disabled={!canApplySelectedCandidate}");
     expect(panelSource).toContain("function reviewChecklistForCandidate");
     expect(panelSource).toContain(
@@ -62,8 +75,10 @@ describe("admin restaurant refresh history source contracts", () => {
       "readbackLabel(selectedCandidate.readback_state)",
     );
     expect(panelSource).toContain(
-      '근거: {evidenceText(selectedCandidate.evidence, "source") || "출처 미기록"}',
+      'data-admin-restaurant-refresh-evidence-summary="true"',
     );
+    expect(panelSource).toContain("function evidenceText");
+    expect(panelSource).toContain("출처 미기록");
     expect(panelSource).toContain("snapshotText(");
     expect(panelSource).toContain("candidate.previous_snapshot,");
     expect(panelSource).toContain('"road_address"');
