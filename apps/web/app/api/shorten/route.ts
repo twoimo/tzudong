@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient as createSupabaseAdminClient } from '@supabase/supabase-js';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { randomInt } from 'node:crypto';
 
 // 환경변수에서 Supabase URL과 Service Role Key 가져오기
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const DEFAULT_SITE_ORIGIN = 'https://www.tzudong.app';
 const SHORTEN_RATE_LIMIT_WINDOW_MS = 60_000;
@@ -82,6 +83,32 @@ function isValidReviewId(reviewId: string | null): reviewId is string {
     return !!reviewId && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(reviewId);
 }
 
+function createSupabasePublicClient() {
+    if (!supabaseUrl || !supabaseAnonKey) {
+        return null;
+    }
+
+    return createSupabaseClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+        },
+    });
+}
+
+function createSupabaseAdminClient() {
+    if (!supabaseUrl || !supabaseServiceKey) {
+        return null;
+    }
+
+    return createSupabaseClient(supabaseUrl, supabaseServiceKey, {
+        auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+        },
+    });
+}
+
 // 6자리 영숫자 코드 생성
 function generateShortCode(): string {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -119,19 +146,22 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        if (!supabaseUrl || !supabaseServiceKey) {
+        const supabasePublic = createSupabasePublicClient();
+        const supabaseAdmin = createSupabaseAdminClient();
+        if (!supabasePublic || !supabaseAdmin) {
             return NextResponse.json(
                 { error: '단축 URL 저장소가 설정되지 않았습니다.' },
                 { status: 500 }
             );
         }
 
-        const supabase = createSupabaseAdminClient(supabaseUrl, supabaseServiceKey);
-
-        const { data: review, error: reviewError } = await supabase
+        // 공개 리뷰 검증은 anon/RLS 경로로 먼저 수행한다. service-role은 검증된
+        // 대상의 short_urls 저장에만 사용해 공개 API의 데이터 노출면을 줄인다.
+        const { data: review, error: reviewError } = await supabasePublic
             .from('reviews')
-            .select('id, restaurant_id')
+            .select('id, restaurant_id, is_verified')
             .eq('id', allowedTarget.reviewId)
+            .eq('is_verified', true)
             .maybeSingle();
 
         if (reviewError || !review) {
@@ -142,7 +172,7 @@ export async function POST(request: NextRequest) {
         }
 
         // 동일한 targetUrl이 이미 존재하는지 확인
-        const { data: existing } = await supabase
+        const { data: existing } = await supabaseAdmin
             .from('short_urls')
             .select('code')
             .eq('target_url', allowedTarget.canonicalTargetUrl)
@@ -165,7 +195,7 @@ export async function POST(request: NextRequest) {
 
         while (attempts < maxAttempts) {
             code = generateShortCode();
-            const { data: codeExists } = await supabase
+            const { data: codeExists } = await supabaseAdmin
                 .from('short_urls')
                 .select('id')
                 .eq('code', code)
@@ -183,7 +213,7 @@ export async function POST(request: NextRequest) {
         }
 
         // 단축 URL 저장
-        const { error: insertError } = await supabase
+        const { error: insertError } = await supabaseAdmin
             .from('short_urls')
             .insert({
                 code,

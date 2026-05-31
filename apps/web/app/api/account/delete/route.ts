@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/auth/require-admin';
 import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
+import { revokeCurrentUserSessions } from '@/lib/auth/session-revocation';
 
 export const runtime = 'nodejs';
 
@@ -28,6 +29,8 @@ export async function DELETE(request: NextRequest) {
         if (targetUserId !== user.id) {
             const auth = await requireAdmin();
             if (!auth.ok) return auth.response;
+        } else {
+            await revokeCurrentUserSessions({ supabase, supabaseAdmin, request });
         }
 
         // 1. 프로필 익명화
