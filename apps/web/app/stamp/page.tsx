@@ -1104,7 +1104,31 @@ export default function StampPage() {
                             data-stamp-loading-behavior="static-shell-dynamic-skeleton"
                         >
                             {isStampDynamicLoading ? (
-                                <StampGridSkeleton count={STAMP_PAGE_SIZE} showHeader={false} />
+                                <div className="space-y-3">
+                                    {showStampGuide && (
+                                        <div
+                                            className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 md:gap-4"
+                                            data-stamp-guide-loading-card="mobile-page"
+                                        >
+                                            <StampCard
+                                                restaurant={STAMP_GUIDE_DEMO_RESTAURANT}
+                                                isVisited={true}
+                                                isUserStampsReady={true}
+                                                currentThumbnailIndex={0}
+                                                onThumbnailChange={handleGuideThumbnailChange}
+                                                onClick={() => {}}
+                                                size={isDesktop ? "compact" : "default"}
+                                                stampSize={isDesktop ? "compact" : "mobile"}
+                                                guideLabel="가이드"
+                                                isGuideCard={true}
+                                                guideTitle={STAMP_GUIDE_DEMO_RESTAURANT.name}
+                                                guideDescription={STAMP_GUIDE_DESCRIPTION}
+                                                onGuideClose={dismissStampGuide}
+                                            />
+                                        </div>
+                                    )}
+                                    <StampGridSkeleton count={STAMP_PAGE_SIZE} showHeader={false} />
+                                </div>
                             ) : viewMode === 'grid' ? (
                                 /* 그리드 뷰 (Grid View) */
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 md:gap-4">
