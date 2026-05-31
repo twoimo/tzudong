@@ -741,16 +741,24 @@ export function AdminRestaurantRefreshHistoryPanel() {
       aria-label="맛집 최신화 기록관리"
       className="flex h-full min-h-0 flex-col overflow-hidden bg-background text-foreground"
       data-admin-restaurant-refresh-history="true"
+      data-admin-restaurant-refresh-headerless="true"
       data-admin-restaurant-refresh-management-structure="header-list-detail"
     >
-      <div className="border-b border-border bg-card px-2 py-1.5 sm:px-3 sm:py-2">
+      <div
+        className="border-b border-border bg-card px-2 py-1.5 sm:px-3 sm:py-2"
+        aria-label="맛집 최신화 필터 및 상태 도구"
+        data-admin-restaurant-refresh-toolbar="headerless-management"
+      >
         <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="flex items-center gap-1.5 bg-gradient-primary bg-clip-text text-base font-bold text-transparent sm:text-lg">
-                <Store className="h-5 w-5 text-primary" />
-                맛집 최신화
-              </h1>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Badge
+                variant="outline"
+                className="gap-1 border-primary/30 text-primary"
+              >
+                <Store className="h-3.5 w-3.5" />
+                기록 관리
+              </Badge>
               <Badge
                 variant="outline"
                 className="border-primary/30 text-primary"
@@ -763,8 +771,11 @@ export function AdminRestaurantRefreshHistoryPanel() {
               >
                 승인 맛집 대상
               </Badge>
+              <Badge variant="secondary" className="font-normal">
+                guarded apply · readback/recrawl
+              </Badge>
             </div>
-            <p className="mt-0.5 text-xs text-muted-foreground sm:text-sm">
+            <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
               필터링: {filteredCandidates.length}개 | 검토 필요{" "}
               {summary?.needs_review ?? 0}개 | 최근 점검{" "}
               {formatDate(summary?.last_checked_at)}
