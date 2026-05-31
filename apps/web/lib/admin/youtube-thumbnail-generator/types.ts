@@ -24,6 +24,26 @@ export const GEMINI_THUMBNAIL_IMAGE_MODELS = [
 export type OpenAIThumbnailImageModel = (typeof OPENAI_THUMBNAIL_IMAGE_MODELS)[number];
 export type GeminiThumbnailImageModel = (typeof GEMINI_THUMBNAIL_IMAGE_MODELS)[number];
 
+export const THUMBNAIL_BRIEF_PRESETS = [
+  'tzuyang-food-travel-collage',
+  'night-market-reaction',
+  'convenience-store-haul',
+  'grilled-meat-feast',
+  'sushi-seafood-table',
+] as const;
+
+export type ThumbnailBriefPreset = (typeof THUMBNAIL_BRIEF_PRESETS)[number];
+
+export const THUMBNAIL_REFERENCE_ROLES = [
+  'host',
+  'food',
+  'object',
+  'person',
+  'other',
+] as const;
+
+export type ThumbnailReferenceRole = (typeof THUMBNAIL_REFERENCE_ROLES)[number];
+
 export type ThumbnailTextLayer = {
   id: string;
   content: string;
@@ -46,7 +66,8 @@ export type ThumbnailGeneratorPayload = {
   topic: string;
   headline: string;
   subHeadline?: string;
-  stylePreset?: 'tzuyang-food-travel-collage';
+  stylePreset?: ThumbnailBriefPreset;
+  referenceImageRoles?: ThumbnailReferenceRole[];
   acknowledgedSafety: boolean;
   textLayers?: ThumbnailTextLayer[];
 };
@@ -55,7 +76,7 @@ export type ThumbnailReferenceImage = {
   name: string;
   mime: 'image/png' | 'image/jpeg' | 'image/webp';
   bytes: Uint8Array;
-  role: 'host' | 'food' | 'object' | 'person' | 'other';
+  role: ThumbnailReferenceRole;
 };
 
 export type ThumbnailBaseImage = {
