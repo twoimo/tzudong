@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+
+import { AdminRestaurantRefreshHistoryPanel } from "../components/admin/AdminRestaurantRefreshHistoryPanel";
 
 const root = process.cwd();
 const repoRoot = join(root, "../..");
@@ -39,6 +43,16 @@ describe("admin restaurant refresh history source contracts", () => {
     expect(panelSource).toContain(
       'data-admin-restaurant-refresh-history="true"',
     );
+    expect(panelSource).toContain(
+      'data-admin-restaurant-refresh-headerless="true"',
+    );
+    expect(panelSource).toContain(
+      'data-admin-restaurant-refresh-toolbar="headerless-management"',
+    );
+    expect(panelSource).not.toMatch(
+      /<h1[\s\S]*?>[\s\S]*?맛집 최신화[\s\S]*?<\/h1>/,
+    );
+    expect(panelSource).toContain("기록 관리");
     expect(panelSource).toContain("상호명·전화번호·폐업·이전");
     expect(panelSource).toContain(
       'data-admin-restaurant-refresh-management-structure="header-list-detail"',
@@ -89,6 +103,20 @@ describe("admin restaurant refresh history source contracts", () => {
     expect(panelSource).toContain(
       'candidate.candidate_status !== "needs_review"',
     );
+  });
+
+  test("panel renders as a headerless management toolbar without the old visible title", () => {
+    const html = renderToStaticMarkup(
+      createElement(AdminRestaurantRefreshHistoryPanel),
+    );
+
+    expect(html).toContain('data-admin-restaurant-refresh-headerless="true"');
+    expect(html).toContain(
+      'data-admin-restaurant-refresh-toolbar="headerless-management"',
+    );
+    expect(html).toContain('aria-label="맛집 최신화 기록관리"');
+    expect(html).toContain("기록 관리");
+    expect(html).not.toMatch(/<h1[\s\S]*?>[\s\S]*?맛집 최신화[\s\S]*?<\/h1>/);
   });
 
   test("admin API is admin gated, no-store, and separates record from guarded apply", () => {
