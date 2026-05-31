@@ -8,10 +8,14 @@ import subprocess
 import sys
 
 PATTERNS: list[tuple[str, re.Pattern[str]]] = [
-    ("GitHub token", re.compile(r"(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{36,}|github_pat_[A-Za-z0-9_]{22,}_[A-Za-z0-9_]{59,}")),
-    ("Google API key", re.compile(r"AIza[0-9A-Za-z_-]{35}")),
-    ("OpenAI API key", re.compile(r"sk-[A-Za-z0-9_-]{32,}")),
-    ("Stripe webhook secret", re.compile(r"whsec_[A-Za-z0-9]{20,}")),
+    ("GitHub token", re.compile(r"(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{36,}|" + r"github" + r"_pat_[A-Za-z0-9_]{22,}_[A-Za-z0-9_]{59,}")),
+    ("JWT-like token", re.compile(r"ey" + r"J[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}")),
+    ("Google API key", re.compile(r"AI" + r"za[0-9A-Za-z_-]{35}")),
+    ("OpenAI API key", re.compile(r"sk" + r"-[A-Za-z0-9_-]{32,}")),
+    ("Anthropic API key", re.compile(r"sk" + r"-ant-[A-Za-z0-9_-]{32,}")),
+    ("Slack token", re.compile(r"xox" + r"[baprs]-[A-Za-z0-9-]{20,}")),
+    ("Stripe webhook secret", re.compile(r"wh" + r"sec_[A-Za-z0-9]{20,}")),
+    ("Private key block", re.compile(r"-----BEGIN " + r"[A-Z ]*PRIVATE KEY-----")),
 ]
 
 SKIP_SUFFIXES = {

@@ -112,8 +112,12 @@ describe("mobile and desktop parity source contracts", () => {
     expect(tableSource).toContain("누락 사유:");
     expect(tableSource).toContain("판정 근거");
     expect(tableSource).toContain("쯔양 리뷰 요약");
-    expect(tableSource).toContain("{ value: 'true', label: '확인됨' }");
+    expect(tableSource).toContain("{ value: 'true', label: '일치' }");
+    expect(tableSource).toContain("{ value: 'false_match', label: '불일치' }");
+    expect(tableSource).toContain("{ value: 'review', label: '검토' }");
     expect(tableSource).toContain("{ value: 'false_geocode', label: '실패' }");
+    expect(tableSource).not.toContain("{ value: 'candidate', label: '승격 후보' }");
+    expect(tableSource).not.toContain("label: '추가 확인'");
     expect(tableSource).toContain("{ value: 'missing', label: '누락' }");
     expect(tableSource).not.toContain("Missing 사유:");
     expect(tableSource).not.toContain("Reasoning Basis");
@@ -279,6 +283,7 @@ describe("mobile and desktop parity source contracts", () => {
     const stampOverlaySource = source(
       "components/overlay-pages/StampOverlay.tsx",
     );
+    const stampPageSource = source("app/stamp/page.tsx");
     const overlayLayoutSource = source("components/layout/OverlayLayout.tsx");
     const detailPanelSource = source(
       "components/restaurant/RestaurantDetailPanel.tsx",
@@ -797,6 +802,14 @@ describe("mobile and desktop parity source contracts", () => {
     );
     expect(stampOverlaySource).toContain('stampSize="mobile"');
     expect(stampOverlaySource).toContain('size="default"');
+    expect(stampPageSource).toContain(
+      'data-stamp-guide-loading-card="mobile-page"',
+    );
+    expect(stampOverlaySource).toContain(
+      'data-stamp-guide-loading-card="desktop-left-panel"',
+    );
+    expect(stampPageSource).toContain("showStampGuide && (");
+    expect(stampOverlaySource).toContain("showStampGuide && (");
     expect(stampOverlaySource).toContain("singleColumnCards?: boolean");
     expect(stampOverlaySource).toContain("singleColumnCards = false");
     expect(stampOverlaySource).toContain(

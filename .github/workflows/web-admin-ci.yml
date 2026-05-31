@@ -13,6 +13,16 @@ on:
       - 'apps/web/bun.lock'
       - 'apps/web/tsconfig.json'
       - 'apps/web/eslint.config.mjs'
+      - 'backend/bin/apply_tzuyang_address_evidence_ledger.mjs'
+      - 'backend/bin/build_tzuyang_address_evidence_ledger.mjs'
+      - 'backend/bin/build_tzuyang_case_review_pack.mjs'
+      - 'backend/bin/naver_scrapling_fetch.py'
+      - 'backend/bin/build_tzuyang_operator_review_package.mjs'
+      - 'backend/bin/validate_tzuyang_address_evidence_ledger.mjs'
+      - 'backend/restaurant-evaluation/scripts/tests/tzuyang-case-review-pack.test.mjs'
+      - 'backend/restaurant-evaluation/scripts/tests/tzuyang-operator-review-package.test.mjs'
+      - 'backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger.test.mjs'
+      - 'backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger-cli-fixture.mjs'
   push:
     branches:
       - main
@@ -29,6 +39,16 @@ on:
       - 'apps/web/bun.lock'
       - 'apps/web/tsconfig.json'
       - 'apps/web/eslint.config.mjs'
+      - 'backend/bin/apply_tzuyang_address_evidence_ledger.mjs'
+      - 'backend/bin/build_tzuyang_address_evidence_ledger.mjs'
+      - 'backend/bin/build_tzuyang_case_review_pack.mjs'
+      - 'backend/bin/naver_scrapling_fetch.py'
+      - 'backend/bin/build_tzuyang_operator_review_package.mjs'
+      - 'backend/bin/validate_tzuyang_address_evidence_ledger.mjs'
+      - 'backend/restaurant-evaluation/scripts/tests/tzuyang-case-review-pack.test.mjs'
+      - 'backend/restaurant-evaluation/scripts/tests/tzuyang-operator-review-package.test.mjs'
+      - 'backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger.test.mjs'
+      - 'backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger-cli-fixture.mjs'
   workflow_dispatch:
 
 permissions:
@@ -46,6 +66,20 @@ jobs:
     name: Admin address consistency regression
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: tzudong_ci
+          POSTGRES_USER: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     defaults:
       run:
         working-directory: apps/web
@@ -69,6 +103,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install backend dependencies
+        run: cd ../.. && npm ci --prefix backend
+
       - name: Lint changed admin address surfaces
         run: >
           npx eslint
@@ -77,14 +114,37 @@ jobs:
           components/admin/EvaluationDetailView.tsx
           components/admin/EvaluationTableNew.tsx
           tests-unit/admin-address-consistency.test.ts
+          tests-unit/admin-evaluation-address-filter-source.test.ts
           --max-warnings=0
 
       - name: Typecheck web app
         run: npx tsc --noEmit --pretty false
 
+      - name: Run backend address ledger regression tests
+        run: >
+          cd ../.. &&
+          node --test
+          backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger.test.mjs
+          backend/restaurant-evaluation/scripts/tests/tzuyang-case-review-pack.test.mjs
+          backend/restaurant-evaluation/scripts/tests/tzuyang-operator-review-package.test.mjs
+
+
+      - name: Run backend address ledger CLI fixture chain
+        run: >
+          cd ../.. &&
+          TZUYANG_LEDGER_CI_FIXTURE=1
+          SUPABASE_DB_HOST=localhost
+          SUPABASE_DB_PORT=5432
+          SUPABASE_DB_NAME=tzudong_ci
+          SUPABASE_DB_USER=postgres
+          SUPABASE_DB_PASSWORD=${{ github.run_id }}
+          SUPABASE_DB_SSL=disable
+          node backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger-cli-fixture.mjs
+
       - name: Run admin address regression tests
         run: >
           bun test
           tests-unit/admin-address-consistency.test.ts
+          tests-unit/admin-evaluation-address-filter-source.test.ts
           tests-unit/mobile-desktop-parity-source.test.ts
           tests-unit/web-quality-performance-source.test.ts

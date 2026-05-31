@@ -1710,7 +1710,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(routeSource).toContain("subscriberDelta");
     expect(routeSource).toContain("comparisonFetchedAt");
     expect(routeSource).toContain("YOUTUBE_API_KEY");
-    expect(routeSource).toContain("NEXT_PUBLIC_YOUTUBE_API_KEY");
+    expect(routeSource).not.toContain("NEXT_PUBLIC_YOUTUBE_API_KEY");
     expect(routeSource).toContain("YOUTUBE_CHANNEL_ID");
     expect(routeSource).toContain("YOUTUBE_CHANNEL_HANDLE");
     expect(routeSource).toContain("@tzuyang6145");
@@ -1995,6 +1995,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain('renderOrderControls("dropdown")');
     expect(consoleSource).toContain('data-admin-sidebar-theme-toggle="true"');
     expect(consoleSource).toContain('data-admin-sidebar-footer-actions="true"');
+    expect(consoleSource).toContain('data-admin-sidebar-section-list="spacious"');
+    expect(consoleSource).toContain('data-admin-sidebar-footer-separator="spacious"');
+    expect(consoleSource).toContain("border-t border-dashed border-border/70 pt-4");
     expect(consoleSource).toContain('data-admin-sidebar-preference-placement={placement}');
     expect(consoleSource).toContain('data-admin-sidebar-theme-layout={placement}');
     expect(consoleSource).toContain(
@@ -2003,8 +2006,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain('aria-label="메뉴 순서 설정"');
     expect(consoleSource).toContain('aria-label="관리자 사이드바 설정"');
     expect(consoleSource).toContain('isCollapsed');
-    expect(consoleSource).toContain('"flex w-full flex-col items-center gap-1.5"');
-    expect(consoleSource).toContain('"space-y-2"');
+    expect(consoleSource).toContain('"flex w-full flex-col items-center gap-2.5"');
+    expect(consoleSource).toContain('"space-y-3"');
     expect(consoleSource).toContain('data-admin-sidebar-order-trigger="expanded"');
     expect(consoleSource).toContain('data-admin-sidebar-order-trigger="collapsed"');
     expect(consoleSource).toContain("ADMIN_THEME_STORAGE_KEY");
@@ -2086,9 +2089,12 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain('data-admin-sidebar-order-editor={placement}');
     expect(consoleSource).toContain('renderOrderControls("dropdown")');
     expect(consoleSource).toContain('data-admin-sidebar-footer-actions="true"');
+    expect(consoleSource).toContain('data-admin-sidebar-section-list="spacious"');
+    expect(consoleSource).toContain('data-admin-sidebar-footer-separator="spacious"');
+    expect(consoleSource).toContain("border-t border-dashed border-border/70 pt-4");
     expect(consoleSource).toContain("renderThemeControls(\"sidebar\")");
     expect(consoleSource).toContain("renderOrderControls(\"sidebar\")");
-    expect(consoleSource).toContain("block min-h-0 flex-1 space-y-1.5 pb-2");
+    expect(consoleSource).toContain("block min-h-0 flex-1 space-y-3 pt-2 pb-3");
     expect(consoleSource).toContain("메뉴 순서");
     expect(consoleSource).toContain("초기화");
     expect(consoleSource).toContain("aria-label={`${item.title} 메뉴 앞으로`}");

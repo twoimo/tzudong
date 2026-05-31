@@ -57,8 +57,8 @@ export async function POST(request: Request) {
         });
 
         if (!workflowPreflightResponse.ok) {
-            const errorText = await workflowPreflightResponse.text();
-            console.error('GitHub Actions 사전 확인 실패:', workflowPreflightResponse.status, errorText);
+            await workflowPreflightResponse.text().catch(() => null);
+            console.error('GitHub Actions 사전 확인 실패:', workflowPreflightResponse.status);
             return NextResponse.json(
                 { error: `GitHub Actions 사전 확인 실패: ${workflowPreflightResponse.status}` },
                 { status: workflowPreflightResponse.status }
@@ -87,7 +87,7 @@ export async function POST(request: Request) {
         if (resetError) {
             console.error('OCR 초기화 실패:', resetError);
             return NextResponse.json(
-                { error: `OCR 초기화 실패: ${resetError.message}` },
+                { error: 'OCR 초기화에 실패했습니다.' },
                 { status: 500 }
             );
         }
@@ -100,8 +100,8 @@ export async function POST(request: Request) {
         });
 
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error('GitHub API 오류:', response.status, errorText);
+            await response.text().catch(() => null);
+            console.error('GitHub API 오류:', response.status);
             return NextResponse.json(
                 {
                     error: `GitHub Actions 트리거 실패: ${response.status}`,
@@ -121,7 +121,7 @@ export async function POST(request: Request) {
     } catch (err) {
         console.error('OCR 전체 재실행 오류:', err);
         return NextResponse.json(
-            { error: err instanceof Error ? err.message : 'Unknown error' },
+            { error: 'OCR 전체 재실행을 시작하지 못했습니다.' },
             { status: 500 }
         );
     }

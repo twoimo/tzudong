@@ -1,6 +1,5 @@
 import crypto from 'crypto';
 import sharp from 'sharp';
-import { createClient } from '@/lib/supabase/server';
 import { createClient as createSupabaseJsClient } from '@supabase/supabase-js';
 import { callGeminiReceiptOcr, GEMINI_OCR_FALLBACK_MODEL, GeminiOcrError } from '@/lib/ocr/gemini';
 import {
@@ -36,6 +35,12 @@ import {
   isOcrForceRefreshRequested,
   OCR_DAILY_QUOTA,
 } from '@/lib/ocr/quota';
+import {
+  authenticateOcrRequest,
+  getOcrUploadRejectionForRequest,
+  OCR_MAX_INPUT_PIXELS,
+  readOcrImageFile,
+} from '@/lib/ocr/request-security';
 
 export const runtime = 'nodejs';
 
@@ -97,7 +102,7 @@ function createSseResponse(
 async function optimizeImage(buffer: Buffer): Promise<{ optimized: Buffer; savings: string }> {
   try {
     const originalSize = buffer.length;
-    const metadata = await sharp(buffer).metadata();
+    const metadata = await sharp(buffer, { limitInputPixels: OCR_MAX_INPUT_PIXELS }).metadata();
 
     // 영수증 OCR은 작은 글자 판독이 핵심이다. 실기기 영수증처럼 이미 2MB 이하이고
     // 1800px 이하인 이미지는 원본을 유지해 가게명/메뉴명 오인식을 줄인다.
@@ -107,8 +112,8 @@ async function optimizeImage(buffer: Buffer): Promise<{ optimized: Buffer; savin
 
     // 큰 이미지만 완만하게 축소한다. 1024px/70% 과압축은 영수증 OCR 정확도를 떨어뜨린다.
     const optimized = metadata.width && metadata.width > 1600
-      ? await sharp(buffer).resize({ width: 1600 }).jpeg({ quality: 85 }).toBuffer()
-      : await sharp(buffer).jpeg({ quality: 85 }).toBuffer();
+      ? await sharp(buffer, { limitInputPixels: OCR_MAX_INPUT_PIXELS }).resize({ width: 1600 }).jpeg({ quality: 85 }).toBuffer()
+      : await sharp(buffer, { limitInputPixels: OCR_MAX_INPUT_PIXELS }).jpeg({ quality: 85 }).toBuffer();
     const savingsPercent = ((originalSize - optimized.length) / originalSize * 100).toFixed(0);
     return { optimized, savings: `${savingsPercent}%` };
   } catch {
@@ -138,6 +143,24 @@ async function runStreamingOcrCandidate(input: {
 }
 
 export async function POST(req: Request) {
+  const uploadRejection = getOcrUploadRejectionForRequest(req.headers);
+  if (uploadRejection) {
+    return new Response(JSON.stringify({ error: uploadRejection.error }), {
+      status: uploadRejection.status,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const auth = await authenticateOcrRequest(req);
+  if (!auth.ok) {
+    return new Response(JSON.stringify({ error: auth.error }), {
+      status: auth.status,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+  const { supabase, user } = auth;
+  let accessToken: string | null = auth.accessToken;
+
   const aiRuntime = await resolveOcrAiRuntimeConfig();
   const providerCandidates = [aiRuntime, ...aiRuntime.fallbackCandidates];
   const runnableCandidates = providerCandidates.filter(candidate => hasRunnableOcrCredentials([candidate]));
@@ -156,36 +179,16 @@ export async function POST(req: Request) {
   if (!file) {
     return new Response(JSON.stringify({ error: '이미지가 제공되지 않았습니다' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
-  if (!file.type.startsWith('image/')) {
-    return new Response(JSON.stringify({ error: '유효하지 않은 파일 형식입니다' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+
+  const imageReadResult = await readOcrImageFile(file);
+  if (!imageReadResult.ok) {
+    return new Response(JSON.stringify({ error: imageReadResult.error }), {
+      status: imageReadResult.status,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
-  const supabase = await createClient();
-  const { data: { user: initialUser }, error: authError } = await supabase.auth.getUser();
-  let user = initialUser;
-  let accessToken: string | null = null;
-
-  if (!authError && user) {
-    const { data: { session } } = await supabase.auth.getSession();
-    accessToken = session?.access_token ?? null;
-  }
-
-  if (authError || !user) {
-    const authHeader = req.headers.get('Authorization');
-    if (authHeader?.startsWith('Bearer ')) {
-      const token = authHeader.split(' ')[1];
-      const { data: { user: headerUser }, error: headerError } = await supabase.auth.getUser(token);
-      if (headerError || !headerUser) {
-        return new Response(JSON.stringify({ error: '로그인이 필요한 서비스입니다 (Token Invalid)' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
-      }
-      user = headerUser;
-      accessToken = token;
-    } else {
-      return new Response(JSON.stringify({ error: '로그인이 필요한 서비스입니다' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
-    }
-  }
-
-  const buffer = Buffer.from(await file.arrayBuffer());
+  const buffer = imageReadResult.buffer;
   const imageHash = crypto.createHash('sha256').update(buffer).digest('hex');
   const ocrCacheVersions = providerCandidates.map(candidate => buildOcrCacheVersion({
     cacheKind: RECEIPT_OCR_RAW_CACHE_KIND,
