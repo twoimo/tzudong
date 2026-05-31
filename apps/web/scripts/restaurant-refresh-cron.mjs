@@ -301,7 +301,12 @@ async function fetchApprovedRestaurants(supabase, limit) {
     supabase,
     'restaurants',
     'id, approved_name, origin_name, naver_name, google_name, phone, road_address, jibun_address, english_address, lat, lng, status, is_missing, is_not_selected, updated_at, created_at',
-    (query) => query.eq('status', 'approved').order('updated_at', { ascending: true, nullsFirst: true }).limit(limit || DEFAULT_LIMIT),
+    (query) => query
+      .eq('status', 'approved')
+      .not('is_missing', 'is', true)
+      .not('is_not_selected', 'is', true)
+      .order('updated_at', { ascending: true, nullsFirst: true })
+      .limit(limit || DEFAULT_LIMIT),
   );
   return rows.filter((row) => row.is_missing !== true && row.is_not_selected !== true);
 }
