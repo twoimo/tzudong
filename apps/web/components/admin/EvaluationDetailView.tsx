@@ -6,6 +6,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { formatCategoryText } from '@/lib/category-utils';
 import { openExternalUrl } from '@/lib/open-external-url';
+import { extractVideoIdFromYoutubeLink } from '@/lib/dashboard/helpers';
+import { getYoutubeThumbnailCandidates, shouldTryNextYoutubeThumbnailCandidate } from '@/lib/youtube-thumbnail';
 import {
     explainAddressConsistency,
     getAddressConsistencyAhpSummary,
@@ -21,24 +23,6 @@ import {
     hasUsableEvaluationBasis,
     type EvaluationMetricKey,
 } from '@/lib/admin-evaluation-completeness';
-
-// 유틸리티 함수: YouTube 비디오 ID 추출 (컴포넌트 외부)
-const getYoutubeVideoId = (url: string | undefined): string | null => {
-    if (!url) return null;
-    const patterns = [
-        /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})(?:[?&].*)?/,
-        /(?:youtube\.com\/(?:embed|v)\/)([a-zA-Z0-9_-]{11})/,
-        /(?:m\.youtube\.com\/watch\?v=|youtube\.com\/.*[?&]v=)([a-zA-Z0-9_-]{11})/,
-        /(?:youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
-    ];
-    for (const pattern of patterns) {
-        const match = url.match(pattern);
-        if (match && match[1] && match[1].length === 11) {
-            return match[1];
-        }
-    }
-    return null;
-};
 
 interface EvaluationDetailViewProps {
     record: EvaluationRecord;
@@ -254,16 +238,19 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
 
     const [embedError, setEmbedError] = useState(false);
     const [videoUrl, setVideoUrl] = useState<string | null>(null);
+    const [thumbnailCandidateIndex, setThumbnailCandidateIndex] = useState(0);
     const iframeRef = React.useRef<HTMLIFrameElement>(null);
 
     // 리코드 변경 시 상태 초기화
     useEffect(() => {
         setEmbedError(false);
         setVideoUrl(null);
+        setThumbnailCandidateIndex(0);
     }, [record?.id]);
 
     // videoId 메모이제이션
-    const videoId = useMemo(() => getYoutubeVideoId(record?.youtube_link), [record?.youtube_link]);
+    const videoId = useMemo(() => extractVideoIdFromYoutubeLink(record?.youtube_link), [record?.youtube_link]);
+    const thumbnailCandidates = useMemo(() => getYoutubeThumbnailCandidates(videoId), [videoId]);
 
     // YouTube 임베드 가능 여부 확인 (noembed.com 프록시 사용 - CORS 지원)
     useEffect(() => {
@@ -300,7 +287,7 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
     // 비디오 URL 생성 로직
     useEffect(() => {
         if (record?.youtube_link && !embedError) {
-            const vidId = getYoutubeVideoId(record.youtube_link);
+            const vidId = extractVideoIdFromYoutubeLink(record.youtube_link);
             if (vidId) {
                 const origin = typeof window !== 'undefined' ? window.location.origin : '';
                 const url = `https://www.youtube.com/embed/${vidId}?autoplay=0&mute=0&playsinline=1&rel=0&enablejsapi=1&origin=${origin}&controls=1`;
@@ -652,16 +639,27 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
                             >
                                 {videoId ? (
                                     <Image
-                                        src={`https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`}
+                                        src={thumbnailCandidates[thumbnailCandidateIndex] || `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`}
                                         alt={`${title} 썸네일`}
                                         fill
                                         unoptimized
                                         sizes="(max-width: 768px) 100vw, 768px"
                                         className="object-cover transition-opacity duration-200 group-hover:opacity-90 motion-reduce:transition-none"
-                                        onError={(e) => {
-                                            const target = e.currentTarget;
-                                            if (target.src.includes('maxresdefault')) {
-                                                target.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+                                        onLoad={(event) => {
+                                            if (
+                                                shouldTryNextYoutubeThumbnailCandidate({
+                                                    naturalWidth: event.currentTarget.naturalWidth,
+                                                    naturalHeight: event.currentTarget.naturalHeight,
+                                                    candidateIndex: thumbnailCandidateIndex,
+                                                    totalCandidates: thumbnailCandidates.length,
+                                                })
+                                            ) {
+                                                setThumbnailCandidateIndex((index) => index + 1);
+                                            }
+                                        }}
+                                        onError={() => {
+                                            if (thumbnailCandidateIndex < thumbnailCandidates.length - 1) {
+                                                setThumbnailCandidateIndex((index) => index + 1);
                                             }
                                         }}
                                     />

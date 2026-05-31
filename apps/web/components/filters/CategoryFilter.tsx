@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { Region, Restaurant } from "@/types/restaurant";
 import { mergeRestaurants } from "@/hooks/use-restaurants";
 import { buildOverseasCountryAddressOrFilter } from "@/lib/overseas-region-matching";
+import { buildRestaurantRegionAddressOrFilter } from "@/lib/popular-restaurants";
 
 interface CategoryFilterProps {
     selectedCategories: string[];
@@ -66,18 +67,14 @@ const CategoryFilter = ({
 
             // 지역 또는 국가 필터링 적용
             if (selectedRegion) {
-                // 국내 지역 필터링
-                if (selectedRegion === "울릉도") {
-                    params.push(['or', 'road_address.ilike.%울릉%,jibun_address.ilike.%울릉%']);
-                } else if (selectedRegion === "욕지도") {
-                    params.push(['or', 'road_address.ilike.%욕지%,jibun_address.ilike.%욕지%']);
-                } else {
-                    params.push(['or', `road_address.ilike.%${selectedRegion}%,jibun_address.ilike.%${selectedRegion}%`]);
+                const regionFilter = buildRestaurantRegionAddressOrFilter(selectedRegion, '%');
+                if (regionFilter) {
+                    params.push(['or', `(${regionFilter})`]);
                 }
             } else if (selectedCountry) {
                 const overseasFilter = buildOverseasCountryAddressOrFilter(selectedCountry, '%');
                 if (overseasFilter) {
-                    params.push(['or', overseasFilter]);
+                    params.push(['or', `(${overseasFilter})`]);
                 }
             }
 
