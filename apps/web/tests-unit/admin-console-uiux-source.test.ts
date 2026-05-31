@@ -277,7 +277,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("return null;");
     expect(adminLoadingSource).not.toContain("AdminConsoleLoadingSkeleton");
     expect(source("app/app-globals.css")).toContain(
-      "grid-template-columns: fit-content(24rem) minmax(0, 1fr);",
+      "grid-template-columns: fit-content(var(--admin-sidebar-expanded-max-width)) minmax(0, 1fr);",
     );
     expect(consoleSource).not.toContain("lg:w-[280px]");
     expect(consoleSource).not.toContain(
@@ -1801,18 +1801,20 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       '[data-admin-console-layout="sidebar-content"]',
     );
     expect(appGlobalsSource).toContain(
-      "grid-template-columns: fit-content(24rem) minmax(0, 1fr);",
+      "grid-template-columns: fit-content(var(--admin-sidebar-expanded-max-width)) minmax(0, 1fr);",
     );
     expect(appGlobalsSource).toContain(
       '[data-admin-left-panel-expanded="true"]',
     );
+    expect(appGlobalsSource).toContain("--admin-sidebar-expanded-max-width: min(18rem, 28vw);");
     expect(appGlobalsSource).toContain("width: max-content;");
-    expect(appGlobalsSource).toContain("max-width: min(24rem, 32vw);");
+    expect(appGlobalsSource).toContain("min-width: 14.25rem;");
+    expect(appGlobalsSource).toContain("max-width: var(--admin-sidebar-expanded-max-width);");
     expect(appGlobalsSource).toContain(
-      "grid-template-columns: fit-content(24rem) minmax(0, 1fr);",
+      "grid-template-columns: fit-content(var(--admin-sidebar-expanded-max-width)) minmax(0, 1fr);",
     );
     expect(appGlobalsSource).toContain(
-      "grid-template-columns: fit-content(24rem) minmax(0, 1fr);",
+      "grid-template-columns: fit-content(var(--admin-sidebar-expanded-max-width)) minmax(0, 1fr);",
     );
     expect(appGlobalsSource).toContain("[data-admin-console-content]:focus");
     expect(appGlobalsSource).toContain(
@@ -1830,7 +1832,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(appGlobalsSource).toContain("max-width: 100% !important;");
     expect(appGlobalsSource).toContain(
-      "grid-template-columns: fit-content(24rem) minmax(0, 1fr);",
+      "grid-template-columns: fit-content(var(--admin-sidebar-expanded-max-width)) minmax(0, 1fr);",
     );
     expect(appGlobalsSource).toContain(
       "grid-template-columns: 4.5rem minmax(0, 1fr);",
@@ -1989,14 +1991,26 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain("rounded-full border-border/80 bg-background/85 p-0 shadow-sm");
     expect(consoleSource).not.toContain('data-admin-console-menu-trigger="desktop-hamburger"');
     expect(consoleSource).toContain('data-admin-console-menu-dropdown="true"');
-    expect(consoleSource).toContain('data-admin-sidebar-order-editor="dropdown"');
+    expect(consoleSource).toContain('data-admin-sidebar-order-editor={placement}');
+    expect(consoleSource).toContain('renderOrderControls("dropdown")');
     expect(consoleSource).toContain('data-admin-sidebar-theme-toggle="true"');
-    expect(consoleSource).not.toContain('data-admin-sidebar-footer-actions="true"');
+    expect(consoleSource).toContain('data-admin-sidebar-footer-actions="true"');
+    expect(consoleSource).toContain('data-admin-sidebar-preference-placement={placement}');
+    expect(consoleSource).toContain('data-admin-sidebar-theme-layout={placement}');
+    expect(consoleSource).toContain(
+      'className="rounded-2xl border border-border bg-background/70 p-2"',
+    );
+    expect(consoleSource).toContain('aria-label="메뉴 순서 설정"');
+    expect(consoleSource).toContain('aria-label="관리자 사이드바 설정"');
+    expect(consoleSource).toContain('isCollapsed');
+    expect(consoleSource).toContain('"flex w-full flex-col items-center gap-1.5"');
+    expect(consoleSource).toContain('"space-y-2"');
+    expect(consoleSource).toContain('data-admin-sidebar-order-trigger="expanded"');
+    expect(consoleSource).toContain('data-admin-sidebar-order-trigger="collapsed"');
     expect(consoleSource).toContain("ADMIN_THEME_STORAGE_KEY");
     expect(consoleSource).toContain(
       'type AdminThemePreference = "light" | "dark" | "system"',
     );
-    expect(consoleSource).toContain("getNextAdminThemePreference");
     expect(consoleSource).toContain(
       'window.matchMedia("(prefers-color-scheme: dark)")',
     );
@@ -2006,18 +2020,25 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       "window.localStorage.setItem(ADMIN_THEME_STORAGE_KEY",
     );
-    expect(consoleSource).toContain("aria-label={themeToggleLabel}");
+    expect(consoleSource).toContain('aria-label="화면 모드 선택"');
+    expect(consoleSource).toContain('aria-label={`${label}으로 변경`}');
     expect(consoleSource).toContain(
-      'aria-pressed={themePreference !== "light"}',
+      'aria-pressed={themePreference === theme}',
     );
     expect(consoleSource).toContain(
-      '<Monitor className="mr-1 h-3.5 w-3.5" aria-hidden="true" />',
+      '"border border-border bg-white p-1 shadow-inner dark:bg-card"',
     );
     expect(consoleSource).toContain(
-      '<Moon className="mr-1 h-3.5 w-3.5" aria-hidden="true" />',
+      '["light", "화이트 모드", Sun]',
     );
     expect(consoleSource).toContain(
-      '<Sun className="mr-1 h-3.5 w-3.5" aria-hidden="true" />',
+      '["dark", "다크모드", Moon]',
+    );
+    expect(consoleSource).toContain(
+      '["system", "시스템 설정", Monitor]',
+    );
+    expect(consoleSource).toContain(
+      '<Icon className="h-3.5 w-3.5" aria-hidden="true" />',
     );
     expect(consoleSource).toContain("ADMIN_SIDEBAR_COLLAPSED_STORAGE_KEY");
     expect(consoleSource).toContain(
@@ -2040,8 +2061,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(appGlobalsSource).toContain(".dark {");
     expect(appGlobalsSource).toContain("--background: 24 10% 10%;");
     expect(consoleSource).toContain(
-      "relative z-30 hidden h-full min-h-0 w-full shrink-0 flex-col",
+      "relative z-30 hidden h-full min-h-0 w-max shrink-0 flex-col",
     );
+    expect(consoleSource).toContain("md:min-w-[14.25rem]");
+    expect(consoleSource).toContain("md:max-w-[var(--admin-sidebar-expanded-max-width)]");
     expect(consoleSource).toContain("isCollapsed &&");
     expect(consoleSource).toContain(
       '"md:min-h-9 md:w-full md:items-center md:justify-center md:border-b-0 md:px-0 md:pb-1"',
@@ -2060,7 +2083,11 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain('aria-label="관리자 메뉴 열기"');
     expect(consoleSource).toContain('aria-controls="admin-console-menu-dropdown"');
     expect(consoleSource).toContain('data-admin-console-menu-dropdown="true"');
-    expect(consoleSource).toContain('data-admin-sidebar-order-editor="dropdown"');
+    expect(consoleSource).toContain('data-admin-sidebar-order-editor={placement}');
+    expect(consoleSource).toContain('renderOrderControls("dropdown")');
+    expect(consoleSource).toContain('data-admin-sidebar-footer-actions="true"');
+    expect(consoleSource).toContain("renderThemeControls(\"sidebar\")");
+    expect(consoleSource).toContain("renderOrderControls(\"sidebar\")");
     expect(consoleSource).toContain("block min-h-0 flex-1 space-y-1.5 pb-2");
     expect(consoleSource).toContain("메뉴 순서");
     expect(consoleSource).toContain("초기화");
@@ -2208,7 +2235,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
 
     expect(source("app/app-globals.css")).toContain(
-      "grid-template-columns: fit-content(24rem) minmax(0, 1fr);",
+      "grid-template-columns: fit-content(var(--admin-sidebar-expanded-max-width)) minmax(0, 1fr);",
     );
     expect(consoleSource).toContain('data-admin-console-menu-trigger="hamburger"');
     expect(consoleSource).toContain('data-admin-dashboard-period-select-trigger="true"');

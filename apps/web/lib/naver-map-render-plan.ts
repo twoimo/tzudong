@@ -2,12 +2,13 @@ import type { Restaurant } from '@/types/restaurant';
 import type Supercluster from 'supercluster';
 import { isCluster, type ClusterProperties, type RegionalCluster, type SeoulDistrictCluster } from '@/lib/clustering';
 import { getPrimaryCategory, isRestaurantInViewport, type ExtendedBounds } from '@/lib/naver-map-view-helpers';
+import { getTzuyangVisitCount } from '@/lib/restaurant-visit-count';
 
 const formatCoordForSignature = (value: number | null | undefined): string =>
     typeof value === 'number' && Number.isFinite(value) ? value.toFixed(6) : 'na';
 
 const toRestaurantRenderToken = (restaurant: Restaurant, prefix = 'restaurant'): string =>
-    `${prefix}-${restaurant.id}:${formatCoordForSignature(restaurant.lat)}:${formatCoordForSignature(restaurant.lng)}:${getPrimaryCategory(restaurant)}`;
+    `${prefix}-${restaurant.id}:${formatCoordForSignature(restaurant.lat)}:${formatCoordForSignature(restaurant.lng)}:${getPrimaryCategory(restaurant)}:${getTzuyangVisitCount(restaurant)}`;
 
 type RestaurantWithRenderableCoordinates = Restaurant & { lat: number; lng: number };
 
@@ -84,6 +85,7 @@ export function getSeoulIndividualRestaurantsForRender({
 
 export function buildRenderTargetIdsForSignature({
     activeSearchedRestaurant,
+    selectedRestaurant,
     clusters,
     displayRestaurantIds,
     displayRestaurants,
@@ -97,6 +99,7 @@ export function buildRenderTargetIdsForSignature({
     seoulIndividualIds,
 }: {
     activeSearchedRestaurant: Restaurant | null;
+    selectedRestaurant?: Restaurant | null;
     clusters: Array<Supercluster.ClusterFeature<ClusterProperties> | Supercluster.PointFeature<ClusterProperties>>;
     displayRestaurantIds: Set<string>;
     displayRestaurants: Restaurant[];
@@ -115,6 +118,14 @@ export function buildRenderTargetIdsForSignature({
 
     if (activeSearchedRestaurant && !displayRestaurantIds.has(activeSearchedRestaurant.id)) {
         renderTargetIdsForSignature.push(toRestaurantRenderToken(activeSearchedRestaurant, 'searched'));
+    }
+
+    if (
+        selectedRestaurant &&
+        !displayRestaurantIds.has(selectedRestaurant.id) &&
+        selectedRestaurant.id !== activeSearchedRestaurant?.id
+    ) {
+        renderTargetIdsForSignature.push(toRestaurantRenderToken(selectedRestaurant, 'selected'));
     }
 
     if (nextIsRegionalClusterMode) {
