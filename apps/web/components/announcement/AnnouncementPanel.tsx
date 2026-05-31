@@ -36,6 +36,19 @@ interface AnnouncementPanelProps {
     adminActionsMode?: 'inline';
 }
 
+function normalizeAnnouncementContent(content: string): string {
+    return content
+        .replace(/\r\n?/g, '\n')
+        .replace(/\\n/g, '\n')
+        .trim();
+}
+
+function getAnnouncementContentParagraphs(content: string): string[] {
+    const normalizedContent = normalizeAnnouncementContent(content);
+
+    return normalizedContent ? normalizedContent.split(/\n{2,}/) : [];
+}
+
 export default function AnnouncementPanel({
     isOpen,
     onClose,
@@ -503,8 +516,16 @@ function AnnouncementListItemSkeleton({ index }: { index: number }) {
 
                                     {/* 내용 */}
                                     <div className="pt-4 border-t border-border overflow-hidden">
-                                        <div className="whitespace-pre-wrap text-sm text-foreground leading-relaxed break-words" style={{ overflowWrap: 'anywhere' }}>
-                                            {selectedAnnouncement.content}
+                                        <div className="space-y-3 text-sm text-foreground leading-relaxed break-words" style={{ overflowWrap: 'anywhere' }}>
+                                            {getAnnouncementContentParagraphs(selectedAnnouncement.content).map((paragraph, index) => (
+                                                <p
+                                                    key={`${selectedAnnouncement.id}-paragraph-${index}`}
+                                                    className="whitespace-pre-line"
+                                                    style={{ whiteSpace: 'pre-line' }}
+                                                >
+                                                    {paragraph}
+                                                </p>
+                                            ))}
                                         </div>
                                     </div>
 
