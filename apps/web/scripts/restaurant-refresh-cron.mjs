@@ -86,6 +86,15 @@ function normalizePhone(value) {
   return norm(value).replace(/[^0-9]/g, '');
 }
 
+function isLikelyKoreanLocalSearchTarget(row) {
+  const address = norm([row.road_address, row.jibun_address, row.english_address].filter(Boolean).join(' '));
+  if (/[가-힣]+(?:특별시|광역시|특별자치도|도)\s+[가-힣]+/.test(address)) return true;
+  if (/(서울|부산|대구|인천|광주|대전|울산|세종|경기|강원|충북|충남|전북|전남|경북|경남|제주)/.test(address)) return true;
+  const phoneText = norm(row.phone);
+  const digits = normalizePhone(phoneText);
+  return !phoneText.startsWith('+') && digits.startsWith('0') && digits.length >= 8;
+}
+
 function canonicalSnapshot(row) {
   return {
     name: row.approved_name || row.naver_name || row.google_name || row.origin_name || null,
@@ -220,6 +229,7 @@ export function buildCandidateFromLocalItems(row, items, now, query) {
 export function buildNoResultCandidate(row, attempts, now) {
   if (!attempts.length || attempts.some((attempt) => attempt.status === 'ok' && attempt.items.length > 0)) return null;
   if (attempts.some((attempt) => attempt.status !== 'ok')) return null;
+  if (!isLikelyKoreanLocalSearchTarget(row)) return null;
   const previous = canonicalSnapshot(row);
   return {
     restaurant_id: row.id,
