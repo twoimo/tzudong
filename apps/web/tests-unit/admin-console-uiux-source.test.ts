@@ -411,6 +411,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(opsSectionSource).toContain('id: "routes"');
     expect(opsSectionSource).not.toContain('"audit"');
     expect(labSectionSource).toContain('"audit"');
+    expect(labSectionSource).toContain('["audit", "youtube-thumbnail-generator"]');
     expect(labSectionSource).toContain('id: "llm"');
     expect(labSectionSource).toContain('badge: "실험 중"');
     expect(opsSectionSource.indexOf('id: "routes"')).toBeLessThan(
@@ -1777,6 +1778,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       '"users"',
       '"insights"',
       '"audit"',
+      '"youtube-thumbnail-generator"',
       '"llm"',
     ]) {
       expect(consoleSource).toContain(moduleId);
@@ -1888,11 +1890,52 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(sidebarOrderSource).toContain(
       '운영: ["routes", "storyboard", "banners", "users", "insights"]',
     );
-    expect(sidebarOrderSource).toContain('실험실: ["audit", "llm"]');
+    expect(sidebarOrderSource).toContain('실험실: ["audit", "youtube-thumbnail-generator", "llm"]');
     expect(sidebarOrderRouteSource).toContain(
       'from "@/lib/admin/sidebar-order"',
     );
     expect(sidebarOrderSource).not.toContain("'announcements'");
+  });
+
+
+  test("adds YouTube thumbnail generation as a guarded Lab module", () => {
+    const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
+    const componentSource = source(
+      "components/admin/thumbnail-generator/AdminYoutubeThumbnailGenerator.tsx",
+    );
+    const routeSource = source("app/api/admin/youtube-thumbnail-generator/route.ts");
+    const providerSource = source("lib/admin/youtube-thumbnail-generator/providers.ts");
+    const promptSource = source("lib/admin/youtube-thumbnail-generator/prompt.ts");
+    const requestSource = source("lib/admin/youtube-thumbnail-generator/request.ts");
+
+    expect(consoleSource).toContain('id: "youtube-thumbnail-generator"');
+    expect(consoleSource).toContain("유튜브 썸네일 생성기");
+    expect(consoleSource).toContain("AdminYoutubeThumbnailGenerator");
+    expect(componentSource).toContain("/api/admin/youtube-thumbnail-generator");
+    expect(componentSource).toContain("Google Nano Banana 2 Pro API");
+    expect(componentSource).toContain("gpt-image-2");
+    expect(componentSource).toContain("fontFamily");
+    expect(componentSource).toContain("strokeWidth");
+    expect(componentSource).toContain('canvas.toDataURL("image/png")');
+    expect(routeSource).toContain("export const runtime = 'nodejs'");
+    expect(routeSource).toContain("export const dynamic = 'force-dynamic'");
+    expect(routeSource).toContain("await requireAdmin()");
+    expect(routeSource.indexOf("await requireAdmin()")).toBeLessThan(
+      routeSource.indexOf("await request.formData()"),
+    );
+    const postSource = routeSource.slice(routeSource.indexOf("export async function POST"));
+    expect(postSource.indexOf("await requireAdmin()")).toBeLessThan(
+      postSource.indexOf("generateYoutubeThumbnail"),
+    );
+    expect(routeSource).toContain("getContentLengthRejection");
+    expect(routeSource).toContain("getMultipartContentTypeRejection");
+    expect(routeSource).toContain("'Cache-Control': 'no-store'");
+    expect(providerSource).toContain("gpt-image-1.5");
+    expect(providerSource).toContain("gemini-3-pro-image-preview");
+    expect(providerSource).toContain("execFile");
+    expect(providerSource).not.toContain("spawn(");
+    expect(promptSource).toContain("Do not render real names");
+    expect(requestSource).toContain("detectImageMime");
   });
 
   test("adds storyboard generation as an operator-controlled admin module", () => {
