@@ -1837,6 +1837,12 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(appGlobalsSource).toContain(
       "grid-template-columns: 4.5rem minmax(0, 1fr);",
     );
+    expect(consoleSource).toContain(
+      '? "md:w-[4.5rem] md:min-w-[4.5rem] md:max-w-[4.5rem] md:items-center md:px-1.5"',
+    );
+    expect(consoleSource).toContain(
+      ': "md:min-w-[14.25rem] md:max-w-[var(--admin-sidebar-expanded-max-width)]"',
+    );
   });
 
   test("keeps admin console keyboard and screen-reader navigation intact", () => {
@@ -2004,6 +2010,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("border-t border-dashed border-border/70 pt-4");
     expect(consoleSource).toContain('data-admin-sidebar-preference-placement={placement}');
     expect(consoleSource).toContain('data-admin-sidebar-theme-layout={placement}');
+    expect(consoleSource).toContain(
+      'inline-flex w-9 flex-col items-center gap-1 self-center rounded-2xl',
+    );
+    expect(consoleSource).toContain('isCompactSidebar ? "w-8" : "w-full min-w-0"');
     expect(consoleSource).toContain(
       'className="rounded-2xl border border-border bg-background/70 p-2"',
     );
