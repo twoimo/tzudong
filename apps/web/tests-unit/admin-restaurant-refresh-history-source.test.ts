@@ -37,6 +37,10 @@ describe("admin restaurant refresh history source contracts", () => {
     expect(panelSource).toContain('운영자 결정 기록');
     expect(panelSource).toContain('결정 저장');
     expect(panelSource).toContain('승인과 동시에 현재 맛집 값 guarded apply');
+    expect(panelSource).toContain('snapshotText(candidate.previous_snapshot, "road_address")');
+    expect(panelSource).toContain('snapshotText(candidate.candidate_snapshot, "road_address")');
+    expect(panelSource).toContain('snapshotText(selectedCandidate.previous_snapshot, "jibun_address")');
+    expect(panelSource).toContain('snapshotText(selectedCandidate.candidate_snapshot, "jibun_address")');
     expect(panelSource).toContain('candidate.candidate_status !== "needs_review"');
   });
 

@@ -308,13 +308,15 @@ export function AdminRestaurantRefreshHistoryPanel() {
                   <p className="font-semibold text-foreground">현재 스냅샷</p>
                   <p>상호: {snapshotText(selectedCandidate.previous_snapshot, "name")}</p>
                   <p>전화: {snapshotText(selectedCandidate.previous_snapshot, "phone")}</p>
-                  <p>주소: {snapshotText(selectedCandidate.previous_snapshot, "road_address")}</p>
+                  <p>도로명: {snapshotText(selectedCandidate.previous_snapshot, "road_address")}</p>
+                  <p>지번: {snapshotText(selectedCandidate.previous_snapshot, "jibun_address")}</p>
                 </div>
                 <div className="rounded-lg border border-border bg-background/80 p-3 text-xs leading-5">
                   <p className="font-semibold text-foreground">후보 스냅샷</p>
                   <p>상호: {snapshotText(selectedCandidate.candidate_snapshot, "name")}</p>
                   <p>전화: {snapshotText(selectedCandidate.candidate_snapshot, "phone")}</p>
-                  <p>주소: {snapshotText(selectedCandidate.candidate_snapshot, "road_address")}</p>
+                  <p>도로명: {snapshotText(selectedCandidate.candidate_snapshot, "road_address")}</p>
+                  <p>지번: {snapshotText(selectedCandidate.candidate_snapshot, "jibun_address")}</p>
                 </div>
                 <div className="space-y-2">
                   <label className="block text-xs font-medium text-foreground">
@@ -382,6 +384,7 @@ export function AdminRestaurantRefreshHistoryPanel() {
                   <div className="text-xs leading-5 text-muted-foreground">
                     <p><span className="font-medium text-foreground">상호</span> {snapshotText(candidate.previous_snapshot, "name")} → {snapshotText(candidate.candidate_snapshot, "name")}</p>
                     <p><span className="font-medium text-foreground">전화</span> {snapshotText(candidate.previous_snapshot, "phone")} → {snapshotText(candidate.candidate_snapshot, "phone")}</p>
+                    <p><span className="font-medium text-foreground">주소</span> {snapshotText(candidate.previous_snapshot, "road_address")} → {snapshotText(candidate.candidate_snapshot, "road_address")}</p>
                   </div>
                   <div className="flex flex-wrap gap-1">
                     {candidate.detected_change_types.map((type) => (
