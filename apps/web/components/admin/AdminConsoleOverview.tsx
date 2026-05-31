@@ -8038,13 +8038,14 @@ function AdminSidebar({
 
       <aside
         className={cn(
-          "relative z-30 hidden h-full min-h-0 w-max shrink-0 flex-col overflow-x-hidden overflow-y-auto border-r border-border bg-gradient-to-b from-card via-card to-background/95 p-2 shadow-sm transition-[width,padding] duration-300 motion-reduce:transition-none md:flex",
+          "scrollbar-hide relative z-30 hidden h-full min-h-0 w-max shrink-0 flex-col overflow-x-hidden overflow-y-auto overscroll-contain border-r border-border bg-gradient-to-b from-card via-card to-background/95 p-2 shadow-sm transition-[width,padding] duration-300 motion-reduce:transition-none md:flex",
           isCollapsed
             ? "md:w-[4.5rem] md:min-w-[4.5rem] md:max-w-[4.5rem] md:items-center md:px-1.5"
             : "md:min-w-[14.25rem] md:max-w-[var(--admin-sidebar-expanded-max-width)]",
         )}
         aria-label="관리자 콘솔 사이드바"
         data-admin-left-panel-expanded={isCollapsed ? "false" : "true"}
+        data-admin-sidebar-scroll="hidden-scrollbar"
       >
         <div
           className={cn(
