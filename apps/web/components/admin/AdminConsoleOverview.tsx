@@ -7841,7 +7841,7 @@ function AdminSidebar({
         className={cn(
           "border border-border bg-white p-1 shadow-inner dark:bg-card",
           isCompactSidebar
-            ? "flex w-full flex-col items-center gap-1 rounded-2xl"
+            ? "inline-flex w-9 flex-col items-center gap-1 self-center rounded-2xl"
             : "grid w-full grid-cols-3 gap-1 rounded-full",
         )}
         aria-label="화면 모드 선택"
@@ -7861,7 +7861,7 @@ function AdminSidebar({
             size="sm"
             className={cn(
               "h-8 rounded-full border border-transparent p-0 text-muted-foreground shadow-none transition-[background-color,color,box-shadow,transform] duration-150 hover:bg-background/80 hover:text-foreground focus-visible:ring-primary focus-visible:ring-offset-background",
-              isCompactSidebar ? "w-9" : "w-full min-w-0",
+              isCompactSidebar ? "w-8" : "w-full min-w-0",
               themePreference === theme &&
                 "bg-primary text-primary-foreground shadow-primary hover:bg-primary hover:text-primary-foreground",
             )}
@@ -7992,8 +7992,10 @@ function AdminSidebar({
 
       <aside
         className={cn(
-          "relative z-30 hidden h-full min-h-0 w-max shrink-0 flex-col overflow-x-hidden overflow-y-auto border-r border-border bg-gradient-to-b from-card via-card to-background/95 p-2 shadow-sm transition-[width,padding] duration-300 motion-reduce:transition-none md:flex md:min-w-[14.25rem] md:max-w-[var(--admin-sidebar-expanded-max-width)]",
-          isCollapsed && "md:w-[4.5rem] md:max-w-[4.5rem] md:items-center md:px-1.5",
+          "relative z-30 hidden h-full min-h-0 w-max shrink-0 flex-col overflow-x-hidden overflow-y-auto border-r border-border bg-gradient-to-b from-card via-card to-background/95 p-2 shadow-sm transition-[width,padding] duration-300 motion-reduce:transition-none md:flex",
+          isCollapsed
+            ? "md:w-[4.5rem] md:min-w-[4.5rem] md:max-w-[4.5rem] md:items-center md:px-1.5"
+            : "md:min-w-[14.25rem] md:max-w-[var(--admin-sidebar-expanded-max-width)]",
         )}
         aria-label="관리자 콘솔 사이드바"
         data-admin-left-panel-expanded={isCollapsed ? "false" : "true"}
