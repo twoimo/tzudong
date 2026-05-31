@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 const cron = await import("../scripts/restaurant-refresh-cron.mjs");
 
@@ -18,6 +20,19 @@ const baseRestaurant = {
 };
 
 describe("restaurant refresh cron", () => {
+  test("filters ineligible approved restaurants before applying the scan limit", () => {
+    const source = readFileSync(join(process.cwd(), "scripts/restaurant-refresh-cron.mjs"), "utf8");
+    const statusIndex = source.indexOf(".eq('status', 'approved')");
+    const missingIndex = source.indexOf(".not('is_missing', 'is', true)");
+    const notSelectedIndex = source.indexOf(".not('is_not_selected', 'is', true)");
+    const limitIndex = source.indexOf(".limit(limit || DEFAULT_LIMIT)");
+
+    expect(statusIndex).toBeGreaterThan(0);
+    expect(missingIndex).toBeGreaterThan(statusIndex);
+    expect(notSelectedIndex).toBeGreaterThan(missingIndex);
+    expect(limitIndex).toBeGreaterThan(notSelectedIndex);
+  });
+
   test("builds phone-first queries from approved restaurant state", () => {
     const queries = cron.buildQueriesForRestaurant(baseRestaurant, 4);
     expect(queries[0]).toBe("02-111-2222");
