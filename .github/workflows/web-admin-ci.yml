@@ -5,12 +5,14 @@ on:
     paths:
       - '.github/workflows/web-admin-ci.yml'
       - '.github/workflows/restaurant-refresh-cron.yml'
+      - '.github/workflows/supabase-migration-apply.yml'
       - 'apps/web/app/admin/evaluations/**'
       - 'apps/web/components/admin/**'
       - 'apps/web/app/api/admin/restaurant-refresh-history/**'
       - 'apps/web/lib/admin-address-consistency.ts'
       - 'apps/web/tests-unit/**'
       - 'apps/web/scripts/restaurant-refresh-cron.mjs'
+      - 'apps/web/scripts/apply-supabase-migration.mjs'
       - 'apps/web/package.json'
       - 'apps/web/package-lock.json'
       - 'apps/web/bun.lock'
@@ -36,12 +38,14 @@ on:
     paths:
       - '.github/workflows/web-admin-ci.yml'
       - '.github/workflows/restaurant-refresh-cron.yml'
+      - '.github/workflows/supabase-migration-apply.yml'
       - 'apps/web/app/admin/evaluations/**'
       - 'apps/web/components/admin/**'
       - 'apps/web/app/api/admin/restaurant-refresh-history/**'
       - 'apps/web/lib/admin-address-consistency.ts'
       - 'apps/web/tests-unit/**'
       - 'apps/web/scripts/restaurant-refresh-cron.mjs'
+      - 'apps/web/scripts/apply-supabase-migration.mjs'
       - 'apps/web/package.json'
       - 'apps/web/package-lock.json'
       - 'apps/web/bun.lock'
@@ -131,7 +135,9 @@ jobs:
           tests-unit/admin-restaurant-refresh-history-source.test.ts
           tests-unit/admin-sidebar-order.test.ts
           scripts/restaurant-refresh-cron.mjs
+          scripts/apply-supabase-migration.mjs
           tests-unit/restaurant-refresh-cron.test.ts
+          tests-unit/supabase-migration-apply-source.test.ts
           --max-warnings=0
 
       - name: Typecheck web app
@@ -166,5 +172,6 @@ jobs:
           tests-unit/admin-restaurant-refresh-history-source.test.ts
           tests-unit/admin-sidebar-order.test.ts
           tests-unit/restaurant-refresh-cron.test.ts
+          tests-unit/supabase-migration-apply-source.test.ts
           tests-unit/mobile-desktop-parity-source.test.ts
           tests-unit/web-quality-performance-source.test.ts
