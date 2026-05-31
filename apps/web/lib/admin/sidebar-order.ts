@@ -4,14 +4,14 @@ export const ADMIN_SIDEBAR_ITEM_IDS = [
   "restaurants",
   "submissions",
   "reviews",
-  "routes",
-  "storyboard",
-  "banners",
   "users",
+  "banners",
   "insights",
-  "audit",
   "youtube-thumbnail-generator",
+  "storyboard",
+  "routes",
   "llm",
+  "audit",
 ] as const;
 
 export type AdminSidebarSectionLabel = (typeof ADMIN_SIDEBAR_SECTIONS)[number];
@@ -27,8 +27,8 @@ export const DEFAULT_ADMIN_SIDEBAR_ORDER: AdminSidebarOrderPreference = {
   items: {
     홈: ["overview"],
     검수: ["restaurants", "submissions", "reviews"],
-    운영: ["routes", "storyboard", "banners", "users", "insights"],
-    실험실: ["audit", "youtube-thumbnail-generator", "llm"],
+    운영: ["users", "banners", "insights"],
+    실험실: ["youtube-thumbnail-generator", "storyboard", "routes", "llm", "audit"],
   },
 };
 
@@ -79,6 +79,21 @@ function uniqueKnownItems(
   });
 }
 
+function hasItemsOutsideCurrentSection(value: Record<string, unknown>): boolean {
+  return DEFAULT_ADMIN_SIDEBAR_ORDER.sections.some((section) => {
+    const rawItems = value[section];
+    if (!Array.isArray(rawItems)) return false;
+
+    const allowedItemIds = new Set(DEFAULT_ADMIN_SIDEBAR_ORDER.items[section] ?? []);
+    return rawItems.some(
+      (item) =>
+        typeof item === "string" &&
+        itemSet.has(item) &&
+        !allowedItemIds.has(item as AdminSidebarItemId),
+    );
+  });
+}
+
 export function mergeSidebarItemsWithDefaultSlots<Item extends string>(
   preferredItems: Item[],
   defaultItems: readonly Item[],
@@ -113,6 +128,10 @@ export function normalizeAdminSidebarOrder(
 ): AdminSidebarOrderPreference {
   const record = isRecord(value) ? value : {};
   const itemRecord = isRecord(record.items) ? record.items : {};
+  if (hasItemsOutsideCurrentSection(itemRecord)) {
+    return DEFAULT_ADMIN_SIDEBAR_ORDER;
+  }
+
   const preferredSections = uniqueKnownSections(record.sections);
   const sections = [
     ...preferredSections,
