@@ -82,6 +82,14 @@ function candidatePatchFromSnapshot(snapshot: Record<string, unknown>, adminUser
   return patch;
 }
 
+function hasMaterialRestaurantPatch(patch: Record<string, unknown>) {
+  return Object.keys(patch).some((key) => key !== "updated_by_admin_id");
+}
+
+function hasClosureChange(types: unknown) {
+  return Array.isArray(types) && types.some((type) => type === "closure");
+}
+
 async function fetchRestaurantMap(
   supabase: ReturnType<typeof createSupabaseServiceRoleClient>,
   restaurantIds: string[],
@@ -274,10 +282,10 @@ export async function POST(request: NextRequest) {
 
       const { data: candidate, error: candidateError } = await supabase
         .from("restaurant_refresh_candidates")
-        .select("id, restaurant_id, candidate_status, candidate_snapshot")
+        .select("id, restaurant_id, candidate_status, detected_change_types, candidate_snapshot")
         .eq("id", candidateId)
         .single()
-        .returns<{ id: string; restaurant_id: string; candidate_status: RefreshCandidateStatus; candidate_snapshot: Record<string, unknown> }>();
+        .returns<{ id: string; restaurant_id: string; candidate_status: RefreshCandidateStatus; detected_change_types: string[] | null; candidate_snapshot: Record<string, unknown> }>();
 
       if (candidateError || !candidate) {
         return NextResponse.json({ error: "최신화 후보를 찾지 못했습니다." }, { status: 404 });
@@ -289,7 +297,19 @@ export async function POST(request: NextRequest) {
 
       const now = new Date().toISOString();
       if (decision === "approved" && apply) {
+        if (hasClosureChange(candidate.detected_change_types)) {
+          return NextResponse.json(
+            { error: "폐업 의심 후보는 자동 guarded apply 대상이 아닙니다. 운영자 결정만 기록하고 별도 검증 후 처리하세요." },
+            { status: 400 },
+          );
+        }
         const patch = candidatePatchFromSnapshot(candidate.candidate_snapshot, auth.userId);
+        if (!hasMaterialRestaurantPatch(patch)) {
+          return NextResponse.json(
+            { error: "적용 가능한 상호명·전화번호·주소·좌표 변경값이 없습니다." },
+            { status: 400 },
+          );
+        }
         const { data: updatedRestaurant, error: updateError } = await supabase
           .from("restaurants")
           .update(patch)
