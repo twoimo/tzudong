@@ -99,6 +99,10 @@ function changeTypeLabel(type: string) {
   return type;
 }
 
+function isClosureCandidate(candidate: RefreshCandidateRow | null) {
+  return Boolean(candidate?.detected_change_types.includes("closure"));
+}
+
 export function AdminRestaurantRefreshHistoryPanel() {
   const [data, setData] = useState<RefreshHistoryResponse | null>(null);
   const [statusFilter, setStatusFilter] = useState<RefreshCandidateStatus | "all">("all");
@@ -184,6 +188,8 @@ export function AdminRestaurantRefreshHistoryPanel() {
   }, [loadHistory]);
 
   const filteredCandidates = useMemo(() => data?.candidates ?? [], [data]);
+  const selectedCandidateIsClosure = isClosureCandidate(selectedCandidate);
+  const canApplySelectedCandidate = decision === "approved" && !selectedCandidateIsClosure;
   const summary = data?.summary;
 
   return (
@@ -326,7 +332,7 @@ export function AdminRestaurantRefreshHistoryPanel() {
                       onChange={(event) => {
                         const nextDecision = event.target.value as CandidateDecision;
                         setDecision(nextDecision);
-                        if (nextDecision !== "approved") setApplyApprovedChange(false);
+                        if (nextDecision !== "approved" || selectedCandidateIsClosure) setApplyApprovedChange(false);
                       }}
                       className="mt-1 h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
@@ -339,15 +345,22 @@ export function AdminRestaurantRefreshHistoryPanel() {
                     <input
                       type="checkbox"
                       checked={applyApprovedChange}
-                      disabled={decision !== "approved"}
+                      disabled={!canApplySelectedCandidate}
                       onChange={(event) => setApplyApprovedChange(event.target.checked)}
                       className="mt-0.5 h-4 w-4"
                     />
                     <span>
                       승인과 동시에 현재 맛집 값 guarded apply
-                      <span className="block text-[11px]">승인된 맛집 row에만 적용되며 실패 시 이력도 적용됨으로 바뀌지 않습니다.</span>
+                      <span className="block text-[11px]">상호·전화·주소·좌표 변경 후보만 적용됩니다. 폐업 의심 후보는 자동 적용할 수 없습니다.</span>
                     </span>
                   </label>
+
+                  {selectedCandidateIsClosure ? (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs leading-5 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+                      폐업 의심 후보는 네이버 미검색 신호일 뿐 폐업 확정이 아니므로 guarded apply를 막습니다.
+                      결정 메모에 전화 확인·외부 리뷰·현장/지도 근거를 남긴 뒤 별도 운영 절차로 처리하세요.
+                    </div>
+                  ) : null}
                   <textarea
                     value={operatorNotes}
                     onChange={(event) => setOperatorNotes(event.target.value)}
