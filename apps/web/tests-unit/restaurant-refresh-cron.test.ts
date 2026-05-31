@@ -40,10 +40,10 @@ describe("restaurant refresh cron", () => {
     expect(queries.some((query: string) => query.includes("마포구"))).toBe(true);
   });
 
-  test("records candidate snapshots for name phone and address drift without auto apply", () => {
+  test("records anchored candidate snapshots for name and address drift without auto apply", () => {
     const candidate = cron.buildCandidateFromLocalItems(baseRestaurant, [{
       title: "<b>새상호</b>",
-      telephone: "02-333-4444",
+      telephone: "02-111-2222",
       roadAddress: "서울특별시 마포구 망원로 9",
       address: "서울특별시 마포구 망원동 9-1",
       category: "한식>백반",
@@ -53,9 +53,27 @@ describe("restaurant refresh cron", () => {
     }], "2026-05-31T01:00:00Z", "옛상호 마포구");
 
     expect(candidate).not.toBeNull();
-    expect(candidate.detected_change_types).toEqual(["name", "phone", "address"]);
+    expect(candidate.detected_change_types).toEqual(["name", "address"]);
     expect(candidate.candidate_snapshot.name).toBe("새상호");
     expect(candidate.evidence.source).toBe("naver_local_api");
+  });
+
+  test("ignores weak local results that only share a broad query region", () => {
+    const candidate = cron.buildCandidateFromLocalItems({
+      ...baseRestaurant,
+      approved_name: "진미평양냉면",
+      phone: "02-515-3469",
+      road_address: "서울특별시 강남구 학동로 305-3",
+      jibun_address: "서울특별시 강남구 논현동 115-10",
+    }, [{
+      title: "크레스타운 논현세관사거리점",
+      telephone: "",
+      roadAddress: "서울특별시 강남구 언주로 652 1층 크레스타운커피",
+      address: "서울특별시 강남구 논현동 238 1층 크레스타운커피",
+      category: "음식점>카페,디저트",
+    }], "2026-05-31T01:00:00Z", "서울특별시 강남구 학동 진미평양냉면");
+
+    expect(candidate).toBeNull();
   });
 
   test("turns all-local no-result into review-only closure candidate", () => {
