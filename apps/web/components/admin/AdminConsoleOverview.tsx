@@ -111,6 +111,7 @@ type AdminModuleId =
   | "users"
   | "insights"
   | "audit"
+  | "youtube-thumbnail-generator"
   | "llm";
 type ConsoleModuleId = Exclude<AdminModuleId, "overview" | "routes" | "llm">;
 
@@ -222,6 +223,17 @@ const consoleModules: ConsoleModule[] = [
     badge: "준비 중",
     actionLabel: "감사 기준 보기",
   },
+  {
+    id: "youtube-thumbnail-generator",
+    title: "유튜브 썸네일 생성기",
+    description:
+      "다음 업로드 주제와 참고 이미지를 바탕으로 16:9 먹방 썸네일 초안을 만들고 텍스트를 편집합니다.",
+    href: "/admin?module=youtube-thumbnail-generator",
+    icon: ImageIcon,
+    badge: "썸네일",
+    actionLabel: "썸네일 생성하기",
+    priority: "urgent",
+  },
 ];
 
 const guardedSteps = ["미리보기", "확인", "적용", "재확인", "감사 기록"];
@@ -317,7 +329,7 @@ const sidebarSections: SidebarSection[] = [
     label: "실험실",
     items: [
       ...consoleModules
-        .filter((module) => ["audit"].includes(module.id))
+        .filter((module) => ["audit", "youtube-thumbnail-generator"].includes(module.id))
         .map(({ id, title, description, icon, badge }) => ({
           id,
           title,
@@ -611,6 +623,17 @@ const AdminStoryboardGenerator = dynamic(
   () =>
     import("@/components/admin/storyboard/AdminStoryboardGenerator").then(
       (module) => module.AdminStoryboardGenerator,
+    ),
+  {
+    ssr: false,
+  },
+);
+
+
+const AdminYoutubeThumbnailGenerator = dynamic(
+  () =>
+    import("@/components/admin/thumbnail-generator/AdminYoutubeThumbnailGenerator").then(
+      (module) => module.AdminYoutubeThumbnailGenerator,
     ),
   {
     ssr: false,
@@ -8399,6 +8422,8 @@ function InlineModulePanel({ module }: { module: ConsoleModule }) {
         return <AdminBannerModule key="admin-banners" embedded />;
       case "storyboard":
         return <AdminStoryboardGenerator key="admin-storyboard" />;
+      case "youtube-thumbnail-generator":
+        return <AdminYoutubeThumbnailGenerator key="admin-youtube-thumbnail-generator" />;
       case "users":
         return <AdminUsersModule key="admin-users" />;
       case "insights":
