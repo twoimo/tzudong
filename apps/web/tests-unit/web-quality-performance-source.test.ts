@@ -72,7 +72,10 @@ describe("web quality performance source contracts", () => {
     expect(popupSource).toContain(
       "src={isActive ? banner.video_url : undefined}",
     );
-    expect(popupSource).toContain("banner.image_url && isActive");
+    expect(popupSource).toContain("banner.image_url && shouldLoadImage");
+    expect(popupSource).toContain("filterPopupBannersWithPosterMedia(banners)");
+    expect(popupSource).toContain("getPopupBannerLoopResetIndex");
+    expect(popupSource).not.toContain("텍스트 전용 배너");
     expect(popupSource).toContain(
       "['pointerdown', 'keydown', 'wheel', 'touchstart']",
     );
@@ -473,6 +476,7 @@ describe("web quality performance source contracts", () => {
     expect(homeDesktopControlPanelSource).toContain(
       "const shouldShowDesktopSearchResults =",
     );
+    expect(homeDesktopControlPanelSource).toContain("const hasDesktopSearchIntent =");
     expect(homeDesktopControlPanelSource).toContain("!isPanelOpen &&");
     expect(homeClientEffectsSource).not.toContain(
       "MOBILE_RESTAURANT_DEEP_LINK_IDLE_DELAY_MS",
@@ -637,7 +641,7 @@ describe("web quality performance source contracts", () => {
     );
     expect(homeDesktopControlPanelSource).toContain("shouldShowDesktopMapHome");
     expect(homeDesktopControlPanelSource).toContain(
-      'activeLeftPanelView === "map" &&\n    !isPanelOpen &&\n    (isDesktopSearchActive',
+      'activeLeftPanelView === "map" &&\n    hasDesktopSearchIntent',
     );
     expect(homeDesktopControlPanelSource).toContain("<DesktopLeftPanelMapHome");
     expect(homeDesktopControlPanelSource).not.toContain(
@@ -678,12 +682,12 @@ describe("web quality performance source contracts", () => {
       "POPULAR_RESTAURANT_LIMIT = 5",
     );
     expect(desktopLeftPanelMapHomeSource).toContain(
-      "POPULAR_RESTAURANT_QUERY_LIMIT = 20",
+      "POPULAR_RESTAURANT_QUERY_LIMIT = 60",
     );
     expect(desktopLeftPanelMapHomeSource).toContain("맛집 5곳");
     expect(desktopLeftPanelMapHomeSource).toContain("TOP 5");
     expect(desktopLeftPanelMapHomeSource).toContain("fetchPopularRestaurants");
-    expect(desktopLeftPanelMapHomeSource).toContain("fetchLatestRestaurants");
+    expect(desktopLeftPanelMapHomeSource).toContain("fetchLatestRestaurantPage");
     expect(desktopLeftPanelMapHomeSource).toContain(
       "getPopularRestaurantsQueryKey",
     );
@@ -703,7 +707,7 @@ describe("web quality performance source contracts", () => {
       "desktopLeftPanelHomeLatestQueryKey",
     );
     expect(desktopLeftPanelMapHomeSource).toContain(
-      "LATEST_RESTAURANT_LIMIT = 10",
+      "LATEST_RESTAURANT_INITIAL_RENDER_COUNT = 3",
     );
     expect(desktopLeftPanelMapHomeSource).toContain(
       'data-desktop-left-panel-popular-skeleton="true"',
@@ -718,10 +722,11 @@ describe("web quality performance source contracts", () => {
       "Array.from({ length: POPULAR_RESTAURANT_LIMIT }",
     );
     expect(desktopLeftPanelMapHomeSource).toContain(
-      "Array.from({ length: LATEST_RESTAURANT_LIMIT }",
+      "LATEST_RESTAURANT_INITIAL_RENDER_COUNT",
     );
-    expect(desktopLeftPanelMapHomeSource).not.toContain(
-      "Array.from({ length: 3 }",
+    expect(desktopLeftPanelMapHomeSource).toContain("useInfiniteQuery");
+    expect(desktopLeftPanelMapHomeSource).toContain(
+      'data-desktop-left-panel-latest-load-more="true"',
     );
     expect(desktopLeftPanelMapHomeSource).toContain(
       "latestRestaurantSortOptions",
@@ -776,6 +781,15 @@ describe("web quality performance source contracts", () => {
       "export type LatestRestaurantSort = 'latest' | 'oldest' | 'popular'",
     );
     expect(popularRestaurantsSource).toContain("KOREAN_RESTAURANT_REGIONS");
+    expect(popularRestaurantsSource).toContain(
+      "getRestaurantRegionAddressKeywords",
+    );
+    expect(popularRestaurantsSource).toContain(
+      "buildRestaurantRegionAddressOrFilter",
+    );
+    expect(popularRestaurantsSource).toContain(
+      "applyRestaurantRegionAddressFilter",
+    );
     expect(popularRestaurantsSource).toContain("const isApprovedRestaurant");
     expect(popularRestaurantsSource).toContain(
       "restaurant.status === 'approved'",
@@ -814,7 +828,7 @@ describe("web quality performance source contracts", () => {
     );
     expect(desktopLeftPanelMapHomeSource).toContain("최근 추가된 맛집");
     expect(desktopLeftPanelMapHomeSource).toContain(
-      "도장 카드처럼 한눈에 보는 맛집 10곳",
+      "먼저 3곳을 보여주고 스크롤하면 이어서 불러와요",
     );
     expect(desktopLeftPanelMapHomeSource).toContain("<Select");
     expect(desktopLeftPanelMapHomeSource).toContain("<SelectTrigger");
@@ -936,6 +950,7 @@ describe("web quality performance source contracts", () => {
       'activeLeftPanelView === "map"',
     );
     expect(homeDesktopControlPanelSource).toContain("!isPanelOpen");
+    expect(homeDesktopControlPanelSource).toContain("hasDesktopSearchIntent");
     expect(homeDesktopControlPanelSource).not.toContain(
       'activeLeftPanelView === "map" && isDesktopSearchActive',
     );
@@ -2183,8 +2198,9 @@ describe("web quality performance source contracts", () => {
     expect(stampOverlaySource).toContain("tabular-nums");
     expect(stampOverlaySource).toContain('stampSize="mobile"');
     expect(stampOverlaySource).toContain('size="default"');
+    expect(stampOverlaySource).toContain("const STAMP_PAGE_SIZE = 5");
     expect(stampOverlaySource).toContain(
-      "const skeletonCardCount = singleColumnCards ? 8 : 16",
+      "const skeletonCardCount = STAMP_PAGE_SIZE",
     );
     expect(stampOverlaySource).toContain("shouldShowStampOverlaySkeleton");
     expect(stampOverlaySource).toContain("count={skeletonCardCount}");

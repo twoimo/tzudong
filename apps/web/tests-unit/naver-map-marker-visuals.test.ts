@@ -20,4 +20,30 @@ describe('naver map marker visuals', () => {
         expect(visual.content).toContain('/images/maker-images/snack_bar.png');
         expect(visual.content).toContain('type="image/webp"');
     });
+
+    test('shows red visit count badge for restaurants visited at least twice', () => {
+        const visual = getNaverIndividualMarkerVisual({
+            categories: ['한식'],
+            category: [],
+            mergedYoutubeLinks: ['https://youtu.be/one', 'https://youtu.be/two'],
+        }, false);
+
+        expect(visual.content).toContain('class="tzuyang-visit-count-badge"');
+        expect(visual.content).toContain('data-tzuyang-visit-count-badge="true"');
+        expect(visual.content).toContain('background-color: #dc2626');
+        expect(visual.content).toContain('aria-label="쯔양 2회 방문"');
+        expect(visual.content).toContain('>2</span>');
+    });
+
+    test('does not show visit count badge for single-visit restaurants', () => {
+        const visual = getNaverIndividualMarkerVisual({
+            categories: ['한식'],
+            category: [],
+            youtube_link: 'https://youtu.be/one',
+        }, false);
+
+        expect(visual.content).not.toContain('tzuyang-visit-count-badge');
+    });
+
+
 });

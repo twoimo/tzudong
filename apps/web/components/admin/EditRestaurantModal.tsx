@@ -87,9 +87,69 @@ interface NaverGeocodingResponse {
 
 type NaverGeocodingAddress = NonNullable<NaverGeocodingResponse['addresses']>[number];
 
+interface GeocodingResult {
+  road_address: string;
+  jibun_address: string;
+  english_address: string;
+  address_elements: Record<string, unknown>;
+  x: string;
+  y: string;
+  place_name?: string;
+  place_phone?: string;
+}
+
+interface NaverLocalSearchItem {
+  title?: string;
+  address?: string;
+  roadAddress?: string;
+  telephone?: string;
+}
+
+interface NaverLocalSearchResponse {
+  items?: NaverLocalSearchItem[];
+}
+
 const getErrorMessage = (error: unknown, fallback: string) => {
   if (error instanceof Error && error.message) return error.message;
   return fallback;
+};
+
+const sanitizeNaverPlaceTitle = (title: string | undefined) =>
+  (title || '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .trim();
+
+const normalizePlaceAddress = (address: string | undefined) =>
+  (address || '')
+    .replace(/\(.*?\)/g, '')
+    .replace(/\s+/g, '')
+    .trim();
+
+const isMatchingPlaceAddress = (placeAddress: string | undefined, geocodedAddress: string | undefined) => {
+  const normalizedPlaceAddress = normalizePlaceAddress(placeAddress);
+  const normalizedGeocodedAddress = normalizePlaceAddress(geocodedAddress);
+
+  if (!normalizedPlaceAddress || !normalizedGeocodedAddress) return false;
+
+  return normalizedPlaceAddress === normalizedGeocodedAddress ||
+    normalizedPlaceAddress.includes(normalizedGeocodedAddress) ||
+    normalizedGeocodedAddress.includes(normalizedPlaceAddress);
+};
+
+const findBestNaverPlaceMatch = (items: NaverLocalSearchItem[], geocodingResult: GeocodingResult) => {
+  const matchedByAddress = items.find((item) =>
+    isMatchingPlaceAddress(item.address, geocodingResult.jibun_address) ||
+    isMatchingPlaceAddress(item.roadAddress, geocodingResult.road_address) ||
+    isMatchingPlaceAddress(item.address, geocodingResult.road_address) ||
+    isMatchingPlaceAddress(item.roadAddress, geocodingResult.jibun_address)
+  );
+
+  return matchedByAddress || (items.length === 1 ? items[0] : null);
 };
 
 export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: EditRestaurantModalProps) {
@@ -116,14 +176,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
   const [addressChanged, setAddressChanged] = useState<boolean>(false); // 주소 변경 여부
 
   // 지오코딩 결과 목록 (여러 개)
-  const [geocodingResults, setGeocodingResults] = useState<Array<{
-    road_address: string;
-    jibun_address: string;
-    english_address: string;
-    address_elements: Record<string, unknown>;
-    x: string;
-    y: string;
-  }>>([]);
+  const [geocodingResults, setGeocodingResults] = useState<GeocodingResult[]>([]);
 
   // 선택된 지오코딩 결과
   const [selectedGeocodingIndex, setSelectedGeocodingIndex] = useState<number | null>(null);
@@ -183,17 +236,16 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       // 3. 두 결과를 합치고 중복 제거 (지번 주소 기준)
       const allResults = [...fullAddressResults, ...shortAddressResults];
       const uniqueResults = removeDuplicateAddresses(allResults);
+      const enrichedResults = await enrichGeocodingResultsWithPlaceMetadata(trimmedName, uniqueResults);
 
-
-
-      if (uniqueResults.length > 0) {
-        setGeocodingResults(uniqueResults);
+      if (enrichedResults.length > 0) {
+        setGeocodingResults(enrichedResults);
         setAddressChanged(false); // 지오코딩 성공 시 플래그 초기화
         setInitialAddress(trimmedAddress); // 새로운 주소를 초기 주소로 설정
 
         toast({
           title: '지오코딩 성공',
-          description: `${uniqueResults.length}개의 주소 후보를 찾았습니다. 하나를 선택해주세요.`,
+          description: `${enrichedResults.length}개의 주소 후보를 찾았습니다. 하나를 선택해주세요.`,
         });
       } else {
         toast({
@@ -217,6 +269,52 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
     }
   };
 
+  const fetchNaverPlaceMetadata = async (name: string, result: GeocodingResult): Promise<Partial<GeocodingResult>> => {
+    const searchAddress = result.road_address || result.jibun_address;
+    const query = [name, searchAddress].filter(Boolean).join(' ').trim();
+
+    if (!query) return {};
+
+    try {
+      const response = await fetch(`/api/naver-search?query=${encodeURIComponent(query)}&display=5`);
+      if (!response.ok) {
+        console.warn('네이버 장소 검색 실패:', response.status);
+        return {};
+      }
+
+      const data = await response.json() as NaverLocalSearchResponse;
+      const bestMatch = findBestNaverPlaceMatch(data.items || [], result);
+
+      if (!bestMatch) return {};
+
+      const placeName = sanitizeNaverPlaceTitle(bestMatch.title);
+      const placePhone = (bestMatch.telephone || '').trim();
+
+      return {
+        ...(placeName ? { place_name: placeName } : {}),
+        ...(placePhone ? { place_phone: placePhone } : {}),
+      };
+    } catch (error) {
+      console.warn('네이버 장소 검색 중 오류:', error);
+      return {};
+    }
+  };
+
+  const enrichGeocodingResultsWithPlaceMetadata = async (
+    name: string,
+    results: GeocodingResult[]
+  ): Promise<GeocodingResult[]> => {
+    const trimmedName = name.trim();
+    if (!trimmedName || results.length === 0) return results;
+
+    return Promise.all(
+      results.map(async (result) => ({
+        ...result,
+        ...(await fetchNaverPlaceMetadata(trimmedName, result)),
+      }))
+    );
+  };
+
   // 시/군/구까지만 추출하는 함수
   const extractCityDistrictGu = (address: string): string | null => {
     // 서울특별시 마포구, 경기도 성남시 분당구 등 추출
@@ -226,21 +324,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
   };
 
   // 중복 제거 함수 (지번 주소 기준)
-  const removeDuplicateAddresses = (addresses: Array<{
-    road_address: string;
-    jibun_address: string;
-    english_address: string;
-    address_elements: Record<string, unknown>;
-    x: string;
-    y: string;
-  }>): Array<{
-    road_address: string;
-    jibun_address: string;
-    english_address: string;
-    address_elements: Record<string, unknown>;
-    x: string;
-    y: string;
-  }> => {
+  const removeDuplicateAddresses = (addresses: GeocodingResult[]): GeocodingResult[] => {
     const seen = new Set<string>();
     return addresses.filter(addr => {
       if (seen.has(addr.jibun_address)) {
@@ -252,14 +336,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
   };
 
   // 지오코딩 함수 (여러 개 결과 반환)
-  const geocodeAddressMultiple = async (name: string, address: string, limit: number = 3): Promise<Array<{
-    road_address: string;
-    jibun_address: string;
-    english_address: string;
-    address_elements: Record<string, unknown>;
-    x: string;
-    y: string;
-  }>> => {
+  const geocodeAddressMultiple = async (name: string, address: string, limit: number = 3): Promise<GeocodingResult[]> => {
     try {
       // 주소만 사용 (이름 제외) - Geocoding API는 주소만 필요
 
@@ -1133,8 +1210,13 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
                     key={index}
                     onClick={() => {
                       setSelectedGeocodingIndex(index);
-                      // 선택된 옵션의 지번 주소로 실시간 업데이트
-                      setFormData(prev => ({ ...prev, address: result.jibun_address }));
+                      // 선택된 옵션의 주소와 네이버 장소 검색 메타데이터를 실시간 업데이트
+                      setFormData(prev => ({
+                        ...prev,
+                        address: result.jibun_address,
+                        ...(result.place_name ? { name: result.place_name } : {}),
+                        ...(result.place_phone ? { phone: result.place_phone } : {}),
+                      }));
                       setInitialAddress(result.jibun_address);
                       setAddressChanged(false);
                     }}
@@ -1158,6 +1240,18 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
                     </div>
 
                     <div className="space-y-1 text-sm">
+                      {result.place_name && (
+                        <div>
+                          <span className="font-medium text-gray-700 dark:text-gray-300">상호: </span>
+                          <span className="text-gray-600 dark:text-gray-400">{result.place_name}</span>
+                        </div>
+                      )}
+                      {result.place_phone && (
+                        <div>
+                          <span className="font-medium text-gray-700 dark:text-gray-300">전화: </span>
+                          <span className="text-gray-600 dark:text-gray-400">{result.place_phone}</span>
+                        </div>
+                      )}
                       <div>
                         <span className="font-medium text-gray-700 dark:text-gray-300">도로명: </span>
                         <span className="text-gray-600 dark:text-gray-400">{result.road_address}</span>

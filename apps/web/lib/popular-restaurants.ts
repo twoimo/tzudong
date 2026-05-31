@@ -1,5 +1,6 @@
 import { mergeRestaurants } from '@/hooks/use-restaurants';
 import { supabase } from '@/integrations/supabase/client';
+import { OVERSEAS_REGIONS } from '@/constants/overseas-regions';
 import type { Restaurant } from '@/types/restaurant';
 
 export const POPULAR_RESTAURANTS_QUERY_KEY = ['popular-searches-weekly'] as const;
@@ -27,6 +28,43 @@ export const KOREAN_RESTAURANT_REGIONS = [
   '경상남도',
   '제주특별자치도',
 ] as const;
+
+const RESTAURANT_ADDRESS_FIELDS = [
+  'road_address',
+  'jibun_address',
+  'english_address',
+] as const;
+
+const RESTAURANT_REGION_ADDRESS_KEYWORDS: Record<string, readonly string[]> = {
+  서울특별시: ['서울특별시', '서울시', '서울'],
+  부산광역시: ['부산광역시', '부산시', '부산'],
+  대구광역시: ['대구광역시', '대구시', '대구'],
+  인천광역시: ['인천광역시', '인천시', '인천'],
+  광주광역시: ['광주광역시', '광주시', '광주'],
+  대전광역시: ['대전광역시', '대전시', '대전'],
+  울산광역시: ['울산광역시', '울산시', '울산'],
+  세종특별자치시: ['세종특별자치시', '세종시', '세종'],
+  경기도: ['경기도', '경기'],
+  강원특별자치도: ['강원특별자치도', '강원도', '강원'],
+  충청북도: ['충청북도', '충북'],
+  충청남도: ['충청남도', '충남'],
+  전북특별자치도: ['전북특별자치도', '전라북도', '전북'],
+  전라남도: ['전라남도', '전남'],
+  경상북도: ['경상북도', '경북'],
+  경상남도: ['경상남도', '경남'],
+  제주특별자치도: ['제주특별자치도', '제주도', '제주'],
+  울릉도: ['울릉도', '울릉군', '울릉'],
+  욕지도: ['욕지도', '욕지'],
+};
+
+const KOREAN_RESTAURANT_ADDRESS_KEYWORDS = Array.from(
+  new Set(
+    Object.values(RESTAURANT_REGION_ADDRESS_KEYWORDS)
+      .flat()
+      .map((keyword) => keyword.trim())
+      .filter(Boolean),
+  ),
+);
 
 export const POPULAR_RESTAURANT_SELECT =
   'id, name:approved_name, approved_name, lat, lng, road_address, jibun_address, english_address, categories, phone, review_count, youtube_link, tzuyang_review, youtube_meta, status, created_at, updated_at, weekly_search_count, reasoning_basis';
@@ -110,6 +148,17 @@ type RestaurantListArgs = {
   sort?: LatestRestaurantSort;
 };
 
+type LatestRestaurantPageArgs = Omit<RestaurantListArgs, 'limit'> & {
+  fetchLimit: number;
+  offset?: number;
+};
+
+export type LatestRestaurantPage = {
+  restaurants: Restaurant[];
+  nextOffset: number | null;
+  hasMore: boolean;
+};
+
 export const getPopularRestaurantsQueryKey = ({
   limit,
   selectedRegion,
@@ -150,25 +199,108 @@ export const getLatestRestaurantsQueryKey = ({
   isKoreanOnly ? 'korean' : 'global',
 ];
 
+const uniqueAddressKeywords = (keywords: readonly string[]) =>
+  Array.from(
+    new Set(keywords.map((keyword) => keyword.trim()).filter(Boolean)),
+  );
+
+export function getRestaurantRegionAddressKeywords(
+  selectedRegion: string | null | undefined,
+) {
+  const normalizedRegion = selectedRegion?.trim();
+  if (!normalizedRegion) return [];
+
+  const domesticKeywords =
+    RESTAURANT_REGION_ADDRESS_KEYWORDS[normalizedRegion];
+  if (domesticKeywords) return uniqueAddressKeywords(domesticKeywords);
+
+  const overseasRegion = OVERSEAS_REGIONS[normalizedRegion];
+  if (overseasRegion) {
+    return uniqueAddressKeywords([
+      overseasRegion.country,
+      ...overseasRegion.keywords,
+    ]);
+  }
+
+  const overseasCountryKeywords = Object.values(OVERSEAS_REGIONS)
+    .filter(
+      (region) =>
+        region.country === normalizedRegion ||
+        region.label.startsWith(`${normalizedRegion}(`),
+    )
+    .flatMap((region) => [region.country, ...region.keywords]);
+  if (overseasCountryKeywords.length > 0) {
+    return uniqueAddressKeywords(overseasCountryKeywords);
+  }
+
+  return uniqueAddressKeywords([normalizedRegion]);
+}
+
 const isApprovedRestaurant = (restaurant: Restaurant) =>
   restaurant.status === 'approved';
 
-const matchesRestaurantAddressContext = (
+export const matchesRestaurantAddressContext = (
   restaurant: Restaurant,
   selectedRegion: string | null | undefined,
   isKoreanOnly: boolean,
 ) => {
-  const address =
-    restaurant.road_address ||
-    restaurant.jibun_address ||
-    restaurant.english_address ||
-    '';
+  const address = [
+    restaurant.road_address,
+    restaurant.jibun_address,
+    restaurant.english_address,
+  ]
+    .filter(Boolean)
+    .join(' ');
 
-  if (selectedRegion && !address.includes(selectedRegion)) return false;
+  const selectedRegionKeywords =
+    getRestaurantRegionAddressKeywords(selectedRegion);
+  if (
+    selectedRegionKeywords.length > 0 &&
+    !selectedRegionKeywords.some((keyword) => address.includes(keyword))
+  ) {
+    return false;
+  }
 
   if (!isKoreanOnly) return true;
 
-  return KOREAN_RESTAURANT_REGIONS.some((region) => address.includes(region));
+  return KOREAN_RESTAURANT_ADDRESS_KEYWORDS.some((keyword) =>
+    address.includes(keyword),
+  );
+};
+
+const escapePostgrestLikePattern = (value: string) =>
+  value.replace(/[%_]/g, (character) => `\\${character}`);
+
+const normalizePostgrestOrTerm = (term: string) =>
+  escapePostgrestLikePattern(term).replace(/[(),]/g, ' ').trim();
+
+export function buildRestaurantRegionAddressOrFilter(
+  selectedRegion: string | null | undefined,
+  wildcard: '%' | '*' = '%',
+) {
+  const keywords = getRestaurantRegionAddressKeywords(selectedRegion)
+    .map(normalizePostgrestOrTerm)
+    .filter(Boolean);
+
+  if (keywords.length === 0) return null;
+
+  return keywords
+    .flatMap((keyword) =>
+      RESTAURANT_ADDRESS_FIELDS.map(
+        (field) => `${field}.ilike.${wildcard}${keyword}${wildcard}`,
+      ),
+    )
+    .join(',');
+}
+
+const applyRestaurantRegionAddressFilter = <T>(
+  query: T & { or: (filters: string) => T },
+  selectedRegion: string | null | undefined,
+) => {
+  const regionAddressFilter =
+    buildRestaurantRegionAddressOrFilter(selectedRegion);
+
+  return regionAddressFilter ? query.or(regionAddressFilter) : query;
 };
 
 const getPopularRankSnapshotsTable = () =>
@@ -260,17 +392,62 @@ export const attachPopularRankTrends = (
     };
   });
 
+async function fetchRegionalPopularBackfillRestaurants({
+  fetchLimit,
+  selectedRegion,
+  isKoreanOnly = false,
+}: Pick<
+  RestaurantListArgs,
+  'fetchLimit' | 'selectedRegion' | 'isKoreanOnly'
+>): Promise<Restaurant[]> {
+  if (!selectedRegion) return [];
+
+  const query = supabase
+    .from('restaurants')
+    .select(POPULAR_RESTAURANT_SELECT)
+    .eq('status', 'approved');
+  const regionScopedQuery = applyRestaurantRegionAddressFilter(
+    query,
+    selectedRegion,
+  );
+  const { data, error } = await regionScopedQuery
+    .order('review_count', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(fetchLimit ?? 20);
+
+  if (error) throw error;
+
+  return mergeRestaurants((data ?? []) as Restaurant[])
+    .filter(isApprovedRestaurant)
+    .filter((restaurant) =>
+      matchesRestaurantAddressContext(restaurant, selectedRegion, isKoreanOnly),
+    )
+    .sort((a, b) => {
+      const reviewDelta = (b.review_count ?? 0) - (a.review_count ?? 0);
+      if (reviewDelta !== 0) return reviewDelta;
+
+      const bTime = Date.parse(b.created_at ?? b.updated_at ?? '') || 0;
+      const aTime = Date.parse(a.created_at ?? a.updated_at ?? '') || 0;
+      return bTime - aTime;
+    });
+}
+
 export async function fetchPopularRestaurants({
   limit,
   fetchLimit = Math.max(limit * 4, 12),
   selectedRegion,
   isKoreanOnly = false,
 }: RestaurantListArgs): Promise<PopularRestaurantWithTrend[]> {
-  const { data, error } = await supabase
+  const query = supabase
     .from('restaurants')
     .select(POPULAR_RESTAURANT_SELECT)
     .eq('status', 'approved')
-    .gt('weekly_search_count', 0)
+    .gt('weekly_search_count', 0);
+  const regionScopedQuery = applyRestaurantRegionAddressFilter(
+    query,
+    selectedRegion,
+  );
+  const { data, error } = await regionScopedQuery
     .order('weekly_search_count', { ascending: false })
     .limit(fetchLimit);
 
@@ -285,6 +462,21 @@ export async function fetchPopularRestaurants({
       (a, b) => (b.weekly_search_count ?? 0) - (a.weekly_search_count ?? 0),
     )
     .slice(0, limit);
+
+  if (selectedRegion && restaurants.length < limit) {
+    const existingIds = new Set(restaurants.map((restaurant) => restaurant.id));
+    const backfillRestaurants = await fetchRegionalPopularBackfillRestaurants({
+      fetchLimit,
+      selectedRegion,
+      isKoreanOnly,
+    });
+
+    restaurants.push(
+      ...backfillRestaurants
+        .filter((restaurant) => !existingIds.has(restaurant.id))
+        .slice(0, limit - restaurants.length),
+    );
+  }
 
   try {
     const { snapshots, hasSnapshotPeriod } = await fetchPopularRankSnapshots({
@@ -311,12 +503,16 @@ export async function fetchLatestRestaurants({
     .from('restaurants')
     .select(POPULAR_RESTAURANT_SELECT)
     .eq('status', 'approved');
+  const regionScopedQuery = applyRestaurantRegionAddressFilter(
+    query,
+    selectedRegion,
+  );
   const orderedQuery =
     sort === 'popular'
-      ? query
+      ? regionScopedQuery
           .order('weekly_search_count', { ascending: false })
           .order('created_at', { ascending: false })
-      : query.order('created_at', { ascending: sort === 'oldest' });
+      : regionScopedQuery.order('created_at', { ascending: sort === 'oldest' });
   const { data, error } = await orderedQuery.limit(fetchLimit);
 
   if (error) throw error;
@@ -338,4 +534,60 @@ export async function fetchLatestRestaurants({
       return sort === 'oldest' ? aTime - bTime : bTime - aTime;
     })
     .slice(0, limit);
+}
+
+export async function fetchLatestRestaurantPage({
+  fetchLimit,
+  offset = 0,
+  selectedRegion,
+  isKoreanOnly = false,
+  sort = 'latest',
+}: LatestRestaurantPageArgs): Promise<LatestRestaurantPage> {
+  const pageSize = Math.max(1, fetchLimit);
+  const pageOffset = Math.max(0, offset);
+  const query = supabase
+    .from('restaurants')
+    .select(POPULAR_RESTAURANT_SELECT)
+    .eq('status', 'approved');
+  const regionScopedQuery = applyRestaurantRegionAddressFilter(
+    query,
+    selectedRegion,
+  );
+  const orderedQuery =
+    sort === 'popular'
+      ? regionScopedQuery
+          .order('weekly_search_count', { ascending: false })
+          .order('created_at', { ascending: false })
+      : regionScopedQuery.order('created_at', { ascending: sort === 'oldest' });
+  const { data, error } = await orderedQuery.range(
+    pageOffset,
+    pageOffset + pageSize - 1,
+  );
+
+  if (error) throw error;
+
+  const rawRestaurants = (data ?? []) as Restaurant[];
+  const restaurants = mergeRestaurants(rawRestaurants)
+    .filter(isApprovedRestaurant)
+    .filter((restaurant) =>
+      matchesRestaurantAddressContext(restaurant, selectedRegion, isKoreanOnly),
+    )
+    .sort((a, b) => {
+      if (sort === 'popular') {
+        const popularityDelta =
+          (b.weekly_search_count ?? 0) - (a.weekly_search_count ?? 0);
+        if (popularityDelta !== 0) return popularityDelta;
+      }
+
+      const bTime = Date.parse(b.created_at ?? b.updated_at ?? '') || 0;
+      const aTime = Date.parse(a.created_at ?? a.updated_at ?? '') || 0;
+      return sort === 'oldest' ? aTime - bTime : bTime - aTime;
+    });
+  const hasMore = rawRestaurants.length === pageSize;
+
+  return {
+    restaurants,
+    nextOffset: hasMore ? pageOffset + pageSize : null,
+    hasMore,
+  };
 }
