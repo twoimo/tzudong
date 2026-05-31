@@ -49,7 +49,7 @@ describe("mobile and desktop parity source contracts", () => {
     expect(consoleSource).toContain("md:hidden");
     expect(consoleSource).toContain("md:flex");
     expect(source("app/app-globals.css")).toContain(
-      "grid-template-columns: fit-content(24rem) minmax(0, 1fr);",
+      "grid-template-columns: fit-content(var(--admin-sidebar-expanded-max-width)) minmax(0, 1fr);",
     );
     expect(source("app/app-globals.css")).toContain(
       "grid-template-columns: 4.5rem minmax(0, 1fr);",
@@ -773,7 +773,7 @@ describe("mobile and desktop parity source contracts", () => {
     );
     expect(homeDesktopControlPanelSource).toContain("shouldShowDesktopMapHome");
     expect(homeDesktopControlPanelSource).toContain(
-      'activeLeftPanelView === "map" &&\n    !isPanelOpen &&\n    (isDesktopSearchActive',
+      'activeLeftPanelView === "map" &&\n    hasDesktopSearchIntent',
     );
     expect(homeDesktopControlPanelSource).toContain(' ? "px-0 py-0"');
     expect(homeDesktopControlPanelSource).toContain(' : "px-4 py-4"');
@@ -802,8 +802,9 @@ describe("mobile and desktop parity source contracts", () => {
     expect(stampOverlaySource).toContain(
       'data-stamp-card-grid-single-column={singleColumnCards ? "true" : "false"}',
     );
+    expect(stampOverlaySource).toContain("const STAMP_PAGE_SIZE = 5");
     expect(stampOverlaySource).toContain(
-      "const skeletonCardCount = singleColumnCards ? 8 : 16",
+      "const skeletonCardCount = STAMP_PAGE_SIZE",
     );
     expect(stampOverlaySource).toContain("count={skeletonCardCount}");
     expect(stampOverlaySource).toContain(
