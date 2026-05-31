@@ -810,10 +810,11 @@ export default function HomeDesktopControlPanel({
     searchType: "name",
     isSearchActive: false,
   });
+  const hasDesktopSearchIntent =
+    isDesktopSearchActive || desktopSearchQuery.trim().length > 0;
   const shouldShowDesktopSearchResults =
     activeLeftPanelView === "map" &&
-    !isPanelOpen &&
-    (isDesktopSearchActive || desktopSearchQuery.trim().length > 0);
+    hasDesktopSearchIntent;
   const shouldShowDesktopMapHome =
     activeLeftPanelView === "map" &&
     !isPanelOpen &&

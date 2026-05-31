@@ -190,20 +190,19 @@ const RestaurantSearch = ({
   });
 
   // 메모이제이션된 쿼리 키 (debouncedSearchQuery 사용)
+  // 지역 필터는 인기 검색/목록 패널에만 적용하고, 직접 검색은 항상 전체 지역에서 찾는다.
   const queryKey = useMemo(
     () => [
       ...RESTAURANT_SEARCH_QUERY_KEY_PREFIX,
       trimmedDebouncedSearchQuery,
       searchType,
       categoryFilterKey,
-      selectedRegion,
       isKoreanOnly,
     ],
     [
       trimmedDebouncedSearchQuery,
       searchType,
       categoryFilterKey,
-      selectedRegion,
       isKoreanOnly,
     ],
   );
@@ -277,17 +276,8 @@ const RestaurantSearch = ({
           results = (data || []) as Restaurant[];
         }
 
-        // 지역 필터 적용 (선택된 지역/국가로 필터링)
-        if (selectedRegion) {
-          results = results.filter((restaurant: Restaurant) => {
-            const address =
-              restaurant.road_address ||
-              restaurant.jibun_address ||
-              restaurant.english_address ||
-              "";
-            return address.includes(selectedRegion);
-          });
-        }
+        // 지역 필터가 켜져 있어도 검색창 직접 검색은 전체 지역을 대상으로 한다.
+        // 단, 홈의 국내/해외 모드 구분(isKoreanOnly)은 유지한다.
 
         // 병합 로직 적용 (동일한 상호명 처리)
         const merged = mergeRestaurants(results);
