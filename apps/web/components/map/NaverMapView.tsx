@@ -45,7 +45,6 @@ import {
 import { markerPool } from "@/lib/marker-pool";
 import {
     createClusterMarkerHTML,
-    createIndividualMarkerHTML,
     clusterAnimationManager,
     injectClusterCSS,
     removeClusterCSS
@@ -110,6 +109,9 @@ import {
     getSeoulDistrictTargetZoom,
     getSuperclusterTargetZoom,
     quantizeNaverClusterZoom,
+    resolveNaverIslandClusterViewportByRegion,
+    resolveNaverIslandClusterViewportForRestaurants,
+    resolveNaverIslandFitBoundsOptions,
     resolveNaverClusterBoundsBbox,
     resolveNaverClusterUpdateBbox,
     shouldHideInSeoulDistrictMode,
@@ -165,6 +167,10 @@ import {
     buildNaverResizeObserverHandler,
 } from "@/lib/naver-map-resize-observer-helpers";
 import { focusNaverMapOnRestaurant } from "@/lib/naver-map-focus-helpers";
+import {
+    buildNaverOverlappingMarkerOffsets,
+    resolveNaverOverlappingMarkerPosition,
+} from "@/lib/naver-map-overlap-helpers";
 import { resolveNaverResizeOffsets } from "@/lib/naver-map-resize-offset-helpers";
 import {
     buildNaverWindowResizeCleanup,
@@ -213,6 +219,7 @@ interface NaverMapLike {
     getCenter: () => NaverLatLngLike;
     getProjection: () => NaverProjectionLike;
     getZoom: () => number;
+    fitBounds?: (bounds: unknown, options?: unknown) => void;
     morph: (target: unknown, zoom?: number, options?: unknown) => void;
     panBy: (x: number, y: number) => void;
     panTo: (target: unknown, options?: unknown) => void;
@@ -1062,6 +1069,27 @@ const NaverMapView = memo(({
         map.setCenter(adjustedCenter);
     }, [getViewportOffset]);
 
+    const fitIslandClusterViewport = useCallback((
+        viewport: ReturnType<typeof resolveNaverIslandClusterViewportByRegion>
+    ) => {
+        const map = mapInstanceRef.current;
+        const maps = window.naver?.maps;
+        if (!viewport || !map?.fitBounds || !maps?.LatLng || !maps?.LatLngBounds) {
+            return false;
+        }
+
+        const bounds = new maps.LatLngBounds(
+            new maps.LatLng(viewport.bounds.south, viewport.bounds.west),
+            new maps.LatLng(viewport.bounds.north, viewport.bounds.east),
+        );
+        map.fitBounds(bounds, resolveNaverIslandFitBoundsOptions({
+            isMobileOrTablet,
+            maxZoom: viewport.maxZoom,
+            viewportOffset: getViewportOffset(),
+        }));
+        return true;
+    }, [getViewportOffset, isMobileOrTablet]);
+
     // [통합] 지도 중심 및 줌 조정 로직
     useEffect(() => {
         if (!mapInstanceRef.current || isGridMode) return;
@@ -1530,9 +1558,10 @@ const NaverMapView = memo(({
     const { byId: restaurantById, idSet: displayRestaurantIds, mergedRestaurantIds, mergedRestaurantById } = restaurantLookup;
     const restaurantsForSwipe = useMemo(() => buildRestaurantsForSwipe({
         activeSearchedRestaurant,
+        selectedRestaurant,
         displayRestaurantIds,
         displayRestaurants,
-    }), [activeSearchedRestaurant, displayRestaurants, displayRestaurantIds]);
+    }), [activeSearchedRestaurant, displayRestaurants, displayRestaurantIds, selectedRestaurant]);
     const filterSignature = useMemo(
         () => [
             ...filters.categories,
@@ -1769,11 +1798,28 @@ const NaverMapView = memo(({
             allRestaurants: restaurantsForSwipe,
             activeSearchedRestaurant,
         });
+        const overlappingMarkerCandidates = new Map<string, { id: string; lat?: number | null; lng?: number | null }>();
+        [...displayRestaurants, ...restaurantsForMarkerRender].forEach((restaurant) => {
+            overlappingMarkerCandidates.set(restaurant.id, restaurant);
+        });
+        clusters.forEach((feature) => {
+            if (isCluster(feature)) return;
+            const [lng, lat] = feature.geometry.coordinates;
+            overlappingMarkerCandidates.set(feature.properties.restaurantId, {
+                id: feature.properties.restaurantId,
+                lat,
+                lng,
+            });
+        });
+        const overlappingMarkerOffsets = buildNaverOverlappingMarkerOffsets(
+            Array.from(overlappingMarkerCandidates.values())
+        );
 
         onVisibleRestaurantsChange?.(swipeCandidates);
 
         const renderTargetIdsForSignature = buildRenderTargetIdsForSignature({
             activeSearchedRestaurant,
+            selectedRestaurant,
             clusters,
             displayRestaurantIds,
             displayRestaurants,
@@ -1837,6 +1883,15 @@ const NaverMapView = memo(({
                 onClick
             );
         };
+        const createIndividualMarkerPosition = (restaurant: { id: string; lat: number; lng: number }) => {
+            const basePosition = new naver.maps.LatLng(restaurant.lat, restaurant.lng);
+            return resolveNaverOverlappingMarkerPosition({
+                basePosition,
+                createPoint: (x, y) => new naver.maps.Point(x, y),
+                offset: overlappingMarkerOffsets.get(restaurant.id),
+                projection: map.getProjection(),
+            });
+        };
 
         if (shouldUseRegionalCluster) {
             // ===== 17개 행정구역 중앙 클러스터 모드 =====
@@ -1859,6 +1914,10 @@ const NaverMapView = memo(({
                         () => {
                             activateNoncriticalMapEffects();
                             setExpandedClusterRestaurantIds(cluster.restaurantIds);
+                            if (fitIslandClusterViewport(resolveNaverIslandClusterViewportByRegion(cluster.region))) {
+                                return;
+                            }
+
                             const currentZoom = map.getZoom();
                             const targetZoom = getRegionalClusterTargetZoom(currentZoom, clusterIndexMaxZoom);
                             jumpWithPanelOffset(cluster.center.lat, cluster.center.lng, targetZoom);
@@ -1917,7 +1976,7 @@ const NaverMapView = memo(({
 
                     markerPool.acquire(
                         restaurant.id,
-                        new naver.maps.LatLng(restaurant.lat, restaurant.lng),
+                        createIndividualMarkerPosition(restaurant),
                         { content: visual.content, anchor: new naver.maps.Point(visual.anchor.x, visual.anchor.y) },
                         map,
                         () => handleMarkerRestaurantSelection(restaurant)
@@ -1963,11 +2022,22 @@ const NaverMapView = memo(({
                                 clusterId,
                                 () => {
                                     activateNoncriticalMapEffects();
+                                    let expandedRestaurantIds: string[] = [];
                                     try {
-                                        setExpandedClusterRestaurantIds(expandCluster(clusterIndexRef.current!, clusterId));
+                                        expandedRestaurantIds = expandCluster(clusterIndexRef.current!, clusterId);
+                                        setExpandedClusterRestaurantIds(expandedRestaurantIds);
                                     } catch {
                                         setExpandedClusterRestaurantIds([]);
                                     }
+                                    const islandViewport = resolveNaverIslandClusterViewportForRestaurants(
+                                        expandedRestaurantIds
+                                            .map((restaurantId) => restaurantById.get(restaurantId) ?? mergedRestaurantById.get(restaurantId))
+                                            .filter(Boolean) as Restaurant[],
+                                    );
+                                    if (fitIslandClusterViewport(islandViewport)) {
+                                        return;
+                                    }
+
                                     const expansionZoom = clusterIndexRef.current!.getClusterExpansionZoom(clusterId);
                                     const currentZoom = map.getZoom();
                                     const targetZoom = getSuperclusterTargetZoom(currentZoom, expansionZoom, clusterIndexMaxZoom);
@@ -1980,16 +2050,23 @@ const NaverMapView = memo(({
                             activeIds.add(restaurantId);
                             const category = feature.properties.category;
                             const isSelected = selectedRestaurant?.id === restaurantId;
-                            const visual = getNaverIndividualMarkerVisual({ categories: [], category }, isSelected);
+                            const restaurant = restaurantById.get(restaurantId) ?? mergedRestaurantById.get(restaurantId);
+                            const visual = getNaverIndividualMarkerVisual(restaurant ?? { categories: [], category }, isSelected);
+                            const position = typeof restaurant?.lat === 'number' && typeof restaurant?.lng === 'number'
+                                ? createIndividualMarkerPosition({
+                                    id: restaurantId,
+                                    lat: restaurant.lat,
+                                    lng: restaurant.lng,
+                                })
+                                : new naver.maps.LatLng(lat, lng);
 
                             markerPool.acquire(
                                 restaurantId,
-                                new naver.maps.LatLng(lat, lng),
+                                position,
                                 { content: visual.content, anchor: new naver.maps.Point(visual.anchor.x, visual.anchor.y) },
                                 map,
                                 () => {
                                     // ... existing click logic ...
-                                    const restaurant = restaurantById.get(restaurantId) ?? mergedRestaurantById.get(restaurantId);
                                     if (restaurant) {
                                         handleMarkerRestaurantSelection(restaurant);
                                     }
@@ -2019,7 +2096,7 @@ const NaverMapView = memo(({
 
                     markerPool.acquire(
                         restaurant.id,
-                        new naver.maps.LatLng(restaurant.lat, restaurant.lng),
+                        createIndividualMarkerPosition(restaurant),
                         { content: visual.content, anchor: new naver.maps.Point(visual.anchor.x, visual.anchor.y) },
                         map,
                         () => handleMarkerRestaurantSelection(restaurant)
@@ -2040,7 +2117,7 @@ const NaverMapView = memo(({
             }
         }
 
-    }, [clusters, regionalClusters, seoulDistrictClusters, seoulDistrictClustersFiltered, seoulIndividualIds, activeSearchedRestaurant, displayRestaurants, displayRestaurantIds, expandedClusterRestaurantIds, restaurantById, mergedRestaurantById, restaurantsForSwipe, selectedRegion, selectedRestaurant?.id, isClusterMode, isRegionalClusterMode, isSeoulDistrictMode, isMapInitialized, activateNoncriticalMapEffects, jumpWithPanelOffset, onMarkerClick, onRestaurantSelect, onVisibleRestaurantsChange, handleMarkerRestaurantSelection]);
+    }, [clusters, regionalClusters, seoulDistrictClusters, seoulDistrictClustersFiltered, seoulIndividualIds, activeSearchedRestaurant, displayRestaurants, displayRestaurantIds, expandedClusterRestaurantIds, restaurantById, mergedRestaurantById, restaurantsForSwipe, selectedRegion, selectedRestaurant, isClusterMode, isRegionalClusterMode, isSeoulDistrictMode, isMapInitialized, activateNoncriticalMapEffects, fitIslandClusterViewport, jumpWithPanelOffset, onMarkerClick, onRestaurantSelect, onVisibleRestaurantsChange, handleMarkerRestaurantSelection]);
 
     // [Animation] 카테고리 이모지 순환 업데이트
     useEffect(() => {
