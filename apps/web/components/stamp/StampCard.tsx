@@ -228,6 +228,7 @@ export const StampCard = memo(function StampCard({
                                             "absolute top-2 left-2 z-10 leading-none rounded-full bg-black/65 text-white font-medium",
                                             isCompact ? "text-[10px] px-2 py-1" : "text-xs px-2.5 py-1.5"
                                         )}
+                                        data-stamp-guide-badge="true"
                                     >
                                         {guideLabel}
                                     </span>
@@ -249,6 +250,7 @@ export const StampCard = memo(function StampCard({
                                             isCompact ? "w-5 h-5" : "w-6 h-6"
                                         )}
                                         aria-label="가이드 닫기"
+                                        data-stamp-guide-close="true"
                                     >
                                         <X className={cn("shrink-0", isCompact ? "h-3 w-3" : "h-4 w-4")} aria-hidden="true" />
                                     </button>
