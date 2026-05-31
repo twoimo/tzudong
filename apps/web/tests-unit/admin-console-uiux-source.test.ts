@@ -408,14 +408,26 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       sidebarSectionsSource.indexOf('label: "실험실"'),
     );
     expect(homeSectionSource).not.toContain('id: "routes"');
-    expect(opsSectionSource).toContain('id: "routes"');
+    expect(opsSectionSource).toContain('getSidebarConsoleItems(["users", "banners", "insights"])');
+    expect(opsSectionSource).not.toContain('id: "routes"');
+    expect(opsSectionSource).not.toContain('"storyboard"');
     expect(opsSectionSource).not.toContain('"audit"');
+    expect(labSectionSource).toContain('getSidebarConsoleItems(["youtube-thumbnail-generator", "storyboard"])');
+    expect(labSectionSource).toContain('id: "routes"');
     expect(labSectionSource).toContain('"audit"');
-    expect(labSectionSource).toContain('["audit", "youtube-thumbnail-generator"]');
     expect(labSectionSource).toContain('id: "llm"');
     expect(labSectionSource).toContain('badge: "실험 중"');
-    expect(opsSectionSource.indexOf('id: "routes"')).toBeLessThan(
-      opsSectionSource.indexOf('"storyboard"'),
+    expect(labSectionSource.indexOf('"youtube-thumbnail-generator"')).toBeLessThan(
+      labSectionSource.indexOf('"storyboard"'),
+    );
+    expect(labSectionSource.indexOf('"storyboard"')).toBeLessThan(
+      labSectionSource.indexOf('id: "routes"'),
+    );
+    expect(labSectionSource.indexOf('id: "routes"')).toBeLessThan(
+      labSectionSource.indexOf('id: "llm"'),
+    );
+    expect(labSectionSource.indexOf('id: "llm"')).toBeLessThan(
+      labSectionSource.indexOf('"audit"'),
     );
     expect(consoleSource).toContain('title: "핵심 인사이트"');
     expect(consoleSource).toContain("fetchAdminDashboardInsightSummary");
@@ -1888,9 +1900,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(sidebarOrderSource).toContain('"routes",');
     expect(sidebarOrderSource).toContain(
-      '운영: ["routes", "storyboard", "banners", "users", "insights"]',
+      '운영: ["users", "banners", "insights"]',
     );
-    expect(sidebarOrderSource).toContain('실험실: ["audit", "youtube-thumbnail-generator", "llm"]');
+    expect(sidebarOrderSource).toContain('실험실: ["youtube-thumbnail-generator", "storyboard", "routes", "llm", "audit"]');
     expect(sidebarOrderRouteSource).toContain(
       'from "@/lib/admin/sidebar-order"',
     );
@@ -2183,7 +2195,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(sidebarOrderSource).toContain("mergeSidebarItemsWithDefaultSlots");
     expect(sidebarOrderSource).toContain(
-      '운영: ["routes", "storyboard", "banners", "users", "insights"]',
+      '운영: ["users", "banners", "insights"]',
     );
     expect(preferenceRouteSource).toContain("await requireAdmin()");
     expect(preferenceRouteSource.indexOf("await requireAdmin()")).toBeLessThan(

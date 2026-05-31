@@ -236,6 +236,20 @@ const consoleModules: ConsoleModule[] = [
   },
 ];
 
+const consoleModuleById = new Map<ConsoleModuleId, ConsoleModule>(
+  consoleModules.map((module) => [module.id, module]),
+);
+
+function getSidebarConsoleItems(moduleIds: ConsoleModuleId[]): SidebarSection["items"] {
+  return moduleIds.flatMap((moduleId) => {
+    const consoleModule = consoleModuleById.get(moduleId);
+    if (!consoleModule) return [];
+
+    const { id, title, description, icon, badge } = consoleModule;
+    return [{ id, title, description, icon, badge }];
+  });
+}
+
 const guardedSteps = ["미리보기", "확인", "적용", "재확인", "감사 기록"];
 const SIDEBAR_LABEL_REVEAL_DELAY_MS = 180;
 const ADMIN_THEME_STORAGE_KEY = "tzudong-admin-theme";
@@ -304,7 +318,12 @@ const sidebarSections: SidebarSection[] = [
   },
   {
     label: "운영",
+    items: getSidebarConsoleItems(["users", "banners", "insights"]),
+  },
+  {
+    label: "실험실",
     items: [
+      ...getSidebarConsoleItems(["youtube-thumbnail-generator", "storyboard"]),
       {
         id: "routes",
         title: "맛집 동선 추천",
@@ -312,31 +331,6 @@ const sidebarSections: SidebarSection[] = [
         icon: Route,
         badge: "지도 동선",
       },
-      ...consoleModules
-        .filter((module) =>
-          ["storyboard", "banners", "users", "insights"].includes(module.id),
-        )
-        .map(({ id, title, description, icon, badge }) => ({
-          id,
-          title,
-          description,
-          icon,
-          badge,
-        })),
-    ],
-  },
-  {
-    label: "실험실",
-    items: [
-      ...consoleModules
-        .filter((module) => ["audit", "youtube-thumbnail-generator"].includes(module.id))
-        .map(({ id, title, description, icon, badge }) => ({
-          id,
-          title,
-          description,
-          icon,
-          badge,
-        })),
       {
         id: "llm",
         title: "운영 보조",
@@ -344,6 +338,7 @@ const sidebarSections: SidebarSection[] = [
         icon: Bot,
         badge: "실험 중",
       },
+      ...getSidebarConsoleItems(["audit"]),
     ],
   },
 ];
