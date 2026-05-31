@@ -37,6 +37,9 @@ describe("admin restaurant refresh history source contracts", () => {
     expect(panelSource).toContain('운영자 결정 기록');
     expect(panelSource).toContain('결정 저장');
     expect(panelSource).toContain('승인과 동시에 현재 맛집 값 guarded apply');
+    expect(panelSource).toContain('function isClosureCandidate');
+    expect(panelSource).toContain('폐업 의심 후보는 네이버 미검색 신호일 뿐 폐업 확정이 아니므로 guarded apply를 막습니다.');
+    expect(panelSource).toContain('disabled={!canApplySelectedCandidate}');
     expect(panelSource).toContain('snapshotText(candidate.previous_snapshot, "road_address")');
     expect(panelSource).toContain('snapshotText(candidate.candidate_snapshot, "road_address")');
     expect(panelSource).toContain('snapshotText(selectedCandidate.previous_snapshot, "jibun_address")');
@@ -53,6 +56,10 @@ describe("admin restaurant refresh history source contracts", () => {
     expect(routeSource).toContain('action === "record_candidate"');
     expect(routeSource).toContain('action === "decide_candidate"');
     expect(routeSource).toContain('body.apply === true');
+    expect(routeSource).toContain('detected_change_types, candidate_snapshot');
+    expect(routeSource).toContain('function hasClosureChange');
+    expect(routeSource).toContain('폐업 의심 후보는 자동 guarded apply 대상이 아닙니다.');
+    expect(routeSource).toContain('function hasMaterialRestaurantPatch');
     expect(routeSource).toContain('.eq("status", "approved")');
     expect(routeSource).toContain('!updatedRestaurant');
     expect(routeSource).toContain('"Cache-Control": "no-store"');
