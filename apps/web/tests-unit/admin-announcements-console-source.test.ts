@@ -73,6 +73,20 @@ describe('admin announcements console integration source contract', () => {
     expect(homeSidePanelsSource).toContain('loading: () => <AnnouncementPanelLoadingFallback');
   });
 
+  test('renders announcement detail content with preserved paragraphs and line breaks', () => {
+    const announcementPanelSource = source('components/announcement/AnnouncementPanel.tsx');
+
+    expect(announcementPanelSource).toContain('function normalizeAnnouncementContent(content: string): string');
+    expect(announcementPanelSource).toContain(".replace(/\\\\n/g, '\\n')");
+    expect(announcementPanelSource).toContain('function getAnnouncementContentParagraphs(content: string): string[]');
+    expect(announcementPanelSource).toContain('normalizedContent.split(/\\n{2,}/)');
+    expect(announcementPanelSource).toContain('getAnnouncementContentParagraphs(selectedAnnouncement.content).map');
+    expect(announcementPanelSource).toContain('className="space-y-3 text-sm text-foreground leading-relaxed break-words"');
+    expect(announcementPanelSource).toContain('className="whitespace-pre-line"');
+    expect(announcementPanelSource).toContain("style={{ whiteSpace: 'pre-line' }}");
+    expect(announcementPanelSource).not.toContain('{selectedAnnouncement.content}');
+  });
+
   test('keeps multiple banner announcements toast-safe and query-refreshable', () => {
     const adminHookSource = source('hooks/use-announcements.tsx');
     const bannerHookSource = source('hooks/use-banner-announcements.tsx');
