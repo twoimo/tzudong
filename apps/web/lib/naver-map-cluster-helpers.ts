@@ -1,6 +1,119 @@
 const DEFAULT_CLUSTER_DISABLE_ZOOM = 13;
 const DEFAULT_MAX_MAP_ZOOM = 18;
 
+type IslandClusterViewport = {
+    aliases: string[];
+    bounds: {
+        south: number;
+        west: number;
+        north: number;
+        east: number;
+    };
+    center: {
+        lat: number;
+        lng: number;
+    };
+    maxZoom: number;
+};
+
+type IslandRestaurantCandidate = {
+    lat?: number | null;
+    lng?: number | null;
+    road_address?: string | null;
+    jibun_address?: string | null;
+    address?: string | null;
+};
+
+export const NAVER_ISLAND_CLUSTER_VIEWPORTS: Record<string, IslandClusterViewport> = {
+    제주특별자치도: {
+        aliases: ['제주특별자치도', '제주도', '제주'],
+        bounds: { south: 33.06, west: 126.08, north: 33.64, east: 126.98 },
+        center: { lat: 33.3625, lng: 126.5339 },
+        maxZoom: 10,
+    },
+    울릉도: {
+        aliases: ['울릉도', '울릉'],
+        bounds: { south: 37.43, west: 130.77, north: 37.56, east: 130.94 },
+        center: { lat: 37.4918, lng: 130.8616 },
+        maxZoom: 12,
+    },
+    욕지도: {
+        aliases: ['욕지도', '욕지'],
+        bounds: { south: 34.60, west: 128.22, north: 34.67, east: 128.32 },
+        center: { lat: 34.6354, lng: 128.2661 },
+        maxZoom: 13,
+    },
+};
+
+const getIslandRestaurantAddress = (restaurant: IslandRestaurantCandidate) =>
+    [
+        restaurant.road_address,
+        restaurant.jibun_address,
+        restaurant.address,
+    ].filter(Boolean).join(' ');
+
+const isCoordinateInsideIslandViewport = (
+    restaurant: IslandRestaurantCandidate,
+    viewport: IslandClusterViewport,
+) => {
+    if (typeof restaurant.lat !== 'number' || typeof restaurant.lng !== 'number') return false;
+
+    return (
+        restaurant.lat >= viewport.bounds.south &&
+        restaurant.lat <= viewport.bounds.north &&
+        restaurant.lng >= viewport.bounds.west &&
+        restaurant.lng <= viewport.bounds.east
+    );
+};
+
+const isRestaurantInIslandViewport = (
+    restaurant: IslandRestaurantCandidate,
+    viewport: IslandClusterViewport,
+) => {
+    const address = getIslandRestaurantAddress(restaurant);
+    return viewport.aliases.some((alias) => address.includes(alias)) ||
+        isCoordinateInsideIslandViewport(restaurant, viewport);
+};
+
+export function resolveNaverIslandClusterViewportByRegion(region: string | null | undefined) {
+    if (!region) return null;
+
+    return Object.values(NAVER_ISLAND_CLUSTER_VIEWPORTS).find((viewport) =>
+        viewport.aliases.some((alias) => region.includes(alias))
+    ) ?? null;
+}
+
+export function resolveNaverIslandClusterViewportForRestaurants(
+    restaurants: IslandRestaurantCandidate[],
+) {
+    if (restaurants.length === 0) return null;
+
+    return Object.values(NAVER_ISLAND_CLUSTER_VIEWPORTS).find((viewport) =>
+        restaurants.every((restaurant) => isRestaurantInIslandViewport(restaurant, viewport))
+    ) ?? null;
+}
+
+export function resolveNaverIslandFitBoundsOptions({
+    isMobileOrTablet,
+    maxZoom,
+    viewportOffset,
+}: {
+    isMobileOrTablet: boolean;
+    maxZoom: number;
+    viewportOffset: number;
+}) {
+    const horizontalMargin = isMobileOrTablet ? 48 : 72;
+    const verticalMargin = isMobileOrTablet ? 80 : 72;
+
+    return {
+        top: verticalMargin,
+        right: horizontalMargin,
+        bottom: isMobileOrTablet ? 168 : verticalMargin,
+        left: horizontalMargin + Math.max(0, Math.ceil(viewportOffset)),
+        maxZoom,
+    };
+}
+
 function toFiniteZoom(value: number, fallback: number) {
     return Number.isFinite(value) ? Math.floor(value) : fallback;
 }

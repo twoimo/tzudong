@@ -21,7 +21,7 @@ import { getRestaurantDisplayName, withRestaurantDisplayName } from "@/lib/resta
 import { compareStampRestaurants } from "@/lib/stamp-restaurant-order";
 import { cn } from "@/lib/utils";
 
-const STAMP_PAGE_SIZE = 16;
+const STAMP_PAGE_SIZE = 5;
 const STAMP_GUIDE_DEMO_RESTAURANT = {
     id: "guide-stamp-overlay-demo",
     name: "명동 얼큰수제비",
@@ -126,7 +126,7 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
     const shouldWaitForStampState = !!user?.id && !isUserStampsFetched;
     const shouldShowStampOverlaySkeleton =
         isRestaurantsLoading || shouldWaitForStampState;
-    const skeletonCardCount = singleColumnCards ? 8 : 16;
+    const skeletonCardCount = STAMP_PAGE_SIZE;
     const skeletonGridColumns = singleColumnCards
         ? "grid-cols-1 md:gap-3"
         : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 md:gap-4";
@@ -199,15 +199,16 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
     }, [allMergedRestaurants, deferredSearchQuery, filters, isVisited, normalizedCategoriesByRestaurantId, user]);
 
     const overlayGuideCount = showStampGuide ? 1 : 0;
+    const overlayRestaurantLimit = Math.max(displayLimit - overlayGuideCount, 0);
     const displayedRestaurants = useMemo(
-        () => filteredRestaurants.slice(0, Math.max(displayLimit - overlayGuideCount, 0)),
-        [filteredRestaurants, displayLimit, overlayGuideCount]
+        () => filteredRestaurants.slice(0, overlayRestaurantLimit),
+        [filteredRestaurants, overlayRestaurantLimit]
     );
     const displayedCards = useMemo(() => {
         if (!showStampGuide) return displayedRestaurants;
         return [STAMP_GUIDE_DEMO_RESTAURANT, ...displayedRestaurants];
     }, [showStampGuide, displayedRestaurants]);
-    const hasMoreToDisplay = displayLimit < filteredRestaurants.length;
+    const hasMoreToDisplay = displayedRestaurants.length < filteredRestaurants.length;
 
     const activeFilterCount =
         (filters.searchQuery ? 1 : 0) +
