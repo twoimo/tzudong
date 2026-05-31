@@ -1,11 +1,25 @@
-import type { ThumbnailGeneratorPayload, ThumbnailReferenceImage } from './types';
+import type { ThumbnailBriefPreset, ThumbnailGeneratorPayload, ThumbnailReferenceImage } from './types';
 import { validateThumbnailSafety } from './safety';
+
+const BRIEF_PRESET_PROMPTS: Record<ThumbnailBriefPreset, string> = {
+  'tzuyang-food-travel-collage':
+    'Tzudong-style food travel collage: high-energy host/reaction zones, oversized glossy food foreground, dense local food-place background, large editable Korean title safe area.',
+  'night-market-reaction':
+    'Night market reaction: warm lantern/food-stall lighting, crowded but non-identifying background silhouettes, dramatic host/reaction cutouts, street food plates filling the lower frame.',
+  'convenience-store-haul':
+    'Convenience-store haul: bright fluorescent store lighting, many generic snack/meal packages with fictional labels only, instant noodles and desserts stacked across the lower frame.',
+  'grilled-meat-feast':
+    'Grilled-meat feast: huge glossy skewers and roasted meat across the foreground, warm restaurant lighting, visible sauce/char textures, reaction faces separated from food piles.',
+  'sushi-seafood-table':
+    'Sushi/seafood table: bright casual restaurant, many white plates with glossy seafood pieces, low table-angle perspective, host holding a large bite near the lens.',
+};
 
 export function buildYoutubeThumbnailPrompt(
   payload: ThumbnailGeneratorPayload,
   referenceImages: ThumbnailReferenceImage[] = [],
 ) {
   validateThumbnailSafety(payload);
+  const stylePreset = payload.stylePreset ?? 'tzuyang-food-travel-collage';
 
   const roleSummary = referenceImages.length
     ? referenceImages.map((image, index) => `${index + 1}. ${image.role} reference (${image.mime})`).join('\n')
@@ -14,6 +28,7 @@ export function buildYoutubeThumbnailPrompt(
   return [
     'Create a 16:9 YouTube thumbnail base image for Korean food travel / mukbang content.',
     `Content topic: ${payload.topic}`,
+    `Style preset: ${stylePreset} — ${BRIEF_PRESET_PROMPTS[stylePreset]}`,
     `Editable headline placeholder to reserve space for later canvas text: ${payload.headline}`,
     payload.subHeadline ? `Secondary editable caption placeholder: ${payload.subHeadline}` : null,
     '',

@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
     const files = formData
       .getAll('referenceImages')
       .filter((entry): entry is File => entry instanceof File && entry.size > 0);
-    const referenceImages = await readThumbnailReferenceImages(files);
+    const referenceImages = await readThumbnailReferenceImages(files, payload.referenceImageRoles);
     const result = await generateYoutubeThumbnail(payload, referenceImages, process.env);
 
     return NextResponse.json(result, { headers: noStoreHeaders });
