@@ -206,8 +206,10 @@ export function buildCandidateFromLocalItems(row, items, now, query) {
   const previous = canonicalSnapshot(row);
   const snapshots = (items || []).map((item) => ({ snapshot: localItemSnapshot(item, now), raw: item }));
   snapshots.sort((a, b) => candidateScore(previous, b.snapshot, query) - candidateScore(previous, a.snapshot, query));
-  const selected = snapshots[0]?.snapshot || null;
+  const selectedPair = snapshots[0] || null;
+  const selected = selectedPair?.snapshot || null;
   if (!selected) return null;
+  if (candidateScore(previous, selected, query) < 4) return null;
   const detected = diffSnapshots(previous, selected).filter((type) => CHANGE_TYPES.includes(type));
   if (detected.length === 0) return null;
   return {
