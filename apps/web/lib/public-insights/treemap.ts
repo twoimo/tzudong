@@ -1,8 +1,9 @@
-import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
+import { createClient } from '@supabase/supabase-js';
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const HISTORY_CACHE_TTL_MS = 5 * 60 * 1000;
 const PAGE_SIZE = 1000;
+const MAX_PUBLIC_TREEMAP_ROWS = 500;
 
 type CacheEntry<T> = {
     expiresAt: number;
@@ -545,16 +546,33 @@ function getPeriodCutoff(period: InsightTreemapPeriod): Date | null {
     return new Date(Date.now() - durationMs);
 }
 
+function createPublicTreemapSupabaseClient() {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+        throw new Error('Supabase environment variables are missing (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY).');
+    }
+
+    return createClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+        },
+    });
+}
+
 async function fetchVideosFromSupabase(period: InsightTreemapPeriod = 'ALL'): Promise<VideoDbRow[]> {
-    const supabase = createSupabaseServiceRoleClient();
+    const supabase = createPublicTreemapSupabaseClient();
     const rows: VideoDbRow[] = [];
     let page = 0;
     const cutoff = getPeriodCutoff(period);
     const cutoffValue = cutoff?.toISOString() ?? null;
 
-    while (true) {
+    while (rows.length < MAX_PUBLIC_TREEMAP_ROWS) {
         const from = page * PAGE_SIZE;
-        const to = from + PAGE_SIZE - 1;
+        const remaining = MAX_PUBLIC_TREEMAP_ROWS - rows.length;
+        const to = from + Math.min(PAGE_SIZE, remaining) - 1;
 
         let query = supabase
             .from('videos')

@@ -8064,15 +8064,16 @@ function AdminSidebar({
           id="admin-console-menu"
           aria-label="관리자 통합 메뉴"
           className={cn(
-            "block min-h-0 flex-1 space-y-1.5 pb-2",
+            "block min-h-0 flex-1 space-y-3 pt-2 pb-3",
             isCollapsed && "md:flex md:w-full md:flex-col md:items-center",
           )}
+          data-admin-sidebar-section-list="spacious"
         >
           {orderedSidebarSections.map((section) => (
             <div
               key={section.label}
               className={cn(
-                "block space-y-1",
+                "block space-y-1.5",
                 isCollapsed && "md:flex md:w-full md:flex-col md:items-center",
               )}
             >
@@ -8091,12 +8092,13 @@ function AdminSidebar({
 
         <div
           className={cn(
-            "mt-auto border-t border-border/70 pt-2",
+            "mt-auto border-t border-dashed border-border/70 pt-4",
             isCollapsed
-              ? "flex w-full flex-col items-center gap-1.5"
-              : "space-y-2",
+              ? "flex w-full flex-col items-center gap-2.5"
+              : "space-y-3",
           )}
           data-admin-sidebar-footer-actions="true"
+          data-admin-sidebar-footer-separator="spacious"
           aria-label="관리자 사이드바 설정"
         >
           {isCollapsed ? (

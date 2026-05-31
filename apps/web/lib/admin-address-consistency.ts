@@ -92,7 +92,7 @@ export function getAddressConsistencyReviewQueueInfo(record: Pick<AddressConsist
   if (queue === ADDRESS_REVIEW_GEOCODE_RECOVERED_QUEUE) {
     return {
       queue,
-      label: '추가 확인',
+      label: '검토',
       reason: typeof review?.reason_ko === 'string'
         ? review.reason_ko
         : '주소 지오코딩은 회복됐지만 지도 상호 후보가 부족해 관리자 확인이 필요합니다.',
@@ -101,7 +101,7 @@ export function getAddressConsistencyReviewQueueInfo(record: Pick<AddressConsist
 
   return {
     queue,
-    label: '추가 확인',
+    label: '검토',
     reason: typeof review?.reason_ko === 'string' ? review.reason_ko : '주소 정합성 추가 검토가 필요합니다.',
   };
 }
@@ -159,15 +159,15 @@ export function getAddressConsistencyLabel(record: AddressConsistencyInput): str
 export function getAddressConsistencyDisplayLabel(record: AddressConsistencyInput): string {
   switch (getAddressConsistencyStatus(record)) {
     case 'true':
-      return '정상';
+      return '일치';
     case 'false':
       return '불일치';
     case 'failed':
       return '실패';
     case 'review':
-      return '추가 확인';
+      return '검토';
     case 'candidate':
-      return '승격 후보';
+      return '검토';
     case 'not_applicable':
     case 'unknown':
     default:
@@ -189,9 +189,9 @@ function isMostlyKorean(value: string): boolean {
   return /[가-힣]/.test(value);
 }
 
-function toKoreanReadableMessage(value: string | null, fallback: string): string | null {
+function toKoreanReadableMessage(value: string | null, replacementMessage: string): string | null {
   if (!value) return null;
-  return isMostlyKorean(value) ? value : fallback;
+  return isMostlyKorean(value) ? value : replacementMessage;
 }
 
 function stageReason(stage: number | null | undefined): string | null {
@@ -501,9 +501,9 @@ export function getAddressConsistencyOperatorGuidance(record: AddressConsistency
 
   if (status === 'candidate') {
     return {
-      label: '승격 후보',
+      label: '검토',
       tone: 'info',
-      possibleCause: 'AHP 98점 이상과 복수 근거가 있어 정정 승인 후보로 볼 수 있지만, 현재 원본 판정은 아직 불일치 계열입니다.',
+      possibleCause: 'AHP 98점 이상과 복수 근거가 있어 정정 검토 대상으로 볼 수 있지만, 현재 원본 판정은 아직 불일치 계열입니다.',
       recommendedAction: '영상 제목·발행일, 원본명, 후보 주소, 지도 URL/추론 근거를 한 번 더 대조한 뒤 수정 승인으로 전환하세요.',
       safeguard: '자동 일치 처리하지 말고 사람이 최종 근거를 남긴 뒤 승인합니다.',
     };
@@ -524,9 +524,9 @@ export function getAddressConsistencyOperatorGuidance(record: AddressConsistency
 
   if (reviewQueueInfo?.queue === ADDRESS_REVIEW_GEOCODE_RECOVERED_QUEUE) {
     return {
-      label: '추가 확인',
+      label: '검토',
       tone: 'info',
-      possibleCause: '주소는 어느 정도 회복됐지만 같은 상호의 주소 검색 결과가 부족합니다. 정상 영업 중인데 검색 로직이 못 찾았거나, 상호 변경·이전·폐업 가능성이 모두 남아 있습니다.',
+      possibleCause: '주소는 어느 정도 회복됐지만 같은 상호의 주소 검색 결과가 부족합니다. 실제 영업 중인데 검색 로직이 못 찾았거나, 상호 변경·이전·폐업 가능성이 모두 남아 있습니다.',
       recommendedAction: '카카오맵/네이버 지도, 우체국 공식 주소, 최근 블로그·리뷰를 작게 교차 확인한 뒤 수정 또는 보류하세요.',
       safeguard: '한 출처만으로 확정하지 말고 최소 두 근거를 비교해 결정 기록에 남깁니다.',
     };
@@ -582,9 +582,9 @@ export function getAddressConsistencyTriageSignals(record: AddressConsistencyInp
     const score = getReviewAhpScore(record);
     signals.push({
       kind: 'promotion_candidate',
-      label: '승격 후보',
+      label: '검토',
       tone: 'info',
-      message: '복수 근거와 AHP 점수상 정정 승인 후보입니다. 단, 자동 일치가 아니라 관리자 확인 후 수정 승인 대상입니다.',
+      message: '복수 근거와 AHP 점수상 정정 검토 대상입니다. 단, 자동 일치가 아니라 관리자 확인 후 수정 승인 대상입니다.',
       evidence: compact([
         score !== null ? `AHP ${score}점` : null,
         ...getEvidenceFamilies(record, locationMatch).map((family) => `근거 유형: ${AHP_EVIDENCE_FAMILY_LABELS[family] ?? family}`),
@@ -696,7 +696,7 @@ export function explainAddressConsistency(record: AddressConsistencyInput): Addr
   if (status === 'true') {
     return {
       label,
-      headline: '정상 · 주소 후보가 정합 판정되었습니다.',
+      headline: '일치 · 주소 후보가 정합 판정되었습니다.',
       reason: '지오코딩 결과가 승인 가능한 주소와 좌표로 확정되었습니다.',
       evidence: compact([
         candidateName ? `확정 후보: ${candidateName}` : null,
@@ -729,10 +729,10 @@ export function explainAddressConsistency(record: AddressConsistencyInput): Addr
     const score = getReviewAhpScore(record);
     return {
       label,
-      headline: '승격 후보 · 복수 근거가 강하지만 자동 일치 처리하지 않고 관리자 확인이 필요합니다.',
+      headline: '검토 · 복수 근거가 강하지만 자동 일치 처리하지 않고 관리자 확인이 필요합니다.',
       reason: score !== null
-        ? `AHP ${score}점으로 정정 승인 후보이나, 원본 판정이 불일치 계열이라 영상·상호·주소 근거를 최종 대조해야 합니다.`
-        : '정정 승인 후보이나, 원본 판정이 불일치 계열이라 영상·상호·주소 근거를 최종 대조해야 합니다.',
+        ? `AHP ${score}점으로 정정 검토 대상이나, 원본 판정이 불일치 계열이라 영상·상호·주소 근거를 최종 대조해야 합니다.`
+        : '정정 검토 대상이나, 원본 판정이 불일치 계열이라 영상·상호·주소 근거를 최종 대조해야 합니다.',
       evidence: compact([
         reviewQueueInfo ? `운영 큐: ${reviewQueueInfo.label} · ${reviewQueueInfo.reason}` : null,
         falseMessage ? `규칙 판정: ${falseMessage}` : null,
@@ -748,7 +748,7 @@ export function explainAddressConsistency(record: AddressConsistencyInput): Addr
   if (status === 'review') {
     return {
       label,
-      headline: '추가 확인 · 주소 후보는 회복됐지만 같은 가게로 확정할 상호 근거가 부족합니다.',
+      headline: '검토 · 주소 후보는 회복됐지만 같은 가게로 확정할 상호 근거가 부족합니다.',
       reason: reviewQueueInfo?.reason || pendingReason || '주소 지오코딩은 회복됐지만 지도 상호 후보가 부족해 관리자 확인이 필요합니다.',
       evidence: compact([
         reviewQueueInfo ? `운영 큐: ${reviewQueueInfo.label} · ${reviewQueueInfo.reason}` : null,
