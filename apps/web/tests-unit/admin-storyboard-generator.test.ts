@@ -75,4 +75,33 @@ describe('admin storyboard generator', () => {
       fixture.cleanup();
     }
   });
+
+  test('honors the production notes toggle for generated scene checklists', async () => {
+    const fixture = withHeatmapFixture();
+    const previous = process.env.TZUYANG_HEATMAP_DIR;
+    process.env.TZUYANG_HEATMAP_DIR = fixture.dir;
+
+    try {
+      const { generateLocalStoryboard } = await import(`../lib/admin/storyboard/generator.ts?case=${Math.random()}`);
+      const result = generateLocalStoryboard({
+        prompt: '소리와 질감 중심으로 차분한 다음 영상안을 만들어줘.',
+        tone: 'comfort',
+        targetLengthMinutes: 18,
+        sourceLimit: 10,
+        segmentCount: 6,
+        includeProductionNotes: false,
+      });
+
+      expect(result.storyboard.scenes).toHaveLength(6);
+      expect(result.storyboard.scenes.every((scene) => scene.productionChecklist.length === 0)).toBe(true);
+      expect(result.request.includeProductionNotes).toBe(false);
+    } finally {
+      if (previous === undefined) {
+        delete process.env.TZUYANG_HEATMAP_DIR;
+      } else {
+        process.env.TZUYANG_HEATMAP_DIR = previous;
+      }
+      fixture.cleanup();
+    }
+  });
 });
