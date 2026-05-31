@@ -55,6 +55,9 @@ on:
       - 'backend/restaurant-evaluation/scripts/tests/tzuyang-operator-review-package.test.mjs'
       - 'backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger.test.mjs'
       - 'backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger-cli-fixture.mjs'
+  schedule:
+    # Weekly freshness/admin regression guard: Mondays 03:17 KST (Sundays 18:17 UTC).
+    - cron: '17 18 * * 0'
   workflow_dispatch:
 
 permissions:
