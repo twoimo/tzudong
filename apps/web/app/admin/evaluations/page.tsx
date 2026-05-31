@@ -803,16 +803,15 @@ function AdminEvaluationPage({
 
     // 5. 주소 정합 필터 (True/False/Failed) - 상세/테이블 표시와 같은 helper 사용
     if (evalFilters.geocoding_success) {
-      const targetStatusByFilter: Record<string, ReturnType<typeof getAddressConsistencyStatus>> = {
-        true: 'true',
-        false_match: 'false',
-        false_geocode: 'failed',
-        review: 'review',
-        candidate: 'candidate',
+      const targetStatusByFilter: Record<string, ReturnType<typeof getAddressConsistencyStatus>[]> = {
+        true: ['true'],
+        false_match: ['false'],
+        false_geocode: ['failed'],
+        review: ['review', 'candidate'],
       };
-      const targetStatus = targetStatusByFilter[evalFilters.geocoding_success];
-      if (targetStatus) {
-        filtered = filtered.filter(r => getAddressConsistencyStatus(r) === targetStatus);
+      const targetStatuses = targetStatusByFilter[evalFilters.geocoding_success];
+      if (targetStatuses) {
+        filtered = filtered.filter(r => targetStatuses.includes(getAddressConsistencyStatus(r)));
       }
     }
 
