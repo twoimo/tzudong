@@ -1,7 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Download, ImagePlus, Loader2, RotateCcw, Wand2 } from "lucide-react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
+import { Download, ImagePlus, Loader2, Move, Plus, RotateCcw, Trash2, Wand2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,6 +42,13 @@ type TextLayer = {
   align: "left" | "center" | "right";
   rotation: number;
   zIndex: number;
+};
+
+type DragState = {
+  pointerId: number;
+  layerId: string;
+  offsetX: number;
+  offsetY: number;
 };
 
 type GenerationResult = {
@@ -86,6 +100,28 @@ const DEFAULT_TEXT_LAYERS: TextLayer[] = [
     zIndex: 2,
   },
 ];
+
+const FONT_PRESETS = [
+  { label: "Impact", fontFamily: "Impact, Pretendard, system-ui, sans-serif", fontWeight: 900 },
+  { label: "Arial Black", fontFamily: "Arial Black, Pretendard, system-ui, sans-serif", fontWeight: 900 },
+  { label: "Pretendard", fontFamily: "Pretendard, system-ui, sans-serif", fontWeight: 800 },
+] as const;
+
+const STROKE_PRESETS = [
+  { label: "두꺼운 검정", stroke: "#111111", strokeWidth: 10 },
+  { label: "얇은 검정", stroke: "#111111", strokeWidth: 5 },
+  { label: "노란 포인트", stroke: "#ffde21", strokeWidth: 8 },
+] as const;
+
+const SHADOW_PRESETS = [
+  { label: "강한 그림자", shadow: "0 12px 24px rgba(0,0,0,0.72)" },
+  { label: "부드러운 그림자", shadow: "0 8px 18px rgba(0,0,0,0.45)" },
+  { label: "그림자 없음", shadow: "none" },
+] as const;
+
+function createDefaultTextLayers() {
+  return DEFAULT_TEXT_LAYERS.map((layer) => ({ ...layer }));
+}
 
 const providerOptions: Array<{ value: ProviderId; label: string; help: string }> = [
   {
@@ -143,6 +179,8 @@ function drawWrappedText(
 
 export function AdminYoutubeThumbnailGenerator() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const dragStateRef = useRef<DragState | null>(null);
+  const layerIdCounterRef = useRef(3);
   const [topic, setTopic] = useState(
     "다음 업로드 주제: 해외 야시장 길거리 음식, 압도적인 양의 음식 전경, 진행자와 리액션 컷아웃",
   );
@@ -151,7 +189,9 @@ export function AdminYoutubeThumbnailGenerator() {
   const [providerId, setProviderId] = useState<ProviderId>("mock");
   const [files, setFiles] = useState<File[]>([]);
   const [acknowledgedSafety, setAcknowledgedSafety] = useState(true);
-  const [textLayers, setTextLayers] = useState<TextLayer[]>(DEFAULT_TEXT_LAYERS);
+  const [textLayers, setTextLayers] = useState<TextLayer[]>(() => createDefaultTextLayers());
+  const [activeLayerId, setActiveLayerId] = useState(DEFAULT_TEXT_LAYERS[0]?.id ?? "headline");
+  const [showSafeAreaGuide, setShowSafeAreaGuide] = useState(true);
   const [result, setResult] = useState<GenerationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -160,6 +200,10 @@ export function AdminYoutubeThumbnailGenerator() {
   const selectedProvider = useMemo(
     () => providerOptions.find((option) => option.value === providerId) ?? providerOptions[0],
     [providerId],
+  );
+  const activeLayer = useMemo(
+    () => textLayers.find((layer) => layer.id === activeLayerId) ?? textLayers[0] ?? null,
+    [activeLayerId, textLayers],
   );
 
   useEffect(() => {
@@ -192,6 +236,23 @@ export function AdminYoutubeThumbnailGenerator() {
     context.fillStyle = "#16100d";
     context.fillRect(0, 0, TARGET_WIDTH, TARGET_HEIGHT);
 
+    const renderSafeAreaGuide = () => {
+      if (!showSafeAreaGuide) return;
+      context.save();
+      context.setLineDash([18, 14]);
+      context.lineWidth = 3;
+      context.strokeStyle = "rgba(255,255,255,0.72)";
+      context.strokeRect(64, 36, TARGET_WIDTH - 128, TARGET_HEIGHT - 72);
+      context.strokeStyle = "rgba(255,226,64,0.72)";
+      context.strokeRect(96, 72, TARGET_WIDTH - 192, TARGET_HEIGHT - 144);
+      context.fillStyle = "rgba(0,0,0,0.52)";
+      context.fillRect(86, 46, 188, 30);
+      context.fillStyle = "#ffffff";
+      context.font = "700 18px system-ui, sans-serif";
+      context.fillText("1280x720 safe area", 96, 68);
+      context.restore();
+    };
+
     const renderLayers = () => {
       [...textLayers]
         .sort((a, b) => a.zIndex - b.zIndex)
@@ -208,9 +269,15 @@ export function AdminYoutubeThumbnailGenerator() {
           context.fillStyle = layer.fill;
           context.strokeStyle = layer.stroke;
           context.lineWidth = layer.strokeWidth;
-          context.shadowColor = "rgba(0,0,0,0.62)";
-          context.shadowBlur = 18;
-          context.shadowOffsetY = 8;
+          if (layer.shadow !== "none") {
+            context.shadowColor = "rgba(0,0,0,0.62)";
+            context.shadowBlur = layer.shadow.includes("24px") ? 18 : 10;
+            context.shadowOffsetY = layer.shadow.includes("12px") ? 8 : 5;
+          } else {
+            context.shadowColor = "transparent";
+            context.shadowBlur = 0;
+            context.shadowOffsetY = 0;
+          }
           drawWrappedText(context, layer.content, 0, 0, 760, layer.fontSize * 1.02, layer);
           context.restore();
         });
@@ -231,6 +298,7 @@ export function AdminYoutubeThumbnailGenerator() {
       context.beginPath();
       context.ellipse(430, 620, 480, 128, 0, 0, Math.PI * 2);
       context.fill();
+      renderSafeAreaGuide();
       renderLayers();
       return;
     }
@@ -239,17 +307,114 @@ export function AdminYoutubeThumbnailGenerator() {
     image.onload = () => {
       context.clearRect(0, 0, TARGET_WIDTH, TARGET_HEIGHT);
       context.drawImage(image, 0, 0, TARGET_WIDTH, TARGET_HEIGHT);
+      renderSafeAreaGuide();
       renderLayers();
     };
     image.src = result.baseImage.dataUrl;
-  }, [result, textLayers]);
+  }, [result, showSafeAreaGuide, textLayers]);
 
   useEffect(() => {
     drawCanvas();
   }, [drawCanvas]);
 
   function updateTextLayer(id: string, patch: Partial<TextLayer>) {
+    if (typeof patch.content === "string") {
+      if (id === "headline") setHeadline(patch.content);
+      if (id === "subHeadline") setSubHeadline(patch.content);
+    }
     setTextLayers((current) => current.map((layer) => (layer.id === id ? { ...layer, ...patch } : layer)));
+  }
+
+  function addTextLayer() {
+    const nextId = `layer-${layerIdCounterRef.current++}`;
+    const nextLayer: TextLayer = {
+      id: nextId,
+      content: "새 문구",
+      x: 640,
+      y: 360,
+      fontFamily: "Pretendard, system-ui, sans-serif",
+      fontSize: 64,
+      fontWeight: 900,
+      fill: "#ffffff",
+      stroke: "#111111",
+      strokeWidth: 8,
+      shadow: "0 12px 24px rgba(0,0,0,0.72)",
+      align: "center",
+      rotation: 0,
+      zIndex: textLayers.length + 1,
+    };
+    setTextLayers((current) => [...current, nextLayer]);
+    setActiveLayerId(nextId);
+  }
+
+  function deleteTextLayer(id: string) {
+    if (textLayers.length <= 1) return;
+
+    const next = textLayers.filter((layer) => layer.id !== id);
+    setTextLayers(next);
+    if (activeLayerId === id) setActiveLayerId(next[0]?.id ?? DEFAULT_TEXT_LAYERS[0]?.id ?? "headline");
+    if (id === "headline") setHeadline(next.find((layer) => layer.id === "headline")?.content ?? next[0]?.content ?? "");
+    if (id === "subHeadline") setSubHeadline(next.find((layer) => layer.id === "subHeadline")?.content ?? "");
+  }
+
+  function resetTextLayers() {
+    const defaults = createDefaultTextLayers();
+    layerIdCounterRef.current = 3;
+    setTextLayers(defaults);
+    setHeadline(defaults[0]?.content ?? "");
+    setSubHeadline(defaults[1]?.content ?? "");
+    setActiveLayerId(defaults[0]?.id ?? "headline");
+  }
+
+  function getCanvasPoint(event: ReactPointerEvent<HTMLCanvasElement>) {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: ((event.clientX - rect.left) / rect.width) * TARGET_WIDTH,
+      y: ((event.clientY - rect.top) / rect.height) * TARGET_HEIGHT,
+    };
+  }
+
+  function findLayerAtPoint(point: { x: number; y: number }) {
+    return [...textLayers]
+      .sort((a, b) => b.zIndex - a.zIndex)
+      .find((layer) => Math.abs(point.x - layer.x) <= 320 && Math.abs(point.y - layer.y) <= Math.max(44, layer.fontSize));
+  }
+
+  function handleCanvasPointerDown(event: ReactPointerEvent<HTMLCanvasElement>) {
+    const point = getCanvasPoint(event);
+    if (!point) return;
+    const layer = findLayerAtPoint(point);
+    if (!layer) return;
+    setActiveLayerId(layer.id);
+    dragStateRef.current = {
+      pointerId: event.pointerId,
+      layerId: layer.id,
+      offsetX: point.x - layer.x,
+      offsetY: point.y - layer.y,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function handleCanvasPointerMove(event: ReactPointerEvent<HTMLCanvasElement>) {
+    const dragState = dragStateRef.current;
+    if (!dragState || dragState.pointerId !== event.pointerId) return;
+    const point = getCanvasPoint(event);
+    if (!point) return;
+    updateTextLayer(dragState.layerId, {
+      x: Math.round(Math.max(0, Math.min(TARGET_WIDTH, point.x - dragState.offsetX))),
+      y: Math.round(Math.max(0, Math.min(TARGET_HEIGHT, point.y - dragState.offsetY))),
+    });
+  }
+
+  function handleCanvasPointerUp(event: ReactPointerEvent<HTMLCanvasElement>) {
+    if (dragStateRef.current?.pointerId === event.pointerId) {
+      dragStateRef.current = null;
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+    }
   }
 
   async function handleGenerate() {
@@ -408,7 +573,7 @@ export function AdminYoutubeThumbnailGenerator() {
                 {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
                 썸네일 초안 생성
               </Button>
-              <Button type="button" variant="outline" onClick={() => setTextLayers(DEFAULT_TEXT_LAYERS)}>
+              <Button type="button" variant="outline" onClick={resetTextLayers}>
                 <RotateCcw className="mr-2 h-4 w-4" /> 텍스트 초기화
               </Button>
             </div>
@@ -417,11 +582,19 @@ export function AdminYoutubeThumbnailGenerator() {
 
         <Card className="min-h-0">
           <CardHeader className="space-y-1">
-            <CardTitle className="flex items-center justify-between gap-3 text-base">
+            <CardTitle className="flex flex-wrap items-center justify-between gap-2 text-base">
               <span>캔버스 편집 / PNG 내보내기</span>
-              <Button type="button" size="sm" variant="secondary" onClick={handleExportPng}>
-                <Download className="mr-2 h-4 w-4" /> PNG 저장
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" size="sm" variant="outline" onClick={() => setShowSafeAreaGuide((value) => !value)} data-thumbnail-safe-area-toggle="true">
+                  {showSafeAreaGuide ? "가이드 숨김" : "가이드 표시"}
+                </Button>
+                <Button type="button" size="sm" variant="outline" onClick={addTextLayer} data-thumbnail-add-text-layer="true">
+                  <Plus className="mr-2 h-4 w-4" /> 문구 추가
+                </Button>
+                <Button type="button" size="sm" variant="secondary" onClick={handleExportPng}>
+                  <Download className="mr-2 h-4 w-4" /> PNG 저장
+                </Button>
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -430,17 +603,43 @@ export function AdminYoutubeThumbnailGenerator() {
                 ref={canvasRef}
                 width={TARGET_WIDTH}
                 height={TARGET_HEIGHT}
-                className="aspect-video h-auto w-full"
+                className="aspect-video h-auto w-full touch-none cursor-move"
                 aria-label="유튜브 썸네일 1280x720 편집 캔버스"
+                data-thumbnail-draggable-canvas="true"
+                data-thumbnail-safe-area-guide={showSafeAreaGuide ? "visible" : "hidden"}
+                onPointerDown={handleCanvasPointerDown}
+                onPointerMove={handleCanvasPointerMove}
+                onPointerUp={handleCanvasPointerUp}
+                onPointerCancel={handleCanvasPointerUp}
               />
             </div>
 
             <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
               {textLayers.map((layer) => (
-                <div key={layer.id} className="rounded-xl border border-border bg-background p-3" data-thumbnail-text-layer={layer.id}>
+                <div
+                  key={layer.id}
+                  className={cn(
+                    "rounded-xl border bg-background p-3",
+                    activeLayer?.id === layer.id ? "border-primary shadow-sm" : "border-border",
+                  )}
+                  data-thumbnail-text-layer={layer.id}
+                  data-thumbnail-active-layer={activeLayer?.id === layer.id ? "true" : "false"}
+                >
                   <div className="mb-3 flex items-center justify-between gap-2">
-                    <strong className="text-sm">{layer.id === "headline" ? "메인 문구" : "스티커 문구"}</strong>
-                    <Badge variant="outline">fontFamily / strokeWidth 편집</Badge>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1 text-left text-sm font-semibold"
+                      onClick={() => setActiveLayerId(layer.id)}
+                    >
+                      <Move className="h-3.5 w-3.5" aria-hidden="true" />
+                      {layer.id === "headline" ? "메인 문구" : layer.id === "subHeadline" ? "스티커 문구" : "추가 문구"}
+                    </button>
+                    <div className="flex items-center gap-1">
+                      <Badge variant="outline">fontFamily / strokeWidth 편집</Badge>
+                      <Button type="button" size="sm" variant="ghost" className="h-7 px-2" onClick={() => deleteTextLayer(layer.id)} disabled={textLayers.length <= 1} aria-label={`${layer.content} 문구 삭제`}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <label className="col-span-2 space-y-1 text-xs font-medium">
@@ -451,6 +650,13 @@ export function AdminYoutubeThumbnailGenerator() {
                       폰트 패밀리
                       <Input value={layer.fontFamily} onChange={(event) => updateTextLayer(layer.id, { fontFamily: event.target.value })} />
                     </label>
+                    <div className="col-span-2 flex flex-wrap gap-1" data-thumbnail-font-presets="true">
+                      {FONT_PRESETS.map((preset) => (
+                        <Button key={preset.label} type="button" size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => updateTextLayer(layer.id, preset)}>
+                          {preset.label}
+                        </Button>
+                      ))}
+                    </div>
                     {([
                       ["x", "X"],
                       ["y", "Y"],
@@ -475,6 +681,20 @@ export function AdminYoutubeThumbnailGenerator() {
                       외곽선색
                       <Input type="color" value={layer.stroke} onChange={(event) => updateTextLayer(layer.id, { stroke: event.target.value })} />
                     </label>
+                    <div className="col-span-2 flex flex-wrap gap-1" data-thumbnail-stroke-presets="true">
+                      {STROKE_PRESETS.map((preset) => (
+                        <Button key={preset.label} type="button" size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => updateTextLayer(layer.id, preset)}>
+                          {preset.label}
+                        </Button>
+                      ))}
+                    </div>
+                    <div className="col-span-2 flex flex-wrap gap-1" data-thumbnail-shadow-presets="true">
+                      {SHADOW_PRESETS.map((preset) => (
+                        <Button key={preset.label} type="button" size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => updateTextLayer(layer.id, preset)}>
+                          {preset.label}
+                        </Button>
+                      ))}
+                    </div>
                     <label className="col-span-2 space-y-1 text-xs font-medium">
                       정렬
                       <Select value={layer.align} onValueChange={(value) => updateTextLayer(layer.id, { align: value as TextLayer["align"] })}>
