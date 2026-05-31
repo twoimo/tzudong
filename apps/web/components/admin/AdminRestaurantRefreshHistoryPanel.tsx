@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   Clock3,
   History,
+  ListChecks,
   RefreshCw,
   Search,
   ShieldCheck,
@@ -24,6 +25,13 @@ type RefreshCandidateStatus =
   | "applied"
   | "superseded";
 
+type ReadbackState = {
+  status: "not_required" | "pending" | "completed" | "failed";
+  checked_at: string | null;
+  run_id: string | null;
+  notes: string | null;
+};
+
 type RefreshCandidateRow = {
   id: string;
   restaurant_id: string;
@@ -38,6 +46,7 @@ type RefreshCandidateRow = {
   created_at: string;
   decided_at: string | null;
   applied_at: string | null;
+  readback_state: ReadbackState;
 };
 
 type RefreshHistorySummary = {
@@ -101,6 +110,40 @@ function changeTypeLabel(type: string) {
 
 function isClosureCandidate(candidate: RefreshCandidateRow | null) {
   return Boolean(candidate?.detected_change_types.includes("closure"));
+}
+
+function evidenceText(evidence: Record<string, unknown>, key: string) {
+  const value = evidence[key];
+  if (typeof value === "string" && value.trim()) return value;
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  return null;
+}
+
+function readbackLabel(state: ReadbackState) {
+  if (state.status === "completed") return "readback 완료";
+  if (state.status === "failed") return "readback 실패";
+  if (state.status === "pending") return "readback 대기";
+  return "readback 대상 아님";
+}
+
+function readbackTone(state: ReadbackState) {
+  if (state.status === "completed") return "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200";
+  if (state.status === "failed") return "border-destructive/30 bg-destructive/10 text-destructive";
+  if (state.status === "pending") return "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200";
+  return "border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-300";
+}
+
+function reviewChecklistForCandidate(candidate: RefreshCandidateRow) {
+  const types = new Set(candidate.detected_change_types);
+  const checklist = new Set<string>();
+  if (types.has("name")) checklist.add("상호 변경: 후보 상호+지역명+전화번호로 검색해 상호 변경/동일 주소 여부를 확인");
+  if (types.has("phone")) checklist.add("전화번호 변경: 후보 전화번호를 네이버 지도와 구글/블로그 리뷰에서 역검색");
+  if (types.has("address") || types.has("relocation")) checklist.add("주소/이전: 도로명·지번·좌표·주변 가게/거리 단서를 영상·지도 리뷰 이미지와 교차 확인");
+  if (types.has("closure")) checklist.add("폐업 의심: 네이버 미검색만으로 확정하지 말고 전화 확인·외부 리뷰·상호 변경 가능성을 검토");
+  if (types.has("readback_mismatch")) checklist.add("readback 불일치: 적용 후보와 현재 restaurants row를 비교하고 재점검 후보로 다시 결정");
+  if (candidate.candidate_status === "applied") checklist.add("적용 완료: readback/recrawl 상태가 완료인지 확인하고, 대기/실패면 재점검 실행");
+  if (checklist.size === 0) checklist.add("기본 검토: 후보 생성 근거·현재 스냅샷·외부 출처를 확인 후 결정 메모를 남김");
+  return [...checklist];
 }
 
 export function AdminRestaurantRefreshHistoryPanel() {
@@ -189,6 +232,7 @@ export function AdminRestaurantRefreshHistoryPanel() {
 
   const filteredCandidates = useMemo(() => data?.candidates ?? [], [data]);
   const selectedCandidateIsClosure = isClosureCandidate(selectedCandidate);
+  const selectedCandidateChecklist = selectedCandidate ? reviewChecklistForCandidate(selectedCandidate) : [];
   const canApplySelectedCandidate = decision === "approved" && !selectedCandidateIsClosure;
   const summary = data?.summary;
 
@@ -361,6 +405,31 @@ export function AdminRestaurantRefreshHistoryPanel() {
                       결정 메모에 전화 확인·외부 리뷰·현장/지도 근거를 남긴 뒤 별도 운영 절차로 처리하세요.
                     </div>
                   ) : null}
+                  <div className="rounded-lg border border-border bg-background/80 p-3 text-xs leading-5 text-muted-foreground">
+                    <p className="mb-1 flex items-center gap-1 font-semibold text-foreground">
+                      <ListChecks className="h-3.5 w-3.5 text-primary" />
+                      유형별 검토 체크리스트
+                    </p>
+                    <ul className="list-disc space-y-1 pl-4">
+                      {selectedCandidateChecklist.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      <Badge variant="outline" className={cn("w-fit", readbackTone(selectedCandidate.readback_state))}>
+                        {readbackLabel(selectedCandidate.readback_state)}
+                      </Badge>
+                      {selectedCandidate.readback_state.checked_at ? (
+                        <span className="text-[11px] text-muted-foreground">
+                          {formatDate(selectedCandidate.readback_state.checked_at)}
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="mt-2 text-[11px]">
+                      근거: {evidenceText(selectedCandidate.evidence, "source") || "출처 미기록"}
+                      {evidenceText(selectedCandidate.evidence, "query") ? ` · ${evidenceText(selectedCandidate.evidence, "query")}` : ""}
+                    </p>
+                  </div>
                   <textarea
                     value={operatorNotes}
                     onChange={(event) => setOperatorNotes(event.target.value)}
@@ -399,13 +468,17 @@ export function AdminRestaurantRefreshHistoryPanel() {
                     <p><span className="font-medium text-foreground">전화</span> {snapshotText(candidate.previous_snapshot, "phone")} → {snapshotText(candidate.candidate_snapshot, "phone")}</p>
                     <p><span className="font-medium text-foreground">주소</span> {snapshotText(candidate.previous_snapshot, "road_address")} → {snapshotText(candidate.candidate_snapshot, "road_address")}</p>
                   </div>
-                  <div className="flex flex-wrap gap-1">
-                    {candidate.detected_change_types.map((type) => (
-                      <Badge key={type} variant="secondary" className="text-xs">{changeTypeLabel(type)}</Badge>
-                    ))}
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap gap-1">
+                      {candidate.detected_change_types.map((type) => (
+                        <Badge key={type} variant="secondary" className="text-xs">{changeTypeLabel(type)}</Badge>
+                      ))}
+                    </div>
+                    <p className="text-xs leading-5 text-muted-foreground">{reviewChecklistForCandidate(candidate)[0]}</p>
                   </div>
                   <div className="space-y-1">
                     <Badge variant="outline" className={cn("w-fit", statusTone[candidate.candidate_status])}>{statusLabels[candidate.candidate_status]}</Badge>
+                    <Badge variant="outline" className={cn("w-fit", readbackTone(candidate.readback_state))}>{readbackLabel(candidate.readback_state)}</Badge>
                     <p className="text-xs text-muted-foreground">기록 {formatDate(candidate.created_at)}</p>
                   </div>
                   <Button
