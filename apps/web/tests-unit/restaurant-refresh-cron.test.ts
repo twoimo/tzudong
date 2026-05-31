@@ -69,6 +69,24 @@ describe("restaurant refresh cron", () => {
     expect(candidate.evidence.decision_boundary).toContain("review_only");
   });
 
+  test("does not turn foreign local-search misses into closure candidates", () => {
+    const candidate = cron.buildNoResultCandidate({
+      ...baseRestaurant,
+      id: "restaurant-foreign",
+      approved_name: "라오허제 야시장(饒河街夜市)",
+      phone: "+886 2 2766 8876",
+      road_address: "Raohe St, Songshan District, Taipei City, 대만 105",
+      jibun_address: "Raohe St, Songshan District, Taipei City, 대만 105",
+      lat: 25.0508854,
+      lng: 121.5774891,
+    }, [
+      { query: "+886 2 2766 8876", status: "ok", items: [] },
+      { query: "Raohe St 라오허제 야시장", status: "ok", items: [] },
+    ], "2026-05-31T01:00:00Z");
+
+    expect(candidate).toBeNull();
+  });
+
   test("readback mismatch creates a new review candidate instead of silently accepting drift", () => {
     const mismatch = cron.buildReadbackMismatchCandidate({
       id: "candidate-1",
