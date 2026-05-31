@@ -277,11 +277,18 @@ export const createClusterMarkerHTML = (
  */
 export const createIndividualMarkerHTML = (
   category: string,
-  isSelected: boolean
+  isSelected: boolean,
+  visitCount = 0
 ): string => {
   const image = getCategoryImage(category);
   // 이미지 마커: 선택 시 42px, 기본 32px
   const size = isSelected ? 42 : 32;
+  const normalizedVisitCount = Number.isFinite(visitCount) ? Math.max(0, Math.floor(visitCount)) : 0;
+  const shouldShowVisitBadge = normalizedVisitCount >= 2;
+  const visitBadgeSize = isSelected ? 19 : 17;
+  const visitBadgeFontSize = isSelected ? 11 : 10;
+  const visitBadgeOffset = isSelected ? -6 : -5;
+  const displayVisitCount = normalizedVisitCount >= 100 ? '99+' : String(normalizedVisitCount);
 
   const dropShadow = isSelected
     ? 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4)) drop-shadow(0 0 0 2px rgba(255, 255, 255, 0.9))'
@@ -313,6 +320,35 @@ export const createIndividualMarkerHTML = (
       data-testid="marker"
     >
         ${createCategoryImageHTML({ image, alt: 'marker' })}
+        ${shouldShowVisitBadge ? `
+        <span
+          class="tzuyang-visit-count-badge"
+          data-tzuyang-visit-count-badge="true"
+          aria-label="쯔양 ${normalizedVisitCount}회 방문"
+          style="
+            position: absolute;
+            top: ${visitBadgeOffset}px;
+            right: ${visitBadgeOffset}px;
+            min-width: ${visitBadgeSize}px;
+            height: ${visitBadgeSize}px;
+            padding: 0 4px;
+            border-radius: 9999px;
+            background-color: #dc2626;
+            color: #ffffff;
+            border: 2px solid #ffffff;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: ${visitBadgeFontSize}px;
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: -0.02em;
+            pointer-events: none;
+            box-sizing: border-box;
+          "
+        >${displayVisitCount}</span>
+        ` : ''}
     </div>
   `;
 };
