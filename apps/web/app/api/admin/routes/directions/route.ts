@@ -9,14 +9,12 @@ const MAX_DIRECTIONS_POINTS = 7; // start + goal + up to 5 waypoints (Directions
 const DEFAULT_DIRECTIONS_OPTION = "trafast";
 
 const NAVER_DIRECTIONS_CLIENT_ID =
-  process.env.NEXT_PUBLIC_NAVER_CLIENT_ID ||
-  process.env.NEXT_PUBLIC_NAVER_CLIENT_ID_BYEON ||
   process.env.NEXT_NAVER_CLIENT_ID ||
-  process.env.NEXT_NAVER_CLIENT_ID_BYEON;
+  process.env.NEXT_NAVER_CLIENT_ID_BYEON ||
+  process.env.NEXT_PUBLIC_NAVER_CLIENT_ID ||
+  process.env.NEXT_PUBLIC_NAVER_CLIENT_ID_BYEON;
 
 const NAVER_DIRECTIONS_CLIENT_SECRET =
-  process.env.NEXT_PUBLIC_NAVER_CLIENT_SECRET ||
-  process.env.NEXT_PUBLIC_NAVER_CLIENT_SECRET_BYEON ||
   process.env.NEXT_NAVER_CLIENT_SECRET ||
   process.env.NEXT_NAVER_CLIENT_SECRET_BYEON;
 

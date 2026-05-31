@@ -1,8 +1,11 @@
 import { describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { buildOcrResponseFromRawCache, buildOcrSuccessLogMetadata } from '@/lib/ocr/route-helpers';
 import { buildReceiptOcrEnvelope, flattenReceiptOcrEnvelope } from '@/lib/ocr/receipt-normalization';
 import { RECEIPT_OCR_EXTRACTION_SCHEMA_VERSION, RECEIPT_OCR_RAW_CACHE_KIND } from '@/lib/ocr/cache-version';
 
+const source = (relativePath: string) => readFileSync(join(import.meta.dir, '..', relativePath), 'utf8');
 
 describe('OCR extract route normalization/cache contract', () => {
   test('builds cacheable success metadata with raw and normalized OCR envelopes after provider fallback', () => {
@@ -140,6 +143,29 @@ describe('OCR extract route normalization/cache contract', () => {
     });
 
     expect(response).toBeNull();
+  });
+
+  test('rejects unauthenticated and oversized OCR requests before reading image bytes', () => {
+    const routeSource = source('app/api/ocr/extract/route.ts');
+    const streamRouteSource = source('app/api/ocr/extract/stream/route.ts');
+    const securitySource = source('lib/ocr/request-security.ts');
+
+    for (const ocrRouteSource of [routeSource, streamRouteSource]) {
+      expect(ocrRouteSource).toContain('getOcrUploadRejectionForRequest(req.headers)');
+      expect(ocrRouteSource).toContain('await authenticateOcrRequest(req)');
+      expect(ocrRouteSource).toContain('await req.formData()');
+      expect(ocrRouteSource).toContain('await readOcrImageFile(file)');
+      expect(ocrRouteSource.indexOf('await authenticateOcrRequest(req)')).toBeLessThan(ocrRouteSource.indexOf('await req.formData()'));
+      expect(ocrRouteSource.indexOf('await readOcrImageFile(file)')).toBeLessThan(ocrRouteSource.indexOf("crypto.createHash('sha256')"));
+    }
+
+    expect(securitySource).toContain('OCR_MAX_UPLOAD_BYTES = 8 * 1024 * 1024');
+    expect(securitySource).toContain('OCR_MAX_INPUT_PIXELS = 24_000_000');
+    expect(securitySource).toContain('content-length');
+    expect(securitySource).toContain('file.size > OCR_MAX_UPLOAD_BYTES');
+    expect(securitySource).toContain('hasSupportedImageSignature(buffer)');
+    expect(routeSource).toContain('limitInputPixels: OCR_MAX_INPUT_PIXELS');
+    expect(streamRouteSource).toContain('limitInputPixels: OCR_MAX_INPUT_PIXELS');
   });
 
 });
