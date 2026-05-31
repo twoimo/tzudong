@@ -40,6 +40,37 @@ const ADMIN_OVERVIEW_MAP_PAGE_SIZE = 500;
 const ADMIN_OVERVIEW_CLUSTER_MAX_ZOOM = 13;
 const ADMIN_OVERVIEW_CLUSTER_RADIUS = 56;
 const ADMIN_DIRECTIONS_MAX_POINTS = 7;
+const ADMIN_ROUTE_STOP_LIMIT_OPTIONS = [3, 5, 7] as const;
+
+const ADMIN_ROUTE_PLANNER_PRESETS: Array<{
+  id: string;
+  label: string;
+  description: string;
+  mode: AdminRouteMode;
+  stopLimit: (typeof ADMIN_ROUTE_STOP_LIMIT_OPTIONS)[number];
+}> = [
+  {
+    id: "efficient-driving",
+    label: "차량 효율",
+    description: "실제 도로 경로 우선 · 촬영 이동 시간을 줄입니다.",
+    mode: "driving",
+    stopLimit: 7,
+  },
+  {
+    id: "walkable-shooting",
+    label: "도보 촬영",
+    description: "가까운 구간 중심 · 현장 B-roll을 많이 확보합니다.",
+    mode: "walking",
+    stopLimit: 5,
+  },
+  {
+    id: "compact-mixed",
+    label: "혼합 압축",
+    description: "차량 이동과 도보 컷을 섞어 반나절 답사안으로 압축합니다.",
+    mode: "mixed",
+    stopLimit: 5,
+  },
+];
 
 type AdminOverviewModuleId = "restaurants" | "submissions" | "reviews";
 
@@ -883,7 +914,10 @@ function AdminMapInfoPanel({
   directionsStatus,
   isLoading,
   hasError,
+  coordinateRestaurantCount,
+  routeStopLimit,
   onRouteModeChange,
+  onRouteStopLimitChange,
 }: {
   selectedRestaurant: AdminMapRestaurant | null;
   routePlan: AdminRoutePlan;
@@ -892,7 +926,10 @@ function AdminMapInfoPanel({
   directionsStatus: AdminDirectionsStatus;
   isLoading: boolean;
   hasError: boolean;
+  coordinateRestaurantCount: number;
+  routeStopLimit: number;
   onRouteModeChange: (mode: AdminRouteMode) => void;
+  onRouteStopLimitChange: (limit: number) => void;
 }) {
   const selectedVideoId = selectedRestaurant?.videoId ?? null;
   const selectedThumbnailUrl = getAdminYoutubeThumbnailUrl(selectedVideoId);
@@ -1057,15 +1094,13 @@ function AdminMapInfoPanel({
 
       <section
         className="rounded-xl border border-border bg-card p-2.5 shadow-sm lg:min-h-0 lg:flex-1 lg:overflow-y-auto"
-        aria-labelledby="admin-route-candidates-title"
+        aria-label="동선 추천 초안"
+        data-admin-route-recommendation-panel="enhanced"
       >
         <div className="flex items-center justify-between gap-3">
-          <h2
-            id="admin-route-candidates-title"
-            className="text-sm font-bold text-foreground"
-          >
-            동선 추천 초안
-          </h2>
+          <p className="text-[11px] font-bold tracking-[0.12em] text-muted-foreground">
+            촬영 동선
+          </p>
           {isLoading ? (
             <Skeleton
               className="h-5 w-20 rounded-full motion-reduce:animate-none"
@@ -1100,6 +1135,58 @@ function AdminMapInfoPanel({
               onClick={() => onRouteModeChange(option.id)}
             >
               {option.shortLabel}
+            </button>
+          ))}
+        </div>
+
+        <div
+          className="mt-2 grid gap-1.5"
+          data-admin-route-planner-presets="true"
+        >
+          {ADMIN_ROUTE_PLANNER_PRESETS.map((preset) => (
+            <button
+              key={preset.id}
+              type="button"
+              className={cn(
+                "rounded-xl border border-border bg-background/70 p-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                routeMode === preset.mode && routeStopLimit === preset.stopLimit
+                  ? "border-primary/35 bg-primary/5"
+                  : "hover:border-primary/25 hover:bg-muted/60",
+              )}
+              onClick={() => {
+                onRouteModeChange(preset.mode);
+                onRouteStopLimitChange(preset.stopLimit);
+              }}
+            >
+              <span className="block text-xs font-bold text-foreground">
+                {preset.label}
+              </span>
+              <span className="mt-0.5 block text-[11px] leading-4 text-muted-foreground">
+                {preset.description}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        <div
+          className="mt-2 grid grid-cols-3 gap-1 rounded-xl border border-border bg-background/70 p-1"
+          data-admin-route-stop-limit-controls="true"
+          aria-label="동선 방문 지점 수 선택"
+        >
+          {ADMIN_ROUTE_STOP_LIMIT_OPTIONS.map((limit) => (
+            <button
+              key={limit}
+              type="button"
+              className={cn(
+                "rounded-lg px-2 py-1.5 text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                routeStopLimit === limit
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+              )}
+              aria-pressed={routeStopLimit === limit}
+              onClick={() => onRouteStopLimitChange(limit)}
+            >
+              {limit}곳
             </button>
           ))}
         </div>
@@ -1145,6 +1232,42 @@ function AdminMapInfoPanel({
             </ul>
           )}
         </div>
+
+        <div
+          className="mt-2 grid grid-cols-2 gap-1.5 rounded-xl border border-border bg-background/70 p-2 text-[11px] text-muted-foreground"
+          data-admin-route-quality-panel="true"
+        >
+          <div>
+            <p className="font-bold text-foreground">좌표 맛집</p>
+            <p>{adminNumberFormatter.format(coordinateRestaurantCount)}곳</p>
+          </div>
+          <div>
+            <p className="font-bold text-foreground">추천 지점</p>
+            <p>{routeStops.length}/{routeStopLimit}곳</p>
+          </div>
+          <div>
+            <p className="font-bold text-foreground">이동수단</p>
+            <p>{routeModeOption?.label ?? routeMode}</p>
+          </div>
+          <div>
+            <p className="font-bold text-foreground">도로 경로</p>
+            <p>{directionsStatus === "ready" ? "확보" : "로컬 후보"}</p>
+          </div>
+        </div>
+
+        {routePlan.warnings.length > 0 ? (
+          <div
+            className="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-2 text-[11px] leading-4 text-amber-900"
+            data-admin-route-warning-list="true"
+          >
+            <p className="font-bold">동선 주의사항</p>
+            <ul className="mt-1 space-y-0.5">
+              {routePlan.warnings.map((warning) => (
+                <li key={warning}>• {warning}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
 
         <div>
           {routeStops.length > 1 ? (
@@ -1222,6 +1345,9 @@ export function AdminOverviewDashboard({
   const [directionsStatus, setDirectionsStatus] =
     useState<AdminDirectionsStatus>("idle");
   const [routeMode, setRouteMode] = useState<AdminRouteMode>("driving");
+  const [routeStopLimit, setRouteStopLimit] = useState<number>(
+    ADMIN_DIRECTIONS_MAX_POINTS,
+  );
   const mapRestaurantsQuery = useQuery({
     queryKey: ["admin-overview", "map-restaurants"],
     queryFn: fetchAdminMapRestaurants,
@@ -1248,9 +1374,9 @@ export function AdminOverviewDashboard({
         selectedRestaurant,
         restaurants: realRestaurants,
         mode: routeMode,
-        maxStops: ADMIN_DIRECTIONS_MAX_POINTS,
+        maxStops: routeStopLimit,
       }),
-    [realRestaurants, routeMode, selectedRestaurant],
+    [realRestaurants, routeMode, routeStopLimit, selectedRestaurant],
   );
   const restaurantById = useMemo(
     () =>
@@ -1344,11 +1470,14 @@ export function AdminOverviewDashboard({
           routePlan={routePlan}
           routeMode={routeMode}
           directionsRoute={directionsRoute}
-          directionsStatus={directionsStatus}
-          isLoading={isMapLoading}
-          hasError={hasMapError}
-          onRouteModeChange={setRouteMode}
-        />
+            directionsStatus={directionsStatus}
+            isLoading={isMapLoading}
+            hasError={hasMapError}
+            coordinateRestaurantCount={realRestaurants.length}
+            routeStopLimit={routeStopLimit}
+            onRouteModeChange={setRouteMode}
+            onRouteStopLimitChange={setRouteStopLimit}
+          />
       </div>
     </div>
   );

@@ -26,6 +26,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
 type ProviderId = "mock" | "openai-gpt-image" | "gemini-nano-banana" | "local-codex";
+type BriefPreset =
+  | "tzuyang-food-travel-collage"
+  | "night-market-reaction"
+  | "convenience-store-haul"
+  | "grilled-meat-feast"
+  | "sushi-seafood-table";
+type ReferenceImageRole = "host" | "food" | "object" | "person" | "other";
 
 type TextLayer = {
   id: string;
@@ -146,6 +153,42 @@ const providerOptions: Array<{ value: ProviderId; label: string; help: string }>
   },
 ];
 
+const briefPresetOptions: Array<{ value: BriefPreset; label: string; help: string }> = [
+  {
+    value: "tzuyang-food-travel-collage",
+    label: "쯔동 먹방 여행 콜라주",
+    help: "진행자/리액션 컷아웃, 과장된 음식 전경, 큰 한글 제목 안전영역을 기본으로 잡습니다.",
+  },
+  {
+    value: "night-market-reaction",
+    label: "야시장 리액션",
+    help: "따뜻한 등불, 노점, 북적임, 놀람 리액션을 강조합니다.",
+  },
+  {
+    value: "convenience-store-haul",
+    label: "편의점 음식 산더미",
+    help: "형광등, 가상 패키지 라벨, 컵라면/디저트/간식 더미를 강조합니다.",
+  },
+  {
+    value: "grilled-meat-feast",
+    label: "구운 고기/꼬치 잔치",
+    help: "윤기, 탄 자국, 꼬치 반복 리듬과 뜨거운 식당 조명을 강조합니다.",
+  },
+  {
+    value: "sushi-seafood-table",
+    label: "초밥/해산물 테이블",
+    help: "낮은 테이블 시점, 흰 접시, 윤기 나는 생선/해산물 전경을 강조합니다.",
+  },
+];
+
+const referenceRoleOptions: Array<{ value: ReferenceImageRole; label: string; help: string }> = [
+  { value: "host", label: "진행자", help: "메인 인물/표정 참고" },
+  { value: "food", label: "음식", help: "먹은 음식/전경 질감 참고" },
+  { value: "object", label: "사물", help: "돈, 소품, 메뉴판 등 비브랜드 사물" },
+  { value: "person", label: "기타 인물", help: "보조 리액션 인물 참고" },
+  { value: "other", label: "기타", help: "장소/분위기 참고" },
+];
+
 function drawWrappedText(
   context: CanvasRenderingContext2D,
   text: string,
@@ -187,7 +230,9 @@ export function AdminYoutubeThumbnailGenerator() {
   const [headline, setHeadline] = useState(DEFAULT_TEXT_LAYERS[0]?.content ?? "역대급 먹방");
   const [subHeadline, setSubHeadline] = useState(DEFAULT_TEXT_LAYERS[1]?.content ?? "한입만 가능?");
   const [providerId, setProviderId] = useState<ProviderId>("mock");
+  const [briefPreset, setBriefPreset] = useState<BriefPreset>("tzuyang-food-travel-collage");
   const [files, setFiles] = useState<File[]>([]);
+  const [referenceImageRoles, setReferenceImageRoles] = useState<ReferenceImageRole[]>([]);
   const [acknowledgedSafety, setAcknowledgedSafety] = useState(true);
   const [textLayers, setTextLayers] = useState<TextLayer[]>(() => createDefaultTextLayers());
   const [activeLayerId, setActiveLayerId] = useState(DEFAULT_TEXT_LAYERS[0]?.id ?? "headline");
@@ -195,34 +240,19 @@ export function AdminYoutubeThumbnailGenerator() {
   const [result, setResult] = useState<GenerationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [providerStatus, setProviderStatus] = useState<string>("provider status loading");
 
   const selectedProvider = useMemo(
     () => providerOptions.find((option) => option.value === providerId) ?? providerOptions[0],
     [providerId],
   );
+  const selectedBriefPreset = useMemo(
+    () => briefPresetOptions.find((option) => option.value === briefPreset) ?? briefPresetOptions[0],
+    [briefPreset],
+  );
   const activeLayer = useMemo(
     () => textLayers.find((layer) => layer.id === activeLayerId) ?? textLayers[0] ?? null,
     [activeLayerId, textLayers],
   );
-
-  useEffect(() => {
-    let ignore = false;
-    fetch("/api/admin/youtube-thumbnail-generator", { cache: "no-store" })
-      .then((response) => response.json())
-      .then((payload) => {
-        if (ignore) return;
-        setProviderStatus(
-          `1280x720 · THUMBNAIL_GENERATOR_ENABLE_LIVE_API=${payload?.providers?.openai?.liveEnabled ? "1" : "0"} · OpenAI ${payload?.providers?.openai?.model ?? "미설정"} · Gemini ${payload?.providers?.gemini?.model ?? "미설정"}`,
-        );
-      })
-      .catch(() => {
-        if (!ignore) setProviderStatus("관리자 인증 후 provider 상태를 확인할 수 있습니다.");
-      });
-    return () => {
-      ignore = true;
-    };
-  }, []);
 
   const drawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -417,6 +447,18 @@ export function AdminYoutubeThumbnailGenerator() {
     }
   }
 
+  function handleReferenceFilesChange(nextFiles: File[]) {
+    const limitedFiles = nextFiles.slice(0, 8);
+    setFiles(limitedFiles);
+    setReferenceImageRoles((current) =>
+      limitedFiles.map((_, index) => current[index] ?? (index === 0 ? "host" : index === 1 ? "food" : "other")),
+    );
+  }
+
+  function updateReferenceImageRole(index: number, role: ReferenceImageRole) {
+    setReferenceImageRoles((current) => files.map((_, fileIndex) => (fileIndex === index ? role : current[fileIndex] ?? "other")));
+  }
+
   async function handleGenerate() {
     setIsGenerating(true);
     setError(null);
@@ -429,6 +471,8 @@ export function AdminYoutubeThumbnailGenerator() {
           topic,
           headline,
           subHeadline,
+          stylePreset: briefPreset,
+          referenceImageRoles,
           acknowledgedSafety,
           textLayers,
         }),
@@ -460,34 +504,19 @@ export function AdminYoutubeThumbnailGenerator() {
   }
 
   return (
-    <main className="flex min-h-full flex-col gap-4 overflow-y-auto bg-muted/20 p-4" data-admin-youtube-thumbnail-generator="true">
-      <section className="rounded-2xl border border-border bg-background p-4 shadow-sm">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="secondary">실험실</Badge>
-              <Badge variant="outline">1280x720 · 16:9</Badge>
-              <Badge variant="outline">고채도 먹방 콜라주</Badge>
-            </div>
-            <h2 className="text-2xl font-black tracking-tight">유튜브 썸네일 생성기</h2>
-            <p className="max-w-3xl text-sm text-muted-foreground">
-              지난 먹방/여행 썸네일 문법을 참고하되 실제 채널명, 브랜드, 가격, 주소, URL은 렌더링하지 않습니다. 생성 이미지는 바탕으로만 쓰고, 폰트와 문구는 캔버스에서 별도로 자유 편집합니다.
-            </p>
-          </div>
-          <div className="rounded-xl border border-dashed border-border/80 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-            {providerStatus}
-          </div>
-        </div>
-      </section>
-
-      <div className="grid min-h-0 grid-cols-1 gap-4 xl:grid-cols-[minmax(340px,420px)_minmax(0,1fr)]">
-        <Card className="min-h-0">
-          <CardHeader className="space-y-1">
+    <main
+      className="flex h-full min-h-0 flex-col overflow-hidden bg-muted/20 p-4"
+      aria-label="유튜브 썸네일 생성기"
+      data-admin-youtube-thumbnail-generator="true"
+    >
+      <div className="grid h-full min-h-0 grid-cols-1 grid-rows-[minmax(0,0.9fr)_minmax(0,1.1fr)] gap-4 overflow-hidden xl:grid-cols-[minmax(340px,420px)_minmax(0,1fr)] xl:grid-rows-1">
+        <Card className="flex min-h-0 flex-col overflow-hidden">
+          <CardHeader className="shrink-0 space-y-1">
             <CardTitle className="flex items-center gap-2 text-base">
               <Wand2 className="h-4 w-4" /> 생성 입력
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain">
             <div className="space-y-2">
               <Label htmlFor="thumbnail-provider">이미지 생성 모델</Label>
               <Select value={providerId} onValueChange={(value) => setProviderId(value as ProviderId)}>
@@ -501,6 +530,21 @@ export function AdminYoutubeThumbnailGenerator() {
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">{selectedProvider.help}</p>
+            </div>
+
+            <div className="space-y-2" data-thumbnail-brief-preset="true">
+              <Label htmlFor="thumbnail-brief-preset">썸네일 장면 프리셋</Label>
+              <Select value={briefPreset} onValueChange={(value) => setBriefPreset(value as BriefPreset)}>
+                <SelectTrigger id="thumbnail-brief-preset">
+                  <SelectValue placeholder="장면 프리셋 선택" />
+                </SelectTrigger>
+                <SelectContent>
+                  {briefPresetOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">{selectedBriefPreset.help}</p>
             </div>
 
             <div className="space-y-2">
@@ -550,10 +594,45 @@ export function AdminYoutubeThumbnailGenerator() {
                 type="file"
                 accept="image/png,image/jpeg,image/webp"
                 multiple
-                onChange={(event) => setFiles(Array.from(event.target.files ?? []).slice(0, 8))}
+                onChange={(event) => handleReferenceFilesChange(Array.from(event.target.files ?? []))}
               />
               <p className="text-xs text-muted-foreground">쯔양/진행자 참고 이미지, 먹은 음식, 사물, 기타 인물 등 최대 8장 · 각 8MiB · PNG/JPEG/WebP</p>
             </div>
+
+            {files.length ? (
+              <div className="space-y-2 rounded-xl border border-border bg-muted/20 p-3" data-thumbnail-reference-role-editor="true">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold">참고 이미지 역할</p>
+                  <Badge variant="outline">{files.length}/8</Badge>
+                </div>
+                <div className="space-y-2">
+                  {files.map((file, index) => {
+                    const selectedRole = referenceRoleOptions.find((role) => role.value === (referenceImageRoles[index] ?? "other")) ?? referenceRoleOptions[4];
+                    return (
+                      <div key={`${file.name}-${index}`} className="grid grid-cols-1 gap-2 rounded-lg border border-border bg-background p-2 sm:grid-cols-[minmax(0,1fr)_160px]">
+                        <div className="min-w-0">
+                          <p className="truncate text-xs font-medium">{index + 1}. {file.name}</p>
+                          <p className="text-[11px] text-muted-foreground">{(file.size / 1024 / 1024).toFixed(2)}MiB · {selectedRole.help}</p>
+                        </div>
+                        <Select
+                          value={referenceImageRoles[index] ?? "other"}
+                          onValueChange={(value) => updateReferenceImageRole(index, value as ReferenceImageRole)}
+                        >
+                          <SelectTrigger aria-label={`${file.name} 참고 이미지 역할`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {referenceRoleOptions.map((role) => (
+                              <SelectItem key={role.value} value={role.value}>{role.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
 
             <label className="flex items-start gap-2 rounded-xl border border-border bg-muted/30 p-3 text-sm">
               <input
@@ -566,6 +645,25 @@ export function AdminYoutubeThumbnailGenerator() {
                 실제 개인 이름, 계정명, URL, 정확한 가격/주소/전화번호, 실제 브랜드 로고를 썸네일 텍스트나 생성 지시로 넣지 않겠습니다.
               </span>
             </label>
+
+            <div className="grid grid-cols-2 gap-2 rounded-xl border border-dashed border-border/80 bg-muted/20 p-3 text-xs text-muted-foreground" data-thumbnail-brief-quality-panel="true">
+              <div>
+                <p className="font-semibold text-foreground">프리셋</p>
+                <p>{selectedBriefPreset.label}</p>
+              </div>
+              <div>
+                <p className="font-semibold text-foreground">참고 이미지</p>
+                <p>{files.length}장 · 역할 {referenceImageRoles.filter(Boolean).length}개</p>
+              </div>
+              <div>
+                <p className="font-semibold text-foreground">문구 레이어</p>
+                <p>{textLayers.length}개 · {showSafeAreaGuide ? "가이드 표시" : "가이드 숨김"}</p>
+              </div>
+              <div>
+                <p className="font-semibold text-foreground">안전 확인</p>
+                <p>{acknowledgedSafety ? "확인됨" : "확인 필요"}</p>
+              </div>
+            </div>
 
             {error ? <p className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">{error}</p> : null}
             <div className="flex flex-wrap gap-2">
@@ -580,8 +678,8 @@ export function AdminYoutubeThumbnailGenerator() {
           </CardContent>
         </Card>
 
-        <Card className="min-h-0">
-          <CardHeader className="space-y-1">
+        <Card className="flex min-h-0 flex-col overflow-hidden">
+          <CardHeader className="shrink-0 space-y-1">
             <CardTitle className="flex flex-wrap items-center justify-between gap-2 text-base">
               <span>캔버스 편집 / PNG 내보내기</span>
               <div className="flex flex-wrap gap-2">
@@ -597,7 +695,7 @@ export function AdminYoutubeThumbnailGenerator() {
               </div>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain">
             <div className="overflow-hidden rounded-2xl border border-border bg-black shadow-inner">
               <canvas
                 ref={canvasRef}
@@ -663,6 +761,7 @@ export function AdminYoutubeThumbnailGenerator() {
                       ["fontSize", "크기"],
                       ["strokeWidth", "외곽선"],
                       ["rotation", "회전"],
+                      ["zIndex", "레이어"],
                     ] as const).map(([key, label]) => (
                       <label key={key} className="space-y-1 text-xs font-medium">
                         {label}
