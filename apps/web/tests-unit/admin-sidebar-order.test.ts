@@ -15,21 +15,21 @@ describe("admin sidebar order normalization", () => {
     ]);
 
     expect(DEFAULT_ADMIN_SIDEBAR_ORDER.items["운영"]).toEqual([
-      "routes",
-      "storyboard",
-      "banners",
       "users",
+      "banners",
       "insights",
     ]);
 
     expect(DEFAULT_ADMIN_SIDEBAR_ORDER.items["실험실"]).toEqual([
-      "audit",
       "youtube-thumbnail-generator",
+      "storyboard",
+      "routes",
       "llm",
+      "audit",
     ]);
   });
 
-  test("inserts newly known default items at their default slot on old saved orders", () => {
+  test("resets old saved section slots when modules move between operations and lab", () => {
     const normalized = normalizeAdminSidebarOrder({
       sections: ["홈", "검수", "운영", "실험실"],
       items: {
@@ -48,17 +48,17 @@ describe("admin sidebar order normalization", () => {
     ]);
 
     expect(normalized.items["운영"]).toEqual([
-      "routes",
-      "storyboard",
-      "banners",
       "users",
+      "banners",
       "insights",
     ]);
 
     expect(normalized.items["실험실"]).toEqual([
-      "audit",
       "youtube-thumbnail-generator",
+      "storyboard",
+      "routes",
       "llm",
+      "audit",
     ]);
   });
 
@@ -66,7 +66,7 @@ describe("admin sidebar order normalization", () => {
     const normalized = normalizeAdminSidebarOrder({
       sections: ["운영", "홈"],
       items: {
-        운영: ["banners", "storyboard"],
+        운영: ["banners", "users"],
         홈: ["overview"],
       },
     });
@@ -80,9 +80,7 @@ describe("admin sidebar order normalization", () => {
     ]);
 
     expect(normalized.items["운영"]).toEqual([
-      "routes",
       "banners",
-      "storyboard",
       "users",
       "insights",
     ]);
