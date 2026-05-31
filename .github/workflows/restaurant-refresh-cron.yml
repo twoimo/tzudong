@@ -1,0 +1,87 @@
+name: Restaurant Refresh Cron
+
+on:
+  schedule:
+    # Weekly approved-restaurant freshness scan: Mondays 03:47 KST (Sundays 18:47 UTC).
+    - cron: '47 18 * * 0'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Run mode: candidates, readback, or both'
+        required: false
+        default: 'both'
+        type: choice
+        options:
+          - both
+          - candidates
+          - readback
+      limit:
+        description: 'Maximum approved restaurants/applied candidates to scan'
+        required: false
+        default: '50'
+        type: string
+      dry_run:
+        description: 'Do not write refresh runs/candidates'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+concurrency:
+  group: restaurant-refresh-cron
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/web
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL || secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      NAVER_CLIENT_ID_BYEON: ${{ secrets.NAVER_CLIENT_ID_BYEON }}
+      NAVER_CLIENT_SECRET_BYEON: ${{ secrets.NAVER_CLIENT_SECRET_BYEON }}
+      RESTAURANT_REFRESH_MODE: ${{ github.event.inputs.mode || 'both' }}
+      RESTAURANT_REFRESH_LIMIT: ${{ github.event.inputs.limit || '50' }}
+      RESTAURANT_REFRESH_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install runtime dependencies
+        run: npm ci --omit=dev --ignore-scripts
+
+      - name: Run approved restaurant freshness scan
+        run: |
+          set -euo pipefail
+          args=(--mode "$RESTAURANT_REFRESH_MODE" --limit "$RESTAURANT_REFRESH_LIMIT" --json)
+          if [ "$RESTAURANT_REFRESH_DRY_RUN" = "true" ]; then
+            args+=(--dry-run)
+          else
+            args+=(--allow-db-write)
+          fi
+          node scripts/restaurant-refresh-cron.mjs "${args[@]}"
+
+      - name: Upload refresh report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # actions/upload-artifact@v7.0.1
+        with:
+          name: restaurant-refresh-cron-report
+          path: apps/web/reports/restaurant-refresh-cron/
+          if-no-files-found: ignore
