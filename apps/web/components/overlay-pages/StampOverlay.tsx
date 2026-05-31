@@ -530,7 +530,7 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
                                         key={restaurant.id}
                                         restaurant={restaurant}
                                         isVisited={isVisitedCard}
-                                        isUserStampsReady={isUserStampsReady}
+                                        isUserStampsReady={isGuideCard ? true : isUserStampsReady}
                                         currentThumbnailIndex={currentIndex}
                                         onThumbnailChange={handleThumbnailChange}
                                         onClick={isGuideCard ? () => {} : handleRestaurantClick}
