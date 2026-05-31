@@ -453,11 +453,39 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
             {/* 그리드 */}
             <div className="flex-1 min-h-0 px-4 sm:px-6 pt-6 pb-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1.5rem)] md:pb-6 bg-background">
                 {shouldShowStampOverlaySkeleton ? (
-                    <StampGridSkeleton
-                        count={skeletonCardCount}
-                        showHeader={false}
-                        columns={skeletonGridColumns}
-                    />
+                    <div className="space-y-3">
+                        {showStampGuide && (
+                            <div
+                                className={cn(
+                                    singleColumnCards
+                                        ? "grid grid-cols-1 gap-3 md:gap-3"
+                                        : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 md:gap-4"
+                                )}
+                                data-stamp-guide-loading-card="desktop-left-panel"
+                            >
+                                <StampCard
+                                    restaurant={STAMP_GUIDE_DEMO_RESTAURANT}
+                                    isVisited={true}
+                                    isUserStampsReady={true}
+                                    currentThumbnailIndex={0}
+                                    onThumbnailChange={handleThumbnailChange}
+                                    onClick={() => {}}
+                                    size="default"
+                                    stampSize="mobile"
+                                    guideLabel="가이드"
+                                    isGuideCard={true}
+                                    guideTitle={STAMP_GUIDE_DEMO_RESTAURANT.name}
+                                    guideDescription={STAMP_GUIDE_DESCRIPTION}
+                                    onGuideClose={dismissStampGuide}
+                                />
+                            </div>
+                        )}
+                        <StampGridSkeleton
+                            count={skeletonCardCount}
+                            showHeader={false}
+                            columns={skeletonGridColumns}
+                        />
+                    </div>
                 ) : isRestaurantsError ? (
                     <div
                         role="status"

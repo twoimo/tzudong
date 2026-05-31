@@ -36,9 +36,12 @@ export async function GET(request: Request) {
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
-            console.error('[API] Naver API Error Response:', errorData);
-            return NextResponse.json(errorData, { status: response.status });
+            await response.text().catch(() => null);
+            console.error('[API] Naver API Error Response:', response.status);
+            return NextResponse.json(
+                { error: 'Naver API request failed' },
+                { status: response.status }
+            );
         }
 
         const data = await response.json();

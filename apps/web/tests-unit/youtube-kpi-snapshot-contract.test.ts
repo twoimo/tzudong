@@ -72,7 +72,7 @@ describe("YouTube KPI snapshot collector contract", () => {
     expect(route).toContain('fallbackReasonCode: "snapshot-comparison-unavailable"');
     expect(route).toContain("getInsightTreemapData(period");
     expect(route).toContain('filterByPeriod: !isChannelGrowthScope && period !== "ALL"');
-    expect(route).toContain("process.env.YOUTUBE_API_KEY || null");
+    expect(route).toContain("return process.env.YOUTUBE_API_KEY || null");
     expect(route).toContain("YouTube KPI fallback data is unavailable");
     expect(route).toContain('dataSource: "youtube-live"');
     expect(route).toContain('fallbackReasonCode: "youtube-api-key-missing"');

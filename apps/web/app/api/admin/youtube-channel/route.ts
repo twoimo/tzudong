@@ -63,11 +63,7 @@ function getDerivedLiveDelta(
 }
 
 function getYouTubeApiKey() {
-  return (
-    process.env.YOUTUBE_API_KEY ||
-    process.env.NEXT_PUBLIC_YOUTUBE_API_KEY ||
-    null
-  );
+  return process.env.YOUTUBE_API_KEY || null;
 }
 
 function getYouTubeChannelFilter() {

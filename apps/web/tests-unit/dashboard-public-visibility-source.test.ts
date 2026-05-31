@@ -45,4 +45,17 @@ describe('dashboard public Supabase visibility contracts', () => {
     expect(restaurantsHookSource).toContain('fetchSupabaseRows');
     expect(restaurantsHookSource).not.toContain('SUPABASE_SERVICE_ROLE_KEY');
   });
+
+  test('public treemap endpoint uses anon-scoped reads instead of service-role reads', () => {
+    const treemapSource = source('lib/public-insights/treemap.ts');
+    const treemapRouteSource = source('app/api/insights/treemap/route.ts');
+
+    expect(treemapRouteSource).toContain('getInsightTreemapData(period, { filterByPeriod, metricMode })');
+    expect(treemapSource).toContain('function createPublicTreemapSupabaseClient()');
+    expect(treemapSource).toContain('NEXT_PUBLIC_SUPABASE_ANON_KEY');
+    expect(treemapSource).toContain('MAX_PUBLIC_TREEMAP_ROWS = 500');
+    expect(treemapSource).toContain('while (rows.length < MAX_PUBLIC_TREEMAP_ROWS)');
+    expect(treemapSource).not.toContain('createSupabaseServiceRoleClient');
+    expect(treemapSource).not.toContain('SUPABASE_SERVICE_ROLE_KEY');
+  });
 });
