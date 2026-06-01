@@ -1,8 +1,10 @@
+import { StampPageSkeleton } from "@/components/ui/skeleton-loaders";
+
 /**
- * Route fallback intentionally stays empty so direct /stamp loads do not show
- * a second full-page skeleton before the client page renders its static shell.
- * The page itself keeps the header visible and scopes skeleton UI to dynamic cards.
+ * Mobile stamp navigation can otherwise show a blank segment while the large
+ * client page bundle and restaurant data path are prepared. Keep this fallback
+ * route-owned and lightweight so users get immediate layout feedback.
  */
 export default function StampLoading() {
-    return null;
+    return <StampPageSkeleton />;
 }
