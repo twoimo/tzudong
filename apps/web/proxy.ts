@@ -14,6 +14,7 @@ const PUBLIC_API_PREFIXES = [
 const PUBLIC_PAGE_PATHS = new Set([
     '/',
     '/home-frame',
+    '/stamp',
 ])
 
 function normalizeHostName(value: string) {
