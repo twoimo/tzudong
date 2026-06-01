@@ -60,9 +60,11 @@ test('공개 경로는 세션 갱신을 건너뛴다', async () => {
 
     const homeResponse = await proxy(new NextRequest('http://localhost:3000/'))
     const healthResponse = await proxy(new NextRequest('http://localhost:3000/api/health'))
+    const stampResponse = await proxy(new NextRequest('http://localhost:3000/stamp'))
 
     expect(homeResponse.status).toBe(200)
     expect(healthResponse.status).toBe(200)
+    expect(stampResponse.status).toBe(200)
     expect(updateSessionCalls).toBe(0)
 })
 
