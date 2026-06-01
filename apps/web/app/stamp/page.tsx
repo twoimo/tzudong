@@ -321,8 +321,6 @@ export default function StampPage() {
 
     // 사용자 방문 데이터 준비 완료 상태 (비로그인 또는 로딩 완료)
     const isUserStampsReady = !user?.id || isUserStampsFetched;
-    const shouldWaitForStampState = !!user?.id && !isUserStampsFetched;
-
     const isVisited = useCallback((restaurant: Restaurant) => {
         return hasRelatedVerifiedUserReview({
             restaurant,
@@ -333,7 +331,10 @@ export default function StampPage() {
 
     // --- 데이터 패칭: 맛집 정보 ---
     // 병합된 전체 맛집 수 조회 (useRestaurants 훅 사용 - 병합 로직 적용됨)
-    const { data: allMergedRestaurants = [], isLoading: isRestaurantsLoading } = useRestaurants({ enabled: true });
+    const { data: allMergedRestaurants = [], isLoading: isRestaurantsLoading } = useRestaurants({
+        enabled: true,
+        includeVerifiedReviewCounts: false,
+    });
     const totalRestaurantCount = allMergedRestaurants.length;
 
     // 검색 시 사용할 전체 맛집 데이터 조회 (RPC 함수 사용)
@@ -846,9 +847,7 @@ export default function StampPage() {
     // [Check before render]
     const isStampDynamicLoading =
         !isMounted ||
-        authLoading ||
-        (isRestaurantsLoading && !searchQuery) ||
-        shouldWaitForStampState;
+        (isRestaurantsLoading && !searchQuery);
     const shouldShowStampFilterToggle = !isMounted || isMobileOrTablet;
     const shouldShowStampViewToggle = isMounted && !isMobileOrTablet;
     const shouldShowStampFilters = isMounted && (!isMobileOrTablet || isFilterExpanded);
