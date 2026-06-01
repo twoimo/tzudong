@@ -1853,11 +1853,14 @@ describe("web quality performance source contracts", () => {
     expect(skeletonLoadersSource).toContain(
       "ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2",
     );
-    expect(stampLoadingSource).toContain("return null");
-    expect(stampLoadingSource).not.toContain("StampPageSkeleton");
+    expect(stampLoadingSource).toContain('import { StampPageSkeleton }');
+    expect(stampLoadingSource).toContain("return <StampPageSkeleton />");
     expect(stampPageSource).toContain(
       'data-stamp-loading-behavior="static-shell-dynamic-skeleton"',
     );
+    expect(stampPageSource).toContain("includeVerifiedReviewCounts: false");
+    expect(stampPageSource).toContain("const isStampDynamicLoading =");
+    expect(stampPageSource).not.toContain("shouldWaitForStampState");
     expect(stampPageSource).toContain("const STAMP_PAGE_SIZE = 5");
     expect(stampPageSource).toContain(
       "const [displayLimit, setDisplayLimit] = useState(STAMP_PAGE_SIZE)",
@@ -3324,6 +3327,9 @@ describe("web quality performance source contracts", () => {
       "<LeaderboardSkeleton",
     );
     expect(source("app/loading.tsx")).toContain("return null");
+    expect(
+      countSourceMatches(source("app/stamp/loading.tsx"), /<StampPageSkeleton\s*\/>/g),
+    ).toBe(1);
     expect(source("app/loading.tsx")).not.toContain("<MapSkeleton");
     expect(source("app/home-client-loader.tsx")).not.toContain("<GlobalLoader");
     expect(source("app/home-client-loader.tsx")).toContain(
@@ -3356,7 +3362,6 @@ describe("web quality performance source contracts", () => {
       "app/insights/loading.tsx",
       "app/leaderboard/loading.tsx",
       "app/mypage/loading.tsx",
-      "app/stamp/loading.tsx",
       "app/user/[userId]/loading.tsx",
     ];
 
@@ -3384,6 +3389,9 @@ describe("web quality performance source contracts", () => {
       expect(loadingSource).not.toContain("<GlobalLoader");
     }
 
+    expect(source("app/stamp/loading.tsx")).toContain("return <StampPageSkeleton />");
+    expect(source("app/stamp/loading.tsx")).not.toContain("return null");
+
     const skeletonOwnerContracts = [
       {
         route: "app/auth/reset-password/loading.tsx",
@@ -3409,8 +3417,7 @@ describe("web quality performance source contracts", () => {
       {
         route: "app/stamp/loading.tsx",
         owner: "app/stamp/page.tsx",
-        marker:
-          'data-stamp-loading-behavior="static-shell-dynamic-skeleton"',
+        marker: "<StampPageSkeleton />",
       },
       {
         route: "app/user/[userId]/loading.tsx",
@@ -3420,11 +3427,18 @@ describe("web quality performance source contracts", () => {
     ];
 
     for (const { route, owner, marker } of skeletonOwnerContracts) {
-      expect(source(route)).toContain("return null");
-      expect(source(owner)).toContain(marker);
+      expect(source(route)).toContain(route === "app/stamp/loading.tsx" ? marker : "return null");
+      expect(source(owner)).toContain(
+        route === "app/stamp/loading.tsx"
+          ? 'data-stamp-loading-behavior="static-shell-dynamic-skeleton"'
+          : marker,
+      );
     }
 
     expect(source("app/loading.tsx")).toContain("return null");
+    expect(
+      countSourceMatches(source("app/stamp/loading.tsx"), /<StampPageSkeleton\s*\/>/g),
+    ).toBe(1);
     expect(source("app/loading.tsx")).not.toContain("<MapSkeleton");
     expect(
       countSourceMatches(
