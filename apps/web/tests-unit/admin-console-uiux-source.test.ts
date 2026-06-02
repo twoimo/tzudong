@@ -1742,6 +1742,23 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
   });
 
+  test("keeps admin pending counts behind an admin-only server route", () => {
+    const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
+    const routeSource = source("app/api/admin/pending-counts/route.ts");
+
+    expect(consoleSource).toContain('fetch("/api/admin/pending-counts"');
+    expect(consoleSource).not.toContain("fetchSupabaseExactCount");
+    expect(routeSource).toContain("await requireAdmin()");
+    expect(routeSource.indexOf("await requireAdmin()")).toBeLessThan(
+      routeSource.indexOf("createSupabaseServiceRoleClient()"),
+    );
+    expect(routeSource).toContain('from("restaurant_submissions")');
+    expect(routeSource).toContain('.in("status", ["pending", "partially_approved"])');
+    expect(routeSource).toContain('from("reviews")');
+    expect(routeSource).toContain('.eq("is_verified", false)');
+    expect(routeSource).toContain('{ count: "exact", head: true }');
+  });
+
   test("keeps YouTube channel statistics behind an admin-only server route", () => {
     const routeSource = source("app/api/admin/youtube-channel/route.ts");
 
