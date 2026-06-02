@@ -18,7 +18,7 @@ import {
 
 // 로컬 스토리지 키
 const DISMISSED_DATE_KEY = 'combinedPopup_dismissedDate';
-const POPUP_BANNER_IDLE_DELAY_MS = 30000;
+const POPUP_BANNER_IDLE_DELAY_MS = 0;
 
 // 오늘 날짜 문자열 (캐시)
 let todayStringCache: string | null = null;
@@ -191,8 +191,8 @@ const CombinedPopupComponent = () => {
         return true;
     }, []);
 
-    // Non-critical ad media is deferred out of the initial CWV window.
-    // Load on the first real user intent, with a slow idle fallback for long sessions.
+    // Ad popup banner loading starts immediately so first-screen campaigns can appear as soon as data is ready.
+    // User intent listeners remain as a fallback if the initial zero-delay timer is interrupted.
     useEffect(() => {
         if (!shouldShowPopup()) return;
 
@@ -221,7 +221,7 @@ const CombinedPopupComponent = () => {
             const timer = setTimeout(() => {
                 setIsVisible(true);
                 hasShownRef.current = true;
-            }, 500);
+            }, 0);
             return () => clearTimeout(timer);
         }
     }, [posterBanners.length, canLoadBanners, shouldShowPopup]);
