@@ -62,7 +62,7 @@ export function resolveNaverAnnouncementToastInactivePlan({
 
 export function resolveNaverAnnouncementToastSchedulePlan({
     hasExistingInitialTimer,
-    initialDelayMs = 9000,
+    initialDelayMs = 0,
     intervalMs,
 }: {
     hasExistingInitialTimer: boolean;

@@ -114,7 +114,7 @@ describe('naver map toast helpers', () => {
             hasExistingInitialTimer: true,
             intervalMs: 60000,
         })).toEqual({
-            initialDelayMs: 9000,
+            initialDelayMs: 0,
             intervalMs: 60000,
             shouldClearExistingInitialTimer: true,
         });
