@@ -61,11 +61,11 @@ describe("web quality performance source contracts", () => {
     expect(webpTotal).toBeLessThan(pngTotal * 0.1);
   });
 
-  test("popup ad banners are deferred out of the initial CWV window and distant media has no src", () => {
+  test("popup ad banners load immediately for first-screen exposure while distant media has no src", () => {
     const popupSource = source("components/layout/CombinedPopup.tsx");
     const hookSource = source("hooks/use-ad-banners.tsx");
 
-    expect(popupSource).toContain("POPUP_BANNER_IDLE_DELAY_MS = 30000");
+    expect(popupSource).toContain("POPUP_BANNER_IDLE_DELAY_MS = 0");
     expect(popupSource).toContain(
       "usePopupAdBanners({ enabled: canLoadBanners })",
     );
@@ -4049,7 +4049,7 @@ describe("web quality performance source contracts", () => {
     expect(mainLayoutSource).not.toContain(
       'min-h-screen bg-background" aria-hidden="true"',
     );
-    expect(mainLayoutSource).toContain("NONCRITICAL_CHROME_DELAY_MS = 30000");
+    expect(mainLayoutSource).toContain("NONCRITICAL_CHROME_DELAY_MS = 0");
     expect(mainLayoutSource).toContain(
       "canMountNoncriticalChrome && !shouldSuppressNoncriticalChrome",
     );
