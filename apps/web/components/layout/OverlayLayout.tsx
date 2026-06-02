@@ -53,7 +53,7 @@ const UserDataPrefetcher = dynamic(
   },
 );
 
-const OVERLAY_NONCRITICAL_CHROME_DELAY_MS = 30000;
+const OVERLAY_NONCRITICAL_CHROME_DELAY_MS = 0;
 const OVERLAY_NONCRITICAL_CHROME_EVENTS: Array<keyof WindowEventMap> = [
   "pointerdown",
   "keydown",
