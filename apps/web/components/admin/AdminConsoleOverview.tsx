@@ -91,7 +91,6 @@ import {
   type AdminSidebarOrderPreference,
 } from "@/lib/admin/sidebar-order";
 import { getMobileScrollNavVisibilityAction } from "@/lib/mobile-scroll-nav-visibility";
-import { fetchSupabaseExactCount } from "@/lib/supabase-rest-client";
 import { cn } from "@/lib/utils";
 import type { DashboardSummaryResponse } from "@/types/dashboard";
 import type {
@@ -1040,14 +1039,16 @@ function openAdminDashboardPdfReport(report: AdminDashboardPdfReportData) {
 }
 
 async function fetchAdminPendingCounts(): Promise<AdminPendingCounts> {
-  const [submissions, reviews] = await Promise.all([
-    fetchSupabaseExactCount("restaurant_submissions", [
-      ["status", "in.(pending,partially_approved)"],
-    ]),
-    fetchSupabaseExactCount("reviews", [["is_verified", "eq.false"]]),
-  ]);
+  const response = await fetch("/api/admin/pending-counts", {
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  });
 
-  return { submissions, reviews };
+  if (!response.ok) {
+    throw new Error("admin-pending-counts-failed");
+  }
+
+  return response.json() as Promise<AdminPendingCounts>;
 }
 
 async function fetchDashboardSummary(): Promise<DashboardSummaryResponse> {
