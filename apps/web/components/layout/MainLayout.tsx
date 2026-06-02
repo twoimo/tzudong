@@ -47,7 +47,7 @@ const CombinedPopup = dynamic(
   { ssr: false },
 );
 
-const NONCRITICAL_CHROME_DELAY_MS = 30000;
+const NONCRITICAL_CHROME_DELAY_MS = 0;
 const NONCRITICAL_CHROME_EVENTS: Array<keyof WindowEventMap> = [
   "pointerdown",
   "keydown",
