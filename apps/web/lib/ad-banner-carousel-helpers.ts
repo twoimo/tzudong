@@ -58,3 +58,32 @@ export function getPopupBannerLoopResetIndex(trackIndex: number, count: number) 
     if (trackIndex === count + 1) return 1;
     return null;
 }
+
+export function getPopupBannerTrackIndexForSourceIndex(sourceIndex: number, count: number) {
+    if (count <= 1) return 0;
+    const normalizedSourceIndex = ((sourceIndex % count) + count) % count;
+    return normalizedSourceIndex + 1;
+}
+
+export function getPopupBannerNavigationTarget(
+    currentSourceIndex: number,
+    count: number,
+    direction: -1 | 1,
+) {
+    if (count <= 1) {
+        return { sourceIndex: 0, trackIndex: 0 };
+    }
+
+    const normalizedCurrentIndex = ((currentSourceIndex % count) + count) % count;
+    const sourceIndex = (normalizedCurrentIndex + direction + count) % count;
+
+    if (direction === 1 && normalizedCurrentIndex === count - 1) {
+        return { sourceIndex, trackIndex: count + 1 };
+    }
+
+    if (direction === -1 && normalizedCurrentIndex === 0) {
+        return { sourceIndex, trackIndex: 0 };
+    }
+
+    return { sourceIndex, trackIndex: sourceIndex + 1 };
+}
