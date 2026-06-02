@@ -5,6 +5,8 @@ import {
     filterPopupBannersWithPosterMedia,
     getPopupBannerInitialTrackIndex,
     getPopupBannerLoopResetIndex,
+    getPopupBannerNavigationTarget,
+    getPopupBannerTrackIndexForSourceIndex,
 } from '../lib/ad-banner-carousel-helpers';
 import type { AdBanner } from '../types/ad-banner';
 
@@ -69,5 +71,40 @@ describe('ad banner carousel helpers', () => {
         expect(getPopupBannerLoopResetIndex(0, 3)).toBe(3);
         expect(getPopupBannerLoopResetIndex(2, 3)).toBeNull();
         expect(getPopupBannerLoopResetIndex(0, 1)).toBeNull();
+    });
+
+    test('maps source indices to bounded real track indices', () => {
+        expect(getPopupBannerTrackIndexForSourceIndex(0, 3)).toBe(1);
+        expect(getPopupBannerTrackIndexForSourceIndex(2, 3)).toBe(3);
+        expect(getPopupBannerTrackIndexForSourceIndex(3, 3)).toBe(1);
+        expect(getPopupBannerTrackIndexForSourceIndex(-1, 3)).toBe(3);
+        expect(getPopupBannerTrackIndexForSourceIndex(5, 1)).toBe(0);
+    });
+
+    test('keeps rapid navigation targets inside loop slide bounds', () => {
+        expect(getPopupBannerNavigationTarget(0, 3, 1)).toEqual({
+            sourceIndex: 1,
+            trackIndex: 2,
+        });
+        expect(getPopupBannerNavigationTarget(2, 3, 1)).toEqual({
+            sourceIndex: 0,
+            trackIndex: 4,
+        });
+        expect(getPopupBannerNavigationTarget(0, 3, -1)).toEqual({
+            sourceIndex: 2,
+            trackIndex: 0,
+        });
+        expect(getPopupBannerNavigationTarget(2, 3, -1)).toEqual({
+            sourceIndex: 1,
+            trackIndex: 2,
+        });
+        expect(getPopupBannerNavigationTarget(7, 3, 1)).toEqual({
+            sourceIndex: 2,
+            trackIndex: 3,
+        });
+        expect(getPopupBannerNavigationTarget(0, 1, 1)).toEqual({
+            sourceIndex: 0,
+            trackIndex: 0,
+        });
     });
 });
