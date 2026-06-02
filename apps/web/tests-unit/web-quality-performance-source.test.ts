@@ -61,7 +61,7 @@ describe("web quality performance source contracts", () => {
     expect(webpTotal).toBeLessThan(pngTotal * 0.1);
   });
 
-  test("popup ad banners are deferred out of the initial CWV window and inactive media has no src", () => {
+  test("popup ad banners are deferred out of the initial CWV window and distant media has no src", () => {
     const popupSource = source("components/layout/CombinedPopup.tsx");
     const hookSource = source("hooks/use-ad-banners.tsx");
 
@@ -70,11 +70,24 @@ describe("web quality performance source contracts", () => {
       "usePopupAdBanners({ enabled: canLoadBanners })",
     );
     expect(popupSource).toContain(
-      "src={isActive ? banner.video_url : undefined}",
+      "src={shouldLoadMedia ? banner.video_url : undefined}",
     );
-    expect(popupSource).toContain("banner.image_url && shouldLoadImage");
+    expect(popupSource).toContain("banner.image_url && shouldLoadMedia");
+    expect(popupSource).toContain(
+      "shouldLoadMedia={Math.abs(index - trackSlide) <= 1}",
+    );
     expect(popupSource).toContain("filterPopupBannersWithPosterMedia(banners)");
     expect(popupSource).toContain("getPopupBannerLoopResetIndex");
+    expect(popupSource).toContain("getPopupBannerNavigationTarget");
+    expect(popupSource).toContain("getPopupBannerTrackIndexForSourceIndex");
+    expect(popupSource).toContain(
+      "const target = getPopupBannerNavigationTarget(currentSlideRef.current, posterBanners.length, direction)",
+    );
+    expect(popupSource).toContain(
+      "absolute bottom-12 left-0 right-0 z-20 flex justify-center gap-1.5",
+    );
+    expect(popupSource).toContain("flex h-5 w-5 items-center justify-center");
+    expect(popupSource).toContain("h-1.5 w-1.5 rounded-full transition-all");
     expect(popupSource).not.toContain("텍스트 전용 배너");
     expect(popupSource).toContain(
       "['pointerdown', 'keydown', 'wheel', 'touchstart']",
