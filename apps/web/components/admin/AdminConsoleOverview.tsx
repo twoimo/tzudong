@@ -1386,16 +1386,6 @@ function formatDashboardDateTime(value: string | null | undefined) {
     : "시간 없음";
 }
 
-function getAdminDashboardDataSourceLabel(
-  source: NonNullable<InsightTreemapResponse["meta"]>["dataSource"] | undefined,
-) {
-  if (source === "youtube-snapshot") return "스냅샷";
-  if (source === "youtube-live") return "실시간";
-  if (source === "supabase-treemap") return "Supabase";
-  if (source === "public-treemap-fallback") return "공개 폴백";
-  return "출처 확인 중";
-}
-
 function getAdminDashboardCoverageLabel(
   coverage:
     | NonNullable<InsightTreemapResponse["meta"]>["comparisonCoverage"]
@@ -4991,58 +4981,6 @@ function AdminDashboardPdfReportButton({ onExport }: { onExport: () => void }) {
   );
 }
 
-function AdminDashboardDataConfidenceBadge({
-  meta,
-  channelStats,
-}: {
-  meta: InsightTreemapResponse["meta"] | undefined;
-  channelStats: AdminYouTubeChannelStats | undefined;
-}) {
-  const coverage = meta?.comparisonCoverage;
-  const sourceLabel = getAdminDashboardDataSourceLabel(meta?.dataSource);
-  const coverageLabel = getAdminDashboardCoverageLabel(coverage);
-  const deltaSourceLabel = getAdminDashboardDeltaSourceLabel(
-    channelStats?.deltaSource,
-  );
-  const tooltipLines = [
-    `데이터 출처: ${sourceLabel}`,
-    `비교 커버리지: ${coverageLabel}`,
-    `최신 버킷: ${formatDashboardDateTime(meta?.latestBucketStartedAt ?? null)}`,
-    `비교 버킷: ${formatDashboardDateTime(meta?.comparisonBucketStartedAt ?? null)}`,
-    `신규 영상: ${formatNumber(coverage?.newVideos ?? 0)}개`,
-    `비교값 없음: ${formatNumber(coverage?.missingPreviousVideos ?? 0)}개`,
-    `채널 delta 원천: ${deltaSourceLabel}`,
-    meta?.fallbackReasonCode
-      ? `폴백 사유: ${meta.fallbackReasonCode}`
-      : "폴백 사유: 없음",
-  ];
-  const badgeTone =
-    meta?.dataSource === "public-treemap-fallback"
-      ? "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-400/30 dark:bg-amber-950/40 dark:text-amber-300"
-      : coverage?.missingPreviousVideos
-        ? "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-400/30 dark:bg-sky-950/40 dark:text-sky-300"
-        : "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-950/40 dark:text-emerald-300";
-
-  return (
-    <AdminDashboardInlineTooltip
-      label="KPI 데이터 출처와 비교 커버리지"
-      lines={tooltipLines}
-      className="order-2 shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-primary"
-    >
-      <Badge
-        variant="outline"
-        className={cn(
-          "h-7 rounded-full px-2 py-0 text-[10px] font-black",
-          badgeTone,
-        )}
-        data-admin-dashboard-data-confidence="true"
-      >
-        {sourceLabel} · {coverageLabel}
-      </Badge>
-    </AdminDashboardInlineTooltip>
-  );
-}
-
 function AdminDashboardPeriodSelector({
   value,
   onChange,
@@ -6749,11 +6687,6 @@ function AdminDashboardManagementPanel({
               onRefresh={() => void collectionLogsQuery.refetch()}
             />
           </div>
-          <AdminDashboardDataConfidenceBadge
-            meta={insightQuery.data?.meta}
-            channelStats={channelStats}
-          />
-
           <AdminDashboardPeriodSelector
             value={period}
             onChange={(nextPeriod) => {
