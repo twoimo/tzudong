@@ -995,7 +995,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       "처리: 비교 버킷 이후 신규 영상은 이전값 0으로 보고, 비교 버킷 이전 영상인데 이전값이 없으면 비교 불가로 분리합니다.",
     );
-    expect(consoleSource).toContain(
+    expect(consoleSource).not.toContain(
       'data-admin-dashboard-data-confidence="true"',
     );
     expect(consoleSource).toContain("fallbackReasonCode");
