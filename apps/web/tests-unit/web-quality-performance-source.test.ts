@@ -4004,6 +4004,9 @@ describe("web quality performance source contracts", () => {
       "startNaverMapPresence",
     );
     expect(source("components/admin/AdminConsoleOverview.tsx")).toContain(
+      'fetch("/api/admin/pending-counts"',
+    );
+    expect(source("components/admin/AdminConsoleOverview.tsx")).not.toContain(
       "fetchSupabaseExactCount",
     );
     expect(source("components/layout/Header.tsx")).not.toContain(
