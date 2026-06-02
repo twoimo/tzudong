@@ -276,6 +276,14 @@ async function mockAdminDashboardApis(page: Page) {
         });
     });
 
+    await page.route('**/api/admin/pending-counts', async (route) => {
+        await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({ submissions: 0, reviews: 0 }),
+        });
+    });
+
     await page.route('**/api/dashboard/summary', async (route) => {
         await route.fulfill({
             status: 200,
