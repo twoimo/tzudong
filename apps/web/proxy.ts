@@ -37,6 +37,12 @@ function isLocalPlaywrightHost(hostname: string) {
     return normalizedHostName === 'localhost' || normalizedHostName === '127.0.0.1' || normalizedHostName === '::1'
 }
 
+function isLocalPlaywrightRequestUrlHost(hostname: string) {
+    const normalizedHostName = normalizeHostName(hostname)
+
+    return normalizedHostName === '0.0.0.0' || isLocalPlaywrightHost(normalizedHostName)
+}
+
 function isLocalPlaywrightHostHeader(
     value: string | null,
     options: { required?: boolean } = {},
@@ -61,7 +67,7 @@ function isPlaywrightAdminBypassRequest(request: NextRequest) {
     // through Supabase session validation, even with similar headers present.
     return (
         (method === 'GET' || method === 'HEAD') &&
-        isLocalPlaywrightHost(hostname) &&
+        isLocalPlaywrightRequestUrlHost(hostname) &&
         isLocalPlaywrightHostHeader(request.headers.get('host'), { required: true }) &&
         isLocalPlaywrightHostHeader(request.headers.get('x-forwarded-host')) &&
         isE2EAdminRouteBypassEnvEnabled() &&
