@@ -1,0 +1,17 @@
+# Storyboard backend agent runtime dependencies.
+# Python 3.8 local runtime is currently used in this checkout; keep pins conservative.
+# The default local admin wrapper uses Codex CLI OAuth and does not require OpenAI API keys.
+
+langgraph>=0.2.70,<0.3
+langchain-core>=0.3,<0.4
+langchain-openai>=0.2,<0.3
+langchain-teddynote>=0.3,<0.4
+pydantic>=2,<3
+python-dotenv>=1,<2
+supabase>=2,<3
+numpy>=1.24,<2
+Pillow>=10,<11
+
+# Heavy retrieval dependencies used lazily by src/_shared.py tools.
+# Install only on machines that will run BGE/reranker-backed search locally.
+# FlagEmbedding>=1.2,<2

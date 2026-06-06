@@ -1,6 +1,13 @@
+import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
 
 import { createClient } from '@/lib/supabase/server';
+import {
+  E2E_ADMIN_ROUTE_BYPASS_HEADER,
+  E2E_ADMIN_ROUTE_BYPASS_TOKEN_HEADER,
+  getE2EAdminRouteBypassExpectedToken,
+  isE2EAdminRouteBypassEnvEnabled,
+} from '@/lib/e2e-admin-route-bypass';
 
 type RequireAdminOk = {
   ok: true;
@@ -11,6 +18,45 @@ type RequireAdminFail = {
   ok: false;
   response: NextResponse;
 };
+
+
+function normalizeHostName(value: string) {
+  const firstValue = value.split(',')[0]?.trim().toLowerCase() ?? '';
+
+  if (firstValue.startsWith('[')) {
+    const closingBracketIndex = firstValue.indexOf(']');
+    return closingBracketIndex > 1 ? firstValue.slice(1, closingBracketIndex) : firstValue;
+  }
+
+  if (firstValue === '::1') return firstValue;
+  if (firstValue.includes(':') && firstValue.split(':').length > 2) return firstValue;
+
+  return firstValue.split(':')[0] ?? '';
+}
+
+function isLocalPlaywrightHost(value: string | null) {
+  if (!value) return false;
+
+  const normalizedHostName = normalizeHostName(value);
+  return normalizedHostName === 'localhost' || normalizedHostName === '127.0.0.1' || normalizedHostName === '::1';
+}
+
+async function getE2EAdminApiBypassUserId() {
+  if (!isE2EAdminRouteBypassEnvEnabled()) return null;
+
+  const requestHeaders = await headers();
+  const requestToken = requestHeaders.get(E2E_ADMIN_ROUTE_BYPASS_TOKEN_HEADER)?.trim();
+
+  if (
+    requestHeaders.get(E2E_ADMIN_ROUTE_BYPASS_HEADER) === '1' &&
+    requestToken === getE2EAdminRouteBypassExpectedToken() &&
+    isLocalPlaywrightHost(requestHeaders.get('host'))
+  ) {
+    return 'e2e-admin-route-bypass';
+  }
+
+  return null;
+}
 
 function isMissingOptionalAdminStatusStoreError(error: unknown) {
   if (!error || typeof error !== 'object') return false;
@@ -27,6 +73,11 @@ function isMissingOptionalAdminStatusStoreError(error: unknown) {
 }
 
 export async function requireAdmin(): Promise<RequireAdminOk | RequireAdminFail> {
+  const e2eAdminUserId = await getE2EAdminApiBypassUserId();
+  if (e2eAdminUserId) {
+    return { ok: true, userId: e2eAdminUserId };
+  }
+
   const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
 
