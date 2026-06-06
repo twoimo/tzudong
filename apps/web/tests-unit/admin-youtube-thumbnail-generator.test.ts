@@ -14,16 +14,12 @@ import {
   parseThumbnailReferenceImageUrl,
   parseThumbnailPayload,
   readThumbnailReferenceImages,
-  THUMBNAIL_SESSION_GEMINI_API_KEY_FIELD,
-  THUMBNAIL_SESSION_OPENAI_API_KEY_FIELD,
 } from "../lib/admin/youtube-thumbnail-generator/request";
 import {
   generateYoutubeThumbnail,
   getThumbnailProviderAvailability,
   probeLocalCodex,
-  resolveGeminiThumbnailModel,
   resolveLocalCodexThumbnailModel,
-  resolveOpenAIThumbnailModel,
 } from "../lib/admin/youtube-thumbnail-generator/providers";
 import {
   generateYoutubeThumbnailChatWithBackendAgent,
@@ -152,130 +148,53 @@ function createLocalCodexFixtureEnv(warnings: string[] = ["fixture_local_codex_i
 }
 
 describe("admin youtube thumbnail generator", () => {
-  test("pins live image model allowlists and rejects unverified marketing names", () => {
-    expect(resolveOpenAIThumbnailModel({} as NodeJS.ProcessEnv)).toBe("gpt-image-2");
-    expect(resolveOpenAIThumbnailModel({ THUMBNAIL_OPENAI_IMAGE_MODEL: "gpt-image-2" } as NodeJS.ProcessEnv)).toBe("gpt-image-2");
-    expect(() => resolveOpenAIThumbnailModel({ THUMBNAIL_OPENAI_IMAGE_MODEL: "gpt-image-1.5" } as NodeJS.ProcessEnv)).toThrow("정확한 GPT Image 2");
-    expect(() => resolveOpenAIThumbnailModel({ THUMBNAIL_OPENAI_IMAGE_MODEL: "gpt-image-1" } as NodeJS.ProcessEnv)).toThrow("정확한 GPT Image 2");
-    expect(() => resolveOpenAIThumbnailModel({ THUMBNAIL_OPENAI_IMAGE_MODEL: "dall-e-3" } as NodeJS.ProcessEnv)).toThrow("정확한 GPT Image 2");
-
-    expect(resolveGeminiThumbnailModel({} as NodeJS.ProcessEnv)).toBe("gemini-3-pro-image-preview");
-    expect(resolveGeminiThumbnailModel({ THUMBNAIL_GEMINI_IMAGE_MODEL: "nano-banana" } as NodeJS.ProcessEnv)).toBe("gemini-2.5-flash-image");
-    expect(resolveGeminiThumbnailModel({ THUMBNAIL_GEMINI_IMAGE_MODEL: "nano-banana-pro" } as NodeJS.ProcessEnv)).toBe("gemini-3-pro-image-preview");
-    expect(() => resolveGeminiThumbnailModel({ THUMBNAIL_GEMINI_IMAGE_MODEL: "nano-banana-2-pro" } as NodeJS.ProcessEnv)).toThrow("지원하지 않는 Gemini");
-
+  test("pins thumbnail generation to local Codex only and rejects non-local providers", () => {
     expect(resolveLocalCodexThumbnailModel({} as NodeJS.ProcessEnv)).toBe("requested:gpt-image-2");
     expect(resolveLocalCodexThumbnailModel({ THUMBNAIL_LOCAL_CODEX_IMAGE_MODEL: "chatgpt-image-latest" } as NodeJS.ProcessEnv)).toBe("chatgpt-image-latest");
+    expect(parseThumbnailPayload(safePayload).providerId).toBe("local-codex");
+    expectThumbnailError(() => parseThumbnailPayload({ ...safePayload, providerId: "openai-gpt-image" }), "provider_unavailable");
+    expectThumbnailError(() => parseThumbnailPayload({ ...safePayload, providerId: "gemini-nano-banana" }), "provider_unavailable");
   });
 
-  test("calls the OpenAI Images API with exact gpt-image-2 and no fallback", async () => {
-    const calls: Array<Record<string, unknown>> = [];
-    mock.module("openai", () => ({
-      default: class OpenAI {
-        images = {
-          generate: async (payload: Record<string, unknown>) => {
-            calls.push(payload);
-            return { data: [{ b64_json: "iVBORw0KGgo=" }] };
-          },
-        };
+  test("does not expose OpenAI or Gemini live API provider availability", () => {
+    expect(getThumbnailProviderAvailability({
+      OPENAI_API_KEY: "test-openai-key",
+      GEMINI_API_KEY: "test-gemini-key",
+    } as NodeJS.ProcessEnv)).toMatchObject({
+      localCodex: {
+        available: false,
+        reason: "local_codex_model_not_allowed",
+        strictExactModelRequired: true,
       },
-    }));
-
-    const parsed = parseThumbnailPayload({ ...safePayload, providerId: "openai-gpt-image" });
-    const result = await generateYoutubeThumbnail(parsed, [], {
-      THUMBNAIL_GENERATOR_ENABLE_LIVE_API: "1",
-      OPENAI_API_KEY: "test-openai-key",
-    } as NodeJS.ProcessEnv);
-
-    expect(calls).toHaveLength(1);
-    expect(calls[0]).toMatchObject({ model: "gpt-image-2", size: "1536x864", n: 1 });
-    expect(result.baseImage.providerId).toBe("openai-gpt-image");
-    expect(result.baseImage.model).toBe("gpt-image-2");
-    expect(result.baseImage.modelProvenance).toBe("exact");
-    expect(result.baseImage.dataUrl).toBe("data:image/png;base64,iVBORw0KGgo=");
-    expect(result.warnings.join("\n")).toContain("live_provider_exact_gpt_image_2");
-    expect(result.warnings.join("\n")).toContain("model=gpt-image-2");
+    });
+    expect(getThumbnailProviderAvailability({} as NodeJS.ProcessEnv)).not.toHaveProperty("openai");
+    expect(getThumbnailProviderAvailability({} as NodeJS.ProcessEnv)).not.toHaveProperty("gemini");
   });
 
-  test("keeps live API providers unavailable until the explicit live gate is open", () => {
-    expect(getThumbnailProviderAvailability({
-      OPENAI_API_KEY: "test-openai-key",
-      GEMINI_API_KEY: "test-gemini-key",
-    } as NodeJS.ProcessEnv)).toMatchObject({
-      openai: { available: false, liveEnabled: false, model: "gpt-image-2" },
-      gemini: { available: false, liveEnabled: false, model: "gemini-3-pro-image-preview" },
-    });
-
-    expect(getThumbnailProviderAvailability({
-      THUMBNAIL_GENERATOR_ENABLE_LIVE_API: "1",
-      OPENAI_API_KEY: "test-openai-key",
-      GEMINI_API_KEY: "test-gemini-key",
-    } as NodeJS.ProcessEnv)).toMatchObject({
-      openai: { available: true, liveEnabled: true, model: "gpt-image-2" },
-      gemini: { available: true, liveEnabled: true, model: "gemini-3-pro-image-preview" },
-    });
-  });
-
-  test("builds request-scoped provider env from session API key fields without bypassing the live gate", () => {
+  test("ignores request-scoped session API key shaped fields", () => {
     const formData = new FormData();
-    formData.append(THUMBNAIL_SESSION_OPENAI_API_KEY_FIELD, " sk-session-openai-1234567890 ");
-    formData.append(THUMBNAIL_SESSION_GEMINI_API_KEY_FIELD, "AIza-session-gemini-1234567890");
+    formData.append("thumbnailSessionApiKeyAttempt", " sk-session-attempt-1234567890 ");
+    formData.append("fallbackProviderApiKeyAttempt", "AIza-session-gemini-1234567890");
 
     const openaiEnv = buildThumbnailProviderRequestEnv({
       THUMBNAIL_GENERATOR_ENABLE_LIVE_API: "1",
-    } as NodeJS.ProcessEnv, "openai-gpt-image", formData);
-    expect(openaiEnv.OPENAI_API_KEY).toBe("sk-session-openai-1234567890");
+    } as NodeJS.ProcessEnv, "local-codex", formData);
+    expect(openaiEnv.OPENAI_API_KEY).toBeUndefined();
     expect(openaiEnv.GEMINI_API_KEY).toBeUndefined();
-    expect(getThumbnailProviderAvailability(openaiEnv).openai).toMatchObject({
-      available: true,
-      liveEnabled: true,
-      model: "gpt-image-2",
-    });
-
-    const blockedEnv = buildThumbnailProviderRequestEnv({} as NodeJS.ProcessEnv, "openai-gpt-image", formData);
-    expect(blockedEnv.OPENAI_API_KEY).toBe("sk-session-openai-1234567890");
-    expect(getThumbnailProviderAvailability(blockedEnv).openai).toMatchObject({
-      available: false,
-      liveEnabled: false,
-      model: "gpt-image-2",
-    });
 
     const localEnv = buildThumbnailProviderRequestEnv({} as NodeJS.ProcessEnv, "local-codex", formData);
     expect(localEnv.OPENAI_API_KEY).toBeUndefined();
     expect(localEnv.GEMINI_API_KEY).toBeUndefined();
   });
 
-  test("rejects malformed matching session API key fields and ignores provider mismatches", () => {
-    const invalidOpenai = new FormData();
-    invalidOpenai.append(THUMBNAIL_SESSION_OPENAI_API_KEY_FIELD, "not-openai");
-    expectThumbnailError(
-      () => buildThumbnailProviderRequestEnv({} as NodeJS.ProcessEnv, "openai-gpt-image", invalidOpenai),
-      "invalid_text",
-    );
+  test("documents that thumbnail generation never executes an imagegen wrapper without exact provenance", () => {
+    const providerSource = readFileSync(new URL("../lib/admin/youtube-thumbnail-generator/providers.ts", import.meta.url), "utf8");
 
-    const invalidGemini = new FormData();
-    invalidGemini.append(THUMBNAIL_SESSION_GEMINI_API_KEY_FIELD, "AIza bad whitespace");
-    expectThumbnailError(
-      () => buildThumbnailProviderRequestEnv({} as NodeJS.ProcessEnv, "gemini-nano-banana", invalidGemini),
-      "invalid_text",
-    );
-
-    const mismatch = new FormData();
-    mismatch.append(THUMBNAIL_SESSION_GEMINI_API_KEY_FIELD, "bad gemini value ignored for openai");
-    const env = buildThumbnailProviderRequestEnv({} as NodeJS.ProcessEnv, "openai-gpt-image", mismatch);
-    expect(env.GEMINI_API_KEY).toBeUndefined();
-    expect(env.OPENAI_API_KEY).toBeUndefined();
-  });
-
-  test("documents the local Codex OAuth imagegen wrapper instead of using gpt-image-2 as an agent model", () => {
-    const wrapper = readFileSync(new URL("../../../scripts/codex-imagegen-thumbnail-provider.py", import.meta.url), "utf8");
-
-    expect(wrapper).toContain("$imagegen");
-    expect(wrapper).toContain("do not call `codex exec -m gpt-image-2`");
-    expect(wrapper).toContain("CODEX_IMAGEGEN_AGENT_MODEL must be a Codex agent model");
-    expect(wrapper).toContain("--reference-manifest");
-    expect(existsSync(new URL("../../../scripts/codex-imagegen-thumbnail-provider.py", import.meta.url))).toBe(true);
-    expect(existsSync(new URL("../public/images/admin/youtube-thumbnail-local-codex-example.png", import.meta.url))).toBe(true);
+    expect(providerSource).toContain("local_codex_model_provenance_unverified");
+    expect(providerSource).toContain("throw new ThumbnailGenerationError");
+    expect(providerSource).not.toContain("execFile");
+    expect(providerSource).not.toContain("$imagegen");
+    expect(providerSource).not.toContain("THUMBNAIL_LOCAL_CODEX_ARGS_JSON");
   });
 
   test("validates multipart payload shape and image magic bytes", () => {
@@ -460,18 +379,12 @@ describe("admin youtube thumbnail generator", () => {
   });
 
 
-  test("runs an opt-in local Codex wrapper and returns a real image data URL", async () => {
+  test("blocks opt-in local Codex execution when exact gpt-image-2 provenance is unavailable", async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "thumbnail-local-codex-block-"));
+    const markerPath = join(tempDir, "executed.txt");
     const localScript = `
       const fs = require("node:fs");
-      const args = process.argv.slice(2);
-      const valueAfter = (name) => args[args.indexOf(name) + 1];
-      const prompt = fs.readFileSync(valueAfter("--prompt-file"), "utf8");
-      fs.writeFileSync(valueAfter("--json-output"), JSON.stringify({
-        mime: "image/png",
-        base64: "iVBORw0KGgo=",
-        model: valueAfter("--model"),
-        warnings: [prompt.includes("16:9") ? "prompt_received" : "prompt_missing"],
-      }));
+      fs.writeFileSync(${JSON.stringify(markerPath)}, "executed");
     `;
     const env = {
       ALLOW_LOCAL_CLI_THUMBNAIL: "true",
@@ -490,45 +403,109 @@ describe("admin youtube thumbnail generator", () => {
       ]),
     } as NodeJS.ProcessEnv;
 
-    expect(resolveLocalCodexThumbnailModel(env)).toBe("gpt-image-2");
-    expect(getThumbnailProviderAvailability(env).localCodex).toMatchObject({
-      available: true,
-      reason: "local_codex_command_configured",
-      model: "gpt-image-2",
-    });
-    await expect(probeLocalCodex({ ALLOW_LOCAL_CLI_THUMBNAIL: "true" } as NodeJS.ProcessEnv)).resolves.toMatchObject({
-      available: false,
-      reason: "local_codex_command_not_configured",
-    });
+    try {
+      expect(resolveLocalCodexThumbnailModel(env)).toBe("gpt-image-2");
+      expect(getThumbnailProviderAvailability(env).localCodex).toMatchObject({
+        available: false,
+        reason: "local_codex_model_provenance_unverified",
+        model: "gpt-image-2",
+        strictExactModelRequired: true,
+      });
+      await expect(probeLocalCodex({ ALLOW_LOCAL_CLI_THUMBNAIL: "true" } as NodeJS.ProcessEnv)).resolves.toMatchObject({
+        available: false,
+        reason: "local_codex_model_not_allowed",
+        strictExactModelRequired: true,
+      });
 
-    const parsed = parseThumbnailPayload({ ...safePayload, providerId: "local-codex" });
-    const result = await generateYoutubeThumbnail(parsed, [], env);
-
-    expect(result.baseImage.providerId).toBe("local-codex");
-    expect(result.baseImage.model).toBe("gpt-image-2");
-    expect(result.baseImage.modelProvenance).toBe("requested-label");
-    expect(result.baseImage.mime).toBe("image/png");
-    expect(result.baseImage.dataUrl).toBe("data:image/png;base64,iVBORw0KGgo=");
-    expect(result.warnings.join("\n")).toContain("local_codex_provider_opaque");
-    expect(result.warnings.join("\n")).toContain("prompt_received");
+      const parsed = parseThumbnailPayload({ ...safePayload, providerId: "local-codex" });
+      await expectThumbnailErrorAsync(() => generateYoutubeThumbnail(parsed, [], env), "provider_unavailable", 503);
+      expect(existsSync(markerPath)).toBe(false);
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
   });
 
 
-  test("rejects local Codex result paths that escape the temp work directory", async () => {
+
+  test("local Codex gpt-image-2 mode stops when model provenance is unverified even without a strict opt-in flag", async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "thumbnail-strict-local-codex-"));
+    const markerPath = join(tempDir, "executed.txt");
+    const localScript = `
+      const fs = require("node:fs");
+      fs.writeFileSync(${JSON.stringify(markerPath)}, "executed");
+    `;
+    const env = {
+      ALLOW_LOCAL_CLI_THUMBNAIL: "true",
+      THUMBNAIL_LOCAL_CODEX_COMMAND: process.execPath,
+      THUMBNAIL_LOCAL_CODEX_IMAGE_MODEL: "gpt-image-2",
+      THUMBNAIL_LOCAL_CODEX_ARGS_JSON: JSON.stringify(["-e", localScript]),
+    } as NodeJS.ProcessEnv;
+
+    try {
+      expect(getThumbnailProviderAvailability(env).localCodex).toMatchObject({
+        available: false,
+        reason: "local_codex_model_provenance_unverified",
+        model: "gpt-image-2",
+        strictExactModelRequired: true,
+      });
+      const parsed = parseThumbnailPayload({ ...safePayload, providerId: "local-codex" });
+
+      await expectThumbnailErrorAsync(() => generateYoutubeThumbnail(parsed, [], env), "provider_unavailable", 503);
+      expect(existsSync(markerPath)).toBe(false);
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test("local Codex mode rejects non-gpt-image-2 labels before command execution", async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "thumbnail-strict-local-codex-model-"));
+    const markerPath = join(tempDir, "executed.txt");
+    const localScript = `
+      const fs = require("node:fs");
+      fs.writeFileSync(${JSON.stringify(markerPath)}, "executed");
+    `;
+    const env = {
+      ALLOW_LOCAL_CLI_THUMBNAIL: "true",
+      THUMBNAIL_LOCAL_CODEX_COMMAND: process.execPath,
+      THUMBNAIL_LOCAL_CODEX_IMAGE_MODEL: "chatgpt-image-latest",
+      THUMBNAIL_LOCAL_CODEX_ARGS_JSON: JSON.stringify(["-e", localScript]),
+    } as NodeJS.ProcessEnv;
+
+    try {
+      expect(getThumbnailProviderAvailability(env).localCodex).toMatchObject({
+        available: false,
+        reason: "local_codex_model_not_allowed",
+        model: "chatgpt-image-latest",
+        strictExactModelRequired: true,
+      });
+      const parsed = parseThumbnailPayload({ ...safePayload, providerId: "local-codex" });
+
+      await expectThumbnailErrorAsync(() => generateYoutubeThumbnail(parsed, [], env), "unsupported_model", 400);
+      expect(existsSync(markerPath)).toBe(false);
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test("does not inspect local Codex result paths because opaque execution is blocked first", async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "thumbnail-local-codex-no-path-inspect-"));
+    const markerPath = join(tempDir, "executed.txt");
     const localScript = `
       const fs = require("node:fs");
       const args = process.argv.slice(2);
       const valueAfter = (name) => args[args.indexOf(name) + 1];
+      fs.writeFileSync(${JSON.stringify(markerPath)}, "executed");
       fs.writeFileSync("../escape.png", Buffer.from("iVBORw0KGgo=", "base64"));
       fs.writeFileSync(valueAfter("--json-output"), JSON.stringify({
         mime: "image/png",
         path: "../escape.png",
-        model: "requested:gpt-image-2",
+        model: "gpt-image-2",
       }));
     `;
     const env = {
       ALLOW_LOCAL_CLI_THUMBNAIL: "true",
       THUMBNAIL_LOCAL_CODEX_COMMAND: process.execPath,
+      THUMBNAIL_LOCAL_CODEX_IMAGE_MODEL: "gpt-image-2",
       THUMBNAIL_LOCAL_CODEX_ARGS_JSON: JSON.stringify([
         "-e",
         localScript,
@@ -538,33 +515,35 @@ describe("admin youtube thumbnail generator", () => {
       ]),
     } as NodeJS.ProcessEnv;
 
-    const parsed = parseThumbnailPayload({ ...safePayload, providerId: "local-codex" });
-    await expectThumbnailErrorAsync(() => generateYoutubeThumbnail(parsed, [], env), "provider_unavailable", 503);
+    try {
+      const parsed = parseThumbnailPayload({ ...safePayload, providerId: "local-codex" });
+      await expectThumbnailErrorAsync(() => generateYoutubeThumbnail(parsed, [], env), "provider_unavailable", 503);
+      expect(existsSync(markerPath)).toBe(false);
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
   });
-  test("orchestrates thumbnail generation through the default backend-agent runner", async () => {
+  test("runs backend-agent planning but blocks local Codex provider generation without exact provenance", async () => {
     const parsed = parseThumbnailPayload({ ...safePayload, generationMode: "backend_agent", providerId: "local-codex" });
-    const result = await generateYoutubeThumbnailWithBackendAgent(parsed, [], createLocalCodexFixtureEnv());
 
-    expect(result.baseImage.providerId).toBe("local-codex");
-    expect(result.prompt).toContain("Backend thumbnail agent orchestration brief");
-    expect(result.warnings.join("\n")).toContain("backend_agent_orchestrated");
-    expect(result.warnings.join("\n")).toContain("backend_agent_command");
-    expect(result.warnings.join("\n")).toContain("local_codex_provider_opaque");
-    expect(result.backendAgent).toMatchObject({
-      mode: "command",
-      runtime: "local_graph",
-      diagnostics: { providerId: "local-codex", providerModelProvenance: "requested-label" },
-    });
-    expect(result.backendAgent?.nextActions.join(" ")).toContain("검수");
+    await expectThumbnailErrorAsync(
+      () => generateYoutubeThumbnailWithBackendAgent(parsed, [], createLocalCodexFixtureEnv()),
+      "provider_unavailable",
+      503,
+    );
   });
 
   test("keeps session API keys out of backend-agent command env while allowing provider-only env overrides", async () => {
     const tempDir = mkdtempSync(join(tmpdir(), "thumbnail-agent-env-isolation-"));
     const commandPath = join(tempDir, "thumbnail-agent-env-isolation.sh");
+    const diagnosticsPath = join(tempDir, "agent-diagnostics.json");
     try {
       writeFileSync(commandPath, `#!/usr/bin/env bash
 cat >/dev/null
 node - <<'NODE'
+const fs = require("node:fs");
+const diagnostics = { openaiKeyLeaked: Boolean(process.env.OPENAI_API_KEY) };
+fs.writeFileSync(${JSON.stringify(diagnosticsPath)}, JSON.stringify(diagnostics));
 process.stdout.write(JSON.stringify({
   mode: "command",
   runtime: "codex_cli_oauth",
@@ -574,14 +553,13 @@ process.stdout.write(JSON.stringify({
   safetyReview: "review",
   nextActions: ["검수"],
   warnings: [],
-  diagnostics: { openaiKeyLeaked: Boolean(process.env.OPENAI_API_KEY) }
+  diagnostics
 }));
 NODE
 `, "utf8");
       chmodSync(commandPath, 0o755);
       const parsed = parseThumbnailPayload({ ...safePayload, generationMode: "backend_agent", providerId: "local-codex" });
       const baseEnv = {
-        ...createLocalCodexFixtureEnv(["env_isolation_provider_called"]),
         THUMBNAIL_AGENT_COMMAND: commandPath,
       } as NodeJS.ProcessEnv;
       const providerEnv = {
@@ -589,11 +567,13 @@ NODE
         OPENAI_API_KEY: "sk-provider-only-not-for-agent",
       } as NodeJS.ProcessEnv;
 
-      const result = await generateYoutubeThumbnailWithBackendAgent(parsed, [], baseEnv, { providerEnv });
+      await expectThumbnailErrorAsync(
+        () => generateYoutubeThumbnailWithBackendAgent(parsed, [], baseEnv, { providerEnv }),
+        "unsupported_model",
+        400,
+      );
 
-      expect(result.backendAgent?.diagnostics).toMatchObject({ openaiKeyLeaked: false });
-      expect(result.warnings.join("\n")).toContain("env_isolation_provider_called");
-      expect(result.prompt).not.toContain("sk-provider-only-not-for-agent");
+      expect(JSON.parse(readFileSync(diagnosticsPath, "utf8"))).toMatchObject({ openaiKeyLeaked: false });
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
@@ -700,7 +680,7 @@ printf '%s' '{"mode":"command","runtime":"codex_cli_oauth","concept":"chat conce
     }
   });
 
-  test("returns provider patches for chat-driven OpenAI and Gemini generation intent", async () => {
+  test("keeps chat-driven generation intent pinned to local Codex even when users mention other providers", async () => {
     const { tempDir, commandPath } = createThumbnailChatAgentCommandFixture();
     try {
       const openai = await generateYoutubeThumbnailChatWithBackendAgent({
@@ -717,10 +697,10 @@ printf '%s' '{"mode":"command","runtime":"codex_cli_oauth","concept":"chat conce
         THUMBNAIL_AGENT_CODEX_EFFORT: "high",
       } as NodeJS.ProcessEnv);
 
-      expect(openai.providerId).toBe("openai-gpt-image");
+      expect(openai.providerId).toBe("local-codex");
       expect(openai.generationMode).toBe("backend_agent");
       expect(openai.shouldGenerate).toBe(true);
-      expect(openai.assistantMessage).toContain("provider openai-gpt-image 선택");
+      expect(openai.assistantMessage).not.toContain("OpenAI");
 
       const gemini = await generateYoutubeThumbnailChatWithBackendAgent({
         message: "Gemini Nano Banana로 야시장 썸네일 생성해줘",
@@ -736,9 +716,28 @@ printf '%s' '{"mode":"command","runtime":"codex_cli_oauth","concept":"chat conce
         THUMBNAIL_AGENT_CODEX_EFFORT: "high",
       } as NodeJS.ProcessEnv);
 
-      expect(gemini.providerId).toBe("gemini-nano-banana");
+      expect(gemini.providerId).toBe("local-codex");
       expect(gemini.generationMode).toBe("backend_agent");
       expect(gemini.shouldGenerate).toBe(true);
+
+      const localCodex = await generateYoutubeThumbnailChatWithBackendAgent({
+        message: "로컬 Codex CLI OAuth로 gpt-image-2 썸네일 생성해줘. 메인: 레전드 한입",
+        currentTopic: "기존 주제",
+        currentHeadline: "기존 메인",
+        currentSubHeadline: "기존 스티커",
+        providerId: "local-codex",
+        generationMode: "backend_agent",
+      }, {
+        THUMBNAIL_AGENT_COMMAND: commandPath,
+        THUMBNAIL_AGENT_RUNTIME: "codex_cli_oauth",
+        THUMBNAIL_AGENT_CODEX_MODEL: "gpt-5.5",
+        THUMBNAIL_AGENT_CODEX_EFFORT: "high",
+      } as NodeJS.ProcessEnv);
+
+      expect(localCodex.providerId).toBe("local-codex");
+      expect(localCodex.generationMode).toBe("backend_agent");
+      expect(localCodex.shouldGenerate).toBe(true);
+      expect(localCodex.assistantMessage).toContain("실제 썸네일 생성");
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
@@ -1000,15 +999,16 @@ sleep 30
   });
 
 
-  test("keeps local Codex disabled without the explicit local command gate", async () => {
+  test("keeps local Codex disabled by default because requested model labels are not exact provenance", async () => {
     const parsed = parseThumbnailPayload({ ...safePayload, providerId: "local-codex" });
 
     expect(getThumbnailProviderAvailability({} as NodeJS.ProcessEnv).localCodex).toMatchObject({
       available: false,
-      reason: "local_codex_gate_disabled",
+      reason: "local_codex_model_not_allowed",
       model: "requested:gpt-image-2",
+      strictExactModelRequired: true,
     });
-    await expectThumbnailErrorAsync(() => generateYoutubeThumbnail(parsed, [], {} as NodeJS.ProcessEnv), "provider_unavailable", 503);
+    await expectThumbnailErrorAsync(() => generateYoutubeThumbnail(parsed, [], {} as NodeJS.ProcessEnv), "unsupported_model", 400);
   });
 
   test("rejects the removed mock provider and keeps reusable prompt grammar", async () => {
