@@ -1,4 +1,7 @@
 import { describe, expect, test } from 'bun:test';
+import { existsSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 
 import {
   buildStoryboardSceneImagePrompt,
@@ -46,22 +49,43 @@ const scene: StoryboardScene = {
 describe('admin storyboard image provider', () => {
   test('uses the local Codex GPT Image 2 gate instead of mock image generation', () => {
     const env = {
-      ALLOW_LOCAL_CLI_THUMBNAIL: 'true',
+      ALLOW_LOCAL_CLI_STORYBOARD_IMAGES: 'true',
       STORYBOARD_LOCAL_CODEX_COMMAND: '/tmp/codex-imagegen-storyboard-provider.py',
       STORYBOARD_LOCAL_CODEX_IMAGE_MODEL: 'gpt-image-2',
     } as NodeJS.ProcessEnv;
 
     expect(resolveLocalCodexStoryboardModel(env)).toBe('gpt-image-2');
     expect(getStoryboardImageProviderAvailability(env)).toMatchObject({
-      available: true,
-      reason: 'local_codex_command_configured',
+      available: false,
+      reason: 'local_codex_model_provenance_unverified',
       command: '/tmp/codex-imagegen-storyboard-provider.py',
       model: 'gpt-image-2',
       target: { width: 1280, height: 720, aspectRatio: '16:9' },
     });
     expect(getStoryboardImageProviderAvailability({} as NodeJS.ProcessEnv)).toMatchObject({
       available: false,
-      reason: 'local_codex_gate_disabled',
+      reason: 'local_codex_model_provenance_unverified',
+      model: 'gpt-image-2',
+    });
+    expect(getStoryboardImageProviderAvailability({
+      ALLOW_LOCAL_CLI_STORYBOARD_IMAGES: 'true',
+      STORYBOARD_LOCAL_CODEX_COMMAND: '/tmp/codex-imagegen-storyboard-provider.py',
+      STORYBOARD_LOCAL_CODEX_IMAGE_MODEL: 'gpt-image-1',
+    } as NodeJS.ProcessEnv)).toMatchObject({
+      available: false,
+      reason: 'local_codex_model_not_allowed',
+      model: 'gpt-image-1',
+    });
+    expect(resolveLocalCodexStoryboardModel({
+      THUMBNAIL_LOCAL_CODEX_IMAGE_MODEL: 'gpt-image-1',
+    } as NodeJS.ProcessEnv)).toBe('gpt-image-2');
+    expect(getStoryboardImageProviderAvailability({
+      ALLOW_LOCAL_CLI_THUMBNAIL: 'true',
+      STORYBOARD_LOCAL_CODEX_COMMAND: '/tmp/codex-imagegen-storyboard-provider.py',
+      STORYBOARD_LOCAL_CODEX_IMAGE_MODEL: 'gpt-image-2',
+    } as NodeJS.ProcessEnv)).toMatchObject({
+      available: false,
+      reason: 'local_codex_model_provenance_unverified',
       model: 'gpt-image-2',
     });
   });
@@ -77,94 +101,42 @@ describe('admin storyboard image provider', () => {
     expect(prompt).toContain('CUT 1');
     expect(prompt).toContain('Visual direction:');
     expect(prompt).toContain('do not recreate a real person likeness');
+    expect(prompt).toContain('no recognizable face');
+    expect(prompt).toContain('no face close-up');
+    expect(prompt).toContain('no detailed eyes/nose/mouth');
+    expect(prompt).toContain('cropped hands');
+    expect(prompt).toContain('face outside frame');
     expect(prompt).toContain('No logos, watermarks');
     expect(prompt).toContain('do not render readable text');
     expect(prompt).toContain('06:57');
   });
 
-  test('runs an opt-in local Codex storyboard wrapper and returns generated image data URLs', async () => {
+  test('strict-stops before executing the local Codex storyboard wrapper when exact provenance is unavailable', async () => {
+    const markerPath = join(tmpdir(), `storyboard-should-not-execute-${Date.now()}`);
     const localScript = `
       const fs = require("node:fs");
-      const args = process.argv.slice(2);
-      const valueAfter = (name) => args[args.indexOf(name) + 1];
-      const prompt = fs.readFileSync(valueAfter("--prompt-file"), "utf8");
-      fs.writeFileSync(valueAfter("--json-output"), JSON.stringify({
-        mime: "image/png",
-        base64: "iVBORw0KGgo=",
-        model: valueAfter("--model"),
-        warnings: [prompt.includes("storyboard panel") ? "storyboard_prompt_received" : "storyboard_prompt_missing"],
-      }));
+      fs.writeFileSync(process.env.STORYBOARD_EXEC_MARKER, "executed");
     `;
     const env = {
       ALLOW_LOCAL_CLI_STORYBOARD_IMAGES: 'true',
       STORYBOARD_LOCAL_CODEX_COMMAND: process.execPath,
       STORYBOARD_LOCAL_CODEX_IMAGE_MODEL: 'gpt-image-2',
-      STORYBOARD_LOCAL_CODEX_ARGS_JSON: JSON.stringify([
-        '-e',
-        localScript,
-        '--',
-        '--prompt-file',
-        '{promptFile}',
-        '--json-output',
-        '{outputJsonFile}',
-        '--model',
-        '{model}',
-      ]),
-    } as NodeJS.ProcessEnv;
-
-    const result = await generateStoryboardSceneImages([scene], {
-      title: '실데이터 스토리보드',
-      logline: '반복시청 피크 기반 4컷 이미지',
-      request,
-    }, env);
-
-    expect(result).toHaveLength(1);
-    expect(result[0].sceneNo).toBe(1);
-    expect(result[0].image.providerId).toBe('local-codex');
-    expect(result[0].image.model).toBe('gpt-image-2');
-    expect(result[0].image.trustPolicy).toBe(STORYBOARD_GENERATED_IMAGE_TRUST_POLICY);
-    expect(result[0].image.mime).toBe('image/png');
-    expect(result[0].image.dataUrl).toBe('data:image/png;base64,iVBORw0KGgo=');
-    expect(result[0].image.warnings.join('\n')).toContain('local_codex_provider');
-    expect(result[0].image.warnings.join('\n')).toContain('storyboard_prompt_received');
-  });
-
-  test('rejects local Codex JSON paths that escape the temporary work directory', async () => {
-    const localScript = `
-      const fs = require("node:fs");
-      const path = require("node:path");
-      const args = process.argv.slice(2);
-      const valueAfter = (name) => args[args.indexOf(name) + 1];
-      fs.writeFileSync(
-        path.join(process.cwd(), "..", "storyboard-secret.png"),
-        Buffer.from("iVBORw0KGgo=", "base64"),
-      );
-      fs.writeFileSync(valueAfter("--json-output"), JSON.stringify({
-        mime: "image/png",
-        path: "../storyboard-secret.png",
-        model: valueAfter("--model"),
-      }));
-    `;
-    const env = {
-      ALLOW_LOCAL_CLI_STORYBOARD_IMAGES: 'true',
-      STORYBOARD_LOCAL_CODEX_COMMAND: process.execPath,
-      STORYBOARD_LOCAL_CODEX_IMAGE_MODEL: 'gpt-image-2',
-      STORYBOARD_LOCAL_CODEX_ARGS_JSON: JSON.stringify([
-        '-e',
-        localScript,
-        '--',
-        '--json-output',
-        '{outputJsonFile}',
-        '--model',
-        '{model}',
-      ]),
+      STORYBOARD_EXEC_MARKER: markerPath,
+      STORYBOARD_LOCAL_CODEX_ARGS_JSON: JSON.stringify(['-e', localScript]),
     } as NodeJS.ProcessEnv;
 
     await expect(generateStoryboardSceneImages([scene], {
       title: '실데이터 스토리보드',
       logline: '반복시청 피크 기반 4컷 이미지',
       request,
-    }, env)).rejects.toThrow(/Local Codex 출력에서 스토리보드 이미지 데이터를 찾지 못했습니다/);
+    }, env)).rejects.toThrow(/exact gpt-image-2 backend provenance/);
+    expect(getStoryboardImageProviderAvailability(env)).toMatchObject({
+      available: false,
+      reason: 'local_codex_model_provenance_unverified',
+      model: 'gpt-image-2',
+    });
+    expect(existsSync(markerPath)).toBe(false);
+    rmSync(markerPath, { force: true });
   });
 
   test('trusts only storyboard-panel GPT Image 2 metadata and strips thumbnail-like history images', () => {

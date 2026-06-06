@@ -2,8 +2,6 @@ export const YOUTUBE_THUMBNAIL_TARGET_WIDTH = 1280;
 export const YOUTUBE_THUMBNAIL_TARGET_HEIGHT = 720;
 
 export const THUMBNAIL_PROVIDER_IDS = [
-  'openai-gpt-image',
-  'gemini-nano-banana',
   'local-codex',
 ] as const;
 
@@ -15,21 +13,6 @@ export const THUMBNAIL_GENERATION_MODES = [
 ] as const;
 
 export type ThumbnailGenerationMode = (typeof THUMBNAIL_GENERATION_MODES)[number];
-
-export const OPENAI_THUMBNAIL_IMAGE_MODELS = [
-  'gpt-image-2',
-  'gpt-image-1.5',
-  'gpt-image-1-mini',
-  'gpt-image-1',
-] as const;
-
-export const GEMINI_THUMBNAIL_IMAGE_MODELS = [
-  'gemini-2.5-flash-image',
-  'gemini-3-pro-image-preview',
-] as const;
-
-export type OpenAIThumbnailImageModel = (typeof OPENAI_THUMBNAIL_IMAGE_MODELS)[number];
-export type GeminiThumbnailImageModel = (typeof GEMINI_THUMBNAIL_IMAGE_MODELS)[number];
 
 export const THUMBNAIL_BRIEF_PRESETS = [
   'tzuyang-food-travel-collage',
