@@ -10,6 +10,9 @@ backend/bun.lock
 dist/
 .vercel/
 apps/web/.cache/
+apps/web/tmp/
+apps/web/public/qa-history/
+output/
 
 # ── 로그 / Logs ──────────────────────────────────────────
 logs/

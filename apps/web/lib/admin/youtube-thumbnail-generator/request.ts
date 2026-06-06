@@ -1,6 +1,11 @@
+import { lookup } from 'node:dns/promises';
+import { isIP } from 'node:net';
+
 import type {
   ThumbnailBriefPreset,
+  ThumbnailChatAgentRequest,
   ThumbnailGeneratorPayload,
+  ThumbnailGenerationMode,
   ThumbnailReferenceImage,
   ThumbnailReferenceRole,
   ThumbnailTextLayer,
@@ -8,6 +13,7 @@ import type {
 import {
   ThumbnailGenerationError,
   THUMBNAIL_BRIEF_PRESETS,
+  THUMBNAIL_GENERATION_MODES,
   THUMBNAIL_PROVIDER_IDS,
   THUMBNAIL_REFERENCE_ROLES,
 } from './types';
@@ -16,6 +22,23 @@ import { isThumbnailProviderId } from './providers';
 export const THUMBNAIL_MAX_TOTAL_BYTES = 33_554_432;
 export const THUMBNAIL_MAX_FILE_BYTES = 8_388_608;
 export const THUMBNAIL_MAX_FILES = 8;
+export const THUMBNAIL_REMOTE_IMAGE_TIMEOUT_MS = 10_000;
+export const THUMBNAIL_CHAT_MESSAGE_MAX_LENGTH = 1_000;
+export const THUMBNAIL_CHAT_CONTEXT_MAX_LENGTH = 280;
+export const THUMBNAIL_CHAT_TEXT_MAX_LENGTH = 80;
+export const THUMBNAIL_SESSION_OPENAI_API_KEY_FIELD = 'thumbnailSessionOpenaiApiKey';
+export const THUMBNAIL_SESSION_GEMINI_API_KEY_FIELD = 'thumbnailSessionGeminiApiKey';
+export const THUMBNAIL_SESSION_API_KEY_MAX_LENGTH = 512;
+const THUMBNAIL_CHAT_RUN_ID_MAX_LENGTH = 120;
+const THUMBNAIL_CHAT_LAYER_ID_MAX_LENGTH = 40;
+const THUMBNAIL_CHAT_ACTION_MAX_LENGTH = 80;
+const THUMBNAIL_CHAT_RUN_ID_PATTERN = /^[A-Za-z0-9_.:-]+$/;
+const THUMBNAIL_SESSION_KEY_UNSAFE_PATTERN = /[\s\x00-\x1f\x7f]/;
+
+type RemoteImageFetchDeps = {
+  fetch?: typeof fetch;
+  lookup?: typeof lookup;
+};
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
@@ -25,12 +48,149 @@ function toStringValue(value: unknown, maxLength: number) {
   return typeof value === 'string' ? value.trim().slice(0, maxLength) : '';
 }
 
+function readSessionApiKeyField(formData: FormData, fieldName: string) {
+  const values = formData.getAll(fieldName).filter((entry): entry is string => typeof entry === 'string');
+  if (values.length === 0) return null;
+  if (values.length > 1) {
+    throw new ThumbnailGenerationError('invalid_text', `${fieldName}는 한 번만 전송할 수 있습니다.`, 400);
+  }
+  const trimmed = values[0]?.trim() ?? '';
+  if (!trimmed) return null;
+  if (trimmed.length > THUMBNAIL_SESSION_API_KEY_MAX_LENGTH || THUMBNAIL_SESSION_KEY_UNSAFE_PATTERN.test(trimmed)) {
+    throw new ThumbnailGenerationError('invalid_text', '세션 API 키 형식이 올바르지 않습니다.', 400);
+  }
+  return trimmed;
+}
+
+function readMatchingSessionApiKey(formData: FormData, providerId: ThumbnailGeneratorPayload['providerId']) {
+  if (providerId === 'openai-gpt-image') {
+    const key = readSessionApiKeyField(formData, THUMBNAIL_SESSION_OPENAI_API_KEY_FIELD);
+    if (key && !key.startsWith('sk-')) {
+      throw new ThumbnailGenerationError('invalid_text', 'OpenAI 세션 API 키는 sk-로 시작해야 합니다.', 400);
+    }
+    return key ? { OPENAI_API_KEY: key } : {};
+  }
+
+  if (providerId === 'gemini-nano-banana') {
+    const key = readSessionApiKeyField(formData, THUMBNAIL_SESSION_GEMINI_API_KEY_FIELD);
+    if (key && !key.startsWith('AIza')) {
+      throw new ThumbnailGenerationError('invalid_text', 'Gemini 세션 API 키는 AIza로 시작해야 합니다.', 400);
+    }
+    return key ? { GEMINI_API_KEY: key } : {};
+  }
+
+  return {};
+}
+
+export function buildThumbnailProviderRequestEnv(
+  baseEnv: NodeJS.ProcessEnv,
+  providerId: ThumbnailGeneratorPayload['providerId'],
+  formData: FormData,
+): NodeJS.ProcessEnv {
+  return {
+    ...baseEnv,
+    ...readMatchingSessionApiKey(formData, providerId),
+  };
+}
+
 function isThumbnailBriefPreset(value: unknown): value is ThumbnailBriefPreset {
   return typeof value === 'string' && (THUMBNAIL_BRIEF_PRESETS as readonly string[]).includes(value);
 }
 
 function isThumbnailReferenceRole(value: unknown): value is ThumbnailReferenceRole {
   return typeof value === 'string' && (THUMBNAIL_REFERENCE_ROLES as readonly string[]).includes(value);
+}
+
+function isThumbnailGenerationMode(value: unknown): value is ThumbnailGenerationMode {
+  return typeof value === 'string' && (THUMBNAIL_GENERATION_MODES as readonly string[]).includes(value);
+}
+
+function parseGenerationMode(value: unknown): ThumbnailGenerationMode {
+  if (isThumbnailGenerationMode(value)) return value;
+  throw new ThumbnailGenerationError(
+    'invalid_generation_mode',
+    `generationMode는 ${THUMBNAIL_GENERATION_MODES.join(', ')} 중 하나여야 합니다.`,
+    400,
+  );
+}
+
+function parseOptionalChatString(value: unknown, fieldName: string, maxLength: number) {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== 'string') {
+    throw new ThumbnailGenerationError('thumbnail_chat_payload_invalid', `${fieldName}는 문자열이어야 합니다.`, 400);
+  }
+  const trimmed = value.trim();
+  return trimmed ? trimmed.slice(0, maxLength) : undefined;
+}
+
+export function parseThumbnailChatAgentRequest(value: unknown): ThumbnailChatAgentRequest {
+  if (!isRecord(value)) {
+    throw new ThumbnailGenerationError('thumbnail_chat_payload_invalid', '채팅 요청 JSON이 필요합니다.', 400);
+  }
+  if (typeof value.message !== 'string') {
+    throw new ThumbnailGenerationError('thumbnail_chat_message_required', '채팅 메시지를 입력하세요.', 400);
+  }
+
+  const message = value.message.trim();
+  if (!message) {
+    throw new ThumbnailGenerationError('thumbnail_chat_message_required', '채팅 메시지를 입력하세요.', 400);
+  }
+  if (message.length > THUMBNAIL_CHAT_MESSAGE_MAX_LENGTH) {
+    throw new ThumbnailGenerationError(
+      'thumbnail_chat_message_too_long',
+      `채팅 메시지는 ${THUMBNAIL_CHAT_MESSAGE_MAX_LENGTH}자 이하여야 합니다.`,
+      400,
+    );
+  }
+
+  let providerId: ThumbnailChatAgentRequest['providerId'];
+  if (value.providerId !== undefined && value.providerId !== null) {
+    const candidate = toStringValue(value.providerId, 80);
+    if (!isThumbnailProviderId(candidate)) {
+      throw new ThumbnailGenerationError(
+        'thumbnail_chat_payload_invalid',
+        `providerId는 ${THUMBNAIL_PROVIDER_IDS.join(', ')} 중 하나여야 합니다.`,
+        400,
+      );
+    }
+    providerId = candidate;
+  }
+
+  let generationMode: ThumbnailChatAgentRequest['generationMode'];
+  if (value.generationMode !== undefined && value.generationMode !== null) {
+    const candidate = toStringValue(value.generationMode, 40);
+    if (!isThumbnailGenerationMode(candidate)) {
+      throw new ThumbnailGenerationError(
+        'thumbnail_chat_payload_invalid',
+        `generationMode는 ${THUMBNAIL_GENERATION_MODES.join(', ')} 중 하나여야 합니다.`,
+        400,
+      );
+    }
+    generationMode = candidate;
+  }
+
+  const chatRunId = parseOptionalChatString(value.chatRunId, 'chatRunId', THUMBNAIL_CHAT_RUN_ID_MAX_LENGTH);
+  if (chatRunId && !THUMBNAIL_CHAT_RUN_ID_PATTERN.test(chatRunId)) {
+    throw new ThumbnailGenerationError(
+      'thumbnail_chat_payload_invalid',
+      'chatRunId는 영문, 숫자, 점, 콜론, 하이픈, 밑줄만 사용할 수 있습니다.',
+      400,
+    );
+  }
+
+  return {
+    chatRunId,
+    message,
+    currentTopic: parseOptionalChatString(value.currentTopic, 'currentTopic', THUMBNAIL_CHAT_CONTEXT_MAX_LENGTH),
+    currentHeadline: parseOptionalChatString(value.currentHeadline, 'currentHeadline', THUMBNAIL_CHAT_TEXT_MAX_LENGTH),
+    currentSubHeadline: parseOptionalChatString(value.currentSubHeadline, 'currentSubHeadline', THUMBNAIL_CHAT_TEXT_MAX_LENGTH),
+    activeLayerId: parseOptionalChatString(value.activeLayerId, 'activeLayerId', THUMBNAIL_CHAT_LAYER_ID_MAX_LENGTH),
+    editingLayerId: parseOptionalChatString(value.editingLayerId, 'editingLayerId', THUMBNAIL_CHAT_LAYER_ID_MAX_LENGTH),
+    lastCanvasActionLabel: parseOptionalChatString(value.lastCanvasActionLabel, 'lastCanvasActionLabel', THUMBNAIL_CHAT_ACTION_MAX_LENGTH),
+    currentTextLayers: parseTextLayers(value.currentTextLayers),
+    providerId,
+    generationMode,
+  };
 }
 
 function parseStylePreset(value: unknown): ThumbnailBriefPreset {
@@ -79,6 +239,7 @@ export function parseThumbnailPayload(value: unknown): ThumbnailGeneratorPayload
   if (!topic || !headline) throw new ThumbnailGenerationError('invalid_text', '주제와 헤드라인을 입력하세요.', 400);
   return {
     providerId,
+    generationMode: parseGenerationMode(value.generationMode),
     topic,
     headline,
     subHeadline: toStringValue(value.subHeadline, 80) || undefined,
@@ -114,6 +275,180 @@ export function detectImageMime(bytes: Uint8Array): ThumbnailReferenceImage['mim
     String.fromCharCode(...bytes.slice(8, 12)) === 'WEBP'
   ) return 'image/webp';
   return null;
+}
+
+function isBlockedIPv4(address: string) {
+  const parts = address.split('.').map((part) => Number(part));
+  if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return true;
+  const [a, b] = parts;
+  return (
+    a === 0 ||
+    a === 10 ||
+    a === 127 ||
+    (a === 100 && b >= 64 && b <= 127) ||
+    (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168) ||
+    (a === 198 && (b === 18 || b === 19)) ||
+    a >= 224
+  );
+}
+
+function isBlockedIPv6(address: string) {
+  const normalized = address.toLowerCase();
+  if (normalized.startsWith('::ffff:')) {
+    const mappedIPv4 = normalized.slice('::ffff:'.length);
+    if (isIP(mappedIPv4) === 4) return isBlockedIPv4(mappedIPv4);
+  }
+
+  return (
+    normalized === '::1' ||
+    normalized === '::' ||
+    normalized.startsWith('fc') ||
+    normalized.startsWith('fd') ||
+    normalized.startsWith('fe80')
+  );
+}
+
+function isBlockedAddress(address: string) {
+  const family = isIP(address);
+  if (family === 4) return isBlockedIPv4(address);
+  if (family === 6) return isBlockedIPv6(address);
+  return true;
+}
+
+function getSafeRemoteFileName(url: URL, mime: ThumbnailReferenceImage['mime']) {
+  const rawName = decodeURIComponent(url.pathname.split('/').filter(Boolean).at(-1) ?? 'reference-image')
+    .replace(/[^a-zA-Z0-9._-]+/g, '-')
+    .slice(0, 80)
+    .replace(/^-+|-+$/g, '');
+  const extension = mime === 'image/png' ? 'png' : mime === 'image/webp' ? 'webp' : 'jpg';
+  const baseName = rawName || 'reference-image';
+  return /\.(png|jpe?g|webp)$/i.test(baseName) ? baseName : `${baseName}.${extension}`;
+}
+
+export function parseThumbnailReferenceImageUrl(value: unknown) {
+  const raw = typeof value === 'string' ? value.trim() : '';
+  if (!raw || raw.length > 2_048) {
+    throw new ThumbnailGenerationError('invalid_text', '참고 이미지 URL을 입력하세요.', 400);
+  }
+
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new ThumbnailGenerationError('invalid_text', '참고 이미지 URL 형식이 올바르지 않습니다.', 400);
+  }
+
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+    throw new ThumbnailGenerationError('invalid_text', 'HTTP/HTTPS 이미지 URL만 사용할 수 있습니다.', 400);
+  }
+  if (url.username || url.password) {
+    throw new ThumbnailGenerationError('invalid_text', '인증 정보가 포함된 URL은 사용할 수 없습니다.', 400);
+  }
+  if (!url.hostname || url.hostname === 'localhost' || url.hostname.endsWith('.localhost')) {
+    throw new ThumbnailGenerationError('invalid_text', '로컬 주소는 참고 이미지 URL로 사용할 수 없습니다.', 400);
+  }
+
+  return url;
+}
+
+async function assertPublicRemoteImageHost(url: URL, deps: RemoteImageFetchDeps = {}) {
+  if (isIP(url.hostname)) {
+    if (isBlockedAddress(url.hostname)) {
+      throw new ThumbnailGenerationError('invalid_text', '사설망/로컬 주소는 참고 이미지 URL로 사용할 수 없습니다.', 400);
+    }
+    return;
+  }
+
+  const lookupFn = deps.lookup ?? lookup;
+  const addresses = await lookupFn(url.hostname, { all: true, verbatim: true });
+  if (!addresses.length || addresses.some((entry) => isBlockedAddress(entry.address))) {
+    throw new ThumbnailGenerationError('invalid_text', '사설망/로컬 주소는 참고 이미지 URL로 사용할 수 없습니다.', 400);
+  }
+}
+
+async function readLimitedRemoteImageBytes(response: Response) {
+  if (!response.body) {
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    if (bytes.byteLength > THUMBNAIL_MAX_FILE_BYTES) {
+      throw new ThumbnailGenerationError('invalid_text', '이미지 1개는 8MiB를 넘을 수 없습니다.', 413);
+    }
+    return bytes;
+  }
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (!value) continue;
+    total += value.byteLength;
+    if (total > THUMBNAIL_MAX_FILE_BYTES) {
+      await reader.cancel().catch(() => undefined);
+      throw new ThumbnailGenerationError('invalid_text', '이미지 1개는 8MiB를 넘을 수 없습니다.', 413);
+    }
+    chunks.push(value);
+  }
+
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
+}
+
+export async function fetchThumbnailReferenceImageFromUrl(value: unknown, deps: RemoteImageFetchDeps = {}) {
+  const url = parseThumbnailReferenceImageUrl(value);
+  await assertPublicRemoteImageHost(url, deps);
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), THUMBNAIL_REMOTE_IMAGE_TIMEOUT_MS);
+  try {
+    const fetchFn = deps.fetch ?? fetch;
+    const response = await fetchFn(url, {
+      redirect: 'manual',
+      signal: controller.signal,
+      headers: { Accept: 'image/png,image/jpeg,image/webp' },
+    });
+
+    if (response.status >= 300 && response.status < 400) {
+      throw new ThumbnailGenerationError('invalid_text', '리다이렉트되는 이미지 URL은 사용할 수 없습니다.', 400);
+    }
+    if (!response.ok) {
+      throw new ThumbnailGenerationError('invalid_text', `참고 이미지를 가져오지 못했습니다. HTTP ${response.status}`, 400);
+    }
+
+    const declaredLength = Number(response.headers.get('content-length') ?? '0');
+    if (Number.isFinite(declaredLength) && declaredLength > THUMBNAIL_MAX_FILE_BYTES) {
+      throw new ThumbnailGenerationError('invalid_text', '이미지 1개는 8MiB를 넘을 수 없습니다.', 413);
+    }
+    const declaredType = (response.headers.get('content-type') ?? '').split(';')[0]?.trim().toLowerCase();
+    if (declaredType && !['image/png', 'image/jpeg', 'image/webp'].includes(declaredType)) {
+      throw new ThumbnailGenerationError('invalid_text', 'PNG/JPEG/WebP 이미지 URL만 사용할 수 있습니다.', 415);
+    }
+
+    const bytes = await readLimitedRemoteImageBytes(response);
+    const mime = detectImageMime(bytes);
+    if (!mime) throw new ThumbnailGenerationError('invalid_text', 'PNG/JPEG/WebP 이미지 URL만 사용할 수 있습니다.', 415);
+
+    return {
+      bytes,
+      mime,
+      fileName: getSafeRemoteFileName(url, mime),
+    };
+  } catch (error) {
+    if (error instanceof ThumbnailGenerationError) throw error;
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new ThumbnailGenerationError('invalid_text', '참고 이미지 URL 응답 시간이 초과되었습니다.', 408);
+    }
+    throw new ThumbnailGenerationError('invalid_text', '참고 이미지 URL을 가져오지 못했습니다.', 400);
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export async function readThumbnailReferenceImages(

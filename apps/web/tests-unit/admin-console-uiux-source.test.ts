@@ -219,6 +219,56 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(overviewSource).toContain(
       'data-admin-route-recommendation-panel="enhanced"',
     );
+    expect(overviewSource).toContain(
+      'className="flex min-h-0 flex-col gap-2 lg:h-full lg:overflow-hidden"',
+    );
+    expect(overviewSource).toContain(
+      'className="shrink-0 rounded-xl bg-card/80 p-2 shadow-sm"',
+    );
+    expect(overviewSource).toContain(
+      'className="rounded-xl bg-card/80 p-2 shadow-sm lg:min-h-0 lg:flex-1 lg:overflow-y-auto"',
+    );
+    expect(overviewSource).toContain(
+      'className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-2xl bg-card/80 shadow-sm"',
+    );
+    expect(overviewSource).toContain(
+      'className="relative h-full min-h-[360px] overflow-hidden rounded-[24px] bg-muted/25"',
+    );
+    expect(overviewSource).toContain(
+      '<div className="overflow-hidden rounded-xl bg-background/70">',
+    );
+    expect(overviewSource).toContain(
+      '<div className="absolute inset-x-0 bottom-0 bg-black/75 p-2.5 text-white">',
+    );
+    expect(overviewSource).toContain(
+      'className="mt-2 grid grid-cols-3 gap-1 rounded-xl bg-background/70 p-1"',
+    );
+    expect(overviewSource).toContain(
+      'className="mt-1.5 rounded-xl bg-primary/5 p-1.5"',
+    );
+    expect(overviewSource).toContain(
+      'className="mt-1.5 grid grid-cols-2 gap-1.5 rounded-xl bg-background/70 p-1.5 text-[11px] text-muted-foreground"',
+    );
+    expect(overviewSource).not.toContain(
+      'className="rounded-xl border border-border bg-card p-2.5 shadow-sm lg:min-h-0 lg:flex-1 lg:overflow-y-auto"',
+    );
+    expect(overviewSource).not.toContain(
+      'className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm"',
+    );
+    expect(overviewSource).not.toContain(
+      'className="relative h-full min-h-[360px] overflow-hidden rounded-[24px] border border-border bg-muted/25"',
+    );
+    expect(overviewSource).not.toContain(
+      '<div className="overflow-hidden rounded-xl border border-border bg-background/70">',
+    );
+    expect(overviewSource).not.toContain("bg-gradient-to-t");
+    expect(overviewSource).not.toContain("to-transparent");
+    expect(overviewSource).not.toContain(
+      'className="mt-2 grid grid-cols-3 gap-1 rounded-xl border border-border bg-background/70 p-1"',
+    );
+    expect(overviewSource).not.toContain(
+      'className="mt-2 rounded-xl border border-primary/15 bg-primary/5 p-2"',
+    );
     expect(overviewSource).toContain("ADMIN_ROUTE_PLANNER_PRESETS");
     expect(overviewSource).toContain("ADMIN_ROUTE_STOP_LIMIT_OPTIONS");
     expect(overviewSource).toContain('data-admin-route-planner-presets="true"');
@@ -1753,7 +1803,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       routeSource.indexOf("createSupabaseServiceRoleClient()"),
     );
     expect(routeSource).toContain('from("restaurant_submissions")');
-    expect(routeSource).toContain('.in("status", ["pending", "partially_approved"])');
+    expect(routeSource).toContain(
+      '.in("status", ["pending", "partially_approved"])',
+    );
     expect(routeSource).toContain('from("reviews")');
     expect(routeSource).toContain('.eq("is_verified", false)');
     expect(routeSource).toContain('{ count: "exact", head: true }');
@@ -1797,6 +1849,20 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
 
     expect(consoleSource).toContain("shouldRenderAdminShell");
     expect(consoleSource).toContain("canLoadAdminConsoleData");
+    expect(consoleSource).toContain(
+      'E2E_ADMIN_SHELL_BYPASS_STORAGE_KEY = "tzudong:e2e-admin-shell-bypass"',
+    );
+    expect(consoleSource).toContain('process.env.NODE_ENV === "production"');
+    expect(consoleSource).toContain(
+      "isLocalE2EAdminShellBypassHost(window.location.hostname)",
+    );
+    expect(consoleSource).toContain("try {");
+    expect(consoleSource).toContain(
+      'window.localStorage.getItem(E2E_ADMIN_SHELL_BYPASS_STORAGE_KEY) === "1"',
+    );
+    expect(consoleSource).toContain("} catch {");
+    expect(consoleSource).toContain("return false;");
+    expect(consoleSource).toContain("hasLocalE2EAdminShellBypass()");
     expect(consoleSource).toContain(
       "useAdminOverviewStats(canLoadAdminConsoleData)",
     );
@@ -1979,6 +2045,12 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     const routeSource = source(
       "app/api/admin/youtube-thumbnail-generator/route.ts",
     );
+    const referenceImageRouteSource = source(
+      "app/api/admin/youtube-thumbnail-generator/reference-image/route.ts",
+    );
+    const chatRouteSource = source(
+      "app/api/admin/youtube-thumbnail-generator/chat/route.ts",
+    );
     const providerSource = source(
       "lib/admin/youtube-thumbnail-generator/providers.ts",
     );
@@ -1988,53 +2060,705 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     const requestSource = source(
       "lib/admin/youtube-thumbnail-generator/request.ts",
     );
+    const historySource = source(
+      "lib/admin/youtube-thumbnail-generator/history.ts",
+    );
+    const backendAgentSource = source(
+      "lib/admin/youtube-thumbnail-generator/backend-agent.ts",
+    );
+    const backendAgentGraphSource = source(
+      "../../backend/thumbnail-agent/src/graph.py",
+    );
+    const backendAgentRunnerSource = source(
+      "../../backend/thumbnail-agent/scripts/run-thumbnail-agent.py",
+    );
+    const backendAgentRequirementsSource = source(
+      "../../backend/thumbnail-agent/requirements.txt",
+    );
 
     expect(consoleSource).toContain('id: "youtube-thumbnail-generator"');
-    expect(consoleSource).toContain("유튜브 썸네일 생성기");
+    expect(consoleSource).toContain('title: "유튜브 썸네일 생성"');
     expect(consoleSource).toContain("AdminYoutubeThumbnailGenerator");
     expect(componentSource).toContain("/api/admin/youtube-thumbnail-generator");
+    expect(componentSource).toContain(
+      'const THUMBNAIL_CHAT_AGENT_STREAM_URL = "/api/admin/youtube-thumbnail-generator/chat";',
+    );
+    expect(componentSource).not.toContain(
+      "/api/admin/youtube-thumbnail-generator/reference-image",
+    );
     expect(componentSource).toContain("Google Nano Banana 2 Pro API");
-    expect(componentSource).toContain("gpt-image-2");
+    expect(componentSource).not.toContain("gpt-image-1.5");
     expect(componentSource).toContain('aria-label="유튜브 썸네일 생성기"');
     expect(componentSource).toContain(
-      "flex h-full min-h-0 flex-col overflow-hidden bg-muted/20 p-4",
+      "flex h-full min-h-0 flex-col overflow-hidden bg-muted/20 p-3",
     );
     expect(componentSource).toContain(
-      "grid h-full min-h-0 grid-cols-1 grid-rows-[minmax(0,0.9fr)_minmax(0,1.1fr)]",
+      "grid h-full min-h-0 grid-cols-1 grid-rows-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-3 overflow-hidden xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] xl:grid-rows-1",
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-chat-right-layout="true"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-generation-input-panel="right-chat"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-canvas-panel="primary-left"',
+    );
+    expect(componentSource).toContain('data-thumbnail-chat-panel="true"');
+    expect(componentSource).toContain('data-thumbnail-chat-header="true"');
+    expect(componentSource).toContain(
+      'data-thumbnail-chat-header-actions="true"',
+    );
+    expect(componentSource).toContain('data-thumbnail-chat-controls="true"');
+    expect(componentSource).toContain('data-thumbnail-chat-canvas-context="true"');
+    expect(componentSource).toContain("data-thumbnail-chat-canvas-context-state={canvasContextState}");
+    expect(componentSource).toContain('data-thumbnail-chat-canvas-context-action="true"');
+    expect(componentSource).toContain('data-thumbnail-chat-canvas-context-summary="true"');
+    expect(componentSource).toContain('data-thumbnail-chat-canvas-context-ask="true"');
+    expect(componentSource).toContain('data-thumbnail-chat-composer="true"');
+    expect(componentSource).toContain('data-thumbnail-chat-live-stream="true"');
+    expect(componentSource).toContain(
+      'data-thumbnail-chat-settings-toggle="true"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-chat-settings-panel="true"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-api-key-settings="session-local"',
+    );
+    expect(componentSource).toContain(
+      "data-thumbnail-api-key-input={setting.id}",
+    );
+    expect(componentSource).toContain('data-thumbnail-api-key-save="true"');
+    expect(componentSource).toContain(
+      'data-thumbnail-chat-message-meta="true"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-chat-message-bubble="true"',
+    );
+    expect(componentSource).toContain(
+      "입력값은 현재 탭 메모리에만 보관되며, 실제 생성 요청에만 일회성으로 전송합니다.",
+    );
+    expect(componentSource).not.toContain(
+      "생성/채팅 요청에는 전송하지 않습니다.",
+    );
+    expect(componentSource).toContain("canUseSessionApiKeyForProvider");
+    expect(componentSource).toContain("appendSessionApiKeyForProvider");
+    expect(componentSource).toContain('THUMBNAIL_SESSION_OPENAI_API_KEY_FIELD = "thumbnailSessionOpenaiApiKey"');
+    expect(componentSource).toContain('THUMBNAIL_SESSION_GEMINI_API_KEY_FIELD = "thumbnailSessionGeminiApiKey"');
+    expect(componentSource).toContain("finalResult.providerId ?? providerId");
+    expect(componentSource).toContain("finalResult.generationMode ?? generationMode");
+    expect(componentSource).toContain('data-thumbnail-chat-topic-state="true"');
+    expect(componentSource).not.toContain(
+      "data-thumbnail-chat-agent-stream-state",
+    );
+    expect(componentSource).not.toContain("data-thumbnail-chat-agent-model");
+    expect(componentSource).not.toContain("data-thumbnail-chat-agent-effort");
+    expect(componentSource).not.toContain(
+      'data-thumbnail-live-canvas-text-summary="true"',
+    );
+    expect(componentSource).toContain("handleChatDraftChange");
+    expect(componentSource).toContain("handleThumbnailChatSubmit");
+    expect(componentSource).toContain("chatComposerImeRef");
+    expect(componentSource).toContain("handleThumbnailChatCompositionStart");
+    expect(componentSource).toContain("handleThumbnailChatCompositionEnd");
+    expect(componentSource).toContain("isThumbnailChatImeComposing");
+    expect(componentSource).toContain("event.nativeEvent.isComposing");
+    expect(componentSource).toContain('event.key === "Process"');
+    expect(componentSource).toContain("onCompositionStart={handleThumbnailChatCompositionStart}");
+    expect(componentSource).toContain("onCompositionEnd={handleThumbnailChatCompositionEnd}");
+    expect(componentSource).toContain('aria-describedby="thumbnail-chat-keyboard-hint"');
+    expect(componentSource).toContain('<p id="thumbnail-chat-keyboard-hint" className="sr-only">');
+    expect(componentSource).toContain('id="thumbnail-chat-keyboard-hint"');
+    expect(componentSource).toContain('data-thumbnail-chat-ime-safe="true"');
+    expect(componentSource).toContain("한글 조합 중 Enter는 전송하지 않고, 조합이 끝난 뒤 Enter로 전송합니다.");
+    expect(componentSource).toContain("lastCanvasActionLabel");
+    expect(componentSource).toContain("getCanvasLayerDisplayName");
+    expect(componentSource).toContain("getCanvasContextPrompt");
+    expect(componentSource).toContain("useCanvasContextInChat");
+    expect(componentSource).toContain("markCanvasAction");
+    expect(componentSource).toContain("setChatDraft(canvasContextPrompt)");
+    expect(componentSource).not.toContain("THUMBNAIL_CHAT_COMMANDS");
+    expect(componentSource).toContain("resolveThumbnailChatLocalCommand");
+    expect(componentSource).toContain("type ThumbnailChatLocalCommandId =");
+    expect(componentSource).toContain('"export-png"');
+    expect(componentSource).toContain('"real-data-status"');
+    expect(componentSource).toContain('"guide-hide"');
+    expect(componentSource).toContain('"guide-show"');
+    expect(componentSource).toContain('"undo"');
+    expect(componentSource).toContain("resolveThumbnailChatEditorToolCommand");
+    expect(componentSource).toContain("isThumbnailChatRealDataStatusPrompt");
+    expect(componentSource).toContain("isCanvasContextChatPrompt");
+    expect(componentSource).toContain("hasThumbnailGenerationIntent");
+    expect(componentSource).toContain("isThumbnailChatStructuredEditPrompt");
+    expect(componentSource).toContain("isThumbnailChatReplacementPrompt");
+    expect(componentSource).toContain("isThumbnailChatOptimizationPrompt");
+    expect(componentSource).toContain("restorePendingChatPreviewSnapshotForStructuredEdit");
+    expect(componentSource).toContain("restoreTextEditorHistorySnapshot(snapshot)");
+    expect(componentSource).toContain("pendingTextLayerUndoSnapshotRef.current = null");
+    expect(componentSource).toContain("if (isThumbnailChatStructuredEditPrompt(normalized)) return null;");
+    expect(componentSource).toContain("if (!selectedLayerPrompt && !structuredEditPrompt) applyChatRequirementToCanvas(submittedRequirement);");
+    expect(componentSource).toContain("CHAT_GENERATION_INTENT_PATTERN");
+    expect(componentSource).toContain("THUMBNAIL_CHAT_LOCAL_COMMAND_OVERMATCH_FIXTURES");
+    expect(componentSource).toContain("생성 과정 확인해줘");
+    expect(componentSource).toContain("생성\\s*과정");
+    expect(componentSource).not.toContain("프로세스|과정|모델");
+    expect(componentSource).not.toContain("상태|과정|출처");
+    expect(componentSource).toContain("가이드 포함해서 썸네일 생성해줘");
+    expect(componentSource).toContain("메인 문구 크게 보이게 생성해줘");
+    expect(componentSource).toContain("PNG 느낌으로 저장하고 싶은 썸네일 만들어줘");
+    expect(componentSource).toContain('if (isThumbnailChatRealDataStatusPrompt(normalized)) return "real-data-status";');
+    expect(componentSource).toContain('return "export-png";');
+    expect(componentSource).toContain('return "guide-hide";');
+    expect(componentSource).toContain('return "guide-show";');
+    expect(componentSource).toContain('return "bigger";');
+    expect(componentSource).toContain('return "fill-yellow";');
+    expect(componentSource).toContain('return "bring-front";');
+    expect(componentSource).toContain("handleThumbnailChatCommand");
+    expect(componentSource).toContain("appendThumbnailChatCommand");
+    expect(componentSource).toContain("chatAbortControllerRef");
+    expect(componentSource).toContain("generationAbortControllerRef");
+    expect(componentSource).toContain("abortThumbnailChatWork");
+    expect(componentSource).toContain("abortThumbnailGeneration");
+    expect(componentSource).toContain("getAbortNotice");
+    expect(componentSource).toContain("getThumbnailRealDataStatusSummary");
+    expect(componentSource).toContain("getThumbnailResultSourceLabel");
+    expect(componentSource).toContain("Mock provider: 제거됨");
+    expect(componentSource).toContain("현재 로드된 상태 기준");
+    expect(componentSource).toContain("formatThumbnailGenerationCompletionSummary");
+    expect(componentSource).toContain("히스토리 새로고침 요청됨");
+    expect(componentSource).toContain("signal: controller.signal");
+    expect(componentSource).toContain("extractThumbnailChatSseEvents");
+    expect(componentSource).toContain("isThumbnailChatAgentResult");
+    expect(componentSource).toContain("runThumbnailGeneration");
+    expect(componentSource).toContain("finalResult?.shouldGenerate");
+    expect(componentSource).toContain("Codex CLI gpt-5.5 high 스트림 작업 중");
+    expect(componentSource).toContain("applyChatRequirementToCanvas");
+    expect(componentSource).toContain("deriveChatHeadline");
+    expect(componentSource).not.toContain(
+      "실제 이미지는 채팅창 아래 생성 버튼으로 실행됩니다.",
+    );
+    expect(componentSource).not.toContain(
+      'data-thumbnail-generation-settings="true"',
+    );
+    expect(componentSource).not.toContain(
+      'data-thumbnail-live-canvas-brief="true"',
+    );
+    expect(componentSource).not.toContain(
+      "xl:grid-cols-[minmax(340px,420px)_minmax(0,1fr)]",
     );
     expect(componentSource).toContain("flex min-h-0 flex-col overflow-hidden");
     expect(componentSource).toContain(
-      "min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain",
+      "flex min-h-0 flex-1 flex-col overflow-hidden p-3 pt-0",
+    );
+    expect(componentSource).toContain(
+      "flex min-h-0 flex-col overflow-hidden border-0 bg-card/80 shadow-none",
+    );
+    expect(componentSource).not.toContain(
+      "space-y-1.5 rounded-xl bg-muted/25 p-2.5",
+    );
+    expect(componentSource).not.toContain(
+      "grid grid-cols-1 gap-2 rounded-lg bg-background/80 p-2",
+    );
+    expect(componentSource).not.toContain(
+      "space-y-2 rounded-xl border border-border bg-muted/20 p-3",
+    );
+    expect(componentSource).not.toContain(
+      "rounded-xl border bg-background p-3",
+    );
+    expect(componentSource).not.toContain(
+      "overflow-hidden rounded-2xl border border-border bg-black",
     );
     expect(componentSource).not.toContain(
       "flex min-h-full flex-col gap-4 overflow-y-auto bg-muted/20 p-4",
     );
+    expect(componentSource).not.toContain(
+      "flex h-full min-h-0 flex-col overflow-hidden bg-muted/20 p-4",
+    );
+    expect(componentSource).not.toContain(
+      "min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain",
+    );
     expect(componentSource).not.toContain("지난 먹방/여행 썸네일 문법");
     expect(componentSource).not.toContain("고채도 먹방 콜라주");
-    expect(componentSource).not.toContain("providerStatus");
+    expect(componentSource).toContain(
+      'fetch("/api/admin/youtube-thumbnail-generator", { cache: "no-store" })',
+    );
+    expect(componentSource).not.toContain("로컬 실행 준비 상태");
+    expect(componentSource).not.toContain("상태 새로고침");
+    expect(componentSource).not.toContain("선택한 모델이 현재 비가용입니다");
+    expect(componentSource).not.toContain("환경변수를 준비하거나 Mock");
+    expect(componentSource).not.toContain("현재 사용할 수 없습니다. Mock");
+    expect(componentSource).not.toContain(" · 비가용");
+    expect(componentSource).not.toContain("providerNotice");
+    expect(componentSource).not.toContain("setProviderNotice");
+    expect(componentSource).not.toContain(
+      'data-thumbnail-provider-status="true"',
+    );
+    expect(componentSource).not.toContain("data-thumbnail-provider-readiness");
+    expect(componentSource).not.toContain(
+      'data-thumbnail-ready-now-path="mock"',
+    );
+    expect(componentSource).toContain("const acknowledgedSafety = true;");
+    expect(componentSource).not.toContain(
+      "const [acknowledgedSafety, setAcknowledgedSafety] = useState(false)",
+    );
+    expect(componentSource).not.toContain('data-thumbnail-safety-group="true"');
+    expect(componentSource).not.toContain(
+      'data-thumbnail-safety-acknowledgement="true"',
+    );
+    expect(componentSource).not.toContain(
+      'data-thumbnail-generation-actions="true"',
+    );
+    expect(componentSource).not.toContain(
+      'data-thumbnail-chat-command-row="true"',
+    );
+    expect(componentSource).not.toContain("data-thumbnail-chat-command=");
+    expect(componentSource).toContain(
+      'data-thumbnail-chat-cancel={isChatAgentStreaming ? "true" : undefined}',
+    );
+    expect(componentSource).not.toContain(
+      'data-thumbnail-generation-cancel="true"',
+    );
+    expect(componentSource).toContain("createThumbnailChatRunId");
+    expect(componentSource).toContain(
+      "const chatRunId = createThumbnailChatRunId(nextAssistantMessageId);",
+    );
+    expect(componentSource).toContain("chatRunId,");
+    expect(componentSource).toContain("isSelectedLayerChatPrompt");
+    expect(componentSource).toContain("activeLayerId: activeLayerIdRef.current");
+    expect(componentSource).toContain("currentTextLayers: textLayersRef.current");
+    expect(componentSource).toContain("textLayerPatches");
+    expect(componentSource).toContain("applyThumbnailChatTextLayerPatches");
+    expect(backendAgentSource).toContain("parseThumbnailChatTextReplacementIntent");
+    expect(backendAgentSource).toContain("resolveThumbnailChatReplacementTarget");
+    expect(backendAgentSource).toContain("createCanvasOptimizationTextLayerPatches");
+    expect(backendAgentSource).toContain("CHAT_CANVAS_OPTIMIZATION_PATTERN");
+    expect(backendAgentSource).toContain("대상 문구를 찾지 못해 캔버스 문구를 임의로 바꾸지 않았습니다.");
+    expect(componentSource).not.toContain(
+      'data-thumbnail-chat-attachments="true"',
+    );
+    expect(componentSource).not.toContain(
+      'id="thumbnail-reference-image-input"',
+    );
+    expect(componentSource).not.toContain(
+      'data-thumbnail-reference-file-input="true"',
+    );
+    expect(componentSource).not.toContain(
+      'data-thumbnail-reference-file-chip="true"',
+    );
+    expect(componentSource).not.toContain(
+      'data-thumbnail-reference-file-remove="true"',
+    );
+    expect(componentSource).not.toContain("removeReferenceImage");
+    expect(componentSource).toContain(
+      'id="thumbnail-reference-image-chat-input"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-chat-reference-file-input="true"',
+    );
+    expect(componentSource).toContain("referenceFileInputRef.current?.click()");
+    expect(componentSource).toContain("참고 이미지 추가");
+    expect(componentSource).toContain("참고 이미지 파일 선택창을 열었습니다");
+    expect(componentSource).toContain(
+      'const THUMBNAIL_HISTORY_API_URL = "/api/admin/youtube-thumbnail-generator/history";',
+    );
+    expect(componentSource).toContain(
+      'const THUMBNAIL_HISTORY_IMAGE_BASE_URL = "/qa-history/youtube-thumbnail-generator";',
+    );
+    expect(componentSource).not.toContain("THUMBNAIL_QA_HISTORY_URL");
+    expect(componentSource).not.toContain("data-thumbnail-qa-history-link=");
+    expect(componentSource).not.toContain("window.open(THUMBNAIL");
+    expect(componentSource).toContain('data-thumbnail-history-panel="true"');
+    expect(componentSource).toContain("data-thumbnail-history-load-run=");
+    expect(componentSource).toContain("생성 히스토리");
+    expect(componentSource).toContain(
+      'data-thumbnail-generation-skeleton="true"',
+    );
+    expect(componentSource).toContain("실제 썸네일 이미지를 생성하는 중입니다");
+    expect(componentSource).not.toContain("안전/권리 확인");
+    expect(componentSource).not.toContain(
+      "onCheckedChange={(checked) => setAcknowledgedSafety(checked === true)}",
+    );
+    expect(componentSource).not.toContain(
+      "이미지 권리와 안전 사용 확인을 체크하세요.",
+    );
+    expect(componentSource).not.toContain(
+      "참고 이미지 권리, 실제 인물/브랜드/개인 식별 정보 사용 권한과 안전한 썸네일 사용 조건을 확인했습니다.",
+    );
+    expect(componentSource).not.toContain(
+      "Enter는 채팅 반영, Shift+Enter는 줄바꿈입니다. 실제 이미지는 채팅창 아래 생성 버튼으로 실행됩니다.",
+    );
+    expect(componentSource).toContain("acknowledgedSafety,");
+    expect(componentSource).not.toContain("acknowledgedSafety: true,");
+    expect(componentSource).toContain("thumbnailErrorActions");
+    expect(componentSource).toContain("getThumbnailErrorAction");
+    expect(componentSource).toContain(
+      'import { toast } from "@/hooks/use-toast"',
+    );
+    expect(componentSource).not.toContain('title: "모델 준비 필요"');
+    expect(componentSource).not.toContain('title: "안전 미리보기로 전환"');
+    expect(componentSource).toContain('title: "실제 이미지 모델 준비 필요"');
+    expect(componentSource).toContain('title: "썸네일 생성 실패"');
+    expect(componentSource).not.toContain('data-thumbnail-error-action="true"');
+    expect(componentSource).not.toContain(
+      'data-thumbnail-preflight-issues="true"',
+    );
+    expect(componentSource).not.toContain(
+      'data-thumbnail-file-preflight="true"',
+    );
+    expect(componentSource).not.toContain(
+      'data-thumbnail-reference-url-import="true"',
+    );
+    expect(componentSource).not.toContain('id="thumbnail-reference-image-url"');
+    expect(componentSource).not.toContain("URL 추가");
+    expect(componentSource).toContain("providerReadinessKey");
+    expect(componentSource).toContain("selectedProviderAvailability");
+    expect(componentSource).not.toContain('title: "모델 실행 불가"');
+    expect(componentSource).not.toContain('setProviderId("mock")');
+    expect(componentSource).not.toContain('providerId !== "mock"');
+    expect(componentSource).toContain(
+      "선택한 실제 이미지 모델을 사용할 수 없습니다.",
+    );
+    expect(componentSource).toContain("OpenAI GPT Image 2 API (정확)");
+    expect(componentSource).toContain("Codex built-in imagegen 로컬 (불투명)");
+    expect(componentSource).toContain(
+      'const [providerId, setProviderId] = useState<ProviderId>("local-codex")',
+    );
+    expect(componentSource).not.toContain(
+      'data-thumbnail-terminal-call-panel="true"',
+    );
+    expect(componentSource).not.toContain("터미널 호출 확인");
+    expect(componentSource).not.toContain("localCodexTerminalCommand");
+    expect(componentSource).not.toContain("terminalCall");
+    expect(componentSource).not.toContain(
+      "THUMBNAIL_LOCAL_CODEX_COMMAND wrapper",
+    );
     expect(componentSource).not.toContain(
       '<h2 className="text-2xl font-black tracking-tight">유튜브 썸네일 생성기</h2>',
     );
-    expect(componentSource).toContain('data-thumbnail-brief-preset="true"');
+    expect(componentSource).not.toContain("QUICK_START_PRESETS");
+    expect(componentSource).not.toContain("applyQuickStartPreset");
+    expect(componentSource).not.toContain(
+      'data-thumbnail-onboarding-quick-start="true"',
+    );
+    expect(componentSource).not.toContain("빠른 시작");
+    expect(componentSource).not.toContain(
+      "처음이면 프리셋을 고른 뒤 문구만 바꾸고 생성하세요.",
+    );
+    expect(componentSource).toContain("썸네일 생성");
+    expect(componentSource).not.toContain("썸네일 초안 생성");
     expect(componentSource).toContain(
-      'data-thumbnail-reference-role-editor="true"',
+      'const [generationMode, setGenerationMode] = useState<GenerationMode>("backend_agent")',
     );
     expect(componentSource).toContain(
+      "generationMode: submittedGenerationMode",
+    );
+    expect(componentSource).not.toContain("generationModeOptions");
+    expect(componentSource).not.toContain(
+      'data-thumbnail-backend-agent-mode="true"',
+    );
+    expect(componentSource).not.toContain(
+      'data-thumbnail-backend-agent-status="true"',
+    );
+    expect(componentSource).not.toContain("LangGraph agent");
+    expect(componentSource).not.toContain("selectedGenerationMode.help");
+    expect(componentSource).not.toContain(
+      'data-thumbnail-backend-agent-result="true"',
+    );
+    expect(componentSource).not.toContain(
+      'data-thumbnail-generation-warnings="true"',
+    );
+    expect(componentSource).not.toContain(
+      'data-thumbnail-generation-trace="true"',
+    );
+    expect(componentSource).not.toContain(
+      "data-thumbnail-provider-provenance={currentModelProvenance}",
+    );
+    expect(componentSource).not.toContain(
+      'data-thumbnail-review-drawer="true"',
+    );
+    expect(componentSource).not.toContain(
+      'data-thumbnail-agent-brief-summary="true"',
+    );
+    expect(componentSource).not.toContain(
+      'data-thumbnail-generation-warning-summary="true"',
+    );
+    expect(componentSource).not.toContain(
+      'type ModelProvenance = NonNullable<GenerationResult["baseImage"]["modelProvenance"]>',
+    );
+    expect(componentSource).not.toContain(
+      "const modelProvenanceLabels: Record<ModelProvenance, string> = {",
+    );
+    expect(componentSource).not.toContain(
+      'const currentModelProvenance: ModelProvenance = result?.baseImage.modelProvenance ?? "unknown"',
+    );
+    expect(componentSource).not.toContain(
+      'const resultGenerationMode = result?.generationMode ?? (result?.backendAgent ? "backend_agent" : "direct_provider")',
+    );
+    expect(componentSource).not.toContain(
+      'resultGenerationMode === "backend_agent"',
+    );
+    expect(componentSource).not.toContain(
+      "const [isReviewDrawerOpen, setIsReviewDrawerOpen] = useState(true)",
+    );
+    expect(componentSource).not.toContain(
+      "onToggle={(event) => setIsReviewDrawerOpen(event.currentTarget.open)}",
+    );
+    expect(componentSource).not.toContain("생성 리뷰");
+    expect(componentSource).not.toContain("Agent 기록 없음");
+    expect(componentSource).not.toContain("현재 표시할 경고가 없습니다.");
+    expect(componentSource).toContain("generationMode?: GenerationMode;");
+    expect(componentSource).toContain('generationMode: "direct_provider"');
+    expect(componentSource).toContain(
+      "const submittedGenerationMode = overrides.generationMode ?? generationMode;",
+    );
+    expect(componentSource).toContain(
+      "const nextResult = { ...(payload as GenerationResult), generationMode: submittedGenerationMode };",
+    );
+    expect(componentSource).toContain("setResult(nextResult);");
+    expect(componentSource).not.toContain(
+      'generationMode === "backend_agent"\n      ? "백엔드 에이전트 요청"',
+    );
+    const toolbarIndex = componentSource.indexOf(
+      'data-thumbnail-editor-toolbar="true"',
+    );
+    expect(toolbarIndex).toBeGreaterThan(
+      componentSource.indexOf('data-thumbnail-keyboard-canvas="true"'),
+    );
+    expect(componentSource).not.toContain(
+      "max-h-24 overflow-y-auto rounded-xl bg-muted/25",
+    );
+    expect(componentSource).not.toContain(
+      "max-h-16 overflow-y-auto rounded-xl bg-amber-500/10",
+    );
+    expect(componentSource).not.toContain("warnings.slice(0, 4)");
+    expect(componentSource).toContain(
+      'const [generationMode, setGenerationMode] = useState<GenerationMode>("backend_agent")',
+    );
+    expect(requestSource).toContain(
+      "function parseGenerationMode(value: unknown): ThumbnailGenerationMode",
+    );
+    expect(requestSource).toContain(
+      "if (isThumbnailGenerationMode(value)) return value;",
+    );
+    expect(requestSource).toContain("'invalid_generation_mode'");
+    expect(requestSource).toContain("parseThumbnailChatAgentRequest");
+    expect(requestSource).toContain("THUMBNAIL_CHAT_MESSAGE_MAX_LENGTH");
+    expect(requestSource).toContain("THUMBNAIL_CHAT_RUN_ID_PATTERN");
+    expect(requestSource).toContain("chatRunId");
+    expect(requestSource).toContain("activeLayerId");
+    expect(requestSource).toContain("editingLayerId");
+    expect(requestSource).toContain("currentTextLayers");
+    expect(requestSource).toContain("'thumbnail_chat_payload_invalid'");
+    expect(requestSource).toContain("'thumbnail_chat_message_required'");
+    expect(requestSource).toContain("'thumbnail_chat_message_too_long'");
+    expect(requestSource).not.toContain(
+      "return isThumbnailGenerationMode(value) ? value : 'direct_provider'",
+    );
+    expect(componentSource).not.toContain('data-thumbnail-brief-preset="true"');
+    expect(componentSource).not.toContain(
+      'data-thumbnail-reference-role-editor="true"',
+    );
+    expect(componentSource).not.toContain(
       'data-thumbnail-brief-quality-panel="true"',
     );
     expect(componentSource).toContain("referenceImageRoles");
-    expect(componentSource).toContain('["zIndex", "레이어"]');
     expect(componentSource).toContain("fontFamily");
     expect(componentSource).toContain("strokeWidth");
-    expect(componentSource).toContain("FONT_PRESETS");
-    expect(componentSource).toContain("STROKE_PRESETS");
-    expect(componentSource).toContain("SHADOW_PRESETS");
-    expect(componentSource).toContain('data-thumbnail-font-presets="true"');
-    expect(componentSource).toContain('data-thumbnail-stroke-presets="true"');
-    expect(componentSource).toContain('data-thumbnail-shadow-presets="true"');
+    expect(componentSource).toContain("THUMBNAIL_EDITOR_TOOLS");
+    expect(componentSource).toContain("applyThumbnailEditorTool");
+    expect(componentSource).toContain("duplicateActiveTextLayer");
+    expect(componentSource).toContain('"edit-text"');
+    expect(componentSource).toContain('"delete-text"');
+    expect(componentSource).toContain('"rotate-left"');
+    expect(componentSource).toContain('"rotate-right"');
+    expect(componentSource).toContain('"align-left"');
+    expect(componentSource).toContain('"align-center"');
+    expect(componentSource).toContain('"align-right"');
+    expect(componentSource).toContain('"fill-yellow"');
+    expect(componentSource).toContain('"stroke-thick"');
+    expect(componentSource).toContain('"shadow-none"');
+    expect(componentSource).toContain('"font-impact"');
+    expect(componentSource).toContain("startCanvasTextInlineEditing(layer.id)");
+    expect(componentSource).toContain("deleteTextLayer(layer.id)");
+    expect(componentSource).toContain('{ align: "center" }');
+    expect(componentSource).toContain('{ fill: "#fff200" }');
+    expect(componentSource).toContain('{ shadow: "none" }');
+    expect(componentSource).toContain(
+      'fontFamily: "Impact, Pretendard, system-ui, sans-serif"',
+    );
+    expect(componentSource).toContain('data-thumbnail-editor-toolbar="true"');
+    expect(componentSource).toContain(
+      'data-thumbnail-tradingview-tool-palette="true"',
+    );
+    expect(componentSource).toContain('data-thumbnail-canvas-tool-row="true"');
+    expect(componentSource).toContain(
+      "grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] gap-3 overflow-hidden p-3 pt-0",
+    );
+    expect(componentSource).toContain(
+      "relative flex min-h-0 items-center justify-center overflow-hidden rounded-2xl bg-black",
+    );
+    expect(componentSource).toContain(
+      "aspect-video h-full max-h-full max-w-full w-auto",
+    );
+    expect(componentSource).toContain(
+      'className="overflow-hidden rounded-xl bg-muted/30 p-1" data-thumbnail-editor-toolbar="true"',
+    );
+    expect(componentSource).toContain(
+      'className="grid w-full grid-cols-[repeat(auto-fit,minmax(5.5rem,1fr))] gap-1.5"',
+    );
+    expect(componentSource).not.toContain(
+      'className="overflow-visible" data-thumbnail-editor-toolbar="true"',
+    );
+    expect(componentSource).not.toContain(
+      'className="flex flex-wrap content-start gap-1.5"',
+    );
+    expect(componentSource).not.toContain("-mx-1 overflow-x-auto px-1");
+    expect(componentSource).not.toContain(
+      "flex gap-1.5 whitespace-nowrap pb-1",
+    );
+    expect(componentSource).toContain('variant="ghost"');
+    expect(componentSource).toContain(
+      "h-8 w-full min-w-0 gap-1 rounded-lg bg-background/80 px-1.5 text-[11px] leading-none shadow-sm hover:bg-background",
+    );
+    expect(componentSource).toContain(
+      "[&_span]:min-w-0 [&_span]:truncate [&_svg]:h-3.5 [&_svg]:w-3.5",
+    );
+    expect(componentSource).not.toContain(
+      "space-y-2 rounded-xl bg-background/85 p-2 shadow-sm ring-1 ring-border",
+    );
+    expect(componentSource).not.toContain(
+      'data-thumbnail-active-layer-badge="true"',
+    );
+    expect(componentSource).not.toContain('data-thumbnail-layer-list="true"');
+    expect(componentSource).not.toContain(
+      "data-thumbnail-text-layer={layer.id}",
+    );
+    expect(componentSource).not.toContain(
+      'data-thumbnail-active-layer={activeLayer?.id === layer.id ? "true" : "false"}',
+    );
+    expect(componentSource).not.toContain(
+      'data-thumbnail-active-text-inline-editor="true"',
+    );
+    expect(componentSource).not.toContain(
+      'data-thumbnail-inline-font-family="true"',
+    );
+    expect(componentSource).not.toContain(
+      'data-thumbnail-inline-font-size="true"',
+    );
+    expect(componentSource).not.toContain(
+      'data-thumbnail-inline-z-index="true"',
+    );
+    expect(componentSource).not.toContain("선택 문구 바로 편집");
+    expect(
+      componentSource.indexOf('data-thumbnail-editor-toolbar="true"'),
+    ).toBeGreaterThan(
+      componentSource.indexOf('data-thumbnail-keyboard-canvas="true"'),
+    );
     expect(componentSource).toContain('data-thumbnail-add-text-layer="true"');
     expect(componentSource).toContain('data-thumbnail-safe-area-toggle="true"');
     expect(componentSource).toContain('data-thumbnail-draggable-canvas="true"');
+    expect(componentSource).toContain('data-thumbnail-keyboard-canvas="true"');
+    expect(componentSource).toContain("handleCanvasKeyDown");
+    expect(componentSource).toContain("handleCanvasDoubleClick");
+    expect(componentSource).toContain("startCanvasTextInlineEditing");
+    expect(componentSource).toContain("editingLayerId");
+    expect(componentSource).toContain("loadedBaseImageRef");
+    expect(componentSource).toContain("drawCanvasFrameRef");
+    expect(componentSource).toContain("window.requestAnimationFrame");
+    expect(componentSource).toContain("handleInlineTextEditorBlur");
+    expect(componentSource).toContain(
+      "if (textTransformStateRef.current) return;",
+    );
+    expect(componentSource).toContain("type TextEditorHistorySnapshot");
+    expect(componentSource).toContain("textLayerUndoStackRef");
+    expect(componentSource).toContain("pendingTextLayerUndoSnapshotRef");
+    expect(componentSource).toContain("TEXT_LAYER_UNDO_LIMIT");
+    expect(componentSource).toContain("undoTextLayerChange");
+    expect(componentSource).toContain("isUndoKeyboardShortcut");
+    expect(componentSource).toContain("handleThumbnailEditorShellKeyDown");
+    expect(componentSource).toContain(
+      "onKeyDown={handleThumbnailEditorShellKeyDown}",
+    );
+    expect(componentSource).toContain("commitPendingTextLayerUndoSnapshot");
+    expect(componentSource).toContain("beginTextLayerUndoStep");
+    expect(componentSource).toContain("ensurePendingTextLayerUndoSnapshot");
+    expect(componentSource).toContain(
+      'updateTextLayer(editingLayer.id, { content: nextContent }, { history: "none" })',
+    );
+    expect(componentSource).toContain("updateTextLayer(dragState.layerId, {");
+    expect(componentSource).toContain('{ history: "none" });');
+    expect(componentSource).toContain(
+      'data-thumbnail-canvas-inline-text-editor="true"',
+    );
+    expect(componentSource).toContain("contentEditable");
+    expect(componentSource).toContain("suppressContentEditableWarning");
+    expect(componentSource).toContain("inlineTextEditorRef");
+    expect(componentSource).toContain(
+      "if (layer.id === editingLayerId) return;",
+    );
+    expect(componentSource).toContain("normalizeInlineEditableText");
+    expect(componentSource).toContain("aria-multiline={false}");
+    expect(componentSource).toContain("whitespace-nowrap");
+    expect(componentSource).toContain("inline-block w-max max-w-none");
+    expect(componentSource).toContain('width: "max-content"');
+    expect(componentSource).toContain('maxWidth: "none"');
+    expect(componentSource).toContain(
+      'transformOrigin: `${editingLayer.align === "center" ? "center" : editingLayer.align} center`',
+    );
+    expect(componentSource).toContain("type TextTransformState");
+    expect(componentSource).toContain("textTransformStateRef");
+    expect(componentSource).toContain("handleTextTransformPointerDown");
+    expect(componentSource).toContain("handleTextTransformPointerMove");
+    expect(componentSource).toContain("handleTextTransformPointerUp");
+    expect(componentSource).toContain(
+      "clampTextLayerFontSize(transformState.startFontSize *",
+    );
+    expect(componentSource).toContain(
+      "normalizeCanvasRotation(transformState.startRotation",
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-canvas-text-transform-frame="true"',
+    );
+    expect(componentSource).toContain(
+      "data-thumbnail-text-resize-handle={handleId}",
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-text-rotate-handle="true"',
+    );
+    expect(componentSource).toContain('aria-label="문구 크기 조절"');
+    expect(componentSource).toContain('aria-label="문구 회전"');
+    expect(componentSource).not.toContain(
+      "Math.max(editingLayer.content.length, 6) * editingLayer.fontSize",
+    );
+    expect(componentSource).toContain('whiteSpace: "nowrap"');
+    expect(componentSource).not.toContain('whiteSpace: "pre-wrap"');
+    expect(componentSource).toContain("TEXT_LAYER_RENDER_MAX_WIDTH");
+    expect(componentSource).toContain("getNoWrapFittedTextMetrics");
+    expect(componentSource).toContain("drawNoWrapFittedText");
+    expect(componentSource).toContain('text.replace(/\\s+/g, " ").trim()');
+    expect(componentSource).not.toContain("drawWrappedText");
+    expect(componentSource).not.toContain("text.split(/\\s+/)");
+    expect(componentSource).not.toContain(
+      "<input\n                  autoFocus",
+    );
+    expect(componentSource).toContain(
+      "onDoubleClick={handleCanvasDoubleClick}",
+    );
+    expect(componentSource).toContain('aria-label="캔버스 위 문구 바로 수정"');
+    expect(componentSource).toContain("[container-type:inline-size]");
+    expect(componentSource).toContain("bg-transparent");
+    expect(componentSource).toContain("WebkitTextStroke");
+    expect(componentSource).toContain("moveActiveTextLayer");
+    expect(componentSource).toContain("CANVAS_KEYBOARD_FAST_MOVE_STEP");
+    expect(componentSource).toContain("tabIndex={0}");
+    expect(componentSource).toContain("onKeyDown={handleCanvasKeyDown}");
+    expect(componentSource).not.toContain(
+      "data-thumbnail-canvas-keyboard-help",
+    );
+    expect(componentSource).not.toContain(
+      'aria-describedby="thumbnail-canvas-keyboard-help"',
+    );
     expect(componentSource).toContain(
       'data-thumbnail-safe-area-guide={showSafeAreaGuide ? "visible" : "hidden"}',
     );
@@ -2044,8 +2768,59 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(componentSource).toContain(
       "onPointerMove={handleCanvasPointerMove}",
     );
+    expect(componentSource).toContain("createInitialThumbnailResult");
+    expect(componentSource).not.toContain("data:image/svg+xml;charset=utf-8");
+    expect(componentSource).toContain("LOCAL_CODEX_THUMBNAIL_EXAMPLE_URL");
+    expect(componentSource).toContain(
+      "/images/admin/youtube-thumbnail-local-codex-example.png",
+    );
+    expect(componentSource).toContain("THUMBNAIL_HISTORY_API_URL");
+    expect(componentSource).toContain("findLatestActualHistoryRun");
+    expect(componentSource).toContain("createThumbnailResultFromHistoryRun");
+    expect(componentSource).toContain("canReplacePreviewWithHistoryResult");
+    expect(componentSource).toContain("loadThumbnailHistory");
+    expect(componentSource).toContain("data-thumbnail-history-preview=");
+    expect(componentSource).toContain("isProviderId(run.providerId)");
+    expect(componentSource).not.toContain("mockUsed");
+    expect(historySource).toContain("value.mockUsed === true");
+    expect(historySource).not.toContain("mockUsed?: false");
+    expect(historySource).not.toContain("mockUsed: false");
+    expect(historySource).not.toContain("local_codex_fixture");
+    expect(componentSource).toContain('providerId: "local-codex"');
+    expect(componentSource).toContain('model: "requested:gpt-image-2"');
+    expect(componentSource).toContain('modelProvenance: "requested-label"');
+    expect(componentSource).toContain("backend model 확정 증거가 아닙니다");
+    expect(componentSource).toContain('data-thumbnail-initial-preview="true"');
+    expect(componentSource).not.toContain("Prompt safety:");
+    expect(componentSource).not.toContain(
+      "생성 정보: 초기 예시는 바로 편집할 수 있습니다.",
+    );
+    expect(componentSource).not.toContain("Model: {result.baseImage.model}");
+    expect(componentSource).not.toContain("생성 프롬프트 보기");
     expect(componentSource).toContain("handleExportPng");
-    expect(componentSource).toContain('canvas.toDataURL("image/png")');
+    expect(componentSource).toContain("await handleExportPng();");
+    expect(componentSource).toContain("setShowSafeAreaGuide(nextVisible)");
+    expect(componentSource).toContain("undoTextLayerChange();");
+    expect(componentSource).toContain("applyThumbnailEditorTool(commandId)");
+    expect(componentSource).toContain("ThumbnailExportPresetId");
+    expect(componentSource).toContain("thumbnailExportPresets");
+    expect(componentSource).toContain('"quick-1280x720"');
+    expect(componentSource).toContain('"high-3840x2160"');
+    expect(componentSource).toContain("HIGH_EXPORT_SCALE = 3");
+    expect(componentSource).toContain('data-thumbnail-export-preset="true"');
+    expect(componentSource).toContain('data-thumbnail-export-metadata="true"');
+    expect(componentSource).toContain("loadThumbnailImage");
+    expect(componentSource).toContain("exportCanvas.width = preset.width");
+    expect(componentSource).toContain("exportCanvas.height = preset.height");
+    expect(componentSource).toContain("context.scale(scale, scale)");
+    expect(componentSource).toContain(
+      "drawNoWrapFittedText(context, layer.content, 0, 0, TEXT_LAYER_RENDER_MAX_WIDTH, layer);",
+    );
+    expect(componentSource).toContain(
+      "tzudong-youtube-thumbnail-${preset.fileSuffix}.png",
+    );
+    expect(componentSource).toContain('exportCanvas.toDataURL("image/png")');
+    expect(componentSource).not.toContain("createLinearGradient");
     expect(routeSource).toContain("export const runtime = 'nodejs'");
     expect(routeSource).toContain("export const dynamic = 'force-dynamic'");
     expect(routeSource).toContain("await requireAdmin()");
@@ -2059,17 +2834,143 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       postSource.indexOf("generateYoutubeThumbnail"),
     );
     expect(routeSource).toContain("getContentLengthRejection");
+    expect(routeSource).toContain("generateYoutubeThumbnailWithBackendAgent");
+    expect(routeSource).toContain("getThumbnailBackendAgentStatus");
+    expect(routeSource).toContain("payload.generationMode === 'backend_agent'");
+    expect(routeSource).toContain(
+      "backendAgent: getThumbnailBackendAgentStatus(process.env)",
+    );
     expect(routeSource).toContain("getMultipartContentTypeRejection");
     expect(routeSource).toContain("'Cache-Control': 'no-store'");
-    expect(providerSource).toContain("gpt-image-1.5");
+    expect(routeSource).toContain("randomUUID");
+    expect(routeSource).toContain(
+      "const generationRunId = `thumbnail-generation-${randomUUID()}`;",
+    );
+    expect(routeSource).toContain("signal: request.signal");
+    expect(routeSource).toContain("runId: generationRunId");
+    expect(chatRouteSource).toContain("export const runtime = 'nodejs'");
+    expect(chatRouteSource).toContain("export const dynamic = 'force-dynamic'");
+    expect(chatRouteSource).toContain("await requireAdmin()");
+    expect(chatRouteSource).toContain(
+      "'Content-Type': 'text/event-stream; charset=utf-8'",
+    );
+    expect(chatRouteSource).toContain(
+      "generateYoutubeThumbnailChatWithBackendAgent",
+    );
+    expect(chatRouteSource).toContain("parseThumbnailChatAgentRequest");
+    expect(
+      chatRouteSource.indexOf("parseThumbnailChatAgentRequest("),
+    ).toBeLessThan(chatRouteSource.indexOf("new ReadableStream"));
+    expect(chatRouteSource).toContain("randomUUID");
+    expect(chatRouteSource).toContain(
+      "const chatRunId = payload.chatRunId ?? `thumbnail-chat-${randomUUID()}`;",
+    );
+    expect(chatRouteSource).toContain(
+      "const payloadWithRunId = { ...payload, chatRunId };",
+    );
+    expect(chatRouteSource).toContain("signal: request.signal");
+    expect(chatRouteSource).toContain("runId: chatRunId");
+    expect(chatRouteSource).toContain("Codex CLI gpt-5.5 high 백엔드 에이전트");
+    expect(chatRouteSource).toContain("send('status'");
+    expect(chatRouteSource).toContain("send('agent_started'");
+    expect(chatRouteSource).toContain("send('heartbeat'");
+    expect(chatRouteSource).toContain("send('agent_done'");
+    expect(chatRouteSource).toContain("send('stream_timeout'");
+    expect(chatRouteSource).toContain("send('patch'");
+    expect(chatRouteSource).toContain("send('done'");
+    expect(chatRouteSource).toContain("jsonRouteError(error)");
+    expect(chatRouteSource).not.toContain(
+      "payload as Parameters<typeof generateYoutubeThumbnailChatWithBackendAgent>[0]",
+    );
+    expect(referenceImageRouteSource).toContain(
+      "export const runtime = 'nodejs'",
+    );
+    expect(referenceImageRouteSource).toContain(
+      "export const dynamic = 'force-dynamic'",
+    );
+    expect(referenceImageRouteSource).toContain("await requireAdmin()");
+    const referencePostSource = referenceImageRouteSource.slice(
+      referenceImageRouteSource.indexOf("export async function POST"),
+    );
+    expect(referencePostSource.indexOf("await requireAdmin()")).toBeLessThan(
+      referencePostSource.indexOf("fetchThumbnailReferenceImageFromUrl"),
+    );
+    expect(referenceImageRouteSource).toContain("Content-Type");
+    expect(referenceImageRouteSource).toContain(
+      "X-Thumbnail-Reference-File-Name",
+    );
+    expect(referenceImageRouteSource).toContain("'Cache-Control': 'no-store'");
+    expect(providerSource).toContain("gpt-image-2");
     expect(providerSource).toContain("gemini-3-pro-image-preview");
+    expect(providerSource).toContain("gpt-image-2");
+    expect(providerSource).toContain("THUMBNAIL_LOCAL_CODEX_COMMAND");
+    expect(providerSource).toContain("THUMBNAIL_LOCAL_CODEX_ARGS_JSON");
+    expect(providerSource).toContain("THUMBNAIL_LOCAL_CODEX_IMAGE_MODEL");
     expect(providerSource).toContain("execFile");
+    expect(providerSource).toContain("type ThumbnailProviderExecutionOptions");
+    expect(providerSource).toContain("throwIfProviderAborted");
+    expect(providerSource).toContain("'thumbnail_generation_aborted'");
+    expect(providerSource).toContain("signal: input.signal");
+    expect(providerSource).toContain("THUMBNAIL_GENERATION_RUN_ID");
     expect(providerSource).not.toContain("spawn(");
     expect(promptSource).toContain("Do not render real names");
     expect(promptSource).toContain("Style preset:");
     expect(promptSource).toContain("night-market-reaction");
     expect(requestSource).toContain("THUMBNAIL_REFERENCE_ROLES");
+    expect(requestSource).toContain("THUMBNAIL_GENERATION_MODES");
+    expect(requestSource).toContain("parseGenerationMode");
     expect(requestSource).toContain("detectImageMime");
+    expect(requestSource).toContain("fetchThumbnailReferenceImageFromUrl");
+    expect(requestSource).toContain("parseThumbnailReferenceImageUrl");
+    expect(requestSource).toContain("THUMBNAIL_REMOTE_IMAGE_TIMEOUT_MS");
+    expect(requestSource).toContain("lookupFn(url.hostname");
+    expect(requestSource).toContain("redirect: 'manual'");
+    expect(requestSource).toContain("detectImageMime(bytes)");
+    expect(backendAgentSource).toContain("getThumbnailBackendAgentStatus");
+    expect(backendAgentSource).toContain(
+      "generateYoutubeThumbnailChatWithBackendAgent",
+    );
+    expect(backendAgentSource).toContain(
+      "generateYoutubeThumbnailWithBackendAgent",
+    );
+    expect(backendAgentSource).toContain("THUMBNAIL_AGENT_COMMAND");
+    expect(backendAgentSource).toContain("THUMBNAIL_AGENT_ROOT");
+    expect(backendAgentSource).toContain("THUMBNAIL_AGENT_TIMEOUT_MS");
+    expect(backendAgentSource).toContain(
+      "DEFAULT_THUMBNAIL_AGENT_RUNTIME = 'codex_cli_oauth'",
+    );
+    expect(backendAgentSource).toContain(
+      "DEFAULT_THUMBNAIL_AGENT_CODEX_MODEL = 'gpt-5.5'",
+    );
+    expect(backendAgentSource).toContain(
+      "DEFAULT_THUMBNAIL_AGENT_CODEX_EFFORT = 'high'",
+    );
+    expect(backendAgentSource).toContain("resolveThumbnailAgentCodexModel");
+    expect(backendAgentSource).toContain("resolveThumbnailAgentCodexEffort");
+    expect(backendAgentSource).toContain("UNSAFE_COMMAND_PATTERN");
+    expect(backendAgentSource).toContain("shell: false");
+    expect(backendAgentSource).toContain("type ThumbnailAgentExecutionOptions");
+    expect(backendAgentSource).toContain("THUMBNAIL_AGENT_RUN_ID");
+    expect(backendAgentSource).toContain(
+      "options.signal?.addEventListener('abort'",
+    );
+    expect(backendAgentSource).toContain("'thumbnail_chat_aborted'");
+    expect(backendAgentSource).toContain("runId: options.runId");
+    expect(backendAgentSource).toContain("generateYoutubeThumbnailWithPrompt");
+    expect(backendAgentSource).toContain("backend_agent_orchestrated");
+    expect(backendAgentSource).toContain("providerModelProvenance");
+    expect(backendAgentGraphSource).toContain("StateGraph");
+    expect(backendAgentGraphSource).toContain("promptAddendum");
+    expect(backendAgentRunnerSource).toContain("THUMBNAIL_AGENT_JSON");
+    expect(backendAgentRunnerSource).toContain("never generates images");
+    expect(backendAgentRunnerSource).toContain(
+      'DEFAULT_CODEX_MODEL = "gpt-5.5"',
+    );
+    expect(backendAgentRunnerSource).toContain('DEFAULT_CODEX_EFFORT = "high"');
+    expect(backendAgentRunnerSource).toContain("codex exec");
+    expect(backendAgentRunnerSource).toContain("model_reasoning_effort");
+    expect(backendAgentRequirementsSource).toContain("langgraph");
+    expect(backendAgentRequirementsSource).toContain("langchain-openai");
   });
 
   test("adds storyboard generation as an operator-controlled admin module", () => {
@@ -2078,7 +2979,33 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "components/admin/storyboard/AdminStoryboardGenerator.tsx",
     );
     const routeSource = source("app/api/admin/storyboard/route.ts");
+    const chatRouteSource = source("app/api/admin/storyboard/chat/route.ts");
+    const imageRouteSource = source("app/api/admin/storyboard/images/route.ts");
+    const imageProviderSource = source(
+      "lib/admin/storyboard/image-provider.ts",
+    );
+    const imageTrustSource = source("lib/admin/storyboard/image-trust.ts");
+    const historyClientSource = source(
+      "lib/admin/storyboard/history-client.ts",
+    );
+    const storyboardImageWrapperSource = source(
+      "../../scripts/codex-imagegen-storyboard-provider.py",
+    );
+    const backendAgentWrapperSource = source(
+      "../../backend/storyboard-agent/scripts/run-storyboard-agent.py",
+    );
+    const backendAgentRequirementsSource = source(
+      "../../backend/storyboard-agent/requirements.txt",
+    );
+    const codexOauthResearchSource = source(
+      ".omx/research/codex-oauth-gpt-image-2-storyboard.md",
+    );
+    const envExampleSource = source(".env.example");
+    const readmeSource = source("README.md");
+    const backendAgentSource = source("lib/admin/storyboard/backend-agent.ts");
     const generatorSource = source("lib/admin/storyboard/generator.ts");
+    const typesSource = source("lib/admin/storyboard/types.ts");
+    const requireAdminSource = source("lib/auth/require-admin.ts");
 
     expect(consoleSource).toContain('id: "storyboard"');
     expect(consoleSource).toContain("스토리보드 생성");
@@ -2089,54 +3016,752 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-admin-storyboard-generator="true"',
     );
     expect(storyboardSource).toContain(
-      "flex h-full min-h-0 flex-col overflow-hidden bg-background p-4",
+      "flex h-full min-h-0 flex-col overflow-hidden bg-background p-3",
     );
     expect(storyboardSource).toContain(
-      "grid h-full min-h-0 grid-cols-1 grid-rows-[minmax(0,0.9fr)_minmax(0,1.1fr)]",
+      "grid h-full min-h-0 grid-cols-1 grid-rows-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-3 overflow-hidden",
     );
     expect(storyboardSource).toContain(
-      "flex min-h-0 flex-col overflow-hidden rounded-3xl",
+      "order-1 flex min-h-0 flex-col overflow-hidden border-0 bg-card/80 shadow-none",
     );
     expect(storyboardSource).toContain(
-      "min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain",
+      'data-storyboard-input-panel="chat-stream"',
     );
     expect(storyboardSource).toContain(
-      "min-h-0 space-y-4 overflow-y-auto overscroll-contain pr-1",
+      'data-storyboard-input-position="right-of-canvas"',
     );
+    expect(storyboardSource).toContain('aria-label="요구사항 채팅"');
+    expect(storyboardSource).toContain('data-storyboard-chat-header="true"');
+    expect(storyboardSource).toContain(
+      'data-storyboard-chat-header-actions="true"',
+    );
+    expect(storyboardSource).toContain(
+      '<span className="min-w-0 truncate">생성 채팅</span>',
+    );
+    expect(storyboardSource).not.toContain(
+      '<MessageSquare className="h-4 w-4" aria-hidden="true" />',
+    );
+    expect(storyboardSource).toContain('data-storyboard-chat-panel="true"');
+    expect(storyboardSource).toContain(
+      'data-storyboard-chat-style="thumbnail-like"',
+    );
+    expect(storyboardSource).toContain('data-storyboard-chat-log="true"');
+    expect(storyboardSource).toContain(
+      'data-storyboard-chat-transcript="true"',
+    );
+    expect(storyboardSource).toContain('data-storyboard-chat-controls="true"');
+    expect(storyboardSource).toContain(
+      'data-storyboard-chat-message-meta="true"',
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-chat-message-bubble="true"',
+    );
+    expect(storyboardSource).toContain('data-storyboard-chat-composer="true"');
+    expect(storyboardSource).toContain(
+      'data-storyboard-chat-live-stream="true"',
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-chat-topic-state="true"',
+    );
+    expect(storyboardSource).toContain("formatStoryboardRealDataTrace");
+    expect(storyboardSource).toContain("getStoryboardRealDataModeLabel");
+    expect(storyboardSource).toContain('data-storyboard-chat-real-data-trace="true"');
+    expect(storyboardSource).toContain(
+      "data-storyboard-chat-real-data-trace-mode={",
+    );
+    expect(storyboardSource).toContain('data-storyboard-chat-real-data-headline="true"');
+    expect(storyboardSource).toContain('data-storyboard-chat-real-data-source="true"');
+    expect(storyboardSource).toContain('data-storyboard-chat-real-data-backend="true"');
+    expect(storyboardSource).toContain("실제 히트맵 데이터");
+    expect(storyboardSource).toContain("데모/샘플 모드: 실제 데이터 아님");
+    expect(storyboardSource).toContain("storyboardRealDataTrace.summaryText");
+    expect(storyboardSource).toContain("formatStoryboardRealDataTrace(latestResult)");
+    expect(storyboardSource).toContain("formatStoryboardRealDataTrace(result)");
+    expect(storyboardSource).toContain("formatStoryboardRealDataTrace(generated)");
+    expect(storyboardSource).toContain("STORYBOARD_HISTORY_INDEX_URL");
+    expect(storyboardSource).toContain("getSafeStoryboardHistoryRunUrl");
+    expect(storyboardSource).toContain("getStoryboardHistoryResults");
+    expect(storyboardSource).toContain("extractStoryboardHistoryRuns");
+    expect(storyboardSource).toContain("mergeStoryboardHistoryCases");
+    expect(storyboardSource).toContain("applyStoryboardHistoryResult");
+    expect(storyboardSource).toContain('data-storyboard-case-history="true"');
+    expect(storyboardSource).toContain(
+      "data-storyboard-case-history-status={storyboardHistoryStatus}",
+    );
+    expect(storyboardSource).toContain(
+      "data-storyboard-case-history-count={String(",
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-case-history-run={',
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-case-history-title="true"',
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-case-history-logline="true"',
+    );
+    expect(storyboardSource).toContain(
+      "히스토리 케이스 로드 완료",
+    );
+    expect(storyboardSource).toContain(
+      "setLatestRealDataLoadedAt(historyResult.generatedAt)",
+    );
+    expect(historyClientSource).toContain(
+      "export const STORYBOARD_HISTORY_INDEX_URL",
+    );
+    expect(historyClientSource).toContain("normalizeStoryboardHistoryRunPath");
+    expect(historyClientSource).toContain("getSafeStoryboardHistoryRunUrl");
+    expect(historyClientSource).toContain("trimmed.includes('?')");
+    expect(historyClientSource).toContain("trimmed.includes('#')");
+    expect(historyClientSource).toContain("trimmed.endsWith('.json')");
+    expect(historyClientSource).toContain("latest-real-data.json");
+    expect(historyClientSource).toContain("run.jsonPath");
+    expect(historyClientSource).toContain("run.rawPath");
+    expect(storyboardSource).not.toContain(
+      'data-storyboard-live-canvas-text-summary="true"',
+    );
+    expect(storyboardSource).not.toContain(
+      'data-storyboard-chat-agent-model="gpt-5.5"',
+    );
+    expect(storyboardSource).not.toContain(
+      'data-storyboard-chat-agent-effort="high"',
+    );
+    expect(storyboardSource).toContain("getStoryboardChatQuickCommand");
+    expect(storyboardSource).toContain("getStoryboardChatStatusMessage");
+    expect(storyboardSource).toContain("appendStoryboardQuickCommandMessages");
+    expect(storyboardSource).toContain(
+      "‘상태’, ‘생성’, ‘4컷 재생성’, ‘초기화’",
+    );
+    const chatDraftHandler = storyboardSource.match(
+      /function handleChatDraftChange\(value: string\) \{([\s\S]*?)\n  \}/,
+    )?.[1] ?? "";
+    expect(chatDraftHandler).toContain("setChatDraft(value);");
+    expect(chatDraftHandler).not.toContain("setForm");
+    expect(storyboardSource).toContain("const commandBaseForm: GeneratorForm = form;");
+    expect(storyboardSource).not.toContain("prompt: result.request.prompt");
+    expect(storyboardSource).toContain("현재 상태 · CUT");
+    expect(storyboardSource).toContain(
+      'aria-label="스토리보드 요구사항 채팅 입력"',
+    );
+    expect(storyboardSource).toContain(
+      "onKeyDown={handleStoryboardChatKeyDown}",
+    );
+    expect(storyboardSource).toContain(
+      'const STORYBOARD_CHAT_AGENT_STREAM_URL = "/api/admin/storyboard/chat";',
+    );
+    expect(storyboardSource).toContain("extractStoryboardChatSseEvents");
+    expect(storyboardSource).toContain("isStoryboardChatAgentResult");
+    expect(storyboardSource).toContain("getTrustedStoryboardGeneratedImage");
+    expect(storyboardSource).toContain("countTrustedStoryboardGeneratedImages");
+    expect(storyboardSource).toContain(
+      "stripUntrustedStoryboardGeneratedImages",
+    );
+    expect(imageTrustSource).toContain("isTrustedStoryboardGeneratedImage");
+    expect(imageTrustSource).toContain("countTrustedStoryboardGeneratedImages");
+    expect(imageTrustSource).toContain(
+      "STORYBOARD_GENERATED_IMAGE_TRUST_POLICY",
+    );
+    expect(imageTrustSource).toContain(
+      "image.trustPolicy === STORYBOARD_GENERATED_IMAGE_TRUST_POLICY",
+    );
+    expect(imageProviderSource).toContain(
+      "Create exactly one 16:9 raster storyboard panel",
+    );
+    expect(imageProviderSource).toContain("hand-drawn storyboard sketch");
+    expect(imageProviderSource).toContain(
+      "trustPolicy: STORYBOARD_GENERATED_IMAGE_TRUST_POLICY",
+    );
+    expect(storyboardSource).toContain(
+      "fetch(STORYBOARD_CHAT_AGENT_STREAM_URL",
+    );
+    expect(storyboardSource).toContain("appendChatMessages?: boolean;");
+    expect(storyboardSource).toContain("assistantMessageId?: string;");
+    expect(storyboardSource).toContain("shouldGenerate");
+    expect(storyboardSource).toContain("abortStoryboardChatWork");
+    expect(storyboardSource).toContain("data-storyboard-chat-cancel={");
+    expect(storyboardSource).toContain(
+      'isChatAgentStreaming ? "true" : undefined',
+    );
+    expect(storyboardSource).toContain(
+      "disabled={isChatAgentStreaming ? false : !chatDraft.trim()}",
+    );
+    expect(storyboardSource).toContain('"요구사항 채팅 반영"');
+    expect(storyboardSource).toContain("data-storyboard-chat-submit={");
+    expect(storyboardSource).not.toContain(
+      'data-storyboard-chat-command-row="true"',
+    );
+    expect(storyboardSource).not.toContain(
+      'data-storyboard-generation-actions="true"',
+    );
+    expect(storyboardSource).not.toContain(
+      "data-storyboard-chat-command={command.id}",
+    );
+    expect(storyboardSource).not.toContain(
+      "data-storyboard-generate-from-chat={",
+    );
+    expect(storyboardSource).not.toContain("data-storyboard-chat-reset={");
+    expect(storyboardSource).toContain('quickCommand === "generate"');
+    expect(storyboardSource).toContain('quickCommand === "images"');
+    expect(storyboardSource).toContain('quickCommand === "reset"');
+    expect(storyboardSource).toContain('quickCommand === "status"');
+    expect(storyboardSource).toContain(
+      "await handleGenerateStoryboardImages({ assistantMessageId })",
+    );
+    expect(typesSource).toContain("export type StoryboardChatScenePatch");
+    expect(typesSource).toContain("targetSource?: 'explicit' | 'selected'");
+    expect(typesSource).toContain("regenerateImage?: boolean");
+    expect(typesSource).toContain("focusSceneNo?: number");
+    expect(typesSource).toContain("unavailableFocusSceneNo?: number");
+    expect(typesSource).toContain("baselinePrompt?: string");
+    expect(typesSource).toContain("currentAvailableSceneCount?: number");
+    expect(backendAgentSource).toContain("createStoryboardScenePatch");
+    expect(backendAgentSource).toContain("deriveExplicitStoryboardSceneNo");
+    expect(backendAgentSource).toContain("hasExplicitStoryboardScenePatchIntent");
+    expect(backendAgentSource).toContain("hasStoryboardNavigationIntent");
+    expect(backendAgentSource).toContain("deriveStoryboardNavigationSceneNo");
+    expect(backendAgentSource).toContain("wantsSelectedStoryboardImageRegeneration");
+    expect(backendAgentSource).toContain("regenerate_selected_scene");
+    expect(backendAgentSource).toContain("scenePatch ? undefined : deriveStoryboardNavigationSceneNo");
+    expect(backendAgentSource).toContain("!isNavigationRequest && scenePatch?.targetSource !== 'explicit'");
+    expect(backendAgentSource).toContain("Navigation focusSceneNo");
+    expect(backendAgentSource).toContain("Navigation unavailableFocusSceneNo");
+    expect(backendAgentSource).toContain("navigate_unavailable");
+    expect(backendAgentSource).toContain("? 'navigate'");
+    expect(backendAgentSource).toContain("`${sceneTargetLabel} 요청 반영");
+    expect(storyboardSource).toContain("mergeStoryboardScenePatch");
+    expect(storyboardSource).toContain("getStoryboardPageForSceneNo");
+    expect(storyboardSource).toContain("baselinePrompt: result.request.prompt");
+    expect(storyboardSource).toContain("currentAvailableSceneCount: result.storyboard.scenes.length");
+    expect(storyboardSource).toContain("patch.focusSceneNo");
+    expect(storyboardSource).toContain("patch.unavailableFocusSceneNo");
+    expect(storyboardSource).toContain(
+      "finalResult?.canvasPatch.scenePatch?.regenerateImage",
+    );
+    expect(storyboardSource).toContain(
+      "getStoryboardPageForSceneNo(sceneForFocus.sceneNo, storyboardTotalPages)",
+    );
+    expect(storyboardSource).toContain('scope?: "page" | "selected";');
+    expect(storyboardSource).toContain("targetScenes?: StoryboardScene[]");
+    expect(storyboardSource).toContain("selectedRealStoryboardScene");
+    expect(storyboardSource).toContain(
+      'data-storyboard-chat-stream-status="true"',
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-chat-streaming-preview="true"',
+    );
+    expect(storyboardSource).not.toContain("채팅 초안 반영 중");
+    expect(storyboardSource).not.toContain("입력 순서");
+    expect(storyboardSource).not.toContain('data-storyboard-input-step="1"');
+    expect(storyboardSource).not.toContain('data-storyboard-input-step="2"');
+    expect(storyboardSource).not.toContain('data-storyboard-input-step="3"');
+    expect(storyboardSource).not.toContain('data-storyboard-input-step="4"');
+    expect(storyboardSource).not.toContain('data-storyboard-input-step="5"');
+    expect(storyboardSource).not.toContain("소재/상황 채팅 입력");
+    expect(storyboardSource).not.toContain('id="segment-count"');
+    expect(storyboardSource).not.toContain('id="target-length"');
+    expect(storyboardSource).not.toContain('id="storyboard-tone"');
+    expect(storyboardSource).not.toContain('id="storyboard-generation-mode"');
+    expect(storyboardSource).toContain(
+      "예: 매운 짜장라면 첫 입, 치즈 클로즈업, 완식 리액션을 8컷으로 구성해줘",
+    );
+    expect(storyboardSource).not.toContain("채팅으로 생성");
+    expect(storyboardSource).not.toContain('data-storyboard-input-step="6"');
+    expect(storyboardSource).not.toContain("6. 스토리보드 생성");
+    expect(storyboardSource).not.toContain("생성 입력");
+    expect(storyboardSource).toContain(
+      "order-2 flex min-h-0 flex-col overflow-hidden border-0 bg-card/80 shadow-none",
+    );
+    expect(storyboardSource).not.toContain(
+      "rounded-2xl bg-muted/25 p-2.5 text-sm leading-6",
+    );
+    expect(storyboardSource).not.toContain(
+      "grid grid-cols-2 gap-2 rounded-2xl bg-muted/25 p-2.5",
+    );
+    expect(storyboardSource).not.toContain(
+      "rounded-2xl bg-background/80 p-2.5",
+    );
+    expect(storyboardSource).not.toContain(
+      "rounded-2xl border border-border bg-muted/20 p-3",
+    );
+    expect(storyboardSource).not.toContain(
+      "rounded-3xl border-border/80 shadow-sm",
+    );
+    expect(storyboardSource).not.toContain(
+      "rounded-2xl border border-primary/15 bg-primary/5 p-3",
+    );
+    expect(storyboardSource).toContain(
+      "bg-gradient-to-b from-background/95 to-muted/35",
+    );
+    expect(storyboardSource).toContain(
+      "flex min-h-0 flex-1 flex-col overflow-hidden p-3 pt-0",
+    );
+    expect(storyboardSource).not.toContain(
+      "PD가 소재 방향과 근거 영상 범위를 조정합니다.",
+    );
+    expect(storyboardSource).not.toContain("PD 회의용 시작점을 빠르게 적용");
+    expect(storyboardSource).not.toContain("씬별 촬영 체크리스트 포함");
+    expect(storyboardSource).toContain(
+      'data-storyboard-result-panel="image-frames-only"',
+    );
+    expect(storyboardSource).toContain(
+      'aria-label="스토리보드 이미지 생성 결과"',
+    );
+    expect(storyboardSource).toContain("캔버스 편집 / PNG 내보내기");
+    expect(storyboardSource).toContain("StoryboardExportPresetId");
+    expect(storyboardSource).toContain("storyboardExportPresets");
+    expect(storyboardSource).toContain('data-storyboard-export-preset="true"');
+    expect(storyboardSource).toContain('aria-label="PNG 저장 해상도"');
+    expect(storyboardSource).toContain(
+      'data-storyboard-safe-area-toggle="true"',
+    );
+    expect(storyboardSource).not.toContain(
+      'data-storyboard-add-text-layer="true"',
+    );
+    expect(storyboardSource).not.toContain("문구 추가");
+    expect(storyboardSource).toContain('data-storyboard-export-png="true"');
+    expect(storyboardSource).toContain(
+      'data-storyboard-generate-images="local-codex"',
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-generated-image="local-codex"',
+    );
+    expect(storyboardSource).toContain("/api/admin/storyboard/images");
+    expect(storyboardSource).toContain("postStoryboardImagesRequest");
+    expect(storyboardSource).toContain("handleGenerateStoryboardImages");
+    expect(storyboardSource).toContain("imageGenerationButtonLabel");
+    expect(storyboardSource).toContain("activeRealStoryboardPageScenes");
+    expect(storyboardSource).toContain("activePageGenerationTargetCount");
+    expect(storyboardSource).toContain(
+      "postStoryboardImagesRequest(result, activeRealStoryboardPageScenes)",
+    );
+    expect(storyboardSource).toContain(
+      "현재 ${activePageGenerationTargetCount}컷 이미지 생성",
+    );
+    expect(storyboardSource).toContain(
+      "현재 ${activePageGenerationTargetCount}컷 다시 생성",
+    );
+    expect(storyboardSource).toContain(
+      "현재 페이지 ${activePageGenerationTargetCount}컷을 GPT Image 2로 생성",
+    );
+    expect(storyboardSource).toContain("trustedGeneratedImage?.dataUrl");
+    expect(storyboardSource).toContain("src={trustedGeneratedImage.dataUrl}");
+    expect(storyboardSource).toContain("loadCanvasImage");
+    expect(storyboardSource).toContain(
+      'data-storyboard-safe-area-guide="true"',
+    );
+    expect(storyboardSource).toContain("handleExportStoryboardPng");
+    expect(storyboardSource).toContain("exportResolutionToken");
+    expect(storyboardSource).toContain(
+      "tzudong-storyboard-page-${activeStoryboardPage + 1}-${exportResolutionToken}.png",
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-canvas-toolbar="thumbnail-like"',
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-compact-toolbar="true"',
+    );
+    expect(storyboardSource).toContain(
+      'className="flex min-w-0 items-center gap-2 text-sm"',
+    );
+    expect(storyboardSource).toContain(
+      'className="ml-auto flex min-w-0 flex-nowrap items-center gap-1.5 overflow-x-auto pb-1"',
+    );
+    expect(storyboardSource).toContain(
+      'className="shrink-0 p-2 pb-1"',
+    );
+    expect(storyboardSource).toContain('className="sr-only"');
+    expect(storyboardSource).toContain("캔버스 편집 / PNG 내보내기");
+    expect(storyboardSource).toContain("캔버스");
+    expect(storyboardSource).not.toContain(
+      'className="flex flex-wrap items-center justify-between gap-2 text-base"',
+    );
+    expect(storyboardSource).not.toContain('className="flex flex-wrap gap-2"');
+    expect(storyboardSource).toContain(
+      'className="min-h-0 flex-1 overflow-hidden p-3 pt-0"',
+    );
+    expect(storyboardSource).toContain('className="h-8 w-[112px] shrink-0 text-xs"');
+    expect(storyboardSource).toContain("최신");
+    expect(storyboardSource).toContain("가이드");
+    expect(storyboardSource).toContain("compactImageGenerationButtonLabel");
+    expect(storyboardSource).toContain("PNG 저장");
+    expect(storyboardSource).toContain("truncateStoryboardFrameText");
+    expect(storyboardSource).toContain("scene.hostBeat");
+    expect(storyboardSource).toContain("오디오 후보");
+    expect(storyboardSource).toContain(
+      'data-storyboard-frame-script="true"',
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-frame-script-placement="separated"',
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-frame-audio="true"',
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-frame-subtitle="true"',
+    );
+    expect(storyboardSource).toContain("Audio");
+    expect(storyboardSource).toContain("Subtitle");
+    expect(storyboardSource).toContain("StoryboardChatFocusContext");
+    expect(storyboardSource).toContain("storyboardCanvasFocus");
+    expect(storyboardSource).toContain("createStoryboardCutFocusContext");
+    expect(storyboardSource).toContain("createStoryboardActionFocusContext");
+    expect(storyboardSource).toContain("handleSelectStoryboardScene");
+    expect(storyboardSource).toContain("focusContext: storyboardCanvasFocus");
+    expect(storyboardSource).toContain(
+      'data-storyboard-chat-canvas-context="true"',
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-canvas-focus-label="true"',
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-canvas-focus-detail="true"',
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-clear-canvas-context="true"',
+    );
+    expect(storyboardSource).toContain(
+      "이 맥락으로 채팅 가능",
+    );
+    expect(storyboardSource).toContain(
+      "기준으로 바꾸고 싶은 점을 입력하세요",
+    );
+    expect(storyboardSource).toContain(
+      "액션 직후의 캔버스 상태입니다",
+    );
+    expect(storyboardSource).toContain("aria-pressed=");
+    expect(storyboardSource).toContain(
+      'data-storyboard-selected-frame={',
+    );
+    expect(storyboardSource).toContain("drawStoryboardFrameToCanvas");
+    expect(storyboardSource).toContain('canvas.toDataURL("image/png")');
     expect(storyboardSource).not.toContain(
       "flex h-full min-h-0 flex-col overflow-y-auto bg-background",
     );
     expect(storyboardSource).not.toContain("space-y-4 p-4 sm:p-5 lg:p-6");
     expect(storyboardSource).not.toContain(
+      "flex h-full min-h-0 flex-col overflow-hidden bg-background p-4 sm:p-5 lg:p-6",
+    );
+    expect(storyboardSource).not.toContain(
+      "min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain",
+    );
+    expect(storyboardSource).not.toContain(
       '<h2 className="text-2xl font-bold tracking-[-0.04em] text-foreground md:text-3xl">',
     );
+    expect(storyboardSource).toContain("INITIAL_STORYBOARD_PREVIEW");
+    expect(storyboardSource).toContain("useState<StoryboardGenerationResult>(");
+    expect(storyboardSource).not.toContain(
+      'data-storyboard-status-chips="true"',
+    );
+    expect(storyboardSource).not.toContain(
+      'data-storyboard-generation-mode="true"',
+    );
+    expect(storyboardSource).not.toContain(
+      'data-storyboard-backend-agent-status="true"',
+    );
+    expect(storyboardSource).toContain('generationMode: "backend_agent"');
+    expect(storyboardSource).not.toContain('"local_heatmap"');
+    expect(storyboardSource).not.toContain("storyboardToolActions");
+    expect(storyboardSource).not.toContain(
+      'data-storyboard-tool-palette="true"',
+    );
+    expect(storyboardSource).toContain('data-storyboard-image-board="true"');
+    expect(storyboardSource).toContain('data-storyboard-frame-grid="true"');
+    expect(storyboardSource).toContain("storyboardFrameScenes");
+    expect(storyboardSource).toContain("STORYBOARD_FRAMES_PER_PAGE = 4");
+    expect(storyboardSource).toContain("isStoryboardResultSkeletonVisible");
+    expect(storyboardSource).toContain("requestedCutCount");
+    expect(storyboardSource).toContain("setStoryboardPage(0)");
     expect(storyboardSource).toContain(
+      "isStoryboardResultSkeletonVisible || !hasPreviousStoryboardPage",
+    );
+    expect(storyboardSource).toContain(
+      "isStoryboardResultSkeletonVisible || !hasNextStoryboardPage",
+    );
+    expect(storyboardSource).toContain(
+      "disabled={isStoryboardResultSkeletonVisible || isGeneratingImages}",
+    );
+    expect(storyboardSource).toContain(
+      "disabled={isStoryboardResultSkeletonVisible}",
+    );
+    expect(storyboardSource).toContain("activeStoryboardPageScenes");
+    expect(storyboardSource).toContain("storyboardTotalPages");
+    expect(storyboardSource).toContain(
+      'data-storyboard-frame-pagination="true"',
+    );
+    expect(storyboardSource).toContain('data-storyboard-page-prev="true"');
+    expect(storyboardSource).toContain('data-storyboard-page-next="true"');
+    expect(storyboardSource).toContain('data-storyboard-page-indicator="true"');
+    expect(storyboardSource).toContain(
+      'data-storyboard-frame-page-range="true"',
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-generated-image-count="true"',
+    );
+    expect(storyboardSource).toContain("activeCutStart");
+    expect(storyboardSource).toContain("activeCutEnd");
+    expect(storyboardSource).toContain("generatedImageCount");
+    expect(storyboardSource).toContain(
+      "INITIAL_STORYBOARD_PREVIEW.storyboard.scenes.slice",
+    );
+    expect(storyboardSource).toContain('data-storyboard-frame-fill="true"');
+    expect(storyboardSource).toContain(
+      "data-storyboard-result-skeleton-frame={String(cutNo)}",
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-realtime-skeleton="true"',
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-image-generation-skeleton="true"',
+    );
+    expect(storyboardSource).toContain('aria-live="polite"');
+    expect(storyboardSource).toContain("스토리보드 생성 중...");
+    expect(storyboardSource).toContain("GPT Image 2 생성 중");
+    expect(storyboardSource).toContain(
+      "Array.from({ length: STORYBOARD_FRAMES_PER_PAGE }",
+    );
+    expect(storyboardSource).toContain(
+      '"grid h-full min-h-0 grid-cols-2 grid-rows-2 gap-2"',
+    );
+    expect(storyboardSource).toContain(
+      "data-storyboard-frame-page={String(activeStoryboardPage + 1)}",
+    );
+    expect(storyboardSource).toContain(
+      "data-storyboard-frame-page-size={String(STORYBOARD_FRAMES_PER_PAGE)}",
+    );
+    expect(storyboardSource).not.toContain('"h-full grid-cols-1 grid-rows-3"');
+    expect(storyboardSource).not.toContain(
+      "auto-rows-max grid-cols-2 2xl:grid-cols-3",
+    );
+    expect(storyboardSource).toContain(
+      "data-storyboard-image-frame={String(scene.sceneNo)}",
+    );
+    expect(storyboardSource).toContain("스토리보드 이미지 생성 결과");
+    expect(storyboardSource).not.toContain("aspect-video");
+    expect(storyboardSource).toContain(
+      "aria-label={`${scene.sceneNo}컷 이미지 생성 결과`}",
+    );
+    expect(storyboardSource).not.toContain('"copy-markdown"');
+    expect(storyboardSource).not.toContain('"view-full"');
+    expect(storyboardSource).not.toContain('"view-evidence"');
+    expect(storyboardSource).not.toContain('"view-checklist"');
+    expect(storyboardSource).not.toContain('"reset-preview"');
+    expect(storyboardSource).not.toContain("StoryboardViewMode");
+    expect(storyboardSource).not.toContain(
       'data-storyboard-readiness-panel="true"',
     );
-    expect(storyboardSource).toContain(
+    expect(storyboardSource).not.toContain(
+      "아직 생성된 스토리보드가 없습니다.",
+    );
+    expect(storyboardSource).not.toContain(
       'data-storyboard-planning-presets="true"',
     );
-    expect(storyboardSource).toContain(
+    expect(storyboardSource).not.toContain(
       'data-storyboard-production-notes-toggle="true"',
     );
-    expect(storyboardSource).toContain(
+    expect(storyboardSource).not.toContain(
       'data-storyboard-quality-summary="true"',
     );
-    expect(storyboardSource).toContain(
+    expect(storyboardSource).not.toContain(
       'data-storyboard-production-checklist="true"',
     );
-    expect(storyboardSource).toContain(
+    expect(storyboardSource).not.toContain(
       'fetch("/api/admin/storyboard", { cache: "no-store" })',
     );
-    expect(storyboardSource).toContain("회의용 Markdown 복사");
-    expect(storyboardSource).toContain("위원회 AHP 평가");
-    expect(routeSource).toContain("await requireAdmin()");
-    expect(routeSource.indexOf("await requireAdmin()")).toBeLessThan(
-      routeSource.indexOf("const result = generateLocalStoryboard"),
+    expect(storyboardSource).not.toContain("status?.isFallbackData");
+    expect(storyboardSource).toContain(
+      "result.sourceSummary.isFallbackData",
     );
+    expect(storyboardSource).toContain("데모/샘플 모드: 실제 데이터 아님");
+    expect(storyboardSource).not.toContain("실제 분석 아님");
+    expect(storyboardSource).not.toContain("회의용 Markdown 복사");
+    expect(storyboardSource).not.toContain("Markdown 복사");
+    expect(storyboardSource).not.toContain("위원회 AHP 평가");
+    expect(storyboardSource).not.toContain("멘트 후보:");
+    expect(requireAdminSource).toContain("getE2EAdminApiBypassUserId");
+    expect(requireAdminSource).toContain("isE2EAdminRouteBypassEnvEnabled()");
+    expect(requireAdminSource).toContain("E2E_ADMIN_ROUTE_BYPASS_TOKEN_HEADER");
+    expect(requireAdminSource).toContain(
+      "requestHeaders.get(E2E_ADMIN_ROUTE_BYPASS_HEADER) === '1'",
+    );
+    expect(requireAdminSource).toContain(
+      "requestToken === getE2EAdminRouteBypassExpectedToken()",
+    );
+    expect(requireAdminSource).toContain(
+      "isLocalPlaywrightHost(requestHeaders.get('host'))",
+    );
+    expect(requireAdminSource).toContain("return 'e2e-admin-route-bypass'");
+    expect(routeSource).toContain("generateStoryboardWithBackendAgent");
+    expect(routeSource).toContain("getStoryboardBackendAgentStatus");
+    expect(routeSource).toContain("body?.generationMode === 'backend_agent'");
+    expect(routeSource).toContain(
+      "backendAgent: getStoryboardBackendAgentStatus()",
+    );
+    expect(chatRouteSource).toContain("generateStoryboardChatWithBackendAgent");
+    expect(chatRouteSource).toContain("text/event-stream");
+    expect(chatRouteSource).toContain("event: ${event}");
+    expect(chatRouteSource).toContain("Codex CLI gpt-5.5 high");
+    expect(chatRouteSource).toContain("send('status'");
+    expect(chatRouteSource).toContain("send('patch', result)");
+    expect(chatRouteSource).toContain("send('done', result)");
+    expect(chatRouteSource).toContain("await requireAdmin()");
+    expect(imageRouteSource).toContain("generateStoryboardSceneImages");
+    expect(imageRouteSource).toContain(
+      "getStoryboardImageProviderAvailability",
+    );
+    expect(imageRouteSource).toContain("await requireAdmin()");
+    expect(imageRouteSource).toContain("maxScenesPerRequest: 4");
+    expect(imageRouteSource).toContain(
+      "ALLOW_LOCAL_CLI_STORYBOARD_IMAGES 또는 ALLOW_LOCAL_CLI_THUMBNAIL",
+    );
+    expect(imageProviderSource).toContain("gpt-image-2");
+    expect(imageProviderSource).toContain("ALLOW_LOCAL_CLI_STORYBOARD_IMAGES");
+    expect(imageProviderSource).toContain("ALLOW_LOCAL_CLI_THUMBNAIL");
+    expect(imageProviderSource).toContain(
+      "codex-imagegen-storyboard-provider.py",
+    );
+    expect(imageProviderSource).toContain("generateStoryboardSceneImage");
+    expect(imageProviderSource).toContain("buildStoryboardSceneImagePrompt");
+    expect(imageProviderSource).not.toContain("generateMock");
+    expect(storyboardImageWrapperSource).toContain("$imagegen");
+    expect(storyboardImageWrapperSource).toContain("gpt-image-2");
+    expect(storyboardImageWrapperSource).toContain("Do not run shell commands");
+    expect(storyboardImageWrapperSource).toContain(
+      "do not call `codex exec -m gpt-image-2`",
+    );
+    expect(backendAgentWrapperSource).toContain("codex_cli_oauth");
+    expect(backendAgentWrapperSource).toContain("gpt-5.5");
+    expect(backendAgentWrapperSource).toContain("STORYBOARD_AGENT_CODEX_MODEL");
+    expect(backendAgentWrapperSource).toContain(
+      "STORYBOARD_AGENT_CODEX_EFFORT",
+    );
+    expect(backendAgentWrapperSource).toContain('model_reasoning_effort="');
+    expect(backendAgentWrapperSource).toContain("STORYBOARD_AGENT_TIMEOUT_MS");
+    expect(backendAgentWrapperSource).toContain("codex_oauth_env");
+    expect(backendAgentWrapperSource).toContain("CODEX_API_KEY");
+    expect(backendAgentWrapperSource).toContain("NEXT_PUBLIC_SUPABASE_URL");
+    expect(backendAgentWrapperSource).toContain("NEXT_OPENAI_API_KEY_BYEON");
+    expect(backendAgentWrapperSource).toContain("Do not run shell commands");
+    expect(backendAgentWrapperSource).toContain(
+      "gpt-image-2 is handled by the separate image provider",
+    );
+    expect(backendAgentWrapperSource).toContain("[REDACTED]");
+    expect(backendAgentRequirementsSource).toContain("langgraph");
+    expect(backendAgentRequirementsSource).toContain("langchain-openai");
+    expect(backendAgentRequirementsSource).toContain("supabase");
+    expect(codexOauthResearchSource).toContain("Codex CLI OAuth");
+    expect(codexOauthResearchSource).toContain("gpt-4o");
+    expect(codexOauthResearchSource).toContain("gpt-image-2");
+    expect(codexOauthResearchSource).toContain("GitHub/community");
+    expect(envExampleSource).toContain("STORYBOARD_AGENT_COMMAND");
+    expect(envExampleSource).toContain("STORYBOARD_AGENT_ROOT=");
+    expect(envExampleSource).toContain("STORYBOARD_AGENT_PYTHON");
+    expect(envExampleSource).toContain(
+      "STORYBOARD_AGENT_RUNTIME=codex_cli_oauth",
+    );
+    expect(envExampleSource).toContain("STORYBOARD_AGENT_CODEX_EFFORT=high");
+    expect(envExampleSource).toContain(
+      "../../backend/storyboard-agent/scripts/run-storyboard-agent.py",
+    );
+    expect(envExampleSource).toContain("셸 메타문자/인자는 허용하지 않는다");
+    expect(envExampleSource).toContain("STORYBOARD_AGENT_TIMEOUT_MS=120000");
+    expect(envExampleSource).toContain("Remote service bridge");
+    expect(readmeSource).toContain("STORYBOARD_AGENT_COMMAND");
+    expect(readmeSource).toContain("STORYBOARD_AGENT_ROOT=");
+    expect(readmeSource).toContain("STORYBOARD_AGENT_CODEX_MODEL=gpt-5.5");
+    expect(readmeSource).toContain("STORYBOARD_AGENT_CODEX_EFFORT=high");
+    expect(readmeSource).toContain(
+      "../../backend/storyboard-agent/scripts/run-storyboard-agent.py",
+    );
+    expect(readmeSource).toContain("Remote service bridge");
+    expect(backendAgentSource).toContain("BACKEND_AGENT_ROOT");
+    expect(backendAgentSource).toContain("backend/storyboard-agent");
+    expect(backendAgentSource).toContain("STORYBOARD_AGENT_COMMAND");
+    expect(backendAgentSource).toContain("STORYBOARD_AGENT_ROOT");
+    expect(backendAgentSource).toContain("STORYBOARD_AGENT_PYTHON");
+    expect(backendAgentSource).toContain("STORYBOARD_AGENT_TIMEOUT_MS");
+    expect(backendAgentSource).toContain("resolveStoryboardAgentPython");
+    expect(backendAgentSource).toContain("resolveStoryboardAgentCommand");
+    expect(backendAgentSource).toContain("UNSAFE_COMMAND_PATTERN");
+    expect(backendAgentSource).toContain("shell: false");
+    expect(backendAgentSource).not.toContain("shell: true");
+    expect(backendAgentSource).toContain("sanitizeCommandOutput");
+    expect(backendAgentSource).toContain("BACKEND_AGENT_ROOT");
+    expect(backendAgentSource).toContain("backend_agent_local_adapter");
+    expect(backendAgentSource).toContain("backend_agent_command");
+    expect(backendAgentSource).toContain(
+      "generateStoryboardChatWithBackendAgent",
+    );
+    expect(backendAgentSource).toContain(
+      "DEFAULT_STORYBOARD_AGENT_CODEX_MODEL = 'gpt-5.5'",
+    );
+    expect(backendAgentSource).toContain(
+      "DEFAULT_STORYBOARD_AGENT_CODEX_EFFORT = 'high'",
+    );
+    expect(backendAgentSource).toContain("resolveStoryboardAgentCodexModel");
+    expect(backendAgentSource).toContain("resolveStoryboardAgentCodexEffort");
+    expect(backendAgentSource).toContain("createStoryboardChatCanvasPatch");
+    expect(backendAgentSource).toContain("shouldGenerate");
+    expect(backendAgentSource).toContain("shouldReset");
+    expect(backendAgentSource).toContain("src/graph.py");
+    expect(backendAgentSource).toContain("src/state/slots.py");
+    expect(backendAgentSource).toContain("src/prompts/designer.py");
+    expect(typesSource).toContain(
+      "export type StoryboardGenerationMode = 'local_heatmap' | 'backend_agent';",
+    );
+    expect(typesSource).toContain("'backend_agent_local_adapter'");
+    expect(typesSource).toContain("'backend_agent_command'");
+    expect(typesSource).toContain(
+      "export type StoryboardFallbackReason = 'missing-heatmap-directory' | 'no-usable-heatmap-sources';",
+    );
+    expect(typesSource).toContain("generationMode: StoryboardGenerationMode;");
+    expect(typesSource).toContain("export type StoryboardBackendAgentStatus");
+    expect(typesSource).toContain("commandAvailable: boolean;");
+    expect(typesSource).toContain("localAdapterAvailable: boolean;");
+    expect(typesSource).toContain(
+      "backendAgent?: StoryboardBackendAgentStatus",
+    );
+    expect(typesSource).toContain(
+      "generatedImage?: StoryboardSceneGeneratedImage;",
+    );
+    expect(typesSource).toContain("export type StoryboardSceneGeneratedImage");
+    expect(typesSource).toContain(
+      "trustPolicy: 'storyboard-gpt-image-2-panel-v1';",
+    );
+    expect(typesSource).toContain("isFallbackData: boolean;");
+    expect(typesSource).toContain(
+      "fallbackReason: StoryboardFallbackReason | null;",
+    );
+    expect(typesSource).toContain("dataModeLabel: string;");
+    const storyboardGetSource = routeSource.slice(
+      routeSource.indexOf("export async function GET"),
+      routeSource.indexOf("export async function POST"),
+    );
+    const storyboardPostSource = routeSource.slice(
+      routeSource.indexOf("export async function POST"),
+    );
+    expect(routeSource).toContain("await requireAdmin()");
+    expect(storyboardPostSource.indexOf("await requireAdmin()")).toBeLessThan(
+      storyboardPostSource.indexOf("const result = body?.generationMode"),
+    );
+    expect(storyboardGetSource.indexOf("await requireAdmin()")).toBeLessThan(
+      storyboardGetSource.indexOf("} = loadStoryboardHeatmapSources"),
+    );
+    expect(routeSource).toContain("isFallbackData");
+    expect(routeSource).toContain("fallbackReason");
+    expect(routeSource).toContain("dataModeLabel");
+    expect(routeSource).not.toContain("mode: 'local_heatmap_fixture'");
     expect(generatorSource).toContain("backend/storyboard-agent");
     expect(generatorSource).toContain("most_replayed_markers");
     expect(generatorSource).toContain("TZUYANG_HEATMAP_DIR");
+    expect(generatorSource).toContain(
+      "LOCAL_FALLBACK_MODE_LABEL = '데모/샘플 모드'",
+    );
+    expect(generatorSource).toContain(
+      "FALLBACK_HEATMAP_DIRECTORY = 'local-demo://storyboard-fallback'",
+    );
+    expect(generatorSource).toContain("missing-heatmap-directory");
+    expect(generatorSource).toContain("no-usable-heatmap-sources");
+    expect(generatorSource).toContain("local-demo-");
   });
 
   test("lets admins reorder the sidebar without polluting the two-pane map overview", () => {
@@ -2813,4 +4438,28 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "confirm('모든 리뷰의 OCR을 초기화하고 다시 실행합니다. 계속하시겠습니까?')",
     );
   });
+
+  test("keeps multi-case thumbnail QA history page-visible and non-stubbed", () => {
+    const seedScriptSource = source("../../scripts/seed-youtube-thumbnail-qa-cases.py");
+    const batchSpecSource = source("tests/admin-youtube-thumbnail-generator-batch-history.spec.ts");
+
+    expect(seedScriptSource).toContain('PUBLIC_IMAGE_BASE_URL = "/qa-history/youtube-thumbnail-generator/generated/qa-batch"');
+    expect(seedScriptSource).toContain("default_history_root");
+    expect(seedScriptSource).toContain('app_root() / ".omx" / "runtime" / "youtube-thumbnail-history"');
+    expect(seedScriptSource).toContain("caseCount");
+    expect(seedScriptSource).toContain("requested:gpt-image-2");
+    expect(seedScriptSource).toContain("requested-label");
+    expect(seedScriptSource).not.toContain("mock");
+
+    expect(batchSpecSource).toContain("seed-youtube-thumbnail-qa-cases.py");
+    expect(batchSpecSource).toContain("qa-batch-spicy-market");
+    expect(batchSpecSource).toContain("qa-batch-injection-safe");
+    expect(batchSpecSource).toContain("/api/admin/youtube-thumbnail-generator/history");
+    expect(batchSpecSource).toContain("data-thumbnail-history-load-run");
+    expect(batchSpecSource).toContain("data-thumbnail-history-preview");
+    expect(batchSpecSource).toContain("toDataURL('image/png')");
+    expect(batchSpecSource).not.toContain("page.route('**/api/admin/youtube-thumbnail-generator/history");
+    expect(batchSpecSource).not.toContain('route.fulfill({');
+  });
+
 });
