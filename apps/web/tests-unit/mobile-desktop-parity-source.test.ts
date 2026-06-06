@@ -375,6 +375,41 @@ describe("mobile and desktop parity source contracts", () => {
       'aria-label="검색어 지우기"',
     );
     expect(homeDesktopControlPanelSource).toContain('aria-label="검색 닫기"');
+    expect(homeDesktopControlPanelSource).toContain(
+      "const hasDesktopSearchQuery = desktopSearchQuery.trim().length > 0",
+    );
+    expect(homeDesktopControlPanelSource).toContain("{hasDesktopSearchQuery ? (");
+    expect(homeDesktopControlPanelSource).toContain('aria-label="지도 메뉴 열기"');
+    expect(homeDesktopControlPanelSource).toContain(
+      'data-desktop-map-menu-trigger="true"',
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      'data-desktop-map-menu="true"',
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      "const desktopMapMenuItemClass =",
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      "z-[180] w-max min-w-[max-content] max-w-[min(24rem,calc(100vw-2rem))] rounded-2xl border-border bg-card p-1.5 font-serif shadow-2xl",
+    );
+    expect(homeDesktopControlPanelSource).not.toContain(
+      "z-[180] w-44 rounded-2xl border-border bg-card p-1.5 font-serif shadow-2xl",
+    );
+    expect(homeDesktopControlPanelSource).not.toContain(
+      "DropdownMenuLabel",
+    );
+    expect(homeDesktopControlPanelSource).not.toContain(
+      ">지도 메뉴<",
+    );
+    expect(homeDesktopControlPanelSource).not.toContain(
+      "max-w-[min(22rem,calc(100vw-4rem))] rounded-xl px-3 py-2 text-foreground",
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      "cursor-pointer rounded-xl px-3 py-2.5 text-sm font-medium text-foreground whitespace-nowrap focus:bg-accent focus:text-foreground",
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      '<Menu className="h-5 w-5" aria-hidden="true" />',
+    );
     expect(homeDesktopControlPanelSource).toContain('alt="로고"');
     expect(homeDesktopControlPanelSource).toContain("width={24}");
     expect(homeDesktopControlPanelSource).toContain("height={24}");
@@ -448,6 +483,15 @@ describe("mobile and desktop parity source contracts", () => {
       "searchQueryValue={desktopSearchQuery}",
     );
     expect(homeDesktopControlPanelSource).toContain(
+      'data-desktop-map-mode-toggle="true"',
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      'className="fixed top-4 z-[70] grid auto-rows-auto grid-cols-[max-content] items-start gap-2"',
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      "const desktopMapFloatingControlStyle = {",
+    );
+    expect(homeDesktopControlPanelSource).toContain(
       'data-desktop-map-floating-filters="true"',
     );
     expect(homeDesktopControlPanelSource).toContain(
@@ -460,12 +504,15 @@ describe("mobile and desktop parity source contracts", () => {
       "grid auto-rows-auto grid-cols-[max-content] items-start gap-2",
     );
     expect(homeDesktopControlPanelSource).toContain(
-      "flex w-full min-w-max items-center gap-0.5 rounded-full",
+      "const DESKTOP_MAP_FLOATING_FILTER_WIDTH = \"10.9375rem\"",
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      '"--desktop-map-floating-filter-width": DESKTOP_MAP_FLOATING_FILTER_WIDTH',
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      "flex w-[var(--desktop-map-floating-filter-width)] items-center gap-0.5 rounded-full",
     );
     expect(homeDesktopControlPanelSource).toContain("!w-full !min-w-max");
-    expect(homeDesktopControlPanelSource).not.toContain(
-      "w-[clamp(84px,8vw,105px)] items-center gap-0.5",
-    );
     expect(homeDesktopControlPanelSource).toContain("국내 맛집 지도 보기");
     expect(homeDesktopControlPanelSource).toContain("해외 맛집 지도 보기");
     expect(homeDesktopControlPanelSource).toContain("쯔동여지도 검색하기");
@@ -576,28 +623,28 @@ describe("mobile and desktop parity source contracts", () => {
     );
     expect(homeDesktopControlPanelSource).toContain('resultView="inline"');
     expect(homeDesktopControlPanelSource).toContain("hideSearchControls");
-    expect(homeDesktopControlPanelSource).toContain(
+    expect(homeDesktopControlPanelSource).not.toContain(
       'data-desktop-map-floating-nav="true"',
     );
-    expect(homeDesktopControlPanelSource).toContain(
+    expect(homeDesktopControlPanelSource).not.toContain(
       'className="fixed top-4 z-[70] flex flex-col items-start gap-2"',
     );
-    expect(homeDesktopControlPanelSource).toContain(
+    expect(homeDesktopControlPanelSource).not.toContain(
       "DESKTOP_FLOATING_NAV_ROW_STARTS",
     );
-    expect(homeDesktopControlPanelSource).toContain(
+    expect(homeDesktopControlPanelSource).not.toContain(
       "data-desktop-map-floating-nav-row={",
     );
-    expect(homeDesktopControlPanelSource).toContain(
+    expect(homeDesktopControlPanelSource).not.toContain(
       'rowStart === 0 ? "account" : "content"',
     );
-    expect(homeDesktopControlPanelSource).toContain(
+    expect(homeDesktopControlPanelSource).not.toContain(
       "DESKTOP_FLOATING_NAV_BUTTON_WIDTH",
     );
-    expect(homeDesktopControlPanelSource).toContain(
+    expect(homeDesktopControlPanelSource).not.toContain(
       '"--desktop-floating-nav-button-width": DESKTOP_FLOATING_NAV_BUTTON_WIDTH',
     );
-    expect(homeDesktopControlPanelSource).toContain(
+    expect(homeDesktopControlPanelSource).not.toContain(
       "pointer-events-auto h-9 w-[var(--desktop-floating-nav-button-width)] shrink-0 justify-center rounded-full",
     );
     expect(homeDesktopControlPanelSource).toContain(
@@ -649,14 +696,40 @@ describe("mobile and desktop parity source contracts", () => {
     expect(homeDesktopControlPanelSource).toContain(
       'showDesktopLeftPanelAuthToast("notifications");',
     );
-    expect(
-      homeDesktopControlPanelSource.indexOf(
-        '{ id: "profile", label: "프로필", icon: UserRound }',
-      ),
-    ).toBeLessThan(
-      homeDesktopControlPanelSource.indexOf(
-        '{ id: "feed", label: "리뷰", icon: MessageSquare }',
-      ),
+    expect(homeDesktopControlPanelSource).toContain(
+      "const desktopMapMenuItems = useMemo",
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      "onSelect: handleAccountClick",
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      "onSelect: handleBookmarkClick",
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      "onSelect: handleNotificationClick",
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      'onSelect: () => handleShortcutClick("feed")',
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      'onSelect: () => handleShortcutClick("stamp")',
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      'onSelect: () => handleShortcutClick("leaderboard")',
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      "desktopMapMenuItems.map((item) =>",
+    );
+    expect(homeDesktopControlPanelSource).toContain("onClick={item.onSelect}");
+    expect(homeDesktopControlPanelSource).not.toContain(
+      "const handleDesktopMapMenuClick = useCallback",
+    );
+    expect(homeDesktopControlPanelSource).not.toContain("DESKTOP_MAP_MENU_ITEMS");
+    expect(homeDesktopControlPanelSource).toContain(
+      "The hamburger menu intentionally lives in the expanded desktop search slot.",
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      "we do not add a second map-floating nav because the old map overlay buttons",
     );
     const myPageProfileSource = source("app/mypage/profile/page.tsx");
     expect(myPageLayoutContentSource).not.toContain(
@@ -864,8 +937,9 @@ describe("mobile and desktop parity source contracts", () => {
     expect(homeDesktopControlPanelSource).toContain(
       'router.push("/?panel=bookmarks", { scroll: false })',
     );
+    expect(homeDesktopControlPanelSource).toContain('label: "알림"');
     expect(homeDesktopControlPanelSource).toContain(
-      '{ id: "notifications", label: "알림", icon: Bell }',
+      "onSelect: handleNotificationClick",
     );
     expect(homeDesktopControlPanelSource).toContain(
       'router.push("/?panel=notifications", { scroll: false })',
