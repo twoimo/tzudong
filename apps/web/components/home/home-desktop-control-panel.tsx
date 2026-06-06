@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ComponentType,
@@ -20,6 +21,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import RegionSelector from "@/components/region/RegionSelector";
 import DesktopLeftPanelMapHome from "@/components/home/DesktopLeftPanelMapHome";
 import CategoryFilter from "@/components/filters/CategoryFilter";
@@ -53,6 +60,7 @@ import {
   ChevronRight,
   Gauge,
   MapPin,
+  Menu,
   MessageSquare,
   PanelLeft,
   PanelRight,
@@ -246,26 +254,18 @@ interface HomeDesktopControlPanelProps {
 }
 
 const DESKTOP_LEFT_PANEL_WIDTH_PX = 392;
-const DESKTOP_FLOATING_NAV_ITEMS = [
-  { id: "profile", label: "프로필", icon: UserRound },
-  { id: "bookmarks", label: "북마크", icon: Bookmark },
-  { id: "notifications", label: "알림", icon: Bell },
-  { id: "feed", label: "리뷰", icon: MessageSquare },
-  { id: "stamp", label: "도장", icon: Stamp },
-  { id: "leaderboard", label: "랭킹", icon: Trophy },
-] as const satisfies ReadonlyArray<{
+const DESKTOP_MAP_FLOATING_FILTER_WIDTH = "10.9375rem";
+const desktopMapMenuItemClass =
+  "cursor-pointer rounded-xl px-3 py-2.5 text-sm font-medium text-foreground whitespace-nowrap focus:bg-accent focus:text-foreground";
+type DesktopMapMenuItem = {
   id: Extract<
     DesktopLeftPanelView,
     "feed" | "stamp" | "leaderboard" | "profile" | "bookmarks" | "notifications"
   >;
   label: string;
   icon: typeof MessageSquare;
-}>;
-const DESKTOP_FLOATING_NAV_ROW_STARTS = [0, 3] as const;
-const DESKTOP_FLOATING_NAV_BUTTON_WIDTH = `${Math.max(
-  5.5,
-  ...DESKTOP_FLOATING_NAV_ITEMS.map((item) => item.label.length * 0.55 + 3.85),
-).toFixed(2)}rem`;
+  onSelect: () => void;
+};
 
 const DESKTOP_LEFT_PANEL_AUTH_TOASTS = {
   profile: "로그인 후 프로필을 확인할 수 있어요",
@@ -1331,25 +1331,46 @@ export default function HomeDesktopControlPanel({
     router.push("/?panel=notifications", { scroll: false });
   }, [activeRightPanel, onPanelClose, revealDesktopLeftPanel, router, user]);
 
-  const handleFloatingNavClick = useCallback(
-    (panel: (typeof DESKTOP_FLOATING_NAV_ITEMS)[number]["id"]) => {
-      if (panel === "profile") {
-        handleAccountClick();
-        return;
-      }
-
-      if (panel === "bookmarks") {
-        handleBookmarkClick();
-        return;
-      }
-
-      if (panel === "notifications") {
-        handleNotificationClick();
-        return;
-      }
-
-      handleShortcutClick(panel);
-    },
+  const desktopMapMenuItems = useMemo(
+    () =>
+      [
+        {
+          id: "profile",
+          label: "프로필",
+          icon: UserRound,
+          onSelect: handleAccountClick,
+        },
+        {
+          id: "bookmarks",
+          label: "북마크",
+          icon: Bookmark,
+          onSelect: handleBookmarkClick,
+        },
+        {
+          id: "notifications",
+          label: "알림",
+          icon: Bell,
+          onSelect: handleNotificationClick,
+        },
+        {
+          id: "feed",
+          label: "리뷰",
+          icon: MessageSquare,
+          onSelect: () => handleShortcutClick("feed"),
+        },
+        {
+          id: "stamp",
+          label: "도장",
+          icon: Stamp,
+          onSelect: () => handleShortcutClick("stamp"),
+        },
+        {
+          id: "leaderboard",
+          label: "랭킹",
+          icon: Trophy,
+          onSelect: () => handleShortcutClick("leaderboard"),
+        },
+      ] as const satisfies ReadonlyArray<DesktopMapMenuItem>,
     [
       handleAccountClick,
       handleBookmarkClick,
@@ -1414,77 +1435,36 @@ export default function HomeDesktopControlPanel({
   );
   const hasActiveDetail = isPanelOpen && Boolean(panelRestaurant);
   const isInlinePanelViewActive = activeLeftPanelView !== "map";
+  const hasDesktopSearchQuery = desktopSearchQuery.trim().length > 0;
+  // The hamburger menu intentionally lives in the expanded desktop search slot.
+  // When the panel is collapsed, the persistent edge toggle reveals this slot;
+  // we do not add a second map-floating nav because the old map overlay buttons
+  // were explicitly removed from the map surface.
   const panelSideLabel = desktopPanelSide === "right" ? "우측" : "좌측";
   const panelToggleLabel = isPanelCollapsed
     ? `${panelSideLabel} 패널 펼치기`
     : `${panelSideLabel} 패널 접기`;
-  const floatingControlsStyle = {
+  const desktopMapFloatingControlStyle = {
     left:
       !isPanelCollapsed && desktopPanelSide === "left"
         ? `calc(min(${DESKTOP_LEFT_PANEL_WIDTH_PX}px, calc(100vw - 32px)) + 1rem)`
         : "1rem",
-    "--desktop-floating-nav-button-width": DESKTOP_FLOATING_NAV_BUTTON_WIDTH,
+    "--desktop-map-floating-filter-width": DESKTOP_MAP_FLOATING_FILTER_WIDTH,
   } as CSSProperties;
 
   return (
     <>
       {!hasActiveDetail && (
         <>
-          <nav
-            className="fixed top-4 z-[70] flex flex-col items-start gap-2"
-            style={floatingControlsStyle}
-            aria-label="지도 화면 보조 탐색"
-            data-desktop-map-floating-nav="true"
-            onMouseDownCapture={handlePanelMouseDownCapture}
-            onFocusCapture={handlePanelFocusCapture}
-          >
-            {DESKTOP_FLOATING_NAV_ROW_STARTS.map((rowStart) => (
-              <div
-                key={rowStart}
-                className="grid grid-cols-3 gap-2"
-                data-desktop-map-floating-nav-row={
-                  rowStart === 0 ? "account" : "content"
-                }
-              >
-                {DESKTOP_FLOATING_NAV_ITEMS.slice(rowStart, rowStart + 3).map(
-                  (item) => {
-                    const isActive = activeLeftPanelView === item.id;
-                    return (
-                      <Button
-                        key={item.id}
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        aria-pressed={isActive}
-                        className={cn(
-                          "pointer-events-auto h-9 w-[var(--desktop-floating-nav-button-width)] shrink-0 justify-center rounded-full border border-border bg-background/95 px-3 text-xs font-medium shadow-sm backdrop-blur-sm transition-colors motion-reduce:transition-none hover:bg-secondary/80",
-                          isActive &&
-                            "border-red-700 bg-red-700 text-white hover:bg-red-800",
-                        )}
-                        onClick={() => handleFloatingNavClick(item.id)}
-                      >
-                        <item.icon
-                          className="mr-1 h-3.5 w-3.5"
-                          aria-hidden="true"
-                        />
-                        {item.label}
-                      </Button>
-                    );
-                  },
-                )}
-              </div>
-            ))}
-          </nav>
-
-          <div
-            className="fixed bottom-6 z-[70] grid auto-rows-auto grid-cols-[max-content] items-start gap-2"
-            style={floatingControlsStyle}
-            data-desktop-map-floating-filters="true"
-            onMouseDownCapture={handlePanelMouseDownCapture}
-            onFocusCapture={handlePanelFocusCapture}
-          >
-            {onModeChange && (
-              <div className="flex w-full min-w-max items-center gap-0.5 rounded-full border border-border bg-background/95 p-0.5 shadow-lg backdrop-blur-sm">
+          {onModeChange && (
+            <div
+              className="fixed top-4 z-[70] grid auto-rows-auto grid-cols-[max-content] items-start gap-2"
+              style={desktopMapFloatingControlStyle}
+              data-desktop-map-mode-toggle="true"
+              onMouseDownCapture={handlePanelMouseDownCapture}
+              onFocusCapture={handlePanelFocusCapture}
+            >
+              <div className="flex w-[var(--desktop-map-floating-filter-width)] items-center gap-0.5 rounded-full border border-border bg-background/95 p-0.5 shadow-lg backdrop-blur-sm">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -1516,8 +1496,16 @@ export default function HomeDesktopControlPanel({
                   해외
                 </Button>
               </div>
-            )}
+            </div>
+          )}
 
+          <div
+            className="fixed bottom-6 z-[70] grid auto-rows-auto grid-cols-[max-content] items-start gap-2"
+            style={desktopMapFloatingControlStyle}
+            data-desktop-map-floating-filters="true"
+            onMouseDownCapture={handlePanelMouseDownCapture}
+            onFocusCapture={handlePanelFocusCapture}
+          >
             {mapMode === "domestic" ? (
               <RegionSelector
                 selectedRegion={selectedRegion}
@@ -1697,19 +1685,65 @@ export default function HomeDesktopControlPanel({
                   <Video className="h-4 w-4" aria-hidden="true" />
                 )}
               </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  clearDesktopSearch();
-                  desktopSearchInputRef.current?.blur();
-                }}
-                aria-label="검색 닫기"
-                className="h-9 w-9 shrink-0 rounded-full border border-border bg-background hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
-              >
-                <X className="h-5 w-5" aria-hidden="true" />
-              </Button>
+              {hasDesktopSearchQuery ? (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    clearDesktopSearch();
+                    desktopSearchInputRef.current?.blur();
+                  }}
+                  aria-label="검색 닫기"
+                  className="h-9 w-9 shrink-0 rounded-full border border-border bg-background hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
+                >
+                  <X className="h-5 w-5" aria-hidden="true" />
+                </Button>
+              ) : (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      type="button"
+                      onClick={(event) => event.stopPropagation()}
+                      aria-label="지도 메뉴 열기"
+                      className="h-9 w-9 shrink-0 rounded-full border border-border bg-background hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
+                      data-desktop-map-menu-trigger="true"
+                    >
+                      <Menu className="h-5 w-5" aria-hidden="true" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    sideOffset={8}
+                    className="z-[180] w-max min-w-[max-content] max-w-[min(24rem,calc(100vw-2rem))] rounded-2xl border-border bg-card p-1.5 font-serif shadow-2xl"
+                    data-desktop-map-menu="true"
+                  >
+                    {desktopMapMenuItems.map((item) => {
+                      const isActive = activeLeftPanelView === item.id;
+                      const ItemIcon = item.icon;
+                      return (
+                        <DropdownMenuItem
+                          key={item.id}
+                          onClick={item.onSelect}
+                          className={cn(
+                            desktopMapMenuItemClass,
+                            isActive && "bg-primary/10 text-primary focus:text-primary",
+                          )}
+                          aria-label={`${item.label} 패널 열기`}
+                        >
+                          <ItemIcon
+                            className="mr-2 h-4 w-4"
+                            aria-hidden="true"
+                          />
+                          {item.label}
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
           </div>
 
