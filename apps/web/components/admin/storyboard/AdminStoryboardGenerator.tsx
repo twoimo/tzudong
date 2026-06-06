@@ -12,19 +12,27 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  History,
   ImageIcon,
   Loader2,
   MessageCircle,
   RotateCcw,
   Send,
+  Settings,
   Square,
   Wand2,
   TriangleAlert,
+  X,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -53,6 +61,11 @@ import {
   getTrustedStoryboardGeneratedImage,
   stripUntrustedStoryboardGeneratedImages,
 } from "@/lib/admin/storyboard/image-trust";
+import {
+  getOmittedStoryboardSceneCount,
+  getStoryboardImageGenerationTargetScenes,
+  getVisibleTrustedStoryboardScenes,
+} from "@/lib/admin/storyboard/visible-scenes";
 import { cn } from "@/lib/utils";
 
 type GeneratorForm = {
@@ -84,6 +97,16 @@ type StoryboardRealDataTrace = {
   backendText: string;
   generatedAtText: string;
   summaryText: string;
+};
+
+type StoryboardUserPerspectiveRoleId = "host" | "manager" | "pd" | "editor";
+
+type StoryboardUserPerspectiveReadinessItem = {
+  id: StoryboardUserPerspectiveRoleId;
+  label: string;
+  status: "ready" | "watch";
+  summary: string;
+  detail: string;
 };
 
 type StoryboardHistoryStatus = "idle" | "loading" | "ready" | "empty" | "error";
@@ -119,7 +142,14 @@ const storyboardExportPresets: StoryboardExportPreset[] = [
   { id: "high-1920x1080", label: "1920×1080", width: 1920, height: 1080 },
 ];
 
-type StoryboardChatQuickCommand = "generate" | "images" | "reset" | "status";
+type StoryboardChatQuickCommand =
+  | "generate"
+  | "history"
+  | "images"
+  | "review"
+  | "reset"
+  | "settings"
+  | "status";
 
 function getStoryboardChatQuickCommand(
   message: string,
@@ -130,6 +160,11 @@ function getStoryboardChatQuickCommand(
 
   if (/^(초기화|리셋|reset|clear)$/.test(compact)) return "reset";
   if (/^(상태|요약|status|컷상태|이미지상태)$/.test(compact)) return "status";
+  if (/^(점검|사용자점검|사용자관점|검수|qa|review)$/.test(compact)) {
+    return "review";
+  }
+  if (/^(히스토리|생성히스토리|기록|history)$/.test(compact)) return "history";
+  if (/^(설정|톱니바퀴|settings|setting)$/.test(compact)) return "settings";
   if (
     isShortCommand &&
     (/(4컷|네컷|현재4컷).*(재생성|다시생성)/.test(compact) ||
@@ -146,7 +181,7 @@ function getStoryboardChatQuickCommand(
 
 const STORYBOARD_FRAMES_PER_PAGE = 4;
 // Source contracts kept literal for admin storyboard UI regression tests:
-// postStoryboardImagesRequest(result, activeRealStoryboardPageScenes)
+// postStoryboardImagesRequest(result, activeStoryboardImageGenerationTargetScenes)
 // isStoryboardResultSkeletonVisible || !hasPreviousStoryboardPage
 // isStoryboardResultSkeletonVisible || !hasNextStoryboardPage
 // disabled={isStoryboardResultSkeletonVisible || isGeneratingImages}
@@ -161,7 +196,6 @@ const storyboardStreamingPhases = [
   "좌측 캔버스 2×2 컷에 순차 반영 중",
   "자막·리액션·클로즈업 포인트 정리 중",
 ];
-
 
 function formatStoryboardRealDataPercent(value: number) {
   if (!Number.isFinite(value)) return "0.0%";
@@ -211,6 +245,100 @@ function formatStoryboardRealDataTrace(
   };
 }
 
+function formatStoryboardOmittedSceneText(omittedSceneCount: number) {
+  return omittedSceneCount > 0
+    ? `무이미지/미검증 컷 ${omittedSceneCount}개 제외`
+    : "무이미지/미검증 컷 없음";
+}
+
+function buildStoryboardUserPerspectiveReadiness({
+  result,
+  activeCutStart,
+  activeCutEnd,
+  activePageGeneratedCount,
+  activePageSceneCount,
+  generatedImageCount,
+  visibleCutCount,
+  omittedSceneCount,
+  hasSelectedCut,
+}: {
+  result: StoryboardGenerationResult;
+  activeCutStart: number;
+  activeCutEnd: number;
+  activePageGeneratedCount: number;
+  activePageSceneCount: number;
+  generatedImageCount: number;
+  visibleCutCount: number;
+  omittedSceneCount: number;
+  hasSelectedCut: boolean;
+}): StoryboardUserPerspectiveReadinessItem[] {
+  const isActualData = getStoryboardRealDataModeLabel(result) === "actual";
+  const hasVisibleGeneratedCuts = visibleCutCount > 0 && generatedImageCount > 0;
+  const activePageReady =
+    activePageSceneCount > 0 && activePageGeneratedCount === activePageSceneCount;
+  const omittedText = formatStoryboardOmittedSceneText(omittedSceneCount);
+
+  return [
+    {
+      id: "host",
+      label: "쯔양님/진행자",
+      status: hasVisibleGeneratedCuts ? "ready" : "watch",
+      summary: hasSelectedCut
+        ? "선택한 CUT 맥락으로 멘트·리액션 수정 가능"
+        : "채팅으로 요구사항 입력 후 CUT을 눌러 멘트 수정 가능",
+      detail: hasVisibleGeneratedCuts
+        ? `현재 CUT ${String(activeCutStart).padStart(2, "0")}–${String(activeCutEnd).padStart(2, "0")}를 보며 말할 포인트를 점검합니다.`
+        : "먼저 스토리보드와 GPT Image 2 이미지를 생성해야 진행자가 확인할 장면이 생깁니다.",
+    },
+    {
+      id: "manager",
+      label: "매니저",
+      status: isActualData ? "ready" : "watch",
+      summary: isActualData
+        ? "실제 히트맵/백엔드 근거 확인 가능"
+        : "샘플 데이터 상태라 실제 근거 확인 필요",
+      detail: `${result.sourceSummary.dataModeLabel} · 선택 ${result.sourceSummary.selectedSources}개 · 피크 ${result.sourceSummary.totalMarkers}개`,
+    },
+    {
+      id: "pd",
+      label: "PD",
+      status: activePageReady ? "ready" : "watch",
+      summary: activePageReady
+        ? "2×2 캔버스 현재 페이지가 생성 이미지로 채워짐"
+        : "현재 페이지 생성 이미지 누락 컷 확인 필요",
+      detail: `현재 ${activePageGeneratedCount}/${activePageSceneCount || STORYBOARD_FRAMES_PER_PAGE} · 전체 ${generatedImageCount}/${visibleCutCount} · ${omittedText}`,
+    },
+    {
+      id: "editor",
+      label: "편집자",
+      status: hasVisibleGeneratedCuts ? "ready" : "watch",
+      summary: "이미지와 분리된 AUDIO/SUBTITLE로 컷별 편집 판단",
+      detail: hasVisibleGeneratedCuts
+        ? "프레임 아래 스크립트 영역에서 오디오와 자막을 따로 읽고 채팅으로 바로 수정할 수 있습니다."
+        : "검증된 이미지가 생성되면 오디오/자막 점검 영역이 함께 표시됩니다.",
+    },
+  ];
+}
+
+function formatStoryboardUserPerspectiveMessage(
+  readinessItems: StoryboardUserPerspectiveReadinessItem[],
+  result: StoryboardGenerationResult,
+  generatedImageCount: number,
+  visibleCutCount: number,
+  omittedSceneCount: number,
+) {
+  const trace = formatStoryboardRealDataTrace(result);
+  const roleLines = readinessItems.map((item) => {
+    const statusText = item.status === "ready" ? "준비됨" : "확인 필요";
+    return `${item.label}: ${statusText} · ${item.summary}`;
+  });
+  return [
+    `사용자 관점 점검 · 이미지 ${generatedImageCount}/${visibleCutCount} · ${formatStoryboardOmittedSceneText(omittedSceneCount)}`,
+    ...roleLines,
+    `데이터 근거: ${trace.headline} · ${trace.sourceText}`,
+  ].join("\n");
+}
+
 function summarizeChatPrompt(prompt: string) {
   const normalized = prompt.trim().replace(/\s+/g, " ");
   if (!normalized) return "채팅창에 스토리보드 요구사항을 입력해 주세요.";
@@ -253,7 +381,8 @@ function createStoryboardActionFocusContext(
     kind: "action",
     label,
     detail,
-    promptContext: promptContext ?? `${label} 액션 직후의 캔버스 상태입니다. ${detail}`,
+    promptContext:
+      promptContext ?? `${label} 액션 직후의 캔버스 상태입니다. ${detail}`,
     createdAt: new Date().toISOString(),
   };
 }
@@ -802,6 +931,28 @@ function mergeStoryboardHistoryCases(
   });
 }
 
+function getStoryboardHistoryPreviewImage(
+  historyCase: StoryboardHistoryCase,
+) {
+  for (const scene of historyCase.result.storyboard.scenes) {
+    const trustedImage = getTrustedStoryboardGeneratedImage(
+      scene.generatedImage,
+    );
+    if (trustedImage) return trustedImage.dataUrl;
+  }
+  return null;
+}
+
+function formatStoryboardHistoryVisibleCutCount(
+  result: StoryboardGenerationResult,
+) {
+  const generatedImageCount = countTrustedStoryboardGeneratedImages(
+    result.storyboard.scenes,
+  );
+  if (generatedImageCount > 0) return `${generatedImageCount}컷 이미지`;
+  return `${result.storyboard.scenes.length}컷`;
+}
+
 function mergeStoryboardScenePatch(
   scene: StoryboardScene,
   patch: NonNullable<StoryboardChatCanvasPatch["scenePatch"]>,
@@ -829,6 +980,21 @@ function getStoryboardPageForSceneNo(sceneNo: number, totalPages: number) {
     (Math.max(1, Math.trunc(sceneNo)) - 1) / STORYBOARD_FRAMES_PER_PAGE,
   );
   return Math.min(maxPage, Math.max(0, page));
+}
+
+function getStoryboardVisibleFramePageForSceneNo(
+  scenes: StoryboardScene[],
+  sceneNo: number,
+) {
+  if (!Number.isFinite(sceneNo)) return null;
+  const sceneIndex = scenes.findIndex(
+    (scene) => scene.sceneNo === Math.trunc(sceneNo),
+  );
+  if (sceneIndex < 0) return null;
+  return getStoryboardPageForSceneNo(
+    sceneIndex + 1,
+    Math.max(1, Math.ceil(scenes.length / STORYBOARD_FRAMES_PER_PAGE)),
+  );
 }
 
 async function getLatestRealDataStoryboardResult(): Promise<StoryboardGenerationResult | null> {
@@ -885,6 +1051,7 @@ async function postStoryboardImagesRequest(
       logline: result.storyboard.logline,
       request: result.request,
       scenes,
+      sourceResult: result,
     }),
   });
 
@@ -926,9 +1093,6 @@ export function AdminStoryboardGenerator() {
     useState<StoryboardExportPresetId>("quick-1280x720");
   const [showStoryboardGuide, setShowStoryboardGuide] = useState(false);
   const [storyboardPage, setStoryboardPage] = useState(0);
-  const [latestRealDataLoadedAt, setLatestRealDataLoadedAt] = useState<
-    string | null
-  >(null);
   const [storyboardHistoryCases, setStoryboardHistoryCases] = useState<
     StoryboardHistoryCase[]
   >([]);
@@ -937,6 +1101,10 @@ export function AdminStoryboardGenerator() {
   const [storyboardHistoryError, setStoryboardHistoryError] = useState<
     string | null
   >(null);
+  const [isStoryboardHistoryPanelOpen, setIsStoryboardHistoryPanelOpen] =
+    useState(false);
+  const [isStoryboardChatSettingsOpen, setIsStoryboardChatSettingsOpen] =
+    useState(false);
   const [chatDraft, setChatDraft] = useState("");
   const [storyboardCanvasFocus, setStoryboardCanvasFocus] =
     useState<StoryboardChatFocusContext | null>(null);
@@ -945,7 +1113,7 @@ export function AdminStoryboardGenerator() {
     {
       id: "assistant-intake",
       role: "assistant",
-      text: "요구사항을 입력하거나 ‘상태’, ‘생성’, ‘4컷 재생성’, ‘초기화’라고 보내면 채팅 안에서 바로 처리합니다.",
+      text: "요구사항을 입력하거나 ‘상태’, ‘점검’, ‘생성’, ‘4컷 재생성’, ‘초기화’라고 보내면 채팅 안에서 바로 처리합니다.",
       status: "done",
     },
   ]);
@@ -959,7 +1127,6 @@ export function AdminStoryboardGenerator() {
         setResult(latestResult);
         setForm(latestResult.request);
         setStoryboardPage(0);
-        setLatestRealDataLoadedAt(latestResult.generatedAt);
         const trace = formatStoryboardRealDataTrace(latestResult);
         const latestHistoryMessage: StoryboardChatMessage = {
           id: "assistant-latest-real-data",
@@ -1022,16 +1189,10 @@ export function AdminStoryboardGenerator() {
     return () => window.clearInterval(intervalId);
   }, [isGenerating, isChatAgentStreaming]);
 
-  const storyboardFrameScenes = useMemo(() => {
-    if (result.storyboard.scenes.length >= 4) return result.storyboard.scenes;
-    return [
-      ...result.storyboard.scenes,
-      ...INITIAL_STORYBOARD_PREVIEW.storyboard.scenes.slice(
-        result.storyboard.scenes.length,
-        4,
-      ),
-    ];
-  }, [result.storyboard.scenes]);
+  const storyboardFrameScenes = useMemo(
+    () => getVisibleTrustedStoryboardScenes(result.storyboard.scenes),
+    [result.storyboard.scenes],
+  );
   const storyboardTotalPages = Math.max(
     1,
     Math.ceil(storyboardFrameScenes.length / STORYBOARD_FRAMES_PER_PAGE),
@@ -1040,17 +1201,21 @@ export function AdminStoryboardGenerator() {
     storyboardPage,
     storyboardTotalPages - 1,
   );
-  const activeRealStoryboardPageScenes = result.storyboard.scenes.slice(
-    activeStoryboardPage * STORYBOARD_FRAMES_PER_PAGE,
-    activeStoryboardPage * STORYBOARD_FRAMES_PER_PAGE +
-      STORYBOARD_FRAMES_PER_PAGE,
-  );
   const activeStoryboardPageScenes = storyboardFrameScenes.slice(
     activeStoryboardPage * STORYBOARD_FRAMES_PER_PAGE,
     activeStoryboardPage * STORYBOARD_FRAMES_PER_PAGE +
       STORYBOARD_FRAMES_PER_PAGE,
   );
-  const activeCutStart = activeStoryboardPage * STORYBOARD_FRAMES_PER_PAGE + 1;
+  const activeStoryboardImageGenerationTargetScenes =
+    getStoryboardImageGenerationTargetScenes({
+      allScenes: result.storyboard.scenes,
+      visibleScenes: storyboardFrameScenes,
+      page: activeStoryboardPage,
+      pageSize: STORYBOARD_FRAMES_PER_PAGE,
+    });
+  const activeCutStart =
+    activeStoryboardPageScenes[0]?.sceneNo ??
+    activeStoryboardPage * STORYBOARD_FRAMES_PER_PAGE + 1;
   const requestedCutCount = Math.max(
     STORYBOARD_FRAMES_PER_PAGE,
     Number.isFinite(form.segmentCount)
@@ -1059,36 +1224,73 @@ export function AdminStoryboardGenerator() {
   );
   const totalCutCount = isGenerating
     ? requestedCutCount
-    : result.storyboard.scenes.length;
-  const activeCutEnd = Math.min(
-    activeCutStart + STORYBOARD_FRAMES_PER_PAGE - 1,
-    Math.max(activeCutStart, totalCutCount),
-  );
+    : storyboardFrameScenes.length;
+  const activeCutEnd =
+    activeStoryboardPageScenes.at(-1)?.sceneNo ??
+    Math.min(
+      activeCutStart + STORYBOARD_FRAMES_PER_PAGE - 1,
+      Math.max(activeCutStart, totalCutCount),
+    );
   const isStoryboardResultSkeletonVisible = isGenerating;
   const generatedImageCount = countTrustedStoryboardGeneratedImages(
     result.storyboard.scenes,
   );
-  const activePageGeneratedCount = countTrustedStoryboardGeneratedImages(
-    activeRealStoryboardPageScenes,
+  const omittedStoryboardSceneCount = Math.max(
+    0,
+    getOmittedStoryboardSceneCount(result.storyboard.scenes),
   );
-  const activePageGenerationTargetCount = Math.max(
-    1,
-    activeRealStoryboardPageScenes.length,
+  const activePageGeneratedCount = countTrustedStoryboardGeneratedImages(
+    activeStoryboardImageGenerationTargetScenes,
+  );
+  const activePageGenerationTargetCount =
+    activeStoryboardImageGenerationTargetScenes.length;
+  const selectedStoryboardSceneNo =
+    storyboardCanvasFocus?.kind === "cut"
+      ? storyboardCanvasFocus.sceneNo
+      : null;
+  const storyboardUserPerspectiveReadiness = useMemo(
+    () =>
+      buildStoryboardUserPerspectiveReadiness({
+        result,
+        activeCutStart,
+        activeCutEnd,
+        activePageGeneratedCount,
+        activePageSceneCount:
+          activeStoryboardImageGenerationTargetScenes.length || STORYBOARD_FRAMES_PER_PAGE,
+        generatedImageCount,
+        visibleCutCount: totalCutCount,
+        omittedSceneCount: omittedStoryboardSceneCount,
+        hasSelectedCut: Boolean(selectedStoryboardSceneNo),
+      }),
+    [
+      result,
+      activeCutStart,
+      activeCutEnd,
+      activePageGeneratedCount,
+      activeStoryboardImageGenerationTargetScenes.length,
+      generatedImageCount,
+      totalCutCount,
+      omittedStoryboardSceneCount,
+      selectedStoryboardSceneNo,
+    ],
   );
   const imageGenerationButtonLabel =
-    activePageGeneratedCount === activeRealStoryboardPageScenes.length
-      ? `현재 ${activePageGenerationTargetCount}컷 다시 생성`
-      : `현재 ${activePageGenerationTargetCount}컷 이미지 생성`;
+    activePageGenerationTargetCount === 0
+      ? "이미지 생성 대상 없음"
+      : activePageGeneratedCount === activeStoryboardImageGenerationTargetScenes.length
+        ? `현재 ${activePageGenerationTargetCount}컷 다시 생성`
+        : `현재 ${activePageGenerationTargetCount}컷 이미지 생성`;
   const compactImageGenerationButtonLabel =
-    activePageGeneratedCount === activeRealStoryboardPageScenes.length
-      ? `${activePageGenerationTargetCount}컷 재생성`
-      : `${activePageGenerationTargetCount}컷 생성`;
+    activePageGenerationTargetCount === 0
+      ? "이미지 없음"
+      : activePageGeneratedCount === activeStoryboardImageGenerationTargetScenes.length
+        ? `${activePageGenerationTargetCount}컷 재생성`
+        : `${activePageGenerationTargetCount}컷 생성`;
   const hasPreviousStoryboardPage = activeStoryboardPage > 0;
   const hasNextStoryboardPage = activeStoryboardPage < storyboardTotalPages - 1;
   const selectedExportPreset =
     storyboardExportPresets.find((preset) => preset.id === exportPresetId) ??
     storyboardExportPresets[0];
-  const currentSourceSummary = result.sourceSummary;
   const storyboardRealDataTrace = useMemo(
     () => formatStoryboardRealDataTrace(result),
     [result],
@@ -1112,22 +1314,12 @@ export function AdminStoryboardGenerator() {
       : isChatDraftActive
         ? "채팅 초안이 캔버스에 반영 대기 중"
         : "최신 캔버스와 동기화됨";
-  const selectedStoryboardSceneNo =
-    storyboardCanvasFocus?.kind === "cut" ? storyboardCanvasFocus.sceneNo : null;
   const selectedRealStoryboardScene = selectedStoryboardSceneNo
     ? result.storyboard.scenes.find(
         (scene) => scene.sceneNo === selectedStoryboardSceneNo,
       )
     : null;
   const visibleStoryboardHistoryCases = storyboardHistoryCases.slice(0, 8);
-  const storyboardHistoryStatusLabel =
-    storyboardHistoryStatus === "loading"
-      ? "히스토리 로드 중"
-      : storyboardHistoryStatus === "error"
-        ? "히스토리 오류"
-        : storyboardHistoryCases.length
-          ? `최근 ${storyboardHistoryCases.length}개`
-          : "히스토리 없음";
   const storyboardChatPlaceholder =
     storyboardCanvasFocus?.kind === "cut"
       ? `${storyboardCanvasFocus.label} 기준으로 바꾸고 싶은 점을 입력하세요`
@@ -1156,14 +1348,20 @@ export function AdminStoryboardGenerator() {
         (scene) => scene.sceneNo === patch.scenePatch?.sceneNo,
       );
       if (sceneForFocus) {
-        setStoryboardCanvasFocus(
-          createStoryboardCutFocusContext(
-            mergeStoryboardScenePatch(sceneForFocus, patch.scenePatch),
-          ),
+        const visibleFramePage = getStoryboardVisibleFramePageForSceneNo(
+          storyboardFrameScenes,
+          sceneForFocus.sceneNo,
         );
-        setStoryboardPage(
-          getStoryboardPageForSceneNo(sceneForFocus.sceneNo, storyboardTotalPages),
-        );
+        if (visibleFramePage === null) {
+          setStoryboardCanvasFocus(null);
+        } else {
+          setStoryboardCanvasFocus(
+            createStoryboardCutFocusContext(
+              mergeStoryboardScenePatch(sceneForFocus, patch.scenePatch),
+            ),
+          );
+          setStoryboardPage(visibleFramePage);
+        }
       }
       setResult((current) => {
         const nextScenes = current.storyboard.scenes.map((scene) =>
@@ -1185,10 +1383,18 @@ export function AdminStoryboardGenerator() {
         (scene) => scene.sceneNo === patch.focusSceneNo,
       );
       if (sceneForFocus) {
-        setStoryboardCanvasFocus(createStoryboardCutFocusContext(sceneForFocus));
-        setStoryboardPage(
-          getStoryboardPageForSceneNo(sceneForFocus.sceneNo, storyboardTotalPages),
+        const visibleFramePage = getStoryboardVisibleFramePageForSceneNo(
+          storyboardFrameScenes,
+          sceneForFocus.sceneNo,
         );
+        if (visibleFramePage === null) {
+          setStoryboardCanvasFocus(null);
+        } else {
+          setStoryboardCanvasFocus(
+            createStoryboardCutFocusContext(sceneForFocus),
+          );
+          setStoryboardPage(visibleFramePage);
+        }
       }
       return;
     }
@@ -1256,13 +1462,17 @@ export function AdminStoryboardGenerator() {
     }
   }
 
+  function handleStoryboardHistoryDropdownOpenChange(nextOpen: boolean) {
+    setIsStoryboardHistoryPanelOpen(nextOpen);
+    if (nextOpen) void refreshStoryboardHistoryResults();
+  }
+
   function applyStoryboardHistoryResult(historyCase: StoryboardHistoryCase) {
     const historyResult = historyCase.result;
     const trace = formatStoryboardRealDataTrace(historyResult);
     setResult(historyResult);
     setForm(historyResult.request);
     setStoryboardPage(0);
-    setLatestRealDataLoadedAt(historyResult.generatedAt);
     setChatDraft("");
     setErrorMessage(null);
     applyStoryboardCanvasFocus(
@@ -1339,7 +1549,7 @@ export function AdminStoryboardGenerator() {
 
   function getStoryboardChatStatusMessage() {
     const trace = formatStoryboardRealDataTrace(result);
-    return `현재 상태 · CUT ${String(activeCutStart).padStart(2, "0")}–${String(activeCutEnd).padStart(2, "0")} · 이미지 현재 ${activePageGeneratedCount}/${activeRealStoryboardPageScenes.length || STORYBOARD_FRAMES_PER_PAGE} · 전체 ${generatedImageCount}/${totalCutCount} · ${trace.summaryText}`;
+    return `현재 상태 · CUT ${String(activeCutStart).padStart(2, "0")}–${String(activeCutEnd).padStart(2, "0")} · 이미지 현재 ${activePageGeneratedCount}/${activeStoryboardImageGenerationTargetScenes.length || STORYBOARD_FRAMES_PER_PAGE} · 전체 ${generatedImageCount}/${totalCutCount} · ${formatStoryboardOmittedSceneText(omittedStoryboardSceneCount)} · ${trace.summaryText}`;
   }
 
   function appendStoryboardQuickCommandMessages(
@@ -1416,9 +1626,11 @@ export function AdminStoryboardGenerator() {
       const generated = await postStoryboardRequest(nextForm);
       const completionTrace = formatStoryboardRealDataTrace(generated);
       setResult(generated);
-      setLatestRealDataLoadedAt(generated.generatedAt);
       setStoryboardHistoryCases((current) =>
-        mergeStoryboardHistoryCases([makeStoryboardHistoryCase(generated)], current),
+        mergeStoryboardHistoryCases(
+          [makeStoryboardHistoryCase(generated)],
+          current,
+        ),
       );
       setStoryboardHistoryStatus("ready");
       setStoryboardHistoryError(null);
@@ -1492,7 +1704,20 @@ export function AdminStoryboardGenerator() {
       if (quickCommand === "status") {
         appendStoryboardQuickCommandMessages(
           submittedPrompt,
-          `${getStoryboardChatStatusMessage()}${storyboardCanvasFocus ? ` · 현재 맥락 ${storyboardCanvasFocus.label}` : ""} · ‘생성’, ‘4컷 재생성’, ‘초기화’도 채팅으로 실행할 수 있습니다.`,
+          `${getStoryboardChatStatusMessage()}${storyboardCanvasFocus ? ` · 현재 맥락 ${storyboardCanvasFocus.label}` : ""} · ‘점검’, ‘생성’, ‘4컷 재생성’, ‘초기화’도 채팅으로 실행할 수 있습니다.`,
+        );
+        return;
+      }
+      if (quickCommand === "review") {
+        appendStoryboardQuickCommandMessages(
+          submittedPrompt,
+          formatStoryboardUserPerspectiveMessage(
+            storyboardUserPerspectiveReadiness,
+            result,
+            generatedImageCount,
+            totalCutCount,
+            omittedStoryboardSceneCount,
+          ),
         );
         return;
       }
@@ -1507,11 +1732,28 @@ export function AdminStoryboardGenerator() {
         resetStoryboardChatState();
         return;
       }
+      if (quickCommand === "history") {
+        setIsStoryboardHistoryPanelOpen(true);
+        appendStoryboardQuickCommandMessages(
+          submittedPrompt,
+          "생성 히스토리를 이 페이지 안에서 열었습니다. 우상단 히스토리 버튼으로도 닫거나 다시 열 수 있습니다.",
+        );
+        await refreshStoryboardHistoryResults();
+        return;
+      }
+      if (quickCommand === "settings") {
+        setIsStoryboardChatSettingsOpen(true);
+        appendStoryboardQuickCommandMessages(
+          submittedPrompt,
+          "채팅 설정을 열었습니다. 우상단 톱니바퀴에서 실제 데이터 근거, 이미지 재생성, 초기화를 관리할 수 있습니다.",
+        );
+        return;
+      }
       if (quickCommand === "images") {
         if (
           isStoryboardResultSkeletonVisible ||
           isGeneratingImages ||
-          activeRealStoryboardPageScenes.length === 0
+          activeStoryboardImageGenerationTargetScenes.length === 0
         ) {
           appendStoryboardQuickCommandMessages(
             submittedPrompt,
@@ -1575,7 +1817,8 @@ export function AdminStoryboardGenerator() {
           currentTone: form.tone,
           currentTargetLengthMinutes: form.targetLengthMinutes,
           currentSegmentCount: form.segmentCount,
-          currentAvailableSceneCount: result.storyboard.scenes.length,
+          currentAvailableSceneCount:
+            storyboardFrameScenes.length || result.storyboard.scenes.length,
           generationMode: form.generationMode,
           focusContext: storyboardCanvasFocus,
         }),
@@ -1774,8 +2017,22 @@ export function AdminStoryboardGenerator() {
       scope?: "page" | "selected";
     } = {},
   ) {
-    const targetScenes = options.targetScenes ?? activeRealStoryboardPageScenes;
+    const targetScenes =
+      options.targetScenes ?? activeStoryboardImageGenerationTargetScenes;
     const isSelectedScope = options.scope === "selected";
+    if (targetScenes.length === 0) {
+      const message =
+        "현재 페이지에 GPT Image 2로 생성할 스토리보드 컷이 없습니다.";
+      setErrorMessage(message);
+      if (options.assistantMessageId) {
+        updateStoryboardChatMessage(
+          options.assistantMessageId,
+          message,
+          "done",
+        );
+      }
+      return;
+    }
     const targetLabel =
       isSelectedScope && targetScenes[0]
         ? `CUT ${String(targetScenes[0].sceneNo).padStart(2, "0")}`
@@ -1801,15 +2058,11 @@ export function AdminStoryboardGenerator() {
       );
     }
 
-    try {
-      // Source contract: postStoryboardImagesRequest(result, activeRealStoryboardPageScenes)
-      const payload = await postStoryboardImagesRequest(
-        result,
-        targetScenes,
-      );
+    let appliedImageCount = 0;
+    const applyGeneratedImages = (images: StoryboardImagesResponse["images"]) => {
       setResult((current) => {
         const imageMap = new Map(
-          payload.images.map(({ sceneNo, image }) => [sceneNo, image]),
+          images.map(({ sceneNo, image }) => [sceneNo, image]),
         );
         return {
           ...current,
@@ -1824,19 +2077,53 @@ export function AdminStoryboardGenerator() {
           },
         };
       });
+      appliedImageCount += images.length;
+    };
+
+    try {
+      const generatedImages: StoryboardImagesResponse["images"] = [];
+      if (!isSelectedScope && targetScenes.length > 1) {
+        for (let index = 0; index < targetScenes.length; index += 1) {
+          const scene = targetScenes[index];
+          if (!scene) continue;
+          if (options.assistantMessageId) {
+            updateStoryboardChatMessage(
+              options.assistantMessageId,
+              `GPT Image 2로 CUT ${String(scene.sceneNo).padStart(2, "0")} 생성 중입니다 · ${index + 1}/${targetScenes.length}`,
+              "streaming",
+            );
+          }
+          const scenePayload = await postStoryboardImagesRequest(result, [
+            scene,
+          ]);
+          generatedImages.push(...scenePayload.images);
+          applyGeneratedImages(scenePayload.images);
+          applyStoryboardCanvasFocus(
+            createStoryboardActionFocusContext(
+              "컷 이미지 생성 진행",
+              `CUT ${String(scene.sceneNo).padStart(2, "0")} 이미지가 캔버스에 반영됐습니다 · ${index + 1}/${targetScenes.length}`,
+              "긴 4컷 생성도 컷 단위로 반영됩니다. 사용자가 이미 보이는 컷을 선택해 오디오/자막/비주얼 피드백을 바로 이어갈 수 있습니다.",
+            ),
+          );
+        }
+      } else {
+        const payload = await postStoryboardImagesRequest(result, targetScenes);
+        generatedImages.push(...payload.images);
+        applyGeneratedImages(payload.images);
+      }
       if (options.assistantMessageId) {
         updateStoryboardChatMessage(
           options.assistantMessageId,
           isSelectedScope
             ? `완료 · ${targetLabel} 이미지를 GPT Image 2 결과로 교체했습니다.`
-            : `완료 · 현재 페이지 ${activePageGenerationTargetCount}컷 이미지를 GPT Image 2 결과로 교체했습니다.`,
+            : `완료 · 현재 페이지 ${generatedImages.length}/${activePageGenerationTargetCount}컷 이미지를 GPT Image 2 결과로 교체했습니다.`,
           "done",
         );
       }
       applyStoryboardCanvasFocus(
         createStoryboardActionFocusContext(
           isSelectedScope ? "현재 컷 이미지 생성 완료" : "4컷 이미지 생성 완료",
-          `${targetLabel} 이미지 ${payload.images.length}개가 캔버스에 반영됐습니다.`,
+          `${targetLabel} 이미지 ${generatedImages.length}개가 캔버스에 반영됐습니다.`,
           isSelectedScope
             ? "선택 CUT의 GPT Image 2 생성 결과가 반영됐습니다. 사용자가 같은 컷의 오디오/자막/비주얼을 계속 보완할 수 있습니다."
             : "현재 페이지의 GPT Image 2 생성 결과가 반영됐습니다. 사용자가 컷을 선택하면 해당 이미지를 기준으로 보완 대화를 이어가세요.",
@@ -1853,7 +2140,7 @@ export function AdminStoryboardGenerator() {
           options.assistantMessageId,
           isSelectedScope
             ? `현재 컷 재생성 실패 · ${message}`
-            : `4컷 재생성 실패 · ${message}`,
+            : `4컷 재생성 실패 · ${message} · 반영 ${appliedImageCount}/${targetScenes.length}`,
           "done",
         );
       }
@@ -1890,54 +2177,455 @@ export function AdminStoryboardGenerator() {
                 className="flex shrink-0 items-center gap-1"
                 data-storyboard-chat-header-actions="true"
               >
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 rounded-full px-2 text-xs"
-                  onClick={() =>
-                    void handleGenerateStoryboardImages(
-                      selectedRealStoryboardScene
-                        ? {
-                            targetScenes: [selectedRealStoryboardScene],
-                            scope: "selected",
-                          }
-                        : undefined,
-                    )
-                  }
-                  disabled={
-                    isStoryboardResultSkeletonVisible ||
-                    isGeneratingImages ||
-                    (selectedRealStoryboardScene
-                      ? false
-                      : activeRealStoryboardPageScenes.length === 0)
-                  }
-                  aria-label={
-                    selectedRealStoryboardScene
-                      ? `CUT ${String(selectedRealStoryboardScene.sceneNo).padStart(2, "0")} 이미지 재생성`
-                      : "현재 페이지 4컷 이미지 재생성"
-                  }
-                  data-storyboard-chat-header-image-command="true"
+                <DropdownMenu
+                  open={isStoryboardHistoryPanelOpen}
+                  onOpenChange={handleStoryboardHistoryDropdownOpenChange}
                 >
-                  {isGeneratingImages ? (
-                    <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <ImageIcon className="mr-1 h-3.5 w-3.5" />
-                  )}
-                  {selectedRealStoryboardScene ? "현재 컷" : "4컷"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 rounded-full"
-                  onClick={resetStoryboardChatState}
-                  disabled={isGenerating || isChatAgentStreaming}
-                  aria-label="스토리보드 채팅 초기화"
-                  data-storyboard-chat-header-reset="true"
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      variant={
+                        isStoryboardHistoryPanelOpen ? "secondary" : "ghost"
+                      }
+                      size="icon"
+                      className="h-8 w-8 rounded-full"
+                      disabled={storyboardHistoryStatus === "loading"}
+                      aria-label="스토리보드 생성 히스토리 열기"
+                      data-storyboard-history-panel-toggle="true"
+                      data-storyboard-history-dropdown-trigger="icon-only"
+                    >
+                      {storyboardHistoryStatus === "loading" ? (
+                        <Loader2
+                          className="h-3.5 w-3.5 animate-spin"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <History className="h-3.5 w-3.5" aria-hidden="true" />
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    className="w-[min(420px,calc(100vw-2rem))] p-0"
+                    data-storyboard-history-dropdown="true"
+                  >
+                    <div
+                      className="space-y-2 rounded-md bg-background/95 p-2 text-xs"
+                      data-storyboard-history-panel="true"
+                      data-storyboard-history-status={storyboardHistoryStatus}
+                      data-storyboard-history-count={String(
+                        storyboardHistoryCases.length,
+                      )}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 text-xs font-semibold">
+                            <History className="h-3.5 w-3.5" />
+                            <span>생성 히스토리</span>
+                            <Badge
+                              variant="secondary"
+                              className="px-1.5 text-[10px]"
+                              data-storyboard-history-status-label="true"
+                            >
+                              {storyboardHistoryStatus === "loading"
+                                ? "불러오는 중"
+                                : storyboardHistoryCases.length
+                                  ? `${storyboardHistoryCases.length}건`
+                                  : "없음"}
+                            </Badge>
+                          </div>
+                          <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                            실제 POST 결과를 이 페이지 안에서 다시 불러옵니다.
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => void refreshStoryboardHistoryResults()}
+                            disabled={storyboardHistoryStatus === "loading"}
+                            aria-label="스토리보드 생성 히스토리 새로고침"
+                            data-storyboard-history-refresh="true"
+                          >
+                            {storyboardHistoryStatus === "loading" ? (
+                              <Loader2
+                                className="h-3.5 w-3.5 animate-spin"
+                                aria-hidden="true"
+                              />
+                            ) : (
+                              <RotateCcw
+                                className="h-3.5 w-3.5"
+                                aria-hidden="true"
+                              />
+                            )}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => setIsStoryboardHistoryPanelOpen(false)}
+                            aria-label="스토리보드 생성 히스토리 닫기"
+                            data-storyboard-history-close="true"
+                          >
+                            <X className="h-3.5 w-3.5" aria-hidden="true" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      {storyboardHistoryError ? (
+                        <div
+                          className="rounded-xl bg-destructive/10 px-2.5 py-2 text-[11px] text-destructive"
+                          data-storyboard-history-error="true"
+                        >
+                          히스토리를 불러오지 못했습니다.{" "}
+                          {storyboardHistoryError}
+                        </div>
+                      ) : null}
+
+                      {storyboardHistoryStatus === "empty" ? (
+                        <div
+                          className="rounded-xl bg-muted/40 px-2.5 py-2 text-[11px] text-muted-foreground"
+                          data-storyboard-history-empty="true"
+                        >
+                          아직 저장된 실제 생성 기록이 없습니다. 채팅에서 “생성”을
+                          보내면 여기에 쌓입니다.
+                        </div>
+                      ) : null}
+
+                      {visibleStoryboardHistoryCases.length ? (
+                        <div
+                          className="max-h-72 space-y-1.5 overflow-y-auto pr-0.5"
+                          data-storyboard-history-run-list="true"
+                        >
+                          {visibleStoryboardHistoryCases.map((historyCase) => {
+                            const historyTrace = formatStoryboardRealDataTrace(
+                              historyCase.result,
+                            );
+                            const historyPreviewImage =
+                              getStoryboardHistoryPreviewImage(historyCase);
+                            const isSelectedHistory =
+                              historyCase.result.generatedAt === result.generatedAt;
+                            return (
+                              <div
+                                key={historyCase.id}
+                                className={cn(
+                                  "grid gap-2 rounded-xl p-2 text-[11px] sm:grid-cols-[72px_minmax(0,1fr)]",
+                                  isSelectedHistory
+                                    ? "bg-primary/5 ring-1 ring-primary/30"
+                                    : "bg-muted/35",
+                                )}
+                                data-storyboard-history-run="true"
+                                data-storyboard-history-run-id={historyCase.id}
+                                data-storyboard-history-mode={historyTrace.mode}
+                                data-storyboard-history-selected={
+                                  isSelectedHistory ? "true" : undefined
+                                }
+                              >
+                                <div className="h-12 overflow-hidden rounded-lg bg-background/80 ring-1 ring-border/60">
+                                  {historyPreviewImage ? (
+                                    <NextImage
+                                      src={historyPreviewImage}
+                                      alt={`${historyCase.result.storyboard.title} 스토리보드 히스토리`}
+                                      width={144}
+                                      height={81}
+                                      className="h-full w-full object-cover"
+                                      unoptimized
+                                      data-storyboard-history-preview-image="true"
+                                    />
+                                  ) : (
+                                    <div className="grid h-full place-items-center bg-muted/50 text-[10px] font-semibold text-muted-foreground">
+                                      이미지 없음
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="min-w-0 space-y-1">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="min-w-0">
+                                      <p
+                                        className="truncate font-semibold"
+                                        title={historyCase.result.storyboard.title}
+                                        data-storyboard-history-title="true"
+                                      >
+                                        {historyCase.result.storyboard.title}
+                                      </p>
+                                      <p className="truncate text-muted-foreground">
+                                        {historyCase.result.storyboard.logline}
+                                      </p>
+                                    </div>
+                                    <Badge
+                                      variant={
+                                        historyTrace.mode === "actual"
+                                          ? "secondary"
+                                          : "outline"
+                                      }
+                                      className="shrink-0 px-1.5 text-[10px]"
+                                    >
+                                      {historyTrace.mode === "actual"
+                                        ? "실제"
+                                        : "샘플"}
+                                    </Badge>
+                                  </div>
+                                  <div className="flex flex-wrap items-center gap-1.5">
+                                    <Button
+                                      type="button"
+                                      variant="secondary"
+                                      size="sm"
+                                      className="h-7 rounded-full px-2 text-[11px]"
+                                      onClick={() => {
+                                        applyStoryboardHistoryResult(historyCase);
+                                        setIsStoryboardHistoryPanelOpen(false);
+                                      }}
+                                      data-storyboard-history-load-run={
+                                        historyCase.id
+                                      }
+                                    >
+                                      캔버스에 불러오기
+                                    </Button>
+                                    <span
+                                      className="text-muted-foreground"
+                                      data-storyboard-history-scenes="true"
+                                    >
+                                      {formatStoryboardHistoryVisibleCutCount(
+                                        historyCase.result,
+                                      )}
+                                    </span>
+                                    <span
+                                      className="text-muted-foreground"
+                                      aria-hidden="true"
+                                    >
+                                      ·
+                                    </span>
+                                    <time
+                                      dateTime={historyCase.result.generatedAt}
+                                      title={historyCase.result.generatedAt}
+                                      className="text-muted-foreground"
+                                      data-storyboard-history-generated-at="true"
+                                    >
+                                      {formatStoryboardHistoryTimestamp(
+                                        historyCase.result.generatedAt,
+                                      )}
+                                    </time>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : null}
+                    </div>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <DropdownMenu
+                  open={isStoryboardChatSettingsOpen}
+                  onOpenChange={setIsStoryboardChatSettingsOpen}
                 >
-                  <RotateCcw className="h-3.5 w-3.5" />
-                </Button>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      variant={
+                        isStoryboardChatSettingsOpen ? "secondary" : "ghost"
+                      }
+                      size="icon"
+                      className="h-8 w-8 rounded-full"
+                      aria-label="스토리보드 채팅 설정 열기"
+                      data-storyboard-chat-settings-toggle="true"
+                      data-storyboard-chat-settings-open={
+                        isStoryboardChatSettingsOpen ? "true" : "false"
+                      }
+                      data-storyboard-chat-settings-dropdown-trigger="true"
+                    >
+                      <Settings className="h-3.5 w-3.5" aria-hidden="true" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    className="w-[min(360px,calc(100vw-2rem))] p-0"
+                    data-storyboard-chat-settings-dropdown="true"
+                  >
+                    <div
+                      className="space-y-2 rounded-md bg-background/95 p-3"
+                      data-storyboard-chat-settings-panel="true"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 text-xs font-semibold">
+                            <Settings className="h-3.5 w-3.5 text-primary" />
+                            <span>채팅 설정</span>
+                            <Badge
+                              variant={
+                                storyboardRealDataTrace.mode === "actual"
+                                  ? "secondary"
+                                  : "outline"
+                              }
+                              className="px-1.5 text-[10px]"
+                              data-storyboard-chat-settings-real-data-mode={
+                                storyboardRealDataTrace.mode
+                              }
+                            >
+                              {storyboardRealDataTrace.headline}
+                            </Badge>
+                          </div>
+                          <p
+                            className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-muted-foreground"
+                            title={`${storyboardRealDataTrace.backendText} · ${storyboardRealDataTrace.sourceText} · ${storyboardRealDataTrace.generatedAtText}`}
+                            data-storyboard-chat-settings-source-trace="true"
+                          >
+                            {storyboardRealDataTrace.backendText} ·{" "}
+                            {storyboardRealDataTrace.sourceText}
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 shrink-0"
+                          onClick={() => setIsStoryboardChatSettingsOpen(false)}
+                          aria-label="스토리보드 채팅 설정 닫기"
+                          data-storyboard-chat-settings-close="true"
+                        >
+                          <X className="h-3.5 w-3.5" aria-hidden="true" />
+                        </Button>
+                      </div>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p
+                          className="text-[11px] text-muted-foreground"
+                          data-storyboard-chat-settings-generated-at="true"
+                        >
+                          {storyboardRealDataTrace.generatedAtText}
+                        </p>
+                        {omittedStoryboardSceneCount > 0 ? (
+                          <Badge
+                            variant="outline"
+                            className="rounded-full px-2 text-[10px]"
+                            data-storyboard-omitted-scene-count="true"
+                          >
+                            {formatStoryboardOmittedSceneText(
+                              omittedStoryboardSceneCount,
+                            )}
+                          </Badge>
+                        ) : (
+                          <span
+                            className="sr-only"
+                            data-storyboard-omitted-scene-count="true"
+                          >
+                            {formatStoryboardOmittedSceneText(
+                              omittedStoryboardSceneCount,
+                            )}
+                          </span>
+                        )}
+                      </div>
+                      <div
+                        className="rounded-2xl border border-border/70 bg-muted/25 p-2"
+                        data-storyboard-user-perspective-readiness="true"
+                      >
+                        <div className="mb-1.5 flex items-center justify-between gap-2">
+                          <span className="text-[11px] font-semibold text-foreground">
+                            사용자 관점 점검
+                          </span>
+                          <span className="text-[10px] text-muted-foreground">
+                            채팅에 “점검”
+                          </span>
+                        </div>
+                        <div className="grid gap-1">
+                          {storyboardUserPerspectiveReadiness.map((item) => (
+                            <div
+                              key={item.id}
+                              className="grid grid-cols-[84px_minmax(0,1fr)] items-start gap-2 rounded-xl bg-background/70 px-2 py-1.5 text-[11px]"
+                              data-storyboard-user-perspective-role={item.id}
+                            >
+                              <span className="truncate font-semibold text-foreground">
+                                {item.label}
+                              </span>
+                              <span className="min-w-0">
+                                <span
+                                  className={cn(
+                                    "mr-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+                                    item.status === "ready"
+                                      ? "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300"
+                                      : "bg-amber-500/12 text-amber-700 dark:text-amber-300",
+                                  )}
+                                >
+                                  {item.status === "ready"
+                                    ? "준비됨"
+                                    : "확인 필요"}
+                                </span>
+                                <span className="line-clamp-1 text-muted-foreground">
+                                  {item.summary}
+                                </span>
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 rounded-full px-2 text-xs"
+                            onClick={() =>
+                              void handleGenerateStoryboardImages(
+                                selectedRealStoryboardScene
+                                  ? {
+                                      targetScenes: [
+                                        selectedRealStoryboardScene,
+                                      ],
+                                      scope: "selected",
+                                    }
+                                  : undefined,
+                              )
+                            }
+                            disabled={
+                              isStoryboardResultSkeletonVisible ||
+                              isGeneratingImages ||
+                              (selectedRealStoryboardScene
+                                ? false
+                                : activeStoryboardImageGenerationTargetScenes.length === 0)
+                            }
+                            aria-label={
+                              selectedRealStoryboardScene
+                                ? `CUT ${String(selectedRealStoryboardScene.sceneNo).padStart(2, "0")} 이미지 재생성`
+                                : "현재 페이지 4컷 이미지 재생성"
+                            }
+                            data-storyboard-chat-settings-image-command="true"
+                          >
+                            {isGeneratingImages ? (
+                              <Loader2
+                                className="mr-1 h-3.5 w-3.5 animate-spin"
+                                aria-hidden="true"
+                              />
+                            ) : (
+                              <ImageIcon
+                                className="mr-1 h-3.5 w-3.5"
+                                aria-hidden="true"
+                              />
+                            )}
+                            {selectedRealStoryboardScene ? "현재 컷" : "4컷"}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 rounded-full px-2 text-xs"
+                            onClick={resetStoryboardChatState}
+                            disabled={isGenerating || isChatAgentStreaming}
+                            data-storyboard-chat-settings-reset="true"
+                          >
+                            <RotateCcw
+                              className="mr-1 h-3.5 w-3.5"
+                              aria-hidden="true"
+                            />
+                            초기화
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           </CardHeader>
@@ -2044,7 +2732,7 @@ export function AdminStoryboardGenerator() {
                     </div>
                   </div>
                 ) : null}
-              </div>
+                </div>
 
               <div
                 className="shrink-0 space-y-2.5 border-t border-border/70 bg-background/80 p-2.5"
@@ -2057,199 +2745,9 @@ export function AdminStoryboardGenerator() {
                   readOnly
                   data-storyboard-chat-topic-state="true"
                 />
-                <div
-                  className={cn(
-                    "rounded-2xl border p-2.5 text-xs",
-                    storyboardRealDataTrace.mode === "actual"
-                      ? "border-emerald-300/70 bg-emerald-500/10 text-emerald-950 dark:text-emerald-100"
-                      : "border-amber-300/70 bg-amber-500/10 text-amber-950 dark:text-amber-100",
-                  )}
-                  data-storyboard-chat-real-data-trace="true"
-                  data-storyboard-chat-real-data-trace-mode={
-                    storyboardRealDataTrace.mode
-                  }
-                >
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <Badge
-                      variant={
-                        storyboardRealDataTrace.mode === "actual"
-                          ? "secondary"
-                          : "outline"
-                      }
-                      className="rounded-full"
-                      data-storyboard-chat-real-data-headline="true"
-                    >
-                      {storyboardRealDataTrace.headline}
-                    </Badge>
-                    <span
-                      className="font-medium"
-                      data-storyboard-chat-real-data-backend="true"
-                    >
-                      {storyboardRealDataTrace.backendText}
-                    </span>
-                  </div>
-                  <p
-                    className="mt-1.5 leading-5 opacity-90"
-                    data-storyboard-chat-real-data-source="true"
-                  >
-                    {storyboardRealDataTrace.sourceText}
-                  </p>
-                  <p
-                    className="mt-1 text-[11px] opacity-75"
-                    data-storyboard-chat-real-data-generated-at="true"
-                  >
-                    {storyboardRealDataTrace.generatedAtText}
-                  </p>
-                </div>
-                <div
-                  className="rounded-2xl border border-border/70 bg-background/90 p-2.5 text-xs"
-                  data-storyboard-case-history="true"
-                  data-storyboard-case-history-status={storyboardHistoryStatus}
-                  data-storyboard-case-history-count={String(
-                    storyboardHistoryCases.length,
-                  )}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="min-w-0 space-y-0.5">
-                      <div className="flex min-w-0 items-center gap-1.5">
-                        <Badge
-                          variant="secondary"
-                          className="shrink-0 rounded-full"
-                        >
-                          생성 케이스
-                        </Badge>
-                        <span
-                          className="truncate text-[11px] font-medium text-muted-foreground"
-                          data-storyboard-case-history-status-label="true"
-                        >
-                          {storyboardHistoryStatusLabel}
-                        </span>
-                      </div>
-                      <p className="line-clamp-1 text-[11px] text-muted-foreground">
-                        실제 POST 결과를 불러와 캔버스에 다시 확인합니다.
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 shrink-0 rounded-full px-2 text-[11px]"
-                      onClick={() => void refreshStoryboardHistoryResults()}
-                      disabled={storyboardHistoryStatus === "loading"}
-                      data-storyboard-case-history-refresh="true"
-                    >
-                      {storyboardHistoryStatus === "loading" ? (
-                        <Loader2
-                          className="mr-1 h-3 w-3 animate-spin"
-                          aria-hidden="true"
-                        />
-                      ) : null}
-                      새로고침
-                    </Button>
-                  </div>
-                  {storyboardHistoryError ? (
-                    <p
-                      className="mt-2 rounded-xl bg-destructive/10 px-2 py-1.5 text-[11px] text-destructive"
-                      data-storyboard-case-history-error="true"
-                    >
-                      {storyboardHistoryError}
-                    </p>
-                  ) : null}
-                  {visibleStoryboardHistoryCases.length ? (
-                    <div
-                      className="mt-2 max-h-32 space-y-1 overflow-y-auto pr-1"
-                      data-storyboard-case-history-list="true"
-                    >
-                      {visibleStoryboardHistoryCases.map((historyCase) => {
-                        const historyTrace = formatStoryboardRealDataTrace(
-                          historyCase.result,
-                        );
-                        const isSelectedHistory =
-                          historyCase.result.generatedAt === result.generatedAt;
-                        return (
-                          <button
-                            type="button"
-                            key={historyCase.id}
-                            className={cn(
-                              "w-full rounded-xl border px-2 py-1.5 text-left transition hover:bg-muted/60",
-                              isSelectedHistory
-                                ? "border-primary/40 bg-primary/5"
-                                : "border-border/70 bg-muted/20",
-                            )}
-                            onClick={() =>
-                              applyStoryboardHistoryResult(historyCase)
-                            }
-                            data-storyboard-case-history-run={
-                              historyCase.result.generatedAt
-                            }
-                            data-storyboard-case-history-mode={
-                              historyTrace.mode
-                            }
-                            data-storyboard-case-history-selected={
-                              isSelectedHistory ? "true" : undefined
-                            }
-                            aria-pressed={isSelectedHistory}
-                          >
-                            <div className="flex min-w-0 items-center gap-1.5">
-                              <span
-                                className="min-w-0 flex-1 truncate font-semibold text-foreground"
-                                title={historyCase.result.storyboard.title}
-                                data-storyboard-case-history-title="true"
-                              >
-                                {historyCase.result.storyboard.title}
-                              </span>
-                              <Badge
-                                variant={
-                                  historyTrace.mode === "actual"
-                                    ? "secondary"
-                                    : "outline"
-                                }
-                                className="shrink-0 rounded-full px-1.5 text-[10px]"
-                              >
-                                {historyTrace.mode === "actual"
-                                  ? "실제"
-                                  : "샘플"}
-                              </Badge>
-                            </div>
-                            <p
-                              className="mt-0.5 line-clamp-1 text-[11px] text-muted-foreground"
-                              title={historyCase.result.storyboard.logline}
-                              data-storyboard-case-history-logline="true"
-                            >
-                              {historyCase.result.storyboard.logline}
-                            </p>
-                            <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground">
-                              <span data-storyboard-case-history-scenes="true">
-                                {historyCase.result.storyboard.scenes.length}컷
-                              </span>
-                              <span aria-hidden="true">·</span>
-                              <time
-                                dateTime={historyCase.result.generatedAt}
-                                title={historyCase.result.generatedAt}
-                                data-storyboard-case-history-generated-at="true"
-                              >
-                                {formatStoryboardHistoryTimestamp(
-                                  historyCase.result.generatedAt,
-                                )}
-                              </time>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <p
-                      className="mt-2 rounded-xl bg-muted/50 px-2 py-1.5 text-[11px] text-muted-foreground"
-                      data-storyboard-case-history-empty="true"
-                    >
-                      아직 저장된 실제 생성 케이스가 없습니다. 채팅에서 “생성”을
-                      보내면 여기에 쌓입니다.
-                    </p>
-                  )}
-                </div>
                 {storyboardCanvasFocus ? (
                   <div
-                    className="flex items-start justify-between gap-2 rounded-2xl border border-primary/20 bg-primary/5 p-2.5 text-xs"
+                    className="flex min-h-8 items-center justify-between gap-2 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-[11px]"
                     data-storyboard-chat-canvas-context="true"
                     data-storyboard-chat-canvas-context-kind={
                       storyboardCanvasFocus.kind
@@ -2260,31 +2758,30 @@ export function AdminStoryboardGenerator() {
                         : undefined
                     }
                   >
-                    <div className="min-w-0 space-y-1">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <Badge
-                          variant="secondary"
-                          className="rounded-full"
-                          data-storyboard-canvas-focus-label="true"
-                        >
-                          {storyboardCanvasFocus.label}
-                        </Badge>
-                        <span className="text-[11px] font-medium text-primary">
-                          이 맥락으로 채팅 가능
-                        </span>
-                      </div>
-                      <p
-                        className="line-clamp-2 text-muted-foreground"
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <Badge
+                        variant="secondary"
+                        className="h-6 shrink-0 rounded-full px-2 text-[11px]"
+                        data-storyboard-canvas-focus-label="true"
+                      >
+                        {storyboardCanvasFocus.label}
+                      </Badge>
+                      <span className="shrink-0 font-medium text-primary">
+                        채팅 맥락
+                      </span>
+                      <span
+                        className="min-w-0 truncate text-muted-foreground"
+                        title={storyboardCanvasFocus.detail}
                         data-storyboard-canvas-focus-detail="true"
                       >
                         {storyboardCanvasFocus.detail}
-                      </p>
+                      </span>
                     </div>
                     <Button
                       type="button"
                       size="sm"
                       variant="ghost"
-                      className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+                      className="h-6 shrink-0 rounded-full px-2 text-[11px]"
                       onClick={() => setStoryboardCanvasFocus(null)}
                       data-storyboard-clear-canvas-context="true"
                     >
@@ -2377,26 +2874,6 @@ export function AdminStoryboardGenerator() {
                 data-storyboard-canvas-toolbar="thumbnail-like"
                 data-storyboard-compact-toolbar="true"
               >
-                {latestRealDataLoadedAt ? (
-                  <Badge
-                    variant="outline"
-                    className="h-7 shrink-0 rounded-full px-2 text-[11px]"
-                    data-storyboard-latest-real-data-loaded="true"
-                    title={latestRealDataLoadedAt}
-                  >
-                    최신
-                  </Badge>
-                ) : null}
-                {!currentSourceSummary.isFallbackData ? (
-                  <Badge
-                    variant="outline"
-                    className="h-7 max-w-[132px] shrink-0 truncate rounded-full px-2 text-[11px]"
-                    data-storyboard-real-data-mode="true"
-                    title={currentSourceSummary.dataModeLabel}
-                  >
-                    {currentSourceSummary.dataModeLabel}
-                  </Badge>
-                ) : null}
                 <Badge
                   variant="secondary"
                   className="h-7 shrink-0 rounded-full px-2 text-[11px]"
@@ -2413,7 +2890,7 @@ export function AdminStoryboardGenerator() {
                   data-storyboard-generated-image-count="true"
                 >
                   이미지 {activePageGeneratedCount}/
-                  {activeRealStoryboardPageScenes.length ||
+                  {activeStoryboardImageGenerationTargetScenes.length ||
                     STORYBOARD_FRAMES_PER_PAGE}
                   · 전체 {generatedImageCount}/{totalCutCount}
                 </Badge>
@@ -2510,11 +2987,14 @@ export function AdminStoryboardGenerator() {
                   variant="outline"
                   onClick={() => void handleGenerateStoryboardImages()}
                   disabled={
-                    isStoryboardResultSkeletonVisible || isGeneratingImages
+                    isStoryboardResultSkeletonVisible ||
+                    isGeneratingImages ||
+                    activePageGenerationTargetCount === 0
                   }
                   className="h-8 shrink-0 px-2 text-xs"
                   data-storyboard-generate-images="local-codex"
                   aria-label={`현재 페이지 ${activePageGenerationTargetCount}컷을 GPT Image 2로 생성`}
+                  title={imageGenerationButtonLabel}
                 >
                   {isGeneratingImages ? (
                     <Loader2
@@ -2541,10 +3021,7 @@ export function AdminStoryboardGenerator() {
                   data-storyboard-export-png="true"
                   aria-label={`현재 페이지 4컷 PNG 저장 (${exportResolutionToken})`}
                 >
-                  <Download
-                    className="mr-1.5 h-3.5 w-3.5"
-                    aria-hidden="true"
-                  />
+                  <Download className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
                   PNG 저장
                 </Button>
               </div>
@@ -2561,204 +3038,220 @@ export function AdminStoryboardGenerator() {
                 STORYBOARD_FRAMES_PER_PAGE,
               )}
             >
-              {isStoryboardResultSkeletonVisible
-                ? Array.from(
-                    { length: STORYBOARD_FRAMES_PER_PAGE },
-                    (_, index) => {
-                      const cutNo = activeCutStart + index;
-                      return (
+              {isStoryboardResultSkeletonVisible ? (
+                Array.from(
+                  { length: STORYBOARD_FRAMES_PER_PAGE },
+                  (_, index) => {
+                    const cutNo = activeCutStart + index;
+                    return (
+                      <div
+                        key={`storyboard-result-skeleton-${cutNo}`}
+                        className="h-full min-h-0 overflow-hidden rounded-2xl bg-muted/30"
+                        data-storyboard-result-skeleton-frame={String(cutNo)}
+                      >
                         <div
-                          key={`storyboard-result-skeleton-${cutNo}`}
-                          className="h-full min-h-0 overflow-hidden rounded-2xl bg-muted/30"
-                          data-storyboard-result-skeleton-frame={String(cutNo)}
+                          className="relative h-full overflow-hidden rounded-2xl border border-border/40 bg-muted/40"
+                          role="status"
+                          aria-live="polite"
+                          aria-label={`${cutNo}컷 스토리보드 생성 중`}
+                          data-storyboard-realtime-skeleton="true"
                         >
+                          <div className="absolute inset-0 animate-pulse bg-[linear-gradient(110deg,transparent,rgba(255,255,255,0.28),transparent)]" />
+                          <div className="absolute inset-x-3 top-3 flex items-center justify-between gap-2">
+                            <span className="rounded-full bg-foreground/70 px-3 py-1 text-xs font-semibold text-background">
+                              CUT {String(cutNo).padStart(2, "0")}
+                            </span>
+                            <span className="h-6 w-16 rounded-full bg-muted-foreground/20" />
+                          </div>
                           <div
-                            className="relative h-full overflow-hidden rounded-2xl border border-border/40 bg-muted/40"
+                            className="absolute inset-x-4 top-[28%] rounded-2xl bg-background/70 p-3 shadow-sm backdrop-blur-sm"
+                            data-storyboard-chat-streaming-preview="true"
+                          >
+                            <p className="text-sm font-semibold text-foreground">
+                              {
+                                storyboardStreamingPhases[
+                                  (streamingPhaseIndex + index) %
+                                    storyboardStreamingPhases.length
+                                ]
+                              }
+                            </p>
+                            <p className="mt-1 line-clamp-2 text-xs leading-snug text-muted-foreground">
+                              {chatPromptSummary}
+                            </p>
+                          </div>
+                          <div className="absolute bottom-3 left-3 right-3 grid grid-cols-[0.75fr_1fr] items-end gap-2">
+                            <div className="h-12 rounded-t-full rounded-b-2xl bg-muted-foreground/20" />
+                            <div className="space-y-1.5">
+                              <div className="h-8 rounded-full bg-muted-foreground/20" />
+                              <div className="h-2 rounded-full bg-muted-foreground/15" />
+                              <div className="h-2 w-2/3 rounded-full bg-muted-foreground/15" />
+                            </div>
+                          </div>
+                          <span className="sr-only">스토리보드 생성 중...</span>
+                        </div>
+                      </div>
+                    );
+                  },
+                )
+              ) : activeStoryboardPageScenes.length === 0 ? (
+                <div
+                  className="col-span-2 row-span-2 flex h-full min-h-0 items-center justify-center rounded-2xl border border-dashed border-border/70 bg-muted/20 p-6 text-center"
+                  data-storyboard-image-empty-state="true"
+                >
+                  <div className="max-w-sm space-y-2">
+                    <p className="text-sm font-semibold text-foreground">
+                      표시할 스토리보드 이미지 결과가 없습니다
+                    </p>
+                    <p className="text-xs leading-5 text-muted-foreground">
+                      GPT Image 2로 생성·검증된 컷만 이 캔버스에 표시합니다.
+                      채팅에서 “생성” 후 “4컷 재생성”을 보내면 첫 이미지
+                      페이지가 채워집니다.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                activeStoryboardPageScenes.map((scene) => {
+                  const frameVisual = getStoryboardFrameVisual(scene.sceneNo);
+                  const trustedGeneratedImage =
+                    getTrustedStoryboardGeneratedImage(scene.generatedImage);
+                  return (
+                    <button
+                      type="button"
+                      key={`frame-${scene.sceneNo}-${scene.heatmapEvidence.videoId}`}
+                      className={cn(
+                        "group flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border-0 bg-background p-0 text-left shadow-sm outline-none transition focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+                        selectedStoryboardSceneNo === scene.sceneNo
+                          ? "ring-2 ring-primary ring-offset-2"
+                          : "ring-0",
+                      )}
+                      onClick={() => handleSelectStoryboardScene(scene)}
+                      aria-label={`${scene.sceneNo}컷을 선택해서 채팅 맥락으로 사용`}
+                      aria-pressed={selectedStoryboardSceneNo === scene.sceneNo}
+                      data-storyboard-image-frame={String(scene.sceneNo)}
+                      data-storyboard-selected-frame={
+                        selectedStoryboardSceneNo === scene.sceneNo
+                          ? "true"
+                          : undefined
+                      }
+                    >
+                      <div
+                        className="relative min-h-0 flex-1 overflow-hidden rounded-t-2xl"
+                        style={{ background: frameVisual.background }}
+                        aria-label={`${scene.sceneNo}컷 이미지 생성 결과`}
+                      >
+                        {trustedGeneratedImage ? (
+                          <NextImage
+                            src={trustedGeneratedImage.dataUrl}
+                            alt={`${scene.sceneNo}컷 Codex CLI GPT Image 2 생성 결과`}
+                            fill
+                            sizes="(min-width: 1280px) 36vw, 50vw"
+                            className="object-cover"
+                            unoptimized
+                            data-storyboard-generated-image="local-codex"
+                          />
+                        ) : null}
+                        {isGeneratingImages && !trustedGeneratedImage ? (
+                          <div
+                            className="absolute inset-0 z-10 flex items-center justify-center bg-background/55 backdrop-blur-[1px]"
                             role="status"
                             aria-live="polite"
-                            aria-label={`${cutNo}컷 스토리보드 생성 중`}
-                            data-storyboard-realtime-skeleton="true"
+                            data-storyboard-image-generation-skeleton="true"
                           >
-                            <div className="absolute inset-0 animate-pulse bg-[linear-gradient(110deg,transparent,rgba(255,255,255,0.28),transparent)]" />
-                            <div className="absolute inset-x-3 top-3 flex items-center justify-between gap-2">
-                              <span className="rounded-full bg-foreground/70 px-3 py-1 text-xs font-semibold text-background">
-                                CUT {String(cutNo).padStart(2, "0")}
-                              </span>
-                              <span className="h-6 w-16 rounded-full bg-muted-foreground/20" />
+                            <div className="flex items-center gap-2 rounded-full bg-background/90 px-3 py-2 text-xs font-semibold shadow-sm">
+                              <Loader2
+                                className="h-3.5 w-3.5 animate-spin"
+                                aria-hidden="true"
+                              />
+                              GPT Image 2 생성 중
                             </div>
+                          </div>
+                        ) : null}
+                        <div className="absolute inset-x-3 top-3 flex items-center justify-between gap-2">
+                          <Badge className="rounded-full bg-black/60 text-white hover:bg-black/60">
+                            CUT {String(scene.sceneNo).padStart(2, "0")}
+                          </Badge>
+                          <Badge className="rounded-full bg-white/80 text-slate-900 hover:bg-white/80">
+                            {scene.heatmapEvidence.peakTime}
+                          </Badge>
+                        </div>
+                        {showStoryboardGuide ? (
+                          <div
+                            className="pointer-events-none absolute inset-[12%] rounded-2xl border border-dashed border-white/70"
+                            data-storyboard-safe-area-guide="true"
+                          />
+                        ) : null}
+                        {!trustedGeneratedImage ? (
+                          <>
                             <div
-                              className="absolute inset-x-4 top-[28%] rounded-2xl bg-background/70 p-3 shadow-sm backdrop-blur-sm"
-                              data-storyboard-chat-streaming-preview="true"
+                              className="absolute inset-x-3 top-14 rounded-2xl bg-black/36 p-3 text-white shadow-sm backdrop-blur-[1px]"
+                              data-storyboard-scene-summary="true"
                             >
-                              <p className="text-sm font-semibold text-foreground">
-                                {
-                                  storyboardStreamingPhases[
-                                    (streamingPhaseIndex + index) %
-                                      storyboardStreamingPhases.length
-                                  ]
-                                }
+                              <p
+                                className="line-clamp-1 text-sm font-semibold tracking-tight"
+                                data-storyboard-scene-title="true"
+                              >
+                                {scene.title}
                               </p>
-                              <p className="mt-1 line-clamp-2 text-xs leading-snug text-muted-foreground">
-                                {chatPromptSummary}
+                              <p className="mt-1 line-clamp-2 text-xs leading-snug text-white/82">
+                                {scene.visualDirection}
+                              </p>
+                              <p className="mt-2 line-clamp-1 text-[11px] font-medium text-amber-100">
+                                {scene.captionIdea}
                               </p>
                             </div>
                             <div className="absolute bottom-3 left-3 right-3 grid grid-cols-[0.75fr_1fr] items-end gap-2">
-                              <div className="h-12 rounded-t-full rounded-b-2xl bg-muted-foreground/20" />
-                              <div className="space-y-1.5">
-                                <div className="h-8 rounded-full bg-muted-foreground/20" />
-                                <div className="h-2 rounded-full bg-muted-foreground/15" />
-                                <div className="h-2 w-2/3 rounded-full bg-muted-foreground/15" />
-                              </div>
-                            </div>
-                            <span className="sr-only">
-                              스토리보드 생성 중...
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    },
-                  )
-                : activeStoryboardPageScenes.map((scene) => {
-                    const frameVisual = getStoryboardFrameVisual(scene.sceneNo);
-                    const trustedGeneratedImage =
-                      getTrustedStoryboardGeneratedImage(scene.generatedImage);
-                    return (
-                      <button
-                        type="button"
-                        key={`frame-${scene.sceneNo}-${scene.heatmapEvidence.videoId}`}
-                        className={cn(
-                          "group flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border-0 bg-background p-0 text-left shadow-sm outline-none transition focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
-                          selectedStoryboardSceneNo === scene.sceneNo
-                            ? "ring-2 ring-primary ring-offset-2"
-                            : "ring-0",
-                        )}
-                        onClick={() => handleSelectStoryboardScene(scene)}
-                        aria-label={`${scene.sceneNo}컷을 선택해서 채팅 맥락으로 사용`}
-                        aria-pressed={selectedStoryboardSceneNo === scene.sceneNo}
-                        data-storyboard-image-frame={String(scene.sceneNo)}
-                        data-storyboard-selected-frame={
-                          selectedStoryboardSceneNo === scene.sceneNo
-                            ? "true"
-                            : undefined
-                        }
-                      >
-                        <div
-                          className="relative min-h-0 flex-1 overflow-hidden rounded-t-2xl"
-                          style={{ background: frameVisual.background }}
-                          aria-label={`${scene.sceneNo}컷 이미지 생성 결과`}
-                        >
-                          {trustedGeneratedImage ? (
-                            <NextImage
-                              src={trustedGeneratedImage.dataUrl}
-                              alt={`${scene.sceneNo}컷 Codex CLI GPT Image 2 생성 결과`}
-                              fill
-                              sizes="(min-width: 1280px) 36vw, 50vw"
-                              className="object-cover"
-                              unoptimized
-                              data-storyboard-generated-image="local-codex"
-                            />
-                          ) : null}
-                          {isGeneratingImages && !trustedGeneratedImage ? (
-                            <div
-                              className="absolute inset-0 z-10 flex items-center justify-center bg-background/55 backdrop-blur-[1px]"
-                              role="status"
-                              aria-live="polite"
-                              data-storyboard-image-generation-skeleton="true"
-                            >
-                              <div className="flex items-center gap-2 rounded-full bg-background/90 px-3 py-2 text-xs font-semibold shadow-sm">
-                                <Loader2
-                                  className="h-3.5 w-3.5 animate-spin"
-                                  aria-hidden="true"
-                                />
-                                GPT Image 2 생성 중
-                              </div>
-                            </div>
-                          ) : null}
-                          <div className="absolute inset-x-3 top-3 flex items-center justify-between gap-2">
-                            <Badge className="rounded-full bg-black/60 text-white hover:bg-black/60">
-                              CUT {String(scene.sceneNo).padStart(2, "0")}
-                            </Badge>
-                            <Badge className="rounded-full bg-white/80 text-slate-900 hover:bg-white/80">
-                              {scene.heatmapEvidence.peakTime}
-                            </Badge>
-                          </div>
-                          {showStoryboardGuide ? (
-                            <div
-                              className="pointer-events-none absolute inset-[12%] rounded-2xl border border-dashed border-white/70"
-                              data-storyboard-safe-area-guide="true"
-                            />
-                          ) : null}
-                          {!trustedGeneratedImage ? (
-                            <>
                               <div
-                                className="absolute inset-x-3 top-14 rounded-2xl bg-black/36 p-3 text-white shadow-sm backdrop-blur-[1px]"
-                                data-storyboard-scene-summary="true"
-                              >
-                                <p
-                                  className="line-clamp-1 text-sm font-semibold tracking-tight"
-                                  data-storyboard-scene-title="true"
-                                >
-                                  {scene.title}
-                                </p>
-                                <p className="mt-1 line-clamp-2 text-xs leading-snug text-white/82">
-                                  {scene.visualDirection}
-                                </p>
-                                <p className="mt-2 line-clamp-1 text-[11px] font-medium text-amber-100">
-                                  {scene.captionIdea}
-                                </p>
-                              </div>
-                              <div className="absolute bottom-3 left-3 right-3 grid grid-cols-[0.75fr_1fr] items-end gap-2">
+                                className={cn(
+                                  "h-12 rounded-t-full rounded-b-2xl shadow-lg ring-2 ring-white/40",
+                                  frameVisual.accent,
+                                )}
+                              />
+                              <div className="space-y-1.5">
                                 <div
                                   className={cn(
-                                    "h-12 rounded-t-full rounded-b-2xl shadow-lg ring-2 ring-white/40",
-                                    frameVisual.accent,
+                                    "h-8 rounded-full shadow-lg",
+                                    frameVisual.plate,
                                   )}
                                 />
-                                <div className="space-y-1.5">
-                                  <div
-                                    className={cn(
-                                      "h-8 rounded-full shadow-lg",
-                                      frameVisual.plate,
-                                    )}
-                                  />
-                                  <div className="h-2 rounded-full bg-white/65" />
-                                  <div className="h-2 w-2/3 rounded-full bg-white/45" />
-                                </div>
+                                <div className="h-2 rounded-full bg-white/65" />
+                                <div className="h-2 w-2/3 rounded-full bg-white/45" />
                               </div>
-                            </>
-                          ) : null}
-                        </div>
-                        <div
-                          className="shrink-0 space-y-1.5 border-t border-border/70 bg-background/96 px-3 py-2 text-foreground"
-                          data-storyboard-frame-script="true"
-                          data-storyboard-frame-script-placement="separated"
+                            </div>
+                          </>
+                        ) : null}
+                      </div>
+                      <div
+                        className="shrink-0 space-y-1.5 border-t border-border/70 bg-background/96 px-3 py-2 text-foreground"
+                        data-storyboard-frame-script="true"
+                        data-storyboard-frame-script-placement="separated"
+                      >
+                        <p
+                          className="grid grid-cols-[68px_minmax(0,1fr)] items-start gap-2 text-[11px] leading-snug"
+                          data-storyboard-frame-audio="true"
                         >
-                          <p
-                            className="grid grid-cols-[68px_minmax(0,1fr)] items-start gap-2 text-[11px] leading-snug"
-                            data-storyboard-frame-audio="true"
-                          >
-                            <span className="mt-0.5 rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-                              Audio
-                            </span>
-                            <span className="line-clamp-2 font-medium text-foreground">
-                              {scene.hostBeat}
-                            </span>
-                          </p>
-                          <p
-                            className="grid grid-cols-[68px_minmax(0,1fr)] items-start gap-2 text-[11px] leading-snug"
-                            data-storyboard-frame-subtitle="true"
-                          >
-                            <span className="mt-0.5 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary">
-                              Subtitle
-                            </span>
-                            <span className="line-clamp-2 font-semibold text-foreground">
-                              {scene.captionIdea}
-                            </span>
-                          </p>
-                        </div>
-                      </button>
-                    );
-                  })}
+                          <span className="mt-0.5 rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                            Audio
+                          </span>
+                          <span className="line-clamp-2 font-medium text-foreground">
+                            {scene.hostBeat}
+                          </span>
+                        </p>
+                        <p
+                          className="grid grid-cols-[68px_minmax(0,1fr)] items-start gap-2 text-[11px] leading-snug"
+                          data-storyboard-frame-subtitle="true"
+                        >
+                          <span className="mt-0.5 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary">
+                            Subtitle
+                          </span>
+                          <span className="line-clamp-2 font-semibold text-foreground">
+                            {scene.captionIdea}
+                          </span>
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })
+              )}
             </div>
           </CardContent>
         </Card>

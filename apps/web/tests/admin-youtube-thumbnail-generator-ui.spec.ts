@@ -99,13 +99,11 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
         body: JSON.stringify({
           target: { width: 1280, height: 720, aspectRatio: '16:9' },
           providers: {
-            openai: { available: false, liveEnabled: false, model: 'gpt-image-2' },
-            gemini: { available: false, liveEnabled: false, model: 'gemini-3-pro-image-preview' },
             localCodex: {
               available: true,
               reason: 'local_codex_command_configured',
               command: 'codex-imagegen-thumbnail-provider.py',
-              model: 'requested:gpt-image-2',
+              model: 'gpt-image-2',
             },
           },
           backendAgent: {
@@ -155,8 +153,8 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
           targetWidth: 1280,
           targetHeight: 720,
           providerId: 'local-codex',
-          model: 'requested:gpt-image-2',
-          modelProvenance: 'requested-label',
+          model: 'gpt-image-2',
+          modelProvenance: 'exact',
         },
         prompt: 'UI 테스트 실제 생성 응답',
         warnings: ['ui_generation_fixture'],
@@ -258,8 +256,8 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
             completedAt: '2026-06-05T09:20:00.000Z',
             status: 'passed',
             providerId: 'local-codex',
-            model: 'requested:gpt-image-2',
-            modelProvenance: 'requested-label',
+            model: 'gpt-image-2',
+            modelProvenance: 'exact',
             generationMode: 'direct_provider',
             topic: 'UI 테스트용 실제 생성 히스토리',
             headline: '역대급 먹방',
@@ -305,9 +303,10 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
   await chatComposer.press('Enter');
   await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('실데이터 확인');
   await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('현재 로드된 상태');
-  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('Mock provider: 제거됨');
-  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('provider');
-  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('provenance');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('Mock/Python seed');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('local-codex');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('gpt-image-2');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('exact');
   await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('히스토리');
   await expect(chatPanel).not.toContainText('sk-live-secret-for-ui-only');
   expect(chatRequestBodies).toHaveLength(0);
@@ -404,22 +403,34 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
   await expect(thumbnailModule.locator('[data-thumbnail-chat-reference-file-input="true"]')).toHaveCount(1);
   await expect(thumbnailModule.locator('[data-thumbnail-chat-reference-file-input="true"]')).toHaveClass(/sr-only/);
   await expect(thumbnailModule.locator('[data-thumbnail-chat-settings-toggle="true"]')).toBeVisible();
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-settings-toggle="true"]')).toHaveAttribute(
+    'data-thumbnail-chat-settings-dropdown-trigger',
+    'true',
+  );
   await expect(thumbnailModule.locator('[data-thumbnail-history-panel-toggle="true"]')).toBeVisible();
-  await expect(thumbnailModule.locator('[data-thumbnail-history-panel-toggle="true"]')).toHaveText(/히스토리/);
+  await expect(thumbnailModule.locator('[data-thumbnail-history-panel-toggle="true"]')).toHaveText('');
+  await expect(thumbnailModule.locator('[data-thumbnail-history-panel-toggle="true"]')).toHaveAttribute(
+    'data-thumbnail-history-dropdown-trigger',
+    'icon-only',
+  );
   await expect(thumbnailModule.locator('[data-thumbnail-chat-message-meta="true"]').first()).toBeVisible();
   await expect(thumbnailModule.locator('[data-thumbnail-chat-message-bubble="true"]').first()).toBeVisible();
-  await expect(thumbnailModule.locator('[data-thumbnail-chat-settings-panel="true"]')).toHaveCount(0);
+  await expect(page.locator('[data-thumbnail-chat-settings-panel="true"]')).toHaveCount(0);
   await thumbnailModule.locator('[data-thumbnail-chat-settings-toggle="true"]').click();
-  await expect(thumbnailModule.locator('[data-thumbnail-chat-settings-panel="true"]')).toBeVisible();
-  await expect(thumbnailModule.locator('[data-thumbnail-api-key-settings="session-local"]')).toBeVisible();
-  const openAiApiKeyInput = thumbnailModule.locator('[data-thumbnail-api-key-input="openai"]');
-  await expect(openAiApiKeyInput).toHaveAttribute('type', 'password');
-  await openAiApiKeyInput.fill('sk-live-secret-for-ui-only');
-  await thumbnailModule.locator('[data-thumbnail-api-key-save="true"]').click();
-  await expect(thumbnailModule.locator('[data-thumbnail-api-key-session-status="true"]')).toContainText('현재 탭 보관됨');
+  await expect(page.locator('[data-thumbnail-chat-settings-dropdown="true"]')).toBeVisible();
+  await expect(page.locator('[data-thumbnail-chat-settings-panel="true"]')).toBeVisible();
+  await expect(page.locator('[data-thumbnail-api-key-settings="disabled"]')).toBeVisible();
+  await expect(page.locator('[data-thumbnail-api-key-disabled="true"]')).toContainText('세션 API 키 입력/전송은 비활성화');
+  await expect(page.locator('[data-thumbnail-api-key-input="openai"]')).toHaveCount(0);
+  await expect(page.locator('[data-thumbnail-api-key-save="true"]')).toHaveCount(0);
+  await expect(page.locator('[data-thumbnail-api-key-session-status="true"]')).toContainText('비활성화');
   await expect(chatPanel).not.toContainText('sk-live-secret-for-ui-only');
+  await page.locator('[data-thumbnail-chat-settings-close="true"]').click();
+  await expect(page.locator('[data-thumbnail-chat-settings-dropdown="true"]')).toHaveCount(0);
 
   await chatComposer.fill('참고 이미지 추가');
+  await expect(chatComposer).toHaveValue('참고 이미지 추가');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-submit="true"]')).toBeEnabled();
   const fileChooserPromise = page.waitForEvent('filechooser');
   await thumbnailModule.locator('[data-thumbnail-chat-submit="true"]').click();
   const fileChooser = await fileChooserPromise;
@@ -427,22 +438,27 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
   await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('참고 이미지 1장');
 
   await thumbnailModule.locator('[data-thumbnail-history-panel-toggle="true"]').click();
-  await expect(thumbnailModule.locator('[data-thumbnail-history-panel="true"]')).toBeVisible();
-  await expect(thumbnailModule.locator('[data-thumbnail-history-run="true"]')).toContainText('역대급 먹방');
-  await expect(thumbnailModule.locator('[data-thumbnail-history-load-run]')).toBeVisible();
+  await expect(page.locator('[data-thumbnail-history-dropdown="true"]')).toBeVisible();
+  await expect(page.locator('[data-thumbnail-history-panel="true"]')).toBeVisible();
+  await expect(page.locator('[data-thumbnail-history-run="true"]')).toContainText('역대급 먹방');
+  await expect(page.locator('[data-thumbnail-history-load-run]')).toBeVisible();
+  await page.locator('[data-thumbnail-history-load-run]').click();
   await expect(thumbnailModule.locator('canvas')).toHaveAttribute('data-thumbnail-history-preview', 'true', {
     timeout: 10_000,
   });
-  await thumbnailModule.locator('[data-thumbnail-history-close="true"]').click();
+  await expect(page.locator('[data-thumbnail-history-dropdown="true"]')).toHaveCount(0);
   await chatComposer.fill('히스토리 보여줘');
   await chatComposer.press('Enter');
-  await expect(thumbnailModule.locator('[data-thumbnail-history-panel="true"]')).toBeVisible();
+  await expect(page.locator('[data-thumbnail-history-panel="true"]')).toBeVisible();
   await expect(thumbnailModule.locator('[data-thumbnail-chat-message="user"]').last()).toContainText('히스토리 보여줘');
   await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('생성 히스토리를 이 페이지 안에서 열었습니다');
+  await page.locator('[data-thumbnail-history-close="true"]').click();
+  await expect(page.locator('[data-thumbnail-history-dropdown="true"]')).toHaveCount(0);
   await expect(thumbnailModule.locator('[data-thumbnail-generation-skeleton="true"]')).toHaveCount(0);
 
   const chatRequestsBeforeGuideHide = chatRequestBodies.length;
   await chatComposer.fill('가이드 숨겨줘');
+  await expect(chatComposer).toHaveValue('가이드 숨겨줘');
   await chatComposer.press('Enter');
   await expect(thumbnailModule.locator('canvas')).toHaveAttribute('data-thumbnail-safe-area-guide', 'hidden');
   await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('가이드를 숨겼습니다');
@@ -472,8 +488,8 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
   await chatComposer.press('Enter');
   await expect(thumbnailModule.locator('[data-thumbnail-chat-message-mode="live"]').last()).toContainText('실제 썸네일 생성 완료');
   await expect(thumbnailModule.locator('[data-thumbnail-chat-message-mode="live"]').last()).toContainText('provider local-codex');
-  await expect(thumbnailModule.locator('[data-thumbnail-chat-message-mode="live"]').last()).toContainText('model requested:gpt-image-2');
-  await expect(thumbnailModule.locator('[data-thumbnail-chat-message-mode="live"]').last()).toContainText('provenance requested-label');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-message-mode="live"]').last()).toContainText('model gpt-image-2');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-message-mode="live"]').last()).toContainText('provenance exact');
   await expect(thumbnailModule.locator('[data-thumbnail-chat-message-mode="live"]').last()).toContainText('히스토리 새로고침 요청됨');
   expect(generationRequestBodies).toHaveLength(generationRequestsBeforeCompletionProbe + 1);
 
