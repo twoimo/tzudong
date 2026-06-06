@@ -224,7 +224,7 @@ const consoleModules: ConsoleModule[] = [
   },
   {
     id: "youtube-thumbnail-generator",
-    title: "유튜브 썸네일 생성기",
+    title: "유튜브 썸네일 생성",
     description:
       "다음 업로드 주제와 참고 이미지를 바탕으로 16:9 먹방 썸네일 초안을 만들고 텍스트를 편집합니다.",
     href: "/admin?module=youtube-thumbnail-generator",
@@ -761,6 +761,23 @@ function getAdminModuleStateWarning(
   }
 
   return null;
+}
+
+const E2E_ADMIN_SHELL_BYPASS_STORAGE_KEY = "tzudong:e2e-admin-shell-bypass";
+
+function isLocalE2EAdminShellBypassHost(hostname: string) {
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+}
+
+function hasLocalE2EAdminShellBypass() {
+  if (process.env.NODE_ENV === "production" || typeof window === "undefined") return false;
+  if (!isLocalE2EAdminShellBypassHost(window.location.hostname)) return false;
+
+  try {
+    return window.localStorage.getItem(E2E_ADMIN_SHELL_BYPASS_STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
 }
 
 const adminNumberFormatter = new Intl.NumberFormat("ko-KR");
@@ -8420,8 +8437,12 @@ export function AdminConsoleOverview() {
   const requestedModuleId = getAdminModuleIdFromSearchParams(searchParams);
   const { user, isLoading: authLoading } = useAuth();
   const [hasHydrated, setHasHydrated] = useState(false);
+  const [hasE2EAdminShellBypass, setHasE2EAdminShellBypass] = useState(() =>
+    hasLocalE2EAdminShellBypass(),
+  );
   const isShellBootstrapping = authLoading || !hasHydrated;
-  const shouldRenderAdminShell = isShellBootstrapping || Boolean(user);
+  const shouldRenderAdminShell =
+    isShellBootstrapping || Boolean(user) || hasE2EAdminShellBypass;
   const canLoadAdminConsoleData = Boolean(user) && !isShellBootstrapping;
   const {
     stats,
@@ -8447,6 +8468,7 @@ export function AdminConsoleOverview() {
 
   useEffect(() => {
     setHasHydrated(true);
+    setHasE2EAdminShellBypass(hasLocalE2EAdminShellBypass());
   }, []);
 
   useEffect(() => {
