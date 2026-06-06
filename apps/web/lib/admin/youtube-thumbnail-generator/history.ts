@@ -32,6 +32,7 @@ type ThumbnailHistoryOptions = {
   publicImageRoot?: string;
   now?: Date;
   includeLegacyFallback?: boolean;
+  includeNonExactQaRuns?: boolean;
   limit?: number;
 };
 
@@ -161,6 +162,15 @@ function normalizePublicImagePath(imagePath: unknown, imageBaseUrl: string) {
   return `${normalizedBase}/${normalizedRelative}`;
 }
 
+export function isExactGptImage2ThumbnailHistoryRun(run: Pick<ThumbnailHistoryRun, 'providerId' | 'model' | 'modelProvenance' | 'status'>) {
+  return (
+    run.status === 'passed' &&
+    run.providerId === 'local-codex' &&
+    run.model === 'gpt-image-2' &&
+    run.modelProvenance === 'exact'
+  );
+}
+
 function normalizeHistoryRun(value: unknown, imageBaseUrl: string): ThumbnailHistoryRun | null {
   if (!isRecord(value)) return null;
   if (value.mockUsed === true) return null;
@@ -209,7 +219,7 @@ async function readJsonFile(path: string) {
   return JSON.parse(file) as RawHistoryPayload;
 }
 
-async function readHistorySource(source: LegacyHistorySource, limit: number) {
+async function readHistorySource(source: LegacyHistorySource, limit: number, options: Pick<ThumbnailHistoryOptions, 'includeNonExactQaRuns'> = {}) {
   try {
     const payload = await readJsonFile(source.path);
     const runs = Array.isArray(payload.runs) ? payload.runs : [];
@@ -217,6 +227,9 @@ async function readHistorySource(source: LegacyHistorySource, limit: number) {
       updatedAt: toString(payload.updatedAt, 80) || null,
       runs: runs.flatMap((run) => {
         const normalized = normalizeHistoryRun(run, source.imageBaseUrl);
+        if (normalized && !options.includeNonExactQaRuns && !isExactGptImage2ThumbnailHistoryRun(normalized)) {
+          return [];
+        }
         return normalized ? [normalized] : [];
       }).slice(0, limit),
     } satisfies ThumbnailHistoryPayload;
@@ -248,11 +261,11 @@ export async function readThumbnailHistory(
   const canonical = await readHistorySource({
     path: join(historyRoot, 'history.json'),
     imageBaseUrl: THUMBNAIL_HISTORY_PUBLIC_IMAGE_BASE_URL,
-  }, limit);
+  }, limit, options);
   if (canonical.runs.length || options.includeLegacyFallback === false) return canonical;
 
   for (const source of legacyHistorySources()) {
-    const legacy = await readHistorySource(source, limit);
+    const legacy = await readHistorySource(source, limit, options);
     if (legacy.runs.length) return legacy;
   }
   return canonical;
@@ -279,7 +292,7 @@ async function readCanonicalRuns(historyRoot: string) {
   const payload = await readHistorySource({
     path: join(historyRoot, 'history.json'),
     imageBaseUrl: THUMBNAIL_HISTORY_PUBLIC_IMAGE_BASE_URL,
-  }, THUMBNAIL_HISTORY_LIMIT);
+  }, THUMBNAIL_HISTORY_LIMIT, { includeNonExactQaRuns: true });
   return payload.runs;
 }
 
