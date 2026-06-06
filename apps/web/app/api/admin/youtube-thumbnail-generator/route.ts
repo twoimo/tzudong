@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { randomUUID } from 'node:crypto';
 
 import { requireAdmin } from '@/lib/auth/require-admin';
 import {
+  buildThumbnailProviderRequestEnv,
   getContentLengthRejection,
   getMultipartContentTypeRejection,
   parseThumbnailPayload,
   readThumbnailReferenceImages,
 } from '@/lib/admin/youtube-thumbnail-generator/request';
+import { generateYoutubeThumbnailWithBackendAgent, getThumbnailBackendAgentStatus } from '@/lib/admin/youtube-thumbnail-generator/backend-agent';
+import { persistLocalThumbnailHistory } from '@/lib/admin/youtube-thumbnail-generator/history';
 import {
   generateYoutubeThumbnail,
   getThumbnailProviderAvailability,
@@ -40,6 +44,7 @@ export async function GET(_request: NextRequest) {
       {
         target: { width: 1280, height: 720, aspectRatio: '16:9' },
         providers: getThumbnailProviderAvailability(process.env),
+        backendAgent: getThumbnailBackendAgentStatus(process.env),
         limits: {
           maxFiles: 8,
           maxFileBytes: 8_388_608,
@@ -51,6 +56,11 @@ export async function GET(_request: NextRequest) {
           openaiModelEnv: 'THUMBNAIL_OPENAI_IMAGE_MODEL',
           geminiModelEnv: 'THUMBNAIL_GEMINI_IMAGE_MODEL',
           localCodexGate: 'ALLOW_LOCAL_CLI_THUMBNAIL',
+          backendAgentCommandEnv: 'THUMBNAIL_AGENT_COMMAND',
+          backendAgentRootEnv: 'THUMBNAIL_AGENT_ROOT',
+          backendAgentRuntimeEnv: 'THUMBNAIL_AGENT_RUNTIME',
+          backendAgentCodexModelEnv: 'THUMBNAIL_AGENT_CODEX_MODEL',
+          backendAgentCodexEffortEnv: 'THUMBNAIL_AGENT_CODEX_EFFORT',
         },
       },
       { headers: noStoreHeaders },
@@ -89,9 +99,28 @@ export async function POST(request: NextRequest) {
       .getAll('referenceImages')
       .filter((entry): entry is File => entry instanceof File && entry.size > 0);
     const referenceImages = await readThumbnailReferenceImages(files, payload.referenceImageRoles);
-    const result = await generateYoutubeThumbnail(payload, referenceImages, process.env);
+    const generationRunId = `thumbnail-generation-${randomUUID()}`;
+    const providerRequestEnv = buildThumbnailProviderRequestEnv(process.env, payload.providerId, formData);
+    const result = payload.generationMode === 'backend_agent'
+      ? await generateYoutubeThumbnailWithBackendAgent(payload, referenceImages, process.env, {
+        signal: request.signal,
+        runId: generationRunId,
+        providerEnv: providerRequestEnv,
+      })
+      : await generateYoutubeThumbnail(payload, referenceImages, providerRequestEnv, {
+        signal: request.signal,
+        runId: generationRunId,
+      });
 
-    return NextResponse.json(result, { headers: noStoreHeaders });
+    const responseResult = { ...result, warnings: [...result.warnings] };
+    try {
+      await persistLocalThumbnailHistory(responseResult, payload, process.env, { runId: generationRunId });
+    } catch (historyError) {
+      console.error('[admin/youtube-thumbnail-generator] history persistence failed:', historyError);
+      responseResult.warnings.push('thumbnail_history_persist_failed');
+    }
+
+    return NextResponse.json(responseResult, { headers: noStoreHeaders });
   } catch (error) {
     if (error instanceof SyntaxError) {
       return jsonError('payload_json_invalid', 400, 'payload 필드는 JSON 문자열이어야 합니다.');
