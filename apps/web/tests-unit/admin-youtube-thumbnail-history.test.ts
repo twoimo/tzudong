@@ -28,11 +28,11 @@ const result: ThumbnailGenerationResult = {
     targetWidth: 1280,
     targetHeight: 720,
     providerId: "local-codex",
-    model: "requested:gpt-image-2",
-    modelProvenance: "requested-label",
+    model: "gpt-image-2",
+    modelProvenance: "exact",
   },
   prompt: "thumbnail prompt",
-  warnings: ["local_codex_real_generation"],
+  warnings: ["live_provider_exact_gpt_image_2"],
 };
 
 function tempDir(name: string) {
@@ -100,17 +100,19 @@ describe("admin youtube thumbnail history", () => {
     }
   });
 
-  test("filters legacy synthetic, failed, invalid provider, and unsafe image path runs", async () => {
+  test("filters legacy synthetic, Python QA seed, non-exact provider, failed, invalid provider, and unsafe image path runs", async () => {
     const historyRoot = tempDir("thumbnail-history-filter-");
     try {
       writeFileSync(join(historyRoot, "history.json"), JSON.stringify({
         updatedAt: "2026-06-05T09:00:00.000Z",
         runs: [
           { timestamp: "mock", completedAt: "mock", status: "passed", providerId: "local-codex", imagePath: "./ok.png", mockUsed: true },
+          { timestamp: "python-seed", completedAt: "python-seed", status: "passed", providerId: "local-codex", model: "requested:gpt-image-2", modelProvenance: "requested-label", imagePath: "./python-seed.png" },
+          { timestamp: "gemini", completedAt: "gemini", status: "passed", providerId: "gemini-nano-banana", model: "gemini-3-pro-image-preview", modelProvenance: "unknown", imagePath: "./gemini.png" },
           { timestamp: "failed", completedAt: "failed", status: "failed", providerId: "local-codex", imagePath: "./ok.png" },
           { timestamp: "bad-provider", completedAt: "bad-provider", status: "passed", providerId: "mock", imagePath: "./ok.png" },
           { timestamp: "bad-path", completedAt: "bad-path", status: "passed", providerId: "local-codex", imagePath: "https://example.com/x.png" },
-          { timestamp: "good", completedAt: "good", status: "passed", providerId: "local-codex", model: "requested:gpt-image-2", generationMode: "direct_provider", imagePath: "./ok.png", headline: "역대급 먹방" },
+          { timestamp: "good", completedAt: "good", status: "passed", providerId: "local-codex", model: "gpt-image-2", modelProvenance: "exact", generationMode: "direct_provider", imagePath: "./ok.png", headline: "역대급 먹방" },
         ],
       }));
 
@@ -119,9 +121,17 @@ describe("admin youtube thumbnail history", () => {
       expect(history.runs[0]).toMatchObject({
         id: "good",
         providerId: "local-codex",
+        model: "gpt-image-2",
+        modelProvenance: "exact",
         imagePath: `${THUMBNAIL_HISTORY_PUBLIC_IMAGE_BASE_URL}/ok.png`,
       });
       expect(history.runs[0]).not.toHaveProperty("mockUsed");
+
+      const qaHistory = await readThumbnailHistory(
+        { NODE_ENV: "test" },
+        { historyRoot, includeLegacyFallback: false, includeNonExactQaRuns: true },
+      );
+      expect(qaHistory.runs.map((run) => run.id)).toEqual(["python-seed", "good"]);
     } finally {
       rmSync(historyRoot, { recursive: true, force: true });
     }

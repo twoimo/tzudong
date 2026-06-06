@@ -156,7 +156,7 @@ test.beforeAll(() => {
   expect(seedReport.modelProvenance).toBe('requested-label');
 });
 
-test('shows every seeded YouTube thumbnail case through the real page history and loads each into canvas', async ({ page }, testInfo) => {
+test('hides deterministic Python QA seed from actual GPT Image 2 page history', async ({ page }, testInfo) => {
   await installAdminBypass(page, testInfo);
   await page.setViewportSize({ width: 1920, height: 1000 });
 
@@ -173,41 +173,38 @@ test('shows every seeded YouTube thumbnail case through the real page history an
     response.url().includes('/api/admin/youtube-thumbnail-generator/history') &&
     response.request().method() === 'GET'
   ));
+  await expect(thumbnailModule.locator('[data-thumbnail-history-panel-toggle="true"]')).toHaveAttribute(
+    'data-thumbnail-history-dropdown-trigger',
+    'icon-only',
+  );
   await thumbnailModule.locator('[data-thumbnail-history-panel-toggle="true"]').click();
   const historyResponse = await historyResponsePromise;
   expect(historyResponse.status()).toBe(200);
   const historyPayload = await historyResponse.json() as { runs?: Array<{ id?: string; providerId?: string; model?: string; modelProvenance?: string; imagePath?: string }> };
   const seededRuns = new Set((historyPayload.runs ?? []).map((run) => run.id));
   for (const seededCase of SEEDED_CASES) {
-    expect(seededRuns.has(seededCase.id)).toBe(true);
+    expect(seededRuns.has(seededCase.id)).toBe(false);
   }
 
-  await expect(thumbnailModule.locator('[data-thumbnail-history-panel="true"]')).toBeVisible();
-  await expect.poll(async () => thumbnailModule.locator('[data-thumbnail-history-run="true"]').count()).toBeGreaterThanOrEqual(SEEDED_CASES.length);
+  await expect(page.locator('[data-thumbnail-history-panel="true"]')).toBeVisible();
+  await expect.poll(async () => page.locator('[data-thumbnail-history-run="true"]').count()).toBe((historyPayload.runs ?? []).length);
 
   for (const seededCase of SEEDED_CASES) {
-    const loadButton = thumbnailModule.locator(`[data-thumbnail-history-load-run="${seededCase.id}"]`);
-    await loadButton.scrollIntoViewIfNeeded();
-    await expect(loadButton).toBeVisible();
-    const card = loadButton.locator('xpath=ancestor::*[@data-thumbnail-history-run="true"][1]');
-    await expect(card).toContainText(seededCase.headline);
-    await expect(card).toContainText(seededCase.topicProbe);
-    await expect(card).toContainText('local-codex');
-
-    await loadButton.click();
-    await expect(thumbnailModule.locator('canvas')).toHaveAttribute('data-thumbnail-history-preview', 'true');
-    await expect(thumbnailModule.locator('#thumbnail-topic')).toHaveValue(new RegExp(seededCase.topicProbe));
-    const canvasDataUrlPrefix = await thumbnailModule.locator('canvas').evaluate((canvas) =>
-      (canvas as HTMLCanvasElement).toDataURL('image/png').slice(0, 22),
-    );
-    expect(canvasDataUrlPrefix).toBe('data:image/png;base64,');
+    const loadButton = page.locator(`[data-thumbnail-history-load-run="${seededCase.id}"]`);
+    await expect(loadButton).toHaveCount(0);
+    await expect(thumbnailModule).not.toContainText(seededCase.headline);
+    await expect(thumbnailModule).not.toContainText(seededCase.topicProbe);
   }
 
   for (const run of historyPayload.runs ?? []) {
-    if (!seedReport.runIds.includes(run.id ?? '')) continue;
     expect(run.providerId).toBe('local-codex');
-    expect(run.model).toBe('requested:gpt-image-2');
-    expect(run.modelProvenance).toBe('requested-label');
-    expect(run.imagePath).toMatch(/^\/qa-history\/youtube-thumbnail-generator\/generated\/qa-batch\/.+\.png$/);
+    expect(run.model).toBe('gpt-image-2');
+    expect(run.modelProvenance).toBe('exact');
+    expect(run.imagePath).toMatch(/^\/qa-history\/youtube-thumbnail-generator\/generated\/.+\.(png|jpg|jpeg|webp)$/);
+  }
+
+  if (!historyPayload.runs?.length) {
+    await expect(page.locator('[data-thumbnail-history-empty="true"]')).toBeVisible();
+    await expect(page.locator('[data-thumbnail-history-empty="true"]')).toContainText('아직 저장된 실제 생성 기록이 없습니다');
   }
 });
