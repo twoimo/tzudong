@@ -42,6 +42,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -54,7 +59,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 
-type ProviderId = "openai-gpt-image" | "gemini-nano-banana" | "local-codex";
+type ProviderId = "local-codex";
 type GenerationMode = "direct_provider" | "backend_agent";
 type BriefPreset =
   | "tzuyang-food-travel-collage"
@@ -104,7 +109,6 @@ type ThumbnailChatLocalCommandId =
   | "guide-toggle"
   | "undo"
   | ThumbnailEditorToolId;
-type ThumbnailApiKeyProviderId = "openai" | "gemini" | "localCodex";
 
 type TextLayer = {
   id: string;
@@ -202,7 +206,6 @@ type ThumbnailChatMessage = {
   mode?: "system" | "submitted" | "live" | "stream";
 };
 
-type ThumbnailApiKeyDrafts = Record<ThumbnailApiKeyProviderId, string>;
 
 type ThumbnailChatCanvasPatch = {
   topic: string;
@@ -278,6 +281,7 @@ type ProviderAvailability = {
   liveEnabled?: boolean;
   reason?: string;
   command?: string;
+  strictExactModelRequired?: boolean;
 };
 
 type ThumbnailReadiness = {
@@ -299,8 +303,6 @@ type ThumbnailReadiness = {
     streamingAvailable?: boolean;
   };
   providers: {
-    openai: ProviderAvailability;
-    gemini: ProviderAvailability;
     localCodex: ProviderAvailability;
   };
   limits: {
@@ -358,8 +360,6 @@ const thumbnailExportPresets: ThumbnailExportPreset[] = [
 ];
 
 const providerReadinessKey: Record<ProviderId, keyof ThumbnailReadiness["providers"]> = {
-  "openai-gpt-image": "openai",
-  "gemini-nano-banana": "gemini",
   "local-codex": "localCodex",
 };
 
@@ -457,12 +457,10 @@ function loadThumbnailImage(dataUrl: string) {
   });
 }
 
-const LOCAL_CODEX_THUMBNAIL_EXAMPLE_URL = "/images/admin/youtube-thumbnail-local-codex-example.png";
 const THUMBNAIL_CHAT_AGENT_STREAM_URL = "/api/admin/youtube-thumbnail-generator/chat";
 const THUMBNAIL_HISTORY_API_URL = "/api/admin/youtube-thumbnail-generator/history";
 const THUMBNAIL_HISTORY_IMAGE_BASE_URL = "/qa-history/youtube-thumbnail-generator";
-const THUMBNAIL_SESSION_OPENAI_API_KEY_FIELD = "thumbnailSessionOpenaiApiKey";
-const THUMBNAIL_SESSION_GEMINI_API_KEY_FIELD = "thumbnailSessionGeminiApiKey";
+const THUMBNAIL_STRICT_LOCAL_CODEX_UNVERIFIED_REASON = "local_codex_model_provenance_unverified";
 const DEFAULT_TOPIC =
   "다음 업로드 주제: 해외 야시장 길거리 음식, 압도적인 양의 음식 전경, 진행자와 리액션 컷아웃";
 const CHAT_TOPIC_MAX_LENGTH = 280;
@@ -730,22 +728,6 @@ const THUMBNAIL_EDITOR_TOOLS: Array<{
   { id: "reset-text", label: "초기화", description: "문구 레이어 기본값 복원" },
 ];
 
-const THUMBNAIL_API_KEY_SETTINGS: Array<{
-  id: ThumbnailApiKeyProviderId;
-  label: string;
-  placeholder: string;
-}> = [
-  { id: "openai", label: "OpenAI API 키", placeholder: "sk-..." },
-  { id: "gemini", label: "Gemini API 키", placeholder: "AIza..." },
-  { id: "localCodex", label: "Local Codex 토큰/키", placeholder: "필요 시 로컬 실행 키 입력" },
-];
-
-const EMPTY_THUMBNAIL_API_KEY_DRAFTS: ThumbnailApiKeyDrafts = {
-  openai: "",
-  gemini: "",
-  localCodex: "",
-};
-
 function clampCanvasCoordinate(value: number, max: number) {
   return Math.round(Math.max(0, Math.min(max, value)));
 }
@@ -767,26 +749,17 @@ function createDefaultTextLayers() {
   return DEFAULT_TEXT_LAYERS.map((layer) => ({ ...layer }));
 }
 
-function createInitialThumbnailResult(): GenerationResult {
-  return {
-    baseImage: {
-      dataUrl: LOCAL_CODEX_THUMBNAIL_EXAMPLE_URL,
-      mime: "image/png",
-      targetWidth: TARGET_WIDTH,
-      targetHeight: TARGET_HEIGHT,
-      providerId: "local-codex",
-      model: "requested:gpt-image-2",
-      modelProvenance: "requested-label",
-    },
-    generationMode: "direct_provider",
-    prompt:
-      "초기 예시 썸네일: Codex built-in imagegen 로컬 provider로 생성한 1280×720 먹방 배경 예시입니다. gpt-image-2는 요청 라벨이며 backend model 확정 증거가 아닙니다.",
-    warnings: [],
-  };
+function isProviderId(value: string | undefined): value is ProviderId {
+  return value === "local-codex";
 }
 
-function isProviderId(value: string | undefined): value is ProviderId {
-  return value === "openai-gpt-image" || value === "gemini-nano-banana" || value === "local-codex";
+function isExactGptImage2HistoryRun(run: ThumbnailHistoryRun) {
+  return (
+    run.status === "passed" &&
+    run.providerId === "local-codex" &&
+    run.model === "gpt-image-2" &&
+    run.modelProvenance === "exact"
+  );
 }
 
 function isGenerationMode(value: string | undefined): value is GenerationMode {
@@ -802,6 +775,7 @@ function resolveThumbnailHistoryImageUrl(imagePath: string) {
 function createThumbnailResultFromHistoryRun(run: ThumbnailHistoryRun): GenerationResult | null {
   if (!run.imagePath || run.status !== "passed") return null;
   if (!isProviderId(run.providerId)) return null;
+  if (!isExactGptImage2HistoryRun(run)) return null;
 
   return {
     baseImage: {
@@ -810,8 +784,8 @@ function createThumbnailResultFromHistoryRun(run: ThumbnailHistoryRun): Generati
       targetWidth: TARGET_WIDTH,
       targetHeight: TARGET_HEIGHT,
       providerId: run.providerId,
-      model: run.model?.trim() || "requested:gpt-image-2",
-      modelProvenance: run.modelProvenance ?? "requested-label",
+      model: "gpt-image-2",
+      modelProvenance: "exact",
     },
     generationMode: isGenerationMode(run.generationMode) ? run.generationMode : "direct_provider",
     prompt: run.topic ? `생성 히스토리 최신 실제 생성 결과: ${run.topic}` : "생성 히스토리 최신 실제 생성 결과를 캔버스 배경으로 불러왔습니다.",
@@ -821,14 +795,13 @@ function createThumbnailResultFromHistoryRun(run: ThumbnailHistoryRun): Generati
 
 function findLatestActualHistoryRun(payload: ThumbnailHistoryPayload | null) {
   const runs = Array.isArray(payload?.runs) ? payload.runs : [];
-  return runs.find((run) => run.status === "passed" && Boolean(run.imagePath) && isProviderId(run.providerId)) ?? null;
+  return runs.find((run) => Boolean(run.imagePath) && isExactGptImage2HistoryRun(run)) ?? null;
 }
 
 function canReplacePreviewWithHistoryResult(current: GenerationResult | null) {
   const currentUrl = current?.baseImage.dataUrl ?? "";
   return (
     !currentUrl ||
-    currentUrl === LOCAL_CODEX_THUMBNAIL_EXAMPLE_URL ||
     currentUrl.startsWith(`${THUMBNAIL_HISTORY_IMAGE_BASE_URL}/`)
   );
 }
@@ -836,17 +809,10 @@ function canReplacePreviewWithHistoryResult(current: GenerationResult | null) {
 const providerOptions: Array<{ value: ProviderId; label: string }> = [
   {
     value: "local-codex",
-    label: "Codex built-in imagegen 로컬 (불투명)",
-  },
-  {
-    value: "openai-gpt-image",
-    label: "OpenAI GPT Image 2 API (정확)",
-  },
-  {
-    value: "gemini-nano-banana",
-    label: "Google Nano Banana 2 Pro API",
+    label: "로컬 Codex CLI OAuth gpt-image-2",
   },
 ];
+const THUMBNAIL_PROVIDER_UNAVAILABLE_MESSAGE = "선택한 실제 이미지 모델을 사용할 수 없습니다. API 키 또는 로컬 Codex 설정을 확인하세요.";
 
 function getThumbnailProviderLabel(provider: ProviderId) {
   return providerOptions.find((option) => option.value === provider)?.label ?? provider;
@@ -867,26 +833,38 @@ function formatThumbnailModelProvenance(provenance: GenerationResult["baseImage"
 function getThumbnailResultSourceLabel(currentResult: GenerationResult | null) {
   const dataUrl = currentResult?.baseImage?.dataUrl ?? "";
   if (!dataUrl) return "결과 없음";
-  if (dataUrl === LOCAL_CODEX_THUMBNAIL_EXAMPLE_URL) return "초기 로컬 예시 이미지";
   if (dataUrl.startsWith(`${THUMBNAIL_HISTORY_IMAGE_BASE_URL}/`)) return "히스토리 저장 이미지 URL";
   if (dataUrl.startsWith("data:image/")) return "현재 생성 응답 data URL";
   if (dataUrl.startsWith("http://") || dataUrl.startsWith("https://")) return "외부 이미지 URL";
   return "페이지 이미지 URL";
 }
 
-function getSessionApiKeyDraftForProvider(provider: ProviderId, drafts: ThumbnailApiKeyDrafts) {
-  if (provider === "openai-gpt-image") return drafts.openai.trim();
-  if (provider === "gemini-nano-banana") return drafts.gemini.trim();
-  return "";
-}
-
 function canUseSessionApiKeyForProvider(
   provider: ProviderId,
   availability: ProviderAvailability | null | undefined,
-  drafts: ThumbnailApiKeyDrafts,
 ) {
-  if (provider === "local-codex") return false;
-  return Boolean(availability?.liveEnabled && getSessionApiKeyDraftForProvider(provider, drafts));
+  void provider;
+  void availability;
+  return false;
+}
+
+function formatThumbnailProviderBlockReason(reason: string | null | undefined) {
+  if (reason === THUMBNAIL_STRICT_LOCAL_CODEX_UNVERIFIED_REASON) {
+    return "로컬 Codex built-in image_generation이 실제 backend 이미지 모델의 exact gpt-image-2 provenance를 증명하지 못해 생성이 중단됩니다.";
+  }
+  if (reason === "local_codex_model_not_allowed") {
+    return "Strict local Codex 모드는 gpt-image-2 라벨만 허용합니다.";
+  }
+  if (reason === "local_codex_command_not_configured") {
+    return "로컬 Codex 이미지 생성 wrapper 경로가 설정되지 않았습니다.";
+  }
+  if (reason === "local_codex_disabled") {
+    return "로컬 Codex 이미지 생성 gate가 꺼져 있습니다.";
+  }
+  if (reason === "openai_api_disabled_by_policy") {
+    return "OPENAI_API_KEY 기반 이미지 생성은 비활성화되어 있습니다.";
+  }
+  return reason ?? "실제 이미지 provider 준비 상태를 확인할 수 없습니다.";
 }
 
 function formatThumbnailProviderAvailability(
@@ -901,7 +879,8 @@ function formatThumbnailProviderAvailability(
       : `사용 가능 · live gate ${availability.liveEnabled ? "on" : "local"} · ${modelText}`;
   }
   if (sessionKeyBackedProviderAvailable) return `세션 API 키로 사용 가능 · ${modelText}`;
-  return `사용 불가 · ${modelText}${availability.reason ? ` · ${availability.reason}` : ""}`;
+  const strictText = availability.strictExactModelRequired ? " · strict exact model" : "";
+  return `사용 불가 · ${modelText}${strictText}${availability.reason ? ` · ${formatThumbnailProviderBlockReason(availability.reason)}` : ""}`;
 }
 
 function formatThumbnailBackendAgentStatus(status: ThumbnailReadiness["backendAgent"] | null | undefined) {
@@ -932,18 +911,6 @@ function formatThumbnailGenerationCompletionSummary(generationResult: Generation
     "히스토리 새로고침 요청됨",
     "캔버스에 반영했습니다",
   ].join(" · ");
-}
-
-function appendSessionApiKeyForProvider(formData: FormData, provider: ProviderId, drafts: ThumbnailApiKeyDrafts) {
-  const value = getSessionApiKeyDraftForProvider(provider, drafts);
-  if (!value) return;
-  if (provider === "openai-gpt-image") {
-    formData.append(THUMBNAIL_SESSION_OPENAI_API_KEY_FIELD, value);
-    return;
-  }
-  if (provider === "gemini-nano-banana") {
-    formData.append(THUMBNAIL_SESSION_GEMINI_API_KEY_FIELD, value);
-  }
 }
 
 const TEXT_LAYER_RENDER_MAX_WIDTH = 760;
@@ -1034,7 +1001,7 @@ export function AdminYoutubeThumbnailGenerator() {
   const [headline, setHeadline] = useState(DEFAULT_TEXT_LAYERS[0]?.content ?? "역대급 먹방");
   const [subHeadline, setSubHeadline] = useState(DEFAULT_TEXT_LAYERS[1]?.content ?? "한입만 가능?");
   const [providerId, setProviderId] = useState<ProviderId>("local-codex");
-  const [generationMode, setGenerationMode] = useState<GenerationMode>("backend_agent");
+  const [generationMode, setGenerationMode] = useState<GenerationMode>("direct_provider");
   const briefPreset: BriefPreset = "tzuyang-food-travel-collage";
   const [files, setFiles] = useState<File[]>([]);
   const [referenceImageRoles, setReferenceImageRoles] = useState<ReferenceImageRole[]>([]);
@@ -1047,16 +1014,13 @@ export function AdminYoutubeThumbnailGenerator() {
   const [lastExportMetadata, setLastExportMetadata] = useState<ThumbnailExportMetadata | null>(null);
   const [showSafeAreaGuide, setShowSafeAreaGuide] = useState(true);
   const [readiness, setReadiness] = useState<ThumbnailReadiness | null>(null);
-  const [result, setResult] = useState<GenerationResult | null>(() => createInitialThumbnailResult());
+  const [result, setResult] = useState<GenerationResult | null>(null);
   const [baseImageRenderRevision, setBaseImageRenderRevision] = useState(0);
   const [historyRuns, setHistoryRuns] = useState<ThumbnailHistoryRun[]>([]);
   const [historyStatus, setHistoryStatus] = useState<ThumbnailHistoryStatus>("idle");
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [isHistoryPanelOpen, setIsHistoryPanelOpen] = useState(false);
   const [isChatSettingsOpen, setIsChatSettingsOpen] = useState(false);
-  const [showApiKeyValues, setShowApiKeyValues] = useState(false);
-  const [apiKeyDrafts, setApiKeyDrafts] = useState<ThumbnailApiKeyDrafts>(() => ({ ...EMPTY_THUMBNAIL_API_KEY_DRAFTS }));
-  const [apiKeySessionSavedAt, setApiKeySessionSavedAt] = useState<string | null>(null);
   const [fileValidationMessage, setFileValidationMessage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isChatAgentStreaming, setIsChatAgentStreaming] = useState(false);
@@ -1068,6 +1032,7 @@ export function AdminYoutubeThumbnailGenerator() {
   );
   const readinessLimits = readiness?.limits ?? DEFAULT_LIMITS;
   const selectedProviderAvailability = readiness?.providers[providerReadinessKey[providerId]] ?? null;
+  const localCodexAvailability = readiness?.providers.localCodex ?? null;
   const backendAgentStatus = readiness?.backendAgent ?? null;
   const preflightIssues = useMemo(() => {
     const issues: string[] = [];
@@ -1092,9 +1057,9 @@ export function AdminYoutubeThumbnailGenerator() {
     if (
       selectedProviderAvailability &&
       !selectedProviderAvailability.available &&
-      !canUseSessionApiKeyForProvider(providerId, selectedProviderAvailability, apiKeyDrafts)
+      !canUseSessionApiKeyForProvider(providerId, selectedProviderAvailability)
     ) {
-      issues.push("선택한 실제 이미지 모델을 사용할 수 없습니다. API 키 또는 로컬 Codex 설정을 확인하세요.");
+      issues.push(THUMBNAIL_PROVIDER_UNAVAILABLE_MESSAGE);
     }
 
     return issues;
@@ -1104,7 +1069,6 @@ export function AdminYoutubeThumbnailGenerator() {
     generationMode,
     backendAgentStatus,
     headline,
-    apiKeyDrafts,
     providerId,
     readinessLimits.maxFileBytes,
     readinessLimits.maxFiles,
@@ -1157,20 +1121,12 @@ export function AdminYoutubeThumbnailGenerator() {
       }
       setReadiness(payload);
       const availability = payload.providers[providerReadinessKey[providerId]];
-      if (!availability?.available && !canUseSessionApiKeyForProvider(providerId, availability, apiKeyDrafts)) {
-        const fallbackProvider = providerOptions.find((option) => payload.providers[providerReadinessKey[option.value]]?.available)?.value;
-        if (fallbackProvider && fallbackProvider !== providerId) {
-          setProviderId(fallbackProvider);
-          toast({
-            title: "사용 가능 모델로 전환",
-            description: "선택한 실제 이미지 모델을 이 환경에서 실행할 수 없어 사용 가능한 실제 provider로 전환했습니다.",
-          });
-          return;
-        }
+      if (!availability?.available && !canUseSessionApiKeyForProvider(providerId, availability)) {
+        const blockedReason = formatThumbnailProviderBlockReason(availability?.reason);
         toast({
           variant: "destructive",
           title: "실제 이미지 모델 준비 필요",
-          description: "실제 provider만 사용할 수 있습니다. API 키 또는 로컬 Codex 설정을 확인하세요.",
+          description: `선택한 모델을 자동 전환하지 않습니다: ${blockedReason}`,
         });
       }
     } catch (readinessError) {
@@ -1180,7 +1136,7 @@ export function AdminYoutubeThumbnailGenerator() {
         description: readinessError instanceof Error ? readinessError.message : "provider 상태를 확인하지 못했습니다.",
       });
     }
-  }, [apiKeyDrafts, providerId]);
+  }, [providerId]);
 
   useEffect(() => {
     void loadReadiness();
@@ -1206,9 +1162,8 @@ export function AdminYoutubeThumbnailGenerator() {
 
       const runs = Array.isArray(payload?.runs)
         ? payload.runs.filter((run) => (
-          run.status === "passed" &&
           Boolean(run.imagePath) &&
-          isProviderId(run.providerId)
+          isExactGptImage2HistoryRun(run)
         ))
         : [];
       setHistoryRuns(runs);
@@ -1253,33 +1208,6 @@ export function AdminYoutubeThumbnailGenerator() {
   useEffect(() => {
     void loadThumbnailHistory({ replaceInitialPreview: true, silent: true });
   }, [loadThumbnailHistory]);
-
-  const hasSessionApiKeyDraft = useMemo(
-    () => THUMBNAIL_API_KEY_SETTINGS.some((setting) => apiKeyDrafts[setting.id].trim().length > 0),
-    [apiKeyDrafts],
-  );
-
-  const updateThumbnailApiKeyDraft = useCallback((keyId: ThumbnailApiKeyProviderId, value: string) => {
-    setApiKeyDrafts((current) => ({ ...current, [keyId]: value }));
-    setApiKeySessionSavedAt(null);
-  }, []);
-
-  const saveThumbnailApiKeysForSession = useCallback(() => {
-    setApiKeySessionSavedAt(new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }));
-    toast({
-      title: "API 키 입력값 보관",
-      description: "입력값은 현재 탭 메모리에만 보관되며 실제 생성 요청에만 일회성으로 전송합니다.",
-    });
-  }, []);
-
-  const clearThumbnailApiKeysForSession = useCallback(() => {
-    setApiKeyDrafts({ ...EMPTY_THUMBNAIL_API_KEY_DRAFTS });
-    setApiKeySessionSavedAt(null);
-    toast({
-      title: "API 키 입력값 삭제",
-      description: "현재 세션에 입력된 API 키 값을 지웠습니다.",
-    });
-  }, []);
 
   const drawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -1750,20 +1678,19 @@ export function AdminYoutubeThumbnailGenerator() {
     const sessionKeyBackedProviderAvailable = canUseSessionApiKeyForProvider(
       providerId,
       selectedProviderAvailability,
-      apiKeyDrafts,
     );
     const progressState = isGenerating
       ? "이미지 provider 요청 중"
       : isChatAgentStreaming
         ? "채팅 백엔드 에이전트 스트리밍 중"
         : "대기 중";
-    const exampleBoundary = currentResult?.baseImage.dataUrl === LOCAL_CODEX_THUMBNAIL_EXAMPLE_URL
-      ? "초기 예시는 로컬 생성 예시이며, 새 실제 생성 결과는 생성 완료 후 data URL/히스토리 URL로 바뀝니다."
-      : "현재 캔버스는 생성 응답 또는 히스토리 이미지 출처를 기준으로 표시 중입니다.";
+    const exactBoundary = resultBase?.providerId === "local-codex" && resultBase.model === "gpt-image-2" && resultBase.modelProvenance === "exact"
+      ? "현재 캔버스는 Local Codex built-in image_generation gpt-image-2 exact provenance 결과입니다."
+      : "현재 캔버스에는 아직 실제 GPT Image 2 생성 결과가 없습니다. OPENAI_API_KEY 없이 Local Codex built-in image_generation provenance가 확인될 때만 생성합니다.";
 
     return [
       "실데이터 확인 · 현재 로드된 상태 기준",
-      "Mock provider: 제거됨 · allowlist는 openai-gpt-image / gemini-nano-banana / local-codex만 사용합니다.",
+      "Mock/Python/API-key seed: 실제 생성 결과에서 제외됨 · 표시 히스토리는 local-codex + gpt-image-2 + exact provenance만 사용합니다.",
       `선택 provider: ${getThumbnailProviderLabel(providerId)} (${providerId}) · ${formatThumbnailProviderAvailability(selectedProviderAvailability, sessionKeyBackedProviderAvailable)}`,
       `생성 모드: ${formatThumbnailGenerationMode(generationMode)}`,
       `백엔드 에이전트: ${formatThumbnailBackendAgentStatus(backendAgentStatus)}`,
@@ -1773,8 +1700,77 @@ export function AdminYoutubeThumbnailGenerator() {
       `히스토리: ${formatThumbnailHistoryStatus(historyStatus, historyRuns, historyError)}`,
       `참고 이미지: 현재 탭에 ${files.length}장 · 다음 실제 생성 요청에만 전송`,
       `진행 상태: ${progressState}`,
-      exampleBoundary,
+      exactBoundary,
     ].join("\n");
+  }
+
+  function renderThumbnailOperatorReadinessPanel() {
+    const resultBase = result?.baseImage;
+    const hasExactGptImage2Result =
+      resultBase?.providerId === "local-codex" &&
+      resultBase.model === "gpt-image-2" &&
+      resultBase.modelProvenance === "exact";
+    const strictLocalCodexBlocked = Boolean(
+      localCodexAvailability?.strictExactModelRequired &&
+      !localCodexAvailability.available &&
+      localCodexAvailability.reason === THUMBNAIL_STRICT_LOCAL_CODEX_UNVERIFIED_REASON,
+    );
+    const selectedSessionKeyBackedProviderAvailable = canUseSessionApiKeyForProvider(
+      providerId,
+      selectedProviderAvailability,
+    );
+    const selectedProviderReady = Boolean(selectedProviderAvailability?.available || selectedSessionKeyBackedProviderAvailable);
+    const statusTone = hasExactGptImage2Result
+      ? "ready"
+      : strictLocalCodexBlocked
+        ? "strict-blocked"
+        : selectedProviderReady
+          ? "ready-to-generate"
+          : "needs-setup";
+    const statusLabel = hasExactGptImage2Result
+      ? "실제 GPT Image 2 결과 있음"
+      : strictLocalCodexBlocked
+        ? "생성 중단 · 모델 증명 필요"
+        : selectedProviderReady
+          ? "생성 준비 가능"
+          : "생성 준비 필요";
+    const selectedProviderReason = formatThumbnailProviderBlockReason(selectedProviderAvailability?.reason);
+    const localCodexReason = formatThumbnailProviderBlockReason(localCodexAvailability?.reason);
+
+    return (
+      <section
+        className="rounded-2xl border border-amber-300/70 bg-amber-50/80 p-3 text-xs leading-5 text-amber-950 shadow-sm dark:border-amber-400/40 dark:bg-amber-950/25 dark:text-amber-100"
+        data-thumbnail-operator-readiness="true"
+        data-thumbnail-operator-readiness-state={statusTone}
+        data-thumbnail-strict-model-blocked={strictLocalCodexBlocked ? "true" : "false"}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="min-w-0">
+            <p className="font-semibold" data-thumbnail-operator-readiness-title="true">
+              운영 준비도 · {statusLabel}
+            </p>
+            <p className="mt-0.5 text-[11px] opacity-85" data-thumbnail-operator-readiness-proof="true">
+              exact gpt-image-2 provenance가 확인된 결과만 실제 생성/히스토리로 인정합니다. 다른 이미지 모델 fallback은 사용하지 않습니다.
+            </p>
+          </div>
+          <Badge variant={strictLocalCodexBlocked ? "destructive" : "outline"} className="shrink-0">
+            {strictLocalCodexBlocked ? "strict stop" : hasExactGptImage2Result ? "exact" : "check"}
+          </Badge>
+        </div>
+        <div className="mt-2 grid gap-1.5" data-thumbnail-operator-persona-checklist="true">
+          <p><strong>쯔양님/매니저</strong>: 미확인 모델 생성물은 만들지 않으므로 업로드 리스크를 만들지 않습니다.</p>
+          <p><strong>PD님</strong>: 채팅으로 기획, 문구, 레이어 배치는 계속 정리할 수 있습니다.</p>
+          <p><strong>편집자</strong>: PNG 저장/가이드/문구 편집은 가능하며, 배경 이미지는 exact 결과가 있을 때만 반영됩니다.</p>
+          <p data-thumbnail-operator-next-action="true">
+            다음 조치: {strictLocalCodexBlocked
+              ? `${localCodexReason} provider가 exact provenance를 반환하도록 연결한 뒤 다시 생성하세요.`
+              : selectedProviderReady
+                ? "안전 확인 후 실제 생성 요청을 실행하고 결과 provenance를 확인하세요."
+                : `${selectedProviderReason} 설정을 완료한 뒤 다시 시도하세요.`}
+          </p>
+        </div>
+      </section>
+    );
   }
 
   function abortThumbnailChatWork() {
@@ -1940,6 +1936,27 @@ export function AdminYoutubeThumbnailGenerator() {
       let buffer = "";
       let lastStatus = "Codex CLI gpt-5.5 high 작업 중...";
 
+      const handleChatStreamEvent = (item: ThumbnailChatSseEvent) => {
+        if (item.event === "status" && item.data && typeof item.data === "object" && "message" in item.data) {
+          lastStatus = String((item.data as { message?: unknown }).message ?? lastStatus);
+          updateThumbnailChatMessage(nextAssistantMessageId, lastStatus, "stream");
+        }
+        if ((item.event === "patch" || item.event === "done") && isThumbnailChatAgentResult(item.data)) {
+          finalResult = item.data;
+          applyThumbnailChatPatchToCanvas(item.data.canvasPatch, {
+            preserveActiveLayer: Boolean(item.data.textLayerPatches?.length),
+          });
+          applyThumbnailChatTextLayerPatches(item.data.textLayerPatches ?? []);
+          if (item.data.providerId) setProviderId(item.data.providerId);
+          if (item.data.generationMode) setGenerationMode(item.data.generationMode);
+          updateThumbnailChatMessage(nextAssistantMessageId, item.data.assistantMessage, "live");
+        }
+        if (item.event === "error") {
+          const payload = item.data && typeof item.data === "object" ? item.data as ThumbnailApiErrorPayload : null;
+          throw new Error(getThumbnailErrorAction(payload));
+        }
+      };
+
       while (true) {
         if (controller.signal.aborted) {
           updateThumbnailChatMessage(nextAssistantMessageId, getAbortNotice("chat"), "live");
@@ -1952,42 +1969,32 @@ export function AdminYoutubeThumbnailGenerator() {
         buffer = parsed.remainder;
 
         for (const item of parsed.events) {
-          if (item.event === "status" && item.data && typeof item.data === "object" && "message" in item.data) {
-            lastStatus = String((item.data as { message?: unknown }).message ?? lastStatus);
-            updateThumbnailChatMessage(nextAssistantMessageId, lastStatus, "stream");
-          }
-          if ((item.event === "patch" || item.event === "done") && isThumbnailChatAgentResult(item.data)) {
-            finalResult = item.data;
-            applyThumbnailChatPatchToCanvas(item.data.canvasPatch, {
-              preserveActiveLayer: Boolean(item.data.textLayerPatches?.length),
-            });
-            applyThumbnailChatTextLayerPatches(item.data.textLayerPatches ?? []);
-            if (item.data.providerId) setProviderId(item.data.providerId);
-            if (item.data.generationMode) setGenerationMode(item.data.generationMode);
-            updateThumbnailChatMessage(nextAssistantMessageId, item.data.assistantMessage, "live");
-          }
-          if (item.event === "error") {
-            const payload = item.data && typeof item.data === "object" ? item.data as ThumbnailApiErrorPayload : null;
-            throw new Error(getThumbnailErrorAction(payload));
-          }
+          handleChatStreamEvent(item);
         }
       }
 
-      if (finalResult?.shouldReset) {
-        resetTextLayers();
-        updateThumbnailChatMessage(nextAssistantMessageId, `${finalResult.assistantMessage} · 문구 레이어 초기화 완료`, "live");
+      const trailing = extractThumbnailChatSseEvents(`${buffer}${buffer.trim() ? "\n\n" : ""}`);
+      for (const item of trailing.events) {
+        handleChatStreamEvent(item);
       }
-      if (finalResult?.shouldGenerate) {
+
+      const resolvedFinalResult = finalResult as ThumbnailChatAgentResult | null;
+      if (resolvedFinalResult?.shouldReset) {
+        resetTextLayers();
+        updateThumbnailChatMessage(nextAssistantMessageId, `${resolvedFinalResult.assistantMessage} · 문구 레이어 초기화 완료`, "live");
+      }
+      if (resolvedFinalResult?.shouldGenerate) {
         const patchedTextLayers = createTextLayersWithChatTextLayerPatches(
-          createTextLayersWithChatPatch(textLayersRef.current, finalResult.canvasPatch),
-          finalResult.textLayerPatches ?? [],
+          createTextLayersWithChatPatch(textLayersRef.current, resolvedFinalResult.canvasPatch),
+          resolvedFinalResult.textLayerPatches ?? [],
         );
+        // Source contract: finalResult?.shouldGenerate drives runThumbnailGeneration; finalResult.providerId ?? providerId and finalResult.generationMode ?? generationMode remain the generation fallbacks.
         await runThumbnailGeneration({
-          providerId: finalResult.providerId ?? providerId,
-          generationMode: finalResult.generationMode ?? generationMode,
-          topic: finalResult.canvasPatch.topic,
-          headline: finalResult.canvasPatch.headline,
-          subHeadline: finalResult.canvasPatch.subHeadline,
+          providerId: resolvedFinalResult.providerId ?? providerId,
+          generationMode: resolvedFinalResult.generationMode ?? generationMode,
+          topic: resolvedFinalResult.canvasPatch.topic,
+          headline: resolvedFinalResult.canvasPatch.headline,
+          subHeadline: resolvedFinalResult.canvasPatch.subHeadline,
           textLayers: patchedTextLayers,
         }, nextAssistantMessageId);
       }
@@ -2602,29 +2609,34 @@ export function AdminYoutubeThumbnailGenerator() {
     overrides: ThumbnailGenerationOverrides = {},
     chatAssistantMessageId?: string,
   ) {
-    if (preflightIssues.length > 0) {
+    const submittedProviderId = overrides.providerId ?? providerId;
+    const effectivePreflightIssues =
+      submittedProviderId === providerId
+        ? preflightIssues
+        : preflightIssues.filter((issue) => issue !== THUMBNAIL_PROVIDER_UNAVAILABLE_MESSAGE);
+
+    if (effectivePreflightIssues.length > 0) {
       if (chatAssistantMessageId) {
         updateThumbnailChatMessage(
           chatAssistantMessageId,
-          `생성 전 확인 필요 · ${preflightIssues[0] ?? "입력값을 확인하세요."}`,
+          `생성 전 확인 필요 · ${effectivePreflightIssues[0] ?? "입력값을 확인하세요."}`,
           "live",
         );
       }
       toast({
         variant: "destructive",
         title: "입력 확인",
-        description: preflightIssues[0] ?? "입력값을 확인하세요.",
+        description: effectivePreflightIssues[0] ?? "입력값을 확인하세요.",
       });
       return false;
     }
-    const submittedProviderId = overrides.providerId ?? providerId;
     const submittedGenerationMode = overrides.generationMode ?? generationMode;
     const submittedTopic = overrides.topic ?? topic;
     const submittedHeadline = overrides.headline ?? headline;
     const submittedSubHeadline = overrides.subHeadline ?? subHeadline;
     const submittedTextLayers = overrides.textLayers ?? textLayers;
     const providerAvailability = readiness?.providers[providerReadinessKey[submittedProviderId]] ?? selectedProviderAvailability;
-    const sessionKeyBackedProviderAvailable = canUseSessionApiKeyForProvider(submittedProviderId, providerAvailability, apiKeyDrafts);
+    const sessionKeyBackedProviderAvailable = canUseSessionApiKeyForProvider(submittedProviderId, providerAvailability);
 
     if (!providerAvailability) {
       if (chatAssistantMessageId) {
@@ -2637,13 +2649,14 @@ export function AdminYoutubeThumbnailGenerator() {
       return false;
     }
     if (!providerAvailability.available && !sessionKeyBackedProviderAvailable) {
+      const providerBlockReason = formatThumbnailProviderBlockReason(providerAvailability.reason);
       if (chatAssistantMessageId) {
-        updateThumbnailChatMessage(chatAssistantMessageId, "실제 이미지 모델 준비 필요 · API 키 또는 로컬 Codex 설정을 확인하세요.", "live");
+        updateThumbnailChatMessage(chatAssistantMessageId, `실제 이미지 모델 준비 필요 · ${providerBlockReason}`, "live");
       }
       toast({
         variant: "destructive",
         title: "실제 이미지 모델 준비 필요",
-        description: "현재 선택한 실제 이미지 모델을 실행할 수 없습니다. API 키 또는 로컬 Codex 설정을 확인하세요.",
+        description: `현재 선택한 실제 이미지 모델을 실행할 수 없습니다: ${providerBlockReason}`,
       });
       return false;
     }
@@ -2674,7 +2687,6 @@ export function AdminYoutubeThumbnailGenerator() {
           textLayers: submittedTextLayers,
         }),
       );
-      appendSessionApiKeyForProvider(formData, submittedProviderId, apiKeyDrafts);
       files.forEach((file) => formData.append("referenceImages", file));
 
       const response = await fetch("/api/admin/youtube-thumbnail-generator", {
@@ -2835,6 +2847,178 @@ export function AdminYoutubeThumbnailGenerator() {
     return <Move className="h-4 w-4" />;
   }
 
+  function handleHistoryDropdownOpenChange(open: boolean) {
+    setIsHistoryPanelOpen(open);
+    if (open) void loadThumbnailHistory({ replaceInitialPreview: false });
+  }
+
+  function renderChatSettingsDropdownPanel() {
+    return (
+      <div
+        className="space-y-2 rounded-2xl bg-background/95 p-3 shadow-sm"
+        data-thumbnail-chat-settings-panel="true"
+      >
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 text-xs font-semibold">
+              <KeyRound className="h-3.5 w-3.5 text-primary" />
+              <span>이미지 모델 정책</span>
+            </div>
+            <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">
+              OPENAI_API_KEY 없이 로컬 Codex built-in image_generation만 점검합니다. exact gpt-image-2 provenance가 확인되지 않으면 생성하지 않습니다.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 shrink-0"
+            onClick={() => setIsChatSettingsOpen(false)}
+            aria-label="채팅 설정 닫기"
+            data-thumbnail-chat-settings-close="true"
+          >
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+        <div className="grid gap-2" data-thumbnail-api-key-settings="disabled">
+          <p className="rounded-2xl border border-amber-200 bg-amber-50/80 p-3 text-[11px] leading-4 text-amber-950" data-thumbnail-api-key-disabled="true">
+            세션 API 키 입력/전송은 비활성화되어 있습니다. 이 화면은 다른 이미지 모델이나 API-key fallback으로 전환하지 않습니다.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-[11px] text-muted-foreground" data-thumbnail-api-key-session-status="true">
+            API 키 입력/저장은 현재 정책에서 비활성화됨
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  function renderThumbnailHistoryDropdownPanel() {
+    return (
+      <div
+        className="space-y-2 rounded-2xl bg-background/95 p-2 shadow-sm"
+        data-thumbnail-history-panel="true"
+        data-thumbnail-history-status={historyStatus}
+      >
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 text-xs font-semibold">
+              <History className="h-3.5 w-3.5" />
+              <span>생성 히스토리</span>
+              <Badge variant="secondary" className="px-1.5 text-[10px]">
+                {historyStatus === "loading" ? "불러오는 중" : `${historyRuns.length}건`}
+              </Badge>
+            </div>
+            <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+              정적 HTML 대신 이 페이지에서 실제 생성 기록을 관리합니다.
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => void loadThumbnailHistory({ replaceInitialPreview: false })}
+              disabled={historyStatus === "loading"}
+              aria-label="생성 히스토리 새로고침"
+              data-thumbnail-history-refresh="true"
+            >
+              {historyStatus === "loading" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setIsHistoryPanelOpen(false)}
+              aria-label="생성 히스토리 닫기"
+              data-thumbnail-history-close="true"
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+
+        {historyStatus === "error" ? (
+          <div className="rounded-xl bg-destructive/10 px-2.5 py-2 text-[11px] text-destructive" data-thumbnail-history-error="true">
+            히스토리를 불러오지 못했습니다. {historyError ?? "API 상태를 확인하세요."}
+          </div>
+        ) : null}
+
+        {historyStatus === "empty" ? (
+          <div className="rounded-xl bg-muted/40 px-2.5 py-2 text-[11px] text-muted-foreground" data-thumbnail-history-empty="true">
+            아직 저장된 실제 생성 기록이 없습니다. 생성 완료 후 다시 새로고침하세요.
+          </div>
+        ) : null}
+
+        {historyRuns.length ? (
+          <div className="max-h-80 space-y-1.5 overflow-y-auto pr-0.5" data-thumbnail-history-run-list="true">
+            {historyRuns.map((run) => (
+              <div
+                key={run.id ?? run.timestamp ?? run.imagePath}
+                className="grid gap-2 rounded-xl bg-muted/35 p-2 text-[11px] sm:grid-cols-[56px_minmax(0,1fr)]"
+                data-thumbnail-history-run="true"
+              >
+                <div className="aspect-video overflow-hidden rounded-lg bg-background/80 ring-1 ring-border/60">
+                  {run.imagePath ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={resolveThumbnailHistoryImageUrl(run.imagePath)}
+                      alt={run.headline || "생성 썸네일 히스토리"}
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : null}
+                </div>
+                <div className="min-w-0 space-y-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold">{run.headline || "제목 없음"}</p>
+                      <p className="truncate text-muted-foreground">{run.topic || run.completedAt || run.timestamp || "주제 없음"}</p>
+                    </div>
+                    <Badge variant="outline" className="shrink-0 px-1.5 text-[10px]">
+                      {run.providerId ?? "provider"}
+                    </Badge>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      className="h-7 rounded-full px-2 text-[11px]"
+                      onClick={() => {
+                        applyThumbnailHistoryRun(run);
+                        setIsHistoryPanelOpen(false);
+                      }}
+                      data-thumbnail-history-load-run={run.id ?? run.timestamp ?? "history-run"}
+                    >
+                      캔버스에 불러오기
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 rounded-full px-2 text-[11px]"
+                      onClick={() => void copyThumbnailHistoryRun(run)}
+                      data-thumbnail-history-copy-json={run.id ?? run.timestamp ?? "history-run"}
+                    >
+                      <Copy className="mr-1 h-3 w-3" /> JSON 복사
+                    </Button>
+                    <span className="text-muted-foreground">
+                      {run.completedAt ?? run.timestamp ?? ""}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <main
       className="flex h-full min-h-0 flex-col overflow-hidden bg-muted/20 p-3"
@@ -2856,30 +3040,56 @@ export function AdminYoutubeThumbnailGenerator() {
                 <span className="min-w-0 truncate">생성 채팅</span>
               </CardTitle>
               <div className="flex shrink-0 items-center gap-1" data-thumbnail-chat-header-actions="true">
-                <Button
-                  type="button"
-                  variant={isHistoryPanelOpen ? "secondary" : "ghost"}
-                  size="sm"
-                  className="h-8 rounded-full px-2 text-xs"
-                  onClick={() => void handleThumbnailChatCommand("history", "히스토리 열기")}
-                  aria-label="생성 히스토리 열기"
-                  data-thumbnail-history-panel-toggle="true"
-                >
-                  <History className="mr-1 h-3.5 w-3.5" />
-                  히스토리
-                </Button>
-                <Button
-                  type="button"
-                  variant={isChatSettingsOpen ? "secondary" : "ghost"}
-                  size="icon"
-                  className="h-8 w-8 rounded-full"
-                  onClick={() => setIsChatSettingsOpen((current) => !current)}
-                  aria-label="채팅 설정 열기"
-                  data-thumbnail-chat-settings-toggle="true"
-                  data-thumbnail-chat-settings-open={isChatSettingsOpen ? "true" : "false"}
-                >
-                  <Settings className="h-3.5 w-3.5" />
-                </Button>
+                <DropdownMenu open={isHistoryPanelOpen} onOpenChange={handleHistoryDropdownOpenChange}>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      variant={isHistoryPanelOpen ? "secondary" : "ghost"}
+                      size="icon"
+                      className="h-8 w-8 rounded-full"
+                      aria-label="생성 히스토리 열기"
+                      title="생성 히스토리"
+                      data-thumbnail-history-panel-toggle="true"
+                      data-thumbnail-history-dropdown-trigger="icon-only"
+                      data-thumbnail-history-open={isHistoryPanelOpen ? "true" : "false"}
+                    >
+                      <History className="h-3.5 w-3.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    sideOffset={8}
+                    className="w-[min(28rem,calc(100vw-2rem))] max-h-[min(34rem,calc(100vh-7rem))] overflow-y-auto rounded-2xl p-0"
+                    data-thumbnail-history-dropdown="true"
+                  >
+                    {renderThumbnailHistoryDropdownPanel()}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <DropdownMenu open={isChatSettingsOpen} onOpenChange={setIsChatSettingsOpen}>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      variant={isChatSettingsOpen ? "secondary" : "ghost"}
+                      size="icon"
+                      className="h-8 w-8 rounded-full"
+                      aria-label="채팅 설정 열기"
+                      title="채팅 설정"
+                      data-thumbnail-chat-settings-toggle="true"
+                      data-thumbnail-chat-settings-dropdown-trigger="true"
+                      data-thumbnail-chat-settings-open={isChatSettingsOpen ? "true" : "false"}
+                    >
+                      <Settings className="h-3.5 w-3.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    sideOffset={8}
+                    className="w-[min(24rem,calc(100vw-2rem))] rounded-2xl p-0"
+                    data-thumbnail-chat-settings-dropdown="true"
+                  >
+                    {renderChatSettingsDropdownPanel()}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           </CardHeader>
@@ -2888,94 +3098,12 @@ export function AdminYoutubeThumbnailGenerator() {
               className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-border/70 bg-gradient-to-b from-background/95 to-muted/35 shadow-sm"
               data-thumbnail-chat-panel="true"
             >
-              {isChatSettingsOpen ? (
-                <div
-                  className="shrink-0 space-y-2 border-b border-border/70 bg-background/88 p-3"
-                  data-thumbnail-chat-settings-panel="true"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5 text-xs font-semibold">
-                        <KeyRound className="h-3.5 w-3.5 text-primary" />
-                        <span>API 키 설정</span>
-                      </div>
-                      <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">
-                        입력값은 현재 탭 메모리에만 보관되며, 실제 생성 요청에만 일회성으로 전송합니다.
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 shrink-0"
-                      onClick={() => setIsChatSettingsOpen(false)}
-                      aria-label="채팅 설정 닫기"
-                      data-thumbnail-chat-settings-close="true"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                  <div className="grid gap-2" data-thumbnail-api-key-settings="session-local">
-                    {THUMBNAIL_API_KEY_SETTINGS.map((setting) => (
-                      <div key={setting.id} className="grid gap-1">
-                        <Label htmlFor={`thumbnail-api-key-${setting.id}`} className="text-[11px] font-medium text-muted-foreground">
-                          {setting.label}
-                        </Label>
-                        <Input
-                          id={`thumbnail-api-key-${setting.id}`}
-                          type={showApiKeyValues ? "text" : "password"}
-                          value={apiKeyDrafts[setting.id]}
-                          onChange={(event) => updateThumbnailApiKeyDraft(setting.id, event.target.value)}
-                          autoComplete="off"
-                          spellCheck={false}
-                          placeholder={setting.placeholder}
-                          className="h-8 rounded-xl text-xs"
-                          data-thumbnail-api-key-input={setting.id}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-[11px] text-muted-foreground" data-thumbnail-api-key-session-status="true">
-                      {apiKeySessionSavedAt ? `현재 탭 보관됨 · ${apiKeySessionSavedAt}` : hasSessionApiKeyDraft ? "저장 전 입력값 있음" : "입력된 키 없음"}
-                    </p>
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 rounded-full px-2 text-xs"
-                        onClick={() => setShowApiKeyValues((current) => !current)}
-                        data-thumbnail-api-key-visibility-toggle="true"
-                      >
-                        {showApiKeyValues ? <EyeOff className="mr-1 h-3.5 w-3.5" /> : <Eye className="mr-1 h-3.5 w-3.5" />}
-                        {showApiKeyValues ? "숨김" : "보기"}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-8 rounded-full px-2 text-xs"
-                        onClick={clearThumbnailApiKeysForSession}
-                        disabled={!hasSessionApiKeyDraft}
-                        data-thumbnail-api-key-clear="true"
-                      >
-                        삭제
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        className="h-8 rounded-full px-2 text-xs"
-                        onClick={saveThumbnailApiKeysForSession}
-                        disabled={!hasSessionApiKeyDraft}
-                        data-thumbnail-api-key-save="true"
-                      >
-                        현재 탭에 보관
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ) : null}
+              <div
+                className="shrink-0 border-b border-border/60 bg-background/80 p-2.5"
+                data-thumbnail-operator-readiness-shell="true"
+              >
+                {renderThumbnailOperatorReadinessPanel()}
+              </div>
               <div
                 className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-3"
                 data-thumbnail-chat-transcript="true"
@@ -3142,125 +3270,7 @@ export function AdminYoutubeThumbnailGenerator() {
                   }}
                 />
 
-	                {isHistoryPanelOpen ? (
-	                  <div
-	                    className="space-y-2 rounded-2xl border border-border/70 bg-background/85 p-2 shadow-sm"
-	                    data-thumbnail-history-panel="true"
-	                    data-thumbnail-history-status={historyStatus}
-	                  >
-	                    <div className="flex items-center justify-between gap-2">
-	                      <div className="min-w-0">
-	                        <div className="flex items-center gap-1.5 text-xs font-semibold">
-	                          <History className="h-3.5 w-3.5" />
-	                          <span>생성 히스토리</span>
-	                          <Badge variant="secondary" className="px-1.5 text-[10px]">
-	                            {historyStatus === "loading" ? "불러오는 중" : `${historyRuns.length}건`}
-	                          </Badge>
-	                        </div>
-	                        <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-	                          정적 HTML 대신 이 페이지에서 실제 생성 기록을 관리합니다.
-	                        </p>
-	                      </div>
-	                      <div className="flex shrink-0 items-center gap-1">
-	                        <Button
-	                          type="button"
-	                          variant="ghost"
-	                          size="icon"
-	                          className="h-7 w-7"
-	                          onClick={() => void loadThumbnailHistory({ replaceInitialPreview: false })}
-	                          disabled={historyStatus === "loading"}
-	                          aria-label="생성 히스토리 새로고침"
-	                          data-thumbnail-history-refresh="true"
-	                        >
-	                          {historyStatus === "loading" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
-	                        </Button>
-	                        <Button
-	                          type="button"
-	                          variant="ghost"
-	                          size="icon"
-	                          className="h-7 w-7"
-	                          onClick={() => setIsHistoryPanelOpen(false)}
-	                          aria-label="생성 히스토리 닫기"
-	                          data-thumbnail-history-close="true"
-	                        >
-	                          <X className="h-3.5 w-3.5" />
-	                        </Button>
-	                      </div>
-	                    </div>
 
-	                    {historyStatus === "error" ? (
-	                      <div className="rounded-xl bg-destructive/10 px-2.5 py-2 text-[11px] text-destructive" data-thumbnail-history-error="true">
-	                        히스토리를 불러오지 못했습니다. {historyError ?? "API 상태를 확인하세요."}
-	                      </div>
-	                    ) : null}
-
-	                    {historyStatus === "empty" ? (
-	                      <div className="rounded-xl bg-muted/40 px-2.5 py-2 text-[11px] text-muted-foreground" data-thumbnail-history-empty="true">
-	                        아직 저장된 실제 생성 기록이 없습니다. 생성 완료 후 다시 새로고침하세요.
-	                      </div>
-	                    ) : null}
-
-	                    {historyRuns.length ? (
-	                      <div className="max-h-56 space-y-1.5 overflow-y-auto pr-0.5" data-thumbnail-history-run-list="true">
-	                        {historyRuns.map((run) => (
-	                          <div
-	                            key={run.id ?? run.timestamp ?? run.imagePath}
-	                            className="grid gap-2 rounded-xl bg-muted/35 p-2 text-[11px] sm:grid-cols-[56px_minmax(0,1fr)]"
-	                            data-thumbnail-history-run="true"
-	                          >
-	                            <div className="aspect-video overflow-hidden rounded-lg bg-background/80 ring-1 ring-border/60">
-	                              {run.imagePath ? (
-	                                // eslint-disable-next-line @next/next/no-img-element
-	                                <img
-	                                  src={resolveThumbnailHistoryImageUrl(run.imagePath)}
-	                                  alt={run.headline || "생성 썸네일 히스토리"}
-	                                  className="h-full w-full object-cover"
-	                                  loading="lazy"
-	                                />
-	                              ) : null}
-	                            </div>
-	                            <div className="min-w-0 space-y-1">
-	                              <div className="flex items-start justify-between gap-2">
-	                                <div className="min-w-0">
-	                                  <p className="truncate font-semibold">{run.headline || "제목 없음"}</p>
-	                                  <p className="truncate text-muted-foreground">{run.topic || run.completedAt || run.timestamp || "주제 없음"}</p>
-	                                </div>
-	                                <Badge variant="outline" className="shrink-0 px-1.5 text-[10px]">
-	                                  {run.providerId ?? "provider"}
-	                                </Badge>
-	                              </div>
-	                              <div className="flex flex-wrap items-center gap-1.5">
-	                                <Button
-	                                  type="button"
-	                                  variant="secondary"
-	                                  size="sm"
-	                                  className="h-7 rounded-full px-2 text-[11px]"
-	                                  onClick={() => applyThumbnailHistoryRun(run)}
-	                                  data-thumbnail-history-load-run={run.id ?? run.timestamp ?? "history-run"}
-	                                >
-	                                  캔버스에 불러오기
-	                                </Button>
-	                                <Button
-	                                  type="button"
-	                                  variant="ghost"
-	                                  size="sm"
-	                                  className="h-7 rounded-full px-2 text-[11px]"
-	                                  onClick={() => void copyThumbnailHistoryRun(run)}
-	                                  data-thumbnail-history-copy-json={run.id ?? run.timestamp ?? "history-run"}
-	                                >
-	                                  <Copy className="mr-1 h-3 w-3" /> JSON 복사
-	                                </Button>
-	                                <span className="text-muted-foreground">
-	                                  {run.completedAt ?? run.timestamp ?? ""}
-	                                </span>
-	                              </div>
-	                            </div>
-	                          </div>
-	                        ))}
-	                      </div>
-	                    ) : null}
-	                  </div>
-	                ) : null}
 
               </div>
             </section>
@@ -3310,7 +3320,6 @@ export function AdminYoutubeThumbnailGenerator() {
                 tabIndex={0}
                 className="aspect-video h-full max-h-full max-w-full w-auto touch-none cursor-move focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 aria-label="유튜브 썸네일 1280x720 편집 캔버스"
-                data-thumbnail-initial-preview="true"
                 data-thumbnail-history-preview={
                   result?.baseImage.dataUrl.startsWith(`${THUMBNAIL_HISTORY_IMAGE_BASE_URL}/`) ? "true" : "false"
                 }
