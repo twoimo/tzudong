@@ -223,6 +223,11 @@ test('Playwright 관리자 우회는 env와 토큰 헤더가 모두 맞는 /admi
                 headers: adminBypassHeaders({ host: '[::1]:3000' }),
             }),
         )
+        const bindAddressUrlResponse = await proxy(
+            new NextRequest('http://0.0.0.0:8080/admin', {
+                headers: adminBypassHeaders({ host: 'localhost:8080' }),
+            }),
+        )
         const missingTokenResponse = await proxy(
             new NextRequest('http://localhost:3000/admin', {
                 headers: adminBypassHeaders({
@@ -277,6 +282,13 @@ test('Playwright 관리자 우회는 env와 토큰 헤더가 모두 맞는 /admi
                 }),
             }),
         )
+        const bindAddressHostHeaderResponse = await proxy(
+            new NextRequest('http://0.0.0.0:8080/admin', {
+                headers: adminBypassHeaders({
+                    host: '0.0.0.0:8080',
+                }),
+            }),
+        )
         const missingHostResponse = await proxy(
             new NextRequest('http://localhost:3000/admin', {
                 headers: {
@@ -308,6 +320,7 @@ test('Playwright 관리자 우회는 env와 토큰 헤더가 모두 맞는 /admi
         expect(headResponse.headers.get('x-auth-checked')).toBeNull()
         expect(uppercaseHostResponse.headers.get('x-auth-checked')).toBeNull()
         expect(ipv6HostResponse.headers.get('x-auth-checked')).toBeNull()
+        expect(bindAddressUrlResponse.headers.get('x-auth-checked')).toBeNull()
         expect(forwardedLocalHostResponse.headers.get('x-auth-checked')).toBeNull()
         expect(missingTokenResponse.headers.get('x-auth-checked')).toBe('1')
         expect(invalidTokenResponse.headers.get('x-auth-checked')).toBe('1')
@@ -316,11 +329,12 @@ test('Playwright 관리자 우회는 env와 토큰 헤더가 모두 맞는 /admi
         expect(forwardedHostResponse.headers.get('x-auth-checked')).toBe('1')
         expect(deceptiveLocalHostResponse.headers.get('x-auth-checked')).toBe('1')
         expect(malformedLocalHostResponse.headers.get('x-auth-checked')).toBe('1')
+        expect(bindAddressHostHeaderResponse.headers.get('x-auth-checked')).toBe('1')
         expect(missingHostResponse.headers.get('x-auth-checked')).toBe('1')
         expect(nonAdminVariantResponse.headers.get('x-auth-checked')).toBe('1')
         expect(childRouteResponse.headers.get('x-auth-checked')).toBe('1')
         expect(postResponse.headers.get('x-auth-checked')).toBe('1')
-        expect(updateSessionCalls).toBe(11)
+        expect(updateSessionCalls).toBe(12)
     } finally {
         resetAdminBypassEnv()
     }

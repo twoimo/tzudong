@@ -3,6 +3,8 @@ import path from 'node:path';
 
 import type {
   StoryboardAhpCriterion,
+  StoryboardDataMode,
+  StoryboardFallbackReason,
   StoryboardGenerateRequest,
   StoryboardGenerationResult,
   StoryboardHeatmapMarker,
@@ -17,7 +19,14 @@ const DEFAULT_REQUEST: StoryboardGenerateRequest = {
   sourceLimit: 80,
   segmentCount: 7,
   includeProductionNotes: true,
+  generationMode: 'local_heatmap',
 };
+
+const LOCAL_HEATMAP_MODE: StoryboardDataMode = 'local_heatmap_fixture';
+const LOCAL_FALLBACK_MODE: StoryboardDataMode = 'local_demo_fallback';
+const LOCAL_HEATMAP_MODE_LABEL = '로컬 히트맵 모드';
+const LOCAL_FALLBACK_MODE_LABEL = '데모/샘플 모드';
+const FALLBACK_HEATMAP_DIRECTORY = 'local-demo://storyboard-fallback';
 
 const TONE_LABELS: Record<StoryboardTone, string> = {
   warm: '따뜻한 동네 맛집 탐방',
@@ -50,20 +59,60 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-function resolveHeatmapDirectory() {
+function makeFallbackSources(): StoryboardHeatmapSource[] {
+  return Array.from({ length: 10 }, (_, index) => {
+    const sourceNo = index + 1;
+    const basePeakMillis = 90_000 + index * 15_000;
+    const replayPeakScore = Number((0.995 - index * 0.003).toFixed(3));
+    const secondaryScore = Number((0.982 - index * 0.002).toFixed(3));
+    const markers: StoryboardHeatmapMarker[] = [
+      {
+        startMillis: basePeakMillis - 5_000,
+        endMillis: basePeakMillis + 10_000,
+        peakMillis: basePeakMillis,
+        label: '로컬 데모 반복시청 피크',
+        peakTime: formatMillis(basePeakMillis),
+        replayScore: replayPeakScore,
+      },
+      {
+        startMillis: basePeakMillis + 115_000,
+        endMillis: basePeakMillis + 130_000,
+        peakMillis: basePeakMillis + 120_000,
+        label: '로컬 데모 보조 피크',
+        peakTime: formatMillis(basePeakMillis + 120_000),
+        replayScore: secondaryScore,
+      },
+    ];
+
+    return {
+      videoId: `local-demo-${String(sourceNo).padStart(3, '0')}`,
+      youtubeLink: `https://www.youtube.com/watch?v=local-demo-${String(sourceNo).padStart(3, '0')}`,
+      durationSeconds: 900 + index * 30,
+      collectedAt: '2026-01-01T00:00:00.000Z',
+      replayPeakScore,
+      markers,
+    };
+  });
+}
+
+function resolveHeatmapDirectory(): { directory: string | null; fallbackReason: StoryboardFallbackReason | null } {
+  const explicitDirectory = process.env.TZUYANG_HEATMAP_DIR?.trim();
+  if (explicitDirectory) {
+    return existsSync(explicitDirectory)
+      ? { directory: explicitDirectory, fallbackReason: null }
+      : { directory: null, fallbackReason: 'missing-heatmap-directory' };
+  }
+
   const candidates = [
-    process.env.TZUYANG_HEATMAP_DIR,
     path.resolve(process.cwd(), 'backend/restaurant-crawling/data/tzuyang/heatmap'),
     path.resolve(process.cwd(), '../backend/restaurant-crawling/data/tzuyang/heatmap'),
     path.resolve(process.cwd(), '../../backend/restaurant-crawling/data/tzuyang/heatmap'),
-  ].filter((candidate): candidate is string => Boolean(candidate));
+  ];
 
   const found = candidates.find((candidate) => existsSync(candidate));
-  if (!found) {
-    throw new Error(`tzuyang heatmap directory not found: ${candidates.join(', ')}`);
-  }
-
-  return found;
+  return found
+    ? { directory: found, fallbackReason: null }
+    : { directory: null, fallbackReason: 'missing-heatmap-directory' };
 }
 
 function parseLatestJsonLine(filePath: string): Record<string, unknown> | null {
@@ -136,7 +185,21 @@ function buildSource(filePath: string): StoryboardHeatmapSource | null {
 }
 
 export function loadStoryboardHeatmapSources(sourceLimit = DEFAULT_REQUEST.sourceLimit) {
-  const heatmapDirectory = resolveHeatmapDirectory();
+  const { directory: heatmapDirectory, fallbackReason } = resolveHeatmapDirectory();
+  if (!heatmapDirectory) {
+    const fallbackSources = makeFallbackSources();
+    return {
+      mode: LOCAL_FALLBACK_MODE,
+      heatmapDirectory: FALLBACK_HEATMAP_DIRECTORY,
+      scannedFiles: 0,
+      usableSources: fallbackSources,
+      selectedSources: fallbackSources.slice(0, clamp(sourceLimit, 5, 250)),
+      isFallbackData: true,
+      fallbackReason,
+      dataModeLabel: LOCAL_FALLBACK_MODE_LABEL,
+    };
+  }
+
   const files = readdirSync(heatmapDirectory)
     .filter((file) => file.endsWith('.jsonl'))
     .sort();
@@ -146,11 +209,29 @@ export function loadStoryboardHeatmapSources(sourceLimit = DEFAULT_REQUEST.sourc
     .filter((source): source is StoryboardHeatmapSource => Boolean(source))
     .sort((left, right) => right.replayPeakScore - left.replayPeakScore);
 
+  if (usableSources.length === 0) {
+    const fallbackSources = makeFallbackSources();
+    return {
+      mode: LOCAL_FALLBACK_MODE,
+      heatmapDirectory: FALLBACK_HEATMAP_DIRECTORY,
+      scannedFiles: files.length,
+      usableSources: fallbackSources,
+      selectedSources: fallbackSources.slice(0, clamp(sourceLimit, 5, 250)),
+      isFallbackData: true,
+      fallbackReason: 'no-usable-heatmap-sources' as const,
+      dataModeLabel: LOCAL_FALLBACK_MODE_LABEL,
+    };
+  }
+
   return {
+    mode: LOCAL_HEATMAP_MODE,
     heatmapDirectory,
     scannedFiles: files.length,
     usableSources,
     selectedSources: usableSources.slice(0, clamp(sourceLimit, 5, 250)),
+    isFallbackData: false,
+    fallbackReason: null,
+    dataModeLabel: LOCAL_HEATMAP_MODE_LABEL,
   };
 }
 
@@ -167,6 +248,7 @@ function normalizeRequest(input: Partial<StoryboardGenerateRequest> | null | und
     sourceLimit: clamp(Math.round(toNumber(input?.sourceLimit, DEFAULT_REQUEST.sourceLimit)), 10, 250),
     segmentCount: clamp(Math.round(toNumber(input?.segmentCount, DEFAULT_REQUEST.segmentCount)), 5, 10),
     includeProductionNotes: input?.includeProductionNotes !== false,
+    generationMode: input?.generationMode === 'backend_agent' ? 'backend_agent' : 'local_heatmap',
   };
 }
 
@@ -269,11 +351,16 @@ function buildMarkdown(result: Omit<StoryboardGenerationResult, 'storyboard'> & 
 
 export function generateLocalStoryboard(input?: Partial<StoryboardGenerateRequest> | null): StoryboardGenerationResult {
   const request = normalizeRequest(input);
-  const { heatmapDirectory, scannedFiles, usableSources, selectedSources } = loadStoryboardHeatmapSources(request.sourceLimit);
-
-  if (selectedSources.length === 0) {
-    throw new Error('No usable Tzuyang heatmap files were found for storyboard generation.');
-  }
+  const {
+    mode,
+    heatmapDirectory,
+    scannedFiles,
+    usableSources,
+    selectedSources,
+    isFallbackData,
+    fallbackReason,
+    dataModeLabel,
+  } = loadStoryboardHeatmapSources(request.sourceLimit);
 
   const scenes = buildScenes(request, selectedSources);
   const totalMarkers = selectedSources.reduce((sum, source) => sum + source.markers.length, 0);
@@ -285,11 +372,14 @@ export function generateLocalStoryboard(input?: Partial<StoryboardGenerateReques
     selectedSources: selectedSources.length,
     totalMarkers,
     topReplayScore: Number(topReplayScore.toFixed(3)),
+    isFallbackData,
+    fallbackReason,
+    dataModeLabel,
   };
   const ahp = buildAhpReport(request, selectedSources, scannedFiles);
   const partial = {
     generatedAt: new Date().toISOString(),
-    mode: 'local_heatmap_fixture' as const,
+    mode,
     request,
     sourceSummary,
     ahp,
@@ -303,6 +393,9 @@ export function generateLocalStoryboard(input?: Partial<StoryboardGenerateReques
         'LangGraph/OpenAI/Supabase/Tavily 자격증명 없이도 로컬 jsonl 히트맵으로 생성 가능',
         '라이브 자막/프레임 캡션이 없을 때도 씬별 URL·피크 시간·리플레이 강도를 노출',
         'PD가 관리자 콘솔에서 파라미터를 조정하고 결과를 복사할 수 있게 API와 UI를 분리',
+        ...(isFallbackData
+          ? ['히트맵 디렉터리 또는 사용 가능한 jsonl이 없어도 데모/샘플 모드로 로컬 생성 흐름을 검증']
+          : []),
       ],
     },
     scenes,
