@@ -49,10 +49,33 @@ GEMINI_OCR_DEFAULT_MODEL=gemini-3.5-flash
 GEMINI_OCR_THINKING_LEVEL=MEDIUM
 
 # Storyboard Agent (옵션)
+# Local command bridge: backend/storyboard-agent를 Next.js API에서 직접 실행한다.
+# apps/web 기준 상대 경로 또는 절대 경로를 직접 설정한다. 셸 메타문자/인자는 허용하지 않는다.
+# 기본 runtime은 별도 OpenAI API 키 대신 로컬 Codex CLI OAuth 세션을 사용한다.
+STORYBOARD_AGENT_COMMAND=../../backend/storyboard-agent/scripts/run-storyboard-agent.py
+# Optional: apps/web 기준 상대 경로 또는 절대 경로. 비우면 repo 루트 backend/storyboard-agent를 자동 탐지.
+STORYBOARD_AGENT_ROOT=
+STORYBOARD_AGENT_PYTHON=python3
+STORYBOARD_AGENT_RUNTIME=codex_cli_oauth
+STORYBOARD_AGENT_CODEX_MODEL=gpt-5.5
+STORYBOARD_AGENT_CODEX_EFFORT=high
+# milliseconds; command bridge timeout.
+STORYBOARD_AGENT_TIMEOUT_MS=120000
+
+# YouTube Thumbnail Agent (옵션)
+# 채팅으로 들어온 캔버스 수정/초기화/생성 brief 작업은 기본적으로 로컬 Codex CLI OAuth 세션의 gpt-5.5 high가 처리한다.
+THUMBNAIL_AGENT_COMMAND=../../backend/thumbnail-agent/scripts/run-thumbnail-agent.py
+THUMBNAIL_AGENT_ROOT=
+THUMBNAIL_AGENT_PYTHON=python3
+THUMBNAIL_AGENT_RUNTIME=codex_cli_oauth
+THUMBNAIL_AGENT_CODEX_MODEL=gpt-5.5
+THUMBNAIL_AGENT_CODEX_EFFORT=high
+THUMBNAIL_AGENT_TIMEOUT_MS=120000
+
+# Remote service bridge: 별도 HTTP 서버를 쓸 때만 활성화한다.
 STORYBOARD_AGENT_REMOTE_ENABLED=false
 STORYBOARD_AGENT_API_URL=http://localhost:8001
 STORYBOARD_AGENT_CHAT_PATH=/chat
-STORYBOARD_AGENT_TIMEOUT_MS=8000
 STORYBOARD_AGENT_MAX_RETRIES=3
 STORYBOARD_ORCHESTRATOR_MAX_RETRIES=3
 STORYBOARD_WEB_SEARCH_ENABLED=false
@@ -76,3 +99,17 @@ bun run dev:webpack
 bun run build
 bun run start
 ```
+
+## YouTube thumbnail backend-agent bridge
+
+The admin YouTube thumbnail generator can run in `backend_agent` mode. This mode adds a thin LangGraph-style orchestration layer for concept, layout, prompt addendum, safety review, and next actions, then still calls the existing web provider layer. The exact OpenAI path remains `openai-gpt-image` with `model: gpt-image-2`; the backend command does not generate images and does not treat `gpt-image-2` as a Codex agent model.
+
+```bash
+THUMBNAIL_AGENT_COMMAND=../../backend/thumbnail-agent/scripts/run-thumbnail-agent.py
+THUMBNAIL_AGENT_ROOT=../../backend/thumbnail-agent
+THUMBNAIL_AGENT_PYTHON=python3
+THUMBNAIL_AGENT_RUNTIME=local_graph
+THUMBNAIL_AGENT_TIMEOUT_MS=120000
+```
+
+If `THUMBNAIL_AGENT_COMMAND` is not configured, the Next.js route uses a local adapter that emits the same orchestration contract and keeps direct provider mode available.
