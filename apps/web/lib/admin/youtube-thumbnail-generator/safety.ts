@@ -16,6 +16,7 @@ const PRICE_PATTERN = /(?:₩|원|달러|엔|위안|만원|천원|\$)\s?\d|\d[\d
 const IDENTITY_PATTERN = /(쯔양|tzuyang|youtube\s*channel|유튜브\s*채널|계정|@[\w_.-]+)/i;
 const BRAND_PATTERN = /(로고|브랜드|상표|맥도날드|스타벅스|코카콜라|나이키|애플|삼성|cu|gs25|세븐일레븐)/i;
 const CROWD_PATTERN = /(식별 가능|얼굴이 선명|군중 얼굴|배경 인물.*선명|특정 인물처럼)/;
+const PROMPT_INJECTION_PATTERN = /(ignore\s+(all\s+)?(previous|prior|above)\s+instructions|system\s+prompt|developer\s+message|process\.env|api[_-]?key|secret|token|비밀|시스템\s*프롬프트|이전\s*지시.*무시|지시.*무시|환경\s*변수|키를?\s*출력|토큰을?\s*출력)/i;
 
 function payloadText(payload: ThumbnailGeneratorPayload) {
   return [
@@ -63,6 +64,9 @@ export function validateThumbnailSafety(payload: ThumbnailGeneratorPayload) {
   }
   if (CROWD_PATTERN.test(text)) {
     throw new ThumbnailGenerationError('unsafe_crowd', '배경 인물의 식별 가능성을 높이는 지시는 제한합니다.', 400);
+  }
+  if (PROMPT_INJECTION_PATTERN.test(text)) {
+    throw new ThumbnailGenerationError('unsafe_instruction', '시스템 지시 무시, 비밀/환경변수/키 출력처럼 보이는 문구는 썸네일 생성 입력에서 제한합니다.', 400);
   }
 
   const normalizedText = text.replace(/\s+/g, ' ');
