@@ -6,8 +6,10 @@ import {
   getStoryboardImageProviderAvailability,
   StoryboardImageGenerationError,
 } from '@/lib/admin/storyboard/image-provider';
+import { persistLocalStoryboardHistory } from '@/lib/admin/storyboard/history';
 import type {
   StoryboardGenerateRequest,
+  StoryboardGenerationResult,
   StoryboardScene,
   StoryboardTone,
 } from '@/lib/admin/storyboard/types';
@@ -17,6 +19,15 @@ export const dynamic = 'force-dynamic';
 
 const noStoreHeaders = { 'Cache-Control': 'no-store' } as const;
 const storyboardTones = new Set<StoryboardTone>(['warm', 'energetic', 'documentary', 'comfort']);
+
+function getStoryboardImageRouteEnv() {
+  return {
+    ...process.env,
+    CODEX_IMAGEGEN_AGENT_MODEL: process.env.CODEX_IMAGEGEN_AGENT_MODEL || 'gpt-5.5',
+    CODEX_IMAGEGEN_AGENT_EFFORT: process.env.CODEX_IMAGEGEN_AGENT_EFFORT || 'high',
+    STORYBOARD_LOCAL_HISTORY_WRITE: process.env.STORYBOARD_LOCAL_HISTORY_WRITE || '1',
+  };
+}
 
 function jsonError(error: string, status: number, detail?: string) {
   return NextResponse.json({ error, detail }, { status, headers: noStoreHeaders });
@@ -105,6 +116,41 @@ function parsePayload(value: unknown) {
     logline: toStringValue(payload.logline, 240),
     request: parseRequest(payload.request),
     scenes: rawScenes.map(parseScene),
+    sourceResult: parseSourceResult(payload.sourceResult),
+  };
+}
+
+function parseSourceResult(value: unknown): StoryboardGenerationResult | null {
+  if (!value || typeof value !== 'object') return null;
+
+  const candidate = value as Partial<StoryboardGenerationResult>;
+  if (!candidate.storyboard || typeof candidate.storyboard !== 'object') return null;
+  if (!Array.isArray(candidate.storyboard.scenes)) return null;
+  if (!candidate.request || typeof candidate.request !== 'object') return null;
+  if (!candidate.sourceSummary || typeof candidate.sourceSummary !== 'object') return null;
+  if (!candidate.ahp || typeof candidate.ahp !== 'object') return null;
+  if (!candidate.backendAnalysis || typeof candidate.backendAnalysis !== 'object') return null;
+
+  return candidate as StoryboardGenerationResult;
+}
+
+function createPersistableImageResult(
+  sourceResult: StoryboardGenerationResult | null,
+  images: Awaited<ReturnType<typeof generateStoryboardSceneImages>>,
+): StoryboardGenerationResult | null {
+  if (!sourceResult) return null;
+
+  const imageMap = new Map(images.map(({ sceneNo, image }) => [sceneNo, image]));
+  return {
+    ...sourceResult,
+    generatedAt: new Date().toISOString(),
+    storyboard: {
+      ...sourceResult.storyboard,
+      scenes: sourceResult.storyboard.scenes.map((scene) => {
+        const generatedImage = imageMap.get(scene.sceneNo);
+        return generatedImage ? { ...scene, generatedImage } : scene;
+      }),
+    },
   };
 }
 
@@ -121,9 +167,9 @@ export async function GET(_request: NextRequest) {
           target: { width: 1280, height: 720, aspectRatio: '16:9' },
         },
         configuration: {
-          localCodexGate: 'ALLOW_LOCAL_CLI_STORYBOARD_IMAGES 또는 ALLOW_LOCAL_CLI_THUMBNAIL',
+          localCodexGate: 'ALLOW_LOCAL_CLI_STORYBOARD_IMAGES',
           localCodexCommand: 'STORYBOARD_LOCAL_CODEX_COMMAND 또는 scripts/codex-imagegen-storyboard-provider.py',
-          localCodexModel: 'STORYBOARD_LOCAL_CODEX_IMAGE_MODEL 또는 THUMBNAIL_LOCAL_CODEX_IMAGE_MODEL',
+          localCodexModel: 'STORYBOARD_LOCAL_CODEX_IMAGE_MODEL',
         },
       },
       { headers: noStoreHeaders },
@@ -140,6 +186,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json().catch(() => null);
     const payload = parsePayload(body);
+    const imageRouteEnv = getStoryboardImageRouteEnv();
     const images = await generateStoryboardSceneImages(
       payload.scenes,
       {
@@ -147,13 +194,21 @@ export async function POST(request: NextRequest) {
         logline: payload.logline,
         request: payload.request,
       },
-      process.env,
+      imageRouteEnv,
     );
+    const historyResult = createPersistableImageResult(payload.sourceResult, images);
+    const history = historyResult
+      ? await persistLocalStoryboardHistory(historyResult, imageRouteEnv).catch((historyError) => {
+        console.error('[admin/storyboard/images] local history persistence failed:', historyError);
+        return { persisted: false as const, reason: 'storyboard_image_history_persist_failed' as const };
+      })
+      : { persisted: false as const, reason: 'missing_source_result' as const };
 
     return NextResponse.json(
       {
-        provider: getStoryboardImageProviderAvailability(process.env),
+        provider: getStoryboardImageProviderAvailability(imageRouteEnv),
         images,
+        history,
       },
       { headers: noStoreHeaders },
     );
