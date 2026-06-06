@@ -762,7 +762,7 @@ function AdminNaverMapSurface({
   const isMapPreparing = isLoading || isNaverLoading;
 
   return (
-    <div className="relative h-full min-h-[360px] overflow-hidden rounded-[24px] border border-border bg-muted/25">
+    <div className="relative h-full min-h-[360px] overflow-hidden rounded-[24px] bg-muted/25">
       <div
         ref={mapContainerRef}
         className="h-full min-h-[360px] w-full"
@@ -773,7 +773,7 @@ function AdminNaverMapSurface({
 
       {loadError && !isMapPreparing && (
         <div className="absolute inset-0 grid place-items-center bg-card/85 p-4 text-center backdrop-blur-sm">
-          <div className="max-w-sm rounded-2xl border border-dashed border-border bg-card/95 p-4 shadow-sm">
+          <div className="max-w-sm rounded-2xl bg-card/95 p-4 shadow-sm">
             <p className="text-sm font-bold text-foreground">
               네이버 지도를 불러오지 못했습니다
             </p>
@@ -816,7 +816,7 @@ function AdminMapOverviewCanvas({
   return (
     <section
       aria-label="관리자 지도 운영"
-      className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm"
+      className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-2xl bg-card/80 shadow-sm"
     >
       <div className="min-h-0 flex-1 overflow-hidden p-2 sm:p-3">
         <div
@@ -837,7 +837,7 @@ function AdminMapOverviewCanvas({
               className="pointer-events-none absolute inset-x-3 bottom-3 z-10 flex justify-center sm:inset-x-auto sm:left-3 sm:justify-start"
               data-admin-map-status-overlay="non-blocking"
             >
-              <div className="pointer-events-auto max-w-sm rounded-2xl border border-border bg-card/95 p-3 text-left shadow-lg backdrop-blur">
+              <div className="pointer-events-auto max-w-sm rounded-2xl bg-card/95 p-3 text-left shadow-lg backdrop-blur">
                 <p className="text-sm font-bold text-foreground">
                   {hasError
                     ? "지도는 유지하고 실데이터만 재확인합니다"
@@ -868,28 +868,28 @@ function AdminMapOverviewCanvas({
 function AdminMapInfoPanelSkeleton() {
   return (
     <aside
-      className="flex min-h-0 flex-col gap-3 lg:h-full lg:overflow-hidden"
+      className="flex min-h-0 flex-col gap-2 lg:h-full lg:overflow-hidden"
       data-admin-map-info-skeleton="true"
       role="status"
       aria-busy="true"
       aria-live="polite"
       aria-label="관리자 지도 동선 추천 로딩"
     >
-      <section className="shrink-0 rounded-xl border border-border bg-card p-2.5 shadow-sm">
+      <section className="shrink-0 rounded-xl bg-card/80 p-2 shadow-sm">
         <div className="grid gap-2 sm:grid-cols-2">
-          <div className="rounded-xl border border-border bg-background/70 p-2.5">
+          <div className="rounded-xl bg-background/70 p-2">
             <Skeleton className="h-3 w-20 rounded-full motion-reduce:animate-none" />
             <Skeleton className="mt-2 h-6 w-40 rounded-full motion-reduce:animate-none" />
             <Skeleton className="mt-3 h-4 w-full rounded-full motion-reduce:animate-none" />
             <Skeleton className="mt-2 h-4 w-4/5 rounded-full motion-reduce:animate-none" />
           </div>
-          <div className="rounded-xl border border-border bg-background/70 p-2.5">
+          <div className="rounded-xl bg-background/70 p-2">
             <Skeleton className="aspect-video w-full rounded-lg motion-reduce:animate-none" />
           </div>
         </div>
       </section>
-      <section className="rounded-xl border border-border bg-card p-2.5 shadow-sm lg:min-h-0 lg:flex-1">
-        <div className="flex items-center justify-between gap-3">
+      <section className="rounded-xl bg-card/80 p-2.5 shadow-sm lg:min-h-0 lg:flex-1">
+        <div className="flex items-center justify-between gap-2">
           <Skeleton className="h-5 w-28 rounded-full motion-reduce:animate-none" />
           <Skeleton className="h-5 w-20 rounded-full motion-reduce:animate-none" />
         </div>
@@ -975,13 +975,13 @@ function AdminMapInfoPanel({
   }
 
   return (
-    <aside className="flex min-h-0 flex-col gap-3 lg:h-full lg:overflow-hidden">
+    <aside className="flex min-h-0 flex-col gap-2 lg:h-full lg:overflow-hidden">
       <section
-        className="shrink-0 rounded-xl border border-border bg-card p-2.5 shadow-sm"
+        className="shrink-0 rounded-xl bg-card/80 p-2 shadow-sm"
         aria-labelledby="admin-map-selected-title"
       >
         {selectedRestaurant ? (
-          <div className="overflow-hidden rounded-xl border border-border bg-background/70">
+          <div className="overflow-hidden rounded-xl bg-background/70">
             <a
               href={selectedYoutubeUrl ?? undefined}
               target={selectedYoutubeUrl ? "_blank" : undefined}
@@ -1019,14 +1019,14 @@ function AdminMapInfoPanel({
               <Badge
                 variant="outline"
                 className={cn(
-                  "absolute right-3 top-3 rounded-full border-white/30 bg-white/15 text-white shadow-sm backdrop-blur",
+                  "absolute right-2.5 top-2.5 rounded-full border-white/30 bg-white/15 text-white shadow-sm backdrop-blur",
                   hasError && "border-amber-200/50 text-amber-100",
                 )}
               >
                 {hasError ? "확인 필요" : "선택됨"}
               </Badge>
 
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/55 to-transparent p-3 text-white">
+              <div className="absolute inset-x-0 bottom-0 bg-black/75 p-2.5 text-white">
                 <div className="min-w-0">
                   <p className="text-[10px] font-bold tracking-[0.14em] text-white/75">
                     선택한 마커
@@ -1043,7 +1043,7 @@ function AdminMapInfoPanel({
                   {selectedRestaurant.address ?? "주소 정보 확인 필요"}
                 </p>
 
-                <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] font-semibold">
+                <div className="mt-1.5 flex flex-wrap gap-1 text-[11px] font-semibold">
                   <span className="max-w-full truncate rounded-full bg-white/15 px-2 py-0.5 text-white backdrop-blur">
                     {selectedRestaurant.category ?? "카테고리 확인"}
                   </span>
@@ -1093,11 +1093,11 @@ function AdminMapInfoPanel({
       </section>
 
       <section
-        className="rounded-xl border border-border bg-card p-2.5 shadow-sm lg:min-h-0 lg:flex-1 lg:overflow-y-auto"
+        className="rounded-xl bg-card/80 p-2 shadow-sm lg:min-h-0 lg:flex-1 lg:overflow-y-auto"
         aria-label="동선 추천 초안"
         data-admin-route-recommendation-panel="enhanced"
       >
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center justify-between gap-2">
           <p className="text-[11px] font-bold tracking-[0.12em] text-muted-foreground">
             촬영 동선
           </p>
@@ -1117,7 +1117,7 @@ function AdminMapInfoPanel({
         </div>
 
         <div
-          className="mt-2 grid grid-cols-3 gap-1 rounded-xl border border-border bg-background/70 p-1"
+          className="mt-2 grid grid-cols-3 gap-1 rounded-xl bg-background/70 p-1"
           data-admin-route-mode-controls="driving-walking-mixed"
           aria-label="동선 이동수단 선택"
         >
@@ -1140,7 +1140,7 @@ function AdminMapInfoPanel({
         </div>
 
         <div
-          className="mt-2 grid gap-1.5"
+          className="mt-1.5 grid gap-1.5"
           data-admin-route-planner-presets="true"
         >
           {ADMIN_ROUTE_PLANNER_PRESETS.map((preset) => (
@@ -1148,10 +1148,10 @@ function AdminMapInfoPanel({
               key={preset.id}
               type="button"
               className={cn(
-                "rounded-xl border border-border bg-background/70 p-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                "rounded-xl bg-background/70 p-1.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
                 routeMode === preset.mode && routeStopLimit === preset.stopLimit
-                  ? "border-primary/35 bg-primary/5"
-                  : "hover:border-primary/25 hover:bg-muted/60",
+                  ? "bg-primary/5 shadow-sm ring-1 ring-primary/20"
+                  : "hover:bg-muted/60",
               )}
               onClick={() => {
                 onRouteModeChange(preset.mode);
@@ -1169,7 +1169,7 @@ function AdminMapInfoPanel({
         </div>
 
         <div
-          className="mt-2 grid grid-cols-3 gap-1 rounded-xl border border-border bg-background/70 p-1"
+          className="mt-2 grid grid-cols-3 gap-1 rounded-xl bg-background/70 p-1"
           data-admin-route-stop-limit-controls="true"
           aria-label="동선 방문 지점 수 선택"
         >
@@ -1198,7 +1198,7 @@ function AdminMapInfoPanel({
         )}
 
         <div
-          className="mt-2 rounded-xl border border-primary/15 bg-primary/5 p-2"
+          className="mt-1.5 rounded-xl bg-primary/5 p-1.5"
           data-admin-route-readiness-panel="local-heuristic"
         >
           <div className="flex items-center justify-between gap-2">
@@ -1234,7 +1234,7 @@ function AdminMapInfoPanel({
         </div>
 
         <div
-          className="mt-2 grid grid-cols-2 gap-1.5 rounded-xl border border-border bg-background/70 p-2 text-[11px] text-muted-foreground"
+          className="mt-1.5 grid grid-cols-2 gap-1.5 rounded-xl bg-background/70 p-1.5 text-[11px] text-muted-foreground"
           data-admin-route-quality-panel="true"
         >
           <div>
@@ -1257,7 +1257,7 @@ function AdminMapInfoPanel({
 
         {routePlan.warnings.length > 0 ? (
           <div
-            className="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-2 text-[11px] leading-4 text-amber-900"
+            className="mt-1.5 rounded-xl bg-amber-50 p-1.5 text-[11px] leading-4 text-amber-900"
             data-admin-route-warning-list="true"
           >
             <p className="font-bold">동선 주의사항</p>
@@ -1272,15 +1272,15 @@ function AdminMapInfoPanel({
         <div>
           {routeStops.length > 1 ? (
             <ol
-              className="mt-2 space-y-1.5"
+              className="mt-1.5 space-y-1"
               data-admin-route-stop-list="ordered-shooting-plan"
             >
               {routeStops.map((restaurant, index) => (
                 <li
                   key={restaurant.id}
-                  className="rounded-xl border border-border bg-background/70 p-2.5"
+                  className="rounded-xl bg-background/70 p-2"
                 >
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-start gap-2">
                     <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-primary/5 text-xs font-bold text-primary">
                       {index + 1}
                     </span>
@@ -1288,12 +1288,12 @@ function AdminMapInfoPanel({
                       <p className="truncate text-sm font-bold text-foreground">
                         {restaurant.name}
                       </p>
-                      <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">
+                      <p className="mt-0.5 line-clamp-2 text-xs leading-5 text-muted-foreground">
                         {restaurant.address ?? "주소 미입력"} ·{" "}
                         {restaurant.category ?? "카테고리 확인"}
                       </p>
                       {index > 0 && routePlan.legs[index - 1] && (
-                        <p className="mt-1 text-[11px] font-semibold text-primary">
+                        <p className="mt-0.5 text-[11px] font-semibold text-primary">
                           이전 지점에서{" "}
                           {routePlan.legs[index - 1].distanceKm.toFixed(1)}km ·
                           약{" "}
@@ -1309,7 +1309,7 @@ function AdminMapInfoPanel({
               ))}
             </ol>
           ) : (
-            <p className="mt-3 rounded-2xl border border-dashed border-border bg-muted/25 p-3 text-xs leading-5 text-muted-foreground">
+            <p className="mt-2 rounded-2xl bg-muted/25 p-2.5 text-xs leading-5 text-muted-foreground">
               추천 동선은 좌표가 있는 맛집이 2곳 이상 연결되면 표시합니다.
               데이터가 부족하면 임의 동선을 만들지 않습니다.
             </p>
