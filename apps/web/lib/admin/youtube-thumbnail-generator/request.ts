@@ -26,14 +26,10 @@ export const THUMBNAIL_REMOTE_IMAGE_TIMEOUT_MS = 10_000;
 export const THUMBNAIL_CHAT_MESSAGE_MAX_LENGTH = 1_000;
 export const THUMBNAIL_CHAT_CONTEXT_MAX_LENGTH = 280;
 export const THUMBNAIL_CHAT_TEXT_MAX_LENGTH = 80;
-export const THUMBNAIL_SESSION_OPENAI_API_KEY_FIELD = 'thumbnailSessionOpenaiApiKey';
-export const THUMBNAIL_SESSION_GEMINI_API_KEY_FIELD = 'thumbnailSessionGeminiApiKey';
-export const THUMBNAIL_SESSION_API_KEY_MAX_LENGTH = 512;
 const THUMBNAIL_CHAT_RUN_ID_MAX_LENGTH = 120;
 const THUMBNAIL_CHAT_LAYER_ID_MAX_LENGTH = 40;
 const THUMBNAIL_CHAT_ACTION_MAX_LENGTH = 80;
 const THUMBNAIL_CHAT_RUN_ID_PATTERN = /^[A-Za-z0-9_.:-]+$/;
-const THUMBNAIL_SESSION_KEY_UNSAFE_PATTERN = /[\s\x00-\x1f\x7f]/;
 
 type RemoteImageFetchDeps = {
   fetch?: typeof fetch;
@@ -48,48 +44,15 @@ function toStringValue(value: unknown, maxLength: number) {
   return typeof value === 'string' ? value.trim().slice(0, maxLength) : '';
 }
 
-function readSessionApiKeyField(formData: FormData, fieldName: string) {
-  const values = formData.getAll(fieldName).filter((entry): entry is string => typeof entry === 'string');
-  if (values.length === 0) return null;
-  if (values.length > 1) {
-    throw new ThumbnailGenerationError('invalid_text', `${fieldName}는 한 번만 전송할 수 있습니다.`, 400);
-  }
-  const trimmed = values[0]?.trim() ?? '';
-  if (!trimmed) return null;
-  if (trimmed.length > THUMBNAIL_SESSION_API_KEY_MAX_LENGTH || THUMBNAIL_SESSION_KEY_UNSAFE_PATTERN.test(trimmed)) {
-    throw new ThumbnailGenerationError('invalid_text', '세션 API 키 형식이 올바르지 않습니다.', 400);
-  }
-  return trimmed;
-}
-
-function readMatchingSessionApiKey(formData: FormData, providerId: ThumbnailGeneratorPayload['providerId']) {
-  if (providerId === 'openai-gpt-image') {
-    const key = readSessionApiKeyField(formData, THUMBNAIL_SESSION_OPENAI_API_KEY_FIELD);
-    if (key && !key.startsWith('sk-')) {
-      throw new ThumbnailGenerationError('invalid_text', 'OpenAI 세션 API 키는 sk-로 시작해야 합니다.', 400);
-    }
-    return key ? { OPENAI_API_KEY: key } : {};
-  }
-
-  if (providerId === 'gemini-nano-banana') {
-    const key = readSessionApiKeyField(formData, THUMBNAIL_SESSION_GEMINI_API_KEY_FIELD);
-    if (key && !key.startsWith('AIza')) {
-      throw new ThumbnailGenerationError('invalid_text', 'Gemini 세션 API 키는 AIza로 시작해야 합니다.', 400);
-    }
-    return key ? { GEMINI_API_KEY: key } : {};
-  }
-
-  return {};
-}
-
 export function buildThumbnailProviderRequestEnv(
   baseEnv: NodeJS.ProcessEnv,
   providerId: ThumbnailGeneratorPayload['providerId'],
   formData: FormData,
 ): NodeJS.ProcessEnv {
+  void providerId;
+  void formData;
   return {
     ...baseEnv,
-    ...readMatchingSessionApiKey(formData, providerId),
   };
 }
 

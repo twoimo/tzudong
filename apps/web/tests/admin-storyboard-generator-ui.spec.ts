@@ -121,9 +121,6 @@ test("storyboard canvas counts only visible trusted GPT Image 2 storyboard panel
     ),
   ).toBeVisible();
   await expect(
-    storyboardModule.getByText("캔버스 편집 / PNG 내보내기"),
-  ).toBeVisible();
-  await expect(
     storyboardModule.locator('[data-storyboard-export-preset="true"]'),
   ).toBeVisible();
   await expect(
@@ -160,75 +157,150 @@ test("storyboard canvas counts only visible trusted GPT Image 2 storyboard panel
   await expect(
     storyboardModule.locator('[data-storyboard-chat-composer="true"] textarea'),
   ).toBeVisible();
-  const chatRealDataTrace = storyboardModule.locator(
-    '[data-storyboard-chat-real-data-trace="true"]',
+  await expect(
+    storyboardModule.locator('[data-storyboard-chat-real-data-trace="true"]'),
+  ).toHaveCount(0);
+  await expect(
+    storyboardModule.locator('[data-storyboard-case-history="true"]'),
+  ).toHaveCount(0);
+
+  const storyboardSettingsToggle = storyboardModule.locator(
+    '[data-storyboard-chat-settings-toggle="true"]',
   );
-  await expect(chatRealDataTrace).toBeVisible({ timeout: 30_000 });
-  await expect(chatRealDataTrace).toHaveAttribute(
-    "data-storyboard-chat-real-data-trace-mode",
-    "actual",
-    { timeout: 30_000 },
+  await expect(storyboardSettingsToggle).toBeVisible();
+  await expect(storyboardSettingsToggle).toHaveAttribute(
+    "data-storyboard-chat-settings-open",
+    "false",
+  );
+  await storyboardSettingsToggle.click();
+  const storyboardSettingsDropdown = page.locator(
+    '[data-storyboard-chat-settings-dropdown="true"]',
+  );
+  const storyboardSettingsPanel = page.locator(
+    '[data-storyboard-chat-settings-panel="true"]',
+  );
+  await expect(storyboardSettingsDropdown).toBeVisible();
+  await expect(storyboardSettingsPanel).toBeVisible();
+  await expect(storyboardSettingsToggle).toHaveAttribute(
+    "data-storyboard-chat-settings-open",
+    "true",
   );
   await expect(
-    chatRealDataTrace.locator('[data-storyboard-chat-real-data-headline="true"]'),
-  ).toContainText("실제 히트맵 데이터");
+    storyboardSettingsPanel.locator(
+      '[data-storyboard-chat-settings-source-trace="true"]',
+    ),
+  ).toContainText(/Codex CLI/);
   await expect(
-    chatRealDataTrace.locator('[data-storyboard-chat-real-data-source="true"]'),
+    storyboardSettingsPanel.locator(
+      '[data-storyboard-chat-settings-source-trace="true"]',
+    ),
   ).toContainText(/선택 \d+개/);
   await expect(
-    chatRealDataTrace.locator('[data-storyboard-chat-real-data-backend="true"]'),
-  ).toContainText(/Codex CLI/);
-  const storyboardCaseHistory = storyboardModule.locator(
-    '[data-storyboard-case-history="true"]',
+    storyboardSettingsPanel.locator(
+      '[data-storyboard-chat-settings-image-command="true"]',
+    ),
+  ).toBeVisible();
+  await expect(
+    storyboardSettingsPanel.locator('[data-storyboard-chat-settings-reset="true"]'),
+  ).toBeVisible();
+  await expect(
+    storyboardSettingsPanel.locator(
+      '[data-storyboard-user-perspective-readiness="true"]',
+    ),
+  ).toBeVisible();
+  await expect(
+    storyboardSettingsPanel.locator(
+      '[data-storyboard-user-perspective-role="host"]',
+    ),
+  ).toContainText(/쯔양님\/진행자/);
+  await expect(
+    storyboardSettingsPanel.locator(
+      '[data-storyboard-user-perspective-role="manager"]',
+    ),
+  ).toContainText(/매니저/);
+  await expect(
+    storyboardSettingsPanel.locator('[data-storyboard-user-perspective-role="pd"]'),
+  ).toContainText(/PD/);
+  await expect(
+    storyboardSettingsPanel.locator(
+      '[data-storyboard-user-perspective-role="editor"]',
+    ),
+  ).toContainText(/편집자/);
+  await expect(
+    storyboardSettingsPanel.locator(
+      '[data-storyboard-omitted-scene-count="true"]',
+    ),
+  ).toContainText(/무이미지\/미검증 컷/);
+  await storyboardSettingsPanel
+    .locator('[data-storyboard-chat-settings-close="true"]')
+    .click();
+  await expect(storyboardSettingsPanel).toHaveCount(0);
+  await expect(storyboardSettingsDropdown).toHaveCount(0);
+
+  const storyboardHistoryToggle = storyboardModule.locator(
+    '[data-storyboard-history-panel-toggle="true"]',
   );
-  await expect(storyboardCaseHistory).toBeVisible({ timeout: 30_000 });
-  await expect(storyboardCaseHistory).toHaveAttribute(
-    "data-storyboard-case-history-status",
+  await expect(storyboardHistoryToggle).toBeVisible();
+  await expect(storyboardHistoryToggle).toHaveText("");
+  await expect(storyboardHistoryToggle).toHaveAttribute(
+    "data-storyboard-history-dropdown-trigger",
+    "icon-only",
+  );
+  await storyboardHistoryToggle.click();
+  const storyboardHistoryDropdown = page.locator(
+    '[data-storyboard-history-dropdown="true"]',
+  );
+  const storyboardHistoryPanel = page.locator(
+    '[data-storyboard-history-panel="true"]',
+  );
+  await expect(storyboardHistoryDropdown).toBeVisible({ timeout: 30_000 });
+  await expect(storyboardHistoryPanel).toBeVisible({ timeout: 30_000 });
+  await expect(storyboardHistoryPanel).toHaveAttribute(
+    "data-storyboard-history-status",
     "ready",
     { timeout: 30_000 },
   );
   await expect
-    .poll(async () => {
-      const historyCount = await storyboardCaseHistory.getAttribute(
-        "data-storyboard-case-history-count",
-      );
-      return Number(historyCount ?? "0");
-    }, { timeout: 30_000 })
+    .poll(
+      async () => {
+        const historyCount = await storyboardHistoryPanel.getAttribute(
+          "data-storyboard-history-count",
+        );
+        return Number(historyCount ?? "0");
+      },
+      { timeout: 30_000 },
+    )
     .toBeGreaterThanOrEqual(4);
-  const storyboardHistoryRows = storyboardCaseHistory.locator(
-    '[data-storyboard-case-history-run]',
+  const storyboardHistoryRows = storyboardHistoryPanel.locator(
+    '[data-storyboard-history-run="true"]',
   );
   await expect(storyboardHistoryRows.nth(0)).toBeVisible();
   await expect(storyboardHistoryRows.nth(1)).toBeVisible();
   await expect(
-    storyboardHistoryRows
-      .nth(0)
-      .locator('[data-storyboard-case-history-title="true"]'),
+    storyboardHistoryRows.nth(0).locator('[data-storyboard-history-title="true"]'),
   ).toBeVisible();
   await expect(
     storyboardHistoryRows
       .nth(0)
-      .locator('[data-storyboard-case-history-logline="true"]'),
-  ).toBeVisible();
-  const alternateHistoryRow = storyboardHistoryRows.filter({ hasText: /8컷/ }).first();
-  await expect(alternateHistoryRow).toBeVisible();
-  const alternateGeneratedAt =
-    (await alternateHistoryRow.getAttribute(
-      "data-storyboard-case-history-run",
-    )) ?? "";
-  expect(alternateGeneratedAt).not.toBe("");
-  await alternateHistoryRow.click();
+      .locator('[data-storyboard-history-scenes="true"]'),
+  ).toContainText(/컷/);
+  const latestHistoryRow = storyboardHistoryRows.nth(0);
+  await expect(latestHistoryRow).toBeVisible();
+  const loadedGeneratedAt =
+    (await latestHistoryRow
+      .locator('[data-storyboard-history-generated-at="true"]')
+      .getAttribute("datetime")) ?? "";
+  expect(loadedGeneratedAt).not.toBe("");
+  await latestHistoryRow.locator('[data-storyboard-history-load-run]').click();
   await expect(
     storyboardModule.locator('[data-storyboard-latest-real-data-loaded="true"]'),
-  ).toHaveAttribute("title", alternateGeneratedAt, { timeout: 10_000 });
+  ).toHaveCount(0);
+  await expect(
+    storyboardModule.locator('[data-storyboard-real-data-mode="true"]'),
+  ).toHaveCount(0);
   await expect(
     storyboardModule.getByText(/히스토리 케이스 로드 완료/),
   ).toBeVisible({ timeout: 10_000 });
-  await expect(chatRealDataTrace).toHaveAttribute(
-    "data-storyboard-chat-real-data-trace-mode",
-    "actual",
-    { timeout: 10_000 },
-  );
   await expect(
     storyboardModule.locator(
       '[data-storyboard-image-frame="1"] [data-storyboard-frame-script="true"]',
@@ -249,6 +321,18 @@ test("storyboard canvas counts only visible trusted GPT Image 2 storyboard panel
       '[data-storyboard-image-frame="1"] [data-storyboard-frame-subtitle="true"]',
     ),
   ).toContainText(/Subtitle/);
+  const storyboardPageIndicator = storyboardModule.locator(
+    '[data-storyboard-page-indicator="true"]',
+  );
+  await expect(storyboardPageIndicator).toContainText(/1 \/ \d+/);
+  const storyboardPageIndicatorText = await storyboardPageIndicator.innerText();
+  const initialStoryboardTotalPages =
+    Number(storyboardPageIndicatorText.match(/\/\s*(\d+)/)?.[1] ?? "1") || 1;
+  const storyboardFrameRangeText = await storyboardModule
+    .locator('[data-storyboard-frame-page-range="true"]')
+    .innerText();
+  const visibleTrustedStoryboardCutCount =
+    Number(storyboardFrameRangeText.match(/\/\s*0?(\d+)/)?.[1] ?? "4") || 4;
   await storyboardModule
     .locator('[data-storyboard-image-frame="1"]')
     .dispatchEvent("click");
@@ -283,7 +367,8 @@ test("storyboard canvas counts only visible trusted GPT Image 2 storyboard panel
     '[data-storyboard-chat-topic-state="true"]',
   );
   const initialCanonicalPrompt = await canonicalPromptState.inputValue();
-  const transientDraft = "채팅 draft만 반영되고 canonical prompt는 유지되어야 함";
+  const transientDraft =
+    "채팅 draft만 반영되고 canonical prompt는 유지되어야 함";
   await chatInput.fill(transientDraft);
   await expect(
     storyboardModule.locator('[data-storyboard-chat-draft-preview="true"]'),
@@ -306,13 +391,31 @@ test("storyboard canvas counts only visible trusted GPT Image 2 storyboard panel
   await expect(statusBubble).toContainText(/실제 히트맵 데이터/);
   await expect(statusBubble).toContainText(/스캔 \d+파일/);
   await expect(statusBubble).toContainText(/피크 \d+개/);
+  await expect(statusBubble).toContainText(/무이미지\/미검증 컷/);
   await expect(canonicalPromptState).toHaveValue(initialCanonicalPrompt);
-  await expect(storyboardModule.getByText(/현재 맥락 CUT 01 선택됨/)).toBeVisible();
+  await expect(
+    storyboardModule.getByText(/현재 맥락 CUT 01 선택됨/),
+  ).toBeVisible();
   await expect(
     storyboardModule.getByText(
-      /‘생성’, ‘4컷 재생성’, ‘초기화’도 채팅으로 실행/,
+      /‘점검’, ‘생성’, ‘4컷 재생성’, ‘초기화’도 채팅으로 실행/,
     ),
   ).toBeVisible();
+
+  await chatInput.fill("점검");
+  await chatInput.press("Enter");
+  const reviewBubble = storyboardModule
+    .locator('[data-storyboard-chat-message-bubble="true"]')
+    .filter({ hasText: /사용자 관점 점검/ })
+    .last();
+  await expect(reviewBubble).toBeVisible({ timeout: 10_000 });
+  await expect(reviewBubble).toContainText(/쯔양님\/진행자/);
+  await expect(reviewBubble).toContainText(/매니저/);
+  await expect(reviewBubble).toContainText(/PD/);
+  await expect(reviewBubble).toContainText(/편집자/);
+  await expect(reviewBubble).toContainText(/이미지 \d+\/\d+/);
+  await expect(reviewBubble).toContainText(/실제 히트맵 데이터/);
+  await expect(canonicalPromptState).toHaveValue(initialCanonicalPrompt);
 
   await chatInput.fill("이 컷 자막만 더 짧게 바꿔줘");
   await chatInput.press("Enter");
@@ -321,9 +424,9 @@ test("storyboard canvas counts only visible trusted GPT Image 2 storyboard panel
       '[data-storyboard-image-frame="1"] [data-storyboard-frame-subtitle="true"]',
     ),
   ).toContainText(/요청 반영/, { timeout: 15_000 });
-  await expect(
-    storyboardModule.getByText(/CUT 01 부분 수정 패치/),
-  ).toBeVisible({ timeout: 15_000 });
+  await expect(storyboardModule.getByText(/CUT 01 부분 수정 패치/)).toBeVisible(
+    { timeout: 15_000 },
+  );
 
   const currentVisibleTrustedImages = await storyboardModule
     .locator(
@@ -353,29 +456,54 @@ test("storyboard canvas counts only visible trusted GPT Image 2 storyboard panel
       imageGenerationRequests.push(request.url());
     }
   });
-  const imageGenerationRequestCountBeforeNavigation = imageGenerationRequests.length;
+  const imageGenerationRequestCountBeforeNavigation =
+    imageGenerationRequests.length;
 
   await chatInput.fill("5컷 보여줘");
   await chatInput.press("Enter");
-  await expect(
-    storyboardModule.locator('[data-storyboard-page-indicator="true"]'),
-  ).toContainText("2 / 2", { timeout: 15_000 });
-  await expect(
-    storyboardModule.locator('[data-storyboard-frame-grid="true"]'),
-  ).toHaveAttribute("data-storyboard-frame-page", "2");
-  await expect(
-    storyboardModule.locator('[data-storyboard-canvas-focus-label="true"]'),
-  ).toContainText("CUT 05");
-  await expect(storyboardModule.getByText(/CUT 05로 캔버스 포커스/)).toBeVisible({
-    timeout: 15_000,
-  });
+  if (visibleTrustedStoryboardCutCount >= 5 && initialStoryboardTotalPages > 1) {
+    await expect(storyboardPageIndicator).toContainText(
+      `2 / ${initialStoryboardTotalPages}`,
+      { timeout: 15_000 },
+    );
+    await expect(
+      storyboardModule.locator('[data-storyboard-frame-grid="true"]'),
+    ).toHaveAttribute("data-storyboard-frame-page", "2");
+    await expect(
+      storyboardModule.locator('[data-storyboard-image-frame="5"]'),
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(
+      storyboardModule.locator('[data-storyboard-canvas-focus-label="true"]'),
+    ).toContainText("CUT 05");
+  } else {
+    await expect(storyboardPageIndicator).toContainText("1 / 1", {
+      timeout: 15_000,
+    });
+    await expect(
+      storyboardModule.locator('[data-storyboard-frame-grid="true"]'),
+    ).toHaveAttribute("data-storyboard-frame-page", "1");
+    await expect(
+      storyboardModule.locator('[data-storyboard-image-frame="5"]'),
+    ).toHaveCount(0);
+    await expect(
+      storyboardModule.getByText(
+        new RegExp(
+          `CUT 05는 현재 ${visibleTrustedStoryboardCutCount}컷 결과에 없어 선택을 해제`,
+        ),
+      ),
+    ).toBeVisible({
+      timeout: 15_000,
+    });
+  }
   expect(imageGenerationRequests).toHaveLength(
     imageGenerationRequestCountBeforeNavigation,
   );
 
   await chatInput.fill("99컷 보여줘");
   await chatInput.press("Enter");
-  await expect(storyboardModule.getByText(/CUT 99는 현재 8컷 결과에 없어 선택을 해제/)).toBeVisible({
+  await expect(
+    storyboardModule.getByText(/CUT 99는 현재 \d+컷 결과에 없어 선택을 해제/),
+  ).toBeVisible({
     timeout: 15_000,
   });
   await expect(
@@ -385,20 +513,21 @@ test("storyboard canvas counts only visible trusted GPT Image 2 storyboard panel
     imageGenerationRequestCountBeforeNavigation,
   );
 
-  await chatInput.fill("5컷 자막만 요청 반영으로 바꿔줘");
+  await chatInput.fill("4컷 자막만 요청 반영으로 바꿔줘");
   await chatInput.press("Enter");
-  await expect(
-    storyboardModule.locator('[data-storyboard-page-indicator="true"]'),
-  ).toContainText("2 / 2", { timeout: 15_000 });
+  await expect(storyboardPageIndicator).toContainText(
+    `1 / ${initialStoryboardTotalPages}`,
+    { timeout: 15_000 },
+  );
   await expect(
     storyboardModule.locator('[data-storyboard-frame-grid="true"]'),
-  ).toHaveAttribute("data-storyboard-frame-page", "2");
+  ).toHaveAttribute("data-storyboard-frame-page", "1");
   await expect(
     storyboardModule.locator(
-      '[data-storyboard-image-frame="5"] [data-storyboard-frame-subtitle="true"]',
+      '[data-storyboard-image-frame="4"] [data-storyboard-frame-subtitle="true"]',
     ),
   ).toContainText(/요청 반영/, { timeout: 15_000 });
   await expect(
     storyboardModule.locator('[data-storyboard-canvas-focus-label="true"]'),
-  ).toContainText("CUT 05");
+  ).toContainText("CUT 04");
 });

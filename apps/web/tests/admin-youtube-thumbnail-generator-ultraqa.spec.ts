@@ -233,7 +233,7 @@ test('UltraQA generates a thumbnail through the bypassed admin console and manag
               available: true,
               reason: 'local_test_provider_available',
               command: 'playwright-local-test-provider',
-              model: 'requested:gpt-image-2',
+              model: 'gpt-image-2',
             },
           },
           backendAgent: {
@@ -279,8 +279,8 @@ test('UltraQA generates a thumbnail through the bypassed admin console and manag
           targetWidth: 1280,
           targetHeight: 720,
           providerId: 'local-codex',
-          model: 'requested:gpt-image-2',
-          modelProvenance: 'requested-label',
+          model: 'gpt-image-2',
+          modelProvenance: 'exact',
         },
         prompt: 'local-codex test provider prompt with 16:9 YouTube thumbnail layout',
         warnings: ['local_test_provider: Playwright fulfilled a local-codex result for skeleton/history verification.'],
@@ -319,7 +319,11 @@ test('UltraQA generates a thumbnail through the bypassed admin console and manag
   await expect(thumbnailModule.locator('[data-thumbnail-generation-actions="true"]')).toHaveCount(0);
   await expect(thumbnailModule.locator('[data-thumbnail-chat-command-row="true"]')).toHaveCount(0);
   await expect(thumbnailModule.locator('[data-thumbnail-chat-command]')).toHaveCount(0);
-  await expect(thumbnailModule.locator('[data-thumbnail-history-panel-toggle="true"]')).toHaveText(/히스토리/);
+  await expect(thumbnailModule.locator('[data-thumbnail-history-panel-toggle="true"]')).toHaveText('');
+  await expect(thumbnailModule.locator('[data-thumbnail-history-panel-toggle="true"]')).toHaveAttribute(
+    'data-thumbnail-history-dropdown-trigger',
+    'icon-only',
+  );
 
   const chatComposer = thumbnailModule.locator('[data-thumbnail-chat-composer="true"] textarea');
   await chatComposer.fill('해외 야시장 길거리 음식과 대형 꼬치구이 전경, 진행자 없이 음식 양과 리액션 분위기를 강조한 다음 업로드 썸네일, 메인: 역대급 먹방, 스티커: 한입만 가능? 생성해줘');
@@ -360,8 +364,9 @@ test('UltraQA generates a thumbnail through the bypassed admin console and manag
   expect(existsSync(resolve(process.cwd(), '.omx/runtime/youtube-thumbnail-history/e2e-runs/latest.html'))).toBe(false);
 
   await thumbnailModule.locator('[data-thumbnail-history-panel-toggle="true"]').click();
-  await expect(thumbnailModule.locator('[data-thumbnail-history-panel="true"]')).toBeVisible();
-  await expect(thumbnailModule.locator('[data-thumbnail-history-run="true"]')).toContainText('역대급 먹방');
-  await thumbnailModule.locator('[data-thumbnail-history-load-run]').click();
+  await expect(page.locator('[data-thumbnail-history-dropdown="true"]')).toBeVisible();
+  await expect(page.locator('[data-thumbnail-history-panel="true"]')).toBeVisible();
+  await expect(page.locator('[data-thumbnail-history-run="true"]')).toContainText('역대급 먹방');
+  await page.locator('[data-thumbnail-history-load-run]').click();
   await expect(thumbnailModule.locator('canvas')).toHaveAttribute('data-thumbnail-history-preview', 'true');
 });
