@@ -128,13 +128,11 @@ export default function OverlayLayout({
   const isHomeRoute = pathname === "/";
   const routeDirectPanelParam = getDirectOverlayPanel(panelParam);
   const directPanelParam = isHomeRoute ? null : routeDirectPanelParam;
-  const shouldSuppressNoncriticalChrome =
-    pathname?.startsWith("/auth/") ||
+  const shouldSuppressNoncriticalChrome = pathname?.startsWith("/auth/") || routeDirectPanelParam !== null ||
     pathname?.startsWith("/admin") ||
     pathname === "/feed" ||
     pathname === "/stamp" ||
-    pathname === "/leaderboard" ||
-    routeDirectPanelParam !== null;
+    pathname === "/leaderboard";
   const shouldRenderRouteOverlayChrome =
     !isHomeRoute && routeDirectPanelParam !== null;
   const isFullPageRoute = !isHomeRoute && routeDirectPanelParam === null;
