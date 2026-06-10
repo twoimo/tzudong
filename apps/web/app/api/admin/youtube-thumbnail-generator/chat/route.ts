@@ -38,7 +38,7 @@ function jsonRouteError(error: unknown) {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requireAdmin();
+  const auth = await requireAdmin({ allowDevAdminBypassCookie: true });
   if (!auth.ok) return auth.response;
 
   let payload: ReturnType<typeof parseThumbnailChatAgentRequest>;
