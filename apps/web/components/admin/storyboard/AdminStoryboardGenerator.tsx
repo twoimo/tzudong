@@ -463,16 +463,23 @@ function formatStoryboardRealDataTrace(
     `상위 ${formatStoryboardRealDataPercent(result.sourceSummary.topReplayScore)}`,
   ].join(" · ");
   const backend = result.backendAnalysis.backendAgent;
-  const backendMode = backend?.mode ?? result.request.generationMode;
+  const graph = backend?.graph;
+  const backendExecutionText =
+    graph?.mode === "graph_command" && backend?.invokedCommand
+      ? "LangGraph 명령 실행"
+      : graph?.mode === "legacy_command" && backend?.invokedCommand
+        ? "Legacy Codex 명령 실행"
+        : backend?.invokedCommand && graph?.status === "fallback"
+          ? "명령 실패 후 로컬 어댑터 폴백"
+          : "로컬 어댑터";
   const graphText = formatStoryboardGraphDiagnosticsText(result);
   const backendText = [
-    `백엔드 ${backendMode}`,
+    `백엔드 ${backendExecutionText}`,
     graphText,
     !graphText && backend?.runtime ? `런타임 ${backend.runtime}` : null,
-    backend?.graph?.runtime === "codex_cli_oauth_legacy" || !backend?.graph
+    graph?.runtime === "codex_cli_oauth_legacy" || !graph
       ? `Codex CLI ${backend?.codexModel ?? "gpt-5.5"} ${backend?.codexEffort ?? "high"}`
       : null,
-    backend?.invokedCommand ? "명령 실행" : "로컬 어댑터",
   ]
     .filter(Boolean)
     .join(" · ");
