@@ -34,6 +34,87 @@ export const THUMBNAIL_REFERENCE_ROLES = [
 
 export type ThumbnailReferenceRole = (typeof THUMBNAIL_REFERENCE_ROLES)[number];
 
+export const THUMBNAIL_RETRIEVAL_STATUSES = [
+  'used',
+  'partial',
+  'fallback',
+  'disabled',
+  'unavailable',
+  'timeout',
+  'invalid_output',
+] as const;
+
+export type ThumbnailRetrievalStatus = (typeof THUMBNAIL_RETRIEVAL_STATUSES)[number];
+
+export const THUMBNAIL_REFERENCE_EVIDENCE_INTENTS = [
+  'style',
+  'composition',
+  'food',
+  'host',
+  'person',
+  'text_layout',
+] as const;
+
+export type ThumbnailReferenceEvidenceIntent = (typeof THUMBNAIL_REFERENCE_EVIDENCE_INTENTS)[number];
+
+export const THUMBNAIL_RETRIEVAL_FALLBACK_REASONS = [
+  'disabled',
+  'missing_dependency',
+  'missing_supabase_env',
+  'rpc_unavailable',
+  'timeout',
+  'invalid_json',
+  'empty_result',
+  'unsafe_reference',
+  'unknown_error',
+] as const;
+
+export type ThumbnailRetrievalFallbackReason = (typeof THUMBNAIL_RETRIEVAL_FALLBACK_REASONS)[number];
+
+export type ThumbnailReferenceEvidence = {
+  id: string;
+  source: 'youtube_thumbnail' | 'transcript_scene' | 'frame_caption' | 'history' | 'manual_upload';
+  intent: ThumbnailReferenceEvidenceIntent;
+  uploadRole: ThumbnailReferenceRole;
+  videoId?: string;
+  title?: string;
+  thumbnailUrl?: string;
+  cachedImagePath?: string;
+  startSec?: number;
+  endSec?: number;
+  transcriptSnippet?: string;
+  captionSnippet?: string;
+  hybridScore?: number;
+  mmrRank?: number;
+  rerankScore?: number;
+  selectedReason: string;
+};
+
+export type ThumbnailRetrievalDiagnostics = {
+  status: ThumbnailRetrievalStatus;
+  candidateCount: number;
+  selectedReferenceIds: string[];
+  fallbackReason?: ThumbnailRetrievalFallbackReason;
+  usedModels?: {
+    embedding?: 'BAAI/bge-m3';
+    reranker?: 'BAAI/bge-reranker-v2-m3';
+  };
+  operations?: {
+    supabaseRpc?: 'match_documents_hybrid';
+    denseSparseHybrid?: boolean;
+    mmrApplied?: boolean;
+    rerankerApplied?: boolean;
+    captionEnrichmentApplied?: boolean;
+  };
+  commandRuntime?: 'python_retrieval_adapter' | 'local_static_pool' | 'none';
+  elapsedMs?: number;
+};
+
+export type ThumbnailRetrievalResult = {
+  evidence: ThumbnailReferenceEvidence[];
+  diagnostics: ThumbnailRetrievalDiagnostics;
+};
+
 export type ThumbnailTextLayer = {
   id: string;
   content: string;
@@ -61,6 +142,8 @@ export type ThumbnailGeneratorPayload = {
   referenceImageRoles?: ThumbnailReferenceRole[];
   acknowledgedSafety: boolean;
   textLayers?: ThumbnailTextLayer[];
+  retrievalEvidence?: ThumbnailReferenceEvidence[];
+  retrievalDiagnostics?: ThumbnailRetrievalDiagnostics;
 };
 
 export type ThumbnailReferenceImage = {
@@ -115,6 +198,7 @@ export type ThumbnailGenerationResult = {
   prompt: string;
   warnings: string[];
   backendAgent?: ThumbnailBackendAgentRun;
+  retrieval?: ThumbnailRetrievalResult;
 };
 
 export type ThumbnailChatCanvasPatch = {
@@ -189,6 +273,7 @@ export type ThumbnailGenerationErrorCode =
   | 'unsafe_crowd'
   | 'unsupported_model'
   | 'invalid_generation_mode'
+  | 'host_reference_required'
   | 'provider_unavailable';
 
 export class ThumbnailGenerationError extends Error {

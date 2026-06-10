@@ -1,0 +1,497 @@
+{
+  "generatedAt": "2026-06-10T06:05:47.005Z",
+  "seed": true,
+  "description": "Shared default storyboard seed for first-load admin canvas display across accounts and devices.",
+  "result": {
+    "generatedAt": "2026-06-10T06:05:47.004Z",
+    "mode": "backend_agent_local_adapter",
+    "request": {
+      "prompt": "실제 쯔양님 채널 운영자가 쓸 수 있는 제육볶음 치즈 폭포 스토리보드를 손/음식 중심으로 구성해줘.",
+      "tone": "energetic",
+      "targetLengthMinutes": 12,
+      "sourceLimit": 40,
+      "segmentCount": 4,
+      "includeProductionNotes": true,
+      "generationMode": "backend_agent"
+    },
+    "sourceSummary": {
+      "heatmapDirectory": "/home/twoimo/src/tzudong/backend/restaurant-crawling/data/tzuyang/heatmap",
+      "scannedFiles": 1068,
+      "usableSources": 1020,
+      "selectedSources": 40,
+      "totalMarkers": 76,
+      "topReplayScore": 1,
+      "isFallbackData": false,
+      "fallbackReason": null,
+      "dataModeLabel": "백엔드 에이전트 어댑터"
+    },
+    "ahp": {
+      "targetScore": 99.8,
+      "score": 99.45,
+      "status": "needs_iteration",
+      "committee": [
+        {
+          "role": "콘텐츠 PD",
+          "focus": "소재 명확성, 촬영 가능성, 회차 완성도"
+        },
+        {
+          "role": "유튜브 리텐션 분석가",
+          "focus": "가장 많이 본 구간/피크 재현 가능성"
+        },
+        {
+          "role": "먹방 연출가",
+          "focus": "음식 등장, 리액션, 사운드, 화면 리듬"
+        },
+        {
+          "role": "브랜드/안전 편집자",
+          "focus": "과장 방지, 운영자가 바로 검토 가능한 근거"
+        },
+        {
+          "role": "관리자 UX 설계자",
+          "focus": "PD가 콘솔에서 입력-생성-검토-복사까지 끝내는 흐름"
+        }
+      ],
+      "criteria": [
+        {
+          "id": "heatmap",
+          "label": "히트맵 근거성",
+          "weight": 22,
+          "score": 99.95,
+          "evidence": "40개 영상, 76개 피크 구간 사용"
+        },
+        {
+          "id": "story",
+          "label": "스토리보드 디테일",
+          "weight": 18,
+          "score": 97.5,
+          "evidence": "5개 씬에 의도/연출/멘트/체크리스트 포함"
+        },
+        {
+          "id": "control",
+          "label": "운영자 조작성",
+          "weight": 14,
+          "score": 99.8,
+          "evidence": "프롬프트, 톤, 목표 길이, 근거 영상 수, 씬 수를 콘솔에서 조작"
+        },
+        {
+          "id": "local",
+          "label": "로컬 실행 신뢰성",
+          "weight": 14,
+          "score": 99.95,
+          "evidence": "1068개 로컬 jsonl 히트맵 파일 스캔"
+        },
+        {
+          "id": "safety",
+          "label": "브랜드·편집 안전성",
+          "weight": 10,
+          "score": 99.8,
+          "evidence": "과장 방지/편집 체크리스트와 근거 URL을 씬마다 노출"
+        },
+        {
+          "id": "ux",
+          "label": "관리자 UX 적합성",
+          "weight": 12,
+          "score": 99.8,
+          "evidence": "관리자 콘솔 모듈 안에서 생성·검토·복사까지 완료"
+        },
+        {
+          "id": "trace",
+          "label": "추적 가능성",
+          "weight": 10,
+          "score": 99.9,
+          "evidence": "최상위 리플레이 강도 100.0%"
+        }
+      ],
+      "iterationBacklog": [
+        "히트맵 파일 수 또는 피크 구간 수 부족: 백엔드 수집 스크립트 재실행 필요"
+      ]
+    },
+    "backendAnalysis": {
+      "reusedLogic": [
+        "backend/storyboard-agent/src/graph.py supervisor→researcher→intern/designer LangGraph 구조",
+        "backend/storyboard-agent/src/state/slots.py StoryboardSlots 슬롯 충족 모델",
+        "backend/storyboard-agent/src/prompts/designer.py 스토리보드 출력 규칙",
+        "backend/storyboard-agent의 supervisor→researcher→designer 구조를 콘솔 단일 생성 플로우로 축약",
+        "search_scene_data의 피크 구간 캡션 보강 원칙을 로컬 히트맵 marker 기반 근거로 대체",
+        "backend/restaurant-crawling/data/tzuyang/heatmap jsonl의 most_replayed_markers와 intensityScoreNormalized를 핵심 랭킹 신호로 사용"
+      ],
+      "localGapsHandled": [
+        "STORYBOARD_AGENT_COMMAND 미설정 또는 Python/LangGraph 의존성 부족 시 로컬 히트맵 생성기로 안전 폴백",
+        "LangGraph/OpenAI/Supabase/Tavily 자격증명 없이도 로컬 jsonl 히트맵으로 생성 가능",
+        "라이브 자막/프레임 캡션이 없을 때도 씬별 URL·피크 시간·리플레이 강도를 노출",
+        "PD가 관리자 콘솔에서 파라미터를 조정하고 결과를 복사할 수 있게 API와 UI를 분리"
+      ],
+      "backendAgent": {
+        "available": true,
+        "mode": "command",
+        "rootPath": "/home/twoimo/src/tzudong/backend/storyboard-agent",
+        "notebooks": [
+          "scripts/03-storyboard-agent.ipynb",
+          "scripts/04-storyboard-agent-graph-debug.ipynb"
+        ],
+        "graphEntrypoint": "/home/twoimo/src/tzudong/backend/storyboard-agent/src/graph.py",
+        "commandConfigured": true,
+        "commandAvailable": false,
+        "commandRejectionReason": "command-not-executable",
+        "localAdapterAvailable": true,
+        "missingPythonModules": [],
+        "runtime": "codex_cli_oauth",
+        "codexModel": "gpt-5.5",
+        "codexEffort": "high",
+        "streamingAvailable": true,
+        "invokedCommand": false
+      }
+    },
+    "scenes": [
+      {
+        "sceneNo": 1,
+        "title": "오프닝 훅",
+        "durationSec": 144,
+        "operatorIntent": "가장 강한 리플레이 피크를 10초 안에 예고해 초반 이탈을 막습니다.",
+        "visualDirection": "가게 외관/메뉴판/대표 음식 클로즈업을 빠르게 교차합니다.",
+        "hostBeat": "“오늘은 구독자분들이 다시 돌려본 그 포인트를 새 메뉴로 확장해볼게요.”",
+        "captionIdea": "초반 몰입이 강한 에너지형 먹방 톤으로 “실제 쯔양님 채널 운영자가 쓸 수 있는 제육볶음 치즈 폭포 스토리보드를 손/음식 중심으로 구성해줘.” 소재를 06:57 피크 감정에 맞춰 압축",
+        "heatmapEvidence": {
+          "videoId": "-D43ezc57z8",
+          "youtubeLink": "https://www.youtube.com/watch?v=-D43ezc57z8",
+          "peakTime": "06:57",
+          "replayScore": 1,
+          "reason": "Most replayed / 리플레이 강도 100.0% 구간을 참조"
+        },
+        "productionChecklist": [
+          "촬영 전 피크 구간을 PD/편집자가 함께 1회 재생",
+          "첫 입·질감·소리 컷을 분리 촬영해 쇼츠/썸네일 후보 확보",
+          "과장된 맛 표현보다 실제 리액션과 구독자 반복시청 근거를 우선"
+        ]
+      },
+      {
+        "sceneNo": 2,
+        "title": "기대감 세팅",
+        "durationSec": 144,
+        "operatorIntent": "음식이 나오기 전 양·비주얼·소리 기대치를 쌓습니다.",
+        "visualDirection": "조리 과정, 상차림, 김/소스/면발처럼 질감이 보이는 컷을 확보합니다.",
+        "hostBeat": "“이 장면은 냄새부터 다르게 느껴져요.”",
+        "captionIdea": "초반 몰입이 강한 에너지형 먹방 톤으로 “실제 쯔양님 채널 운영자가 쓸 수 있는 제육볶음 치즈 폭포 스토리보드를 손/음식 중심으로 구성해줘.” 소재를 13:25 피크 감정에 맞춰 압축",
+        "heatmapEvidence": {
+          "videoId": "-H-mhUeu_qk",
+          "youtubeLink": "https://www.youtube.com/watch?v=-H-mhUeu_qk",
+          "peakTime": "13:25",
+          "replayScore": 1,
+          "reason": "Most replayed / 리플레이 강도 100.0% 구간을 참조"
+        },
+        "productionChecklist": [
+          "촬영 전 피크 구간을 PD/편집자가 함께 1회 재생",
+          "첫 입·질감·소리 컷을 분리 촬영해 쇼츠/썸네일 후보 확보",
+          "과장된 맛 표현보다 실제 리액션과 구독자 반복시청 근거를 우선"
+        ]
+      },
+      {
+        "sceneNo": 3,
+        "title": "첫 입 리액션",
+        "durationSec": 144,
+        "operatorIntent": "피크 구간과 닮은 첫 입 리액션을 명확히 배치합니다.",
+        "visualDirection": "입장 전 정적 → 한입 → 표정 클로즈업 → 한 박자 쉬는 편집을 씁니다.",
+        "hostBeat": "“와… 이건 첫입부터 기준이 생기는데요?”",
+        "captionIdea": "초반 몰입이 강한 에너지형 먹방 톤으로 “실제 쯔양님 채널 운영자가 쓸 수 있는 제육볶음 치즈 폭포 스토리보드를 손/음식 중심으로 구성해줘.” 소재를 10:56 피크 감정에 맞춰 압축",
+        "heatmapEvidence": {
+          "videoId": "-HyRSLWcOeA",
+          "youtubeLink": "https://www.youtube.com/watch?v=-HyRSLWcOeA",
+          "peakTime": "10:56",
+          "replayScore": 1,
+          "reason": "Most replayed / 리플레이 강도 100.0% 구간을 참조"
+        },
+        "productionChecklist": [
+          "촬영 전 피크 구간을 PD/편집자가 함께 1회 재생",
+          "첫 입·질감·소리 컷을 분리 촬영해 쇼츠/썸네일 후보 확보",
+          "과장된 맛 표현보다 실제 리액션과 구독자 반복시청 근거를 우선"
+        ]
+      },
+      {
+        "sceneNo": 4,
+        "title": "반복 시청 포인트",
+        "durationSec": 144,
+        "operatorIntent": "소리·늘어남·단면·국물처럼 되감기 좋은 감각 컷을 설계합니다.",
+        "visualDirection": "마이크에 가까운 바삭/후루룩 소리와 손동작 디테일을 따로 땁니다.",
+        "hostBeat": "“이 소리 때문에 여기 다시 보실 것 같아요.”",
+        "captionIdea": "초반 몰입이 강한 에너지형 먹방 톤으로 “실제 쯔양님 채널 운영자가 쓸 수 있는 제육볶음 치즈 폭포 스토리보드를 손/음식 중심으로 구성해줘.” 소재를 01:55 피크 감정에 맞춰 압축",
+        "heatmapEvidence": {
+          "videoId": "-LGODBDAg1c",
+          "youtubeLink": "https://www.youtube.com/watch?v=-LGODBDAg1c",
+          "peakTime": "01:55",
+          "replayScore": 0.866,
+          "reason": "Most replayed / 리플레이 강도 86.6% 구간을 참조"
+        },
+        "productionChecklist": [
+          "촬영 전 피크 구간을 PD/편집자가 함께 1회 재생",
+          "첫 입·질감·소리 컷을 분리 촬영해 쇼츠/썸네일 후보 확보",
+          "과장된 맛 표현보다 실제 리액션과 구독자 반복시청 근거를 우선"
+        ]
+      },
+      {
+        "sceneNo": 5,
+        "title": "중반 변주",
+        "durationSec": 144,
+        "operatorIntent": "같은 맛이 반복되지 않도록 조합/소스/사이드 메뉴로 리듬을 바꿉니다.",
+        "visualDirection": "새 조합을 만들 때 화면 하단에 조합명을 짧게 넣습니다.",
+        "hostBeat": "“여기서 조합을 한 번 바꿔볼게요.”",
+        "captionIdea": "초반 몰입이 강한 에너지형 먹방 톤으로 “실제 쯔양님 채널 운영자가 쓸 수 있는 제육볶음 치즈 폭포 스토리보드를 손/음식 중심으로 구성해줘.” 소재를 13:47 피크 감정에 맞춰 압축",
+        "heatmapEvidence": {
+          "videoId": "-RI5PUiPr3g",
+          "youtubeLink": "https://www.youtube.com/watch?v=-RI5PUiPr3g",
+          "peakTime": "13:47",
+          "replayScore": 1,
+          "reason": "Most replayed / 리플레이 강도 100.0% 구간을 참조"
+        },
+        "productionChecklist": [
+          "촬영 전 피크 구간을 PD/편집자가 함께 1회 재생",
+          "첫 입·질감·소리 컷을 분리 촬영해 쇼츠/썸네일 후보 확보",
+          "과장된 맛 표현보다 실제 리액션과 구독자 반복시청 근거를 우선"
+        ]
+      }
+    ],
+    "storyboard": {
+      "title": "공용 기본 스토리보드 · 제육볶음 치즈 폭포 4컷",
+      "logline": "관리자 콘솔 첫 진입 시 계정/기기와 무관하게 바로 확인할 수 있는 손/음식 중심 4컷 스토리보드입니다.",
+      "operatorBrief": "backend/storyboard-agent의 LangGraph 슬롯/디자이너 설계를 관리자 콘솔용 로컬 히트맵 생성 흐름에 연결했습니다.",
+      "scenes": [
+        {
+          "sceneNo": 1,
+          "title": "오프닝 훅",
+          "durationSec": 144,
+          "operatorIntent": "가장 강한 리플레이 피크를 10초 안에 예고해 초반 이탈을 막습니다.",
+          "visualDirection": "가게 외관/메뉴판/대표 음식 클로즈업을 빠르게 교차합니다.",
+          "hostBeat": "“오늘은 구독자분들이 다시 돌려본 그 포인트를 새 메뉴로 확장해볼게요.”",
+          "captionIdea": "초반 몰입이 강한 에너지형 먹방 톤으로 “실제 쯔양님 채널 운영자가 쓸 수 있는 제육볶음 치즈 폭포 스토리보드를 손/음식 중심으로 구성해줘.” 소재를 06:57 피크 감정에 맞춰 압축",
+          "heatmapEvidence": {
+            "videoId": "-D43ezc57z8",
+            "youtubeLink": "https://www.youtube.com/watch?v=-D43ezc57z8",
+            "peakTime": "06:57",
+            "replayScore": 1,
+            "reason": "Most replayed / 리플레이 강도 100.0% 구간을 참조"
+          },
+          "productionChecklist": [
+            "촬영 전 피크 구간을 PD/편집자가 함께 1회 재생",
+            "첫 입·질감·소리 컷을 분리 촬영해 쇼츠/썸네일 후보 확보",
+            "과장된 맛 표현보다 실제 리액션과 구독자 반복시청 근거를 우선"
+          ],
+          "generatedImage": {
+            "dataUrl": "/storyboard-seed/generated/cut-01.png",
+            "mime": "image/png",
+            "providerId": "local-codex",
+            "trustPolicy": "storyboard-gpt-image-2-panel-v1",
+            "model": "gpt-image-2",
+            "prompt": "Create exactly one full-bleed 16:9 single-scene storyboard cut image for a Korean food-travel / mukbang planning board.\nComposition contract: the entire image must be one continuous scene filling the full canvas edge-to-edge. This image will be placed into an external 2x2 grid by the web UI; never draw that grid inside the image.\nHard negatives: no storyboard sheet, no comic page, no multi-panel layout, no split-screen, no inset panels, no thumbnail contact sheet, no wireframe boxes, no internal borders, no crop marks, no frame guides, no blank quadrants, no placeholder rectangles, and no X-mark empty panels.\nStyle: cinematic hand-drawn food-storyboard keyframe, clean black pencil lines, subtle warm food-color accents, strong single focal point, no UI chrome.\nSafety: do not recreate a real person likeness; no recognizable face, no face close-up, no host face at all, and no detailed eyes/nose/mouth. Keep all human faces outside the frame; if a person is implied, keep any face outside frame. Show human presence only through cropped hands, chopsticks, food, over-shoulder silhouette, back-of-head silhouette, or cropped body parts without facial detail. No logos, watermarks, readable brand names, URLs, prices, or final typography.\nStoryboard title: 초반 몰입이 강한 에너지형 먹방 — 구독자 반복시청 기반 다음 영상안\nOverall logline: 쯔양님 기존 영상의 가장 많이 본 구간 76개를 근거로 12분 분량의 새 먹방 흐름을 구성합니다.\nUser brief: 실제 쯔양님 채널 운영자가 쓸 수 있는 제육볶음 치즈 폭포 스토리보드를 손/음식 중심으로 구성해줘.\nCUT 1: 오프닝 훅\nVisual direction: 가게 외관/메뉴판/대표 음식 클로즈업을 빠르게 교차합니다.\nOperator intent: 가장 강한 리플레이 피크를 10초 안에 예고해 초반 이탈을 막습니다.\nCaption idea for mood only, do not render readable text: 초반 몰입이 강한 에너지형 먹방 톤으로 “실제 쯔양님 채널 운영자가 쓸 수 있는 제육볶음 치즈 폭포 스토리보드를 손/음식 중심으로 구성해줘.” 소재를 06:57 피크 감정에 맞춰 압축\nHeatmap evidence mood: 06:57, replay score 1.\nOutput only the image. Fill the whole frame with one coherent CUT; do not include scene labels, timecodes, captions, subtitles, handwriting, speech bubbles, or any readable text.",
+            "generatedAt": "2026-06-10T06:01:41.452367Z",
+            "warnings": [
+              "shared_seed_storyboard: bundled for cross-account and cross-device admin first-load display.",
+              "local_codex_provider: generated via local Codex OAuth provider and persisted for admin storyboard display.",
+              "exact_provenance: image_generation.gpt-image-2 response=resp_0ca7686a194cddc0016a28fd790f60819198cdaff3c09de1cc call=ig_0ca7686a194cddc0016a28fd7a5f0c8191be2862c178c5e967"
+            ],
+            "provenance": {
+              "providerId": "local-codex",
+              "authMode": "codex_oauth",
+              "endpoint": "https://chatgpt.com/backend-api/codex/responses",
+              "agentModel": "gpt-5.5",
+              "requestToolType": "image_generation",
+              "requestToolModel": "gpt-image-2",
+              "model": "gpt-image-2",
+              "modelProvenance": "exact",
+              "responseId": "resp_0ca7686a194cddc0016a28fd790f60819198cdaff3c09de1cc",
+              "imageCallId": "ig_0ca7686a194cddc0016a28fd7a5f0c8191be2862c178c5e967",
+              "imageItemCount": 1,
+              "generatedImageItemTypes": [
+                "image_generation_call"
+              ],
+              "rawImageItemTypes": [
+                "image_generation_call",
+                "message"
+              ],
+              "requestHash": "148c5a9a83d30192b1e240a5fcb854c40c2a749cdf39db0850993cde3833287a",
+              "responseHash": "21a2346f0cfb4100bb7061449d9447a08b3b7400f9e48c378631837d6e1542de",
+              "hasOpenAIAPIKey": false,
+              "generatedAt": "2026-06-10T06:01:41.452367Z"
+            }
+          }
+        },
+        {
+          "sceneNo": 2,
+          "title": "기대감 세팅",
+          "durationSec": 144,
+          "operatorIntent": "음식이 나오기 전 양·비주얼·소리 기대치를 쌓습니다.",
+          "visualDirection": "조리 과정, 상차림, 김/소스/면발처럼 질감이 보이는 컷을 확보합니다.",
+          "hostBeat": "“이 장면은 냄새부터 다르게 느껴져요.”",
+          "captionIdea": "초반 몰입이 강한 에너지형 먹방 톤으로 “실제 쯔양님 채널 운영자가 쓸 수 있는 제육볶음 치즈 폭포 스토리보드를 손/음식 중심으로 구성해줘.” 소재를 13:25 피크 감정에 맞춰 압축",
+          "heatmapEvidence": {
+            "videoId": "-H-mhUeu_qk",
+            "youtubeLink": "https://www.youtube.com/watch?v=-H-mhUeu_qk",
+            "peakTime": "13:25",
+            "replayScore": 1,
+            "reason": "Most replayed / 리플레이 강도 100.0% 구간을 참조"
+          },
+          "productionChecklist": [
+            "촬영 전 피크 구간을 PD/편집자가 함께 1회 재생",
+            "첫 입·질감·소리 컷을 분리 촬영해 쇼츠/썸네일 후보 확보",
+            "과장된 맛 표현보다 실제 리액션과 구독자 반복시청 근거를 우선"
+          ],
+          "generatedImage": {
+            "dataUrl": "/storyboard-seed/generated/cut-02.png",
+            "mime": "image/png",
+            "providerId": "local-codex",
+            "trustPolicy": "storyboard-gpt-image-2-panel-v1",
+            "model": "gpt-image-2",
+            "prompt": "Create exactly one full-bleed 16:9 single-scene storyboard cut image for a Korean food-travel / mukbang planning board.\nComposition contract: the entire image must be one continuous scene filling the full canvas edge-to-edge. This image will be placed into an external 2x2 grid by the web UI; never draw that grid inside the image.\nHard negatives: no storyboard sheet, no comic page, no multi-panel layout, no split-screen, no inset panels, no thumbnail contact sheet, no wireframe boxes, no internal borders, no crop marks, no frame guides, no blank quadrants, no placeholder rectangles, and no X-mark empty panels.\nStyle: cinematic hand-drawn food-storyboard keyframe, clean black pencil lines, subtle warm food-color accents, strong single focal point, no UI chrome.\nSafety: do not recreate a real person likeness; no recognizable face, no face close-up, no host face at all, and no detailed eyes/nose/mouth. Keep all human faces outside the frame; if a person is implied, keep any face outside frame. Show human presence only through cropped hands, chopsticks, food, over-shoulder silhouette, back-of-head silhouette, or cropped body parts without facial detail. No logos, watermarks, readable brand names, URLs, prices, or final typography.\nStoryboard title: 초반 몰입이 강한 에너지형 먹방 — 구독자 반복시청 기반 다음 영상안\nOverall logline: 쯔양님 기존 영상의 가장 많이 본 구간 76개를 근거로 12분 분량의 새 먹방 흐름을 구성합니다.\nUser brief: 실제 쯔양님 채널 운영자가 쓸 수 있는 제육볶음 치즈 폭포 스토리보드를 손/음식 중심으로 구성해줘.\nCUT 2: 기대감 세팅\nVisual direction: 조리 과정, 상차림, 김/소스/면발처럼 질감이 보이는 컷을 확보합니다.\nOperator intent: 음식이 나오기 전 양·비주얼·소리 기대치를 쌓습니다.\nCaption idea for mood only, do not render readable text: 초반 몰입이 강한 에너지형 먹방 톤으로 “실제 쯔양님 채널 운영자가 쓸 수 있는 제육볶음 치즈 폭포 스토리보드를 손/음식 중심으로 구성해줘.” 소재를 13:25 피크 감정에 맞춰 압축\nHeatmap evidence mood: 13:25, replay score 1.\nOutput only the image. Fill the whole frame with one coherent CUT; do not include scene labels, timecodes, captions, subtitles, handwriting, speech bubbles, or any readable text.",
+            "generatedAt": "2026-06-10T06:02:43.683264Z",
+            "warnings": [
+              "shared_seed_storyboard: bundled for cross-account and cross-device admin first-load display.",
+              "local_codex_provider: generated via local Codex OAuth provider and persisted for admin storyboard display.",
+              "exact_provenance: image_generation.gpt-image-2 response=resp_0c0d7da0f13ff26e016a28fdc639f8819190602216ad355336 call=ig_0c0d7da0f13ff26e016a28fdc71b4481918a8de14035f01a24"
+            ],
+            "provenance": {
+              "providerId": "local-codex",
+              "authMode": "codex_oauth",
+              "endpoint": "https://chatgpt.com/backend-api/codex/responses",
+              "agentModel": "gpt-5.5",
+              "requestToolType": "image_generation",
+              "requestToolModel": "gpt-image-2",
+              "model": "gpt-image-2",
+              "modelProvenance": "exact",
+              "responseId": "resp_0c0d7da0f13ff26e016a28fdc639f8819190602216ad355336",
+              "imageCallId": "ig_0c0d7da0f13ff26e016a28fdc71b4481918a8de14035f01a24",
+              "imageItemCount": 1,
+              "generatedImageItemTypes": [
+                "image_generation_call"
+              ],
+              "rawImageItemTypes": [
+                "image_generation_call",
+                "message"
+              ],
+              "requestHash": "6c2c14c67c17e66e5c9646d2a1321cb38d44b23affab346f98a2e5e976dc2250",
+              "responseHash": "039c569846ed7268baaa9282f630c6c999a25a9ba2d2c8dd7f54c6969aa98d2e",
+              "hasOpenAIAPIKey": false,
+              "generatedAt": "2026-06-10T06:02:43.683264Z"
+            }
+          }
+        },
+        {
+          "sceneNo": 3,
+          "title": "첫 입 리액션",
+          "durationSec": 144,
+          "operatorIntent": "피크 구간과 닮은 첫 입 리액션을 명확히 배치합니다.",
+          "visualDirection": "입장 전 정적 → 한입 → 표정 클로즈업 → 한 박자 쉬는 편집을 씁니다.",
+          "hostBeat": "“와… 이건 첫입부터 기준이 생기는데요?”",
+          "captionIdea": "초반 몰입이 강한 에너지형 먹방 톤으로 “실제 쯔양님 채널 운영자가 쓸 수 있는 제육볶음 치즈 폭포 스토리보드를 손/음식 중심으로 구성해줘.” 소재를 10:56 피크 감정에 맞춰 압축",
+          "heatmapEvidence": {
+            "videoId": "-HyRSLWcOeA",
+            "youtubeLink": "https://www.youtube.com/watch?v=-HyRSLWcOeA",
+            "peakTime": "10:56",
+            "replayScore": 1,
+            "reason": "Most replayed / 리플레이 강도 100.0% 구간을 참조"
+          },
+          "productionChecklist": [
+            "촬영 전 피크 구간을 PD/편집자가 함께 1회 재생",
+            "첫 입·질감·소리 컷을 분리 촬영해 쇼츠/썸네일 후보 확보",
+            "과장된 맛 표현보다 실제 리액션과 구독자 반복시청 근거를 우선"
+          ],
+          "generatedImage": {
+            "dataUrl": "/storyboard-seed/generated/cut-03.png",
+            "mime": "image/png",
+            "providerId": "local-codex",
+            "trustPolicy": "storyboard-gpt-image-2-panel-v1",
+            "model": "gpt-image-2",
+            "prompt": "Create exactly one full-bleed 16:9 single-scene storyboard cut image for a Korean food-travel / mukbang planning board.\nComposition contract: the entire image must be one continuous scene filling the full canvas edge-to-edge. This image will be placed into an external 2x2 grid by the web UI; never draw that grid inside the image.\nHard negatives: no storyboard sheet, no comic page, no multi-panel layout, no split-screen, no inset panels, no thumbnail contact sheet, no wireframe boxes, no internal borders, no crop marks, no frame guides, no blank quadrants, no placeholder rectangles, and no X-mark empty panels.\nStyle: cinematic hand-drawn food-storyboard keyframe, clean black pencil lines, subtle warm food-color accents, strong single focal point, no UI chrome.\nSafety: do not recreate a real person likeness; no recognizable face, no face close-up, no host face at all, and no detailed eyes/nose/mouth. Keep all human faces outside the frame; if a person is implied, keep any face outside frame. Show human presence only through cropped hands, chopsticks, food, over-shoulder silhouette, back-of-head silhouette, or cropped body parts without facial detail. No logos, watermarks, readable brand names, URLs, prices, or final typography.\nStoryboard title: 초반 몰입이 강한 에너지형 먹방 — 구독자 반복시청 기반 다음 영상안\nOverall logline: 쯔양님 기존 영상의 가장 많이 본 구간 76개를 근거로 12분 분량의 새 먹방 흐름을 구성합니다.\nUser brief: 실제 쯔양님 채널 운영자가 쓸 수 있는 제육볶음 치즈 폭포 스토리보드를 손/음식 중심으로 구성해줘.\nCUT 3: 첫 입 리액션\nVisual direction: 입장 전 정적 → 한입 → 표정 클로즈업 → 한 박자 쉬는 편집을 씁니다.\nOperator intent: 피크 구간과 닮은 첫 입 리액션을 명확히 배치합니다.\nCaption idea for mood only, do not render readable text: 초반 몰입이 강한 에너지형 먹방 톤으로 “실제 쯔양님 채널 운영자가 쓸 수 있는 제육볶음 치즈 폭포 스토리보드를 손/음식 중심으로 구성해줘.” 소재를 10:56 피크 감정에 맞춰 압축\nHeatmap evidence mood: 10:56, replay score 1.\nOutput only the image. Fill the whole frame with one coherent CUT; do not include scene labels, timecodes, captions, subtitles, handwriting, speech bubbles, or any readable text.",
+            "generatedAt": "2026-06-10T06:04:07.616066Z",
+            "warnings": [
+              "shared_seed_storyboard: bundled for cross-account and cross-device admin first-load display.",
+              "local_codex_provider: generated via local Codex OAuth provider and persisted for admin storyboard display.",
+              "exact_provenance: image_generation.gpt-image-2 response=resp_0bca03c660f99ff0016a28fe04f83481989141dd92e4e7c784 call=ig_0bca03c660f99ff0016a28fe0653988198a59a72734028c53b"
+            ],
+            "provenance": {
+              "providerId": "local-codex",
+              "authMode": "codex_oauth",
+              "endpoint": "https://chatgpt.com/backend-api/codex/responses",
+              "agentModel": "gpt-5.5",
+              "requestToolType": "image_generation",
+              "requestToolModel": "gpt-image-2",
+              "model": "gpt-image-2",
+              "modelProvenance": "exact",
+              "responseId": "resp_0bca03c660f99ff0016a28fe04f83481989141dd92e4e7c784",
+              "imageCallId": "ig_0bca03c660f99ff0016a28fe0653988198a59a72734028c53b",
+              "imageItemCount": 1,
+              "generatedImageItemTypes": [
+                "image_generation_call"
+              ],
+              "rawImageItemTypes": [
+                "image_generation_call",
+                "message"
+              ],
+              "requestHash": "0abc8e9b1a1b5a338eb525c075f4126d769053aa80534c45f9b0f25bf25dc791",
+              "responseHash": "63728951ef0e03c7f29e915273345819cfe5cc7e5a27ae4b1b435c56469c1717",
+              "hasOpenAIAPIKey": false,
+              "generatedAt": "2026-06-10T06:04:07.616066Z"
+            }
+          }
+        },
+        {
+          "sceneNo": 4,
+          "title": "반복 시청 포인트",
+          "durationSec": 144,
+          "operatorIntent": "소리·늘어남·단면·국물처럼 되감기 좋은 감각 컷을 설계합니다.",
+          "visualDirection": "마이크에 가까운 바삭/후루룩 소리와 손동작 디테일을 따로 땁니다.",
+          "hostBeat": "“이 소리 때문에 여기 다시 보실 것 같아요.”",
+          "captionIdea": "초반 몰입이 강한 에너지형 먹방 톤으로 “실제 쯔양님 채널 운영자가 쓸 수 있는 제육볶음 치즈 폭포 스토리보드를 손/음식 중심으로 구성해줘.” 소재를 01:55 피크 감정에 맞춰 압축",
+          "heatmapEvidence": {
+            "videoId": "-LGODBDAg1c",
+            "youtubeLink": "https://www.youtube.com/watch?v=-LGODBDAg1c",
+            "peakTime": "01:55",
+            "replayScore": 0.866,
+            "reason": "Most replayed / 리플레이 강도 86.6% 구간을 참조"
+          },
+          "productionChecklist": [
+            "촬영 전 피크 구간을 PD/편집자가 함께 1회 재생",
+            "첫 입·질감·소리 컷을 분리 촬영해 쇼츠/썸네일 후보 확보",
+            "과장된 맛 표현보다 실제 리액션과 구독자 반복시청 근거를 우선"
+          ],
+          "generatedImage": {
+            "dataUrl": "/storyboard-seed/generated/cut-04.png",
+            "mime": "image/png",
+            "providerId": "local-codex",
+            "trustPolicy": "storyboard-gpt-image-2-panel-v1",
+            "model": "gpt-image-2",
+            "prompt": "Create exactly one full-bleed 16:9 single-scene storyboard cut image for a Korean food-travel / mukbang planning board.\nComposition contract: the entire image must be one continuous scene filling the full canvas edge-to-edge. This image will be placed into an external 2x2 grid by the web UI; never draw that grid inside the image.\nHard negatives: no storyboard sheet, no comic page, no multi-panel layout, no split-screen, no inset panels, no thumbnail contact sheet, no wireframe boxes, no internal borders, no crop marks, no frame guides, no blank quadrants, no placeholder rectangles, and no X-mark empty panels.\nStyle: cinematic hand-drawn food-storyboard keyframe, clean black pencil lines, subtle warm food-color accents, strong single focal point, no UI chrome.\nSafety: do not recreate a real person likeness; no recognizable face, no face close-up, no host face at all, and no detailed eyes/nose/mouth. Keep all human faces outside the frame; if a person is implied, keep any face outside frame. Show human presence only through cropped hands, chopsticks, food, over-shoulder silhouette, back-of-head silhouette, or cropped body parts without facial detail. No logos, watermarks, readable brand names, URLs, prices, or final typography.\nStoryboard title: 초반 몰입이 강한 에너지형 먹방 — 구독자 반복시청 기반 다음 영상안\nOverall logline: 쯔양님 기존 영상의 가장 많이 본 구간 76개를 근거로 12분 분량의 새 먹방 흐름을 구성합니다.\nUser brief: 실제 쯔양님 채널 운영자가 쓸 수 있는 제육볶음 치즈 폭포 스토리보드를 손/음식 중심으로 구성해줘.\nCUT 4: 반복 시청 포인트\nVisual direction: 마이크에 가까운 바삭/후루룩 소리와 손동작 디테일을 따로 땁니다.\nOperator intent: 소리·늘어남·단면·국물처럼 되감기 좋은 감각 컷을 설계합니다.\nCaption idea for mood only, do not render readable text: 초반 몰입이 강한 에너지형 먹방 톤으로 “실제 쯔양님 채널 운영자가 쓸 수 있는 제육볶음 치즈 폭포 스토리보드를 손/음식 중심으로 구성해줘.” 소재를 01:55 피크 감정에 맞춰 압축\nHeatmap evidence mood: 01:55, replay score 0.866.\nOutput only the image. Fill the whole frame with one coherent CUT; do not include scene labels, timecodes, captions, subtitles, handwriting, speech bubbles, or any readable text.",
+            "generatedAt": "2026-06-10T06:05:46.971569Z",
+            "warnings": [
+              "shared_seed_storyboard: bundled for cross-account and cross-device admin first-load display.",
+              "local_codex_provider: generated via local Codex OAuth provider and persisted for admin storyboard display.",
+              "exact_provenance: image_generation.gpt-image-2 response=resp_0783331ab038f66b016a28fe5abdc88191abb16491291a5abe call=ig_0783331ab038f66b016a28fe5c7d588191aeca23b00a72e9eb"
+            ],
+            "provenance": {
+              "providerId": "local-codex",
+              "authMode": "codex_oauth",
+              "endpoint": "https://chatgpt.com/backend-api/codex/responses",
+              "agentModel": "gpt-5.5",
+              "requestToolType": "image_generation",
+              "requestToolModel": "gpt-image-2",
+              "model": "gpt-image-2",
+              "modelProvenance": "exact",
+              "responseId": "resp_0783331ab038f66b016a28fe5abdc88191abb16491291a5abe",
+              "imageCallId": "ig_0783331ab038f66b016a28fe5c7d588191aeca23b00a72e9eb",
+              "imageItemCount": 1,
+              "generatedImageItemTypes": [
+                "image_generation_call"
+              ],
+              "rawImageItemTypes": [
+                "image_generation_call",
+                "message"
+              ],
+              "requestHash": "333e7f9669f947a9bdd243af20537c7a44d37401785636628de9edd043fad81a",
+              "responseHash": "e57504783182531e5b345a3b578bcbc751e1bc116c48c11311d46cda851974fb",
+              "hasOpenAIAPIKey": false,
+              "generatedAt": "2026-06-10T06:05:46.971569Z"
+            }
+          }
+        }
+      ],
+      "exportMarkdown": "# 초반 몰입이 강한 에너지형 먹방 스토리보드\n\n- 요청: 실제 쯔양님 채널 운영자가 쓸 수 있는 제육볶음 치즈 폭포 스토리보드를 손/음식 중심으로 구성해줘.\n- AHP 로컬 준비도: 99.45/100 (개선 필요)\n- 근거: 40개 영상 / 76개 피크 / 최상위 100.0%\n\n## 1. 오프닝 훅 (144초)\n- 운영 의도: 가장 강한 리플레이 피크를 10초 안에 예고해 초반 이탈을 막습니다.\n- 화면 연출: 가게 외관/메뉴판/대표 음식 클로즈업을 빠르게 교차합니다.\n- 쯔양님 멘트 후보: “오늘은 구독자분들이 다시 돌려본 그 포인트를 새 메뉴로 확장해볼게요.”\n- 자막 아이디어: 초반 몰입이 강한 에너지형 먹방 톤으로 “실제 쯔양님 채널 운영자가 쓸 수 있는 제육볶음 치즈 폭포 스토리보드를 손/음식 중심으로 구성해줘.” 소재를 06:57 피크 감정에 맞춰 압축\n- 히트맵 근거: -D43ezc57z8 06:57 / Most replayed / 리플레이 강도 100.0% 구간을 참조\n- URL: https://www.youtube.com/watch?v=-D43ezc57z8\n\n## 2. 기대감 세팅 (144초)\n- 운영 의도: 음식이 나오기 전 양·비주얼·소리 기대치를 쌓습니다.\n- 화면 연출: 조리 과정, 상차림, 김/소스/면발처럼 질감이 보이는 컷을 확보합니다.\n- 쯔양님 멘트 후보: “이 장면은 냄새부터 다르게 느껴져요.”\n- 자막 아이디어: 초반 몰입이 강한 에너지형 먹방 톤으로 “실제 쯔양님 채널 운영자가 쓸 수 있는 제육볶음 치즈 폭포 스토리보드를 손/음식 중심으로 구성해줘.” 소재를 13:25 피크 감정에 맞춰 압축\n- 히트맵 근거: -H-mhUeu_qk 13:25 / Most replayed / 리플레이 강도 100.0% 구간을 참조\n- URL: https://www.youtube.com/watch?v=-H-mhUeu_qk\n\n## 3. 첫 입 리액션 (144초)\n- 운영 의도: 피크 구간과 닮은 첫 입 리액션을 명확히 배치합니다.\n- 화면 연출: 입장 전 정적 → 한입 → 표정 클로즈업 → 한 박자 쉬는 편집을 씁니다.\n- 쯔양님 멘트 후보: “와… 이건 첫입부터 기준이 생기는데요?”\n- 자막 아이디어: 초반 몰입이 강한 에너지형 먹방 톤으로 “실제 쯔양님 채널 운영자가 쓸 수 있는 제육볶음 치즈 폭포 스토리보드를 손/음식 중심으로 구성해줘.” 소재를 10:56 피크 감정에 맞춰 압축\n- 히트맵 근거: -HyRSLWcOeA 10:56 / Most replayed / 리플레이 강도 100.0% 구간을 참조\n- URL: https://www.youtube.com/watch?v=-HyRSLWcOeA\n\n## 4. 반복 시청 포인트 (144초)\n- 운영 의도: 소리·늘어남·단면·국물처럼 되감기 좋은 감각 컷을 설계합니다.\n- 화면 연출: 마이크에 가까운 바삭/후루룩 소리와 손동작 디테일을 따로 땁니다.\n- 쯔양님 멘트 후보: “이 소리 때문에 여기 다시 보실 것 같아요.”\n- 자막 아이디어: 초반 몰입이 강한 에너지형 먹방 톤으로 “실제 쯔양님 채널 운영자가 쓸 수 있는 제육볶음 치즈 폭포 스토리보드를 손/음식 중심으로 구성해줘.” 소재를 01:55 피크 감정에 맞춰 압축\n- 히트맵 근거: -LGODBDAg1c 01:55 / Most replayed / 리플레이 강도 86.6% 구간을 참조\n- URL: https://www.youtube.com/watch?v=-LGODBDAg1c\n\n## 5. 중반 변주 (144초)\n- 운영 의도: 같은 맛이 반복되지 않도록 조합/소스/사이드 메뉴로 리듬을 바꿉니다.\n- 화면 연출: 새 조합을 만들 때 화면 하단에 조합명을 짧게 넣습니다.\n- 쯔양님 멘트 후보: “여기서 조합을 한 번 바꿔볼게요.”\n- 자막 아이디어: 초반 몰입이 강한 에너지형 먹방 톤으로 “실제 쯔양님 채널 운영자가 쓸 수 있는 제육볶음 치즈 폭포 스토리보드를 손/음식 중심으로 구성해줘.” 소재를 13:47 피크 감정에 맞춰 압축\n- 히트맵 근거: -RI5PUiPr3g 13:47 / Most replayed / 리플레이 강도 100.0% 구간을 참조\n- URL: https://www.youtube.com/watch?v=-RI5PUiPr3g\n"
+    }
+  }
+}
