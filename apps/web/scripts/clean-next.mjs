@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
+import net from 'node:net';
 import path from 'node:path';
 import { config as loadEnv } from 'dotenv';
 
@@ -18,6 +19,41 @@ const commandArgs = separatorIndex >= 0
 const skipClean = separatorIndex >= 0
     ? rawArgs.slice(0, separatorIndex).includes('--skip-clean')
     : rawArgs.includes('--skip-clean');
+
+const readCommandArg = (name) => {
+    const exactIndex = commandArgs.indexOf(name);
+    if (exactIndex >= 0) {
+        return commandArgs[exactIndex + 1];
+    }
+
+    const prefixed = commandArgs.find((arg) => arg.startsWith(`${name}=`));
+    return prefixed ? prefixed.slice(name.length + 1) : undefined;
+};
+
+const getGuardedDevPort = () => {
+    const commandText = commandArgs.join(' ');
+    const isNextDevCommand =
+        commandText.includes('node_modules/next/dist/bin/next') && commandArgs.includes('dev');
+    const isDevPrewarmCommand = commandArgs.some((arg) => arg.endsWith('scripts/dev-prewarm.mjs'));
+
+    if (!isNextDevCommand && !isDevPrewarmCommand) {
+        return null;
+    }
+
+    const rawPort = readCommandArg('--port') ?? process.env.PORT ?? '8080';
+    const port = Number(rawPort);
+    return Number.isInteger(port) && port > 0 && port <= 65535 ? port : null;
+};
+
+const canBindPort = (port) =>
+    new Promise((resolve) => {
+        const server = net.createServer();
+        server.once('error', () => resolve(false));
+        server.once('listening', () => {
+            server.close(() => resolve(true));
+        });
+        server.listen(port, '::');
+    });
 
 const tryRemove = (targetPath) => {
     fs.rmSync(targetPath, {
@@ -88,6 +124,14 @@ process.env.BASELINE_BROWSER_MAPPING_IGNORE_OLD_DATA ??= 'true';
 process.env.BROWSERSLIST_IGNORE_OLD_DATA ??= 'true';
 
 if (!skipClean) {
+    const guardedDevPort = getGuardedDevPort();
+    if (guardedDevPort && !(await canBindPort(guardedDevPort))) {
+        console.error(
+            `[clean-next] refusing to remove .next because port ${guardedDevPort} is already in use. Stop the existing dev server first.`,
+        );
+        process.exit(1);
+    }
+
     purgeStaleCaches();
 
     try {

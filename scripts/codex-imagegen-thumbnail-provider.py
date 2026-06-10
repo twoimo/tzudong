@@ -12,8 +12,11 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shlex
+import shutil
 import subprocess
+import datetime as _datetime
 import sys
 import tempfile
 import time
@@ -25,6 +28,8 @@ TARGET_WIDTH = 1280
 TARGET_HEIGHT = 720
 DEFAULT_MODEL = "gpt-image-2"
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp"}
+PROVENANCE_FILE = ".omx/artifacts/gpt-image-2-provenance/latest-verified.json"
+PROVENANCE_GENERATED_DIR = ".omx/artifacts/gpt-image-2-provenance/generated"
 
 
 def parse_args() -> argparse.Namespace:
@@ -76,10 +81,7 @@ def load_references(manifest_path: str | None) -> list[Path]:
 
 def newest_generated_image_since(started_at: float) -> Path | None:
     codex_home = Path(os.environ.get("CODEX_HOME", str(Path.home() / ".codex")))
-    roots = [
-        codex_home / "generated_images",
-        codex_home,
-    ]
+    roots = [codex_home / "generated_images"]
     candidates: list[Path] = []
     for root in roots:
         if not root.exists():
@@ -91,6 +93,47 @@ def newest_generated_image_since(started_at: float) -> Path | None:
                         candidates.append(path)
                 except OSError:
                     continue
+    if not candidates:
+        return None
+    return max(candidates, key=lambda path: path.stat().st_mtime)
+
+
+def codex_generated_images_root() -> Path:
+    codex_home = Path(os.environ.get("CODEX_HOME", str(Path.home() / ".codex")))
+    return codex_home / "generated_images"
+
+
+def is_path_inside(root: Path, target: Path) -> bool:
+    try:
+        target.resolve().relative_to(root.resolve())
+        return True
+    except ValueError:
+        return False
+
+
+def generated_image_for_event(event_proof: dict[str, Any], started_at: float) -> Path | None:
+    response_id = str(event_proof.get("responseId") or "")
+    image_call_id = str(event_proof.get("imageCallId") or "")
+    if not response_id or not image_call_id:
+        return None
+
+    response_root = codex_generated_images_root() / response_id
+    if not response_root.exists():
+        return None
+    safe_response_root = response_root.resolve()
+    candidates: list[Path] = []
+    for suffix in IMAGE_SUFFIXES:
+        path = response_root / f"{image_call_id}{suffix}"
+        if not path.is_file():
+            continue
+        try:
+            if not is_path_inside(safe_response_root, path):
+                continue
+            if path.stat().st_mtime < started_at - 5:
+                continue
+        except OSError:
+            continue
+        candidates.append(path)
     if not candidates:
         return None
     return max(candidates, key=lambda path: path.stat().st_mtime)
@@ -155,14 +198,7 @@ def condense_app_prompt(app_prompt: str) -> str:
 def build_codex_prompt(app_prompt: str, output_path: Path, model: str, references: list[Path]) -> str:
     reference_lines = "\n".join(f"- {path}" for path in references) or "- none"
     image_prompt = condense_app_prompt(app_prompt)
-    model_note = (
-        f"Use Codex CLI's built-in $imagegen image-generation tool. The desired image model label is {model}."
-        if model == DEFAULT_MODEL
-        else (
-            f"Use Codex CLI's built-in $imagegen image-generation tool. The app requested image model label "
-            f"{model!r}; if the built-in tool only exposes its default image model, use that default and report a warning."
-        )
-    )
+    model_note = f"Use Codex CLI's built-in $imagegen image-generation tool. The required image model label is exactly {model}."
     return f"""$imagegen
 {model_note}
 
@@ -193,6 +229,7 @@ def run_codex(args: argparse.Namespace, prompt: str, references: list[Path], ans
         "--cd",
         str(repo_root),
         "--dangerously-bypass-approvals-and-sandbox",
+        "--json",
         "--output-last-message",
         str(answer_file),
     ]
@@ -210,10 +247,260 @@ def run_codex(args: argparse.Namespace, prompt: str, references: list[Path], ans
         stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
+        env={**os.environ, "OPENAI_API_KEY": ""},
         timeout=float(os.environ.get("CODEX_IMAGEGEN_TIMEOUT_SECONDS", "600")),
         check=False,
     )
 
+
+
+def parse_codex_event_stream(raw: str) -> dict[str, Any]:
+    response_id = ""
+    image_call_ids: list[str] = []
+    item_types: list[str] = []
+    for line in raw.splitlines():
+        line = line.strip()
+        if not line.startswith("{"):
+            continue
+        try:
+            event = json.loads(line)
+        except Exception:
+            continue
+        if event.get("type") == "thread.started" and isinstance(event.get("thread_id"), str):
+            response_id = event["thread_id"]
+        payload = event.get("payload")
+        if isinstance(payload, dict):
+            payload_type = payload.get("type")
+            if isinstance(payload_type, str):
+                item_types.append(payload_type)
+            call_id = payload.get("call_id") or payload.get("id")
+            if payload_type in {"image_generation_end", "image_generation_call"} and isinstance(call_id, str) and call_id.startswith("ig_"):
+                image_call_ids.append(call_id)
+    unique_call_ids = list(dict.fromkeys(image_call_ids))
+    return {
+        "responseId": response_id,
+        "imageCallId": unique_call_ids[-1] if unique_call_ids else "",
+        "imageItemCount": len(unique_call_ids),
+        "rawImageItemTypes": list(dict.fromkeys(item_types)),
+    }
+
+
+def find_codex_session_log(thread_id: str) -> Path | None:
+    if not thread_id:
+        return None
+    codex_home = Path(os.environ.get("CODEX_HOME", str(Path.home() / ".codex")))
+    sessions_root = codex_home / "sessions"
+    if not sessions_root.exists():
+        return None
+    matches = list(sessions_root.rglob(f"*{thread_id}.jsonl"))
+    if not matches:
+        return None
+    return max(matches, key=lambda path: path.stat().st_mtime)
+
+
+def complete_codex_event_proof(event_proof: dict[str, Any]) -> dict[str, Any]:
+    if event_proof.get("imageCallId"):
+        return event_proof
+    session_log = find_codex_session_log(str(event_proof.get("responseId") or ""))
+    if not session_log:
+        return event_proof
+    session_proof = parse_codex_event_stream(session_log.read_text(encoding="utf-8", errors="ignore"))
+    merged = {**event_proof}
+    for key, value in session_proof.items():
+        if key == "rawImageItemTypes" and value:
+            merged[key] = value
+        elif value and not merged.get(key):
+            merged[key] = value
+    merged["rawResponsePath"] = str(session_log)
+    return merged
+
+
+def verify_gpt_image_2_c2pa(image_path: Path) -> dict[str, Any]:
+    c2patool_bin = resolve_c2patool_bin()
+    if not c2patool_bin:
+        return {"ok": False, "missing": ["c2patool"]}
+
+    try:
+        result = subprocess.run(
+            [c2patool_bin, "--crjson", str(image_path)],
+            text=True,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=float(os.environ.get("CODEX_IMAGEGEN_C2PATOOL_TIMEOUT_SECONDS", "30")),
+            check=False,
+        )
+    except Exception as exc:
+        return {"ok": False, "validator": "c2patool", "missing": [f"c2patool_failed:{exc}"]}
+
+    if result.returncode != 0:
+        return {
+            "ok": False,
+            "validator": "c2patool",
+            "missing": ["c2pa_claim"],
+            "stderr": result.stderr[-1200:],
+        }
+
+    try:
+        payload = json.loads(result.stdout)
+    except Exception as exc:
+        return {
+            "ok": False,
+            "validator": "c2patool",
+            "missing": [f"c2patool_invalid_json:{exc}"],
+            "stderr": result.stderr[-1200:],
+        }
+
+    exact = extract_gpt_image_2_c2pa(payload)
+    if not exact.get("ok"):
+        return exact
+    return {
+        "ok": True,
+        "claimGeneratorInfo": "OpenAI Media Service API",
+        "softwareAgentName": "gpt-image",
+        "softwareAgentVersion": "2.0",
+        "source": "png-caBX-c2pa",
+        "validator": "c2patool",
+        "validationSuccessCodes": exact.get("validationSuccessCodes", []),
+        "validationInformationalCodes": exact.get("validationInformationalCodes", []),
+        "validationFailureCodes": exact.get("validationFailureCodes", []),
+    }
+
+
+def resolve_c2patool_bin() -> str | None:
+    configured = os.environ.get("CODEX_IMAGEGEN_C2PATOOL_BIN") or os.environ.get("C2PATOOL_BIN")
+    candidates = [configured] if configured else []
+    candidates.extend(["c2patool", str(Path.home() / ".cargo" / "bin" / "c2patool")])
+    for candidate in candidates:
+        if not candidate:
+            continue
+        path = shutil.which(candidate)
+        if path:
+            return path
+        candidate_path = Path(candidate)
+        if candidate_path.exists() and os.access(candidate_path, os.X_OK):
+            return str(candidate_path)
+    return None
+
+
+def extract_gpt_image_2_c2pa(payload: dict[str, Any]) -> dict[str, Any]:
+    manifests = payload.get("manifests")
+    if not isinstance(manifests, list):
+        return {"ok": False, "validator": "c2patool", "missing": ["manifests"]}
+
+    missing_global = ["claimGeneratorInfo", "softwareAgent:gpt-image", "softwareAgentVersion:2.0"]
+    for manifest in manifests:
+        if not isinstance(manifest, dict):
+            continue
+        claim = manifest.get("claim.v2") or manifest.get("claim")
+        if not isinstance(claim, dict):
+            continue
+        generator = claim.get("claim_generator_info")
+        generator_name = generator.get("name") if isinstance(generator, dict) else None
+        assertions = manifest.get("assertions")
+        actions_payload = assertions.get("c2pa.actions.v2") if isinstance(assertions, dict) else None
+        actions = actions_payload.get("actions") if isinstance(actions_payload, dict) else None
+        if not isinstance(actions, list):
+            continue
+
+        matching_action = None
+        for action in actions:
+            if not isinstance(action, dict):
+                continue
+            software_agent = action.get("softwareAgent")
+            if not isinstance(software_agent, dict):
+                continue
+            if software_agent.get("name") == "gpt-image" and str(software_agent.get("version")) == "2.0":
+                matching_action = action
+                break
+
+        missing: list[str] = []
+        if generator_name != "OpenAI Media Service API":
+            missing.append("claimGeneratorInfo")
+        if not matching_action:
+            missing.extend(["softwareAgent:gpt-image", "softwareAgentVersion:2.0"])
+        if missing:
+            missing_global = missing
+            continue
+
+        validation = manifest.get("validationResults")
+        validation_success_codes = validation_codes(validation, "success")
+        validation_info_codes = validation_codes(validation, "informational")
+        validation_failure_codes = validation_codes(validation, "failure")
+        required_success = {"claimSignature.validated", "assertion.dataHash.match"}
+        missing_success = sorted(required_success - set(validation_success_codes))
+        if missing_success:
+            return {
+                "ok": False,
+                "validator": "c2patool",
+                "missing": [f"validationSuccess:{code}" for code in missing_success],
+                "validationSuccessCodes": validation_success_codes,
+                "validationInformationalCodes": validation_info_codes,
+                "validationFailureCodes": validation_failure_codes,
+            }
+
+        return {
+            "ok": True,
+            "validator": "c2patool",
+            "validationSuccessCodes": validation_success_codes,
+            "validationInformationalCodes": validation_info_codes,
+            "validationFailureCodes": validation_failure_codes,
+        }
+
+    return {"ok": False, "validator": "c2patool", "missing": missing_global}
+
+
+def validation_codes(validation: Any, field: str) -> list[str]:
+    if not isinstance(validation, dict):
+        return []
+    entries = validation.get(field)
+    if not isinstance(entries, list):
+        return []
+    codes: list[str] = []
+    for entry in entries:
+        if isinstance(entry, dict) and isinstance(entry.get("code"), str):
+            codes.append(entry["code"])
+    return list(dict.fromkeys(codes))
+
+
+def write_provenance_file(payload: dict[str, Any]) -> None:
+    repo_root = Path(os.environ.get("CODEX_IMAGEGEN_WORKDIR", str(Path(__file__).resolve().parents[1]))).resolve()
+    proof_path = Path(os.environ.get("CODEX_IMAGEGEN_PROVENANCE_FILE", str(repo_root / PROVENANCE_FILE)))
+    if not proof_path.is_absolute():
+        proof_path = repo_root / proof_path
+    write_json(proof_path, payload)
+
+
+def get_repo_root() -> Path:
+    return Path(os.environ.get("CODEX_IMAGEGEN_WORKDIR", str(Path(__file__).resolve().parents[1]))).resolve()
+
+
+def sanitize_artifact_name(value: str) -> str:
+    sanitized = re.sub(r"[^A-Za-z0-9_.-]+", "-", value).strip("-")
+    return sanitized[:96] or "unknown"
+
+
+def durable_generated_path(output_path: Path, event_proof: dict[str, Any]) -> Path:
+    repo_root = get_repo_root()
+    generated_root = Path(
+        os.environ.get(
+            "CODEX_IMAGEGEN_DURABLE_OUTPUT_DIR",
+            str(repo_root / PROVENANCE_GENERATED_DIR),
+        )
+    )
+    if not generated_root.is_absolute():
+        generated_root = repo_root / generated_root
+    response_id = sanitize_artifact_name(str(event_proof.get("responseId") or "no-response"))
+    image_call_id = sanitize_artifact_name(str(event_proof.get("imageCallId") or output_path.stem))
+    timestamp = _datetime.datetime.now(_datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    return generated_root / f"{timestamp}-{response_id}-{image_call_id}.png"
+
+
+def copy_durable_output(output_path: Path, event_proof: dict[str, Any]) -> Path:
+    durable_path = durable_generated_path(output_path, event_proof)
+    durable_path.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(output_path, durable_path)
+    return durable_path
 
 def write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -230,15 +517,33 @@ def main() -> int:
 
     app_prompt = prompt_file.read_text(encoding="utf-8")
     references = load_references(args.reference_manifest)
+    if args.model != DEFAULT_MODEL:
+        payload = {
+            "ok": False,
+            "providerId": "local-codex",
+            "model": args.model,
+            "modelProvenance": "unknown",
+            "mime": "image/png",
+            "path": str(output_path),
+            "outputPath": str(output_path),
+            "hasOpenAIAPIKey": bool(os.environ.get("OPENAI_API_KEY")),
+            "warnings": ["unsupported_image_model_label"],
+            "error": f"Only exact {DEFAULT_MODEL} is allowed; no image-model fallback is permitted.",
+        }
+        write_json(json_output_path, payload)
+        print(json.dumps(payload, ensure_ascii=False))
+        return 2
+
     started_at = time.time()
     with tempfile.TemporaryDirectory(prefix="codex-imagegen-thumbnail-") as tmp:
         answer_file = Path(tmp) / "codex-answer.txt"
         codex_prompt = build_codex_prompt(app_prompt, output_path, args.model, references)
         result = run_codex(args, codex_prompt, references, answer_file)
+        event_proof = complete_codex_event_proof(parse_codex_event_stream(result.stdout))
+        generated_for_proof = generated_image_for_event(event_proof, started_at)
 
         if not output_path.exists():
-            generated = newest_generated_image_since(started_at)
-            if not generated:
+            if not generated_for_proof:
                 if result.returncode != 0:
                     write_json(
                         json_output_path,
@@ -260,27 +565,74 @@ def main() -> int:
                         "stderr": result.stderr[-1200:],
                     },
                 )
-                die("Codex imagegen completed but no generated image was found.")
-            fit_image(generated, output_path)
+                die("Codex imagegen completed but no generated image matched the current response/image call id.")
+            fit_image(generated_for_proof, output_path)
         else:
             # Normalize even if Codex saved the file itself; the app expects 16:9 PNG output.
             fit_image(output_path, output_path)
 
-        warnings = ["codex_cli_imagegen_oauth: generated via Codex CLI built-in $imagegen"]
+        if not generated_for_proof:
+            generated_for_proof = generated_image_for_event(event_proof, started_at)
+        c2pa = verify_gpt_image_2_c2pa(generated_for_proof) if generated_for_proof else {
+            "ok": False,
+            "missing": ["current_response_image_call_output"],
+        }
+        warnings = ["codex_cli_imagegen_oauth: generated via Codex CLI built-in image_generation"]
         if result.returncode != 0:
             warnings.append("codex_cli_nonzero_after_image: collected generated image despite non-zero Codex exit")
         if args.model != DEFAULT_MODEL:
             warnings.append(f"requested_model_label: {args.model}")
-        write_json(
-            json_output_path,
-            {
-                "path": str(output_path),
-                "mime": "image/png",
+        if args.model != DEFAULT_MODEL or not c2pa.get("ok") or not event_proof.get("responseId") or not event_proof.get("imageCallId"):
+            payload = {
+                "ok": False,
+                "providerId": "local-codex",
                 "model": args.model,
+                "modelProvenance": "unknown",
+                "mime": "image/png",
+                "path": str(output_path),
+                "outputPath": str(output_path),
+                "rawGeneratedPath": str(generated_for_proof) if generated_for_proof else "",
+                "hasOpenAIAPIKey": bool(os.environ.get("OPENAI_API_KEY")),
                 "warnings": warnings,
-            },
-        )
-    print(json.dumps({"path": str(output_path), "mime": "image/png", "model": args.model}, ensure_ascii=False))
+                "c2pa": c2pa,
+                **event_proof,
+            }
+            write_json(json_output_path, payload)
+            print(json.dumps(payload, ensure_ascii=False))
+            return 2
+
+        # Serve the exact C2PA-verified Codex image, not the normalized working copy.
+        # Resizing/cropping strips the embedded claim, so the durable output that
+        # the web app accepts must be a byte copy of the c2patool-verified asset.
+        durable_output_path = copy_durable_output(generated_for_proof, event_proof)
+
+        payload = {
+            "ok": True,
+            "providerId": "local-codex",
+            "authMode": "codex_oauth",
+            "endpoint": "codex_cli_builtin_image_generation",
+            "agentModel": args.agent_model or os.environ.get("CODEX_IMAGEGEN_AGENT_MODEL") or "codex-default",
+            "requestToolType": "image_generation",
+            "requestToolModel": DEFAULT_MODEL,
+            "model": DEFAULT_MODEL,
+            "modelProvenance": "exact",
+            "mime": "image/png",
+            "bytes": durable_output_path.stat().st_size,
+            "path": str(output_path),
+            "transientOutputPath": str(output_path),
+            "outputPath": str(durable_output_path),
+            "durableOutputPath": str(durable_output_path),
+            "rawGeneratedPath": str(generated_for_proof),
+            "rawResponsePath": event_proof.get("rawResponsePath") or "codex-cli-json-stdout",
+            "hasOpenAIAPIKey": False,
+            "generatedAt": _datetime.datetime.now(_datetime.timezone.utc).isoformat(),
+            "warnings": warnings,
+            "c2pa": c2pa,
+            **event_proof,
+        }
+        write_json(json_output_path, payload)
+        write_provenance_file(payload)
+    print(json.dumps(payload, ensure_ascii=False))
     return 0
 
 
