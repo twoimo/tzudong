@@ -13,6 +13,8 @@ import type {
   StoryboardGenerateRequest,
   StoryboardGenerationResult,
   StoryboardGenerationMode,
+  StoryboardGraphDiagnostics,
+  StoryboardGraphFallbackReason,
   StoryboardTone,
 } from "./types";
 
@@ -31,7 +33,7 @@ const REQUIRED_PYTHON_MODULES = [
 const DEFAULT_STORYBOARD_AGENT_TIMEOUT_MS = 120_000;
 const MIN_STORYBOARD_AGENT_TIMEOUT_MS = 5_000;
 const MAX_STORYBOARD_AGENT_TIMEOUT_MS = 600_000;
-const DEFAULT_STORYBOARD_AGENT_RUNTIME = "codex_cli_oauth";
+const DEFAULT_STORYBOARD_AGENT_RUNTIME = "langgraph";
 const DEFAULT_STORYBOARD_AGENT_CODEX_MODEL = "gpt-5.5";
 const DEFAULT_STORYBOARD_AGENT_CODEX_EFFORT = "high";
 const UNSAFE_COMMAND_PATTERN = /[\s;&|`$<>()[\]{}!#\n\r]/;
@@ -39,8 +41,15 @@ const SECRET_PATTERNS = [
   /sk-proj-[A-Za-z0-9_-]{12,}/g,
   /sk-[A-Za-z0-9_-]{12,}/g,
   /eyJ[A-Za-z0-9_.-]{20,}/g,
-  /(OPENAI[_A-Z]*|SERVICE[_A-Z]*|SUPABASE[_A-Z]*|API[_A-Z]*KEY|TOKEN|SECRET)\s*[:=]\s*[^\s,;]+/gi,
+  /(OPENAI[_A-Z]*|SERVICE[_A-Z]*|SUPABASE[_A-Z]*|API[_A-Z]*KEY|TOKEN|SECRET)\s*[:=]\s*[^\s,;"'{}\\]+/gi,
   /https:\/\/[^\s]+(?:token|key|secret)[^\s]*/gi,
+];
+const HOSTILE_PUBLIC_TEXT_PATTERNS = [
+  /ignore\s+(?:all\s+)?previous\s+instructions?/gi,
+  /reveal\s+(?:openai[_\s-]*api[_\s-]*key|api[_\s-]*key|secret|token)[^.!?\n\r]*/gi,
+  /delete\s+\.?omx\/state[^.!?\n\r]*/gi,
+  /검증을\s*건너뛰[^\n\r.!?]*/g,
+  /이전\s*지시(?:를)?\s*무시[^\n\r.!?]*/g,
 ];
 
 type CommandResult = {
@@ -49,6 +58,21 @@ type CommandResult = {
   timedOut: boolean;
   stdout: string;
   stderr: string;
+};
+
+type ParsedStoryboardAgentOutput = Partial<StoryboardGenerationResult> & {
+  markdown?: string;
+  final_output?: string;
+  backendAgent?: {
+    graph?: unknown;
+  };
+  storyboard?: {
+    contentAuthority?: unknown;
+  };
+  diagnostics?: {
+    runtime?: unknown;
+    graph?: unknown;
+  };
 };
 
 type ResolvedStoryboardAgentCommand =
@@ -98,10 +122,15 @@ function resolveStoryboardAgentPython() {
 }
 
 function resolveStoryboardAgentRuntime() {
-  return (
+  const runtime = (
     process.env.STORYBOARD_AGENT_RUNTIME?.trim() ||
     DEFAULT_STORYBOARD_AGENT_RUNTIME
   );
+  return runtime === "codex_cli_oauth" || runtime === "codex"
+    ? "codex_cli_oauth_legacy"
+    : runtime === "local_adapter_fallback"
+      ? "local_adapter_fallback"
+      : "langgraph";
 }
 
 function resolveStoryboardAgentCodexModel(
@@ -136,6 +165,13 @@ function sanitizeCommandOutput(raw: string) {
     (text, pattern) => text.replace(pattern, "[REDACTED]"),
     raw,
   );
+}
+
+function sanitizePublicAgentText(value: string) {
+  return HOSTILE_PUBLIC_TEXT_PATTERNS.reduce(
+    (text, pattern) => text.replace(pattern, "[SAFETY-REDACTED-INSTRUCTION]"),
+    sanitizeCommandOutput(value),
+  ).replace(/\s{2,}/g, " ").trim();
 }
 
 function resolveStoryboardAgentCommand(
@@ -211,7 +247,7 @@ export function getStoryboardBackendAgentStatus(): StoryboardBackendAgentStatus 
     ? backendAgentPath(BACKEND_AGENT_GRAPH)
     : null;
   const missingPythonModules =
-    commandConfigured && runtime !== "codex_cli_oauth"
+    commandConfigured && runtime !== "codex_cli_oauth_legacy"
       ? listMissingPythonModules()
       : commandConfigured
         ? []
@@ -741,10 +777,286 @@ function runStoryboardAgentCommand(
   });
 }
 
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+function toStringArray(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
+}
+
+function sanitizePublicAgentDiagnostic(value: string, maxLength = 300) {
+  return sanitizePublicAgentText(value).slice(0, maxLength);
+}
+
+function toPublicDiagnosticStringArray(value: unknown, maxItemLength = 120) {
+  return toStringArray(value)
+    .map((item) => sanitizePublicAgentDiagnostic(item, maxItemLength))
+    .filter(Boolean);
+}
+
+function normalizeGraphRuntime(value: unknown): StoryboardGraphDiagnostics["runtime"] {
+  return value === "codex_cli_oauth" || value === "codex_cli_oauth_legacy"
+    ? "codex_cli_oauth_legacy"
+    : value === "local_adapter_fallback"
+      ? "local_adapter_fallback"
+      : "langgraph";
+}
+
+function parseGraphRuntime(
+  value: unknown,
+): StoryboardGraphDiagnostics["runtime"] | null {
+  if (
+    value === "langgraph" ||
+    value === "codex_cli_oauth" ||
+    value === "codex_cli_oauth_legacy" ||
+    value === "local_adapter_fallback"
+  ) {
+    return normalizeGraphRuntime(value);
+  }
+  return null;
+}
+
+function parseGraphStatus(
+  value: unknown,
+): StoryboardGraphDiagnostics["status"] | null {
+  return value === "interrupted_output_ready" ||
+    value === "interrupted_needs_resume" ||
+    value === "fallback" ||
+    value === "legacy" ||
+    value === "used"
+    ? value
+    : null;
+}
+
+function normalizeGraphRetrieval(
+  value: unknown,
+  toolsCalled: string[],
+): NonNullable<StoryboardGraphDiagnostics["retrieval"]> {
+  if (!isObjectRecord(value)) return { status: "not_used" };
+  const status = value.status === "used" || value.status === "failed" ? value.status : "not_used";
+  if (status !== "used" || !toolsCalled.includes("search_scene_data")) {
+    return { status };
+  }
+  const models = isObjectRecord(value.usedModels) ? value.usedModels : {};
+  const operations = isObjectRecord(value.operations) ? value.operations : {};
+  return {
+    status: "used",
+    usedModels: {
+      embedding: models.embedding === "BAAI/bge-m3" ? "BAAI/bge-m3" : undefined,
+      reranker:
+        models.reranker === "BAAI/bge-reranker-v2-m3"
+          ? "BAAI/bge-reranker-v2-m3"
+          : undefined,
+    },
+    operations: {
+      supabaseRpc:
+        operations.supabaseRpc === "match_documents_hybrid"
+          ? "match_documents_hybrid"
+          : undefined,
+      mmrApplied:
+        typeof operations.mmrApplied === "boolean"
+          ? operations.mmrApplied
+          : undefined,
+      captionLookup:
+        operations.captionLookup === "get_video_captions_for_range"
+          ? "get_video_captions_for_range"
+          : undefined,
+    },
+  };
+}
+
+function normalizeGraphInterrupts(
+  value: unknown,
+): StoryboardGraphDiagnostics["interrupts"] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(isObjectRecord)
+    .map((item) => ({
+      node:
+        typeof item.node === "string"
+          ? sanitizePublicAgentDiagnostic(item.node, 120) || "unknown"
+          : "unknown",
+      resumable: Boolean(item.resumable),
+      outputReady: Boolean(item.outputReady),
+      summary:
+        typeof item.summary === "string"
+          ? sanitizePublicAgentDiagnostic(item.summary, 300) || "LangGraph interrupt"
+          : "LangGraph interrupt",
+    }));
+}
+
+function normalizeGraphDiagnostics(
+  value: unknown,
+): StoryboardGraphDiagnostics | null {
+  if (!isObjectRecord(value)) return null;
+  const runtime = parseGraphRuntime(value.runtime);
+  const parsedStatus = parseGraphStatus(value.status);
+  if (!runtime || !parsedStatus) return null;
+  if (
+    value.mode !== "graph_command" &&
+    value.mode !== "legacy_command" &&
+    value.mode !== "local_adapter"
+  ) {
+    return null;
+  }
+  if (!Array.isArray(value.nodesVisited) || !Array.isArray(value.interrupts)) {
+    return null;
+  }
+  if (!Array.isArray(value.toolsCalled)) return null;
+  if (
+    value.checkpointer !== "MemorySaver" &&
+    value.checkpointerScope === "durable_cross_process"
+  ) {
+    return null;
+  }
+  if (runtime === "langgraph") {
+    if (typeof value.threadId !== "string" || !value.threadId.trim()) {
+      return null;
+    }
+    if (typeof value.checkpointer !== "string" || !value.checkpointer.trim()) {
+      return null;
+    }
+  }
+  const toolsCalled = toPublicDiagnosticStringArray(value.toolsCalled);
+  const status =
+    runtime === "codex_cli_oauth_legacy"
+      ? "legacy"
+      : parsedStatus;
+  const fallbackReason =
+    typeof value.fallbackReason === "string"
+      ? normalizeFallbackReason(value.fallbackReason)
+      : undefined;
+  return {
+    status,
+    runtime,
+    mode:
+      value.mode === "legacy_command" || runtime === "codex_cli_oauth_legacy"
+        ? "legacy_command"
+        : value.mode === "local_adapter" || runtime === "local_adapter_fallback"
+          ? "local_adapter"
+          : "graph_command",
+    threadId:
+      typeof value.threadId === "string"
+        ? sanitizePublicAgentDiagnostic(value.threadId, 160)
+        : undefined,
+    checkpointer:
+      typeof value.checkpointer === "string"
+        ? sanitizePublicAgentDiagnostic(value.checkpointer, 120)
+        : undefined,
+    checkpointerScope:
+      value.checkpointer === "MemorySaver" ||
+      value.checkpointerScope === "per_process_only"
+        ? "per_process_only"
+        : value.checkpointerScope === "durable_cross_process"
+          ? "durable_cross_process"
+          : undefined,
+    graphEntrypoint:
+      typeof value.graphEntrypoint === "string"
+        ? sanitizePublicAgentDiagnostic(value.graphEntrypoint, 300)
+        : undefined,
+    nodesVisited: toPublicDiagnosticStringArray(value.nodesVisited),
+    interrupts: normalizeGraphInterrupts(value.interrupts),
+    toolsCalled,
+    retrieval: normalizeGraphRetrieval(value.retrieval, toolsCalled),
+    fallbackReason,
+    fallbackDetail:
+      typeof value.fallbackDetail === "string"
+        ? sanitizePublicAgentDiagnostic(value.fallbackDetail, 600)
+        : undefined,
+  };
+}
+
+function normalizeFallbackReason(value: string): StoryboardGraphFallbackReason {
+  if (
+    value === "not_configured" ||
+    value === "dependency_missing" ||
+    value === "unsupported_runtime" ||
+    value === "graph_timeout" ||
+    value === "graph_invalid_output" ||
+    value === "graph_execution_failed" ||
+    value === "credential_missing" ||
+    value === "retrieval_dependency_missing" ||
+    value === "retrieval_rpc_unavailable"
+  ) {
+    return value;
+  }
+  if (value === "not-configured" || value === "command-not-executable") {
+    return "not_configured";
+  }
+  if (value === "unsafe-command-string") return "unsupported_runtime";
+  return "graph_execution_failed";
+}
+
+function mapCommandFailureToFallbackReason(
+  status: StoryboardBackendAgentStatus,
+  command?: CommandResult,
+): StoryboardGraphFallbackReason {
+  if (!status.commandConfigured) return "not_configured";
+  if (!status.commandAvailable) {
+    return normalizeFallbackReason(status.commandRejectionReason ?? "not-configured");
+  }
+  if (command?.timedOut) return "graph_timeout";
+  const text = `${command?.stdout ?? ""}\n${command?.stderr ?? ""}`;
+  if (/ModuleNotFoundError|ImportError|No module named/i.test(text)) {
+    if (/FlagEmbedding|bge|reranker/i.test(text)) {
+      return "retrieval_dependency_missing";
+    }
+    return "dependency_missing";
+  }
+  if (/OPENAI_API_KEY|SUPABASE|credential|unauthorized|permission/i.test(text)) {
+    return "credential_missing";
+  }
+  if (/match_documents_hybrid|rpc|caption/i.test(text)) {
+    return "retrieval_rpc_unavailable";
+  }
+  return "graph_execution_failed";
+}
+
+function createFallbackGraphDiagnostics(
+  status: StoryboardBackendAgentStatus,
+  reason: StoryboardGraphFallbackReason,
+  detail?: string,
+): StoryboardGraphDiagnostics {
+  return {
+    status: "fallback",
+    runtime: "local_adapter_fallback",
+    mode: "local_adapter",
+    graphEntrypoint: status.graphEntrypoint
+      ? sanitizePublicAgentDiagnostic(status.graphEntrypoint, 300)
+      : undefined,
+    nodesVisited: [],
+    interrupts: [],
+    toolsCalled: [],
+    retrieval: { status: "not_used" },
+    fallbackReason: reason,
+    fallbackDetail: detail ? sanitizePublicAgentDiagnostic(detail, 600) : undefined,
+  };
+}
+
+function createLegacyGraphDiagnostics(command?: CommandResult): StoryboardGraphDiagnostics {
+  return {
+    status: "legacy",
+    runtime: "codex_cli_oauth_legacy",
+    mode: "legacy_command",
+    threadId: undefined,
+    nodesVisited: [],
+    interrupts: [],
+    toolsCalled: [],
+    retrieval: { status: "not_used" },
+    fallbackDetail: command
+      ? sanitizePublicAgentDiagnostic(`${command.stdout}\n${command.stderr}`, 600)
+      : undefined,
+  };
+}
+
 function appendBackendAgentAnalysis(
   result: StoryboardGenerationResult,
   status: StoryboardBackendAgentStatus,
   command?: CommandResult,
+  graph?: StoryboardGraphDiagnostics,
 ) {
   result.backendAnalysis.reusedLogic = [
     "backend/storyboard-agent/src/graph.py supervisor→researcher→intern/designer LangGraph 구조",
@@ -760,14 +1072,14 @@ function appendBackendAgentAnalysis(
   ];
   result.backendAnalysis.backendAgent = {
     ...status,
+    runtime: graph?.runtime ?? status.runtime,
     invokedCommand: Boolean(command),
     commandExitCode: command?.exitCode,
     commandTimedOut: command?.timedOut,
     rawOutputPreview: command
-      ? sanitizeCommandOutput(`${command.stdout}\n${command.stderr}`)
-          .trim()
-          .slice(0, 1200)
+      ? sanitizePublicAgentDiagnostic(`${command.stdout}\n${command.stderr}`, 1200)
       : undefined,
+    graph,
   };
 }
 
@@ -779,50 +1091,97 @@ function applyBackendAdapterMode(result: StoryboardGenerationResult) {
     "backend/storyboard-agent의 LangGraph 슬롯/디자이너 설계를 관리자 콘솔용 로컬 히트맵 생성 흐름에 연결했습니다.";
 }
 
+function parseStoryboardAgentOutput(
+  command: CommandResult,
+): ParsedStoryboardAgentOutput | null {
+  const raw = command.stdout.trim();
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as ParsedStoryboardAgentOutput;
+  } catch {
+    return null;
+  }
+}
+
+
+function isParsedStoryboardMetadataAuthoritative(
+  parsed: ParsedStoryboardAgentOutput,
+) {
+  const graph =
+    normalizeGraphDiagnostics(parsed.backendAgent?.graph) ??
+    normalizeGraphDiagnostics(parsed.diagnostics?.graph);
+  if (graph?.runtime !== "langgraph") return true;
+  return parsed.storyboard?.contentAuthority === "authoritative";
+}
+
 function applyBackendCommandOutput(
   result: StoryboardGenerationResult,
   command: CommandResult,
+  parsed: ParsedStoryboardAgentOutput | null,
 ) {
   result.mode = "backend_agent_command";
   result.request.generationMode = "backend_agent";
   result.sourceSummary.dataModeLabel = "백엔드 에이전트 명령 실행";
   const raw = command.stdout.trim();
-  if (!raw) return;
-  try {
-    const parsed = JSON.parse(raw) as Partial<StoryboardGenerationResult> & {
-      markdown?: string;
-      final_output?: string;
-    };
+  if (parsed) {
+    const storyboardMetadataAuthoritative =
+      isParsedStoryboardMetadataAuthoritative(parsed);
     if (typeof parsed.storyboard?.exportMarkdown === "string") {
-      result.storyboard.exportMarkdown = parsed.storyboard.exportMarkdown;
+      result.storyboard.exportMarkdown = sanitizePublicAgentText(parsed.storyboard.exportMarkdown);
     } else if (typeof parsed.markdown === "string") {
-      result.storyboard.exportMarkdown = parsed.markdown;
+      result.storyboard.exportMarkdown = sanitizePublicAgentText(parsed.markdown);
     } else if (typeof parsed.final_output === "string") {
-      result.storyboard.exportMarkdown = parsed.final_output;
+      result.storyboard.exportMarkdown = sanitizePublicAgentText(parsed.final_output);
     }
-    if (typeof parsed.storyboard?.title === "string")
-      result.storyboard.title = parsed.storyboard.title;
-    if (typeof parsed.storyboard?.logline === "string")
-      result.storyboard.logline = parsed.storyboard.logline;
-    if (typeof parsed.storyboard?.operatorBrief === "string") {
-      result.storyboard.operatorBrief = parsed.storyboard.operatorBrief;
-    } else {
+    if (
+      storyboardMetadataAuthoritative &&
+      typeof parsed.storyboard?.title === "string"
+    ) {
+      result.storyboard.title = sanitizePublicAgentText(parsed.storyboard.title);
+    }
+    if (
+      storyboardMetadataAuthoritative &&
+      typeof parsed.storyboard?.logline === "string"
+    ) {
+      result.storyboard.logline = sanitizePublicAgentText(parsed.storyboard.logline);
+    }
+    if (
+      storyboardMetadataAuthoritative &&
+      typeof parsed.storyboard?.operatorBrief === "string"
+    ) {
+      result.storyboard.operatorBrief = sanitizePublicAgentText(parsed.storyboard.operatorBrief);
+    } else if (storyboardMetadataAuthoritative) {
       result.storyboard.operatorBrief =
         "백엔드 storyboard-agent 명령 실행 결과를 회의용 Markdown에 반영했습니다.";
     }
-  } catch {
-    result.storyboard.exportMarkdown = raw;
+    return;
+  }
+  if (raw) {
+    result.storyboard.exportMarkdown = sanitizePublicAgentText(raw);
     result.storyboard.operatorBrief =
       "백엔드 storyboard-agent 명령의 텍스트 출력을 회의용 Markdown으로 반영했습니다.";
   }
 }
 
+function extractGraphDiagnosticsFromParsedOutput(
+  parsed: ParsedStoryboardAgentOutput | null,
+) {
+  return (
+    normalizeGraphDiagnostics(parsed?.backendAgent?.graph) ??
+    normalizeGraphDiagnostics(parsed?.diagnostics?.graph)
+  );
+}
+
 export async function generateStoryboardWithBackendAgent(
   input?: Partial<StoryboardGenerateRequest> | null,
 ): Promise<StoryboardGenerationResult> {
+  const sanitizedInput =
+    input && typeof input.prompt === "string"
+      ? { ...input, prompt: sanitizePublicAgentText(input.prompt) }
+      : input;
   const status = getStoryboardBackendAgentStatus();
   const base = generateLocalStoryboard({
-    ...input,
+    ...sanitizedInput,
     generationMode: "backend_agent",
   });
   applyBackendAdapterMode(base);
@@ -838,12 +1197,46 @@ export async function generateStoryboardWithBackendAgent(
       localStoryboard: base,
     });
     if (commandResult.ok) {
-      applyBackendCommandOutput(base, commandResult);
+      const parsed = parseStoryboardAgentOutput(commandResult);
+      const graph =
+        status.runtime === "codex_cli_oauth_legacy"
+          ? createLegacyGraphDiagnostics(commandResult)
+          : extractGraphDiagnosticsFromParsedOutput(parsed) ??
+            createFallbackGraphDiagnostics(
+              status,
+              "graph_invalid_output",
+              "LangGraph command succeeded but did not return canonical graph diagnostics.",
+            );
+      if (graph.status === "fallback") {
+        applyBackendAdapterMode(base);
+      } else {
+        applyBackendCommandOutput(base, commandResult, parsed);
+      }
+      appendBackendAgentAnalysis(base, status, commandResult, graph);
+      return base;
     }
-    appendBackendAgentAnalysis(base, status, commandResult);
+    appendBackendAgentAnalysis(
+      base,
+      status,
+      commandResult,
+      createFallbackGraphDiagnostics(
+        status,
+        mapCommandFailureToFallbackReason(status, commandResult),
+        `${commandResult.stdout}\n${commandResult.stderr}`,
+      ),
+    );
     return base;
   }
 
-  appendBackendAgentAnalysis(base, status);
+  appendBackendAgentAnalysis(
+    base,
+    status,
+    undefined,
+    createFallbackGraphDiagnostics(
+      status,
+      mapCommandFailureToFallbackReason(status),
+      status.commandRejectionReason,
+    ),
+  );
   return base;
 }
