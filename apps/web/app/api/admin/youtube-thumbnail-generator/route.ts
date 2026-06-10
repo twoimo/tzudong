@@ -15,10 +15,14 @@ import {
   generateYoutubeThumbnail,
   getThumbnailProviderAvailability,
 } from '@/lib/admin/youtube-thumbnail-generator/providers';
+import { resolveThumbnailRetrievalReferences } from '@/lib/admin/youtube-thumbnail-generator/retrieval';
 import { ThumbnailGenerationError } from '@/lib/admin/youtube-thumbnail-generator/types';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+const SPECIFIC_CREATOR_HOST_PATTERN = /(쯔양|tzuyang)/i;
+const HOST_PERSON_REFERENCE_ROLES = new Set(['host', 'person']);
 
 const noStoreHeaders = { 'Cache-Control': 'no-store' } as const;
 
@@ -37,7 +41,7 @@ function normalizeRouteError(error: unknown) {
 
 export async function GET(_request: NextRequest) {
   try {
-    const auth = await requireAdmin();
+    const auth = await requireAdmin({ allowDevAdminBypassCookie: true });
     if (!auth.ok) return auth.response;
 
     return NextResponse.json(
@@ -72,7 +76,7 @@ export async function GET(_request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const auth = await requireAdmin();
+    const auth = await requireAdmin({ allowDevAdminBypassCookie: true });
     if (!auth.ok) return auth.response;
 
     const contentTypeRejection = getMultipartContentTypeRejection(request.headers);
@@ -99,22 +103,46 @@ export async function POST(request: NextRequest) {
       .getAll('referenceImages')
       .filter((entry): entry is File => entry instanceof File && entry.size > 0);
     const referenceImages = await readThumbnailReferenceImages(files, payload.referenceImageRoles);
+    const retrieval = await resolveThumbnailRetrievalReferences(payload, process.env);
+    const payloadWithRetrieval = {
+      ...payload,
+      retrievalEvidence: retrieval.evidence,
+      retrievalDiagnostics: retrieval.diagnostics,
+    };
+    if (
+      SPECIFIC_CREATOR_HOST_PATTERN.test(payload.topic) &&
+      !referenceImages.some((image) => HOST_PERSON_REFERENCE_ROLES.has(image.role))
+    ) {
+      throw new ThumbnailGenerationError(
+        'host_reference_required',
+        '쯔양님이 실제로 나오려면 host/person 참고 이미지를 먼저 추가해야 합니다. 참고 이미지 없이 쯔양님 얼굴을 추측 생성하지 않습니다.',
+        400,
+      );
+    }
     const generationRunId = `thumbnail-generation-${randomUUID()}`;
     const providerRequestEnv = buildThumbnailProviderRequestEnv(process.env, payload.providerId, formData);
     const result = payload.generationMode === 'backend_agent'
-      ? await generateYoutubeThumbnailWithBackendAgent(payload, referenceImages, process.env, {
+      ? await generateYoutubeThumbnailWithBackendAgent(payloadWithRetrieval, referenceImages, process.env, {
         signal: request.signal,
         runId: generationRunId,
         providerEnv: providerRequestEnv,
       })
-      : await generateYoutubeThumbnail(payload, referenceImages, providerRequestEnv, {
+      : await generateYoutubeThumbnail(payloadWithRetrieval, referenceImages, providerRequestEnv, {
         signal: request.signal,
         runId: generationRunId,
       });
 
-    const responseResult = { ...result, warnings: [...result.warnings] };
+    const responseResult = {
+      ...result,
+      warnings: [
+        ...result.warnings,
+        `thumbnail_retrieval_status:${retrieval.diagnostics.status}`,
+        ...(retrieval.diagnostics.fallbackReason ? [`thumbnail_retrieval_fallback:${retrieval.diagnostics.fallbackReason}`] : []),
+      ],
+      retrieval,
+    };
     try {
-      await persistLocalThumbnailHistory(responseResult, payload, process.env, { runId: generationRunId });
+      await persistLocalThumbnailHistory(responseResult, payloadWithRetrieval, process.env, { runId: generationRunId });
     } catch (historyError) {
       console.error('[admin/youtube-thumbnail-generator] history persistence failed:', historyError);
       responseResult.warnings.push('thumbnail_history_persist_failed');
