@@ -642,6 +642,10 @@ describe('admin storyboard LangGraph replacement contracts', () => {
     expect(source).toContain('formatStoryboardGraphDiagnosticsText');
     expect(source).toContain('buildStoryboardBackendAgentReadiness');
     expect(source).toContain('result.backendAnalysis.backendAgent?.graph');
+    expect(source).toContain('backendExecutionText');
+    expect(source).toContain('LangGraph 명령 실행');
+    expect(source).toContain('Legacy Codex 명령 실행');
+    expect(source).toContain('명령 실패 후 로컬 어댑터 폴백');
     expect(source).toContain('graph.retrieval?.status === "used"');
     expect(source).toContain('graph.toolsCalled.includes("search_scene_data")');
     expect(source).toContain('graph.status === "used"');
