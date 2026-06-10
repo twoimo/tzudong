@@ -43,6 +43,14 @@ const COMMITTEE = [
   { role: '관리자 UX 설계자', focus: 'PD가 콘솔에서 입력-생성-검토-복사까지 끝내는 흐름' },
 ];
 
+const HOSTILE_PROMPT_PATTERNS = [
+  /ignore\s+(?:all\s+)?previous\s+instructions?/gi,
+  /reveal\s+(?:openai[_\s-]*api[_\s-]*key|api[_\s-]*key|secret|token)[^.!?\n\r]*/gi,
+  /delete\s+\.?omx\/state[^.!?\n\r]*/gi,
+  /검증을\s*건너뛰[^\n\r.!?]*/g,
+  /이전\s*지시(?:를)?\s*무시[^\n\r.!?]*/g,
+];
+
 function toNumber(value: unknown, fallback = 0) {
   const parsed = typeof value === 'number' ? value : Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
@@ -57,6 +65,14 @@ function formatMillis(milliseconds: number) {
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
+}
+
+function sanitizeStoryboardPrompt(value: string) {
+  const sanitized = HOSTILE_PROMPT_PATTERNS.reduce(
+    (text, pattern) => text.replace(pattern, '[안전상 제거된 공격 지시]'),
+    value,
+  );
+  return sanitized.replace(/\s{2,}/g, ' ').trim();
 }
 
 function makeFallbackSources(): StoryboardHeatmapSource[] {
@@ -238,7 +254,7 @@ export function loadStoryboardHeatmapSources(sourceLimit = DEFAULT_REQUEST.sourc
 function normalizeRequest(input: Partial<StoryboardGenerateRequest> | null | undefined): StoryboardGenerateRequest {
   const tone = input?.tone && input.tone in TONE_LABELS ? input.tone : DEFAULT_REQUEST.tone;
   const prompt = typeof input?.prompt === 'string' && input.prompt.trim().length > 0
-    ? input.prompt.trim().slice(0, 400)
+    ? sanitizeStoryboardPrompt(input.prompt.trim().slice(0, 400))
     : DEFAULT_REQUEST.prompt;
 
   return {
