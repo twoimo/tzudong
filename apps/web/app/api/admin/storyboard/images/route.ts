@@ -167,9 +167,9 @@ export async function GET(_request: NextRequest) {
           target: { width: 1280, height: 720, aspectRatio: '16:9' },
         },
         configuration: {
-          localCodexGate: 'ALLOW_LOCAL_CLI_STORYBOARD_IMAGES',
           localCodexCommand: 'STORYBOARD_LOCAL_CODEX_COMMAND 또는 scripts/codex-imagegen-storyboard-provider.py',
           localCodexModel: 'STORYBOARD_LOCAL_CODEX_IMAGE_MODEL',
+          localCodexProof: 'STORYBOARD_LOCAL_CODEX_PROVENANCE_FILE 또는 npm run storyboard:image-proof',
         },
       },
       { headers: noStoreHeaders },

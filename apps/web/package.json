@@ -22,7 +22,8 @@
     "dev:webpack:clean": "node scripts/clean-next.mjs -- node node_modules/next/dist/bin/next dev --webpack --port 8080",
     "bench:dev": "node scripts/measure-dev-compile.mjs",
     "bench:routes": "node scripts/measure-dev-routes.mjs",
-    "bench:compare": "node scripts/compare-dev-route-reports.mjs"
+    "bench:compare": "node scripts/compare-dev-route-reports.mjs",
+    "storyboard:image-proof": "python3 scripts/codex-imagegen-storyboard-provider.py --prove --proof-file .omx/artifacts/gpt-image-2-provenance/latest-verified.json --output-dir .omx/artifacts/gpt-image-2-provenance/latest-proof"
   },
   "dependencies": {
     "@ffmpeg/ffmpeg": "^0.12.15",

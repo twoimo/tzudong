@@ -33,6 +33,7 @@ REPO_ROOT = BACKEND_ROOT.parents[0]
 DEFAULT_CODEX_MODEL = "gpt-5.5"
 DEFAULT_CODEX_EFFORT = "high"
 DEFAULT_TIMEOUT_SECONDS = 120
+GRAPH_ENTRYPOINT = "backend/storyboard-agent/src/graph.py"
 SECRET_PATTERNS = [
     re.compile(r"sk-[A-Za-z0-9_\-]{12,}"),
     re.compile(r"sk-proj-[A-Za-z0-9_\-]{12,}"),
@@ -259,6 +260,296 @@ def parse_codex_answer(raw: str, model: str, effort: str) -> dict[str, Any]:
     }
 
 
+def make_graph_diagnostics(
+    *,
+    status: str,
+    thread_id: str,
+    nodes_visited: list[str] | None = None,
+    tools_called: list[str] | None = None,
+    interrupts: list[dict[str, Any]] | None = None,
+    retrieval: dict[str, Any] | None = None,
+    fallback_reason: str | None = None,
+    fallback_detail: str | None = None,
+) -> dict[str, Any]:
+    graph: dict[str, Any] = {
+        "status": status,
+        "runtime": "langgraph",
+        "mode": "graph_command",
+        "threadId": thread_id,
+        "checkpointer": "MemorySaver",
+        "checkpointerScope": "per_process_only",
+        "graphEntrypoint": GRAPH_ENTRYPOINT,
+        "nodesVisited": nodes_visited or [],
+        "interrupts": interrupts or [],
+        "toolsCalled": tools_called or [],
+        "retrieval": retrieval or {"status": "not_used"},
+    }
+    if fallback_reason:
+        graph["fallbackReason"] = fallback_reason
+    if fallback_detail:
+        graph["fallbackDetail"] = redact(fallback_detail)[:600]
+    return graph
+
+
+def fixture_storyboard(markdown: str, operator_brief: str) -> dict[str, Any]:
+    return {
+        "contentAuthority": "diagnostic_only",
+        "title": "LangGraph storyboard fixture",
+        "logline": "Fixture output for admin storyboard LangGraph contract validation.",
+        "operatorBrief": operator_brief,
+        "exportMarkdown": markdown,
+    }
+
+
+def run_langgraph_fixture(fixture: str, payload: dict[str, Any]) -> dict[str, Any]:
+    thread_id = f"storyboard-admin-fixture-{fixture}"
+    base_nodes = ["extract_slots", "supervisor"]
+    if fixture == "success_retrieval_used":
+        markdown = "# LangGraph fixture storyboard\n\n- search_scene_data 근거를 사용한 스토리보드"
+        graph = make_graph_diagnostics(
+            status="used",
+            thread_id=thread_id,
+            nodes_visited=[*base_nodes, "researcher", "designer"],
+            tools_called=["search_scene_data"],
+            retrieval={
+                "status": "used",
+                "usedModels": {
+                    "embedding": "BAAI/bge-m3",
+                    "reranker": "BAAI/bge-reranker-v2-m3",
+                },
+                "operations": {
+                    "supabaseRpc": "match_documents_hybrid",
+                    "mmrApplied": True,
+                    "captionLookup": "get_video_captions_for_range",
+                },
+            },
+        )
+    elif fixture == "interrupted_output_ready":
+        markdown = "# LangGraph interrupted output ready\n\n- designer_node interrupt 이후 검토 가능한 출력"
+        graph = make_graph_diagnostics(
+            status="interrupted_output_ready",
+            thread_id=thread_id,
+            nodes_visited=[*base_nodes, "designer"],
+            interrupts=[
+                {
+                    "node": "designer_node",
+                    "resumable": True,
+                    "outputReady": True,
+                    "summary": "designer output awaits human review",
+                }
+            ],
+        )
+    elif fixture == "interrupted_needs_resume":
+        markdown = ""
+        graph = make_graph_diagnostics(
+            status="interrupted_needs_resume",
+            thread_id=thread_id,
+            nodes_visited=[*base_nodes, "designer"],
+            interrupts=[
+                {
+                    "node": "designer_node",
+                    "resumable": True,
+                    "outputReady": False,
+                    "summary": "designer interrupt requires resume before complete output",
+                }
+            ],
+        )
+    else:
+        markdown = "# LangGraph fixture storyboard\n\n- retrieval 없이 designer로 완료"
+        graph = make_graph_diagnostics(
+            status="used",
+            thread_id=thread_id,
+            nodes_visited=[*base_nodes, "designer"],
+            retrieval={"status": "not_used"},
+        )
+
+    return {
+        "final_output": markdown,
+        "markdown": markdown,
+        "storyboard": fixture_storyboard(
+            markdown or "LangGraph interrupted before final storyboard output.",
+            "LangGraph fixture runner output",
+        ),
+        "backendAgent": {"graph": graph},
+        "diagnostics": {
+            "runtime": "langgraph",
+            "threadId": thread_id,
+            "fixture": fixture,
+            "imageModelLabel": "gpt-image-2 is handled by the separate image provider, not this text command",
+        },
+    }
+
+
+def compact_prompt_from_payload(payload: dict[str, Any]) -> str:
+    request = payload.get("request") if isinstance(payload.get("request"), dict) else {}
+    prompt = str(request.get("prompt") or "스토리보드를 생성해줘.")[:1200]
+    tone = request.get("tone")
+    segment_count = request.get("segmentCount")
+    target_minutes = request.get("targetLengthMinutes")
+    local = payload.get("localStoryboard") if isinstance(payload.get("localStoryboard"), dict) else {}
+    return "\n".join(
+        [
+            f"User request: {prompt}",
+            f"Tone: {tone}",
+            f"Target minutes: {target_minutes}",
+            f"Requested scene count: {segment_count}",
+            "Local storyboard seed:",
+            compact_local_storyboard(local),
+        ]
+    )[:14000]
+
+
+def build_initial_langgraph_state(payload: dict[str, Any]) -> dict[str, Any]:
+    from langchain_core.messages import HumanMessage
+
+    return {
+        "messages": [HumanMessage(content=compact_prompt_from_payload(payload))],
+        "slots": None,
+        "is_approved": False,
+        "final_output": None,
+        "research_instruction": None,
+        "research_results": {},
+        "research_scene_data": [],
+        "research_web_summary": None,
+        "intern_request": None,
+        "researcher_context": None,
+        "intern_result": None,
+        "research_sufficient": None,
+        "research_summary": None,
+        "researcher_think_count": 0,
+        "researcher_stall_summary": None,
+        "agent_instructions": {},
+        "human_feedback": None,
+        "conversation_summary": None,
+    }
+
+
+def collect_tools_from_state(state: dict[str, Any]) -> list[str]:
+    tools: list[str] = []
+    for msg in state.get("messages") or []:
+        name = getattr(msg, "name", None)
+        if name and name not in tools:
+            tools.append(str(name))
+        additional = getattr(msg, "additional_kwargs", None)
+        if isinstance(additional, dict):
+            for call in additional.get("tool_calls") or []:
+                fn = call.get("function") if isinstance(call, dict) else None
+                tool_name = fn.get("name") if isinstance(fn, dict) else None
+                if tool_name and tool_name not in tools:
+                    tools.append(str(tool_name))
+    return tools
+
+
+def derive_retrieval_diagnostics(tools_called: list[str], state: dict[str, Any]) -> dict[str, Any]:
+    if "search_scene_data" not in tools_called:
+        return {"status": "not_used"}
+    return {
+        "status": "used",
+        "usedModels": {
+            "embedding": "BAAI/bge-m3",
+            "reranker": "BAAI/bge-reranker-v2-m3",
+        },
+        "operations": {
+            "supabaseRpc": "match_documents_hybrid",
+            "mmrApplied": True,
+            "captionLookup": "get_video_captions_for_range",
+        },
+    }
+
+
+def summarize_interrupts(snapshot: Any, final_output: str) -> list[dict[str, Any]]:
+    interrupts: list[dict[str, Any]] = []
+    tasks = getattr(snapshot, "tasks", None) or []
+    next_nodes = list(getattr(snapshot, "next", None) or [])
+    for task in tasks:
+        interrupt_items = getattr(task, "interrupts", None) or []
+        for item in interrupt_items:
+            node = getattr(task, "name", None) or getattr(item, "ns", None) or "unknown"
+            interrupts.append(
+                {
+                    "node": str(node),
+                    "resumable": True,
+                    "outputReady": bool(final_output.strip()),
+                    "summary": redact(getattr(item, "value", "") or "LangGraph interrupt")[:300],
+                }
+            )
+    if not interrupts and next_nodes:
+        for node in next_nodes:
+            interrupts.append(
+                {
+                    "node": str(node),
+                    "resumable": True,
+                    "outputReady": bool(final_output.strip()),
+                    "summary": "LangGraph execution paused with pending next node",
+                }
+            )
+    return interrupts
+
+
+def run_langgraph(payload: dict[str, Any]) -> dict[str, Any]:
+    fixture = os.environ.get("STORYBOARD_AGENT_LANGGRAPH_FIXTURE", "").strip()
+    if fixture:
+        return run_langgraph_fixture(fixture, payload)
+
+    sys.path.insert(0, str(BACKEND_ROOT / "src"))
+    from graph import build_graph
+
+    timeout = clamp_timeout()
+    thread_id = os.environ.get("STORYBOARD_AGENT_THREAD_ID") or f"storyboard-admin-{int(time.time())}-{secrets.token_hex(4)}"
+    config = {"configurable": {"thread_id": thread_id}}
+    graph = build_graph()
+    initial_state = build_initial_langgraph_state(payload)
+    nodes_visited: list[str] = []
+    latest_state: dict[str, Any] = dict(initial_state)
+    start = time.monotonic()
+
+    for update in graph.stream(initial_state, config=config, stream_mode="updates"):
+        if time.monotonic() - start > timeout:
+            raise subprocess.TimeoutExpired("langgraph", timeout)
+        if not isinstance(update, dict):
+            continue
+        for node, value in update.items():
+            if node not in nodes_visited and not str(node).startswith("__"):
+                nodes_visited.append(str(node))
+            if isinstance(value, dict):
+                latest_state.update(value)
+
+    snapshot = graph.get_state(config)
+    snapshot_values = getattr(snapshot, "values", None)
+    if isinstance(snapshot_values, dict):
+        latest_state.update(snapshot_values)
+    final_output = str(latest_state.get("final_output") or "").strip()
+    interrupts = summarize_interrupts(snapshot, final_output)
+    status = "used"
+    if interrupts and final_output:
+        status = "interrupted_output_ready"
+    elif interrupts:
+        status = "interrupted_needs_resume"
+    tools_called = collect_tools_from_state(latest_state)
+    retrieval = derive_retrieval_diagnostics(tools_called, latest_state)
+    markdown = final_output or "LangGraph execution paused before final storyboard output."
+    graph_diagnostics = make_graph_diagnostics(
+        status=status,
+        thread_id=thread_id,
+        nodes_visited=nodes_visited,
+        tools_called=tools_called,
+        interrupts=interrupts,
+        retrieval=retrieval,
+    )
+    return {
+        "final_output": markdown,
+        "markdown": markdown,
+        "storyboard": fixture_storyboard(markdown, "LangGraph graph_command output"),
+        "backendAgent": {"graph": graph_diagnostics},
+        "diagnostics": {
+            "runtime": "langgraph",
+            "threadId": thread_id,
+            "timeoutSeconds": timeout,
+            "imageModelLabel": "gpt-image-2 is handled by the separate image provider, not this text command",
+        },
+    }
+
+
 def run_codex_oauth(payload: dict[str, Any]) -> dict[str, Any]:
     model = os.environ.get("STORYBOARD_AGENT_CODEX_MODEL", DEFAULT_CODEX_MODEL).strip() or DEFAULT_CODEX_MODEL
     effort = os.environ.get("STORYBOARD_AGENT_CODEX_EFFORT", DEFAULT_CODEX_EFFORT).strip() or DEFAULT_CODEX_EFFORT
@@ -321,13 +612,16 @@ def main() -> int:
     try:
         load_dotenv_file(BACKEND_ROOT / ".env")
         payload = read_payload()
-        runtime = os.environ.get("STORYBOARD_AGENT_RUNTIME", "codex_cli_oauth").strip()
+        runtime = os.environ.get("STORYBOARD_AGENT_RUNTIME", "langgraph").strip() or "langgraph"
         apply_safe_env_aliases(runtime)
-        if runtime not in {"codex_cli_oauth", "codex"}:
+        if runtime == "langgraph":
+            result = run_langgraph(payload)
+        elif runtime in {"codex_cli_oauth", "codex"}:
+            result = run_codex_oauth(payload)
+        else:
             raise RuntimeError(
-                f"unsupported_storyboard_agent_runtime={runtime}; default local runtime is codex_cli_oauth"
+                f"unsupported_storyboard_agent_runtime={runtime}; default local runtime is langgraph"
             )
-        result = run_codex_oauth(payload)
         print(json.dumps(result, ensure_ascii=False))
         return 0
     except subprocess.TimeoutExpired as exc:
