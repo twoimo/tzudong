@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Run storyboard backend generation as a Next.js command bridge.
 
-Default runtime: Codex CLI OAuth (`codex exec`) so local development does not
-need a separate OpenAI API key. This wrapper intentionally does not treat
-`gpt-image-2` as a Codex agent model; image generation is handled by the
-separate storyboard image provider.
+Default runtime: LangGraph. Codex CLI OAuth remains available only as an
+explicit legacy runtime. This wrapper intentionally does not treat `gpt-image-2`
+as a Codex agent model; image generation is handled by the separate storyboard
+image provider.
 
 Input contract:
 - JSON is read from stdin first, then STORYBOARD_AGENT_JSON.
