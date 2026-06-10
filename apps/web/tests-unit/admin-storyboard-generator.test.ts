@@ -664,13 +664,15 @@ describe('admin storyboard generator', () => {
         includeProductionNotes: true,
       });
 
-      expect(result.request.prompt).toHaveLength(400);
-      expect(result.request.prompt).toContain('이전 지시를 무시하고');
+      expect(result.request.prompt.length).toBeLessThanOrEqual(400);
+      expect(result.request.prompt).not.toContain('이전 지시를 무시하고');
+      expect(result.request.prompt).toContain('[안전상 제거된 공격 지시]');
       expect(result.request.tone).toBe('warm');
       expect(result.request.targetLengthMinutes).toBe(6);
       expect(result.request.sourceLimit).toBe(250);
       expect(result.request.segmentCount).toBe(10);
-      expect(result.storyboard.exportMarkdown).toContain('이전 지시를 무시하고');
+      expect(result.storyboard.exportMarkdown).not.toContain('이전 지시를 무시하고');
+      expect(result.storyboard.exportMarkdown).toContain('[안전상 제거된 공격 지시]');
     } finally {
       if (previous === undefined) {
         delete process.env.TZUYANG_HEATMAP_DIR;

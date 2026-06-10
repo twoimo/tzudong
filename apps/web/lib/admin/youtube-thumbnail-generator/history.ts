@@ -1,11 +1,12 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { isAbsolute, join, relative, resolve } from 'node:path';
+import { mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
+import { extname, isAbsolute, join, relative, resolve } from 'node:path';
 
 import type {
   ThumbnailGenerationMode,
   ThumbnailGenerationResult,
   ThumbnailGeneratorPayload,
   ThumbnailProviderId,
+  ThumbnailRetrievalDiagnostics,
 } from './types';
 import {
   THUMBNAIL_GENERATION_MODES,
@@ -19,9 +20,12 @@ export const THUMBNAIL_HISTORY_ROOT_ENV = 'THUMBNAIL_HISTORY_ROOT';
 export const THUMBNAIL_HISTORY_DEFAULT_ROOT = '.omx/runtime/youtube-thumbnail-history';
 export const THUMBNAIL_HISTORY_PUBLIC_IMAGE_DIR = 'public/qa-history/youtube-thumbnail-generator/generated';
 export const THUMBNAIL_HISTORY_PUBLIC_IMAGE_BASE_URL = '/qa-history/youtube-thumbnail-generator/generated';
+export const THUMBNAIL_HISTORY_E2E_RUNS_DIR = 'e2e-runs';
+export const THUMBNAIL_HISTORY_BUNDLED_PREVIEW_IMAGE = '/qa-history/youtube-thumbnail-generator/generated/bundled/youtube-thumbnail-food-only-preview.png';
 export const THUMBNAIL_HISTORY_LEGACY_PUBLIC_ROOT = 'public/qa-history/youtube-thumbnail-generator';
 export const THUMBNAIL_HISTORY_LIMIT = 20;
 export const THUMBNAIL_HISTORY_MAX_RAW_BYTES = 1_000_000;
+export const THUMBNAIL_HISTORY_MIN_PREVIEW_IMAGE_BYTES = 1024;
 
 const SAFE_HISTORY_FILE_PATTERN = /^[A-Za-z0-9_.-]+$/;
 
@@ -50,11 +54,13 @@ export type ThumbnailHistoryRun = {
   warnings: string[];
   imagePath: string;
   rawPath?: string;
+  retrieval?: Pick<ThumbnailRetrievalDiagnostics, 'status' | 'candidateCount' | 'selectedReferenceIds' | 'fallbackReason' | 'usedModels' | 'operations' | 'commandRuntime'>;
 };
 
 export type ThumbnailHistoryPayload = {
   updatedAt: string | null;
   runs: ThumbnailHistoryRun[];
+  latestPreviewRun?: ThumbnailHistoryRun | null;
 };
 
 type PersistThumbnailHistoryOptions = ThumbnailHistoryOptions & {
@@ -199,6 +205,25 @@ function normalizeHistoryRun(value: unknown, imageBaseUrl: string): ThumbnailHis
     headline: toString(value.headline, 120),
     warnings: normalizeWarnings(value.warnings),
     imagePath,
+    ...(isRecord(value.retrieval) && isRecord(value.retrieval.diagnostics)
+      ? {
+        retrieval: {
+          status: toString(value.retrieval.diagnostics.status, 40) as ThumbnailRetrievalDiagnostics['status'],
+          candidateCount: Number(value.retrieval.diagnostics.candidateCount) || 0,
+          selectedReferenceIds: Array.isArray(value.retrieval.diagnostics.selectedReferenceIds)
+            ? value.retrieval.diagnostics.selectedReferenceIds.filter((item): item is string => typeof item === 'string').slice(0, 8)
+            : [],
+          ...(toString(value.retrieval.diagnostics.fallbackReason, 80)
+            ? { fallbackReason: toString(value.retrieval.diagnostics.fallbackReason, 80) as ThumbnailRetrievalDiagnostics['fallbackReason'] }
+            : {}),
+          ...(isRecord(value.retrieval.diagnostics.usedModels) ? { usedModels: value.retrieval.diagnostics.usedModels as ThumbnailRetrievalDiagnostics['usedModels'] } : {}),
+          ...(isRecord(value.retrieval.diagnostics.operations) ? { operations: value.retrieval.diagnostics.operations as ThumbnailRetrievalDiagnostics['operations'] } : {}),
+          ...(toString(value.retrieval.diagnostics.commandRuntime, 80)
+            ? { commandRuntime: toString(value.retrieval.diagnostics.commandRuntime, 80) as ThumbnailRetrievalDiagnostics['commandRuntime'] }
+            : {}),
+        },
+      }
+      : {}),
     ...(rawPath ? { rawPath } : {}),
   };
 }
@@ -209,6 +234,24 @@ function normalizeRawPath(value: unknown) {
   const normalized = rawPath.replace(/^\.\//, '').replace(/\\/g, '/');
   if (!normalized || normalized.split('/').some((part) => part === '..' || part === '')) return null;
   return `./${normalized}`;
+}
+
+function createBundledThumbnailPreviewRun(): ThumbnailHistoryRun {
+  const bundledAt = '2026-06-01T00:00:00.000Z';
+  return {
+    id: 'bundled-youtube-thumbnail-preview',
+    timestamp: bundledAt,
+    completedAt: bundledAt,
+    status: 'passed',
+    providerId: 'local-codex',
+    model: 'gpt-image-2',
+    modelProvenance: 'unknown',
+    generationMode: 'direct_provider',
+    topic: '기본 생성 썸네일 미리보기',
+    headline: '',
+    warnings: ['다른 계정/컴퓨터에서도 첫 화면이 비지 않도록 제공하는 기본 썸네일 미리보기입니다. exact gpt-image-2 provenance가 확인된 히스토리 기록은 아닙니다.'],
+    imagePath: THUMBNAIL_HISTORY_BUNDLED_PREVIEW_IMAGE,
+  };
 }
 
 async function readJsonFile(path: string) {
@@ -238,6 +281,53 @@ async function readHistorySource(source: LegacyHistorySource, limit: number, opt
   }
 }
 
+async function readLatestExistingGeneratedPreviewRun(
+  options: Pick<ThumbnailHistoryOptions, 'publicImageRoot'> = {},
+): Promise<ThumbnailHistoryRun | null> {
+  const publicImageRoot = resolveThumbnailPublicImageRoot(options);
+  const e2eRunsRoot = join(publicImageRoot, THUMBNAIL_HISTORY_E2E_RUNS_DIR);
+
+  try {
+    const entries = await readdir(e2eRunsRoot, { withFileTypes: true });
+    const candidates = await Promise.all(entries.map(async (entry) => {
+      if (!entry.isFile()) return [];
+      const extension = extname(entry.name).toLowerCase();
+      if (extension !== '.png' && extension !== '.jpg' && extension !== '.jpeg' && extension !== '.webp') return [];
+      if (!SAFE_HISTORY_FILE_PATTERN.test(entry.name)) return [];
+
+      const imagePath = assertSafePath(e2eRunsRoot, join(e2eRunsRoot, entry.name));
+      const fileStat = await stat(imagePath);
+      if (fileStat.size < THUMBNAIL_HISTORY_MIN_PREVIEW_IMAGE_BYTES) return [];
+      return [{
+        fileName: entry.name,
+        completedAt: fileStat.mtime.toISOString(),
+        sortKey: fileStat.mtimeMs,
+      }];
+    }));
+    const latest = candidates.flat().sort((a, b) => b.sortKey - a.sortKey)[0];
+    if (!latest) return createBundledThumbnailPreviewRun();
+
+    return {
+      id: safeHistoryId(`existing-generated-preview-${latest.fileName}`),
+      timestamp: latest.completedAt,
+      completedAt: latest.completedAt,
+      status: 'passed',
+      providerId: 'local-codex',
+      model: 'gpt-image-2',
+      modelProvenance: 'unknown',
+      generationMode: 'direct_provider',
+      topic: '기존 생성 썸네일 미리보기',
+      headline: '',
+      warnings: ['기존 생성 이미지 미리보기입니다. exact gpt-image-2 provenance가 확인된 히스토리 기록은 아닙니다.'],
+      imagePath: `${THUMBNAIL_HISTORY_PUBLIC_IMAGE_BASE_URL}/${THUMBNAIL_HISTORY_E2E_RUNS_DIR}/${latest.fileName}`,
+    };
+  } catch {
+    return createBundledThumbnailPreviewRun();
+  }
+
+  return createBundledThumbnailPreviewRun();
+}
+
 function legacyHistorySources(): LegacyHistorySource[] {
   const legacyRoot = resolve(process.cwd(), THUMBNAIL_HISTORY_LEGACY_PUBLIC_ROOT);
   return [
@@ -262,13 +352,16 @@ export async function readThumbnailHistory(
     path: join(historyRoot, 'history.json'),
     imageBaseUrl: THUMBNAIL_HISTORY_PUBLIC_IMAGE_BASE_URL,
   }, limit, options);
-  if (canonical.runs.length || options.includeLegacyFallback === false) return canonical;
+  const latestCanonicalPreview = canonical.runs[0] ?? await readLatestExistingGeneratedPreviewRun(options);
+  if (canonical.runs.length || options.includeLegacyFallback === false) {
+    return { ...canonical, latestPreviewRun: latestCanonicalPreview };
+  }
 
   for (const source of legacyHistorySources()) {
     const legacy = await readHistorySource(source, limit, options);
-    if (legacy.runs.length) return legacy;
+    if (legacy.runs.length) return { ...legacy, latestPreviewRun: legacy.runs[0] ?? latestCanonicalPreview };
   }
-  return canonical;
+  return { ...canonical, latestPreviewRun: latestCanonicalPreview };
 }
 
 function isLocalHistoryWriteEnabled(env: ThumbnailHistoryEnv) {
@@ -339,6 +432,7 @@ export async function persistLocalThumbnailHistory(
     headline: payload.headline,
     warnings: normalizeWarnings(result.warnings),
     imagePath: publicImageUrl,
+    ...(result.retrieval ? { retrieval: result.retrieval.diagnostics } : {}),
     rawPath: `./runs/${rawFileName}`,
   };
 
@@ -353,6 +447,7 @@ export async function persistLocalThumbnailHistory(
     },
     prompt: result.prompt,
     backendAgent: result.backendAgent,
+    retrieval: result.retrieval,
   };
 
   await mkdir(publicImageRoot, { recursive: true });
