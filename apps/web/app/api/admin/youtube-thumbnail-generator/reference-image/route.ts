@@ -24,7 +24,7 @@ function normalizeRouteError(error: unknown) {
 
 export async function POST(request: NextRequest) {
   try {
-    const auth = await requireAdmin();
+    const auth = await requireAdmin({ allowDevAdminBypassCookie: true });
     if (!auth.ok) return auth.response;
 
     const body = await request.json().catch(() => null) as { url?: unknown } | null;
