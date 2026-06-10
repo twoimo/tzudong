@@ -1,4 +1,5 @@
 import type {
+  StoryboardGeneratedImageProvenance,
   StoryboardGenerationResult,
   StoryboardSceneGeneratedImage,
 } from './types';
@@ -19,31 +20,52 @@ function hasStoryboardImageLocation(value: unknown) {
     /^data:image\/(?:png|jpeg|webp);base64,/i.test(value) ||
     /^\/qa-history\/storyboard\/generated\/[^?#]+\/cut-\d{2}\.png$/i.test(
       value,
+    ) ||
+    /^\/storyboard-seed\/generated\/cut-\d{2}\.png$/i.test(
+      value,
     )
   );
 }
 
-function isTrustedLegacyPersistedStoryboardImage(
-  image: Partial<StoryboardSceneGeneratedImage>,
-) {
-  const warnings = Array.isArray(image.warnings) ? image.warnings : [];
+function isSha256Hex(value: unknown): value is string {
+  return typeof value === 'string' && /^[a-f0-9]{64}$/i.test(value);
+}
+
+export function isExactStoryboardGeneratedImageProvenance(
+  value: unknown,
+): value is StoryboardGeneratedImageProvenance {
+  if (!value || typeof value !== 'object') return false;
+  const provenance = value as Partial<StoryboardGeneratedImageProvenance>;
   return (
-    image.trustPolicy === undefined &&
-    typeof image.dataUrl === 'string' &&
-    /^\/qa-history\/storyboard\/generated\/[^?#]+\/cut-\d{2}\.png$/i.test(
-      image.dataUrl,
-    ) &&
-    typeof image.prompt === 'string' &&
-    /^Persisted local Codex GPT Image 2 storyboard panel for CUT \d+$/i.test(
-      image.prompt.trim(),
-    ) &&
-    warnings.some(
-      (warning) =>
-        typeof warning === 'string' &&
-        warning.includes('generated via local Codex OAuth provider') &&
-        warning.includes('persisted for admin storyboard display'),
-    )
+    provenance.providerId === 'local-codex' &&
+    provenance.authMode === 'codex_oauth' &&
+    provenance.endpoint === 'https://chatgpt.com/backend-api/codex/responses' &&
+    provenance.requestToolType === 'image_generation' &&
+    provenance.requestToolModel === 'gpt-image-2' &&
+    provenance.model === 'gpt-image-2' &&
+    provenance.modelProvenance === 'exact' &&
+    typeof provenance.responseId === 'string' &&
+    provenance.responseId.trim().length > 0 &&
+    typeof provenance.imageCallId === 'string' &&
+    provenance.imageCallId.trim().length > 0 &&
+    typeof provenance.imageItemCount === 'number' &&
+    provenance.imageItemCount > 0 &&
+    Array.isArray(provenance.rawImageItemTypes) &&
+    provenance.rawImageItemTypes[0] === 'image_generation_call' &&
+    (!Array.isArray(provenance.generatedImageItemTypes) ||
+      provenance.generatedImageItemTypes.includes('image_generation_call')) &&
+    isSha256Hex(provenance.requestHash) &&
+    isSha256Hex(provenance.responseHash) &&
+    provenance.hasOpenAIAPIKey === false &&
+    typeof provenance.generatedAt === 'string' &&
+    Number.isFinite(Date.parse(provenance.generatedAt))
   );
+}
+
+export function getExactStoryboardGeneratedImageProvenance(
+  value: unknown,
+): StoryboardGeneratedImageProvenance | null {
+  return isExactStoryboardGeneratedImageProvenance(value) ? value : null;
 }
 
 export function isTrustedStoryboardGeneratedImage(
@@ -56,8 +78,8 @@ export function isTrustedStoryboardGeneratedImage(
     image.model === 'gpt-image-2' &&
     isSupportedStoryboardImageMime(image.mime) &&
     hasStoryboardImageLocation(image.dataUrl) &&
-    (image.trustPolicy === STORYBOARD_GENERATED_IMAGE_TRUST_POLICY ||
-      isTrustedLegacyPersistedStoryboardImage(image))
+    isExactStoryboardGeneratedImageProvenance(image.provenance) &&
+    image.trustPolicy === STORYBOARD_GENERATED_IMAGE_TRUST_POLICY
   );
 }
 
