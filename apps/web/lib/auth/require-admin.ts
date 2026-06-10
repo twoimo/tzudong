@@ -3,6 +3,10 @@ import { NextResponse } from 'next/server';
 
 import { createClient } from '@/lib/supabase/server';
 import {
+  getDevAdminBypassCookieFromHeader,
+  validateDevAdminBypassCookie,
+} from '@/lib/auth/dev-admin-bypass-cookie';
+import {
   E2E_ADMIN_ROUTE_BYPASS_HEADER,
   E2E_ADMIN_ROUTE_BYPASS_TOKEN_HEADER,
   getE2EAdminRouteBypassExpectedToken,
@@ -17,6 +21,10 @@ type RequireAdminOk = {
 type RequireAdminFail = {
   ok: false;
   response: NextResponse;
+};
+
+type RequireAdminOptions = {
+  allowDevAdminBypassCookie?: boolean;
 };
 
 
@@ -41,7 +49,7 @@ function isLocalPlaywrightHost(value: string | null) {
   return normalizedHostName === 'localhost' || normalizedHostName === '127.0.0.1' || normalizedHostName === '::1';
 }
 
-async function getE2EAdminApiBypassUserId() {
+async function getE2EAdminApiBypassUserId(options: RequireAdminOptions = {}) {
   if (!isE2EAdminRouteBypassEnvEnabled()) return null;
 
   const requestHeaders = await headers();
@@ -53,6 +61,15 @@ async function getE2EAdminApiBypassUserId() {
     isLocalPlaywrightHost(requestHeaders.get('host'))
   ) {
     return 'e2e-admin-route-bypass';
+  }
+
+  if (options.allowDevAdminBypassCookie) {
+    const cookieValue = getDevAdminBypassCookieFromHeader(requestHeaders.get('cookie'));
+    const validation = await validateDevAdminBypassCookie({
+      cookieValue,
+      host: requestHeaders.get('host'),
+    });
+    if (validation.ok) return 'dev-admin-thumbnail-bypass';
   }
 
   return null;
@@ -72,8 +89,8 @@ function isMissingOptionalAdminStatusStoreError(error: unknown) {
   );
 }
 
-export async function requireAdmin(): Promise<RequireAdminOk | RequireAdminFail> {
-  const e2eAdminUserId = await getE2EAdminApiBypassUserId();
+export async function requireAdmin(options: RequireAdminOptions = {}): Promise<RequireAdminOk | RequireAdminFail> {
+  const e2eAdminUserId = await getE2EAdminApiBypassUserId(options);
   if (e2eAdminUserId) {
     return { ok: true, userId: e2eAdminUserId };
   }
