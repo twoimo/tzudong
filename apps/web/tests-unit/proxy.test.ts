@@ -7,6 +7,10 @@ import {
     E2E_ADMIN_ROUTE_BYPASS_RUNTIME,
     E2E_ADMIN_ROUTE_BYPASS_TOKEN_HEADER,
 } from '@/lib/e2e-admin-route-bypass'
+import {
+    DEV_ADMIN_BYPASS_COOKIE_NAME,
+    createDevAdminBypassCookieValue,
+} from '@/lib/auth/dev-admin-bypass-cookie'
 
 function loadProxyModule() {
     const nonce = `${Date.now()}-${Math.random().toString(36).slice(2)}`
@@ -335,6 +339,76 @@ test('Playwright 관리자 우회는 env와 토큰 헤더가 모두 맞는 /admi
         expect(childRouteResponse.headers.get('x-auth-checked')).toBe('1')
         expect(postResponse.headers.get('x-auth-checked')).toBe('1')
         expect(updateSessionCalls).toBe(12)
+    } finally {
+        resetAdminBypassEnv()
+    }
+})
+
+test('개발자 썸네일 bootstrap 쿠키는 일반 브라우저의 썸네일 관리자 진입만 세션 갱신 없이 허용한다', async () => {
+    enableAdminBypassEnv()
+
+    try {
+        let updateSessionCalls = 0
+
+        mock.module('@/lib/supabase/middleware', () => ({
+            updateSession: async () => {
+                updateSessionCalls += 1
+                return NextResponse.json({ ok: true }, { headers: { 'x-auth-checked': '1' } })
+            },
+        }))
+
+        const cookieValue = await createDevAdminBypassCookieValue({
+            nonce: 'proxy-thumbnail-dev-cookie',
+        })
+        const cookieHeader = `${DEV_ADMIN_BYPASS_COOKIE_NAME}=${cookieValue}`
+
+        const { proxy } = await loadProxyModule()
+        const allowedResponse = await proxy(
+            new NextRequest('http://localhost:3000/admin?module=youtube-thumbnail-generator', {
+                headers: { host: 'localhost:3000', cookie: cookieHeader },
+            }),
+        )
+        const allowedHeadResponse = await proxy(
+            new NextRequest('http://127.0.0.1:3000/admin?module=youtube-thumbnail-generator', {
+                method: 'HEAD',
+                headers: { host: '127.0.0.1:3000', cookie: cookieHeader },
+            }),
+        )
+        const wrongModuleResponse = await proxy(
+            new NextRequest('http://localhost:3000/admin?module=overview', {
+                headers: { host: 'localhost:3000', cookie: cookieHeader },
+            }),
+        )
+        const childRouteResponse = await proxy(
+            new NextRequest('http://localhost:3000/admin/evaluations?module=youtube-thumbnail-generator', {
+                headers: { host: 'localhost:3000', cookie: cookieHeader },
+            }),
+        )
+        const postResponse = await proxy(
+            new NextRequest('http://localhost:3000/admin?module=youtube-thumbnail-generator', {
+                method: 'POST',
+                headers: { host: 'localhost:3000', cookie: cookieHeader },
+            }),
+        )
+        const invalidCookieResponse = await proxy(
+            new NextRequest('http://localhost:3000/admin?module=youtube-thumbnail-generator', {
+                headers: { host: 'localhost:3000', cookie: `${DEV_ADMIN_BYPASS_COOKIE_NAME}=bad.cookie.value` },
+            }),
+        )
+        const nonLocalHostResponse = await proxy(
+            new NextRequest('https://example.com/admin?module=youtube-thumbnail-generator', {
+                headers: { host: 'example.com', cookie: cookieHeader },
+            }),
+        )
+
+        expect(allowedResponse.headers.get('x-auth-checked')).toBeNull()
+        expect(allowedHeadResponse.headers.get('x-auth-checked')).toBeNull()
+        expect(wrongModuleResponse.headers.get('x-auth-checked')).toBe('1')
+        expect(childRouteResponse.headers.get('x-auth-checked')).toBe('1')
+        expect(postResponse.headers.get('x-auth-checked')).toBe('1')
+        expect(invalidCookieResponse.headers.get('x-auth-checked')).toBe('1')
+        expect(nonLocalHostResponse.headers.get('x-auth-checked')).toBe('1')
+        expect(updateSessionCalls).toBe(5)
     } finally {
         resetAdminBypassEnv()
     }

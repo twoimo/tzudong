@@ -8,8 +8,8 @@ import type { StoryboardGenerationResult } from '../lib/admin/storyboard/types';
 
 function buildResult(): StoryboardGenerationResult {
   const trustedPrompt = [
-    'Create exactly one 16:9 raster storyboard panel for a Korean food-travel / mukbang planning board.',
-    'Style: hand-drawn storyboard sketch, clean black pencil lines.',
+    'Create exactly one full-bleed 16:9 single-scene storyboard cut image for a Korean food-travel / mukbang planning board.',
+    'Style: cinematic hand-drawn food-storyboard keyframe, clean black pencil lines.',
   ].join('\n');
 
   return {
@@ -61,7 +61,7 @@ function buildResult(): StoryboardGenerationResult {
             mime: 'image/png',
             providerId: 'local-codex',
             model: 'gpt-image-2',
-            prompt: 'Persisted local Codex GPT Image 2 storyboard panel for CUT 1',
+            prompt: 'Persisted local Codex GPT Image 2 storyboard cut image for CUT 1',
             generatedAt: '2026-06-05T08:15:00.000Z',
             warnings: [],
           },
@@ -91,6 +91,25 @@ function buildResult(): StoryboardGenerationResult {
             prompt: trustedPrompt,
             generatedAt: '2026-06-05T08:15:00.000Z',
             warnings: [],
+            provenance: {
+              providerId: 'local-codex',
+              authMode: 'codex_oauth',
+              endpoint: 'https://chatgpt.com/backend-api/codex/responses',
+              agentModel: 'gpt-5.5',
+              requestToolType: 'image_generation',
+              requestToolModel: 'gpt-image-2',
+              model: 'gpt-image-2',
+              modelProvenance: 'exact',
+              responseId: 'resp_history_test',
+              imageCallId: 'ig_history_test',
+              imageItemCount: 1,
+              generatedImageItemTypes: ['image_generation_call'],
+              rawImageItemTypes: ['image_generation_call'],
+              requestHash: 'a'.repeat(64),
+              responseHash: 'b'.repeat(64),
+              hasOpenAIAPIKey: false,
+              generatedAt: '2026-06-05T08:15:00.000Z',
+            },
           },
         },
       ],
@@ -139,6 +158,17 @@ describe('admin storyboard local history persistence', () => {
       };
       expect(latest.result.storyboard.scenes[0].generatedImage).toBeUndefined();
       expect(latest.result.storyboard.scenes[1].generatedImage?.model).toBe('gpt-image-2');
+      expect(latest.result.storyboard.scenes[1].generatedImage?.provenance).toMatchObject({
+        providerId: 'local-codex',
+        authMode: 'codex_oauth',
+        requestToolType: 'image_generation',
+        requestToolModel: 'gpt-image-2',
+        model: 'gpt-image-2',
+        modelProvenance: 'exact',
+        responseId: 'resp_history_test',
+        imageCallId: 'ig_history_test',
+        hasOpenAIAPIKey: false,
+      });
       const history = JSON.parse(readFileSync(join(dir, 'history-real-data.json'), 'utf8')) as { runs: Array<{ trustedImages: number }> };
       expect(history.runs[0].trustedImages).toBe(1);
       const html = readFileSync(join(dir, '2026-06-05T08-15-00-000Z.html'), 'utf8');
