@@ -3,6 +3,8 @@ import { describe, expect, test } from 'bun:test';
 import {
   getOmittedStoryboardSceneCount,
   getStoryboardImageGenerationTargetScenes,
+  getStoryboardTrustedScenePageCount,
+  getVisibleTrustedStoryboardPageScenes,
   getVisibleTrustedStoryboardScenes,
 } from '../lib/admin/storyboard/visible-scenes';
 import { STORYBOARD_GENERATED_IMAGE_TRUST_POLICY } from '../lib/admin/storyboard/image-trust';
@@ -31,9 +33,28 @@ const trustedImage = (sceneNo: number): StoryboardScene['generatedImage'] => ({
   providerId: 'local-codex',
   trustPolicy: STORYBOARD_GENERATED_IMAGE_TRUST_POLICY,
   model: 'gpt-image-2',
-  prompt: 'Create exactly one 16:9 raster storyboard panel',
+  prompt: 'Create exactly one full-bleed 16:9 single-scene storyboard cut image',
   generatedAt: '2026-06-07T00:00:00.000Z',
   warnings: [],
+  provenance: {
+    providerId: 'local-codex',
+    authMode: 'codex_oauth',
+    endpoint: 'https://chatgpt.com/backend-api/codex/responses',
+    agentModel: 'gpt-5.5',
+    requestToolType: 'image_generation',
+    requestToolModel: 'gpt-image-2',
+    model: 'gpt-image-2',
+    modelProvenance: 'exact',
+    responseId: `resp_visible_${sceneNo}`,
+    imageCallId: `ig_visible_${sceneNo}`,
+    imageItemCount: 1,
+    generatedImageItemTypes: ['image_generation_call'],
+    rawImageItemTypes: ['image_generation_call'],
+    requestHash: `${sceneNo}`.repeat(64).slice(0, 64),
+    responseHash: `${9 - sceneNo}`.repeat(64).slice(0, 64),
+    hasOpenAIAPIKey: false,
+    generatedAt: '2026-06-07T00:00:00.000Z',
+  },
 });
 
 describe('storyboard visible trusted scenes', () => {
@@ -89,5 +110,77 @@ describe('storyboard visible trusted scenes', () => {
         pageSize: 4,
       }).map((scene) => scene.sceneNo),
     ).toEqual([1, 2, 3, 4]);
+  });
+
+  test('targets the source page to fill missing images instead of regenerating only visible cuts', () => {
+    const scenes = [1, 2, 3, 4, 5, 6, 7, 8].map(baseScene).map((scene) =>
+      [1, 2, 3, 4, 5].includes(scene.sceneNo)
+        ? { ...scene, generatedImage: trustedImage(scene.sceneNo) }
+        : scene,
+    );
+    const visibleScenes = getVisibleTrustedStoryboardScenes(scenes);
+
+    expect(
+      getStoryboardImageGenerationTargetScenes({
+        allScenes: scenes,
+        visibleScenes,
+        page: 0,
+        pageSize: 4,
+      }).map((scene) => scene.sceneNo),
+    ).toEqual([1, 2, 3, 4]);
+    expect(
+      getStoryboardImageGenerationTargetScenes({
+        allScenes: scenes,
+        visibleScenes,
+        page: 1,
+        pageSize: 4,
+      }).map((scene) => scene.sceneNo),
+    ).toEqual([5, 6, 7, 8]);
+  });
+
+  test('keeps sparse trusted cuts in their source page window instead of compacting them forward', () => {
+    const scenes = [1, 2, 3, 4, 5, 6, 7, 8].map(baseScene).map((scene) =>
+      [1, 5].includes(scene.sceneNo)
+        ? { ...scene, generatedImage: trustedImage(scene.sceneNo) }
+        : scene,
+    );
+    const visibleScenes = getVisibleTrustedStoryboardScenes(scenes);
+
+    expect(
+      getVisibleTrustedStoryboardPageScenes({
+        allScenes: scenes,
+        page: 0,
+        pageSize: 4,
+      }).map((scene) => scene.sceneNo),
+    ).toEqual([1]);
+    expect(
+      getVisibleTrustedStoryboardPageScenes({
+        allScenes: scenes,
+        page: 1,
+        pageSize: 4,
+      }).map((scene) => scene.sceneNo),
+    ).toEqual([5]);
+    expect(
+      getStoryboardTrustedScenePageCount({
+        allScenes: scenes,
+        pageSize: 4,
+      }),
+    ).toBe(2);
+    expect(
+      getStoryboardImageGenerationTargetScenes({
+        allScenes: scenes,
+        visibleScenes,
+        page: 0,
+        pageSize: 4,
+      }).map((scene) => scene.sceneNo),
+    ).toEqual([1, 2, 3, 4]);
+    expect(
+      getStoryboardImageGenerationTargetScenes({
+        allScenes: scenes,
+        visibleScenes,
+        page: 1,
+        pageSize: 4,
+      }).map((scene) => scene.sceneNo),
+    ).toEqual([5, 6, 7, 8]);
   });
 });
