@@ -5,6 +5,10 @@ import {
     getE2EAdminRouteBypassExpectedToken,
     isE2EAdminRouteBypassEnvEnabled,
 } from '@/lib/e2e-admin-route-bypass'
+import {
+    getDevAdminBypassCookieFromHeader,
+    validateDevAdminBypassCookie,
+} from '@/lib/auth/dev-admin-bypass-cookie'
 
 const PUBLIC_API_PREFIXES = [
     '/api/health',
@@ -77,11 +81,94 @@ function isPlaywrightAdminBypassRequest(request: NextRequest) {
     )
 }
 
-function shouldSkipSession(request: NextRequest) {
+function isDevAdminThumbnailBootstrapRequest(request: NextRequest) {
+    const { hostname, pathname } = request.nextUrl
+    const method = request.method.toUpperCase()
+    const normalizedPathname = pathname.replace(/\/+$/, '') || '/'
+
+    return (
+        (method === 'GET' || method === 'HEAD') &&
+        normalizedPathname === '/api/dev/admin-thumbnail-bootstrap' &&
+        isLocalPlaywrightRequestUrlHost(hostname) &&
+        isLocalPlaywrightHostHeader(request.headers.get('host'), { required: true }) &&
+        isE2EAdminRouteBypassEnvEnabled()
+    )
+}
+
+function isE2EAdminThumbnailApiBypassRequest(request: NextRequest) {
+    const { hostname, pathname } = request.nextUrl
+    const normalizedPathname = pathname.replace(/\/+$/, '') || '/'
+    const expectedToken = getE2EAdminRouteBypassExpectedToken()
+    const requestToken = request.headers.get(E2E_ADMIN_ROUTE_BYPASS_TOKEN_HEADER)?.trim()
+
+    return (
+        normalizedPathname.startsWith('/api/admin/youtube-thumbnail-generator') &&
+        isLocalPlaywrightRequestUrlHost(hostname) &&
+        isLocalPlaywrightHostHeader(request.headers.get('host'), { required: true }) &&
+        isLocalPlaywrightHostHeader(request.headers.get('x-forwarded-host')) &&
+        isE2EAdminRouteBypassEnvEnabled() &&
+        request.headers.get(E2E_ADMIN_ROUTE_BYPASS_HEADER) === '1' &&
+        requestToken === expectedToken
+    )
+}
+
+async function isDevAdminThumbnailApiCookieBypassRequest(request: NextRequest) {
+    const { hostname, pathname } = request.nextUrl
+    const normalizedPathname = pathname.replace(/\/+$/, '') || '/'
+
+    if (!normalizedPathname.startsWith('/api/admin/youtube-thumbnail-generator')) return false
+    if (!isLocalPlaywrightRequestUrlHost(hostname)) return false
+    if (!isLocalPlaywrightHostHeader(request.headers.get('host'), { required: true })) return false
+
+    const cookieValue = getDevAdminBypassCookieFromHeader(request.headers.get('cookie'))
+    const validation = await validateDevAdminBypassCookie({
+        cookieValue,
+        host: request.headers.get('host'),
+    })
+    return validation.ok
+}
+
+async function isDevAdminThumbnailBypassRequest(request: NextRequest) {
+    const { hostname, pathname, searchParams } = request.nextUrl
+    const method = request.method.toUpperCase()
+    const normalizedPathname = pathname.replace(/\/+$/, '') || '/'
+
+    if ((method !== 'GET' && method !== 'HEAD') || normalizedPathname !== '/admin') {
+        return false
+    }
+    if (searchParams.get('module') !== 'youtube-thumbnail-generator') return false
+    if (!isLocalPlaywrightHost(normalizeHostName(hostname))) return false
+    if (!isLocalPlaywrightHostHeader(request.headers.get('host'), { required: true })) return false
+
+    const cookieValue = getDevAdminBypassCookieFromHeader(request.headers.get('cookie'))
+    const validation = await validateDevAdminBypassCookie({
+        cookieValue,
+        host: request.headers.get('host'),
+    })
+    return validation.ok
+}
+
+async function shouldSkipSession(request: NextRequest) {
     const { pathname } = request.nextUrl
     const method = request.method.toUpperCase()
 
     if (isPlaywrightAdminBypassRequest(request)) {
+        return true
+    }
+
+    if (await isDevAdminThumbnailBypassRequest(request)) {
+        return true
+    }
+
+    if (isDevAdminThumbnailBootstrapRequest(request)) {
+        return true
+    }
+
+    if (isE2EAdminThumbnailApiBypassRequest(request)) {
+        return true
+    }
+
+    if (await isDevAdminThumbnailApiCookieBypassRequest(request)) {
         return true
     }
 
@@ -103,7 +190,7 @@ function shouldSkipSession(request: NextRequest) {
  */
 export async function proxy(request: NextRequest) {
 
-    if (shouldSkipSession(request)) {
+    if (await shouldSkipSession(request)) {
         return NextResponse.next()
     }
 

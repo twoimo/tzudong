@@ -23,7 +23,9 @@
     "bench:dev": "node scripts/measure-dev-compile.mjs",
     "bench:routes": "node scripts/measure-dev-routes.mjs",
     "bench:compare": "node scripts/compare-dev-route-reports.mjs",
-    "storyboard:image-proof": "python3 scripts/codex-imagegen-storyboard-provider.py --prove --proof-file .omx/artifacts/gpt-image-2-provenance/latest-verified.json --output-dir .omx/artifacts/gpt-image-2-provenance/latest-proof"
+    "dev:thumbnail-ready": "node scripts/dev-thumbnail-ready.mjs",
+    "storyboard:image-proof": "python3 scripts/codex-imagegen-storyboard-provider.py --prove --proof-file .omx/artifacts/gpt-image-2-provenance/latest-verified.json --output-dir .omx/artifacts/gpt-image-2-provenance/latest-proof",
+    "thumbnail:release-certify": "node scripts/thumbnail-release-readback-certification.mjs"
   },
   "dependencies": {
     "@ffmpeg/ffmpeg": "^0.12.15",
