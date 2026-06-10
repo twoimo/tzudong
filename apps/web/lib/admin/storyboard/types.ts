@@ -1,5 +1,56 @@
 export type StoryboardTone = 'warm' | 'energetic' | 'documentary' | 'comfort';
 export type StoryboardGenerationMode = 'local_heatmap' | 'backend_agent';
+export type StoryboardBackendRuntime =
+  | 'langgraph'
+  | 'codex_cli_oauth_legacy'
+  | 'local_adapter_fallback';
+export type StoryboardGraphFallbackReason =
+  | 'not_configured'
+  | 'dependency_missing'
+  | 'unsupported_runtime'
+  | 'graph_timeout'
+  | 'graph_invalid_output'
+  | 'graph_execution_failed'
+  | 'credential_missing'
+  | 'retrieval_dependency_missing'
+  | 'retrieval_rpc_unavailable';
+export type StoryboardGraphStatus =
+  | 'used'
+  | 'interrupted_output_ready'
+  | 'interrupted_needs_resume'
+  | 'fallback'
+  | 'legacy';
+export type StoryboardGraphDiagnostics = {
+  status: StoryboardGraphStatus;
+  runtime: StoryboardBackendRuntime;
+  mode: 'graph_command' | 'legacy_command' | 'local_adapter';
+  threadId?: string;
+  checkpointer?: 'MemorySaver' | string;
+  checkpointerScope?: 'per_process_only' | 'durable_cross_process';
+  graphEntrypoint?: string;
+  nodesVisited: string[];
+  interrupts: Array<{
+    node: string;
+    resumable: boolean;
+    outputReady: boolean;
+    summary: string;
+  }>;
+  toolsCalled: string[];
+  retrieval?: {
+    status: 'not_used' | 'used' | 'failed';
+    usedModels?: {
+      embedding?: 'BAAI/bge-m3';
+      reranker?: 'BAAI/bge-reranker-v2-m3';
+    };
+    operations?: {
+      supabaseRpc?: 'match_documents_hybrid';
+      mmrApplied?: boolean;
+      captionLookup?: 'get_video_captions_for_range';
+    };
+  };
+  fallbackReason?: StoryboardGraphFallbackReason;
+  fallbackDetail?: string;
+};
 export type StoryboardDataMode =
   | 'local_heatmap_fixture'
   | 'local_demo_fallback'
@@ -29,7 +80,7 @@ export type StoryboardBackendAgentStatus = {
   commandRejectionReason?: string;
   localAdapterAvailable: boolean;
   missingPythonModules: string[];
-  runtime?: string;
+  runtime?: StoryboardBackendRuntime;
   codexModel?: string;
   codexEffort?: string;
   streamingAvailable?: boolean;
@@ -148,6 +199,27 @@ export type StoryboardSceneGeneratedImage = {
   prompt: string;
   generatedAt: string;
   warnings: string[];
+  provenance?: StoryboardGeneratedImageProvenance;
+};
+
+export type StoryboardGeneratedImageProvenance = {
+  providerId: 'local-codex';
+  authMode: 'codex_oauth';
+  endpoint: 'https://chatgpt.com/backend-api/codex/responses';
+  agentModel?: string;
+  requestToolType: 'image_generation';
+  requestToolModel: 'gpt-image-2';
+  model: 'gpt-image-2';
+  modelProvenance: 'exact';
+  responseId: string;
+  imageCallId: string;
+  imageItemCount: number;
+  generatedImageItemTypes?: string[];
+  rawImageItemTypes: string[];
+  requestHash: string;
+  responseHash: string;
+  hasOpenAIAPIKey: false;
+  generatedAt: string;
 };
 
 export type StoryboardAhpCriterion = {
@@ -198,6 +270,7 @@ export type StoryboardGenerationResult = {
       commandExitCode?: number | null;
       commandTimedOut?: boolean;
       rawOutputPreview?: string;
+      graph?: StoryboardGraphDiagnostics;
     };
   };
 };
