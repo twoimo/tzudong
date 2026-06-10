@@ -112,6 +112,32 @@ type InsertReleaseRow = Omit<ReleaseRow, 'updated_at'> & {
   created_at?: string;
 };
 
+const RELEASE_ROW_SELECT = [
+  'id',
+  'release_key',
+  'status',
+  'candidate_id',
+  'source_manifest_id',
+  'source_image_id',
+  'storage_bucket',
+  'storage_object_path',
+  'browser_image_path',
+  'sha256',
+  'width',
+  'height',
+  'mime_type',
+  'provider_id',
+  'model',
+  'model_provenance',
+  'score',
+  'issue_tags',
+  'text_layers',
+  'canvas',
+  'source_quality_gate',
+  'published_at',
+  'updated_at',
+].join(',');
+
 export type ThumbnailReleaseRegistryAdapter = {
   readCurrentRelease(releaseKey: string): Promise<ReleaseRow | null>;
   publishRelease(row: InsertReleaseRow): Promise<ReleaseRow>;
@@ -314,7 +340,7 @@ function createSupabaseRegistryAdapter(): ThumbnailReleaseRegistryAdapter {
     async readCurrentRelease(releaseKey: string) {
       const { data, error } = await supabase
         .from(THUMBNAIL_RELEASE_TABLE)
-        .select('*')
+        .select(RELEASE_ROW_SELECT)
         .eq('release_key', releaseKey)
         .eq('status', 'active')
         .order('published_at', { ascending: false })
