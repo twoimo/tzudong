@@ -96,8 +96,16 @@ function resolveThumbnailAgentCodexEffort(env: NodeJS.ProcessEnv = process.env) 
   return env.THUMBNAIL_AGENT_CODEX_EFFORT?.trim() || DEFAULT_THUMBNAIL_AGENT_CODEX_EFFORT;
 }
 
-function allowsSpecificCreatorHost(payload: ThumbnailGeneratorPayload, referenceImages: ThumbnailReferenceImage[]) {
-  return TZUYANG_TOPIC_PATTERN.test(payload.topic) || referenceImages.some((image) => PERSON_REFERENCE_ROLES.has(image.role));
+function requestsSpecificCreatorHost(payload: ThumbnailGeneratorPayload) {
+  return TZUYANG_TOPIC_PATTERN.test(payload.topic);
+}
+
+function hasHostPersonReference(referenceImages: ThumbnailReferenceImage[]) {
+  return referenceImages.some((image) => PERSON_REFERENCE_ROLES.has(image.role));
+}
+
+function allowsSpecificCreatorHost(_payload: ThumbnailGeneratorPayload, referenceImages: ThumbnailReferenceImage[]) {
+  return hasHostPersonReference(referenceImages);
 }
 
 function firstExistingPath(candidates: string[]) {
@@ -225,11 +233,18 @@ export function getThumbnailBackendAgentStatus(env: NodeJS.ProcessEnv = process.
   };
 }
 
-function summarizeReferences(referenceImages: ThumbnailReferenceImage[], allowSpecificCreatorHost: boolean) {
+function summarizeReferences(
+  referenceImages: ThumbnailReferenceImage[],
+  allowSpecificCreatorHost: boolean,
+  requestedSpecificCreatorHost = false,
+) {
   if (!referenceImages.length) {
+    if (requestedSpecificCreatorHost) {
+      return '참고 이미지 없음: 특정 크리에이터 likeness는 host/person reference가 필요하므로 음식 중심/비식별 베이스로 구성';
+    }
     return allowSpecificCreatorHost
-      ? '참고 이미지 없음: 요청된 쯔양/유튜브 크리에이터 맥락으로 메인 호스트 컷아웃 구성'
-      : '참고 이미지 없음: generic non-identifying collage로 구성';
+      ? 'host/person reference 확인: 제공된 참고 이미지 기반 호스트 컷아웃만 허용'
+      : '참고 이미지 없음: no-person food-first 또는 generic non-identifying collage로 구성';
   }
   return referenceImages
     .slice(0, 8)
@@ -243,12 +258,15 @@ function buildLocalAgentPlan(
   basePrompt: string,
   fallbackReason = 'command-not-configured',
 ): ThumbnailAgentPlan {
+  const requestedSpecificHost = requestsSpecificCreatorHost(payload);
   const allowSpecificHost = allowsSpecificCreatorHost(payload, referenceImages);
   const subHeadline = payload.subHeadline ? `보조 문구 "${payload.subHeadline}"를 작은 스티커처럼 분리` : '보조 문구는 필요할 때만 작은 반응 스티커로 분리';
   const concept = `${payload.headline} 중심의 고대비 먹방 썸네일: 음식 클로즈업과 리액션 존을 분리해 클릭 전에 주제가 즉시 읽히게 한다.`;
   const hostZone = allowSpecificHost
-    ? '오른쪽 또는 좌상단에 요청된 쯔양/유튜브 크리에이터 또는 참고 이미지 기반 호스트 존을 둔다.'
-    : '오른쪽 또는 좌상단에 비식별 리액션/호스트 존을 둔다.';
+    ? '오른쪽 또는 좌상단에 제공된 host/person reference와 일치하는 호스트 존만 둔다.'
+    : requestedSpecificHost
+      ? '쯔양/특정 크리에이터 참고 이미지가 없으므로 사람 얼굴은 만들지 말고 음식 중심 또는 비식별 빈 호스트 존으로 둔다.'
+      : '오른쪽 또는 좌상단은 비식별 리액션/호스트 존 또는 음식 디테일 존으로 둔다.';
   const layoutBrief = [
     '하단 40~50%는 음식 클로즈업으로 채우고, 메인 문구가 겹칠 안전 영역을 남긴다.',
     hostZone,
@@ -259,7 +277,7 @@ function buildLocalAgentPlan(
     'Backend thumbnail agent orchestration brief:',
     `Concept: ${concept}`,
     `Layout: ${layoutBrief}`,
-    `Reference plan:\n${summarizeReferences(referenceImages, allowSpecificHost)}`,
+    `Reference plan:\n${summarizeReferences(referenceImages, allowSpecificHost, requestedSpecificHost)}`,
     'Quality gate: preserve a clear editable headline safe area, avoid baked-in final Korean typography, avoid real logos/signage/contact data/prices, and keep the result suitable for human approval before export.',
   ].join('\n');
 
@@ -373,6 +391,8 @@ function deriveChatHeadline(text: string, fallback = '역대급 먹방') {
   if (explicitHeadline) return sanitizeCanvasChatText(explicitHeadline, fallback, 18);
   const quotedText = text.match(/["“'‘]([^"”'’]{2,24})["”'’]/)?.[1]?.trim();
   if (quotedText) return sanitizeCanvasChatText(quotedText, fallback, 18);
+  const foodSubject = deriveThumbnailFoodSubject(text);
+  if (foodSubject) return sanitizeCanvasChatText(`${foodSubject} 먹방`, fallback, 18);
   if (/불맛|화력|철판|매운/i.test(text)) return '역대급 불맛';
   if (/대왕|대형|거대|압도|많이|양/i.test(text)) return '역대급 먹방';
   if (/한입|가능/i.test(text)) return '한입만 가능?';
@@ -383,11 +403,25 @@ function deriveChatHeadline(text: string, fallback = '역대급 먹방') {
 function deriveChatSubHeadline(text: string, fallback = '한입만 가능?') {
   const explicitSubHeadline = pickExplicitChatField(text, CHAT_EXPLICIT_SUBHEADLINE_PATTERN);
   if (explicitSubHeadline) return sanitizeCanvasChatText(explicitSubHeadline, fallback, 16);
+  const foodSubject = deriveThumbnailFoodSubject(text);
+  if (foodSubject && /제육|김치찌개|된장찌개|백반|국밥|삼겹살|갈비/i.test(foodSubject)) return '밥도둑 인정?';
+  if (foodSubject && /떡볶이|라면|마라|불닭|매운/i.test(foodSubject)) return '맵기 실화?';
+  if (foodSubject && /초밥|회|대게|킹크랩|랍스터|해산물/i.test(foodSubject)) return '퀄리티 미쳤다';
   if (/한입|가능/i.test(text)) return '한입만 가능?';
   if (/쯔양|tzuyang/i.test(text)) return '진짜 가능?';
   if (/매운|불맛|화력/i.test(text)) return '불맛 폭발';
   if (/야시장|시장|노점/i.test(text)) return '야시장 클라스';
   return fallback;
+}
+
+function deriveThumbnailFoodSubject(text: string) {
+  const normalized = normalizeChatRequirement(text);
+  const explicitFood = normalized.match(/(?:음식|메뉴|주제|소재)\s*[:：]\s*([가-힣A-Za-z0-9\s]{2,18})/)?.[1]?.trim();
+  if (explicitFood) return sanitizeCanvasChatText(explicitFood, '', 10);
+  const foodMatch = normalized.match(/(제육볶음|김치찌개|된장찌개|부대찌개|라면|떡볶이|돈가스|돈까스|삼겹살|갈비|곱창|막창|마라탕|불닭|치킨|피자|햄버거|초밥|스시|회|대게|킹크랩|랍스터|해산물|국밥|백반|고기|꼬치|튀김)/i)?.[1];
+  if (foodMatch) return sanitizeCanvasChatText(foodMatch, '', 10);
+  const sceneFallback = normalized.match(/(분식|야시장)/i)?.[1];
+  return sceneFallback ? sanitizeCanvasChatText(sceneFallback, '', 10) : '';
 }
 
 function hasExplicitChatHeadline(text: string) {

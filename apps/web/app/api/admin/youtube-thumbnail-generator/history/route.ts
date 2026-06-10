@@ -14,7 +14,7 @@ function jsonError(error: string, status: number, detail?: string) {
 
 export async function GET(_request: NextRequest) {
   try {
-    const auth = await requireAdmin();
+    const auth = await requireAdmin({ allowDevAdminBypassCookie: true });
     if (!auth.ok) return auth.response;
 
     const history = await readThumbnailHistory(process.env);
