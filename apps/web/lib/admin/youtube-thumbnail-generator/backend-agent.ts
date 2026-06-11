@@ -9,6 +9,7 @@ import type {
   ThumbnailChatAgentResult,
   ThumbnailBackendAgentRun,
   ThumbnailBackendAgentStatus,
+  PublicThumbnailBackendAgentStatus,
   ThumbnailChatCanvasPatch,
   ThumbnailChatTextLayerPatch,
   ThumbnailGeneratorPayload,
@@ -230,6 +231,16 @@ export function getThumbnailBackendAgentStatus(env: NodeJS.ProcessEnv = process.
     codexModel: resolveThumbnailAgentCodexModel(env),
     codexEffort: resolveThumbnailAgentCodexEffort(env),
     streamingAvailable: true,
+  };
+}
+
+export function toPublicThumbnailBackendAgentStatus(
+  status: ThumbnailBackendAgentStatus,
+): PublicThumbnailBackendAgentStatus {
+  const { rootPath: _rootPath, graphEntrypoint: _graphEntrypoint, commandPath: _commandPath, ...publicStatus } = status;
+  return {
+    ...publicStatus,
+    diagnosticsRedacted: true,
   };
 }
 
