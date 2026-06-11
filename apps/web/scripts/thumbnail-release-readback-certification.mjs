@@ -37,17 +37,49 @@ function normalizeBaseUrl(value) {
   return url.toString().replace(/\/$/, '')
 }
 
-function isPrivateIpAddress(hostname) {
-  const host = String(hostname || '').trim().replace(/^\[|\]$/g, '')
-  const v4 = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/)
+function parseIpv4Address(hostname) {
+  const v4 = hostname.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/)
   if (v4) {
     const octets = v4.slice(1).map((part) => Number(part))
-    if (octets.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return true
-    const [a, b] = octets
-    return a === 10 || a === 127 || a === 0 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 169 && b === 254)
+    if (octets.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return { invalid: true, octets: [] }
+    return { invalid: false, octets }
   }
+  return null
+}
+
+function isBlockedIpv4Address(octets) {
+  const [a, b, c] = octets
+  return (
+    a === 0 ||
+    a === 10 ||
+    a === 127 ||
+    (a === 100 && b >= 64 && b <= 127) ||
+    (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 0 && (c === 0 || c === 2)) ||
+    (a === 192 && b === 168) ||
+    (a === 198 && (b === 18 || b === 19)) ||
+    (a === 198 && b === 51 && c === 100) ||
+    (a === 203 && b === 0 && c === 113) ||
+    a >= 224
+  )
+}
+
+function isBlockedHostedIpAddress(hostname) {
+  const host = String(hostname || '').trim().replace(/^\[|\]$/g, '')
+  const v4 = parseIpv4Address(host)
+  if (v4) return v4.invalid || isBlockedIpv4Address(v4.octets)
   const normalized = host.toLowerCase()
-  return normalized === '::1' || normalized.startsWith('fc') || normalized.startsWith('fd') || normalized.startsWith('fe80:')
+  return (
+    normalized === '::' ||
+    normalized === '::1' ||
+    normalized.startsWith('::ffff:') ||
+    normalized.startsWith('fc') ||
+    normalized.startsWith('fd') ||
+    normalized.startsWith('fe80:') ||
+    normalized.startsWith('ff') ||
+    normalized.startsWith('2001:db8:')
+  )
 }
 
 function parseAllowedHostedOrigins(value) {
@@ -78,7 +110,7 @@ function getHostedBaseUrlBlocker(baseUrl, allowedOrigins = '') {
     hostname.endsWith('.test') ||
     hostname === 'example.com' ||
     hostname.endsWith('.example.com') ||
-    isPrivateIpAddress(hostname)
+    isBlockedHostedIpAddress(hostname)
   ) {
     return 'hosted_real_base_url_required'
   }
