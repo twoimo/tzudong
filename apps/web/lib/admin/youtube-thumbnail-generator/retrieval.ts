@@ -225,7 +225,6 @@ function sanitizeEvidence(value: unknown): ThumbnailReferenceEvidence[] {
       videoId: typeof record.videoId === 'string' ? record.videoId.slice(0, 80) : undefined,
       title: typeof record.title === 'string' ? record.title.slice(0, 160) : undefined,
       thumbnailUrl: typeof record.thumbnailUrl === 'string' ? record.thumbnailUrl.slice(0, 500) : undefined,
-      cachedImagePath: typeof record.cachedImagePath === 'string' ? record.cachedImagePath.slice(0, 500) : undefined,
       startSec: Number.isFinite(Number(record.startSec)) ? Number(record.startSec) : undefined,
       endSec: Number.isFinite(Number(record.endSec)) ? Number(record.endSec) : undefined,
       transcriptSnippet: typeof record.transcriptSnippet === 'string' ? record.transcriptSnippet.slice(0, 500) : undefined,

@@ -394,6 +394,9 @@ describe("admin youtube thumbnail generator", () => {
     expect(wrapperSource).toContain("path = response_root / f\"{image_call_id}{suffix}\"");
     expect(wrapperSource).toContain("durable_output_path = copy_durable_output(generated_for_proof, event_proof)");
     expect(wrapperSource).toContain("Only exact {DEFAULT_MODEL} is allowed; no image-model fallback is permitted.");
+    expect(wrapperSource).toContain("food-only output with no human figure, face, silhouette, cutout, or creator body zone");
+    expect(wrapperSource).toContain("read_png_dimensions(durable_output_path)");
+    expect(wrapperSource).not.toContain("generic non-identifying host/reaction figure or silhouette");
     expect(wrapperSource).not.toContain("image_path.read_bytes()");
     expect(wrapperSource).not.toContain("software_window");
     expect(wrapperSource).not.toContain("use that default and report a warning");
@@ -615,6 +618,9 @@ describe("admin youtube thumbnail generator", () => {
   });
 
   test("requires a host/person reference before generating a Tzuyang-like host visual", () => {
+    const routeSource = readFileSync(new URL("../app/api/admin/youtube-thumbnail-generator/route.ts", import.meta.url), "utf8");
+    expect(routeSource.indexOf("host_reference_required")).toBeLessThan(routeSource.indexOf("resolveThumbnailRetrievalReferences(payload, process.env)"));
+
     const promptWithoutReference = buildYoutubeThumbnailPrompt({
       ...safePayload,
       topic: "유튜브 쯔양이 메인 진행자로 보이는 야시장 먹방 썸네일",
@@ -699,6 +705,7 @@ process.stdin.on("end", () => {
       intent: "food",
       videoId: "cmdVideo01",
       title: "쯔양 제육볶음 먹방",
+      cachedImagePath: ".omx/artifacts/private-reference-cache/cmdVideo01.png",
       hybridScore: 22.5,
       rerankScore: 0.91,
       selectedReason: "BGE dense/sparse hybrid + reranker selected this food reference"
@@ -737,6 +744,9 @@ process.stdin.on("end", () => {
       expect(retrieval.diagnostics.status).toBe("used");
       expect(retrieval.diagnostics.commandRuntime).toBe("python_retrieval_adapter");
       expect(retrieval.evidence[0]?.uploadRole).toBe("food");
+      expect("cachedImagePath" in (retrieval.evidence[0] ?? {})).toBe(false);
+      expect(JSON.stringify(retrieval)).not.toContain(".omx");
+      expect(JSON.stringify(retrieval)).not.toContain("cachedImagePath");
       expect(canShowThumbnailRetrievalModelLabel(retrieval.diagnostics, "embedding")).toBe(true);
       expect(canShowThumbnailRetrievalModelLabel(retrieval.diagnostics, "reranker")).toBe(true);
       expect(prompt).toContain("Embedding retrieval proof: BAAI/bge-m3");
@@ -2324,7 +2334,6 @@ test("youtube thumbnail durable release routes return 503 when the durable regis
       release: null,
       diagnostics: {
         durableRegistryAvailable: false,
-        storageBucket: "youtube-thumbnail-releases",
         releaseKey: "youtube-thumbnail-generator/current",
         reason: "missing_supabase_env",
         warnings: [],
@@ -2336,7 +2345,6 @@ test("youtube thumbnail durable release routes return 503 when the durable regis
       release: null,
       diagnostics: {
         durableRegistryAvailable: false,
-        storageBucket: "youtube-thumbnail-releases",
         releaseKey: "youtube-thumbnail-generator/current",
         reason: "missing_supabase_env",
         warnings: [],
@@ -2431,6 +2439,19 @@ test("youtube thumbnail hosted release certification runner blocks hosted pass w
       local_adapter_smoke_status: string;
       output_artifact: { filename: string; local_path_redacted: boolean };
       raw_path_leak_check: { passed: boolean };
+      redacted_input_summary: { hosted_enabled: boolean; distinct_contexts: boolean };
+      observability: {
+        no_leak_scan_status: string;
+        redacted_env_input_summary_recorded: boolean;
+      };
+      operator_acceptance: {
+        status: string;
+        score_schema: {
+          scale: string;
+          thresholds: { minimumPerRole: number; weightedTotal: number };
+        };
+        blocks_operator_ready: boolean;
+      };
       blockers: string[];
     };
 
@@ -2440,10 +2461,19 @@ test("youtube thumbnail hosted release certification runner blocks hosted pass w
     expect(result.local_adapter_smoke_status).toBe("passed");
     expect(result.output_artifact).toEqual({ filename: "result.json", local_path_redacted: true });
     expect(result.raw_path_leak_check.passed).toBe(true);
+    expect(result.redacted_input_summary).toMatchObject({ hosted_enabled: false, distinct_contexts: false });
+    expect(result.observability.no_leak_scan_status).toBe("passed");
+    expect(result.observability.redacted_env_input_summary_recorded).toBe(true);
+    expect(result.operator_acceptance.status).toBe("not_run");
+    expect(result.operator_acceptance.score_schema.scale).toBe("0-100");
+    expect(result.operator_acceptance.score_schema.thresholds).toEqual({ minimumPerRole: 85, weightedTotal: 90 });
+    expect(result.operator_acceptance.blocks_operator_ready).toBe(true);
     expect(result.blockers).toContain("hosted_certification_not_enabled");
     expect(result.certification_level).not.toBe("hosted");
     expect(resultText).not.toContain(".omx");
     expect(resultText).not.toContain("storage_object_path");
+    expect(resultText).not.toContain("storageBucket");
+    expect(resultText).not.toContain("storagePath");
     expect(resultText).not.toContain("SUPABASE_SERVICE_ROLE_KEY");
 
     const script = readFileSync(
@@ -2452,6 +2482,10 @@ test("youtube thumbnail hosted release certification runner blocks hosted pass w
     );
     expect(script).toContain("local_adapter_smoke_must_not_mark_hosted_certification_passed");
     expect(script).toContain("hosted_certification_pass_requires_two_context_evidence");
+    expect(script).toContain("hosted_reader_cookie_required");
+    expect(script).toContain("hosted_reader_context_must_be_distinct");
+    expect(script).toContain("operator_score_required_for_operator_ready");
+    expect(script).toContain("OPERATOR_SCORE_WEIGHTS");
   } finally {
     rmSync(tempDir, { recursive: true, force: true });
   }
@@ -2463,6 +2497,8 @@ test("youtube thumbnail hosted release certification preserves local-only status
     for (const [name, args, blocker] of [
       ["missing-candidate", ["--hosted", "1", "--base-url", "https://example.invalid", "--cookie", "admin=1"], "hosted_candidate_id_required"],
       ["missing-cookie", ["--hosted", "1", "--base-url", "https://example.invalid", "--candidate-id", "01-durable"], "hosted_admin_cookie_required"],
+      ["missing-reader-cookie", ["--hosted", "1", "--base-url", "https://example.invalid", "--candidate-id", "01-durable", "--cookie", "admin=1"], "hosted_reader_cookie_required"],
+      ["shared-reader-cookie", ["--hosted", "1", "--base-url", "https://example.invalid", "--candidate-id", "01-durable", "--cookie", "shared=1", "--reader-cookie", "shared=1"], "hosted_reader_context_must_be_distinct"],
     ] as const) {
       const outputPath = join(tempDir, name, "result.json");
       const run = spawnSync(process.execPath, [
@@ -2483,6 +2519,7 @@ test("youtube thumbnail hosted release certification preserves local-only status
         hosted_readback_status: string;
         local_adapter_smoke_status: string;
         blockers: string[];
+        redacted_input_summary: { admin_context_provided: boolean; reader_context_provided: boolean; distinct_contexts: boolean };
       };
 
       expect(result.status).toBe("blocked");
@@ -2490,6 +2527,7 @@ test("youtube thumbnail hosted release certification preserves local-only status
       expect(result.hosted_readback_status).toBe("blocked");
       expect(result.local_adapter_smoke_status).toBe("passed");
       expect(result.blockers).toContain(blocker);
+      expect(result.redacted_input_summary.distinct_contexts).toBe(false);
     }
   } finally {
     rmSync(tempDir, { recursive: true, force: true });
