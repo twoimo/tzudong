@@ -9,7 +9,11 @@ import {
   parseThumbnailPayload,
   readThumbnailReferenceImages,
 } from '@/lib/admin/youtube-thumbnail-generator/request';
-import { generateYoutubeThumbnailWithBackendAgent, getThumbnailBackendAgentStatus } from '@/lib/admin/youtube-thumbnail-generator/backend-agent';
+import {
+  generateYoutubeThumbnailWithBackendAgent,
+  getThumbnailBackendAgentStatus,
+  toPublicThumbnailBackendAgentStatus,
+} from '@/lib/admin/youtube-thumbnail-generator/backend-agent';
 import { persistLocalThumbnailHistory } from '@/lib/admin/youtube-thumbnail-generator/history';
 import {
   generateYoutubeThumbnail,
@@ -48,7 +52,7 @@ export async function GET(_request: NextRequest) {
       {
         target: { width: 1280, height: 720, aspectRatio: '16:9' },
         providers: getThumbnailProviderAvailability(process.env),
-        backendAgent: getThumbnailBackendAgentStatus(process.env),
+        backendAgent: toPublicThumbnailBackendAgentStatus(getThumbnailBackendAgentStatus(process.env)),
         limits: {
           maxFiles: 8,
           maxFileBytes: 8_388_608,
