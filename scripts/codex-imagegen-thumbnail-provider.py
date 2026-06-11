@@ -111,6 +111,14 @@ def is_path_inside(root: Path, target: Path) -> bool:
         return False
 
 
+def read_png_dimensions(path: Path) -> tuple[int, int]:
+    with path.open("rb") as handle:
+        header = handle.read(24)
+    if len(header) < 24 or header[:8] != b"\x89PNG\r\n\x1a\n" or header[12:16] != b"IHDR":
+        return (0, 0)
+    return (int.from_bytes(header[16:20], "big"), int.from_bytes(header[20:24], "big"))
+
+
 def generated_image_for_event(event_proof: dict[str, Any], started_at: float) -> Path | None:
     response_id = str(event_proof.get("responseId") or "")
     image_call_id = str(event_proof.get("imageCallId") or "")
@@ -184,7 +192,7 @@ def condense_app_prompt(app_prompt: str) -> str:
     host_guidance = (
         "When Host/person guidance says ALLOW_SPECIFIC_CREATOR_HOST, include the requested Tzuyang/YouTube creator host as a respectful main mukbang reaction cutout or follow provided host/person references. Avoid defamatory, sexualized, deceptive, or private-life context.\n"
         if allow_specific_creator_host
-        else "Include one clearly visible generic non-identifying host/reaction figure or silhouette when the brief mentions a host/reaction zone.\n"
+        else "When no host/person reference is allowed, keep the thumbnail food-only with no human figure, face, silhouette, cutout, or creator body zone; use food detail, steam, utensils, and restaurant depth for reaction energy.\n"
     )
     return (
         "Create a 16:9 Korean YouTube mukbang or food-travel thumbnail base image.\n"
@@ -208,7 +216,7 @@ Hard generation contract:
 - Use the built-in image generation tool only.
 - Do not run shell commands, do not call `codex exec -m gpt-image-2`, and do not create mock/SVG/placeholder output.
 - Prefer a 16:9 landscape composition. The wrapper process will collect the generated image and normalize it to {TARGET_WIDTH}x{TARGET_HEIGHT} PNG at {output_path}; you do not need to save, crop, resize, verify, or copy files yourself.
-- Respect the app prompt's Host/person guidance. If it says ALLOW_SPECIFIC_CREATOR_HOST, the main public creator/reference host may be visible; otherwise use a generic non-identifying host/reaction figure or silhouette.
+- Respect the app prompt's Host/person guidance. If it says ALLOW_SPECIFIC_CREATOR_HOST, only the supplied host/person reference-matched figure may be visible; otherwise generate food-only output with no human figure, face, silhouette, cutout, or creator body zone.
 - No logos, watermarks, visible UI chrome, readable real signage, names, prices, or contact text.
 - Final reply should only state: generated.
 
@@ -605,6 +613,7 @@ def main() -> int:
         # Resizing/cropping strips the embedded claim, so the durable output that
         # the web app accepts must be a byte copy of the c2patool-verified asset.
         durable_output_path = copy_durable_output(generated_for_proof, event_proof)
+        durable_width, durable_height = read_png_dimensions(durable_output_path)
 
         payload = {
             "ok": True,
@@ -618,6 +627,8 @@ def main() -> int:
             "modelProvenance": "exact",
             "mime": "image/png",
             "bytes": durable_output_path.stat().st_size,
+            "width": durable_width,
+            "height": durable_height,
             "path": str(output_path),
             "transientOutputPath": str(output_path),
             "outputPath": str(durable_output_path),

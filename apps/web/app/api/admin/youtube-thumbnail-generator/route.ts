@@ -103,12 +103,6 @@ export async function POST(request: NextRequest) {
       .getAll('referenceImages')
       .filter((entry): entry is File => entry instanceof File && entry.size > 0);
     const referenceImages = await readThumbnailReferenceImages(files, payload.referenceImageRoles);
-    const retrieval = await resolveThumbnailRetrievalReferences(payload, process.env);
-    const payloadWithRetrieval = {
-      ...payload,
-      retrievalEvidence: retrieval.evidence,
-      retrievalDiagnostics: retrieval.diagnostics,
-    };
     if (
       SPECIFIC_CREATOR_HOST_PATTERN.test(payload.topic) &&
       !referenceImages.some((image) => HOST_PERSON_REFERENCE_ROLES.has(image.role))
@@ -119,6 +113,12 @@ export async function POST(request: NextRequest) {
         400,
       );
     }
+    const retrieval = await resolveThumbnailRetrievalReferences(payload, process.env);
+    const payloadWithRetrieval = {
+      ...payload,
+      retrievalEvidence: retrieval.evidence,
+      retrievalDiagnostics: retrieval.diagnostics,
+    };
     const generationRunId = `thumbnail-generation-${randomUUID()}`;
     const providerRequestEnv = buildThumbnailProviderRequestEnv(process.env, payload.providerId, formData);
     const result = payload.generationMode === 'backend_agent'
