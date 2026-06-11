@@ -1,14 +1,17 @@
 #!/usr/bin/env node
+import { createHash } from 'node:crypto'
 import { readFile, mkdir, writeFile } from 'node:fs/promises'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { basename, dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const WEB_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const REPO_ROOT = resolve(WEB_ROOT, '../..')
 const DEFAULT_OUTPUT = resolve(REPO_ROOT, '.omx/artifacts/thumbnail-release-readback-certification/result.json')
-const FORBIDDEN_PATTERNS = ['.omx', 'storage_object_path', 'SUPABASE_SERVICE_ROLE_KEY']
-const FORBIDDEN_PATTERN_LABELS = ['local-artifact-paths', 'raw-storage-object-field', 'service-role-secret']
+const FORBIDDEN_PATTERNS = ['.omx', 'storage_object_path', 'storagePath', 'storageBucket', 'SUPABASE_SERVICE_ROLE_KEY', 'SERVICE_ROLE']
+const FORBIDDEN_PATTERN_LABELS = ['local-artifact-paths', 'private-storage-object-metadata', 'service-role-secret']
+const OPERATOR_SCORE_WEIGHTS = { tzuyang: 0.35, pd: 0.25, manager: 0.2, editor: 0.2 }
+const OPERATOR_ROLE_THRESHOLDS = { minimumPerRole: 85, weightedTotal: 90 }
 
 function parseArgs(argv) {
   const args = new Map()
@@ -46,6 +49,49 @@ function redactSupabaseRef(value) {
   }
 }
 
+function redactedCookieFingerprint(cookie) {
+  const raw = String(cookie || '').trim()
+  if (!raw) return null
+  return `sha256:${createHash('sha256').update(raw).digest('hex').slice(0, 12)}`
+}
+
+function createRedactedInputSummary({ hostedEnabled, baseUrl, candidateId, cookie, readerCookie }) {
+  const adminFingerprint = redactedCookieFingerprint(cookie)
+  const readerFingerprint = redactedCookieFingerprint(readerCookie)
+  return {
+    hosted_enabled: Boolean(hostedEnabled),
+    base_url_origin: baseUrl ? new URL(baseUrl).origin : null,
+    candidate_id_present: Boolean(candidateId),
+    admin_context_provided: Boolean(cookie),
+    reader_context_provided: Boolean(readerCookie),
+    admin_context_fingerprint: adminFingerprint,
+    reader_context_fingerprint: readerFingerprint,
+    distinct_contexts: Boolean(adminFingerprint && readerFingerprint && adminFingerprint !== readerFingerprint),
+  }
+}
+
+function createOperatorAcceptance() {
+  return {
+    status: 'not_run',
+    passed: false,
+    blocks_operator_ready: true,
+    score_schema: {
+      scale: '0-100',
+      weights: OPERATOR_SCORE_WEIGHTS,
+      thresholds: OPERATOR_ROLE_THRESHOLDS,
+      roles: {
+        tzuyang: 'brand_identity_upload_risk',
+        pd: 'hook_concept_ctr_narrative',
+        manager: 'repeatability_blocked_state_cross_device',
+        editor: 'canvas_layer_text_png_workflow',
+      },
+    },
+    scores: { tzuyang: null, pd: null, manager: null, editor: null },
+    weighted_total: null,
+    blocker: 'operator_score_required_for_operator_ready',
+  }
+}
+
 function createEmptyResult({ outputPath, baseUrl, supabaseUrl }) {
   return {
     schema_version: 1,
@@ -63,6 +109,7 @@ function createEmptyResult({ outputPath, baseUrl, supabaseUrl }) {
       supabase_project_ref_redacted: redactSupabaseRef(supabaseUrl),
       app_base_url: baseUrl || null,
     },
+    redacted_input_summary: null,
     release: {
       release_id: null,
       candidate_id: null,
@@ -73,6 +120,9 @@ function createEmptyResult({ outputPath, baseUrl, supabaseUrl }) {
     two_context_evidence: {
       publisher_context: 'not_run',
       reader_context: 'not_run',
+      distinct_contexts: false,
+      admin_context_fingerprint: null,
+      reader_context_fingerprint: null,
       same_release_id: false,
       screenshots: [],
     },
@@ -85,6 +135,20 @@ function createEmptyResult({ outputPath, baseUrl, supabaseUrl }) {
       source_contracts_checked: [],
       passed: false,
     },
+    observability: {
+      artifact_paths: {
+        result_json: basename(outputPath),
+        admin_screenshot: null,
+        reader_screenshot: null,
+        console_network_summary: null,
+      },
+      final_release_id: null,
+      final_candidate_id: null,
+      proxy_status: null,
+      no_leak_scan_status: 'not_run',
+      redacted_env_input_summary_recorded: false,
+    },
+    operator_acceptance: createOperatorAcceptance(),
     blockers: [],
     notes: [],
   }
@@ -143,6 +207,10 @@ async function runLocalSmoke(result) {
     assertContains(certificationScript, "local_adapter_smoke_status", 'scripts/thumbnail-release-readback-certification.mjs', checks),
     assertContains(certificationScript, "local_adapter_smoke_must_not_mark_hosted_certification_passed", 'scripts/thumbnail-release-readback-certification.mjs', checks),
     assertContains(certificationScript, "hosted_certification_pass_requires_two_context_evidence", 'scripts/thumbnail-release-readback-certification.mjs', checks),
+    assertContains(certificationScript, "hosted_reader_cookie_required", 'scripts/thumbnail-release-readback-certification.mjs', checks),
+    assertContains(certificationScript, "hosted_reader_context_must_be_distinct", 'scripts/thumbnail-release-readback-certification.mjs', checks),
+    assertContains(certificationScript, "operator_score_required_for_operator_ready", 'scripts/thumbnail-release-readback-certification.mjs', checks),
+    assertContains(certificationScript, "OPERATOR_SCORE_WEIGHTS", 'scripts/thumbnail-release-readback-certification.mjs', checks),
     assertContains(migration, "public = false", files.migration, checks),
     assertContains(migration, "check (model = 'gpt-image-2')", files.migration, checks),
     assertContains(migration, "publish_youtube_thumbnail_release", files.migration, checks),
@@ -194,15 +262,55 @@ function hasForbiddenLeak(value) {
   return FORBIDDEN_PATTERNS.filter((pattern) => text.includes(pattern))
 }
 
+function readOperatorScores(rawValue) {
+  const raw = String(rawValue || '').trim()
+  if (!raw) return null
+  if (existsSync(raw)) return JSON.parse(String(readFileSync(raw, 'utf8')))
+  return JSON.parse(raw)
+}
+
+function normalizeScore(value) {
+  const score = Number(value)
+  return Number.isFinite(score) ? Math.max(0, Math.min(100, Math.round(score))) : null
+}
+
+function applyOperatorScores(result, rawScores) {
+  if (!rawScores) return result
+  const scores = {
+    tzuyang: normalizeScore(rawScores.tzuyang),
+    pd: normalizeScore(rawScores.pd),
+    manager: normalizeScore(rawScores.manager),
+    editor: normalizeScore(rawScores.editor),
+  }
+  const allPresent = Object.values(scores).every((value) => value !== null)
+  const weightedTotal = allPresent
+    ? Math.round(Object.entries(OPERATOR_SCORE_WEIGHTS).reduce((sum, [role, weight]) => sum + scores[role] * weight, 0) * 10) / 10
+    : null
+  const perRolePassed = allPresent && Object.values(scores).every((value) => value >= OPERATOR_ROLE_THRESHOLDS.minimumPerRole)
+  const passed = Boolean(perRolePassed && weightedTotal >= OPERATOR_ROLE_THRESHOLDS.weightedTotal)
+  result.operator_acceptance = {
+    ...result.operator_acceptance,
+    status: passed ? 'passed' : 'failed',
+    passed,
+    blocks_operator_ready: !passed,
+    scores,
+    weighted_total: weightedTotal,
+    blocker: passed ? null : 'operator_score_below_threshold',
+  }
+  return result
+}
+
 function maybeMarkHostedPass(result) {
   const hostedPassed =
     result.certification_level === 'hosted' &&
     result.hosted_readback_status === 'passed' &&
     result.two_context_evidence.publisher_context === 'passed' &&
     result.two_context_evidence.reader_context === 'passed' &&
+    result.two_context_evidence.distinct_contexts === true &&
     result.two_context_evidence.same_release_id === true &&
     result.raw_path_leak_check.passed === true &&
-    result.release.proxy_status === 200
+    result.release.proxy_status === 200 &&
+    result.operator_acceptance.passed === true
 
   if (hostedPassed) {
     result.status = 'passed'
@@ -230,6 +338,21 @@ async function runHostedReadback(result, { baseUrl, cookie, readerCookie, candid
     result.blockers.push('hosted_admin_cookie_required')
     return result
   }
+  if (!readerCookie) {
+    result.hosted_readback_status = 'blocked'
+    result.certification_level = result.local_adapter_smoke_status === 'passed' ? 'local_only' : 'blocked'
+    result.blockers.push('hosted_reader_cookie_required')
+    return result
+  }
+  if (result.redacted_input_summary && !result.redacted_input_summary.distinct_contexts) {
+    result.hosted_readback_status = 'blocked'
+    result.certification_level = result.local_adapter_smoke_status === 'passed' ? 'local_only' : 'blocked'
+    result.blockers.push('hosted_reader_context_must_be_distinct')
+    return result
+  }
+  result.two_context_evidence.distinct_contexts = true
+  result.two_context_evidence.admin_context_fingerprint = result.redacted_input_summary?.admin_context_fingerprint ?? null
+  result.two_context_evidence.reader_context_fingerprint = result.redacted_input_summary?.reader_context_fingerprint ?? null
 
   const publish = await fetchJson(baseUrl, '/api/admin/youtube-thumbnail-generator/releases/publish', {
     method: 'POST',
@@ -253,7 +376,7 @@ async function runHostedReadback(result, { baseUrl, cookie, readerCookie, candid
   result.release.sha256 = release?.sha256 ?? null
 
   const current = await fetchJson(baseUrl, '/api/admin/youtube-thumbnail-generator/releases/current', { headers: createHeaders(cookie) })
-  const reader = await fetchJson(baseUrl, '/api/admin/youtube-thumbnail-generator/releases/current', { headers: createHeaders(readerCookie || cookie) })
+  const reader = await fetchJson(baseUrl, '/api/admin/youtube-thumbnail-generator/releases/current', { headers: createHeaders(readerCookie) })
   const assetPath = release?.browserImagePath
   const asset = assetPath ? await fetchWithTimeout(`${baseUrl}${assetPath}`, { headers: createHeaders(cookie) }) : null
 
@@ -264,9 +387,10 @@ async function runHostedReadback(result, { baseUrl, cookie, readerCookie, candid
   )
   const leaks = [...hasForbiddenLeak(publish.body), ...hasForbiddenLeak(current.body), ...hasForbiddenLeak(reader.body)]
   result.raw_path_leak_check.passed = leaks.length === 0
-  if (leaks.length) result.blockers.push(`raw_path_leak:${[...new Set(leaks)].join(',')}`)
+  if (leaks.length) result.blockers.push('raw_path_leak:forbidden_browser_visible_metadata')
 
   result.release.proxy_status = asset?.status ?? null
+  result.observability.proxy_status = result.release.proxy_status
   result.two_context_evidence.reader_context = reader.ok ? 'passed' : 'failed'
   result.two_context_evidence.same_release_id = Boolean(
     release?.id &&
@@ -285,6 +409,8 @@ async function runHostedReadback(result, { baseUrl, cookie, readerCookie, candid
   ) ? 'passed' : 'failed'
   result.certification_level = result.hosted_readback_status === 'passed' ? 'hosted' : 'blocked'
   if (result.hosted_readback_status !== 'passed') result.blockers.push('hosted_two_context_readback_failed')
+  result.observability.final_release_id = result.release.release_id
+  result.observability.final_candidate_id = result.release.candidate_id
   return result
 }
 
@@ -296,12 +422,15 @@ async function main() {
   const candidateId = args.get('candidate-id') || process.env.THUMBNAIL_RELEASE_CERTIFICATION_CANDIDATE_ID || ''
   const cookie = args.get('cookie') || process.env.THUMBNAIL_RELEASE_CERTIFICATION_COOKIE || ''
   const readerCookie = args.get('reader-cookie') || process.env.THUMBNAIL_RELEASE_CERTIFICATION_READER_COOKIE || ''
+  const operatorScores = readOperatorScores(args.get('operator-scores') || process.env.THUMBNAIL_RELEASE_CERTIFICATION_OPERATOR_SCORES || '')
 
   const result = createEmptyResult({
     outputPath,
     baseUrl,
     supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
   })
+  result.redacted_input_summary = createRedactedInputSummary({ hostedEnabled, baseUrl, candidateId, cookie, readerCookie })
+  result.observability.redacted_env_input_summary_recorded = true
 
   await runLocalSmoke(result)
 
@@ -318,6 +447,18 @@ async function main() {
     await runHostedReadback(result, { baseUrl, cookie, readerCookie, candidateId })
   }
 
+  applyOperatorScores(result, operatorScores)
+  if (result.hosted_readback_status === 'passed' && !result.operator_acceptance.passed) {
+    result.blockers.push(result.operator_acceptance.blocker || 'operator_score_required_for_operator_ready')
+    result.certification_level = 'blocked'
+  }
+  const finalLeaks = hasForbiddenLeak(result)
+  result.observability.no_leak_scan_status = finalLeaks.length === 0 ? 'passed' : 'failed'
+  if (finalLeaks.length) {
+    result.raw_path_leak_check.passed = false
+    result.blockers.push('certification_result_leak:forbidden_metadata')
+    result.certification_level = 'blocked'
+  }
   maybeMarkHostedPass(result)
   if (result.status !== 'passed') result.status = result.blockers.length ? 'blocked' : 'failed'
   if (result.certification_level === 'hosted' && result.status !== 'passed') {

@@ -321,7 +321,6 @@ type ThumbnailDurableReleasePayload = {
   release?: ThumbnailDurableRelease | null;
   diagnostics?: {
     durableRegistryAvailable: boolean;
-    storageBucket: string;
     releaseKey: string;
     reason?: string;
     warnings: string[];
