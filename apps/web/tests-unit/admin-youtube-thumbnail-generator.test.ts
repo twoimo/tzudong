@@ -2551,6 +2551,17 @@ test("youtube thumbnail hosted release certification requires a real hosted HTTP
       ["loopback-https", "https://127.0.0.1:8080"],
       ["reserved-invalid", "https://example.invalid"],
       ["private-lan", "https://192.168.1.20"],
+      ["shared-address-space", "https://100.64.0.1"],
+      ["test-net-192", "https://192.0.2.10"],
+      ["test-net-198", "https://198.51.100.10"],
+      ["test-net-203", "https://203.0.113.10"],
+      ["benchmark-net", "https://198.18.0.10"],
+      ["ipv6-unspecified", "https://[::]"],
+      ["ipv6-loopback", "https://[::1]"],
+      ["ipv6-ula", "https://[fd00::1]"],
+      ["ipv6-documentation", "https://[2001:db8::1]"],
+      ["ipv4-mapped-loopback", "https://[::ffff:127.0.0.1]"],
+      ["ipv4-mapped-private", "https://[::ffff:192.168.1.20]"],
     ] as const) {
       const outputPath = join(tempDir, name, "result.json");
       const run = spawnSync(process.execPath, [
