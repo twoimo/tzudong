@@ -37,6 +37,56 @@ function normalizeBaseUrl(value) {
   return url.toString().replace(/\/$/, '')
 }
 
+function isPrivateIpAddress(hostname) {
+  const host = String(hostname || '').trim().replace(/^\[|\]$/g, '')
+  const v4 = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/)
+  if (v4) {
+    const octets = v4.slice(1).map((part) => Number(part))
+    if (octets.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return true
+    const [a, b] = octets
+    return a === 10 || a === 127 || a === 0 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 169 && b === 254)
+  }
+  const normalized = host.toLowerCase()
+  return normalized === '::1' || normalized.startsWith('fc') || normalized.startsWith('fd') || normalized.startsWith('fe80:')
+}
+
+function parseAllowedHostedOrigins(value) {
+  return String(value || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map((item) => {
+      try {
+        return new URL(item).origin
+      } catch {
+        return `https://${item}`.replace(/\/$/, '')
+      }
+    })
+}
+
+function getHostedBaseUrlBlocker(baseUrl, allowedOrigins = '') {
+  if (!baseUrl) return 'hosted_base_url_required'
+  const url = new URL(baseUrl)
+  const hostname = url.hostname.toLowerCase()
+  if (url.protocol !== 'https:') return 'hosted_real_base_url_required'
+  if (
+    hostname === 'localhost' ||
+    hostname.endsWith('.localhost') ||
+    hostname.endsWith('.local') ||
+    hostname.endsWith('.internal') ||
+    hostname.endsWith('.invalid') ||
+    hostname.endsWith('.test') ||
+    hostname === 'example.com' ||
+    hostname.endsWith('.example.com') ||
+    isPrivateIpAddress(hostname)
+  ) {
+    return 'hosted_real_base_url_required'
+  }
+  const allowed = parseAllowedHostedOrigins(allowedOrigins)
+  if (allowed.length && !allowed.includes(url.origin)) return 'hosted_allowed_origin_required'
+  return null
+}
+
 function redactSupabaseRef(value) {
   const raw = String(value || '').trim()
   if (!raw) return null
@@ -439,12 +489,18 @@ async function main() {
     result.certification_level = result.local_adapter_smoke_status === 'passed' ? 'local_only' : 'blocked'
     result.blockers.push('hosted_certification_not_enabled')
     result.notes.push('Set THUMBNAIL_RELEASE_CERTIFICATION_ENABLE_HOSTED=1 with base URL, admin cookie, and candidate id to attempt hosted certification.')
-  } else if (!baseUrl) {
-    result.hosted_readback_status = 'blocked'
-    result.certification_level = result.local_adapter_smoke_status === 'passed' ? 'local_only' : 'blocked'
-    result.blockers.push('hosted_base_url_required')
   } else {
-    await runHostedReadback(result, { baseUrl, cookie, readerCookie, candidateId })
+    const hostedBaseUrlBlocker = getHostedBaseUrlBlocker(
+      baseUrl,
+      args.get('allowed-origin') || process.env.THUMBNAIL_RELEASE_CERTIFICATION_ALLOWED_ORIGINS || '',
+    )
+    if (hostedBaseUrlBlocker) {
+      result.hosted_readback_status = 'blocked'
+      result.certification_level = result.local_adapter_smoke_status === 'passed' ? 'local_only' : 'blocked'
+      result.blockers.push(hostedBaseUrlBlocker)
+    } else {
+      await runHostedReadback(result, { baseUrl, cookie, readerCookie, candidateId })
+    }
   }
 
   applyOperatorScores(result, operatorScores)

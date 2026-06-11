@@ -3052,8 +3052,12 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(routeSource).toContain("getContentLengthRejection");
     expect(routeSource).toContain("generateYoutubeThumbnailWithBackendAgent");
     expect(routeSource).toContain("getThumbnailBackendAgentStatus");
+    expect(routeSource).toContain("toPublicThumbnailBackendAgentStatus");
     expect(routeSource).toContain("payload.generationMode === 'backend_agent'");
     expect(routeSource).toContain(
+      "backendAgent: toPublicThumbnailBackendAgentStatus(getThumbnailBackendAgentStatus(process.env))",
+    );
+    expect(routeSource).not.toContain(
       "backendAgent: getThumbnailBackendAgentStatus(process.env)",
     );
     expect(routeSource).toContain("getMultipartContentTypeRejection");
