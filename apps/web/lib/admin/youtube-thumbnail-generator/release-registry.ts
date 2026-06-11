@@ -68,7 +68,6 @@ export type ThumbnailDurableReleasePayload = {
   release: ThumbnailDurableRelease | null;
   diagnostics: {
     durableRegistryAvailable: boolean;
-    storageBucket: typeof THUMBNAIL_RELEASE_STORAGE_BUCKET;
     releaseKey: typeof THUMBNAIL_RELEASE_KEY;
     reason?: string;
     warnings: string[];
@@ -326,7 +325,6 @@ function createUnavailablePayload(reason: string, warnings: string[] = []): Thum
     release: null,
     diagnostics: {
       durableRegistryAvailable: false,
-      storageBucket: THUMBNAIL_RELEASE_STORAGE_BUCKET,
       releaseKey: THUMBNAIL_RELEASE_KEY,
       reason,
       warnings,
@@ -414,7 +412,6 @@ export async function readCurrentThumbnailDurableRelease(
         release: null,
         diagnostics: {
           durableRegistryAvailable: true,
-          storageBucket: THUMBNAIL_RELEASE_STORAGE_BUCKET,
           releaseKey: THUMBNAIL_RELEASE_KEY,
           warnings: [],
         },
@@ -428,7 +425,6 @@ export async function readCurrentThumbnailDurableRelease(
       release,
       diagnostics: {
         durableRegistryAvailable: true,
-        storageBucket: THUMBNAIL_RELEASE_STORAGE_BUCKET,
         releaseKey: THUMBNAIL_RELEASE_KEY,
         warnings: [],
       },
