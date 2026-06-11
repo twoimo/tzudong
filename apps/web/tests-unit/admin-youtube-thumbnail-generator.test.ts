@@ -26,6 +26,7 @@ import {
   generateYoutubeThumbnailChatWithBackendAgent,
   generateYoutubeThumbnailWithBackendAgent,
   getThumbnailBackendAgentStatus,
+  toPublicThumbnailBackendAgentStatus,
 } from "../lib/admin/youtube-thumbnail-generator/backend-agent";
 import { readThumbnailHistory } from "../lib/admin/youtube-thumbnail-generator/history";
 import {
@@ -1409,6 +1410,14 @@ NODE
       codexEffort: "high",
       streamingAvailable: true,
     });
+
+    const publicStatus = toPublicThumbnailBackendAgentStatus(status);
+    const publicStatusText = JSON.stringify(publicStatus);
+    expect(publicStatus.diagnosticsRedacted).toBe(true);
+    expect(publicStatusText).not.toContain("rootPath");
+    expect(publicStatusText).not.toContain("graphEntrypoint");
+    expect(publicStatusText).not.toContain("commandPath");
+    expect(publicStatusText).not.toContain("backend/thumbnail-agent");
     expect(graph).toContain("StateGraph");
     expect(graph).toContain("promptAddendum");
     expect(runner).toContain("THUMBNAIL_AGENT_JSON");
@@ -2495,10 +2504,10 @@ test("youtube thumbnail hosted release certification preserves local-only status
   const tempDir = mkdtempSync(join(tmpdir(), "thumbnail-release-certification-hosted-missing-"));
   try {
     for (const [name, args, blocker] of [
-      ["missing-candidate", ["--hosted", "1", "--base-url", "https://example.invalid", "--cookie", "admin=1"], "hosted_candidate_id_required"],
-      ["missing-cookie", ["--hosted", "1", "--base-url", "https://example.invalid", "--candidate-id", "01-durable"], "hosted_admin_cookie_required"],
-      ["missing-reader-cookie", ["--hosted", "1", "--base-url", "https://example.invalid", "--candidate-id", "01-durable", "--cookie", "admin=1"], "hosted_reader_cookie_required"],
-      ["shared-reader-cookie", ["--hosted", "1", "--base-url", "https://example.invalid", "--candidate-id", "01-durable", "--cookie", "shared=1", "--reader-cookie", "shared=1"], "hosted_reader_context_must_be_distinct"],
+      ["missing-candidate", ["--hosted", "1", "--base-url", "https://preview.tzudong.vercel.app", "--cookie", "admin=1"], "hosted_candidate_id_required"],
+      ["missing-cookie", ["--hosted", "1", "--base-url", "https://preview.tzudong.vercel.app", "--candidate-id", "01-durable"], "hosted_admin_cookie_required"],
+      ["missing-reader-cookie", ["--hosted", "1", "--base-url", "https://preview.tzudong.vercel.app", "--candidate-id", "01-durable", "--cookie", "admin=1"], "hosted_reader_cookie_required"],
+      ["shared-reader-cookie", ["--hosted", "1", "--base-url", "https://preview.tzudong.vercel.app", "--candidate-id", "01-durable", "--cookie", "shared=1", "--reader-cookie", "shared=1"], "hosted_reader_context_must_be_distinct"],
     ] as const) {
       const outputPath = join(tempDir, name, "result.json");
       const run = spawnSync(process.execPath, [
@@ -2528,6 +2537,61 @@ test("youtube thumbnail hosted release certification preserves local-only status
       expect(result.local_adapter_smoke_status).toBe("passed");
       expect(result.blockers).toContain(blocker);
       expect(result.redacted_input_summary.distinct_contexts).toBe(false);
+    }
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+test("youtube thumbnail hosted release certification requires a real hosted HTTPS base URL", () => {
+  const tempDir = mkdtempSync(join(tmpdir(), "thumbnail-release-certification-real-host-"));
+  try {
+    for (const [name, baseUrl] of [
+      ["localhost-http", "http://localhost:8080"],
+      ["loopback-https", "https://127.0.0.1:8080"],
+      ["reserved-invalid", "https://example.invalid"],
+      ["private-lan", "https://192.168.1.20"],
+    ] as const) {
+      const outputPath = join(tempDir, name, "result.json");
+      const run = spawnSync(process.execPath, [
+        "scripts/thumbnail-release-readback-certification.mjs",
+        "--hosted",
+        "1",
+        "--base-url",
+        baseUrl,
+        "--candidate-id",
+        "01-durable",
+        "--cookie",
+        "admin=1",
+        "--reader-cookie",
+        "reader=1",
+        "--operator-scores",
+        JSON.stringify({ tzuyang: 95, pd: 94, manager: 93, editor: 92 }),
+        "--output",
+        outputPath,
+      ], {
+        cwd: process.cwd(),
+        env: process.env,
+        encoding: "utf8",
+      });
+      expect(run.status).toBe(0);
+      expect(run.stderr).toBe("");
+      const resultText = readFileSync(outputPath, "utf8");
+      const result = JSON.parse(resultText) as {
+        status: string;
+        certification_level: string;
+        hosted_readback_status: string;
+        blockers: string[];
+        environment: { kind: string };
+      };
+
+      expect(result.status).toBe("blocked");
+      expect(result.certification_level).toBe("local_only");
+      expect(result.hosted_readback_status).toBe("blocked");
+      expect(result.environment.kind).toBe("adapter_only");
+      expect(result.blockers).toContain("hosted_real_base_url_required");
+      expect(resultText).not.toContain(".omx");
+      expect(resultText).not.toContain("storage_object_path");
     }
   } finally {
     rmSync(tempDir, { recursive: true, force: true });
