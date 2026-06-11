@@ -62,9 +62,11 @@ describe("admin youtube thumbnail history", () => {
     expect(routeSource).toContain("persistLocalThumbnailHistory");
     expect(routeSource).toContain("buildThumbnailProviderRequestEnv");
     expect(routeSource).toContain("providerEnv: providerRequestEnv");
-    expect(routeSource).toContain("const responseResult = { ...result, warnings: [...result.warnings] };");
+    expect(routeSource).toContain("const responseResult = {");
+    expect(routeSource).toContain("thumbnail_retrieval_status:${retrieval.diagnostics.status}");
+    expect(routeSource).toContain("retrieval,");
     expect(routeSource.indexOf("const result = payload.generationMode")).toBeLessThan(
-      routeSource.indexOf("await persistLocalThumbnailHistory(responseResult, payload, process.env, { runId: generationRunId });"),
+      routeSource.indexOf("await persistLocalThumbnailHistory(responseResult, payloadWithRetrieval, process.env, { runId: generationRunId });"),
     );
     expect(routeSource).toContain("thumbnail_history_persist_failed");
     expect(routeSource).toContain("return NextResponse.json(responseResult, { headers: noStoreHeaders });");
@@ -86,14 +88,16 @@ describe("admin youtube thumbnail history", () => {
   test("returns an empty list for missing or malformed canonical history", async () => {
     const historyRoot = tempDir("thumbnail-history-empty-");
     try {
-      expect(await readThumbnailHistory({ NODE_ENV: "test" }, { historyRoot, includeLegacyFallback: false })).toEqual({
+      expect(await readThumbnailHistory({ NODE_ENV: "test" }, { historyRoot, includeLegacyFallback: false })).toMatchObject({
         updatedAt: null,
         runs: [],
+        latestPreviewRun: { id: "bundled-youtube-thumbnail-preview" },
       });
       writeFileSync(join(historyRoot, "history.json"), "not json");
-      expect(await readThumbnailHistory({ NODE_ENV: "test" }, { historyRoot, includeLegacyFallback: false })).toEqual({
+      expect(await readThumbnailHistory({ NODE_ENV: "test" }, { historyRoot, includeLegacyFallback: false })).toMatchObject({
         updatedAt: null,
         runs: [],
+        latestPreviewRun: { id: "bundled-youtube-thumbnail-preview" },
       });
     } finally {
       rmSync(historyRoot, { recursive: true, force: true });
