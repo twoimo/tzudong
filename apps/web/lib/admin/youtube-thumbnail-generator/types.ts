@@ -79,7 +79,6 @@ export type ThumbnailReferenceEvidence = {
   videoId?: string;
   title?: string;
   thumbnailUrl?: string;
-  cachedImagePath?: string;
   startSec?: number;
   endSec?: number;
   transcriptSnippet?: string;
