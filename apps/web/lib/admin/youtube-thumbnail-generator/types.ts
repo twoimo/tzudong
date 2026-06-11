@@ -181,6 +181,13 @@ export type ThumbnailBackendAgentStatus = {
   streamingAvailable: boolean;
 };
 
+export type PublicThumbnailBackendAgentStatus = Omit<
+  ThumbnailBackendAgentStatus,
+  'rootPath' | 'graphEntrypoint' | 'commandPath'
+> & {
+  diagnosticsRedacted: true;
+};
+
 export type ThumbnailBackendAgentRun = {
   mode: 'command' | 'local_adapter';
   runtime: string;
