@@ -417,11 +417,8 @@ type ThumbnailReadiness = {
   backendAgent?: {
     available: boolean;
     mode: "command" | "local_adapter";
-    rootPath: string;
-    graphEntrypoint: string | null;
     commandConfigured: boolean;
     commandAvailable: boolean;
-    commandPath?: string;
     commandRejectionReason?: string;
     localAdapterAvailable: boolean;
     missingPythonModules: string[];
@@ -429,6 +426,7 @@ type ThumbnailReadiness = {
     codexModel?: string;
     codexEffort?: string;
     streamingAvailable?: boolean;
+    diagnosticsRedacted?: true;
   };
   providers: {
     localCodex: ProviderAvailability;
