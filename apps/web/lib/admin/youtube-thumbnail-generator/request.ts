@@ -26,11 +26,16 @@ export const THUMBNAIL_REMOTE_IMAGE_TIMEOUT_MS = 10_000;
 export const THUMBNAIL_CHAT_MESSAGE_MAX_LENGTH = 1_000;
 export const THUMBNAIL_CHAT_CONTEXT_MAX_LENGTH = 280;
 export const THUMBNAIL_CHAT_TEXT_MAX_LENGTH = 80;
+export const THUMBNAIL_SESSION_OPENAI_API_KEY_FIELD = 'thumbnailSessionOpenaiApiKey';
+export const THUMBNAIL_SESSION_GEMINI_API_KEY_FIELD = 'thumbnailSessionGeminiApiKey';
+export const THUMBNAIL_SESSION_API_KEY_MAX_LENGTH = 512;
 const THUMBNAIL_CHAT_RUN_ID_MAX_LENGTH = 120;
 const THUMBNAIL_CHAT_LAYER_ID_MAX_LENGTH = 40;
 const THUMBNAIL_CHAT_ACTION_MAX_LENGTH = 80;
 const THUMBNAIL_CHAT_RUN_ID_PATTERN = /^[A-Za-z0-9_.:-]+$/;
 const THUMBNAIL_CONTROL_CHARS_PATTERN = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
+const THUMBNAIL_SESSION_OPENAI_API_KEY_PATTERN = /^sk-[A-Za-z0-9_-]{16,}$/;
+const THUMBNAIL_SESSION_API_KEY_FORBIDDEN_CHARS_PATTERN = /[\s\u0000-\u001F\u007F]/;
 
 type RemoteImageFetchDeps = {
   fetch?: typeof fetch;
@@ -54,11 +59,40 @@ export function buildThumbnailProviderRequestEnv(
   providerId: ThumbnailGeneratorPayload['providerId'],
   formData: FormData,
 ): NodeJS.ProcessEnv {
-  void providerId;
-  void formData;
-  return {
-    ...baseEnv,
-  };
+  const env = { ...baseEnv };
+  if (providerId !== 'openai-gpt-image-2') return env;
+
+  const openaiApiKey = normalizeThumbnailSessionOpenAIApiKey(
+    formData.get(THUMBNAIL_SESSION_OPENAI_API_KEY_FIELD),
+  );
+  if (openaiApiKey) {
+    env.OPENAI_API_KEY = openaiApiKey;
+    env.THUMBNAIL_OPENAI_IMAGE_MODEL = 'gpt-image-2';
+  }
+  return env;
+}
+
+export function normalizeThumbnailSessionOpenAIApiKey(value: FormDataEntryValue | null): string | undefined {
+  if (value === null || value === undefined) return undefined;
+  if (typeof value !== 'string') {
+    throw new ThumbnailGenerationError('invalid_session_api_key', 'OpenAI API 키는 문자열로만 입력할 수 있습니다.', 400);
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  if (
+    trimmed.length > THUMBNAIL_SESSION_API_KEY_MAX_LENGTH ||
+    THUMBNAIL_SESSION_API_KEY_FORBIDDEN_CHARS_PATTERN.test(trimmed) ||
+    !THUMBNAIL_SESSION_OPENAI_API_KEY_PATTERN.test(trimmed)
+  ) {
+    throw new ThumbnailGenerationError(
+      'invalid_session_api_key',
+      'OpenAI API 키 형식이 올바르지 않습니다. sk-로 시작하는 키를 입력해 주세요.',
+      400,
+    );
+  }
+
+  return trimmed;
 }
 
 function isThumbnailBriefPreset(value: unknown): value is ThumbnailBriefPreset {

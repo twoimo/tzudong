@@ -82,6 +82,7 @@ const CHAT_REPLACEMENT_TARGET_SUBHEADLINE_PATTERN = /(?:스티커\s*문구|스�
 const CHAT_REPLACEMENT_TARGET_SELECTED_PATTERN = /(?:선택된\s*문구|선택\s*문구|현재\s*문구|이\s*문구|이거|그거|해당\s*문구)/i;
 const CHAT_CANVAS_OPTIMIZATION_PATTERN = /(조회수|클릭률|클릭|CTR|최적화|가독성|잘\s*나오|잘\s*읽히|잘\s*보이|눈에\s*띄|주목|강조|배치|위치|폰트|크기)/i;
 const CHAT_LOCAL_CODEX_PROVIDER_PATTERN = /(local\s*codex|로컬\s*codex|codex\s*(?:built-in|imagegen|로컬)|로컬\s*이미지젠|imagegen\s*로컬)/i;
+const CHAT_OPENAI_GPT_IMAGE_2_PROVIDER_PATTERN = /(open\s*ai|오픈\s*ai|오픈에이아이)/i;
 const MAIN_HEADLINE_MAX_LENGTH = 36;
 const AUTO_GENERATED_MAIN_HEADLINE_MAX_LENGTH = 14;
 const SUB_HEADLINE_MAX_LENGTH = 20;
@@ -874,9 +875,9 @@ function resolveChatProviderId(
   message: string,
   fallback: ThumbnailGeneratorPayload['providerId'],
 ): ThumbnailGeneratorPayload['providerId'] {
-  void fallback;
   if (CHAT_LOCAL_CODEX_PROVIDER_PATTERN.test(message)) return 'local-codex';
-  return 'local-codex';
+  if (CHAT_OPENAI_GPT_IMAGE_2_PROVIDER_PATTERN.test(message)) return 'openai-gpt-image-2';
+  return fallback;
 }
 
 function resolveChatGenerationMode(message: string, fallback: ThumbnailGeneratorPayload['generationMode']) {
