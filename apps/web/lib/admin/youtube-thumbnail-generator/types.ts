@@ -3,6 +3,7 @@ export const YOUTUBE_THUMBNAIL_TARGET_HEIGHT = 720;
 
 export const THUMBNAIL_PROVIDER_IDS = [
   'local-codex',
+  'openai-gpt-image-2',
 ] as const;
 
 export type ThumbnailProviderId = (typeof THUMBNAIL_PROVIDER_IDS)[number];
@@ -272,6 +273,7 @@ export type ThumbnailGenerationErrorCode =
   | 'thumbnail_chat_message_too_long'
   | 'thumbnail_chat_aborted'
   | 'thumbnail_generation_aborted'
+  | 'invalid_session_api_key'
   | 'unsafe_instruction'
   | 'unsafe_identity'
   | 'unsafe_brand'
