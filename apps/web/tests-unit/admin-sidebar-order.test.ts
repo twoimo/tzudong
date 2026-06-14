@@ -6,7 +6,14 @@ import {
 } from "../lib/admin/sidebar-order";
 
 describe("admin sidebar order normalization", () => {
-  test("keeps server and client defaults stable for the operations section", () => {
+  test("keeps server and client defaults stable for review and operations sections", () => {
+    expect(DEFAULT_ADMIN_SIDEBAR_ORDER.items["검수"]).toEqual([
+      "restaurants",
+      "restaurant-refresh-history",
+      "submissions",
+      "reviews",
+    ]);
+
     expect(DEFAULT_ADMIN_SIDEBAR_ORDER.items["운영"]).toEqual([
       "users",
       "banners",
@@ -33,6 +40,13 @@ describe("admin sidebar order normalization", () => {
       },
     });
 
+    expect(normalized.items["검수"]).toEqual([
+      "restaurants",
+      "restaurant-refresh-history",
+      "submissions",
+      "reviews",
+    ]);
+
     expect(normalized.items["운영"]).toEqual([
       "users",
       "banners",
@@ -58,6 +72,13 @@ describe("admin sidebar order normalization", () => {
     });
 
     expect(normalized.sections).toEqual(["운영", "홈", "검수", "실험실"]);
+    expect(normalized.items["검수"]).toEqual([
+      "restaurants",
+      "restaurant-refresh-history",
+      "submissions",
+      "reviews",
+    ]);
+
     expect(normalized.items["운영"]).toEqual([
       "banners",
       "users",
