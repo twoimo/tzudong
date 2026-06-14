@@ -8530,40 +8530,15 @@ function AdminStoryboardModuleLoadingSkeleton() {
           </CardHeader>
           <CardContent className="min-h-0 flex-1 overflow-hidden p-3 pt-0">
             <div
-              className="relative grid h-full min-h-0 grid-cols-2 grid-rows-2 gap-2"
-              data-storyboard-module-loading-frame-grid="true"
-            >
-              {Array.from({ length: 4 }, (_, index) => {
-                const cutNo = index + 1;
-                return (
-                  <div
-                    key={`storyboard-module-loading-cut-${cutNo}`}
-                    className="relative overflow-hidden rounded-2xl border border-slate-400/35 bg-slate-300/42 shadow-[inset_0_1px_0_rgba(255,255,255,0.42)] dark:border-slate-500/35 dark:bg-slate-700/35"
-                    data-storyboard-module-loading-cut={String(cutNo)}
-                  >
-                    <span
-                      className="absolute inset-0 bg-gradient-to-br from-white/34 via-slate-300/20 to-slate-500/24"
-                      aria-hidden="true"
-                    />
-                    <span
-                      className="absolute left-3 top-3 z-10 h-6 w-16 rounded-full bg-slate-700/55"
-                      aria-hidden="true"
-                    />
-                    <span
-                      className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/68 to-transparent blur-sm [animation:storyboard-glass-shimmer_1.45s_ease-in-out_infinite]"
-                      aria-hidden="true"
-                      data-storyboard-module-loading-shimmer="true"
-                    />
-                  </div>
-                );
-              })}
-            </div>
+              className="h-full min-h-[420px] rounded-2xl bg-transparent"
+              data-storyboard-module-loading-canvas-blank="true"
+              aria-hidden="true"
+            />
           </CardContent>
         </Card>
       </div>
       <span className="sr-only">
-        스토리보드 페이지 구조와 CUT별 회색조 스켈레톤을 함께 준비하고
-        있습니다.
+        스토리보드 페이지 구조를 준비하고 있습니다.
       </span>
     </section>
   );
