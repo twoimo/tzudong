@@ -8,6 +8,13 @@ import type { OverlayPanelType } from "@/components/layout/FloatingNavButtons";
 import { useAuth } from "@/contexts/AuthContextBase";
 import { Restaurant } from "@/types/restaurant";
 import { AUTH_UI_REQUEST_EVENT } from "@/lib/auth-ui-events";
+import {
+  AUTH_LOGIN_QUERY_PARAM,
+  AUTH_LOGIN_QUERY_VALUE,
+  AUTH_REDIRECT_NEXT_PARAM,
+  AUTH_REDIRECT_REASON_PARAM,
+  getSafeAuthNextPath,
+} from "@/lib/auth/auth-redirect";
 
 // 지연 로딩
 const FloatingNavButtons = dynamic(
@@ -125,6 +132,12 @@ export default function OverlayLayout({
   const prevPathnameRef = useRef(pathname);
   const panelParam = searchParams.get("panel");
   const reviewParam = searchParams.get("review");
+  const authLoginRequested =
+    searchParams.get(AUTH_LOGIN_QUERY_PARAM) === AUTH_LOGIN_QUERY_VALUE;
+  const authLoginReason = searchParams.get(AUTH_REDIRECT_REASON_PARAM);
+  const authLoginNextPath = getSafeAuthNextPath(
+    searchParams.get(AUTH_REDIRECT_NEXT_PARAM),
+  );
   const isHomeRoute = pathname === "/";
   const routeDirectPanelParam = getDirectOverlayPanel(panelParam);
   const directPanelParam = isHomeRoute ? null : routeDirectPanelParam;
@@ -207,12 +220,24 @@ export default function OverlayLayout({
 
   // 인증 모달 핸들러
   const handleOpenAuth = useCallback(() => setIsAuthModalOpen(true), []);
+  const handleCloseAuth = useCallback(() => {
+    setIsAuthModalOpen(false);
+    if (authLoginRequested) {
+      router.replace("/", { scroll: false });
+    }
+  }, [authLoginRequested, router]);
 
   useEffect(() => {
     window.addEventListener(AUTH_UI_REQUEST_EVENT, handleOpenAuth);
     return () =>
       window.removeEventListener(AUTH_UI_REQUEST_EVENT, handleOpenAuth);
   }, [handleOpenAuth]);
+
+  useEffect(() => {
+    if (authLoginRequested) {
+      setIsAuthModalOpen(true);
+    }
+  }, [authLoginRequested]);
 
   useEffect(() => {
     if (shouldSuppressNoncriticalChrome) {
@@ -336,7 +361,9 @@ export default function OverlayLayout({
       {isAuthModalOpen && (
         <AuthModal
           isOpen={isAuthModalOpen}
-          onClose={() => setIsAuthModalOpen(false)}
+          onClose={handleCloseAuth}
+          redirectTo={authLoginRequested ? authLoginNextPath : null}
+          reason={authLoginRequested ? authLoginReason : null}
         />
       )}
       {isAdminModalOpen && (

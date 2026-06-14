@@ -112,18 +112,23 @@ def clamp_timeout() -> float:
 def deterministic_plan(payload: dict[str, Any], runtime: str, reason: str | None = None) -> dict[str, Any]:
     request = payload.get("request") if isinstance(payload.get("request"), dict) else {}
     refs = payload.get("referenceImages") if isinstance(payload.get("referenceImages"), list) else []
+    retrieval_evidence = payload.get("retrievalEvidence") if isinstance(payload.get("retrievalEvidence"), list) else request.get("retrievalEvidence") if isinstance(request.get("retrievalEvidence"), list) else []
+    retrieval_diagnostics = payload.get("retrievalDiagnostics") if isinstance(payload.get("retrievalDiagnostics"), dict) else request.get("retrievalDiagnostics") if isinstance(request.get("retrievalDiagnostics"), dict) else {}
+    retrieval_titles = "; ".join(str(item.get("title") or item.get("id") or "reference")[:80] for item in retrieval_evidence[:4] if isinstance(item, dict)) or "no retrieval evidence"
     headline = str(request.get("headline") or "메인 문구")[:80]
     topic = str(request.get("topic") or "먹방 썸네일")[:180]
     sub = str(request.get("subHeadline") or "").strip()[:80]
-    concept = f"{headline} 중심의 고대비 먹방 썸네일: {topic}을 음식 클로즈업과 리액션 존으로 즉시 전달."
-    layout = "하단 40~50%는 음식 클로즈업, 우측/좌상단은 리액션 존, 중앙/하단은 편집 가능한 한글 제목 안전 영역."
+    concept = f"{headline} 중심의 고대비 먹방 썸네일: {topic}을 검색 레퍼런스({retrieval_titles}) 기반 음식 클로즈업과 리액션 존으로 즉시 전달."
+    layout = "하단 40~50%는 검색된 음식/구도 레퍼런스와 맞는 음식 클로즈업, 우측/좌상단은 리액션 존, 중앙/하단은 편집 가능한 한글 제목 안전 영역."
     if sub:
         layout += f" 보조 문구 '{sub}'는 작은 스티커처럼 분리."
     prompt_addendum = "\n".join([
         "Backend thumbnail agent orchestration brief:",
         f"Concept: {concept}",
         f"Layout: {layout}",
-        "Quality gate: no real logos/signage/contact data/prices, no identifiable crowd faces, keep final Korean typography editable in canvas.",
+        f"Retrieved references: {retrieval_titles}",
+        f"Retrieval diagnostics: {json.dumps(retrieval_diagnostics, ensure_ascii=False)[:800]}",
+        "Quality gate: no real logos/signage/contact data/prices, no identifiable crowd faces, keep final Korean typography editable in canvas, and never treat automatic retrieval as host/person likeness permission.",
     ])
     warnings = ["thumbnail_agent_deterministic_fallback: emitted deterministic orchestration plan"]
     if reason:
@@ -140,6 +145,7 @@ def deterministic_plan(payload: dict[str, Any], runtime: str, reason: str | None
         "diagnostics": {
             "runtime": runtime,
             "referenceImageCount": len(refs),
+            "retrievalEvidenceCount": len(retrieval_evidence),
             "graphFallback": bool(reason),
         },
     }
@@ -161,10 +167,13 @@ def run_local_graph(payload: dict[str, Any]) -> dict[str, Any]:
 def build_codex_prompt(payload: dict[str, Any]) -> str:
     request = payload.get("request") if isinstance(payload.get("request"), dict) else {}
     refs = payload.get("referenceImages") if isinstance(payload.get("referenceImages"), list) else []
+    retrieval_evidence = payload.get("retrievalEvidence") if isinstance(payload.get("retrievalEvidence"), list) else request.get("retrievalEvidence") if isinstance(request.get("retrievalEvidence"), list) else []
+    retrieval_diagnostics = payload.get("retrievalDiagnostics") if isinstance(payload.get("retrievalDiagnostics"), dict) else request.get("retrievalDiagnostics") if isinstance(request.get("retrievalDiagnostics"), dict) else {}
     base_prompt = str(payload.get("basePrompt") or "")[:8000]
     target = payload.get("target") if isinstance(payload.get("target"), dict) else {"width": 1280, "height": 720}
     compact_request = json.dumps(request, ensure_ascii=False, indent=2)[:4000]
     compact_refs = json.dumps(refs[:8], ensure_ascii=False, indent=2)[:3000]
+    compact_retrieval = json.dumps({"evidence": retrieval_evidence[:4], "diagnostics": retrieval_diagnostics}, ensure_ascii=False, indent=2)[:4000]
     return f"""You are the local thumbnail backend command for the tzudong admin app.
 
 Critical constraints:
@@ -181,6 +190,8 @@ Request JSON:
 {compact_request}
 Reference image summaries:
 {compact_refs}
+Automatic retrieval/reranker evidence:
+{compact_retrieval}
 Base prompt/context:
 {base_prompt}
 
@@ -297,10 +308,7 @@ def main() -> int:
         payload = read_payload()
         runtime = os.environ.get("THUMBNAIL_AGENT_RUNTIME", "codex_cli_oauth").strip() or "codex_cli_oauth"
         if runtime == "local_graph":
-            try:
-                result = run_local_graph(payload)
-            except Exception as exc:
-                result = deterministic_plan(payload, runtime, str(exc))
+            result = run_local_graph(payload)
         elif runtime in {"codex_cli_oauth", "codex"}:
             result = run_codex_oauth(payload)
         else:

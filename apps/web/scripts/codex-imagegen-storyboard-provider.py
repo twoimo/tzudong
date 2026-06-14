@@ -14,6 +14,7 @@ import argparse
 import base64
 import binascii
 import hashlib
+import http.client
 import json
 import os
 import time
@@ -288,7 +289,16 @@ def _run_oauth_responses(payload: Mapping[str, Any], *, timeout: int, auth_file:
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
             charset = response.headers.get_content_charset() or "utf-8"
-            body = response.read().decode(charset)
+            try:
+                body = response.read().decode(charset)
+            except http.client.IncompleteRead as exc:
+                partial = exc.partial or b""
+                if not partial:
+                    raise BridgeError(
+                        "codex_responses_incomplete_read",
+                        "Responses bridge stream ended before any body bytes were received",
+                    ) from exc
+                body = partial.decode(charset, errors="replace")
     except urllib.error.HTTPError as exc:
         body_text = exc.read().decode("utf-8", errors="replace")
         raise BridgeError("codex_responses_http_error", f"Responses bridge HTTP {exc.code}: {body_text[:1600]}", exc.code) from exc

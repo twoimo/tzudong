@@ -10,16 +10,29 @@ export const THUMBNAIL_RELEASE_STORAGE_BUCKET = 'youtube-thumbnail-releases';
 export const THUMBNAIL_RELEASE_TABLE = 'youtube_thumbnail_releases';
 export const THUMBNAIL_DURABLE_RELEASE_REASON_MISSING_ENV = 'missing_supabase_env';
 export const THUMBNAIL_DURABLE_RELEASE_REASON_MISSING_TABLE = 'missing_release_table';
+export const THUMBNAIL_DURABLE_RELEASE_REASON_LOCAL_CANDIDATE_FALLBACK = 'local_release_candidate_fallback';
 
 const TARGET_WIDTH = 1280;
 const TARGET_HEIGHT = 720;
 const MAX_TEXT_LAYERS = 8;
+const AUTO_RELEASE_MAIN_HEADLINE_MAX_LENGTH = 14;
 const SAFE_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SHA256_HEX_PATTERN = /^[a-f0-9]{64}$/i;
 const RELEASE_STORAGE_OBJECT_PATTERN = /^youtube-thumbnail-generator\/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.png$/i;
 const SAFE_BROWSER_IMAGE_PREFIX = '/api/admin/youtube-thumbnail-generator/releases/assets/';
 const SAFE_HISTORY_IMAGE_PREFIX = '/qa-history/youtube-thumbnail-generator/';
-const PUBLIC_RAW_PATH_PATTERNS = ['.omx/artifacts', '.omx/runtime', 'SUPABASE_SERVICE_ROLE_KEY', 'storage_object_path'];
+const PUBLIC_RAW_PATH_PATTERNS = [
+  '.omx/artifacts',
+  '.omx/runtime',
+  'SUPABASE_SERVICE_ROLE_KEY',
+  'SERVICE_ROLE',
+  'service_role',
+  'storage_object_path',
+  'storage_bucket',
+  'storageBucket',
+  'storagePath',
+  'storage_path',
+];
 
 export type ThumbnailReleaseTextLayer = {
   id: string;
@@ -158,6 +171,31 @@ function toString(value: unknown, maxLength: number) {
   return typeof value === 'string' ? value.trim().slice(0, maxLength) : '';
 }
 
+function normalizeReleaseHeadlineCopy(value: string, fallback = '먹방 레전드') {
+  const normalized = value
+    .replace(/(쯔양|tzuyang|youtube\s*channel|유튜브\s*채널|계정|@[\w_.-]+)/gi, '')
+    .replace(/https?:\/\/\S+|www\.\S+/gi, '')
+    .replace(/[<>`{}]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const foodSubject = normalized.match(/(제육볶음|김치찌개|된장찌개|부대찌개|라면|떡볶이|돈가스|돈까스|삼겹살|갈비|곱창|막창|마라탕|불닭|치킨|피자|햄버거|초밥|스시|회|대게|킹크랩|랍스터|해산물|국밥|백반|고기|꼬치|튀김|분식|야시장)/i)?.[1] ?? '';
+  const tokens: string[] = [];
+  const hasRiceThief = /밥도둑/.test(normalized);
+  const hasFeast = /한상/.test(normalized);
+  if (hasRiceThief && hasFeast) tokens.push('밥도둑 한상');
+  else {
+    if (foodSubject) tokens.push(foodSubject);
+    if (hasRiceThief) tokens.push('밥도둑');
+    if (hasFeast) tokens.push('한상');
+  }
+  if (!tokens.length && /야시장|시장|노점|길거리/i.test(normalized)) {
+    tokens.push(/끝판왕/.test(normalized) ? '야시장 끝판왕' : '야시장 먹방');
+  }
+  const benchmark = tokens.join(' ').trim();
+  const candidate = benchmark || normalized || fallback;
+  return candidate.slice(0, AUTO_RELEASE_MAIN_HEADLINE_MAX_LENGTH).trim() || fallback;
+}
+
 function clampNumber(value: unknown, min: number, max: number, fallback: number) {
   const numberValue = Number(value);
   if (!Number.isFinite(numberValue)) return fallback;
@@ -241,9 +279,36 @@ function createReleaseSourceQualityGate(candidate: ThumbnailReleaseCandidate, ac
   };
 }
 
+
+function normalizeReleaseSourceQualityGate(value: unknown): Record<string, unknown> {
+  const gate = isRecord(value) ? value : {};
+  const issueTags = Array.isArray(gate.issueTags)
+    ? gate.issueTags.filter((tag): tag is string => typeof tag === 'string' && tag.trim() === 'none').slice(0, 1)
+    : [];
+  const safeGate: Record<string, unknown> = {};
+  const candidateId = toString(gate.candidateId, 120).replace(/[^A-Za-z0-9_.-]/g, '-');
+  const sourceManifestId = toString(gate.sourceManifestId, 180).replace(/[^A-Za-z0-9_.\/-]/g, '-');
+  const sourceImageId = toString(gate.sourceImageId, 180).replace(/[^A-Za-z0-9_.-]/g, '-');
+  if (candidateId) safeGate.candidateId = candidateId;
+  if (sourceManifestId && !sourceManifestId.includes('..')) safeGate.sourceManifestId = sourceManifestId;
+  if (sourceImageId) safeGate.sourceImageId = sourceImageId;
+  const score = Number(gate.score);
+  if (Number.isFinite(score)) safeGate.score = Math.max(0, Math.min(100, score));
+  if (gate.providerId === 'local-codex') safeGate.providerId = 'local-codex';
+  if (gate.model === 'gpt-image-2') safeGate.model = 'gpt-image-2';
+  if (gate.modelProvenance === 'exact') safeGate.modelProvenance = 'exact';
+  if (issueTags.length) safeGate.issueTags = ['none'];
+  if (gate.releaseCandidate === true) safeGate.releaseCandidate = true;
+  if (gate.normalizedFromManifestMembership === true) safeGate.normalizedFromManifestMembership = true;
+  if (typeof gate.sha256Verified === 'boolean') safeGate.sha256Verified = gate.sha256Verified;
+  if (gate.localReadOnlyFallback === true) safeGate.localReadOnlyFallback = true;
+  return safeGate;
+}
+
 function normalizeTextLayer(value: unknown, index: number, fallbackHeadline: string): ThumbnailReleaseTextLayer | null {
   if (!isRecord(value)) return null;
-  const content = toString(value.content, 48) || (index === 0 ? fallbackHeadline : '');
+  const rawContent = toString(value.content, 48) || (index === 0 ? fallbackHeadline : '');
+  const content = index === 0 ? normalizeReleaseHeadlineCopy(rawContent, fallbackHeadline) : rawContent;
   if (!content) return null;
   const id = toString(value.id, 40).replace(/[^A-Za-z0-9_-]/g, '-') || `releaseLayer${index + 1}`;
   const fontFamilyRaw = toString(value.fontFamily, 80);
@@ -256,8 +321,8 @@ function normalizeTextLayer(value: unknown, index: number, fallbackHeadline: str
   return {
     id,
     content,
-    x: Math.round(clampNumber(value.x, 80, TARGET_WIDTH - 80, index === 1 ? 1010 : 640)),
-    y: Math.round(clampNumber(value.y, 72, TARGET_HEIGHT - 72, index === 1 ? 162 : 552)),
+    x: Math.round(clampNumber(value.x, 80, TARGET_WIDTH - 80, index === 1 ? 252 : 640)),
+    y: Math.round(clampNumber(value.y, 72, TARGET_HEIGHT - 72, index === 1 ? 142 : 552)),
     fontFamily,
     fontSize: Math.round(clampNumber(value.fontSize, 24, 140, index === 1 ? 44 : 88)),
     fontWeight: Math.round(clampNumber(value.fontWeight, 300, 950, 900)),
@@ -272,15 +337,16 @@ function normalizeTextLayer(value: unknown, index: number, fallbackHeadline: str
 }
 
 export function normalizeThumbnailReleaseTextLayers(input: unknown, fallbackHeadline = '먹방 레전드') {
+  const compactFallbackHeadline = normalizeReleaseHeadlineCopy(fallbackHeadline, '먹방 레전드');
   const rawLayers = Array.isArray(input) ? input : [];
   const normalized = rawLayers
-    .map((layer, index) => normalizeTextLayer(layer, index, fallbackHeadline))
+    .map((layer, index) => normalizeTextLayer(layer, index, compactFallbackHeadline))
     .filter((layer): layer is ThumbnailReleaseTextLayer => Boolean(layer))
     .slice(0, MAX_TEXT_LAYERS);
   if (normalized.length) return normalized;
   return [
-    normalizeTextLayer({ id: 'headline', content: fallbackHeadline, x: 640, y: 552, fontFamily: 'Impact', fontSize: 88, zIndex: 5 }, 0, fallbackHeadline)!,
-    normalizeTextLayer({ id: 'subHeadline', content: '검증 완료', x: 1010, y: 162, fontFamily: 'Pretendard', fontSize: 44, fill: '#fff200', rotation: -4, zIndex: 6 }, 1, fallbackHeadline)!,
+    normalizeTextLayer({ id: 'headline', content: compactFallbackHeadline, x: 430, y: 330, fontFamily: 'Impact', fontSize: 56, zIndex: 5 }, 0, compactFallbackHeadline)!,
+    normalizeTextLayer({ id: 'subHeadline', content: '검증 완료', x: 252, y: 142, fontFamily: 'Pretendard', fontSize: 44, fill: '#fff200', rotation: -4, zIndex: 6 }, 1, compactFallbackHeadline)!,
   ];
 }
 
@@ -310,7 +376,7 @@ function normalizeReleaseRow(row: ReleaseRow): ThumbnailDurableRelease | null {
     issueTags: ['none'],
     textLayers,
     canvas: { width: 1280, height: 720 },
-    sourceQualityGate: isRecord(row.source_quality_gate) ? row.source_quality_gate : {},
+    sourceQualityGate: normalizeReleaseSourceQualityGate(row.source_quality_gate),
     publishedAt: row.published_at,
     updatedAt: row.updated_at,
   };
@@ -330,6 +396,91 @@ function createUnavailablePayload(reason: string, warnings: string[] = []): Thum
       warnings,
     },
   };
+}
+
+function deterministicReleaseIdFromCandidate(candidate: ThumbnailReleaseCandidate) {
+  const seed = createHash('sha256').update(`${candidate.sourceManifestId}:${candidate.id}:${candidate.sha256}`).digest('hex');
+  return `${seed.slice(0, 8)}-${seed.slice(8, 12)}-4${seed.slice(13, 16)}-8${seed.slice(17, 20)}-${seed.slice(20, 32)}`;
+}
+
+function selectLocalFallbackReleaseCandidate(payload: Awaited<ReturnType<typeof readThumbnailReleaseCandidates>>) {
+  const promotedId = payload.promotionState?.candidateId;
+  if (promotedId) {
+    const promoted = payload.candidates.find((candidate) => candidate.id === promotedId);
+    if (promoted) return promoted;
+  }
+  return [...payload.candidates]
+    .filter((candidate) => candidate.providerId === 'local-codex' && candidate.model === 'gpt-image-2' && candidate.modelProvenance === 'exact' && candidate.issueTags.length === 1 && candidate.issueTags[0] === 'none')
+    .sort((left, right) => right.score - left.score || left.id.localeCompare(right.id))[0] ?? null;
+}
+
+function createLocalFallbackDurableReleasePayload(
+  candidate: ThumbnailReleaseCandidate,
+  payload: Awaited<ReturnType<typeof readThumbnailReleaseCandidates>>,
+  fallbackReason: string,
+): ThumbnailDurableReleasePayload {
+  const releaseId = deterministicReleaseIdFromCandidate(candidate);
+  const updatedAt = payload.updatedAt ?? new Date(0).toISOString();
+  const release: ThumbnailDurableRelease = {
+    id: releaseId,
+    releaseKey: THUMBNAIL_RELEASE_KEY,
+    status: 'active',
+    candidateId: candidate.id,
+    sourceManifestId: candidate.sourceManifestId,
+    sourceImageId: candidate.sourceImageId,
+    browserImagePath: candidate.browserImagePath,
+    sha256: candidate.sha256,
+    width: 1280,
+    height: 720,
+    mimeType: 'image/png',
+    providerId: 'local-codex',
+    model: 'gpt-image-2',
+    modelProvenance: 'exact',
+    score: candidate.score,
+    issueTags: ['none'],
+    textLayers: normalizeThumbnailReleaseTextLayers([], normalizeReleaseHeadlineCopy(candidate.headline)),
+    canvas: { width: 1280, height: 720 },
+    sourceQualityGate: {
+      candidateId: candidate.id,
+      sourceManifestId: candidate.sourceManifestId,
+      sourceImageId: candidate.sourceImageId,
+      score: candidate.score,
+      providerId: 'local-codex',
+      model: 'gpt-image-2',
+      modelProvenance: 'exact',
+      issueTags: ['none'],
+      releaseCandidate: true,
+      localReadOnlyFallback: true,
+    },
+    publishedAt: updatedAt,
+    updatedAt,
+  };
+  const fallbackPayload: ThumbnailDurableReleasePayload = {
+    status: 'ready',
+    updatedAt,
+    release,
+    diagnostics: {
+      durableRegistryAvailable: false,
+      releaseKey: THUMBNAIL_RELEASE_KEY,
+      reason: THUMBNAIL_DURABLE_RELEASE_REASON_LOCAL_CANDIDATE_FALLBACK,
+      warnings: [
+        `durable-registry-unavailable:${fallbackReason}`,
+        'using-local-exact-release-candidate-readonly',
+      ],
+    },
+  };
+  assertRedactedPublicPayload(fallbackPayload);
+  return fallbackPayload;
+}
+
+async function readLocalFallbackDurableRelease(
+  env: ThumbnailReleaseEnv,
+  options: ThumbnailReleaseRegistryOptions,
+  fallbackReason: string,
+) {
+  const candidatesPayload = await readThumbnailReleaseCandidates(env, { ...options, mirrorCandidateImages: false });
+  const candidate = selectLocalFallbackReleaseCandidate(candidatesPayload);
+  return candidate ? createLocalFallbackDurableReleasePayload(candidate, candidatesPayload, fallbackReason) : null;
 }
 
 function createSupabaseRegistryAdapter(): ThumbnailReleaseRegistryAdapter {
@@ -401,7 +552,10 @@ export async function readCurrentThumbnailDurableRelease(
   options: ThumbnailReleaseRegistryOptions = {},
 ): Promise<ThumbnailDurableReleasePayload> {
   const adapter = getRegistryAdapter(env, options);
-  if (!adapter) return createUnavailablePayload(THUMBNAIL_DURABLE_RELEASE_REASON_MISSING_ENV);
+  if (!adapter) {
+    const fallback = await readLocalFallbackDurableRelease(env, options, THUMBNAIL_DURABLE_RELEASE_REASON_MISSING_ENV);
+    return fallback ?? createUnavailablePayload(THUMBNAIL_DURABLE_RELEASE_REASON_MISSING_ENV, ['local-release-candidate-fallback-unavailable']);
+  }
 
   try {
     const row = await adapter.readCurrentRelease(THUMBNAIL_RELEASE_KEY);
@@ -432,7 +586,10 @@ export async function readCurrentThumbnailDurableRelease(
     assertRedactedPublicPayload(payload);
     return payload;
   } catch (error) {
-    if (isMissingReleaseTableError(error)) return createUnavailablePayload(THUMBNAIL_DURABLE_RELEASE_REASON_MISSING_TABLE);
+    if (isMissingReleaseTableError(error)) {
+      const fallback = await readLocalFallbackDurableRelease(env, options, THUMBNAIL_DURABLE_RELEASE_REASON_MISSING_TABLE);
+      return fallback ?? createUnavailablePayload(THUMBNAIL_DURABLE_RELEASE_REASON_MISSING_TABLE, ['local-release-candidate-fallback-unavailable']);
+    }
     throw error;
   }
 }
@@ -467,7 +624,7 @@ export async function publishThumbnailDurableRelease(
   const now = (options.now ?? new Date()).toISOString();
   const objectPath = `youtube-thumbnail-generator/${releaseId}.png`;
   const browserImagePath = releaseAssetBrowserPath(releaseId);
-  const textLayers = normalizeThumbnailReleaseTextLayers(request.textLayers, candidate.headline);
+  const textLayers = normalizeThumbnailReleaseTextLayers(request.textLayers, normalizeReleaseHeadlineCopy(candidate.headline));
   const sourceQualityGate = createReleaseSourceQualityGate(candidate, actualSha256);
 
   if (!isReleaseStorageObjectPath(objectPath)) throw new Error('thumbnail_durable_release_storage_path_invalid');
