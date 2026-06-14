@@ -339,6 +339,8 @@ async function runRetrievalCommand(
 ): Promise<ThumbnailRetrievalResult | { fallbackReason: ThumbnailRetrievalFallbackReason } | null> {
   const command = resolveRetrievalCommand(env);
   if (!command) return null;
+  const commandArgs = command.endsWith('.py') ? [command] : [];
+  const commandExecutable = command.endsWith('.py') ? env.PYTHON?.trim() || 'python3' : command;
   const timeout = Math.max(1_000, Math.min(
     Number(env[THUMBNAIL_RETRIEVAL_TIMEOUT_MS_ENV]) || THUMBNAIL_RETRIEVAL_COMMAND_TIMEOUT_MS,
     30_000,
@@ -352,7 +354,7 @@ async function runRetrievalCommand(
   });
 
   return await new Promise((resolveResult) => {
-    const child = spawn(command, [], {
+    const child = spawn(commandExecutable, commandArgs, {
       cwd: resolve(process.cwd(), env[THUMBNAIL_RETRIEVAL_ROOT_ENV] || '.'),
       env: { ...process.env, ...env, THUMBNAIL_RETRIEVAL_JSON: input },
       stdio: ['pipe', 'pipe', 'ignore'],

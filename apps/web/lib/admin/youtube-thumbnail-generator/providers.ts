@@ -21,9 +21,15 @@ import { buildYoutubeThumbnailPrompt } from './prompt';
 const LOCAL_CODEX_DEFAULT_MODEL = 'unconfigured:gpt-image-2';
 const LOCAL_CODEX_EXACT_IMAGE_MODEL = 'gpt-image-2';
 const LOCAL_CODEX_PROVIDER_ID = 'local-codex' as const;
+const OPENAI_GPT_IMAGE_2_PROVIDER_ID = 'openai-gpt-image-2' as const;
+const OPENAI_GPT_IMAGE_2_MODEL = 'gpt-image-2';
+const OPENAI_GPT_IMAGE_2_DEFAULT_SIZE = `${YOUTUBE_THUMBNAIL_TARGET_WIDTH}x${YOUTUBE_THUMBNAIL_TARGET_HEIGHT}`;
+const OPENAI_GPT_IMAGE_2_DEFAULT_QUALITY = 'medium';
+const DEFAULT_OPENAI_IMAGE_API_URL = 'https://api.openai.com/v1/images/generations';
 const DEFAULT_LOCAL_CODEX_SCRIPT = 'scripts/codex-imagegen-thumbnail-provider.py';
 const DEFAULT_LOCAL_CODEX_PROVENANCE_FILE = '.omx/artifacts/gpt-image-2-provenance/latest-verified.json';
 const DEFAULT_LOCAL_CODEX_DURABLE_OUTPUT_DIR = '.omx/artifacts/gpt-image-2-provenance/generated';
+const OPENAI_IMAGE_API_TIMEOUT_MS = 300_000;
 const LOCAL_CODEX_COMMAND_TIMEOUT_MS = 10 * 60 * 1000;
 const LOCAL_CODEX_COMMAND_MAX_OUTPUT_BYTES = 3 * 1024 * 1024;
 const LOCAL_CODEX_C2PATOOL_TIMEOUT_MS = 30 * 1000;
@@ -103,11 +109,15 @@ type LocalCodexCommandResult = {
 };
 
 export function isThumbnailProviderId(value: unknown): value is ThumbnailProviderId {
-  return value === LOCAL_CODEX_PROVIDER_ID;
+  return value === LOCAL_CODEX_PROVIDER_ID || value === OPENAI_GPT_IMAGE_2_PROVIDER_ID;
 }
 
 export function resolveLocalCodexThumbnailModel(env: NodeJS.ProcessEnv = process.env) {
   return env.THUMBNAIL_LOCAL_CODEX_IMAGE_MODEL?.trim() || LOCAL_CODEX_DEFAULT_MODEL;
+}
+
+export function resolveOpenAiGptImage2ThumbnailModel(env: NodeJS.ProcessEnv = process.env) {
+  return env.THUMBNAIL_OPENAI_IMAGE_MODEL?.trim() || OPENAI_GPT_IMAGE_2_MODEL;
 }
 
 function resolveRepoRoot(env: NodeJS.ProcessEnv = process.env) {
@@ -919,6 +929,181 @@ async function generateLocalCodexThumbnail(
   return generatedResult;
 }
 
+function getOpenAiGptImage2ApiKey(env: NodeJS.ProcessEnv) {
+  return env.OPENAI_API_KEY?.trim() || undefined;
+}
+
+function getOpenAiGptImage2StrictBlock(env: NodeJS.ProcessEnv) {
+  const model = resolveOpenAiGptImage2ThumbnailModel(env);
+  if (model !== OPENAI_GPT_IMAGE_2_MODEL) {
+    return {
+      code: 'unsupported_model' as const,
+      status: 400,
+      reason: 'openai_model_not_allowed' as const,
+      model,
+      message: 'OpenAI 이미지 생성은 gpt-image-2만 허용됩니다.',
+    };
+  }
+  if (!getOpenAiGptImage2ApiKey(env)) {
+    return {
+      code: 'provider_unavailable' as const,
+      status: 400,
+      reason: 'openai_api_key_required' as const,
+      model,
+      message: 'OpenAI gpt-image-2 생성을 사용하려면 브라우저 설정에 OpenAI API 키를 저장해 주세요.',
+    };
+  }
+  return null;
+}
+
+function resolveOpenAiImageApiUrl(env: NodeJS.ProcessEnv) {
+  return env.THUMBNAIL_OPENAI_IMAGE_API_URL?.trim() || DEFAULT_OPENAI_IMAGE_API_URL;
+}
+
+function resolveOpenAiImageApiTimeoutMs(env: NodeJS.ProcessEnv) {
+  const parsed = Number(env.THUMBNAIL_OPENAI_IMAGE_TIMEOUT_MS);
+  if (!Number.isFinite(parsed)) return OPENAI_IMAGE_API_TIMEOUT_MS;
+  return Math.max(10_000, Math.min(600_000, Math.floor(parsed)));
+}
+
+function resolveOpenAiImageSize(env: NodeJS.ProcessEnv) {
+  return env.THUMBNAIL_OPENAI_IMAGE_SIZE?.trim() || OPENAI_GPT_IMAGE_2_DEFAULT_SIZE;
+}
+
+function resolveOpenAiImageQuality(env: NodeJS.ProcessEnv) {
+  return env.THUMBNAIL_OPENAI_IMAGE_QUALITY?.trim() || OPENAI_GPT_IMAGE_2_DEFAULT_QUALITY;
+}
+
+function assertOpenAiGptImage2Size(size: string) {
+  const match = size.match(/^(\d+)x(\d+)$/);
+  if (!match) {
+    throw new ThumbnailGenerationError('unsupported_model', 'OpenAI 이미지 크기는 1280x720처럼 숫자x숫자 형식이어야 합니다.', 400);
+  }
+  const width = Number(match[1]);
+  const height = Number(match[2]);
+  if (
+    !Number.isInteger(width) ||
+    !Number.isInteger(height) ||
+    width <= 0 ||
+    height <= 0 ||
+    width > 3840 ||
+    height > 3840 ||
+    width % 16 !== 0 ||
+    height % 16 !== 0
+  ) {
+    throw new ThumbnailGenerationError(
+      'unsupported_model',
+      'OpenAI gpt-image-2 이미지 크기는 각 변이 16의 배수이고 최대 3840px 이하여야 합니다.',
+      400,
+    );
+  }
+}
+
+function extractOpenAiImageBase64(responseJson: unknown) {
+  const record = asRecord(responseJson);
+  const data = Array.isArray(record?.data) ? record.data : [];
+  const firstItem = asRecord(data[0]);
+  const b64Json = firstItem?.b64_json;
+  return typeof b64Json === 'string' && b64Json.trim() ? b64Json.trim() : null;
+}
+
+async function generateOpenAiGptImage2Thumbnail(
+  payload: ThumbnailGeneratorPayload,
+  referenceImages: ThumbnailReferenceImage[],
+  prompt: string,
+  env: NodeJS.ProcessEnv,
+  options: ThumbnailProviderExecutionOptions,
+): Promise<ThumbnailGenerationResult> {
+  const startedAt = Date.now();
+  throwIfProviderAborted(options.signal);
+  const strictBlock = getOpenAiGptImage2StrictBlock(env);
+  if (strictBlock) {
+    throw new ThumbnailGenerationError(strictBlock.code, strictBlock.message, strictBlock.status);
+  }
+
+  const apiKey = getOpenAiGptImage2ApiKey(env)!;
+  const apiUrl = resolveOpenAiImageApiUrl(env);
+  const size = resolveOpenAiImageSize(env);
+  const quality = resolveOpenAiImageQuality(env);
+  assertOpenAiGptImage2Size(size);
+
+  const timeoutController = new AbortController();
+  const timeout = setTimeout(() => timeoutController.abort(), resolveOpenAiImageApiTimeoutMs(env));
+  const abortListener = () => timeoutController.abort();
+  options.signal?.addEventListener('abort', abortListener, { once: true });
+  try {
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      signal: timeoutController.signal,
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: OPENAI_GPT_IMAGE_2_MODEL,
+        prompt,
+        size,
+        quality,
+        n: 1,
+      }),
+    });
+    const responseJson = await response.json().catch(() => null) as unknown;
+    if (!response.ok) {
+      const errorRecord = asRecord(asRecord(responseJson)?.error);
+      const errorMessage = typeof errorRecord?.message === 'string'
+        ? errorRecord.message
+        : `OpenAI Images API 요청이 실패했습니다(status ${response.status}).`;
+      throw new ThumbnailGenerationError('provider_unavailable', `OpenAI gpt-image-2 생성 실패: ${errorMessage}`, response.status);
+    }
+
+    const b64Json = extractOpenAiImageBase64(responseJson);
+    if (!b64Json) {
+      throw new ThumbnailGenerationError('provider_unavailable', 'OpenAI gpt-image-2 응답에서 이미지를 찾지 못했습니다.', 502);
+    }
+
+    const [width, height] = size.split('x').map((value) => Number(value));
+    return {
+      baseImage: {
+        dataUrl: `data:image/png;base64,${b64Json}`,
+        mime: 'image/png',
+        width,
+        height,
+        targetWidth: YOUTUBE_THUMBNAIL_TARGET_WIDTH,
+        targetHeight: YOUTUBE_THUMBNAIL_TARGET_HEIGHT,
+        providerId: OPENAI_GPT_IMAGE_2_PROVIDER_ID,
+        model: OPENAI_GPT_IMAGE_2_MODEL,
+        modelProvenance: 'requested-label',
+      },
+      prompt,
+      warnings: [
+        'openai_gpt_image_2_provider: generated through a browser-provided, request-scoped OpenAI API key.',
+        'openai_gpt_image_2_requested_label: API request was pinned to model=gpt-image-2; no alternate image model fallback was used.',
+        'browser_api_key_storage: key is accepted only from the current browser request and is not persisted by the server.',
+        ...(referenceImages.length
+          ? [`openai_reference_images_described_only:${referenceImages.length}`]
+          : []),
+        ...(payload.generationMode === 'backend_agent'
+          ? ['backend_agent_mode: direct OpenAI provider image generated after backend planning.']
+          : []),
+        `thumbnail_timing_ms:provider_total=${Date.now() - startedAt}`,
+      ],
+    };
+  } catch (error) {
+    if (timeoutController.signal.aborted || options.signal?.aborted) {
+      throw new ThumbnailGenerationError('thumbnail_generation_aborted', 'OpenAI gpt-image-2 이미지 생성 작업이 취소되었거나 시간이 초과되었습니다.', options.signal?.aborted ? 499 : 504);
+    }
+    if (error instanceof ThumbnailGenerationError) throw error;
+    throw new ThumbnailGenerationError(
+      'provider_unavailable',
+      `OpenAI gpt-image-2 생성 요청을 처리하지 못했습니다: ${error instanceof Error ? error.message : 'unknown'}`,
+      502,
+    );
+  } finally {
+    clearTimeout(timeout);
+    options.signal?.removeEventListener('abort', abortListener);
+  }
+}
+
 export async function generateYoutubeThumbnailWithPrompt(
   payload: ThumbnailGeneratorPayload,
   referenceImages: ThumbnailReferenceImage[],
@@ -929,6 +1114,8 @@ export async function generateYoutubeThumbnailWithPrompt(
   switch (payload.providerId) {
     case 'local-codex':
       return generateLocalCodexThumbnail(payload, referenceImages, prompt, env, options);
+    case 'openai-gpt-image-2':
+      return generateOpenAiGptImage2Thumbnail(payload, referenceImages, prompt, env, options);
     default: {
       throw new ThumbnailGenerationError('provider_unavailable', '지원하지 않는 provider입니다.', 400);
     }
@@ -950,6 +1137,28 @@ export function getThumbnailProviderAvailability(env: NodeJS.ProcessEnv = proces
   const command = getLocalCodexCommand(env);
   const proof = readLocalCodexProof(env);
   const strictBlock = getLocalCodexStrictBlock(env);
+  const openAiStrictBlock = getOpenAiGptImage2StrictBlock(env);
+  const openAiAvailability = openAiStrictBlock
+    ? {
+      available: false,
+      reason: openAiStrictBlock.reason,
+      model: openAiStrictBlock.model,
+      providerId: OPENAI_GPT_IMAGE_2_PROVIDER_ID,
+      modelProvenance: 'requested-label' as const,
+      liveEnabled: true,
+      browserKeyStorage: 'browser_local_storage_only' as const,
+      strictExactModelRequired: false,
+    }
+    : {
+      available: true,
+      reason: 'ready' as const,
+      model: OPENAI_GPT_IMAGE_2_MODEL,
+      providerId: OPENAI_GPT_IMAGE_2_PROVIDER_ID,
+      modelProvenance: 'requested-label' as const,
+      liveEnabled: true,
+      browserKeyStorage: 'browser_local_storage_only' as const,
+      strictExactModelRequired: false,
+    };
   if (strictBlock) {
     return {
       localCodex: {
@@ -962,6 +1171,7 @@ export function getThumbnailProviderAvailability(env: NodeJS.ProcessEnv = proces
         modelProvenance: 'unverified' as const,
         proof: proof ?? undefined,
       },
+      openaiGptImage2: openAiAvailability,
     };
   }
 
@@ -976,5 +1186,6 @@ export function getThumbnailProviderAvailability(env: NodeJS.ProcessEnv = proces
       modelProvenance: 'exact' as const,
       proof: proof!,
     },
+    openaiGptImage2: openAiAvailability,
   };
 }
