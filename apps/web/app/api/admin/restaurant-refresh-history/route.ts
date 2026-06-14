@@ -35,6 +35,16 @@ type CandidateRow = {
   created_at: string;
 };
 
+type ReadbackRunRow = {
+  id: string;
+  restaurant_id: string;
+  status: string | null;
+  query: Record<string, unknown> | null;
+  notes: string | null;
+  completed_at: string | null;
+  created_at: string;
+};
+
 const candidateStatuses = new Set<RefreshCandidateStatus>([
   "needs_review",
   "approved",
@@ -82,6 +92,14 @@ function candidatePatchFromSnapshot(snapshot: Record<string, unknown>, adminUser
   return patch;
 }
 
+function hasMaterialRestaurantPatch(patch: Record<string, unknown>) {
+  return Object.keys(patch).some((key) => key !== "updated_by_admin_id");
+}
+
+function hasClosureChange(types: unknown) {
+  return Array.isArray(types) && types.some((type) => type === "closure");
+}
+
 async function fetchRestaurantMap(
   supabase: ReturnType<typeof createSupabaseServiceRoleClient>,
   restaurantIds: string[],
@@ -95,6 +113,62 @@ async function fetchRestaurantMap(
 
   if (error) throw error;
   return new Map((data ?? []).map((row) => [row.id, row]));
+}
+
+async function fetchReadbackRunMap(
+  supabase: ReturnType<typeof createSupabaseServiceRoleClient>,
+  candidates: CandidateRow[],
+) {
+  const appliedCandidateIds = new Set(
+    candidates
+      .filter((candidate) => candidate.candidate_status === "applied")
+      .map((candidate) => candidate.id),
+  );
+  if (appliedCandidateIds.size === 0) return new Map<string, ReadbackRunRow>();
+
+  const restaurantIds = [
+    ...new Set(
+      candidates
+        .filter((candidate) => appliedCandidateIds.has(candidate.id))
+        .map((candidate) => candidate.restaurant_id),
+    ),
+  ];
+  if (restaurantIds.length === 0) return new Map<string, ReadbackRunRow>();
+
+  const { data, error } = await supabase
+    .from("restaurant_refresh_runs")
+    .select("id, restaurant_id, status, query, notes, completed_at, created_at")
+    .eq("run_type", "readback_recrawl")
+    .in("restaurant_id", restaurantIds)
+    .order("created_at", { ascending: false })
+    .limit(200)
+    .returns<ReadbackRunRow[]>();
+
+  if (error) throw error;
+
+  const readbackRunMap = new Map<string, ReadbackRunRow>();
+  for (const run of data ?? []) {
+    const appliedCandidateId = stringValue(run.query?.applied_candidate_id);
+    if (appliedCandidateId && appliedCandidateIds.has(appliedCandidateId) && !readbackRunMap.has(appliedCandidateId)) {
+      readbackRunMap.set(appliedCandidateId, run);
+    }
+  }
+  return readbackRunMap;
+}
+
+function readbackStateForCandidate(candidate: CandidateRow, readbackRun?: ReadbackRunRow) {
+  if (candidate.candidate_status !== "applied") {
+    return { status: "not_required", checked_at: null, run_id: null, notes: null };
+  }
+  if (!readbackRun) {
+    return { status: "pending", checked_at: null, run_id: null, notes: "guarded apply 후 readback/recrawl 대기" };
+  }
+  return {
+    status: readbackRun.status === "failed" ? "failed" : readbackRun.status === "completed" ? "completed" : "pending",
+    checked_at: readbackRun.completed_at ?? readbackRun.created_at,
+    run_id: readbackRun.id,
+    notes: readbackRun.notes,
+  };
 }
 
 export async function GET(request: NextRequest) {
@@ -131,12 +205,16 @@ export async function GET(request: NextRequest) {
     if (countError) throw countError;
     if (candidateError) throw candidateError;
 
-    const restaurantMap = await fetchRestaurantMap(
-      supabase,
-      (candidates ?? []).map((candidate) => candidate.restaurant_id),
-    );
+    const candidateRows = candidates ?? [];
+    const [restaurantMap, readbackRunMap] = await Promise.all([
+      fetchRestaurantMap(
+        supabase,
+        candidateRows.map((candidate) => candidate.restaurant_id),
+      ),
+      fetchReadbackRunMap(supabase, candidateRows),
+    ]);
 
-    const rows = (candidates ?? [])
+    const rows = candidateRows
       .map((candidate) => {
         const restaurant = restaurantMap.get(candidate.restaurant_id);
         return {
@@ -153,6 +231,7 @@ export async function GET(request: NextRequest) {
           created_at: candidate.created_at,
           decided_at: candidate.decided_at,
           applied_at: candidate.applied_at,
+          readback_state: readbackStateForCandidate(candidate, readbackRunMap.get(candidate.id)),
         };
       })
       .filter((row) => {
@@ -274,10 +353,10 @@ export async function POST(request: NextRequest) {
 
       const { data: candidate, error: candidateError } = await supabase
         .from("restaurant_refresh_candidates")
-        .select("id, restaurant_id, candidate_status, candidate_snapshot")
+        .select("id, restaurant_id, candidate_status, detected_change_types, candidate_snapshot")
         .eq("id", candidateId)
         .single()
-        .returns<{ id: string; restaurant_id: string; candidate_status: RefreshCandidateStatus; candidate_snapshot: Record<string, unknown> }>();
+        .returns<{ id: string; restaurant_id: string; candidate_status: RefreshCandidateStatus; detected_change_types: string[] | null; candidate_snapshot: Record<string, unknown> }>();
 
       if (candidateError || !candidate) {
         return NextResponse.json({ error: "최신화 후보를 찾지 못했습니다." }, { status: 404 });
@@ -289,7 +368,19 @@ export async function POST(request: NextRequest) {
 
       const now = new Date().toISOString();
       if (decision === "approved" && apply) {
+        if (hasClosureChange(candidate.detected_change_types)) {
+          return NextResponse.json(
+            { error: "폐업 의심 후보는 자동 guarded apply 대상이 아닙니다. 운영자 결정만 기록하고 별도 검증 후 처리하세요." },
+            { status: 400 },
+          );
+        }
         const patch = candidatePatchFromSnapshot(candidate.candidate_snapshot, auth.userId);
+        if (!hasMaterialRestaurantPatch(patch)) {
+          return NextResponse.json(
+            { error: "적용 가능한 상호명·전화번호·주소·좌표 변경값이 없습니다." },
+            { status: 400 },
+          );
+        }
         const { data: updatedRestaurant, error: updateError } = await supabase
           .from("restaurants")
           .update(patch)
