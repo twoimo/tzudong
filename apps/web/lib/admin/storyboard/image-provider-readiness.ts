@@ -66,9 +66,9 @@ export const INITIAL_STORYBOARD_IMAGE_PROVIDER_READINESS: StoryboardImageProvide
   {
     status: 'checking',
     label: '이미지 상태 확인 중',
-    summary: 'GPT Image 2 provider 설정을 확인하고 있습니다.',
+    summary: '이미지 생성 준비 여부를 확인하고 있습니다.',
     detail:
-      '스토리보드 컷 이미지를 생성하기 전에 exact gpt-image-2 provenance를 확인합니다.',
+      '확인이 끝나기 전에는 새 이미지 만들기 버튼을 잠시 비활성화합니다.',
     reason: 'checking',
     model: STORYBOARD_IMAGE_PROVIDER_MODEL,
     providerId: STORYBOARD_IMAGE_PROVIDER_ID,
@@ -102,9 +102,9 @@ export function mapStoryboardImageProviderReadiness(
     return {
       status: 'ready',
       label: '이미지 생성 준비됨',
-      summary: `exact ${model} provider가 준비되었습니다.`,
+      summary: '이미지 만들기 준비가 끝났습니다.',
       detail:
-        '현재 페이지의 스토리보드 컷을 실제 GPT Image 2 이미지로 재생성할 수 있습니다.',
+        '현재 페이지의 스토리보드 컷을 새 이미지로 만들 수 있습니다.',
       reason: 'ready',
       model,
       providerId: provider.providerId,
@@ -118,10 +118,10 @@ export function mapStoryboardImageProviderReadiness(
   if (model !== STORYBOARD_IMAGE_PROVIDER_MODEL) {
     return {
       status: 'blocked_model',
-      label: '이미지 모델 차단됨',
-      summary: `${model}은 허용된 스토리보드 이미지 모델이 아닙니다.`,
+      label: '이미지 생성 설정 확인 필요',
+      summary: '현재 이미지 생성 설정을 사용할 수 없습니다.',
       detail:
-        '스토리보드 이미지는 gpt-image-2만 허용합니다. 다른 이미지 모델이나 fallback은 실행하지 않습니다.',
+        '안전 확인이 끝날 때까지 새 이미지 생성을 멈춥니다.',
       reason: 'local_codex_model_not_allowed',
       model,
       providerId: provider?.providerId,
@@ -140,9 +140,9 @@ export function mapStoryboardImageProviderReadiness(
     return {
       status: 'blocked_provenance',
       label: '이미지 생성 설정 필요',
-      summary: `exact ${model} provenance가 아직 검증되지 않았습니다.`,
+      summary: '이미지 생성 연결 확인이 아직 끝나지 않았습니다.',
       detail:
-        '검증된 로컬 Codex/OAuth gpt-image-2 bridge가 연결되기 전까지 fresh 이미지 생성은 중단됩니다.',
+        '확인이 끝나면 현재 페이지의 컷 이미지를 만들 수 있습니다.',
       reason: 'local_codex_model_provenance_unverified',
       model,
       providerId: provider?.providerId,
@@ -156,10 +156,10 @@ export function mapStoryboardImageProviderReadiness(
   if (provider?.reason === 'local_codex_model_not_allowed') {
     return {
       status: 'blocked_model',
-      label: '이미지 모델 차단됨',
-      summary: `${model}은 허용된 스토리보드 이미지 모델이 아닙니다.`,
+      label: '이미지 생성 설정 확인 필요',
+      summary: '현재 이미지 생성 설정을 사용할 수 없습니다.',
       detail:
-        '스토리보드 이미지는 gpt-image-2만 허용합니다. 다른 이미지 모델이나 fallback은 실행하지 않습니다.',
+        '안전 확인이 끝날 때까지 새 이미지 생성을 멈춥니다.',
       reason: 'local_codex_model_not_allowed',
       model,
       providerId: provider.providerId,
@@ -173,9 +173,9 @@ export function mapStoryboardImageProviderReadiness(
   return {
     status: 'error',
     label: '이미지 상태 확인 실패',
-    summary: '스토리보드 이미지 provider 상태를 읽지 못했습니다.',
+    summary: '스토리보드 이미지 상태를 읽지 못했습니다.',
     detail:
-      '페이지는 계속 사용할 수 있지만 fresh 이미지 생성 전 provider 상태를 다시 확인해야 합니다.',
+      '페이지는 계속 사용할 수 있지만 새 이미지 생성 전 다시 확인해 주세요.',
     reason: provider?.reason ?? 'unknown',
     model,
     providerId: provider?.providerId,
@@ -202,12 +202,16 @@ export function isStoryboardImageProviderReady(
 export function formatStoryboardImageProviderGuidanceMessage(
   readiness: StoryboardImageProviderReadiness,
 ) {
+  const nextAction =
+    readiness.status === 'ready'
+      ? '이미지 만들기 버튼을 누르면 현재 페이지 컷을 새 이미지로 채울 수 있습니다.'
+      : '설정 확인이 끝난 뒤 이미지 만들기 버튼을 다시 눌러 주세요.';
+
   return [
     `이미지 생성 상태 · ${readiness.label}`,
-    `모델: ${readiness.model} · 타깃 ${formatStoryboardImageProviderTarget(readiness.target)}`,
+    `대상 크기: ${formatStoryboardImageProviderTarget(readiness.target)}`,
     `상태: ${readiness.summary}`,
     readiness.detail,
-    `필요 설정: ${STORYBOARD_IMAGE_PROVIDER_MODEL_ENV}=gpt-image-2 · ${STORYBOARD_IMAGE_PROVIDER_COMMAND_ENV}=${STORYBOARD_IMAGE_PROVIDER_COMMAND_PLACEHOLDER} · exact provenance 확인`,
-    '정책: 다른 이미지 모델, mock 이미지, fallback 생성은 실행하지 않습니다.',
+    nextAction,
   ].join('\n');
 }

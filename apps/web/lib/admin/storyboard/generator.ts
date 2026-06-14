@@ -1,7 +1,14 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
+import { buildStoryboardAgentGraphFidelity } from './agent-graph-fidelity';
+import { sanitizeStoryboardPrompt } from './prompt-safety';
+import {
+  STORYBOARD_MAX_SEGMENT_COUNT,
+  STORYBOARD_MIN_SEGMENT_COUNT,
+} from './types';
 import type {
+  StoryboardArcRole,
   StoryboardAhpCriterion,
   StoryboardDataMode,
   StoryboardFallbackReason,
@@ -9,7 +16,11 @@ import type {
   StoryboardGenerationResult,
   StoryboardHeatmapMarker,
   StoryboardHeatmapSource,
+  StoryboardImageStatusLabel,
+  StoryboardPlannerOutput,
+  StoryboardSourceEvidenceLabel,
   StoryboardTone,
+  StoryboardTopicProfileId,
 } from './types';
 
 const DEFAULT_REQUEST: StoryboardGenerateRequest = {
@@ -17,7 +28,7 @@ const DEFAULT_REQUEST: StoryboardGenerateRequest = {
   tone: 'warm',
   targetLengthMinutes: 18,
   sourceLimit: 80,
-  segmentCount: 7,
+  segmentCount: 10,
   includeProductionNotes: true,
   generationMode: 'local_heatmap',
 };
@@ -43,13 +54,94 @@ const COMMITTEE = [
   { role: '관리자 UX 설계자', focus: 'PD가 콘솔에서 입력-생성-검토-복사까지 끝내는 흐름' },
 ];
 
-const HOSTILE_PROMPT_PATTERNS = [
-  /ignore\s+(?:all\s+)?previous\s+instructions?/gi,
-  /reveal\s+(?:openai[_\s-]*api[_\s-]*key|api[_\s-]*key|secret|token)[^.!?\n\r]*/gi,
-  /delete\s+\.?omx\/state[^.!?\n\r]*/gi,
-  /검증을\s*건너뛰[^\n\r.!?]*/g,
-  /이전\s*지시(?:를)?\s*무시[^\n\r.!?]*/g,
+type StoryboardTopicProfile = StoryboardPlannerOutput['topicProfile'];
+type StoryboardSceneDraft = StoryboardPlannerOutput['sceneDrafts'][number];
+
+const STORYBOARD_NO_TRUSTED_IMAGE_LABEL: StoryboardImageStatusLabel = '이미지 검증 전';
+
+const STORYBOARD_ARC_ROLE_MAP: Record<number, StoryboardArcRole[]> = {
+  5: ['intro_hook', 'menu_context', 'first_bite', 'climax_hero', 'final_review'],
+  6: ['intro_hook', 'menu_context', 'prep_sensory', 'first_bite', 'climax_hero', 'final_review'],
+  7: ['intro_hook', 'menu_context', 'prep_sensory', 'first_bite', 'climax_hero', 'final_review', 'outro_next'],
+  8: ['intro_hook', 'menu_context', 'prep_sensory', 'table_reveal', 'first_bite', 'climax_hero', 'final_review', 'outro_next'],
+  9: ['intro_hook', 'menu_context', 'prep_sensory', 'table_reveal', 'first_bite', 'combo_variation', 'climax_hero', 'final_review', 'outro_next'],
+  10: ['intro_hook', 'menu_context', 'prep_sensory', 'table_reveal', 'first_bite', 'combo_variation', 'climax_hero', 'near_finish', 'final_review', 'outro_next'],
+  11: ['intro_hook', 'menu_context', 'prep_sensory', 'table_reveal', 'first_bite', 'texture_asmr', 'combo_variation', 'climax_hero', 'near_finish', 'final_review', 'outro_next'],
+  12: ['intro_hook', 'menu_context', 'prep_sensory', 'table_reveal', 'first_bite', 'texture_asmr', 'combo_variation', 'pace_break', 'climax_hero', 'near_finish', 'final_review', 'outro_next'],
+};
+
+const TOPIC_PROFILES: Array<StoryboardTopicProfile & { matchers: RegExp[] }> = [
+  {
+    id: 'spicy_street_food',
+    label: '매운 분식 먹방',
+    keywords: ['떡볶이', '순대', '튀김', '어묵', '매운 소스'],
+    visualMotifs: ['빨간 양념 윤기', '튀김 바삭한 단면', '순대와 떡볶이 한입 조합'],
+    audioMotifs: ['바삭 소리', '매운 소스에 찍는 소리', '쫄깃한 떡 식감'],
+    subtitleMotifs: ['매콤달콤한 첫입', '분식 조합 피크', '바삭함과 매운맛 대비'],
+    sensoryWords: ['매콤한', '쫄깃한', '바삭한', '달큰한'],
+    matchers: [/떡볶|분식|순대|튀김|어묵|매운|양념/],
+  },
+  {
+    id: 'dessert_cafe',
+    label: '디저트 카페 먹방',
+    keywords: ['딸기빙수', '케이크', '카페', '크림', '디저트'],
+    visualMotifs: ['딸기 토핑 얹는 손', '케이크 단면', '빙수 위로 올라간 크림'],
+    audioMotifs: ['스푼으로 빙수 뜨는 소리', '부드러운 크림 식감', '케이크를 자르는 소리'],
+    subtitleMotifs: ['차가운 달콤함', '크림과 딸기 조합', '디저트 비주얼 피크'],
+    sensoryWords: ['달콤한', '차가운', '부드러운', '상큼한'],
+    matchers: [/빙수|케이크|카페|디저트|딸기|크림|초코|아이스크림/],
+  },
+  {
+    id: 'seafood',
+    label: '해산물 한상 먹방',
+    keywords: ['해산물', '회', '대게', '매운탕', '조개'],
+    visualMotifs: ['회 한상 윤기', '대게 살 발라내는 손', '매운탕 국물 김'],
+    audioMotifs: ['게살을 발라내는 소리', '국물이 끓는 소리', '회 씹는 식감'],
+    subtitleMotifs: ['바다향 피크', '대게 살 한입', '매운탕 마무리'],
+    sensoryWords: ['싱싱한', '탱글한', '시원한', '진한'],
+    matchers: [/해산물|회|대게|킹크랩|매운탕|조개|새우|전복|문어/],
+  },
+  {
+    id: 'convenience_food',
+    label: '편의점 조합 먹방',
+    keywords: ['편의점', '라면', '삼각김밥', '치즈', '컵라면'],
+    visualMotifs: ['컵라면 김', '삼각김밥을 라면에 얹는 손', '치즈가 녹는 순간'],
+    audioMotifs: ['면치기 소리', '치즈 늘어나는 식감', '포장 뜯는 소리'],
+    subtitleMotifs: ['편의점 꿀조합', '라면과 삼각김밥 한입', '치즈 조합 피크'],
+    sensoryWords: ['고소한', '짭짤한', '뜨끈한', '꾸덕한'],
+    matchers: [/편의점|라면|컵라면|삼각김밥|치즈|도시락|즉석/],
+  },
+  {
+    id: 'korean_bbq',
+    label: '고기 구이 먹방',
+    keywords: ['삼겹살', '갈비', '한우', '고기', '쌈'],
+    visualMotifs: ['불판 위 고기 굽는 장면', '쌈을 싸는 손', '육즙 단면과 테이블 반응'],
+    audioMotifs: ['불판 지글거림', '고기 자르는 소리', '쌈 한입 식감'],
+    subtitleMotifs: ['육즙 피크', '불향 가득한 한입', '쌈 조합 완성'],
+    sensoryWords: ['고소한', '육즙 가득한', '불향 나는', '쫀득한'],
+    matchers: [/삼겹살|고기|갈비|한우|구이|불판|쌈|육즙/],
+  },
+  {
+    id: 'noodle_soup',
+    label: '면·국물 먹방',
+    keywords: ['국밥', '국수', '라멘', '칼국수', '냉면'],
+    visualMotifs: ['국물 위 김', '면발 들어 올리는 손', '국물 한 숟가락과 반응'],
+    audioMotifs: ['면치기 소리', '국물 떠먹는 소리', '후루룩 리듬'],
+    subtitleMotifs: ['국물 첫 숟갈', '면발 식감 피크', '든든한 마무리'],
+    sensoryWords: ['뜨끈한', '시원한', '진한', '쫄깃한'],
+    matchers: [/국밥|국수|라멘|라면|칼국수|냉면|짬뽕|우동|국물|면발/],
+  },
 ];
+
+const GENERIC_TOPIC_PROFILE: StoryboardTopicProfile = {
+  id: 'generic_mukbang',
+  label: '먹방 하이라이트',
+  keywords: ['가게 앞 인트로', '주문 맥락', '첫 입', '맛 평가'],
+  visualMotifs: ['가게 앞 도착', '한상 전체샷', '첫 입 준비 손동작'],
+  audioMotifs: ['첫 입 식감', '조리 소리', '만족스러운 리액션'],
+  subtitleMotifs: ['다시 보고 싶은 한입', '오늘의 대표 장면', '맛 포인트 정리'],
+  sensoryWords: ['푸짐한', '맛있는', '든든한', '생생한'],
+};
 
 function toNumber(value: unknown, fallback = 0) {
   const parsed = typeof value === 'number' ? value : Number(value);
@@ -65,14 +157,6 @@ function formatMillis(milliseconds: number) {
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
-}
-
-function sanitizeStoryboardPrompt(value: string) {
-  const sanitized = HOSTILE_PROMPT_PATTERNS.reduce(
-    (text, pattern) => text.replace(pattern, '[안전상 제거된 공격 지시]'),
-    value,
-  );
-  return sanitized.replace(/\s{2,}/g, ' ').trim();
 }
 
 function makeFallbackSources(): StoryboardHeatmapSource[] {
@@ -262,50 +346,290 @@ function normalizeRequest(input: Partial<StoryboardGenerateRequest> | null | und
     tone,
     targetLengthMinutes: clamp(Math.round(toNumber(input?.targetLengthMinutes, DEFAULT_REQUEST.targetLengthMinutes)), 6, 60),
     sourceLimit: clamp(Math.round(toNumber(input?.sourceLimit, DEFAULT_REQUEST.sourceLimit)), 10, 250),
-    segmentCount: clamp(Math.round(toNumber(input?.segmentCount, DEFAULT_REQUEST.segmentCount)), 5, 10),
+    segmentCount: clamp(
+      Math.round(toNumber(input?.segmentCount, DEFAULT_REQUEST.segmentCount)),
+      STORYBOARD_MIN_SEGMENT_COUNT,
+      STORYBOARD_MAX_SEGMENT_COUNT,
+    ),
     includeProductionNotes: input?.includeProductionNotes !== false,
     generationMode: input?.generationMode === 'backend_agent' ? 'backend_agent' : 'local_heatmap',
   };
 }
 
-function sceneTemplate(sceneNo: number) {
-  const templates = [
-    ['오프닝 훅', '가장 강한 리플레이 피크를 10초 안에 예고해 초반 이탈을 막습니다.', '가게 외관/메뉴판/대표 음식 클로즈업을 빠르게 교차합니다.', '“오늘은 구독자분들이 다시 돌려본 그 포인트를 새 메뉴로 확장해볼게요.”'],
-    ['기대감 세팅', '음식이 나오기 전 양·비주얼·소리 기대치를 쌓습니다.', '조리 과정, 상차림, 김/소스/면발처럼 질감이 보이는 컷을 확보합니다.', '“이 장면은 냄새부터 다르게 느껴져요.”'],
-    ['첫 입 리액션', '피크 구간과 닮은 첫 입 리액션을 명확히 배치합니다.', '입장 전 정적 → 한입 → 표정 클로즈업 → 한 박자 쉬는 편집을 씁니다.', '“와… 이건 첫입부터 기준이 생기는데요?”'],
-    ['반복 시청 포인트', '소리·늘어남·단면·국물처럼 되감기 좋은 감각 컷을 설계합니다.', '마이크에 가까운 바삭/후루룩 소리와 손동작 디테일을 따로 땁니다.', '“이 소리 때문에 여기 다시 보실 것 같아요.”'],
-    ['중반 변주', '같은 맛이 반복되지 않도록 조합/소스/사이드 메뉴로 리듬을 바꿉니다.', '새 조합을 만들 때 화면 하단에 조합명을 짧게 넣습니다.', '“여기서 조합을 한 번 바꿔볼게요.”'],
-    ['클라이맥스 한상', '가장 강한 장면을 새 영상의 대표 썸네일 후보로 전환합니다.', '테이블 전체, 한입 크기 대비, 표정이 동시에 보이는 구도를 만듭니다.', '“오늘의 하이라이트는 이 한상이에요.”'],
-    ['마무리/다음 소재 연결', '댓글 유도와 다음 회차 소재를 자연스럽게 연결합니다.', '빈 그릇/남은 소스/최종 표정을 차분하게 보여줍니다.', '“다음엔 이 피크를 어떤 메뉴로 이어가면 좋을까요?”'],
-  ];
-  return templates[(sceneNo - 1) % templates.length];
+const ROLE_TEMPLATES: Record<StoryboardArcRole, {
+  title: string;
+  operatorIntent: string;
+  visualDirection: string;
+  hostBeat: string;
+  captionStem: string;
+}> = {
+  intro_hook: {
+    title: '초반 1분 30초 가게 앞 인트로',
+    operatorIntent: '쯔양님 영상에서 자주 보이는 00:00~01:30 인사·장소 설명·가게 앞 도입을 먼저 깔고, 가장 강한 리플레이 피크를 예고해 초반 이탈을 막습니다.',
+    visualDirection: '가게 앞 외관, 입구, 메뉴판, 대표 음식 예고 컷을 1분 30초 안에 빠르게 교차한 뒤 본격 먹방으로 넘어갑니다.',
+    hostBeat: '“오늘은 이 가게 앞에서부터 기대가 되는데요. 1분 30초 안에 장소와 메뉴를 짧게 보여드리고 바로 들어가볼게요.”',
+    captionStem: '초반 1분 30초 가게 앞 인사 · 오늘 갈 곳과 대표 메뉴를 먼저 보여주기',
+  },
+  menu_context: {
+    title: '주문과 메뉴 맥락 세팅',
+    operatorIntent: '시청자가 무엇을 얼마나 먹게 될지 바로 이해하도록 메뉴·양·가격대 느낌을 짧게 정리합니다.',
+    visualDirection: '메뉴판을 직접 읽히지 않고 손가락, 주문표, 대표 재료, 상차림 준비 컷으로 맥락을 보여줍니다.',
+    hostBeat: '“오늘은 이 조합으로 주문해봤어요. 어떤 맛이 날지 바로 확인해볼게요.”',
+    captionStem: '주문 맥락 · 오늘 먹을 메뉴와 양을 쉽게 알려주기',
+  },
+  prep_sensory: {
+    title: '조리 과정과 소리 기대감',
+    operatorIntent: '음식이 나오기 전 김·소리·윤기·조리 동작으로 첫 입 전 기대치를 쌓습니다.',
+    visualDirection: '주방 손동작, 지글거리는 팬, 끓는 국물, 올라오는 김처럼 조리 과정이 보이는 컷을 확보합니다.',
+    hostBeat: '“나오기 전부터 소리가 진짜 좋아요. 이 장면만 봐도 기대돼요.”',
+    captionStem: '조리 기대감 · 김과 소리로 첫 입 전 설렘 만들기',
+  },
+  table_reveal: {
+    title: '첫 상차림 전체 공개',
+    operatorIntent: '시청자가 화면을 멈추고 한상을 훑어볼 수 있게 메뉴 구성을 한 번에 보여줍니다.',
+    visualDirection: '테이블 전체를 넓게 잡고 메인 음식, 사이드, 소스, 식기 위치가 한눈에 보이게 배치합니다.',
+    hostBeat: '“한상이 이렇게 나왔습니다. 양이 정말 푸짐하죠?”',
+    captionStem: '한상 공개 · 메인과 사이드를 한눈에 보여주기',
+  },
+  first_bite: {
+    title: '첫 입 리액션',
+    operatorIntent: '피크 구간과 닮은 첫 입 리액션을 명확히 배치해 맛의 기준점을 만듭니다.',
+    visualDirection: '입장 전 정적 → 한입을 집는 손 → 맛 포인트 자막 → 한 박자 쉬는 편집을 씁니다. 얼굴 대신 손동작과 테이블 반응 중심으로 표현합니다.',
+    hostBeat: '“와… 이건 첫입부터 기준이 생기는데요?”',
+    captionStem: '첫 입 리액션 · 한입 직후 맛 포인트를 짧게 자막화',
+  },
+  texture_asmr: {
+    title: 'ASMR 질감 포인트',
+    operatorIntent: '소리·늘어남·단면·국물처럼 되감기 좋은 감각 컷을 별도 피크로 설계합니다.',
+    visualDirection: '마이크 근처 손동작, 젓가락, 숟가락, 국물 표면, 면발 질감 등 얼굴이 아닌 음식 디테일을 크게 잡습니다.',
+    hostBeat: '“이 소리 때문에 여기 다시 보실 것 같아요.”',
+    captionStem: 'ASMR 질감 · 소리와 식감이 살아나는 순간 강조',
+  },
+  combo_variation: {
+    title: '소스와 사이드 조합 변주',
+    operatorIntent: '같은 맛이 반복되지 않도록 조합·소스·사이드 메뉴로 중반 리듬을 바꿉니다.',
+    visualDirection: '소스를 찍는 손, 반찬을 얹는 동작, 조합 전후 비교를 한 컷 안에서 이해되게 보여줍니다.',
+    hostBeat: '“여기서 조합을 한 번 바꿔볼게요.”',
+    captionStem: '조합 변주 · 새 소스와 사이드로 흐름 전환',
+  },
+  pace_break: {
+    title: '페이스 조절과 입가심',
+    operatorIntent: '계속 먹는 장면 사이에 음료·물·가벼운 대화로 호흡을 만들어 시청 피로를 줄입니다.',
+    visualDirection: '컵, 물병, 빈 접시 일부, 잠깐 내려놓은 젓가락처럼 쉬어가는 물건 중심의 안정적인 컷을 둡니다.',
+    hostBeat: '“잠깐 입가심하고 다음 조합으로 넘어가볼게요.”',
+    captionStem: '페이스 조절 · 음료와 짧은 쉬어감으로 리듬 만들기',
+  },
+  climax_hero: {
+    title: '클라이맥스 히어로 한상',
+    operatorIntent: '가장 강한 장면을 새 영상의 대표 썸네일 후보이자 최고 몰입 구간으로 전환합니다.',
+    visualDirection: '테이블 전체와 가장 큰 한입, 풍성한 음식 높이, 김/윤기가 동시에 보이는 히어로 구도를 만듭니다.',
+    hostBeat: '“오늘의 하이라이트는 이 한상이에요.”',
+    captionStem: '클라이맥스 한상 · 오늘 가장 강한 대표 장면 만들기',
+  },
+  near_finish: {
+    title: '거의 완식과 만족감',
+    operatorIntent: '초반 기대가 실제로 채워졌다는 증거를 빈 그릇과 정리된 테이블로 보여줍니다.',
+    visualDirection: '비워진 그릇, 남은 소스 자국, 접힌 냅킨, 내려놓은 숟가락 등 완식에 가까운 상태를 차분히 보여줍니다.',
+    hostBeat: '“진짜 거의 다 먹었네요. 마지막까지 맛이 괜찮았어요.”',
+    captionStem: '거의 완식 · 빈 그릇으로 만족감 보여주기',
+  },
+  final_review: {
+    title: '최종 맛 평가와 재방문 포인트',
+    operatorIntent: '먹은 메뉴의 맛·양·추천 대상·재방문 포인트를 초보자도 이해하게 정리합니다.',
+    visualDirection: '메모하는 손, 메뉴 조합 정리, 대표 접시 하나를 다시 보여주는 컷으로 평가 장면을 구성합니다.',
+    hostBeat: '“오늘은 이 맛 때문에 다시 생각날 것 같아요.”',
+    captionStem: '최종 맛 평가 · 맛과 양, 다시 먹고 싶은 이유 정리',
+  },
+  outro_next: {
+    title: '다음 소재 연결과 아웃트로',
+    operatorIntent: '댓글 유도와 다음 회차 소재를 자연스럽게 연결해 영상 이후 행동을 만듭니다.',
+    visualDirection: '가게 바깥으로 나오는 뒷모습, 간판 없는 거리 분위기, 다음 메뉴 후보를 암시하는 소품으로 마무리합니다.',
+    hostBeat: '“다음엔 이 피크를 어떤 메뉴로 이어가면 좋을까요?”',
+    captionStem: '다음 소재 연결 · 댓글 질문과 다음 영상 기대감 남기기',
+  },
+};
+
+function summarizePromptForCaption(prompt: string) {
+  const normalized = prompt.replace(/[“”"]/g, '').replace(/\s+/g, ' ').trim();
+  if (normalized.length <= 28) return normalized;
+  return `${normalized.slice(0, 27)}…`;
 }
 
-function buildScenes(request: StoryboardGenerateRequest, sources: StoryboardHeatmapSource[]) {
+function formatMarkerLabelForCaption(label: string) {
+  if (/most\s*replayed/i.test(label)) return '반복 시청 피크';
+  if (/top\s*replay/i.test(label)) return '상위 반복 시청 구간';
+  return label;
+}
+
+function pickFrom<T>(items: T[], index: number) {
+  return items[index % items.length];
+}
+
+function cloneTopicProfile(profile: StoryboardTopicProfile): StoryboardTopicProfile {
+  return {
+    id: profile.id,
+    label: profile.label,
+    keywords: [...profile.keywords],
+    visualMotifs: [...profile.visualMotifs],
+    audioMotifs: [...profile.audioMotifs],
+    subtitleMotifs: [...profile.subtitleMotifs],
+    sensoryWords: [...profile.sensoryWords],
+  };
+}
+
+function inferStoryboardTopicProfile(prompt: string): StoryboardTopicProfile {
+  const normalized = prompt.toLowerCase();
+  let bestProfile: StoryboardTopicProfile | null = null;
+  let bestScore = 0;
+
+  for (const profile of TOPIC_PROFILES) {
+    const matcherScore = profile.matchers.reduce(
+      (sum, matcher) => sum + (matcher.test(normalized) ? 1 : 0),
+      0,
+    );
+    const keywordScore = profile.keywords.reduce(
+      (sum, keyword) => sum + (normalized.includes(keyword.toLowerCase()) ? 1 : 0),
+      0,
+    );
+    const score = matcherScore + keywordScore;
+    if (score > bestScore) {
+      bestScore = score;
+      bestProfile = profile;
+    }
+  }
+
+  return cloneTopicProfile(bestProfile ?? GENERIC_TOPIC_PROFILE);
+}
+
+export function getStoryboardArcRolesForSegmentCount(segmentCount: number): StoryboardArcRole[] {
+  const cutCount = clamp(
+    Math.round(toNumber(segmentCount, DEFAULT_REQUEST.segmentCount)),
+    STORYBOARD_MIN_SEGMENT_COUNT,
+    STORYBOARD_MAX_SEGMENT_COUNT,
+  );
+  return [...STORYBOARD_ARC_ROLE_MAP[cutCount]];
+}
+
+function getStoryboardCompressionRule(cutCount: number) {
+  if (cutCount === 5) return '5컷 압축: 인트로, 메뉴 맥락, 첫 입, 클라이맥스, 최종 평가만 남겨 핵심 흐름을 완성';
+  if (cutCount <= 8) return `${cutCount}컷 확장: 조리/상차림/아웃트로를 필요한 만큼 추가해 짧은 회차 리듬 유지`;
+  if (cutCount <= 10) return `${cutCount}컷 확장: 조합 변주와 완식 근거를 더해 중반 반복감을 줄임`;
+  if (cutCount === 11) return '11컷 확장: 전체 흐름에서 페이스 조절만 제외해 몰입을 유지';
+  return '12컷 풀 아크: 인트로부터 다음 소재 연결까지 모든 역할을 사용';
+}
+
+function buildRequiredRoleCoverage(roles: StoryboardArcRole[]) {
+  return {
+    hasIntro: roles.includes('intro_hook'),
+    hasContext: roles.includes('menu_context'),
+    hasFirstBiteOrSensory: roles.some((role) =>
+      ['first_bite', 'prep_sensory', 'texture_asmr'].includes(role),
+    ),
+    hasClimax: roles.includes('climax_hero'),
+    hasFinalReviewOrOutro: roles.some((role) =>
+      ['final_review', 'outro_next'].includes(role),
+    ),
+  };
+}
+
+function getSourceEvidenceLabel(options: {
+  isFallbackData: boolean;
+  dataModeLabel: string;
+  mode?: StoryboardDataMode;
+}): StoryboardSourceEvidenceLabel {
+  if (options.mode === 'backend_agent_command' || /백엔드/.test(options.dataModeLabel)) {
+    return '백엔드 에이전트 근거';
+  }
+  return options.isFallbackData ? '데모/샘플 근거' : '로컬 히트맵 근거';
+}
+
+function createStoryboardSceneDraft(
+  role: StoryboardArcRole,
+  sceneNo: number,
+  profile: StoryboardTopicProfile,
+): StoryboardSceneDraft {
+  const base = ROLE_TEMPLATES[role];
+  const keyword = pickFrom(profile.keywords, sceneNo - 1);
+  const visualMotif = pickFrom(profile.visualMotifs, sceneNo - 1);
+  const audioMotif = pickFrom(profile.audioMotifs, sceneNo - 1);
+  const subtitleMotif = pickFrom(profile.subtitleMotifs, sceneNo - 1);
+  const sensoryWord = pickFrom(profile.sensoryWords, sceneNo - 1);
+
+  return {
+    sceneNo,
+    role,
+    topicKeywords: [profile.label, keyword, sensoryWord],
+    title: `${base.title} · ${profile.label}`,
+    operatorIntent: `${base.operatorIntent} 이번 주제는 ${profile.label}이라서 ${keyword}의 ${sensoryWord} 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.`,
+    visualDirection: `${base.visualDirection} 특히 ${visualMotif}을/를 크게 잡아 ${profile.label} 주제가 다른 장면과 구분되게 만듭니다.`,
+    hostBeat: `${base.hostBeat} ${keyword}은/는 ${audioMotif}이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다.`,
+    captionStem: `${base.captionStem} · ${subtitleMotif} · ${keyword}`,
+  };
+}
+
+export function createStoryboardPlannerOutput(
+  request: StoryboardGenerateRequest,
+  options: {
+    dataModeLabel: string;
+    isFallbackData: boolean;
+    mode?: StoryboardDataMode;
+  },
+): StoryboardPlannerOutput {
+  const topicProfile = inferStoryboardTopicProfile(request.prompt);
+  const roles = getStoryboardArcRolesForSegmentCount(request.segmentCount);
+  const sceneDrafts = roles.map((role, index) =>
+    createStoryboardSceneDraft(role, index + 1, topicProfile),
+  );
+
+  return {
+    topicProfile,
+    arcPlan: {
+      cutCount: roles.length,
+      roles,
+      compressionRule: getStoryboardCompressionRule(roles.length),
+      requiredRoleCoverage: buildRequiredRoleCoverage(roles),
+    },
+    sourceTrace: {
+      dataModeLabel: options.dataModeLabel,
+      isFallbackData: options.isFallbackData,
+      evidenceLabel: getSourceEvidenceLabel(options),
+      imageStatusLabel: STORYBOARD_NO_TRUSTED_IMAGE_LABEL,
+    },
+    sceneDrafts,
+  };
+}
+
+function buildScenes(
+  request: StoryboardGenerateRequest,
+  sources: StoryboardHeatmapSource[],
+  planner: StoryboardPlannerOutput,
+) {
   const durationSec = Math.round((request.targetLengthMinutes * 60) / request.segmentCount);
-  return Array.from({ length: request.segmentCount }, (_, index) => {
+  return planner.sceneDrafts.map((draft, index) => {
     const source = sources[index % sources.length];
     const marker = source.markers[index % source.markers.length];
-    const [title, operatorIntent, visualDirection, hostBeat] = sceneTemplate(index + 1);
+    const markerLabel = formatMarkerLabelForCaption(marker.label);
+    const sourceTrace = planner.sourceTrace.evidenceLabel;
 
     return {
-      sceneNo: index + 1,
-      title,
+      sceneNo: draft.sceneNo,
+      title: draft.title,
       durationSec,
-      operatorIntent,
-      visualDirection,
-      hostBeat,
-      captionIdea: `${TONE_LABELS[request.tone]} 톤으로 “${request.prompt}” 소재를 ${marker.peakTime} 피크 감정에 맞춰 압축`,
+      operatorIntent: draft.operatorIntent,
+      visualDirection: draft.visualDirection,
+      hostBeat: draft.hostBeat,
+      captionIdea: `${draft.captionStem} · ${sourceTrace} ${marker.peakTime} ${markerLabel} · ${TONE_LABELS[request.tone]} 톤 · ${summarizePromptForCaption(request.prompt)}`,
       heatmapEvidence: {
         videoId: source.videoId,
         youtubeLink: source.youtubeLink,
         peakTime: marker.peakTime,
         replayScore: Number(marker.replayScore.toFixed(3)),
-        reason: `${marker.label} / 리플레이 강도 ${(marker.replayScore * 100).toFixed(1)}% 구간을 참조`,
+        reason: `${sourceTrace} · ${marker.label} / 리플레이 강도 ${(marker.replayScore * 100).toFixed(1)}% 구간을 참조`,
       },
       productionChecklist: request.includeProductionNotes
         ? [
           '촬영 전 피크 구간을 PD/편집자가 함께 1회 재생',
+          `${planner.topicProfile.label} 주제어(${draft.topicKeywords.join(', ')})가 화면·오디오·자막에 모두 들어갔는지 확인`,
           '첫 입·질감·소리 컷을 분리 촬영해 쇼츠/썸네일 후보 확보',
           '과장된 맛 표현보다 실제 리액션과 구독자 반복시청 근거를 우선',
         ]
@@ -344,25 +668,101 @@ function buildAhpReport(request: StoryboardGenerateRequest, selectedSources: Sto
   };
 }
 
-function buildMarkdown(result: Omit<StoryboardGenerationResult, 'storyboard'> & { scenes: ReturnType<typeof buildScenes> }) {
+function normalizeStoryboardMarkdownText(value: unknown) {
+  return String(value ?? '').replace(/\s+/g, ' ').trim();
+}
+
+function escapeStoryboardMarkdownTableCell(value: unknown) {
+  return normalizeStoryboardMarkdownText(value).replace(/\|/g, '\\|');
+}
+
+function formatStoryboardCutNo(sceneNo: number) {
+  return `CUT ${String(sceneNo).padStart(2, '0')}`;
+}
+
+function createStoryboardShotListTable(scenes: StoryboardGenerationResult['storyboard']['scenes']) {
   return [
+    '| CUT | 역할 | 촬영 지시 | 멘트 | 자막 | 근거 |',
+    '| --- | --- | --- | --- | --- | --- |',
+    ...scenes.map((scene) => [
+      formatStoryboardCutNo(scene.sceneNo),
+      scene.title,
+      scene.visualDirection,
+      scene.hostBeat,
+      scene.captionIdea,
+      `${scene.heatmapEvidence.peakTime} · ${scene.heatmapEvidence.reason}`,
+    ].map(escapeStoryboardMarkdownTableCell).join(' | ')).map((row) => `| ${row} |`),
+  ];
+}
+
+function formatStoryboardSceneChecklist(scene: StoryboardGenerationResult['storyboard']['scenes'][number]) {
+  if (!scene.productionChecklist.length) return ['- 체크리스트: 운영 노트 없음'];
+  return [
+    '- 체크리스트:',
+    ...scene.productionChecklist.map((item) => `  - ${normalizeStoryboardMarkdownText(item)}`),
+  ];
+}
+
+export function buildStoryboardExportMarkdown(
+  result: Pick<
+    StoryboardGenerationResult,
+    'request' | 'sourceSummary' | 'ahp'
+  > & {
+    storyboard: Pick<
+      StoryboardGenerationResult['storyboard'],
+      'title' | 'logline' | 'operatorBrief' | 'scenes'
+    >;
+  },
+  options: { backendMarkdown?: string } = {},
+) {
+  const scenes = result.storyboard.scenes;
+  const canonical = [
     `# ${TONE_LABELS[result.request.tone]} 스토리보드`,
     '',
-    `- 요청: ${result.request.prompt}`,
+    `- 요청: ${normalizeStoryboardMarkdownText(result.request.prompt)}`,
+    `- 구성: ${scenes.length}컷 / ${result.request.targetLengthMinutes}분`,
     `- AHP 로컬 준비도: ${result.ahp.score}/100 (${result.ahp.status === 'passed' ? '통과' : '개선 필요'})`,
     `- 근거: ${result.sourceSummary.selectedSources}개 영상 / ${result.sourceSummary.totalMarkers}개 피크 / 최상위 ${(result.sourceSummary.topReplayScore * 100).toFixed(1)}%`,
     '',
-    ...result.scenes.flatMap((scene) => [
-      `## ${scene.sceneNo}. ${scene.title} (${scene.durationSec}초)`,
-      `- 운영 의도: ${scene.operatorIntent}`,
-      `- 화면 연출: ${scene.visualDirection}`,
-      `- 쯔양님 멘트 후보: ${scene.hostBeat}`,
-      `- 자막 아이디어: ${scene.captionIdea}`,
-      `- 히트맵 근거: ${scene.heatmapEvidence.videoId} ${scene.heatmapEvidence.peakTime} / ${scene.heatmapEvidence.reason}`,
-      `- URL: ${scene.heatmapEvidence.youtubeLink}`,
+    '## 촬영 기획표',
+    '',
+    ...createStoryboardShotListTable(scenes),
+    '',
+    '## CUT별 상세 메모',
+    '',
+    ...scenes.flatMap((scene) => [
+      `### ${formatStoryboardCutNo(scene.sceneNo)} · ${normalizeStoryboardMarkdownText(scene.title)} (${scene.durationSec}초)`,
+      `- 역할: ${normalizeStoryboardMarkdownText(scene.operatorIntent)}`,
+      `- 촬영: ${normalizeStoryboardMarkdownText(scene.visualDirection)}`,
+      `- 멘트: ${normalizeStoryboardMarkdownText(scene.hostBeat)}`,
+      `- 자막: ${normalizeStoryboardMarkdownText(scene.captionIdea)}`,
+      `- 근거: ${normalizeStoryboardMarkdownText(scene.heatmapEvidence.videoId)} ${normalizeStoryboardMarkdownText(scene.heatmapEvidence.peakTime)} / ${normalizeStoryboardMarkdownText(scene.heatmapEvidence.reason)}`,
+      `- URL: ${normalizeStoryboardMarkdownText(scene.heatmapEvidence.youtubeLink)}`,
+      ...formatStoryboardSceneChecklist(scene),
       '',
     ]),
   ].join('\n');
+
+  const backendMarkdown = options.backendMarkdown?.trim();
+  if (!backendMarkdown) return canonical;
+
+  return [
+    canonical,
+    '',
+    '## 백엔드 에이전트 메모',
+    '',
+    normalizeStoryboardMarkdownText(backendMarkdown),
+  ].join('\n');
+}
+
+export function normalizeStoryboardExportMarkdown(
+  result: StoryboardGenerationResult,
+  backendMarkdown?: string,
+) {
+  result.storyboard.exportMarkdown = buildStoryboardExportMarkdown(result, {
+    backendMarkdown,
+  });
+  return result;
 }
 
 export function generateLocalStoryboard(input?: Partial<StoryboardGenerateRequest> | null): StoryboardGenerationResult {
@@ -378,7 +778,6 @@ export function generateLocalStoryboard(input?: Partial<StoryboardGenerateReques
     dataModeLabel,
   } = loadStoryboardHeatmapSources(request.sourceLimit);
 
-  const scenes = buildScenes(request, selectedSources);
   const totalMarkers = selectedSources.reduce((sum, source) => sum + source.markers.length, 0);
   const topReplayScore = selectedSources[0]?.replayPeakScore ?? 0;
   const sourceSummary = {
@@ -392,40 +791,51 @@ export function generateLocalStoryboard(input?: Partial<StoryboardGenerateReques
     fallbackReason,
     dataModeLabel,
   };
+  const planner = createStoryboardPlannerOutput(request, {
+    dataModeLabel,
+    isFallbackData,
+    mode,
+  });
+  const scenes = buildScenes(request, selectedSources, planner);
   const ahp = buildAhpReport(request, selectedSources, scannedFiles);
-  const partial = {
+  const agentGraphFidelity = buildStoryboardAgentGraphFidelity({
+    mode,
+    finalOutputReady: true,
+  });
+  const result: StoryboardGenerationResult = {
     generatedAt: new Date().toISOString(),
     mode,
     request,
     sourceSummary,
     ahp,
+    agentGraphFidelity,
+    planner,
     backendAnalysis: {
       reusedLogic: [
         'backend/storyboard-agent의 supervisor→researcher→designer 구조를 콘솔 단일 생성 플로우로 축약',
         'search_scene_data의 피크 구간 캡션 보강 원칙을 로컬 히트맵 marker 기반 근거로 대체',
         'backend/restaurant-crawling/data/tzuyang/heatmap jsonl의 most_replayed_markers와 intensityScoreNormalized를 핵심 랭킹 신호로 사용',
+        `StoryboardPlannerOutput ${planner.topicProfile.label} / ${planner.arcPlan.roles.length}컷 역할 매핑 사용`,
       ],
       localGapsHandled: [
         'LangGraph/OpenAI/Supabase/Tavily 자격증명 없이도 로컬 jsonl 히트맵으로 생성 가능',
         '라이브 자막/프레임 캡션이 없을 때도 씬별 URL·피크 시간·리플레이 강도를 노출',
         'PD가 관리자 콘솔에서 파라미터를 조정하고 결과를 복사할 수 있게 API와 UI를 분리',
+        `${planner.sourceTrace.evidenceLabel} / ${planner.sourceTrace.imageStatusLabel} 상태를 생성 결과에 명시`,
         ...(isFallbackData
           ? ['히트맵 디렉터리 또는 사용 가능한 jsonl이 없어도 데모/샘플 모드로 로컬 생성 흐름을 검증']
           : []),
       ],
     },
-    scenes,
-  };
-  const exportMarkdown = buildMarkdown(partial);
-
-  return {
-    ...partial,
     storyboard: {
       title: `${TONE_LABELS[request.tone]} — 구독자 반복시청 기반 다음 영상안`,
       logline: `쯔양님 기존 영상의 가장 많이 본 구간 ${totalMarkers}개를 근거로 ${request.targetLengthMinutes}분 분량의 새 먹방 흐름을 구성합니다.`,
       operatorBrief: '관리자 콘솔에서 프롬프트와 톤을 조정한 뒤, 씬별 히트맵 근거를 확인하고 제작 회의 자료로 복사해 사용합니다.',
       scenes,
-      exportMarkdown,
+      exportMarkdown: '',
     },
   };
+  result.storyboard.exportMarkdown = buildStoryboardExportMarkdown(result);
+
+  return result;
 }
