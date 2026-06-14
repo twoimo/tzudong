@@ -32,18 +32,34 @@ def load_tools() -> tuple[list, list]:
     """tools/ 폴더를 스캔하여 (TOOLS, ADMIN_TOOLS) 반환. 호출 시점의 폴더 상태를 반영."""
     tools = []
     admin_tools = []
+    optional_missing = {}
 
     for fname in sorted(os.listdir(_dir)):
         if fname.startswith("_") or not fname.endswith(".py"):
             continue
         mod_name = fname[:-3]
-        mod = importlib.import_module(f".{mod_name}", package=__name__)
-        importlib.reload(mod)
+        try:
+            mod = importlib.import_module(f".{mod_name}", package=__name__)
+            importlib.reload(mod)
+        except ModuleNotFoundError as exc:
+            # `web_search` depends on an optional Tavily wrapper. The local
+            # admin storyboard graph must still be able to run its core
+            # self-RAG/search_scene_data path when that optional package is not
+            # installed.
+            if mod_name == "web_search":
+                optional_missing[mod_name] = str(exc)
+                continue
+            raise
         tool_obj = getattr(mod, mod_name, None)
         if tool_obj is not None and _is_tool(tool_obj):
             if mod_name in _ADMIN_NAMES:
                 admin_tools.append(tool_obj)
             else:
                 tools.append(tool_obj)
+
+    if optional_missing:
+        os.environ["STORYBOARD_AGENT_OPTIONAL_TOOLS_MISSING"] = ",".join(
+            sorted(optional_missing)
+        )
 
     return tools, admin_tools

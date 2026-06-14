@@ -64,6 +64,81 @@ const baseRequest = {
   generationMode: 'backend_agent' as const,
 };
 
+function createCanonicalReferenceGraph() {
+  return {
+    lifecycle: {
+      start: true,
+      extractSlots: true,
+      supervisor: true,
+      researcherDelegated: true,
+      designerDelegated: true,
+      internRoutedByResearcher: true,
+      end: true,
+    },
+    supervisor: {
+      research_sufficient: true,
+      agent_instructions: { researcher: 'collect data', designer: 'draft storyboard' },
+      is_approved: { researcher: true, designer: true },
+      research_scene_data: ['scene data'],
+      research_web_summary: 'web summary',
+      human_feedback: ['approved'],
+      intern_result: { status: 'reviewed' },
+      messages: ['supervisor ok'],
+    },
+    researcher: {
+      agent_instructions: ['self rag'],
+      research_sufficient: true,
+      research_summary: 'enough data',
+      previous_queries: ['q1'],
+      researcher_stall_summary: 'resolved',
+      intern_request: { tool: 'search_scene_data' },
+      intern_result: { status: 'done' },
+      researcher_think_count: 2,
+      messages: ['think', 'tools', 'evaluate'],
+      loop: { think: true, tools: true, evaluate: true },
+    },
+    intern: {
+      intern_request: { tool: 'search_scene_data.py' },
+      agent_instructions: ['review before execute'],
+      intern_action: 'create_modify_tool_rpc',
+      pending_execute_calls: ['create_tool'],
+      intern_result: { status: 'reviewed' },
+      modified_tool_calls: ['search_scene_data'],
+      plan_update_events: ['plan', 'review', 'execute'],
+      messages: ['human approved'],
+      planCreated: true,
+      review: { planApproved: true },
+      toolRpcMutation: true,
+      searchSceneDataReviewed: true,
+      humanInterrupts: {
+        beforeCreateDelete: true,
+        afterToolRpcGeneration: true,
+        blocksUnapprovedExecution: true,
+        recordsHumanDecision: true,
+        reviewBeforeTrust: true,
+      },
+    },
+    designer: {
+      research_scene_data: ['scene data'],
+      research_web_summary: 'web summary',
+      final_output: '# storyboard',
+      storyboard_history: ['draft', 'final'],
+      human_feedback: ['approved'],
+      conversation_summary: 'feedback applied',
+      feedback_action: 'finalize',
+      messages: ['designer final'],
+    },
+    audit: {
+      persisted: true,
+      perAgentStateVisible: true,
+      messagesCaptured: true,
+      eventsOrdered: true,
+      safeForPublicUi: true,
+      evidencePointers: ['referenceGraph'],
+    },
+  } as const;
+}
+
 describe('admin storyboard LangGraph replacement contracts', () => {
   test('defaults backend_agent status to LangGraph replacement runtime without changing public generation modes', async () => {
     await withEnv(
@@ -95,6 +170,9 @@ describe('admin storyboard LangGraph replacement contracts', () => {
 
         expect(result.request.generationMode).toBe('backend_agent');
         expect(result.mode).toBe('backend_agent_local_adapter');
+        expect(result.storyboard.exportMarkdown).toContain('## 촬영 기획표');
+        expect(result.storyboard.exportMarkdown).toContain('| CUT | 역할 | 촬영 지시 | 멘트 | 자막 | 근거 |');
+        expect(result.storyboard.exportMarkdown).toContain('백엔드 에이전트 근거');
         expect(graph?.status).toBe('fallback');
         expect(graph?.runtime).toBe('local_adapter_fallback');
         expect(graph?.mode).toBe('local_adapter');
@@ -159,6 +237,9 @@ describe('admin storyboard LangGraph replacement contracts', () => {
           expect(result.storyboard.title).toBe('LangGraph storyboard');
           expect(result.storyboard.logline).toBe('실제 그래프 기반 스토리보드');
           expect(result.storyboard.operatorBrief).toBe('LangGraph graph_command output');
+          expect(result.storyboard.exportMarkdown).toContain('## 촬영 기획표');
+          expect(result.storyboard.exportMarkdown).toContain('| CUT | 역할 | 촬영 지시 | 멘트 | 자막 | 근거 |');
+          expect(result.storyboard.exportMarkdown).toContain('# LangGraph storyboard');
           expect(result.backendAnalysis.backendAgent?.runtime).toBe('langgraph');
           expect(graph?.status).toBe('used');
           expect(graph?.runtime).toBe('langgraph');
@@ -304,7 +385,10 @@ describe('admin storyboard LangGraph replacement contracts', () => {
         exportMarkdown: '# BAD MARKDOWN FROM INVALID GRAPH',
         operatorBrief: 'bad graph output',
       },
-      backendAgent: { graph: {} },
+      backendAgent: {
+        graph: {},
+        referenceGraph: createCanonicalReferenceGraph(),
+      },
     });
     const unsupportedDurable = createCommand({
       storyboard: { exportMarkdown: '# unsupported durable graph claim', operatorBrief: 'bad graph output' },
@@ -341,6 +425,9 @@ describe('admin storyboard LangGraph replacement contracts', () => {
             expect(result.backendAnalysis.backendAgent?.graph?.status).toBe('fallback');
             expect(result.backendAnalysis.backendAgent?.graph?.runtime).toBe('local_adapter_fallback');
             expect(result.backendAnalysis.backendAgent?.graph?.fallbackReason).toBe('graph_invalid_output');
+            expect(result.agentGraphFidelity?.status).toBe('needs_iteration');
+            expect(result.agentGraphFidelity?.score ?? 100).toBeLessThan(98);
+            expect(result.agentGraphFidelity?.evidenceMode).toBe('local_adapter_gap');
           },
         );
       }
@@ -422,7 +509,7 @@ describe('admin storyboard LangGraph replacement contracts', () => {
         const serialized = JSON.stringify(result);
 
         expect(serialized).not.toContain('SECRETSECRETSECRET');
-        expect(serialized).toContain('[REDACTED]');
+        expect(serialized).toContain('[안전상 제거된 운영 지시]');
         expect(result.backendAnalysis.backendAgent?.graph?.retrieval?.status).toBe('not_used');
       },
     );
@@ -468,8 +555,8 @@ describe('admin storyboard LangGraph replacement contracts', () => {
           expect(serialized).not.toContain('SECRETSECRETSECRET');
           expect(serialized).not.toContain('ignore previous instructions');
           expect(serialized).not.toContain('delete .omx/state');
-          expect(serialized).toContain('[REDACTED]');
-          expect(serialized).toContain('[SAFETY-REDACTED-INSTRUCTION]');
+          expect(serialized).toContain('[안전상 제거된 운영 지시]');
+          expect(serialized).toContain('[안전상 제거된 운영 지시]');
         },
       );
     } finally {
@@ -530,8 +617,8 @@ describe('admin storyboard LangGraph replacement contracts', () => {
           expect(serialized).not.toContain('sk-proj-');
           expect(serialized).not.toContain('ignore previous instructions');
           expect(serialized).not.toContain('delete .omx/state');
-          expect(serialized).toContain('[REDACTED]');
-          expect(serialized).toContain('[SAFETY-REDACTED-INSTRUCTION]');
+          expect(serialized).toContain('[안전상 제거된 운영 지시]');
+          expect(serialized).toContain('[안전상 제거된 운영 지시]');
         },
       );
     } finally {
@@ -642,10 +729,10 @@ describe('admin storyboard LangGraph replacement contracts', () => {
     expect(source).toContain('formatStoryboardGraphDiagnosticsText');
     expect(source).toContain('buildStoryboardBackendAgentReadiness');
     expect(source).toContain('result.backendAnalysis.backendAgent?.graph');
-    expect(source).toContain('backendExecutionText');
-    expect(source).toContain('LangGraph 명령 실행');
-    expect(source).toContain('Legacy Codex 명령 실행');
-    expect(source).toContain('명령 실패 후 로컬 어댑터 폴백');
+    expect(source).toContain('storyboardAgentGraphFidelity');
+    expect(source).toContain('data-storyboard-agent-graph-fidelity');
+    expect(source).toContain('참조 그래프 충실도');
+    expect(source).toContain('영상 자료 검색 반영');
     expect(source).toContain('graph.retrieval?.status === "used"');
     expect(source).toContain('graph.toolsCalled.includes("search_scene_data")');
     expect(source).toContain('graph.status === "used"');
@@ -654,9 +741,59 @@ describe('admin storyboard LangGraph replacement contracts', () => {
     expect(source).toContain('data-storyboard-backend-agent-readiness="true"');
     expect(source).toContain('data-storyboard-backend-agent-live-graph-ready');
     expect(source).toContain('data-storyboard-backend-agent-retrieval-used');
-    expect(source).toContain('임베딩 ${graph.retrieval.usedModels.embedding}');
-    expect(source).toContain('리랭커 ${graph.retrieval.usedModels.reranker}');
-    expect(source).toContain('체크포인터');
-    expect(source).toContain('per-process');
+    expect(source).toContain('자료 분석 반영');
+    expect(source).toContain('우선순위 정리');
+    expect(source).toContain('data-storyboard-agent-graph-role');
+    expect(source).toContain('data-storyboard-agent-graph-blockers');
   });
+
+  test('maps canonical reference graph diagnostics to separate agentGraphFidelity pass report', async () => {
+    const command = createCommand({
+      storyboard: {
+        contentAuthority: 'authoritative',
+        title: 'Reference graph storyboard',
+        logline: 'Supervisor Researcher Intern Designer graph fidelity',
+        operatorBrief: 'Canonical reference graph output',
+        exportMarkdown: '# Reference graph storyboard',
+      },
+      backendAgent: {
+        graph: {
+          status: 'used',
+          runtime: 'langgraph',
+          mode: 'graph_command',
+          threadId: 'storyboard-admin-reference-graph',
+          checkpointer: 'MemorySaver',
+          checkpointerScope: 'per_process_only',
+          nodesVisited: ['extract_slots', 'supervisor', 'researcher', 'intern', 'designer'],
+          interrupts: [{ node: 'intern_review', resumable: true, outputReady: true, summary: 'human reviewed generated tool' }],
+          toolsCalled: ['search_scene_data'],
+          retrieval: { status: 'used' },
+        },
+        referenceGraph: createCanonicalReferenceGraph(),
+      },
+    });
+
+    try {
+      await withEnv(
+        {
+          STORYBOARD_AGENT_COMMAND: command.commandPath,
+          STORYBOARD_AGENT_RUNTIME: 'langgraph',
+          TZUYANG_HEATMAP_DIR: path.join(os.tmpdir(), `missing-tzudong-heatmap-${Date.now()}`),
+        },
+        async () => {
+          const { generateStoryboardWithBackendAgent } = await import(`../lib/admin/storyboard/backend-agent.ts?case=${Math.random()}`);
+          const result = await generateStoryboardWithBackendAgent(baseRequest);
+
+          expect(result.ahp.score).toBeGreaterThanOrEqual(90);
+          expect(result.agentGraphFidelity?.status).toBe('passed');
+          expect(result.agentGraphFidelity?.score).toBeGreaterThanOrEqual(98);
+          expect(result.agentGraphFidelity?.evidenceMode).toBe('canonical_reference_graph');
+          expect(result.agentGraphFidelity?.roles.every((role) => role.evidenceState === 'supported')).toBe(true);
+        },
+      );
+    } finally {
+      command.cleanup();
+    }
+  });
+
 });

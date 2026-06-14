@@ -15,6 +15,30 @@ from get_video_captions_for_range import get_video_captions_for_range
 from langchain_core.tools import tool
 
 
+def _public_caption_provenance(captions: list[dict]) -> dict:
+    """Return sanitized provider/provenance summary for caption rows."""
+    if not captions:
+        return {"captionLookupStatus": "unavailable", "captionFallbackReason": "empty_caption_result"}
+    first = captions[0] if isinstance(captions[0], dict) else {}
+    provenance = first.get("caption_provenance") or {}
+    if not isinstance(provenance, dict):
+        provenance = {}
+    public_provenance = {
+        "captionLookupStatus": "used",
+        "captionProvider": first.get("caption_provider") or "llava_next_video",
+        "captionModel": first.get("caption_model") or "llava-hf/LLaVA-NeXT-Video-7B-hf",
+        "captionAuthMode": first.get("caption_auth_mode") or "unknown_legacy",
+        "captionSchemaVersion": first.get("caption_schema_version") or 1,
+        "frameCount": provenance.get("frameCount"),
+        "truncatedFrames": provenance.get("truncatedFrames"),
+        "requestHash": provenance.get("requestHash"),
+        "parserStatus": provenance.get("parserStatus"),
+        "latencyMs": provenance.get("latencyMs"),
+        "responseId": provenance.get("responseId"),
+    }
+    return {k: v for k, v in public_provenance.items() if v is not None}
+
+
 @tool
 def search_scene_data(
     query: str,
@@ -108,8 +132,16 @@ def search_scene_data(
                 )
                 if captions_result and captions_result.get("captions"):
                     doc["metadata"]["caption"] = captions_result["captions"]
-            except Exception:
-                pass
+                    doc["metadata"]["captionProvenance"] = _public_caption_provenance(
+                        captions_result["captions"]
+                    )
+                    doc["metadata"]["captionLookupStatus"] = "used"
+                else:
+                    doc["metadata"]["captionLookupStatus"] = "unavailable"
+                    doc["metadata"]["captionFallbackReason"] = "empty_caption_result"
+            except Exception as exc:
+                doc["metadata"]["captionLookupStatus"] = "unavailable"
+                doc["metadata"]["captionFallbackReason"] = type(exc).__name__
 
     return {"transcripts": reranked}
 

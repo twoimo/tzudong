@@ -175,6 +175,8 @@ def condense_app_prompt(app_prompt: str) -> str:
         "Composition requirements:",
         "Host/person guidance:",
         "User image references:",
+        "Automatic collected-reference evidence:",
+        "Collected Tzuyang thumbnail visual matching:",
     )
     selected: list[str] = []
     for raw_line in app_prompt.splitlines():
@@ -187,10 +189,16 @@ def condense_app_prompt(app_prompt: str) -> str:
         selected.append(app_prompt.strip())
 
     condensed = "\n".join(selected)
-    condensed = condensed[:1400]
+    identity_lines = [
+        line.strip()
+        for line in app_prompt.splitlines()
+        if "Identity lock:" in line or "ALLOW_SPECIFIC_CREATOR_HOST_WITH_REFERENCE" in line
+    ]
+    identity_lock = "\n".join(identity_lines)[:900]
+    condensed = condensed[:1800]
     allow_specific_creator_host = "ALLOW_SPECIFIC_CREATOR_HOST" in app_prompt
     host_guidance = (
-        "When Host/person guidance says ALLOW_SPECIFIC_CREATOR_HOST, include the requested Tzuyang/YouTube creator host as a respectful main mukbang reaction cutout or follow provided host/person references. Avoid defamatory, sexualized, deceptive, or private-life context.\n"
+        "When Host/person guidance says ALLOW_SPECIFIC_CREATOR_HOST, the files named reference-*-host or reference-*-person are strict identity references, not just style references. Include the requested Tzuyang/YouTube creator host as a large respectful mukbang reaction cutout that visibly matches the same person in those references. Treat the face as identity-critical: preserve the same face structure, forehead/bangs silhouette, hair length and parting, eye spacing/shape, nose/mouth proportions, cheek/jaw outline, expression energy, and cutout placement from the references. Do not invent a generic woman, idol-like alternate, younger/older substitute, or anonymous Korean mukbang host. Do not synthesize a new woman, do not beautify into a different person, and do not redraw the face from imagination. If identity matching is uncertain, omit the human figure instead of showing the wrong person. Avoid defamatory, sexualized, deceptive, or private-life context.\n"
         if allow_specific_creator_host
         else "When no host/person reference is allowed, keep the thumbnail food-only with no human figure, face, silhouette, cutout, or creator body zone; use food detail, steam, utensils, and restaurant depth for reaction energy.\n"
     )
@@ -199,6 +207,7 @@ def condense_app_prompt(app_prompt: str) -> str:
         "Use bright high-contrast food photography/collage styling with appetizing Korean dishes, warm restaurant lighting, and clear negative space for later text overlays.\n"
         f"{host_guidance}"
         "Do not include readable names, URLs, prices, brands, logos, watermarks, or UI chrome. Do not bake final typography into the image.\n"
+        f"Identity requirements:\n{identity_lock or 'No identity-lock host guidance.'}\n"
         f"Brief:\n{condensed}"
     )
 
@@ -216,7 +225,7 @@ Hard generation contract:
 - Use the built-in image generation tool only.
 - Do not run shell commands, do not call `codex exec -m gpt-image-2`, and do not create mock/SVG/placeholder output.
 - Prefer a 16:9 landscape composition. The wrapper process will collect the generated image and normalize it to {TARGET_WIDTH}x{TARGET_HEIGHT} PNG at {output_path}; you do not need to save, crop, resize, verify, or copy files yourself.
-- Respect the app prompt's Host/person guidance. If it says ALLOW_SPECIFIC_CREATOR_HOST, only the supplied host/person reference-matched figure may be visible; otherwise generate food-only output with no human figure, face, silhouette, cutout, or creator body zone.
+- Respect the app prompt's Host/person guidance. If it says ALLOW_SPECIFIC_CREATOR_HOST, files named reference-*-host or reference-*-person are identity-lock references; only the same supplied host/person reference-matched figure may be visible. Preserve the same person's face, bangs, hair silhouette, eye/nose/mouth proportions, cheek/jaw outline, and expression energy from the attached host/person thumbnails; do not invent, beautify, substitute, or redraw a generic woman, idol-like alternate, or alternate host. Otherwise generate food-only output with no human figure, face, silhouette, cutout, or creator body zone.
 - No logos, watermarks, visible UI chrome, readable real signage, names, prices, or contact text.
 - Final reply should only state: generated.
 
@@ -247,12 +256,11 @@ def run_codex(args: argparse.Namespace, prompt: str, references: list[Path], ans
         command.extend(["--model", args.agent_model])
     for ref in references:
         command.extend(["--image", str(ref)])
-    command.append(prompt)
     print("Running:", " ".join(shlex.quote(part) for part in command[:6]), "...", file=sys.stderr)
     return subprocess.run(
         command,
         text=True,
-        stdin=subprocess.DEVNULL,
+        input=prompt,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         env={**os.environ, "OPENAI_API_KEY": ""},

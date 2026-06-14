@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Noto_Serif_KR } from "next/font/google";
 import { DEFAULT_DESCRIPTION, DEFAULT_TITLE, OG_IMAGE_ALT, OG_IMAGE_PATH, SITE_NAME, SITE_URL } from "@/lib/seo";
 import { RootSpeedInsights } from "./root-speed-insights";
 import "./globals.css";
@@ -8,13 +7,6 @@ import "./globals.css";
 const siteUrl = SITE_URL;
 const supabasePreconnectUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
 const shouldPreconnectSupabase = Boolean(supabasePreconnectUrl && /^https?:\/\//i.test(supabasePreconnectUrl));
-const notoSerifKr = Noto_Serif_KR({
-    weight: ['400', '700'],
-    subsets: ['latin'],
-    display: 'swap',
-    variable: '--font-noto-serif-kr',
-    fallback: ['Apple SD Gothic Neo', 'Malgun Gothic', 'ui-serif', 'Georgia', 'serif'],
-});
 export const metadata: Metadata = {
     metadataBase: new URL(siteUrl),
     title: DEFAULT_TITLE,
@@ -80,7 +72,6 @@ export default function RootLayout({
     return (
         <html
             lang="ko"
-            className={notoSerifKr.variable}
             suppressHydrationWarning
         >
             <head>
