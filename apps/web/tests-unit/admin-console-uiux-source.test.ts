@@ -2121,6 +2121,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'export const ADMIN_SIDEBAR_SECTIONS = ["홈", "검수", "운영", "실험실"]',
     );
     expect(sidebarOrderSource).toContain('"routes",');
+    expect(sidebarOrderSource).toContain('"restaurant-refresh-history",');
+    expect(sidebarOrderSource).toContain(
+      '검수: ["restaurants", "restaurant-refresh-history", "submissions", "reviews"]',
+    );
     expect(sidebarOrderSource).toContain(
       '운영: ["users", "banners", "insights"]',
     );
