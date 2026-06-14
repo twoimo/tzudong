@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { getSafeAuthNextPath } from '@/lib/auth/auth-redirect';
 
 const DEFAULT_PRODUCTION_REDIRECT_ORIGIN = 'https://www.tzudong.app';
 
@@ -25,23 +26,10 @@ function getTrustedRedirectOrigin(requestOrigin: string) {
 }
 
 
-function getSafeNextPath(value: string | null) {
-    const next = value?.trim() || '/';
-    if (next.length > 160) return '/';
-    if (!next.startsWith('/') || next.startsWith('//') || next.includes('\\')) return '/';
-
-    const [pathname, query = ''] = next.split('?', 2);
-    const safePathPattern = /^\/(?:mypage(?:\/[A-Za-z0-9_-]+)*|submissions(?:\/[A-Za-z0-9_-]+)*|user(?:\/[A-Za-z0-9_-]+)*|)$/;
-    if (!safePathPattern.test(pathname)) return '/';
-    if (query && !/^[A-Za-z0-9._~!$&'()*+,;=:@/?%-]*$/.test(query)) return '/';
-
-    return query ? `${pathname}?${query}` : pathname;
-}
-
 export async function GET(request: Request) {
     const { searchParams, origin } = new URL(request.url);
     const code = searchParams.get('code');
-    const next = getSafeNextPath(searchParams.get('next'));
+    const next = getSafeAuthNextPath(searchParams.get('next'));
 
     if (code) {
         const supabase = await createClient();

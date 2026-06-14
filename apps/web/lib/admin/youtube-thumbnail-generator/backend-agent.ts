@@ -70,8 +70,10 @@ type ThumbnailAgentPlan = {
 };
 
 const TZUYANG_TOPIC_PATTERN = /(쯔양|tzuyang)/i;
+const TZUYANG_CHANNEL_PRESET = 'tzuyang-food-travel-collage';
 const PERSON_REFERENCE_ROLES = new Set<ThumbnailReferenceImage['role']>(['host', 'person']);
 const CHAT_EXPLICIT_HEADLINE_PATTERN = /(?:^|[\n,;])\s*(?:메인\s*문구|메인|큰\s*문구|제목|headline)\s*[:：]\s*([^\n,;]+)/i;
+const CHAT_EXPLICIT_HEADLINE_PARTICLE_PATTERN = /(?:^|[\n,;.])\s*(?:메인\s*)?(?:문구|제목)\s*(?:은|는|=)\s*["“'‘]?([^"”'’\n,;.]{2,42})/i;
 const CHAT_EXPLICIT_SUBHEADLINE_PATTERN = /(?:^|[\n,;])\s*(?:보조\s*문구|보조|스티커|서브|sub)\s*[:：]\s*([^\n,;]+)/i;
 const CHAT_TEXT_IDENTITY_PATTERN = /(쯔양|tzuyang|youtube\s*channel|유튜브\s*채널|계정|@[\w_.-]+)/gi;
 const CHAT_REPLACEMENT_ACTION_PATTERN = /(?:수정|바꿔|바꾸|변경|교체|고쳐|고치)/i;
@@ -80,6 +82,12 @@ const CHAT_REPLACEMENT_TARGET_SUBHEADLINE_PATTERN = /(?:스티커\s*문구|스�
 const CHAT_REPLACEMENT_TARGET_SELECTED_PATTERN = /(?:선택된\s*문구|선택\s*문구|현재\s*문구|이\s*문구|이거|그거|해당\s*문구)/i;
 const CHAT_CANVAS_OPTIMIZATION_PATTERN = /(조회수|클릭률|클릭|CTR|최적화|가독성|잘\s*나오|잘\s*읽히|잘\s*보이|눈에\s*띄|주목|강조|배치|위치|폰트|크기)/i;
 const CHAT_LOCAL_CODEX_PROVIDER_PATTERN = /(local\s*codex|로컬\s*codex|codex\s*(?:built-in|imagegen|로컬)|로컬\s*이미지젠|imagegen\s*로컬)/i;
+const MAIN_HEADLINE_MAX_LENGTH = 36;
+const AUTO_GENERATED_MAIN_HEADLINE_MAX_LENGTH = 14;
+const SUB_HEADLINE_MAX_LENGTH = 20;
+const FOOD_SUBJECT_MAX_LENGTH = 14;
+const TZUYANG_BENCHMARK_COPY_SIGNAL_PATTERN =
+  /\d+\s*(?:kg|KG|인분|그릇|마리|종|개|년|만원|cm|CM|m|M)|대왕|얼굴만한|역대급|끝판왕|밥도둑|전통|무한|최대|가득|폭탄|통수육|볶음밥|한상|레전드/i;
 
 type ThumbnailChatReplacementTarget = 'headline' | 'subHeadline' | 'selected' | 'exact';
 
@@ -98,7 +106,8 @@ function resolveThumbnailAgentCodexEffort(env: NodeJS.ProcessEnv = process.env) 
 }
 
 function requestsSpecificCreatorHost(payload: ThumbnailGeneratorPayload) {
-  return TZUYANG_TOPIC_PATTERN.test(payload.topic);
+  return TZUYANG_TOPIC_PATTERN.test(payload.topic)
+    || (payload.stylePreset ?? TZUYANG_CHANNEL_PRESET) === TZUYANG_CHANNEL_PRESET;
 }
 
 function hasHostPersonReference(referenceImages: ThumbnailReferenceImage[]) {
@@ -263,6 +272,36 @@ function summarizeReferences(
     .join('\n');
 }
 
+
+function summarizeRetrievalEvidence(payload: ThumbnailGeneratorPayload) {
+  const evidence = payload.retrievalEvidence ?? [];
+  const diagnostics = payload.retrievalDiagnostics;
+  const evidenceSummary = evidence.length
+    ? evidence.slice(0, 4).map((item, index) => {
+      const score = typeof item.rerankScore === 'number'
+        ? `rerank=${item.rerankScore.toFixed(3)}`
+        : typeof item.hybridScore === 'number'
+          ? `hybrid=${item.hybridScore.toFixed(3)}`
+          : 'score=n/a';
+      const source = [item.videoId, item.title].filter(Boolean).join(' · ') || item.id;
+      return `${index + 1}. ${item.intent}/${item.uploadRole} · ${source} · ${score} · ${item.selectedReason}`;
+    }).join('\n')
+    : 'retrieval evidence 없음';
+  const proofSummary = diagnostics
+    ? [
+      `status=${diagnostics.status}`,
+      `runtime=${diagnostics.commandRuntime ?? 'none'}`,
+      diagnostics.usedModels?.embedding ? `embedding=${diagnostics.usedModels.embedding}` : null,
+      diagnostics.usedModels?.reranker ? `reranker=${diagnostics.usedModels.reranker}` : null,
+      diagnostics.operations?.denseSparseHybrid ? 'hybrid=true' : null,
+      diagnostics.operations?.mmrApplied ? 'mmr=true' : null,
+      diagnostics.operations?.rerankerApplied ? 'rerank=true' : null,
+      diagnostics.fallbackReason ? `fallback=${diagnostics.fallbackReason}` : null,
+    ].filter(Boolean).join(' · ')
+    : 'diagnostics 없음';
+  return { evidenceSummary, proofSummary, evidenceCount: evidence.length };
+}
+
 function buildLocalAgentPlan(
   payload: ThumbnailGeneratorPayload,
   referenceImages: ThumbnailReferenceImage[],
@@ -272,11 +311,12 @@ function buildLocalAgentPlan(
   const requestedSpecificHost = requestsSpecificCreatorHost(payload);
   const allowSpecificHost = allowsSpecificCreatorHost(payload, referenceImages);
   const subHeadline = payload.subHeadline ? `보조 문구 "${payload.subHeadline}"를 작은 스티커처럼 분리` : '보조 문구는 필요할 때만 작은 반응 스티커로 분리';
-  const concept = `${payload.headline} 중심의 고대비 먹방 썸네일: 음식 클로즈업과 리액션 존을 분리해 클릭 전에 주제가 즉시 읽히게 한다.`;
+  const retrieval = summarizeRetrievalEvidence(payload);
+  const concept = `${payload.headline} 중심의 고대비 먹방 썸네일: 검색 레퍼런스 ${retrieval.evidenceCount}건을 바탕으로 음식 클로즈업과 리액션 존을 분리해 클릭 전에 주제가 즉시 읽히게 한다.`;
   const hostZone = allowSpecificHost
-    ? '오른쪽 또는 좌상단에 제공된 host/person reference와 일치하는 호스트 존만 둔다.'
+    ? '오른쪽 또는 좌상단에 제공된 host/person reference와 일치하는 쯔양 호스트 컷아웃을 반드시 보이게 둔다. 빈 실루엣, 사람 없는 음식-only 결과, generic 인물 대체는 실패로 본다. 제공 레퍼런스에 일관되게 없는 안경/모자/마스크/무거운 액세서리는 새로 만들지 않는다.'
     : requestedSpecificHost
-      ? '쯔양/특정 크리에이터 참고 이미지가 없으므로 사람 얼굴은 만들지 말고 음식 중심 또는 비식별 빈 호스트 존으로 둔다.'
+      ? '쯔양/특정 크리에이터 host/person 레퍼런스가 없으므로 사람 얼굴은 만들지 말고 음식 중심 또는 비식별 리액션 존으로 둔다.'
       : '오른쪽 또는 좌상단은 비식별 리액션/호스트 존 또는 음식 디테일 존으로 둔다.';
   const layoutBrief = [
     '하단 40~50%는 음식 클로즈업으로 채우고, 메인 문구가 겹칠 안전 영역을 남긴다.',
@@ -289,7 +329,11 @@ function buildLocalAgentPlan(
     `Concept: ${concept}`,
     `Layout: ${layoutBrief}`,
     `Reference plan:\n${summarizeReferences(referenceImages, allowSpecificHost, requestedSpecificHost)}`,
-    'Quality gate: preserve a clear editable headline safe area, avoid baked-in final Korean typography, avoid real logos/signage/contact data/prices, and keep the result suitable for human approval before export.',
+    `Retrieved reference plan:\n${retrieval.evidenceSummary}`,
+    `Retrieval diagnostics: ${retrieval.proofSummary}`,
+    allowSpecificHost
+      ? 'Quality gate: preserve a clear editable headline safe area, require a visible reference-backed host cutout when host/person references are present, avoid blank silhouettes or food-only substitutions, avoid baked-in final Korean typography, avoid real logos/signage/contact data/prices, and keep the result suitable for human approval before export.'
+      : 'Quality gate: preserve a clear editable headline safe area, map retrieved evidence only to food/style/composition/text zones, avoid baked-in final Korean typography, avoid real logos/signage/contact data/prices, and keep the result suitable for human approval before export.',
   ].join('\n');
 
   return {
@@ -304,6 +348,8 @@ function buildLocalAgentPlan(
     diagnostics: {
       basePromptLength: basePrompt.length,
       referenceImageCount: referenceImages.length,
+      retrievalEvidenceCount: retrieval.evidenceCount,
+      retrievalProof: retrieval.proofSummary,
       target: `${YOUTUBE_THUMBNAIL_TARGET_WIDTH}x${YOUTUBE_THUMBNAIL_TARGET_HEIGHT}`,
     },
   };
@@ -383,7 +429,7 @@ function normalizeChatRequirement(value: string) {
 function sanitizeCanvasChatText(value: string, fallback: string, maxLength = 18) {
   const sanitized = value
     .replace(CHAT_TEXT_IDENTITY_PATTERN, '')
-    .replace(/(생성해줘|생성|만들어줘|만들어|그려줘|그려|실행해줘|실행|이미지\s*뽑아줘|뽑아줘)/gi, '')
+    .replace(/\s*(?:으로|로)?\s*(?:생성해줘|생성|만들어줘|만들어|그려줘|그려|실행해줘|실행|이미지\s*뽑아줘|뽑아줘|수정해줘|수정|바꿔줘|바꿔|바꾸|변경해줘|변경|교체해줘|교체|고쳐줘|고쳐)\s*$/gi, '')
     .replace(/https?:\/\/\S+|www\.\S+/gi, '')
     .replace(/[<>`{}]/g, '')
     .replace(/\s+/g, ' ')
@@ -397,13 +443,85 @@ function pickExplicitChatField(text: string, pattern: RegExp) {
   return text.match(pattern)?.[1]?.replace(/^["“'‘]|["”'’]$/g, '').trim() ?? '';
 }
 
+function joinThumbnailCopyTokens(tokens: Array<string | null | undefined>) {
+  const uniqueTokens: string[] = [];
+  tokens.forEach((token) => {
+    const normalizedToken = token?.replace(/\s+/g, ' ').trim();
+    if (!normalizedToken) return;
+    if (uniqueTokens.some((existing) => existing === normalizedToken || existing.includes(normalizedToken))) return;
+    uniqueTokens.push(normalizedToken);
+  });
+  return uniqueTokens.join(' ');
+}
+
+function deriveBenchmarkThumbnailHeadline(text: string, foodSubject: string) {
+  const normalized = normalizeChatRequirement(text);
+  if (!normalized || !TZUYANG_BENCHMARK_COPY_SIGNAL_PATTERN.test(normalized)) return '';
+
+  const yearTradition = normalized.match(/\d+\s*년\s*(?:전통|노포)/i)?.[0];
+  const quantity = normalized.match(/\d+\s*(?:kg|KG|인분|그릇|마리|종|개|만원|cm|CM|m|M)/)?.[0];
+  const hasRiceThief = /밥도둑/.test(normalized);
+  const hasFeast = /한상/.test(normalized);
+  const scaleSignal = normalized.match(/얼굴만한|대왕|역대급|끝판왕|폭탄|무한|최대|가득|레전드/i)?.[0];
+
+  if (foodSubject && (hasRiceThief || hasFeast)) {
+    if (hasRiceThief && hasFeast) return '밥도둑 한상';
+    return sanitizeCanvasChatText(
+      joinThumbnailCopyTokens([foodSubject, hasRiceThief ? '밥도둑' : null, hasFeast ? '한상' : null]),
+      '',
+      AUTO_GENERATED_MAIN_HEADLINE_MAX_LENGTH,
+    );
+  }
+
+  if (foodSubject && (yearTradition || quantity || scaleSignal)) {
+    return sanitizeCanvasChatText(
+      joinThumbnailCopyTokens([yearTradition, scaleSignal, quantity, foodSubject]),
+      '',
+      AUTO_GENERATED_MAIN_HEADLINE_MAX_LENGTH,
+    );
+  }
+
+  if (/야시장|시장|노점|길거리/i.test(normalized)) {
+    return sanitizeCanvasChatText(
+      joinThumbnailCopyTokens([scaleSignal ?? '야시장', /끝판왕/.test(normalized) ? '끝판왕' : null]),
+      '',
+      AUTO_GENERATED_MAIN_HEADLINE_MAX_LENGTH,
+    );
+  }
+
+  return '';
+}
+
+function deriveAutomaticThumbnailHeadlineCopy(text: string, requestedHeadline = '', fallback = '역대급 먹방') {
+  const normalized = normalizeChatRequirement(`${text} ${requestedHeadline}`);
+  const foodSubject = deriveThumbnailFoodSubject(normalized);
+  const benchmarkHeadline = deriveBenchmarkThumbnailHeadline(normalized, foodSubject);
+  if (benchmarkHeadline) return benchmarkHeadline;
+  if (foodSubject) {
+    return sanitizeCanvasChatText(`${foodSubject} 먹방`, fallback, AUTO_GENERATED_MAIN_HEADLINE_MAX_LENGTH);
+  }
+  return sanitizeCanvasChatText(requestedHeadline || normalized, fallback, AUTO_GENERATED_MAIN_HEADLINE_MAX_LENGTH);
+}
+
 function deriveChatHeadline(text: string, fallback = '역대급 먹방') {
-  const explicitHeadline = pickExplicitChatField(text, CHAT_EXPLICIT_HEADLINE_PATTERN);
-  if (explicitHeadline) return sanitizeCanvasChatText(explicitHeadline, fallback, 18);
-  const quotedText = text.match(/["“'‘]([^"”'’]{2,24})["”'’]/)?.[1]?.trim();
-  if (quotedText) return sanitizeCanvasChatText(quotedText, fallback, 18);
+  const explicitHeadline =
+    pickExplicitChatField(text, CHAT_EXPLICIT_HEADLINE_PATTERN) ||
+    pickExplicitChatField(text, CHAT_EXPLICIT_HEADLINE_PARTICLE_PATTERN);
+  if (explicitHeadline) {
+    return wantsGeneration(text)
+      ? deriveAutomaticThumbnailHeadlineCopy(text, explicitHeadline, fallback)
+      : sanitizeCanvasChatText(explicitHeadline, fallback, MAIN_HEADLINE_MAX_LENGTH);
+  }
+  const quotedText = text.match(/["“'‘]([^"”'’]{2,42})["”'’]/)?.[1]?.trim();
+  if (quotedText) {
+    return wantsGeneration(text)
+      ? deriveAutomaticThumbnailHeadlineCopy(text, quotedText, fallback)
+      : sanitizeCanvasChatText(quotedText, fallback, MAIN_HEADLINE_MAX_LENGTH);
+  }
   const foodSubject = deriveThumbnailFoodSubject(text);
-  if (foodSubject) return sanitizeCanvasChatText(`${foodSubject} 먹방`, fallback, 18);
+  const benchmarkHeadline = deriveBenchmarkThumbnailHeadline(text, foodSubject);
+  if (benchmarkHeadline) return benchmarkHeadline;
+  if (foodSubject) return sanitizeCanvasChatText(`${foodSubject} 먹방`, fallback, AUTO_GENERATED_MAIN_HEADLINE_MAX_LENGTH);
   if (/불맛|화력|철판|매운/i.test(text)) return '역대급 불맛';
   if (/대왕|대형|거대|압도|많이|양/i.test(text)) return '역대급 먹방';
   if (/한입|가능/i.test(text)) return '한입만 가능?';
@@ -413,7 +531,7 @@ function deriveChatHeadline(text: string, fallback = '역대급 먹방') {
 
 function deriveChatSubHeadline(text: string, fallback = '한입만 가능?') {
   const explicitSubHeadline = pickExplicitChatField(text, CHAT_EXPLICIT_SUBHEADLINE_PATTERN);
-  if (explicitSubHeadline) return sanitizeCanvasChatText(explicitSubHeadline, fallback, 16);
+  if (explicitSubHeadline) return sanitizeCanvasChatText(explicitSubHeadline, fallback, SUB_HEADLINE_MAX_LENGTH);
   const foodSubject = deriveThumbnailFoodSubject(text);
   if (foodSubject && /제육|김치찌개|된장찌개|백반|국밥|삼겹살|갈비/i.test(foodSubject)) return '밥도둑 인정?';
   if (foodSubject && /떡볶이|라면|마라|불닭|매운/i.test(foodSubject)) return '맵기 실화?';
@@ -428,11 +546,11 @@ function deriveChatSubHeadline(text: string, fallback = '한입만 가능?') {
 function deriveThumbnailFoodSubject(text: string) {
   const normalized = normalizeChatRequirement(text);
   const explicitFood = normalized.match(/(?:음식|메뉴|주제|소재)\s*[:：]\s*([가-힣A-Za-z0-9\s]{2,18})/)?.[1]?.trim();
-  if (explicitFood) return sanitizeCanvasChatText(explicitFood, '', 10);
+  if (explicitFood) return sanitizeCanvasChatText(explicitFood, '', FOOD_SUBJECT_MAX_LENGTH);
   const foodMatch = normalized.match(/(제육볶음|김치찌개|된장찌개|부대찌개|라면|떡볶이|돈가스|돈까스|삼겹살|갈비|곱창|막창|마라탕|불닭|치킨|피자|햄버거|초밥|스시|회|대게|킹크랩|랍스터|해산물|국밥|백반|고기|꼬치|튀김)/i)?.[1];
-  if (foodMatch) return sanitizeCanvasChatText(foodMatch, '', 10);
+  if (foodMatch) return sanitizeCanvasChatText(foodMatch, '', FOOD_SUBJECT_MAX_LENGTH);
   const sceneFallback = normalized.match(/(분식|야시장)/i)?.[1];
-  return sceneFallback ? sanitizeCanvasChatText(sceneFallback, '', 10) : '';
+  return sceneFallback ? sanitizeCanvasChatText(sceneFallback, '', FOOD_SUBJECT_MAX_LENGTH) : '';
 }
 
 function hasExplicitChatHeadline(text: string) {
@@ -662,14 +780,27 @@ function createCanvasOptimizationTextLayerPatches(request: ThumbnailChatAgentReq
   });
 }
 
+function getResponsiveMainHeadlineFontSize(headlineText: string, currentFontSize = 88) {
+  if (headlineText.length >= 24) return Math.min(currentFontSize, 58);
+  if (headlineText.length >= 16) return Math.min(currentFontSize, 66);
+  return currentFontSize;
+}
+
 function createChatTextLayerPatches(request: ThumbnailChatAgentRequest): ThumbnailChatTextLayerPatch[] {
   const normalized = normalizeChatRequirement(request.message);
   const replacementIntent = parseThumbnailChatTextReplacementIntent(request);
   if (replacementIntent) {
     const replacementTarget = resolveThumbnailChatReplacementTarget(request, replacementIntent);
-    return replacementTarget
-      ? [{ id: replacementTarget.id, content: replacementIntent.newText }]
-      : [];
+    if (!replacementTarget) return [];
+    if (replacementTarget.id === 'headline') {
+      return [{
+        id: replacementTarget.id,
+        content: replacementIntent.newText,
+        fontSize: getResponsiveMainHeadlineFontSize(replacementIntent.newText, replacementTarget.fontSize),
+        strokeWidth: replacementIntent.newText.length >= 16 ? Math.min(replacementTarget.strokeWidth, 9) : replacementTarget.strokeWidth,
+      }];
+    }
+    return [{ id: replacementTarget.id, content: replacementIntent.newText }];
   }
 
   if (isSelectedLayerChatIntent(normalized)) {
@@ -692,21 +823,21 @@ function createChatCanvasPatch(request: ThumbnailChatAgentRequest): ThumbnailCha
     ? resolveThumbnailChatReplacementTarget(request, replacementIntent)
     : null;
   const optimizationIntent = isThumbnailChatCanvasOptimizationIntent(normalized);
-  const headlineFallback = sanitizeCanvasChatText(request.currentHeadline ?? '', '역대급 먹방', 18);
-  const subHeadlineFallback = sanitizeCanvasChatText(request.currentSubHeadline ?? '', '한입만 가능?', 16);
+  const headlineFallback = sanitizeCanvasChatText(request.currentHeadline ?? '', '역대급 먹방', MAIN_HEADLINE_MAX_LENGTH);
+  const subHeadlineFallback = sanitizeCanvasChatText(request.currentSubHeadline ?? '', '한입만 가능?', SUB_HEADLINE_MAX_LENGTH);
   const topicFallback = normalizeChatRequirement(request.currentTopic ?? '') || '먹방 썸네일';
   const preservesGlobalText = selectedLayerIntent || replacementIntent || optimizationIntent;
   const replacementForHeadline = replacementIntent && (
     replacementIntent.target === 'headline' ||
     replacementTarget?.id === 'headline'
   )
-    ? sanitizeCanvasChatText(replacementIntent.newText, headlineFallback, 18)
+    ? sanitizeCanvasChatText(replacementIntent.newText, headlineFallback, MAIN_HEADLINE_MAX_LENGTH)
     : null;
   const replacementForSubHeadline = replacementIntent && (
     replacementIntent.target === 'subHeadline' ||
     replacementTarget?.id === 'subHeadline'
   )
-    ? sanitizeCanvasChatText(replacementIntent.newText, subHeadlineFallback, 16)
+    ? sanitizeCanvasChatText(replacementIntent.newText, subHeadlineFallback, SUB_HEADLINE_MAX_LENGTH)
     : null;
 
   return {
@@ -722,6 +853,17 @@ function createChatCanvasPatch(request: ThumbnailChatAgentRequest): ThumbnailCha
 
 function wantsGeneration(message: string) {
   return /(생성|만들|그려|실행|뽑아|이미지|썸네일)/i.test(message) && !/(하지\s*마|생성\s*금지|멈춰)/i.test(message);
+}
+
+
+function isUnsafeThumbnailChatInstructionPrompt(value: string) {
+  const normalized = normalizeChatRequirement(value);
+  if (!normalized) return false;
+  return /(?:이전\s*지시|지시\s*무시|ignore\s+(?:previous|all)\s+instructions|system\s*prompt|developer\s*message|환경\s*변수|env(?:ironment)?\s*var|process\.env|비밀\s*키|secret|api\s*key|토큰|token|검증\s*(?:건너|스킵|무시)|skip\s*verification|성공(?:했다고|으로)\s*말|false\s*success|delete\s+state|상태\s*삭제)/i.test(normalized);
+}
+
+function getUnsafeThumbnailChatInstructionMessage() {
+  return '그 요청은 안전하게 처리할 수 없어요. 비밀 정보 보여주기, 확인 과정 건너뛰기, 사실과 다른 성공 처리는 하지 않습니다. 썸네일 문구나 배치를 어떻게 바꾸고 싶은지만 다시 적어 주세요.';
 }
 
 function wantsReset(message: string) {
@@ -802,28 +944,79 @@ export async function generateYoutubeThumbnailChatWithBackendAgent(
     runId: chatRunId,
   });
   const status = getThumbnailBackendAgentStatus(env);
-  const shouldReset = wantsReset(normalizedMessage);
-  const shouldGenerate = wantsGeneration(normalizedMessage) && !shouldReset;
-  let canvasSummary = `캔버스 반영 · 메인 "${canvasPatch.headline}" · 스티커 "${canvasPatch.subHeadline}"`;
+  const unsafeInstruction = isUnsafeThumbnailChatInstructionPrompt(normalizedMessage);
+  const shouldReset = !unsafeInstruction && wantsReset(normalizedMessage);
+  const shouldGenerate = !unsafeInstruction && wantsGeneration(normalizedMessage) && !shouldReset;
+  if (unsafeInstruction) {
+    return {
+      assistantMessage: getUnsafeThumbnailChatInstructionMessage(),
+      canvasPatch: {
+        topic: request.currentTopic || '먹방 썸네일',
+        headline: request.currentHeadline || '역대급 먹방',
+        subHeadline: request.currentSubHeadline || '한입만 가능?',
+      },
+      textLayerPatches: [],
+      providerId: request.providerId ?? 'local-codex',
+      generationMode: request.generationMode ?? 'direct_provider',
+      shouldGenerate: false,
+      shouldReset: false,
+      backendAgent: {
+        mode: agentPlan.mode,
+        runtime: agentPlan.runtime,
+        concept: agentPlan.concept,
+        layoutBrief: agentPlan.layoutBrief,
+        promptAddendum: agentPlan.promptAddendum,
+        safetyReview: agentPlan.safetyReview,
+        nextActions: agentPlan.nextActions,
+        diagnostics: {
+          ...agentPlan.diagnostics,
+          chatRunId,
+          chatIntent: 'blocked_unsafe_instruction',
+          codexModel: status.codexModel,
+          codexEffort: status.codexEffort,
+        },
+      },
+      diagnostics: {
+        runtime: agentPlan.runtime,
+        model: status.codexModel,
+        effort: status.codexEffort,
+        streaming: 'sse-progress',
+        chatRunId,
+      },
+    };
+  }
+  const describeLayerForChat = (layerId: string | undefined) => {
+    if (layerId === 'headline') return '메인 문구';
+    if (layerId === 'subHeadline') return '스티커 문구';
+    return '선택한 문구';
+  };
+  const getKoreanRoroParticle = (value: string) => {
+    const lastChar = Array.from(value.trim()).pop();
+    if (!lastChar) return '로';
+    const code = lastChar.charCodeAt(0);
+    if (code < 0xac00 || code > 0xd7a3) return '로';
+    const jong = (code - 0xac00) % 28;
+    return jong === 0 || jong === 8 ? '로' : '으로';
+  };
+  let canvasSummary = `캔버스에 메인 문구 “${canvasPatch.headline}”와 스티커 문구 “${canvasPatch.subHeadline}”를 반영했어요.`;
   if (shouldReset) {
-    canvasSummary = '초기화 요청을 반영합니다.';
+    canvasSummary = '입력값을 처음 상태로 되돌릴게요.';
   } else if (replacementIntent && replacementTarget) {
-    canvasSummary = `문구 ${replacementTarget.id} 교체 · "${replacementIntent.newText}"`;
+    canvasSummary = `${describeLayerForChat(replacementTarget.id)}를 “${replacementIntent.newText}”${getKoreanRoroParticle(replacementIntent.newText)} 바꿨어요.`;
   } else if (replacementIntent && !replacementTarget) {
-    canvasSummary = '대상 문구를 찾지 못해 캔버스 문구를 임의로 바꾸지 않았습니다.';
+    canvasSummary = '바꿀 문구를 찾지 못해서 캔버스 문구는 그대로 두었어요.';
   } else if (optimizationIntent && textLayerPatches.length) {
-    canvasSummary = `문구 ${textLayerPatches.length}개 배치/폰트 최적화 · 기존 문구 유지`;
+    canvasSummary = `문구 ${textLayerPatches.length}개의 위치와 크기를 보기 좋게 정리했어요. 내용은 그대로 두었습니다.`;
   } else if (textLayerPatches.length) {
-    canvasSummary = `선택 레이어 ${textLayerPatches[0]?.id} 반영 · 메인 "${canvasPatch.headline}" · 스티커 "${canvasPatch.subHeadline}"`;
+    canvasSummary = `${describeLayerForChat(textLayerPatches[0]?.id)}를 다듬고, 메인 문구 “${canvasPatch.headline}”와 스티커 문구 “${canvasPatch.subHeadline}”를 확인했어요.`;
   }
 
   return {
     assistantMessage: [
-      `Codex CLI ${status.codexModel} ${status.codexEffort} 작업 완료`,
-      resolvedProviderId !== request.providerId ? `provider ${resolvedProviderId} 선택` : null,
+      '요청을 이해했어요.',
       canvasSummary,
-      shouldGenerate ? '채팅 요청에 따라 실제 썸네일 생성까지 이어서 실행합니다.' : '추가로 “생성해줘”라고 입력하면 실제 이미지 생성까지 이어집니다.',
-    ].filter(Boolean).join(' · '),
+      shouldGenerate ? '이어서 실제 썸네일 이미지까지 만들게요.' : '바로 만들고 싶으면 “생성해줘”라고 입력하세요.',
+    ].filter(Boolean).join(' '),
     canvasPatch,
     textLayerPatches,
     providerId: resolvedProviderId,
@@ -914,6 +1107,8 @@ async function resolveAgentPlan(
     basePrompt,
     target: { width: YOUTUBE_THUMBNAIL_TARGET_WIDTH, height: YOUTUBE_THUMBNAIL_TARGET_HEIGHT },
     referenceImages: referenceImages.map((image) => ({ name: image.name, mime: image.mime, role: image.role, bytes: image.bytes.byteLength })),
+    retrievalEvidence: payload.retrievalEvidence ?? [],
+    retrievalDiagnostics: payload.retrievalDiagnostics ?? null,
   }, env, options);
   if (!result.ok) {
     if (result.aborted) {
