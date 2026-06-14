@@ -352,6 +352,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-storyboard-module-loading-canvas="true"',
     );
     expect(consoleSource).toContain(
+      'data-storyboard-module-loading-canvas-blank="true"',
+    );
+    expect(consoleSource).not.toContain(
       'data-storyboard-module-loading-frame-grid="true"',
     );
     expect(consoleSource).toContain(
@@ -360,10 +363,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       'data-storyboard-module-loading-chat-actions="outside-bubble"',
     );
-    expect(consoleSource).toContain(
+    expect(consoleSource).not.toContain(
       "data-storyboard-module-loading-cut={String(cutNo)}",
     );
-    expect(consoleSource).toContain(
+    expect(consoleSource).not.toContain(
       'data-storyboard-module-loading-shimmer="true"',
     );
     expect(consoleSource).toContain('data-thumbnail-module-loading="true"');
@@ -2202,7 +2205,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(componentSource).not.toContain("gpt-image-1.5");
     expect(componentSource).toContain('aria-label="유튜브 썸네일 생성기"');
     expect(componentSource).toContain(
-      "flex h-full min-h-0 flex-col overflow-hidden bg-muted/20 p-3",
+      "flex h-full min-h-0 flex-col overflow-hidden bg-background p-3",
     );
     expect(componentSource).toContain(
       "grid h-full min-h-0 grid-cols-1 grid-rows-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-3 overflow-hidden xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] xl:grid-rows-1",
@@ -2214,13 +2217,24 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-thumbnail-generation-input-panel="right-chat"',
     );
     expect(componentSource).toContain(
+      'data-thumbnail-input-panel="chat-stream"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-input-position="right-of-canvas"',
+    );
+    expect(componentSource).toContain(
       'data-thumbnail-canvas-panel="primary-left"',
     );
     expect(componentSource).toContain('data-thumbnail-chat-panel="true"');
+    expect(componentSource).toContain(
+      'data-thumbnail-chat-style="storyboard-like"',
+    );
+    expect(componentSource).toContain('data-thumbnail-chat-log="true"');
     expect(componentSource).toContain('data-thumbnail-chat-header="true"');
     expect(componentSource).toContain("유튜브 썸네일 생성 도우미");
-    expect(componentSource).toContain("썸네일 도우미");
-    expect(componentSource).toContain("도우미에게 물어보기");
+    expect(componentSource).toContain("유튜브 썸네일 도우미");
+    expect(componentSource).toContain("채팅 맥락");
+    expect(componentSource).toContain("물어보기");
     expect(componentSource).not.toContain(">생성 채팅<");
     expect(componentSource).not.toContain("AI 도우미");
     expect(componentSource).toContain(
@@ -2243,6 +2257,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-thumbnail-chat-canvas-context-ask="true"',
     );
     expect(componentSource).toContain('data-thumbnail-chat-composer="true"');
+    expect(componentSource).toContain(
+      'data-thumbnail-chat-draft-preview="true"',
+    );
     expect(componentSource).toContain('data-thumbnail-chat-live-stream="true"');
     expect(componentSource).toContain(
       'data-thumbnail-chat-settings-toggle="true"',
@@ -2266,14 +2283,17 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-thumbnail-chat-settings-panel="true"',
     );
     expect(componentSource).toContain(
-      'data-thumbnail-api-key-settings="disabled"',
+      'data-thumbnail-api-key-settings="local-storage-only"',
     );
-    expect(componentSource).toContain('data-thumbnail-api-key-disabled="true"');
+    expect(componentSource).toContain('data-thumbnail-api-key-db-storage="forbidden"');
+    expect(componentSource).toContain('data-thumbnail-browser-api-key-input="true"');
+    expect(componentSource).toContain('data-thumbnail-api-key-save="true"');
+    expect(componentSource).toContain('data-thumbnail-api-key-clear="true"');
     expect(componentSource).toContain(
-      "OPENAI_API_KEY 없이 로컬 Codex built-in image_generation만 점검합니다.",
+      "DB나 계정에는 저장하지 않습니다.",
     );
-    expect(componentSource).toContain("세션 API 키 입력/전송은 비활성화되어 있습니다.");
-    expect(componentSource).not.toContain('data-thumbnail-api-key-save="true"');
+    expect(componentSource).toContain("이 브라우저 localStorage에만 남습니다.");
+    expect(componentSource).toContain("이미지 모델은 gpt-image-2만 허용합니다.");
     expect(componentSource).toContain(
       'data-thumbnail-chat-message-meta="true"',
     );
@@ -2281,11 +2301,16 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-thumbnail-chat-message-bubble="true"',
     );
     expect(componentSource).toContain(
-      "이 화면은 다른 이미지 모델이나 API-key fallback으로 전환하지 않습니다.",
+      'className="whitespace-pre-wrap break-keep [overflow-wrap:anywhere]"',
     );
+    expect(componentSource).toContain("요청을 정리하는 중이에요...");
+    expect(componentSource).not.toContain(
+      "whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-left text-xs leading-5 shadow-sm",
+    );
+    expect(componentSource).toContain("다른 이미지 모델로 자동 전환하지 않습니다.");
     expect(componentSource).toContain("canUseSessionApiKeyForProvider");
-    expect(componentSource).not.toContain("appendSessionApiKeyForProvider");
-    expect(componentSource).not.toContain("thumbnailSessionOpenaiApiKey");
+    expect(componentSource).toContain("thumbnailSessionOpenaiApiKey");
+    expect(componentSource).toContain("THUMBNAIL_BROWSER_MODEL_KEYS_STORAGE_KEY");
     expect(componentSource).not.toContain("thumbnailSessionGeminiApiKey");
     expect(componentSource).toContain("finalResult.providerId ?? providerId");
     expect(componentSource).toContain(
@@ -4723,8 +4748,12 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(imageRouteSource).toContain(
       "npm run storyboard:image-proof",
     );
+    expect(imageRouteSource).toContain("STORYBOARD_BROWSER_OPENAI_API_KEY_HEADER");
+    expect(imageRouteSource).toContain("normalizeStoryboardBrowserOpenAIApiKey");
+    expect(imageRouteSource).toContain("browserKeyStorage: 'browser_local_storage_only'");
     expect(imageProviderSource).toContain("STORYBOARD_IMAGE_PROVIDER_MODEL");
     expect(imageProviderSource).toContain("providerId: STORYBOARD_IMAGE_PROVIDER_ID");
+    expect(imageProviderSource).toContain("STORYBOARD_BROWSER_OPENAI_IMAGE_PROVIDER_ID");
     expect(imageProviderSource).toContain("modelProvenance: 'unverified'");
     expect(imageProviderSource).toContain("modelProvenance: STORYBOARD_IMAGE_PROVIDER_EXACT_PROVENANCE");
     expect(imageProviderSource).toContain("STORYBOARD_LOCAL_CODEX_PROVENANCE_FILE");
@@ -4740,8 +4769,20 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(imageProviderSource).toContain("requestToolType: 'image_generation'");
     expect(imageProviderSource).toContain("requestToolModel: STORYBOARD_IMAGE_PROVIDER_MODEL");
     expect(imageProviderSource).toContain("exact_provenance: ${proof.requestToolType}.${proof.requestToolModel}");
+    expect(imageProviderSource).toContain("browser_local_storage_api_key");
+    expect(imageProviderSource).toContain("storage_boundary: raw API key was not persisted to account data, DB, history, or provenance.");
+    expect(imageProviderSource).toContain("redactProviderSecretText");
     expect(imageProviderSource).toContain("OPENAI_API_KEY: ''");
+    expect(storyboardSource).toContain("STORYBOARD_BROWSER_MODEL_KEYS_STORAGE_KEY");
+    expect(storyboardSource).toContain("window.localStorage.setItem(");
+    expect(storyboardSource).toContain("data-storyboard-browser-api-key-settings=\"local-storage-only\"");
+    expect(storyboardSource).toContain("data-storyboard-api-key-db-storage=\"forbidden\"");
+    expect(storyboardSource).toContain("data-storyboard-browser-api-key-input=\"true\"");
+    expect(storyboardSource).not.toContain("supabase.from(\"storyboard_browser_model_keys\")");
+    expect(storyboardSource).not.toContain("user_id: storyboardBrowserOpenAIApiKey");
     expect(imageReadinessSource).toContain("gpt-image-2");
+    expect(imageReadinessSource).toContain("browser-openai-api-key");
+    expect(imageReadinessSource).toContain("x-storyboard-openai-api-key");
     expect(imageProviderSource).not.toContain("ALLOW_LOCAL_CLI_STORYBOARD_IMAGES");
     expect(imageProviderSource).not.toContain("ALLOW_LOCAL_CLI_THUMBNAIL");
     expect(imageProviderSource).not.toContain("THUMBNAIL_LOCAL_CODEX_IMAGE_MODEL");

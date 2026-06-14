@@ -1,11 +1,12 @@
 import { spawn } from 'node:child_process';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
-import { mkdir, stat } from 'node:fs/promises';
+import { mkdir, stat, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 
 import { STORYBOARD_GENERATED_IMAGE_TRUST_POLICY } from './image-trust';
 import {
+  STORYBOARD_BROWSER_OPENAI_IMAGE_PROVIDER_ID,
   STORYBOARD_IMAGE_PROVIDER_EXACT_PROVENANCE,
   STORYBOARD_IMAGE_PROVIDER_ID,
   STORYBOARD_IMAGE_PROVIDER_MODEL,
@@ -27,12 +28,15 @@ const DEFAULT_LOCAL_CODEX_PROVENANCE_FILE =
   '.omx/artifacts/gpt-image-2-provenance/latest-verified.json' as const;
 const LOCAL_CODEX_RESPONSES_ENDPOINT =
   'https://chatgpt.com/backend-api/codex/responses' as const;
+const BROWSER_OPENAI_IMAGES_ENDPOINT =
+  'https://api.openai.com/v1/images/generations' as const;
 const LOCAL_CODEX_PROVENANCE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const LOCAL_CODEX_PROVENANCE_FUTURE_SKEW_MS = 5 * 60 * 1000;
 const STORYBOARD_GENERATED_IMAGE_PUBLIC_ROOT =
   '/qa-history/storyboard/generated' as const;
 const LOCAL_CODEX_COMMAND_TIMEOUT_MS = 5 * 60 * 1000;
 const LOCAL_CODEX_COMMAND_MAX_OUTPUT_BYTES = 3 * 1024 * 1024;
+const BROWSER_OPENAI_REQUEST_TIMEOUT_MS = 5 * 60 * 1000;
 
 type StoryboardImageContext = {
   title: string;
@@ -45,6 +49,10 @@ type StoryboardImageProviderUnavailableReason =
   | 'local_codex_bridge_unavailable'
   | 'local_codex_model_provenance_unverified';
 
+type StoryboardImageProviderRuntimeOptions = {
+  browserOpenAIApiKey?: string | null;
+};
+
 type StoryboardImageProviderTarget = {
   width: typeof STORYBOARD_IMAGE_TARGET_WIDTH;
   height: typeof STORYBOARD_IMAGE_TARGET_HEIGHT;
@@ -54,8 +62,10 @@ type StoryboardImageProviderTarget = {
 type StoryboardImageProviderBaseAvailability = {
   command?: string;
   model: string;
-  providerId: typeof STORYBOARD_IMAGE_PROVIDER_ID;
+  providerId: typeof STORYBOARD_IMAGE_PROVIDER_ID | typeof STORYBOARD_BROWSER_OPENAI_IMAGE_PROVIDER_ID;
   target: StoryboardImageProviderTarget;
+  authMode?: 'codex_oauth' | 'browser_local_storage_api_key';
+  browserKeyStorage?: 'browser_local_storage_only';
 };
 
 export type StoryboardImageProviderAvailability =
@@ -70,7 +80,7 @@ export type StoryboardImageProviderAvailability =
     reason: 'ready';
     model: typeof STORYBOARD_IMAGE_PROVIDER_MODEL;
     modelProvenance: typeof STORYBOARD_IMAGE_PROVIDER_EXACT_PROVENANCE;
-    proof: StoryboardImageProviderProofSummary;
+    proof?: StoryboardImageProviderProofSummary;
   });
 
 type StoryboardImageProviderProofSummary = {
@@ -115,6 +125,26 @@ export function resolveLocalCodexStoryboardModel(env: NodeJS.ProcessEnv = proces
 
 function isAllowedLocalCodexStoryboardModel(model: string) {
   return model === LOCAL_CODEX_ALLOWED_MODEL;
+}
+
+export function normalizeStoryboardBrowserOpenAIApiKey(value: unknown) {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (trimmed.length > 260) return null;
+  if (!/^sk-[A-Za-z0-9_-]{16,}$/.test(trimmed)) return null;
+  return trimmed;
+}
+
+function sha256Hex(value: string | Buffer) {
+  return createHash('sha256').update(value).digest('hex');
+}
+
+function redactProviderSecretText(value: string) {
+  return value
+    .replace(/sk-[A-Za-z0-9_-]{8,}/g, '[redacted_api_key]')
+    .replace(/Bearer\s+[A-Za-z0-9._-]+/gi, 'Bearer [redacted]')
+    .slice(0, 800);
 }
 
 function getStoryboardImageTarget(): StoryboardImageProviderTarget {
@@ -299,10 +329,14 @@ function readLocalCodexProof(env: NodeJS.ProcessEnv) {
 
 export function getStoryboardImageProviderAvailability(
   env: NodeJS.ProcessEnv = process.env,
+  options: StoryboardImageProviderRuntimeOptions = {},
 ): StoryboardImageProviderAvailability {
   const model = resolveLocalCodexStoryboardModel(env);
   const target = getStoryboardImageTarget();
   const command = resolveLocalCodexStoryboardCommandParts(env).label;
+  const browserOpenAIApiKey = normalizeStoryboardBrowserOpenAIApiKey(
+    options.browserOpenAIApiKey,
+  );
 
   if (!isAllowedLocalCodexStoryboardModel(model)) {
     return {
@@ -312,6 +346,20 @@ export function getStoryboardImageProviderAvailability(
       model,
       providerId: STORYBOARD_IMAGE_PROVIDER_ID,
       modelProvenance: 'unverified',
+      target,
+    };
+  }
+
+  if (browserOpenAIApiKey) {
+    return {
+      available: true,
+      reason: 'ready',
+      command: 'browser localStorage API key (transient request header)',
+      model: STORYBOARD_IMAGE_PROVIDER_MODEL,
+      providerId: STORYBOARD_BROWSER_OPENAI_IMAGE_PROVIDER_ID,
+      authMode: 'browser_local_storage_api_key',
+      browserKeyStorage: 'browser_local_storage_only',
+      modelProvenance: STORYBOARD_IMAGE_PROVIDER_EXACT_PROVENANCE,
       target,
     };
   }
@@ -658,17 +706,220 @@ async function getVerifiedGeneratedImageFile(path: string) {
   return fileStat;
 }
 
+type BrowserOpenAIImageResponse = {
+  id?: string;
+  created?: number;
+  data?: Array<{
+    b64_json?: string;
+    url?: string;
+  }>;
+};
+
+function getBrowserOpenAIRequestTimeout(env: NodeJS.ProcessEnv) {
+  const parsed = Number(env.STORYBOARD_OPENAI_IMAGE_TIMEOUT_MS);
+  return Number.isFinite(parsed)
+    ? Math.max(5_000, Math.min(10 * 60 * 1000, Math.trunc(parsed)))
+    : BROWSER_OPENAI_REQUEST_TIMEOUT_MS;
+}
+
+async function fetchOpenAIImageUrlAsBuffer(url: string) {
+  const response = await fetch(url, {
+    headers: { Accept: 'image/png,image/*;q=0.9,*/*;q=0.1' },
+  });
+  if (!response.ok) {
+    throw new StoryboardImageGenerationError(
+      'provider_execution_failed',
+      `OpenAI 이미지 URL을 읽지 못했습니다: HTTP ${response.status}`,
+      502,
+    );
+  }
+  return Buffer.from(await response.arrayBuffer());
+}
+
+async function requestBrowserOpenAIStoryboardImage(
+  apiKey: string,
+  input: {
+    prompt: string;
+    sceneNo: number;
+    outputPath: string;
+    size: string;
+  },
+  env: NodeJS.ProcessEnv,
+) {
+  const requestBody = {
+    model: STORYBOARD_IMAGE_PROVIDER_MODEL,
+    prompt: input.prompt,
+    n: 1,
+    size: input.size,
+    output_format: 'png',
+  };
+  const response = await fetch(BROWSER_OPENAI_IMAGES_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestBody),
+    signal: AbortSignal.timeout(getBrowserOpenAIRequestTimeout(env)),
+  }).catch((error) => {
+    throw new StoryboardImageGenerationError(
+      'provider_execution_failed',
+      `OpenAI 이미지 API 요청 실패: ${redactProviderSecretText(error instanceof Error ? error.message : 'unknown')}`,
+      502,
+    );
+  });
+
+  const responseText = await response.text();
+  if (!response.ok) {
+    throw new StoryboardImageGenerationError(
+      'provider_execution_failed',
+      `OpenAI 이미지 API가 실패했습니다: HTTP ${response.status} ${redactProviderSecretText(responseText)}`,
+      response.status === 401 || response.status === 403 ? 401 : 502,
+    );
+  }
+
+  let payload: BrowserOpenAIImageResponse;
+  try {
+    payload = JSON.parse(responseText) as BrowserOpenAIImageResponse;
+  } catch (error) {
+    throw new StoryboardImageGenerationError(
+      'provider_execution_failed',
+      `OpenAI 이미지 API 응답 JSON 파싱 실패: ${error instanceof Error ? error.message : 'unknown'}`,
+      502,
+    );
+  }
+
+  const firstImage = payload.data?.[0];
+  const buffer = firstImage?.b64_json
+    ? Buffer.from(firstImage.b64_json, 'base64')
+    : firstImage?.url
+      ? await fetchOpenAIImageUrlAsBuffer(firstImage.url)
+      : null;
+
+  if (!buffer || buffer.length <= 0) {
+    throw new StoryboardImageGenerationError(
+      'provider_execution_failed',
+      'OpenAI 이미지 API가 사용 가능한 이미지 데이터를 반환하지 않았습니다.',
+      502,
+    );
+  }
+
+  await writeFile(input.outputPath, buffer);
+  const generatedAt = payload.created
+    ? new Date(payload.created * 1000).toISOString()
+    : new Date().toISOString();
+  return {
+    responseId: payload.id || `openai_image_${randomUUID()}`,
+    imageCallId: `image_${String(input.sceneNo).padStart(2, '0')}_${randomUUID().slice(0, 8)}`,
+    requestHash: sha256Hex(JSON.stringify(requestBody)),
+    responseHash: sha256Hex(buffer),
+    bytes: buffer.length,
+    generatedAt,
+  };
+}
+
+function toBrowserOpenAIStoryboardGeneratedImageProvenance(
+  proof: Awaited<ReturnType<typeof requestBrowserOpenAIStoryboardImage>>,
+): StoryboardGeneratedImageProvenance {
+  return {
+    providerId: STORYBOARD_BROWSER_OPENAI_IMAGE_PROVIDER_ID,
+    authMode: 'browser_local_storage_api_key',
+    endpoint: BROWSER_OPENAI_IMAGES_ENDPOINT,
+    requestToolType: 'image_generation',
+    requestToolModel: STORYBOARD_IMAGE_PROVIDER_MODEL,
+    model: STORYBOARD_IMAGE_PROVIDER_MODEL,
+    modelProvenance: STORYBOARD_IMAGE_PROVIDER_EXACT_PROVENANCE,
+    responseId: proof.responseId,
+    imageCallId: proof.imageCallId,
+    imageItemCount: 1,
+    generatedImageItemTypes: ['image_generation_call'],
+    rawImageItemTypes: ['image_generation_call'],
+    requestHash: proof.requestHash,
+    responseHash: proof.responseHash,
+    hasOpenAIAPIKey: true,
+    generatedAt: proof.generatedAt,
+  };
+}
+
+async function generateStoryboardSceneImageWithBrowserOpenAIKey(
+  scene: StoryboardScene,
+  context: StoryboardImageContext,
+  apiKey: string,
+  env: NodeJS.ProcessEnv,
+): Promise<StoryboardSceneGeneratedImage> {
+  const prompt = buildStoryboardSceneImagePrompt(scene, context);
+  const runId = createStoryboardImageRunId();
+  const publicDir = `${STORYBOARD_GENERATED_IMAGE_PUBLIC_ROOT}/${runId}`;
+  const outputRoot = getStoryboardGeneratedImageRoot();
+  const outputPath = assertPathInside(
+    outputRoot,
+    join(outputRoot, runId, `cut-${String(scene.sceneNo).padStart(2, '0')}.png`),
+  );
+  await mkdir(dirname(outputPath), { recursive: true });
+
+  const proof = await requestBrowserOpenAIStoryboardImage(
+    apiKey,
+    {
+      prompt,
+      sceneNo: scene.sceneNo,
+      outputPath,
+      size: env.STORYBOARD_OPENAI_IMAGE_SIZE || STORYBOARD_IMAGE_OUTPUT_SIZE,
+    },
+    env,
+  );
+  await getVerifiedGeneratedImageFile(outputPath);
+
+  return {
+    dataUrl: `${publicDir}/cut-${String(scene.sceneNo).padStart(2, '0')}.png`,
+    mime: 'image/png',
+    providerId: STORYBOARD_BROWSER_OPENAI_IMAGE_PROVIDER_ID,
+    trustPolicy: STORYBOARD_GENERATED_IMAGE_TRUST_POLICY,
+    model: STORYBOARD_IMAGE_PROVIDER_MODEL,
+    prompt,
+    generatedAt: proof.generatedAt,
+    warnings: [
+      'browser_api_key_provider: generated via a transient OpenAI API key supplied from browser localStorage.',
+      'storage_boundary: raw API key was not persisted to account data, DB, history, or provenance.',
+      `exact_provenance: image_generation.${STORYBOARD_IMAGE_PROVIDER_MODEL} response=${proof.responseId} call=${proof.imageCallId}`,
+    ],
+    provenance: toBrowserOpenAIStoryboardGeneratedImageProvenance(proof),
+  };
+}
+
 export async function generateStoryboardSceneImage(
   scene: StoryboardScene,
   context: StoryboardImageContext,
   env: NodeJS.ProcessEnv = process.env,
+  options: StoryboardImageProviderRuntimeOptions = {},
 ): Promise<StoryboardSceneGeneratedImage> {
-  const availability = getStoryboardImageProviderAvailability(env);
+  const browserOpenAIApiKey = normalizeStoryboardBrowserOpenAIApiKey(
+    options.browserOpenAIApiKey,
+  );
+  const availability = getStoryboardImageProviderAvailability(env, {
+    browserOpenAIApiKey,
+  });
   if (!availability.available) {
     throw new StoryboardImageGenerationError(
       'provider_unavailable',
       `Local Codex 스토리보드 이미지 생성은 exact ${LOCAL_CODEX_ALLOWED_MODEL} backend provenance를 증명할 수 없어 중단되었습니다: ${availability.reason}`,
       503,
+    );
+  }
+
+  if (availability.providerId === STORYBOARD_BROWSER_OPENAI_IMAGE_PROVIDER_ID) {
+    if (!browserOpenAIApiKey) {
+      throw new StoryboardImageGenerationError(
+        'provider_unavailable',
+        '브라우저 API 키가 없어 OpenAI 이미지 생성 요청을 시작할 수 없습니다.',
+        503,
+      );
+    }
+    return generateStoryboardSceneImageWithBrowserOpenAIKey(
+      scene,
+      context,
+      browserOpenAIApiKey,
+      env,
     );
   }
 
@@ -719,13 +970,14 @@ export async function generateStoryboardSceneImages(
   scenes: StoryboardScene[],
   context: StoryboardImageContext,
   env: NodeJS.ProcessEnv = process.env,
+  options: StoryboardImageProviderRuntimeOptions = {},
 ) {
   const limitedScenes = scenes.slice(0, 4);
   const images: Array<{ sceneNo: number; image: StoryboardSceneGeneratedImage }> = [];
   for (const scene of limitedScenes) {
     images.push({
       sceneNo: scene.sceneNo,
-      image: await generateStoryboardSceneImage(scene, context, env),
+      image: await generateStoryboardSceneImage(scene, context, env, options),
     });
   }
   return images;
