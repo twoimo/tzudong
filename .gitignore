@@ -1,6 +1,8 @@
 # ── 의존성 / Dependency ──────────────────────────────────
 node_modules/
 __pycache__/
+.venv/
+venv/
 backend/bun.lock
 
 # ── 빌드 / 출력 / Build & Output ─────────────────────────

@@ -10,6 +10,7 @@ import { StaticNotificationProvider } from '@/contexts/NotificationContextBase';
 import { useHomeViewportMode } from '@/hooks/useHomeViewportMode';
 import { cn } from '@/lib/utils';
 import { AUTH_UI_REQUEST_EVENT } from '@/lib/auth-ui-events';
+import { readHomeAuthLoginRequestFromLocation } from '@/lib/auth/auth-redirect';
 import { HOME_AUTH_SESSION_UPDATED_EVENT, type HomeAuthSessionUpdatedDetail } from '@/lib/home-auth-events';
 import { useDeferredComponent } from '@/hooks/use-deferred-component';
 import { hasSupabaseAuthSessionHint } from '@/lib/supabase-auth-session-hints';
@@ -24,7 +25,12 @@ import { AppToaster } from '@/components/ui/app-toaster';
 
 const OverlayLayout = lazy(() => import('@/components/layout/OverlayLayout'));
 
-type AuthModalProps = { isOpen: boolean; onClose: () => void };
+type AuthModalProps = {
+    isOpen: boolean;
+    onClose: () => void;
+    redirectTo?: string | null;
+    reason?: string | null;
+};
 type ProfileModalProps = AuthModalProps;
 type NicknameSetupModalProps = { isOpen: boolean; onComplete: () => void };
 type ProviderProps = { children: ReactNode };
@@ -126,8 +132,21 @@ function MobileHomeLayout({ children }: { children: ReactNode }) {
     const queryClient = useQueryClient();
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+    const [authLoginRequest, setAuthLoginRequest] = useState({
+        requested: false,
+        reason: null as string | null,
+        nextPath: '/',
+    });
 
     const openAuth = useCallback(() => setIsAuthModalOpen(true), []);
+    const closeAuth = useCallback(() => {
+        setIsAuthModalOpen(false);
+        setAuthLoginRequest((current) => {
+            if (!current.requested) return current;
+            window.history.replaceState(window.history.state, '', '/');
+            return { requested: false, reason: null, nextPath: '/' };
+        });
+    }, []);
     const openProfile = useCallback(() => setIsProfileModalOpen(true), []);
 
     useEffect(() => {
@@ -161,6 +180,14 @@ function MobileHomeLayout({ children }: { children: ReactNode }) {
             root.style.setProperty(APP_HEADER_HEIGHT_VAR, '56px');
         };
     }, [openAuth, openProfile]);
+
+    useEffect(() => {
+        const request = readHomeAuthLoginRequestFromLocation(window.location);
+        setAuthLoginRequest(request);
+        if (request.requested) {
+            setIsAuthModalOpen(true);
+        }
+    }, []);
 
     useEffect(() => {
         if (!user) {
@@ -198,7 +225,9 @@ function MobileHomeLayout({ children }: { children: ReactNode }) {
                 <Suspense fallback={null}>
                     <DeferredAuthModal
                         isOpen={isAuthModalOpen}
-                        onClose={() => setIsAuthModalOpen(false)}
+                        onClose={closeAuth}
+                        redirectTo={authLoginRequest.requested ? authLoginRequest.nextPath : null}
+                        reason={authLoginRequest.requested ? authLoginRequest.reason : null}
                     />
                 </Suspense>
             )}
