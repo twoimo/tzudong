@@ -3,6 +3,7 @@
 :root {
   --vh: 1vh;
   --full-height: 100vh;
+  --font-noto-serif-kr: 'Noto Serif KR', 'Apple SD Gothic Neo', 'Malgun Gothic', ui-serif, Georgia, serif;
 
   --background: 38 30% 98%;
   --foreground: 24 10% 10%;
@@ -97,4 +98,13 @@ button {
 :focus-visible {
   outline: 2px solid hsl(var(--ring));
   outline-offset: 2px;
+}
+
+@keyframes storyboard-glass-shimmer {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(320%);
+  }
 }

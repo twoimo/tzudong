@@ -1,6 +1,7 @@
 -- 2. 비디오 캡션 조회 함수 (시간 범위 기준)
 -- 설명: 특정 비디오의 특정 시간 범위에 겹치는 캡션(시각적 묘사)을 조회합니다. 식당 방문 증거 등으로 활용 가능합니다.
 -- 수정: video_frame_captions 테이블의 duration 필드를 사용하여 동일 duration의 가장 최신 recollect_id를 찾습니다.
+-- provider-aware columns are returned through setof video_frame_captions when the 20260612075100 migration is applied.
 create or replace function get_video_captions_for_range (
   p_video_id text,
   p_recollect_id int,

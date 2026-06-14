@@ -30,6 +30,7 @@ const THUMBNAIL_CHAT_RUN_ID_MAX_LENGTH = 120;
 const THUMBNAIL_CHAT_LAYER_ID_MAX_LENGTH = 40;
 const THUMBNAIL_CHAT_ACTION_MAX_LENGTH = 80;
 const THUMBNAIL_CHAT_RUN_ID_PATTERN = /^[A-Za-z0-9_.:-]+$/;
+const THUMBNAIL_CONTROL_CHARS_PATTERN = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
 
 type RemoteImageFetchDeps = {
   fetch?: typeof fetch;
@@ -40,8 +41,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
 
+function stripThumbnailControlChars(value: string) {
+  return value.replace(THUMBNAIL_CONTROL_CHARS_PATTERN, '');
+}
+
 function toStringValue(value: unknown, maxLength: number) {
-  return typeof value === 'string' ? value.trim().slice(0, maxLength) : '';
+  return typeof value === 'string' ? stripThumbnailControlChars(value).trim().slice(0, maxLength) : '';
 }
 
 export function buildThumbnailProviderRequestEnv(
@@ -82,7 +87,7 @@ function parseOptionalChatString(value: unknown, fieldName: string, maxLength: n
   if (typeof value !== 'string') {
     throw new ThumbnailGenerationError('thumbnail_chat_payload_invalid', `${fieldName}는 문자열이어야 합니다.`, 400);
   }
-  const trimmed = value.trim();
+  const trimmed = stripThumbnailControlChars(value).trim();
   return trimmed ? trimmed.slice(0, maxLength) : undefined;
 }
 
@@ -94,7 +99,7 @@ export function parseThumbnailChatAgentRequest(value: unknown): ThumbnailChatAge
     throw new ThumbnailGenerationError('thumbnail_chat_message_required', '채팅 메시지를 입력하세요.', 400);
   }
 
-  const message = value.message.trim();
+  const message = stripThumbnailControlChars(value.message).trim();
   if (!message) {
     throw new ThumbnailGenerationError('thumbnail_chat_message_required', '채팅 메시지를 입력하세요.', 400);
   }

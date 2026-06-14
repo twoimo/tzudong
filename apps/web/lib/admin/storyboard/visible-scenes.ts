@@ -11,7 +11,7 @@ function getSafeStoryboardPageSize(pageSize: number) {
     : 1;
 }
 
-function getStoryboardSourcePageScenes({
+export function getStoryboardSourcePageScenes({
   allScenes,
   page,
   pageSize,
@@ -26,6 +26,17 @@ function getStoryboardSourcePageScenes({
     safePage * safePageSize,
     safePage * safePageSize + safePageSize,
   );
+}
+
+export function getStoryboardScenePageCount({
+  allScenes,
+  pageSize,
+}: {
+  allScenes: StoryboardScene[];
+  pageSize: number;
+}) {
+  const safePageSize = getSafeStoryboardPageSize(pageSize);
+  return Math.max(1, Math.ceil(allScenes.length / safePageSize));
 }
 
 export function getVisibleTrustedStoryboardScenes(
@@ -100,12 +111,10 @@ export function getStoryboardImageGenerationTargetScenes({
 
   if (
     sourcePageScenes.length > 0 &&
-    visiblePageScenes.length < sourcePageScenes.length &&
-    (safePage === 0 || visiblePageScenes.length > 0)
+    visiblePageScenes.length < sourcePageScenes.length
   ) {
     return sourcePageScenes;
   }
   if (visiblePageScenes.length > 0) return visiblePageScenes;
-  if (safePage > 0) return [];
   return sourcePageScenes;
 }
