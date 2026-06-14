@@ -284,7 +284,7 @@ export type StoryboardPlannerOutput = {
 export type StoryboardSceneGeneratedImage = {
   dataUrl: string;
   mime: 'image/png' | 'image/jpeg' | 'image/webp';
-  providerId: 'local-codex';
+  providerId: 'local-codex' | 'browser-openai-api-key';
   trustPolicy: 'storyboard-gpt-image-2-panel-v1';
   model: string;
   prompt: string;
@@ -294,9 +294,11 @@ export type StoryboardSceneGeneratedImage = {
 };
 
 export type StoryboardGeneratedImageProvenance = {
-  providerId: 'local-codex';
-  authMode: 'codex_oauth';
-  endpoint: 'https://chatgpt.com/backend-api/codex/responses';
+  providerId: 'local-codex' | 'browser-openai-api-key';
+  authMode: 'codex_oauth' | 'browser_local_storage_api_key';
+  endpoint:
+    | 'https://chatgpt.com/backend-api/codex/responses'
+    | 'https://api.openai.com/v1/images/generations';
   agentModel?: string;
   requestToolType: 'image_generation';
   requestToolModel: 'gpt-image-2';
@@ -309,7 +311,7 @@ export type StoryboardGeneratedImageProvenance = {
   rawImageItemTypes: string[];
   requestHash: string;
   responseHash: string;
-  hasOpenAIAPIKey: false;
+  hasOpenAIAPIKey: boolean;
   generatedAt: string;
 };
 
