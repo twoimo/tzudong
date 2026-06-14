@@ -1,5 +1,9 @@
 export type StoryboardTone = 'warm' | 'energetic' | 'documentary' | 'comfort';
 export type StoryboardGenerationMode = 'local_heatmap' | 'backend_agent';
+export const STORYBOARD_MIN_SEGMENT_COUNT = 5;
+export const STORYBOARD_CHAT_MIN_SEGMENT_COUNT = 4;
+export const STORYBOARD_MAX_SEGMENT_COUNT = 12;
+export const STORYBOARD_IMAGE_GENERATION_BATCH_SIZE = 4;
 export type StoryboardBackendRuntime =
   | 'langgraph'
   | 'codex_cli_oauth_legacy'
@@ -46,6 +50,20 @@ export type StoryboardGraphDiagnostics = {
       supabaseRpc?: 'match_documents_hybrid';
       mmrApplied?: boolean;
       captionLookup?: 'get_video_captions_for_range';
+    };
+    caption?: {
+      lookupStatus?: 'used' | 'unavailable' | 'not_reported';
+      provider?: 'llava_next_video' | 'openai_vision_gpt55' | 'codex_cli_vision_gpt55' | 'unknown_legacy';
+      model?: string;
+      authMode?: 'platform_api_key' | 'codex_cli_oauth_local' | 'offline_local' | 'unknown_legacy';
+      schemaVersion?: number;
+      frameCount?: number;
+      truncatedFrames?: number;
+      requestHash?: string;
+      parserStatus?: string;
+      latencyMs?: number;
+      responseId?: string;
+      fallbackReason?: string;
     };
   };
   fallbackReason?: StoryboardGraphFallbackReason;
@@ -190,6 +208,79 @@ export type StoryboardScene = {
   generatedImage?: StoryboardSceneGeneratedImage;
 };
 
+export type StoryboardTopicProfileId =
+  | 'spicy_street_food'
+  | 'dessert_cafe'
+  | 'seafood'
+  | 'convenience_food'
+  | 'korean_bbq'
+  | 'noodle_soup'
+  | 'generic_mukbang';
+
+export type StoryboardArcRole =
+  | 'intro_hook'
+  | 'menu_context'
+  | 'prep_sensory'
+  | 'table_reveal'
+  | 'first_bite'
+  | 'texture_asmr'
+  | 'combo_variation'
+  | 'pace_break'
+  | 'climax_hero'
+  | 'near_finish'
+  | 'final_review'
+  | 'outro_next';
+
+export type StoryboardSourceEvidenceLabel =
+  | '로컬 히트맵 근거'
+  | '데모/샘플 근거'
+  | '백엔드 에이전트 근거';
+
+export type StoryboardImageStatusLabel =
+  | '이미지 검증 전'
+  | '검증 이미지 일부 있음'
+  | '검증 이미지 완료';
+
+export type StoryboardPlannerOutput = {
+  topicProfile: {
+    id: StoryboardTopicProfileId;
+    label: string;
+    keywords: string[];
+    visualMotifs: string[];
+    audioMotifs: string[];
+    subtitleMotifs: string[];
+    sensoryWords: string[];
+  };
+  arcPlan: {
+    cutCount: number;
+    roles: StoryboardArcRole[];
+    compressionRule: string;
+    requiredRoleCoverage: {
+      hasIntro: boolean;
+      hasContext: boolean;
+      hasFirstBiteOrSensory: boolean;
+      hasClimax: boolean;
+      hasFinalReviewOrOutro: boolean;
+    };
+  };
+  sourceTrace: {
+    dataModeLabel: string;
+    isFallbackData: boolean;
+    evidenceLabel: StoryboardSourceEvidenceLabel;
+    imageStatusLabel: StoryboardImageStatusLabel;
+  };
+  sceneDrafts: Array<{
+    sceneNo: number;
+    role: StoryboardArcRole;
+    topicKeywords: string[];
+    title: string;
+    operatorIntent: string;
+    visualDirection: string;
+    hostBeat: string;
+    captionStem: string;
+  }>;
+};
+
 export type StoryboardSceneGeneratedImage = {
   dataUrl: string;
   mime: 'image/png' | 'image/jpeg' | 'image/webp';
@@ -220,6 +311,38 @@ export type StoryboardGeneratedImageProvenance = {
   responseHash: string;
   hasOpenAIAPIKey: false;
   generatedAt: string;
+};
+
+
+export type StoryboardAgentGraphEvidenceState = 'supported' | 'adapter' | 'missing' | 'blocked';
+export type StoryboardAgentGraphRoleId = 'supervisor' | 'researcher' | 'intern' | 'designer';
+
+export type StoryboardAgentGraphFidelityCriterion = {
+  id: string;
+  label: string;
+  weight: number;
+  score: number;
+  evidence: string;
+};
+
+export type StoryboardAgentGraphFidelityRole = {
+  id: StoryboardAgentGraphRoleId;
+  label: string;
+  evidenceState: StoryboardAgentGraphEvidenceState;
+  score: number;
+  evidence: string;
+};
+
+export type StoryboardAgentGraphFidelityReport = {
+  targetScore: number;
+  score: number;
+  status: 'passed' | 'needs_iteration';
+  evidenceMode: 'canonical_reference_graph' | 'backend_diagnostics_partial' | 'local_adapter_gap' | 'fallback_gap';
+  committee: Array<{ role: string; focus: string }>;
+  roles: StoryboardAgentGraphFidelityRole[];
+  criteria: StoryboardAgentGraphFidelityCriterion[];
+  blockers: string[];
+  nextActions: string[];
 };
 
 export type StoryboardAhpCriterion = {
@@ -262,6 +385,8 @@ export type StoryboardGenerationResult = {
     exportMarkdown: string;
   };
   ahp: StoryboardAhpReport;
+  agentGraphFidelity?: StoryboardAgentGraphFidelityReport;
+  planner?: StoryboardPlannerOutput;
   backendAnalysis: {
     reusedLogic: string[];
     localGapsHandled: string[];
@@ -271,6 +396,7 @@ export type StoryboardGenerationResult = {
       commandTimedOut?: boolean;
       rawOutputPreview?: string;
       graph?: StoryboardGraphDiagnostics;
+      referenceGraph?: unknown;
     };
   };
 };

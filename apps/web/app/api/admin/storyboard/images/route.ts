@@ -7,6 +7,12 @@ import {
   StoryboardImageGenerationError,
 } from '@/lib/admin/storyboard/image-provider';
 import { persistLocalStoryboardHistory } from '@/lib/admin/storyboard/history';
+import { sanitizeStoryboardPublicText } from '@/lib/admin/storyboard/prompt-safety';
+import {
+  STORYBOARD_CHAT_MIN_SEGMENT_COUNT,
+  STORYBOARD_IMAGE_GENERATION_BATCH_SIZE,
+  STORYBOARD_MAX_SEGMENT_COUNT,
+} from '@/lib/admin/storyboard/types';
 import type {
   StoryboardGenerateRequest,
   StoryboardGenerationResult,
@@ -43,7 +49,7 @@ function normalizeRouteError(error: unknown) {
 }
 
 function toStringValue(value: unknown, maxLength: number) {
-  return typeof value === 'string' ? value.trim().slice(0, maxLength) : '';
+  return typeof value === 'string' ? sanitizeStoryboardPublicText(value.trim()).slice(0, maxLength) : '';
 }
 
 function toNumberValue(value: unknown, fallback: number) {
@@ -92,7 +98,13 @@ function parseRequest(value: unknown): StoryboardGenerateRequest {
     tone: storyboardTones.has(tone as StoryboardTone) ? tone as StoryboardTone : 'warm',
     targetLengthMinutes: Math.max(6, Math.min(60, Math.round(toNumberValue(request.targetLengthMinutes, 18)))),
     sourceLimit: Math.max(10, Math.min(250, Math.round(toNumberValue(request.sourceLimit, 40)))),
-    segmentCount: Math.max(4, Math.min(10, Math.round(toNumberValue(request.segmentCount, 4)))),
+    segmentCount: Math.max(
+      STORYBOARD_CHAT_MIN_SEGMENT_COUNT,
+      Math.min(
+        STORYBOARD_MAX_SEGMENT_COUNT,
+        Math.round(toNumberValue(request.segmentCount, STORYBOARD_CHAT_MIN_SEGMENT_COUNT)),
+      ),
+    ),
     includeProductionNotes: request.includeProductionNotes !== false,
     generationMode: request.generationMode === 'local_heatmap' ? 'local_heatmap' : 'backend_agent',
   };
@@ -107,8 +119,12 @@ function parsePayload(value: unknown) {
   if (!Array.isArray(rawScenes) || rawScenes.length === 0) {
     throw new StoryboardImageGenerationError('invalid_payload', 'scenes 배열이 필요합니다.', 400);
   }
-  if (rawScenes.length > 4) {
-    throw new StoryboardImageGenerationError('invalid_payload', '한 번에 최대 4컷까지만 생성할 수 있습니다.', 400);
+  if (rawScenes.length > STORYBOARD_IMAGE_GENERATION_BATCH_SIZE) {
+    throw new StoryboardImageGenerationError(
+      'invalid_payload',
+      `한 번에 최대 ${STORYBOARD_IMAGE_GENERATION_BATCH_SIZE}컷까지만 생성할 수 있습니다.`,
+      400,
+    );
   }
 
   return {
@@ -156,7 +172,7 @@ function createPersistableImageResult(
 
 export async function GET(_request: NextRequest) {
   try {
-    const auth = await requireAdmin();
+    const auth = await requireAdmin({ allowDevAdminBypassCookie: true });
     if (!auth.ok) return auth.response;
 
     return NextResponse.json(
@@ -181,7 +197,7 @@ export async function GET(_request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const auth = await requireAdmin();
+    const auth = await requireAdmin({ allowDevAdminBypassCookie: true });
     if (!auth.ok) return auth.response;
 
     const body = await request.json().catch(() => null);

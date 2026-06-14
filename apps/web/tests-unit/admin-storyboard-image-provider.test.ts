@@ -54,7 +54,7 @@ const scene: StoryboardScene = {
     replayScore: 1,
     reason: 'Most replayed / 리플레이 강도 100.0% 구간을 참조',
   },
-  productionChecklist: ['음식 김/윤기 컷', '첫 표정 클로즈업'],
+  productionChecklist: ['음식 김/윤기 컷', '첫 반응 손동작'],
 };
 
 const tinyPngBase64 =
@@ -363,6 +363,11 @@ describe('admin storyboard image provider', () => {
     expect(prompt).toContain('no placeholder rectangles');
     expect(prompt).toContain('one coherent CUT');
     expect(prompt).toContain('CUT 1');
+    expect(prompt).toContain('Visual role contract: CUT 01 is "storefront intro / outside arrival"');
+    expect(prompt).toContain('Must show for this CUT: restaurant exterior arrival');
+    expect(prompt).toContain('Must avoid for this CUT: do not show eating action');
+    expect(prompt).toContain('Neighbor difference rule');
+    expect(prompt).toContain('do not default to repeated food-only or noodle-lift shots');
     expect(prompt).toContain('Visual direction:');
     expect(prompt).toContain('do not recreate a real person likeness');
     expect(prompt).toContain('no recognizable face');
@@ -380,6 +385,28 @@ describe('admin storyboard image provider', () => {
     expect(prompt).toContain('No logos, watermarks');
     expect(prompt).toContain('do not render readable text');
     expect(prompt).toContain('06:57');
+  });
+
+  test('changes the image role contract by CUT number so generated panels do not repeat the same food close-up', () => {
+    const peakScenePrompt = buildStoryboardSceneImagePrompt(
+      {
+        ...scene,
+        sceneNo: 9,
+        title: '클라이맥스 히어로 한상',
+        visualDirection: '테이블 전체와 가장 큰 한입, 풍성한 음식 높이, 김/윤기가 동시에 보이는 히어로 구도',
+      },
+      {
+        title: '실데이터 스토리보드',
+        logline: '반복시청 피크 기반 12컷 이미지',
+        request: { ...request, segmentCount: 12 },
+      },
+    );
+
+    expect(peakScenePrompt).toContain('Visual role contract: CUT 09 is "peak feast / hero table composition"');
+    expect(peakScenePrompt).toContain('Must show for this CUT: largest feast moment');
+    expect(peakScenePrompt).toContain('dynamic wide hero shot');
+    expect(peakScenePrompt).toContain('no drink-only frame');
+    expect(peakScenePrompt).not.toContain('storefront intro / outside arrival');
   });
 
   test('strict-stops before executing the local Codex storyboard wrapper when exact provenance is unavailable', async () => {
