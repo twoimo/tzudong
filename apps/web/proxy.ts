@@ -20,6 +20,14 @@ const PUBLIC_PAGE_PATHS = new Set([
     '/home-frame',
     '/stamp',
 ])
+const DEV_ADMIN_BYPASS_MODULES = new Set([
+    'youtube-thumbnail-generator',
+    'storyboard',
+])
+const DEV_ADMIN_BYPASS_API_PREFIXES = [
+    '/api/admin/youtube-thumbnail-generator',
+    '/api/admin/storyboard',
+]
 
 function normalizeHostName(value: string) {
     const firstValue = value.split(',')[0]?.trim().toLowerCase() ?? ''
@@ -116,7 +124,7 @@ async function isDevAdminThumbnailApiCookieBypassRequest(request: NextRequest) {
     const { hostname, pathname } = request.nextUrl
     const normalizedPathname = pathname.replace(/\/+$/, '') || '/'
 
-    if (!normalizedPathname.startsWith('/api/admin/youtube-thumbnail-generator')) return false
+    if (!DEV_ADMIN_BYPASS_API_PREFIXES.some((prefix) => normalizedPathname.startsWith(prefix))) return false
     if (!isLocalPlaywrightRequestUrlHost(hostname)) return false
     if (!isLocalPlaywrightHostHeader(request.headers.get('host'), { required: true })) return false
 
@@ -136,7 +144,7 @@ async function isDevAdminThumbnailBypassRequest(request: NextRequest) {
     if ((method !== 'GET' && method !== 'HEAD') || normalizedPathname !== '/admin') {
         return false
     }
-    if (searchParams.get('module') !== 'youtube-thumbnail-generator') return false
+    if (!DEV_ADMIN_BYPASS_MODULES.has(searchParams.get('module') ?? '')) return false
     if (!isLocalPlaywrightHost(normalizeHostName(hostname))) return false
     if (!isLocalPlaywrightHostHeader(request.headers.get('host'), { required: true })) return false
 

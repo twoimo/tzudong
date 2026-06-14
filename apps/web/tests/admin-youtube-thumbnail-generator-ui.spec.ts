@@ -187,11 +187,20 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
       headline: requestBody.currentHeadline ?? '역대급 먹방',
       subHeadline: requestBody.currentSubHeadline ?? '한입만 가능?',
     };
-    const shouldGenerateThumbnail = message.includes('실제 썸네일 생성 완료 메시지 테스트');
+    const shouldGenerateThumbnail = message.includes('새 썸네일 이미지를 만들고 캔버스에 넣었습니다 메시지 테스트');
     const shouldKeepProcessSceneProbeState = message.includes('조리 과정이 보이는 썸네일 생성해줘');
-    const chatResult = message.includes('레전드 음식')
+    const chatResult = message.includes('제육볶음')
       ? {
-        assistantMessage: 'Codex CLI gpt-5.5 high 작업 완료 · 문구 headline 교체 · "레전드 음식"',
+        assistantMessage: '요청을 이해했어요. 메인 문구를 “제육볶음 먹방”로 바꿨어요.',
+        canvasPatch: { ...canvasPatch, headline: '제육볶음 먹방' },
+        textLayerPatches: [{ id: 'headline', content: '제육볶음 먹방' }],
+        shouldGenerate: false,
+        shouldReset: false,
+        diagnostics: { runtime: 'codex_cli_oauth', model: 'gpt-5.5', effort: 'high', streaming: 'sse-progress' },
+      }
+      : message.includes('레전드 음식')
+      ? {
+        assistantMessage: '요청을 이해했어요. 메인 문구를 “레전드 음식”로 바꿨어요.',
         canvasPatch: { ...canvasPatch, headline: '레전드 음식' },
         textLayerPatches: [{ id: 'headline', content: '레전드 음식' }],
         shouldGenerate: false,
@@ -200,7 +209,7 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
       }
       : shouldGenerateThumbnail
         ? {
-          assistantMessage: 'Codex CLI gpt-5.5 high 작업 완료 · 실제 provider 생성 요청을 시작합니다.',
+          assistantMessage: '요청을 이해했어요 · 이어서 실제 썸네일 이미지까지 만들게요.',
           canvasPatch,
           textLayerPatches: [{ id: 'headline', content: canvasPatch.headline }],
           providerId: 'local-codex',
@@ -211,7 +220,7 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
         }
       : shouldKeepProcessSceneProbeState
         ? {
-          assistantMessage: 'Codex CLI gpt-5.5 high 작업 완료 · 조리 과정 생성 프롬프트 라우팅 확인',
+          assistantMessage: '요청을 이해했어요 · 조리 과정 생성 프롬프트 라우팅 확인',
           canvasPatch,
           textLayerPatches: [],
           shouldGenerate: false,
@@ -219,7 +228,7 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
           diagnostics: { runtime: 'codex_cli_oauth', model: 'gpt-5.5', effort: 'high', streaming: 'sse-progress' },
         }
       : {
-        assistantMessage: `Codex CLI gpt-5.5 high 작업 완료 · 선택 레이어 subHeadline 반영 · 메인 "${canvasPatch.headline}" · 스티커 "${canvasPatch.subHeadline}"`,
+        assistantMessage: `요청을 이해했어요. 스티커 문구를 다듬고, 메인 문구 “${canvasPatch.headline}”와 스티커 문구 “${canvasPatch.subHeadline}”를 확인했어요.`,
         canvasPatch,
         textLayerPatches: [{ id: 'subHeadline', fontSize: 64, fill: '#fff200' }],
         shouldGenerate: false,
@@ -234,7 +243,7 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
       },
       body: [
         'event: status',
-        'data: {"message":"Codex CLI gpt-5.5 high 백엔드 에이전트 테스트 스트림"}',
+        'data: {"message":"요청을 읽고 어떤 썸네일을 만들지 정리하고 있어요 테스트 스트림"}',
         '',
         'event: done',
         `data: ${JSON.stringify(chatResult)}`,
@@ -268,6 +277,20 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
       }),
     });
   });
+  await page.route('**/api/admin/youtube-thumbnail-generator/release-candidates', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ candidates: [] }),
+    });
+  });
+  await page.route('**/api/admin/youtube-thumbnail-generator/releases/current', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ release: null }),
+    });
+  });
   await gotoAndHidePopup(page, '/admin?module=youtube-thumbnail-generator');
 
   const thumbnailModule = page.locator('[data-admin-youtube-thumbnail-generator="true"]');
@@ -299,36 +322,55 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
   await expect(canvasContextSummary).toContainText('메인 문구');
   await expect(canvasContextSummary).toContainText('역대급 먹방');
 
+  await chatComposer.fill('제육볶음 먹방 썸네일로 해줘');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-live-stream="true"]')).toBeVisible();
+  await expect(canvasContextSummary).toContainText('역대급 먹방');
+  await expect(canvasContextSummary).not.toContainText('제육볶음 먹방');
+  await chatComposer.press('Enter');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('메인 문구를');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('제육볶음 먹방');
+  await expect(canvasContextSummary).toContainText('제육볶음 먹방');
+  expect(chatRequestBodies.at(-1)).toMatchObject({
+    message: '제육볶음 먹방 썸네일로 해줘',
+    activeLayerId: 'headline',
+    currentTextLayers: expect.arrayContaining([
+      expect.objectContaining({ id: 'headline', content: '역대급 먹방' }),
+    ]),
+  });
+  const chatRequestsAfterSubmitOnlyProbe = chatRequestBodies.length;
+  await chatComposer.fill('');
+
   await chatComposer.fill('실제 데이터 기반인지 확인해줘');
   await chatComposer.press('Enter');
-  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('실데이터 확인');
-  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('현재 로드된 상태');
-  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('Mock/Python seed');
-  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('local-codex');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('현재 상태를 쉽게 정리했어요');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('가짜 예시 이미지는 실제 결과로 보지 않고');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('이미지 만들기:');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('썸네일 도우미:');
   await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('gpt-image-2');
-  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('exact');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('검증 완료');
   await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('히스토리');
   await expect(chatPanel).not.toContainText('sk-live-secret-for-ui-only');
-  expect(chatRequestBodies).toHaveLength(0);
+  expect(chatRequestBodies).toHaveLength(chatRequestsAfterSubmitOnlyProbe);
 
   await chatComposer.fill('생성 과정 확인해줘');
   await chatComposer.press('Enter');
-  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('실데이터 확인');
-  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('생성 모드');
-  expect(chatRequestBodies).toHaveLength(0);
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('현재 상태를 쉽게 정리했어요');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('작업 방식');
+  expect(chatRequestBodies).toHaveLength(chatRequestsAfterSubmitOnlyProbe);
 
   await chatComposer.fill('메인 문구를 레전드 음식으로 수정해줘');
   await expect(thumbnailModule.locator('[data-thumbnail-chat-live-stream="true"]')).toBeVisible();
-  await expect(thumbnailModule.locator('[data-thumbnail-chat-live-stream="true"]')).toContainText('구조화 편집');
-  await expect(thumbnailModule.locator('[data-thumbnail-chat-live-stream="true"]')).toContainText('백엔드 구조화 편집');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-live-stream="true"]')).toContainText('전송 후 편집');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-live-stream="true"]')).toContainText('전송하면 문구를 바꿉니다');
   await chatComposer.press('Enter');
-  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('문구 headline 교체');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('메인 문구를');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('레전드 음식');
   await expect(canvasContextSummary).toContainText('레전드 음식');
   expect(chatRequestBodies.at(-1)).toMatchObject({
     message: '메인 문구를 레전드 음식으로 수정해줘',
     activeLayerId: 'headline',
     currentTextLayers: expect.arrayContaining([
-      expect.objectContaining({ id: 'headline', content: '역대급 먹방' }),
+      expect.objectContaining({ id: 'headline', content: '제육볶음 먹방' }),
     ]),
   });
   await chatComposer.fill('');
@@ -337,7 +379,7 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
   await chatComposer.fill('조리 과정이 보이는 썸네일 생성해줘');
   await expect(thumbnailModule.locator('[data-thumbnail-chat-live-stream="true"]')).toBeVisible();
   await chatComposer.press('Enter');
-  await expect(thumbnailModule.locator('[data-thumbnail-chat-message-mode="live"]').last()).toContainText('Codex CLI gpt-5.5 high 작업 완료');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-message-mode="live"]').last()).toContainText('요청을 이해했어요');
   expect(chatRequestBodies).toHaveLength(chatRequestsBeforeProcessSceneProbe + 1);
   expect(chatRequestBodies.at(-1)).toMatchObject({
     message: '조리 과정이 보이는 썸네일 생성해줘',
@@ -354,7 +396,7 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
   await expect(thumbnailModule.locator('[data-thumbnail-chat-message="user"]')).toHaveCount(userMessagesBeforeCanvasAsk);
   await expect(canvasContextSummary).toContainText('46px');
   await chatComposer.press('Enter');
-  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('선택 레이어 subHeadline 반영');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('스티커 문구를 다듬고');
   await expect(canvasContextAction).toContainText('선택 문구 채팅 반영');
   await expect(canvasContextSummary).toContainText('스티커 문구');
   await expect(canvasContextSummary).toContainText('64px');
@@ -377,7 +419,7 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
   await expect(thumbnailModule.locator('[data-thumbnail-chat-message="user"]')).toHaveCount(userMessagesBeforeImeProbe);
   await chatComposer.dispatchEvent('compositionend', { data: '한글 조합 테스트 생성해줘' });
   await chatComposer.press('Enter');
-  await expect(thumbnailModule.locator('[data-thumbnail-chat-message-mode="live"]').last()).toContainText('Codex CLI gpt-5.5 high 작업 완료');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-message-mode="live"]').last()).toContainText('요청을 이해했어요');
   expect(chatRequestBodies).toHaveLength(chatRequestsBeforeImeProbe + 1);
 
   await expect(thumbnailModule.locator('[data-thumbnail-generation-settings="true"]')).toHaveCount(0);
@@ -434,7 +476,7 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
   const fileChooserPromise = page.waitForEvent('filechooser');
   await thumbnailModule.locator('[data-thumbnail-chat-submit="true"]').click();
   const fileChooser = await fileChooserPromise;
-  await fileChooser.setFiles(resolve(process.cwd(), 'public/images/admin/youtube-thumbnail-local-codex-example.png'));
+  await fileChooser.setFiles(resolve(process.cwd(), 'public/images/admin/youtube-thumbnail-food-only-preview.png'));
   await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('참고 이미지 1장');
 
   await thumbnailModule.locator('[data-thumbnail-history-panel-toggle="true"]').click();
@@ -480,17 +522,17 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
   await chatComposer.fill('메인 문구 크게 보이게 생성해줘');
   await expect(thumbnailModule.locator('[data-thumbnail-chat-live-stream="true"]')).toBeVisible();
   await chatComposer.press('Enter');
-  await expect(thumbnailModule.locator('[data-thumbnail-chat-message-mode="live"]').last()).toContainText('Codex CLI gpt-5.5 high 작업 완료');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-message-mode="live"]').last()).toContainText('요청을 이해했어요');
   expect(chatRequestBodies).toHaveLength(chatRequestsBeforeOvermatchProbe + 1);
 
   const generationRequestsBeforeCompletionProbe = generationRequestBodies.length;
-  await chatComposer.fill('실제 썸네일 생성 완료 메시지 테스트 생성해줘');
+  await chatComposer.fill('새 썸네일 이미지를 만들고 캔버스에 넣었습니다 메시지 테스트 생성해줘');
   await chatComposer.press('Enter');
-  await expect(thumbnailModule.locator('[data-thumbnail-chat-message-mode="live"]').last()).toContainText('실제 썸네일 생성 완료');
-  await expect(thumbnailModule.locator('[data-thumbnail-chat-message-mode="live"]').last()).toContainText('provider local-codex');
-  await expect(thumbnailModule.locator('[data-thumbnail-chat-message-mode="live"]').last()).toContainText('model gpt-image-2');
-  await expect(thumbnailModule.locator('[data-thumbnail-chat-message-mode="live"]').last()).toContainText('provenance exact');
-  await expect(thumbnailModule.locator('[data-thumbnail-chat-message-mode="live"]').last()).toContainText('히스토리 새로고침 요청됨');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-message-mode="live"]').last()).toContainText('새 썸네일 이미지를 만들고 캔버스에 넣었습니다');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-message-mode="live"]').last()).toContainText('새 썸네일 이미지를 만들고 캔버스에 넣었습니다');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-message-mode="live"]').last()).toContainText('사용한 이미지 모델도 검증되었습니다');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-message-mode="live"]').last()).toContainText('기존 썸네일 후보');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-message-mode="live"]').last()).toContainText('문구 위치를 확인한 뒤 필요하면 PNG로 저장하세요');
   expect(generationRequestBodies).toHaveLength(generationRequestsBeforeCompletionProbe + 1);
 
   await expect(toolbar).toBeVisible();
@@ -513,11 +555,12 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
   await chatComposer.fill('유튜브 쯔양이 오른쪽에 크게, 매운 철판구이, 메인: 역대급 불맛, 스티커: 한입만 가능?');
   await expect(thumbnailModule.locator('[data-thumbnail-chat-live-stream="true"]')).toBeVisible();
   await expect(thumbnailModule.locator('[data-thumbnail-live-canvas-text-summary="true"]')).toHaveCount(0);
-  await expect(thumbnailModule.locator('#thumbnail-topic')).toHaveValue(/쯔양이 오른쪽/);
+  await expect(thumbnailModule.locator('#thumbnail-topic')).not.toHaveValue(/쯔양이 오른쪽/);
   await chatComposer.press('Enter');
   await expect(thumbnailModule.locator('[data-thumbnail-chat-message="user"]').last()).toContainText('유튜브 쯔양이');
-  await expect(thumbnailModule.locator('[data-thumbnail-chat-message-mode="live"]').last()).toContainText('Codex CLI gpt-5.5 high 작업 완료');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-message-mode="live"]').last()).toContainText('요청을 이해했어요');
   await expect(thumbnailModule.locator('[data-thumbnail-chat-live-stream="true"]')).toHaveCount(0);
+  await expect(thumbnailModule.locator('#thumbnail-topic')).toHaveValue(/쯔양이 오른쪽/);
 
   const bounds = await thumbnailModule.evaluate((element) => {
     const moduleRect = element.getBoundingClientRect();
