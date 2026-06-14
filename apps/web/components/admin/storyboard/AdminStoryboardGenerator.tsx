@@ -82,8 +82,13 @@ import {
 } from "@/lib/admin/storyboard/visible-scenes";
 import {
   INITIAL_STORYBOARD_IMAGE_PROVIDER_READINESS,
+  STORYBOARD_BROWSER_MODEL_KEYS_STORAGE_KEY,
+  STORYBOARD_BROWSER_OPENAI_IMAGE_PROVIDER_ID,
+  STORYBOARD_BROWSER_OPENAI_API_KEY_HEADER,
+  STORYBOARD_IMAGE_PROVIDER_EXACT_PROVENANCE,
   STORYBOARD_IMAGE_PROVIDER_COMMAND_ENV,
   STORYBOARD_IMAGE_PROVIDER_COMMAND_PLACEHOLDER,
+  STORYBOARD_IMAGE_PROVIDER_MODEL,
   STORYBOARD_IMAGE_PROVIDER_MODEL_ENV,
   type StoryboardImageProviderReadiness,
   type StoryboardImageProviderStatusResponse,
@@ -245,6 +250,88 @@ type StoryboardHistoryProofSummary = {
   responseHash: string;
   generatedAt: string;
 };
+
+type StoryboardBrowserModelKeysCache = {
+  version: 1;
+  openAIApiKey: string;
+  savedAt: string;
+  storage: "browser_local_storage_only";
+};
+
+function normalizeStoryboardBrowserOpenAIApiKeyInput(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (trimmed.length > 260) return null;
+  if (!/^sk-[A-Za-z0-9_-]{16,}$/.test(trimmed)) return null;
+  return trimmed;
+}
+
+function maskStoryboardBrowserOpenAIApiKey(value: string) {
+  if (!value) return "";
+  const prefix = value.slice(0, 7);
+  const suffix = value.slice(-4);
+  return `${prefix}…${suffix}`;
+}
+
+function readStoryboardBrowserModelKeysCache():
+  | StoryboardBrowserModelKeysCache
+  | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(
+      STORYBOARD_BROWSER_MODEL_KEYS_STORAGE_KEY,
+    );
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<StoryboardBrowserModelKeysCache>;
+    if (
+      parsed.version !== 1 ||
+      parsed.storage !== "browser_local_storage_only" ||
+      typeof parsed.openAIApiKey !== "string" ||
+      typeof parsed.savedAt !== "string"
+    ) {
+      return null;
+    }
+    const normalized = normalizeStoryboardBrowserOpenAIApiKeyInput(
+      parsed.openAIApiKey,
+    );
+    if (!normalized) return null;
+    return {
+      version: 1,
+      openAIApiKey: normalized,
+      savedAt: parsed.savedAt,
+      storage: "browser_local_storage_only",
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeStoryboardBrowserModelKeysCache(openAIApiKey: string) {
+  const cache: StoryboardBrowserModelKeysCache = {
+    version: 1,
+    openAIApiKey,
+    savedAt: new Date().toISOString(),
+    storage: "browser_local_storage_only",
+  };
+  window.localStorage.setItem(
+    STORYBOARD_BROWSER_MODEL_KEYS_STORAGE_KEY,
+    JSON.stringify(cache),
+  );
+  return cache;
+}
+
+function clearStoryboardBrowserModelKeysCache() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(STORYBOARD_BROWSER_MODEL_KEYS_STORAGE_KEY);
+}
+
+function getStoryboardBrowserModelKeyHeaders(
+  openAIApiKey: string | null,
+): Record<string, string> {
+  return openAIApiKey
+    ? { [STORYBOARD_BROWSER_OPENAI_API_KEY_HEADER]: openAIApiKey }
+    : {};
+}
 
 const DEFAULT_FORM: GeneratorForm = {
   prompt:
@@ -2241,12 +2328,14 @@ type StoryboardImagesResponse = {
 async function postStoryboardImagesRequest(
   result: StoryboardGenerationResult,
   scenes: StoryboardGenerationResult["storyboard"]["scenes"],
+  browserOpenAIApiKey: string | null,
 ): Promise<StoryboardImagesResponse> {
   const response = await fetch("/api/admin/storyboard/images", {
     method: "POST",
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
+      ...getStoryboardBrowserModelKeyHeaders(browserOpenAIApiKey),
     },
     body: JSON.stringify({
       title: result.storyboard.title,
@@ -2272,10 +2361,15 @@ async function postStoryboardImagesRequest(
   return response.json() as Promise<StoryboardImagesResponse>;
 }
 
-async function getStoryboardImageProviderStatusRequest(): Promise<StoryboardImageProviderStatusResponse> {
+async function getStoryboardImageProviderStatusRequest(
+  browserOpenAIApiKey: string | null,
+): Promise<StoryboardImageProviderStatusResponse> {
   const response = await fetch("/api/admin/storyboard/images", {
     cache: "no-store",
-    headers: { Accept: "application/json" },
+    headers: {
+      Accept: "application/json",
+      ...getStoryboardBrowserModelKeyHeaders(browserOpenAIApiKey),
+    },
   });
 
   if (!response.ok) {
@@ -2434,6 +2528,20 @@ export function AdminStoryboardGenerator() {
   ] = useState<StoryboardImageProviderReadiness>(
     INITIAL_STORYBOARD_IMAGE_PROVIDER_READINESS,
   );
+  const [storyboardBrowserOpenAIApiKey, setStoryboardBrowserOpenAIApiKey] =
+    useState<string | null>(null);
+  const [
+    storyboardBrowserOpenAIApiKeyDraft,
+    setStoryboardBrowserOpenAIApiKeyDraft,
+  ] = useState("");
+  const [
+    storyboardBrowserOpenAIApiKeySavedAt,
+    setStoryboardBrowserOpenAIApiKeySavedAt,
+  ] = useState<string | null>(null);
+  const [
+    storyboardBrowserOpenAIApiKeyError,
+    setStoryboardBrowserOpenAIApiKeyError,
+  ] = useState<string | null>(null);
   const [chatDraft, setChatDraft] = useState("");
   const [storyboardCanvasFocus, setStoryboardCanvasFocus] =
     useState<StoryboardChatFocusContext | null>(null);
@@ -2556,9 +2664,16 @@ export function AdminStoryboardGenerator() {
   }, [isGenerating, isChatAgentStreaming, isGeneratingImages]);
 
   useEffect(() => {
+    const cache = readStoryboardBrowserModelKeysCache();
+    if (!cache) return;
+    setStoryboardBrowserOpenAIApiKey(cache.openAIApiKey);
+    setStoryboardBrowserOpenAIApiKeySavedAt(cache.savedAt);
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
 
-    getStoryboardImageProviderStatusRequest()
+    getStoryboardImageProviderStatusRequest(storyboardBrowserOpenAIApiKey)
       .then((payload) => {
         if (cancelled) return;
         setStoryboardImageProviderReadiness(
@@ -2585,7 +2700,7 @@ export function AdminStoryboardGenerator() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [storyboardBrowserOpenAIApiKey]);
 
   useEffect(() => {
     const transcript = chatTranscriptRef.current;
@@ -2725,6 +2840,12 @@ export function AdminStoryboardGenerator() {
         : activePageGeneratedCount === activeStoryboardImageGenerationTargetScenes.length
         ? `${activePageGenerationTargetCount}컷 재생성`
         : `${activePageGenerationTargetCount}컷 생성`;
+  const isStoryboardBrowserOpenAIApiKeySaved = Boolean(
+    storyboardBrowserOpenAIApiKey,
+  );
+  const maskedStoryboardBrowserOpenAIApiKey = storyboardBrowserOpenAIApiKey
+    ? maskStoryboardBrowserOpenAIApiKey(storyboardBrowserOpenAIApiKey)
+    : "";
   const hasPreviousStoryboardPage = activeStoryboardPage > 0;
   const hasNextStoryboardPage = activeStoryboardPage < storyboardTotalPages - 1;
   const selectedExportPreset =
@@ -3065,7 +3186,9 @@ export function AdminStoryboardGenerator() {
       INITIAL_STORYBOARD_IMAGE_PROVIDER_READINESS,
     );
     try {
-      const payload = await getStoryboardImageProviderStatusRequest();
+      const payload = await getStoryboardImageProviderStatusRequest(
+        storyboardBrowserOpenAIApiKey,
+      );
       setStoryboardImageProviderReadiness(
         mapStoryboardImageProviderReadiness(payload),
       );
@@ -3084,6 +3207,60 @@ export function AdminStoryboardGenerator() {
         checkedAt: new Date().toISOString(),
       });
     }
+  }
+
+  function handleSaveStoryboardBrowserOpenAIApiKey() {
+    const normalized = normalizeStoryboardBrowserOpenAIApiKeyInput(
+      storyboardBrowserOpenAIApiKeyDraft,
+    );
+    if (!normalized) {
+      setStoryboardBrowserOpenAIApiKeyError(
+        "OpenAI API 키 형식이 올바르지 않습니다. sk-로 시작하는 키를 입력해 주세요.",
+      );
+      return;
+    }
+    const cache = writeStoryboardBrowserModelKeysCache(normalized);
+    setStoryboardBrowserOpenAIApiKey(cache.openAIApiKey);
+    setStoryboardBrowserOpenAIApiKeySavedAt(cache.savedAt);
+    setStoryboardImageProviderReadiness({
+      status: "ready",
+      label: "이미지 생성 준비됨",
+      summary: "브라우저에 저장한 API 키로 이미지 생성 준비가 끝났습니다.",
+      detail: "키는 이 브라우저 캐시에만 보관되고, 요청할 때만 서버로 전달됩니다.",
+      reason: "ready",
+      model: STORYBOARD_IMAGE_PROVIDER_MODEL,
+      providerId: STORYBOARD_BROWSER_OPENAI_IMAGE_PROVIDER_ID,
+      modelProvenance: STORYBOARD_IMAGE_PROVIDER_EXACT_PROVENANCE,
+      command: "browser localStorage API key (transient request header)",
+      target: { width: 1280, height: 720, aspectRatio: "16:9" },
+      checkedAt: new Date().toISOString(),
+    });
+    setStoryboardBrowserOpenAIApiKeyDraft("");
+    setStoryboardBrowserOpenAIApiKeyError(null);
+    appendStoryboardChatMessages([
+      {
+        id: `assistant-browser-key-saved-${Date.now()}`,
+        role: "assistant",
+        text: "모델 API 키를 이 브라우저에만 저장했어요. DB나 계정에는 저장하지 않고, 이미지 생성 요청 때만 임시로 사용합니다.",
+        status: "done",
+      },
+    ]);
+  }
+
+  function handleClearStoryboardBrowserOpenAIApiKey() {
+    clearStoryboardBrowserModelKeysCache();
+    setStoryboardBrowserOpenAIApiKey(null);
+    setStoryboardBrowserOpenAIApiKeySavedAt(null);
+    setStoryboardBrowserOpenAIApiKeyDraft("");
+    setStoryboardBrowserOpenAIApiKeyError(null);
+    appendStoryboardChatMessages([
+      {
+        id: `assistant-browser-key-cleared-${Date.now()}`,
+        role: "assistant",
+        text: "브라우저에 저장된 모델 API 키를 삭제했어요. 이제 로컬 Codex 이미지 설정 상태만 사용합니다.",
+        status: "done",
+      },
+    ]);
   }
 
   function guideUnavailableStoryboardImageGeneration(
@@ -3901,6 +4078,7 @@ export function AdminStoryboardGenerator() {
           const scenePayload = await postStoryboardImagesRequest(
             accumulatedResult,
             [scene],
+            storyboardBrowserOpenAIApiKey,
           );
           generatedImages.push(...scenePayload.images);
           applyGeneratedImages(scenePayload.images);
@@ -3916,6 +4094,7 @@ export function AdminStoryboardGenerator() {
         const payload = await postStoryboardImagesRequest(
           accumulatedResult,
           targetScenes,
+          storyboardBrowserOpenAIApiKey,
         );
         generatedImages.push(...payload.images);
         applyGeneratedImages(payload.images);
@@ -4359,7 +4538,7 @@ export function AdminStoryboardGenerator() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
                     align="end"
-                    className="w-[min(360px,calc(100vw-2rem))] p-0"
+                    className="max-h-[min(720px,calc(100vh-5rem))] w-[min(360px,calc(100vw-2rem))] overflow-y-auto overscroll-contain p-0"
                     data-storyboard-chat-settings-dropdown="true"
                   >
                     <div
@@ -4784,6 +4963,101 @@ export function AdminStoryboardGenerator() {
                             있습니다.
                           </p>
                         </div>
+                      </div>
+                      <div
+                        className="rounded-2xl border border-border/70 bg-background/80 p-2 text-[11px]"
+                        data-storyboard-browser-api-key-settings="local-storage-only"
+                        data-storyboard-api-key-storage="browser-local-storage-only"
+                        data-storyboard-api-key-db-storage="forbidden"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className="font-semibold text-foreground">
+                                프로덕션 모델 키
+                              </span>
+                              <Badge
+                                variant={
+                                  isStoryboardBrowserOpenAIApiKeySaved
+                                    ? "secondary"
+                                    : "outline"
+                                }
+                                className="rounded-full px-1.5 text-[10px]"
+                                data-storyboard-browser-api-key-status={
+                                  isStoryboardBrowserOpenAIApiKeySaved
+                                    ? "saved"
+                                    : "empty"
+                                }
+                              >
+                                {isStoryboardBrowserOpenAIApiKeySaved
+                                  ? "브라우저 저장됨"
+                                  : "미저장"}
+                              </Badge>
+                            </div>
+                            <p className="mt-1 leading-4 text-muted-foreground">
+                              OpenAI 키는 이 브라우저 localStorage에만 저장합니다.
+                              계정·DB에는 저장하지 않습니다.
+                            </p>
+                          </div>
+                        </div>
+                        {isStoryboardBrowserOpenAIApiKeySaved ? (
+                          <p
+                            className="mt-1 rounded-xl bg-muted/40 px-2 py-1 font-mono text-[10px] text-muted-foreground"
+                            data-storyboard-browser-api-key-mask="true"
+                          >
+                            {maskedStoryboardBrowserOpenAIApiKey}
+                            {storyboardBrowserOpenAIApiKeySavedAt
+                              ? ` · ${new Date(storyboardBrowserOpenAIApiKeySavedAt).toLocaleString()}`
+                              : ""}
+                          </p>
+                        ) : null}
+                        <div className="mt-2 flex items-center gap-1.5">
+                          <input
+                            type="password"
+                            value={storyboardBrowserOpenAIApiKeyDraft}
+                            onChange={(event) => {
+                              setStoryboardBrowserOpenAIApiKeyDraft(
+                                event.target.value,
+                              );
+                              setStoryboardBrowserOpenAIApiKeyError(null);
+                            }}
+                            placeholder="sk-... OpenAI API 키"
+                            autoComplete="off"
+                            spellCheck={false}
+                            className="min-w-0 flex-1 rounded-full border border-input bg-background px-3 py-1.5 text-xs outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                            aria-label="브라우저에만 저장할 OpenAI API 키"
+                            data-storyboard-browser-api-key-input="true"
+                          />
+                          <Button
+                            type="button"
+                            size="sm"
+                            className="h-8 shrink-0 rounded-full px-2 text-xs"
+                            onClick={handleSaveStoryboardBrowserOpenAIApiKey}
+                            disabled={!storyboardBrowserOpenAIApiKeyDraft.trim()}
+                            data-storyboard-browser-api-key-save="true"
+                          >
+                            저장
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 shrink-0 rounded-full px-2 text-xs"
+                            onClick={handleClearStoryboardBrowserOpenAIApiKey}
+                            disabled={!isStoryboardBrowserOpenAIApiKeySaved}
+                            data-storyboard-browser-api-key-clear="true"
+                          >
+                            삭제
+                          </Button>
+                        </div>
+                        {storyboardBrowserOpenAIApiKeyError ? (
+                          <p
+                            className="mt-1 text-[10px] text-destructive"
+                            data-storyboard-browser-api-key-error="true"
+                          >
+                            {storyboardBrowserOpenAIApiKeyError}
+                          </p>
+                        ) : null}
                       </div>
                       <div
                         className="rounded-2xl border border-amber-300/60 bg-amber-500/10 p-2 text-[11px]"
@@ -5356,8 +5630,7 @@ export function AdminStoryboardGenerator() {
                     getTrustedStoryboardGeneratedImage(scene.generatedImage);
                   const isSceneImageGenerating =
                     generatingStoryboardImageSceneNoSet.has(scene.sceneNo);
-                  const shouldShowSceneSkeleton =
-                    isSceneImageGenerating || !trustedGeneratedImage;
+                  const shouldShowSceneSkeleton = isSceneImageGenerating;
                   const productionNote = formatStoryboardFrameProductionNote(scene);
                   return (
                     <button
@@ -5507,6 +5780,24 @@ export function AdminStoryboardGenerator() {
                             {scene.captionIdea}
                           </span>
                         </div>
+                        {!trustedGeneratedImage && !isSceneImageGenerating ? (
+                          <div
+                            className="grid grid-cols-[58px_minmax(0,1fr)] items-start gap-2 rounded-xl bg-amber-500/10 px-2 py-1 text-[11px] leading-4"
+                            data-storyboard-frame-production-note="true"
+                            data-storyboard-frame-production-note-row="true"
+                          >
+                            <span className="rounded-full bg-amber-200 px-2 py-0.5 text-center text-[10px] font-bold uppercase tracking-wide text-amber-950">
+                              촬영
+                            </span>
+                            <span
+                              className="line-clamp-1 font-semibold text-foreground"
+                              title={productionNote}
+                              data-storyboard-frame-production-note-text="true"
+                            >
+                              {productionNote}
+                            </span>
+                          </div>
+                        ) : null}
                       </div>
                         </>
                       )}

@@ -20,6 +20,7 @@ import {
   generateYoutubeThumbnail,
   getThumbnailProviderAvailability,
   probeLocalCodex,
+  resolveOpenAiGptImage2ThumbnailModel,
   resolveLocalCodexThumbnailModel,
 } from "../lib/admin/youtube-thumbnail-generator/providers";
 import {
@@ -369,43 +370,120 @@ function writeThumbnailRetrievalCommand(root: string, body: string) {
 
 
 describe("admin youtube thumbnail generator", () => {
-  test("pins thumbnail generation to local Codex only and rejects non-local providers", () => {
+  test("allows only local Codex and OpenAI gpt-image-2 thumbnail providers", () => {
     expect(resolveLocalCodexThumbnailModel({} as NodeJS.ProcessEnv)).toBe("unconfigured:gpt-image-2");
     expect(resolveLocalCodexThumbnailModel({ THUMBNAIL_LOCAL_CODEX_IMAGE_MODEL: "chatgpt-image-latest" } as NodeJS.ProcessEnv)).toBe("chatgpt-image-latest");
+    expect(resolveOpenAiGptImage2ThumbnailModel({} as NodeJS.ProcessEnv)).toBe("gpt-image-2");
+    expect(resolveOpenAiGptImage2ThumbnailModel({ THUMBNAIL_OPENAI_IMAGE_MODEL: "other-image-model" } as NodeJS.ProcessEnv)).toBe("other-image-model");
     expect(parseThumbnailPayload(safePayload).providerId).toBe("local-codex");
-    expectThumbnailError(() => parseThumbnailPayload({ ...safePayload, providerId: "openai-gpt-image" }), "provider_unavailable");
+    expect(parseThumbnailPayload({ ...safePayload, providerId: "openai-gpt-image-2" }).providerId).toBe("openai-gpt-image-2");
     expectThumbnailError(() => parseThumbnailPayload({ ...safePayload, providerId: "gemini-nano-banana" }), "provider_unavailable");
   });
 
-  test("does not expose OpenAI or Gemini live API provider availability", () => {
-    expect(getThumbnailProviderAvailability({
-      OPENAI_API_KEY: "test-openai-key",
-      GEMINI_API_KEY: "test-gemini-key",
-    } as NodeJS.ProcessEnv)).toMatchObject({
+  test("exposes OpenAI gpt-image-2 availability without exposing Gemini fallback", () => {
+    expect(getThumbnailProviderAvailability({} as NodeJS.ProcessEnv)).toMatchObject({
       localCodex: {
         available: false,
         reason: "local_codex_model_not_allowed",
         strictExactModelRequired: true,
       },
+      openaiGptImage2: {
+        available: false,
+        reason: "openai_api_key_required",
+        providerId: "openai-gpt-image-2",
+        model: "gpt-image-2",
+        browserKeyStorage: "browser_local_storage_only",
+      },
     });
-    expect(getThumbnailProviderAvailability({} as NodeJS.ProcessEnv)).not.toHaveProperty("openai");
+    expect(getThumbnailProviderAvailability({ OPENAI_API_KEY: "sk-test-openai-key-1234567890" } as NodeJS.ProcessEnv)).toMatchObject({
+      openaiGptImage2: {
+        available: true,
+        reason: "ready",
+        providerId: "openai-gpt-image-2",
+        model: "gpt-image-2",
+      },
+    });
+    expect(getThumbnailProviderAvailability({ THUMBNAIL_OPENAI_IMAGE_MODEL: "not-gpt-image-2" } as NodeJS.ProcessEnv)).toMatchObject({
+      openaiGptImage2: {
+        available: false,
+        reason: "openai_model_not_allowed",
+        model: "not-gpt-image-2",
+      },
+    });
     expect(getThumbnailProviderAvailability({} as NodeJS.ProcessEnv)).not.toHaveProperty("gemini");
   });
 
-  test("ignores request-scoped session API key shaped fields", () => {
+  test("accepts OpenAI request-scoped session API key only for OpenAI gpt-image-2 provider", () => {
     const formData = new FormData();
-    formData.append("thumbnailSessionApiKeyAttempt", " sk-session-attempt-1234567890 ");
+    formData.append("thumbnailSessionOpenaiApiKey", " sk-session-attempt-1234567890 ");
     formData.append("fallbackProviderApiKeyAttempt", "AIza-session-gemini-1234567890");
 
     const openaiEnv = buildThumbnailProviderRequestEnv({
       THUMBNAIL_GENERATOR_ENABLE_LIVE_API: "1",
-    } as NodeJS.ProcessEnv, "local-codex", formData);
-    expect(openaiEnv.OPENAI_API_KEY).toBeUndefined();
+    } as NodeJS.ProcessEnv, "openai-gpt-image-2", formData);
+    expect(openaiEnv.OPENAI_API_KEY).toBe("sk-session-attempt-1234567890");
+    expect(openaiEnv.THUMBNAIL_OPENAI_IMAGE_MODEL).toBe("gpt-image-2");
     expect(openaiEnv.GEMINI_API_KEY).toBeUndefined();
 
     const localEnv = buildThumbnailProviderRequestEnv({} as NodeJS.ProcessEnv, "local-codex", formData);
     expect(localEnv.OPENAI_API_KEY).toBeUndefined();
     expect(localEnv.GEMINI_API_KEY).toBeUndefined();
+
+    const badFormData = new FormData();
+    badFormData.append("thumbnailSessionOpenaiApiKey", "not-a-key");
+    expectThumbnailError(
+      () => buildThumbnailProviderRequestEnv({} as NodeJS.ProcessEnv, "openai-gpt-image-2", badFormData),
+      "invalid_session_api_key",
+    );
+  });
+
+  test("calls OpenAI Images API with gpt-image-2 only and returns requested-label image", async () => {
+    const originalFetch = globalThis.fetch;
+    const seenRequests: Array<{ url: string; authorization?: string; body: Record<string, unknown> }> = [];
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      seenRequests.push({
+        url: String(input),
+        authorization: init?.headers && typeof init.headers === "object" && !Array.isArray(init.headers)
+          ? (init.headers as Record<string, string>).Authorization
+          : undefined,
+        body: JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>,
+      });
+      return new Response(JSON.stringify({
+        data: [{ b64_json: Buffer.from("tiny image").toString("base64") }],
+      }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }) as typeof fetch;
+    try {
+      const result = await generateYoutubeThumbnail(
+        parseThumbnailPayload({ ...safePayload, providerId: "openai-gpt-image-2" }),
+        [],
+        {
+          OPENAI_API_KEY: "sk-test-openai-session-1234567890",
+        } as NodeJS.ProcessEnv,
+      );
+
+      expect(seenRequests).toHaveLength(1);
+      expect(seenRequests[0]?.url).toBe("https://api.openai.com/v1/images/generations");
+      expect(seenRequests[0]?.authorization).toBe("Bearer sk-test-openai-session-1234567890");
+      expect(seenRequests[0]?.body).toMatchObject({
+        model: "gpt-image-2",
+        size: "1280x720",
+        quality: "medium",
+        n: 1,
+      });
+      expect(result.baseImage).toMatchObject({
+        providerId: "openai-gpt-image-2",
+        model: "gpt-image-2",
+        modelProvenance: "requested-label",
+        targetWidth: 1280,
+        targetHeight: 720,
+      });
+      expect(result.warnings.join("\n")).not.toContain("sk-test-openai-session");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 
   test("documents that thumbnail generation only executes after exact provenance proof", () => {
@@ -2266,7 +2344,7 @@ printf '%s' '{"mode":"command","runtime":"codex_cli_oauth","concept":"chat conce
     }
   });
 
-  test("keeps chat-driven generation intent pinned to local Codex even when users mention other providers", async () => {
+  test("lets chat-driven generation choose OpenAI gpt-image-2 while keeping unsupported providers on fallback", async () => {
     const { tempDir, commandPath } = createThumbnailChatAgentCommandFixture();
     try {
       const openai = await generateYoutubeThumbnailChatWithBackendAgent({
@@ -2283,10 +2361,10 @@ printf '%s' '{"mode":"command","runtime":"codex_cli_oauth","concept":"chat conce
         THUMBNAIL_AGENT_CODEX_EFFORT: "high",
       } as NodeJS.ProcessEnv);
 
-      expect(openai.providerId).toBe("local-codex");
+      expect(openai.providerId).toBe("openai-gpt-image-2");
       expect(openai.generationMode).toBe("backend_agent");
       expect(openai.shouldGenerate).toBe(true);
-      expect(openai.assistantMessage).not.toContain("OpenAI");
+      expect(openai.assistantMessage).toContain("실제 썸네일 이미지");
 
       const gemini = await generateYoutubeThumbnailChatWithBackendAgent({
         message: "Gemini Nano Banana로 야시장 썸네일 생성해줘",

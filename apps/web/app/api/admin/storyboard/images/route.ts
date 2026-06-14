@@ -4,8 +4,12 @@ import { requireAdmin } from '@/lib/auth/require-admin';
 import {
   generateStoryboardSceneImages,
   getStoryboardImageProviderAvailability,
+  normalizeStoryboardBrowserOpenAIApiKey,
   StoryboardImageGenerationError,
 } from '@/lib/admin/storyboard/image-provider';
+import {
+  STORYBOARD_BROWSER_OPENAI_API_KEY_HEADER,
+} from '@/lib/admin/storyboard/image-provider-readiness';
 import { persistLocalStoryboardHistory } from '@/lib/admin/storyboard/history';
 import { sanitizeStoryboardPublicText } from '@/lib/admin/storyboard/prompt-safety';
 import {
@@ -33,6 +37,12 @@ function getStoryboardImageRouteEnv() {
     CODEX_IMAGEGEN_AGENT_EFFORT: process.env.CODEX_IMAGEGEN_AGENT_EFFORT || 'high',
     STORYBOARD_LOCAL_HISTORY_WRITE: process.env.STORYBOARD_LOCAL_HISTORY_WRITE || '1',
   };
+}
+
+function getBrowserOpenAIApiKeyFromRequest(request: NextRequest) {
+  return normalizeStoryboardBrowserOpenAIApiKey(
+    request.headers.get(STORYBOARD_BROWSER_OPENAI_API_KEY_HEADER),
+  );
 }
 
 function jsonError(error: string, status: number, detail?: string) {
@@ -170,14 +180,17 @@ function createPersistableImageResult(
   };
 }
 
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
     const auth = await requireAdmin({ allowDevAdminBypassCookie: true });
     if (!auth.ok) return auth.response;
+    const browserOpenAIApiKey = getBrowserOpenAIApiKeyFromRequest(request);
 
     return NextResponse.json(
       {
-        provider: getStoryboardImageProviderAvailability(process.env),
+        provider: getStoryboardImageProviderAvailability(process.env, {
+          browserOpenAIApiKey,
+        }),
         limits: {
           maxScenesPerRequest: 4,
           target: { width: 1280, height: 720, aspectRatio: '16:9' },
@@ -186,6 +199,9 @@ export async function GET(_request: NextRequest) {
           localCodexCommand: 'STORYBOARD_LOCAL_CODEX_COMMAND 또는 scripts/codex-imagegen-storyboard-provider.py',
           localCodexModel: 'STORYBOARD_LOCAL_CODEX_IMAGE_MODEL',
           localCodexProof: 'STORYBOARD_LOCAL_CODEX_PROVENANCE_FILE 또는 npm run storyboard:image-proof',
+          browserOpenAIApiKey: '브라우저 localStorage에만 저장하고 요청 헤더로만 임시 전달',
+          browserKeyStorage: 'browser_local_storage_only',
+          browserApiKeyHeader: STORYBOARD_BROWSER_OPENAI_API_KEY_HEADER,
         },
       },
       { headers: noStoreHeaders },
@@ -203,6 +219,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => null);
     const payload = parsePayload(body);
     const imageRouteEnv = getStoryboardImageRouteEnv();
+    const browserOpenAIApiKey = getBrowserOpenAIApiKeyFromRequest(request);
     const images = await generateStoryboardSceneImages(
       payload.scenes,
       {
@@ -211,6 +228,7 @@ export async function POST(request: NextRequest) {
         request: payload.request,
       },
       imageRouteEnv,
+      { browserOpenAIApiKey },
     );
     const historyResult = createPersistableImageResult(payload.sourceResult, images);
     const history = historyResult
@@ -222,7 +240,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       {
-        provider: getStoryboardImageProviderAvailability(imageRouteEnv),
+        provider: getStoryboardImageProviderAvailability(imageRouteEnv, {
+          browserOpenAIApiKey,
+        }),
         images,
         history,
       },

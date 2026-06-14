@@ -85,6 +85,30 @@ function exactProvenance(
   };
 }
 
+function browserApiKeyProvenance(
+  responseId: string,
+  imageCallId: string,
+): StoryboardGeneratedImageProvenance {
+  return {
+    providerId: 'browser-openai-api-key',
+    authMode: 'browser_local_storage_api_key',
+    endpoint: 'https://api.openai.com/v1/images/generations',
+    requestToolType: 'image_generation',
+    requestToolModel: 'gpt-image-2',
+    model: 'gpt-image-2',
+    modelProvenance: 'exact',
+    responseId,
+    imageCallId,
+    imageItemCount: 1,
+    generatedImageItemTypes: ['image_generation_call'],
+    rawImageItemTypes: ['image_generation_call'],
+    requestHash: 'c'.repeat(64),
+    responseHash: 'd'.repeat(64),
+    hasOpenAIAPIKey: true,
+    generatedAt: '2026-06-05T00:00:00.000Z',
+  };
+}
+
 function writeExactProof(dir: string, overrides: Record<string, unknown> = {}) {
   const imagePath = join(dir, 'proof.png');
   const proofPath = join(dir, 'proof.json');
@@ -530,6 +554,76 @@ describe('admin storyboard image provider', () => {
     rmSync(dirname(join(process.cwd(), 'public', image!.dataUrl)), { recursive: true, force: true });
   });
 
+  test('uses a browser-provided OpenAI API key only as a transient request header provider', async () => {
+    const originalFetch = globalThis.fetch;
+    const seen: Array<{ authorization?: string; body?: string }> = [];
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      expect(String(input)).toBe('https://api.openai.com/v1/images/generations');
+      const headers = new Headers(init?.headers);
+      seen.push({
+        authorization: headers.get('authorization') ?? undefined,
+        body: typeof init?.body === 'string' ? init.body : undefined,
+      });
+      return new Response(JSON.stringify({
+        id: 'resp_browser_key_test',
+        created: Math.floor(Date.parse('2026-06-05T00:00:00.000Z') / 1000),
+        data: [{ b64_json: tinyPngBase64 }],
+      }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    }) as typeof fetch;
+
+    try {
+      const env = {
+        STORYBOARD_LOCAL_CODEX_COMMAND: join(tmpdir(), `missing-local-codex-${Date.now()}`),
+        STORYBOARD_LOCAL_CODEX_IMAGE_MODEL: 'gpt-image-2',
+      } as NodeJS.ProcessEnv;
+      const browserKey = 'sk-proj_browserlocalonly1234567890';
+      expect(getStoryboardImageProviderAvailability(env, {
+        browserOpenAIApiKey: browserKey,
+      })).toMatchObject({
+        available: true,
+        reason: 'ready',
+        model: 'gpt-image-2',
+        providerId: 'browser-openai-api-key',
+        authMode: 'browser_local_storage_api_key',
+        browserKeyStorage: 'browser_local_storage_only',
+        modelProvenance: 'exact',
+      });
+
+      const images = await generateStoryboardSceneImages([scene], {
+        title: '프로덕션 키 스토리보드',
+        logline: '브라우저 키 기반 이미지',
+        request,
+      }, env, { browserOpenAIApiKey: browserKey });
+
+      expect(seen).toHaveLength(1);
+      expect(seen[0]?.authorization).toBe(`Bearer ${browserKey}`);
+      expect(seen[0]?.body).toContain('"model":"gpt-image-2"');
+      expect(seen[0]?.body).not.toContain(browserKey);
+      const image = images[0]?.image;
+      expect(image?.providerId).toBe('browser-openai-api-key');
+      expect(image?.model).toBe('gpt-image-2');
+      expect(image?.provenance).toMatchObject({
+        providerId: 'browser-openai-api-key',
+        authMode: 'browser_local_storage_api_key',
+        endpoint: 'https://api.openai.com/v1/images/generations',
+        requestToolModel: 'gpt-image-2',
+        model: 'gpt-image-2',
+        modelProvenance: 'exact',
+        hasOpenAIAPIKey: true,
+      });
+      expect(JSON.stringify(image)).not.toContain(browserKey);
+      expect(isExactStoryboardGeneratedImageProvenance(image?.provenance)).toBe(true);
+      expect(isTrustedStoryboardGeneratedImage(image)).toBe(true);
+      expect(existsSync(join(process.cwd(), 'public', image!.dataUrl))).toBe(true);
+      rmSync(dirname(join(process.cwd(), 'public', image!.dataUrl)), { recursive: true, force: true });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   test('trusts only storyboard-panel GPT Image 2 metadata and strips thumbnail-like history images', () => {
     const prompt = buildStoryboardSceneImagePrompt(scene, {
       title: '실데이터 스토리보드',
@@ -551,6 +645,11 @@ describe('admin storyboard image provider', () => {
       ...trustedImage,
       dataUrl: '/storyboard-seed/generated/cut-01.png',
       provenance: exactProvenance('resp_seed', 'ig_seed'),
+    };
+    const browserKeyImage = {
+      ...trustedImage,
+      providerId: 'browser-openai-api-key' as const,
+      provenance: browserApiKeyProvenance('resp_browser_trusted', 'ig_browser_trusted'),
     };
     const storyboardThumbnailCandidateImage = {
       ...trustedImage,
@@ -617,6 +716,7 @@ describe('admin storyboard image provider', () => {
     };
 
     expect(isTrustedStoryboardGeneratedImage(trustedImage)).toBe(true);
+    expect(isTrustedStoryboardGeneratedImage(browserKeyImage)).toBe(true);
     expect(getTrustedStoryboardGeneratedImage(trustedImage)).toBe(trustedImage);
     expect(isTrustedStoryboardGeneratedImage(sharedSeedImage)).toBe(true);
     expect(getTrustedStoryboardGeneratedImage(sharedSeedImage)).toBe(sharedSeedImage);
