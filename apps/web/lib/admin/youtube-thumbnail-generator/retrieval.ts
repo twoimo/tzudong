@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import { basename, join, resolve } from 'node:path';
 
@@ -22,7 +23,10 @@ export const THUMBNAIL_RETRIEVAL_LOCAL_POOL_ENV = 'THUMBNAIL_RETRIEVAL_LOCAL_POO
 export const THUMBNAIL_RETRIEVAL_DEFAULT_LOCAL_POOL =
   'backend/restaurant-crawling/data/tzuyang/meta';
 export const THUMBNAIL_RETRIEVAL_REFERENCE_LIMIT = 4;
+export const THUMBNAIL_RETRIEVAL_DEFAULT_COMMAND =
+  'backend/thumbnail-agent/scripts/retrieve-thumbnail-references.py';
 const THUMBNAIL_RETRIEVAL_COMMAND_TIMEOUT_MS = 8_000;
+const TZUYANG_CREATOR_PATTERN = /(쯔양|tzuyang)/i;
 
 type ThumbnailRetrievalEnv = NodeJS.ProcessEnv;
 
@@ -70,12 +74,29 @@ function extractVideoIdFromYoutubeLink(value: string) {
   return null;
 }
 
+function shouldPreferTzuyangHostReferences(query: string) {
+  return TZUYANG_CREATOR_PATTERN.test(query);
+}
+
 function inferEvidenceIntent(title: string, query: string): ThumbnailReferenceEvidenceIntent {
   const text = normalizeText(`${title} ${query}`);
+  if (shouldPreferTzuyangHostReferences(query)) return 'host';
   if (/(문구|텍스트|타이틀|제목|headline|caption)/i.test(text)) return 'text_layout';
   if (/(음식|먹방|고기|떡볶|라면|제육|삼겹|스테이크|꼬치|해산물|초밥|분식|김치|치즈)/i.test(text)) return 'food';
   if (/(얼굴|표정|리액션|reaction)/i.test(text)) return 'composition';
   return 'style';
+}
+
+function buildRetrievalQuery(payload: ThumbnailGeneratorPayload) {
+  const baseQuery = `${payload.topic}\n${payload.headline}\n${payload.subHeadline ?? ''}`;
+  if (!shouldPreferTzuyangHostReferences(baseQuery) && payload.stylePreset !== 'tzuyang-food-travel-collage') {
+    return baseQuery;
+  }
+  return [
+    '쯔양 얼굴 표정 리액션 호스트 인물 컷아웃 먹방 썸네일',
+    'Tzuyang host face expression reaction creator cutout mukbang thumbnail',
+    baseQuery,
+  ].join('\n');
 }
 
 export function mapThumbnailEvidenceIntentToUploadRole(
@@ -112,11 +133,20 @@ async function readJsonlFirstObject(path: string) {
   }
 }
 
+function resolveLocalTzuyangMetaRoot(env: ThumbnailRetrievalEnv) {
+  const configured = env[THUMBNAIL_RETRIEVAL_LOCAL_POOL_ENV]?.trim();
+  if (configured) return resolve(process.cwd(), configured);
+
+  const candidates = [
+    resolve(process.cwd(), THUMBNAIL_RETRIEVAL_DEFAULT_LOCAL_POOL),
+    resolve(process.cwd(), '../../', THUMBNAIL_RETRIEVAL_DEFAULT_LOCAL_POOL),
+    resolve(process.cwd(), '../', THUMBNAIL_RETRIEVAL_DEFAULT_LOCAL_POOL),
+  ];
+  return candidates.find((candidate) => existsSync(candidate)) ?? candidates[0];
+}
+
 async function loadLocalTzuyangMetaCandidates(env: ThumbnailRetrievalEnv) {
-  const root = resolve(
-    process.cwd(),
-    env[THUMBNAIL_RETRIEVAL_LOCAL_POOL_ENV] || THUMBNAIL_RETRIEVAL_DEFAULT_LOCAL_POOL,
-  );
+  const root = resolveLocalTzuyangMetaRoot(env);
   let files: string[] = [];
   try {
     files = (await readdir(root))
@@ -193,6 +223,21 @@ function localStaticPoolResult(
   };
 }
 
+function resolveDefaultRetrievalCommand() {
+  const candidates = [
+    resolve(process.cwd(), THUMBNAIL_RETRIEVAL_DEFAULT_COMMAND),
+    resolve(process.cwd(), '../../', THUMBNAIL_RETRIEVAL_DEFAULT_COMMAND),
+  ];
+  return candidates.find((candidate) => existsSync(candidate)) ?? null;
+}
+
+function resolveRetrievalCommand(env: ThumbnailRetrievalEnv) {
+  const configured = env[THUMBNAIL_RETRIEVAL_COMMAND_ENV]?.trim();
+  if (configured) return configured;
+  if (env.THUMBNAIL_RETRIEVAL_DEFAULT_ADAPTER_DISABLED === '1') return '';
+  return resolveDefaultRetrievalCommand() ?? '';
+}
+
 function sanitizeFallbackReason(value: unknown): ThumbnailRetrievalFallbackReason {
   return value === 'missing_dependency'
     || value === 'missing_supabase_env'
@@ -246,13 +291,22 @@ function sanitizeCommandResult(parsed: unknown, startedAt: number): ThumbnailRet
   const diagnosticsRecord = record.diagnostics && typeof record.diagnostics === 'object' && !Array.isArray(record.diagnostics)
     ? record.diagnostics as Record<string, unknown>
     : {};
-  const usedEmbedding = diagnosticsRecord.usedModels && typeof diagnosticsRecord.usedModels === 'object'
-    && (diagnosticsRecord.usedModels as Record<string, unknown>).embedding === 'BAAI/bge-m3';
-  const usedReranker = diagnosticsRecord.usedModels && typeof diagnosticsRecord.usedModels === 'object'
-    && (diagnosticsRecord.usedModels as Record<string, unknown>).reranker === 'BAAI/bge-reranker-v2-m3';
+  const rawUsedModels = diagnosticsRecord.usedModels && typeof diagnosticsRecord.usedModels === 'object'
+    ? diagnosticsRecord.usedModels as Record<string, unknown>
+    : {};
+  const usedEmbedding = rawUsedModels.embedding === 'BAAI/bge-m3'
+    || rawUsedModels.embedding === 'local-char-ngram-v1';
+  const usedReranker = rawUsedModels.reranker === 'BAAI/bge-reranker-v2-m3'
+    || rawUsedModels.reranker === 'local-lexical-reranker-v1';
   const operations = diagnosticsRecord.operations && typeof diagnosticsRecord.operations === 'object'
     ? diagnosticsRecord.operations as Record<string, unknown>
     : {};
+  const embeddingModel = usedEmbedding
+    ? rawUsedModels.embedding as NonNullable<ThumbnailRetrievalDiagnostics['usedModels']>['embedding']
+    : undefined;
+  const rerankerModel = usedReranker
+    ? rawUsedModels.reranker as NonNullable<ThumbnailRetrievalDiagnostics['usedModels']>['reranker']
+    : undefined;
 
   const diagnostics: ThumbnailRetrievalDiagnostics = {
     status: evidence.length ? 'used' : 'fallback',
@@ -260,8 +314,8 @@ function sanitizeCommandResult(parsed: unknown, startedAt: number): ThumbnailRet
     selectedReferenceIds: evidence.map((item) => item.id),
     fallbackReason: evidence.length ? undefined : sanitizeFallbackReason(diagnosticsRecord.fallbackReason),
     usedModels: {
-      ...(usedEmbedding ? { embedding: 'BAAI/bge-m3' as const } : {}),
-      ...(usedReranker ? { reranker: 'BAAI/bge-reranker-v2-m3' as const } : {}),
+      ...(embeddingModel ? { embedding: embeddingModel } : {}),
+      ...(rerankerModel ? { reranker: rerankerModel } : {}),
     },
     operations: {
       ...(operations.supabaseRpc === 'match_documents_hybrid' ? { supabaseRpc: 'match_documents_hybrid' as const } : {}),
@@ -269,6 +323,8 @@ function sanitizeCommandResult(parsed: unknown, startedAt: number): ThumbnailRet
       mmrApplied: operations.mmrApplied === true,
       rerankerApplied: operations.rerankerApplied === true,
       captionEnrichmentApplied: operations.captionEnrichmentApplied === true,
+      localVectorSearch: operations.localVectorSearch === true,
+      lexicalRerank: operations.lexicalRerank === true,
     },
     commandRuntime: 'python_retrieval_adapter',
     elapsedMs: nowMs() - startedAt,
@@ -281,14 +337,14 @@ async function runRetrievalCommand(
   env: ThumbnailRetrievalEnv,
   startedAt: number,
 ): Promise<ThumbnailRetrievalResult | { fallbackReason: ThumbnailRetrievalFallbackReason } | null> {
-  const command = env[THUMBNAIL_RETRIEVAL_COMMAND_ENV]?.trim();
+  const command = resolveRetrievalCommand(env);
   if (!command) return null;
   const timeout = Math.max(1_000, Math.min(
     Number(env[THUMBNAIL_RETRIEVAL_TIMEOUT_MS_ENV]) || THUMBNAIL_RETRIEVAL_COMMAND_TIMEOUT_MS,
     30_000,
   ));
   const input = JSON.stringify({
-    query: `${payload.topic}\n${payload.headline}\n${payload.subHeadline ?? ''}`,
+    query: buildRetrievalQuery(payload),
     topic: payload.topic,
     headline: payload.headline,
     subHeadline: payload.subHeadline,

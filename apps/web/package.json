@@ -25,7 +25,8 @@
     "bench:compare": "node scripts/compare-dev-route-reports.mjs",
     "dev:thumbnail-ready": "node scripts/dev-thumbnail-ready.mjs",
     "storyboard:image-proof": "python3 scripts/codex-imagegen-storyboard-provider.py --prove --proof-file .omx/artifacts/gpt-image-2-provenance/latest-verified.json --output-dir .omx/artifacts/gpt-image-2-provenance/latest-proof",
-    "thumbnail:release-certify": "node scripts/thumbnail-release-readback-certification.mjs"
+    "thumbnail:release-certify": "node scripts/thumbnail-release-readback-certification.mjs",
+    "storyboard:quality-loop": "node scripts/storyboard-quality-loop.mjs"
   },
   "dependencies": {
     "@ffmpeg/ffmpeg": "^0.12.15",

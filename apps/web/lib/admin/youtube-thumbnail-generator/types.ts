@@ -95,8 +95,8 @@ export type ThumbnailRetrievalDiagnostics = {
   selectedReferenceIds: string[];
   fallbackReason?: ThumbnailRetrievalFallbackReason;
   usedModels?: {
-    embedding?: 'BAAI/bge-m3';
-    reranker?: 'BAAI/bge-reranker-v2-m3';
+    embedding?: 'BAAI/bge-m3' | 'local-char-ngram-v1';
+    reranker?: 'BAAI/bge-reranker-v2-m3' | 'local-lexical-reranker-v1';
   };
   operations?: {
     supabaseRpc?: 'match_documents_hybrid';
@@ -104,6 +104,8 @@ export type ThumbnailRetrievalDiagnostics = {
     mmrApplied?: boolean;
     rerankerApplied?: boolean;
     captionEnrichmentApplied?: boolean;
+    localVectorSearch?: boolean;
+    lexicalRerank?: boolean;
   };
   commandRuntime?: 'python_retrieval_adapter' | 'local_static_pool' | 'none';
   elapsedMs?: number;

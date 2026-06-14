@@ -206,6 +206,10 @@ function createEmptyResult({ outputPath, baseUrl, supabaseUrl }) {
       admin_context_fingerprint: null,
       reader_context_fingerprint: null,
       same_release_id: false,
+      admin_asset_proxy_status: null,
+      reader_asset_proxy_status: null,
+      admin_asset_content_type: null,
+      reader_asset_content_type: null,
       screenshots: [],
     },
     raw_path_leak_check: {
@@ -227,6 +231,7 @@ function createEmptyResult({ outputPath, baseUrl, supabaseUrl }) {
       final_release_id: null,
       final_candidate_id: null,
       proxy_status: null,
+      reader_proxy_status: null,
       no_leak_scan_status: 'not_run',
       redacted_env_input_summary_recorded: false,
     },
@@ -291,6 +296,8 @@ async function runLocalSmoke(result) {
     assertContains(certificationScript, "hosted_certification_pass_requires_two_context_evidence", 'scripts/thumbnail-release-readback-certification.mjs', checks),
     assertContains(certificationScript, "hosted_reader_cookie_required", 'scripts/thumbnail-release-readback-certification.mjs', checks),
     assertContains(certificationScript, "hosted_reader_context_must_be_distinct", 'scripts/thumbnail-release-readback-certification.mjs', checks),
+    assertContains(certificationScript, "reader_asset_readback_not_proven", 'scripts/thumbnail-release-readback-certification.mjs', checks),
+    assertContains(certificationScript, "reader_asset_proxy_status", 'scripts/thumbnail-release-readback-certification.mjs', checks),
     assertContains(certificationScript, "operator_score_required_for_operator_ready", 'scripts/thumbnail-release-readback-certification.mjs', checks),
     assertContains(certificationScript, "OPERATOR_SCORE_WEIGHTS", 'scripts/thumbnail-release-readback-certification.mjs', checks),
     assertContains(migration, "public = false", files.migration, checks),
@@ -299,8 +306,12 @@ async function runLocalSmoke(result) {
     assertContains(currentRoute, "payload.status === 'unavailable'", files.currentRoute, checks),
     assertContains(publishRoute, "payload.status === 'unavailable'", files.publishRoute, checks),
     assertContains(assetRoute, "private, no-store", files.assetRoute, checks),
-    assertContains(component, 'payload?.status !== "unavailable"', files.component, checks),
-    assertContains(component, 'payload?.status === "unavailable"', files.component, checks),
+    assertContains(component, 'THUMBNAIL_DURABLE_RELEASE_CURRENT_API_URL', files.component, checks),
+    assertContains(component, 'THUMBNAIL_RELEASE_CANDIDATES_API_URL', files.component, checks),
+    assertContains(component, 'selectAutomaticReleaseCandidate', files.component, checks),
+    assertContains(component, 'type ThumbnailDurableReleaseLoadResult', files.component, checks),
+    assertContains(component, 'data-thumbnail-initial-preview-source', files.component, checks),
+    assertContains(component, 'return pool[0] ?? null', files.component, checks),
   ].every(Boolean)
 
   result.local_smoke.source_contracts_checked = checks
@@ -337,6 +348,38 @@ async function fetchJson(baseUrl, path, options = {}) {
   let body = null
   try { body = JSON.parse(text) } catch { body = text }
   return { status: response.status, ok: response.ok, body, headers: Object.fromEntries(response.headers.entries()) }
+}
+
+function stringifyFetchError(error) {
+  return error instanceof Error ? `${error.name}: ${error.message}` : String(error)
+}
+
+async function safeFetchJson(baseUrl, path, options = {}) {
+  try {
+    return await fetchJson(baseUrl, path, options)
+  } catch (error) {
+    return { status: 0, ok: false, body: { error: stringifyFetchError(error) }, headers: {} }
+  }
+}
+
+function createFailedAssetResponse(error) {
+  return {
+    status: 0,
+    ok: false,
+    error: stringifyFetchError(error),
+    headers: {
+      get: () => '',
+      entries: function* entries() {},
+    },
+  }
+}
+
+async function safeFetchAsset(url, options = {}) {
+  try {
+    return await fetchWithTimeout(url, options)
+  } catch (error) {
+    return createFailedAssetResponse(error)
+  }
 }
 
 function hasForbiddenLeak(value) {
@@ -457,35 +500,49 @@ async function runHostedReadback(result, { baseUrl, cookie, readerCookie, candid
   result.release.release_id = release?.id ?? null
   result.release.sha256 = release?.sha256 ?? null
 
-  const current = await fetchJson(baseUrl, '/api/admin/youtube-thumbnail-generator/releases/current', { headers: createHeaders(cookie) })
-  const reader = await fetchJson(baseUrl, '/api/admin/youtube-thumbnail-generator/releases/current', { headers: createHeaders(readerCookie) })
+  const current = await safeFetchJson(baseUrl, '/api/admin/youtube-thumbnail-generator/releases/current', { headers: createHeaders(cookie) })
+  const reader = await safeFetchJson(baseUrl, '/api/admin/youtube-thumbnail-generator/releases/current', { headers: createHeaders(readerCookie) })
   const assetPath = release?.browserImagePath
-  const asset = assetPath ? await fetchWithTimeout(`${baseUrl}${assetPath}`, { headers: createHeaders(cookie) }) : null
+  const adminAsset = assetPath ? await safeFetchAsset(`${baseUrl}${assetPath}`, { headers: createHeaders(cookie) }) : null
+  const readerAsset = assetPath ? await safeFetchAsset(`${baseUrl}${assetPath}`, { headers: createHeaders(readerCookie) }) : null
+  const adminAssetContentType = adminAsset?.headers.get('content-type') || ''
+  const readerAssetContentType = readerAsset?.headers.get('content-type') || ''
+  const adminAssetIsPng = adminAsset?.status === 200 && /^image\/png\b/i.test(adminAssetContentType)
+  const readerAssetIsPng = readerAsset?.status === 200 && /^image\/png\b/i.test(readerAssetContentType)
 
   result.raw_path_leak_check.checked_surfaces.push(
     { name: 'publish', status: publish.status },
     { name: 'current', status: current.status },
     { name: 'reader_current', status: reader.status },
+    { name: 'admin_asset_proxy', status: adminAsset?.status ?? null },
+    { name: 'reader_asset_proxy', status: readerAsset?.status ?? null },
   )
   const leaks = [...hasForbiddenLeak(publish.body), ...hasForbiddenLeak(current.body), ...hasForbiddenLeak(reader.body)]
   result.raw_path_leak_check.passed = leaks.length === 0
   if (leaks.length) result.blockers.push('raw_path_leak:forbidden_browser_visible_metadata')
 
-  result.release.proxy_status = asset?.status ?? null
+  result.release.proxy_status = adminAsset?.status ?? null
   result.observability.proxy_status = result.release.proxy_status
+  result.observability.reader_proxy_status = readerAsset?.status ?? null
+  result.two_context_evidence.admin_asset_proxy_status = adminAsset?.status ?? null
+  result.two_context_evidence.reader_asset_proxy_status = readerAsset?.status ?? null
+  result.two_context_evidence.admin_asset_content_type = adminAssetContentType ? adminAssetContentType.split(';')[0].toLowerCase() : null
+  result.two_context_evidence.reader_asset_content_type = readerAssetContentType ? readerAssetContentType.split(';')[0].toLowerCase() : null
   result.two_context_evidence.reader_context = reader.ok ? 'passed' : 'failed'
   result.two_context_evidence.same_release_id = Boolean(
     release?.id &&
     current.body?.release?.id === release.id &&
     reader.body?.release?.id === release.id,
   )
+  if (!adminAssetIsPng) result.blockers.push('admin_asset_readback_not_proven')
+  if (!readerAssetIsPng) result.blockers.push('reader_asset_readback_not_proven')
 
   result.hosted_readback_status = (
     publish.ok &&
     current.ok &&
     reader.ok &&
-    asset?.status === 200 &&
-    /^image\/png\b/i.test(asset.headers.get('content-type') || '') &&
+    adminAssetIsPng &&
+    readerAssetIsPng &&
     result.two_context_evidence.same_release_id &&
     result.raw_path_leak_check.passed
   ) ? 'passed' : 'failed'

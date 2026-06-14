@@ -3,6 +3,8 @@ import { describe, expect, test } from 'bun:test';
 import {
   getOmittedStoryboardSceneCount,
   getStoryboardImageGenerationTargetScenes,
+  getStoryboardScenePageCount,
+  getStoryboardSourcePageScenes,
   getStoryboardTrustedScenePageCount,
   getVisibleTrustedStoryboardPageScenes,
   getVisibleTrustedStoryboardScenes,
@@ -58,6 +60,32 @@ const trustedImage = (sceneNo: number): StoryboardScene['generatedImage'] => ({
 });
 
 describe('storyboard visible trusted scenes', () => {
+  test('keeps text-only storyboard cuts available for the canvas source pages', () => {
+    const scenes = [1, 2, 3, 4, 5, 6, 7, 8].map(baseScene);
+
+    expect(getVisibleTrustedStoryboardScenes(scenes)).toEqual([]);
+    expect(
+      getStoryboardSourcePageScenes({
+        allScenes: scenes,
+        page: 0,
+        pageSize: 4,
+      }).map((scene) => scene.sceneNo),
+    ).toEqual([1, 2, 3, 4]);
+    expect(
+      getStoryboardSourcePageScenes({
+        allScenes: scenes,
+        page: 1,
+        pageSize: 4,
+      }).map((scene) => scene.sceneNo),
+    ).toEqual([5, 6, 7, 8]);
+    expect(
+      getStoryboardScenePageCount({
+        allScenes: scenes,
+        pageSize: 4,
+      }),
+    ).toBe(2);
+  });
+
   test('omits a fifth no-image scene without creating a phantom visible CUT', () => {
     const scenes = [1, 2, 3, 4, 5].map(baseScene).map((scene) =>
       scene.sceneNo <= 4
@@ -86,7 +114,7 @@ describe('storyboard visible trusted scenes', () => {
     expect(Math.ceil(visibleScenes.length / 4)).toBe(2);
   });
 
-  test('does not use a raw fallback slice for later empty visible pages', () => {
+  test('targets later source pages even when their images are still missing', () => {
     const scenes = [1, 2, 3, 4, 5].map(baseScene).map((scene) =>
       scene.sceneNo <= 4
         ? { ...scene, generatedImage: trustedImage(scene.sceneNo) }
@@ -100,8 +128,8 @@ describe('storyboard visible trusted scenes', () => {
         visibleScenes,
         page: 1,
         pageSize: 4,
-      }),
-    ).toEqual([]);
+      }).map((scene) => scene.sceneNo),
+    ).toEqual([5]);
     expect(
       getStoryboardImageGenerationTargetScenes({
         allScenes: scenes,
