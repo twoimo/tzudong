@@ -13,7 +13,7 @@ type StoryboardRouteContext = {
 
 export async function GET(_request: NextRequest, _context: StoryboardRouteContext) {
   try {
-    const auth = await requireAdmin();
+    const auth = await requireAdmin({ allowDevAdminBypassCookie: true });
     if (!auth.ok) return auth.response;
 
     const {
@@ -48,7 +48,7 @@ export async function GET(_request: NextRequest, _context: StoryboardRouteContex
 
 export async function POST(request: NextRequest) {
   try {
-    const auth = await requireAdmin();
+    const auth = await requireAdmin({ allowDevAdminBypassCookie: true });
     if (!auth.ok) return auth.response;
 
     const body = await request.json().catch(() => null) as Record<string, unknown> | null;

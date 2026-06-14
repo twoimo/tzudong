@@ -116,7 +116,25 @@ describe("admin youtube thumbnail history", () => {
           { timestamp: "failed", completedAt: "failed", status: "failed", providerId: "local-codex", imagePath: "./ok.png" },
           { timestamp: "bad-provider", completedAt: "bad-provider", status: "passed", providerId: "mock", imagePath: "./ok.png" },
           { timestamp: "bad-path", completedAt: "bad-path", status: "passed", providerId: "local-codex", imagePath: "https://example.com/x.png" },
-          { timestamp: "good", completedAt: "good", status: "passed", providerId: "local-codex", model: "gpt-image-2", modelProvenance: "exact", generationMode: "direct_provider", imagePath: "./ok.png", headline: "역대급 먹방" },
+          {
+            timestamp: "good",
+            completedAt: "good",
+            status: "passed",
+            providerId: "local-codex",
+            model: "gpt-image-2",
+            modelProvenance: "exact",
+            generationMode: "direct_provider",
+            imagePath: "./ok.png",
+            headline: "역대급 먹방",
+            retrieval: {
+              status: "used",
+              candidateCount: 4,
+              selectedReferenceIds: ["ref-a", "ref-b"],
+              usedModels: { embedding: "local-char-ngram-v1", reranker: "local-lexical-reranker-v1" },
+              operations: { rerankerApplied: true },
+              commandRuntime: "local-python",
+            },
+          },
         ],
       }));
 
@@ -128,6 +146,14 @@ describe("admin youtube thumbnail history", () => {
         model: "gpt-image-2",
         modelProvenance: "exact",
         imagePath: `${THUMBNAIL_HISTORY_PUBLIC_IMAGE_BASE_URL}/ok.png`,
+        retrieval: {
+          status: "used",
+          candidateCount: 4,
+          selectedReferenceIds: ["ref-a", "ref-b"],
+          usedModels: { embedding: "local-char-ngram-v1", reranker: "local-lexical-reranker-v1" },
+          operations: { rerankerApplied: true },
+          commandRuntime: "local-python",
+        },
       });
       expect(history.runs[0]).not.toHaveProperty("mockUsed");
 
@@ -145,13 +171,18 @@ describe("admin youtube thumbnail history", () => {
     const historyRoot = tempDir("thumbnail-history-write-");
     const imageRoot = tempDir("thumbnail-history-images-");
     try {
-      const disabled = await persistLocalThumbnailHistory(result, payload, { NODE_ENV: "development" }, { historyRoot, publicImageRoot: imageRoot });
+      const disabled = await persistLocalThumbnailHistory(
+        result,
+        payload,
+        { NODE_ENV: "development", THUMBNAIL_LOCAL_HISTORY_WRITE: "0" },
+        { historyRoot, publicImageRoot: imageRoot },
+      );
       expect(disabled).toEqual({ persisted: false, reason: "disabled" });
 
       const persisted = await persistLocalThumbnailHistory(
         result,
         payload,
-        { NODE_ENV: "development", THUMBNAIL_LOCAL_HISTORY_WRITE: "1" },
+        { NODE_ENV: "development" },
         { historyRoot, publicImageRoot: imageRoot, now: new Date("2026-06-05T09:10:00.000Z"), runId: "run-001" },
       );
       expect(persisted.persisted).toBe(true);

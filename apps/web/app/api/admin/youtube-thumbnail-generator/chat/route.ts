@@ -79,13 +79,13 @@ export async function POST(request: NextRequest) {
         send('stream_timeout', {
           stage: 'aborted',
           chatRunId,
-          message: '채팅 스트림이 중단되었습니다. 백엔드 에이전트 작업 취소는 클라이언트 요청 종료 기준으로 처리됩니다.',
+          message: '채팅 작업을 멈췄습니다. 진행 중이던 요청도 함께 취소했습니다.',
           elapsedMs: Date.now() - startedAt,
         });
         send('error', {
           error: 'thumbnail_chat_aborted',
           chatRunId,
-          detail: '채팅 스트림이 중단되었습니다.',
+          detail: '채팅 작업이 중단되었습니다.',
           status: 499,
         });
         close();
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
       request.signal.addEventListener('abort', sendAbort, { once: true });
       try {
         send('status', {
-          message: 'Codex CLI gpt-5.5 high 백엔드 에이전트가 채팅 작업을 해석합니다.',
+          message: '요청을 읽고 어떤 썸네일을 만들지 정리하고 있어요.',
           runtime: 'codex_cli_oauth',
           model: 'gpt-5.5',
           effort: 'high',
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
         send('agent_started', {
           stage: 'agent_started',
           chatRunId,
-          message: '백엔드 에이전트 스트림을 시작했습니다.',
+          message: '작업을 시작했습니다.',
           model: 'gpt-5.5',
           effort: 'high',
         });
@@ -111,11 +111,11 @@ export async function POST(request: NextRequest) {
           send('heartbeat', {
             stage: 'agent_running',
             chatRunId,
-            message: '백엔드 에이전트가 캔버스 반영안을 계산 중입니다.',
+            message: '캔버스에 넣을 문구와 배치를 정리하고 있어요.',
             elapsedMs: Date.now() - startedAt,
           });
         }, 1500);
-        send('status', { chatRunId, message: '캔버스 문구/레이아웃/생성 의도를 계획 중입니다.' });
+        send('status', { chatRunId, message: '문구, 위치, 이미지 생성 여부를 쉽게 정리하고 있어요.' });
         if (request.signal.aborted) {
           sendAbort();
           return;
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
         send('agent_done', {
           stage: 'agent_done',
           chatRunId,
-          message: '백엔드 에이전트 작업이 완료되었습니다.',
+          message: '요청 정리가 끝났습니다.',
           shouldGenerate: result.shouldGenerate,
           shouldReset: result.shouldReset,
           elapsedMs: Date.now() - startedAt,

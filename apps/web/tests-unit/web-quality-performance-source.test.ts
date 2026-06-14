@@ -2577,9 +2577,10 @@ describe("web quality performance source contracts", () => {
     );
     expect(resetPasswordSource).toContain("홈으로 돌아가기");
     expect(authRequiredSource).toContain("로그인이 필요합니다");
-    expect(authRequiredSource).toContain(
+    expect(authRequiredSource).not.toContain(
       "관리자 콘솔은 관리자 계정으로 로그인한 뒤 사용할 수 있습니다.",
     );
+    expect(authRequiredSource).toContain("buildHomeAuthLoginPath");
     expect(authRequiredSource).toContain(
       "마이페이지는 로그인한 뒤 사용할 수 있습니다.",
     );
@@ -2590,8 +2591,10 @@ describe("web quality performance source contracts", () => {
       "redirectUrl.searchParams.set('reason', reason)",
     );
     expect(middlewareSource).toContain(
-      "redirectAuthRequiredWithSessionCookies(request, sourceResponse, 'admin')",
+      "redirectAdminLoginWithSessionCookies",
     );
+    expect(middlewareSource).toContain("AUTH_LOGIN_QUERY_VALUE");
+    expect(middlewareSource).toContain("redirectAdminHomeWithSessionCookies");
     expect(middlewareSource).toContain("const isMyPageRequest");
     expect(middlewareSource).toContain(
       "pathname === '/mypage' || pathname.startsWith('/mypage/')",
@@ -2647,6 +2650,7 @@ describe("web quality performance source contracts", () => {
     const naverGeocodeSource = source("app/api/naver-geocode/route.ts");
     const youtubeMetaSource = source("app/api/youtube-meta/route.ts");
     const authCallbackSource = source("app/auth/callback/route.ts");
+    const authRedirectSource = source("lib/auth/auth-redirect.ts");
     const shortenSource = source("app/api/shorten/route.ts");
     const shortRedirectSource = source("app/s/[code]/page.tsx");
 
@@ -2700,9 +2704,10 @@ describe("web quality performance source contracts", () => {
     );
     expect(shortRedirectSource).toContain("redirect('/');");
     expect(authCallbackSource).toContain("function getTrustedRedirectOrigin");
-    expect(authCallbackSource).toContain("function getSafeNextPath");
-    expect(authCallbackSource).toContain("next.startsWith('//')");
-    expect(authCallbackSource).toContain("safePathPattern");
+    expect(authCallbackSource).toContain("getSafeAuthNextPath(searchParams.get('next'))");
+    expect(authRedirectSource).toContain("export function getSafeAuthNextPath");
+    expect(authRedirectSource).toContain("next.startsWith('//')");
+    expect(authRedirectSource).toContain("SAFE_AUTH_NEXT_PATH_PATTERN");
     expect(authCallbackSource).not.toContain("if (!next.startsWith('/'))");
     expect(authCallbackSource).toContain("DEFAULT_PRODUCTION_REDIRECT_ORIGIN");
     expect(authCallbackSource).toContain("https://www.tzudong.app");
