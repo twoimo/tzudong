@@ -358,13 +358,109 @@ function trimForPrompt(value: string, maxLength: number) {
   return trimmed.length > maxLength ? `${trimmed.slice(0, maxLength - 1)}…` : trimmed;
 }
 
+type StoryboardVisualRoleContract = {
+  label: string;
+  mustShow: string;
+  mustAvoid: string;
+  cameraAndAction: string;
+};
+
+const STORYBOARD_VISUAL_ROLE_CONTRACTS: StoryboardVisualRoleContract[] = [
+  {
+    label: 'storefront intro / outside arrival',
+    mustShow: 'restaurant exterior arrival, doorway or street atmosphere, cropped hand or back-of-head silhouette only, food teaser as a small secondary detail',
+    mustAvoid: 'do not show eating action, noodle lift, full table hero composition, or interior detail-only shot yet',
+    cameraAndAction: 'wide establishing shot from outside, calm arrival action',
+  },
+  {
+    label: 'ordering and menu context setup',
+    mustShow: 'ordering moment, cropped hand pointing near a menu-like object, ingredient hints, table not fully filled yet',
+    mustAvoid: 'no readable menu text, no finished feast, no bite reaction, no empty bowls',
+    cameraAndAction: 'medium planning shot focused on hands and ordering context',
+  },
+  {
+    label: 'kitchen prep / sizzle anticipation',
+    mustShow: 'steam, sizzling pan, boiling broth, prep hands, cooking texture before serving',
+    mustAvoid: 'no table-wide feast, no host reaction, no finished empty bowls, no storefront exterior',
+    cameraAndAction: 'medium prep shot with motion from steam or cooking tools',
+  },
+  {
+    label: 'full table arrival reveal',
+    mustShow: 'entire spread arriving on the table, main dish plus side dishes and sauces visible at once',
+    mustAvoid: 'no single bite close-up, no drink break, no outro street shot',
+    cameraAndAction: 'wide overhead or three-quarter table reveal',
+  },
+  {
+    label: 'first bite reaction without face detail',
+    mustShow: 'first bite being lifted by chopsticks or spoon, cropped hands, food near frame edge, implied reaction without face',
+    mustAvoid: 'no recognizable face, no repeated full-table layout, no empty bowls',
+    cameraAndAction: 'tight food-and-hands shot at the decisive first bite moment',
+  },
+  {
+    label: 'texture / ASMR macro detail',
+    mustShow: 'macro texture, noodle stretch or crispy surface or broth ripple, microphone-like object or utensil detail if natural',
+    mustAvoid: 'no storefront, no wide table, no note-taking, no final evaluation pose',
+    cameraAndAction: 'extreme close-up with sensory texture as the focal point',
+  },
+  {
+    label: 'sauce / side combination change',
+    mustShow: 'sauce dip, side dish added on top, before-and-after combination implied in one coherent frame',
+    mustAvoid: 'no full table hero shot, no first bite duplicate, no drink reset',
+    cameraAndAction: 'medium shot of hands changing the flavor combination',
+  },
+  {
+    label: 'pacing reset / drink / palate cleanser',
+    mustShow: 'drink glass, water bottle, chopsticks resting, small pause between eating beats',
+    mustAvoid: 'no dramatic food lift, no cooking action, no hero feast, no outro exterior',
+    cameraAndAction: 'quiet medium shot with negative space and a resting rhythm',
+  },
+  {
+    label: 'peak feast / hero table composition',
+    mustShow: 'largest feast moment, abundant table, strongest food hero shape, steam and glossy highlights',
+    mustAvoid: 'no storefront, no empty bowls, no note-taking detail-only shot, no drink-only frame',
+    cameraAndAction: 'dynamic wide hero shot built for a thumbnail-like climax',
+  },
+  {
+    label: 'almost finished / empty bowls satisfaction',
+    mustShow: 'nearly empty bowls, sauce traces, finished plates, utensils resting after the meal',
+    mustAvoid: 'no fresh full-table reveal, no raw prep, no first bite, no menu ordering',
+    cameraAndAction: 'calm post-meal table shot showing completion evidence',
+  },
+  {
+    label: 'final taste evaluation / note-taking',
+    mustShow: 'cropped hand writing notes or rating thoughts beside one representative dish remnant',
+    mustAvoid: 'no readable text, no host face, no cooking steam action, no storefront wide shot',
+    cameraAndAction: 'medium evaluation shot with notebook-like prop but no legible writing',
+  },
+  {
+    label: 'next episode prompt / outro exterior',
+    mustShow: 'leaving the restaurant area, outside mood, next-food hint as a small object or silhouette',
+    mustAvoid: 'no eating action, no full feast, no macro texture, no note-taking table',
+    cameraAndAction: 'wide outro shot from behind or outside, forward-looking exit beat',
+  },
+];
+
+function getStoryboardVisualRoleContract(scene: StoryboardScene) {
+  const safeSceneNo = Number.isFinite(scene.sceneNo) ? Math.trunc(scene.sceneNo) : 1;
+  return STORYBOARD_VISUAL_ROLE_CONTRACTS[
+    ((Math.max(1, safeSceneNo) - 1) % STORYBOARD_VISUAL_ROLE_CONTRACTS.length)
+  ];
+}
+
 export function buildStoryboardSceneImagePrompt(scene: StoryboardScene, context: StoryboardImageContext) {
+  const visualRole = getStoryboardVisualRoleContract(scene);
   return [
     'Create exactly one full-bleed 16:9 single-scene storyboard cut image for a Korean food-travel / mukbang planning board.',
     'Composition contract: the entire image must be one continuous scene filling the full canvas edge-to-edge. This image will be placed into an external 2x2 grid by the web UI; never draw that grid inside the image.',
     'Hard negatives: no storyboard sheet, no comic page, no multi-panel layout, no split-screen, no inset panels, no thumbnail contact sheet, no wireframe boxes, no internal borders, no crop marks, no frame guides, no blank quadrants, no placeholder rectangles, and no X-mark empty panels.',
     'Style: cinematic hand-drawn food-storyboard keyframe, clean black pencil lines, subtle warm food-color accents, strong single focal point, no UI chrome.',
     'Safety: do not recreate a real person likeness; no recognizable face, no face close-up, no host face at all, and no detailed eyes/nose/mouth. Keep all human faces outside the frame; if a person is implied, keep any face outside frame. Show human presence only through cropped hands, chopsticks, food, over-shoulder silhouette, back-of-head silhouette, or cropped body parts without facial detail. No logos, watermarks, readable brand names, URLs, prices, or final typography.',
+    `Visual role contract: CUT ${String(scene.sceneNo).padStart(2, '0')} is "${visualRole.label}".`,
+    `Must show for this CUT: ${visualRole.mustShow}.`,
+    `Camera/action contract for this CUT: ${visualRole.cameraAndAction}.`,
+    `Must avoid for this CUT: ${visualRole.mustAvoid}.`,
+    'Neighbor difference rule: adjacent CUTs must not reuse the same camera distance, food action, subject emphasis, or pacing beat.',
+    'Sequence diversity rule: do not default to repeated food-only or noodle-lift shots; use a lifted noodle/bite only when the role explicitly needs first-bite, ASMR texture, or peak-feast emphasis, and keep surrounding context visible.',
     `Storyboard title: ${trimForPrompt(context.title, 120)}`,
     `Overall logline: ${trimForPrompt(context.logline, 180)}`,
     `User brief: ${trimForPrompt(context.request.prompt, 220)}`,

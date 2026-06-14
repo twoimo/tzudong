@@ -1,6 +1,11 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
+import {
+    buildHomeAuthLoginPath,
+    getSafeAuthNextPath,
+} from '@/lib/auth/auth-redirect';
 
 type AuthRequiredPageProps = {
     searchParams: Promise<{
@@ -13,7 +18,11 @@ export default async function AuthRequiredPage({ searchParams }: AuthRequiredPag
     const params = await searchParams;
     const isAdminReason = params.reason === 'admin';
     const isMyPageReason = params.reason === 'mypage';
-    const nextPath = params.next?.startsWith('/') ? params.next : '/';
+    const nextPath = getSafeAuthNextPath(params.next);
+
+    if (isAdminReason) {
+        redirect(buildHomeAuthLoginPath({ reason: 'admin', next: nextPath }));
+    }
 
     return (
         <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-muted/30 px-4 py-10">
@@ -23,10 +32,8 @@ export default async function AuthRequiredPage({ searchParams }: AuthRequiredPag
                 </div>
                 <h1 className="text-xl font-bold text-foreground">로그인이 필요합니다</h1>
                 <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                    {isAdminReason
-                        ? '관리자 콘솔은 관리자 계정으로 로그인한 뒤 사용할 수 있습니다.'
-                        : isMyPageReason
-                            ? '마이페이지는 로그인한 뒤 사용할 수 있습니다.'
+                    {isMyPageReason
+                        ? '마이페이지는 로그인한 뒤 사용할 수 있습니다.'
                         : '요청한 페이지는 로그인 후 사용할 수 있습니다.'}
                 </p>
                 <p className="mt-2 text-xs text-muted-foreground">

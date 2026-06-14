@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 function Skeleton({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("animate-pulse rounded-md bg-muted/40 motion-reduce:animate-none", className)}
+      className={cn("rounded-md bg-muted/40", className)}
       style={{ contain: 'layout style paint' }}
       {...props}
     />

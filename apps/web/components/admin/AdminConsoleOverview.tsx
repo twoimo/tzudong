@@ -643,6 +643,7 @@ const AdminStoryboardGenerator = dynamic(
     ),
   {
     ssr: false,
+    loading: () => <AdminStoryboardModuleLoadingSkeleton />,
   },
 );
 
@@ -654,6 +655,7 @@ const AdminYoutubeThumbnailGenerator = dynamic(
     ),
   {
     ssr: false,
+    loading: () => <AdminYoutubeThumbnailModuleLoadingSkeleton />,
   },
 );
 
@@ -8456,6 +8458,266 @@ function AdminConsoleCanvasSkeleton() {
   );
 }
 
+function AdminStoryboardModuleLoadingSkeleton() {
+  return (
+    <section
+      className="flex h-full min-h-[640px] min-w-0 flex-col overflow-hidden bg-background p-3 md:min-h-0"
+      data-storyboard-module-loading="true"
+      data-storyboard-module-loading-layout="page-shell"
+      role="status"
+      aria-busy="true"
+      aria-label="스토리보드 생성 화면 로딩 중"
+    >
+      <div className="grid h-full min-h-0 grid-cols-1 grid-rows-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-3 overflow-hidden xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] xl:grid-rows-1">
+        <Card
+          className="order-2 flex min-h-0 flex-col overflow-hidden border-0 bg-card/80 shadow-none"
+          aria-label="스토리보드 도우미 로딩"
+          data-storyboard-module-loading-chat="true"
+        >
+          <CardHeader className="shrink-0 space-y-1 p-3 pb-2">
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="flex min-w-0 items-center gap-2 text-base">
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+                  <MessageSquareText className="h-4 w-4" aria-hidden="true" />
+                </span>
+                <span className="min-w-0 truncate">스토리보드 도우미</span>
+              </CardTitle>
+              <Badge
+                variant="outline"
+                className="h-6 shrink-0 rounded-full px-2 text-[10px]"
+              >
+                준비 중
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="flex min-h-0 flex-1 flex-col gap-3 p-3 pt-0">
+            <div className="min-h-0 flex-1 space-y-3 overflow-hidden rounded-2xl border border-border/50 bg-muted/15 p-3">
+              <div className="max-w-[86%] space-y-1">
+                <div className="h-3 w-24 rounded-full bg-muted" />
+                <div className="space-y-2 rounded-2xl rounded-bl-md bg-background px-3 py-3 ring-1 ring-border/60">
+                  <div className="h-3 w-full rounded-full bg-muted" />
+                  <div className="h-3 w-4/5 rounded-full bg-muted" />
+                </div>
+                <div
+                  className="flex gap-1.5 pl-1"
+                  data-storyboard-module-loading-chat-actions="outside-bubble"
+                >
+                  <div className="h-7 w-20 rounded-full border border-border/60 bg-background/80" />
+                  <div className="h-7 w-20 rounded-full bg-primary/15" />
+                </div>
+              </div>
+              <div className="ml-auto max-w-[72%] space-y-1">
+                <div className="ml-auto h-3 w-10 rounded-full bg-primary/20" />
+                <div className="space-y-2 rounded-2xl rounded-br-md bg-primary/10 px-3 py-3">
+                  <div className="h-3 w-48 max-w-full rounded-full bg-primary/20" />
+                  <div className="h-3 w-32 max-w-full rounded-full bg-primary/20" />
+                </div>
+              </div>
+            </div>
+            <div
+              className="flex items-center gap-2 rounded-3xl border border-border/60 bg-background p-2 shadow-sm"
+              data-storyboard-module-loading-composer="true"
+            >
+              <div className="h-7 min-w-0 flex-1 rounded-full bg-muted/70" />
+              <div className="h-9 w-9 shrink-0 rounded-full bg-primary/20" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card
+          className="order-1 flex min-h-0 flex-col overflow-hidden border-0 bg-card/80 shadow-none"
+          aria-label="스토리보드 캔버스 로딩"
+          data-storyboard-module-loading-canvas="true"
+        >
+          <CardHeader className="flex shrink-0 flex-row items-center gap-2 p-2 pb-1">
+            <CardTitle className="flex min-w-0 items-center gap-2 text-sm">
+              <span className="shrink-0 whitespace-nowrap font-semibold">
+                캔버스
+              </span>
+            </CardTitle>
+            <div className="ml-auto flex min-w-0 flex-nowrap items-center gap-1.5 overflow-hidden pb-1">
+              <Badge
+                variant="secondary"
+                className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+              >
+                CUT 01–04 / 04
+              </Badge>
+              <Badge
+                variant="outline"
+                className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+              >
+                이미지 준비 중
+              </Badge>
+              <div className="h-8 w-20 shrink-0 rounded-md border border-input bg-background" />
+              <div className="h-8 w-16 shrink-0 rounded-md border border-input bg-background" />
+              <div className="h-8 w-24 shrink-0 rounded-md bg-primary/10" />
+            </div>
+          </CardHeader>
+          <CardContent className="min-h-0 flex-1 overflow-hidden p-3 pt-0">
+            <div
+              className="relative grid h-full min-h-0 grid-cols-2 grid-rows-2 gap-2"
+              data-storyboard-module-loading-frame-grid="true"
+            >
+              {Array.from({ length: 4 }, (_, index) => {
+                const cutNo = index + 1;
+                return (
+                  <div
+                    key={`storyboard-module-loading-cut-${cutNo}`}
+                    className="relative overflow-hidden rounded-2xl border border-slate-400/35 bg-slate-300/42 shadow-[inset_0_1px_0_rgba(255,255,255,0.42)] dark:border-slate-500/35 dark:bg-slate-700/35"
+                    data-storyboard-module-loading-cut={String(cutNo)}
+                  >
+                    <span
+                      className="absolute inset-0 bg-gradient-to-br from-white/34 via-slate-300/20 to-slate-500/24"
+                      aria-hidden="true"
+                    />
+                    <span
+                      className="absolute left-3 top-3 z-10 h-6 w-16 rounded-full bg-slate-700/55"
+                      aria-hidden="true"
+                    />
+                    <span
+                      className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/68 to-transparent blur-sm [animation:storyboard-glass-shimmer_1.45s_ease-in-out_infinite]"
+                      aria-hidden="true"
+                      data-storyboard-module-loading-shimmer="true"
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      <span className="sr-only">
+        스토리보드 페이지 구조와 CUT별 회색조 스켈레톤을 함께 준비하고
+        있습니다.
+      </span>
+    </section>
+  );
+}
+
+function AdminYoutubeThumbnailModuleLoadingSkeleton() {
+  return (
+    <section
+      className="flex h-full min-h-[640px] min-w-0 flex-col overflow-hidden bg-muted/20 p-3 md:min-h-0"
+      data-thumbnail-module-loading="true"
+      data-thumbnail-module-loading-layout="page-shell"
+      role="status"
+      aria-busy="true"
+      aria-label="유튜브 썸네일 생성 화면 로딩 중"
+    >
+      <div className="grid h-full min-h-0 grid-cols-1 grid-rows-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-3 overflow-hidden xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] xl:grid-rows-1">
+        <Card
+          className="order-1 flex min-h-0 flex-col overflow-hidden border-0 bg-card/80 shadow-none"
+          aria-label="유튜브 썸네일 캔버스 로딩"
+          data-thumbnail-module-loading-canvas="true"
+        >
+          <CardHeader className="flex shrink-0 flex-row items-center gap-2 p-2 pb-1">
+            <CardTitle className="flex min-w-0 items-center gap-2 text-sm">
+              <span className="shrink-0 whitespace-nowrap font-semibold">
+                캔버스 편집 / PNG 내보내기
+              </span>
+            </CardTitle>
+            <div className="ml-auto flex min-w-0 flex-nowrap items-center gap-1.5 overflow-hidden pb-1">
+              <div className="h-8 w-24 shrink-0 rounded-md border border-input bg-background" />
+              <div className="h-8 w-20 shrink-0 rounded-md border border-input bg-background" />
+              <div className="h-8 w-24 shrink-0 rounded-md border border-input bg-background" />
+              <div className="h-8 w-24 shrink-0 rounded-md bg-slate-200/80 dark:bg-slate-700/60" />
+            </div>
+          </CardHeader>
+          <CardContent className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden p-3 pt-0">
+            <div
+              className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-2xl border border-slate-300/70 bg-gradient-to-br from-slate-50/95 via-slate-100/88 to-slate-200/78 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] dark:border-slate-600/60 dark:from-slate-800/68 dark:via-slate-700/56 dark:to-slate-600/48"
+              data-thumbnail-module-loading-canvas-frame="true"
+            >
+              <span
+                className="absolute inset-0 bg-gradient-to-br from-white/42 via-slate-200/22 to-slate-500/18"
+                aria-hidden="true"
+                data-thumbnail-module-loading-canvas-glass="true"
+              />
+              <span
+                className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/68 to-transparent blur-sm [animation:storyboard-glass-shimmer_1.45s_ease-in-out_infinite]"
+                aria-hidden="true"
+                data-thumbnail-module-loading-shimmer="true"
+              />
+            </div>
+            <div
+              className="grid shrink-0 grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-6"
+              data-thumbnail-module-loading-toolbar="true"
+            >
+              {Array.from({ length: 12 }, (_, index) => (
+                <div
+                  key={`thumbnail-module-loading-tool-${index + 1}`}
+                  className="h-8 rounded-lg border border-border/60 bg-background/80"
+                />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card
+          className="order-2 flex min-h-0 flex-col overflow-hidden border-0 bg-card/80 shadow-none"
+          aria-label="유튜브 썸네일 생성 도우미 로딩"
+          data-thumbnail-module-loading-chat="true"
+        >
+          <CardHeader className="shrink-0 space-y-1 p-3 pb-2">
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="flex min-w-0 items-center gap-2 text-base">
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-slate-200/80 text-slate-600 dark:bg-slate-700/60 dark:text-slate-200">
+                  <MessageSquareText className="h-4 w-4" aria-hidden="true" />
+                </span>
+                <span className="min-w-0 truncate">
+                  유튜브 썸네일 생성 도우미
+                </span>
+              </CardTitle>
+              <Badge
+                variant="outline"
+                className="h-6 shrink-0 rounded-full px-2 text-[10px]"
+              >
+                준비 중
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="flex min-h-0 flex-1 flex-col gap-3 p-3 pt-0">
+            <div className="min-h-0 flex-1 space-y-3 overflow-hidden rounded-2xl border border-border/50 bg-muted/15 p-3">
+              <div className="max-w-[86%] space-y-1">
+                <div className="h-3 w-24 rounded-full bg-muted" />
+                <div className="space-y-2 rounded-2xl rounded-bl-md bg-background px-3 py-3 ring-1 ring-border/60">
+                  <div className="h-3 w-full rounded-full bg-muted" />
+                  <div className="h-3 w-4/5 rounded-full bg-muted" />
+                </div>
+                <div
+                  className="flex gap-1.5 pl-1"
+                  data-thumbnail-module-loading-chat-actions="outside-bubble"
+                >
+                  <div className="h-7 w-20 rounded-full border border-border/60 bg-background/80" />
+                  <div className="h-7 w-20 rounded-full bg-slate-200/80 dark:bg-slate-700/60" />
+                </div>
+              </div>
+              <div className="ml-auto max-w-[72%] space-y-1">
+                <div className="ml-auto h-3 w-10 rounded-full bg-slate-300/70 dark:bg-slate-600/70" />
+                <div className="space-y-2 rounded-2xl rounded-br-md bg-slate-200/65 px-3 py-3 dark:bg-slate-700/45">
+                  <div className="h-3 w-48 max-w-full rounded-full bg-slate-300/80 dark:bg-slate-600/75" />
+                  <div className="h-3 w-32 max-w-full rounded-full bg-slate-300/80 dark:bg-slate-600/75" />
+                </div>
+              </div>
+            </div>
+            <div
+              className="flex items-center gap-2 rounded-3xl border border-border/60 bg-background p-2 shadow-sm"
+              data-thumbnail-module-loading-composer="true"
+            >
+              <div className="h-7 min-w-0 flex-1 rounded-full bg-muted/70" />
+              <div className="h-9 w-9 shrink-0 rounded-full bg-slate-200/80 dark:bg-slate-700/60" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      <span className="sr-only">
+        유튜브 썸네일 페이지 구조와 캔버스, 채팅 도우미를 함께 준비하고
+        있습니다.
+      </span>
+    </section>
+  );
+}
+
 export function AdminConsoleOverview() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -8791,6 +9053,10 @@ export function AdminConsoleOverview() {
           {isShellBootstrapping ? (
             activeModuleId === "overview" ? (
               <AdminDashboardManagementSkeleton />
+            ) : activeModuleId === "storyboard" ? (
+              <AdminStoryboardModuleLoadingSkeleton />
+            ) : activeModuleId === "youtube-thumbnail-generator" ? (
+              <AdminYoutubeThumbnailModuleLoadingSkeleton />
             ) : (
               <AdminConsoleCanvasSkeleton />
             )
