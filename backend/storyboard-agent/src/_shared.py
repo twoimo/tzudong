@@ -24,6 +24,45 @@ _reranker = None
 _LOG_PATH = os.path.join(_BASE_DIR, "log.md")
 
 
+def _supports_fp16() -> bool:
+    """Return True only when half precision inference is safe for this host."""
+    try:
+        import torch
+
+        return bool(torch.cuda.is_available())
+    except Exception:
+        return False
+
+
+def _patch_flagembedding_dtype_kwarg() -> None:
+    """Keep FlagEmbedding 1.4.0 compatible with transformers 4.x.
+
+    FlagEmbedding 1.4.0 calls ``AutoModel.from_pretrained(..., dtype=...)``.
+    The transformers 4.x line expects ``torch_dtype`` instead and forwards the
+    unknown ``dtype`` kwarg into XLMRobertaModel, which raises at runtime.
+    Patch the narrow FlagEmbedding runner call-site instead of weakening the
+    storyboard search contract or pretending retrieval succeeded.
+    """
+    try:
+        from FlagEmbedding.finetune.embedder.encoder_only.m3 import runner as m3_runner
+    except Exception:
+        return
+
+    original = m3_runner.AutoModel.from_pretrained
+    if getattr(original, "_tzudong_dtype_compat", False):
+        return
+
+    def compat_from_pretrained(*args, **kwargs):
+        if "dtype" in kwargs:
+            dtype_value = kwargs.pop("dtype")
+            if dtype_value is not None and "torch_dtype" not in kwargs:
+                kwargs["torch_dtype"] = dtype_value
+        return original(*args, **kwargs)
+
+    compat_from_pretrained._tzudong_dtype_compat = True  # type: ignore[attr-defined]
+    m3_runner.AutoModel.from_pretrained = compat_from_pretrained
+
+
 def log_tool_call(tool_name: str, **kwargs) -> None:
     """도구 호출 원문을 log.md에 기록"""
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -48,9 +87,10 @@ def get_bge_model():
     """BGE-M3 모델 싱글톤 반환"""
     global _bge_model
     if _bge_model is None:
+        _patch_flagembedding_dtype_kwarg()
         from FlagEmbedding import BGEM3FlagModel
 
-        _bge_model = BGEM3FlagModel("BAAI/bge-m3", use_fp16=True)
+        _bge_model = BGEM3FlagModel("BAAI/bge-m3", use_fp16=_supports_fp16())
     return _bge_model
 
 
@@ -60,7 +100,7 @@ def get_reranker():
     if _reranker is None:
         from FlagEmbedding import FlagReranker
 
-        _reranker = FlagReranker("BAAI/bge-reranker-v2-m3", use_fp16=True)
+        _reranker = FlagReranker("BAAI/bge-reranker-v2-m3", use_fp16=_supports_fp16())
     return _reranker
 
 

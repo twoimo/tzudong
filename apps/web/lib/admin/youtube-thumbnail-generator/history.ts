@@ -21,7 +21,7 @@ export const THUMBNAIL_HISTORY_DEFAULT_ROOT = '.omx/runtime/youtube-thumbnail-hi
 export const THUMBNAIL_HISTORY_PUBLIC_IMAGE_DIR = 'public/qa-history/youtube-thumbnail-generator/generated';
 export const THUMBNAIL_HISTORY_PUBLIC_IMAGE_BASE_URL = '/qa-history/youtube-thumbnail-generator/generated';
 export const THUMBNAIL_HISTORY_E2E_RUNS_DIR = 'e2e-runs';
-export const THUMBNAIL_HISTORY_BUNDLED_PREVIEW_IMAGE = '/qa-history/youtube-thumbnail-generator/generated/bundled/youtube-thumbnail-food-only-preview.png';
+export const THUMBNAIL_HISTORY_BUNDLED_PREVIEW_IMAGE = '/images/admin/youtube-thumbnail-generated-example-preview.png';
 export const THUMBNAIL_HISTORY_LEGACY_PUBLIC_ROOT = 'public/qa-history/youtube-thumbnail-generator';
 export const THUMBNAIL_HISTORY_LIMIT = 20;
 export const THUMBNAIL_HISTORY_MAX_RAW_BYTES = 1_000_000;
@@ -177,6 +177,26 @@ export function isExactGptImage2ThumbnailHistoryRun(run: Pick<ThumbnailHistoryRu
   );
 }
 
+function normalizeHistoryRetrieval(value: unknown) {
+  if (!isRecord(value)) return null;
+  const diagnostics = isRecord(value.diagnostics) ? value.diagnostics : value;
+  return {
+    status: toString(diagnostics.status, 40) as ThumbnailRetrievalDiagnostics['status'],
+    candidateCount: Number(diagnostics.candidateCount) || 0,
+    selectedReferenceIds: Array.isArray(diagnostics.selectedReferenceIds)
+      ? diagnostics.selectedReferenceIds.filter((item): item is string => typeof item === 'string').slice(0, 8)
+      : [],
+    ...(toString(diagnostics.fallbackReason, 80)
+      ? { fallbackReason: toString(diagnostics.fallbackReason, 80) as ThumbnailRetrievalDiagnostics['fallbackReason'] }
+      : {}),
+    ...(isRecord(diagnostics.usedModels) ? { usedModels: diagnostics.usedModels as ThumbnailRetrievalDiagnostics['usedModels'] } : {}),
+    ...(isRecord(diagnostics.operations) ? { operations: diagnostics.operations as ThumbnailRetrievalDiagnostics['operations'] } : {}),
+    ...(toString(diagnostics.commandRuntime, 80)
+      ? { commandRuntime: toString(diagnostics.commandRuntime, 80) as ThumbnailRetrievalDiagnostics['commandRuntime'] }
+      : {}),
+  };
+}
+
 function normalizeHistoryRun(value: unknown, imageBaseUrl: string): ThumbnailHistoryRun | null {
   if (!isRecord(value)) return null;
   if (value.mockUsed === true) return null;
@@ -191,6 +211,7 @@ function normalizeHistoryRun(value: unknown, imageBaseUrl: string): ThumbnailHis
   if (!timestamp || !completedAt) return null;
 
   const rawPath = normalizeRawPath(value.rawPath);
+  const retrieval = normalizeHistoryRetrieval(value.retrieval);
 
   return {
     id: safeHistoryId(toString(value.id, 120) || timestamp || imagePath),
@@ -205,25 +226,7 @@ function normalizeHistoryRun(value: unknown, imageBaseUrl: string): ThumbnailHis
     headline: toString(value.headline, 120),
     warnings: normalizeWarnings(value.warnings),
     imagePath,
-    ...(isRecord(value.retrieval) && isRecord(value.retrieval.diagnostics)
-      ? {
-        retrieval: {
-          status: toString(value.retrieval.diagnostics.status, 40) as ThumbnailRetrievalDiagnostics['status'],
-          candidateCount: Number(value.retrieval.diagnostics.candidateCount) || 0,
-          selectedReferenceIds: Array.isArray(value.retrieval.diagnostics.selectedReferenceIds)
-            ? value.retrieval.diagnostics.selectedReferenceIds.filter((item): item is string => typeof item === 'string').slice(0, 8)
-            : [],
-          ...(toString(value.retrieval.diagnostics.fallbackReason, 80)
-            ? { fallbackReason: toString(value.retrieval.diagnostics.fallbackReason, 80) as ThumbnailRetrievalDiagnostics['fallbackReason'] }
-            : {}),
-          ...(isRecord(value.retrieval.diagnostics.usedModels) ? { usedModels: value.retrieval.diagnostics.usedModels as ThumbnailRetrievalDiagnostics['usedModels'] } : {}),
-          ...(isRecord(value.retrieval.diagnostics.operations) ? { operations: value.retrieval.diagnostics.operations as ThumbnailRetrievalDiagnostics['operations'] } : {}),
-          ...(toString(value.retrieval.diagnostics.commandRuntime, 80)
-            ? { commandRuntime: toString(value.retrieval.diagnostics.commandRuntime, 80) as ThumbnailRetrievalDiagnostics['commandRuntime'] }
-            : {}),
-        },
-      }
-      : {}),
+    ...(retrieval ? { retrieval } : {}),
     ...(rawPath ? { rawPath } : {}),
   };
 }
@@ -247,9 +250,9 @@ function createBundledThumbnailPreviewRun(): ThumbnailHistoryRun {
     model: 'gpt-image-2',
     modelProvenance: 'unknown',
     generationMode: 'direct_provider',
-    topic: '기본 생성 썸네일 미리보기',
-    headline: '',
-    warnings: ['다른 계정/컴퓨터에서도 첫 화면이 비지 않도록 제공하는 기본 썸네일 미리보기입니다. exact gpt-image-2 provenance가 확인된 히스토리 기록은 아닙니다.'],
+    topic: '쯔양 먹방 제육볶음 한상 기본 미리보기',
+    headline: '제육볶음 한상',
+    warnings: ['다른 계정/컴퓨터에서도 첫 화면이 비지 않도록 제공하는 실제 생성 예시 썸네일입니다. exact gpt-image-2 provenance가 확인된 히스토리 기록은 아닙니다.'],
     imagePath: THUMBNAIL_HISTORY_BUNDLED_PREVIEW_IMAGE,
   };
 }
@@ -365,7 +368,7 @@ export async function readThumbnailHistory(
 }
 
 function isLocalHistoryWriteEnabled(env: ThumbnailHistoryEnv) {
-  return env.NODE_ENV !== 'production' && env[THUMBNAIL_LOCAL_HISTORY_WRITE_ENV] === '1';
+  return env.NODE_ENV !== 'production' && env[THUMBNAIL_LOCAL_HISTORY_WRITE_ENV] !== '0';
 }
 
 function decodeImageDataUrl(dataUrl: string) {
