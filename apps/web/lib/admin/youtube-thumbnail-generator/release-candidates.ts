@@ -25,6 +25,7 @@ export type ThumbnailReleaseOptions = {
   publicImageRoot?: string;
   historyRoot?: string;
   now?: Date;
+  mirrorCandidateImages?: boolean;
 };
 
 type RawReleaseCandidate = {
@@ -277,11 +278,21 @@ function candidatePublicFileName(candidate: Pick<RawReleaseCandidate, 'id' | 'sh
   return `${id}${shaPrefix ? `-${shaPrefix}` : ''}.png`;
 }
 
-async function mirrorCandidateForBrowser(candidate: RawReleaseCandidate, sourceImagePath: string, options: ThumbnailReleaseOptions, webRoot: string) {
+function resolveCandidatePublicFilePath(candidate: RawReleaseCandidate, options: ThumbnailReleaseOptions, webRoot: string) {
   const publicImageRoot = resolvePublicImageRoot(options, webRoot);
-  const publicFilePath = assertInside(publicImageRoot, join(publicImageRoot, candidatePublicFileName(candidate)), 'thumbnail_release_public_image_path_escape');
-  await mkdir(publicImageRoot, { recursive: true });
+  return assertInside(publicImageRoot, join(publicImageRoot, candidatePublicFileName(candidate)), 'thumbnail_release_public_image_path_escape');
+}
+
+async function mirrorCandidateForBrowser(candidate: RawReleaseCandidate, sourceImagePath: string, options: ThumbnailReleaseOptions, webRoot: string) {
+  const publicFilePath = resolveCandidatePublicFilePath(candidate, options, webRoot);
+  await mkdir(dirname(publicFilePath), { recursive: true });
   await copyFile(sourceImagePath, publicFilePath);
+  return `${THUMBNAIL_RELEASE_PUBLIC_IMAGE_BASE_URL}/${basename(publicFilePath)}`;
+}
+
+async function readExistingCandidateBrowserPath(candidate: RawReleaseCandidate, options: ThumbnailReleaseOptions, webRoot: string) {
+  const publicFilePath = resolveCandidatePublicFilePath(candidate, options, webRoot);
+  await stat(publicFilePath);
   return `${THUMBNAIL_RELEASE_PUBLIC_IMAGE_BASE_URL}/${basename(publicFilePath)}`;
 }
 
@@ -320,7 +331,9 @@ async function normalizeCandidates(rawManifest: RawReleaseManifest, manifestPath
     }
     try {
       await stat(sourceImagePath);
-      const browserImagePath = await mirrorCandidateForBrowser(rawCandidate, sourceImagePath, options, webRoot);
+      const browserImagePath = options.mirrorCandidateImages === false
+        ? await readExistingCandidateBrowserPath(rawCandidate, options, webRoot)
+        : await mirrorCandidateForBrowser(rawCandidate, sourceImagePath, options, webRoot);
       if (!browserImagePath.startsWith('/qa-history/youtube-thumbnail-generator/')) {
         warnings.push(`unsafe-browser-path:${toString(rawCandidate.id, 120) || 'unknown'}`);
         continue;
@@ -346,8 +359,9 @@ async function normalizeCandidates(rawManifest: RawReleaseManifest, manifestPath
         normalizedFromManifestMembership: true,
       });
     } catch (error) {
-      console.error('[youtube-thumbnail/release-candidates] failed to mirror manifest artifact:', error);
-      warnings.push(`mirror-failed:${toString(rawCandidate.id, 120) || 'unknown'}:source_image_unavailable`);
+      const reason = options.mirrorCandidateImages === false ? 'public-image-unavailable' : 'source_image_unavailable';
+      if (options.mirrorCandidateImages !== false) console.error('[youtube-thumbnail/release-candidates] failed to mirror manifest artifact:', error);
+      warnings.push(`mirror-failed:${toString(rawCandidate.id, 120) || 'unknown'}:${reason}`);
     }
   }
 

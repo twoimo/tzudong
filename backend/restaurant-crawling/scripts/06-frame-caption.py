@@ -14,31 +14,38 @@ frame-caption/{video_id}.jsonl로 저장합니다.
     python 06-frame-caption.py --youtuber tzuyang --model llava-hf/LLaVA-NeXT-Video-7B-hf
 """
 
+from __future__ import annotations
+
 import json
 import os
+import sys
 
 # MPS 메모리 제한 해제 (시스템 메모리 최대한 사용)
 os.environ["PYTORCH_MPS_HIGH_WATERMARK_RATIO"] = "0.0"
 
 import re
-import glob
 import argparse
 from pathlib import Path
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
 from PIL import Image
-import torch
-from transformers import (
-    LlavaNextVideoProcessor,
-    LlavaNextVideoForConditionalGeneration,
-)
 
 # 경로 설정
 SCRIPT_DIR = Path(__file__).parent.resolve()
+STORYBOARD_AGENT_SRC = (SCRIPT_DIR / "../../storyboard-agent/src").resolve()
+if str(STORYBOARD_AGENT_SRC) not in sys.path:
+    sys.path.insert(0, str(STORYBOARD_AGENT_SRC))
+
+from vision_captioning import CaptionRequest, get_provider, resolve_provider_id
+from vision_captioning.providers import CaptionProviderError, CaptionProviderUnavailable
+
+
+BASE_DATA_DIR = SCRIPT_DIR / "../data"
 
 
 def get_device() -> str:
     """디바이스 자동 감지 (우선순위: cuda > mps > cpu)"""
+    import torch
+
     if torch.cuda.is_available():
         return "cuda"
     elif torch.backends.mps.is_available():
@@ -62,13 +69,29 @@ def parse_segment_folder(folder_name: str) -> dict | None:
     return None
 
 
+def frame_sort_key(path: Path) -> tuple[int, str]:
+    """Sort direct legacy numeric frames and nested frame_N files chronologically."""
+    match = re.search(r"(\d+)(?!.*\d)", path.stem)
+    frame_index = int(match.group(1)) if match else 0
+    return (frame_index, str(path))
+
+
+def list_frame_files(segment_path: Path) -> list[Path]:
+    """Return frame files from legacy direct layout or nested quality/format layout."""
+    frame_files = [
+        *segment_path.rglob("*.webp"),
+        *segment_path.rglob("*.jpg"),
+        *segment_path.rglob("*.jpeg"),
+        *segment_path.rglob("*.png"),
+    ]
+    return sorted({f.resolve() for f in frame_files if f.is_file()}, key=frame_sort_key)
+
+
 def load_frames_from_segment(segment_path: Path) -> list[Image.Image]:
     """
     세그먼트 폴더에서 모든 jpg 프레임 로드 (시간순 정렬)
     """
-    # .webp 또는 .jpg 파일 검색 (webp 우선)
-    frame_files = list(segment_path.glob("*.webp")) + list(segment_path.glob("*.jpg"))
-    frame_files = sorted(frame_files, key=lambda x: int(x.stem))
+    frame_files = list_frame_files(segment_path)
     frames = []
     for f in frame_files:
         try:
@@ -81,9 +104,7 @@ def load_frames_from_segment(segment_path: Path) -> list[Image.Image]:
 
 def get_frame_paths(segment_path: Path) -> list[str]:
     """세그먼트 폴더 내 프레임 경로 목록 반환"""
-    # .webp 또는 .jpg 파일 검색
-    frame_files = list(segment_path.glob("*.webp")) + list(segment_path.glob("*.jpg"))
-    frame_files = sorted(frame_files, key=lambda x: int(x.stem))
+    frame_files = list_frame_files(segment_path)
     return [str(f) for f in frame_files]
 
 
@@ -116,6 +137,12 @@ def load_model(model_id: str, device: str = None):
     LLaVA-NeXT-Video 모델 및 프로세서 로드
     MPS/CUDA/CPU 자동 감지
     """
+    import torch
+    from transformers import (
+        LlavaNextVideoProcessor,
+        LlavaNextVideoForConditionalGeneration,
+    )
+
     if device is None:
         device = get_device()
 
@@ -160,6 +187,8 @@ def generate_caption(
     """
     프레임들을 기반으로 캡션 생성
     """
+    import torch
+
     # 대화 형식 구성
     conversation = [
         {
@@ -222,8 +251,7 @@ def process_video_frames(
     frames_dir: Path,
     output_dir: Path,
     meta_dir: Path,
-    model,
-    processor,
+    caption_provider,
     prompt: str,
 ):
     """
@@ -285,63 +313,77 @@ def process_video_frames(
     if not tasks:
         return 0
 
-    # 2. 병렬 로딩 및 순차 처리 (Prefetching 효과)
-    # 이미지 로딩(I/O, CPU)은 멀티스레드로 미리 하고, 추론(GPU)은 메인 스레드에서 순차적으로 수행
-
     processed_count = 0
 
-    print(f"작업 수집 완료: {len(tasks)}개 세그먼트 (병렬 처리 시작)", flush=True)
+    print(f"작업 수집 완료: {len(tasks)}개 세그먼트 (provider 순차 처리 시작)", flush=True)
 
-    # 최대 1개 세그먼트만 미리 로딩 (메모리 절약을 위해 직렬 처리로 변경)
-    # MPS OOM 방지를 위해 동시 실행 제한
-    with ThreadPoolExecutor(max_workers=1) as executor:
-        # Future -> Task 매핑
-        future_to_task = {
-            executor.submit(load_frames_from_segment, task["folder"]): task
-            for task in tasks
-        }
+    for task in tasks:
+        try:
+            frame_paths = get_frame_paths(task["folder"])
+            if not frame_paths:
+                print(f"[WARN] 프레임 없음: {task['folder']}")
+                continue
 
-        # 완료되는대로 순서 상관없이 처리 (어차피 결과는 JSONL에 append)
-        for future in as_completed(future_to_task):
-            task = future_to_task[future]
+            print(
+                f"처리 중 {task['video_id']}/{task['recollect_id']}/{task['rank']} ({len(frame_paths)}장)"
+            )
 
-            try:
-                frames = future.result()
-                if not frames:
-                    print(f"[WARN] 프레임 없음: {task['folder']}")
-                    continue
-
-                frame_paths = get_frame_paths(task["folder"])
-
-                print(
-                    f"처리 중 {task['video_id']}/{task['recollect_id']}/{task['rank']} ({len(frames)}장)"
+            caption_result = caption_provider.generate(
+                CaptionRequest(
+                    video_id=task["video_id"],
+                    recollect_id=task["recollect_id"],
+                    rank=task["rank"],
+                    start_sec=task["start_sec"],
+                    end_sec=task["end_sec"],
+                    duration=task["duration"],
+                    frame_paths=frame_paths,
+                    prompt=prompt,
+                    locale="ko-KR",
                 )
+            )
+            result = caption_result.to_jsonl_record()
+            result["frames"] = frame_paths
+            print(f"   캡션({result.get('caption_provider')}): {str(result.get('raw_caption'))[:100]}...")
 
-                # GPU 추론 (메인 프로세스)
-                caption = generate_caption(model, processor, frames, prompt)
-                print(f"   캡션: {caption[:100]}...")
+            with open(caption_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(result, ensure_ascii=False) + "\n")
 
-                # 저장
-                result = {
-                    "video_id": task["video_id"],
-                    "recollect_id": task["recollect_id"],
-                    "start_sec": task["start_sec"],
-                    "end_sec": task["end_sec"],
-                    "duration": task["duration"],
-                    "rank": task["rank"],
-                    "frames": frame_paths,
-                    "caption": caption,
-                }
+            processed_count += 1
 
-                with open(caption_path, "a", encoding="utf-8") as f:
-                    f.write(json.dumps(result, ensure_ascii=False) + "\n")
-
-                processed_count += 1
-
-            except Exception as e:
-                print(f"[ERROR] 처리 실패 {task['folder']}: {e}")
+        except (CaptionProviderUnavailable, CaptionProviderError):
+            raise
+        except Exception as e:
+            print(f"[ERROR] 처리 실패 {task['folder']}: {e}")
+            raise RuntimeError(f"frame caption task failed: {task['folder']}") from e
 
     return processed_count
+
+
+def preflight_caption_provider(caption_provider, provider_id: str) -> None:
+    """Fail fast for provider-level auth/runtime gates before segment loops."""
+    if provider_id == "openai_vision_gpt55" and not os.environ.get("OPENAI_API_KEY"):
+        raise CaptionProviderUnavailable("openai_vision_gpt55 requires OPENAI_API_KEY")
+    if provider_id == "codex_cli_vision_gpt55":
+        require_local_trust = getattr(caption_provider, "_require_local_trust", None)
+        if callable(require_local_trust):
+            require_local_trust()
+
+
+def resolve_frames_dir(data_dir: Path, base_data_dir: Path = BASE_DATA_DIR) -> Path:
+    """Resolve frames root across legacy per-channel and current shared layouts."""
+    env_frames_root = os.environ.get("FRAMES_ROOT_DIR")
+    if env_frames_root:
+        return Path(env_frames_root).expanduser().resolve()
+
+    channel_frames = data_dir / "frames"
+    if channel_frames.exists():
+        return channel_frames
+
+    shared_frames = base_data_dir / "frames"
+    if shared_frames.exists():
+        return shared_frames
+
+    return channel_frames
 
 
 def main():
@@ -358,7 +400,14 @@ def main():
         "--model",
         type=str,
         default="llava-hf/LLaVA-NeXT-Video-7B-hf",
-        help="HuggingFace model ID",
+        help="Legacy LLaVA HuggingFace model ID (used only by llava_next_video provider)",
+    )
+    parser.add_argument(
+        "--provider",
+        type=str,
+        default=None,
+        choices=["llava_next_video", "openai_vision_gpt55", "codex_cli_vision_gpt55"],
+        help="Caption provider. Defaults to STORYBOARD_CAPTION_PROVIDER or llava_next_video.",
     )
     parser.add_argument(
         "--prompt",
@@ -380,8 +429,8 @@ def main():
     args = parser.parse_args()
 
     # 경로 설정
-    data_dir = SCRIPT_DIR / f"../data/{args.youtuber}"
-    frames_dir = data_dir / "frames"
+    data_dir = BASE_DATA_DIR / args.youtuber
+    frames_dir = resolve_frames_dir(data_dir)
     output_dir = data_dir / "frame-caption"
     meta_dir = data_dir / "meta"
 
@@ -392,8 +441,11 @@ def main():
     if not meta_dir.exists():
         print(f"[WARN] Meta directory not found: {meta_dir} (duration 조회 불가)")
 
-    # 모델 로드
-    model, processor = load_model(args.model, args.device)
+    provider_id = args.provider or resolve_provider_id()
+    if provider_id == "llava_next_video":
+        os.environ.setdefault("STORYBOARD_CAPTION_LLAVA_MODEL", args.model)
+    caption_provider = get_provider(provider_id, device=args.device)
+    preflight_caption_provider(caption_provider, provider_id)
 
     # video_id 폴더 목록
     if args.video_id:
@@ -410,7 +462,8 @@ def main():
 
     print(f"\n{'='*60}")
     print(f"{len(video_ids)}개 비디오 폴더 발견: {frames_dir}")
-    print(f"모델: {args.model}")
+    print(f"캡션 Provider: {provider_id}")
+    print(f"모델: {getattr(caption_provider, 'model', args.model)}")
     print(f"출력 경로: {output_dir}")
     print(f"{'='*60}\n")
 
@@ -422,8 +475,7 @@ def main():
             frames_dir=frames_dir,
             output_dir=output_dir,
             meta_dir=meta_dir,
-            model=model,
-            processor=processor,
+            caption_provider=caption_provider,
             prompt=args.prompt,
         )
         total_processed += count
@@ -434,4 +486,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except CaptionProviderUnavailable as exc:
+        print(f"[ERROR] Caption provider unavailable: {exc}", file=sys.stderr)
+        sys.exit(2)
