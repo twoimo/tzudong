@@ -58,7 +58,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 
-type ProviderId = "local-codex";
+type ProviderId = "local-codex" | "openai-gpt-image-2";
 type GenerationMode = "direct_provider" | "backend_agent";
 type BriefPreset =
   | "tzuyang-food-travel-collage"
@@ -410,6 +410,7 @@ type ProviderAvailability = {
   reason?: string;
   command?: string;
   strictExactModelRequired?: boolean;
+  browserKeyStorage?: "browser_local_storage_only";
 };
 
 type ThumbnailReadiness = {
@@ -430,6 +431,7 @@ type ThumbnailReadiness = {
   };
   providers: {
     localCodex: ProviderAvailability;
+    openaiGptImage2?: ProviderAvailability;
   };
   limits: {
     maxFiles: number;
@@ -468,6 +470,19 @@ const DEFAULT_LIMITS: ThumbnailReadiness["limits"] = {
   mimeTypes: ["image/png", "image/jpeg", "image/webp"],
 };
 
+const THUMBNAIL_BROWSER_MODEL_KEYS_STORAGE_KEY = "tzudong.admin.youtubeThumbnail.modelKeys.v1";
+const THUMBNAIL_BROWSER_MODEL_KEYS_VERSION = 1;
+const THUMBNAIL_SESSION_OPENAI_API_KEY_FIELD = "thumbnailSessionOpenaiApiKey";
+const THUMBNAIL_SESSION_API_KEY_MAX_LENGTH = 512;
+const THUMBNAIL_BROWSER_OPENAI_API_KEY_PATTERN = /^sk-[A-Za-z0-9_-]{16,}$/;
+
+type ThumbnailBrowserModelKeysCache = {
+  version: typeof THUMBNAIL_BROWSER_MODEL_KEYS_VERSION;
+  openAIApiKey: string;
+  savedAt: string;
+  storage: "browser_local_storage_only";
+};
+
 const thumbnailExportPresets: ThumbnailExportPreset[] = [
   {
     id: "quick-1280x720",
@@ -487,11 +502,13 @@ const thumbnailExportPresets: ThumbnailExportPreset[] = [
 
 const providerReadinessKey: Record<ProviderId, keyof ThumbnailReadiness["providers"]> = {
   "local-codex": "localCodex",
+  "openai-gpt-image-2": "openaiGptImage2",
 };
 
 const thumbnailErrorActions: Record<string, string> = {
   required_ack: "안전 확인 체크박스를 직접 확인한 뒤 다시 생성하세요.",
   provider_unavailable: "현재 이미지 생성 준비가 끝나지 않았습니다. 설정을 확인한 뒤 다시 시도하세요.",
+  invalid_session_api_key: "설정에 저장한 OpenAI API 키 형식을 확인하세요.",
   unsupported_model: "지원 모델 allowlist와 THUMBNAIL_*_IMAGE_MODEL 환경변수를 확인하세요.",
   invalid_text: "주제/문구 길이와 금지 문자를 줄이고 다시 시도하세요.",
   unsafe_instruction: "시스템 지시 무시, 비밀/환경변수/키 출력 요청을 제거하세요.",
@@ -510,6 +527,70 @@ const thumbnailErrorActions: Record<string, string> = {
 
 function getSpecificCreatorReferenceRequiredMessage() {
   return "쯔양님이 실제로 나오려면 기보유 쯔양 썸네일 레퍼런스나 인물 참고 이미지가 필요합니다. 레퍼런스를 불러오지 못해 사람 없는 썸네일로 대신 만들지 않았습니다.";
+}
+
+function normalizeThumbnailBrowserOpenAIApiKeyInput(value: string) {
+  return value.trim();
+}
+
+function isValidThumbnailBrowserOpenAIApiKey(value: string) {
+  const normalized = normalizeThumbnailBrowserOpenAIApiKeyInput(value);
+  return (
+    normalized.length > 0 &&
+    normalized.length <= THUMBNAIL_SESSION_API_KEY_MAX_LENGTH &&
+    THUMBNAIL_BROWSER_OPENAI_API_KEY_PATTERN.test(normalized) &&
+    !/\s/.test(normalized)
+  );
+}
+
+function maskThumbnailBrowserOpenAIApiKey(value: string | null) {
+  if (!value) return "";
+  if (value.length <= 14) return "저장됨";
+  return `${value.slice(0, 7)}…${value.slice(-4)}`;
+}
+
+function readThumbnailBrowserModelKeysCache(): ThumbnailBrowserModelKeysCache | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(THUMBNAIL_BROWSER_MODEL_KEYS_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<ThumbnailBrowserModelKeysCache>;
+    if (
+      parsed.version !== THUMBNAIL_BROWSER_MODEL_KEYS_VERSION ||
+      parsed.storage !== "browser_local_storage_only" ||
+      typeof parsed.openAIApiKey !== "string" ||
+      !isValidThumbnailBrowserOpenAIApiKey(parsed.openAIApiKey)
+    ) {
+      window.localStorage.removeItem(THUMBNAIL_BROWSER_MODEL_KEYS_STORAGE_KEY);
+      return null;
+    }
+    return {
+      version: THUMBNAIL_BROWSER_MODEL_KEYS_VERSION,
+      openAIApiKey: parsed.openAIApiKey,
+      savedAt: typeof parsed.savedAt === "string" ? parsed.savedAt : new Date().toISOString(),
+      storage: "browser_local_storage_only",
+    };
+  } catch {
+    window.localStorage.removeItem(THUMBNAIL_BROWSER_MODEL_KEYS_STORAGE_KEY);
+    return null;
+  }
+}
+
+function writeThumbnailBrowserModelKeysCache(openAIApiKey: string) {
+  if (typeof window === "undefined") return null;
+  const cache: ThumbnailBrowserModelKeysCache = {
+    version: THUMBNAIL_BROWSER_MODEL_KEYS_VERSION,
+    openAIApiKey,
+    savedAt: new Date().toISOString(),
+    storage: "browser_local_storage_only",
+  };
+  window.localStorage.setItem(THUMBNAIL_BROWSER_MODEL_KEYS_STORAGE_KEY, JSON.stringify(cache));
+  return cache;
+}
+
+function clearThumbnailBrowserModelKeysCache() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(THUMBNAIL_BROWSER_MODEL_KEYS_STORAGE_KEY);
 }
 
 function formatBytes(bytes: number) {
@@ -1098,7 +1179,7 @@ function cloneTextLayer(layer: TextLayer) {
 }
 
 function isProviderId(value: string | undefined): value is ProviderId {
-  return value === "local-codex";
+  return value === "local-codex" || value === "openai-gpt-image-2";
 }
 
 function isExactGptImage2HistoryRun(run: ThumbnailHistoryRun) {
@@ -1270,6 +1351,10 @@ const providerOptions: Array<{ value: ProviderId; label: string }> = [
     value: "local-codex",
     label: "검증된 썸네일 이미지 생성",
   },
+  {
+    value: "openai-gpt-image-2",
+    label: "OpenAI gpt-image-2",
+  },
 ];
 
 function getThumbnailProviderLabel(provider: ProviderId) {
@@ -1309,10 +1394,14 @@ function isInitialThumbnailPreviewResult(currentResult: GenerationResult | null)
 function canUseSessionApiKeyForProvider(
   provider: ProviderId,
   availability: ProviderAvailability | null | undefined,
+  hasBrowserOpenAIApiKey = false,
 ) {
-  void provider;
-  void availability;
-  return false;
+  return (
+    provider === "openai-gpt-image-2" &&
+    hasBrowserOpenAIApiKey &&
+    availability?.model !== null &&
+    availability?.reason !== "openai_model_not_allowed"
+  );
 }
 
 function formatThumbnailProviderBlockReason(reason: string | null | undefined) {
@@ -1330,6 +1419,12 @@ function formatThumbnailProviderBlockReason(reason: string | null | undefined) {
   }
   if (reason === "openai_api_disabled_by_policy") {
     return "현재 페이지에서는 별도 API 키 방식으로 이미지를 만들지 않습니다.";
+  }
+  if (reason === "openai_api_key_required") {
+    return "오른쪽 위 톱니바퀴에서 OpenAI API 키를 이 브라우저에 저장해 주세요.";
+  }
+  if (reason === "openai_model_not_allowed") {
+    return "OpenAI 이미지는 gpt-image-2만 사용할 수 있습니다.";
   }
   return reason ?? "이미지 생성 준비 상태를 확인할 수 없습니다.";
 }
@@ -1732,6 +1827,10 @@ export function AdminYoutubeThumbnailGenerator() {
   const [initialPreviewSource, setInitialPreviewSource] = useState<ThumbnailInitialPreviewSource>("bundled");
   const [isHistoryPanelOpen, setIsHistoryPanelOpen] = useState(false);
   const [isChatSettingsOpen, setIsChatSettingsOpen] = useState(false);
+  const [browserOpenAIApiKey, setBrowserOpenAIApiKey] = useState<string | null>(null);
+  const [browserOpenAIApiKeyDraft, setBrowserOpenAIApiKeyDraft] = useState("");
+  const [browserOpenAIApiKeySavedAt, setBrowserOpenAIApiKeySavedAt] = useState<string | null>(null);
+  const [browserOpenAIApiKeyMessage, setBrowserOpenAIApiKeyMessage] = useState<string | null>(null);
   const [fileValidationMessage, setFileValidationMessage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isChatAgentStreaming, setIsChatAgentStreaming] = useState(false);
@@ -1816,6 +1915,16 @@ export function AdminYoutubeThumbnailGenerator() {
   useEffect(() => {
     resultRef.current = result;
   }, [result]);
+
+  useEffect(() => {
+    const cachedKeys = readThumbnailBrowserModelKeysCache();
+    if (!cachedKeys) return;
+    setBrowserOpenAIApiKey(cachedKeys.openAIApiKey);
+    setBrowserOpenAIApiKeyDraft("");
+    setBrowserOpenAIApiKeySavedAt(cachedKeys.savedAt);
+    setBrowserOpenAIApiKeyMessage("이 브라우저에 저장된 OpenAI 키를 사용할 준비가 됐습니다.");
+    setProviderId("openai-gpt-image-2");
+  }, []);
 
   const loadReadiness = useCallback(async () => {
     try {
@@ -2961,6 +3070,7 @@ export function AdminYoutubeThumbnailGenerator() {
     const sessionKeyBackedProviderAvailable = canUseSessionApiKeyForProvider(
       providerId,
       selectedProviderAvailability,
+      Boolean(browserOpenAIApiKey),
     );
     const progressState = isGenerating
       ? "이미지를 만드는 중"
@@ -2968,8 +3078,10 @@ export function AdminYoutubeThumbnailGenerator() {
         ? "요청을 정리하는 중"
         : "대기 중";
     const exactBoundary = resultBase?.providerId === "local-codex" && resultBase.model === "gpt-image-2" && resultBase.modelProvenance === "exact"
-      ? "현재 캔버스에는 확인된 실제 생성 이미지가 들어 있습니다."
-      : "현재 캔버스에는 아직 확인된 실제 생성 이미지가 없습니다. 확인된 결과만 실제 생성 결과로 표시합니다.";
+      ? "현재 캔버스에는 exact gpt-image-2로 확인된 실제 생성 이미지가 들어 있습니다."
+      : resultBase?.providerId === "openai-gpt-image-2" && resultBase.model === "gpt-image-2"
+        ? "현재 캔버스에는 브라우저에 저장한 OpenAI 키로 만든 gpt-image-2 이미지가 들어 있습니다."
+        : "현재 캔버스에는 아직 확인된 실제 생성 이미지가 없습니다. 확인된 결과만 실제 생성 결과로 표시합니다.";
 
     return [
       "현재 상태를 쉽게 정리했어요.",
@@ -3917,9 +4029,16 @@ export function AdminYoutubeThumbnailGenerator() {
     overrides: ThumbnailGenerationOverrides = {},
     chatAssistantMessageId?: string,
   ) {
-    const submittedProviderId = overrides.providerId ?? providerId;
+    const requestedProviderId = overrides.providerId ?? providerId;
+    const submittedProviderId = requestedProviderId === "local-codex" && browserOpenAIApiKey
+      ? "openai-gpt-image-2"
+      : requestedProviderId;
     const providerAvailability = readiness?.providers[providerReadinessKey[submittedProviderId]] ?? selectedProviderAvailability;
-    const sessionKeyBackedProviderAvailable = canUseSessionApiKeyForProvider(submittedProviderId, providerAvailability);
+    const sessionKeyBackedProviderAvailable = canUseSessionApiKeyForProvider(
+      submittedProviderId,
+      providerAvailability,
+      Boolean(browserOpenAIApiKey),
+    );
 
     if (!providerAvailability) {
       if (chatAssistantMessageId) {
@@ -4019,6 +4138,9 @@ export function AdminYoutubeThumbnailGenerator() {
         }),
       );
       files.forEach((file) => formData.append("referenceImages", file));
+      if (submittedProviderId === "openai-gpt-image-2" && browserOpenAIApiKey) {
+        formData.append(THUMBNAIL_SESSION_OPENAI_API_KEY_FIELD, browserOpenAIApiKey);
+      }
 
       const response = await fetch("/api/admin/youtube-thumbnail-generator", {
         method: "POST",
@@ -4188,6 +4310,44 @@ export function AdminYoutubeThumbnailGenerator() {
     if (open) void loadThumbnailHistory({ replaceInitialPreview: false });
   }
 
+  function handleSaveThumbnailBrowserOpenAIApiKey() {
+    const normalizedKey = normalizeThumbnailBrowserOpenAIApiKeyInput(browserOpenAIApiKeyDraft);
+    if (!isValidThumbnailBrowserOpenAIApiKey(normalizedKey)) {
+      const message = "OpenAI API 키 형식이 올바르지 않습니다. sk-로 시작하는 키를 붙여 넣어 주세요.";
+      setBrowserOpenAIApiKeyMessage(message);
+      toast({
+        variant: "destructive",
+        title: "API 키 확인",
+        description: message,
+      });
+      return;
+    }
+
+    const cache = writeThumbnailBrowserModelKeysCache(normalizedKey);
+    setBrowserOpenAIApiKey(normalizedKey);
+    setBrowserOpenAIApiKeyDraft("");
+    setBrowserOpenAIApiKeySavedAt(cache?.savedAt ?? new Date().toISOString());
+    setBrowserOpenAIApiKeyMessage("저장했어요. 이 브라우저에서만 gpt-image-2 생성 요청에 사용합니다.");
+    setProviderId("openai-gpt-image-2");
+    toast({
+      title: "OpenAI 키 저장 완료",
+      description: "DB나 계정에는 저장하지 않고, 이 브라우저 캐시에만 저장했습니다.",
+    });
+  }
+
+  function handleClearThumbnailBrowserOpenAIApiKey() {
+    clearThumbnailBrowserModelKeysCache();
+    setBrowserOpenAIApiKey(null);
+    setBrowserOpenAIApiKeyDraft("");
+    setBrowserOpenAIApiKeySavedAt(null);
+    setBrowserOpenAIApiKeyMessage("저장된 OpenAI 키를 이 브라우저에서 삭제했습니다.");
+    setProviderId("local-codex");
+    toast({
+      title: "OpenAI 키 삭제 완료",
+      description: "이 브라우저 캐시에서만 삭제했습니다.",
+    });
+  }
+
   function renderChatSettingsDropdownPanel() {
     return (
       <div
@@ -4198,10 +4358,10 @@ export function AdminYoutubeThumbnailGenerator() {
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 text-xs font-semibold">
               <KeyRound className="h-3.5 w-3.5 text-primary" />
-              <span>이미지 모델 정책</span>
+              <span>이미지 모델 API 키</span>
             </div>
             <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">
-              OPENAI_API_KEY 없이 로컬 Codex built-in image_generation만 점검합니다. exact gpt-image-2 provenance가 확인되지 않으면 생성하지 않습니다.
+              프로덕션에서는 OpenAI 키를 이 브라우저에만 저장해 gpt-image-2 썸네일 생성에 사용합니다. DB나 계정에는 저장하지 않습니다.
             </p>
           </div>
           <Button
@@ -4216,15 +4376,70 @@ export function AdminYoutubeThumbnailGenerator() {
             <X className="h-3.5 w-3.5" />
           </Button>
         </div>
-        <div className="grid gap-2" data-thumbnail-api-key-settings="disabled">
-          <p className="rounded-2xl border border-amber-200 bg-amber-50/80 p-3 text-[11px] leading-4 text-amber-950" data-thumbnail-api-key-disabled="true">
-            세션 API 키 입력/전송은 비활성화되어 있습니다. 이 화면은 다른 이미지 모델이나 API-key fallback으로 전환하지 않습니다.
+        <div
+          className="grid gap-2 rounded-2xl border border-border/70 bg-muted/20 p-3"
+          data-thumbnail-api-key-settings="local-storage-only"
+          data-thumbnail-api-key-db-storage="forbidden"
+          data-thumbnail-browser-api-key-storage-key={THUMBNAIL_BROWSER_MODEL_KEYS_STORAGE_KEY}
+        >
+          <Label htmlFor="thumbnail-browser-openai-api-key" className="text-[11px] font-semibold">
+            OpenAI API 키 · gpt-image-2 전용
+          </Label>
+          <div className="flex gap-2">
+            <Input
+              id="thumbnail-browser-openai-api-key"
+              type="password"
+              value={browserOpenAIApiKeyDraft}
+              onChange={(event) => {
+                setBrowserOpenAIApiKeyDraft(event.target.value);
+                if (browserOpenAIApiKeyMessage) setBrowserOpenAIApiKeyMessage(null);
+              }}
+              placeholder={browserOpenAIApiKey ? `${maskThumbnailBrowserOpenAIApiKey(browserOpenAIApiKey)} 저장됨` : "sk-..."}
+              autoComplete="off"
+              spellCheck={false}
+              className="h-8 text-xs"
+              data-thumbnail-browser-api-key-input="true"
+            />
+            <Button
+              type="button"
+              size="sm"
+              className="h-8 shrink-0"
+              onClick={handleSaveThumbnailBrowserOpenAIApiKey}
+              data-thumbnail-api-key-save="true"
+            >
+              저장
+            </Button>
+          </div>
+          <p className="text-[11px] leading-4 text-muted-foreground" data-thumbnail-api-key-browser-only-copy="true">
+            저장한 키는 이 브라우저 localStorage에만 남습니다. 이미지 생성 요청을 보낼 때만 임시 전송하고, 서버 히스토리·DB·계정에는 키 값을 남기지 않습니다.
+          </p>
+          {browserOpenAIApiKey ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 justify-start rounded-full text-[11px]"
+              onClick={handleClearThumbnailBrowserOpenAIApiKey}
+              data-thumbnail-api-key-clear="true"
+            >
+              저장된 키 삭제
+            </Button>
+          ) : null}
+          <p className="rounded-xl border border-amber-200 bg-amber-50/70 p-2 text-[11px] leading-4 text-amber-950" data-thumbnail-api-key-model-policy="gpt-image-2-only">
+            이미지 모델은 gpt-image-2만 허용합니다. 다른 이미지 모델로 자동 전환하지 않습니다.
           </p>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-[11px] text-muted-foreground" data-thumbnail-api-key-session-status="true">
-            API 키 입력/저장은 현재 정책에서 비활성화됨
+            {browserOpenAIApiKey
+              ? `저장됨 · ${maskThumbnailBrowserOpenAIApiKey(browserOpenAIApiKey)}${browserOpenAIApiKeySavedAt ? ` · ${new Date(browserOpenAIApiKeySavedAt).toLocaleString("ko-KR")}` : ""}`
+              : "아직 저장된 OpenAI 키가 없습니다."}
           </p>
+          {browserOpenAIApiKeyMessage ? (
+            <p className="basis-full text-[11px] text-muted-foreground" data-thumbnail-api-key-message="true">
+              {browserOpenAIApiKeyMessage}
+            </p>
+          ) : null}
         </div>
       </div>
     );
@@ -4357,7 +4572,7 @@ export function AdminYoutubeThumbnailGenerator() {
 
   return (
     <main
-      className="flex h-full min-h-0 flex-col overflow-hidden bg-muted/20 p-3"
+      className="flex h-full min-h-0 flex-col overflow-hidden bg-background p-3"
       aria-label="유튜브 썸네일 생성기"
       data-admin-youtube-thumbnail-generator="true"
       data-thumbnail-initial-preview-source={initialPreviewSource}
@@ -4367,7 +4582,13 @@ export function AdminYoutubeThumbnailGenerator() {
         className="grid h-full min-h-0 grid-cols-1 grid-rows-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-3 overflow-hidden xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] xl:grid-rows-1"
         data-thumbnail-chat-right-layout="true"
       >
-        <Card className="order-2 flex min-h-0 flex-col overflow-hidden border-0 bg-card/80 shadow-none" data-thumbnail-generation-input-panel="right-chat">
+        <Card
+          className="order-2 flex min-h-0 flex-col overflow-hidden border-0 bg-card/80 shadow-none"
+          aria-label="요구사항 채팅"
+          data-thumbnail-generation-input-panel="right-chat"
+          data-thumbnail-input-panel="chat-stream"
+          data-thumbnail-input-position="right-of-canvas"
+        >
           <CardHeader className="shrink-0 space-y-1 p-3 pb-2">
             <div className="flex items-center justify-between gap-2" data-thumbnail-chat-header="true">
               <CardTitle className="flex min-w-0 items-center gap-2 text-base">
@@ -4434,17 +4655,19 @@ export function AdminYoutubeThumbnailGenerator() {
             <section
               className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-border/70 bg-gradient-to-b from-background/95 to-muted/35 shadow-sm"
               data-thumbnail-chat-panel="true"
+              data-thumbnail-chat-style="storyboard-like"
             >
               <div
                 ref={chatTranscriptRef}
                 className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-3"
+                data-thumbnail-chat-log="true"
                 data-thumbnail-chat-transcript="true"
                 aria-live="polite"
               >
                 {chatMessages.map((message) => (
                   <div
                     key={message.id}
-                    className={`flex min-w-0 gap-2 ${
+                    className={`flex gap-2 ${
                       message.role === "user" ? "justify-end" : "justify-start"
                     }`}
                     data-thumbnail-chat-message={message.role}
@@ -4452,29 +4675,52 @@ export function AdminYoutubeThumbnailGenerator() {
                   >
                     {message.role !== "user" ? (
                       <div className="mt-5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
-                        <Wand2 className="h-3.5 w-3.5" />
+                        {message.mode === "stream" ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Wand2 className="h-3.5 w-3.5" />
+                        )}
                       </div>
                     ) : null}
-                    <div className={`min-w-0 max-w-[92%] space-y-1 sm:max-w-[86%] ${message.role === "user" ? "text-right" : "text-left"}`}>
+                    <div
+                      className={`max-w-[86%] space-y-1 ${message.role === "user" ? "text-right" : "text-left"}`}
+                    >
                       <div
                         className={`text-[10px] font-medium uppercase tracking-wide ${
                           message.role === "user" ? "text-primary" : "text-muted-foreground"
                         }`}
                         data-thumbnail-chat-message-meta="true"
                       >
-                        {message.role === "user" ? "나" : message.mode === "system" ? "가이드" : message.mode === "stream" ? "정리 중" : "썸네일 도우미"}
+                        {message.role === "user"
+                          ? "나"
+                          : message.mode === "stream"
+                            ? "작업 중"
+                            : message.mode === "system"
+                              ? "가이드"
+                              : "유튜브 썸네일 도우미"}
                       </div>
                       <div
-                        className={`whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-left text-xs leading-5 shadow-sm [overflow-wrap:anywhere] ${
+                        className={`rounded-2xl px-3 py-2 text-xs leading-5 shadow-sm ${
                           message.role === "user"
                             ? "rounded-br-md bg-primary text-primary-foreground"
-                            : message.mode === "live"
+                            : message.mode === "live" || message.mode === "stream"
                               ? "rounded-bl-md border border-sky-300/60 bg-sky-500/10 text-sky-950 dark:text-sky-100"
                               : "rounded-bl-md bg-background text-foreground ring-1 ring-border/60"
                         }`}
                         data-thumbnail-chat-message-bubble="true"
                       >
-                        {message.content}
+                        <p className="whitespace-pre-wrap break-keep [overflow-wrap:anywhere]">
+                          {message.content}
+                        </p>
+                        {message.mode === "stream" ? (
+                          <p className="mt-1 flex items-center gap-1.5 whitespace-pre-wrap break-keep opacity-80 [overflow-wrap:anywhere]">
+                            <Loader2
+                              className="h-3 w-3 animate-spin"
+                              aria-hidden="true"
+                            />
+                            요청을 정리하는 중이에요...
+                          </p>
+                        ) : null}
                       </div>
                     </div>
                     {message.role === "user" ? (
@@ -4487,16 +4733,17 @@ export function AdminYoutubeThumbnailGenerator() {
                 {chatDraft.trim() || isChatAgentStreaming || isGenerating ? (
                   <div
                     className="flex gap-2"
+                    data-thumbnail-chat-draft-preview="true"
                     data-thumbnail-chat-live-stream="true"
                   >
                     <div className="mt-5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-sky-500/15 text-sky-600">
                       {isChatAgentStreaming ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MessageCircle className="h-3.5 w-3.5" />}
                     </div>
-                    <div className="min-w-0 max-w-[92%] space-y-1 sm:max-w-[86%]">
+                    <div className="max-w-[86%] space-y-1">
                       <div className="text-[10px] font-medium uppercase tracking-wide text-sky-700 dark:text-sky-200">
                         {isGenerating ? "이미지 생성 중" : isChatAgentStreaming ? "작업 중" : isThumbnailChatStructuredEditPrompt(chatDraft) ? "전송 후 편집" : "입력 프리뷰"}
                       </div>
-                      <div className="whitespace-pre-wrap break-words rounded-2xl rounded-bl-md border border-dashed border-sky-400/70 bg-sky-500/10 px-3 py-2 text-left text-xs leading-5 text-sky-950 shadow-sm [overflow-wrap:anywhere] dark:text-sky-100">
+                      <div className="rounded-2xl rounded-bl-md border border-dashed border-sky-400/70 bg-sky-500/10 px-3 py-2 text-xs leading-5 text-sky-950 shadow-sm whitespace-pre-wrap break-keep [overflow-wrap:anywhere] dark:text-sky-100">
                         {isGenerating
                           ? "썸네일 이미지를 만들고 있어요. 시간이 오래 걸리면 아래 생성 중단을 누를 수 있습니다."
                           : isChatAgentStreaming
@@ -4510,7 +4757,7 @@ export function AdminYoutubeThumbnailGenerator() {
                 ) : null}
               </div>
 
-              <div className="shrink-0 space-y-2.5 border-t border-border/70 bg-background/80 p-2.5" data-thumbnail-chat-controls="true">
+              <div className="shrink-0 space-y-2 border-t border-border/70 bg-background/80 p-2.5" data-thumbnail-chat-controls="true">
                 <input
                   id="thumbnail-topic"
                   type="hidden"
@@ -4520,42 +4767,45 @@ export function AdminYoutubeThumbnailGenerator() {
                 />
 
                 <div
-                  className="rounded-2xl border border-border/70 bg-muted/35 p-2.5 shadow-sm"
+                  className="flex min-h-8 items-center justify-between gap-2 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-[11px]"
                   data-thumbnail-chat-canvas-context="true"
                   data-thumbnail-chat-canvas-context-state={canvasContextState}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 space-y-1">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <Badge variant={canvasContextState === "editing" ? "secondary" : "outline"} className="shrink-0 px-2 text-[10px]">
-                          {canvasContextState === "editing" ? "수정 중" : canvasContextState === "selected" ? "선택됨" : "캔버스"}
-                        </Badge>
-                        <span
-                          className="min-w-0 truncate text-[11px] font-medium text-muted-foreground"
-                          data-thumbnail-chat-canvas-context-action="true"
-                        >
-                          {lastCanvasActionLabel ?? "선택 대기"}
-                        </span>
-                      </div>
-                      <p
-                        className="min-w-0 truncate text-xs font-medium"
-                        title={canvasContextSummary}
-                        data-thumbnail-chat-canvas-context-summary="true"
-                      >
-                        {canvasContextSummary}
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      className="h-8 shrink-0 rounded-full px-2.5 text-[11px]"
-                      onClick={useCanvasContextInChat}
-                      data-thumbnail-chat-canvas-context-ask="true"
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <Badge
+                      variant={canvasContextState === "editing" ? "secondary" : "outline"}
+                      className="h-6 shrink-0 rounded-full px-2 text-[11px]"
                     >
-                      도우미에게 물어보기
-                    </Button>
+                      {canvasContextState === "editing" ? "수정 중" : canvasContextState === "selected" ? "선택됨" : "캔버스"}
+                    </Badge>
+                    <span className="shrink-0 font-medium text-primary">
+                      채팅 맥락
+                    </span>
+                    <span
+                      className="min-w-0 truncate text-muted-foreground"
+                      title={`${lastCanvasActionLabel ?? "선택 대기"} · ${canvasContextSummary}`}
+                      data-thumbnail-chat-canvas-context-action="true"
+                    >
+                      {lastCanvasActionLabel ?? "선택 대기"}
+                    </span>
+                    <span
+                      className="min-w-0 truncate text-muted-foreground"
+                      title={canvasContextSummary}
+                      data-thumbnail-chat-canvas-context-summary="true"
+                    >
+                      {canvasContextSummary}
+                    </span>
                   </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 shrink-0 rounded-full px-2 text-[11px]"
+                    onClick={useCanvasContextInChat}
+                    data-thumbnail-chat-canvas-context-ask="true"
+                  >
+                    물어보기
+                  </Button>
                 </div>
 
                 <Label htmlFor="thumbnail-chat-composer" className="sr-only">썸네일 요구사항 채팅 입력</Label>

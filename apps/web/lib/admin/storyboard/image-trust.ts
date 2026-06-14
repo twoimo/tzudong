@@ -31,15 +31,38 @@ function isSha256Hex(value: unknown): value is string {
   return typeof value === 'string' && /^[a-f0-9]{64}$/i.test(value);
 }
 
+function isExactLocalCodexStoryboardProvenance(
+  provenance: Partial<StoryboardGeneratedImageProvenance>,
+) {
+  return (
+    provenance.providerId === 'local-codex' &&
+    provenance.authMode === 'codex_oauth' &&
+    provenance.endpoint === 'https://chatgpt.com/backend-api/codex/responses' &&
+    provenance.hasOpenAIAPIKey === false
+  );
+}
+
+function isExactBrowserOpenAIStoryboardProvenance(
+  provenance: Partial<StoryboardGeneratedImageProvenance>,
+) {
+  return (
+    provenance.providerId === 'browser-openai-api-key' &&
+    provenance.authMode === 'browser_local_storage_api_key' &&
+    provenance.endpoint === 'https://api.openai.com/v1/images/generations' &&
+    provenance.hasOpenAIAPIKey === true
+  );
+}
+
 export function isExactStoryboardGeneratedImageProvenance(
   value: unknown,
 ): value is StoryboardGeneratedImageProvenance {
   if (!value || typeof value !== 'object') return false;
   const provenance = value as Partial<StoryboardGeneratedImageProvenance>;
   return (
-    provenance.providerId === 'local-codex' &&
-    provenance.authMode === 'codex_oauth' &&
-    provenance.endpoint === 'https://chatgpt.com/backend-api/codex/responses' &&
+    (
+      isExactLocalCodexStoryboardProvenance(provenance) ||
+      isExactBrowserOpenAIStoryboardProvenance(provenance)
+    ) &&
     provenance.requestToolType === 'image_generation' &&
     provenance.requestToolModel === 'gpt-image-2' &&
     provenance.model === 'gpt-image-2' &&
@@ -56,7 +79,6 @@ export function isExactStoryboardGeneratedImageProvenance(
       provenance.generatedImageItemTypes.includes('image_generation_call')) &&
     isSha256Hex(provenance.requestHash) &&
     isSha256Hex(provenance.responseHash) &&
-    provenance.hasOpenAIAPIKey === false &&
     typeof provenance.generatedAt === 'string' &&
     Number.isFinite(Date.parse(provenance.generatedAt))
   );
@@ -74,7 +96,10 @@ export function isTrustedStoryboardGeneratedImage(
   if (!value || typeof value !== 'object') return false;
   const image = value as Partial<StoryboardSceneGeneratedImage>;
   return (
-    image.providerId === 'local-codex' &&
+    (
+      image.providerId === 'local-codex' ||
+      image.providerId === 'browser-openai-api-key'
+    ) &&
     image.model === 'gpt-image-2' &&
     isSupportedStoryboardImageMime(image.mime) &&
     hasStoryboardImageLocation(image.dataUrl) &&

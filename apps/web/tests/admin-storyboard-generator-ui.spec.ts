@@ -827,6 +827,165 @@ test("storyboard canvas counts only visible trusted GPT Image 2 storyboard panel
   }
 });
 
+test("storyboard settings keeps production image API keys in browser localStorage only", async ({
+  page,
+}, testInfo) => {
+  test.setTimeout(90_000);
+  await page.setExtraHTTPHeaders({
+    [E2E_ADMIN_ROUTE_BYPASS_HEADER]: "1",
+    [E2E_ADMIN_ROUTE_BYPASS_TOKEN_HEADER]:
+      getE2EAdminRouteBypassToken(testInfo),
+  });
+  await page.addInitScript(
+    ({ storageKey }) => {
+      const encodeBase64Url = (value: unknown) =>
+        btoa(JSON.stringify(value))
+          .replace(/\+/g, "-")
+          .replace(/\//g, "_")
+          .replace(/=+$/g, "");
+      const expiresAt = Math.floor(Date.now() / 1000) + 60 * 60;
+      const userId = "00000000-0000-4000-8000-000000000005";
+      const accessToken = [
+        encodeBase64Url({ alg: "HS256", typ: "JWT" }),
+        encodeBase64Url({
+          aud: "authenticated",
+          exp: expiresAt,
+          sub: userId,
+          email: "storyboard-key-e2e@example.com",
+          role: "authenticated",
+        }),
+        "storyboard-key-e2e",
+      ].join(".");
+
+      window.localStorage.setItem("tzudong:e2e-admin-shell-bypass", "1");
+      window.localStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          access_token: accessToken,
+          refresh_token: "storyboard-key-e2e-refresh-token",
+          expires_at: expiresAt,
+          expires_in: 3600,
+          token_type: "bearer",
+          user: {
+            id: userId,
+            aud: "authenticated",
+            role: "authenticated",
+            email: "storyboard-key-e2e@example.com",
+            app_metadata: {},
+            user_metadata: {},
+            created_at: new Date().toISOString(),
+          },
+        }),
+      );
+    },
+    { storageKey: getSupabaseAuthStorageKey() },
+  );
+
+  const seenImageStatusHeaders: Array<string | null> = [];
+  await page.route("**/api/admin/storyboard/images", async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.continue();
+      return;
+    }
+    seenImageStatusHeaders.push(
+      route.request().headers()["x-storyboard-openai-api-key"] ?? null,
+    );
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        provider: {
+          available: true,
+          reason: "ready",
+          providerId: "browser-openai-api-key",
+          authMode: "browser_local_storage_api_key",
+          browserKeyStorage: "browser_local_storage_only",
+          model: "gpt-image-2",
+          modelProvenance: "exact",
+          target: { width: 1280, height: 720, aspectRatio: "16:9" },
+        },
+        limits: {
+          maxScenesPerRequest: 4,
+          target: { width: 1280, height: 720, aspectRatio: "16:9" },
+        },
+        config: {
+          browserKeyStorage: "browser_local_storage_only",
+          browserApiKeyHeader: "x-storyboard-openai-api-key",
+        },
+      }),
+    });
+  });
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/admin?module=storyboard", {
+    waitUntil: "domcontentloaded",
+    timeout: 90_000,
+  });
+  await hidePopupOverlay(page);
+
+  const storyboardModule = page.locator('[data-admin-storyboard-generator="true"]');
+  await expect(storyboardModule).toBeVisible({ timeout: 30_000 });
+  await storyboardModule.locator('[data-storyboard-chat-settings-toggle="true"]').click();
+  const apiKeySettings = page.locator(
+    '[data-storyboard-browser-api-key-settings="local-storage-only"]',
+  );
+  await expect(apiKeySettings).toBeVisible({ timeout: 10_000 });
+  await expect(apiKeySettings).toHaveAttribute(
+    "data-storyboard-api-key-storage",
+    "browser-local-storage-only",
+  );
+  await expect(apiKeySettings).toHaveAttribute(
+    "data-storyboard-api-key-db-storage",
+    "forbidden",
+  );
+
+  const fakeApiKey = "sk-proj_browserlocalonly1234567890";
+  const apiKeyInput = apiKeySettings.locator(
+    '[data-storyboard-browser-api-key-input="true"]',
+  );
+  await apiKeyInput.fill("not-a-key");
+  await apiKeySettings.locator('[data-storyboard-browser-api-key-save="true"]').click();
+  await expect(
+    apiKeySettings.locator('[data-storyboard-browser-api-key-error="true"]'),
+  ).toContainText(/형식/);
+
+  await apiKeyInput.fill(fakeApiKey);
+  await apiKeySettings.locator('[data-storyboard-browser-api-key-save="true"]').click();
+  await expect(
+    apiKeySettings.locator('[data-storyboard-browser-api-key-status="saved"]'),
+  ).toBeVisible({ timeout: 10_000 });
+  await expect(
+    apiKeySettings.locator('[data-storyboard-browser-api-key-mask="true"]'),
+  ).toContainText(/sk-proj…/);
+  await expect(apiKeySettings).not.toContainText(fakeApiKey);
+
+  const localStorageSnapshot = await page.evaluate(() =>
+    window.localStorage.getItem("tzudong.admin.storyboard.modelKeys.v1"),
+  );
+  expect(localStorageSnapshot).toBeTruthy();
+  expect(JSON.parse(localStorageSnapshot ?? "{}")).toMatchObject({
+    version: 1,
+    openAIApiKey: fakeApiKey,
+    storage: "browser_local_storage_only",
+  });
+  await expect
+    .poll(() => seenImageStatusHeaders.includes(fakeApiKey), {
+      timeout: 10_000,
+      message: "expected provider status refresh to use the browser key header",
+    })
+    .toBe(true);
+
+  await apiKeySettings.locator('[data-storyboard-browser-api-key-clear="true"]').click();
+  await expect(
+    apiKeySettings.locator('[data-storyboard-browser-api-key-status="empty"]'),
+  ).toBeVisible({ timeout: 10_000 });
+  expect(
+    await page.evaluate(() =>
+      window.localStorage.getItem("tzudong.admin.storyboard.modelKeys.v1"),
+    ),
+  ).toBeNull();
+});
+
 test("storyboard chat redacts hostile prompts and keeps fallback readiness truthful", async ({
   page,
 }, testInfo) => {

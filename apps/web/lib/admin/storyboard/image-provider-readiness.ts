@@ -1,14 +1,19 @@
 export const STORYBOARD_IMAGE_PROVIDER_ID = 'local-codex' as const;
+export const STORYBOARD_BROWSER_OPENAI_IMAGE_PROVIDER_ID = 'browser-openai-api-key' as const;
 export const STORYBOARD_IMAGE_PROVIDER_MODEL = 'gpt-image-2' as const;
 export const STORYBOARD_IMAGE_PROVIDER_EXACT_PROVENANCE = 'exact' as const;
 export const STORYBOARD_IMAGE_PROVIDER_MODEL_ENV = 'STORYBOARD_LOCAL_CODEX_IMAGE_MODEL' as const;
 export const STORYBOARD_IMAGE_PROVIDER_COMMAND_ENV = 'STORYBOARD_LOCAL_CODEX_COMMAND' as const;
 export const STORYBOARD_IMAGE_PROVIDER_COMMAND_PLACEHOLDER = '<verified bridge>' as const;
+export const STORYBOARD_BROWSER_OPENAI_API_KEY_HEADER = 'x-storyboard-openai-api-key' as const;
+export const STORYBOARD_BROWSER_MODEL_KEYS_STORAGE_KEY =
+  'tzudong.admin.storyboard.modelKeys.v1' as const;
 
 export type StoryboardImageProviderReason =
   | 'local_codex_model_not_allowed'
   | 'local_codex_bridge_unavailable'
   | 'local_codex_model_provenance_unverified'
+  | 'browser_openai_api_key_present'
   | 'ready'
   | 'unknown';
 
@@ -46,6 +51,8 @@ export type StoryboardImageProviderAvailabilityPayload = {
   model?: string;
   providerId?: string;
   modelProvenance?: string;
+  authMode?: string;
+  browserKeyStorage?: 'browser_local_storage_only';
   target?: StoryboardImageProviderTarget;
 };
 
@@ -55,6 +62,9 @@ export type StoryboardImageProviderStatusResponse = {
     localCodexCommand?: string;
     localCodexModel?: string;
     localCodexProof?: string;
+    browserOpenAIApiKey?: string;
+    browserKeyStorage?: 'browser_local_storage_only';
+    browserApiKeyHeader?: typeof STORYBOARD_BROWSER_OPENAI_API_KEY_HEADER;
   };
   limits?: {
     maxScenesPerRequest?: number;
@@ -78,13 +88,16 @@ export function isExactStoryboardGptImage2ProviderPayload(
   provider?: StoryboardImageProviderAvailabilityPayload,
 ): provider is StoryboardImageProviderAvailabilityPayload & {
   available: true;
-  providerId: typeof STORYBOARD_IMAGE_PROVIDER_ID;
+  providerId: typeof STORYBOARD_IMAGE_PROVIDER_ID | typeof STORYBOARD_BROWSER_OPENAI_IMAGE_PROVIDER_ID;
   model: typeof STORYBOARD_IMAGE_PROVIDER_MODEL;
   modelProvenance: typeof STORYBOARD_IMAGE_PROVIDER_EXACT_PROVENANCE;
 } {
   return (
     provider?.available === true &&
-    provider.providerId === STORYBOARD_IMAGE_PROVIDER_ID &&
+    (
+      provider.providerId === STORYBOARD_IMAGE_PROVIDER_ID ||
+      provider.providerId === STORYBOARD_BROWSER_OPENAI_IMAGE_PROVIDER_ID
+    ) &&
     provider.model === STORYBOARD_IMAGE_PROVIDER_MODEL &&
     provider.modelProvenance === STORYBOARD_IMAGE_PROVIDER_EXACT_PROVENANCE
   );
@@ -99,12 +112,18 @@ export function mapStoryboardImageProviderReadiness(
   const checkedAt = new Date().toISOString();
 
   if (isExactStoryboardGptImage2ProviderPayload(provider)) {
+    const isBrowserKeyProvider =
+      provider.providerId === STORYBOARD_BROWSER_OPENAI_IMAGE_PROVIDER_ID;
     return {
       status: 'ready',
       label: '이미지 생성 준비됨',
-      summary: '이미지 만들기 준비가 끝났습니다.',
+      summary: isBrowserKeyProvider
+        ? '브라우저에 저장한 API 키로 이미지 생성 준비가 끝났습니다.'
+        : '이미지 만들기 준비가 끝났습니다.',
       detail:
-        '현재 페이지의 스토리보드 컷을 새 이미지로 만들 수 있습니다.',
+        isBrowserKeyProvider
+          ? '키는 이 브라우저 캐시에만 보관되고, 요청할 때만 서버로 전달됩니다.'
+          : '현재 페이지의 스토리보드 컷을 새 이미지로 만들 수 있습니다.',
       reason: 'ready',
       model,
       providerId: provider.providerId,
