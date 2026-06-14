@@ -1,5 +1,12 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import {
+    AUTH_LOGIN_QUERY_PARAM,
+    AUTH_LOGIN_QUERY_VALUE,
+    AUTH_REDIRECT_NEXT_PARAM,
+    AUTH_REDIRECT_REASON_PARAM,
+    type AuthRedirectReason,
+} from '@/lib/auth/auth-redirect'
 
 const isRefreshTokenNotFoundError = (error: unknown) => {
     if (!error || typeof error !== 'object') return false;
@@ -63,7 +70,7 @@ const getRequestedPathWithSearch = (request: NextRequest) => {
 const redirectAuthRequiredWithSessionCookies = (
     request: NextRequest,
     sourceResponse: NextResponse,
-    reason: 'admin' | 'mypage',
+    reason: AuthRedirectReason,
 ) => {
     const redirectUrl = new URL('/auth/required', request.url);
     redirectUrl.searchParams.set('reason', reason);
@@ -77,8 +84,29 @@ const redirectAuthRequiredWithSessionCookies = (
     return redirectResponse;
 };
 
-const redirectAdminAuthRequiredWithSessionCookies = (request: NextRequest, sourceResponse: NextResponse) =>
-    redirectAuthRequiredWithSessionCookies(request, sourceResponse, 'admin');
+const redirectAdminLoginWithSessionCookies = (request: NextRequest, sourceResponse: NextResponse) => {
+    const redirectUrl = new URL('/', request.url);
+    redirectUrl.searchParams.set(AUTH_LOGIN_QUERY_PARAM, AUTH_LOGIN_QUERY_VALUE);
+    redirectUrl.searchParams.set(AUTH_REDIRECT_REASON_PARAM, 'admin');
+    redirectUrl.searchParams.set(AUTH_REDIRECT_NEXT_PARAM, getRequestedPathWithSearch(request));
+    const redirectResponse = NextResponse.redirect(redirectUrl);
+
+    for (const cookie of sourceResponse.cookies.getAll()) {
+        redirectResponse.cookies.set(cookie);
+    }
+
+    return redirectResponse;
+};
+
+const redirectAdminHomeWithSessionCookies = (request: NextRequest, sourceResponse: NextResponse) => {
+    const redirectResponse = NextResponse.redirect(new URL('/', request.url));
+
+    for (const cookie of sourceResponse.cookies.getAll()) {
+        redirectResponse.cookies.set(cookie);
+    }
+
+    return redirectResponse;
+};
 
 const redirectMyPageAuthRequiredWithSessionCookies = (request: NextRequest, sourceResponse: NextResponse) =>
     redirectAuthRequiredWithSessionCookies(request, sourceResponse, 'mypage');
@@ -134,7 +162,7 @@ export async function updateSession(request: NextRequest) {
 
     if (isAdminPageRequest(request)) {
         if (authFailed || !authUserId) {
-            return redirectAdminAuthRequiredWithSessionCookies(request, supabaseResponse);
+            return redirectAdminLoginWithSessionCookies(request, supabaseResponse);
         }
 
         const { data: role, error: roleError } = await supabase
@@ -145,7 +173,7 @@ export async function updateSession(request: NextRequest) {
             .maybeSingle();
 
         if (roleError || !role) {
-            return redirectAdminAuthRequiredWithSessionCookies(request, supabaseResponse);
+            return redirectAdminHomeWithSessionCookies(request, supabaseResponse);
         }
 
         const { data: accountStatus, error: accountStatusError } = await supabase
@@ -155,11 +183,11 @@ export async function updateSession(request: NextRequest) {
             .maybeSingle();
 
         if (accountStatus?.account_status === 'disabled') {
-            return redirectAdminAuthRequiredWithSessionCookies(request, supabaseResponse);
+            return redirectAdminHomeWithSessionCookies(request, supabaseResponse);
         }
 
         if (accountStatusError && !isMissingOptionalAdminStatusStoreError(accountStatusError)) {
-            return redirectAdminAuthRequiredWithSessionCookies(request, supabaseResponse);
+            return redirectAdminHomeWithSessionCookies(request, supabaseResponse);
         }
     }
 

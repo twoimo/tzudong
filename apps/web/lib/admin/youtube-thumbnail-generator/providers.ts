@@ -1,5 +1,5 @@
 import { spawn, spawnSync } from 'node:child_process';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, stat, writeFile } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
@@ -28,10 +28,27 @@ const LOCAL_CODEX_COMMAND_TIMEOUT_MS = 10 * 60 * 1000;
 const LOCAL_CODEX_COMMAND_MAX_OUTPUT_BYTES = 3 * 1024 * 1024;
 const LOCAL_CODEX_C2PATOOL_TIMEOUT_MS = 30 * 1000;
 const LOCAL_CODEX_C2PATOOL_MAX_OUTPUT_BYTES = 3 * 1024 * 1024;
+const THUMBNAIL_GENERATION_CACHE_VERSION = 'thumbnail-generation-cache-v1';
+const THUMBNAIL_GENERATION_CACHE_DIR = '.omx/runtime/youtube-thumbnail-cache';
 
 type ThumbnailProviderExecutionOptions = {
   signal?: AbortSignal;
   runId?: string;
+};
+
+type ThumbnailGenerationCacheEntry = {
+  version: typeof THUMBNAIL_GENERATION_CACHE_VERSION;
+  cacheKey: string;
+  createdAt: string;
+  providerId: typeof LOCAL_CODEX_PROVIDER_ID;
+  model: typeof LOCAL_CODEX_EXACT_IMAGE_MODEL;
+  modelProvenance: 'exact';
+  mime: 'image/png';
+  width: typeof YOUTUBE_THUMBNAIL_TARGET_WIDTH;
+  height: typeof YOUTUBE_THUMBNAIL_TARGET_HEIGHT;
+  imageFile: string;
+  prompt: string;
+  warnings: string[];
 };
 
 type LocalCodexProviderProofSummary = {
@@ -167,6 +184,147 @@ function getLocalCodexDurableOutputRoot(env: NodeJS.ProcessEnv = process.env) {
     resolveRepoRoot(env),
     env.THUMBNAIL_LOCAL_CODEX_DURABLE_OUTPUT_DIR?.trim() || DEFAULT_LOCAL_CODEX_DURABLE_OUTPUT_DIR,
   );
+}
+
+function getThumbnailGenerationCacheRoot(env: NodeJS.ProcessEnv = process.env) {
+  return resolve(
+    resolveRepoRoot(env),
+    env.THUMBNAIL_GENERATION_CACHE_ROOT?.trim() || THUMBNAIL_GENERATION_CACHE_DIR,
+  );
+}
+
+function sha256(value: string | Uint8Array | Buffer) {
+  return createHash('sha256').update(value).digest('hex');
+}
+
+function stableStringify(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => stableStringify(item)).join(',')}]`;
+  }
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${stableStringify(record[key])}`).join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function createThumbnailGenerationCacheKey(
+  payload: ThumbnailGeneratorPayload,
+  referenceImages: ThumbnailReferenceImage[],
+  prompt: string,
+) {
+  return sha256(stableStringify({
+    version: THUMBNAIL_GENERATION_CACHE_VERSION,
+    providerId: payload.providerId,
+    generationMode: payload.generationMode,
+    model: LOCAL_CODEX_EXACT_IMAGE_MODEL,
+    promptHash: sha256(prompt),
+    references: referenceImages.map((image, index) => ({
+      index,
+      name: image.name,
+      role: image.role,
+      mime: image.mime,
+      bytes: image.bytes.byteLength,
+      sha256: sha256(image.bytes),
+    })),
+  }));
+}
+
+function decodeCacheDataUrl(dataUrl: string) {
+  const match = dataUrl.match(/^data:image\/png;base64,([A-Za-z0-9+/=\r\n]+)$/);
+  return match ? Buffer.from(match[1].replace(/\s+/g, ''), 'base64') : null;
+}
+
+async function readThumbnailGenerationCache(
+  cacheKey: string,
+  prompt: string,
+  env: NodeJS.ProcessEnv,
+): Promise<ThumbnailGenerationResult | null> {
+  if (env.THUMBNAIL_GENERATION_CACHE_DISABLED === '1') return null;
+  const cacheRoot = getThumbnailGenerationCacheRoot(env);
+  const entryPath = resolve(cacheRoot, `${cacheKey}.json`);
+  const imagePath = resolve(cacheRoot, `${cacheKey}.png`);
+  if (!isPathInside(cacheRoot, entryPath) || !isPathInside(cacheRoot, imagePath)) return null;
+
+  try {
+    const entry = JSON.parse(await readFile(entryPath, 'utf8')) as ThumbnailGenerationCacheEntry;
+    if (
+      entry.version !== THUMBNAIL_GENERATION_CACHE_VERSION ||
+      entry.cacheKey !== cacheKey ||
+      entry.providerId !== LOCAL_CODEX_PROVIDER_ID ||
+      entry.model !== LOCAL_CODEX_EXACT_IMAGE_MODEL ||
+      entry.modelProvenance !== 'exact' ||
+      entry.mime !== 'image/png' ||
+      entry.imageFile !== `${cacheKey}.png` ||
+      entry.prompt !== prompt ||
+      !hasPngMagic(imagePath) ||
+      !hasStructuralExactGptImage2C2paProof(imagePath, env)
+    ) {
+      return null;
+    }
+    const bytes = await readFile(imagePath);
+    return {
+      baseImage: {
+        dataUrl: `data:image/png;base64,${Buffer.from(bytes).toString('base64')}`,
+        mime: 'image/png',
+        width: YOUTUBE_THUMBNAIL_TARGET_WIDTH,
+        height: YOUTUBE_THUMBNAIL_TARGET_HEIGHT,
+        targetWidth: YOUTUBE_THUMBNAIL_TARGET_WIDTH,
+        targetHeight: YOUTUBE_THUMBNAIL_TARGET_HEIGHT,
+        providerId: LOCAL_CODEX_PROVIDER_ID,
+        model: LOCAL_CODEX_EXACT_IMAGE_MODEL,
+        modelProvenance: 'exact',
+      },
+      prompt,
+      warnings: [
+        'thumbnail_generation_cache_hit: exact gpt-image-2 cached base image reused.',
+        `thumbnail_generation_cache_key:${cacheKey}`,
+        ...entry.warnings.filter((warning) => typeof warning === 'string').slice(0, 8),
+      ],
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function writeThumbnailGenerationCache(
+  cacheKey: string,
+  result: ThumbnailGenerationResult,
+  env: NodeJS.ProcessEnv,
+) {
+  if (env.THUMBNAIL_GENERATION_CACHE_DISABLED === '1') return;
+  if (
+    result.baseImage.providerId !== LOCAL_CODEX_PROVIDER_ID ||
+    result.baseImage.model !== LOCAL_CODEX_EXACT_IMAGE_MODEL ||
+    result.baseImage.modelProvenance !== 'exact' ||
+    result.baseImage.mime !== 'image/png'
+  ) {
+    return;
+  }
+  const bytes = decodeCacheDataUrl(result.baseImage.dataUrl);
+  if (!bytes || bytes.length <= 0) return;
+
+  const cacheRoot = getThumbnailGenerationCacheRoot(env);
+  const imagePath = resolve(cacheRoot, `${cacheKey}.png`);
+  const entryPath = resolve(cacheRoot, `${cacheKey}.json`);
+  if (!isPathInside(cacheRoot, imagePath) || !isPathInside(cacheRoot, entryPath)) return;
+  await mkdir(cacheRoot, { recursive: true });
+  await writeFile(imagePath, bytes);
+  const entry: ThumbnailGenerationCacheEntry = {
+    version: THUMBNAIL_GENERATION_CACHE_VERSION,
+    cacheKey,
+    createdAt: new Date().toISOString(),
+    providerId: LOCAL_CODEX_PROVIDER_ID,
+    model: LOCAL_CODEX_EXACT_IMAGE_MODEL,
+    modelProvenance: 'exact',
+    mime: 'image/png',
+    width: YOUTUBE_THUMBNAIL_TARGET_WIDTH,
+    height: YOUTUBE_THUMBNAIL_TARGET_HEIGHT,
+    imageFile: `${cacheKey}.png`,
+    prompt: result.prompt,
+    warnings: result.warnings.filter((warning) => typeof warning === 'string').slice(0, 12),
+  };
+  await writeFile(entryPath, `${JSON.stringify(entry, null, 2)}\n`, 'utf8');
 }
 
 function isPathInside(root: string, target: string) {
@@ -683,10 +841,18 @@ async function generateLocalCodexThumbnail(
   env: NodeJS.ProcessEnv,
   options: ThumbnailProviderExecutionOptions,
 ): Promise<ThumbnailGenerationResult> {
+  const startedAt = Date.now();
   throwIfProviderAborted(options.signal);
   const strictBlock = getLocalCodexStrictBlock(env);
   if (strictBlock) {
     throw new ThumbnailGenerationError(strictBlock.code, strictBlock.message, strictBlock.status);
+  }
+
+  const cacheKey = createThumbnailGenerationCacheKey(payload, referenceImages, prompt);
+  const cached = await readThumbnailGenerationCache(cacheKey, prompt, env);
+  if (cached) {
+    cached.warnings.push(`thumbnail_timing_ms:provider_total=${Date.now() - startedAt}`);
+    return cached;
   }
 
   const runId = createThumbnailRunId(options.runId);
@@ -698,6 +864,7 @@ async function generateLocalCodexThumbnail(
   await mkdir(dirname(outputPath), { recursive: true });
   await writeFile(promptFile, prompt, 'utf8');
 
+  const commandStartedAt = Date.now();
   const result = await runLocalCodexThumbnailCommand(
     env,
     {
@@ -710,7 +877,10 @@ async function generateLocalCodexThumbnail(
     },
     options,
   );
+  const commandElapsedMs = Date.now() - commandStartedAt;
+  const proofStartedAt = Date.now();
   const proof = validateLocalCodexCommandResult(result, outputPath, env);
+  const proofElapsedMs = Date.now() - proofStartedAt;
   const proofOutputStat = await stat(proof.outputPath);
   if (!proofOutputStat.isFile() || proofOutputStat.size !== proof.bytes || proofOutputStat.size <= 0) {
     throw new ThumbnailGenerationError('provider_unavailable', '로컬 Codex bridge가 유효한 durable PNG 썸네일을 증명하지 못했습니다.', 502);
@@ -726,7 +896,7 @@ async function generateLocalCodexThumbnail(
     warnings.push('backend_agent_mode: direct provider image generated after backend planning.');
   }
 
-  return {
+  const generatedResult: ThumbnailGenerationResult = {
     baseImage: {
       dataUrl: `data:image/png;base64,${Buffer.from(bytes).toString('base64')}`,
       mime: 'image/png',
@@ -741,6 +911,12 @@ async function generateLocalCodexThumbnail(
     prompt,
     warnings,
   };
+  generatedResult.warnings.push(`thumbnail_generation_cache_miss:${cacheKey}`);
+  generatedResult.warnings.push(`thumbnail_timing_ms:provider_command=${commandElapsedMs}`);
+  generatedResult.warnings.push(`thumbnail_timing_ms:provider_proof=${proofElapsedMs}`);
+  generatedResult.warnings.push(`thumbnail_timing_ms:provider_total=${Date.now() - startedAt}`);
+  await writeThumbnailGenerationCache(cacheKey, generatedResult, env);
+  return generatedResult;
 }
 
 export async function generateYoutubeThumbnailWithPrompt(

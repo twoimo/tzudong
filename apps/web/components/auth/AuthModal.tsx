@@ -19,6 +19,10 @@ import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { MOBILE_FULL_FORM_SHEET, MobileSheetHeader, mobileSheetStyles } from "@/components/ui/mobile-sheet-frame";
 import { useImmediateMobileOrTablet } from "@/hooks/useDeviceType";
 import { dispatchHomeAuthSessionUpdated } from "@/lib/home-auth-events";
+import {
+  getSafeAuthNextPath,
+  isAdminAuthRedirect,
+} from "@/lib/auth/auth-redirect";
 import { PrivacyPolicyContent } from "@/components/legal/PrivacyPolicyContent";
 
 // 쯔양 테마 랜덤 닉네임 생성
@@ -38,6 +42,8 @@ const generateRandomNickname = (): string => {
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
+  redirectTo?: string | null;
+  reason?: string | null;
 }
 
 const AUTH_MODAL_DESKTOP_CONTENT_CLASS_NAME = "max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 rounded-xl pb-[max(1.5rem,env(safe-area-inset-bottom))]";
@@ -69,7 +75,7 @@ const GoogleIcon = memo(() => (
 ));
 GoogleIcon.displayName = "GoogleIcon";
 
-const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
+const AuthModal = memo(({ isOpen, onClose, redirectTo, reason }: AuthModalProps) => {
   const isMobileOrTablet = useImmediateMobileOrTablet();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -82,6 +88,8 @@ const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
   const [isSendingReset, setIsSendingReset] = useState(false);
+  const safeRedirectTo = getSafeAuthNextPath(redirectTo);
+  const isAdminRedirect = isAdminAuthRedirect(reason, safeRedirectTo);
 
   // 이전에 동의한 적 있으면 localStorage에서 불러오기 + 랜덤 닉네임 설정
   useEffect(() => {
@@ -111,9 +119,14 @@ const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
   const handleGoogleLogin = useCallback(async () => {
     setIsGoogleLoading(true);
     try {
+      const callbackUrl = new URL("/auth/callback", window.location.origin);
+      if (isAdminRedirect) {
+        callbackUrl.searchParams.set("next", safeRedirectTo);
+      }
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: `${window.location.origin}/auth/callback` },
+        options: { redirectTo: callbackUrl.toString() },
       });
       if (error) throw error;
     } catch (error) {
@@ -122,7 +135,13 @@ const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
       toast.error(errorMessage);
       setIsGoogleLoading(false);
     }
-  }, []);
+  }, [isAdminRedirect, safeRedirectTo]);
+
+  const redirectAfterAdminLogin = useCallback(() => {
+    if (!isAdminRedirect) return false;
+    window.location.assign(safeRedirectTo);
+    return true;
+  }, [isAdminRedirect, safeRedirectTo]);
 
   const handleLogin = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -141,6 +160,9 @@ const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
         source: 'auth-modal-password-login',
       });
       resetForm();
+      if (data.session?.user?.id && redirectAfterAdminLogin()) {
+        return;
+      }
       onClose();
     } catch (error) {
       console.error("Login error:", error);
@@ -149,7 +171,7 @@ const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
     } finally {
       setIsLoading(false);
     }
-  }, [email, password, resetForm, onClose]);
+  }, [email, password, redirectAfterAdminLogin, resetForm, onClose]);
 
   const handleSignup = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();

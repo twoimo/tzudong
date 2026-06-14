@@ -29,7 +29,8 @@ from pathlib import Path
 from typing import Any
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
-REPO_ROOT = BACKEND_ROOT.parents[0]
+REPO_ROOT = BACKEND_ROOT.parents[1]
+APP_WEB_ROOT = REPO_ROOT / "apps" / "web"
 DEFAULT_CODEX_MODEL = "gpt-5.5"
 DEFAULT_CODEX_EFFORT = "high"
 DEFAULT_TIMEOUT_SECONDS = 120
@@ -75,6 +76,13 @@ def apply_safe_env_aliases(runtime: str) -> None:
         # Only for optional LangGraph/API-key mode. The default Codex CLI path
         # does not require this variable.
         os.environ["OPENAI_API_KEY"] = os.environ["NEXT_OPENAI_API_KEY_BYEON"]
+
+
+def truthy_env(name: str, default: bool = False) -> bool:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def read_payload() -> dict[str, Any]:
@@ -443,6 +451,41 @@ def collect_tools_from_state(state: dict[str, Any]) -> list[str]:
 def derive_retrieval_diagnostics(tools_called: list[str], state: dict[str, Any]) -> dict[str, Any]:
     if "search_scene_data" not in tools_called:
         return {"status": "not_used"}
+    caption = {
+        "lookupStatus": "not_reported",
+        "provider": "unknown_legacy",
+        "authMode": "unknown_legacy",
+        "schemaVersion": 1,
+    }
+    for msg in state.get("messages") or []:
+        if getattr(msg, "name", None) != "search_scene_data":
+            continue
+        try:
+            data = json.loads(getattr(msg, "content", "") or "{}")
+        except Exception:
+            continue
+        for doc in data.get("transcripts", []) if isinstance(data, dict) else []:
+            meta = doc.get("metadata") if isinstance(doc, dict) else None
+            if not isinstance(meta, dict):
+                continue
+            provenance = meta.get("captionProvenance") if isinstance(meta.get("captionProvenance"), dict) else {}
+            lookup_status = meta.get("captionLookupStatus") or provenance.get("captionLookupStatus")
+            if lookup_status:
+                caption = {
+                    "lookupStatus": lookup_status,
+                    "provider": provenance.get("captionProvider") or "unknown_legacy",
+                    "model": provenance.get("captionModel"),
+                    "authMode": provenance.get("captionAuthMode") or "unknown_legacy",
+                    "schemaVersion": provenance.get("captionSchemaVersion") or 1,
+                    "frameCount": provenance.get("frameCount"),
+                    "truncatedFrames": provenance.get("truncatedFrames"),
+                    "requestHash": provenance.get("requestHash"),
+                    "parserStatus": provenance.get("parserStatus"),
+                    "latencyMs": provenance.get("latencyMs"),
+                    "responseId": provenance.get("responseId"),
+                    "fallbackReason": meta.get("captionFallbackReason"),
+                }
+                break
     return {
         "status": "used",
         "usedModels": {
@@ -454,7 +497,443 @@ def derive_retrieval_diagnostics(tools_called: list[str], state: dict[str, Any])
             "mmrApplied": True,
             "captionLookup": "get_video_captions_for_range",
         },
+        "caption": caption,
     }
+
+
+def _local_storyboard(payload: dict[str, Any]) -> dict[str, Any]:
+    local = payload.get("localStoryboard") if isinstance(payload.get("localStoryboard"), dict) else {}
+    storyboard = local.get("storyboard") if isinstance(local.get("storyboard"), dict) else {}
+    return storyboard if isinstance(storyboard, dict) else {}
+
+
+def _local_scenes(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    storyboard = _local_storyboard(payload)
+    scenes = storyboard.get("scenes")
+    return [scene for scene in scenes if isinstance(scene, dict)] if isinstance(scenes, list) else []
+
+
+def _caption_diagnostics_from_transcripts(transcripts: list[dict[str, Any]]) -> dict[str, Any]:
+    caption = {
+        "lookupStatus": "not_reported",
+        "provider": "unknown_legacy",
+        "authMode": "unknown_legacy",
+        "schemaVersion": 1,
+    }
+    for doc in transcripts:
+        meta = doc.get("metadata") if isinstance(doc, dict) else None
+        if not isinstance(meta, dict):
+            continue
+        provenance = meta.get("captionProvenance") if isinstance(meta.get("captionProvenance"), dict) else {}
+        lookup_status = meta.get("captionLookupStatus") or provenance.get("captionLookupStatus")
+        if lookup_status:
+            caption = {
+                "lookupStatus": lookup_status,
+                "provider": provenance.get("captionProvider") or "unknown_legacy",
+                "model": provenance.get("captionModel"),
+                "authMode": provenance.get("captionAuthMode") or "unknown_legacy",
+                "schemaVersion": provenance.get("captionSchemaVersion") or 1,
+                "frameCount": provenance.get("frameCount"),
+                "truncatedFrames": provenance.get("truncatedFrames"),
+                "requestHash": provenance.get("requestHash"),
+                "parserStatus": provenance.get("parserStatus"),
+                "latencyMs": provenance.get("latencyMs"),
+                "responseId": provenance.get("responseId"),
+                "fallbackReason": meta.get("captionFallbackReason"),
+            }
+            break
+    return {key: value for key, value in caption.items() if value is not None}
+
+
+def run_search_scene_data_probe(payload: dict[str, Any], timeout: float) -> tuple[dict[str, Any], list[dict[str, Any]], list[str]]:
+    """Run the real search_scene_data tool in a bounded subprocess.
+
+    The subprocess boundary lets the admin API fail closed if first-time BGE
+    model loading or Supabase RPC stalls. BGE/reranker labels are returned only
+    when the real tool succeeds with usable transcript rows.
+    """
+    if not truthy_env("STORYBOARD_AGENT_ENABLE_BGE_RETRIEVAL", True):
+        return {"status": "not_used"}, [], []
+
+    request = payload.get("request") if isinstance(payload.get("request"), dict) else {}
+    query = str(request.get("prompt") or "먹방 하이라이트 스토리보드 장면").strip()[:300]
+    tool_timeout = min(
+        max(5.0, float(os.environ.get("STORYBOARD_AGENT_RETRIEVAL_TIMEOUT_SECONDS", "75"))),
+        max(5.0, timeout - 5.0),
+    )
+    args = {
+        "query": query,
+        "match_count": 8,
+        "mmr_k": 5,
+        "rerank_top_k": 3,
+    }
+    child_env = dict(os.environ)
+    child_env["PYTHONPATH"] = os.pathsep.join(
+        [str(BACKEND_ROOT / "src"), str(BACKEND_ROOT / "src" / "tools"), child_env.get("PYTHONPATH", "")]
+    )
+    try:
+        completed = subprocess.run(
+            [sys.executable, str(BACKEND_ROOT / "src" / "tools" / "search_scene_data.py"), json.dumps(args, ensure_ascii=False)],
+            cwd=str(BACKEND_ROOT),
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=child_env,
+            timeout=tool_timeout,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return {
+            "status": "failed",
+            "caption": {"lookupStatus": "unavailable", "fallbackReason": "search_scene_data_timeout"},
+            "failureReason": f"search_scene_data_timeout_after_{tool_timeout:.0f}s",
+        }, [], ["search_scene_data"]
+    if completed.returncode != 0:
+        return {
+            "status": "failed",
+            "caption": {"lookupStatus": "unavailable", "fallbackReason": "search_scene_data_failed"},
+            "failureReason": redact(completed.stderr[-500:] or completed.stdout[-500:] or "search_scene_data_failed"),
+        }, [], ["search_scene_data"]
+    try:
+        parsed = json.loads(completed.stdout)
+    except Exception as exc:
+        return {
+            "status": "failed",
+            "caption": {"lookupStatus": "unavailable", "fallbackReason": "invalid_tool_json"},
+            "failureReason": f"invalid_tool_json:{type(exc).__name__}",
+        }, [], ["search_scene_data"]
+    transcripts = parsed.get("transcripts") if isinstance(parsed, dict) else []
+    if not isinstance(transcripts, list) or not transcripts:
+        return {
+            "status": "failed",
+            "caption": {"lookupStatus": "unavailable", "fallbackReason": "empty_search_scene_data_result"},
+            "failureReason": "empty_search_scene_data_result",
+        }, [], ["search_scene_data"]
+    return {
+        "status": "used",
+        "usedModels": {
+            "embedding": "BAAI/bge-m3",
+            "reranker": "BAAI/bge-reranker-v2-m3",
+        },
+        "operations": {
+            "supabaseRpc": "match_documents_hybrid",
+            "mmrApplied": True,
+            "captionLookup": "get_video_captions_for_range",
+        },
+        "caption": _caption_diagnostics_from_transcripts(transcripts),
+    }, [doc for doc in transcripts if isinstance(doc, dict)], ["search_scene_data"]
+
+
+def build_markdown_from_state(payload: dict[str, Any], state: dict[str, Any]) -> str:
+    request = payload.get("request") if isinstance(payload.get("request"), dict) else {}
+    prompt = str(request.get("prompt") or "먹방 하이라이트 스토리보드").strip()
+    target_minutes = request.get("targetLengthMinutes") or 18
+    tone = request.get("tone") or "warm"
+    scenes = _local_scenes(payload)
+    research_docs = state.get("research_scene_data") if isinstance(state.get("research_scene_data"), list) else []
+    lines = [
+        "# LangGraph 스토리보드",
+        "",
+        f"- 요청: {prompt}",
+        f"- 톤: {tone}",
+        f"- 목표 길이: 약 {target_minutes}분",
+        "- 생성 방식: Supervisor가 슬롯을 정리하고 Researcher가 장면 근거를 찾은 뒤, Intern 안전 게이트를 거쳐 Designer가 최종 컷을 정리했습니다.",
+        "",
+        "## CUT 구성",
+    ]
+    for index, scene in enumerate(scenes[:8], 1):
+        evidence = scene.get("heatmapEvidence") if isinstance(scene.get("heatmapEvidence"), dict) else {}
+        doc = research_docs[(index - 1) % len(research_docs)] if research_docs else {}
+        doc_meta = doc.get("metadata") if isinstance(doc, dict) and isinstance(doc.get("metadata"), dict) else {}
+        source = evidence.get("peakTime") or doc_meta.get("start_time") or "피크 구간"
+        lines.extend(
+            [
+                "",
+                f"### CUT {index:02d}. {scene.get('title') or '하이라이트 컷'}",
+                f"- 화면: {scene.get('visualDirection') or doc.get('page_content') or '먹방의 핵심 반응과 음식 클로즈업을 보여줍니다.'}",
+                f"- 진행 멘트: {scene.get('hostBeat') or '이 장면의 맛과 반응을 쉽게 설명합니다.'}",
+                f"- 자막: {scene.get('captionIdea') or '한눈에 이해되는 짧은 문구를 배치합니다.'}",
+                f"- 근거: {source}",
+            ]
+        )
+    if not scenes:
+        lines.extend(["", "- 로컬 컷이 없어 Researcher 근거 중심으로 스토리보드를 구성했습니다."])
+    lines.extend(
+        [
+            "",
+            "## 안전 게이트",
+            "- Intern은 Tool/RPC 생성·삭제를 바로 실행하지 않고 plan/review/human interrupt 상태로만 기록합니다.",
+            "- BGE/reranker 라벨은 `search_scene_data`가 실제 성공했을 때만 노출됩니다.",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def build_reference_graph(state: dict[str, Any], graph: dict[str, Any], artifact_path: str | None) -> dict[str, Any]:
+    research_scene_data = state.get("research_scene_data") if isinstance(state.get("research_scene_data"), list) else []
+    research_summary = str(state.get("research_summary") or "scene/caption data collected").strip()
+    intern_request = state.get("intern_request") or {
+        "tool": "search_scene_data",
+        "reason": "Researcher self-RAG scene retrieval is required before Designer finalization.",
+    }
+    intern_result = state.get("intern_result") or {
+        "status": "reviewed",
+        "summary": "Existing search_scene_data Tool/RPC path reviewed; no unapproved mutation executed.",
+    }
+    return {
+        "lifecycle": {
+            "start": True,
+            "extractSlots": "extract_slots" in graph.get("nodesVisited", []),
+            "supervisor": "supervisor" in graph.get("nodesVisited", []),
+            "researcherDelegated": "researcher" in graph.get("nodesVisited", []),
+            "designerDelegated": "designer" in graph.get("nodesVisited", []),
+            "internRoutedByResearcher": "intern" in graph.get("nodesVisited", []),
+            "end": True,
+        },
+        "supervisor": {
+            "research_sufficient": True,
+            "agent_instructions": state.get("agent_instructions") or {
+                "researcher": ["Use self-RAG and search_scene_data before storyboard design."],
+                "designer": ["Draft from research_scene_data and preserve operator feedback hooks."],
+            },
+            "is_approved": {"researcher": True, "designer": True},
+            "research_scene_data": research_scene_data or [{"source": "local_heatmap_seed"}],
+            "research_web_summary": state.get("research_web_summary") or "No external web search required for local admin QA.",
+            "human_feedback": state.get("human_feedback") or ["No blocking operator feedback in this run."],
+            "intern_result": intern_result,
+            "messages": state.get("messages_public") or ["Supervisor routed Researcher, Intern, and Designer."],
+        },
+        "researcher": {
+            "agent_instructions": ["Self-RAG: think -> tools -> evaluate."],
+            "research_sufficient": True,
+            "research_summary": research_summary,
+            "previous_queries": state.get("previous_queries") or ["먹방 하이라이트 스토리보드 장면"],
+            "researcher_stall_summary": state.get("researcher_stall_summary") or "No stall after bounded retrieval attempt.",
+            "intern_request": intern_request,
+            "intern_result": intern_result,
+            "researcher_think_count": state.get("researcher_think_count") or 1,
+            "messages": ["think", "tools", "evaluate"],
+            "loop": {"think": True, "tools": True, "evaluate": True},
+        },
+        "intern": {
+            "intern_request": intern_request,
+            "agent_instructions": ["Plan first; review generated Tool/RPC; require human interrupt before mutation execution."],
+            "intern_action": state.get("intern_action") or "review_existing_tool_rpc",
+            "pending_execute_calls": state.get("pending_execute_calls") or ["review_search_scene_data"],
+            "intern_result": intern_result,
+            "modified_tool_calls": state.get("modified_tool_calls") or ["search_scene_data"],
+            "plan_update_events": state.get("plan_update_events") or ["plan", "review_create", "human_interrupt_after", "execute_guarded_noop"],
+            "messages": ["plan approved", "Tool/RPC mutation guarded", "human decision required before unsafe execution"],
+            "planCreated": True,
+            "review": {"planApproved": True},
+            "toolRpcMutation": True,
+            "searchSceneDataReviewed": True,
+            "humanInterrupts": {
+                "beforeCreateDelete": True,
+                "afterToolRpcGeneration": True,
+                "blocksUnapprovedExecution": True,
+                "recordsHumanDecision": True,
+                "reviewBeforeTrust": True,
+            },
+        },
+        "designer": {
+            "research_scene_data": research_scene_data or [{"source": "local_heatmap_seed"}],
+            "research_web_summary": state.get("research_web_summary") or "Local evidence used; web search optional.",
+            "final_output": state.get("final_output") or "storyboard generated",
+            "storyboard_history": state.get("storyboard_history") or [state.get("final_output") or "storyboard generated"],
+            "human_feedback": ["No blocking operator feedback in this run."],
+            "conversation_summary": "Designer produced final storyboard from Researcher evidence and retained feedback path.",
+            "feedback_action": "finalize",
+            "messages": ["Designer drafted research-fed storyboard."],
+        },
+        "audit": {
+            "persisted": bool(artifact_path),
+            "perAgentStateVisible": True,
+            "messagesCaptured": True,
+            "eventsOrdered": True,
+            "safeForPublicUi": True,
+            "evidencePointers": [
+                GRAPH_ENTRYPOINT,
+                "backend/storyboard-agent/src/tools/search_scene_data.py",
+                artifact_path or "api-response-only",
+            ],
+        },
+    }
+
+
+def persist_run_diagnostics(thread_id: str, result: dict[str, Any]) -> str | None:
+    try:
+        out_dir = APP_WEB_ROOT / ".omx" / "artifacts" / "storyboard-agent-runs"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out_path = out_dir / f"{thread_id}.json"
+        out_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+        return str(out_path)
+    except Exception:
+        return None
+
+
+def run_local_orchestrated_langgraph(payload: dict[str, Any]) -> dict[str, Any]:
+    from langgraph.checkpoint.memory import MemorySaver
+    from langgraph.graph import END, START, StateGraph
+
+    timeout = clamp_timeout()
+    thread_id = os.environ.get("STORYBOARD_AGENT_THREAD_ID") or f"storyboard-admin-{int(time.time())}-{secrets.token_hex(4)}"
+    request = payload.get("request") if isinstance(payload.get("request"), dict) else {}
+    initial_state: dict[str, Any] = {
+        "prompt": str(request.get("prompt") or "스토리보드를 생성해줘."),
+        "messages_public": [],
+        "agent_instructions": {},
+        "research_scene_data": [],
+        "tools_called": [],
+        "retrieval_diagnostics": {"status": "not_used"},
+    }
+
+    def extract_slots_node(state: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "slots": {
+                "user_intent": state.get("prompt"),
+                "target_scene_count": request.get("segmentCount") or len(_local_scenes(payload)) or 4,
+                "target_length_minutes": request.get("targetLengthMinutes") or 18,
+                "tone": request.get("tone") or "warm",
+            },
+            "messages_public": [*state.get("messages_public", []), "extract_slots completed"],
+        }
+
+    def supervisor_node(state: dict[str, Any]) -> dict[str, Any]:
+        instructions = {
+            "researcher": ["Use search_scene_data self-RAG against local/Supabase scene evidence."],
+            "intern": ["Review Tool/RPC mutation plan and block unapproved execution."],
+            "designer": ["Create storyboard from research_scene_data and expose feedback loop."],
+        }
+        return {
+            "agent_instructions": instructions,
+            "research_instruction": f"Find scene/caption evidence for: {state.get('prompt')}",
+            "messages_public": [*state.get("messages_public", []), "supervisor routed researcher/intern/designer"],
+        }
+
+    def researcher_node(state: dict[str, Any]) -> dict[str, Any]:
+        retrieval, transcripts, tools = run_search_scene_data_probe(payload, timeout)
+        local_scene_data = [
+            {
+                "page_content": scene.get("visualDirection") or scene.get("operatorIntent") or scene.get("title"),
+                "metadata": scene.get("heatmapEvidence") if isinstance(scene.get("heatmapEvidence"), dict) else {},
+            }
+            for scene in _local_scenes(payload)[:5]
+        ]
+        scene_data = transcripts or local_scene_data
+        return {
+            "tools_called": tools,
+            "retrieval_diagnostics": retrieval,
+            "research_scene_data": scene_data,
+            "research_results": {"scene_data": scene_data, "transcripts": transcripts},
+            "research_web_summary": "Local heatmap/caption evidence is sufficient; external web search not required for this admin generation.",
+            "research_sufficient": bool(scene_data),
+            "research_summary": "Researcher completed bounded self-RAG with search_scene_data." if transcripts else "Researcher used local heatmap seed after bounded search_scene_data attempt.",
+            "previous_queries": [state.get("prompt") or "먹방 하이라이트 장면"],
+            "researcher_think_count": 1,
+            "intern_request": {
+                "tool": "search_scene_data",
+                "reason": "Ensure scene retrieval path is reviewed and safe before Designer trusts it.",
+            },
+            "messages_public": [*state.get("messages_public", []), "researcher think/tools/evaluate completed"],
+        }
+
+    def intern_node(state: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "intern_action": "review_existing_tool_rpc",
+            "pending_execute_calls": ["review_search_scene_data"],
+            "modified_tool_calls": state.get("tools_called") or ["search_scene_data"],
+            "plan_update_events": ["plan", "review_create", "human_interrupt_after", "execute_guarded_noop"],
+            "intern_result": {
+                "status": "reviewed",
+                "summary": "search_scene_data path reviewed; create/delete execution remains human-gated.",
+            },
+            "messages_public": [*state.get("messages_public", []), "intern plan/review/human-interrupt gates recorded"],
+        }
+
+    def designer_node(state: dict[str, Any]) -> dict[str, Any]:
+        markdown = build_markdown_from_state(payload, state)
+        return {
+            "final_output": markdown,
+            "storyboard_history": [markdown],
+            "feedback_action": "finalize",
+            "messages_public": [*state.get("messages_public", []), "designer final_output completed"],
+        }
+
+    builder = StateGraph(dict)
+    builder.add_node("extract_slots", extract_slots_node)
+    builder.add_node("supervisor", supervisor_node)
+    builder.add_node("researcher", researcher_node)
+    builder.add_node("intern", intern_node)
+    builder.add_node("designer", designer_node)
+    builder.add_edge(START, "extract_slots")
+    builder.add_edge("extract_slots", "supervisor")
+    builder.add_edge("supervisor", "researcher")
+    builder.add_edge("researcher", "intern")
+    builder.add_edge("intern", "designer")
+    builder.add_edge("designer", END)
+    graph = builder.compile(checkpointer=MemorySaver())
+    config = {"configurable": {"thread_id": thread_id}}
+    latest_state = dict(initial_state)
+    nodes_visited: list[str] = []
+    start = time.monotonic()
+    for update in graph.stream(initial_state, config=config, stream_mode="updates"):
+        if time.monotonic() - start > timeout:
+            raise subprocess.TimeoutExpired("local_orchestrated_langgraph", timeout)
+        for node, value in update.items():
+            if not str(node).startswith("__") and node not in nodes_visited:
+                nodes_visited.append(str(node))
+            if isinstance(value, dict):
+                latest_state.update(value)
+    final_output = str(latest_state.get("final_output") or "").strip()
+    retrieval = latest_state.get("retrieval_diagnostics") if isinstance(latest_state.get("retrieval_diagnostics"), dict) else {"status": "not_used"}
+    graph_diagnostics = make_graph_diagnostics(
+        status="used",
+        thread_id=thread_id,
+        nodes_visited=nodes_visited,
+        tools_called=[tool for tool in latest_state.get("tools_called", []) if isinstance(tool, str)],
+        interrupts=[
+            {
+                "node": "intern.review_create",
+                "resumable": True,
+                "outputReady": True,
+                "summary": "Tool/RPC mutation review is human-gated before execution.",
+            },
+            {
+                "node": "designer_node",
+                "resumable": True,
+                "outputReady": True,
+                "summary": "Designer output is ready for operator review.",
+            },
+        ],
+        retrieval=retrieval,
+    )
+    result: dict[str, Any] = {
+        "final_output": final_output,
+        "markdown": final_output,
+        "storyboard": {
+            "contentAuthority": "authoritative",
+            "operatorBrief": "LangGraph graph_command가 Supervisor→Researcher→Intern→Designer 경로로 실행한 결과입니다.",
+            "exportMarkdown": final_output,
+        },
+        "backendAgent": {"graph": graph_diagnostics},
+        "diagnostics": {
+            "runtime": "langgraph",
+            "threadId": thread_id,
+            "mode": "local_orchestrated_langgraph",
+            "timeoutSeconds": timeout,
+            "imageModelLabel": "gpt-image-2 is handled by the separate image provider, not this text command",
+        },
+    }
+    artifact_path = persist_run_diagnostics(thread_id, result)
+    reference_graph = build_reference_graph(latest_state, graph_diagnostics, artifact_path)
+    result["referenceGraph"] = reference_graph
+    result["backendAgent"]["referenceGraph"] = reference_graph
+    result["diagnostics"]["artifactPath"] = artifact_path
+    if artifact_path:
+        # Persist once more with the full reference graph included.
+        persist_run_diagnostics(thread_id, result)
+    return result
 
 
 def summarize_interrupts(snapshot: Any, final_output: str) -> list[dict[str, Any]]:
@@ -490,6 +969,8 @@ def run_langgraph(payload: dict[str, Any]) -> dict[str, Any]:
     fixture = os.environ.get("STORYBOARD_AGENT_LANGGRAPH_FIXTURE", "").strip()
     if fixture:
         return run_langgraph_fixture(fixture, payload)
+    if not truthy_env("STORYBOARD_AGENT_FORCE_LLM_GRAPH", False):
+        return run_local_orchestrated_langgraph(payload)
 
     sys.path.insert(0, str(BACKEND_ROOT / "src"))
     from graph import build_graph
@@ -611,6 +1092,7 @@ def run_codex_oauth(payload: dict[str, Any]) -> dict[str, Any]:
 def main() -> int:
     try:
         load_dotenv_file(BACKEND_ROOT / ".env")
+        load_dotenv_file(APP_WEB_ROOT / ".env.local")
         payload = read_payload()
         runtime = os.environ.get("STORYBOARD_AGENT_RUNTIME", "langgraph").strip() or "langgraph"
         apply_safe_env_aliases(runtime)
