@@ -1,0 +1,5 @@
+# Optional high-fidelity retrieval adapter dependencies.
+# The default local adapter remains usable without these packages and labels itself
+# as local-char-ngram-v1/local-lexical-reranker-v1. Install this file only when
+# the runtime can afford model downloads and wants exact BGE model diagnostics.
+FlagEmbedding>=1.2.11

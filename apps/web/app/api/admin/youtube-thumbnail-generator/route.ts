@@ -20,6 +20,7 @@ import {
   getThumbnailProviderAvailability,
 } from '@/lib/admin/youtube-thumbnail-generator/providers';
 import { resolveThumbnailRetrievalReferences } from '@/lib/admin/youtube-thumbnail-generator/retrieval';
+import { readThumbnailRetrievalReferenceImages } from '@/lib/admin/youtube-thumbnail-generator/retrieval-reference-images';
 import { ThumbnailGenerationError } from '@/lib/admin/youtube-thumbnail-generator/types';
 
 export const runtime = 'nodejs';
@@ -27,6 +28,7 @@ export const dynamic = 'force-dynamic';
 
 const SPECIFIC_CREATOR_HOST_PATTERN = /(쯔양|tzuyang)/i;
 const HOST_PERSON_REFERENCE_ROLES = new Set(['host', 'person']);
+const TZUYANG_CHANNEL_PRESET = 'tzuyang-food-travel-collage';
 
 const noStoreHeaders = { 'Cache-Control': 'no-store' } as const;
 
@@ -41,6 +43,11 @@ function normalizeRouteError(error: unknown) {
 
   console.error('[admin/youtube-thumbnail-generator] unexpected failure:', error);
   return jsonError('thumbnail_generation_failed', 500, '썸네일 생성 요청을 처리하지 못했습니다.');
+}
+
+function shouldUseTzuyangHostReferences(payload: ReturnType<typeof parseThumbnailPayload>) {
+  return SPECIFIC_CREATOR_HOST_PATTERN.test(payload.topic)
+    || payload.stylePreset === TZUYANG_CHANNEL_PRESET;
 }
 
 export async function GET(_request: NextRequest) {
@@ -102,22 +109,38 @@ export async function POST(request: NextRequest) {
     }
 
     const rawPayload = JSON.parse(payloadEntries[0]) as unknown;
+    const routeStartedAt = Date.now();
     const payload = parseThumbnailPayload(rawPayload);
     const files = formData
       .getAll('referenceImages')
       .filter((entry): entry is File => entry instanceof File && entry.size > 0);
     const referenceImages = await readThumbnailReferenceImages(files, payload.referenceImageRoles);
+    const requestsSpecificCreatorHost = shouldUseTzuyangHostReferences(payload);
+    const retrievalStartedAt = Date.now();
+    const retrieval = await resolveThumbnailRetrievalReferences(payload, process.env);
+    const retrievalElapsedMs = Date.now() - retrievalStartedAt;
+    const automaticReferenceStartedAt = Date.now();
+    const automaticReferenceImages = await readThumbnailRetrievalReferenceImages(
+      retrieval.evidence,
+      referenceImages.length,
+      {},
+      { allowHostPersonFromRetrievedThumbnails: requestsSpecificCreatorHost },
+    );
+    const automaticReferenceElapsedMs = Date.now() - automaticReferenceStartedAt;
+    const generationReferenceImages = [
+      ...referenceImages,
+      ...automaticReferenceImages.images,
+    ];
     if (
-      SPECIFIC_CREATOR_HOST_PATTERN.test(payload.topic) &&
-      !referenceImages.some((image) => HOST_PERSON_REFERENCE_ROLES.has(image.role))
+      requestsSpecificCreatorHost &&
+      !generationReferenceImages.some((image) => HOST_PERSON_REFERENCE_ROLES.has(image.role))
     ) {
       throw new ThumbnailGenerationError(
         'host_reference_required',
-        '쯔양님이 실제로 나오려면 host/person 참고 이미지를 먼저 추가해야 합니다. 참고 이미지 없이 쯔양님 얼굴을 추측 생성하지 않습니다.',
+        '쯔양님이 실제로 나오려면 기보유 쯔양 썸네일 레퍼런스 또는 업로드한 인물 참고 이미지가 필요합니다. 레퍼런스를 불러오지 못하면 사람 없는 음식 썸네일로 대신 만들지 않습니다.',
         400,
       );
     }
-    const retrieval = await resolveThumbnailRetrievalReferences(payload, process.env);
     const payloadWithRetrieval = {
       ...payload,
       retrievalEvidence: retrieval.evidence,
@@ -125,32 +148,45 @@ export async function POST(request: NextRequest) {
     };
     const generationRunId = `thumbnail-generation-${randomUUID()}`;
     const providerRequestEnv = buildThumbnailProviderRequestEnv(process.env, payload.providerId, formData);
+    const generationStartedAt = Date.now();
     const result = payload.generationMode === 'backend_agent'
-      ? await generateYoutubeThumbnailWithBackendAgent(payloadWithRetrieval, referenceImages, process.env, {
+      ? await generateYoutubeThumbnailWithBackendAgent(payloadWithRetrieval, generationReferenceImages, process.env, {
         signal: request.signal,
         runId: generationRunId,
         providerEnv: providerRequestEnv,
       })
-      : await generateYoutubeThumbnail(payloadWithRetrieval, referenceImages, providerRequestEnv, {
+      : await generateYoutubeThumbnail(payloadWithRetrieval, generationReferenceImages, providerRequestEnv, {
         signal: request.signal,
         runId: generationRunId,
       });
+    const generationElapsedMs = Date.now() - generationStartedAt;
 
     const responseResult = {
       ...result,
       warnings: [
         ...result.warnings,
         `thumbnail_retrieval_status:${retrieval.diagnostics.status}`,
+        `thumbnail_retrieval_visual_refs:${automaticReferenceImages.images.length}`,
+        `thumbnail_timing_ms:retrieval=${retrievalElapsedMs}`,
+        `thumbnail_timing_ms:automatic_refs=${automaticReferenceElapsedMs}`,
+        `thumbnail_timing_ms:generation=${generationElapsedMs}`,
+        ...(automaticReferenceImages.selectedReferenceIds.length
+          ? [`thumbnail_retrieval_visual_ref_ids:${automaticReferenceImages.selectedReferenceIds.join(',')}`]
+          : []),
+        ...automaticReferenceImages.warnings,
         ...(retrieval.diagnostics.fallbackReason ? [`thumbnail_retrieval_fallback:${retrieval.diagnostics.fallbackReason}`] : []),
       ],
       retrieval,
     };
+    const historyStartedAt = Date.now();
     try {
       await persistLocalThumbnailHistory(responseResult, payloadWithRetrieval, process.env, { runId: generationRunId });
     } catch (historyError) {
       console.error('[admin/youtube-thumbnail-generator] history persistence failed:', historyError);
       responseResult.warnings.push('thumbnail_history_persist_failed');
     }
+    responseResult.warnings.push(`thumbnail_timing_ms:history=${Date.now() - historyStartedAt}`);
+    responseResult.warnings.push(`thumbnail_timing_ms:total=${Date.now() - routeStartedAt}`);
 
     return NextResponse.json(responseResult, { headers: noStoreHeaders });
   } catch (error) {
