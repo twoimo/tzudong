@@ -86,6 +86,15 @@ function normalizePhone(value) {
   return norm(value).replace(/[^0-9]/g, '');
 }
 
+function isLikelyKoreanLocalSearchTarget(row) {
+  const address = norm([row.road_address, row.jibun_address, row.english_address].filter(Boolean).join(' '));
+  if (/[가-힣]+(?:특별시|광역시|특별자치도|도)\s+[가-힣]+/.test(address)) return true;
+  if (/(서울|부산|대구|인천|광주|대전|울산|세종|경기|강원|충북|충남|전북|전남|경북|경남|제주)/.test(address)) return true;
+  const phoneText = norm(row.phone);
+  const digits = normalizePhone(phoneText);
+  return !phoneText.startsWith('+') && digits.startsWith('0') && digits.length >= 8;
+}
+
 function canonicalSnapshot(row) {
   return {
     name: row.approved_name || row.naver_name || row.google_name || row.origin_name || null,
@@ -197,8 +206,10 @@ export function buildCandidateFromLocalItems(row, items, now, query) {
   const previous = canonicalSnapshot(row);
   const snapshots = (items || []).map((item) => ({ snapshot: localItemSnapshot(item, now), raw: item }));
   snapshots.sort((a, b) => candidateScore(previous, b.snapshot, query) - candidateScore(previous, a.snapshot, query));
-  const selected = snapshots[0]?.snapshot || null;
+  const selectedPair = snapshots[0] || null;
+  const selected = selectedPair?.snapshot || null;
   if (!selected) return null;
+  if (candidateScore(previous, selected, query) < 4) return null;
   const detected = diffSnapshots(previous, selected).filter((type) => CHANGE_TYPES.includes(type));
   if (detected.length === 0) return null;
   return {
@@ -220,6 +231,7 @@ export function buildCandidateFromLocalItems(row, items, now, query) {
 export function buildNoResultCandidate(row, attempts, now) {
   if (!attempts.length || attempts.some((attempt) => attempt.status === 'ok' && attempt.items.length > 0)) return null;
   if (attempts.some((attempt) => attempt.status !== 'ok')) return null;
+  if (!isLikelyKoreanLocalSearchTarget(row)) return null;
   const previous = canonicalSnapshot(row);
   return {
     restaurant_id: row.id,
@@ -301,7 +313,12 @@ async function fetchApprovedRestaurants(supabase, limit) {
     supabase,
     'restaurants',
     'id, approved_name, origin_name, naver_name, google_name, phone, road_address, jibun_address, english_address, lat, lng, status, is_missing, is_not_selected, updated_at, created_at',
-    (query) => query.eq('status', 'approved').order('updated_at', { ascending: true, nullsFirst: true }).limit(limit || DEFAULT_LIMIT),
+    (query) => query
+      .eq('status', 'approved')
+      .not('is_missing', 'is', true)
+      .not('is_not_selected', 'is', true)
+      .order('updated_at', { ascending: true, nullsFirst: true })
+      .limit(limit || DEFAULT_LIMIT),
   );
   return rows.filter((row) => row.is_missing !== true && row.is_not_selected !== true);
 }
