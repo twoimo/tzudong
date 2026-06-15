@@ -172,6 +172,18 @@ test("storyboard canvas counts only visible trusted GPT Image 2 storyboard panel
   await expect(
     storyboardModule.locator('[data-storyboard-frame-grid="true"]'),
   ).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator('[data-storyboard-module-loading="true"]')).toHaveCount(0);
+  await expect(
+    storyboardModule.locator('[data-storyboard-glass-skeleton="true"]'),
+  ).toHaveCount(0);
+  await expect(
+    storyboardModule.locator('[data-storyboard-empty-canvas="true"]'),
+  ).toHaveCount(0);
+  await expect(
+    storyboardModule
+      .locator('[data-storyboard-generated-image="local-codex"]')
+      .first(),
+  ).toBeVisible({ timeout: 30_000 });
   await expect(
     storyboardModule.locator(
       '[data-storyboard-canvas-toolbar="thumbnail-like"]',
@@ -278,90 +290,58 @@ test("storyboard canvas counts only visible trusted GPT Image 2 storyboard panel
     "data-storyboard-chat-settings-open",
     "true",
   );
+  await expect(storyboardSettingsPanel).toContainText("이미지 모델 API 키");
+  await expect(storyboardSettingsPanel).toContainText(
+    "OpenAI API 키 · gpt-image-2 전용",
+  );
+  const apiKeySettings = storyboardSettingsPanel.locator(
+    '[data-storyboard-browser-api-key-settings="local-storage-only"]',
+  );
+  await expect(apiKeySettings).toBeVisible();
+  await expect(apiKeySettings).toHaveAttribute(
+    "data-storyboard-api-key-storage",
+    "browser-local-storage-only",
+  );
+  await expect(apiKeySettings).toHaveAttribute(
+    "data-storyboard-api-key-db-storage",
+    "forbidden",
+  );
+  await expect(
+    apiKeySettings.locator('[data-storyboard-browser-api-key-input="true"]'),
+  ).toBeVisible();
+  await expect(
+    apiKeySettings.locator(
+      '[data-storyboard-browser-api-key-model-policy="gpt-image-2-only"]',
+    ),
+  ).toContainText(/gpt-image-2만 허용/);
   await expect(
     storyboardSettingsPanel.locator(
       '[data-storyboard-chat-settings-source-trace="true"]',
     ),
-  ).toContainText(/스토리보드 초안|영상 흐름|예시 요청/);
-  await expect(
-    storyboardSettingsPanel.locator(
-      '[data-storyboard-chat-settings-source-trace="true"]',
-    ),
-  ).not.toContainText(/확인한 자료|활용 자료|선택 장면|주요 순간|반응 강도|생성 방식/);
+  ).toHaveCount(0);
   await expect(
     storyboardSettingsPanel.locator(
       '[data-storyboard-chat-settings-image-command="true"]',
     ),
-  ).toBeVisible();
+  ).toHaveCount(0);
   await expect(
     storyboardSettingsPanel.locator(
-      '[data-storyboard-chat-settings-image-command="true"]',
+      '[data-storyboard-image-provider-readiness="true"]',
     ),
-  ).toHaveAttribute("data-storyboard-image-provider-action-status", /blocked_provenance/);
-  const storyboardImageProviderReadiness = storyboardSettingsPanel.locator(
-    '[data-storyboard-image-provider-readiness="true"]',
-  );
-  await expect(storyboardImageProviderReadiness).toBeVisible();
-  await expect(storyboardImageProviderReadiness).toHaveAttribute(
-    "data-storyboard-image-provider-status",
-    /blocked_provenance/,
-  );
-  await expect(
-    storyboardImageProviderReadiness.locator(
-      '[data-storyboard-image-provider-guidance="true"]',
-    ),
-  ).toContainText(/이미지 생성|이미지 만들기|상태/);
-  await expect(
-    storyboardImageProviderReadiness.locator(
-      '[data-storyboard-image-provider-model="true"]',
-    ),
-  ).toContainText(/이미지 크기|1280×720|16:9/);
-  await expect(
-    storyboardImageProviderReadiness.locator(
-      '[data-storyboard-image-provider-refresh="true"]',
-    ),
-  ).toBeVisible();
+  ).toHaveCount(0);
   await expect(
     storyboardSettingsPanel.locator('[data-storyboard-chat-settings-reset="true"]'),
-  ).toBeVisible();
+  ).toHaveCount(0);
   await expect(
     storyboardSettingsPanel.locator(
       '[data-storyboard-user-perspective-readiness="true"]',
     ),
-  ).toBeVisible();
-  await expect(
-    storyboardSettingsPanel.locator(
-      '[data-storyboard-user-perspective-role="host"]',
-    ),
-  ).toContainText(/쯔양/);
-  await expect(
-    storyboardSettingsPanel.locator(
-      '[data-storyboard-user-perspective-role="manager"]',
-    ),
-  ).toContainText(/매니저/);
-  await expect(
-    storyboardSettingsPanel.locator('[data-storyboard-user-perspective-role="pd"]'),
-  ).toContainText(/PD/);
-  await expect(
-    storyboardSettingsPanel.locator(
-      '[data-storyboard-user-perspective-role="editor"]',
-    ),
-  ).toContainText(/편집자/);
+  ).toHaveCount(0);
   await expect(
     storyboardSettingsPanel.locator(
       '[data-storyboard-visual-safety-readiness="true"]',
     ),
-  ).toContainText(/이미지 안전 점검/);
-  await expect(
-    storyboardSettingsPanel.locator(
-      '[data-storyboard-visual-safety-readiness="true"]',
-    ),
-  ).toContainText(/실존 인물\/진행자 얼굴/);
-  await expect(
-    storyboardSettingsPanel.locator(
-      '[data-storyboard-omitted-scene-count="true"]',
-    ),
-  ).toContainText(/무이미지\/미검증 컷/);
+  ).toHaveCount(0);
   await storyboardSettingsPanel
     .locator('[data-storyboard-chat-settings-close="true"]')
     .click({ force: true });
@@ -952,10 +932,10 @@ test("storyboard settings keeps production image API keys in browser localStorag
   await apiKeyInput.fill(fakeApiKey);
   await apiKeySettings.locator('[data-storyboard-browser-api-key-save="true"]').click();
   await expect(
-    apiKeySettings.locator('[data-storyboard-browser-api-key-status="saved"]'),
+    page.locator('[data-storyboard-browser-api-key-status="saved"]'),
   ).toBeVisible({ timeout: 10_000 });
   await expect(
-    apiKeySettings.locator('[data-storyboard-browser-api-key-mask="true"]'),
+    page.locator('[data-storyboard-browser-api-key-status="saved"]'),
   ).toContainText(/sk-proj…/);
   await expect(apiKeySettings).not.toContainText(fakeApiKey);
 
@@ -977,7 +957,7 @@ test("storyboard settings keeps production image API keys in browser localStorag
 
   await apiKeySettings.locator('[data-storyboard-browser-api-key-clear="true"]').click();
   await expect(
-    apiKeySettings.locator('[data-storyboard-browser-api-key-status="empty"]'),
+    page.locator('[data-storyboard-browser-api-key-status="empty"]'),
   ).toBeVisible({ timeout: 10_000 });
   expect(
     await page.evaluate(() =>
@@ -1316,37 +1296,14 @@ test("storyboard chat redacts hostile prompts and keeps fallback readiness truth
   );
 
   await storyboardModule.locator('[data-storyboard-chat-settings-toggle="true"]').click();
-  const backendReadiness = page.locator('[data-storyboard-backend-agent-readiness="true"]');
-  await expect(backendReadiness).toBeVisible({ timeout: 10_000 });
-  await expect(backendReadiness).toHaveAttribute(
-    "data-storyboard-backend-agent-status",
-    /fallback|unknown/,
-  );
-  await expect(backendReadiness).toHaveAttribute(
-    "data-storyboard-backend-agent-live-graph-ready",
-    "false",
-  );
-  await expect(backendReadiness).toHaveAttribute(
-    "data-storyboard-backend-agent-retrieval-used",
-    "false",
-  );
-  await expect(backendReadiness).not.toContainText(
-    /백엔드|에이전트|명령|모델|model|provider|gpt-5\.5|Codex CLI|LangGraph|BGE|리랭커|provenance|fallback|gpt-image-2|BAAI\/bge-m3|bge-reranker/i,
-  );
+  const settingsPanel = page.locator('[data-storyboard-chat-settings-panel="true"]');
+  await expect(settingsPanel).toBeVisible({ timeout: 10_000 });
+  await expect(settingsPanel).toContainText("OpenAI API 키 · gpt-image-2 전용");
+  await expect(page.locator('[data-storyboard-backend-agent-readiness="true"]')).toHaveCount(0);
+  await expect(page.locator('[data-storyboard-image-provider-readiness="true"]')).toHaveCount(0);
 
   const imageProviderAction = storyboardModule.locator(
     '[data-storyboard-image-provider-action-status="blocked_model"]',
   );
   await expect(imageProviderAction.first()).toBeVisible({ timeout: 10_000 });
-  const imageProviderReadiness = page.locator(
-    '[data-storyboard-image-provider-readiness="true"]',
-  );
-  await expect(imageProviderReadiness).toBeVisible({ timeout: 10_000 });
-  await expect(imageProviderReadiness).toHaveAttribute(
-    "data-storyboard-image-provider-status",
-    "blocked_model",
-  );
-  await expect(imageProviderReadiness).not.toContainText(
-    /백엔드|에이전트|명령|모델|model|provider|gpt-5\.5|Codex CLI|LangGraph|BGE|리랭커|provenance|fallback|gpt-image-2/i,
-  );
 });
