@@ -202,6 +202,7 @@ export async function GET(request: NextRequest) {
           browserOpenAIApiKey: '브라우저 localStorage에만 저장하고 요청 헤더로만 임시 전달',
           browserKeyStorage: 'browser_local_storage_only',
           browserApiKeyHeader: STORYBOARD_BROWSER_OPENAI_API_KEY_HEADER,
+          browserImageTransport: 'data_url_response_no_server_file_write',
         },
       },
       { headers: noStoreHeaders },
