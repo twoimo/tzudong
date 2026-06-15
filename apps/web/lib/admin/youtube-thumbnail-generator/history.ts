@@ -1,5 +1,5 @@
-import { mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
-import { extname, isAbsolute, join, relative, resolve } from 'node:path';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { isAbsolute, join, relative, resolve } from 'node:path';
 
 import type {
   ThumbnailGenerationMode,
@@ -14,6 +14,8 @@ import {
   YOUTUBE_THUMBNAIL_TARGET_HEIGHT,
   YOUTUBE_THUMBNAIL_TARGET_WIDTH,
 } from './types';
+import type { ThumbnailReleaseHostPresenceProof } from './release-candidates';
+import { normalizeThumbnailReleaseHostPresenceProof } from './release-candidates';
 
 export const THUMBNAIL_LOCAL_HISTORY_WRITE_ENV = 'THUMBNAIL_LOCAL_HISTORY_WRITE';
 export const THUMBNAIL_HISTORY_ROOT_ENV = 'THUMBNAIL_HISTORY_ROOT';
@@ -25,7 +27,6 @@ export const THUMBNAIL_HISTORY_BUNDLED_PREVIEW_IMAGE = '/images/admin/youtube-th
 export const THUMBNAIL_HISTORY_LEGACY_PUBLIC_ROOT = 'public/qa-history/youtube-thumbnail-generator';
 export const THUMBNAIL_HISTORY_LIMIT = 20;
 export const THUMBNAIL_HISTORY_MAX_RAW_BYTES = 1_000_000;
-export const THUMBNAIL_HISTORY_MIN_PREVIEW_IMAGE_BYTES = 1024;
 
 const SAFE_HISTORY_FILE_PATTERN = /^[A-Za-z0-9_.-]+$/;
 
@@ -53,6 +54,7 @@ export type ThumbnailHistoryRun = {
   headline: string;
   warnings: string[];
   imagePath: string;
+  hostPresence?: ThumbnailReleaseHostPresenceProof;
   rawPath?: string;
   retrieval?: Pick<ThumbnailRetrievalDiagnostics, 'status' | 'candidateCount' | 'selectedReferenceIds' | 'fallbackReason' | 'usedModels' | 'operations' | 'commandRuntime'>;
 };
@@ -168,12 +170,17 @@ function normalizePublicImagePath(imagePath: unknown, imageBaseUrl: string) {
   return `${normalizedBase}/${normalizedRelative}`;
 }
 
-export function isExactGptImage2ThumbnailHistoryRun(run: Pick<ThumbnailHistoryRun, 'providerId' | 'model' | 'modelProvenance' | 'status'>) {
+function hasTzuyangHostPresenceProof(run: Pick<ThumbnailHistoryRun, 'hostPresence'>) {
+  return run.hostPresence?.creator === 'tzuyang' && run.hostPresence.visible === true;
+}
+
+export function isExactGptImage2ThumbnailHistoryRun(run: Pick<ThumbnailHistoryRun, 'providerId' | 'model' | 'modelProvenance' | 'status' | 'hostPresence'>) {
   return (
     run.status === 'passed' &&
     run.providerId === 'local-codex' &&
     run.model === 'gpt-image-2' &&
-    run.modelProvenance === 'exact'
+    run.modelProvenance === 'exact' &&
+    hasTzuyangHostPresenceProof(run)
   );
 }
 
@@ -212,6 +219,7 @@ function normalizeHistoryRun(value: unknown, imageBaseUrl: string): ThumbnailHis
 
   const rawPath = normalizeRawPath(value.rawPath);
   const retrieval = normalizeHistoryRetrieval(value.retrieval);
+  const hostPresence = normalizeThumbnailReleaseHostPresenceProof(value);
 
   return {
     id: safeHistoryId(toString(value.id, 120) || timestamp || imagePath),
@@ -226,6 +234,7 @@ function normalizeHistoryRun(value: unknown, imageBaseUrl: string): ThumbnailHis
     headline: toString(value.headline, 120),
     warnings: normalizeWarnings(value.warnings),
     imagePath,
+    ...(hostPresence ? { hostPresence } : {}),
     ...(retrieval ? { retrieval } : {}),
     ...(rawPath ? { rawPath } : {}),
   };
@@ -254,6 +263,11 @@ function createBundledThumbnailPreviewRun(): ThumbnailHistoryRun {
     headline: '제육볶음 한상',
     warnings: ['다른 계정/컴퓨터에서도 첫 화면이 비지 않도록 제공하는 실제 생성 예시 썸네일입니다. exact gpt-image-2 provenance가 확인된 히스토리 기록은 아닙니다.'],
     imagePath: THUMBNAIL_HISTORY_BUNDLED_PREVIEW_IMAGE,
+    hostPresence: {
+      creator: 'tzuyang',
+      visible: true,
+      evidence: 'bundled-preview-visible-host',
+    },
   };
 }
 
@@ -285,49 +299,12 @@ async function readHistorySource(source: LegacyHistorySource, limit: number, opt
 }
 
 async function readLatestExistingGeneratedPreviewRun(
-  options: Pick<ThumbnailHistoryOptions, 'publicImageRoot'> = {},
+  _options: Pick<ThumbnailHistoryOptions, 'publicImageRoot'> = {},
 ): Promise<ThumbnailHistoryRun | null> {
-  const publicImageRoot = resolveThumbnailPublicImageRoot(options);
-  const e2eRunsRoot = join(publicImageRoot, THUMBNAIL_HISTORY_E2E_RUNS_DIR);
-
-  try {
-    const entries = await readdir(e2eRunsRoot, { withFileTypes: true });
-    const candidates = await Promise.all(entries.map(async (entry) => {
-      if (!entry.isFile()) return [];
-      const extension = extname(entry.name).toLowerCase();
-      if (extension !== '.png' && extension !== '.jpg' && extension !== '.jpeg' && extension !== '.webp') return [];
-      if (!SAFE_HISTORY_FILE_PATTERN.test(entry.name)) return [];
-
-      const imagePath = assertSafePath(e2eRunsRoot, join(e2eRunsRoot, entry.name));
-      const fileStat = await stat(imagePath);
-      if (fileStat.size < THUMBNAIL_HISTORY_MIN_PREVIEW_IMAGE_BYTES) return [];
-      return [{
-        fileName: entry.name,
-        completedAt: fileStat.mtime.toISOString(),
-        sortKey: fileStat.mtimeMs,
-      }];
-    }));
-    const latest = candidates.flat().sort((a, b) => b.sortKey - a.sortKey)[0];
-    if (!latest) return createBundledThumbnailPreviewRun();
-
-    return {
-      id: safeHistoryId(`existing-generated-preview-${latest.fileName}`),
-      timestamp: latest.completedAt,
-      completedAt: latest.completedAt,
-      status: 'passed',
-      providerId: 'local-codex',
-      model: 'gpt-image-2',
-      modelProvenance: 'unknown',
-      generationMode: 'direct_provider',
-      topic: '기존 생성 썸네일 미리보기',
-      headline: '',
-      warnings: ['기존 생성 이미지 미리보기입니다. exact gpt-image-2 provenance가 확인된 히스토리 기록은 아닙니다.'],
-      imagePath: `${THUMBNAIL_HISTORY_PUBLIC_IMAGE_BASE_URL}/${THUMBNAIL_HISTORY_E2E_RUNS_DIR}/${latest.fileName}`,
-    };
-  } catch {
-    return createBundledThumbnailPreviewRun();
-  }
-
+  // Public e2e-run images were useful as developer evidence, but they do not
+  // carry a durable "Tzuyang is visible" proof. Never promote those arbitrary
+  // files to the first-load canvas; use the bundled host-visible preview until
+  // a canonical exact history or release record includes explicit host proof.
   return createBundledThumbnailPreviewRun();
 }
 
@@ -421,6 +398,7 @@ export async function persistLocalThumbnailHistory(
   const historyPath = assertSafePath(historyRoot, join(historyRoot, 'history.json'));
   const latestPath = assertSafePath(historyRoot, join(historyRoot, 'latest.json'));
   const publicImageUrl = `${THUMBNAIL_HISTORY_PUBLIC_IMAGE_BASE_URL}/${imageFileName}`;
+  const hostPresence = normalizeThumbnailReleaseHostPresenceProof(result.baseImage);
 
   const run: ThumbnailHistoryRun = {
     id: runId,
@@ -435,6 +413,7 @@ export async function persistLocalThumbnailHistory(
     headline: payload.headline,
     warnings: normalizeWarnings(result.warnings),
     imagePath: publicImageUrl,
+    ...(hostPresence ? { hostPresence } : {}),
     ...(result.retrieval ? { retrieval: result.retrieval.diagnostics } : {}),
     rawPath: `./runs/${rawFileName}`,
   };
