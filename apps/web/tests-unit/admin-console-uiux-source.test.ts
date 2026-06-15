@@ -412,6 +412,36 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-thumbnail-module-loading-canvas-glass="true"',
     );
     expect(consoleSource).toContain(
+      'data-thumbnail-module-loading-glass-shell="true"',
+    );
+    expect(consoleSource).toContain(
+      'data-thumbnail-module-loading-page-shimmer="true"',
+    );
+    expect(consoleSource).toContain(
+      'data-thumbnail-module-loading-card-glass="chat"',
+    );
+    expect(consoleSource).toContain(
+      'data-thumbnail-module-loading-card-glass="canvas"',
+    );
+    expect(consoleSource).toContain(
+      'data-thumbnail-module-loading-chat-shell-glass="true"',
+    );
+    expect(consoleSource).toContain(
+      'data-thumbnail-module-loading-chat-shell-shimmer="true"',
+    );
+    expect(consoleSource).toContain(
+      'data-thumbnail-module-loading-chat-glass="true"',
+    );
+    expect(consoleSource).toContain(
+      'data-thumbnail-module-loading-chat-shimmer="true"',
+    );
+    expect(consoleSource).toContain(
+      'data-thumbnail-module-loading-canvas-shell-glass="true"',
+    );
+    expect(consoleSource).toContain(
+      'data-thumbnail-module-loading-canvas-shell-shimmer="true"',
+    );
+    expect(consoleSource).toContain(
       'data-thumbnail-module-loading-toolbar="true"',
     );
     expect(consoleSource).toContain(
@@ -440,6 +470,12 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(consoleSource).toContain(
       'data-thumbnail-module-loading-shimmer="true"',
+    );
+    expect(consoleSource).toContain(
+      'data-thumbnail-module-loading-tool-glass="true"',
+    );
+    expect(consoleSource).toContain(
+      'data-thumbnail-module-loading-tool-shimmer="true"',
     );
     const thumbnailLoadingSkeletonSource =
       consoleSource
@@ -2377,19 +2413,74 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-thumbnail-chat-settings-panel="true"',
     );
     expect(componentSource).toContain(
+      'data-thumbnail-chat-settings-panel-parity="storyboard"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-chat-settings-dropdown-parity="storyboard"',
+    );
+    expect(componentSource).toContain("getThumbnailImageApiRouterView");
+    expect(componentSource).toContain(
+      'data-thumbnail-api-router-panel="true"',
+    );
+    expect(componentSource).toContain(
+      "data-thumbnail-api-router-active={thumbnailImageApiRouterView.id}",
+    );
+    expect(componentSource).toContain(
+      "data-thumbnail-codex-oauth-status={thumbnailImageApiRouterView.codexOAuthStatus}",
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-api-router-model="gpt-image-2"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-api-router-parity="storyboard"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-api-router-label="true"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-api-router-status="true"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-api-router-summary="true"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-codex-oauth-copy="true"',
+    );
+    expect(componentSource).toContain(
       'data-thumbnail-api-key-settings="local-storage-only"',
     );
     expect(componentSource).toContain(
+      'data-thumbnail-browser-api-key-settings="local-storage-only"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-api-key-storage="browser-local-storage-only"',
+    );
+    expect(componentSource).toContain(
       'data-thumbnail-api-key-db-storage="forbidden"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-openai-api-key-scope="browser-local-storage"',
     );
     expect(componentSource).toContain(
       'data-thumbnail-browser-api-key-input="true"',
     );
     expect(componentSource).toContain('data-thumbnail-api-key-save="true"');
     expect(componentSource).toContain('data-thumbnail-api-key-clear="true"');
-    expect(componentSource).toContain("DB나 계정에는 저장하지 않습니다.");
-    expect(componentSource).toContain("이 브라우저 localStorage에만 남습니다.");
     expect(componentSource).toContain(
+      'data-thumbnail-browser-api-key-model-policy="gpt-image-2-only"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-browser-api-key-status={',
+    );
+    expect(componentSource).toContain("OpenAI API Key 하나만 입력합니다.");
+    expect(componentSource).toContain("API 라우터");
+    expect(componentSource).toContain("Codex CLI OAuth:");
+    expect(componentSource).toContain(
+      "키는 이 브라우저에만 저장하고, 요청 때만 잠깐 보냅니다.",
+    );
+    expect(componentSource).toContain("모델은 gpt-image-2만 사용합니다.");
+    expect(componentSource).not.toContain("이 브라우저 localStorage에만 남습니다.");
+    expect(componentSource).not.toContain(
       "이미지 모델은 gpt-image-2만 허용합니다.",
     );
     expect(componentSource).toContain(
@@ -2436,7 +2527,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(componentSource).not.toContain(
       "whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-left text-xs leading-5 shadow-sm",
     );
-    expect(componentSource).toContain(
+    expect(componentSource).toContain("모델은 gpt-image-2만 사용합니다.");
+    expect(componentSource).not.toContain(
       "다른 이미지 모델로 자동 전환하지 않습니다.",
     );
     expect(componentSource).toContain("canUseSessionApiKeyForProvider");
@@ -2875,13 +2967,15 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(componentSource).toContain("&& !accentCopy");
     expect(componentSource).toContain(
-      "const headlineFontSize = getResponsiveMainHeadlineFontSize(headlineText, isTzuyangBenchmarkLayout ? 56",
+      "const headlineFontSize = getResponsiveMainHeadlineFontSize(headlineText, isTzuyangBenchmarkLayout ? (isLongHeadline ? 56 : 72)",
     );
     expect(componentSource).toContain(
       "const subHeadlineFontSize = isTzuyangBenchmarkLayout ? (isChallengeLayout ? 38 : 40)",
     );
     expect(componentSource).toContain('id: "host-head"');
-    expect(componentSource).toContain("weight: 16");
+    expect(componentSource).toContain("weight: 20");
+    expect(componentSource).toContain("weight: 24");
+    expect(componentSource).toContain("TEXT_OCCLUSION_HARD_FACE_PENALTY");
     expect(componentSource).toContain(
       'fontFamily: "Impact, Pretendard, system-ui, sans-serif"',
     );
@@ -3369,6 +3463,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(componentSource).toContain("handleTextTransformPointerDown");
     expect(componentSource).toContain("handleTextTransformPointerMove");
     expect(componentSource).toContain("handleTextTransformPointerUp");
+    expect(componentSource).toContain("renderTextTransformHandleButtons");
+    expect(componentSource).toContain("TEXT_TRANSFORM_RESIZE_HANDLES");
+    expect(componentSource).toContain("getTextLayerTransformFrameStyle(activeLayer)");
     expect(componentSource).toContain(
       "clampTextLayerFontSize(transformState.startFontSize *",
     );
@@ -3377,6 +3474,30 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(componentSource).toContain(
       'data-thumbnail-canvas-text-transform-frame="true"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-canvas-selected-text-transform-frame="true"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-canvas-text-transform-state="selected"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-canvas-text-transform-state="editing"',
+    );
+    expect(componentSource).toContain(
+      "data-thumbnail-text-transform-handle-state={state}",
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-text-transform-handle-mode="resize"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-text-transform-handle-mode="rotate"',
+    );
+    expect(componentSource).toContain(
+      "data-thumbnail-selected-text-resize-handle={state === \"selected\" ? handleId : undefined}",
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-selected-text-rotate-handle={state === "selected" ? "true" : undefined}',
     );
     expect(componentSource).toContain(
       "data-thumbnail-text-resize-handle={handleId}",

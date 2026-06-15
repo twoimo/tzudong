@@ -8586,7 +8586,7 @@ function AdminStoryboardModuleLoadingSkeleton() {
 function AdminYoutubeThumbnailModuleLoadingSkeleton() {
   return (
     <section
-      className="flex h-full min-h-[640px] min-w-0 flex-col overflow-hidden bg-background p-3 md:min-h-0"
+      className="relative flex h-full min-h-[640px] min-w-0 flex-col overflow-hidden bg-background p-3 md:min-h-0"
       data-thumbnail-module-loading="true"
       data-thumbnail-module-loading-layout="page-shell"
       data-thumbnail-module-loading-parity="storyboard-shell"
@@ -8594,13 +8594,34 @@ function AdminYoutubeThumbnailModuleLoadingSkeleton() {
       aria-busy="true"
       aria-label="유튜브 썸네일 생성 화면 로딩 중"
     >
-      <div className="grid h-full min-h-0 grid-cols-1 grid-rows-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-3 overflow-hidden xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] xl:grid-rows-1">
+      <span
+        className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-br from-background via-slate-50/72 to-slate-200/48 dark:via-slate-900/54 dark:to-slate-700/32"
+        aria-hidden="true"
+        data-thumbnail-module-loading-glass-shell="true"
+      />
+      <span
+        className="pointer-events-none absolute inset-y-0 -left-1/3 z-0 w-1/3 bg-gradient-to-r from-transparent via-white/62 to-transparent blur-md [animation:storyboard-glass-shimmer_1.8s_ease-in-out_infinite] motion-reduce:animate-none dark:via-white/22"
+        aria-hidden="true"
+        data-thumbnail-module-loading-page-shimmer="true"
+      />
+      <div className="relative z-10 grid h-full min-h-0 grid-cols-1 grid-rows-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-3 overflow-hidden xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] xl:grid-rows-1">
         <Card
-          className="order-2 flex min-h-0 flex-col overflow-hidden border border-border/70 bg-background shadow-none"
+          className="relative order-2 flex min-h-0 flex-col overflow-hidden border border-border/70 bg-background/86 shadow-none backdrop-blur-[1px]"
           aria-label="유튜브 썸네일 도우미 준비 영역"
           data-thumbnail-module-loading-chat-shell="static"
+          data-thumbnail-module-loading-card-glass="chat"
         >
-          <CardHeader className="shrink-0 space-y-1 p-3 pb-2">
+          <span
+            className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/36 via-slate-100/14 to-slate-300/18 dark:from-slate-800/22 dark:via-slate-700/12 dark:to-slate-500/14"
+            aria-hidden="true"
+            data-thumbnail-module-loading-chat-shell-glass="true"
+          />
+          <span
+            className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/52 to-transparent blur-sm [animation:storyboard-glass-shimmer_1.7s_ease-in-out_infinite] motion-reduce:animate-none dark:via-white/18"
+            aria-hidden="true"
+            data-thumbnail-module-loading-chat-shell-shimmer="true"
+          />
+          <CardHeader className="relative z-10 shrink-0 space-y-1 p-3 pb-2">
             <div className="flex items-center justify-between gap-2">
               <CardTitle className="flex min-w-0 items-center gap-2 text-base">
                 <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground">
@@ -8618,14 +8639,24 @@ function AdminYoutubeThumbnailModuleLoadingSkeleton() {
               </Badge>
             </div>
           </CardHeader>
-          <CardContent className="flex min-h-0 flex-1 flex-col p-3 pt-0">
+          <CardContent className="relative z-10 flex min-h-0 flex-1 flex-col p-3 pt-0">
             <div
-              className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-border/70 bg-gradient-to-b from-background/95 to-muted/35 shadow-sm"
+              className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-border/70 bg-gradient-to-b from-background/92 to-muted/32 shadow-sm"
               data-thumbnail-module-loading-chat="true"
               data-thumbnail-module-loading-chat-tone="neutral-storyboard"
             >
+              <span
+                className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/42 via-slate-100/16 to-slate-300/18 dark:from-slate-800/26 dark:via-slate-700/14 dark:to-slate-600/16"
+                aria-hidden="true"
+                data-thumbnail-module-loading-chat-glass="true"
+              />
+              <span
+                className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/56 to-transparent blur-sm [animation:storyboard-glass-shimmer_1.6s_ease-in-out_infinite] motion-reduce:animate-none dark:via-white/18"
+                aria-hidden="true"
+                data-thumbnail-module-loading-chat-shimmer="true"
+              />
               <div
-                className="min-h-0 flex-1 space-y-3 overflow-hidden p-3"
+                className="relative z-10 min-h-0 flex-1 space-y-3 overflow-hidden p-3"
                 data-thumbnail-module-loading-chat-log="true"
                 aria-hidden="true"
               >
@@ -8686,7 +8717,7 @@ function AdminYoutubeThumbnailModuleLoadingSkeleton() {
                 </div>
               </div>
               <div
-                className="shrink-0 border-t border-border/70 bg-background/80 p-2.5"
+                className="relative z-10 shrink-0 border-t border-border/70 bg-background/74 p-2.5 backdrop-blur-[1px]"
                 data-thumbnail-module-loading-composer="true"
                 aria-hidden="true"
               >
@@ -8703,11 +8734,22 @@ function AdminYoutubeThumbnailModuleLoadingSkeleton() {
         </Card>
 
         <Card
-          className="order-1 flex min-h-0 flex-col overflow-hidden border-0 bg-card/80 shadow-none"
+          className="relative order-1 flex min-h-0 flex-col overflow-hidden border-0 bg-card/72 shadow-none backdrop-blur-[1px]"
           aria-label="유튜브 썸네일 캔버스 로딩"
           data-thumbnail-module-loading-canvas="true"
+          data-thumbnail-module-loading-card-glass="canvas"
         >
-          <CardHeader className="flex shrink-0 flex-row items-center gap-2 p-2 pb-1">
+          <span
+            className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/34 via-slate-100/14 to-slate-300/20 dark:from-slate-800/24 dark:via-slate-700/14 dark:to-slate-600/18"
+            aria-hidden="true"
+            data-thumbnail-module-loading-canvas-shell-glass="true"
+          />
+          <span
+            className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/50 to-transparent blur-sm [animation:storyboard-glass-shimmer_1.75s_ease-in-out_infinite] motion-reduce:animate-none dark:via-white/18"
+            aria-hidden="true"
+            data-thumbnail-module-loading-canvas-shell-shimmer="true"
+          />
+          <CardHeader className="relative z-10 flex shrink-0 flex-row items-center gap-2 p-2 pb-1">
             <CardTitle className="flex min-w-0 items-center gap-2 text-sm">
               <span className="shrink-0 whitespace-nowrap font-semibold">
                 캔버스 편집 / PNG 내보내기
@@ -8720,7 +8762,7 @@ function AdminYoutubeThumbnailModuleLoadingSkeleton() {
               <div className="h-8 w-24 shrink-0 rounded-md bg-muted/80" />
             </div>
           </CardHeader>
-          <CardContent className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden p-3 pt-0">
+          <CardContent className="relative z-10 flex min-h-0 flex-1 flex-col gap-3 overflow-hidden p-3 pt-0">
             <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden">
               <div
                 className="relative aspect-video w-full max-w-full overflow-hidden rounded-2xl border border-slate-300/80 bg-gradient-to-br from-slate-100 via-slate-200 to-slate-400/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] dark:border-slate-700/70 dark:from-slate-800/72 dark:via-slate-700/58 dark:to-slate-600/52"
@@ -8746,8 +8788,19 @@ function AdminYoutubeThumbnailModuleLoadingSkeleton() {
               {Array.from({ length: 12 }, (_, index) => (
                 <div
                   key={`thumbnail-module-loading-tool-${index + 1}`}
-                  className="h-8 rounded-lg border border-border/60 bg-background/80"
-                />
+                  className="relative h-8 overflow-hidden rounded-lg border border-border/60 bg-gradient-to-br from-background/88 via-slate-50/68 to-slate-200/54 dark:via-slate-800/44 dark:to-slate-700/34"
+                >
+                  <span
+                    className="absolute inset-0 bg-gradient-to-br from-white/28 via-transparent to-slate-400/14"
+                    aria-hidden="true"
+                    data-thumbnail-module-loading-tool-glass="true"
+                  />
+                  <span
+                    className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/54 to-transparent blur-sm [animation:storyboard-glass-shimmer_1.7s_ease-in-out_infinite] motion-reduce:animate-none dark:via-white/16"
+                    aria-hidden="true"
+                    data-thumbnail-module-loading-tool-shimmer="true"
+                  />
+                </div>
               ))}
             </div>
           </CardContent>

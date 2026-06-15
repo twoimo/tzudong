@@ -65,6 +65,7 @@ export type StoryboardImageProviderStatusResponse = {
     browserOpenAIApiKey?: string;
     browserKeyStorage?: 'browser_local_storage_only';
     browserApiKeyHeader?: typeof STORYBOARD_BROWSER_OPENAI_API_KEY_HEADER;
+    browserImageTransport?: 'data_url_response_no_server_file_write';
   };
   limits?: {
     maxScenesPerRequest?: number;
@@ -122,7 +123,7 @@ export function mapStoryboardImageProviderReadiness(
         : '이미지 만들기 준비가 끝났습니다.',
       detail:
         isBrowserKeyProvider
-          ? '키는 이 브라우저 캐시에만 보관되고, 요청할 때만 서버로 전달됩니다.'
+          ? '키는 이 브라우저 캐시에만 보관되고, 이미지는 서버 파일로 저장하지 않고 현재 응답으로만 전달됩니다.'
           : '현재 페이지의 스토리보드 컷을 새 이미지로 만들 수 있습니다.',
       reason: 'ready',
       model,
