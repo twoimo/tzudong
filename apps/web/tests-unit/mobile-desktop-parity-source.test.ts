@@ -22,7 +22,7 @@ describe("mobile and desktop parity source contracts", () => {
     const adminPageSource = source("app/admin/page.tsx");
     const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
 
-    expect(adminPageSource).toContain("<AdminConsoleOverview />");
+    expect(adminPageSource).toContain("<AdminConsoleOverview initialStoryboardResult={initialStoryboardResult} />");
     expect(consoleSource).toContain('aria-label="관리자 콘솔 사이드바"');
     expect(consoleSource).toContain('aria-label="관리자 통합 메뉴"');
     expect(consoleSource).toContain('data-admin-console-shell="true"');
