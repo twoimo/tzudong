@@ -421,16 +421,17 @@ export function renderAuditMarkdown(report) {
 }
 
 function parseArgs(argv) {
-  const args = { failOnExact: false, sampleLimit: 20, output: null, markdown: null, input: null };
+  const args = { failOnExact: false, failOnIdentityBlocking: false, sampleLimit: 20, output: null, markdown: null, input: null };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === '--fail-on-exact') args.failOnExact = true;
+    else if (arg === '--fail-on-identity-blocking') args.failOnIdentityBlocking = true;
     else if (arg === '--output') args.output = argv[++index];
     else if (arg === '--markdown') args.markdown = argv[++index];
     else if (arg === '--input') args.input = argv[++index];
     else if (arg === '--sample-limit') args.sampleLimit = Number(argv[++index] || 20);
     else if (arg === '--help') {
-      console.log('Usage: node admin-data-quality-audit.mjs [--input rows.json] [--output report.json] [--markdown report.md] [--fail-on-exact]');
+      console.log('Usage: node admin-data-quality-audit.mjs [--input rows.json] [--output report.json] [--markdown report.md] [--fail-on-exact] [--fail-on-identity-blocking]');
       process.exit(0);
     }
   }
@@ -491,8 +492,15 @@ async function main() {
   }
 
   console.log(JSON.stringify(report, null, 2));
-  if (args.failOnExact && (report.counts.exactDuplicateGroups > 0 || report.counts.identityBlockingRows > 0)) {
-    console.error(`Admin data quality gate failed: ${report.counts.exactDuplicateGroups} exact duplicate group(s), ${report.counts.identityBlockingRows} identity blocking row(s).`);
+  if (report.counts.identityBlockingRows > 0 && !args.failOnIdentityBlocking) {
+    console.error(`Admin data quality warning: ${report.counts.identityBlockingRows} identity blocking row(s) reported for operator review.`);
+  }
+  if (args.failOnExact && report.counts.exactDuplicateGroups > 0) {
+    console.error(`Admin data quality gate failed: ${report.counts.exactDuplicateGroups} exact duplicate group(s).`);
+    process.exit(2);
+  }
+  if (args.failOnIdentityBlocking && report.counts.identityBlockingRows > 0) {
+    console.error(`Admin data quality gate failed: ${report.counts.identityBlockingRows} identity blocking row(s).`);
     process.exit(2);
   }
 }

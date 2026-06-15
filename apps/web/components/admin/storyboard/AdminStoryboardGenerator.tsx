@@ -15,6 +15,7 @@ import {
   Download,
   History,
   ImageIcon,
+  KeyRound,
   Loader2,
   MessageCircle,
   RotateCcw,
@@ -39,6 +40,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -52,6 +54,10 @@ import {
   STORYBOARD_MAX_SEGMENT_COUNT,
   STORYBOARD_MIN_SEGMENT_COUNT,
 } from "@/lib/admin/storyboard/types";
+import type {
+  StoryboardInitialResult,
+  StoryboardInitialResultSource,
+} from "@/lib/admin/storyboard/initial-result";
 import type {
   StoryboardChatAgentResult,
   StoryboardChatCanvasPatch,
@@ -86,14 +92,10 @@ import {
   STORYBOARD_BROWSER_OPENAI_IMAGE_PROVIDER_ID,
   STORYBOARD_BROWSER_OPENAI_API_KEY_HEADER,
   STORYBOARD_IMAGE_PROVIDER_EXACT_PROVENANCE,
-  STORYBOARD_IMAGE_PROVIDER_COMMAND_ENV,
-  STORYBOARD_IMAGE_PROVIDER_COMMAND_PLACEHOLDER,
   STORYBOARD_IMAGE_PROVIDER_MODEL,
-  STORYBOARD_IMAGE_PROVIDER_MODEL_ENV,
   type StoryboardImageProviderReadiness,
   type StoryboardImageProviderStatusResponse,
   formatStoryboardImageProviderGuidanceMessage,
-  formatStoryboardImageProviderTarget,
   isStoryboardImageProviderReady,
   mapStoryboardImageProviderReadiness,
 } from "@/lib/admin/storyboard/image-provider-readiness";
@@ -466,10 +468,6 @@ function getStoryboardChatQuickCommand(
 const STORYBOARD_FRAMES_PER_PAGE = 4;
 // Source contracts kept literal for admin storyboard UI regression tests:
 // postStoryboardImagesRequest(sourceResult, activeStoryboardImageGenerationTargetScenes)
-// isStoryboardResultSkeletonVisible || !hasPreviousStoryboardPage
-// isStoryboardResultSkeletonVisible || !hasNextStoryboardPage
-// disabled={isStoryboardResultSkeletonVisible || isGeneratingImages}
-// disabled={isStoryboardResultSkeletonVisible}
 // Array.from({ length: STORYBOARD_FRAMES_PER_PAGE }
 // data-storyboard-frame-page={String(activeStoryboardPage + 1)}
 // data-storyboard-frame-page-size={String(STORYBOARD_FRAMES_PER_PAGE)}
@@ -1143,6 +1141,10 @@ function formatStoryboardAssistantDisplayText(value: string) {
     .replace(/예시를 생성하세요/g, "예시 만들기를 눌러보세요")
     .replace(/초기화 완료/g, "처음 상태로 되돌렸어요")
     .replace(/요구사항/g, "원하는 내용")
+    .replace(/분류했어요/g, "이해했어요")
+    .replace(/반영합니다/g, "반영할게요")
+    .replace(/좌측\s*/g, "")
+    .replace(/캔버스에/g, "화면에")
     .replaceAll(STORYBOARD_NO_TRUSTED_IMAGE_LABEL, protectedNoImageLabel)
     .trim();
 
@@ -1157,6 +1159,14 @@ function formatStoryboardAssistantDisplayText(value: string) {
     )
     .filter(Boolean);
 
+  const compactLines =
+    lines.length > 5
+      ? [
+          ...lines.slice(0, 4),
+          "더 자세히 보고 싶으면 “과정”이라고 입력하세요.",
+        ]
+      : lines;
+
   if (lines.length <= 1) {
     return safe.replaceAll(
       " __STORYBOARD_NO_IMAGE_DOT__ ",
@@ -1164,7 +1174,7 @@ function formatStoryboardAssistantDisplayText(value: string) {
     );
   }
 
-  return lines
+  return compactLines
     .map((line, index) => (index === 0 ? line : `- ${line}`))
     .join("\n");
 }
@@ -1337,14 +1347,8 @@ const STORYBOARD_SHARED_SEED_REAL_DATA_URL =
   "/storyboard-seed/latest-real-data.json";
 const STORYBOARD_NO_TRUSTED_IMAGE_LABEL =
   "컷 구성만 준비됨 · 실제 이미지는 아직 없음";
-
-type StoryboardInitialResultSource = "latest-history" | "shared-seed";
-
-type StoryboardInitialResult = {
-  result: StoryboardGenerationResult;
-  source: StoryboardInitialResultSource;
-  runUrl: string;
-};
+const STORYBOARD_PENDING_IMAGE_BACKGROUND =
+  "linear-gradient(135deg, rgba(248,250,252,0.98), rgba(226,232,240,0.82) 48%, rgba(148,163,184,0.68))";
 
 const INITIAL_STORYBOARD_PREVIEW: StoryboardGenerationResult = {
   generatedAt: "initial-local-preview",
@@ -2024,6 +2028,12 @@ function formatStoryboardHistoryVisibleCutCount(
   return `${result.storyboard.scenes.length}컷`;
 }
 
+function getMissingTrustedStoryboardImageScenes(scenes: StoryboardScene[]) {
+  return scenes.filter(
+    (scene) => !getTrustedStoryboardGeneratedImage(scene.generatedImage),
+  );
+}
+
 function formatStoryboardSceneTraceReason(scene: StoryboardScene) {
   const cutLabel = `CUT ${String(scene.sceneNo).padStart(2, "0")}`;
   const title = sanitizeStoryboardAssistantSourceText(scene.title);
@@ -2053,12 +2063,10 @@ function formatStoryboardVisibleImprovementSummary(
       : `${STORYBOARD_NO_TRUSTED_IMAGE_LABEL} · 검증 이미지는 0/${sceneCount}컷이에요.`;
 
   return [
-    "개선 반영 확인",
-    "CUT별 오디오와 자막이 따로 바뀌고, 페이지를 넘기면 현재 페이지 요약도 함께 바뀝니다.",
-    "첫 CUT은 쯔양님 영상 흐름을 고려해 초반 1분 30초 가게 앞 인트로부터 시작합니다.",
-    "장면은 반복 시청 피크와 요청 주제를 기준으로 고르고, '과정'이라고 입력하면 왜 이렇게 나왔는지 쉽게 설명합니다.",
-    "각 CUT 이미지 위에는 바로 촬영할 수 있는 짧은 촬영 포인트도 표시합니다.",
-    `이미지 상태: ${imageReadinessText}`,
+    "준비된 스토리보드를 불러왔어요.",
+    "컷마다 오디오, 자막, 촬영 포인트를 나눠서 볼 수 있어요.",
+    "첫 컷은 가게 앞 인트로부터 시작해요.",
+    `이미지: ${imageReadinessText}`,
   ].join("\n");
 }
 
@@ -2087,33 +2095,15 @@ function formatStoryboardTraceBubble(
   const sceneReasons = result.storyboard.scenes
     .slice(0, 3)
     .map(formatStoryboardSceneTraceReason);
-  const checks =
-    flowChecks ??
-    buildStoryboardPdfFlowChecks({
-      result,
-      backendReadiness: buildStoryboardBackendAgentReadiness(result),
-      graphFidelityStatus:
-        result.agentGraphFidelity?.status ??
-        buildStoryboardAgentGraphFidelity({
-          mode: result.mode,
-          graph: result.backendAnalysis.backendAgent?.graph,
-          finalOutputReady: Boolean(result.storyboard.exportMarkdown),
-          storyboardHistoryCount: 0,
-        }).status,
-      historyCount: 0,
-    });
-  const flowTraceText = formatStoryboardPdfFlowTraceText(checks);
+  void flowChecks;
 
   return [
-    "이렇게 만들었어요",
-    flowTraceText,
-    "1. 요청 정리: 원하는 컷 수, 분위기, 영상 길이를 먼저 정했어요.",
-    `2. 자료 확인: ${dataText}`,
-    "3. 안전 검토: 비밀값이나 위험한 지시는 빼고, 반영 가능한 요청만 남겼어요.",
-    "4. 컷 구성: 가게 앞 맥락, 주문·상차림, 첫 입 준비, 맛 평가와 다음 소재 연결 순서로 엮었어요.",
-    `5. 확인할 점: ${imageText}`,
-    sceneReasons.length ? "선택 이유" : null,
-    ...sceneReasons,
+    "이렇게 만들었어요.",
+    "1. 원하는 컷 수와 분위기를 먼저 맞췄어요.",
+    `2. ${dataText}`,
+    "3. 가게 앞 인트로부터 맛 평가까지 자연스럽게 이어지게 했어요.",
+    `이미지: ${imageText}`,
+    sceneReasons[0] ? `예: ${sceneReasons[0].replace(/^- /, "")}` : null,
   ]
     .filter(Boolean)
     .join("\n");
@@ -2296,6 +2286,66 @@ async function getLatestRealDataStoryboardResult(): Promise<StoryboardInitialRes
   );
 }
 
+function getTrustedInitialStoryboardResult(
+  initialStoryboardResult?: StoryboardInitialResult | null,
+): StoryboardInitialResult | null {
+  if (!initialStoryboardResult) return null;
+  const trustedResult =
+    extractLatestStoryboardResult(initialStoryboardResult.result) ??
+    hydrateStoryboardResultForDisplay(initialStoryboardResult.result);
+  const trustedFirstPageSceneCount = getVisibleTrustedStoryboardPageScenes({
+    allScenes: trustedResult.storyboard.scenes,
+    page: 0,
+    pageSize: STORYBOARD_FRAMES_PER_PAGE,
+  }).length;
+
+  return trustedFirstPageSceneCount >= STORYBOARD_FRAMES_PER_PAGE
+    ? { ...initialStoryboardResult, result: trustedResult }
+    : null;
+}
+
+function getStoryboardInitialResultSourceLabel(
+  source: StoryboardInitialResult["source"],
+) {
+  return source === "shared-seed"
+    ? "공용 기본 스토리보드"
+    : "최근 스토리보드 기록";
+}
+
+function makeInitialStoryboardChatMessages(
+  initialStoryboardResult: StoryboardInitialResult | null,
+): StoryboardChatMessage[] {
+  const intakeMessage = formatStoryboardChatMessageForDisplay({
+    id: "assistant-intake",
+    role: "assistant",
+    text: "처음이면 가이드를 보고, 바로 확인하려면 예시 만들기를 눌러보세요.",
+    status: "done",
+  });
+
+  if (!initialStoryboardResult) return [intakeMessage];
+
+  const sourceLabel = getStoryboardInitialResultSourceLabel(
+    initialStoryboardResult.source,
+  );
+  const latestHistoryMessage: StoryboardChatMessage = {
+    id: "assistant-latest-real-data",
+    role: "assistant",
+    text: `${sourceLabel}을 바로 불러왔어요 · ${initialStoryboardResult.result.storyboard.title}. 컷을 확인하고 필요한 수정은 채팅으로 요청하세요.`,
+    status: "done",
+  };
+  const latestHistoryImprovementMessage =
+    makeStoryboardImprovementSummaryMessage(
+      initialStoryboardResult.result,
+      "assistant-latest-real-data-improvement-summary",
+    );
+
+  return [
+    intakeMessage,
+    formatStoryboardChatMessageForDisplay(latestHistoryMessage),
+    formatStoryboardChatMessageForDisplay(latestHistoryImprovementMessage),
+  ];
+}
+
 async function postStoryboardRequest(
   form: GeneratorForm,
 ): Promise<StoryboardGenerationResult> {
@@ -2397,56 +2447,31 @@ function loadCanvasImage(src?: string) {
   });
 }
 
-function StoryboardGlassLoadingCanvas({
+function StoryboardEmptyCanvasState({
   activeCutStart,
   activeCutEnd,
-  mode,
 }: {
   activeCutStart: number;
   activeCutEnd: number;
-  mode: "loading" | "empty";
 }) {
-  const statusLabel =
-    mode === "loading"
-      ? "스토리보드 구성 로딩 중"
-      : STORYBOARD_NO_TRUSTED_IMAGE_LABEL;
   const cutRangeLabel = `CUT ${String(activeCutStart).padStart(2, "0")}–${String(activeCutEnd).padStart(2, "0")}`;
 
   return (
     <div
-      className="relative col-span-2 row-span-2 flex h-full min-h-0 overflow-hidden rounded-2xl bg-transparent"
-      role="status"
+      className="col-span-2 row-span-2 flex h-full min-h-[360px] items-center justify-center rounded-2xl border border-dashed border-border/80 bg-background p-6 text-center"
       aria-live="polite"
-      aria-busy={mode === "loading"}
-      aria-label={statusLabel}
-      data-storyboard-glass-skeleton="true"
-      data-storyboard-unified-skeleton="true"
-      data-storyboard-realtime-skeleton="true"
-      data-storyboard-image-empty-state={mode === "empty" ? "true" : undefined}
+      aria-label={`${cutRangeLabel} ${STORYBOARD_NO_TRUSTED_IMAGE_LABEL}`}
+      data-storyboard-empty-canvas="true"
     >
-      <div
-        className="relative z-10 grid h-full w-full grid-cols-2 grid-rows-2 gap-2 p-2"
-        aria-hidden="true"
-      >
-        {Array.from({ length: STORYBOARD_FRAMES_PER_PAGE }, (_, index) => {
-          const cutNo = activeCutStart + index;
-          return (
-            <div
-              key={`storyboard-glass-frame-${cutNo}`}
-              className="relative overflow-hidden rounded-2xl border border-slate-400/35 bg-slate-300/42 shadow-[inset_0_1px_0_rgba(255,255,255,0.42)] dark:border-slate-500/35 dark:bg-slate-700/35"
-              data-storyboard-glass-skeleton-frame={String(cutNo)}
-            >
-              <span className="absolute inset-0 bg-gradient-to-br from-white/34 via-slate-300/20 to-slate-500/24" />
-              <span
-                className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/68 to-transparent blur-sm [animation:storyboard-glass-shimmer_1.45s_ease-in-out_infinite]"
-                aria-hidden="true"
-                data-storyboard-glass-shimmer="true"
-              />
-            </div>
-          );
-        })}
+      <div className="max-w-sm space-y-2">
+        <p className="text-sm font-semibold text-foreground">
+          {STORYBOARD_NO_TRUSTED_IMAGE_LABEL}
+        </p>
+        <p className="text-xs leading-5 text-muted-foreground">
+          {cutRangeLabel}에 보여줄 검증 이미지가 아직 없습니다. 이미지 만들기
+          설정을 확인한 뒤 현재 컷 이미지를 생성하세요.
+        </p>
       </div>
-      <span className="sr-only">{`${cutRangeLabel} ${statusLabel}`}</span>
     </div>
   );
 }
@@ -2491,10 +2516,22 @@ function StoryboardCutImageSkeleton({
   );
 }
 
-export function AdminStoryboardGenerator() {
-  const [form, setForm] = useState<GeneratorForm>(DEFAULT_FORM);
+type AdminStoryboardGeneratorProps = {
+  initialStoryboardResult?: StoryboardInitialResult | null;
+};
+
+export function AdminStoryboardGenerator({
+  initialStoryboardResult = null,
+}: AdminStoryboardGeneratorProps = {}) {
+  const trustedInitialStoryboardResult = useMemo(
+    () => getTrustedInitialStoryboardResult(initialStoryboardResult),
+    [initialStoryboardResult],
+  );
+  const [form, setForm] = useState<GeneratorForm>(
+    () => trustedInitialStoryboardResult?.result.request ?? DEFAULT_FORM,
+  );
   const [result, setResult] = useState<StoryboardGenerationResult>(
-    INITIAL_STORYBOARD_PREVIEW,
+    () => trustedInitialStoryboardResult?.result ?? INITIAL_STORYBOARD_PREVIEW,
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -2510,9 +2547,20 @@ export function AdminStoryboardGenerator() {
   const [storyboardPage, setStoryboardPage] = useState(0);
   const [storyboardHistoryCases, setStoryboardHistoryCases] = useState<
     StoryboardHistoryCase[]
-  >([]);
+  >(() =>
+    trustedInitialStoryboardResult
+      ? [
+          makeStoryboardHistoryCase(
+            trustedInitialStoryboardResult.result,
+            trustedInitialStoryboardResult.runUrl,
+          ),
+        ]
+      : [],
+  );
   const [storyboardHistoryStatus, setStoryboardHistoryStatus] =
-    useState<StoryboardHistoryStatus>("idle");
+    useState<StoryboardHistoryStatus>(
+      trustedInitialStoryboardResult ? "ready" : "idle",
+    );
   const [storyboardHistoryError, setStoryboardHistoryError] = useState<
     string | null
   >(null);
@@ -2542,22 +2590,26 @@ export function AdminStoryboardGenerator() {
     storyboardBrowserOpenAIApiKeyError,
     setStoryboardBrowserOpenAIApiKeyError,
   ] = useState<string | null>(null);
+  const [
+    storyboardBrowserOpenAIApiKeyMessage,
+    setStoryboardBrowserOpenAIApiKeyMessage,
+  ] = useState<string | null>(null);
   const [chatDraft, setChatDraft] = useState("");
   const [storyboardCanvasFocus, setStoryboardCanvasFocus] =
     useState<StoryboardChatFocusContext | null>(null);
   const chatAbortControllerRef = useRef<AbortController | null>(null);
   const chatTranscriptRef = useRef<HTMLDivElement | null>(null);
-  const [chatMessages, setChatMessages] = useState<StoryboardChatMessage[]>([
-    formatStoryboardChatMessageForDisplay({
-      id: "assistant-intake",
-      role: "assistant",
-      text: "처음이면 가이드를 보고, 바로 확인하려면 예시를 생성하세요.",
-      status: "done",
-    }),
-  ]);
+  const [chatMessages, setChatMessages] = useState<StoryboardChatMessage[]>(
+    () => makeInitialStoryboardChatMessages(trustedInitialStoryboardResult),
+  );
   const [streamingPhaseIndex, setStreamingPhaseIndex] = useState(0);
   const hasUserStoryboardMutationRef = useRef(false);
+  const autoGeneratedMissingStoryboardPageKeysRef = useRef<Set<string>>(
+    new Set(),
+  );
   useEffect(() => {
+    if (trustedInitialStoryboardResult) return;
+
     let cancelled = false;
 
     getLatestRealDataStoryboardResult()
@@ -2585,10 +2637,9 @@ export function AdminStoryboardGenerator() {
         );
         setStoryboardHistoryStatus("ready");
         setStoryboardHistoryError(null);
-        const sourceLabel =
-          initialResult.source === "shared-seed"
-            ? "공용 기본 스토리보드"
-            : "최근 스토리보드 기록";
+        const sourceLabel = getStoryboardInitialResultSourceLabel(
+          initialResult.source,
+        );
         const latestHistoryMessage: StoryboardChatMessage = {
           id: "assistant-latest-real-data",
           role: "assistant",
@@ -2618,7 +2669,7 @@ export function AdminStoryboardGenerator() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [trustedInitialStoryboardResult]);
 
   useEffect(() => {
     let cancelled = false;
@@ -2668,6 +2719,9 @@ export function AdminStoryboardGenerator() {
     if (!cache) return;
     setStoryboardBrowserOpenAIApiKey(cache.openAIApiKey);
     setStoryboardBrowserOpenAIApiKeySavedAt(cache.savedAt);
+    setStoryboardBrowserOpenAIApiKeyMessage(
+      "이 브라우저에 저장된 OpenAI 키를 사용할 준비가 됐습니다.",
+    );
   }, []);
 
   useEffect(() => {
@@ -2778,7 +2832,6 @@ export function AdminStoryboardGenerator() {
       activeCutStart + STORYBOARD_FRAMES_PER_PAGE - 1,
       Math.max(activeCutStart, totalCutCount),
     );
-  const isStoryboardResultSkeletonVisible = isGenerating;
   const generatedImageCount = countTrustedStoryboardGeneratedImages(
     result.storyboard.scenes,
   );
@@ -2851,10 +2904,6 @@ export function AdminStoryboardGenerator() {
   const selectedExportPreset =
     storyboardExportPresets.find((preset) => preset.id === exportPresetId) ??
     storyboardExportPresets[0];
-  const storyboardRealDataTrace = useMemo(
-    () => formatStoryboardRealDataTrace(result),
-    [result],
-  );
   const storyboardBackendAgentReadiness = useMemo(
     () => buildStoryboardBackendAgentReadiness(result),
     [result],
@@ -3098,6 +3147,33 @@ export function AdminStoryboardGenerator() {
     appendStoryboardQuickCommandMessages("가이드", STORYBOARD_USAGE_GUIDE_TEXT);
   }
 
+  async function handleGenerateAllStoryboardImagesForResult(
+    generated: StoryboardGenerationResult,
+    assistantMessageId?: string,
+    scopeLabelPrefix = "전체 CUT",
+  ) {
+    const targetScenes = generated.storyboard.scenes;
+    if (targetScenes.length === 0) return;
+
+    if (!isStoryboardImageProviderAvailable) {
+      const firstSceneNo = targetScenes[0]?.sceneNo ?? 1;
+      const lastSceneNo = targetScenes.at(-1)?.sceneNo ?? targetScenes.length;
+      guideUnavailableStoryboardImageGeneration({
+        assistantMessageId,
+        scopeLabel: `${scopeLabelPrefix} ${String(firstSceneNo).padStart(2, "0")}–${String(lastSceneNo).padStart(2, "0")}`,
+        openSettings: false,
+      });
+      return;
+    }
+
+    await handleGenerateStoryboardImages({
+      assistantMessageId,
+      targetScenes,
+      sourceResult: generated,
+      scope: "all",
+    });
+  }
+
   async function handleStoryboardGuidedExampleGenerate() {
     if (isGenerating || isChatAgentStreaming) return;
     const guidedForm: GeneratorForm = {
@@ -3109,7 +3185,7 @@ export function AdminStoryboardGenerator() {
     };
     const assistantMessageId = appendStoryboardQuickCommandMessages(
       "예시 생성",
-      "예시 흐름에 맞춰 스토리보드와 첫 페이지 이미지를 함께 만들고 있어요.",
+      "예시 흐름에 맞춰 스토리보드와 전체 CUT 이미지를 함께 만들고 있어요.",
       "streaming",
     );
     const generated = await handleGenerate(guidedForm, {
@@ -3118,29 +3194,11 @@ export function AdminStoryboardGenerator() {
     });
     if (!generated) return;
 
-    const targetScenes = getStoryboardImageGenerationTargetScenes({
-      allScenes: generated.storyboard.scenes,
-      visibleScenes: generated.storyboard.scenes,
-      page: 0,
-      pageSize: STORYBOARD_FRAMES_PER_PAGE,
-    });
-    if (targetScenes.length === 0) return;
-
-    if (!isStoryboardImageProviderAvailable) {
-      const firstSceneNo = targetScenes[0]?.sceneNo ?? 1;
-      const lastSceneNo = targetScenes.at(-1)?.sceneNo ?? targetScenes.length;
-      guideUnavailableStoryboardImageGeneration({
-        scopeLabel: `예시 CUT ${String(firstSceneNo).padStart(2, "0")}–${String(lastSceneNo).padStart(2, "0")}`,
-        openSettings: false,
-      });
-      return;
-    }
-
-    await handleGenerateStoryboardImages({
+    await handleGenerateAllStoryboardImagesForResult(
+      generated,
       assistantMessageId,
-      targetScenes,
-      sourceResult: generated,
-    });
+      "예시 CUT",
+    );
   }
 
   async function refreshStoryboardHistoryResults() {
@@ -3214,9 +3272,10 @@ export function AdminStoryboardGenerator() {
       storyboardBrowserOpenAIApiKeyDraft,
     );
     if (!normalized) {
-      setStoryboardBrowserOpenAIApiKeyError(
-        "OpenAI API 키 형식이 올바르지 않습니다. sk-로 시작하는 키를 입력해 주세요.",
-      );
+      const message =
+        "OpenAI API 키 형식이 올바르지 않습니다. sk-로 시작하는 키를 붙여 넣어 주세요.";
+      setStoryboardBrowserOpenAIApiKeyError(message);
+      setStoryboardBrowserOpenAIApiKeyMessage(message);
       return;
     }
     const cache = writeStoryboardBrowserModelKeysCache(normalized);
@@ -3237,6 +3296,9 @@ export function AdminStoryboardGenerator() {
     });
     setStoryboardBrowserOpenAIApiKeyDraft("");
     setStoryboardBrowserOpenAIApiKeyError(null);
+    setStoryboardBrowserOpenAIApiKeyMessage(
+      "저장했어요. 이 브라우저에서만 gpt-image-2 생성 요청에 사용합니다.",
+    );
     appendStoryboardChatMessages([
       {
         id: `assistant-browser-key-saved-${Date.now()}`,
@@ -3253,6 +3315,9 @@ export function AdminStoryboardGenerator() {
     setStoryboardBrowserOpenAIApiKeySavedAt(null);
     setStoryboardBrowserOpenAIApiKeyDraft("");
     setStoryboardBrowserOpenAIApiKeyError(null);
+    setStoryboardBrowserOpenAIApiKeyMessage(
+      "저장된 OpenAI 키를 이 브라우저에서 삭제했습니다.",
+    );
     appendStoryboardChatMessages([
       {
         id: `assistant-browser-key-cleared-${Date.now()}`,
@@ -3366,6 +3431,75 @@ export function AdminStoryboardGenerator() {
     return { start, end };
   }
 
+  function maybeGenerateMissingStoryboardPageImages(
+    page: number,
+    pageScenes: StoryboardScene[],
+  ) {
+    if (
+      pageScenes.length === 0 ||
+      result.generatedAt === INITIAL_STORYBOARD_PREVIEW.generatedAt ||
+      result.storyboard.scenes.length === 0 ||
+      !isStoryboardImageProviderAvailable ||
+      isGenerating ||
+      isGeneratingImages ||
+      isChatAgentStreaming
+    ) {
+      return;
+    }
+
+    const missingStoryboardScenes = getMissingTrustedStoryboardImageScenes(
+      result.storyboard.scenes,
+    );
+    if (missingStoryboardScenes.length === 0) return;
+
+    const missingSceneNos = missingStoryboardScenes
+      .map((scene) => scene.sceneNo)
+      .join(",");
+    const autoGenerationKey = `${result.generatedAt}:all:${missingSceneNos}`;
+    if (
+      autoGeneratedMissingStoryboardPageKeysRef.current.has(autoGenerationKey)
+    ) {
+      return;
+    }
+    autoGeneratedMissingStoryboardPageKeysRef.current.add(autoGenerationKey);
+
+    const pageRange = getStoryboardSourcePageRange(page);
+    const assistantMessageId = `assistant-page-image-autofill-${Date.now()}`;
+    appendStoryboardChatMessages([
+      {
+        id: assistantMessageId,
+        role: "assistant",
+        text: `CUT ${String(pageRange.start).padStart(2, "0")}–${String(pageRange.end).padStart(2, "0")}을 보는 중이에요. 아직 이미지가 없는 전체 ${missingStoryboardScenes.length}컷을 자동으로 채우고 있어요. 페이지를 넘기지 않아도 완료된 CUT은 바로 준비됩니다.`,
+        status: "streaming",
+      },
+    ]);
+
+    void handleGenerateStoryboardImages({
+      assistantMessageId,
+      targetScenes: missingStoryboardScenes,
+      sourceResult: result,
+      scope: "all",
+    });
+  }
+
+  useEffect(() => {
+    maybeGenerateMissingStoryboardPageImages(
+      activeStoryboardPage,
+      activeStoryboardPageScenes,
+    );
+    // 자동 전체 생성은 내부 key(ref)로 중복 실행을 막습니다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    activeStoryboardPage,
+    activeStoryboardPageScenes,
+    generatedImageCount,
+    isStoryboardImageProviderAvailable,
+    isGenerating,
+    isGeneratingImages,
+    isChatAgentStreaming,
+    result,
+  ]);
+
   function handleStoryboardPageChange(nextPage: number) {
     const normalizedPage = Math.min(
       storyboardTotalPages - 1,
@@ -3381,6 +3515,7 @@ export function AdminStoryboardGenerator() {
     const firstVisibleScene = sourcePageScenes[0];
     if (firstVisibleScene) {
       applyStoryboardCanvasFocus(createStoryboardCutFocusContext(firstVisibleScene));
+      maybeGenerateMissingStoryboardPageImages(normalizedPage, sourcePageScenes);
       return;
     }
     applyStoryboardCanvasFocus(
@@ -3390,6 +3525,7 @@ export function AdminStoryboardGenerator() {
         "사용자가 스토리보드 페이지를 이동했습니다. 현재 보이는 컷 범위의 리듬과 연결성을 기준으로 개선 대화를 이어가세요.",
       ),
     );
+    maybeGenerateMissingStoryboardPageImages(normalizedPage, sourcePageScenes);
   }
 
   function handleStoryboardGuideToggle() {
@@ -3652,13 +3788,13 @@ export function AdminStoryboardGenerator() {
         setIsStoryboardChatSettingsOpen(true);
         appendStoryboardQuickCommandMessages(
           submittedPrompt,
-          "채팅 설정을 열었습니다. 우상단 톱니바퀴에서 실제 데이터 근거, 이미지 재생성, 초기화를 관리할 수 있습니다.",
+          "채팅 설정을 열었습니다. 우상단 톱니바퀴에는 OpenAI API 키 · gpt-image-2 전용 설정만 있습니다.",
         );
         return;
       }
       if (quickCommand === "images") {
         if (
-          isStoryboardResultSkeletonVisible ||
+          isGenerating ||
           isGeneratingImages ||
           activeStoryboardImageGenerationTargetScenes.length === 0
         ) {
@@ -3689,10 +3825,16 @@ export function AdminStoryboardGenerator() {
           "현재 입력한 내용으로 스토리보드를 만들고 있어요. 완료되면 캔버스에서 바로 확인할 수 있습니다.",
           "streaming",
         );
-        await handleGenerate(commandBaseForm, {
+        const generated = await handleGenerate(commandBaseForm, {
           appendChatMessages: false,
           assistantMessageId,
         });
+        if (generated) {
+          await handleGenerateAllStoryboardImagesForResult(
+            generated,
+            assistantMessageId,
+          );
+        }
         return;
       }
     }
@@ -3819,10 +3961,16 @@ export function AdminStoryboardGenerator() {
         );
       }
       if (finalResult?.shouldGenerate) {
-        await handleGenerate(finalForm, {
+        const generated = await handleGenerate(finalForm, {
           appendChatMessages: false,
           assistantMessageId: nextAssistantMessageId,
         });
+        if (generated) {
+          await handleGenerateAllStoryboardImagesForResult(
+            generated,
+            nextAssistantMessageId,
+          );
+        }
       }
       if (
         finalResult?.canvasPatch.scenePatch?.regenerateImage &&
@@ -3990,13 +4138,16 @@ export function AdminStoryboardGenerator() {
       assistantMessageId?: string;
       targetScenes?: StoryboardScene[];
       sourceResult?: StoryboardGenerationResult;
-      scope?: "page" | "selected";
+      scope?: "page" | "selected" | "all";
     } = {},
   ) {
     const sourceResult = options.sourceResult ?? result;
     const targetScenes =
       options.targetScenes ?? activeStoryboardImageGenerationTargetScenes;
     const isSelectedScope = options.scope === "selected";
+    const isAllScope =
+      options.scope === "all" ||
+      (!isSelectedScope && targetScenes.length > STORYBOARD_FRAMES_PER_PAGE);
     if (targetScenes.length === 0) {
       const message =
         "현재 페이지에 이미지로 만들 스토리보드 컷이 없습니다.";
@@ -4016,7 +4167,9 @@ export function AdminStoryboardGenerator() {
     const targetLabel =
       isSelectedScope && targetScenes[0]
         ? `CUT ${String(targetScenes[0].sceneNo).padStart(2, "0")}`
-        : `현재 페이지 CUT ${String(targetStart).padStart(2, "0")}–${String(targetEnd).padStart(2, "0")}`;
+        : isAllScope
+          ? `전체 CUT ${String(targetStart).padStart(2, "0")}–${String(targetEnd).padStart(2, "0")}`
+          : `현재 페이지 CUT ${String(targetStart).padStart(2, "0")}–${String(targetEnd).padStart(2, "0")}`;
     if (!isStoryboardImageProviderAvailable) {
       guideUnavailableStoryboardImageGeneration({
         assistantMessageId: options.assistantMessageId,
@@ -4030,11 +4183,17 @@ export function AdminStoryboardGenerator() {
     setErrorMessage(null);
     applyStoryboardCanvasFocus(
       createStoryboardActionFocusContext(
-        isSelectedScope ? "현재 컷 이미지 재생성" : "4컷 이미지 재생성",
+        isSelectedScope
+          ? "현재 컷 이미지 재생성"
+          : isAllScope
+            ? "전체 CUT 이미지 생성"
+            : "4컷 이미지 재생성",
         `${targetLabel} 이미지를 생성 중입니다.`,
         isSelectedScope
           ? "사용자가 선택한 CUT만 이미지 생성을 실행했습니다. 생성 후 해당 컷 이미지 톤과 자막/오디오 일치를 기준으로 후속 대화를 이어가세요."
-          : "사용자가 현재 페이지 4컷 이미지 생성을 실행했습니다. 생성 후 이미지 톤, 컷별 완성도, 누락 컷을 기준으로 후속 대화를 이어가세요.",
+          : isAllScope
+            ? "사용자가 전체 CUT 이미지 생성을 실행했습니다. 생성된 컷은 페이지를 넘겨도 바로 확인할 수 있어야 합니다."
+            : "사용자가 현재 페이지 4컷 이미지 생성을 실행했습니다. 생성 후 이미지 톤, 컷별 완성도, 누락 컷을 기준으로 후속 대화를 이어가세요.",
       ),
     );
     if (options.assistantMessageId) {
@@ -4042,7 +4201,9 @@ export function AdminStoryboardGenerator() {
         options.assistantMessageId,
         isSelectedScope
           ? `${targetLabel} 이미지를 다시 만드는 중입니다...`
-          : `현재 ${targetCount}컷 이미지를 만드는 중입니다...`,
+          : isAllScope
+            ? `전체 ${targetCount}컷 이미지를 만드는 중입니다...`
+            : `현재 ${targetCount}컷 이미지를 만드는 중입니다...`,
         "streaming",
       );
     }
@@ -4086,7 +4247,9 @@ export function AdminStoryboardGenerator() {
             createStoryboardActionFocusContext(
               "컷 이미지 생성 진행",
               `CUT ${String(scene.sceneNo).padStart(2, "0")} 이미지가 캔버스에 반영됐습니다 · ${index + 1}/${targetScenes.length}`,
-              "긴 4컷 생성도 컷 단위로 반영됩니다. 사용자가 이미 보이는 컷을 선택해 오디오/자막/비주얼 피드백을 바로 이어갈 수 있습니다.",
+              isAllScope
+                ? "전체 CUT 생성도 컷 단위로 반영됩니다. 사용자가 페이지를 넘기는 중에도 생성된 컷을 바로 확인할 수 있습니다."
+                : "긴 4컷 생성도 컷 단위로 반영됩니다. 사용자가 이미 보이는 컷을 선택해 오디오/자막/비주얼 피드백을 바로 이어갈 수 있습니다.",
             ),
           );
         }
@@ -4111,17 +4274,25 @@ export function AdminStoryboardGenerator() {
           options.assistantMessageId,
           isSelectedScope
             ? `완료 · ${targetLabel} 이미지를 새 결과로 교체했습니다.`
-            : `완료 · 현재 페이지 ${generatedImages.length}/${targetCount}컷 이미지를 새 결과로 교체했습니다.`,
+            : isAllScope
+              ? `완료 · 전체 ${generatedImages.length}/${targetCount}컷 이미지를 새 결과로 교체했습니다.`
+              : `완료 · 현재 페이지 ${generatedImages.length}/${targetCount}컷 이미지를 새 결과로 교체했습니다.`,
           "done",
         );
       }
       applyStoryboardCanvasFocus(
         createStoryboardActionFocusContext(
-          isSelectedScope ? "현재 컷 이미지 생성 완료" : "4컷 이미지 생성 완료",
+          isSelectedScope
+            ? "현재 컷 이미지 생성 완료"
+            : isAllScope
+              ? "전체 CUT 이미지 생성 완료"
+              : "4컷 이미지 생성 완료",
           `${targetLabel} 이미지 ${generatedImages.length}개가 캔버스에 반영됐습니다.`,
           isSelectedScope
             ? "선택 CUT의 새 이미지가 반영됐습니다. 사용자가 같은 컷의 오디오/자막/비주얼을 계속 보완할 수 있습니다."
-            : "현재 페이지의 새 이미지가 반영됐습니다. 사용자가 컷을 선택하면 해당 이미지를 기준으로 보완 대화를 이어가세요.",
+            : isAllScope
+              ? "전체 CUT 이미지가 반영됐습니다. 페이지를 넘겨 각 CUT 이미지를 확인하고 보완 대화를 이어가세요."
+              : "현재 페이지의 새 이미지가 반영됐습니다. 사용자가 컷을 선택하면 해당 이미지를 기준으로 보완 대화를 이어가세요.",
         ),
       );
     } catch (error) {
@@ -4135,7 +4306,9 @@ export function AdminStoryboardGenerator() {
           options.assistantMessageId,
           isSelectedScope
             ? `현재 컷 재생성 실패 · ${message}`
-            : `4컷 재생성 실패 · ${message} · 반영 ${appliedImageCount}/${targetScenes.length}`,
+            : isAllScope
+              ? `전체 CUT 이미지 생성 실패 · ${message} · 반영 ${appliedImageCount}/${targetScenes.length}`
+              : `4컷 재생성 실패 · ${message} · 반영 ${appliedImageCount}/${targetScenes.length}`,
           "done",
         );
       }
@@ -4542,35 +4715,19 @@ export function AdminStoryboardGenerator() {
                     data-storyboard-chat-settings-dropdown="true"
                   >
                     <div
-                      className="space-y-2 rounded-md bg-background/95 p-3"
+                      className="space-y-2 rounded-2xl bg-background/95 p-3 shadow-sm"
                       data-storyboard-chat-settings-panel="true"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5 text-xs font-semibold">
-                            <Settings className="h-3.5 w-3.5 text-primary" />
-                            <span>채팅 설정</span>
-                            <Badge
-                              variant={
-                                storyboardRealDataTrace.mode === "actual"
-                                  ? "secondary"
-                                  : "outline"
-                              }
-                              className="px-1.5 text-[10px]"
-                              data-storyboard-chat-settings-real-data-mode={
-                                storyboardRealDataTrace.mode
-                              }
-                            >
-                              {storyboardRealDataTrace.headline}
-                            </Badge>
+                            <KeyRound className="h-3.5 w-3.5 text-primary" />
+                            <span>이미지 모델 API 키</span>
                           </div>
-                          <p
-                            className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-muted-foreground"
-                            title={`${storyboardRealDataTrace.backendText} · ${storyboardRealDataTrace.sourceText} · ${storyboardRealDataTrace.generatedAtText}`}
-                            data-storyboard-chat-settings-source-trace="true"
-                          >
-                            {storyboardRealDataTrace.backendText} ·{" "}
-                            {storyboardRealDataTrace.sourceText}
+                          <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">
+                            프로덕션에서는 OpenAI 키를 이 브라우저에만 저장해
+                            gpt-image-2 스토리보드 이미지 생성에 사용합니다.
+                            DB나 계정에는 저장하지 않습니다.
                           </p>
                         </div>
                         <Button
@@ -4585,434 +4742,24 @@ export function AdminStoryboardGenerator() {
                           <X className="h-3.5 w-3.5" aria-hidden="true" />
                         </Button>
                       </div>
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p
-                          className="text-[11px] text-muted-foreground"
-                          data-storyboard-chat-settings-generated-at="true"
-                        >
-                          {storyboardRealDataTrace.generatedAtText}
-                        </p>
-                        {omittedStoryboardSceneCount > 0 ? (
-                          <Badge
-                            variant="outline"
-                            className="rounded-full px-2 text-[10px]"
-                            data-storyboard-omitted-scene-count="true"
-                          >
-                            {formatStoryboardOmittedSceneText(
-                              omittedStoryboardSceneCount,
-                            )}
-                          </Badge>
-                        ) : (
-                          <span
-                            className="sr-only"
-                            data-storyboard-omitted-scene-count="true"
-                          >
-                            {formatStoryboardOmittedSceneText(
-                              omittedStoryboardSceneCount,
-                            )}
-                          </span>
-                        )}
-                      </div>
                       <div
-                        className="rounded-2xl border border-border/70 bg-muted/25 p-2 text-[11px]"
-                        data-storyboard-pdf-flow-trace="true"
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <span className="font-semibold text-foreground">
-                            프로젝트 흐름 추적
-                          </span>
-                          <Badge
-                            variant="outline"
-                            className="rounded-full px-1.5 text-[10px]"
-                          >
-                            15개 상태
-                          </Badge>
-                        </div>
-                        <p
-                          className="mt-1 leading-4 text-muted-foreground"
-                          data-storyboard-pdf-flow-service="true"
-                        >
-                          {STORYBOARD_PDF_FLOW_SERVICE_TEXT}
-                        </p>
-                        <p
-                          className="mt-1 leading-4 text-muted-foreground"
-                          data-storyboard-pdf-flow-sequence="true"
-                        >
-                          {STORYBOARD_PDF_FLOW_SEQUENCE_TEXT}
-                        </p>
-                        <div className="mt-1.5 grid gap-1">
-                          {storyboardPdfFlowChecks.map((check) => (
-                            <div
-                              key={check.id}
-                              className="grid grid-cols-[92px_minmax(0,1fr)] gap-2 rounded-xl bg-background/70 px-2 py-1.5"
-                              data-storyboard-pdf-flow-check={check.id}
-                              data-storyboard-pdf-flow-check-status={
-                                check.status
-                              }
-                            >
-                              <span className="truncate font-semibold text-foreground">
-                                {check.label}
-                              </span>
-                              <span className="min-w-0">
-                                <span
-                                  className={cn(
-                                    "mr-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
-                                    check.status === "used"
-                                      ? "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300"
-                                      : check.status === "available"
-                                        ? "bg-sky-500/12 text-sky-700 dark:text-sky-300"
-                                        : check.status === "fallback"
-                                          ? "bg-amber-500/12 text-amber-700 dark:text-amber-300"
-                                          : "bg-muted text-muted-foreground",
-                                  )}
-                                >
-                                  {getStoryboardPdfFlowStatusLabel(
-                                    check.status,
-                                  )}
-                                </span>
-                                <span
-                                  className="line-clamp-1 text-muted-foreground"
-                                  title={check.summary}
-                                >
-                                  {check.summary}
-                                </span>
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                        <div
-                          className="mt-1.5 rounded-xl bg-background/70 px-2 py-1.5 text-muted-foreground"
-                          data-storyboard-evaluation-review-status="true"
-                        >
-                          <p>{STORYBOARD_EVALUATION_LOGS_TEXT}</p>
-                          <p className="mt-0.5">
-                            {STORYBOARD_REVIEW_STATUS_TEXT}
-                          </p>
-                        </div>
-                      </div>
-                      <div
-                        className={cn(
-                          "rounded-2xl border p-2 text-[11px]",
-                          storyboardBackendAgentReadiness.retrievalUsed
-                            ? "border-emerald-300/60 bg-emerald-500/10"
-                            : storyboardBackendAgentReadiness.liveGraphReady ||
-                              storyboardBackendAgentReadiness.outputReadyForReview
-                            ? "border-sky-300/60 bg-sky-500/10"
-                            : storyboardBackendAgentReadiness.resumeRequired
-                            ? "border-amber-300/60 bg-amber-500/10"
-                            : "border-border/70 bg-muted/25",
-                        )}
-                        data-storyboard-backend-agent-readiness="true"
-                        data-storyboard-backend-agent-status={
-                          storyboardBackendAgentReadiness.status
-                        }
-                        data-storyboard-backend-agent-live-graph-ready={
-                          storyboardBackendAgentReadiness.liveGraphReady
-                            ? "true"
-                            : "false"
-                        }
-                        data-storyboard-backend-agent-retrieval-used={
-                          storyboardBackendAgentReadiness.retrievalUsed
-                            ? "true"
-                            : "false"
-                        }
-                        data-storyboard-backend-agent-resume-required={
-                          storyboardBackendAgentReadiness.resumeRequired
-                            ? "true"
-                            : "false"
-                        }
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <span className="font-semibold text-foreground">
-                            생성 준비 상태
-                          </span>
-                          <Badge
-                            variant={
-                              storyboardBackendAgentReadiness.retrievalUsed
-                                ? "secondary"
-                                : "outline"
-                            }
-                            className="rounded-full px-1.5 text-[10px]"
-                          >
-                            {storyboardBackendAgentReadiness.label}
-                          </Badge>
-                        </div>
-                        <p
-                          className="mt-1 leading-4 text-muted-foreground"
-                          data-storyboard-backend-agent-summary="true"
-                        >
-                          {storyboardBackendAgentReadiness.summary}
-                        </p>
-                        <p
-                          className="mt-1 line-clamp-2 leading-4 text-muted-foreground"
-                          title={storyboardBackendAgentReadiness.detail}
-                          data-storyboard-backend-agent-detail="true"
-                        >
-                          {storyboardBackendAgentReadiness.detail}
-                        </p>
-                      </div>
-                      <div
-                        className={cn(
-                          "rounded-2xl border p-2 text-[11px]",
-                          storyboardAgentGraphFidelity.status === "passed"
-                            ? "border-emerald-300/60 bg-emerald-500/10"
-                            : "border-amber-300/60 bg-amber-500/10",
-                        )}
-                        data-storyboard-agent-graph-fidelity="true"
-                        data-storyboard-agent-graph-fidelity-status={
-                          storyboardAgentGraphFidelity.status
-                        }
-                        data-storyboard-agent-graph-fidelity-score={String(
-                          storyboardAgentGraphFidelity.score,
-                        )}
-                        data-storyboard-agent-graph-fidelity-mode={
-                          storyboardAgentGraphFidelity.evidenceMode
-                        }
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <span className="font-semibold text-foreground">
-                            참조 그래프 충실도
-                          </span>
-                          <Badge
-                            variant={
-                              storyboardAgentGraphFidelity.status === "passed"
-                                ? "secondary"
-                                : "outline"
-                            }
-                            className="rounded-full px-1.5 text-[10px]"
-                            data-storyboard-agent-graph-fidelity-ahp="true"
-                          >
-                            AHP {storyboardAgentGraphFidelity.score}/
-                            {storyboardAgentGraphFidelity.targetScore}
-                          </Badge>
-                        </div>
-                        <p className="mt-1 leading-4 text-muted-foreground">
-                          Supervisor·Researcher·Intern·Designer 상태를 기존
-                          스토리보드 AHP와 분리해 검증합니다.
-                        </p>
-                        <div className="mt-1.5 grid gap-1">
-                          {storyboardAgentGraphFidelity.roles.map((role) => (
-                            <div
-                              key={role.id}
-                              className="grid grid-cols-[84px_minmax(0,1fr)] gap-2 rounded-xl bg-background/70 px-2 py-1.5"
-                              data-storyboard-agent-graph-role={role.id}
-                              data-storyboard-agent-graph-role-state={
-                                role.evidenceState
-                              }
-                            >
-                              <span className="truncate font-semibold text-foreground">
-                                {role.label}
-                              </span>
-                              <span className="min-w-0">
-                                <span
-                                  className={cn(
-                                    "mr-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
-                                    role.evidenceState === "supported"
-                                      ? "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300"
-                                      : role.evidenceState === "blocked"
-                                        ? "bg-destructive/12 text-destructive"
-                                        : "bg-amber-500/12 text-amber-700 dark:text-amber-300",
-                                  )}
-                                >
-                                  {role.evidenceState === "supported"
-                                    ? "증거 충분"
-                                    : role.evidenceState === "adapter"
-                                      ? "일부 증거"
-                                      : role.evidenceState === "blocked"
-                                        ? "차단"
-                                        : "누락"}
-                                </span>
-                                <span className="line-clamp-1 text-muted-foreground">
-                                  {role.evidence}
-                                </span>
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                        {storyboardAgentGraphFidelity.blockers.length ? (
-                          <ul
-                            className="mt-1.5 list-disc space-y-0.5 pl-4 text-muted-foreground"
-                            data-storyboard-agent-graph-blockers="true"
-                          >
-                            {storyboardAgentGraphFidelity.blockers
-                              .slice(0, 3)
-                              .map((blocker) => (
-                                <li key={blocker}>{blocker}</li>
-                              ))}
-                          </ul>
-                        ) : null}
-                      </div>
-
-                      <div
-                        className="rounded-2xl border border-border/70 bg-muted/25 p-2"
-                        data-storyboard-user-perspective-readiness="true"
-                      >
-                        <div className="mb-1.5 flex items-center justify-between gap-2">
-                          <span className="text-[11px] font-semibold text-foreground">
-                            사용자 관점 점검
-                          </span>
-                          <span className="text-[10px] text-muted-foreground">
-                            채팅에 “점검”
-                          </span>
-                        </div>
-                        <div className="grid gap-1">
-                          {storyboardUserPerspectiveReadiness.map((item) => (
-                            <div
-                              key={item.id}
-                              className="grid grid-cols-[84px_minmax(0,1fr)] items-start gap-2 rounded-xl bg-background/70 px-2 py-1.5 text-[11px]"
-                              data-storyboard-user-perspective-role={item.id}
-                            >
-                              <span className="truncate font-semibold text-foreground">
-                                {item.label}
-                              </span>
-                              <span className="min-w-0">
-                                <span
-                                  className={cn(
-                                    "mr-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
-                                    item.status === "ready"
-                                      ? "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300"
-                                      : "bg-amber-500/12 text-amber-700 dark:text-amber-300",
-                                  )}
-                                >
-                                  {item.status === "ready"
-                                    ? "준비됨"
-                                    : "확인 필요"}
-                                </span>
-                                <span className="line-clamp-1 text-muted-foreground">
-                                  {item.summary}
-                                </span>
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      <div
-                        className={cn(
-                          "rounded-2xl border p-2 text-[11px]",
-                          isStoryboardImageProviderAvailable
-                            ? "border-emerald-300/60 bg-emerald-500/10"
-                            : "border-amber-300/60 bg-amber-500/10",
-                        )}
-                        data-storyboard-image-provider-readiness="true"
-                        data-storyboard-image-provider-status={
-                          storyboardImageProviderReadiness.status
-                        }
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              <span className="font-semibold text-foreground">
-                                이미지 생성 준비 상태
-                              </span>
-                              <Badge
-                                variant={
-                                  isStoryboardImageProviderAvailable
-                                    ? "secondary"
-                                    : "outline"
-                                }
-                                className="rounded-full px-1.5 text-[10px]"
-                              >
-                                {storyboardImageProviderReadiness.label}
-                              </Badge>
-                            </div>
-                            <p
-                              className="mt-1 leading-4 text-muted-foreground"
-                              data-storyboard-image-provider-guidance="true"
-                            >
-                              {storyboardImageProviderReadiness.summary}{" "}
-                              {storyboardImageProviderReadiness.detail}
-                            </p>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 shrink-0"
-                            onClick={() =>
-                              void refreshStoryboardImageProviderReadiness()
-                            }
-                            aria-label="스토리보드 이미지 상태 새로고침"
-                            data-storyboard-image-provider-refresh="true"
-                          >
-                            {storyboardImageProviderReadiness.status ===
-                            "checking" ? (
-                              <Loader2
-                                className="h-3.5 w-3.5 animate-spin"
-                                aria-hidden="true"
-                              />
-                            ) : (
-                              <RotateCcw
-                                className="h-3.5 w-3.5"
-                                aria-hidden="true"
-                              />
-                            )}
-                          </Button>
-                        </div>
-                        <div className="mt-1.5 grid gap-1 rounded-xl bg-background/70 p-2">
-                          <p
-                            className="truncate text-muted-foreground"
-                            data-storyboard-image-provider-model="true"
-                          >
-                            이미지 크기 {formatStoryboardImageProviderTarget(
-                              storyboardImageProviderReadiness.target,
-                            )}
-                          </p>
-                          <p className="line-clamp-2 text-muted-foreground">
-                            새 이미지를 만들기 전 안전 확인을 먼저 진행합니다.
-                            채팅에 “이미지상태”를 보내면 같은 안내를 다시 볼 수
-                            있습니다.
-                          </p>
-                        </div>
-                      </div>
-                      <div
-                        className="rounded-2xl border border-border/70 bg-background/80 p-2 text-[11px]"
+                        className="grid gap-2 rounded-2xl border border-border/70 bg-muted/20 p-3"
                         data-storyboard-browser-api-key-settings="local-storage-only"
                         data-storyboard-api-key-storage="browser-local-storage-only"
                         data-storyboard-api-key-db-storage="forbidden"
+                        data-storyboard-browser-api-key-storage-key={
+                          STORYBOARD_BROWSER_MODEL_KEYS_STORAGE_KEY
+                        }
                       >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              <span className="font-semibold text-foreground">
-                                프로덕션 모델 키
-                              </span>
-                              <Badge
-                                variant={
-                                  isStoryboardBrowserOpenAIApiKeySaved
-                                    ? "secondary"
-                                    : "outline"
-                                }
-                                className="rounded-full px-1.5 text-[10px]"
-                                data-storyboard-browser-api-key-status={
-                                  isStoryboardBrowserOpenAIApiKeySaved
-                                    ? "saved"
-                                    : "empty"
-                                }
-                              >
-                                {isStoryboardBrowserOpenAIApiKeySaved
-                                  ? "브라우저 저장됨"
-                                  : "미저장"}
-                              </Badge>
-                            </div>
-                            <p className="mt-1 leading-4 text-muted-foreground">
-                              OpenAI 키는 이 브라우저 localStorage에만 저장합니다.
-                              계정·DB에는 저장하지 않습니다.
-                            </p>
-                          </div>
-                        </div>
-                        {isStoryboardBrowserOpenAIApiKeySaved ? (
-                          <p
-                            className="mt-1 rounded-xl bg-muted/40 px-2 py-1 font-mono text-[10px] text-muted-foreground"
-                            data-storyboard-browser-api-key-mask="true"
-                          >
-                            {maskedStoryboardBrowserOpenAIApiKey}
-                            {storyboardBrowserOpenAIApiKeySavedAt
-                              ? ` · ${new Date(storyboardBrowserOpenAIApiKeySavedAt).toLocaleString()}`
-                              : ""}
-                          </p>
-                        ) : null}
-                        <div className="mt-2 flex items-center gap-1.5">
-                          <input
+                        <Label
+                          htmlFor="storyboard-browser-openai-api-key"
+                          className="text-[11px] font-semibold"
+                        >
+                          OpenAI API 키 · gpt-image-2 전용
+                        </Label>
+                        <div className="flex gap-2">
+                          <Input
+                            id="storyboard-browser-openai-api-key"
                             type="password"
                             value={storyboardBrowserOpenAIApiKeyDraft}
                             onChange={(event) => {
@@ -5020,129 +4767,95 @@ export function AdminStoryboardGenerator() {
                                 event.target.value,
                               );
                               setStoryboardBrowserOpenAIApiKeyError(null);
+                              if (storyboardBrowserOpenAIApiKeyMessage) {
+                                setStoryboardBrowserOpenAIApiKeyMessage(null);
+                              }
                             }}
-                            placeholder="sk-... OpenAI API 키"
+                            placeholder={
+                              storyboardBrowserOpenAIApiKey
+                                ? `${maskedStoryboardBrowserOpenAIApiKey} 저장됨`
+                                : "sk-..."
+                            }
                             autoComplete="off"
                             spellCheck={false}
-                            className="min-w-0 flex-1 rounded-full border border-input bg-background px-3 py-1.5 text-xs outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                            className="h-8 text-xs"
                             aria-label="브라우저에만 저장할 OpenAI API 키"
                             data-storyboard-browser-api-key-input="true"
                           />
                           <Button
                             type="button"
                             size="sm"
-                            className="h-8 shrink-0 rounded-full px-2 text-xs"
+                            className="h-8 shrink-0"
                             onClick={handleSaveStoryboardBrowserOpenAIApiKey}
-                            disabled={!storyboardBrowserOpenAIApiKeyDraft.trim()}
                             data-storyboard-browser-api-key-save="true"
                           >
                             저장
                           </Button>
+                        </div>
+                        <p
+                          className="text-[11px] leading-4 text-muted-foreground"
+                          data-storyboard-browser-api-key-browser-only-copy="true"
+                        >
+                          저장한 키는 이 브라우저 localStorage에만 남습니다.
+                          이미지 생성 요청을 보낼 때만 임시 전송하고, 서버
+                          히스토리·DB·계정에는 키 값을 남기지 않습니다.
+                        </p>
+                        {storyboardBrowserOpenAIApiKey ? (
                           <Button
                             type="button"
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
-                            className="h-8 shrink-0 rounded-full px-2 text-xs"
+                            className="h-8 justify-start rounded-full text-[11px]"
                             onClick={handleClearStoryboardBrowserOpenAIApiKey}
-                            disabled={!isStoryboardBrowserOpenAIApiKeySaved}
                             data-storyboard-browser-api-key-clear="true"
                           >
-                            삭제
+                            저장된 키 삭제
                           </Button>
-                        </div>
+                        ) : null}
+                        <p
+                          className="rounded-xl border border-amber-200 bg-amber-50/70 p-2 text-[11px] leading-4 text-amber-950"
+                          data-storyboard-browser-api-key-model-policy="gpt-image-2-only"
+                        >
+                          이미지 모델은 gpt-image-2만 허용합니다. 다른 이미지
+                          모델로 자동 전환하지 않습니다.
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p
+                          className="text-[11px] text-muted-foreground"
+                          data-storyboard-browser-api-key-status={
+                            isStoryboardBrowserOpenAIApiKeySaved
+                              ? "saved"
+                              : "empty"
+                          }
+                        >
+                          {isStoryboardBrowserOpenAIApiKeySaved
+                            ? `저장됨 · ${maskedStoryboardBrowserOpenAIApiKey}${
+                                storyboardBrowserOpenAIApiKeySavedAt
+                                  ? ` · ${new Date(
+                                      storyboardBrowserOpenAIApiKeySavedAt,
+                                    ).toLocaleString("ko-KR")}`
+                                  : ""
+                              }`
+                            : "아직 저장된 OpenAI 키가 없습니다."}
+                        </p>
                         {storyboardBrowserOpenAIApiKeyError ? (
                           <p
-                            className="mt-1 text-[10px] text-destructive"
+                            className="basis-full text-[11px] text-destructive"
                             data-storyboard-browser-api-key-error="true"
                           >
                             {storyboardBrowserOpenAIApiKeyError}
                           </p>
                         ) : null}
-                      </div>
-                      <div
-                        className="rounded-2xl border border-amber-300/60 bg-amber-500/10 p-2 text-[11px]"
-                        data-storyboard-visual-safety-readiness="true"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-semibold text-foreground">
-                            이미지 안전 점검
-                          </span>
-                          <span className="shrink-0 text-[10px] text-muted-foreground">
-                            채팅에 “안전점검”
-                          </span>
-                        </div>
-                        <p className="mt-1 leading-4 text-muted-foreground">
-                          실존 인물/진행자 얼굴·얼굴 클로즈업은 생성 대상이
-                          아니며, 손·젓가락·음식·오버숄더/뒷모습 실루엣
-                          중심으로 확인합니다.
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 rounded-full px-2 text-xs"
-                            onClick={() =>
-                              void handleGenerateStoryboardImages(
-                                selectedRealStoryboardScene
-                                  ? {
-                                      targetScenes: [
-                                        selectedRealStoryboardScene,
-                                      ],
-                                      scope: "selected",
-                                    }
-                                  : undefined,
-                              )
-                            }
-                            disabled={
-                              isStoryboardResultSkeletonVisible ||
-                              isGeneratingImages ||
-                              (selectedRealStoryboardScene
-                                ? false
-                                : activeStoryboardImageGenerationTargetScenes.length === 0)
-                            }
-                            aria-label={
-                              selectedRealStoryboardScene
-                                ? `CUT ${String(selectedRealStoryboardScene.sceneNo).padStart(2, "0")} 이미지 재생성`
-                                : imageGenerationButtonLabel
-                            }
-                            data-storyboard-chat-settings-image-command="true"
-                            data-storyboard-image-provider-action-status={
-                              storyboardImageProviderReadiness.status
-                            }
-                            title={imageGenerationButtonLabel}
+                        {storyboardBrowserOpenAIApiKeyMessage &&
+                        !storyboardBrowserOpenAIApiKeyError ? (
+                          <p
+                            className="basis-full text-[11px] text-muted-foreground"
+                            data-storyboard-browser-api-key-message="true"
                           >
-                            {isGeneratingImages ? (
-                              <Loader2
-                                className="mr-1 h-3.5 w-3.5 animate-spin"
-                                aria-hidden="true"
-                              />
-                            ) : (
-                              <ImageIcon
-                                className="mr-1 h-3.5 w-3.5"
-                                aria-hidden="true"
-                              />
-                            )}
-                            {selectedRealStoryboardScene ? "현재 컷" : "4컷"}
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="h-8 rounded-full px-2 text-xs"
-                            onClick={resetStoryboardChatState}
-                            disabled={isGenerating || isChatAgentStreaming}
-                            data-storyboard-chat-settings-reset="true"
-                          >
-                            <RotateCcw
-                              className="mr-1 h-3.5 w-3.5"
-                              aria-hidden="true"
-                            />
-                            초기화
-                          </Button>
-                        </div>
+                            {storyboardBrowserOpenAIApiKeyMessage}
+                          </p>
+                        ) : null}
                       </div>
                     </div>
                   </DropdownMenuContent>
@@ -5471,10 +5184,7 @@ export function AdminStoryboardGenerator() {
                     onClick={() =>
                       handleStoryboardPageChange(activeStoryboardPage - 1)
                     }
-                    disabled={
-                      isStoryboardResultSkeletonVisible ||
-                      !hasPreviousStoryboardPage
-                    }
+                    disabled={!hasPreviousStoryboardPage}
                     data-storyboard-page-prev="true"
                     aria-label="이전 4컷 보기"
                   >
@@ -5494,10 +5204,7 @@ export function AdminStoryboardGenerator() {
                     onClick={() =>
                       handleStoryboardPageChange(activeStoryboardPage + 1)
                     }
-                    disabled={
-                      isStoryboardResultSkeletonVisible ||
-                      !hasNextStoryboardPage
-                    }
+                    disabled={!hasNextStoryboardPage}
                     data-storyboard-page-next="true"
                     aria-label="다음 4컷 보기"
                   >
@@ -5541,7 +5248,7 @@ export function AdminStoryboardGenerator() {
                   variant="outline"
                   onClick={() => void handleGenerateStoryboardImages()}
                   disabled={
-                    isStoryboardResultSkeletonVisible ||
+                    isGenerating ||
                     isGeneratingImages ||
                     activePageGenerationTargetCount === 0
                   }
@@ -5573,7 +5280,7 @@ export function AdminStoryboardGenerator() {
                   size="sm"
                   variant="secondary"
                   onClick={() => void handleCopyStoryboardPlanMarkdown()}
-                  disabled={isStoryboardResultSkeletonVisible}
+                  disabled={isGenerating}
                   className="h-8 shrink-0 px-2 text-xs"
                   data-storyboard-copy-plan="true"
                   aria-label="촬영 기획표 복사"
@@ -5589,7 +5296,7 @@ export function AdminStoryboardGenerator() {
                   size="sm"
                   variant="secondary"
                   onClick={handleExportStoryboardPng}
-                  disabled={isStoryboardResultSkeletonVisible}
+                  disabled={isGenerating}
                   className="h-8 shrink-0 px-2 text-xs"
                   data-storyboard-export-png="true"
                   aria-label={`현재 페이지 4컷 PNG 저장 (${exportResolutionToken})`}
@@ -5611,17 +5318,10 @@ export function AdminStoryboardGenerator() {
                   STORYBOARD_FRAMES_PER_PAGE,
                 )}
               >
-              {isStoryboardResultSkeletonVisible ? (
-                <StoryboardGlassLoadingCanvas
+              {activeStoryboardPageScenes.length === 0 ? (
+                <StoryboardEmptyCanvasState
                   activeCutStart={activeCutStart}
                   activeCutEnd={activeCutEnd}
-                  mode="loading"
-                />
-              ) : activeStoryboardPageScenes.length === 0 ? (
-                <StoryboardGlassLoadingCanvas
-                  activeCutStart={activeCutStart}
-                  activeCutEnd={activeCutEnd}
-                  mode="empty"
                 />
               ) : (
                 activeStoryboardPageScenes.map((scene) => {
@@ -5630,7 +5330,9 @@ export function AdminStoryboardGenerator() {
                     getTrustedStoryboardGeneratedImage(scene.generatedImage);
                   const isSceneImageGenerating =
                     generatingStoryboardImageSceneNoSet.has(scene.sceneNo);
-                  const shouldShowSceneSkeleton = isSceneImageGenerating;
+                  const frameBackground = trustedGeneratedImage
+                    ? frameVisual.background
+                    : STORYBOARD_PENDING_IMAGE_BACKGROUND;
                   const productionNote = formatStoryboardFrameProductionNote(scene);
                   return (
                     <button
@@ -5659,32 +5361,20 @@ export function AdminStoryboardGenerator() {
                             : "empty"
                       }
                       >
-                      {selectedStoryboardSceneNo === scene.sceneNo &&
-                      !shouldShowSceneSkeleton ? (
+                      {selectedStoryboardSceneNo === scene.sceneNo ? (
                         <span
                           aria-hidden="true"
                           className="pointer-events-none absolute inset-0 z-50 rounded-2xl border-2 border-primary"
                           data-storyboard-selected-frame-border="true"
                         />
                       ) : null}
-                      {shouldShowSceneSkeleton ? (
-                        <div
-                          className="relative min-h-0 flex-1 overflow-hidden rounded-2xl"
-                          aria-label={`${scene.sceneNo}컷 이미지 생성 대기`}
-                          data-storyboard-frame-skeleton-only="true"
-                        >
-                          <StoryboardCutImageSkeleton
-                            sceneNo={scene.sceneNo}
-                            hasExistingImage={Boolean(trustedGeneratedImage)}
-                            fullFrame
-                          />
-                        </div>
-                      ) : (
-                        <>
                       <div
                         className="relative min-h-0 flex-1 overflow-hidden rounded-t-2xl"
-                        style={{ background: frameVisual.background }}
+                        style={{ background: frameBackground }}
                         aria-label={`${scene.sceneNo}컷 이미지 생성 결과`}
+                        data-storyboard-cut-image-loading-scope={
+                          isSceneImageGenerating ? "image-only" : undefined
+                        }
                       >
                         {trustedGeneratedImage ? (
                           <NextImage
@@ -5716,30 +5406,6 @@ export function AdminStoryboardGenerator() {
                             className="pointer-events-none absolute inset-[12%] rounded-2xl border border-dashed border-white/70"
                             data-storyboard-safe-area-guide="true"
                           />
-                        ) : null}
-                        {!trustedGeneratedImage && !isSceneImageGenerating ? (
-                          <StoryboardCutImageSkeleton
-                            sceneNo={scene.sceneNo}
-                            hasExistingImage={false}
-                          />
-                        ) : null}
-                        {trustedGeneratedImage && !isSceneImageGenerating ? (
-                          <div
-                            className="absolute inset-x-3 bottom-3 z-20 grid grid-cols-[58px_minmax(0,1fr)] items-center gap-2 rounded-2xl bg-black/58 px-2 py-1.5 text-xs leading-4 text-white shadow-sm backdrop-blur-[1px]"
-                            data-storyboard-frame-production-note="true"
-                            data-storyboard-frame-production-note-row="true"
-                          >
-                            <span className="rounded-full bg-amber-200 px-2 py-0.5 text-center text-[10px] font-bold uppercase tracking-wide text-amber-950">
-                              촬영
-                            </span>
-                            <span
-                              className="line-clamp-2 font-semibold"
-                              title={productionNote}
-                              data-storyboard-frame-production-note-text="true"
-                            >
-                              {productionNote}
-                            </span>
-                          </div>
                         ) : null}
                       </div>
                       <div
@@ -5780,27 +5446,23 @@ export function AdminStoryboardGenerator() {
                             {scene.captionIdea}
                           </span>
                         </div>
-                        {!trustedGeneratedImage && !isSceneImageGenerating ? (
-                          <div
-                            className="grid grid-cols-[58px_minmax(0,1fr)] items-start gap-2 rounded-xl bg-amber-500/10 px-2 py-1 text-[11px] leading-4"
-                            data-storyboard-frame-production-note="true"
-                            data-storyboard-frame-production-note-row="true"
+                        <div
+                          className="grid grid-cols-[58px_minmax(0,1fr)] items-start gap-2 rounded-xl bg-amber-500/10 px-2 py-1 text-[11px] leading-4"
+                          data-storyboard-frame-production-note="true"
+                          data-storyboard-frame-production-note-row="true"
+                        >
+                          <span className="rounded-full bg-amber-200 px-2 py-0.5 text-center text-[10px] font-bold uppercase tracking-wide text-amber-950">
+                            촬영
+                          </span>
+                          <span
+                            className="line-clamp-1 font-semibold text-foreground"
+                            title={productionNote}
+                            data-storyboard-frame-production-note-text="true"
                           >
-                            <span className="rounded-full bg-amber-200 px-2 py-0.5 text-center text-[10px] font-bold uppercase tracking-wide text-amber-950">
-                              촬영
-                            </span>
-                            <span
-                              className="line-clamp-1 font-semibold text-foreground"
-                              title={productionNote}
-                              data-storyboard-frame-production-note-text="true"
-                            >
-                              {productionNote}
-                            </span>
-                          </div>
-                        ) : null}
+                            {productionNote}
+                          </span>
+                        </div>
                       </div>
-                        </>
-                      )}
                     </button>
                   );
                 })

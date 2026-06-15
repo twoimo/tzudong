@@ -86,9 +86,9 @@ function getRouteRequestSummary(payload: StoryboardChatPayload) {
 function getInitialStatusMessages(payload: StoryboardChatPayload) {
   const focusSummary = getRouteFocusSummary(payload);
   return [
-    `${getRouteRequestSummary(payload)}을 ${focusSummary}으로 해석하고 있어요.`,
-    `${focusSummary}에서 바꿀 항목을 구분 중이에요: 컷 수, 오디오, 자막, 이미지 요청.`,
-    '생성/수정/검토/초기화 중 어떤 작업인지 판단한 뒤 캔버스 패치로 바꿉니다.',
+    `${getRouteRequestSummary(payload)}을 확인하고 있어요.`,
+    `${focusSummary}에서 바꿀 부분을 찾고 있어요.`,
+    '곧 화면에 바로 반영할게요.',
   ];
 }
 
@@ -113,7 +113,7 @@ function getResolvedStatusMessage(
   const scope = sceneNo
     ? `CUT ${String(sceneNo).padStart(2, '0')}`
     : `${patch.segmentCount}컷 · 약 ${patch.targetLengthMinutes}분`;
-  return `${intent}으로 분류했어요. ${scope} 기준 패치를 만들고 캔버스에 반영합니다.`;
+  return `${intent} 작업으로 이해했어요. ${scope} 기준으로 화면에 반영할게요.`;
 }
 
 export async function POST(request: NextRequest) {
