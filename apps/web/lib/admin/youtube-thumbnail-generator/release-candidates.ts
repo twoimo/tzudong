@@ -39,6 +39,11 @@ type RawReleaseCandidate = {
   score?: unknown;
   issueTags?: unknown;
   assignedBy?: unknown;
+  hostPresence?: unknown;
+  hostProof?: unknown;
+  tzuyangHostVisible?: unknown;
+  tzuyangVisible?: unknown;
+  containsTzuyang?: unknown;
 };
 
 type RawReleaseManifest = {
@@ -66,8 +71,15 @@ export type ThumbnailReleaseCandidate = {
   score: number;
   issueTags: string[];
   assignedBy: string;
+  hostPresence: ThumbnailReleaseHostPresenceProof;
   releaseCandidate: true;
   normalizedFromManifestMembership: true;
+};
+
+export type ThumbnailReleaseHostPresenceProof = {
+  creator: 'tzuyang';
+  visible: true;
+  evidence: string;
 };
 
 export type ThumbnailPromotionState = {
@@ -180,6 +192,60 @@ function normalizeIssueTags(value: unknown) {
   return Array.isArray(value)
     ? value.filter((tag): tag is string => typeof tag === 'string').map((tag) => tag.trim()).filter(Boolean).slice(0, 10)
     : [];
+}
+
+function textContainsTzuyang(value: unknown) {
+  return /(?:쯔양|tzuyang)/i.test(toString(value, 160));
+}
+
+function normalizeHostPresenceRecord(value: unknown): ThumbnailReleaseHostPresenceProof | null {
+  if (!isRecord(value)) return null;
+  const visible = value.visible === true
+    || value.hostVisible === true
+    || value.personVisible === true
+    || value.tzuyangVisible === true
+    || value.containsTzuyang === true;
+  if (!visible) return null;
+  const creatorMatches = textContainsTzuyang(value.creator)
+    || textContainsTzuyang(value.creatorId)
+    || textContainsTzuyang(value.identity)
+    || textContainsTzuyang(value.identityName)
+    || textContainsTzuyang(value.name)
+    || textContainsTzuyang(value.person)
+    || textContainsTzuyang(value.subject)
+    || textContainsTzuyang(value.channel);
+  if (!creatorMatches) return null;
+  return {
+    creator: 'tzuyang',
+    visible: true,
+    evidence: toString(value.evidence, 120)
+      || toString(value.source, 120)
+      || toString(value.verifiedBy, 120)
+      || 'explicit-host-presence-proof',
+  };
+}
+
+export function normalizeThumbnailReleaseHostPresenceProof(value: unknown): ThumbnailReleaseHostPresenceProof | null {
+  if (!isRecord(value)) return null;
+  const nestedProof = normalizeHostPresenceRecord(value.hostPresence)
+    || normalizeHostPresenceRecord(value.hostProof)
+    || normalizeHostPresenceRecord(value.personPresence)
+    || normalizeHostPresenceRecord(value.identityProof);
+  if (nestedProof) return nestedProof;
+  const directProof = normalizeHostPresenceRecord(value);
+  if (directProof) return directProof;
+  if ((value.tzuyangHostVisible === true || value.tzuyangVisible === true || value.containsTzuyang === true)
+    && (textContainsTzuyang(value.creator) || textContainsTzuyang(value.creatorId) || textContainsTzuyang(value.identity) || textContainsTzuyang(value.name) || textContainsTzuyang(value.subject) || textContainsTzuyang(value.channel))) {
+    return {
+      creator: 'tzuyang',
+      visible: true,
+      evidence: toString(value.hostPresenceEvidence, 120)
+        || toString(value.evidence, 120)
+        || toString(value.assignedBy, 120)
+        || 'explicit-tzuyang-visible-flag',
+    };
+  }
+  return null;
 }
 
 function resolveMaybeRelativePath(root: string, value: string) {
@@ -324,6 +390,11 @@ async function normalizeCandidates(rawManifest: RawReleaseManifest, manifestPath
       warnings.push(`ineligible:${toString(rawCandidate.id, 120) || 'unknown'}`);
       continue;
     }
+    const hostPresence = normalizeThumbnailReleaseHostPresenceProof(rawCandidate);
+    if (!hostPresence) {
+      warnings.push(`missing-tzuyang-host-proof:${toString(rawCandidate.id, 120) || 'unknown'}`);
+      continue;
+    }
     const sourceImagePath = resolveCandidateSourceImagePath(rawCandidate.imagePath, repoRoot);
     if (!sourceImagePath) {
       warnings.push(`missing-image-path:${toString(rawCandidate.id, 120) || 'unknown'}`);
@@ -355,6 +426,7 @@ async function normalizeCandidates(rawManifest: RawReleaseManifest, manifestPath
         score: Number(rawCandidate.score),
         issueTags: ['none'],
         assignedBy: toString(rawCandidate.assignedBy, 80) || 'human-vision-adjudication',
+        hostPresence,
         releaseCandidate: true,
         normalizedFromManifestMembership: true,
       });
