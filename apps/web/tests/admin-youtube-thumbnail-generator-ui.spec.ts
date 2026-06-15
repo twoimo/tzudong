@@ -321,6 +321,10 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
   await expect(canvasContext).toHaveAttribute('data-thumbnail-chat-canvas-context-state', 'selected');
   await expect(canvasContextSummary).toContainText('메인 문구');
   await expect(canvasContextSummary).toContainText('역대급 먹방');
+  const selectedTextTransformFrame = thumbnailModule.locator('[data-thumbnail-canvas-selected-text-transform-frame="true"]');
+  await expect(selectedTextTransformFrame).toBeVisible();
+  await expect(selectedTextTransformFrame.locator('[data-thumbnail-selected-text-resize-handle]')).toHaveCount(4);
+  await expect(selectedTextTransformFrame.locator('[data-thumbnail-selected-text-rotate-handle="true"]')).toBeVisible();
 
   await chatComposer.fill('제육볶음 먹방 썸네일로 해줘');
   await expect(thumbnailModule.locator('[data-thumbnail-chat-live-stream="true"]')).toBeVisible();
@@ -460,12 +464,29 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
   await expect(page.locator('[data-thumbnail-chat-settings-panel="true"]')).toHaveCount(0);
   await thumbnailModule.locator('[data-thumbnail-chat-settings-toggle="true"]').click();
   await expect(page.locator('[data-thumbnail-chat-settings-dropdown="true"]')).toBeVisible();
+  await expect(page.locator('[data-thumbnail-chat-settings-dropdown="true"]')).toHaveAttribute(
+    'data-thumbnail-chat-settings-dropdown-parity',
+    'storyboard',
+  );
   await expect(page.locator('[data-thumbnail-chat-settings-panel="true"]')).toBeVisible();
-  await expect(page.locator('[data-thumbnail-api-key-settings="disabled"]')).toBeVisible();
-  await expect(page.locator('[data-thumbnail-api-key-disabled="true"]')).toContainText('세션 API 키 입력/전송은 비활성화');
+  await expect(page.locator('[data-thumbnail-chat-settings-panel="true"]')).toHaveAttribute(
+    'data-thumbnail-chat-settings-panel-parity',
+    'storyboard',
+  );
+  await expect(page.locator('[data-thumbnail-api-router-panel="true"]')).toBeVisible();
+  await expect(page.locator('[data-thumbnail-api-router-panel="true"]')).toHaveAttribute(
+    'data-thumbnail-api-router-parity',
+    'storyboard',
+  );
+  await expect(page.locator('[data-thumbnail-api-key-settings="local-storage-only"]')).toBeVisible();
+  await expect(page.locator('[data-thumbnail-browser-api-key-settings="local-storage-only"]')).toBeVisible();
+  await expect(page.locator('[data-thumbnail-api-key-disabled="true"]')).toHaveCount(0);
   await expect(page.locator('[data-thumbnail-api-key-input="openai"]')).toHaveCount(0);
-  await expect(page.locator('[data-thumbnail-api-key-save="true"]')).toHaveCount(0);
-  await expect(page.locator('[data-thumbnail-api-key-session-status="true"]')).toContainText('비활성화');
+  await expect(page.locator('[data-thumbnail-browser-api-key-input="true"]')).toBeVisible();
+  await expect(page.locator('[data-thumbnail-api-key-save="true"]')).toBeVisible();
+  await expect(page.locator('[data-thumbnail-api-key-session-status="true"]')).toContainText('저장된 키 없음');
+  await expect(page.locator('[data-thumbnail-api-key-browser-only-copy="true"]')).toContainText('키는 이 브라우저에만 저장');
+  await expect(page.locator('[data-thumbnail-browser-api-key-model-policy="gpt-image-2-only"]')).toContainText('모델은 gpt-image-2만 사용합니다.');
   await expect(chatPanel).not.toContainText('sk-live-secret-for-ui-only');
   await page.locator('[data-thumbnail-chat-settings-close="true"]').click();
   await expect(page.locator('[data-thumbnail-chat-settings-dropdown="true"]')).toHaveCount(0);
