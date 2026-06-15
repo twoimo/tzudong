@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
-import { mkdir, stat, writeFile } from 'node:fs/promises';
+import * as fsPromises from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 
 import { STORYBOARD_GENERATED_IMAGE_TRUST_POLICY } from './image-trust';
@@ -695,7 +695,7 @@ function runLocalCodexStoryboardCommand(
 }
 
 async function getVerifiedGeneratedImageFile(path: string) {
-  const fileStat = await stat(path);
+  const fileStat = await fsPromises.stat(path);
   if (!fileStat.isFile() || fileStat.size <= 0) {
     throw new StoryboardImageGenerationError(
       'provider_execution_failed',
@@ -741,7 +741,6 @@ async function requestBrowserOpenAIStoryboardImage(
   input: {
     prompt: string;
     sceneNo: number;
-    outputPath: string;
     size: string;
   },
   env: NodeJS.ProcessEnv,
@@ -805,7 +804,6 @@ async function requestBrowserOpenAIStoryboardImage(
     );
   }
 
-  await writeFile(input.outputPath, buffer);
   const generatedAt = payload.created
     ? new Date(payload.created * 1000).toISOString()
     : new Date().toISOString();
@@ -815,6 +813,7 @@ async function requestBrowserOpenAIStoryboardImage(
     requestHash: sha256Hex(JSON.stringify(requestBody)),
     responseHash: sha256Hex(buffer),
     bytes: buffer.length,
+    imageBase64: buffer.toString('base64'),
     generatedAt,
   };
 }
@@ -849,29 +848,18 @@ async function generateStoryboardSceneImageWithBrowserOpenAIKey(
   env: NodeJS.ProcessEnv,
 ): Promise<StoryboardSceneGeneratedImage> {
   const prompt = buildStoryboardSceneImagePrompt(scene, context);
-  const runId = createStoryboardImageRunId();
-  const publicDir = `${STORYBOARD_GENERATED_IMAGE_PUBLIC_ROOT}/${runId}`;
-  const outputRoot = getStoryboardGeneratedImageRoot();
-  const outputPath = assertPathInside(
-    outputRoot,
-    join(outputRoot, runId, `cut-${String(scene.sceneNo).padStart(2, '0')}.png`),
-  );
-  await mkdir(dirname(outputPath), { recursive: true });
-
   const proof = await requestBrowserOpenAIStoryboardImage(
     apiKey,
     {
       prompt,
       sceneNo: scene.sceneNo,
-      outputPath,
       size: env.STORYBOARD_OPENAI_IMAGE_SIZE || STORYBOARD_IMAGE_OUTPUT_SIZE,
     },
     env,
   );
-  await getVerifiedGeneratedImageFile(outputPath);
 
   return {
-    dataUrl: `${publicDir}/cut-${String(scene.sceneNo).padStart(2, '0')}.png`,
+    dataUrl: `data:image/png;base64,${proof.imageBase64}`,
     mime: 'image/png',
     providerId: STORYBOARD_BROWSER_OPENAI_IMAGE_PROVIDER_ID,
     trustPolicy: STORYBOARD_GENERATED_IMAGE_TRUST_POLICY,
@@ -880,6 +868,7 @@ async function generateStoryboardSceneImageWithBrowserOpenAIKey(
     generatedAt: proof.generatedAt,
     warnings: [
       'browser_api_key_provider: generated via a transient OpenAI API key supplied from browser localStorage.',
+      'production_transport: image bytes were returned as an in-memory data URL without writing to the server public filesystem.',
       'storage_boundary: raw API key was not persisted to account data, DB, history, or provenance.',
       `exact_provenance: image_generation.${STORYBOARD_IMAGE_PROVIDER_MODEL} response=${proof.responseId} call=${proof.imageCallId}`,
     ],
@@ -931,7 +920,7 @@ export async function generateStoryboardSceneImage(
     outputRoot,
     join(outputRoot, runId, `cut-${String(scene.sceneNo).padStart(2, '0')}.png`),
   );
-  await mkdir(dirname(outputPath), { recursive: true });
+  await fsPromises.mkdir(dirname(outputPath), { recursive: true });
 
   const result = await runLocalCodexStoryboardCommand(
     {
