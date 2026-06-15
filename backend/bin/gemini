@@ -24,6 +24,26 @@ fi
 
 GEMINI_DIR="$HOME/.gemini"
 CURRENT_CREDS="$GEMINI_DIR/oauth_creds.json"
+
+# Gemini CLI OAuth requires the auth method selection in settings.json on fresh runners.
+# Keep this idempotent so CI, local shells, and rotated accounts all use OAuth when
+# oauth_creds.json is present and no API key is intentionally supplied by the caller.
+if [ -f "$CURRENT_CREDS" ]; then
+    python3 - <<'PY' || true
+import json
+from pathlib import Path
+
+path = Path.home() / ".gemini" / "settings.json"
+try:
+    data = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+except json.JSONDecodeError:
+    data = {}
+data.setdefault("security", {}).setdefault("auth", {})["selectedType"] = "oauth-personal"
+path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
+    chmod 600 "$GEMINI_DIR/settings.json" 2>/dev/null || true
+fi
+
 TMP_STDERR=$(mktemp)
 
 # Calculate max retries based on available backup credentials

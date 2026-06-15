@@ -33,6 +33,7 @@ PROFILES = {
             "GEMINI_CREDENTIALS_BASE64",
             "GEMINI_CREDENTIALS_BASE64_2",
             "AGY_SETTINGS_JSON",
+            "AGY_CREDENTIAL_B64",
         ],
     },
     "gdrive-backfill": {
@@ -67,7 +68,10 @@ RUNTIME_ALIAS_NOTES = {
         "optional Gemini CLI OAuth backup account for backend/bin/gemini rotation"
     ),
     "AGY_SETTINGS_JSON": (
-        "optional Antigravity CLI settings.json override; auth itself remains keyring-backed"
+        "optional Antigravity CLI settings.json override; selected model and UI preferences only"
+    ),
+    "AGY_CREDENTIAL_B64": (
+        "optional Antigravity CLI OAuth credential exported from OS keyring for CI Secret Service restore"
     ),
 }
 
