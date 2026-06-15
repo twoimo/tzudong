@@ -1147,8 +1147,8 @@ function createBundledThumbnailPreviewTextLayers() {
       return {
         ...layer,
         content: BUNDLED_THUMBNAIL_PREVIEW_HEADLINE,
-        x: 390,
-        y: 330,
+        x: 640,
+        y: 548,
         fontSize: 72,
         fill: "#ffffff",
         stroke: "#111111",
@@ -1159,8 +1159,8 @@ function createBundledThumbnailPreviewTextLayers() {
       return {
         ...layer,
         content: BUNDLED_THUMBNAIL_PREVIEW_SUB_HEADLINE,
-        x: 990,
-        y: 170,
+        x: 650,
+        y: 168,
         fontSize: 44,
         fill: "#fff200",
         stroke: "#111111",
@@ -1494,6 +1494,66 @@ function formatThumbnailProviderAvailability(
     : "준비 필요";
 }
 
+type ThumbnailImageApiRouterView = {
+  id: "browser-openai-api-key" | "local-codex-oauth" | "setup-required";
+  label: string;
+  statusLabel: string;
+  summary: string;
+  codexOAuthStatus: "active" | "checking" | "unavailable" | "api-key-active";
+};
+
+function getThumbnailImageApiRouterView(
+  readiness: ThumbnailReadiness | null,
+  selectedProviderId: ProviderId,
+  hasBrowserOpenAIApiKey: boolean,
+): ThumbnailImageApiRouterView {
+  const localCodexAvailability = readiness?.providers.localCodex;
+  const openAIApiKeyAvailability = readiness?.providers.openaiGptImage2;
+
+  if (hasBrowserOpenAIApiKey || selectedProviderId === "openai-gpt-image-2") {
+    return {
+      id: "browser-openai-api-key",
+      label: "OpenAI API 키",
+      statusLabel:
+        hasBrowserOpenAIApiKey || openAIApiKeyAvailability?.available
+          ? "사용 중"
+          : readiness
+            ? "확인 필요"
+            : "확인 중",
+      summary: "이 브라우저에 저장한 키로 gpt-image-2를 호출합니다.",
+      codexOAuthStatus: "api-key-active",
+    };
+  }
+
+  if (selectedProviderId === "local-codex") {
+    return {
+      id: "local-codex-oauth",
+      label: "Codex CLI OAuth",
+      statusLabel:
+        localCodexAvailability?.available
+          ? "사용 중"
+          : readiness
+            ? "확인 필요"
+            : "확인 중",
+      summary: "로컬 Codex OAuth 브리지로 gpt-image-2 썸네일을 호출합니다.",
+      codexOAuthStatus:
+        !readiness
+          ? "checking"
+          : localCodexAvailability?.available
+            ? "active"
+            : "unavailable",
+    };
+  }
+
+  return {
+    id: "setup-required",
+    label: "설정 필요",
+    statusLabel: readiness ? "설정 필요" : "확인 중",
+    summary: "OpenAI API 키를 저장하거나 Codex CLI OAuth 상태를 확인해 주세요.",
+    codexOAuthStatus: readiness ? "unavailable" : "checking",
+  };
+}
+
 function formatThumbnailBackendAgentStatus(status: ThumbnailReadiness["backendAgent"] | null | undefined) {
   if (!status) return "아직 확인 중";
   if (status.available) return "도우미 준비됨";
@@ -1565,6 +1625,14 @@ function formatThumbnailGenerationCompletionSummary(generationResult: Generation
 
 const TEXT_LAYER_RENDER_MAX_WIDTH = 760;
 const TEXT_LAYER_MIN_FIT_SCALE = 0.58;
+const TEXT_LAYER_SELECTION_FRAME_PADDING_X = 18;
+const TEXT_LAYER_SELECTION_FRAME_PADDING_Y = 12;
+const TEXT_TRANSFORM_RESIZE_HANDLES = [
+  ["top-left", "-left-2 -top-2 cursor-nwse-resize"],
+  ["top-right", "-right-2 -top-2 cursor-nesw-resize"],
+  ["bottom-left", "-bottom-2 -left-2 cursor-nesw-resize"],
+  ["bottom-right", "-bottom-2 -right-2 cursor-nwse-resize"],
+] as const;
 
 type CanvasTextFrame = {
   x: number;
@@ -1603,8 +1671,8 @@ const TEXT_OCCLUSION_SAFE_AREA: CanvasTextFrame = {
 
 const TEXT_OCCLUSION_PROTECTED_ZONES = {
   benchmark: [
-    { id: "host-head", x: 740, y: 32, width: 500, height: 352, weight: 16 },
-    { id: "host-face", x: 560, y: 52, width: 620, height: 344, weight: 12 },
+    { id: "host-head", x: 830, y: 32, width: 410, height: 352, weight: 20 },
+    { id: "host-face", x: 872, y: 58, width: 288, height: 272, weight: 24 },
     { id: "food-hero", x: 420, y: 382, width: 760, height: 300, weight: 9 },
   ],
   default: [
@@ -1612,23 +1680,50 @@ const TEXT_OCCLUSION_PROTECTED_ZONES = {
   ],
 } satisfies Record<"benchmark" | "default", TextOcclusionProtectedZone[]>;
 
+const TEXT_OCCLUSION_HOST_ZONE_IDS = new Set<TextOcclusionProtectedZone["id"]>(["host-head", "host-face"]);
+const TEXT_OCCLUSION_HARD_FACE_PENALTY = 1_000_000;
+const TEXT_OCCLUSION_ROLE_ZONE_WEIGHT_MULTIPLIERS: Record<
+  GeneratedTextPlacementRole,
+  Partial<Record<TextOcclusionProtectedZone["id"], number>>
+> = {
+  headline: {
+    "food-hero": 0.006,
+    "default-food-hero": 0.02,
+  },
+  subHeadline: {
+    "food-hero": 0.22,
+    "default-food-hero": 0.28,
+  },
+  accentBadge: {
+    "food-hero": 0.22,
+    "default-food-hero": 0.28,
+  },
+  contextCaption: {
+    "food-hero": 0.14,
+    "default-food-hero": 0.18,
+  },
+};
+
 const TEXT_OCCLUSION_BENCHMARK_CANDIDATES: Record<GeneratedTextPlacementRole, TextPlacementCandidate[]> = {
   headline: [
+    { x: 640, y: 548, label: "benchmark-lower-hero" },
+    { x: 460, y: 536, label: "benchmark-left-low" },
     { x: 300, y: 354, label: "benchmark-left-mid" },
-    { x: 302, y: 480, label: "benchmark-left-low" },
-    { x: 324, y: 540, label: "benchmark-left-bottom" },
+    { x: 324, y: 612, label: "benchmark-left-bottom" },
     { x: 982, y: 612, label: "benchmark-right-bottom" },
-    { x: 430, y: 330, label: "legacy-fallback" },
   ],
   subHeadline: [
-    { x: 252, y: 142, label: "benchmark-left-top" },
+    { x: 650, y: 168, label: "benchmark-center-left-top" },
+    { x: 340, y: 152, label: "benchmark-left-top" },
     { x: 250, y: 206, label: "benchmark-left-upper" },
+    { x: 432, y: 222, label: "benchmark-left-center" },
     { x: 300, y: 612, label: "benchmark-left-bottom" },
     { x: 1036, y: 620, label: "benchmark-right-bottom" },
   ],
   accentBadge: [
-    { x: 238, y: 142, label: "benchmark-left-top" },
+    { x: 340, y: 152, label: "benchmark-left-top" },
     { x: 250, y: 206, label: "benchmark-left-upper" },
+    { x: 432, y: 222, label: "benchmark-left-center" },
     { x: 1036, y: 620, label: "benchmark-right-bottom" },
   ],
   contextCaption: [
@@ -1655,6 +1750,26 @@ function estimateGeneratedTextFrame(
   const y = candidate.y - height * 0.72;
 
   return { x, y, width, height };
+}
+
+function getTextLayerTransformFrameStyle(layer: TextLayer) {
+  const frame = estimateGeneratedTextFrame(
+    layer.content,
+    layer.fontSize,
+    { x: layer.x, y: layer.y, align: layer.align },
+    layer.align,
+  );
+  const paddedWidth = Math.max(48, frame.width + TEXT_LAYER_SELECTION_FRAME_PADDING_X * 2);
+  const paddedHeight = Math.max(34, frame.height + TEXT_LAYER_SELECTION_FRAME_PADDING_Y * 2);
+
+  return {
+    left: `${(layer.x / TARGET_WIDTH) * 100}%`,
+    top: `${(layer.y / TARGET_HEIGHT) * 100}%`,
+    width: `${(paddedWidth / TARGET_WIDTH) * 100}%`,
+    height: `${(paddedHeight / TARGET_HEIGHT) * 100}%`,
+    transform: `translate(${layer.align === "center" ? "-50%" : layer.align === "right" ? "-100%" : "0"}, -50%) rotate(${layer.rotation}deg)`,
+    transformOrigin: `${layer.align === "center" ? "center" : layer.align} center`,
+  };
 }
 
 function calculateFrameIntersectionArea(a: CanvasTextFrame, b: CanvasTextFrame) {
@@ -1702,12 +1817,46 @@ function clampTextPlacementIntoCanvasSafeArea(
   };
 }
 
-function scoreTextPlacementOverlap(frame: CanvasTextFrame, protectedZones: TextOcclusionProtectedZone[]) {
+function scoreTextPlacementOverlap(
+  role: GeneratedTextPlacementRole,
+  frame: CanvasTextFrame,
+  protectedZones: TextOcclusionProtectedZone[],
+) {
   const frameArea = Math.max(1, frame.width * frame.height);
   return protectedZones.reduce((total, zone) => {
     const overlapRatio = calculateFrameIntersectionArea(frame, zone) / frameArea;
-    return total + overlapRatio * zone.weight;
+    if (TEXT_OCCLUSION_HOST_ZONE_IDS.has(zone.id) && overlapRatio > 0) {
+      return total + TEXT_OCCLUSION_HARD_FACE_PENALTY + overlapRatio * zone.weight;
+    }
+    const zoneWeightMultiplier = TEXT_OCCLUSION_ROLE_ZONE_WEIGHT_MULTIPLIERS[role][zone.id] ?? 1;
+    return total + overlapRatio * zone.weight * zoneWeightMultiplier;
   }, 0);
+}
+
+function scoreTextPlacementPreference(
+  role: GeneratedTextPlacementRole,
+  candidate: TextPlacementCandidate,
+  frame: CanvasTextFrame,
+) {
+  const frameCenterX = frame.x + frame.width / 2;
+  const frameCenterY = frame.y + frame.height / 2;
+  if (role === "headline") {
+    const lowerBandPenalty = Math.abs(frameCenterY - 520) * 0.00035;
+    const centeredLowerPenalty = Math.abs(frameCenterX - 620) * 0.00004;
+    const tooHighPenalty = candidate.y < 440 ? 0.18 : 0;
+    return lowerBandPenalty + centeredLowerPenalty + tooHighPenalty;
+  }
+  if (role === "subHeadline" || role === "accentBadge") {
+    const upperBandPenalty = Math.abs(frameCenterY - 156) * 0.00035;
+    const preferredCenterX = role === "subHeadline" ? 650 : 340;
+    const horizontalPenalty = Math.abs(frameCenterX - preferredCenterX) * 0.00004;
+    const faceSidePenalty = Math.max(0, frameCenterX - 760) * 0.00018;
+    const lowerFallbackPenalty = candidate.y > 420 ? 0.12 : 0;
+    return upperBandPenalty + horizontalPenalty + faceSidePenalty + lowerFallbackPenalty;
+  }
+  const bottomCaptionPenalty = Math.abs(frameCenterY - 600) * 0.0002;
+  const sideCaptionPenalty = Math.min(Math.abs(frameCenterX - 270), Math.abs(frameCenterX - 1016)) * 0.00005;
+  return bottomCaptionPenalty + sideCaptionPenalty;
 }
 
 function createGeneratedTextProtectedZone(
@@ -1742,7 +1891,10 @@ function selectNonOccludingTextPlacement(
 
   candidates.forEach((candidate, index) => {
     const placement = clampTextPlacementIntoCanvasSafeArea(content, fontSize, candidate, fallbackAlign);
-    const score = scoreTextPlacementOverlap(placement.frame, protectedZones) + rolePenalty + index * 0.000_001;
+    const score = scoreTextPlacementOverlap(role, placement.frame, protectedZones)
+      + scoreTextPlacementPreference(role, candidate, placement.frame)
+      + rolePenalty
+      + index * 0.000_001;
     // Stable tie-break: equal overlap keeps the earlier candidate in the ordered contract.
     if (score < best.score) {
       best = { ...placement, score };
@@ -1949,10 +2101,16 @@ export function AdminYoutubeThumbnailGenerator() {
     [canvasContextLayer, lastCanvasActionLabel],
   );
   const shouldShowThumbnailCanvasContext = canvasContextState !== "idle";
+  const isBrowserOpenAIApiKeySaved = Boolean(browserOpenAIApiKey);
+  const thumbnailImageApiRouterView = getThumbnailImageApiRouterView(
+    readiness,
+    providerId,
+    isBrowserOpenAIApiKeySaved,
+  );
   const sessionKeyBackedProviderAvailableForChatStatus = canUseSessionApiKeyForProvider(
     providerId,
     selectedProviderAvailability,
-    Boolean(browserOpenAIApiKey),
+    isBrowserOpenAIApiKeySaved,
   );
   const thumbnailChatStatusState = isGenerating
     ? "generating"
@@ -2392,10 +2550,15 @@ export function AdminYoutubeThumbnailGenerator() {
             context.setLineDash([14, 10]);
             context.lineWidth = 4;
             context.strokeStyle = "#38bdf8";
-            context.strokeRect(frameX - 18, frameY - 12, measuredWidth + 36, measuredHeight + 24);
+            context.strokeRect(
+              frameX - TEXT_LAYER_SELECTION_FRAME_PADDING_X,
+              frameY - TEXT_LAYER_SELECTION_FRAME_PADDING_Y,
+              measuredWidth + TEXT_LAYER_SELECTION_FRAME_PADDING_X * 2,
+              measuredHeight + TEXT_LAYER_SELECTION_FRAME_PADDING_Y * 2,
+            );
             context.setLineDash([]);
             context.fillStyle = "rgba(8, 47, 73, 0.88)";
-            context.fillRect(frameX - 18, frameY - 44, 132, 28);
+            context.fillRect(frameX - TEXT_LAYER_SELECTION_FRAME_PADDING_X, frameY - 44, 132, 28);
             context.fillStyle = "#ffffff";
             context.font = "800 16px system-ui, sans-serif";
             context.textAlign = "left";
@@ -2799,7 +2962,7 @@ export function AdminYoutubeThumbnailGenerator() {
     const isChallengeLayout = /대왕|대형|거대|압도|챌린지|도전|한입|가능|기록|전메뉴|전\s*메뉴/i.test(normalizedTopic);
     const isSeafoodLayout = /초밥|스시|회|대게|킹크랩|랍스터|해산물|바다/i.test(normalizedTopic);
     const isLongHeadline = headlineText.length >= 8;
-    const headlineFontSize = getResponsiveMainHeadlineFontSize(headlineText, isTzuyangBenchmarkLayout ? 56 : isMarketLayout || isLongHeadline ? 78 : 88);
+    const headlineFontSize = getResponsiveMainHeadlineFontSize(headlineText, isTzuyangBenchmarkLayout ? (isLongHeadline ? 56 : 72) : isMarketLayout || isLongHeadline ? 78 : 88);
     const subHeadlineFontSize = isTzuyangBenchmarkLayout ? (isChallengeLayout ? 38 : 40) : isChallengeLayout ? 42 : 44;
     const accentFontSize = isChallengeLayout ? 40 : 38;
     const captionFontSize = 32;
@@ -3086,17 +3249,25 @@ export function AdminYoutubeThumbnailGenerator() {
   function applyThumbnailChatResultToCanvas(
     patch: ThumbnailChatCanvasPatch,
     patches: ThumbnailChatTextLayerPatch[] = [],
-    options: { preserveActiveLayer?: boolean } = {},
+    options: { preserveActiveLayer?: boolean; normalizeGeneratedLayout?: boolean } = {},
   ) {
     const patchedLayers = createTextLayersWithChatTextLayerPatches(
       createTextLayersWithChatPatch(textLayersRef.current, patch),
       patches,
     );
-    textLayersRef.current = patchedLayers;
+    const nextLayers = options.normalizeGeneratedLayout
+      ? createTextLayersWithGenerationLayout(
+        patchedLayers,
+        patch.topic,
+        patch.headline,
+        patch.subHeadline,
+      )
+      : patchedLayers;
+    textLayersRef.current = nextLayers;
     setTopic(patch.topic.slice(0, CHAT_TOPIC_MAX_LENGTH));
-    syncCanonicalTextInputs(patchedLayers);
-    setTextLayers(patchedLayers);
-    const firstPatchId = patches.find((item) => patchedLayers.some((layer) => layer.id === item.id))?.id;
+    syncCanonicalTextInputs(nextLayers);
+    setTextLayers(nextLayers);
+    const firstPatchId = patches.find((item) => nextLayers.some((layer) => layer.id === item.id))?.id;
     if (firstPatchId) {
       setActiveLayerId(firstPatchId);
       markCanvasAction("선택 문구 채팅 반영");
@@ -3466,7 +3637,10 @@ export function AdminYoutubeThumbnailGenerator() {
           applyThumbnailChatResultToCanvas(
             nextAgentResult.canvasPatch,
             nextAgentResult.textLayerPatches ?? [],
-            { preserveActiveLayer: Boolean(nextAgentResult.textLayerPatches?.length) },
+            {
+              preserveActiveLayer: Boolean(nextAgentResult.textLayerPatches?.length),
+              normalizeGeneratedLayout: Boolean(nextAgentResult.shouldGenerate || shouldPreferSubmittedPromptCopy),
+            },
           );
           if (nextAgentResult.providerId) setProviderId(nextAgentResult.providerId);
           if (nextAgentResult.generationMode) setGenerationMode(nextAgentResult.generationMode);
@@ -4047,6 +4221,46 @@ export function AdminYoutubeThumbnailGenerator() {
     }
   }
 
+  function renderTextTransformHandleButtons(layer: TextLayer, state: "selected" | "editing") {
+    return (
+      <>
+        {TEXT_TRANSFORM_RESIZE_HANDLES.map(([handleId, positionClass]) => (
+          <button
+            key={`${state}-${handleId}`}
+            type="button"
+            tabIndex={-1}
+            aria-label="문구 크기 조절"
+            className={`pointer-events-auto absolute h-4 w-4 rounded-full border border-white bg-sky-500 shadow-lg ${positionClass}`}
+            data-thumbnail-text-transform-handle-state={state}
+            data-thumbnail-text-transform-handle-mode="resize"
+            data-thumbnail-text-resize-handle={handleId}
+            data-thumbnail-selected-text-resize-handle={state === "selected" ? handleId : undefined}
+            onPointerDown={(event) => handleTextTransformPointerDown(event, layer, "resize")}
+            onPointerMove={handleTextTransformPointerMove}
+            onPointerUp={handleTextTransformPointerUp}
+            onPointerCancel={handleTextTransformPointerUp}
+          />
+        ))}
+        <button
+          type="button"
+          tabIndex={-1}
+          aria-label="문구 회전"
+          className="pointer-events-auto absolute -top-9 left-1/2 flex h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full border border-white bg-amber-400 text-slate-950 shadow-lg"
+          data-thumbnail-text-transform-handle-state={state}
+          data-thumbnail-text-transform-handle-mode="rotate"
+          data-thumbnail-text-rotate-handle="true"
+          data-thumbnail-selected-text-rotate-handle={state === "selected" ? "true" : undefined}
+          onPointerDown={(event) => handleTextTransformPointerDown(event, layer, "rotate")}
+          onPointerMove={handleTextTransformPointerMove}
+          onPointerUp={handleTextTransformPointerUp}
+          onPointerCancel={handleTextTransformPointerUp}
+        >
+          <RotateCw className="h-3.5 w-3.5" aria-hidden="true" />
+        </button>
+      </>
+    );
+  }
+
   function findLayerAtPoint(point: { x: number; y: number }) {
     return [...textLayers]
       .sort((a, b) => b.zIndex - a.zIndex)
@@ -4474,18 +4688,21 @@ export function AdminYoutubeThumbnailGenerator() {
   function renderChatSettingsDropdownPanel() {
     return (
       <div
-        className="space-y-2 rounded-2xl bg-background/95 p-3 shadow-sm"
+        className="space-y-3 rounded-2xl bg-background/95 p-3 shadow-sm"
         data-thumbnail-chat-settings-panel="true"
+        data-thumbnail-chat-settings-panel-parity="storyboard"
       >
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5 text-xs font-semibold">
-              <KeyRound className="h-3.5 w-3.5 text-primary" />
-              <span>이미지 모델 API 키</span>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <KeyRound className="h-3.5 w-3.5" aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-bold">이미지 생성 설정</p>
+              <p className="text-[11px] text-muted-foreground">
+                OpenAI API Key 하나만 입력합니다.
+              </p>
             </div>
-            <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">
-              프로덕션에서는 OpenAI 키를 이 브라우저에만 저장해 gpt-image-2 썸네일 생성에 사용합니다. DB나 계정에는 저장하지 않습니다.
-            </p>
           </div>
           <Button
             type="button"
@@ -4493,20 +4710,74 @@ export function AdminYoutubeThumbnailGenerator() {
             size="icon"
             className="h-7 w-7 shrink-0"
             onClick={() => setIsChatSettingsOpen(false)}
-            aria-label="채팅 설정 닫기"
+            aria-label="유튜브 썸네일 채팅 설정 닫기"
             data-thumbnail-chat-settings-close="true"
           >
-            <X className="h-3.5 w-3.5" />
+            <X className="h-3.5 w-3.5" aria-hidden="true" />
           </Button>
         </div>
+
         <div
-          className="grid gap-2 rounded-2xl border border-border/70 bg-muted/20 p-3"
+          className="rounded-2xl border border-border/70 bg-muted/20 p-3"
+          data-thumbnail-api-router-panel="true"
+          data-thumbnail-api-router-active={thumbnailImageApiRouterView.id}
+          data-thumbnail-codex-oauth-status={thumbnailImageApiRouterView.codexOAuthStatus}
+          data-thumbnail-api-router-model="gpt-image-2"
+          data-thumbnail-api-router-parity="storyboard"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[11px] font-semibold text-muted-foreground">
+              API 라우터
+            </span>
+            <Badge
+              variant="secondary"
+              className="h-6 rounded-full px-2 text-[11px]"
+              data-thumbnail-api-router-label="true"
+            >
+              {thumbnailImageApiRouterView.label}
+            </Badge>
+          </div>
+          <p
+            className="mt-2 text-xs font-semibold"
+            data-thumbnail-api-router-status="true"
+          >
+            {thumbnailImageApiRouterView.statusLabel}
+          </p>
+          <p
+            className="mt-1 text-[11px] leading-4 text-muted-foreground"
+            data-thumbnail-api-router-summary="true"
+          >
+            {thumbnailImageApiRouterView.summary}
+          </p>
+          <p
+            className="mt-1 text-[11px] leading-4 text-muted-foreground"
+            data-thumbnail-codex-oauth-copy="true"
+          >
+            Codex CLI OAuth:{" "}
+            {thumbnailImageApiRouterView.codexOAuthStatus === "active"
+              ? "사용 중"
+              : thumbnailImageApiRouterView.codexOAuthStatus === "checking"
+                ? "확인 중"
+                : thumbnailImageApiRouterView.codexOAuthStatus === "api-key-active"
+                  ? "API 키 사용 중"
+                  : "확인 필요"}
+          </p>
+        </div>
+
+        <div
+          className="grid gap-2"
           data-thumbnail-api-key-settings="local-storage-only"
+          data-thumbnail-browser-api-key-settings="local-storage-only"
+          data-thumbnail-api-key-storage="browser-local-storage-only"
           data-thumbnail-api-key-db-storage="forbidden"
+          data-thumbnail-openai-api-key-scope="browser-local-storage"
           data-thumbnail-browser-api-key-storage-key={THUMBNAIL_BROWSER_MODEL_KEYS_STORAGE_KEY}
         >
-          <Label htmlFor="thumbnail-browser-openai-api-key" className="text-[11px] font-semibold">
-            OpenAI API 키 · gpt-image-2 전용
+          <Label
+            htmlFor="thumbnail-browser-openai-api-key"
+            className="text-[11px] font-semibold"
+          >
+            OpenAI API Key
           </Label>
           <div className="flex gap-2">
             <Input
@@ -4517,10 +4788,15 @@ export function AdminYoutubeThumbnailGenerator() {
                 setBrowserOpenAIApiKeyDraft(event.target.value);
                 if (browserOpenAIApiKeyMessage) setBrowserOpenAIApiKeyMessage(null);
               }}
-              placeholder={browserOpenAIApiKey ? `${maskThumbnailBrowserOpenAIApiKey(browserOpenAIApiKey)} 저장됨` : "sk-..."}
+              placeholder={
+                browserOpenAIApiKey
+                  ? `${maskThumbnailBrowserOpenAIApiKey(browserOpenAIApiKey)} 저장됨`
+                  : "sk-..."
+              }
               autoComplete="off"
               spellCheck={false}
               className="h-8 text-xs"
+              aria-label="브라우저에만 저장할 OpenAI API 키"
               data-thumbnail-browser-api-key-input="true"
             />
             <Button
@@ -4529,40 +4805,64 @@ export function AdminYoutubeThumbnailGenerator() {
               className="h-8 shrink-0"
               onClick={handleSaveThumbnailBrowserOpenAIApiKey}
               data-thumbnail-api-key-save="true"
+              data-thumbnail-browser-api-key-save="true"
             >
               저장
             </Button>
           </div>
-          <p className="text-[11px] leading-4 text-muted-foreground" data-thumbnail-api-key-browser-only-copy="true">
-            저장한 키는 이 브라우저 localStorage에만 남습니다. 이미지 생성 요청을 보낼 때만 임시 전송하고, 서버 히스토리·DB·계정에는 키 값을 남기지 않습니다.
+          <p
+            className="text-[11px] leading-4 text-muted-foreground"
+            data-thumbnail-api-key-browser-only-copy="true"
+            data-thumbnail-browser-api-key-browser-only-copy="true"
+          >
+            키는 이 브라우저에만 저장하고, 요청 때만 잠깐 보냅니다.
           </p>
-          {browserOpenAIApiKey ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-8 justify-start rounded-full text-[11px]"
-              onClick={handleClearThumbnailBrowserOpenAIApiKey}
-              data-thumbnail-api-key-clear="true"
+          <p
+            className="text-[11px] leading-4 text-muted-foreground"
+            data-thumbnail-api-key-model-policy="gpt-image-2-only"
+            data-thumbnail-browser-api-key-model-policy="gpt-image-2-only"
+          >
+            모델은 gpt-image-2만 사용합니다.
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p
+              className="min-w-0 flex-1 text-[11px] text-muted-foreground"
+              data-thumbnail-api-key-session-status="true"
+              data-thumbnail-browser-api-key-status={
+                isBrowserOpenAIApiKeySaved ? "saved" : "empty"
+              }
             >
-              저장된 키 삭제
-            </Button>
-          ) : null}
-          <p className="rounded-xl border border-amber-200 bg-amber-50/70 p-2 text-[11px] leading-4 text-amber-950" data-thumbnail-api-key-model-policy="gpt-image-2-only">
-            이미지 모델은 gpt-image-2만 허용합니다. 다른 이미지 모델로 자동 전환하지 않습니다.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-[11px] text-muted-foreground" data-thumbnail-api-key-session-status="true">
-            {browserOpenAIApiKey
-              ? `저장됨 · ${maskThumbnailBrowserOpenAIApiKey(browserOpenAIApiKey)}${browserOpenAIApiKeySavedAt ? ` · ${new Date(browserOpenAIApiKeySavedAt).toLocaleString("ko-KR")}` : ""}`
-              : "아직 저장된 OpenAI 키가 없습니다."}
-          </p>
-          {browserOpenAIApiKeyMessage ? (
-            <p className="basis-full text-[11px] text-muted-foreground" data-thumbnail-api-key-message="true">
-              {browserOpenAIApiKeyMessage}
+              {browserOpenAIApiKey
+                ? `저장됨 · ${maskThumbnailBrowserOpenAIApiKey(browserOpenAIApiKey)}${
+                    browserOpenAIApiKeySavedAt
+                      ? ` · ${new Date(browserOpenAIApiKeySavedAt).toLocaleString("ko-KR")}`
+                      : ""
+                  }`
+                : "저장된 키 없음"}
             </p>
-          ) : null}
+            {browserOpenAIApiKey ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+                onClick={handleClearThumbnailBrowserOpenAIApiKey}
+                data-thumbnail-api-key-clear="true"
+                data-thumbnail-browser-api-key-clear="true"
+              >
+                삭제
+              </Button>
+            ) : null}
+            {browserOpenAIApiKeyMessage ? (
+              <p
+                className="basis-full text-[11px] text-muted-foreground"
+                data-thumbnail-api-key-message="true"
+                data-thumbnail-browser-api-key-message="true"
+              >
+                {browserOpenAIApiKeyMessage}
+              </p>
+            ) : null}
+          </div>
         </div>
       </div>
     );
@@ -4768,20 +5068,20 @@ export function AdminYoutubeThumbnailGenerator() {
                       variant={isChatSettingsOpen ? "secondary" : "ghost"}
                       size="icon"
                       className="h-8 w-8 rounded-full"
-                      aria-label="채팅 설정 열기"
+                      aria-label="유튜브 썸네일 채팅 설정 열기"
                       title="채팅 설정"
                       data-thumbnail-chat-settings-toggle="true"
                       data-thumbnail-chat-settings-dropdown-trigger="true"
                       data-thumbnail-chat-settings-open={isChatSettingsOpen ? "true" : "false"}
                     >
-                      <Settings className="h-3.5 w-3.5" />
+                      <Settings className="h-3.5 w-3.5" aria-hidden="true" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
                     align="end"
-                    sideOffset={8}
-                    className="w-[min(24rem,calc(100vw-2rem))] rounded-2xl p-0"
+                    className="w-[min(320px,calc(100vw-2rem))] p-0"
                     data-thumbnail-chat-settings-dropdown="true"
+                    data-thumbnail-chat-settings-dropdown-parity="storyboard"
                   >
                     {renderChatSettingsDropdownPanel()}
                   </DropdownMenuContent>
@@ -5113,6 +5413,18 @@ export function AdminYoutubeThumbnailGenerator() {
                   onKeyDown={handleCanvasKeyDown}
                   onDoubleClick={handleCanvasDoubleClick}
                 />
+              {activeLayer && !editingLayer ? (
+                <div
+                  className="pointer-events-none absolute z-10 rounded-sm border-2 border-dashed border-sky-400/90"
+                  style={getTextLayerTransformFrameStyle(activeLayer)}
+                  data-thumbnail-canvas-text-transform-frame="true"
+                  data-thumbnail-canvas-selected-text-transform-frame="true"
+                  data-thumbnail-canvas-text-transform-state="selected"
+                  data-thumbnail-canvas-selected-text-layer={activeLayer.id}
+                >
+                  {renderTextTransformHandleButtons(activeLayer, "selected")}
+                </div>
+              ) : null}
               {isGenerating ? (
                 <div
                   className="pointer-events-none absolute inset-0 z-20 overflow-hidden rounded-2xl border border-slate-300/70 bg-gradient-to-br from-slate-50/86 via-slate-100/76 to-slate-200/68 shadow-sm backdrop-blur-[1px] dark:border-slate-600/60 dark:from-slate-800/62 dark:via-slate-700/50 dark:to-slate-600/44"
@@ -5150,6 +5462,7 @@ export function AdminYoutubeThumbnailGenerator() {
                     transformOrigin: `${editingLayer.align === "center" ? "center" : editingLayer.align} center`,
                   }}
                   data-thumbnail-canvas-text-transform-frame="true"
+                  data-thumbnail-canvas-text-transform-state="editing"
                 >
                   <div
                     ref={inlineTextEditorRef}
@@ -5204,38 +5517,7 @@ export function AdminYoutubeThumbnailGenerator() {
                     aria-label="캔버스 위 문구 바로 수정"
                     data-thumbnail-canvas-inline-text-editor="true"
                   />
-                  {[
-                    ["top-left", "-left-2 -top-2 cursor-nwse-resize"],
-                    ["top-right", "-right-2 -top-2 cursor-nesw-resize"],
-                    ["bottom-left", "-bottom-2 -left-2 cursor-nesw-resize"],
-                    ["bottom-right", "-bottom-2 -right-2 cursor-nwse-resize"],
-                  ].map(([handleId, positionClass]) => (
-                    <button
-                      key={handleId}
-                      type="button"
-                      tabIndex={-1}
-                      aria-label="문구 크기 조절"
-                      className={`pointer-events-auto absolute h-4 w-4 rounded-full border border-white bg-sky-500 shadow-lg ${positionClass}`}
-                      data-thumbnail-text-resize-handle={handleId}
-                      onPointerDown={(event) => handleTextTransformPointerDown(event, editingLayer, "resize")}
-                      onPointerMove={handleTextTransformPointerMove}
-                      onPointerUp={handleTextTransformPointerUp}
-                      onPointerCancel={handleTextTransformPointerUp}
-                    />
-                  ))}
-                  <button
-                    type="button"
-                    tabIndex={-1}
-                    aria-label="문구 회전"
-                    className="pointer-events-auto absolute -top-9 left-1/2 flex h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full border border-white bg-amber-400 text-slate-950 shadow-lg"
-                    data-thumbnail-text-rotate-handle="true"
-                    onPointerDown={(event) => handleTextTransformPointerDown(event, editingLayer, "rotate")}
-                    onPointerMove={handleTextTransformPointerMove}
-                    onPointerUp={handleTextTransformPointerUp}
-                    onPointerCancel={handleTextTransformPointerUp}
-                  >
-                    <RotateCw className="h-3.5 w-3.5" aria-hidden="true" />
-                  </button>
+                  {renderTextTransformHandleButtons(editingLayer, "editing")}
                 </div>
               ) : null}
               </div>

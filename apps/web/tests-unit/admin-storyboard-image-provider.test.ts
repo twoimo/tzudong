@@ -1,5 +1,6 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, spyOn, test } from 'bun:test';
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import * as fsPromises from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -557,6 +558,9 @@ describe('admin storyboard image provider', () => {
   test('uses a browser-provided OpenAI API key only as a transient request header provider', async () => {
     const originalFetch = globalThis.fetch;
     const seen: Array<{ authorization?: string; body?: string }> = [];
+    const mkdirSpy = spyOn(fsPromises, 'mkdir');
+    const writeFileSpy = spyOn(fsPromises, 'writeFile');
+    const statSpy = spyOn(fsPromises, 'stat');
     globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
       expect(String(input)).toBe('https://api.openai.com/v1/images/generations');
       const headers = new Headers(init?.headers);
@@ -605,6 +609,7 @@ describe('admin storyboard image provider', () => {
       const image = images[0]?.image;
       expect(image?.providerId).toBe('browser-openai-api-key');
       expect(image?.model).toBe('gpt-image-2');
+      expect(image?.dataUrl).toBe(`data:image/png;base64,${tinyPngBase64}`);
       expect(image?.provenance).toMatchObject({
         providerId: 'browser-openai-api-key',
         authMode: 'browser_local_storage_api_key',
@@ -617,10 +622,14 @@ describe('admin storyboard image provider', () => {
       expect(JSON.stringify(image)).not.toContain(browserKey);
       expect(isExactStoryboardGeneratedImageProvenance(image?.provenance)).toBe(true);
       expect(isTrustedStoryboardGeneratedImage(image)).toBe(true);
-      expect(existsSync(join(process.cwd(), 'public', image!.dataUrl))).toBe(true);
-      rmSync(dirname(join(process.cwd(), 'public', image!.dataUrl)), { recursive: true, force: true });
+      expect(mkdirSpy).not.toHaveBeenCalled();
+      expect(writeFileSpy).not.toHaveBeenCalled();
+      expect(statSpy).not.toHaveBeenCalled();
     } finally {
       globalThis.fetch = originalFetch;
+      mkdirSpy.mockRestore();
+      writeFileSpy.mockRestore();
+      statSpy.mockRestore();
     }
   });
 
