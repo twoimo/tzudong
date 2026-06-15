@@ -2,7 +2,14 @@ import { createHash, randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { basename, isAbsolute, join, relative, resolve } from 'node:path';
 
-import { readThumbnailReleaseCandidates, type ThumbnailReleaseCandidate, type ThumbnailReleaseEnv, type ThumbnailReleaseOptions } from './release-candidates';
+import {
+  normalizeThumbnailReleaseHostPresenceProof,
+  readThumbnailReleaseCandidates,
+  type ThumbnailReleaseCandidate,
+  type ThumbnailReleaseEnv,
+  type ThumbnailReleaseHostPresenceProof,
+  type ThumbnailReleaseOptions,
+} from './release-candidates';
 import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
 
 export const THUMBNAIL_RELEASE_KEY = 'youtube-thumbnail-generator/current';
@@ -68,6 +75,7 @@ export type ThumbnailDurableRelease = {
   modelProvenance: 'exact';
   score: number;
   issueTags: ['none'];
+  hostPresence: ThumbnailReleaseHostPresenceProof;
   textLayers: ThumbnailReleaseTextLayer[];
   canvas: { width: 1280; height: 720 };
   sourceQualityGate: Record<string, unknown>;
@@ -275,6 +283,7 @@ function createReleaseSourceQualityGate(candidate: ThumbnailReleaseCandidate, ac
     issueTags: ['none'],
     releaseCandidate: true,
     normalizedFromManifestMembership: true,
+    hostPresence: candidate.hostPresence,
     sha256Verified: normalizeHexSha256(candidate.sha256) === actualSha256,
   };
 }
@@ -300,6 +309,8 @@ function normalizeReleaseSourceQualityGate(value: unknown): Record<string, unkno
   if (issueTags.length) safeGate.issueTags = ['none'];
   if (gate.releaseCandidate === true) safeGate.releaseCandidate = true;
   if (gate.normalizedFromManifestMembership === true) safeGate.normalizedFromManifestMembership = true;
+  const hostPresence = normalizeThumbnailReleaseHostPresenceProof(gate);
+  if (hostPresence) safeGate.hostPresence = hostPresence;
   if (typeof gate.sha256Verified === 'boolean') safeGate.sha256Verified = gate.sha256Verified;
   if (gate.localReadOnlyFallback === true) safeGate.localReadOnlyFallback = true;
   return safeGate;
@@ -356,6 +367,9 @@ function normalizeReleaseRow(row: ReleaseRow): ThumbnailDurableRelease | null {
   if (!row.browser_image_path.startsWith(SAFE_BROWSER_IMAGE_PREFIX)) return null;
   const issueTags = Array.isArray(row.issue_tags) ? row.issue_tags : [];
   if (issueTags.length !== 1 || issueTags[0] !== 'none') return null;
+  const sourceQualityGate = normalizeReleaseSourceQualityGate(row.source_quality_gate);
+  const hostPresence = normalizeThumbnailReleaseHostPresenceProof(sourceQualityGate);
+  if (!hostPresence) return null;
   const textLayers = normalizeThumbnailReleaseTextLayers(row.text_layers, toString(row.candidate_id, 32));
   const release: ThumbnailDurableRelease = {
     id: row.id,
@@ -374,9 +388,10 @@ function normalizeReleaseRow(row: ReleaseRow): ThumbnailDurableRelease | null {
     modelProvenance: 'exact',
     score: Number(row.score),
     issueTags: ['none'],
+    hostPresence,
     textLayers,
     canvas: { width: 1280, height: 720 },
-    sourceQualityGate: normalizeReleaseSourceQualityGate(row.source_quality_gate),
+    sourceQualityGate: { ...sourceQualityGate, hostPresence },
     publishedAt: row.published_at,
     updatedAt: row.updated_at,
   };
@@ -407,10 +422,10 @@ function selectLocalFallbackReleaseCandidate(payload: Awaited<ReturnType<typeof 
   const promotedId = payload.promotionState?.candidateId;
   if (promotedId) {
     const promoted = payload.candidates.find((candidate) => candidate.id === promotedId);
-    if (promoted) return promoted;
+    if (promoted && normalizeThumbnailReleaseHostPresenceProof(promoted)) return promoted;
   }
   return [...payload.candidates]
-    .filter((candidate) => candidate.providerId === 'local-codex' && candidate.model === 'gpt-image-2' && candidate.modelProvenance === 'exact' && candidate.issueTags.length === 1 && candidate.issueTags[0] === 'none')
+    .filter((candidate) => candidate.providerId === 'local-codex' && candidate.model === 'gpt-image-2' && candidate.modelProvenance === 'exact' && candidate.issueTags.length === 1 && candidate.issueTags[0] === 'none' && Boolean(normalizeThumbnailReleaseHostPresenceProof(candidate)))
     .sort((left, right) => right.score - left.score || left.id.localeCompare(right.id))[0] ?? null;
 }
 
@@ -438,6 +453,7 @@ function createLocalFallbackDurableReleasePayload(
     modelProvenance: 'exact',
     score: candidate.score,
     issueTags: ['none'],
+    hostPresence: candidate.hostPresence,
     textLayers: normalizeThumbnailReleaseTextLayers([], normalizeReleaseHeadlineCopy(candidate.headline)),
     canvas: { width: 1280, height: 720 },
     sourceQualityGate: {
@@ -450,6 +466,7 @@ function createLocalFallbackDurableReleasePayload(
       modelProvenance: 'exact',
       issueTags: ['none'],
       releaseCandidate: true,
+      hostPresence: candidate.hostPresence,
       localReadOnlyFallback: true,
     },
     publishedAt: updatedAt,
