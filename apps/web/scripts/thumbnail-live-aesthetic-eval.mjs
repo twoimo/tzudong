@@ -416,6 +416,33 @@ function visualScoreOf(run) {
   return Number.isFinite(score) ? Number(score) : null;
 }
 
+function normalizeTzuyangHostPresence(value) {
+  const proof = value && typeof value === 'object' ? value : null;
+  if (!proof) return null;
+  const hostPresence = proof.hostPresence && typeof proof.hostPresence === 'object' ? proof.hostPresence : proof;
+  const creatorText = [
+    hostPresence.creator,
+    hostPresence.creatorId,
+    hostPresence.identity,
+    hostPresence.identityName,
+    hostPresence.name,
+    hostPresence.person,
+    hostPresence.subject,
+    hostPresence.channel,
+  ].filter(Boolean).join(' ');
+  const visible = hostPresence.visible === true
+    || hostPresence.hostVisible === true
+    || hostPresence.personVisible === true
+    || hostPresence.tzuyangVisible === true
+    || hostPresence.containsTzuyang === true;
+  if (!visible || !/(쯔양|tzuyang)/i.test(creatorText)) return null;
+  return {
+    creator: 'tzuyang',
+    visible: true,
+    evidence: String(hostPresence.evidence || hostPresence.source || hostPresence.verifiedBy || 'visual-host-proof').slice(0, 120),
+  };
+}
+
 function decorateVisualMetadata(runs, batchPassed = false) {
   return runs.map((run) => {
     const score = visualScoreOf(run);
@@ -423,9 +450,13 @@ function decorateVisualMetadata(runs, batchPassed = false) {
     const notes = run.visualAestheticScore?.notes || existingVisual.notes || '';
     const issueTags = normalizeIssueTags(existingVisual.issueTags || run.visualAestheticScore?.issueTags, score ?? 0, notes);
     const assignedBy = normalizeAssignedBy(existingVisual.assignedBy || run.visualAestheticScore?.assignedBy, score !== null);
+    const hostPresence = normalizeTzuyangHostPresence(existingVisual.hostPresence)
+      || normalizeTzuyangHostPresence(run.visualAestheticScore?.hostPresence)
+      || normalizeTzuyangHostPresence(run.hostPresence);
     const releaseCandidate = Boolean(
       batchPassed &&
       isExactRun(run) &&
+      hostPresence &&
       score !== null &&
       score >= V1_VISUAL_GATE.releaseMinScore &&
       issueTags.length === 1 &&
@@ -438,6 +469,7 @@ function decorateVisualMetadata(runs, batchPassed = false) {
         score,
         issueTags,
         assignedBy,
+        ...(hostPresence ? { hostPresence } : {}),
         releaseCandidate,
       },
       visualAestheticScore: run.visualAestheticScore ? {
@@ -700,6 +732,7 @@ async function writeReleaseCandidateManifest(artifactRoot, runs, visualAesthetic
       score: run.visual?.score ?? run.visualAestheticScore?.score ?? null,
       issueTags: run.visual?.issueTags || [],
       assignedBy: run.visual?.assignedBy || run.visualAestheticScore?.assignedBy || 'script',
+      hostPresence: run.visual?.hostPresence,
     }));
   const manifestPath = join(artifactRoot, 'release-candidates.json');
   const manifest = {
