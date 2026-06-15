@@ -92,6 +92,7 @@ import {
   STORYBOARD_BROWSER_OPENAI_IMAGE_PROVIDER_ID,
   STORYBOARD_BROWSER_OPENAI_API_KEY_HEADER,
   STORYBOARD_IMAGE_PROVIDER_EXACT_PROVENANCE,
+  STORYBOARD_IMAGE_PROVIDER_ID,
   STORYBOARD_IMAGE_PROVIDER_MODEL,
   type StoryboardImageProviderReadiness,
   type StoryboardImageProviderStatusResponse,
@@ -333,6 +334,66 @@ function getStoryboardBrowserModelKeyHeaders(
   return openAIApiKey
     ? { [STORYBOARD_BROWSER_OPENAI_API_KEY_HEADER]: openAIApiKey }
     : {};
+}
+
+type StoryboardImageApiRouterView = {
+  id: "browser-openai-api-key" | "local-codex-oauth" | "setup-required";
+  label: string;
+  statusLabel: string;
+  summary: string;
+  codexOAuthStatus: "active" | "checking" | "unavailable" | "api-key-active";
+};
+
+function getStoryboardImageApiRouterView(
+  readiness: StoryboardImageProviderReadiness,
+  hasBrowserOpenAIApiKey: boolean,
+): StoryboardImageApiRouterView {
+  if (
+    hasBrowserOpenAIApiKey ||
+    readiness.providerId === STORYBOARD_BROWSER_OPENAI_IMAGE_PROVIDER_ID
+  ) {
+    return {
+      id: "browser-openai-api-key",
+      label: "OpenAI API 키",
+      statusLabel:
+        readiness.status === "ready"
+          ? "사용 중"
+          : readiness.status === "checking"
+            ? "확인 중"
+            : "확인 필요",
+      summary: "이 브라우저에 저장한 키로 gpt-image-2를 호출합니다.",
+      codexOAuthStatus: "api-key-active",
+    };
+  }
+
+  if (readiness.providerId === STORYBOARD_IMAGE_PROVIDER_ID) {
+    return {
+      id: "local-codex-oauth",
+      label: "Codex CLI OAuth",
+      statusLabel:
+        readiness.status === "ready"
+          ? "사용 중"
+          : readiness.status === "checking"
+            ? "확인 중"
+            : "확인 필요",
+      summary: "로컬 Codex OAuth 브리지로 gpt-image-2를 호출합니다.",
+      codexOAuthStatus:
+        readiness.status === "ready"
+          ? "active"
+          : readiness.status === "checking"
+            ? "checking"
+            : "unavailable",
+    };
+  }
+
+  return {
+    id: "setup-required",
+    label: "설정 필요",
+    statusLabel: readiness.status === "checking" ? "확인 중" : "설정 필요",
+    summary: "OpenAI API 키를 저장하거나 Codex CLI OAuth 상태를 확인해 주세요.",
+    codexOAuthStatus:
+      readiness.status === "checking" ? "checking" : "unavailable",
+  };
 }
 
 const DEFAULT_FORM: GeneratorForm = {
@@ -2720,7 +2781,7 @@ export function AdminStoryboardGenerator({
     setStoryboardBrowserOpenAIApiKey(cache.openAIApiKey);
     setStoryboardBrowserOpenAIApiKeySavedAt(cache.savedAt);
     setStoryboardBrowserOpenAIApiKeyMessage(
-      "이 브라우저에 저장된 OpenAI 키를 사용할 준비가 됐습니다.",
+      "이 브라우저에 저장된 OpenAI API 키를 사용할 준비가 됐습니다.",
     );
   }, []);
 
@@ -2899,6 +2960,10 @@ export function AdminStoryboardGenerator({
   const maskedStoryboardBrowserOpenAIApiKey = storyboardBrowserOpenAIApiKey
     ? maskStoryboardBrowserOpenAIApiKey(storyboardBrowserOpenAIApiKey)
     : "";
+  const storyboardImageApiRouterView = getStoryboardImageApiRouterView(
+    storyboardImageProviderReadiness,
+    isStoryboardBrowserOpenAIApiKeySaved,
+  );
   const hasPreviousStoryboardPage = activeStoryboardPage > 0;
   const hasNextStoryboardPage = activeStoryboardPage < storyboardTotalPages - 1;
   const selectedExportPreset =
@@ -3297,13 +3362,13 @@ export function AdminStoryboardGenerator({
     setStoryboardBrowserOpenAIApiKeyDraft("");
     setStoryboardBrowserOpenAIApiKeyError(null);
     setStoryboardBrowserOpenAIApiKeyMessage(
-      "저장했어요. 이 브라우저에서만 gpt-image-2 생성 요청에 사용합니다.",
+      "저장했어요. OpenAI API 키 라우터로 gpt-image-2를 사용합니다.",
     );
     appendStoryboardChatMessages([
       {
         id: `assistant-browser-key-saved-${Date.now()}`,
         role: "assistant",
-        text: "모델 API 키를 이 브라우저에만 저장했어요. DB나 계정에는 저장하지 않고, 이미지 생성 요청 때만 임시로 사용합니다.",
+        text: "OpenAI API 키를 이 브라우저에만 저장했어요. DB에는 저장하지 않고, 이미지 생성 요청 때만 잠깐 보냅니다.",
         status: "done",
       },
     ]);
@@ -3316,13 +3381,13 @@ export function AdminStoryboardGenerator({
     setStoryboardBrowserOpenAIApiKeyDraft("");
     setStoryboardBrowserOpenAIApiKeyError(null);
     setStoryboardBrowserOpenAIApiKeyMessage(
-      "저장된 OpenAI 키를 이 브라우저에서 삭제했습니다.",
+      "삭제했어요. 가능하면 Codex CLI OAuth 라우터로 돌아갑니다.",
     );
     appendStoryboardChatMessages([
       {
         id: `assistant-browser-key-cleared-${Date.now()}`,
         role: "assistant",
-        text: "브라우저에 저장된 모델 API 키를 삭제했어요. 이제 로컬 Codex 이미지 설정 상태만 사용합니다.",
+        text: "브라우저에 저장된 OpenAI API 키를 삭제했어요. 이제 Codex CLI OAuth 상태를 확인합니다.",
         status: "done",
       },
     ]);
@@ -3788,7 +3853,7 @@ export function AdminStoryboardGenerator({
         setIsStoryboardChatSettingsOpen(true);
         appendStoryboardQuickCommandMessages(
           submittedPrompt,
-          "채팅 설정을 열었습니다. 우상단 톱니바퀴에는 OpenAI API 키 · gpt-image-2 전용 설정만 있습니다.",
+          "채팅 설정을 열었습니다. 현재 이미지 라우터와 OpenAI API 키 저장 상태만 보여줍니다.",
         );
         return;
       }
@@ -4711,24 +4776,24 @@ export function AdminStoryboardGenerator({
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
                     align="end"
-                    className="max-h-[min(720px,calc(100vh-5rem))] w-[min(360px,calc(100vw-2rem))] overflow-y-auto overscroll-contain p-0"
+                    className="w-[min(320px,calc(100vw-2rem))] p-0"
                     data-storyboard-chat-settings-dropdown="true"
                   >
                     <div
-                      className="space-y-2 rounded-2xl bg-background/95 p-3 shadow-sm"
+                      className="space-y-3 rounded-2xl bg-background/95 p-3 shadow-sm"
                       data-storyboard-chat-settings-panel="true"
                     >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5 text-xs font-semibold">
-                            <KeyRound className="h-3.5 w-3.5 text-primary" />
-                            <span>이미지 모델 API 키</span>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                            <KeyRound className="h-3.5 w-3.5" aria-hidden="true" />
+                          </span>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-bold">이미지 생성 설정</p>
+                            <p className="text-[11px] text-muted-foreground">
+                              OpenAI API Key 하나만 입력합니다.
+                            </p>
                           </div>
-                          <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">
-                            프로덕션에서는 OpenAI 키를 이 브라우저에만 저장해
-                            gpt-image-2 스토리보드 이미지 생성에 사용합니다.
-                            DB나 계정에는 저장하지 않습니다.
-                          </p>
                         </div>
                         <Button
                           type="button"
@@ -4742,11 +4807,59 @@ export function AdminStoryboardGenerator({
                           <X className="h-3.5 w-3.5" aria-hidden="true" />
                         </Button>
                       </div>
+
                       <div
-                        className="grid gap-2 rounded-2xl border border-border/70 bg-muted/20 p-3"
+                        className="rounded-2xl border border-border/70 bg-muted/20 p-3"
+                        data-storyboard-api-router-panel="true"
+                        data-storyboard-api-router-active={storyboardImageApiRouterView.id}
+                        data-storyboard-codex-oauth-status={storyboardImageApiRouterView.codexOAuthStatus}
+                        data-storyboard-api-router-model={STORYBOARD_IMAGE_PROVIDER_MODEL}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[11px] font-semibold text-muted-foreground">
+                            API 라우터
+                          </span>
+                          <Badge
+                            variant="secondary"
+                            className="h-6 rounded-full px-2 text-[11px]"
+                            data-storyboard-api-router-label="true"
+                          >
+                            {storyboardImageApiRouterView.label}
+                          </Badge>
+                        </div>
+                        <p
+                          className="mt-2 text-xs font-semibold"
+                          data-storyboard-api-router-status="true"
+                        >
+                          {storyboardImageApiRouterView.statusLabel}
+                        </p>
+                        <p
+                          className="mt-1 text-[11px] leading-4 text-muted-foreground"
+                          data-storyboard-api-router-summary="true"
+                        >
+                          {storyboardImageApiRouterView.summary}
+                        </p>
+                        <p
+                          className="mt-1 text-[11px] leading-4 text-muted-foreground"
+                          data-storyboard-codex-oauth-copy="true"
+                        >
+                          Codex CLI OAuth:{" "}
+                          {storyboardImageApiRouterView.codexOAuthStatus === "active"
+                            ? "사용 중"
+                            : storyboardImageApiRouterView.codexOAuthStatus === "checking"
+                              ? "확인 중"
+                              : storyboardImageApiRouterView.codexOAuthStatus === "api-key-active"
+                                ? "API 키 사용 중"
+                                : "확인 필요"}
+                        </p>
+                      </div>
+
+                      <div
+                        className="grid gap-2"
                         data-storyboard-browser-api-key-settings="local-storage-only"
                         data-storyboard-api-key-storage="browser-local-storage-only"
                         data-storyboard-api-key-db-storage="forbidden"
+                        data-storyboard-openai-api-key-scope="browser-local-storage"
                         data-storyboard-browser-api-key-storage-key={
                           STORYBOARD_BROWSER_MODEL_KEYS_STORAGE_KEY
                         }
@@ -4755,7 +4868,7 @@ export function AdminStoryboardGenerator({
                           htmlFor="storyboard-browser-openai-api-key"
                           className="text-[11px] font-semibold"
                         >
-                          OpenAI API 키 · gpt-image-2 전용
+                          OpenAI API Key
                         </Label>
                         <div className="flex gap-2">
                           <Input
@@ -4796,66 +4909,63 @@ export function AdminStoryboardGenerator({
                           className="text-[11px] leading-4 text-muted-foreground"
                           data-storyboard-browser-api-key-browser-only-copy="true"
                         >
-                          저장한 키는 이 브라우저 localStorage에만 남습니다.
-                          이미지 생성 요청을 보낼 때만 임시 전송하고, 서버
-                          히스토리·DB·계정에는 키 값을 남기지 않습니다.
+                          키는 이 브라우저에만 저장하고, 요청 때만 잠깐 보냅니다.
                         </p>
-                        {storyboardBrowserOpenAIApiKey ? (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="h-8 justify-start rounded-full text-[11px]"
-                            onClick={handleClearStoryboardBrowserOpenAIApiKey}
-                            data-storyboard-browser-api-key-clear="true"
-                          >
-                            저장된 키 삭제
-                          </Button>
-                        ) : null}
                         <p
-                          className="rounded-xl border border-amber-200 bg-amber-50/70 p-2 text-[11px] leading-4 text-amber-950"
+                          className="text-[11px] leading-4 text-muted-foreground"
                           data-storyboard-browser-api-key-model-policy="gpt-image-2-only"
                         >
-                          이미지 모델은 gpt-image-2만 허용합니다. 다른 이미지
-                          모델로 자동 전환하지 않습니다.
+                          모델은 gpt-image-2만 사용합니다.
                         </p>
-                      </div>
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p
-                          className="text-[11px] text-muted-foreground"
-                          data-storyboard-browser-api-key-status={
-                            isStoryboardBrowserOpenAIApiKeySaved
-                              ? "saved"
-                              : "empty"
-                          }
-                        >
-                          {isStoryboardBrowserOpenAIApiKeySaved
-                            ? `저장됨 · ${maskedStoryboardBrowserOpenAIApiKey}${
-                                storyboardBrowserOpenAIApiKeySavedAt
-                                  ? ` · ${new Date(
-                                      storyboardBrowserOpenAIApiKeySavedAt,
-                                    ).toLocaleString("ko-KR")}`
-                                  : ""
-                              }`
-                            : "아직 저장된 OpenAI 키가 없습니다."}
-                        </p>
-                        {storyboardBrowserOpenAIApiKeyError ? (
+                        <div className="flex flex-wrap items-center gap-2">
                           <p
-                            className="basis-full text-[11px] text-destructive"
-                            data-storyboard-browser-api-key-error="true"
+                            className="min-w-0 flex-1 text-[11px] text-muted-foreground"
+                            data-storyboard-browser-api-key-status={
+                              isStoryboardBrowserOpenAIApiKeySaved
+                                ? "saved"
+                                : "empty"
+                            }
                           >
-                            {storyboardBrowserOpenAIApiKeyError}
+                            {isStoryboardBrowserOpenAIApiKeySaved
+                              ? `저장됨 · ${maskedStoryboardBrowserOpenAIApiKey}${
+                                  storyboardBrowserOpenAIApiKeySavedAt
+                                    ? ` · ${new Date(
+                                        storyboardBrowserOpenAIApiKeySavedAt,
+                                      ).toLocaleString("ko-KR")}`
+                                    : ""
+                                }`
+                              : "저장된 키 없음"}
                           </p>
-                        ) : null}
-                        {storyboardBrowserOpenAIApiKeyMessage &&
-                        !storyboardBrowserOpenAIApiKeyError ? (
-                          <p
-                            className="basis-full text-[11px] text-muted-foreground"
-                            data-storyboard-browser-api-key-message="true"
-                          >
-                            {storyboardBrowserOpenAIApiKeyMessage}
-                          </p>
-                        ) : null}
+                          {storyboardBrowserOpenAIApiKey ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+                              onClick={handleClearStoryboardBrowserOpenAIApiKey}
+                              data-storyboard-browser-api-key-clear="true"
+                            >
+                              삭제
+                            </Button>
+                          ) : null}
+                          {storyboardBrowserOpenAIApiKeyError ? (
+                            <p
+                              className="basis-full text-[11px] text-destructive"
+                              data-storyboard-browser-api-key-error="true"
+                            >
+                              {storyboardBrowserOpenAIApiKeyError}
+                            </p>
+                          ) : null}
+                          {storyboardBrowserOpenAIApiKeyMessage &&
+                          !storyboardBrowserOpenAIApiKeyError ? (
+                            <p
+                              className="basis-full text-[11px] text-muted-foreground"
+                              data-storyboard-browser-api-key-message="true"
+                            >
+                              {storyboardBrowserOpenAIApiKeyMessage}
+                            </p>
+                          ) : null}
+                        </div>
                       </div>
                     </div>
                   </DropdownMenuContent>

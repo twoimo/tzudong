@@ -290,10 +290,10 @@ test("storyboard canvas counts only visible trusted GPT Image 2 storyboard panel
     "data-storyboard-chat-settings-open",
     "true",
   );
-  await expect(storyboardSettingsPanel).toContainText("이미지 모델 API 키");
-  await expect(storyboardSettingsPanel).toContainText(
-    "OpenAI API 키 · gpt-image-2 전용",
-  );
+  await expect(storyboardSettingsPanel).toContainText("이미지 생성 설정");
+  await expect(storyboardSettingsPanel).toContainText("OpenAI API Key");
+  await expect(storyboardSettingsPanel).toContainText("API 라우터");
+  await expect(storyboardSettingsPanel).toContainText("Codex CLI OAuth");
   const apiKeySettings = storyboardSettingsPanel.locator(
     '[data-storyboard-browser-api-key-settings="local-storage-only"]',
   );
@@ -313,7 +313,7 @@ test("storyboard canvas counts only visible trusted GPT Image 2 storyboard panel
     apiKeySettings.locator(
       '[data-storyboard-browser-api-key-model-policy="gpt-image-2-only"]',
     ),
-  ).toContainText(/gpt-image-2만 허용/);
+  ).toContainText(/gpt-image-2만 사용/);
   await expect(
     storyboardSettingsPanel.locator(
       '[data-storyboard-chat-settings-source-trace="true"]',
@@ -1298,7 +1298,8 @@ test("storyboard chat redacts hostile prompts and keeps fallback readiness truth
   await storyboardModule.locator('[data-storyboard-chat-settings-toggle="true"]').click();
   const settingsPanel = page.locator('[data-storyboard-chat-settings-panel="true"]');
   await expect(settingsPanel).toBeVisible({ timeout: 10_000 });
-  await expect(settingsPanel).toContainText("OpenAI API 키 · gpt-image-2 전용");
+  await expect(settingsPanel).toContainText("OpenAI API Key");
+  await expect(settingsPanel).toContainText("API 라우터");
   await expect(page.locator('[data-storyboard-backend-agent-readiness="true"]')).toHaveCount(0);
   await expect(page.locator('[data-storyboard-image-provider-readiness="true"]')).toHaveCount(0);
 
