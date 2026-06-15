@@ -149,6 +149,12 @@ function writeTinyPng(path: string) {
   );
 }
 
+const tzuyangHostPresenceFixture = {
+  creator: "tzuyang",
+  visible: true,
+  evidence: "test-host-visual-proof",
+};
+
 function writeExactLocalCodexProof(path: string, outputPath: string, overrides: Record<string, unknown> = {}) {
   mkdirSync(dirname(path), { recursive: true });
   const outputBytes = (() => {
@@ -525,7 +531,7 @@ describe("admin youtube thumbnail generator", () => {
     expect(wrapperSource).not.toContain("use that default and report a warning");
   });
 
-  test("provides the latest existing generated thumbnail as the initial canvas preview without polluting exact history", async () => {
+  test("does not use arbitrary generated thumbnails as the initial preview without Tzuyang host proof", async () => {
     const tempDir = mkdtempSync(join(tmpdir(), "thumbnail-existing-preview-"));
     try {
       const historyRoot = join(tempDir, "history");
@@ -546,13 +552,95 @@ describe("admin youtube thumbnail generator", () => {
 
       expect(history.runs).toEqual([]);
       expect(history.latestPreviewRun).toMatchObject({
+        id: "bundled-youtube-thumbnail-preview",
         status: "passed",
         providerId: "local-codex",
         model: "gpt-image-2",
         modelProvenance: "unknown",
-        imagePath: "/qa-history/youtube-thumbnail-generator/generated/e2e-runs/2026-06-09T10-56-45-188Z.png",
+        imagePath: "/images/admin/youtube-thumbnail-generated-example-preview.png",
       });
+      expect(history.latestPreviewRun?.imagePath).not.toContain("e2e-runs");
       expect(history.latestPreviewRun?.imagePath).not.toContain("qa-batch");
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test("filters exact thumbnail history out of the default preview until Tzuyang host proof exists", async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "thumbnail-history-host-proof-"));
+    try {
+      const historyRoot = join(tempDir, "history");
+      mkdirSync(historyRoot, { recursive: true });
+      writeFileSync(join(historyRoot, "history.json"), JSON.stringify({
+        updatedAt: "2026-06-10T00:00:00.000Z",
+        runs: [{
+          id: "food-only-exact",
+          timestamp: "2026-06-10T00:00:00.000Z",
+          completedAt: "2026-06-10T00:00:00.000Z",
+          status: "passed",
+          providerId: "local-codex",
+          model: "gpt-image-2",
+          modelProvenance: "exact",
+          generationMode: "direct_provider",
+          topic: "쯔양 없는 음식 단독 이미지",
+          headline: "야시장",
+          warnings: [],
+          imagePath: "food-only.png",
+        }],
+      }));
+
+      const history = await readThumbnailHistory({ NODE_ENV: "test" } as NodeJS.ProcessEnv, {
+        historyRoot,
+        publicImageRoot: join(tempDir, "public", "qa-history", "youtube-thumbnail-generator", "generated"),
+        includeLegacyFallback: false,
+      });
+
+      expect(history.runs).toEqual([]);
+      expect(history.latestPreviewRun).toMatchObject({
+        id: "bundled-youtube-thumbnail-preview",
+        imagePath: "/images/admin/youtube-thumbnail-generated-example-preview.png",
+      });
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test("allows exact thumbnail history as the default preview only with explicit Tzuyang host proof", async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "thumbnail-history-host-proof-"));
+    try {
+      const historyRoot = join(tempDir, "history");
+      mkdirSync(historyRoot, { recursive: true });
+      writeFileSync(join(historyRoot, "history.json"), JSON.stringify({
+        updatedAt: "2026-06-10T00:00:00.000Z",
+        runs: [{
+          id: "tzuyang-exact",
+          timestamp: "2026-06-10T00:00:00.000Z",
+          completedAt: "2026-06-10T00:00:00.000Z",
+          status: "passed",
+          providerId: "local-codex",
+          model: "gpt-image-2",
+          modelProvenance: "exact",
+          generationMode: "direct_provider",
+          topic: "쯔양 제육볶음 한상",
+          headline: "밥도둑 한상",
+          warnings: [],
+          imagePath: "tzuyang-exact.png",
+          hostPresence: tzuyangHostPresenceFixture,
+        }],
+      }));
+
+      const history = await readThumbnailHistory({ NODE_ENV: "test" } as NodeJS.ProcessEnv, {
+        historyRoot,
+        publicImageRoot: join(tempDir, "public", "qa-history", "youtube-thumbnail-generator", "generated"),
+        includeLegacyFallback: false,
+      });
+
+      expect(history.runs).toHaveLength(1);
+      expect(history.latestPreviewRun).toMatchObject({
+        id: "tzuyang-exact",
+        imagePath: "/qa-history/youtube-thumbnail-generator/generated/tzuyang-exact.png",
+        hostPresence: tzuyangHostPresenceFixture,
+      });
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
@@ -2983,6 +3071,7 @@ test("youtube thumbnail release candidates normalize exact gpt-image-2 manifest 
           score: 95,
           issueTags: ["none"],
           assignedBy: "human-vision-adjudication",
+          hostPresence: tzuyangHostPresenceFixture,
         },
         {
           id: "02-wrong-model",
@@ -3030,6 +3119,53 @@ test("youtube thumbnail release candidates normalize exact gpt-image-2 manifest 
     const statePath = join(webRoot, ".omx", "runtime", "youtube-thumbnail-release-promotion", "current.json");
     expect(existsSync(statePath)).toBe(true);
     expect(statePath.includes(`${join(webRoot, "public")}`)).toBe(false);
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+test("youtube thumbnail release candidates ignore exact food-only defaults without Tzuyang host proof", async () => {
+  const tempDir = mkdtempSync(join(tmpdir(), "thumbnail-release-requires-host-proof-"));
+  try {
+    const repoRoot = tempDir;
+    const webRoot = join(repoRoot, "apps", "web");
+    mkdirSync(webRoot, { recursive: true });
+    writeFileSync(join(webRoot, "package.json"), "{}", "utf8");
+    const batchRoot = join(repoRoot, ".omx", "artifacts", "thumbnail-live-aesthetic", "batch-food-only");
+    const imagePath = join(batchRoot, "generated", "food-only.png");
+    const manifestPath = join(batchRoot, "release-candidates.json");
+    writeTinyPng(imagePath);
+    writeFileSync(manifestPath, JSON.stringify({
+      generatedAt: "2026-06-15T00:00:00.000Z",
+      eligibility: {
+        providerId: "local-codex",
+        model: "gpt-image-2",
+        modelProvenance: "exact",
+        minVisualScore: 90,
+        issueTags: ["none"],
+        batchGate: { passedV1Gate: true },
+      },
+      totalRuns: 1,
+      releaseCandidateCount: 1,
+      releaseCandidates: [{
+        id: "food-only",
+        subjectId: "night-market-skewers",
+        imagePath: ".omx/artifacts/thumbnail-live-aesthetic/batch-food-only/generated/food-only.png",
+        providerId: "local-codex",
+        model: "gpt-image-2",
+        modelProvenance: "exact",
+        sha256: "4b5c5c92cec3b23e6a294fc0eea43234ef5126c5a64f4c6c531ac8430ab0b844",
+        score: 98,
+        issueTags: ["none"],
+        assignedBy: "human-vision-adjudication",
+      }],
+    }, null, 2), "utf8");
+
+    const payload = await readThumbnailReleaseCandidates({}, { repoRoot, webRoot, manifestPath });
+    expect(payload.candidates).toHaveLength(0);
+    expect(payload.promotionState).toBeNull();
+    expect(payload.diagnostics.warnings).toContain("missing-tzuyang-host-proof:food-only");
+    expect(existsSync(join(webRoot, "public", "qa-history", "youtube-thumbnail-generator", "release-candidates", "food-only-4b5c5c92cec3.png"))).toBe(false);
   } finally {
     rmSync(tempDir, { recursive: true, force: true });
   }
@@ -3109,6 +3245,7 @@ test("youtube thumbnail durable release readback strips private source quality g
         modelProvenance: "exact",
         issueTags: ["none"],
         releaseCandidate: true,
+        hostPresence: tzuyangHostPresenceFixture,
         storage_bucket: "private-bucket",
         storageBucket: "private-bucket",
         storagePath: "secret/path.png",
@@ -3174,6 +3311,7 @@ test("youtube thumbnail durable release registry publishes exact candidates with
         score: 96,
         issueTags: ["none"],
         assignedBy: "human-vision-adjudication",
+        hostPresence: tzuyangHostPresenceFixture,
       }],
     }, null, 2), "utf8");
     const fake = createFakeThumbnailReleaseRegistryAdapter();
@@ -3278,6 +3416,7 @@ test("youtube thumbnail durable release registry does not mirror local fallback 
         score: 96,
         issueTags: ["none"],
         assignedBy: "human-vision-adjudication",
+        hostPresence: tzuyangHostPresenceFixture,
       }],
     }, null, 2), "utf8");
 
@@ -3328,6 +3467,7 @@ test("youtube thumbnail durable release registry uses an already mirrored local 
         score: 96,
         issueTags: ["none"],
         assignedBy: "human-vision-adjudication",
+        hostPresence: tzuyangHostPresenceFixture,
       }],
     }, null, 2), "utf8");
 
@@ -3380,6 +3520,7 @@ test("youtube thumbnail durable publish does not mask registry constraint failur
         sha256: "4b5c5c92cec3b23e6a294fc0eea43234ef5126c5a64f4c6c531ac8430ab0b844",
         score: 96,
         issueTags: ["none"],
+        hostPresence: tzuyangHostPresenceFixture,
       }],
     }, null, 2), "utf8");
     const constraintError = Object.assign(new Error("new row for relation \"youtube_thumbnail_releases\" violates check constraint \"youtube_thumbnail_releases_score_check\""), { code: "23514" });
@@ -3445,6 +3586,7 @@ test("youtube thumbnail durable publish maps missing registry RPC to unavailable
         sha256: "4b5c5c92cec3b23e6a294fc0eea43234ef5126c5a64f4c6c531ac8430ab0b844",
         score: 96,
         issueTags: ["none"],
+        hostPresence: tzuyangHostPresenceFixture,
       }],
     }, null, 2), "utf8");
     const missingRpcError = Object.assign(new Error("Could not find the function public.publish_youtube_thumbnail_release in the schema cache"), { code: "PGRST202" });
@@ -3507,6 +3649,7 @@ test("youtube thumbnail durable publish removes uploaded asset when registry pub
         sha256: "4b5c5c92cec3b23e6a294fc0eea43234ef5126c5a64f4c6c531ac8430ab0b844",
         score: 96,
         issueTags: ["none"],
+        hostPresence: tzuyangHostPresenceFixture,
       }],
     }, null, 2), "utf8");
     const fake = createFakeThumbnailReleaseRegistryAdapter([], { failPublish: true });
@@ -3877,6 +4020,7 @@ test("youtube thumbnail release candidates ignore stale promotion state instead 
         sha256: "8af10f1506967197741bc09e1e6f83a5b7a10b0721dd2a74c7e6b215cca6705b",
         score: 94,
         issueTags: ["none"],
+        hostPresence: tzuyangHostPresenceFixture,
       }],
     }, null, 2), "utf8");
     const promotionRoot = join(webRoot, ".omx", "runtime", "youtube-thumbnail-release-promotion");
@@ -3975,6 +4119,7 @@ test("youtube thumbnail release candidates redact mirror failures and require va
           sha256: "4b5c5c92cec3b23e6a294fc0eea43234ef5126c5a64f4c6c531ac8430ab0b844",
           score: 96,
           issueTags: ["none"],
+          hostPresence: tzuyangHostPresenceFixture,
         },
         {
           id: "invalid-sha",
@@ -4037,6 +4182,7 @@ test("youtube thumbnail release promotion ignores stale client manifest paths an
           sha256: sha,
           score: 95,
           issueTags: ["none"],
+          hostPresence: tzuyangHostPresenceFixture,
         }],
       }, null, 2), "utf8");
       return manifestPath;
@@ -4128,6 +4274,8 @@ test("youtube thumbnail release candidates stay hidden and auto-seed the initial
   expect(component).not.toContain(".omx/artifacts/thumbnail-live-aesthetic/live-aesthetic-loop-v1b-20260610T130040Z/generated/${");
   expect(releaseRegistry).toContain("AUTO_RELEASE_MAIN_HEADLINE_MAX_LENGTH = 14");
   expect(releaseRegistry).toContain("function normalizeReleaseHeadlineCopy");
+  expect(releaseRegistry).toContain("normalizeThumbnailReleaseHostPresenceProof");
+  expect(releaseRegistry).toContain("hostPresence");
   expect(releaseRegistry).toContain("normalizeThumbnailReleaseTextLayers([], normalizeReleaseHeadlineCopy(candidate.headline))");
   expect(releaseRegistry).toContain("x: 430, y: 330");
   expect(releaseRegistry).toContain("fontSize: 56");

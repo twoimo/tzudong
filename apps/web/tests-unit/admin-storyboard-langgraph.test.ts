@@ -721,7 +721,7 @@ describe('admin storyboard LangGraph replacement contracts', () => {
     expect(JSON.stringify(status)).not.toContain('gpt-image-1');
   });
 
-  test('admin storyboard UI derives backend labels from canonical graph diagnostics and gates retrieval labels', () => {
+  test('admin storyboard keeps graph diagnostics available while settings stay API-key-only', () => {
     const source = readFileSync(
       path.resolve('components/admin/storyboard/AdminStoryboardGenerator.tsx'),
       'utf8',
@@ -730,21 +730,23 @@ describe('admin storyboard LangGraph replacement contracts', () => {
     expect(source).toContain('buildStoryboardBackendAgentReadiness');
     expect(source).toContain('result.backendAnalysis.backendAgent?.graph');
     expect(source).toContain('storyboardAgentGraphFidelity');
-    expect(source).toContain('data-storyboard-agent-graph-fidelity');
-    expect(source).toContain('참조 그래프 충실도');
     expect(source).toContain('영상 자료 검색 반영');
     expect(source).toContain('graph.retrieval?.status === "used"');
     expect(source).toContain('graph.toolsCalled.includes("search_scene_data")');
     expect(source).toContain('graph.status === "used"');
     expect(source).toContain('graph.status === "interrupted_output_ready"');
     expect(source).toContain('graph.status === "interrupted_needs_resume"');
-    expect(source).toContain('data-storyboard-backend-agent-readiness="true"');
-    expect(source).toContain('data-storyboard-backend-agent-live-graph-ready');
-    expect(source).toContain('data-storyboard-backend-agent-retrieval-used');
+    expect(source).not.toContain('data-storyboard-agent-graph-fidelity');
+    expect(source).not.toContain('참조 그래프 충실도');
+    expect(source).not.toContain('data-storyboard-backend-agent-readiness="true"');
+    expect(source).not.toContain('data-storyboard-backend-agent-live-graph-ready');
+    expect(source).not.toContain('data-storyboard-backend-agent-retrieval-used');
+    expect(source).toContain('data-storyboard-browser-api-key-settings="local-storage-only"');
+    expect(source).toContain('OpenAI API 키 · gpt-image-2 전용');
     expect(source).toContain('자료 분석 반영');
     expect(source).toContain('우선순위 정리');
-    expect(source).toContain('data-storyboard-agent-graph-role');
-    expect(source).toContain('data-storyboard-agent-graph-blockers');
+    expect(source).not.toContain('data-storyboard-agent-graph-role');
+    expect(source).not.toContain('data-storyboard-agent-graph-blockers');
   });
 
   test('maps canonical reference graph diagnostics to separate agentGraphFidelity pass report', async () => {
