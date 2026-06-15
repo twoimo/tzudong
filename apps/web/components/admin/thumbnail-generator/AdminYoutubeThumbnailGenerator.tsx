@@ -1948,6 +1948,47 @@ export function AdminYoutubeThumbnailGenerator() {
     () => getCanvasContextPrompt(canvasContextLayer, lastCanvasActionLabel),
     [canvasContextLayer, lastCanvasActionLabel],
   );
+  const shouldShowThumbnailCanvasContext = canvasContextState !== "idle";
+  const sessionKeyBackedProviderAvailableForChatStatus = canUseSessionApiKeyForProvider(
+    providerId,
+    selectedProviderAvailability,
+    Boolean(browserOpenAIApiKey),
+  );
+  const thumbnailChatStatusState = isGenerating
+    ? "generating"
+    : isChatAgentStreaming
+      ? "streaming"
+      : selectedProviderAvailability?.available ||
+          sessionKeyBackedProviderAvailableForChatStatus ||
+          backendAgentStatus?.available
+        ? "ready"
+        : readiness
+          ? "needs-setup"
+          : "checking";
+  const thumbnailChatStatusLabel =
+    thumbnailChatStatusState === "generating"
+      ? "만드는 중"
+      : thumbnailChatStatusState === "streaming"
+        ? "답변 중"
+        : thumbnailChatStatusState === "ready"
+          ? "준비됨"
+          : thumbnailChatStatusState === "needs-setup"
+            ? "준비 필요"
+            : "확인 중";
+  const currentThumbnailStreamingLabel = isGenerating
+    ? "이미지 생성 중"
+    : isChatAgentStreaming
+      ? "요청 반영 중"
+      : isThumbnailChatStructuredEditPrompt(chatDraft)
+        ? "전송 후 편집"
+        : "입력 프리뷰";
+  const currentThumbnailStreamingPhase = isGenerating
+    ? "썸네일 이미지를 만들고 있어요. 오래 걸리면 아래 중단 버튼을 누를 수 있습니다."
+    : isChatAgentStreaming
+      ? "요청을 쉽게 정리하는 중이에요..."
+      : isThumbnailChatStructuredEditPrompt(chatDraft)
+        ? "입력 중 · 전송하면 문구를 바꿉니다"
+        : "입력 중 · 전송하면 캔버스에 반영됩니다";
 
   useEffect(() => {
     textLayersRef.current = textLayers;
@@ -4678,6 +4719,21 @@ export function AdminYoutubeThumbnailGenerator() {
                   <MessageCircle className="h-4 w-4" />
                 </span>
                 <span className="min-w-0 truncate">유튜브 썸네일 생성 도우미</span>
+                <Badge
+                  variant={
+                    thumbnailChatStatusState === "ready" ||
+                    thumbnailChatStatusState === "generating" ||
+                    thumbnailChatStatusState === "streaming"
+                      ? "secondary"
+                      : "outline"
+                  }
+                  className="h-6 max-w-[6.5rem] shrink-0 truncate rounded-full px-2 text-[10px]"
+                  title={thumbnailChatStatusLabel}
+                  data-thumbnail-chat-status-badge="true"
+                  data-thumbnail-chat-status={thumbnailChatStatusState}
+                >
+                  {thumbnailChatStatusLabel}
+                </Badge>
               </CardTitle>
               <div className="flex shrink-0 items-center gap-1" data-thumbnail-chat-header-actions="true">
                 <DropdownMenu open={isHistoryPanelOpen} onOpenChange={handleHistoryDropdownOpenChange}>
@@ -4754,6 +4810,13 @@ export function AdminYoutubeThumbnailGenerator() {
                     }`}
                     data-thumbnail-chat-message={message.role}
                     data-thumbnail-chat-message-mode={message.mode ?? "submitted"}
+                    data-thumbnail-chat-message-status={
+                      message.mode === "stream"
+                        ? "streaming"
+                        : message.mode === "system"
+                          ? "guide"
+                          : "done"
+                    }
                   >
                     {message.role !== "user" ? (
                       <div className="mt-5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
@@ -4776,7 +4839,7 @@ export function AdminYoutubeThumbnailGenerator() {
                         {message.role === "user"
                           ? "나"
                           : message.mode === "stream"
-                            ? "작업 중"
+                            ? currentThumbnailStreamingLabel
                             : message.mode === "system"
                               ? "가이드"
                               : "유튜브 썸네일 도우미"}
@@ -4800,7 +4863,7 @@ export function AdminYoutubeThumbnailGenerator() {
                               className="h-3 w-3 animate-spin"
                               aria-hidden="true"
                             />
-                            요청을 정리하는 중이에요...
+                            {currentThumbnailStreamingPhase}
                           </p>
                         ) : null}
                       </div>
@@ -4854,16 +4917,10 @@ export function AdminYoutubeThumbnailGenerator() {
                     </div>
                     <div className="max-w-[86%] space-y-1">
                       <div className="text-[10px] font-medium uppercase tracking-wide text-sky-700 dark:text-sky-200">
-                        {isGenerating ? "이미지 생성 중" : isChatAgentStreaming ? "작업 중" : isThumbnailChatStructuredEditPrompt(chatDraft) ? "전송 후 편집" : "입력 프리뷰"}
+                        {currentThumbnailStreamingLabel}
                       </div>
                       <div className="rounded-2xl rounded-bl-md border border-dashed border-sky-400/70 bg-sky-500/10 px-3 py-2 text-xs leading-5 text-sky-950 shadow-sm whitespace-pre-wrap break-keep [overflow-wrap:anywhere] dark:text-sky-100">
-                        {isGenerating
-                          ? "썸네일 이미지를 만들고 있어요. 시간이 오래 걸리면 아래 생성 중단을 누를 수 있습니다."
-                          : isChatAgentStreaming
-                            ? "요청을 정리하는 중이에요..."
-                            : isThumbnailChatStructuredEditPrompt(chatDraft)
-                              ? "입력 중 · 전송하면 문구를 바꿉니다"
-                              : "입력 중 · 전송하면 캔버스에 반영됩니다"}
+                        {currentThumbnailStreamingPhase}
                       </div>
                     </div>
                   </div>
@@ -4879,86 +4936,95 @@ export function AdminYoutubeThumbnailGenerator() {
                   data-thumbnail-chat-topic-state="true"
                 />
 
-                <div
-                  className="flex min-h-8 items-center justify-between gap-2 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-[11px]"
-                  data-thumbnail-chat-canvas-context="true"
-                  data-thumbnail-chat-canvas-context-state={canvasContextState}
-                >
-                  <div className="flex min-w-0 items-center gap-1.5">
-                    <Badge
-                      variant={canvasContextState === "editing" ? "secondary" : "outline"}
-                      className="h-6 shrink-0 rounded-full px-2 text-[11px]"
-                    >
-                      {canvasContextState === "editing" ? "수정 중" : canvasContextState === "selected" ? "선택됨" : "캔버스"}
-                    </Badge>
-                    <span className="shrink-0 font-medium text-primary">
-                      채팅 맥락
-                    </span>
-                    <span
-                      className="min-w-0 truncate text-muted-foreground"
-                      title={`${lastCanvasActionLabel ?? "선택 대기"} · ${canvasContextSummary}`}
-                      data-thumbnail-chat-canvas-context-action="true"
-                    >
-                      {lastCanvasActionLabel ?? "선택 대기"}
-                    </span>
-                    <span
-                      className="min-w-0 truncate text-muted-foreground"
-                      title={canvasContextSummary}
-                      data-thumbnail-chat-canvas-context-summary="true"
-                    >
-                      {canvasContextSummary}
-                    </span>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 shrink-0 rounded-full px-2 text-[11px]"
-                    onClick={useCanvasContextInChat}
-                    data-thumbnail-chat-canvas-context-ask="true"
+                {shouldShowThumbnailCanvasContext ? (
+                  <div
+                    className="flex min-h-8 items-center justify-between gap-2 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-[11px]"
+                    data-thumbnail-chat-canvas-context="true"
+                    data-thumbnail-chat-canvas-context-state={canvasContextState}
+                    data-thumbnail-chat-canvas-context-visibility="selected-only"
                   >
-                    물어보기
-                  </Button>
-                </div>
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <Badge
+                        variant={canvasContextState === "editing" ? "secondary" : "outline"}
+                        className="h-6 shrink-0 rounded-full px-2 text-[11px]"
+                      >
+                        {canvasContextState === "editing" ? "수정 중" : "선택됨"}
+                      </Badge>
+                      <span className="shrink-0 font-medium text-primary">
+                        채팅 맥락
+                      </span>
+                      <span
+                        className="min-w-0 truncate text-muted-foreground"
+                        title={`${lastCanvasActionLabel ?? "선택됨"} · ${canvasContextSummary}`}
+                        data-thumbnail-chat-canvas-context-action="true"
+                      >
+                        {lastCanvasActionLabel ?? "선택됨"}
+                      </span>
+                      <span
+                        className="min-w-0 truncate text-muted-foreground"
+                        title={canvasContextSummary}
+                        data-thumbnail-chat-canvas-context-summary="true"
+                      >
+                        {canvasContextSummary}
+                      </span>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 shrink-0 rounded-full px-2 text-[11px]"
+                      onClick={useCanvasContextInChat}
+                      data-thumbnail-chat-canvas-context-ask="true"
+                    >
+                      물어보기
+                    </Button>
+                  </div>
+                ) : null}
 
                 <Label htmlFor="thumbnail-chat-composer" className="sr-only">썸네일 요구사항 채팅 입력</Label>
                 <p id="thumbnail-chat-keyboard-hint" className="sr-only">
                   한글 조합 중 Enter는 전송하지 않고, 조합이 끝난 뒤 Enter로 전송합니다.
                 </p>
-                <div className="flex items-end gap-2 rounded-3xl border border-border/60 bg-background p-2 shadow-sm" data-thumbnail-chat-composer="true">
-                  <Textarea
-                    id="thumbnail-chat-composer"
-                    value={chatDraft}
-                    onChange={(event) => handleChatDraftChange(event.target.value)}
-                    onCompositionStart={handleThumbnailChatCompositionStart}
-                    onCompositionEnd={handleThumbnailChatCompositionEnd}
-                    onKeyDown={handleThumbnailChatKeyDown}
-                    aria-describedby="thumbnail-chat-keyboard-hint"
-                    disabled={isChatAgentStreaming || isGenerating}
-                    className="max-h-28 min-h-11 resize-none border-0 bg-transparent p-2 text-sm shadow-none focus-visible:ring-0"
-                    placeholder="예: 제육볶음 먹방 썸네일 생성해줘 · 문구 크게 · 참고 인물 이미지는 파일로 추가해줘 · PNG 저장해줘"
-                    data-thumbnail-chat-ime-safe="true"
-                  />
-                  <Button
-                    type="button"
-                    size={isChatAgentStreaming || isGenerating ? "sm" : "icon"}
-                    className={`h-9 shrink-0 rounded-full ${isChatAgentStreaming || isGenerating ? "px-3" : "w-9"}`}
-                    onClick={isChatAgentStreaming ? abortThumbnailChatWork : isGenerating ? abortThumbnailGeneration : () => void handleThumbnailChatSubmit()}
-                    disabled={isChatAgentStreaming || isGenerating ? false : !chatDraft.trim()}
-                    aria-label={isChatAgentStreaming ? "채팅 스트림 중단" : isGenerating ? "썸네일 생성 중단" : "요구사항 채팅 반영"}
-                    data-thumbnail-chat-submit={isChatAgentStreaming || isGenerating ? undefined : "true"}
-                    data-thumbnail-chat-cancel={isChatAgentStreaming ? "true" : undefined}
-                    data-thumbnail-generation-cancel={isGenerating ? "true" : undefined}
-                  >
-                    {isChatAgentStreaming || isGenerating ? (
-                      <>
-                        <Square className="h-4 w-4" />
-                        <span className="text-xs">{isGenerating ? "생성 중단" : "중단"}</span>
-                      </>
-                    ) : (
-                      <Send className="h-4 w-4" />
-                    )}
-                  </Button>
+                <div
+                  className="rounded-3xl border border-border/60 bg-background p-2 shadow-sm"
+                  data-thumbnail-chat-composer="true"
+                  data-thumbnail-chat-composer-shell="storyboard-like"
+                >
+                  <div className="flex items-end gap-2" data-thumbnail-chat-composer-inner="true">
+                    <Textarea
+                      id="thumbnail-chat-composer"
+                      value={chatDraft}
+                      onChange={(event) => handleChatDraftChange(event.target.value)}
+                      onCompositionStart={handleThumbnailChatCompositionStart}
+                      onCompositionEnd={handleThumbnailChatCompositionEnd}
+                      onKeyDown={handleThumbnailChatKeyDown}
+                      aria-describedby="thumbnail-chat-keyboard-hint"
+                      disabled={isChatAgentStreaming || isGenerating}
+                      className="max-h-24 min-h-10 resize-none border-0 bg-transparent p-2 text-sm shadow-none focus-visible:ring-0"
+                      placeholder="예: 제육볶음 먹방 썸네일 생성해줘 · 문구 크게 · 참고 인물 이미지는 파일로 추가해줘 · PNG 저장해줘"
+                      data-thumbnail-chat-ime-safe="true"
+                    />
+                    <Button
+                      type="button"
+                      size={isChatAgentStreaming || isGenerating ? "sm" : "icon"}
+                      className={`h-9 shrink-0 rounded-full ${isChatAgentStreaming || isGenerating ? "px-3" : "w-9"}`}
+                      onClick={isChatAgentStreaming ? abortThumbnailChatWork : isGenerating ? abortThumbnailGeneration : () => void handleThumbnailChatSubmit()}
+                      disabled={isChatAgentStreaming || isGenerating ? false : !chatDraft.trim()}
+                      aria-label={isChatAgentStreaming ? "채팅 스트림 중단" : isGenerating ? "썸네일 생성 중단" : "요구사항 채팅 반영"}
+                      data-thumbnail-chat-submit={isChatAgentStreaming || isGenerating ? undefined : "true"}
+                      data-thumbnail-chat-cancel={isChatAgentStreaming ? "true" : undefined}
+                      data-thumbnail-generation-cancel={isGenerating ? "true" : undefined}
+                    >
+                      {isChatAgentStreaming || isGenerating ? (
+                        <>
+                          <Square className="h-4 w-4" />
+                          <span className="text-xs">{isGenerating ? "생성 중단" : "중단"}</span>
+                        </>
+                      ) : (
+                        <Send className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
                 <input
                   ref={referenceFileInputRef}
