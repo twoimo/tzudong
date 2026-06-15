@@ -2543,16 +2543,26 @@ printf '%s' '{"mode":"command","runtime":"codex_cli_oauth","concept":"chat conce
     expect(componentSource).toContain('id: "host-face"');
     expect(componentSource).toContain('id: "food-hero"');
     expect(componentSource).toContain('id: "default-food-hero"');
-    expect(componentSource).toContain("x: 740, y: 32, width: 500, height: 352, weight: 16");
-    expect(componentSource).toContain("x: 560, y: 52, width: 620, height: 344, weight: 12");
+    expect(componentSource).toContain("x: 830, y: 32, width: 410, height: 352, weight: 20");
+    expect(componentSource).toContain("x: 872, y: 58, width: 288, height: 272, weight: 24");
     expect(componentSource).toContain("x: 420, y: 382, width: 760, height: 300, weight: 9");
-    expect(componentSource).toContain("headline: [\n    { x: 300, y: 354");
-    expect(componentSource).toContain("subHeadline: [\n    { x: 252, y: 142");
+    expect(componentSource).toContain("TEXT_OCCLUSION_HOST_ZONE_IDS");
+    expect(componentSource).toContain("TEXT_OCCLUSION_HARD_FACE_PENALTY = 1_000_000");
+    expect(componentSource).toContain("TEXT_OCCLUSION_ROLE_ZONE_WEIGHT_MULTIPLIERS");
+    expect(componentSource).toContain("headline: [\n    { x: 640, y: 548");
+    expect(componentSource).toContain("subHeadline: [\n    { x: 650, y: 168");
     expect(componentSource).not.toContain('x: 1090, y: 126, label: "benchmark-right-top"');
     expect(componentSource).not.toContain('x: 1052, y: 126, label: "legacy-fallback"');
+    expect(componentSource).toContain("function createBundledThumbnailPreviewTextLayers()");
+    expect(componentSource).toContain("content: BUNDLED_THUMBNAIL_PREVIEW_HEADLINE,\n        x: 640,\n        y: 548");
+    expect(componentSource).toContain("content: BUNDLED_THUMBNAIL_PREVIEW_SUB_HEADLINE,\n        x: 650,\n        y: 168");
+    expect(componentSource).not.toContain("content: BUNDLED_THUMBNAIL_PREVIEW_SUB_HEADLINE,\n        x: 990,\n        y: 170");
+    expect(componentSource).toContain("const preferredCenterX = role === \"subHeadline\" ? 650 : 340");
     expect(componentSource).toContain("selectNonOccludingTextPlacement");
     expect(componentSource).toContain("clampTextPlacementIntoCanvasSafeArea");
     expect(componentSource).toContain("scoreTextPlacementOverlap");
+    expect(componentSource).toContain("scoreTextPlacementOverlap(role, placement.frame, protectedZones)");
+    expect(componentSource).toContain("scoreTextPlacementPreference(role, candidate, placement.frame)");
     expect(componentSource).toContain("if (score < best.score)");
     expect(componentSource).toContain("createGeneratedTextProtectedZone");
     expect(componentSource).toContain('"generated-headline"');
@@ -2569,6 +2579,30 @@ printf '%s' '{"mode":"command","runtime":"codex_cli_oauth","concept":"chat conce
     expect(componentSource).toContain("frame.x < TEXT_OCCLUSION_SAFE_AREA.x");
     expect(componentSource).toContain("frame.y < TEXT_OCCLUSION_SAFE_AREA.y");
     expect(componentSource).toContain("return [...generatedLayers, ...preservedCustomLayers].slice(0, 8);");
+  });
+
+  test("normalizes generated chat result text through face-safe layout without touching manual edit paths", () => {
+    const componentSource = readFileSync(new URL("../components/admin/thumbnail-generator/AdminYoutubeThumbnailGenerator.tsx", import.meta.url), "utf8");
+
+    expect(componentSource).toContain("normalizeGeneratedLayout?: boolean");
+    expect(componentSource).toContain("const nextLayers = options.normalizeGeneratedLayout");
+    expect(componentSource).toContain("createTextLayersWithGenerationLayout(\n        patchedLayers,");
+    expect(componentSource).toContain("normalizeGeneratedLayout: Boolean(nextAgentResult.shouldGenerate || shouldPreferSubmittedPromptCopy)");
+    expect(componentSource).toContain("function updateTextLayer(");
+    const updateTextLayerStart = componentSource.indexOf("function updateTextLayer(");
+    const updateTextLayerEnd = componentSource.indexOf("\n\n  function applyChatRequirementToCanvas", updateTextLayerStart);
+    const updateTextLayerBody = componentSource.slice(
+      updateTextLayerStart,
+      updateTextLayerEnd,
+    );
+    expect(updateTextLayerBody).not.toContain("createTextLayersWithGenerationLayout");
+    const transformStart = componentSource.indexOf("function handleTextTransformPointerDown");
+    const transformEnd = componentSource.indexOf("function runThumbnailGeneration", transformStart);
+    const transformBody = componentSource.slice(
+      transformStart,
+      transformEnd,
+    );
+    expect(transformBody).not.toContain("createTextLayersWithGenerationLayout");
   });
 
   test("auto-generates natural canvas copy from food generation prompts", async () => {
