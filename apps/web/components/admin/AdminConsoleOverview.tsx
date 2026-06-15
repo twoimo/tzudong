@@ -64,7 +64,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AdminStoryboardGenerator } from "@/components/admin/storyboard/AdminStoryboardGenerator";
 import {
   Popover,
   PopoverContent,
@@ -635,6 +634,17 @@ const AdminUsersModule = dynamic(
   () => import("@/components/admin/AdminUsersPanel"),
   {
     ssr: false,
+  },
+);
+
+const AdminStoryboardGenerator = dynamic(
+  () =>
+    import("@/components/admin/storyboard/AdminStoryboardGenerator").then(
+      (module) => module.AdminStoryboardGenerator,
+    ),
+  {
+    ssr: false,
+    loading: () => <AdminStoryboardModuleLoadingSkeleton />,
   },
 );
 
@@ -8459,6 +8469,120 @@ function AdminConsoleCanvasSkeleton() {
   );
 }
 
+function AdminStoryboardModuleLoadingSkeleton() {
+  const loadingCutNos = [1, 2, 3, 4] as const;
+
+  return (
+    <section
+      className="flex h-full min-h-[640px] min-w-0 flex-col overflow-hidden bg-background p-3 md:min-h-0"
+      data-storyboard-module-loading="true"
+      data-storyboard-module-loading-layout="page-shell"
+      role="status"
+      aria-busy="true"
+      aria-label="스토리보드 생성 화면 로딩 중"
+    >
+      <div className="grid h-full min-h-0 grid-cols-1 grid-rows-[minmax(0,1fr)_auto] gap-3 overflow-hidden xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] xl:grid-rows-1">
+        <Card
+          className="order-1 flex min-h-0 flex-col overflow-hidden border-0 bg-background shadow-none"
+          aria-label="스토리보드 캔버스 준비 영역"
+          data-storyboard-module-loading-canvas="true"
+        >
+          <CardHeader className="flex shrink-0 flex-row items-center gap-2 p-2 pb-1">
+            <div
+              className="h-8 w-28 rounded-full bg-muted/70"
+              aria-hidden="true"
+              data-storyboard-module-loading-toolbar="true"
+            />
+            <div className="ml-auto flex min-w-0 flex-nowrap items-center gap-1.5 overflow-hidden pb-1">
+              <div className="h-8 w-24 shrink-0 rounded-md border border-border/70 bg-background" />
+              <div className="h-8 w-20 shrink-0 rounded-md border border-border/70 bg-background" />
+              <div className="h-8 w-24 shrink-0 rounded-md bg-muted/70" />
+            </div>
+          </CardHeader>
+          <CardContent className="min-h-0 flex-1 p-3 pt-1">
+            <div
+              className="grid h-full min-h-[420px] grid-cols-1 gap-2 overflow-hidden sm:grid-cols-2"
+              data-storyboard-module-loading-frame-grid="true"
+              aria-hidden="true"
+            >
+              {loadingCutNos.map((cutNo) => (
+                <div
+                  key={`storyboard-loading-cut-${cutNo}`}
+                  className="relative min-h-[190px] overflow-hidden rounded-2xl bg-gradient-to-br from-slate-100 via-slate-200/85 to-slate-400/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] dark:from-slate-800/72 dark:via-slate-700/58 dark:to-slate-600/52"
+                  data-storyboard-module-loading-cut={String(cutNo)}
+                >
+                  <span className="absolute left-3 top-3 z-10 h-5 w-14 rounded-full bg-slate-700/70" />
+                  <span className="absolute right-3 top-3 z-10 h-6 w-12 rounded-full bg-white/80" />
+                  <span
+                    className="absolute inset-0 bg-gradient-to-br from-white/58 via-slate-200/28 to-slate-500/24"
+                    aria-hidden="true"
+                    data-storyboard-module-loading-glass="true"
+                  />
+                  <span
+                    className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/70 to-transparent blur-sm [animation:storyboard-glass-shimmer_1.35s_ease-in-out_infinite]"
+                    aria-hidden="true"
+                    data-storyboard-module-loading-shimmer="true"
+                  />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card
+          className="order-2 flex min-h-[360px] flex-col overflow-hidden border border-border/70 bg-background shadow-none xl:min-h-0"
+          aria-label="스토리보드 도우미 준비 영역"
+          data-storyboard-module-loading-chat-shell="static"
+        >
+          <CardHeader className="shrink-0 space-y-1 p-3 pb-2">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground">
+                  <MessageSquareText className="h-4 w-4" aria-hidden="true" />
+                </span>
+                <div className="h-4 w-28 rounded-full bg-muted/80" />
+              </div>
+              <div className="h-6 w-14 shrink-0 rounded-full border border-border/70 bg-background" />
+            </div>
+          </CardHeader>
+          <CardContent className="flex min-h-0 flex-1 flex-col p-3 pt-0">
+            <div
+              className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-border/70 bg-gradient-to-b from-background/95 to-muted/30 shadow-sm"
+              data-storyboard-module-loading-chat="true"
+            >
+              <div className="min-h-0 flex-1 space-y-3 overflow-hidden p-3">
+                <div className="max-w-[86%] space-y-2 rounded-2xl rounded-bl-md bg-background px-3 py-3 shadow-sm ring-1 ring-border/60">
+                  <div className="h-3 w-44 max-w-full rounded-full bg-muted-foreground/14" />
+                  <div className="h-3 w-64 max-w-full rounded-full bg-muted-foreground/12" />
+                </div>
+                <div className="ml-auto max-w-[72%] rounded-2xl rounded-br-md bg-muted/70 px-3 py-3">
+                  <div className="h-3 w-52 max-w-full rounded-full bg-muted-foreground/16" />
+                </div>
+                <div className="max-w-[82%] space-y-2 rounded-2xl rounded-bl-md border border-border/60 bg-muted/45 px-3 py-3">
+                  <div className="h-3 w-48 max-w-full rounded-full bg-muted-foreground/16" />
+                  <div className="h-3 w-32 max-w-full rounded-full bg-muted-foreground/12" />
+                </div>
+              </div>
+              <div
+                className="shrink-0 border-t border-border/70 bg-background/80 p-2.5"
+                data-storyboard-module-loading-composer="true"
+              >
+                <div className="flex items-center gap-2 rounded-full border border-border/70 bg-background px-3 py-2">
+                  <div className="h-3 flex-1 rounded-full bg-muted-foreground/12" />
+                  <div className="h-9 w-9 shrink-0 rounded-full bg-muted/80" />
+                </div>
+              </div>
+            </div>
+            <span className="sr-only">
+              스토리보드 캔버스와 도우미 영역을 준비하고 있습니다.
+            </span>
+          </CardContent>
+        </Card>
+      </div>
+    </section>
+  );
+}
+
 function AdminYoutubeThumbnailModuleLoadingSkeleton() {
   return (
     <section
@@ -8974,11 +9098,13 @@ export function AdminConsoleOverview({
           <p className="sr-only" aria-live="polite">
             {activeModuleLabel} 작업 화면으로 전환됨
           </p>
-          {isShellBootstrapping && activeModuleId !== "storyboard" ? (
+          {isShellBootstrapping ? (
             activeModuleId === "overview" ? (
               <AdminDashboardManagementSkeleton />
             ) : activeModuleId === "youtube-thumbnail-generator" ? (
               <AdminYoutubeThumbnailModuleLoadingSkeleton />
+            ) : activeModuleId === "storyboard" ? (
+              <AdminStoryboardModuleLoadingSkeleton />
             ) : (
               <AdminConsoleCanvasSkeleton />
             )
