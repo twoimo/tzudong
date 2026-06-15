@@ -321,10 +321,16 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       'data-admin-console-content-loading="true"',
     );
-    expect(consoleSource).toContain(
+    expect(consoleSource).not.toContain(
       "function AdminStoryboardModuleLoadingSkeleton()",
     );
     expect(consoleSource).toContain(
+      'import { AdminStoryboardGenerator } from "@/components/admin/storyboard/AdminStoryboardGenerator";',
+    );
+    expect(consoleSource).toContain(
+      'import type { StoryboardInitialResult } from "@/lib/admin/storyboard/initial-result";',
+    );
+    expect(consoleSource).not.toContain(
       "loading: () => <AdminStoryboardModuleLoadingSkeleton />",
     );
     expect(consoleSource).toContain(
@@ -333,34 +339,42 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       "loading: () => <AdminYoutubeThumbnailModuleLoadingSkeleton />",
     );
-    expect(consoleSource).toContain('activeModuleId === "storyboard" ? (');
-    expect(consoleSource).toContain("<AdminStoryboardModuleLoadingSkeleton />");
+    expect(consoleSource).toContain(
+      'isShellBootstrapping && activeModuleId !== "storyboard"',
+    );
+    expect(consoleSource).not.toContain(
+      "<AdminStoryboardModuleLoadingSkeleton />",
+    );
+    expect(consoleSource).toContain("initialStoryboardResult={initialStoryboardResult}");
     expect(consoleSource).toContain(
       'activeModuleId === "youtube-thumbnail-generator" ? (',
     );
     expect(consoleSource).toContain(
       "<AdminYoutubeThumbnailModuleLoadingSkeleton />",
     );
-    expect(consoleSource).toContain('data-storyboard-module-loading="true"');
-    expect(consoleSource).toContain(
-      'data-storyboard-module-loading-layout="page-shell"',
+    expect(consoleSource).not.toContain('data-storyboard-module-loading="true"');
+    expect(consoleSource).not.toContain(
+      'data-storyboard-module-loading-layout="canvas-only"',
     );
-    expect(consoleSource).toContain(
+    expect(consoleSource).not.toContain(
       'data-storyboard-module-loading-chat="true"',
     );
-    expect(consoleSource).toContain(
+    expect(consoleSource).not.toContain(
+      'data-storyboard-module-loading-chat-shell="static"',
+    );
+    expect(consoleSource).not.toContain(
       'data-storyboard-module-loading-canvas="true"',
     );
-    expect(consoleSource).toContain(
+    expect(consoleSource).not.toContain(
       'data-storyboard-module-loading-canvas-blank="true"',
     );
     expect(consoleSource).not.toContain(
       'data-storyboard-module-loading-frame-grid="true"',
     );
-    expect(consoleSource).toContain(
+    expect(consoleSource).not.toContain(
       'data-storyboard-module-loading-composer="true"',
     );
-    expect(consoleSource).toContain(
+    expect(consoleSource).not.toContain(
       'data-storyboard-module-loading-chat-actions="outside-bubble"',
     );
     expect(consoleSource).not.toContain(
@@ -374,10 +388,16 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-thumbnail-module-loading-layout="page-shell"',
     );
     expect(consoleSource).toContain(
+      'data-thumbnail-module-loading-parity="storyboard-shell"',
+    );
+    expect(consoleSource).toContain(
       'data-thumbnail-module-loading-canvas="true"',
     );
     expect(consoleSource).toContain(
       'data-thumbnail-module-loading-canvas-frame="true"',
+    );
+    expect(consoleSource).toContain(
+      'data-thumbnail-module-loading-canvas-aspect="16:9"',
     );
     expect(consoleSource).toContain(
       'data-thumbnail-module-loading-canvas-glass="true"',
@@ -389,10 +409,41 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-thumbnail-module-loading-chat="true"',
     );
     expect(consoleSource).toContain(
+      'data-thumbnail-module-loading-chat-tone="neutral-storyboard"',
+    );
+    expect(consoleSource).toContain(
+      'data-thumbnail-module-loading-chat-shell="static"',
+    );
+    expect(consoleSource).toContain(
+      'data-thumbnail-module-loading-chat-log="true"',
+    );
+    expect(consoleSource).toContain(
+      'data-thumbnail-module-loading-chat-bubble="guide"',
+    );
+    expect(consoleSource).toContain(
+      'data-thumbnail-module-loading-chat-bubble="assistant"',
+    );
+    expect(consoleSource).toContain(
       'data-thumbnail-module-loading-composer="true"',
     );
     expect(consoleSource).toContain(
+      'data-thumbnail-module-loading-chat-actions="outside-bubble"',
+    );
+    expect(consoleSource).toContain(
       'data-thumbnail-module-loading-shimmer="true"',
+    );
+    const thumbnailLoadingSkeletonSource =
+      consoleSource.split("function AdminYoutubeThumbnailModuleLoadingSkeleton()")[1]?.split("export function AdminConsoleOverview")[0] ?? "";
+    expect(thumbnailLoadingSkeletonSource).not.toContain("bg-primary/10");
+    expect(thumbnailLoadingSkeletonSource).not.toContain("bg-primary/15");
+    expect(thumbnailLoadingSkeletonSource).not.toContain("bg-primary/18");
+    expect(thumbnailLoadingSkeletonSource).not.toContain("bg-sky-500/15");
+    expect(thumbnailLoadingSkeletonSource).not.toContain("bg-sky-500/10");
+    expect(consoleSource).not.toContain(
+      'className="flex h-full min-h-[640px] min-w-0 flex-col overflow-hidden bg-muted/20 p-3 md:min-h-0"',
+    );
+    expect(consoleSource).not.toContain(
+      "bg-slate-200/80 text-slate-600",
     );
     expect(consoleSource).not.toContain(
       "absolute right-[7%] top-[12%] h-[30%] w-[22%] rounded-full",
@@ -416,7 +467,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       "const isShellBootstrapping = authLoading || !hasHydrated;",
     );
-    expect(consoleSource).toContain("{isShellBootstrapping ? (");
+    expect(consoleSource).toContain(
+      '{isShellBootstrapping && activeModuleId !== "storyboard" ? (',
+    );
     expect(consoleSource).toContain(
       "function AdminDashboardManagementSkeleton()",
     );
@@ -1996,7 +2049,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     const adminPageSource = source("app/admin/page.tsx");
     const appGlobalsSource = source("app/app-globals.css");
 
-    expect(adminPageSource).toContain("<AdminConsoleOverview />");
+    expect(adminPageSource).toContain("<AdminConsoleOverview initialStoryboardResult={initialStoryboardResult} />");
     for (const moduleId of [
       '"restaurants"',
       '"submissions"',
@@ -2305,6 +2358,34 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-thumbnail-chat-message-bubble="true"',
     );
     expect(componentSource).toContain(
+      'data-thumbnail-chat-message-actions="true"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-chat-message-actions-placement="outside-bubble"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-chat-guide-button="true"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-chat-guide-example="true"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-chat-message-action="guide"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-chat-message-action="example"',
+    );
+    expect(componentSource).toContain("handleThumbnailUsageGuideClick");
+    expect(componentSource).toContain("handleThumbnailGuidedExampleClick");
+    expect(componentSource).toContain("THUMBNAIL_USAGE_GUIDE_TEXT");
+    expect(componentSource).toContain(
+      "예시를 화면에 넣었어요",
+    );
+    expect(componentSource).toContain(
+      "setResult(BUNDLED_THUMBNAIL_PREVIEW_RESULT);",
+    );
+    expect(componentSource).toContain("createBundledThumbnailPreviewTextLayers()");
+    expect(componentSource).toContain(
       'className="whitespace-pre-wrap break-keep [overflow-wrap:anywhere]"',
     );
     expect(componentSource).toContain("요청을 정리하는 중이에요...");
@@ -2362,6 +2443,27 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "한글 조합 중 Enter는 전송하지 않고, 조합이 끝난 뒤 Enter로 전송합니다.",
     );
     expect(componentSource).toContain("lastCanvasActionLabel");
+    expect(componentSource).toContain(
+      "const activeLayerIdRef = useRef<string | null>(null);",
+    );
+    expect(componentSource).toContain(
+      "const [activeLayerId, setActiveLayerId] = useState<string | null>(null);",
+    );
+    expect(componentSource).toContain(
+      "const [lastCanvasActionLabel, setLastCanvasActionLabel] = useState<string | null>(null);",
+    );
+    expect(componentSource).toContain(
+      "activeLayerId ? textLayers.find((layer) => layer.id === activeLayerId) ?? null : null",
+    );
+    expect(componentSource).not.toContain(
+      'useState(DEFAULT_TEXT_LAYERS[0]?.id ?? "headline")',
+    );
+    expect(componentSource).not.toContain(
+      'useState<string | null>("메인 문구 선택됨")',
+    );
+    expect(componentSource).not.toContain(
+      "textLayers.find((item) => item.id === activeLayerId) ?? textLayers[0]",
+    );
     expect(componentSource).toContain("getCanvasLayerDisplayName");
     expect(componentSource).toContain("getCanvasContextPrompt");
     expect(componentSource).toContain("useCanvasContextInChat");
@@ -2431,16 +2533,33 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(componentSource).toContain("getAbortNotice");
     expect(componentSource).toContain("getThumbnailRealDataStatusSummary");
     expect(componentSource).toContain("getThumbnailResultSourceLabel");
-    expect(componentSource).toContain("가짜 예시 이미지는 실제 결과로 보지 않고");
+    expect(componentSource).toContain("formatThumbnailAssistantDisplayText");
+    expect(componentSource).toContain("THUMBNAIL_CHAT_INTERNAL_JARGON_PATTERN");
+    expect(componentSource).toContain("THUMBNAIL_CHAT_SIMPLE_FALLBACK_MESSAGE");
+    expect(componentSource).toContain("backend[-\\s]?agent");
+    expect(componentSource).toContain("provider|provenance|fallback");
+    expect(componentSource).toContain("reranker|embedding|LangGraph");
+    expect(componentSource).toContain("exact|allowlist|runtime|diagnostics");
+    expect(componentSource).toContain("더 자세히 보고 싶으면 “상태”라고 입력하세요.");
     expect(componentSource).toContain("현재 상태를 쉽게 정리했어요");
+    expect(componentSource).toContain("확인된 이미지일 때만 실제 결과로 표시합니다.");
+    expect(componentSource).toContain("formatThumbnailBackendAgentStatus");
+    expect(componentSource).toContain("도우미 준비됨");
+    expect(componentSource).toContain("도우미 준비 필요");
+    expect(componentSource).toContain("formatThumbnailHistoryStatus");
+    expect(componentSource).toContain("저장된 결과");
+    expect(componentSource).not.toContain("최근 결과 ${formatThumbnailModelProvenance");
+    expect(componentSource).toContain("formatThumbnailRetrievalSummaryForBeginner");
+    expect(componentSource).toContain("기존 썸네일");
+    expect(componentSource).toContain("골라 참고했습니다");
     expect(componentSource).toContain(
       "formatThumbnailGenerationCompletionSummary",
     );
-    expect(componentSource).toContain("쯔양님 얼굴과 음식이 문구에 가려지지 않는지 확인한 뒤 필요하면 PNG로 저장하세요");
-    expect(componentSource).toContain("역할별 확인: 쯔양님은 얼굴과 음식이 잘 보이는지");
-    expect(componentSource).toContain("PD님은 제목이 후킹되는지");
-    expect(componentSource).toContain("매니저님은 저장 전 검수 상태를");
-    expect(componentSource).toContain("편집자는 문구 위치를 확인하면 됩니다");
+    expect(componentSource).toContain("얼굴, 음식, 문구가 잘 보이면 PNG로 저장하세요.");
+    expect(componentSource).not.toContain("역할별 확인: 쯔양님은 얼굴과 음식이 잘 보이는지");
+    expect(componentSource).not.toContain("PD님은 제목이 후킹되는지");
+    expect(componentSource).not.toContain("매니저님은 저장 전 검수 상태를");
+    expect(componentSource).not.toContain("편집자는 문구 위치를 확인하면 됩니다");
     expect(componentSource).toContain("signal: controller.signal");
     expect(componentSource).toContain("extractThumbnailChatSseEvents");
     expect(componentSource).toContain("isThumbnailChatAgentResult");
@@ -2727,9 +2846,11 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(componentSource).not.toContain('title: "모델 준비 필요"');
     expect(componentSource).not.toContain('title: "안전 미리보기로 전환"');
-    expect(componentSource).toContain('title: "실제 이미지 모델 준비 필요"');
-    expect(componentSource).toContain("실제 이미지 모델 준비 필요 ·");
-    expect(componentSource).toContain(
+    expect(componentSource).not.toContain('title: "실제 이미지 모델 준비 필요"');
+    expect(componentSource).toContain('title: "이미지 만들기 준비 필요"');
+    expect(componentSource).toContain("이미지 만들기 준비가 아직 안 됐어요.");
+    expect(componentSource).not.toContain("실제 이미지 모델 준비 필요 ·");
+    expect(componentSource).not.toContain(
       "현재 선택한 실제 이미지 모델을 실행할 수 없습니다:",
     );
     expect(runThumbnailGenerationBody.indexOf("if (!providerAvailability.available")).toBeGreaterThan(-1);
@@ -3144,7 +3265,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(historySource).toContain("readLatestExistingGeneratedPreviewRun");
     expect(historySource).toContain("THUMBNAIL_HISTORY_E2E_RUNS_DIR");
     expect(historySource).toContain("THUMBNAIL_HISTORY_BUNDLED_PREVIEW_IMAGE");
-    expect(historySource).toContain("THUMBNAIL_HISTORY_MIN_PREVIEW_IMAGE_BYTES");
+    expect(historySource).toContain("hasTzuyangHostPresenceProof");
+    expect(historySource).toContain("bundled-preview-visible-host");
+    expect(historySource).toContain("Never promote those arbitrary");
     expect(historySource).not.toContain("/qa-history/youtube-thumbnail-generator/generated/bundled/youtube-thumbnail-food-only-preview.png");
     expect(historySource).toContain("/images/admin/youtube-thumbnail-generated-example-preview.png");
     expect(promptSource).toContain("SPECIFIC_CREATOR_REFERENCE_REQUIRED");
@@ -3214,7 +3337,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(componentSource).toContain('const [providerId, setProviderId] = useState<ProviderId>("local-codex")');
     expect(componentSource).toContain('model: "gpt-image-2"');
     expect(componentSource).toContain('modelProvenance: "exact"');
-    expect(componentSource).toContain("현재 캔버스에는 아직 확인된 실제 생성 이미지가 없습니다. 확인된 결과만 실제 생성 결과로 표시합니다.");
+    expect(componentSource).toContain("현재 화면: 아직 만든 이미지 없음");
+    expect(componentSource).toContain("확인된 이미지일 때만 실제 결과로 표시합니다.");
     expect(componentSource).not.toContain('data-thumbnail-operator-readiness="true"');
     expect(componentSource).not.toContain('data-thumbnail-operator-readiness-shell="true"');
     expect(componentSource).not.toContain("data-thumbnail-strict-model-blocked");
@@ -3552,25 +3676,27 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).toContain(
       'data-storyboard-chat-settings-panel="true"',
     );
-    expect(storyboardSource).toContain(
+    expect(storyboardSource).toContain("이미지 모델 API 키");
+    expect(storyboardSource).toContain("OpenAI API 키 · gpt-image-2 전용");
+    expect(storyboardSource).not.toContain(
       'data-storyboard-chat-settings-source-trace="true"',
     );
-    expect(storyboardSource).toContain(
+    expect(storyboardSource).not.toContain(
       'data-storyboard-chat-settings-image-command="true"',
     );
-    expect(storyboardSource).toContain(
+    expect(storyboardSource).not.toContain(
       'data-storyboard-image-provider-readiness="true"',
     );
     expect(storyboardSource).toContain(
       "data-storyboard-image-provider-status={",
     );
-    expect(storyboardSource).toContain(
+    expect(storyboardSource).not.toContain(
       'data-storyboard-image-provider-guidance="true"',
     );
-    expect(storyboardSource).toContain(
+    expect(storyboardSource).not.toContain(
       'data-storyboard-image-provider-refresh="true"',
     );
-    expect(storyboardSource).toContain(
+    expect(storyboardSource).not.toContain(
       'data-storyboard-image-provider-model="true"',
     );
     expect(storyboardSource).toContain(
@@ -3593,7 +3719,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "guideUnavailableStoryboardImageGeneration",
     );
     expect(storyboardSource).toContain("!isStoryboardImageProviderAvailable");
-    expect(storyboardSource).toContain("이미지 생성 준비 상태");
+    expect(storyboardSource).not.toContain("이미지 생성 준비 상태");
     expect(storyboardSource).toContain("이미지 생성 설정 필요");
     expect(imageRouteSource).toContain("StoryboardImageGenerationError");
     expect(imageRouteSource).toContain("normalizeRouteError(error)");
@@ -3606,9 +3732,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(imageProviderSource).toContain("'provider_unavailable'");
     expect(imageProviderSource).toContain("backend provenance");
-    expect(storyboardSource).toContain("STORYBOARD_IMAGE_PROVIDER_MODEL_ENV");
-    expect(storyboardSource).toContain("STORYBOARD_IMAGE_PROVIDER_COMMAND_ENV");
-    expect(storyboardSource).toContain(
+    expect(storyboardSource).not.toContain("STORYBOARD_IMAGE_PROVIDER_MODEL_ENV");
+    expect(storyboardSource).not.toContain("STORYBOARD_IMAGE_PROVIDER_COMMAND_ENV");
+    expect(storyboardSource).not.toContain(
       "STORYBOARD_IMAGE_PROVIDER_COMMAND_PLACEHOLDER",
     );
     expect(imageReadinessSource).toContain(
@@ -3631,19 +3757,19 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(imageReadinessSource).toContain("provider?.available === true");
     expect(imageReadinessSource).toContain("blocked_provenance");
-    expect(storyboardSource).toContain(
+    expect(storyboardSource).not.toContain(
       'data-storyboard-chat-settings-reset="true"',
     );
-    expect(storyboardSource).toContain(
+    expect(storyboardSource).not.toContain(
       'data-storyboard-user-perspective-readiness="true"',
     );
-    expect(storyboardSource).toContain(
+    expect(storyboardSource).not.toContain(
       'data-storyboard-visual-safety-readiness="true"',
     );
-    expect(storyboardSource).toContain(
+    expect(storyboardSource).not.toContain(
       "data-storyboard-user-perspective-role={item.id}",
     );
-    expect(storyboardSource).toContain(
+    expect(storyboardSource).not.toContain(
       'data-storyboard-omitted-scene-count="true"',
     );
     expect(storyboardSource).toContain("StoryboardUserPerspectiveRoleId");
@@ -3725,15 +3851,15 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(storyboardSource).toContain("영상 흐름 반영");
     expect(storyboardSource).toContain("예시 구성");
-    expect(storyboardSource).toContain("storyboardRealDataTrace.sourceText");
-    expect(storyboardSource).toContain("storyboardRealDataTrace.backendText");
+    expect(storyboardSource).not.toContain("storyboardRealDataTrace.sourceText");
+    expect(storyboardSource).not.toContain("storyboardRealDataTrace.backendText");
     expect(storyboardSource).not.toContain("trace.summaryText");
     expect(storyboardSource).not.toContain("확인한 자료");
     expect(storyboardSource).not.toContain("활용 자료");
     expect(storyboardSource).not.toContain("반응 강도");
     expect(storyboardSource).not.toContain("생성시각");
     expect(storyboardSource).not.toContain("생성시각 ${result.generatedAt}");
-    expect(storyboardSource).toContain("formatStoryboardRealDataTrace(result)");
+    expect(storyboardSource).toContain("const trace = formatStoryboardRealDataTrace(result)");
     expect(storyboardSource).not.toContain(
       "formatStoryboardRealDataTrace(generated)",
     );
@@ -3749,9 +3875,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).toContain(
       '"/storyboard-seed/latest-real-data.json"',
     );
-    expect(storyboardSource).toContain(
-      'type StoryboardInitialResultSource = "latest-history" | "shared-seed"',
-    );
+    expect(storyboardSource).toContain("StoryboardInitialResultSource");
     expect(storyboardSource).toContain("fetchStoryboardInitialResult(");
     expect(storyboardSource).toContain(
       "trustedFirstPageSceneCount >= STORYBOARD_FRAMES_PER_PAGE",
@@ -3865,9 +3989,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).toContain(
       "STORYBOARD_PDF_FLOW_CHECK_DEFINITIONS",
     );
-    expect(storyboardSource).toContain('data-storyboard-pdf-flow-trace="true"');
-    expect(storyboardSource).toContain("data-storyboard-pdf-flow-check={check.id}");
-    expect(storyboardSource).toContain(
+    expect(storyboardSource).not.toContain('data-storyboard-pdf-flow-trace="true"');
+    expect(storyboardSource).not.toContain("data-storyboard-pdf-flow-check={check.id}");
+    expect(storyboardSource).not.toContain(
       "data-storyboard-pdf-flow-check-status",
     );
     expect(storyboardSource).toContain("STORYBOARD_PDF_FLOW_SEQUENCE_TEXT");
@@ -3916,11 +4040,11 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-storyboard-page-script-summary="true"',
     );
     expect(storyboardSource).not.toContain("formatStoryboardPageScriptSummary");
-    expect(storyboardSource).toContain("요청 정리");
-    expect(storyboardSource).toContain("자료 확인");
-    expect(storyboardSource).toContain("안전 검토");
-    expect(storyboardSource).toContain("컷 구성");
-    expect(storyboardSource).toContain("선택 이유");
+    expect(storyboardSource).toContain("formatStoryboardAssistantDisplayText");
+    expect(storyboardSource).toContain("더 자세히 보고 싶으면 “과정”이라고 입력하세요.");
+    expect(storyboardSource).toContain("준비된 스토리보드를 불러왔어요.");
+    expect(storyboardSource).toContain("컷마다 오디오, 자막, 촬영 포인트를 나눠서 볼 수 있어요.");
+    expect(storyboardSource).toContain("첫 컷은 가게 앞 인트로부터 시작해요.");
     expect(storyboardSource).toContain("왜\\s*(?:이렇게");
     expect(storyboardSource).toContain("어떻게");
     expect(storyboardSource).toContain(
@@ -3983,8 +4107,11 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).toContain(
       "무이미지/미검증 컷 ${omittedSceneCount}개 제외",
     );
-    expect(storyboardSource).toContain(
+    expect(storyboardSource).not.toContain(
       "data-storyboard-image-empty-state={",
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-empty-canvas="true"',
     );
     expect(imageTrustSource).toContain("isTrustedStoryboardGeneratedImage");
     expect(imageTrustSource).toContain("countTrustedStoryboardGeneratedImages");
@@ -4060,9 +4187,23 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "handleStoryboardGuidedExampleGenerate",
     );
     expect(storyboardSource).toContain(
-      "스토리보드와 첫 페이지 이미지를 함께 만들고 있어요",
+      "스토리보드와 전체 CUT 이미지를 함께 만들고 있어요",
     );
+    expect(storyboardSource).toContain("handleGenerateAllStoryboardImagesForResult");
+    expect(storyboardSource).toContain("const targetScenes = generated.storyboard.scenes");
+    expect(storyboardSource).toContain('scope: "all"');
     expect(storyboardSource).toContain("sourceResult: generated");
+    expect(storyboardSource).toContain("if (generated) {");
+    expect(storyboardSource).toContain(
+      `await handleGenerateAllStoryboardImagesForResult(
+            generated,
+            assistantMessageId,`,
+    );
+    expect(storyboardSource).toContain(
+      `await handleGenerateAllStoryboardImagesForResult(
+            generated,
+            nextAssistantMessageId,`,
+    );
     expect(storyboardSource).toContain(
       "sourceResult?: StoryboardGenerationResult",
     );
@@ -4193,7 +4334,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).toContain(
       "getStoryboardVisibleFramePageForSceneNo(",
     );
-    expect(storyboardSource).toContain('scope?: "page" | "selected";');
+    expect(storyboardSource).toContain('scope?: "page" | "selected" | "all";');
     expect(storyboardSource).toContain("targetScenes?: StoryboardScene[]");
     expect(storyboardSource).toContain("selectedRealStoryboardScene");
     expect(storyboardSource).not.toContain(
@@ -4398,7 +4539,22 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).toContain('scene.captionIdea.split("·").slice(0, 2)');
     expect(storyboardSource).toContain("formatStoryboardFrameProductionNote");
     expect(storyboardSource).toContain("얼굴\\s*클로즈업|표정\\s*클로즈업");
-    expect(storyboardSource).toContain("각 CUT 이미지 위에는 바로 촬영할 수 있는 짧은 촬영 포인트");
+    expect(storyboardSource).toContain("컷마다 오디오, 자막, 촬영 포인트를 나눠서 볼 수 있어요.");
+    expect(storyboardSource).not.toContain(
+      "absolute inset-x-3 bottom-3 z-20 grid grid-cols-[58px_minmax(0,1fr)]",
+    );
+    const audioRowIndex = storyboardSource.indexOf(
+      'data-storyboard-frame-audio="true"',
+    );
+    const subtitleRowIndex = storyboardSource.indexOf(
+      'data-storyboard-frame-subtitle="true"',
+    );
+    const productionRowIndex = storyboardSource.indexOf(
+      'data-storyboard-frame-production-note="true"',
+    );
+    expect(audioRowIndex).toBeGreaterThan(-1);
+    expect(subtitleRowIndex).toBeGreaterThan(audioRowIndex);
+    expect(productionRowIndex).toBeGreaterThan(subtitleRowIndex);
     expect(storyboardSource).toContain("title={scene.hostBeat}");
     expect(storyboardSource).toContain("title={scene.captionIdea}");
     expect(storyboardSource).toContain("title={productionNote}");
@@ -4479,20 +4635,19 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).toContain('data-storyboard-frame-grid="true"');
     expect(storyboardSource).toContain("storyboardFrameScenes");
     expect(storyboardSource).toContain("STORYBOARD_FRAMES_PER_PAGE = 4");
-    expect(storyboardSource).toContain("isStoryboardResultSkeletonVisible");
+    expect(storyboardSource).not.toContain("isStoryboardResultSkeletonVisible");
     expect(storyboardSource).toContain("requestedCutCount");
     expect(storyboardSource).toContain("setStoryboardPage(0)");
     expect(storyboardSource).toContain(
-      "isStoryboardResultSkeletonVisible || !hasPreviousStoryboardPage",
+      "disabled={!hasPreviousStoryboardPage}",
     );
     expect(storyboardSource).toContain(
-      "isStoryboardResultSkeletonVisible || !hasNextStoryboardPage",
+      "disabled={!hasNextStoryboardPage}",
     );
+    expect(storyboardSource).toContain("isGenerating ||");
+    expect(storyboardSource).toContain("isGeneratingImages ||");
     expect(storyboardSource).toContain(
-      "disabled={isStoryboardResultSkeletonVisible || isGeneratingImages}",
-    );
-    expect(storyboardSource).toContain(
-      "disabled={isStoryboardResultSkeletonVisible}",
+      "disabled={isGenerating}",
     );
     expect(storyboardSource).toContain("activeStoryboardPageScenes");
     expect(storyboardSource).toContain("storyboardTotalPages");
@@ -4520,8 +4675,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(storyboardSource).toContain("현재 캔버스 CUT 이미지");
     expect(storyboardSource).toContain("formatStoryboardVisibleImprovementSummary");
-    expect(storyboardSource).toContain("개선 반영 확인");
-    expect(storyboardSource).toContain("초반 1분 30초 가게 앞 인트로부터 시작");
+    expect(storyboardSource).toContain("준비된 스토리보드를 불러왔어요.");
+    expect(storyboardSource).toContain("첫 컷은 가게 앞 인트로부터 시작해요.");
     expect(storyboardSource).toContain("실제 신뢰된 이미지 파일만 세었습니다");
     expect(storyboardSource).toContain("assistant-latest-real-data-improvement-summary");
     expect(storyboardSource).toContain("assistant-history-load-improvement-summary");
@@ -4532,6 +4687,28 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "이미지 만들기 버튼을 누르면 캔버스 CUT 이미지를 채울 수 있습니다",
     );
     expect(storyboardSource).toContain("getStoryboardSourcePageRange");
+    expect(storyboardSource).toContain(
+      "autoGeneratedMissingStoryboardPageKeysRef",
+    );
+    expect(storyboardSource).toContain(
+      "getMissingTrustedStoryboardImageScenes",
+    );
+    expect(storyboardSource).toContain(
+      "maybeGenerateMissingStoryboardPageImages",
+    );
+    expect(storyboardSource).toContain(
+      "result.generatedAt === INITIAL_STORYBOARD_PREVIEW.generatedAt",
+    );
+    expect(storyboardSource).toContain(
+      "아직 이미지가 없는 전체 ${missingStoryboardScenes.length}컷을 자동으로 채우고 있어요",
+    );
+    expect(storyboardSource).toContain(
+      "페이지를 넘기지 않아도 완료된 CUT은 바로 준비됩니다.",
+    );
+    expect(storyboardSource).toContain(
+      "maybeGenerateMissingStoryboardPageImages(normalizedPage, sourcePageScenes)",
+    );
+    expect(storyboardSource).toContain('scope: "all"');
     expect(storyboardSource).toContain(
       "const sourcePageRange = getStoryboardSourcePageRange(normalizedPage)",
     );
@@ -4547,16 +4724,16 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).not.toContain("activeFallbackGenerationScenes");
     expect(storyboardSource).toContain("getStoryboardImageGenerationTargetScenes");
     expect(storyboardSource).toContain('data-storyboard-frame-fill="true"');
-    expect(storyboardSource).toContain(
+    expect(storyboardSource).not.toContain(
       'data-storyboard-glass-skeleton="true"',
     );
-    expect(storyboardSource).toContain(
+    expect(storyboardSource).not.toContain(
       'data-storyboard-unified-skeleton="true"',
     );
-    expect(storyboardSource).toContain(
+    expect(storyboardSource).not.toContain(
       'data-storyboard-glass-shimmer="true"',
     );
-    expect(storyboardSource).toContain("bg-transparent");
+    expect(storyboardSource).not.toContain("rounded-2xl bg-transparent");
     expect(storyboardSource).toContain("rgba(203,213,225,0.82)");
     expect(storyboardSource).not.toContain("rgba(244,114,182");
     expect(storyboardSource).not.toContain("rgba(251,191,36");
@@ -4577,10 +4754,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).not.toContain("rgba(71,85,105,0.24)");
     expect(storyboardSource).toContain("rgba(148,163,184,0.28)");
     expect(storyboardSource).toContain("rgba(71,85,105,0.26)");
-    expect(storyboardSource).toContain("bg-slate-300/42");
-    expect(storyboardSource).toContain("to-slate-500/24");
-    expect(storyboardSource).toContain("border border-slate-400/35");
-    expect(storyboardSource).toContain("dark:border-slate-500/35");
+    expect(storyboardSource).toContain("from-slate-100 via-slate-200");
+    expect(storyboardSource).toContain("to-slate-400/70");
+    expect(storyboardSource).not.toContain("border border-slate-300/80");
+    expect(storyboardSource).not.toContain("dark:border-slate-700/70");
     expect(storyboardSource).not.toContain("border border-slate-300/70");
     expect(storyboardSource).not.toContain("dark:border-slate-600/60");
     expect(storyboardSource).not.toContain("to-muted/60");
@@ -4600,8 +4777,14 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "line-clamp-2 text-xs leading-snug text-white/82",
     );
     expect(storyboardSource).not.toContain("text-amber-100");
-    expect(storyboardSource).toContain(
+    expect(storyboardSource).not.toContain(
       "function StoryboardGlassLoadingCanvas",
+    );
+    expect(storyboardSource).toContain(
+      "function StoryboardEmptyCanvasState",
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-empty-canvas="true"',
     );
     expect(storyboardSource).not.toContain(
       'import { Skeleton } from "@/components/ui/skeleton";',
@@ -4609,8 +4792,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).not.toContain(
       "data-storyboard-result-skeleton-frame={String(cutNo)}",
     );
-    expect(storyboardSource).toContain('mode === "empty" ? "true" : undefined');
-    expect(storyboardSource).toContain(
+    expect(storyboardSource).not.toContain('mode === "empty" ? "true" : undefined');
+    expect(storyboardSource).not.toContain(
       'data-storyboard-realtime-skeleton="true"',
     );
     expect(storyboardSource).toContain(
@@ -4618,6 +4801,14 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(storyboardSource).toContain(
       'data-storyboard-cut-image-shimmer="true"',
+    );
+    expect(storyboardSource).toContain("STORYBOARD_PENDING_IMAGE_BACKGROUND");
+    expect(storyboardSource).toContain(
+      'data-storyboard-cut-image-loading-scope={',
+    );
+    expect(storyboardSource).toContain('"image-only"');
+    expect(storyboardSource).not.toContain(
+      'data-storyboard-frame-skeleton-only="true"',
     );
     expect(storyboardSource).toContain(
       "generatingStoryboardImageSceneNos",
@@ -4636,7 +4827,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(storyboardSource).toContain('aria-live="polite"');
     expect(storyboardSource).toContain("STORYBOARD_NO_TRUSTED_IMAGE_LABEL");
-    expect(storyboardSource).toContain("스토리보드 구성 로딩 중");
+    expect(storyboardSource).not.toContain("스토리보드 구성 로딩 중");
+    expect(storyboardSource).toContain("getTrustedInitialStoryboardResult");
+    expect(storyboardSource).toContain("makeInitialStoryboardChatMessages");
     expect(storyboardSource).not.toContain(
       "여러 CUT을 하나의 캔버스로 묶어 준비하고 있어요.",
     );
@@ -4706,9 +4899,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).not.toContain("회의용 Markdown 복사");
     expect(storyboardSource).not.toContain("Markdown 복사");
     expect(storyboardSource).not.toContain("위원회 AHP 평가");
-    expect(storyboardSource).toContain("data-storyboard-agent-graph-fidelity");
-    expect(storyboardSource).toContain("data-storyboard-agent-graph-role");
-    expect(storyboardSource).toContain("참조 그래프 충실도");
+    expect(storyboardSource).not.toContain("data-storyboard-agent-graph-fidelity");
+    expect(storyboardSource).not.toContain("data-storyboard-agent-graph-role");
+    expect(storyboardSource).not.toContain("참조 그래프 충실도");
     expect(storyboardSource).toContain("agentGraphFidelity");
     expect(storyboardSource).not.toContain("멘트 후보:");
     expect(requireAdminSource).toContain("getE2EAdminApiBypassUserId");
@@ -4735,7 +4928,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(chatRouteSource).toContain("event: ${event}");
     expect(chatRouteSource).toContain("getInitialStatusMessages");
     expect(chatRouteSource).toContain("getResolvedStatusMessage");
-    expect(chatRouteSource).toContain("생성/수정/검토/초기화 중 어떤 작업인지 판단");
+    expect(chatRouteSource).toContain("작업으로 이해했어요");
+    expect(chatRouteSource).toContain("곧 화면에 바로 반영할게요");
     expect(chatRouteSource).toContain("send('status'");
     expect(chatRouteSource).toContain("send('patch', publicResult)");
     expect(chatRouteSource).toContain("send('done', publicResult)");
