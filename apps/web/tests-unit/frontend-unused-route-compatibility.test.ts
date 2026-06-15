@@ -102,7 +102,7 @@ describe('frontend unused route compatibility', () => {
         const adminPageSource = source('app/admin/page.tsx');
         const adminConsoleSource = source('components/admin/AdminConsoleOverview.tsx');
 
-        expect(adminPageSource).toContain('<AdminConsoleOverview />');
+        expect(adminPageSource).toContain('<AdminConsoleOverview initialStoryboardResult={initialStoryboardResult} />');
         expect(adminConsoleSource).toContain('getAdminModuleIdFromSearchParams(searchParams)');
         expect(adminConsoleSource).toContain('buildCanonicalAdminModuleHref');
         expect(adminConsoleSource).toContain('router.replace(buildCanonicalAdminModuleHref(moduleId)');
@@ -124,7 +124,9 @@ describe('frontend unused route compatibility', () => {
         expect(adminConsoleSource).not.toContain('AdminConsoleLoadingSkeleton');
         expect(adminConsoleSource).toContain('function AdminConsoleCanvasSkeleton()');
         expect(adminConsoleSource).toContain('data-admin-console-content-loading="true"');
-        expect(adminConsoleSource).toContain('{authLoading ? (');
+        expect(adminConsoleSource).toContain(
+            'isShellBootstrapping && activeModuleId !== "storyboard" ? (',
+        );
         expect(adminConsoleSource).toContain('return null;');
         expect(adminConsoleSource).not.toContain('<GlobalLoader');
         expect(adminConsoleSource).toContain('<AdminBannerModule key="admin-banners" embedded />');
