@@ -145,7 +145,7 @@ type TextTransformState = {
 
 type TextEditorHistorySnapshot = {
   textLayers: TextLayer[];
-  activeLayerId: string;
+  activeLayerId: string | null;
   editingLayerId: string | null;
   layerIdCounter: number;
 };
@@ -508,10 +508,10 @@ const providerReadinessKey: Record<ProviderId, keyof ThumbnailReadiness["provide
 const thumbnailErrorActions: Record<string, string> = {
   required_ack: "안전 확인 체크박스를 직접 확인한 뒤 다시 생성하세요.",
   provider_unavailable: "현재 이미지 생성 준비가 끝나지 않았습니다. 설정을 확인한 뒤 다시 시도하세요.",
-  invalid_session_api_key: "설정에 저장한 OpenAI API 키 형식을 확인하세요.",
-  unsupported_model: "지원 모델 allowlist와 THUMBNAIL_*_IMAGE_MODEL 환경변수를 확인하세요.",
+  invalid_session_api_key: "설정에 저장한 이미지 만들기 키를 확인하세요.",
+  unsupported_model: "이미지 만들기 설정을 확인하세요.",
   invalid_text: "주제/문구 길이와 금지 문자를 줄이고 다시 시도하세요.",
-  unsafe_instruction: "시스템 지시 무시, 비밀/환경변수/키 출력 요청을 제거하세요.",
+  unsafe_instruction: "비밀 정보나 설정을 보여 달라는 요청은 빼 주세요.",
   unsafe_identity: "실제 채널명, 계정명, 개인 식별 텍스트를 제거하세요.",
   unsafe_brand: "브랜드/로고/상표 요청을 제거하고 일반 묘사로 바꾸세요.",
   unsafe_contact: "URL, 이메일, 전화번호, 주소처럼 보이는 텍스트를 제거하세요.",
@@ -526,7 +526,7 @@ const thumbnailErrorActions: Record<string, string> = {
 };
 
 function getSpecificCreatorReferenceRequiredMessage() {
-  return "쯔양님이 실제로 나오려면 기보유 쯔양 썸네일 레퍼런스나 인물 참고 이미지가 필요합니다. 레퍼런스를 불러오지 못해 사람 없는 썸네일로 대신 만들지 않았습니다.";
+  return "쯔양님이 나오려면 참고 이미지가 필요합니다. 사람 없는 이미지로 대신 만들지 않았습니다.";
 }
 
 function normalizeThumbnailBrowserOpenAIApiKeyInput(value: string) {
@@ -600,7 +600,7 @@ function formatBytes(bytes: number) {
 function getThumbnailErrorAction(payload: ThumbnailApiErrorPayload | null) {
   const code = payload?.error ?? "thumbnail_generation_failed";
   const action = thumbnailErrorActions[code] ?? "입력값과 이미지 생성 준비 상태를 확인한 뒤 다시 시도하세요.";
-  return payload?.detail ? `${action} (${payload.detail})` : action;
+  return action;
 }
 
 function parseThumbnailChatSseBlock(block: string): ThumbnailChatSseEvent | null {
@@ -698,6 +698,59 @@ const THUMBNAIL_CHAT_LOCAL_COMMAND_OVERMATCH_FIXTURES = [
   "PNG 느낌으로 저장하고 싶은 썸네일 만들어줘",
   "생성 과정 확인해줘",
 ] as const;
+const THUMBNAIL_CHAT_INTERNAL_JARGON_PATTERN =
+  /backend[-\s]?agent|provider|provenance|fallback|reranker|embedding|LangGraph|exact|allowlist|runtime|diagnostics|process\.env|환경\s*변수|model|모델|프로바이더|gpt-image-2|GPT\s*Image\s*2|BGE|local[-\s]?codex|Codex CLI/i;
+const THUMBNAIL_CHAT_SIMPLE_FALLBACK_MESSAGE = [
+  "쉽게 정리했어요.",
+  "지금은 썸네일을 안전하게 만들 수 있는지 확인했습니다.",
+  "원하는 음식, 짧은 문구, 참고 이미지를 알려 주세요.",
+].join("\n");
+const THUMBNAIL_USAGE_GUIDE_TEXT =
+  "간단히 3가지만 적어 주세요.\n1. 어떤 음식인지\n2. 쯔양님이나 참고 인물이 필요한지\n3. 꼭 넣고 싶은 짧은 문구";
+const THUMBNAIL_GUIDED_EXAMPLE_REQUEST =
+  "제육볶음 밥도둑 한상 썸네일 예시를 보여줘. 쯔양님과 음식이 잘 보이고 문구는 짧게 배치해줘.";
+const THUMBNAIL_GUIDED_EXAMPLE_RESPONSE =
+  "예시를 화면에 넣었어요.\n음식, 인물, 문구 위치를 보고 원하는 내용은 말로 바꿀 수 있습니다.";
+
+function formatThumbnailAssistantDisplayText(value: string) {
+  const safe = value
+    .replace(/Codex CLI\s+[A-Za-z0-9._-]+\s+\w+\s+작업 완료/gi, "요청을 이해했어요")
+    .replace(/GPT\s*Image\s*2|gpt-image-2|model/gi, "이미지 만들기")
+    .replace(/provider|provenance|fallback|runtime|diagnostics|allowlist|exact/gi, "확인")
+    .replace(/backend[-\s]?agent|LangGraph|reranker|embedding|BGE|local[-\s]?codex/gi, "도우미")
+    .replace(/환경\s*변수|process\.env/gi, "설정")
+    .replace(/백엔드\s*에이전트|백엔드|에이전트/g, "도우미")
+    .replace(/패치/g, "수정")
+    .replace(/캔버스/g, "화면")
+    .replace(/썸네일 생성/g, "썸네일 만들기")
+    .replace(/이미지 생성/g, "이미지 만들기")
+    .replace(/실제 이미지 모델/g, "이미지 만들기")
+    .replace(/모델 상태/g, "이미지 만들기 상태")
+    .replace(/문구 레이어/g, "문구")
+    .replace(/\s*·\s*/g, "\n")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  const lines = safe
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const compactLines =
+    lines.length > 5
+      ? [
+          ...lines.slice(0, 4),
+          "더 자세히 보고 싶으면 “상태”라고 입력하세요.",
+        ]
+      : lines;
+  const formatted = compactLines.length <= 1
+    ? compactLines[0] ?? ""
+    : compactLines
+    .map((line, index) => (index === 0 ? line : `- ${line}`))
+    .join("\n");
+  return THUMBNAIL_CHAT_INTERNAL_JARGON_PATTERN.test(formatted)
+    ? THUMBNAIL_CHAT_SIMPLE_FALLBACK_MESSAGE
+    : formatted;
+}
 
 function createThumbnailChatRunId(messageId: string) {
   return `thumbnail-chat-${Date.now()}-${messageId}`;
@@ -1363,8 +1416,8 @@ function getThumbnailProviderLabel(provider: ProviderId) {
 
 function formatThumbnailGenerationMode(mode: GenerationMode) {
   return mode === "backend_agent"
-    ? "도우미가 문구, 위치, 참고 이미지를 먼저 정리한 뒤 이미지 만들기"
-    : "요청한 썸네일을 바로 이미지로 만들기";
+    ? "도우미가 먼저 정리한 뒤 만들기"
+    : "바로 만들기";
 }
 
 function formatThumbnailModelProvenance(provenance: GenerationResult["baseImage"]["modelProvenance"] | undefined) {
@@ -1406,10 +1459,10 @@ function canUseSessionApiKeyForProvider(
 
 function formatThumbnailProviderBlockReason(reason: string | null | undefined) {
   if (reason === THUMBNAIL_STRICT_LOCAL_CODEX_UNVERIFIED_REASON) {
-    return "사용한 이미지 모델을 정확히 확인하지 못해서 안전하게 중단했습니다.";
+    return "이미지를 안전하게 확인하지 못해 멈췄습니다.";
   }
   if (reason === "local_codex_model_not_allowed") {
-    return "허용된 이미지 모델이 아니어서 생성하지 않았습니다.";
+    return "현재 이미지 만들기 설정을 사용할 수 없습니다.";
   }
   if (reason === "local_codex_command_not_configured") {
     return "이미지를 만드는 도구 경로가 아직 설정되지 않았습니다.";
@@ -1421,12 +1474,12 @@ function formatThumbnailProviderBlockReason(reason: string | null | undefined) {
     return "현재 페이지에서는 별도 API 키 방식으로 이미지를 만들지 않습니다.";
   }
   if (reason === "openai_api_key_required") {
-    return "오른쪽 위 톱니바퀴에서 OpenAI API 키를 이 브라우저에 저장해 주세요.";
+    return "오른쪽 위 톱니바퀴에서 이미지 만들기 키를 저장해 주세요.";
   }
   if (reason === "openai_model_not_allowed") {
-    return "OpenAI 이미지는 gpt-image-2만 사용할 수 있습니다.";
+    return "현재 이미지 만들기 설정을 사용할 수 없습니다.";
   }
-  return reason ?? "이미지 생성 준비 상태를 확인할 수 없습니다.";
+  return "이미지 만들기 준비 상태를 확인할 수 없습니다.";
 }
 
 function formatThumbnailProviderAvailability(
@@ -1443,20 +1496,14 @@ function formatThumbnailProviderAvailability(
 
 function formatThumbnailBackendAgentStatus(status: ThumbnailReadiness["backendAgent"] | null | undefined) {
   if (!status) return "아직 확인 중";
-  if (status.available) return status.streamingAvailable
-    ? "사용 가능 · 문구와 위치를 실시간으로 정리합니다"
-    : "사용 가능 · 문구와 위치를 정리합니다";
-  return "준비 필요 · 썸네일 도우미 설정을 확인해야 합니다";
+  if (status.available) return "도우미 준비됨";
+  return "도우미 준비 필요";
 }
 
 function formatThumbnailHistoryStatus(status: ThumbnailHistoryStatus, runs: ThumbnailHistoryRun[], error: string | null) {
   if (status === "error") return `불러오기 실패 · ${error ?? "다시 시도해 주세요"}`;
   if (status === "loading") return `불러오는 중 · ${runs.length}건 확인됨`;
-  const latest = runs[0];
-  const latestText = latest
-    ? ` · 최근 결과 ${formatThumbnailModelProvenance(latest.modelProvenance)}`
-    : "";
-  return `저장된 결과 ${runs.length}건${latestText}`;
+  return `저장된 결과 ${runs.length}건`;
 }
 
 function canShowThumbnailRetrievalModelLabel(
@@ -1490,10 +1537,10 @@ function formatThumbnailRetrievalSummaryForBeginner(retrieval: ThumbnailRetrieva
   const diagnostics = "diagnostics" in retrieval ? retrieval.diagnostics : retrieval;
   const evidenceCount = "evidence" in retrieval && Array.isArray(retrieval.evidence) ? retrieval.evidence.length : diagnostics.selectedReferenceIds?.length ?? 0;
   if (diagnostics.status === "used" || diagnostics.status === "partial") {
-    return `참고 썸네일 검색: 기존 후보 ${diagnostics.candidateCount ?? 0}개 중 ${evidenceCount}개를 골라 참고했습니다.`;
+    return `참고 썸네일 검색: 기존 썸네일 ${evidenceCount}개를 골라 참고했습니다.`;
   }
   if (diagnostics.status === "fallback") {
-    return "참고 썸네일 검색: 자동 검색이 충분하지 않아 기본 참고 방식으로 진행했습니다.";
+    return "참고 썸네일 검색: 기존 썸네일을 아직 충분히 고르지 못했습니다.";
   }
   return "참고 썸네일 검색: 아직 충분한 참고 자료를 고르지 못했습니다.";
 }
@@ -1502,17 +1549,17 @@ function formatThumbnailGenerationCompletionSummary(generationResult: Generation
   const retrieval = generationResult.retrieval;
   const evidenceCount = retrieval?.evidence?.length ?? retrieval?.diagnostics?.selectedReferenceIds?.length ?? 0;
   const referenceSummary = retrieval
-    ? `기존 썸네일 후보 ${retrieval.diagnostics?.candidateCount ?? 0}개 중 ${evidenceCount}개를 참고했습니다.`
+    ? `기존 썸네일 ${evidenceCount}개를 참고했습니다.`
     : "참고 썸네일 검색 없이 만들었습니다.";
-  const verifiedSummary = generationResult.baseImage.model === "gpt-image-2" && generationResult.baseImage.modelProvenance === "exact"
-    ? "사용한 이미지 모델도 검증되었습니다."
-    : "이미지 모델 확인 상태는 추가 확인이 필요합니다.";
+  const verifiedSummary = generationResult.baseImage.modelProvenance === "exact"
+    ? "확인된 실제 이미지입니다."
+    : "저장하기 전에 한 번 더 확인해 주세요.";
   return [
     "완료했어요.",
-    "새 썸네일 이미지를 만들고 캔버스에 넣었습니다.",
+    "새 썸네일 이미지를 만들고 화면에 넣었습니다.",
     verifiedSummary,
     referenceSummary,
-    "쯔양님 얼굴과 음식이 문구에 가려지지 않는지 확인한 뒤 필요하면 PNG로 저장하세요.",
+    "얼굴, 음식, 문구가 잘 보이면 PNG로 저장하세요.",
   ].join("\n");
 }
 
@@ -1769,7 +1816,7 @@ export function AdminYoutubeThumbnailGenerator() {
   const loadedBaseImageRef = useRef<{ dataUrl: string; image: HTMLImageElement } | null>(null);
   const drawCanvasFrameRef = useRef<number | null>(null);
   const textLayersRef = useRef<TextLayer[]>([]);
-  const activeLayerIdRef = useRef(DEFAULT_TEXT_LAYERS[0]?.id ?? "headline");
+  const activeLayerIdRef = useRef<string | null>(null);
   const editingLayerIdRef = useRef<string | null>(null);
   const textLayerUndoStackRef = useRef<TextEditorHistorySnapshot[]>([]);
   const pendingTextLayerUndoSnapshotRef = useRef<TextEditorHistorySnapshot | null>(null);
@@ -1799,7 +1846,9 @@ export function AdminYoutubeThumbnailGenerator() {
       id: "assistant-intro",
       role: "assistant",
       mode: "system",
-      content: "원하는 썸네일을 말로 적으면 도우미가 문구, 위치, 참고 이미지 사용 여부를 쉽게 정리해 줍니다. PNG 저장이나 이전 결과 불러오기도 말로 요청할 수 있습니다.",
+      content: formatThumbnailAssistantDisplayText(
+        "원하는 썸네일을 말로 적어 주세요.\n문구, 위치, 참고 이미지 사용 여부를 쉽게 정리해 드릴게요.\nPNG 저장이나 이전 결과 불러오기도 말로 요청할 수 있습니다.",
+      ),
     },
   ]);
   const [headline, setHeadline] = useState(BUNDLED_THUMBNAIL_PREVIEW_HEADLINE);
@@ -1811,9 +1860,9 @@ export function AdminYoutubeThumbnailGenerator() {
   const [referenceImageRoles, setReferenceImageRoles] = useState<ReferenceImageRole[]>([]);
   const acknowledgedSafety = true;
   const [textLayers, setTextLayers] = useState<TextLayer[]>(() => createBundledThumbnailPreviewTextLayers());
-  const [activeLayerId, setActiveLayerId] = useState(DEFAULT_TEXT_LAYERS[0]?.id ?? "headline");
+  const [activeLayerId, setActiveLayerId] = useState<string | null>(null);
   const [editingLayerId, setEditingLayerId] = useState<string | null>(null);
-  const [lastCanvasActionLabel, setLastCanvasActionLabel] = useState<string | null>("메인 문구 선택됨");
+  const [lastCanvasActionLabel, setLastCanvasActionLabel] = useState<string | null>(null);
   const [exportPresetId, setExportPresetId] = useState<ThumbnailExportPresetId>("quick-1280x720");
   const [lastExportMetadata, setLastExportMetadata] = useState<ThumbnailExportMetadata | null>(null);
   const [showSafeAreaGuide, setShowSafeAreaGuide] = useState(true);
@@ -1882,7 +1931,7 @@ export function AdminYoutubeThumbnailGenerator() {
     topic,
   ]);
   const activeLayer = useMemo(
-    () => textLayers.find((layer) => layer.id === activeLayerId) ?? textLayers[0] ?? null,
+    () => activeLayerId ? textLayers.find((layer) => layer.id === activeLayerId) ?? null : null,
     [activeLayerId, textLayers],
   );
   const editingLayer = useMemo(
@@ -2013,7 +2062,7 @@ export function AdminYoutubeThumbnailGenerator() {
       textLayersRef.current = nextLayers;
       return nextLayers;
     });
-    setActiveLayerId("headline");
+    setActiveLayerId(null);
     setBaseImageRenderRevision((revision) => revision + 1);
     setLastCanvasActionLabel(`릴리즈 후보 ${candidate.id} 자동 적용됨`);
     return true;
@@ -2059,7 +2108,7 @@ export function AdminYoutubeThumbnailGenerator() {
       syncCanonicalTextInputs(nextLayers);
       return nextLayers;
     });
-    setActiveLayerId("headline");
+    setActiveLayerId(null);
     setBaseImageRenderRevision((revision) => revision + 1);
     setLastCanvasActionLabel(`공용 릴리즈 ${release.candidateId} 적용됨`);
     return true;
@@ -2205,7 +2254,7 @@ export function AdminYoutubeThumbnailGenerator() {
           textLayersRef.current = nextLayers;
           return nextLayers;
         });
-        setActiveLayerId("headline");
+        setActiveLayerId(null);
       }
     } catch (error) {
       if (thumbnailHistoryRequestIdRef.current !== requestId) return;
@@ -2471,9 +2520,9 @@ export function AdminYoutubeThumbnailGenerator() {
     layerIdCounterRef.current = snapshot.layerIdCounter;
     setTextLayers(restoredLayers);
     syncCanonicalTextInputs(restoredLayers);
-    const restoredActiveLayerId = restoredLayers.some((layer) => layer.id === snapshot.activeLayerId)
+    const restoredActiveLayerId = snapshot.activeLayerId && restoredLayers.some((layer) => layer.id === snapshot.activeLayerId)
       ? snapshot.activeLayerId
-      : restoredLayers[0]?.id ?? "headline";
+      : null;
     const restoredEditingLayerId =
       snapshot.editingLayerId && restoredLayers.some((layer) => layer.id === snapshot.editingLayerId)
         ? snapshot.editingLayerId
@@ -2598,7 +2647,7 @@ export function AdminYoutubeThumbnailGenerator() {
       textLayersRef.current = nextLayers;
       return nextLayers;
     });
-    setActiveLayerId("headline");
+    setActiveLayerId(null);
     markCanvasAction("생성 문구 미리보기 반영");
   }
 
@@ -2989,7 +3038,7 @@ export function AdminYoutubeThumbnailGenerator() {
       }
       return didUpdate ? nextLayers : current;
     });
-    if (!options.preserveActiveLayer) setActiveLayerId("headline");
+    if (!options.preserveActiveLayer) setActiveLayerId(null);
     markCanvasAction("채팅 반영");
   }
 
@@ -3012,17 +3061,36 @@ export function AdminYoutubeThumbnailGenerator() {
       markCanvasAction("선택 문구 채팅 반영");
       return;
     }
-    if (!options.preserveActiveLayer) setActiveLayerId("headline");
+    if (!options.preserveActiveLayer) setActiveLayerId(null);
     markCanvasAction("채팅 반영");
   }
 
   function appendThumbnailChatMessages(messages: ThumbnailChatMessage[]) {
-    setChatMessages((current) => [...current, ...messages].slice(-10));
+    setChatMessages((current) => [
+      ...current,
+      ...messages.map((message) =>
+        message.role === "assistant"
+          ? {
+              ...message,
+              content: formatThumbnailAssistantDisplayText(message.content),
+            }
+          : message,
+      ),
+    ].slice(-10));
   }
 
   function updateThumbnailChatMessage(messageId: string, content: string, mode: ThumbnailChatMessage["mode"] = "stream") {
     setChatMessages((current) => current.map((message) => (
-      message.id === messageId ? { ...message, content, mode } : message
+      message.id === messageId
+        ? {
+            ...message,
+            content:
+              message.role === "assistant"
+                ? formatThumbnailAssistantDisplayText(content)
+                : content,
+            mode,
+          }
+        : message
     )));
   }
 
@@ -3057,6 +3125,25 @@ export function AdminYoutubeThumbnailGenerator() {
     ]);
   }
 
+  function handleThumbnailUsageGuideClick() {
+    appendThumbnailChatCommand("가이드 보기", THUMBNAIL_USAGE_GUIDE_TEXT, "system");
+  }
+
+  function handleThumbnailGuidedExampleClick() {
+    const nextLayers = createBundledThumbnailPreviewTextLayers();
+    userCanvasResultLockedRef.current = true;
+    setTopic(THUMBNAIL_GUIDED_EXAMPLE_REQUEST.slice(0, CHAT_TOPIC_MAX_LENGTH));
+    setHeadline(BUNDLED_THUMBNAIL_PREVIEW_HEADLINE);
+    setSubHeadline(BUNDLED_THUMBNAIL_PREVIEW_SUB_HEADLINE);
+    textLayersRef.current = nextLayers;
+    setTextLayers(nextLayers);
+    setResult(BUNDLED_THUMBNAIL_PREVIEW_RESULT);
+    setBaseImageRenderRevision((revision) => revision + 1);
+    setActiveLayerId(null);
+    markCanvasAction("예시 썸네일 반영");
+    appendThumbnailChatCommand("예시 만들기", THUMBNAIL_GUIDED_EXAMPLE_RESPONSE);
+  }
+
   function getAbortNotice(kind: "chat" | "generation") {
     return kind === "chat"
       ? "채팅 작업을 멈췄습니다. 진행 중이던 요청도 함께 취소했습니다."
@@ -3077,29 +3164,24 @@ export function AdminYoutubeThumbnailGenerator() {
       : isChatAgentStreaming
         ? "요청을 정리하는 중"
         : "대기 중";
-    const exactBoundary = resultBase?.providerId === "local-codex" && resultBase.model === "gpt-image-2" && resultBase.modelProvenance === "exact"
-      ? "현재 캔버스에는 exact gpt-image-2로 확인된 실제 생성 이미지가 들어 있습니다."
-      : resultBase?.providerId === "openai-gpt-image-2" && resultBase.model === "gpt-image-2"
-        ? "현재 캔버스에는 브라우저에 저장한 OpenAI 키로 만든 gpt-image-2 이미지가 들어 있습니다."
-        : "현재 캔버스에는 아직 확인된 실제 생성 이미지가 없습니다. 확인된 결과만 실제 생성 결과로 표시합니다.";
+    const resultBoundary = resultBase?.modelProvenance === "exact"
+      ? "현재 화면에는 확인된 이미지가 들어 있습니다."
+      : "확인된 이미지일 때만 실제 결과로 표시합니다.";
 
     return [
       "현재 상태를 쉽게 정리했어요.",
-      "가짜 예시 이미지는 실제 결과로 보지 않고, 확인된 이미지 결과만 사용합니다.",
       `이미지 만들기: ${formatThumbnailProviderAvailability(selectedProviderAvailability, sessionKeyBackedProviderAvailable)}`,
-      `작업 방식: ${formatThumbnailGenerationMode(generationMode)}`,
-      `썸네일 도우미: ${formatThumbnailBackendAgentStatus(backendAgentStatus)}`,
       resultBase
-        ? `현재 캔버스 결과: ${resultSource} · ${formatThumbnailModelProvenance(resultBase.modelProvenance)}`
-        : "현재 캔버스 결과: 아직 만든 이미지 없음",
+        ? `현재 화면: ${resultSource}`
+        : "현재 화면: 아직 만든 이미지 없음",
       currentResult?.retrieval
         ? formatThumbnailRetrievalSummaryForBeginner(currentResult.retrieval)
         : (historyRuns[0]?.retrieval ? formatThumbnailRetrievalSummaryForBeginner(historyRuns[0].retrieval) : "참고 썸네일 검색: 아직 실행 안 됨"),
-      "역할별 확인: 쯔양님은 얼굴과 음식이 잘 보이는지, PD님은 제목이 후킹되는지, 매니저님은 저장 전 검수 상태를, 편집자는 문구 위치를 확인하면 됩니다.",
-      `히스토리: ${formatThumbnailHistoryStatus(historyStatus, historyRuns, historyError)}`,
-      `참고 이미지: 현재 ${files.length}장 추가됨 · 다음 생성 요청에만 사용`,
+      `저장된 결과: ${formatThumbnailHistoryStatus(historyStatus, historyRuns, historyError)}`,
+      `참고 이미지: 현재 ${files.length}장 추가됨`,
       `진행 상태: ${progressState}`,
-      exactBoundary,
+      resultBoundary,
+      "다음에는 원하는 음식, 짧은 문구, 참고 이미지를 알려 주세요.",
     ].join("\n");
   }
 
@@ -3170,7 +3252,7 @@ export function AdminYoutubeThumbnailGenerator() {
         textLayersRef.current = nextLayers;
         return nextLayers;
       });
-      setActiveLayerId("headline");
+      setActiveLayerId(null);
     }
     appendThumbnailChatCommand(
       "히스토리 결과 불러오기",
@@ -3603,7 +3685,7 @@ export function AdminYoutubeThumbnailGenerator() {
     const next = textLayers.filter((layer) => layer.id !== id);
     textLayersRef.current = next;
     setTextLayers(next);
-    if (activeLayerId === id) setActiveLayerId(next[0]?.id ?? DEFAULT_TEXT_LAYERS[0]?.id ?? "headline");
+    if (activeLayerId === id) setActiveLayerId(null);
     if (id === "headline") setHeadline(next.find((layer) => layer.id === "headline")?.content ?? next[0]?.content ?? "");
     if (id === "subHeadline") setSubHeadline(next.find((layer) => layer.id === "subHeadline")?.content ?? "");
     markCanvasAction("문구 삭제됨");
@@ -3618,7 +3700,7 @@ export function AdminYoutubeThumbnailGenerator() {
     setTextLayers(defaults);
     setHeadline(defaults[0]?.content ?? "");
     setSubHeadline(defaults[1]?.content ?? "");
-    setActiveLayerId(defaults[0]?.id ?? "headline");
+    setActiveLayerId(null);
     markCanvasAction("문구 초기화됨");
   }
 
@@ -3774,7 +3856,7 @@ export function AdminYoutubeThumbnailGenerator() {
   }
 
   function moveActiveTextLayer(deltaX: number, deltaY: number) {
-    const layer = textLayers.find((item) => item.id === activeLayerId) ?? textLayers[0];
+    const layer = activeLayerId ? textLayers.find((item) => item.id === activeLayerId) : null;
     if (!layer) return;
     updateTextLayer(layer.id, {
       x: clampCanvasCoordinate(layer.x + deltaX, TARGET_WIDTH),
@@ -3809,7 +3891,7 @@ export function AdminYoutubeThumbnailGenerator() {
     const step = event.shiftKey ? CANVAS_KEYBOARD_FAST_MOVE_STEP : CANVAS_KEYBOARD_MOVE_STEP;
     if (event.key === "Enter") {
       event.preventDefault();
-      const layer = textLayers.find((item) => item.id === activeLayerId) ?? textLayers[0];
+      const layer = activeLayerId ? textLayers.find((item) => item.id === activeLayerId) : null;
       if (layer) startCanvasTextInlineEditing(layer.id);
       return;
     }
@@ -4042,10 +4124,10 @@ export function AdminYoutubeThumbnailGenerator() {
 
     if (!providerAvailability) {
       if (chatAssistantMessageId) {
-        updateThumbnailChatMessage(chatAssistantMessageId, "모델 상태 확인 중 · 잠시 후 다시 생성하세요.", "live");
+        updateThumbnailChatMessage(chatAssistantMessageId, "이미지 만들기 준비를 확인하고 있어요. 잠시 후 다시 시도해 주세요.", "live");
       }
       toast({
-        title: "모델 상태 확인 중",
+        title: "이미지 준비 확인 중",
         description: "잠시 후 다시 생성하세요.",
       });
       return false;
@@ -4053,12 +4135,12 @@ export function AdminYoutubeThumbnailGenerator() {
     if (!providerAvailability.available && !sessionKeyBackedProviderAvailable) {
       const providerBlockReason = formatThumbnailProviderBlockReason(providerAvailability.reason);
       if (chatAssistantMessageId) {
-        updateThumbnailChatMessage(chatAssistantMessageId, `실제 이미지 모델 준비 필요 · ${providerBlockReason}`, "live");
+        updateThumbnailChatMessage(chatAssistantMessageId, `이미지 만들기 준비가 아직 안 됐어요. ${providerBlockReason}`, "live");
       }
       toast({
         variant: "destructive",
-        title: "실제 이미지 모델 준비 필요",
-        description: `현재 선택한 실제 이미지 모델을 실행할 수 없습니다: ${providerBlockReason}`,
+        title: "이미지 만들기 준비 필요",
+        description: providerBlockReason,
       });
       return false;
     }
@@ -4067,7 +4149,7 @@ export function AdminYoutubeThumbnailGenerator() {
       if (chatAssistantMessageId) {
         updateThumbnailChatMessage(
           chatAssistantMessageId,
-          `생성 전 확인 필요 · ${preflightIssues[0] ?? "입력값을 확인하세요."}`,
+          `먼저 입력을 확인해 주세요. ${preflightIssues[0] ?? "문구나 참고 이미지를 조금 줄여 보세요."}`,
           "live",
         );
       }
@@ -4180,7 +4262,7 @@ export function AdminYoutubeThumbnailGenerator() {
       if (chatAssistantMessageId) {
         updateThumbnailChatMessage(
           chatAssistantMessageId,
-          generationError instanceof Error ? `실제 썸네일 생성 실패 · ${generationError.message}` : "실제 썸네일 생성 실패 · 다시 시도하세요.",
+          "썸네일을 만들지 못했어요. 입력과 설정을 확인한 뒤 다시 시도해 주세요.",
           "live",
         );
       }
@@ -4722,6 +4804,37 @@ export function AdminYoutubeThumbnailGenerator() {
                           </p>
                         ) : null}
                       </div>
+                      {message.role === "assistant" && message.id === "assistant-intro" ? (
+                        <div
+                          className="flex flex-wrap gap-1.5 pl-1"
+                          data-thumbnail-chat-message-actions="true"
+                          data-thumbnail-chat-message-actions-placement="outside-bubble"
+                        >
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-7 rounded-full bg-background/80 px-2 text-[11px] shadow-sm"
+                            onClick={handleThumbnailUsageGuideClick}
+                            disabled={isGenerating || isChatAgentStreaming}
+                            data-thumbnail-chat-guide-button="true"
+                            data-thumbnail-chat-message-action="guide"
+                          >
+                            가이드 보기
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            className="h-7 rounded-full px-2 text-[11px] shadow-sm"
+                            onClick={handleThumbnailGuidedExampleClick}
+                            disabled={isGenerating || isChatAgentStreaming}
+                            data-thumbnail-chat-guide-example="true"
+                            data-thumbnail-chat-message-action="example"
+                          >
+                            예시 만들기
+                          </Button>
+                        </div>
+                      ) : null}
                     </div>
                     {message.role === "user" ? (
                       <div className="mt-5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground">
