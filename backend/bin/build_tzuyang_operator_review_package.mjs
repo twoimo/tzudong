@@ -353,7 +353,6 @@ async function main() {
   for (const approval of approvals) {
     const row = confirmedById.get(approval.id);
     const failures = approvalFailures(approval, row);
-    if (row && !manualById.has(row.id)) failures.push('source_manual_review_row_missing');
     if (failures.length) {
       approvalRejections.push({ id: approval.id || null, failures, approval });
       continue;

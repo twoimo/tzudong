@@ -460,8 +460,14 @@ download_video() {
     else
         yt_quiet_flags=(--no-progress --no-warnings)
     fi
+    local yt_impersonate_flags=()
+    if $yt_dlp_cmd --list-impersonate-targets 2>/dev/null | grep -Eq '^[[:space:]]*Chrome-[^[:space:]]+[[:space:]]'; then
+        yt_impersonate_flags=(--impersonate Chrome)
+    else
+        log_warn "yt-dlp Chrome impersonation target unavailable → continuing without impersonation"
+    fi
     $yt_dlp_cmd --js-runtimes "deno" --js-runtimes "node" $cookie_arg \
-        --impersonate Chrome \
+        "${yt_impersonate_flags[@]}" \
         --no-part --ignore-errors \
         "${yt_quiet_flags[@]}" \
         -f "b[ext=mp4][height<=360]/b[height<=360]/b" \
