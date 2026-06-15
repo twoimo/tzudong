@@ -742,7 +742,9 @@ describe('admin storyboard LangGraph replacement contracts', () => {
     expect(source).not.toContain('data-storyboard-backend-agent-live-graph-ready');
     expect(source).not.toContain('data-storyboard-backend-agent-retrieval-used');
     expect(source).toContain('data-storyboard-browser-api-key-settings="local-storage-only"');
-    expect(source).toContain('OpenAI API 키 · gpt-image-2 전용');
+    expect(source).toContain('OpenAI API Key');
+    expect(source).toContain('data-storyboard-api-router-panel="true"');
+    expect(source).toContain('data-storyboard-codex-oauth-status={');
     expect(source).toContain('자료 분석 반영');
     expect(source).toContain('우선순위 정리');
     expect(source).not.toContain('data-storyboard-agent-graph-role');
