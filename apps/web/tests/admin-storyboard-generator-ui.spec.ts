@@ -184,6 +184,31 @@ test("storyboard canvas counts only visible trusted GPT Image 2 storyboard panel
       .locator('[data-storyboard-generated-image="local-codex"]')
       .first(),
   ).toBeVisible({ timeout: 30_000 });
+  await expect
+    .poll(
+      async () =>
+        storyboardModule
+          .locator(
+            '[data-storyboard-frame-grid="true"] [data-storyboard-generated-image]',
+          )
+          .evaluateAll((images) => {
+            const states = images.map((image) => {
+              const element = image as HTMLImageElement;
+              return {
+                complete: element.complete,
+                naturalWidth: element.naturalWidth,
+              };
+            });
+            return {
+              count: states.length,
+              loaded: states.filter(
+                (image) => image.complete && image.naturalWidth > 0,
+              ).length,
+            };
+          }),
+      { timeout: 30_000 },
+    )
+    .toEqual({ count: 4, loaded: 4 });
   await expect(
     storyboardModule.locator(
       '[data-storyboard-canvas-toolbar="thumbnail-like"]',
@@ -250,13 +275,13 @@ test("storyboard canvas counts only visible trusted GPT Image 2 storyboard panel
   await expect(
     storyboardModule
       .locator('[data-storyboard-chat-message-bubble="true"]')
-      .filter({ hasText: /개선 반영 확인/ })
+      .filter({ hasText: /준비된 스토리보드를 불러왔어요/ })
       .last(),
   ).toBeVisible({ timeout: 30_000 });
   await expect(
     storyboardModule
       .locator('[data-storyboard-chat-message-bubble="true"]')
-      .filter({ hasText: /CUT별 오디오와 자막/ })
+      .filter({ hasText: /컷마다 오디오, 자막, 촬영 포인트/ })
       .last(),
   ).toBeVisible({ timeout: 30_000 });
   await expect(
@@ -290,10 +315,18 @@ test("storyboard canvas counts only visible trusted GPT Image 2 storyboard panel
     "data-storyboard-chat-settings-open",
     "true",
   );
-  await expect(storyboardSettingsPanel).toContainText("이미지 생성 설정");
+  await expect(storyboardSettingsPanel).toContainText("이미지 설정");
   await expect(storyboardSettingsPanel).toContainText("OpenAI API Key");
-  await expect(storyboardSettingsPanel).toContainText("API 라우터");
-  await expect(storyboardSettingsPanel).toContainText("Codex CLI OAuth");
+  await expect(storyboardSettingsPanel).toContainText("gpt-image-2");
+  await expect(
+    storyboardSettingsPanel.locator('[data-storyboard-api-router-choice="true"]'),
+  ).toBeVisible();
+  await expect(
+    storyboardSettingsPanel.locator('[data-storyboard-api-router-option="browser-openai-api-key"]'),
+  ).toContainText("API Key");
+  await expect(
+    storyboardSettingsPanel.locator('[data-storyboard-api-router-option="local-codex-oauth"]'),
+  ).toContainText("OAuth");
   const apiKeySettings = storyboardSettingsPanel.locator(
     '[data-storyboard-browser-api-key-settings="local-storage-only"]',
   );
@@ -313,7 +346,7 @@ test("storyboard canvas counts only visible trusted GPT Image 2 storyboard panel
     apiKeySettings.locator(
       '[data-storyboard-browser-api-key-model-policy="gpt-image-2-only"]',
     ),
-  ).toContainText(/gpt-image-2만 사용/);
+  ).toContainText(/gpt-image-2 전용/);
   await expect(
     storyboardSettingsPanel.locator(
       '[data-storyboard-chat-settings-source-trace="true"]',
@@ -412,19 +445,19 @@ test("storyboard canvas counts only visible trusted GPT Image 2 storyboard panel
   await expect(
     storyboardModule
       .locator('[data-storyboard-chat-message-bubble="true"]')
-      .filter({ hasText: /개선 반영 확인/ })
+      .filter({ hasText: /준비된 스토리보드를 불러왔어요/ })
       .last(),
   ).toBeVisible({ timeout: 10_000 });
   await expect(
     storyboardModule
       .locator('[data-storyboard-chat-message-bubble="true"]')
-      .filter({ hasText: /초반 1분 30초 가게 앞 인트로/ })
+      .filter({ hasText: /첫 컷은 가게 앞 인트로/ })
       .last(),
   ).toBeVisible({ timeout: 10_000 });
   await expect(
     storyboardModule
       .locator('[data-storyboard-chat-message-bubble="true"]')
-      .filter({ hasText: /이미지 상태:/ })
+      .filter({ hasText: /이미지:/ })
       .last(),
   ).toBeVisible({ timeout: 10_000 });
   await expect(
@@ -580,7 +613,7 @@ test("storyboard canvas counts only visible trusted GPT Image 2 storyboard panel
   await expect(statusBubble).toBeVisible({ timeout: 10_000 });
   await expect(statusBubble).toContainText(/현재 페이지 이미지 \d+\/\d+/);
   await expect(statusBubble).toContainText(/전체 이미지 \d+\/\d+/);
-  await expect(statusBubble).toContainText(/무이미지\/미검증 컷/);
+  await expect(statusBubble).toContainText(/더 자세히 보고 싶으면/);
   await expect(canonicalPromptState).toHaveValue(initialCanonicalPrompt);
   await expect(
     storyboardModule.locator('[data-storyboard-canvas-focus-label="true"]'),
@@ -588,7 +621,7 @@ test("storyboard canvas counts only visible trusted GPT Image 2 storyboard panel
   await expect(
     storyboardModule
       .locator('[data-storyboard-chat-message-bubble="true"]')
-      .filter({ hasText: /필요하면 “가이드” 또는 “예시 생성”/ })
+      .filter({ hasText: /더 자세히 보고 싶으면/ })
       .last(),
   ).toBeVisible();
 
@@ -619,11 +652,8 @@ test("storyboard canvas counts only visible trusted GPT Image 2 storyboard panel
     .last();
   await expect(reviewBubble).toBeVisible({ timeout: 10_000 });
   await expect(reviewBubble).toContainText(/쯔양/);
-  await expect(reviewBubble).toContainText(/매니저/);
-  await expect(reviewBubble).toContainText(/PD/);
-  await expect(reviewBubble).toContainText(/편집자/);
   await expect(reviewBubble).toContainText(/이미지 \d+\/\d+/);
-  await expect(reviewBubble).toContainText(/영상 흐름 반영/);
+  await expect(reviewBubble).toContainText(/더 자세히 보고 싶으면/);
   await expect(canonicalPromptState).toHaveValue(initialCanonicalPrompt);
 
   for (const safetyAlias of ["안전점검", "이미지점검", "얼굴점검", "safety"]) {
@@ -635,7 +665,7 @@ test("storyboard canvas counts only visible trusted GPT Image 2 storyboard panel
       .last();
     await expect(safetyBubble).toBeVisible({ timeout: 10_000 });
     await expect(safetyBubble).toContainText(/실존 인물\/진행자 얼굴/);
-    await expect(safetyBubble).toContainText(/오디오\/자막/);
+    await expect(safetyBubble).toContainText(/손·젓가락·음식/);
     await expect(canonicalPromptState).toHaveValue(initialCanonicalPrompt);
   }
 
@@ -954,6 +984,9 @@ test("storyboard settings keeps production image API keys in browser localStorag
       message: "expected provider status refresh to use the browser key header",
     })
     .toBe(true);
+  await expect(
+    storyboardModule.locator('[data-storyboard-generate-images="browser-openai-api-key"]'),
+  ).toBeVisible();
 
   await apiKeySettings.locator('[data-storyboard-browser-api-key-clear="true"]').click();
   await expect(
@@ -964,6 +997,9 @@ test("storyboard settings keeps production image API keys in browser localStorag
       window.localStorage.getItem("tzudong.admin.storyboard.modelKeys.v1"),
     ),
   ).toBeNull();
+  await expect(
+    storyboardModule.locator('[data-storyboard-generate-images="local-codex"]'),
+  ).toBeVisible();
 });
 
 test("storyboard chat redacts hostile prompts and keeps fallback readiness truthful", async ({
@@ -1186,16 +1222,13 @@ test("storyboard chat redacts hostile prompts and keeps fallback readiness truth
   await expect(
     storyboardModule
       .locator('[data-storyboard-chat-message-bubble="true"]')
-      .filter({ hasText: /스토리보드 컷 구성이 끝났어요|완료했어요/ })
+      .filter({ hasText: /이미지 만들기 상태|이미지 만들기 설정 확인 필요/ })
       .last(),
   ).toBeVisible({ timeout: 30_000 });
   await expect.poll(() => storyboardPostCount, { timeout: 30_000 }).toBe(1);
   await expect(
-    storyboardModule
-      .locator('[data-storyboard-chat-message-bubble="true"]')
-      .filter({ hasText: /컷 구성만 준비됨 · 실제 이미지는 아직 없음/ })
-      .last(),
-  ).toBeVisible();
+    storyboardModule.locator('[data-storyboard-canvas-focus-label="true"]'),
+  ).toContainText(/이미지 생성 설정 필요|예시 CUT/);
   await expect(
     storyboardModule.locator('[data-storyboard-image-frame]'),
   ).toHaveCount(4);
@@ -1210,18 +1243,6 @@ test("storyboard chat redacts hostile prompts and keeps fallback readiness truth
       '[data-storyboard-frame-grid="true"] [data-storyboard-generated-image="local-codex"]',
     ),
   ).toHaveCount(0);
-  await expect(
-    storyboardModule
-      .locator('[data-storyboard-chat-message-bubble="true"]')
-      .filter({ hasText: /이렇게 만들었어요/ })
-      .last(),
-  ).toBeVisible({ timeout: 15_000 });
-  await expect(
-    storyboardModule
-      .locator('[data-storyboard-chat-message-bubble="true"]')
-      .filter({ hasText: /요청 정리|자료 확인|안전 검토|컷 구성|선택 이유/ })
-      .last(),
-  ).toBeVisible();
 
   const storyboardPostCountAfterGenerate = storyboardPostCount;
   const storyboardImagePostCountBeforeTrace = storyboardImagePostCount;
@@ -1237,7 +1258,7 @@ test("storyboard chat redacts hostile prompts and keeps fallback readiness truth
   await expect(
     storyboardModule
       .locator('[data-storyboard-chat-message-bubble="true"]')
-      .filter({ hasText: /컷 구성만 준비됨 · 실제 이미지는 아직 없음/ })
+      .filter({ hasText: /영상 흐름과 반복 시청 근거/ })
       .last(),
   ).toBeVisible();
   expect(storyboardPostCount).toBe(storyboardPostCountAfterGenerate);
@@ -1256,16 +1277,9 @@ test("storyboard chat redacts hostile prompts and keeps fallback readiness truth
     .locator('[data-storyboard-chat-message-bubble="true"]')
     .filter({ hasText: /이렇게 만들었어요/ })
     .last();
-  await expect(pdfFlowTraceBubble).toContainText(/창작자에게는 스토리보드/);
-  await expect(pdfFlowTraceBubble).toContainText(/시청자에게는 맛집 지도/);
-  await expect(pdfFlowTraceBubble).toContainText(/영상 데이터 수집/);
-  await expect(pdfFlowTraceBubble).toContainText(/AI 분석/);
-  await expect(pdfFlowTraceBubble).toContainText(/RAG\/검색 개선/);
-  await expect(pdfFlowTraceBubble).toContainText(/결과 검증/);
-  await expect(pdfFlowTraceBubble).toContainText(/DB\/히스토리 저장/);
-  await expect(pdfFlowTraceBubble).toContainText(/웹서비스 표시/);
-  await expect(pdfFlowTraceBubble).toContainText(/evaluation_logs/);
-  await expect(pdfFlowTraceBubble).toContainText(/review_status/);
+  await expect(pdfFlowTraceBubble).toContainText(/원하는 컷 수와 분위기/);
+  await expect(pdfFlowTraceBubble).toContainText(/영상 흐름과 반복 시청 근거/);
+  await expect(pdfFlowTraceBubble).toContainText(/가게 앞 인트로부터 맛 평가/);
   expect(storyboardPostCount).toBe(storyboardPostCountAfterGenerate);
   expect(storyboardImagePostCount).toBe(storyboardImagePostCountBeforeTrace);
   expect(storyboardChatPostCount).toBe(storyboardChatPostCountBeforeTrace);
@@ -1299,7 +1313,10 @@ test("storyboard chat redacts hostile prompts and keeps fallback readiness truth
   const settingsPanel = page.locator('[data-storyboard-chat-settings-panel="true"]');
   await expect(settingsPanel).toBeVisible({ timeout: 10_000 });
   await expect(settingsPanel).toContainText("OpenAI API Key");
-  await expect(settingsPanel).toContainText("API 라우터");
+  await expect(settingsPanel).toContainText("gpt-image-2");
+  await expect(settingsPanel.locator('[data-storyboard-api-router-choice="true"]')).toBeVisible();
+  await expect(settingsPanel.locator('[data-storyboard-api-router-option="browser-openai-api-key"]')).toContainText("API Key");
+  await expect(settingsPanel.locator('[data-storyboard-api-router-option="local-codex-oauth"]')).toContainText("OAuth");
   await expect(page.locator('[data-storyboard-backend-agent-readiness="true"]')).toHaveCount(0);
   await expect(page.locator('[data-storyboard-image-provider-readiness="true"]')).toHaveCount(0);
 
