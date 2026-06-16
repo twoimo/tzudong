@@ -854,7 +854,7 @@
             "본격 입장 전 기대감"
           ],
           "generatedImage": {
-            "dataUrl": "/qa-history/storyboard/generated/2026-06-14T07-43-05-936Z-23a98498/cut-01.png",
+            "dataUrl": "/storyboard-seed/generated/cut-01.png",
             "mime": "image/png",
             "providerId": "local-codex",
             "trustPolicy": "storyboard-gpt-image-2-panel-v1",
@@ -913,7 +913,7 @@
             "조합 예고"
           ],
           "generatedImage": {
-            "dataUrl": "/qa-history/storyboard/generated/2026-06-14T07-44-00-688Z-72bf5e25/cut-02.png",
+            "dataUrl": "/storyboard-seed/generated/cut-02.png",
             "mime": "image/png",
             "providerId": "local-codex",
             "trustPolicy": "storyboard-gpt-image-2-panel-v1",
@@ -972,7 +972,7 @@
             "첫 입 전 긴장감"
           ],
           "generatedImage": {
-            "dataUrl": "/qa-history/storyboard/generated/2026-06-14T07-45-01-503Z-df92ca54/cut-03.png",
+            "dataUrl": "/storyboard-seed/generated/cut-03.png",
             "mime": "image/png",
             "providerId": "local-codex",
             "trustPolicy": "storyboard-gpt-image-2-panel-v1",
@@ -1031,7 +1031,7 @@
             "다음 소재 예고"
           ],
           "generatedImage": {
-            "dataUrl": "/qa-history/storyboard/generated/2026-06-14T07-46-01-562Z-fba55c40/cut-04.png",
+            "dataUrl": "/storyboard-seed/generated/cut-04.png",
             "mime": "image/png",
             "providerId": "local-codex",
             "trustPolicy": "storyboard-gpt-image-2-panel-v1",
