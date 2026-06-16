@@ -2000,11 +2000,9 @@ async function getStoryboardHistoryResults(): Promise<StoryboardHistoryCase[]> {
         await runResponse.json(),
       );
       if (!historyResult) return null;
-      const renderableHistoryResult =
-        await stripUnavailableStoryboardGeneratedImagesForBrowser(historyResult);
       return {
-        id: `${renderableHistoryResult.generatedAt}-${index}`,
-        result: renderableHistoryResult,
+        id: `${historyResult.generatedAt}-${index}`,
+        result: historyResult,
         runUrl,
       } satisfies StoryboardHistoryCase;
     }),
@@ -3551,9 +3549,11 @@ export function AdminStoryboardGenerator({
     }
   }
 
-  function applyStoryboardHistoryResult(historyCase: StoryboardHistoryCase) {
+  async function applyStoryboardHistoryResult(historyCase: StoryboardHistoryCase) {
     hasUserStoryboardMutationRef.current = true;
-    const historyResult = hydrateStoryboardResultForDisplay(historyCase.result);
+    const historyResult = await stripUnavailableStoryboardGeneratedImagesForBrowser(
+      hydrateStoryboardResultForDisplay(historyCase.result),
+    );
     setResult(historyResult);
     setForm(historyResult.request);
     setStoryboardPage(0);
@@ -4762,8 +4762,9 @@ export function AdminStoryboardGenerator({
                                       size="sm"
                                       className="h-7 rounded-full px-2 text-[11px]"
                                       onClick={() => {
-                                        applyStoryboardHistoryResult(historyCase);
-                                        setIsStoryboardHistoryPanelOpen(false);
+                                        void applyStoryboardHistoryResult(
+                                          historyCase,
+                                        );
                                       }}
                                       data-storyboard-history-load-run={
                                         historyCase.id
