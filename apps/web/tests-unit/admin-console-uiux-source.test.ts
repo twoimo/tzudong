@@ -2306,7 +2306,15 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(componentSource).not.toContain("Google Nano Banana 2 Pro API");
     expect(componentSource).not.toContain("OpenAI GPT Image 2 API (정확)");
-    expect(componentSource).toContain("검증된 썸네일 이미지 생성");
+    expect(componentSource).toContain('label: "Codex OAuth"');
+    expect(componentSource).toContain('label: "API Key"');
+    expect(componentSource).toContain('data-thumbnail-api-router-choice="true"');
+    expect(componentSource).toContain('data-thumbnail-api-router-option="openai-gpt-image-2"');
+    expect(componentSource).toContain('data-thumbnail-api-router-option="local-codex"');
+    expect(componentSource).toContain("const submittedProviderId = requestedProviderId;");
+    expect(componentSource).not.toContain(
+      'requestedProviderId === "local-codex" && browserOpenAIApiKey',
+    );
     expect(componentSource).not.toContain("gpt-image-1.5");
     expect(componentSource).toContain('aria-label="유튜브 썸네일 생성기"');
     expect(componentSource).toContain(
@@ -2388,6 +2396,13 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(componentSource).toContain(
       'data-thumbnail-chat-composer-inner="true"',
     );
+    expect(componentSource).toContain(
+      'data-thumbnail-chat-reference-upload="true"',
+    );
+    expect(componentSource).toContain('aria-label="참고 이미지 첨부"');
+    expect(componentSource).toContain(
+      "function openThumbnailReferenceFilePicker()",
+    );
     expect(componentSource).toContain("max-h-24 min-h-10 resize-none");
     expect(componentSource).toContain(
       'data-thumbnail-chat-draft-preview="true"',
@@ -2419,6 +2434,15 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-thumbnail-chat-settings-dropdown-parity="storyboard"',
     );
     expect(componentSource).toContain("getThumbnailImageApiRouterView");
+    expect(componentSource).toContain(
+      'data-thumbnail-api-router-choice="true"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-api-router-option="openai-gpt-image-2"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-api-router-option="local-codex"',
+    );
     expect(componentSource).toContain(
       'data-thumbnail-api-router-panel="true"',
     );
@@ -2472,13 +2496,15 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(componentSource).toContain(
       'data-thumbnail-browser-api-key-status={',
     );
-    expect(componentSource).toContain("OpenAI API Key 하나만 입력합니다.");
-    expect(componentSource).toContain("API 라우터");
-    expect(componentSource).toContain("Codex CLI OAuth:");
+    expect(componentSource).toContain("OpenAI Key · gpt-image-2");
+    expect(componentSource).toContain("사용: {thumbnailImageApiRouterView.label}");
+    expect(componentSource).toContain("sessionKeyBackedOpenAIAvailable");
+    expect(componentSource).toContain("키 저장됨");
+    expect(componentSource).toContain("Codex OAuth");
     expect(componentSource).toContain(
-      "키는 이 브라우저에만 저장하고, 요청 때만 잠깐 보냅니다.",
+      "브라우저에만 저장 · gpt-image-2 전용 · DB 저장 없음",
     );
-    expect(componentSource).toContain("모델은 gpt-image-2만 사용합니다.");
+    expect(componentSource).toContain("gpt-image-2 전용");
     expect(componentSource).not.toContain("이 브라우저 localStorage에만 남습니다.");
     expect(componentSource).not.toContain(
       "이미지 모델은 gpt-image-2만 허용합니다.",
@@ -2510,15 +2536,25 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(componentSource).toContain(
       'data-thumbnail-chat-message-action="example"',
     );
+    expect(componentSource).toContain(
+      'placeholder="원하는 썸네일 내용을 입력해 주세요"',
+    );
+    expect(componentSource).not.toContain(
+      'placeholder="예: 제육볶음 먹방 썸네일 생성해줘 · 문구 크게 · 참고 인물 이미지는 파일로 추가해줘 · PNG 저장해줘"',
+    );
     expect(componentSource).toContain("handleThumbnailUsageGuideClick");
     expect(componentSource).toContain("handleThumbnailGuidedExampleClick");
     expect(componentSource).toContain("THUMBNAIL_USAGE_GUIDE_TEXT");
+    expect(componentSource).toContain("THUMBNAIL_GUIDED_EXAMPLE_PRESETS");
     expect(componentSource).toContain("예시를 화면에 넣었어요");
-    expect(componentSource).toContain(
+    expect(componentSource).toContain("guidedExampleVariantIndexRef.current += 1");
+    expect(componentSource).toContain("createTextLayersWithGenerationLayout(");
+    expect(componentSource).toContain('setActiveLayerId("headline")');
+    expect(componentSource).toContain("실제 이미지 생성 전 빠르게 보여 주는 예시 화면입니다.");
+    expect(componentSource).toContain("void runThumbnailGeneration({");
+    expect(componentSource).toContain('markCanvasAction("예시 썸네일 생성 시작")');
+    expect(componentSource).not.toContain(
       "setResult(BUNDLED_THUMBNAIL_PREVIEW_RESULT);",
-    );
-    expect(componentSource).toContain(
-      "createBundledThumbnailPreviewTextLayers()",
     );
     expect(componentSource).toContain(
       'className="whitespace-pre-wrap break-keep [overflow-wrap:anywhere]"',
@@ -2527,7 +2563,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(componentSource).not.toContain(
       "whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-left text-xs leading-5 shadow-sm",
     );
-    expect(componentSource).toContain("모델은 gpt-image-2만 사용합니다.");
+    expect(componentSource).toContain("gpt-image-2 전용");
     expect(componentSource).not.toContain(
       "다른 이미지 모델로 자동 전환하지 않습니다.",
     );
@@ -3017,6 +3053,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(backendAgentSource).toContain("`${foodSubject} 먹방`");
     expect(backendAgentSource).toContain("밥도둑 인정?");
     expect(componentSource).toContain("referenceFileInputRef.current?.click()");
+    expect(componentSource).toContain("openThumbnailReferenceFilePicker()");
     expect(componentSource).toContain("참고 이미지 추가");
     expect(componentSource).toContain("참고 이미지 파일 선택창을 열었습니다");
     expect(componentSource).toContain(
@@ -3159,7 +3196,11 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "선택한 실제 이미지 모델을 사용할 수 없습니다.",
     );
     expect(componentSource).not.toContain("OpenAI GPT Image 2 API (정확)");
-    expect(componentSource).toContain("검증된 썸네일 이미지 생성");
+    expect(componentSource).toContain('label: "Codex OAuth"');
+    expect(componentSource).toContain('label: "API Key"');
+    expect(componentSource).toContain('data-thumbnail-api-router-choice="true"');
+    expect(componentSource).toContain('data-thumbnail-api-router-option="openai-gpt-image-2"');
+    expect(componentSource).toContain('data-thumbnail-api-router-option="local-codex"');
     expect(componentSource).not.toContain(
       "Codex built-in imagegen 로컬 (불투명)",
     );
@@ -3427,6 +3468,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(componentSource).toContain("pendingTextLayerUndoSnapshotRef");
     expect(componentSource).toContain("TEXT_LAYER_UNDO_LIMIT");
     expect(componentSource).toContain("undoTextLayerChange");
+    expect(componentSource).toContain("undoInlineTextEditorChange");
+    expect(componentSource).toContain("handleInlineTextEditorBeforeInput");
+    expect(componentSource).toContain('nativeEvent.inputType !== "historyUndo"');
+    expect(componentSource).toContain("placeInlineTextEditorCaretAtEnd");
     expect(componentSource).toContain("isUndoKeyboardShortcut");
     expect(componentSource).toContain("handleThumbnailEditorShellKeyDown");
     expect(componentSource).toContain(
@@ -3443,6 +3488,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(componentSource).toContain(
       'data-thumbnail-canvas-inline-text-editor="true"',
     );
+    expect(componentSource).toContain("onBeforeInput={handleInlineTextEditorBeforeInput}");
+    expect(componentSource).toContain("undoInlineTextEditorChange();");
     expect(componentSource).toContain("contentEditable");
     expect(componentSource).toContain("suppressContentEditableWarning");
     expect(componentSource).toContain("inlineTextEditorRef");
@@ -3463,9 +3510,22 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(componentSource).toContain("handleTextTransformPointerDown");
     expect(componentSource).toContain("handleTextTransformPointerMove");
     expect(componentSource).toContain("handleTextTransformPointerUp");
+    expect(componentSource).toContain("focusCanvasAfterTextTransform");
+    expect(componentSource).toContain("handleTextTransformHandleKeyDown");
+    expect(componentSource).toContain("focusCanvasAfterTextTransform();");
+    expect(componentSource).toContain("onKeyDown={handleTextTransformHandleKeyDown}");
     expect(componentSource).toContain("renderTextTransformHandleButtons");
     expect(componentSource).toContain("TEXT_TRANSFORM_RESIZE_HANDLES");
+    expect(componentSource).toContain("getTextLayerVisualFrame");
+    expect(componentSource).toContain("measured.actualBoundingBoxLeft + measured.actualBoundingBoxRight");
+    expect(componentSource).toContain('context.textBaseline = "middle"');
+    expect(componentSource).toContain("const strokeInset = Math.max(2, layer.strokeWidth / 2);");
+    expect(componentSource).toContain("Math.max(36, metrics.width");
+    expect(componentSource).toContain("Math.max(28, metrics.height");
+    expect(componentSource).toContain("getTextLayerSelectionLabel(activeLayer)");
     expect(componentSource).toContain("getTextLayerTransformFrameStyle(activeLayer)");
+    expect(componentSource).toContain('data-thumbnail-text-transform-metrics="visual-bounds"');
+    expect(componentSource).toContain('data-thumbnail-selected-text-transform-label="true"');
     expect(componentSource).toContain(
       "clampTextLayerFontSize(transformState.startFontSize *",
     );
@@ -3515,6 +3575,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(componentSource).toContain("TEXT_LAYER_RENDER_MAX_WIDTH");
     expect(componentSource).toContain("getNoWrapFittedTextMetrics");
     expect(componentSource).toContain("drawNoWrapFittedText");
+    expect(componentSource).not.toContain('context.fillText(layer.id === "headline" ? "메인 선택됨"');
     expect(componentSource).toContain("const width = rawWidth * renderScale;");
     expect(componentSource).not.toContain(
       "Math.min(maxWidth, rawWidth * renderScale)",
@@ -3672,7 +3733,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(backendAgentSource).toContain(
       "host/person 레퍼런스가 없으므로 사람 얼굴은 만들지 말고",
     );
-    expect(componentSource).toContain("참고 인물 이미지는 파일로 추가해줘");
+    expect(componentSource).toContain("쯔양님이 나오려면 참고 이미지가 필요합니다");
+    expect(componentSource).not.toContain("참고 인물 이미지는 파일로 추가해줘");
     expect(componentSource).toContain(
       "getSpecificCreatorReferenceRequiredMessage",
     );
@@ -4066,14 +4128,23 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).toContain(
       'data-storyboard-chat-settings-panel="true"',
     );
-    expect(storyboardSource).toContain("이미지 생성 설정");
+    expect(storyboardSource).toContain("이미지 설정");
     expect(storyboardSource).toContain("OpenAI API Key");
+    expect(storyboardSource).toContain(
+      'data-storyboard-api-router-choice="true"',
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-api-router-option="browser-openai-api-key"',
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-api-router-option="local-codex-oauth"',
+    );
     expect(storyboardSource).toContain(
       'data-storyboard-api-router-panel="true"',
     );
     expect(storyboardSource).toContain("data-storyboard-api-router-active={");
     expect(storyboardSource).toContain("data-storyboard-codex-oauth-status={");
-    expect(storyboardSource).toContain("Codex CLI OAuth");
+    expect(storyboardSource).toContain("Codex OAuth");
     expect(storyboardSource).not.toContain(
       'data-storyboard-chat-settings-source-trace="true"',
     );
@@ -4283,11 +4354,18 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(storyboardSource).toContain("StoryboardInitialResultSource");
     expect(storyboardSource).toContain("fetchStoryboardInitialResult(");
+    expect(storyboardSource).toContain("isStoryboardDisplayImageAvailable");
+    expect(storyboardSource).toContain("stripUnavailableStoryboardGeneratedImagesForBrowser");
+    expect(storyboardSource).toContain("stripStoryboardGeneratedImageForScene");
+    expect(storyboardSource).toContain("loadCanvasImage(dataUrl)");
     expect(storyboardSource).toContain(
       "trustedFirstPageSceneCount >= STORYBOARD_FRAMES_PER_PAGE",
     );
     expect(storyboardSource).toContain("STORYBOARD_SHARED_SEED_REAL_DATA_URL,");
     expect(storyboardSource).toContain('"shared-seed"');
+    const sharedSeedSource = source("public/storyboard-seed/latest-real-data.json");
+    expect(sharedSeedSource).toContain('"dataUrl": "/storyboard-seed/generated/cut-01.png"');
+    expect(sharedSeedSource).not.toContain('/qa-history/storyboard/generated/2026-06-14T07-43-05-936Z-23a98498/cut-01.png');
     expect(storyboardSource).toContain("initialResult.runUrl");
     expect(storyboardSource).toContain("공용 기본 스토리보드");
     expect(storyboardSource).toContain("STORYBOARD_HISTORY_INDEX_URL");
@@ -4307,7 +4385,13 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "mergeStoryboardGeneratedImagesIntoResult",
     );
     expect(storyboardSource).toContain(
-      "accumulatedResult = mergeStoryboardGeneratedImagesIntoResult",
+      "const browserSafeResult =",
+    );
+    expect(storyboardSource).toContain(
+      "await stripUnavailableStoryboardGeneratedImagesForBrowser(mergedResult)",
+    );
+    expect(storyboardSource).toContain(
+      "accumulatedResult = browserSafeResult",
     );
     expect(storyboardSource).toContain("applyStoryboardHistoryResult");
     expect(storyboardSource).not.toContain(
@@ -4762,7 +4846,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).not.toContain('id="storyboard-tone"');
     expect(storyboardSource).not.toContain('id="storyboard-generation-mode"');
     expect(storyboardSource).toContain("STORYBOARD_MAX_SEGMENT_COUNT");
-    expect(storyboardSource).toContain(
+    expect(storyboardSource).toContain("원하는 스토리보드 내용을 입력해 주세요");
+    expect(storyboardSource).not.toContain(
       "예: 매운 짜장라면 · 첫 입·맛 평가 중심 ${STORYBOARD_MAX_SEGMENT_COUNT}컷",
     );
     expect(storyboardSource).not.toContain("채팅으로 생성");
@@ -4820,11 +4905,16 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(storyboardSource).not.toContain("문구 추가");
     expect(storyboardSource).toContain('data-storyboard-export-png="true"');
+    expect(storyboardSource).toContain("storyboardImageGenerationProviderId");
     expect(storyboardSource).toContain(
-      'data-storyboard-generate-images="local-codex"',
+      "data-storyboard-generate-images={storyboardImageGenerationProviderId}",
     );
+    expect(storyboardSource).toContain("trustedGeneratedImage.providerId");
+    expect(storyboardSource).toContain('className="h-full w-full object-cover"');
+    expect(storyboardSource).toContain('loading="eager"');
+    expect(storyboardSource).toContain("onError={() =>");
     expect(storyboardSource).toContain(
-      'data-storyboard-generated-image="local-codex"',
+      "data-storyboard-generated-image={trustedGeneratedImage.providerId}",
     );
     expect(storyboardSource).toContain("/api/admin/storyboard/images");
     expect(storyboardSource).toContain("postStoryboardImagesRequest");
@@ -5418,6 +5508,13 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(storyboardSource).toContain(
       'data-storyboard-browser-api-key-model-policy="gpt-image-2-only"',
+    );
+    expect(storyboardSource).toContain("expectedStoryboardImageProviderId");
+    expect(storyboardSource).toContain(
+      "isSelectedStoryboardImageProviderReady",
+    );
+    expect(storyboardSource).toContain(
+      "isStoryboardBrowserOpenAIApiKeySaved && isSelectedStoryboardImageProviderReady",
     );
     expect(storyboardSource).not.toContain(
       'supabase.from("storyboard_browser_model_keys")',
