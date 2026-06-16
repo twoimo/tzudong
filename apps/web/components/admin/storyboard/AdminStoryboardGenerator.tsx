@@ -15,7 +15,6 @@ import {
   Download,
   History,
   ImageIcon,
-  KeyRound,
   Loader2,
   MessageCircle,
   RotateCcw,
@@ -336,8 +335,10 @@ function getStoryboardBrowserModelKeyHeaders(
     : {};
 }
 
+type StoryboardImageRouteChoice = "browser-openai-api-key" | "local-codex-oauth";
+
 type StoryboardImageApiRouterView = {
-  id: "browser-openai-api-key" | "local-codex-oauth" | "setup-required";
+  id: StoryboardImageRouteChoice | "setup-required";
   label: string;
   statusLabel: string;
   summary: string;
@@ -346,39 +347,41 @@ type StoryboardImageApiRouterView = {
 
 function getStoryboardImageApiRouterView(
   readiness: StoryboardImageProviderReadiness,
+  selectedRoute: StoryboardImageRouteChoice,
   hasBrowserOpenAIApiKey: boolean,
 ): StoryboardImageApiRouterView {
-  if (
-    hasBrowserOpenAIApiKey ||
-    readiness.providerId === STORYBOARD_BROWSER_OPENAI_IMAGE_PROVIDER_ID
-  ) {
+  if (selectedRoute === "browser-openai-api-key") {
+    const isBrowserOpenAIApiKeyReady =
+      readiness.status === "ready" &&
+      readiness.providerId === STORYBOARD_BROWSER_OPENAI_IMAGE_PROVIDER_ID;
     return {
       id: "browser-openai-api-key",
       label: "OpenAI API 키",
-      statusLabel:
-        readiness.status === "ready"
+      statusLabel: !hasBrowserOpenAIApiKey
+        ? "키 필요"
+        : isBrowserOpenAIApiKeyReady
           ? "사용 중"
           : readiness.status === "checking"
-            ? "확인 중"
-            : "확인 필요",
+          ? "확인 중"
+          : "확인 필요",
       summary: "이 브라우저에 저장한 키로 gpt-image-2를 호출합니다.",
       codexOAuthStatus: "api-key-active",
     };
   }
 
-  if (readiness.providerId === STORYBOARD_IMAGE_PROVIDER_ID) {
+  if (selectedRoute === "local-codex-oauth") {
     return {
       id: "local-codex-oauth",
       label: "Codex CLI OAuth",
       statusLabel:
-        readiness.status === "ready"
+        readiness.status === "ready" && readiness.providerId === STORYBOARD_IMAGE_PROVIDER_ID
           ? "사용 중"
           : readiness.status === "checking"
             ? "확인 중"
             : "확인 필요",
       summary: "로컬 Codex OAuth 브리지로 gpt-image-2를 호출합니다.",
       codexOAuthStatus:
-        readiness.status === "ready"
+        readiness.status === "ready" && readiness.providerId === STORYBOARD_IMAGE_PROVIDER_ID
           ? "active"
           : readiness.status === "checking"
             ? "checking"
@@ -1997,9 +2000,11 @@ async function getStoryboardHistoryResults(): Promise<StoryboardHistoryCase[]> {
         await runResponse.json(),
       );
       if (!historyResult) return null;
+      const renderableHistoryResult =
+        await stripUnavailableStoryboardGeneratedImagesForBrowser(historyResult);
       return {
-        id: `${historyResult.generatedAt}-${index}`,
-        result: historyResult,
+        id: `${renderableHistoryResult.generatedAt}-${index}`,
+        result: renderableHistoryResult,
         runUrl,
       } satisfies StoryboardHistoryCase;
     }),
@@ -2311,6 +2316,69 @@ function getStoryboardVisibleFramePageForSceneNo(
   );
 }
 
+async function isStoryboardDisplayImageAvailable(dataUrl: string) {
+  const isInlineImage = /^data:image\/(?:png|jpeg|webp);base64,/i.test(
+    dataUrl,
+  );
+  if (!isInlineImage && !dataUrl.startsWith("/")) {
+    return false;
+  }
+  return Boolean(await loadCanvasImage(dataUrl));
+}
+
+async function stripUnavailableStoryboardGeneratedImagesForBrowser(
+  result: StoryboardGenerationResult,
+): Promise<StoryboardGenerationResult> {
+  const scenes = await Promise.all(
+    result.storyboard.scenes.map(async (scene) => {
+      const trustedImage = getTrustedStoryboardGeneratedImage(
+        scene.generatedImage,
+      );
+      if (!trustedImage) return scene;
+      if (await isStoryboardDisplayImageAvailable(trustedImage.dataUrl)) {
+        return scene;
+      }
+      const safeScene = { ...scene };
+      delete safeScene.generatedImage;
+      return safeScene;
+    }),
+  );
+
+  return {
+    ...result,
+    storyboard: {
+      ...result.storyboard,
+      scenes,
+    },
+  };
+}
+
+function stripStoryboardGeneratedImageForScene(
+  result: StoryboardGenerationResult,
+  sceneNo: number,
+  dataUrl: string,
+): StoryboardGenerationResult {
+  let didStripImage = false;
+  const scenes = result.storyboard.scenes.map((scene) => {
+    if (scene.sceneNo !== sceneNo) return scene;
+    const trustedImage = getTrustedStoryboardGeneratedImage(scene.generatedImage);
+    if (!trustedImage || trustedImage.dataUrl !== dataUrl) return scene;
+    const safeScene = { ...scene };
+    delete safeScene.generatedImage;
+    didStripImage = true;
+    return safeScene;
+  });
+
+  if (!didStripImage) return result;
+  return {
+    ...result,
+    storyboard: {
+      ...result.storyboard,
+      scenes,
+    },
+  };
+}
+
 async function fetchStoryboardInitialResult(
   runUrl: string,
   source: StoryboardInitialResultSource,
@@ -2323,7 +2391,9 @@ async function fetchStoryboardInitialResult(
   if (!response.ok) return null;
   const result = extractLatestStoryboardResult(await response.json());
   if (!result) return null;
-  const trustedResult = hydrateStoryboardResultForDisplay(result);
+  const trustedResult = await stripUnavailableStoryboardGeneratedImagesForBrowser(
+    hydrateStoryboardResultForDisplay(result),
+  );
   const trustedFirstPageSceneCount = getVisibleTrustedStoryboardPageScenes({
     allScenes: trustedResult.storyboard.scenes,
     page: 0,
@@ -2637,6 +2707,8 @@ export function AdminStoryboardGenerator({
   ] = useState<StoryboardImageProviderReadiness>(
     INITIAL_STORYBOARD_IMAGE_PROVIDER_READINESS,
   );
+  const [storyboardImageRouteChoice, setStoryboardImageRouteChoice] =
+    useState<StoryboardImageRouteChoice>("local-codex-oauth");
   const [storyboardBrowserOpenAIApiKey, setStoryboardBrowserOpenAIApiKey] =
     useState<string | null>(null);
   const [
@@ -2779,6 +2851,7 @@ export function AdminStoryboardGenerator({
     const cache = readStoryboardBrowserModelKeysCache();
     if (!cache) return;
     setStoryboardBrowserOpenAIApiKey(cache.openAIApiKey);
+    setStoryboardImageRouteChoice("browser-openai-api-key");
     setStoryboardBrowserOpenAIApiKeySavedAt(cache.savedAt);
     setStoryboardBrowserOpenAIApiKeyMessage(
       "이 브라우저에 저장된 OpenAI API 키를 사용할 준비가 됐습니다.",
@@ -2788,7 +2861,12 @@ export function AdminStoryboardGenerator({
   useEffect(() => {
     let cancelled = false;
 
-    getStoryboardImageProviderStatusRequest(storyboardBrowserOpenAIApiKey)
+    const routeOpenAIApiKey =
+      storyboardImageRouteChoice === "browser-openai-api-key"
+        ? storyboardBrowserOpenAIApiKey
+        : null;
+
+    getStoryboardImageProviderStatusRequest(routeOpenAIApiKey)
       .then((payload) => {
         if (cancelled) return;
         setStoryboardImageProviderReadiness(
@@ -2815,7 +2893,7 @@ export function AdminStoryboardGenerator({
     return () => {
       cancelled = true;
     };
-  }, [storyboardBrowserOpenAIApiKey]);
+  }, [storyboardBrowserOpenAIApiKey, storyboardImageRouteChoice]);
 
   useEffect(() => {
     const transcript = chatTranscriptRef.current;
@@ -2905,9 +2983,20 @@ export function AdminStoryboardGenerator({
   );
   const activePageGenerationTargetCount =
     activeStoryboardImageGenerationTargetScenes.length;
-  const isStoryboardImageProviderAvailable = isStoryboardImageProviderReady(
-    storyboardImageProviderReadiness,
+  const isStoryboardBrowserOpenAIApiKeySaved = Boolean(
+    storyboardBrowserOpenAIApiKey,
   );
+  const expectedStoryboardImageProviderId =
+    storyboardImageRouteChoice === "browser-openai-api-key"
+      ? STORYBOARD_BROWSER_OPENAI_IMAGE_PROVIDER_ID
+      : STORYBOARD_IMAGE_PROVIDER_ID;
+  const isSelectedStoryboardImageProviderReady =
+    isStoryboardImageProviderReady(storyboardImageProviderReadiness) &&
+    storyboardImageProviderReadiness.providerId === expectedStoryboardImageProviderId;
+  const isStoryboardImageProviderAvailable =
+    storyboardImageRouteChoice === "browser-openai-api-key"
+      ? isStoryboardBrowserOpenAIApiKeySaved && isSelectedStoryboardImageProviderReady
+      : isSelectedStoryboardImageProviderReady;
   const selectedStoryboardSceneNo =
     storyboardCanvasFocus?.kind === "cut"
       ? storyboardCanvasFocus.sceneNo
@@ -2954,16 +3043,22 @@ export function AdminStoryboardGenerator({
         : activePageGeneratedCount === activeStoryboardImageGenerationTargetScenes.length
         ? `${activePageGenerationTargetCount}컷 재생성`
         : `${activePageGenerationTargetCount}컷 생성`;
-  const isStoryboardBrowserOpenAIApiKeySaved = Boolean(
-    storyboardBrowserOpenAIApiKey,
-  );
   const maskedStoryboardBrowserOpenAIApiKey = storyboardBrowserOpenAIApiKey
     ? maskStoryboardBrowserOpenAIApiKey(storyboardBrowserOpenAIApiKey)
     : "";
+  const selectedStoryboardBrowserOpenAIApiKey =
+    storyboardImageRouteChoice === "browser-openai-api-key"
+      ? storyboardBrowserOpenAIApiKey
+      : null;
   const storyboardImageApiRouterView = getStoryboardImageApiRouterView(
     storyboardImageProviderReadiness,
+    storyboardImageRouteChoice,
     isStoryboardBrowserOpenAIApiKeySaved,
   );
+  const storyboardImageGenerationProviderId =
+    storyboardImageRouteChoice === "browser-openai-api-key"
+      ? STORYBOARD_BROWSER_OPENAI_IMAGE_PROVIDER_ID
+      : STORYBOARD_IMAGE_PROVIDER_ID;
   const hasPreviousStoryboardPage = activeStoryboardPage > 0;
   const hasNextStoryboardPage = activeStoryboardPage < storyboardTotalPages - 1;
   const selectedExportPreset =
@@ -3083,7 +3178,7 @@ export function AdminStoryboardGenerator({
       ? `${storyboardCanvasFocus.label} 멘트·자막·구도 중 무엇을 바꿀까요?`
       : storyboardCanvasFocus?.kind === "action"
         ? `${storyboardCanvasFocus.label} 이후 조정할 내용을 입력하세요`
-        : `예: 매운 짜장라면 · 첫 입·맛 평가 중심 ${STORYBOARD_MAX_SEGMENT_COUNT}컷`;
+        : "원하는 스토리보드 내용을 입력해 주세요";
 
   function createFormWithStoryboardChatPatch(
     baseForm: GeneratorForm,
@@ -3310,7 +3405,7 @@ export function AdminStoryboardGenerator({
     );
     try {
       const payload = await getStoryboardImageProviderStatusRequest(
-        storyboardBrowserOpenAIApiKey,
+        selectedStoryboardBrowserOpenAIApiKey,
       );
       setStoryboardImageProviderReadiness(
         mapStoryboardImageProviderReadiness(payload),
@@ -3345,18 +3440,15 @@ export function AdminStoryboardGenerator({
     }
     const cache = writeStoryboardBrowserModelKeysCache(normalized);
     setStoryboardBrowserOpenAIApiKey(cache.openAIApiKey);
+    setStoryboardImageRouteChoice("browser-openai-api-key");
     setStoryboardBrowserOpenAIApiKeySavedAt(cache.savedAt);
     setStoryboardImageProviderReadiness({
-      status: "ready",
-      label: "이미지 생성 준비됨",
-      summary: "브라우저에 저장한 API 키로 이미지 생성 준비가 끝났습니다.",
-      detail: "키는 이 브라우저 캐시에만 보관되고, 요청할 때만 서버로 전달됩니다.",
-      reason: "ready",
-      model: STORYBOARD_IMAGE_PROVIDER_MODEL,
+      ...INITIAL_STORYBOARD_IMAGE_PROVIDER_READINESS,
       providerId: STORYBOARD_BROWSER_OPENAI_IMAGE_PROVIDER_ID,
-      modelProvenance: STORYBOARD_IMAGE_PROVIDER_EXACT_PROVENANCE,
-      command: "browser localStorage API key (transient request header)",
-      target: { width: 1280, height: 720, aspectRatio: "16:9" },
+      summary: "브라우저에 저장한 API 키로 이미지 생성 준비 여부를 확인하고 있습니다.",
+      detail: "키는 이 브라우저 캐시에만 보관되고, 상태 확인 요청 때만 서버로 전달됩니다.",
+      reason: "checking",
+      model: STORYBOARD_IMAGE_PROVIDER_MODEL,
       checkedAt: new Date().toISOString(),
     });
     setStoryboardBrowserOpenAIApiKeyDraft("");
@@ -3377,6 +3469,7 @@ export function AdminStoryboardGenerator({
   function handleClearStoryboardBrowserOpenAIApiKey() {
     clearStoryboardBrowserModelKeysCache();
     setStoryboardBrowserOpenAIApiKey(null);
+    setStoryboardImageRouteChoice("local-codex-oauth");
     setStoryboardBrowserOpenAIApiKeySavedAt(null);
     setStoryboardBrowserOpenAIApiKeyDraft("");
     setStoryboardBrowserOpenAIApiKeyError(null);
@@ -3391,6 +3484,20 @@ export function AdminStoryboardGenerator({
         status: "done",
       },
     ]);
+  }
+
+  function handleSelectStoryboardImageRouteChoice(
+    nextRoute: StoryboardImageRouteChoice,
+  ) {
+    setStoryboardImageRouteChoice(nextRoute);
+    setStoryboardBrowserOpenAIApiKeyError(null);
+    setStoryboardBrowserOpenAIApiKeyMessage(
+      nextRoute === "browser-openai-api-key"
+        ? storyboardBrowserOpenAIApiKey
+          ? "OpenAI API 키를 사용하도록 선택했어요."
+          : "API Key를 선택했어요. 먼저 키를 저장해 주세요."
+        : "Codex OAuth를 사용하도록 선택했어요.",
+    );
   }
 
   function guideUnavailableStoryboardImageGeneration(
@@ -4275,13 +4382,31 @@ export function AdminStoryboardGenerator({
 
     let appliedImageCount = 0;
     let accumulatedResult = sourceResult;
-    const applyGeneratedImages = (images: StoryboardImagesResponse["images"]) => {
-      accumulatedResult = mergeStoryboardGeneratedImagesIntoResult(
+    const applyGeneratedImages = async (
+      images: StoryboardImagesResponse["images"],
+    ) => {
+      const mergedResult = mergeStoryboardGeneratedImagesIntoResult(
         accumulatedResult,
         images,
       );
+      const browserSafeResult =
+        await stripUnavailableStoryboardGeneratedImagesForBrowser(mergedResult);
+      const acceptedSceneNos = new Set(
+        images.flatMap(({ sceneNo, image }) => {
+          const trustedImage = getTrustedStoryboardGeneratedImage(image);
+          if (!trustedImage) return [];
+          const scene = browserSafeResult.storyboard.scenes.find(
+            (candidate) => candidate.sceneNo === sceneNo,
+          );
+          const acceptedImage = getTrustedStoryboardGeneratedImage(
+            scene?.generatedImage,
+          );
+          return acceptedImage?.dataUrl === trustedImage.dataUrl ? [sceneNo] : [];
+        }),
+      );
+      accumulatedResult = browserSafeResult;
       setResult(accumulatedResult);
-      appliedImageCount += images.length;
+      appliedImageCount += acceptedSceneNos.size;
       const completedSceneNos = new Set(images.map((image) => image.sceneNo));
       setGeneratingStoryboardImageSceneNos((current) =>
         current.filter((sceneNo) => !completedSceneNos.has(sceneNo)),
@@ -4289,7 +4414,6 @@ export function AdminStoryboardGenerator({
     };
 
     try {
-      const generatedImages: StoryboardImagesResponse["images"] = [];
       if (!isSelectedScope && targetScenes.length > 1) {
         for (let index = 0; index < targetScenes.length; index += 1) {
           const scene = targetScenes[index];
@@ -4304,10 +4428,9 @@ export function AdminStoryboardGenerator({
           const scenePayload = await postStoryboardImagesRequest(
             accumulatedResult,
             [scene],
-            storyboardBrowserOpenAIApiKey,
+            selectedStoryboardBrowserOpenAIApiKey,
           );
-          generatedImages.push(...scenePayload.images);
-          applyGeneratedImages(scenePayload.images);
+          await applyGeneratedImages(scenePayload.images);
           applyStoryboardCanvasFocus(
             createStoryboardActionFocusContext(
               "컷 이미지 생성 진행",
@@ -4322,10 +4445,9 @@ export function AdminStoryboardGenerator({
         const payload = await postStoryboardImagesRequest(
           accumulatedResult,
           targetScenes,
-          storyboardBrowserOpenAIApiKey,
+          selectedStoryboardBrowserOpenAIApiKey,
         );
-        generatedImages.push(...payload.images);
-        applyGeneratedImages(payload.images);
+        await applyGeneratedImages(payload.images);
       }
       setStoryboardHistoryCases((current) =>
         mergeStoryboardHistoryCases(
@@ -4340,8 +4462,8 @@ export function AdminStoryboardGenerator({
           isSelectedScope
             ? `완료 · ${targetLabel} 이미지를 새 결과로 교체했습니다.`
             : isAllScope
-              ? `완료 · 전체 ${generatedImages.length}/${targetCount}컷 이미지를 새 결과로 교체했습니다.`
-              : `완료 · 현재 페이지 ${generatedImages.length}/${targetCount}컷 이미지를 새 결과로 교체했습니다.`,
+              ? `완료 · 전체 ${appliedImageCount}/${targetCount}컷 이미지를 새 결과로 교체했습니다.`
+              : `완료 · 현재 페이지 ${appliedImageCount}/${targetCount}컷 이미지를 새 결과로 교체했습니다.`,
           "done",
         );
       }
@@ -4352,7 +4474,7 @@ export function AdminStoryboardGenerator({
             : isAllScope
               ? "전체 CUT 이미지 생성 완료"
               : "4컷 이미지 생성 완료",
-          `${targetLabel} 이미지 ${generatedImages.length}개가 캔버스에 반영됐습니다.`,
+          `${targetLabel} 이미지 ${appliedImageCount}개가 캔버스에 반영됐습니다.`,
           isSelectedScope
             ? "선택 CUT의 새 이미지가 반영됐습니다. 사용자가 같은 컷의 오디오/자막/비주얼을 계속 보완할 수 있습니다."
             : isAllScope
@@ -4776,24 +4898,19 @@ export function AdminStoryboardGenerator({
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
                     align="end"
-                    className="w-[min(320px,calc(100vw-2rem))] p-0"
+                    className="w-[min(280px,calc(100vw-2rem))] p-0"
                     data-storyboard-chat-settings-dropdown="true"
                   >
                     <div
-                      className="space-y-3 rounded-2xl bg-background/95 p-3 shadow-sm"
+                      className="space-y-2 rounded-2xl bg-background/95 p-2.5 shadow-sm"
                       data-storyboard-chat-settings-panel="true"
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <div className="flex min-w-0 items-center gap-2">
-                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                            <KeyRound className="h-3.5 w-3.5" aria-hidden="true" />
-                          </span>
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-bold">이미지 생성 설정</p>
-                            <p className="text-[11px] text-muted-foreground">
-                              OpenAI API Key 하나만 입력합니다.
-                            </p>
-                          </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-bold">이미지 설정</p>
+                          <p className="text-[11px] text-muted-foreground">
+                            OpenAI Key · gpt-image-2
+                          </p>
                         </div>
                         <Button
                           type="button"
@@ -4809,53 +4926,103 @@ export function AdminStoryboardGenerator({
                       </div>
 
                       <div
-                        className="rounded-2xl border border-border/70 bg-muted/20 p-3"
+                        className="grid grid-cols-2 gap-1"
+                        role="radiogroup"
+                        aria-label="스토리보드 이미지 생성 방식 선택"
+                        data-storyboard-api-router-choice="true"
+                      >
+                        <button
+                          type="button"
+                          className={`rounded-xl px-2 py-1.5 text-left transition ${
+                            storyboardImageRouteChoice === "browser-openai-api-key"
+                              ? "bg-primary text-primary-foreground shadow-sm"
+                              : "bg-muted/35 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                          }`}
+                          aria-pressed={storyboardImageRouteChoice === "browser-openai-api-key"}
+                          onClick={() => handleSelectStoryboardImageRouteChoice("browser-openai-api-key")}
+                          data-storyboard-api-router-option="browser-openai-api-key"
+                          data-storyboard-api-router-option-selected={
+                            storyboardImageRouteChoice === "browser-openai-api-key"
+                              ? "true"
+                              : "false"
+                          }
+                        >
+                          <span className="block text-[11px] font-bold">API Key</span>
+                          <span className="block text-[10px] opacity-80">
+                            {isStoryboardBrowserOpenAIApiKeySaved ? "저장됨" : "키 필요"}
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          className={`rounded-xl px-2 py-1.5 text-left transition ${
+                            storyboardImageRouteChoice === "local-codex-oauth"
+                              ? "bg-primary text-primary-foreground shadow-sm"
+                              : "bg-muted/35 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                          }`}
+                          aria-pressed={storyboardImageRouteChoice === "local-codex-oauth"}
+                          onClick={() => handleSelectStoryboardImageRouteChoice("local-codex-oauth")}
+                          data-storyboard-api-router-option="local-codex-oauth"
+                          data-storyboard-api-router-option-selected={
+                            storyboardImageRouteChoice === "local-codex-oauth"
+                              ? "true"
+                              : "false"
+                          }
+                        >
+                          <span className="block text-[11px] font-bold">OAuth</span>
+                          <span className="block text-[10px] opacity-80">
+                            {storyboardImageProviderReadiness.status === "ready" &&
+                            storyboardImageProviderReadiness.providerId === STORYBOARD_IMAGE_PROVIDER_ID
+                              ? "사용 가능"
+                              : storyboardImageProviderReadiness.status === "checking"
+                                ? "확인 중"
+                                : "확인 필요"}
+                          </span>
+                        </button>
+                      </div>
+
+                      <div
+                        className="flex items-center justify-between gap-2 rounded-xl bg-muted/30 px-2.5 py-2"
                         data-storyboard-api-router-panel="true"
                         data-storyboard-api-router-active={storyboardImageApiRouterView.id}
                         data-storyboard-codex-oauth-status={storyboardImageApiRouterView.codexOAuthStatus}
                         data-storyboard-api-router-model={STORYBOARD_IMAGE_PROVIDER_MODEL}
                       >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-[11px] font-semibold text-muted-foreground">
-                            API 라우터
-                          </span>
-                          <Badge
-                            variant="secondary"
-                            className="h-6 rounded-full px-2 text-[11px]"
-                            data-storyboard-api-router-label="true"
+                        <div className="min-w-0">
+                          <p
+                            className="truncate text-[11px] font-semibold"
+                            data-storyboard-api-router-status="true"
                           >
-                            {storyboardImageApiRouterView.label}
-                          </Badge>
+                            사용: {storyboardImageApiRouterView.label}
+                          </p>
+                          <p
+                            className="truncate text-[10px] text-muted-foreground"
+                            data-storyboard-api-router-summary="true"
+                            data-storyboard-codex-oauth-copy="true"
+                          >
+                            {storyboardImageApiRouterView.statusLabel} ·{" "}
+                            {storyboardImageApiRouterView.codexOAuthStatus ===
+                            "active"
+                              ? "Codex OAuth"
+                              : storyboardImageApiRouterView.codexOAuthStatus ===
+                                  "checking"
+                                ? "OAuth 확인"
+                                : storyboardImageApiRouterView.codexOAuthStatus ===
+                                    "api-key-active"
+                                  ? "브라우저 키"
+                                  : "설정 필요"}
+                          </p>
                         </div>
-                        <p
-                          className="mt-2 text-xs font-semibold"
-                          data-storyboard-api-router-status="true"
+                        <Badge
+                          variant="secondary"
+                          className="h-6 shrink-0 rounded-full px-2 text-[10px]"
+                          data-storyboard-api-router-label="true"
                         >
-                          {storyboardImageApiRouterView.statusLabel}
-                        </p>
-                        <p
-                          className="mt-1 text-[11px] leading-4 text-muted-foreground"
-                          data-storyboard-api-router-summary="true"
-                        >
-                          {storyboardImageApiRouterView.summary}
-                        </p>
-                        <p
-                          className="mt-1 text-[11px] leading-4 text-muted-foreground"
-                          data-storyboard-codex-oauth-copy="true"
-                        >
-                          Codex CLI OAuth:{" "}
-                          {storyboardImageApiRouterView.codexOAuthStatus === "active"
-                            ? "사용 중"
-                            : storyboardImageApiRouterView.codexOAuthStatus === "checking"
-                              ? "확인 중"
-                              : storyboardImageApiRouterView.codexOAuthStatus === "api-key-active"
-                                ? "API 키 사용 중"
-                                : "확인 필요"}
-                        </p>
+                          gpt-image-2
+                        </Badge>
                       </div>
 
                       <div
-                        className="grid gap-2"
+                        className="grid gap-1.5"
                         data-storyboard-browser-api-key-settings="local-storage-only"
                         data-storyboard-api-key-storage="browser-local-storage-only"
                         data-storyboard-api-key-db-storage="forbidden"
@@ -4898,7 +5065,7 @@ export function AdminStoryboardGenerator({
                           <Button
                             type="button"
                             size="sm"
-                            className="h-8 shrink-0"
+                            className="h-8 shrink-0 px-2 text-xs"
                             onClick={handleSaveStoryboardBrowserOpenAIApiKey}
                             data-storyboard-browser-api-key-save="true"
                           >
@@ -4906,16 +5073,11 @@ export function AdminStoryboardGenerator({
                           </Button>
                         </div>
                         <p
-                          className="text-[11px] leading-4 text-muted-foreground"
+                          className="text-[10px] leading-4 text-muted-foreground"
                           data-storyboard-browser-api-key-browser-only-copy="true"
-                        >
-                          키는 이 브라우저에만 저장하고, 요청 때만 잠깐 보냅니다.
-                        </p>
-                        <p
-                          className="text-[11px] leading-4 text-muted-foreground"
                           data-storyboard-browser-api-key-model-policy="gpt-image-2-only"
                         >
-                          모델은 gpt-image-2만 사용합니다.
+                          브라우저에만 저장 · gpt-image-2 전용 · DB 저장 없음
                         </p>
                         <div className="flex flex-wrap items-center gap-2">
                           <p
@@ -5363,7 +5525,7 @@ export function AdminStoryboardGenerator({
                     activePageGenerationTargetCount === 0
                   }
                   className="h-8 shrink-0 px-2 text-xs"
-                  data-storyboard-generate-images="local-codex"
+                  data-storyboard-generate-images={storyboardImageGenerationProviderId}
                   data-storyboard-image-provider-action-status={
                     storyboardImageProviderReadiness.status
                   }
@@ -5479,7 +5641,7 @@ export function AdminStoryboardGenerator({
                         />
                       ) : null}
                       <div
-                        className="relative min-h-0 flex-1 overflow-hidden rounded-t-2xl"
+                        className="relative min-h-[160px] flex-1 overflow-hidden rounded-t-2xl"
                         style={{ background: frameBackground }}
                         aria-label={`${scene.sceneNo}컷 이미지 생성 결과`}
                         data-storyboard-cut-image-loading-scope={
@@ -5487,14 +5649,23 @@ export function AdminStoryboardGenerator({
                         }
                       >
                         {trustedGeneratedImage ? (
-                          <NextImage
+                          // eslint-disable-next-line @next/next/no-img-element -- CUT canvas images are browser-verified blob/static storyboard outputs; plain eager img avoids Next fill zero-height regressions.
+                          <img
                             src={trustedGeneratedImage.dataUrl}
                             alt={`${scene.sceneNo}컷 스토리보드 이미지`}
-                            fill
-                            sizes="(min-width: 1280px) 36vw, 50vw"
-                            className="object-cover"
-                            unoptimized
-                            data-storyboard-generated-image="local-codex"
+                            className="h-full w-full object-cover"
+                            loading="eager"
+                            decoding="async"
+                            onError={() => {
+                              setResult((current) =>
+                                stripStoryboardGeneratedImageForScene(
+                                  current,
+                                  scene.sceneNo,
+                                  trustedGeneratedImage.dataUrl,
+                                ),
+                              );
+                            }}
+                            data-storyboard-generated-image={trustedGeneratedImage.providerId}
                           />
                         ) : null}
                         {isSceneImageGenerating ? (
