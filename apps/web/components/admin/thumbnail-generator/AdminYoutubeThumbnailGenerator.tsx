@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type FormEvent as ReactFormEvent,
   type FocusEvent as ReactFocusEvent,
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
@@ -20,7 +21,6 @@ import {
   Download,
   EyeOff,
   History,
-  KeyRound,
   Loader2,
   MessageCircle,
   Move,
@@ -57,6 +57,24 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
+import {
+  THUMBNAIL_LOCAL_BRIDGE_DEFAULT_URL,
+  THUMBNAIL_LOCAL_BRIDGE_IMAGES_PATH,
+  THUMBNAIL_LOCAL_BRIDGE_ROUTE_ID,
+  buildThumbnailLocalBridgeImagesRequest,
+  getThumbnailLocalBridgeAuthHeaders,
+  normalizeThumbnailLocalBridgeImagesResponse,
+  normalizeThumbnailLocalBridgeToken,
+  normalizeThumbnailLocalBridgeUrl,
+  redactThumbnailLocalBridgeSecretText,
+  requireThumbnailLocalBridgeToken,
+  type ThumbnailLocalBridgeReferenceImage,
+  type ThumbnailLocalBridgeStatus,
+} from "@/lib/admin/youtube-thumbnail-generator/local-bridge-contract";
+import type {
+  ThumbnailGenerationResult as ContractThumbnailGenerationResult,
+  ThumbnailGeneratorPayload,
+} from "@/lib/admin/youtube-thumbnail-generator/types";
 
 type ProviderId = "local-codex" | "openai-gpt-image-2";
 type GenerationMode = "direct_provider" | "backend_agent";
@@ -381,6 +399,7 @@ type ThumbnailChatSseEvent = {
 
 type ThumbnailGenerationOverrides = Partial<{
   providerId: ProviderId;
+  imageRouteChoice: ThumbnailImageRouteChoice;
   generationMode: GenerationMode;
   topic: string;
   headline: string;
@@ -472,6 +491,7 @@ const DEFAULT_LIMITS: ThumbnailReadiness["limits"] = {
 
 const THUMBNAIL_BROWSER_MODEL_KEYS_STORAGE_KEY = "tzudong.admin.youtubeThumbnail.modelKeys.v1";
 const THUMBNAIL_BROWSER_MODEL_KEYS_VERSION = 1;
+const THUMBNAIL_LOCAL_BRIDGE_SESSION_STORAGE_KEY = "tzudong.admin.youtubeThumbnail.localBridge.v1" as const;
 const THUMBNAIL_SESSION_OPENAI_API_KEY_FIELD = "thumbnailSessionOpenaiApiKey";
 const THUMBNAIL_SESSION_API_KEY_MAX_LENGTH = 512;
 const THUMBNAIL_BROWSER_OPENAI_API_KEY_PATTERN = /^sk-[A-Za-z0-9_-]{16,}$/;
@@ -482,6 +502,19 @@ type ThumbnailBrowserModelKeysCache = {
   savedAt: string;
   storage: "browser_local_storage_only";
 };
+
+type ThumbnailLocalBridgeSessionCache = {
+  version: 1;
+  bridgeUrl: string;
+  token: string;
+  savedAt: string;
+  storage: "browser_session_storage_only";
+};
+
+type ThumbnailImageRouteChoice =
+  | "browser-openai-api-key"
+  | "local-codex-oauth"
+  | typeof THUMBNAIL_LOCAL_BRIDGE_ROUTE_ID;
 
 const thumbnailExportPresets: ThumbnailExportPreset[] = [
   {
@@ -593,14 +626,265 @@ function clearThumbnailBrowserModelKeysCache() {
   window.localStorage.removeItem(THUMBNAIL_BROWSER_MODEL_KEYS_STORAGE_KEY);
 }
 
+function maskThumbnailLocalBridgeToken(value: string | null) {
+  if (!value) return "";
+  return `${value.slice(0, 4)}…${value.slice(-4)}`;
+}
+
+function readThumbnailLocalBridgeSessionCache(): ThumbnailLocalBridgeSessionCache | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.sessionStorage.getItem(THUMBNAIL_LOCAL_BRIDGE_SESSION_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<ThumbnailLocalBridgeSessionCache>;
+    if (
+      parsed.version !== 1 ||
+      parsed.storage !== "browser_session_storage_only" ||
+      typeof parsed.bridgeUrl !== "string" ||
+      typeof parsed.token !== "string" ||
+      typeof parsed.savedAt !== "string"
+    ) {
+      window.sessionStorage.removeItem(THUMBNAIL_LOCAL_BRIDGE_SESSION_STORAGE_KEY);
+      return null;
+    }
+    const bridgeUrl = normalizeThumbnailLocalBridgeUrl(parsed.bridgeUrl);
+    const token = normalizeThumbnailLocalBridgeToken(parsed.token);
+    if (!token) return null;
+    return {
+      version: 1,
+      bridgeUrl,
+      token,
+      savedAt: parsed.savedAt,
+      storage: "browser_session_storage_only",
+    };
+  } catch {
+    window.sessionStorage.removeItem(THUMBNAIL_LOCAL_BRIDGE_SESSION_STORAGE_KEY);
+    return null;
+  }
+}
+
+function writeThumbnailLocalBridgeSessionCache(
+  bridgeUrl: string,
+  token: string,
+) {
+  if (typeof window === "undefined") return null;
+  const cache: ThumbnailLocalBridgeSessionCache = {
+    version: 1,
+    bridgeUrl: normalizeThumbnailLocalBridgeUrl(bridgeUrl),
+    token,
+    savedAt: new Date().toISOString(),
+    storage: "browser_session_storage_only",
+  };
+  window.sessionStorage.setItem(
+    THUMBNAIL_LOCAL_BRIDGE_SESSION_STORAGE_KEY,
+    JSON.stringify(cache),
+  );
+  return cache;
+}
+
+function clearThumbnailLocalBridgeSessionCache() {
+  if (typeof window === "undefined") return;
+  window.sessionStorage.removeItem(THUMBNAIL_LOCAL_BRIDGE_SESSION_STORAGE_KEY);
+}
+
+function getProviderIdForThumbnailImageRouteChoice(routeChoice: ThumbnailImageRouteChoice): ProviderId {
+  return routeChoice === "browser-openai-api-key" ? "openai-gpt-image-2" : "local-codex";
+}
+
 function formatBytes(bytes: number) {
   return `${(bytes / 1024 / 1024).toFixed(bytes >= 1024 * 1024 ? 1 : 2)}MiB`;
+}
+
+type ThumbnailGenerationPreflightInput = {
+  topic: string;
+  headline: string;
+  files: File[];
+  readinessLimits: ThumbnailReadiness["limits"];
+  fileValidationMessage: string | null;
+  generationMode: GenerationMode;
+  backendAgentStatus: ThumbnailReadiness["backendAgent"] | null | undefined;
+};
+
+function getThumbnailGenerationPreflightIssues({
+  topic,
+  headline,
+  files,
+  readinessLimits,
+  fileValidationMessage,
+  generationMode,
+  backendAgentStatus,
+}: ThumbnailGenerationPreflightInput) {
+  const issues: string[] = [];
+  const trimmedTopic = topic.trim();
+  const trimmedHeadline = headline.trim();
+  const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
+
+  if (!trimmedTopic) issues.push("영상 콘텐츠 주제를 입력하세요.");
+  if (trimmedTopic.length > 280) issues.push("영상 콘텐츠 주제는 280자 이하로 줄이세요.");
+  if (!trimmedHeadline) issues.push("메인 문구를 입력하세요.");
+  if (trimmedHeadline.length > 80) issues.push("메인 문구는 80자 이하로 줄이세요.");
+  if (files.length > readinessLimits.maxFiles) issues.push(`참고 이미지는 최대 ${readinessLimits.maxFiles}장까지 업로드할 수 있습니다.`);
+  const oversizedFile = files.find((file) => file.size > readinessLimits.maxFileBytes);
+  if (oversizedFile) issues.push(`${oversizedFile.name} 파일이 ${formatBytes(readinessLimits.maxFileBytes)} 제한을 넘습니다.`);
+  if (totalBytes > readinessLimits.maxTotalBytes) issues.push(`참고 이미지 총 용량은 ${formatBytes(readinessLimits.maxTotalBytes)} 이하로 줄이세요.`);
+  const unsupportedFile = files.find((file) => file.type && !readinessLimits.mimeTypes.includes(file.type));
+  if (unsupportedFile) issues.push(`${unsupportedFile.name}은 PNG/JPEG/WebP 이미지로 다시 선택하세요.`);
+  if (fileValidationMessage) issues.push(fileValidationMessage);
+  if (generationMode === "backend_agent" && backendAgentStatus && !backendAgentStatus.available) {
+    issues.push("도우미 준비 상태를 확인할 수 없어 바로 이미지 생성으로 전환하세요.");
+  }
+  // Specific creator requests are allowed to proceed without an upload because
+  // the server can use the locally held Tzuyang thumbnail library as
+  // reference-backed host/person evidence; if retrieval cannot provide it, the
+  // guarded API returns host_reference_required.
+
+  return issues;
 }
 
 function getThumbnailErrorAction(payload: ThumbnailApiErrorPayload | null) {
   const code = payload?.error ?? "thumbnail_generation_failed";
   const action = thumbnailErrorActions[code] ?? "입력값과 이미지 생성 준비 상태를 확인한 뒤 다시 시도하세요.";
   return action;
+}
+
+async function getThumbnailLocalBridgeStatusRequest(
+  bridgeUrl: string,
+  token: string | null,
+): Promise<{ status: ThumbnailLocalBridgeStatus; message: string }> {
+  const baseUrl = normalizeThumbnailLocalBridgeUrl(bridgeUrl);
+  const normalizedToken = normalizeThumbnailLocalBridgeToken(token);
+  if (!normalizedToken) {
+    return {
+      status: "unpaired",
+      message: "고급 로컬 브릿지 pairing 설정을 먼저 저장해 주세요.",
+    };
+  }
+  try {
+    const healthResponse = await fetch(`${baseUrl}/health`, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    const healthPayload = await healthResponse.json().catch(() => null) as Partial<{
+      ok: boolean;
+      providerId: string;
+      model: string;
+      endpoints?: { thumbnailImages?: string };
+    }> | null;
+    if (
+      !healthResponse.ok ||
+      healthPayload?.ok !== true ||
+      healthPayload.providerId !== "local-codex" ||
+      healthPayload.model !== "gpt-image-2" ||
+      healthPayload.endpoints?.thumbnailImages !== THUMBNAIL_LOCAL_BRIDGE_IMAGES_PATH
+    ) {
+      return {
+        status: "unavailable",
+        message: "로컬 브릿지 health 응답을 신뢰할 수 없습니다.",
+      };
+    }
+    const authResponse = await fetch(`${baseUrl}/auth-status`, {
+      method: "GET",
+      headers: getThumbnailLocalBridgeAuthHeaders(normalizedToken),
+      cache: "no-store",
+    });
+    const authPayload = await authResponse.json().catch(() => null) as Partial<{
+      ok: boolean;
+      status: string;
+      providerId: string;
+      model: string;
+      detail?: string;
+    }> | null;
+    if (
+      authResponse.ok &&
+      authPayload?.ok === true &&
+      authPayload.status === "ready" &&
+      authPayload.providerId === "local-codex" &&
+      authPayload.model === "gpt-image-2"
+    ) {
+      return {
+        status: "connected",
+        message: "고급 로컬 브릿지 연결됨 · local-codex gpt-image-2",
+      };
+    }
+    if (authPayload?.status === "auth_required") {
+      return {
+        status: "auth_required",
+        message: authPayload.detail ?? "로컬 Codex OAuth 로그인이 필요합니다.",
+      };
+    }
+    return {
+      status: "unpaired",
+      message: "pairing 설정이 브릿지와 맞지 않습니다.",
+    };
+  } catch (error) {
+    return {
+      status: "unavailable",
+      message: redactThumbnailLocalBridgeSecretText(
+        error instanceof Error ? error.message : "로컬 브릿지에 연결할 수 없습니다.",
+        normalizedToken,
+      ),
+    };
+  }
+}
+
+function bytesToBase64(buffer: ArrayBuffer) {
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  let binary = "";
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+  }
+  return window.btoa(binary);
+}
+
+async function buildThumbnailLocalBridgeReferenceImages(
+  files: File[],
+  roles: ReferenceImageRole[],
+): Promise<ThumbnailLocalBridgeReferenceImage[]> {
+  return Promise.all(files.slice(0, DEFAULT_LIMITS.maxFiles).map(async (file, index) => {
+    let mime: ThumbnailLocalBridgeReferenceImage["mime"] = "image/png";
+    if (file.type === "image/jpeg") mime = "image/jpeg";
+    if (file.type === "image/webp") mime = "image/webp";
+    return {
+      name: file.name || `reference-${index + 1}.${mime.split("/")[1] ?? "png"}`,
+      mime,
+      role: roles[index] ?? (index === 0 ? "host" : "other"),
+      dataBase64: bytesToBase64(await file.arrayBuffer()),
+    };
+  }));
+}
+
+async function postThumbnailLocalBridgeImagesRequest(
+  payload: ThumbnailGeneratorPayload,
+  referenceImages: ThumbnailLocalBridgeReferenceImage[],
+  bridgeUrl: string,
+  token: string | null,
+  signal: AbortSignal,
+): Promise<GenerationResult> {
+  const baseUrl = normalizeThumbnailLocalBridgeUrl(bridgeUrl);
+  const normalizedToken = requireThumbnailLocalBridgeToken(token);
+  const requestPayload = buildThumbnailLocalBridgeImagesRequest(payload, referenceImages);
+  const response = await fetch(`${baseUrl}${THUMBNAIL_LOCAL_BRIDGE_IMAGES_PATH}`, {
+    method: "POST",
+    headers: getThumbnailLocalBridgeAuthHeaders(normalizedToken),
+    body: JSON.stringify(requestPayload),
+    signal,
+  });
+  const responsePayload = await response.json().catch(() => null) as unknown;
+  if (!response.ok) {
+    const errorPayload = responsePayload && typeof responsePayload === "object"
+      ? responsePayload as { detail?: unknown; error?: unknown }
+      : null;
+    throw new Error(
+      redactThumbnailLocalBridgeSecretText(
+        String(errorPayload?.detail ?? errorPayload?.error ?? "로컬 브릿지 썸네일 생성 실패"),
+        normalizedToken,
+      ),
+    );
+  }
+  const normalized = normalizeThumbnailLocalBridgeImagesResponse(responsePayload);
+  return normalized.result as ContractThumbnailGenerationResult & GenerationResult;
 }
 
 function parseThumbnailChatSseBlock(block: string): ThumbnailChatSseEvent | null {
@@ -711,6 +995,30 @@ const THUMBNAIL_GUIDED_EXAMPLE_REQUEST =
   "제육볶음 밥도둑 한상 썸네일 예시를 보여줘. 쯔양님과 음식이 잘 보이고 문구는 짧게 배치해줘.";
 const THUMBNAIL_GUIDED_EXAMPLE_RESPONSE =
   "예시를 화면에 넣었어요.\n음식, 인물, 문구 위치를 보고 원하는 내용은 말로 바꿀 수 있습니다.";
+const THUMBNAIL_GUIDED_EXAMPLE_PRESETS = [
+  {
+    request: THUMBNAIL_GUIDED_EXAMPLE_REQUEST,
+    response: THUMBNAIL_GUIDED_EXAMPLE_RESPONSE,
+    topic: "쯔양 제육볶음 밥도둑 한상 먹방 썸네일",
+    headline: "밥도둑 한상",
+    subHeadline: "불판 직행?",
+  },
+  {
+    request: "쯔양님과 빨간 양념 제육볶음이 크게 보이는 썸네일 예시를 만들어줘.",
+    response: "다른 예시를 화면에 넣었어요.\n문구를 짧게 줄이고, 음식과 얼굴을 덜 가리도록 배치했습니다.",
+    topic: "쯔양 매운 제육볶음 빨간 양념 먹방 썸네일",
+    headline: "매운맛 한상",
+    subHeadline: "밥도둑 인정?",
+  },
+  {
+    request: "쯔양님과 푸짐한 한상차림이 잘 보이는 먹방 썸네일 예시를 보여줘.",
+    response: "한상차림 예시를 화면에 넣었어요.\n큰 문구는 짧게, 보조 문구는 얼굴을 피해서 배치했습니다.",
+    topic: "쯔양 푸짐한 한상차림 먹방 썸네일",
+    headline: "역대급 한상",
+    subHeadline: "한입만 가능?",
+  },
+] as const;
+type ThumbnailGuidedExamplePreset = (typeof THUMBNAIL_GUIDED_EXAMPLE_PRESETS)[number];
 
 function formatThumbnailAssistantDisplayText(value: string) {
   const safe = value
@@ -1402,11 +1710,11 @@ function canReplacePreviewWithHistoryResult(current: GenerationResult | null) {
 const providerOptions: Array<{ value: ProviderId; label: string }> = [
   {
     value: "local-codex",
-    label: "검증된 썸네일 이미지 생성",
+    label: "Codex OAuth",
   },
   {
     value: "openai-gpt-image-2",
-    label: "OpenAI gpt-image-2",
+    label: "API Key",
   },
 ];
 
@@ -1495,28 +1803,44 @@ function formatThumbnailProviderAvailability(
 }
 
 type ThumbnailImageApiRouterView = {
-  id: "browser-openai-api-key" | "local-codex-oauth" | "setup-required";
+  id: ThumbnailImageRouteChoice | "setup-required";
   label: string;
   statusLabel: string;
   summary: string;
-  codexOAuthStatus: "active" | "checking" | "unavailable" | "api-key-active";
+  codexOAuthStatus:
+    | "active"
+    | "checking"
+    | "unavailable"
+    | "api-key-active"
+    | "local-bridge-active"
+    | "local-bridge-unpaired";
 };
 
 function getThumbnailImageApiRouterView(
   readiness: ThumbnailReadiness | null,
-  selectedProviderId: ProviderId,
+  selectedRoute: ThumbnailImageRouteChoice,
   hasBrowserOpenAIApiKey: boolean,
+  hasLocalBridgeToken: boolean,
+  localBridgeStatus: ThumbnailLocalBridgeStatus,
 ): ThumbnailImageApiRouterView {
   const localCodexAvailability = readiness?.providers.localCodex;
   const openAIApiKeyAvailability = readiness?.providers.openaiGptImage2;
+  const sessionKeyBackedOpenAIAvailable = canUseSessionApiKeyForProvider(
+    "openai-gpt-image-2",
+    openAIApiKeyAvailability,
+    hasBrowserOpenAIApiKey,
+  );
 
-  if (hasBrowserOpenAIApiKey || selectedProviderId === "openai-gpt-image-2") {
+  if (selectedRoute === "browser-openai-api-key") {
     return {
       id: "browser-openai-api-key",
       label: "OpenAI API 키",
-      statusLabel:
-        hasBrowserOpenAIApiKey || openAIApiKeyAvailability?.available
+      statusLabel: !hasBrowserOpenAIApiKey
+        ? "키 필요"
+        : openAIApiKeyAvailability?.available
           ? "사용 중"
+          : sessionKeyBackedOpenAIAvailable
+            ? "키 저장됨"
           : readiness
             ? "확인 필요"
             : "확인 중",
@@ -1525,17 +1849,17 @@ function getThumbnailImageApiRouterView(
     };
   }
 
-  if (selectedProviderId === "local-codex") {
+  if (selectedRoute === "local-codex-oauth") {
     return {
       id: "local-codex-oauth",
-      label: "Codex CLI OAuth",
+      label: "기본 OAuth",
       statusLabel:
         localCodexAvailability?.available
           ? "사용 중"
           : readiness
             ? "확인 필요"
             : "확인 중",
-      summary: "로컬 Codex OAuth 브리지로 gpt-image-2 썸네일을 호출합니다.",
+      summary: "서버 라우터가 Codex OAuth로 gpt-image-2 썸네일을 호출합니다.",
       codexOAuthStatus:
         !readiness
           ? "checking"
@@ -1545,11 +1869,32 @@ function getThumbnailImageApiRouterView(
     };
   }
 
+  if (selectedRoute === THUMBNAIL_LOCAL_BRIDGE_ROUTE_ID) {
+    return {
+      id: THUMBNAIL_LOCAL_BRIDGE_ROUTE_ID,
+      label: "고급 로컬",
+      statusLabel: !hasLocalBridgeToken
+        ? "토큰 필요"
+        : localBridgeStatus === "connected"
+          ? "연결됨"
+          : localBridgeStatus === "checking"
+            ? "확인 중"
+            : "확인 필요",
+      summary: "같은 Codex OAuth를 사용자 PC 브릿지에서 직접 실행합니다.",
+      codexOAuthStatus:
+        localBridgeStatus === "connected"
+          ? "local-bridge-active"
+          : hasLocalBridgeToken
+            ? "checking"
+            : "local-bridge-unpaired",
+    };
+  }
+
   return {
     id: "setup-required",
     label: "설정 필요",
     statusLabel: readiness ? "설정 필요" : "확인 중",
-    summary: "OpenAI API 키를 저장하거나 Codex CLI OAuth 상태를 확인해 주세요.",
+    summary: "기본 OAuth, 고급 로컬, API Key 백업 중 하나를 확인해 주세요.",
     codexOAuthStatus: readiness ? "unavailable" : "checking",
   };
 }
@@ -1608,7 +1953,8 @@ function formatThumbnailRetrievalSummaryForBeginner(retrieval: ThumbnailRetrieva
 function formatThumbnailGenerationCompletionSummary(generationResult: GenerationResult) {
   const retrieval = generationResult.retrieval;
   const evidenceCount = retrieval?.evidence?.length ?? retrieval?.diagnostics?.selectedReferenceIds?.length ?? 0;
-  const referenceSummary = retrieval
+  const didUseRetrieval = Boolean(retrieval && retrieval.diagnostics?.status !== "disabled" && evidenceCount > 0);
+  const referenceSummary = didUseRetrieval
     ? `기존 썸네일 ${evidenceCount}개를 참고했습니다.`
     : "참고 썸네일 검색 없이 만들었습니다.";
   const verifiedSummary = generationResult.baseImage.modelProvenance === "exact"
@@ -1625,13 +1971,13 @@ function formatThumbnailGenerationCompletionSummary(generationResult: Generation
 
 const TEXT_LAYER_RENDER_MAX_WIDTH = 760;
 const TEXT_LAYER_MIN_FIT_SCALE = 0.58;
-const TEXT_LAYER_SELECTION_FRAME_PADDING_X = 18;
-const TEXT_LAYER_SELECTION_FRAME_PADDING_Y = 12;
+const TEXT_LAYER_SELECTION_FRAME_PADDING_X = 10;
+const TEXT_LAYER_SELECTION_FRAME_PADDING_Y = 7;
 const TEXT_TRANSFORM_RESIZE_HANDLES = [
-  ["top-left", "-left-2 -top-2 cursor-nwse-resize"],
-  ["top-right", "-right-2 -top-2 cursor-nesw-resize"],
-  ["bottom-left", "-bottom-2 -left-2 cursor-nesw-resize"],
-  ["bottom-right", "-bottom-2 -right-2 cursor-nwse-resize"],
+  ["top-left", "left-0 top-0 -translate-x-1/2 -translate-y-1/2 cursor-nwse-resize"],
+  ["top-right", "right-0 top-0 translate-x-1/2 -translate-y-1/2 cursor-nesw-resize"],
+  ["bottom-left", "bottom-0 left-0 -translate-x-1/2 translate-y-1/2 cursor-nesw-resize"],
+  ["bottom-right", "bottom-0 right-0 translate-x-1/2 translate-y-1/2 cursor-nwse-resize"],
 ] as const;
 
 type CanvasTextFrame = {
@@ -1752,23 +2098,91 @@ function estimateGeneratedTextFrame(
   return { x, y, width, height };
 }
 
-function getTextLayerTransformFrameStyle(layer: TextLayer) {
-  const frame = estimateGeneratedTextFrame(
-    layer.content,
-    layer.fontSize,
-    { x: layer.x, y: layer.y, align: layer.align },
-    layer.align,
-  );
-  const paddedWidth = Math.max(48, frame.width + TEXT_LAYER_SELECTION_FRAME_PADDING_X * 2);
-  const paddedHeight = Math.max(34, frame.height + TEXT_LAYER_SELECTION_FRAME_PADDING_Y * 2);
+type TextLayerVisualFrame = CanvasTextFrame & {
+  anchorX: number;
+  anchorY: number;
+};
+
+let textLayerMeasurementCanvas: HTMLCanvasElement | null = null;
+
+function getTextLayerMeasurementContext() {
+  if (typeof document === "undefined") return null;
+  textLayerMeasurementCanvas ??= document.createElement("canvas");
+  return textLayerMeasurementCanvas.getContext("2d");
+}
+
+function estimateTextLayerRenderMetrics(layer: TextLayer) {
+  const normalizedText = layer.content.replace(/\s+/g, " ").trim();
+  const fallbackGlyphCount = Math.max(1, Array.from(normalizedText).length);
+  const fallbackRawWidth = fallbackGlyphCount * layer.fontSize * 0.72;
+  const context = getTextLayerMeasurementContext();
+  if (context) {
+    context.font = `${layer.fontWeight} ${layer.fontSize}px ${layer.fontFamily}`;
+    context.textAlign = layer.align;
+    context.textBaseline = "middle";
+  }
+  const measured = context?.measureText(normalizedText);
+  const rawAdvanceWidth = Math.max(layer.fontSize * 2, measured?.width ?? fallbackRawWidth);
+  const renderScale = rawAdvanceWidth > TEXT_LAYER_RENDER_MAX_WIDTH
+    ? Math.max(TEXT_LAYER_MIN_FIT_SCALE, TEXT_LAYER_RENDER_MAX_WIDTH / rawAdvanceWidth)
+    : 1;
+  const hasExactGlyphBounds = measured
+    && measured.actualBoundingBoxLeft + measured.actualBoundingBoxRight > 0
+    && measured.actualBoundingBoxAscent + measured.actualBoundingBoxDescent > 0;
+
+  if (hasExactGlyphBounds) {
+    return {
+      offsetX: -measured.actualBoundingBoxLeft * renderScale,
+      offsetY: -measured.actualBoundingBoxAscent * renderScale,
+      width: (measured.actualBoundingBoxLeft + measured.actualBoundingBoxRight) * renderScale,
+      height: (measured.actualBoundingBoxAscent + measured.actualBoundingBoxDescent) * renderScale,
+    };
+  }
+
+  const fallbackWidth = rawAdvanceWidth * renderScale;
+  const fallbackHeight = Math.max(layer.fontSize * renderScale * 1.05, layer.fontSize * renderScale + 8);
+  return {
+    offsetX: layer.align === "center" ? -fallbackWidth / 2 : layer.align === "right" ? -fallbackWidth : 0,
+    offsetY: -fallbackHeight / 2,
+    width: fallbackWidth,
+    height: fallbackHeight,
+  };
+}
+
+function getTextLayerVisualFrame(layer: TextLayer): TextLayerVisualFrame {
+  const metrics = estimateTextLayerRenderMetrics(layer);
+  const strokeInset = Math.max(2, layer.strokeWidth / 2);
+  const x = layer.x + metrics.offsetX - strokeInset - TEXT_LAYER_SELECTION_FRAME_PADDING_X;
+  const y = layer.y + metrics.offsetY - strokeInset - TEXT_LAYER_SELECTION_FRAME_PADDING_Y;
+  const width = Math.max(36, metrics.width + (strokeInset + TEXT_LAYER_SELECTION_FRAME_PADDING_X) * 2);
+  const height = Math.max(28, metrics.height + (strokeInset + TEXT_LAYER_SELECTION_FRAME_PADDING_Y) * 2);
 
   return {
-    left: `${(layer.x / TARGET_WIDTH) * 100}%`,
-    top: `${(layer.y / TARGET_HEIGHT) * 100}%`,
-    width: `${(paddedWidth / TARGET_WIDTH) * 100}%`,
-    height: `${(paddedHeight / TARGET_HEIGHT) * 100}%`,
-    transform: `translate(${layer.align === "center" ? "-50%" : layer.align === "right" ? "-100%" : "0"}, -50%) rotate(${layer.rotation}deg)`,
-    transformOrigin: `${layer.align === "center" ? "center" : layer.align} center`,
+    x,
+    y,
+    width,
+    height,
+    anchorX: layer.x - x,
+    anchorY: layer.y - y,
+  };
+}
+
+function getTextLayerSelectionLabel(layer: TextLayer) {
+  if (layer.id === "headline") return "메인 문구 선택됨";
+  if (layer.id === "subHeadline") return "스티커 문구 선택됨";
+  return "문구 선택됨";
+}
+
+function getTextLayerTransformFrameStyle(layer: TextLayer) {
+  const frame = getTextLayerVisualFrame(layer);
+
+  return {
+    left: `${(frame.x / TARGET_WIDTH) * 100}%`,
+    top: `${(frame.y / TARGET_HEIGHT) * 100}%`,
+    width: `${(frame.width / TARGET_WIDTH) * 100}%`,
+    height: `${(frame.height / TARGET_HEIGHT) * 100}%`,
+    transform: `rotate(${layer.rotation}deg)`,
+    transformOrigin: `${(frame.anchorX / frame.width) * 100}% ${(frame.anchorY / frame.height) * 100}%`,
   };
 }
 
@@ -1984,6 +2398,7 @@ export function AdminYoutubeThumbnailGenerator() {
   const chatAbortControllerRef = useRef<AbortController | null>(null);
   const activeChatAssistantMessageIdRef = useRef<string | null>(null);
   const pendingChatGenerationRequirementRef = useRef<string | null>(null);
+  const guidedExampleVariantIndexRef = useRef(0);
   const generationAbortControllerRef = useRef<AbortController | null>(null);
   const activeGenerationAssistantMessageIdRef = useRef<string | null>(null);
   const chatTranscriptRef = useRef<HTMLDivElement | null>(null);
@@ -2032,6 +2447,15 @@ export function AdminYoutubeThumbnailGenerator() {
   const [browserOpenAIApiKeyDraft, setBrowserOpenAIApiKeyDraft] = useState("");
   const [browserOpenAIApiKeySavedAt, setBrowserOpenAIApiKeySavedAt] = useState<string | null>(null);
   const [browserOpenAIApiKeyMessage, setBrowserOpenAIApiKeyMessage] = useState<string | null>(null);
+  const [thumbnailImageRouteChoice, setThumbnailImageRouteChoice] = useState<ThumbnailImageRouteChoice>("local-codex-oauth");
+  const [thumbnailLocalBridgeUrl, setThumbnailLocalBridgeUrl] = useState<string>(THUMBNAIL_LOCAL_BRIDGE_DEFAULT_URL);
+  const [thumbnailLocalBridgeUrlDraft, setThumbnailLocalBridgeUrlDraft] = useState<string>(THUMBNAIL_LOCAL_BRIDGE_DEFAULT_URL);
+  const [thumbnailLocalBridgeToken, setThumbnailLocalBridgeToken] = useState<string | null>(null);
+  const [thumbnailLocalBridgeTokenDraft, setThumbnailLocalBridgeTokenDraft] = useState("");
+  const [thumbnailLocalBridgeSavedAt, setThumbnailLocalBridgeSavedAt] = useState<string | null>(null);
+  const [thumbnailLocalBridgeStatus, setThumbnailLocalBridgeStatus] = useState<ThumbnailLocalBridgeStatus>("unpaired");
+  const [thumbnailLocalBridgeMessage, setThumbnailLocalBridgeMessage] = useState<string | null>(null);
+  const [thumbnailLocalBridgeError, setThumbnailLocalBridgeError] = useState<string | null>(null);
   const [fileValidationMessage, setFileValidationMessage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isChatAgentStreaming, setIsChatAgentStreaming] = useState(false);
@@ -2044,44 +2468,26 @@ export function AdminYoutubeThumbnailGenerator() {
   const readinessLimits = readiness?.limits ?? DEFAULT_LIMITS;
   const selectedProviderAvailability = readiness?.providers[providerReadinessKey[providerId]] ?? null;
   const backendAgentStatus = readiness?.backendAgent ?? null;
-  const preflightIssues = useMemo(() => {
-    const issues: string[] = [];
-    const trimmedTopic = topic.trim();
-    const trimmedHeadline = headline.trim();
-    const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
-
-    if (!trimmedTopic) issues.push("영상 콘텐츠 주제를 입력하세요.");
-    if (trimmedTopic.length > 280) issues.push("영상 콘텐츠 주제는 280자 이하로 줄이세요.");
-    if (!trimmedHeadline) issues.push("메인 문구를 입력하세요.");
-    if (trimmedHeadline.length > 80) issues.push("메인 문구는 80자 이하로 줄이세요.");
-    if (files.length > readinessLimits.maxFiles) issues.push(`참고 이미지는 최대 ${readinessLimits.maxFiles}장까지 업로드할 수 있습니다.`);
-    const oversizedFile = files.find((file) => file.size > readinessLimits.maxFileBytes);
-    if (oversizedFile) issues.push(`${oversizedFile.name} 파일이 ${formatBytes(readinessLimits.maxFileBytes)} 제한을 넘습니다.`);
-    if (totalBytes > readinessLimits.maxTotalBytes) issues.push(`참고 이미지 총 용량은 ${formatBytes(readinessLimits.maxTotalBytes)} 이하로 줄이세요.`);
-    const unsupportedFile = files.find((file) => file.type && !readinessLimits.mimeTypes.includes(file.type));
-    if (unsupportedFile) issues.push(`${unsupportedFile.name}은 PNG/JPEG/WebP 이미지로 다시 선택하세요.`);
-    if (fileValidationMessage) issues.push(fileValidationMessage);
-    if (generationMode === "backend_agent" && backendAgentStatus && !backendAgentStatus.available) {
-      issues.push("도우미 준비 상태를 확인할 수 없어 바로 이미지 생성으로 전환하세요.");
-    }
-    // Specific creator requests are allowed to proceed without an upload because
-    // the server can use the locally held Tzuyang thumbnail library as
-    // reference-backed host/person evidence; if retrieval cannot provide it, the
-    // guarded API returns host_reference_required.
-
-    return issues;
-  }, [
-    fileValidationMessage,
-    files,
-    generationMode,
-    backendAgentStatus,
-    headline,
-    readinessLimits.maxFileBytes,
-    readinessLimits.maxFiles,
-    readinessLimits.maxTotalBytes,
-    readinessLimits.mimeTypes,
-    topic,
-  ]);
+  const preflightIssues = useMemo(
+    () => getThumbnailGenerationPreflightIssues({
+      topic,
+      headline,
+      files,
+      readinessLimits,
+      fileValidationMessage,
+      generationMode,
+      backendAgentStatus,
+    }),
+    [
+      backendAgentStatus,
+      fileValidationMessage,
+      files,
+      generationMode,
+      headline,
+      readinessLimits,
+      topic,
+    ],
+  );
   const activeLayer = useMemo(
     () => activeLayerId ? textLayers.find((layer) => layer.id === activeLayerId) ?? null : null,
     [activeLayerId, textLayers],
@@ -2102,11 +2508,17 @@ export function AdminYoutubeThumbnailGenerator() {
   );
   const shouldShowThumbnailCanvasContext = canvasContextState !== "idle";
   const isBrowserOpenAIApiKeySaved = Boolean(browserOpenAIApiKey);
+  const isThumbnailLocalBridgePaired = Boolean(thumbnailLocalBridgeToken);
+  const isThumbnailLocalBridgeConnected = thumbnailLocalBridgeStatus === "connected";
+  const shouldShowThumbnailLocalBridgeSettings = thumbnailImageRouteChoice === THUMBNAIL_LOCAL_BRIDGE_ROUTE_ID;
   const thumbnailImageApiRouterView = getThumbnailImageApiRouterView(
     readiness,
-    providerId,
+    thumbnailImageRouteChoice,
     isBrowserOpenAIApiKeySaved,
+    isThumbnailLocalBridgePaired,
+    thumbnailLocalBridgeStatus,
   );
+  const maskedThumbnailLocalBridgeToken = maskThumbnailLocalBridgeToken(thumbnailLocalBridgeToken);
   const sessionKeyBackedProviderAvailableForChatStatus = canUseSessionApiKeyForProvider(
     providerId,
     selectedProviderAvailability,
@@ -2116,7 +2528,8 @@ export function AdminYoutubeThumbnailGenerator() {
     ? "generating"
     : isChatAgentStreaming
       ? "streaming"
-      : selectedProviderAvailability?.available ||
+      : isThumbnailLocalBridgeConnected ||
+          selectedProviderAvailability?.available ||
           sessionKeyBackedProviderAvailableForChatStatus ||
           backendAgentStatus?.available
         ? "ready"
@@ -2172,7 +2585,43 @@ export function AdminYoutubeThumbnailGenerator() {
     setBrowserOpenAIApiKeySavedAt(cachedKeys.savedAt);
     setBrowserOpenAIApiKeyMessage("이 브라우저에 저장된 OpenAI 키를 사용할 준비가 됐습니다.");
     setProviderId("openai-gpt-image-2");
+    setThumbnailImageRouteChoice("browser-openai-api-key");
   }, []);
+
+  useEffect(() => {
+    const cachedBridge = readThumbnailLocalBridgeSessionCache();
+    if (!cachedBridge) return;
+    setThumbnailLocalBridgeUrl(cachedBridge.bridgeUrl);
+    setThumbnailLocalBridgeUrlDraft(cachedBridge.bridgeUrl);
+    setThumbnailLocalBridgeToken(cachedBridge.token);
+    setThumbnailLocalBridgeTokenDraft("");
+    setThumbnailLocalBridgeSavedAt(cachedBridge.savedAt);
+    setThumbnailLocalBridgeStatus("checking");
+    setThumbnailLocalBridgeMessage("이 탭에 저장된 로컬 브릿지 연결을 확인하고 있습니다.");
+    setProviderId("local-codex");
+    setGenerationMode("direct_provider");
+    setThumbnailImageRouteChoice(THUMBNAIL_LOCAL_BRIDGE_ROUTE_ID);
+  }, []);
+
+  useEffect(() => {
+    if (thumbnailImageRouteChoice !== THUMBNAIL_LOCAL_BRIDGE_ROUTE_ID) return;
+    if (!thumbnailLocalBridgeToken) {
+      setThumbnailLocalBridgeStatus("unpaired");
+      setThumbnailLocalBridgeMessage("고급 로컬 브릿지는 pairing 설정을 저장한 뒤 사용할 수 있습니다.");
+      return;
+    }
+    let cancelled = false;
+    setThumbnailLocalBridgeStatus("checking");
+    void getThumbnailLocalBridgeStatusRequest(thumbnailLocalBridgeUrl, thumbnailLocalBridgeToken).then((status) => {
+      if (cancelled) return;
+      setThumbnailLocalBridgeStatus(status.status);
+      setThumbnailLocalBridgeMessage(status.message);
+      setThumbnailLocalBridgeError(status.status === "connected" ? null : status.message);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [thumbnailImageRouteChoice, thumbnailLocalBridgeToken, thumbnailLocalBridgeUrl]);
 
   const loadReadiness = useCallback(async () => {
     try {
@@ -2538,33 +2987,7 @@ export function AdminYoutubeThumbnailGenerator() {
             context.shadowBlur = 0;
             context.shadowOffsetY = 0;
           }
-          const textMetrics = drawNoWrapFittedText(context, layer.content, 0, 0, TEXT_LAYER_RENDER_MAX_WIDTH, layer);
-          if (layer.id === activeLayerId) {
-            const measuredWidth = textMetrics.width;
-            const measuredHeight = textMetrics.height;
-            const frameX = layer.align === "center" ? -measuredWidth / 2 : layer.align === "right" ? -measuredWidth : 0;
-            const frameY = -measuredHeight / 2;
-            context.shadowColor = "transparent";
-            context.shadowBlur = 0;
-            context.shadowOffsetY = 0;
-            context.setLineDash([14, 10]);
-            context.lineWidth = 4;
-            context.strokeStyle = "#38bdf8";
-            context.strokeRect(
-              frameX - TEXT_LAYER_SELECTION_FRAME_PADDING_X,
-              frameY - TEXT_LAYER_SELECTION_FRAME_PADDING_Y,
-              measuredWidth + TEXT_LAYER_SELECTION_FRAME_PADDING_X * 2,
-              measuredHeight + TEXT_LAYER_SELECTION_FRAME_PADDING_Y * 2,
-            );
-            context.setLineDash([]);
-            context.fillStyle = "rgba(8, 47, 73, 0.88)";
-            context.fillRect(frameX - TEXT_LAYER_SELECTION_FRAME_PADDING_X, frameY - 44, 132, 28);
-            context.fillStyle = "#ffffff";
-            context.font = "800 16px system-ui, sans-serif";
-            context.textAlign = "left";
-            context.textBaseline = "middle";
-            context.fillText(layer.id === "headline" ? "메인 선택됨" : layer.id === "subHeadline" ? "스티커 선택됨" : "문구 선택됨", frameX - 8, frameY - 30);
-          }
+          drawNoWrapFittedText(context, layer.content, 0, 0, TEXT_LAYER_RENDER_MAX_WIDTH, layer);
           context.restore();
         });
     };
@@ -2599,7 +3022,7 @@ export function AdminYoutubeThumbnailGenerator() {
       renderSafeAreaGuide();
       renderLayers();
     }
-  }, [activeLayerId, baseImageRenderRevision, editingLayerId, result?.baseImage?.dataUrl, showSafeAreaGuide, textLayers]);
+  }, [baseImageRenderRevision, editingLayerId, result?.baseImage?.dataUrl, showSafeAreaGuide, textLayers]);
 
   useEffect(() => {
     const baseImageDataUrl = result?.baseImage?.dataUrl ?? null;
@@ -2764,6 +3187,39 @@ export function AdminYoutubeThumbnailGenerator() {
     restoreTextEditorHistorySnapshot(previousSnapshot);
   }
 
+  function placeInlineTextEditorCaretAtEnd() {
+    const editor = inlineTextEditorRef.current;
+    if (!editor || typeof window === "undefined" || typeof document === "undefined") return;
+    editor.focus({ preventScroll: true });
+    const selection = window.getSelection();
+    if (!selection) return;
+    const range = document.createRange();
+    range.selectNodeContents(editor);
+    range.collapse(false);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+
+  function restoreInlineTextEditorFocusAfterUndo() {
+    if (typeof window === "undefined") return;
+    window.requestAnimationFrame(() => {
+      placeInlineTextEditorCaretAtEnd();
+    });
+  }
+
+  function undoInlineTextEditorChange() {
+    undoTextLayerChange();
+    restoreInlineTextEditorFocusAfterUndo();
+  }
+
+  function handleInlineTextEditorBeforeInput(event: ReactFormEvent<HTMLDivElement>) {
+    const nativeEvent = event.nativeEvent as InputEvent;
+    if (nativeEvent.inputType !== "historyUndo") return;
+    event.preventDefault();
+    event.stopPropagation();
+    undoInlineTextEditorChange();
+  }
+
   function markCanvasAction(label: string) {
     setLastCanvasActionLabel(label);
   }
@@ -2789,6 +3245,21 @@ export function AdminYoutubeThumbnailGenerator() {
     event.preventDefault();
     event.stopPropagation();
     undoTextLayerChange();
+  }
+
+  function focusCanvasAfterTextTransform() {
+    if (typeof window === "undefined") return;
+    window.requestAnimationFrame(() => {
+      canvasRef.current?.focus({ preventScroll: true });
+    });
+  }
+
+  function handleTextTransformHandleKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>) {
+    if (!isUndoKeyboardShortcut(event)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    undoTextLayerChange();
+    focusCanvasAfterTextTransform();
   }
 
   function updateTextLayer(
@@ -3278,17 +3749,25 @@ export function AdminYoutubeThumbnailGenerator() {
   }
 
   function appendThumbnailChatMessages(messages: ThumbnailChatMessage[]) {
-    setChatMessages((current) => [
-      ...current,
-      ...messages.map((message) =>
-        message.role === "assistant"
-          ? {
-              ...message,
-              content: formatThumbnailAssistantDisplayText(message.content),
-            }
-          : message,
-      ),
-    ].slice(-10));
+    setChatMessages((current) => {
+      const nextMessages = [
+        ...current,
+        ...messages.map((message) =>
+          message.role === "assistant"
+            ? {
+                ...message,
+                content: formatThumbnailAssistantDisplayText(message.content),
+              }
+            : message,
+        ),
+      ];
+      const introMessage = nextMessages.find((message) => message.id === "assistant-intro");
+      const recentMessages = nextMessages
+        .filter((message) => message.id !== "assistant-intro")
+        .slice(-9);
+
+      return introMessage ? [introMessage, ...recentMessages] : recentMessages.slice(-10);
+    });
   }
 
   function updateThumbnailChatMessage(messageId: string, content: string, mode: ThumbnailChatMessage["mode"] = "stream") {
@@ -3341,19 +3820,51 @@ export function AdminYoutubeThumbnailGenerator() {
     appendThumbnailChatCommand("가이드 보기", THUMBNAIL_USAGE_GUIDE_TEXT, "system");
   }
 
-  function handleThumbnailGuidedExampleClick() {
-    const nextLayers = createBundledThumbnailPreviewTextLayers();
+  function applyThumbnailGuidedExamplePreviewToCanvas(example: ThumbnailGuidedExamplePreset) {
+    const nextLayers = createTextLayersWithGenerationLayout(
+      createDefaultTextLayers(),
+      example.topic,
+      example.headline,
+      example.subHeadline,
+    );
+
     userCanvasResultLockedRef.current = true;
-    setTopic(THUMBNAIL_GUIDED_EXAMPLE_REQUEST.slice(0, CHAT_TOPIC_MAX_LENGTH));
-    setHeadline(BUNDLED_THUMBNAIL_PREVIEW_HEADLINE);
-    setSubHeadline(BUNDLED_THUMBNAIL_PREVIEW_SUB_HEADLINE);
+    setTopic(example.request.slice(0, CHAT_TOPIC_MAX_LENGTH));
+    setHeadline(example.headline);
+    setSubHeadline(example.subHeadline);
     textLayersRef.current = nextLayers;
     setTextLayers(nextLayers);
-    setResult(BUNDLED_THUMBNAIL_PREVIEW_RESULT);
+    // Keep the immediate canvas preview visible even if the provider request
+    // later fails; it remains marked as a non-final preview until a real result
+    // replaces it.
+    setResult({
+      ...BUNDLED_THUMBNAIL_PREVIEW_RESULT,
+      prompt: `예시 만들기: ${example.topic}`,
+      warnings: ["실제 이미지 생성 전 빠르게 보여 주는 예시 화면입니다."],
+    });
     setBaseImageRenderRevision((revision) => revision + 1);
-    setActiveLayerId(null);
-    markCanvasAction("예시 썸네일 반영");
-    appendThumbnailChatCommand("예시 만들기", THUMBNAIL_GUIDED_EXAMPLE_RESPONSE);
+    setActiveLayerId("headline");
+    markCanvasAction("예시 썸네일 생성 시작");
+    pendingChatGenerationRequirementRef.current = null;
+
+    return nextLayers;
+  }
+
+  function handleThumbnailGuidedExampleClick() {
+    const example = THUMBNAIL_GUIDED_EXAMPLE_PRESETS[
+      guidedExampleVariantIndexRef.current % THUMBNAIL_GUIDED_EXAMPLE_PRESETS.length
+    ] ?? THUMBNAIL_GUIDED_EXAMPLE_PRESETS[0];
+    guidedExampleVariantIndexRef.current += 1;
+    const nextLayers = applyThumbnailGuidedExamplePreviewToCanvas(example);
+    const assistantMessageId = appendThumbnailChatCommand("예시 만들기", example.response);
+    void runThumbnailGeneration({
+      providerId,
+      generationMode,
+      topic: example.topic,
+      headline: example.headline,
+      subHeadline: example.subHeadline,
+      textLayers: nextLayers,
+    }, assistantMessageId);
   }
 
   function getAbortNotice(kind: "chat" | "generation") {
@@ -3379,10 +3890,13 @@ export function AdminYoutubeThumbnailGenerator() {
     const resultBoundary = resultBase?.modelProvenance === "exact"
       ? "현재 화면에는 확인된 이미지가 들어 있습니다."
       : "확인된 이미지일 때만 실제 결과로 표시합니다.";
+    const imageMakeStatus = thumbnailImageRouteChoice === THUMBNAIL_LOCAL_BRIDGE_ROUTE_ID
+      ? (isThumbnailLocalBridgeConnected ? "고급 로컬 브릿지 연결됨" : "고급 로컬 브릿지 설정 필요")
+      : formatThumbnailProviderAvailability(selectedProviderAvailability, sessionKeyBackedProviderAvailable);
 
     return [
       "현재 상태를 쉽게 정리했어요.",
-      `이미지 만들기: ${formatThumbnailProviderAvailability(selectedProviderAvailability, sessionKeyBackedProviderAvailable)}`,
+      `이미지 만들기: ${imageMakeStatus}`,
       resultBase
         ? `현재 화면: ${resultSource}`
         : "현재 화면: 아직 만든 이미지 없음",
@@ -3642,8 +4156,12 @@ export function AdminYoutubeThumbnailGenerator() {
               normalizeGeneratedLayout: Boolean(nextAgentResult.shouldGenerate || shouldPreferSubmittedPromptCopy),
             },
           );
-          if (nextAgentResult.providerId) setProviderId(nextAgentResult.providerId);
-          if (nextAgentResult.generationMode) setGenerationMode(nextAgentResult.generationMode);
+          if (nextAgentResult.providerId && thumbnailImageRouteChoice !== THUMBNAIL_LOCAL_BRIDGE_ROUTE_ID) {
+            setProviderId(nextAgentResult.providerId);
+          }
+          if (nextAgentResult.generationMode && thumbnailImageRouteChoice !== THUMBNAIL_LOCAL_BRIDGE_ROUTE_ID) {
+            setGenerationMode(nextAgentResult.generationMode);
+          }
           updateThumbnailChatMessage(nextAssistantMessageId, nextAgentResult.assistantMessage, "live");
         }
         if (item.event === "error") {
@@ -3701,10 +4219,11 @@ export function AdminYoutubeThumbnailGenerator() {
         const generationSubHeadline = shouldPreserveSubmittedCreatorReference || shouldPreferSubmittedPromptCopy
           ? deriveChatSubHeadline(submittedRequirement)
           : resolvedFinalResult.canvasPatch.subHeadline;
-        // Source contract: finalResult?.shouldGenerate drives runThumbnailGeneration; finalResult.providerId ?? providerId and finalResult.generationMode ?? generationMode remain the generation fallbacks.
+        // Source contract: finalResult?.shouldGenerate drives runThumbnailGeneration; imageRouteChoice ?? thumbnailImageRouteChoice keeps 고급 로컬 on the browser-direct route even when the chat agent returns provider metadata.
         await runThumbnailGeneration({
           providerId: resolvedFinalResult.providerId ?? providerId,
           generationMode: resolvedFinalResult.generationMode ?? generationMode,
+          imageRouteChoice: thumbnailImageRouteChoice,
           topic: generationTopic,
           headline: generationHeadline,
           subHeadline: generationSubHeadline,
@@ -3749,6 +4268,10 @@ export function AdminYoutubeThumbnailGenerator() {
     return chatComposerImeRef.current || event.nativeEvent.isComposing || event.key === "Process";
   }
 
+  function openThumbnailReferenceFilePicker() {
+    referenceFileInputRef.current?.click();
+  }
+
   function handleThumbnailChatKeyDown(event: ReactKeyboardEvent<HTMLTextAreaElement>) {
     if (event.key !== "Enter" || event.shiftKey || isThumbnailChatImeComposing(event)) return;
     event.preventDefault();
@@ -3788,7 +4311,7 @@ export function AdminYoutubeThumbnailGenerator() {
         userContent,
         `참고 이미지 파일 선택창을 열었습니다. 선택한 이미지는 현재 탭 메모리에만 보관되고 다음 생성 요청에만 함께 전달됩니다. 최대 ${readinessLimits.maxFiles}장까지 사용할 수 있습니다.`,
       );
-      referenceFileInputRef.current?.click();
+      openThumbnailReferenceFilePicker();
       return;
     }
 
@@ -4218,6 +4741,7 @@ export function AdminYoutubeThumbnailGenerator() {
       if (event.currentTarget.hasPointerCapture(event.pointerId)) {
         event.currentTarget.releasePointerCapture(event.pointerId);
       }
+      focusCanvasAfterTextTransform();
     }
   }
 
@@ -4230,7 +4754,7 @@ export function AdminYoutubeThumbnailGenerator() {
             type="button"
             tabIndex={-1}
             aria-label="문구 크기 조절"
-            className={`pointer-events-auto absolute h-4 w-4 rounded-full border border-white bg-sky-500 shadow-lg ${positionClass}`}
+            className={`pointer-events-auto absolute h-3 w-3 rounded-full border-2 border-sky-500 bg-white/95 shadow-[0_2px_8px_rgba(2,132,199,0.35)] ring-1 ring-slate-950/10 transition-transform hover:scale-110 ${positionClass}`}
             data-thumbnail-text-transform-handle-state={state}
             data-thumbnail-text-transform-handle-mode="resize"
             data-thumbnail-text-resize-handle={handleId}
@@ -4239,13 +4763,14 @@ export function AdminYoutubeThumbnailGenerator() {
             onPointerMove={handleTextTransformPointerMove}
             onPointerUp={handleTextTransformPointerUp}
             onPointerCancel={handleTextTransformPointerUp}
+            onKeyDown={handleTextTransformHandleKeyDown}
           />
         ))}
         <button
           type="button"
           tabIndex={-1}
           aria-label="문구 회전"
-          className="pointer-events-auto absolute -top-9 left-1/2 flex h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full border border-white bg-amber-400 text-slate-950 shadow-lg"
+          className="pointer-events-auto absolute -top-8 left-1/2 flex h-5 w-5 -translate-x-1/2 items-center justify-center rounded-full border-2 border-sky-500 bg-white/95 text-sky-600 shadow-[0_2px_8px_rgba(2,132,199,0.35)] ring-1 ring-slate-950/10 transition-transform hover:scale-110"
           data-thumbnail-text-transform-handle-state={state}
           data-thumbnail-text-transform-handle-mode="rotate"
           data-thumbnail-text-rotate-handle="true"
@@ -4254,6 +4779,7 @@ export function AdminYoutubeThumbnailGenerator() {
           onPointerMove={handleTextTransformPointerMove}
           onPointerUp={handleTextTransformPointerUp}
           onPointerCancel={handleTextTransformPointerUp}
+          onKeyDown={handleTextTransformHandleKeyDown}
         >
           <RotateCw className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
@@ -4366,59 +4892,28 @@ export function AdminYoutubeThumbnailGenerator() {
     overrides: ThumbnailGenerationOverrides = {},
     chatAssistantMessageId?: string,
   ) {
-    const requestedProviderId = overrides.providerId ?? providerId;
-    const submittedProviderId = requestedProviderId === "local-codex" && browserOpenAIApiKey
-      ? "openai-gpt-image-2"
-      : requestedProviderId;
+    const requestedRouteChoice = overrides.imageRouteChoice ?? (
+      overrides.providerId === "openai-gpt-image-2"
+        ? "browser-openai-api-key"
+        : thumbnailImageRouteChoice
+    );
+    const isLocalBridgeRoute = requestedRouteChoice === THUMBNAIL_LOCAL_BRIDGE_ROUTE_ID;
+    const requestedProviderId = overrides.imageRouteChoice
+      ? getProviderIdForThumbnailImageRouteChoice(requestedRouteChoice)
+      : isLocalBridgeRoute
+        ? "local-codex"
+        : overrides.providerId ?? getProviderIdForThumbnailImageRouteChoice(requestedRouteChoice);
+    const submittedProviderId = requestedProviderId;
     const providerAvailability = readiness?.providers[providerReadinessKey[submittedProviderId]] ?? selectedProviderAvailability;
     const sessionKeyBackedProviderAvailable = canUseSessionApiKeyForProvider(
       submittedProviderId,
       providerAvailability,
       Boolean(browserOpenAIApiKey),
     );
-
-    if (!providerAvailability) {
-      if (chatAssistantMessageId) {
-        updateThumbnailChatMessage(chatAssistantMessageId, "이미지 만들기 준비를 확인하고 있어요. 잠시 후 다시 시도해 주세요.", "live");
-      }
-      toast({
-        title: "이미지 준비 확인 중",
-        description: "잠시 후 다시 생성하세요.",
-      });
-      return false;
-    }
-    if (!providerAvailability.available && !sessionKeyBackedProviderAvailable) {
-      const providerBlockReason = formatThumbnailProviderBlockReason(providerAvailability.reason);
-      if (chatAssistantMessageId) {
-        updateThumbnailChatMessage(chatAssistantMessageId, `이미지 만들기 준비가 아직 안 됐어요. ${providerBlockReason}`, "live");
-      }
-      toast({
-        variant: "destructive",
-        title: "이미지 만들기 준비 필요",
-        description: providerBlockReason,
-      });
-      return false;
-    }
-
-    if (preflightIssues.length > 0) {
-      if (chatAssistantMessageId) {
-        updateThumbnailChatMessage(
-          chatAssistantMessageId,
-          `먼저 입력을 확인해 주세요. ${preflightIssues[0] ?? "문구나 참고 이미지를 조금 줄여 보세요."}`,
-          "live",
-        );
-      }
-      toast({
-        variant: "destructive",
-        title: "입력 확인",
-        description: preflightIssues[0] ?? "입력값을 확인하세요.",
-      });
-      return false;
-    }
     const chatGenerationRequirement = chatAssistantMessageId
       ? pendingChatGenerationRequirementRef.current
       : null;
-    const submittedGenerationMode = overrides.generationMode ?? generationMode;
+    const submittedGenerationMode = isLocalBridgeRoute ? "direct_provider" : overrides.generationMode ?? generationMode;
     const submittedTopic = chatGenerationRequirement ?? overrides.topic ?? topic;
     const submittedHeadline = chatGenerationRequirement
       ? deriveChatHeadline(chatGenerationRequirement)
@@ -4433,7 +4928,67 @@ export function AdminYoutubeThumbnailGenerator() {
         subHeadline: deriveChatSubHeadline(chatGenerationRequirement),
       })
       : overrides.textLayers ?? textLayers;
-    if (shouldBlockSpecificCreatorGenerationRequest(submittedTopic, files, referenceImageRoles) && chatAssistantMessageId) {
+
+    if (!isLocalBridgeRoute && !providerAvailability) {
+      if (chatAssistantMessageId) {
+        updateThumbnailChatMessage(chatAssistantMessageId, "이미지 만들기 준비를 확인하고 있어요. 잠시 후 다시 시도해 주세요.", "live");
+      }
+      toast({
+        title: "이미지 준비 확인 중",
+        description: "잠시 후 다시 생성하세요.",
+      });
+      return false;
+    }
+    if (!isLocalBridgeRoute && providerAvailability && !providerAvailability.available && !sessionKeyBackedProviderAvailable) {
+      const providerBlockReason = formatThumbnailProviderBlockReason(providerAvailability.reason);
+      if (chatAssistantMessageId) {
+        updateThumbnailChatMessage(chatAssistantMessageId, `이미지 만들기 준비가 아직 안 됐어요. ${providerBlockReason}`, "live");
+      }
+      toast({
+        variant: "destructive",
+        title: "이미지 만들기 준비 필요",
+        description: providerBlockReason,
+      });
+      return false;
+    }
+
+    const submittedPreflightIssues = getThumbnailGenerationPreflightIssues({
+      topic: submittedTopic,
+      headline: submittedHeadline,
+      files,
+      readinessLimits,
+      fileValidationMessage,
+      generationMode: submittedGenerationMode,
+      backendAgentStatus,
+    });
+    if (submittedPreflightIssues.length > 0) {
+      if (chatAssistantMessageId) {
+        updateThumbnailChatMessage(
+          chatAssistantMessageId,
+          `먼저 입력을 확인해 주세요. ${submittedPreflightIssues[0] ?? "문구나 참고 이미지를 조금 줄여 보세요."}`,
+          "live",
+        );
+      }
+      toast({
+        variant: "destructive",
+        title: "입력 확인",
+        description: submittedPreflightIssues[0] ?? "입력값을 확인하세요.",
+      });
+      return false;
+    }
+    if (isLocalBridgeRoute && shouldBlockSpecificCreatorGenerationRequest(submittedTopic, files, referenceImageRoles)) {
+      const message = "고급 로컬은 서버 참고 썸네일 검색을 쓰지 않습니다. 쯔양님이 나오려면 host/person 참고 이미지를 먼저 첨부해 주세요.";
+      if (chatAssistantMessageId) {
+        updateThumbnailChatMessage(chatAssistantMessageId, message, "live");
+      }
+      toast({
+        variant: "destructive",
+        title: "로컬 브릿지 참고 이미지 필요",
+        description: message,
+      });
+      return false;
+    }
+    if (!isLocalBridgeRoute && shouldBlockSpecificCreatorGenerationRequest(submittedTopic, files, referenceImageRoles) && chatAssistantMessageId) {
       // Inform the user without blocking generation. The backend retrieval path
       // is authoritative: it searches the locally held Tzuyang thumbnail
       // library for host/person evidence first, then fails closed with
@@ -4459,20 +5014,55 @@ export function AdminYoutubeThumbnailGenerator() {
       );
     }
     try {
+      const generationPayload = {
+        providerId: submittedProviderId,
+        generationMode: submittedGenerationMode,
+        topic: naturalGenerationCopy.topic,
+        headline: naturalGenerationCopy.headline,
+        subHeadline: naturalGenerationCopy.subHeadline,
+        stylePreset: briefPreset,
+        referenceImageRoles,
+        acknowledgedSafety,
+        textLayers: naturalGenerationCopy.textLayers,
+      } satisfies ThumbnailGeneratorPayload;
+
+      if (isLocalBridgeRoute) {
+        const bridgeStatus = await getThumbnailLocalBridgeStatusRequest(
+          thumbnailLocalBridgeUrl,
+          thumbnailLocalBridgeToken,
+        );
+        setThumbnailLocalBridgeStatus(bridgeStatus.status);
+        setThumbnailLocalBridgeMessage(bridgeStatus.message);
+        setThumbnailLocalBridgeError(bridgeStatus.status === "connected" ? null : bridgeStatus.message);
+        if (bridgeStatus.status !== "connected") {
+          throw new Error(bridgeStatus.message);
+        }
+        const localBridgeReferences = await buildThumbnailLocalBridgeReferenceImages(files, referenceImageRoles);
+        const nextResult = await postThumbnailLocalBridgeImagesRequest(
+          generationPayload,
+          localBridgeReferences,
+          thumbnailLocalBridgeUrl,
+          thumbnailLocalBridgeToken,
+          controller.signal,
+        );
+        userCanvasResultLockedRef.current = true;
+        syncNaturalGenerationCopyToCanvas(naturalGenerationCopy);
+        setResult(nextResult);
+        markCanvasAction("고급 로컬 생성 반영");
+        if (chatAssistantMessageId) {
+          updateThumbnailChatMessage(
+            chatAssistantMessageId,
+            formatThumbnailGenerationCompletionSummary(nextResult),
+            "live",
+          );
+        }
+        return true;
+      }
+
       const formData = new FormData();
       formData.append(
         "payload",
-        JSON.stringify({
-          providerId: submittedProviderId,
-          generationMode: submittedGenerationMode,
-          topic: naturalGenerationCopy.topic,
-          headline: naturalGenerationCopy.headline,
-          subHeadline: naturalGenerationCopy.subHeadline,
-          stylePreset: briefPreset,
-          referenceImageRoles,
-          acknowledgedSafety,
-          textLayers: naturalGenerationCopy.textLayers,
-        }),
+        JSON.stringify(generationPayload),
       );
       files.forEach((file) => formData.append("referenceImages", file));
       if (submittedProviderId === "openai-gpt-image-2" && browserOpenAIApiKey) {
@@ -4515,9 +5105,12 @@ export function AdminYoutubeThumbnailGenerator() {
         return false;
       }
       if (chatAssistantMessageId) {
+        const generationErrorMessage = generationError instanceof Error ? generationError.message : "다시 시도하세요.";
         updateThumbnailChatMessage(
           chatAssistantMessageId,
-          "썸네일을 만들지 못했어요. 입력과 설정을 확인한 뒤 다시 시도해 주세요.",
+          isLocalBridgeRoute
+            ? `고급 로컬 브릿지 연결을 먼저 확인해 주세요. ${generationErrorMessage}`
+            : "썸네일을 만들지 못했어요. 입력과 설정을 확인한 뒤 다시 시도해 주세요.",
           "live",
         );
       }
@@ -4666,6 +5259,7 @@ export function AdminYoutubeThumbnailGenerator() {
     setBrowserOpenAIApiKeySavedAt(cache?.savedAt ?? new Date().toISOString());
     setBrowserOpenAIApiKeyMessage("저장했어요. 이 브라우저에서만 gpt-image-2 생성 요청에 사용합니다.");
     setProviderId("openai-gpt-image-2");
+    setThumbnailImageRouteChoice("browser-openai-api-key");
     toast({
       title: "OpenAI 키 저장 완료",
       description: "DB나 계정에는 저장하지 않고, 이 브라우저 캐시에만 저장했습니다.",
@@ -4678,6 +5272,9 @@ export function AdminYoutubeThumbnailGenerator() {
     setBrowserOpenAIApiKeyDraft("");
     setBrowserOpenAIApiKeySavedAt(null);
     setBrowserOpenAIApiKeyMessage("저장된 OpenAI 키를 이 브라우저에서 삭제했습니다.");
+    if (thumbnailImageRouteChoice === "browser-openai-api-key") {
+      setThumbnailImageRouteChoice("local-codex-oauth");
+    }
     setProviderId("local-codex");
     toast({
       title: "OpenAI 키 삭제 완료",
@@ -4685,24 +5282,111 @@ export function AdminYoutubeThumbnailGenerator() {
     });
   }
 
+  async function handleSaveThumbnailLocalBridgeSession() {
+    try {
+      const normalizedUrl = normalizeThumbnailLocalBridgeUrl(thumbnailLocalBridgeUrlDraft);
+      const normalizedToken = requireThumbnailLocalBridgeToken(
+        thumbnailLocalBridgeTokenDraft || thumbnailLocalBridgeToken,
+      );
+      const cache = writeThumbnailLocalBridgeSessionCache(normalizedUrl, normalizedToken);
+      if (!cache) {
+        throw new Error("브라우저 sessionStorage를 사용할 수 없습니다.");
+      }
+      setThumbnailLocalBridgeUrl(cache.bridgeUrl);
+      setThumbnailLocalBridgeUrlDraft(cache.bridgeUrl);
+      setThumbnailLocalBridgeToken(cache.token);
+      setThumbnailLocalBridgeTokenDraft("");
+      setThumbnailLocalBridgeSavedAt(cache.savedAt);
+      setThumbnailLocalBridgeStatus("checking");
+      setThumbnailLocalBridgeMessage("저장했어요. 이 탭에서만 로컬 브릿지 연결을 확인합니다.");
+      setThumbnailLocalBridgeError(null);
+      setProviderId("local-codex");
+      setGenerationMode("direct_provider");
+      setThumbnailImageRouteChoice(THUMBNAIL_LOCAL_BRIDGE_ROUTE_ID);
+      appendThumbnailChatAssistantNotice(
+        "고급 로컬 브릿지 설정을 이 탭 sessionStorage에만 저장했어요. 서버로 OAuth 파일이나 pairing 설정을 보내지 않습니다.",
+      );
+      const status = await getThumbnailLocalBridgeStatusRequest(cache.bridgeUrl, cache.token);
+      setThumbnailLocalBridgeStatus(status.status);
+      setThumbnailLocalBridgeMessage(status.message);
+      setThumbnailLocalBridgeError(status.status === "connected" ? null : status.message);
+    } catch (error) {
+      const message = redactThumbnailLocalBridgeSecretText(
+        error instanceof Error ? error.message : "로컬 브릿지 설정을 저장하지 못했습니다.",
+        thumbnailLocalBridgeTokenDraft || thumbnailLocalBridgeToken,
+      );
+      setThumbnailLocalBridgeStatus("error");
+      setThumbnailLocalBridgeMessage(message);
+      setThumbnailLocalBridgeError(message);
+      toast({
+        variant: "destructive",
+        title: "고급 로컬 브릿지 확인",
+        description: message,
+      });
+    }
+  }
+
+  function handleClearThumbnailLocalBridgeSession() {
+    clearThumbnailLocalBridgeSessionCache();
+    setThumbnailLocalBridgeUrl(THUMBNAIL_LOCAL_BRIDGE_DEFAULT_URL);
+    setThumbnailLocalBridgeUrlDraft(THUMBNAIL_LOCAL_BRIDGE_DEFAULT_URL);
+    setThumbnailLocalBridgeToken(null);
+    setThumbnailLocalBridgeTokenDraft("");
+    setThumbnailLocalBridgeSavedAt(null);
+    setThumbnailLocalBridgeStatus("unpaired");
+    setThumbnailLocalBridgeMessage("로컬 브릿지 설정을 이 탭에서 삭제했습니다.");
+    setThumbnailLocalBridgeError(null);
+    if (thumbnailImageRouteChoice === THUMBNAIL_LOCAL_BRIDGE_ROUTE_ID) {
+      setThumbnailImageRouteChoice("local-codex-oauth");
+      setProviderId("local-codex");
+      setGenerationMode("direct_provider");
+    }
+    appendThumbnailChatAssistantNotice(
+      "고급 로컬 브릿지 URL과 pairing 설정을 이 탭에서 삭제했어요. 기본 OAuth로 돌아갑니다.",
+    );
+  }
+
+  function handleSelectThumbnailImageRouteChoice(nextRoute: ThumbnailImageRouteChoice) {
+    setThumbnailImageRouteChoice(nextRoute);
+    setProviderId(getProviderIdForThumbnailImageRouteChoice(nextRoute));
+    setThumbnailLocalBridgeError(null);
+    if (nextRoute === THUMBNAIL_LOCAL_BRIDGE_ROUTE_ID) {
+      setGenerationMode("direct_provider");
+      setThumbnailLocalBridgeMessage(
+        thumbnailLocalBridgeToken
+          ? "로컬 브릿지 연결을 확인하고 있습니다."
+          : "고급 로컬 브릿지는 사용자 PC에서 실행 중일 때만 사용할 수 있습니다.",
+      );
+      setBrowserOpenAIApiKeyMessage(null);
+      return;
+    }
+    if (nextRoute === "browser-openai-api-key") {
+      setBrowserOpenAIApiKeyMessage(
+        browserOpenAIApiKey
+          ? "OpenAI API 키를 사용하도록 선택했어요."
+          : "API Key를 선택했어요. 먼저 키를 저장해 주세요.",
+      );
+      setThumbnailLocalBridgeMessage(null);
+      return;
+    }
+    setGenerationMode("direct_provider");
+    setBrowserOpenAIApiKeyMessage(null);
+    setThumbnailLocalBridgeMessage(null);
+  }
+
   function renderChatSettingsDropdownPanel() {
     return (
       <div
-        className="space-y-3 rounded-2xl bg-background/95 p-3 shadow-sm"
+        className="space-y-2 rounded-2xl bg-background/95 p-2.5 shadow-sm"
         data-thumbnail-chat-settings-panel="true"
         data-thumbnail-chat-settings-panel-parity="storyboard"
       >
         <div className="flex items-center justify-between gap-2">
-          <div className="flex min-w-0 items-center gap-2">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <KeyRound className="h-3.5 w-3.5" aria-hidden="true" />
-            </span>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-bold">이미지 생성 설정</p>
-              <p className="text-[11px] text-muted-foreground">
-                OpenAI API Key 하나만 입력합니다.
-              </p>
-            </div>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-bold">이미지 생성 설정</p>
+            <p className="text-[11px] text-muted-foreground">
+              기본 OAuth · 고급 로컬 · API Key 백업
+            </p>
           </div>
           <Button
             type="button"
@@ -4718,54 +5402,128 @@ export function AdminYoutubeThumbnailGenerator() {
         </div>
 
         <div
-          className="rounded-2xl border border-border/70 bg-muted/20 p-3"
+          className="grid grid-cols-3 gap-1"
+          role="radiogroup"
+          aria-label="썸네일 이미지 생성 방식 선택"
+          data-thumbnail-api-router-choice="true"
+          data-thumbnail-api-router-choice-parity="storyboard"
+          data-thumbnail-api-router-choice-layout="oauth-deduped"
+        >
+          <button
+            type="button"
+            className={`rounded-xl px-2 py-1.5 text-left transition ${
+              thumbnailImageRouteChoice === "local-codex-oauth"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "bg-muted/35 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+            }`}
+            aria-pressed={thumbnailImageRouteChoice === "local-codex-oauth"}
+            onClick={() => handleSelectThumbnailImageRouteChoice("local-codex-oauth")}
+            data-thumbnail-api-router-option="local-codex-oauth"
+            data-thumbnail-api-router-option-selected={
+              thumbnailImageRouteChoice === "local-codex-oauth" ? "true" : "false"
+            }
+            data-thumbnail-api-router-oauth-transport="server"
+          >
+            <span className="block text-[11px] font-bold">기본 OAuth</span>
+            <span className="block text-[10px] opacity-80">
+              {readiness?.providers.localCodex.available
+                ? "사용 가능"
+                : readiness
+                  ? "확인 필요"
+                  : "확인 중"}
+            </span>
+          </button>
+          <button
+            type="button"
+            className={`rounded-xl px-2 py-1.5 text-left transition ${
+              thumbnailImageRouteChoice === THUMBNAIL_LOCAL_BRIDGE_ROUTE_ID
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "bg-muted/35 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+            }`}
+            aria-pressed={thumbnailImageRouteChoice === THUMBNAIL_LOCAL_BRIDGE_ROUTE_ID}
+            onClick={() => handleSelectThumbnailImageRouteChoice(THUMBNAIL_LOCAL_BRIDGE_ROUTE_ID)}
+            data-thumbnail-api-router-option="local-bridge"
+            data-thumbnail-api-router-option-selected={
+              thumbnailImageRouteChoice === THUMBNAIL_LOCAL_BRIDGE_ROUTE_ID ? "true" : "false"
+            }
+            data-thumbnail-api-router-oauth-transport="local-bridge"
+          >
+            <span className="block text-[11px] font-bold">고급 로컬</span>
+            <span className="block text-[10px] opacity-80">
+              {thumbnailLocalBridgeStatus === "connected"
+                ? "연결됨"
+                : thumbnailLocalBridgeStatus === "checking"
+                  ? "확인 중"
+                  : thumbnailLocalBridgeToken
+                    ? "확인 필요"
+                    : "토큰 필요"}
+            </span>
+          </button>
+          <button
+            type="button"
+            className={`rounded-xl px-2 py-1.5 text-left transition ${
+              thumbnailImageRouteChoice === "browser-openai-api-key"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "bg-muted/35 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+            }`}
+            aria-pressed={thumbnailImageRouteChoice === "browser-openai-api-key"}
+            onClick={() => handleSelectThumbnailImageRouteChoice("browser-openai-api-key")}
+            data-thumbnail-api-router-option="browser-openai-api-key"
+            data-thumbnail-api-router-option-selected={
+              thumbnailImageRouteChoice === "browser-openai-api-key" ? "true" : "false"
+            }
+            data-thumbnail-api-router-fallback="browser-api-key"
+          >
+            <span className="block text-[11px] font-bold">API Key</span>
+            <span className="block text-[10px] opacity-80">
+              {isBrowserOpenAIApiKeySaved ? "저장됨" : "키 필요"}
+            </span>
+          </button>
+        </div>
+
+        <div
+          className="flex items-center justify-between gap-2 rounded-xl bg-muted/30 px-2.5 py-2"
           data-thumbnail-api-router-panel="true"
           data-thumbnail-api-router-active={thumbnailImageApiRouterView.id}
           data-thumbnail-codex-oauth-status={thumbnailImageApiRouterView.codexOAuthStatus}
           data-thumbnail-api-router-model="gpt-image-2"
           data-thumbnail-api-router-parity="storyboard"
         >
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[11px] font-semibold text-muted-foreground">
-              API 라우터
-            </span>
-            <Badge
-              variant="secondary"
-              className="h-6 rounded-full px-2 text-[11px]"
-              data-thumbnail-api-router-label="true"
+          <div className="min-w-0">
+            <p
+              className="truncate text-[11px] font-semibold"
+              data-thumbnail-api-router-status="true"
             >
-              {thumbnailImageApiRouterView.label}
-            </Badge>
+              사용: {thumbnailImageApiRouterView.label}
+            </p>
+            <p
+              className="truncate text-[10px] text-muted-foreground"
+              data-thumbnail-api-router-summary="true"
+              data-thumbnail-codex-oauth-copy="true"
+            >
+              {thumbnailImageApiRouterView.statusLabel} ·{" "}
+              {thumbnailImageApiRouterView.codexOAuthStatus === "active"
+                ? "Codex OAuth"
+                : thumbnailImageApiRouterView.codexOAuthStatus === "local-bridge-active"
+                  ? "Codex OAuth · 로컬"
+                  : thumbnailImageApiRouterView.codexOAuthStatus === "checking"
+                    ? "확인 중"
+                    : thumbnailImageApiRouterView.codexOAuthStatus === "api-key-active"
+                      ? "브라우저 키"
+                      : "설정 필요"}
+            </p>
           </div>
-          <p
-            className="mt-2 text-xs font-semibold"
-            data-thumbnail-api-router-status="true"
+          <Badge
+            variant="secondary"
+            className="h-6 shrink-0 rounded-full px-2 text-[10px]"
+            data-thumbnail-api-router-label="true"
           >
-            {thumbnailImageApiRouterView.statusLabel}
-          </p>
-          <p
-            className="mt-1 text-[11px] leading-4 text-muted-foreground"
-            data-thumbnail-api-router-summary="true"
-          >
-            {thumbnailImageApiRouterView.summary}
-          </p>
-          <p
-            className="mt-1 text-[11px] leading-4 text-muted-foreground"
-            data-thumbnail-codex-oauth-copy="true"
-          >
-            Codex CLI OAuth:{" "}
-            {thumbnailImageApiRouterView.codexOAuthStatus === "active"
-              ? "사용 중"
-              : thumbnailImageApiRouterView.codexOAuthStatus === "checking"
-                ? "확인 중"
-                : thumbnailImageApiRouterView.codexOAuthStatus === "api-key-active"
-                  ? "API 키 사용 중"
-                  : "확인 필요"}
-          </p>
+            gpt-image-2
+          </Badge>
         </div>
 
         <div
-          className="grid gap-2"
+          className="grid gap-1.5"
           data-thumbnail-api-key-settings="local-storage-only"
           data-thumbnail-browser-api-key-settings="local-storage-only"
           data-thumbnail-api-key-storage="browser-local-storage-only"
@@ -4773,12 +5531,31 @@ export function AdminYoutubeThumbnailGenerator() {
           data-thumbnail-openai-api-key-scope="browser-local-storage"
           data-thumbnail-browser-api-key-storage-key={THUMBNAIL_BROWSER_MODEL_KEYS_STORAGE_KEY}
         >
-          <Label
-            htmlFor="thumbnail-browser-openai-api-key"
-            className="text-[11px] font-semibold"
-          >
-            OpenAI API Key
-          </Label>
+          <div className="flex items-center justify-between gap-2">
+            <Label
+              htmlFor="thumbnail-browser-openai-api-key"
+              className="text-[11px] font-semibold"
+            >
+              API Key 백업
+            </Label>
+            <button
+              type="button"
+              className={`h-6 shrink-0 rounded-full px-2 text-[10px] font-semibold transition ${
+                thumbnailImageRouteChoice === "browser-openai-api-key"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+              aria-pressed={thumbnailImageRouteChoice === "browser-openai-api-key"}
+              onClick={() => handleSelectThumbnailImageRouteChoice("browser-openai-api-key")}
+              data-thumbnail-api-router-option="browser-openai-api-key"
+              data-thumbnail-api-router-option-selected={
+                thumbnailImageRouteChoice === "browser-openai-api-key" ? "true" : "false"
+              }
+              data-thumbnail-api-router-fallback="browser-api-key"
+            >
+              백업 사용
+            </button>
+          </div>
           <div className="flex gap-2">
             <Input
               id="thumbnail-browser-openai-api-key"
@@ -4802,7 +5579,7 @@ export function AdminYoutubeThumbnailGenerator() {
             <Button
               type="button"
               size="sm"
-              className="h-8 shrink-0"
+              className="h-8 shrink-0 px-2 text-xs"
               onClick={handleSaveThumbnailBrowserOpenAIApiKey}
               data-thumbnail-api-key-save="true"
               data-thumbnail-browser-api-key-save="true"
@@ -4811,18 +5588,13 @@ export function AdminYoutubeThumbnailGenerator() {
             </Button>
           </div>
           <p
-            className="text-[11px] leading-4 text-muted-foreground"
+            className="text-[10px] leading-4 text-muted-foreground"
             data-thumbnail-api-key-browser-only-copy="true"
             data-thumbnail-browser-api-key-browser-only-copy="true"
-          >
-            키는 이 브라우저에만 저장하고, 요청 때만 잠깐 보냅니다.
-          </p>
-          <p
-            className="text-[11px] leading-4 text-muted-foreground"
             data-thumbnail-api-key-model-policy="gpt-image-2-only"
             data-thumbnail-browser-api-key-model-policy="gpt-image-2-only"
           >
-            모델은 gpt-image-2만 사용합니다.
+            OAuth가 안 될 때만 사용 · 브라우저 저장 · DB 저장 없음 · gpt-image-2 전용
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <p
@@ -4864,6 +5636,114 @@ export function AdminYoutubeThumbnailGenerator() {
             ) : null}
           </div>
         </div>
+
+        {shouldShowThumbnailLocalBridgeSettings ? (
+          <div
+            className="grid gap-1.5 rounded-xl border border-dashed border-primary/25 bg-primary/5 p-2"
+            data-thumbnail-local-bridge-settings="session-only"
+            data-thumbnail-local-bridge-settings-visibility="advanced-selected"
+            data-thumbnail-local-bridge-storage="browser-session-storage-only"
+            data-thumbnail-local-bridge-server-relay="forbidden"
+            data-thumbnail-local-bridge-token-persistence="session-only"
+            data-thumbnail-local-bridge-storage-key={THUMBNAIL_LOCAL_BRIDGE_SESSION_STORAGE_KEY}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <Label
+                htmlFor="thumbnail-local-bridge-url"
+                className="text-[11px] font-semibold"
+              >
+                고급 로컬 브릿지
+              </Label>
+              <Badge
+                variant="outline"
+                className="h-5 shrink-0 rounded-full px-1.5 text-[10px]"
+                data-thumbnail-local-bridge-status={thumbnailLocalBridgeStatus}
+              >
+                {thumbnailLocalBridgeStatus === "connected"
+                  ? "연결됨"
+                  : thumbnailLocalBridgeStatus === "checking"
+                    ? "확인 중"
+                    : "설정 필요"}
+              </Badge>
+            </div>
+            <p
+              className="text-[10px] leading-4 text-muted-foreground"
+              data-thumbnail-local-bridge-guidance="true"
+            >
+              OAuth는 동일합니다. 차이는 서버 대신 사용자 PC 브릿지를 직접 호출하는 것입니다.
+            </p>
+            <div className="grid gap-1">
+              <Input
+                id="thumbnail-local-bridge-url"
+                value={thumbnailLocalBridgeUrlDraft}
+                onChange={(event) => {
+                  setThumbnailLocalBridgeUrlDraft(event.target.value);
+                  setThumbnailLocalBridgeError(null);
+                }}
+                placeholder={THUMBNAIL_LOCAL_BRIDGE_DEFAULT_URL}
+                autoComplete="off"
+                spellCheck={false}
+                className="h-8 text-xs"
+                aria-label="로컬 브릿지 URL"
+                data-thumbnail-local-bridge-url-input="true"
+              />
+              <Input
+                id="thumbnail-local-bridge-token"
+                type="password"
+                value={thumbnailLocalBridgeTokenDraft}
+                onChange={(event) => {
+                  setThumbnailLocalBridgeTokenDraft(event.target.value);
+                  setThumbnailLocalBridgeError(null);
+                }}
+                placeholder={
+                  thumbnailLocalBridgeToken
+                    ? `${maskedThumbnailLocalBridgeToken} 저장됨`
+                    : "브릿지 터미널 pairing_token"
+                }
+                autoComplete="off"
+                spellCheck={false}
+                className="h-8 text-xs"
+                aria-label="로컬 브릿지 pairing token"
+                data-thumbnail-local-bridge-token-input="true"
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+                onClick={() => void handleSaveThumbnailLocalBridgeSession()}
+                data-thumbnail-local-bridge-save="true"
+              >
+                저장/테스트
+              </Button>
+              {thumbnailLocalBridgeToken ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+                  onClick={handleClearThumbnailLocalBridgeSession}
+                  data-thumbnail-local-bridge-clear="true"
+                >
+                  삭제
+                </Button>
+              ) : null}
+              <p
+                className={`basis-full text-[11px] ${
+                  thumbnailLocalBridgeError ? "text-destructive" : "text-muted-foreground"
+                }`}
+                data-thumbnail-local-bridge-message="true"
+              >
+                {thumbnailLocalBridgeError ??
+                  thumbnailLocalBridgeMessage ??
+                  (thumbnailLocalBridgeSavedAt
+                    ? `sessionStorage 저장됨 · ${new Date(thumbnailLocalBridgeSavedAt).toLocaleString("ko-KR")}`
+                    : "npm run storyboard:local-bridge 실행 후 token을 붙여넣으세요.")}
+              </p>
+            </div>
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -5079,7 +5959,7 @@ export function AdminYoutubeThumbnailGenerator() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
                     align="end"
-                    className="w-[min(320px,calc(100vw-2rem))] p-0"
+                    className="w-[min(280px,calc(100vw-2rem))] p-0"
                     data-thumbnail-chat-settings-dropdown="true"
                     data-thumbnail-chat-settings-dropdown-parity="storyboard"
                   >
@@ -5291,6 +6171,19 @@ export function AdminYoutubeThumbnailGenerator() {
                   data-thumbnail-chat-composer-shell="storyboard-like"
                 >
                   <div className="flex items-end gap-2" data-thumbnail-chat-composer-inner="true">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 shrink-0 rounded-full text-muted-foreground hover:text-foreground"
+                      onClick={openThumbnailReferenceFilePicker}
+                      disabled={isChatAgentStreaming || isGenerating}
+                      aria-label="참고 이미지 첨부"
+                      title="참고 이미지 첨부"
+                      data-thumbnail-chat-reference-upload="true"
+                    >
+                      <Plus className="h-4 w-4" aria-hidden="true" />
+                    </Button>
                     <Textarea
                       id="thumbnail-chat-composer"
                       value={chatDraft}
@@ -5301,7 +6194,7 @@ export function AdminYoutubeThumbnailGenerator() {
                       aria-describedby="thumbnail-chat-keyboard-hint"
                       disabled={isChatAgentStreaming || isGenerating}
                       className="max-h-24 min-h-10 resize-none border-0 bg-transparent p-2 text-sm shadow-none focus-visible:ring-0"
-                      placeholder="예: 제육볶음 먹방 썸네일 생성해줘 · 문구 크게 · 참고 인물 이미지는 파일로 추가해줘 · PNG 저장해줘"
+                      placeholder="원하는 썸네일 내용을 입력해 주세요"
                       data-thumbnail-chat-ime-safe="true"
                     />
                     <Button
@@ -5415,13 +6308,20 @@ export function AdminYoutubeThumbnailGenerator() {
                 />
               {activeLayer && !editingLayer ? (
                 <div
-                  className="pointer-events-none absolute z-10 rounded-sm border-2 border-dashed border-sky-400/90"
+                  className="pointer-events-none absolute z-10 rounded-md border border-dashed border-sky-400/85 bg-sky-400/[0.03] shadow-[0_0_0_1px_rgba(255,255,255,0.55),0_0_18px_rgba(56,189,248,0.18)]"
                   style={getTextLayerTransformFrameStyle(activeLayer)}
                   data-thumbnail-canvas-text-transform-frame="true"
                   data-thumbnail-canvas-selected-text-transform-frame="true"
                   data-thumbnail-canvas-text-transform-state="selected"
                   data-thumbnail-canvas-selected-text-layer={activeLayer.id}
+                  data-thumbnail-text-transform-metrics="visual-bounds"
                 >
+                  <span
+                    className="pointer-events-none absolute -top-7 left-0 rounded-md bg-slate-950/85 px-2 py-1 text-[11px] font-bold leading-none text-white shadow-sm backdrop-blur-sm"
+                    data-thumbnail-selected-text-transform-label="true"
+                  >
+                    {getTextLayerSelectionLabel(activeLayer)}
+                  </span>
                   {renderTextTransformHandleButtons(activeLayer, "selected")}
                 </div>
               ) : null}
@@ -5434,6 +6334,7 @@ export function AdminYoutubeThumbnailGenerator() {
                   aria-label="썸네일 생성 중"
                   data-thumbnail-generation-skeleton="true"
                   data-thumbnail-generation-skeleton-variant="neutral-gray"
+                  data-thumbnail-generation-skeleton-effect="glass-shimmer"
                   data-thumbnail-unified-generation-skeleton="true"
                   data-thumbnail-generation-skeleton-glass-surface="true"
                 >
@@ -5473,6 +6374,7 @@ export function AdminYoutubeThumbnailGenerator() {
                     tabIndex={0}
                     onBlur={handleInlineTextEditorBlur}
                     onPointerDown={(event) => event.stopPropagation()}
+                    onBeforeInput={handleInlineTextEditorBeforeInput}
                     onInput={(event) => {
                       ensurePendingTextLayerUndoSnapshot();
                       const nextContent = normalizeInlineEditableText(event.currentTarget.textContent ?? "");
@@ -5491,7 +6393,7 @@ export function AdminYoutubeThumbnailGenerator() {
                       if (isUndoKeyboardShortcut(event)) {
                         event.preventDefault();
                         event.stopPropagation();
-                        undoTextLayerChange();
+                        undoInlineTextEditorChange();
                         return;
                       }
                       event.stopPropagation();
