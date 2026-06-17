@@ -1,16 +1,14 @@
 {
-  "generatedAt": "2026-06-14T07:47:09.240Z",
-  "seed": true,
-  "description": "관리자 스토리보드 첫 진입에 보여줄 대표 예시입니다. 가게 앞 인트로, 주문 맥락, 조리 기대감, 한상 공개와 맛 평가 흐름을 바로 확인할 수 있게 합니다.",
+  "generatedAt": "2026-06-15T13:31:46.935Z",
   "result": {
-    "generatedAt": "2026-06-14T07:47:09.232Z",
+    "generatedAt": "2026-06-15T13:31:46.935Z",
     "mode": "backend_agent_command",
     "request": {
-      "prompt": "사용자가 접속하자마자 바로 참고할 수 있는 대표 먹방 스토리보드 예시. 음식만 크게 잡는 방식보다 가게 앞 인트로, 주문 맥락, 조리 기대감, 한상 공개와 맛 평가 흐름을 보여줘.",
+      "prompt": "매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안팎의 스토리보드로 만들어줘. 가게 앞 인트로와 주문 맥락으로 시작하고, 조리 기대감, 첫 입, ASMR 질감, 소스 조합, 클라이맥스 한상, 완식, 맛 평가, 다음 영상 기대감까지 이어지게 구성해줘.",
       "tone": "energetic",
-      "targetLengthMinutes": 12,
+      "targetLengthMinutes": 14,
       "sourceLimit": 80,
-      "segmentCount": 4,
+      "segmentCount": 10,
       "includeProductionNotes": true,
       "generationMode": "backend_agent"
     },
@@ -18,12 +16,12 @@
       "heatmapDirectory": "/home/twoimo/src/tzudong/backend/restaurant-crawling/data/tzuyang/heatmap",
       "scannedFiles": 1072,
       "usableSources": 1024,
-      "selectedSources": 4,
-      "totalMarkers": 4,
-      "topReplayScore": 0.99,
+      "selectedSources": 80,
+      "totalMarkers": 158,
+      "topReplayScore": 1,
       "isFallbackData": false,
       "fallbackReason": null,
-      "dataModeLabel": "대표 예시 히스토리"
+      "dataModeLabel": "백엔드 에이전트 명령 실행"
     },
     "ahp": {
       "targetScore": 99.8,
@@ -64,7 +62,7 @@
           "label": "스토리보드 디테일",
           "weight": 18,
           "score": 99.85,
-          "evidence": "8개 씬에 의도/연출/멘트/체크리스트 포함"
+          "evidence": "10개 씬에 의도/연출/멘트/체크리스트 포함"
         },
         {
           "id": "control",
@@ -219,6 +217,211 @@
         "Canonical reference graph evidence passes the AHP 98 gate for this fixture/result."
       ]
     },
+    "planner": {
+      "topicProfile": {
+        "id": "convenience_food",
+        "label": "편의점 조합 먹방",
+        "keywords": [
+          "편의점",
+          "라면",
+          "삼각김밥",
+          "치즈",
+          "컵라면"
+        ],
+        "visualMotifs": [
+          "컵라면 김",
+          "삼각김밥을 라면에 얹는 손",
+          "치즈가 녹는 순간"
+        ],
+        "audioMotifs": [
+          "면치기 소리",
+          "치즈 늘어나는 식감",
+          "포장 뜯는 소리"
+        ],
+        "subtitleMotifs": [
+          "편의점 꿀조합",
+          "라면과 삼각김밥 한입",
+          "치즈 조합 피크"
+        ],
+        "sensoryWords": [
+          "고소한",
+          "짭짤한",
+          "뜨끈한",
+          "꾸덕한"
+        ]
+      },
+      "arcPlan": {
+        "cutCount": 10,
+        "roles": [
+          "intro_hook",
+          "menu_context",
+          "prep_sensory",
+          "table_reveal",
+          "first_bite",
+          "combo_variation",
+          "climax_hero",
+          "near_finish",
+          "final_review",
+          "outro_next"
+        ],
+        "compressionRule": "10컷 확장: 조합 변주와 완식 근거를 더해 중반 반복감을 줄임",
+        "requiredRoleCoverage": {
+          "hasIntro": true,
+          "hasContext": true,
+          "hasFirstBiteOrSensory": true,
+          "hasClimax": true,
+          "hasFinalReviewOrOutro": true
+        }
+      },
+      "sourceTrace": {
+        "dataModeLabel": "백엔드 에이전트 어댑터",
+        "isFallbackData": false,
+        "evidenceLabel": "백엔드 에이전트 근거",
+        "imageStatusLabel": "이미지 검증 전"
+      },
+      "sceneDrafts": [
+        {
+          "sceneNo": 1,
+          "role": "intro_hook",
+          "topicKeywords": [
+            "편의점 조합 먹방",
+            "편의점",
+            "고소한"
+          ],
+          "title": "초반 1분 30초 가게 앞 인트로 · 편의점 조합 먹방",
+          "operatorIntent": "쯔양님 영상에서 자주 보이는 00:00~01:30 인사·장소 설명·가게 앞 도입을 먼저 깔고, 가장 강한 리플레이 피크를 예고해 초반 이탈을 막습니다. 이번 주제는 편의점 조합 먹방이라서 편의점의 고소한 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.",
+          "visualDirection": "가게 앞 외관, 입구, 메뉴판, 대표 음식 예고 컷을 1분 30초 안에 빠르게 교차한 뒤 본격 먹방으로 넘어갑니다. 특히 컵라면 김을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.",
+          "hostBeat": "“오늘은 이 가게 앞에서부터 기대가 되는데요. 1분 30초 안에 장소와 메뉴를 짧게 보여드리고 바로 들어가볼게요.” 편의점은/는 면치기 소리이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다.",
+          "captionStem": "초반 1분 30초 가게 앞 인사 · 오늘 갈 곳과 대표 메뉴를 먼저 보여주기 · 편의점 꿀조합 · 편의점"
+        },
+        {
+          "sceneNo": 2,
+          "role": "menu_context",
+          "topicKeywords": [
+            "편의점 조합 먹방",
+            "라면",
+            "짭짤한"
+          ],
+          "title": "주문과 메뉴 맥락 세팅 · 편의점 조합 먹방",
+          "operatorIntent": "시청자가 무엇을 얼마나 먹게 될지 바로 이해하도록 메뉴·양·가격대 느낌을 짧게 정리합니다. 이번 주제는 편의점 조합 먹방이라서 라면의 짭짤한 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.",
+          "visualDirection": "메뉴판을 직접 읽히지 않고 손가락, 주문표, 대표 재료, 상차림 준비 컷으로 맥락을 보여줍니다. 특히 삼각김밥을 라면에 얹는 손을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.",
+          "hostBeat": "“오늘은 이 조합으로 주문해봤어요. 어떤 맛이 날지 바로 확인해볼게요.” 라면은/는 치즈 늘어나는 식감이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다.",
+          "captionStem": "주문 맥락 · 오늘 먹을 메뉴와 양을 쉽게 알려주기 · 라면과 삼각김밥 한입 · 라면"
+        },
+        {
+          "sceneNo": 3,
+          "role": "prep_sensory",
+          "topicKeywords": [
+            "편의점 조합 먹방",
+            "삼각김밥",
+            "뜨끈한"
+          ],
+          "title": "조리 과정과 소리 기대감 · 편의점 조합 먹방",
+          "operatorIntent": "음식이 나오기 전 김·소리·윤기·조리 동작으로 첫 입 전 기대치를 쌓습니다. 이번 주제는 편의점 조합 먹방이라서 삼각김밥의 뜨끈한 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.",
+          "visualDirection": "주방 손동작, 지글거리는 팬, 끓는 국물, 올라오는 김처럼 조리 과정이 보이는 컷을 확보합니다. 특히 치즈가 녹는 순간을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.",
+          "hostBeat": "“나오기 전부터 소리가 진짜 좋아요. 이 장면만 봐도 기대돼요.” 삼각김밥은/는 포장 뜯는 소리이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다.",
+          "captionStem": "조리 기대감 · 김과 소리로 첫 입 전 설렘 만들기 · 치즈 조합 피크 · 삼각김밥"
+        },
+        {
+          "sceneNo": 4,
+          "role": "table_reveal",
+          "topicKeywords": [
+            "편의점 조합 먹방",
+            "치즈",
+            "꾸덕한"
+          ],
+          "title": "첫 상차림 전체 공개 · 편의점 조합 먹방",
+          "operatorIntent": "시청자가 화면을 멈추고 한상을 훑어볼 수 있게 메뉴 구성을 한 번에 보여줍니다. 이번 주제는 편의점 조합 먹방이라서 치즈의 꾸덕한 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.",
+          "visualDirection": "테이블 전체를 넓게 잡고 메인 음식, 사이드, 소스, 식기 위치가 한눈에 보이게 배치합니다. 특히 컵라면 김을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.",
+          "hostBeat": "“한상이 이렇게 나왔습니다. 양이 정말 푸짐하죠?” 치즈은/는 면치기 소리이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다.",
+          "captionStem": "한상 공개 · 메인과 사이드를 한눈에 보여주기 · 편의점 꿀조합 · 치즈"
+        },
+        {
+          "sceneNo": 5,
+          "role": "first_bite",
+          "topicKeywords": [
+            "편의점 조합 먹방",
+            "컵라면",
+            "고소한"
+          ],
+          "title": "첫 입 리액션 · 편의점 조합 먹방",
+          "operatorIntent": "피크 구간과 닮은 첫 입 리액션을 명확히 배치해 맛의 기준점을 만듭니다. 이번 주제는 편의점 조합 먹방이라서 컵라면의 고소한 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.",
+          "visualDirection": "입장 전 정적 → 한입을 집는 손 → 맛 포인트 자막 → 한 박자 쉬는 편집을 씁니다. 얼굴 대신 손동작과 테이블 반응 중심으로 표현합니다. 특히 삼각김밥을 라면에 얹는 손을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.",
+          "hostBeat": "“와… 이건 첫입부터 기준이 생기는데요?” 컵라면은/는 치즈 늘어나는 식감이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다.",
+          "captionStem": "첫 입 리액션 · 한입 직후 맛 포인트를 짧게 자막화 · 라면과 삼각김밥 한입 · 컵라면"
+        },
+        {
+          "sceneNo": 6,
+          "role": "combo_variation",
+          "topicKeywords": [
+            "편의점 조합 먹방",
+            "편의점",
+            "짭짤한"
+          ],
+          "title": "소스와 사이드 조합 변주 · 편의점 조합 먹방",
+          "operatorIntent": "같은 맛이 반복되지 않도록 조합·소스·사이드 메뉴로 중반 리듬을 바꿉니다. 이번 주제는 편의점 조합 먹방이라서 편의점의 짭짤한 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.",
+          "visualDirection": "소스를 찍는 손, 반찬을 얹는 동작, 조합 전후 비교를 한 컷 안에서 이해되게 보여줍니다. 특히 치즈가 녹는 순간을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.",
+          "hostBeat": "“여기서 조합을 한 번 바꿔볼게요.” 편의점은/는 포장 뜯는 소리이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다.",
+          "captionStem": "조합 변주 · 새 소스와 사이드로 흐름 전환 · 치즈 조합 피크 · 편의점"
+        },
+        {
+          "sceneNo": 7,
+          "role": "climax_hero",
+          "topicKeywords": [
+            "편의점 조합 먹방",
+            "라면",
+            "뜨끈한"
+          ],
+          "title": "클라이맥스 히어로 한상 · 편의점 조합 먹방",
+          "operatorIntent": "가장 강한 장면을 새 영상의 대표 썸네일 후보이자 최고 몰입 구간으로 전환합니다. 이번 주제는 편의점 조합 먹방이라서 라면의 뜨끈한 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.",
+          "visualDirection": "테이블 전체와 가장 큰 한입, 풍성한 음식 높이, 김/윤기가 동시에 보이는 히어로 구도를 만듭니다. 특히 컵라면 김을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.",
+          "hostBeat": "“오늘의 하이라이트는 이 한상이에요.” 라면은/는 면치기 소리이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다.",
+          "captionStem": "클라이맥스 한상 · 오늘 가장 강한 대표 장면 만들기 · 편의점 꿀조합 · 라면"
+        },
+        {
+          "sceneNo": 8,
+          "role": "near_finish",
+          "topicKeywords": [
+            "편의점 조합 먹방",
+            "삼각김밥",
+            "꾸덕한"
+          ],
+          "title": "거의 완식과 만족감 · 편의점 조합 먹방",
+          "operatorIntent": "초반 기대가 실제로 채워졌다는 증거를 빈 그릇과 정리된 테이블로 보여줍니다. 이번 주제는 편의점 조합 먹방이라서 삼각김밥의 꾸덕한 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.",
+          "visualDirection": "비워진 그릇, 남은 소스 자국, 접힌 냅킨, 내려놓은 숟가락 등 완식에 가까운 상태를 차분히 보여줍니다. 특히 삼각김밥을 라면에 얹는 손을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.",
+          "hostBeat": "“진짜 거의 다 먹었네요. 마지막까지 맛이 괜찮았어요.” 삼각김밥은/는 치즈 늘어나는 식감이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다.",
+          "captionStem": "거의 완식 · 빈 그릇으로 만족감 보여주기 · 라면과 삼각김밥 한입 · 삼각김밥"
+        },
+        {
+          "sceneNo": 9,
+          "role": "final_review",
+          "topicKeywords": [
+            "편의점 조합 먹방",
+            "치즈",
+            "고소한"
+          ],
+          "title": "최종 맛 평가와 재방문 포인트 · 편의점 조합 먹방",
+          "operatorIntent": "먹은 메뉴의 맛·양·추천 대상·재방문 포인트를 초보자도 이해하게 정리합니다. 이번 주제는 편의점 조합 먹방이라서 치즈의 고소한 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.",
+          "visualDirection": "메모하는 손, 메뉴 조합 정리, 대표 접시 하나를 다시 보여주는 컷으로 평가 장면을 구성합니다. 특히 치즈가 녹는 순간을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.",
+          "hostBeat": "“오늘은 이 맛 때문에 다시 생각날 것 같아요.” 치즈은/는 포장 뜯는 소리이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다.",
+          "captionStem": "최종 맛 평가 · 맛과 양, 다시 먹고 싶은 이유 정리 · 치즈 조합 피크 · 치즈"
+        },
+        {
+          "sceneNo": 10,
+          "role": "outro_next",
+          "topicKeywords": [
+            "편의점 조합 먹방",
+            "컵라면",
+            "짭짤한"
+          ],
+          "title": "다음 소재 연결과 아웃트로 · 편의점 조합 먹방",
+          "operatorIntent": "댓글 유도와 다음 회차 소재를 자연스럽게 연결해 영상 이후 행동을 만듭니다. 이번 주제는 편의점 조합 먹방이라서 컵라면의 짭짤한 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.",
+          "visualDirection": "가게 바깥으로 나오는 뒷모습, 간판 없는 거리 분위기, 다음 메뉴 후보를 암시하는 소품으로 마무리합니다. 특히 컵라면 김을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.",
+          "hostBeat": "“다음엔 이 피크를 어떤 메뉴로 이어가면 좋을까요?” 컵라면은/는 면치기 소리이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다.",
+          "captionStem": "다음 소재 연결 · 댓글 질문과 다음 영상 기대감 남기기 · 편의점 꿀조합 · 컵라면"
+        }
+      ]
+    },
     "backendAnalysis": {
       "reusedLogic": [
         "backend/storyboard-agent/src/graph.py supervisor→researcher→intern/designer LangGraph 구조",
@@ -226,13 +429,15 @@
         "backend/storyboard-agent/src/prompts/designer.py 스토리보드 출력 규칙",
         "backend/storyboard-agent의 supervisor→researcher→designer 구조를 콘솔 단일 생성 플로우로 축약",
         "search_scene_data의 피크 구간 캡션 보강 원칙을 로컬 히트맵 marker 기반 근거로 대체",
-        "backend/restaurant-crawling/data/tzuyang/heatmap jsonl의 most_replayed_markers와 intensityScoreNormalized를 핵심 랭킹 신호로 사용"
+        "backend/restaurant-crawling/data/tzuyang/heatmap jsonl의 most_replayed_markers와 intensityScoreNormalized를 핵심 랭킹 신호로 사용",
+        "StoryboardPlannerOutput 편의점 조합 먹방 / 10컷 역할 매핑 사용"
       ],
       "localGapsHandled": [
         "STORYBOARD_AGENT_COMMAND 실행 결과를 관리자 API에서 받아 구조화 결과와 함께 보존",
         "LangGraph/OpenAI/Supabase/Tavily 자격증명 없이도 로컬 jsonl 히트맵으로 생성 가능",
         "라이브 자막/프레임 캡션이 없을 때도 씬별 URL·피크 시간·리플레이 강도를 노출",
-        "PD가 관리자 콘솔에서 파라미터를 조정하고 결과를 복사할 수 있게 API와 UI를 분리"
+        "PD가 관리자 콘솔에서 파라미터를 조정하고 결과를 복사할 수 있게 API와 UI를 분리",
+        "로컬 히트맵 근거 / 이미지 검증 전 상태를 생성 결과에 명시"
       ],
       "backendAgent": {
         "available": true,
@@ -255,12 +460,12 @@
         "invokedCommand": true,
         "commandExitCode": 0,
         "commandTimedOut": false,
-        "rawOutputPreview": "{\"final_output\": \"# LangGraph 스토리보드\\n\\n- 요청: 매운 짜장라면 먹방을 8컷 스토리보드로 만들어줘. 첫 장면은 음식 소개, 중간은 면을 집는 장면과 첫 입 리액션, 마지막은 맛 평가와 다음 영상 기대감을 남기는 흐름으로 구성해줘.\\n- 톤: energetic\\n- 목표 길이: 약 14분\\n- 생성 방식: Supervisor가 슬롯을 정리하고 Researcher가 장면 근거를 찾은 뒤, Intern 안전 게이트를 거쳐 Designer가 최종 컷을 정리했습니다.\\n\\n## CUT 구성\\n\\n### CUT 01. 오프닝 훅\\n- 화면: 가게 앞 인사, 입구 분위기, 대표 메뉴 예고를 넓은 컷으로 빠르게 연결합니다.\\n- 진행 멘트: “오늘은 구독자분들이 다시 돌려본 그 포인트를 새 메뉴로 확장해볼게요.”\\n- 자막: 초반 몰입이 강한 에너지형 먹방 톤으로 “매운 짜장라면 먹방을 8컷 스토리보드로 만들어줘. 첫 장면은 음식 소개, 중간은 면을 집는 장면과 첫 입 리액션, 마지막은 맛 평가와 다음 영상 기대감을 남기는 흐름으로 구성해줘.” 소재를 06:57 피크 감정에 맞춰 압축\\n- 근거: 06:57\\n\\n### CUT 02. 기대감 세팅\\n- 화면: 조리 과정, 상차림, 김/소스/면발처럼 질감이 보이는 컷을 확보합니다.\\n- 진행 멘트: “이 장면은 냄새부터 다르게 느껴져요.”\\n- 자막: 초반 몰입이 강한 에너지형 먹방 톤으로 “매운 짜장라면 먹방을 8컷 스토리보드로 만들어줘. 첫 장면은 음식 소개, 중간은 면을 집는 장면과 첫 입 리액션, 마지막은 맛 평가와 다음 영상 기대감을 남기는 흐름으로 구성해줘.” 소재를 13:25 피크 감정에 맞춰 압축\\n- 근거: 13:25\\n\\n### CUT 03. 첫 입 리액션\\n- 화면: 입장 전 정적 → 한입을 집는 손 → 맛 포인트 자막 → 한 박자 쉬는 편집을 씁니다.\\n- 진행 멘트: “와… 이건 첫입부터 기준이 생기는데요?”\\n- 자막: 초반 몰입이 강한 에너지형 먹방 톤으로 “매운 짜장라면 먹방을 8컷 스토리보드로 만들어줘. 첫 장면은 음식 소개, 중간은 면을 집는 장면과 첫 입 리액션, 마지막은 맛 평가와 다음 영상 기대감을 남기는 흐름으로 구성해줘.” 소재를 10:56 피크 감정에 맞춰 압축\\n- 근거: 10:56\\n\\n### CUT 04. 반복 시청 포인트\\n- 화면: 마이크에 가까운 바삭/후루룩 소리와 손동작 디테일을 따로 땁니다.\\n- 진행 멘트: “이 소리 때문",
+        "rawOutputPreview": "{\"final_output\": \"# LangGraph 스토리보드\\n\\n- 요청: 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안팎의 스토리보드로 만들어줘. 가게 앞 인트로와 주문 맥락으로 시작하고, 조리 기대감, 첫 입, ASMR 질감, 소스 조합, 클라이맥스 한상, 완식, 맛 평가, 다음 영상 기대감까지 이어지게 구성해줘.\\n- 톤: energetic\\n- 목표 길이: 약 14분\\n- 생성 방식: Supervisor가 슬롯을 정리하고 Researcher가 장면 근거를 찾은 뒤, Intern 안전 게이트를 거쳐 Designer가 최종 컷을 정리했습니다.\\n\\n## CUT 구성\\n\\n### CUT 01. 초반 1분 30초 가게 앞 인트로 · 편의점 조합 먹방\\n- 화면: 가게 앞 외관, 입구, 메뉴판, 대표 음식 예고 컷을 1분 30초 안에 빠르게 교차한 뒤 본격 먹방으로 넘어갑니다. 특히 컵라면 김을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.\\n- 진행 멘트: “오늘은 이 가게 앞에서부터 기대가 되는데요. 1분 30초 안에 장소와 메뉴를 짧게 보여드리고 바로 들어가볼게요.” 편의점은/는 면치기 소리이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다.\\n- 자막: 초반 1분 30초 가게 앞 인사 · 오늘 갈 곳과 대표 메뉴를 먼저 보여주기 · 편의점 꿀조합 · 편의점 · 백엔드 에이전트 근거 06:57 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안…\\n- 근거: 06:57\\n\\n### CUT 02. 주문과 메뉴 맥락 세팅 · 편의점 조합 먹방\\n- 화면: 메뉴판을 직접 읽히지 않고 손가락, 주문표, 대표 재료, 상차림 준비 컷으로 맥락을 보여줍니다. 특히 삼각김밥을 라면에 얹는 손을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.\\n- 진행 멘트: “오늘은 이 조합으로 주문해봤어요. 어떤 맛이 날지 바로 확인해볼게요.” 라면은/는 치즈 늘어나는 식감이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다.\\n- 자막: 주문 맥락 · 오늘 먹을 메뉴와 양을 쉽게 알려주기 · 라면과 삼각김밥 한입 · 라면 · 백엔드 에이전트 근거 13:25 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안…\\n- 근거: 13:25\\n\\n### ",
         "graph": {
           "status": "used",
           "runtime": "langgraph",
           "mode": "graph_command",
-          "threadId": "storyboard-admin-1781347354-45666079",
+          "threadId": "storyboard-admin-1781444377-255a6b15",
           "checkpointer": "MemorySaver",
           "checkpointerScope": "per_process_only",
           "graphEntrypoint": "backend/storyboard-agent/src/graph.py",
@@ -289,22 +494,10 @@
             "search_scene_data"
           ],
           "retrieval": {
-            "status": "used",
-            "usedModels": {
-              "embedding": "BAAI/bge-m3",
-              "reranker": "BAAI/bge-reranker-v2-m3"
-            },
-            "operations": {
-              "supabaseRpc": "match_documents_hybrid",
-              "mmrApplied": true,
-              "captionLookup": "get_video_captions_for_range"
-            },
+            "status": "failed",
             "caption": {
-              "lookupStatus": "used",
-              "provider": "llava_next_video",
-              "model": "llava-hf/LLaVA-NeXT-Video-7B-hf",
-              "authMode": "unknown_legacy",
-              "schemaVersion": 1
+              "lookupStatus": "unavailable",
+              "fallbackReason": "search_scene_data_timeout"
             }
           }
         },
@@ -337,143 +530,54 @@
             },
             "research_scene_data": [
               {
-                "id": 35379,
-                "video_id": "7n1dJibopAY",
-                "chunk_index": 6,
-                "recollect_id": 0,
-                "page_content": "문맥: 이 서브타이틀 청크는 주인공이 점보라면 2탄 중 하나인 비빔라면을 먹는 장면을 묘사하고 있습니다. 주인공은 라면을 '디저트'처럼 즐기며, 매운 짜장 맛이 강하면서도 자극적이지 않게 잘 조리된 것을 평가합니다. 특히, 매운 짜장 라면이 끝까지 질지 않고 맛있게 먹을 수 있었다고 말하며, 4~5명이 충분히 나눠 먹을 수 있는 양이라고 언급합니다. 또한, 주인공이 라면을 먹으면서 느끼는 식감과 맛에 대한 긍정적인 반응을 보입니다. [09:28 ~ 11:05] (라면 1개 흡입 중...!)\n(공간춘 클리어!)\n(봉봉으로 마무리...!)\n잘 먹었다...!\n(그릇에 숨어있는 면 발견!) 어? 여기 좀 남았네?\n생각보다 너무 금방 먹었어요\n(남은 하나는 친구들이랑 맛있게 먹을게요!) 이제 이거는 친구들이랑 먹기로 해서\n너무 맛있게 잘 먹었다ㅎㅎ\n(진짜로 마무리!)\n(박수)\n디저트...\n밥을 먹은 거 같은데 먹은 거 같지 않은...\n비빔라면이라서 그런지\n8명이서 먹기엔 모자랄 거 같아요\n4~5명 정도면 충분히 먹을 거 같은데?\n짜장이 원래 잘 질리는데\n[11:05 ~ 11:19] 매운 짜장이라서 그런지\n끝까지 안 질리고 되게 맛있게 먹었어요\n짜장 맛도 엄청 진해서 ",
+                "page_content": "가게 앞 외관, 입구, 메뉴판, 대표 음식 예고 컷을 1분 30초 안에 빠르게 교차한 뒤 본격 먹방으로 넘어갑니다. 특히 컵라면 김을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.",
                 "metadata": {
-                  "title": "한개에 4000Kcal?!😳 점보라면 2탄 점보짬짜면 공간춘 먹방",
-                  "is_peak": false,
-                  "duration": 683,
-                  "end_time": 679,
-                  "video_id": "7n1dJibopAY",
-                  "char_count": 399,
-                  "peak_score": 0,
-                  "start_time": 568,
-                  "chunk_index": 6,
-                  "restaurants": [],
-                  "channel_name": "tzuyang",
-                  "next_overlap": "",
-                  "prev_overlap": "(젓가락으로 잘 안 모아지네...ㅎ) 숟가락이 필요한가? 싹싹 긁어 먹기가 힘드네요\n(어떻게든 먹고 만다...!)\n이거 긁어모으니까 라면 1개 되는 거 같은데...?ㅎㅎ",
-                  "recollect_id": 0
-                },
-                "dense_score": 0.659296452957429,
-                "sparse_score": 0.323523434985361,
-                "hybrid_score": 0.558564547565809,
-                "rerank_score": 0.6815528869628906
+                  "videoId": "-D43ezc57z8",
+                  "youtubeLink": "https://www.youtube.com/watch?v=-D43ezc57z8",
+                  "peakTime": "06:57",
+                  "replayScore": 1,
+                  "reason": "백엔드 에이전트 근거 · 로컬 히트맵 근거 · Most replayed / 리플레이 강도 100.0% 구간을 참조"
+                }
               },
               {
-                "id": 35213,
-                "video_id": "xguVx7lTLjc",
-                "chunk_index": 3,
-                "recollect_id": 0,
-                "page_content": "문맥: 쯔양이 매운 라면 먹방 도중, 너무 매워서 더 이상 먹기 힘들어지자 잠시 멈추고 덜 매운 음식으로 전환하는 장면입니다. 그녀는 Paldo Jjajangmyeon(팔도 짜장면)을 먹으며 맛있다고 평가하고, 오랜만에 먹는 짜장면에 대한 만족감을 표현합니다. 이어서 흰쌀밥과 함께 짜장밥을 만들어 먹으며, 3분짜리 짜장 소스보다 훨씬 맛있다고 칭찬합니다. 마지막으로 김치와의 조화를 강조하며 시청자들에게 감사 인사를 전합니다. [06:17 ~ 08:11] Really, I can continue\nBut since you guys don't want me to\nI'll bring something else\nNon-spicy noodles?\nBon appetit~\nIt's going to be yummy\nPaldo Jjajangmyeon tastes so good (black bean noodles brand)\nAnd look what we have here Some leek kimchi\nIt's going to be amazing\nIt's so good because it's been a while\nThere are a lot of different kinds ",
+                "page_content": "메뉴판을 직접 읽히지 않고 손가락, 주문표, 대표 재료, 상차림 준비 컷으로 맥락을 보여줍니다. 특히 삼각김밥을 라면에 얹는 손을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.",
                 "metadata": {
-                  "title": "세상에서 제일 매운라면! 먹다가 저승갈뻔.. 불마왕라면, 짜장라면 먹방Korean mukbang eating show",
-                  "is_peak": true,
-                  "duration": 615,
-                  "end_time": 614.767,
-                  "video_id": "xguVx7lTLjc",
-                  "char_count": 818,
-                  "peak_score": 1,
-                  "start_time": 377.372,
-                  "chunk_index": 3,
-                  "restaurants": [],
-                  "channel_name": "tzuyang",
-                  "next_overlap": "",
-                  "prev_overlap": "Should I eat something else then?\nI'm kinda hoping for that\nI mean, I can tolerate spicy food",
-                  "recollect_id": 0,
-                  "caption": [
-                    {
-                      "id": "[TRUNCATED]",
-                      "video_id": "[TRUNCATED]",
-                      "recollect_id": "[TRUNCATED]",
-                      "start_sec": "[TRUNCATED]",
-                      "end_sec": "[TRUNCATED]",
-                      "rank": "[TRUNCATED]",
-                      "raw_caption": "[TRUNCATED]",
-                      "chronological_analysis": "[TRUNCATED]",
-                      "highlight_keywords": "[TRUNCATED]",
-                      "created_at": "[TRUNCATED]",
-                      "duration": "[TRUNCATED]",
-                      "caption_provider": "[TRUNCATED]",
-                      "caption_model": "[TRUNCATED]",
-                      "caption_auth_mode": "[TRUNCATED]",
-                      "caption_provenance": "[TRUNCATED]",
-                      "caption_generated_at": "[TRUNCATED]",
-                      "caption_schema_version": "[TRUNCATED]"
-                    }
-                  ],
-                  "captionProvenance": {
-                    "captionLookupStatus": "used",
-                    "captionProvider": "llava_next_video",
-                    "captionModel": "llava-hf/LLaVA-NeXT-Video-7B-hf",
-                    "captionAuthMode": "unknown_legacy",
-                    "captionSchemaVersion": 1
-                  },
-                  "captionLookupStatus": "used"
-                },
-                "dense_score": 0.64965374828397,
-                "sparse_score": 0.315966872454737,
-                "hybrid_score": 0.5495476855352,
-                "rerank_score": -0.6422748565673828
+                  "videoId": "-H-mhUeu_qk",
+                  "youtubeLink": "https://www.youtube.com/watch?v=-H-mhUeu_qk",
+                  "peakTime": "13:25",
+                  "replayScore": 1,
+                  "reason": "백엔드 에이전트 근거 · 로컬 히트맵 근거 · Most replayed / 리플레이 강도 100.0% 구간을 참조"
+                }
               },
               {
-                "id": 32103,
-                "video_id": "i8gH-plQJm8",
-                "chunk_index": 3,
-                "recollect_id": 0,
-                "page_content": "문맥: 이 서브타이틀 청크는 먹방 영상에서 여러 음식과 음료에 대한 평가와 준비 과정을 다룹니다. 쯔양은 라면, 김밥, 참치김밥, 떡볶이 등을 시식하며 맛과 비주얼을 평가합니다. 라면의 맛에 아쉬움을 느끼지만 치킨과 피자와의 조합을 긍정적으로 보고, '라면의 세계'라는 표현으로 다양한 음식 준비 과정을 흥미롭게 설명합니다. [09:53] 걸음도 너 누구야 2.1 말고 라면 프로 카 뒷줄 로또 피가 너무 맛이 없어서 잘 안 한 3개만 끓여 오고 봐서 이 좀 회복도 붉힐 빼고 나머지 한번 되도록 하겠습니다 어질 진짜 너무 쪽은 너가 떨어지고 똑똑히 못 하나요 라면의 세계 끓였습니다 아 투망 site 아 아 음 역시 음식 시켰을 때 맛 없으면 라면이 줘 그렇죠 그런데 그런데 음식 치킨 따와서 소나무 길이 먹었어요 아 좀 맛있구요 피자 를 준비합니다 아쿠아 roo\n[11:06] 을 던져야 돼 뜹니다 아 아 아 아 아 co 아 아 보면 진짜 안 더불어 하면 되게 끌어 써 주면 되게끔 였네요 이렇게 많죠 아 십시오\n[12:49] 다른 김밥도 이렇게 같이 떠 가지고 시절 조안 참치김밥 쓰 5 그런데 갑자기 왜 빛이 사라졌지 겁재 약 하자 해 보이죠 하면 될까요 beta ",
+                "page_content": "주방 손동작, 지글거리는 팬, 끓는 국물, 올라오는 김처럼 조리 과정이 보이는 컷을 확보합니다. 특히 치즈가 녹는 순간을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.",
                 "metadata": {
-                  "title": "김밥천국 인기메뉴 10가지 먹방! 떡볶이,돈까스,오무라이스,쫄면,라면 등Korean mukbang eating show",
-                  "is_peak": true,
-                  "duration": 857,
-                  "end_time": 857,
-                  "video_id": "i8gH-plQJm8",
-                  "char_count": 478,
-                  "peak_score": 1,
-                  "start_time": 593,
-                  "chunk_index": 3,
-                  "restaurants": [],
-                  "channel_name": "tzuyang",
-                  "next_overlap": "",
-                  "prev_overlap": "딸 자도 제일 마셔야만 3층 있다는 것 같아요 아 다운이 많다죠 한 사람이 몸이 냥을 제가 먹잖아요 삼촌은 배가 올까요 아 아 5 아 아 아 주",
-                  "recollect_id": 0,
-                  "caption": [
-                    {
-                      "id": "[TRUNCATED]",
-                      "video_id": "[TRUNCATED]",
-                      "recollect_id": "[TRUNCATED]",
-                      "start_sec": "[TRUNCATED]",
-                      "end_sec": "[TRUNCATED]",
-                      "rank": "[TRUNCATED]",
-                      "raw_caption": "[TRUNCATED]",
-                      "chronological_analysis": "[TRUNCATED]",
-                      "highlight_keywords": "[TRUNCATED]",
-                      "created_at": "[TRUNCATED]",
-                      "duration": "[TRUNCATED]",
-                      "caption_provider": "[TRUNCATED]",
-                      "caption_model": "[TRUNCATED]",
-                      "caption_auth_mode": "[TRUNCATED]",
-                      "caption_provenance": "[TRUNCATED]",
-                      "caption_generated_at": "[TRUNCATED]",
-                      "caption_schema_version": "[TRUNCATED]"
-                    }
-                  ],
-                  "captionProvenance": {
-                    "captionLookupStatus": "used",
-                    "captionProvider": "llava_next_video",
-                    "captionModel": "llava-hf/LLaVA-NeXT-Video-7B-hf",
-                    "captionAuthMode": "unknown_legacy",
-                    "captionSchemaVersion": 1
-                  },
-                  "captionLookupStatus": "used"
-                },
-                "dense_score": 0.64861293978231,
-                "sparse_score": 0.229163685893127,
-                "hybrid_score": 0.522778163615555,
-                "rerank_score": -1.5881882905960083
+                  "videoId": "-HyRSLWcOeA",
+                  "youtubeLink": "https://www.youtube.com/watch?v=-HyRSLWcOeA",
+                  "peakTime": "10:56",
+                  "replayScore": 1,
+                  "reason": "백엔드 에이전트 근거 · 로컬 히트맵 근거 · Most replayed / 리플레이 강도 100.0% 구간을 참조"
+                }
+              },
+              {
+                "page_content": "테이블 전체를 넓게 잡고 메인 음식, 사이드, 소스, 식기 위치가 한눈에 보이게 배치합니다. 특히 컵라면 김을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.",
+                "metadata": {
+                  "videoId": "-LGODBDAg1c",
+                  "youtubeLink": "https://www.youtube.com/watch?v=-LGODBDAg1c",
+                  "peakTime": "01:55",
+                  "replayScore": 0.866,
+                  "reason": "백엔드 에이전트 근거 · 로컬 히트맵 근거 · Most replayed / 리플레이 강도 86.6% 구간을 참조"
+                }
+              },
+              {
+                "page_content": "입장 전 정적 → 한입을 집는 손 → 맛 포인트 자막 → 한 박자 쉬는 편집을 씁니다. 얼굴 대신 손동작과 테이블 반응 중심으로 표현합니다. 특히 삼각김밥을 라면에 얹는 손을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.",
+                "metadata": {
+                  "videoId": "-RI5PUiPr3g",
+                  "youtubeLink": "https://www.youtube.com/watch?v=-RI5PUiPr3g",
+                  "peakTime": "13:47",
+                  "replayScore": 1,
+                  "reason": "백엔드 에이전트 근거 · 로컬 히트맵 근거 · Most replayed / 리플레이 강도 100.0% 구간을 참조"
+                }
               }
             ],
             "research_web_summary": "Local heatmap/caption evidence is sufficient; external web search not required for this admin generation.",
@@ -497,7 +601,7 @@
               "Self-RAG: think -> tools -> evaluate."
             ],
             "research_sufficient": true,
-            "research_summary": "Researcher completed bounded self-RAG with search_scene_data.",
+            "research_summary": "Researcher used local heatmap seed after bounded search_scene_data attempt.",
             "previous_queries": [
               "먹방 하이라이트 장면"
             ],
@@ -569,149 +673,60 @@
           "designer": {
             "research_scene_data": [
               {
-                "id": 35379,
-                "video_id": "7n1dJibopAY",
-                "chunk_index": 6,
-                "recollect_id": 0,
-                "page_content": "문맥: 이 서브타이틀 청크는 주인공이 점보라면 2탄 중 하나인 비빔라면을 먹는 장면을 묘사하고 있습니다. 주인공은 라면을 '디저트'처럼 즐기며, 매운 짜장 맛이 강하면서도 자극적이지 않게 잘 조리된 것을 평가합니다. 특히, 매운 짜장 라면이 끝까지 질지 않고 맛있게 먹을 수 있었다고 말하며, 4~5명이 충분히 나눠 먹을 수 있는 양이라고 언급합니다. 또한, 주인공이 라면을 먹으면서 느끼는 식감과 맛에 대한 긍정적인 반응을 보입니다. [09:28 ~ 11:05] (라면 1개 흡입 중...!)\n(공간춘 클리어!)\n(봉봉으로 마무리...!)\n잘 먹었다...!\n(그릇에 숨어있는 면 발견!) 어? 여기 좀 남았네?\n생각보다 너무 금방 먹었어요\n(남은 하나는 친구들이랑 맛있게 먹을게요!) 이제 이거는 친구들이랑 먹기로 해서\n너무 맛있게 잘 먹었다ㅎㅎ\n(진짜로 마무리!)\n(박수)\n디저트...\n밥을 먹은 거 같은데 먹은 거 같지 않은...\n비빔라면이라서 그런지\n8명이서 먹기엔 모자랄 거 같아요\n4~5명 정도면 충분히 먹을 거 같은데?\n짜장이 원래 잘 질리는데\n[11:05 ~ 11:19] 매운 짜장이라서 그런지\n끝까지 안 질리고 되게 맛있게 먹었어요\n짜장 맛도 엄청 진해서 ",
+                "page_content": "가게 앞 외관, 입구, 메뉴판, 대표 음식 예고 컷을 1분 30초 안에 빠르게 교차한 뒤 본격 먹방으로 넘어갑니다. 특히 컵라면 김을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.",
                 "metadata": {
-                  "title": "한개에 4000Kcal?!😳 점보라면 2탄 점보짬짜면 공간춘 먹방",
-                  "is_peak": false,
-                  "duration": 683,
-                  "end_time": 679,
-                  "video_id": "7n1dJibopAY",
-                  "char_count": 399,
-                  "peak_score": 0,
-                  "start_time": 568,
-                  "chunk_index": 6,
-                  "restaurants": [],
-                  "channel_name": "tzuyang",
-                  "next_overlap": "",
-                  "prev_overlap": "(젓가락으로 잘 안 모아지네...ㅎ) 숟가락이 필요한가? 싹싹 긁어 먹기가 힘드네요\n(어떻게든 먹고 만다...!)\n이거 긁어모으니까 라면 1개 되는 거 같은데...?ㅎㅎ",
-                  "recollect_id": 0
-                },
-                "dense_score": 0.659296452957429,
-                "sparse_score": 0.323523434985361,
-                "hybrid_score": 0.558564547565809,
-                "rerank_score": 0.6815528869628906
+                  "videoId": "-D43ezc57z8",
+                  "youtubeLink": "https://www.youtube.com/watch?v=-D43ezc57z8",
+                  "peakTime": "06:57",
+                  "replayScore": 1,
+                  "reason": "백엔드 에이전트 근거 · 로컬 히트맵 근거 · Most replayed / 리플레이 강도 100.0% 구간을 참조"
+                }
               },
               {
-                "id": 35213,
-                "video_id": "xguVx7lTLjc",
-                "chunk_index": 3,
-                "recollect_id": 0,
-                "page_content": "문맥: 쯔양이 매운 라면 먹방 도중, 너무 매워서 더 이상 먹기 힘들어지자 잠시 멈추고 덜 매운 음식으로 전환하는 장면입니다. 그녀는 Paldo Jjajangmyeon(팔도 짜장면)을 먹으며 맛있다고 평가하고, 오랜만에 먹는 짜장면에 대한 만족감을 표현합니다. 이어서 흰쌀밥과 함께 짜장밥을 만들어 먹으며, 3분짜리 짜장 소스보다 훨씬 맛있다고 칭찬합니다. 마지막으로 김치와의 조화를 강조하며 시청자들에게 감사 인사를 전합니다. [06:17 ~ 08:11] Really, I can continue\nBut since you guys don't want me to\nI'll bring something else\nNon-spicy noodles?\nBon appetit~\nIt's going to be yummy\nPaldo Jjajangmyeon tastes so good (black bean noodles brand)\nAnd look what we have here Some leek kimchi\nIt's going to be amazing\nIt's so good because it's been a while\nThere are a lot of different kinds ",
+                "page_content": "메뉴판을 직접 읽히지 않고 손가락, 주문표, 대표 재료, 상차림 준비 컷으로 맥락을 보여줍니다. 특히 삼각김밥을 라면에 얹는 손을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.",
                 "metadata": {
-                  "title": "세상에서 제일 매운라면! 먹다가 저승갈뻔.. 불마왕라면, 짜장라면 먹방Korean mukbang eating show",
-                  "is_peak": true,
-                  "duration": 615,
-                  "end_time": 614.767,
-                  "video_id": "xguVx7lTLjc",
-                  "char_count": 818,
-                  "peak_score": 1,
-                  "start_time": 377.372,
-                  "chunk_index": 3,
-                  "restaurants": [],
-                  "channel_name": "tzuyang",
-                  "next_overlap": "",
-                  "prev_overlap": "Should I eat something else then?\nI'm kinda hoping for that\nI mean, I can tolerate spicy food",
-                  "recollect_id": 0,
-                  "caption": [
-                    {
-                      "id": "[TRUNCATED]",
-                      "video_id": "[TRUNCATED]",
-                      "recollect_id": "[TRUNCATED]",
-                      "start_sec": "[TRUNCATED]",
-                      "end_sec": "[TRUNCATED]",
-                      "rank": "[TRUNCATED]",
-                      "raw_caption": "[TRUNCATED]",
-                      "chronological_analysis": "[TRUNCATED]",
-                      "highlight_keywords": "[TRUNCATED]",
-                      "created_at": "[TRUNCATED]",
-                      "duration": "[TRUNCATED]",
-                      "caption_provider": "[TRUNCATED]",
-                      "caption_model": "[TRUNCATED]",
-                      "caption_auth_mode": "[TRUNCATED]",
-                      "caption_provenance": "[TRUNCATED]",
-                      "caption_generated_at": "[TRUNCATED]",
-                      "caption_schema_version": "[TRUNCATED]"
-                    }
-                  ],
-                  "captionProvenance": {
-                    "captionLookupStatus": "used",
-                    "captionProvider": "llava_next_video",
-                    "captionModel": "llava-hf/LLaVA-NeXT-Video-7B-hf",
-                    "captionAuthMode": "unknown_legacy",
-                    "captionSchemaVersion": 1
-                  },
-                  "captionLookupStatus": "used"
-                },
-                "dense_score": 0.64965374828397,
-                "sparse_score": 0.315966872454737,
-                "hybrid_score": 0.5495476855352,
-                "rerank_score": -0.6422748565673828
+                  "videoId": "-H-mhUeu_qk",
+                  "youtubeLink": "https://www.youtube.com/watch?v=-H-mhUeu_qk",
+                  "peakTime": "13:25",
+                  "replayScore": 1,
+                  "reason": "백엔드 에이전트 근거 · 로컬 히트맵 근거 · Most replayed / 리플레이 강도 100.0% 구간을 참조"
+                }
               },
               {
-                "id": 32103,
-                "video_id": "i8gH-plQJm8",
-                "chunk_index": 3,
-                "recollect_id": 0,
-                "page_content": "문맥: 이 서브타이틀 청크는 먹방 영상에서 여러 음식과 음료에 대한 평가와 준비 과정을 다룹니다. 쯔양은 라면, 김밥, 참치김밥, 떡볶이 등을 시식하며 맛과 비주얼을 평가합니다. 라면의 맛에 아쉬움을 느끼지만 치킨과 피자와의 조합을 긍정적으로 보고, '라면의 세계'라는 표현으로 다양한 음식 준비 과정을 흥미롭게 설명합니다. [09:53] 걸음도 너 누구야 2.1 말고 라면 프로 카 뒷줄 로또 피가 너무 맛이 없어서 잘 안 한 3개만 끓여 오고 봐서 이 좀 회복도 붉힐 빼고 나머지 한번 되도록 하겠습니다 어질 진짜 너무 쪽은 너가 떨어지고 똑똑히 못 하나요 라면의 세계 끓였습니다 아 투망 site 아 아 음 역시 음식 시켰을 때 맛 없으면 라면이 줘 그렇죠 그런데 그런데 음식 치킨 따와서 소나무 길이 먹었어요 아 좀 맛있구요 피자 를 준비합니다 아쿠아 roo\n[11:06] 을 던져야 돼 뜹니다 아 아 아 아 아 co 아 아 보면 진짜 안 더불어 하면 되게 끌어 써 주면 되게끔 였네요 이렇게 많죠 아 십시오\n[12:49] 다른 김밥도 이렇게 같이 떠 가지고 시절 조안 참치김밥 쓰 5 그런데 갑자기 왜 빛이 사라졌지 겁재 약 하자 해 보이죠 하면 될까요 beta ",
+                "page_content": "주방 손동작, 지글거리는 팬, 끓는 국물, 올라오는 김처럼 조리 과정이 보이는 컷을 확보합니다. 특히 치즈가 녹는 순간을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.",
                 "metadata": {
-                  "title": "김밥천국 인기메뉴 10가지 먹방! 떡볶이,돈까스,오무라이스,쫄면,라면 등Korean mukbang eating show",
-                  "is_peak": true,
-                  "duration": 857,
-                  "end_time": 857,
-                  "video_id": "i8gH-plQJm8",
-                  "char_count": 478,
-                  "peak_score": 1,
-                  "start_time": 593,
-                  "chunk_index": 3,
-                  "restaurants": [],
-                  "channel_name": "tzuyang",
-                  "next_overlap": "",
-                  "prev_overlap": "딸 자도 제일 마셔야만 3층 있다는 것 같아요 아 다운이 많다죠 한 사람이 몸이 냥을 제가 먹잖아요 삼촌은 배가 올까요 아 아 5 아 아 아 주",
-                  "recollect_id": 0,
-                  "caption": [
-                    {
-                      "id": "[TRUNCATED]",
-                      "video_id": "[TRUNCATED]",
-                      "recollect_id": "[TRUNCATED]",
-                      "start_sec": "[TRUNCATED]",
-                      "end_sec": "[TRUNCATED]",
-                      "rank": "[TRUNCATED]",
-                      "raw_caption": "[TRUNCATED]",
-                      "chronological_analysis": "[TRUNCATED]",
-                      "highlight_keywords": "[TRUNCATED]",
-                      "created_at": "[TRUNCATED]",
-                      "duration": "[TRUNCATED]",
-                      "caption_provider": "[TRUNCATED]",
-                      "caption_model": "[TRUNCATED]",
-                      "caption_auth_mode": "[TRUNCATED]",
-                      "caption_provenance": "[TRUNCATED]",
-                      "caption_generated_at": "[TRUNCATED]",
-                      "caption_schema_version": "[TRUNCATED]"
-                    }
-                  ],
-                  "captionProvenance": {
-                    "captionLookupStatus": "used",
-                    "captionProvider": "llava_next_video",
-                    "captionModel": "llava-hf/LLaVA-NeXT-Video-7B-hf",
-                    "captionAuthMode": "unknown_legacy",
-                    "captionSchemaVersion": 1
-                  },
-                  "captionLookupStatus": "used"
-                },
-                "dense_score": 0.64861293978231,
-                "sparse_score": 0.229163685893127,
-                "hybrid_score": 0.522778163615555,
-                "rerank_score": -1.5881882905960083
+                  "videoId": "-HyRSLWcOeA",
+                  "youtubeLink": "https://www.youtube.com/watch?v=-HyRSLWcOeA",
+                  "peakTime": "10:56",
+                  "replayScore": 1,
+                  "reason": "백엔드 에이전트 근거 · 로컬 히트맵 근거 · Most replayed / 리플레이 강도 100.0% 구간을 참조"
+                }
+              },
+              {
+                "page_content": "테이블 전체를 넓게 잡고 메인 음식, 사이드, 소스, 식기 위치가 한눈에 보이게 배치합니다. 특히 컵라면 김을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.",
+                "metadata": {
+                  "videoId": "-LGODBDAg1c",
+                  "youtubeLink": "https://www.youtube.com/watch?v=-LGODBDAg1c",
+                  "peakTime": "01:55",
+                  "replayScore": 0.866,
+                  "reason": "백엔드 에이전트 근거 · 로컬 히트맵 근거 · Most replayed / 리플레이 강도 86.6% 구간을 참조"
+                }
+              },
+              {
+                "page_content": "입장 전 정적 → 한입을 집는 손 → 맛 포인트 자막 → 한 박자 쉬는 편집을 씁니다. 얼굴 대신 손동작과 테이블 반응 중심으로 표현합니다. 특히 삼각김밥을 라면에 얹는 손을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.",
+                "metadata": {
+                  "videoId": "-RI5PUiPr3g",
+                  "youtubeLink": "https://www.youtube.com/watch?v=-RI5PUiPr3g",
+                  "peakTime": "13:47",
+                  "replayScore": 1,
+                  "reason": "백엔드 에이전트 근거 · 로컬 히트맵 근거 · Most replayed / 리플레이 강도 100.0% 구간을 참조"
+                }
               }
             ],
             "research_web_summary": "Local heatmap/caption evidence is sufficient; external web search not required for this admin generation.",
-            "final_output": "# LangGraph 스토리보드 - 요청: 매운 짜장라면 먹방을 8컷 스토리보드로 만들어줘. 첫 장면은 음식 소개, 중간은 면을 집는 장면과 첫 입 리액션, 마지막은 맛 평가와 다음 영상 기대감을 남기는 흐름으로 구성해줘.\n- 톤: energetic\n- 목표 길이: 약 14분\n- 생성 방식: Supervisor가 슬롯을 정리하고 Researcher가 장면 근거를 찾은 뒤, Intern 안전 게이트를 거쳐 Designer가 최종 컷을 정리했습니다. ## CUT 구성 ### CUT 01. 오프닝 훅\n- 화면: 가게 앞 인사, 입구 분위기, 대표 메뉴 예고를 넓은 컷으로 빠르게 연결합니다.\n- 진행 멘트: “오늘은 구독자분들이 다시 돌려본 그 포인트를 새 메뉴로 확장해볼게요.”\n- 자막: 초반 몰입이 강한 에너지형 먹방 톤으로 “매운 짜장라면 먹방을 8컷 스토리보드로 만들어줘. 첫 장면은 음식 소개, 중간은 면을 집는 장면과 첫 입 리액션, 마지막은 맛 평가와 다음 영상 기대감을 남기는 흐름으로 구성해줘.” 소재를 06:57 피크 감정에 맞춰 압축\n- 근거: 06:57 ### CUT 02. 기대감 세팅\n- 화면: 조리 과정, 상차림, 김/소스/면발처럼 질감이 보이는 컷을 확보합니다.\n",
+            "final_output": "# LangGraph 스토리보드 - 요청: 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안팎의 스토리보드로 만들어줘. 가게 앞 인트로와 주문 맥락으로 시작하고, 조리 기대감, 첫 입, ASMR 질감, 소스 조합, 클라이맥스 한상, 완식, 맛 평가, 다음 영상 기대감까지 이어지게 구성해줘.\n- 톤: energetic\n- 목표 길이: 약 14분\n- 생성 방식: Supervisor가 슬롯을 정리하고 Researcher가 장면 근거를 찾은 뒤, Intern 안전 게이트를 거쳐 Designer가 최종 컷을 정리했습니다. ## CUT 구성 ### CUT 01. 초반 1분 30초 가게 앞 인트로 · 편의점 조합 먹방\n- 화면: 가게 앞 외관, 입구, 메뉴판, 대표 음식 예고 컷을 1분 30초 안에 빠르게 교차한 뒤 본격 먹방으로 넘어갑니다. 특히 컵라면 김을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.\n- 진행 멘트: “오늘은 이 가게 앞에서부터 기대가 되는데요. 1분 30초 안에 장소와 메뉴를 짧게 보여드리고 바로 들어가볼게요.” 편의점은/는 면치기 소리이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다.\n- 자막: 초반 1분 3",
             "storyboard_history": [
-              "# LangGraph 스토리보드 - 요청: 매운 짜장라면 먹방을 8컷 스토리보드로 만들어줘. 첫 장면은 음식 소개, 중간은 면을 집는 장면과 첫 입 리액션, 마지막은 맛 평가와 다음 영상 기대감을 남기는 흐름으로 구성해줘.\n- 톤: energetic\n- 목표 길이: 약 14분\n- 생성 방식: Supervisor가 슬롯을 정리하고 Researcher가 장면 근거를 찾은 뒤, Intern 안전 게이트를 거쳐 Designer가 최종 컷을 정리했습니다. ## CUT 구성 ### CUT 01. 오프닝 훅\n- 화면: 가게 앞 인사, 입구 분위기, 대표 메뉴 예고를 넓은 컷으로 빠르게 연결합니다.\n- 진행 멘트: “오늘은 구독자분들이 다시 돌려본 그 포인트를 새 메뉴로 확장해볼게요.”\n- 자막: 초반 몰입이 강한 에너지형 먹방 톤으로 “매운 짜장라면 먹방을 8컷 스토리보드로 만들어줘. 첫 장면은 음식 소개, 중간은 면을 집는 장면과 첫 입 리액션, 마지막은 맛 평가와 다음 영상 기대감을 남기는 흐름으로 구성해줘.” 소재를 06:57 피크 감정에 맞춰 압축\n- 근거: 06:57 ### CUT 02. 기대감 세팅\n- 화면: 조리 과정, 상차림, 김/소스/면발처럼 질감이 보이는 컷을 확보합니다.\n"
+              "# LangGraph 스토리보드 - 요청: 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안팎의 스토리보드로 만들어줘. 가게 앞 인트로와 주문 맥락으로 시작하고, 조리 기대감, 첫 입, ASMR 질감, 소스 조합, 클라이맥스 한상, 완식, 맛 평가, 다음 영상 기대감까지 이어지게 구성해줘.\n- 톤: energetic\n- 목표 길이: 약 14분\n- 생성 방식: Supervisor가 슬롯을 정리하고 Researcher가 장면 근거를 찾은 뒤, Intern 안전 게이트를 거쳐 Designer가 최종 컷을 정리했습니다. ## CUT 구성 ### CUT 01. 초반 1분 30초 가게 앞 인트로 · 편의점 조합 먹방\n- 화면: 가게 앞 외관, 입구, 메뉴판, 대표 음식 예고 컷을 1분 30초 안에 빠르게 교차한 뒤 본격 먹방으로 넘어갑니다. 특히 컵라면 김을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.\n- 진행 멘트: “오늘은 이 가게 앞에서부터 기대가 되는데요. 1분 30초 안에 장소와 메뉴를 짧게 보여드리고 바로 들어가볼게요.” 편의점은/는 면치기 소리이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다.\n- 자막: 초반 1분 3"
             ],
             "human_feedback": [
               "No blocking operator feedback in this run."
@@ -731,127 +746,37 @@
             "evidencePointers": [
               "backend/storyboard-agent/src/graph.py",
               "backend/storyboard-agent/src/tools/search_scene_data.py",
-              "/home/twoimo/src/tzudong/apps/web/.omx/artifacts/storyboard-agent-runs/storyboard-admin-1781347354-45666079.json"
+              "/home/twoimo/src/tzudong/apps/web/[안전상 제거된 운영 지시].json"
             ]
           }
         }
       }
     },
-    "scenes": [
-      {
-        "sceneNo": 1,
-        "title": "가게 앞 인트로와 오늘의 약속",
-        "durationSec": 90,
-        "operatorIntent": "초반 1분 30초 안에 장소, 방문 이유, 오늘 먹을 대표 메뉴를 이해시켜 이탈을 줄입니다.",
-        "visualDirection": "가게 외관, 입구 동선, 주변 분위기, 작은 메뉴 예고 소품을 넓은 화면으로 연결합니다. 음식만 크게 잡지 않고 장소 맥락을 먼저 보여줍니다.",
-        "hostBeat": "오늘은 이 집에서 가장 궁금했던 메뉴를 처음부터 끝까지 흐름 있게 먹어볼게요.",
-        "captionIdea": "초반 1분 30초 가게 앞 인사 · 장소와 대표 메뉴를 먼저 이해시키기",
-        "heatmapEvidence": {
-          "videoId": "representative-example-001",
-          "youtubeLink": "https://www.youtube.com/watch?v=representative-example-001",
-          "peakTime": "00:35",
-          "replayScore": 0.99,
-          "reason": "쯔양 영상에서 초반 장소 설명과 대표 메뉴 예고가 이후 시청 맥락을 만든다는 운영 가정입니다."
-        },
-        "productionChecklist": [
-          "가게 앞 인사",
-          "입구와 주변 분위기",
-          "대표 메뉴 예고 자막",
-          "본격 입장 전 기대감"
-        ]
-      },
-      {
-        "sceneNo": 2,
-        "title": "주문 맥락과 메뉴 선택 이유",
-        "durationSec": 120,
-        "operatorIntent": "왜 이 메뉴를 먹는지, 어떤 조합으로 볼 것인지 초보 시청자도 바로 알게 만듭니다.",
-        "visualDirection": "주문하는 손, 메뉴판을 가리키는 동작, 재료 준비, 빈 테이블 세팅을 중간 거리에서 보여줍니다. 읽을 수 있는 글자는 넣지 않습니다.",
-        "hostBeat": "이 메뉴는 양도 중요하지만 어떤 조합으로 먹는지가 포인트예요.",
-        "captionIdea": "주문과 메뉴 맥락 · 왜 이 메뉴를 고르는지 쉽게 보여주기",
-        "heatmapEvidence": {
-          "videoId": "representative-example-002",
-          "youtubeLink": "https://www.youtube.com/watch?v=representative-example-002",
-          "peakTime": "02:10",
-          "replayScore": 0.96,
-          "reason": "메뉴 선택 이유가 명확할수록 이후 첫 입과 평가 장면이 잘 이어진다는 운영 가정입니다."
-        },
-        "productionChecklist": [
-          "주문 손동작",
-          "메뉴 선택 이유",
-          "빈 테이블 세팅",
-          "조합 예고"
-        ]
-      },
-      {
-        "sceneNo": 3,
-        "title": "조리 기대감과 첫 상 준비",
-        "durationSec": 150,
-        "operatorIntent": "첫 입 전 냄새, 김, 조리 소리로 기대감을 만들되 화면을 음식 단독 화면으로 고정하지 않습니다.",
-        "visualDirection": "주방 손동작, 김이 올라오는 조리 도구, 상차림이 채워지는 과정을 중간 거리로 연결합니다. 손과 도구, 테이블의 변화가 함께 보이게 합니다.",
-        "hostBeat": "지금 냄새가 올라오는데, 이 순간부터 이미 기대감이 확 생겨요.",
-        "captionIdea": "조리 기대감 · 냄새와 상차림으로 첫 입 전 설렘 만들기",
-        "heatmapEvidence": {
-          "videoId": "representative-example-003",
-          "youtubeLink": "https://www.youtube.com/watch?v=representative-example-003",
-          "peakTime": "04:40",
-          "replayScore": 0.94,
-          "reason": "조리음과 상차림 변화는 첫 입 전 몰입을 만드는 장면으로 가정합니다."
-        },
-        "productionChecklist": [
-          "조리 손동작",
-          "김과 소리",
-          "상차림 변화",
-          "첫 입 전 긴장감"
-        ]
-      },
-      {
-        "sceneNo": 4,
-        "title": "한상 공개와 맛 평가 메모",
-        "durationSec": 180,
-        "operatorIntent": "완성된 한상을 넓게 보여주고, 맛 평가와 다음 소재로 이어질 수 있는 운영 메모를 남깁니다.",
-        "visualDirection": "테이블 전체, 메인 접시, 사이드 메뉴, 메모하는 손을 한 화면에 두어 실제 촬영 순서표처럼 쓸 수 있게 만듭니다.",
-        "hostBeat": "오늘은 이 조합이 제일 기억에 남아요. 다음에는 다른 메뉴도 이어서 비교해볼게요.",
-        "captionIdea": "한상 공개와 맛 평가 · 다시 먹고 싶은 이유와 다음 소재 연결",
-        "heatmapEvidence": {
-          "videoId": "representative-example-004",
-          "youtubeLink": "https://www.youtube.com/watch?v=representative-example-004",
-          "peakTime": "10:20",
-          "replayScore": 0.97,
-          "reason": "한상 전체와 평가 메모는 제작자가 다음 기획에 바로 옮겨 적기 쉬운 마무리 장면입니다."
-        },
-        "productionChecklist": [
-          "한상 전체 구도",
-          "메인과 사이드 위치",
-          "맛 평가 메모",
-          "다음 소재 예고"
-        ]
-      }
-    ],
     "storyboard": {
-      "title": "대표 예시 · 바로 활용 가능한 먹방 스토리보드",
-      "logline": "사용자가 접속하자마자 가게 앞 인트로부터 주문, 조리 기대감, 한상 공개와 맛 평가까지 바로 참고할 수 있는 4컷 예시입니다.",
-      "operatorBrief": "음식만 크게 잡는 화면보다 실제 촬영 순서와 설명 흐름이 보이도록 구성했습니다. 필요한 수정은 채팅으로 바로 요청할 수 있습니다.",
+      "title": "초반 몰입이 강한 에너지형 먹방 — 구독자 반복시청 기반 다음 영상안",
+      "logline": "쯔양님 기존 영상의 가장 많이 본 구간 158개를 근거로 14분 분량의 새 먹방 흐름을 구성합니다.",
+      "operatorBrief": "LangGraph graph_command가 Supervisor→Researcher→Intern→Designer 경로로 실행한 결과입니다.",
       "scenes": [
         {
           "sceneNo": 1,
-          "title": "가게 앞 인트로와 오늘의 약속",
-          "durationSec": 90,
-          "operatorIntent": "초반 1분 30초 안에 장소, 방문 이유, 오늘 먹을 대표 메뉴를 이해시켜 이탈을 줄입니다.",
-          "visualDirection": "가게 외관, 입구 동선, 주변 분위기, 작은 메뉴 예고 소품을 넓은 화면으로 연결합니다. 음식만 크게 잡지 않고 장소 맥락을 먼저 보여줍니다.",
-          "hostBeat": "오늘은 이 집에서 가장 궁금했던 메뉴를 처음부터 끝까지 흐름 있게 먹어볼게요.",
-          "captionIdea": "초반 1분 30초 가게 앞 인사 · 장소와 대표 메뉴를 먼저 이해시키기",
+          "title": "초반 1분 30초 가게 앞 인트로 · 편의점 조합 먹방",
+          "durationSec": 84,
+          "operatorIntent": "쯔양님 영상에서 자주 보이는 00:00~01:30 인사·장소 설명·가게 앞 도입을 먼저 깔고, 가장 강한 리플레이 피크를 예고해 초반 이탈을 막습니다. 이번 주제는 편의점 조합 먹방이라서 편의점의 고소한 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.",
+          "visualDirection": "가게 앞 외관, 입구, 메뉴판, 대표 음식 예고 컷을 1분 30초 안에 빠르게 교차한 뒤 본격 먹방으로 넘어갑니다. 특히 컵라면 김을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.",
+          "hostBeat": "“오늘은 이 가게 앞에서부터 기대가 되는데요. 1분 30초 안에 장소와 메뉴를 짧게 보여드리고 바로 들어가볼게요.” 편의점은/는 면치기 소리이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다.",
+          "captionIdea": "초반 1분 30초 가게 앞 인사 · 오늘 갈 곳과 대표 메뉴를 먼저 보여주기 · 편의점 꿀조합 · 편의점 · 백엔드 에이전트 근거 06:57 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안…",
           "heatmapEvidence": {
-            "videoId": "representative-example-001",
-            "youtubeLink": "https://www.youtube.com/watch?v=representative-example-001",
-            "peakTime": "00:35",
-            "replayScore": 0.99,
-            "reason": "쯔양 영상에서 초반 장소 설명과 대표 메뉴 예고가 이후 시청 맥락을 만든다는 운영 가정입니다."
+            "videoId": "-D43ezc57z8",
+            "youtubeLink": "https://www.youtube.com/watch?v=-D43ezc57z8",
+            "peakTime": "06:57",
+            "replayScore": 1,
+            "reason": "백엔드 에이전트 근거 · 로컬 히트맵 근거 · Most replayed / 리플레이 강도 100.0% 구간을 참조"
           },
           "productionChecklist": [
-            "가게 앞 인사",
-            "입구와 주변 분위기",
-            "대표 메뉴 예고 자막",
-            "본격 입장 전 기대감"
+            "촬영 전 피크 구간을 PD/편집자가 함께 1회 재생",
+            "편의점 조합 먹방 주제어(편의점 조합 먹방, 편의점, 고소한)가 화면·오디오·자막에 모두 들어갔는지 확인",
+            "첫 입·질감·소리 컷을 분리 촬영해 쇼츠/썸네일 후보 확보",
+            "과장된 맛 표현보다 실제 리액션과 구독자 반복시청 근거를 우선"
           ],
           "generatedImage": {
             "dataUrl": "/storyboard-seed/generated/cut-01.png",
@@ -859,11 +784,11 @@
             "providerId": "local-codex",
             "trustPolicy": "storyboard-gpt-image-2-panel-v1",
             "model": "gpt-image-2",
-            "prompt": "Create exactly one full-bleed 16:9 single-scene storyboard cut image for a Korean food-travel / mukbang planning board.\nComposition contract: the entire image must be one continuous scene filling the full canvas edge-to-edge. This image will be placed into an external 2x2 grid by the web UI; never draw that grid inside the image.\nHard negatives: no storyboard sheet, no comic page, no multi-panel layout, no split-screen, no inset panels, no thumbnail contact sheet, no wireframe boxes, no internal borders, no crop marks, no frame guides, no blank quadrants, no placeholder rectangles, and no X-mark empty panels.\nStyle: cinematic hand-drawn food-storyboard keyframe, clean black pencil lines, subtle warm food-color accents, strong single focal point, no UI chrome.\nSafety: do not recreate a real person likeness; no recognizable face, no face close-up, no host face at all, and no detailed eyes/nose/mouth. Keep all human faces outside the frame; if a person is implied, keep any face outside frame. Show human presence only through cropped hands, chopsticks, food, over-shoulder silhouette, back-of-head silhouette, or cropped body parts without facial detail. No logos, watermarks, readable brand names, URLs, prices, or final typography.\nVisual role contract: CUT 01 is \"storefront intro / outside arrival\".\nMust show for this CUT: restaurant exterior arrival, doorway or street atmosphere, cropped hand or back-of-head silhouette only, food teaser as a small secondary detail.\nCamera/action contract for this CUT: wide establishing shot from outside, calm arrival action.\nMust avoid for this CUT: do not show eating action, noodle lift, full table hero composition, or interior detail-only shot yet.\nNeighbor difference rule: adjacent CUTs must not reuse the same camera distance, food action, subject emphasis, or pacing beat.\nSequence diversity rule: do not default to repeated food-only or noodle-lift shots; use a lifted noodle/bite only when the role explicitly needs first-bite, ASMR texture, or peak-feast emphasis, and keep surrounding context visible.\nStoryboard title: 대표 예시 · 바로 활용 가능한 먹방 스토리보드\nOverall logline: 사용자가 접속하자마자 가게 앞 인트로부터 주문, 조리 기대감, 한상 공개와 맛 평가까지 바로 참고할 수 있는 4컷 예시입니다.\nUser brief: 사용자가 접속하자마자 바로 참고할 수 있는 대표 먹방 스토리보드 예시. 음식만 크게 잡는 방식보다 가게 앞 인트로, 주문 맥락, 조리 기대감, 한상 공개와 맛 평가 흐름을 보여줘.\nCUT 1: 가게 앞 인트로와 오늘의 약속\nVisual direction: 가게 외관, 입구 동선, 주변 분위기, 작은 메뉴 예고 소품을 넓은 화면으로 연결합니다. 음식만 크게 잡지 않고 장소 맥락을 먼저 보여줍니다.\nOperator intent: 초반 1분 30초 안에 장소, 방문 이유, 오늘 먹을 대표 메뉴를 이해시켜 이탈을 줄입니다.\nCaption idea for mood only, do not render readable text: 초반 1분 30초 가게 앞 인사 · 장소와 대표 메뉴를 먼저 이해시키기\nHeatmap evidence mood: 00:35, replay score 0.99.\nOutput only the image. Fill the whole frame with one coherent CUT; do not include scene labels, timecodes, captions, subtitles, handwriting, speech bubbles, or any readable text.",
-            "generatedAt": "2026-06-14T07:44:00.664090Z",
+            "prompt": "Create exactly one full-bleed 16:9 single-scene storyboard cut image for a Korean food-travel / mukbang planning board.\nComposition contract: the entire image must be one continuous scene filling the full canvas edge-to-edge. This image will be placed into an external 2x2 grid by the web UI; never draw that grid inside the image.\nHard negatives: no storyboard sheet, no comic page, no multi-panel layout, no split-screen, no inset panels, no thumbnail contact sheet, no wireframe boxes, no internal borders, no crop marks, no frame guides, no blank quadrants, no placeholder rectangles, and no X-mark empty panels.\nStyle: cinematic hand-drawn food-storyboard keyframe, clean black pencil lines, subtle warm food-color accents, strong single focal point, no UI chrome.\nSafety: do not recreate a real person likeness; no recognizable face, no face close-up, no host face at all, and no detailed eyes/nose/mouth. Keep all human faces outside the frame; if a person is implied, keep any face outside frame. Show human presence only through cropped hands, chopsticks, food, over-shoulder silhouette, back-of-head silhouette, or cropped body parts without facial detail. No logos, watermarks, readable brand names, URLs, prices, or final typography.\nVisual role contract: CUT 01 is \"storefront intro / outside arrival\".\nMust show for this CUT: restaurant exterior arrival, doorway or street atmosphere, cropped hand or back-of-head silhouette only, food teaser as a small secondary detail.\nCamera/action contract for this CUT: wide establishing shot from outside, calm arrival action.\nMust avoid for this CUT: do not show eating action, noodle lift, full table hero composition, or interior detail-only shot yet.\nNeighbor difference rule: adjacent CUTs must not reuse the same camera distance, food action, subject emphasis, or pacing beat.\nSequence diversity rule: do not default to repeated food-only or noodle-lift shots; use a lifted noodle/bite only when the role explicitly needs first-bite, ASMR texture, or peak-feast emphasis, and keep surrounding context visible.\nStoryboard title: 초반 몰입이 강한 에너지형 먹방 — 구독자 반복시청 기반 다음 영상안\nOverall logline: 쯔양님 기존 영상의 가장 많이 본 구간 158개를 근거로 14분 분량의 새 먹방 흐름을 구성합니다.\nUser brief: 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안팎의 스토리보드로 만들어줘. 가게 앞 인트로와 주문 맥락으로 시작하고, 조리 기대감, 첫 입, ASMR 질감, 소스 조합, 클라이맥스 한상, 완식, 맛 평가, 다음 영상 기대감까지 이어지게 구성해줘.\nCUT 1: 초반 1분 30초 가게 앞 인트로 · 편의점 조합 먹방\nVisual direction: 가게 앞 외관, 입구, 메뉴판, 대표 음식 예고 컷을 1분 30초 안에 빠르게 교차한 뒤 본격 먹방으로 넘어갑니다. 특히 컵라면 김을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.\nOperator intent: 쯔양님 영상에서 자주 보이는 00:00~01:30 인사·장소 설명·가게 앞 도입을 먼저 깔고, 가장 강한 리플레이 피크를 예고해 초반 이탈을 막습니다. 이번 주제는 편의점 조합 먹방이라서 편의점의 고소한 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.\nCaption idea for mood only, do not render readable text: 초반 1분 30초 가게 앞 인사 · 오늘 갈 곳과 대표 메뉴를 먼저 보여주기 · 편의점 꿀조합 · 편의점 · 백엔드 에이전트 근거 06:57 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면…\nHeatmap evidence mood: 06:57, replay score 1.\nOutput only the image. Fill the whole frame with one coherent CUT; do not include scene labels, timecodes, captions, subtitles, handwriting, speech bubbles, or any readable text.",
+            "generatedAt": "2026-06-14T13:42:28.022271Z",
             "warnings": [
               "local_codex_provider: generated via local Codex OAuth provider and persisted for admin storyboard display.",
-              "exact_provenance: image_generation.gpt-image-2 response=resp_007021d5338fbbe2016a2e5b8abb088191b79dd97e44a6af46 call=ig_007021d5338fbbe2016a2e5b8bb8808191ad2183142a55aa27"
+              "exact_provenance: image_generation.gpt-image-2 response=resp_0c74036a73f45012016a2eaf8986308198bf6d62016a4504a4 call=ig_0c74036a73f45012016a2eaf8a3fbc8198a2498804256f5f86"
             ],
             "provenance": {
               "providerId": "local-codex",
@@ -874,8 +799,8 @@
               "requestToolModel": "gpt-image-2",
               "model": "gpt-image-2",
               "modelProvenance": "exact",
-              "responseId": "resp_007021d5338fbbe2016a2e5b8abb088191b79dd97e44a6af46",
-              "imageCallId": "ig_007021d5338fbbe2016a2e5b8bb8808191ad2183142a55aa27",
+              "responseId": "resp_0c74036a73f45012016a2eaf8986308198bf6d62016a4504a4",
+              "imageCallId": "ig_0c74036a73f45012016a2eaf8a3fbc8198a2498804256f5f86",
               "imageItemCount": 1,
               "generatedImageItemTypes": [
                 "image_generation_call"
@@ -884,33 +809,33 @@
                 "image_generation_call",
                 "message"
               ],
-              "requestHash": "2e3dd5acfafb9608ab46863d34dcd6381733f13c12ae5ad15c042cf38393f6fa",
-              "responseHash": "79384c060551d6a19e6d4bb3271a64c5e3f7f4d5290d8cb2e5c2c846e3afc8b9",
+              "requestHash": "92a20548e5c98ec3f60ebaf90829e761f7a77b5a78c863c1e9536b6fc1eab759",
+              "responseHash": "cc1f9bb430fc64647f47a11936be4ccbc0ab013530fdaa0665f2fbc2413ebcf7",
               "hasOpenAIAPIKey": false,
-              "generatedAt": "2026-06-14T07:44:00.664090Z"
+              "generatedAt": "2026-06-14T13:42:28.022271Z"
             }
           }
         },
         {
           "sceneNo": 2,
-          "title": "주문 맥락과 메뉴 선택 이유",
-          "durationSec": 120,
-          "operatorIntent": "왜 이 메뉴를 먹는지, 어떤 조합으로 볼 것인지 초보 시청자도 바로 알게 만듭니다.",
-          "visualDirection": "주문하는 손, 메뉴판을 가리키는 동작, 재료 준비, 빈 테이블 세팅을 중간 거리에서 보여줍니다. 읽을 수 있는 글자는 넣지 않습니다.",
-          "hostBeat": "이 메뉴는 양도 중요하지만 어떤 조합으로 먹는지가 포인트예요.",
-          "captionIdea": "주문과 메뉴 맥락 · 왜 이 메뉴를 고르는지 쉽게 보여주기",
+          "title": "주문과 메뉴 맥락 세팅 · 편의점 조합 먹방",
+          "durationSec": 84,
+          "operatorIntent": "시청자가 무엇을 얼마나 먹게 될지 바로 이해하도록 메뉴·양·가격대 느낌을 짧게 정리합니다. 이번 주제는 편의점 조합 먹방이라서 라면의 짭짤한 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.",
+          "visualDirection": "메뉴판을 직접 읽히지 않고 손가락, 주문표, 대표 재료, 상차림 준비 컷으로 맥락을 보여줍니다. 특히 삼각김밥을 라면에 얹는 손을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.",
+          "hostBeat": "“오늘은 이 조합으로 주문해봤어요. 어떤 맛이 날지 바로 확인해볼게요.” 라면은/는 치즈 늘어나는 식감이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다.",
+          "captionIdea": "주문 맥락 · 오늘 먹을 메뉴와 양을 쉽게 알려주기 · 라면과 삼각김밥 한입 · 라면 · 백엔드 에이전트 근거 13:25 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안…",
           "heatmapEvidence": {
-            "videoId": "representative-example-002",
-            "youtubeLink": "https://www.youtube.com/watch?v=representative-example-002",
-            "peakTime": "02:10",
-            "replayScore": 0.96,
-            "reason": "메뉴 선택 이유가 명확할수록 이후 첫 입과 평가 장면이 잘 이어진다는 운영 가정입니다."
+            "videoId": "-H-mhUeu_qk",
+            "youtubeLink": "https://www.youtube.com/watch?v=-H-mhUeu_qk",
+            "peakTime": "13:25",
+            "replayScore": 1,
+            "reason": "백엔드 에이전트 근거 · 로컬 히트맵 근거 · Most replayed / 리플레이 강도 100.0% 구간을 참조"
           },
           "productionChecklist": [
-            "주문 손동작",
-            "메뉴 선택 이유",
-            "빈 테이블 세팅",
-            "조합 예고"
+            "촬영 전 피크 구간을 PD/편집자가 함께 1회 재생",
+            "편의점 조합 먹방 주제어(편의점 조합 먹방, 라면, 짭짤한)가 화면·오디오·자막에 모두 들어갔는지 확인",
+            "첫 입·질감·소리 컷을 분리 촬영해 쇼츠/썸네일 후보 확보",
+            "과장된 맛 표현보다 실제 리액션과 구독자 반복시청 근거를 우선"
           ],
           "generatedImage": {
             "dataUrl": "/storyboard-seed/generated/cut-02.png",
@@ -918,11 +843,11 @@
             "providerId": "local-codex",
             "trustPolicy": "storyboard-gpt-image-2-panel-v1",
             "model": "gpt-image-2",
-            "prompt": "Create exactly one full-bleed 16:9 single-scene storyboard cut image for a Korean food-travel / mukbang planning board.\nComposition contract: the entire image must be one continuous scene filling the full canvas edge-to-edge. This image will be placed into an external 2x2 grid by the web UI; never draw that grid inside the image.\nHard negatives: no storyboard sheet, no comic page, no multi-panel layout, no split-screen, no inset panels, no thumbnail contact sheet, no wireframe boxes, no internal borders, no crop marks, no frame guides, no blank quadrants, no placeholder rectangles, and no X-mark empty panels.\nStyle: cinematic hand-drawn food-storyboard keyframe, clean black pencil lines, subtle warm food-color accents, strong single focal point, no UI chrome.\nSafety: do not recreate a real person likeness; no recognizable face, no face close-up, no host face at all, and no detailed eyes/nose/mouth. Keep all human faces outside the frame; if a person is implied, keep any face outside frame. Show human presence only through cropped hands, chopsticks, food, over-shoulder silhouette, back-of-head silhouette, or cropped body parts without facial detail. No logos, watermarks, readable brand names, URLs, prices, or final typography.\nVisual role contract: CUT 02 is \"ordering and menu context setup\".\nMust show for this CUT: ordering moment, cropped hand pointing near a menu-like object, ingredient hints, table not fully filled yet.\nCamera/action contract for this CUT: medium planning shot focused on hands and ordering context.\nMust avoid for this CUT: no readable menu text, no finished feast, no bite reaction, no empty bowls.\nNeighbor difference rule: adjacent CUTs must not reuse the same camera distance, food action, subject emphasis, or pacing beat.\nSequence diversity rule: do not default to repeated food-only or noodle-lift shots; use a lifted noodle/bite only when the role explicitly needs first-bite, ASMR texture, or peak-feast emphasis, and keep surrounding context visible.\nStoryboard title: 대표 예시 · 바로 활용 가능한 먹방 스토리보드\nOverall logline: 사용자가 접속하자마자 가게 앞 인트로부터 주문, 조리 기대감, 한상 공개와 맛 평가까지 바로 참고할 수 있는 4컷 예시입니다.\nUser brief: 사용자가 접속하자마자 바로 참고할 수 있는 대표 먹방 스토리보드 예시. 음식만 크게 잡는 방식보다 가게 앞 인트로, 주문 맥락, 조리 기대감, 한상 공개와 맛 평가 흐름을 보여줘.\nCUT 2: 주문 맥락과 메뉴 선택 이유\nVisual direction: 주문하는 손, 메뉴판을 가리[안전상 제거된 운영 지시]. 읽을 수 있는 글자는 넣지 않습니다.\nOperator intent: 왜 이 메뉴를 먹는지, 어떤 조합으로 볼 것인지 초보 시청자도 바로 알게 만듭니다.\nCaption idea for mood only, do not render readable text: 주문과 메뉴 맥락 · 왜 이 메뉴를 고르는지 쉽게 보여주기\nHeatmap evidence mood: 02:10, replay score 0.96.\nOutput only the image. Fill the whole frame with one coherent CUT; do not include scene labels, timecodes, captions, subtitles, handwriting, speech bubbles, or any readable text.",
-            "generatedAt": "2026-06-14T07:45:01.486022Z",
+            "prompt": "Create exactly one full-bleed 16:9 single-scene storyboard cut image for a Korean food-travel / mukbang planning board.\nComposition contract: the entire image must be one continuous scene filling the full canvas edge-to-edge. This image will be placed into an external 2x2 grid by the web UI; never draw that grid inside the image.\nHard negatives: no storyboard sheet, no comic page, no multi-panel layout, no split-screen, no inset panels, no thumbnail contact sheet, no wireframe boxes, no internal borders, no crop marks, no frame guides, no blank quadrants, no placeholder rectangles, and no X-mark empty panels.\nStyle: cinematic hand-drawn food-storyboard keyframe, clean black pencil lines, subtle warm food-color accents, strong single focal point, no UI chrome.\nSafety: do not recreate a real person likeness; no recognizable face, no face close-up, no host face at all, and no detailed eyes/nose/mouth. Keep all human faces outside the frame; if a person is implied, keep any face outside frame. Show human presence only through cropped hands, chopsticks, food, over-shoulder silhouette, back-of-head silhouette, or cropped body parts without facial detail. No logos, watermarks, readable brand names, URLs, prices, or final typography.\nVisual role contract: CUT 02 is \"ordering and menu context setup\".\nMust show for this CUT: ordering moment, cropped hand pointing near a menu-like object, ingredient hints, table not fully filled yet.\nCamera/action contract for this CUT: medium planning shot focused on hands and ordering context.\nMust avoid for this CUT: no readable menu text, no finished feast, no bite reaction, no empty bowls.\nNeighbor difference rule: adjacent CUTs must not reuse the same camera distance, food action, subject emphasis, or pacing beat.\nSequence diversity rule: do not default to repeated food-only or noodle-lift shots; use a lifted noodle/bite only when the role explicitly needs first-bite, ASMR texture, or peak-feast emphasis, and keep surrounding context visible.\nStoryboard title: 초반 몰입이 강한 에너지형 먹방 — 구독자 반복시청 기반 다음 영상안\nOverall logline: 쯔양님 기존 영상의 가장 많이 본 구간 158개를 근거로 14분 분량의 새 먹방 흐름을 구성합니다.\nUser brief: 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안팎의 스토리보드로 만들어줘. 가게 앞 인트로와 주문 맥락으로 시작하고, 조리 기대감, 첫 입, ASMR 질감, 소스 조합, 클라이맥스 한상, 완식, 맛 평가, 다음 영상 기대감까지 이어지게 구성해줘.\nCUT 2: 주문과 메뉴 맥락 세팅 · 편의점 조합 먹방\nVisual direction: 메뉴판을 직접 읽히지 않고 손가락, 주문표, 대표 재료, 상차림 준비 컷으로 맥락을 보여줍니다. 특히 삼각김밥을 라면에 얹는 손을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.\nOperator intent: 시청자가 무엇을 얼마나 먹게 될지 바로 이해하도록 메뉴·양·가격대 느낌을 짧게 정리합니다. 이번 주제는 편의점 조합 먹방이라서 라면의 짭짤한 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.\nCaption idea for mood only, do not render readable text: 주문 맥락 · 오늘 먹을 메뉴와 양을 쉽게 알려주기 · 라면과 삼각김밥 한입 · 라면 · 백엔드 에이전트 근거 13:25 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에…\nHeatmap evidence mood: 13:25, replay score 1.\nOutput only the image. Fill the whole frame with one coherent CUT; do not include scene labels, timecodes, captions, subtitles, handwriting, speech bubbles, or any readable text.",
+            "generatedAt": "2026-06-14T13:43:32.988157Z",
             "warnings": [
               "local_codex_provider: generated via local Codex OAuth provider and persisted for admin storyboard display.",
-              "exact_provenance: image_generation.gpt-image-2 response=resp_0f1236fbcb8816c4016a2e5bc178548191bf583da4632c3704 call=ig_0f1236fbcb8816c4016a2e5bc26d2c8191a26f750f5c9b6f18"
+              "exact_provenance: image_generation.gpt-image-2 response=resp_02f1a16c8a2d0b95016a2eafc5ffec819198ec013b87824c23 call=ig_02f1a16c8a2d0b95016a2eafc715b88191bfa438a7a004ddc7"
             ],
             "provenance": {
               "providerId": "local-codex",
@@ -933,8 +858,8 @@
               "requestToolModel": "gpt-image-2",
               "model": "gpt-image-2",
               "modelProvenance": "exact",
-              "responseId": "resp_0f1236fbcb8816c4016a2e5bc178548191bf583da4632c3704",
-              "imageCallId": "ig_0f1236fbcb8816c4016a2e5bc26d2c8191a26f750f5c9b6f18",
+              "responseId": "resp_02f1a16c8a2d0b95016a2eafc5ffec819198ec013b87824c23",
+              "imageCallId": "ig_02f1a16c8a2d0b95016a2eafc715b88191bfa438a7a004ddc7",
               "imageItemCount": 1,
               "generatedImageItemTypes": [
                 "image_generation_call"
@@ -943,33 +868,33 @@
                 "image_generation_call",
                 "message"
               ],
-              "requestHash": "84b77c83d883c69f1847438efbfa8866c863fa8def3060ad8550654176e490d3",
-              "responseHash": "ee6817b7e69b3c6389248fea3ed005c52044a143ef438e0b0a3708905e5d72a5",
+              "requestHash": "a098bea2e15744e733e3f8d085f094f83900813cbceb83f9cc0dea69e7d841ce",
+              "responseHash": "33a9c1d2835a1adc3bdb7bc687a39de9ae22b1b1f83cbf195f94490482431dd2",
               "hasOpenAIAPIKey": false,
-              "generatedAt": "2026-06-14T07:45:01.486022Z"
+              "generatedAt": "2026-06-14T13:43:32.988157Z"
             }
           }
         },
         {
           "sceneNo": 3,
-          "title": "조리 기대감과 첫 상 준비",
-          "durationSec": 150,
-          "operatorIntent": "첫 입 전 냄새, 김, 조리 소리로 기대감을 만들되 화면을 음식 단독 화면으로 고정하지 않습니다.",
-          "visualDirection": "주방 손동작, 김이 올라오는 조리 도구, 상차림이 채워지는 과정을 중간 거리로 연결합니다. 손과 도구, 테이블의 변화가 함께 보이게 합니다.",
-          "hostBeat": "지금 냄새가 올라오는데, 이 순간부터 이미 기대감이 확 생겨요.",
-          "captionIdea": "조리 기대감 · 냄새와 상차림으로 첫 입 전 설렘 만들기",
+          "title": "조리 과정과 소리 기대감 · 편의점 조합 먹방",
+          "durationSec": 84,
+          "operatorIntent": "음식이 나오기 전 김·소리·윤기·조리 동작으로 첫 입 전 기대치를 쌓습니다. 이번 주제는 편의점 조합 먹방이라서 삼각김밥의 뜨끈한 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.",
+          "visualDirection": "주방 손동작, 지글거리는 팬, 끓는 국물, 올라오는 김처럼 조리 과정이 보이는 컷을 확보합니다. 특히 치즈가 녹는 순간을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.",
+          "hostBeat": "“나오기 전부터 소리가 진짜 좋아요. 이 장면만 봐도 기대돼요.” 삼각김밥은/는 포장 뜯는 소리이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다.",
+          "captionIdea": "조리 기대감 · 김과 소리로 첫 입 전 설렘 만들기 · 치즈 조합 피크 · 삼각김밥 · 백엔드 에이전트 근거 10:56 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안…",
           "heatmapEvidence": {
-            "videoId": "representative-example-003",
-            "youtubeLink": "https://www.youtube.com/watch?v=representative-example-003",
-            "peakTime": "04:40",
-            "replayScore": 0.94,
-            "reason": "조리음과 상차림 변화는 첫 입 전 몰입을 만드는 장면으로 가정합니다."
+            "videoId": "-HyRSLWcOeA",
+            "youtubeLink": "https://www.youtube.com/watch?v=-HyRSLWcOeA",
+            "peakTime": "10:56",
+            "replayScore": 1,
+            "reason": "백엔드 에이전트 근거 · 로컬 히트맵 근거 · Most replayed / 리플레이 강도 100.0% 구간을 참조"
           },
           "productionChecklist": [
-            "조리 손동작",
-            "김과 소리",
-            "상차림 변화",
-            "첫 입 전 긴장감"
+            "촬영 전 피크 구간을 PD/편집자가 함께 1회 재생",
+            "편의점 조합 먹방 주제어(편의점 조합 먹방, 삼각김밥, 뜨끈한)가 화면·오디오·자막에 모두 들어갔는지 확인",
+            "첫 입·질감·소리 컷을 분리 촬영해 쇼츠/썸네일 후보 확보",
+            "과장된 맛 표현보다 실제 리액션과 구독자 반복시청 근거를 우선"
           ],
           "generatedImage": {
             "dataUrl": "/storyboard-seed/generated/cut-03.png",
@@ -977,11 +902,11 @@
             "providerId": "local-codex",
             "trustPolicy": "storyboard-gpt-image-2-panel-v1",
             "model": "gpt-image-2",
-            "prompt": "Create exactly one full-bleed 16:9 single-scene storyboard cut image for a Korean food-travel / mukbang planning board.\nComposition contract: the entire image must be one continuous scene filling the full canvas edge-to-edge. This image will be placed into an external 2x2 grid by the web UI; never draw that grid inside the image.\nHard negatives: no storyboard sheet, no comic page, no multi-panel layout, no split-screen, no inset panels, no thumbnail contact sheet, no wireframe boxes, no internal borders, no crop marks, no frame guides, no blank quadrants, no placeholder rectangles, and no X-mark empty panels.\nStyle: cinematic hand-drawn food-storyboard keyframe, clean black pencil lines, subtle warm food-color accents, strong single focal point, no UI chrome.\nSafety: do not recreate a real person likeness; no recognizable face, no face close-up, no host face at all, and no detailed eyes/nose/mouth. Keep all human faces outside the frame; if a person is implied, keep any face outside frame. Show human presence only through cropped hands, chopsticks, food, over-shoulder silhouette, back-of-head silhouette, or cropped body parts without facial detail. No logos, watermarks, readable brand names, URLs, prices, or final typography.\nVisual role contract: CUT 03 is \"kitchen prep / sizzle anticipation\".\nMust show for this CUT: steam, sizzling pan, boiling broth, prep hands, cooking texture before serving.\nCamera/action contract for this CUT: medium prep shot with motion from steam or cooking tools.\nMust avoid for this CUT: no table-wide feast, no host reaction, no finished empty bowls, no storefront exterior.\nNeighbor difference rule: adjacent CUTs must not reuse the same camera distance, food action, subject emphasis, or pacing beat.\nSequence diversity rule: do not default to repeated food-only or noodle-lift shots; use a lifted noodle/bite only when the role explicitly needs first-bite, ASMR texture, or peak-feast emphasis, and keep surrounding context visible.\nStoryboard title: 대표 예시 · 바로 활용 가능한 먹방 스토리보드\nOverall logline: 사용자가 접속하자마자 가게 앞 인트로부터 주문, 조리 기대감, 한상 공개와 맛 평가까지 바로 참고할 수 있는 4컷 예시입니다.\nUser brief: 사용자가 접속하자마자 바로 참고할 수 있는 대표 먹방 스토리보드 예시. 음식만 크게 잡는 방식보다 가게 앞 인트로, 주문 맥락, 조리 기대감, 한상 공개와 맛 평가 흐름을 보여줘.\nCUT 3: 조리 기대감과 첫 상 준비\nVisual direction: 주방 손동작, 김이 올라오는 조리 도구, 상차림이 채워지는 과정을 중간 거리로 연결합니다. 손과 도구, 테이블의 변화가 함께 보이게 합니다.\nOperator intent: 첫 입 전 냄새, 김, 조리 소리로 기대감을 만들되 화면을 음식 단독 화면으로 고정하지 않습니다.\nCaption idea for mood only, do not render readable text: 조리 기대감 · 냄새와 상차림으로 첫 입 전 설렘 만들기\nHeatmap evidence mood: 04:40, replay score 0.94.\nOutput only the image. Fill the whole frame with one coherent CUT; do not include scene labels, timecodes, captions, subtitles, handwriting, speech bubbles, or any readable text.",
-            "generatedAt": "2026-06-14T07:46:01.536111Z",
+            "prompt": "Create exactly one full-bleed 16:9 single-scene storyboard cut image for a Korean food-travel / mukbang planning board.\nComposition contract: the entire image must be one continuous scene filling the full canvas edge-to-edge. This image will be placed into an external 2x2 grid by the web UI; never draw that grid inside the image.\nHard negatives: no storyboard sheet, no comic page, no multi-panel layout, no split-screen, no inset panels, no thumbnail contact sheet, no wireframe boxes, no internal borders, no crop marks, no frame guides, no blank quadrants, no placeholder rectangles, and no X-mark empty panels.\nStyle: cinematic hand-drawn food-storyboard keyframe, clean black pencil lines, subtle warm food-color accents, strong single focal point, no UI chrome.\nSafety: do not recreate a real person likeness; no recognizable face, no face close-up, no host face at all, and no detailed eyes/nose/mouth. Keep all human faces outside the frame; if a person is implied, keep any face outside frame. Show human presence only through cropped hands, chopsticks, food, over-shoulder silhouette, back-of-head silhouette, or cropped body parts without facial detail. No logos, watermarks, readable brand names, URLs, prices, or final typography.\nVisual role contract: CUT 03 is \"kitchen prep / sizzle anticipation\".\nMust show for this CUT: steam, sizzling pan, boiling broth, prep hands, cooking texture before serving.\nCamera/action contract for this CUT: medium prep shot with motion from steam or cooking tools.\nMust avoid for this CUT: no table-wide feast, no host reaction, no finished empty bowls, no storefront exterior.\nNeighbor difference rule: adjacent CUTs must not reuse the same camera distance, food action, subject emphasis, or pacing beat.\nSequence diversity rule: do not default to repeated food-only or noodle-lift shots; use a lifted noodle/bite only when the role explicitly needs first-bite, ASMR texture, or peak-feast emphasis, and keep surrounding context visible.\nStoryboard title: 초반 몰입이 강한 에너지형 먹방 — 구독자 반복시청 기반 다음 영상안\nOverall logline: 쯔양님 기존 영상의 가장 많이 본 구간 158개를 근거로 14분 분량의 새 먹방 흐름을 구성합니다.\nUser brief: 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안팎의 스토리보드로 만들어줘. 가게 앞 인트로와 주문 맥락으로 시작하고, 조리 기대감, 첫 입, ASMR 질감, 소스 조합, 클라이맥스 한상, 완식, 맛 평가, 다음 영상 기대감까지 이어지게 구성해줘.\nCUT 3: 조리 과정과 소리 기대감 · 편의점 조합 먹방\nVisual direction: 주방 손동작, 지글거리는 팬, 끓는 국물, 올라오는 김처럼 조리 과정이 보이는 컷을 확보합니다. 특히 치즈가 녹는 순간을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.\nOperator intent: 음식이 나오기 전 김·소리·윤기·조리 동작으로 첫 입 전 기대치를 쌓습니다. 이번 주제는 편의점 조합 먹방이라서 삼각김밥의 뜨끈한 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.\nCaption idea for mood only, do not render readable text: 조리 기대감 · 김과 소리로 첫 입 전 설렘 만들기 · 치즈 조합 피크 · 삼각김밥 · 백엔드 에이전트 근거 10:56 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 …\nHeatmap evidence mood: 10:56, replay score 1.\nOutput only the image. Fill the whole frame with one coherent CUT; do not include scene labels, timecodes, captions, subtitles, handwriting, speech bubbles, or any readable text.",
+            "generatedAt": "2026-06-14T13:44:30.915432Z",
             "warnings": [
               "local_codex_provider: generated via local Codex OAuth provider and persisted for admin storyboard display.",
-              "exact_provenance: image_generation.gpt-image-2 response=resp_0f8a8995f9615768016a2e5bfe42a081919ce2defc1df97274 call=ig_0f8a8995f9615768016a2e5bfef728819189ea228cf9bcb97b"
+              "exact_provenance: image_generation.gpt-image-2 response=resp_0c0585dfd689d9e3016a2eb006e6b88191bed703e0e05f40bc call=ig_0c0585dfd689d9e3016a2eb007def4819184a742c3cdf02ae2"
             ],
             "provenance": {
               "providerId": "local-codex",
@@ -992,8 +917,8 @@
               "requestToolModel": "gpt-image-2",
               "model": "gpt-image-2",
               "modelProvenance": "exact",
-              "responseId": "resp_0f8a8995f9615768016a2e5bfe42a081919ce2defc1df97274",
-              "imageCallId": "ig_0f8a8995f9615768016a2e5bfef728819189ea228cf9bcb97b",
+              "responseId": "resp_0c0585dfd689d9e3016a2eb006e6b88191bed703e0e05f40bc",
+              "imageCallId": "ig_0c0585dfd689d9e3016a2eb007def4819184a742c3cdf02ae2",
               "imageItemCount": 1,
               "generatedImageItemTypes": [
                 "image_generation_call"
@@ -1002,33 +927,33 @@
                 "image_generation_call",
                 "message"
               ],
-              "requestHash": "bb5a70649f96eda23cca8666e7026192ce619e19ab7c0cc90caf0e1f0e3fd80b",
-              "responseHash": "d0dc1f2c37fffe48497f97a3e4d7f8bea20a4b0d55fd5179225051f73e5dc034",
+              "requestHash": "6f4fe506cebb04ee9596db92d626a2d429b6762cc5c8f8d4b76a548544d2e41c",
+              "responseHash": "b952a9e4df44ea7f89b86bbca45752edb770afce8a9ecc02df932d276dedeca6",
               "hasOpenAIAPIKey": false,
-              "generatedAt": "2026-06-14T07:46:01.536111Z"
+              "generatedAt": "2026-06-14T13:44:30.915432Z"
             }
           }
         },
         {
           "sceneNo": 4,
-          "title": "한상 공개와 맛 평가 메모",
-          "durationSec": 180,
-          "operatorIntent": "완성된 한상을 넓게 보여주고, 맛 평가와 다음 소재로 이어질 수 있는 운영 메모를 남깁니다.",
-          "visualDirection": "테이블 전체, 메인 접시, 사이드 메뉴, 메모하는 손을 한 화면에 두어 실제 촬영 순서표처럼 쓸 수 있게 만듭니다.",
-          "hostBeat": "오늘은 이 조합이 제일 기억에 남아요. 다음에는 다른 메뉴도 이어서 비교해볼게요.",
-          "captionIdea": "한상 공개와 맛 평가 · 다시 먹고 싶은 이유와 다음 소재 연결",
+          "title": "첫 상차림 전체 공개 · 편의점 조합 먹방",
+          "durationSec": 84,
+          "operatorIntent": "시청자가 화면을 멈추고 한상을 훑어볼 수 있게 메뉴 구성을 한 번에 보여줍니다. 이번 주제는 편의점 조합 먹방이라서 치즈의 꾸덕한 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.",
+          "visualDirection": "테이블 전체를 넓게 잡고 메인 음식, 사이드, 소스, 식기 위치가 한눈에 보이게 배치합니다. 특히 컵라면 김을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.",
+          "hostBeat": "“한상이 이렇게 나왔습니다. 양이 정말 푸짐하죠?” 치즈은/는 면치기 소리이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다.",
+          "captionIdea": "한상 공개 · 메인과 사이드를 한눈에 보여주기 · 편의점 꿀조합 · 치즈 · 백엔드 에이전트 근거 01:55 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안…",
           "heatmapEvidence": {
-            "videoId": "representative-example-004",
-            "youtubeLink": "https://www.youtube.com/watch?v=representative-example-004",
-            "peakTime": "10:20",
-            "replayScore": 0.97,
-            "reason": "한상 전체와 평가 메모는 제작자가 다음 기획에 바로 옮겨 적기 쉬운 마무리 장면입니다."
+            "videoId": "-LGODBDAg1c",
+            "youtubeLink": "https://www.youtube.com/watch?v=-LGODBDAg1c",
+            "peakTime": "01:55",
+            "replayScore": 0.866,
+            "reason": "백엔드 에이전트 근거 · 로컬 히트맵 근거 · Most replayed / 리플레이 강도 86.6% 구간을 참조"
           },
           "productionChecklist": [
-            "한상 전체 구도",
-            "메인과 사이드 위치",
-            "맛 평가 메모",
-            "다음 소재 예고"
+            "촬영 전 피크 구간을 PD/편집자가 함께 1회 재생",
+            "편의점 조합 먹방 주제어(편의점 조합 먹방, 치즈, 꾸덕한)가 화면·오디오·자막에 모두 들어갔는지 확인",
+            "첫 입·질감·소리 컷을 분리 촬영해 쇼츠/썸네일 후보 확보",
+            "과장된 맛 표현보다 실제 리액션과 구독자 반복시청 근거를 우선"
           ],
           "generatedImage": {
             "dataUrl": "/storyboard-seed/generated/cut-04.png",
@@ -1036,11 +961,11 @@
             "providerId": "local-codex",
             "trustPolicy": "storyboard-gpt-image-2-panel-v1",
             "model": "gpt-image-2",
-            "prompt": "Create exactly one full-bleed 16:9 single-scene storyboard cut image for a Korean food-travel / mukbang planning board.\nComposition contract: the entire image must be one continuous scene filling the full canvas edge-to-edge. This image will be placed into an external 2x2 grid by the web UI; never draw that grid inside the image.\nHard negatives: no storyboard sheet, no comic page, no multi-panel layout, no split-screen, no inset panels, no thumbnail contact sheet, no wireframe boxes, no internal borders, no crop marks, no frame guides, no blank quadrants, no placeholder rectangles, and no X-mark empty panels.\nStyle: cinematic hand-drawn food-storyboard keyframe, clean black pencil lines, subtle warm food-color accents, strong single focal point, no UI chrome.\nSafety: do not recreate a real person likeness; no recognizable face, no face close-up, no host face at all, and no detailed eyes/nose/mouth. Keep all human faces outside the frame; if a person is implied, keep any face outside frame. Show human presence only through cropped hands, chopsticks, food, over-shoulder silhouette, back-of-head silhouette, or cropped body parts without facial detail. No logos, watermarks, readable brand names, URLs, prices, or final typography.\nVisual role contract: CUT 04 is \"full table arrival reveal\".\nMust show for this CUT: entire spread arriving on the table, main dish plus side dishes and sauces visible at once.\nCamera/action contract for this CUT: wide overhead or three-quarter table reveal.\nMust avoid for this CUT: no single bite close-up, no drink break, no outro street shot.\nNeighbor difference rule: adjacent CUTs must not reuse the same camera distance, food action, subject emphasis, or pacing beat.\nSequence diversity rule: do not default to repeated food-only or noodle-lift shots; use a lifted noodle/bite only when the role explicitly needs first-bite, ASMR texture, or peak-feast emphasis, and keep surrounding context visible.\nStoryboard title: 대표 예시 · 바로 활용 가능한 먹방 스토리보드\nOverall logline: 사용자가 접속하자마자 가게 앞 인트로부터 주문, 조리 기대감, 한상 공개와 맛 평가까지 바로 참고할 수 있는 4컷 예시입니다.\nUser brief: 사용자가 접속하자마자 바로 참고할 수 있는 대표 먹방 스토리보드 예시. 음식만 크게 잡는 방식보다 가게 앞 인트로, 주문 맥락, 조리 기대감, 한상 공개와 맛 평가 흐름을 보여줘.\nCUT 4: 한상 공개와 맛 평가 메모\nVisual direction: 테이블 전체, 메인 접시, 사이드 메뉴, 메모하는 손을 한 화면에 두어 실제 촬영 순서표처럼 쓸 수 있게 만듭니다.\nOperator intent: 완성된 한상을 넓게 보여주고, 맛 평가와 다음 소재로 이어질 수 있는 운영 메모를 남깁니다.\nCaption idea for mood only, do not render readable text: 한상 공개와 맛 평가 · 다시 먹고 싶은 이유와 다음 소재 연결\nHeatmap evidence mood: 10:20, replay score 0.97.\nOutput only the image. Fill the whole frame with one coherent CUT; do not include scene labels, timecodes, captions, subtitles, handwriting, speech bubbles, or any readable text.",
-            "generatedAt": "2026-06-14T07:47:09.212712Z",
+            "prompt": "Create exactly one full-bleed 16:9 single-scene storyboard cut image for a Korean food-travel / mukbang planning board.\nComposition contract: the entire image must be one continuous scene filling the full canvas edge-to-edge. This image will be placed into an external 2x2 grid by the web UI; never draw that grid inside the image.\nHard negatives: no storyboard sheet, no comic page, no multi-panel layout, no split-screen, no inset panels, no thumbnail contact sheet, no wireframe boxes, no internal borders, no crop marks, no frame guides, no blank quadrants, no placeholder rectangles, and no X-mark empty panels.\nStyle: cinematic hand-drawn food-storyboard keyframe, clean black pencil lines, subtle warm food-color accents, strong single focal point, no UI chrome.\nSafety: do not recreate a real person likeness; no recognizable face, no face close-up, no host face at all, and no detailed eyes/nose/mouth. Keep all human faces outside the frame; if a person is implied, keep any face outside frame. Show human presence only through cropped hands, chopsticks, food, over-shoulder silhouette, back-of-head silhouette, or cropped body parts without facial detail. No logos, watermarks, readable brand names, URLs, prices, or final typography.\nVisual role contract: CUT 04 is \"full table arrival reveal\".\nMust show for this CUT: entire spread arriving on the table, main dish plus side dishes and sauces visible at once.\nCamera/action contract for this CUT: wide overhead or three-quarter table reveal.\nMust avoid for this CUT: no single bite close-up, no drink break, no outro street shot.\nNeighbor difference rule: adjacent CUTs must not reuse the same camera distance, food action, subject emphasis, or pacing beat.\nSequence diversity rule: do not default to repeated food-only or noodle-lift shots; use a lifted noodle/bite only when the role explicitly needs first-bite, ASMR texture, or peak-feast emphasis, and keep surrounding context visible.\nStoryboard title: 초반 몰입이 강한 에너지형 먹방 — 구독자 반복시청 기반 다음 영상안\nOverall logline: 쯔양님 기존 영상의 가장 많이 본 구간 158개를 근거로 14분 분량의 새 먹방 흐름을 구성합니다.\nUser brief: 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안팎의 스토리보드로 만들어줘. 가게 앞 인트로와 주문 맥락으로 시작하고, 조리 기대감, 첫 입, ASMR 질감, 소스 조합, 클라이맥스 한상, 완식, 맛 평가, 다음 영상 기대감까지 이어지게 구성해줘.\nCUT 4: 첫 상차림 전체 공개 · 편의점 조합 먹방\nVisual direction: 테이블 전체를 넓게 잡고 메인 음식, 사이드, 소스, 식기 위치가 한눈에 보이게 배치합니다. 특히 컵라면 김을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.\nOperator intent: 시청자가 화면을 멈추고 한상을 훑어볼 수 있게 메뉴 구성을 한 번에 보여줍니다. 이번 주제는 편의점 조합 먹방이라서 치즈의 꾸덕한 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.\nCaption idea for mood only, do not render readable text: 한상 공개 · 메인과 사이드를 한눈에 보여주기 · 편의점 꿀조합 · 치즈 · 백엔드 에이전트 근거 01:55 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷…\nHeatmap evidence mood: 01:55, replay score 0.866.\nOutput only the image. Fill the whole frame with one coherent CUT; do not include scene labels, timecodes, captions, subtitles, handwriting, speech bubbles, or any readable text.",
+            "generatedAt": "2026-06-14T13:46:04.878059Z",
             "warnings": [
               "local_codex_provider: generated via local Codex OAuth provider and persisted for admin storyboard display.",
-              "exact_provenance: image_generation.gpt-image-2 response=resp_0adf1fe1189f1c52016a2e5c3a7c8881918025cb294e074909 call=ig_0adf1fe1189f1c52016a2e5c3be9848191b8f4810cbc5e7a68"
+              "exact_provenance: image_generation.gpt-image-2 response=resp_0fd4f989761e6d15016a2eb040c9e881918115e1b68c0bb61a call=ig_0fd4f989761e6d15016a2eb041d6bc8191b884ebea63dc26a0"
             ],
             "provenance": {
               "providerId": "local-codex",
@@ -1051,8 +976,8 @@
               "requestToolModel": "gpt-image-2",
               "model": "gpt-image-2",
               "modelProvenance": "exact",
-              "responseId": "resp_0adf1fe1189f1c52016a2e5c3a7c8881918025cb294e074909",
-              "imageCallId": "ig_0adf1fe1189f1c52016a2e5c3be9848191b8f4810cbc5e7a68",
+              "responseId": "resp_0fd4f989761e6d15016a2eb040c9e881918115e1b68c0bb61a",
+              "imageCallId": "ig_0fd4f989761e6d15016a2eb041d6bc8191b884ebea63dc26a0",
               "imageItemCount": 1,
               "generatedImageItemTypes": [
                 "image_generation_call"
@@ -1061,20 +986,379 @@
                 "image_generation_call",
                 "message"
               ],
-              "requestHash": "ee6fbb4f3c6d278450a7f5a2286a4c55756aee92d2b29c65a5028ca930b21ba7",
-              "responseHash": "b9ee07c3a7ff2c28369b22c4ba4408579b97953c19891c4a6230d789c1af24c5",
+              "requestHash": "52aef069e229e9c115cf5c77e34b19af399f2569c598e9295523ccae15a9a957",
+              "responseHash": "6a9a1feb6eb22c34c3159151f3de4c9d7e214c953d1ed18aa68934abc618b83c",
               "hasOpenAIAPIKey": false,
-              "generatedAt": "2026-06-14T07:47:09.212712Z"
+              "generatedAt": "2026-06-14T13:46:04.878059Z"
+            }
+          }
+        },
+        {
+          "sceneNo": 5,
+          "title": "첫 입 리액션 · 편의점 조합 먹방",
+          "durationSec": 84,
+          "operatorIntent": "피크 구간과 닮은 첫 입 리액션을 명확히 배치해 맛의 기준점을 만듭니다. 이번 주제는 편의점 조합 먹방이라서 컵라면의 고소한 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.",
+          "visualDirection": "입장 전 정적 → 한입을 집는 손 → 맛 포인트 자막 → 한 박자 쉬는 편집을 씁니다. 얼굴 대신 손동작과 테이블 반응 중심으로 표현합니다. 특히 삼각김밥을 라면에 얹는 손을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.",
+          "hostBeat": "“와… 이건 첫입부터 기준이 생기는데요?” 컵라면은/는 치즈 늘어나는 식감이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다.",
+          "captionIdea": "첫 입 리액션 · 한입 직후 맛 포인트를 짧게 자막화 · 라면과 삼각김밥 한입 · 컵라면 · 백엔드 에이전트 근거 13:47 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안…",
+          "heatmapEvidence": {
+            "videoId": "-RI5PUiPr3g",
+            "youtubeLink": "https://www.youtube.com/watch?v=-RI5PUiPr3g",
+            "peakTime": "13:47",
+            "replayScore": 1,
+            "reason": "백엔드 에이전트 근거 · 로컬 히트맵 근거 · Most replayed / 리플레이 강도 100.0% 구간을 참조"
+          },
+          "productionChecklist": [
+            "촬영 전 피크 구간을 PD/편집자가 함께 1회 재생",
+            "편의점 조합 먹방 주제어(편의점 조합 먹방, 컵라면, 고소한)가 화면·오디오·자막에 모두 들어갔는지 확인",
+            "첫 입·질감·소리 컷을 분리 촬영해 쇼츠/썸네일 후보 확보",
+            "과장된 맛 표현보다 실제 리액션과 구독자 반복시청 근거를 우선"
+          ],
+          "generatedImage": {
+            "dataUrl": "/storyboard-seed/generated/cut-05.png",
+            "mime": "image/png",
+            "providerId": "local-codex",
+            "trustPolicy": "storyboard-gpt-image-2-panel-v1",
+            "model": "gpt-image-2",
+            "prompt": "Create exactly one full-bleed 16:9 single-scene storyboard cut image for a Korean food-travel / mukbang planning board.\nComposition contract: the entire image must be one continuous scene filling the full canvas edge-to-edge. This image will be placed into an external 2x2 grid by the web UI; never draw that grid inside the image.\nHard negatives: no storyboard sheet, no comic page, no multi-panel layout, no split-screen, no inset panels, no thumbnail contact sheet, no wireframe boxes, no internal borders, no crop marks, no frame guides, no blank quadrants, no placeholder rectangles, and no X-mark empty panels.\nStyle: cinematic hand-drawn food-storyboard keyframe, clean black pencil lines, subtle warm food-color accents, strong single focal point, no UI chrome.\nSafety: do not recreate a real person likeness; no recognizable face, no face close-up, no host face at all, and no detailed eyes/nose/mouth. Keep all human faces outside the frame; if a person is implied, keep any face outside frame. Show human presence only through cropped hands, chopsticks, food, over-shoulder silhouette, back-of-head silhouette, or cropped body parts without facial detail. No logos, watermarks, readable brand names, URLs, prices, or final typography.\nVisual role contract: CUT 05 is \"first bite reaction without face detail\".\nMust show for this CUT: first bite being lifted by chopsticks or spoon, cropped hands, food near frame edge, implied reaction without face.\nCamera/action contract for this CUT: tight food-and-hands shot at the decisive first bite moment.\nMust avoid for this CUT: no recognizable face, no repeated full-table layout, no empty bowls.\nNeighbor difference rule: adjacent CUTs must not reuse the same camera distance, food action, subject emphasis, or pacing beat.\nSequence diversity rule: do not default to repeated food-only or noodle-lift shots; use a lifted noodle/bite only when the role explicitly needs first-bite, ASMR texture, or peak-feast emphasis, and keep surrounding context visible.\nStoryboard title: 초반 몰입이 강한 에너지형 먹방 — 구독자 반복시청 기반 다음 영상안\nOverall logline: 쯔양님 기존 영상의 가장 많이 본 구간 158개를 근거로 14분 분량의 새 먹방 흐름을 구성합니다.\nUser brief: 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안팎의 스토리보드로 만들어줘. 가게 앞 인트로와 주문 맥락으로 시작하고, 조리 기대감, 첫 입, ASMR 질감, 소스 조합, 클라이맥스 한상, 완식, 맛 평가, 다음 영상 기대감까지 이어지게 구성해줘.\nCUT 5: 첫 입 리액션 · 편의점 조합 먹방\nVisual direction: 입장 전 정적 → 한입을 집는 손 → 맛 포인트 자막 → 한 박자 쉬는 편집을 씁니다. 얼굴 대신 손동작과 테이블 반응 중심으로 표현합니다. 특히 삼각김밥을 라면에 얹는 손을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.\nOperator intent: 피크 구간과 닮은 첫 입 리액션을 명확히 배치해 맛의 기준점을 만듭니다. 이번 주제는 편의점 조합 먹방이라서 컵라면의 고소한 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.\nCaption idea for mood only, do not render readable text: 첫 입 리액션 · 한입 직후 맛 포인트를 짧게 자막화 · 라면과 삼각김밥 한입 · 컵라면 · 백엔드 에이전트 근거 13:47 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐…\nHeatmap evidence mood: 13:47, replay score 1.\nOutput only the image. Fill the whole frame with one coherent CUT; do not include scene labels, timecodes, captions, subtitles, handwriting, speech bubbles, or any readable text.",
+            "generatedAt": "2026-06-15T12:36:51.248951Z",
+            "warnings": [
+              "local_codex_provider: generated via local Codex OAuth provider and persisted for admin storyboard display.",
+              "exact_provenance: image_generation.gpt-image-2 response=resp_074f67078f29f3ca016a2ff1b8402c8191ac6c3beb8f3e9614 call=ig_074f67078f29f3ca016a2ff1b92da881918fa861a9fdcf8d5e"
+            ],
+            "provenance": {
+              "providerId": "local-codex",
+              "authMode": "codex_oauth",
+              "endpoint": "https://chatgpt.com/backend-api/codex/responses",
+              "agentModel": "gpt-5.5",
+              "requestToolType": "image_generation",
+              "requestToolModel": "gpt-image-2",
+              "model": "gpt-image-2",
+              "modelProvenance": "exact",
+              "responseId": "resp_074f67078f29f3ca016a2ff1b8402c8191ac6c3beb8f3e9614",
+              "imageCallId": "ig_074f67078f29f3ca016a2ff1b92da881918fa861a9fdcf8d5e",
+              "imageItemCount": 1,
+              "generatedImageItemTypes": [
+                "image_generation_call"
+              ],
+              "rawImageItemTypes": [
+                "image_generation_call",
+                "message"
+              ],
+              "requestHash": "853295c3c12fec4aca658e4543f86980f3b480c9a40d8db228829f835dd8fad3",
+              "responseHash": "c09f63f2c17dfa0fc74148943d8d58e28471629987e42b4da4f4371dad8e2ca9",
+              "hasOpenAIAPIKey": false,
+              "generatedAt": "2026-06-15T12:36:51.248951Z"
+            }
+          }
+        },
+        {
+          "sceneNo": 6,
+          "title": "소스와 사이드 조합 변주 · 편의점 조합 먹방",
+          "durationSec": 84,
+          "operatorIntent": "같은 맛이 반복되지 않도록 조합·소스·사이드 메뉴로 중반 리듬을 바꿉니다. 이번 주제는 편의점 조합 먹방이라서 편의점의 짭짤한 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.",
+          "visualDirection": "소스를 찍는 손, 반찬을 얹는 동작, 조합 전후 비교를 한 컷 안에서 이해되게 보여줍니다. 특히 치즈가 녹는 순간을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.",
+          "hostBeat": "“여기서 조합을 한 번 바꿔볼게요.” 편의점은/는 포장 뜯는 소리이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다.",
+          "captionIdea": "조합 변주 · 새 소스와 사이드로 흐름 전환 · 치즈 조합 피크 · 편의점 · 백엔드 에이전트 근거 09:29 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안…",
+          "heatmapEvidence": {
+            "videoId": "-Tf_SWz5f9k",
+            "youtubeLink": "https://www.youtube.com/watch?v=-Tf_SWz5f9k",
+            "peakTime": "09:29",
+            "replayScore": 0.801,
+            "reason": "백엔드 에이전트 근거 · 로컬 히트맵 근거 · Most replayed / 리플레이 강도 80.1% 구간을 참조"
+          },
+          "productionChecklist": [
+            "촬영 전 피크 구간을 PD/편집자가 함께 1회 재생",
+            "편의점 조합 먹방 주제어(편의점 조합 먹방, 편의점, 짭짤한)가 화면·오디오·자막에 모두 들어갔는지 확인",
+            "첫 입·질감·소리 컷을 분리 촬영해 쇼츠/썸네일 후보 확보",
+            "과장된 맛 표현보다 실제 리액션과 구독자 반복시청 근거를 우선"
+          ],
+          "generatedImage": {
+            "dataUrl": "/storyboard-seed/generated/cut-06.png",
+            "mime": "image/png",
+            "providerId": "local-codex",
+            "trustPolicy": "storyboard-gpt-image-2-panel-v1",
+            "model": "gpt-image-2",
+            "prompt": "Create exactly one full-bleed 16:9 single-scene storyboard cut image for a Korean food-travel / mukbang planning board.\nComposition contract: the entire image must be one continuous scene filling the full canvas edge-to-edge. This image will be placed into an external 2x2 grid by the web UI; never draw that grid inside the image.\nHard negatives: no storyboard sheet, no comic page, no multi-panel layout, no split-screen, no inset panels, no thumbnail contact sheet, no wireframe boxes, no internal borders, no crop marks, no frame guides, no blank quadrants, no placeholder rectangles, and no X-mark empty panels.\nStyle: cinematic hand-drawn food-storyboard keyframe, clean black pencil lines, subtle warm food-color accents, strong single focal point, no UI chrome.\nSafety: do not recreate a real person likeness; no recognizable face, no face close-up, no host face at all, and no detailed eyes/nose/mouth. Keep all human faces outside the frame; if a person is implied, keep any face outside frame. Show human presence only through cropped hands, chopsticks, food, over-shoulder silhouette, back-of-head silhouette, or cropped body parts without facial detail. No logos, watermarks, readable brand names, URLs, prices, or final typography.\nVisual role contract: CUT 06 is \"texture / ASMR macro detail\".\nMust show for this CUT: macro texture, noodle stretch or crispy surface or broth ripple, microphone-like object or utensil detail if natural.\nCamera/action contract for this CUT: extreme close-up with sensory texture as the focal point.\nMust avoid for this CUT: no storefront, no wide table, no note-taking, no final evaluation pose.\nNeighbor difference rule: adjacent CUTs must not reuse the same camera distance, food action, subject emphasis, or pacing beat.\nSequence diversity rule: do not default to repeated food-only or noodle-lift shots; use a lifted noodle/bite only when the role explicitly needs first-bite, ASMR texture, or peak-feast emphasis, and keep surrounding context visible.\nStoryboard title: 초반 몰입이 강한 에너지형 먹방 — 구독자 반복시청 기반 다음 영상안\nOverall logline: 쯔양님 기존 영상의 가장 많이 본 구간 158개를 근거로 14분 분량의 새 먹방 흐름을 구성합니다.\nUser brief: 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안팎의 스토리보드로 만들어줘. 가게 앞 인트로와 주문 맥락으로 시작하고, 조리 기대감, 첫 입, ASMR 질감, 소스 조합, 클라이맥스 한상, 완식, 맛 평가, 다음 영상 기대감까지 이어지게 구성해줘.\nCUT 6: 소스와 사이드 조합 변주 · 편의점 조합 먹방\nVisual direction: 소스를 찍는 손, 반찬을 얹는 동작, 조합 전후 비교를 한 컷 안에서 이해되게 보여줍니다. 특히 치즈가 녹는 순간을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.\nOperator intent: 같은 맛이 반복되지 않도록 조합·소스·사이드 메뉴로 중반 리듬을 바꿉니다. 이번 주제는 편의점 조합 먹방이라서 편의점의 짭짤한 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.\nCaption idea for mood only, do not render readable text: 조합 변주 · 새 소스와 사이드로 흐름 전환 · 치즈 조합 피크 · 편의점 · 백엔드 에이전트 근거 09:29 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10…\nHeatmap evidence mood: 09:29, replay score 0.801.\nOutput only the image. Fill the whole frame with one coherent CUT; do not include scene labels, timecodes, captions, subtitles, handwriting, speech bubbles, or any readable text.",
+            "generatedAt": "2026-06-15T12:38:06.509295Z",
+            "warnings": [
+              "local_codex_provider: generated via local Codex OAuth provider and persisted for admin storyboard display.",
+              "exact_provenance: image_generation.gpt-image-2 response=resp_0ac8fc66e2c7944c016a2ff1e4fa4c81918462c8597a0a0e61 call=ig_0ac8fc66e2c7944c016a2ff1e795a88191bed586a6d6ca1b65"
+            ],
+            "provenance": {
+              "providerId": "local-codex",
+              "authMode": "codex_oauth",
+              "endpoint": "https://chatgpt.com/backend-api/codex/responses",
+              "agentModel": "gpt-5.5",
+              "requestToolType": "image_generation",
+              "requestToolModel": "gpt-image-2",
+              "model": "gpt-image-2",
+              "modelProvenance": "exact",
+              "responseId": "resp_0ac8fc66e2c7944c016a2ff1e4fa4c81918462c8597a0a0e61",
+              "imageCallId": "ig_0ac8fc66e2c7944c016a2ff1e795a88191bed586a6d6ca1b65",
+              "imageItemCount": 1,
+              "generatedImageItemTypes": [
+                "image_generation_call"
+              ],
+              "rawImageItemTypes": [
+                "image_generation_call",
+                "message"
+              ],
+              "requestHash": "473b5529ca77e845a1090d28a67eaf23bad9e3f0b67c9cfe3066b5439b12707b",
+              "responseHash": "e7ea0e6f8e63ff52ddf8051188889837e77bd8b4628fb0695fcadc436243cf42",
+              "hasOpenAIAPIKey": false,
+              "generatedAt": "2026-06-15T12:38:06.509295Z"
+            }
+          }
+        },
+        {
+          "sceneNo": 7,
+          "title": "클라이맥스 히어로 한상 · 편의점 조합 먹방",
+          "durationSec": 84,
+          "operatorIntent": "가장 강한 장면을 새 영상의 대표 썸네일 후보이자 최고 몰입 구간으로 전환합니다. 이번 주제는 편의점 조합 먹방이라서 라면의 뜨끈한 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.",
+          "visualDirection": "테이블 전체와 가장 큰 한입, 풍성한 음식 높이, 김/윤기가 동시에 보이는 히어로 구도를 만듭니다. 특히 컵라면 김을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.",
+          "hostBeat": "“오늘의 하이라이트는 이 한상이에요.” 라면은/는 면치기 소리이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다.",
+          "captionIdea": "클라이맥스 한상 · 오늘 가장 강한 대표 장면 만들기 · 편의점 꿀조합 · 라면 · 백엔드 에이전트 근거 12:46 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안…",
+          "heatmapEvidence": {
+            "videoId": "-X47382RRus",
+            "youtubeLink": "https://www.youtube.com/watch?v=-X47382RRus",
+            "peakTime": "12:46",
+            "replayScore": 1,
+            "reason": "백엔드 에이전트 근거 · 로컬 히트맵 근거 · Most replayed / 리플레이 강도 100.0% 구간을 참조"
+          },
+          "productionChecklist": [
+            "촬영 전 피크 구간을 PD/편집자가 함께 1회 재생",
+            "편의점 조합 먹방 주제어(편의점 조합 먹방, 라면, 뜨끈한)가 화면·오디오·자막에 모두 들어갔는지 확인",
+            "첫 입·질감·소리 컷을 분리 촬영해 쇼츠/썸네일 후보 확보",
+            "과장된 맛 표현보다 실제 리액션과 구독자 반복시청 근거를 우선"
+          ],
+          "generatedImage": {
+            "dataUrl": "/storyboard-seed/generated/cut-07.png",
+            "mime": "image/png",
+            "providerId": "local-codex",
+            "trustPolicy": "storyboard-gpt-image-2-panel-v1",
+            "model": "gpt-image-2",
+            "prompt": "Create exactly one full-bleed 16:9 single-scene storyboard cut image for a Korean food-travel / mukbang planning board.\nComposition contract: the entire image must be one continuous scene filling the full canvas edge-to-edge. This image will be placed into an external 2x2 grid by the web UI; never draw that grid inside the image.\nHard negatives: no storyboard sheet, no comic page, no multi-panel layout, no split-screen, no inset panels, no thumbnail contact sheet, no wireframe boxes, no internal borders, no crop marks, no frame guides, no blank quadrants, no placeholder rectangles, and no X-mark empty panels.\nStyle: cinematic hand-drawn food-storyboard keyframe, clean black pencil lines, subtle warm food-color accents, strong single focal point, no UI chrome.\nSafety: do not recreate a real person likeness; no recognizable face, no face close-up, no host face at all, and no detailed eyes/nose/mouth. Keep all human faces outside the frame; if a person is implied, keep any face outside frame. Show human presence only through cropped hands, chopsticks, food, over-shoulder silhouette, back-of-head silhouette, or cropped body parts without facial detail. No logos, watermarks, readable brand names, URLs, prices, or final typography.\nVisual role contract: CUT 07 is \"sauce / side combination change\".\nMust show for this CUT: sauce dip, side dish added on top, before-and-after combination implied in one coherent frame.\nCamera/action contract for this CUT: medium shot of hands changing the flavor combination.\nMust avoid for this CUT: no full table hero shot, no first bite duplicate, no drink reset.\nNeighbor difference rule: adjacent CUTs must not reuse the same camera distance, food action, subject emphasis, or pacing beat.\nSequence diversity rule: do not default to repeated food-only or noodle-lift shots; use a lifted noodle/bite only when the role explicitly needs first-bite, ASMR texture, or peak-feast emphasis, and keep surrounding context visible.\nStoryboard title: 초반 몰입이 강한 에너지형 먹방 — 구독자 반복시청 기반 다음 영상안\nOverall logline: 쯔양님 기존 영상의 가장 많이 본 구간 158개를 근거로 14분 분량의 새 먹방 흐름을 구성합니다.\nUser brief: 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안팎의 스토리보드로 만들어줘. 가게 앞 인트로와 주문 맥락으로 시작하고, 조리 기대감, 첫 입, ASMR 질감, 소스 조합, 클라이맥스 한상, 완식, 맛 평가, 다음 영상 기대감까지 이어지게 구성해줘.\nCUT 7: 클라이맥스 히어로 한상 · 편의점 조합 먹방\nVisual direction: 테이블 전체와 가장 큰 한입, 풍성한 음식 높이, 김/윤기가 동시에 보이는 히어로 구도를 만듭니다. 특히 컵라면 김을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.\nOperator intent: 가장 강한 장면을 새 영상의 대표 썸네일 후보이자 최고 몰입 구간으로 전환합니다. 이번 주제는 편의점 조합 먹방이라서 라면의 뜨끈한 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.\nCaption idea for mood only, do not render readable text: 클라이맥스 한상 · 오늘 가장 강한 대표 장면 만들기 · 편의점 꿀조합 · 라면 · 백엔드 에이전트 근거 12:46 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰…\nHeatmap evidence mood: 12:46, replay score 1.\nOutput only the image. Fill the whole frame with one coherent CUT; do not include scene labels, timecodes, captions, subtitles, handwriting, speech bubbles, or any readable text.",
+            "generatedAt": "2026-06-15T12:39:06.308783Z",
+            "warnings": [
+              "local_codex_provider: generated via local Codex OAuth provider and persisted for admin storyboard display.",
+              "exact_provenance: image_generation.gpt-image-2 response=resp_0f0186db274c7af6016a2ff23007a0819189cca8bca2f992d3 call=ig_0f0186db274c7af6016a2ff23141088191a612b0be88119a51"
+            ],
+            "provenance": {
+              "providerId": "local-codex",
+              "authMode": "codex_oauth",
+              "endpoint": "https://chatgpt.com/backend-api/codex/responses",
+              "agentModel": "gpt-5.5",
+              "requestToolType": "image_generation",
+              "requestToolModel": "gpt-image-2",
+              "model": "gpt-image-2",
+              "modelProvenance": "exact",
+              "responseId": "resp_0f0186db274c7af6016a2ff23007a0819189cca8bca2f992d3",
+              "imageCallId": "ig_0f0186db274c7af6016a2ff23141088191a612b0be88119a51",
+              "imageItemCount": 1,
+              "generatedImageItemTypes": [
+                "image_generation_call"
+              ],
+              "rawImageItemTypes": [
+                "image_generation_call",
+                "message"
+              ],
+              "requestHash": "c3afca1e4413cb56feca70292a62270e521e24c59d4789c68eff3668f720573c",
+              "responseHash": "d43e386b2ada0729fb4608867017aa69eb44bdce617845f253011816a6e75ebd",
+              "hasOpenAIAPIKey": false,
+              "generatedAt": "2026-06-15T12:39:06.308783Z"
+            }
+          }
+        },
+        {
+          "sceneNo": 8,
+          "title": "거의 완식과 만족감 · 편의점 조합 먹방",
+          "durationSec": 84,
+          "operatorIntent": "초반 기대가 실제로 채워졌다는 증거를 빈 그릇과 정리된 테이블로 보여줍니다. 이번 주제는 편의점 조합 먹방이라서 삼각김밥의 꾸덕한 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.",
+          "visualDirection": "비워진 그릇, 남은 소스 자국, 접힌 냅킨, 내려놓은 숟가락 등 완식에 가까운 상태를 차분히 보여줍니다. 특히 삼각김밥을 라면에 얹는 손을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.",
+          "hostBeat": "“진짜 거의 다 먹었네요. 마지막까지 맛이 괜찮았어요.” 삼각김밥은/는 치즈 늘어나는 식감이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다.",
+          "captionIdea": "거의 완식 · 빈 그릇으로 만족감 보여주기 · 라면과 삼각김밥 한입 · 삼각김밥 · 백엔드 에이전트 근거 17:16 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안…",
+          "heatmapEvidence": {
+            "videoId": "-e0ERP2rFkY",
+            "youtubeLink": "https://www.youtube.com/watch?v=-e0ERP2rFkY",
+            "peakTime": "17:16",
+            "replayScore": 0.961,
+            "reason": "백엔드 에이전트 근거 · 로컬 히트맵 근거 · Most replayed / 리플레이 강도 96.1% 구간을 참조"
+          },
+          "productionChecklist": [
+            "촬영 전 피크 구간을 PD/편집자가 함께 1회 재생",
+            "편의점 조합 먹방 주제어(편의점 조합 먹방, 삼각김밥, 꾸덕한)가 화면·오디오·자막에 모두 들어갔는지 확인",
+            "첫 입·질감·소리 컷을 분리 촬영해 쇼츠/썸네일 후보 확보",
+            "과장된 맛 표현보다 실제 리액션과 구독자 반복시청 근거를 우선"
+          ],
+          "generatedImage": {
+            "dataUrl": "/storyboard-seed/generated/cut-08.png",
+            "mime": "image/png",
+            "providerId": "local-codex",
+            "trustPolicy": "storyboard-gpt-image-2-panel-v1",
+            "model": "gpt-image-2",
+            "prompt": "Create exactly one full-bleed 16:9 single-scene storyboard cut image for a Korean food-travel / mukbang planning board.\nComposition contract: the entire image must be one continuous scene filling the full canvas edge-to-edge. This image will be placed into an external 2x2 grid by the web UI; never draw that grid inside the image.\nHard negatives: no storyboard sheet, no comic page, no multi-panel layout, no split-screen, no inset panels, no thumbnail contact sheet, no wireframe boxes, no internal borders, no crop marks, no frame guides, no blank quadrants, no placeholder rectangles, and no X-mark empty panels.\nStyle: cinematic hand-drawn food-storyboard keyframe, clean black pencil lines, subtle warm food-color accents, strong single focal point, no UI chrome.\nSafety: do not recreate a real person likeness; no recognizable face, no face close-up, no host face at all, and no detailed eyes/nose/mouth. Keep all human faces outside the frame; if a person is implied, keep any face outside frame. Show human presence only through cropped hands, chopsticks, food, over-shoulder silhouette, back-of-head silhouette, or cropped body parts without facial detail. No logos, watermarks, readable brand names, URLs, prices, or final typography.\nVisual role contract: CUT 08 is \"pacing reset / drink / palate cleanser\".\nMust show for this CUT: drink glass, water bottle, chopsticks resting, small pause between eating beats.\nCamera/action contract for this CUT: quiet medium shot with negative space and a resting rhythm.\nMust avoid for this CUT: no dramatic food lift, no cooking action, no hero feast, no outro exterior.\nNeighbor difference rule: adjacent CUTs must not reuse the same camera distance, food action, subject emphasis, or pacing beat.\nSequence diversity rule: do not default to repeated food-only or noodle-lift shots; use a lifted noodle/bite only when the role explicitly needs first-bite, ASMR texture, or peak-feast emphasis, and keep surrounding context visible.\nStoryboard title: 초반 몰입이 강한 에너지형 먹방 — 구독자 반복시청 기반 다음 영상안\nOverall logline: 쯔양님 기존 영상의 가장 많이 본 구간 158개를 근거로 14분 분량의 새 먹방 흐름을 구성합니다.\nUser brief: 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안팎의 스토리보드로 만들어줘. 가게 앞 인트로와 주문 맥락으로 시작하고, 조리 기대감, 첫 입, ASMR 질감, 소스 조합, 클라이맥스 한상, 완식, 맛 평가, 다음 영상 기대감까지 이어지게 구성해줘.\nCUT 8: 거의 완식과 만족감 · 편의점 조합 먹방\nVisual direction: 비워진 그릇, 남은 소스 자국, 접힌 냅킨, 내려놓은 숟가락 등 완식에 가까운 상태를 차분히 보여줍니다. 특히 삼각김밥을 라면에 얹는 손을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.\nOperator intent: 초반 기대가 실제로 채워졌다는 증거를 빈 그릇과 정리된 테이블로 보여줍니다. 이번 주제는 편의점 조합 먹방이라서 삼각김밥의 꾸덕한 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.\nCaption idea for mood only, do not render readable text: 거의 완식 · 빈 그릇으로 만족감 보여주기 · 라면과 삼각김밥 한입 · 삼각김밥 · 백엔드 에이전트 근거 17:16 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰…\nHeatmap evidence mood: 17:16, replay score 0.961.\nOutput only the image. Fill the whole frame with one coherent CUT; do not include scene labels, timecodes, captions, subtitles, handwriting, speech bubbles, or any readable text.",
+            "generatedAt": "2026-06-15T12:40:04.736842Z",
+            "warnings": [
+              "local_codex_provider: generated via local Codex OAuth provider and persisted for admin storyboard display.",
+              "exact_provenance: image_generation.gpt-image-2 response=resp_0c7b154e010c64e1016a2ff26bc6d88191b79364753438825c call=ig_0c7b154e010c64e1016a2ff26d0d748191b50403b070829c71"
+            ],
+            "provenance": {
+              "providerId": "local-codex",
+              "authMode": "codex_oauth",
+              "endpoint": "https://chatgpt.com/backend-api/codex/responses",
+              "agentModel": "gpt-5.5",
+              "requestToolType": "image_generation",
+              "requestToolModel": "gpt-image-2",
+              "model": "gpt-image-2",
+              "modelProvenance": "exact",
+              "responseId": "resp_0c7b154e010c64e1016a2ff26bc6d88191b79364753438825c",
+              "imageCallId": "ig_0c7b154e010c64e1016a2ff26d0d748191b50403b070829c71",
+              "imageItemCount": 1,
+              "generatedImageItemTypes": [
+                "image_generation_call"
+              ],
+              "rawImageItemTypes": [
+                "image_generation_call",
+                "message"
+              ],
+              "requestHash": "da854e2e6ad9ab62169c2ae58ec3e9b66b61aa7b241a17b36e180c3d709e2cee",
+              "responseHash": "79cb677e1c2187c2b6b28b75300c330c6fe541cbb5f5c5d2cb081ab25b6359a6",
+              "hasOpenAIAPIKey": false,
+              "generatedAt": "2026-06-15T12:40:04.736842Z"
+            }
+          }
+        },
+        {
+          "sceneNo": 9,
+          "title": "최종 맛 평가와 재방문 포인트 · 편의점 조합 먹방",
+          "durationSec": 84,
+          "operatorIntent": "먹은 메뉴의 맛·양·추천 대상·재방문 포인트를 초보자도 이해하게 정리합니다. 이번 주제는 편의점 조합 먹방이라서 치즈의 고소한 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.",
+          "visualDirection": "메모하는 손, 메뉴 조합 정리, 대표 접시 하나를 다시 보여주는 컷으로 평가 장면을 구성합니다. 특히 치즈가 녹는 순간을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.",
+          "hostBeat": "“오늘은 이 맛 때문에 다시 생각날 것 같아요.” 치즈은/는 포장 뜯는 소리이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다.",
+          "captionIdea": "최종 맛 평가 · 맛과 양, 다시 먹고 싶은 이유 정리 · 치즈 조합 피크 · 치즈 · 백엔드 에이전트 근거 06:51 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안…",
+          "heatmapEvidence": {
+            "videoId": "-fE1mGc-W8w",
+            "youtubeLink": "https://www.youtube.com/watch?v=-fE1mGc-W8w",
+            "peakTime": "06:51",
+            "replayScore": 0.874,
+            "reason": "백엔드 에이전트 근거 · 로컬 히트맵 근거 · Most replayed / 리플레이 강도 87.4% 구간을 참조"
+          },
+          "productionChecklist": [
+            "촬영 전 피크 구간을 PD/편집자가 함께 1회 재생",
+            "편의점 조합 먹방 주제어(편의점 조합 먹방, 치즈, 고소한)가 화면·오디오·자막에 모두 들어갔는지 확인",
+            "첫 입·질감·소리 컷을 분리 촬영해 쇼츠/썸네일 후보 확보",
+            "과장된 맛 표현보다 실제 리액션과 구독자 반복시청 근거를 우선"
+          ],
+          "generatedImage": {
+            "dataUrl": "/storyboard-seed/generated/cut-09.png",
+            "mime": "image/png",
+            "providerId": "local-codex",
+            "trustPolicy": "storyboard-gpt-image-2-panel-v1",
+            "model": "gpt-image-2",
+            "prompt": "Create exactly one full-bleed 16:9 single-scene storyboard cut image for a Korean food-travel / mukbang planning board.\nComposition contract: the entire image must be one continuous scene filling the full canvas edge-to-edge. This image will be placed into an external 2x2 grid by the web UI; never draw that grid inside the image.\nHard negatives: no storyboard sheet, no comic page, no multi-panel layout, no split-screen, no inset panels, no thumbnail contact sheet, no wireframe boxes, no internal borders, no crop marks, no frame guides, no blank quadrants, no placeholder rectangles, and no X-mark empty panels.\nStyle: cinematic hand-drawn food-storyboard keyframe, clean black pencil lines, subtle warm food-color accents, strong single focal point, no UI chrome.\nSafety: do not recreate a real person likeness; no recognizable face, no face close-up, no host face at all, and no detailed eyes/nose/mouth. Keep all human faces outside the frame; if a person is implied, keep any face outside frame. Show human presence only through cropped hands, chopsticks, food, over-shoulder silhouette, back-of-head silhouette, or cropped body parts without facial detail. No logos, watermarks, readable brand names, URLs, prices, or final typography.\nVisual role contract: CUT 09 is \"peak feast / hero table composition\".\nMust show for this CUT: largest feast moment, abundant table, strongest food hero shape, steam and glossy highlights.\nCamera/action contract for this CUT: dynamic wide hero shot built for a thumbnail-like climax.\nMust avoid for this CUT: no storefront, no empty bowls, no note-taking detail-only shot, no drink-only frame.\nNeighbor difference rule: adjacent CUTs must not reuse the same camera distance, food action, subject emphasis, or pacing beat.\nSequence diversity rule: do not default to repeated food-only or noodle-lift shots; use a lifted noodle/bite only when the role explicitly needs first-bite, ASMR texture, or peak-feast emphasis, and keep surrounding context visible.\nStoryboard title: 초반 몰입이 강한 에너지형 먹방 — 구독자 반복시청 기반 다음 영상안\nOverall logline: 쯔양님 기존 영상의 가장 많이 본 구간 158개를 근거로 14분 분량의 새 먹방 흐름을 구성합니다.\nUser brief: 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안팎의 스토리보드로 만들어줘. 가게 앞 인트로와 주문 맥락으로 시작하고, 조리 기대감, 첫 입, ASMR 질감, 소스 조합, 클라이맥스 한상, 완식, 맛 평가, 다음 영상 기대감까지 이어지게 구성해줘.\nCUT 9: 최종 맛 평가와 재방문 포인트 · 편의점 조합 먹방\nVisual direction: 메모하는 손, 메뉴 조합 정리, 대표 접시 하나를 다시 보여주는 컷으로 평가 장면을 구성합니다. 특히 치즈가 녹는 순간을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.\nOperator intent: 먹은 메뉴의 맛·양·추천 대상·재방문 포인트를 초보자도 이해하게 정리합니다. 이번 주제는 편의점 조합 먹방이라서 치즈의 고소한 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.\nCaption idea for mood only, do not render readable text: 최종 맛 평가 · 맛과 양, 다시 먹고 싶은 이유 정리 · 치즈 조합 피크 · 치즈 · 백엔드 에이전트 근거 06:51 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 …\nHeatmap evidence mood: 06:51, replay score 0.874.\nOutput only the image. Fill the whole frame with one coherent CUT; do not include scene labels, timecodes, captions, subtitles, handwriting, speech bubbles, or any readable text.",
+            "generatedAt": "2026-06-15T13:30:41.605737Z",
+            "warnings": [
+              "local_codex_provider: generated via local Codex OAuth provider and persisted for admin storyboard display.",
+              "exact_provenance: image_generation.gpt-image-2 response=resp_0c9e681d38353361016a2ffe3772888193be19f6052eaf0037 call=ig_0c9e681d38353361016a2ffe39c3ac81938efa31d217b1315c"
+            ],
+            "provenance": {
+              "providerId": "local-codex",
+              "authMode": "codex_oauth",
+              "endpoint": "https://chatgpt.com/backend-api/codex/responses",
+              "agentModel": "gpt-5.5",
+              "requestToolType": "image_generation",
+              "requestToolModel": "gpt-image-2",
+              "model": "gpt-image-2",
+              "modelProvenance": "exact",
+              "responseId": "resp_0c9e681d38353361016a2ffe3772888193be19f6052eaf0037",
+              "imageCallId": "ig_0c9e681d38353361016a2ffe39c3ac81938efa31d217b1315c",
+              "imageItemCount": 1,
+              "generatedImageItemTypes": [
+                "image_generation_call"
+              ],
+              "rawImageItemTypes": [
+                "image_generation_call",
+                "message"
+              ],
+              "requestHash": "f0badab03376aa7097bf7b230326df9565f4b26006ef1289e82b439020da3e5d",
+              "responseHash": "3905695e32057d02243dd9deadbb283131b6a62cd3d72c1f0e93b1c15ce14515",
+              "hasOpenAIAPIKey": false,
+              "generatedAt": "2026-06-15T13:30:41.605737Z"
+            }
+          }
+        },
+        {
+          "sceneNo": 10,
+          "title": "다음 소재 연결과 아웃트로 · 편의점 조합 먹방",
+          "durationSec": 84,
+          "operatorIntent": "댓글 유도와 다음 회차 소재를 자연스럽게 연결해 영상 이후 행동을 만듭니다. 이번 주제는 편의점 조합 먹방이라서 컵라면의 짭짤한 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.",
+          "visualDirection": "가게 바깥으로 나오는 뒷모습, 간판 없는 거리 분위기, 다음 메뉴 후보를 암시하는 소품으로 마무리합니다. 특히 컵라면 김을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.",
+          "hostBeat": "“다음엔 이 피크를 어떤 메뉴로 이어가면 좋을까요?” 컵라면은/는 면치기 소리이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다.",
+          "captionIdea": "다음 소재 연결 · 댓글 질문과 다음 영상 기대감 남기기 · 편의점 꿀조합 · 컵라면 · 백엔드 에이전트 근거 10:54 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안…",
+          "heatmapEvidence": {
+            "videoId": "-gMCn9VDJns",
+            "youtubeLink": "https://www.youtube.com/watch?v=-gMCn9VDJns",
+            "peakTime": "10:54",
+            "replayScore": 0.912,
+            "reason": "백엔드 에이전트 근거 · 로컬 히트맵 근거 · Most replayed / 리플레이 강도 91.2% 구간을 참조"
+          },
+          "productionChecklist": [
+            "촬영 전 피크 구간을 PD/편집자가 함께 1회 재생",
+            "편의점 조합 먹방 주제어(편의점 조합 먹방, 컵라면, 짭짤한)가 화면·오디오·자막에 모두 들어갔는지 확인",
+            "첫 입·질감·소리 컷을 분리 촬영해 쇼츠/썸네일 후보 확보",
+            "과장된 맛 표현보다 실제 리액션과 구독자 반복시청 근거를 우선"
+          ],
+          "generatedImage": {
+            "dataUrl": "/storyboard-seed/generated/cut-10.png",
+            "mime": "image/png",
+            "providerId": "local-codex",
+            "trustPolicy": "storyboard-gpt-image-2-panel-v1",
+            "model": "gpt-image-2",
+            "prompt": "Create exactly one full-bleed 16:9 single-scene storyboard cut image for a Korean food-travel / mukbang planning board.\nComposition contract: the entire image must be one continuous scene filling the full canvas edge-to-edge. This image will be placed into an external 2x2 grid by the web UI; never draw that grid inside the image.\nHard negatives: no storyboard sheet, no comic page, no multi-panel layout, no split-screen, no inset panels, no thumbnail contact sheet, no wireframe boxes, no internal borders, no crop marks, no frame guides, no blank quadrants, no placeholder rectangles, and no X-mark empty panels.\nStyle: cinematic hand-drawn food-storyboard keyframe, clean black pencil lines, subtle warm food-color accents, strong single focal point, no UI chrome.\nSafety: do not recreate a real person likeness; no recognizable face, no face close-up, no host face at all, and no detailed eyes/nose/mouth. Keep all human faces outside the frame; if a person is implied, keep any face outside frame. Show human presence only through cropped hands, chopsticks, food, over-shoulder silhouette, back-of-head silhouette, or cropped body parts without facial detail. No logos, watermarks, readable brand names, URLs, prices, or final typography.\nVisual role contract: CUT 10 is \"almost finished / empty bowls satisfaction\".\nMust show for this CUT: nearly empty bowls, sauce traces, finished plates, utensils resting after the meal.\nCamera/action contract for this CUT: calm post-meal table shot showing completion evidence.\nMust avoid for this CUT: no fresh full-table reveal, no raw prep, no first bite, no menu ordering.\nNeighbor difference rule: adjacent CUTs must not reuse the same camera distance, food action, subject emphasis, or pacing beat.\nSequence diversity rule: do not default to repeated food-only or noodle-lift shots; use a lifted noodle/bite only when the role explicitly needs first-bite, ASMR texture, or peak-feast emphasis, and keep surrounding context visible.\nStoryboard title: 초반 몰입이 강한 에너지형 먹방 — 구독자 반복시청 기반 다음 영상안\nOverall logline: 쯔양님 기존 영상의 가장 많이 본 구간 158개를 근거로 14분 분량의 새 먹방 흐름을 구성합니다.\nUser brief: 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안팎의 스토리보드로 만들어줘. 가게 앞 인트로와 주문 맥락으로 시작하고, 조리 기대감, 첫 입, ASMR 질감, 소스 조합, 클라이맥스 한상, 완식, 맛 평가, 다음 영상 기대감까지 이어지게 구성해줘.\nCUT 10: 다음 소재 연결과 아웃트로 · 편의점 조합 먹방\nVisual direction: 가게 바깥으로 나오는 뒷모습, 간판 없는 거리 분위기, 다음 메뉴 후보를 암시하는 소품으로 마무리합니다. 특히 컵라면 김을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.\nOperator intent: 댓글 유도와 다음 회차 소재를 자연스럽게 연결해 영상 이후 행동을 만듭니다. 이번 주제는 편의점 조합 먹방이라서 컵라면의 짭짤한 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.\nCaption idea for mood only, do not render readable text: 다음 소재 연결 · 댓글 질문과 다음 영상 기대감 남기기 · 편의점 꿀조합 · 컵라면 · 백엔드 에이전트 근거 10:54 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에…\nHeatmap evidence mood: 10:54, replay score 0.912.\nOutput only the image. Fill the whole frame with one coherent CUT; do not include scene labels, timecodes, captions, subtitles, handwriting, speech bubbles, or any readable text.",
+            "generatedAt": "2026-06-15T13:31:46.911269Z",
+            "warnings": [
+              "local_codex_provider: generated via local Codex OAuth provider and persisted for admin storyboard display.",
+              "exact_provenance: image_generation.gpt-image-2 response=resp_043e3733b7944a0a016a2ffe83321c8196914df3b16a5b445d call=ig_043e3733b7944a0a016a2ffe83f704819681acea7e2a67367c"
+            ],
+            "provenance": {
+              "providerId": "local-codex",
+              "authMode": "codex_oauth",
+              "endpoint": "https://chatgpt.com/backend-api/codex/responses",
+              "agentModel": "gpt-5.5",
+              "requestToolType": "image_generation",
+              "requestToolModel": "gpt-image-2",
+              "model": "gpt-image-2",
+              "modelProvenance": "exact",
+              "responseId": "resp_043e3733b7944a0a016a2ffe83321c8196914df3b16a5b445d",
+              "imageCallId": "ig_043e3733b7944a0a016a2ffe83f704819681acea7e2a67367c",
+              "imageItemCount": 1,
+              "generatedImageItemTypes": [
+                "image_generation_call"
+              ],
+              "rawImageItemTypes": [
+                "image_generation_call",
+                "message"
+              ],
+              "requestHash": "677e86a10681cbafca40813fa257f728f9f414bd1257fa76b02801d027e15173",
+              "responseHash": "3814ae938bd66389d10306282e1c6903b743916c84d48cf307b951617d78e885",
+              "hasOpenAIAPIKey": false,
+              "generatedAt": "2026-06-15T13:31:46.911269Z"
             }
           }
         }
       ],
-      "exportMarkdown": "# 대표 예시 · 바로 활용 가능한 먹방 스토리보드\n\n- 요청: 사용자가 접속하자마자 확인 가능한 대표 예시\n- 핵심: 음식 단독 화면보다 가게 앞 인트로 → 주문 맥락 → 조리 기대감 → 한상 공개와 맛 평가 흐름\n\n## 1. 가게 앞 인트로와 오늘의 약속 (90초)\n- 운영 의도: 초반 1분 30초 안에 장소, 방문 이유, 오늘 먹을 대표 메뉴를 이해시켜 이탈을 줄입니다.\n- 화면 연출: 가게 외관, 입구 동선, 주변 분위기, 작은 메뉴 예고 소품을 넓은 화면으로 연결합니다. 음식만 크게 잡지 않고 장소 맥락을 먼저 보여줍니다.\n- 멘트 후보: 오늘은 이 집에서 가장 궁금했던 메뉴를 처음부터 끝까지 흐름 있게 먹어볼게요.\n- 자막 아이디어: 초반 1분 30초 가게 앞 인사 · 장소와 대표 메뉴를 먼저 이해시키기\n- 근거: 00:35 / 반복 시청 가정 99%\n\n## 2. 주문 맥락과 메뉴 선택 이유 (120초)\n- 운영 의도: 왜 이 메뉴를 먹는지, 어떤 조합으로 볼 것인지 초보 시청자도 바로 알게 만듭니다.\n- 화면 연출: 주문하는 손, 메뉴판을 가리키는 동작, 재료 준비, 빈 테이블 세팅을 중간 거리에서 보여줍니다. 읽을 수 있는 글자는 넣지 않습니다.\n- 멘트 후보: 이 메뉴는 양도 중요하지만 어떤 조합으로 먹는지가 포인트예요.\n- 자막 아이디어: 주문과 메뉴 맥락 · 왜 이 메뉴를 고르는지 쉽게 보여주기\n- 근거: 02:10 / 반복 시청 가정 96%\n\n## 3. 조리 기대감과 첫 상 준비 (150초)\n- 운영 의도: 첫 입 전 냄새, 김, 조리 소리로 기대감을 만들되 화면을 음식 단독 화면으로 고정하지 않습니다.\n- 화면 연출: 주방 손동작, 김이 올라오는 조리 도구, 상차림이 채워지는 과정을 중간 거리로 연결합니다. 손과 도구, 테이블의 변화가 함께 보이게 합니다.\n- 멘트 후보: 지금 냄새가 올라오는데, 이 순간부터 이미 기대감이 확 생겨요.\n- 자막 아이디어: 조리 기대감 · 냄새와 상차림으로 첫 입 전 설렘 만들기\n- 근거: 04:40 / 반복 시청 가정 94%\n\n## 4. 한상 공개와 맛 평가 메모 (180초)\n- 운영 의도: 완성된 한상을 넓게 보여주고, 맛 평가와 다음 소재로 이어질 수 있는 운영 메모를 남깁니다.\n- 화면 연출: 테이블 전체, 메인 접시, 사이드 메뉴, 메모하는 손을 한 화면에 두어 실제 촬영 순서표처럼 쓸 수 있게 만듭니다.\n- 멘트 후보: 오늘은 이 조합이 제일 기억에 남아요. 다음에는 다른 메뉴도 이어서 비교해볼게요.\n- 자막 아이디어: 한상 공개와 맛 평가 · 다시 먹고 싶은 이유와 다음 소재 연결\n- 근거: 10:20 / 반복 시청 가정 97%\n\n"
+      "exportMarkdown": "# 초반 몰입이 강한 에너지형 먹방 스토리보드\n\n- 요청: 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안팎의 스토리보드로 만들어줘. 가게 앞 인트로와 주문 맥락으로 시작하고, 조리 기대감, 첫 입, ASMR 질감, 소스 조합, 클라이맥스 한상, 완식, 맛 평가, 다음 영상 기대감까지 이어지게 구성해줘.\n- 구성: 10컷 / 14분\n- AHP 로컬 준비도: 99.87/100 (통과)\n- 근거: 80개 영상 / 158개 피크 / 최상위 100.0%\n\n## 촬영 기획표\n\n| CUT | 역할 | 촬영 지시 | 멘트 | 자막 | 근거 |\n| --- | --- | --- | --- | --- | --- |\n| CUT 01 | 초반 1분 30초 가게 앞 인트로 · 편의점 조합 먹방 | 가게 앞 외관, 입구, 메뉴판, 대표 음식 예고 컷을 1분 30초 안에 빠르게 교차한 뒤 본격 먹방으로 넘어갑니다. 특히 컵라면 김을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다. | “오늘은 이 가게 앞에서부터 기대가 되는데요. 1분 30초 안에 장소와 메뉴를 짧게 보여드리고 바로 들어가볼게요.” 편의점은/는 면치기 소리이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다. | 초반 1분 30초 가게 앞 인사 · 오늘 갈 곳과 대표 메뉴를 먼저 보여주기 · 편의점 꿀조합 · 편의점 · 백엔드 에이전트 근거 06:57 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안… | 06:57 · 백엔드 에이전트 근거 · 로컬 히트맵 근거 · Most replayed / 리플레이 강도 100.0% 구간을 참조 |\n| CUT 02 | 주문과 메뉴 맥락 세팅 · 편의점 조합 먹방 | 메뉴판을 직접 읽히지 않고 손가락, 주문표, 대표 재료, 상차림 준비 컷으로 맥락을 보여줍니다. 특히 삼각김밥을 라면에 얹는 손을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다. | “오늘은 이 조합으로 주문해봤어요. 어떤 맛이 날지 바로 확인해볼게요.” 라면은/는 치즈 늘어나는 식감이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다. | 주문 맥락 · 오늘 먹을 메뉴와 양을 쉽게 알려주기 · 라면과 삼각김밥 한입 · 라면 · 백엔드 에이전트 근거 13:25 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안… | 13:25 · 백엔드 에이전트 근거 · 로컬 히트맵 근거 · Most replayed / 리플레이 강도 100.0% 구간을 참조 |\n| CUT 03 | 조리 과정과 소리 기대감 · 편의점 조합 먹방 | 주방 손동작, 지글거리는 팬, 끓는 국물, 올라오는 김처럼 조리 과정이 보이는 컷을 확보합니다. 특히 치즈가 녹는 순간을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다. | “나오기 전부터 소리가 진짜 좋아요. 이 장면만 봐도 기대돼요.” 삼각김밥은/는 포장 뜯는 소리이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다. | 조리 기대감 · 김과 소리로 첫 입 전 설렘 만들기 · 치즈 조합 피크 · 삼각김밥 · 백엔드 에이전트 근거 10:56 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안… | 10:56 · 백엔드 에이전트 근거 · 로컬 히트맵 근거 · Most replayed / 리플레이 강도 100.0% 구간을 참조 |\n| CUT 04 | 첫 상차림 전체 공개 · 편의점 조합 먹방 | 테이블 전체를 넓게 잡고 메인 음식, 사이드, 소스, 식기 위치가 한눈에 보이게 배치합니다. 특히 컵라면 김을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다. | “한상이 이렇게 나왔습니다. 양이 정말 푸짐하죠?” 치즈은/는 면치기 소리이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다. | 한상 공개 · 메인과 사이드를 한눈에 보여주기 · 편의점 꿀조합 · 치즈 · 백엔드 에이전트 근거 01:55 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안… | 01:55 · 백엔드 에이전트 근거 · 로컬 히트맵 근거 · Most replayed / 리플레이 강도 86.6% 구간을 참조 |\n| CUT 05 | 첫 입 리액션 · 편의점 조합 먹방 | 입장 전 정적 → 한입을 집는 손 → 맛 포인트 자막 → 한 박자 쉬는 편집을 씁니다. 얼굴 대신 손동작과 테이블 반응 중심으로 표현합니다. 특히 삼각김밥을 라면에 얹는 손을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다. | “와… 이건 첫입부터 기준이 생기는데요?” 컵라면은/는 치즈 늘어나는 식감이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다. | 첫 입 리액션 · 한입 직후 맛 포인트를 짧게 자막화 · 라면과 삼각김밥 한입 · 컵라면 · 백엔드 에이전트 근거 13:47 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안… | 13:47 · 백엔드 에이전트 근거 · 로컬 히트맵 근거 · Most replayed / 리플레이 강도 100.0% 구간을 참조 |\n| CUT 06 | 소스와 사이드 조합 변주 · 편의점 조합 먹방 | 소스를 찍는 손, 반찬을 얹는 동작, 조합 전후 비교를 한 컷 안에서 이해되게 보여줍니다. 특히 치즈가 녹는 순간을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다. | “여기서 조합을 한 번 바꿔볼게요.” 편의점은/는 포장 뜯는 소리이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다. | 조합 변주 · 새 소스와 사이드로 흐름 전환 · 치즈 조합 피크 · 편의점 · 백엔드 에이전트 근거 09:29 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안… | 09:29 · 백엔드 에이전트 근거 · 로컬 히트맵 근거 · Most replayed / 리플레이 강도 80.1% 구간을 참조 |\n| CUT 07 | 클라이맥스 히어로 한상 · 편의점 조합 먹방 | 테이블 전체와 가장 큰 한입, 풍성한 음식 높이, 김/윤기가 동시에 보이는 히어로 구도를 만듭니다. 특히 컵라면 김을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다. | “오늘의 하이라이트는 이 한상이에요.” 라면은/는 면치기 소리이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다. | 클라이맥스 한상 · 오늘 가장 강한 대표 장면 만들기 · 편의점 꿀조합 · 라면 · 백엔드 에이전트 근거 12:46 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안… | 12:46 · 백엔드 에이전트 근거 · 로컬 히트맵 근거 · Most replayed / 리플레이 강도 100.0% 구간을 참조 |\n| CUT 08 | 거의 완식과 만족감 · 편의점 조합 먹방 | 비워진 그릇, 남은 소스 자국, 접힌 냅킨, 내려놓은 숟가락 등 완식에 가까운 상태를 차분히 보여줍니다. 특히 삼각김밥을 라면에 얹는 손을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다. | “진짜 거의 다 먹었네요. 마지막까지 맛이 괜찮았어요.” 삼각김밥은/는 치즈 늘어나는 식감이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다. | 거의 완식 · 빈 그릇으로 만족감 보여주기 · 라면과 삼각김밥 한입 · 삼각김밥 · 백엔드 에이전트 근거 17:16 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안… | 17:16 · 백엔드 에이전트 근거 · 로컬 히트맵 근거 · Most replayed / 리플레이 강도 96.1% 구간을 참조 |\n| CUT 09 | 최종 맛 평가와 재방문 포인트 · 편의점 조합 먹방 | 메모하는 손, 메뉴 조합 정리, 대표 접시 하나를 다시 보여주는 컷으로 평가 장면을 구성합니다. 특히 치즈가 녹는 순간을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다. | “오늘은 이 맛 때문에 다시 생각날 것 같아요.” 치즈은/는 포장 뜯는 소리이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다. | 최종 맛 평가 · 맛과 양, 다시 먹고 싶은 이유 정리 · 치즈 조합 피크 · 치즈 · 백엔드 에이전트 근거 06:51 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안… | 06:51 · 백엔드 에이전트 근거 · 로컬 히트맵 근거 · Most replayed / 리플레이 강도 87.4% 구간을 참조 |\n| CUT 10 | 다음 소재 연결과 아웃트로 · 편의점 조합 먹방 | 가게 바깥으로 나오는 뒷모습, 간판 없는 거리 분위기, 다음 메뉴 후보를 암시하는 소품으로 마무리합니다. 특히 컵라면 김을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다. | “다음엔 이 피크를 어떤 메뉴로 이어가면 좋을까요?” 컵라면은/는 면치기 소리이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다. | 다음 소재 연결 · 댓글 질문과 다음 영상 기대감 남기기 · 편의점 꿀조합 · 컵라면 · 백엔드 에이전트 근거 10:54 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안… | 10:54 · 백엔드 에이전트 근거 · 로컬 히트맵 근거 · Most replayed / 리플레이 강도 91.2% 구간을 참조 |\n\n## CUT별 상세 메모\n\n### CUT 01 · 초반 1분 30초 가게 앞 인트로 · 편의점 조합 먹방 (84초)\n- 역할: 쯔양님 영상에서 자주 보이는 00:00~01:30 인사·장소 설명·가게 앞 도입을 먼저 깔고, 가장 강한 리플레이 피크를 예고해 초반 이탈을 막습니다. 이번 주제는 편의점 조합 먹방이라서 편의점의 고소한 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.\n- 촬영: 가게 앞 외관, 입구, 메뉴판, 대표 음식 예고 컷을 1분 30초 안에 빠르게 교차한 뒤 본격 먹방으로 넘어갑니다. 특히 컵라면 김을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.\n- 멘트: “오늘은 이 가게 앞에서부터 기대가 되는데요. 1분 30초 안에 장소와 메뉴를 짧게 보여드리고 바로 들어가볼게요.” 편의점은/는 면치기 소리이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다.\n- 자막: 초반 1분 30초 가게 앞 인사 · 오늘 갈 곳과 대표 메뉴를 먼저 보여주기 · 편의점 꿀조합 · 편의점 · 백엔드 에이전트 근거 06:57 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안…\n- 근거: -D43ezc57z8 06:57 / 백엔드 에이전트 근거 · 로컬 히트맵 근거 · Most replayed / 리플레이 강도 100.0% 구간을 참조\n- URL: https://www.youtube.com/watch?v=-D43ezc57z8\n- 체크리스트:\n  - 촬영 전 피크 구간을 PD/편집자가 함께 1회 재생\n  - 편의점 조합 먹방 주제어(편의점 조합 먹방, 편의점, 고소한)가 화면·오디오·자막에 모두 들어갔는지 확인\n  - 첫 입·질감·소리 컷을 분리 촬영해 쇼츠/썸네일 후보 확보\n  - 과장된 맛 표현보다 실제 리액션과 구독자 반복시청 근거를 우선\n\n### CUT 02 · 주문과 메뉴 맥락 세팅 · 편의점 조합 먹방 (84초)\n- 역할: 시청자가 무엇을 얼마나 먹게 될지 바로 이해하도록 메뉴·양·가격대 느낌을 짧게 정리합니다. 이번 주제는 편의점 조합 먹방이라서 라면의 짭짤한 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.\n- 촬영: 메뉴판을 직접 읽히지 않고 손가락, 주문표, 대표 재료, 상차림 준비 컷으로 맥락을 보여줍니다. 특히 삼각김밥을 라면에 얹는 손을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.\n- 멘트: “오늘은 이 조합으로 주문해봤어요. 어떤 맛이 날지 바로 확인해볼게요.” 라면은/는 치즈 늘어나는 식감이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다.\n- 자막: 주문 맥락 · 오늘 먹을 메뉴와 양을 쉽게 알려주기 · 라면과 삼각김밥 한입 · 라면 · 백엔드 에이전트 근거 13:25 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안…\n- 근거: -H-mhUeu_qk 13:25 / 백엔드 에이전트 근거 · 로컬 히트맵 근거 · Most replayed / 리플레이 강도 100.0% 구간을 참조\n- URL: https://www.youtube.com/watch?v=-H-mhUeu_qk\n- 체크리스트:\n  - 촬영 전 피크 구간을 PD/편집자가 함께 1회 재생\n  - 편의점 조합 먹방 주제어(편의점 조합 먹방, 라면, 짭짤한)가 화면·오디오·자막에 모두 들어갔는지 확인\n  - 첫 입·질감·소리 컷을 분리 촬영해 쇼츠/썸네일 후보 확보\n  - 과장된 맛 표현보다 실제 리액션과 구독자 반복시청 근거를 우선\n\n### CUT 03 · 조리 과정과 소리 기대감 · 편의점 조합 먹방 (84초)\n- 역할: 음식이 나오기 전 김·소리·윤기·조리 동작으로 첫 입 전 기대치를 쌓습니다. 이번 주제는 편의점 조합 먹방이라서 삼각김밥의 뜨끈한 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.\n- 촬영: 주방 손동작, 지글거리는 팬, 끓는 국물, 올라오는 김처럼 조리 과정이 보이는 컷을 확보합니다. 특히 치즈가 녹는 순간을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.\n- 멘트: “나오기 전부터 소리가 진짜 좋아요. 이 장면만 봐도 기대돼요.” 삼각김밥은/는 포장 뜯는 소리이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다.\n- 자막: 조리 기대감 · 김과 소리로 첫 입 전 설렘 만들기 · 치즈 조합 피크 · 삼각김밥 · 백엔드 에이전트 근거 10:56 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안…\n- 근거: -HyRSLWcOeA 10:56 / 백엔드 에이전트 근거 · 로컬 히트맵 근거 · Most replayed / 리플레이 강도 100.0% 구간을 참조\n- URL: https://www.youtube.com/watch?v=-HyRSLWcOeA\n- 체크리스트:\n  - 촬영 전 피크 구간을 PD/편집자가 함께 1회 재생\n  - 편의점 조합 먹방 주제어(편의점 조합 먹방, 삼각김밥, 뜨끈한)가 화면·오디오·자막에 모두 들어갔는지 확인\n  - 첫 입·질감·소리 컷을 분리 촬영해 쇼츠/썸네일 후보 확보\n  - 과장된 맛 표현보다 실제 리액션과 구독자 반복시청 근거를 우선\n\n### CUT 04 · 첫 상차림 전체 공개 · 편의점 조합 먹방 (84초)\n- 역할: 시청자가 화면을 멈추고 한상을 훑어볼 수 있게 메뉴 구성을 한 번에 보여줍니다. 이번 주제는 편의점 조합 먹방이라서 치즈의 꾸덕한 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.\n- 촬영: 테이블 전체를 넓게 잡고 메인 음식, 사이드, 소스, 식기 위치가 한눈에 보이게 배치합니다. 특히 컵라면 김을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.\n- 멘트: “한상이 이렇게 나왔습니다. 양이 정말 푸짐하죠?” 치즈은/는 면치기 소리이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다.\n- 자막: 한상 공개 · 메인과 사이드를 한눈에 보여주기 · 편의점 꿀조합 · 치즈 · 백엔드 에이전트 근거 01:55 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안…\n- 근거: -LGODBDAg1c 01:55 / 백엔드 에이전트 근거 · 로컬 히트맵 근거 · Most replayed / 리플레이 강도 86.6% 구간을 참조\n- URL: https://www.youtube.com/watch?v=-LGODBDAg1c\n- 체크리스트:\n  - 촬영 전 피크 구간을 PD/편집자가 함께 1회 재생\n  - 편의점 조합 먹방 주제어(편의점 조합 먹방, 치즈, 꾸덕한)가 화면·오디오·자막에 모두 들어갔는지 확인\n  - 첫 입·질감·소리 컷을 분리 촬영해 쇼츠/썸네일 후보 확보\n  - 과장된 맛 표현보다 실제 리액션과 구독자 반복시청 근거를 우선\n\n### CUT 05 · 첫 입 리액션 · 편의점 조합 먹방 (84초)\n- 역할: 피크 구간과 닮은 첫 입 리액션을 명확히 배치해 맛의 기준점을 만듭니다. 이번 주제는 편의점 조합 먹방이라서 컵라면의 고소한 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.\n- 촬영: 입장 전 정적 → 한입을 집는 손 → 맛 포인트 자막 → 한 박자 쉬는 편집을 씁니다. 얼굴 대신 손동작과 테이블 반응 중심으로 표현합니다. 특히 삼각김밥을 라면에 얹는 손을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.\n- 멘트: “와… 이건 첫입부터 기준이 생기는데요?” 컵라면은/는 치즈 늘어나는 식감이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다.\n- 자막: 첫 입 리액션 · 한입 직후 맛 포인트를 짧게 자막화 · 라면과 삼각김밥 한입 · 컵라면 · 백엔드 에이전트 근거 13:47 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안…\n- 근거: -RI5PUiPr3g 13:47 / 백엔드 에이전트 근거 · 로컬 히트맵 근거 · Most replayed / 리플레이 강도 100.0% 구간을 참조\n- URL: https://www.youtube.com/watch?v=-RI5PUiPr3g\n- 체크리스트:\n  - 촬영 전 피크 구간을 PD/편집자가 함께 1회 재생\n  - 편의점 조합 먹방 주제어(편의점 조합 먹방, 컵라면, 고소한)가 화면·오디오·자막에 모두 들어갔는지 확인\n  - 첫 입·질감·소리 컷을 분리 촬영해 쇼츠/썸네일 후보 확보\n  - 과장된 맛 표현보다 실제 리액션과 구독자 반복시청 근거를 우선\n\n### CUT 06 · 소스와 사이드 조합 변주 · 편의점 조합 먹방 (84초)\n- 역할: 같은 맛이 반복되지 않도록 조합·소스·사이드 메뉴로 중반 리듬을 바꿉니다. 이번 주제는 편의점 조합 먹방이라서 편의점의 짭짤한 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.\n- 촬영: 소스를 찍는 손, 반찬을 얹는 동작, 조합 전후 비교를 한 컷 안에서 이해되게 보여줍니다. 특히 치즈가 녹는 순간을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.\n- 멘트: “여기서 조합을 한 번 바꿔볼게요.” 편의점은/는 포장 뜯는 소리이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다.\n- 자막: 조합 변주 · 새 소스와 사이드로 흐름 전환 · 치즈 조합 피크 · 편의점 · 백엔드 에이전트 근거 09:29 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안…\n- 근거: -Tf_SWz5f9k 09:29 / 백엔드 에이전트 근거 · 로컬 히트맵 근거 · Most replayed / 리플레이 강도 80.1% 구간을 참조\n- URL: https://www.youtube.com/watch?v=-Tf_SWz5f9k\n- 체크리스트:\n  - 촬영 전 피크 구간을 PD/편집자가 함께 1회 재생\n  - 편의점 조합 먹방 주제어(편의점 조합 먹방, 편의점, 짭짤한)가 화면·오디오·자막에 모두 들어갔는지 확인\n  - 첫 입·질감·소리 컷을 분리 촬영해 쇼츠/썸네일 후보 확보\n  - 과장된 맛 표현보다 실제 리액션과 구독자 반복시청 근거를 우선\n\n### CUT 07 · 클라이맥스 히어로 한상 · 편의점 조합 먹방 (84초)\n- 역할: 가장 강한 장면을 새 영상의 대표 썸네일 후보이자 최고 몰입 구간으로 전환합니다. 이번 주제는 편의점 조합 먹방이라서 라면의 뜨끈한 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.\n- 촬영: 테이블 전체와 가장 큰 한입, 풍성한 음식 높이, 김/윤기가 동시에 보이는 히어로 구도를 만듭니다. 특히 컵라면 김을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.\n- 멘트: “오늘의 하이라이트는 이 한상이에요.” 라면은/는 면치기 소리이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다.\n- 자막: 클라이맥스 한상 · 오늘 가장 강한 대표 장면 만들기 · 편의점 꿀조합 · 라면 · 백엔드 에이전트 근거 12:46 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안…\n- 근거: -X47382RRus 12:46 / 백엔드 에이전트 근거 · 로컬 히트맵 근거 · Most replayed / 리플레이 강도 100.0% 구간을 참조\n- URL: https://www.youtube.com/watch?v=-X47382RRus\n- 체크리스트:\n  - 촬영 전 피크 구간을 PD/편집자가 함께 1회 재생\n  - 편의점 조합 먹방 주제어(편의점 조합 먹방, 라면, 뜨끈한)가 화면·오디오·자막에 모두 들어갔는지 확인\n  - 첫 입·질감·소리 컷을 분리 촬영해 쇼츠/썸네일 후보 확보\n  - 과장된 맛 표현보다 실제 리액션과 구독자 반복시청 근거를 우선\n\n### CUT 08 · 거의 완식과 만족감 · 편의점 조합 먹방 (84초)\n- 역할: 초반 기대가 실제로 채워졌다는 증거를 빈 그릇과 정리된 테이블로 보여줍니다. 이번 주제는 편의점 조합 먹방이라서 삼각김밥의 꾸덕한 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.\n- 촬영: 비워진 그릇, 남은 소스 자국, 접힌 냅킨, 내려놓은 숟가락 등 완식에 가까운 상태를 차분히 보여줍니다. 특히 삼각김밥을 라면에 얹는 손을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.\n- 멘트: “진짜 거의 다 먹었네요. 마지막까지 맛이 괜찮았어요.” 삼각김밥은/는 치즈 늘어나는 식감이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다.\n- 자막: 거의 완식 · 빈 그릇으로 만족감 보여주기 · 라면과 삼각김밥 한입 · 삼각김밥 · 백엔드 에이전트 근거 17:16 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안…\n- 근거: -e0ERP2rFkY 17:16 / 백엔드 에이전트 근거 · 로컬 히트맵 근거 · Most replayed / 리플레이 강도 96.1% 구간을 참조\n- URL: https://www.youtube.com/watch?v=-e0ERP2rFkY\n- 체크리스트:\n  - 촬영 전 피크 구간을 PD/편집자가 함께 1회 재생\n  - 편의점 조합 먹방 주제어(편의점 조합 먹방, 삼각김밥, 꾸덕한)가 화면·오디오·자막에 모두 들어갔는지 확인\n  - 첫 입·질감·소리 컷을 분리 촬영해 쇼츠/썸네일 후보 확보\n  - 과장된 맛 표현보다 실제 리액션과 구독자 반복시청 근거를 우선\n\n### CUT 09 · 최종 맛 평가와 재방문 포인트 · 편의점 조합 먹방 (84초)\n- 역할: 먹은 메뉴의 맛·양·추천 대상·재방문 포인트를 초보자도 이해하게 정리합니다. 이번 주제는 편의점 조합 먹방이라서 치즈의 고소한 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.\n- 촬영: 메모하는 손, 메뉴 조합 정리, 대표 접시 하나를 다시 보여주는 컷으로 평가 장면을 구성합니다. 특히 치즈가 녹는 순간을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.\n- 멘트: “오늘은 이 맛 때문에 다시 생각날 것 같아요.” 치즈은/는 포장 뜯는 소리이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다.\n- 자막: 최종 맛 평가 · 맛과 양, 다시 먹고 싶은 이유 정리 · 치즈 조합 피크 · 치즈 · 백엔드 에이전트 근거 06:51 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안…\n- 근거: -fE1mGc-W8w 06:51 / 백엔드 에이전트 근거 · 로컬 히트맵 근거 · Most replayed / 리플레이 강도 87.4% 구간을 참조\n- URL: https://www.youtube.com/watch?v=-fE1mGc-W8w\n- 체크리스트:\n  - 촬영 전 피크 구간을 PD/편집자가 함께 1회 재생\n  - 편의점 조합 먹방 주제어(편의점 조합 먹방, 치즈, 고소한)가 화면·오디오·자막에 모두 들어갔는지 확인\n  - 첫 입·질감·소리 컷을 분리 촬영해 쇼츠/썸네일 후보 확보\n  - 과장된 맛 표현보다 실제 리액션과 구독자 반복시청 근거를 우선\n\n### CUT 10 · 다음 소재 연결과 아웃트로 · 편의점 조합 먹방 (84초)\n- 역할: 댓글 유도와 다음 회차 소재를 자연스럽게 연결해 영상 이후 행동을 만듭니다. 이번 주제는 편의점 조합 먹방이라서 컵라면의 짭짤한 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.\n- 촬영: 가게 바깥으로 나오는 뒷모습, 간판 없는 거리 분위기, 다음 메뉴 후보를 암시하는 소품으로 마무리합니다. 특히 컵라면 김을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다.\n- 멘트: “다음엔 이 피크를 어떤 메뉴로 이어가면 좋을까요?” 컵라면은/는 면치기 소리이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다.\n- 자막: 다음 소재 연결 · 댓글 질문과 다음 영상 기대감 남기기 · 편의점 꿀조합 · 컵라면 · 백엔드 에이전트 근거 10:54 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안…\n- 근거: -gMCn9VDJns 10:54 / 백엔드 에이전트 근거 · 로컬 히트맵 근거 · Most replayed / 리플레이 강도 91.2% 구간을 참조\n- URL: https://www.youtube.com/watch?v=-gMCn9VDJns\n- 체크리스트:\n  - 촬영 전 피크 구간을 PD/편집자가 함께 1회 재생\n  - 편의점 조합 먹방 주제어(편의점 조합 먹방, 컵라면, 짭짤한)가 화면·오디오·자막에 모두 들어갔는지 확인\n  - 첫 입·질감·소리 컷을 분리 촬영해 쇼츠/썸네일 후보 확보\n  - 과장된 맛 표현보다 실제 리액션과 구독자 반복시청 근거를 우선\n\n\n## 백엔드 에이전트 메모\n\n# LangGraph 스토리보드 - 요청: 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안팎의 스토리보드로 만들어줘. 가게 앞 인트로와 주문 맥락으로 시작하고, 조리 기대감, 첫 입, ASMR 질감, 소스 조합, 클라이맥스 한상, 완식, 맛 평가, 다음 영상 기대감까지 이어지게 구성해줘. - 톤: energetic - 목표 길이: 약 14분 - 생성 방식: Supervisor가 슬롯을 정리하고 Researcher가 장면 근거를 찾은 뒤, Intern 안전 게이트를 거쳐 Designer가 최종 컷을 정리했습니다. ## CUT 구성 ### CUT 01. 초반 1분 30초 가게 앞 인트로 · 편의점 조합 먹방 - 화면: 가게 앞 외관, 입구, 메뉴판, 대표 음식 예고 컷을 1분 30초 안에 빠르게 교차한 뒤 본격 먹방으로 넘어갑니다. 특히 컵라면 김을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다. - 진행 멘트: “오늘은 이 가게 앞에서부터 기대가 되는데요. 1분 30초 안에 장소와 메뉴를 짧게 보여드리고 바로 들어가볼게요.” 편의점은/는 면치기 소리이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다. - 자막: 초반 1분 30초 가게 앞 인사 · 오늘 갈 곳과 대표 메뉴를 먼저 보여주기 · 편의점 꿀조합 · 편의점 · 백엔드 에이전트 근거 06:57 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안… - 근거: 06:57 ### CUT 02. 주문과 메뉴 맥락 세팅 · 편의점 조합 먹방 - 화면: 메뉴판을 직접 읽히지 않고 손가락, 주문표, 대표 재료, 상차림 준비 컷으로 맥락을 보여줍니다. 특히 삼각김밥을 라면에 얹는 손을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다. - 진행 멘트: “오늘은 이 조합으로 주문해봤어요. 어떤 맛이 날지 바로 확인해볼게요.” 라면은/는 치즈 늘어나는 식감이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다. - 자막: 주문 맥락 · 오늘 먹을 메뉴와 양을 쉽게 알려주기 · 라면과 삼각김밥 한입 · 라면 · 백엔드 에이전트 근거 13:25 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안… - 근거: 13:25 ### CUT 03. 조리 과정과 소리 기대감 · 편의점 조합 먹방 - 화면: 주방 손동작, 지글거리는 팬, 끓는 국물, 올라오는 김처럼 조리 과정이 보이는 컷을 확보합니다. 특히 치즈가 녹는 순간을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다. - 진행 멘트: “나오기 전부터 소리가 진짜 좋아요. 이 장면만 봐도 기대돼요.” 삼각김밥은/는 포장 뜯는 소리이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다. - 자막: 조리 기대감 · 김과 소리로 첫 입 전 설렘 만들기 · 치즈 조합 피크 · 삼각김밥 · 백엔드 에이전트 근거 10:56 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안… - 근거: 10:56 ### CUT 04. 첫 상차림 전체 공개 · 편의점 조합 먹방 - 화면: 테이블 전체를 넓게 잡고 메인 음식, 사이드, 소스, 식기 위치가 한눈에 보이게 배치합니다. 특히 컵라면 김을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다. - 진행 멘트: “한상이 이렇게 나왔습니다. 양이 정말 푸짐하죠?” 치즈은/는 면치기 소리이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다. - 자막: 한상 공개 · 메인과 사이드를 한눈에 보여주기 · 편의점 꿀조합 · 치즈 · 백엔드 에이전트 근거 01:55 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안… - 근거: 01:55 ### CUT 05. 첫 입 리액션 · 편의점 조합 먹방 - 화면: 입장 전 정적 → 한입을 집는 손 → 맛 포인트 자막 → 한 박자 쉬는 편집을 씁니다. 얼굴 대신 손동작과 테이블 반응 중심으로 표현합니다. 특히 삼각김밥을 라면에 얹는 손을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다. - 진행 멘트: “와… 이건 첫입부터 기준이 생기는데요?” 컵라면은/는 치즈 늘어나는 식감이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다. - 자막: 첫 입 리액션 · 한입 직후 맛 포인트를 짧게 자막화 · 라면과 삼각김밥 한입 · 컵라면 · 백엔드 에이전트 근거 13:47 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안… - 근거: 13:47 ### CUT 06. 소스와 사이드 조합 변주 · 편의점 조합 먹방 - 화면: 소스를 찍는 손, 반찬을 얹는 동작, 조합 전후 비교를 한 컷 안에서 이해되게 보여줍니다. 특히 치즈가 녹는 순간을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다. - 진행 멘트: “여기서 조합을 한 번 바꿔볼게요.” 편의점은/는 포장 뜯는 소리이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다. - 자막: 조합 변주 · 새 소스와 사이드로 흐름 전환 · 치즈 조합 피크 · 편의점 · 백엔드 에이전트 근거 09:29 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안… - 근거: 09:29 ### CUT 07. 클라이맥스 히어로 한상 · 편의점 조합 먹방 - 화면: 테이블 전체와 가장 큰 한입, 풍성한 음식 높이, 김/윤기가 동시에 보이는 히어로 구도를 만듭니다. 특히 컵라면 김을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다. - 진행 멘트: “오늘의 하이라이트는 이 한상이에요.” 라면은/는 면치기 소리이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다. - 자막: 클라이맥스 한상 · 오늘 가장 강한 대표 장면 만들기 · 편의점 꿀조합 · 라면 · 백엔드 에이전트 근거 12:46 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안… - 근거: 12:46 ### CUT 08. 거의 완식과 만족감 · 편의점 조합 먹방 - 화면: 비워진 그릇, 남은 소스 자국, 접힌 냅킨, 내려놓은 숟가락 등 완식에 가까운 상태를 차분히 보여줍니다. 특히 삼각김밥을 라면에 얹는 손을/를 크게 잡아 편의점 조합 먹방 주제가 다른 장면과 구분되게 만듭니다. - 진행 멘트: “진짜 거의 다 먹었네요. 마지막까지 맛이 괜찮았어요.” 삼각김밥은/는 치즈 늘어나는 식감이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다. - 자막: 거의 완식 · 빈 그릇으로 만족감 보여주기 · 라면과 삼각김밥 한입 · 삼각김밥 · 백엔드 에이전트 근거 17:16 반복 시청 피크 · 초반 몰입이 강한 에너지형 먹방 톤 · 매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안… - 근거: 17:16 ## 안전 게이트 - Intern은 Tool/RPC 생성·삭제를 바로 실행하지 않고 plan/review/human interrupt 상태로만 기록합니다. - BGE/reranker 라벨은 `search_scene_data`가 실제 성공했을 때만 노출됩니다."
     }
   },
   "provenance": {
     "persistedBy": "admin-storyboard-route",
     "localOnly": true,
-    "trustPolicy": "stripUntrustedStoryboardGeneratedImages"
-  }
+    "trustPolicy": "stripUntrustedStoryboardGeneratedImages",
+    "seedSource": "public/qa-history/storyboard/latest-real-data.json",
+    "promotion": "qa-history-to-storyboard-seed",
+    "promotedSceneCount": 10
+  },
+  "seed": true,
+  "description": "관리자 스토리보드 첫 진입에 보여줄 10컷 대표 예시입니다. 로컬 QA history에서 검수된 CUT 이미지만 공용 seed 경로로 승격했습니다."
 }
