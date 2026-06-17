@@ -165,6 +165,7 @@ export type ThumbnailBaseImage = {
   providerId: ThumbnailProviderId;
   model: string;
   modelProvenance: 'exact' | 'requested-label' | 'unknown';
+  hostPresence?: unknown;
 };
 
 export type ThumbnailBackendAgentStatus = {

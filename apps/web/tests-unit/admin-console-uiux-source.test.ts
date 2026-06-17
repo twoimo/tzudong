@@ -2267,6 +2267,12 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     const retrievalSource = source(
       "lib/admin/youtube-thumbnail-generator/retrieval.ts",
     );
+    const thumbnailLocalBridgeContractSource = source(
+      "lib/admin/youtube-thumbnail-generator/local-bridge-contract.ts",
+    );
+    const storyboardLocalBridgeServerSource = source(
+      "lib/admin/storyboard/local-bridge-server.mts",
+    );
     const loadReadinessBody = componentSource.slice(
       componentSource.indexOf("const loadReadiness = useCallback"),
       componentSource.indexOf("const loadThumbnailHistory = useCallback"),
@@ -2306,11 +2312,13 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(componentSource).not.toContain("Google Nano Banana 2 Pro API");
     expect(componentSource).not.toContain("OpenAI GPT Image 2 API (정확)");
-    expect(componentSource).toContain('label: "Codex OAuth"');
-    expect(componentSource).toContain('label: "API Key"');
+    expect(componentSource).toContain("기본 OAuth");
+    expect(componentSource).toContain("고급 로컬");
+    expect(componentSource).toContain("API Key");
     expect(componentSource).toContain('data-thumbnail-api-router-choice="true"');
-    expect(componentSource).toContain('data-thumbnail-api-router-option="openai-gpt-image-2"');
-    expect(componentSource).toContain('data-thumbnail-api-router-option="local-codex"');
+    expect(componentSource).toContain('data-thumbnail-api-router-option="browser-openai-api-key"');
+    expect(componentSource).toContain('data-thumbnail-api-router-option="local-codex-oauth"');
+    expect(componentSource).toContain('data-thumbnail-api-router-option="local-bridge"');
     expect(componentSource).toContain("const submittedProviderId = requestedProviderId;");
     expect(componentSource).not.toContain(
       'requestedProviderId === "local-codex" && browserOpenAIApiKey',
@@ -2438,10 +2446,25 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-thumbnail-api-router-choice="true"',
     );
     expect(componentSource).toContain(
-      'data-thumbnail-api-router-option="openai-gpt-image-2"',
+      'data-thumbnail-api-router-choice="true"',
     );
     expect(componentSource).toContain(
-      'data-thumbnail-api-router-option="local-codex"',
+      'data-thumbnail-api-router-option="local-codex-oauth"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-api-router-option="local-bridge"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-api-router-option="browser-openai-api-key"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-api-router-oauth-transport="server"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-api-router-oauth-transport="local-bridge"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-api-router-fallback="browser-api-key"',
     );
     expect(componentSource).toContain(
       'data-thumbnail-api-router-panel="true"',
@@ -2496,15 +2519,56 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(componentSource).toContain(
       'data-thumbnail-browser-api-key-status={',
     );
-    expect(componentSource).toContain("OpenAI Key · gpt-image-2");
-    expect(componentSource).toContain("사용: {thumbnailImageApiRouterView.label}");
-    expect(componentSource).toContain("sessionKeyBackedOpenAIAvailable");
+    expect(componentSource).toContain("기본 OAuth · 고급 로컬 · API Key 백업");
+    expect(componentSource).toContain("API Key 백업");
+    expect(componentSource).toContain("고급 로컬");
     expect(componentSource).toContain("키 저장됨");
     expect(componentSource).toContain("Codex OAuth");
     expect(componentSource).toContain(
-      "브라우저에만 저장 · gpt-image-2 전용 · DB 저장 없음",
+      "OAuth가 안 될 때만 사용 · 브라우저 저장 · DB 저장 없음",
     );
     expect(componentSource).toContain("gpt-image-2 전용");
+    expect(componentSource).toContain(
+      'data-thumbnail-local-bridge-settings="session-only"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-local-bridge-settings-visibility="advanced-selected"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-local-bridge-storage="browser-session-storage-only"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-local-bridge-server-relay="forbidden"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-local-bridge-token-persistence="session-only"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-local-bridge-url-input="true"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-local-bridge-token-input="true"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-local-bridge-save="true"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-local-bridge-clear="true"',
+    );
+    expect(componentSource).toContain("postThumbnailLocalBridgeImagesRequest");
+    expect(componentSource).toContain("buildThumbnailLocalBridgeReferenceImages");
+    expect(componentSource).toContain("THUMBNAIL_LOCAL_BRIDGE_IMAGES_PATH");
+    expect(componentSource).toContain("thumbnailImageRouteChoice === THUMBNAIL_LOCAL_BRIDGE_ROUTE_ID");
+    expect(thumbnailLocalBridgeContractSource).toContain("THUMBNAIL_LOCAL_BRIDGE_ROUTE_ID");
+    expect(thumbnailLocalBridgeContractSource).toContain("normalizeThumbnailLocalBridgeUrl");
+    expect(thumbnailLocalBridgeContractSource).toContain("normalizeThumbnailLocalBridgeToken");
+    expect(thumbnailLocalBridgeContractSource).toContain("normalizeThumbnailLocalBridgeImagesResponse");
+    expect(thumbnailLocalBridgeContractSource).toContain("modelProvenance === 'exact'");
+    expect(storyboardLocalBridgeServerSource).toContain("THUMBNAIL_LOCAL_BRIDGE_IMAGES_PATH");
+    expect(storyboardLocalBridgeServerSource).toContain("handleThumbnailImages");
+    expect(storyboardLocalBridgeServerSource).toContain("runThumbnailProviderCommand");
+    expect(storyboardLocalBridgeServerSource).toContain("no_relay_transport");
+    expect(storyboardLocalBridgeServerSource).toContain("server_history_persistence: skipped");
     expect(componentSource).not.toContain("이 브라우저 localStorage에만 남습니다.");
     expect(componentSource).not.toContain(
       "이미지 모델은 gpt-image-2만 허용합니다.",
@@ -2544,12 +2608,15 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(componentSource).toContain("handleThumbnailUsageGuideClick");
     expect(componentSource).toContain("handleThumbnailGuidedExampleClick");
+    expect(componentSource).toContain("applyThumbnailGuidedExamplePreviewToCanvas");
+    expect(componentSource).toContain("getThumbnailGenerationPreflightIssues");
     expect(componentSource).toContain("THUMBNAIL_USAGE_GUIDE_TEXT");
     expect(componentSource).toContain("THUMBNAIL_GUIDED_EXAMPLE_PRESETS");
     expect(componentSource).toContain("예시를 화면에 넣었어요");
     expect(componentSource).toContain("guidedExampleVariantIndexRef.current += 1");
     expect(componentSource).toContain("createTextLayersWithGenerationLayout(");
     expect(componentSource).toContain('setActiveLayerId("headline")');
+    expect(componentSource).toContain("Keep the immediate canvas preview visible");
     expect(componentSource).toContain("실제 이미지 생성 전 빠르게 보여 주는 예시 화면입니다.");
     expect(componentSource).toContain("void runThumbnailGeneration({");
     expect(componentSource).toContain('markCanvasAction("예시 썸네일 생성 시작")');
@@ -2573,9 +2640,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "THUMBNAIL_BROWSER_MODEL_KEYS_STORAGE_KEY",
     );
     expect(componentSource).not.toContain("thumbnailSessionGeminiApiKey");
-    expect(componentSource).toContain("finalResult.providerId ?? providerId");
+    expect(componentSource).toContain("resolvedFinalResult.providerId ?? providerId");
     expect(componentSource).toContain(
-      "finalResult.generationMode ?? generationMode",
+      "resolvedFinalResult.generationMode ?? generationMode",
     );
     expect(componentSource).toContain('data-thumbnail-chat-topic-state="true"');
     expect(componentSource).not.toContain(
@@ -3075,6 +3142,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-thumbnail-generation-skeleton-variant="neutral-gray"',
     );
     expect(componentSource).toContain(
+      'data-thumbnail-generation-skeleton-effect="glass-shimmer"',
+    );
+    expect(componentSource).toContain(
       'data-thumbnail-unified-generation-skeleton="true"',
     );
     expect(componentSource).toContain(
@@ -3160,19 +3230,23 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "현재 선택한 실제 이미지 모델을 실행할 수 없습니다:",
     );
     expect(
-      runThumbnailGenerationBody.indexOf("if (!providerAvailability.available"),
+      runThumbnailGenerationBody.indexOf("if (!isLocalBridgeRoute && providerAvailability && !providerAvailability.available"),
+    ).toBeGreaterThan(-1);
+    expect(runThumbnailGenerationBody).toContain(
+      "const submittedPreflightIssues = getThumbnailGenerationPreflightIssues",
+    );
+    expect(
+      runThumbnailGenerationBody.indexOf("if (submittedPreflightIssues.length > 0)"),
     ).toBeGreaterThan(-1);
     expect(
-      runThumbnailGenerationBody.indexOf("if (preflightIssues.length > 0)"),
-    ).toBeGreaterThan(-1);
-    expect(
-      runThumbnailGenerationBody.indexOf("if (!providerAvailability.available"),
+      runThumbnailGenerationBody.indexOf("if (!isLocalBridgeRoute && providerAvailability && !providerAvailability.available"),
     ).toBeLessThan(
-      runThumbnailGenerationBody.indexOf("if (preflightIssues.length > 0)"),
+      runThumbnailGenerationBody.indexOf("if (submittedPreflightIssues.length > 0)"),
     );
     expect(componentSource).not.toContain(
       "THUMBNAIL_PROVIDER_UNAVAILABLE_MESSAGE",
     );
+    expect(runThumbnailGenerationBody).not.toContain("if (preflightIssues.length > 0)");
     expect(runThumbnailGenerationBody).not.toContain("preflightIssues.filter(");
     expect(componentSource).toContain('title: "썸네일 생성 실패"');
     expect(componentSource).not.toContain('data-thumbnail-error-action="true"');
@@ -3196,11 +3270,13 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "선택한 실제 이미지 모델을 사용할 수 없습니다.",
     );
     expect(componentSource).not.toContain("OpenAI GPT Image 2 API (정확)");
-    expect(componentSource).toContain('label: "Codex OAuth"');
-    expect(componentSource).toContain('label: "API Key"');
+    expect(componentSource).toContain("기본 OAuth");
+    expect(componentSource).toContain("고급 로컬");
+    expect(componentSource).toContain("API Key");
     expect(componentSource).toContain('data-thumbnail-api-router-choice="true"');
-    expect(componentSource).toContain('data-thumbnail-api-router-option="openai-gpt-image-2"');
-    expect(componentSource).toContain('data-thumbnail-api-router-option="local-codex"');
+    expect(componentSource).toContain('data-thumbnail-api-router-option="browser-openai-api-key"');
+    expect(componentSource).toContain('data-thumbnail-api-router-option="local-codex-oauth"');
+    expect(componentSource).toContain('data-thumbnail-api-router-option="local-bridge"');
     expect(componentSource).not.toContain(
       "Codex built-in imagegen 로컬 (불투명)",
     );
@@ -3295,7 +3371,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'const [generationMode, setGenerationMode] = useState<GenerationMode>("direct_provider")',
     );
     expect(componentSource).toContain(
-      "const submittedGenerationMode = overrides.generationMode ?? generationMode;",
+      "const submittedGenerationMode = isLocalBridgeRoute ? \"direct_provider\" : overrides.generationMode ?? generationMode;",
     );
     expect(componentSource).toContain(
       "const nextResult = { ...(payload as GenerationResult), generationMode: submittedGenerationMode };",
@@ -4035,6 +4111,18 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "lib/admin/storyboard/image-provider-readiness.ts",
     );
     const imageTrustSource = source("lib/admin/storyboard/image-trust.ts");
+    const localBridgeContractSource = source(
+      "lib/admin/storyboard/local-bridge-contract.ts",
+    );
+    const localBridgeCoreSource = source(
+      "lib/admin/local-bridge/core-contract.ts",
+    );
+    const localBridgeServerSource = source(
+      "lib/admin/storyboard/local-bridge-server.mts",
+    );
+    const localBridgeScriptSource = source(
+      "scripts/storyboard-local-bridge.ts",
+    );
     const historyClientSource = source(
       "lib/admin/storyboard/history-client.ts",
     );
@@ -4129,7 +4217,57 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-storyboard-chat-settings-panel="true"',
     );
     expect(storyboardSource).toContain("이미지 설정");
-    expect(storyboardSource).toContain("OpenAI API Key");
+    expect(storyboardSource).toContain("기본 OAuth · 고급 로컬 · API Key 백업");
+    expect(storyboardSource).not.toContain("OpenAI Key · OAuth · Local Bridge");
+    expect(storyboardSource).toContain("API Key 백업");
+    expect(storyboardSource).toContain(
+      'data-storyboard-api-router-choice="true"',
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-api-router-choice-layout="oauth-deduped"',
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-api-router-option="browser-openai-api-key"',
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-api-router-option="local-codex-oauth"',
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-api-router-option="local-bridge"',
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-api-router-oauth-transport="server"',
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-api-router-oauth-transport="local-bridge"',
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-api-router-fallback="browser-api-key"',
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-local-bridge-settings="session-only"',
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-local-bridge-settings-visibility="advanced-selected"',
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-local-bridge-server-relay="forbidden"',
+    );
+    expect(storyboardSource).toContain(
+      "postStoryboardLocalBridgeImagesRequest",
+    );
+    expect(storyboardSource).toContain(
+      'fetch(`${baseUrl}/v1/storyboard/images`',
+    );
+    expect(storyboardSource).toContain(
+      "storyboardImageRouteChoice === STORYBOARD_LOCAL_BRIDGE_ROUTE_ID",
+    );
+    expect(storyboardSource).toContain(
+      "normalizeStoryboardLocalBridgeToken(token)",
+    );
+    expect(storyboardSource).toContain(
+      "normalizeStoryboardLocalBridgeImagesResponse",
+    );
     expect(storyboardSource).toContain(
       'data-storyboard-api-router-choice="true"',
     );
@@ -4364,8 +4502,20 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).toContain("STORYBOARD_SHARED_SEED_REAL_DATA_URL,");
     expect(storyboardSource).toContain('"shared-seed"');
     const sharedSeedSource = source("public/storyboard-seed/latest-real-data.json");
-    expect(sharedSeedSource).toContain('"dataUrl": "/storyboard-seed/generated/cut-01.png"');
-    expect(sharedSeedSource).not.toContain('/qa-history/storyboard/generated/2026-06-14T07-43-05-936Z-23a98498/cut-01.png');
+    const sharedSeed = JSON.parse(sharedSeedSource) as {
+      result: { storyboard: { scenes: Array<{ generatedImage?: { dataUrl?: string } }> } };
+    };
+    const sharedSeedImageUrls = sharedSeed.result.storyboard.scenes.map(
+      (scene) => scene.generatedImage?.dataUrl,
+    );
+    expect(sharedSeedImageUrls).toHaveLength(10);
+    expect(sharedSeedImageUrls).toEqual(
+      Array.from(
+        { length: 10 },
+        (_, index) => `/storyboard-seed/generated/cut-${String(index + 1).padStart(2, "0")}.png`,
+      ),
+    );
+    expect(sharedSeedSource).not.toContain('/qa-history/storyboard/generated/');
     expect(storyboardSource).toContain("initialResult.runUrl");
     expect(storyboardSource).toContain("공용 기본 스토리보드");
     expect(storyboardSource).toContain("STORYBOARD_HISTORY_INDEX_URL");
@@ -5521,6 +5671,31 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(storyboardSource).not.toContain(
       "user_id: storyboardBrowserOpenAIApiKey",
+    );
+    expect(localBridgeContractSource).toContain(
+      "STORYBOARD_LOCAL_BRIDGE_DEFAULT_URL = LOCAL_BRIDGE_DEFAULT_URL",
+    );
+    expect(localBridgeCoreSource).toContain(
+      "LOCAL_BRIDGE_DEFAULT_URL = 'http://127.0.0.1:17873'",
+    );
+    expect(localBridgeCoreSource).toContain(
+      "http://127.0.0.1 또는 localhost 주소만 사용할 수 있습니다.",
+    );
+    expect(localBridgeContractSource).toContain(
+      "getTrustedStoryboardGeneratedImage",
+    );
+    expect(localBridgeServerSource).toContain(
+      "Access-Control-Allow-Private-Network",
+    );
+    expect(localBridgeServerSource).toContain(
+      "TZUDONG_LOCAL_BRIDGE_UNSAFE_HOST",
+    );
+    expect(localBridgeServerSource).toContain("OPENAI_API_KEY");
+    expect(localBridgeServerSource).toContain(
+      "providerId: STORYBOARD_IMAGE_PROVIDER_ID",
+    );
+    expect(localBridgeScriptSource).toContain(
+      "startStoryboardLocalBridgeServer",
     );
     expect(imageReadinessSource).toContain("gpt-image-2");
     expect(imageReadinessSource).toContain("browser-openai-api-key");
