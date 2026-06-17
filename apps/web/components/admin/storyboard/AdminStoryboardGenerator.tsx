@@ -99,6 +99,17 @@ import {
   isStoryboardImageProviderReady,
   mapStoryboardImageProviderReadiness,
 } from "@/lib/admin/storyboard/image-provider-readiness";
+import {
+  STORYBOARD_LOCAL_BRIDGE_DEFAULT_URL,
+  STORYBOARD_LOCAL_BRIDGE_ROUTE_ID,
+  buildStoryboardLocalBridgeImagesRequest,
+  getStoryboardLocalBridgeAuthHeaders,
+  normalizeStoryboardLocalBridgeImagesResponse,
+  normalizeStoryboardLocalBridgeToken,
+  normalizeStoryboardLocalBridgeUrl,
+  redactStoryboardLocalBridgeSecretText,
+  type StoryboardLocalBridgeStatus,
+} from "@/lib/admin/storyboard/local-bridge-contract";
 import { cn } from "@/lib/utils";
 
 type GeneratorForm = {
@@ -260,6 +271,17 @@ type StoryboardBrowserModelKeysCache = {
   storage: "browser_local_storage_only";
 };
 
+const STORYBOARD_LOCAL_BRIDGE_SESSION_STORAGE_KEY =
+  "tzudong.admin.storyboard.localBridge.v1" as const;
+
+type StoryboardLocalBridgeSessionCache = {
+  version: 1;
+  bridgeUrl: string;
+  token: string;
+  savedAt: string;
+  storage: "browser_session_storage_only";
+};
+
 function normalizeStoryboardBrowserOpenAIApiKeyInput(value: string) {
   const trimmed = value.trim();
   if (!trimmed) return null;
@@ -327,6 +349,68 @@ function clearStoryboardBrowserModelKeysCache() {
   window.localStorage.removeItem(STORYBOARD_BROWSER_MODEL_KEYS_STORAGE_KEY);
 }
 
+function maskStoryboardLocalBridgeToken(value: string | null) {
+  if (!value) return "";
+  return `${value.slice(0, 4)}…${value.slice(-4)}`;
+}
+
+function readStoryboardLocalBridgeSessionCache():
+  | StoryboardLocalBridgeSessionCache
+  | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.sessionStorage.getItem(
+      STORYBOARD_LOCAL_BRIDGE_SESSION_STORAGE_KEY,
+    );
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<StoryboardLocalBridgeSessionCache>;
+    if (
+      parsed.version !== 1 ||
+      parsed.storage !== "browser_session_storage_only" ||
+      typeof parsed.bridgeUrl !== "string" ||
+      typeof parsed.token !== "string" ||
+      typeof parsed.savedAt !== "string"
+    ) {
+      return null;
+    }
+    const bridgeUrl = normalizeStoryboardLocalBridgeUrl(parsed.bridgeUrl);
+    const token = normalizeStoryboardLocalBridgeToken(parsed.token);
+    if (!token) return null;
+    return {
+      version: 1,
+      bridgeUrl,
+      token,
+      savedAt: parsed.savedAt,
+      storage: "browser_session_storage_only",
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeStoryboardLocalBridgeSessionCache(
+  bridgeUrl: string,
+  token: string,
+) {
+  const cache: StoryboardLocalBridgeSessionCache = {
+    version: 1,
+    bridgeUrl: normalizeStoryboardLocalBridgeUrl(bridgeUrl),
+    token,
+    savedAt: new Date().toISOString(),
+    storage: "browser_session_storage_only",
+  };
+  window.sessionStorage.setItem(
+    STORYBOARD_LOCAL_BRIDGE_SESSION_STORAGE_KEY,
+    JSON.stringify(cache),
+  );
+  return cache;
+}
+
+function clearStoryboardLocalBridgeSessionCache() {
+  if (typeof window === "undefined") return;
+  window.sessionStorage.removeItem(STORYBOARD_LOCAL_BRIDGE_SESSION_STORAGE_KEY);
+}
+
 function getStoryboardBrowserModelKeyHeaders(
   openAIApiKey: string | null,
 ): Record<string, string> {
@@ -335,20 +419,30 @@ function getStoryboardBrowserModelKeyHeaders(
     : {};
 }
 
-type StoryboardImageRouteChoice = "browser-openai-api-key" | "local-codex-oauth";
+type StoryboardImageRouteChoice =
+  | "browser-openai-api-key"
+  | "local-codex-oauth"
+  | typeof STORYBOARD_LOCAL_BRIDGE_ROUTE_ID;
 
 type StoryboardImageApiRouterView = {
   id: StoryboardImageRouteChoice | "setup-required";
   label: string;
   statusLabel: string;
   summary: string;
-  codexOAuthStatus: "active" | "checking" | "unavailable" | "api-key-active";
+  codexOAuthStatus:
+    | "active"
+    | "checking"
+    | "unavailable"
+    | "api-key-active"
+    | "local-bridge-active"
+    | "local-bridge-unpaired";
 };
 
 function getStoryboardImageApiRouterView(
   readiness: StoryboardImageProviderReadiness,
   selectedRoute: StoryboardImageRouteChoice,
   hasBrowserOpenAIApiKey: boolean,
+  hasLocalBridgeToken: boolean,
 ): StoryboardImageApiRouterView {
   if (selectedRoute === "browser-openai-api-key") {
     const isBrowserOpenAIApiKeyReady =
@@ -372,14 +466,14 @@ function getStoryboardImageApiRouterView(
   if (selectedRoute === "local-codex-oauth") {
     return {
       id: "local-codex-oauth",
-      label: "Codex CLI OAuth",
+      label: "기본 OAuth",
       statusLabel:
         readiness.status === "ready" && readiness.providerId === STORYBOARD_IMAGE_PROVIDER_ID
           ? "사용 중"
           : readiness.status === "checking"
             ? "확인 중"
             : "확인 필요",
-      summary: "로컬 Codex OAuth 브리지로 gpt-image-2를 호출합니다.",
+      summary: "서버 라우터가 Codex OAuth로 gpt-image-2를 호출합니다.",
       codexOAuthStatus:
         readiness.status === "ready" && readiness.providerId === STORYBOARD_IMAGE_PROVIDER_ID
           ? "active"
@@ -389,11 +483,34 @@ function getStoryboardImageApiRouterView(
     };
   }
 
+  if (selectedRoute === STORYBOARD_LOCAL_BRIDGE_ROUTE_ID) {
+    const isReady =
+      readiness.status === "ready" &&
+      readiness.providerId === STORYBOARD_IMAGE_PROVIDER_ID;
+    return {
+      id: STORYBOARD_LOCAL_BRIDGE_ROUTE_ID,
+      label: "고급 로컬",
+      statusLabel: !hasLocalBridgeToken
+        ? "토큰 필요"
+        : isReady
+          ? "연결됨"
+          : readiness.status === "checking"
+            ? "확인 중"
+            : "확인 필요",
+      summary: "같은 Codex OAuth를 사용자 PC 브릿지에서 직접 실행합니다.",
+      codexOAuthStatus: isReady
+        ? "local-bridge-active"
+        : hasLocalBridgeToken
+          ? "checking"
+          : "local-bridge-unpaired",
+    };
+  }
+
   return {
     id: "setup-required",
     label: "설정 필요",
     statusLabel: readiness.status === "checking" ? "확인 중" : "설정 필요",
-    summary: "OpenAI API 키를 저장하거나 Codex CLI OAuth 상태를 확인해 주세요.",
+    summary: "기본 OAuth, 고급 로컬, API Key 백업 중 하나를 확인해 주세요.",
     codexOAuthStatus:
       readiness.status === "checking" ? "checking" : "unavailable",
   };
@@ -2566,6 +2683,207 @@ async function getStoryboardImageProviderStatusRequest(
   return response.json() as Promise<StoryboardImageProviderStatusResponse>;
 }
 
+function mapStoryboardLocalBridgeStatusToReadiness(
+  status: StoryboardLocalBridgeStatus,
+  message?: string,
+): StoryboardImageProviderReadiness {
+  const checkedAt = new Date().toISOString();
+  if (status === "connected") {
+    return {
+      status: "ready",
+      label: "로컬 브릿지 연결됨",
+      summary: "사용자 PC의 로컬 브릿지가 gpt-image-2 생성 준비를 마쳤습니다.",
+      detail:
+        "이 모드는 Vercel/Next 서버를 중계하지 않고 브라우저에서 127.0.0.1 브릿지로 직접 요청합니다.",
+      reason: "ready",
+      model: STORYBOARD_IMAGE_PROVIDER_MODEL,
+      providerId: STORYBOARD_IMAGE_PROVIDER_ID,
+      modelProvenance: STORYBOARD_IMAGE_PROVIDER_EXACT_PROVENANCE,
+      command: "browser-to-127.0.0.1-local-bridge",
+      target: { width: 1280, height: 720, aspectRatio: "16:9" },
+      checkedAt,
+    };
+  }
+  if (status === "checking") {
+    return {
+      ...INITIAL_STORYBOARD_IMAGE_PROVIDER_READINESS,
+      label: "로컬 브릿지 확인 중",
+      summary: "사용자 PC의 로컬 브릿지 연결과 pairing token을 확인하고 있습니다.",
+      detail: "확인이 끝나기 전에는 새 이미지 만들기를 잠시 중단합니다.",
+      checkedAt,
+    };
+  }
+  return {
+    status: status === "blocked" ? "blocked_provenance" : "error",
+    label:
+      status === "unpaired"
+        ? "로컬 브릿지 토큰 필요"
+        : status === "auth_required"
+          ? "Codex OAuth 로그인 필요"
+          : status === "unavailable"
+            ? "로컬 브릿지 꺼짐"
+            : "로컬 브릿지 확인 실패",
+    summary:
+      message ??
+      (status === "unpaired"
+        ? "터미널에 표시된 pairing token을 입력해야 합니다."
+        : status === "auth_required"
+          ? "로컬 Codex CLI OAuth 인증 파일을 찾지 못했습니다."
+          : status === "unavailable"
+            ? "127.0.0.1 로컬 브릿지에 연결할 수 없습니다."
+            : "로컬 브릿지 응답을 신뢰할 수 없습니다."),
+    detail:
+      "고급 사용자 기능은 사용자 로컬에서 브릿지를 직접 실행한 경우에만 활성화됩니다. 실패 시 프로덕션 서버로 우회하지 않습니다.",
+    reason: "local_codex_bridge_unavailable",
+    model: STORYBOARD_IMAGE_PROVIDER_MODEL,
+    providerId: STORYBOARD_IMAGE_PROVIDER_ID,
+    checkedAt,
+  };
+}
+
+async function getStoryboardLocalBridgeStatusRequest(
+  bridgeUrl: string,
+  token: string | null,
+): Promise<{
+  status: StoryboardLocalBridgeStatus;
+  message: string;
+  readiness: StoryboardImageProviderReadiness;
+}> {
+  let baseUrl: string;
+  try {
+    baseUrl = normalizeStoryboardLocalBridgeUrl(bridgeUrl);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "로컬 브릿지 주소가 올바르지 않습니다.";
+    return {
+      status: "blocked",
+      message,
+      readiness: mapStoryboardLocalBridgeStatusToReadiness("blocked", message),
+    };
+  }
+  if (!token) {
+    const message = "터미널에 표시된 pairing token을 입력해 주세요.";
+    return {
+      status: "unpaired",
+      message,
+      readiness: mapStoryboardLocalBridgeStatusToReadiness("unpaired", message),
+    };
+  }
+
+  try {
+    const health = await fetch(`${baseUrl}/health`, {
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    });
+    if (!health.ok) {
+      throw new Error(`로컬 브릿지 health 확인 실패 (${health.status})`);
+    }
+    const healthPayload = (await health.json().catch(() => null)) as {
+      bridge?: string;
+      providerId?: string;
+      model?: string;
+    } | null;
+    if (
+      healthPayload?.bridge !== "tzudong-storyboard-local-bridge" ||
+      healthPayload.providerId !== STORYBOARD_IMAGE_PROVIDER_ID ||
+      healthPayload.model !== STORYBOARD_IMAGE_PROVIDER_MODEL
+    ) {
+      const message = "로컬 브릿지 health 응답이 스토리보드 신뢰 정책과 맞지 않습니다.";
+      return {
+        status: "blocked",
+        message,
+        readiness: mapStoryboardLocalBridgeStatusToReadiness("blocked", message),
+      };
+    }
+
+    const authStatus = await fetch(`${baseUrl}/auth-status`, {
+      cache: "no-store",
+      headers: getStoryboardLocalBridgeAuthHeaders(token),
+    });
+    const authPayload = (await authStatus.json().catch(() => null)) as {
+      status?: "ready" | "auth_required" | "unpaired";
+      detail?: string;
+    } | null;
+    if (authStatus.status === 401 || authStatus.status === 403) {
+      const message = "pairing token이 맞지 않습니다. 터미널의 최신 token을 다시 입력해 주세요.";
+      return {
+        status: "unpaired",
+        message,
+        readiness: mapStoryboardLocalBridgeStatusToReadiness("unpaired", message),
+      };
+    }
+    if (!authStatus.ok || authPayload?.status === "auth_required") {
+      const message =
+        authPayload?.detail ??
+        "로컬 Codex CLI OAuth 인증 파일을 찾지 못했습니다.";
+      return {
+        status: "auth_required",
+        message,
+        readiness: mapStoryboardLocalBridgeStatusToReadiness("auth_required", message),
+      };
+    }
+    if (authPayload?.status !== "ready") {
+      const message = "로컬 브릿지 pairing 상태를 확인하지 못했습니다.";
+      return {
+        status: "unpaired",
+        message,
+        readiness: mapStoryboardLocalBridgeStatusToReadiness("unpaired", message),
+      };
+    }
+
+    const message = "로컬 브릿지 연결 완료 · 브라우저에서 127.0.0.1로 직접 요청합니다.";
+    return {
+      status: "connected",
+      message,
+      readiness: mapStoryboardLocalBridgeStatusToReadiness("connected", message),
+    };
+  } catch (error) {
+    const rawMessage =
+      error instanceof Error
+        ? error.message
+        : "로컬 브릿지에 연결할 수 없습니다.";
+    const message = redactStoryboardLocalBridgeSecretText(rawMessage, token);
+    return {
+      status: "unavailable",
+      message,
+      readiness: mapStoryboardLocalBridgeStatusToReadiness("unavailable", message),
+    };
+  }
+}
+
+async function postStoryboardLocalBridgeImagesRequest(
+  result: StoryboardGenerationResult,
+  scenes: StoryboardGenerationResult["storyboard"]["scenes"],
+  bridgeUrl: string,
+  token: string | null,
+): Promise<StoryboardImagesResponse> {
+  const normalizedToken = normalizeStoryboardLocalBridgeToken(token);
+  if (!normalizedToken) {
+    throw new Error("로컬 브릿지 pairing token을 먼저 저장해 주세요.");
+  }
+  const baseUrl = normalizeStoryboardLocalBridgeUrl(bridgeUrl);
+  const response = await fetch(`${baseUrl}/v1/storyboard/images`, {
+    method: "POST",
+    headers: getStoryboardLocalBridgeAuthHeaders(normalizedToken),
+    body: JSON.stringify(buildStoryboardLocalBridgeImagesRequest(result, scenes)),
+  });
+
+  const payload = (await response.json().catch(() => null)) as unknown;
+  if (!response.ok) {
+    const failure = payload as { error?: string; detail?: string } | null;
+    throw new Error(
+      redactStoryboardLocalBridgeSecretText(
+        failure?.detail ??
+          failure?.error ??
+          `로컬 브릿지 이미지 생성 실패 (${response.status})`,
+        normalizedToken,
+      ),
+    );
+  }
+
+  return normalizeStoryboardLocalBridgeImagesResponse(payload);
+}
+
 function loadCanvasImage(src?: string) {
   if (!src) return Promise.resolve(null);
   return new Promise<HTMLImageElement | null>((resolveImage) => {
@@ -2725,6 +3043,35 @@ export function AdminStoryboardGenerator({
     storyboardBrowserOpenAIApiKeyMessage,
     setStoryboardBrowserOpenAIApiKeyMessage,
   ] = useState<string | null>(null);
+  const [storyboardLocalBridgeUrl, setStoryboardLocalBridgeUrl] = useState<string>(
+    STORYBOARD_LOCAL_BRIDGE_DEFAULT_URL,
+  );
+  const [
+    storyboardLocalBridgeUrlDraft,
+    setStoryboardLocalBridgeUrlDraft,
+  ] = useState<string>(STORYBOARD_LOCAL_BRIDGE_DEFAULT_URL);
+  const [storyboardLocalBridgeToken, setStoryboardLocalBridgeToken] =
+    useState<string | null>(null);
+  const [
+    storyboardLocalBridgeTokenDraft,
+    setStoryboardLocalBridgeTokenDraft,
+  ] = useState("");
+  const [
+    storyboardLocalBridgeSavedAt,
+    setStoryboardLocalBridgeSavedAt,
+  ] = useState<string | null>(null);
+  const [
+    storyboardLocalBridgeStatus,
+    setStoryboardLocalBridgeStatus,
+  ] = useState<StoryboardLocalBridgeStatus>("unpaired");
+  const [
+    storyboardLocalBridgeMessage,
+    setStoryboardLocalBridgeMessage,
+  ] = useState<string | null>(null);
+  const [
+    storyboardLocalBridgeError,
+    setStoryboardLocalBridgeError,
+  ] = useState<string | null>(null);
   const [chatDraft, setChatDraft] = useState("");
   const [storyboardCanvasFocus, setStoryboardCanvasFocus] =
     useState<StoryboardChatFocusContext | null>(null);
@@ -2857,7 +3204,59 @@ export function AdminStoryboardGenerator({
   }, []);
 
   useEffect(() => {
+    const cache = readStoryboardLocalBridgeSessionCache();
+    if (!cache) return;
+    setStoryboardLocalBridgeUrl(cache.bridgeUrl);
+    setStoryboardLocalBridgeUrlDraft(cache.bridgeUrl);
+    setStoryboardLocalBridgeToken(cache.token);
+    setStoryboardLocalBridgeSavedAt(cache.savedAt);
+    setStoryboardLocalBridgeStatus("checking");
+    setStoryboardImageRouteChoice(STORYBOARD_LOCAL_BRIDGE_ROUTE_ID);
+    setStoryboardLocalBridgeMessage(
+      "이 탭의 sessionStorage에 저장된 로컬 브릿지 설정을 확인하고 있습니다.",
+    );
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
+
+    if (storyboardImageRouteChoice === STORYBOARD_LOCAL_BRIDGE_ROUTE_ID) {
+      setStoryboardLocalBridgeStatus("checking");
+      setStoryboardImageProviderReadiness(
+        mapStoryboardLocalBridgeStatusToReadiness("checking"),
+      );
+      getStoryboardLocalBridgeStatusRequest(
+        storyboardLocalBridgeUrl,
+        storyboardLocalBridgeToken,
+      )
+        .then((result) => {
+          if (cancelled) return;
+          setStoryboardLocalBridgeStatus(result.status);
+          setStoryboardLocalBridgeMessage(result.message);
+          setStoryboardLocalBridgeError(
+            result.status === "connected" ? null : result.message,
+          );
+          setStoryboardImageProviderReadiness(result.readiness);
+        })
+        .catch((error) => {
+          if (cancelled) return;
+          const message = redactStoryboardLocalBridgeSecretText(
+            error instanceof Error
+              ? error.message
+              : "로컬 브릿지 상태를 읽지 못했습니다.",
+            storyboardLocalBridgeToken,
+          );
+          setStoryboardLocalBridgeStatus("error");
+          setStoryboardLocalBridgeError(message);
+          setStoryboardLocalBridgeMessage(message);
+          setStoryboardImageProviderReadiness(
+            mapStoryboardLocalBridgeStatusToReadiness("error", message),
+          );
+        });
+      return () => {
+        cancelled = true;
+      };
+    }
 
     const routeOpenAIApiKey =
       storyboardImageRouteChoice === "browser-openai-api-key"
@@ -2891,7 +3290,12 @@ export function AdminStoryboardGenerator({
     return () => {
       cancelled = true;
     };
-  }, [storyboardBrowserOpenAIApiKey, storyboardImageRouteChoice]);
+  }, [
+    storyboardBrowserOpenAIApiKey,
+    storyboardImageRouteChoice,
+    storyboardLocalBridgeToken,
+    storyboardLocalBridgeUrl,
+  ]);
 
   useEffect(() => {
     const transcript = chatTranscriptRef.current;
@@ -2984,6 +3388,10 @@ export function AdminStoryboardGenerator({
   const isStoryboardBrowserOpenAIApiKeySaved = Boolean(
     storyboardBrowserOpenAIApiKey,
   );
+  const isStoryboardLocalBridgePaired = Boolean(storyboardLocalBridgeToken);
+  const shouldShowStoryboardLocalBridgeSettings =
+    storyboardImageRouteChoice === STORYBOARD_LOCAL_BRIDGE_ROUTE_ID ||
+    Boolean(storyboardLocalBridgeToken || storyboardLocalBridgeError);
   const expectedStoryboardImageProviderId =
     storyboardImageRouteChoice === "browser-openai-api-key"
       ? STORYBOARD_BROWSER_OPENAI_IMAGE_PROVIDER_ID
@@ -2994,7 +3402,9 @@ export function AdminStoryboardGenerator({
   const isStoryboardImageProviderAvailable =
     storyboardImageRouteChoice === "browser-openai-api-key"
       ? isStoryboardBrowserOpenAIApiKeySaved && isSelectedStoryboardImageProviderReady
-      : isSelectedStoryboardImageProviderReady;
+      : storyboardImageRouteChoice === STORYBOARD_LOCAL_BRIDGE_ROUTE_ID
+        ? isStoryboardLocalBridgePaired && isSelectedStoryboardImageProviderReady
+        : isSelectedStoryboardImageProviderReady;
   const selectedStoryboardSceneNo =
     storyboardCanvasFocus?.kind === "cut"
       ? storyboardCanvasFocus.sceneNo
@@ -3048,10 +3458,18 @@ export function AdminStoryboardGenerator({
     storyboardImageRouteChoice === "browser-openai-api-key"
       ? storyboardBrowserOpenAIApiKey
       : null;
+  const selectedStoryboardLocalBridgeToken =
+    storyboardImageRouteChoice === STORYBOARD_LOCAL_BRIDGE_ROUTE_ID
+      ? storyboardLocalBridgeToken
+      : null;
+  const maskedStoryboardLocalBridgeToken = maskStoryboardLocalBridgeToken(
+    storyboardLocalBridgeToken,
+  );
   const storyboardImageApiRouterView = getStoryboardImageApiRouterView(
     storyboardImageProviderReadiness,
     storyboardImageRouteChoice,
     isStoryboardBrowserOpenAIApiKeySaved,
+    isStoryboardLocalBridgePaired,
   );
   const storyboardImageGenerationProviderId =
     storyboardImageRouteChoice === "browser-openai-api-key"
@@ -3402,6 +3820,20 @@ export function AdminStoryboardGenerator({
       INITIAL_STORYBOARD_IMAGE_PROVIDER_READINESS,
     );
     try {
+      if (storyboardImageRouteChoice === STORYBOARD_LOCAL_BRIDGE_ROUTE_ID) {
+        setStoryboardLocalBridgeStatus("checking");
+        const result = await getStoryboardLocalBridgeStatusRequest(
+          storyboardLocalBridgeUrl,
+          selectedStoryboardLocalBridgeToken,
+        );
+        setStoryboardLocalBridgeStatus(result.status);
+        setStoryboardLocalBridgeMessage(result.message);
+        setStoryboardLocalBridgeError(
+          result.status === "connected" ? null : result.message,
+        );
+        setStoryboardImageProviderReadiness(result.readiness);
+        return;
+      }
       const payload = await getStoryboardImageProviderStatusRequest(
         selectedStoryboardBrowserOpenAIApiKey,
       );
@@ -3409,6 +3841,21 @@ export function AdminStoryboardGenerator({
         mapStoryboardImageProviderReadiness(payload),
       );
     } catch (error) {
+      if (storyboardImageRouteChoice === STORYBOARD_LOCAL_BRIDGE_ROUTE_ID) {
+        const message = redactStoryboardLocalBridgeSecretText(
+          error instanceof Error
+            ? error.message
+            : "로컬 브릿지 상태를 읽지 못했습니다.",
+          selectedStoryboardLocalBridgeToken,
+        );
+        setStoryboardLocalBridgeStatus("error");
+        setStoryboardLocalBridgeError(message);
+        setStoryboardLocalBridgeMessage(message);
+        setStoryboardImageProviderReadiness(
+          mapStoryboardLocalBridgeStatusToReadiness("error", message),
+        );
+        return;
+      }
       setStoryboardImageProviderReadiness({
         ...INITIAL_STORYBOARD_IMAGE_PROVIDER_READINESS,
         status: "error",
@@ -3484,17 +3931,111 @@ export function AdminStoryboardGenerator({
     ]);
   }
 
+  async function handleSaveStoryboardLocalBridgeSession() {
+    try {
+      const normalizedUrl = normalizeStoryboardLocalBridgeUrl(
+        storyboardLocalBridgeUrlDraft,
+      );
+      const normalizedToken = normalizeStoryboardLocalBridgeToken(
+        storyboardLocalBridgeTokenDraft || storyboardLocalBridgeToken,
+      );
+      if (!normalizedToken) {
+        throw new Error("터미널에 표시된 pairing token을 입력해 주세요.");
+      }
+      const cache = writeStoryboardLocalBridgeSessionCache(
+        normalizedUrl,
+        normalizedToken,
+      );
+      setStoryboardLocalBridgeUrl(cache.bridgeUrl);
+      setStoryboardLocalBridgeUrlDraft(cache.bridgeUrl);
+      setStoryboardLocalBridgeToken(cache.token);
+      setStoryboardLocalBridgeTokenDraft("");
+      setStoryboardLocalBridgeSavedAt(cache.savedAt);
+      setStoryboardImageRouteChoice(STORYBOARD_LOCAL_BRIDGE_ROUTE_ID);
+      setStoryboardLocalBridgeStatus("checking");
+      setStoryboardLocalBridgeError(null);
+      setStoryboardLocalBridgeMessage(
+        "저장했어요. 이 탭에서만 로컬 브릿지 연결을 확인합니다.",
+      );
+      setStoryboardImageProviderReadiness(
+        mapStoryboardLocalBridgeStatusToReadiness("checking"),
+      );
+      appendStoryboardChatMessages([
+        {
+          id: `assistant-local-bridge-saved-${Date.now()}`,
+          role: "assistant",
+          text: "로컬 브릿지 설정을 이 탭 sessionStorage에만 저장했어요. Vercel/Next 서버로 OAuth 파일이나 pairing token을 보내지 않습니다.",
+          status: "done",
+        },
+      ]);
+      const status = await getStoryboardLocalBridgeStatusRequest(
+        cache.bridgeUrl,
+        cache.token,
+      );
+      setStoryboardLocalBridgeStatus(status.status);
+      setStoryboardLocalBridgeMessage(status.message);
+      setStoryboardLocalBridgeError(
+        status.status === "connected" ? null : status.message,
+      );
+      setStoryboardImageProviderReadiness(status.readiness);
+    } catch (error) {
+      const message = redactStoryboardLocalBridgeSecretText(
+        error instanceof Error
+          ? error.message
+          : "로컬 브릿지 설정을 저장하지 못했습니다.",
+        storyboardLocalBridgeTokenDraft || storyboardLocalBridgeToken,
+      );
+      setStoryboardLocalBridgeError(message);
+      setStoryboardLocalBridgeMessage(message);
+      setStoryboardLocalBridgeStatus("error");
+      setStoryboardImageProviderReadiness(
+        mapStoryboardLocalBridgeStatusToReadiness("error", message),
+      );
+    }
+  }
+
+  function handleClearStoryboardLocalBridgeSession() {
+    clearStoryboardLocalBridgeSessionCache();
+    setStoryboardLocalBridgeUrl(STORYBOARD_LOCAL_BRIDGE_DEFAULT_URL);
+    setStoryboardLocalBridgeUrlDraft(STORYBOARD_LOCAL_BRIDGE_DEFAULT_URL);
+    setStoryboardLocalBridgeToken(null);
+    setStoryboardLocalBridgeTokenDraft("");
+    setStoryboardLocalBridgeSavedAt(null);
+    setStoryboardLocalBridgeStatus("unpaired");
+    setStoryboardLocalBridgeError(null);
+    setStoryboardLocalBridgeMessage("로컬 브릿지 설정을 이 탭에서 삭제했습니다.");
+    if (storyboardImageRouteChoice === STORYBOARD_LOCAL_BRIDGE_ROUTE_ID) {
+      setStoryboardImageRouteChoice("local-codex-oauth");
+    }
+    appendStoryboardChatMessages([
+      {
+        id: `assistant-local-bridge-cleared-${Date.now()}`,
+        role: "assistant",
+        text: "로컬 브릿지 URL과 token을 이 탭에서 삭제했어요. 필요하면 터미널에서 브릿지를 다시 실행하고 token을 새로 붙여 넣어 주세요.",
+        status: "done",
+      },
+    ]);
+  }
+
   function handleSelectStoryboardImageRouteChoice(
     nextRoute: StoryboardImageRouteChoice,
   ) {
     setStoryboardImageRouteChoice(nextRoute);
     setStoryboardBrowserOpenAIApiKeyError(null);
+    setStoryboardLocalBridgeError(null);
     setStoryboardBrowserOpenAIApiKeyMessage(
       nextRoute === "browser-openai-api-key"
         ? storyboardBrowserOpenAIApiKey
           ? "OpenAI API 키를 사용하도록 선택했어요."
           : "API Key를 선택했어요. 먼저 키를 저장해 주세요."
-        : "Codex OAuth를 사용하도록 선택했어요.",
+        : null,
+    );
+    setStoryboardLocalBridgeMessage(
+      nextRoute === STORYBOARD_LOCAL_BRIDGE_ROUTE_ID
+        ? storyboardLocalBridgeToken
+          ? "로컬 브릿지 연결을 확인하고 있습니다."
+          : "고급 로컬 브릿지는 사용자 PC에서 실행 중일 때만 사용할 수 있습니다."
+        : null,
     );
   }
 
@@ -4382,6 +4923,27 @@ export function AdminStoryboardGenerator({
 
     let appliedImageCount = 0;
     let accumulatedResult = sourceResult;
+    const requestStoryboardImages =
+      storyboardImageRouteChoice === STORYBOARD_LOCAL_BRIDGE_ROUTE_ID
+        ? (
+            nextResult: StoryboardGenerationResult,
+            nextScenes: StoryboardGenerationResult["storyboard"]["scenes"],
+          ) =>
+            postStoryboardLocalBridgeImagesRequest(
+              nextResult,
+              nextScenes,
+              storyboardLocalBridgeUrl,
+              selectedStoryboardLocalBridgeToken,
+            )
+        : (
+            nextResult: StoryboardGenerationResult,
+            nextScenes: StoryboardGenerationResult["storyboard"]["scenes"],
+          ) =>
+            postStoryboardImagesRequest(
+              nextResult,
+              nextScenes,
+              selectedStoryboardBrowserOpenAIApiKey,
+            );
     const applyGeneratedImages = async (
       images: StoryboardImagesResponse["images"],
     ) => {
@@ -4425,10 +4987,9 @@ export function AdminStoryboardGenerator({
               "streaming",
             );
           }
-          const scenePayload = await postStoryboardImagesRequest(
+          const scenePayload = await requestStoryboardImages(
             accumulatedResult,
             [scene],
-            selectedStoryboardBrowserOpenAIApiKey,
           );
           await applyGeneratedImages(scenePayload.images);
           applyStoryboardCanvasFocus(
@@ -4442,10 +5003,9 @@ export function AdminStoryboardGenerator({
           );
         }
       } else {
-        const payload = await postStoryboardImagesRequest(
+        const payload = await requestStoryboardImages(
           accumulatedResult,
           targetScenes,
-          selectedStoryboardBrowserOpenAIApiKey,
         );
         await applyGeneratedImages(payload.images);
       }
@@ -4910,7 +5470,7 @@ export function AdminStoryboardGenerator({
                         <div className="min-w-0">
                           <p className="truncate text-sm font-bold">이미지 설정</p>
                           <p className="text-[11px] text-muted-foreground">
-                            OpenAI Key · gpt-image-2
+                            기본 OAuth · 고급 로컬 · API Key 백업
                           </p>
                         </div>
                         <Button
@@ -4931,28 +5491,8 @@ export function AdminStoryboardGenerator({
                         role="radiogroup"
                         aria-label="스토리보드 이미지 생성 방식 선택"
                         data-storyboard-api-router-choice="true"
+                        data-storyboard-api-router-choice-layout="oauth-deduped"
                       >
-                        <button
-                          type="button"
-                          className={`rounded-xl px-2 py-1.5 text-left transition ${
-                            storyboardImageRouteChoice === "browser-openai-api-key"
-                              ? "bg-primary text-primary-foreground shadow-sm"
-                              : "bg-muted/35 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-                          }`}
-                          aria-pressed={storyboardImageRouteChoice === "browser-openai-api-key"}
-                          onClick={() => handleSelectStoryboardImageRouteChoice("browser-openai-api-key")}
-                          data-storyboard-api-router-option="browser-openai-api-key"
-                          data-storyboard-api-router-option-selected={
-                            storyboardImageRouteChoice === "browser-openai-api-key"
-                              ? "true"
-                              : "false"
-                          }
-                        >
-                          <span className="block text-[11px] font-bold">API Key</span>
-                          <span className="block text-[10px] opacity-80">
-                            {isStoryboardBrowserOpenAIApiKeySaved ? "저장됨" : "키 필요"}
-                          </span>
-                        </button>
                         <button
                           type="button"
                           className={`rounded-xl px-2 py-1.5 text-left transition ${
@@ -4968,8 +5508,9 @@ export function AdminStoryboardGenerator({
                               ? "true"
                               : "false"
                           }
+                          data-storyboard-api-router-oauth-transport="server"
                         >
-                          <span className="block text-[11px] font-bold">OAuth</span>
+                          <span className="block text-[11px] font-bold">기본</span>
                           <span className="block text-[10px] opacity-80">
                             {storyboardImageProviderReadiness.status === "ready" &&
                             storyboardImageProviderReadiness.providerId === STORYBOARD_IMAGE_PROVIDER_ID
@@ -4977,6 +5518,34 @@ export function AdminStoryboardGenerator({
                               : storyboardImageProviderReadiness.status === "checking"
                                 ? "확인 중"
                                 : "확인 필요"}
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          className={`rounded-xl px-2 py-1.5 text-left transition ${
+                            storyboardImageRouteChoice === STORYBOARD_LOCAL_BRIDGE_ROUTE_ID
+                              ? "bg-primary text-primary-foreground shadow-sm"
+                              : "bg-muted/35 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                          }`}
+                          aria-pressed={storyboardImageRouteChoice === STORYBOARD_LOCAL_BRIDGE_ROUTE_ID}
+                          onClick={() => handleSelectStoryboardImageRouteChoice(STORYBOARD_LOCAL_BRIDGE_ROUTE_ID)}
+                          data-storyboard-api-router-option="local-bridge"
+                          data-storyboard-api-router-option-selected={
+                            storyboardImageRouteChoice === STORYBOARD_LOCAL_BRIDGE_ROUTE_ID
+                              ? "true"
+                              : "false"
+                          }
+                          data-storyboard-api-router-oauth-transport="local-bridge"
+                        >
+                          <span className="block text-[11px] font-bold">고급 로컬</span>
+                          <span className="block text-[10px] opacity-80">
+                            {storyboardLocalBridgeStatus === "connected"
+                              ? "연결됨"
+                              : storyboardLocalBridgeStatus === "checking"
+                                ? "확인 중"
+                                : storyboardLocalBridgeToken
+                                  ? "확인 필요"
+                                  : "토큰 필요"}
                           </span>
                         </button>
                       </div>
@@ -5005,8 +5574,11 @@ export function AdminStoryboardGenerator({
                             "active"
                               ? "Codex OAuth"
                               : storyboardImageApiRouterView.codexOAuthStatus ===
+                                  "local-bridge-active"
+                                ? "Codex OAuth · 로컬"
+                              : storyboardImageApiRouterView.codexOAuthStatus ===
                                   "checking"
-                                ? "OAuth 확인"
+                                ? "확인 중"
                                 : storyboardImageApiRouterView.codexOAuthStatus ===
                                     "api-key-active"
                                   ? "브라우저 키"
@@ -5032,12 +5604,39 @@ export function AdminStoryboardGenerator({
                           STORYBOARD_BROWSER_MODEL_KEYS_STORAGE_KEY
                         }
                       >
-                        <Label
-                          htmlFor="storyboard-browser-openai-api-key"
-                          className="text-[11px] font-semibold"
-                        >
-                          OpenAI API Key
-                        </Label>
+                        <div className="flex items-center justify-between gap-2">
+                          <Label
+                            htmlFor="storyboard-browser-openai-api-key"
+                            className="text-[11px] font-semibold"
+                          >
+                            API Key 백업
+                          </Label>
+                          <button
+                            type="button"
+                            className={`h-6 shrink-0 rounded-full px-2 text-[10px] font-semibold transition ${
+                              storyboardImageRouteChoice === "browser-openai-api-key"
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+                            }`}
+                            aria-pressed={
+                              storyboardImageRouteChoice === "browser-openai-api-key"
+                            }
+                            onClick={() =>
+                              handleSelectStoryboardImageRouteChoice(
+                                "browser-openai-api-key",
+                              )
+                            }
+                            data-storyboard-api-router-option="browser-openai-api-key"
+                            data-storyboard-api-router-option-selected={
+                              storyboardImageRouteChoice === "browser-openai-api-key"
+                                ? "true"
+                                : "false"
+                            }
+                            data-storyboard-api-router-fallback="browser-api-key"
+                          >
+                            백업 사용
+                          </button>
+                        </div>
                         <div className="flex gap-2">
                           <Input
                             id="storyboard-browser-openai-api-key"
@@ -5078,7 +5677,7 @@ export function AdminStoryboardGenerator({
                           data-storyboard-browser-api-key-browser-only-copy="true"
                           data-storyboard-browser-api-key-model-policy="gpt-image-2-only"
                         >
-                          브라우저에만 저장 · gpt-image-2 전용 · DB 저장 없음
+                          OAuth가 안 될 때만 사용 · 브라우저 저장 · DB 저장 없음
                         </p>
                         <div className="flex flex-wrap items-center gap-2">
                           <p
@@ -5130,6 +5729,123 @@ export function AdminStoryboardGenerator({
                           ) : null}
                         </div>
                       </div>
+                      {shouldShowStoryboardLocalBridgeSettings ? (
+                        <div
+                          className="grid gap-1.5 rounded-xl border border-dashed border-primary/25 bg-primary/5 p-2"
+                          data-storyboard-local-bridge-settings="session-only"
+                          data-storyboard-local-bridge-settings-visibility="advanced-selected"
+                          data-storyboard-local-bridge-storage="browser-session-storage-only"
+                          data-storyboard-local-bridge-server-relay="forbidden"
+                          data-storyboard-local-bridge-token-persistence="session-only"
+                          data-storyboard-local-bridge-storage-key={
+                            STORYBOARD_LOCAL_BRIDGE_SESSION_STORAGE_KEY
+                          }
+                        >
+                        <div className="flex items-center justify-between gap-2">
+                          <Label
+                            htmlFor="storyboard-local-bridge-url"
+                            className="text-[11px] font-semibold"
+                          >
+                            고급 로컬 브릿지
+                          </Label>
+                          <Badge
+                            variant="outline"
+                            className="h-5 shrink-0 rounded-full px-1.5 text-[10px]"
+                            data-storyboard-local-bridge-status={
+                              storyboardLocalBridgeStatus
+                            }
+                          >
+                            {storyboardLocalBridgeStatus === "connected"
+                              ? "연결됨"
+                              : storyboardLocalBridgeStatus === "checking"
+                                ? "확인 중"
+                                : "설정 필요"}
+                          </Badge>
+                        </div>
+                        <p
+                          className="text-[10px] leading-4 text-muted-foreground"
+                          data-storyboard-local-bridge-guidance="true"
+                        >
+                          OAuth는 동일합니다. 차이는 서버 대신 사용자 PC 브릿지를 직접 호출하는 것입니다.
+                        </p>
+                        <div className="grid gap-1">
+                          <Input
+                            id="storyboard-local-bridge-url"
+                            value={storyboardLocalBridgeUrlDraft}
+                            onChange={(event) => {
+                              setStoryboardLocalBridgeUrlDraft(event.target.value);
+                              setStoryboardLocalBridgeError(null);
+                            }}
+                            placeholder={STORYBOARD_LOCAL_BRIDGE_DEFAULT_URL}
+                            autoComplete="off"
+                            spellCheck={false}
+                            className="h-8 text-xs"
+                            aria-label="로컬 브릿지 URL"
+                            data-storyboard-local-bridge-url-input="true"
+                          />
+                          <Input
+                            id="storyboard-local-bridge-token"
+                            type="password"
+                            value={storyboardLocalBridgeTokenDraft}
+                            onChange={(event) => {
+                              setStoryboardLocalBridgeTokenDraft(
+                                event.target.value,
+                              );
+                              setStoryboardLocalBridgeError(null);
+                            }}
+                            placeholder={
+                              storyboardLocalBridgeToken
+                                ? `${maskedStoryboardLocalBridgeToken} 저장됨`
+                                : "브릿지 터미널 pairing_token"
+                            }
+                            autoComplete="off"
+                            spellCheck={false}
+                            className="h-8 text-xs"
+                            aria-label="로컬 브릿지 pairing token"
+                            data-storyboard-local-bridge-token-input="true"
+                          />
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+                            onClick={() => void handleSaveStoryboardLocalBridgeSession()}
+                            data-storyboard-local-bridge-save="true"
+                          >
+                            저장/테스트
+                          </Button>
+                          {storyboardLocalBridgeToken ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+                              onClick={handleClearStoryboardLocalBridgeSession}
+                              data-storyboard-local-bridge-clear="true"
+                            >
+                              삭제
+                            </Button>
+                          ) : null}
+                          <p
+                            className={`basis-full text-[11px] ${
+                              storyboardLocalBridgeError
+                                ? "text-destructive"
+                                : "text-muted-foreground"
+                            }`}
+                            data-storyboard-local-bridge-message="true"
+                          >
+                            {storyboardLocalBridgeError ??
+                              storyboardLocalBridgeMessage ??
+                              (storyboardLocalBridgeSavedAt
+                                ? `sessionStorage 저장됨 · ${new Date(
+                                    storyboardLocalBridgeSavedAt,
+                                  ).toLocaleString("ko-KR")}`
+                                : "npm run storyboard:local-bridge 실행 후 token을 붙여넣으세요.")}
+                          </p>
+                        </div>
+                      </div>
+                      ) : null}
                     </div>
                   </DropdownMenuContent>
                 </DropdownMenu>
