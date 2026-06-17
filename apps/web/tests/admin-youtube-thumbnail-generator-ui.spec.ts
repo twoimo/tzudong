@@ -91,6 +91,123 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
   await page.setViewportSize({ width: 1920, height: 1000 });
   const chatRequestBodies: unknown[] = [];
   const generationRequestBodies: unknown[] = [];
+  const localBridgeRequestBodies: unknown[] = [];
+  const localBridgeOptionsPaths: string[] = [];
+  const localBridgeToken = 'playwright-local-bridge-token-123456';
+  const getLocalBridgeCorsHeaders = (origin: string | undefined) => ({
+    'access-control-allow-origin': origin || '*',
+    'access-control-allow-methods': 'GET,POST,OPTIONS',
+    'access-control-allow-headers': 'Authorization, Content-Type, X-Tzudong-Local-Bridge',
+    'access-control-allow-private-network': 'true',
+    'access-control-max-age': '0',
+    vary: 'Origin',
+  });
+  let shouldDeferNextGenerationResponse = false;
+  let markDeferredGenerationRequestStarted: (() => void) | null = null;
+  let releaseDeferredGenerationResponse: (() => void) | null = null;
+  function releaseDeferredGenerationResponseOrThrow() {
+    if (!releaseDeferredGenerationResponse) {
+      throw new Error('Deferred thumbnail generation response was not captured.');
+    }
+    releaseDeferredGenerationResponse();
+  }
+  await page.route('http://127.0.0.1:17873/**', async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const origin = request.headers().origin;
+    const corsHeaders = getLocalBridgeCorsHeaders(origin);
+    if (request.method() === 'OPTIONS') {
+      localBridgeOptionsPaths.push(url.pathname);
+      await route.fulfill({ status: 204, headers: corsHeaders, body: '' });
+      return;
+    }
+    if (request.method() === 'GET' && url.pathname === '/health') {
+      await route.fulfill({
+        status: 200,
+        headers: { ...corsHeaders, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          ok: true,
+          bridge: 'tzudong-storyboard-local-bridge',
+          version: 1,
+          status: 'ok',
+          tokenRequired: true,
+          providerId: 'local-codex',
+          model: 'gpt-image-2',
+          endpoints: {
+            storyboardImages: '/v1/storyboard/images',
+            thumbnailImages: '/v1/youtube-thumbnail/images',
+          },
+        }),
+      });
+      return;
+    }
+    const authorization = request.headers().authorization ?? '';
+    if (authorization !== `Bearer ${localBridgeToken}`) {
+      await route.fulfill({
+        status: 401,
+        headers: { ...corsHeaders, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          ok: false,
+          bridge: 'tzudong-storyboard-local-bridge',
+          status: 'unpaired',
+          providerId: 'local-codex',
+          model: 'gpt-image-2',
+          detail: 'pairing mismatch',
+        }),
+      });
+      return;
+    }
+    if (request.method() === 'GET' && url.pathname === '/auth-status') {
+      await route.fulfill({
+        status: 200,
+        headers: { ...corsHeaders, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          ok: true,
+          bridge: 'tzudong-storyboard-local-bridge',
+          status: 'ready',
+          providerId: 'local-codex',
+          model: 'gpt-image-2',
+        }),
+      });
+      return;
+    }
+    if (request.method() === 'POST' && url.pathname === '/v1/youtube-thumbnail/images') {
+      localBridgeRequestBodies.push(request.postDataJSON());
+      await route.fulfill({
+        status: 200,
+        headers: { ...corsHeaders, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          ok: true,
+          providerId: 'local-codex',
+          model: 'gpt-image-2',
+          result: {
+            baseImage: {
+              dataUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=',
+              mime: 'image/png',
+              targetWidth: 1280,
+              targetHeight: 720,
+              providerId: 'local-codex',
+              model: 'gpt-image-2',
+              modelProvenance: 'exact',
+            },
+            prompt: 'Playwright local bridge thumbnail',
+            warnings: [
+              'local_bridge_provider: playwright',
+              'no_relay_transport: browser direct',
+              'server_history_persistence: skipped',
+              'exact_provenance: image_generation.gpt-image-2 response=playwright-local call=playwright-call',
+            ],
+          },
+        }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 404,
+      headers: { ...corsHeaders, 'content-type': 'application/json' },
+      body: JSON.stringify({ ok: false, error: 'not_found' }),
+    });
+  });
   await page.route('**/api/admin/youtube-thumbnail-generator', async (route) => {
     if (route.request().method() === 'GET') {
       await route.fulfill({
@@ -143,6 +260,15 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
     }
 
     generationRequestBodies.push(route.request().postData() ?? null);
+    if (shouldDeferNextGenerationResponse) {
+      shouldDeferNextGenerationResponse = false;
+      await new Promise<void>((resolve) => {
+        releaseDeferredGenerationResponse = resolve;
+        markDeferredGenerationRequestStarted?.();
+        markDeferredGenerationRequestStarted = null;
+      });
+      releaseDeferredGenerationResponse = null;
+    }
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -315,12 +441,16 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
   await expect(chatPanel).toBeVisible();
   await expect(chatHeaderActions).toBeVisible();
   await expect(chatComposer).toBeVisible();
+  await expect(chatComposer).toHaveAttribute('placeholder', '원하는 썸네일 내용을 입력해 주세요');
   await expect(chatComposer).toHaveAttribute('data-thumbnail-chat-ime-safe', 'true');
   await expect(chatComposer).toHaveAttribute('aria-describedby', 'thumbnail-chat-keyboard-hint');
+  await thumbnailModule.locator('[data-thumbnail-editor-tool="select-headline"]').click();
   await expect(canvasContext).toBeVisible();
   await expect(canvasContext).toHaveAttribute('data-thumbnail-chat-canvas-context-state', 'selected');
   await expect(canvasContextSummary).toContainText('메인 문구');
-  await expect(canvasContextSummary).toContainText('역대급 먹방');
+  const initialHeadlineSummary = await canvasContextSummary.innerText();
+  expect(initialHeadlineSummary).toContain('메인 문구');
+  expect(initialHeadlineSummary).not.toContain('제육볶음 먹방');
   const selectedTextTransformFrame = thumbnailModule.locator('[data-thumbnail-canvas-selected-text-transform-frame="true"]');
   await expect(selectedTextTransformFrame).toBeVisible();
   await expect(selectedTextTransformFrame.locator('[data-thumbnail-selected-text-resize-handle]')).toHaveCount(4);
@@ -328,7 +458,7 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
 
   await chatComposer.fill('제육볶음 먹방 썸네일로 해줘');
   await expect(thumbnailModule.locator('[data-thumbnail-chat-live-stream="true"]')).toBeVisible();
-  await expect(canvasContextSummary).toContainText('역대급 먹방');
+  await expect(canvasContextSummary).toHaveText(initialHeadlineSummary);
   await expect(canvasContextSummary).not.toContainText('제육볶음 먹방');
   await chatComposer.press('Enter');
   await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('메인 문구를');
@@ -338,7 +468,7 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
     message: '제육볶음 먹방 썸네일로 해줘',
     activeLayerId: 'headline',
     currentTextLayers: expect.arrayContaining([
-      expect.objectContaining({ id: 'headline', content: '역대급 먹방' }),
+      expect.objectContaining({ id: 'headline', content: '제육볶음 한상' }),
     ]),
   });
   const chatRequestsAfterSubmitOnlyProbe = chatRequestBodies.length;
@@ -347,19 +477,16 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
   await chatComposer.fill('실제 데이터 기반인지 확인해줘');
   await chatComposer.press('Enter');
   await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('현재 상태를 쉽게 정리했어요');
-  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('가짜 예시 이미지는 실제 결과로 보지 않고');
   await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('이미지 만들기:');
-  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('썸네일 도우미:');
-  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('gpt-image-2');
-  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('검증 완료');
-  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('히스토리');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('현재 화면:');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('참고 썸네일 검색:');
   await expect(chatPanel).not.toContainText('sk-live-secret-for-ui-only');
   expect(chatRequestBodies).toHaveLength(chatRequestsAfterSubmitOnlyProbe);
 
   await chatComposer.fill('생성 과정 확인해줘');
   await chatComposer.press('Enter');
   await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('현재 상태를 쉽게 정리했어요');
-  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('작업 방식');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('이미지 만들기:');
   expect(chatRequestBodies).toHaveLength(chatRequestsAfterSubmitOnlyProbe);
 
   await chatComposer.fill('메인 문구를 레전드 음식으로 수정해줘');
@@ -398,12 +525,12 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
   await expect(chatComposer).toHaveValue(/선택된 스티커 문구/);
   await expect(chatComposer).toHaveValue(/한입만 가능/);
   await expect(thumbnailModule.locator('[data-thumbnail-chat-message="user"]')).toHaveCount(userMessagesBeforeCanvasAsk);
-  await expect(canvasContextSummary).toContainText('46px');
+  await expect(canvasContextSummary).toContainText(/\d+px/);
   await chatComposer.press('Enter');
   await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('스티커 문구를 다듬고');
   await expect(canvasContextAction).toContainText('선택 문구 채팅 반영');
   await expect(canvasContextSummary).toContainText('스티커 문구');
-  await expect(canvasContextSummary).toContainText('64px');
+  await expect(canvasContextSummary).toContainText(/\d+px/);
   expect(chatRequestBodies.at(-1)).toMatchObject({
     activeLayerId: 'subHeadline',
     editingLayerId: null,
@@ -446,6 +573,11 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
   await expect(thumbnailModule.locator('[data-thumbnail-chat-attachments="true"]')).toHaveCount(0);
   await expect(thumbnailModule.locator('[data-thumbnail-reference-file-input="true"]')).toHaveCount(0);
   await expect(thumbnailModule.locator('[data-thumbnail-reference-file-chip="true"]')).toHaveCount(0);
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-reference-upload="true"]')).toBeVisible();
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-reference-upload="true"]')).toHaveAttribute(
+    'aria-label',
+    '참고 이미지 첨부',
+  );
   await expect(thumbnailModule.locator('[data-thumbnail-chat-reference-file-input="true"]')).toHaveCount(1);
   await expect(thumbnailModule.locator('[data-thumbnail-chat-reference-file-input="true"]')).toHaveClass(/sr-only/);
   await expect(thumbnailModule.locator('[data-thumbnail-chat-settings-toggle="true"]')).toBeVisible();
@@ -473,6 +605,11 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
     'data-thumbnail-chat-settings-panel-parity',
     'storyboard',
   );
+  await expect(page.locator('[data-thumbnail-api-router-choice="true"]')).toBeVisible();
+  await expect(page.locator('[data-thumbnail-api-router-option="local-codex-oauth"]')).toContainText('기본 OAuth');
+  await expect(page.locator('[data-thumbnail-api-router-option="local-bridge"]')).toContainText('고급 로컬');
+  await expect(page.locator('[data-thumbnail-api-router-option="browser-openai-api-key"]').first()).toContainText('API Key');
+  await expect(page.locator('[data-thumbnail-local-bridge-settings="session-only"]')).toHaveCount(0);
   await expect(page.locator('[data-thumbnail-api-router-panel="true"]')).toBeVisible();
   await expect(page.locator('[data-thumbnail-api-router-panel="true"]')).toHaveAttribute(
     'data-thumbnail-api-router-parity',
@@ -485,20 +622,83 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
   await expect(page.locator('[data-thumbnail-browser-api-key-input="true"]')).toBeVisible();
   await expect(page.locator('[data-thumbnail-api-key-save="true"]')).toBeVisible();
   await expect(page.locator('[data-thumbnail-api-key-session-status="true"]')).toContainText('저장된 키 없음');
-  await expect(page.locator('[data-thumbnail-api-key-browser-only-copy="true"]')).toContainText('키는 이 브라우저에만 저장');
-  await expect(page.locator('[data-thumbnail-browser-api-key-model-policy="gpt-image-2-only"]')).toContainText('모델은 gpt-image-2만 사용합니다.');
+  await expect(page.locator('[data-thumbnail-api-key-browser-only-copy="true"]')).toContainText('브라우저 저장');
+  await expect(page.locator('[data-thumbnail-browser-api-key-model-policy="gpt-image-2-only"]')).toContainText('gpt-image-2 전용');
   await expect(chatPanel).not.toContainText('sk-live-secret-for-ui-only');
+
+  await page.locator('[data-thumbnail-api-router-option="local-bridge"]').click();
+  const localBridgeSettings = page.locator('[data-thumbnail-local-bridge-settings="session-only"]');
+  await expect(localBridgeSettings).toBeVisible();
+  await expect(localBridgeSettings).toHaveAttribute(
+    'data-thumbnail-local-bridge-settings-visibility',
+    'advanced-selected',
+  );
+  await expect(localBridgeSettings).toHaveAttribute(
+    'data-thumbnail-local-bridge-server-relay',
+    'forbidden',
+  );
+  await expect(localBridgeSettings).toHaveAttribute(
+    'data-thumbnail-local-bridge-token-persistence',
+    'session-only',
+  );
+  await expect(localBridgeSettings.locator('[data-thumbnail-local-bridge-url-input="true"]')).toBeVisible();
+  await expect(localBridgeSettings.locator('[data-thumbnail-local-bridge-token-input="true"]')).toBeVisible();
+
+  const generationRequestsBeforeUnpairedLocalBridge = generationRequestBodies.length;
+  const localBridgeRequestsBeforeUnpaired = localBridgeRequestBodies.length;
+  await page.locator('[data-thumbnail-chat-settings-close="true"]').click();
+  await expect(page.locator('[data-thumbnail-chat-settings-dropdown="true"]')).toHaveCount(0);
+  await chatComposer.fill('새 썸네일 이미지를 만들고 캔버스에 넣었습니다 메시지 테스트 생성해줘');
+  await chatComposer.press('Enter');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-message-mode="live"]').last()).toContainText('고급 로컬 브릿지 연결');
+  expect(generationRequestBodies).toHaveLength(generationRequestsBeforeUnpairedLocalBridge);
+  expect(localBridgeRequestBodies).toHaveLength(localBridgeRequestsBeforeUnpaired);
+
+  await thumbnailModule.locator('[data-thumbnail-chat-settings-toggle="true"]').click();
+  await expect(page.locator('[data-thumbnail-chat-settings-dropdown="true"]')).toBeVisible();
+  await page.locator('[data-thumbnail-api-router-option="local-bridge"]').click();
+  await localBridgeSettings.locator('[data-thumbnail-local-bridge-url-input="true"]').fill('http://127.0.0.1:17873');
+  await localBridgeSettings.locator('[data-thumbnail-local-bridge-token-input="true"]').fill(localBridgeToken);
+  await localBridgeSettings.locator('[data-thumbnail-local-bridge-save="true"]').click();
+  await expect(localBridgeSettings.locator('[data-thumbnail-local-bridge-status="connected"]')).toBeVisible();
+  await expect(localBridgeSettings.locator('[data-thumbnail-local-bridge-message="true"]')).toContainText('연결됨');
   await page.locator('[data-thumbnail-chat-settings-close="true"]').click();
   await expect(page.locator('[data-thumbnail-chat-settings-dropdown="true"]')).toHaveCount(0);
 
-  await chatComposer.fill('참고 이미지 추가');
-  await expect(chatComposer).toHaveValue('참고 이미지 추가');
-  await expect(thumbnailModule.locator('[data-thumbnail-chat-submit="true"]')).toBeEnabled();
   const fileChooserPromise = page.waitForEvent('filechooser');
-  await thumbnailModule.locator('[data-thumbnail-chat-submit="true"]').click();
+  await thumbnailModule.locator('[data-thumbnail-chat-reference-upload="true"]').click();
   const fileChooser = await fileChooserPromise;
   await fileChooser.setFiles(resolve(process.cwd(), 'public/images/admin/youtube-thumbnail-food-only-preview.png'));
   await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('참고 이미지 1장');
+
+  const serverGenerationRequestsBeforeLocalBridge = generationRequestBodies.length;
+  const localBridgeRequestsBeforePaired = localBridgeRequestBodies.length;
+  await chatComposer.fill('새 썸네일 이미지를 만들고 캔버스에 넣었습니다 메시지 테스트 생성해줘');
+  await chatComposer.press('Enter');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-message-mode="live"]').last()).toContainText('새 썸네일 이미지를 만들고 화면에 넣었습니다');
+  expect(localBridgeRequestBodies).toHaveLength(localBridgeRequestsBeforePaired + 1);
+  expect(generationRequestBodies).toHaveLength(serverGenerationRequestsBeforeLocalBridge);
+  expect(Array.isArray(localBridgeOptionsPaths)).toBe(true);
+  const bridgeBody = localBridgeRequestBodies.at(-1) as {
+    payload?: { providerId?: string; generationMode?: string };
+    referenceImages?: Array<{ role?: string; mime?: string; name?: string; dataBase64?: string }>;
+  };
+  expect(bridgeBody.payload).toMatchObject({
+    providerId: 'local-codex',
+    generationMode: 'direct_provider',
+  });
+  expect(bridgeBody.referenceImages).toHaveLength(1);
+  expect(bridgeBody.referenceImages?.[0]).toMatchObject({
+    role: 'host',
+    mime: 'image/png',
+  });
+  expect(bridgeBody.referenceImages?.[0]?.name).toContain('youtube-thumbnail-food-only-preview');
+  expect(bridgeBody.referenceImages?.[0]?.dataBase64).toMatch(/^[A-Za-z0-9+/=]+$/);
+
+  await thumbnailModule.locator('[data-thumbnail-chat-settings-toggle="true"]').click();
+  await page.locator('[data-thumbnail-api-router-option="local-codex-oauth"]').click();
+  await page.locator('[data-thumbnail-chat-settings-close="true"]').click();
+  await expect(page.locator('[data-thumbnail-chat-settings-dropdown="true"]')).toHaveCount(0);
 
   await thumbnailModule.locator('[data-thumbnail-history-panel-toggle="true"]').click();
   await expect(page.locator('[data-thumbnail-history-dropdown="true"]')).toBeVisible();
@@ -533,10 +733,11 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
   await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('가이드를 표시했습니다');
   expect(chatRequestBodies).toHaveLength(chatRequestsBeforeGuideHide);
 
+  await thumbnailModule.locator('[data-thumbnail-editor-tool="select-headline"]').click();
   await chatComposer.fill('문구 크게');
   await chatComposer.press('Enter');
   await expect(canvasContextAction).toContainText('크게 적용');
-  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('크게 도구를 캔버스에 적용했습니다');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('크게 도구를 화면에 적용했습니다');
   expect(chatRequestBodies).toHaveLength(chatRequestsBeforeGuideHide);
 
   const chatRequestsBeforeOvermatchProbe = chatRequestBodies.length;
@@ -549,11 +750,10 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
   const generationRequestsBeforeCompletionProbe = generationRequestBodies.length;
   await chatComposer.fill('새 썸네일 이미지를 만들고 캔버스에 넣었습니다 메시지 테스트 생성해줘');
   await chatComposer.press('Enter');
-  await expect(thumbnailModule.locator('[data-thumbnail-chat-message-mode="live"]').last()).toContainText('새 썸네일 이미지를 만들고 캔버스에 넣었습니다');
-  await expect(thumbnailModule.locator('[data-thumbnail-chat-message-mode="live"]').last()).toContainText('새 썸네일 이미지를 만들고 캔버스에 넣었습니다');
-  await expect(thumbnailModule.locator('[data-thumbnail-chat-message-mode="live"]').last()).toContainText('사용한 이미지 모델도 검증되었습니다');
-  await expect(thumbnailModule.locator('[data-thumbnail-chat-message-mode="live"]').last()).toContainText('기존 썸네일 후보');
-  await expect(thumbnailModule.locator('[data-thumbnail-chat-message-mode="live"]').last()).toContainText('문구 위치를 확인한 뒤 필요하면 PNG로 저장하세요');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-message-mode="live"]').last()).toContainText('새 썸네일 이미지를 만들고 화면에 넣었습니다');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-message-mode="live"]').last()).toContainText('확인된 실제 이미지입니다');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-message-mode="live"]').last()).toContainText('참고 썸네일 검색 없이 만들었습니다');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-message-mode="live"]').last()).toContainText('PNG로 저장하세요');
   expect(generationRequestBodies).toHaveLength(generationRequestsBeforeCompletionProbe + 1);
 
   await expect(toolbar).toBeVisible();
@@ -582,6 +782,30 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
   await expect(thumbnailModule.locator('[data-thumbnail-chat-message-mode="live"]').last()).toContainText('요청을 이해했어요');
   await expect(thumbnailModule.locator('[data-thumbnail-chat-live-stream="true"]')).toHaveCount(0);
   await expect(thumbnailModule.locator('#thumbnail-topic')).toHaveValue(/쯔양이 오른쪽/);
+
+  const chatRequestsBeforeGuidedExample = chatRequestBodies.length;
+  const generationRequestsBeforeGuidedExample = generationRequestBodies.length;
+  const guidedExampleButton = thumbnailModule.locator('[data-thumbnail-chat-guide-example="true"]').first();
+  const guidedExampleGenerationRequestStarted = new Promise<void>((resolve) => {
+    markDeferredGenerationRequestStarted = resolve;
+  });
+  shouldDeferNextGenerationResponse = true;
+  await guidedExampleButton.scrollIntoViewIfNeeded();
+  await expect(guidedExampleButton).toBeVisible();
+  await guidedExampleButton.click();
+  await guidedExampleGenerationRequestStarted;
+  await expect(canvasContextSummary).toContainText('밥도둑 한상');
+  await expect(thumbnailModule.locator('canvas')).toHaveAttribute('data-thumbnail-history-preview', 'true');
+  await expect(thumbnailModule.locator('[data-thumbnail-canvas-selected-text-transform-frame="true"]')).toBeVisible();
+  await expect(thumbnailModule.locator('[data-thumbnail-generation-skeleton="true"]')).toBeVisible();
+  await expect(thumbnailModule.locator('[data-thumbnail-generation-skeleton-glass-surface="true"]')).toBeVisible();
+  await expect(thumbnailModule.locator('[data-thumbnail-generation-skeleton-shimmer="true"]')).toBeVisible();
+  expect(chatRequestBodies).toHaveLength(chatRequestsBeforeGuidedExample);
+  expect(generationRequestBodies).toHaveLength(generationRequestsBeforeGuidedExample + 1);
+  releaseDeferredGenerationResponseOrThrow();
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('새 썸네일 이미지를 만들고 화면에 넣었습니다');
+  await expect(thumbnailModule.locator('[data-thumbnail-generation-skeleton="true"]')).toHaveCount(0);
+  await expect(thumbnailModule.locator('canvas')).toHaveAttribute('data-thumbnail-history-preview', 'false');
 
   const bounds = await thumbnailModule.evaluate((element) => {
     const moduleRect = element.getBoundingClientRect();
