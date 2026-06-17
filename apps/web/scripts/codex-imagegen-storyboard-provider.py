@@ -207,6 +207,7 @@ def _build_payload(
     output_format: str,
     background: str,
     reasoning_effort: str,
+    instructions: str,
 ) -> Dict[str, Any]:
     if output_format not in {"png", "jpeg", "webp"}:
         raise BridgeError("invalid_output_format", "outputFormat must be png, jpeg, or webp")
@@ -221,7 +222,7 @@ def _build_payload(
     }
     payload: Dict[str, Any] = {
         "model": agent_model,
-        "instructions": DEFAULT_INSTRUCTIONS,
+        "instructions": instructions,
         "input": [
             {
                 "role": "user",
@@ -386,6 +387,7 @@ def _generate(payload: Mapping[str, Any]) -> Dict[str, Any]:
     output_format = _optional_str(payload.get("outputFormat")) or DEFAULT_FORMAT
     background = _optional_str(payload.get("background")) or DEFAULT_BACKGROUND
     reasoning_effort = _optional_str(payload.get("reasoningEffort")) or os.environ.get("CODEX_IMAGEGEN_AGENT_EFFORT") or DEFAULT_REASONING_EFFORT
+    instructions = _optional_str(payload.get("instructions")) or os.environ.get("CODEX_IMAGEGEN_INSTRUCTIONS") or DEFAULT_INSTRUCTIONS
     timeout = int(payload.get("timeout") if isinstance(payload.get("timeout"), int) else 300)
     auth_file = _optional_str(payload.get("authFile")) or os.environ.get("CODEX_AUTH_FILE")
 
@@ -396,6 +398,7 @@ def _generate(payload: Mapping[str, Any]) -> Dict[str, Any]:
         output_format=output_format,
         background=background,
         reasoning_effort=reasoning_effort,
+        instructions=instructions,
     )
     raw_response = _run_oauth_responses(request_payload, timeout=timeout, auth_file=auth_file)
     image = _extract_generated_image(raw_response, output_format)
