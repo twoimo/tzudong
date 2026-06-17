@@ -21,6 +21,12 @@ const payload: ThumbnailGeneratorPayload = {
   acknowledgedSafety: true,
 };
 
+const tzuyangHostPresenceFixture = {
+  creator: "tzuyang",
+  visible: true,
+  evidence: "history-test-host-proof",
+};
+
 const result: ThumbnailGenerationResult = {
   baseImage: {
     dataUrl: "data:image/png;base64,iVBORw0KGgo=",
@@ -30,6 +36,7 @@ const result: ThumbnailGenerationResult = {
     providerId: "local-codex",
     model: "gpt-image-2",
     modelProvenance: "exact",
+    hostPresence: tzuyangHostPresenceFixture,
   },
   prompt: "thumbnail prompt",
   warnings: ["live_provider_exact_gpt_image_2"],
@@ -126,6 +133,7 @@ describe("admin youtube thumbnail history", () => {
             generationMode: "direct_provider",
             imagePath: "./ok.png",
             headline: "역대급 먹방",
+            hostPresence: tzuyangHostPresenceFixture,
             retrieval: {
               status: "used",
               candidateCount: 4,
