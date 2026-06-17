@@ -316,17 +316,28 @@ test("storyboard canvas counts only visible trusted GPT Image 2 storyboard panel
     "true",
   );
   await expect(storyboardSettingsPanel).toContainText("이미지 설정");
-  await expect(storyboardSettingsPanel).toContainText("OpenAI API Key");
+  await expect(storyboardSettingsPanel).toContainText(
+    "기본 OAuth · 고급 로컬 · API Key 백업",
+  );
+  await expect(storyboardSettingsPanel).toContainText("API Key 백업");
   await expect(storyboardSettingsPanel).toContainText("gpt-image-2");
   await expect(
     storyboardSettingsPanel.locator('[data-storyboard-api-router-choice="true"]'),
   ).toBeVisible();
   await expect(
-    storyboardSettingsPanel.locator('[data-storyboard-api-router-option="browser-openai-api-key"]'),
-  ).toContainText("API Key");
+    storyboardSettingsPanel.locator(
+      '[data-storyboard-api-router-choice-layout="oauth-deduped"]',
+    ),
+  ).toBeVisible();
   await expect(
     storyboardSettingsPanel.locator('[data-storyboard-api-router-option="local-codex-oauth"]'),
-  ).toContainText("OAuth");
+  ).toContainText("기본");
+  await expect(
+    storyboardSettingsPanel.locator('[data-storyboard-api-router-option="local-bridge"]'),
+  ).toContainText("고급 로컬");
+  await expect(
+    storyboardSettingsPanel.locator('[data-storyboard-api-router-option="browser-openai-api-key"]'),
+  ).toContainText("백업 사용");
   const apiKeySettings = storyboardSettingsPanel.locator(
     '[data-storyboard-browser-api-key-settings="local-storage-only"]',
   );
@@ -892,6 +903,14 @@ test("storyboard settings keeps production image API keys in browser localStorag
   );
 
   const seenImageStatusHeaders: Array<string | null> = [];
+  const seenLocalBridgeAuthHeaders: Array<string | null> = [];
+  const localBridgeCorsHeaders = {
+    "Access-Control-Allow-Origin": "http://localhost:8080",
+    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+    "Access-Control-Allow-Headers":
+      "Authorization, Content-Type, X-Tzudong-Local-Bridge",
+    "Access-Control-Allow-Private-Network": "true",
+  };
   await page.route("**/api/admin/storyboard/images", async (route) => {
     if (route.request().method() !== "GET") {
       await route.continue();
@@ -925,6 +944,55 @@ test("storyboard settings keeps production image API keys in browser localStorag
       }),
     });
   });
+  await page.route("http://127.0.0.1:17873/**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (request.method() === "OPTIONS") {
+      await route.fulfill({ status: 204, headers: localBridgeCorsHeaders });
+      return;
+    }
+    if (url.pathname === "/health") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        headers: localBridgeCorsHeaders,
+        body: JSON.stringify({
+          ok: true,
+          bridge: "tzudong-storyboard-local-bridge",
+          version: 1,
+          status: "ok",
+          tokenRequired: true,
+          providerId: "local-codex",
+          model: "gpt-image-2",
+        }),
+      });
+      return;
+    }
+    if (url.pathname === "/auth-status") {
+      seenLocalBridgeAuthHeaders.push(
+        request.headers().authorization ?? null,
+      );
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        headers: localBridgeCorsHeaders,
+        body: JSON.stringify({
+          ok: true,
+          bridge: "tzudong-storyboard-local-bridge",
+          status: "ready",
+          providerId: "local-codex",
+          model: "gpt-image-2",
+        }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 404,
+      contentType: "application/json",
+      headers: localBridgeCorsHeaders,
+      body: JSON.stringify({ ok: false }),
+    });
+  });
 
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/admin?module=storyboard", {
@@ -936,10 +1004,19 @@ test("storyboard settings keeps production image API keys in browser localStorag
   const storyboardModule = page.locator('[data-admin-storyboard-generator="true"]');
   await expect(storyboardModule).toBeVisible({ timeout: 30_000 });
   await storyboardModule.locator('[data-storyboard-chat-settings-toggle="true"]').click();
+  const settingsPanel = page.locator('[data-storyboard-chat-settings-panel="true"]');
   const apiKeySettings = page.locator(
     '[data-storyboard-browser-api-key-settings="local-storage-only"]',
   );
   await expect(apiKeySettings).toBeVisible({ timeout: 10_000 });
+  await expect(settingsPanel).toContainText(
+    "기본 OAuth · 고급 로컬 · API Key 백업",
+  );
+  await expect(
+    settingsPanel.locator(
+      '[data-storyboard-api-router-choice-layout="oauth-deduped"]',
+    ),
+  ).toBeVisible();
   await expect(apiKeySettings).toHaveAttribute(
     "data-storyboard-api-key-storage",
     "browser-local-storage-only",
@@ -948,6 +1025,55 @@ test("storyboard settings keeps production image API keys in browser localStorag
     "data-storyboard-api-key-db-storage",
     "forbidden",
   );
+
+  const fakeLocalBridgeToken = "ui-local-bridge-token-1234567890";
+  await settingsPanel.locator('[data-storyboard-api-router-option="local-bridge"]').click();
+  const localBridgeSettings = settingsPanel.locator(
+    '[data-storyboard-local-bridge-settings="session-only"]',
+  );
+  await expect(localBridgeSettings).toBeVisible({ timeout: 10_000 });
+  await expect(localBridgeSettings).toHaveAttribute(
+    "data-storyboard-local-bridge-settings-visibility",
+    "advanced-selected",
+  );
+  await expect(localBridgeSettings).toContainText(/OAuth는 동일합니다/);
+  await localBridgeSettings
+    .locator('[data-storyboard-local-bridge-url-input="true"]')
+    .fill("http://127.0.0.1:17873");
+  await localBridgeSettings
+    .locator('[data-storyboard-local-bridge-token-input="true"]')
+    .fill(fakeLocalBridgeToken);
+  await localBridgeSettings.locator('[data-storyboard-local-bridge-save="true"]').click();
+  await expect(
+    localBridgeSettings.locator(
+      '[data-storyboard-local-bridge-status="connected"]',
+    ),
+  ).toBeVisible({ timeout: 10_000 });
+  await expect(
+    localBridgeSettings.locator('[data-storyboard-local-bridge-message="true"]'),
+  ).toContainText(/연결|저장|사용 가능|ready/i);
+  await expect
+    .poll(() => seenLocalBridgeAuthHeaders.includes(`Bearer ${fakeLocalBridgeToken}`), {
+      timeout: 10_000,
+      message: "expected local bridge auth-status to use the pasted pairing token",
+    })
+    .toBe(true);
+  expect(
+    await page.evaluate(() =>
+      window.sessionStorage.getItem(
+        "tzudong.admin.storyboard.localBridge.v1",
+      ),
+    ),
+  ).toContain(fakeLocalBridgeToken);
+  await localBridgeSettings.locator('[data-storyboard-local-bridge-clear="true"]').click();
+  await expect(localBridgeSettings).toHaveCount(0, { timeout: 10_000 });
+  expect(
+    await page.evaluate(() =>
+      window.sessionStorage.getItem(
+        "tzudong.admin.storyboard.localBridge.v1",
+      ),
+    ),
+  ).toBeNull();
 
   const fakeApiKey = "sk-proj_browserlocalonly1234567890";
   const apiKeyInput = apiKeySettings.locator(
@@ -1312,11 +1438,16 @@ test("storyboard chat redacts hostile prompts and keeps fallback readiness truth
   await storyboardModule.locator('[data-storyboard-chat-settings-toggle="true"]').click();
   const settingsPanel = page.locator('[data-storyboard-chat-settings-panel="true"]');
   await expect(settingsPanel).toBeVisible({ timeout: 10_000 });
-  await expect(settingsPanel).toContainText("OpenAI API Key");
+  await expect(settingsPanel).toContainText(
+    "기본 OAuth · 고급 로컬 · API Key 백업",
+  );
+  await expect(settingsPanel).toContainText("API Key 백업");
   await expect(settingsPanel).toContainText("gpt-image-2");
   await expect(settingsPanel.locator('[data-storyboard-api-router-choice="true"]')).toBeVisible();
-  await expect(settingsPanel.locator('[data-storyboard-api-router-option="browser-openai-api-key"]')).toContainText("API Key");
-  await expect(settingsPanel.locator('[data-storyboard-api-router-option="local-codex-oauth"]')).toContainText("OAuth");
+  await expect(settingsPanel.locator('[data-storyboard-api-router-choice-layout="oauth-deduped"]')).toBeVisible();
+  await expect(settingsPanel.locator('[data-storyboard-api-router-option="browser-openai-api-key"]')).toContainText("백업 사용");
+  await expect(settingsPanel.locator('[data-storyboard-api-router-option="local-codex-oauth"]')).toContainText("기본");
+  await expect(settingsPanel.locator('[data-storyboard-api-router-option="local-bridge"]')).toContainText("고급 로컬");
   await expect(page.locator('[data-storyboard-backend-agent-readiness="true"]')).toHaveCount(0);
   await expect(page.locator('[data-storyboard-image-provider-readiness="true"]')).toHaveCount(0);
 
