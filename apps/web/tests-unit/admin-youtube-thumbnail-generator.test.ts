@@ -51,6 +51,13 @@ import {
   getThumbnailAutomaticRetrievalReferenceLimit,
   readThumbnailRetrievalReferenceImages,
 } from "../lib/admin/youtube-thumbnail-generator/retrieval-reference-images";
+import {
+  ThumbnailLocalBridgeContractError,
+  buildThumbnailLocalBridgeImagesRequest,
+  normalizeThumbnailLocalBridgeImagesResponse,
+  normalizeThumbnailLocalBridgeToken,
+  normalizeThumbnailLocalBridgeUrl,
+} from "../lib/admin/youtube-thumbnail-generator/local-bridge-contract";
 import { ThumbnailGenerationError } from "../lib/admin/youtube-thumbnail-generator/types";
 
 const safePayload = {
@@ -376,6 +383,67 @@ function writeThumbnailRetrievalCommand(root: string, body: string) {
 
 
 describe("admin youtube thumbnail generator", () => {
+  test("normalizes thumbnail local bridge contract and trusts exact local-codex gpt-image-2 only", () => {
+    expect(normalizeThumbnailLocalBridgeUrl("http://localhost:17873/path?debug=1#hash")).toBe("http://localhost:17873");
+    expect(normalizeThumbnailLocalBridgeUrl("http://127.0.0.1:17873")).toBe("http://127.0.0.1:17873");
+    expect(() => normalizeThumbnailLocalBridgeUrl("https://example.com:17873")).toThrow(ThumbnailLocalBridgeContractError);
+    expect(normalizeThumbnailLocalBridgeToken("  bridge-token-1234567890  ")).toBe("bridge-token-1234567890");
+    expect(normalizeThumbnailLocalBridgeToken("too-short")).toBeNull();
+
+    const request = buildThumbnailLocalBridgeImagesRequest(safePayload, [
+      {
+        name: "host.png",
+        mime: "image/png",
+        role: "host",
+        dataBase64: "aGVsbG8=",
+      },
+    ]);
+    expect(request.payload).toMatchObject({
+      providerId: "local-codex",
+      generationMode: "direct_provider",
+    });
+    expect(request.referenceImages).toHaveLength(1);
+
+    const trustedResponse = normalizeThumbnailLocalBridgeImagesResponse({
+      ok: true,
+      providerId: "local-codex",
+      model: "gpt-image-2",
+      result: {
+        baseImage: {
+          dataUrl: "data:image/png;base64,aGVsbG8=",
+          mime: "image/png",
+          targetWidth: 1280,
+          targetHeight: 720,
+          providerId: "local-codex",
+          model: "gpt-image-2",
+          modelProvenance: "exact",
+        },
+        prompt: "local bridge thumbnail",
+        warnings: ["exact_provenance"],
+      },
+    });
+    expect(trustedResponse.result.baseImage.modelProvenance).toBe("exact");
+
+    expect(() => normalizeThumbnailLocalBridgeImagesResponse({
+      ok: true,
+      providerId: "local-codex",
+      model: "gpt-image-2",
+      result: {
+        baseImage: {
+          dataUrl: "data:image/png;base64,aGVsbG8=",
+          mime: "image/png",
+          targetWidth: 1280,
+          targetHeight: 720,
+          providerId: "local-codex",
+          model: "gpt-image-2",
+          modelProvenance: "requested-label",
+        },
+        prompt: "untrusted",
+        warnings: [],
+      },
+    })).toThrow(ThumbnailLocalBridgeContractError);
+  });
+
   test("allows only local Codex and OpenAI gpt-image-2 thumbnail providers", () => {
     expect(resolveLocalCodexThumbnailModel({} as NodeJS.ProcessEnv)).toBe("unconfigured:gpt-image-2");
     expect(resolveLocalCodexThumbnailModel({ THUMBNAIL_LOCAL_CODEX_IMAGE_MODEL: "chatgpt-image-latest" } as NodeJS.ProcessEnv)).toBe("chatgpt-image-latest");
