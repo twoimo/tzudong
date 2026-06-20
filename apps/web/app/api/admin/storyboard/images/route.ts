@@ -35,7 +35,7 @@ function getStoryboardImageRouteEnv() {
     ...process.env,
     CODEX_IMAGEGEN_AGENT_MODEL: process.env.CODEX_IMAGEGEN_AGENT_MODEL || 'gpt-5.5',
     CODEX_IMAGEGEN_AGENT_EFFORT: process.env.CODEX_IMAGEGEN_AGENT_EFFORT || 'high',
-    STORYBOARD_LOCAL_HISTORY_WRITE: process.env.STORYBOARD_LOCAL_HISTORY_WRITE || '1',
+    STORYBOARD_LOCAL_HISTORY_WRITE: process.env.STORYBOARD_LOCAL_HISTORY_WRITE,
   };
 }
 
