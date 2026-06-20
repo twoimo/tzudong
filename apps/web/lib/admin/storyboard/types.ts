@@ -378,6 +378,8 @@ export type StoryboardGenerationResult = {
     isFallbackData: boolean;
     fallbackReason: StoryboardFallbackReason | null;
     dataModeLabel: string;
+    selectedSingleMarkerSourceCount?: number;
+    selectedMarkerMedianRelativePeak?: number | null;
   };
   storyboard: {
     title: string;
