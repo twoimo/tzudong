@@ -14,7 +14,7 @@ import csv
 import json
 import sys
 from collections import Counter, defaultdict
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable, Optional, Sequence
 
@@ -23,7 +23,7 @@ DEFAULT_TRANSFORMS = REPO_ROOT / "backend" / "restaurant-evaluation" / "data" / 
 
 
 def utc_now_iso() -> str:
-    return datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def iter_jsonl(path: Path) -> Iterable[tuple[int, dict]]:
@@ -103,7 +103,126 @@ def unique_coordinate_suggestion(candidates: list[dict]) -> Optional[dict]:
     }
 
 
-def build_report(path: Path, *, checked_at: str = "") -> dict:
+def stage_key_for_entry(entry: dict) -> str:
+    stage = entry.get("geocodingFalseStage")
+    return "unknown" if stage is None else str(stage)
+
+
+def build_direct_coordinate_reuse_lane(entries: list[dict]) -> dict:
+    direct_entries = []
+    for entry in entries:
+        suggestion = entry.get("suggestedKnownCoordinate")
+        if not suggestion:
+            continue
+        direct_entries.append({
+            "lineNumber": entry.get("lineNumber"),
+            "traceId": entry.get("traceId"),
+            "videoId": entry.get("videoId"),
+            "originName": entry.get("originName"),
+            "geocodingFalseStage": entry.get("geocodingFalseStage"),
+            "suggestedLat": suggestion.get("lat"),
+            "suggestedLng": suggestion.get("lng"),
+            "suggestionSourceCount": suggestion.get("sourceCount"),
+            "sourceTraceIds": suggestion.get("sourceTraceIds", []),
+            "sourceVideoIds": suggestion.get("sourceVideoIds", []),
+            "roadAddress": suggestion.get("roadAddress"),
+            "jibunAddress": suggestion.get("jibunAddress"),
+            "correctionTemplate": {
+                "traceId": entry.get("traceId"),
+                "lat": suggestion.get("lat"),
+                "lng": suggestion.get("lng"),
+                "roadAddress": suggestion.get("roadAddress") or "",
+                "jibunAddress": suggestion.get("jibunAddress") or "",
+                "reviewDecision": "",
+                "reviewerNotes": "",
+            },
+        })
+    return {
+        "description": "Manual first-pass lane for same-name rows with one unique known coordinate. Apply only after human trace-id review.",
+        "count": len(direct_entries),
+        "entries": direct_entries,
+    }
+
+
+def review_preview_quality(value: object) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return "missing"
+    thin_markers = (
+        "언급되지 않",
+        "짧게 언급",
+        "맛 평가",
+        "맛에 대한",
+        "마감하여",
+        "초점",
+        "방문하여",
+    )
+    if any(marker in text for marker in thin_markers):
+        return "thin"
+    return "usable"
+
+def browser_review_entry(entry: dict) -> dict:
+    return {
+        "lineNumber": entry.get("lineNumber"),
+        "traceId": entry.get("traceId"),
+        "videoId": entry.get("videoId"),
+        "youtubeLink": entry.get("youtubeLink"),
+        "originName": entry.get("originName"),
+        "originAddress": entry.get("originAddress"),
+        "geocodingFalseStage": entry.get("geocodingFalseStage"),
+        "reviewPreview": entry.get("reviewPreview"),
+        "reviewPreviewQuality": review_preview_quality(entry.get("reviewPreview")),
+    }
+
+
+def build_browser_review_lane(entries: list[dict], *, high_row_threshold: int = 5) -> dict:
+    browser_entries = [entry for entry in entries if not entry.get("suggestedKnownCoordinate")]
+    by_stage: dict[str, list[dict]] = defaultdict(list)
+    by_video: dict[str, list[dict]] = defaultdict(list)
+    review_quality_counts: Counter[str] = Counter()
+    for entry in browser_entries:
+        review_entry = browser_review_entry(entry)
+        by_stage[stage_key_for_entry(entry)].append(review_entry)
+        review_quality_counts.update([review_entry["reviewPreviewQuality"]])
+        video_id = str(entry.get("videoId") or "unknown")
+        by_video[video_id].append(entry)
+
+    high_row_groups = []
+    for video_id, video_entries in sorted(by_video.items(), key=lambda item: (-len(item[1]), item[0])):
+        if len(video_entries) < high_row_threshold:
+            continue
+        stage_counts = Counter(stage_key_for_entry(entry) for entry in video_entries)
+        high_row_groups.append({
+            "videoId": video_id,
+            "rowCount": len(video_entries),
+            "stageCounts": dict(sorted(stage_counts.items())),
+            "entries": [browser_review_entry(entry) for entry in video_entries],
+        })
+
+    return {
+        "description": "Manual browser-review lane for rows without safe same-name coordinate reuse.",
+        "count": len(browser_entries),
+        "reviewPreviewQualityCounts": dict(sorted(review_quality_counts.items())),
+        "stageBuckets": {
+            stage: {
+                "count": len(stage_entries),
+                "entries": stage_entries,
+            }
+            for stage, stage_entries in sorted(by_stage.items())
+        },
+        "highRowVideoThreshold": high_row_threshold,
+        "highRowVideoGroups": high_row_groups,
+    }
+
+
+def build_review_lanes(entries: list[dict], *, high_row_threshold: int = 5) -> dict:
+    return {
+        "directCoordinateReuse": build_direct_coordinate_reuse_lane(entries),
+        "browserReview": build_browser_review_lane(entries, high_row_threshold=high_row_threshold),
+    }
+
+
+def build_report(path: Path, *, checked_at: str = "", high_row_threshold: int = 5) -> dict:
     records = list(iter_jsonl(path))
     known = collect_known_coordinates(records)
     entries = []
@@ -147,6 +266,7 @@ def build_report(path: Path, *, checked_at: str = "") -> dict:
         "stageCounts": dict(sorted(stage_counts.items())),
         "channelCounts": dict(sorted(channel_counts.items())),
         "sameNameUniqueCoordinateSuggestionCount": reusable_count,
+        "reviewLanes": build_review_lanes(entries, high_row_threshold=high_row_threshold),
         "entries": entries,
     }
 
@@ -186,6 +306,90 @@ def write_csv(path: Path, entries: list[dict]) -> None:
             })
 
 
+def write_direct_candidates_csv(path: Path, lane: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fields = [
+        "traceId", "lat", "lng", "roadAddress", "jibunAddress", "reviewDecision",
+        "reviewerNotes", "lineNumber", "videoId", "originName", "geocodingFalseStage",
+        "suggestionSourceCount",
+    ]
+    with path.open("w", encoding="utf-8", newline="") as fh:
+        writer = csv.DictWriter(fh, fieldnames=fields)
+        writer.writeheader()
+        for entry in lane.get("entries", []):
+            template = entry.get("correctionTemplate") or {}
+            writer.writerow({
+                "traceId": template.get("traceId"),
+                "lat": template.get("lat"),
+                "lng": template.get("lng"),
+                "roadAddress": template.get("roadAddress"),
+                "jibunAddress": template.get("jibunAddress"),
+                "reviewDecision": template.get("reviewDecision"),
+                "reviewerNotes": template.get("reviewerNotes"),
+                "lineNumber": entry.get("lineNumber"),
+                "videoId": entry.get("videoId"),
+                "originName": entry.get("originName"),
+                "geocodingFalseStage": entry.get("geocodingFalseStage"),
+                "suggestionSourceCount": entry.get("suggestionSourceCount"),
+            })
+
+
+def iter_browser_queue_rows(lane: dict) -> Iterable[dict]:
+    high_row_index = {
+        entry.get("traceId"): {
+            "highRowVideoId": group.get("videoId"),
+            "highRowRowCount": group.get("rowCount"),
+        }
+        for group in lane.get("highRowVideoGroups", [])
+        for entry in group.get("entries", [])
+        if entry.get("traceId")
+    }
+    for stage, bucket in (lane.get("stageBuckets") or {}).items():
+        for entry in bucket.get("entries", []):
+            high_row = high_row_index.get(entry.get("traceId"), {})
+            yield {
+                "queueType": f"stage:{stage}",
+                "highRowVideoId": high_row.get("highRowVideoId", ""),
+                "highRowRowCount": high_row.get("highRowRowCount", ""),
+                **entry,
+            }
+
+
+def write_browser_queue_csv(path: Path, lane: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fields = [
+        "queueType", "highRowVideoId", "highRowRowCount", "lineNumber", "traceId",
+        "videoId", "youtubeLink", "originName", "geocodingFalseStage", "originAddress",
+        "reviewPreview", "reviewPreviewQuality",
+    ]
+    with path.open("w", encoding="utf-8", newline="") as fh:
+        writer = csv.DictWriter(fh, fieldnames=fields)
+        writer.writeheader()
+        for row in iter_browser_queue_rows(lane):
+            writer.writerow({
+                "queueType": row.get("queueType"),
+                "highRowVideoId": row.get("highRowVideoId", ""),
+                "highRowRowCount": row.get("highRowRowCount", ""),
+                "lineNumber": row.get("lineNumber"),
+                "traceId": row.get("traceId"),
+                "videoId": row.get("videoId"),
+                "youtubeLink": row.get("youtubeLink"),
+                "originName": row.get("originName"),
+                "geocodingFalseStage": row.get("geocodingFalseStage"),
+                "originAddress": json.dumps(row.get("originAddress"), ensure_ascii=False, sort_keys=True),
+                "reviewPreview": row.get("reviewPreview"),
+                "reviewPreviewQuality": row.get("reviewPreviewQuality"),
+            })
+
+
+APPROVED_REVIEW_DECISIONS = {"approved", "approve", "yes", "y", "승인", "확정"}
+
+
+def is_review_approved(row: dict) -> bool:
+    decision = str(row.get("reviewDecision") or row.get("reviewed") or "").strip().lower()
+    return decision in APPROVED_REVIEW_DECISIONS
+
+
 def load_corrections(path: Path) -> dict[str, dict]:
     corrections: dict[str, dict] = {}
     with path.open("r", encoding="utf-8", newline="") as fh:
@@ -193,6 +397,8 @@ def load_corrections(path: Path) -> dict[str, dict]:
         for row in reader:
             trace_id = str(row.get("traceId") or "").strip()
             if not trace_id:
+                continue
+            if not is_review_approved(row):
                 continue
             lat_raw = str(row.get("lat") or row.get("correctedLat") or "").strip()
             lng_raw = str(row.get("lng") or row.get("correctedLng") or "").strip()
@@ -211,6 +417,8 @@ def load_corrections(path: Path) -> dict[str, dict]:
 
 
 def apply_corrections(input_path: Path, output_path: Path, corrections_path: Path) -> dict:
+    if input_path.resolve() == output_path.resolve():
+        raise ValueError("corrected output must differ from input path")
     corrections = load_corrections(corrections_path)
     updated = 0
     output_lines = []
@@ -244,19 +452,29 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("--input", default=str(DEFAULT_TRANSFORMS))
     parser.add_argument("--output", default="")
     parser.add_argument("--csv", default="")
+    parser.add_argument("--direct-candidates-csv", default="")
+    parser.add_argument("--browser-queue-json", default="")
+    parser.add_argument("--browser-queue-csv", default="")
+    parser.add_argument("--high-row-threshold", type=int, default=5)
     parser.add_argument("--apply-corrections", default="")
     parser.add_argument("--corrected-output", default="")
     parser.add_argument("--checked-at", default="")
     args = parser.parse_args(argv)
 
     input_path = Path(args.input)
-    report = build_report(input_path, checked_at=args.checked_at)
+    report = build_report(input_path, checked_at=args.checked_at, high_row_threshold=args.high_row_threshold)
     if args.output:
         write_json(Path(args.output), report)
     else:
         print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
     if args.csv:
         write_csv(Path(args.csv), report["entries"])
+    if args.direct_candidates_csv:
+        write_direct_candidates_csv(Path(args.direct_candidates_csv), report["reviewLanes"]["directCoordinateReuse"])
+    if args.browser_queue_json:
+        write_json(Path(args.browser_queue_json), report["reviewLanes"]["browserReview"])
+    if args.browser_queue_csv:
+        write_browser_queue_csv(Path(args.browser_queue_csv), report["reviewLanes"]["browserReview"])
     if args.apply_corrections:
         if not args.corrected_output:
             print("--corrected-output is required with --apply-corrections", file=sys.stderr)

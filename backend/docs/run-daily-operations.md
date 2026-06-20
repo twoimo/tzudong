@@ -16,8 +16,8 @@
 
 핵심 판정 필드:
 
-- `finalStatus`: 전체 실행 결과입니다. `success`가 아니면 실패/경고 배열을
-  함께 확인합니다.
+- `finalStatus`: 전체 실행 결과입니다. `OK`, `WARN`, `ERROR` 중 하나이며,
+  `OK`가 아니면 실패/경고 배열을 함께 확인합니다.
 - `finalExitCode`: 프로세스 종료 코드입니다. 필수 단계 실패가 있으면
   non-zero여야 합니다.
 - `failedRequiredSteps[]`: 필수 단계 실패 목록입니다.
@@ -29,6 +29,11 @@
 - `runtime`: GitHub Actions run id/url/ref/event와 실행 브랜치 증거입니다.
 - `gdriveUpload`: Actions upload step이 실행 후 append할 수 있는 GDrive
   업로드 상태입니다.
+- 브랜치 안전 모드, split data worktree 준비 실패처럼 정상 final-reporting
+  구간에 도달하기 전 중단되는 경우에도 producer가 `ERROR` manifest를 먼저
+  기록해야 합니다. success 경로에서 manifest를 기록/확인하지 못하면
+  프로세스는 non-zero로 내려가야 하며, manifest가 없거나 파싱 실패할
+  때만 bounded log-tail fallback을 사용합니다.
 
 예시 확인 명령:
 
@@ -53,7 +58,7 @@ PY
 
 ### 정상 완료로 볼 수 있는 경우
 
-- `finalStatus=success`
+- `finalStatus=OK`
 - `finalExitCode=0`
 - `failedRequiredSteps[]`가 비어 있음
 - `downstreamSkips[]`가 비어 있음
@@ -82,6 +87,7 @@ PY
 - `finalExitCode`가 non-zero
 - `failedRequiredSteps[]`가 비어 있지 않음
 - 필수 단계의 `stepEvents[].status=failed`
+- success 경로에서 summary manifest 기록/확인이 실패함
 - 필수 선행 단계 실패 뒤 후속 단계가 계속 실행된 정황이 있음
 
 이 경우 기존 동작을 우회하지 말고 `backend/utils/tests/test_run_daily_regression.py`

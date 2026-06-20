@@ -4,6 +4,17 @@ export const LOCAL_BRIDGE_TOKEN_HEADER = 'Authorization' as const;
 export const LOCAL_BRIDGE_PROVIDER_ID = 'local-codex' as const;
 export const LOCAL_BRIDGE_MODEL = 'gpt-image-2' as const;
 export const LOCAL_BRIDGE_MODEL_PROVENANCE = 'exact' as const;
+export const LOCAL_BRIDGE_HELPER_ROUTE = '/helper' as const;
+export const LOCAL_BRIDGE_HELPER_ORIGIN_QUERY_PARAM = 'origin' as const;
+export const LOCAL_BRIDGE_HELPER_SESSION_QUERY_PARAM = 'session' as const;
+export const LOCAL_BRIDGE_HELPER_SURFACE_QUERY_PARAM = 'surface' as const;
+export const LOCAL_BRIDGE_HELPER_MESSAGE_VERSION = 1 as const;
+export const LOCAL_BRIDGE_HELPER_SURFACES = ['storyboard', 'thumbnail'] as const;
+export const LOCAL_BRIDGE_HELPER_COMMANDS = [
+  'checkStatus',
+  'generateThumbnail',
+  'generateStoryboard',
+] as const;
 export const LOCAL_BRIDGE_ALLOWED_ORIGINS = [
   'https://www.tzudong.app',
   'https://tzudong.app',
@@ -17,12 +28,22 @@ export type LocalBridgeRouteId = typeof LOCAL_BRIDGE_ROUTE_ID;
 export type LocalBridgeProviderId = typeof LOCAL_BRIDGE_PROVIDER_ID;
 export type LocalBridgeModel = typeof LOCAL_BRIDGE_MODEL;
 export type LocalBridgeModelProvenance = typeof LOCAL_BRIDGE_MODEL_PROVENANCE;
+export type LocalBridgeHelperRoute = typeof LOCAL_BRIDGE_HELPER_ROUTE;
+export type LocalBridgeHelperMessageVersion = typeof LOCAL_BRIDGE_HELPER_MESSAGE_VERSION;
+export type LocalBridgeHelperOriginQueryParam = typeof LOCAL_BRIDGE_HELPER_ORIGIN_QUERY_PARAM;
+export type LocalBridgeHelperSessionQueryParam = typeof LOCAL_BRIDGE_HELPER_SESSION_QUERY_PARAM;
+export type LocalBridgeHelperSurfaceQueryParam = typeof LOCAL_BRIDGE_HELPER_SURFACE_QUERY_PARAM;
+export type LocalBridgeHelperSurface = typeof LOCAL_BRIDGE_HELPER_SURFACES[number];
+export type LocalBridgeHelperCommand = typeof LOCAL_BRIDGE_HELPER_COMMANDS[number];
 export type LocalBridgeStatus =
   | 'checking'
   | 'connected'
+  | 'needs_reconnect'
   | 'unavailable'
   | 'auth_required'
   | 'unpaired'
+  | 'popup_blocked'
+  | 'helper_failed'
   | 'blocked'
   | 'error';
 
@@ -31,6 +52,47 @@ export type LocalBridgeContractErrorCode =
   | 'invalid_bridge_token'
   | 'invalid_bridge_payload'
   | 'untrusted_bridge_response';
+
+export type LocalBridgeHelperCheckStatusPayload = {
+  healthOk: boolean;
+  health: unknown;
+  authOk: boolean;
+  auth: unknown;
+};
+
+export type LocalBridgeHelperBridgePayload = unknown;
+
+export type LocalBridgeHelperRequestMessage = {
+  kind: 'tzudong-local-bridge-helper-request';
+  sessionId: string;
+  requestId: string;
+  command: LocalBridgeHelperCommand;
+  bridgeUrl: string;
+  token: string;
+  payload?: unknown;
+};
+
+export type LocalBridgeHelperErrorCode =
+  | 'invalid_message'
+  | 'origin_mismatch'
+  | 'request_failed';
+
+export type LocalBridgeHelperResponseMessage =
+  | {
+    kind: 'tzudong-local-bridge-helper-response';
+    sessionId: string;
+    requestId: string;
+    ok: true;
+    payload: LocalBridgeHelperCheckStatusPayload | LocalBridgeHelperBridgePayload;
+  }
+  | {
+    kind: 'tzudong-local-bridge-helper-response';
+    sessionId: string;
+    requestId: string;
+    ok: false;
+    errorCode: LocalBridgeHelperErrorCode;
+    message: string;
+  };
 
 export class LocalBridgeContractError extends Error {
   readonly code: LocalBridgeContractErrorCode;
