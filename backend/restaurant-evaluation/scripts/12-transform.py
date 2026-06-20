@@ -11,8 +11,8 @@ laaj_results, map_url_crawling 데이터를 최종 형식으로 변환합니다.
 - 출력:
   - evaluation/transforms.jsonl (채널별로 각각)
 
-- trace_id = hash(youtube_link + (naver_name || name) + youtuber_review)
-- trace_id_name_source: "naver_name" 또는 "original"
+- trace_id = hash(youtube_link + provider-backed matched_name/name + youtuber_review)
+- trace_id_name_source: "naver", "google", 또는 "original"
 - source_type: "geminiCLI" 또는 "map_url_crawling"
 """
 
@@ -223,6 +223,18 @@ def get_eval_item(
     return None
 
 
+def has_independent_provider_evidence(loc_match_item: dict) -> bool:
+    evidence_families = loc_match_item.get("evidence_families")
+    if not isinstance(evidence_families, list):
+        return False
+    unique_families = {
+        str(item).strip()
+        for item in evidence_families
+        if isinstance(item, str) and item.strip()
+    }
+    return len(unique_families) >= 2
+
+
 def resolve_trace_identity(
     restaurant_name: str, loc_match_item: Optional[dict]
 ) -> tuple[str, str]:
@@ -236,9 +248,12 @@ def resolve_trace_identity(
         or loc_match_item.get("naver_name")
         or loc_match_item.get("google_name")
     )
-    if matched_name and not are_provider_names_compatible(restaurant_name, matched_name):
-        return restaurant_name, "original"
     if matched_provider and matched_name:
+        if (
+            not are_provider_names_compatible(restaurant_name, matched_name)
+            and not has_independent_provider_evidence(loc_match_item)
+        ):
+            return restaurant_name, "original"
         return matched_name, matched_provider
 
     return restaurant_name, "original"

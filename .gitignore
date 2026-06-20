@@ -98,3 +98,7 @@ backend/restaurant-crawling/data/cookies.txt
 
 # Local generated backend review/export reports; may contain live operational data.
 backend/restaurant-evaluation/reports/
+
+.vercel
+.gjc/
+tmp/

@@ -5,9 +5,11 @@ import os
 import shutil
 import stat
 import subprocess
+import shlex
 import textwrap
 import time
 import unittest
+import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Callable, Optional
@@ -23,6 +25,37 @@ ACTIONS_BUDGET_CHECK_SOURCE = BACKEND_ROOT / "bin" / "check_actions_budget.py"
 DAILY_CRAWLER_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "daily-crawler.yml"
 GDRIVE_BACKFILL_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "gdrive-frame-backfill.yml"
 CHUNK_MULTIMODAL_SCRIPT = BACKEND_ROOT / "restaurant-crawling" / "scripts" / "08-chunk-multimodal-crawling.sh"
+PYTHON_BIN = os.environ.get("TZUDONG_TEST_PYTHON") or sys.executable
+
+
+def _resolve_bash_bin() -> str | None:
+    override = os.environ.get("TZUDONG_TEST_BASH")
+    if override:
+        return override
+    preferred = [
+        r"C:\Program Files\Git\bin\bash.exe",
+        r"C:\Program Files\Git\usr\bin\bash.exe",
+    ]
+    for candidate in preferred:
+        if Path(candidate).is_file():
+            return candidate
+    return shutil.which("bash") or shutil.which("bash.exe")
+
+
+BASH_BIN = _resolve_bash_bin()
+
+
+def _to_bash_path(path_value: Path | str) -> str:
+    text = str(path_value)
+    if os.name != "nt":
+        return text
+    normalized = Path(text).resolve().as_posix()
+    if len(normalized) >= 3 and normalized[1:3] == ":/":
+        return f"/{normalized[0].lower()}{normalized[2:]}"
+    return normalized
+
+
+
 
 
 class GDriveUploadContractTests(unittest.TestCase):
@@ -382,7 +415,7 @@ class GDriveUploadContractTests(unittest.TestCase):
         })
 
         ok = subprocess.run(
-            ["/usr/bin/python3", str(ENV_CONTRACT_SOURCE), "--profile", "daily", "--json"],
+            [PYTHON_BIN, str(ENV_CONTRACT_SOURCE), "--profile", "daily", "--json"],
             capture_output=True,
             text=True,
             env=env,
@@ -397,7 +430,7 @@ class GDriveUploadContractTests(unittest.TestCase):
         env["GEMINI_CREDENTIALS_BASE64"] = "oauth-secret-value"
         env["AGY_CREDENTIAL_B64"] = "agy-oauth-secret-value"
         oauth_ok = subprocess.run(
-            ["/usr/bin/python3", str(ENV_CONTRACT_SOURCE), "--profile", "daily", "--json"],
+            [PYTHON_BIN, str(ENV_CONTRACT_SOURCE), "--profile", "daily", "--json"],
             capture_output=True,
             text=True,
             env=env,
@@ -813,6 +846,48 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertIn("invalid step event status: unknown", result.stderr)
         self.assertFalse(summary_path.exists())
 
+    def test_run_daily_summary_manifest_validate_rejects_invalid_json(self) -> None:
+        summary_path = self.root / "invalid-summary.json"
+        summary_path.write_text("not json\n", encoding="utf-8")
+
+        result = self._helper(
+            "validate-summary-manifest",
+            "--input",
+            str(summary_path),
+        )
+
+        self.assertNotEqual(0, result.returncode, self._format_process_output(result))
+        self.assertIn("Expecting value", result.stderr)
+
+    def test_run_daily_summary_manifest_repairs_mojibaked_cli_text(self) -> None:
+        summary_path = self.root / "mojibake-summary.json"
+        reason = "Google 로그인 세션 만료"
+        mojibake_reason = reason.encode("utf-8").decode("latin-1")
+
+        result = self._helper(
+            "write-summary-manifest",
+            "--output",
+            str(summary_path),
+            "--date",
+            "2026-05-01",
+            "--final-status",
+            "ERROR",
+            "--final-exit-code",
+            "1",
+            "--failed-required-step",
+            f"Step 08 (Chunk Multimodal) - {mojibake_reason}",
+            "--downstream-skip",
+            f"Step 09~13 (Evaluation) - {mojibake_reason}",
+            "--step-event",
+            f"failed\tStep 08 (Chunk Multimodal)\t\t{mojibake_reason}\t",
+        )
+
+        self.assertEqual(0, result.returncode, self._format_process_output(result))
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        self.assertIn(reason, summary["failedRequiredSteps"][0])
+        self.assertIn(reason, summary["downstreamSkips"][0])
+        self.assertEqual(reason, summary["stepEvents"][0]["reason"])
+
     def test_gdrive_upload_status_embeds_in_summary_manifest_when_requested(self) -> None:
         frame = self.frames_dir / "summary.jpg"
         frame.write_text("frame\n", encoding="utf-8")
@@ -1085,7 +1160,7 @@ class GDriveUploadContractTests(unittest.TestCase):
 
     def _helper(self, *args: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
-            ["/usr/bin/python3", str(RUN_DAILY_HELPER_SOURCE), *args],
+            [PYTHON_BIN, str(RUN_DAILY_HELPER_SOURCE), *args],
             capture_output=True,
             text=True,
             check=False,
@@ -1144,7 +1219,7 @@ class BackendGuardrailScriptTests(unittest.TestCase):
 
         result = subprocess.run(
             [
-                "/usr/bin/python3",
+                PYTHON_BIN,
                 str(PRODUCTION_FIXTURE_CHECK_SOURCE),
                 "--transforms-jsonl",
                 str(transforms),
@@ -1169,7 +1244,7 @@ class BackendGuardrailScriptTests(unittest.TestCase):
         env.pop("GITHUB_TOKEN", None)
         result = subprocess.run(
             [
-                "/usr/bin/python3",
+                PYTHON_BIN,
                 str(ACTIONS_BUDGET_CHECK_SOURCE),
                 "--repository",
                 "twoimo/tzudong",
@@ -1370,7 +1445,7 @@ class RunDailyRegressionTests(unittest.TestCase):
         self.assertEqual(1, manifest["finalExitCode"])
         self.assertTrue(any("Step 13 (Supabase)" in item for item in manifest["failedRequiredSteps"]))
 
-    def test_manifest_write_failure_is_warn_only_and_preserves_success_exit(self) -> None:
+    def test_manifest_write_failure_returns_non_zero_exit(self) -> None:
         blocked_manifest_dir = self.root / "project" / "tmp" / "blocked-manifest"
 
         def fixture_mutator(_project_root: Path, _state_dir: Path) -> None:
@@ -1382,9 +1457,55 @@ class RunDailyRegressionTests(unittest.TestCase):
             fixture_mutator=fixture_mutator,
         )
 
-        self.assertEqual(0, result.returncode, self._format_process_output(result))
-        self.assertIn("run_daily summary manifest write failed (warn-only)", result.stdout)
+        self.assertNotEqual(0, result.returncode, self._format_process_output(result))
+        self.assertIn("run_daily summary manifest write failed", result.stdout)
+        self.assertIn("success exit downgraded to failure", result.stdout)
         self.assertFalse((blocked_manifest_dir / "current-summary.json").exists())
+
+    def test_manifest_readback_failure_returns_non_zero_exit(self) -> None:
+        result = self._run_script(
+            env_overrides={"RUN_DAILY_TEST_CORRUPT_SUMMARY_MANIFEST_AFTER_WRITE": "1"}
+        )
+
+        self.assertNotEqual(0, result.returncode, self._format_process_output(result))
+        self.assertIn("run_daily summary manifest write failed or readback failed", result.stdout)
+        self.assertIn("summary manifest readback:", result.stdout)
+        self.assertIn("success exit downgraded to failure", result.stdout)
+
+    def test_branch_safe_mode_failure_still_writes_summary_manifest(self) -> None:
+        result = self._run_script(env_overrides={"RUN_DAILY_TEST_CURRENT_BRANCH": "main"})
+
+        self.assertNotEqual(0, result.returncode, self._format_process_output(result))
+        self.assertIn("FORCE_BRANCH_SWITCH=1", result.stdout)
+
+        manifest = self._read_manifest()
+        self.assertEqual("ERROR", manifest["finalStatus"])
+        self.assertEqual(1, manifest["finalExitCode"])
+        self.assertTrue(any("Branch Check" in item for item in manifest["failedRequiredSteps"]))
+        self.assertEqual([], manifest["optionalSkips"])
+        self.assertEqual([], manifest["downstreamSkips"])
+        self.assertEqual("data", manifest["runtime"]["targetBranch"])
+
+    def test_split_worktree_failure_still_writes_summary_manifest(self) -> None:
+        result = self._run_script(
+            env_overrides={
+                "CI": "true",
+                "RUN_DAILY_EXECUTION_BRANCH": "main",
+                "RUN_DAILY_TARGET_BRANCH": "data",
+                "RUN_DAILY_TEST_CURRENT_BRANCH": "main",
+                "RUN_DAILY_TEST_WORKTREE_ADD_FAILURE": "1",
+            }
+        )
+
+        self.assertNotEqual(0, result.returncode, self._format_process_output(result))
+        self.assertIn("실행용 코드와 데이터 동기화 브랜치 분리 준비 실패", result.stdout)
+
+        manifest = self._read_manifest()
+        self.assertEqual("ERROR", manifest["finalStatus"])
+        self.assertEqual(1, manifest["finalExitCode"])
+        self.assertTrue(any("Split Data Sync Worktree" in item for item in manifest["failedRequiredSteps"]))
+        self.assertEqual("main", manifest["runtime"]["executionBranch"])
+        self.assertEqual("data", manifest["runtime"]["targetBranch"])
 
     def test_ci_validation_target_branch_uses_checked_out_branch_for_sync(self) -> None:
         target_branch = "verify-target"
@@ -1514,6 +1635,7 @@ class RunDailyRegressionTests(unittest.TestCase):
         self.assertNotEqual(0, result.returncode, self._format_process_output(result))
         self.assertIn("데이터 미러링 대상 디렉터리 생성 실패", result.stderr)
 
+    @unittest.skipIf(os.name == "nt", "Windows does not enforce POSIX chmod denial for this shell fixture")
     def test_mirror_data_root_returns_non_zero_when_source_list_fails(self) -> None:
         source = self.root / "source"
         target = self.root / "target"
@@ -1530,6 +1652,7 @@ class RunDailyRegressionTests(unittest.TestCase):
         self.assertNotEqual(0, result.returncode, self._format_process_output(result))
         self.assertIn("데이터 미러링 소스 목록 생성 실패", result.stderr)
 
+    @unittest.skipIf(os.name == "nt", "Windows does not enforce POSIX chmod denial for this shell fixture")
     def test_mirror_data_root_returns_non_zero_when_target_list_fails(self) -> None:
         source = self.root / "source"
         target = self.root / "target"
@@ -1546,6 +1669,7 @@ class RunDailyRegressionTests(unittest.TestCase):
         self.assertNotEqual(0, result.returncode, self._format_process_output(result))
         self.assertIn("데이터 미러링 대상 목록 생성 실패", result.stderr)
 
+    @unittest.skipIf(os.name == "nt", "Windows does not enforce POSIX chmod denial for this shell fixture")
     def test_mirror_data_root_returns_non_zero_when_copy_fails(self) -> None:
         source = self.root / "source"
         target = self.root / "target"
@@ -1563,6 +1687,7 @@ class RunDailyRegressionTests(unittest.TestCase):
         self.assertNotEqual(0, result.returncode, self._format_process_output(result))
         self.assertIn("데이터 미러링 파일 복사 실패", result.stderr)
 
+    @unittest.skipIf(os.name == "nt", "Windows does not enforce POSIX chmod denial for this shell fixture")
     def test_mirror_data_root_returns_non_zero_when_stale_remove_fails(self) -> None:
         source = self.root / "source"
         target = self.root / "target"
@@ -1635,13 +1760,33 @@ class RunDailyRegressionTests(unittest.TestCase):
                     env.pop(key, None)
                 else:
                     env[key] = value
-        Path(env["HOME"]).mkdir(parents=True, exist_ok=True)
+        if os.name == "nt":
+            env["PATH"] = ":".join([_to_bash_path(project_root / "bin"), env.get("PATH", "")])
+            for key in (
+                "HOME",
+                "RUN_DAILY_LOG_DIR",
+                "RUN_DAILY_ARCHIVE_DIR",
+                "RUN_DAILY_CURRENT_LOG_LINK",
+                "RUN_DAILY_SUMMARY_PATH",
+                "RUN_DAILY_MANIFEST_PATH",
+                "RUN_DAILY_TEST_STATE_DIR",
+                "RUN_DAILY_TEST_GIT_LOG_PATH",
+            ):
+                if env.get(key):
+                    env[key] = _to_bash_path(env[key])
+        Path(self.root / "home").mkdir(parents=True, exist_ok=True)
 
+        if not BASH_BIN:
+            self.skipTest("bash is not available in PATH")
+        script_path = shlex.quote(_to_bash_path(project_root / "backend" / "run_daily.sh"))
+        fixture_bin = shlex.quote(_to_bash_path(project_root / "bin"))
         return subprocess.run(
-            ["/bin/bash", str(project_root / "backend" / "run_daily.sh")],
+            [BASH_BIN, "-lc", f"export PATH={fixture_bin}:$PATH; exec {script_path}"],
             cwd=project_root,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             env=env,
             check=False,
         )
@@ -1670,15 +1815,19 @@ class RunDailyRegressionTests(unittest.TestCase):
         mirror_script = textwrap.dedent(
             f"""
             set -euo pipefail
-            source <(sed -n '/^mirror_data_root()/,/^mirror_data_files_to_sync_worktree()/p' {RUN_DAILY_SOURCE} | sed '$d')
-            mirror_data_root {source} {target}
+            source <(sed -n '/^mirror_data_root()/,/^mirror_data_files_to_sync_worktree()/p' '{_to_bash_path(RUN_DAILY_SOURCE)}' | sed '$d')
+            mirror_data_root '{_to_bash_path(source)}' '{_to_bash_path(target)}'
             """
         )
 
+        if not BASH_BIN:
+            self.skipTest("bash is not available in PATH")
         return subprocess.run(
-            ["/bin/bash", "-lc", mirror_script],
+            [BASH_BIN, "-lc", mirror_script],
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             check=False,
         )
 
@@ -1770,6 +1919,7 @@ class RunDailyRegressionTests(unittest.TestCase):
         path.chmod(path.stat().st_mode | stat.S_IEXEC)
 
     def _python_stub(self) -> str:
+        real_python = shlex.quote(_to_bash_path(PYTHON_BIN))
         return """
         #!/usr/bin/env bash
         if [ "${1:-}" = "-V" ] || [ "${1:-}" = "--version" ]; then
@@ -1779,7 +1929,20 @@ class RunDailyRegressionTests(unittest.TestCase):
 
         script_name="$(basename "${1:-}")"
         if [ "$script_name" = "run_daily_helpers.py" ]; then
-          exec /usr/bin/python3 "$@"
+          converted_args=()
+          for arg in "$@"; do
+            case "$arg" in
+              /[a-zA-Z]/*)
+                drive="${arg:1:1}"
+                rest="${arg:2}"
+                converted_args+=("${drive^^}:$rest")
+                ;;
+              *)
+                converted_args+=("$arg")
+                ;;
+            esac
+          done
+          exec __REAL_PYTHON__ "${converted_args[@]}"
         fi
 
         case "$script_name" in
@@ -1818,7 +1981,7 @@ class RunDailyRegressionTests(unittest.TestCase):
             ;;
         esac
         exit 0
-        """
+        """.replace("__REAL_PYTHON__", real_python)
 
     def _node_stub(self) -> str:
         return """
@@ -2005,6 +2168,10 @@ class RunDailyRegressionTests(unittest.TestCase):
                       ;;
                   esac
                 done
+                if [ "${RUN_DAILY_TEST_WORKTREE_ADD_FAILURE:-0}" = "1" ]; then
+                  echo "simulated worktree add failure" >&2
+                  exit 1
+                fi
                 mkdir -p "$target_path"
                 exit 0
                 ;;

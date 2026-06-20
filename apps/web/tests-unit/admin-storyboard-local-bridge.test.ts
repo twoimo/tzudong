@@ -18,6 +18,12 @@ import {
   normalizeThumbnailLocalBridgeImagesResponse,
 } from '../lib/admin/youtube-thumbnail-generator/local-bridge-contract';
 import { createStoryboardLocalBridgeServer } from '../lib/admin/storyboard/local-bridge-server.mts';
+import {
+  LOCAL_BRIDGE_HELPER_ORIGIN_QUERY_PARAM,
+  LOCAL_BRIDGE_HELPER_ROUTE,
+  LOCAL_BRIDGE_HELPER_SESSION_QUERY_PARAM,
+  LOCAL_BRIDGE_HELPER_SURFACE_QUERY_PARAM,
+} from '../lib/admin/local-bridge/core-contract';
 import { isTrustedStoryboardGeneratedImage } from '../lib/admin/storyboard/image-trust';
 import type { StoryboardGenerateRequest, StoryboardGenerationResult, StoryboardScene } from '../lib/admin/storyboard/types';
 
@@ -254,6 +260,26 @@ describe('storyboard local bridge server', () => {
     expect(text).not.toContain(token);
   });
 
+  test('serves the helper page without requiring an Origin header', async () => {
+    const { providerPath } = writeFakeProvider(tempDir);
+    const bridge = await listenBridge({ providerPath, outputDir: join(tempDir, 'out') });
+    activeServer = bridge.server;
+
+    const helperUrl = new URL(`${bridge.baseUrl}${LOCAL_BRIDGE_HELPER_ROUTE}`);
+    helperUrl.searchParams.set(LOCAL_BRIDGE_HELPER_ORIGIN_QUERY_PARAM, allowedOrigin);
+    helperUrl.searchParams.set(LOCAL_BRIDGE_HELPER_SESSION_QUERY_PARAM, 'storyboard-session-1');
+    helperUrl.searchParams.set(LOCAL_BRIDGE_HELPER_SURFACE_QUERY_PARAM, 'storyboard');
+
+    const helper = await fetch(helperUrl);
+    expect(helper.status).toBe(200);
+    expect(helper.headers.get('content-type')).toContain('text/html');
+    expect(helper.headers.get('cache-control')).toBe('no-store');
+    const html = await helper.text();
+    expect(html).toContain('Local bridge helper ready');
+    expect(html).toContain('storyboard-session-1');
+    expect(html).toContain(allowedOrigin);
+  });
+
   test('rejects missing token and wrong origin before provider invocation', async () => {
     const { providerPath, markerPath } = writeFakeProvider(tempDir);
     const bridge = await listenBridge({ providerPath, outputDir: join(tempDir, 'out') });
@@ -332,6 +358,38 @@ describe('storyboard local bridge server', () => {
     expect(payload.images).toHaveLength(1);
     expect(payload.images[0].image.providerId).toBe('local-codex');
     expect(payload.images[0].image.dataUrl).toStartWith('data:image/png;base64,');
+    expect(readFileSync(markerPath, 'utf8')).toBe('invoked');
+  });
+
+  test('accepts loopback helper origins for status and generation routes', async () => {
+    const { providerPath, markerPath } = writeFakeProvider(tempDir);
+    const bridge = await listenBridge({ providerPath, outputDir: join(tempDir, 'out') });
+    activeServer = bridge.server;
+    const localhostOrigin = bridge.baseUrl.replace('127.0.0.1', 'localhost');
+
+    const health = await fetch(`${bridge.baseUrl}/health`, { headers: { Origin: bridge.baseUrl } });
+    expect(health.status).toBe(200);
+    const healthPayload = await health.json() as { endpoints?: { helper?: string } };
+    expect(healthPayload.endpoints?.helper).toBe(LOCAL_BRIDGE_HELPER_ROUTE);
+
+    const authStatus = await fetch(`${bridge.baseUrl}/auth-status`, {
+      headers: {
+        Origin: localhostOrigin,
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    expect(authStatus.status).toBe(200);
+
+    const response = await fetch(`${bridge.baseUrl}/v1/storyboard/images`, {
+      method: 'POST',
+      headers: {
+        Origin: bridge.baseUrl,
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(buildStoryboardLocalBridgeImagesRequest(sourceResult, [scene])),
+    });
+    expect(response.status).toBe(200);
     expect(readFileSync(markerPath, 'utf8')).toBe('invoked');
   });
 
