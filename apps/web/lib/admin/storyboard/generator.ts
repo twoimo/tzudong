@@ -159,6 +159,82 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
+function markerRelativePeak(marker: StoryboardHeatmapMarker, durationSeconds: number | null) {
+  if (!durationSeconds || durationSeconds <= 0) return null;
+  return clamp(marker.peakMillis / (durationSeconds * 1000), 0, 1);
+}
+
+function median(values: number[]) {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((left, right) => left - right);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 1
+    ? sorted[middle]
+    : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+
+function sourceMedianRelativePeak(source: StoryboardHeatmapSource) {
+  return median(
+    source.markers
+      .map((marker) => markerRelativePeak(marker, source.durationSeconds))
+      .filter((value): value is number => value !== null),
+  );
+}
+
+function sourceRelativePeakSpread(source: StoryboardHeatmapSource) {
+  const relativePeaks = source.markers
+    .map((marker) => markerRelativePeak(marker, source.durationSeconds))
+    .filter((value): value is number => value !== null);
+  if (relativePeaks.length === 0) return 0;
+  return Math.max(...relativePeaks) - Math.min(...relativePeaks);
+}
+
+function sourceRecencyEpoch(source: StoryboardHeatmapSource) {
+  const epoch = Date.parse(source.collectedAt ?? '');
+  return Number.isFinite(epoch) ? epoch : 0;
+}
+
+function compareStoryboardHeatmapSources(left: StoryboardHeatmapSource, right: StoryboardHeatmapSource) {
+  const replayDelta = right.replayPeakScore - left.replayPeakScore;
+  if (Math.abs(replayDelta) > 0.0001) return replayDelta;
+
+  const markerCountDelta = right.markers.length - left.markers.length;
+  if (markerCountDelta !== 0) return markerCountDelta;
+
+  const leftMedianPeak = sourceMedianRelativePeak(left);
+  const rightMedianPeak = sourceMedianRelativePeak(right);
+  const leftCenterPenalty = leftMedianPeak === null ? 1 : Math.abs(leftMedianPeak - 0.45);
+  const rightCenterPenalty = rightMedianPeak === null ? 1 : Math.abs(rightMedianPeak - 0.45);
+  if (Math.abs(leftCenterPenalty - rightCenterPenalty) > 0.0001) {
+    return leftCenterPenalty - rightCenterPenalty;
+  }
+
+  const spreadDelta = sourceRelativePeakSpread(right) - sourceRelativePeakSpread(left);
+  if (Math.abs(spreadDelta) > 0.0001) return spreadDelta;
+
+  const recencyDelta = sourceRecencyEpoch(right) - sourceRecencyEpoch(left);
+  if (recencyDelta !== 0) return recencyDelta;
+
+  return left.videoId.localeCompare(right.videoId);
+}
+
+function summarizeSelectedSources(selectedSources: StoryboardHeatmapSource[]) {
+  const selectedSingleMarkerSourceCount = selectedSources.filter((source) => source.markers.length === 1).length;
+  const selectedMarkerMedianRelativePeak = median(
+    selectedSources.flatMap((source) =>
+      source.markers
+        .map((marker) => markerRelativePeak(marker, source.durationSeconds))
+        .filter((value): value is number => value !== null),
+    ),
+  );
+
+  return {
+    selectedSingleMarkerSourceCount,
+    selectedMarkerMedianRelativePeak,
+  };
+}
+
+
 function makeFallbackSources(): StoryboardHeatmapSource[] {
   return Array.from({ length: 10 }, (_, index) => {
     const sourceNo = index + 1;
@@ -307,7 +383,7 @@ export function loadStoryboardHeatmapSources(sourceLimit = DEFAULT_REQUEST.sourc
   const usableSources = files
     .map((file) => buildSource(path.join(heatmapDirectory, file)))
     .filter((source): source is StoryboardHeatmapSource => Boolean(source))
-    .sort((left, right) => right.replayPeakScore - left.replayPeakScore);
+    .sort(compareStoryboardHeatmapSources);
 
   if (usableSources.length === 0) {
     const fallbackSources = makeFallbackSources();
@@ -780,6 +856,7 @@ export function generateLocalStoryboard(input?: Partial<StoryboardGenerateReques
 
   const totalMarkers = selectedSources.reduce((sum, source) => sum + source.markers.length, 0);
   const topReplayScore = selectedSources[0]?.replayPeakScore ?? 0;
+  const { selectedSingleMarkerSourceCount, selectedMarkerMedianRelativePeak } = summarizeSelectedSources(selectedSources);
   const sourceSummary = {
     heatmapDirectory,
     scannedFiles,
@@ -787,6 +864,11 @@ export function generateLocalStoryboard(input?: Partial<StoryboardGenerateReques
     selectedSources: selectedSources.length,
     totalMarkers,
     topReplayScore: Number(topReplayScore.toFixed(3)),
+    selectedSingleMarkerSourceCount,
+    selectedMarkerMedianRelativePeak:
+      selectedMarkerMedianRelativePeak === null
+        ? null
+        : Number(selectedMarkerMedianRelativePeak.toFixed(3)),
     isFallbackData,
     fallbackReason,
     dataModeLabel,

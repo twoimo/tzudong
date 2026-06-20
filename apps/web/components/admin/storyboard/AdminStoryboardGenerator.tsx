@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -273,6 +274,12 @@ type StoryboardBrowserModelKeysCache = {
 
 const STORYBOARD_LOCAL_BRIDGE_SESSION_STORAGE_KEY =
   "tzudong.admin.storyboard.localBridge.v1" as const;
+const STORYBOARD_LOCAL_BRIDGE_HELPER_VERSION = 1 as const;
+const STORYBOARD_LOCAL_BRIDGE_HELPER_ROUTE = "/helper" as const;
+const STORYBOARD_LOCAL_BRIDGE_HELPER_QUERY_ORIGIN = "origin" as const;
+const STORYBOARD_LOCAL_BRIDGE_HELPER_QUERY_SESSION = "session" as const;
+const STORYBOARD_LOCAL_BRIDGE_HELPER_QUERY_SURFACE = "surface" as const;
+
 
 type StoryboardLocalBridgeSessionCache = {
   version: 1;
@@ -281,6 +288,125 @@ type StoryboardLocalBridgeSessionCache = {
   savedAt: string;
   storage: "browser_session_storage_only";
 };
+
+type StoryboardLocalBridgeUiStatus = StoryboardLocalBridgeStatus;
+type StoryboardLocalBridgeHelperCommand = "checkStatus" | "generateStoryboard";
+type StoryboardLocalBridgeHelperReadyMessage = {
+  kind: "tzudong-local-bridge-helper-ready";
+  sessionId: string;
+  surface: "storyboard";
+  protocolVersion: typeof STORYBOARD_LOCAL_BRIDGE_HELPER_VERSION;
+};
+type StoryboardLocalBridgeHelperRequestMessage = {
+  kind: "tzudong-local-bridge-helper-request";
+  sessionId: string;
+  requestId: string;
+  command: StoryboardLocalBridgeHelperCommand;
+  bridgeUrl: string;
+  token: string;
+  payload?: unknown;
+};
+type StoryboardLocalBridgeHelperResponseMessage =
+  | {
+    kind: "tzudong-local-bridge-helper-response";
+    sessionId: string;
+    requestId: string;
+    ok: true;
+    payload: unknown;
+  }
+  | {
+    kind: "tzudong-local-bridge-helper-response";
+    sessionId: string;
+    requestId: string;
+    ok: false;
+    errorCode: string;
+    message: string;
+  };
+type StoryboardLocalBridgeHelperClosedMessage = {
+  kind: "tzudong-local-bridge-helper-closed";
+  sessionId: string;
+};
+type StoryboardLocalBridgeHelperStatusPayload = {
+  healthOk: boolean;
+  health: unknown;
+  authOk: boolean;
+  auth: unknown;
+};
+type StoryboardLocalBridgeHelperInvoke = (
+  request: StoryboardLocalBridgeHelperRequestMessage,
+  options?: { signal?: AbortSignal },
+) => Promise<unknown>;
+
+function isStoryboardLocalBridgeHelperReadyMessage(
+  value: unknown,
+): value is StoryboardLocalBridgeHelperReadyMessage {
+  return (
+    Boolean(value) &&
+    typeof value === "object" &&
+    (value as { kind?: unknown }).kind === "tzudong-local-bridge-helper-ready" &&
+    (value as { surface?: unknown }).surface === "storyboard" &&
+    typeof (value as { sessionId?: unknown }).sessionId === "string" &&
+    (value as { protocolVersion?: unknown }).protocolVersion === STORYBOARD_LOCAL_BRIDGE_HELPER_VERSION
+  );
+}
+
+function isStoryboardLocalBridgeHelperResponseMessage(
+  value: unknown,
+): value is StoryboardLocalBridgeHelperResponseMessage {
+  return (
+    Boolean(value) &&
+    typeof value === "object" &&
+    (value as { kind?: unknown }).kind === "tzudong-local-bridge-helper-response" &&
+    typeof (value as { sessionId?: unknown }).sessionId === "string" &&
+    typeof (value as { requestId?: unknown }).requestId === "string" &&
+    typeof (value as { ok?: unknown }).ok === "boolean"
+  );
+}
+
+function isStoryboardLocalBridgeHelperClosedMessage(
+  value: unknown,
+): value is StoryboardLocalBridgeHelperClosedMessage {
+  return (
+    Boolean(value) &&
+    typeof value === "object" &&
+    (value as { kind?: unknown }).kind === "tzudong-local-bridge-helper-closed" &&
+    typeof (value as { sessionId?: unknown }).sessionId === "string"
+  );
+}
+
+function createStoryboardLocalBridgeHelperSessionId() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `storyboard-local-bridge-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function getStoryboardLocalBridgeReconnectRequiredMessage() {
+  return "이 탭은 pairing 설정만 복원했습니다. `로컬 브릿지 다시 연결`을 눌러 helper 창을 다시 연결해 주세요.";
+}
+
+function getStoryboardLocalBridgeHelperClosedMessage() {
+  return "로컬 브릿지 helper 창이 닫혔습니다. `로컬 브릿지 다시 연결`을 눌러 다시 연결한 뒤 다시 시도하세요.";
+}
+
+function getStoryboardLocalBridgePopupBlockedMessage() {
+  return "브라우저가 로컬 브릿지 helper 팝업을 막았습니다. 팝업을 허용한 뒤 `로컬 브릿지 다시 연결`을 다시 눌러 주세요.";
+}
+
+function getStoryboardLocalBridgeOrigin(bridgeUrl: string) {
+  return new URL(normalizeStoryboardLocalBridgeUrl(bridgeUrl)).origin;
+}
+
+function buildStoryboardLocalBridgeHelperUrl(bridgeUrl: string, sessionId: string) {
+  const baseUrl = normalizeStoryboardLocalBridgeUrl(bridgeUrl);
+  const helperUrl = new URL(STORYBOARD_LOCAL_BRIDGE_HELPER_ROUTE, `${baseUrl}/`);
+  helperUrl.searchParams.set(STORYBOARD_LOCAL_BRIDGE_HELPER_QUERY_ORIGIN, window.location.origin);
+  helperUrl.searchParams.set(STORYBOARD_LOCAL_BRIDGE_HELPER_QUERY_SESSION, sessionId);
+  helperUrl.searchParams.set(STORYBOARD_LOCAL_BRIDGE_HELPER_QUERY_SURFACE, "storyboard");
+  return helperUrl.toString();
+}
+
+
 
 function normalizeStoryboardBrowserOpenAIApiKeyInput(value: string) {
   const trimmed = value.trim();
@@ -2684,7 +2810,7 @@ async function getStoryboardImageProviderStatusRequest(
 }
 
 function mapStoryboardLocalBridgeStatusToReadiness(
-  status: StoryboardLocalBridgeStatus,
+  status: StoryboardLocalBridgeUiStatus,
   message?: string,
 ): StoryboardImageProviderReadiness {
   const checkedAt = new Date().toISOString();
@@ -2692,14 +2818,14 @@ function mapStoryboardLocalBridgeStatusToReadiness(
     return {
       status: "ready",
       label: "로컬 브릿지 연결됨",
-      summary: "사용자 PC의 로컬 브릿지가 gpt-image-2 생성 준비를 마쳤습니다.",
+      summary: "사용자 PC helper가 gpt-image-2 생성 준비를 마쳤습니다.",
       detail:
-        "이 모드는 Vercel/Next 서버를 중계하지 않고 브라우저에서 127.0.0.1 브릿지로 직접 요청합니다.",
+        "helper 창이 사용자 PC loopback 브릿지와 통신하며, 앱 서버 relay 없이 non-loopback 네트워크로 pairing token을 보내지 않습니다.",
       reason: "ready",
       model: STORYBOARD_IMAGE_PROVIDER_MODEL,
       providerId: STORYBOARD_IMAGE_PROVIDER_ID,
       modelProvenance: STORYBOARD_IMAGE_PROVIDER_EXACT_PROVENANCE,
-      command: "browser-to-127.0.0.1-local-bridge",
+      command: "browser-helper-to-127.0.0.1-local-bridge",
       target: { width: 1280, height: 720, aspectRatio: "16:9" },
       checkedAt,
     };
@@ -2707,8 +2833,8 @@ function mapStoryboardLocalBridgeStatusToReadiness(
   if (status === "checking") {
     return {
       ...INITIAL_STORYBOARD_IMAGE_PROVIDER_READINESS,
-      label: "로컬 브릿지 확인 중",
-      summary: "사용자 PC의 로컬 브릿지 연결과 pairing token을 확인하고 있습니다.",
+      label: "로컬 브릿지 연결 중",
+      summary: "helper 창과 pairing 상태를 확인하고 있습니다.",
       detail: "확인이 끝나기 전에는 새 이미지 만들기를 잠시 중단합니다.",
       checkedAt,
     };
@@ -2720,20 +2846,24 @@ function mapStoryboardLocalBridgeStatusToReadiness(
         ? "로컬 브릿지 토큰 필요"
         : status === "auth_required"
           ? "Codex OAuth 로그인 필요"
-          : status === "unavailable"
-            ? "로컬 브릿지 꺼짐"
-            : "로컬 브릿지 확인 실패",
+          : status === "needs_reconnect"
+            ? "로컬 브릿지 다시 연결 필요"
+            : status === "unavailable"
+              ? "로컬 브릿지 꺼짐"
+              : "로컬 브릿지 확인 실패",
     summary:
       message ??
       (status === "unpaired"
         ? "터미널에 표시된 pairing token을 입력해야 합니다."
         : status === "auth_required"
-          ? "로컬 Codex CLI OAuth 인증 파일을 찾지 못했습니다."
-          : status === "unavailable"
-            ? "127.0.0.1 로컬 브릿지에 연결할 수 없습니다."
-            : "로컬 브릿지 응답을 신뢰할 수 없습니다."),
+          ? "로컬 Codex OAuth 로그인 후 helper를 다시 연결해 주세요."
+          : status === "needs_reconnect"
+            ? "페이지를 다시 불렀거나 helper 창 연결이 끊겨 다시 연결해야 합니다."
+            : status === "unavailable"
+              ? "127.0.0.1 로컬 브릿지에 연결할 수 없습니다."
+              : "로컬 브릿지 응답을 신뢰할 수 없습니다."),
     detail:
-      "고급 사용자 기능은 사용자 로컬에서 브릿지를 직접 실행한 경우에만 활성화됩니다. 실패 시 프로덕션 서버로 우회하지 않습니다.",
+      "고급 로컬이 선택된 동안에는 서버 relay나 다른 라우터로 우회하지 않습니다. helper를 다시 연결하거나 설정을 고친 뒤 재시도해 주세요.",
     reason: "local_codex_bridge_unavailable",
     model: STORYBOARD_IMAGE_PROVIDER_MODEL,
     providerId: STORYBOARD_IMAGE_PROVIDER_ID,
@@ -2741,11 +2871,13 @@ function mapStoryboardLocalBridgeStatusToReadiness(
   };
 }
 
+
 async function getStoryboardLocalBridgeStatusRequest(
   bridgeUrl: string,
   token: string | null,
+  invokeHelper: StoryboardLocalBridgeHelperInvoke,
 ): Promise<{
-  status: StoryboardLocalBridgeStatus;
+  status: StoryboardLocalBridgeUiStatus;
   message: string;
   readiness: StoryboardImageProviderReadiness;
 }> {
@@ -2761,7 +2893,8 @@ async function getStoryboardLocalBridgeStatusRequest(
       readiness: mapStoryboardLocalBridgeStatusToReadiness("blocked", message),
     };
   }
-  if (!token) {
+  const normalizedToken = normalizeStoryboardLocalBridgeToken(token);
+  if (!normalizedToken) {
     const message = "터미널에 표시된 pairing token을 입력해 주세요.";
     return {
       status: "unpaired",
@@ -2771,20 +2904,38 @@ async function getStoryboardLocalBridgeStatusRequest(
   }
 
   try {
-    const health = await fetch(`${baseUrl}/health`, {
-      cache: "no-store",
-      headers: { Accept: "application/json" },
+    const responsePayload = await invokeHelper({
+      kind: "tzudong-local-bridge-helper-request",
+      sessionId: "storyboard-local-bridge-status",
+      requestId: "storyboard-local-bridge-status",
+      command: "checkStatus",
+      bridgeUrl: baseUrl,
+      token: normalizedToken,
     });
-    if (!health.ok) {
-      throw new Error(`로컬 브릿지 health 확인 실패 (${health.status})`);
-    }
-    const healthPayload = (await health.json().catch(() => null)) as {
-      bridge?: string;
-      providerId?: string;
-      model?: string;
-    } | null;
+    const helperPayload = responsePayload && typeof responsePayload === "object"
+      ? responsePayload as Partial<StoryboardLocalBridgeHelperStatusPayload>
+      : null;
+    const healthPayload = helperPayload?.health && typeof helperPayload.health === "object"
+      ? helperPayload.health as Partial<{
+          ok: boolean;
+          bridge: string;
+          providerId: string;
+          model: string;
+        }>
+      : null;
+    const authPayload = helperPayload?.auth && typeof helperPayload.auth === "object"
+      ? helperPayload.auth as Partial<{
+          ok: boolean;
+          status: string;
+          providerId: string;
+          model: string;
+          detail?: string;
+        }>
+      : null;
     if (
-      healthPayload?.bridge !== "tzudong-storyboard-local-bridge" ||
+      helperPayload?.healthOk !== true ||
+      healthPayload?.ok !== true ||
+      healthPayload.bridge !== "tzudong-storyboard-local-bridge" ||
       healthPayload.providerId !== STORYBOARD_IMAGE_PROVIDER_ID ||
       healthPayload.model !== STORYBOARD_IMAGE_PROVIDER_MODEL
     ) {
@@ -2795,58 +2946,51 @@ async function getStoryboardLocalBridgeStatusRequest(
         readiness: mapStoryboardLocalBridgeStatusToReadiness("blocked", message),
       };
     }
-
-    const authStatus = await fetch(`${baseUrl}/auth-status`, {
-      cache: "no-store",
-      headers: getStoryboardLocalBridgeAuthHeaders(token),
-    });
-    const authPayload = (await authStatus.json().catch(() => null)) as {
-      status?: "ready" | "auth_required" | "unpaired";
-      detail?: string;
-    } | null;
-    if (authStatus.status === 401 || authStatus.status === 403) {
-      const message = "pairing token이 맞지 않습니다. 터미널의 최신 token을 다시 입력해 주세요.";
+    if (
+      helperPayload?.authOk === true &&
+      authPayload?.ok === true &&
+      authPayload.status === "ready" &&
+      authPayload.providerId === STORYBOARD_IMAGE_PROVIDER_ID &&
+      authPayload.model === STORYBOARD_IMAGE_PROVIDER_MODEL
+    ) {
+      const message = "로컬 브릿지 연결 완료 · helper transport · local-codex gpt-image-2";
       return {
-        status: "unpaired",
+        status: "connected",
         message,
-        readiness: mapStoryboardLocalBridgeStatusToReadiness("unpaired", message),
+        readiness: mapStoryboardLocalBridgeStatusToReadiness("connected", message),
       };
     }
-    if (!authStatus.ok || authPayload?.status === "auth_required") {
-      const message =
-        authPayload?.detail ??
-        "로컬 Codex CLI OAuth 인증 파일을 찾지 못했습니다.";
+    if (authPayload?.status === "auth_required") {
+      const message = authPayload.detail ?? "로컬 Codex CLI OAuth 인증 파일을 찾지 못했습니다.";
       return {
         status: "auth_required",
         message,
         readiness: mapStoryboardLocalBridgeStatusToReadiness("auth_required", message),
       };
     }
-    if (authPayload?.status !== "ready") {
-      const message = "로컬 브릿지 pairing 상태를 확인하지 못했습니다.";
-      return {
-        status: "unpaired",
-        message,
-        readiness: mapStoryboardLocalBridgeStatusToReadiness("unpaired", message),
-      };
-    }
-
-    const message = "로컬 브릿지 연결 완료 · 브라우저에서 127.0.0.1로 직접 요청합니다.";
+    const message = "pairing token이 맞지 않습니다. 터미널의 최신 token을 다시 입력해 주세요.";
     return {
-      status: "connected",
+      status: "unpaired",
       message,
-      readiness: mapStoryboardLocalBridgeStatusToReadiness("connected", message),
+      readiness: mapStoryboardLocalBridgeStatusToReadiness("unpaired", message),
     };
   } catch (error) {
-    const rawMessage =
-      error instanceof Error
-        ? error.message
-        : "로컬 브릿지에 연결할 수 없습니다.";
-    const message = redactStoryboardLocalBridgeSecretText(rawMessage, token);
+    const message = redactStoryboardLocalBridgeSecretText(
+      error instanceof Error ? error.message : "로컬 브릿지 helper 연결을 확인하지 못했습니다.",
+      normalizedToken,
+    );
+    const status: StoryboardLocalBridgeUiStatus =
+      message === getStoryboardLocalBridgeReconnectRequiredMessage()
+        ? "needs_reconnect"
+        : message === getStoryboardLocalBridgePopupBlockedMessage()
+          ? "popup_blocked"
+          : message === getStoryboardLocalBridgeHelperClosedMessage()
+            ? "helper_failed"
+            : "unavailable";
     return {
-      status: "unavailable",
+      status,
       message,
-      readiness: mapStoryboardLocalBridgeStatusToReadiness("unavailable", message),
+      readiness: mapStoryboardLocalBridgeStatusToReadiness(status, message),
     };
   }
 }
@@ -2856,32 +3000,24 @@ async function postStoryboardLocalBridgeImagesRequest(
   scenes: StoryboardGenerationResult["storyboard"]["scenes"],
   bridgeUrl: string,
   token: string | null,
+  invokeHelper: StoryboardLocalBridgeHelperInvoke,
 ): Promise<StoryboardImagesResponse> {
   const normalizedToken = normalizeStoryboardLocalBridgeToken(token);
   if (!normalizedToken) {
     throw new Error("로컬 브릿지 pairing token을 먼저 저장해 주세요.");
   }
   const baseUrl = normalizeStoryboardLocalBridgeUrl(bridgeUrl);
-  const response = await fetch(`${baseUrl}/v1/storyboard/images`, {
-    method: "POST",
-    headers: getStoryboardLocalBridgeAuthHeaders(normalizedToken),
-    body: JSON.stringify(buildStoryboardLocalBridgeImagesRequest(result, scenes)),
+  const requestPayload = buildStoryboardLocalBridgeImagesRequest(result, scenes);
+  const responsePayload = await invokeHelper({
+    kind: "tzudong-local-bridge-helper-request",
+    sessionId: "storyboard-local-bridge-generate",
+    requestId: "storyboard-local-bridge-generate",
+    command: "generateStoryboard",
+    bridgeUrl: baseUrl,
+    token: normalizedToken,
+    payload: requestPayload,
   });
-
-  const payload = (await response.json().catch(() => null)) as unknown;
-  if (!response.ok) {
-    const failure = payload as { error?: string; detail?: string } | null;
-    throw new Error(
-      redactStoryboardLocalBridgeSecretText(
-        failure?.detail ??
-          failure?.error ??
-          `로컬 브릿지 이미지 생성 실패 (${response.status})`,
-        normalizedToken,
-      ),
-    );
-  }
-
-  return normalizeStoryboardLocalBridgeImagesResponse(payload);
+  return normalizeStoryboardLocalBridgeImagesResponse(responsePayload);
 }
 
 function loadCanvasImage(src?: string) {
@@ -3063,7 +3199,7 @@ export function AdminStoryboardGenerator({
   const [
     storyboardLocalBridgeStatus,
     setStoryboardLocalBridgeStatus,
-  ] = useState<StoryboardLocalBridgeStatus>("unpaired");
+  ] = useState<StoryboardLocalBridgeUiStatus>("unpaired");
   const [
     storyboardLocalBridgeMessage,
     setStoryboardLocalBridgeMessage,
@@ -3072,6 +3208,258 @@ export function AdminStoryboardGenerator({
     storyboardLocalBridgeError,
     setStoryboardLocalBridgeError,
   ] = useState<string | null>(null);
+  const storyboardLocalBridgeHelperWindowRef = useRef<Window | null>(null);
+  const storyboardLocalBridgeHelperPortRef = useRef<MessagePort | null>(null);
+  const storyboardLocalBridgeHelperOriginRef = useRef<string | null>(null);
+  const storyboardLocalBridgeHelperSessionIdRef = useRef<string | null>(null);
+  const storyboardLocalBridgeHelperRequestIdRef = useRef(0);
+  const storyboardLocalBridgeHelperCloseWatchRef = useRef<number | null>(null);
+  const storyboardLocalBridgePendingRequestsRef = useRef(
+    new Map<
+      string,
+      {
+        resolve: (value: unknown) => void;
+        reject: (reason?: unknown) => void;
+      }
+    >(),
+  );
+
+  const clearStoryboardLocalBridgeHelperCloseWatch = useCallback(() => {
+    if (typeof window === "undefined") return;
+    if (storyboardLocalBridgeHelperCloseWatchRef.current !== null) {
+      window.clearInterval(storyboardLocalBridgeHelperCloseWatchRef.current);
+      storyboardLocalBridgeHelperCloseWatchRef.current = null;
+    }
+  }, []);
+
+  const rejectStoryboardLocalBridgePendingRequests = useCallback((message: string) => {
+    storyboardLocalBridgePendingRequestsRef.current.forEach(({ reject }) => {
+      reject(new Error(message));
+    });
+    storyboardLocalBridgePendingRequestsRef.current.clear();
+  }, []);
+
+  const resetStoryboardLocalBridgeHelperTransport = useCallback((options?: {
+    closePopup?: boolean;
+    nextStatus?: StoryboardLocalBridgeUiStatus;
+    nextMessage?: string;
+    nextError?: string | null;
+  }) => {
+    clearStoryboardLocalBridgeHelperCloseWatch();
+    const failureMessage = options?.nextMessage ?? getStoryboardLocalBridgeReconnectRequiredMessage();
+    rejectStoryboardLocalBridgePendingRequests(failureMessage);
+    const port = storyboardLocalBridgeHelperPortRef.current;
+    if (port) {
+      try {
+        port.onmessage = null;
+        port.close();
+      } catch {
+        // Ignore already-closed helper ports.
+      }
+      storyboardLocalBridgeHelperPortRef.current = null;
+    }
+    const popup = storyboardLocalBridgeHelperWindowRef.current;
+    if (options?.closePopup && popup && !popup.closed) {
+      try {
+        popup.close();
+      } catch {
+        // Ignore popup close failures.
+      }
+    }
+    storyboardLocalBridgeHelperWindowRef.current = null;
+    storyboardLocalBridgeHelperOriginRef.current = null;
+    storyboardLocalBridgeHelperSessionIdRef.current = null;
+    if (options?.nextStatus) setStoryboardLocalBridgeStatus(options.nextStatus);
+    if (options?.nextMessage !== undefined) setStoryboardLocalBridgeMessage(options.nextMessage);
+    if (options?.nextError !== undefined) setStoryboardLocalBridgeError(options.nextError);
+  }, [clearStoryboardLocalBridgeHelperCloseWatch, rejectStoryboardLocalBridgePendingRequests]);
+
+  const invokeStoryboardLocalBridgeHelper = useCallback<StoryboardLocalBridgeHelperInvoke>((request, options) => {
+    const port = storyboardLocalBridgeHelperPortRef.current;
+    const sessionId = storyboardLocalBridgeHelperSessionIdRef.current;
+    if (!port || !sessionId) {
+      return Promise.reject(new Error(getStoryboardLocalBridgeReconnectRequiredMessage()));
+    }
+    if (storyboardLocalBridgeHelperWindowRef.current?.closed) {
+      resetStoryboardLocalBridgeHelperTransport({
+        nextStatus: "helper_failed",
+        nextMessage: getStoryboardLocalBridgeHelperClosedMessage(),
+        nextError: getStoryboardLocalBridgeHelperClosedMessage(),
+      });
+      return Promise.reject(new Error(getStoryboardLocalBridgeHelperClosedMessage()));
+    }
+    const requestId = `storyboard-local-bridge-${storyboardLocalBridgeHelperRequestIdRef.current + 1}`;
+    storyboardLocalBridgeHelperRequestIdRef.current += 1;
+    return new Promise((resolve, reject) => {
+      const abortHandler = () => {
+        storyboardLocalBridgePendingRequestsRef.current.delete(requestId);
+        reject(new Error("storyboard_local_bridge_request_aborted"));
+      };
+      if (options?.signal?.aborted) {
+        abortHandler();
+        return;
+      }
+      if (options?.signal) {
+        options.signal.addEventListener("abort", abortHandler, { once: true });
+      }
+      storyboardLocalBridgePendingRequestsRef.current.set(requestId, {
+        resolve: (value) => {
+          if (options?.signal) options.signal.removeEventListener("abort", abortHandler);
+          resolve(value);
+        },
+        reject: (reason) => {
+          if (options?.signal) options.signal.removeEventListener("abort", abortHandler);
+          reject(reason);
+        },
+      });
+      try {
+        port.postMessage({
+          ...request,
+          sessionId,
+          requestId,
+        });
+      } catch (error) {
+        storyboardLocalBridgePendingRequestsRef.current.delete(requestId);
+        if (options?.signal) options.signal.removeEventListener("abort", abortHandler);
+        reject(error);
+      }
+    });
+  }, [resetStoryboardLocalBridgeHelperTransport]);
+
+  const handleConnectStoryboardLocalBridgeHelper = useCallback(async () => {
+    const normalizedToken = normalizeStoryboardLocalBridgeToken(storyboardLocalBridgeToken);
+    if (!normalizedToken) {
+      const message = "먼저 저장을 눌러 pairing 설정을 이 탭 sessionStorage에 저장해 주세요.";
+      setStoryboardLocalBridgeStatus("unpaired");
+      setStoryboardLocalBridgeMessage(message);
+      setStoryboardLocalBridgeError(message);
+      setStoryboardImageProviderReadiness(
+        mapStoryboardLocalBridgeStatusToReadiness("unpaired", message),
+      );
+      return false;
+    }
+    try {
+      const normalizedUrl = normalizeStoryboardLocalBridgeUrl(storyboardLocalBridgeUrl);
+      resetStoryboardLocalBridgeHelperTransport({ closePopup: true });
+      const sessionId = createStoryboardLocalBridgeHelperSessionId();
+      const helperOrigin = getStoryboardLocalBridgeOrigin(normalizedUrl);
+      const helperUrl = buildStoryboardLocalBridgeHelperUrl(normalizedUrl, sessionId);
+      setStoryboardLocalBridgeStatus("checking");
+      setStoryboardLocalBridgeMessage("로컬 브릿지 helper 창을 여는 중입니다. 팝업이 보이면 닫지 말고 연결이 끝날 때까지 기다려 주세요.");
+      setStoryboardLocalBridgeError(null);
+      setStoryboardImageProviderReadiness(
+        mapStoryboardLocalBridgeStatusToReadiness("checking"),
+      );
+      let popup: Window | null = null;
+      const port = await new Promise<MessagePort>((resolve, reject) => {
+        const timeoutId = window.setTimeout(() => {
+          cleanup();
+          reject(new Error("로컬 브릿지 helper 창이 응답하지 않습니다. helper 창이 열렸는지 확인한 뒤 다시 연결해 주세요."));
+        }, 10_000);
+        const onMessage = (event: MessageEvent<unknown>) => {
+          if (!isStoryboardLocalBridgeHelperReadyMessage(event.data)) return;
+          if (event.data.sessionId !== sessionId) return;
+          if (!event.ports[0]) {
+            cleanup();
+            reject(new Error("로컬 브릿지 helper 통신 포트를 받을 수 없습니다."));
+            return;
+          }
+          cleanup();
+          resolve(event.ports[0]);
+        };
+        const cleanup = () => {
+          window.clearTimeout(timeoutId);
+          window.removeEventListener("message", onMessage);
+        };
+        window.addEventListener("message", onMessage);
+        popup = window.open(
+          helperUrl,
+          "tzudong-storyboard-local-bridge-helper",
+          "popup=yes,width=560,height=720,resizable=yes,scrollbars=yes",
+        );
+        if (!popup) {
+          cleanup();
+          reject(new Error(getStoryboardLocalBridgePopupBlockedMessage()));
+          return;
+        }
+        popup.focus();
+      });
+      storyboardLocalBridgeHelperWindowRef.current = popup;
+      storyboardLocalBridgeHelperPortRef.current = port;
+      storyboardLocalBridgeHelperOriginRef.current = helperOrigin;
+      storyboardLocalBridgeHelperSessionIdRef.current = sessionId;
+      port.onmessage = (event) => {
+        const data = event.data;
+        if (isStoryboardLocalBridgeHelperClosedMessage(data)) {
+          if (data.sessionId !== storyboardLocalBridgeHelperSessionIdRef.current) return;
+          resetStoryboardLocalBridgeHelperTransport({
+            nextStatus: "helper_failed",
+            nextMessage: getStoryboardLocalBridgeHelperClosedMessage(),
+            nextError: getStoryboardLocalBridgeHelperClosedMessage(),
+          });
+          setStoryboardImageProviderReadiness(
+            mapStoryboardLocalBridgeStatusToReadiness("helper_failed", getStoryboardLocalBridgeHelperClosedMessage()),
+          );
+          return;
+        }
+        if (!isStoryboardLocalBridgeHelperResponseMessage(data)) return;
+        if (data.sessionId !== storyboardLocalBridgeHelperSessionIdRef.current) return;
+        const pending = storyboardLocalBridgePendingRequestsRef.current.get(data.requestId);
+        if (!pending) return;
+        storyboardLocalBridgePendingRequestsRef.current.delete(data.requestId);
+        if (data.ok) {
+          pending.resolve(data.payload);
+          return;
+        }
+        pending.reject(new Error(data.message || data.errorCode || "local_bridge_helper_request_failed"));
+      };
+      port.start();
+      clearStoryboardLocalBridgeHelperCloseWatch();
+      storyboardLocalBridgeHelperCloseWatchRef.current = window.setInterval(() => {
+        if (!storyboardLocalBridgeHelperWindowRef.current?.closed) return;
+        resetStoryboardLocalBridgeHelperTransport({
+          nextStatus: "helper_failed",
+          nextMessage: getStoryboardLocalBridgeHelperClosedMessage(),
+          nextError: getStoryboardLocalBridgeHelperClosedMessage(),
+        });
+        setStoryboardImageProviderReadiness(
+          mapStoryboardLocalBridgeStatusToReadiness("helper_failed", getStoryboardLocalBridgeHelperClosedMessage()),
+        );
+      }, 500);
+      const status = await getStoryboardLocalBridgeStatusRequest(
+        normalizedUrl,
+        normalizedToken,
+        invokeStoryboardLocalBridgeHelper,
+      );
+      setStoryboardLocalBridgeStatus(status.status);
+      setStoryboardLocalBridgeMessage(status.message);
+      setStoryboardLocalBridgeError(status.status === "connected" ? null : status.message);
+      setStoryboardImageProviderReadiness(status.readiness);
+      return status.status === "connected";
+    } catch (error) {
+      const message = redactStoryboardLocalBridgeSecretText(
+        error instanceof Error ? error.message : "로컬 브릿지 helper 연결을 시작하지 못했습니다.",
+        storyboardLocalBridgeToken,
+      );
+      const nextStatus = message === getStoryboardLocalBridgePopupBlockedMessage()
+        ? "popup_blocked"
+        : "error";
+      setStoryboardLocalBridgeStatus(nextStatus);
+      setStoryboardLocalBridgeMessage(message);
+      setStoryboardLocalBridgeError(message);
+      setStoryboardImageProviderReadiness(
+        mapStoryboardLocalBridgeStatusToReadiness(nextStatus, message),
+      );
+      return false;
+    }
+  }, [
+    clearStoryboardLocalBridgeHelperCloseWatch,
+    invokeStoryboardLocalBridgeHelper,
+    resetStoryboardLocalBridgeHelperTransport,
+    storyboardLocalBridgeToken,
+    storyboardLocalBridgeUrl,
+  ]);
+
   const [chatDraft, setChatDraft] = useState("");
   const [storyboardCanvasFocus, setStoryboardCanvasFocus] =
     useState<StoryboardChatFocusContext | null>(null);
@@ -3210,49 +3598,38 @@ export function AdminStoryboardGenerator({
     setStoryboardLocalBridgeUrlDraft(cache.bridgeUrl);
     setStoryboardLocalBridgeToken(cache.token);
     setStoryboardLocalBridgeSavedAt(cache.savedAt);
-    setStoryboardLocalBridgeStatus("checking");
+    setStoryboardLocalBridgeStatus("needs_reconnect");
     setStoryboardImageRouteChoice(STORYBOARD_LOCAL_BRIDGE_ROUTE_ID);
     setStoryboardLocalBridgeMessage(
-      "이 탭의 sessionStorage에 저장된 로컬 브릿지 설정을 확인하고 있습니다.",
+      "이 탭 sessionStorage에 pairing 설정을 복원했어요. helper 창은 자동으로 다시 열지 않으니 `로컬 브릿지 다시 연결`을 눌러 주세요.",
     );
   }, []);
+
+  useEffect(() => {
+    return () => {
+      resetStoryboardLocalBridgeHelperTransport({ closePopup: true });
+    };
+  }, [resetStoryboardLocalBridgeHelperTransport]);
+
 
   useEffect(() => {
     let cancelled = false;
 
     if (storyboardImageRouteChoice === STORYBOARD_LOCAL_BRIDGE_ROUTE_ID) {
-      setStoryboardLocalBridgeStatus("checking");
-      setStoryboardImageProviderReadiness(
-        mapStoryboardLocalBridgeStatusToReadiness("checking"),
-      );
-      getStoryboardLocalBridgeStatusRequest(
-        storyboardLocalBridgeUrl,
-        storyboardLocalBridgeToken,
-      )
-        .then((result) => {
-          if (cancelled) return;
-          setStoryboardLocalBridgeStatus(result.status);
-          setStoryboardLocalBridgeMessage(result.message);
-          setStoryboardLocalBridgeError(
-            result.status === "connected" ? null : result.message,
-          );
-          setStoryboardImageProviderReadiness(result.readiness);
-        })
-        .catch((error) => {
-          if (cancelled) return;
-          const message = redactStoryboardLocalBridgeSecretText(
-            error instanceof Error
-              ? error.message
-              : "로컬 브릿지 상태를 읽지 못했습니다.",
-            storyboardLocalBridgeToken,
-          );
-          setStoryboardLocalBridgeStatus("error");
-          setStoryboardLocalBridgeError(message);
-          setStoryboardLocalBridgeMessage(message);
-          setStoryboardImageProviderReadiness(
-            mapStoryboardLocalBridgeStatusToReadiness("error", message),
-          );
-        });
+      const localBridgeMessage = storyboardLocalBridgeMessage
+        ?? (storyboardLocalBridgeToken
+          ? storyboardLocalBridgeStatus === "connected"
+            ? "로컬 브릿지 helper 연결을 유지 중입니다."
+            : "helper 창을 직접 다시 연결해야 합니다."
+          : "터미널에 표시된 pairing token을 먼저 저장해 주세요.");
+      if (!cancelled) {
+        setStoryboardImageProviderReadiness(
+          mapStoryboardLocalBridgeStatusToReadiness(
+            storyboardLocalBridgeToken ? storyboardLocalBridgeStatus : "unpaired",
+            localBridgeMessage,
+          ),
+        );
+      }
       return () => {
         cancelled = true;
       };
@@ -3294,6 +3671,8 @@ export function AdminStoryboardGenerator({
     storyboardBrowserOpenAIApiKey,
     storyboardImageRouteChoice,
     storyboardLocalBridgeToken,
+    storyboardLocalBridgeMessage,
+    storyboardLocalBridgeStatus,
     storyboardLocalBridgeUrl,
   ]);
 
@@ -3825,6 +4204,7 @@ export function AdminStoryboardGenerator({
         const result = await getStoryboardLocalBridgeStatusRequest(
           storyboardLocalBridgeUrl,
           selectedStoryboardLocalBridgeToken,
+          invokeStoryboardLocalBridgeHelper,
         );
         setStoryboardLocalBridgeStatus(result.status);
         setStoryboardLocalBridgeMessage(result.message);
@@ -3946,38 +4326,29 @@ export function AdminStoryboardGenerator({
         normalizedUrl,
         normalizedToken,
       );
+      resetStoryboardLocalBridgeHelperTransport({ closePopup: true });
       setStoryboardLocalBridgeUrl(cache.bridgeUrl);
       setStoryboardLocalBridgeUrlDraft(cache.bridgeUrl);
       setStoryboardLocalBridgeToken(cache.token);
       setStoryboardLocalBridgeTokenDraft("");
       setStoryboardLocalBridgeSavedAt(cache.savedAt);
       setStoryboardImageRouteChoice(STORYBOARD_LOCAL_BRIDGE_ROUTE_ID);
-      setStoryboardLocalBridgeStatus("checking");
+      setStoryboardLocalBridgeStatus("needs_reconnect");
       setStoryboardLocalBridgeError(null);
       setStoryboardLocalBridgeMessage(
-        "저장했어요. 이 탭에서만 로컬 브릿지 연결을 확인합니다.",
+        getStoryboardLocalBridgeReconnectRequiredMessage(),
       );
       setStoryboardImageProviderReadiness(
-        mapStoryboardLocalBridgeStatusToReadiness("checking"),
+        mapStoryboardLocalBridgeStatusToReadiness("needs_reconnect"),
       );
       appendStoryboardChatMessages([
         {
           id: `assistant-local-bridge-saved-${Date.now()}`,
           role: "assistant",
-          text: "로컬 브릿지 설정을 이 탭 sessionStorage에만 저장했어요. Vercel/Next 서버로 OAuth 파일이나 pairing token을 보내지 않습니다.",
+          text: "로컬 브릿지 설정을 이 탭 sessionStorage에 저장했어요. pairing token은 앱 서버나 비-loopback 네트워크로 보내지 않습니다.",
           status: "done",
         },
       ]);
-      const status = await getStoryboardLocalBridgeStatusRequest(
-        cache.bridgeUrl,
-        cache.token,
-      );
-      setStoryboardLocalBridgeStatus(status.status);
-      setStoryboardLocalBridgeMessage(status.message);
-      setStoryboardLocalBridgeError(
-        status.status === "connected" ? null : status.message,
-      );
-      setStoryboardImageProviderReadiness(status.readiness);
     } catch (error) {
       const message = redactStoryboardLocalBridgeSecretText(
         error instanceof Error
@@ -3995,6 +4366,7 @@ export function AdminStoryboardGenerator({
   }
 
   function handleClearStoryboardLocalBridgeSession() {
+    resetStoryboardLocalBridgeHelperTransport({ closePopup: true });
     clearStoryboardLocalBridgeSessionCache();
     setStoryboardLocalBridgeUrl(STORYBOARD_LOCAL_BRIDGE_DEFAULT_URL);
     setStoryboardLocalBridgeUrlDraft(STORYBOARD_LOCAL_BRIDGE_DEFAULT_URL);
@@ -4033,7 +4405,7 @@ export function AdminStoryboardGenerator({
     setStoryboardLocalBridgeMessage(
       nextRoute === STORYBOARD_LOCAL_BRIDGE_ROUTE_ID
         ? storyboardLocalBridgeToken
-          ? "로컬 브릿지 연결을 확인하고 있습니다."
+          ? getStoryboardLocalBridgeReconnectRequiredMessage()
           : "고급 로컬 브릿지는 사용자 PC에서 실행 중일 때만 사용할 수 있습니다."
         : null,
     );
@@ -4934,6 +5306,7 @@ export function AdminStoryboardGenerator({
               nextScenes,
               storyboardLocalBridgeUrl,
               selectedStoryboardLocalBridgeToken,
+              invokeStoryboardLocalBridgeHelper,
             )
         : (
             nextResult: StoryboardGenerationResult,
@@ -5677,7 +6050,7 @@ export function AdminStoryboardGenerator({
                           data-storyboard-browser-api-key-browser-only-copy="true"
                           data-storyboard-browser-api-key-model-policy="gpt-image-2-only"
                         >
-                          OAuth가 안 될 때만 사용 · 브라우저 저장 · DB 저장 없음
+                          OAuth가 안 될 때만 사용 · gpt-image-2 전용 · 브라우저 저장 · DB 저장 없음
                         </p>
                         <div className="flex flex-wrap items-center gap-2">
                           <p
@@ -5759,14 +6132,18 @@ export function AdminStoryboardGenerator({
                               ? "연결됨"
                               : storyboardLocalBridgeStatus === "checking"
                                 ? "확인 중"
-                                : "설정 필요"}
+                                : storyboardLocalBridgeStatus === "needs_reconnect"
+                                  ? "재연결 필요"
+                                  : storyboardLocalBridgeToken
+                                    ? "확인 필요"
+                                    : "설정 필요"}
                           </Badge>
                         </div>
                         <p
                           className="text-[10px] leading-4 text-muted-foreground"
                           data-storyboard-local-bridge-guidance="true"
                         >
-                          OAuth는 동일합니다. 차이는 서버 대신 사용자 PC 브릿지를 직접 호출하는 것입니다.
+                          OAuth는 동일합니다. 차이는 서버 대신 사용자 PC helper가 loopback 브릿지를 호출한다는 점입니다.
                         </p>
                         <div className="grid gap-1">
                           <Input
@@ -5813,7 +6190,17 @@ export function AdminStoryboardGenerator({
                             onClick={() => void handleSaveStoryboardLocalBridgeSession()}
                             data-storyboard-local-bridge-save="true"
                           >
-                            저장/테스트
+                            저장
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+                            onClick={() => void handleConnectStoryboardLocalBridgeHelper()}
+                            data-storyboard-local-bridge-connect="true"
+                          >
+                            {storyboardLocalBridgeStatus === "connected" ? "다시 확인" : "로컬 브릿지 다시 연결"}
                           </Button>
                           {storyboardLocalBridgeToken ? (
                             <Button
@@ -5841,7 +6228,7 @@ export function AdminStoryboardGenerator({
                                 ? `sessionStorage 저장됨 · ${new Date(
                                     storyboardLocalBridgeSavedAt,
                                   ).toLocaleString("ko-KR")}`
-                                : "npm run storyboard:local-bridge 실행 후 token을 붙여넣으세요.")}
+                                : "npm run storyboard:local-bridge 실행 후 token을 저장하고 로컬 브릿지 다시 연결을 눌러 주세요.")}
                           </p>
                         </div>
                       </div>
