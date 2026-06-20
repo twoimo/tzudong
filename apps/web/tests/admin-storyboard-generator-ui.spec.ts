@@ -944,9 +944,96 @@ test("storyboard settings keeps production image API keys in browser localStorag
       }),
     });
   });
-  await page.route("http://127.0.0.1:17873/**", async (route) => {
+  await page.context().route("http://127.0.0.1:17873/**", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
+    if (request.method() === "GET" && url.pathname === "/helper") {
+      await route.fulfill({
+        status: 200,
+        contentType: "text/html",
+        headers: localBridgeCorsHeaders,
+        body: String.raw`<!doctype html>
+<html>
+  <body>
+    <script>
+      const params = new URLSearchParams(location.search);
+      const sessionId = params.get('session') || '';
+      const expectedOrigin = params.get('origin') || '*';
+      const channel = new MessageChannel();
+      const port = channel.port1;
+      async function requestJson(path, init) {
+        const response = await fetch(path, init);
+        const payload = await response.json().catch(() => null);
+        return { ok: response.ok, payload };
+      }
+      port.onmessage = async (event) => {
+        const data = event.data || {};
+        if (data.kind !== 'tzudong-local-bridge-helper-request' || data.sessionId !== sessionId) return;
+        try {
+          if (data.command === 'checkStatus') {
+            const health = await requestJson(data.bridgeUrl + '/health', {
+              method: 'GET',
+              headers: { Accept: 'application/json' },
+              cache: 'no-store',
+            });
+            const auth = await requestJson(data.bridgeUrl + '/auth-status', {
+              method: 'GET',
+              headers: {
+                Accept: 'application/json',
+                Authorization: 'Bearer ' + data.token,
+                'Content-Type': 'application/json',
+              },
+              cache: 'no-store',
+            });
+            port.postMessage({
+              kind: 'tzudong-local-bridge-helper-response',
+              sessionId,
+              requestId: data.requestId,
+              ok: true,
+              payload: {
+                healthOk: health.ok,
+                health: health.payload,
+                authOk: auth.ok,
+                auth: auth.payload,
+              },
+            });
+            return;
+          }
+          port.postMessage({
+            kind: 'tzudong-local-bridge-helper-response',
+            sessionId,
+            requestId: data.requestId,
+            ok: false,
+            errorCode: 'unsupported_helper_command',
+            message: 'unsupported_helper_command',
+          });
+        } catch (error) {
+          port.postMessage({
+            kind: 'tzudong-local-bridge-helper-response',
+            sessionId,
+            requestId: data.requestId,
+            ok: false,
+            errorCode: 'helper_request_failed',
+            message: error instanceof Error ? error.message : 'helper_request_failed',
+          });
+        }
+      };
+      port.start();
+      window.addEventListener('beforeunload', () => {
+        try { port.postMessage({ kind: 'tzudong-local-bridge-helper-closed', sessionId }); } catch {}
+      });
+      window.opener?.postMessage({
+        kind: 'tzudong-local-bridge-helper-ready',
+        sessionId,
+        surface: 'storyboard',
+        protocolVersion: 1,
+      }, expectedOrigin, [channel.port2]);
+    </script>
+  </body>
+</html>`,
+      });
+      return;
+    }
     if (request.method() === "OPTIONS") {
       await route.fulfill({ status: 204, headers: localBridgeCorsHeaders });
       return;
@@ -1046,18 +1133,12 @@ test("storyboard settings keeps production image API keys in browser localStorag
   await localBridgeSettings.locator('[data-storyboard-local-bridge-save="true"]').click();
   await expect(
     localBridgeSettings.locator(
-      '[data-storyboard-local-bridge-status="connected"]',
+      '[data-storyboard-local-bridge-status="needs_reconnect"]',
     ),
   ).toBeVisible({ timeout: 10_000 });
   await expect(
     localBridgeSettings.locator('[data-storyboard-local-bridge-message="true"]'),
-  ).toContainText(/연결|저장|사용 가능|ready/i);
-  await expect
-    .poll(() => seenLocalBridgeAuthHeaders.includes(`Bearer ${fakeLocalBridgeToken}`), {
-      timeout: 10_000,
-      message: "expected local bridge auth-status to use the pasted pairing token",
-    })
-    .toBe(true);
+  ).toContainText(/로컬 브릿지 다시 연결|helper/i);
   expect(
     await page.evaluate(() =>
       window.sessionStorage.getItem(
@@ -1065,6 +1146,42 @@ test("storyboard settings keeps production image API keys in browser localStorag
       ),
     ),
   ).toContain(fakeLocalBridgeToken);
+  await expect
+    .poll(() => seenLocalBridgeAuthHeaders.includes(`Bearer ${fakeLocalBridgeToken}`), {
+      timeout: 2_000,
+    })
+    .toBe(false);
+  await localBridgeSettings.locator('[data-storyboard-local-bridge-connect="true"]').click();
+  await expect(
+    localBridgeSettings.locator(
+      '[data-storyboard-local-bridge-status="connected"]',
+    ),
+  ).toBeVisible({ timeout: 10_000 });
+  await expect(
+    localBridgeSettings.locator('[data-storyboard-local-bridge-message="true"]'),
+  ).toContainText(/연결/i);
+  await expect
+    .poll(() => seenLocalBridgeAuthHeaders.includes(`Bearer ${fakeLocalBridgeToken}`), {
+      timeout: 10_000,
+      message: "expected local bridge auth-status to use the pasted pairing token",
+    })
+    .toBe(true);
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await hidePopupOverlay(page);
+  await expect(storyboardModule).toBeVisible({ timeout: 30_000 });
+  await storyboardModule.locator('[data-storyboard-chat-settings-toggle="true"]').click();
+  await expect(page.locator('[data-storyboard-chat-settings-dropdown="true"]')).toBeVisible();
+  await expect(
+    page.locator('[data-storyboard-api-router-option="local-bridge"]').first(),
+  ).toHaveAttribute('data-storyboard-api-router-option-selected', 'true');
+  await expect(
+    localBridgeSettings.locator(
+      '[data-storyboard-local-bridge-status="needs_reconnect"]',
+    ),
+  ).toBeVisible({ timeout: 10_000 });
+  await expect(
+    localBridgeSettings.locator('[data-storyboard-local-bridge-message="true"]'),
+  ).toContainText(/로컬 브릿지 다시 연결|helper/i);
   await localBridgeSettings.locator('[data-storyboard-local-bridge-clear="true"]').click();
   await expect(localBridgeSettings).toHaveCount(0, { timeout: 10_000 });
   expect(
