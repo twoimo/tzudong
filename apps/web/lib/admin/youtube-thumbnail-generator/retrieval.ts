@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
-import { basename, join, resolve } from 'node:path';
+import { basename, extname, join, resolve } from 'node:path';
 
 import { getYoutubeThumbnailUrl } from '@/lib/youtube-thumbnail';
 
@@ -26,6 +26,7 @@ export const THUMBNAIL_RETRIEVAL_REFERENCE_LIMIT = 4;
 export const THUMBNAIL_RETRIEVAL_DEFAULT_COMMAND =
   'backend/thumbnail-agent/scripts/retrieve-thumbnail-references.py';
 const THUMBNAIL_RETRIEVAL_COMMAND_TIMEOUT_MS = 8_000;
+const DEFAULT_THUMBNAIL_RETRIEVAL_PYTHON = process.platform === 'win32' ? 'python' : 'python3';
 const TZUYANG_CREATOR_PATTERN = /(쯔양|tzuyang)/i;
 
 type ThumbnailRetrievalEnv = NodeJS.ProcessEnv;
@@ -237,6 +238,43 @@ function resolveRetrievalCommand(env: ThumbnailRetrievalEnv) {
   if (env.THUMBNAIL_RETRIEVAL_DEFAULT_ADAPTER_DISABLED === '1') return '';
   return resolveDefaultRetrievalCommand() ?? '';
 }
+function toShellScriptArg(command: string) {
+  return process.platform === 'win32' ? command.replaceAll('\\', '/') : command;
+}
+
+function resolveNodeBinary() {
+  return process.versions.bun ? (process.env.NODE || 'node') : process.execPath;
+}
+
+function resolvePythonBinary(env: ThumbnailRetrievalEnv = process.env) {
+  return env.PYTHON?.trim() || process.env.PYTHON?.trim() || DEFAULT_THUMBNAIL_RETRIEVAL_PYTHON;
+}
+
+function resolveBashBinary() {
+  if (process.platform === 'win32') {
+    const preferred = [
+      'C:\\Program Files\\Git\\bin\\bash.exe',
+      'C:\\Program Files\\Git\\usr\\bin\\bash.exe',
+    ];
+    const found = preferred.find((candidate) => existsSync(candidate));
+    if (found) return found;
+  }
+  return 'bash';
+}
+
+function resolveScriptCommand(command: string, args: string[], env: ThumbnailRetrievalEnv = process.env) {
+  const extension = extname(command).toLowerCase();
+  if (extension === '.js' || extension === '.mjs' || extension === '.cjs') {
+    return { command: resolveNodeBinary(), args: [command, ...args] };
+  }
+  if (extension === '.py') {
+    return { command: resolvePythonBinary(env), args: [command, ...args] };
+  }
+  if (extension === '.sh') {
+    return { command: resolveBashBinary(), args: [toShellScriptArg(command), ...args] };
+  }
+  return { command, args };
+}
 
 function sanitizeFallbackReason(value: unknown): ThumbnailRetrievalFallbackReason {
   return value === 'missing_dependency'
@@ -339,8 +377,7 @@ async function runRetrievalCommand(
 ): Promise<ThumbnailRetrievalResult | { fallbackReason: ThumbnailRetrievalFallbackReason } | null> {
   const command = resolveRetrievalCommand(env);
   if (!command) return null;
-  const commandArgs = command.endsWith('.py') ? [command] : [];
-  const commandExecutable = command.endsWith('.py') ? env.PYTHON?.trim() || 'python3' : command;
+  const runnable = resolveScriptCommand(command, [], env);
   const timeout = Math.max(1_000, Math.min(
     Number(env[THUMBNAIL_RETRIEVAL_TIMEOUT_MS_ENV]) || THUMBNAIL_RETRIEVAL_COMMAND_TIMEOUT_MS,
     30_000,
@@ -354,7 +391,7 @@ async function runRetrievalCommand(
   });
 
   return await new Promise((resolveResult) => {
-    const child = spawn(commandExecutable, commandArgs, {
+    const child = spawn(runnable.command, runnable.args, {
       cwd: resolve(process.cwd(), env[THUMBNAIL_RETRIEVAL_ROOT_ENV] || '.'),
       env: { ...process.env, ...env, THUMBNAIL_RETRIEVAL_JSON: input },
       stdio: ['pipe', 'pipe', 'ignore'],

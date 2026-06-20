@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -34,6 +34,8 @@ function buildResult(): StoryboardGenerationResult {
       isFallbackData: false,
       fallbackReason: null,
       dataModeLabel: '실제 히트맵 모드',
+      selectedSingleMarkerSourceCount: 0,
+      selectedMarkerMedianRelativePeak: 0.2,
     },
     storyboard: {
       title: '히스토리 <정화> & 테스트',
@@ -141,6 +143,32 @@ describe('admin storyboard local history persistence', () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+  test('does not write local history in production even when the write flag is present', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'storyboard-history-production-'));
+    try {
+      const result = await persistLocalStoryboardHistory(
+        buildResult(),
+        { NODE_ENV: 'production', STORYBOARD_LOCAL_HISTORY_WRITE: '1' },
+        { historyDir: dir },
+      );
+      expect(result.persisted).toBe(false);
+      expect(result.reason).toBe('disabled');
+      expect(existsSync(join(dir, 'latest-real-data.json'))).toBe(false);
+      expect(existsSync(join(dir, 'history-real-data.json'))).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+  test('does not default image-route history writes on without explicit opt-in', () => {
+    const routeSource = readFileSync(
+      join(process.cwd(), 'app/api/admin/storyboard/images/route.ts'),
+      'utf8',
+    );
+    expect(routeSource).toContain(
+      'STORYBOARD_LOCAL_HISTORY_WRITE: process.env.STORYBOARD_LOCAL_HISTORY_WRITE',
+    );
+    expect(routeSource).not.toContain("STORYBOARD_LOCAL_HISTORY_WRITE || '1'");
+  });
 
   test('writes only sanitized trusted-image storyboard history in local development', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'storyboard-history-enabled-'));
@@ -169,6 +197,8 @@ describe('admin storyboard local history persistence', () => {
         imageCallId: 'ig_history_test',
         hasOpenAIAPIKey: false,
       });
+      expect(latest.result.sourceSummary.selectedSingleMarkerSourceCount).toBe(0);
+      expect(latest.result.sourceSummary.selectedMarkerMedianRelativePeak).toBe(0.2);
       const history = JSON.parse(readFileSync(join(dir, 'history-real-data.json'), 'utf8')) as { runs: Array<{ trustedImages: number }> };
       expect(history.runs[0].trustedImages).toBe(1);
       const html = readFileSync(join(dir, '2026-06-05T08-15-00-000Z.html'), 'utf8');
