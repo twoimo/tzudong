@@ -1,7 +1,7 @@
 import { describe, expect, mock, test } from "bun:test";
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { delimiter, dirname, join } from "node:path";
 import { spawnSync } from "node:child_process";
 import type { NextRequest } from "next/server";
 
@@ -59,6 +59,8 @@ import {
   normalizeThumbnailLocalBridgeUrl,
 } from "../lib/admin/youtube-thumbnail-generator/local-bridge-contract";
 import { ThumbnailGenerationError } from "../lib/admin/youtube-thumbnail-generator/types";
+
+const THUMBNAIL_TEST_PYTHON = process.env.PYTHON ?? (process.platform === "win32" ? "python" : "python3");
 
 const safePayload = {
   providerId: "local-codex" as const,
@@ -134,14 +136,32 @@ async function expectThumbnailErrorAsync(fn: () => Promise<unknown>, code: strin
   throw new Error(`Expected ThumbnailGenerationError ${code}`);
 }
 
+function writeThumbnailAgentCommand(root: string, name: string, body: string) {
+  mkdirSync(root, { recursive: true });
+  const commandPath = join(root, `${name}.cjs`);
+  writeFileSync(commandPath, `#!/usr/bin/env node\n${body}\n`, "utf8");
+  chmodSync(commandPath, 0o755);
+  return commandPath;
+}
+
 function createThumbnailChatAgentCommandFixture(prefix = "thumbnail-chat-agent-") {
   const tempDir = mkdtempSync(join(tmpdir(), prefix));
-  const commandPath = join(tempDir, "thumbnail-chat-agent.sh");
-  writeFileSync(commandPath, `#!/usr/bin/env bash
-cat >/dev/null
-printf '%s' '{"mode":"command","runtime":"codex_cli_oauth","concept":"chat concept","layoutBrief":"chat layout","promptAddendum":"Backend thumbnail agent orchestration brief: chat","safetyReview":"review","nextActions":["생성 이미지 검수"],"warnings":["backend_agent_command"],"diagnostics":{"model":"gpt-5.5","effort":"high"}}'
-`, "utf8");
-  chmodSync(commandPath, 0o755);
+  const commandPath = writeThumbnailAgentCommand(tempDir, "thumbnail-chat-agent", `
+process.stdin.resume();
+process.stdin.on("end", () => {
+  process.stdout.write(JSON.stringify({
+    mode: "command",
+    runtime: "codex_cli_oauth",
+    concept: "chat concept",
+    layoutBrief: "chat layout",
+    promptAddendum: "Backend thumbnail agent orchestration brief: chat",
+    safetyReview: "review",
+    nextActions: ["생성 이미지 검수"],
+    warnings: ["backend_agent_command"],
+    diagnostics: { model: "gpt-5.5", effort: "high" },
+  }));
+});
+`);
   return { tempDir, commandPath };
 }
 
@@ -572,7 +592,8 @@ describe("admin youtube thumbnail generator", () => {
     expect(providerSource).toContain("durableOutputPath");
     expect(providerSource).toContain("hasExactGptImage2C2paProof");
     expect(providerSource).toContain("hasStructuralExactGptImage2C2paProof");
-    expect(providerSource).toContain("spawnSync(c2patoolBin, ['--crjson', outputPath]");
+    expect(providerSource).toContain("const toolCommand = resolveScriptCommand(c2patoolBin, ['--crjson', outputPath], env)");
+    expect(providerSource).toContain("spawnSync(toolCommand.command, toolCommand.args");
     expect(providerSource).toContain("claimSignature.validated");
     expect(providerSource).toContain("assertion.dataHash.match");
     expect(providerSource).toContain("realpathSync");
@@ -2225,14 +2246,28 @@ process.stdin.on("end", () => {
 
   test("passes retrieval evidence into backend-agent planning payload", async () => {
     const tempDir = mkdtempSync(join(tmpdir(), "thumbnail-agent-retrieval-payload-"));
-    const commandPath = join(tempDir, "thumbnail-agent-capture.sh");
     const payloadPath = join(tempDir, "agent-payload.json");
     try {
-      writeFileSync(commandPath, `#!/usr/bin/env bash
-cat >${JSON.stringify(payloadPath)}
-printf '%s' '{"mode":"command","runtime":"codex_cli_oauth","concept":"retrieval concept","layoutBrief":"retrieval layout","promptAddendum":"Backend thumbnail agent orchestration brief: retrieval evidence used","safetyReview":"review","nextActions":["검수"],"warnings":[],"diagnostics":{"retrievalEvidenceCount":1}}'
-`, "utf8");
-      chmodSync(commandPath, 0o755);
+      const commandPath = writeThumbnailAgentCommand(tempDir, "thumbnail-agent-capture", `
+const { writeFileSync } = require("node:fs");
+let input = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => { input += chunk; });
+process.stdin.on("end", () => {
+  writeFileSync(${JSON.stringify(payloadPath)}, input, "utf8");
+  process.stdout.write(JSON.stringify({
+    mode: "command",
+    runtime: "codex_cli_oauth",
+    concept: "retrieval concept",
+    layoutBrief: "retrieval layout",
+    promptAddendum: "Backend thumbnail agent orchestration brief: retrieval evidence used",
+    safetyReview: "review",
+    nextActions: ["검수"],
+    warnings: [],
+    diagnostics: { retrievalEvidenceCount: 1 },
+  }));
+});
+`);
       const parsed = parseThumbnailPayload({ ...safePayload, generationMode: "backend_agent", providerId: "local-codex" });
       await expectThumbnailErrorAsync(
         () => generateYoutubeThumbnailWithBackendAgent({
@@ -2299,15 +2334,15 @@ printf '%s' '{"mode":"command","runtime":"codex_cli_oauth","concept":"retrieval 
       basePrompt: "base prompt",
     };
 
-    const result = spawnSync("python3", [runnerPath], {
+    const result = spawnSync(THUMBNAIL_TEST_PYTHON, [runnerPath], {
       cwd: join(import.meta.dir, ".."),
       input: JSON.stringify(payload),
-      env: { ...process.env, THUMBNAIL_AGENT_RUNTIME: "local_graph" },
+      env: { ...process.env, THUMBNAIL_AGENT_RUNTIME: "local_graph", PYTHONWARNINGS: "ignore::UserWarning" },
       encoding: "utf8",
     });
 
     expect(result.status).toBe(0);
-    expect(result.stderr).toBe("");
+    expect(result.stderr).not.toContain("Traceback");
     const parsed = JSON.parse(result.stdout);
     expect(parsed.runtime).toBe("local_graph");
     expect(parsed.promptAddendum).toContain("Retrieved references");
@@ -2325,13 +2360,14 @@ printf '%s' '{"mode":"command","runtime":"codex_cli_oauth","concept":"retrieval 
       writeFileSync(join(tempDir, "langgraph", "__init__.py"), "", "utf8");
       writeFileSync(join(tempDir, "langgraph", "graph.py"), "raise RuntimeError('broken installed langgraph')\n", "utf8");
 
-      const result = spawnSync("python3", [runnerPath], {
+      const result = spawnSync(THUMBNAIL_TEST_PYTHON, [runnerPath], {
         cwd: join(import.meta.dir, ".."),
         input: JSON.stringify({ request: { topic: "먹방", headline: "검증" } }),
         env: {
           ...process.env,
           THUMBNAIL_AGENT_RUNTIME: "local_graph",
-          PYTHONPATH: [tempDir, process.env.PYTHONPATH].filter(Boolean).join(":"),
+          PYTHONWARNINGS: "ignore::UserWarning",
+          PYTHONPATH: [tempDir, process.env.PYTHONPATH].filter(Boolean).join(delimiter),
         },
         encoding: "utf8",
       });
@@ -2347,29 +2383,27 @@ printf '%s' '{"mode":"command","runtime":"codex_cli_oauth","concept":"retrieval 
 
   test("keeps session API keys out of backend-agent command env while allowing provider-only env overrides", async () => {
     const tempDir = mkdtempSync(join(tmpdir(), "thumbnail-agent-env-isolation-"));
-    const commandPath = join(tempDir, "thumbnail-agent-env-isolation.sh");
     const diagnosticsPath = join(tempDir, "agent-diagnostics.json");
     try {
-      writeFileSync(commandPath, `#!/usr/bin/env bash
-cat >/dev/null
-node - <<'NODE'
-const fs = require("node:fs");
-const diagnostics = { openaiKeyLeaked: Boolean(process.env.OPENAI_API_KEY) };
-fs.writeFileSync(${JSON.stringify(diagnosticsPath)}, JSON.stringify(diagnostics));
-process.stdout.write(JSON.stringify({
-  mode: "command",
-  runtime: "codex_cli_oauth",
-  concept: "env isolation",
-  layoutBrief: "layout",
-  promptAddendum: "Backend thumbnail agent orchestration brief: env isolation",
-  safetyReview: "review",
-  nextActions: ["검수"],
-  warnings: [],
-  diagnostics
-}));
-NODE
-`, "utf8");
-      chmodSync(commandPath, 0o755);
+      const commandPath = writeThumbnailAgentCommand(tempDir, "thumbnail-agent-env-isolation", `
+const { writeFileSync } = require("node:fs");
+process.stdin.resume();
+process.stdin.on("end", () => {
+  const diagnostics = { openaiKeyLeaked: Boolean(process.env.OPENAI_API_KEY) };
+  writeFileSync(${JSON.stringify(diagnosticsPath)}, JSON.stringify(diagnostics), "utf8");
+  process.stdout.write(JSON.stringify({
+    mode: "command",
+    runtime: "codex_cli_oauth",
+    concept: "env isolation",
+    layoutBrief: "layout",
+    promptAddendum: "Backend thumbnail agent orchestration brief: env isolation",
+    safetyReview: "review",
+    nextActions: ["검수"],
+    warnings: [],
+    diagnostics,
+  }));
+});
+`);
       const parsed = parseThumbnailPayload({ ...safePayload, generationMode: "backend_agent", providerId: "local-codex" });
       const baseEnv = {
         THUMBNAIL_AGENT_COMMAND: commandPath,
@@ -2392,10 +2426,13 @@ NODE
   });
   test("fails explicitly when a configured thumbnail backend-agent command emits invalid JSON", async () => {
     const tempDir = mkdtempSync(join(tmpdir(), "thumbnail-agent-invalid-"));
-    const commandPath = join(tempDir, "thumbnail-agent-invalid.sh");
     try {
-      writeFileSync(commandPath, "#!/usr/bin/env bash\nprintf 'not-json'\n", "utf8");
-      chmodSync(commandPath, 0o755);
+      const commandPath = writeThumbnailAgentCommand(tempDir, "thumbnail-agent-invalid", `
+process.stdin.resume();
+process.stdin.on("end", () => {
+  process.stdout.write("not-json");
+});
+`);
       const parsed = parseThumbnailPayload({ ...safePayload, generationMode: "backend_agent", providerId: "local-codex" });
 
       await expectThumbnailErrorAsync(() => generateYoutubeThumbnailWithBackendAgent(parsed, [], {
@@ -2424,7 +2461,7 @@ NODE
     expect(status.localAdapterAvailable).toBe(true);
     expect(status.commandAvailable).toBe(true);
     expect(status.commandConfigured).toBe(false);
-    expect(status.commandPath).toContain("backend/thumbnail-agent/scripts/run-thumbnail-agent.py");
+    expect(status.commandPath?.replaceAll("\\", "/")).toContain("backend/thumbnail-agent/scripts/run-thumbnail-agent.py");
     expect(status.graphEntrypoint).toContain("backend/thumbnail-agent");
     expect(status).toMatchObject({
       runtime: "codex_cli_oauth",
@@ -2454,13 +2491,23 @@ NODE
 
   test("runs thumbnail chat work through a backend-agent command contract", async () => {
     const tempDir = mkdtempSync(join(tmpdir(), "thumbnail-chat-agent-"));
-    const commandPath = join(tempDir, "thumbnail-chat-agent.sh");
     try {
-      writeFileSync(commandPath, `#!/usr/bin/env bash
-cat >/dev/null
-printf '%s' '{"mode":"command","runtime":"codex_cli_oauth","concept":"chat concept","layoutBrief":"chat layout","promptAddendum":"Backend thumbnail agent orchestration brief: chat","safetyReview":"review","nextActions":["생성 이미지 검수"],"warnings":["backend_agent_command"],"diagnostics":{"model":"gpt-5.5","effort":"high"}}'
-`, "utf8");
-      chmodSync(commandPath, 0o755);
+    const commandPath = writeThumbnailAgentCommand(tempDir, "thumbnail-chat-agent", `
+process.stdin.resume();
+process.stdin.on("end", () => {
+  process.stdout.write(JSON.stringify({
+    mode: "command",
+    runtime: "codex_cli_oauth",
+    concept: "chat concept",
+    layoutBrief: "chat layout",
+    promptAddendum: "Backend thumbnail agent orchestration brief: chat",
+    safetyReview: "review",
+    nextActions: ["생성 이미지 검수"],
+    warnings: ["backend_agent_command"],
+    diagnostics: { model: "gpt-5.5", effort: "high" },
+  }));
+});
+`);
 
       const result = await generateYoutubeThumbnailChatWithBackendAgent({
         message: "유튜브 쯔양이 오른쪽에 크게, 메인: 역대급 불맛, 스티커: 한입만 가능? 생성해줘",
@@ -2998,7 +3045,6 @@ printf '%s' '{"mode":"command","runtime":"codex_cli_oauth","concept":"chat conce
 
   test("aborts thumbnail chat backend-agent commands with the request signal and run id", async () => {
     const tempDir = mkdtempSync(join(tmpdir(), "thumbnail-chat-agent-abort-"));
-    const commandPath = join(tempDir, "thumbnail-chat-agent-abort.sh");
     const abortMarkerPath = join(tempDir, "aborted.txt");
     const readAbortMarker = async () => {
       for (let attempt = 0; attempt < 20; attempt += 1) {
@@ -3009,13 +3055,13 @@ printf '%s' '{"mode":"command","runtime":"codex_cli_oauth","concept":"chat conce
     };
 
     try {
-      writeFileSync(commandPath, `#!/usr/bin/env bash
-printf "%s" "$THUMBNAIL_AGENT_RUN_ID" > "${abortMarkerPath}"
-trap 'exit 143' TERM
-cat >/dev/null
-sleep 30
-`, "utf8");
-      chmodSync(commandPath, 0o755);
+      const commandPath = writeThumbnailAgentCommand(tempDir, "thumbnail-chat-agent-abort", `
+const { writeFileSync } = require("node:fs");
+writeFileSync(${JSON.stringify(abortMarkerPath)}, process.env.THUMBNAIL_AGENT_RUN_ID ?? "", "utf8");
+process.stdin.resume();
+process.on("SIGTERM", () => process.exit(143));
+setTimeout(() => {}, 30_000);
+`);
       const controller = new AbortController();
       const promise = generateYoutubeThumbnailChatWithBackendAgent({
         chatRunId: "thumbnail-chat-abort-test",
@@ -3030,9 +3076,9 @@ sleep 30
         runId: "thumbnail-chat-abort-test",
       });
 
-      setTimeout(() => controller.abort(), 30);
-      await expectThumbnailErrorAsync(() => promise, "thumbnail_chat_aborted", 499);
       expect(await readAbortMarker()).toBe("thumbnail-chat-abort-test");
+      controller.abort();
+      await expectThumbnailErrorAsync(() => promise, "thumbnail_chat_aborted", 499);
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }

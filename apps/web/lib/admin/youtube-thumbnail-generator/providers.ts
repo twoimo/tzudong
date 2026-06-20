@@ -142,6 +142,44 @@ function parseArgsJson(value: string | undefined) {
   }
 }
 
+function resolveNodeBinary() {
+  return process.versions.bun ? (process.env.NODE || 'node') : process.execPath;
+}
+
+function resolvePythonBinary(env: NodeJS.ProcessEnv = process.env) {
+  return env.PYTHON?.trim() || process.env.PYTHON?.trim() || (process.platform === 'win32' ? 'python' : 'python3');
+}
+
+function resolveBashBinary() {
+  if (process.platform === 'win32') {
+    const preferred = [
+      'C:\\Program Files\\Git\\bin\\bash.exe',
+      'C:\\Program Files\\Git\\usr\\bin\\bash.exe',
+    ];
+    const found = preferred.find((candidate) => existsSync(candidate));
+    if (found) return found;
+  }
+  return 'bash';
+}
+function toShellScriptArg(command: string) {
+  return process.platform === 'win32' ? command.replaceAll('\\', '/') : command;
+}
+
+
+function resolveScriptCommand(command: string, args: string[], env: NodeJS.ProcessEnv = process.env) {
+  const extension = extname(command).toLowerCase();
+  if (extension === '.js' || extension === '.mjs' || extension === '.cjs') {
+    return { command: resolveNodeBinary(), args: [command, ...args] };
+  }
+  if (extension === '.py') {
+    return { command: resolvePythonBinary(env), args: [command, ...args] };
+  }
+  if (extension === '.sh') {
+    return { command: resolveBashBinary(), args: [toShellScriptArg(command), ...args] };
+  }
+  return { command, args };
+}
+
 function resolveLocalCodexThumbnailCommandParts(env: NodeJS.ProcessEnv) {
   const configuredCommand = env.THUMBNAIL_LOCAL_CODEX_COMMAND?.trim();
   if (configuredCommand) {
@@ -156,10 +194,11 @@ function resolveLocalCodexThumbnailCommandParts(env: NodeJS.ProcessEnv) {
   }
 
   const scriptPath = resolveDefaultLocalCodexScript(env);
+  const python = resolvePythonBinary(env);
   return {
-    command: env.PYTHON ?? 'python3',
+    command: python,
     args: [scriptPath],
-    label: `${env.PYTHON ?? 'python3'} ${DEFAULT_LOCAL_CODEX_SCRIPT}`,
+    label: `${python} ${DEFAULT_LOCAL_CODEX_SCRIPT}`,
     scriptPath,
     configured: false,
   };
@@ -393,7 +432,8 @@ function candidateC2paToolBins(env: NodeJS.ProcessEnv) {
 function hasStructuralExactGptImage2C2paProof(outputPath: string, env: NodeJS.ProcessEnv) {
   let lastFailure = '';
   for (const c2patoolBin of candidateC2paToolBins(env)) {
-    const result = spawnSync(c2patoolBin, ['--crjson', outputPath], {
+    const toolCommand = resolveScriptCommand(c2patoolBin, ['--crjson', outputPath], env);
+    const result = spawnSync(toolCommand.command, toolCommand.args, {
       encoding: 'utf8',
       maxBuffer: LOCAL_CODEX_C2PATOOL_MAX_OUTPUT_BYTES,
       timeout: Number(env.THUMBNAIL_LOCAL_CODEX_C2PATOOL_TIMEOUT_MS ?? LOCAL_CODEX_C2PATOOL_TIMEOUT_MS),
@@ -742,9 +782,10 @@ function runLocalCodexThumbnailCommand(
   options: ThumbnailProviderExecutionOptions,
 ) {
   const { command, args } = buildLocalCodexCommand(env, placeholders);
+  const runnable = resolveScriptCommand(command, args, env);
   const repoRoot = resolveRepoRoot(env);
   return new Promise<LocalCodexCommandResult>((resolveCommand, rejectCommand) => {
-    const child = spawn(command, args, {
+    const child = spawn(runnable.command, runnable.args, {
       cwd: repoRoot,
       env: {
         ...process.env,
