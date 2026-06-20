@@ -66,6 +66,14 @@ def _as_non_empty_string_list(value: Any) -> list[str]:
             output.append(item.strip())
     return output
 
+def _iter_evaluation_items(value: Any) -> list[dict]:
+    """Return evaluation item rows from either list or {values: [...]} payloads."""
+    if isinstance(value, list):
+        return [item for item in value if isinstance(item, dict)]
+    if isinstance(value, dict) and isinstance(value.get("values"), list):
+        return [item for item in value["values"] if isinstance(item, dict)]
+    return []
+
 
 # ═══════════════════════════════════════════════════════════
 # 1. Gemini 크롤링 출력 검증 (Step 7)
@@ -375,44 +383,42 @@ def validate_laaj_results(video_id: str, data: dict) -> list[dict]:
 
     # 점수 범위 검증
     for score_key, (min_val, max_val) in SCORE_RANGES.items():
-        score_items = eval_results.get(score_key, [])
-        if isinstance(score_items, list):
-            for item in score_items:
-                val = item.get("eval_value")
-                name = item.get("name", "")
-                if val is not None:
-                    try:
-                        val_f = float(val)
-                        if not (min_val <= val_f <= max_val):
-                            errors.append(_err(step, video_id, ValidationSeverity.ERROR.value,
-                                              "score_range",
-                                              f"{score_key} 범위 초과: {val_f} (허용: {min_val}~{max_val})",
-                                              restaurant_name=name))
-                    except (ValueError, TypeError):
+        score_items = _iter_evaluation_items(eval_results.get(score_key))
+        for item in score_items:
+            val = item.get("eval_value")
+            name = item.get("name", "")
+            if val is not None:
+                try:
+                    val_f = float(val)
+                    if not (min_val <= val_f <= max_val):
                         errors.append(_err(step, video_id, ValidationSeverity.ERROR.value,
-                                          "score_type",
-                                          f"{score_key} 값이 숫자가 아닙니다: {val}",
+                                          "score_range",
+                                          f"{score_key} 범위 초과: {val_f} (허용: {min_val}~{max_val})",
                                           restaurant_name=name))
-
-                # eval_basis 존재 확인
-                basis = item.get("eval_basis", "")
-                if not basis or (isinstance(basis, str) and len(basis.strip()) < 5):
-                    errors.append(_err(step, video_id, ValidationSeverity.WARNING.value,
-                                      "missing_basis",
-                                      f"{score_key} 평가 근거 누락 또는 너무 짧음",
+                except (ValueError, TypeError):
+                    errors.append(_err(step, video_id, ValidationSeverity.ERROR.value,
+                                      "score_type",
+                                      f"{score_key} 값이 숫자가 아닙니다: {val}",
                                       restaurant_name=name))
+
+            # eval_basis 존재 확인
+            basis = item.get("eval_basis", "")
+            if not basis or (isinstance(basis, str) and len(basis.strip()) < 5):
+                errors.append(_err(step, video_id, ValidationSeverity.WARNING.value,
+                                  "missing_basis",
+                                  f"{score_key} 평가 근거 누락 또는 너무 짧음",
+                                  restaurant_name=name))
 
     # Boolean 필드 타입 검증
     for bool_key in ("rb_grounding_TF", "category_TF"):
-        bool_items = eval_results.get(bool_key, [])
-        if isinstance(bool_items, list):
-            for item in bool_items:
-                val = item.get("eval_value")
-                if val is not None and not isinstance(val, bool):
-                    errors.append(_err(step, video_id, ValidationSeverity.WARNING.value,
-                                      "type_error",
-                                      f"{bool_key}.eval_value가 boolean이 아닙니다: {val}",
-                                      restaurant_name=item.get("name", "")))
+        bool_items = _iter_evaluation_items(eval_results.get(bool_key))
+        for item in bool_items:
+            val = item.get("eval_value")
+            if val is not None and not isinstance(val, bool):
+                errors.append(_err(step, video_id, ValidationSeverity.WARNING.value,
+                                  "type_error",
+                                  f"{bool_key}.eval_value가 boolean이 아닙니다: {val}",
+                                  restaurant_name=item.get("name", "")))
 
     return errors
 
@@ -452,11 +458,11 @@ def cross_validate(video_id: str, rule_data: dict, laaj_data: dict) -> list[dict
     # location_match vs visit_authenticity 모순 탐지
     location_matches = {
         loc.get("origin_name"): loc.get("eval_value")
-        for loc in rule_eval.get("location_match_TF", [])
+        for loc in _iter_evaluation_items(rule_eval.get("location_match_TF"))
     }
     visit_auths = {
         item.get("name"): item.get("eval_value")
-        for item in laaj_eval.get("visit_authenticity", [])
+        for item in _iter_evaluation_items(laaj_eval.get("visit_authenticity"))
     }
 
     for name, loc_val in location_matches.items():
@@ -471,11 +477,11 @@ def cross_validate(video_id: str, rule_data: dict, laaj_data: dict) -> list[dict
     # category 교차 검증
     rule_cat = {
         item.get("name"): item.get("eval_value")
-        for item in rule_eval.get("category_validity_TF", [])
+        for item in _iter_evaluation_items(rule_eval.get("category_validity_TF"))
     }
     laaj_cat = {
         item.get("name"): item.get("eval_value")
-        for item in laaj_eval.get("category_TF", [])
+        for item in _iter_evaluation_items(laaj_eval.get("category_TF"))
     }
 
     for name in rule_cat:

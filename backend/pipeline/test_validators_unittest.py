@@ -175,6 +175,39 @@ class ValidatorsRegressionTests(unittest.TestCase):
         self.assertIn("type_error", rules)
         self.assertIn("missing_basis", rules)
 
+    def test_validate_laaj_results_accepts_values_wrappers(self) -> None:
+        errors = validate_laaj_results(
+            "vid-5-wrapper",
+            {
+                "restaurants": [{"origin_name": "식당A"}],
+                "evaluation_results": {
+                    "visit_authenticity": {
+                        "values": [
+                            {"name": "식당A", "eval_value": 3, "eval_basis": "충분한 근거 문장"}
+                        ],
+                        "missing": [],
+                    },
+                    "rb_inference_score": {
+                        "values": [
+                            {"name": "식당A", "eval_value": "NaN-ish", "eval_basis": "충분한 근거 문장"}
+                        ],
+                    },
+                    "rb_grounding_TF": [{"name": "식당A", "eval_value": "true"}],
+                    "review_faithfulness_score": [
+                        {"name": "식당A", "eval_value": 0.8, "eval_basis": "짧음"}
+                    ],
+                    "category_TF": {"values": [{"name": "식당A", "eval_value": True}]},
+                },
+            },
+        )
+
+        rules = {error["rule"] for error in errors}
+        self.assertIn("score_range", rules)
+        self.assertIn("score_type", rules)
+        self.assertIn("type_error", rules)
+        self.assertIn("missing_basis", rules)
+
+
     def test_cross_validate_detects_inter_stage_contradictions(self) -> None:
         errors = cross_validate(
             "vid-6",
@@ -190,6 +223,32 @@ class ValidatorsRegressionTests(unittest.TestCase):
                 "evaluation_results": {
                     "visit_authenticity": [{"name": "식당A", "eval_value": 2}],
                     "category_TF": [{"name": "식당A", "eval_value": True}],
+                },
+            },
+        )
+
+        rules = {error["rule"] for error in errors}
+        self.assertIn("location_visit_contradiction", rules)
+        self.assertIn("category_contradiction", rules)
+
+    def test_cross_validate_accepts_laaj_values_wrapper(self) -> None:
+        errors = cross_validate(
+            "vid-6-wrapper",
+            {
+                "restaurants": [{"origin_name": "식당A"}],
+                "evaluation_results": {
+                    "location_match_TF": [{"origin_name": "식당A", "eval_value": False}],
+                    "category_validity_TF": [{"name": "식당A", "eval_value": False}],
+                },
+            },
+            {
+                "restaurants": [{"name": "식당A"}],
+                "evaluation_results": {
+                    "visit_authenticity": {
+                        "values": [{"name": "식당A", "eval_value": 2}],
+                        "missing": [],
+                    },
+                    "category_TF": {"values": [{"name": "식당A", "eval_value": True}]},
                 },
             },
         )

@@ -591,6 +591,112 @@ record_exit_if_failed() {
     fi
     return 1
 }
+write_run_daily_summary_manifest() {
+    local final_status="${1:-ERROR}"
+    local final_exit_code="${2:-1}"
+    local summary_path="${3:-${SUMMARY_MD:-${RUN_DAILY_SUMMARY_PATH:-$PROJECT_ROOT/summary.md}}}"
+
+    if [ ! -f "$PROJECT_ROOT/backend/utils/run_daily_helpers.py" ]; then
+        log "ERROR" "run_daily summary manifest helper missing: $PROJECT_ROOT/backend/utils/run_daily_helpers.py"
+        return 1
+    fi
+
+    local MANIFEST_ARGS=(
+        "$PROJECT_ROOT/backend/utils/run_daily_helpers.py"
+        write-summary-manifest
+        --output "$RUN_DAILY_MANIFEST_PATH"
+        --date "$DATE"
+        --final-status "$final_status"
+        --final-exit-code "$final_exit_code"
+        --latest-log-path "$LOG_FILE"
+        --summary-path "$summary_path"
+        --no-work-short-circuit "${NO_WORK_SHORT_CIRCUIT:-false}"
+        --policy-mode "${RUN_DAILY_POLICY_MODE:-end_to_end}"
+        --github-run-id "${GITHUB_RUN_ID:-}"
+        --github-run-attempt "${GITHUB_RUN_ATTEMPT:-}"
+        --github-run-url "${GITHUB_RUN_ID:+${GITHUB_SERVER_URL:-https://github.com}/${GITHUB_REPOSITORY:-}/actions/runs/${GITHUB_RUN_ID}}"
+        --github-workflow "${GITHUB_WORKFLOW:-}"
+        --github-sha "${GITHUB_SHA:-}"
+        --github-ref "${GITHUB_REF:-}"
+        --github-event-name "${GITHUB_EVENT_NAME:-}"
+        --execution-branch "${EXECUTION_BRANCH:-${RUN_DAILY_EXECUTION_BRANCH:-}}"
+        --target-branch "${TARGET_BRANCH:-${RUN_DAILY_TARGET_BRANCH:-}}"
+    )
+
+    for item in "${FAILED_REQUIRED_STEPS[@]}"; do
+        MANIFEST_ARGS+=(--failed-required-step "$item")
+    done
+    for item in "${SKIPPED_OPTIONAL_STEPS[@]}"; do
+        MANIFEST_ARGS+=(--optional-skip "$item")
+    done
+    for item in "${SKIPPED_DOWNSTREAM_STEPS[@]}"; do
+        MANIFEST_ARGS+=(--downstream-skip "$item")
+    done
+    for item in "${STEP_EVENTS[@]}"; do
+        MANIFEST_ARGS+=(--step-event "$item")
+    done
+
+    local manifest_readback_log
+    manifest_readback_log="$(mktemp)"
+
+    if "$PYTHON_CMD" "${MANIFEST_ARGS[@]}"; then
+        if [ "${RUN_DAILY_TEST_CORRUPT_SUMMARY_MANIFEST_AFTER_WRITE:-0}" = "1" ]; then
+            printf 'not json\n' > "$RUN_DAILY_MANIFEST_PATH"
+        fi
+        if "$PYTHON_CMD" "$PROJECT_ROOT/backend/utils/run_daily_helpers.py" \
+            validate-summary-manifest \
+            --input "$RUN_DAILY_MANIFEST_PATH" \
+            > /dev/null 2> "$manifest_readback_log"; then
+            rm -f "$manifest_readback_log"
+            log "INFO" "run_daily summary manifest written and verified: $RUN_DAILY_MANIFEST_PATH"
+            return 0
+        fi
+    fi
+
+    log "ERROR" "run_daily summary manifest write failed or readback failed: $RUN_DAILY_MANIFEST_PATH"
+    if [ -s "$manifest_readback_log" ]; then
+        while IFS= read -r line; do
+            log "ERROR" "summary manifest readback: $line"
+        done < "$manifest_readback_log"
+    fi
+    rm -f "$manifest_readback_log"
+    return 1
+}
+
+write_early_summary_and_exit() {
+    local final_exit_code="${1:-1}"
+    local step_name="${2:-run_daily startup}"
+    local reason="${3:-early termination}"
+    local summary_path="${RUN_DAILY_SUMMARY_PATH:-$PROJECT_ROOT/summary.md}"
+
+    if mkdir -p "$(dirname "$summary_path")" 2>/dev/null; then
+        {
+            echo "## Daily Crawling Report ($DATE)"
+            echo ""
+            echo "### Pipeline Attention Required"
+            echo "> run_daily stopped before the normal final reporting phase."
+            echo ""
+            echo "- **Failed Step**: $step_name"
+            echo "- **Reason**: $reason"
+            echo "- **Log File**: \`${LOG_FILE#$PROJECT_ROOT/}\`"
+        } > "$summary_path" || true
+    fi
+
+    if ! write_run_daily_summary_manifest "ERROR" "$final_exit_code" "$summary_path"; then
+        log "ERROR" "run_daily summary manifest contract breached during early exit: $RUN_DAILY_MANIFEST_PATH"
+    fi
+    exit "$final_exit_code"
+}
+
+fail_run_daily_before_pipeline() {
+    local step_name="$1"
+    local reason="$2"
+    local exit_code="${3:-1}"
+
+    record_required_failure "$step_name" "$reason"
+    write_early_summary_and_exit "$exit_code" "$step_name" "$reason"
+}
+
 
 record_youtube_api_exit() {
     local step_name="$1"
@@ -1166,17 +1272,23 @@ if [ "$CURRENT_BRANCH" != "$DESIRED_BRANCH" ]; then
         log "INFO" "FORCE_BRANCH_SWITCH=1 또는 CI 환경 감지됨. '$DESIRED_BRANCH'로 전환을 시도합니다."
         git fetch origin
 
-        if git show-ref --verify --quiet refs/heads/$DESIRED_BRANCH; then
-            git checkout $DESIRED_BRANCH || { log "ERROR" "브랜치 전환 실패. 변경사항을 커밋하거나 스태시하세요."; exit 1; }
+        if git show-ref --verify --quiet "refs/heads/$DESIRED_BRANCH"; then
+            if ! git checkout "$DESIRED_BRANCH"; then
+                log "ERROR" "브랜치 전환 실패. 변경사항을 커밋하거나 스태시하세요."
+                fail_run_daily_before_pipeline "Branch Check" "$DESIRED_BRANCH 브랜치 전환 실패"
+            fi
         else
-            git checkout -b $DESIRED_BRANCH origin/$DESIRED_BRANCH || { log "ERROR" "원격 브랜치 체크아웃 실패."; exit 1; }
+            if ! git checkout -b "$DESIRED_BRANCH" "origin/$DESIRED_BRANCH"; then
+                log "ERROR" "원격 브랜치 체크아웃 실패."
+                fail_run_daily_before_pipeline "Branch Check" "$DESIRED_BRANCH 원격 브랜치 체크아웃 실패"
+            fi
         fi
 
         log "OK" "브랜치 전환 완료: $DESIRED_BRANCH"
     else
         log "ERROR" "안전 모드: FORCE_BRANCH_SWITCH=1 환경변수 없이 자동으로 브랜치를 전환하지 않습니다."
         log "ERROR" "작업 중인 파일이 유실될 수 있으므로 직접 'git checkout $DESIRED_BRANCH' 후 다시 실행해주세요."
-        exit 1
+        fail_run_daily_before_pipeline "Branch Check" "현재 브랜치 '$CURRENT_BRANCH'가 요구 브랜치 '$DESIRED_BRANCH'와 다르고 FORCE_BRANCH_SWITCH가 비활성화됨"
     fi
 fi
 
@@ -1191,11 +1303,11 @@ EXECUTION_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 if [ "$SPLIT_SYNC_BRANCH_MODE" = "true" ]; then
     if ! ensure_split_sync_worktree "$TARGET_BRANCH"; then
         log "ERROR" "실행용 코드와 데이터 동기화 브랜치 분리 준비 실패"
-        exit 1
+        fail_run_daily_before_pipeline "Split Data Sync Worktree" "$TARGET_BRANCH 동기화 worktree 준비 실패"
     fi
     if ! seed_execution_data_from_sync_worktree; then
         log "ERROR" "실행 워크스페이스에 최신 데이터 브랜치를 반영하지 못했습니다."
-        exit 1
+        fail_run_daily_before_pipeline "Split Data Sync Worktree" "$TARGET_BRANCH 데이터 seed 실패"
     fi
     log "INFO" "코드는 '$EXECUTION_BRANCH' 브랜치에서 실행하고 데이터는 '$TARGET_BRANCH' 브랜치로 동기화합니다."
 fi
@@ -1997,45 +2109,10 @@ else
 EOF
 fi
 echo "\`\`\`" >> "$SUMMARY_MD"
-if [ -f "$PROJECT_ROOT/backend/utils/run_daily_helpers.py" ]; then
-    MANIFEST_ARGS=(
-        "$PROJECT_ROOT/backend/utils/run_daily_helpers.py"
-        write-summary-manifest
-        --output "$RUN_DAILY_MANIFEST_PATH"
-        --date "$DATE"
-        --final-status "$FINAL_STATUS_LABEL"
-        --final-exit-code "$FINAL_EXIT_CODE"
-        --latest-log-path "$LOG_FILE"
-        --summary-path "$SUMMARY_MD"
-        --no-work-short-circuit "${NO_WORK_SHORT_CIRCUIT:-false}"
-        --policy-mode "${RUN_DAILY_POLICY_MODE:-end_to_end}"
-        --github-run-id "${GITHUB_RUN_ID:-}"
-        --github-run-attempt "${GITHUB_RUN_ATTEMPT:-}"
-        --github-run-url "${GITHUB_RUN_ID:+${GITHUB_SERVER_URL:-https://github.com}/${GITHUB_REPOSITORY:-}/actions/runs/${GITHUB_RUN_ID}}"
-        --github-workflow "${GITHUB_WORKFLOW:-}"
-        --github-sha "${GITHUB_SHA:-}"
-        --github-ref "${GITHUB_REF:-}"
-        --github-event-name "${GITHUB_EVENT_NAME:-}"
-        --execution-branch "${RUN_DAILY_EXECUTION_BRANCH:-}"
-        --target-branch "${RUN_DAILY_TARGET_BRANCH:-}"
-    )
-    for item in "${FAILED_REQUIRED_STEPS[@]}"; do
-        MANIFEST_ARGS+=(--failed-required-step "$item")
-    done
-    for item in "${SKIPPED_OPTIONAL_STEPS[@]}"; do
-        MANIFEST_ARGS+=(--optional-skip "$item")
-    done
-    for item in "${SKIPPED_DOWNSTREAM_STEPS[@]}"; do
-        MANIFEST_ARGS+=(--downstream-skip "$item")
-    done
-    for item in "${STEP_EVENTS[@]}"; do
-        MANIFEST_ARGS+=(--step-event "$item")
-    done
-
-    if "$PYTHON_CMD" "${MANIFEST_ARGS[@]}"; then
-        log "INFO" "run_daily summary manifest written: $RUN_DAILY_MANIFEST_PATH"
-    else
-        log "WARN" "run_daily summary manifest write failed (warn-only): $RUN_DAILY_MANIFEST_PATH"
+if ! write_run_daily_summary_manifest "$FINAL_STATUS_LABEL" "$FINAL_EXIT_CODE" "$SUMMARY_MD"; then
+    if [ "$FINAL_EXIT_CODE" -eq 0 ]; then
+        log "ERROR" "run_daily summary manifest contract breached: success exit downgraded to failure"
+        FINAL_EXIT_CODE=1
     fi
 fi
 exit "$FINAL_EXIT_CODE"
