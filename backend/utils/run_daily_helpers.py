@@ -13,7 +13,7 @@ import json
 import os
 import tarfile
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
@@ -67,7 +67,7 @@ def _optional_path(value: Optional[str]) -> Optional[str]:
 
 
 def _utc_now_iso() -> str:
-    return datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def _parse_bool(value: str) -> bool:
@@ -891,10 +891,20 @@ def build_gdrive_upload_status(args: argparse.Namespace) -> dict:
     return payload
 
 
+def _repair_cli_text(value: str) -> str:
+    """Repair UTF-8 argv text mojibaked by Windows bash/native Python boundaries."""
+    if not any(marker in value for marker in ("Ã", "Â", "â", "ë", "ì", "ê", "í")):
+        return value
+    try:
+        return value.encode("latin-1").decode("utf-8")
+    except UnicodeError:
+        return value
+
+
 def _optional_string(value: Optional[str]) -> Optional[str]:
     if value is None:
         return None
-    normalized = str(value).strip()
+    normalized = _repair_cli_text(str(value)).strip()
     return normalized or None
 
 
@@ -921,9 +931,9 @@ def _parse_step_event(value: str) -> dict:
     while len(parts) < 5:
         parts.append("")
 
-    status, name, duration_seconds, reason, upstream_step = parts
-    status = status.strip()
-    name = name.strip()
+    status, name, duration_seconds, reason, upstream_step = (
+        _repair_cli_text(part).strip() for part in parts
+    )
     if not status:
         raise ValueError("step event status is required")
     if status not in STEP_EVENT_STATUSES:
@@ -952,15 +962,21 @@ def _parse_step_event(value: str) -> dict:
 
 def build_summary_manifest(args: argparse.Namespace) -> dict:
     """Build the stable run_daily summary manifest payload."""
-    generated_at = args.generated_at or datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+    generated_at = args.generated_at or _utc_now_iso()
     manifest = {
         "generatedAt": generated_at,
         "date": args.date,
         "finalStatus": args.final_status,
         "finalExitCode": args.final_exit_code,
-        "failedRequiredSteps": list(args.failed_required_step or []),
-        "optionalSkips": list(args.optional_skip or []),
-        "downstreamSkips": list(args.downstream_skip or []),
+        "failedRequiredSteps": [
+            _repair_cli_text(item) for item in list(args.failed_required_step or [])
+        ],
+        "optionalSkips": [
+            _repair_cli_text(item) for item in list(args.optional_skip or [])
+        ],
+        "downstreamSkips": [
+            _repair_cli_text(item) for item in list(args.downstream_skip or [])
+        ],
         "latestLogPath": _optional_path(args.latest_log_path),
         "summaryPath": _optional_path(args.summary_path),
         "noWorkShortCircuit": _truthy(args.no_work_short_circuit),
@@ -971,6 +987,40 @@ def build_summary_manifest(args: argparse.Namespace) -> dict:
     if runtime:
         manifest["runtime"] = runtime
     return manifest
+
+def validate_summary_manifest_payload(payload: object) -> None:
+    """Validate the bounded schema run_daily.sh must read back after writing."""
+    if not isinstance(payload, dict):
+        raise ValueError("summary manifest must be a JSON object")
+    final_status = payload.get("finalStatus")
+    if final_status not in {"OK", "WARN", "ERROR"}:
+        raise ValueError(f"invalid summary finalStatus: {final_status}")
+    if not isinstance(payload.get("finalExitCode"), int):
+        raise ValueError("summary finalExitCode must be an integer")
+    for field in ("failedRequiredSteps", "optionalSkips", "downstreamSkips"):
+        value = payload.get(field)
+        if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+            raise ValueError(f"summary {field} must be a string list")
+    step_events = payload.get("stepEvents")
+    if not isinstance(step_events, list):
+        raise ValueError("summary stepEvents must be a list")
+    for index, event in enumerate(step_events):
+        if not isinstance(event, dict):
+            raise ValueError(f"summary stepEvents[{index}] must be an object")
+        name = event.get("name")
+        status = event.get("status")
+        if not isinstance(name, str) or not name.strip():
+            raise ValueError(f"summary stepEvents[{index}].name must be a non-empty string")
+        if status not in STEP_EVENT_STATUSES:
+            raise ValueError(f"summary stepEvents[{index}].status is invalid: {status}")
+        if "durationSeconds" in event:
+            duration = event["durationSeconds"]
+            if not isinstance(duration, int) or duration < 0:
+                raise ValueError(f"summary stepEvents[{index}].durationSeconds must be a non-negative integer")
+        for field in ("reason", "upstreamStep"):
+            if field in event and not isinstance(event[field], str):
+                raise ValueError(f"summary stepEvents[{index}].{field} must be a string")
+
 
 
 def render_summary_flow_guide() -> str:
@@ -1135,6 +1185,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     gdrive_batches_parser = subparsers.add_parser("write-gdrive-upload-batches")
     _add_gdrive_batches_args(gdrive_batches_parser)
 
+    validate_summary_parser = subparsers.add_parser("validate-summary-manifest")
+    validate_summary_parser.add_argument("--input", required=True)
+
     gdrive_staging_parser = subparsers.add_parser("write-gdrive-staging-shards")
     _add_gdrive_staging_args(gdrive_staging_parser)
 
@@ -1185,6 +1238,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     if args.command == "write-summary-manifest":
         payload = build_summary_manifest(args)
         write_json(Path(args.output), payload)
+        return 0
+
+    if args.command == "validate-summary-manifest":
+        payload = json.loads(Path(args.input).read_text(encoding="utf-8"))
+        validate_summary_manifest_payload(payload)
+        print("ok")
         return 0
 
     if args.command == "write-gdrive-upload-expected":
