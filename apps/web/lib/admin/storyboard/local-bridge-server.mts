@@ -9,10 +9,19 @@ import { pathToFileURL } from 'node:url';
 
 import {
   LOCAL_BRIDGE_ALLOWED_ORIGINS,
+  LOCAL_BRIDGE_HELPER_COMMANDS,
+  LOCAL_BRIDGE_HELPER_MESSAGE_VERSION,
+  LOCAL_BRIDGE_HELPER_ORIGIN_QUERY_PARAM,
+  LOCAL_BRIDGE_HELPER_ROUTE,
+  LOCAL_BRIDGE_HELPER_SESSION_QUERY_PARAM,
+  LOCAL_BRIDGE_HELPER_SURFACE_QUERY_PARAM,
   LOCAL_BRIDGE_MODEL,
   LOCAL_BRIDGE_MODEL_PROVENANCE,
   LOCAL_BRIDGE_PROVIDER_ID,
   redactLocalBridgeSecretText,
+} from '../local-bridge/core-contract.ts';
+import type {
+  LocalBridgeHelperSurface,
 } from '../local-bridge/core-contract.ts';
 import type {
   StoryboardGeneratedImageProvenance,
@@ -42,6 +51,8 @@ const STORYBOARD_IMAGE_PROVIDER_MODEL = LOCAL_BRIDGE_MODEL;
 const STORYBOARD_IMAGE_PROVIDER_EXACT_PROVENANCE = LOCAL_BRIDGE_MODEL_PROVENANCE;
 const THUMBNAIL_TARGET_WIDTH = 1280 as const;
 const THUMBNAIL_TARGET_HEIGHT = 720 as const;
+const LOCAL_BRIDGE_AUTH_STATUS_PATH = '/auth-status' as const;
+const STORYBOARD_LOCAL_BRIDGE_IMAGES_PATH = '/v1/storyboard/images' as const;
 const THUMBNAIL_LOCAL_BRIDGE_IMAGES_PATH = '/v1/youtube-thumbnail/images' as const;
 const COMMAND_TIMEOUT_MS = 5 * 60 * 1000;
 const THUMBNAIL_COMMAND_TIMEOUT_MS = 10 * 60 * 1000;
@@ -209,6 +220,24 @@ function getRequestOrigin(request: IncomingMessage) {
   return typeof origin === 'string' ? origin : null;
 }
 
+function requestOriginCandidates(request: IncomingMessage) {
+  const hostHeader = request.headers.host;
+  if (typeof hostHeader !== 'string' || !hostHeader.trim()) return new Set<string>();
+  let url: URL;
+  try {
+    url = new URL(`http://${hostHeader}`);
+  } catch {
+    return new Set<string>();
+  }
+  const port = url.port || '80';
+  const suffix = port === '80' ? '' : `:${port}`;
+  return new Set([
+    `http://127.0.0.1${suffix}`,
+    `http://localhost${suffix}`,
+    `http://[::1]${suffix}`,
+  ]);
+}
+
 function applyCors(response: ServerResponse, origin: string, request: IncomingMessage) {
   response.setHeader('Access-Control-Allow-Origin', origin);
   response.setHeader('Vary', 'Origin, Access-Control-Request-Private-Network');
@@ -220,9 +249,13 @@ function applyCors(response: ServerResponse, origin: string, request: IncomingMe
   }
 }
 
+function isAllowedOrigin(origin: string, request: IncomingMessage, allowedOrigins: Set<string>) {
+  return allowedOrigins.has(origin) || requestOriginCandidates(request).has(origin);
+}
+
 function assertAllowedOrigin(request: IncomingMessage, response: ServerResponse, allowedOrigins: Set<string>) {
   const origin = getRequestOrigin(request);
-  if (!origin || !allowedOrigins.has(origin)) {
+  if (!origin || !isAllowedOrigin(origin, request, allowedOrigins)) {
     throw new LocalBridgeHttpError('origin_forbidden', 'Origin is not allowed for this local bridge.', 403);
   }
   applyCors(response, origin, request);
@@ -249,6 +282,228 @@ function respondJson(response: ServerResponse, status: number, payload: unknown,
   response.setHeader('Content-Type', 'application/json; charset=utf-8');
   response.setHeader('Cache-Control', 'no-store');
   response.end(`${JSON.stringify(payload)}\n`);
+}
+
+function respondHtml(response: ServerResponse, status: number, html: string) {
+  response.statusCode = status;
+  response.setHeader('Content-Type', 'text/html; charset=utf-8');
+  response.setHeader('Cache-Control', 'no-store');
+  response.setHeader('X-Frame-Options', 'DENY');
+  response.end(html);
+}
+
+type LocalBridgeHelperRouteContext = {
+  openerOrigin: string;
+  sessionId: string;
+  surface: LocalBridgeHelperSurface;
+};
+
+function serializeInlineScriptValue(value: unknown) {
+  return JSON.stringify(value)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026');
+}
+
+function parseHelperRouteContext(url: URL, allowedOrigins: Set<string>): LocalBridgeHelperRouteContext {
+  const openerOrigin = url.searchParams.get(LOCAL_BRIDGE_HELPER_ORIGIN_QUERY_PARAM)?.trim();
+  if (!openerOrigin || !allowedOrigins.has(openerOrigin)) {
+    throw new LocalBridgeHttpError('origin_forbidden', 'Helper opener origin is not allowed.', 403);
+  }
+  const sessionId = url.searchParams.get(LOCAL_BRIDGE_HELPER_SESSION_QUERY_PARAM)?.trim();
+  if (!sessionId || !/^[A-Za-z0-9._-]{1,120}$/.test(sessionId)) {
+    throw new LocalBridgeHttpError('invalid_payload', 'Helper session query is invalid.', 400);
+  }
+  const surfaceValue = url.searchParams.get(LOCAL_BRIDGE_HELPER_SURFACE_QUERY_PARAM);
+  if (surfaceValue !== 'storyboard' && surfaceValue !== 'thumbnail') {
+    throw new LocalBridgeHttpError('invalid_payload', 'Helper surface query is invalid.', 400);
+  }
+  return {
+    openerOrigin,
+    sessionId,
+    surface: surfaceValue,
+  };
+}
+
+function buildLocalBridgeHelperHtml(context: LocalBridgeHelperRouteContext) {
+  const configJson = serializeInlineScriptValue(context);
+  const commandListJson = serializeInlineScriptValue([...LOCAL_BRIDGE_HELPER_COMMANDS]);
+  const responsePathsJson = serializeInlineScriptValue({
+    health: '/health',
+    authStatus: LOCAL_BRIDGE_AUTH_STATUS_PATH,
+    storyboardImages: STORYBOARD_LOCAL_BRIDGE_IMAGES_PATH,
+    thumbnailImages: THUMBNAIL_LOCAL_BRIDGE_IMAGES_PATH,
+  });
+  const versionJson = serializeInlineScriptValue(LOCAL_BRIDGE_HELPER_MESSAGE_VERSION);
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tzudong Local Bridge Helper</title>
+    <style>
+      :root { color-scheme: light dark; font-family: ui-sans-serif, system-ui, sans-serif; }
+      body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #0f172a; color: #e2e8f0; }
+      main { max-width: 28rem; padding: 2rem; text-align: center; }
+      p { margin: 0.5rem 0 0; color: #cbd5e1; }
+      code { font-family: ui-monospace, SFMono-Regular, monospace; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Local bridge helper ready</h1>
+      <p><code>${context.surface}</code> helper session <code>${context.sessionId}</code></p>
+      <p>This window only proxies requests to the loopback bridge and returns results to the opener.</p>
+    </main>
+    <script>
+      const HELPER_CONFIG = ${configJson};
+      const HELPER_COMMANDS = ${commandListJson};
+      const HELPER_PATHS = ${responsePathsJson};
+      const HELPER_VERSION = ${versionJson};
+
+      const channel = new MessageChannel();
+      const port = channel.port1;
+
+      function postToOpener(message, transfer) {
+        if (!window.opener || window.opener.closed) return;
+        window.opener.postMessage(message, HELPER_CONFIG.openerOrigin, transfer || []);
+      }
+
+      function postToPort(message) {
+        port.postMessage(message);
+      }
+
+      function asRecord(value) {
+        return value && typeof value === 'object' ? value : null;
+      }
+
+      function parseMessagePayload(payload) {
+        const record = asRecord(payload);
+        if (!record) return null;
+        if (record.kind !== 'tzudong-local-bridge-helper-request') return null;
+        if (record.sessionId !== HELPER_CONFIG.sessionId) return null;
+        if (typeof record.requestId !== 'string' || !record.requestId) return null;
+        if (!HELPER_COMMANDS.includes(record.command)) return null;
+        if (typeof record.bridgeUrl !== 'string' || !record.bridgeUrl) return null;
+        if (typeof record.token !== 'string' || !record.token.trim()) return null;
+        return record;
+      }
+
+      function postError(requestId, code, message) {
+        postToPort({
+          kind: 'tzudong-local-bridge-helper-response',
+          sessionId: HELPER_CONFIG.sessionId,
+          requestId,
+          ok: false,
+          errorCode: code,
+          message,
+        });
+      }
+
+      async function readResponseBody(response) {
+        const text = await response.text();
+        if (!text) return null;
+        try {
+          return JSON.parse(text);
+        } catch {
+          return text;
+        }
+      }
+
+      async function fetchBridge(url, token, body) {
+        const headers = { Accept: 'application/json' };
+        if (typeof token === 'string' && token) {
+          headers.Authorization = 'Bearer ' + token;
+        }
+        if (body !== undefined) {
+          headers['Content-Type'] = 'application/json';
+        }
+        return fetch(url, {
+          method: body === undefined ? 'GET' : 'POST',
+          cache: 'no-store',
+          credentials: 'omit',
+          headers,
+          body: body === undefined ? undefined : JSON.stringify(body),
+        });
+      }
+
+      async function handleStatusRequest(message) {
+        try {
+          const [healthResponse, authResponse] = await Promise.all([
+            fetchBridge(message.bridgeUrl + HELPER_PATHS.health),
+            fetchBridge(message.bridgeUrl + HELPER_PATHS.authStatus, message.token),
+          ]);
+          postToPort({
+            kind: 'tzudong-local-bridge-helper-response',
+            sessionId: HELPER_CONFIG.sessionId,
+            requestId: message.requestId,
+            ok: true,
+            payload: {
+              healthOk: healthResponse.ok,
+              health: await readResponseBody(healthResponse),
+              authOk: authResponse.ok,
+              auth: await readResponseBody(authResponse),
+            },
+          });
+        } catch (error) {
+          postError(message.requestId, 'request_failed', error instanceof Error ? error.message : 'Helper status request failed.');
+        }
+      }
+
+      async function handleGenerateRequest(message, path) {
+        try {
+          const bridgeResponse = await fetchBridge(message.bridgeUrl + path, message.token, message.payload);
+          const body = await readResponseBody(bridgeResponse);
+          if (!bridgeResponse.ok) {
+            postError(
+              message.requestId,
+              String(body?.error || 'request_failed'),
+              String(body?.detail || body?.error || 'Bridge request failed.'),
+            );
+            return;
+          }
+          postToPort({
+            kind: 'tzudong-local-bridge-helper-response',
+            sessionId: HELPER_CONFIG.sessionId,
+            requestId: message.requestId,
+            ok: true,
+            payload: body,
+          });
+        } catch (error) {
+          postError(message.requestId, 'request_failed', error instanceof Error ? error.message : 'Helper bridge request failed.');
+        }
+      }
+
+      port.onmessage = (event) => {
+        const message = parseMessagePayload(event.data);
+        if (!message) return;
+        if (message.command === 'checkStatus') {
+          void handleStatusRequest(message);
+          return;
+        }
+        if (message.command === 'generateStoryboard') {
+          void handleGenerateRequest(message, HELPER_PATHS.storyboardImages);
+          return;
+        }
+        if (message.command === 'generateThumbnail') {
+          void handleGenerateRequest(message, HELPER_PATHS.thumbnailImages);
+        }
+      };
+      port.start();
+      window.addEventListener('beforeunload', () => {
+        try {
+          postToPort({ kind: 'tzudong-local-bridge-helper-closed', sessionId: HELPER_CONFIG.sessionId });
+        } catch {}
+      });
+      postToOpener({
+        kind: 'tzudong-local-bridge-helper-ready',
+        sessionId: HELPER_CONFIG.sessionId,
+        surface: HELPER_CONFIG.surface,
+        protocolVersion: HELPER_VERSION,
+      }, [channel.port2]);
+    </script>
+  </body>
+</html>`;
 }
 
 async function readJsonBody(request: IncomingMessage, maxBytes = STORYBOARD_LOCAL_BRIDGE_MAX_BODY_BYTES) {
@@ -899,13 +1154,24 @@ export function createStoryboardLocalBridgeServer(options: StoryboardLocalBridge
     let origin: string | undefined;
     try {
       const url = new URL(request.url || '/', 'http://127.0.0.1');
+      if (request.method === 'GET' && url.pathname === LOCAL_BRIDGE_HELPER_ROUTE) {
+        const context = parseHelperRouteContext(url, allowedOrigins);
+        respondHtml(response, 200, buildLocalBridgeHelperHtml(context));
+        return;
+      }
+      const allowsMissingOriginGet =
+        request.method === 'GET' &&
+        !getRequestOrigin(request) &&
+        (url.pathname === '/health' || url.pathname === LOCAL_BRIDGE_AUTH_STATUS_PATH);
       if (request.method === 'OPTIONS') {
         origin = assertAllowedOrigin(request, response, allowedOrigins);
         response.statusCode = 204;
         response.end();
         return;
       }
-      origin = assertAllowedOrigin(request, response, allowedOrigins);
+      if (!allowsMissingOriginGet) {
+        origin = assertAllowedOrigin(request, response, allowedOrigins);
+      }
       if (request.method === 'GET' && url.pathname === '/health') {
         respondJson(response, 200, {
           ok: true,
@@ -916,13 +1182,14 @@ export function createStoryboardLocalBridgeServer(options: StoryboardLocalBridge
           providerId: STORYBOARD_IMAGE_PROVIDER_ID,
           model: STORYBOARD_IMAGE_PROVIDER_MODEL,
           endpoints: {
-            storyboardImages: '/v1/storyboard/images',
+            helper: LOCAL_BRIDGE_HELPER_ROUTE,
+            storyboardImages: STORYBOARD_LOCAL_BRIDGE_IMAGES_PATH,
             thumbnailImages: THUMBNAIL_LOCAL_BRIDGE_IMAGES_PATH,
           },
         }, origin, request);
         return;
       }
-      if (request.method === 'GET' && url.pathname === '/auth-status') {
+      if (request.method === 'GET' && url.pathname === LOCAL_BRIDGE_AUTH_STATUS_PATH) {
         try {
           assertPaired(request, token);
         } catch {
@@ -946,7 +1213,7 @@ export function createStoryboardLocalBridgeServer(options: StoryboardLocalBridge
         }, origin, request);
         return;
       }
-      if (request.method === 'POST' && url.pathname === '/v1/storyboard/images') {
+      if (request.method === 'POST' && url.pathname === STORYBOARD_LOCAL_BRIDGE_IMAGES_PATH) {
         assertPaired(request, token);
         const body = await readJsonBody(request);
         const payload = await handleImages(body, options);
@@ -960,7 +1227,13 @@ export function createStoryboardLocalBridgeServer(options: StoryboardLocalBridge
         respondJson(response, 200, payload, origin, request);
         return;
       }
-      if (url.pathname === '/health' || url.pathname === '/auth-status' || url.pathname === '/v1/storyboard/images' || url.pathname === THUMBNAIL_LOCAL_BRIDGE_IMAGES_PATH) {
+      if (
+        url.pathname === LOCAL_BRIDGE_HELPER_ROUTE ||
+        url.pathname === '/health' ||
+        url.pathname === LOCAL_BRIDGE_AUTH_STATUS_PATH ||
+        url.pathname === STORYBOARD_LOCAL_BRIDGE_IMAGES_PATH ||
+        url.pathname === THUMBNAIL_LOCAL_BRIDGE_IMAGES_PATH
+      ) {
         throw new LocalBridgeHttpError('method_not_allowed', 'Method is not allowed.', 405);
       }
       throw new LocalBridgeHttpError('not_found', 'Route not found.', 404);

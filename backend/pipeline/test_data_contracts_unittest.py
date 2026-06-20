@@ -430,6 +430,7 @@ class DataContractBaselineTests(unittest.TestCase):
                         "matched_name": "네이버식당",
                         "naver_name": "네이버식당",
                         "eval_value": True,
+                        "evidence_families": ["provider_candidate", "address"],
                     }
                 ]
             },
