@@ -6,7 +6,7 @@ import {
   E2E_ADMIN_ROUTE_BYPASS_HEADER,
   E2E_ADMIN_ROUTE_BYPASS_TOKEN_HEADER,
 } from '../lib/e2e-admin-route-bypass';
-import { gotoAndHidePopup } from './helpers';
+import { gotoAndHidePopup, hidePopupOverlay } from './helpers';
 
 test.setTimeout(90_000);
 
@@ -94,6 +94,8 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
   const localBridgeRequestBodies: unknown[] = [];
   const localBridgeOptionsPaths: string[] = [];
   const localBridgeToken = 'playwright-local-bridge-token-123456';
+  const localBridgeObservedRequests: Array<{ method: string; path: string; authorization: string; origin: string }> = [];
+  const localBridgeSessionStorageKey = 'tzudong.admin.youtubeThumbnail.localBridge.v1';
   const getLocalBridgeCorsHeaders = (origin: string | undefined) => ({
     'access-control-allow-origin': origin || '*',
     'access-control-allow-methods': 'GET,POST,OPTIONS',
@@ -111,16 +113,149 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
     }
     releaseDeferredGenerationResponse();
   }
-  await page.route('http://127.0.0.1:17873/**', async (route) => {
+  await page.context().route('http://127.0.0.1:17873/**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
     const origin = request.headers().origin;
     const corsHeaders = getLocalBridgeCorsHeaders(origin);
+    if (request.method() === 'GET' && url.pathname === '/helper') {
+      await route.fulfill({
+        status: 200,
+        headers: { ...corsHeaders, 'content-type': 'text/html; charset=utf-8' },
+        body: String.raw`<!doctype html>
+<html>
+  <body>
+    <script>
+      const params = new URLSearchParams(location.search);
+      const sessionId = params.get('session') || '';
+      const expectedOrigin = params.get('origin') || '*';
+      const channel = new MessageChannel();
+      const port = channel.port1;
+      async function requestJson(url, init) {
+        const response = await fetch(url, init);
+        const payload = await response.json().catch(() => null);
+        return { ok: response.ok, payload };
+      }
+      port.onmessage = async (event) => {
+        const data = event.data || {};
+        if (data.kind !== 'tzudong-local-bridge-helper-request' || data.sessionId !== sessionId) return;
+        try {
+          if (data.command === 'checkStatus') {
+            const health = await requestJson(
+              data.bridgeUrl + '/health',
+              { method: 'GET', headers: { Accept: 'application/json' }, cache: 'no-store' },
+            );
+            const auth = await requestJson(
+              data.bridgeUrl + '/auth-status',
+              {
+                method: 'GET',
+                headers: {
+                  Accept: 'application/json',
+                  Authorization: 'Bearer ' + data.token,
+                  'Content-Type': 'application/json',
+                  'X-Tzudong-Local-Bridge': 'youtube-thumbnail',
+                },
+                cache: 'no-store',
+              },
+            );
+            port.postMessage({
+              kind: 'tzudong-local-bridge-helper-response',
+              sessionId,
+              requestId: data.requestId,
+              ok: true,
+              payload: {
+                healthOk: health.ok,
+                health: health.payload,
+                authOk: auth.ok,
+                auth: auth.payload,
+              },
+            });
+            return;
+          }
+          if (data.command === 'generateThumbnail') {
+            const response = await fetch(data.bridgeUrl + '/v1/youtube-thumbnail/images', {
+              method: 'POST',
+              headers: {
+                Accept: 'application/json',
+                Authorization: 'Bearer ' + data.token,
+                'Content-Type': 'application/json',
+                'X-Tzudong-Local-Bridge': 'youtube-thumbnail',
+              },
+              body: JSON.stringify(data.payload),
+            });
+            const payload = await response.json().catch(() => null);
+            if (!response.ok) {
+              port.postMessage({
+                kind: 'tzudong-local-bridge-helper-response',
+                sessionId,
+                requestId: data.requestId,
+                ok: false,
+                errorCode: String(payload?.error || 'helper_request_failed'),
+                message: String(payload?.detail || payload?.error || 'helper_request_failed'),
+              });
+              return;
+            }
+            port.postMessage({
+              kind: 'tzudong-local-bridge-helper-response',
+              sessionId,
+              requestId: data.requestId,
+              ok: true,
+              payload,
+            });
+            return;
+          }
+          port.postMessage({
+            kind: 'tzudong-local-bridge-helper-response',
+            sessionId,
+            requestId: data.requestId,
+            ok: false,
+            errorCode: 'unsupported_helper_command',
+            message: 'unsupported_helper_command',
+          });
+        } catch (error) {
+          port.postMessage({
+            kind: 'tzudong-local-bridge-helper-response',
+            sessionId,
+            requestId: data.requestId,
+            ok: false,
+            errorCode: 'helper_request_failed',
+            message: error instanceof Error ? error.message : 'helper_request_failed',
+          });
+        }
+      };
+      port.start();
+      window.addEventListener('beforeunload', () => {
+        try {
+          port.postMessage({ kind: 'tzudong-local-bridge-helper-closed', sessionId });
+        } catch {}
+      });
+      window.opener?.postMessage(
+        {
+          kind: 'tzudong-local-bridge-helper-ready',
+          sessionId,
+          surface: 'thumbnail',
+          protocolVersion: 1,
+        },
+        expectedOrigin,
+        [channel.port2],
+      );
+    </script>
+  </body>
+</html>`,
+      });
+      return;
+    }
     if (request.method() === 'OPTIONS') {
       localBridgeOptionsPaths.push(url.pathname);
       await route.fulfill({ status: 204, headers: corsHeaders, body: '' });
       return;
     }
+    localBridgeObservedRequests.push({
+      method: request.method(),
+      path: url.pathname,
+      authorization: request.headers().authorization ?? '',
+      origin: origin ?? '',
+    });
     if (request.method() === 'GET' && url.pathname === '/health') {
       await route.fulfill({
         status: 200,
@@ -193,7 +328,7 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
             prompt: 'Playwright local bridge thumbnail',
             warnings: [
               'local_bridge_provider: playwright',
-              'no_relay_transport: browser direct',
+              'no_relay_transport: helper window',
               'server_history_persistence: skipped',
               'exact_provenance: image_generation.gpt-image-2 response=playwright-local call=playwright-call',
             ],
@@ -643,6 +778,7 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
   );
   await expect(localBridgeSettings.locator('[data-thumbnail-local-bridge-url-input="true"]')).toBeVisible();
   await expect(localBridgeSettings.locator('[data-thumbnail-local-bridge-token-input="true"]')).toBeVisible();
+  await expect(localBridgeSettings).toHaveAttribute('data-thumbnail-local-bridge-storage-key', localBridgeSessionStorageKey);
 
   const generationRequestsBeforeUnpairedLocalBridge = generationRequestBodies.length;
   const localBridgeRequestsBeforeUnpaired = localBridgeRequestBodies.length;
@@ -659,12 +795,65 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
   await page.locator('[data-thumbnail-api-router-option="local-bridge"]').click();
   await localBridgeSettings.locator('[data-thumbnail-local-bridge-url-input="true"]').fill('http://127.0.0.1:17873');
   await localBridgeSettings.locator('[data-thumbnail-local-bridge-token-input="true"]').fill(localBridgeToken);
+  const localBridgeEventsBeforeSave = localBridgeObservedRequests.length;
   await localBridgeSettings.locator('[data-thumbnail-local-bridge-save="true"]').click();
+  await expect(localBridgeSettings.locator('[data-thumbnail-local-bridge-status="needs_reconnect"]')).toBeVisible();
+  await expect(localBridgeSettings.locator('[data-thumbnail-local-bridge-message="true"]')).toContainText('로컬 브릿지 연결');
+  const savedLocalBridgeCache = await page.evaluate((storageKey) => window.sessionStorage.getItem(storageKey), localBridgeSessionStorageKey);
+  expect(savedLocalBridgeCache).not.toBeNull();
+  expect(JSON.parse(savedLocalBridgeCache ?? '{}')).toMatchObject({
+    version: 1,
+    bridgeUrl: 'http://127.0.0.1:17873',
+    token: localBridgeToken,
+    storage: 'browser_session_storage_only',
+  });
+  expect(localBridgeObservedRequests.slice(localBridgeEventsBeforeSave)).toHaveLength(0);
+  await expect(localBridgeSettings.locator('[data-thumbnail-local-bridge-token-input="true"]')).toHaveValue('');
+  await expect(localBridgeSettings.locator('[data-thumbnail-local-bridge-message="true"]')).not.toContainText(localBridgeToken);
+
+  const localBridgeEventsBeforeConnect = localBridgeObservedRequests.length;
+  await localBridgeSettings.locator('[data-thumbnail-local-bridge-connect="true"]').click();
   await expect(localBridgeSettings.locator('[data-thumbnail-local-bridge-status="connected"]')).toBeVisible();
   await expect(localBridgeSettings.locator('[data-thumbnail-local-bridge-message="true"]')).toContainText('연결됨');
+  const localBridgeEventsAfterConnect = localBridgeObservedRequests.slice(localBridgeEventsBeforeConnect);
+  const localBridgeConnectPaths = localBridgeEventsAfterConnect.map((entry) => `${entry.method} ${entry.path}`);
+  const connectHealthIndex = localBridgeConnectPaths.indexOf('GET /health');
+  const connectAuthIndex = localBridgeEventsAfterConnect.findIndex(
+    (entry, index) => index > connectHealthIndex && entry.method === 'GET' && entry.path === '/auth-status' && entry.authorization === `Bearer ${localBridgeToken}`,
+  );
+  expect(connectHealthIndex).toBeGreaterThanOrEqual(0);
+  expect(connectAuthIndex).toBeGreaterThan(connectHealthIndex);
   await page.locator('[data-thumbnail-chat-settings-close="true"]').click();
   await expect(page.locator('[data-thumbnail-chat-settings-dropdown="true"]')).toHaveCount(0);
 
+  const localBridgeEventsBeforeReload = localBridgeObservedRequests.length;
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await hidePopupOverlay(page);
+  await expect(thumbnailModule).toBeVisible({ timeout: 30_000 });
+  await thumbnailModule.locator('[data-thumbnail-chat-settings-toggle="true"]').click();
+  await expect(page.locator('[data-thumbnail-chat-settings-dropdown="true"]')).toBeVisible();
+  await expect(page.locator('[data-thumbnail-api-router-option="local-bridge"]').first()).toHaveAttribute(
+    'data-thumbnail-api-router-option-selected',
+    'true',
+  );
+  await expect(localBridgeSettings.locator('[data-thumbnail-local-bridge-status="needs_reconnect"]')).toBeVisible();
+  await expect(localBridgeSettings.locator('[data-thumbnail-local-bridge-message="true"]')).toContainText('로컬 브릿지 연결');
+  await expect(localBridgeSettings.locator('[data-thumbnail-local-bridge-message="true"]')).not.toContainText(localBridgeToken);
+  expect(localBridgeObservedRequests.slice(localBridgeEventsBeforeReload)).toHaveLength(0);
+  const localBridgeEventsBeforeReconnect = localBridgeObservedRequests.length;
+  await localBridgeSettings.locator('[data-thumbnail-local-bridge-connect="true"]').click();
+  await expect(localBridgeSettings.locator('[data-thumbnail-local-bridge-status="connected"]')).toBeVisible();
+  await expect(localBridgeSettings.locator('[data-thumbnail-local-bridge-message="true"]')).toContainText('연결됨');
+  const localBridgeEventsAfterReconnect = localBridgeObservedRequests.slice(localBridgeEventsBeforeReconnect);
+  const localBridgeReconnectPaths = localBridgeEventsAfterReconnect.map((entry) => `${entry.method} ${entry.path}`);
+  const reconnectHealthIndex = localBridgeReconnectPaths.indexOf('GET /health');
+  const reconnectAuthIndex = localBridgeEventsAfterReconnect.findIndex(
+    (entry, index) => index > reconnectHealthIndex && entry.method === 'GET' && entry.path === '/auth-status' && entry.authorization === `Bearer ${localBridgeToken}`,
+  );
+  expect(reconnectHealthIndex).toBeGreaterThanOrEqual(0);
+  expect(reconnectAuthIndex).toBeGreaterThan(reconnectHealthIndex);
+  await page.locator('[data-thumbnail-chat-settings-close="true"]').click();
+  await expect(page.locator('[data-thumbnail-chat-settings-dropdown="true"]')).toHaveCount(0);
   const fileChooserPromise = page.waitForEvent('filechooser');
   await thumbnailModule.locator('[data-thumbnail-chat-reference-upload="true"]').click();
   const fileChooser = await fileChooserPromise;
@@ -673,11 +862,25 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
 
   const serverGenerationRequestsBeforeLocalBridge = generationRequestBodies.length;
   const localBridgeRequestsBeforePaired = localBridgeRequestBodies.length;
+  const localBridgeEventsBeforePaired = localBridgeObservedRequests.length;
   await chatComposer.fill('새 썸네일 이미지를 만들고 캔버스에 넣었습니다 메시지 테스트 생성해줘');
   await chatComposer.press('Enter');
   await expect(thumbnailModule.locator('[data-thumbnail-chat-message-mode="live"]').last()).toContainText('새 썸네일 이미지를 만들고 화면에 넣었습니다');
   expect(localBridgeRequestBodies).toHaveLength(localBridgeRequestsBeforePaired + 1);
   expect(generationRequestBodies).toHaveLength(serverGenerationRequestsBeforeLocalBridge);
+  const localBridgeEventsAfterPaired = localBridgeObservedRequests.slice(localBridgeEventsBeforePaired);
+  const localBridgePairedPaths = localBridgeEventsAfterPaired.map((entry) => `${entry.method} ${entry.path}`);
+  const pairedHealthIndex = localBridgePairedPaths.indexOf('GET /health');
+  const pairedAuthIndex = localBridgeEventsAfterPaired.findIndex(
+    (entry, index) => index > pairedHealthIndex && entry.method === 'GET' && entry.path === '/auth-status' && entry.authorization === `Bearer ${localBridgeToken}`,
+  );
+  const pairedImagePostIndex = localBridgeEventsAfterPaired.findIndex(
+    (entry, index) => index > pairedAuthIndex && entry.method === 'POST' && entry.path === '/v1/youtube-thumbnail/images' && entry.authorization === `Bearer ${localBridgeToken}`,
+  );
+  expect(pairedHealthIndex).toBeGreaterThanOrEqual(0);
+  expect(pairedAuthIndex).toBeGreaterThan(pairedHealthIndex);
+  expect(pairedImagePostIndex).toBeGreaterThan(pairedAuthIndex);
+  expect(localBridgeObservedRequests.every((entry) => entry.authorization === '' || entry.authorization === `Bearer ${localBridgeToken}`)).toBe(true);
   expect(Array.isArray(localBridgeOptionsPaths)).toBe(true);
   const bridgeBody = localBridgeRequestBodies.at(-1) as {
     payload?: { providerId?: string; generationMode?: string };
@@ -715,8 +918,13 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
   await expect(page.locator('[data-thumbnail-history-panel="true"]')).toBeVisible();
   await expect(thumbnailModule.locator('[data-thumbnail-chat-message="user"]').last()).toContainText('히스토리 보여줘');
   await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('생성 히스토리를 이 페이지 안에서 열었습니다');
+  await expect(page.locator('[data-thumbnail-history-panel="true"]')).not.toContainText(localBridgeToken);
   await page.locator('[data-thumbnail-history-close="true"]').click();
   await expect(page.locator('[data-thumbnail-history-dropdown="true"]')).toHaveCount(0);
+  expect(JSON.stringify(chatRequestBodies)).not.toContain(localBridgeToken);
+  expect(JSON.stringify(generationRequestBodies)).not.toContain(localBridgeToken);
+  expect(JSON.stringify(localBridgeRequestBodies)).not.toContain(localBridgeToken);
+  await expect(chatPanel).not.toContainText(localBridgeToken);
   await expect(thumbnailModule.locator('[data-thumbnail-generation-skeleton="true"]')).toHaveCount(0);
 
   const chatRequestsBeforeGuideHide = chatRequestBodies.length;
