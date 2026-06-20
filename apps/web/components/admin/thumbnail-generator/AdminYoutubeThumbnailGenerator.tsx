@@ -511,6 +511,66 @@ type ThumbnailLocalBridgeSessionCache = {
   storage: "browser_session_storage_only";
 };
 
+type ThumbnailLocalBridgeUiStatus =
+  | ThumbnailLocalBridgeStatus
+  | "needs_reconnect"
+  | "helper_opening"
+  | "popup_blocked"
+  | "helper_closed";
+
+type ThumbnailLocalBridgeHelperCommand = "checkStatus" | "generateThumbnail";
+
+type ThumbnailLocalBridgeHelperReadyMessage = {
+  kind: "tzudong-local-bridge-helper-ready";
+  sessionId: string;
+  surface: "thumbnail";
+  protocolVersion: 1;
+};
+
+type ThumbnailLocalBridgeHelperRequestMessage = {
+  kind: "tzudong-local-bridge-helper-request";
+  sessionId: string;
+  requestId: string;
+  command: ThumbnailLocalBridgeHelperCommand;
+  bridgeUrl: string;
+  token: string;
+  payload?: unknown;
+};
+
+type ThumbnailLocalBridgeHelperResponseMessage =
+  | {
+    kind: "tzudong-local-bridge-helper-response";
+    sessionId: string;
+    requestId: string;
+    ok: true;
+    payload: unknown;
+  }
+  | {
+    kind: "tzudong-local-bridge-helper-response";
+    sessionId: string;
+    requestId: string;
+    ok: false;
+    errorCode: string;
+    message: string;
+  };
+
+type ThumbnailLocalBridgeHelperClosedMessage = {
+  kind: "tzudong-local-bridge-helper-closed";
+  sessionId: string;
+};
+
+type ThumbnailLocalBridgeHelperStatusPayload = {
+  healthOk: boolean;
+  health: unknown;
+  authOk: boolean;
+  auth: unknown;
+};
+
+type ThumbnailLocalBridgeHelperInvoke = (
+  request: ThumbnailLocalBridgeHelperRequestMessage,
+  options?: { signal?: AbortSignal },
+) => Promise<unknown>;
+
 type ThumbnailImageRouteChoice =
   | "browser-openai-api-key"
   | "local-codex-oauth"
@@ -557,6 +617,104 @@ const thumbnailErrorActions: Record<string, string> = {
   content_length_too_large: "참고 이미지 총 용량을 32MiB 이하로 줄이세요.",
   payload_json_invalid: "입력값을 새로고침 후 다시 작성하세요.",
 };
+
+const THUMBNAIL_LOCAL_BRIDGE_HELPER_PATH = "/helper" as const;
+const THUMBNAIL_LOCAL_BRIDGE_HELPER_PROTOCOL_VERSION = 1 as const;
+
+let thumbnailLocalBridgeHelperSessionCounter = 0;
+
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object";
+}
+
+function createThumbnailLocalBridgeHelperSessionId() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
+    const values = new Uint32Array(2);
+    crypto.getRandomValues(values);
+    return `thumbnail-local-bridge-${Date.now()}-${Array.from(values, (value) => value.toString(36)).join("")}`;
+  }
+  thumbnailLocalBridgeHelperSessionCounter += 1;
+  return `thumbnail-local-bridge-${Date.now()}-${thumbnailLocalBridgeHelperSessionCounter}`;
+}
+
+function getThumbnailLocalBridgeReconnectRequiredMessage() {
+  return "이 탭은 pairing 설정만 복원했습니다. “로컬 브릿지 연결”을 눌러 helper 창을 다시 연결해 주세요.";
+}
+
+function getThumbnailLocalBridgeHelperClosedMessage() {
+  return "로컬 브릿지 helper 창이 닫혔습니다. “로컬 브릿지 연결”을 눌러 다시 연결한 뒤 다시 시도하세요.";
+}
+
+function getThumbnailLocalBridgePopupBlockedMessage() {
+  return "브라우저가 로컬 브릿지 helper 팝업을 막았습니다. 주소창에서 팝업을 허용한 뒤 “로컬 브릿지 연결”을 다시 눌러 주세요.";
+}
+
+function formatThumbnailLocalBridgeStatusLabel(
+  status: ThumbnailLocalBridgeUiStatus,
+  hasToken: boolean,
+) {
+  if (!hasToken) return "토큰 필요";
+  if (status === "connected") return "연결됨";
+  if (status === "checking" || status === "helper_opening") return "연결 중";
+  if (
+    status === "needs_reconnect" ||
+    status === "helper_closed" ||
+    status === "popup_blocked"
+  ) {
+    return "재연결 필요";
+  }
+  return "확인 필요";
+}
+
+function buildThumbnailLocalBridgeHelperUrl(bridgeUrl: string, sessionId: string) {
+  const baseUrl = normalizeThumbnailLocalBridgeUrl(bridgeUrl);
+  const helperUrl = new URL(THUMBNAIL_LOCAL_BRIDGE_HELPER_PATH, `${baseUrl}/`);
+  helperUrl.searchParams.set("origin", window.location.origin);
+  helperUrl.searchParams.set("session", sessionId);
+  helperUrl.searchParams.set("surface", "thumbnail");
+  helperUrl.searchParams.set(
+    "protocolVersion",
+    String(THUMBNAIL_LOCAL_BRIDGE_HELPER_PROTOCOL_VERSION),
+  );
+  return helperUrl.toString();
+}
+
+function isThumbnailLocalBridgeHelperReadyMessage(
+  value: unknown,
+): value is ThumbnailLocalBridgeHelperReadyMessage {
+  return (
+    isObjectRecord(value) &&
+    value.kind === "tzudong-local-bridge-helper-ready" &&
+    typeof value.sessionId === "string" &&
+    value.surface === "thumbnail" &&
+    value.protocolVersion === THUMBNAIL_LOCAL_BRIDGE_HELPER_PROTOCOL_VERSION
+  );
+}
+
+function isThumbnailLocalBridgeHelperResponseMessage(
+  value: unknown,
+): value is ThumbnailLocalBridgeHelperResponseMessage {
+  return (
+    isObjectRecord(value) &&
+    value.kind === "tzudong-local-bridge-helper-response" &&
+    typeof value.sessionId === "string" &&
+    typeof value.requestId === "string" &&
+    typeof value.ok === "boolean"
+  );
+}
+
+function isThumbnailLocalBridgeHelperClosedMessage(
+  value: unknown,
+): value is ThumbnailLocalBridgeHelperClosedMessage {
+  return (
+    isObjectRecord(value) &&
+    value.kind === "tzudong-local-bridge-helper-closed" &&
+    typeof value.sessionId === "string"
+  );
+}
 
 function getSpecificCreatorReferenceRequiredMessage() {
   return "쯔양님이 나오려면 참고 이미지가 필요합니다. 사람 없는 이미지로 대신 만들지 않았습니다.";
@@ -750,7 +908,8 @@ function getThumbnailErrorAction(payload: ThumbnailApiErrorPayload | null) {
 async function getThumbnailLocalBridgeStatusRequest(
   bridgeUrl: string,
   token: string | null,
-): Promise<{ status: ThumbnailLocalBridgeStatus; message: string }> {
+  invokeHelper: ThumbnailLocalBridgeHelperInvoke,
+): Promise<{ status: ThumbnailLocalBridgeUiStatus; message: string }> {
   const baseUrl = normalizeThumbnailLocalBridgeUrl(bridgeUrl);
   const normalizedToken = normalizeThumbnailLocalBridgeToken(token);
   if (!normalizedToken) {
@@ -760,19 +919,38 @@ async function getThumbnailLocalBridgeStatusRequest(
     };
   }
   try {
-    const healthResponse = await fetch(`${baseUrl}/health`, {
-      method: "GET",
-      headers: { Accept: "application/json" },
-      cache: "no-store",
-    });
-    const healthPayload = await healthResponse.json().catch(() => null) as Partial<{
-      ok: boolean;
-      providerId: string;
-      model: string;
-      endpoints?: { thumbnailImages?: string };
-    }> | null;
+    const responsePayload = await invokeHelper(
+      {
+        kind: "tzudong-local-bridge-helper-request",
+        sessionId: "thumbnail-local-bridge-status",
+        requestId: "thumbnail-local-bridge-status",
+        command: "checkStatus",
+        bridgeUrl: baseUrl,
+        token: normalizedToken,
+      },
+    );
+    const helperPayload = isObjectRecord(responsePayload)
+      ? responsePayload as Partial<ThumbnailLocalBridgeHelperStatusPayload>
+      : null;
+    const healthPayload = isObjectRecord(helperPayload?.health)
+      ? helperPayload.health as Partial<{
+        ok: boolean;
+        providerId: string;
+        model: string;
+        endpoints?: { thumbnailImages?: string };
+      }>
+      : null;
+    const authPayload = isObjectRecord(helperPayload?.auth)
+      ? helperPayload.auth as Partial<{
+        ok: boolean;
+        status: string;
+        providerId: string;
+        model: string;
+        detail?: string;
+      }>
+      : null;
     if (
-      !healthResponse.ok ||
+      helperPayload?.healthOk !== true ||
       healthPayload?.ok !== true ||
       healthPayload.providerId !== "local-codex" ||
       healthPayload.model !== "gpt-image-2" ||
@@ -783,20 +961,8 @@ async function getThumbnailLocalBridgeStatusRequest(
         message: "로컬 브릿지 health 응답을 신뢰할 수 없습니다.",
       };
     }
-    const authResponse = await fetch(`${baseUrl}/auth-status`, {
-      method: "GET",
-      headers: getThumbnailLocalBridgeAuthHeaders(normalizedToken),
-      cache: "no-store",
-    });
-    const authPayload = await authResponse.json().catch(() => null) as Partial<{
-      ok: boolean;
-      status: string;
-      providerId: string;
-      model: string;
-      detail?: string;
-    }> | null;
     if (
-      authResponse.ok &&
+      helperPayload?.authOk === true &&
       authPayload?.ok === true &&
       authPayload.status === "ready" &&
       authPayload.providerId === "local-codex" &&
@@ -804,7 +970,7 @@ async function getThumbnailLocalBridgeStatusRequest(
     ) {
       return {
         status: "connected",
-        message: "고급 로컬 브릿지 연결됨 · local-codex gpt-image-2",
+        message: "고급 로컬 브릿지 연결됨 · helper transport · local-codex gpt-image-2",
       };
     }
     if (authPayload?.status === "auth_required") {
@@ -818,12 +984,22 @@ async function getThumbnailLocalBridgeStatusRequest(
       message: "pairing 설정이 브릿지와 맞지 않습니다.",
     };
   } catch (error) {
+    const message = redactThumbnailLocalBridgeSecretText(
+      error instanceof Error ? error.message : "로컬 브릿지 helper 연결을 확인하지 못했습니다.",
+      normalizedToken,
+    );
+    if (message === getThumbnailLocalBridgeHelperClosedMessage()) {
+      return { status: "helper_closed", message };
+    }
+    if (message === getThumbnailLocalBridgePopupBlockedMessage()) {
+      return { status: "popup_blocked", message };
+    }
+    if (message === getThumbnailLocalBridgeReconnectRequiredMessage()) {
+      return { status: "needs_reconnect", message };
+    }
     return {
       status: "unavailable",
-      message: redactThumbnailLocalBridgeSecretText(
-        error instanceof Error ? error.message : "로컬 브릿지에 연결할 수 없습니다.",
-        normalizedToken,
-      ),
+      message,
     };
   }
 }
@@ -861,28 +1037,23 @@ async function postThumbnailLocalBridgeImagesRequest(
   bridgeUrl: string,
   token: string | null,
   signal: AbortSignal,
+  invokeHelper: ThumbnailLocalBridgeHelperInvoke,
 ): Promise<GenerationResult> {
   const baseUrl = normalizeThumbnailLocalBridgeUrl(bridgeUrl);
   const normalizedToken = requireThumbnailLocalBridgeToken(token);
   const requestPayload = buildThumbnailLocalBridgeImagesRequest(payload, referenceImages);
-  const response = await fetch(`${baseUrl}${THUMBNAIL_LOCAL_BRIDGE_IMAGES_PATH}`, {
-    method: "POST",
-    headers: getThumbnailLocalBridgeAuthHeaders(normalizedToken),
-    body: JSON.stringify(requestPayload),
-    signal,
-  });
-  const responsePayload = await response.json().catch(() => null) as unknown;
-  if (!response.ok) {
-    const errorPayload = responsePayload && typeof responsePayload === "object"
-      ? responsePayload as { detail?: unknown; error?: unknown }
-      : null;
-    throw new Error(
-      redactThumbnailLocalBridgeSecretText(
-        String(errorPayload?.detail ?? errorPayload?.error ?? "로컬 브릿지 썸네일 생성 실패"),
-        normalizedToken,
-      ),
-    );
-  }
+  const responsePayload = await invokeHelper(
+    {
+      kind: "tzudong-local-bridge-helper-request",
+      sessionId: "thumbnail-local-bridge-generate",
+      requestId: "thumbnail-local-bridge-generate",
+      command: "generateThumbnail",
+      bridgeUrl: baseUrl,
+      token: normalizedToken,
+      payload: requestPayload,
+    },
+    { signal },
+  );
   const normalized = normalizeThumbnailLocalBridgeImagesResponse(responsePayload);
   return normalized.result as ContractThumbnailGenerationResult & GenerationResult;
 }
@@ -1821,7 +1992,7 @@ function getThumbnailImageApiRouterView(
   selectedRoute: ThumbnailImageRouteChoice,
   hasBrowserOpenAIApiKey: boolean,
   hasLocalBridgeToken: boolean,
-  localBridgeStatus: ThumbnailLocalBridgeStatus,
+  localBridgeStatus: ThumbnailLocalBridgeUiStatus,
 ): ThumbnailImageApiRouterView {
   const localCodexAvailability = readiness?.providers.localCodex;
   const openAIApiKeyAvailability = readiness?.providers.openaiGptImage2;
@@ -1873,14 +2044,8 @@ function getThumbnailImageApiRouterView(
     return {
       id: THUMBNAIL_LOCAL_BRIDGE_ROUTE_ID,
       label: "고급 로컬",
-      statusLabel: !hasLocalBridgeToken
-        ? "토큰 필요"
-        : localBridgeStatus === "connected"
-          ? "연결됨"
-          : localBridgeStatus === "checking"
-            ? "확인 중"
-            : "확인 필요",
-      summary: "같은 Codex OAuth를 사용자 PC 브릿지에서 직접 실행합니다.",
+      statusLabel: formatThumbnailLocalBridgeStatusLabel(localBridgeStatus, hasLocalBridgeToken),
+      summary: "loopback helper 창을 통해 사용자 PC 브릿지를 연결합니다.",
       codexOAuthStatus:
         localBridgeStatus === "connected"
           ? "local-bridge-active"
@@ -2453,13 +2618,238 @@ export function AdminYoutubeThumbnailGenerator() {
   const [thumbnailLocalBridgeToken, setThumbnailLocalBridgeToken] = useState<string | null>(null);
   const [thumbnailLocalBridgeTokenDraft, setThumbnailLocalBridgeTokenDraft] = useState("");
   const [thumbnailLocalBridgeSavedAt, setThumbnailLocalBridgeSavedAt] = useState<string | null>(null);
-  const [thumbnailLocalBridgeStatus, setThumbnailLocalBridgeStatus] = useState<ThumbnailLocalBridgeStatus>("unpaired");
+  const [thumbnailLocalBridgeStatus, setThumbnailLocalBridgeStatus] = useState<ThumbnailLocalBridgeUiStatus>("unpaired");
   const [thumbnailLocalBridgeMessage, setThumbnailLocalBridgeMessage] = useState<string | null>(null);
   const [thumbnailLocalBridgeError, setThumbnailLocalBridgeError] = useState<string | null>(null);
   const [fileValidationMessage, setFileValidationMessage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isChatAgentStreaming, setIsChatAgentStreaming] = useState(false);
   const resultRef = useRef<GenerationResult | null>(result);
+  const thumbnailLocalBridgeHelperPopupRef = useRef<Window | null>(null);
+  const thumbnailLocalBridgeHelperPortRef = useRef<MessagePort | null>(null);
+  const thumbnailLocalBridgeHelperSessionIdRef = useRef<string | null>(null);
+  const thumbnailLocalBridgeHelperRequestIdRef = useRef(0);
+  const thumbnailLocalBridgeHelperCloseWatchRef = useRef<number | null>(null);
+  const thumbnailLocalBridgeHelperPendingRequestsRef = useRef(new Map<string, {
+    resolve: (value: unknown) => void;
+    reject: (reason?: unknown) => void;
+  }>());
+
+  const clearThumbnailLocalBridgeHelperCloseWatch = useCallback(() => {
+    if (typeof window === "undefined") return;
+    if (thumbnailLocalBridgeHelperCloseWatchRef.current !== null) {
+      window.clearInterval(thumbnailLocalBridgeHelperCloseWatchRef.current);
+      thumbnailLocalBridgeHelperCloseWatchRef.current = null;
+    }
+  }, []);
+
+  const rejectThumbnailLocalBridgeHelperPendingRequests = useCallback((message: string) => {
+    thumbnailLocalBridgeHelperPendingRequestsRef.current.forEach(({ reject }) => {
+      reject(new Error(message));
+    });
+    thumbnailLocalBridgeHelperPendingRequestsRef.current.clear();
+  }, []);
+
+  const resetThumbnailLocalBridgeHelperTransport = useCallback((options?: {
+    closePopup?: boolean;
+    nextStatus?: ThumbnailLocalBridgeUiStatus;
+    nextMessage?: string;
+    nextError?: string | null;
+  }) => {
+    clearThumbnailLocalBridgeHelperCloseWatch();
+    const failureMessage = options?.nextMessage ?? getThumbnailLocalBridgeReconnectRequiredMessage();
+    rejectThumbnailLocalBridgeHelperPendingRequests(failureMessage);
+    const port = thumbnailLocalBridgeHelperPortRef.current;
+    if (port) {
+      try {
+        port.onmessage = null;
+        port.close();
+      } catch {
+        // Ignore already-closed helper ports.
+      }
+      thumbnailLocalBridgeHelperPortRef.current = null;
+    }
+    const popup = thumbnailLocalBridgeHelperPopupRef.current;
+    if (options?.closePopup && popup && !popup.closed) {
+      try {
+        popup.close();
+      } catch {
+        // Ignore popup close failures.
+      }
+    }
+    thumbnailLocalBridgeHelperPopupRef.current = null;
+    thumbnailLocalBridgeHelperSessionIdRef.current = null;
+    if (options?.nextStatus) setThumbnailLocalBridgeStatus(options.nextStatus);
+    if (options?.nextMessage !== undefined) setThumbnailLocalBridgeMessage(options.nextMessage);
+    if (options?.nextError !== undefined) setThumbnailLocalBridgeError(options.nextError);
+  }, [clearThumbnailLocalBridgeHelperCloseWatch, rejectThumbnailLocalBridgeHelperPendingRequests]);
+
+  const invokeThumbnailLocalBridgeHelper = useCallback<ThumbnailLocalBridgeHelperInvoke>((request, options) => {
+    const port = thumbnailLocalBridgeHelperPortRef.current;
+    const sessionId = thumbnailLocalBridgeHelperSessionIdRef.current;
+    if (!port || !sessionId) {
+      return Promise.reject(new Error(getThumbnailLocalBridgeReconnectRequiredMessage()));
+    }
+    if (thumbnailLocalBridgeHelperPopupRef.current?.closed) {
+      resetThumbnailLocalBridgeHelperTransport({
+        nextStatus: "helper_closed",
+        nextMessage: getThumbnailLocalBridgeHelperClosedMessage(),
+        nextError: getThumbnailLocalBridgeHelperClosedMessage(),
+      });
+      return Promise.reject(new Error(getThumbnailLocalBridgeHelperClosedMessage()));
+    }
+    const requestId = `thumbnail-local-bridge-${thumbnailLocalBridgeHelperRequestIdRef.current + 1}`;
+    thumbnailLocalBridgeHelperRequestIdRef.current += 1;
+    return new Promise((resolve, reject) => {
+      const abortHandler = () => {
+        thumbnailLocalBridgeHelperPendingRequestsRef.current.delete(requestId);
+        reject(new Error("thumbnail_local_bridge_request_aborted"));
+      };
+      if (options?.signal?.aborted) {
+        abortHandler();
+        return;
+      }
+      if (options?.signal) {
+        options.signal.addEventListener("abort", abortHandler, { once: true });
+      }
+      thumbnailLocalBridgeHelperPendingRequestsRef.current.set(requestId, {
+        resolve: (value) => {
+          if (options?.signal) options.signal.removeEventListener("abort", abortHandler);
+          resolve(value);
+        },
+        reject: (reason) => {
+          if (options?.signal) options.signal.removeEventListener("abort", abortHandler);
+          reject(reason);
+        },
+      });
+      const nextRequest: ThumbnailLocalBridgeHelperRequestMessage = {
+        ...request,
+        sessionId,
+        requestId,
+      };
+      try {
+        port.postMessage(nextRequest);
+      } catch (error) {
+        thumbnailLocalBridgeHelperPendingRequestsRef.current.delete(requestId);
+        if (options?.signal) options.signal.removeEventListener("abort", abortHandler);
+        reject(error);
+      }
+    });
+  }, [resetThumbnailLocalBridgeHelperTransport]);
+
+  const handleConnectThumbnailLocalBridgeHelper = useCallback(async () => {
+    const normalizedToken = normalizeThumbnailLocalBridgeToken(thumbnailLocalBridgeToken);
+    if (!normalizedToken) {
+      const message = "먼저 저장을 눌러 pairing 설정을 이 탭 sessionStorage에 저장해 주세요.";
+      setThumbnailLocalBridgeStatus("unpaired");
+      setThumbnailLocalBridgeMessage(message);
+      setThumbnailLocalBridgeError(message);
+      return false;
+    }
+    try {
+      const normalizedUrl = normalizeThumbnailLocalBridgeUrl(thumbnailLocalBridgeUrl);
+      resetThumbnailLocalBridgeHelperTransport({ closePopup: true });
+      const sessionId = createThumbnailLocalBridgeHelperSessionId();
+      setThumbnailLocalBridgeStatus("helper_opening");
+      setThumbnailLocalBridgeMessage("로컬 브릿지 helper 창을 여는 중입니다. 팝업이 보이면 닫지 말고 연결이 끝날 때까지 기다려 주세요.");
+      setThumbnailLocalBridgeError(null);
+      const helperOrigin = new URL(normalizedUrl).origin;
+      const helperUrl = buildThumbnailLocalBridgeHelperUrl(normalizedUrl, sessionId);
+      let popup: Window | null = null;
+      const port = await new Promise<MessagePort>((resolve, reject) => {
+        const timeoutId = window.setTimeout(() => {
+          cleanup();
+          reject(new Error("로컬 브릿지 helper 창이 응답하지 않습니다. helper 창이 열렸는지 확인한 뒤 다시 연결해 주세요."));
+        }, 10_000);
+        const onMessage = (event: MessageEvent<unknown>) => {
+          if (!isThumbnailLocalBridgeHelperReadyMessage(event.data)) return;
+          if (event.data.sessionId !== sessionId) return;
+          if (!event.ports[0]) {
+            cleanup();
+            reject(new Error("로컬 브릿지 helper 통신 포트를 받을 수 없습니다."));
+            return;
+          }
+          cleanup();
+          resolve(event.ports[0]);
+        };
+        const cleanup = () => {
+          window.clearTimeout(timeoutId);
+          window.removeEventListener("message", onMessage);
+        };
+        window.addEventListener("message", onMessage);
+        popup = window.open(
+          helperUrl,
+          "tzudong-thumbnail-local-bridge-helper",
+          "popup=yes,width=560,height=720,resizable=yes,scrollbars=yes",
+        );
+        if (!popup) {
+          cleanup();
+          reject(new Error(getThumbnailLocalBridgePopupBlockedMessage()));
+          return;
+        }
+        popup.focus();
+      });
+      thumbnailLocalBridgeHelperPopupRef.current = popup;
+      thumbnailLocalBridgeHelperPortRef.current = port;
+      thumbnailLocalBridgeHelperSessionIdRef.current = sessionId;
+      port.onmessage = (event) => {
+        const data = event.data;
+        if (isThumbnailLocalBridgeHelperClosedMessage(data)) {
+          if (data.sessionId !== thumbnailLocalBridgeHelperSessionIdRef.current) return;
+          resetThumbnailLocalBridgeHelperTransport({
+            nextStatus: "helper_closed",
+            nextMessage: getThumbnailLocalBridgeHelperClosedMessage(),
+            nextError: getThumbnailLocalBridgeHelperClosedMessage(),
+          });
+          return;
+        }
+        if (!isThumbnailLocalBridgeHelperResponseMessage(data)) return;
+        if (data.sessionId !== thumbnailLocalBridgeHelperSessionIdRef.current) return;
+        const pending = thumbnailLocalBridgeHelperPendingRequestsRef.current.get(data.requestId);
+        if (!pending) return;
+        thumbnailLocalBridgeHelperPendingRequestsRef.current.delete(data.requestId);
+        if (data.ok) {
+          pending.resolve(data.payload);
+          return;
+        }
+        pending.reject(new Error(data.message || data.errorCode || "local_bridge_helper_request_failed"));
+      };
+      port.start();
+      clearThumbnailLocalBridgeHelperCloseWatch();
+      thumbnailLocalBridgeHelperCloseWatchRef.current = window.setInterval(() => {
+        if (!thumbnailLocalBridgeHelperPopupRef.current?.closed) return;
+        resetThumbnailLocalBridgeHelperTransport({
+          nextStatus: "helper_closed",
+          nextMessage: getThumbnailLocalBridgeHelperClosedMessage(),
+          nextError: getThumbnailLocalBridgeHelperClosedMessage(),
+        });
+      }, 500);
+      const status = await getThumbnailLocalBridgeStatusRequest(
+        normalizedUrl,
+        normalizedToken,
+        invokeThumbnailLocalBridgeHelper,
+      );
+      setThumbnailLocalBridgeStatus(status.status);
+      setThumbnailLocalBridgeMessage(status.message);
+      setThumbnailLocalBridgeError(status.status === "connected" ? null : status.message);
+      return status.status === "connected";
+    } catch (error) {
+      const message = redactThumbnailLocalBridgeSecretText(
+        error instanceof Error ? error.message : "로컬 브릿지 helper 연결을 시작하지 못했습니다.",
+        thumbnailLocalBridgeToken,
+      );
+      setThumbnailLocalBridgeStatus(message === getThumbnailLocalBridgePopupBlockedMessage() ? "popup_blocked" : "error");
+      setThumbnailLocalBridgeMessage(message);
+      setThumbnailLocalBridgeError(message);
+      return false;
+    }
+  }, [
+    clearThumbnailLocalBridgeHelperCloseWatch,
+    invokeThumbnailLocalBridgeHelper,
+    resetThumbnailLocalBridgeHelperTransport,
+    thumbnailLocalBridgeToken,
+    thumbnailLocalBridgeUrl,
+  ]);
 
   const selectedExportPreset = useMemo(
     () => thumbnailExportPresets.find((preset) => preset.id === exportPresetId) ?? thumbnailExportPresets[0],
@@ -2596,32 +2986,19 @@ export function AdminYoutubeThumbnailGenerator() {
     setThumbnailLocalBridgeToken(cachedBridge.token);
     setThumbnailLocalBridgeTokenDraft("");
     setThumbnailLocalBridgeSavedAt(cachedBridge.savedAt);
-    setThumbnailLocalBridgeStatus("checking");
-    setThumbnailLocalBridgeMessage("이 탭에 저장된 로컬 브릿지 연결을 확인하고 있습니다.");
+    setThumbnailLocalBridgeStatus("needs_reconnect");
+    setThumbnailLocalBridgeMessage(getThumbnailLocalBridgeReconnectRequiredMessage());
+    setThumbnailLocalBridgeError(null);
     setProviderId("local-codex");
     setGenerationMode("direct_provider");
     setThumbnailImageRouteChoice(THUMBNAIL_LOCAL_BRIDGE_ROUTE_ID);
   }, []);
 
   useEffect(() => {
-    if (thumbnailImageRouteChoice !== THUMBNAIL_LOCAL_BRIDGE_ROUTE_ID) return;
-    if (!thumbnailLocalBridgeToken) {
-      setThumbnailLocalBridgeStatus("unpaired");
-      setThumbnailLocalBridgeMessage("고급 로컬 브릿지는 pairing 설정을 저장한 뒤 사용할 수 있습니다.");
-      return;
-    }
-    let cancelled = false;
-    setThumbnailLocalBridgeStatus("checking");
-    void getThumbnailLocalBridgeStatusRequest(thumbnailLocalBridgeUrl, thumbnailLocalBridgeToken).then((status) => {
-      if (cancelled) return;
-      setThumbnailLocalBridgeStatus(status.status);
-      setThumbnailLocalBridgeMessage(status.message);
-      setThumbnailLocalBridgeError(status.status === "connected" ? null : status.message);
-    });
     return () => {
-      cancelled = true;
+      resetThumbnailLocalBridgeHelperTransport({ closePopup: true });
     };
-  }, [thumbnailImageRouteChoice, thumbnailLocalBridgeToken, thumbnailLocalBridgeUrl]);
+  }, [resetThumbnailLocalBridgeHelperTransport]);
 
   const loadReadiness = useCallback(async () => {
     try {
@@ -5030,6 +5407,7 @@ export function AdminYoutubeThumbnailGenerator() {
         const bridgeStatus = await getThumbnailLocalBridgeStatusRequest(
           thumbnailLocalBridgeUrl,
           thumbnailLocalBridgeToken,
+          invokeThumbnailLocalBridgeHelper,
         );
         setThumbnailLocalBridgeStatus(bridgeStatus.status);
         setThumbnailLocalBridgeMessage(bridgeStatus.message);
@@ -5044,6 +5422,7 @@ export function AdminYoutubeThumbnailGenerator() {
           thumbnailLocalBridgeUrl,
           thumbnailLocalBridgeToken,
           controller.signal,
+          invokeThumbnailLocalBridgeHelper,
         );
         userCanvasResultLockedRef.current = true;
         syncNaturalGenerationCopyToCanvas(naturalGenerationCopy);
@@ -5292,24 +5671,21 @@ export function AdminYoutubeThumbnailGenerator() {
       if (!cache) {
         throw new Error("브라우저 sessionStorage를 사용할 수 없습니다.");
       }
+      resetThumbnailLocalBridgeHelperTransport({ closePopup: true });
       setThumbnailLocalBridgeUrl(cache.bridgeUrl);
       setThumbnailLocalBridgeUrlDraft(cache.bridgeUrl);
       setThumbnailLocalBridgeToken(cache.token);
       setThumbnailLocalBridgeTokenDraft("");
       setThumbnailLocalBridgeSavedAt(cache.savedAt);
-      setThumbnailLocalBridgeStatus("checking");
-      setThumbnailLocalBridgeMessage("저장했어요. 이 탭에서만 로컬 브릿지 연결을 확인합니다.");
+      setThumbnailLocalBridgeStatus("needs_reconnect");
+      setThumbnailLocalBridgeMessage(getThumbnailLocalBridgeReconnectRequiredMessage());
       setThumbnailLocalBridgeError(null);
       setProviderId("local-codex");
       setGenerationMode("direct_provider");
       setThumbnailImageRouteChoice(THUMBNAIL_LOCAL_BRIDGE_ROUTE_ID);
       appendThumbnailChatAssistantNotice(
-        "고급 로컬 브릿지 설정을 이 탭 sessionStorage에만 저장했어요. 서버로 OAuth 파일이나 pairing 설정을 보내지 않습니다.",
+        "고급 로컬 브릿지 설정을 이 탭 sessionStorage에 저장했어요. pairing token은 앱 서버나 비-loopback 네트워크로 보내지 않습니다.",
       );
-      const status = await getThumbnailLocalBridgeStatusRequest(cache.bridgeUrl, cache.token);
-      setThumbnailLocalBridgeStatus(status.status);
-      setThumbnailLocalBridgeMessage(status.message);
-      setThumbnailLocalBridgeError(status.status === "connected" ? null : status.message);
     } catch (error) {
       const message = redactThumbnailLocalBridgeSecretText(
         error instanceof Error ? error.message : "로컬 브릿지 설정을 저장하지 못했습니다.",
@@ -5320,13 +5696,14 @@ export function AdminYoutubeThumbnailGenerator() {
       setThumbnailLocalBridgeError(message);
       toast({
         variant: "destructive",
-        title: "고급 로컬 브릿지 확인",
+        title: "고급 로컬 브릿지 저장",
         description: message,
       });
     }
   }
 
   function handleClearThumbnailLocalBridgeSession() {
+    resetThumbnailLocalBridgeHelperTransport({ closePopup: true });
     clearThumbnailLocalBridgeSessionCache();
     setThumbnailLocalBridgeUrl(THUMBNAIL_LOCAL_BRIDGE_DEFAULT_URL);
     setThumbnailLocalBridgeUrlDraft(THUMBNAIL_LOCAL_BRIDGE_DEFAULT_URL);
@@ -5352,10 +5729,17 @@ export function AdminYoutubeThumbnailGenerator() {
     setThumbnailLocalBridgeError(null);
     if (nextRoute === THUMBNAIL_LOCAL_BRIDGE_ROUTE_ID) {
       setGenerationMode("direct_provider");
+      setThumbnailLocalBridgeStatus(
+        thumbnailLocalBridgeToken
+          ? (thumbnailLocalBridgeStatus === "connected" ? "connected" : "needs_reconnect")
+          : "unpaired",
+      );
       setThumbnailLocalBridgeMessage(
         thumbnailLocalBridgeToken
-          ? "로컬 브릿지 연결을 확인하고 있습니다."
-          : "고급 로컬 브릿지는 사용자 PC에서 실행 중일 때만 사용할 수 있습니다.",
+          ? (thumbnailLocalBridgeStatus === "connected"
+              ? "로컬 브릿지 helper가 연결되어 있습니다. 이 경로는 앱 서버 relay 없이 loopback에서만 동작합니다."
+              : getThumbnailLocalBridgeReconnectRequiredMessage())
+          : "고급 로컬 브릿지는 pairing 설정을 저장한 뒤 helper 연결을 눌러 사용할 수 있습니다.",
       );
       setBrowserOpenAIApiKeyMessage(null);
       return;
@@ -5450,13 +5834,10 @@ export function AdminYoutubeThumbnailGenerator() {
           >
             <span className="block text-[11px] font-bold">고급 로컬</span>
             <span className="block text-[10px] opacity-80">
-              {thumbnailLocalBridgeStatus === "connected"
-                ? "연결됨"
-                : thumbnailLocalBridgeStatus === "checking"
-                  ? "확인 중"
-                  : thumbnailLocalBridgeToken
-                    ? "확인 필요"
-                    : "토큰 필요"}
+              {formatThumbnailLocalBridgeStatusLabel(
+                thumbnailLocalBridgeStatus,
+                Boolean(thumbnailLocalBridgeToken),
+              )}
             </span>
           </button>
           <button
@@ -5646,6 +6027,7 @@ export function AdminYoutubeThumbnailGenerator() {
             data-thumbnail-local-bridge-server-relay="forbidden"
             data-thumbnail-local-bridge-token-persistence="session-only"
             data-thumbnail-local-bridge-storage-key={THUMBNAIL_LOCAL_BRIDGE_SESSION_STORAGE_KEY}
+            data-thumbnail-local-bridge-transport="helper-window"
           >
             <div className="flex items-center justify-between gap-2">
               <Label
@@ -5659,18 +6041,17 @@ export function AdminYoutubeThumbnailGenerator() {
                 className="h-5 shrink-0 rounded-full px-1.5 text-[10px]"
                 data-thumbnail-local-bridge-status={thumbnailLocalBridgeStatus}
               >
-                {thumbnailLocalBridgeStatus === "connected"
-                  ? "연결됨"
-                  : thumbnailLocalBridgeStatus === "checking"
-                    ? "확인 중"
-                    : "설정 필요"}
+                {formatThumbnailLocalBridgeStatusLabel(
+                  thumbnailLocalBridgeStatus,
+                  Boolean(thumbnailLocalBridgeToken),
+                )}
               </Badge>
             </div>
             <p
               className="text-[10px] leading-4 text-muted-foreground"
               data-thumbnail-local-bridge-guidance="true"
             >
-              OAuth는 동일합니다. 차이는 서버 대신 사용자 PC 브릿지를 직접 호출하는 것입니다.
+              pairing token은 이 탭에만 저장합니다. 실제 bridge 호출은 loopback helper 창에서 처리하며 앱 서버 relay는 사용하지 않습니다.
             </p>
             <div className="grid gap-1">
               <Input
@@ -5715,7 +6096,17 @@ export function AdminYoutubeThumbnailGenerator() {
                 onClick={() => void handleSaveThumbnailLocalBridgeSession()}
                 data-thumbnail-local-bridge-save="true"
               >
-                저장/테스트
+                저장
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+                onClick={() => void handleConnectThumbnailLocalBridgeHelper()}
+                data-thumbnail-local-bridge-connect="true"
+              >
+                {thumbnailLocalBridgeStatus === "connected" ? "다시 확인" : "로컬 브릿지 연결"}
               </Button>
               {thumbnailLocalBridgeToken ? (
                 <Button
@@ -5739,7 +6130,7 @@ export function AdminYoutubeThumbnailGenerator() {
                   thumbnailLocalBridgeMessage ??
                   (thumbnailLocalBridgeSavedAt
                     ? `sessionStorage 저장됨 · ${new Date(thumbnailLocalBridgeSavedAt).toLocaleString("ko-KR")}`
-                    : "npm run storyboard:local-bridge 실행 후 token을 붙여넣으세요.")}
+                    : "npm run storyboard:local-bridge 실행 후 token을 저장하고 로컬 브릿지 연결을 눌러 주세요.")}
               </p>
             </div>
           </div>

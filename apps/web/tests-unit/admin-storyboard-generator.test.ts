@@ -36,6 +36,50 @@ function withHeatmapFixture() {
     cleanup: () => rmSync(dir, { recursive: true, force: true }),
   };
 }
+function withMixedTieHeatmapFixture() {
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'tzudong-storyboard-mixed-tie-'));
+
+  for (let index = 0; index < 160; index += 1) {
+    const isMultiMarker = index >= 80;
+    const videoId = `${isMultiMarker ? 'multi' : 'single'}${String(index).padStart(5, '0')}`;
+    const row = {
+      youtube_link: `https://www.youtube.com/watch?v=${videoId}`,
+      channel_name: 'tzuyang',
+      video_id: videoId,
+      duration: 1000,
+      interaction_data: isMultiMarker
+        ? [
+          { startMillis: '250000', durationMillis: '10000', intensityScoreNormalized: 1, formatted_time: '04:10' },
+          { startMillis: '450000', durationMillis: '10000', intensityScoreNormalized: 1, formatted_time: '07:30' },
+        ]
+        : [
+          { startMillis: '630000', durationMillis: '10000', intensityScoreNormalized: 1, formatted_time: '10:30' },
+        ],
+      most_replayed_markers: isMultiMarker
+        ? [
+          { startMillis: 245000, endMillis: 260000, peakMillis: 250000, label: '중반 반복시청 피크' },
+          { startMillis: 445000, endMillis: 460000, peakMillis: 450000, label: '후속 반복시청 피크' },
+        ]
+        : [
+          { startMillis: 625000, endMillis: 640000, peakMillis: 630000, label: '단일 반복시청 피크' },
+        ],
+      status: 'success',
+      collected_at: '2026-01-01T00:00:00.000Z',
+    };
+
+    writeFileSync(
+      path.join(dir, `${videoId}.jsonl`),
+      `${JSON.stringify(row)}\n`,
+      'utf8',
+    );
+  }
+
+  return {
+    dir,
+    cleanup: () => rmSync(dir, { recursive: true, force: true }),
+  };
+}
+
 
 describe('admin storyboard generator', () => {
   test('builds a local-first storyboard from explicit heatmap most-replayed markers', async () => {
@@ -62,6 +106,8 @@ describe('admin storyboard generator', () => {
       expect(result.sourceSummary.usableSources).toBe(100);
       expect(result.sourceSummary.totalMarkers).toBe(24);
       expect(result.sourceSummary.topReplayScore).toBe(1);
+      expect(result.sourceSummary.selectedSingleMarkerSourceCount).toBe(0);
+      expect(result.sourceSummary.selectedMarkerMedianRelativePeak).toBe(0.2);
       expect(result.storyboard.scenes).toHaveLength(12);
       expect(result.storyboard.scenes[0].heatmapEvidence.videoId).toBe('fixture00000');
       expect(result.storyboard.scenes[0].heatmapEvidence.peakTime).toBe('02:00');
@@ -95,6 +141,34 @@ describe('admin storyboard generator', () => {
       expect(result.agentGraphFidelity?.score).toBeLessThan(98);
       expect(result.agentGraphFidelity?.blockers.join('\n')).toContain('Intern Tool/RPC mutation');
       expect(JSON.stringify(result)).toContain('backend/storyboard-agent');
+    } finally {
+      if (previous === undefined) {
+        delete process.env.TZUYANG_HEATMAP_DIR;
+      } else {
+        process.env.TZUYANG_HEATMAP_DIR = previous;
+      }
+      fixture.cleanup();
+    }
+  });
+  test('keeps 80-source tie selection below the single-marker and late-peak baselines', async () => {
+    const fixture = withMixedTieHeatmapFixture();
+    const previous = process.env.TZUYANG_HEATMAP_DIR;
+    process.env.TZUYANG_HEATMAP_DIR = fixture.dir;
+
+    try {
+      const { generateLocalStoryboard } = await import(`../lib/admin/storyboard/generator.ts?case=${Math.random()}`);
+      const result = generateLocalStoryboard({
+        prompt: '동률 피크 편향 없이 다음 영상안을 만들어줘.',
+        tone: 'warm',
+        targetLengthMinutes: 18,
+        sourceLimit: 80,
+        segmentCount: 10,
+        includeProductionNotes: true,
+      });
+
+      expect(result.sourceSummary.selectedSources).toBe(80);
+      expect(result.sourceSummary.selectedSingleMarkerSourceCount).toBeLessThan(80);
+      expect(result.sourceSummary.selectedMarkerMedianRelativePeak).toBeLessThan(0.63);
     } finally {
       if (previous === undefined) {
         delete process.env.TZUYANG_HEATMAP_DIR;

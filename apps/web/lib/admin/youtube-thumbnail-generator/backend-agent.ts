@@ -18,6 +18,7 @@ import type {
   ThumbnailTextLayer,
 } from './types';
 import { ThumbnailGenerationError, YOUTUBE_THUMBNAIL_TARGET_HEIGHT, YOUTUBE_THUMBNAIL_TARGET_WIDTH } from './types';
+const DEFAULT_THUMBNAIL_AGENT_PYTHON = process.platform === 'win32' ? 'python' : 'python3';
 
 const BACKEND_AGENT_GRAPH = 'src/graph.py';
 const BACKEND_AGENT_RUNNER = 'scripts/run-thumbnail-agent.py';
@@ -29,7 +30,7 @@ const DEFAULT_THUMBNAIL_AGENT_RUNTIME = 'codex_cli_oauth';
 const DEFAULT_THUMBNAIL_AGENT_CODEX_MODEL = 'gpt-5.5';
 const DEFAULT_THUMBNAIL_AGENT_CODEX_EFFORT = 'high';
 const REQUIRED_PYTHON_MODULES = ['langgraph', 'langchain_core', 'langchain_openai'];
-const UNSAFE_COMMAND_PATTERN = /[\s;&|`$<>()[\]{}!#\n\r]/;
+const UNSAFE_COMMAND_PATTERN = /[;&|`$<>()[\]{}!#\n\r]/;
 const SECRET_PATTERNS = [
   /sk-proj-[A-Za-z0-9_-]{12,}/g,
   /sk-[A-Za-z0-9_-]{12,}/g,
@@ -39,7 +40,7 @@ const SECRET_PATTERNS = [
 ];
 
 type ResolvedThumbnailAgentCommand =
-  | { ok: true; executable: string; args: string[] }
+  | { ok: true; executable: string; args: string[]; displayPath: string }
   | { ok: false; reason: string };
 
 type CommandResult = {
@@ -145,7 +146,23 @@ function backendAgentPath(relativePath: string) {
 }
 
 function resolveThumbnailAgentPython(env: NodeJS.ProcessEnv = process.env) {
-  return env.THUMBNAIL_AGENT_PYTHON?.trim() || 'python3';
+  return env.THUMBNAIL_AGENT_PYTHON?.trim() || env.PYTHON?.trim() || DEFAULT_THUMBNAIL_AGENT_PYTHON;
+}
+
+function resolveThumbnailAgentNode(env: NodeJS.ProcessEnv = process.env) {
+  return env.NODE?.trim() || process.env.NODE?.trim() || (process.versions.bun ? 'node' : process.execPath);
+}
+
+function resolveThumbnailAgentBash() {
+  if (process.platform === 'win32') {
+    const preferred = [
+      'C:\\Program Files\\Git\\bin\\bash.exe',
+      'C:\\Program Files\\Git\\usr\\bin\\bash.exe',
+    ];
+    const found = preferred.find((candidate) => existsSync(candidate));
+    if (found) return found;
+  }
+  return 'bash';
 }
 
 function resolveThumbnailAgentRuntime(env: NodeJS.ProcessEnv = process.env) {
@@ -161,8 +178,27 @@ function resolveThumbnailAgentTimeoutMs(env: NodeJS.ProcessEnv = process.env) {
 function sanitizeCommandOutput(raw: string) {
   return SECRET_PATTERNS.reduce((text, pattern) => text.replace(pattern, '[REDACTED]'), raw);
 }
+function toShellScriptArg(command: string) {
+  return process.platform === 'win32' ? command.replaceAll('\\', '/') : command;
+}
+function resolveScriptCommand(command: string, args: string[], env: NodeJS.ProcessEnv = process.env) {
+  const extension = path.extname(command).toLowerCase();
+  if (extension === '.js' || extension === '.mjs' || extension === '.cjs') {
+    return { executable: resolveThumbnailAgentNode(env), args: [command, ...args] };
+  }
+  if (extension === '.py') {
+    return { executable: resolveThumbnailAgentPython(env), args: [command, ...args] };
+  }
+  if (extension === '.sh') {
+    return { executable: resolveThumbnailAgentBash(), args: [toShellScriptArg(command), ...args] };
+  }
+  return { executable: command, args };
+}
 
-function resolveThumbnailAgentCommand(rawCommand?: string | null): ResolvedThumbnailAgentCommand {
+function resolveThumbnailAgentCommand(
+  env: NodeJS.ProcessEnv = process.env,
+  rawCommand?: string | null,
+): ResolvedThumbnailAgentCommand {
   const command = rawCommand?.trim();
   const executableCandidates = command
     ? (path.isAbsolute(command)
@@ -175,9 +211,15 @@ function resolveThumbnailAgentCommand(rawCommand?: string | null): ResolvedThumb
     : [backendAgentPath(BACKEND_AGENT_RUNNER)];
   if (command && UNSAFE_COMMAND_PATTERN.test(command)) return { ok: false, reason: 'unsafe-command-string' };
   const executable = firstExistingPath(executableCandidates);
+  const extension = path.extname(executable).toLowerCase();
+  if (['.py', '.sh', '.js', '.mjs', '.cjs'].includes(extension) && existsSync(executable)) {
+    const runnable = resolveScriptCommand(executable, [], env);
+    return { ok: true, executable: runnable.executable, args: runnable.args, displayPath: executable };
+  }
   try {
     accessSync(executable, constants.X_OK);
-    return { ok: true, executable, args: [] };
+    const runnable = resolveScriptCommand(executable, [], env);
+    return { ok: true, executable: runnable.executable, args: runnable.args, displayPath: executable };
   } catch {
     return { ok: false, reason: 'command-not-executable' };
   }
@@ -215,7 +257,7 @@ function listMissingPythonModules(env: NodeJS.ProcessEnv = process.env) {
 }
 
 export function getThumbnailBackendAgentStatus(env: NodeJS.ProcessEnv = process.env): ThumbnailBackendAgentStatus {
-  const commandResolution = resolveThumbnailAgentCommand(env.THUMBNAIL_AGENT_COMMAND);
+  const commandResolution = resolveThumbnailAgentCommand(env, env.THUMBNAIL_AGENT_COMMAND);
   const commandConfigured = Boolean(env.THUMBNAIL_AGENT_COMMAND?.trim());
   const graphEntrypoint = existsSync(backendAgentPath(BACKEND_AGENT_GRAPH)) ? backendAgentPath(BACKEND_AGENT_GRAPH) : null;
   const runnerEntrypoint = existsSync(backendAgentPath(BACKEND_AGENT_RUNNER)) ? backendAgentPath(BACKEND_AGENT_RUNNER) : null;
@@ -230,10 +272,10 @@ export function getThumbnailBackendAgentStatus(env: NodeJS.ProcessEnv = process.
     available: commandAvailable || localAdapterAvailable,
     mode: commandConfigured ? 'command' : 'local_adapter',
     rootPath: BACKEND_AGENT_ROOT,
-    graphEntrypoint,
+    graphEntrypoint: graphEntrypoint?.replaceAll('\\', '/') ?? null,
     commandConfigured,
     commandAvailable,
-    commandPath: commandResolution.ok ? commandResolution.executable : undefined,
+    commandPath: commandResolution.ok ? commandResolution.displayPath.replaceAll('\\', '/') : undefined,
     commandRejectionReason: commandResolution.ok ? undefined : commandResolution.reason,
     localAdapterAvailable,
     missingPythonModules,
@@ -1090,7 +1132,7 @@ async function resolveAgentPlan(
   options: ThumbnailAgentExecutionOptions = {},
 ): Promise<ThumbnailAgentPlan> {
   const fallback = buildLocalAgentPlan(payload, referenceImages, basePrompt);
-  const command = resolveThumbnailAgentCommand(env.THUMBNAIL_AGENT_COMMAND);
+  const command = resolveThumbnailAgentCommand(env, env.THUMBNAIL_AGENT_COMMAND);
   if (!command.ok) {
     if (env.THUMBNAIL_AGENT_COMMAND?.trim()) {
       throw new ThumbnailGenerationError(
