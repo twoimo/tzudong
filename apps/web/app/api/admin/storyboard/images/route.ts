@@ -2,15 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { requireAdmin } from '@/lib/auth/require-admin';
 import {
-  generateStoryboardSceneImages,
-  getStoryboardImageProviderAvailability,
-  normalizeStoryboardBrowserOpenAIApiKey,
-  StoryboardImageGenerationError,
-} from '@/lib/admin/storyboard/image-provider';
-import {
   STORYBOARD_BROWSER_OPENAI_API_KEY_HEADER,
 } from '@/lib/admin/storyboard/image-provider-readiness';
-import { persistLocalStoryboardHistory } from '@/lib/admin/storyboard/history';
 import { sanitizeStoryboardPublicText } from '@/lib/admin/storyboard/prompt-safety';
 import {
   STORYBOARD_CHAT_MIN_SEGMENT_COUNT,
@@ -22,7 +15,50 @@ import type {
   StoryboardGenerationResult,
   StoryboardScene,
   StoryboardTone,
+  StoryboardSceneGeneratedImage,
 } from '@/lib/admin/storyboard/types';
+type StoryboardGeneratedSceneImageForRoute = {
+  sceneNo: number;
+  image: StoryboardSceneGeneratedImage;
+};
+
+class StoryboardImageGenerationError extends Error {
+  constructor(
+    public readonly code: 'provider_unavailable' | 'invalid_payload' | 'provider_execution_failed',
+    message: string,
+    public readonly status = 400,
+  ) {
+    super(message);
+    this.name = 'StoryboardImageGenerationError';
+  }
+}
+
+function normalizeStoryboardBrowserOpenAIApiKey(value: unknown) {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (trimmed.length > 260) return null;
+  if (!/^sk-[A-Za-z0-9_-]{16,}$/.test(trimmed)) return null;
+  return trimmed;
+}
+
+async function getStoryboardImageProviderAvailabilityForRoute(
+  env: NodeJS.ProcessEnv,
+  options: { browserOpenAIApiKey?: string | null },
+) {
+  const { getStoryboardImageProviderAvailability } = await import('@/lib/admin/storyboard/image-provider');
+  return getStoryboardImageProviderAvailability(env, options);
+}
+
+async function generateStoryboardSceneImagesForRoute(
+  scenes: StoryboardScene[],
+  context: { title: string; logline: string; request: StoryboardGenerateRequest },
+  env: NodeJS.ProcessEnv,
+  options: { browserOpenAIApiKey?: string | null },
+) {
+  const { generateStoryboardSceneImages } = await import('@/lib/admin/storyboard/image-provider');
+  return generateStoryboardSceneImages(scenes, context, env, options);
+}
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -52,6 +88,20 @@ function jsonError(error: string, status: number, detail?: string) {
 function normalizeRouteError(error: unknown) {
   if (error instanceof StoryboardImageGenerationError) {
     return jsonError(error.code, error.status, error.message);
+  }
+
+  const providerError = error as { code?: unknown; status?: unknown; message?: unknown };
+  if (
+    typeof providerError.code === 'string' &&
+    (providerError.code === 'provider_unavailable' ||
+      providerError.code === 'invalid_payload' ||
+      providerError.code === 'provider_execution_failed')
+  ) {
+    return jsonError(
+      providerError.code,
+      typeof providerError.status === 'number' ? providerError.status : 400,
+      typeof providerError.message === 'string' ? providerError.message : undefined,
+    );
   }
 
   console.error('[admin/storyboard/images] unexpected failure:', error);
@@ -162,7 +212,7 @@ function parseSourceResult(value: unknown): StoryboardGenerationResult | null {
 
 function createPersistableImageResult(
   sourceResult: StoryboardGenerationResult | null,
-  images: Awaited<ReturnType<typeof generateStoryboardSceneImages>>,
+  images: StoryboardGeneratedSceneImageForRoute[],
 ): StoryboardGenerationResult | null {
   if (!sourceResult) return null;
 
@@ -188,7 +238,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(
       {
-        provider: getStoryboardImageProviderAvailability(process.env, {
+        provider: await getStoryboardImageProviderAvailabilityForRoute(process.env, {
           browserOpenAIApiKey,
         }),
         limits: {
@@ -221,7 +271,7 @@ export async function POST(request: NextRequest) {
     const payload = parsePayload(body);
     const imageRouteEnv = getStoryboardImageRouteEnv();
     const browserOpenAIApiKey = getBrowserOpenAIApiKeyFromRequest(request);
-    const images = await generateStoryboardSceneImages(
+    const images = await generateStoryboardSceneImagesForRoute(
       payload.scenes,
       {
         title: payload.title,
@@ -233,15 +283,19 @@ export async function POST(request: NextRequest) {
     );
     const historyResult = createPersistableImageResult(payload.sourceResult, images);
     const history = historyResult
-      ? await persistLocalStoryboardHistory(historyResult, imageRouteEnv).catch((historyError) => {
-        console.error('[admin/storyboard/images] local history persistence failed:', historyError);
-        return { persisted: false as const, reason: 'storyboard_image_history_persist_failed' as const };
-      })
+      ? process.env.VERCEL === '1'
+        ? { persisted: false as const, reason: 'storyboard_image_history_skipped_on_vercel' as const }
+        : await (await import('@/lib/admin/storyboard/history'))
+          .persistLocalStoryboardHistory(historyResult, imageRouteEnv)
+          .catch((historyError) => {
+            console.error('[admin/storyboard/images] local history persistence failed:', historyError);
+            return { persisted: false as const, reason: 'storyboard_image_history_persist_failed' as const };
+          })
       : { persisted: false as const, reason: 'missing_source_result' as const };
 
     return NextResponse.json(
       {
-        provider: getStoryboardImageProviderAvailability(imageRouteEnv, {
+        provider: await getStoryboardImageProviderAvailabilityForRoute(imageRouteEnv, {
           browserOpenAIApiKey,
         }),
         images,
