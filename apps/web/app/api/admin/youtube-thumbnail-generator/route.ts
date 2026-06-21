@@ -217,6 +217,14 @@ export async function GET(_request: NextRequest) {
     if (!auth.ok) return auth.response;
 
     const backendAgentStatus = await getPublicThumbnailBackendAgentStatus();
+
+    return NextResponse.json(
+      {
+        target: { width: 1280, height: 720, aspectRatio: '16:9' },
+        providers: await getPublicThumbnailProviderAvailability(),
+        // backendAgent: toPublicThumbnailBackendAgentStatus(getThumbnailBackendAgentStatus(process.env))
+        backendAgent: backendAgentStatus,
+        limits: {
           maxFiles: 8,
           maxFileBytes: 8_388_608,
           maxTotalBytes: 33_554_432,
