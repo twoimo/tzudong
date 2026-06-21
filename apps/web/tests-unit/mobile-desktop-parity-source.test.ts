@@ -11,8 +11,8 @@ describe("mobile and desktop parity source contracts", () => {
     const responsiveScriptSource = source("scripts/run-responsive-tests.mjs");
 
     expect(responsiveSpecSource).toContain("'/admin'");
+    expect(responsiveSpecSource).toContain("'/admin?module=restaurants'");
     expect(responsiveSpecSource).toContain("'/admin/evaluations'");
-    expect(responsiveSpecSource).toContain("'/admin/banners'");
     expect(responsiveScriptSource).toContain(
       "admin route responsive cases will be skipped",
     );
@@ -253,7 +253,7 @@ describe("mobile and desktop parity source contracts", () => {
     expect(mobileOverlaySource).not.toContain("공지사항");
     expect(mobileOverlaySource).not.toContain("Megaphone");
     expect(navigationRoutesSource).toContain("'/admin'");
-    expect(navigationRoutesSource).toContain("'/admin/evaluations'");
+    expect(navigationRoutesSource).toContain("'/admin?module=restaurants'");
     expect(navigationRoutesSource).toContain("'/admin/banners'");
     expect(mobileBottomNavSource).toContain("path: '/'");
     expect(mobileBottomNavSource).toContain("path: '/stamp'");
