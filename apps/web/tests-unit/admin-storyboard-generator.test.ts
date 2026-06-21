@@ -81,6 +81,52 @@ function withMixedTieHeatmapFixture() {
 }
 
 
+function writeExecutableShim(commandPath: string, unixLines: string[], winLines = unixLines) {
+  if (process.platform === 'win32') {
+    writeFileSync(
+      commandPath,
+      ['@echo off', ...winLines].join('\r\n'),
+      'utf8',
+    );
+    return;
+  }
+
+  writeFileSync(
+    commandPath,
+    ['#!/usr/bin/env bash', ...unixLines].join('\n'),
+    'utf8',
+  );
+  chmodSync(commandPath, 0o755);
+}
+
+function writePythonShim(commandPath: string, markerPath: string, stdoutJson: unknown, cwdPath?: string) {
+  writeExecutableShim(
+    commandPath,
+[
+  cwdPath ? `pwd > ${JSON.stringify(cwdPath)}` : undefined,
+  `printf 'called\n' > ${JSON.stringify(markerPath)}`,
+  `printf '%s\\n' ${JSON.stringify(stdoutJson)}`,
+].filter(Boolean) as string[],
+[
+  cwdPath ? `cd > ${JSON.stringify(cwdPath)}` : undefined,
+  `echo called> ${JSON.stringify(markerPath)}`,
+  `echo ${JSON.stringify(stdoutJson)}`,
+].filter(Boolean) as string[],
+  );
+}
+function writeFailingPythonShim(commandPath: string, message: string) {
+  writeExecutableShim(
+    commandPath,
+    [
+      `printf '%s\\n' ${JSON.stringify(message)} >&2`,
+      'exit 1',
+    ],
+    [
+      `echo ${message} 1>&2`,
+      'exit /b 1',
+    ],
+  );
+}
 describe('admin storyboard generator', () => {
   test('builds a local-first storyboard from explicit heatmap most-replayed markers', async () => {
     const fixture = withHeatmapFixture();
@@ -437,239 +483,366 @@ describe('admin storyboard generator', () => {
     }
   });
 
-  test('does not fabricate planner evidence from unparsed backend command text', async () => {
-    const tempDir = mkdtempSync(path.join(os.tmpdir(), 'tzudong-storyboard-raw-command-'));
-    const commandPath = path.join(tempDir, 'storyboard-raw-command.sh');
-    writeFileSync(
-      commandPath,
-      [
-        '#!/usr/bin/env bash',
-        'cat >/dev/null',
-        'printf "%s\\n" "# raw command markdown"',
-        'printf "%s\\n" "StoryboardPlannerOutput fabricated 데모/샘플 근거 로컬 히트맵 근거 백엔드 에이전트 근거"',
-      ].join('\n'),
-      'utf8',
-    );
-    chmodSync(commandPath, 0o755);
-    const previousCommand = process.env.STORYBOARD_AGENT_COMMAND;
-    const previousRuntime = process.env.STORYBOARD_AGENT_RUNTIME;
-    const previousDirectory = process.env.TZUYANG_HEATMAP_DIR;
-    process.env.STORYBOARD_AGENT_COMMAND = commandPath;
-    process.env.STORYBOARD_AGENT_RUNTIME = 'codex';
-    process.env.TZUYANG_HEATMAP_DIR = path.join(os.tmpdir(), `missing-tzudong-heatmap-${Date.now()}`);
+test('does not fabricate planner evidence from unparsed backend command text', async () => {
+  const tempDir = mkdtempSync(path.join(os.tmpdir(), 'tzudong-storyboard-raw-command-'));
+  const commandPath = path.join(tempDir, process.platform === 'win32' ? 'storyboard-raw-command.cmd' : 'storyboard-raw-command.sh');
+  writeExecutableShim(
+    commandPath,
+    [
+      'cat >/dev/null',
+      'printf "%s\\n" "# raw command markdown"',
+      'printf "%s\\n" "StoryboardPlannerOutput fabricated 데모/샘플 근거 로컬 히트맵 근거 백엔드 에이전트 근거"',
+    ],
+    [
+      'echo # raw command markdown',
+      'echo StoryboardPlannerOutput fabricated 데모/샘플 근거 로컬 히트맵 근거 백엔드 에이전트 근거',
+    ],
+  );
+  const previousCommand = process.env.STORYBOARD_AGENT_COMMAND;
+  const previousRuntime = process.env.STORYBOARD_AGENT_RUNTIME;
+  const previousDirectory = process.env.TZUYANG_HEATMAP_DIR;
+  process.env.STORYBOARD_AGENT_COMMAND = commandPath;
+  process.env.STORYBOARD_AGENT_RUNTIME = 'codex';
+  process.env.TZUYANG_HEATMAP_DIR = path.join(os.tmpdir(), `missing-tzudong-heatmap-${Date.now()}`);
 
-    try {
-      const { generateStoryboardWithBackendAgent } = await import(`../lib/admin/storyboard/backend-agent.ts?case=${Math.random()}`);
-      const result = await generateStoryboardWithBackendAgent({
-        prompt: 'raw command가 planner 근거를 조작하면 안 돼.',
-        tone: 'warm',
-        targetLengthMinutes: 18,
-        sourceLimit: 20,
-        segmentCount: 6,
-        includeProductionNotes: true,
-        generationMode: 'backend_agent',
-      });
+  try {
+    const { generateStoryboardWithBackendAgent } = await import(`../lib/admin/storyboard/backend-agent.ts?case=${Math.random()}`);
+    const result = await generateStoryboardWithBackendAgent({
+      prompt: 'raw command가 planner 근거를 조작하면 안 돼.',
+      tone: 'warm',
+      targetLengthMinutes: 18,
+      sourceLimit: 20,
+      segmentCount: 6,
+      includeProductionNotes: true,
+      generationMode: 'backend_agent',
+    });
 
-      expect(result.mode).toBe('backend_agent_command');
-      expect(result.storyboard.exportMarkdown).toContain('# raw command markdown');
-      expect(result.planner?.sourceTrace.evidenceLabel).toBe('백엔드 에이전트 근거');
-      expect(result.planner?.sceneDrafts.map((draft) => draft.captionStem).join('\n')).not.toContain('fabricated');
-      expect(result.storyboard.scenes.map((scene) => scene.captionIdea).join('\n')).not.toContain('fabricated');
-      expect(result.backendAnalysis.backendAgent?.rawOutputPreview).toContain('fabricated');
-    } finally {
-      if (previousCommand === undefined) delete process.env.STORYBOARD_AGENT_COMMAND;
-      else process.env.STORYBOARD_AGENT_COMMAND = previousCommand;
-      if (previousRuntime === undefined) delete process.env.STORYBOARD_AGENT_RUNTIME;
-      else process.env.STORYBOARD_AGENT_RUNTIME = previousRuntime;
-      if (previousDirectory === undefined) delete process.env.TZUYANG_HEATMAP_DIR;
-      else process.env.TZUYANG_HEATMAP_DIR = previousDirectory;
-      rmSync(tempDir, { recursive: true, force: true });
-    }
-  });
+    expect(result.mode).toBe('backend_agent_command');
+    expect(result.storyboard.exportMarkdown).toContain('# raw command markdown');
+    expect(result.planner?.sourceTrace.evidenceLabel).toBe('백엔드 에이전트 근거');
+    expect(result.planner?.sceneDrafts.map((draft) => draft.captionStem).join('\n')).not.toContain('fabricated');
+    expect(result.storyboard.scenes.map((scene) => scene.captionIdea).join('\n')).not.toContain('fabricated');
+    expect(result.backendAnalysis.backendAgent?.rawOutputPreview).toContain('fabricated');
+  } finally {
+    if (previousCommand === undefined) delete process.env.STORYBOARD_AGENT_COMMAND;
+    else process.env.STORYBOARD_AGENT_COMMAND = previousCommand;
+    if (previousRuntime === undefined) delete process.env.STORYBOARD_AGENT_RUNTIME;
+    else process.env.STORYBOARD_AGENT_RUNTIME = previousRuntime;
+    if (previousDirectory === undefined) delete process.env.TZUYANG_HEATMAP_DIR;
+    else process.env.TZUYANG_HEATMAP_DIR = previousDirectory;
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+});
 
-  test('uses backend storyboard-agent command output when STORYBOARD_AGENT_COMMAND succeeds', async () => {
-    const tempDir = mkdtempSync(path.join(os.tmpdir(), 'tzudong-storyboard-command-'));
-    const commandPath = path.join(tempDir, 'storyboard-command.sh');
-    writeFileSync(
-      commandPath,
-      [
-        '#!/usr/bin/env bash',
-        'cat >/dev/null',
-        'printf \'%s\\n\' \'{"markdown":"# command storyboard","storyboard":{"exportMarkdown":"# command storyboard","operatorBrief":"command ok"},"final_output":"# command storyboard"}\'',
-      ].join('\n'),
-      'utf8',
-    );
-    chmodSync(commandPath, 0o755);
-    const previousCommand = process.env.STORYBOARD_AGENT_COMMAND;
-    const previousRuntime = process.env.STORYBOARD_AGENT_RUNTIME;
-    const previousDirectory = process.env.TZUYANG_HEATMAP_DIR;
-    process.env.STORYBOARD_AGENT_COMMAND = commandPath;
-    process.env.STORYBOARD_AGENT_RUNTIME = 'codex_cli_oauth';
-    process.env.TZUYANG_HEATMAP_DIR = path.join(os.tmpdir(), `missing-tzudong-heatmap-${Date.now()}`);
+test('uses backend storyboard-agent command output when STORYBOARD_AGENT_COMMAND succeeds', async () => {
+  const tempDir = mkdtempSync(path.join(os.tmpdir(), 'tzudong-storyboard-command-'));
+  const commandPath = path.join(tempDir, process.platform === 'win32' ? 'storyboard-command.cmd' : 'storyboard-command.sh');
+  const payload = '{"markdown":"# command storyboard","storyboard":{"exportMarkdown":"# command storyboard","operatorBrief":"command ok"},"final_output":"# command storyboard"}';
+  writeExecutableShim(
+    commandPath,
+    ['cat >/dev/null', `printf '%s\\n' '${payload}'`],
+    [`echo ${payload}`],
+  );
+  const previousCommand = process.env.STORYBOARD_AGENT_COMMAND;
+  const previousRuntime = process.env.STORYBOARD_AGENT_RUNTIME;
+  const previousDirectory = process.env.TZUYANG_HEATMAP_DIR;
+  process.env.STORYBOARD_AGENT_COMMAND = commandPath;
+  process.env.STORYBOARD_AGENT_RUNTIME = 'codex_cli_oauth';
+  process.env.TZUYANG_HEATMAP_DIR = path.join(os.tmpdir(), `missing-tzudong-heatmap-${Date.now()}`);
 
-    try {
-      const { generateStoryboardWithBackendAgent, getStoryboardBackendAgentStatus } = await import(`../lib/admin/storyboard/backend-agent.ts?case=${Math.random()}`);
-      const status = getStoryboardBackendAgentStatus();
-      const result = await generateStoryboardWithBackendAgent({
-        prompt: 'command mode로 스토리보드를 만들어줘.',
-        tone: 'warm',
-        targetLengthMinutes: 18,
-        sourceLimit: 20,
-        segmentCount: 4,
-        includeProductionNotes: true,
-        generationMode: 'backend_agent',
-      });
+  try {
+    const { generateStoryboardWithBackendAgent, getStoryboardBackendAgentStatus } = await import(`../lib/admin/storyboard/backend-agent.ts?case=${Math.random()}`);
+    const status = getStoryboardBackendAgentStatus();
+    const result = await generateStoryboardWithBackendAgent({
+      prompt: 'command mode로 스토리보드를 만들어줘.',
+      tone: 'warm',
+      targetLengthMinutes: 18,
+      sourceLimit: 20,
+      segmentCount: 4,
+      includeProductionNotes: true,
+      generationMode: 'backend_agent',
+    });
 
-      expect(status.mode).toBe('command');
-      expect(status.commandConfigured).toBe(true);
-      expect(status.commandAvailable).toBe(true);
-      expect(status.commandPath).toBe(commandPath);
-      expect(status.localAdapterAvailable).toBe(true);
-      expect(status.missingPythonModules).toEqual([]);
-      expect(result.mode).toBe('backend_agent_command');
-      expect(result.sourceSummary.dataModeLabel).toBe('백엔드 에이전트 명령 실행');
-      expect(result.backendAnalysis.backendAgent?.invokedCommand).toBe(true);
-      expect(result.backendAnalysis.backendAgent?.commandExitCode).toBe(0);
-      expect(result.storyboard.exportMarkdown).toContain('# command storyboard');
-      expect(result.storyboard.operatorBrief).toBe('command ok');
-    } finally {
-      if (previousCommand === undefined) delete process.env.STORYBOARD_AGENT_COMMAND;
-      else process.env.STORYBOARD_AGENT_COMMAND = previousCommand;
-      if (previousRuntime === undefined) delete process.env.STORYBOARD_AGENT_RUNTIME;
-      else process.env.STORYBOARD_AGENT_RUNTIME = previousRuntime;
-      if (previousDirectory === undefined) delete process.env.TZUYANG_HEATMAP_DIR;
-      else process.env.TZUYANG_HEATMAP_DIR = previousDirectory;
-      rmSync(tempDir, { recursive: true, force: true });
-    }
-  });
+    expect(status.mode).toBe('command');
+    expect(status.commandConfigured).toBe(true);
+    expect(status.commandAvailable).toBe(true);
+    expect(status.commandPath).toBe(commandPath);
+    expect(status.localAdapterAvailable).toBe(true);
+    expect(status.missingPythonModules).toEqual([]);
+    expect(result.mode).toBe('backend_agent_command');
+    expect(result.sourceSummary.dataModeLabel).toBe('백엔드 에이전트 명령 실행');
+    expect(result.backendAnalysis.backendAgent?.invokedCommand).toBe(true);
+    expect(result.backendAnalysis.backendAgent?.commandExitCode).toBe(0);
+    expect(result.storyboard.exportMarkdown).toContain('# command storyboard');
+    expect(result.storyboard.operatorBrief).toBe('command ok');
+  } finally {
+    if (previousCommand === undefined) delete process.env.STORYBOARD_AGENT_COMMAND;
+    else process.env.STORYBOARD_AGENT_COMMAND = previousCommand;
+    if (previousRuntime === undefined) delete process.env.STORYBOARD_AGENT_RUNTIME;
+    else process.env.STORYBOARD_AGENT_RUNTIME = previousRuntime;
+    if (previousDirectory === undefined) delete process.env.TZUYANG_HEATMAP_DIR;
+    else process.env.TZUYANG_HEATMAP_DIR = previousDirectory;
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+});
 
-  test('keeps local adapter fallback and redacts command stdout and stderr when command fails', async () => {
-    const tempDir = mkdtempSync(path.join(os.tmpdir(), 'tzudong-storyboard-command-fail-'));
-    const commandPath = path.join(tempDir, 'storyboard-command-fail.sh');
-    writeFileSync(
-      commandPath,
-      [
-        '#!/usr/bin/env bash',
-        'cat >/dev/null',
-        'echo "OPENAI_API_KEY=sk-proj-fakeSecretValue1234567890" >&1',
-        'echo "SUPABASE_SERVICE_ROLE_KEY=eyJfakeSecretValue1234567890abcdef" >&2',
-        'exit 2',
-      ].join('\n'),
-      'utf8',
-    );
-    chmodSync(commandPath, 0o755);
-    const previousCommand = process.env.STORYBOARD_AGENT_COMMAND;
-    const previousRuntime = process.env.STORYBOARD_AGENT_RUNTIME;
-    process.env.STORYBOARD_AGENT_COMMAND = commandPath;
-    process.env.STORYBOARD_AGENT_RUNTIME = 'codex_cli_oauth';
+test('keeps local adapter fallback and redacts command stdout and stderr when command fails', async () => {
+  const tempDir = mkdtempSync(path.join(os.tmpdir(), 'tzudong-storyboard-command-fail-'));
+  const commandPath = path.join(tempDir, process.platform === 'win32' ? 'storyboard-command-fail.cmd' : 'storyboard-command-fail.sh');
+  writeExecutableShim(
+    commandPath,
+    [
+      'cat >/dev/null',
+      'echo "OPENAI_API_KEY=sk-proj-fakeSecretValue1234567890" >&1',
+      'echo "SUPABASE_SERVICE_ROLE_KEY=eyJfakeSecretValue1234567890abcdef" >&2',
+      'exit 2',
+    ],
+    [
+      'echo OPENAI_API_KEY=sk-proj-fakeSecretValue1234567890',
+      'echo SUPABASE_SERVICE_ROLE_KEY=eyJfakeSecretValue1234567890abcdef 1>&2',
+      'exit /b 2',
+    ],
+  );
+  const previousCommand = process.env.STORYBOARD_AGENT_COMMAND;
+  const previousRuntime = process.env.STORYBOARD_AGENT_RUNTIME;
+  process.env.STORYBOARD_AGENT_COMMAND = commandPath;
+  process.env.STORYBOARD_AGENT_RUNTIME = 'codex_cli_oauth';
 
-    try {
-      const { generateStoryboardWithBackendAgent } = await import(`../lib/admin/storyboard/backend-agent.ts?case=${Math.random()}`);
-      const result = await generateStoryboardWithBackendAgent({
-        prompt: '실패하면 안전하게 fallback 해줘.',
-        tone: 'documentary',
-        targetLengthMinutes: 18,
-        sourceLimit: 20,
-        segmentCount: 4,
-        includeProductionNotes: true,
-        generationMode: 'backend_agent',
-      });
+  try {
+    const { generateStoryboardWithBackendAgent } = await import(`../lib/admin/storyboard/backend-agent.ts?case=${Math.random()}`);
+    const result = await generateStoryboardWithBackendAgent({
+      prompt: '실패하면 안전하게 fallback 해줘.',
+      tone: 'documentary',
+      targetLengthMinutes: 18,
+      sourceLimit: 20,
+      segmentCount: 4,
+      includeProductionNotes: true,
+      generationMode: 'backend_agent',
+    });
 
-      expect(result.mode).toBe('backend_agent_local_adapter');
-      expect(result.backendAnalysis.backendAgent?.invokedCommand).toBe(true);
-      expect(result.backendAnalysis.backendAgent?.commandAvailable).toBe(true);
-      expect(result.backendAnalysis.backendAgent?.commandExitCode).toBe(2);
-      expect(result.backendAnalysis.backendAgent?.rawOutputPreview).toContain('[안전상 제거된 운영 지시]');
-      expect(result.backendAnalysis.backendAgent?.rawOutputPreview).not.toContain('sk-proj-fakeSecretValue');
-      expect(result.backendAnalysis.backendAgent?.rawOutputPreview).not.toContain('eyJfakeSecretValue');
-      expect(result.storyboard.operatorBrief).toContain('backend/storyboard-agent');
-    } finally {
-      if (previousCommand === undefined) delete process.env.STORYBOARD_AGENT_COMMAND;
-      else process.env.STORYBOARD_AGENT_COMMAND = previousCommand;
-      if (previousRuntime === undefined) delete process.env.STORYBOARD_AGENT_RUNTIME;
-      else process.env.STORYBOARD_AGENT_RUNTIME = previousRuntime;
-      rmSync(tempDir, { recursive: true, force: true });
-    }
-  });
+    expect(result.mode).toBe('backend_agent_local_adapter');
+    expect(result.backendAnalysis.backendAgent?.invokedCommand).toBe(true);
+    expect(result.backendAnalysis.backendAgent?.commandAvailable).toBe(true);
+    expect(result.backendAnalysis.backendAgent?.commandExitCode).toBe(2);
+    expect(result.backendAnalysis.backendAgent?.rawOutputPreview).toContain('[안전상 제거된 운영 지시]');
+    expect(result.backendAnalysis.backendAgent?.rawOutputPreview).not.toContain('sk-proj-fakeSecretValue');
+    expect(result.backendAnalysis.backendAgent?.rawOutputPreview).not.toContain('eyJfakeSecretValue');
+    expect(result.storyboard.operatorBrief).toContain('backend/storyboard-agent');
+  } finally {
+    if (previousCommand === undefined) delete process.env.STORYBOARD_AGENT_COMMAND;
+    else process.env.STORYBOARD_AGENT_COMMAND = previousCommand;
+    if (previousRuntime === undefined) delete process.env.STORYBOARD_AGENT_RUNTIME;
+    else process.env.STORYBOARD_AGENT_RUNTIME = previousRuntime;
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+});
 
-  test('rejects unsafe shell command strings instead of executing through a shell', async () => {
-    const tempDir = mkdtempSync(path.join(os.tmpdir(), 'tzudong-storyboard-unsafe-command-'));
-    const commandPath = path.join(tempDir, 'storyboard-command.sh');
-    const markerPath = path.join(tempDir, 'should-not-exist.txt');
-    writeFileSync(
-      commandPath,
-      ['#!/usr/bin/env bash', `touch ${JSON.stringify(markerPath)}`, 'exit 0'].join('\n'),
-      'utf8',
-    );
-    chmodSync(commandPath, 0o755);
-    const previousCommand = process.env.STORYBOARD_AGENT_COMMAND;
-    const previousRuntime = process.env.STORYBOARD_AGENT_RUNTIME;
-    process.env.STORYBOARD_AGENT_COMMAND = `${commandPath};touch ${markerPath}`;
-    process.env.STORYBOARD_AGENT_RUNTIME = 'codex_cli_oauth';
+test('rejects unsafe shell command strings instead of executing through a shell', async () => {
+  const tempDir = mkdtempSync(path.join(os.tmpdir(), 'tzudong-storyboard-unsafe-command-'));
+  const commandPath = path.join(tempDir, process.platform === 'win32' ? 'storyboard-command.cmd' : 'storyboard-command.sh');
+  const markerPath = path.join(tempDir, 'should-not-exist.txt');
+  writeExecutableShim(
+    commandPath,
+    [`touch ${JSON.stringify(markerPath)}`, 'exit 0'],
+    [`type nul > ${JSON.stringify(markerPath)}`, 'exit /b 0'],
+  );
+  const previousCommand = process.env.STORYBOARD_AGENT_COMMAND;
+  const previousRuntime = process.env.STORYBOARD_AGENT_RUNTIME;
+  process.env.STORYBOARD_AGENT_COMMAND = `${commandPath};touch ${markerPath}`;
+  process.env.STORYBOARD_AGENT_RUNTIME = 'codex_cli_oauth';
 
-    try {
-      const { generateStoryboardWithBackendAgent, getStoryboardBackendAgentStatus } = await import(`../lib/admin/storyboard/backend-agent.ts?case=${Math.random()}`);
-      const status = getStoryboardBackendAgentStatus();
-      const result = await generateStoryboardWithBackendAgent({
-        prompt: 'unsafe command는 실행하면 안 돼.',
-        tone: 'documentary',
-        targetLengthMinutes: 18,
-        sourceLimit: 20,
-        segmentCount: 4,
-        includeProductionNotes: true,
-        generationMode: 'backend_agent',
-      });
+  try {
+    const { generateStoryboardWithBackendAgent, getStoryboardBackendAgentStatus } = await import(`../lib/admin/storyboard/backend-agent.ts?case=${Math.random()}`);
+    const status = getStoryboardBackendAgentStatus();
+    const result = await generateStoryboardWithBackendAgent({
+      prompt: 'unsafe command는 실행하면 안 돼.',
+      tone: 'documentary',
+      targetLengthMinutes: 18,
+      sourceLimit: 20,
+      segmentCount: 4,
+      includeProductionNotes: true,
+      generationMode: 'backend_agent',
+    });
 
-      expect(status.mode).toBe('command');
-      expect(status.commandConfigured).toBe(true);
-      expect(status.commandAvailable).toBe(false);
-      expect(status.commandRejectionReason).toBe('unsafe-command-string');
-      expect(result.mode).toBe('backend_agent_local_adapter');
-      expect(result.backendAnalysis.backendAgent?.invokedCommand).toBe(false);
-      expect(result.backendAnalysis.backendAgent?.commandAvailable).toBe(false);
-      expect(existsSync(markerPath)).toBe(false);
-    } finally {
-      if (previousCommand === undefined) delete process.env.STORYBOARD_AGENT_COMMAND;
-      else process.env.STORYBOARD_AGENT_COMMAND = previousCommand;
-      if (previousRuntime === undefined) delete process.env.STORYBOARD_AGENT_RUNTIME;
-      else process.env.STORYBOARD_AGENT_RUNTIME = previousRuntime;
-      rmSync(tempDir, { recursive: true, force: true });
-    }
-  });
+    expect(status.mode).toBe('command');
+    expect(status.commandConfigured).toBe(true);
+    expect(status.commandAvailable).toBe(false);
+    expect(status.commandRejectionReason).toBe('unsafe-command-string');
+    expect(result.mode).toBe('backend_agent_local_adapter');
+    expect(result.backendAnalysis.backendAgent?.invokedCommand).toBe(false);
+    expect(result.backendAnalysis.backendAgent?.commandAvailable).toBe(false);
+    expect(existsSync(markerPath)).toBe(false);
+  } finally {
+    if (previousCommand === undefined) delete process.env.STORYBOARD_AGENT_COMMAND;
+    else process.env.STORYBOARD_AGENT_COMMAND = previousCommand;
+    if (previousRuntime === undefined) delete process.env.STORYBOARD_AGENT_RUNTIME;
+    else process.env.STORYBOARD_AGENT_RUNTIME = previousRuntime;
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+});
 
-  test('runs Python dependency probe from backend agent root when langgraph runtime is requested', async () => {
-    const tempDir = mkdtempSync(path.join(os.tmpdir(), 'tzudong-storyboard-python-probe-'));
-    const pythonPath = path.join(tempDir, 'fake-python.sh');
-    const cwdPath = path.join(tempDir, 'cwd.txt');
-    writeFileSync(
-      pythonPath,
-      ['#!/usr/bin/env bash', `pwd > ${JSON.stringify(cwdPath)}`, 'printf \'%s\\n\' \'["langgraph"]\''].join('\n'),
-      'utf8',
-    );
-    chmodSync(pythonPath, 0o755);
-    const previousCommand = process.env.STORYBOARD_AGENT_COMMAND;
-    const previousRuntime = process.env.STORYBOARD_AGENT_RUNTIME;
-    const previousPython = process.env.STORYBOARD_AGENT_PYTHON;
-    process.env.STORYBOARD_AGENT_COMMAND = '/tmp/storyboard-agent-command-placeholder';
-    process.env.STORYBOARD_AGENT_RUNTIME = 'langgraph';
-    process.env.STORYBOARD_AGENT_PYTHON = pythonPath;
+test('resolves platform-specific Python defaults while preserving explicit override precedence', async () => {
+  const { resolveStoryboardAgentPythonForPlatform } = await import(`../lib/admin/storyboard/backend-agent.ts?case=${Math.random()}`);
 
-    try {
-      const { getStoryboardBackendAgentStatus } = await import(`../lib/admin/storyboard/backend-agent.ts?case=${Math.random()}`);
-      const status = getStoryboardBackendAgentStatus();
-      expect(status.mode).toBe('command');
-      expect(status.missingPythonModules).toEqual(['langgraph']);
-      expect(readFileSync(cwdPath, 'utf8').trim()).toMatch(/backend\/storyboard-agent$/);
-    } finally {
-      if (previousCommand === undefined) delete process.env.STORYBOARD_AGENT_COMMAND;
-      else process.env.STORYBOARD_AGENT_COMMAND = previousCommand;
-      if (previousRuntime === undefined) delete process.env.STORYBOARD_AGENT_RUNTIME;
-      else process.env.STORYBOARD_AGENT_RUNTIME = previousRuntime;
-      if (previousPython === undefined) delete process.env.STORYBOARD_AGENT_PYTHON;
-      else process.env.STORYBOARD_AGENT_PYTHON = previousPython;
-      rmSync(tempDir, { recursive: true, force: true });
-    }
-  });
+  expect(resolveStoryboardAgentPythonForPlatform({}, 'win32')).toBe('python');
+  expect(resolveStoryboardAgentPythonForPlatform({}, 'linux')).toBe('python3');
+  expect(resolveStoryboardAgentPythonForPlatform({ STORYBOARD_AGENT_PYTHON: ' custom-python ' }, 'win32')).toBe('custom-python');
+});
+
+test('uses the Windows-safe default Python binary when langgraph runtime is requested without an override', async () => {
+  const tempDir = mkdtempSync(path.join(os.tmpdir(), 'tzudong-storyboard-python-default-'));
+  const expectedCommandPath = path.join(tempDir, process.platform === 'win32' ? 'python.cmd' : 'python3');
+  const otherCommandPath = path.join(tempDir, process.platform === 'win32' ? 'python3.cmd' : 'python');
+  const expectedMarkerPath = path.join(tempDir, 'expected-called.txt');
+  const otherMarkerPath = path.join(tempDir, 'other-called.txt');
+  const previousCommand = process.env.STORYBOARD_AGENT_COMMAND;
+  const previousRuntime = process.env.STORYBOARD_AGENT_RUNTIME;
+  const previousPython = process.env.STORYBOARD_AGENT_PYTHON;
+  const previousPath = process.env.PATH;
+
+  writePythonShim(expectedCommandPath, expectedMarkerPath, ['langgraph']);
+  writePythonShim(otherCommandPath, otherMarkerPath, ['wrong-binary']);
+
+  process.env.STORYBOARD_AGENT_COMMAND = '/tmp/storyboard-agent-command-placeholder';
+  process.env.STORYBOARD_AGENT_RUNTIME = 'langgraph';
+  delete process.env.STORYBOARD_AGENT_PYTHON;
+  process.env.PATH = `${tempDir}${path.delimiter}${previousPath ?? ''}`;
+
+  try {
+    const { getStoryboardBackendAgentStatus } = await import(`../lib/admin/storyboard/backend-agent.ts?case=${Math.random()}`);
+    const status = getStoryboardBackendAgentStatus();
+    expect(status.mode).toBe('command');
+    expect(status.missingPythonModules).toEqual(['langgraph']);
+    expect(status.pythonRuntimeAvailable).toBe(true);
+    expect(existsSync(expectedMarkerPath)).toBe(true);
+    expect(existsSync(otherMarkerPath)).toBe(false);
+  } finally {
+    if (previousCommand === undefined) delete process.env.STORYBOARD_AGENT_COMMAND;
+    else process.env.STORYBOARD_AGENT_COMMAND = previousCommand;
+    if (previousRuntime === undefined) delete process.env.STORYBOARD_AGENT_RUNTIME;
+    else process.env.STORYBOARD_AGENT_RUNTIME = previousRuntime;
+    if (previousPython === undefined) delete process.env.STORYBOARD_AGENT_PYTHON;
+    else process.env.STORYBOARD_AGENT_PYTHON = previousPython;
+    if (previousPath === undefined) delete process.env.PATH;
+    else process.env.PATH = previousPath;
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('runs Python dependency probe from backend agent root when langgraph runtime is requested', async () => {
+  const tempDir = mkdtempSync(path.join(os.tmpdir(), 'tzudong-storyboard-python-probe-'));
+  const pythonPath = path.join(tempDir, process.platform === 'win32' ? 'fake-python.cmd' : 'fake-python.sh');
+  const markerPath = path.join(tempDir, 'called.txt');
+  const cwdPath = path.join(tempDir, 'cwd.txt');
+  writePythonShim(pythonPath, markerPath, ['langgraph'], cwdPath);
+  const previousCommand = process.env.STORYBOARD_AGENT_COMMAND;
+  const previousRuntime = process.env.STORYBOARD_AGENT_RUNTIME;
+  const previousPython = process.env.STORYBOARD_AGENT_PYTHON;
+  process.env.STORYBOARD_AGENT_COMMAND = '/tmp/storyboard-agent-command-placeholder';
+  process.env.STORYBOARD_AGENT_RUNTIME = 'langgraph';
+  process.env.STORYBOARD_AGENT_PYTHON = pythonPath;
+
+  try {
+    const { getStoryboardBackendAgentStatus } = await import(`../lib/admin/storyboard/backend-agent.ts?case=${Math.random()}`);
+    const status = getStoryboardBackendAgentStatus();
+    expect(status.mode).toBe('command');
+    expect(status.missingPythonModules).toEqual(['langgraph']);
+    expect(status.pythonRuntimeAvailable).toBe(true);
+    expect(existsSync(markerPath)).toBe(true);
+    expect(readFileSync(cwdPath, 'utf8').trim()).toMatch(/backend[\\/]storyboard-agent$/);
+  } finally {
+    if (previousCommand === undefined) delete process.env.STORYBOARD_AGENT_COMMAND;
+    else process.env.STORYBOARD_AGENT_COMMAND = previousCommand;
+    if (previousRuntime === undefined) delete process.env.STORYBOARD_AGENT_RUNTIME;
+    else process.env.STORYBOARD_AGENT_RUNTIME = previousRuntime;
+    if (previousPython === undefined) delete process.env.STORYBOARD_AGENT_PYTHON;
+    else process.env.STORYBOARD_AGENT_PYTHON = previousPython;
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+test('degrades honestly when the configured Python runtime is unavailable', async () => {
+  const previousCommand = process.env.STORYBOARD_AGENT_COMMAND;
+  const previousRuntime = process.env.STORYBOARD_AGENT_RUNTIME;
+  const previousPython = process.env.STORYBOARD_AGENT_PYTHON;
+  const previousDirectory = process.env.TZUYANG_HEATMAP_DIR;
+  process.env.STORYBOARD_AGENT_COMMAND = '../../backend/storyboard-agent/scripts/run-storyboard-agent.py';
+  process.env.STORYBOARD_AGENT_RUNTIME = 'langgraph';
+  process.env.STORYBOARD_AGENT_PYTHON = process.platform === 'win32' ? 'missing-python.exe' : 'missing-python';
+  process.env.TZUYANG_HEATMAP_DIR = path.join(os.tmpdir(), `missing-tzudong-heatmap-${Date.now()}`);
+
+  try {
+    const { generateStoryboardWithBackendAgent, getStoryboardBackendAgentStatus } = await import(`../lib/admin/storyboard/backend-agent.ts?case=${Math.random()}`);
+    const status = getStoryboardBackendAgentStatus();
+    const result = await generateStoryboardWithBackendAgent({
+      prompt: 'python runtime이 없으면 솔직하게 fallback 해줘.',
+      tone: 'documentary',
+      targetLengthMinutes: 18,
+      sourceLimit: 20,
+      segmentCount: 4,
+      includeProductionNotes: true,
+      generationMode: 'backend_agent',
+    });
+
+    expect(status.mode).toBe('command');
+    expect(status.missingPythonModules).toEqual([]);
+    expect(status.pythonRuntimeAvailable).toBe(false);
+    expect(status.pythonRuntimeError).toBeTruthy();
+    expect(result.mode).toBe('backend_agent_local_adapter');
+    expect(result.backendAnalysis.backendAgent?.graph?.status).toBe('fallback');
+    expect(result.backendAnalysis.backendAgent?.graph?.fallbackReason).toBe('unsupported_runtime');
+  } finally {
+    if (previousCommand === undefined) delete process.env.STORYBOARD_AGENT_COMMAND;
+    else process.env.STORYBOARD_AGENT_COMMAND = previousCommand;
+    if (previousRuntime === undefined) delete process.env.STORYBOARD_AGENT_RUNTIME;
+    else process.env.STORYBOARD_AGENT_RUNTIME = previousRuntime;
+    if (previousPython === undefined) delete process.env.STORYBOARD_AGENT_PYTHON;
+    else process.env.STORYBOARD_AGENT_PYTHON = previousPython;
+    if (previousDirectory === undefined) delete process.env.TZUYANG_HEATMAP_DIR;
+    else process.env.TZUYANG_HEATMAP_DIR = previousDirectory;
+  }
+});
+test('treats the Windows Store Python alias message as unavailable runtime', async () => {
+  const tempDir = mkdtempSync(path.join(os.tmpdir(), 'tzudong-storyboard-python-store-alias-'));
+  const pythonPath = path.join(tempDir, process.platform === 'win32' ? 'store-python.cmd' : 'store-python.sh');
+  const previousCommand = process.env.STORYBOARD_AGENT_COMMAND;
+  const previousRuntime = process.env.STORYBOARD_AGENT_RUNTIME;
+  const previousPython = process.env.STORYBOARD_AGENT_PYTHON;
+  const previousDirectory = process.env.TZUYANG_HEATMAP_DIR;
+  writeFailingPythonShim(pythonPath, 'Python was not found');
+
+  process.env.STORYBOARD_AGENT_COMMAND = '../../backend/storyboard-agent/scripts/run-storyboard-agent.py';
+  process.env.STORYBOARD_AGENT_RUNTIME = 'langgraph';
+  process.env.STORYBOARD_AGENT_PYTHON = pythonPath;
+  process.env.TZUYANG_HEATMAP_DIR = path.join(os.tmpdir(), `missing-tzudong-heatmap-${Date.now()}`);
+
+  try {
+    const { generateStoryboardWithBackendAgent, getStoryboardBackendAgentStatus } = await import(`../lib/admin/storyboard/backend-agent.ts?case=${Math.random()}`);
+    const status = getStoryboardBackendAgentStatus();
+    const result = await generateStoryboardWithBackendAgent({
+      prompt: 'store alias 오류도 runtime unavailable로 처리해줘.',
+      tone: 'documentary',
+      targetLengthMinutes: 18,
+      sourceLimit: 20,
+      segmentCount: 4,
+      includeProductionNotes: true,
+      generationMode: 'backend_agent',
+    });
+
+    expect(status.pythonRuntimeAvailable).toBe(false);
+    expect(status.pythonRuntimeError).toContain('Python was not found');
+    expect(result.backendAnalysis.backendAgent?.graph?.fallbackReason).toBe('unsupported_runtime');
+  } finally {
+    if (previousCommand === undefined) delete process.env.STORYBOARD_AGENT_COMMAND;
+    else process.env.STORYBOARD_AGENT_COMMAND = previousCommand;
+    if (previousRuntime === undefined) delete process.env.STORYBOARD_AGENT_RUNTIME;
+    else process.env.STORYBOARD_AGENT_RUNTIME = previousRuntime;
+    if (previousPython === undefined) delete process.env.STORYBOARD_AGENT_PYTHON;
+    else process.env.STORYBOARD_AGENT_PYTHON = previousPython;
+    if (previousDirectory === undefined) delete process.env.TZUYANG_HEATMAP_DIR;
+    else process.env.TZUYANG_HEATMAP_DIR = previousDirectory;
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+});
 
   test('passes selected canvas cut context into storyboard chat agent prompts', async () => {
     const { generateStoryboardChatWithBackendAgent } = await import(`../lib/admin/storyboard/backend-agent.ts?case=${Math.random()}`);
@@ -699,6 +872,66 @@ describe('admin storyboard generator', () => {
     expect(result.backendAgent.promptAddendum).toContain('Canvas focus context');
     expect(result.backendAgent.promptAddendum).toContain('CUT 01');
     expect(result.backendAgent.promptAddendum).toContain('Selected CUT scenePatch');
+  });
+
+  test('treats short greetings as non-mutating chat guidance', async () => {
+    const { generateStoryboardChatWithBackendAgent } = await import(`../lib/admin/storyboard/backend-agent.ts?case=${Math.random()}`);
+    const result = await generateStoryboardChatWithBackendAgent({
+      message: 'ㅎㅇ',
+      currentPrompt: '먹방 피크 기반 스토리보드',
+      baselinePrompt: '먹방 피크 기반 스토리보드',
+      currentTone: 'warm',
+      currentTargetLengthMinutes: 14,
+      currentSegmentCount: 8,
+      currentAvailableSceneCount: 8,
+      generationMode: 'backend_agent',
+      focusContext: {
+        kind: 'cut',
+        label: 'CUT 01 선택됨',
+        detail: '오프닝 훅 · 06:57',
+        sceneNo: 1,
+        promptContext: 'CUT 01을 선택한 상태입니다.',
+        createdAt: '2026-06-05T00:00:00.000Z',
+      },
+    });
+
+    expect(result.shouldGenerate).toBe(false);
+    expect(result.shouldReset).toBe(false);
+    expect(result.canvasPatch.prompt).toBe('먹방 피크 기반 스토리보드');
+    expect(result.canvasPatch.scenePatch).toBeUndefined();
+    expect(result.assistantMessage).toContain('안녕하세요! 스토리보드 도우미입니다.');
+    expect(result.assistantMessage).toContain('화면은 바꾸지 않고');
+    expect(result.assistantMessage).not.toContain('캔버스에 8컷');
+    expect(result.backendAgent.diagnostics.chatIntent).toBe('casual_chat');
+  });
+  test('streams general conversation without mutating storyboard canvas intent', async () => {
+    const { generateStoryboardChatWithBackendAgent } = await import(`../lib/admin/storyboard/backend-agent.ts?case=${Math.random()}`);
+    const result = await generateStoryboardChatWithBackendAgent({
+      message: '이미지는 얼마나 걸려?',
+      currentPrompt: '먹방 피크 기반 스토리보드',
+      baselinePrompt: '먹방 피크 기반 스토리보드',
+      currentTone: 'warm',
+      currentTargetLengthMinutes: 14,
+      currentSegmentCount: 8,
+      currentAvailableSceneCount: 8,
+      generationMode: 'backend_agent',
+      focusContext: {
+        kind: 'cut',
+        label: 'CUT 01 선택됨',
+        detail: '오프닝 훅 · 06:57',
+        sceneNo: 1,
+        promptContext: 'CUT 01을 선택한 상태입니다.',
+        createdAt: '2026-06-05T00:00:00.000Z',
+      },
+    });
+
+    expect(result.shouldGenerate).toBe(false);
+    expect(result.shouldReset).toBe(false);
+    expect(result.canvasPatch.prompt).toBe('먹방 피크 기반 스토리보드');
+    expect(result.canvasPatch.scenePatch).toBeUndefined();
+    expect(result.assistantMessage).toContain('CUT별로 순차 진행');
+    expect(result.assistantMessage).not.toContain('요청을 이해했어요');
+    expect(result.backendAgent.diagnostics.chatIntent).toBe('conversation');
   });
 
   test('keeps beginner review chat as explanation without mutating the selected cut', async () => {
