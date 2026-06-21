@@ -31,6 +31,15 @@ const DEFAULT_THUMBNAIL_AGENT_CODEX_MODEL = 'gpt-5.5';
 const DEFAULT_THUMBNAIL_AGENT_CODEX_EFFORT = 'high';
 const REQUIRED_PYTHON_MODULES = ['langgraph', 'langchain_core', 'langchain_openai'];
 const UNSAFE_COMMAND_PATTERN = /[;&|`$<>()[\]{}!#\n\r]/;
+
+function getRuntimeCwd() {
+  const cwd = Reflect.get(process, 'cwd');
+  return typeof cwd === 'function' ? cwd.call(process) : '.';
+}
+
+function resolveFromRuntimeCwd(...segments: string[]) {
+  return path.resolve(/* turbopackIgnore: true */ getRuntimeCwd(), ...segments);
+}
 const SECRET_PATTERNS = [
   /sk-proj-[A-Za-z0-9_-]{12,}/g,
   /sk-[A-Za-z0-9_-]{12,}/g,
@@ -126,19 +135,19 @@ function firstExistingPath(candidates: string[]) {
 
 function resolveAppWebRoot() {
   return firstExistingPath([
-    process.cwd(),
-    path.resolve(process.cwd(), 'apps/web'),
-    path.resolve(process.cwd(), '..'),
-    path.resolve(process.cwd(), '../..'),
-  ].filter((candidate) => existsSync(path.join(candidate, APP_WEB_MARKER))));
+    getRuntimeCwd(),
+    resolveFromRuntimeCwd('apps/web'),
+    resolveFromRuntimeCwd('..'),
+    resolveFromRuntimeCwd('../..'),
+  ].filter((candidate) => existsSync(/* turbopackIgnore: true */ path.join(candidate, APP_WEB_MARKER))));
 }
 
 const APP_WEB_ROOT = resolveAppWebRoot();
 const BACKEND_AGENT_ROOT = process.env.THUMBNAIL_AGENT_ROOT?.trim()
-  ? path.resolve(APP_WEB_ROOT, process.env.THUMBNAIL_AGENT_ROOT.trim())
+  ? path.resolve(/* turbopackIgnore: true */ APP_WEB_ROOT, process.env.THUMBNAIL_AGENT_ROOT.trim())
   : firstExistingPath([
-    path.resolve(APP_WEB_ROOT, '../../backend/thumbnail-agent'),
-    path.resolve(process.cwd(), 'backend/thumbnail-agent'),
+    path.resolve(/* turbopackIgnore: true */ APP_WEB_ROOT, '../../backend/thumbnail-agent'),
+    resolveFromRuntimeCwd('backend/thumbnail-agent'),
   ]);
 
 function backendAgentPath(relativePath: string) {
@@ -204,8 +213,8 @@ function resolveThumbnailAgentCommand(
     ? (path.isAbsolute(command)
       ? [command]
       : [
-        path.resolve(APP_WEB_ROOT, command),
-        path.resolve(process.cwd(), command),
+        path.resolve(/* turbopackIgnore: true */ APP_WEB_ROOT, command),
+        resolveFromRuntimeCwd(command),
         path.resolve(BACKEND_AGENT_ROOT, command),
       ])
     : [backendAgentPath(BACKEND_AGENT_RUNNER)];
@@ -411,7 +420,7 @@ function runThumbnailAgentCommand(
     }
     const timeoutMs = resolveThumbnailAgentTimeoutMs(env);
     const child = spawn(command.executable, command.args, {
-      cwd: existsSync(BACKEND_AGENT_ROOT) ? BACKEND_AGENT_ROOT : process.cwd(),
+      cwd: existsSync(/* turbopackIgnore: true */ BACKEND_AGENT_ROOT) ? BACKEND_AGENT_ROOT : getRuntimeCwd(),
       shell: false,
       stdio: ['pipe', 'pipe', 'pipe'],
       env: {
