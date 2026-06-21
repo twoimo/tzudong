@@ -9,7 +9,8 @@ const withBundleAnalyzer = bundleAnalyzer({
     enabled: process.env.ANALYZE === 'true',
 });
 
-const shouldUseStandaloneOutput = process.env.NODE_ENV === 'production' && process.env.VERCEL !== '1';
+const isNextBuildCommand = process.argv.some((arg) => arg === 'build');
+const shouldUseStandaloneOutput = process.env.NODE_ENV === 'production' && isNextBuildCommand && process.env.VERCEL !== '1';
 
 const securityHeaders = [
     { key: 'X-Content-Type-Options', value: 'nosniff' },
@@ -164,6 +165,7 @@ const nextConfig = {
     webpack: (config, { dev }) => {
         if (dev) {
             config.devtool = false;
+            config.cache = false;
             const warnings = config.ignoreWarnings ?? [];
             config.ignoreWarnings = [
                 ...warnings,
