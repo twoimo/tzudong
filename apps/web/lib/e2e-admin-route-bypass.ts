@@ -7,6 +7,8 @@ export const E2E_ADMIN_ROUTE_BYPASS_ENV_KEYS = {
 
 export const E2E_ADMIN_ROUTE_BYPASS_CONTEXT = 'playwright'
 export const E2E_ADMIN_ROUTE_BYPASS_RUNTIME = 'local-dev-server'
+export const E2E_ADMIN_ROUTE_BYPASS_PRODUCTION_SMOKE_RUNTIME = 'local-production-bundle-smoke'
+export const E2E_ADMIN_ROUTE_BYPASS_PRODUCTION_SMOKE_ENV = 'E2E_ADMIN_ROUTE_BYPASS_ALLOW_LOCAL_PRODUCTION_SMOKE'
 export const E2E_ADMIN_ROUTE_BYPASS_HEADER = 'x-e2e-admin-bypass'
 export const E2E_ADMIN_ROUTE_BYPASS_TOKEN_HEADER = 'x-e2e-admin-bypass-token'
 
@@ -18,14 +20,33 @@ export function getE2EAdminRouteBypassExpectedToken(
     return env[E2E_ADMIN_ROUTE_BYPASS_ENV_KEYS.token]?.trim() ?? ''
 }
 
+function hasBaseBypassEnv(env: E2EAdminRouteBypassEnv) {
+    return (
+        env[E2E_ADMIN_ROUTE_BYPASS_ENV_KEYS.enabled] === '1' &&
+        env[E2E_ADMIN_ROUTE_BYPASS_ENV_KEYS.context] === E2E_ADMIN_ROUTE_BYPASS_CONTEXT &&
+        Boolean(getE2EAdminRouteBypassExpectedToken(env))
+    )
+}
+
+function isLocalProductionSmokeBypassEnvEnabled(env: E2EAdminRouteBypassEnv) {
+    return (
+        env.NODE_ENV === 'production' &&
+        env.VERCEL !== '1' &&
+        env[E2E_ADMIN_ROUTE_BYPASS_ENV_KEYS.runtime] === E2E_ADMIN_ROUTE_BYPASS_PRODUCTION_SMOKE_RUNTIME &&
+        env[E2E_ADMIN_ROUTE_BYPASS_PRODUCTION_SMOKE_ENV] === '1' &&
+        hasBaseBypassEnv(env)
+    )
+}
+
 export function isE2EAdminRouteBypassEnvEnabled(
     env: E2EAdminRouteBypassEnv = process.env,
 ) {
     return (
-        env.NODE_ENV !== 'production' &&
-        env[E2E_ADMIN_ROUTE_BYPASS_ENV_KEYS.enabled] === '1' &&
-        env[E2E_ADMIN_ROUTE_BYPASS_ENV_KEYS.context] === E2E_ADMIN_ROUTE_BYPASS_CONTEXT &&
-        env[E2E_ADMIN_ROUTE_BYPASS_ENV_KEYS.runtime] === E2E_ADMIN_ROUTE_BYPASS_RUNTIME &&
-        Boolean(getE2EAdminRouteBypassExpectedToken(env))
+        (
+            env.NODE_ENV !== 'production' &&
+            env[E2E_ADMIN_ROUTE_BYPASS_ENV_KEYS.runtime] === E2E_ADMIN_ROUTE_BYPASS_RUNTIME &&
+            hasBaseBypassEnv(env)
+        ) ||
+        isLocalProductionSmokeBypassEnvEnabled(env)
     )
 }
