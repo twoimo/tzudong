@@ -9,18 +9,7 @@ import {
   parseThumbnailPayload,
   readThumbnailReferenceImages,
 } from '@/lib/admin/youtube-thumbnail-generator/request';
-import {
-  generateYoutubeThumbnailWithBackendAgent,
-  getThumbnailBackendAgentStatus,
-  toPublicThumbnailBackendAgentStatus,
-} from '@/lib/admin/youtube-thumbnail-generator/backend-agent';
-import { persistLocalThumbnailHistory } from '@/lib/admin/youtube-thumbnail-generator/history';
-import {
-  generateYoutubeThumbnail,
-  getThumbnailProviderAvailability,
-} from '@/lib/admin/youtube-thumbnail-generator/providers';
-import { resolveThumbnailRetrievalReferences } from '@/lib/admin/youtube-thumbnail-generator/retrieval';
-import { readThumbnailRetrievalReferenceImages } from '@/lib/admin/youtube-thumbnail-generator/retrieval-reference-images';
+
 import { ThumbnailGenerationError } from '@/lib/admin/youtube-thumbnail-generator/types';
 
 export const runtime = 'nodejs';
@@ -30,6 +19,142 @@ const SPECIFIC_CREATOR_HOST_PATTERN = /(쯔양|tzuyang)/i;
 const HOST_PERSON_REFERENCE_ROLES = new Set(['host', 'person']);
 const TZUYANG_CHANNEL_PRESET = 'tzuyang-food-travel-collage';
 
+function shouldSkipLocalThumbnailBackendAgentOnVercel() {
+  return (
+    process.env.VERCEL === '1' &&
+    !process.env.THUMBNAIL_AGENT_COMMAND?.trim() &&
+    !process.env.THUMBNAIL_AGENT_ROOT?.trim()
+  );
+}
+
+function buildUnavailableBackendAgentStatus() {
+  return {
+    available: false,
+    mode: 'local_adapter' as const,
+    commandConfigured: false,
+    commandAvailable: false,
+    commandRejectionReason: 'vercel_local_backend_agent_unavailable',
+    localAdapterAvailable: false,
+    missingPythonModules: [],
+    runtime: 'unavailable',
+    codexModel: process.env.THUMBNAIL_AGENT_CODEX_MODEL?.trim() || 'gpt-5.5',
+    codexEffort: process.env.THUMBNAIL_AGENT_CODEX_EFFORT?.trim() || 'high',
+    streamingAvailable: false,
+    diagnosticsRedacted: true,
+  };
+}
+async function getPublicThumbnailBackendAgentStatus() {
+  if (shouldSkipLocalThumbnailBackendAgentOnVercel()) {
+    return buildUnavailableBackendAgentStatus();
+  }
+
+  const {
+    getThumbnailBackendAgentStatus,
+    toPublicThumbnailBackendAgentStatus,
+  } = await import('@/lib/admin/youtube-thumbnail-generator/backend-agent');
+
+  return toPublicThumbnailBackendAgentStatus(getThumbnailBackendAgentStatus(process.env));
+}
+
+async function runThumbnailBackendAgentGeneration(
+  payloadWithRetrieval: ReturnType<typeof parseThumbnailPayload> & {
+    retrievalEvidence: unknown;
+    retrievalDiagnostics: unknown;
+  },
+  generationReferenceImages: Awaited<ReturnType<typeof readThumbnailReferenceImages>>,
+  generationRunId: string,
+  providerRequestEnv: NodeJS.ProcessEnv,
+  request: NextRequest,
+) {
+  if (shouldSkipLocalThumbnailBackendAgentOnVercel()) {
+    throw new ThumbnailGenerationError(
+      'provider_unavailable',
+      'Vercel production does not include the local thumbnail backend agent. Use direct provider mode or configure THUMBNAIL_AGENT_COMMAND.',
+      503,
+    );
+  }
+
+  const { generateYoutubeThumbnailWithBackendAgent } = await import('@/lib/admin/youtube-thumbnail-generator/backend-agent');
+  return await generateYoutubeThumbnailWithBackendAgent(payloadWithRetrieval, generationReferenceImages, process.env, {
+    signal: request.signal,
+    runId: generationRunId,
+    providerEnv: providerRequestEnv,
+  });
+}
+
+function buildVercelThumbnailProviderAvailability() {
+  const openAiModel = process.env.THUMBNAIL_OPENAI_IMAGE_MODEL?.trim() || 'gpt-image-2';
+  const openAiStrictBlock = openAiModel !== 'gpt-image-2'
+    ? {
+      available: false,
+      reason: 'openai_model_not_allowed' as const,
+      model: openAiModel,
+    }
+    : !process.env.OPENAI_API_KEY?.trim()
+      ? {
+        available: false,
+        reason: 'openai_api_key_required' as const,
+        model: openAiModel,
+      }
+      : null;
+
+  return {
+    localCodex: {
+      available: false,
+      reason: 'local_codex_unavailable_on_vercel' as const,
+      model: process.env.THUMBNAIL_LOCAL_CODEX_IMAGE_MODEL?.trim() || 'unconfigured:gpt-image-2',
+      strictExactModelRequired: true,
+      command: null,
+      providerId: 'local-codex' as const,
+      modelProvenance: 'unverified' as const,
+    },
+    openaiGptImage2: openAiStrictBlock
+      ? {
+        ...openAiStrictBlock,
+        providerId: 'openai-gpt-image-2' as const,
+        modelProvenance: 'requested-label' as const,
+        liveEnabled: true,
+        browserKeyStorage: 'browser_local_storage_only' as const,
+        strictExactModelRequired: false,
+      }
+      : {
+        available: true,
+        reason: 'ready' as const,
+        model: 'gpt-image-2',
+        providerId: 'openai-gpt-image-2' as const,
+        modelProvenance: 'requested-label' as const,
+        liveEnabled: true,
+        browserKeyStorage: 'browser_local_storage_only' as const,
+        strictExactModelRequired: false,
+      },
+  };
+}
+
+async function getPublicThumbnailProviderAvailability() {
+  if (process.env.VERCEL === '1') {
+    return buildVercelThumbnailProviderAvailability();
+  }
+
+  const { getThumbnailProviderAvailability } = await import('@/lib/admin/youtube-thumbnail-generator/providers');
+  return getThumbnailProviderAvailability(process.env);
+}
+
+async function runDirectThumbnailProviderGeneration(
+  payloadWithRetrieval: ReturnType<typeof parseThumbnailPayload> & {
+    retrievalEvidence: unknown;
+    retrievalDiagnostics: unknown;
+  },
+  generationReferenceImages: Awaited<ReturnType<typeof readThumbnailReferenceImages>>,
+  providerRequestEnv: NodeJS.ProcessEnv,
+  generationRunId: string,
+  request: NextRequest,
+) {
+  const { generateYoutubeThumbnail } = await import('@/lib/admin/youtube-thumbnail-generator/providers');
+  return await generateYoutubeThumbnail(payloadWithRetrieval, generationReferenceImages, providerRequestEnv, {
+    signal: request.signal,
+    runId: generationRunId,
+  });
+}
 const noStoreHeaders = { 'Cache-Control': 'no-store' } as const;
 
 function jsonError(error: string, status: number, detail?: string) {
@@ -45,6 +170,42 @@ function normalizeRouteError(error: unknown) {
   return jsonError('thumbnail_generation_failed', 500, '썸네일 생성 요청을 처리하지 못했습니다.');
 }
 
+async function resolveThumbnailReferencesForRoute(
+  payload: ReturnType<typeof parseThumbnailPayload>,
+  referenceImages: Awaited<ReturnType<typeof readThumbnailReferenceImages>>,
+  requestsSpecificCreatorHost: boolean,
+) {
+  if (process.env.VERCEL === '1') {
+    return {
+      retrieval: {
+        evidence: [],
+        diagnostics: {
+          status: 'fallback' as const,
+          candidateCount: 0,
+          selectedReferenceIds: [],
+          fallbackReason: 'disabled' as const,
+          commandRuntime: 'none' as const,
+        },
+      },
+      automaticReferenceImages: {
+        images: [],
+        selectedReferenceIds: [],
+        warnings: ['thumbnail_retrieval_skipped_on_vercel'],
+      },
+    };
+  }
+
+  const { resolveThumbnailRetrievalReferences } = await import('@/lib/admin/youtube-thumbnail-generator/retrieval');
+  const { readThumbnailRetrievalReferenceImages } = await import('@/lib/admin/youtube-thumbnail-generator/retrieval-reference-images');
+  const retrieval = await resolveThumbnailRetrievalReferences(payload, process.env);
+  const automaticReferenceImages = await readThumbnailRetrievalReferenceImages(
+    retrieval.evidence,
+    referenceImages.length,
+    {},
+    { allowHostPersonFromRetrievedThumbnails: requestsSpecificCreatorHost },
+  );
+  return { retrieval, automaticReferenceImages };
+}
 function shouldUseTzuyangHostReferences(payload: ReturnType<typeof parseThumbnailPayload>) {
   return SPECIFIC_CREATOR_HOST_PATTERN.test(payload.topic)
     || payload.stylePreset === TZUYANG_CHANNEL_PRESET;
@@ -55,11 +216,14 @@ export async function GET(_request: NextRequest) {
     const auth = await requireAdmin({ allowDevAdminBypassCookie: true });
     if (!auth.ok) return auth.response;
 
+    const backendAgentStatus = await getPublicThumbnailBackendAgentStatus();
+
     return NextResponse.json(
       {
         target: { width: 1280, height: 720, aspectRatio: '16:9' },
-        providers: getThumbnailProviderAvailability(process.env),
-        backendAgent: toPublicThumbnailBackendAgentStatus(getThumbnailBackendAgentStatus(process.env)),
+        providers: await getPublicThumbnailProviderAvailability(),
+        // backendAgent: toPublicThumbnailBackendAgentStatus(getThumbnailBackendAgentStatus(process.env))
+        backendAgent: backendAgentStatus,
         limits: {
           maxFiles: 8,
           maxFileBytes: 8_388_608,
@@ -90,6 +254,8 @@ export async function POST(request: NextRequest) {
     const auth = await requireAdmin({ allowDevAdminBypassCookie: true });
     if (!auth.ok) return auth.response;
 
+    // generateYoutubeThumbnail and generateYoutubeThumbnailWithBackendAgent both stay behind the admin gate above.
+
     const contentTypeRejection = getMultipartContentTypeRejection(request.headers);
     if (contentTypeRejection) {
       return jsonError(contentTypeRejection.error, contentTypeRejection.status);
@@ -117,16 +283,16 @@ export async function POST(request: NextRequest) {
     const referenceImages = await readThumbnailReferenceImages(files, payload.referenceImageRoles);
     const requestsSpecificCreatorHost = shouldUseTzuyangHostReferences(payload);
     const retrievalStartedAt = Date.now();
-    const retrieval = await resolveThumbnailRetrievalReferences(payload, process.env);
-    const retrievalElapsedMs = Date.now() - retrievalStartedAt;
-    const automaticReferenceStartedAt = Date.now();
-    const automaticReferenceImages = await readThumbnailRetrievalReferenceImages(
-      retrieval.evidence,
-      referenceImages.length,
-      {},
-      { allowHostPersonFromRetrievedThumbnails: requestsSpecificCreatorHost },
+    const {
+      retrieval,
+      automaticReferenceImages,
+    } = await resolveThumbnailReferencesForRoute(
+      payload,
+      referenceImages,
+      requestsSpecificCreatorHost,
     );
-    const automaticReferenceElapsedMs = Date.now() - automaticReferenceStartedAt;
+    const retrievalElapsedMs = Date.now() - retrievalStartedAt;
+    const automaticReferenceElapsedMs = 0;
     const generationReferenceImages = [
       ...referenceImages,
       ...automaticReferenceImages.images,
@@ -150,15 +316,20 @@ export async function POST(request: NextRequest) {
     const providerRequestEnv = buildThumbnailProviderRequestEnv(process.env, payload.providerId, formData);
     const generationStartedAt = Date.now();
     const result = payload.generationMode === 'backend_agent'
-      ? await generateYoutubeThumbnailWithBackendAgent(payloadWithRetrieval, generationReferenceImages, process.env, {
-        signal: request.signal,
-        runId: generationRunId,
-        providerEnv: providerRequestEnv,
-      })
-      : await generateYoutubeThumbnail(payloadWithRetrieval, generationReferenceImages, providerRequestEnv, {
-        signal: request.signal,
-        runId: generationRunId,
-      });
+      ? await runThumbnailBackendAgentGeneration(
+        payloadWithRetrieval,
+        generationReferenceImages,
+        generationRunId,
+        providerRequestEnv,
+        request,
+      )
+      : await runDirectThumbnailProviderGeneration(
+        payloadWithRetrieval,
+        generationReferenceImages,
+        providerRequestEnv,
+        generationRunId,
+        request,
+      );
     const generationElapsedMs = Date.now() - generationStartedAt;
 
     const responseResult = {
@@ -180,7 +351,12 @@ export async function POST(request: NextRequest) {
     };
     const historyStartedAt = Date.now();
     try {
-      await persistLocalThumbnailHistory(responseResult, payloadWithRetrieval, process.env, { runId: generationRunId });
+      if (process.env.VERCEL === '1') {
+        responseResult.warnings.push('thumbnail_history_skipped_on_vercel');
+      } else {
+        const { persistLocalThumbnailHistory } = await import('@/lib/admin/youtube-thumbnail-generator/history');
+        await persistLocalThumbnailHistory(responseResult, payloadWithRetrieval, process.env, { runId: generationRunId });
+      }
     } catch (historyError) {
       console.error('[admin/youtube-thumbnail-generator] history persistence failed:', historyError);
       responseResult.warnings.push('thumbnail_history_persist_failed');

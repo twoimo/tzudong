@@ -8792,6 +8792,7 @@ function AdminYoutubeThumbnailModuleLoadingSkeleton() {
   );
 }
 
+const EMPTY_SEARCH_PARAMS = new URLSearchParams();
 
 export function AdminConsoleOverview({
   initialStoryboardResult = null,
@@ -8799,7 +8800,7 @@ export function AdminConsoleOverview({
   initialStoryboardResult?: StoryboardInitialResult | null;
 }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams() ?? EMPTY_SEARCH_PARAMS;
   const requestedModuleId = getAdminModuleIdFromSearchParams(searchParams);
   const { user, isLoading: authLoading } = useAuth();
   const [hasHydrated, setHasHydrated] = useState(false);

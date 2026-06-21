@@ -71,6 +71,7 @@ import {
 
 const PAGE_SIZE = 10; // 한 번에 로드할 레코드 수
 const STORAGE_KEY = 'adminEvaluationPageState'; // localStorage 키
+const EMPTY_SEARCH_PARAMS = new URLSearchParams();
 const EVALUATION_FILTER_KEYS = [
   'visit_authenticity',
   'rb_inference_score',
@@ -389,7 +390,7 @@ function AdminEvaluationPage({
 }) {
   const { toast } = useToast();
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams() ?? EMPTY_SEARCH_PARAMS;
   const { user, isAdmin, isLoading: authLoading } = useAuth();
 
   const requireAdminUserId = () => {
