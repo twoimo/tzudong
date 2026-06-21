@@ -107,6 +107,7 @@ export type AdminSystemRunDailyStatus = {
   policyMode?: string;
   runtime?: AdminSystemRunDailyRuntime;
   gdriveUpload?: AdminSystemRunDailyGdriveUpload;
+  detail?: string;
   stale: boolean;
   checkedAt: string;
 };
