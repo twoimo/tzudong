@@ -55,6 +55,11 @@ describe("admin youtube thumbnail history", () => {
     expect(componentSource).toContain('data-thumbnail-history-panel="true"');
     expect(componentSource).toContain('data-thumbnail-history-run="true"');
     expect(componentSource).toContain('data-thumbnail-history-load-run=');
+    expect(componentSource).toContain('data-thumbnail-history-source-label="true"');
+    expect(componentSource).toContain('data-thumbnail-history-provenance-label="true"');
+    expect(componentSource).toContain('공용 예시 미리보기');
+    expect(componentSource).toContain('실제 히스토리');
+    expect(componentSource).toContain('출처 확인 필요');
     expect(componentSource).not.toContain("THUMBNAIL_QA_HISTORY_URL");
     expect(componentSource).not.toContain("THUMBNAIL_QA_HISTORY_JSON_URL");
     expect(componentSource).not.toContain('data-thumbnail-qa-history-link=');
