@@ -1,8 +1,8 @@
 # 2026-06-20 RLM 운영 요약
 
-## 한 줄 결론
-지금 바로 손대야 할 운영 이슈는 **geocoding backlog 누적**, **run_daily live manifest 부재**, **evaluation/LAAJ contract drift**, **storyboard fallback fixture 분포 괴리**다.
-
+## 상태
+이 문서는 **2026-06-20 시점의 역사적 요약본**이며 현재 운영 수치의 source of truth가 아니다.
+현재 geocoding backlog 수치는 `backend/docs/pending-geocoding-backlog-20260507.md`를 보고, 현재 코드 기준 운영 상태는 `/admin`의 운영 상태 센터를 기준으로 확인한다.
 ## 우선순위
 ### P0
 1. **run_daily live manifest 수집/노출 복구**
@@ -13,12 +13,12 @@
      - weak rule location evidence: **366 / 379**
      - missing pending-state encoding: **639 / 667**
      - LAAJ wrapper/schema drift: **790 / 790** 영향 (`786` wrapper + `4` missing families)
-     - null-coordinate pending transforms: **636건**
+     - null-coordinate pending transforms: **637건**
    - 현재 `python -m unittest backend.pipeline.test_data_contracts_unittest`는 **19 tests / 1 failure**다.
 
 ### P1
 3. **geocoding backlog 수동 검수 큐 재정렬**
-   - backlog: **636 / 1267 (50.2%)**, 문서 스냅샷보다 **+19건**.
+   - backlog: **637 / 1269 (50.2%)**, direct manual review lane **11건**.
    - 즉시 검수 가치가 큰 direct same-name coordinate reuse 후보: **11건**.
    - stage-1은 해외/야시장형 실패가 많고, stage-2는 국내 주소 보유 + 20m miss가 대부분이다.
 4. **storyboard local-history readback 복구 + tie-bias 수치화**
@@ -30,7 +30,7 @@
 
 ## 영역별 핵심 관찰
 ### 1) Geocoding backlog
-- stage 분포: **1단계 316 / 2단계 319**
+- stage 분포: **1단계 317 / 2단계 319**
 - 반복 상호는 얕지만, 묶음 검수 포인트는 분명하다.
 - 우선 수동 검수 추천:
   - direct suggestion 11건 먼저
