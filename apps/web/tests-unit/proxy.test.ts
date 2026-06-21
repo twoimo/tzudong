@@ -5,6 +5,8 @@ import {
     E2E_ADMIN_ROUTE_BYPASS_ENV_KEYS,
     E2E_ADMIN_ROUTE_BYPASS_HEADER,
     E2E_ADMIN_ROUTE_BYPASS_RUNTIME,
+    E2E_ADMIN_ROUTE_BYPASS_PRODUCTION_SMOKE_ENV,
+    E2E_ADMIN_ROUTE_BYPASS_PRODUCTION_SMOKE_RUNTIME,
     E2E_ADMIN_ROUTE_BYPASS_TOKEN_HEADER,
 } from '@/lib/e2e-admin-route-bypass'
 import {
@@ -18,6 +20,7 @@ function loadProxyModule() {
 }
 
 const ORIGINAL_NODE_ENV = process.env.NODE_ENV
+const ORIGINAL_VERCEL = process.env.VERCEL
 const ADMIN_BYPASS_TOKEN = 'test-admin-bypass-token'
 
 function resetAdminBypassEnv() {
@@ -25,11 +28,17 @@ function resetAdminBypassEnv() {
     delete process.env[E2E_ADMIN_ROUTE_BYPASS_ENV_KEYS.context]
     delete process.env[E2E_ADMIN_ROUTE_BYPASS_ENV_KEYS.runtime]
     delete process.env[E2E_ADMIN_ROUTE_BYPASS_ENV_KEYS.token]
+    delete process.env[E2E_ADMIN_ROUTE_BYPASS_PRODUCTION_SMOKE_ENV]
 
     if (ORIGINAL_NODE_ENV === undefined) {
         delete process.env.NODE_ENV
     } else {
         process.env.NODE_ENV = ORIGINAL_NODE_ENV
+    }
+    if (ORIGINAL_VERCEL === undefined) {
+        delete process.env.VERCEL
+    } else {
+        process.env.VERCEL = ORIGINAL_VERCEL
     }
 }
 
@@ -174,6 +183,55 @@ test('관리자 우회는 runtime 마커가 없거나 production이면 세션 �
 
         expect(missingRuntimeResponse.headers.get('x-auth-checked')).toBe('1')
         expect(productionResponse.headers.get('x-auth-checked')).toBe('1')
+        expect(updateSessionCalls).toBe(2)
+    } finally {
+        resetAdminBypassEnv()
+    }
+})
+
+test('로컬 production bundle smoke 우회는 명시 플래그와 로컬 호스트에서만 허용된다', async () => {
+    process.env.NODE_ENV = 'production'
+    process.env.VERCEL = '0'
+    process.env[E2E_ADMIN_ROUTE_BYPASS_ENV_KEYS.enabled] = '1'
+    process.env[E2E_ADMIN_ROUTE_BYPASS_ENV_KEYS.context] = E2E_ADMIN_ROUTE_BYPASS_CONTEXT
+    process.env[E2E_ADMIN_ROUTE_BYPASS_ENV_KEYS.runtime] = E2E_ADMIN_ROUTE_BYPASS_PRODUCTION_SMOKE_RUNTIME
+    process.env[E2E_ADMIN_ROUTE_BYPASS_ENV_KEYS.token] = `  ${ADMIN_BYPASS_TOKEN}  `
+    process.env[E2E_ADMIN_ROUTE_BYPASS_PRODUCTION_SMOKE_ENV] = '1'
+
+    try {
+        let updateSessionCalls = 0
+
+        mock.module('@/lib/supabase/middleware', () => ({
+            updateSession: async () => {
+                updateSessionCalls += 1
+                return NextResponse.json({ ok: true }, { headers: { 'x-auth-checked': '1' } })
+            },
+        }))
+
+        const { proxy } = await loadProxyModule()
+        const allowedResponse = await proxy(
+            new NextRequest('http://localhost:3000/admin?module=storyboard', {
+                headers: adminBypassHeaders(),
+            }),
+        )
+
+        process.env.VERCEL = '1'
+        const vercelResponse = await proxy(
+            new NextRequest('http://localhost:3000/admin?module=storyboard', {
+                headers: adminBypassHeaders(),
+            }),
+        )
+        process.env.VERCEL = '0'
+
+        const externalHostResponse = await proxy(
+            new NextRequest('https://example.com/admin?module=storyboard', {
+                headers: adminBypassHeaders({ host: 'example.com' }),
+            }),
+        )
+
+        expect(allowedResponse.headers.get('x-auth-checked')).toBeNull()
+        expect(vercelResponse.headers.get('x-auth-checked')).toBe('1')
+        expect(externalHostResponse.headers.get('x-auth-checked')).toBe('1')
         expect(updateSessionCalls).toBe(2)
     } finally {
         resetAdminBypassEnv()
