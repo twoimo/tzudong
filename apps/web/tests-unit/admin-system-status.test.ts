@@ -960,3 +960,236 @@ describe('admin system status API route', () => {
     });
 
 });
+
+function buildStatusCenterPayload(
+    runDailyPatch: Partial<NonNullable<AdminSystemStatusResponse['runDaily']>> = {},
+): AdminSystemStatusResponse {
+    return {
+        asOf: '2026-06-21T00:00:00.000Z',
+        keys: {
+            supabaseUrl: true,
+            supabaseServiceRoleKey: true,
+            geminiServerKey: true,
+            openaiServerKey: true,
+            anthropicServerKey: true,
+            nanoBanana2Key: true,
+        },
+        storyboardAgent: { enabled: true, configured: true, reachable: true, checkedAt: '2026-06-21T00:00:00.000Z' },
+        bgeEmbedding: { enabled: false, configured: false, reachable: false, checkedAt: '2026-06-21T00:00:00.000Z' },
+        frameCaption: { configured: true, localPathConfigured: true, localPathAvailable: true, gdrivePathConfigured: false, reachable: true, checkedAt: '2026-06-21T00:00:00.000Z' },
+        runDaily: {
+            executable: true,
+            latestManifestPath: '/tmp/current-summary.json',
+            latestLogPath: '/tmp/daily.log',
+            finalStatus: 'OK',
+            failedRequiredSteps: [],
+            optionalSkips: [],
+            downstreamSkips: [],
+            stale: false,
+            checkedAt: '2026-06-21T00:00:00.000Z',
+            ...runDailyPatch,
+        },
+        checklist: [],
+    };
+}
+describe('admin system status center view model', () => {
+    test('renders healthy only when all evidence is current, complete, and queues are empty', async () => {
+        const { buildAdminStatusCenterViewModel } = await import(`../lib/admin/system-status/view-model.ts?cache=${Math.random()}`);
+        const viewModel = buildAdminStatusCenterViewModel(buildStatusCenterPayload({
+            gdriveUpload: {
+                status: 'complete',
+                terminalIncomplete: false,
+                completionProof: 'remote_size_check',
+            },
+        }), { submissions: 0, reviews: 0 });
+
+        expect(viewModel.overallState).toBe('healthy');
+        expect(viewModel.metrics.every((metric) => metric.state === 'healthy')).toBe(true);
+    });
+
+    test('fails closed when run_daily evidence is stale', async () => {
+        const { buildAdminStatusCenterViewModel } = await import(`../lib/admin/system-status/view-model.ts?cache=${Math.random()}`);
+        const viewModel = buildAdminStatusCenterViewModel(buildStatusCenterPayload({
+            stale: true,
+            gdriveUpload: {
+                status: 'complete',
+                terminalIncomplete: false,
+                completionProof: 'remote_size_check',
+            },
+        }), { submissions: 0, reviews: 0 });
+
+        expect(viewModel.overallState).toBe('degraded');
+        expect(viewModel.metrics.find((metric) => metric.id === 'run_daily')?.state).toBe('degraded');
+        expect(viewModel.metrics.find((metric) => metric.id === 'artifacts')?.state).toBe('degraded');
+    });
+
+    test('keeps WARN and skipped run_daily evidence partial instead of healthy', async () => {
+        const { buildAdminStatusCenterViewModel } = await import(`../lib/admin/system-status/view-model.ts?cache=${Math.random()}`);
+        const viewModel = buildAdminStatusCenterViewModel(buildStatusCenterPayload({
+            finalStatus: 'WARN',
+            optionalSkips: ['gdrive_upload'],
+            downstreamSkips: ['admin_data_quality'],
+            gdriveUpload: {
+                status: 'complete',
+                terminalIncomplete: false,
+                completionProof: 'remote_size_check',
+            },
+        }), { submissions: 0, reviews: 0 });
+
+        expect(viewModel.overallState).toBe('partial');
+        expect(viewModel.metrics.find((metric) => metric.id === 'run_daily')?.state).toBe('partial');
+        expect(viewModel.metrics.find((metric) => metric.id === 'gdrive')?.state).toBe('healthy');
+    });
+    test('keeps UNKNOWN run_daily final status out of healthy state', async () => {
+        const { buildAdminStatusCenterViewModel } = await import(`../lib/admin/system-status/view-model.ts?cache=${Math.random()}`);
+        const viewModel = buildAdminStatusCenterViewModel(buildStatusCenterPayload({
+            finalStatus: 'UNKNOWN',
+            gdriveUpload: {
+                status: 'complete',
+                terminalIncomplete: false,
+                completionProof: 'remote_size_check',
+            },
+        }), { submissions: 0, reviews: 0 });
+
+        expect(viewModel.overallState).toBe('unknown');
+        expect(viewModel.metrics.find((metric) => metric.id === 'run_daily')?.state).toBe('unknown');
+        expect(viewModel.metrics.find((metric) => metric.id === 'artifacts')?.state).toBe('healthy');
+    });
+    test('fails closed when manifest evidence is missing', async () => {
+        const { buildAdminStatusCenterViewModel } = await import(`../lib/admin/system-status/view-model.ts?cache=${Math.random()}`);
+        const viewModel = buildAdminStatusCenterViewModel({
+            asOf: '2026-06-21T00:00:00.000Z',
+            keys: {
+                supabaseUrl: true,
+                supabaseServiceRoleKey: true,
+                geminiServerKey: true,
+                openaiServerKey: true,
+                anthropicServerKey: true,
+                nanoBanana2Key: true,
+            },
+            storyboardAgent: { enabled: true, configured: true, reachable: true, checkedAt: '2026-06-21T00:00:00.000Z' },
+            bgeEmbedding: { enabled: false, configured: false, reachable: false, checkedAt: '2026-06-21T00:00:00.000Z' },
+            frameCaption: { configured: true, localPathConfigured: true, localPathAvailable: true, gdrivePathConfigured: false, reachable: true, checkedAt: '2026-06-21T00:00:00.000Z' },
+            runDaily: {
+                executable: true,
+                latestLogPath: '/tmp/daily.log',
+                failedRequiredSteps: [],
+                optionalSkips: [],
+                downstreamSkips: [],
+                stale: false,
+                checkedAt: '2026-06-21T00:00:00.000Z',
+            },
+            checklist: [],
+        }, { submissions: 0, reviews: 0 });
+
+        expect(viewModel.overallState).toBe('degraded');
+        expect(viewModel.metrics.find((metric) => metric.id === 'run_daily')?.state).toBe('degraded');
+        expect(viewModel.metrics.find((metric) => metric.id === 'artifacts')?.value).toBe('manifest 없음');
+    });
+
+    test('treats malformed manifest reads as unknown instead of healthy', async () => {
+        const { buildAdminStatusCenterViewModel } = await import(`../lib/admin/system-status/view-model.ts?cache=${Math.random()}`);
+        const viewModel = buildAdminStatusCenterViewModel({
+            asOf: '2026-06-21T00:00:00.000Z',
+            keys: {
+                supabaseUrl: true,
+                supabaseServiceRoleKey: true,
+                geminiServerKey: true,
+                openaiServerKey: true,
+                anthropicServerKey: true,
+                nanoBanana2Key: true,
+            },
+            storyboardAgent: { enabled: true, configured: true, reachable: true, checkedAt: '2026-06-21T00:00:00.000Z' },
+            bgeEmbedding: { enabled: false, configured: false, reachable: false, checkedAt: '2026-06-21T00:00:00.000Z' },
+            frameCaption: { configured: true, localPathConfigured: true, localPathAvailable: true, gdrivePathConfigured: false, reachable: true, checkedAt: '2026-06-21T00:00:00.000Z' },
+            runDaily: {
+                executable: true,
+                latestManifestPath: '/tmp/current-summary.json',
+                latestLogPath: '/tmp/daily.log',
+                detail: 'Unexpected token',
+                failedRequiredSteps: [],
+                optionalSkips: [],
+                downstreamSkips: [],
+                stale: false,
+                checkedAt: '2026-06-21T00:00:00.000Z',
+            },
+            checklist: [],
+        }, { submissions: 1, reviews: 2 });
+
+        expect(viewModel.overallState).not.toBe('healthy');
+        expect(viewModel.metrics.find((metric) => metric.id === 'artifacts')?.state).toBe('unknown');
+        expect(viewModel.metrics.find((metric) => metric.id === 'run_daily')?.value).toBe('읽기 실패');
+    });
+
+    test('keeps partial GDrive proof and pending work out of healthy state', async () => {
+        const { buildAdminStatusCenterViewModel } = await import(`../lib/admin/system-status/view-model.ts?cache=${Math.random()}`);
+        const viewModel = buildAdminStatusCenterViewModel({
+            asOf: '2026-06-21T00:00:00.000Z',
+            keys: {
+                supabaseUrl: true,
+                supabaseServiceRoleKey: true,
+                geminiServerKey: true,
+                openaiServerKey: true,
+                anthropicServerKey: true,
+                nanoBanana2Key: true,
+            },
+            storyboardAgent: { enabled: true, configured: true, reachable: true, checkedAt: '2026-06-21T00:00:00.000Z' },
+            bgeEmbedding: { enabled: false, configured: false, reachable: false, checkedAt: '2026-06-21T00:00:00.000Z' },
+            frameCaption: { configured: true, localPathConfigured: true, localPathAvailable: true, gdrivePathConfigured: false, reachable: true, checkedAt: '2026-06-21T00:00:00.000Z' },
+            runDaily: {
+                executable: true,
+                latestManifestPath: '/tmp/current-summary.json',
+                latestLogPath: '/tmp/daily.log',
+                finalStatus: 'OK',
+                failedRequiredSteps: [],
+                optionalSkips: [],
+                downstreamSkips: [],
+                gdriveUpload: {
+                    status: 'backfill_required',
+                    terminalIncomplete: true,
+                    completionProof: 'rclone_exit_zero',
+                },
+                stale: false,
+                checkedAt: '2026-06-21T00:00:00.000Z',
+            },
+            checklist: [],
+        }, { submissions: 3, reviews: 4 });
+
+        expect(viewModel.overallState).toBe('partial');
+        expect(viewModel.metrics.find((metric) => metric.id === 'gdrive')?.state).toBe('partial');
+        expect(viewModel.metrics.find((metric) => metric.id === 'pending')?.value).toBe('7건');
+    });
+
+    test('keeps missing log or unreadable pending counts out of healthy state', async () => {
+        const { buildAdminStatusCenterViewModel } = await import(`../lib/admin/system-status/view-model.ts?cache=${Math.random()}`);
+        const viewModel = buildAdminStatusCenterViewModel({
+            asOf: '2026-06-21T00:00:00.000Z',
+            keys: {
+                supabaseUrl: true,
+                supabaseServiceRoleKey: true,
+                geminiServerKey: true,
+                openaiServerKey: true,
+                anthropicServerKey: true,
+                nanoBanana2Key: true,
+            },
+            storyboardAgent: { enabled: true, configured: true, reachable: true, checkedAt: '2026-06-21T00:00:00.000Z' },
+            bgeEmbedding: { enabled: false, configured: false, reachable: false, checkedAt: '2026-06-21T00:00:00.000Z' },
+            frameCaption: { configured: true, localPathConfigured: true, localPathAvailable: true, gdrivePathConfigured: false, reachable: true, checkedAt: '2026-06-21T00:00:00.000Z' },
+            runDaily: {
+                executable: true,
+                latestManifestPath: '/tmp/current-summary.json',
+                finalStatus: 'OK',
+                failedRequiredSteps: [],
+                optionalSkips: [],
+                downstreamSkips: [],
+                stale: false,
+                checkedAt: '2026-06-21T00:00:00.000Z',
+            },
+            checklist: [],
+        }, { submissions: null, reviews: null });
+
+        expect(viewModel.overallState).not.toBe('healthy');
+        expect(viewModel.metrics.find((metric) => metric.id === 'artifacts')?.value).toBe('로그 없음');
+        expect(viewModel.metrics.find((metric) => metric.id === 'pending')?.state).toBe('unknown');
+    });
+});

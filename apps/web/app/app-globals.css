@@ -49,6 +49,85 @@
   /* Chrome, Safari and Opera */
 }
 
+@keyframes storyboard-glass-shimmer {
+  0% {
+    transform: translateX(-20%) skewX(-12deg);
+  }
+
+  100% {
+    transform: translateX(340%) skewX(-12deg);
+  }
+}
+
+.storyboard-cut-image-shimmer {
+  animation: storyboard-glass-shimmer 1.05s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  will-change: transform;
+}
+
+/* Storyboard admin layout is fixed by data-attribute CSS so local Turbopack
+   dev and production builds do not diverge on Tailwind arbitrary utilities. */
+[data-admin-storyboard-generator="true"][data-storyboard-viewport-fit="bounded"] {
+  height: calc(var(--full-height, 100vh) - 2rem);
+  max-height: 100%;
+  min-height: 0;
+}
+
+[data-storyboard-desktop-split-layout="inline-grid"] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
+  grid-template-rows: minmax(0, 1fr);
+}
+
+[data-storyboard-result-panel="image-frames-only"] {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+}
+
+[data-storyboard-input-panel="chat-stream"] {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+}
+
+[data-storyboard-image-board="true"] {
+  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+[data-storyboard-image-frame] {
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+
+[data-storyboard-frame-audio-row="true"],
+[data-storyboard-frame-subtitle-row="true"],
+[data-storyboard-frame-production-note-row="true"] {
+  grid-template-columns: 58px minmax(0, 1fr);
+  min-width: 0;
+}
+
+[data-storyboard-frame-audio-text="true"],
+[data-storyboard-frame-subtitle-text="true"],
+[data-storyboard-frame-production-note-text="true"] {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-storyboard-chat-avatar] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+[data-storyboard-chat-avatar] > svg {
+  display: block;
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here.
 All colors MUST be HSL.
 */

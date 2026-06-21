@@ -4462,3 +4462,21 @@ test("youtube thumbnail release text layer fallback compacts long automatic head
   expect(["제육볶음", "밥도둑", "한상"].every((token) => suppliedLayers[0]?.content.includes(token))).toBe(false);
   expect(suppliedLayers[0]?.content.length).toBeLessThanOrEqual(14);
 });
+
+test('keeps thumbnail provenance labels honest for preview, history, and exact generations', () => {
+  const componentSource = readFileSync(new URL('../components/admin/thumbnail-generator/AdminYoutubeThumbnailGenerator.tsx', import.meta.url), 'utf8');
+  expect(componentSource).toContain('normalizeThumbnailResultSourceKind');
+  expect(componentSource).toContain('공용 예시 미리보기');
+  expect(componentSource).toContain('실제 히스토리');
+  expect(componentSource).toContain('히스토리 미리보기');
+  expect(componentSource).toContain('릴리즈 후보 미리보기');
+  expect(componentSource).toContain('공용 릴리즈 · 로컬 폴백');
+  expect(componentSource).toContain('실제 생성 결과');
+  expect(componentSource).toContain('임시 결과');
+  expect(componentSource).toContain('공용 예시 / 미검증');
+  expect(componentSource).toContain('출처 확인 필요');
+  expect(componentSource).toContain('case "release_candidate_preview"');
+  expect(componentSource).toContain('case "durable_release_fallback"');
+  expect(componentSource).toContain('data-thumbnail-history-source-label="true"');
+  expect(componentSource).toContain('data-thumbnail-history-provenance-label="true"');
+});

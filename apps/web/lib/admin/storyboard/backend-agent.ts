@@ -46,6 +46,9 @@ const REQUIRED_PYTHON_MODULES = [
 const DEFAULT_STORYBOARD_AGENT_TIMEOUT_MS = 120_000;
 const MIN_STORYBOARD_AGENT_TIMEOUT_MS = 5_000;
 const MAX_STORYBOARD_AGENT_TIMEOUT_MS = 600_000;
+function getDefaultStoryboardAgentPython(platform: NodeJS.Platform = process.platform) {
+  return platform === "win32" ? "python" : "python3";
+}
 const DEFAULT_STORYBOARD_AGENT_RUNTIME = "langgraph";
 const DEFAULT_STORYBOARD_AGENT_CODEX_MODEL = "gpt-5.5";
 const DEFAULT_STORYBOARD_AGENT_CODEX_EFFORT = "high";
@@ -143,8 +146,15 @@ function backendAgentPath(relativePath: string) {
   return path.join(BACKEND_AGENT_ROOT, relativePath);
 }
 
+export function resolveStoryboardAgentPythonForPlatform(
+  env: NodeJS.ProcessEnv = process.env,
+  platform: NodeJS.Platform = process.platform,
+) {
+  return env.STORYBOARD_AGENT_PYTHON?.trim() || getDefaultStoryboardAgentPython(platform);
+}
+
 function resolveStoryboardAgentPython() {
-  return process.env.STORYBOARD_AGENT_PYTHON?.trim() || "python3";
+  return resolveStoryboardAgentPythonForPlatform(process.env, process.platform);
 }
 
 function resolveStoryboardAgentRuntime() {
@@ -213,8 +223,32 @@ function resolveStoryboardAgentCommand(
     return { ok: false, reason: "command-not-executable" };
   }
 }
+function resolveWindowsShellScriptRunner() {
+  return firstExistingPath(
+    [
+      process.env.GJC_BASH_PATH ?? "",
+      "C:\\Program Files\\Git\\bin\\bash.exe",
+      "C:\\Program Files\\Git\\usr\\bin\\bash.exe",
+      "C:\\Program Files\\Git\\bin\\sh.exe",
+      "C:\\Program Files\\Git\\usr\\bin\\sh.exe",
+    ].filter(Boolean),
+    "bash",
+  );
+}
 
-function listMissingPythonModules() {
+function isPythonRuntimeUnavailableText(value: string | null | undefined) {
+  return /enoent|executable not found in \$path|is not recognized as an internal or external command|cannot find the file specified|no such file or directory|python was not found|no python at|unable to create process/i.test(
+    value ?? "",
+  );
+}
+
+type PythonModuleProbeResult = {
+  missingModules: string[];
+  runtimeAvailable: boolean;
+  runtimeError?: string;
+};
+
+function probePythonModules(): PythonModuleProbeResult {
   const script = [
     "import importlib.util, json",
     `mods = ${JSON.stringify(REQUIRED_PYTHON_MODULES)}`,
@@ -232,14 +266,40 @@ function listMissingPythonModules() {
         .join(path.delimiter),
     },
   });
-  if (result.error || result.status !== 0) return REQUIRED_PYTHON_MODULES;
+  if (result.error) {
+    return {
+      missingModules: [],
+      runtimeAvailable: false,
+      runtimeError: String(result.error),
+    };
+  }
+  if (result.status !== 0) {
+    const probeText = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
+    if (isPythonRuntimeUnavailableText(probeText)) {
+      return {
+        missingModules: [],
+        runtimeAvailable: false,
+        runtimeError: probeText.trim() || `python exited with status ${result.status}`,
+      };
+    }
+    return {
+      missingModules: REQUIRED_PYTHON_MODULES,
+      runtimeAvailable: true,
+    };
+  }
   try {
     const parsed = JSON.parse(result.stdout.trim()) as unknown;
-    return Array.isArray(parsed)
-      ? parsed.filter((item): item is string => typeof item === "string")
-      : REQUIRED_PYTHON_MODULES;
+    return {
+      missingModules: Array.isArray(parsed)
+        ? parsed.filter((item): item is string => typeof item === "string")
+        : REQUIRED_PYTHON_MODULES,
+      runtimeAvailable: true,
+    };
   } catch {
-    return REQUIRED_PYTHON_MODULES;
+    return {
+      missingModules: REQUIRED_PYTHON_MODULES,
+      runtimeAvailable: true,
+    };
   }
 }
 
@@ -257,12 +317,15 @@ export function getStoryboardBackendAgentStatus(): StoryboardBackendAgentStatus 
   const graphEntrypoint = existsSync(backendAgentPath(BACKEND_AGENT_GRAPH))
     ? backendAgentPath(BACKEND_AGENT_GRAPH)
     : null;
-  const missingPythonModules =
+  const pythonProbe =
     commandConfigured && runtime !== "codex_cli_oauth_legacy"
-      ? listMissingPythonModules()
-      : commandConfigured
-        ? []
-        : REQUIRED_PYTHON_MODULES;
+      ? probePythonModules()
+      : null;
+  const missingPythonModules = pythonProbe
+    ? pythonProbe.missingModules
+    : commandConfigured
+      ? []
+      : REQUIRED_PYTHON_MODULES;
 
   const localAdapterAvailable =
     existsSync(BACKEND_AGENT_ROOT) &&
@@ -286,6 +349,8 @@ export function getStoryboardBackendAgentStatus(): StoryboardBackendAgentStatus 
       : commandResolution.reason,
     localAdapterAvailable,
     missingPythonModules,
+    pythonRuntimeAvailable: pythonProbe?.runtimeAvailable,
+    pythonRuntimeError: pythonProbe?.runtimeError,
     runtime,
     codexModel: resolveStoryboardAgentCodexModel(),
     codexEffort: resolveStoryboardAgentCodexEffort(),
@@ -398,6 +463,44 @@ function wantsStoryboardGeneration(message: string) {
 
 function wantsStoryboardReset(message: string) {
   return /(초기화|리셋|reset)/i.test(message);
+}
+
+export function isCasualStoryboardChatMessage(message: string) {
+  const normalized = normalizeStoryboardChatRequirement(message);
+  if (!normalized) return false;
+  const compact = normalized.replace(/[\s!?.,。~…]+/g, "").toLowerCase();
+  return /^(ㅎㅇ+|하이+|안녕|안녕하세(?:요|여)|안뇽|hi|hello|hey|yo)$/.test(compact);
+}
+
+function hasStoryboardMutationCommand(message: string) {
+  return (
+    wantsStoryboardGeneration(message) ||
+    wantsStoryboardReset(message) ||
+    /(?:수정|변경|바꿔|바꿔줘|고쳐|보완|짧게|줄여|재생성|다시\s*생성|생성해|만들어\s*줘|만들어줘|구성해|짜줘|뽑아|보여줘|이동|가줘|열어|선택|포커스|focus|show|open|해줘)/i.test(
+      message,
+    )
+  );
+}
+
+export function isGeneralStoryboardConversationMessage(message: string) {
+  const normalized = normalizeStoryboardChatRequirement(message);
+  if (!normalized || isCasualStoryboardChatMessage(normalized)) return false;
+  if (hasStoryboardMutationCommand(normalized)) return false;
+
+  const compact = normalized.replace(/[\s!?.,。~…]+/g, "").toLowerCase();
+  if (/^(고마워|고맙|감사|감사해|땡큐|thanks|thankyou|ok|okay|ㅇㅋ|오케이|좋아|좋습니다|괜찮아|ㅋㅋ+|ㅎㅎ+|굿|nice)$/.test(compact)) {
+    return true;
+  }
+
+  if (/(뭐\s*할\s*수|무엇을\s*할\s*수|사용법|도움말|도와줘|help|what can you do|how do i use)/i.test(normalized)) {
+    return true;
+  }
+
+  if (/(?:얼마나|언제|대기|기다|진행|상태|설정|연결|브릿지|토큰|키|provider|이미지|컷|cut).*(?:걸려|걸리|돼|되나|가능|필요|어디|뭐|뭔가|알려|설명|\?)/i.test(normalized)) {
+    return true;
+  }
+
+  return /[?？]$/.test(normalized) && !hasExplicitStoryboardScenePatchIntent(normalized) && !hasStoryboardNavigationIntent(normalized);
 }
 
 function wantsStoryboardTraceExplanation(message: string) {
@@ -575,11 +678,15 @@ function createStoryboardChatCanvasPatch(
 ): StoryboardChatCanvasPatch {
   const normalized = normalizeStoryboardChatRequirement(request.message);
   const isReviewOnly = wantsStoryboardReviewOnly(normalized);
+  const isCasualChat = isCasualStoryboardChatMessage(normalized);
+  const isGeneralConversation =
+    !isReviewOnly && isGeneralStoryboardConversationMessage(normalized);
+  const isConversationOnly = isCasualChat || isGeneralConversation;
   const focusContext = normalizeStoryboardChatFocusContext(
     request.focusContext,
   );
   const focusText = formatStoryboardChatFocusContext(focusContext);
-  const scenePatch = isReviewOnly
+  const scenePatch = isReviewOnly || isConversationOnly
     ? undefined
     : createStoryboardScenePatch(normalized, focusContext);
   const requestedFocusSceneNo = scenePatch
@@ -604,7 +711,7 @@ function createStoryboardChatCanvasPatch(
   const isNavigationRequest =
     focusSceneNo !== undefined || unavailableFocusSceneNo !== undefined;
   const shouldIncludeFocusContext =
-    !isNavigationRequest && scenePatch?.targetSource !== "explicit";
+    !isConversationOnly && !isNavigationRequest && scenePatch?.targetSource !== "explicit";
   const normalizedWithFocus = normalizeStoryboardChatRequirement(
     [
       normalized,
@@ -619,7 +726,7 @@ function createStoryboardChatCanvasPatch(
     normalizeStoryboardChatRequirement(request.baselinePrompt) ||
     normalizeStoryboardChatRequirement(request.currentPrompt) ||
     "먹방 피크 기반 스토리보드";
-  const promptBasis = isReviewOnly
+  const promptBasis = isReviewOnly || isConversationOnly
     ? fallbackPrompt
     : isNavigationRequest
     ? fallbackPrompt
@@ -631,7 +738,7 @@ function createStoryboardChatCanvasPatch(
   return {
     prompt: promptBasis,
     tone: deriveStoryboardTone(promptBasis, request.currentTone ?? "warm"),
-    targetLengthMinutes: isReviewOnly
+    targetLengthMinutes: isReviewOnly || isConversationOnly
       ? clampStoryboardNumber(
           Number(request.currentTargetLengthMinutes),
           6,
@@ -642,7 +749,7 @@ function createStoryboardChatCanvasPatch(
           promptBasis,
           request.currentTargetLengthMinutes ?? 18,
         ),
-    segmentCount: isReviewOnly
+    segmentCount: isReviewOnly || isConversationOnly
       ? availableSceneCount
       : isNavigationRequest
       ? availableSceneCount
@@ -654,6 +761,27 @@ function createStoryboardChatCanvasPatch(
   };
 }
 
+function buildStoryboardConversationMessage(message: string) {
+  if (/(고마워|고맙|감사|땡큐|thanks|thank)/i.test(message)) {
+    return [
+      "천만에요. 화면은 그대로 두고 대화만 이어갈게요.",
+      "필요하면 특정 컷 수정, 전체 생성, 이미지 생성 상태 확인까지 바로 도와드릴 수 있어요.",
+    ].join(" ");
+  }
+
+  if (/(얼마나|언제|대기|기다|진행|상태|이미지|브릿지|연결|설정|토큰|키|provider)/i.test(message)) {
+    return [
+      "이미지 생성은 로컬 브릿지나 이미지 provider가 연결된 뒤 CUT별로 순차 진행돼요.",
+      "진행 중에는 완료된 CUT부터 캔버스에 반영되고, 설정이 필요하면 먼저 연결 상태를 안내할게요.",
+    ].join(" ");
+  }
+
+  return [
+    "네, 자연스럽게 대화할 수 있어요.",
+    "지금 화면은 바꾸지 않고 답변만 드릴게요.",
+    "원하는 주제, 컷 수, 수정할 CUT, 이미지 생성 상태처럼 궁금한 점을 편하게 말해 주세요.",
+  ].join(" ");
+}
 export async function generateStoryboardChatWithBackendAgent(
   request: StoryboardChatAgentRequest,
   env: NodeJS.ProcessEnv = process.env,
@@ -683,6 +811,9 @@ export async function generateStoryboardChatWithBackendAgent(
   const status = getStoryboardBackendAgentStatus();
   const shouldReset = wantsStoryboardReset(normalizedMessage);
   const isReviewOnly = wantsStoryboardReviewOnly(normalizedMessage);
+  const isCasualChat = isCasualStoryboardChatMessage(normalizedMessage);
+  const isGeneralConversation =
+    !isReviewOnly && isGeneralStoryboardConversationMessage(normalizedMessage);
   const shouldRegenerateSelectedSceneImage = Boolean(
     canvasPatch.scenePatch?.regenerateImage,
   );
@@ -695,7 +826,16 @@ export async function generateStoryboardChatWithBackendAgent(
   const effort = status.codexEffort ?? resolveStoryboardAgentCodexEffort(env);
 
   return {
-    assistantMessage: isReviewOnly
+    assistantMessage: isCasualChat
+      ? [
+          "안녕하세요! 스토리보드 도우미입니다.",
+          "화면은 바꾸지 않고 사용 방법만 안내할게요.",
+          "원하는 음식이나 장면, 컷 수, 꼭 보여주고 싶은 순간을 적어 주면 바로 스토리보드를 만들 수 있어요.",
+          "예시가 필요하면 “예시 만들기”를 누르거나, 바로 만들려면 “생성해줘”라고 입력하세요.",
+        ].join(" ")
+      : isGeneralConversation
+      ? buildStoryboardConversationMessage(normalizedMessage)
+      : isReviewOnly
       ? [
           "검토 결과를 쉽게 정리했어요.",
           `현재 보이는 ${canvasPatch.segmentCount}컷 흐름을 기준으로 보면, 앞부분은 관심을 끌고 중간 컷은 맛과 반응을 이어주며 마지막 컷은 다시 보고 싶은 포인트를 잡는 구조예요.`,
@@ -764,19 +904,23 @@ export async function generateStoryboardChatWithBackendAgent(
         runtime,
         codexModel: model,
         codexEffort: effort,
-        chatIntent: shouldRegenerateSelectedSceneImage
-          ? "regenerate_selected_scene"
-          : shouldGenerate
-            ? "generate"
-            : shouldReset
-              ? "reset"
-              : isReviewOnly
-                ? "review"
-              : isNavigationOnly
-                ? "navigate"
-                : isUnavailableNavigation
-                  ? "navigate_unavailable"
-                  : "edit",
+        chatIntent: isCasualChat
+          ? "casual_chat"
+          : isGeneralConversation
+            ? "conversation"
+            : shouldRegenerateSelectedSceneImage
+            ? "regenerate_selected_scene"
+            : shouldGenerate
+              ? "generate"
+              : shouldReset
+                ? "reset"
+                : isReviewOnly
+                  ? "review"
+                  : isNavigationOnly
+                    ? "navigate"
+                    : isUnavailableNavigation
+                      ? "navigate_unavailable"
+                      : "edit",
       },
     },
     diagnostics: {
@@ -795,13 +939,22 @@ function runStoryboardAgentCommand(
   return new Promise((resolve) => {
     const timeoutMs = resolveStoryboardAgentTimeoutMs();
     const shouldUseConfiguredPython = command.executable.endsWith(".py");
+    const shouldUseShellScriptOnWindows =
+      process.platform === "win32" && command.executable.endsWith(".sh");
+    const shellScriptRunner = shouldUseShellScriptOnWindows
+      ? resolveWindowsShellScriptRunner()
+      : null;
     const child = spawn(
       shouldUseConfiguredPython
         ? resolveStoryboardAgentPython()
-        : command.executable,
+        : shellScriptRunner
+          ? shellScriptRunner
+          : command.executable,
       shouldUseConfiguredPython
         ? [command.executable, ...command.args]
-        : command.args,
+        : shouldUseShellScriptOnWindows
+          ? [command.executable, ...command.args]
+          : command.args,
     {
       cwd: existsSync(BACKEND_AGENT_ROOT) ? BACKEND_AGENT_ROOT : process.cwd(),
       shell: false,
@@ -1185,6 +1338,9 @@ function mapCommandFailureToFallbackReason(
   }
   if (command?.timedOut) return "graph_timeout";
   const text = `${command?.stdout ?? ""}\n${command?.stderr ?? ""}`;
+  if (isPythonRuntimeUnavailableText(text)) {
+    return "unsupported_runtime";
+  }
   if (/ModuleNotFoundError|ImportError|No module named/i.test(text)) {
     if (/FlagEmbedding|bge|reranker/i.test(text)) {
       return "retrieval_dependency_missing";
