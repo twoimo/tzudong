@@ -147,6 +147,15 @@ function redactProviderSecretText(value: string) {
     .slice(0, 800);
 }
 
+function getRuntimeCwd() {
+  const cwd = Reflect.get(process, 'cwd');
+  return typeof cwd === 'function' ? cwd.call(process) : '.';
+}
+
+function resolveFromRuntimeCwd(...segments: string[]) {
+  return resolve(/* turbopackIgnore: true */ getRuntimeCwd(), ...segments);
+}
+
 function getStoryboardImageTarget(): StoryboardImageProviderTarget {
   return {
     width: STORYBOARD_IMAGE_TARGET_WIDTH,
@@ -156,7 +165,7 @@ function getStoryboardImageTarget(): StoryboardImageProviderTarget {
 }
 
 function resolveDefaultLocalCodexScript() {
-  return resolve(process.cwd(), DEFAULT_LOCAL_CODEX_SCRIPT);
+  return resolveFromRuntimeCwd(DEFAULT_LOCAL_CODEX_SCRIPT);
 }
 
 function parseArgsJson(value: string | undefined) {
@@ -205,7 +214,7 @@ function isLocalCodexCommandAvailable(env: NodeJS.ProcessEnv) {
 
 function resolveLocalCodexProvenanceFile(env: NodeJS.ProcessEnv) {
   return resolve(
-    process.cwd(),
+    getRuntimeCwd(),
     env.STORYBOARD_LOCAL_CODEX_PROVENANCE_FILE?.trim()
       || DEFAULT_LOCAL_CODEX_PROVENANCE_FILE,
   );
@@ -550,7 +559,7 @@ function createStoryboardImageRunId() {
 }
 
 function getStoryboardGeneratedImageRoot() {
-  return resolve(process.cwd(), 'public/qa-history/storyboard/generated');
+  return resolveFromRuntimeCwd('public/qa-history/storyboard/generated');
 }
 
 function assertPathInside(root: string, target: string) {
@@ -614,7 +623,7 @@ function runLocalCodexStoryboardCommand(
   const { command, args } = resolveLocalCodexStoryboardCommandParts(env);
   return new Promise<LocalCodexStoryboardCommandResult>((resolveCommand, rejectCommand) => {
     const child = spawn(command, args, {
-      cwd: process.cwd(),
+      cwd: getRuntimeCwd(),
       env: {
         ...process.env,
         ...env,

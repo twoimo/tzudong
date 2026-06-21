@@ -17,7 +17,6 @@ import {
   THUMBNAIL_PROVIDER_IDS,
   THUMBNAIL_REFERENCE_ROLES,
 } from './types';
-import { isThumbnailProviderId } from './providers';
 
 export const THUMBNAIL_MAX_TOTAL_BYTES = 33_554_432;
 export const THUMBNAIL_MAX_FILE_BYTES = 8_388_608;
@@ -52,6 +51,9 @@ function stripThumbnailControlChars(value: string) {
 
 function toStringValue(value: unknown, maxLength: number) {
   return typeof value === 'string' ? stripThumbnailControlChars(value).trim().slice(0, maxLength) : '';
+}
+function isThumbnailProviderId(value: unknown): value is ThumbnailGeneratorPayload['providerId'] {
+  return typeof value === 'string' && (THUMBNAIL_PROVIDER_IDS as readonly string[]).includes(value);
 }
 
 export function buildThumbnailProviderRequestEnv(

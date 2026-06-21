@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { promoteThumbnailReleaseCandidate } from '@/lib/admin/youtube-thumbnail-generator/release-candidates';
 import { requireAdmin } from '@/lib/auth/require-admin';
 
 export const runtime = 'nodejs';
@@ -11,6 +10,11 @@ const noStoreHeaders = { 'Cache-Control': 'no-store' } as const;
 function jsonError(error: string, status: number, detail?: string) {
   return NextResponse.json({ error, detail }, { status, headers: noStoreHeaders });
 }
+async function promoteThumbnailReleaseCandidateFromRoute(candidateId: string) {
+  const { promoteThumbnailReleaseCandidate } = await import('@/lib/admin/youtube-thumbnail-generator/release-candidates');
+  return promoteThumbnailReleaseCandidate({ candidateId, promotedBy: 'local-dev-admin' }, process.env);
+}
+
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,7 +25,7 @@ export async function POST(request: NextRequest) {
     const candidateId = typeof body?.candidateId === 'string' ? body.candidateId : '';
     if (!candidateId.trim()) return jsonError('thumbnail_release_candidate_id_required', 400, '승격할 후보 ID가 필요합니다.');
 
-    const payload = await promoteThumbnailReleaseCandidate({ candidateId, promotedBy: 'local-dev-admin' }, process.env);
+    const payload = await promoteThumbnailReleaseCandidateFromRoute(candidateId);
     return NextResponse.json(payload, { headers: noStoreHeaders });
   } catch (error) {
     console.error('[admin/youtube-thumbnail-generator/release-candidates/promote] unexpected failure:', error);
