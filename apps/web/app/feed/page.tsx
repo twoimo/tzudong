@@ -23,10 +23,11 @@ const EditRestaurantModal = dynamic(
     () => import('@/components/modals/EditRestaurantModal').then((mod) => ({ default: mod.EditRestaurantModal })),
     { ssr: false }
 );
+const EMPTY_SEARCH_PARAMS = new URLSearchParams();
 
 function FeedPageContent() {
     const router = useRouter();
-    const searchParams = useSearchParams();
+    const searchParams = useSearchParams() ?? EMPTY_SEARCH_PARAMS;
     const [isMounted, setIsMounted] = useState(false);
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
     const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);

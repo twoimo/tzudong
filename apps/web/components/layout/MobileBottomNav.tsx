@@ -124,7 +124,7 @@ function MobileBottomNavComponent({ className, style }: MobileBottomNavProps) {
         return NAV_ITEMS.map(item => ({
             path: item.path,
             isActive: pathname === item.path ||
-                (item.path === '/mypage/profile' && pathname?.startsWith('/mypage'))
+                (item.path === '/mypage/profile' && pathname?.startsWith('/mypage') === true)
         }));
     }, [pathname]);
 
