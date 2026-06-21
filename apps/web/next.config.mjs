@@ -9,8 +9,10 @@ const withBundleAnalyzer = bundleAnalyzer({
     enabled: process.env.ANALYZE === 'true',
 });
 
+const outputFileTracingRoot = path.join(__dirname, '../../');
 const shouldUseStandaloneOutput = process.env.NODE_ENV === 'production' && process.env.VERCEL !== '1';
 const shouldApplyVercelTraceExcludes = process.env.VERCEL === '1';
+
 
 const securityHeaders = [
     { key: 'X-Content-Type-Options', value: 'nosniff' },
@@ -79,8 +81,8 @@ const nextConfig = {
     },
     ...(shouldUseStandaloneOutput ? {
         output: 'standalone',
-        outputFileTracingRoot: path.join(__dirname, '../../'),
     } : {}),
+    outputFileTracingRoot,
     ...(shouldApplyVercelTraceExcludes ? {
         outputFileTracingExcludes: {
             '/*': ['./backend/**/*', './.omx/**/*', './README.md', './apps/web/README.md'],
