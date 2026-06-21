@@ -730,7 +730,7 @@ const NaverMapView = memo(({
 
 
     // [Fix] 라우트 변경 감지 - 다른 페이지 갔다가 돌아왔을 때 지도 재초기화
-    const pathname = usePathname();
+    const pathname = usePathname() ?? "";
     const prevPathnameRef = useRef(pathname);
 
     useEffect(() => {

@@ -73,6 +73,7 @@ const DIRECT_OVERLAY_PANELS: Array<Exclude<OverlayPanelType, null>> = [
   "leaderboard",
 ];
 const HOME_OVERLAY_PANEL_OPENED_EVENT = "homeOverlayPanelOpened";
+const EMPTY_SEARCH_PARAMS = new URLSearchParams();
 
 function getDirectOverlayPanel(
   panel: string | null,
@@ -115,7 +116,7 @@ export default function OverlayLayout({
   const queryClient = useQueryClient();
   const pathname = usePathname();
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams() ?? EMPTY_SEARCH_PARAMS;
 
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
