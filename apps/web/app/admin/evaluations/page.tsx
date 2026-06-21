@@ -35,6 +35,7 @@ import { debugLog } from '@/lib/debug-log';
 import { getAdminEvaluationApprovalName, getAdminEvaluationDisplayName } from '@/lib/admin-evaluation-name';
 import { getAddressConsistencyStatus } from '@/lib/admin-address-consistency';
 import { needsEvaluationRerun } from '@/lib/admin-evaluation-completeness';
+import { buildCanonicalAdminEvaluationsHref } from '@/lib/admin/admin-module-routing';
 import {
   MISSING_EVALUATION_AUTO_DELETE_MESSAGE,
   getMissingEvaluationAutoDeleteReason,
@@ -493,6 +494,10 @@ function AdminEvaluationPage({
     reason?: string;
   } | null>(null);
 
+  const canonicalAdminHref = useMemo(
+    () => (embedded ? null : buildCanonicalAdminEvaluationsHref(searchParams)),
+    [embedded, searchParams],
+  );
   const clearDeepLinkFilter = useCallback(() => {
     setDeepLinkFilter(null);
     deepLinkInitializedRef.current = true;
@@ -504,9 +509,20 @@ function AdminEvaluationPage({
     params.delete('issue');
     params.delete('reason');
 
-    const query = params.toString();
-    router.replace(query ? `/admin/evaluations?${query}` : '/admin/evaluations', { scroll: false });
+    router.replace(buildCanonicalAdminEvaluationsHref({
+      get: (key) => params.get(key),
+    }), { scroll: false });
   }, [embedded, router, searchParams]);
+
+  useEffect(() => {
+    if (embedded || !canonicalAdminHref) return;
+
+    const currentQuery = searchParams.toString();
+    const currentHref = `/admin/evaluations${currentQuery ? `?${currentQuery}` : ''}`;
+    if (currentHref !== canonicalAdminHref) {
+      router.replace(canonicalAdminHref, { scroll: false });
+    }
+  }, [canonicalAdminHref, embedded, router, searchParams]);
 
   // URL 파라미터에 따라 초기 뷰 설정
   useEffect(() => {
@@ -943,7 +959,7 @@ function AdminEvaluationPage({
     setShowSubmissionView(false);
 
     if (!embedded) {
-      router.replace('/admin/evaluations', { scroll: false });
+      router.replace('/admin?module=restaurants', { scroll: false });
     }
   }, [embedded, router]);
 
@@ -952,7 +968,7 @@ function AdminEvaluationPage({
     setShowSubmissionView(false);
 
     if (!embedded) {
-      router.replace('/admin/evaluations', { scroll: false });
+      router.replace('/admin?module=restaurants', { scroll: false });
     }
   }, [embedded, router]);
 
@@ -2439,7 +2455,7 @@ function AdminEvaluationPage({
                       <span className="lg:hidden">제보</span>
                       {totalPendingCount > 0 && (
                         <>
-                          <span className="inline-flex min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white lg:hidden">
+                          <span className="inline-flex md:inline-flex min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white lg:hidden">
                             {totalPendingCount > 99 ? '99+' : totalPendingCount}
                           </span>
                           <span className="absolute -right-1 top-0 hidden h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs text-white lg:flex">
