@@ -25,23 +25,23 @@ export function isAdminConsoleRouteModuleId(
 }
 
 export function getLegacyEvaluationModuleId(
-  searchParams: Pick<URLSearchParams, 'get'>,
+  searchParams: Pick<URLSearchParams, 'get'> | null | undefined,
 ): Extract<AdminConsoleRouteModuleId, 'restaurants' | 'submissions' | 'reviews'> | null {
-  const routeView = searchParams.get('view');
-  const routeTab = searchParams.get('tab');
+  const routeView = searchParams?.get('view') ?? null;
+  const routeTab = searchParams?.get('tab') ?? null;
   if (routeView === 'submissions') {
     return routeTab === 'reviews' ? 'reviews' : 'submissions';
   }
   return null;
 }
 
-type AdminRouteQueryLike = Pick<URLSearchParams, 'get'>;
+type AdminRouteQueryLike = Pick<URLSearchParams, 'get'> | null | undefined;
 
 function resolveAdminModuleId(
   searchParams: AdminRouteQueryLike,
   defaultModule: AdminConsoleRouteModuleId,
 ): AdminConsoleRouteModuleId {
-  const moduleId = searchParams.get('module');
+  const moduleId = searchParams?.get('module') ?? null;
   if (isAdminConsoleRouteModuleId(moduleId)) return moduleId;
   return getLegacyEvaluationModuleId(searchParams) ?? defaultModule;
 }
@@ -76,7 +76,7 @@ export function buildCanonicalAdminHrefFromSearchParams(
     params.set('module', moduleId);
   }
   for (const key of preserveKeys) {
-    const value = searchParams.get(key);
+    const value = searchParams?.get(key) ?? null;
     if (value) {
       params.set(key, value);
     }
@@ -96,7 +96,7 @@ export function buildCanonicalAdminEvaluationsHref(
 export function getAdminModuleStateWarning(
   searchParams: AdminRouteQueryLike,
 ): string | null {
-  const requestedModule = searchParams.get('module');
+  const requestedModule = searchParams?.get('module') ?? null;
   const legacyModuleId = getLegacyEvaluationModuleId(searchParams);
 
   if (requestedModule && !isAdminConsoleRouteModuleId(requestedModule) && legacyModuleId) {
@@ -111,7 +111,7 @@ export function getAdminModuleStateWarning(
     return '기존 검수 링크를 새 관리자 경로로 정리했습니다.';
   }
 
-  if (searchParams.get('view') || searchParams.get('tab')) {
+  if (searchParams?.get('view') || searchParams?.get('tab')) {
     return '기존 검수 링크를 새 관리자 경로로 정리했습니다.';
   }
 
