@@ -46,6 +46,15 @@ const REQUIRED_PYTHON_MODULES = [
 const DEFAULT_STORYBOARD_AGENT_TIMEOUT_MS = 120_000;
 const MIN_STORYBOARD_AGENT_TIMEOUT_MS = 5_000;
 const MAX_STORYBOARD_AGENT_TIMEOUT_MS = 600_000;
+function getRuntimeCwd() {
+  const cwd = Reflect.get(process, "cwd");
+  return typeof cwd === "function" ? cwd.call(process) : ".";
+}
+
+function resolveFromRuntimeCwd(...segments: string[]) {
+  return path.resolve(/* turbopackIgnore: true */ getRuntimeCwd(), ...segments);
+}
+
 function getDefaultStoryboardAgentPython(platform: NodeJS.Platform = process.platform) {
   return platform === "win32" ? "python" : "python3";
 }
@@ -93,7 +102,7 @@ type ResolvedStoryboardAgentCommand =
       reason: string;
     };
 
-function firstExistingPath(candidates: string[], fallback = process.cwd()) {
+function firstExistingPath(candidates: string[], fallback = getRuntimeCwd()) {
   return (
     candidates.find((candidate) => existsSync(candidate)) ??
     candidates[0] ??
@@ -104,11 +113,11 @@ function firstExistingPath(candidates: string[], fallback = process.cwd()) {
 function resolveAppWebRoot() {
   return firstExistingPath(
     [
-      process.cwd(),
-      path.resolve(process.cwd(), "apps/web"),
-      path.resolve(process.cwd(), ".."),
-      path.resolve(process.cwd(), "../.."),
-    ].filter((candidate) => existsSync(path.join(candidate, APP_WEB_MARKER))),
+      getRuntimeCwd(),
+      resolveFromRuntimeCwd("apps/web"),
+      resolveFromRuntimeCwd(".."),
+      resolveFromRuntimeCwd("../.."),
+    ].filter((candidate) => existsSync(/* turbopackIgnore: true */ path.join(candidate, APP_WEB_MARKER))),
   );
 }
 
@@ -116,7 +125,7 @@ const APP_WEB_ROOT = resolveAppWebRoot();
 
 function loadStoryboardAgentEnvFromAppWebRoot() {
   if (process.env.STORYBOARD_AGENT_LOAD_ENV_LOCAL !== "1") return;
-  const envPath = path.join(APP_WEB_ROOT, ".env.local");
+  const envPath = path.join(/* turbopackIgnore: true */ APP_WEB_ROOT, ".env.local");
   if (!existsSync(envPath)) return;
   try {
     for (const rawLine of readFileSync(envPath, "utf8").split(/\r?\n/)) {
@@ -136,10 +145,10 @@ function loadStoryboardAgentEnvFromAppWebRoot() {
 loadStoryboardAgentEnvFromAppWebRoot();
 
 const BACKEND_AGENT_ROOT = process.env.STORYBOARD_AGENT_ROOT?.trim()
-  ? path.resolve(APP_WEB_ROOT, process.env.STORYBOARD_AGENT_ROOT.trim())
+  ? path.resolve(/* turbopackIgnore: true */ APP_WEB_ROOT, process.env.STORYBOARD_AGENT_ROOT.trim())
   : firstExistingPath([
-      path.resolve(APP_WEB_ROOT, "../../backend/storyboard-agent"),
-      path.resolve(process.cwd(), "backend/storyboard-agent"),
+      path.resolve(/* turbopackIgnore: true */ APP_WEB_ROOT, "../../backend/storyboard-agent"),
+      resolveFromRuntimeCwd("backend/storyboard-agent"),
     ]);
 
 function backendAgentPath(relativePath: string) {
@@ -211,8 +220,8 @@ function resolveStoryboardAgentCommand(
   const executableCandidates = path.isAbsolute(command)
     ? [command]
     : [
-        path.resolve(APP_WEB_ROOT, command),
-        path.resolve(process.cwd(), command),
+        path.resolve(/* turbopackIgnore: true */ APP_WEB_ROOT, command),
+        resolveFromRuntimeCwd(command),
         path.resolve(BACKEND_AGENT_ROOT, command),
       ];
   const executable = firstExistingPath(executableCandidates);
@@ -956,7 +965,7 @@ function runStoryboardAgentCommand(
           ? [command.executable, ...command.args]
           : command.args,
     {
-      cwd: existsSync(BACKEND_AGENT_ROOT) ? BACKEND_AGENT_ROOT : process.cwd(),
+      cwd: existsSync(/* turbopackIgnore: true */ BACKEND_AGENT_ROOT) ? BACKEND_AGENT_ROOT : getRuntimeCwd(),
       shell: false,
       stdio: ["pipe", "pipe", "pipe"],
       env: {

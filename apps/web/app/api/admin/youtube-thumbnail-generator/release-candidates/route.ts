@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import type { ThumbnailReleaseCandidatesPayload } from '@/lib/admin/youtube-thumbnail-generator/release-candidates';
 import { requireAdmin } from '@/lib/auth/require-admin';
 
 export const runtime = 'nodejs';
@@ -18,7 +17,7 @@ function shouldSkipLocalReleaseCandidatesOnVercel() {
   );
 }
 
-function buildUnavailableReleaseCandidatesPayload(): ThumbnailReleaseCandidatesPayload {
+function buildUnavailableReleaseCandidatesPayload() {
   return {
     updatedAt: null,
     sourceManifestId: null,
