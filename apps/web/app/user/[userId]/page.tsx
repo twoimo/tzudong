@@ -5,7 +5,7 @@ import { UserProfilePanel } from "@/components/profile/UserProfilePanel";
 
 export default function UserProfilePage() {
     const params = useParams();
-    const userId = params.userId as string;
+    const userId = typeof params?.userId === "string" ? params.userId : "";
 
     return <UserProfilePanel userId={userId} showBackButton={true} />;
 }
