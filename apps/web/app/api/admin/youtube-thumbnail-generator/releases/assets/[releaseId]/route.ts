@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { readThumbnailDurableReleaseAsset } from '@/lib/admin/youtube-thumbnail-generator/release-registry';
 import { requireAdmin } from '@/lib/auth/require-admin';
 
 export const runtime = 'nodejs';
@@ -13,6 +12,11 @@ type RouteContext = {
 function jsonError(error: string, status: number, detail?: string) {
   return NextResponse.json({ error, detail }, { status, headers: { 'Cache-Control': 'no-store' } });
 }
+async function readThumbnailDurableReleaseAssetFromRoute(releaseId: string) {
+  const { readThumbnailDurableReleaseAsset } = await import('@/lib/admin/youtube-thumbnail-generator/release-registry');
+  return readThumbnailDurableReleaseAsset(releaseId, process.env);
+}
+
 
 export async function GET(_request: NextRequest, context: RouteContext) {
   try {
@@ -20,7 +24,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     if (!auth.ok) return auth.response;
 
     const { releaseId } = await context.params;
-    const asset = await readThumbnailDurableReleaseAsset(releaseId, process.env);
+    const asset = await readThumbnailDurableReleaseAssetFromRoute(releaseId);
     return new NextResponse(new Uint8Array(asset.bytes), {
       status: 200,
       headers: {
