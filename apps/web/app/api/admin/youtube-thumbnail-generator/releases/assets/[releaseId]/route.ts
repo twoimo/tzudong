@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { requireAdmin } from '@/lib/auth/require-admin';
+import { runtimeImport } from '@/lib/server/runtime-import';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -13,7 +14,7 @@ function jsonError(error: string, status: number, detail?: string) {
   return NextResponse.json({ error, detail }, { status, headers: { 'Cache-Control': 'no-store' } });
 }
 async function readThumbnailDurableReleaseAssetFromRoute(releaseId: string) {
-  const { readThumbnailDurableReleaseAsset } = await import('@/lib/admin/youtube-thumbnail-generator/release-registry');
+  const { readThumbnailDurableReleaseAsset } = await runtimeImport<typeof import('@/lib/admin/youtube-thumbnail-generator/release-registry')>('@/lib/admin/youtube-thumbnail-generator/release-registry');
   return readThumbnailDurableReleaseAsset(releaseId, process.env);
 }
 

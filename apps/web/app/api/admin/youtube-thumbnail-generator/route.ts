@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
 
 import { requireAdmin } from '@/lib/auth/require-admin';
+import { runtimeImport } from '@/lib/server/runtime-import';
 import {
   buildThumbnailProviderRequestEnv,
   getContentLengthRejection,
@@ -51,7 +52,7 @@ async function getPublicThumbnailBackendAgentStatus() {
   const {
     getThumbnailBackendAgentStatus,
     toPublicThumbnailBackendAgentStatus,
-  } = await import('@/lib/admin/youtube-thumbnail-generator/backend-agent');
+  } = await runtimeImport<typeof import('@/lib/admin/youtube-thumbnail-generator/backend-agent')>('@/lib/admin/youtube-thumbnail-generator/backend-agent');
 
   return toPublicThumbnailBackendAgentStatus(getThumbnailBackendAgentStatus(process.env));
 }
@@ -74,7 +75,7 @@ async function runThumbnailBackendAgentGeneration(
     );
   }
 
-  const { generateYoutubeThumbnailWithBackendAgent } = await import('@/lib/admin/youtube-thumbnail-generator/backend-agent');
+  const { generateYoutubeThumbnailWithBackendAgent } = await runtimeImport<typeof import('@/lib/admin/youtube-thumbnail-generator/backend-agent')>('@/lib/admin/youtube-thumbnail-generator/backend-agent');
   return await generateYoutubeThumbnailWithBackendAgent(payloadWithRetrieval, generationReferenceImages, process.env, {
     signal: request.signal,
     runId: generationRunId,
@@ -135,7 +136,7 @@ async function getPublicThumbnailProviderAvailability() {
     return buildVercelThumbnailProviderAvailability();
   }
 
-  const { getThumbnailProviderAvailability } = await import('@/lib/admin/youtube-thumbnail-generator/providers');
+  const { getThumbnailProviderAvailability } = await runtimeImport<typeof import('@/lib/admin/youtube-thumbnail-generator/providers')>('@/lib/admin/youtube-thumbnail-generator/providers');
   return getThumbnailProviderAvailability(process.env);
 }
 
@@ -149,7 +150,7 @@ async function runDirectThumbnailProviderGeneration(
   generationRunId: string,
   request: NextRequest,
 ) {
-  const { generateYoutubeThumbnail } = await import('@/lib/admin/youtube-thumbnail-generator/providers');
+  const { generateYoutubeThumbnail } = await runtimeImport<typeof import('@/lib/admin/youtube-thumbnail-generator/providers')>('@/lib/admin/youtube-thumbnail-generator/providers');
   return await generateYoutubeThumbnail(payloadWithRetrieval, generationReferenceImages, providerRequestEnv, {
     signal: request.signal,
     runId: generationRunId,
@@ -195,8 +196,8 @@ async function resolveThumbnailReferencesForRoute(
     };
   }
 
-  const { resolveThumbnailRetrievalReferences } = await import('@/lib/admin/youtube-thumbnail-generator/retrieval');
-  const { readThumbnailRetrievalReferenceImages } = await import('@/lib/admin/youtube-thumbnail-generator/retrieval-reference-images');
+  const { resolveThumbnailRetrievalReferences } = await runtimeImport<typeof import('@/lib/admin/youtube-thumbnail-generator/retrieval')>('@/lib/admin/youtube-thumbnail-generator/retrieval');
+  const { readThumbnailRetrievalReferenceImages } = await runtimeImport<typeof import('@/lib/admin/youtube-thumbnail-generator/retrieval-reference-images')>('@/lib/admin/youtube-thumbnail-generator/retrieval-reference-images');
   const retrieval = await resolveThumbnailRetrievalReferences(payload, process.env);
   const automaticReferenceImages = await readThumbnailRetrievalReferenceImages(
     retrieval.evidence,
@@ -354,7 +355,7 @@ export async function POST(request: NextRequest) {
       if (process.env.VERCEL === '1') {
         responseResult.warnings.push('thumbnail_history_skipped_on_vercel');
       } else {
-        const { persistLocalThumbnailHistory } = await import('@/lib/admin/youtube-thumbnail-generator/history');
+        const { persistLocalThumbnailHistory } = await runtimeImport<typeof import('@/lib/admin/youtube-thumbnail-generator/history')>('@/lib/admin/youtube-thumbnail-generator/history');
         await persistLocalThumbnailHistory(responseResult, payloadWithRetrieval, process.env, { runId: generationRunId });
       }
     } catch (historyError) {

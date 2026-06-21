@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { requireAdmin } from '@/lib/auth/require-admin';
+import { runtimeImport } from '@/lib/server/runtime-import';
 import {
   STORYBOARD_BROWSER_OPENAI_API_KEY_HEADER,
 } from '@/lib/admin/storyboard/image-provider-readiness';
@@ -46,7 +47,7 @@ async function getStoryboardImageProviderAvailabilityForRoute(
   env: NodeJS.ProcessEnv,
   options: { browserOpenAIApiKey?: string | null },
 ) {
-  const { getStoryboardImageProviderAvailability } = await import('@/lib/admin/storyboard/image-provider');
+  const { getStoryboardImageProviderAvailability } = await runtimeImport<typeof import('@/lib/admin/storyboard/image-provider')>('@/lib/admin/storyboard/image-provider');
   return getStoryboardImageProviderAvailability(env, options);
 }
 
@@ -56,7 +57,7 @@ async function generateStoryboardSceneImagesForRoute(
   env: NodeJS.ProcessEnv,
   options: { browserOpenAIApiKey?: string | null },
 ) {
-  const { generateStoryboardSceneImages } = await import('@/lib/admin/storyboard/image-provider');
+  const { generateStoryboardSceneImages } = await runtimeImport<typeof import('@/lib/admin/storyboard/image-provider')>('@/lib/admin/storyboard/image-provider');
   return generateStoryboardSceneImages(scenes, context, env, options);
 }
 
@@ -285,7 +286,7 @@ export async function POST(request: NextRequest) {
     const history = historyResult
       ? process.env.VERCEL === '1'
         ? { persisted: false as const, reason: 'storyboard_image_history_skipped_on_vercel' as const }
-        : await (await import('@/lib/admin/storyboard/history'))
+        : await (await runtimeImport<typeof import('@/lib/admin/storyboard/history')>('@/lib/admin/storyboard/history'))
           .persistLocalStoryboardHistory(historyResult, imageRouteEnv)
           .catch((historyError) => {
             console.error('[admin/storyboard/images] local history persistence failed:', historyError);

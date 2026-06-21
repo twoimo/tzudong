@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { requireAdmin } from '@/lib/auth/require-admin';
+import { runtimeImport } from '@/lib/server/runtime-import';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -11,7 +12,7 @@ function jsonError(error: string, status: number, detail?: string) {
   return NextResponse.json({ error, detail }, { status, headers: noStoreHeaders });
 }
 async function promoteThumbnailReleaseCandidateFromRoute(candidateId: string) {
-  const { promoteThumbnailReleaseCandidate } = await import('@/lib/admin/youtube-thumbnail-generator/release-candidates');
+  const { promoteThumbnailReleaseCandidate } = await runtimeImport<typeof import('@/lib/admin/youtube-thumbnail-generator/release-candidates')>('@/lib/admin/youtube-thumbnail-generator/release-candidates');
   return promoteThumbnailReleaseCandidate({ candidateId, promotedBy: 'local-dev-admin' }, process.env);
 }
 
