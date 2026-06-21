@@ -710,6 +710,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(consoleSource).toContain('activeModuleId === "overview"');
     expect(consoleSource).toContain("overflow-y-auto lg:overflow-hidden");
+    expect(consoleSource).toContain('activeModuleId === "storyboard"');
+    expect(consoleSource).toContain("overflow-y-auto md:overflow-hidden");
     expect(consoleSource).toContain('from "recharts"');
     expect(consoleSource).toContain("ResponsiveContainer");
     expect(consoleSource).toContain("LineChart");
@@ -2004,6 +2006,31 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(routeSource).toContain('from("reviews")');
     expect(routeSource).toContain('.eq("is_verified", false)');
     expect(routeSource).toContain('{ count: "exact", head: true }');
+  });
+
+  test("keeps admin system status center in a dedicated hook/component with fail-closed run_daily states", () => {
+    const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
+    const centerSource = source("components/admin/system-status/AdminSystemStatusCenter.tsx");
+    const hookSource = source("hooks/use-admin-status-center.ts");
+    const viewModelSource = source("lib/admin/system-status/view-model.ts");
+    const routeSource = source("app/api/admin/system-status/route.ts");
+
+    expect(consoleSource).toContain('import("@/components/admin/system-status/AdminSystemStatusCenter")');
+    expect(consoleSource).toContain("<AdminSystemStatusCenter");
+    expect(centerSource).toContain('data-admin-system-status-center="true"');
+    expect(centerSource).toContain('data-admin-run-daily-state=');
+    expect(centerSource).toContain('data-admin-run-daily-artifact-state=');
+    expect(centerSource).toContain('data-admin-system-status-pending-counts=');
+    expect(hookSource).toContain('/api/admin/system-status');
+    expect(hookSource).toContain('/api/admin/pending-counts');
+    expect(hookSource).toContain("systemStatusQuery.isRefetchError");
+    expect(hookSource).toContain("pendingCountsQuery.isRefetchError");
+    expect(hookSource).toContain("systemStatusQueryFailed ? undefined : systemStatusQuery.data");
+    expect(hookSource).toContain("pendingCountsQueryFailed");
+    expect(viewModelSource).toContain('latestManifestPath');
+    expect(viewModelSource).toContain('rclone_exit_zero');
+    expect(viewModelSource).toContain("manifest 없음");
+    expect(routeSource).toContain("await requireAdmin()");
   });
 
   test("keeps YouTube channel statistics behind an admin-only server route", () => {
@@ -4101,6 +4128,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     const storyboardSource = source(
       "components/admin/storyboard/AdminStoryboardGenerator.tsx",
     );
+    const appGlobalsSource = source("app/app-globals.css");
     const routeSource = source("app/api/admin/storyboard/route.ts");
     const chatRouteSource = source("app/api/admin/storyboard/chat/route.ts");
     const imageRouteSource = source("app/api/admin/storyboard/images/route.ts");
@@ -4135,9 +4163,6 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     const backendAgentRequirementsSource = source(
       "../../backend/storyboard-agent/requirements.txt",
     );
-    const codexOauthResearchSource = source(
-      ".omx/research/codex-oauth-gpt-image-2-storyboard.md",
-    );
     const envExampleSource = source(".env.example");
     const readmeSource = source("README.md");
     const backendAgentSource = source("lib/admin/storyboard/backend-agent.ts");
@@ -4154,13 +4179,20 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-admin-storyboard-generator="true"',
     );
     expect(storyboardSource).toContain(
-      "flex h-full min-h-0 flex-col overflow-hidden bg-background p-3",
+      "flex h-full min-h-0 flex-col overflow-hidden bg-background p-2",
+    );
+    expect(storyboardSource).toContain('data-storyboard-viewport-fit="bounded"');
+    expect(storyboardSource).toContain(
+      'height: "calc(var(--full-height, 100vh) - 2rem)"',
     );
     expect(storyboardSource).toContain(
-      "grid h-full min-h-0 grid-cols-1 grid-rows-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-3 overflow-hidden",
+      'data-storyboard-desktop-split-layout="inline-grid"',
     );
     expect(storyboardSource).toContain(
-      "order-1 flex min-h-0 flex-col overflow-hidden border-0 bg-card/80 shadow-none",
+      'gridTemplateColumns: "minmax(0, 1fr) minmax(320px, 400px)"',
+    );
+    expect(storyboardSource).toContain(
+      'style={{ gridColumn: "1", gridRow: "1", minWidth: 0 }}',
     );
     expect(storyboardSource).toContain(
       'data-storyboard-input-panel="chat-stream"',
@@ -4173,6 +4205,29 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).toContain(
       'data-storyboard-chat-header-actions="true"',
     );
+    expect(storyboardSource).toContain(
+      'data-storyboard-chat-title-icon="true"',
+    );
+    expect(storyboardSource).toContain(
+      'className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"',
+    );
+    expect(storyboardSource).toContain(
+      '<MessageCircle className="block h-3.5 w-3.5" aria-hidden="true" />',
+    );
+    expect(storyboardSource).toContain('data-storyboard-chat-avatar="assistant"');
+    expect(storyboardSource).toContain('data-storyboard-chat-avatar="user"');
+    expect(storyboardSource).toContain('data-storyboard-chat-avatar="draft"');
+    expect(storyboardSource).toContain(
+      "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full",
+    );
+    expect(storyboardSource).toContain(
+      '<Wand2 className="block h-3.5 w-3.5" aria-hidden="true" />',
+    );
+    expect(appGlobalsSource).toContain("[data-storyboard-chat-avatar] > svg");
+    expect(appGlobalsSource).toContain("height: 0.875rem;");
+    expect(storyboardSource).toContain('style={{ maxWidth: "86%" }}');
+    expect(storyboardSource).not.toContain("max-w-[86%]");
+    expect(storyboardSource).not.toContain("grid h-7 w-7 shrink-0 place-items-center");
     expect(storyboardSource).toContain(
       '<span className="min-w-0 truncate">스토리보드 도우미</span>',
     );
@@ -4257,7 +4312,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "postStoryboardLocalBridgeImagesRequest",
     );
     expect(storyboardSource).toContain(
-      'fetch(`${baseUrl}/v1/storyboard/images`',
+      'command: "generateStoryboard"',
     );
     expect(storyboardSource).toContain(
       "storyboardImageRouteChoice === STORYBOARD_LOCAL_BRIDGE_ROUTE_ID",
@@ -4826,6 +4881,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(storyboardSource).toContain("STORYBOARD_USAGE_GUIDE_TEXT");
     expect(storyboardSource).toContain("STORYBOARD_GUIDED_EXAMPLE_PROMPT");
+    expect(storyboardSource).toContain("STORYBOARD_GUIDED_EXAMPLE_PRESETS");
+    expect(storyboardSource).toContain("storyboardGuidedExampleIndexRef");
+    expect(storyboardSource).toContain("킹크랩 해산물 한상");
+    expect(storyboardSource).toContain("디저트 카페 코스");
     expect(storyboardSource).toContain("handleStoryboardGuidedExampleGenerate");
     expect(storyboardSource).toContain(
       "스토리보드와 전체 CUT 이미지를 함께 만들고 있어요",
@@ -5005,7 +5064,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).not.toContain("6. 스토리보드 생성");
     expect(storyboardSource).not.toContain("생성 입력");
     expect(storyboardSource).toContain(
-      "order-2 flex min-h-0 flex-col overflow-hidden border-0 bg-card/80 shadow-none",
+      'style={{ gridColumn: "2", gridRow: "1", minWidth: 0 }}',
     );
     expect(storyboardSource).not.toContain(
       "rounded-2xl bg-muted/25 p-2.5 text-sm leading-6",
@@ -5128,7 +5187,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(storyboardSource).not.toContain('className="flex flex-wrap gap-2"');
     expect(storyboardSource).toContain(
-      'className="min-h-0 flex-1 overflow-hidden p-3 pt-0"',
+      'className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-3 pt-0"',
     );
     expect(storyboardSource).toContain(
       'className="h-8 w-[112px] shrink-0 text-xs"',
@@ -5153,6 +5212,16 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).toContain(
       'data-storyboard-frame-script-placement="separated"',
     );
+    expect(storyboardSource).toContain(
+      'data-storyboard-frame-script-layout="stacked-rows"',
+    );
+    expect(storyboardSource).toContain("shrink-0 space-y-1 border-t");
+    expect(storyboardSource).toContain(
+      'style={{ gridTemplateColumns: "58px minmax(0, 1fr)" }}',
+    );
+    expect(storyboardSource).not.toContain(
+      "grid-cols-[58px_minmax(0,1fr)]",
+    );
     expect(storyboardSource).toContain('data-storyboard-frame-audio="true"');
     expect(storyboardSource).toContain(
       'data-storyboard-frame-audio-row="true"',
@@ -5164,6 +5233,14 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).toContain(
       'data-storyboard-frame-audio-text="true"',
     );
+    expect(storyboardSource).toContain(
+      "block min-w-0 truncate whitespace-nowrap font-semibold text-foreground",
+    );
+    expect(storyboardSource).toContain(
+      "block min-w-0 truncate whitespace-nowrap font-bold text-foreground",
+    );
+    expect(storyboardSource).not.toContain("line-clamp-1 font-semibold");
+    expect(storyboardSource).not.toContain("line-clamp-1 font-bold");
     expect(storyboardSource).toContain(
       'data-storyboard-frame-subtitle-text="true"',
     );
@@ -5443,6 +5520,13 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).toContain(
       'data-storyboard-cut-image-shimmer="true"',
     );
+    expect(storyboardSource).toContain("storyboard-cut-image-shimmer");
+    expect(storyboardSource).toContain(
+      'data-storyboard-cut-image-shimmer-effect="glass-sweep"',
+    );
+    expect(appGlobalsSource).toContain(".storyboard-cut-image-shimmer");
+    expect(appGlobalsSource).toContain("@keyframes storyboard-glass-shimmer");
+    expect(appGlobalsSource).toContain("will-change: transform");
     expect(storyboardSource).toContain("STORYBOARD_PENDING_IMAGE_BACKGROUND");
     expect(storyboardSource).toContain(
       "data-storyboard-cut-image-loading-scope={",
@@ -5482,7 +5566,13 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(storyboardSource).toContain('"flex h-full min-h-0 flex-col gap-2"');
     expect(storyboardSource).toContain(
-      '"relative grid min-h-0 flex-1 grid-cols-2 grid-rows-2 gap-2"',
+      '"relative grid min-h-0 flex-1 grid-cols-2 gap-2"',
+    );
+    expect(storyboardSource).toContain(
+      'gridTemplateRows: "minmax(0, 1fr) minmax(0, 1fr)"',
+    );
+    expect(storyboardSource).toContain(
+      'className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-3 pt-0"',
     );
     expect(storyboardSource).toContain(
       "data-storyboard-frame-page={String(activeStoryboardPage + 1)}",
@@ -5495,13 +5585,33 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "auto-rows-max grid-cols-2 2xl:grid-cols-3",
     );
     expect(storyboardSource).toContain(
+      "group relative grid h-full min-h-0 overflow-hidden rounded-2xl",
+    );
+    expect(storyboardSource).toContain(
+      'style={{ gridTemplateRows: "minmax(0, 1fr) auto" }}',
+    );
+    expect(storyboardSource).toContain(
       "data-storyboard-image-frame={String(scene.sceneNo)}",
     );
+    expect(storyboardSource).toContain(
+      'data-storyboard-frame-fit="image-and-script-visible"',
+    );
+    expect(storyboardSource).toContain(
+      'className="relative min-h-0 flex-1 overflow-hidden rounded-t-2xl"',
+    );
+    expect(storyboardSource).not.toContain("min-h-[160px] flex-1");
     expect(storyboardSource).toContain("스토리보드 이미지 생성 결과");
     expect(storyboardSource).not.toContain("aspect-video");
     expect(storyboardSource).toContain(
       "aria-label={`${scene.sceneNo}컷 이미지 생성 결과`}",
     );
+    expect(storyboardSource).toContain('data-storyboard-cut-overlay="true"');
+    expect(storyboardSource).toContain('data-storyboard-cut-badge="true"');
+    expect(storyboardSource).toContain(
+      'data-storyboard-cut-time-badge="true"',
+    );
+    expect(storyboardSource).toContain('zIndex: 30');
+    expect(storyboardSource).toContain("bg-black/70");
     expect(storyboardSource).not.toContain('"copy-markdown"');
     expect(storyboardSource).not.toContain('"view-full"');
     expect(storyboardSource).not.toContain('"view-evidence"');
@@ -5778,10 +5888,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(backendAgentRequirementsSource).toContain("langgraph");
     expect(backendAgentRequirementsSource).toContain("langchain-openai");
     expect(backendAgentRequirementsSource).toContain("supabase");
-    expect(codexOauthResearchSource).toContain("Codex CLI OAuth");
-    expect(codexOauthResearchSource).toContain("gpt-4o");
-    expect(codexOauthResearchSource).toContain("gpt-image-2");
-    expect(codexOauthResearchSource).toContain("GitHub/community");
+    expect(storyboardImageWrapperSource).toContain("Codex OAuth + Responses image_generation");
+    expect(storyboardImageWrapperSource).toContain("gpt-image-2");
+    expect(storyboardImageWrapperSource).toContain("does not read or use OPENAI_API_KEY");
     expect(envExampleSource).toContain("STORYBOARD_AGENT_COMMAND");
     expect(envExampleSource).toContain("STORYBOARD_AGENT_ROOT=");
     expect(envExampleSource).toContain("STORYBOARD_AGENT_PYTHON");
@@ -6190,17 +6299,18 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
 
   test("cleans stale admin module query state and canonicalizes invalid modules", () => {
     const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
+    const routingSource = source("lib/admin/admin-module-routing.ts");
 
     expect(consoleSource).toContain("buildCanonicalAdminModuleHref");
     expect(consoleSource).toContain("getAdminModuleStateWarning");
-    expect(consoleSource).toContain(
+    expect(routingSource).toContain(
       "알 수 없는 관리자 화면 요청을 대시보드 (KPI)로 되돌렸습니다.",
     );
     expect(consoleSource).toContain(
       "router.replace(buildCanonicalAdminModuleHref(moduleId)",
     );
     expect(consoleSource).toContain(
-      "const canonicalHref = buildCanonicalAdminModuleHref(nextModuleId);",
+      "const canonicalHref = buildCanonicalAdminHrefFromSearchParams(searchParams);",
     );
     expect(consoleSource).toContain("currentHref !== canonicalHref");
     expect(consoleSource).toContain(

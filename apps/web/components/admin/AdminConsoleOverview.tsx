@@ -99,21 +99,15 @@ import type {
   InsightTreemapVideoRow,
 } from "@/lib/public-insights/treemap";
 import type { StoryboardInitialResult } from "@/lib/admin/storyboard/initial-result";
+import {
+  buildCanonicalAdminHrefFromSearchParams,
+  buildCanonicalAdminModuleHref,
+  getAdminModuleIdFromSearchParams,
+  getAdminModuleStateWarning,
+  type AdminConsoleRouteModuleId,
+} from "@/lib/admin/admin-module-routing";
 
-type AdminModuleId =
-  | "overview"
-  | "routes"
-  | "restaurants"
-  | "restaurant-refresh-history"
-  | "submissions"
-  | "reviews"
-  | "storyboard"
-  | "banners"
-  | "users"
-  | "insights"
-  | "audit"
-  | "youtube-thumbnail-generator"
-  | "llm";
+type AdminModuleId = AdminConsoleRouteModuleId;
 type ConsoleModuleId = Exclude<AdminModuleId, "overview" | "routes" | "llm">;
 
 type ConsoleModule = {
@@ -144,7 +138,7 @@ const consoleModules: ConsoleModule[] = [
     title: "맛집 관리",
     description:
       "승인된 맛집, 삭제/복구, 지도 좌표 오류 후보를 한 흐름에서 점검합니다.",
-    href: "/admin/evaluations",
+    href: "/admin?module=restaurants",
     icon: Store,
     badge: "데이터 검수",
     actionLabel: "맛집 데이터 검수",
@@ -166,7 +160,7 @@ const consoleModules: ConsoleModule[] = [
     title: "제보 관리",
     description:
       "사용자 신규/수정 제보를 검토하고 안전 적용 절차로 반영합니다.",
-    href: "/admin/evaluations?view=submissions",
+    href: "/admin?module=submissions",
     icon: ClipboardList,
     badge: "승인 대기",
     actionLabel: "제보 검토하기",
@@ -177,7 +171,7 @@ const consoleModules: ConsoleModule[] = [
     title: "리뷰 관리",
     description:
       "미승인 리뷰, OCR 증빙, 중복/삭제 후보를 운영 기준에 맞춰 처리합니다.",
-    href: "/admin/evaluations?view=submissions&tab=reviews",
+    href: "/admin?module=reviews",
     icon: MessageSquareText,
     badge: "검수 큐",
     actionLabel: "리뷰 검수하기",
@@ -230,7 +224,7 @@ const consoleModules: ConsoleModule[] = [
     title: "감사 로그",
     description:
       "승인·반려·삭제·복구 이력을 상태 재확인과 함께 추적하는 영역입니다.",
-    href: "/admin/evaluations",
+    href: "/admin?module=audit",
     icon: ScrollText,
     badge: "준비 중",
     actionLabel: "감사 기준 보기",
@@ -593,20 +587,6 @@ function buildOrderedSidebarSections(
   });
 }
 
-const adminModuleIds: AdminModuleId[] = sidebarSections.flatMap((section) =>
-  section.items.map((item) => item.id),
-);
-
-function isAdminModuleId(value: string | null): value is AdminModuleId {
-  return Boolean(value && adminModuleIds.includes(value as AdminModuleId));
-}
-
-function getAdminModuleIdFromSearchParams(
-  searchParams: Pick<URLSearchParams, "get">,
-): AdminModuleId {
-  const moduleId = searchParams.get("module");
-  return isAdminModuleId(moduleId) ? moduleId : "overview";
-}
 
 const AdminEvaluationModule = dynamic(
   () => import("@/app/admin/evaluations/page"),
@@ -667,6 +647,16 @@ const AdminRouteRecommendationModule = dynamic(
   () =>
     import("@/components/admin/AdminOverviewDashboard").then(
       (module) => module.AdminOverviewDashboard,
+    ),
+  {
+    ssr: false,
+    loading: () => <AdminConsoleCanvasSkeleton />,
+  },
+);
+const AdminSystemStatusCenter = dynamic(
+  () =>
+    import("@/components/admin/system-status/AdminSystemStatusCenter").then(
+      (module) => module.AdminSystemStatusCenter,
     ),
   {
     ssr: false,
@@ -765,28 +755,6 @@ type AdminYouTubeKpiCollectionLogs = {
   };
 };
 
-function buildCanonicalAdminModuleHref(moduleId: AdminModuleId): string {
-  const params = new URLSearchParams();
-
-  if (moduleId !== "overview") {
-    params.set("module", moduleId);
-  }
-
-  const nextQuery = params.toString();
-  return `/admin${nextQuery ? `?${nextQuery}` : ""}`;
-}
-
-function getAdminModuleStateWarning(
-  searchParams: Pick<URLSearchParams, "get">,
-): string | null {
-  const requestedModule = searchParams.get("module");
-
-  if (requestedModule && !isAdminModuleId(requestedModule)) {
-    return "알 수 없는 관리자 화면 요청을 대시보드 (KPI)로 되돌렸습니다.";
-  }
-
-  return null;
-}
 
 const E2E_ADMIN_SHELL_BYPASS_STORAGE_KEY = "tzudong:e2e-admin-shell-bypass";
 
@@ -3860,7 +3828,7 @@ function AdminDashboardOpsSummaryCard({
 }: {
   sections: Array<{
     title: string;
-    rows: Array<{ label: string; value: string; rawValue: number }>;
+    rows: Array<{ label: string; value: string; rawValue: number | null }>;
     totalLabel: string;
     totalValue: string;
   }>;
@@ -3882,7 +3850,7 @@ function AdminDashboardOpsSummaryCard({
   const riskTotal = sections.reduce(
     (sum, section) =>
       section.title === "검수 리스크"
-        ? sum + section.rows.reduce((rowSum, row) => rowSum + row.rawValue, 0)
+        ? sum + section.rows.reduce((rowSum, row) => rowSum + (row.rawValue ?? 0), 0)
         : sum,
     0,
   );
@@ -3968,7 +3936,7 @@ function AdminDashboardOpsSummaryCard({
           {sections.map((section, sectionIndex) => {
             const maxRawValue = Math.max(
               1,
-              ...section.rows.map((row) => row.rawValue),
+              ...section.rows.map((row) => row.rawValue ?? 0),
             );
             const barTone =
               sectionIndex === 0
@@ -3997,7 +3965,7 @@ function AdminDashboardOpsSummaryCard({
                 <div className="grid gap-2">
                   {section.rows.map((row) => {
                     const rowPercent = clampDashboardPercent(
-                      (row.rawValue / maxRawValue) * 100,
+                      (((row.rawValue ?? 0) / maxRawValue) * 100),
                     );
 
                     return (
@@ -5359,10 +5327,12 @@ function AdminDashboardManagementPanel({
   stats,
   isLoading,
   hasError,
+  isAdmin,
 }: {
   stats: AdminOverviewStats;
   isLoading: boolean;
   hasError: boolean;
+  isAdmin: boolean;
 }) {
   const [period, setPeriod] = useState<AdminDashboardPeriod>("1M");
   const [pendingSkeletonPeriod, setPendingSkeletonPeriod] =
@@ -6213,7 +6183,9 @@ function AdminDashboardManagementPanel({
     ? "기간 댓글 증가"
     : "기간 댓글 합계";
   const pendingTotal =
-    (stats.pendingSubmissions ?? 0) + (stats.pendingReviews ?? 0);
+    typeof stats.pendingSubmissions === "number" && typeof stats.pendingReviews === "number"
+      ? stats.pendingSubmissions + stats.pendingReviews
+      : null;
   const missingCoordinates =
     typeof stats.totalRestaurants === "number" &&
     typeof stats.withCoordinates === "number"
@@ -6245,12 +6217,12 @@ function AdminDashboardManagementPanel({
     {
       label: "제보 대기",
       value: formatNumber(stats.pendingSubmissions),
-      rawValue: stats.pendingSubmissions ?? 0,
+      rawValue: stats.pendingSubmissions,
     },
     {
       label: "리뷰 대기",
       value: formatNumber(stats.pendingReviews),
-      rawValue: stats.pendingReviews ?? 0,
+      rawValue: stats.pendingReviews,
     },
     {
       label: "좌표 미완료",
@@ -7142,9 +7114,11 @@ function AdminDashboardManagementPanel({
               rows: operationalLiabilities,
               totalLabel: "합계",
               totalValue: formatNumber(
-                pendingTotal +
-                  (missingCoordinates ?? 0) +
-                  (stats.inactiveBanners ?? 0),
+                pendingTotal === null
+                  ? null
+                  : pendingTotal +
+                      (missingCoordinates ?? 0) +
+                      (stats.inactiveBanners ?? 0),
               ),
             },
           ]}
@@ -7157,6 +7131,10 @@ function AdminDashboardManagementPanel({
           view={getDashboardCardView("ops")}
           onViewChange={(view) => setDashboardCardView("ops", view)}
           isLoading={isLoading}
+        />
+        <AdminSystemStatusCenter
+          isAdmin={isAdmin}
+          className="sm:col-span-2 lg:col-span-2"
         />
 
         <div
@@ -8893,7 +8871,7 @@ export function AdminConsoleOverview({
   useEffect(() => {
     const stateWarning = getAdminModuleStateWarning(searchParams);
     const nextModuleId = requestedModuleId;
-    const canonicalHref = buildCanonicalAdminModuleHref(nextModuleId);
+    const canonicalHref = buildCanonicalAdminHrefFromSearchParams(searchParams);
     const currentQuery = searchParams.toString();
     const currentHref = `/admin${currentQuery ? `?${currentQuery}` : ""}`;
 
@@ -9140,7 +9118,9 @@ export function AdminConsoleOverview({
             "h-full min-h-0 min-w-0 overflow-x-hidden overscroll-contain border-y border-border bg-background p-2 md:border-y-0 md:p-4",
             activeModuleId === "overview"
               ? "overflow-y-auto lg:overflow-hidden"
-              : "overflow-y-auto",
+              : activeModuleId === "storyboard"
+                ? "overflow-y-auto md:overflow-hidden"
+                : "overflow-y-auto",
           )}
           data-admin-console-content="true"
           onScroll={handleAdminCanvasScroll}
@@ -9162,11 +9142,12 @@ export function AdminConsoleOverview({
               <AdminConsoleCanvasSkeleton />
             )
           ) : activeModuleId === "overview" ? (
-            <AdminDashboardManagementPanel
-              stats={stats}
-              isLoading={statsLoading}
-              hasError={statsHasError}
-            />
+<AdminDashboardManagementPanel
+  stats={stats}
+  isLoading={statsLoading}
+  hasError={statsHasError}
+  isAdmin={canLoadAdminConsoleData}
+/>
           ) : activeModuleId === "routes" ? (
             <AdminRouteRecommendationModule
               stats={stats}
