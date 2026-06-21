@@ -745,9 +745,17 @@ function validateLocalCodexCommandResult(
   const transientOutputPath = result.transientOutputPath ?? result.path;
   const latestProof = commandProof ? readLocalCodexProof(env) : null;
   if (!commandProof || transientOutputPath !== expectedOutputPath || !hasMatchingLatestCodexProof(commandProof, latestProof)) {
+    const proofDetail = [
+      commandProof ? 'command_proof=ok' : 'command_proof=missing',
+      transientOutputPath === expectedOutputPath ? 'transient_path=ok' : 'transient_path=mismatch',
+      latestProof ? 'latest_proof=ok' : 'latest_proof=missing',
+      commandProof && latestProof && hasMatchingLatestCodexProof(commandProof, latestProof)
+        ? 'latest_match=ok'
+        : 'latest_match=mismatch',
+    ].join(' ');
     throw new ThumbnailGenerationError(
       'provider_unavailable',
-      '로컬 Codex bridge가 exact local-codex gpt-image-2 provenance를 증명하지 못해 이미지를 폐기했습니다.',
+      `로컬 Codex bridge가 exact local-codex gpt-image-2 provenance를 증명하지 못해 이미지를 폐기했습니다. (${proofDetail})`,
       502,
     );
   }

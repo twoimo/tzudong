@@ -616,6 +616,10 @@ function assertThumbnailImagesPayload(value: unknown): ThumbnailLocalBridgeImage
   };
 }
 
+function resolveLocalBridgePythonCommand() {
+  return process.env.PYTHON || (process.platform === 'win32' ? 'python' : 'python3');
+}
+
 function resolveProviderCommand(options: StoryboardLocalBridgeServerOptions) {
   if (options.providerCommand) {
     return { command: options.providerCommand, args: options.providerArgs ?? [] };
@@ -629,9 +633,19 @@ function resolveProviderCommand(options: StoryboardLocalBridgeServerOptions) {
     };
   }
   return {
-    command: process.env.PYTHON || 'python3',
-    args: [resolve(process.cwd(), DEFAULT_LOCAL_CODEX_SCRIPT)],
+    command: resolveLocalBridgePythonCommand(),
+    args: [resolveStoryboardProviderScriptPath()],
   };
+}
+
+function resolveStoryboardProviderScriptPath() {
+  const cwd = process.cwd();
+  const candidates = [
+    resolve(cwd, 'apps/web', DEFAULT_LOCAL_CODEX_SCRIPT),
+    resolve(cwd, DEFAULT_LOCAL_CODEX_SCRIPT),
+    resolve(resolveLocalBridgeRepoRoot(), DEFAULT_LOCAL_CODEX_SCRIPT),
+  ];
+  return candidates.find((candidate) => existsSync(candidate)) ?? candidates[0];
 }
 
 function resolveLocalBridgeRepoRoot() {
@@ -682,7 +696,7 @@ function resolveThumbnailProviderCommand(
   }
   const repoRoot = resolveLocalBridgeRepoRoot();
   return {
-    command: process.env.PYTHON || 'python3',
+    command: resolveLocalBridgePythonCommand(),
     args: [
       resolve(repoRoot, DEFAULT_LOCAL_CODEX_THUMBNAIL_SCRIPT),
       '--prompt-file', placeholders.promptFile,
