@@ -36,18 +36,20 @@ function withEnv<T>(patch: EnvPatch, callback: () => T | Promise<T>): Promise<T>
 
 function createCommand(stdoutJson: unknown, exitCode = 0) {
   const tempDir = mkdtempSync(path.join(os.tmpdir(), 'tzudong-storyboard-langgraph-command-'));
-  const commandPath = path.join(tempDir, 'storyboard-command.sh');
+  const commandPath = path.join(tempDir, process.platform === 'win32' ? 'storyboard-command.cmd' : 'storyboard-command.sh');
   writeFileSync(
     commandPath,
-    [
-      '#!/usr/bin/env bash',
-      'cat >/dev/null',
-      `printf '%s\\n' ${JSON.stringify(JSON.stringify(stdoutJson))}`,
-      `exit ${exitCode}`,
-    ].join('\n'),
+    process.platform === 'win32'
+      ? ['@echo off', `echo ${JSON.stringify(stdoutJson)}`, `exit /b ${exitCode}`].join('\r\n')
+      : [
+          '#!/usr/bin/env bash',
+          'cat >/dev/null',
+          `printf '%s\\n' ${JSON.stringify(JSON.stringify(stdoutJson))}`,
+          `exit ${exitCode}`,
+        ].join('\n'),
     'utf8',
   );
-  chmodSync(commandPath, 0o755);
+  if (process.platform !== 'win32') chmodSync(commandPath, 0o755);
   return {
     commandPath,
     cleanup: () => rmSync(tempDir, { recursive: true, force: true }),
@@ -627,18 +629,18 @@ describe('admin storyboard LangGraph replacement contracts', () => {
   });
 
   test('adapter invokes checked-in runner fixture through STORYBOARD_AGENT_COMMAND', async () => {
-    const runnerPath = path.resolve('../../backend/storyboard-agent/scripts/run-storyboard-agent.py');
-    const executableProbe = spawnSync(runnerPath, [], {
-      input: JSON.stringify({ request: baseRequest, localStoryboard: { storyboard: { scenes: [] } } }),
-      encoding: 'utf8',
-      env: {
-        ...process.env,
-        STORYBOARD_AGENT_RUNTIME: 'langgraph',
-        STORYBOARD_AGENT_LANGGRAPH_FIXTURE: 'success_retrieval_used',
-      },
-      timeout: 10_000,
-    });
-    expect(executableProbe.status).toBe(0);
+const runnerPath = path.resolve('../../backend/storyboard-agent/scripts/run-storyboard-agent.py');
+const executableProbe = spawnSync(process.platform === 'win32' ? 'python' : 'python3', [runnerPath], {
+  input: JSON.stringify({ request: baseRequest, localStoryboard: { storyboard: { scenes: [] } } }),
+  encoding: 'utf8',
+  env: {
+    ...process.env,
+    STORYBOARD_AGENT_RUNTIME: 'langgraph',
+    STORYBOARD_AGENT_LANGGRAPH_FIXTURE: 'success_retrieval_used',
+  },
+  timeout: 10_000,
+});
+expect(executableProbe.status).toBe(0);
 
     await withEnv(
       {
@@ -742,7 +744,7 @@ describe('admin storyboard LangGraph replacement contracts', () => {
     expect(source).not.toContain('data-storyboard-backend-agent-live-graph-ready');
     expect(source).not.toContain('data-storyboard-backend-agent-retrieval-used');
     expect(source).toContain('data-storyboard-browser-api-key-settings="local-storage-only"');
-    expect(source).toContain('OpenAI API Key');
+    expect(source).toContain('OpenAI API 키');
     expect(source).toContain('data-storyboard-api-router-panel="true"');
     expect(source).toContain('data-storyboard-codex-oauth-status={');
     expect(source).toContain('자료 분석 반영');

@@ -51,12 +51,14 @@ GEMINI_OCR_THINKING_LEVEL=MEDIUM
 # Storyboard Agent (옵션)
 # Local command bridge: backend/storyboard-agent를 Next.js API에서 직접 실행한다.
 # apps/web 기준 상대 경로 또는 절대 경로를 직접 설정한다. 셸 메타문자/인자는 허용하지 않는다.
-# 기본 runtime은 별도 OpenAI API 키 대신 로컬 Codex CLI OAuth 세션을 사용한다.
+# 기본값은 LangGraph command bridge이며, 로컬 환경에서 Python/runtime 준비가 안 되면 fail-closed fallback으로 내려간다.
+# 아래 값은 LangGraph 대신 legacy Codex bridge를 강제로 쓰고 싶을 때만 명시적으로 override 한다.
 STORYBOARD_AGENT_COMMAND=../../backend/storyboard-agent/scripts/run-storyboard-agent.py
 # Optional: apps/web 기준 상대 경로 또는 절대 경로. 비우면 repo 루트 backend/storyboard-agent를 자동 탐지.
 STORYBOARD_AGENT_ROOT=
-STORYBOARD_AGENT_PYTHON=python3
-STORYBOARD_AGENT_RUNTIME=codex_cli_oauth
+# Optional: 기본값은 Windows에서 python, macOS/Linux에서 python3.
+STORYBOARD_AGENT_PYTHON=
+# STORYBOARD_AGENT_RUNTIME=codex_cli_oauth
 STORYBOARD_AGENT_CODEX_MODEL=gpt-5.5
 STORYBOARD_AGENT_CODEX_EFFORT=high
 # milliseconds; command bridge timeout.

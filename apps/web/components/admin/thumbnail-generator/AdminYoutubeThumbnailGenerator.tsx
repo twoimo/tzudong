@@ -78,6 +78,17 @@ import type {
 
 type ProviderId = "local-codex" | "openai-gpt-image-2";
 type GenerationMode = "direct_provider" | "backend_agent";
+type ThumbnailResultSourceKind =
+  | "bundled_preview"
+  | "history_actual"
+  | "history_preview"
+  | "release_candidate_preview"
+  | "durable_release"
+  | "durable_release_fallback"
+  | "generated_exact"
+  | "generated_unverified"
+  | "external_image"
+  | "page_image";
 type BriefPreset =
   | "tzuyang-food-travel-collage"
   | "night-market-reaction"
@@ -178,6 +189,7 @@ type GenerationResult = {
     model: string;
     modelProvenance?: 'exact' | 'requested-label' | 'unknown';
   };
+  sourceKind?: ThumbnailResultSourceKind;
   generationMode?: GenerationMode;
   prompt: string;
   warnings: string[];
@@ -1613,6 +1625,7 @@ const BUNDLED_THUMBNAIL_PREVIEW_RESULT: GenerationResult = {
     model: "gpt-image-2",
     modelProvenance: "unknown",
   },
+  sourceKind: "bundled_preview",
   generationMode: "direct_provider",
   prompt: `기본 생성 예시 썸네일 미리보기: ${BUNDLED_THUMBNAIL_PREVIEW_TOPIC}`,
   warnings: [
@@ -1751,6 +1764,7 @@ function createThumbnailResultFromHistoryRun(run: ThumbnailHistoryRun): Generati
     generationMode: isGenerationMode(run.generationMode) ? run.generationMode : "direct_provider",
     prompt: run.topic ? `생성 히스토리 최신 실제 생성 결과: ${run.topic}` : "생성 히스토리 최신 실제 생성 결과를 캔버스 배경으로 불러왔습니다.",
     warnings: Array.isArray(run.warnings) ? run.warnings : [],
+    sourceKind: "history_actual",
   };
 }
 
@@ -1772,6 +1786,7 @@ function createExistingThumbnailPreviewResultFromHistoryRun(run: ThumbnailHistor
     generationMode: isGenerationMode(run.generationMode) ? run.generationMode : "direct_provider",
     prompt: run.topic ? `기존 생성 썸네일 미리보기: ${run.topic}` : "기존 생성 썸네일 이미지를 캔버스 배경으로 불러왔습니다.",
     warnings: Array.isArray(run.warnings) ? run.warnings : ["기존 생성 이미지 미리보기입니다."],
+    sourceKind: "history_preview",
   };
 }
 
@@ -1792,6 +1807,7 @@ function createThumbnailResultFromReleaseCandidate(candidate: ThumbnailReleaseCa
     },
     generationMode: candidate.generationMode,
     prompt: `자동 선택된 릴리즈 후보: ${candidate.topic}`,
+    sourceKind: "release_candidate_preview",
     warnings: [
       `릴리즈 후보 ${candidate.id} · score ${candidate.score}`,
       "QA 히스토리는 readback evidence이며, 이 배경은 exact gpt-image-2 후보 중 자동 선택된 기본 미리보기입니다.",
@@ -1821,6 +1837,7 @@ function createThumbnailResultFromDurableRelease(release: ThumbnailDurableReleas
       modelProvenance: "exact",
     },
     generationMode: "direct_provider",
+    sourceKind: isLocalFallbackRelease ? "durable_release_fallback" : "durable_release",
     prompt: isLocalFallbackRelease
       ? `로컬 검증 후보 기본 썸네일: ${release.candidateId}`
       : `공용 릴리즈 레지스트리 현재 썸네일: ${release.candidateId}`,
@@ -1900,26 +1917,96 @@ function formatThumbnailGenerationMode(mode: GenerationMode) {
 }
 
 function formatThumbnailModelProvenance(provenance: GenerationResult["baseImage"]["modelProvenance"] | undefined) {
-  if (provenance === "exact") return "검증 완료";
-  if (provenance === "requested-label") return "확인 필요";
-  return "확인 안 됨";
+  if (provenance === "exact") return "실제 생성 확인";
+  if (provenance === "requested-label") return "출처 확인 필요";
+  return "공용 예시 / 미검증";
+}
+
+function normalizeThumbnailResultSourceKind(currentResult: GenerationResult | null): ThumbnailResultSourceKind | null {
+  if (!currentResult) return null;
+  if (currentResult.sourceKind) return currentResult.sourceKind;
+
+  const dataUrl = currentResult.baseImage.dataUrl ?? "";
+  const modelProvenance = currentResult.baseImage.modelProvenance;
+  if (!dataUrl) return null;
+  if (dataUrl.startsWith(`${THUMBNAIL_HISTORY_IMAGE_BASE_URL}/`)) {
+    return modelProvenance === "exact" ? "history_actual" : "history_preview";
+  }
+  if (dataUrl.startsWith("/images/admin/") && modelProvenance === "unknown") {
+    return "bundled_preview";
+  }
+  if (dataUrl.startsWith("data:image/")) {
+    return modelProvenance === "exact" ? "generated_exact" : "generated_unverified";
+  }
+  if (dataUrl.startsWith("http://") || dataUrl.startsWith("https://")) return "external_image";
+  return "page_image";
 }
 
 function getThumbnailResultSourceLabel(currentResult: GenerationResult | null) {
-  const dataUrl = currentResult?.baseImage?.dataUrl ?? "";
-  if (!dataUrl) return "결과 없음";
-  if (dataUrl.startsWith(`${THUMBNAIL_HISTORY_IMAGE_BASE_URL}/`)) return "저장된 이전 결과";
-  if (dataUrl.startsWith("/images/admin/") && currentResult?.baseImage.modelProvenance === "unknown") return "기본 미리보기";
-  if (dataUrl.startsWith("data:image/")) return "방금 만든 이미지";
-  if (dataUrl.startsWith("http://") || dataUrl.startsWith("https://")) return "외부 이미지";
-  return "페이지 이미지";
+  const sourceKind = normalizeThumbnailResultSourceKind(currentResult);
+  switch (sourceKind) {
+    case "bundled_preview":
+      return "공용 예시 미리보기";
+    case "history_actual":
+      return "실제 히스토리";
+    case "history_preview":
+      return "히스토리 미리보기";
+    case "release_candidate_preview":
+      return "릴리즈 후보 미리보기";
+    case "durable_release":
+      return "공용 릴리즈";
+    case "durable_release_fallback":
+      return "공용 릴리즈 · 로컬 폴백";
+    case "generated_exact":
+      return "실제 생성 결과";
+    case "generated_unverified":
+      return "임시 결과";
+    case "external_image":
+      return "외부 이미지 · 확인 필요";
+    case "page_image":
+      return "페이지 이미지 · 확인 필요";
+    default:
+      return "결과 없음";
+  }
+}
+
+function getThumbnailInitialPreviewSourceLabel(source: ThumbnailInitialPreviewSource) {
+  switch (source) {
+    case "bundled":
+      return "공용 예시 미리보기";
+    case "durable":
+      return "공용 릴리즈";
+    case "durable-empty":
+      return "공용 릴리즈 없음";
+    case "durable-error":
+      return "공용 릴리즈 읽기 실패";
+    case "candidate":
+      return "릴리즈 후보 미리보기";
+    case "candidate-empty":
+      return "릴리즈 후보 없음";
+    case "candidate-error":
+      return "릴리즈 후보 읽기 실패";
+    case "history":
+      return "실제 히스토리";
+    default:
+      return "준비 중";
+  }
+}
+
+function getThumbnailHistoryRunSourceLabel(run: ThumbnailHistoryRun) {
+  return run.modelProvenance === "exact"
+    ? "실제 히스토리"
+    : "출처 확인 필요";
 }
 
 function isInitialThumbnailPreviewResult(currentResult: GenerationResult | null) {
-  const dataUrl = currentResult?.baseImage?.dataUrl ?? "";
+  const sourceKind = normalizeThumbnailResultSourceKind(currentResult);
   return (
-    dataUrl.startsWith(`${THUMBNAIL_HISTORY_IMAGE_BASE_URL}/`) ||
-    (dataUrl.startsWith("/images/admin/") && currentResult?.baseImage.modelProvenance === "unknown")
+    sourceKind === "bundled_preview" ||
+    sourceKind === "history_actual" ||
+    sourceKind === "history_preview" ||
+    sourceKind === "release_candidate_preview" ||
+    sourceKind === "durable_release_fallback"
   );
 }
 
@@ -6154,6 +6241,9 @@ export function AdminYoutubeThumbnailGenerator() {
               <Badge variant="secondary" className="px-1.5 text-[10px]">
                 {historyStatus === "loading" ? "불러오는 중" : `${historyRuns.length}건`}
               </Badge>
+              <Badge variant="outline" className="px-1.5 text-[10px]" data-thumbnail-history-source-label="true">
+                {getThumbnailInitialPreviewSourceLabel(initialPreviewSource)}
+              </Badge>
             </div>
             <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
               정적 HTML 대신 이 페이지에서 실제 생성 기록을 관리합니다.
@@ -6223,9 +6313,14 @@ export function AdminYoutubeThumbnailGenerator() {
                       <p className="truncate font-semibold">{run.headline || "제목 없음"}</p>
                       <p className="truncate text-muted-foreground">{run.topic || run.completedAt || run.timestamp || "주제 없음"}</p>
                     </div>
-                    <Badge variant="outline" className="shrink-0 px-1.5 text-[10px]">
-                      {run.providerId ?? "provider"}
-                    </Badge>
+                    <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+                      <Badge variant="outline" className="px-1.5 text-[10px]" data-thumbnail-history-source-label="true">
+                        {getThumbnailHistoryRunSourceLabel(run)}
+                      </Badge>
+                      <Badge variant="outline" className="px-1.5 text-[10px]" data-thumbnail-history-provenance-label="true">
+                        {formatThumbnailModelProvenance(run.modelProvenance)}
+                      </Badge>
+                    </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5">
                     <Button
