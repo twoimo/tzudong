@@ -53,11 +53,15 @@ function classifyRunDailyMetric(runDaily: AdminSystemRunDailyStatus | undefined)
     };
   }
 
-  const failedRequired = runDaily.failedRequiredSteps.length > 0 || runDaily.finalStatus === 'ERROR';
+  const failedRequiredSteps = runDaily.failedRequiredSteps ?? [];
+  const optionalSkips = runDaily.optionalSkips ?? [];
+  const downstreamSkips = runDaily.downstreamSkips ?? [];
+  const failedRequired =
+    failedRequiredSteps.length > 0 || runDaily.finalStatus === 'ERROR';
   const partial =
     runDaily.finalStatus === 'WARN'
-    || runDaily.optionalSkips.length > 0
-    || runDaily.downstreamSkips.length > 0;
+    || optionalSkips.length > 0
+    || downstreamSkips.length > 0;
 
   if (runDaily.detail) {
     return {
