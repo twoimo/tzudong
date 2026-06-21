@@ -1,6 +1,10 @@
 import { NextRequest } from 'next/server';
 
-import { generateStoryboardChatWithBackendAgent } from '@/lib/admin/storyboard/backend-agent';
+import {
+  generateStoryboardChatWithBackendAgent,
+  isCasualStoryboardChatMessage,
+  isGeneralStoryboardConversationMessage,
+} from '@/lib/admin/storyboard/backend-agent';
 import { requireAdmin } from '@/lib/auth/require-admin';
 
 export const runtime = 'nodejs';
@@ -42,12 +46,17 @@ function toPublicStoryboardChatAgentResult(
 }
 
 type StoryboardChatPayload = Record<string, unknown>;
+type SseSend = (event: string, data: unknown) => void;
+
+const CONVERSATION_STREAM_CHUNK_SIZE = 14;
+const CONVERSATION_STREAM_DELAY_MS = 12;
 
 function sanitizeStatusText(value: unknown, maxLength = 90) {
   return typeof value === 'string'
     ? value.replace(/\s+/g, ' ').trim().slice(0, maxLength)
     : '';
 }
+
 
 function getRoutePayloadNumber(payload: StoryboardChatPayload, key: string) {
   const value = Number(payload[key]);
@@ -82,8 +91,45 @@ function getRouteRequestSummary(payload: StoryboardChatPayload) {
     .filter(Boolean)
     .join(' · ');
 }
+function isConversationRequest(payload: StoryboardChatPayload) {
+  const message = String(payload.message ?? '');
+  return (
+    isCasualStoryboardChatMessage(message) ||
+    isGeneralStoryboardConversationMessage(message)
+  );
+}
+
+function isConversationResult(
+  result: Awaited<ReturnType<typeof generateStoryboardChatWithBackendAgent>>,
+) {
+  const chatIntent = String(result.backendAgent.diagnostics.chatIntent ?? '');
+  return chatIntent === 'casual_chat' || chatIntent === 'conversation';
+}
+
+function wait(ms: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
+
+async function streamConversationMessage(send: SseSend, message: string) {
+  const characters = Array.from(message);
+  let rendered = '';
+  for (
+    let index = 0;
+    index < characters.length;
+    index += CONVERSATION_STREAM_CHUNK_SIZE
+  ) {
+    rendered += characters
+      .slice(index, index + CONVERSATION_STREAM_CHUNK_SIZE)
+      .join('');
+    send('status', { message: rendered });
+    await wait(CONVERSATION_STREAM_DELAY_MS);
+  }
+}
+
 
 function getInitialStatusMessages(payload: StoryboardChatPayload) {
+  if (isConversationRequest(payload)) return [];
+
   const focusSummary = getRouteFocusSummary(payload);
   return [
     `${getRouteRequestSummary(payload)}을 확인하고 있어요.`,
@@ -95,6 +141,7 @@ function getInitialStatusMessages(payload: StoryboardChatPayload) {
 function getResolvedStatusMessage(
   result: Awaited<ReturnType<typeof generateStoryboardChatWithBackendAgent>>,
 ) {
+  if (isConversationResult(result)) return result.assistantMessage;
   const patch = result.canvasPatch;
   const sceneNo = patch.scenePatch?.sceneNo;
   const intent = result.shouldReset
@@ -137,15 +184,19 @@ export async function POST(request: NextRequest) {
       };
 
       try {
-        for (const message of getInitialStatusMessages(payload as StoryboardChatPayload)) {
-          send('status', { message });
+        for (const statusMessage of getInitialStatusMessages(payload as StoryboardChatPayload)) {
+          send('status', { message: statusMessage });
         }
         const result = await generateStoryboardChatWithBackendAgent(
           payload as Parameters<typeof generateStoryboardChatWithBackendAgent>[0],
           process.env,
         );
         const publicResult = toPublicStoryboardChatAgentResult(result);
-        send('status', { message: getResolvedStatusMessage(result) });
+        if (isConversationResult(result)) {
+          await streamConversationMessage(send, result.assistantMessage);
+        } else {
+          send('status', { message: getResolvedStatusMessage(result) });
+        }
         send('patch', publicResult);
         send('done', publicResult);
       } catch (error) {

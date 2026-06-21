@@ -319,7 +319,7 @@ export default function HomeClientEffects({
 
         const handleAdminSubmissionsOpen = () => {
             if (isAdmin) {
-                router.push('/admin/evaluations?view=submissions');
+                router.push('/admin?module=submissions');
             }
         };
 
