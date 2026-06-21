@@ -1,10 +1,5 @@
 import { NextRequest } from 'next/server';
 
-import {
-  generateStoryboardChatWithBackendAgent,
-  isCasualStoryboardChatMessage,
-  isGeneralStoryboardConversationMessage,
-} from '@/lib/admin/storyboard/backend-agent';
 import { requireAdmin } from '@/lib/auth/require-admin';
 
 export const runtime = 'nodejs';
@@ -33,9 +28,30 @@ function normalizeRouteError(error: unknown) {
     status: 500,
   };
 }
+type StoryboardChatAgentResultForRoute = {
+  assistantMessage: string;
+  canvasPatch: {
+    segmentCount?: number;
+    targetLengthMinutes?: number;
+    focusSceneNo?: number;
+    unavailableFocusSceneNo?: number;
+    scenePatch?: {
+      sceneNo?: number;
+      regenerateImage?: boolean;
+    };
+  };
+  shouldGenerate: boolean;
+  shouldReset: boolean;
+  backendAgent: {
+    diagnostics: {
+      chatIntent?: unknown;
+    };
+  };
+};
+
 
 function toPublicStoryboardChatAgentResult(
-  result: Awaited<ReturnType<typeof generateStoryboardChatWithBackendAgent>>,
+  result: StoryboardChatAgentResultForRoute,
 ) {
   return {
     assistantMessage: result.assistantMessage,
@@ -50,6 +66,14 @@ type SseSend = (event: string, data: unknown) => void;
 
 const CONVERSATION_STREAM_CHUNK_SIZE = 14;
 const CONVERSATION_STREAM_DELAY_MS = 12;
+
+function shouldSkipLocalStoryboardBackendAgentOnVercel() {
+  return (
+    process.env.VERCEL === '1' &&
+    !process.env.STORYBOARD_AGENT_COMMAND?.trim() &&
+    !process.env.STORYBOARD_AGENT_ROOT?.trim()
+  );
+}
 
 function sanitizeStatusText(value: unknown, maxLength = 90) {
   return typeof value === 'string'
@@ -91,16 +115,54 @@ function getRouteRequestSummary(payload: StoryboardChatPayload) {
     .filter(Boolean)
     .join(' · ');
 }
+function normalizeRouteChatMessage(message: string) {
+  return message.replace(/\s+/g, ' ').trim();
+}
+
+function isRouteCasualStoryboardChatMessage(message: string) {
+  const normalized = normalizeRouteChatMessage(message);
+  if (!normalized) return false;
+  const compact = normalized.replace(/[\s!?.,。~…]+/g, '').toLowerCase();
+  return /^(ㅎㅇ+|하이+|안녕|안녕하세(?:요|여)|안뇽|hi|hello|hey|yo)$/.test(compact);
+}
+
+function hasRouteStoryboardMutationCommand(message: string) {
+  return (
+    /(생성|만들|짜줘|구성해|구성|실행|뽑아|스토리보드|초기화|리셋|reset)/i.test(message) ||
+    /(?:수정|변경|바꿔|바꿔줘|고쳐|보완|짧게|줄여|재생성|다시\s*생성|생성해|만들어\s*줘|만들어줘|구성해|짜줘|뽑아|보여줘|이동|가줘|열어|선택|포커스|focus|show|open|해줘)/i.test(message)
+  );
+}
+
+function isRouteGeneralStoryboardConversationMessage(message: string) {
+  const normalized = normalizeRouteChatMessage(message);
+  if (!normalized || isRouteCasualStoryboardChatMessage(normalized)) return false;
+  if (hasRouteStoryboardMutationCommand(normalized)) return false;
+
+  const compact = normalized.replace(/[\s!?.,。~…]+/g, '').toLowerCase();
+  if (/^(고마워|고맙|감사|감사해|땡큐|thanks|thankyou|ok|okay|ㅇㅋ|오케이|좋아|좋습니다|괜찮아|ㅋㅋ+|ㅎㅎ+|굿|nice)$/.test(compact)) {
+    return true;
+  }
+
+  if (/(뭐\s*할\s*수|무엇을\s*할\s*수|사용법|도움말|도와줘|help|what can you do|how do i use)/i.test(normalized)) {
+    return true;
+  }
+
+  if (/(?:얼마나|언제|대기|기다|진행|상태|설정|연결|브릿지|토큰|키|provider|이미지|컷|cut).*(?:걸려|걸리|돼|되나|가능|필요|어디|뭐|뭔가|알려|설명|\?)/i.test(normalized)) {
+    return true;
+  }
+
+  return /[?？]$/.test(normalized);
+}
 function isConversationRequest(payload: StoryboardChatPayload) {
   const message = String(payload.message ?? '');
   return (
-    isCasualStoryboardChatMessage(message) ||
-    isGeneralStoryboardConversationMessage(message)
+    isRouteCasualStoryboardChatMessage(message) ||
+    isRouteGeneralStoryboardConversationMessage(message)
   );
 }
 
 function isConversationResult(
-  result: Awaited<ReturnType<typeof generateStoryboardChatWithBackendAgent>>,
+  result: StoryboardChatAgentResultForRoute,
 ) {
   const chatIntent = String(result.backendAgent.diagnostics.chatIntent ?? '');
   return chatIntent === 'casual_chat' || chatIntent === 'conversation';
@@ -139,7 +201,7 @@ function getInitialStatusMessages(payload: StoryboardChatPayload) {
 }
 
 function getResolvedStatusMessage(
-  result: Awaited<ReturnType<typeof generateStoryboardChatWithBackendAgent>>,
+  result: StoryboardChatAgentResultForRoute,
 ) {
   if (isConversationResult(result)) return result.assistantMessage;
   const patch = result.canvasPatch;
@@ -187,10 +249,14 @@ export async function POST(request: NextRequest) {
         for (const statusMessage of getInitialStatusMessages(payload as StoryboardChatPayload)) {
           send('status', { message: statusMessage });
         }
+        if (shouldSkipLocalStoryboardBackendAgentOnVercel()) {
+          throw new Error('Vercel production does not include the local storyboard backend agent. Configure STORYBOARD_AGENT_COMMAND to enable storyboard chat.');
+        }
+        const { generateStoryboardChatWithBackendAgent } = await import('@/lib/admin/storyboard/backend-agent');
         const result = await generateStoryboardChatWithBackendAgent(
           payload as Parameters<typeof generateStoryboardChatWithBackendAgent>[0],
           process.env,
-        );
+        ) as StoryboardChatAgentResultForRoute;
         const publicResult = toPublicStoryboardChatAgentResult(result);
         if (isConversationResult(result)) {
           await streamConversationMessage(send, result.assistantMessage);

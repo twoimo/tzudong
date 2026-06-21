@@ -135,6 +135,11 @@ function toString(value: unknown, maxLength: number) {
   return typeof value === 'string' ? value.trim().slice(0, maxLength) : '';
 }
 
+function getRuntimeCwd() {
+  const cwd = Reflect.get(process, 'cwd');
+  return typeof cwd === 'function' ? cwd.call(process) : '.';
+}
+
 function isSafeRelativePathFrom(root: string, target: string) {
   const pathFromRoot = relative(resolve(root), resolve(target));
   return Boolean(pathFromRoot) && !pathFromRoot.startsWith('..') && !isAbsolute(pathFromRoot);
@@ -149,37 +154,25 @@ function assertInside(root: string, target: string, code: string) {
   return resolvedTarget;
 }
 
-async function pathExists(path: string) {
-  try {
-    await stat(path);
-    return true;
-  } catch {
-    return false;
-  }
-}
+function findRepoRoot(start = getRuntimeCwd()) {
+  const explicitRoot = process.env.TZUDONG_REPO_ROOT?.trim();
+  if (explicitRoot) return resolve(/* turbopackIgnore: true */ explicitRoot);
 
-async function findRepoRoot(start = process.cwd()) {
-  let current = resolve(start);
+  const current = resolve(/* turbopackIgnore: true */ start);
   if (basename(current) === 'web' && basename(dirname(current)) === 'apps') {
-    current = dirname(dirname(current));
+    return dirname(dirname(current));
   }
-  for (let depth = 0; depth < 8; depth += 1) {
-    if (await pathExists(join(current, 'apps', 'web', 'package.json'))) return current;
-    if (await pathExists(join(current, '.git')) && await pathExists(join(current, '.omx', 'artifacts'))) return current;
-    const parent = dirname(current);
-    if (parent === current) break;
-    current = parent;
-  }
-  return resolve(start);
+
+  return current;
 }
 
 async function resolveRoots(options: Pick<ThumbnailReleaseOptions, 'repoRoot' | 'webRoot'> = {}) {
-  const repoRoot = options.repoRoot ? resolve(options.repoRoot) : await findRepoRoot();
+  const repoRoot = options.repoRoot ? resolve(/* turbopackIgnore: true */ options.repoRoot) : await findRepoRoot();
   const webRoot = options.webRoot
-    ? resolve(options.webRoot)
+    ? resolve(/* turbopackIgnore: true */ options.webRoot)
     : basename(repoRoot) === 'web' && basename(dirname(repoRoot)) === 'apps'
       ? repoRoot
-      : resolve(repoRoot, 'apps/web');
+      : resolve(/* turbopackIgnore: true */ repoRoot, 'apps/web');
   return { repoRoot, webRoot };
 }
 
@@ -255,7 +248,7 @@ function resolveMaybeRelativePath(root: string, value: string) {
 async function resolveManifestPath(env: ThumbnailReleaseEnv, options: ThumbnailReleaseOptions, repoRoot: string) {
   const configured = options.manifestPath?.trim() || env[THUMBNAIL_RELEASE_CANDIDATE_MANIFEST_ENV]?.trim() || THUMBNAIL_RELEASE_CANDIDATE_DEFAULT_MANIFEST;
   const manifestPath = resolveMaybeRelativePath(repoRoot, configured);
-  const artifactRoot = resolve(repoRoot, '.omx/artifacts/thumbnail-live-aesthetic');
+  const artifactRoot = resolve(/* turbopackIgnore: true */ repoRoot, '.omx/artifacts/thumbnail-live-aesthetic');
   assertInside(artifactRoot, manifestPath, 'thumbnail_release_manifest_path_escape');
   if (basename(manifestPath) !== 'release-candidates.json') throw new Error('thumbnail_release_manifest_must_be_release_candidates_json');
   return manifestPath;
@@ -264,7 +257,7 @@ async function resolveManifestPath(env: ThumbnailReleaseEnv, options: ThumbnailR
 async function resolvePromotionRoot(env: ThumbnailReleaseEnv, options: ThumbnailReleaseOptions, webRoot: string) {
   const configured = options.promotionRoot?.trim() || env[THUMBNAIL_RELEASE_PROMOTION_ROOT_ENV]?.trim() || THUMBNAIL_RELEASE_PROMOTION_DEFAULT_ROOT;
   const promotionRoot = resolveMaybeRelativePath(webRoot, configured);
-  const publicRoot = resolve(webRoot, 'public');
+  const publicRoot = resolve(/* turbopackIgnore: true */ webRoot, 'public');
   if (promotionRoot === publicRoot || isSafeRelativePathFrom(publicRoot, promotionRoot)) {
     throw new Error('thumbnail_release_promotion_root_must_not_be_public');
   }
@@ -334,7 +327,7 @@ function resolveCandidateSourceImagePath(rawImagePath: unknown, repoRoot: string
     return null;
   }
   const resolved = resolveMaybeRelativePath(repoRoot, imagePath);
-  const artifactRoot = resolve(repoRoot, '.omx/artifacts/thumbnail-live-aesthetic');
+  const artifactRoot = resolve(/* turbopackIgnore: true */ repoRoot, '.omx/artifacts/thumbnail-live-aesthetic');
   return assertInside(artifactRoot, resolved, 'thumbnail_release_candidate_image_path_escape');
 }
 
