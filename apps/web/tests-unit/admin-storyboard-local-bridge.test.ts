@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
@@ -144,6 +144,55 @@ writeFileSync(${JSON.stringify(markerPath)}, 'invoked');
 setTimeout(() => {}, 10_000);
 `);
   return { providerPath, markerPath };
+}
+
+function writeDefaultPythonProviderShim(dir: string) {
+  const markerPath = join(dir, 'default-python-provider.marker');
+  const shimJsPath = join(dir, 'default-python-provider.mjs');
+  const commandPath = join(dir, process.platform === 'win32' ? 'python.cmd' : 'python3');
+  writeFileSync(shimJsPath, `
+import { createHash } from 'node:crypto';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
+const rawInput = readFileSync(0, 'utf8').trim();
+const input = rawInput ? JSON.parse(rawInput) : {};
+writeFileSync(${JSON.stringify(markerPath)}, JSON.stringify(process.argv.slice(1)));
+const png = Buffer.from(${JSON.stringify(tinyPngBase64)}, 'base64');
+mkdirSync(dirname(input.outputPath), { recursive: true });
+writeFileSync(input.outputPath, png);
+const responseHash = createHash('sha256').update(png).digest('hex');
+console.log(JSON.stringify({
+  ok: true,
+  providerId: 'local-codex',
+  authMode: 'codex_oauth',
+  endpoint: 'https://chatgpt.com/backend-api/codex/responses',
+  agentModel: 'gpt-5.5',
+  requestToolType: 'image_generation',
+  requestToolModel: 'gpt-image-2',
+  model: 'gpt-image-2',
+  modelProvenance: 'exact',
+  responseId: 'resp_default_python',
+  imageCallId: 'ig_default_python',
+  imageItemCount: 1,
+  generatedImageItemTypes: ['image_generation_call'],
+  rawImageItemTypes: ['image_generation_call'],
+  mime: 'image/png',
+  bytes: png.length,
+  outputPath: input.outputPath,
+  durableOutputPath: input.outputPath,
+  requestHash: ${JSON.stringify(sha256('default-python-request'))},
+  responseHash,
+  hasOpenAIAPIKey: false,
+  generatedAt: new Date().toISOString()
+}));
+`);
+  if (process.platform === 'win32') {
+    writeFileSync(commandPath, `@echo off\r\n"${process.execPath}" "${shimJsPath}" %*\r\n`);
+  } else {
+    writeFileSync(commandPath, `#!/bin/sh\nexec "${process.execPath}" "${shimJsPath}" "$@"\n`);
+    chmodSync(commandPath, 0o755);
+  }
+  return { commandPath, markerPath };
 }
 
 async function listenBridge(options: { providerPath: string; outputDir: string; commandTimeoutMs?: number; thumbnailProviderPath?: string }) {
@@ -393,6 +442,60 @@ describe('storyboard local bridge server', () => {
     expect(readFileSync(markerPath, 'utf8')).toBe('invoked');
   });
 
+  test('uses the Windows-safe default Python command for storyboard image providers', async () => {
+    const { markerPath } = writeDefaultPythonProviderShim(tempDir);
+    const previousPath = process.env.PATH;
+    const previousPython = process.env.PYTHON;
+    const previousProviderCommand = process.env.TZUDONG_LOCAL_BRIDGE_PROVIDER_COMMAND;
+    const previousStoryboardCommand = process.env.STORYBOARD_LOCAL_CODEX_COMMAND;
+    process.env.PATH = `${tempDir}${process.platform === 'win32' ? ';' : ':'}${previousPath ?? ''}`;
+    delete process.env.PYTHON;
+    delete process.env.TZUDONG_LOCAL_BRIDGE_PROVIDER_COMMAND;
+    delete process.env.STORYBOARD_LOCAL_CODEX_COMMAND;
+
+    try {
+      const bridge = createStoryboardLocalBridgeServer({
+        token,
+        allowedOrigins: [allowedOrigin],
+        outputDir: join(tempDir, 'out'),
+        fakeAuthReady: true,
+        commandTimeoutMs: 2000,
+      });
+      activeServer = bridge.server;
+      await new Promise<void>((resolveListen, rejectListen) => {
+        bridge.server.once('error', rejectListen);
+        bridge.server.listen(0, '127.0.0.1', () => resolveListen());
+      });
+      const address = bridge.server.address();
+      if (!address || typeof address === 'string') throw new Error('bridge did not bind to a TCP port');
+
+      const response = await fetch(`http://127.0.0.1:${address.port}/v1/storyboard/images`, {
+        method: 'POST',
+        headers: {
+          Origin: allowedOrigin,
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(buildStoryboardLocalBridgeImagesRequest(sourceResult, [scene])),
+      });
+      expect(response.status).toBe(200);
+      const invokedScriptPath = readFileSync(markerPath, 'utf8');
+      expect(invokedScriptPath).toContain('default-python-provider');
+      expect(invokedScriptPath.replaceAll('\\\\', '/')).toContain(
+        'apps/web/scripts/codex-imagegen-storyboard-provider.py',
+      );
+    } finally {
+      if (previousPath === undefined) delete process.env.PATH;
+      else process.env.PATH = previousPath;
+      if (previousPython === undefined) delete process.env.PYTHON;
+      else process.env.PYTHON = previousPython;
+      if (previousProviderCommand === undefined) delete process.env.TZUDONG_LOCAL_BRIDGE_PROVIDER_COMMAND;
+      else process.env.TZUDONG_LOCAL_BRIDGE_PROVIDER_COMMAND = previousProviderCommand;
+      if (previousStoryboardCommand === undefined) delete process.env.STORYBOARD_LOCAL_CODEX_COMMAND;
+      else process.env.STORYBOARD_LOCAL_CODEX_COMMAND = previousStoryboardCommand;
+    }
+  });
+
   test('serves thumbnail images through the same paired local bridge without a server relay', async () => {
     const { providerPath, markerPath } = writeFakeProvider(tempDir);
     const bridge = await listenBridge({ providerPath, outputDir: join(tempDir, 'out') });
@@ -515,7 +618,7 @@ describe('storyboard local bridge server', () => {
     const bridge = await listenBridge({
       providerPath,
       outputDir: join(tempDir, 'out'),
-      commandTimeoutMs: 500,
+      commandTimeoutMs: 2000,
     });
     activeServer = bridge.server;
 
