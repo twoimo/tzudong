@@ -763,7 +763,7 @@ function isLocalE2EAdminShellBypassHost(hostname: string) {
 }
 
 function hasLocalE2EAdminShellBypass() {
-  if (process.env.NODE_ENV === "production" || typeof window === "undefined") return false;
+  if (typeof window === "undefined") return false;
   if (!isLocalE2EAdminShellBypassHost(window.location.hostname)) return false;
 
   try {
