@@ -5,7 +5,257 @@ import { join } from "node:path";
 const source = (relativePath: string) =>
   readFileSync(join(import.meta.dir, "..", relativePath), "utf8");
 
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const maskCssCommentsAndStrings = (css: string) => {
+  let output = "";
+  for (let index = 0; index < css.length; index += 1) {
+    const current = css[index];
+    const next = css[index + 1];
+
+    if (current === "/" && next === "*") {
+      output += "  ";
+      index += 1;
+      while (index + 1 < css.length && !(css[index] === "*" && css[index + 1] === "/")) {
+        output += css[index] === "\n" ? "\n" : " ";
+        index += 1;
+      }
+      if (index + 1 < css.length) {
+        output += "  ";
+        index += 1;
+      }
+      continue;
+    }
+
+    if (current === "\"" || current === "'") {
+      const quote = current;
+      output += "x";
+      while (index + 1 < css.length) {
+        index += 1;
+        const char = css[index];
+        output += char === "\n" ? "\n" : " ";
+        if (char === "\\") {
+          if (index + 1 < css.length) {
+            index += 1;
+            output += css[index] === "\n" ? "\n" : " ";
+          }
+          continue;
+        }
+        if (char === quote) break;
+      }
+      continue;
+    }
+
+    output += current;
+  }
+
+  return output;
+};
+
+const collectCssSyntaxIssues = (css: string) => {
+  const masked = maskCssCommentsAndStrings(css);
+  const issues: string[] = [];
+  const stack: number[] = [];
+
+  for (let index = 0; index < masked.length; index += 1) {
+    const char = masked[index];
+    if (char === "{") {
+      stack.push(index);
+    } else if (char === "}") {
+      if (stack.length === 0) {
+        issues.push(`unmatched closing brace at offset ${index}`);
+      } else {
+        stack.pop();
+      }
+    }
+  }
+
+  for (const index of stack) {
+    issues.push(`unclosed opening brace at offset ${index}`);
+  }
+
+  const emptyValueDeclarationPattern = /([a-zA-Z-]+)\s*:\s*(?=[;}])/g;
+  for (const match of masked.matchAll(emptyValueDeclarationPattern)) {
+    issues.push(`empty CSS declaration value for ${match[1]}`);
+  }
+
+  return issues;
+};
+
+const getCssBlockContainingSelector = (css: string, selector: string) => {
+  const selectorIndex = css.search(new RegExp(escapeRegExp(selector)));
+  if (selectorIndex < 0) {
+    throw new Error(`Missing CSS selector: ${selector}`);
+  }
+
+  const blockStart = css.indexOf("{", selectorIndex);
+  if (blockStart < 0) {
+    throw new Error(`Missing CSS block for selector: ${selector}`);
+  }
+
+  let depth = 0;
+  for (let index = blockStart; index < css.length; index += 1) {
+    const char = css[index];
+    if (char === "{") depth += 1;
+    if (char === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        return css.slice(blockStart + 1, index);
+      }
+    }
+  }
+
+  throw new Error(`Unclosed CSS block for selector: ${selector}`);
+};
+
+const expectCssDeclaration = (
+  css: string,
+  selector: string,
+  property: string,
+  expectedValue: string,
+) => {
+  const block = getCssBlockContainingSelector(css, selector);
+  expect(block).toContain(`${property}: ${expectedValue};`);
+};
+
 describe("admin console beginner-friendly UI/UX source contract", () => {
+  test("fails fast on malformed admin/storyboard global CSS", () => {
+    const appGlobalsSource = source("app/app-globals.css");
+
+    expect(collectCssSyntaxIssues(appGlobalsSource)).toEqual([]);
+    expect(
+      collectCssSyntaxIssues(
+        `[data-storyboard-chat-avatar] > svg {\n  display: block;\n  height:\n}`,
+      ),
+    ).toContain("empty CSS declaration value for height");
+    expect(collectCssSyntaxIssues(`[data-admin-storyboard-generator="true"] {`).join("\n")).toContain(
+      "unclosed opening brace",
+    );
+  });
+
+  test("keeps storyboard global CSS and component inline geometry in parity", () => {
+    const appGlobalsSource = source("app/app-globals.css");
+    const storyboardSource = source("components/admin/storyboard/AdminStoryboardGenerator.tsx");
+
+    expectCssDeclaration(
+      appGlobalsSource,
+      '[data-admin-storyboard-generator="true"][data-storyboard-viewport-fit="bounded"]',
+      "height",
+      "calc(var(--full-height, 100vh) - 2rem)",
+    );
+    expect(storyboardSource).toContain('height: "calc(var(--full-height, 100vh) - 2rem)"');
+
+    expectCssDeclaration(
+      appGlobalsSource,
+      '[data-storyboard-desktop-split-layout="inline-grid"]',
+      "grid-template-columns",
+      "minmax(0, 1fr) minmax(320px, 400px)",
+    );
+    expect(storyboardSource).toContain(
+      'gridTemplateColumns: "minmax(0, 1fr) minmax(320px, 400px)"',
+    );
+    expectCssDeclaration(
+      appGlobalsSource,
+      '[data-storyboard-desktop-split-layout="inline-grid"]',
+      "grid-template-rows",
+      "minmax(0, 1fr)",
+    );
+    expect(storyboardSource).toContain('gridTemplateRows: "minmax(0, 1fr)"');
+
+    expectCssDeclaration(
+      appGlobalsSource,
+      '[data-storyboard-result-panel="image-frames-only"]',
+      "grid-column",
+      "1",
+    );
+    expectCssDeclaration(
+      appGlobalsSource,
+      '[data-storyboard-result-panel="image-frames-only"]',
+      "grid-row",
+      "1",
+    );
+    expect(storyboardSource).toContain('style={{ gridColumn: "1", gridRow: "1", minWidth: 0 }}');
+
+    expectCssDeclaration(
+      appGlobalsSource,
+      '[data-storyboard-input-panel="chat-stream"]',
+      "grid-column",
+      "2",
+    );
+    expectCssDeclaration(
+      appGlobalsSource,
+      '[data-storyboard-input-panel="chat-stream"]',
+      "grid-row",
+      "1",
+    );
+    expect(storyboardSource).toContain('style={{ gridColumn: "2", gridRow: "1", minWidth: 0 }}');
+
+    expectCssDeclaration(
+      appGlobalsSource,
+      '[data-storyboard-image-board="true"]',
+      "grid-template-rows",
+      "minmax(0, 1fr) minmax(0, 1fr)",
+    );
+    expect(storyboardSource).toContain(
+      'gridTemplateRows: "minmax(0, 1fr) minmax(0, 1fr)"',
+    );
+
+    expectCssDeclaration(
+      appGlobalsSource,
+      "[data-storyboard-image-frame]",
+      "grid-template-rows",
+      "minmax(0, 1fr) auto",
+    );
+    expect(storyboardSource).toContain('gridTemplateRows: "minmax(0, 1fr) auto"');
+
+    for (const selector of [
+      '[data-storyboard-frame-audio-row="true"]',
+      '[data-storyboard-frame-subtitle-row="true"]',
+      '[data-storyboard-frame-production-note-row="true"]',
+    ]) {
+      expectCssDeclaration(
+        appGlobalsSource,
+        selector,
+        "grid-template-columns",
+        "58px minmax(0, 1fr)",
+      );
+    }
+    expect(storyboardSource.match(/gridTemplateColumns: "58px minmax\(0, 1fr\)"/g)?.length).toBe(
+      3,
+    );
+
+    expectCssDeclaration(
+      appGlobalsSource,
+      "[data-storyboard-chat-avatar] > svg",
+      "width",
+      "0.875rem",
+    );
+    expectCssDeclaration(
+      appGlobalsSource,
+      "[data-storyboard-chat-avatar] > svg",
+      "height",
+      "0.875rem",
+    );
+    expect(storyboardSource).toContain('<Wand2 className="block h-3.5 w-3.5" aria-hidden="true" />');
+    expect(storyboardSource).toContain(
+      '<MessageCircle className="block h-3.5 w-3.5" aria-hidden="true" />',
+    );
+  });
+
+  test("keeps standalone output and inherited production env out of local Next dev mode", () => {
+    const nextConfigSource = source("next.config.mjs");
+    const cleanNextSource = source("scripts/clean-next.mjs");
+    const devPrewarmSource = source("scripts/dev-prewarm.mjs");
+
+    expect(nextConfigSource).toContain(
+      "const shouldUseStandaloneOutput = process.env.NODE_ENV === 'production' && process.env.VERCEL !== '1';",
+    );
+    expect(nextConfigSource).not.toContain("const shouldUseStandaloneOutput = process.env.VERCEL !== '1';");
+    expect(nextConfigSource).toContain("turbopackFileSystemCacheForDev: false");
+    expect(cleanNextSource).toContain("childEnv.NODE_ENV = 'development';");
+    expect(cleanNextSource).toContain("if (isNextDevCommand())");
+    expect(devPrewarmSource).toContain("env: { ...process.env, NODE_ENV: 'development' }");
+  });
   test("keeps admin module state URL-backed and easy to recover", () => {
     const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
 
@@ -5670,7 +5920,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(routeSource).toContain("getStoryboardBackendAgentStatus");
     expect(routeSource).toContain("body?.generationMode === 'backend_agent'");
     expect(routeSource).toContain(
-      "backendAgent: getStoryboardBackendAgentStatus()",
+      "backendAgent: await getPublicStoryboardBackendAgentStatus()",
     );
     expect(chatRouteSource).toContain("generateStoryboardChatWithBackendAgent");
     expect(chatRouteSource).toContain("text/event-stream");
