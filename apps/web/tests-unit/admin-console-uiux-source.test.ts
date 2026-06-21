@@ -248,10 +248,15 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     const devPrewarmSource = source("scripts/dev-prewarm.mjs");
 
     expect(nextConfigSource).toContain(
-      "const shouldUseStandaloneOutput = process.env.NODE_ENV === 'production' && process.env.VERCEL !== '1';",
+      "const isNextBuildCommand = process.argv.some((arg) => arg === 'build');",
+    );
+    expect(nextConfigSource).toContain(
+      "const shouldUseStandaloneOutput = process.env.NODE_ENV === 'production' && isNextBuildCommand && process.env.VERCEL !== '1';",
     );
     expect(nextConfigSource).not.toContain("const shouldUseStandaloneOutput = process.env.VERCEL !== '1';");
+    expect(nextConfigSource).not.toContain("const shouldUseStandaloneOutput = process.env.NODE_ENV === 'production' && process.env.VERCEL !== '1';");
     expect(nextConfigSource).toContain("turbopackFileSystemCacheForDev: false");
+    expect(nextConfigSource).toContain("config.cache = false;");
     expect(cleanNextSource).toContain("childEnv.NODE_ENV = 'development';");
     expect(cleanNextSource).toContain("if (isNextDevCommand())");
     expect(devPrewarmSource).toContain("env: { ...process.env, NODE_ENV: 'development' }");
@@ -2324,7 +2329,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       'E2E_ADMIN_SHELL_BYPASS_STORAGE_KEY = "tzudong:e2e-admin-shell-bypass"',
     );
-    expect(consoleSource).toContain('process.env.NODE_ENV === "production"');
+    expect(consoleSource).not.toContain('process.env.NODE_ENV === "production" || typeof window === "undefined"');
+    expect(consoleSource).toContain('if (typeof window === "undefined") return false;');
     expect(consoleSource).toContain(
       "isLocalE2EAdminShellBypassHost(window.location.hostname)",
     );
