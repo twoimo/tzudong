@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { requireAdmin } from '@/lib/auth/require-admin';
+import { runtimeImport } from '@/lib/server/runtime-import';
 
 export const runtime = 'nodejs';
 
@@ -39,17 +40,17 @@ async function getPublicStoryboardBackendAgentStatus() {
     return buildUnavailableStoryboardBackendAgentStatus();
   }
 
-  const { getStoryboardBackendAgentStatus } = await import('@/lib/admin/storyboard/backend-agent');
+  const { getStoryboardBackendAgentStatus } = await runtimeImport<typeof import('@/lib/admin/storyboard/backend-agent')>('@/lib/admin/storyboard/backend-agent');
   return getStoryboardBackendAgentStatus();
 }
 
 async function readLocalStoryboardHeatmapStatus(limit: number) {
-  const { loadStoryboardHeatmapSources } = await import('@/lib/admin/storyboard/generator');
+  const { loadStoryboardHeatmapSources } = await runtimeImport<typeof import('@/lib/admin/storyboard/generator')>('@/lib/admin/storyboard/generator');
   return loadStoryboardHeatmapSources(limit);
 }
 
 async function generateLocalStoryboardForRoute(body: Record<string, unknown> | null) {
-  const { generateLocalStoryboard } = await import('@/lib/admin/storyboard/generator');
+  const { generateLocalStoryboard } = await runtimeImport<typeof import('@/lib/admin/storyboard/generator')>('@/lib/admin/storyboard/generator');
   return generateLocalStoryboard(body);
 }
 
@@ -58,7 +59,7 @@ async function generateStoryboardWithRouteBackendAgent(body: Record<string, unkn
     throw new Error('Vercel production does not include the local storyboard backend agent. Use local heatmap generation or configure STORYBOARD_AGENT_COMMAND.');
   }
 
-  const { generateStoryboardWithBackendAgent } = await import('@/lib/admin/storyboard/backend-agent');
+  const { generateStoryboardWithBackendAgent } = await runtimeImport<typeof import('@/lib/admin/storyboard/backend-agent')>('@/lib/admin/storyboard/backend-agent');
   return generateStoryboardWithBackendAgent(body);
 }
 
@@ -108,7 +109,7 @@ export async function POST(request: NextRequest) {
       ? await generateStoryboardWithRouteBackendAgent(body)
       : await generateLocalStoryboardForRoute(body);
     if (process.env.VERCEL !== '1') {
-      await (await import('@/lib/admin/storyboard/history'))
+      await (await runtimeImport<typeof import('@/lib/admin/storyboard/history')>('@/lib/admin/storyboard/history'))
         .persistLocalStoryboardHistory(result)
         .catch((historyError) => {
           console.error('[admin/storyboard] local history persistence failed:', historyError);

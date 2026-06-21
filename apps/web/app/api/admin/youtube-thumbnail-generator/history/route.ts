@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { requireAdmin } from '@/lib/auth/require-admin';
+import { runtimeImport } from '@/lib/server/runtime-import';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -21,7 +22,7 @@ async function readThumbnailHistoryFromRoute() {
     };
   }
 
-  const { readThumbnailHistory } = await import('@/lib/admin/youtube-thumbnail-generator/history');
+  const { readThumbnailHistory } = await runtimeImport<typeof import('@/lib/admin/youtube-thumbnail-generator/history')>('@/lib/admin/youtube-thumbnail-generator/history');
   return readThumbnailHistory(process.env);
 }
 

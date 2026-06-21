@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { randomUUID } from 'node:crypto';
 
 import { requireAdmin } from '@/lib/auth/require-admin';
+import { runtimeImport } from '@/lib/server/runtime-import';
 import { parseThumbnailChatAgentRequest } from '@/lib/admin/youtube-thumbnail-generator/request';
 import { ThumbnailGenerationError } from '@/lib/admin/youtube-thumbnail-generator/types';
 
@@ -119,7 +120,7 @@ export async function POST(request: NextRequest) {
           sendAbort();
           return;
         }
-        const { generateYoutubeThumbnailChatWithBackendAgent } = await import('@/lib/admin/youtube-thumbnail-generator/backend-agent');
+        const { generateYoutubeThumbnailChatWithBackendAgent } = await runtimeImport<typeof import('@/lib/admin/youtube-thumbnail-generator/backend-agent')>('@/lib/admin/youtube-thumbnail-generator/backend-agent');
         const result = await generateYoutubeThumbnailChatWithBackendAgent(payloadWithRunId, process.env, {
           signal: request.signal,
           runId: chatRunId,

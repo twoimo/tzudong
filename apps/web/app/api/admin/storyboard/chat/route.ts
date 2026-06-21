@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 
 import { requireAdmin } from '@/lib/auth/require-admin';
+import { runtimeImport } from '@/lib/server/runtime-import';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -252,7 +253,7 @@ export async function POST(request: NextRequest) {
         if (shouldSkipLocalStoryboardBackendAgentOnVercel()) {
           throw new Error('Vercel production does not include the local storyboard backend agent. Configure STORYBOARD_AGENT_COMMAND to enable storyboard chat.');
         }
-        const { generateStoryboardChatWithBackendAgent } = await import('@/lib/admin/storyboard/backend-agent');
+        const { generateStoryboardChatWithBackendAgent } = await runtimeImport<typeof import('@/lib/admin/storyboard/backend-agent')>('@/lib/admin/storyboard/backend-agent');
         const result = await generateStoryboardChatWithBackendAgent(
           payload as Parameters<typeof generateStoryboardChatWithBackendAgent>[0],
           process.env,

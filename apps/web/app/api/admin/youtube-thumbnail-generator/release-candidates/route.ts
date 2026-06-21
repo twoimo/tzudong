@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { requireAdmin } from '@/lib/auth/require-admin';
+import { runtimeImport } from '@/lib/server/runtime-import';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -47,7 +48,7 @@ export async function GET(_request: NextRequest) {
       return NextResponse.json(buildUnavailableReleaseCandidatesPayload(), { headers: noStoreHeaders });
     }
 
-    const { readThumbnailReleaseCandidates } = await import('@/lib/admin/youtube-thumbnail-generator/release-candidates');
+    const { readThumbnailReleaseCandidates } = await runtimeImport<typeof import('@/lib/admin/youtube-thumbnail-generator/release-candidates')>('@/lib/admin/youtube-thumbnail-generator/release-candidates');
     const payload = await readThumbnailReleaseCandidates(process.env);
     return NextResponse.json(payload, { headers: noStoreHeaders });
   } catch (error) {
