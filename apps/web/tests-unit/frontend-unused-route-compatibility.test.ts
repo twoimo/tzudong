@@ -2,6 +2,10 @@ import { describe, expect, test } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import {
+    buildCanonicalAdminEvaluationsHref,
+    buildCanonicalAdminHrefFromSearchParams,
+} from '../lib/admin/admin-module-routing';
 import { getNavigationPrefetchRoutes } from '../components/layout/navigation-routes';
 
 const source = (relativePath: string) => readFileSync(join(import.meta.dir, '..', relativePath), 'utf8');
@@ -32,11 +36,15 @@ describe('frontend unused route compatibility', () => {
         const mobileControlOverlaySource = source('components/home/MobileControlOverlay.tsx');
         const homeEffectsSource = source('app/home-client-effects.tsx');
 
-        expect(adminSubmissionsSource).toContain("redirect('/admin/evaluations?view=submissions')");
+        expect(adminSubmissionsSource).toContain("redirect('/admin?module=submissions')");
         expect(adminSubmissionsSource).not.toContain('"use client"');
         expect(adminSubmissionsSource).not.toContain('useInfiniteQuery');
+        expect(adminEvaluationsSource).toContain('buildCanonicalAdminEvaluationsHref');
         expect(adminEvaluationsSource).toContain("const routeView = embedded ? null : searchParams.get('view');");
         expect(adminEvaluationsSource).toContain("routeView === 'submissions'");
+        expect(adminEvaluationsSource).toContain("const currentHref = `/admin/evaluations");
+        expect(adminEvaluationsSource).toContain('router.replace(canonicalAdminHref, { scroll: false });');
+        expect(adminEvaluationsSource).toContain("router.replace(buildCanonicalAdminEvaluationsHref({");
         expect(adminEvaluationsSource).toContain("@/components/admin/EvaluationTableNew");
         expect(adminEvaluationsSource).toContain('fallback={embedded ? null : <AdminEvaluationRouteSkeleton />}');
         expect(adminEvaluationsSource).toContain('return <AdminEvaluationRouteSkeleton />;');
@@ -75,7 +83,7 @@ describe('frontend unused route compatibility', () => {
         expect(mobileControlOverlaySource).not.toContain("router.push('/admin/banners')");
         expect(mobileControlOverlaySource).not.toContain("openAdminSubmissions");
         expect(mobileControlOverlaySource).not.toContain("openAdminReviews");
-        expect(homeEffectsSource).toContain("/admin/evaluations?view=submissions");
+        expect(homeEffectsSource).toContain("/admin?module=submissions");
         expect(homeEffectsSource).toContain("router.push('/mypage/profile')");
         expect(homeEffectsSource).not.toContain("router.push('/mypage')");
     });
@@ -85,17 +93,35 @@ describe('frontend unused route compatibility', () => {
         const userRoutes = getNavigationPrefetchRoutes({ isLoggedIn: true, isAdmin: false });
 
         expect(adminRoutes).toContain('/admin');
-        expect(adminRoutes).toContain('/admin/evaluations');
+        expect(adminRoutes).toContain('/admin?module=restaurants');
+        expect(adminRoutes).toContain('/admin?module=submissions');
+        expect(adminRoutes).toContain('/admin?module=reviews');
         expect(adminRoutes).toContain('/admin/banners');
         expect(adminRoutes).not.toContain(RETIRED_ADMIN_COSTS_ROUTE);
         const retiredAiSettingsRoute = `/admin/${'ai-settings'}`;
         expect(adminRoutes).not.toContain(retiredAiSettingsRoute);
         expect(adminRoutes).not.toContain('/admin/submissions');
+        expect(adminRoutes).not.toContain('/admin/evaluations');
         expect(userRoutes).not.toContain('/admin');
-        expect(userRoutes).not.toContain('/admin/evaluations');
+        expect(userRoutes).not.toContain('/admin?module=restaurants');
+        expect(userRoutes).not.toContain('/admin?module=submissions');
+        expect(userRoutes).not.toContain('/admin?module=reviews');
         expect(userRoutes).not.toContain('/admin/banners');
         expect(userRoutes).not.toContain('/admin/submissions');
         expect(userRoutes).not.toContain(retiredAiSettingsRoute);
+    });
+
+    test('normalizes legacy and mixed admin query states without loops', () => {
+        expect(buildCanonicalAdminEvaluationsHref(new URLSearchParams())).toBe('/admin?module=restaurants');
+        expect(buildCanonicalAdminEvaluationsHref(new URLSearchParams('view=submissions'))).toBe('/admin?module=submissions');
+        expect(buildCanonicalAdminEvaluationsHref(new URLSearchParams('view=submissions&tab=reviews'))).toBe('/admin?module=reviews');
+        expect(buildCanonicalAdminHrefFromSearchParams(new URLSearchParams('module=restaurants'))).toBe('/admin?module=restaurants');
+        expect(buildCanonicalAdminHrefFromSearchParams(new URLSearchParams('module=submissions'))).toBe('/admin?module=submissions');
+        expect(buildCanonicalAdminHrefFromSearchParams(new URLSearchParams('module=reviews'))).toBe('/admin?module=reviews');
+        expect(buildCanonicalAdminHrefFromSearchParams(new URLSearchParams('module=unknown'))).toBe('/admin');
+        expect(buildCanonicalAdminHrefFromSearchParams(new URLSearchParams('module=reviews&view=submissions&tab=reviews'))).toBe('/admin?module=reviews');
+        expect(buildCanonicalAdminHrefFromSearchParams(new URLSearchParams('module=unknown&view=submissions'))).toBe('/admin?module=submissions');
+        expect(buildCanonicalAdminHrefFromSearchParams(new URLSearchParams('view=legacy&tab=reviews'))).toBe('/admin');
     });
 
     test('keeps the unified admin console as the canonical embedded module hub', () => {
@@ -105,6 +131,7 @@ describe('frontend unused route compatibility', () => {
         expect(adminPageSource).toContain('<AdminConsoleOverview initialStoryboardResult={initialStoryboardResult} />');
         expect(adminConsoleSource).toContain('getAdminModuleIdFromSearchParams(searchParams)');
         expect(adminConsoleSource).toContain('buildCanonicalAdminModuleHref');
+        expect(adminConsoleSource).toContain('buildCanonicalAdminHrefFromSearchParams(searchParams)');
         expect(adminConsoleSource).toContain('router.replace(buildCanonicalAdminModuleHref(moduleId)');
         expect(adminConsoleSource).toContain('currentHref !== canonicalHref');
         expect(adminConsoleSource).toContain('router.replace(canonicalHref, { scroll: false });');
@@ -125,7 +152,7 @@ describe('frontend unused route compatibility', () => {
         expect(adminConsoleSource).toContain('function AdminConsoleCanvasSkeleton()');
         expect(adminConsoleSource).toContain('data-admin-console-content-loading="true"');
         expect(adminConsoleSource).toContain(
-            'isShellBootstrapping && activeModuleId !== "storyboard" ? (',
+            '{isShellBootstrapping ? (',
         );
         expect(adminConsoleSource).toContain('return null;');
         expect(adminConsoleSource).not.toContain('<GlobalLoader');
