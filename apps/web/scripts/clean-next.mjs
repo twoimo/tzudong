@@ -30,13 +30,15 @@ const readCommandArg = (name) => {
     return prefixed ? prefixed.slice(name.length + 1) : undefined;
 };
 
-const getGuardedDevPort = () => {
+const isNextDevCommand = () => {
     const commandText = commandArgs.join(' ');
-    const isNextDevCommand =
-        commandText.includes('node_modules/next/dist/bin/next') && commandArgs.includes('dev');
+    return commandText.includes('node_modules/next/dist/bin/next') && commandArgs.includes('dev');
+};
+
+const getGuardedDevPort = () => {
     const isDevPrewarmCommand = commandArgs.some((arg) => arg.endsWith('scripts/dev-prewarm.mjs'));
 
-    if (!isNextDevCommand && !isDevPrewarmCommand) {
+    if (!isNextDevCommand() && !isDevPrewarmCommand) {
         return null;
     }
 
@@ -161,9 +163,13 @@ if (!skipClean) {
 
 if (commandArgs.length > 0) {
     const [command, ...args] = commandArgs;
+    const childEnv = { ...process.env };
+    if (isNextDevCommand()) {
+        childEnv.NODE_ENV = 'development';
+    }
     const child = spawn(command, args, {
         stdio: 'inherit',
-        env: process.env,
+        env: childEnv,
     });
 
     child.on('error', (error) => {
