@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { readCurrentThumbnailDurableRelease } from '@/lib/admin/youtube-thumbnail-generator/release-registry';
 import { requireAdmin } from '@/lib/auth/require-admin';
 
 export const runtime = 'nodejs';
@@ -11,13 +10,18 @@ const noStoreHeaders = { 'Cache-Control': 'no-store' } as const;
 function jsonError(error: string, status: number, detail?: string) {
   return NextResponse.json({ error, detail }, { status, headers: noStoreHeaders });
 }
+async function readCurrentThumbnailDurableReleaseFromRoute() {
+  const { readCurrentThumbnailDurableRelease } = await import('@/lib/admin/youtube-thumbnail-generator/release-registry');
+  return readCurrentThumbnailDurableRelease(process.env);
+}
+
 
 export async function GET(_request: NextRequest) {
   try {
     const auth = await requireAdmin({ allowDevAdminBypassCookie: true });
     if (!auth.ok) return auth.response;
 
-    const payload = await readCurrentThumbnailDurableRelease(process.env);
+    const payload = await readCurrentThumbnailDurableReleaseFromRoute();
     if (payload.status === 'unavailable') {
       return NextResponse.json(payload, { status: 503, headers: noStoreHeaders });
     }
