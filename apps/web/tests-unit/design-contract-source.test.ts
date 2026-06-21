@@ -42,7 +42,7 @@ describe('repo design contract source', () => {
     expect(designSource).toContain('warm ivory');
     expect(designSource).toContain('red primary');
     expect(designSource).toContain('Noto Serif KR');
-    expect(appGlobalsSource).toContain("font-family: 'Noto Serif KR'");
+    expect(appGlobalsSource).toMatch(/font-family: ['"]Noto Serif KR['"]/);
     expect(appGlobalsSource).toContain('--primary: 0 74% 42%');
     expect(appGlobalsSource).toContain('--shadow-primary');
     expect(adminConsoleSource).toContain('rounded-2xl border border-border');

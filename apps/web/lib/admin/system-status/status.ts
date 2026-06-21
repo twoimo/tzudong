@@ -917,6 +917,10 @@ export async function getAdminSystemStatus(
     resolveSupabaseCounterStatus(env, asOf, timeoutMs),
   ]);
 
+  const runDailyDetail = sanitizeTextForDisplay(
+    runDailyManifestInfo.detail ?? runDailyFailureInfo.detail,
+    240,
+  );
   const response: AdminSystemStatusResponse = {
     asOf,
     keys,
@@ -931,6 +935,7 @@ export async function getAdminSystemStatus(
       ...(runDailyManifestInfo.manifestPath ? { latestManifestPath: sanitizeRunDailyPath(runDailyManifestInfo.manifestPath) } : {}),
       ...(runDailyFailureInfo.finalStatus ? { finalStatus: runDailyFailureInfo.finalStatus } : {}),
       ...(runDailyManifestInfo.finalExitCode !== undefined ? { finalExitCode: runDailyManifestInfo.finalExitCode } : {}),
+      ...(runDailyDetail ? { detail: runDailyDetail } : {}),
       failedRequiredSteps: runDailyFailureInfo.failedRequiredSteps,
       optionalSkips: runDailyFailureInfo.optionalSkips,
       downstreamSkips: runDailyFailureInfo.downstreamSkips,

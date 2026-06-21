@@ -17,7 +17,9 @@ export const AUTH_NAV_ROUTES = [
 
 export const ADMIN_NAV_ROUTES = [
     '/admin',
-    '/admin/evaluations',
+    '/admin?module=restaurants',
+    '/admin?module=submissions',
+    '/admin?module=reviews',
     '/admin/banners',
 ] as const;
 
