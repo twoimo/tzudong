@@ -73,6 +73,7 @@ import {
   X,
 } from "lucide-react";
 
+const EMPTY_SEARCH_PARAMS = new URLSearchParams();
 type SearchType = "name" | "youtube";
 type HomeOverlayPanelType = "mypage" | "adminReviews" | "announcement" | null;
 
@@ -775,7 +776,7 @@ export default function HomeDesktopControlPanel({
   selectedAnnouncement = null,
 }: HomeDesktopControlPanelProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams() ?? EMPTY_SEARCH_PARAMS;
   const initialRoutePanel = searchParams.get("panel");
   const countryCounts = useOverseasCountryCounts(mapMode);
   const desktopSearchShellRef = useRef<HTMLDivElement>(null);
