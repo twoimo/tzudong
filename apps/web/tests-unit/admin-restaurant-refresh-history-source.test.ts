@@ -21,8 +21,9 @@ describe("admin restaurant refresh history source contracts", () => {
   test("adds a dedicated admin sidebar module for approved restaurant refresh history", () => {
     const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
     const sidebarOrderSource = source("lib/admin/sidebar-order.ts");
+    const routeSource = source("lib/admin/admin-module-routing.ts");
 
-    expect(consoleSource).toContain('| "restaurant-refresh-history"');
+    expect(routeSource).toContain('"restaurant-refresh-history"');
     expect(consoleSource).toContain('title: "맛집 최신화"');
     expect(consoleSource).toContain(
       'href: "/admin?module=restaurant-refresh-history"',

@@ -209,3 +209,15 @@ describe('admin storyboard local history persistence', () => {
     }
   });
 });
+
+test('labels storyboard history as actual records vs public preview examples', () => {
+  const componentSource = readFileSync(
+    join(process.cwd(), 'components/admin/storyboard/AdminStoryboardGenerator.tsx'),
+    'utf8',
+  );
+  expect(componentSource).toContain('공용 예시 미리보기');
+  expect(componentSource).toContain('최근 실제 기록');
+  expect(componentSource).toContain('실제 기록');
+  expect(componentSource).toContain('공용 예시');
+  expect(componentSource).toContain('data-storyboard-history-source-label="true"');
+});
