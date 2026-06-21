@@ -10,6 +10,7 @@ const withBundleAnalyzer = bundleAnalyzer({
 });
 
 const shouldUseStandaloneOutput = process.env.NODE_ENV === 'production' && process.env.VERCEL !== '1';
+const shouldApplyVercelTraceExcludes = process.env.VERCEL === '1';
 
 const securityHeaders = [
     { key: 'X-Content-Type-Options', value: 'nosniff' },
@@ -80,19 +81,11 @@ const nextConfig = {
         output: 'standalone',
         outputFileTracingRoot: path.join(__dirname, '../../'),
     } : {}),
-    outputFileTracingExcludes: {
-        '/api/admin/storyboard': ['./backend/**/*', './.omx/**/*', './README.md', './apps/web/README.md'],
-        '/api/admin/storyboard/chat': ['./backend/**/*', './.omx/**/*', './README.md', './apps/web/README.md'],
-        '/api/admin/storyboard/images': ['./backend/**/*', './.omx/**/*', './README.md', './apps/web/README.md'],
-        '/api/admin/youtube-thumbnail-generator': ['./backend/**/*', './.omx/**/*', './README.md', './apps/web/README.md'],
-        '/api/admin/youtube-thumbnail-generator/chat': ['./backend/**/*', './.omx/**/*', './README.md', './apps/web/README.md'],
-        '/api/admin/youtube-thumbnail-generator/history': ['./backend/**/*', './.omx/**/*', './README.md', './apps/web/README.md'],
-        '/api/admin/youtube-thumbnail-generator/release-candidates': ['./backend/**/*', './.omx/**/*', './README.md', './apps/web/README.md'],
-        '/api/admin/youtube-thumbnail-generator/release-candidates/promote': ['./backend/**/*', './.omx/**/*', './README.md', './apps/web/README.md'],
-        '/api/admin/youtube-thumbnail-generator/releases/assets/\[releaseId\]': ['./backend/**/*', './.omx/**/*', './README.md', './apps/web/README.md'],
-        '/api/admin/youtube-thumbnail-generator/releases/current': ['./backend/**/*', './.omx/**/*', './README.md', './apps/web/README.md'],
-        '/api/admin/youtube-thumbnail-generator/releases/publish': ['./backend/**/*', './.omx/**/*', './README.md', './apps/web/README.md'],
-    },
+    ...(shouldApplyVercelTraceExcludes ? {
+        outputFileTracingExcludes: {
+            '/*': ['./backend/**/*', './.omx/**/*', './README.md', './apps/web/README.md'],
+        },
+    } : {}),
     typedRoutes: false,
     async redirects() {
         return [
