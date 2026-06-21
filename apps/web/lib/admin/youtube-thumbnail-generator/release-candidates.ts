@@ -149,28 +149,16 @@ function assertInside(root: string, target: string, code: string) {
   return resolvedTarget;
 }
 
-async function pathExists(path: string) {
-  try {
-    await stat(path);
-    return true;
-  } catch {
-    return false;
-  }
-}
+function findRepoRoot(start = process.cwd()) {
+  const explicitRoot = process.env.TZUDONG_REPO_ROOT?.trim();
+  if (explicitRoot) return resolve(explicitRoot);
 
-async function findRepoRoot(start = process.cwd()) {
-  let current = resolve(start);
+  const current = resolve(start);
   if (basename(current) === 'web' && basename(dirname(current)) === 'apps') {
-    current = dirname(dirname(current));
+    return dirname(dirname(current));
   }
-  for (let depth = 0; depth < 8; depth += 1) {
-    if (await pathExists(join(current, 'apps', 'web', 'package.json'))) return current;
-    if (await pathExists(join(current, '.git')) && await pathExists(join(current, '.omx', 'artifacts'))) return current;
-    const parent = dirname(current);
-    if (parent === current) break;
-    current = parent;
-  }
-  return resolve(start);
+
+  return current;
 }
 
 async function resolveRoots(options: Pick<ThumbnailReleaseOptions, 'repoRoot' | 'webRoot'> = {}) {

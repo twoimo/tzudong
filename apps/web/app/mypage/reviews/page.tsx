@@ -105,6 +105,7 @@ const formatDate = (dateString: string) => {
 const PAGE_SIZE = 15;
 const MY_REVIEWS_SELECT =
   "id,restaurant_id,title,content,visited_at,created_at,is_verified,admin_note,is_pinned,is_edited_by_admin,food_photos,categories";
+const EMPTY_SEARCH_PARAMS = new URLSearchParams();
 
 // 상태 배지 컴포넌트 (Memoization)
 const ReviewStatusBadge = memo(({ review }: { review: MyReview }) => {
@@ -136,7 +137,7 @@ ReviewStatusBadge.displayName = "ReviewStatusBadge";
 export default function ReviewsPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams() ?? EMPTY_SEARCH_PARAMS;
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [editingReview, setEditingReview] = useState<MyReview | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);

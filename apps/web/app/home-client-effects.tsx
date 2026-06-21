@@ -30,6 +30,7 @@ type HomeClientEffectsProps = {
     setMapMode: (mode: 'domestic' | 'overseas') => void;
     setSelectedAnnouncement: (announcement: Announcement | null) => void;
 };
+const EMPTY_SEARCH_PARAMS = new URLSearchParams();
 
 export default function HomeClientEffects({
     activeRightPanel,
@@ -45,7 +46,7 @@ export default function HomeClientEffects({
     setMapMode,
     setSelectedAnnouncement,
 }: HomeClientEffectsProps) {
-    const searchParams = useSearchParams();
+    const searchParams = useSearchParams() ?? EMPTY_SEARCH_PARAMS;
     const router = useRouter();
     const lastAnnouncementRequestKeyRef = useRef<string | null>(null);
     const lastRestaurantDeepLinkRequestKeyRef = useRef<string | null>(null);
