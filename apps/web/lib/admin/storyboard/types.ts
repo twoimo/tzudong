@@ -98,6 +98,8 @@ export type StoryboardBackendAgentStatus = {
   commandRejectionReason?: string;
   localAdapterAvailable: boolean;
   missingPythonModules: string[];
+  pythonRuntimeAvailable?: boolean;
+  pythonRuntimeError?: string;
   runtime?: StoryboardBackendRuntime;
   codexModel?: string;
   codexEffort?: string;
