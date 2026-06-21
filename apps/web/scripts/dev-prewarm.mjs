@@ -35,7 +35,7 @@ const child = spawn(
   ],
   {
     cwd: process.cwd(),
-    env: process.env,
+    env: { ...process.env, NODE_ENV: 'development' },
     stdio: ['inherit', 'pipe', 'pipe'],
   },
 );
