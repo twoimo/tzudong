@@ -219,7 +219,7 @@ test("live operator path generates four storyboard images and persists exact gpt
 }, testInfo) => {
   test.skip(
     process.env.STORYBOARD_LIVE_IMAGE_E2E !== "1",
-    "Set STORYBOARD_LIVE_IMAGE_E2E=1 after running npm run storyboard:image-proof to execute real Codex OAuth gpt-image-2 generation.",
+    "Set STORYBOARD_LIVE_IMAGE_E2E=1 after running bun run storyboard:image-proof to execute real Codex OAuth gpt-image-2 generation.",
   );
   test.setTimeout(12 * 60_000);
 

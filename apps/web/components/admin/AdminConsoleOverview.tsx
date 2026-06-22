@@ -121,6 +121,12 @@ type ConsoleModule = {
   priority?: "urgent" | "normal";
 };
 
+const STORYBOARD_MODULE_LOADING_CUT_NOS = [1, 2, 3, 4] as const;
+const THUMBNAIL_MODULE_LOADING_TOOL_IDS = Array.from(
+  { length: 12 },
+  (_, index) => index + 1,
+);
+
 type SidebarSection = {
   label: string;
   items: Array<{
@@ -257,9 +263,7 @@ function getSidebarConsoleItems(moduleIds: ConsoleModuleId[]): SidebarSection["i
 }
 
 const guardedSteps = ["미리보기", "확인", "적용", "재확인", "감사 기록"];
-const SIDEBAR_LABEL_REVEAL_DELAY_MS = 180;
 const ADMIN_THEME_STORAGE_KEY = "tzudong-admin-theme";
-const ADMIN_SIDEBAR_COLLAPSED_STORAGE_KEY = "tzudong-admin-sidebar-collapsed";
 
 type AdminThemePreference = "light" | "dark" | "system";
 
@@ -7352,8 +7356,8 @@ function AdminSidebar({
   onSelectModule,
   isCollapsed,
   showLabels,
-  showMobileHeader,
   onToggleCollapsed,
+  showMobileHeader,
   canLoadPreferences,
   stats,
 }: {
@@ -7361,8 +7365,8 @@ function AdminSidebar({
   onSelectModule: (moduleId: AdminModuleId) => void;
   isCollapsed: boolean;
   showLabels: boolean;
-  showMobileHeader: boolean;
   onToggleCollapsed: () => void;
+  showMobileHeader: boolean;
   canLoadPreferences: boolean;
   stats: AdminOverviewStats;
 }) {
@@ -7816,6 +7820,11 @@ function AdminSidebar({
             ? "inline-flex w-9 flex-col items-center gap-1 self-center rounded-2xl"
             : "grid w-full grid-cols-3 gap-1 rounded-full",
         )}
+        style={
+          isCompactSidebar
+            ? undefined
+            : { gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }
+        }
         aria-label="화면 모드 선택"
         data-admin-sidebar-theme-toggle="true"
         data-admin-sidebar-preference-placement={placement}
@@ -7966,7 +7975,7 @@ function AdminSidebar({
         className={cn(
           "relative z-30 hidden h-full min-h-0 w-max shrink-0 flex-col overflow-hidden border-r border-border bg-gradient-to-b from-card via-card to-background/95 p-2 shadow-sm transition-[width,padding] duration-300 motion-reduce:transition-none md:flex",
           isCollapsed
-            ? "md:w-[4.5rem] md:min-w-[4.5rem] md:max-w-[4.5rem] md:items-center md:px-1.5"
+            ? "md:w-20 md:min-w-20 md:max-w-20 md:items-center md:px-2"
             : "md:min-w-[14.25rem] md:max-w-[var(--admin-sidebar-expanded-max-width)]",
         )}
         aria-label="관리자 콘솔 사이드바"
@@ -7979,6 +7988,7 @@ function AdminSidebar({
             isCollapsed &&
               "md:min-h-9 md:w-full md:items-center md:justify-center md:border-b-0 md:px-0 md:pb-1",
           )}
+          data-admin-sidebar-header="true"
         >
           <Link
             href="/"
@@ -8001,8 +8011,9 @@ function AdminSidebar({
           <div
             className={cn(
               "min-w-0 flex-1 overflow-hidden whitespace-nowrap transition-opacity duration-100 motion-reduce:transition-none",
-              (!showLabels || isCollapsed) && "md:sr-only",
+              (!showLabels || isCollapsed) && "md:hidden",
             )}
+            data-admin-sidebar-header-copy="true"
           >
             <h2 className="truncate whitespace-nowrap text-sm font-bold tracking-[-0.03em] text-foreground text-pretty">
               관리자 콘솔
@@ -8016,15 +8027,15 @@ function AdminSidebar({
             variant="ghost"
             size="sm"
             className={cn(
-              "ml-auto inline-flex h-8 w-8 shrink-0 rounded-xl border border-transparent text-muted-foreground hover:border-primary/15 hover:bg-background/80 hover:text-foreground focus-visible:ring-primary focus-visible:ring-offset-background",
+              "ml-auto inline-flex h-8 w-8 shrink-0 rounded-xl border border-transparent p-0 text-muted-foreground shadow-none hover:border-primary/15 hover:bg-background/80 hover:text-foreground focus-visible:ring-primary focus-visible:ring-offset-background",
               isCollapsed && "md:m-0",
             )}
-            aria-pressed={isCollapsed}
-            aria-expanded={!isCollapsed}
-            aria-controls="admin-console-menu"
             aria-label={
               isCollapsed ? "관리자 사이드바 펼치기" : "관리자 사이드바 접기"
             }
+            aria-expanded={!isCollapsed}
+            aria-controls="admin-console-menu"
+            data-admin-sidebar-collapse-toggle="true"
             onClick={onToggleCollapsed}
           >
             {isCollapsed ? (
@@ -8448,20 +8459,19 @@ function AdminConsoleCanvasSkeleton() {
 }
 
 function AdminStoryboardModuleLoadingSkeleton() {
-  const loadingCutNos = [1, 2, 3, 4] as const;
-
   return (
     <section
-      className="flex h-full min-h-[640px] min-w-0 flex-col overflow-hidden bg-background p-3 md:min-h-0"
+      className="flex h-full min-h-[640px] min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-background p-3 shadow-sm md:min-h-0"
+      data-admin-console-content-loading="true"
       data-storyboard-module-loading="true"
       data-storyboard-module-loading-layout="page-shell"
       role="status"
       aria-busy="true"
       aria-label="스토리보드 생성 화면 로딩 중"
     >
-      <div className="grid h-full min-h-0 grid-cols-1 grid-rows-[minmax(0,1fr)_auto] gap-3 overflow-hidden xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] xl:grid-rows-1">
+      <div className="min-h-0" data-storyboard-module-loading-grid="true">
         <Card
-          className="order-1 flex min-h-0 flex-col overflow-hidden border-0 bg-background shadow-none"
+          className="order-1 flex min-h-0 flex-col overflow-hidden rounded-xl border border-border/70 bg-card/35 shadow-none"
           aria-label="스토리보드 캔버스 준비 영역"
           data-storyboard-module-loading-canvas="true"
         >
@@ -8479,14 +8489,14 @@ function AdminStoryboardModuleLoadingSkeleton() {
           </CardHeader>
           <CardContent className="min-h-0 flex-1 p-3 pt-1">
             <div
-              className="grid h-full min-h-[420px] grid-cols-1 gap-2 overflow-hidden sm:grid-cols-2"
+              className="h-full min-h-0"
               data-storyboard-module-loading-frame-grid="true"
               aria-hidden="true"
             >
-              {loadingCutNos.map((cutNo) => (
+              {STORYBOARD_MODULE_LOADING_CUT_NOS.map((cutNo) => (
                 <div
                   key={`storyboard-loading-cut-${cutNo}`}
-                  className="relative min-h-[190px] overflow-hidden rounded-2xl bg-gradient-to-br from-slate-100 via-slate-200/85 to-slate-400/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] dark:from-slate-800/72 dark:via-slate-700/58 dark:to-slate-600/52"
+                  className="relative min-h-0 overflow-hidden rounded-2xl bg-gradient-to-br from-slate-100 via-slate-200/85 to-slate-400/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] dark:from-slate-800/72 dark:via-slate-700/58 dark:to-slate-600/52"
                   data-storyboard-module-loading-cut={String(cutNo)}
                 >
                   <span className="absolute left-3 top-3 z-10 h-5 w-14 rounded-full bg-slate-700/70" />
@@ -8497,7 +8507,7 @@ function AdminStoryboardModuleLoadingSkeleton() {
                     data-storyboard-module-loading-glass="true"
                   />
                   <span
-                    className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/70 to-transparent blur-sm [animation:storyboard-glass-shimmer_1.35s_ease-in-out_infinite]"
+                    className="admin-module-loading-shimmer pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/70 to-transparent"
                     aria-hidden="true"
                     data-storyboard-module-loading-shimmer="true"
                   />
@@ -8578,13 +8588,13 @@ function AdminYoutubeThumbnailModuleLoadingSkeleton() {
         data-thumbnail-module-loading-glass-shell="true"
       />
       <span
-        className="pointer-events-none absolute inset-y-0 -left-1/3 z-0 w-1/3 bg-gradient-to-r from-transparent via-white/62 to-transparent blur-md [animation:storyboard-glass-shimmer_1.8s_ease-in-out_infinite] motion-reduce:animate-none dark:via-white/22"
+        className="admin-module-loading-shimmer pointer-events-none absolute inset-y-0 -left-1/3 z-0 w-1/3 bg-gradient-to-r from-transparent via-white/62 to-transparent dark:via-white/22"
         aria-hidden="true"
         data-thumbnail-module-loading-page-shimmer="true"
       />
       <div className="relative z-10 grid h-full min-h-0 grid-cols-1 grid-rows-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-3 overflow-hidden xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] xl:grid-rows-1">
         <Card
-          className="relative order-2 flex min-h-0 flex-col overflow-hidden border border-border/70 bg-background/86 shadow-none backdrop-blur-[1px]"
+          className="relative order-2 flex min-h-0 flex-col overflow-hidden border border-border/70 bg-background/86 shadow-none"
           aria-label="유튜브 썸네일 도우미 준비 영역"
           data-thumbnail-module-loading-chat-shell="static"
           data-thumbnail-module-loading-card-glass="chat"
@@ -8595,7 +8605,7 @@ function AdminYoutubeThumbnailModuleLoadingSkeleton() {
             data-thumbnail-module-loading-chat-shell-glass="true"
           />
           <span
-            className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/52 to-transparent blur-sm [animation:storyboard-glass-shimmer_1.7s_ease-in-out_infinite] motion-reduce:animate-none dark:via-white/18"
+            className="admin-module-loading-shimmer pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/52 to-transparent dark:via-white/18"
             aria-hidden="true"
             data-thumbnail-module-loading-chat-shell-shimmer="true"
           />
@@ -8629,7 +8639,7 @@ function AdminYoutubeThumbnailModuleLoadingSkeleton() {
                 data-thumbnail-module-loading-chat-glass="true"
               />
               <span
-                className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/56 to-transparent blur-sm [animation:storyboard-glass-shimmer_1.6s_ease-in-out_infinite] motion-reduce:animate-none dark:via-white/18"
+                className="admin-module-loading-shimmer pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/56 to-transparent dark:via-white/18"
                 aria-hidden="true"
                 data-thumbnail-module-loading-chat-shimmer="true"
               />
@@ -8695,7 +8705,7 @@ function AdminYoutubeThumbnailModuleLoadingSkeleton() {
                 </div>
               </div>
               <div
-                className="relative z-10 shrink-0 border-t border-border/70 bg-background/74 p-2.5 backdrop-blur-[1px]"
+                className="relative z-10 shrink-0 border-t border-border/70 bg-background/74 p-2.5"
                 data-thumbnail-module-loading-composer="true"
                 aria-hidden="true"
               >
@@ -8712,7 +8722,7 @@ function AdminYoutubeThumbnailModuleLoadingSkeleton() {
         </Card>
 
         <Card
-          className="relative order-1 flex min-h-0 flex-col overflow-hidden border-0 bg-card/72 shadow-none backdrop-blur-[1px]"
+          className="relative order-1 flex min-h-0 flex-col overflow-hidden border-0 bg-card/72 shadow-none"
           aria-label="유튜브 썸네일 캔버스 로딩"
           data-thumbnail-module-loading-canvas="true"
           data-thumbnail-module-loading-card-glass="canvas"
@@ -8723,7 +8733,7 @@ function AdminYoutubeThumbnailModuleLoadingSkeleton() {
             data-thumbnail-module-loading-canvas-shell-glass="true"
           />
           <span
-            className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/50 to-transparent blur-sm [animation:storyboard-glass-shimmer_1.75s_ease-in-out_infinite] motion-reduce:animate-none dark:via-white/18"
+            className="admin-module-loading-shimmer pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/50 to-transparent dark:via-white/18"
             aria-hidden="true"
             data-thumbnail-module-loading-canvas-shell-shimmer="true"
           />
@@ -8753,7 +8763,7 @@ function AdminYoutubeThumbnailModuleLoadingSkeleton() {
                   data-thumbnail-module-loading-canvas-glass="true"
                 />
                 <span
-                  className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/70 to-transparent blur-sm [animation:storyboard-glass-shimmer_1.45s_ease-in-out_infinite]"
+                  className="admin-module-loading-shimmer pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/70 to-transparent"
                   aria-hidden="true"
                   data-thumbnail-module-loading-shimmer="true"
                 />
@@ -8763,9 +8773,9 @@ function AdminYoutubeThumbnailModuleLoadingSkeleton() {
               className="grid shrink-0 grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-6"
               data-thumbnail-module-loading-toolbar="true"
             >
-              {Array.from({ length: 12 }, (_, index) => (
+              {THUMBNAIL_MODULE_LOADING_TOOL_IDS.map((toolId) => (
                 <div
-                  key={`thumbnail-module-loading-tool-${index + 1}`}
+                  key={`thumbnail-module-loading-tool-${toolId}`}
                   className="relative h-8 overflow-hidden rounded-lg border border-border/60 bg-gradient-to-br from-background/88 via-slate-50/68 to-slate-200/54 dark:via-slate-800/44 dark:to-slate-700/34"
                 >
                   <span
@@ -8774,7 +8784,7 @@ function AdminYoutubeThumbnailModuleLoadingSkeleton() {
                     data-thumbnail-module-loading-tool-glass="true"
                   />
                   <span
-                    className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/54 to-transparent blur-sm [animation:storyboard-glass-shimmer_1.7s_ease-in-out_infinite] motion-reduce:animate-none dark:via-white/16"
+                    className="admin-module-loading-shimmer pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/54 to-transparent dark:via-white/16"
                     aria-hidden="true"
                     data-thumbnail-module-loading-tool-shimmer="true"
                   />
@@ -8818,8 +8828,8 @@ export function AdminConsoleOverview({
   } = useAdminOverviewStats(canLoadAdminConsoleData);
   const [activeModuleId, setActiveModuleId] =
     useState<AdminModuleId>(requestedModuleId);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [showSidebarLabels, setShowSidebarLabels] = useState(true);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+  const showSidebarLabels = !isSidebarCollapsed;
   const [isMobileHeaderVisible, setIsMobileHeaderVisible] = useState(true);
   const [isAdminMobileViewport, setIsAdminMobileViewport] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -8889,43 +8899,6 @@ export function AdminConsoleOverview({
       router.replace(canonicalHref, { scroll: false });
     }
   }, [requestedModuleId, router, searchParams]);
-
-  useEffect(() => {
-    const isStoredSidebarCollapsed =
-      window.localStorage.getItem(ADMIN_SIDEBAR_COLLAPSED_STORAGE_KEY) ===
-      "true";
-    setIsSidebarCollapsed(isStoredSidebarCollapsed);
-    setShowSidebarLabels(!isStoredSidebarCollapsed);
-  }, []);
-
-  useEffect(() => {
-    if (isSidebarCollapsed) {
-      setShowSidebarLabels(false);
-      return;
-    }
-
-    const timer = window.setTimeout(() => {
-      setShowSidebarLabels(true);
-    }, SIDEBAR_LABEL_REVEAL_DELAY_MS);
-
-    return () => window.clearTimeout(timer);
-  }, [isSidebarCollapsed]);
-
-  const handleToggleSidebarCollapsed = () => {
-    setIsSidebarCollapsed((current) => {
-      const nextSidebarCollapsed = !current;
-      window.localStorage.setItem(
-        ADMIN_SIDEBAR_COLLAPSED_STORAGE_KEY,
-        String(nextSidebarCollapsed),
-      );
-
-      if (nextSidebarCollapsed) {
-        setShowSidebarLabels(false);
-      }
-
-      return nextSidebarCollapsed;
-    });
-  };
 
   const getAdminConsoleScrollTop = useCallback(() => {
     if (typeof window === "undefined") return 0;
@@ -9079,7 +9052,7 @@ export function AdminConsoleOverview({
 
   return (
     <main
-      className="h-[var(--full-height,100vh)] min-h-0 w-full overflow-hidden bg-background text-foreground"
+      className="h-full min-h-0 w-full overflow-hidden bg-background text-foreground"
       data-admin-console-shell="true"
     >
       <a
@@ -9104,8 +9077,10 @@ export function AdminConsoleOverview({
           onSelectModule={selectModule}
           isCollapsed={isSidebarCollapsed}
           showLabels={showSidebarLabels}
+          onToggleCollapsed={() =>
+            setIsSidebarCollapsed((currentCollapsed) => !currentCollapsed)
+          }
           showMobileHeader={isMobileHeaderVisible}
-          onToggleCollapsed={handleToggleSidebarCollapsed}
           canLoadPreferences={canLoadAdminConsoleData}
           stats={stats}
         />
@@ -9124,6 +9099,7 @@ export function AdminConsoleOverview({
                 : "overflow-y-auto",
           )}
           data-admin-console-content="true"
+          data-admin-console-active-module={activeModuleId}
           onScroll={handleAdminCanvasScroll}
           onWheel={handleAdminCanvasWheel}
           onTouchStart={handleAdminCanvasTouchStart}
