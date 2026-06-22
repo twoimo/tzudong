@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import type { Server } from 'node:http';
 
 import {
+  STORYBOARD_LOCAL_BRIDGE_MAX_BODY_BYTES,
   buildStoryboardLocalBridgeImagesRequest,
   normalizeStoryboardLocalBridgeImagesResponse,
   normalizeStoryboardLocalBridgeToken,
@@ -195,6 +196,13 @@ console.log(JSON.stringify({
   return { commandPath, markerPath };
 }
 
+function writeWindowsCmdProviderShim(dir: string) {
+  const { providerPath, markerPath } = writeFakeProvider(dir);
+  const commandPath = join(dir, 'fake-provider.cmd');
+  writeFileSync(commandPath, `@echo off\r\n"${process.execPath}" "${providerPath}" %*\r\n`);
+  return { commandPath, markerPath };
+}
+
 async function listenBridge(options: { providerPath: string; outputDir: string; commandTimeoutMs?: number; thumbnailProviderPath?: string }) {
   const bridge = createStoryboardLocalBridgeServer({
     token,
@@ -267,6 +275,53 @@ describe('storyboard local bridge contract', () => {
       model: 'gpt-image-2',
       images: [{ sceneNo: 1, image }],
     }).images).toHaveLength(1);
+  });
+
+  test('keeps generated image data out of repeated local bridge request payloads', () => {
+    const generatedImage = {
+      dataUrl: `data:image/png;base64,${'a'.repeat(STORYBOARD_LOCAL_BRIDGE_MAX_BODY_BYTES)}`,
+      mime: 'image/png',
+      providerId: 'local-codex',
+      trustPolicy: 'storyboard-gpt-image-2-panel-v1',
+      model: 'gpt-image-2',
+      prompt: 'previous generated image',
+      generatedAt: new Date().toISOString(),
+      warnings: [],
+      provenance: {
+        providerId: 'local-codex',
+        authMode: 'codex_oauth',
+        endpoint: 'https://chatgpt.com/backend-api/codex/responses',
+        agentModel: 'gpt-5.5',
+        requestToolType: 'image_generation',
+        requestToolModel: 'gpt-image-2',
+        model: 'gpt-image-2',
+        modelProvenance: 'exact',
+        responseId: 'resp_previous',
+        imageCallId: 'ig_previous',
+        imageItemCount: 1,
+        rawImageItemTypes: ['image_generation_call'],
+        requestHash: sha256('previous-request'),
+        responseHash: sha256('previous-response'),
+        hasOpenAIAPIKey: false,
+        generatedAt: new Date().toISOString(),
+      },
+    } as const;
+    const generatedScene = { ...scene, generatedImage };
+    const generatedSourceResult = {
+      ...sourceResult,
+      storyboard: {
+        ...sourceResult.storyboard,
+        scenes: [generatedScene],
+      },
+    };
+
+    const requestPayload = buildStoryboardLocalBridgeImagesRequest(generatedSourceResult, [generatedScene]);
+    const serialized = JSON.stringify(requestPayload);
+
+    expect(requestPayload.scenes[0]?.generatedImage).toBeUndefined();
+    expect(requestPayload.sourceResult?.storyboard.scenes[0]?.generatedImage).toBeUndefined();
+    expect(serialized).not.toContain('data:image/png;base64');
+    expect(Buffer.byteLength(serialized, 'utf8')).toBeLessThan(STORYBOARD_LOCAL_BRIDGE_MAX_BODY_BYTES);
   });
 });
 
@@ -381,7 +436,7 @@ describe('storyboard local bridge server', () => {
       },
       body: JSON.stringify({
         ...buildStoryboardLocalBridgeImagesRequest(sourceResult, [scene]),
-        scenes: Array.from({ length: 5 }, (_, index) => ({ ...scene, sceneNo: index + 1 })),
+        scenes: Array.from({ length: 13 }, (_, index) => ({ ...scene, sceneNo: index + 1 })),
       }),
     });
     expect(oversized.status).toBe(400);
@@ -494,6 +549,70 @@ describe('storyboard local bridge server', () => {
       if (previousStoryboardCommand === undefined) delete process.env.STORYBOARD_LOCAL_CODEX_COMMAND;
       else process.env.STORYBOARD_LOCAL_CODEX_COMMAND = previousStoryboardCommand;
     }
+  });
+
+  test('runs configured Windows cmd provider commands for storyboard and thumbnail routes', async () => {
+    if (process.platform !== 'win32') return;
+
+    const { commandPath, markerPath } = writeWindowsCmdProviderShim(tempDir);
+    const bridge = createStoryboardLocalBridgeServer({
+      token,
+      allowedOrigins: [allowedOrigin],
+      providerCommand: commandPath,
+      thumbnailProviderCommand: commandPath,
+      thumbnailProviderArgs: ['{output}'],
+      outputDir: join(tempDir, 'out'),
+      fakeAuthReady: true,
+      commandTimeoutMs: 2000,
+    });
+    activeServer = bridge.server;
+    await new Promise<void>((resolveListen, rejectListen) => {
+      bridge.server.once('error', rejectListen);
+      bridge.server.listen(0, '127.0.0.1', () => resolveListen());
+    });
+    const address = bridge.server.address();
+    if (!address || typeof address === 'string') throw new Error('bridge did not bind to a TCP port');
+    const baseUrl = `http://127.0.0.1:${address.port}`;
+
+    const storyboardResponse = await fetch(`${baseUrl}/v1/storyboard/images`, {
+      method: 'POST',
+      headers: {
+        Origin: allowedOrigin,
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(buildStoryboardLocalBridgeImagesRequest(sourceResult, [scene])),
+    });
+    expect(storyboardResponse.status).toBe(200);
+
+    const thumbnailResponse = await fetch(`${baseUrl}/v1/youtube-thumbnail/images`, {
+      method: 'POST',
+      headers: {
+        Origin: allowedOrigin,
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(buildThumbnailLocalBridgeImagesRequest({
+        providerId: 'local-codex',
+        generationMode: 'direct_provider',
+        topic: '로컬 브릿지 음식 썸네일',
+        headline: '역대급 먹방',
+        subHeadline: '한입만 가능?',
+        stylePreset: 'night-market-reaction',
+        referenceImageRoles: ['host'],
+        acknowledgedSafety: true,
+        textLayers: [],
+      }, [
+        {
+          name: 'host.png',
+          mime: 'image/png',
+          role: 'host',
+          dataBase64: tinyPngBase64,
+        },
+      ])),
+    });
+    expect(thumbnailResponse.status).toBe(200);
+    expect(readFileSync(markerPath, 'utf8')).toBe('invoked');
   });
 
   test('serves thumbnail images through the same paired local bridge without a server relay', async () => {

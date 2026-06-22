@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
           message: '요청을 읽고 어떤 썸네일을 만들지 정리하고 있어요.',
           runtime: 'codex_cli_oauth',
           model: 'gpt-5.5',
-          effort: 'high',
+          effort: 'low',
           chatRunId,
         });
         send('agent_started', {
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
           chatRunId,
           message: '작업을 시작했습니다.',
           model: 'gpt-5.5',
-          effort: 'high',
+          effort: 'low',
         });
         heartbeatTimer = setInterval(() => {
           send('heartbeat', {
