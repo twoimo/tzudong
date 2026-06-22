@@ -5386,19 +5386,13 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'id="storyboard-chat-image-attachment-input"',
     );
     expect(storyboardSource).toContain('aria-label="사진 첨부"');
-    expect(storyboardSource).toContain("STORYBOARD_CHAT_QUICK_START_PROMPTS");
-    expect(storyboardSource).toContain("handleStoryboardQuickStartPrompt");
-    expect(storyboardSource).toContain("매운 라면 10컷");
-    expect(storyboardSource).toContain("고기 한상 12컷");
-    expect(storyboardSource).toContain("디저트 9컷");
-    expect(storyboardSource).toContain("첫 컷 강화");
-    expect(storyboardSource).toContain(
-      "satisfies readonly StoryboardQuickStartPrompt[]",
-    );
-    expect(storyboardSource).toContain("generation: {");
-    expect(storyboardSource).toContain(
-      "void handleStoryboardQuickStartPrompt(item)",
-    );
+    expect(storyboardSource).not.toContain("STORYBOARD_CHAT_QUICK_START_PROMPTS");
+    expect(storyboardSource).not.toContain("StoryboardQuickStartPrompt");
+    expect(storyboardSource).not.toContain("handleStoryboardQuickStartPrompt");
+    expect(storyboardSource).not.toContain("매운 라면 10컷");
+    expect(storyboardSource).not.toContain("고기 한상 12컷");
+    expect(storyboardSource).not.toContain("디저트 9컷");
+    expect(storyboardSource).not.toContain("첫 컷 강화");
     expect(storyboardSource).toContain(
       "await handleGenerateAllStoryboardImagesForResult(",
     );
@@ -5407,13 +5401,14 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(storyboardSource).not.toContain("const runImageWorker = async () =>");
     expect(storyboardSource).not.toContain("applyQueuedGeneratedImages");
-    expect(storyboardSource).toContain(
+    expect(storyboardSource).not.toContain(
       'data-storyboard-chat-quickstart="true"',
     );
-    expect(storyboardSource).toContain(
+    expect(storyboardSource).not.toContain(
       "data-storyboard-chat-quickstart-prompt={item.label}",
     );
-    expect(storyboardSource).toContain('aria-label={`${item.label} 바로 생성`}');
+    expect(storyboardSource).not.toContain('aria-label="스토리보드 빠른 시작"');
+    expect(storyboardSource).not.toContain('aria-label={`${item.label} 바로 생성`}');
     expect(storyboardSource).not.toContain(
       'data-storyboard-chat-inline-tools="true"',
     );
@@ -5512,7 +5507,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).toContain("스토리보드 구성 중");
     expect(storyboardSource).toContain("답변 준비 중");
     expect(storyboardSource).toContain("완료된 CUT은 바로 화면에 반영돼요");
-    expect(storyboardSource).toContain("응답이 도착하면 성공 CUT부터 스켈레톤이 실제 결과로 바뀝니다");
+    expect(storyboardSource).not.toContain("응답이 도착하면 성공 CUT부터 스켈레톤이 실제 결과로 바뀝니다");
     expect(storyboardSource).toContain("requestStoryboardImages(");
     expect(storyboardSource).toContain(
       "for (let index = 0; index < targetScenes.length; index += 1)",
@@ -6218,7 +6213,14 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(appGlobalsSource).toContain(
       '[data-storyboard-cut-image-skeleton="true"]::after',
     );
+    expect(appGlobalsSource).toContain(
+      '[data-storyboard-cut-image-skeleton="true"]::before',
+    );
     expect(appGlobalsSource).toContain("@keyframes storyboard-glass-sparkle");
+    expect(appGlobalsSource).toContain("@keyframes storyboard-glass-prism");
+    expect(appGlobalsSource).toContain(
+      "animation: storyboard-glass-prism 2.2s ease-in-out infinite;",
+    );
     expect(appGlobalsSource).toContain(
       '[data-storyboard-cut-image-skeleton-active="true"]::after',
     );
@@ -6231,6 +6233,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(appGlobalsSource).toContain(
       "animation: storyboard-glass-reduced-sheen 2.4s ease-in-out infinite;",
     );
+    expect(storyboardSource).not.toContain("motion-reduce:hidden");
     expect(appGlobalsSource).toContain("radial-gradient(ellipse at 16% 12%");
     expect(appGlobalsSource).toContain("left: -42%;");
     expect(appGlobalsSource).toContain("width: max(10rem, 34%);");
