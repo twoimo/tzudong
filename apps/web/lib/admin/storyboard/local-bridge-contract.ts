@@ -17,16 +17,17 @@ import {
 import {
   getTrustedStoryboardGeneratedImage,
 } from './image-trust';
-import type {
-  StoryboardGenerateRequest,
-  StoryboardGenerationResult,
-  StoryboardScene,
-  StoryboardSceneGeneratedImage,
+import {
+  STORYBOARD_IMAGE_GENERATION_BATCH_SIZE,
+  type StoryboardGenerateRequest,
+  type StoryboardGenerationResult,
+  type StoryboardScene,
+  type StoryboardSceneGeneratedImage,
 } from './types';
 
 export const STORYBOARD_LOCAL_BRIDGE_ROUTE_ID = LOCAL_BRIDGE_ROUTE_ID;
 export const STORYBOARD_LOCAL_BRIDGE_DEFAULT_URL = LOCAL_BRIDGE_DEFAULT_URL;
-export const STORYBOARD_LOCAL_BRIDGE_MAX_SCENES = 4 as const;
+export const STORYBOARD_LOCAL_BRIDGE_MAX_SCENES = STORYBOARD_IMAGE_GENERATION_BATCH_SIZE;
 export const STORYBOARD_LOCAL_BRIDGE_MAX_BODY_BYTES = 512 * 1024;
 export const STORYBOARD_LOCAL_BRIDGE_TOKEN_HEADER = LOCAL_BRIDGE_TOKEN_HEADER;
 export const STORYBOARD_LOCAL_BRIDGE_ALLOWED_ORIGINS = LOCAL_BRIDGE_ALLOWED_ORIGINS;
@@ -120,12 +121,36 @@ export function buildStoryboardLocalBridgeImagesRequest(
       `로컬 브릿지는 한 번에 최대 ${STORYBOARD_LOCAL_BRIDGE_MAX_SCENES}컷까지만 처리합니다.`,
     );
   }
+  const transportResult = stripStoryboardGeneratedImagesForTransport(result);
   return {
-    title: result.storyboard.title,
-    logline: result.storyboard.logline,
-    request: result.request,
-    scenes,
-    sourceResult: result,
+    title: transportResult.storyboard.title,
+    logline: transportResult.storyboard.logline,
+    request: transportResult.request,
+    scenes: stripStoryboardGeneratedImagesFromScenes(scenes),
+    sourceResult: transportResult,
+  };
+}
+
+export function stripStoryboardGeneratedImagesFromScenes(
+  scenes: StoryboardScene[],
+): StoryboardScene[] {
+  return scenes.map((scene) => {
+    if (!scene.generatedImage) return scene;
+    const safeScene = { ...scene };
+    delete safeScene.generatedImage;
+    return safeScene;
+  });
+}
+
+export function stripStoryboardGeneratedImagesForTransport(
+  result: StoryboardGenerationResult,
+): StoryboardGenerationResult {
+  return {
+    ...result,
+    storyboard: {
+      ...result.storyboard,
+      scenes: stripStoryboardGeneratedImagesFromScenes(result.storyboard.scenes),
+    },
   };
 }
 

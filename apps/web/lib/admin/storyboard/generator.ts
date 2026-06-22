@@ -608,6 +608,18 @@ function buildRequiredRoleCoverage(roles: StoryboardArcRole[]) {
   };
 }
 
+function hasKoreanFinalConsonant(value: string) {
+  const lastHangul = Array.from(value.trim()).reverse().find((character) =>
+    character >= '가' && character <= '힣'
+  );
+  if (!lastHangul) return false;
+  return (lastHangul.charCodeAt(0) - 0xac00) % 28 !== 0;
+}
+
+function withKoreanParticle(value: string, particles: readonly [string, string]) {
+  return `${value}${hasKoreanFinalConsonant(value) ? particles[0] : particles[1]}`;
+}
+
 function getSourceEvidenceLabel(options: {
   isFallbackData: boolean;
   dataModeLabel: string;
@@ -637,8 +649,8 @@ function createStoryboardSceneDraft(
     topicKeywords: [profile.label, keyword, sensoryWord],
     title: `${base.title} · ${profile.label}`,
     operatorIntent: `${base.operatorIntent} 이번 주제는 ${profile.label}이라서 ${keyword}의 ${sensoryWord} 매력을 컷 안에서 바로 이해시키는 것이 핵심입니다.`,
-    visualDirection: `${base.visualDirection} 특히 ${visualMotif}을/를 크게 잡아 ${profile.label} 주제가 다른 장면과 구분되게 만듭니다.`,
-    hostBeat: `${base.hostBeat} ${keyword}은/는 ${audioMotif}이 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다.`,
+    visualDirection: `${base.visualDirection} 특히 ${withKoreanParticle(visualMotif, ['을', '를'])} 크게 잡아 ${profile.label} 주제가 다른 장면과 구분되게 만듭니다.`,
+    hostBeat: `${base.hostBeat} ${withKoreanParticle(keyword, ['은', '는'])} ${withKoreanParticle(audioMotif, ['이', '가'])} 살아야 해서, 멘트는 짧게 두고 맛 반응을 쉽게 설명합니다.`,
     captionStem: `${base.captionStem} · ${subtitleMotif} · ${keyword}`,
   };
 }

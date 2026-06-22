@@ -29,7 +29,7 @@ function buildUnavailableStoryboardBackendAgentStatus() {
     missingPythonModules: [],
     runtime: 'unavailable',
     codexModel: process.env.STORYBOARD_AGENT_CODEX_MODEL?.trim() || 'gpt-5.5',
-    codexEffort: process.env.STORYBOARD_AGENT_CODEX_EFFORT?.trim() || 'high',
+    codexEffort: process.env.STORYBOARD_AGENT_CODEX_EFFORT?.trim() || 'low',
     streamingAvailable: false,
   };
 }
