@@ -2466,7 +2466,7 @@ process.stdin.on("end", () => {
     expect(status).toMatchObject({
       runtime: "codex_cli_oauth",
       codexModel: "gpt-5.5",
-      codexEffort: "high",
+      codexEffort: "low",
       streamingAvailable: true,
     });
 
@@ -2482,7 +2482,7 @@ process.stdin.on("end", () => {
     expect(runner).toContain("THUMBNAIL_AGENT_JSON");
     expect(runner).toContain("never generates images");
     expect(runner).toContain('DEFAULT_CODEX_MODEL = "gpt-5.5"');
-    expect(runner).toContain('DEFAULT_CODEX_EFFORT = "high"');
+    expect(runner).toContain('DEFAULT_CODEX_EFFORT = "low"');
     expect(runner).toContain("codex exec");
     expect(runner).toContain("model_reasoning_effort");
     expect(requirements).toContain("langgraph");
