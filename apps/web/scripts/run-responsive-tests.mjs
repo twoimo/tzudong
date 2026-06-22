@@ -145,7 +145,7 @@ function ensureServerConfig(env) {
     const nextEnv = { ...env };
     if (!nextEnv.PLAYWRIGHT_WEB_SERVER_COMMAND) {
         nextEnv.PLAYWRIGHT_WEB_SERVER_COMMAND =
-            serverMode === 'dev' ? 'npm run dev:playwright' : 'npm run start:playwright';
+            serverMode === 'dev' ? 'bun run dev:playwright' : 'bun run start:playwright';
     }
     if (!nextEnv.PLAYWRIGHT_WEB_SERVER_TIMEOUT_MS) {
         nextEnv.PLAYWRIGHT_WEB_SERVER_TIMEOUT_MS = '240000';
@@ -169,7 +169,7 @@ function maybeBuildForProduction(env) {
     }
 
     console.log('[responsive-test] building Next.js app for production server mode...');
-    const build = spawnSync('npm', ['run', 'build'], { stdio: 'inherit', shell: false, env });
+    const build = spawnSync('bun', ['run', 'build'], { stdio: 'inherit', shell: false, env });
     return build.status === 0;
 }
 

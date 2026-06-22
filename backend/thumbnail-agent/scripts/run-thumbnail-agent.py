@@ -6,7 +6,7 @@ Output: JSON with concept/layoutBrief/promptAddendum/safetyReview/nextActions.
 
 The command never generates images and never treats `gpt-image-2` as a Codex
 agent model. Exact image generation remains in the Next.js provider layer.
-Default runtime is Codex CLI OAuth with `gpt-5.5` and high reasoning so chat
+Default runtime is Codex CLI OAuth with `gpt-5.5` and low reasoning so chat
 orchestration, canvas planning, and generation briefs are handled by the same
 local Codex agent surface as the storyboard backend command.
 """
@@ -28,7 +28,7 @@ BACKEND_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = BACKEND_ROOT.parents[0]
 SRC_ROOT = BACKEND_ROOT / "src"
 DEFAULT_CODEX_MODEL = "gpt-5.5"
-DEFAULT_CODEX_EFFORT = "high"
+DEFAULT_CODEX_EFFORT = "low"
 DEFAULT_TIMEOUT_SECONDS = 120
 SECRET_PATTERNS = [
     re.compile(r"sk-[A-Za-z0-9_\-]{12,}"),
@@ -204,11 +204,11 @@ JSON response requirements:
   "promptAddendum": "Backend thumbnail agent orchestration brief: ...",
   "safetyReview": "Korean safety/review checklist",
   "nextActions": ["생성 이미지 검수", "캔버스 문구 조정", "경고 확인 후 PNG 저장"],
-  "warnings": ["thumbnail_agent_codex_cli_oauth: Codex CLI gpt-5.5 high generated orchestration brief only; exact image provider remains in Next.js."],
+  "warnings": ["thumbnail_agent_codex_cli_oauth: Codex CLI gpt-5.5 low generated orchestration brief only; exact image provider remains in Next.js."],
   "diagnostics": {{
     "runtime": "codex_cli_oauth",
     "model": "...",
-    "effort": "high",
+    "effort": "low",
     "threadPolicy": "per-request noninteractive",
     "imageModelLabel": "gpt-image-2 is handled by the separate image provider, not this text command"
   }}
@@ -254,7 +254,7 @@ def run_codex_oauth(payload: dict[str, Any]) -> dict[str, Any]:
     prompt = build_codex_prompt(payload)
     with tempfile.TemporaryDirectory(prefix="thumbnail-agent-codex-") as tmp:
         answer_path = Path(tmp) / "answer.txt"
-        # Equivalent command surface: codex exec --model gpt-5.5 -c model_reasoning_effort="high"
+        # Equivalent command surface: codex exec --model gpt-5.5 -c model_reasoning_effort="low"
         cmd = [
             codex_bin,
             "exec",

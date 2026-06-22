@@ -9,10 +9,14 @@ describe("mobile and desktop parity source contracts", () => {
   test("responsive overflow smoke includes the unified admin console route", () => {
     const responsiveSpecSource = source("tests/responsive-overflow.spec.ts");
     const responsiveScriptSource = source("scripts/run-responsive-tests.mjs");
+    const playwrightConfigSource = source("playwright.config.ts");
 
     expect(responsiveSpecSource).toContain("'/admin'");
     expect(responsiveSpecSource).toContain("'/admin?module=restaurants'");
     expect(responsiveSpecSource).toContain("'/admin/evaluations'");
+    expect(playwrightConfigSource).toContain("'bun run dev:playwright'");
+    expect(responsiveScriptSource).toContain("serverMode === 'dev' ? 'bun run dev:playwright' : 'bun run start:playwright'");
+    expect(responsiveScriptSource).toContain("spawnSync('bun', ['run', 'build']");
     expect(responsiveScriptSource).toContain(
       "admin route responsive cases will be skipped",
     );
@@ -52,10 +56,10 @@ describe("mobile and desktop parity source contracts", () => {
       "grid-template-columns: fit-content(var(--admin-sidebar-expanded-max-width)) minmax(0, 1fr);",
     );
     expect(source("app/app-globals.css")).toContain(
-      "grid-template-columns: 4.5rem minmax(0, 1fr);",
+      "grid-template-columns: 5rem minmax(0, 1fr);",
     );
     expect(consoleSource).toContain("md:w-full");
-    expect(consoleSource).toContain("md:items-center md:px-1.5");
+    expect(consoleSource).toContain("md:items-center md:px-2");
     expect(consoleSource).toContain("p-2 md:border-y-0 md:p-4");
     expect(consoleSource).not.toContain("pb-[calc(env(safe-area-inset-bottom)+5.75rem)]");
     expect(consoleSource).toContain("flex h-14 shrink-0 transform-gpu items-center gap-2");
@@ -63,9 +67,13 @@ describe("mobile and desktop parity source contracts", () => {
     expect(consoleSource).toContain(
       'data-admin-left-panel-expanded={isCollapsed ? "false" : "true"}',
     );
-    expect(consoleSource).toContain("ADMIN_SIDEBAR_COLLAPSED_STORAGE_KEY");
     expect(consoleSource).toContain(
-      "setIsSidebarCollapsed(isStoredSidebarCollapsed);",
+      "const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);",
+    );
+    expect(consoleSource).toContain("const showSidebarLabels = !isSidebarCollapsed;");
+    expect(consoleSource).not.toContain("ADMIN_SIDEBAR_COLLAPSED_STORAGE_KEY");
+    expect(consoleSource).toContain(
+      "setIsSidebarCollapsed((currentCollapsed) => !currentCollapsed)",
     );
     expect(consoleSource).toContain("관리자 사이드바 펼치기");
     expect(consoleSource).toContain("관리자 사이드바 접기");
