@@ -24,6 +24,7 @@ import type {
   StoryboardGenerationMode,
   StoryboardGraphDiagnostics,
   StoryboardGraphFallbackReason,
+  StoryboardChatImageAttachment,
   StoryboardTone,
 } from "./types";
 
@@ -60,7 +61,7 @@ function getDefaultStoryboardAgentPython(platform: NodeJS.Platform = process.pla
 }
 const DEFAULT_STORYBOARD_AGENT_RUNTIME = "langgraph";
 const DEFAULT_STORYBOARD_AGENT_CODEX_MODEL = "gpt-5.5";
-const DEFAULT_STORYBOARD_AGENT_CODEX_EFFORT = "high";
+const DEFAULT_STORYBOARD_AGENT_CODEX_EFFORT = "low";
 const DEFAULT_STORYBOARD_CHAT_SEGMENT_COUNT = 10;
 const UNSAFE_COMMAND_PATTERN = /[\s;&|`$<>()[\]{}!#\n\r]/;
 
@@ -166,6 +167,47 @@ function resolveStoryboardAgentPython() {
   return resolveStoryboardAgentPythonForPlatform(process.env, process.platform);
 }
 
+function getPathEnvironmentValue(env: NodeJS.ProcessEnv = process.env) {
+  return env.PATH || env.Path || env.path || "";
+}
+
+function resolveWindowsCommandFromPath(command: string, env: NodeJS.ProcessEnv = process.env) {
+  if (process.platform !== "win32" || command.includes("/") || command.includes("\\")) {
+    return command;
+  }
+
+  const pathExts = (env.PATHEXT || ".COM;.EXE;.BAT;.CMD")
+    .split(";")
+    .map((extension) => extension.trim().toLowerCase())
+    .filter(Boolean);
+  const lowerCommand = command.toLowerCase();
+  const hasKnownExtension = pathExts.some((extension) =>
+    lowerCommand.endsWith(extension),
+  );
+  const pathEntries = getPathEnvironmentValue(env)
+    .split(path.delimiter)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
+  for (const entry of pathEntries) {
+    const candidates = hasKnownExtension
+      ? [path.join(entry, command)]
+      : pathExts.map((extension) => path.join(entry, `${command}${extension}`));
+    const resolved = candidates.find((candidate) => existsSync(candidate));
+    if (resolved) return resolved;
+  }
+
+  return command;
+}
+
+function resolveStoryboardAgentPythonCommand() {
+  return resolveWindowsCommandFromPath(resolveStoryboardAgentPython());
+}
+
+function shouldRunThroughWindowsCommandShell(command: string) {
+  return process.platform === "win32" && /\.(?:cmd|bat)$/i.test(command.trim());
+}
+
 function resolveStoryboardAgentRuntime() {
   const runtime = (
     process.env.STORYBOARD_AGENT_RUNTIME?.trim() ||
@@ -264,10 +306,12 @@ function probePythonModules(): PythonModuleProbeResult {
     "missing = [mod for mod in mods if importlib.util.find_spec(mod) is None]",
     "print(json.dumps(missing))",
   ].join("\n");
-  const result = spawnSync(resolveStoryboardAgentPython(), ["-c", script], {
+  const pythonCommand = resolveStoryboardAgentPythonCommand();
+  const result = spawnSync(pythonCommand, ["-c", script], {
     cwd: BACKEND_AGENT_ROOT,
     encoding: "utf8",
     timeout: 15_000,
+    shell: shouldRunThroughWindowsCommandShell(pythonCommand),
     env: {
       ...process.env,
       PYTHONPATH: [backendAgentPath("src"), process.env.PYTHONPATH]
@@ -463,10 +507,21 @@ function deriveStoryboardTargetLength(message: string, fallback: number) {
   return clampStoryboardNumber(Number(explicit), 6, 60, fallback);
 }
 
+function isStoryboardGenerationQuestion(message: string) {
+  return /[?？]/.test(message) || /(?:얼마나|언제|어떻게|왜|무엇|뭐|뭔가|어디|가능|필요|되나|되나요|돼|돼요|될까|걸려|걸리|알려|설명|방법|하려면|하면\s*돼)/i.test(message);
+}
+
 function wantsStoryboardGeneration(message: string) {
+  if (/(하지\s*마|생성\s*금지|멈춰)/i.test(message)) return false;
+  const explicitCommand =
+    /(?:생성|만들|구성|작성|뽑|실행)\s*(?:해\s*)?(?:줘|주세요|줘요|주라|줘라)/i.test(message) ||
+    /(?:짜\s*줘|짜\s*주세요|만들어\s*(?:줘|주세요|줘요|주라|줘라)|뽑아\s*(?:줘|주세요|줘요|주라|줘라)?)/i.test(message);
+  if (explicitCommand) return true;
+  if (isStoryboardGenerationQuestion(message)) return false;
   return (
-    /(생성|만들|짜줘|구성해|구성|실행|뽑아|스토리보드)/i.test(message) &&
-    !/(하지\s*마|생성\s*금지|멈춰)/i.test(message)
+    /(?:예시\s*만들기|예시\s*(?:보여줘|보여\s*줘|보여주세요)|생성\s*시작|생성\s*실행|스토리보드\s*실행|이미지\s*실행)/i.test(message) ||
+    /(?:스토리보드|컷|cut|이미지).*(?:생성|만들|짜|구성|뽑|작성|실행)|(?:생성|만들|짜|구성|뽑|작성|실행).*(?:스토리보드|컷|cut|이미지)/i.test(message) ||
+    /(?:생성해|만들어|구성해|작성해|뽑아|실행해|짜줘|짜\s*줘)$/i.test(message.trim())
   );
 }
 
@@ -485,16 +540,41 @@ function hasStoryboardMutationCommand(message: string) {
   return (
     wantsStoryboardGeneration(message) ||
     wantsStoryboardReset(message) ||
-    /(?:수정|변경|바꿔|바꿔줘|고쳐|보완|짧게|줄여|재생성|다시\s*생성|생성해|만들어\s*줘|만들어줘|구성해|짜줘|뽑아|보여줘|이동|가줘|열어|선택|포커스|focus|show|open|해줘)/i.test(
+    /(?:수정|변경|바꿔|바꿔줘|고쳐|보완|짧게|줄여|재생성|다시\s*생성|보여줘|이동|가줘|열어|선택|포커스|focus|show|open)/i.test(
       message,
     )
   );
 }
 
+function isStoryboardSuggestionConversation(message: string) {
+  if (/(검토|리뷰|평가|피드백)/i.test(message)) return false;
+  return (
+    /(?:추천|아이디어|메뉴|소재|주제|컨셉|방향|흐름).*(?:해줘|줘|있|좋|어때|뭐|궁금|알려|추천)/i.test(message) ||
+    /(?:뭐\s*먹(?:지|을까|으면|을지)?|무슨\s*메뉴|어떤\s*(?:주제|소재|컨셉|방향|흐름)).*(?:좋|추천|있|어때|\?)/i.test(message) ||
+    /(?:영상|스토리보드).*(?:어떤|무슨).*(?:흐름|방향).*(?:좋|어때|\?)/i.test(message)
+  );
+}
+
+function isStoryboardFieldQuestion(message: string) {
+  if (/(검토|리뷰|평가|피드백)/i.test(message)) return false;
+  if (!/[?？]|(?:해야|해도|넣어야|필요|가능|되나|되나요|돼|돼요|될까|어디|어떻게|방법|알려|설명|꼭|잘\s*보)/i.test(message)) {
+    return false;
+  }
+  const directCommand =
+    /(?:수정|변경|바꿔|바꿔줘|고쳐|보완|짧게|줄여|줄여줘|보이게\s*바꿔|생성해줘|만들어줘|만들어\s*줘)$/i.test(
+      message.trim(),
+    );
+  const explanationIntent =
+    /(?:해야|해도|넣어야|필요|가능|되나|되나요|돼|돼요|될까|어디|어떻게|방법|알려|설명|꼭|잘\s*보)/i.test(
+      message,
+    );
+  if (directCommand && !explanationIntent) return false;
+  return /(?:자막|subtitle|문구|카피|caption|오디오|멘트|대사|나레이션|이미지|컷|cut|스토리보드|PNG|저장|다운로드|복사|장면|음식|구도|화면|비주얼|리액션|표정|훅)/i.test(message);
+}
+
 export function isGeneralStoryboardConversationMessage(message: string) {
   const normalized = normalizeStoryboardChatRequirement(message);
   if (!normalized || isCasualStoryboardChatMessage(normalized)) return false;
-  if (hasStoryboardMutationCommand(normalized)) return false;
 
   const compact = normalized.replace(/[\s!?.,。~…]+/g, "").toLowerCase();
   if (/^(고마워|고맙|감사|감사해|땡큐|thanks|thankyou|ok|okay|ㅇㅋ|오케이|좋아|좋습니다|괜찮아|ㅋㅋ+|ㅎㅎ+|굿|nice)$/.test(compact)) {
@@ -508,6 +588,16 @@ export function isGeneralStoryboardConversationMessage(message: string) {
   if (/(?:얼마나|언제|대기|기다|진행|상태|설정|연결|브릿지|토큰|키|provider|이미지|컷|cut).*(?:걸려|걸리|돼|되나|가능|필요|어디|뭐|뭔가|알려|설명|\?)/i.test(normalized)) {
     return true;
   }
+
+  if (isStoryboardSuggestionConversation(normalized)) return true;
+
+  if (isStoryboardFieldQuestion(normalized)) return true;
+
+  if (/(?:너|도우미|챗봇).*(?:누구|뭐야|무엇|가능|할 수|답변|대화)/i.test(normalized)) {
+    return true;
+  }
+
+  if (hasStoryboardMutationCommand(normalized)) return false;
 
   return /[?？]$/.test(normalized) && !hasExplicitStoryboardScenePatchIntent(normalized) && !hasStoryboardNavigationIntent(normalized);
 }
@@ -538,6 +628,9 @@ function wantsStoryboardReviewOnly(message: string) {
   if (wantsStoryboardGeneration(normalized) || wantsStoryboardReset(normalized)) {
     return false;
   }
+  if (isStoryboardSuggestionConversation(normalized) || isStoryboardFieldQuestion(normalized)) {
+    return false;
+  }
   const asksForReview =
     /(검토|리뷰|평가|피드백|설명|알려줘|요약|정리|괜찮|어때|확인)/i.test(
       normalized,
@@ -550,13 +643,19 @@ function wantsStoryboardReviewOnly(message: string) {
 
 function wantsSelectedStoryboardImageRegeneration(message: string) {
   return (
-    /(?:이|현재|선택)\s*컷\s*만.*(?:재생성|다시\s*생성|이미지)/i.test(
+    /(?:이|현재|선택|선택한)\s*컷\s*만.*(?:재생성|다시\s*생성|다시\s*만들|이미지)/i.test(
       message,
     ) ||
-    /(?:재생성|다시\s*생성).*(?:이|현재|선택)\s*컷\s*만/i.test(message) ||
-    /컷만.*(?:재생성|다시\s*생성|이미지)/i.test(message) ||
+    /(?:이|현재|선택|선택한)\s*컷.*이미지\s*만.*(?:재생성|다시\s*생성|다시\s*만들|생성|만들)/i.test(
+      message,
+    ) ||
+    /(?:이|현재|선택|선택한)\s*컷.*이미지.*(?:재생성|다시\s*생성|다시\s*만들|다시\s*만들어|다시\s*만들어줘)/i.test(
+      message,
+    ) ||
+    /(?:재생성|다시\s*생성|다시\s*만들).*(?:이|현재|선택|선택한)\s*컷\s*만/i.test(message) ||
+    /컷만.*(?:재생성|다시\s*생성|다시\s*만들|이미지)/i.test(message) ||
     (deriveExplicitStoryboardSceneNo(message) !== undefined &&
-      /(?:재생성|다시\s*생성|이미지)/i.test(message))
+      /(?:재생성|다시\s*생성|다시\s*만들|이미지)/i.test(message))
   );
 }
 
@@ -629,6 +728,7 @@ function createStoryboardScenePatch(
 ): StoryboardChatScenePatch | undefined {
   const normalized = normalizeStoryboardChatRequirement(message);
   if (wantsStoryboardReviewOnly(normalized)) return undefined;
+  if (isStoryboardFieldQuestion(normalized)) return undefined;
   if (!normalized || !hasExplicitStoryboardScenePatchIntent(normalized))
     return undefined;
   const explicitSceneNo = deriveExplicitStoryboardSceneNo(normalized);
@@ -686,6 +786,9 @@ function createStoryboardChatCanvasPatch(
   request: StoryboardChatAgentRequest,
 ): StoryboardChatCanvasPatch {
   const normalized = normalizeStoryboardChatRequirement(request.message);
+  const imageAttachmentText = formatStoryboardChatImageAttachmentSummary(
+    request.imageAttachments,
+  );
   const isReviewOnly = wantsStoryboardReviewOnly(normalized);
   const isCasualChat = isCasualStoryboardChatMessage(normalized);
   const isGeneralConversation =
@@ -727,6 +830,7 @@ function createStoryboardChatCanvasPatch(
       shouldIncludeFocusContext && focusText
         ? `현재 캔버스 맥락: ${focusText}`
         : "",
+      imageAttachmentText ? `첨부 사진 맥락: ${imageAttachmentText}` : "",
     ]
       .filter(Boolean)
       .join(" "),
@@ -771,26 +875,136 @@ function createStoryboardChatCanvasPatch(
 }
 
 function buildStoryboardConversationMessage(message: string) {
+  const normalized = normalizeStoryboardChatRequirement(message);
   if (/(고마워|고맙|감사|땡큐|thanks|thank)/i.test(message)) {
     return [
-      "천만에요. 화면은 그대로 두고 대화만 이어갈게요.",
-      "필요하면 특정 컷 수정, 전체 생성, 이미지 생성 상태 확인까지 바로 도와드릴 수 있어요.",
+      "천만에요. 지금 화면은 그대로 두고 대화만 이어갈게요.",
+      "필요하면 특정 CUT 수정, 전체 생성, 이미지 상태 확인까지 이어서 도와드릴 수 있어요.",
+    ].join(" ");
+  }
+
+  if (/(뭐\s*할\s*수|무엇을\s*할\s*수|사용법|도움말|도와줘|help|what can you do|how do i use|너.*(?:누구|뭐야|무엇|가능|할 수|답변|대화)|도우미.*(?:누구|뭐야|무엇|가능|할 수|답변|대화)|챗봇.*(?:누구|뭐야|무엇|가능|할 수|답변|대화))/i.test(normalized)) {
+    return [
+      "저는 이 스토리보드 화면을 보면서 대화하는 도우미예요.",
+      "일반 질문에는 화면을 바꾸지 않고 답하고, “3컷 자막 짧게”, “이미지 다시 생성”, “10컷으로 생성해줘”처럼 말하면 필요한 작업만 화면에 반영할게요.",
+    ].join(" ");
+  }
+
+  if (/(?:재생성|다시\s*생성|다시\s*만들|이미지.*다시).*(?:방법|어떻게|알려|설명)|(?:방법|어떻게).*(?:재생성|다시\s*생성|다시\s*만들|이미지)/i.test(normalized)) {
+    return [
+      "이미지 다시 만들기 방법 질문으로 이해했어요. 지금은 화면을 바꾸지 않고 안내만 드릴게요.",
+      "특정 CUT을 선택한 뒤 “현재 컷 이미지만 다시 생성해줘”라고 입력하면 그 컷만 다시 만들고, 전체를 새로 만들고 싶으면 “전체 이미지 다시 생성해줘”처럼 말하면 됩니다.",
+    ].join(" ");
+  }
+
+  if (/(?:장면|음식|구도|화면|비주얼|리액션|표정).*(?:잘\s*보|괜찮|어때|\?)/i.test(normalized)) {
+    return [
+      "시각 확인 질문으로 이해했어요. 지금은 선택한 CUT을 수정하지 않고 기준만 설명할게요.",
+      "음식은 첫눈에 메뉴가 구분되고, 손동작이나 젓가락이 맛 포인트를 가리지 않으며, 자막 영역과 겹치지 않으면 안정적으로 보입니다.",
     ].join(" ");
   }
 
   if (/(얼마나|언제|대기|기다|진행|상태|이미지|브릿지|연결|설정|토큰|키|provider)/i.test(message)) {
     return [
-      "이미지 생성은 로컬 브릿지나 이미지 provider가 연결된 뒤 CUT별로 순차 진행돼요.",
+      "이미지는 로컬 브릿지나 이미지 처리기가 연결된 뒤 CUT별로 순차 진행돼요.",
       "진행 중에는 완료된 CUT부터 캔버스에 반영되고, 설정이 필요하면 먼저 연결 상태를 안내할게요.",
     ].join(" ");
   }
 
+  if (/(?:저장|PNG|내보내기|다운로드|복사)/i.test(normalized)) {
+    return [
+      "저장 방법 질문으로 이해했어요. 화면은 바꾸지 않고 안내만 드릴게요.",
+      "캔버스 상단의 PNG 저장으로 현재 페이지를 이미지로 받을 수 있고, 기획서 복사로 컷별 오디오·자막·촬영 포인트를 바로 복사할 수 있어요.",
+    ].join(" ");
+  }
+
+  if (/(?:자막|subtitle|문구|카피|caption|오디오|멘트|대사|나레이션).*(?:꼭|필요|해야|넣어야|가능|되나|돼|될까|\?)/i.test(normalized)) {
+    return [
+      "질문으로 이해했어요. 지금은 선택한 CUT을 수정하지 않고 기준만 설명할게요.",
+      "자막은 모든 컷에 길게 넣기보다 첫 기대감, 메뉴 확인, 한입 반응, 마무리 포인트처럼 시청자가 놓치면 아쉬운 순간에 짧게 쓰는 편이 좋아요.",
+    ].join(" ");
+  }
+
+  if (/(?:생성|만들|스토리보드).*(?:어떻게|방법|필요|가능|하려면|하면\s*돼)|(?:어떻게|방법|필요|가능|하려면).*(?:생성|만들|스토리보드)/i.test(normalized)) {
+    return [
+      "생성 방법 질문으로 이해했어요. 지금은 화면을 바꾸지 않고 설명만 드릴게요.",
+      "주제나 음식, 원하는 CUT 수, 꼭 보여줄 장면을 한두 문장으로 적은 뒤 “생성해줘”라고 말하면 캔버스에 반영하고 이미지를 순서대로 만들 수 있어요.",
+    ].join(" ");
+  }
+
+  if (
+    /(?:추천|아이디어|메뉴|소재|주제|컨셉|방향).*(?:해줘|줘|있|좋|어때|뭐|궁금|알려|추천)/i.test(normalized) ||
+    /(?:뭐\s*먹(?:지|을까|으면|을지)?|무슨\s*메뉴|어떤\s*(?:주제|소재|컨셉|방향)).*(?:좋|추천|있|어때|\?)/i.test(normalized)
+  ) {
+    return [
+      "좋아요. 화면은 아직 바꾸지 않고 아이디어만 드릴게요.",
+      "먹방 흐름이라면 매운 메뉴 도전, 시장 골목 코스, 해산물 한상, 디저트 투어처럼 첫 CUT에서 기대감을 만들기 쉬운 주제가 잘 맞아요.",
+      "마음에 드는 방향을 고르면 그때 스토리보드로 생성해도 됩니다.",
+    ].join(" ");
+  }
+
+  if (/(?:영상|스토리보드|흐름).*(?:어떤|무슨|어떻게).*(?:흐름|방향|좋|어때|\?)/i.test(normalized)) {
+    return [
+      "흐름 질문으로 이해했어요. 화면은 바꾸지 않고 의견만 드릴게요.",
+      "먹방 영상은 초반 기대감, 메뉴 확인, 첫 입 반응, 조합 변화, 클라이맥스 한상, 마무리 한줄평 순서가 안정적이에요.",
+    ].join(" ");
+  }
+
+  if (/[?？]$/.test(normalized)) {
+    return [
+      "질문으로 이해했어요. 화면은 바꾸지 않고 답변만 이어갈게요.",
+      "스토리보드 흐름, CUT 구성, 이미지 생성 상태, 자막/오디오 방향처럼 궁금한 점을 물어보면 현재 화면 기준으로 짧게 정리해드릴게요.",
+    ].join(" ");
+  }
+
   return [
-    "네, 자연스럽게 대화할 수 있어요.",
-    "지금 화면은 바꾸지 않고 답변만 드릴게요.",
-    "원하는 주제, 컷 수, 수정할 CUT, 이미지 생성 상태처럼 궁금한 점을 편하게 말해 주세요.",
+    "네, 대화로 이어갈게요.",
+    "지금 화면은 바꾸지 않고 답변만 드립니다.",
+    "원하는 주제, CUT 수, 수정할 장면, 이미지 생성 상태처럼 궁금한 점을 편하게 말해 주세요.",
   ].join(" ");
 }
+
+function normalizeStoryboardChatImageAttachments(
+  attachments: StoryboardChatAgentRequest["imageAttachments"],
+): StoryboardChatImageAttachment[] {
+  if (!Array.isArray(attachments)) return [];
+  return attachments.filter((attachment): attachment is StoryboardChatImageAttachment => {
+    if (!attachment || typeof attachment !== "object") return false;
+    return (
+      typeof attachment.id === "string" &&
+      typeof attachment.name === "string" &&
+      typeof attachment.dataUrl === "string" &&
+      typeof attachment.size === "number" &&
+      (attachment.mimeType === "image/png" ||
+        attachment.mimeType === "image/jpeg" ||
+        attachment.mimeType === "image/webp")
+    );
+  });
+}
+
+function formatStoryboardBytes(bytes: number) {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "크기 미상";
+  if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)}MB`;
+  return `${Math.max(1, Math.round(bytes / 1024))}KB`;
+}
+
+function formatStoryboardChatImageAttachmentSummary(
+  attachments: StoryboardChatAgentRequest["imageAttachments"],
+) {
+  const normalizedAttachments =
+    normalizeStoryboardChatImageAttachments(attachments);
+  if (!normalizedAttachments.length) return "";
+  return normalizedAttachments
+    .map((attachment, index) => {
+      const dimensions =
+        attachment.width && attachment.height
+          ? `${attachment.width}x${attachment.height}`
+          : "해상도 미상";
+      return `${index + 1}. ${attachment.name} (${dimensions}, ${attachment.mimeType}, ${formatStoryboardBytes(attachment.size)})`;
+    })
+    .join("; ");
+}
+
 export async function generateStoryboardChatWithBackendAgent(
   request: StoryboardChatAgentRequest,
   env: NodeJS.ProcessEnv = process.env,
@@ -805,6 +1019,11 @@ export async function generateStoryboardChatWithBackendAgent(
     request.focusContext,
   );
   const focusText = formatStoryboardChatFocusContext(focusContext);
+  const imageAttachments = normalizeStoryboardChatImageAttachments(
+    request.imageAttachments,
+  );
+  const imageAttachmentText =
+    formatStoryboardChatImageAttachmentSummary(imageAttachments);
   const isNavigationOnly = Boolean(
     canvasPatch.focusSceneNo && !canvasPatch.scenePatch,
   );
@@ -867,6 +1086,9 @@ export async function generateStoryboardChatWithBackendAgent(
           effectiveFocusText
             ? `지금 선택한 항목(${focusContext?.label})도 함께 참고했어요.`
             : null,
+          imageAttachmentText
+            ? `첨부 사진 ${imageAttachments.length}장도 함께 참고했어요.`
+            : null,
           shouldRegenerateSelectedSceneImage
             ? "현재 선택한 컷의 이미지만 다시 만들 준비를 했어요."
             : null,
@@ -888,6 +1110,7 @@ export async function generateStoryboardChatWithBackendAgent(
         "Storyboard chat agent task.",
         `User chat request: ${normalizedMessage}`,
         effectiveFocusText ? `Canvas focus context: ${effectiveFocusText}` : "",
+        imageAttachmentText ? `Image attachments: ${imageAttachmentText}` : "",
         `Resolved prompt: ${canvasPatch.prompt}`,
         `Resolved cuts: ${canvasPatch.segmentCount}`,
         `Resolved target length minutes: ${canvasPatch.targetLengthMinutes}`,
@@ -913,6 +1136,7 @@ export async function generateStoryboardChatWithBackendAgent(
         runtime,
         codexModel: model,
         codexEffort: effort,
+        imageAttachmentCount: imageAttachments.length,
         chatIntent: isCasualChat
           ? "casual_chat"
           : isGeneralConversation
@@ -955,7 +1179,7 @@ function runStoryboardAgentCommand(
       : null;
     const child = spawn(
       shouldUseConfiguredPython
-        ? resolveStoryboardAgentPython()
+        ? resolveStoryboardAgentPythonCommand()
         : shellScriptRunner
           ? shellScriptRunner
           : command.executable,
@@ -966,7 +1190,9 @@ function runStoryboardAgentCommand(
           : command.args,
     {
       cwd: existsSync(/* turbopackIgnore: true */ BACKEND_AGENT_ROOT) ? BACKEND_AGENT_ROOT : getRuntimeCwd(),
-      shell: false,
+      shell: shouldUseConfiguredPython
+        ? shouldRunThroughWindowsCommandShell(resolveStoryboardAgentPythonCommand())
+        : false,
       stdio: ["pipe", "pipe", "pipe"],
       env: {
         ...process.env,

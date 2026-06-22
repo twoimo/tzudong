@@ -28,7 +28,7 @@ const MIN_THUMBNAIL_AGENT_TIMEOUT_MS = 5_000;
 const MAX_THUMBNAIL_AGENT_TIMEOUT_MS = 600_000;
 const DEFAULT_THUMBNAIL_AGENT_RUNTIME = 'codex_cli_oauth';
 const DEFAULT_THUMBNAIL_AGENT_CODEX_MODEL = 'gpt-5.5';
-const DEFAULT_THUMBNAIL_AGENT_CODEX_EFFORT = 'high';
+const DEFAULT_THUMBNAIL_AGENT_CODEX_EFFORT = 'low';
 const REQUIRED_PYTHON_MODULES = ['langgraph', 'langchain_core', 'langchain_openai'];
 const UNSAFE_COMMAND_PATTERN = /[;&|`$<>()[\]{}!#\n\r]/;
 

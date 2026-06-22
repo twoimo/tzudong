@@ -38,7 +38,7 @@ function buildUnavailableBackendAgentStatus() {
     missingPythonModules: [],
     runtime: 'unavailable',
     codexModel: process.env.THUMBNAIL_AGENT_CODEX_MODEL?.trim() || 'gpt-5.5',
-    codexEffort: process.env.THUMBNAIL_AGENT_CODEX_EFFORT?.trim() || 'high',
+    codexEffort: process.env.THUMBNAIL_AGENT_CODEX_EFFORT?.trim() || 'low',
     streamingAvailable: false,
     diagnosticsRedacted: true,
   };

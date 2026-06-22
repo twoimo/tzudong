@@ -137,7 +137,7 @@ Right-sized checks after storyboard code is added:
 
 ```bash
 # Static/project health
-npm run lint
+bun run lint
 npx tsc --noEmit
 bun run test:unit
 

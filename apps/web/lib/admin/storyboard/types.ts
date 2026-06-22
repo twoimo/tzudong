@@ -3,7 +3,7 @@ export type StoryboardGenerationMode = 'local_heatmap' | 'backend_agent';
 export const STORYBOARD_MIN_SEGMENT_COUNT = 5;
 export const STORYBOARD_CHAT_MIN_SEGMENT_COUNT = 4;
 export const STORYBOARD_MAX_SEGMENT_COUNT = 12;
-export const STORYBOARD_IMAGE_GENERATION_BATCH_SIZE = 4;
+export const STORYBOARD_IMAGE_GENERATION_BATCH_SIZE = STORYBOARD_MAX_SEGMENT_COUNT;
 export type StoryboardBackendRuntime =
   | 'langgraph'
   | 'codex_cli_oauth_legacy'
@@ -138,6 +138,16 @@ export type StoryboardChatFocusContext = {
   createdAt: string;
 };
 
+export type StoryboardChatImageAttachment = {
+  id: string;
+  name: string;
+  mimeType: 'image/png' | 'image/jpeg' | 'image/webp';
+  size: number;
+  dataUrl: string;
+  width?: number;
+  height?: number;
+};
+
 export type StoryboardChatAgentRequest = {
   message: string;
   currentPrompt?: string;
@@ -148,6 +158,7 @@ export type StoryboardChatAgentRequest = {
   currentAvailableSceneCount?: number;
   generationMode?: StoryboardGenerationMode;
   focusContext?: StoryboardChatFocusContext | null;
+  imageAttachments?: StoryboardChatImageAttachment[];
 };
 
 export type StoryboardChatAgentResult = {
