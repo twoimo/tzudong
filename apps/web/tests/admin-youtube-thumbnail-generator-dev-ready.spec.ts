@@ -94,7 +94,7 @@ test('developer bootstrap opens the thumbnail page in a normal browser and rende
           generationMode: 'direct_provider',
           shouldGenerate: true,
           shouldReset: false,
-          diagnostics: { runtime: 'codex_cli_oauth', model: 'gpt-5.5', effort: 'high', streaming: 'sse-progress' },
+          diagnostics: { runtime: 'codex_cli_oauth', model: 'gpt-5.5', effort: 'low', streaming: 'sse-progress' },
         })}`,
         '',
         '',
@@ -208,8 +208,8 @@ test('AHP 98+ multi-scenario browser QA for thumbnail generation quality and saf
         'event: done',
         `data: ${JSON.stringify({
           assistantMessage: isUnsafe
-            ? 'Codex CLI gpt-5.5 high 작업 완료 · 안전 검증 단계로 전달'
-            : `Codex CLI gpt-5.5 high 작업 완료 · AHP ${selected?.id ?? 'unknown'} · 실제 썸네일 생성`,
+            ? 'Codex CLI gpt-5.5 low 작업 완료 · 안전 검증 단계로 전달'
+            : `Codex CLI gpt-5.5 low 작업 완료 · AHP ${selected?.id ?? 'unknown'} · 실제 썸네일 생성`,
           canvasPatch: {
             topic: selected?.topic ?? requestBody.message ?? '',
             headline: selected?.headline ?? '검증 문구',
@@ -223,7 +223,7 @@ test('AHP 98+ multi-scenario browser QA for thumbnail generation quality and saf
           generationMode: 'direct_provider',
           shouldGenerate: true,
           shouldReset: false,
-          diagnostics: { runtime: 'codex_cli_oauth', model: 'gpt-5.5', effort: 'high', streaming: 'sse-progress' },
+          diagnostics: { runtime: 'codex_cli_oauth', model: 'gpt-5.5', effort: 'low', streaming: 'sse-progress' },
         })}`,
         '',
         '',

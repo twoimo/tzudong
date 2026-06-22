@@ -32,7 +32,7 @@ BACKEND_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = BACKEND_ROOT.parents[1]
 APP_WEB_ROOT = REPO_ROOT / "apps" / "web"
 DEFAULT_CODEX_MODEL = "gpt-5.5"
-DEFAULT_CODEX_EFFORT = "high"
+DEFAULT_CODEX_EFFORT = "low"
 DEFAULT_TIMEOUT_SECONDS = 120
 GRAPH_ENTRYPOINT = "backend/storyboard-agent/src/graph.py"
 SECRET_PATTERNS = [
@@ -215,7 +215,7 @@ JSON response requirements:
   "diagnostics": {{
     "runtime": "codex_cli_oauth",
     "model": "...",
-    "effort": "high",
+    "effort": "low",
     "threadPolicy": "per-request noninteractive",
     "imageModelLabel": "gpt-image-2 is handled by the separate image provider, not this text command"
   }}

@@ -4,7 +4,7 @@ Next.js 16 (App Router) 기반의 맛집 지도 웹 애플리케이션입니다.
 
 ## 🛠️ 기술 스택
 
-- **Framework**: Next.js 16 (Turbopack)
+- **Framework**: Next.js 16 (webpack dev/build parity)
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS, Radix UI (Shadcn UI)
 - **State Management**: React Query (TanStack Query), Zustand
@@ -19,8 +19,6 @@ Next.js 16 (App Router) 기반의 맛집 지도 웹 애플리케이션입니다.
 ```bash
 # 의존성 설치
 bun install
-# 또는
-npm install
 ```
 
 ### 2. 환경 변수 설정
@@ -60,18 +58,18 @@ STORYBOARD_AGENT_ROOT=
 STORYBOARD_AGENT_PYTHON=
 # STORYBOARD_AGENT_RUNTIME=codex_cli_oauth
 STORYBOARD_AGENT_CODEX_MODEL=gpt-5.5
-STORYBOARD_AGENT_CODEX_EFFORT=high
+STORYBOARD_AGENT_CODEX_EFFORT=low
 # milliseconds; command bridge timeout.
 STORYBOARD_AGENT_TIMEOUT_MS=120000
 
 # YouTube Thumbnail Agent (옵션)
-# 채팅으로 들어온 캔버스 수정/초기화/생성 brief 작업은 기본적으로 로컬 Codex CLI OAuth 세션의 gpt-5.5 high가 처리한다.
+# 채팅으로 들어온 캔버스 수정/초기화/생성 brief 작업은 기본적으로 로컬 Codex CLI OAuth 세션의 gpt-5.5 low(고속)가 처리한다.
 THUMBNAIL_AGENT_COMMAND=../../backend/thumbnail-agent/scripts/run-thumbnail-agent.py
 THUMBNAIL_AGENT_ROOT=
 THUMBNAIL_AGENT_PYTHON=python3
 THUMBNAIL_AGENT_RUNTIME=codex_cli_oauth
 THUMBNAIL_AGENT_CODEX_MODEL=gpt-5.5
-THUMBNAIL_AGENT_CODEX_EFFORT=high
+THUMBNAIL_AGENT_CODEX_EFFORT=low
 THUMBNAIL_AGENT_TIMEOUT_MS=120000
 
 # Remote service bridge: 별도 HTTP 서버를 쓸 때만 활성화한다.
@@ -88,13 +86,16 @@ STORYBOARD_BGE_ENABLED=false
 ### 3. 실행
 
 ```bash
-# 개발 서버 실행 (기본: Next 16 기본 Turbopack + 캐시 재사용)
+# 개발 서버 실행 (기본: production build와 같은 webpack 경로)
 bun run dev
 
 # 캐시를 비우고 개발 서버 재시작
 bun run dev:clean
 
-# Turbopack 이슈가 있을 때만 webpack 폴백 사용
+# Turbopack 비교가 필요할 때만 별도 실행
+bun run dev:turbopack
+
+# webpack 개발 서버를 명시적으로 실행
 bun run dev:webpack
 
 # 프로덕션 빌드 및 실행

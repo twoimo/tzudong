@@ -70,7 +70,7 @@ function getStoryboardImageRouteEnv() {
   return {
     ...process.env,
     CODEX_IMAGEGEN_AGENT_MODEL: process.env.CODEX_IMAGEGEN_AGENT_MODEL || 'gpt-5.5',
-    CODEX_IMAGEGEN_AGENT_EFFORT: process.env.CODEX_IMAGEGEN_AGENT_EFFORT || 'high',
+    CODEX_IMAGEGEN_AGENT_EFFORT: process.env.CODEX_IMAGEGEN_AGENT_EFFORT || 'low',
     STORYBOARD_LOCAL_HISTORY_WRITE: process.env.STORYBOARD_LOCAL_HISTORY_WRITE,
   };
 }
@@ -242,13 +242,13 @@ export async function GET(request: NextRequest) {
           browserOpenAIApiKey,
         }),
         limits: {
-          maxScenesPerRequest: 4,
+          maxScenesPerRequest: STORYBOARD_IMAGE_GENERATION_BATCH_SIZE,
           target: { width: 1280, height: 720, aspectRatio: '16:9' },
         },
         configuration: {
           localCodexCommand: 'STORYBOARD_LOCAL_CODEX_COMMAND 또는 scripts/codex-imagegen-storyboard-provider.py',
           localCodexModel: 'STORYBOARD_LOCAL_CODEX_IMAGE_MODEL',
-          localCodexProof: 'STORYBOARD_LOCAL_CODEX_PROVENANCE_FILE 또는 npm run storyboard:image-proof',
+          localCodexProof: 'STORYBOARD_LOCAL_CODEX_PROVENANCE_FILE 또는 bun run storyboard:image-proof',
           browserOpenAIApiKey: '브라우저 localStorage에만 저장하고 요청 헤더로만 임시 전달',
           browserKeyStorage: 'browser_local_storage_only',
           browserApiKeyHeader: STORYBOARD_BROWSER_OPENAI_API_KEY_HEADER,
