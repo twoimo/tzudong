@@ -296,10 +296,10 @@ test('UltraQA generates a thumbnail through the bypassed admin console and manag
       },
       body: [
         'event: status',
-        'data: {"message":"Codex CLI gpt-5.5 high 백엔드 에이전트 테스트 스트림"}',
+        'data: {"message":"Codex CLI gpt-5.5 low 백엔드 에이전트 테스트 스트림"}',
         '',
         'event: done',
-        'data: {"assistantMessage":"Codex CLI gpt-5.5 high 작업 완료 · 실제 썸네일 생성 요청으로 전환합니다","canvasPatch":{"topic":"해외 야시장 길거리 음식과 대형 꼬치구이 전경, 진행자 없이 음식 양과 리액션 분위기를 강조한 다음 업로드 썸네일","headline":"역대급 먹방","subHeadline":"한입만 가능?"},"shouldGenerate":true,"shouldReset":false,"diagnostics":{"runtime":"codex_cli_oauth","model":"gpt-5.5","effort":"high","streaming":"sse-progress"}}',
+        'data: {"assistantMessage":"Codex CLI gpt-5.5 low 작업 완료 · 실제 썸네일 생성 요청으로 전환합니다","canvasPatch":{"topic":"해외 야시장 길거리 음식과 대형 꼬치구이 전경, 진행자 없이 음식 양과 리액션 분위기를 강조한 다음 업로드 썸네일","headline":"역대급 먹방","subHeadline":"한입만 가능?"},"shouldGenerate":true,"shouldReset":false,"diagnostics":{"runtime":"codex_cli_oauth","model":"gpt-5.5","effort":"low","streaming":"sse-progress"}}',
         '',
         '',
       ].join('\n'),

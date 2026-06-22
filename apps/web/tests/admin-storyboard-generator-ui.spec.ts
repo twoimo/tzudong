@@ -144,7 +144,7 @@ test("storyboard canvas counts only visible trusted GPT Image 2 storyboard panel
           target: { width: 1280, height: 720, aspectRatio: "16:9" },
         },
         limits: {
-          maxScenesPerRequest: 4,
+          maxScenesPerRequest: 12,
           target: { width: 1280, height: 720, aspectRatio: "16:9" },
         },
         configuration: {
@@ -934,7 +934,7 @@ test("storyboard settings keeps production image API keys in browser localStorag
           target: { width: 1280, height: 720, aspectRatio: "16:9" },
         },
         limits: {
-          maxScenesPerRequest: 4,
+          maxScenesPerRequest: 12,
           target: { width: 1280, height: 720, aspectRatio: "16:9" },
         },
         config: {
@@ -1368,7 +1368,7 @@ test("storyboard chat redacts hostile prompts and keeps fallback readiness truth
           target: { width: 1280, height: 720, aspectRatio: "16:9" },
         },
         limits: {
-          maxScenesPerRequest: 4,
+          maxScenesPerRequest: 12,
           target: { width: 1280, height: 720, aspectRatio: "16:9" },
         },
         configuration: {
@@ -1419,7 +1419,7 @@ test("storyboard chat redacts hostile prompts and keeps fallback readiness truth
       diagnostics: {
         runtime: "langgraph",
         model: "gpt-5.5",
-        effort: "high",
+        effort: "low",
         streaming: "sse-progress",
       },
     };

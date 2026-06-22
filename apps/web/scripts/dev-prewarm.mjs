@@ -15,6 +15,7 @@ if (!Number.isInteger(port) || port <= 0) {
 }
 
 const host = readArg('--host', 'localhost');
+const shouldUseWebpackDev = !hasFlag('--turbopack') && !hasFlag('--turbo');
 const shouldPrewarm = !hasFlag('--no-prewarm') && !['0', 'false', 'no', 'off'].includes(String(process.env.TZUDONG_DEV_PREWARM ?? '1').toLowerCase());
 const prewarmPaths = ['/api/health', '/', '/scripts/viewport-height-fix.js'];
 const readyPattern = /(?:✓|\u2713) Ready in\s+([0-9.]+)(ms|s)/;
@@ -30,6 +31,7 @@ const child = spawn(
     'node',
     'node_modules/next/dist/bin/next',
     'dev',
+    ...(shouldUseWebpackDev ? ['--webpack'] : []),
     '--port',
     String(port),
   ],
