@@ -10,7 +10,7 @@ const RESPONSIVE_SPEC = /responsive-overflow\.spec\.ts/;
 const ADMIN_SETUP_SPEC = /tests[\\/]setup[\\/]admin\.setup\.ts/;
 const ADMIN_STORAGE_STATE = 'tests/.auth/admin.json';
 const PLAYWRIGHT_WEB_SERVER_COMMAND =
-    process.env.PLAYWRIGHT_WEB_SERVER_COMMAND ?? 'npm run dev:playwright';
+    process.env.PLAYWRIGHT_WEB_SERVER_COMMAND ?? 'bun run dev:playwright';
 const PLAYWRIGHT_WEB_SERVER_URL =
     process.env.PLAYWRIGHT_WEB_SERVER_URL ?? 'http://localhost:8080/api/health';
 const PLAYWRIGHT_WEB_SERVER_TIMEOUT_MS = Number(
