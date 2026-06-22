@@ -4,7 +4,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { existsSync } from 'node:fs';
 import * as fsPromises from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { delimiter, dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import {
@@ -23,11 +23,12 @@ import {
 import type {
   LocalBridgeHelperSurface,
 } from '../local-bridge/core-contract.ts';
-import type {
-  StoryboardGeneratedImageProvenance,
-  StoryboardGenerateRequest,
-  StoryboardScene,
-  StoryboardSceneGeneratedImage,
+import {
+  STORYBOARD_IMAGE_GENERATION_BATCH_SIZE,
+  type StoryboardGeneratedImageProvenance,
+  type StoryboardGenerateRequest,
+  type StoryboardScene,
+  type StoryboardSceneGeneratedImage,
 } from './types.ts';
 import type {
   ThumbnailGenerationResult,
@@ -41,7 +42,7 @@ const LOCAL_CODEX_RESPONSES_ENDPOINT = 'https://chatgpt.com/backend-api/codex/re
 const DEFAULT_LOCAL_CODEX_SCRIPT = 'scripts/codex-imagegen-storyboard-provider.py' as const;
 const DEFAULT_LOCAL_CODEX_THUMBNAIL_SCRIPT = 'scripts/codex-imagegen-thumbnail-provider.py' as const;
 const DEFAULT_SIZE = '1536x864' as const;
-const STORYBOARD_LOCAL_BRIDGE_MAX_SCENES = 4 as const;
+const STORYBOARD_LOCAL_BRIDGE_MAX_SCENES = STORYBOARD_IMAGE_GENERATION_BATCH_SIZE;
 const STORYBOARD_LOCAL_BRIDGE_MAX_BODY_BYTES = 512 * 1024;
 const THUMBNAIL_LOCAL_BRIDGE_MAX_BODY_BYTES = 64 * 1024 * 1024;
 const STORYBOARD_LOCAL_BRIDGE_ALLOWED_ORIGINS = LOCAL_BRIDGE_ALLOWED_ORIGINS;
@@ -57,6 +58,7 @@ const THUMBNAIL_LOCAL_BRIDGE_IMAGES_PATH = '/v1/youtube-thumbnail/images' as con
 const COMMAND_TIMEOUT_MS = 5 * 60 * 1000;
 const THUMBNAIL_COMMAND_TIMEOUT_MS = 10 * 60 * 1000;
 const MAX_OUTPUT_BYTES = 3 * 1024 * 1024;
+const STORYBOARD_LOCAL_BRIDGE_DEFAULT_CONCURRENCY = 4;
 
 type BridgeErrorCode =
   | 'not_found'
@@ -616,8 +618,46 @@ function assertThumbnailImagesPayload(value: unknown): ThumbnailLocalBridgeImage
   };
 }
 
+function getPathEnvironmentValue() {
+  return process.env.PATH || process.env.Path || process.env.path || '';
+}
+
+function resolveWindowsCommandFromPath(command: string) {
+  if (process.platform !== 'win32' || command.includes('/') || command.includes('\\')) {
+    return command;
+  }
+
+  const pathExts = (process.env.PATHEXT || '.COM;.EXE;.BAT;.CMD')
+    .split(';')
+    .map((extension) => extension.trim().toLowerCase())
+    .filter(Boolean);
+  const hasKnownExtension = pathExts.some((extension) =>
+    command.toLowerCase().endsWith(extension),
+  );
+  const pathEntries = getPathEnvironmentValue()
+    .split(delimiter)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
+  for (const entry of pathEntries) {
+    const candidates = hasKnownExtension
+      ? [join(entry, command)]
+      : pathExts.map((extension) => join(entry, `${command}${extension}`));
+    const resolved = candidates.find((candidate) => existsSync(candidate));
+    if (resolved) return resolved;
+  }
+
+  return command;
+}
+
+function shouldRunThroughWindowsCommandShell(command: string) {
+  return process.platform === 'win32' && /\.(?:cmd|bat)$/i.test(command.trim());
+}
+
 function resolveLocalBridgePythonCommand() {
-  return process.env.PYTHON || (process.platform === 'win32' ? 'python' : 'python3');
+  const configuredPython = process.env.PYTHON?.trim();
+  if (configuredPython) return configuredPython;
+  return resolveWindowsCommandFromPath(process.platform === 'win32' ? 'python' : 'python3');
 }
 
 function resolveProviderCommand(options: StoryboardLocalBridgeServerOptions) {
@@ -736,6 +776,7 @@ function runProviderCommand(input: Record<string, unknown>, options: StoryboardL
         ...process.env,
         OPENAI_API_KEY: '',
       },
+      shell: shouldRunThroughWindowsCommandShell(command),
       stdio: ['pipe', 'pipe', 'pipe'],
     });
     let settled = false;
@@ -862,7 +903,7 @@ async function generateImageForScene(
     outputFormat: 'png',
     background: 'opaque',
     agentModel: process.env.CODEX_IMAGEGEN_AGENT_MODEL || 'gpt-5.5',
-    reasoningEffort: process.env.CODEX_IMAGEGEN_AGENT_EFFORT || 'high',
+    reasoningEffort: process.env.CODEX_IMAGEGEN_AGENT_EFFORT || 'low',
     timeout: 300,
   }, options);
   if (!isProof(result, outputPath)) {
@@ -977,6 +1018,7 @@ function runThumbnailProviderCommand(
         CODEX_IMAGEGEN_WORKDIR: repoRoot,
         OPENAI_API_KEY: '',
       },
+      shell: shouldRunThroughWindowsCommandShell(command),
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     let settled = false;
@@ -1134,13 +1176,50 @@ function authFileExists(options: StoryboardLocalBridgeServerOptions) {
   return existsSync(path);
 }
 
+function getStoryboardLocalBridgeConcurrency(sceneCount: number) {
+  const parsed = Number(process.env.TZUDONG_LOCAL_BRIDGE_STORYBOARD_CONCURRENCY);
+  const configured = Number.isFinite(parsed)
+    ? Math.trunc(parsed)
+    : STORYBOARD_LOCAL_BRIDGE_DEFAULT_CONCURRENCY;
+  return Math.max(
+    1,
+    Math.min(sceneCount, STORYBOARD_LOCAL_BRIDGE_MAX_SCENES, configured),
+  );
+}
+
+async function mapLocalBridgeItemsWithConcurrency<TItem, TResult>(
+  items: TItem[],
+  concurrency: number,
+  mapper: (item: TItem, index: number) => Promise<TResult>,
+) {
+  const results = new Array<TResult>(items.length);
+  let nextIndex = 0;
+  async function runWorker() {
+    while (nextIndex < items.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      const item = items[index];
+      if (item === undefined) continue;
+      results[index] = await mapper(item, index);
+    }
+  }
+  await Promise.all(
+    Array.from(
+      { length: Math.min(concurrency, items.length) },
+      () => runWorker(),
+    ),
+  );
+  return results;
+}
+
 async function handleImages(payloadValue: unknown, options: StoryboardLocalBridgeServerOptions): Promise<StoryboardLocalBridgeImagesResponse> {
   const payload = assertImagesPayload(payloadValue);
   const runId = `${Date.now()}-${randomBytes(4).toString('hex')}`;
-  const images = [];
-  for (const scene of payload.scenes) {
-    images.push(await generateImageForScene(scene, payload, options, runId));
-  }
+  const images = await mapLocalBridgeItemsWithConcurrency(
+    payload.scenes,
+    getStoryboardLocalBridgeConcurrency(payload.scenes.length),
+    (scene) => generateImageForScene(scene, payload, options, runId),
+  );
   return {
     ok: true,
     providerId: STORYBOARD_IMAGE_PROVIDER_ID,

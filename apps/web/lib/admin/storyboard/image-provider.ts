@@ -11,11 +11,12 @@ import {
   STORYBOARD_IMAGE_PROVIDER_ID,
   STORYBOARD_IMAGE_PROVIDER_MODEL,
 } from './image-provider-readiness';
-import type {
-  StoryboardGenerateRequest,
-  StoryboardGeneratedImageProvenance,
-  StoryboardScene,
-  StoryboardSceneGeneratedImage,
+import {
+  STORYBOARD_IMAGE_GENERATION_BATCH_SIZE,
+  type StoryboardGenerateRequest,
+  type StoryboardGeneratedImageProvenance,
+  type StoryboardScene,
+  type StoryboardSceneGeneratedImage,
 } from './types';
 
 const STORYBOARD_IMAGE_TARGET_WIDTH = 1280 as const;
@@ -37,12 +38,52 @@ const STORYBOARD_GENERATED_IMAGE_PUBLIC_ROOT =
 const LOCAL_CODEX_COMMAND_TIMEOUT_MS = 5 * 60 * 1000;
 const LOCAL_CODEX_COMMAND_MAX_OUTPUT_BYTES = 3 * 1024 * 1024;
 const BROWSER_OPENAI_REQUEST_TIMEOUT_MS = 5 * 60 * 1000;
+const STORYBOARD_IMAGE_GENERATION_DEFAULT_CONCURRENCY = 4;
 
 type StoryboardImageContext = {
   title: string;
   logline: string;
   request: StoryboardGenerateRequest;
 };
+
+function getStoryboardImageGenerationConcurrency(
+  env: NodeJS.ProcessEnv,
+  sceneCount: number,
+) {
+  const parsed = Number(env.STORYBOARD_IMAGE_GENERATION_CONCURRENCY);
+  const configured = Number.isFinite(parsed)
+    ? Math.trunc(parsed)
+    : STORYBOARD_IMAGE_GENERATION_DEFAULT_CONCURRENCY;
+  return Math.max(
+    1,
+    Math.min(sceneCount, STORYBOARD_IMAGE_GENERATION_BATCH_SIZE, configured),
+  );
+}
+
+async function mapStoryboardScenesWithConcurrency<T>(
+  scenes: StoryboardScene[],
+  concurrency: number,
+  mapper: (scene: StoryboardScene, index: number) => Promise<T>,
+) {
+  const results = new Array<T>(scenes.length);
+  let nextIndex = 0;
+  async function runWorker() {
+    while (nextIndex < scenes.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      const scene = scenes[index];
+      if (!scene) continue;
+      results[index] = await mapper(scene, index);
+    }
+  }
+  await Promise.all(
+    Array.from(
+      { length: Math.min(concurrency, scenes.length) },
+      () => runWorker(),
+    ),
+  );
+  return results;
+}
 
 type StoryboardImageProviderUnavailableReason =
   | 'local_codex_model_not_allowed'
@@ -180,6 +221,14 @@ function parseArgsJson(value: string | undefined) {
   }
 }
 
+function resolveLocalCodexPythonCommand(env: NodeJS.ProcessEnv) {
+  return env.PYTHON?.trim() || (process.platform === 'win32' ? 'python' : 'python3');
+}
+
+function shouldRunThroughWindowsCommandShell(command: string) {
+  return process.platform === 'win32' && /\.(?:cmd|bat)$/i.test(command.trim());
+}
+
 function resolveLocalCodexStoryboardCommandParts(env: NodeJS.ProcessEnv) {
   const configuredCommand = env.STORYBOARD_LOCAL_CODEX_COMMAND?.trim();
   if (configuredCommand) {
@@ -194,10 +243,11 @@ function resolveLocalCodexStoryboardCommandParts(env: NodeJS.ProcessEnv) {
   }
 
   const scriptPath = resolveDefaultLocalCodexScript();
+  const pythonCommand = resolveLocalCodexPythonCommand(env);
   return {
-    command: env.PYTHON ?? 'python3',
+    command: pythonCommand,
     args: [scriptPath],
-    label: `${env.PYTHON ?? 'python3'} ${DEFAULT_LOCAL_CODEX_SCRIPT}`,
+    label: `${pythonCommand} ${DEFAULT_LOCAL_CODEX_SCRIPT}`,
     scriptPath,
     configured: false,
   };
@@ -629,6 +679,7 @@ function runLocalCodexStoryboardCommand(
         ...env,
         OPENAI_API_KEY: '',
       },
+      shell: shouldRunThroughWindowsCommandShell(command),
       stdio: ['pipe', 'pipe', 'pipe'],
     });
     let stdout = '';
@@ -940,7 +991,7 @@ export async function generateStoryboardSceneImage(
       outputFormat: 'png',
       background: 'opaque',
       agentModel: env.CODEX_IMAGEGEN_AGENT_MODEL || 'gpt-5.5',
-      reasoningEffort: env.CODEX_IMAGEGEN_AGENT_EFFORT || 'high',
+      reasoningEffort: env.CODEX_IMAGEGEN_AGENT_EFFORT || 'low',
       timeout: 300,
     },
     env,
@@ -970,13 +1021,13 @@ export async function generateStoryboardSceneImages(
   env: NodeJS.ProcessEnv = process.env,
   options: StoryboardImageProviderRuntimeOptions = {},
 ) {
-  const limitedScenes = scenes.slice(0, 4);
-  const images: Array<{ sceneNo: number; image: StoryboardSceneGeneratedImage }> = [];
-  for (const scene of limitedScenes) {
-    images.push({
+  const limitedScenes = scenes.slice(0, STORYBOARD_IMAGE_GENERATION_BATCH_SIZE);
+  return mapStoryboardScenesWithConcurrency(
+    limitedScenes,
+    getStoryboardImageGenerationConcurrency(env, limitedScenes.length),
+    async (scene) => ({
       sceneNo: scene.sceneNo,
       image: await generateStoryboardSceneImage(scene, context, env, options),
-    });
-  }
-  return images;
+    }),
+  );
 }
