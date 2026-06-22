@@ -156,15 +156,6 @@ type StoryboardChatMessage = {
   imageGenerationProgress?: StoryboardImageGenerationProgress;
 };
 
-type StoryboardQuickStartPrompt = {
-  label: string;
-  prompt: string;
-  generation?: Pick<
-    GeneratorForm,
-    "tone" | "targetLengthMinutes" | "sourceLimit" | "segmentCount"
-  >;
-};
-
 type StoryboardChatSseEvent = {
   event: string;
   data: unknown;
@@ -773,47 +764,6 @@ const STORYBOARD_GUIDED_EXAMPLE_PRESETS: StoryboardGuidedExamplePreset[] = [
 
 const STORYBOARD_USAGE_GUIDE_TEXT =
   "간단히 3가지만 적으면 됩니다. 1) 어떤 음식이나 장면인지 2) 몇 컷이 필요한지 3) 꼭 보여주고 싶은 순간입니다. 예시 버튼을 누르면 이 흐름대로 바로 스토리보드를 만들어볼게요.";
-
-const STORYBOARD_CHAT_QUICK_START_PROMPTS = [
-  {
-    label: "매운 라면 10컷",
-    prompt:
-      "매운 짜장라면 먹방을 10컷으로 만들어줘. 첫 입 리액션, 치즈 늘어나는 장면, 김이 오르는 클로즈업, 마지막 완식 평가를 꼭 넣어줘.",
-    generation: {
-      tone: "energetic",
-      targetLengthMinutes: 14,
-      sourceLimit: 80,
-      segmentCount: 10,
-    },
-  },
-  {
-    label: "고기 한상 12컷",
-    prompt:
-      "삼겹살과 갈비가 함께 나오는 고기 한상 먹방을 12컷으로 만들어줘. 불판 예열, 육즙 단면, 쌈 조합, 된장찌개 연결, 클라이맥스 한상을 크게 보여줘.",
-    generation: {
-      tone: "warm",
-      targetLengthMinutes: 16,
-      sourceLimit: 95,
-      segmentCount: 12,
-    },
-  },
-  {
-    label: "디저트 9컷",
-    prompt:
-      "딸기빙수와 케이크 디저트 먹방을 9컷으로 만들어줘. 쇼케이스 선택, 크림 클로즈업, 첫 숟가락, 케이크 단면, 달콤한 리액션을 부드럽게 이어줘.",
-    generation: {
-      tone: "comfort",
-      targetLengthMinutes: 12,
-      sourceLimit: 75,
-      segmentCount: 9,
-    },
-  },
-  {
-    label: "첫 컷 강화",
-    prompt:
-      "CUT 01을 더 강하게 바꿔줘. 가게 앞 도입에서 음식 기대감이 바로 느껴지게 오디오, 자막, 촬영 구도를 다시 잡아줘.",
-  },
-] as const satisfies readonly StoryboardQuickStartPrompt[];
 
 const STORYBOARD_CHAT_IMAGE_ATTACHMENT_LIMIT = 3;
 const STORYBOARD_CHAT_IMAGE_ATTACHMENT_MAX_BYTES = 4 * 1024 * 1024;
@@ -3628,7 +3578,7 @@ function StoryboardCutImageSkeleton({
         data-storyboard-glass-surface="true"
       />
       <span
-        className="storyboard-cut-image-shimmer pointer-events-none absolute motion-reduce:hidden"
+        className="storyboard-cut-image-shimmer pointer-events-none absolute"
         aria-hidden="true"
         data-storyboard-cut-image-shimmer="true"
         data-storyboard-cut-image-shimmer-effect="glass-sweep"
@@ -4549,11 +4499,9 @@ export function AdminStoryboardGenerator({
       return getStoryboardStreamingPhase(
         [
           `${activeStreamingImageCutLabel} 이미지를 생성 중 · 완료된 CUT은 바로 화면에 반영돼요`,
-          "오디오·자막 내용과 어울리는 장면인지 맞추는 중",
           remainingImageGenerationCount > 0
             ? `컷별 이미지 ${remainingImageGenerationCount}컷 생성 순서를 기다리는 중`
             : "새 이미지 결과를 화면에 정리 중",
-          "응답이 도착하면 성공 CUT부터 스켈레톤이 실제 결과로 바뀝니다",
         ],
         normalizedStreamingPhaseIndex,
       );
@@ -4713,44 +4661,6 @@ export function AdminStoryboardGenerator({
 
   function handleChatDraftChange(value: string) {
     setChatDraft(value);
-  }
-
-  async function handleStoryboardQuickStartPrompt(
-    item: StoryboardQuickStartPrompt,
-  ) {
-    if (isGenerating || isChatAgentStreaming || isGeneratingImages) return;
-    setErrorMessage(null);
-    const quickGeneration = item.generation;
-    if (!quickGeneration) {
-      await handleStoryboardChatSubmit({ prompt: item.prompt });
-      return;
-    }
-
-    const quickForm: GeneratorForm = {
-      ...DEFAULT_FORM,
-      prompt: item.prompt,
-      tone: quickGeneration.tone,
-      targetLengthMinutes: quickGeneration.targetLengthMinutes,
-      sourceLimit: quickGeneration.sourceLimit,
-      segmentCount: quickGeneration.segmentCount,
-    };
-    const assistantMessageId = appendStoryboardQuickCommandMessages(
-      item.prompt,
-      `${item.label} 스토리보드와 전체 CUT 이미지를 함께 만들고 있어요.`,
-      "streaming",
-    );
-    setChatDraft("");
-    const generated = await handleGenerate(quickForm, {
-      appendChatMessages: false,
-      assistantMessageId,
-    });
-    if (!generated) return;
-
-    await handleGenerateAllStoryboardImagesForResult(
-      generated,
-      assistantMessageId,
-      `${item.label} CUT`,
-    );
   }
 
   function openStoryboardChatImageAttachmentPicker() {
@@ -7437,31 +7347,6 @@ export function AdminStoryboardGenerator({
                 <Label htmlFor="storyboard-prompt" className="sr-only">
                   스토리보드 요구사항 채팅 입력
                 </Label>
-                <div
-                  className="flex gap-1.5 overflow-x-auto pb-0.5"
-                  aria-label="스토리보드 빠른 시작"
-                  data-storyboard-chat-quickstart="true"
-                >
-                  {STORYBOARD_CHAT_QUICK_START_PROMPTS.map((item) => (
-                    <Button
-                      key={item.label}
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="h-7 shrink-0 rounded-full px-2.5 text-[11px]"
-                      onClick={() =>
-                        void handleStoryboardQuickStartPrompt(item)
-                      }
-                      disabled={
-                        isGenerating || isChatAgentStreaming || isGeneratingImages
-                      }
-                      aria-label={`${item.label} 바로 생성`}
-                      data-storyboard-chat-quickstart-prompt={item.label}
-                    >
-                      {item.label}
-                    </Button>
-                  ))}
-                </div>
                 <p
                   id="storyboard-prompt-help"
                   className="sr-only"
