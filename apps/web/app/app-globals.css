@@ -79,6 +79,19 @@
   }
 }
 
+@keyframes storyboard-glass-prism {
+  0%,
+  100% {
+    opacity: 0.64;
+    transform: translate3d(-0.75rem, 0, 0) skewX(-11deg);
+  }
+
+  50% {
+    opacity: 0.92;
+    transform: translate3d(0.75rem, 0, 0) skewX(-11deg);
+  }
+}
+
 @keyframes storyboard-glass-reduced-sparkle {
   0%,
   100% {
@@ -190,10 +203,25 @@
   isolation: isolate;
 }
 
+[data-storyboard-cut-image-skeleton="true"]::before {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  content: "";
+  background:
+    linear-gradient(112deg, transparent 0 15%, rgba(255, 255, 255, 0.54) 23%, rgba(255, 255, 255, 0.12) 31%, transparent 42%),
+    linear-gradient(112deg, transparent 43%, rgba(255, 255, 255, 0.42) 51%, rgba(255, 255, 255, 0.1) 58%, transparent 69%),
+    radial-gradient(circle at 34% 34%, rgba(255, 255, 255, 0.9) 0 0.12rem, transparent 0.22rem),
+    radial-gradient(circle at 66% 46%, rgba(255, 255, 255, 0.76) 0 0.1rem, transparent 0.2rem);
+  opacity: 0.7;
+  transform: translate3d(0, 0, 0) skewX(-11deg);
+}
+
 [data-storyboard-cut-image-skeleton="true"]::after {
   position: absolute;
   inset: 16% 18%;
-  z-index: 3;
+  z-index: 5;
   pointer-events: none;
   content: "";
   background:
@@ -219,12 +247,16 @@
   top: -14%;
   bottom: -14%;
   left: -42%;
-  z-index: 2;
+  z-index: 4;
   display: block;
   width: max(10rem, 34%);
   height: 128%;
   background:
     linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.12) 30%, rgba(255, 255, 255, 0.78) 50%, rgba(255, 255, 255, 0.14) 70%, transparent 100%);
+}
+
+[data-storyboard-cut-image-skeleton-active="true"]::before {
+  animation: storyboard-glass-prism 2.2s ease-in-out infinite;
 }
 
 [data-storyboard-cut-image-skeleton-active="true"]::after {
@@ -245,6 +277,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .admin-module-loading-shimmer,
+  [data-storyboard-cut-image-skeleton-active="true"]::before,
   [data-storyboard-cut-image-skeleton-active="true"]::after,
   [data-storyboard-cut-image-skeleton-active="true"]
     [data-storyboard-cut-image-shimmer="true"] {
@@ -253,6 +286,11 @@
 
   .admin-module-loading-shimmer {
     opacity: 0.34;
+  }
+
+  [data-storyboard-cut-image-skeleton-active="true"]::before {
+    opacity: 0.82;
+    transform: translate3d(0, 0, 0) skewX(-11deg);
   }
 
   [data-storyboard-cut-image-skeleton-active="true"]::after {
