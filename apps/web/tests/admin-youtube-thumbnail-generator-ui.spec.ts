@@ -427,7 +427,7 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
           promptAddendum: 'ui generation addendum',
           safetyReview: 'ui safety review',
           nextActions: ['업로드 전 검수'],
-          diagnostics: { model: 'gpt-5.5', effort: 'high' },
+          diagnostics: { model: 'gpt-5.5', effort: 'low' },
         },
       }),
     });
@@ -457,7 +457,7 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
         textLayerPatches: [{ id: 'headline', content: '제육볶음 먹방' }],
         shouldGenerate: false,
         shouldReset: false,
-        diagnostics: { runtime: 'codex_cli_oauth', model: 'gpt-5.5', effort: 'high', streaming: 'sse-progress' },
+        diagnostics: { runtime: 'codex_cli_oauth', model: 'gpt-5.5', effort: 'low', streaming: 'sse-progress' },
       }
       : message.includes('레전드 음식')
       ? {
@@ -466,7 +466,7 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
         textLayerPatches: [{ id: 'headline', content: '레전드 음식' }],
         shouldGenerate: false,
         shouldReset: false,
-        diagnostics: { runtime: 'codex_cli_oauth', model: 'gpt-5.5', effort: 'high', streaming: 'sse-progress' },
+        diagnostics: { runtime: 'codex_cli_oauth', model: 'gpt-5.5', effort: 'low', streaming: 'sse-progress' },
       }
       : shouldGenerateThumbnail
         ? {
@@ -477,7 +477,7 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
           generationMode: 'backend_agent',
           shouldGenerate: true,
           shouldReset: false,
-          diagnostics: { runtime: 'codex_cli_oauth', model: 'gpt-5.5', effort: 'high', streaming: 'sse-progress' },
+          diagnostics: { runtime: 'codex_cli_oauth', model: 'gpt-5.5', effort: 'low', streaming: 'sse-progress' },
         }
       : shouldKeepProcessSceneProbeState
         ? {
@@ -486,7 +486,7 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
           textLayerPatches: [],
           shouldGenerate: false,
           shouldReset: false,
-          diagnostics: { runtime: 'codex_cli_oauth', model: 'gpt-5.5', effort: 'high', streaming: 'sse-progress' },
+          diagnostics: { runtime: 'codex_cli_oauth', model: 'gpt-5.5', effort: 'low', streaming: 'sse-progress' },
         }
       : {
         assistantMessage: `요청을 이해했어요. 스티커 문구를 다듬고, 메인 문구 “${canvasPatch.headline}”와 스티커 문구 “${canvasPatch.subHeadline}”를 확인했어요.`,
@@ -494,7 +494,7 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
         textLayerPatches: [{ id: 'subHeadline', fontSize: 64, fill: '#fff200' }],
         shouldGenerate: false,
         shouldReset: false,
-        diagnostics: { runtime: 'codex_cli_oauth', model: 'gpt-5.5', effort: 'high', streaming: 'sse-progress' },
+        diagnostics: { runtime: 'codex_cli_oauth', model: 'gpt-5.5', effort: 'low', streaming: 'sse-progress' },
       };
     await route.fulfill({
       status: 200,

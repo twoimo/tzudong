@@ -6217,7 +6217,7 @@ export function AdminYoutubeThumbnailGenerator() {
                   thumbnailLocalBridgeMessage ??
                   (thumbnailLocalBridgeSavedAt
                     ? `sessionStorage 저장됨 · ${new Date(thumbnailLocalBridgeSavedAt).toLocaleString("ko-KR")}`
-                    : "npm run storyboard:local-bridge 실행 후 token을 저장하고 로컬 브릿지 연결을 눌러 주세요.")}
+                    : "bun run storyboard:local-bridge 실행 후 token을 저장하고 로컬 브릿지 연결을 눌러 주세요.")}
               </p>
             </div>
           </div>
@@ -6803,7 +6803,7 @@ export function AdminYoutubeThumbnailGenerator() {
                   data-thumbnail-text-transform-metrics="visual-bounds"
                 >
                   <span
-                    className="pointer-events-none absolute -top-7 left-0 rounded-md bg-slate-950/85 px-2 py-1 text-[11px] font-bold leading-none text-white shadow-sm backdrop-blur-sm"
+                    className="pointer-events-none absolute -top-7 left-0 rounded-md bg-slate-950/85 px-2 py-1 text-[11px] font-bold leading-none text-white shadow-sm"
                     data-thumbnail-selected-text-transform-label="true"
                   >
                     {getTextLayerSelectionLabel(activeLayer)}
@@ -6813,7 +6813,7 @@ export function AdminYoutubeThumbnailGenerator() {
               ) : null}
               {isGenerating ? (
                 <div
-                  className="pointer-events-none absolute inset-0 z-20 overflow-hidden rounded-2xl border border-slate-300/70 bg-gradient-to-br from-slate-50/86 via-slate-100/76 to-slate-200/68 shadow-sm backdrop-blur-[1px] dark:border-slate-600/60 dark:from-slate-800/62 dark:via-slate-700/50 dark:to-slate-600/44"
+                  className="pointer-events-none absolute inset-0 z-20 overflow-hidden rounded-2xl border border-slate-300/70 bg-gradient-to-br from-slate-50/86 via-slate-100/76 to-slate-200/68 shadow-sm dark:border-slate-600/60 dark:from-slate-800/62 dark:via-slate-700/50 dark:to-slate-600/44"
                   role="status"
                   aria-live="polite"
                   aria-busy="true"
@@ -6829,7 +6829,7 @@ export function AdminYoutubeThumbnailGenerator() {
                     aria-hidden="true"
                   />
                   <div
-                    className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/70 to-transparent blur-sm [animation:storyboard-glass-shimmer_1.65s_ease-in-out_infinite]"
+                    className="admin-module-loading-shimmer pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/70 to-transparent"
                     aria-hidden="true"
                     data-thumbnail-generation-skeleton-shimmer="true"
                   />
