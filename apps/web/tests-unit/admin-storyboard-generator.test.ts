@@ -1,7 +1,8 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, mock, test } from 'bun:test';
 import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import type { NextRequest } from 'next/server';
 
 function withHeatmapFixture() {
   const dir = mkdtempSync(path.join(os.tmpdir(), 'tzudong-storyboard-heatmap-'));
@@ -282,6 +283,39 @@ describe('admin storyboard generator', () => {
       expect(nineCut.storyboard.scenes[0].title).toContain('매운 분식 먹방');
       expect(nineCut.storyboard.scenes.some((scene) => scene.captionIdea.includes('떡볶이'))).toBe(true);
       expect(new Set(nineCut.storyboard.scenes.map((scene) => scene.title)).size).toBe(9);
+    } finally {
+      if (previous === undefined) {
+        delete process.env.TZUYANG_HEATMAP_DIR;
+      } else {
+        process.env.TZUYANG_HEATMAP_DIR = previous;
+      }
+    }
+  });
+
+  test('renders Korean particles instead of leaking placeholder particle pairs', async () => {
+    const previous = process.env.TZUYANG_HEATMAP_DIR;
+    process.env.TZUYANG_HEATMAP_DIR = path.join(os.tmpdir(), `missing-tzudong-heatmap-${Date.now()}`);
+
+    try {
+      const { generateLocalStoryboard } = await import(`../lib/admin/storyboard/generator.ts?case=${Math.random()}`);
+      const result = generateLocalStoryboard({
+        prompt: '편의점 라면, 삼각김밥, 치즈 조합 먹방을 5컷으로 만들어줘.',
+        tone: 'comfort',
+        targetLengthMinutes: 10,
+        sourceLimit: 20,
+        segmentCount: 5,
+        includeProductionNotes: true,
+      });
+      const sceneCopy = result.storyboard.scenes
+        .map((scene) => `${scene.visualDirection}\n${scene.hostBeat}`)
+        .join('\n');
+
+      expect(sceneCopy).not.toContain('은/는');
+      expect(sceneCopy).not.toContain('이/가');
+      expect(sceneCopy).not.toContain('을/를');
+      expect(sceneCopy).toContain('편의점은');
+      expect(sceneCopy).toContain('포장 뜯는 소리가');
+      expect(sceneCopy).toContain('컵라면 김을');
     } finally {
       if (previous === undefined) {
         delete process.env.TZUYANG_HEATMAP_DIR;
@@ -700,7 +734,7 @@ test('uses the Windows-safe default Python binary when langgraph runtime is requ
   const previousPython = process.env.STORYBOARD_AGENT_PYTHON;
   const previousPath = process.env.PATH;
 
-  writePythonShim(expectedCommandPath, expectedMarkerPath, ['langgraph']);
+  writePythonShim(expectedCommandPath, expectedMarkerPath, ['langchain_openai', 'FlagEmbedding']);
   writePythonShim(otherCommandPath, otherMarkerPath, ['wrong-binary']);
 
   process.env.STORYBOARD_AGENT_COMMAND = '/tmp/storyboard-agent-command-placeholder';
@@ -712,7 +746,7 @@ test('uses the Windows-safe default Python binary when langgraph runtime is requ
     const { getStoryboardBackendAgentStatus } = await import(`../lib/admin/storyboard/backend-agent.ts?case=${Math.random()}`);
     const status = getStoryboardBackendAgentStatus();
     expect(status.mode).toBe('command');
-    expect(status.missingPythonModules).toEqual(['langgraph']);
+    expect(status.missingPythonModules).toEqual(['langchain_openai', 'FlagEmbedding']);
     expect(status.pythonRuntimeAvailable).toBe(true);
     expect(existsSync(expectedMarkerPath)).toBe(true);
     expect(existsSync(otherMarkerPath)).toBe(false);
@@ -874,6 +908,37 @@ test('treats the Windows Store Python alias message as unavailable runtime', asy
     expect(result.backendAgent.promptAddendum).toContain('Selected CUT scenePatch');
   });
 
+  test('passes storyboard chat image attachment context into agent prompts', async () => {
+    const { generateStoryboardChatWithBackendAgent } = await import(`../lib/admin/storyboard/backend-agent.ts?case=${Math.random()}`);
+    const result = await generateStoryboardChatWithBackendAgent({
+      message: '이 사진 참고해서 8컷 스토리보드 만들어줘',
+      currentPrompt: '먹방 피크 기반 스토리보드',
+      currentTone: 'warm',
+      currentTargetLengthMinutes: 14,
+      currentSegmentCount: 8,
+      currentAvailableSceneCount: 8,
+      generationMode: 'backend_agent',
+      imageAttachments: [
+        {
+          id: 'photo-1',
+          name: 'spicy ramen.jpg',
+          mimeType: 'image/jpeg',
+          size: 153600,
+          dataUrl: 'data:image/jpeg;base64,aGVsbG8=',
+          width: 1280,
+          height: 720,
+        },
+      ],
+    });
+
+    expect(result.canvasPatch.prompt).toContain('첨부 사진 맥락');
+    expect(result.canvasPatch.prompt).toContain('spicy ramen.jpg');
+    expect(result.assistantMessage).toContain('첨부 사진 1장도 함께 참고했어요');
+    expect(result.backendAgent.promptAddendum).toContain('Image attachments');
+    expect(result.backendAgent.promptAddendum).toContain('1280x720');
+    expect(result.backendAgent.diagnostics.imageAttachmentCount).toBe(1);
+  });
+
   test('treats short greetings as non-mutating chat guidance', async () => {
     const { generateStoryboardChatWithBackendAgent } = await import(`../lib/admin/storyboard/backend-agent.ts?case=${Math.random()}`);
     const result = await generateStoryboardChatWithBackendAgent({
@@ -932,6 +997,163 @@ test('treats the Windows Store Python alias message as unavailable runtime', asy
     expect(result.assistantMessage).toContain('CUT별로 순차 진행');
     expect(result.assistantMessage).not.toContain('요청을 이해했어요');
     expect(result.backendAgent.diagnostics.chatIntent).toBe('conversation');
+  });
+
+  test('answers general recommendation and identity questions without generating or editing', async () => {
+    const { generateStoryboardChatWithBackendAgent } = await import(`../lib/admin/storyboard/backend-agent.ts?case=${Math.random()}`);
+    const recommendationResult = await generateStoryboardChatWithBackendAgent({
+      message: '오늘 뭐 먹으면 좋아? 메뉴 추천해줘',
+      currentPrompt: '먹방 피크 기반 스토리보드',
+      baselinePrompt: '먹방 피크 기반 스토리보드',
+      currentTone: 'warm',
+      currentTargetLengthMinutes: 14,
+      currentSegmentCount: 8,
+      currentAvailableSceneCount: 8,
+      generationMode: 'backend_agent',
+      focusContext: {
+        kind: 'cut',
+        label: 'CUT 01 선택됨',
+        detail: '오프닝 훅 · 06:57',
+        sceneNo: 1,
+        promptContext: 'CUT 01을 선택한 상태입니다.',
+        createdAt: '2026-06-05T00:00:00.000Z',
+      },
+    });
+    const identityResult = await generateStoryboardChatWithBackendAgent({
+      message: '스토리보드 도우미는 뭐 할 수 있어?',
+      currentPrompt: '먹방 피크 기반 스토리보드',
+      baselinePrompt: '먹방 피크 기반 스토리보드',
+      currentTone: 'warm',
+      currentTargetLengthMinutes: 14,
+      currentSegmentCount: 8,
+      currentAvailableSceneCount: 8,
+      generationMode: 'backend_agent',
+      focusContext: null,
+    });
+
+    expect(recommendationResult.shouldGenerate).toBe(false);
+    expect(recommendationResult.canvasPatch.scenePatch).toBeUndefined();
+    expect(recommendationResult.canvasPatch.prompt).toBe('먹방 피크 기반 스토리보드');
+    expect(recommendationResult.assistantMessage).toContain('아이디어만');
+    expect(recommendationResult.backendAgent.diagnostics.chatIntent).toBe('conversation');
+    expect(identityResult.shouldGenerate).toBe(false);
+    expect(identityResult.canvasPatch.scenePatch).toBeUndefined();
+    expect(identityResult.assistantMessage).toContain('스토리보드 화면을 보면서 대화하는 도우미');
+    expect(identityResult.backendAgent.diagnostics.chatIntent).toBe('conversation');
+  });
+
+  test('keeps idea, save, and field questions conversational instead of editing the selected cut', async () => {
+    const { generateStoryboardChatWithBackendAgent } = await import(`../lib/admin/storyboard/backend-agent.ts?case=${Math.random()}`);
+    const baseRequest = {
+      currentPrompt: '먹방 피크 기반 스토리보드',
+      baselinePrompt: '먹방 피크 기반 스토리보드',
+      currentTone: 'warm' as const,
+      currentTargetLengthMinutes: 14,
+      currentSegmentCount: 8,
+      currentAvailableSceneCount: 8,
+      generationMode: 'backend_agent' as const,
+      focusContext: {
+        kind: 'cut' as const,
+        label: 'CUT 02 선택됨',
+        detail: '주문 장면 · 13:25',
+        sceneNo: 2,
+        promptContext: 'CUT 02을 선택한 상태입니다.',
+        createdAt: '2026-06-05T00:00:00.000Z',
+      },
+    };
+
+    const ideaQuestion = await generateStoryboardChatWithBackendAgent({
+      ...baseRequest,
+      message: '매운 짬뽕 먹방 아이디어 어때?',
+    });
+    const saveQuestion = await generateStoryboardChatWithBackendAgent({
+      ...baseRequest,
+      message: 'PNG 저장은 어디서 해?',
+    });
+    const subtitleQuestion = await generateStoryboardChatWithBackendAgent({
+      ...baseRequest,
+      message: '자막을 꼭 넣어야 해?',
+    });
+    const imageMethodQuestion = await generateStoryboardChatWithBackendAgent({
+      ...baseRequest,
+      message: '이미지 다시 생성하는 방법 알려줘',
+    });
+    const visualQuestion = await generateStoryboardChatWithBackendAgent({
+      ...baseRequest,
+      message: '이 장면 음식이 잘 보여?',
+    });
+
+    expect(ideaQuestion.shouldGenerate).toBe(false);
+    expect(ideaQuestion.canvasPatch.scenePatch).toBeUndefined();
+    expect(ideaQuestion.assistantMessage).toContain('아이디어만');
+    expect(ideaQuestion.backendAgent.diagnostics.chatIntent).toBe('conversation');
+    expect(saveQuestion.shouldGenerate).toBe(false);
+    expect(saveQuestion.canvasPatch.scenePatch).toBeUndefined();
+    expect(saveQuestion.assistantMessage).toContain('저장 방법 질문');
+    expect(saveQuestion.backendAgent.diagnostics.chatIntent).toBe('conversation');
+    expect(subtitleQuestion.shouldGenerate).toBe(false);
+    expect(subtitleQuestion.canvasPatch.scenePatch).toBeUndefined();
+    expect(subtitleQuestion.assistantMessage).toContain('선택한 CUT을 수정하지 않고');
+    expect(subtitleQuestion.backendAgent.diagnostics.chatIntent).toBe('conversation');
+    expect(imageMethodQuestion.shouldGenerate).toBe(false);
+    expect(imageMethodQuestion.canvasPatch.scenePatch).toBeUndefined();
+    expect(imageMethodQuestion.assistantMessage).toContain('이미지 다시 만들기 방법 질문');
+    expect(imageMethodQuestion.backendAgent.diagnostics.chatIntent).toBe('conversation');
+    expect(visualQuestion.shouldGenerate).toBe(false);
+    expect(visualQuestion.canvasPatch.scenePatch).toBeUndefined();
+    expect(visualQuestion.assistantMessage).toContain('시각 확인 질문');
+    expect(visualQuestion.backendAgent.diagnostics.chatIntent).toBe('conversation');
+  });
+
+  test('keeps generation-related questions conversational while preserving explicit generation commands', async () => {
+    const { generateStoryboardChatWithBackendAgent } = await import(`../lib/admin/storyboard/backend-agent.ts?case=${Math.random()}`);
+    const baseRequest = {
+      currentPrompt: '먹방 피크 기반 스토리보드',
+      baselinePrompt: '먹방 피크 기반 스토리보드',
+      currentTone: 'warm' as const,
+      currentTargetLengthMinutes: 14,
+      currentSegmentCount: 8,
+      currentAvailableSceneCount: 8,
+      generationMode: 'backend_agent' as const,
+      focusContext: null,
+    };
+
+    const imageDurationQuestion = await generateStoryboardChatWithBackendAgent({
+      ...baseRequest,
+      message: '이미지 생성은 얼마나 걸려?',
+    });
+    const setupQuestion = await generateStoryboardChatWithBackendAgent({
+      ...baseRequest,
+      message: '스토리보드 생성하려면 뭐가 필요해?',
+    });
+    const explicitGeneration = await generateStoryboardChatWithBackendAgent({
+      ...baseRequest,
+      message: '10컷으로 스토리보드 생성해줘',
+    });
+    const exampleGeneration = await generateStoryboardChatWithBackendAgent({
+      ...baseRequest,
+      message: '예시 만들기',
+    });
+    const showExampleGeneration = await generateStoryboardChatWithBackendAgent({
+      ...baseRequest,
+      message: '예시 보여줘',
+    });
+
+    expect(imageDurationQuestion.shouldGenerate).toBe(false);
+    expect(imageDurationQuestion.canvasPatch.scenePatch).toBeUndefined();
+    expect(imageDurationQuestion.assistantMessage).toContain('CUT별로 순차 진행');
+    expect(imageDurationQuestion.backendAgent.diagnostics.chatIntent).toBe('conversation');
+    expect(setupQuestion.shouldGenerate).toBe(false);
+    expect(setupQuestion.canvasPatch.scenePatch).toBeUndefined();
+    expect(setupQuestion.assistantMessage).toContain('화면을 바꾸지 않고 설명');
+    expect(setupQuestion.backendAgent.diagnostics.chatIntent).toBe('conversation');
+    expect(explicitGeneration.shouldGenerate).toBe(true);
+    expect(explicitGeneration.canvasPatch.segmentCount).toBe(10);
+    expect(explicitGeneration.backendAgent.diagnostics.chatIntent).toBe('generate');
+    expect(exampleGeneration.shouldGenerate).toBe(true);
+    expect(exampleGeneration.backendAgent.diagnostics.chatIntent).toBe('generate');
+    expect(showExampleGeneration.shouldGenerate).toBe(true);
+    expect(showExampleGeneration.backendAgent.diagnostics.chatIntent).toBe('generate');
   });
 
   test('keeps beginner review chat as explanation without mutating the selected cut', async () => {
@@ -1006,12 +1228,52 @@ test('treats the Windows Store Python alias message as unavailable runtime', asy
         createdAt: '2026-06-05T00:00:00.000Z',
       },
     });
+    const naturalResult = await generateStoryboardChatWithBackendAgent({
+      message: '현재 컷 이미지만 다시 생성해줘',
+      currentPrompt: '먹방 피크 기반 스토리보드',
+      currentTone: 'warm',
+      currentTargetLengthMinutes: 14,
+      currentSegmentCount: 8,
+      generationMode: 'backend_agent',
+      focusContext: {
+        kind: 'cut',
+        label: 'CUT 02 선택됨',
+        detail: '기대감 세팅 · 13:25',
+        sceneNo: 2,
+        promptContext: 'CUT 02을 선택한 상태입니다. 현재 컷 이미지만 다시 생성합니다.',
+        createdAt: '2026-06-05T00:00:00.000Z',
+      },
+    });
+    const selectedNaturalResult = await generateStoryboardChatWithBackendAgent({
+      message: '선택한 컷 이미지 다시 만들어줘',
+      currentPrompt: '먹방 피크 기반 스토리보드',
+      currentTone: 'warm',
+      currentTargetLengthMinutes: 14,
+      currentSegmentCount: 8,
+      generationMode: 'backend_agent',
+      focusContext: {
+        kind: 'cut',
+        label: 'CUT 02 선택됨',
+        detail: '기대감 세팅 · 13:25',
+        sceneNo: 2,
+        promptContext: 'CUT 02을 선택한 상태입니다. 현재 컷 이미지만 다시 생성합니다.',
+        createdAt: '2026-06-05T00:00:00.000Z',
+      },
+    });
 
     expect(result.shouldGenerate).toBe(false);
     expect(result.canvasPatch.scenePatch?.sceneNo).toBe(2);
     expect(result.canvasPatch.scenePatch?.regenerateImage).toBe(true);
     expect(result.assistantMessage).toContain('현재 선택한 컷의 이미지만 다시 만들 준비');
     expect(result.backendAgent.diagnostics.chatIntent).toBe('regenerate_selected_scene');
+    expect(naturalResult.shouldGenerate).toBe(false);
+    expect(naturalResult.canvasPatch.scenePatch?.sceneNo).toBe(2);
+    expect(naturalResult.canvasPatch.scenePatch?.regenerateImage).toBe(true);
+    expect(naturalResult.backendAgent.diagnostics.chatIntent).toBe('regenerate_selected_scene');
+    expect(selectedNaturalResult.shouldGenerate).toBe(false);
+    expect(selectedNaturalResult.canvasPatch.scenePatch?.sceneNo).toBe(2);
+    expect(selectedNaturalResult.canvasPatch.scenePatch?.regenerateImage).toBe(true);
+    expect(selectedNaturalResult.backendAgent.diagnostics.chatIntent).toBe('regenerate_selected_scene');
   });
 
   test('patches an explicitly addressed storyboard cut even without canvas focus', async () => {
@@ -1289,5 +1551,132 @@ test('treats the Windows Store Python alias message as unavailable runtime', asy
         process.env.TZUYANG_HEATMAP_DIR = previous;
       }
     }
+  });
+
+  test('streams storyboard review chat as an answer without mutation status copy', async () => {
+    let backendAgentCalls = 0;
+
+    mock.module('@/lib/auth/require-admin', () => ({
+      requireAdmin: async () => ({ ok: true, userId: 'admin-user' }),
+    }));
+    mock.module('@/lib/admin/storyboard/backend-agent', () => ({
+      generateStoryboardChatWithBackendAgent: async () => {
+        backendAgentCalls += 1;
+        return {
+          assistantMessage: '검토 결과를 쉽게 정리했어요. 오프닝 훅은 좋고 중반 음식 클로즈업을 더 선명하게 두면 좋아요.',
+          canvasPatch: {
+            prompt: '먹방 피크 기반 스토리보드',
+            tone: 'warm',
+            targetLengthMinutes: 10,
+            segmentCount: 4,
+          },
+          shouldGenerate: false,
+          shouldReset: false,
+          backendAgent: {
+            diagnostics: {
+              chatIntent: 'review',
+            },
+          },
+        };
+      },
+    }));
+
+    const routeModule = await import(`../app/api/admin/storyboard/chat/route.ts?cache=${Math.random()}`);
+    const response = await routeModule.POST(new Request('http://localhost/api/admin/storyboard/chat', {
+      method: 'POST',
+      body: JSON.stringify({
+        message: '전체 흐름 평가해줘',
+        currentPrompt: '먹방 피크 기반 스토리보드',
+        currentTone: 'warm',
+        currentTargetLengthMinutes: 10,
+        currentSegmentCount: 4,
+        currentAvailableSceneCount: 4,
+        generationMode: 'backend_agent',
+      }),
+      headers: { 'Content-Type': 'application/json' },
+    }) as unknown as NextRequest);
+    const text = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toContain('text/event-stream');
+    expect(backendAgentCalls).toBe(1);
+    expect(text).toContain('event: status');
+    expect(text).toContain('검토 결과를 쉽게 정리했어요');
+    expect(text).toContain('event: patch');
+    expect(text).toContain('event: done');
+    expect(text).not.toContain('곧 화면에 바로 반영할게요');
+    expect(text).not.toContain('작업으로 이해했어요');
+  });
+
+  test('streams storyboard chat when only a photo attachment is submitted', async () => {
+    let capturedPayload: Record<string, unknown> | null = null;
+
+    mock.module('@/lib/auth/require-admin', () => ({
+      requireAdmin: async () => ({ ok: true, userId: 'admin-user' }),
+    }));
+    mock.module('@/lib/admin/storyboard/backend-agent', () => ({
+      generateStoryboardChatWithBackendAgent: async (payload: Record<string, unknown>) => {
+        capturedPayload = payload;
+        return {
+          assistantMessage: '첨부 사진을 참고해 스토리보드 방향을 정리했어요.',
+          canvasPatch: {
+            prompt: '첨부한 사진을 참고해서 스토리보드 방향을 제안해줘.',
+            tone: 'warm',
+            targetLengthMinutes: 10,
+            segmentCount: 4,
+          },
+          shouldGenerate: false,
+          shouldReset: false,
+          backendAgent: {
+            diagnostics: {
+              chatIntent: 'conversation',
+            },
+          },
+        };
+      },
+    }));
+
+    const routeModule = await import(`../app/api/admin/storyboard/chat/route.ts?cache=${Math.random()}`);
+    const response = await routeModule.POST(new Request('http://localhost/api/admin/storyboard/chat', {
+      method: 'POST',
+      body: JSON.stringify({
+        message: '',
+        currentPrompt: '먹방 피크 기반 스토리보드',
+        currentTone: 'warm',
+        currentTargetLengthMinutes: 10,
+        currentSegmentCount: 4,
+        currentAvailableSceneCount: 4,
+        generationMode: 'backend_agent',
+        imageAttachments: [
+          {
+            id: 'photo-only',
+            name: 'reference.png',
+            mimeType: 'image/png',
+            size: 5,
+            dataUrl: 'data:image/png;base64,aGVsbG8=',
+            width: 1,
+            height: 1,
+          },
+        ],
+      }),
+      headers: { 'Content-Type': 'application/json' },
+    }) as unknown as NextRequest);
+    const text = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(capturedPayload?.message).toBe('첨부한 사진을 참고해서 스토리보드 방향을 제안해줘.');
+    expect(capturedPayload?.imageAttachments).toEqual([
+      {
+        id: 'photo-only',
+        name: 'reference.png',
+        mimeType: 'image/png',
+        size: 5,
+        dataUrl: 'data:image/png;base64,aGVsbG8=',
+        width: 1,
+        height: 1,
+      },
+    ]);
+    expect(text).toContain('사진 1장 첨부');
+    expect(text).toContain('첨부 사진을 참고해 스토리보드 방향을 정리했어요');
   });
 });
