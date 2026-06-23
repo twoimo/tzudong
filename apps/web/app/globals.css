@@ -102,9 +102,63 @@ button {
 
 @keyframes storyboard-glass-shimmer {
   0% {
-    transform: translateX(0);
+    transform: translate3d(-42%, 0, 0) skewX(-10deg);
   }
   100% {
-    transform: translateX(320%);
+    transform: translate3d(320%, 0, 0) skewX(-10deg);
   }
+}
+
+[data-storyboard-cut-image-skeleton="true"] {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+  overflow: hidden;
+  contain: paint;
+  isolation: isolate;
+  background:
+    radial-gradient(ellipse at 14% 10%, rgba(255, 255, 255, 0.72), transparent 42%),
+    linear-gradient(135deg, rgba(241, 245, 249, 1), rgba(226, 232, 240, 0.85) 50%, rgba(148, 163, 184, 0.7));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.48);
+}
+
+[data-storyboard-cut-image-skeleton="true"]::before {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  content: "";
+  background:
+    linear-gradient(112deg, transparent 0 24%, rgba(255, 255, 255, 0.34) 31%, rgba(255, 255, 255, 0.08) 37%, transparent 47%),
+    linear-gradient(112deg, transparent 50%, rgba(255, 255, 255, 0.22) 58%, rgba(255, 255, 255, 0.06) 64%, transparent 74%),
+    radial-gradient(circle at 34% 34%, rgba(255, 255, 255, 0.9) 0 0.12rem, transparent 0.22rem),
+    radial-gradient(circle at 66% 46%, rgba(255, 255, 255, 0.78) 0 0.1rem, transparent 0.2rem);
+  opacity: 0.46;
+  transform: translate3d(0, 0, 0) skewX(-11deg);
+}
+
+[data-storyboard-cut-image-shimmer="true"] {
+  position: absolute;
+  top: -14%;
+  bottom: -14%;
+  left: -42%;
+  z-index: 4;
+  display: block;
+  width: max(10rem, 34%);
+  height: 128%;
+  background:
+    linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.12) 30%, rgba(255, 255, 255, 0.82) 50%, rgba(255, 255, 255, 0.14) 70%, transparent 100%);
+}
+
+[data-storyboard-cut-image-skeleton-active="true"]
+  [data-storyboard-cut-image-shimmer="true"] {
+  animation: storyboard-glass-shimmer 1.35s ease-in-out infinite;
+  opacity: 0.76;
+  will-change: transform, opacity;
+}
+
+[data-storyboard-cut-image-skeleton-active="false"]
+  [data-storyboard-cut-image-shimmer="true"] {
+  display: none;
 }

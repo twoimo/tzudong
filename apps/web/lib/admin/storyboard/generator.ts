@@ -124,12 +124,12 @@ const TOPIC_PROFILES: Array<StoryboardTopicProfile & { matchers: RegExp[] }> = [
   {
     id: 'noodle_soup',
     label: '면·국물 먹방',
-    keywords: ['국밥', '국수', '라멘', '칼국수', '냉면'],
-    visualMotifs: ['국물 위 김', '면발 들어 올리는 손', '국물 한 숟가락과 반응'],
-    audioMotifs: ['면치기 소리', '국물 떠먹는 소리', '후루룩 리듬'],
-    subtitleMotifs: ['국물 첫 숟갈', '면발 식감 피크', '든든한 마무리'],
+    keywords: ['짬뽕', '탕수육', '짜장면', '국밥', '국수'],
+    visualMotifs: ['짬뽕 국물 위 김', '면발 들어 올리는 손', '탕수육을 소스에 찍는 순간'],
+    audioMotifs: ['면치기 소리', '국물 떠먹는 소리', '탕수육 바삭한 소리'],
+    subtitleMotifs: ['국물 첫 숟갈', '면발 식감 피크', '탕수육 조합 한입'],
     sensoryWords: ['뜨끈한', '시원한', '진한', '쫄깃한'],
-    matchers: [/국밥|국수|라멘|라면|칼국수|냉면|짬뽕|우동|국물|면발/],
+    matchers: [/국밥|국수|라멘|라면|칼국수|냉면|짬뽕|짜장면|탕수육|우동|국물|면발/],
   },
 ];
 
