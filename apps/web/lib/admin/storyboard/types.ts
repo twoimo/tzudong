@@ -94,6 +94,7 @@ export type StoryboardBackendAgentStatus = {
   graphEntrypoint: string | null;
   commandConfigured: boolean;
   commandAvailable: boolean;
+  commandSource?: 'configured' | 'auto_runner';
   commandPath?: string;
   commandRejectionReason?: string;
   localAdapterAvailable: boolean;
@@ -148,6 +149,28 @@ export type StoryboardChatImageAttachment = {
   height?: number;
 };
 
+export type StoryboardChatConversationMessage = {
+  role: 'user' | 'assistant';
+  content: string;
+  id?: string;
+  createdAt?: string;
+};
+
+export type StoryboardThinkingTraceEntryStatus =
+  | 'pending'
+  | 'running'
+  | 'done'
+  | 'failed'
+  | 'cancelled';
+
+export type StoryboardThinkingTraceEntry = {
+  id: string;
+  label: string;
+  status: StoryboardThinkingTraceEntryStatus;
+  detail?: string;
+  timestamp?: string;
+};
+
 export type StoryboardChatAgentRequest = {
   message: string;
   currentPrompt?: string;
@@ -159,12 +182,15 @@ export type StoryboardChatAgentRequest = {
   generationMode?: StoryboardGenerationMode;
   focusContext?: StoryboardChatFocusContext | null;
   imageAttachments?: StoryboardChatImageAttachment[];
+  conversationMessages?: StoryboardChatConversationMessage[];
+  chatThreadId?: string;
 };
 
 export type StoryboardChatAgentResult = {
   assistantMessage: string;
   canvasPatch: StoryboardChatCanvasPatch;
   shouldGenerate: boolean;
+  shouldGenerateImages?: boolean;
   shouldReset: boolean;
   backendAgent: {
     mode: 'local_adapter' | 'command';

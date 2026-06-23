@@ -142,7 +142,7 @@ function createCanonicalReferenceGraph() {
 }
 
 describe('admin storyboard LangGraph replacement contracts', () => {
-  test('defaults backend_agent status to LangGraph replacement runtime without changing public generation modes', async () => {
+  test('defaults backend_agent status to the checked-in LangGraph runner without changing public generation modes', async () => {
     await withEnv(
       {
         STORYBOARD_AGENT_RUNTIME: undefined,
@@ -152,17 +152,22 @@ describe('admin storyboard LangGraph replacement contracts', () => {
         const { getStoryboardBackendAgentStatus } = await import(`../lib/admin/storyboard/backend-agent.ts?case=${Math.random()}`);
         const status = getStoryboardBackendAgentStatus();
         expect(status.runtime).toBe('langgraph');
-        expect(status.mode).toBe('local_adapter');
+        expect(status.mode).toBe('command');
+        expect(status.commandConfigured).toBe(false);
+        expect(status.commandAvailable).toBe(true);
+        expect(status.commandSource).toBe('auto_runner');
+        expect(status.commandPath).toContain('run-storyboard-agent.py');
         expect(status.localAdapterAvailable).toBe(true);
       },
     );
   });
 
-  test('records local fallback in canonical backendAnalysis.backendAgent.graph path when LangGraph command is not configured', async () => {
+  test('runs checked-in LangGraph runner and emits canonical graph evidence when command is not configured', async () => {
     await withEnv(
       {
         STORYBOARD_AGENT_RUNTIME: undefined,
         STORYBOARD_AGENT_COMMAND: undefined,
+        STORYBOARD_AGENT_ENABLE_BGE_RETRIEVAL: '0',
         TZUYANG_HEATMAP_DIR: path.join(os.tmpdir(), `missing-tzudong-heatmap-${Date.now()}`),
       },
       async () => {
@@ -171,17 +176,67 @@ describe('admin storyboard LangGraph replacement contracts', () => {
         const graph = result.backendAnalysis.backendAgent?.graph;
 
         expect(result.request.generationMode).toBe('backend_agent');
+        expect(result.mode).toBe('backend_agent_command');
+        expect(result.backendAnalysis.backendAgent?.commandConfigured).toBe(false);
+        expect(result.backendAnalysis.backendAgent?.commandSource).toBe('auto_runner');
+        expect(result.backendAnalysis.backendAgent?.invokedCommand).toBe(true);
+        expect(result.storyboard.exportMarkdown).toContain('LangGraph 스토리보드');
+        expect(graph?.status).toBe('used');
+        expect(graph?.runtime).toBe('langgraph');
+        expect(graph?.mode).toBe('graph_command');
+        expect(graph?.nodesVisited).toEqual([
+          'extract_slots',
+          'supervisor',
+          'researcher',
+          'intern',
+          'designer',
+        ]);
+        expect(graph?.interrupts?.map((interrupt) => interrupt.node)).toContain('intern.review_create');
+        expect(graph?.interrupts?.map((interrupt) => interrupt.node)).toContain('designer_node');
+        expect(graph?.retrieval?.status).toBe('not_used');
+        expect(result.agentGraphFidelity?.status).toBe('passed');
+        expect(result.agentGraphFidelity?.score ?? 0).toBeGreaterThanOrEqual(98);
+      },
+    );
+  }, 15_000);
+
+  test('local adapter fallback still emits Supervisor Researcher Intern Designer reference graph when runner is disabled', async () => {
+    await withEnv(
+      {
+        STORYBOARD_AGENT_RUNTIME: 'langgraph',
+        STORYBOARD_AGENT_COMMAND: undefined,
+        STORYBOARD_AGENT_DISABLE_AUTO_RUNNER: '1',
+        TZUYANG_HEATMAP_DIR: path.join(os.tmpdir(), `missing-tzudong-heatmap-${Date.now()}`),
+      },
+      async () => {
+        const { generateStoryboardWithBackendAgent, getStoryboardBackendAgentStatus } = await import(`../lib/admin/storyboard/backend-agent.ts?case=${Math.random()}`);
+        const status = getStoryboardBackendAgentStatus();
+        const result = await generateStoryboardWithBackendAgent(baseRequest);
+        const graph = result.backendAnalysis.backendAgent?.graph;
+        const referenceGraph = result.backendAnalysis.backendAgent?.referenceGraph as Record<string, unknown> | undefined;
+
+        expect(status.mode).toBe('local_adapter');
         expect(result.mode).toBe('backend_agent_local_adapter');
-        expect(result.storyboard.exportMarkdown).toContain('## 촬영 기획표');
-        expect(result.storyboard.exportMarkdown).toContain('| CUT | 역할 | 촬영 지시 | 멘트 | 자막 | 근거 |');
-        expect(result.storyboard.exportMarkdown).toContain('백엔드 에이전트 근거');
-        expect(graph?.status).toBe('fallback');
+        expect(graph?.status).toBe('used');
         expect(graph?.runtime).toBe('local_adapter_fallback');
         expect(graph?.mode).toBe('local_adapter');
-        expect(graph?.fallbackReason).toBe('not_configured');
-        expect(graph?.nodesVisited).toEqual([]);
-        expect(graph?.toolsCalled).toEqual([]);
-        expect(graph?.retrieval?.status).toBe('not_used');
+        expect(graph?.nodesVisited).toEqual([
+          'extract_slots',
+          'supervisor',
+          'researcher',
+          'intern',
+          'designer',
+        ]);
+        expect(graph?.toolsCalled).toContain('search_scene_data');
+        expect(graph?.interrupts.map((interrupt) => interrupt.node)).toContain('intern.review_create');
+        expect(graph?.interrupts.map((interrupt) => interrupt.node)).toContain('designer_node');
+        expect(graph?.retrieval?.status).toBe('used');
+        expect(referenceGraph?.supervisor).toBeTruthy();
+        expect(referenceGraph?.researcher).toBeTruthy();
+        expect(referenceGraph?.intern).toBeTruthy();
+        expect(referenceGraph?.designer).toBeTruthy();
+        expect(result.agentGraphFidelity?.status).toBe('passed');
+        expect(result.agentGraphFidelity?.score ?? 0).toBeGreaterThanOrEqual(98);
       },
     );
   });
@@ -499,6 +554,7 @@ describe('admin storyboard LangGraph replacement contracts', () => {
       {
         STORYBOARD_AGENT_COMMAND: undefined,
         STORYBOARD_AGENT_RUNTIME: 'langgraph',
+        STORYBOARD_AGENT_DISABLE_AUTO_RUNNER: '1',
         TZUYANG_HEATMAP_DIR: path.join(os.tmpdir(), `missing-tzudong-heatmap-${Date.now()}`),
       },
       async () => {
@@ -512,7 +568,8 @@ describe('admin storyboard LangGraph replacement contracts', () => {
 
         expect(serialized).not.toContain('SECRETSECRETSECRET');
         expect(serialized).toContain('[안전상 제거된 운영 지시]');
-        expect(result.backendAnalysis.backendAgent?.graph?.retrieval?.status).toBe('not_used');
+        expect(result.backendAnalysis.backendAgent?.graph?.retrieval?.status).toBe('used');
+        expect(result.agentGraphFidelity?.status).toBe('passed');
       },
     );
   });
