@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 
 import { requireAdmin } from '@/lib/auth/require-admin';
+import type { StoryboardThinkingTraceEntry } from '@/lib/admin/storyboard/types';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -41,9 +42,10 @@ type StoryboardChatAgentResultForRoute = {
     };
   };
   shouldGenerate: boolean;
+  shouldGenerateImages?: boolean;
   shouldReset: boolean;
   backendAgent: {
-    diagnostics: {
+    diagnostics: Record<string, unknown> & {
       chatIntent?: unknown;
     };
   };
@@ -57,12 +59,14 @@ function toPublicStoryboardChatAgentResult(
     assistantMessage: result.assistantMessage,
     canvasPatch: result.canvasPatch,
     shouldGenerate: result.shouldGenerate,
+    shouldGenerateImages: result.shouldGenerateImages ?? result.shouldGenerate,
     shouldReset: result.shouldReset,
   };
 }
 
 type StoryboardChatPayload = Record<string, unknown>;
 type SseSend = (event: string, data: unknown) => void;
+type StoryboardRouteTraceStatus = StoryboardThinkingTraceEntry['status'];
 
 type StoryboardChatImageAttachmentForRoute = {
   id: string;
@@ -72,6 +76,13 @@ type StoryboardChatImageAttachmentForRoute = {
   dataUrl: string;
   width?: number;
   height?: number;
+};
+
+type StoryboardChatConversationMessageForRoute = {
+  role: 'user' | 'assistant';
+  content: string;
+  id?: string;
+  createdAt?: string;
 };
 
 const CONVERSATION_STREAM_CHUNK_SIZE = 14;
@@ -86,6 +97,8 @@ const STORYBOARD_CHAT_IMAGE_ATTACHMENT_MIME_TYPES = new Set([
   'image/jpeg',
   'image/webp',
 ] as const);
+const STORYBOARD_CHAT_CONVERSATION_MESSAGE_LIMIT = 8;
+const STORYBOARD_CHAT_CONVERSATION_CONTENT_LIMIT = 320;
 
 function shouldSkipLocalStoryboardBackendAgentOnVercel() {
   return (
@@ -99,6 +112,78 @@ function sanitizeStatusText(value: unknown, maxLength = 90) {
   return typeof value === 'string'
     ? value.replace(/\s+/g, ' ').trim().slice(0, maxLength)
     : '';
+}
+
+function createRouteTraceEntry({
+  id,
+  label,
+  status,
+  detail,
+}: {
+  id: string;
+  label: string;
+  status: StoryboardRouteTraceStatus;
+  detail?: unknown;
+}): StoryboardThinkingTraceEntry {
+  return {
+    id: sanitizeStatusText(id, 80) || `route-trace-${Date.now()}`,
+    label: sanitizeStatusText(label, 80) || '처리 단계',
+    status,
+    ...(detail ? { detail: sanitizeStatusText(detail, 180) } : {}),
+    timestamp: new Date().toISOString(),
+  };
+}
+
+function sendTrace(
+  send: SseSend,
+  entry: Parameters<typeof createRouteTraceEntry>[0],
+) {
+  send('trace', createRouteTraceEntry(entry));
+}
+
+function normalizeRouteConversationMessages(value: unknown):
+  | {
+      ok: true;
+      conversationMessages: StoryboardChatConversationMessageForRoute[];
+    }
+  | { ok: false; error: string; detail: string; status: number } {
+  if (value == null) return { ok: true, conversationMessages: [] };
+  if (!Array.isArray(value)) {
+    return {
+      ok: false,
+      error: 'conversation_messages_invalid',
+      detail: '이전 대화 목록 형식이 올바르지 않습니다.',
+      status: 400,
+    };
+  }
+
+  const conversationMessages: StoryboardChatConversationMessageForRoute[] = value
+    .slice(-STORYBOARD_CHAT_CONVERSATION_MESSAGE_LIMIT)
+    .flatMap((item): StoryboardChatConversationMessageForRoute[] => {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) return [];
+      const candidate = item as Record<string, unknown>;
+      const role =
+        candidate.role === 'user' || candidate.role === 'assistant'
+          ? candidate.role
+          : null;
+      const content = sanitizeStatusText(
+        candidate.content,
+        STORYBOARD_CHAT_CONVERSATION_CONTENT_LIMIT,
+      );
+      if (!role || !content) return [];
+      const id = sanitizeStatusText(candidate.id, 80);
+      const createdAt = sanitizeStatusText(candidate.createdAt, 80);
+      return [
+        {
+          role,
+          content,
+          ...(id ? { id } : {}),
+          ...(createdAt ? { createdAt } : {}),
+        },
+      ];
+    });
+
+  return { ok: true, conversationMessages };
 }
 
 function normalizeRouteImageAttachmentName(value: unknown) {
@@ -234,12 +319,37 @@ function isRouteStoryboardGenerationQuestion(message: string) {
   return /[?？]/.test(message) || /(?:얼마나|언제|어떻게|왜|무엇|뭐|뭔가|어디|가능|필요|되나|되나요|돼|돼요|될까|걸려|걸리|알려|설명|방법|하려면|하면\s*돼)/i.test(message);
 }
 
+function hasRouteStoryboardFullGenerationNegation(message: string) {
+  const compact = message.replace(/[\s!?.,。~…]+/g, '').toLowerCase();
+  return (
+    /^(하지마|하지말아|생성하지마|생성하지말아|만들지마|만들지말아|구성하지마|구성하지말아|생성금지|멈춰|중단|stop|cancel)$/.test(compact) ||
+    /(?:스토리보드|컷|cut|장면|구성|흐름|전체)[^.!?\n]{0,36}(?:생성|만들|구성|작성|뽑|실행|반영)\s*지?\s*(?:마|말|말고|마세요|말아|않|안\s*해|금지|중단|멈춰)/i.test(
+      message,
+    )
+  );
+}
+
+function hasRouteStoryboardImageGenerationNegation(message: string) {
+  return (
+    /(?:이미지|컷\s*이미지|스토리보드\s*이미지)[^.!?\n]{0,36}(?:만들|생성|재생성|실행)\s*지?\s*(?:마|말|말고|마세요|말아|않|안\s*해|금지|중단|멈춰|나중)/i.test(
+      message,
+    ) ||
+    /(?:이미지|컷\s*이미지|스토리보드\s*이미지)(?:는|은|를|을)?[^.!?\n]{0,28}(?:나중|다음에|추후|후에|아직)[^.!?\n]{0,28}(?:만들|생성|재생성|실행|하자|할게|해|진행)?/i.test(
+      message,
+    ) ||
+    /(?:이미지|컷\s*이미지|스토리보드\s*이미지)\s*(?:없이|빼고|제외|나중|아직\s*말고|필요\s*없)/i.test(
+      message,
+    )
+  );
+}
+
 function wantsRouteStoryboardGeneration(message: string) {
-  if (/(하지\s*마|생성\s*금지|멈춰)/i.test(message)) return false;
+  if (hasRouteStoryboardFullGenerationNegation(message)) return false;
   const explicitCommand =
     /(?:생성|만들|구성|작성|뽑|실행)\s*(?:해\s*)?(?:줘|주세요|줘요|주라|줘라)/i.test(message) ||
-    /(?:짜\s*줘|짜\s*주세요|만들어\s*(?:줘|주세요|줘요|주라|줘라)|뽑아\s*(?:줘|주세요|줘요|주라|줘라)?)/i.test(message);
+    /(?:짜\s*줘|짜\s*주세요|만들어\s*(?:줘|주세요|줘요|주라|줘라)|뽑아\s*(?:줘|주세요|줘요|주라|줘라)?|반영해\s*(?:줘|주세요|줘요)?)/i.test(message);
   if (explicitCommand) return true;
+  if (hasRouteStoryboardImageGenerationNegation(message)) return false;
   if (isRouteStoryboardGenerationQuestion(message)) return false;
   return (
     /(?:예시\s*만들기|예시\s*(?:보여줘|보여\s*줘|보여주세요)|생성\s*시작|생성\s*실행|스토리보드\s*실행|이미지\s*실행)/i.test(message) ||
@@ -256,10 +366,32 @@ function hasRouteStoryboardMutationCommand(message: string) {
   );
 }
 
+function hasRouteStoryboardDirectPatchCommandLanguage(message: string) {
+  return /(?:수정|변경|바꿔|바꿔줘|고쳐|보완|짧게|줄여|교체|재작성|다시\s*써|반영해|반영해\s*줘)/i.test(
+    message,
+  );
+}
+
 function isRouteStoryboardSuggestionConversation(message: string) {
   if (/(검토|리뷰|평가|피드백)/i.test(message)) return false;
+  if (
+    hasRouteStoryboardDirectPatchCommandLanguage(message) &&
+    !/(?:추천|아이디어|예시|후보|방법|어떻게|어떤|뭐가\s*좋)/i.test(message)
+  ) {
+    return false;
+  }
+  if (
+    /(?:스토리보드|컷|cut|장면|구성|흐름).*(?:생성해|생성\s*해|만들어|구성해|작성해|반영해|짜줘|짜\s*줘|뽑아)/i.test(
+      message,
+    ) ||
+    /(?:생성해|생성\s*해|만들어|구성해|작성해|반영해|짜줘|짜\s*줘|뽑아).*(?:스토리보드|컷|cut|장면|구성|흐름)/i.test(
+      message,
+    )
+  ) {
+    return false;
+  }
   return (
-    /(?:추천|아이디어|메뉴|소재|주제|컨셉|방향|흐름).*(?:해줘|줘|있|좋|어때|뭐|궁금|알려|추천)/i.test(message) ||
+    /(?:추천|아이디어|메뉴|소재|주제|컨셉|방향|흐름|분위기|스타일|톤|무드|레퍼런스|자막|문구|카피|오디오|멘트|대사|나레이션|후킹|훅|샷|장면|비주얼|맛|식감|조명|색감).*(?:해줘|줘|있|좋|어때|뭐|궁금|알려|추천|예시|후보)/i.test(message) ||
     /(?:뭐\s*먹(?:지|을까|으면|을지)?|무슨\s*메뉴|어떤\s*(?:주제|소재|컨셉|방향|흐름)).*(?:좋|추천|있|어때|\?)/i.test(message) ||
     /(?:영상|스토리보드).*(?:어떤|무슨).*(?:흐름|방향).*(?:좋|어때|\?)/i.test(message)
   );
@@ -279,7 +411,7 @@ function isRouteStoryboardFieldQuestion(message: string) {
       message,
     );
   if (directCommand && !explanationIntent) return false;
-  return /(?:자막|subtitle|문구|카피|caption|오디오|멘트|대사|나레이션|이미지|컷|cut|스토리보드|PNG|저장|다운로드|복사|장면|음식|구도|화면|비주얼|리액션|표정|훅)/i.test(message);
+  return /(?:자막|subtitle|문구|카피|caption|오디오|멘트|대사|나레이션|이미지|컷|cut|스토리보드|PNG|저장|다운로드|복사|장면|음식|구도|화면|비주얼|리액션|표정|훅|맛있|먹음직|식감|조명|색감|분위기|톤|무드)/i.test(message);
 }
 
 function isRouteStoryboardReviewRequest(message: string) {
@@ -297,7 +429,15 @@ function isRouteGeneralStoryboardConversationMessage(message: string) {
     return true;
   }
 
-  if (/(뭐\s*할\s*수|무엇을\s*할\s*수|사용법|도움말|도와줘|help|what can you do|how do i use)/i.test(normalized)) {
+  if (/^(멈춰|중단|취소|그만|stop|cancel)$/.test(compact)) {
+    return true;
+  }
+
+  if (/(뭐\s*할\s*수|무엇을\s*할\s*수|사용법|도움말|도와줘|처음(?:인데|이면)?|시작(?:하려면|하는\s*법)?|뭘\s*입력|무슨\s*말|help|what can you do|how do i use)/i.test(normalized)) {
+    return true;
+  }
+
+  if (/(?:오류|에러|실패|안\s*돼|안됨|문제|멈췄|느려|느림|작동|권한|permission|denied|clipboard|클립보드|복사).*(?:왜|뭐|어떻게|가능|해결|확인|알려|설명|\?)/i.test(normalized)) {
     return true;
   }
 
@@ -407,6 +547,48 @@ function getResolvedStatusMessage(
   return `${intent} 작업으로 이해했어요. ${scope} 기준으로 화면에 반영할게요.`;
 }
 
+function getRouteAgentTraceDetail(result: StoryboardChatAgentResultForRoute) {
+  const diagnostics = result.backendAgent.diagnostics;
+  const intent = sanitizeStatusText(diagnostics.chatIntent, 40) || 'unknown';
+  const imageAction =
+    sanitizeStatusText(diagnostics.imageGenerationAction, 40) ||
+    (result.shouldGenerateImages === false
+      ? 'skip_images'
+      : result.shouldGenerate
+        ? 'generate_images'
+        : 'no_image_action');
+  const turnCount = Number(diagnostics.conversationTurnCount);
+  return [
+    `의도 ${intent}`,
+    `이미지 단계 ${imageAction}`,
+    Number.isFinite(turnCount) && turnCount > 0
+      ? `최근 대화 ${Math.trunc(turnCount)}개 반영`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
+
+function getRouteDecisionTraceDetail(result: StoryboardChatAgentResultForRoute) {
+  const patch = result.canvasPatch;
+  if (result.shouldReset) return '입력 상태를 초기화하는 요청으로 분류';
+  if (result.shouldGenerate) {
+    return result.shouldGenerateImages === false
+      ? `${patch.segmentCount}컷 구성 생성 · CUT 이미지는 사용자 요청으로 생략`
+      : `${patch.segmentCount}컷 구성 생성 · 이후 CUT 이미지 생성 단계로 연결`;
+  }
+  if (patch.scenePatch?.regenerateImage) {
+    return `CUT ${String(patch.scenePatch.sceneNo).padStart(2, '0')} 이미지 재생성`;
+  }
+  if (patch.scenePatch) {
+    return `CUT ${String(patch.scenePatch.sceneNo).padStart(2, '0')} 멘트·자막·구도 보정`;
+  }
+  if (patch.focusSceneNo) {
+    return `CUT ${String(patch.focusSceneNo).padStart(2, '0')} 화면 이동`;
+  }
+  return '대화 답변 또는 현재 화면 검토';
+}
+
 export async function POST(request: NextRequest) {
   const auth = await requireAdmin({ allowDevAdminBypassCookie: true });
   if (!auth.ok) return auth.response;
@@ -425,6 +607,16 @@ export async function POST(request: NextRequest) {
       imageAttachmentResult.detail,
     );
   }
+  const conversationMessageResult = normalizeRouteConversationMessages(
+    (payload as { conversationMessages?: unknown }).conversationMessages,
+  );
+  if (!conversationMessageResult.ok) {
+    return jsonError(
+      conversationMessageResult.error,
+      conversationMessageResult.status,
+      conversationMessageResult.detail,
+    );
+  }
   const message = (payload as { message?: unknown }).message;
   const normalizedMessage = typeof message === 'string' ? message.trim() : '';
   if (!normalizedMessage && imageAttachmentResult.attachments.length === 0) {
@@ -434,6 +626,7 @@ export async function POST(request: NextRequest) {
     ...(payload as StoryboardChatPayload),
     message: normalizedMessage || STORYBOARD_CHAT_IMAGE_ATTACHMENT_ONLY_MESSAGE,
     imageAttachments: imageAttachmentResult.attachments,
+    conversationMessages: conversationMessageResult.conversationMessages,
   };
 
   const encoder = new TextEncoder();
@@ -444,26 +637,68 @@ export async function POST(request: NextRequest) {
       };
 
       try {
+        sendTrace(send, {
+          id: 'route-received',
+          label: '서버 요청 수신',
+          status: 'done',
+          detail: getRouteRequestSummary(normalizedPayload),
+        });
         for (const statusMessage of getInitialStatusMessages(normalizedPayload)) {
           send('status', { message: statusMessage });
         }
         if (shouldSkipLocalStoryboardBackendAgentOnVercel()) {
           throw new Error('Vercel production does not include the local storyboard backend agent. Configure STORYBOARD_AGENT_COMMAND to enable storyboard chat.');
         }
+        sendTrace(send, {
+          id: 'route-agent',
+          label: '채팅 에이전트 실행',
+          status: 'running',
+          detail: '의도 분류, 화면 반영안, 이미지 생성 여부를 계산 중',
+        });
         const { generateStoryboardChatWithBackendAgent } = await import('@/lib/admin/storyboard/backend-agent');
         const result = await generateStoryboardChatWithBackendAgent(
           normalizedPayload as Parameters<typeof generateStoryboardChatWithBackendAgent>[0],
           process.env,
         ) as StoryboardChatAgentResultForRoute;
         const publicResult = toPublicStoryboardChatAgentResult(result);
+        sendTrace(send, {
+          id: 'route-agent',
+          label: '채팅 에이전트 실행',
+          status: 'done',
+          detail: getRouteAgentTraceDetail(result),
+        });
+        sendTrace(send, {
+          id: 'route-decision',
+          label: '화면 반영 결정',
+          status: 'done',
+          detail: getRouteDecisionTraceDetail(result),
+        });
         if (isAnswerOnlyResult(result)) {
+          sendTrace(send, {
+            id: 'route-answer-stream',
+            label: '답변 스트리밍',
+            status: 'running',
+            detail: '대화형 답변을 말풍선에 순차 표시',
+          });
           await streamConversationMessage(send, result.assistantMessage);
+          sendTrace(send, {
+            id: 'route-answer-stream',
+            label: '답변 스트리밍',
+            status: 'done',
+            detail: '대화형 답변 표시 완료',
+          });
         } else {
           send('status', { message: getResolvedStatusMessage(result) });
         }
         send('patch', publicResult);
         send('done', publicResult);
       } catch (error) {
+        sendTrace(send, {
+          id: 'route-agent',
+          label: '채팅 에이전트 실행',
+          status: 'failed',
+          detail: error instanceof Error ? error.message : '채팅 처리 실패',
+        });
         send('error', normalizeRouteError(error));
       } finally {
         controller.close();
