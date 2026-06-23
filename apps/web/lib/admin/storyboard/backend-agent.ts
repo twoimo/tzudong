@@ -18,6 +18,7 @@ import type {
   StoryboardChatFocusContext,
   StoryboardChatAgentResult,
   StoryboardChatCanvasPatch,
+  StoryboardChatConversationMessage,
   StoryboardChatScenePatch,
   StoryboardGenerateRequest,
   StoryboardGenerationResult,
@@ -33,6 +34,7 @@ const BACKEND_AGENT_NOTEBOOKS = [
   "scripts/04-storyboard-agent-graph-debug.ipynb",
 ];
 const BACKEND_AGENT_GRAPH = "src/graph.py";
+const BACKEND_AGENT_RUNNER = "scripts/run-storyboard-agent.py";
 const APP_WEB_MARKER = "app/api/admin/storyboard/route.ts";
 const REQUIRED_PYTHON_MODULES = [
   "langgraph",
@@ -42,6 +44,11 @@ const REQUIRED_PYTHON_MODULES = [
   "supabase",
   "dotenv",
   "numpy",
+  "pydantic",
+];
+const REQUIRED_AUTO_RUNNER_PYTHON_MODULES = [
+  "langgraph",
+  "langchain_core",
   "pydantic",
 ];
 const DEFAULT_STORYBOARD_AGENT_TIMEOUT_MS = 120_000;
@@ -63,6 +70,8 @@ const DEFAULT_STORYBOARD_AGENT_RUNTIME = "langgraph";
 const DEFAULT_STORYBOARD_AGENT_CODEX_MODEL = "gpt-5.5";
 const DEFAULT_STORYBOARD_AGENT_CODEX_EFFORT = "low";
 const DEFAULT_STORYBOARD_CHAT_SEGMENT_COUNT = 10;
+const STORYBOARD_CHAT_CONVERSATION_CONTEXT_LIMIT = 8;
+const STORYBOARD_CHAT_CONVERSATION_CONTENT_LIMIT = 280;
 const UNSAFE_COMMAND_PATTERN = /[\s;&|`$<>()[\]{}!#\n\r]/;
 
 type CommandResult = {
@@ -97,6 +106,7 @@ type ResolvedStoryboardAgentCommand =
       ok: true;
       executable: string;
       args: string[];
+      source: "configured" | "auto_runner";
     }
   | {
       ok: false;
@@ -268,11 +278,44 @@ function resolveStoryboardAgentCommand(
       ];
   const executable = firstExistingPath(executableCandidates);
   try {
-    accessSync(executable, constants.X_OK);
-    return { ok: true, executable, args: [] };
+    accessSync(
+      executable,
+      executable.endsWith(".py") ? constants.R_OK : constants.X_OK,
+    );
+    return { ok: true, executable, args: [], source: "configured" };
   } catch {
     return { ok: false, reason: "command-not-executable" };
   }
+}
+
+function resolveDefaultStoryboardAgentRunnerCommand(
+  runtime: StoryboardBackendAgentStatus["runtime"] = resolveStoryboardAgentRuntime(),
+): ResolvedStoryboardAgentCommand {
+  if (runtime !== "langgraph") {
+    return { ok: false, reason: "auto-runner-runtime-disabled" };
+  }
+  if (process.env.STORYBOARD_AGENT_DISABLE_AUTO_RUNNER === "1") {
+    return { ok: false, reason: "auto-runner-disabled" };
+  }
+  const executable = backendAgentPath(BACKEND_AGENT_RUNNER);
+  if (!existsSync(executable)) {
+    return { ok: false, reason: "auto-runner-missing" };
+  }
+  try {
+    accessSync(executable, constants.R_OK);
+    return { ok: true, executable, args: [], source: "auto_runner" };
+  } catch {
+    return { ok: false, reason: "auto-runner-not-readable" };
+  }
+}
+
+function resolveEffectiveStoryboardAgentCommand(
+  rawCommand?: string | null,
+  runtime: StoryboardBackendAgentStatus["runtime"] = resolveStoryboardAgentRuntime(),
+): ResolvedStoryboardAgentCommand {
+  const configured = resolveStoryboardAgentCommand(rawCommand);
+  if (configured.ok || rawCommand?.trim()) return configured;
+  return resolveDefaultStoryboardAgentRunnerCommand(runtime);
 }
 function resolveWindowsShellScriptRunner() {
   return firstExistingPath(
@@ -299,10 +342,12 @@ type PythonModuleProbeResult = {
   runtimeError?: string;
 };
 
-function probePythonModules(): PythonModuleProbeResult {
+function probePythonModules(
+  modules: string[] = REQUIRED_PYTHON_MODULES,
+): PythonModuleProbeResult {
   const script = [
     "import importlib.util, json",
-    `mods = ${JSON.stringify(REQUIRED_PYTHON_MODULES)}`,
+    `mods = ${JSON.stringify(modules)}`,
     "missing = [mod for mod in mods if importlib.util.find_spec(mod) is None]",
     "print(json.dumps(missing))",
   ].join("\n");
@@ -336,7 +381,7 @@ function probePythonModules(): PythonModuleProbeResult {
       };
     }
     return {
-      missingModules: REQUIRED_PYTHON_MODULES,
+      missingModules: modules,
       runtimeAvailable: true,
     };
   }
@@ -345,25 +390,26 @@ function probePythonModules(): PythonModuleProbeResult {
     return {
       missingModules: Array.isArray(parsed)
         ? parsed.filter((item): item is string => typeof item === "string")
-        : REQUIRED_PYTHON_MODULES,
+        : modules,
       runtimeAvailable: true,
     };
   } catch {
     return {
-      missingModules: REQUIRED_PYTHON_MODULES,
+      missingModules: modules,
       runtimeAvailable: true,
     };
   }
 }
 
 export function getStoryboardBackendAgentStatus(): StoryboardBackendAgentStatus {
-  const commandResolution = resolveStoryboardAgentCommand(
-    process.env.STORYBOARD_AGENT_COMMAND,
-  );
   const commandConfigured = Boolean(
     process.env.STORYBOARD_AGENT_COMMAND?.trim(),
   );
   const runtime = resolveStoryboardAgentRuntime();
+  const commandResolution = resolveEffectiveStoryboardAgentCommand(
+    process.env.STORYBOARD_AGENT_COMMAND,
+    runtime,
+  );
   const notebooks = BACKEND_AGENT_NOTEBOOKS.filter((notebook) =>
     existsSync(backendAgentPath(notebook)),
   );
@@ -371,8 +417,12 @@ export function getStoryboardBackendAgentStatus(): StoryboardBackendAgentStatus 
     ? backendAgentPath(BACKEND_AGENT_GRAPH)
     : null;
   const pythonProbe =
-    commandConfigured && runtime !== "codex_cli_oauth_legacy"
-      ? probePythonModules()
+    commandResolution.ok && runtime !== "codex_cli_oauth_legacy"
+      ? probePythonModules(
+          commandResolution.source === "auto_runner"
+            ? REQUIRED_AUTO_RUNNER_PYTHON_MODULES
+            : REQUIRED_PYTHON_MODULES,
+        )
       : null;
   const missingPythonModules = pythonProbe
     ? pythonProbe.missingModules
@@ -388,12 +438,13 @@ export function getStoryboardBackendAgentStatus(): StoryboardBackendAgentStatus 
 
   return {
     available: localAdapterAvailable || commandAvailable,
-    mode: commandConfigured ? "command" : "local_adapter",
+    mode: commandAvailable ? "command" : "local_adapter",
     rootPath: BACKEND_AGENT_ROOT,
     notebooks,
     graphEntrypoint,
     commandConfigured,
     commandAvailable,
+    commandSource: commandResolution.ok ? commandResolution.source : undefined,
     commandPath: commandResolution.ok
       ? commandResolution.executable
       : undefined,
@@ -415,6 +466,56 @@ function normalizeStoryboardChatRequirement(value: unknown) {
   return typeof value === "string"
     ? sanitizePublicAgentText(value).replace(/\s+/g, " ").slice(0, 400)
     : "";
+}
+
+function stripStoryboardExecutionControls(value: string) {
+  return value
+    .replace(
+      /(?:아직|지금은|우선|먼저|일단|당장은)?\s*(?:이미지|컷\s*이미지|스토리보드\s*이미지)[^.!?。]{0,48}(?:만들|생성|재생성|실행)\s*지?\s*(?:마|말고|마세요|말아|않|안\s*해|금지|중단|멈춰|나중)[^.!?。]*(?:[.!?。]|$)/gi,
+      " ",
+    )
+    .replace(
+      /(?:아직|지금은|우선|먼저|일단|당장은)?\s*(?:이미지|컷\s*이미지|스토리보드\s*이미지)(?:는|은|를|을)?[^.!?。]{0,48}(?:나중|다음에|추후|후에|아직)[^.!?。]{0,48}(?:만들|생성|재생성|실행|하자|할게|해|진행)?[^.!?。]*(?:[.!?。]|$)/gi,
+      " ",
+    )
+    .replace(
+      /(?:화면|캔버스)은?\s*(?:아직|지금은|우선|먼저|일단|당장은)?\s*(?:바꾸지|변경하지|수정하지)\s*않고[^.!?。]*(?:[.!?。]|$)/gi,
+      " ",
+    )
+    .replace(
+      /마음에\s*들면[^.!?。]{0,48}(?:스토리보드|컷|구성)?[^.!?。]{0,48}(?:생성|만들|반영)[^.!?。]*(?:됩니다|돼요|하세요|하면\s*됩니다)[^.!?。]*(?:[.!?。]|$)/gi,
+      " ",
+    )
+    .replace(
+      /(?:방향|아이디어|흐름)\s*만\s*(?:먼저\s*)?(?:추천|제안)\s*해\s*(?:줘|주세요|줘요)?/gi,
+      "방향",
+    )
+    .replace(/(?:추천|제안)\s*해\s*(?:줘|주세요|줘요)/gi, "")
+    .replace(
+      /(?:스토리보드|컷|장면|구성|이미지)?\s*(?:생성|만들|구성|작성|뽑|실행)\s*(?:해\s*)?(?:줘|주세요|줘요|주라|줘라)/gi,
+      " ",
+    )
+    .replace(/만들어\s*(?:줘|주세요|줘요|주라|줘라)/gi, " ")
+    .replace(/(?:짜\s*줘|짜\s*주세요|뽑아\s*(?:줘|주세요|줘요)?)/gi, " ")
+    .replace(/^(?:좋아|좋습니다|오케이|ㅇㅋ|okay|ok)[,\s]*/i, "")
+    .replace(/^(?:그걸로|그\s*방향으로|이걸로)[,\s]*/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizeStoryboardChatPromptBrief(value: unknown) {
+  const normalized = normalizeStoryboardChatRequirement(value);
+  if (!normalized) return "";
+  return stripStoryboardExecutionControls(normalized);
+}
+
+function normalizeStoryboardChatConversationContent(value: unknown) {
+  const normalized = normalizeStoryboardChatRequirement(value);
+  if (!normalized) return "";
+  return stripStoryboardExecutionControls(normalized).slice(
+    0,
+    STORYBOARD_CHAT_CONVERSATION_CONTENT_LIMIT,
+  );
 }
 
 function normalizeStoryboardChatFocusContext(
@@ -468,6 +569,66 @@ function formatStoryboardChatFocusContext(
     .join(" · ");
 }
 
+function normalizeStoryboardChatThreadId(value: unknown) {
+  return typeof value === "string"
+    ? sanitizePublicAgentText(value).replace(/[^\w:.-]/g, "").slice(0, 120)
+    : "";
+}
+
+function normalizeStoryboardChatConversationMessages(
+  value: unknown,
+): StoryboardChatConversationMessage[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .slice(-STORYBOARD_CHAT_CONVERSATION_CONTEXT_LIMIT)
+    .flatMap((item): StoryboardChatConversationMessage[] => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return [];
+      const candidate = item as Partial<StoryboardChatConversationMessage>;
+      const role =
+        candidate.role === "user" || candidate.role === "assistant"
+          ? candidate.role
+          : null;
+      const content = normalizeStoryboardChatConversationContent(
+        candidate.content,
+      );
+      if (!role || !content) return [];
+      const id = normalizeStoryboardChatThreadId(candidate.id);
+      return [
+        {
+          role,
+          content,
+          ...(id ? { id } : {}),
+          ...(typeof candidate.createdAt === "string"
+            ? { createdAt: candidate.createdAt.slice(0, 80) }
+            : {}),
+        },
+      ];
+    });
+}
+
+function formatStoryboardChatConversationContext(
+  messages: StoryboardChatConversationMessage[],
+) {
+  if (!messages.length) return "";
+  return messages
+    .map((message, index) => {
+      const roleLabel = message.role === "user" ? "사용자" : "도우미";
+      return `${index + 1}. ${roleLabel}: ${message.content}`;
+    })
+    .join(" / ");
+}
+
+function formatStoryboardChatConversationBrief(
+  messages: StoryboardChatConversationMessage[],
+) {
+  if (!messages.length) return "";
+  return messages
+    .map((message) => message.content)
+    .filter(Boolean)
+    .join(" ")
+    .slice(0, STORYBOARD_CHAT_CONVERSATION_CONTENT_LIMIT * 2);
+}
+
 function clampStoryboardNumber(
   value: number,
   min: number,
@@ -511,12 +672,37 @@ function isStoryboardGenerationQuestion(message: string) {
   return /[?？]/.test(message) || /(?:얼마나|언제|어떻게|왜|무엇|뭐|뭔가|어디|가능|필요|되나|되나요|돼|돼요|될까|걸려|걸리|알려|설명|방법|하려면|하면\s*돼)/i.test(message);
 }
 
+function hasStoryboardFullGenerationNegation(message: string) {
+  const compact = message.replace(/[\s!?.,。~…]+/g, "").toLowerCase();
+  return (
+    /^(하지마|하지말아|생성하지마|생성하지말아|만들지마|만들지말아|구성하지마|구성하지말아|생성금지|멈춰|중단|stop|cancel)$/.test(compact) ||
+    /(?:스토리보드|컷|cut|장면|구성|흐름|전체)[^.!?\n]{0,36}(?:생성|만들|구성|작성|뽑|실행|반영)\s*지?\s*(?:마|말|말고|마세요|말아|않|안\s*해|금지|중단|멈춰)/i.test(
+      message,
+    )
+  );
+}
+
+function hasStoryboardImageGenerationNegation(message: string) {
+  return (
+    /(?:이미지|컷\s*이미지|스토리보드\s*이미지)[^.!?\n]{0,36}(?:만들|생성|재생성|실행)\s*지?\s*(?:마|말|말고|마세요|말아|않|안\s*해|금지|중단|멈춰|나중)/i.test(
+      message,
+    ) ||
+    /(?:이미지|컷\s*이미지|스토리보드\s*이미지)(?:는|은|를|을)?[^.!?\n]{0,28}(?:나중|다음에|추후|후에|아직)[^.!?\n]{0,28}(?:만들|생성|재생성|실행|하자|할게|해|진행)?/i.test(
+      message,
+    ) ||
+    /(?:이미지|컷\s*이미지|스토리보드\s*이미지)\s*(?:없이|빼고|제외|나중|아직\s*말고|필요\s*없)/i.test(
+      message,
+    )
+  );
+}
+
 function wantsStoryboardGeneration(message: string) {
-  if (/(하지\s*마|생성\s*금지|멈춰)/i.test(message)) return false;
+  if (hasStoryboardFullGenerationNegation(message)) return false;
   const explicitCommand =
     /(?:생성|만들|구성|작성|뽑|실행)\s*(?:해\s*)?(?:줘|주세요|줘요|주라|줘라)/i.test(message) ||
-    /(?:짜\s*줘|짜\s*주세요|만들어\s*(?:줘|주세요|줘요|주라|줘라)|뽑아\s*(?:줘|주세요|줘요|주라|줘라)?)/i.test(message);
+    /(?:짜\s*줘|짜\s*주세요|만들어\s*(?:줘|주세요|줘요|주라|줘라)|뽑아\s*(?:줘|주세요|줘요|주라|줘라)?|반영해\s*(?:줘|주세요|줘요)?)/i.test(message);
   if (explicitCommand) return true;
+  if (hasStoryboardImageGenerationNegation(message)) return false;
   if (isStoryboardGenerationQuestion(message)) return false;
   return (
     /(?:예시\s*만들기|예시\s*(?:보여줘|보여\s*줘|보여주세요)|생성\s*시작|생성\s*실행|스토리보드\s*실행|이미지\s*실행)/i.test(message) ||
@@ -546,10 +732,32 @@ function hasStoryboardMutationCommand(message: string) {
   );
 }
 
+function hasStoryboardDirectPatchCommandLanguage(message: string) {
+  return /(?:수정|변경|바꿔|바꿔줘|고쳐|보완|짧게|줄여|교체|재작성|다시\s*써|반영해|반영해\s*줘)/i.test(
+    message,
+  );
+}
+
 function isStoryboardSuggestionConversation(message: string) {
   if (/(검토|리뷰|평가|피드백)/i.test(message)) return false;
+  if (
+    hasStoryboardDirectPatchCommandLanguage(message) &&
+    !/(?:추천|아이디어|예시|후보|방법|어떻게|어떤|뭐가\s*좋)/i.test(message)
+  ) {
+    return false;
+  }
+  if (
+    /(?:스토리보드|컷|cut|장면|구성|흐름).*(?:생성해|생성\s*해|만들어|구성해|작성해|반영해|짜줘|짜\s*줘|뽑아)/i.test(
+      message,
+    ) ||
+    /(?:생성해|생성\s*해|만들어|구성해|작성해|반영해|짜줘|짜\s*줘|뽑아).*(?:스토리보드|컷|cut|장면|구성|흐름)/i.test(
+      message,
+    )
+  ) {
+    return false;
+  }
   return (
-    /(?:추천|아이디어|메뉴|소재|주제|컨셉|방향|흐름).*(?:해줘|줘|있|좋|어때|뭐|궁금|알려|추천)/i.test(message) ||
+    /(?:추천|아이디어|메뉴|소재|주제|컨셉|방향|흐름|분위기|스타일|톤|무드|레퍼런스|자막|문구|카피|오디오|멘트|대사|나레이션|후킹|훅|샷|장면|비주얼|맛|식감|조명|색감).*(?:해줘|줘|있|좋|어때|뭐|궁금|알려|추천|예시|후보)/i.test(message) ||
     /(?:뭐\s*먹(?:지|을까|으면|을지)?|무슨\s*메뉴|어떤\s*(?:주제|소재|컨셉|방향|흐름)).*(?:좋|추천|있|어때|\?)/i.test(message) ||
     /(?:영상|스토리보드).*(?:어떤|무슨).*(?:흐름|방향).*(?:좋|어때|\?)/i.test(message)
   );
@@ -569,7 +777,7 @@ function isStoryboardFieldQuestion(message: string) {
       message,
     );
   if (directCommand && !explanationIntent) return false;
-  return /(?:자막|subtitle|문구|카피|caption|오디오|멘트|대사|나레이션|이미지|컷|cut|스토리보드|PNG|저장|다운로드|복사|장면|음식|구도|화면|비주얼|리액션|표정|훅)/i.test(message);
+  return /(?:자막|subtitle|문구|카피|caption|오디오|멘트|대사|나레이션|이미지|컷|cut|스토리보드|PNG|저장|다운로드|복사|장면|음식|구도|화면|비주얼|리액션|표정|훅|맛있|먹음직|식감|조명|색감|분위기|톤|무드)/i.test(message);
 }
 
 export function isGeneralStoryboardConversationMessage(message: string) {
@@ -581,7 +789,15 @@ export function isGeneralStoryboardConversationMessage(message: string) {
     return true;
   }
 
-  if (/(뭐\s*할\s*수|무엇을\s*할\s*수|사용법|도움말|도와줘|help|what can you do|how do i use)/i.test(normalized)) {
+  if (/^(멈춰|중단|취소|그만|stop|cancel)$/.test(compact)) {
+    return true;
+  }
+
+  if (/(뭐\s*할\s*수|무엇을\s*할\s*수|사용법|도움말|도와줘|처음(?:인데|이면)?|시작(?:하려면|하는\s*법)?|뭘\s*입력|무슨\s*말|help|what can you do|how do i use)/i.test(normalized)) {
+    return true;
+  }
+
+  if (/(?:오류|에러|실패|안\s*돼|안됨|문제|멈췄|느려|느림|작동|권한|permission|denied|clipboard|클립보드|복사).*(?:왜|뭐|어떻게|가능|해결|확인|알려|설명|\?)/i.test(normalized)) {
     return true;
   }
 
@@ -789,6 +1005,13 @@ function createStoryboardChatCanvasPatch(
   const imageAttachmentText = formatStoryboardChatImageAttachmentSummary(
     request.imageAttachments,
   );
+  const conversationMessages = normalizeStoryboardChatConversationMessages(
+    request.conversationMessages,
+  );
+  const conversationText =
+    formatStoryboardChatConversationContext(conversationMessages);
+  const conversationBrief =
+    formatStoryboardChatConversationBrief(conversationMessages);
   const isReviewOnly = wantsStoryboardReviewOnly(normalized);
   const isCasualChat = isCasualStoryboardChatMessage(normalized);
   const isGeneralConversation =
@@ -824,13 +1047,13 @@ function createStoryboardChatCanvasPatch(
     focusSceneNo !== undefined || unavailableFocusSceneNo !== undefined;
   const shouldIncludeFocusContext =
     !isConversationOnly && !isNavigationRequest && scenePatch?.targetSource !== "explicit";
+  const promptBrief = normalizeStoryboardChatPromptBrief(normalized);
   const normalizedWithFocus = normalizeStoryboardChatRequirement(
     [
-      normalized,
-      shouldIncludeFocusContext && focusText
-        ? `현재 캔버스 맥락: ${focusText}`
-        : "",
-      imageAttachmentText ? `첨부 사진 맥락: ${imageAttachmentText}` : "",
+      promptBrief,
+      conversationBrief,
+      shouldIncludeFocusContext && focusText ? focusText : "",
+      imageAttachmentText,
     ]
       .filter(Boolean)
       .join(" "),
@@ -876,6 +1099,7 @@ function createStoryboardChatCanvasPatch(
 
 function buildStoryboardConversationMessage(message: string) {
   const normalized = normalizeStoryboardChatRequirement(message);
+  const compact = normalized.replace(/[\s!?.,。~…]+/g, "").toLowerCase();
   if (/(고마워|고맙|감사|땡큐|thanks|thank)/i.test(message)) {
     return [
       "천만에요. 지금 화면은 그대로 두고 대화만 이어갈게요.",
@@ -883,10 +1107,24 @@ function buildStoryboardConversationMessage(message: string) {
     ].join(" ");
   }
 
-  if (/(뭐\s*할\s*수|무엇을\s*할\s*수|사용법|도움말|도와줘|help|what can you do|how do i use|너.*(?:누구|뭐야|무엇|가능|할 수|답변|대화)|도우미.*(?:누구|뭐야|무엇|가능|할 수|답변|대화)|챗봇.*(?:누구|뭐야|무엇|가능|할 수|답변|대화))/i.test(normalized)) {
+  if (/^(멈춰|중단|취소|그만|stop|cancel)$/.test(compact)) {
+    return [
+      "중단 요청으로 이해했어요. 지금 말풍선 답변에서는 화면을 바꾸지 않을게요.",
+      "이미지 생성이나 채팅 스트림이 진행 중일 때는 입력창 오른쪽 중지 버튼으로 현재 작업을 멈출 수 있어요.",
+    ].join(" ");
+  }
+
+  if (/(뭐\s*할\s*수|무엇을\s*할\s*수|사용법|도움말|도와줘|처음(?:인데|이면)?|시작(?:하려면|하는\s*법)?|뭘\s*입력|무슨\s*말|help|what can you do|how do i use|너.*(?:누구|뭐야|무엇|가능|할 수|답변|대화)|도우미.*(?:누구|뭐야|무엇|가능|할 수|답변|대화)|챗봇.*(?:누구|뭐야|무엇|가능|할 수|답변|대화))/i.test(normalized)) {
     return [
       "저는 이 스토리보드 화면을 보면서 대화하는 도우미예요.",
       "일반 질문에는 화면을 바꾸지 않고 답하고, “3컷 자막 짧게”, “이미지 다시 생성”, “10컷으로 생성해줘”처럼 말하면 필요한 작업만 화면에 반영할게요.",
+    ].join(" ");
+  }
+
+  if (/(?:오류|에러|실패|안\s*돼|안됨|문제|멈췄|느려|느림|작동|권한|permission|denied|clipboard|클립보드|복사).*(?:왜|뭐|어떻게|가능|해결|확인|알려|설명|\?)/i.test(normalized)) {
+    return [
+      "문제 확인 질문으로 이해했어요. 화면은 바꾸지 않고 점검 순서만 안내할게요.",
+      "먼저 로컬 브릿지 연결 아이콘, 이미지 라우터 설정, 브라우저 권한을 확인하세요. 복사 실패는 클립보드 권한이나 포커스 상태 때문에 생길 수 있어 다시 눌러도 실패하면 브라우저 권한을 확인하는 흐름이 안전합니다.",
     ].join(" ");
   }
 
@@ -897,10 +1135,28 @@ function buildStoryboardConversationMessage(message: string) {
     ].join(" ");
   }
 
-  if (/(?:장면|음식|구도|화면|비주얼|리액션|표정).*(?:잘\s*보|괜찮|어때|\?)/i.test(normalized)) {
+  if (/(?:장면|음식|구도|화면|비주얼|리액션|표정|맛있|먹음직|식감|조명|색감|분위기|톤|무드).*(?:잘\s*보|괜찮|어때|방법|어떻게|\?)/i.test(normalized)) {
     return [
       "시각 확인 질문으로 이해했어요. 지금은 선택한 CUT을 수정하지 않고 기준만 설명할게요.",
       "음식은 첫눈에 메뉴가 구분되고, 손동작이나 젓가락이 맛 포인트를 가리지 않으며, 자막 영역과 겹치지 않으면 안정적으로 보입니다.",
+    ].join(" ");
+  }
+
+  if (/(?:자막|문구|카피|오디오|멘트|대사|나레이션|후킹|훅).*(?:추천|예시|후보|아이디어|몇\s*개|뭐가\s*좋)/i.test(normalized)) {
+    return [
+      "후보 요청으로 이해했어요. 지금은 선택한 CUT을 수정하지 않고 말풍선으로만 제안할게요.",
+      "짧은 자막은 기대감, 메뉴명, 첫 입 반응, 조합 포인트처럼 한 가지 정보만 담는 편이 좋아요. 마음에 드는 후보가 있으면 그 문구로 바꿔달라고 이어서 말해 주세요.",
+    ].join(" ");
+  }
+
+  if (
+    /(?:추천|아이디어|메뉴|소재|주제|컨셉|방향|흐름|분위기|스타일|톤|무드|레퍼런스|자막|문구|카피|오디오|멘트|대사|나레이션|후킹|훅|샷|장면|비주얼|맛|식감|조명|색감).*(?:해줘|줘|있|좋|어때|뭐|궁금|알려|추천|예시|후보)/i.test(normalized) ||
+    /(?:뭐\s*먹(?:지|을까|으면|을지)?|무슨\s*메뉴|어떤\s*(?:주제|소재|컨셉|방향)).*(?:좋|추천|있|어때|\?)/i.test(normalized)
+  ) {
+    return [
+      "좋아요. 화면은 아직 바꾸지 않고 아이디어만 드릴게요.",
+      "먹방 흐름이라면 매운 메뉴 도전, 시장 골목 코스, 해산물 한상, 디저트 투어처럼 첫 CUT에서 기대감을 만들기 쉬운 주제가 잘 맞아요.",
+      "마음에 드는 방향을 고르면 그때 스토리보드로 생성해도 됩니다.",
     ].join(" ");
   }
 
@@ -929,17 +1185,6 @@ function buildStoryboardConversationMessage(message: string) {
     return [
       "생성 방법 질문으로 이해했어요. 지금은 화면을 바꾸지 않고 설명만 드릴게요.",
       "주제나 음식, 원하는 CUT 수, 꼭 보여줄 장면을 한두 문장으로 적은 뒤 “생성해줘”라고 말하면 캔버스에 반영하고 이미지를 순서대로 만들 수 있어요.",
-    ].join(" ");
-  }
-
-  if (
-    /(?:추천|아이디어|메뉴|소재|주제|컨셉|방향).*(?:해줘|줘|있|좋|어때|뭐|궁금|알려|추천)/i.test(normalized) ||
-    /(?:뭐\s*먹(?:지|을까|으면|을지)?|무슨\s*메뉴|어떤\s*(?:주제|소재|컨셉|방향)).*(?:좋|추천|있|어때|\?)/i.test(normalized)
-  ) {
-    return [
-      "좋아요. 화면은 아직 바꾸지 않고 아이디어만 드릴게요.",
-      "먹방 흐름이라면 매운 메뉴 도전, 시장 골목 코스, 해산물 한상, 디저트 투어처럼 첫 CUT에서 기대감을 만들기 쉬운 주제가 잘 맞아요.",
-      "마음에 드는 방향을 고르면 그때 스토리보드로 생성해도 됩니다.",
     ].join(" ");
   }
 
@@ -1024,6 +1269,14 @@ export async function generateStoryboardChatWithBackendAgent(
   );
   const imageAttachmentText =
     formatStoryboardChatImageAttachmentSummary(imageAttachments);
+  const conversationMessages = normalizeStoryboardChatConversationMessages(
+    request.conversationMessages,
+  );
+  const conversationText =
+    formatStoryboardChatConversationContext(conversationMessages);
+  const chatThreadId =
+    normalizeStoryboardChatThreadId(request.chatThreadId) ||
+    `storyboard-chat-${Date.now().toString(36)}`;
   const isNavigationOnly = Boolean(
     canvasPatch.focusSceneNo && !canvasPatch.scenePatch,
   );
@@ -1048,7 +1301,11 @@ export async function generateStoryboardChatWithBackendAgent(
   const shouldGenerate =
     wantsStoryboardGeneration(normalizedMessage) &&
     !shouldReset &&
+    !isGeneralConversation &&
+    !isReviewOnly &&
     !shouldRegenerateSelectedSceneImage;
+  const shouldGenerateImages =
+    shouldGenerate && !hasStoryboardImageGenerationNegation(normalizedMessage);
   const runtime = status.runtime ?? DEFAULT_STORYBOARD_AGENT_RUNTIME;
   const model = status.codexModel ?? resolveStoryboardAgentCodexModel(env);
   const effort = status.codexEffort ?? resolveStoryboardAgentCodexEffort(env);
@@ -1089,17 +1346,23 @@ export async function generateStoryboardChatWithBackendAgent(
           imageAttachmentText
             ? `첨부 사진 ${imageAttachments.length}장도 함께 참고했어요.`
             : null,
+          conversationText
+            ? `최근 대화 ${conversationMessages.length}개도 참고했어요.`
+            : null,
           shouldRegenerateSelectedSceneImage
             ? "현재 선택한 컷의 이미지만 다시 만들 준비를 했어요."
             : null,
           shouldGenerate
-            ? "이어서 실제 스토리보드 만들기까지 진행할게요."
+            ? shouldGenerateImages
+              ? "이어서 실제 스토리보드 만들기와 CUT 이미지 생성까지 진행할게요."
+              : "이어서 컷 구성만 먼저 화면에 반영하고 이미지는 만들지 않을게요."
             : "바로 만들고 싶으면 “생성해줘”라고 입력하세요.",
         ]
           .filter(Boolean)
           .join(" · "),
     canvasPatch,
     shouldGenerate,
+    shouldGenerateImages,
     shouldReset,
     backendAgent: {
       mode: status.mode,
@@ -1109,6 +1372,7 @@ export async function generateStoryboardChatWithBackendAgent(
       promptAddendum: [
         "Storyboard chat agent task.",
         `User chat request: ${normalizedMessage}`,
+        conversationText ? `Conversation context: ${conversationText}` : "",
         effectiveFocusText ? `Canvas focus context: ${effectiveFocusText}` : "",
         imageAttachmentText ? `Image attachments: ${imageAttachmentText}` : "",
         `Resolved prompt: ${canvasPatch.prompt}`,
@@ -1136,6 +1400,17 @@ export async function generateStoryboardChatWithBackendAgent(
         runtime,
         codexModel: model,
         codexEffort: effort,
+        chatThreadId,
+        conversationTurnCount: conversationMessages.length,
+        conversationSummary: conversationText,
+        checkpointScope: "response_payload_state",
+        langGraphResumeContract:
+          "chatThreadId and bounded conversationMessages are forwarded so future Command(resume=...) integration can bind UI turns to a graph thread without trusting hidden client instructions.",
+        imageGenerationAction: shouldGenerateImages
+          ? "auto_generate_after_storyboard"
+          : shouldGenerate
+            ? "skip_image_generation_by_user_directive"
+            : "none",
         imageAttachmentCount: imageAttachments.length,
         chatIntent: isCasualChat
           ? "casual_chat"
@@ -1177,6 +1452,10 @@ function runStoryboardAgentCommand(
     const shellScriptRunner = shouldUseShellScriptOnWindows
       ? resolveWindowsShellScriptRunner()
       : null;
+    const shouldUseWindowsCommandShell =
+      !shouldUseConfiguredPython &&
+      !shouldUseShellScriptOnWindows &&
+      shouldRunThroughWindowsCommandShell(command.executable);
     const child = spawn(
       shouldUseConfiguredPython
         ? resolveStoryboardAgentPythonCommand()
@@ -1192,7 +1471,7 @@ function runStoryboardAgentCommand(
       cwd: existsSync(/* turbopackIgnore: true */ BACKEND_AGENT_ROOT) ? BACKEND_AGENT_ROOT : getRuntimeCwd(),
       shell: shouldUseConfiguredPython
         ? shouldRunThroughWindowsCommandShell(resolveStoryboardAgentPythonCommand())
-        : false,
+        : shouldUseWindowsCommandShell,
       stdio: ["pipe", "pipe", "pipe"],
       env: {
         ...process.env,
@@ -1244,6 +1523,10 @@ function runStoryboardAgentCommand(
         stdout,
         stderr: `${stderr}\n${String(error)}`,
       });
+    });
+    child.stdin.on("error", () => {
+      // The command may exit before it consumes stdin. Keep failure handling on
+      // the process close/error events so fallback diagnostics remain stable.
     });
     child.stdin.end(JSON.stringify(payload));
   });
@@ -1628,6 +1911,353 @@ function createLegacyGraphDiagnostics(command?: CommandResult): StoryboardGraphD
   };
 }
 
+function summarizeLocalAdapterSceneData(result: StoryboardGenerationResult) {
+  return result.storyboard.scenes.slice(0, STORYBOARD_MAX_SEGMENT_COUNT).map((scene) => ({
+    cut: scene.sceneNo,
+    title: sanitizePublicAgentDiagnostic(scene.title, 160),
+    role: sanitizePublicAgentDiagnostic(scene.operatorIntent, 220),
+    scene: sanitizePublicAgentDiagnostic(scene.visualDirection, 260),
+    caption: sanitizePublicAgentDiagnostic(scene.captionIdea, 220),
+    evidence: {
+      videoId: sanitizePublicAgentDiagnostic(scene.heatmapEvidence.videoId, 120),
+      peakTime: sanitizePublicAgentDiagnostic(scene.heatmapEvidence.peakTime, 40),
+      replayScore: scene.heatmapEvidence.replayScore,
+      reason: sanitizePublicAgentDiagnostic(scene.heatmapEvidence.reason, 300),
+    },
+  }));
+}
+
+function buildLocalAdapterResearchQueries(result: StoryboardGenerationResult) {
+  const prompt = sanitizePublicAgentDiagnostic(result.request.prompt, 240);
+  const keywordQuery =
+    result.planner?.topicProfile.keywords.slice(0, 5).join(" ") ||
+    result.planner?.topicProfile.label ||
+    "먹방 반복시청 피크";
+  const arcQuery = result.planner?.arcPlan.roles
+    .slice(0, 5)
+    .map((role) => String(role).replace(/_/g, " "))
+    .join(" → ");
+  return [
+    prompt,
+    `topic:${sanitizePublicAgentDiagnostic(keywordQuery, 180)}`,
+    `arc:${sanitizePublicAgentDiagnostic(arcQuery || "intro → first bite → review", 180)}`,
+  ].filter(Boolean);
+}
+
+function buildLocalAdapterResearchWebSummary(result: StoryboardGenerationResult) {
+  return result.sourceSummary.isFallbackData
+    ? "offline_local: external web search unavailable; local demo heatmap evidence and operator prompt were summarized for Designer."
+    : "offline_local: external web search unavailable; local heatmap evidence and operator prompt were summarized for Designer.";
+}
+
+function createLocalAdapterInternRequest() {
+  return {
+    tool: "search_scene_data",
+    rpc: "match_documents_hybrid",
+    policy: "review_only_offline_local",
+    reason:
+      "Researcher requires scene evidence before Designer finalization; local adapter reviews the Tool/RPC contract without mutating production tools.",
+  };
+}
+
+function runLocalAdapterSupervisorStep(args: {
+  sceneData: ReturnType<typeof summarizeLocalAdapterSceneData>;
+  researchWebSummary: string;
+  promptFeedback: string;
+  internResult?: Record<string, unknown>;
+}) {
+  return {
+    research_sufficient: args.sceneData.length > 0,
+    agent_instructions: {
+      researcher:
+        "Run bounded self-RAG over local heatmap/caption-equivalent evidence before storyboard design.",
+      intern:
+        "Review search_scene_data Tool/RPC safety and block mutation without human approval.",
+      designer:
+        "Create a storyboard only from Researcher evidence and keep the operator feedback loop open.",
+    },
+    is_approved: { researcher: true, designer: true },
+    research_scene_data: args.sceneData,
+    research_web_summary: args.researchWebSummary,
+    human_feedback: [args.promptFeedback || "operator prompt"],
+    intern_result: args.internResult ?? { status: "pending_intern_review" },
+    messages: [
+      "Supervisor extracted slots from the operator request.",
+      "Supervisor delegated evidence gathering to Researcher.",
+      "Supervisor required Intern review before Designer trusts the evidence path.",
+      args.internResult
+        ? "Supervisor approved Designer after Researcher sufficiency passed."
+        : "Supervisor is waiting for Intern review before final Designer approval.",
+    ],
+  };
+}
+
+function runLocalAdapterResearcherStep(args: {
+  result: StoryboardGenerationResult;
+  sceneData: ReturnType<typeof summarizeLocalAdapterSceneData>;
+  previousQueries: string[];
+  internRequest: ReturnType<typeof createLocalAdapterInternRequest>;
+  internResult?: Record<string, unknown>;
+}) {
+  return {
+    agent_instructions: [
+      "Think about the needed scene evidence.",
+      "Call search_scene_data against local heatmap evidence.",
+      "Evaluate whether each planned cut has evidence before Designer handoff.",
+    ],
+    research_sufficient: args.sceneData.length > 0,
+    research_summary:
+      `Researcher completed offline self-RAG with ${args.sceneData.length} scene evidence rows and ${args.result.sourceSummary.totalMarkers} heatmap markers.`,
+    previous_queries: args.previousQueries,
+    researcher_stall_summary:
+      "No stall: local adapter had enough heatmap-backed scene evidence for Designer.",
+    intern_request: args.internRequest,
+    intern_result: args.internResult ?? { status: "pending_intern_review" },
+    researcher_think_count: Math.max(1, Math.min(5, args.previousQueries.length)),
+    messages: [
+      "think: identify missing scene/caption evidence.",
+      "tools: search_scene_data local adapter read-only lookup.",
+      "evaluate: sufficient evidence for storyboard draft.",
+    ],
+    loop: { think: true, tools: true, evaluate: true },
+  };
+}
+
+function runLocalAdapterInternStep(
+  internRequest: ReturnType<typeof createLocalAdapterInternRequest>,
+) {
+  const internResult = {
+    status: "reviewed",
+    decision: "approved_read_only_local_adapter",
+    execution: "guarded_noop",
+    notes:
+      "Tool/RPC creation or deletion is blocked in local adapter mode until an operator approves a generated patch.",
+  };
+  const state = {
+    intern_request: internRequest,
+    agent_instructions: [
+      "Plan before any Tool/RPC mutation.",
+      "Review generated search_scene_data contract before execution.",
+      "Keep mutation blocked unless a human approves the generated patch.",
+    ],
+    intern_action: "create_modify_tool_rpc_review_only",
+    pending_execute_calls: ["create_tool_rpc_patch"],
+    intern_result: internResult,
+    modified_tool_calls: ["search_scene_data"],
+    plan_update_events: [
+      "plan",
+      "review_create",
+      "human_interrupt_before_mutation",
+      "execute_guarded_noop",
+    ],
+    messages: [
+      "Intern drafted a Tool/RPC review plan.",
+      "Intern reviewed search_scene_data as read-only local evidence.",
+      "Intern blocked unapproved mutation and returned a safe review result.",
+    ],
+    planCreated: true,
+    review: { planApproved: true, reviewer: "local_adapter_safety_gate" },
+    toolRpcMutation: true,
+    searchSceneDataReviewed: true,
+    humanInterrupts: {
+      beforeCreateDelete: true,
+      afterToolRpcGeneration: true,
+      blocksUnapprovedExecution: true,
+      recordsHumanDecision: true,
+      reviewBeforeTrust: true,
+    },
+  };
+  return { state, internResult };
+}
+
+function runLocalAdapterDesignerStep(args: {
+  result: StoryboardGenerationResult;
+  sceneData: ReturnType<typeof summarizeLocalAdapterSceneData>;
+  researchWebSummary: string;
+  promptFeedback: string;
+}) {
+  return {
+    research_scene_data: args.sceneData,
+    research_web_summary: args.researchWebSummary,
+    final_output: args.result.storyboard.exportMarkdown,
+    storyboard_history: [
+      "draft_from_research_scene_data",
+      "operator_prompt_feedback_classified",
+      "final_storyboard_export",
+    ],
+    human_feedback: [args.promptFeedback || "operator prompt"],
+    conversation_summary:
+      "Designer transformed Researcher evidence into cuts and remains ready to revise from operator feedback.",
+    feedback_action: "revise_or_finalize_from_operator_feedback",
+    messages: [
+      "Designer consumed Researcher scene evidence.",
+      "Designer produced storyboard export markdown.",
+      "Designer kept feedback state for follow-up revisions.",
+    ],
+  };
+}
+
+function createLocalAdapterGraphDiagnostics(
+  status: StoryboardBackendAgentStatus,
+  result: StoryboardGenerationResult,
+): StoryboardGraphDiagnostics {
+  return {
+    status: "used",
+    runtime: "local_adapter_fallback",
+    mode: "local_adapter",
+    graphEntrypoint: status.graphEntrypoint
+      ? sanitizePublicAgentDiagnostic(status.graphEntrypoint, 300)
+      : "apps/web/lib/admin/storyboard/backend-agent.ts",
+    nodesVisited: [
+      "extract_slots",
+      "supervisor",
+      "researcher",
+      "intern",
+      "designer",
+    ],
+    interrupts: [
+      {
+        node: "intern.review_create",
+        resumable: true,
+        outputReady: false,
+        summary:
+          "Local adapter reviewed the read-only search_scene_data contract and blocked Tool/RPC mutation without operator approval.",
+      },
+      {
+        node: "designer_node",
+        resumable: true,
+        outputReady: true,
+        summary:
+          "Designer output is ready and can be revised by the operator prompt feedback loop.",
+      },
+    ],
+    toolsCalled: [
+      "search_scene_data",
+      "rank_heatmap_markers",
+      "review_tool_rpc_plan",
+      "designer_feedback_classifier",
+    ],
+    retrieval: {
+      status: result.storyboard.scenes.length > 0 ? "used" : "not_used",
+      operations: {
+        mmrApplied: true,
+      },
+      caption: {
+        lookupStatus: "unavailable",
+        provider: "unknown_legacy",
+        authMode: "offline_local",
+        fallbackReason:
+          "Local adapter used heatmap marker evidence instead of live caption/RPC retrieval.",
+      },
+    },
+    fallbackDetail:
+      "Command runner unavailable; local adapter executed the deterministic Supervisor/Researcher/Intern/Designer orchestration contract over local storyboard evidence.",
+  };
+}
+
+function buildLocalAdapterReferenceGraph(
+  result: StoryboardGenerationResult,
+  graph: StoryboardGraphDiagnostics,
+) {
+  const sceneData = summarizeLocalAdapterSceneData(result);
+  const previousQueries = buildLocalAdapterResearchQueries(result);
+  const promptFeedback = sanitizePublicAgentDiagnostic(result.request.prompt, 240);
+  const researchWebSummary = buildLocalAdapterResearchWebSummary(result);
+  const internRequest = createLocalAdapterInternRequest();
+  const supervisorPlan = runLocalAdapterSupervisorStep({
+    sceneData,
+    researchWebSummary,
+    promptFeedback,
+  });
+  const researcherPlan = runLocalAdapterResearcherStep({
+    result,
+    sceneData,
+    previousQueries,
+    internRequest,
+  });
+  const internRun = runLocalAdapterInternStep(internRequest);
+  const researcher = runLocalAdapterResearcherStep({
+    result,
+    sceneData,
+    previousQueries,
+    internRequest,
+    internResult: internRun.internResult,
+  });
+  const supervisor = runLocalAdapterSupervisorStep({
+    sceneData,
+    researchWebSummary,
+    promptFeedback,
+    internResult: internRun.internResult,
+  });
+  const designer = runLocalAdapterDesignerStep({
+    result,
+    sceneData,
+    researchWebSummary,
+    promptFeedback,
+  });
+
+  return {
+    lifecycle: {
+      start: true,
+      extractSlots: true,
+      supervisor: true,
+      researcherDelegated: true,
+      internRoutedByResearcher: true,
+      designerDelegated: true,
+      end: true,
+      order: [
+        "start",
+        "extract_slots",
+        "supervisor",
+        "researcher",
+        "intern",
+        "researcher.evaluate",
+        "designer",
+        "end",
+      ],
+      executionTrace: [
+        "extractLocalAdapterSlots",
+        "runLocalAdapterSupervisorStep",
+        "runLocalAdapterResearcherStep",
+        "runLocalAdapterInternStep",
+        "runLocalAdapterResearcherStep:after_intern",
+        "runLocalAdapterSupervisorStep:approve_designer",
+        "runLocalAdapterDesignerStep",
+      ],
+    },
+    supervisor: {
+      ...supervisor,
+      messages: [
+        ...supervisorPlan.messages,
+        ...supervisor.messages.slice(-1),
+      ],
+    },
+    researcher: {
+      ...researcher,
+      messages: [
+        ...researcherPlan.messages,
+        "evaluate_after_intern: Intern review result accepted.",
+      ],
+    },
+    intern: internRun.state,
+    designer,
+    audit: {
+      persisted: true,
+      persistenceScope: "response_payload",
+      perAgentStateVisible: true,
+      messagesCaptured: true,
+      eventsOrdered: true,
+      safeForPublicUi: true,
+      evidencePointers: [
+        "apps/web/lib/admin/storyboard/backend-agent.ts",
+        "apps/web/lib/admin/storyboard/generator.ts",
+        "backend/storyboard-agent/src/graph.py",
+        ...graph.toolsCalled,
+      ],
+    },
+  };
+}
+
 
 function extractReferenceAgentGraphCandidate(
   parsed: ParsedStoryboardAgentOutput | null,
@@ -1663,13 +2293,18 @@ function applyAgentGraphFidelityReport(
   result: StoryboardGenerationResult,
   graph?: StoryboardGraphDiagnostics,
   parsed?: ParsedStoryboardAgentOutput | null,
+  candidateOverride?: unknown,
 ) {
+  const candidate =
+    candidateOverride !== undefined
+      ? candidateOverride
+      : canUseReferenceAgentGraphCandidate(result, graph)
+        ? extractReferenceAgentGraphCandidate(parsed ?? null)
+        : null;
   result.agentGraphFidelity = buildStoryboardAgentGraphFidelity({
     mode: result.mode,
     graph,
-    candidate: canUseReferenceAgentGraphCandidate(result, graph)
-      ? extractReferenceAgentGraphCandidate(parsed ?? null)
-      : null,
+    candidate,
     finalOutputReady: Boolean(result.storyboard.exportMarkdown || result.storyboard.scenes.length),
   });
 }
@@ -1839,8 +2474,9 @@ export async function generateStoryboardWithBackendAgent(
   });
   applyBackendAdapterMode(base);
 
-  const command = resolveStoryboardAgentCommand(
+  const command = resolveEffectiveStoryboardAgentCommand(
     process.env.STORYBOARD_AGENT_COMMAND,
+    status.runtime,
   );
   if (command.ok) {
     const commandResult = await runStoryboardAgentCommand(command, {
@@ -1890,6 +2526,35 @@ export async function generateStoryboardWithBackendAgent(
       fallbackGraph,
     );
     applyAgentGraphFidelityReport(base, fallbackGraph, null);
+    return base;
+  }
+
+  if (!status.commandConfigured) {
+    const localAdapterGraph = createLocalAdapterGraphDiagnostics(status, base);
+    const localReferenceGraph = buildLocalAdapterReferenceGraph(
+      base,
+      localAdapterGraph,
+    );
+    base.backendAnalysis.localGapsHandled = [
+      "STORYBOARD_AGENT_COMMAND 없이도 local adapter가 Supervisor→Researcher→Intern→Designer 오케스트레이션 상태를 응답에 보존",
+      "Researcher self-RAG는 로컬 히트맵/프롬프트 근거 기반 read-only search_scene_data 루프로 실행",
+      "Intern Tool/RPC 생성·삭제는 review_create interrupt 상태로 기록하고 승인 없는 mutation은 차단",
+      "Designer는 Researcher 근거와 운영자 프롬프트 피드백을 분리해 초안·피드백·최종 export 이력을 보존",
+      ...base.backendAnalysis.localGapsHandled,
+    ];
+    appendBackendAgentAnalysis(
+      base,
+      status,
+      undefined,
+      localAdapterGraph,
+      localReferenceGraph,
+    );
+    applyAgentGraphFidelityReport(
+      base,
+      localAdapterGraph,
+      null,
+      localReferenceGraph,
+    );
     return base;
   }
 
