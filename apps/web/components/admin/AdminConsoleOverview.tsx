@@ -252,7 +252,9 @@ const consoleModuleById = new Map<ConsoleModuleId, ConsoleModule>(
   consoleModules.map((module) => [module.id, module]),
 );
 
-function getSidebarConsoleItems(moduleIds: ConsoleModuleId[]): SidebarSection["items"] {
+function getSidebarConsoleItems(
+  moduleIds: ConsoleModuleId[],
+): SidebarSection["items"] {
   return moduleIds.flatMap((moduleId) => {
     const consoleModule = consoleModuleById.get(moduleId);
     if (!consoleModule) return [];
@@ -316,7 +318,12 @@ const sidebarSections: SidebarSection[] = [
     label: "검수",
     items: consoleModules
       .filter((module) =>
-        ["restaurants", "restaurant-refresh-history", "submissions", "reviews"].includes(module.id),
+        [
+          "restaurants",
+          "restaurant-refresh-history",
+          "submissions",
+          "reviews",
+        ].includes(module.id),
       )
       .map(({ id, title, description, icon, badge }) => ({
         id,
@@ -455,7 +462,9 @@ type AdminDashboardViewTransitionDocument = Document & {
   startViewTransition?: (updateCallback: () => void) => unknown;
 };
 
-function updateAdminDashboardOrderWithViewTransition(updateCallback: () => void) {
+function updateAdminDashboardOrderWithViewTransition(
+  updateCallback: () => void,
+) {
   if (typeof document === "undefined") {
     updateCallback();
     return;
@@ -466,9 +475,8 @@ function updateAdminDashboardOrderWithViewTransition(updateCallback: () => void)
     return;
   }
 
-  const startViewTransition = (
-    document as AdminDashboardViewTransitionDocument
-  ).startViewTransition;
+  const startViewTransition = (document as AdminDashboardViewTransitionDocument)
+    .startViewTransition;
 
   if (!startViewTransition) {
     updateCallback();
@@ -591,7 +599,6 @@ function buildOrderedSidebarSections(
   });
 }
 
-
 const AdminEvaluationModule = dynamic(
   () => import("@/app/admin/evaluations/page"),
   {
@@ -621,11 +628,14 @@ const AdminUsersModule = dynamic(
   },
 );
 
+function loadAdminStoryboardGenerator() {
+  return import("@/components/admin/storyboard/AdminStoryboardGenerator").then(
+    (module) => module.AdminStoryboardGenerator,
+  );
+}
+
 const AdminStoryboardGenerator = dynamic(
-  () =>
-    import("@/components/admin/storyboard/AdminStoryboardGenerator").then(
-      (module) => module.AdminStoryboardGenerator,
-    ),
+  loadAdminStoryboardGenerator,
   {
     ssr: false,
     loading: () => <AdminStoryboardModuleLoadingSkeleton />,
@@ -759,11 +769,12 @@ type AdminYouTubeKpiCollectionLogs = {
   };
 };
 
-
 const E2E_ADMIN_SHELL_BYPASS_STORAGE_KEY = "tzudong:e2e-admin-shell-bypass";
 
 function isLocalE2EAdminShellBypassHost(hostname: string) {
-  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+  return (
+    hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1"
+  );
 }
 
 function hasLocalE2EAdminShellBypass() {
@@ -771,7 +782,9 @@ function hasLocalE2EAdminShellBypass() {
   if (!isLocalE2EAdminShellBypassHost(window.location.hostname)) return false;
 
   try {
-    return window.localStorage.getItem(E2E_ADMIN_SHELL_BYPASS_STORAGE_KEY) === "1";
+    return (
+      window.localStorage.getItem(E2E_ADMIN_SHELL_BYPASS_STORAGE_KEY) === "1"
+    );
   } catch {
     return false;
   }
@@ -1236,7 +1249,6 @@ const ADMIN_DASHBOARD_TOP_CONTENT_CONTRIBUTION_WEIGHTS = {
 } as const;
 const ADMIN_DASHBOARD_TOP_CONTENT_CONTRIBUTION_WEIGHT_LABEL =
   "조회 60% · 좋아요 25% · 댓글 15%";
-
 
 const adminCompactNumberFormatter = new Intl.NumberFormat("ko-KR", {
   notation: "compact",
@@ -1711,7 +1723,8 @@ async function fetchAdminDashboardInsightSummary(
     throw new Error("admin-dashboard-insight-summary-failed");
   }
 
-  const fallbackPayload = (await fallbackResponse.json()) as InsightTreemapResponse;
+  const fallbackPayload =
+    (await fallbackResponse.json()) as InsightTreemapResponse;
 
   return {
     ...fallbackPayload,
@@ -3112,7 +3125,10 @@ function AdminDashboardPanelBodySkeleton({
         {[
           ["left-[9%] top-[58%] h-10 w-10", "bg-sky-100 dark:bg-sky-950/45"],
           ["left-[25%] top-[38%] h-14 w-14", "bg-teal-100 dark:bg-teal-950/45"],
-          ["left-[43%] top-[52%] h-11 w-11", "bg-emerald-100 dark:bg-emerald-950/45"],
+          [
+            "left-[43%] top-[52%] h-11 w-11",
+            "bg-emerald-100 dark:bg-emerald-950/45",
+          ],
           ["left-[62%] top-[30%] h-16 w-16", "bg-cyan-100 dark:bg-cyan-950/45"],
           ["left-[78%] top-[62%] h-9 w-9", "bg-blue-100 dark:bg-blue-950/45"],
         ].map(([positionClassName, colorClassName], index) => (
@@ -3464,9 +3480,21 @@ function AdminDashboardManagementSkeleton() {
                 <AdminDashboardSeriesToggle
                   label="영상별 성과 분포"
                   options={[
-                    { key: "views", label: "조회수", dotClassName: "bg-sky-500" },
-                    { key: "engagement", label: "참여", dotClassName: "bg-teal-500" },
-                    { key: "engagementRate", label: "참여율", dotClassName: "bg-amber-500" },
+                    {
+                      key: "views",
+                      label: "조회수",
+                      dotClassName: "bg-sky-500",
+                    },
+                    {
+                      key: "engagement",
+                      label: "참여",
+                      dotClassName: "bg-teal-500",
+                    },
+                    {
+                      key: "engagementRate",
+                      label: "참여율",
+                      dotClassName: "bg-amber-500",
+                    },
                   ]}
                   visibility={DEFAULT_ADMIN_DASHBOARD_TREND_SERIES_VISIBILITY}
                   onToggle={() => undefined}
@@ -3520,11 +3548,25 @@ function AdminDashboardManagementSkeleton() {
                 <AdminDashboardSeriesToggle
                   label="콘텐츠 성과 TOP 5"
                   options={[
-                    { key: "views", label: "조회수", dotClassName: "bg-sky-500" },
-                    { key: "likes", label: "좋아요", dotClassName: "bg-rose-500" },
-                    { key: "comments", label: "댓글", dotClassName: "bg-orange-500" },
+                    {
+                      key: "views",
+                      label: "조회수",
+                      dotClassName: "bg-sky-500",
+                    },
+                    {
+                      key: "likes",
+                      label: "좋아요",
+                      dotClassName: "bg-rose-500",
+                    },
+                    {
+                      key: "comments",
+                      label: "댓글",
+                      dotClassName: "bg-orange-500",
+                    },
                   ]}
-                  visibility={DEFAULT_ADMIN_DASHBOARD_TOP_CONTENT_SERIES_VISIBILITY}
+                  visibility={
+                    DEFAULT_ADMIN_DASHBOARD_TOP_CONTENT_SERIES_VISIBILITY
+                  }
                   onToggle={() => undefined}
                 />
                 <AdminDashboardViewToggle
@@ -3776,7 +3818,9 @@ function AdminDashboardKpiCard({
                 >
                   <RechartsTooltip
                     allowEscapeViewBox={{ x: true, y: true }}
-                    content={<AdminDashboardKpiSparklineTooltip title={title} />}
+                    content={
+                      <AdminDashboardKpiSparklineTooltip title={title} />
+                    }
                     wrapperStyle={adminDashboardTooltipWrapperStyle}
                     cursor={{
                       stroke: toneClass.stroke,
@@ -3854,7 +3898,8 @@ function AdminDashboardOpsSummaryCard({
   const riskTotal = sections.reduce(
     (sum, section) =>
       section.title === "검수 리스크"
-        ? sum + section.rows.reduce((rowSum, row) => rowSum + (row.rawValue ?? 0), 0)
+        ? sum +
+          section.rows.reduce((rowSum, row) => rowSum + (row.rawValue ?? 0), 0)
         : sum,
     0,
   );
@@ -3952,10 +3997,7 @@ function AdminDashboardOpsSummaryCard({
                 : "text-rose-700 dark:text-rose-300";
 
             return (
-              <div
-                key={section.title}
-                className="grid min-h-0 gap-2"
-              >
+              <div key={section.title} className="grid min-h-0 gap-2">
                 <div className="flex items-center justify-between gap-3">
                   <p
                     className={cn("truncate text-xs font-extrabold", labelTone)}
@@ -3969,7 +4011,7 @@ function AdminDashboardOpsSummaryCard({
                 <div className="grid gap-2">
                   {section.rows.map((row) => {
                     const rowPercent = clampDashboardPercent(
-                      (((row.rawValue ?? 0) / maxRawValue) * 100),
+                      ((row.rawValue ?? 0) / maxRawValue) * 100,
                     );
 
                     return (
@@ -4103,8 +4145,8 @@ function AdminDashboardMultiLineChart({
       data-admin-dashboard-progressive-chart="true"
     >
       <p className="sr-only">
-        조회수, 참여, 참여율을 선택 기간 영상의 게시일 순서로 정규화해 비교합니다.
-        현재 {formatNumber(points.length)}개를 표시하고 전체 대상은{" "}
+        조회수, 참여, 참여율을 선택 기간 영상의 게시일 순서로 정규화해
+        비교합니다. 현재 {formatNumber(points.length)}개를 표시하고 전체 대상은{" "}
         {formatNumber(totalPointCount)}개입니다. 사용자가 각 지표를 숨김/보임
         처리할 수 있습니다.
       </p>
@@ -4134,84 +4176,84 @@ function AdminDashboardMultiLineChart({
               wrapperStyle={adminDashboardTooltipWrapperStyle}
               cursor={{ stroke: adminDashboardGridColor }}
             />
-          {seriesVisibility.views ? (
-            <Line
-              type="monotone"
-              dataKey="조회수"
-              stroke="#5aa6d8"
-              strokeWidth={2.4}
-              dot={isDenseChart ? false : { r: 2.4 }}
-              activeDot={{ r: isDenseChart ? 3 : 4 }}
-              isAnimationActive={false}
-            >
-              <LabelList
-                dataKey="조회수최고"
-                position="top"
-                fill="#2563eb"
-                fontSize={10}
-                fontWeight={800}
-              />
-              <LabelList
-                dataKey="조회수최저"
-                position="bottom"
-                fill="#2563eb"
-                fontSize={10}
-                fontWeight={800}
-              />
-            </Line>
-          ) : null}
-          {seriesVisibility.engagement ? (
-            <Line
-              type="monotone"
-              dataKey="참여"
-              stroke="#57c6ca"
-              strokeWidth={2.4}
-              dot={isDenseChart ? false : { r: 2.4 }}
-              activeDot={{ r: isDenseChart ? 3 : 4 }}
-              isAnimationActive={false}
-            >
-              <LabelList
-                dataKey="참여최고"
-                position="top"
-                fill="#0f766e"
-                fontSize={10}
-                fontWeight={800}
-              />
-              <LabelList
-                dataKey="참여최저"
-                position="bottom"
-                fill="#0f766e"
-                fontSize={10}
-                fontWeight={800}
-              />
-            </Line>
-          ) : null}
-          {seriesVisibility.engagementRate ? (
-            <Line
-              type="monotone"
-              dataKey="참여율"
-              stroke="#f59e0b"
-              strokeWidth={2.8}
-              dot={isDenseChart ? false : { r: 2.6 }}
-              activeDot={{ r: isDenseChart ? 3 : 4.2 }}
-              isAnimationActive={false}
-            >
-              <LabelList
-                dataKey="참여율최고"
-                position="top"
-                fill="#b45309"
-                fontSize={10}
-                fontWeight={900}
-              />
-              <LabelList
-                dataKey="참여율최저"
-                position="bottom"
-                fill="#b45309"
-                fontSize={10}
-                fontWeight={900}
-              />
-            </Line>
-          ) : null}
+            {seriesVisibility.views ? (
+              <Line
+                type="monotone"
+                dataKey="조회수"
+                stroke="#5aa6d8"
+                strokeWidth={2.4}
+                dot={isDenseChart ? false : { r: 2.4 }}
+                activeDot={{ r: isDenseChart ? 3 : 4 }}
+                isAnimationActive={false}
+              >
+                <LabelList
+                  dataKey="조회수최고"
+                  position="top"
+                  fill="#2563eb"
+                  fontSize={10}
+                  fontWeight={800}
+                />
+                <LabelList
+                  dataKey="조회수최저"
+                  position="bottom"
+                  fill="#2563eb"
+                  fontSize={10}
+                  fontWeight={800}
+                />
+              </Line>
+            ) : null}
+            {seriesVisibility.engagement ? (
+              <Line
+                type="monotone"
+                dataKey="참여"
+                stroke="#57c6ca"
+                strokeWidth={2.4}
+                dot={isDenseChart ? false : { r: 2.4 }}
+                activeDot={{ r: isDenseChart ? 3 : 4 }}
+                isAnimationActive={false}
+              >
+                <LabelList
+                  dataKey="참여최고"
+                  position="top"
+                  fill="#0f766e"
+                  fontSize={10}
+                  fontWeight={800}
+                />
+                <LabelList
+                  dataKey="참여최저"
+                  position="bottom"
+                  fill="#0f766e"
+                  fontSize={10}
+                  fontWeight={800}
+                />
+              </Line>
+            ) : null}
+            {seriesVisibility.engagementRate ? (
+              <Line
+                type="monotone"
+                dataKey="참여율"
+                stroke="#f59e0b"
+                strokeWidth={2.8}
+                dot={isDenseChart ? false : { r: 2.6 }}
+                activeDot={{ r: isDenseChart ? 3 : 4.2 }}
+                isAnimationActive={false}
+              >
+                <LabelList
+                  dataKey="참여율최고"
+                  position="top"
+                  fill="#b45309"
+                  fontSize={10}
+                  fontWeight={900}
+                />
+                <LabelList
+                  dataKey="참여율최저"
+                  position="bottom"
+                  fill="#b45309"
+                  fontSize={10}
+                  fontWeight={900}
+                />
+              </Line>
+            ) : null}
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -4367,25 +4409,25 @@ function AdminDashboardBubbleChart({
                 );
               }}
             />
-          <Scatter data={chartData} isAnimationActive={false}>
-            <LabelList
-              dataKey="조회수최고"
-              position="top"
-              fill="#b91c1c"
-              fontSize={10}
-              fontWeight={900}
-            />
-            <LabelList
-              dataKey="조회수최저"
-              position="bottom"
-              fill="#0f766e"
-              fontSize={10}
-              fontWeight={900}
-            />
-            {chartData.map((entry, index) => (
-              <Cell key={entry.title} fill={colors[index % colors.length]} />
-            ))}
-          </Scatter>
+            <Scatter data={chartData} isAnimationActive={false}>
+              <LabelList
+                dataKey="조회수최고"
+                position="top"
+                fill="#b91c1c"
+                fontSize={10}
+                fontWeight={900}
+              />
+              <LabelList
+                dataKey="조회수최저"
+                position="bottom"
+                fill="#0f766e"
+                fontSize={10}
+                fontWeight={900}
+              />
+              {chartData.map((entry, index) => (
+                <Cell key={entry.title} fill={colors[index % colors.length]} />
+              ))}
+            </Scatter>
           </ScatterChart>
         </ResponsiveContainer>
       </div>
@@ -5059,7 +5101,10 @@ function AdminDashboardPeriodSelector({
               KPI와 차트에 적용할 조회 기간을 선택합니다.
             </p>
           </div>
-          <div className="grid grid-cols-3 gap-1" aria-label="대시보드 타임프레임">
+          <div
+            className="grid grid-cols-3 gap-1"
+            aria-label="대시보드 타임프레임"
+          >
             {ADMIN_DASHBOARD_PERIOD_OPTIONS.map((option) => {
               const isSelected = option.value === value;
 
@@ -5109,7 +5154,9 @@ function AdminDashboardCollectionLogPopover({
   const isWorkflowHealthy = latestRun
     ? latestRun.status !== "completed" || latestRun.conclusion === "success"
     : logs?.workflow.available;
-  const collectionStatusLabel = hasSavedSnapshot ? "수집 정상" : "저장 확인 필요";
+  const collectionStatusLabel = hasSavedSnapshot
+    ? "수집 정상"
+    : "저장 확인 필요";
   const collectionStatusClassName = hasSavedSnapshot
     ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-950/40 dark:text-emerald-300"
     : "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-400/30 dark:bg-amber-950/40 dark:text-amber-300";
@@ -5154,7 +5201,8 @@ function AdminDashboardCollectionLogPopover({
               데이터 수집 상태
             </p>
             <p className="mt-0.5 truncate text-[11px] font-semibold text-muted-foreground">
-              Supabase 저장 기준 · {logs?.workflow.workflowId ?? "youtube-kpi-snapshot.yml"}
+              Supabase 저장 기준 ·{" "}
+              {logs?.workflow.workflowId ?? "youtube-kpi-snapshot.yml"}
             </p>
           </div>
           <Button
@@ -5228,19 +5276,25 @@ function AdminDashboardCollectionLogPopover({
                       </span>
                     </div>
                     <div className="rounded-xl bg-background/70 px-2 py-1.5">
-                      <span className="block text-muted-foreground">구독자</span>
+                      <span className="block text-muted-foreground">
+                        구독자
+                      </span>
                       <span className="mt-0.5 block font-bold text-foreground">
                         {formatNumber(snapshot?.subscriberCount)}
                       </span>
                     </div>
                     <div className="rounded-xl bg-background/70 px-2 py-1.5">
-                      <span className="block text-muted-foreground">총 조회수</span>
+                      <span className="block text-muted-foreground">
+                        총 조회수
+                      </span>
                       <span className="mt-0.5 block font-bold text-foreground">
                         {formatCompactNumber(snapshot?.viewCount)}
                       </span>
                     </div>
                     <div className="rounded-xl bg-background/70 px-2 py-1.5">
-                      <span className="block text-muted-foreground">조회 증감</span>
+                      <span className="block text-muted-foreground">
+                        조회 증감
+                      </span>
                       <span className="mt-0.5 block font-bold text-foreground">
                         {formatSignedNumber(snapshot?.viewDelta)}
                       </span>
@@ -5266,7 +5320,10 @@ function AdminDashboardCollectionLogPopover({
                   <div className="flex shrink-0 items-center gap-1.5">
                     <Badge
                       variant="outline"
-                      className={cn("rounded-full px-2 py-0.5 text-[10px]", workflowStatusClassName)}
+                      className={cn(
+                        "rounded-full px-2 py-0.5 text-[10px]",
+                        workflowStatusClassName,
+                      )}
                     >
                       {workflowStatusLabel}
                     </Badge>
@@ -5278,7 +5335,10 @@ function AdminDashboardCollectionLogPopover({
                         className="inline-flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                         aria-label="GitHub Actions 실행 로그 새 탭에서 열기"
                       >
-                        <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                        <ExternalLink
+                          className="h-3.5 w-3.5"
+                          aria-hidden="true"
+                        />
                       </a>
                     ) : null}
                   </div>
@@ -5286,9 +5346,9 @@ function AdminDashboardCollectionLogPopover({
 
                 {!logs?.workflow.available ? (
                   <p className="mt-2 rounded-xl bg-muted/40 px-2 py-1.5 text-[10px] leading-4 text-muted-foreground">
-                    서버 환경 변수에 GitHub 읽기 토큰이 없거나 권한이 부족합니다.
-                    GITHUB_ACTIONS_TOKEN 또는 GH_TOKEN을 설정하면 실행 로그도
-                    표시됩니다.
+                    서버 환경 변수에 GitHub 읽기 토큰이 없거나 권한이
+                    부족합니다. GITHUB_ACTIONS_TOKEN 또는 GH_TOKEN을 설정하면
+                    실행 로그도 표시됩니다.
                     {logs?.workflow.error ? ` (${logs.workflow.error})` : ""}
                   </p>
                 ) : null}
@@ -5306,9 +5366,11 @@ function AdminDashboardCollectionLogPopover({
                           ),
                         )}
                       >
-                        {job.name}: {
-                          getCollectionLogStatusLabel(job.status, job.conclusion)
-                        }
+                        {job.name}:{" "}
+                        {getCollectionLogStatusLabel(
+                          job.status,
+                          job.conclusion,
+                        )}
                       </span>
                     ))}
                   </div>
@@ -5316,8 +5378,8 @@ function AdminDashboardCollectionLogPopover({
               </div>
 
               <p className="text-[10px] leading-4 text-muted-foreground">
-                판정 기준: 최신 스냅샷이 저장되어 있으면 대시보드 데이터
-                수집은 정상으로 봅니다.
+                판정 기준: 최신 스냅샷이 저장되어 있으면 대시보드 데이터 수집은
+                정상으로 봅니다.
               </p>
             </>
           ) : null}
@@ -5753,7 +5815,10 @@ function AdminDashboardManagementPanel({
       );
       dragStartDashboardWidgetOrderRef.current = null;
 
-      if (startOrder && areAdminDashboardWidgetOrdersEqual(startOrder, nextOrder)) {
+      if (
+        startOrder &&
+        areAdminDashboardWidgetOrdersEqual(startOrder, nextOrder)
+      ) {
         setDashboardOrderMessage("카드 순서 변경 없이 편집을 마쳤습니다.");
         return;
       }
@@ -6187,7 +6252,8 @@ function AdminDashboardManagementPanel({
     ? "기간 댓글 증가"
     : "기간 댓글 합계";
   const pendingTotal =
-    typeof stats.pendingSubmissions === "number" && typeof stats.pendingReviews === "number"
+    typeof stats.pendingSubmissions === "number" &&
+    typeof stats.pendingReviews === "number"
       ? stats.pendingSubmissions + stats.pendingReviews
       : null;
   const missingCoordinates =
@@ -6242,23 +6308,23 @@ function AdminDashboardManagementPanel({
   const impactTableRows = useMemo(
     () =>
       videosByInsightScore.map((video) => ({
-          id: video.id,
-          title: video.title,
-          views: hasPeriodGrowthComparison
-            ? getNonNegativeMetricDelta(getVideoViewDelta(video))
-            : video.viewCount,
-          engagement: hasPeriodGrowthComparison
+        id: video.id,
+        title: video.title,
+        views: hasPeriodGrowthComparison
+          ? getNonNegativeMetricDelta(getVideoViewDelta(video))
+          : video.viewCount,
+        engagement: hasPeriodGrowthComparison
+          ? getNonNegativeMetricDelta(getVideoEngagementDelta(video))
+          : getVideoEngagementTotal(video),
+        engagementRate: getDashboardRatio(
+          hasPeriodGrowthComparison
             ? getNonNegativeMetricDelta(getVideoEngagementDelta(video))
             : getVideoEngagementTotal(video),
-          engagementRate: getDashboardRatio(
-            hasPeriodGrowthComparison
-              ? getNonNegativeMetricDelta(getVideoEngagementDelta(video))
-              : getVideoEngagementTotal(video),
-            hasPeriodGrowthComparison
-              ? getNonNegativeMetricDelta(getVideoViewDelta(video))
-              : video.viewCount,
-          ),
-        })),
+          hasPeriodGrowthComparison
+            ? getNonNegativeMetricDelta(getVideoViewDelta(video))
+            : video.viewCount,
+        ),
+      })),
     [hasPeriodGrowthComparison, videosByInsightScore],
   );
   const trendTableRows = useMemo(
@@ -6498,124 +6564,121 @@ function AdminDashboardManagementPanel({
   }`;
   const pdfReportData = useMemo<
     Omit<AdminDashboardPdfReportData, "generatedAtLabel">
-  >(
-    () => {
-      const metricInputs = [
-        {
-          label: subscriberCardTitle,
-          value: subscriberValue,
-          caption: subscriberCaption,
-          rawValue:
-            typeof subscriberDelta === "number"
-              ? Math.abs(subscriberDelta)
-              : (channelStats?.subscriberCount ?? 0),
-        },
-        {
-          label: viewCardTitle,
-          value: isChartLoading ? "—" : formatNumber(periodViewDisplayValue),
-          caption: `${periodMetricCaption} · 현재 전체 누적 ${formatNumber(cumulativeViewValue)}`,
-          rawValue: periodViewDisplayValue,
-        },
-        {
-          label: likeCardTitle,
-          value: isChartLoading ? "—" : formatNumber(periodLikeDisplayValue),
-          caption: `${periodMetricCaption} · 현재 전체 누적 ${formatNumber(cumulativeLikeValue)}`,
-          rawValue: periodLikeDisplayValue,
-        },
-        {
-          label: commentCardTitle,
-          value: isChartLoading ? "—" : formatNumber(periodCommentDisplayValue),
-          caption: `${periodMetricCaption} · 현재 전체 누적 ${formatNumber(cumulativeCommentValue)}`,
-          rawValue: periodCommentDisplayValue,
-        },
-        {
-          label: "업로드 영상 수",
-          value: isChartLoading ? "—" : formatNumber(periodUploadVideoValue),
-          caption: periodVideoCaption,
-          rawValue: periodUploadVideoValue,
-        },
-      ];
-      const metricMaxValue = Math.max(
-        1,
-        ...metricInputs.map((metric) =>
-          typeof metric.rawValue === "number" && Number.isFinite(metric.rawValue)
-            ? Math.abs(metric.rawValue)
+  >(() => {
+    const metricInputs = [
+      {
+        label: subscriberCardTitle,
+        value: subscriberValue,
+        caption: subscriberCaption,
+        rawValue:
+          typeof subscriberDelta === "number"
+            ? Math.abs(subscriberDelta)
+            : (channelStats?.subscriberCount ?? 0),
+      },
+      {
+        label: viewCardTitle,
+        value: isChartLoading ? "—" : formatNumber(periodViewDisplayValue),
+        caption: `${periodMetricCaption} · 현재 전체 누적 ${formatNumber(cumulativeViewValue)}`,
+        rawValue: periodViewDisplayValue,
+      },
+      {
+        label: likeCardTitle,
+        value: isChartLoading ? "—" : formatNumber(periodLikeDisplayValue),
+        caption: `${periodMetricCaption} · 현재 전체 누적 ${formatNumber(cumulativeLikeValue)}`,
+        rawValue: periodLikeDisplayValue,
+      },
+      {
+        label: commentCardTitle,
+        value: isChartLoading ? "—" : formatNumber(periodCommentDisplayValue),
+        caption: `${periodMetricCaption} · 현재 전체 누적 ${formatNumber(cumulativeCommentValue)}`,
+        rawValue: periodCommentDisplayValue,
+      },
+      {
+        label: "업로드 영상 수",
+        value: isChartLoading ? "—" : formatNumber(periodUploadVideoValue),
+        caption: periodVideoCaption,
+        rawValue: periodUploadVideoValue,
+      },
+    ];
+    const metricMaxValue = Math.max(
+      1,
+      ...metricInputs.map((metric) =>
+        typeof metric.rawValue === "number" && Number.isFinite(metric.rawValue)
+          ? Math.abs(metric.rawValue)
+          : 0,
+      ),
+    );
+    const topReportRows = topContentTableRows.slice(0, 5);
+    const topReportMaxViews = Math.max(
+      1,
+      ...topReportRows.map((row) =>
+        typeof row.views === "number" && Number.isFinite(row.views)
+          ? row.views
+          : 0,
+      ),
+    );
+    return {
+      title: "Tzuyang KPI Dashboard Report",
+      logoUrl: "/logo.webp",
+      periodLabel: selectedPeriodLabel,
+      basisLabel: dashboardViewMetricLabel,
+      summaryLabel: `${selectedPeriodLabel} 기준 핵심 KPI, 상위 콘텐츠, 성과 진단을 한 페이지 보고서로 정리했습니다.`,
+      contributionFormula: topContentContributionFormula,
+      metrics: metricInputs.map((metric) => ({
+        label: metric.label,
+        value: metric.value,
+        caption: metric.caption,
+        visualPercent:
+          typeof metric.rawValue === "number" &&
+          Number.isFinite(metric.rawValue)
+            ? (Math.abs(metric.rawValue) / metricMaxValue) * 100
             : 0,
-        ),
-      );
-      const topReportRows = topContentTableRows.slice(0, 5);
-      const topReportMaxViews = Math.max(
-        1,
-        ...topReportRows.map((row) =>
+      })),
+      topContents: topReportRows.map((row, index) => ({
+        rank: `#${index + 1}`,
+        title: row.title,
+        views: formatNumber(row.views),
+        likes: formatNumber(row.likes),
+        comments: formatNumber(row.comments),
+        contribution: row.viewBenchmark,
+        barPercent:
           typeof row.views === "number" && Number.isFinite(row.views)
-            ? row.views
+            ? (row.views / topReportMaxViews) * 100
             : 0,
-        ),
-      );
-      return {
-        title: "Tzuyang KPI Dashboard Report",
-        logoUrl: "/logo.webp",
-        periodLabel: selectedPeriodLabel,
-        basisLabel: dashboardViewMetricLabel,
-        summaryLabel: `${selectedPeriodLabel} 기준 핵심 KPI, 상위 콘텐츠, 성과 진단을 한 페이지 보고서로 정리했습니다.`,
-        contributionFormula: topContentContributionFormula,
-        metrics: metricInputs.map((metric) => ({
-          label: metric.label,
-          value: metric.value,
-          caption: metric.caption,
-          visualPercent:
-            typeof metric.rawValue === "number" &&
-            Number.isFinite(metric.rawValue)
-              ? (Math.abs(metric.rawValue) / metricMaxValue) * 100
-              : 0,
-        })),
-        topContents: topReportRows.map((row, index) => ({
-          rank: `#${index + 1}`,
-          title: row.title,
-          views: formatNumber(row.views),
-          likes: formatNumber(row.likes),
-          comments: formatNumber(row.comments),
-          contribution: row.viewBenchmark,
-          barPercent:
-            typeof row.views === "number" && Number.isFinite(row.views)
-              ? (row.views / topReportMaxViews) * 100
-              : 0,
-        })),
-        insights: topContentInsights.map((insight) => ({
-          label: insight.label,
-          title: insight.title,
-          description: insight.description,
-          scoreLabel: insight.scoreLabel,
-          score: insight.score,
-        })),
-      };
-    },
-    [
-      channelStats?.subscriberCount,
-      commentCardTitle,
-      cumulativeCommentValue,
-      cumulativeLikeValue,
-      cumulativeViewValue,
-      dashboardViewMetricLabel,
-      isChartLoading,
-      likeCardTitle,
-      periodCommentDisplayValue,
-      periodLikeDisplayValue,
-      periodMetricCaption,
-      periodUploadVideoValue,
-      periodVideoCaption,
-      periodViewDisplayValue,
-      selectedPeriodLabel,
-      subscriberCaption,
-      subscriberCardTitle,
-      subscriberDelta,
-      subscriberValue,
-      topContentContributionFormula,
-      topContentInsights,
-      topContentTableRows,
-      viewCardTitle,
-    ],
-  );
+      })),
+      insights: topContentInsights.map((insight) => ({
+        label: insight.label,
+        title: insight.title,
+        description: insight.description,
+        scoreLabel: insight.scoreLabel,
+        score: insight.score,
+      })),
+    };
+  }, [
+    channelStats?.subscriberCount,
+    commentCardTitle,
+    cumulativeCommentValue,
+    cumulativeLikeValue,
+    cumulativeViewValue,
+    dashboardViewMetricLabel,
+    isChartLoading,
+    likeCardTitle,
+    periodCommentDisplayValue,
+    periodLikeDisplayValue,
+    periodMetricCaption,
+    periodUploadVideoValue,
+    periodVideoCaption,
+    periodViewDisplayValue,
+    selectedPeriodLabel,
+    subscriberCaption,
+    subscriberCardTitle,
+    subscriberDelta,
+    subscriberValue,
+    topContentContributionFormula,
+    topContentInsights,
+    topContentTableRows,
+    viewCardTitle,
+  ]);
   const handleExportPdfReport = useCallback(() => {
     const opened = openAdminDashboardPdfReport({
       ...pdfReportData,
@@ -7510,11 +7573,14 @@ function AdminSidebar({
     };
   }, [themePreference]);
 
-  const updateThemePreference = useCallback((nextTheme: AdminThemePreference) => {
-    setThemePreference(nextTheme);
-    window.localStorage.setItem(ADMIN_THEME_STORAGE_KEY, nextTheme);
-    applyAdminThemePreference(nextTheme);
-  }, []);
+  const updateThemePreference = useCallback(
+    (nextTheme: AdminThemePreference) => {
+      setThemePreference(nextTheme);
+      window.localStorage.setItem(ADMIN_THEME_STORAGE_KEY, nextTheme);
+      applyAdminThemePreference(nextTheme);
+    },
+    [],
+  );
 
   const handleMenuNavigation = (moduleId: AdminModuleId) => {
     onSelectModule(moduleId);
@@ -7539,7 +7605,9 @@ function AdminSidebar({
     const button = (
       <button
         type="button"
-        aria-label={itemStatus ? `${item.title} ${itemStatus.label}` : item.title}
+        aria-label={
+          itemStatus ? `${item.title} ${itemStatus.label}` : item.title
+        }
         aria-current={isActive ? "page" : undefined}
         aria-controls="admin-console-canvas"
         className={cn(
@@ -7549,7 +7617,7 @@ function AdminSidebar({
             : "min-h-9 w-full rounded-lg px-2 py-1 text-sm",
           !isDropdown &&
             isCollapsed &&
-            "md:mx-auto md:h-9 md:min-h-9 md:w-9 md:justify-center md:gap-0 md:px-0",
+            "md:mx-auto md:h-8 md:min-h-8 md:w-8 md:justify-center md:gap-0 md:px-0",
           isActive
             ? "border-primary/20 bg-primary text-primary-foreground shadow-primary"
             : "border-transparent text-muted-foreground hover:border-primary/15 hover:bg-background/80 hover:text-foreground",
@@ -7644,22 +7712,22 @@ function AdminSidebar({
   const renderOrderControls = (placement: "dropdown" | "sidebar") => (
     <div
       id="admin-sidebar-order-editor"
-      className="rounded-2xl border border-border bg-background/70 p-2"
+      className="rounded-2xl bg-background/85 p-2"
       aria-label="메뉴 순서 설정"
       data-admin-sidebar-order-editor={placement}
+      data-admin-sidebar-order-editor-density="compact"
     >
-      <div className="mb-2 flex items-center justify-between gap-2 px-1">
+      <div className="mb-1.5 flex items-center justify-between gap-2 px-0.5">
         <div className="min-w-0">
-          <p className="truncate text-xs font-bold text-foreground">메뉴 순서</p>
-          <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-            섹션과 메뉴를 바로 위아래로 옮깁니다.
+          <p className="truncate text-xs font-bold text-foreground">
+            메뉴 순서
           </p>
         </div>
         <Button
           type="button"
           variant="outline"
           size="sm"
-          className="h-7 shrink-0 rounded-lg px-2 text-[11px] font-bold"
+          className="h-6 shrink-0 rounded-full px-2 text-[11px] font-bold"
           disabled={!canLoadPreferences || isOrderLoading || isOrderSaving}
           data-admin-sidebar-order-loading={isOrderLoading ? "true" : "false"}
           onClick={() =>
@@ -7673,14 +7741,15 @@ function AdminSidebar({
         </Button>
       </div>
 
-      <div className="space-y-1.5">
+      <div className="space-y-2">
         {orderedSidebarSections.map((section, sectionIndex) => (
           <div
             key={section.label}
-            className="rounded-xl border border-border bg-card/80 p-1.5"
+            className="space-y-0.5 border-t border-border/55 pt-2 first:border-t-0 first:pt-0"
+            data-admin-sidebar-order-section="compact"
           >
-            <div className="mb-1 flex items-center justify-between gap-1.5">
-              <span className="truncate text-[11px] font-bold text-muted-foreground">
+            <div className="flex h-5 items-center justify-between gap-1.5 px-1">
+              <span className="truncate text-[11px] font-semibold text-muted-foreground">
                 {section.label}
               </span>
               <div className="flex shrink-0 gap-1">
@@ -7688,7 +7757,7 @@ function AdminSidebar({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-6 w-6 rounded-md p-0 text-[11px]"
+                  className="h-5 w-5 rounded-md border-0 bg-transparent p-0 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground"
                   aria-label={`${section.label} 섹션 앞으로`}
                   disabled={
                     !canLoadPreferences ||
@@ -7709,7 +7778,7 @@ function AdminSidebar({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-6 w-6 rounded-md p-0 text-[11px]"
+                  className="h-5 w-5 rounded-md border-0 bg-transparent p-0 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground"
                   aria-label={`${section.label} 섹션 뒤로`}
                   disabled={
                     !canLoadPreferences ||
@@ -7729,11 +7798,12 @@ function AdminSidebar({
               </div>
             </div>
 
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               {section.items.map((item, itemIndex) => (
                 <div
                   key={item.id}
-                  className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-1 rounded-lg bg-muted/35 px-2 py-1"
+                  className="grid min-h-7 grid-cols-[minmax(0,1fr)_auto] items-center gap-1 rounded-lg px-1.5 py-0.5 transition-colors hover:bg-muted/55"
+                  data-admin-sidebar-order-item="compact"
                 >
                   <span className="min-w-0 truncate text-xs font-semibold text-foreground">
                     {item.title}
@@ -7741,9 +7811,9 @@ function AdminSidebar({
                   <div className="flex shrink-0 gap-1">
                     <Button
                       type="button"
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
-                      className="h-6 w-6 rounded-md p-0 text-[11px]"
+                      className="h-5 w-5 rounded-md border-0 bg-transparent p-0 text-[11px] text-muted-foreground hover:bg-background/80 hover:text-foreground"
                       aria-label={`${item.title} 메뉴 앞으로`}
                       disabled={
                         !canLoadPreferences ||
@@ -7767,9 +7837,9 @@ function AdminSidebar({
                     </Button>
                     <Button
                       type="button"
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
-                      className="h-6 w-6 rounded-md p-0 text-[11px]"
+                      className="h-5 w-5 rounded-md border-0 bg-transparent p-0 text-[11px] text-muted-foreground hover:bg-background/80 hover:text-foreground"
                       aria-label={`${item.title} 메뉴 뒤로`}
                       disabled={
                         !canLoadPreferences ||
@@ -7800,7 +7870,7 @@ function AdminSidebar({
       </div>
 
       <p
-        className="mt-2 rounded-lg bg-muted/40 px-2 py-1.5 text-[11px] leading-5 text-muted-foreground"
+        className="mt-2 rounded-lg bg-muted/30 px-2 py-1 text-[11px] leading-5 text-muted-foreground"
         aria-live="polite"
       >
         {sidebarOrderMessage}
@@ -7817,7 +7887,7 @@ function AdminSidebar({
         className={cn(
           "border border-border bg-white p-1 shadow-inner dark:bg-card",
           isCompactSidebar
-            ? "inline-flex w-9 flex-col items-center gap-1 self-center rounded-2xl"
+            ? "inline-flex w-8 flex-col items-center gap-1 self-center rounded-2xl"
             : "grid w-full grid-cols-3 gap-1 rounded-full",
         )}
         style={
@@ -7830,11 +7900,13 @@ function AdminSidebar({
         data-admin-sidebar-preference-placement={placement}
         data-admin-sidebar-theme-layout={placement}
       >
-        {([
-          ["light", "화이트 모드", Sun],
-          ["dark", "다크모드", Moon],
-          ["system", "시스템 설정", Monitor],
-        ] as const).map(([theme, label, Icon]) => (
+        {(
+          [
+            ["light", "화이트 모드", Sun],
+            ["dark", "다크모드", Moon],
+            ["system", "시스템 설정", Monitor],
+          ] as const
+        ).map(([theme, label, Icon]) => (
           <Button
             key={theme}
             type="button"
@@ -7842,7 +7914,7 @@ function AdminSidebar({
             size="sm"
             className={cn(
               "h-8 rounded-full border border-transparent p-0 text-muted-foreground shadow-none transition-[background-color,color,box-shadow,transform] duration-150 hover:bg-background/80 hover:text-foreground focus-visible:ring-primary focus-visible:ring-offset-background",
-              isCompactSidebar ? "w-8" : "w-full min-w-0",
+              isCompactSidebar ? "w-7" : "w-full min-w-0",
               themePreference === theme &&
                 "bg-primary text-primary-foreground shadow-primary hover:bg-primary hover:text-primary-foreground",
             )}
@@ -7868,44 +7940,46 @@ function AdminSidebar({
       data-admin-console-menu-dropdown="true"
     >
       <div className="mb-2 flex items-center gap-2 rounded-2xl bg-muted/35 p-2">
-            <Link
-              href="/"
-              className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-background"
-              aria-label="쯔동여지도 홈으로 이동"
-              onClick={() => setIsAdminMenuOpen(false)}
-            >
-              <Image
-                src="/logo.webp"
-                alt=""
-                aria-hidden="true"
-                width={32}
-                height={32}
-                className="h-7 w-7 rounded-lg object-contain"
-                priority
-              />
-            </Link>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-extrabold text-foreground">
-                관리자 콘솔
-              </p>
-              <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                현재 화면 · {activeSidebarLabel}
-              </p>
-            </div>
+        <Link
+          href="/"
+          className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-background"
+          aria-label="쯔동여지도 홈으로 이동"
+          onClick={() => setIsAdminMenuOpen(false)}
+        >
+          <Image
+            src="/logo.webp"
+            alt=""
+            aria-hidden="true"
+            width={32}
+            height={32}
+            className="h-7 w-7 rounded-lg object-contain"
+            priority
+          />
+        </Link>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-extrabold text-foreground">
+            관리자 콘솔
+          </p>
+          <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+            현재 화면 · {activeSidebarLabel}
+          </p>
+        </div>
+      </div>
+
+      <nav className="space-y-2" aria-label="관리자 통합 메뉴">
+        {orderedSidebarSections.map((section) => (
+          <div key={section.label} className="space-y-1">
+            <p className="px-1 text-[11px] font-bold tracking-[0.08em] text-muted-foreground">
+              {section.label}
+            </p>
+            {section.items.map((item) =>
+              renderMenuItem(item, section, "dropdown"),
+            )}
           </div>
+        ))}
+      </nav>
 
-          <nav className="space-y-2" aria-label="관리자 통합 메뉴">
-            {orderedSidebarSections.map((section) => (
-              <div key={section.label} className="space-y-1">
-                <p className="px-1 text-[11px] font-bold tracking-[0.08em] text-muted-foreground">
-                  {section.label}
-                </p>
-                {section.items.map((item) => renderMenuItem(item, section, "dropdown"))}
-              </div>
-            ))}
-          </nav>
-
-          <div className="mt-2">{renderThemeControls("dropdown")}</div>
+      <div className="mt-2">{renderThemeControls("dropdown")}</div>
 
       <div className="mt-2">{renderOrderControls("dropdown")}</div>
     </PopoverContent>
@@ -7917,8 +7991,7 @@ function AdminSidebar({
         <div
           className={cn(
             "flex h-14 shrink-0 transform-gpu items-center gap-2 overflow-hidden border-b border-border bg-card/95 px-3 py-2 shadow-sm transition-[transform,border-color] duration-300 ease-out will-change-transform motion-reduce:transition-none md:hidden",
-            !showMobileHeader &&
-              "pointer-events-none border-transparent",
+            !showMobileHeader && "pointer-events-none border-transparent",
           )}
           style={{
             transform: showMobileHeader
@@ -7975,7 +8048,7 @@ function AdminSidebar({
         className={cn(
           "relative z-30 hidden h-full min-h-0 w-max shrink-0 flex-col overflow-hidden border-r border-border bg-gradient-to-b from-card via-card to-background/95 p-2 shadow-sm transition-[width,padding] duration-300 motion-reduce:transition-none md:flex",
           isCollapsed
-            ? "md:w-20 md:min-w-20 md:max-w-20 md:items-center md:px-2"
+            ? "md:w-16 md:min-w-16 md:max-w-16 md:items-center md:px-1.5"
             : "md:min-w-[14.25rem] md:max-w-[var(--admin-sidebar-expanded-max-width)]",
         )}
         aria-label="관리자 콘솔 사이드바"
@@ -7986,7 +8059,7 @@ function AdminSidebar({
           className={cn(
             "mb-1.5 flex min-h-9 items-center gap-2 border-b border-border/70 px-1 pb-1.5 transition-[border-color] duration-200 motion-reduce:transition-none",
             isCollapsed &&
-              "md:min-h-9 md:w-full md:items-center md:justify-center md:border-b-0 md:px-0 md:pb-1",
+              "md:min-h-10 md:w-full md:items-center md:justify-center md:border-b-0 md:px-0 md:py-1",
           )}
           data-admin-sidebar-header="true"
         >
@@ -8027,8 +8100,9 @@ function AdminSidebar({
             variant="ghost"
             size="sm"
             className={cn(
-              "ml-auto inline-flex h-8 w-8 shrink-0 rounded-xl border border-transparent p-0 text-muted-foreground shadow-none hover:border-primary/15 hover:bg-background/80 hover:text-foreground focus-visible:ring-primary focus-visible:ring-offset-background",
-              isCollapsed && "md:m-0",
+              "group relative ml-auto inline-flex h-8 w-8 shrink-0 overflow-hidden rounded-xl border border-transparent p-0 text-muted-foreground shadow-none hover:border-primary/15 hover:bg-background/80 hover:text-foreground focus-visible:ring-primary focus-visible:ring-offset-background",
+              isCollapsed &&
+                "md:m-0 md:border-border md:bg-background/70 md:text-foreground",
             )}
             aria-label={
               isCollapsed ? "관리자 사이드바 펼치기" : "관리자 사이드바 접기"
@@ -8036,10 +8110,34 @@ function AdminSidebar({
             aria-expanded={!isCollapsed}
             aria-controls="admin-console-menu"
             data-admin-sidebar-collapse-toggle="true"
+            data-admin-sidebar-collapse-logo-mode={
+              isCollapsed ? "logo-hover-open-icon" : "icon"
+            }
             onClick={onToggleCollapsed}
           >
             {isCollapsed ? (
-              <PanelLeftOpen className="h-4 w-4" aria-hidden="true" />
+              <>
+                <span
+                  className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-100 transition-opacity duration-150 group-hover:opacity-0 group-focus-visible:opacity-0 motion-reduce:transition-none"
+                  aria-hidden="true"
+                  data-admin-sidebar-collapsed-logo="true"
+                >
+                  <Image
+                    src="/logo.webp"
+                    alt=""
+                    width={28}
+                    height={28}
+                    sizes="28px"
+                    className="h-7 w-7 rounded-lg object-contain"
+                    priority
+                  />
+                </span>
+                <PanelLeftOpen
+                  className="relative z-10 h-4 w-4 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none"
+                  aria-hidden="true"
+                  data-admin-sidebar-collapsed-open-icon="true"
+                />
+              </>
             ) : (
               <PanelLeftClose className="h-4 w-4" aria-hidden="true" />
             )}
@@ -8067,18 +8165,22 @@ function AdminSidebar({
                 key={section.label}
                 className={cn(
                   "block space-y-1.5",
-                  isCollapsed && "md:flex md:w-full md:flex-col md:items-center",
+                  isCollapsed &&
+                    "md:flex md:w-full md:flex-col md:items-center",
                 )}
               >
                 <p
                   className={cn(
                     "px-2.5 text-[11px] font-semibold tracking-[0.08em] text-muted-foreground transition-opacity duration-100 motion-reduce:transition-none",
-                    (!showLabels || isCollapsed) && "md:h-px md:px-0 md:opacity-0",
+                    (!showLabels || isCollapsed) &&
+                      "md:h-px md:px-0 md:opacity-0",
                   )}
                 >
                   {section.label}
                 </p>
-                {section.items.map((item) => renderMenuItem(item, section, "sidebar"))}
+                {section.items.map((item) =>
+                  renderMenuItem(item, section, "sidebar"),
+                )}
               </div>
             ))}
           </nav>
@@ -8088,7 +8190,7 @@ function AdminSidebar({
           className={cn(
             "shrink-0 border-t border-dashed border-border/70 pt-4",
             isCollapsed
-              ? "flex w-full flex-col items-center gap-2.5"
+              ? "flex w-full flex-col items-center gap-2"
               : "space-y-3",
           )}
           data-admin-sidebar-footer-actions="true"
@@ -8097,39 +8199,19 @@ function AdminSidebar({
         >
           {isCollapsed ? (
             <>
-              {renderThemeControls("sidebar")}
-
               <Popover>
-                <UiTooltipProvider delayDuration={120}>
-                  <UiTooltip>
-                    <UiTooltipTrigger asChild>
-                      <PopoverTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-9 w-9 rounded-lg border border-border bg-background/70 p-0 text-muted-foreground hover:text-foreground"
-                          aria-label="메뉴 순서 설정 열기"
-                          data-admin-sidebar-order-trigger="collapsed"
-                        >
-                          <Menu className="h-4 w-4" aria-hidden="true" />
-                        </Button>
-                      </PopoverTrigger>
-                    </UiTooltipTrigger>
-                    <UiTooltipContent
-                      side="right"
-                      align="center"
-                      className={adminDashboardTooltipPortalClassName}
-                      data-admin-sidebar-collapsed-tooltip="true"
-                    >
-                      <AdminDashboardTooltipLinesPanel
-                        lines={["메뉴 순서", "섹션과 메뉴 위치 변경"]}
-                        dataAttribute="sidebar-collapsed"
-                        className="max-w-[14rem]"
-                      />
-                    </UiTooltipContent>
-                  </UiTooltip>
-                </UiTooltipProvider>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 rounded-lg border border-border bg-background/70 p-0 text-muted-foreground hover:text-foreground"
+                    aria-label="메뉴 순서 설정 열기"
+                    data-admin-sidebar-order-trigger="collapsed"
+                  >
+                    <Menu className="h-4 w-4" aria-hidden="true" />
+                  </Button>
+                </PopoverTrigger>
                 <PopoverContent
                   side="right"
                   align="end"
@@ -8140,6 +8222,8 @@ function AdminSidebar({
                   {renderOrderControls("sidebar")}
                 </PopoverContent>
               </Popover>
+
+              {renderThemeControls("sidebar")}
             </>
           ) : (
             <>
@@ -8171,7 +8255,6 @@ function AdminSidebar({
             </>
           )}
         </div>
-
       </aside>
     </>
   );
@@ -8376,7 +8459,9 @@ function InlineModulePanel({
           />
         );
       case "restaurant-refresh-history":
-        return <AdminRestaurantRefreshHistoryModule key="restaurant-refresh-history" />;
+        return (
+          <AdminRestaurantRefreshHistoryModule key="restaurant-refresh-history" />
+        );
       case "submissions":
         return (
           <AdminEvaluationModule
@@ -8405,7 +8490,9 @@ function InlineModulePanel({
           />
         );
       case "youtube-thumbnail-generator":
-        return <AdminYoutubeThumbnailGenerator key="admin-youtube-thumbnail-generator" />;
+        return (
+          <AdminYoutubeThumbnailGenerator key="admin-youtube-thumbnail-generator" />
+        );
       case "users":
         return <AdminUsersModule key="admin-users" />;
       case "insights":
@@ -8461,33 +8548,121 @@ function AdminConsoleCanvasSkeleton() {
 function AdminStoryboardModuleLoadingSkeleton() {
   return (
     <section
-      className="flex h-full min-h-[640px] min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-background p-3 shadow-sm md:min-h-0"
+      className="flex h-full min-h-0 flex-col overflow-hidden bg-background p-2"
       data-admin-console-content-loading="true"
+      data-admin-storyboard-generator-loading="true"
       data-storyboard-module-loading="true"
       data-storyboard-module-loading-layout="page-shell"
+      data-storyboard-viewport-fit="bounded"
+      style={{
+        height: "calc(var(--full-height, 100vh) - 2rem)",
+        maxHeight: "100%",
+        minHeight: 0,
+      }}
       role="status"
       aria-busy="true"
       aria-label="스토리보드 생성 화면 로딩 중"
     >
-      <div className="min-h-0" data-storyboard-module-loading-grid="true">
+      <div
+        className="grid h-full min-h-0 gap-3 overflow-hidden"
+        data-storyboard-desktop-split-layout="inline-grid"
+        data-storyboard-module-loading-grid="true"
+        style={{
+          display: "grid",
+          gridTemplateColumns:
+            "var(--storyboard-split-columns, minmax(0, 1fr) minmax(320px, 400px))",
+          gridTemplateRows: "var(--storyboard-split-rows, minmax(0, 1fr))",
+        }}
+      >
         <Card
-          className="order-1 flex min-h-0 flex-col overflow-hidden rounded-xl border border-border/70 bg-card/35 shadow-none"
-          aria-label="스토리보드 캔버스 준비 영역"
-          data-storyboard-module-loading-canvas="true"
+          className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-border/70 bg-card/80 shadow-sm"
+          aria-label="스토리보드 도우미 준비 영역"
+          data-storyboard-module-loading-chat-shell="static"
+          style={{
+            gridColumn: "var(--storyboard-input-panel-column, 2)",
+            gridRow: "var(--storyboard-input-panel-row, 1)",
+            minWidth: 0,
+          }}
         >
-          <CardHeader className="flex shrink-0 flex-row items-center gap-2 p-2 pb-1">
-            <div
-              className="h-8 w-28 rounded-full bg-muted/70"
-              aria-hidden="true"
-              data-storyboard-module-loading-toolbar="true"
-            />
-            <div className="ml-auto flex min-w-0 flex-nowrap items-center gap-1.5 overflow-hidden pb-1">
-              <div className="h-8 w-24 shrink-0 rounded-md border border-border/70 bg-background" />
-              <div className="h-8 w-20 shrink-0 rounded-md border border-border/70 bg-background" />
-              <div className="h-8 w-24 shrink-0 rounded-md bg-muted/70" />
+          <CardHeader className="shrink-0 space-y-1 p-3 pb-2">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+                  <MessageSquareText className="h-3.5 w-3.5" aria-hidden="true" />
+                </span>
+                <div className="h-4 w-32 rounded-full bg-muted/80" />
+              </div>
+              <div className="flex shrink-0 items-center gap-1">
+                <div className="h-4 w-4 rounded-full bg-muted/80" />
+                <div className="h-8 w-8 rounded-full bg-muted/70" />
+                <div className="h-8 w-8 rounded-full bg-muted/70" />
+              </div>
             </div>
           </CardHeader>
-          <CardContent className="min-h-0 flex-1 p-3 pt-1">
+          <CardContent className="flex min-h-0 flex-1 flex-col p-3 pt-0">
+            <div
+              className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl bg-background"
+              data-storyboard-module-loading-chat="true"
+            >
+              <div className="min-h-0 flex-1 space-y-3 overflow-hidden p-3">
+                <div className="max-w-[88%] space-y-2">
+                  <div className="h-3 w-56 max-w-full rounded-full bg-muted-foreground/14" />
+                  <div className="h-3 w-40 max-w-full rounded-full bg-muted-foreground/12" />
+                  <div className="mt-2 flex gap-2">
+                    <div className="h-7 w-20 rounded-full border border-border/60 bg-background" />
+                    <div className="h-7 w-20 rounded-full bg-primary/75" />
+                  </div>
+                </div>
+                <div className="max-w-[92%] space-y-2">
+                  <div className="h-3 w-64 max-w-full rounded-full bg-muted-foreground/14" />
+                  <div className="h-3 w-48 max-w-full rounded-full bg-muted-foreground/12" />
+                  <div className="h-3 w-52 max-w-full rounded-full bg-muted-foreground/12" />
+                </div>
+              </div>
+              <div
+                className="shrink-0 border-t border-border/70 bg-background/80 p-2.5"
+                data-storyboard-module-loading-composer="true"
+              >
+                <div className="flex h-11 items-center gap-2 rounded-full border border-border/70 bg-background px-3">
+                  <div className="h-5 w-5 shrink-0 rounded-full bg-muted/80" />
+                  <div className="h-3 flex-1 rounded-full bg-muted-foreground/12" />
+                  <div className="h-9 w-9 shrink-0 rounded-full bg-muted/80" />
+                </div>
+              </div>
+            </div>
+            <span className="sr-only">
+              스토리보드 도우미 영역을 준비하고 있습니다.
+            </span>
+          </CardContent>
+        </Card>
+
+        <Card
+          className="flex min-h-0 flex-col overflow-hidden border-0 bg-card/80 shadow-none"
+          aria-label="스토리보드 캔버스 준비 영역"
+          data-storyboard-module-loading-canvas="true"
+          style={{
+            gridColumn: "var(--storyboard-result-panel-column, 1)",
+            gridRow: "var(--storyboard-result-panel-row, 1)",
+            minWidth: 0,
+          }}
+        >
+          <CardHeader className="flex shrink-0 flex-row items-center gap-2 p-2 pb-1">
+            <div className="flex min-w-0 items-center gap-2">
+              <div className="h-4 w-12 shrink-0 rounded-full bg-muted/80" />
+              <div className="h-6 w-20 shrink-0 rounded-full border border-border/70 bg-background" />
+              <div className="h-3 w-48 max-w-[32vw] rounded-full bg-muted/70" />
+            </div>
+            <div
+              className="ml-auto flex min-w-0 flex-nowrap items-center gap-1 overflow-hidden px-1 py-1"
+              data-storyboard-module-loading-toolbar="true"
+            >
+              <div className="h-8 w-16 shrink-0 rounded-md border border-border/70 bg-background" />
+              <div className="h-8 w-32 shrink-0 rounded-md border border-border/70 bg-background" />
+              <div className="h-8 w-24 shrink-0 rounded-md border border-border/70 bg-background" />
+              <div className="h-8 w-28 shrink-0 rounded-md bg-muted/70" />
+            </div>
+          </CardHeader>
+          <CardContent className="min-h-0 flex-1 p-2 pt-1">
             <div
               className="h-full min-h-0"
               data-storyboard-module-loading-frame-grid="true"
@@ -8496,73 +8671,42 @@ function AdminStoryboardModuleLoadingSkeleton() {
               {STORYBOARD_MODULE_LOADING_CUT_NOS.map((cutNo) => (
                 <div
                   key={`storyboard-loading-cut-${cutNo}`}
-                  className="relative min-h-0 overflow-hidden rounded-2xl bg-gradient-to-br from-slate-100 via-slate-200/85 to-slate-400/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] dark:from-slate-800/72 dark:via-slate-700/58 dark:to-slate-600/52"
+                  className="relative flex min-h-0 flex-col overflow-hidden rounded-2xl border border-border/60 bg-card/80"
                   data-storyboard-module-loading-cut={String(cutNo)}
                 >
-                  <span className="absolute left-3 top-3 z-10 h-5 w-14 rounded-full bg-slate-700/70" />
-                  <span className="absolute right-3 top-3 z-10 h-6 w-12 rounded-full bg-white/80" />
-                  <span
-                    className="absolute inset-0 bg-gradient-to-br from-white/58 via-slate-200/28 to-slate-500/24"
-                    aria-hidden="true"
-                    data-storyboard-module-loading-glass="true"
-                  />
-                  <span
-                    className="admin-module-loading-shimmer pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/70 to-transparent"
-                    aria-hidden="true"
-                    data-storyboard-module-loading-shimmer="true"
-                  />
+                  <div className="relative min-h-0 flex-1 overflow-hidden bg-gradient-to-br from-slate-100 via-slate-200/85 to-slate-400/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] dark:from-slate-800/72 dark:via-slate-700/58 dark:to-slate-600/52">
+                    <span className="absolute left-3 top-3 z-10 h-5 w-14 rounded-full bg-slate-700/70" />
+                    <span className="absolute right-3 top-3 z-10 h-6 w-12 rounded-full bg-white/80" />
+                    <span
+                      className="absolute inset-0 bg-gradient-to-br from-white/58 via-slate-200/28 to-slate-500/24"
+                      aria-hidden="true"
+                      data-storyboard-module-loading-glass="true"
+                    />
+                    <span
+                      className="admin-module-loading-shimmer pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/70 to-transparent"
+                      aria-hidden="true"
+                      data-storyboard-module-loading-shimmer="true"
+                    />
+                  </div>
+                  <div className="shrink-0 space-y-1 border-t border-border/45 bg-background/90 px-2.5 py-1.5">
+                    <div className="grid items-center gap-2 rounded-lg bg-muted/15 px-2 py-0.5" style={{ gridTemplateColumns: "58px minmax(0, 1fr)" }}>
+                      <div className="h-4 rounded-full bg-muted/65" />
+                      <div className="h-3 rounded-full bg-muted-foreground/12" />
+                    </div>
+                    <div className="grid items-center gap-2 rounded-lg bg-rose-500/[0.045] px-2 py-0.5" style={{ gridTemplateColumns: "58px minmax(0, 1fr)" }}>
+                      <div className="h-4 rounded-full bg-rose-100/70" />
+                      <div className="h-3 rounded-full bg-muted-foreground/12" />
+                    </div>
+                    <div className="grid items-center gap-2 rounded-lg bg-amber-400/[0.10] px-2 py-0.5" style={{ gridTemplateColumns: "58px minmax(0, 1fr)" }}>
+                      <div className="h-4 rounded-full bg-amber-100/75" />
+                      <div className="h-3 rounded-full bg-muted-foreground/12" />
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
-          </CardContent>
-        </Card>
-
-        <Card
-          className="order-2 flex min-h-[360px] flex-col overflow-hidden border border-border/70 bg-background shadow-none xl:min-h-0"
-          aria-label="스토리보드 도우미 준비 영역"
-          data-storyboard-module-loading-chat-shell="static"
-        >
-          <CardHeader className="shrink-0 space-y-1 p-3 pb-2">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex min-w-0 items-center gap-2">
-                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground">
-                  <MessageSquareText className="h-4 w-4" aria-hidden="true" />
-                </span>
-                <div className="h-4 w-28 rounded-full bg-muted/80" />
-              </div>
-              <div className="h-6 w-14 shrink-0 rounded-full border border-border/70 bg-background" />
-            </div>
-          </CardHeader>
-          <CardContent className="flex min-h-0 flex-1 flex-col p-3 pt-0">
-            <div
-              className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-border/70 bg-gradient-to-b from-background/95 to-muted/30 shadow-sm"
-              data-storyboard-module-loading-chat="true"
-            >
-              <div className="min-h-0 flex-1 space-y-3 overflow-hidden p-3">
-                <div className="max-w-[86%] space-y-2 rounded-2xl rounded-bl-md bg-background px-3 py-3 shadow-sm ring-1 ring-border/60">
-                  <div className="h-3 w-44 max-w-full rounded-full bg-muted-foreground/14" />
-                  <div className="h-3 w-64 max-w-full rounded-full bg-muted-foreground/12" />
-                </div>
-                <div className="ml-auto max-w-[72%] rounded-2xl rounded-br-md bg-muted/70 px-3 py-3">
-                  <div className="h-3 w-52 max-w-full rounded-full bg-muted-foreground/16" />
-                </div>
-                <div className="max-w-[82%] space-y-2 rounded-2xl rounded-bl-md border border-border/60 bg-muted/45 px-3 py-3">
-                  <div className="h-3 w-48 max-w-full rounded-full bg-muted-foreground/16" />
-                  <div className="h-3 w-32 max-w-full rounded-full bg-muted-foreground/12" />
-                </div>
-              </div>
-              <div
-                className="shrink-0 border-t border-border/70 bg-background/80 p-2.5"
-                data-storyboard-module-loading-composer="true"
-              >
-                <div className="flex items-center gap-2 rounded-full border border-border/70 bg-background px-3 py-2">
-                  <div className="h-3 flex-1 rounded-full bg-muted-foreground/12" />
-                  <div className="h-9 w-9 shrink-0 rounded-full bg-muted/80" />
-                </div>
-              </div>
-            </div>
             <span className="sr-only">
-              스토리보드 캔버스와 도우미 영역을 준비하고 있습니다.
+              스토리보드 캔버스 영역을 준비하고 있습니다.
             </span>
           </CardContent>
         </Card>
@@ -8849,6 +8993,12 @@ export function AdminConsoleOverview({
   }, []);
 
   useEffect(() => {
+    if (activeModuleId === "storyboard") {
+      void loadAdminStoryboardGenerator();
+    }
+  }, [activeModuleId]);
+
+  useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 767px)");
     const updateIsMobileViewport = () => {
       setIsAdminMobileViewport(mediaQuery.matches);
@@ -8976,26 +9126,25 @@ export function AdminConsoleOverview({
     ],
   );
 
-  const handleAdminCanvasTouchStart =
-    useCallback<TouchEventHandler<HTMLElement>>(
-      (event) => {
-        adminCanvasTouchStartYRef.current = event.touches[0]?.clientY ?? null;
-        adminBottomNavAutoHide.onTouchStart(event);
-      },
-      [adminBottomNavAutoHide],
-    );
+  const handleAdminCanvasTouchStart = useCallback<
+    TouchEventHandler<HTMLElement>
+  >(
+    (event) => {
+      adminCanvasTouchStartYRef.current = event.touches[0]?.clientY ?? null;
+      adminBottomNavAutoHide.onTouchStart(event);
+    },
+    [adminBottomNavAutoHide],
+  );
 
-  const handleAdminCanvasTouchMove = useCallback<TouchEventHandler<HTMLElement>>(
+  const handleAdminCanvasTouchMove = useCallback<
+    TouchEventHandler<HTMLElement>
+  >(
     (event) => {
       const startY = adminCanvasTouchStartYRef.current;
       const currentY = event.touches[0]?.clientY;
       let handledGestureIntent = false;
 
-      if (
-        isAdminMobileViewport &&
-        startY !== null &&
-        currentY !== undefined
-      ) {
+      if (isAdminMobileViewport && startY !== null && currentY !== undefined) {
         const deltaY = currentY - startY;
 
         if (deltaY <= -24) {
@@ -9119,12 +9268,12 @@ export function AdminConsoleOverview({
               <AdminConsoleCanvasSkeleton />
             )
           ) : activeModuleId === "overview" ? (
-<AdminDashboardManagementPanel
-  stats={stats}
-  isLoading={statsLoading}
-  hasError={statsHasError}
-  isAdmin={canLoadAdminConsoleData}
-/>
+            <AdminDashboardManagementPanel
+              stats={stats}
+              isLoading={statsLoading}
+              hasError={statsHasError}
+              isAdmin={canLoadAdminConsoleData}
+            />
           ) : activeModuleId === "routes" ? (
             <AdminRouteRecommendationModule
               stats={stats}

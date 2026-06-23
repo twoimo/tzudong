@@ -11,6 +11,7 @@ import {
 import { flushSync } from "react-dom";
 import NextImage from "next/image";
 import {
+  ArrowUp,
   ChevronLeft,
   ChevronRight,
   ClipboardCopy,
@@ -19,11 +20,11 @@ import {
   ImageIcon,
   Loader2,
   MessageCircle,
+  Plug,
+  Plus,
   RotateCcw,
-  Send,
   Settings,
   Square,
-  Wand2,
   TriangleAlert,
   X,
 } from "lucide-react";
@@ -39,6 +40,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -62,12 +64,14 @@ import type {
 import type {
   StoryboardChatAgentResult,
   StoryboardChatCanvasPatch,
+  StoryboardChatConversationMessage,
   StoryboardChatFocusContext,
   StoryboardChatImageAttachment,
   StoryboardGenerationMode,
   StoryboardGenerationResult,
   StoryboardScene,
   StoryboardSceneGeneratedImage,
+  StoryboardThinkingTraceEntry,
   StoryboardTone,
 } from "@/lib/admin/storyboard/types";
 import {
@@ -154,7 +158,12 @@ type StoryboardChatMessage = {
   text: string;
   status?: "streaming" | "done";
   imageGenerationProgress?: StoryboardImageGenerationProgress;
+  thinkingTrace?: StoryboardThinkingTraceEntry[];
 };
+
+const STORYBOARD_CHAT_TYPEWRITER_START_DELAY_MS = 180;
+const STORYBOARD_CHAT_TYPEWRITER_INTERVAL_MS = 24;
+const STORYBOARD_CHAT_TYPEWRITER_STEP_CHARS = 1;
 
 type StoryboardChatSseEvent = {
   event: string;
@@ -309,7 +318,6 @@ const STORYBOARD_LOCAL_BRIDGE_HELPER_QUERY_ORIGIN = "origin" as const;
 const STORYBOARD_LOCAL_BRIDGE_HELPER_QUERY_SESSION = "session" as const;
 const STORYBOARD_LOCAL_BRIDGE_HELPER_QUERY_SURFACE = "surface" as const;
 
-
 type StoryboardLocalBridgeSessionCache = {
   version: 1;
   bridgeUrl: string;
@@ -337,20 +345,20 @@ type StoryboardLocalBridgeHelperRequestMessage = {
 };
 type StoryboardLocalBridgeHelperResponseMessage =
   | {
-    kind: "tzudong-local-bridge-helper-response";
-    sessionId: string;
-    requestId: string;
-    ok: true;
-    payload: unknown;
-  }
+      kind: "tzudong-local-bridge-helper-response";
+      sessionId: string;
+      requestId: string;
+      ok: true;
+      payload: unknown;
+    }
   | {
-    kind: "tzudong-local-bridge-helper-response";
-    sessionId: string;
-    requestId: string;
-    ok: false;
-    errorCode: string;
-    message: string;
-  };
+      kind: "tzudong-local-bridge-helper-response";
+      sessionId: string;
+      requestId: string;
+      ok: false;
+      errorCode: string;
+      message: string;
+    };
 type StoryboardLocalBridgeHelperClosedMessage = {
   kind: "tzudong-local-bridge-helper-closed";
   sessionId: string;
@@ -385,10 +393,12 @@ function isStoryboardLocalBridgeHelperReadyMessage(
   return (
     Boolean(value) &&
     typeof value === "object" &&
-    (value as { kind?: unknown }).kind === "tzudong-local-bridge-helper-ready" &&
+    (value as { kind?: unknown }).kind ===
+      "tzudong-local-bridge-helper-ready" &&
     (value as { surface?: unknown }).surface === "storyboard" &&
     typeof (value as { sessionId?: unknown }).sessionId === "string" &&
-    (value as { protocolVersion?: unknown }).protocolVersion === STORYBOARD_LOCAL_BRIDGE_HELPER_VERSION
+    (value as { protocolVersion?: unknown }).protocolVersion ===
+      STORYBOARD_LOCAL_BRIDGE_HELPER_VERSION
   );
 }
 
@@ -398,7 +408,8 @@ function isStoryboardLocalBridgeHelperResponseMessage(
   return (
     Boolean(value) &&
     typeof value === "object" &&
-    (value as { kind?: unknown }).kind === "tzudong-local-bridge-helper-response" &&
+    (value as { kind?: unknown }).kind ===
+      "tzudong-local-bridge-helper-response" &&
     typeof (value as { sessionId?: unknown }).sessionId === "string" &&
     typeof (value as { requestId?: unknown }).requestId === "string" &&
     typeof (value as { ok?: unknown }).ok === "boolean"
@@ -411,13 +422,17 @@ function isStoryboardLocalBridgeHelperClosedMessage(
   return (
     Boolean(value) &&
     typeof value === "object" &&
-    (value as { kind?: unknown }).kind === "tzudong-local-bridge-helper-closed" &&
+    (value as { kind?: unknown }).kind ===
+      "tzudong-local-bridge-helper-closed" &&
     typeof (value as { sessionId?: unknown }).sessionId === "string"
   );
 }
 
 function createStoryboardLocalBridgeHelperSessionId() {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
     return crypto.randomUUID();
   }
   return `storyboard-local-bridge-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -439,16 +454,29 @@ function getStoryboardLocalBridgeOrigin(bridgeUrl: string) {
   return new URL(normalizeStoryboardLocalBridgeUrl(bridgeUrl)).origin;
 }
 
-function buildStoryboardLocalBridgeHelperUrl(bridgeUrl: string, sessionId: string) {
+function buildStoryboardLocalBridgeHelperUrl(
+  bridgeUrl: string,
+  sessionId: string,
+) {
   const baseUrl = normalizeStoryboardLocalBridgeUrl(bridgeUrl);
-  const helperUrl = new URL(STORYBOARD_LOCAL_BRIDGE_HELPER_ROUTE, `${baseUrl}/`);
-  helperUrl.searchParams.set(STORYBOARD_LOCAL_BRIDGE_HELPER_QUERY_ORIGIN, window.location.origin);
-  helperUrl.searchParams.set(STORYBOARD_LOCAL_BRIDGE_HELPER_QUERY_SESSION, sessionId);
-  helperUrl.searchParams.set(STORYBOARD_LOCAL_BRIDGE_HELPER_QUERY_SURFACE, "storyboard");
+  const helperUrl = new URL(
+    STORYBOARD_LOCAL_BRIDGE_HELPER_ROUTE,
+    `${baseUrl}/`,
+  );
+  helperUrl.searchParams.set(
+    STORYBOARD_LOCAL_BRIDGE_HELPER_QUERY_ORIGIN,
+    window.location.origin,
+  );
+  helperUrl.searchParams.set(
+    STORYBOARD_LOCAL_BRIDGE_HELPER_QUERY_SESSION,
+    sessionId,
+  );
+  helperUrl.searchParams.set(
+    STORYBOARD_LOCAL_BRIDGE_HELPER_QUERY_SURFACE,
+    "storyboard",
+  );
   return helperUrl.toString();
 }
-
-
 
 function normalizeStoryboardBrowserOpenAIApiKeyInput(value: string) {
   const trimmed = value.trim();
@@ -465,9 +493,7 @@ function maskStoryboardBrowserOpenAIApiKey(value: string) {
   return `${prefix}…${suffix}`;
 }
 
-function readStoryboardBrowserModelKeysCache():
-  | StoryboardBrowserModelKeysCache
-  | null {
+function readStoryboardBrowserModelKeysCache(): StoryboardBrowserModelKeysCache | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = window.localStorage.getItem(
@@ -522,16 +548,16 @@ function maskStoryboardLocalBridgeToken(value: string | null) {
   return `${value.slice(0, 4)}…${value.slice(-4)}`;
 }
 
-function readStoryboardLocalBridgeSessionCache():
-  | StoryboardLocalBridgeSessionCache
-  | null {
+function readStoryboardLocalBridgeSessionCache(): StoryboardLocalBridgeSessionCache | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = window.sessionStorage.getItem(
       STORYBOARD_LOCAL_BRIDGE_SESSION_STORAGE_KEY,
     );
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as Partial<StoryboardLocalBridgeSessionCache>;
+    const parsed = JSON.parse(
+      raw,
+    ) as Partial<StoryboardLocalBridgeSessionCache>;
     if (
       parsed.version !== 1 ||
       parsed.storage !== "browser_session_storage_only" ||
@@ -624,8 +650,8 @@ function getStoryboardImageApiRouterView(
         : isBrowserOpenAIApiKeyReady
           ? "사용 중"
           : readiness.status === "checking"
-          ? "확인 중"
-          : "확인 필요",
+            ? "확인 중"
+            : "확인 필요",
       summary: "이 브라우저에 저장한 키로 gpt-image-2를 호출합니다.",
       codexOAuthStatus: "api-key-active",
     };
@@ -636,14 +662,16 @@ function getStoryboardImageApiRouterView(
       id: "local-codex-oauth",
       label: "기본 OAuth",
       statusLabel:
-        readiness.status === "ready" && readiness.providerId === STORYBOARD_IMAGE_PROVIDER_ID
+        readiness.status === "ready" &&
+        readiness.providerId === STORYBOARD_IMAGE_PROVIDER_ID
           ? "사용 중"
           : readiness.status === "checking"
             ? "확인 중"
             : "확인 필요",
       summary: "서버 라우터가 Codex OAuth로 gpt-image-2를 호출합니다.",
       codexOAuthStatus:
-        readiness.status === "ready" && readiness.providerId === STORYBOARD_IMAGE_PROVIDER_ID
+        readiness.status === "ready" &&
+        readiness.providerId === STORYBOARD_IMAGE_PROVIDER_ID
           ? "active"
           : readiness.status === "checking"
             ? "checking"
@@ -701,7 +729,6 @@ type StoryboardGuidedExamplePreset = Pick<
 > & {
   label: string;
 };
-
 
 const STORYBOARD_GUIDED_EXAMPLE_PROMPT =
   "매운 짜장라면 먹방을 좋은 흐름에 맞춰 10컷 안팎의 스토리보드로 만들어줘. 가게 앞 인트로와 주문 맥락으로 시작하고, 조리 기대감, 첫 입, ASMR 질감, 소스 조합, 클라이맥스 한상, 완식, 맛 평가, 다음 영상 기대감까지 이어지게 구성해줘.";
@@ -767,7 +794,8 @@ const STORYBOARD_USAGE_GUIDE_TEXT =
 
 const STORYBOARD_CHAT_IMAGE_ATTACHMENT_LIMIT = 3;
 const STORYBOARD_CHAT_IMAGE_ATTACHMENT_MAX_BYTES = 4 * 1024 * 1024;
-const STORYBOARD_CHAT_IMAGE_ATTACHMENT_ACCEPT = "image/png,image/jpeg,image/webp";
+const STORYBOARD_CHAT_IMAGE_ATTACHMENT_ACCEPT =
+  "image/png,image/jpeg,image/webp";
 const STORYBOARD_CHAT_IMAGE_ATTACHMENT_ONLY_PROMPT =
   "첨부한 사진을 참고해서 스토리보드 방향을 제안해줘.";
 const STORYBOARD_CHAT_IMAGE_ATTACHMENT_MIME_TYPES = new Set([
@@ -775,6 +803,40 @@ const STORYBOARD_CHAT_IMAGE_ATTACHMENT_MIME_TYPES = new Set([
   "image/jpeg",
   "image/webp",
 ] as const);
+const STORYBOARD_CHAT_CONVERSATION_CONTEXT_LIMIT = 8;
+const STORYBOARD_CHAT_TEXTAREA_MIN_HEIGHT_PX = 40;
+const STORYBOARD_CHAT_TEXTAREA_MULTILINE_MIN_HEIGHT_PX = 72;
+const STORYBOARD_CHAT_TEXTAREA_MAX_HEIGHT_PX = 96;
+
+function resizeStoryboardChatTextarea(
+  textarea: HTMLTextAreaElement | null,
+): boolean {
+  if (!textarea) return false;
+
+  textarea.style.minHeight = `${STORYBOARD_CHAT_TEXTAREA_MIN_HEIGHT_PX}px`;
+  textarea.style.height = `${STORYBOARD_CHAT_TEXTAREA_MIN_HEIGHT_PX}px`;
+  const scrollHeight = textarea.scrollHeight;
+  const isMultiline =
+    scrollHeight > STORYBOARD_CHAT_TEXTAREA_MIN_HEIGHT_PX + 20 ||
+    textarea.value.includes("\n");
+  const minHeight = isMultiline
+    ? STORYBOARD_CHAT_TEXTAREA_MULTILINE_MIN_HEIGHT_PX
+    : STORYBOARD_CHAT_TEXTAREA_MIN_HEIGHT_PX;
+  const nextHeight = Math.min(
+    STORYBOARD_CHAT_TEXTAREA_MAX_HEIGHT_PX,
+    Math.max(minHeight, scrollHeight),
+  );
+  textarea.style.minHeight = `${minHeight}px`;
+  textarea.style.maxHeight = `${
+    isMultiline
+      ? STORYBOARD_CHAT_TEXTAREA_MAX_HEIGHT_PX
+      : STORYBOARD_CHAT_TEXTAREA_MIN_HEIGHT_PX
+  }px`;
+  textarea.style.height = `${nextHeight}px`;
+  textarea.style.overflowY =
+    scrollHeight > STORYBOARD_CHAT_TEXTAREA_MAX_HEIGHT_PX ? "auto" : "hidden";
+  return isMultiline;
+}
 
 type StoryboardExportPresetId = "quick-1280x720" | "high-1920x1080";
 
@@ -842,7 +904,10 @@ function normalizeStoryboardGeneratorFormForSubmit(
 ): GeneratorForm {
   return {
     ...form,
-    segmentCount: deriveStoryboardUiSegmentCount(form.prompt, form.segmentCount),
+    segmentCount: deriveStoryboardUiSegmentCount(
+      form.prompt,
+      form.segmentCount,
+    ),
   };
 }
 
@@ -895,15 +960,7 @@ const STORYBOARD_FRAMES_PER_PAGE = 4;
 // Array.from({ length: STORYBOARD_FRAMES_PER_PAGE }
 // data-storyboard-frame-page={String(activeStoryboardPage + 1)}
 // data-storyboard-frame-page-size={String(STORYBOARD_FRAMES_PER_PAGE)}
-
-const STORYBOARD_STREAMING_PHASE_COUNT = 4;
-
-function getStoryboardStreamingPhase(
-  phases: readonly string[],
-  phaseIndex: number,
-) {
-  return phases[phaseIndex] ?? phases[0] ?? "진행 상황을 확인하는 중";
-}
+type StoryboardFramePageSize = 1 | typeof STORYBOARD_FRAMES_PER_PAGE;
 
 function formatStoryboardGraphRuntimeLabel(
   graph: NonNullable<
@@ -927,12 +984,8 @@ function formatStoryboardGraphDiagnosticsText(
   const retrievalText = retrievalUsed
     ? [
         "영상 자료 검색 반영",
-        graph.retrieval?.usedModels?.embedding
-          ? "자료 분석 반영"
-          : null,
-        graph.retrieval?.usedModels?.reranker
-          ? "우선순위 정리"
-          : null,
+        graph.retrieval?.usedModels?.embedding ? "자료 분석 반영" : null,
+        graph.retrieval?.usedModels?.reranker ? "우선순위 정리" : null,
       ]
         .filter(Boolean)
         .join(" · ")
@@ -966,27 +1019,32 @@ function buildStoryboardBackendAgentReadiness(
   const invokedCommand = Boolean(backend?.invokedCommand);
   const liveGraphReady = Boolean(
     commandConfigured &&
-      commandAvailable &&
-      invokedCommand &&
-      graph?.runtime === "langgraph" &&
-      graph.mode === "graph_command" &&
-      (graph.status === "used" || graph.status === "interrupted_output_ready"),
+    commandAvailable &&
+    invokedCommand &&
+    graph?.runtime === "langgraph" &&
+    graph.mode === "graph_command" &&
+    (graph.status === "used" || graph.status === "interrupted_output_ready"),
   );
   const retrievalUsed = Boolean(
     liveGraphReady &&
-      graph?.status === "used" &&
-      graph.retrieval?.status === "used" &&
-      graph.toolsCalled.includes("search_scene_data"),
+    graph?.status === "used" &&
+    graph.retrieval?.status === "used" &&
+    graph.toolsCalled.includes("search_scene_data"),
   );
-  const resumeRequired = Boolean(graph && graph.status === "interrupted_needs_resume");
-  const outputReadyForReview = Boolean(graph && graph.status === "interrupted_output_ready");
+  const resumeRequired = Boolean(
+    graph && graph.status === "interrupted_needs_resume",
+  );
+  const outputReadyForReview = Boolean(
+    graph && graph.status === "interrupted_output_ready",
+  );
 
   if (retrievalUsed) {
     return {
       status: "live_retrieval_used",
       label: "자료 반영 완료",
       summary: "영상 자료와 요청 내용을 함께 반영했습니다.",
-      detail: formatStoryboardGraphDiagnosticsText(result) ?? "영상 자료 반영 완료",
+      detail:
+        formatStoryboardGraphDiagnosticsText(result) ?? "영상 자료 반영 완료",
       liveGraphReady,
       retrievalUsed,
       resumeRequired,
@@ -1012,7 +1070,8 @@ function buildStoryboardBackendAgentReadiness(
       status: "resume_required",
       label: "이어서 진행 필요",
       summary: "초안 구성을 마치려면 한 번 더 생성해 주세요.",
-      detail: formatStoryboardGraphDiagnosticsText(result) ?? "이어서 진행 필요",
+      detail:
+        formatStoryboardGraphDiagnosticsText(result) ?? "이어서 진행 필요",
       liveGraphReady: false,
       retrievalUsed: false,
       resumeRequired,
@@ -1046,7 +1105,10 @@ function buildStoryboardBackendAgentReadiness(
     };
   }
 
-  if (graph?.runtime === "local_adapter_fallback" || graph?.status === "fallback") {
+  if (
+    graph?.runtime === "local_adapter_fallback" ||
+    graph?.status === "fallback"
+  ) {
     return {
       status: "fallback",
       label: "안전 초안",
@@ -1063,7 +1125,9 @@ function buildStoryboardBackendAgentReadiness(
     status: "unknown",
     label: "준비 상태 확인 중",
     summary: "생성 준비 상태를 확인하고 있습니다.",
-    detail: backend?.runtime ? "생성 상태 확인 중" : "아직 생성 상태가 없습니다.",
+    detail: backend?.runtime
+      ? "생성 상태 확인 중"
+      : "아직 생성 상태가 없습니다.",
     liveGraphReady: false,
     retrievalUsed: false,
     resumeRequired: false,
@@ -1091,15 +1155,16 @@ function isStoryboardRetrievalUsed(result: StoryboardGenerationResult) {
   const graph = result.backendAnalysis.backendAgent?.graph;
   return Boolean(
     graph?.retrieval?.status === "used" &&
-      graph.toolsCalled.includes("search_scene_data"),
+    graph.toolsCalled.includes("search_scene_data"),
   );
 }
 
 function isStoryboardCaptioningUsed(result: StoryboardGenerationResult) {
-  const caption = result.backendAnalysis.backendAgent?.graph?.retrieval?.caption;
+  const caption =
+    result.backendAnalysis.backendAgent?.graph?.retrieval?.caption;
   return Boolean(
     caption?.lookupStatus === "used" ||
-      (caption?.provider && caption.provider !== "unknown_legacy"),
+    (caption?.provider && caption.provider !== "unknown_legacy"),
   );
 }
 
@@ -1107,14 +1172,16 @@ function isStoryboardDenseSparseUsed(result: StoryboardGenerationResult) {
   const retrieval = result.backendAnalysis.backendAgent?.graph?.retrieval;
   return Boolean(
     retrieval?.status === "used" &&
-      retrieval.usedModels?.embedding &&
-      retrieval.operations?.supabaseRpc,
+    retrieval.usedModels?.embedding &&
+    retrieval.operations?.supabaseRpc,
   );
 }
 
 function isStoryboardRerankerUsed(result: StoryboardGenerationResult) {
   const retrieval = result.backendAnalysis.backendAgent?.graph?.retrieval;
-  return Boolean(retrieval?.status === "used" && retrieval.usedModels?.reranker);
+  return Boolean(
+    retrieval?.status === "used" && retrieval.usedModels?.reranker,
+  );
 }
 
 function buildStoryboardPdfFlowChecks({
@@ -1259,8 +1326,9 @@ function formatStoryboardPdfFlowTraceText(checks: StoryboardPdfFlowCheck[]) {
     .slice(0, 5)
     .map(getStoryboardPdfFlowBeginnerLabel)
     .join(", ");
-  const notUsedLabels = checks
-    .filter((check) => check.status === "not_used").length;
+  const notUsedLabels = checks.filter(
+    (check) => check.status === "not_used",
+  ).length;
   return [
     STORYBOARD_PDF_FLOW_SERVICE_TEXT,
     `쉬운 전체 흐름: 먹방 영상이 있다 → AI가 자막과 인기 장면을 분석한다 → 식당 정보는 맛집 지도로 만든다 → 장면 정보는 스토리보드로 만든다 → AI가 틀릴 수 있으니 평가와 사람 검수를 붙인다 → 웹서비스에서 확인한다.`,
@@ -1315,32 +1383,185 @@ function formatStoryboardOmittedSceneText(omittedSceneCount: number) {
     : "무이미지/미검증 컷 없음";
 }
 
-function normalizeStoryboardCopyText(value: string | undefined, fallback: string) {
+function normalizeStoryboardCopyText(
+  value: string | undefined,
+  fallback: string,
+) {
   const normalized = (value ?? "")
     .replace(/\s+/g, " ")
     .replace(/\|/g, "\\|")
     .trim();
-  return normalized ? normalizeLegacyKoreanParticleDisplayText(normalized) : fallback;
+  return normalized
+    ? normalizeLegacyKoreanParticleDisplayText(normalized)
+    : fallback;
+}
+
+function normalizeStoryboardCopyBlock(
+  value: string | undefined,
+  fallback: string,
+) {
+  const normalized = (value ?? "")
+    .replace(/\r\n?/g, "\n")
+    .split("\n")
+    .map((line) => line.replace(/[ \t]+/g, " ").trim())
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  return normalized
+    ? normalizeLegacyKoreanParticleDisplayText(normalized)
+    : fallback;
+}
+
+function normalizeStoryboardCopyMarkdownBlock(
+  value: string | undefined,
+  fallback: string,
+) {
+  const normalized = normalizeStoryboardCopyBlock(value, "");
+  if (!normalized) return fallback;
+
+  return normalized
+    .replace(/\s+(#{1,6}\s+)/g, "\n\n$1")
+    .replace(/\s+(\|\s*CUT\s*\|)/g, "\n\n$1")
+    .replace(/\s+(\|\s*---)/g, "\n$1")
+    .replace(/\s+(\|\s*CUT\s+\d{2}\s*\|)/g, "\n$1")
+    .replace(/\s+(###\s+CUT\s+\d{2})/g, "\n\n$1")
+    .replace(/\s+(-\s+(?:촬영|멘트|자막|체크|근거|오디오):)/g, "\n$1")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function formatStoryboardCopyMarkdownLines(lines: string[]) {
+  return lines
+    .join("\n")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+    .replace(/\n/g, "\r\n");
+}
+
+function formatStoryboardCopyChecklist(
+  items: string[] | undefined,
+  fallback: string,
+) {
+  const normalizedItems =
+    items
+      ?.map((item) => normalizeStoryboardCopyBlock(item, ""))
+      .filter(Boolean) ?? [];
+
+  return normalizedItems.length > 0
+    ? normalizedItems.map((item) => `  - ${item}`)
+    : [`  - ${fallback}`];
+}
+
+async function writeStoryboardClipboardText(text: string) {
+  let selectionCopyError: unknown = null;
+  const textarea = document.createElement("textarea");
+  const selection = document.getSelection();
+  const selectedRange =
+    selection && selection.rangeCount > 0
+      ? selection.getRangeAt(0).cloneRange()
+      : null;
+  const activeElement =
+    document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+  const handleCopy = (event: ClipboardEvent) => {
+    if (!event.clipboardData) return;
+    event.preventDefault();
+    event.clipboardData.setData("text/plain", text);
+  };
+
+  textarea.value = text;
+  textarea.setAttribute("readonly", "true");
+  textarea.style.position = "fixed";
+  textarea.style.inset = "0 auto auto 0";
+  textarea.style.width = "1px";
+  textarea.style.height = "1px";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+
+  try {
+    document.addEventListener("copy", handleCopy);
+    textarea.focus();
+    textarea.select();
+    textarea.setSelectionRange(0, textarea.value.length);
+
+    if (!document.execCommand("copy")) {
+      throw new Error("브라우저 복사 명령을 사용할 수 없습니다.");
+    }
+    return;
+  } catch (fallbackError) {
+    selectionCopyError = fallbackError;
+  } finally {
+    document.removeEventListener("copy", handleCopy);
+    textarea.remove();
+    if (selection && selectedRange) {
+      selection.removeAllRanges();
+      selection.addRange(selectedRange);
+    }
+    activeElement?.focus({ preventScroll: true });
+  }
+
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return;
+    } catch (clipboardError) {
+      if (selectionCopyError instanceof Error) {
+        throw selectionCopyError;
+      }
+      if (clipboardError instanceof Error) {
+        throw clipboardError;
+      }
+    }
+  }
+
+  throw new Error("브라우저 클립보드 권한을 사용할 수 없습니다.");
 }
 
 function buildStoryboardClientCopyPlanMarkdown(
   result: StoryboardGenerationResult,
 ) {
-  const current = result.storyboard.exportMarkdown.trim();
-  const hasCurrentShotList =
-    current.includes("## 촬영 기획표") &&
-    current.includes("| CUT | 역할 | 촬영 지시 | 멘트 | 자막 | 근거 |");
-  if (hasCurrentShotList) return current;
-
+  const current = normalizeStoryboardCopyMarkdownBlock(
+    result.storyboard.exportMarkdown,
+    "",
+  );
   const scenes = result.storyboard.scenes;
-  if (scenes.length === 0) return current;
+  if (scenes.length === 0) {
+    return current ? formatStoryboardCopyMarkdownLines([current]) : "";
+  }
 
+  const generatedImageCount = countTrustedStoryboardGeneratedImages(scenes);
+  const request = result.request;
   const lines = [
     `# ${normalizeStoryboardCopyText(result.storyboard.title, "스토리보드 기획서")}`,
     "",
-    normalizeStoryboardCopyText(
+    `> ${normalizeStoryboardCopyBlock(
       result.storyboard.logline,
       "CUT별 촬영 지시, 멘트, 자막, 근거를 한 번에 확인합니다.",
+    )}`,
+    "",
+    "## 제작 개요",
+    "",
+    `- 생성 요청: ${normalizeStoryboardCopyBlock(request.prompt, "요청 프롬프트 없음")}`,
+    `- 생성 모드: ${normalizeStoryboardCopyText(request.generationMode, "기본 생성")}`,
+    `- 영상 톤: ${normalizeStoryboardCopyText(
+      STORYBOARD_DISPLAY_TONE_LABELS[request.tone] ?? request.tone,
+      "먹방 스토리보드",
+    )}`,
+    `- 목표 분량: ${request.targetLengthMinutes}분 · ${request.segmentCount}컷`,
+    `- 이미지 상태: 생성 완료 ${generatedImageCount}/${scenes.length}컷`,
+    `- 데이터 상태: ${normalizeStoryboardCopyText(
+      result.sourceSummary.dataModeLabel,
+      "스토리보드 데이터",
+    )} · 선택 소스 ${result.sourceSummary.selectedSources}개 · 마커 ${result.sourceSummary.totalMarkers}개`,
+    `- 생성 시각: ${normalizeStoryboardCopyText(result.generatedAt, "생성 시각 없음")}`,
+    "",
+    "## 전체 요약",
+    "",
+    normalizeStoryboardCopyBlock(
+      result.storyboard.operatorBrief,
+      "현장 진행자는 CUT별 멘트, 자막, 촬영 지시를 기준으로 촬영합니다.",
     ),
     "",
     "## 촬영 기획표",
@@ -1354,8 +1575,14 @@ function buildStoryboardClientCopyPlanMarkdown(
         scene.visualDirection || scene.operatorIntent,
         "촬영 지시 확인",
       );
-      const hostBeat = normalizeStoryboardCopyText(scene.hostBeat, "현장 멘트 확인");
-      const subtitle = normalizeStoryboardCopyText(scene.captionIdea, "자막 확인");
+      const hostBeat = normalizeStoryboardCopyText(
+        scene.hostBeat,
+        "현장 멘트 확인",
+      );
+      const subtitle = normalizeStoryboardCopyText(
+        scene.captionIdea,
+        "자막 확인",
+      );
       const evidence = normalizeStoryboardCopyText(
         `${scene.heatmapEvidence.peakTime} · ${scene.heatmapEvidence.reason}`,
         "근거 확인",
@@ -1365,24 +1592,44 @@ function buildStoryboardClientCopyPlanMarkdown(
     "",
     "## CUT별 상세 메모",
     "",
-    ...scenes.flatMap((scene) => [
-      `### CUT ${String(scene.sceneNo).padStart(2, "0")} · ${normalizeStoryboardCopyText(scene.title, "장면 구성")}`,
-      `- 촬영: ${normalizeStoryboardCopyText(scene.visualDirection, "촬영 지시 확인")}`,
-      `- 멘트: ${normalizeStoryboardCopyText(scene.hostBeat, "현장 멘트 확인")}`,
-      `- 자막: ${normalizeStoryboardCopyText(scene.captionIdea, "자막 확인")}`,
-      `- 체크: ${scene.productionChecklist.map((item) => normalizeStoryboardCopyText(item, "체크")).join(" / ") || "현장 체크"}`,
-      `- 근거: ${normalizeStoryboardCopyText(`${scene.heatmapEvidence.peakTime} · ${scene.heatmapEvidence.reason}`, "근거 확인")}`,
-      "",
-    ]),
+    ...scenes.flatMap((scene) => {
+      const trustedImage = getTrustedStoryboardGeneratedImage(
+        scene.generatedImage,
+      );
+      const cut = `CUT ${String(scene.sceneNo).padStart(2, "0")}`;
+
+      return [
+        `### ${cut} · ${normalizeStoryboardCopyText(scene.title, "장면 구성")}`,
+        `- 길이: ${scene.durationSec}초`,
+        `- 역할: ${normalizeStoryboardCopyBlock(scene.operatorIntent, "장면 역할 확인")}`,
+        `- 촬영 지시: ${normalizeStoryboardCopyBlock(scene.visualDirection, "촬영 지시 확인")}`,
+        `- 현장 멘트: ${normalizeStoryboardCopyBlock(scene.hostBeat, "현장 멘트 확인")}`,
+        `- 자막: ${normalizeStoryboardCopyBlock(scene.captionIdea, "자막 확인")}`,
+        `- 근거: ${normalizeStoryboardCopyBlock(
+          `${scene.heatmapEvidence.peakTime} · 리플레이 ${scene.heatmapEvidence.replayScore} · ${scene.heatmapEvidence.reason}`,
+          "근거 확인",
+        )}`,
+        "- 제작 체크리스트:",
+        ...formatStoryboardCopyChecklist(
+          scene.productionChecklist,
+          "현장 동선, 메뉴, 리액션 포인트 확인",
+        ),
+        `- 이미지 상태: ${trustedImage ? `생성 완료 · ${trustedImage.model}` : "아직 생성 전"}`,
+        `- 이미지 프롬프트: ${normalizeStoryboardCopyBlock(
+          trustedImage?.prompt,
+          "이미지 생성 후 프롬프트가 기록됩니다.",
+        )}`,
+        "",
+      ];
+    }),
   ];
 
   if (current) {
-    lines.push("## 기존 메모", "", current);
+    lines.push("## 원본 내보내기 메모", "", current);
   }
 
-  return lines.join("\n").trim();
+  return formatStoryboardCopyMarkdownLines(lines);
 }
-
 
 function buildStoryboardUserPerspectiveReadiness({
   result,
@@ -1406,9 +1653,11 @@ function buildStoryboardUserPerspectiveReadiness({
   hasSelectedCut: boolean;
 }): StoryboardUserPerspectiveReadinessItem[] {
   const isActualData = getStoryboardRealDataModeLabel(result) === "actual";
-  const hasVisibleGeneratedCuts = visibleCutCount > 0 && generatedImageCount > 0;
+  const hasVisibleGeneratedCuts =
+    visibleCutCount > 0 && generatedImageCount > 0;
   const activePageReady =
-    activePageSceneCount > 0 && activePageGeneratedCount === activePageSceneCount;
+    activePageSceneCount > 0 &&
+    activePageGeneratedCount === activePageSceneCount;
   const omittedText = formatStoryboardOmittedSceneText(omittedSceneCount);
 
   return [
@@ -1427,9 +1676,7 @@ function buildStoryboardUserPerspectiveReadiness({
       id: "manager",
       label: "매니저",
       status: isActualData ? "ready" : "watch",
-      summary: isActualData
-        ? "영상 흐름을 참고한 구성"
-        : "예시 구성",
+      summary: isActualData ? "영상 흐름을 참고한 구성" : "예시 구성",
       detail: isActualData
         ? "영상 흐름과 요청 내용을 함께 확인합니다."
         : "실제 영상 자료가 필요하면 다시 생성해 주세요.",
@@ -1439,9 +1686,9 @@ function buildStoryboardUserPerspectiveReadiness({
       label: "PD",
       status: activePageReady ? "ready" : "watch",
       summary: activePageReady
-        ? "2×2 캔버스 현재 페이지가 생성 이미지로 채워짐"
+        ? "현재 보기 페이지가 생성 이미지로 채워짐"
         : "현재 페이지 생성 이미지 누락 컷 확인 필요",
-      detail: `현재 ${activePageGeneratedCount}/${activePageSceneCount || STORYBOARD_FRAMES_PER_PAGE} · 전체 ${generatedImageCount}/${visibleCutCount} · ${omittedText}`,
+      detail: `현재 ${activePageGeneratedCount}/${activePageSceneCount || 1} · 전체 ${generatedImageCount}/${visibleCutCount} · ${omittedText}`,
     },
     {
       id: "editor",
@@ -1580,7 +1827,10 @@ function hasKoreanFinalConsonant(value: string) {
   return (code - 0xac00) % 28 !== 0;
 }
 
-function getKoreanParticleForDisplay(stem: string, pair: "은/는" | "이/가" | "을/를") {
+function getKoreanParticleForDisplay(
+  stem: string,
+  pair: "은/는" | "이/가" | "을/를",
+) {
   const hasFinal = hasKoreanFinalConsonant(stem);
   if (pair === "은/는") return hasFinal ? "은" : "는";
   if (pair === "이/가") return hasFinal ? "이" : "가";
@@ -1617,9 +1867,15 @@ function sanitizeStoryboardChatDisplayText(value: string) {
       /reveal\s+(?:openai[_\s-]*api[_\s-]*key|api[_\s-]*key|secret|token)[^.!?\n\r]*/gi,
       "[SAFETY-REDACTED-INSTRUCTION]",
     )
-    .replace(/delete\s+\.?omx\/state[^.!?\n\r]*/gi, "[SAFETY-REDACTED-INSTRUCTION]")
+    .replace(
+      /delete\s+\.?omx\/state[^.!?\n\r]*/gi,
+      "[SAFETY-REDACTED-INSTRUCTION]",
+    )
     .replace(/검증을\s*건너뛰[^\n\r.!?]*/g, "[SAFETY-REDACTED-INSTRUCTION]")
-    .replace(/이전\s*지시(?:를)?\s*무시[^\n\r.!?]*/g, "[SAFETY-REDACTED-INSTRUCTION]");
+    .replace(
+      /이전\s*지시(?:를)?\s*무시[^\n\r.!?]*/g,
+      "[SAFETY-REDACTED-INSTRUCTION]",
+    );
 
   const safe = sanitizeStoryboardPublicText(locallySanitized)
     .replaceAll(
@@ -1649,9 +1905,15 @@ function formatStoryboardAssistantDisplayText(value: string) {
     " __STORYBOARD_NO_IMAGE_DOT__ ",
   );
   const safe = sanitizeStoryboardAssistantSourceText(value)
-    .replace(/Codex CLI\s+[A-Za-z0-9._-]+\s+\w+\s+작업 완료/gi, "요청을 이해했어요")
+    .replace(
+      /Codex CLI\s+[A-Za-z0-9._-]+\s+\w+\s+작업 완료/gi,
+      "요청을 이해했어요",
+    )
     .replace(/GPT\s*Image\s*2|gpt-image-2/gi, "이미지 만들기")
-    .replace(/LangGraph|BGE|리랭커|provider|provenance|fallback|model/gi, "내부 처리")
+    .replace(
+      /LangGraph|BGE|리랭커|provider|provenance|fallback|model/gi,
+      "내부 처리",
+    )
     .replace(/백엔드\s*에이전트|백엔드|에이전트/g, "도우미")
     .replace(/패치/g, "수정")
     .replace(/스트리밍/g, "진행 상태")
@@ -1659,7 +1921,10 @@ function formatStoryboardAssistantDisplayText(value: string) {
     .replace(/캔버스가/g, "화면이")
     .replace(/캔버스/g, "화면")
     .replace(/CUT\s*0?(\d+)/gi, "컷 $1")
-    .replace(/스토리보드 이미지 반영 완료/g, "스토리보드 이미지가 화면에 들어갔어요")
+    .replace(
+      /스토리보드 이미지 반영 완료/g,
+      "스토리보드 이미지가 화면에 들어갔어요",
+    )
     .replace(/스토리보드 컷 구성 완료/g, "스토리보드 컷 구성이 끝났어요")
     .replace(/^완료:\s*/g, "완료했어요. ")
     .replace(/실제 스토리보드 생성 실패/g, "스토리보드 만들기에 실패했어요")
@@ -1687,27 +1952,16 @@ function formatStoryboardAssistantDisplayText(value: string) {
   const lines = safe
     .split(/\n+|\s+·\s+/)
     .map((line) => line.trim())
-    .map((line) =>
-      line.replaceAll(
-        " __STORYBOARD_NO_IMAGE_DOT__ ",
-        " · ",
-      ),
-    )
+    .map((line) => line.replaceAll(" __STORYBOARD_NO_IMAGE_DOT__ ", " · "))
     .filter(Boolean);
 
   const compactLines =
     lines.length > 5
-      ? [
-          ...lines.slice(0, 4),
-          "더 자세히 보고 싶으면 “과정”이라고 입력하세요.",
-        ]
+      ? [...lines.slice(0, 4), "더 자세히 보고 싶으면 “과정”이라고 입력하세요."]
       : lines;
 
   if (lines.length <= 1) {
-    return safe.replaceAll(
-      " __STORYBOARD_NO_IMAGE_DOT__ ",
-      " · ",
-    );
+    return safe.replaceAll(" __STORYBOARD_NO_IMAGE_DOT__ ", " · ");
   }
 
   return compactLines
@@ -1730,6 +1984,135 @@ function formatStoryboardChatMessageForDisplay(
   };
 }
 
+function buildStoryboardChatConversationContext(
+  messages: StoryboardChatMessage[],
+): StoryboardChatConversationMessage[] {
+  return messages
+    .filter(
+      (message) =>
+        message.status !== "streaming" &&
+        message.id !== "assistant-intake" &&
+        message.text.trim(),
+    )
+    .slice(-STORYBOARD_CHAT_CONVERSATION_CONTEXT_LIMIT)
+    .map((message) => ({
+      id: message.id,
+      role: message.role,
+      content: sanitizeStoryboardChatDisplayText(message.text).slice(0, 320),
+    }));
+}
+
+function useStoryboardChatTypewriterMessages(
+  messages: StoryboardChatMessage[],
+) {
+  const targetTextByIdRef = useRef<Record<string, string>>({});
+  const [displayedTextById, setDisplayedTextById] = useState<
+    Record<string, string>
+  >(() =>
+    Object.fromEntries(
+      messages.map((message) => [
+        message.id,
+        message.role === "assistant" ? "" : message.text,
+      ]),
+    ),
+  );
+
+  useEffect(() => {
+    const previousTargets = targetTextByIdRef.current;
+    const nextTargets = Object.fromEntries(
+      messages.map((message) => [message.id, message.text]),
+    );
+
+    setDisplayedTextById((current) => {
+      const next: Record<string, string> = {};
+
+      for (const message of messages) {
+        if (message.role !== "assistant") {
+          next[message.id] = message.text;
+          continue;
+        }
+
+        const currentText = current[message.id] ?? "";
+        const previousTarget = previousTargets[message.id];
+        const targetChanged = previousTarget !== message.text;
+
+        if (!targetChanged) {
+          next[message.id] = currentText;
+        } else if (message.text.startsWith(currentText)) {
+          next[message.id] = currentText;
+        } else {
+          next[message.id] = "";
+        }
+      }
+
+      return next;
+    });
+
+    targetTextByIdRef.current = nextTargets;
+  }, [messages]);
+
+  const hasPendingTypewriterText = useMemo(
+    () =>
+      messages.some(
+        (message) =>
+          message.role === "assistant" &&
+          (displayedTextById[message.id] ?? "") !== message.text,
+      ),
+    [displayedTextById, messages],
+  );
+
+  useEffect(() => {
+    if (!hasPendingTypewriterText) return;
+    const hasEmptyPendingAssistantText = messages.some(
+      (message) =>
+        message.role === "assistant" &&
+        message.text.length > 0 &&
+        (displayedTextById[message.id] ?? "") === "",
+    );
+
+    const timeout = window.setTimeout(
+      () => {
+        setDisplayedTextById((current) => {
+          let changed = false;
+          const next: Record<string, string> = {};
+
+          for (const message of messages) {
+            if (message.role !== "assistant") {
+              next[message.id] = message.text;
+              continue;
+            }
+
+            const currentText = current[message.id] ?? "";
+            if (currentText === message.text) {
+              next[message.id] = currentText;
+              continue;
+            }
+
+            const stableCurrentText = message.text.startsWith(currentText)
+              ? currentText
+              : "";
+            const nextLength = Math.min(
+              message.text.length,
+              stableCurrentText.length + STORYBOARD_CHAT_TYPEWRITER_STEP_CHARS,
+            );
+            next[message.id] = message.text.slice(0, nextLength);
+            changed = true;
+          }
+
+          return changed ? next : current;
+        });
+      },
+      hasEmptyPendingAssistantText
+        ? STORYBOARD_CHAT_TYPEWRITER_START_DELAY_MS
+        : STORYBOARD_CHAT_TYPEWRITER_INTERVAL_MS,
+    );
+
+    return () => window.clearTimeout(timeout);
+  }, [displayedTextById, hasPendingTypewriterText, messages]);
+
+  return displayedTextById;
+}
+
 function buildStoryboardImageGenerationProgress({
   label,
   scenes,
@@ -1748,14 +2131,15 @@ function buildStoryboardImageGenerationProgress({
   let cancelled = 0;
   const cuts = scenes.map((scene) => {
     const sceneNo = scene.sceneNo;
-    const status: StoryboardImageGenerationCutStatus =
-      completedSceneNos.has(sceneNo)
-        ? "done"
-        : failedSceneNos.has(sceneNo)
-          ? "failed"
-          : cancelledSceneNos.has(sceneNo)
-            ? "cancelled"
-            : "generating";
+    const status: StoryboardImageGenerationCutStatus = completedSceneNos.has(
+      sceneNo,
+    )
+      ? "done"
+      : failedSceneNos.has(sceneNo)
+        ? "failed"
+        : cancelledSceneNos.has(sceneNo)
+          ? "cancelled"
+          : "generating";
     if (status === "done") completed += 1;
     if (status === "failed") failed += 1;
     if (status === "cancelled") cancelled += 1;
@@ -1776,6 +2160,179 @@ function buildStoryboardImageGenerationProgress({
   };
 }
 
+function normalizeStoryboardThinkingTraceEntry(
+  value: unknown,
+  fallbackId = `trace-${Date.now()}`,
+): StoryboardThinkingTraceEntry | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const candidate = value as Partial<StoryboardThinkingTraceEntry>;
+  const label = sanitizeStoryboardChatDisplayText(
+    String(candidate.label ?? ""),
+  );
+  if (!label) return null;
+  const rawStatus = candidate.status;
+  const status: StoryboardThinkingTraceEntry["status"] =
+    rawStatus === "pending" ||
+    rawStatus === "running" ||
+    rawStatus === "done" ||
+    rawStatus === "failed" ||
+    rawStatus === "cancelled"
+      ? rawStatus
+      : "done";
+  const detail = sanitizeStoryboardAssistantSourceText(
+    String(candidate.detail ?? ""),
+  );
+  const idSource = sanitizeStoryboardChatDisplayText(
+    String(candidate.id ?? fallbackId),
+  ).replace(/[^\w:.-]/g, "");
+  return {
+    id: idSource || fallbackId,
+    label,
+    status,
+    ...(detail ? { detail } : {}),
+    timestamp:
+      typeof candidate.timestamp === "string"
+        ? candidate.timestamp.slice(0, 40)
+        : new Date().toISOString(),
+  };
+}
+
+function makeStoryboardThinkingTraceEntries(
+  ...entries: unknown[]
+): StoryboardThinkingTraceEntry[] {
+  return entries.flatMap((entry, index) => {
+    const normalized = normalizeStoryboardThinkingTraceEntry(
+      entry,
+      `trace-${Date.now()}-${index}`,
+    );
+    return normalized ? [normalized] : [];
+  });
+}
+
+function mergeStoryboardThinkingTraceEntries(
+  current: StoryboardThinkingTraceEntry[] | undefined,
+  entries: StoryboardThinkingTraceEntry[],
+) {
+  const merged = new Map<string, StoryboardThinkingTraceEntry>();
+  for (const entry of current ?? []) merged.set(entry.id, entry);
+  for (const entry of entries) merged.set(entry.id, entry);
+  return Array.from(merged.values()).slice(-48);
+}
+
+function getStoryboardThinkingTraceTimestampMs(
+  entry: StoryboardThinkingTraceEntry,
+) {
+  if (!entry.timestamp) return null;
+  const value = Date.parse(entry.timestamp);
+  return Number.isFinite(value) ? value : null;
+}
+
+function formatStoryboardThinkingDuration(ms: number) {
+  const totalSeconds = Math.max(1, Math.round(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes > 0) {
+    return `${minutes}분 ${seconds}초 동안 생각함`;
+  }
+  return `${totalSeconds}초 동안 생각함`;
+}
+
+function getStoryboardThinkingTraceDurationLabel(
+  trace: StoryboardThinkingTraceEntry[],
+) {
+  const timestamps = trace
+    .map(getStoryboardThinkingTraceTimestampMs)
+    .filter((value): value is number => value != null)
+    .sort((a, b) => a - b);
+  if (!timestamps.length) return null;
+  const startMs = timestamps[0];
+  const hasRunningEntry = trace.some((entry) => entry.status === "running");
+  const endMs = hasRunningEntry
+    ? Date.now()
+    : timestamps[timestamps.length - 1];
+  if (endMs <= startMs) return null;
+  return formatStoryboardThinkingDuration(endMs - startMs);
+}
+
+function StoryboardThinkingTracePanel({
+  trace,
+}: {
+  trace: StoryboardThinkingTraceEntry[];
+}) {
+  if (!trace.length) return null;
+  const runningCount = trace.filter(
+    (entry) => entry.status === "running",
+  ).length;
+  const finishedCount = trace.filter(
+    (entry) =>
+      entry.status === "done" ||
+      entry.status === "failed" ||
+      entry.status === "cancelled",
+  ).length;
+  const statusLabel =
+    runningCount > 0
+      ? `${runningCount}단계 진행 중`
+      : `${finishedCount}/${trace.length}단계 기록`;
+  const durationLabel = getStoryboardThinkingTraceDurationLabel(trace);
+
+  return (
+    <details
+      className="mt-2 rounded-xl border border-border/70 bg-muted/35 px-2.5 py-2 text-[11px]"
+      data-storyboard-thinking-trace="true"
+    >
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 font-semibold">
+        <span className="inline-flex min-w-0 items-center gap-1.5">
+          {runningCount > 0 ? (
+            <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+          ) : null}
+          <span>생각 중</span>
+        </span>
+        <span
+          className="shrink-0 text-muted-foreground"
+          data-storyboard-thinking-duration="true"
+        >
+          {durationLabel ?? statusLabel}
+        </span>
+      </summary>
+      <div className="mt-2 space-y-1.5">
+        {trace.map((entry, index) => {
+          const statusText =
+            entry.status === "running"
+              ? "진행 중"
+              : entry.status === "failed"
+                ? "실패"
+                : entry.status === "cancelled"
+                  ? "중단"
+                  : entry.status === "pending"
+                    ? "대기"
+                    : "완료";
+          return (
+            <div
+              key={`${entry.id}-${index}`}
+              className="rounded-lg bg-background/70 px-2 py-1.5"
+              data-storyboard-thinking-trace-entry={entry.status}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="min-w-0 truncate font-medium">
+                  {entry.label}
+                </span>
+                <span className="shrink-0 text-[10px] text-muted-foreground">
+                  {statusText}
+                </span>
+              </div>
+              {entry.detail ? (
+                <p className="mt-0.5 whitespace-pre-wrap break-keep text-muted-foreground [overflow-wrap:anywhere]">
+                  {entry.detail}
+                </p>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+    </details>
+  );
+}
+
 function StoryboardImageGenerationProgressPanel({
   progress,
 }: {
@@ -1784,9 +2341,7 @@ function StoryboardImageGenerationProgressPanel({
   const finishedCount =
     progress.completed + progress.failed + progress.cancelled;
   const progressPercent =
-    progress.total > 0
-      ? Math.round((finishedCount / progress.total) * 100)
-      : 0;
+    progress.total > 0 ? Math.round((finishedCount / progress.total) * 100) : 0;
 
   return (
     <div
@@ -1845,7 +2400,10 @@ function StoryboardImageGenerationProgressPanel({
                 )}
               >
                 {isGenerating ? (
-                  <Loader2 className="h-2.5 w-2.5 animate-spin" aria-hidden="true" />
+                  <Loader2
+                    className="h-2.5 w-2.5 animate-spin"
+                    aria-hidden="true"
+                  />
                 ) : null}
                 {statusLabel}
               </span>
@@ -1914,7 +2472,10 @@ function formatStoryboardFrameProductionNote(scene: StoryboardScene) {
     scene.title?.trim() ||
     "이 컷에서 가장 중요한 장면을 한눈에 보이게 촬영하세요.";
   const safe = sanitizeStoryboardChatDisplayText(source)
-    .replace(/(?:LLM|RAG|LangGraph|BGE|리랭커|provider|provenance|fallback|model)/gi, "도우미 처리")
+    .replace(
+      /(?:LLM|RAG|LangGraph|BGE|리랭커|provider|provenance|fallback|model)/gi,
+      "도우미 처리",
+    )
     .replace(/얼굴\s*클로즈업|표정\s*클로즈업/g, "손동작과 테이블 반응")
     .replace(/얼굴|표정/g, "손동작과 테이블 반응")
     .replace(/\s*특히\s*/g, " 특히 ")
@@ -2039,7 +2600,8 @@ const INITIAL_STORYBOARD_PREVIEW: StoryboardGenerationResult = {
         sceneNo: 1,
         title: "첫 입 리액션 훅",
         durationSec: 110,
-        operatorIntent: "초반 이탈을 줄이도록 가게 앞 상황과 오늘 먹을 메뉴를 먼저 이해시킴",
+        operatorIntent:
+          "초반 이탈을 줄이도록 가게 앞 상황과 오늘 먹을 메뉴를 먼저 이해시킴",
         visualDirection:
           "가게 외관, 입구 동선, 대표 메뉴 예고를 넓은 컷으로 빠르게 연결",
         hostBeat: "이건 한 입 먹자마자 바로 다시 보게 되는 맛이에요.",
@@ -2084,7 +2646,8 @@ const INITIAL_STORYBOARD_PREVIEW: StoryboardGenerationResult = {
         sceneNo: 3,
         title: "첫 상 공개와 첫 입 준비",
         durationSec: 130,
-        operatorIntent: "테이블 구성을 먼저 보여주고 첫 입 직전의 기대감을 만듦",
+        operatorIntent:
+          "테이블 구성을 먼저 보여주고 첫 입 직전의 기대감을 만듦",
         visualDirection:
           "테이블 전체, 메인 접시, 사이드 메뉴 위치가 한눈에 보이게 배치",
         hostBeat: "이 조합으로 먼저 먹어보면 맛의 기준이 잡힐 것 같아요.",
@@ -2109,7 +2672,8 @@ const INITIAL_STORYBOARD_PREVIEW: StoryboardGenerationResult = {
         operatorIntent: "맛, 양, 다시 먹고 싶은 이유와 다음 영상 기대감을 정리",
         visualDirection:
           "메모하는 손, 정리된 접시, 가게 밖 다음 이동 암시를 차분하게 연결",
-        hostBeat: "오늘은 이 조합이 제일 기억에 남고, 다음에는 다른 메뉴도 이어서 가볼게요.",
+        hostBeat:
+          "오늘은 이 조합이 제일 기억에 남고, 다음에는 다른 메뉴도 이어서 가볼게요.",
         captionIdea: "맛 평가와 다음 영상 기대감",
         heatmapEvidence: {
           videoId: "local-preview-004",
@@ -2580,7 +3144,9 @@ async function getStoryboardHistoryResults(): Promise<StoryboardHistoryCase[]> {
   });
 
   if (!response.ok) {
-    throw new Error(`스토리보드 기록 인덱스를 불러오지 못했습니다. (${response.status})`);
+    throw new Error(
+      `스토리보드 기록 인덱스를 불러오지 못했습니다. (${response.status})`,
+    );
   }
   const runs = extractStoryboardHistoryRuns(await response.json());
   const hydratedCases = await Promise.all(
@@ -2669,9 +3235,7 @@ function mergeStoryboardHistoryCases(
   });
 }
 
-function getStoryboardHistoryPreviewImage(
-  historyCase: StoryboardHistoryCase,
-) {
+function getStoryboardHistoryPreviewImage(historyCase: StoryboardHistoryCase) {
   for (const scene of historyCase.result.storyboard.scenes) {
     const trustedImage = getTrustedStoryboardGeneratedImage(
       scene.generatedImage,
@@ -2740,8 +3304,8 @@ function formatStoryboardTraceBubble(
   const graph = result.backendAnalysis.backendAgent?.graph;
   const retrievalUsed = Boolean(
     graph?.status === "used" &&
-      graph.retrieval?.status === "used" &&
-      graph.toolsCalled.includes("search_scene_data"),
+    graph.retrieval?.status === "used" &&
+    graph.toolsCalled.includes("search_scene_data"),
   );
   const dataText = retrievalUsed
     ? "영상에서 다시 본 장면과 자막 근거를 확인했어요."
@@ -2784,7 +3348,10 @@ function formatStoryboardGenerationCompletion(
     page: 0,
     pageSize: STORYBOARD_FRAMES_PER_PAGE,
   }).length;
-  const visibleCanvasCutCount = Math.min(STORYBOARD_FRAMES_PER_PAGE, sceneCount);
+  const visibleCanvasCutCount = Math.min(
+    STORYBOARD_FRAMES_PER_PAGE,
+    sceneCount,
+  );
   const traceText = formatStoryboardTraceBubble(result);
 
   if (visibleCanvasImageCount > 0) {
@@ -2810,8 +3377,7 @@ function formatStoryboardGenerationCompletion(
   return {
     focusLabel: "스토리보드 컷 구성 완료",
     focusDetail: noVisibleImageDetail,
-    focusPromptContext:
-      `${STORYBOARD_NO_TRUSTED_IMAGE_LABEL}. 캔버스 CUT 이미지는 이미지 생성 버튼으로 검증 이미지 결과를 만든 뒤 표시됩니다.`,
+    focusPromptContext: `${STORYBOARD_NO_TRUSTED_IMAGE_LABEL}. 캔버스 CUT 이미지는 이미지 생성 버튼으로 검증 이미지 결과를 만든 뒤 표시됩니다.`,
     assistantText: `스토리보드 컷 구성 완료 · ${noVisibleImageSummary} · 이미지 만들기 버튼을 누르면 캔버스 CUT 이미지를 채울 수 있습니다.\n\n${traceText}`,
     streamingText: `완료: ${sceneCount}컷 스토리보드 구성은 준비됐지만 ${noVisibleImageSummary}입니다 · 이미지 만들기 버튼을 누르면 캔버스 CUT 이미지를 채울 수 있습니다.\n\n${traceText}`,
   };
@@ -2889,11 +3455,15 @@ function mergeStoryboardScenePatch(
   };
 }
 
-function getStoryboardPageForSceneNo(sceneNo: number, totalPages: number) {
+function getStoryboardPageForSceneNo(
+  sceneNo: number,
+  totalPages: number,
+  pageSize: StoryboardFramePageSize | number = STORYBOARD_FRAMES_PER_PAGE,
+) {
   const maxPage = Math.max(0, totalPages - 1);
   if (!Number.isFinite(sceneNo)) return 0;
   const page = Math.floor(
-    (Math.max(1, Math.trunc(sceneNo)) - 1) / STORYBOARD_FRAMES_PER_PAGE,
+    (Math.max(1, Math.trunc(sceneNo)) - 1) / Math.max(1, Math.trunc(pageSize)),
   );
   return Math.min(maxPage, Math.max(0, page));
 }
@@ -2901,6 +3471,7 @@ function getStoryboardPageForSceneNo(sceneNo: number, totalPages: number) {
 function getStoryboardVisibleFramePageForSceneNo(
   scenes: StoryboardScene[],
   sceneNo: number,
+  pageSize: StoryboardFramePageSize | number = STORYBOARD_FRAMES_PER_PAGE,
 ) {
   if (!Number.isFinite(sceneNo)) return null;
   const sceneIndex = scenes.findIndex(
@@ -2909,14 +3480,13 @@ function getStoryboardVisibleFramePageForSceneNo(
   if (sceneIndex < 0) return null;
   return getStoryboardPageForSceneNo(
     sceneIndex + 1,
-    Math.max(1, Math.ceil(scenes.length / STORYBOARD_FRAMES_PER_PAGE)),
+    Math.max(1, Math.ceil(scenes.length / Math.max(1, Math.trunc(pageSize)))),
+    pageSize,
   );
 }
 
 async function isStoryboardDisplayImageAvailable(dataUrl: string) {
-  const isInlineImage = /^data:image\/(?:png|jpeg|webp);base64,/i.test(
-    dataUrl,
-  );
+  const isInlineImage = /^data:image\/(?:png|jpeg|webp);base64,/i.test(dataUrl);
   if (!isInlineImage && !dataUrl.startsWith("/")) {
     return false;
   }
@@ -2958,7 +3528,9 @@ function stripStoryboardGeneratedImageForScene(
   let didStripImage = false;
   const scenes = result.storyboard.scenes.map((scene) => {
     if (scene.sceneNo !== sceneNo) return scene;
-    const trustedImage = getTrustedStoryboardGeneratedImage(scene.generatedImage);
+    const trustedImage = getTrustedStoryboardGeneratedImage(
+      scene.generatedImage,
+    );
     if (!trustedImage || trustedImage.dataUrl !== dataUrl) return scene;
     const safeScene = { ...scene };
     delete safeScene.generatedImage;
@@ -2988,9 +3560,10 @@ async function fetchStoryboardInitialResult(
   if (!response.ok) return null;
   const result = extractLatestStoryboardResult(await response.json());
   if (!result) return null;
-  const trustedResult = await stripUnavailableStoryboardGeneratedImagesForBrowser(
-    hydrateStoryboardResultForDisplay(result),
-  );
+  const trustedResult =
+    await stripUnavailableStoryboardGeneratedImagesForBrowser(
+      hydrateStoryboardResultForDisplay(result),
+    );
   const trustedFirstPageSceneCount = getVisibleTrustedStoryboardPageScenes({
     allScenes: trustedResult.storyboard.scenes,
     page: 0,
@@ -3032,17 +3605,11 @@ function getTrustedInitialStoryboardResult(
     : null;
 }
 
-function getStoryboardInitialResultSourceLabel(
-  source: StoryboardInitialResult["source"],
-) {
-  return source === "shared-seed"
-    ? "공용 기본 스토리보드"
-    : "최근 실제 기록";
-}
-
 function makeInitialStoryboardChatMessages(
   initialStoryboardResult: StoryboardInitialResult | null,
 ): StoryboardChatMessage[] {
+  void initialStoryboardResult;
+
   const intakeMessage = formatStoryboardChatMessageForDisplay({
     id: "assistant-intake",
     role: "assistant",
@@ -3050,28 +3617,7 @@ function makeInitialStoryboardChatMessages(
     status: "done",
   });
 
-  if (!initialStoryboardResult) return [intakeMessage];
-
-  const sourceLabel = getStoryboardInitialResultSourceLabel(
-    initialStoryboardResult.source,
-  );
-  const latestHistoryMessage: StoryboardChatMessage = {
-    id: "assistant-latest-real-data",
-    role: "assistant",
-    text: `${sourceLabel}을 바로 불러왔어요 · ${initialStoryboardResult.result.storyboard.title}. 컷을 확인하고 필요한 수정은 채팅으로 요청하세요.`,
-    status: "done",
-  };
-  const latestHistoryImprovementMessage =
-    makeStoryboardImprovementSummaryMessage(
-      initialStoryboardResult.result,
-      "assistant-latest-real-data-improvement-summary",
-    );
-
-  return [
-    intakeMessage,
-    formatStoryboardChatMessageForDisplay(latestHistoryMessage),
-    formatStoryboardChatMessageForDisplay(latestHistoryImprovementMessage),
-  ];
+  return [intakeMessage];
 }
 
 async function postStoryboardRequest(
@@ -3232,7 +3778,11 @@ function mapStoryboardLocalBridgeStatusToReadiness(
 
 function readStoryboardLocalBridgeErrorBody(body: unknown) {
   if (body && typeof body === "object") {
-    const record = body as Partial<{ detail: unknown; error: unknown; message: unknown }>;
+    const record = body as Partial<{
+      detail: unknown;
+      error: unknown;
+      message: unknown;
+    }>;
     const detail =
       typeof record.detail === "string"
         ? record.detail
@@ -3285,7 +3835,9 @@ async function fetchStoryboardLocalBridgeDirectJson(
     });
   } catch (error) {
     throw new StoryboardLocalBridgeDirectTransportError(
-      error instanceof Error ? error.message : "로컬 브릿지 direct transport가 막혔습니다.",
+      error instanceof Error
+        ? error.message
+        : "로컬 브릿지 direct transport가 막혔습니다.",
     );
   }
 
@@ -3301,8 +3853,15 @@ async function getStoryboardLocalBridgeDirectStatusPayload(
   token: string,
 ): Promise<StoryboardLocalBridgeHelperStatusPayload> {
   const [healthResponse, authResponse] = await Promise.all([
-    fetchStoryboardLocalBridgeDirectJson(baseUrl, STORYBOARD_LOCAL_BRIDGE_HEALTH_PATH),
-    fetchStoryboardLocalBridgeDirectJson(baseUrl, STORYBOARD_LOCAL_BRIDGE_AUTH_STATUS_PATH, token),
+    fetchStoryboardLocalBridgeDirectJson(
+      baseUrl,
+      STORYBOARD_LOCAL_BRIDGE_HEALTH_PATH,
+    ),
+    fetchStoryboardLocalBridgeDirectJson(
+      baseUrl,
+      STORYBOARD_LOCAL_BRIDGE_AUTH_STATUS_PATH,
+      token,
+    ),
   ]);
   return {
     healthOk: healthResponse.ok,
@@ -3311,7 +3870,6 @@ async function getStoryboardLocalBridgeDirectStatusPayload(
     auth: authResponse.body,
   };
 }
-
 
 async function getStoryboardLocalBridgeStatusRequest(
   bridgeUrl: string,
@@ -3327,7 +3885,9 @@ async function getStoryboardLocalBridgeStatusRequest(
     baseUrl = normalizeStoryboardLocalBridgeUrl(bridgeUrl);
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "로컬 브릿지 주소가 올바르지 않습니다.";
+      error instanceof Error
+        ? error.message
+        : "로컬 브릿지 주소가 올바르지 않습니다.";
     return {
       status: "blocked",
       message,
@@ -3366,26 +3926,29 @@ async function getStoryboardLocalBridgeStatusRequest(
         token: normalizedToken,
       });
     }
-    const helperPayload = responsePayload && typeof responsePayload === "object"
-      ? responsePayload as Partial<StoryboardLocalBridgeHelperStatusPayload>
-      : null;
-    const healthPayload = helperPayload?.health && typeof helperPayload.health === "object"
-      ? helperPayload.health as Partial<{
-          ok: boolean;
-          bridge: string;
-          providerId: string;
-          model: string;
-        }>
-      : null;
-    const authPayload = helperPayload?.auth && typeof helperPayload.auth === "object"
-      ? helperPayload.auth as Partial<{
-          ok: boolean;
-          status: string;
-          providerId: string;
-          model: string;
-          detail?: string;
-        }>
-      : null;
+    const helperPayload =
+      responsePayload && typeof responsePayload === "object"
+        ? (responsePayload as Partial<StoryboardLocalBridgeHelperStatusPayload>)
+        : null;
+    const healthPayload =
+      helperPayload?.health && typeof helperPayload.health === "object"
+        ? (helperPayload.health as Partial<{
+            ok: boolean;
+            bridge: string;
+            providerId: string;
+            model: string;
+          }>)
+        : null;
+    const authPayload =
+      helperPayload?.auth && typeof helperPayload.auth === "object"
+        ? (helperPayload.auth as Partial<{
+            ok: boolean;
+            status: string;
+            providerId: string;
+            model: string;
+            detail?: string;
+          }>)
+        : null;
     if (
       helperPayload?.healthOk !== true ||
       healthPayload?.ok !== true ||
@@ -3393,11 +3956,15 @@ async function getStoryboardLocalBridgeStatusRequest(
       healthPayload.providerId !== STORYBOARD_IMAGE_PROVIDER_ID ||
       healthPayload.model !== STORYBOARD_IMAGE_PROVIDER_MODEL
     ) {
-      const message = "로컬 브릿지 health 응답이 스토리보드 신뢰 정책과 맞지 않습니다.";
+      const message =
+        "로컬 브릿지 health 응답이 스토리보드 신뢰 정책과 맞지 않습니다.";
       return {
         status: "blocked",
         message,
-        readiness: mapStoryboardLocalBridgeStatusToReadiness("blocked", message),
+        readiness: mapStoryboardLocalBridgeStatusToReadiness(
+          "blocked",
+          message,
+        ),
       };
     }
     if (
@@ -3411,18 +3978,27 @@ async function getStoryboardLocalBridgeStatusRequest(
       return {
         status: "connected",
         message,
-        readiness: mapStoryboardLocalBridgeStatusToReadiness("connected", message),
+        readiness: mapStoryboardLocalBridgeStatusToReadiness(
+          "connected",
+          message,
+        ),
       };
     }
     if (authPayload?.status === "auth_required") {
-      const message = authPayload.detail ?? "로컬 Codex CLI OAuth 인증 파일을 찾지 못했습니다.";
+      const message =
+        authPayload.detail ??
+        "로컬 Codex CLI OAuth 인증 파일을 찾지 못했습니다.";
       return {
         status: "auth_required",
         message,
-        readiness: mapStoryboardLocalBridgeStatusToReadiness("auth_required", message),
+        readiness: mapStoryboardLocalBridgeStatusToReadiness(
+          "auth_required",
+          message,
+        ),
       };
     }
-    const message = "pairing token이 맞지 않습니다. 터미널의 최신 token을 다시 입력해 주세요.";
+    const message =
+      "pairing token이 맞지 않습니다. 터미널의 최신 token을 다시 입력해 주세요.";
     return {
       status: "unpaired",
       message,
@@ -3430,7 +4006,9 @@ async function getStoryboardLocalBridgeStatusRequest(
     };
   } catch (error) {
     const message = redactStoryboardLocalBridgeSecretText(
-      error instanceof Error ? error.message : "로컬 브릿지 helper 연결을 확인하지 못했습니다.",
+      error instanceof Error
+        ? error.message
+        : "로컬 브릿지 helper 연결을 확인하지 못했습니다.",
       normalizedToken,
     );
     const status: StoryboardLocalBridgeUiStatus =
@@ -3462,7 +4040,10 @@ async function postStoryboardLocalBridgeImagesRequest(
     throw new Error("로컬 브릿지 pairing token을 먼저 저장해 주세요.");
   }
   const baseUrl = normalizeStoryboardLocalBridgeUrl(bridgeUrl);
-  const requestPayload = buildStoryboardLocalBridgeImagesRequest(result, scenes);
+  const requestPayload = buildStoryboardLocalBridgeImagesRequest(
+    result,
+    scenes,
+  );
   let responsePayload: unknown;
   try {
     const directResponse = await fetchStoryboardLocalBridgeDirectJson(
@@ -3480,15 +4061,18 @@ async function postStoryboardLocalBridgeImagesRequest(
     if (!(directError instanceof StoryboardLocalBridgeDirectTransportError)) {
       throw directError;
     }
-    responsePayload = await invokeHelper({
-      kind: "tzudong-local-bridge-helper-request",
-      sessionId: "storyboard-local-bridge-generate",
-      requestId: "storyboard-local-bridge-generate",
-      command: "generateStoryboard",
-      bridgeUrl: baseUrl,
-      token: normalizedToken,
-      payload: requestPayload,
-    }, options);
+    responsePayload = await invokeHelper(
+      {
+        kind: "tzudong-local-bridge-helper-request",
+        sessionId: "storyboard-local-bridge-generate",
+        requestId: "storyboard-local-bridge-generate",
+        command: "generateStoryboard",
+        bridgeUrl: baseUrl,
+        token: normalizedToken,
+        payload: requestPayload,
+      },
+      options,
+    );
   }
   return normalizeStoryboardLocalBridgeImagesResponse(responsePayload);
 }
@@ -3514,7 +4098,7 @@ function StoryboardEmptyCanvasState({
 
   return (
     <div
-      className="col-span-2 row-span-2 flex h-full min-h-[360px] items-center justify-center rounded-2xl border border-dashed border-border/80 bg-background p-6 text-center"
+      className="col-span-full row-span-full flex h-full min-h-[360px] items-center justify-center rounded-2xl border border-dashed border-border/80 bg-background p-6 text-center"
       aria-live="polite"
       aria-label={`${cutRangeLabel} ${STORYBOARD_NO_TRUSTED_IMAGE_LABEL}`}
       data-storyboard-empty-canvas="true"
@@ -3585,7 +4169,8 @@ function StoryboardCutImageSkeleton({
         data-storyboard-glass-shimmer="true"
       />
       <span className="sr-only">
-        CUT {paddedSceneNo} 이미지를 {isActive ? "만드는" : "기다리는"} 중입니다.
+        CUT {paddedSceneNo} 이미지를 {isActive ? "만드는" : "기다리는"}{" "}
+        중입니다.
       </span>
     </div>
   );
@@ -3622,8 +4207,10 @@ export function AdminStoryboardGenerator({
   const [isChatAgentStreaming, setIsChatAgentStreaming] = useState(false);
   const [exportPresetId, setExportPresetId] =
     useState<StoryboardExportPresetId>("quick-1280x720");
-  const [showStoryboardGuide, setShowStoryboardGuide] = useState(false);
+  const showStoryboardGuide = false;
   const [storyboardPage, setStoryboardPage] = useState(0);
+  const [storyboardFramePageSize, setStoryboardFramePageSize] =
+    useState<StoryboardFramePageSize>(STORYBOARD_FRAMES_PER_PAGE);
   const [storyboardHistoryCases, setStoryboardHistoryCases] = useState<
     StoryboardHistoryCase[]
   >(() =>
@@ -3675,35 +4262,24 @@ export function AdminStoryboardGenerator({
     storyboardBrowserOpenAIApiKeyMessage,
     setStoryboardBrowserOpenAIApiKeyMessage,
   ] = useState<string | null>(null);
-  const [storyboardLocalBridgeUrl, setStoryboardLocalBridgeUrl] = useState<string>(
-    STORYBOARD_LOCAL_BRIDGE_DEFAULT_URL,
-  );
-  const [
-    storyboardLocalBridgeUrlDraft,
-    setStoryboardLocalBridgeUrlDraft,
-  ] = useState<string>(STORYBOARD_LOCAL_BRIDGE_DEFAULT_URL);
-  const [storyboardLocalBridgeToken, setStoryboardLocalBridgeToken] =
+  const [storyboardLocalBridgeUrl, setStoryboardLocalBridgeUrl] =
+    useState<string>(STORYBOARD_LOCAL_BRIDGE_DEFAULT_URL);
+  const [storyboardLocalBridgeUrlDraft, setStoryboardLocalBridgeUrlDraft] =
+    useState<string>(STORYBOARD_LOCAL_BRIDGE_DEFAULT_URL);
+  const [storyboardLocalBridgeToken, setStoryboardLocalBridgeToken] = useState<
+    string | null
+  >(null);
+  const [storyboardLocalBridgeTokenDraft, setStoryboardLocalBridgeTokenDraft] =
+    useState("");
+  const [storyboardLocalBridgeSavedAt, setStoryboardLocalBridgeSavedAt] =
     useState<string | null>(null);
-  const [
-    storyboardLocalBridgeTokenDraft,
-    setStoryboardLocalBridgeTokenDraft,
-  ] = useState("");
-  const [
-    storyboardLocalBridgeSavedAt,
-    setStoryboardLocalBridgeSavedAt,
-  ] = useState<string | null>(null);
-  const [
-    storyboardLocalBridgeStatus,
-    setStoryboardLocalBridgeStatus,
-  ] = useState<StoryboardLocalBridgeUiStatus>("unpaired");
-  const [
-    storyboardLocalBridgeMessage,
-    setStoryboardLocalBridgeMessage,
-  ] = useState<string | null>(null);
-  const [
-    storyboardLocalBridgeError,
-    setStoryboardLocalBridgeError,
-  ] = useState<string | null>(null);
+  const [storyboardLocalBridgeStatus, setStoryboardLocalBridgeStatus] =
+    useState<StoryboardLocalBridgeUiStatus>("unpaired");
+  const [storyboardLocalBridgeMessage, setStoryboardLocalBridgeMessage] =
+    useState<string | null>(null);
+  const [storyboardLocalBridgeError, setStoryboardLocalBridgeError] = useState<
+    string | null
+  >(null);
   const storyboardLocalBridgeHelperWindowRef = useRef<Window | null>(null);
   const storyboardLocalBridgeHelperPortRef = useRef<MessagePort | null>(null);
   const storyboardLocalBridgeHelperOriginRef = useRef<string | null>(null);
@@ -3728,104 +4304,134 @@ export function AdminStoryboardGenerator({
     }
   }, []);
 
-  const rejectStoryboardLocalBridgePendingRequests = useCallback((message: string) => {
-    storyboardLocalBridgePendingRequestsRef.current.forEach(({ reject }) => {
-      reject(new Error(message));
-    });
-    storyboardLocalBridgePendingRequestsRef.current.clear();
-  }, []);
-
-  const resetStoryboardLocalBridgeHelperTransport = useCallback((options?: {
-    closePopup?: boolean;
-    nextStatus?: StoryboardLocalBridgeUiStatus;
-    nextMessage?: string;
-    nextError?: string | null;
-  }) => {
-    clearStoryboardLocalBridgeHelperCloseWatch();
-    const failureMessage = options?.nextMessage ?? getStoryboardLocalBridgeReconnectRequiredMessage();
-    rejectStoryboardLocalBridgePendingRequests(failureMessage);
-    const port = storyboardLocalBridgeHelperPortRef.current;
-    if (port) {
-      try {
-        port.onmessage = null;
-        port.close();
-      } catch {
-        // Ignore already-closed helper ports.
-      }
-      storyboardLocalBridgeHelperPortRef.current = null;
-    }
-    const popup = storyboardLocalBridgeHelperWindowRef.current;
-    if (options?.closePopup && popup && !popup.closed) {
-      try {
-        popup.close();
-      } catch {
-        // Ignore popup close failures.
-      }
-    }
-    storyboardLocalBridgeHelperWindowRef.current = null;
-    storyboardLocalBridgeHelperOriginRef.current = null;
-    storyboardLocalBridgeHelperSessionIdRef.current = null;
-    if (options?.nextStatus) setStoryboardLocalBridgeStatus(options.nextStatus);
-    if (options?.nextMessage !== undefined) setStoryboardLocalBridgeMessage(options.nextMessage);
-    if (options?.nextError !== undefined) setStoryboardLocalBridgeError(options.nextError);
-  }, [clearStoryboardLocalBridgeHelperCloseWatch, rejectStoryboardLocalBridgePendingRequests]);
-
-  const invokeStoryboardLocalBridgeHelper = useCallback<StoryboardLocalBridgeHelperInvoke>((request, options) => {
-    const port = storyboardLocalBridgeHelperPortRef.current;
-    const sessionId = storyboardLocalBridgeHelperSessionIdRef.current;
-    if (!port || !sessionId) {
-      return Promise.reject(new Error(getStoryboardLocalBridgeReconnectRequiredMessage()));
-    }
-    if (storyboardLocalBridgeHelperWindowRef.current?.closed) {
-      resetStoryboardLocalBridgeHelperTransport({
-        nextStatus: "helper_failed",
-        nextMessage: getStoryboardLocalBridgeHelperClosedMessage(),
-        nextError: getStoryboardLocalBridgeHelperClosedMessage(),
+  const rejectStoryboardLocalBridgePendingRequests = useCallback(
+    (message: string) => {
+      storyboardLocalBridgePendingRequestsRef.current.forEach(({ reject }) => {
+        reject(new Error(message));
       });
-      return Promise.reject(new Error(getStoryboardLocalBridgeHelperClosedMessage()));
-    }
-    const requestId = `storyboard-local-bridge-${storyboardLocalBridgeHelperRequestIdRef.current + 1}`;
-    storyboardLocalBridgeHelperRequestIdRef.current += 1;
-    return new Promise((resolve, reject) => {
-      const abortHandler = () => {
-        storyboardLocalBridgePendingRequestsRef.current.delete(requestId);
-        reject(new Error("storyboard_local_bridge_request_aborted"));
-      };
-      if (options?.signal?.aborted) {
-        abortHandler();
-        return;
+      storyboardLocalBridgePendingRequestsRef.current.clear();
+    },
+    [],
+  );
+
+  const resetStoryboardLocalBridgeHelperTransport = useCallback(
+    (options?: {
+      closePopup?: boolean;
+      nextStatus?: StoryboardLocalBridgeUiStatus;
+      nextMessage?: string;
+      nextError?: string | null;
+    }) => {
+      clearStoryboardLocalBridgeHelperCloseWatch();
+      const failureMessage =
+        options?.nextMessage ??
+        getStoryboardLocalBridgeReconnectRequiredMessage();
+      rejectStoryboardLocalBridgePendingRequests(failureMessage);
+      const port = storyboardLocalBridgeHelperPortRef.current;
+      if (port) {
+        try {
+          port.onmessage = null;
+          port.close();
+        } catch {
+          // Ignore already-closed helper ports.
+        }
+        storyboardLocalBridgeHelperPortRef.current = null;
       }
-      if (options?.signal) {
-        options.signal.addEventListener("abort", abortHandler, { once: true });
+      const popup = storyboardLocalBridgeHelperWindowRef.current;
+      if (options?.closePopup && popup && !popup.closed) {
+        try {
+          popup.close();
+        } catch {
+          // Ignore popup close failures.
+        }
       }
-      storyboardLocalBridgePendingRequestsRef.current.set(requestId, {
-        resolve: (value) => {
-          if (options?.signal) options.signal.removeEventListener("abort", abortHandler);
-          resolve(value);
-        },
-        reject: (reason) => {
-          if (options?.signal) options.signal.removeEventListener("abort", abortHandler);
-          reject(reason);
-        },
-      });
-      try {
-        port.postMessage({
-          ...request,
-          sessionId,
-          requestId,
+      storyboardLocalBridgeHelperWindowRef.current = null;
+      storyboardLocalBridgeHelperOriginRef.current = null;
+      storyboardLocalBridgeHelperSessionIdRef.current = null;
+      if (options?.nextStatus)
+        setStoryboardLocalBridgeStatus(options.nextStatus);
+      if (options?.nextMessage !== undefined)
+        setStoryboardLocalBridgeMessage(options.nextMessage);
+      if (options?.nextError !== undefined)
+        setStoryboardLocalBridgeError(options.nextError);
+    },
+    [
+      clearStoryboardLocalBridgeHelperCloseWatch,
+      rejectStoryboardLocalBridgePendingRequests,
+    ],
+  );
+
+  const invokeStoryboardLocalBridgeHelper =
+    useCallback<StoryboardLocalBridgeHelperInvoke>(
+      (request, options) => {
+        const port = storyboardLocalBridgeHelperPortRef.current;
+        const sessionId = storyboardLocalBridgeHelperSessionIdRef.current;
+        if (!port || !sessionId) {
+          return Promise.reject(
+            new Error(getStoryboardLocalBridgeReconnectRequiredMessage()),
+          );
+        }
+        if (storyboardLocalBridgeHelperWindowRef.current?.closed) {
+          resetStoryboardLocalBridgeHelperTransport({
+            nextStatus: "helper_failed",
+            nextMessage: getStoryboardLocalBridgeHelperClosedMessage(),
+            nextError: getStoryboardLocalBridgeHelperClosedMessage(),
+          });
+          return Promise.reject(
+            new Error(getStoryboardLocalBridgeHelperClosedMessage()),
+          );
+        }
+        const requestId = `storyboard-local-bridge-${storyboardLocalBridgeHelperRequestIdRef.current + 1}`;
+        storyboardLocalBridgeHelperRequestIdRef.current += 1;
+        return new Promise((resolve, reject) => {
+          const abortHandler = () => {
+            storyboardLocalBridgePendingRequestsRef.current.delete(requestId);
+            reject(new Error("storyboard_local_bridge_request_aborted"));
+          };
+          if (options?.signal?.aborted) {
+            abortHandler();
+            return;
+          }
+          if (options?.signal) {
+            options.signal.addEventListener("abort", abortHandler, {
+              once: true,
+            });
+          }
+          storyboardLocalBridgePendingRequestsRef.current.set(requestId, {
+            resolve: (value) => {
+              if (options?.signal)
+                options.signal.removeEventListener("abort", abortHandler);
+              resolve(value);
+            },
+            reject: (reason) => {
+              if (options?.signal)
+                options.signal.removeEventListener("abort", abortHandler);
+              reject(reason);
+            },
+          });
+          try {
+            port.postMessage({
+              ...request,
+              sessionId,
+              requestId,
+            });
+          } catch (error) {
+            storyboardLocalBridgePendingRequestsRef.current.delete(requestId);
+            if (options?.signal)
+              options.signal.removeEventListener("abort", abortHandler);
+            reject(error);
+          }
         });
-      } catch (error) {
-        storyboardLocalBridgePendingRequestsRef.current.delete(requestId);
-        if (options?.signal) options.signal.removeEventListener("abort", abortHandler);
-        reject(error);
-      }
-    });
-  }, [resetStoryboardLocalBridgeHelperTransport]);
+      },
+      [resetStoryboardLocalBridgeHelperTransport],
+    );
 
   const handleConnectStoryboardLocalBridgeHelper = useCallback(async () => {
-    const normalizedToken = normalizeStoryboardLocalBridgeToken(storyboardLocalBridgeToken);
+    const normalizedToken = normalizeStoryboardLocalBridgeToken(
+      storyboardLocalBridgeToken,
+    );
     if (!normalizedToken) {
-      const message = "먼저 저장을 눌러 pairing 설정을 이 탭 sessionStorage에 저장해 주세요.";
+      const message =
+        "먼저 저장을 눌러 pairing 설정을 이 탭 sessionStorage에 저장해 주세요.";
       setStoryboardLocalBridgeStatus("unpaired");
       setStoryboardLocalBridgeMessage(message);
       setStoryboardLocalBridgeError(message);
@@ -3835,13 +4441,20 @@ export function AdminStoryboardGenerator({
       return false;
     }
     try {
-      const normalizedUrl = normalizeStoryboardLocalBridgeUrl(storyboardLocalBridgeUrl);
+      const normalizedUrl = normalizeStoryboardLocalBridgeUrl(
+        storyboardLocalBridgeUrl,
+      );
       resetStoryboardLocalBridgeHelperTransport({ closePopup: true });
       const sessionId = createStoryboardLocalBridgeHelperSessionId();
       const helperOrigin = getStoryboardLocalBridgeOrigin(normalizedUrl);
-      const helperUrl = buildStoryboardLocalBridgeHelperUrl(normalizedUrl, sessionId);
+      const helperUrl = buildStoryboardLocalBridgeHelperUrl(
+        normalizedUrl,
+        sessionId,
+      );
       setStoryboardLocalBridgeStatus("checking");
-      setStoryboardLocalBridgeMessage("로컬 브릿지 helper 창을 여는 중입니다. 팝업이 보이면 닫지 말고 연결이 끝날 때까지 기다려 주세요.");
+      setStoryboardLocalBridgeMessage(
+        "로컬 브릿지 helper 창을 여는 중입니다. 팝업이 보이면 닫지 말고 연결이 끝날 때까지 기다려 주세요.",
+      );
       setStoryboardLocalBridgeError(null);
       setStoryboardImageProviderReadiness(
         mapStoryboardLocalBridgeStatusToReadiness("checking"),
@@ -3850,14 +4463,20 @@ export function AdminStoryboardGenerator({
       const port = await new Promise<MessagePort>((resolve, reject) => {
         const timeoutId = window.setTimeout(() => {
           cleanup();
-          reject(new Error("로컬 브릿지 helper 창이 응답하지 않습니다. helper 창이 열렸는지 확인한 뒤 다시 연결해 주세요."));
+          reject(
+            new Error(
+              "로컬 브릿지 helper 창이 응답하지 않습니다. helper 창이 열렸는지 확인한 뒤 다시 연결해 주세요.",
+            ),
+          );
         }, 10_000);
         const onMessage = (event: MessageEvent<unknown>) => {
           if (!isStoryboardLocalBridgeHelperReadyMessage(event.data)) return;
           if (event.data.sessionId !== sessionId) return;
           if (!event.ports[0]) {
             cleanup();
-            reject(new Error("로컬 브릿지 helper 통신 포트를 받을 수 없습니다."));
+            reject(
+              new Error("로컬 브릿지 helper 통신 포트를 받을 수 없습니다."),
+            );
             return;
           }
           cleanup();
@@ -3887,41 +4506,62 @@ export function AdminStoryboardGenerator({
       port.onmessage = (event) => {
         const data = event.data;
         if (isStoryboardLocalBridgeHelperClosedMessage(data)) {
-          if (data.sessionId !== storyboardLocalBridgeHelperSessionIdRef.current) return;
+          if (
+            data.sessionId !== storyboardLocalBridgeHelperSessionIdRef.current
+          )
+            return;
           resetStoryboardLocalBridgeHelperTransport({
             nextStatus: "helper_failed",
             nextMessage: getStoryboardLocalBridgeHelperClosedMessage(),
             nextError: getStoryboardLocalBridgeHelperClosedMessage(),
           });
           setStoryboardImageProviderReadiness(
-            mapStoryboardLocalBridgeStatusToReadiness("helper_failed", getStoryboardLocalBridgeHelperClosedMessage()),
+            mapStoryboardLocalBridgeStatusToReadiness(
+              "helper_failed",
+              getStoryboardLocalBridgeHelperClosedMessage(),
+            ),
           );
           return;
         }
         if (!isStoryboardLocalBridgeHelperResponseMessage(data)) return;
-        if (data.sessionId !== storyboardLocalBridgeHelperSessionIdRef.current) return;
-        const pending = storyboardLocalBridgePendingRequestsRef.current.get(data.requestId);
+        if (data.sessionId !== storyboardLocalBridgeHelperSessionIdRef.current)
+          return;
+        const pending = storyboardLocalBridgePendingRequestsRef.current.get(
+          data.requestId,
+        );
         if (!pending) return;
         storyboardLocalBridgePendingRequestsRef.current.delete(data.requestId);
         if (data.ok) {
           pending.resolve(data.payload);
           return;
         }
-        pending.reject(new Error(data.message || data.errorCode || "local_bridge_helper_request_failed"));
+        pending.reject(
+          new Error(
+            data.message ||
+              data.errorCode ||
+              "local_bridge_helper_request_failed",
+          ),
+        );
       };
       port.start();
       clearStoryboardLocalBridgeHelperCloseWatch();
-      storyboardLocalBridgeHelperCloseWatchRef.current = window.setInterval(() => {
-        if (!storyboardLocalBridgeHelperWindowRef.current?.closed) return;
-        resetStoryboardLocalBridgeHelperTransport({
-          nextStatus: "helper_failed",
-          nextMessage: getStoryboardLocalBridgeHelperClosedMessage(),
-          nextError: getStoryboardLocalBridgeHelperClosedMessage(),
-        });
-        setStoryboardImageProviderReadiness(
-          mapStoryboardLocalBridgeStatusToReadiness("helper_failed", getStoryboardLocalBridgeHelperClosedMessage()),
-        );
-      }, 500);
+      storyboardLocalBridgeHelperCloseWatchRef.current = window.setInterval(
+        () => {
+          if (!storyboardLocalBridgeHelperWindowRef.current?.closed) return;
+          resetStoryboardLocalBridgeHelperTransport({
+            nextStatus: "helper_failed",
+            nextMessage: getStoryboardLocalBridgeHelperClosedMessage(),
+            nextError: getStoryboardLocalBridgeHelperClosedMessage(),
+          });
+          setStoryboardImageProviderReadiness(
+            mapStoryboardLocalBridgeStatusToReadiness(
+              "helper_failed",
+              getStoryboardLocalBridgeHelperClosedMessage(),
+            ),
+          );
+        },
+        500,
+      );
       const status = await getStoryboardLocalBridgeStatusRequest(
         normalizedUrl,
         normalizedToken,
@@ -3929,17 +4569,22 @@ export function AdminStoryboardGenerator({
       );
       setStoryboardLocalBridgeStatus(status.status);
       setStoryboardLocalBridgeMessage(status.message);
-      setStoryboardLocalBridgeError(status.status === "connected" ? null : status.message);
+      setStoryboardLocalBridgeError(
+        status.status === "connected" ? null : status.message,
+      );
       setStoryboardImageProviderReadiness(status.readiness);
       return status.status === "connected";
     } catch (error) {
       const message = redactStoryboardLocalBridgeSecretText(
-        error instanceof Error ? error.message : "로컬 브릿지 helper 연결을 시작하지 못했습니다.",
+        error instanceof Error
+          ? error.message
+          : "로컬 브릿지 helper 연결을 시작하지 못했습니다.",
         storyboardLocalBridgeToken,
       );
-      const nextStatus = message === getStoryboardLocalBridgePopupBlockedMessage()
-        ? "popup_blocked"
-        : "error";
+      const nextStatus =
+        message === getStoryboardLocalBridgePopupBlockedMessage()
+          ? "popup_blocked"
+          : "error";
       setStoryboardLocalBridgeStatus(nextStatus);
       setStoryboardLocalBridgeMessage(message);
       setStoryboardLocalBridgeError(message);
@@ -3962,17 +4607,27 @@ export function AdminStoryboardGenerator({
   const [storyboardCanvasFocus, setStoryboardCanvasFocus] =
     useState<StoryboardChatFocusContext | null>(null);
   const chatAbortControllerRef = useRef<AbortController | null>(null);
-  const imageGenerationAbortControllerRef = useRef<AbortController | null>(null);
-  const storyboardChatImageAttachmentInputRef =
-    useRef<HTMLInputElement | null>(null);
+  const imageGenerationAbortControllerRef = useRef<AbortController | null>(
+    null,
+  );
+  const storyboardChatImageAttachmentInputRef = useRef<HTMLInputElement | null>(
+    null,
+  );
+  const storyboardChatTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const [isStoryboardChatMultilineLayout, setIsStoryboardChatMultilineLayout] =
+    useState(false);
   const chatTranscriptRef = useRef<HTMLDivElement | null>(null);
   const [chatMessages, setChatMessages] = useState<StoryboardChatMessage[]>(
     () => makeInitialStoryboardChatMessages(trustedInitialStoryboardResult),
   );
-  const [streamingPhaseIndex, setStreamingPhaseIndex] = useState(0);
+  const storyboardChatTypewriterTextById =
+    useStoryboardChatTypewriterMessages(chatMessages);
   const storyboardGuidedExampleIndexRef = useRef(0);
   const hasUserStoryboardMutationRef = useRef(false);
   const autoGeneratedMissingStoryboardPageKeysRef = useRef<Set<string>>(
+    new Set(),
+  );
+  const suppressedAutoImageGenerationResultKeysRef = useRef<Set<string>>(
     new Set(),
   );
   useEffect(() => {
@@ -4005,30 +4660,6 @@ export function AdminStoryboardGenerator({
         );
         setStoryboardHistoryStatus("ready");
         setStoryboardHistoryError(null);
-        const sourceLabel = getStoryboardInitialResultSourceLabel(
-          initialResult.source,
-        );
-        const latestHistoryMessage: StoryboardChatMessage = {
-          id: "assistant-latest-real-data",
-          role: "assistant",
-          text: `${sourceLabel}을 불러왔어요 · ${initialResult.result.storyboard.title}. 캔버스에서 컷을 확인하고, 필요한 수정은 채팅으로 요청하세요.`,
-          status: "done",
-        };
-        const latestHistoryImprovementMessage = makeStoryboardImprovementSummaryMessage(
-          initialResult.result,
-          "assistant-latest-real-data-improvement-summary",
-        );
-        setChatMessages((messages) =>
-          [
-            ...messages.filter(
-              (message) =>
-                message.id !== latestHistoryMessage.id &&
-                message.id !== latestHistoryImprovementMessage.id,
-            ),
-            formatStoryboardChatMessageForDisplay(latestHistoryMessage),
-            formatStoryboardChatMessageForDisplay(latestHistoryImprovementMessage),
-          ].slice(-10),
-        );
       })
       .catch(() => {
         // 최신 실제 스토리보드 기록가 없으면 초기 미리보기를 유지합니다.
@@ -4068,21 +4699,6 @@ export function AdminStoryboardGenerator({
   }, []);
 
   useEffect(() => {
-    if (!isGenerating && !isChatAgentStreaming && !isGeneratingImages) {
-      setStreamingPhaseIndex(0);
-      return undefined;
-    }
-
-    const intervalId = window.setInterval(() => {
-      setStreamingPhaseIndex(
-        (index) => (index + 1) % STORYBOARD_STREAMING_PHASE_COUNT,
-      );
-    }, 760);
-
-    return () => window.clearInterval(intervalId);
-  }, [isGenerating, isChatAgentStreaming, isGeneratingImages]);
-
-  useEffect(() => {
     const cache = readStoryboardBrowserModelKeysCache();
     if (!cache) return;
     setStoryboardBrowserOpenAIApiKey(cache.openAIApiKey);
@@ -4113,17 +4729,20 @@ export function AdminStoryboardGenerator({
     };
   }, [resetStoryboardLocalBridgeHelperTransport]);
 
-
   useEffect(() => {
     let cancelled = false;
 
     if (storyboardImageRouteChoice === STORYBOARD_LOCAL_BRIDGE_ROUTE_ID) {
       if (!storyboardLocalBridgeToken) {
-        const localBridgeMessage = "터미널에 표시된 pairing token을 먼저 저장해 주세요.";
+        const localBridgeMessage =
+          "터미널에 표시된 pairing token을 먼저 저장해 주세요.";
         setStoryboardLocalBridgeStatus("unpaired");
         setStoryboardLocalBridgeMessage(localBridgeMessage);
         setStoryboardImageProviderReadiness(
-          mapStoryboardLocalBridgeStatusToReadiness("unpaired", localBridgeMessage),
+          mapStoryboardLocalBridgeStatusToReadiness(
+            "unpaired",
+            localBridgeMessage,
+          ),
         );
         return () => {
           cancelled = true;
@@ -4131,7 +4750,9 @@ export function AdminStoryboardGenerator({
       }
 
       setStoryboardLocalBridgeStatus("checking");
-      setStoryboardLocalBridgeMessage("로컬 브릿지 상태를 loopback direct transport로 확인하고 있습니다.");
+      setStoryboardLocalBridgeMessage(
+        "로컬 브릿지 상태를 loopback direct transport로 확인하고 있습니다.",
+      );
       setStoryboardLocalBridgeError(null);
       setStoryboardImageProviderReadiness(
         mapStoryboardLocalBridgeStatusToReadiness("checking"),
@@ -4145,13 +4766,17 @@ export function AdminStoryboardGenerator({
           if (cancelled) return;
           setStoryboardLocalBridgeStatus(status.status);
           setStoryboardLocalBridgeMessage(status.message);
-          setStoryboardLocalBridgeError(status.status === "connected" ? null : status.message);
+          setStoryboardLocalBridgeError(
+            status.status === "connected" ? null : status.message,
+          );
           setStoryboardImageProviderReadiness(status.readiness);
         })
         .catch((error) => {
           if (cancelled) return;
           const message = redactStoryboardLocalBridgeSecretText(
-            error instanceof Error ? error.message : "로컬 브릿지 상태를 확인하지 못했습니다.",
+            error instanceof Error
+              ? error.message
+              : "로컬 브릿지 상태를 확인하지 못했습니다.",
             storyboardLocalBridgeToken,
           );
           setStoryboardLocalBridgeStatus("error");
@@ -4210,10 +4835,15 @@ export function AdminStoryboardGenerator({
     const latestMessage = chatMessages[chatMessages.length - 1];
     if (!latestMessage) return "empty";
     const progress = latestMessage.imageGenerationProgress;
+    const latestDisplayedText =
+      latestMessage.role === "assistant"
+        ? (storyboardChatTypewriterTextById[latestMessage.id] ?? "")
+        : latestMessage.text;
     return [
       latestMessage.id,
       latestMessage.status ?? "done",
       latestMessage.text.length,
+      latestDisplayedText.length,
       progress?.completed ?? 0,
       progress?.failed ?? 0,
       progress?.cancelled ?? 0,
@@ -4222,7 +4852,13 @@ export function AdminStoryboardGenerator({
       isGenerating ? "storyboard" : "",
       isGeneratingImages ? "images" : "",
     ].join(":");
-  }, [chatMessages, isChatAgentStreaming, isGenerating, isGeneratingImages]);
+  }, [
+    chatMessages,
+    isChatAgentStreaming,
+    isGenerating,
+    isGeneratingImages,
+    storyboardChatTypewriterTextById,
+  ]);
 
   useEffect(() => {
     const transcript = chatTranscriptRef.current;
@@ -4238,6 +4874,16 @@ export function AdminStoryboardGenerator({
     return () => window.cancelAnimationFrame(frame);
   }, [latestChatScrollKey]);
 
+  useEffect(() => {
+    const syncTextareaLayout = () =>
+      setIsStoryboardChatMultilineLayout(
+        resizeStoryboardChatTextarea(storyboardChatTextareaRef.current),
+      );
+    syncTextareaLayout();
+    const frame = window.requestAnimationFrame(syncTextareaLayout);
+    return () => window.cancelAnimationFrame(frame);
+  }, [chatDraft]);
+
   const storyboardFrameScenes = useMemo(
     () => result.storyboard.scenes,
     [result.storyboard.scenes],
@@ -4246,9 +4892,9 @@ export function AdminStoryboardGenerator({
     () =>
       getStoryboardScenePageCount({
         allScenes: storyboardFrameScenes,
-        pageSize: STORYBOARD_FRAMES_PER_PAGE,
+        pageSize: storyboardFramePageSize,
       }),
-    [storyboardFrameScenes],
+    [storyboardFramePageSize, storyboardFrameScenes],
   );
   const activeStoryboardPage = Math.min(
     storyboardPage,
@@ -4257,20 +4903,20 @@ export function AdminStoryboardGenerator({
   const activeStoryboardPageSourceScenes = useMemo(
     () =>
       storyboardFrameScenes.slice(
-        activeStoryboardPage * STORYBOARD_FRAMES_PER_PAGE,
-        activeStoryboardPage * STORYBOARD_FRAMES_PER_PAGE +
-          STORYBOARD_FRAMES_PER_PAGE,
+        activeStoryboardPage * storyboardFramePageSize,
+        activeStoryboardPage * storyboardFramePageSize +
+          storyboardFramePageSize,
       ),
-    [activeStoryboardPage, storyboardFrameScenes],
+    [activeStoryboardPage, storyboardFramePageSize, storyboardFrameScenes],
   );
   const activeStoryboardPageScenes = useMemo(
     () =>
       getStoryboardSourcePageScenes({
         allScenes: storyboardFrameScenes,
         page: activeStoryboardPage,
-        pageSize: STORYBOARD_FRAMES_PER_PAGE,
+        pageSize: storyboardFramePageSize,
       }),
-    [activeStoryboardPage, storyboardFrameScenes],
+    [activeStoryboardPage, storyboardFramePageSize, storyboardFrameScenes],
   );
   const activeStoryboardImageGenerationTargetScenes = useMemo(
     () =>
@@ -4278,9 +4924,9 @@ export function AdminStoryboardGenerator({
         allScenes: storyboardFrameScenes,
         visibleScenes: storyboardFrameScenes,
         page: activeStoryboardPage,
-        pageSize: STORYBOARD_FRAMES_PER_PAGE,
+        pageSize: storyboardFramePageSize,
       }),
-    [activeStoryboardPage, storyboardFrameScenes],
+    [activeStoryboardPage, storyboardFramePageSize, storyboardFrameScenes],
   );
   const generatingStoryboardImageSceneNoSet = useMemo(
     () => new Set(generatingStoryboardImageSceneNos),
@@ -4288,15 +4934,15 @@ export function AdminStoryboardGenerator({
   );
   const activeCutStart =
     activeStoryboardPageSourceScenes[0]?.sceneNo ??
-    activeStoryboardPage * STORYBOARD_FRAMES_PER_PAGE + 1;
+    activeStoryboardPage * storyboardFramePageSize + 1;
   const requestedCutCount = Math.max(
-    STORYBOARD_FRAMES_PER_PAGE,
+    storyboardFramePageSize,
     Number.isFinite(form.segmentCount)
       ? Math.trunc(form.segmentCount)
-      : STORYBOARD_FRAMES_PER_PAGE,
+      : storyboardFramePageSize,
   );
   const emptyCanvasSkeletonCutCount = Math.max(
-    STORYBOARD_FRAMES_PER_PAGE,
+    storyboardFramePageSize,
     activeStoryboardPageSourceScenes.length,
     activeStoryboardImageGenerationTargetScenes.length,
   );
@@ -4306,7 +4952,7 @@ export function AdminStoryboardGenerator({
   const activeCutEnd =
     activeStoryboardPageSourceScenes.at(-1)?.sceneNo ??
     Math.min(
-      activeCutStart + STORYBOARD_FRAMES_PER_PAGE - 1,
+      activeCutStart + storyboardFramePageSize - 1,
       Math.max(activeCutStart, totalCutCount),
     );
   const generatedImageCount = Math.min(
@@ -4322,6 +4968,18 @@ export function AdminStoryboardGenerator({
   );
   const activePageGenerationTargetCount =
     activeStoryboardImageGenerationTargetScenes.length;
+  const storyboardCurrentImageGenerationTitle = useMemo(() => {
+    const title = sanitizeStoryboardChatDisplayText(result.storyboard.title);
+    if (title) return title;
+    return summarizeStoryboardPromptForCaption(result.request.prompt);
+  }, [result.request.prompt, result.storyboard.title]);
+  const storyboardCurrentImageGenerationTitleLabel = `${
+    isGeneratingImages
+      ? "이미지 생성 중"
+      : generatedImageCount > 0
+        ? "이미지 생성 완료"
+        : "이미지 생성 대기"
+  } · ${storyboardCurrentImageGenerationTitle}`;
   const isStoryboardBrowserOpenAIApiKeySaved = Boolean(
     storyboardBrowserOpenAIApiKey,
   );
@@ -4335,13 +4993,20 @@ export function AdminStoryboardGenerator({
       : STORYBOARD_IMAGE_PROVIDER_ID;
   const isSelectedStoryboardImageProviderReady =
     isStoryboardImageProviderReady(storyboardImageProviderReadiness) &&
-    storyboardImageProviderReadiness.providerId === expectedStoryboardImageProviderId;
+    storyboardImageProviderReadiness.providerId ===
+      expectedStoryboardImageProviderId;
   const isStoryboardImageProviderAvailable =
     storyboardImageRouteChoice === "browser-openai-api-key"
-      ? isStoryboardBrowserOpenAIApiKeySaved && isSelectedStoryboardImageProviderReady
+      ? isStoryboardBrowserOpenAIApiKeySaved &&
+        isSelectedStoryboardImageProviderReady
       : storyboardImageRouteChoice === STORYBOARD_LOCAL_BRIDGE_ROUTE_ID
-        ? isStoryboardLocalBridgePaired && isSelectedStoryboardImageProviderReady
+        ? isStoryboardLocalBridgePaired &&
+          isSelectedStoryboardImageProviderReady
         : isSelectedStoryboardImageProviderReady;
+  const storyboardImageProviderStatusIconLabel =
+    isStoryboardImageProviderAvailable
+      ? "이미지 생성 브릿지 연결됨"
+      : "이미지 생성 브릿지 연결 안됨";
   const selectedStoryboardSceneNo =
     storyboardCanvasFocus?.kind === "cut"
       ? storyboardCanvasFocus.sceneNo
@@ -4354,7 +5019,8 @@ export function AdminStoryboardGenerator({
         activeCutEnd,
         activePageGeneratedCount,
         activePageSceneCount:
-          activeStoryboardImageGenerationTargetScenes.length || STORYBOARD_FRAMES_PER_PAGE,
+          activeStoryboardImageGenerationTargetScenes.length ||
+          storyboardFramePageSize,
         generatedImageCount,
         visibleCutCount: totalCutCount,
         omittedSceneCount: omittedStoryboardSceneCount,
@@ -4366,28 +5032,15 @@ export function AdminStoryboardGenerator({
       activeCutEnd,
       activePageGeneratedCount,
       activeStoryboardImageGenerationTargetScenes.length,
+      storyboardFramePageSize,
       generatedImageCount,
       totalCutCount,
       omittedStoryboardSceneCount,
       selectedStoryboardSceneNo,
     ],
   );
-  const imageGenerationButtonLabel =
-    activePageGenerationTargetCount === 0
-      ? "이미지 생성 대상 없음"
-      : !isStoryboardImageProviderAvailable
-        ? "이미지 생성 설정 필요"
-        : activePageGeneratedCount === activeStoryboardImageGenerationTargetScenes.length
-        ? `현재 ${activePageGenerationTargetCount}컷 다시 생성`
-        : `현재 ${activePageGenerationTargetCount}컷 이미지 생성`;
-  const compactImageGenerationButtonLabel =
-    activePageGenerationTargetCount === 0
-      ? "이미지 없음"
-      : !isStoryboardImageProviderAvailable
-        ? "설정 필요"
-        : activePageGeneratedCount === activeStoryboardImageGenerationTargetScenes.length
-        ? `${activePageGenerationTargetCount}컷 재생성`
-        : `${activePageGenerationTargetCount}컷 생성`;
+  const activeFrameViewLabel =
+    storyboardFramePageSize === 1 ? "1컷 보기" : "4컷 보기";
   const maskedStoryboardBrowserOpenAIApiKey = storyboardBrowserOpenAIApiKey
     ? maskStoryboardBrowserOpenAIApiKey(storyboardBrowserOpenAIApiKey)
     : "";
@@ -4464,27 +5117,6 @@ export function AdminStoryboardGenerator({
     form.segmentCount !== result.request.segmentCount ||
     form.targetLengthMinutes !== result.request.targetLengthMinutes ||
     form.generationMode !== result.request.generationMode;
-  const normalizedStreamingPhaseIndex =
-    streamingPhaseIndex % STORYBOARD_STREAMING_PHASE_COUNT;
-  const activeStreamingImageCutLabel =
-    isGeneratingImages &&
-    activeGeneratingStoryboardImageSceneNo == null &&
-    generatingStoryboardImageSceneNos.length > 1
-      ? `${generatingStoryboardImageSceneNos.length}컷 대기`
-      : activeGeneratingStoryboardImageSceneNo != null
-        ? `CUT ${String(activeGeneratingStoryboardImageSceneNo).padStart(2, "0")}`
-        : generatingStoryboardImageSceneNos[0] != null
-          ? `CUT ${String(generatingStoryboardImageSceneNos[0]).padStart(2, "0")}`
-          : activePageGenerationTargetCount > 0
-            ? `현재 페이지 ${activePageGenerationTargetCount}컷`
-            : "현재 페이지 이미지";
-  const remainingImageGenerationCount = generatingStoryboardImageSceneNos.length;
-  const focusedStreamingContext =
-    storyboardCanvasFocus?.kind === "cut"
-      ? `${storyboardCanvasFocus.label} 기준으로`
-      : storyboardCanvasFocus?.label
-        ? `${storyboardCanvasFocus.label} 작업을 기준으로`
-        : "현재 화면과 요청을 기준으로";
   const currentStreamingLabel = isGeneratingImages
     ? "이미지 생성 중"
     : isGenerating
@@ -4494,49 +5126,10 @@ export function AdminStoryboardGenerator({
         : isChatDraftActive
           ? "수정 초안 대기"
           : "동기화됨";
-  const currentStreamingPhase = (() => {
-    if (isGeneratingImages) {
-      return getStoryboardStreamingPhase(
-        [
-          `${activeStreamingImageCutLabel} 이미지를 생성 중 · 완료된 CUT은 바로 화면에 반영돼요`,
-          remainingImageGenerationCount > 0
-            ? `컷별 이미지 ${remainingImageGenerationCount}컷 생성 순서를 기다리는 중`
-            : "새 이미지 결과를 화면에 정리 중",
-        ],
-        normalizedStreamingPhaseIndex,
-      );
-    }
-    if (isGenerating) {
-      return getStoryboardStreamingPhase(
-        [
-          `요청을 ${requestedCutCount}컷 안팎의 영상 흐름으로 정리 중`,
-          "반복 시청 포인트와 초반 인트로 흐름을 CUT 후보에 맞추는 중",
-          "오디오·자막·촬영 포인트가 CUT마다 다르게 보이도록 분리 중",
-          `${form.targetLengthMinutes}분 분량과 ${form.tone} 톤에 맞춰 캔버스 반영 준비 중`,
-        ],
-        normalizedStreamingPhaseIndex,
-      );
-    }
-    if (isChatAgentStreaming) {
-      return getStoryboardStreamingPhase(
-        [
-          `요청을 읽고 ${focusedStreamingContext} 답변 방향을 정리하는 중`,
-          "일반 질문인지 화면 변경 요청인지 구분하는 중",
-          "필요한 안내와 화면 반영 여부를 나누는 중",
-          "곧 채팅 답변을 먼저 보여드릴게요",
-        ],
-        normalizedStreamingPhaseIndex,
-      );
-    }
-    if (isChatDraftActive) {
-      return "채팅 초안이 화면에 반영되기 전 대기 중";
-    }
-    return "최신 캔버스와 동기화됨";
-  })();
   const selectedRealStoryboardScene = selectedStoryboardSceneNo
-    ? result.storyboard.scenes.find(
+    ? (result.storyboard.scenes.find(
         (scene) => scene.sceneNo === selectedStoryboardSceneNo,
-      ) ?? null
+      ) ?? null)
     : null;
   const visibleStoryboardHistoryCases = useMemo(
     () => storyboardHistoryCases.slice(0, 8),
@@ -4544,10 +5137,10 @@ export function AdminStoryboardGenerator({
   );
   const storyboardChatPlaceholder =
     storyboardCanvasFocus?.kind === "cut"
-      ? `예: ${storyboardCanvasFocus.label} 멘트는 짧게, 자막은 더 강하게, 구도는 음식 클로즈업으로…`
+      ? `예: ${storyboardCanvasFocus.label.replace(" 선택됨", "")} 멘트 짧게`
       : storyboardCanvasFocus?.kind === "action"
-        ? `예: ${storyboardCanvasFocus.label} 이후 컷을 더 빠른 전개로 바꿔줘…`
-        : "예: 매운 짜장라면 10컷 · 첫 입 리액션 크게 · 치즈 늘어나는 장면…";
+        ? "예: 다음 컷을 더 빠르게"
+        : "예: 매운 라면 10컷으로 만들어줘";
 
   function createFormWithStoryboardChatPatch(
     baseForm: GeneratorForm,
@@ -4573,6 +5166,7 @@ export function AdminStoryboardGenerator({
         const visibleFramePage = getStoryboardVisibleFramePageForSceneNo(
           storyboardFrameScenes,
           sceneForFocus.sceneNo,
+          storyboardFramePageSize,
         );
         if (visibleFramePage === null) {
           setStoryboardCanvasFocus(null);
@@ -4608,6 +5202,7 @@ export function AdminStoryboardGenerator({
         const visibleFramePage = getStoryboardVisibleFramePageForSceneNo(
           storyboardFrameScenes,
           sceneForFocus.sceneNo,
+          storyboardFramePageSize,
         );
         if (visibleFramePage === null) {
           setStoryboardCanvasFocus(null);
@@ -4631,9 +5226,10 @@ export function AdminStoryboardGenerator({
 
   function appendStoryboardChatMessages(messages: StoryboardChatMessage[]) {
     setChatMessages((current) =>
-      [...current, ...messages.map(formatStoryboardChatMessageForDisplay)].slice(
-        -10,
-      ),
+      [
+        ...current,
+        ...messages.map(formatStoryboardChatMessageForDisplay),
+      ].slice(-10),
     );
   }
 
@@ -4642,6 +5238,7 @@ export function AdminStoryboardGenerator({
     text: string,
     status: StoryboardChatMessage["status"] = "streaming",
     imageGenerationProgress?: StoryboardImageGenerationProgress | null,
+    thinkingTrace?: StoryboardThinkingTraceEntry[],
   ) {
     setChatMessages((current) =>
       current.map((message) => {
@@ -4653,14 +5250,49 @@ export function AdminStoryboardGenerator({
           imageGenerationProgress:
             imageGenerationProgress === undefined
               ? message.imageGenerationProgress
-              : imageGenerationProgress ?? undefined,
+              : (imageGenerationProgress ?? undefined),
+          thinkingTrace:
+            thinkingTrace === undefined
+              ? message.thinkingTrace
+              : mergeStoryboardThinkingTraceEntries(
+                  message.thinkingTrace,
+                  thinkingTrace,
+                ),
         });
       }),
     );
   }
 
+  function appendStoryboardThinkingTrace(
+    messageId: string,
+    entries: Array<StoryboardThinkingTraceEntry | null>,
+  ) {
+    const normalizedEntries = entries.filter(
+      (entry): entry is StoryboardThinkingTraceEntry => Boolean(entry),
+    );
+    if (!normalizedEntries.length) return;
+    setChatMessages((current) =>
+      current.map((message) =>
+        message.id === messageId
+          ? {
+              ...message,
+              thinkingTrace: mergeStoryboardThinkingTraceEntries(
+                message.thinkingTrace,
+                normalizedEntries,
+              ),
+            }
+          : message,
+      ),
+    );
+  }
+
   function handleChatDraftChange(value: string) {
     setChatDraft(value);
+    window.requestAnimationFrame(() =>
+      setIsStoryboardChatMultilineLayout(
+        resizeStoryboardChatTextarea(storyboardChatTextareaRef.current),
+      ),
+    );
   }
 
   function openStoryboardChatImageAttachmentPicker() {
@@ -4744,6 +5376,17 @@ export function AdminStoryboardGenerator({
     if (!isStoryboardImageProviderAvailable) {
       const firstSceneNo = targetScenes[0]?.sceneNo ?? 1;
       const lastSceneNo = targetScenes.at(-1)?.sceneNo ?? targetScenes.length;
+      if (assistantMessageId) {
+        appendStoryboardThinkingTrace(
+          assistantMessageId,
+          makeStoryboardThinkingTraceEntries({
+            id: "image-provider-check",
+            label: "이미지 라우터 준비 확인",
+            status: "failed",
+            detail: `${scopeLabelPrefix} ${String(firstSceneNo).padStart(2, "0")}–${String(lastSceneNo).padStart(2, "0")} 생성 전 라우터 준비가 필요함`,
+          }),
+        );
+      }
       guideUnavailableStoryboardImageGeneration({
         assistantMessageId,
         scopeLabel: `${scopeLabelPrefix} ${String(firstSceneNo).padStart(2, "0")}–${String(lastSceneNo).padStart(2, "0")}`,
@@ -4909,8 +5552,10 @@ export function AdminStoryboardGenerator({
     setStoryboardImageProviderReadiness({
       ...INITIAL_STORYBOARD_IMAGE_PROVIDER_READINESS,
       providerId: STORYBOARD_BROWSER_OPENAI_IMAGE_PROVIDER_ID,
-      summary: "브라우저에 저장한 API 키로 이미지 생성 준비 여부를 확인하고 있습니다.",
-      detail: "키는 이 브라우저 캐시에만 보관되고, 상태 확인 요청 때만 서버로 전달됩니다.",
+      summary:
+        "브라우저에 저장한 API 키로 이미지 생성 준비 여부를 확인하고 있습니다.",
+      detail:
+        "키는 이 브라우저 캐시에만 보관되고, 상태 확인 요청 때만 서버로 전달됩니다.",
       reason: "checking",
       model: STORYBOARD_IMAGE_PROVIDER_MODEL,
       checkedAt: new Date().toISOString(),
@@ -5014,7 +5659,9 @@ export function AdminStoryboardGenerator({
     setStoryboardLocalBridgeSavedAt(null);
     setStoryboardLocalBridgeStatus("unpaired");
     setStoryboardLocalBridgeError(null);
-    setStoryboardLocalBridgeMessage("로컬 브릿지 설정을 이 탭에서 삭제했습니다.");
+    setStoryboardLocalBridgeMessage(
+      "로컬 브릿지 설정을 이 탭에서 삭제했습니다.",
+    );
     if (storyboardImageRouteChoice === STORYBOARD_LOCAL_BRIDGE_ROUTE_ID) {
       setStoryboardImageRouteChoice("local-codex-oauth");
     }
@@ -5073,7 +5720,20 @@ export function AdminStoryboardGenerator({
       ),
     );
     if (options.assistantMessageId) {
-      updateStoryboardChatMessage(options.assistantMessageId, guidance, "done");
+      updateStoryboardChatMessage(
+        options.assistantMessageId,
+        guidance,
+        "done",
+        undefined,
+        makeStoryboardThinkingTraceEntries({
+          id: "image-provider-check",
+          label: "이미지 라우터 준비 확인",
+          status: "failed",
+          detail:
+            storyboardImageProviderReadiness.summary ||
+            "CUT 이미지 생성에 필요한 라우터 준비가 완료되지 않음",
+        }),
+      );
       return;
     }
     if (options.submittedPrompt) {
@@ -5101,11 +5761,14 @@ export function AdminStoryboardGenerator({
     }
   }
 
-  async function applyStoryboardHistoryResult(historyCase: StoryboardHistoryCase) {
+  async function applyStoryboardHistoryResult(
+    historyCase: StoryboardHistoryCase,
+  ) {
     hasUserStoryboardMutationRef.current = true;
-    const historyResult = await stripUnavailableStoryboardGeneratedImagesForBrowser(
-      hydrateStoryboardResultForDisplay(historyCase.result),
-    );
+    const historyResult =
+      await stripUnavailableStoryboardGeneratedImagesForBrowser(
+        hydrateStoryboardResultForDisplay(historyCase.result),
+      );
     setResult(historyResult);
     setForm(historyResult.request);
     setStoryboardPage(0);
@@ -5146,11 +5809,11 @@ export function AdminStoryboardGenerator({
 
   function getStoryboardSourcePageRange(page: number) {
     const sourcePageScenes = result.storyboard.scenes.slice(
-      page * STORYBOARD_FRAMES_PER_PAGE,
-      page * STORYBOARD_FRAMES_PER_PAGE + STORYBOARD_FRAMES_PER_PAGE,
+      page * storyboardFramePageSize,
+      page * storyboardFramePageSize + storyboardFramePageSize,
     );
     const start =
-      sourcePageScenes[0]?.sceneNo ?? page * STORYBOARD_FRAMES_PER_PAGE + 1;
+      sourcePageScenes[0]?.sceneNo ?? page * storyboardFramePageSize + 1;
     const end = sourcePageScenes.at(-1)?.sceneNo ?? start;
     return { start, end };
   }
@@ -5163,6 +5826,9 @@ export function AdminStoryboardGenerator({
       pageScenes.length === 0 ||
       result.generatedAt === INITIAL_STORYBOARD_PREVIEW.generatedAt ||
       result.storyboard.scenes.length === 0 ||
+      suppressedAutoImageGenerationResultKeysRef.current.has(
+        result.generatedAt,
+      ) ||
       !isStoryboardImageProviderAvailable ||
       isGenerating ||
       isGeneratingImages ||
@@ -5232,14 +5898,19 @@ export function AdminStoryboardGenerator({
     const sourcePageScenes = getStoryboardSourcePageScenes({
       allScenes: result.storyboard.scenes,
       page: normalizedPage,
-      pageSize: STORYBOARD_FRAMES_PER_PAGE,
+      pageSize: storyboardFramePageSize,
     });
     const sourcePageRange = getStoryboardSourcePageRange(normalizedPage);
     setStoryboardPage(normalizedPage);
     const firstVisibleScene = sourcePageScenes[0];
     if (firstVisibleScene) {
-      applyStoryboardCanvasFocus(createStoryboardCutFocusContext(firstVisibleScene));
-      maybeGenerateMissingStoryboardPageImages(normalizedPage, sourcePageScenes);
+      applyStoryboardCanvasFocus(
+        createStoryboardCutFocusContext(firstVisibleScene),
+      );
+      maybeGenerateMissingStoryboardPageImages(
+        normalizedPage,
+        sourcePageScenes,
+      );
       return;
     }
     applyStoryboardCanvasFocus(
@@ -5252,20 +5923,38 @@ export function AdminStoryboardGenerator({
     maybeGenerateMissingStoryboardPageImages(normalizedPage, sourcePageScenes);
   }
 
-  function handleStoryboardGuideToggle() {
-    const nextVisible = !showStoryboardGuide;
-    setShowStoryboardGuide(nextVisible);
-    applyStoryboardCanvasFocus(
-      createStoryboardActionFocusContext(
-        nextVisible ? "가이드 표시됨" : "가이드 숨김",
-        nextVisible
-          ? "안전 영역 가이드를 켠 상태입니다."
-          : "안전 영역 가이드를 숨긴 상태입니다.",
-        nextVisible
-          ? "사용자가 캔버스 안전 영역 가이드를 켰습니다. 컷 구도와 자막 위치를 안전 영역 기준으로 이야기할 수 있습니다."
-          : "사용자가 캔버스 안전 영역 가이드를 숨겼습니다. 이미지 자체의 구도와 컷 감상을 중심으로 이야기할 수 있습니다.",
-      ),
+  function handleStoryboardFramePageSizeChange(
+    nextPageSize: StoryboardFramePageSize,
+  ) {
+    if (nextPageSize === storyboardFramePageSize) return;
+
+    const preferredSceneNo =
+      selectedStoryboardSceneNo ??
+      activeStoryboardPageSourceScenes[0]?.sceneNo ??
+      activeCutStart;
+    const nextTotalPages = getStoryboardScenePageCount({
+      allScenes: storyboardFrameScenes,
+      pageSize: nextPageSize,
+    });
+    const nextPage = getStoryboardPageForSceneNo(
+      preferredSceneNo,
+      nextTotalPages,
+      nextPageSize,
     );
+    const nextPageScenes = getStoryboardSourcePageScenes({
+      allScenes: result.storyboard.scenes,
+      page: nextPage,
+      pageSize: nextPageSize,
+    });
+    const focusScene =
+      nextPageScenes.find((scene) => scene.sceneNo === preferredSceneNo) ??
+      nextPageScenes[0];
+
+    setStoryboardFramePageSize(nextPageSize);
+    setStoryboardPage(nextPage);
+    if (focusScene) {
+      applyStoryboardCanvasFocus(createStoryboardCutFocusContext(focusScene));
+    }
   }
 
   function abortStoryboardChatWork() {
@@ -5299,7 +5988,7 @@ export function AdminStoryboardGenerator({
   }
 
   function getStoryboardChatStatusMessage() {
-    return `현재 상태 · CUT ${String(activeCutStart).padStart(2, "0")}–${String(activeCutEnd).padStart(2, "0")} · 현재 페이지 이미지 ${activePageGeneratedCount}/${activeStoryboardImageGenerationTargetScenes.length || STORYBOARD_FRAMES_PER_PAGE} · 전체 이미지 ${generatedImageCount}/${totalCutCount} · ${formatStoryboardOmittedSceneText(omittedStoryboardSceneCount)}`;
+    return `현재 상태 · CUT ${String(activeCutStart).padStart(2, "0")}–${String(activeCutEnd).padStart(2, "0")} · 현재 페이지 이미지 ${activePageGeneratedCount}/${activeStoryboardImageGenerationTargetScenes.length || storyboardFramePageSize} · 전체 이미지 ${generatedImageCount}/${totalCutCount} · ${formatStoryboardOmittedSceneText(omittedStoryboardSceneCount)}`;
   }
 
   function appendStoryboardQuickCommandMessages(
@@ -5329,6 +6018,7 @@ export function AdminStoryboardGenerator({
     options: {
       appendChatMessages?: boolean;
       assistantMessageId?: string;
+      suppressAutoImageGeneration?: boolean;
     } = {},
   ) => {
     hasUserStoryboardMutationRef.current = true;
@@ -5350,6 +6040,26 @@ export function AdminStoryboardGenerator({
         "사용자가 채팅 요구사항으로 실제 스토리보드 생성을 실행했습니다. 생성 완료 후 컷 구성과 보완점을 함께 검토하세요.",
       ),
     );
+    if (options.assistantMessageId) {
+      appendStoryboardThinkingTrace(
+        options.assistantMessageId,
+        makeStoryboardThinkingTraceEntries(
+          {
+            id: "storyboard-generate",
+            label: "스토리보드 구성 생성",
+            status: "running",
+            detail: `${nextForm.segmentCount}컷 · ${nextForm.targetLengthMinutes}분 · ${nextForm.tone} 톤으로 생성 API 호출`,
+          },
+          {
+            id: "storyboard-evidence",
+            label: "자료·그래프 근거 확인",
+            status: "running",
+            detail:
+              "LangGraph 또는 로컬 어댑터가 사용할 수 있는 자료를 확인하는 중",
+          },
+        ),
+      );
+    }
     setChatDraft("");
     if (appendMessages) {
       appendStoryboardChatMessages([
@@ -5375,6 +6085,37 @@ export function AdminStoryboardGenerator({
 
     try {
       const generated = await postStoryboardRequest(nextForm);
+      const generatedGraph = generated.backendAnalysis.backendAgent?.graph;
+      const graphNodes =
+        generatedGraph?.nodesVisited && generatedGraph.nodesVisited.length > 0
+          ? ` · 단계 ${generatedGraph.nodesVisited.slice(0, 6).join(" → ")}`
+          : "";
+      if (options.assistantMessageId) {
+        appendStoryboardThinkingTrace(
+          options.assistantMessageId,
+          makeStoryboardThinkingTraceEntries(
+            {
+              id: "storyboard-evidence",
+              label: "자료·그래프 근거 확인",
+              status: "done",
+              detail:
+                formatStoryboardGraphDiagnosticsText(generated) ||
+                `${generated.mode} 기준으로 구성`,
+            },
+            {
+              id: "storyboard-generate",
+              label: "스토리보드 구성 생성",
+              status: "done",
+              detail: `${generated.storyboard.scenes.length}컷 구성 완료${graphNodes}`,
+            },
+          ),
+        );
+      }
+      if (options.suppressAutoImageGeneration) {
+        suppressedAutoImageGenerationResultKeysRef.current.add(
+          generated.generatedAt,
+        );
+      }
       const completionCopy = formatStoryboardGenerationCompletion(generated);
       setResult(generated);
       setStoryboardHistoryCases((current) =>
@@ -5414,6 +6155,20 @@ export function AdminStoryboardGenerator({
       }
       return generated;
     } catch (error) {
+      if (options.assistantMessageId) {
+        appendStoryboardThinkingTrace(
+          options.assistantMessageId,
+          makeStoryboardThinkingTraceEntries({
+            id: "storyboard-generate",
+            label: "스토리보드 구성 생성",
+            status: "failed",
+            detail:
+              error instanceof Error
+                ? error.message
+                : "스토리보드 구성 API 실패",
+          }),
+        );
+      }
       setErrorMessage(
         error instanceof Error
           ? error.message
@@ -5612,6 +6367,37 @@ export function AdminStoryboardGenerator({
 
     const nextUserMessageId = `user-${Date.now()}`;
     const nextAssistantMessageId = `assistant-${Date.now()}`;
+    const conversationMessages =
+      buildStoryboardChatConversationContext(chatMessages);
+    const initialThinkingTrace = [
+      normalizeStoryboardThinkingTraceEntry({
+        id: "chat-input",
+        label: "요청 수신",
+        status: "done",
+        detail: [
+          submittedPrompt
+            ? `입력: ${submittedPrompt.slice(0, 120)}`
+            : "텍스트 없이 사진 첨부로 시작",
+          submittedAttachments.length
+            ? `첨부 사진 ${submittedAttachments.length}장`
+            : "",
+          storyboardCanvasFocus
+            ? `캔버스 맥락: ${storyboardCanvasFocus.label}`
+            : "캔버스 선택 맥락 없음",
+          conversationMessages.length
+            ? `최근 대화 ${conversationMessages.length}개 전달`
+            : "최근 대화 없음",
+        ]
+          .filter(Boolean)
+          .join(" · "),
+      }),
+      normalizeStoryboardThinkingTraceEntry({
+        id: "chat-stream",
+        label: "채팅 에이전트 연결",
+        status: "running",
+        detail: "요청을 서버 스트림으로 보내고 의도 분석 결과를 기다리는 중",
+      }),
+    ].filter((entry): entry is StoryboardThinkingTraceEntry => Boolean(entry));
     appendStoryboardChatMessages([
       {
         id: nextUserMessageId,
@@ -5630,6 +6416,7 @@ export function AdminStoryboardGenerator({
         role: "assistant",
         text: "답변을 준비하고 있어요.",
         status: "streaming",
+        thinkingTrace: initialThinkingTrace,
       },
     ]);
     setChatDraft("");
@@ -5657,6 +6444,8 @@ export function AdminStoryboardGenerator({
           generationMode: form.generationMode,
           focusContext: storyboardCanvasFocus,
           imageAttachments: submittedAttachments,
+          conversationMessages,
+          chatThreadId: "admin-storyboard-chat",
         }),
         signal: abortController.signal,
       });
@@ -5693,13 +6482,23 @@ export function AdminStoryboardGenerator({
             "message" in item.data
           ) {
             lastStatus = sanitizeStoryboardChatDisplayText(
-              String((item.data as { message?: unknown }).message ?? lastStatus),
+              String(
+                (item.data as { message?: unknown }).message ?? lastStatus,
+              ),
             );
             updateStoryboardChatMessage(
               nextAssistantMessageId,
               lastStatus,
               "streaming",
             );
+          }
+          if (item.event === "trace") {
+            appendStoryboardThinkingTrace(nextAssistantMessageId, [
+              normalizeStoryboardThinkingTraceEntry(
+                item.data,
+                `trace-${Date.now()}`,
+              ),
+            ]);
           }
           if (
             (item.event === "patch" || item.event === "done") &&
@@ -5715,6 +6514,29 @@ export function AdminStoryboardGenerator({
               nextAssistantMessageId,
               item.data.assistantMessage,
               "done",
+              undefined,
+              [
+                normalizeStoryboardThinkingTraceEntry({
+                  id: "chat-stream",
+                  label: "채팅 에이전트 연결",
+                  status: "done",
+                  detail: "서버 스트림 응답 수신 완료",
+                }),
+                normalizeStoryboardThinkingTraceEntry({
+                  id: "chat-patch",
+                  label: "화면 반영 결정 수신",
+                  status: "done",
+                  detail: item.data.shouldGenerate
+                    ? item.data.shouldGenerateImages === false
+                      ? "컷 구성만 생성하고 이미지는 건너뛰도록 결정"
+                      : "컷 구성 생성 이후 이미지 생성까지 이어가도록 결정"
+                    : item.data.canvasPatch.scenePatch?.regenerateImage
+                      ? "선택 CUT 이미지만 재생성하도록 결정"
+                      : "대화 답변 또는 화면 일부 수정으로 결정",
+                }),
+              ].filter((entry): entry is StoryboardThinkingTraceEntry =>
+                Boolean(entry),
+              ),
             );
           }
           if (item.event === "error") {
@@ -5741,14 +6563,32 @@ export function AdminStoryboardGenerator({
         );
       }
       if (finalResult?.shouldGenerate) {
+        const shouldGenerateImages = finalResult.shouldGenerateImages ?? true;
         const generated = await handleGenerate(finalForm, {
           appendChatMessages: false,
           assistantMessageId: nextAssistantMessageId,
+          suppressAutoImageGeneration: !shouldGenerateImages,
         });
-        if (generated) {
+        if (generated && shouldGenerateImages) {
           await handleGenerateAllStoryboardImagesForResult(
             generated,
             nextAssistantMessageId,
+          );
+        } else if (generated) {
+          appendStoryboardThinkingTrace(
+            nextAssistantMessageId,
+            makeStoryboardThinkingTraceEntries({
+              id: "image-generation-skip",
+              label: "CUT 이미지 생성 생략",
+              status: "done",
+              detail:
+                "사용자 요청에 따라 컷 구성만 반영하고 이미지 생성 단계는 실행하지 않음",
+            }),
+          );
+          updateStoryboardChatMessage(
+            nextAssistantMessageId,
+            `${finalResult.assistantMessage} · 이미지 생성은 요청대로 건너뛰었습니다.`,
+            "done",
           );
         }
       }
@@ -5781,11 +6621,12 @@ export function AdminStoryboardGenerator({
         "done",
       );
       if (!isAbortError) {
-        setChatDraft((current) =>
-          current ||
-          (submittedPrompt === STORYBOARD_CHAT_IMAGE_ATTACHMENT_ONLY_PROMPT
-            ? ""
-            : submittedPrompt),
+        setChatDraft(
+          (current) =>
+            current ||
+            (submittedPrompt === STORYBOARD_CHAT_IMAGE_ATTACHMENT_ONLY_PROMPT
+              ? ""
+              : submittedPrompt),
         );
         setStoryboardChatImageAttachments((current) =>
           current.length ? current : submittedAttachments,
@@ -5816,8 +6657,8 @@ export function AdminStoryboardGenerator({
     applyStoryboardCanvasFocus(
       createStoryboardActionFocusContext(
         "PNG 저장 실행",
-        `현재 페이지 CUT ${String(activeCutStart).padStart(2, "0")}–${String(activeCutEnd).padStart(2, "0")} · ${exportResolutionToken}`,
-        "사용자가 현재 2×2 스토리보드 페이지를 PNG로 저장했습니다. 이후 채팅은 저장된 페이지의 구도, 순서, 자막 보완을 기준으로 이어갈 수 있습니다.",
+        `${activeFrameViewLabel} · 현재 페이지 CUT ${String(activeCutStart).padStart(2, "0")}–${String(activeCutEnd).padStart(2, "0")} · ${exportResolutionToken}`,
+        "사용자가 현재 스토리보드 보기 단위를 PNG로 저장했습니다. 이후 채팅은 저장된 페이지의 구도, 순서, 자막 보완을 기준으로 이어갈 수 있습니다.",
       ),
     );
     const canvas = document.createElement("canvas");
@@ -5831,8 +6672,13 @@ export function AdminStoryboardGenerator({
 
     const gap = Math.round(canvas.width * 0.018);
     const margin = Math.round(canvas.width * 0.026);
-    const frameWidth = (canvas.width - margin * 2 - gap) / 2;
-    const frameHeight = (canvas.height - margin * 2 - gap) / 2;
+    const isSingleFrameExport = storyboardFramePageSize === 1;
+    const frameWidth = isSingleFrameExport
+      ? canvas.width - margin * 2
+      : (canvas.width - margin * 2 - gap) / 2;
+    const frameHeight = isSingleFrameExport
+      ? canvas.height - margin * 2
+      : (canvas.height - margin * 2 - gap) / 2;
 
     const generatedImages = await Promise.all(
       activeStoryboardPageScenes.map((scene) => {
@@ -5844,8 +6690,8 @@ export function AdminStoryboardGenerator({
     );
 
     for (const [index, scene] of activeStoryboardPageScenes.entries()) {
-      const col = index % 2;
-      const row = Math.floor(index / 2);
+      const col = isSingleFrameExport ? 0 : index % 2;
+      const row = isSingleFrameExport ? 0 : Math.floor(index / 2);
       const generatedImage = generatedImages[index] ?? null;
       drawStoryboardFrameToCanvas(
         context,
@@ -5868,7 +6714,8 @@ export function AdminStoryboardGenerator({
   async function handleCopyStoryboardPlanMarkdown() {
     const exportMarkdown = buildStoryboardClientCopyPlanMarkdown(result);
     if (!exportMarkdown) {
-      const message = "복사할 촬영 기획표가 없습니다. 먼저 스토리보드를 만들어주세요.";
+      const message =
+        "복사할 촬영 기획표가 없습니다. 먼저 스토리보드를 만들어주세요.";
       setErrorMessage(message);
       appendStoryboardChatMessages([
         {
@@ -5882,10 +6729,7 @@ export function AdminStoryboardGenerator({
     }
 
     try {
-      if (!navigator.clipboard?.writeText) {
-        throw new Error("브라우저 클립보드 권한을 사용할 수 없습니다.");
-      }
-      await navigator.clipboard.writeText(exportMarkdown);
+      await writeStoryboardClipboardText(exportMarkdown);
       setErrorMessage(null);
       applyStoryboardCanvasFocus(
         createStoryboardActionFocusContext(
@@ -5940,16 +6784,22 @@ export function AdminStoryboardGenerator({
     const isSelectedScope = options.scope === "selected";
     const isAllScope =
       options.scope === "all" ||
-      (!isSelectedScope && targetScenes.length > STORYBOARD_FRAMES_PER_PAGE);
+      (!isSelectedScope && targetScenes.length > storyboardFramePageSize);
     if (targetScenes.length === 0) {
-      const message =
-        "현재 페이지에 이미지로 만들 스토리보드 컷이 없습니다.";
+      const message = "현재 페이지에 이미지로 만들 스토리보드 컷이 없습니다.";
       setErrorMessage(message);
       if (options.assistantMessageId) {
         updateStoryboardChatMessage(
           options.assistantMessageId,
           message,
           "done",
+          undefined,
+          makeStoryboardThinkingTraceEntries({
+            id: "image-plan",
+            label: "CUT 이미지 생성 계획",
+            status: "failed",
+            detail: "이미지로 만들 대상 CUT이 없음",
+          }),
         );
       }
       return;
@@ -5963,7 +6813,24 @@ export function AdminStoryboardGenerator({
         : isAllScope
           ? `전체 CUT ${String(targetStart).padStart(2, "0")}–${String(targetEnd).padStart(2, "0")}`
           : `현재 페이지 CUT ${String(targetStart).padStart(2, "0")}–${String(targetEnd).padStart(2, "0")}`;
+    const imageRouteLabel =
+      storyboardImageRouteChoice === STORYBOARD_LOCAL_BRIDGE_ROUTE_ID
+        ? "고급 로컬 브릿지"
+        : storyboardImageRouteChoice === "browser-openai-api-key"
+          ? "브라우저 OpenAI API 키"
+          : "기본 Codex OAuth";
     if (!isStoryboardImageProviderAvailable) {
+      if (options.assistantMessageId) {
+        appendStoryboardThinkingTrace(
+          options.assistantMessageId,
+          makeStoryboardThinkingTraceEntries({
+            id: "image-provider-check",
+            label: "이미지 라우터 준비 확인",
+            status: "failed",
+            detail: `${imageRouteLabel} 라우터 준비가 완료되지 않아 ${targetLabel} 생성 중단`,
+          }),
+        );
+      }
       guideUnavailableStoryboardImageGeneration({
         assistantMessageId: options.assistantMessageId,
         scopeLabel: targetLabel,
@@ -5978,22 +6845,41 @@ export function AdminStoryboardGenerator({
     setIsGeneratingImages(true);
     setGeneratingStoryboardImageSceneNos(targetSceneNos);
     setActiveGeneratingStoryboardImageSceneNo(
-      targetScenes.length === 1 ? targetSceneNos[0] ?? null : null,
+      targetScenes.length === 1 ? (targetSceneNos[0] ?? null) : null,
     );
     setErrorMessage(null);
+    if (options.assistantMessageId) {
+      appendStoryboardThinkingTrace(
+        options.assistantMessageId,
+        makeStoryboardThinkingTraceEntries(
+          {
+            id: "image-provider-check",
+            label: "이미지 라우터 준비 확인",
+            status: "done",
+            detail: `${imageRouteLabel} 라우터로 ${targetLabel} 생성 가능`,
+          },
+          {
+            id: "image-plan",
+            label: "CUT 이미지 생성 계획",
+            status: "running",
+            detail: `${targetCount}컷 대상 · 완료된 CUT은 응답 즉시 캔버스에 반영`,
+          },
+        ),
+      );
+    }
     applyStoryboardCanvasFocus(
       createStoryboardActionFocusContext(
         isSelectedScope
           ? "현재 컷 이미지 재생성"
           : isAllScope
             ? "전체 CUT 이미지 생성"
-            : "4컷 이미지 재생성",
+            : `${storyboardFramePageSize}컷 이미지 재생성`,
         `${targetLabel} 이미지를 생성 중입니다.`,
         isSelectedScope
           ? "사용자가 선택한 CUT만 이미지 생성을 실행했습니다. 생성 후 해당 컷 이미지 톤과 자막/오디오 일치를 기준으로 후속 대화를 이어가세요."
           : isAllScope
             ? "사용자가 전체 CUT 이미지 생성을 실행했습니다. 생성된 컷은 페이지를 넘겨도 바로 확인할 수 있어야 합니다."
-            : "사용자가 현재 페이지 4컷 이미지 생성을 실행했습니다. 생성 후 이미지 톤, 컷별 완성도, 누락 컷을 기준으로 후속 대화를 이어가세요.",
+            : "사용자가 현재 페이지 CUT 이미지 생성을 실행했습니다. 생성 후 이미지 톤, 컷별 완성도, 누락 컷을 기준으로 후속 대화를 이어가세요.",
       ),
     );
     if (options.assistantMessageId) {
@@ -6006,7 +6892,7 @@ export function AdminStoryboardGenerator({
         options.assistantMessageId,
         isSelectedScope
           ? `${targetLabel} 이미지를 다시 만드는 중입니다...`
-        : isAllScope
+          : isAllScope
             ? `전체 ${targetCount}컷 이미지를 컷별로 생성합니다...`
             : `현재 ${targetCount}컷 이미지를 컷별로 생성합니다...`,
         "streaming",
@@ -6061,7 +6947,9 @@ export function AdminStoryboardGenerator({
           const acceptedImage = getTrustedStoryboardGeneratedImage(
             scene?.generatedImage,
           );
-          return acceptedImage?.dataUrl === trustedImage.dataUrl ? [sceneNo] : [];
+          return acceptedImage?.dataUrl === trustedImage.dataUrl
+            ? [sceneNo]
+            : [];
         }),
       );
       accumulatedResult = browserSafeResult;
@@ -6080,16 +6968,30 @@ export function AdminStoryboardGenerator({
         throw new DOMException("이미지 생성이 중단되었습니다.", "AbortError");
       }
       setActiveGeneratingStoryboardImageSceneNo(
-        targetScenes.length === 1 ? targetScenes[0]?.sceneNo ?? null : null,
+        targetScenes.length === 1 ? (targetScenes[0]?.sceneNo ?? null) : null,
       );
       if (!isSelectedScope && targetScenes.length > 1) {
         for (let index = 0; index < targetScenes.length; index += 1) {
           const scene = targetScenes[index];
           if (!scene) continue;
           if (imageAbortController.signal.aborted) {
-            throw new DOMException("이미지 생성이 중단되었습니다.", "AbortError");
+            throw new DOMException(
+              "이미지 생성이 중단되었습니다.",
+              "AbortError",
+            );
           }
           setActiveGeneratingStoryboardImageSceneNo(scene.sceneNo);
+          if (options.assistantMessageId) {
+            appendStoryboardThinkingTrace(
+              options.assistantMessageId,
+              makeStoryboardThinkingTraceEntries({
+                id: `image-cut-${scene.sceneNo}`,
+                label: `CUT ${String(scene.sceneNo).padStart(2, "0")} 이미지 요청`,
+                status: "running",
+                detail: `${index + 1}/${targetScenes.length} · 이미지 생성 요청 전송`,
+              }),
+            );
+          }
           if (options.assistantMessageId) {
             updateStoryboardChatMessage(
               options.assistantMessageId,
@@ -6124,6 +7026,19 @@ export function AdminStoryboardGenerator({
             );
           }
           if (options.assistantMessageId) {
+            appendStoryboardThinkingTrace(
+              options.assistantMessageId,
+              makeStoryboardThinkingTraceEntries({
+                id: `image-cut-${scene.sceneNo}`,
+                label: `CUT ${String(scene.sceneNo).padStart(2, "0")} 이미지 요청`,
+                status: acceptedSceneNos.has(scene.sceneNo) ? "done" : "failed",
+                detail: acceptedSceneNos.has(scene.sceneNo)
+                  ? `${index + 1}/${targetScenes.length} · 생성 결과를 캔버스에 즉시 반영`
+                  : `${index + 1}/${targetScenes.length} · 응답에 검증 가능한 이미지가 없어 확인 필요`,
+              }),
+            );
+          }
+          if (options.assistantMessageId) {
             updateStoryboardChatMessage(
               options.assistantMessageId,
               `CUT ${String(scene.sceneNo).padStart(2, "0")} 이미지 반영 확인 · ${index + 1}/${targetScenes.length}`,
@@ -6147,11 +7062,41 @@ export function AdminStoryboardGenerator({
           );
         }
       } else {
+        if (options.assistantMessageId) {
+          appendStoryboardThinkingTrace(
+            options.assistantMessageId,
+            makeStoryboardThinkingTraceEntries(
+              ...targetScenes.map((scene, index) => ({
+                id: `image-cut-${scene.sceneNo}`,
+                label: `CUT ${String(scene.sceneNo).padStart(2, "0")} 이미지 요청`,
+                status: "running",
+                detail: `${index + 1}/${targetScenes.length} · 이미지 생성 요청 전송`,
+              })),
+            ),
+          );
+        }
         const payload = await requestStoryboardImages(
           accumulatedResult,
           targetScenes,
         );
         completedImageSceneNos = await applyGeneratedImages(payload.images);
+        if (options.assistantMessageId) {
+          appendStoryboardThinkingTrace(
+            options.assistantMessageId,
+            makeStoryboardThinkingTraceEntries(
+              ...targetScenes.map((scene, index) => ({
+                id: `image-cut-${scene.sceneNo}`,
+                label: `CUT ${String(scene.sceneNo).padStart(2, "0")} 이미지 요청`,
+                status: completedImageSceneNos.has(scene.sceneNo)
+                  ? "done"
+                  : "failed",
+                detail: completedImageSceneNos.has(scene.sceneNo)
+                  ? `${index + 1}/${targetScenes.length} · 생성 결과를 캔버스에 즉시 반영`
+                  : `${index + 1}/${targetScenes.length} · 응답에 검증 가능한 이미지가 없어 확인 필요`,
+              })),
+            ),
+          );
+        }
       }
       const missingImageSceneNos = new Set(
         targetSceneNos.filter(
@@ -6161,6 +7106,21 @@ export function AdminStoryboardGenerator({
         ),
       );
       if (options.assistantMessageId) {
+        appendStoryboardThinkingTrace(
+          options.assistantMessageId,
+          makeStoryboardThinkingTraceEntries({
+            id: "image-plan",
+            label: "CUT 이미지 생성 계획",
+            status:
+              missingImageSceneNos.size + failedImageSceneNos.size > 0
+                ? "failed"
+                : "done",
+            detail:
+              missingImageSceneNos.size + failedImageSceneNos.size > 0
+                ? `${appliedImageCount}/${targetCount}컷 반영 · ${missingImageSceneNos.size + failedImageSceneNos.size}컷 확인 필요`
+                : `${appliedImageCount}/${targetCount}컷 모두 캔버스 반영 완료`,
+          }),
+        );
         updateStoryboardChatMessage(
           options.assistantMessageId,
           missingImageSceneNos.size + failedImageSceneNos.size > 0
@@ -6223,7 +7183,7 @@ export function AdminStoryboardGenerator({
             ? "현재 컷 이미지 생성 완료"
             : isAllScope
               ? "전체 CUT 이미지 생성 완료"
-              : "4컷 이미지 생성 완료",
+              : `${storyboardFramePageSize}컷 이미지 생성 완료`,
           `${targetLabel} 이미지 ${appliedImageCount}개가 캔버스에 반영됐습니다.`,
           isSelectedScope
             ? "선택 CUT의 새 이미지가 반영됐습니다. 사용자가 같은 컷의 오디오/자막/비주얼을 계속 보완할 수 있습니다."
@@ -6245,7 +7205,30 @@ export function AdminStoryboardGenerator({
       setErrorMessage(message);
       if (options.assistantMessageId) {
         const unresolvedImageSceneNos = new Set(
-          targetSceneNos.filter((sceneNo) => !completedImageSceneNos.has(sceneNo)),
+          targetSceneNos.filter(
+            (sceneNo) => !completedImageSceneNos.has(sceneNo),
+          ),
+        );
+        appendStoryboardThinkingTrace(
+          options.assistantMessageId,
+          makeStoryboardThinkingTraceEntries(
+            {
+              id: "image-plan",
+              label: "CUT 이미지 생성 계획",
+              status: isAbortError ? "cancelled" : "failed",
+              detail: isAbortError
+                ? `중단 요청 처리 · ${appliedImageCount}/${targetScenes.length}컷 반영`
+                : `${message} · ${appliedImageCount}/${targetScenes.length}컷 반영`,
+            },
+            ...Array.from(unresolvedImageSceneNos).map((sceneNo) => ({
+              id: `image-cut-${sceneNo}`,
+              label: `CUT ${String(sceneNo).padStart(2, "0")} 이미지 요청`,
+              status: isAbortError ? "cancelled" : "failed",
+              detail: isAbortError
+                ? "이미지 생성 중단으로 남은 CUT 대기 취소"
+                : "이미지 생성 실패 또는 응답 미반영",
+            })),
+          ),
         );
         updateStoryboardChatMessage(
           options.assistantMessageId,
@@ -6303,7 +7286,7 @@ export function AdminStoryboardGenerator({
         }}
       >
         <Card
-          className="flex min-h-0 flex-col overflow-hidden border-0 bg-card/80 shadow-none"
+          className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-border/70 bg-card/80 shadow-sm"
           aria-label="요구사항 채팅"
           data-storyboard-input-panel="chat-stream"
           data-storyboard-input-position="right-of-canvas"
@@ -6324,27 +7307,38 @@ export function AdminStoryboardGenerator({
                   data-storyboard-chat-title-icon="true"
                   aria-hidden="true"
                 >
-                  <MessageCircle className="block h-3.5 w-3.5" aria-hidden="true" />
+                  <MessageCircle
+                    className="block h-3.5 w-3.5"
+                    aria-hidden="true"
+                  />
                 </span>
                 <span className="min-w-0 truncate">스토리보드 도우미</span>
-                {" "}
-                <Badge
-                  variant={
-                    isStoryboardImageProviderAvailable ? "secondary" : "outline"
-                  }
-                  className="h-6 max-w-[128px] shrink truncate rounded-full px-2 text-[10px]"
-                  data-storyboard-image-provider-status={
-                    storyboardImageProviderReadiness.status
-                  }
-                  title={storyboardImageProviderReadiness.summary}
-                >
-                  {storyboardImageProviderReadiness.label}
-                </Badge>
               </CardTitle>
               <div
                 className="flex shrink-0 items-center gap-1"
                 data-storyboard-chat-header-actions="true"
               >
+                <span
+                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center"
+                  style={{
+                    color: isStoryboardImageProviderAvailable
+                      ? "#059669"
+                      : "#dc2626",
+                  }}
+                  data-storyboard-image-provider-status={
+                    storyboardImageProviderReadiness.status
+                  }
+                  data-storyboard-image-provider-status-icon={
+                    isStoryboardImageProviderAvailable
+                      ? "connected"
+                      : "disconnected"
+                  }
+                  data-storyboard-image-provider-status-visual="plug-icon-only"
+                  title={storyboardImageProviderReadiness.summary}
+                  aria-label={storyboardImageProviderStatusIconLabel}
+                >
+                  <Plug className="h-4 w-4" aria-hidden="true" />
+                </span>
                 <DropdownMenu
                   open={isStoryboardHistoryPanelOpen}
                   onOpenChange={handleStoryboardHistoryDropdownOpenChange}
@@ -6414,7 +7408,9 @@ export function AdminStoryboardGenerator({
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7"
-                            onClick={() => void refreshStoryboardHistoryResults()}
+                            onClick={() =>
+                              void refreshStoryboardHistoryResults()
+                            }
                             disabled={storyboardHistoryStatus === "loading"}
                             aria-label="스토리보드 기록 새로고침"
                             data-storyboard-history-refresh="true"
@@ -6436,7 +7432,9 @@ export function AdminStoryboardGenerator({
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7"
-                            onClick={() => setIsStoryboardHistoryPanelOpen(false)}
+                            onClick={() =>
+                              setIsStoryboardHistoryPanelOpen(false)
+                            }
                             aria-label="스토리보드 기록 닫기"
                             data-storyboard-history-close="true"
                           >
@@ -6455,7 +7453,9 @@ export function AdminStoryboardGenerator({
                           )}
                           data-storyboard-history-error="true"
                           data-storyboard-history-stale={
-                            storyboardHistoryStatus === "stale" ? "true" : undefined
+                            storyboardHistoryStatus === "stale"
+                              ? "true"
+                              : undefined
                           }
                         >
                           {storyboardHistoryStatus === "stale"
@@ -6470,8 +7470,8 @@ export function AdminStoryboardGenerator({
                           className="rounded-xl bg-muted/40 px-2.5 py-2 text-[11px] text-muted-foreground"
                           data-storyboard-history-empty="true"
                         >
-                          아직 저장된 실제 생성 기록이 없습니다. 채팅에서 “생성”을
-                          보내면 여기에 쌓입니다.
+                          아직 저장된 실제 생성 기록이 없습니다. 채팅에서
+                          “생성”을 보내면 여기에 쌓입니다.
                         </div>
                       ) : null}
 
@@ -6493,7 +7493,8 @@ export function AdminStoryboardGenerator({
                             const isProofOpen =
                               openStoryboardHistoryProofId === historyCase.id;
                             const isSelectedHistory =
-                              historyCase.result.generatedAt === result.generatedAt;
+                              historyCase.result.generatedAt ===
+                              result.generatedAt;
                             return (
                               <div
                                 key={historyCase.id}
@@ -6532,7 +7533,9 @@ export function AdminStoryboardGenerator({
                                     <div className="min-w-0">
                                       <p
                                         className="truncate font-semibold"
-                                        title={historyCase.result.storyboard.title}
+                                        title={
+                                          historyCase.result.storyboard.title
+                                        }
                                         data-storyboard-history-title="true"
                                       >
                                         {historyCase.result.storyboard.title}
@@ -6636,33 +7639,39 @@ export function AdminStoryboardGenerator({
                                         </Badge>
                                       </div>
                                       <div className="mt-1.5 space-y-1">
-                                        {proofSummaries.slice(0, 4).map((proof) => (
-                                          <div
-                                            key={`${historyCase.id}-${proof.sceneNo}-${proof.imageCallId}`}
-                                            className="grid gap-1 rounded-md bg-muted/35 p-1.5 sm:grid-cols-[44px_minmax(0,1fr)]"
-                                          >
-                                            <span className="font-semibold">
-                                              CUT {String(proof.sceneNo).padStart(2, "0")}
-                                            </span>
-                                            <span
-                                              className="min-w-0 truncate"
-                                              title={`CUT ${String(proof.sceneNo).padStart(2, "0")} 이미지 확인 내역`}
-                                              data-storyboard-history-proof-response="true"
+                                        {proofSummaries
+                                          .slice(0, 4)
+                                          .map((proof) => (
+                                            <div
+                                              key={`${historyCase.id}-${proof.sceneNo}-${proof.imageCallId}`}
+                                              className="grid gap-1 rounded-md bg-muted/35 p-1.5 sm:grid-cols-[44px_minmax(0,1fr)]"
                                             >
-                                              생성 기록 확인됨
-                                            </span>
-                                            <span className="sr-only">
-                                              이미지 생성 기록 확인됨
-                                            </span>
-                                            <span
-                                              className="min-w-0 truncate text-muted-foreground sm:col-start-2"
-                                              title={`CUT ${String(proof.sceneNo).padStart(2, "0")} 저장 확인`}
-                                              data-storyboard-history-proof-hashes="true"
-                                            >
-                                              저장 확인됨
-                                            </span>
-                                          </div>
-                                        ))}
+                                              <span className="font-semibold">
+                                                CUT{" "}
+                                                {String(proof.sceneNo).padStart(
+                                                  2,
+                                                  "0",
+                                                )}
+                                              </span>
+                                              <span
+                                                className="min-w-0 truncate"
+                                                title={`CUT ${String(proof.sceneNo).padStart(2, "0")} 이미지 확인 내역`}
+                                                data-storyboard-history-proof-response="true"
+                                              >
+                                                생성 기록 확인됨
+                                              </span>
+                                              <span className="sr-only">
+                                                이미지 생성 기록 확인됨
+                                              </span>
+                                              <span
+                                                className="min-w-0 truncate text-muted-foreground sm:col-start-2"
+                                                title={`CUT ${String(proof.sceneNo).padStart(2, "0")} 저장 확인`}
+                                                data-storyboard-history-proof-hashes="true"
+                                              >
+                                                저장 확인됨
+                                              </span>
+                                            </div>
+                                          ))}
                                       </div>
                                     </div>
                                   ) : null}
@@ -6708,7 +7717,9 @@ export function AdminStoryboardGenerator({
                     >
                       <div className="flex items-center justify-between gap-2">
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-bold">이미지 설정</p>
+                          <p className="truncate text-sm font-bold">
+                            이미지 설정
+                          </p>
                           <p className="text-[11px] text-muted-foreground">
                             기본 OAuth · 고급 로컬 · API Key 백업
                           </p>
@@ -6740,8 +7751,14 @@ export function AdminStoryboardGenerator({
                               ? "bg-primary text-primary-foreground shadow-sm"
                               : "bg-muted/35 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                           }`}
-                          aria-pressed={storyboardImageRouteChoice === "local-codex-oauth"}
-                          onClick={() => handleSelectStoryboardImageRouteChoice("local-codex-oauth")}
+                          aria-pressed={
+                            storyboardImageRouteChoice === "local-codex-oauth"
+                          }
+                          onClick={() =>
+                            handleSelectStoryboardImageRouteChoice(
+                              "local-codex-oauth",
+                            )
+                          }
                           data-storyboard-api-router-option="local-codex-oauth"
                           data-storyboard-api-router-option-selected={
                             storyboardImageRouteChoice === "local-codex-oauth"
@@ -6750,12 +7767,17 @@ export function AdminStoryboardGenerator({
                           }
                           data-storyboard-api-router-oauth-transport="server"
                         >
-                          <span className="block text-[11px] font-bold">기본</span>
+                          <span className="block text-[11px] font-bold">
+                            기본
+                          </span>
                           <span className="block text-[10px] opacity-80">
-                            {storyboardImageProviderReadiness.status === "ready" &&
-                            storyboardImageProviderReadiness.providerId === STORYBOARD_IMAGE_PROVIDER_ID
+                            {storyboardImageProviderReadiness.status ===
+                              "ready" &&
+                            storyboardImageProviderReadiness.providerId ===
+                              STORYBOARD_IMAGE_PROVIDER_ID
                               ? "사용 가능"
-                              : storyboardImageProviderReadiness.status === "checking"
+                              : storyboardImageProviderReadiness.status ===
+                                  "checking"
                                 ? "확인 중"
                                 : "확인 필요"}
                           </span>
@@ -6763,21 +7785,32 @@ export function AdminStoryboardGenerator({
                         <button
                           type="button"
                           className={`rounded-xl px-2 py-1.5 text-left transition ${
-                            storyboardImageRouteChoice === STORYBOARD_LOCAL_BRIDGE_ROUTE_ID
+                            storyboardImageRouteChoice ===
+                            STORYBOARD_LOCAL_BRIDGE_ROUTE_ID
                               ? "bg-primary text-primary-foreground shadow-sm"
                               : "bg-muted/35 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                           }`}
-                          aria-pressed={storyboardImageRouteChoice === STORYBOARD_LOCAL_BRIDGE_ROUTE_ID}
-                          onClick={() => handleSelectStoryboardImageRouteChoice(STORYBOARD_LOCAL_BRIDGE_ROUTE_ID)}
+                          aria-pressed={
+                            storyboardImageRouteChoice ===
+                            STORYBOARD_LOCAL_BRIDGE_ROUTE_ID
+                          }
+                          onClick={() =>
+                            handleSelectStoryboardImageRouteChoice(
+                              STORYBOARD_LOCAL_BRIDGE_ROUTE_ID,
+                            )
+                          }
                           data-storyboard-api-router-option="local-bridge"
                           data-storyboard-api-router-option-selected={
-                            storyboardImageRouteChoice === STORYBOARD_LOCAL_BRIDGE_ROUTE_ID
+                            storyboardImageRouteChoice ===
+                            STORYBOARD_LOCAL_BRIDGE_ROUTE_ID
                               ? "true"
                               : "false"
                           }
                           data-storyboard-api-router-oauth-transport="local-bridge"
                         >
-                          <span className="block text-[11px] font-bold">고급 로컬</span>
+                          <span className="block text-[11px] font-bold">
+                            고급 로컬
+                          </span>
                           <span className="block text-[10px] opacity-80">
                             {storyboardLocalBridgeStatus === "connected"
                               ? "연결됨"
@@ -6793,9 +7826,15 @@ export function AdminStoryboardGenerator({
                       <div
                         className="flex items-center justify-between gap-2 rounded-xl bg-muted/30 px-2.5 py-2"
                         data-storyboard-api-router-panel="true"
-                        data-storyboard-api-router-active={storyboardImageApiRouterView.id}
-                        data-storyboard-codex-oauth-status={storyboardImageApiRouterView.codexOAuthStatus}
-                        data-storyboard-api-router-model={STORYBOARD_IMAGE_PROVIDER_MODEL}
+                        data-storyboard-api-router-active={
+                          storyboardImageApiRouterView.id
+                        }
+                        data-storyboard-codex-oauth-status={
+                          storyboardImageApiRouterView.codexOAuthStatus
+                        }
+                        data-storyboard-api-router-model={
+                          STORYBOARD_IMAGE_PROVIDER_MODEL
+                        }
                       >
                         <div className="min-w-0">
                           <p
@@ -6816,13 +7855,13 @@ export function AdminStoryboardGenerator({
                               : storyboardImageApiRouterView.codexOAuthStatus ===
                                   "local-bridge-active"
                                 ? "Codex OAuth · 로컬"
-                              : storyboardImageApiRouterView.codexOAuthStatus ===
-                                  "checking"
-                                ? "확인 중"
                                 : storyboardImageApiRouterView.codexOAuthStatus ===
-                                    "api-key-active"
-                                  ? "브라우저 키"
-                                  : "설정 필요"}
+                                    "checking"
+                                  ? "확인 중"
+                                  : storyboardImageApiRouterView.codexOAuthStatus ===
+                                      "api-key-active"
+                                    ? "브라우저 키"
+                                    : "설정 필요"}
                           </p>
                         </div>
                         <Badge
@@ -6854,12 +7893,14 @@ export function AdminStoryboardGenerator({
                           <button
                             type="button"
                             className={`h-6 shrink-0 rounded-full px-2 text-[10px] font-semibold transition ${
-                              storyboardImageRouteChoice === "browser-openai-api-key"
+                              storyboardImageRouteChoice ===
+                              "browser-openai-api-key"
                                 ? "bg-primary text-primary-foreground"
                                 : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
                             }`}
                             aria-pressed={
-                              storyboardImageRouteChoice === "browser-openai-api-key"
+                              storyboardImageRouteChoice ===
+                              "browser-openai-api-key"
                             }
                             onClick={() =>
                               handleSelectStoryboardImageRouteChoice(
@@ -6868,7 +7909,8 @@ export function AdminStoryboardGenerator({
                             }
                             data-storyboard-api-router-option="browser-openai-api-key"
                             data-storyboard-api-router-option-selected={
-                              storyboardImageRouteChoice === "browser-openai-api-key"
+                              storyboardImageRouteChoice ===
+                              "browser-openai-api-key"
                                 ? "true"
                                 : "false"
                             }
@@ -6917,7 +7959,8 @@ export function AdminStoryboardGenerator({
                           data-storyboard-browser-api-key-browser-only-copy="true"
                           data-storyboard-browser-api-key-model-policy="gpt-image-2-only"
                         >
-                          OAuth가 안 될 때만 사용 · gpt-image-2 전용 · 브라우저 저장 · DB 저장 없음
+                          OAuth가 안 될 때만 사용 · gpt-image-2 전용 · 브라우저
+                          저장 · DB 저장 없음
                         </p>
                         <div className="flex flex-wrap items-center gap-2">
                           <p
@@ -6981,124 +8024,136 @@ export function AdminStoryboardGenerator({
                             STORYBOARD_LOCAL_BRIDGE_SESSION_STORAGE_KEY
                           }
                         >
-                        <div className="flex items-center justify-between gap-2">
-                          <Label
-                            htmlFor="storyboard-local-bridge-url"
-                            className="text-[11px] font-semibold"
+                          <div className="flex items-center justify-between gap-2">
+                            <Label
+                              htmlFor="storyboard-local-bridge-url"
+                              className="text-[11px] font-semibold"
+                            >
+                              고급 로컬 브릿지
+                            </Label>
+                            <Badge
+                              variant="outline"
+                              className="h-5 shrink-0 rounded-full px-1.5 text-[10px]"
+                              data-storyboard-local-bridge-status={
+                                storyboardLocalBridgeStatus
+                              }
+                            >
+                              {storyboardLocalBridgeStatus === "connected"
+                                ? "연결됨"
+                                : storyboardLocalBridgeStatus === "checking"
+                                  ? "확인 중"
+                                  : storyboardLocalBridgeStatus ===
+                                      "needs_reconnect"
+                                    ? "재연결 필요"
+                                    : storyboardLocalBridgeToken
+                                      ? "확인 필요"
+                                      : "설정 필요"}
+                            </Badge>
+                          </div>
+                          <p
+                            className="text-[10px] leading-4 text-muted-foreground"
+                            data-storyboard-local-bridge-guidance="true"
                           >
-                            고급 로컬 브릿지
-                          </Label>
-                          <Badge
-                            variant="outline"
-                            className="h-5 shrink-0 rounded-full px-1.5 text-[10px]"
-                            data-storyboard-local-bridge-status={
-                              storyboardLocalBridgeStatus
-                            }
-                          >
-                            {storyboardLocalBridgeStatus === "connected"
-                              ? "연결됨"
-                              : storyboardLocalBridgeStatus === "checking"
-                                ? "확인 중"
-                                : storyboardLocalBridgeStatus === "needs_reconnect"
-                                  ? "재연결 필요"
-                                  : storyboardLocalBridgeToken
-                                    ? "확인 필요"
-                                    : "설정 필요"}
-                          </Badge>
-                        </div>
-                        <p
-                          className="text-[10px] leading-4 text-muted-foreground"
-                          data-storyboard-local-bridge-guidance="true"
-                        >
-                          OAuth는 동일합니다. 차이는 서버 대신 사용자 PC helper가 loopback 브릿지를 호출한다는 점입니다.
-                        </p>
-                        <div className="grid gap-1">
-                          <Input
-                            id="storyboard-local-bridge-url"
-                            value={storyboardLocalBridgeUrlDraft}
-                            onChange={(event) => {
-                              setStoryboardLocalBridgeUrlDraft(event.target.value);
-                              setStoryboardLocalBridgeError(null);
-                            }}
-                            placeholder={STORYBOARD_LOCAL_BRIDGE_DEFAULT_URL}
-                            autoComplete="off"
-                            spellCheck={false}
-                            className="h-8 text-xs"
-                            aria-label="로컬 브릿지 URL"
-                            data-storyboard-local-bridge-url-input="true"
-                          />
-                          <Input
-                            id="storyboard-local-bridge-token"
-                            type="password"
-                            value={storyboardLocalBridgeTokenDraft}
-                            onChange={(event) => {
-                              setStoryboardLocalBridgeTokenDraft(
-                                event.target.value,
-                              );
-                              setStoryboardLocalBridgeError(null);
-                            }}
-                            placeholder={
-                              storyboardLocalBridgeToken
-                                ? `${maskedStoryboardLocalBridgeToken} 저장됨`
-                                : "브릿지 터미널 pairing_token"
-                            }
-                            autoComplete="off"
-                            spellCheck={false}
-                            className="h-8 text-xs"
-                            aria-label="로컬 브릿지 pairing token"
-                            data-storyboard-local-bridge-token-input="true"
-                          />
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Button
-                            type="button"
-                            size="sm"
-                            className="h-7 shrink-0 rounded-full px-2 text-[11px]"
-                            onClick={() => void handleSaveStoryboardLocalBridgeSession()}
-                            data-storyboard-local-bridge-save="true"
-                          >
-                            저장
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="h-7 shrink-0 rounded-full px-2 text-[11px]"
-                            onClick={() => void handleConnectStoryboardLocalBridgeHelper()}
-                            data-storyboard-local-bridge-connect="true"
-                          >
-                            {storyboardLocalBridgeStatus === "connected" ? "다시 확인" : "로컬 브릿지 다시 연결"}
-                          </Button>
-                          {storyboardLocalBridgeToken ? (
+                            OAuth는 동일합니다. 차이는 서버 대신 사용자 PC
+                            helper가 loopback 브릿지를 호출한다는 점입니다.
+                          </p>
+                          <div className="grid gap-1">
+                            <Input
+                              id="storyboard-local-bridge-url"
+                              value={storyboardLocalBridgeUrlDraft}
+                              onChange={(event) => {
+                                setStoryboardLocalBridgeUrlDraft(
+                                  event.target.value,
+                                );
+                                setStoryboardLocalBridgeError(null);
+                              }}
+                              placeholder={STORYBOARD_LOCAL_BRIDGE_DEFAULT_URL}
+                              autoComplete="off"
+                              spellCheck={false}
+                              className="h-8 text-xs"
+                              aria-label="로컬 브릿지 URL"
+                              data-storyboard-local-bridge-url-input="true"
+                            />
+                            <Input
+                              id="storyboard-local-bridge-token"
+                              type="password"
+                              value={storyboardLocalBridgeTokenDraft}
+                              onChange={(event) => {
+                                setStoryboardLocalBridgeTokenDraft(
+                                  event.target.value,
+                                );
+                                setStoryboardLocalBridgeError(null);
+                              }}
+                              placeholder={
+                                storyboardLocalBridgeToken
+                                  ? `${maskedStoryboardLocalBridgeToken} 저장됨`
+                                  : "브릿지 터미널 pairing_token"
+                              }
+                              autoComplete="off"
+                              spellCheck={false}
+                              className="h-8 text-xs"
+                              aria-label="로컬 브릿지 pairing token"
+                              data-storyboard-local-bridge-token-input="true"
+                            />
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+                              onClick={() =>
+                                void handleSaveStoryboardLocalBridgeSession()
+                              }
+                              data-storyboard-local-bridge-save="true"
+                            >
+                              저장
+                            </Button>
                             <Button
                               type="button"
                               variant="outline"
                               size="sm"
                               className="h-7 shrink-0 rounded-full px-2 text-[11px]"
-                              onClick={handleClearStoryboardLocalBridgeSession}
-                              data-storyboard-local-bridge-clear="true"
+                              onClick={() =>
+                                void handleConnectStoryboardLocalBridgeHelper()
+                              }
+                              data-storyboard-local-bridge-connect="true"
                             >
-                              삭제
+                              {storyboardLocalBridgeStatus === "connected"
+                                ? "다시 확인"
+                                : "로컬 브릿지 다시 연결"}
                             </Button>
-                          ) : null}
-                          <p
-                            className={`basis-full text-[11px] ${
-                              storyboardLocalBridgeError
-                                ? "text-destructive"
-                                : "text-muted-foreground"
-                            }`}
-                            data-storyboard-local-bridge-message="true"
-                          >
-                            {storyboardLocalBridgeError ??
-                              storyboardLocalBridgeMessage ??
-                              (storyboardLocalBridgeSavedAt
-                                ? `sessionStorage 저장됨 · ${new Date(
-                                    storyboardLocalBridgeSavedAt,
-                                  ).toLocaleString("ko-KR")}`
-                                : "bun run storyboard:local-bridge 실행 후 token을 저장하고 로컬 브릿지 다시 연결을 눌러 주세요.")}
-                          </p>
+                            {storyboardLocalBridgeToken ? (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+                                onClick={
+                                  handleClearStoryboardLocalBridgeSession
+                                }
+                                data-storyboard-local-bridge-clear="true"
+                              >
+                                삭제
+                              </Button>
+                            ) : null}
+                            <p
+                              className={`basis-full text-[11px] ${
+                                storyboardLocalBridgeError
+                                  ? "text-destructive"
+                                  : "text-muted-foreground"
+                              }`}
+                              data-storyboard-local-bridge-message="true"
+                            >
+                              {storyboardLocalBridgeError ??
+                                storyboardLocalBridgeMessage ??
+                                (storyboardLocalBridgeSavedAt
+                                  ? `sessionStorage 저장됨 · ${new Date(
+                                      storyboardLocalBridgeSavedAt,
+                                    ).toLocaleString("ko-KR")}`
+                                  : "bun run storyboard:local-bridge 실행 후 token을 저장하고 로컬 브릿지 다시 연결을 눌러 주세요.")}
+                            </p>
+                          </div>
                         </div>
-                      </div>
                       ) : null}
                     </div>
                   </DropdownMenuContent>
@@ -7106,178 +8161,216 @@ export function AdminStoryboardGenerator({
               </div>
             </div>
           </CardHeader>
-          <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-3 pt-0">
+          <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-2 pt-0">
             <section
-              className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-border/70 bg-gradient-to-b from-background/95 to-muted/35 shadow-sm"
+              className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl bg-gradient-to-b from-background/95 to-muted/35"
               data-storyboard-chat-panel="true"
               data-storyboard-chat-style="thumbnail-like"
             >
               <div
                 ref={chatTranscriptRef}
-                className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-3"
+                className="scrollbar-hide flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain p-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                 data-storyboard-chat-log="true"
                 data-storyboard-chat-transcript="true"
                 aria-live="polite"
               >
-                {chatMessages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex gap-2 ${
-                      message.role === "user" ? "justify-end" : "justify-start"
-                    }`}
-                    data-storyboard-chat-message={message.role}
-                    data-storyboard-chat-message-status={
-                      message.status ?? "done"
-                    }
-                  >
-                    {message.role !== "user" ? (
+                {chatMessages.map((message) => {
+                  const storyboardChatMessageText =
+                    message.role === "assistant"
+                      ? (storyboardChatTypewriterTextById[message.id] ?? "")
+                      : message.text;
+                  const isStoryboardChatMessageTyping =
+                    message.role === "assistant" &&
+                    storyboardChatMessageText !== message.text;
+                  const isStoryboardChatStarterMessage =
+                    message.role === "assistant" &&
+                    message.id === "assistant-intake";
+                  const messageProgressLabel =
+                    message.role === "assistant" &&
+                    (message.status === "streaming" ||
+                      message.imageGenerationProgress ||
+                      message.thinkingTrace?.length)
+                      ? message.status === "streaming"
+                        ? currentStreamingLabel
+                        : message.imageGenerationProgress
+                          ? "진행 상황"
+                          : "생각 중"
+                      : null;
+                  return (
+                    <div
+                      key={message.id}
+                      className={`flex ${
+                        isStoryboardChatStarterMessage
+                          ? "min-h-full items-center justify-center"
+                          : message.role === "user"
+                            ? "justify-end"
+                            : "justify-start"
+                      }`}
+                      data-storyboard-chat-message={message.role}
+                      data-storyboard-chat-message-status={
+                        message.status ?? "done"
+                      }
+                      data-storyboard-chat-typewriter={
+                        message.role === "assistant" ? "true" : undefined
+                      }
+                      data-storyboard-chat-typewriter-status={
+                        message.role === "assistant"
+                          ? isStoryboardChatMessageTyping
+                            ? "typing"
+                            : "complete"
+                          : undefined
+                      }
+                    >
                       <div
-                        className="mt-5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary leading-none"
-                        data-storyboard-chat-avatar="assistant"
-                        aria-hidden="true"
+                        className={`space-y-1.5 ${
+                          message.role === "user" ? "text-right" : "text-left"
+                        } ${isStoryboardChatStarterMessage ? "w-full max-w-[21rem]" : ""}`}
+                        style={{
+                          maxWidth: message.role === "user" ? "88%" : "100%",
+                        }}
+                        data-storyboard-chat-message-stack={
+                          message.role === "user"
+                            ? "user-bubble"
+                            : isStoryboardChatStarterMessage
+                              ? "assistant-starter-panel"
+                              : "assistant-plain-with-outside-status"
+                        }
                       >
-                        {message.status === "streaming" ? (
-                          <Loader2 className="block h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                        {messageProgressLabel ? (
+                          <div
+                            className="flex items-center gap-1.5 px-1 text-[10px] font-medium text-muted-foreground"
+                            data-storyboard-chat-message-progress="outside-bubble"
+                          >
+                            {message.status === "streaming" ? (
+                              <Loader2
+                                className="h-3 w-3 animate-spin"
+                                aria-hidden="true"
+                              />
+                            ) : null}
+                            <span>{messageProgressLabel}</span>
+                          </div>
+                        ) : null}
+                        {message.role === "user" ? (
+                          <div
+                            className="rounded-2xl rounded-br-md bg-primary px-3 py-2 text-xs leading-5 text-primary-foreground shadow-sm"
+                            data-storyboard-chat-message-bubble="true"
+                          >
+                            <p className="whitespace-pre-wrap break-keep [overflow-wrap:anywhere]">
+                              {message.text}
+                            </p>
+                          </div>
+                        ) : isStoryboardChatStarterMessage ? (
+                          <div
+                            className="mx-auto flex w-full flex-col gap-3 rounded-2xl border border-border/70 bg-background/90 p-4 text-center shadow-sm"
+                            data-storyboard-chat-starter-panel="true"
+                            data-storyboard-chat-starter-panel-layout="compact-centered-recommendations"
+                          >
+                            <div className="space-y-1.5">
+                              <p
+                                className="text-[11px] font-medium text-primary"
+                                data-storyboard-chat-starter-eyebrow="true"
+                              >
+                                스토리보드 시작
+                              </p>
+                              <h4
+                                className="text-base font-semibold tracking-tight text-foreground"
+                                data-storyboard-chat-starter-title="true"
+                              >
+                                무엇부터 만들까요?
+                              </h4>
+                              <p
+                                className="mx-auto max-w-[18rem] whitespace-pre-wrap break-keep text-xs leading-5 text-muted-foreground [overflow-wrap:anywhere]"
+                                aria-label={message.text}
+                                data-storyboard-chat-typewriter-text="true"
+                                data-storyboard-chat-typewriter-state={
+                                  isStoryboardChatMessageTyping
+                                    ? "typing"
+                                    : "complete"
+                                }
+                              >
+                                {storyboardChatMessageText}
+                              </p>
+                            </div>
+                            <div
+                              className="grid grid-cols-2 gap-2"
+                              data-storyboard-chat-starter-actions="true"
+                            >
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="h-9 justify-center rounded-xl border-border/70 bg-background/85 px-3 text-xs shadow-sm"
+                                onClick={handleStoryboardUsageGuideClick}
+                                disabled={
+                                  isGenerating ||
+                                  isChatAgentStreaming ||
+                                  isGeneratingImages
+                                }
+                                data-storyboard-chat-guide-button="true"
+                                data-storyboard-chat-message-action="guide"
+                                data-storyboard-chat-starter-action="guide"
+                              >
+                                가이드 보기
+                              </Button>
+                              <Button
+                                type="button"
+                                className="h-9 justify-center rounded-xl px-3 text-xs shadow-sm"
+                                onClick={() =>
+                                  void handleStoryboardGuidedExampleGenerate()
+                                }
+                                disabled={
+                                  isGenerating ||
+                                  isChatAgentStreaming ||
+                                  isGeneratingImages
+                                }
+                                data-storyboard-chat-guide-generate="true"
+                                data-storyboard-chat-message-action="example"
+                                data-storyboard-chat-starter-action="example"
+                              >
+                                예시 만들기
+                              </Button>
+                            </div>
+                          </div>
                         ) : (
-                          <Wand2 className="block h-3.5 w-3.5" aria-hidden="true" />
+                          <div
+                            className="px-1 text-xs leading-5 text-foreground"
+                            data-storyboard-chat-assistant-message="plain-text"
+                          >
+                            <p
+                              className="whitespace-pre-wrap break-keep [overflow-wrap:anywhere]"
+                              aria-label={message.text}
+                              data-storyboard-chat-typewriter-text="true"
+                              data-storyboard-chat-typewriter-state={
+                                isStoryboardChatMessageTyping
+                                  ? "typing"
+                                  : "complete"
+                              }
+                            >
+                              {storyboardChatMessageText}
+                            </p>
+                          </div>
                         )}
-                      </div>
-                    ) : null}
-                    <div
-                      className={`space-y-1 ${message.role === "user" ? "text-right" : "text-left"}`}
-                      style={{ maxWidth: "86%" }}
-                    >
-                      <div
-                        className={`text-[10px] font-medium uppercase tracking-wide ${
-                          message.role === "user"
-                            ? "text-primary"
-                            : "text-muted-foreground"
-                        }`}
-                        data-storyboard-chat-message-meta="true"
-                      >
-                        {message.role === "user"
-                          ? "나"
-                          : message.status === "streaming"
-                            ? currentStreamingLabel
-                            : "스토리보드 도우미"}
-                      </div>
-                      <div
-                        className={`rounded-2xl px-3 py-2 text-xs leading-5 shadow-sm ${
-                          message.role === "user"
-                            ? "rounded-br-md bg-primary text-primary-foreground"
-                            : message.status === "streaming"
-                              ? "rounded-bl-md border border-sky-300/60 bg-sky-500/10 text-sky-950 dark:text-sky-100"
-                              : "rounded-bl-md bg-background text-foreground ring-1 ring-border/60"
-                        }`}
-                        data-storyboard-chat-message-bubble="true"
-                      >
-                        <p className="whitespace-pre-wrap break-keep [overflow-wrap:anywhere]">
-                          {message.text}
-                        </p>
-                        {message.imageGenerationProgress ? (
-                          <StoryboardImageGenerationProgressPanel
-                            progress={message.imageGenerationProgress}
-                          />
-                        ) : null}
-                        {message.status === "streaming" ? (
-                          <p className="mt-1 flex items-center gap-1.5 whitespace-pre-wrap break-keep opacity-80 [overflow-wrap:anywhere]">
-                            <Loader2
-                              className="h-3 w-3 animate-spin"
-                              aria-hidden="true"
+                        {message.thinkingTrace?.length ? (
+                          <div data-storyboard-chat-thinking-outside-bubble="true">
+                            <StoryboardThinkingTracePanel
+                              trace={message.thinkingTrace}
                             />
-                            {currentStreamingPhase}
-                          </p>
+                          </div>
+                        ) : null}
+                        {message.imageGenerationProgress ? (
+                          <div data-storyboard-chat-progress-outside-bubble="true">
+                            <StoryboardImageGenerationProgressPanel
+                              progress={message.imageGenerationProgress}
+                            />
+                          </div>
                         ) : null}
                       </div>
-                      {message.role === "assistant" &&
-                      message.id === "assistant-intake" ? (
-                        <div
-                          className="flex flex-wrap gap-1.5 pl-1"
-                          data-storyboard-chat-message-actions="true"
-                          data-storyboard-chat-message-actions-placement="outside-bubble"
-                        >
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            className="h-7 rounded-full bg-background/80 px-2 text-[11px] shadow-sm"
-                            onClick={handleStoryboardUsageGuideClick}
-                            disabled={
-                              isGenerating ||
-                              isChatAgentStreaming ||
-                              isGeneratingImages
-                            }
-                            data-storyboard-chat-guide-button="true"
-                            data-storyboard-chat-message-action="guide"
-                          >
-                            가이드 보기
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            className="h-7 rounded-full px-2 text-[11px] shadow-sm"
-                            onClick={() =>
-                              void handleStoryboardGuidedExampleGenerate()
-                            }
-                            disabled={
-                              isGenerating ||
-                              isChatAgentStreaming ||
-                              isGeneratingImages
-                            }
-                            data-storyboard-chat-guide-generate="true"
-                            data-storyboard-chat-message-action="example"
-                          >
-                            예시 만들기
-                          </Button>
-                        </div>
-                      ) : null}
                     </div>
-                    {message.role === "user" ? (
-                      <div
-                        className="mt-5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground leading-none"
-                        data-storyboard-chat-avatar="user"
-                        aria-hidden="true"
-                      >
-                        <MessageCircle className="block h-3.5 w-3.5" aria-hidden="true" />
-                      </div>
-                    ) : null}
-                  </div>
-                ))}
-                {chatDraft.trim() || isChatAgentStreaming ? (
-                  <div
-                    className="flex gap-2"
-                    data-storyboard-chat-draft-preview="true"
-                    data-storyboard-chat-live-stream="true"
-                  >
-                    <div
-                      className="mt-5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-500/15 text-sky-600 leading-none"
-                      data-storyboard-chat-avatar="draft"
-                      aria-hidden="true"
-                    >
-                      {isChatAgentStreaming ? (
-                        <Loader2 className="block h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-                      ) : (
-                        <MessageCircle className="block h-3.5 w-3.5" aria-hidden="true" />
-                      )}
-                    </div>
-                    <div className="space-y-1" style={{ maxWidth: "86%" }}>
-                      <div className="text-[10px] font-medium uppercase tracking-wide text-sky-700 dark:text-sky-200">
-                        {isChatAgentStreaming
-                          ? currentStreamingLabel
-                          : "입력 프리뷰"}
-                      </div>
-                      <div className="rounded-2xl rounded-bl-md border border-dashed border-sky-400/70 bg-sky-500/10 px-3 py-2 text-xs leading-5 text-sky-950 shadow-sm whitespace-pre-wrap break-keep [overflow-wrap:anywhere] dark:text-sky-100">
-                        {isChatAgentStreaming
-                          ? currentStreamingPhase
-                          : "입력 중 · 보낼 준비 중"}
-                      </div>
-                    </div>
-                  </div>
-                ) : null}
-                </div>
+                  );
+                })}
+              </div>
 
               <div
-                className="shrink-0 space-y-2 border-t border-border/70 bg-background/80 p-2.5"
+                className="shrink-0 space-y-2 border-t border-border/40 bg-background/70 px-2.5 py-2"
                 data-storyboard-chat-controls="true"
               >
                 <input
@@ -7289,7 +8382,7 @@ export function AdminStoryboardGenerator({
                 />
                 {storyboardCanvasFocus ? (
                   <div
-                    className="flex min-h-8 items-center justify-between gap-2 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-[11px]"
+                    className="flex min-h-8 items-center justify-between gap-2 rounded-2xl bg-muted/45 px-2.5 py-1.5 text-[11px]"
                     data-storyboard-chat-canvas-context="true"
                     data-storyboard-chat-canvas-context-kind={
                       storyboardCanvasFocus.kind
@@ -7302,13 +8395,13 @@ export function AdminStoryboardGenerator({
                   >
                     <div className="flex min-w-0 items-center gap-1.5">
                       <Badge
-                        variant="secondary"
-                        className="h-6 shrink-0 rounded-full px-2 text-[11px]"
+                        variant="outline"
+                        className="h-5 shrink-0 rounded-full border-primary/20 bg-background/70 px-2 text-[10px] text-primary"
                         data-storyboard-canvas-focus-label="true"
                       >
                         {storyboardCanvasFocus.label}
                       </Badge>
-                      <span className="shrink-0 font-medium text-primary">
+                      <span className="shrink-0 font-semibold text-foreground/75">
                         채팅 맥락
                       </span>
                       <span
@@ -7323,7 +8416,7 @@ export function AdminStoryboardGenerator({
                       type="button"
                       size="sm"
                       variant="ghost"
-                      className="h-6 shrink-0 rounded-full px-2 text-[11px]"
+                      className="h-6 shrink-0 rounded-full px-2 text-[11px] text-muted-foreground hover:text-foreground"
                       onClick={() => setStoryboardCanvasFocus(null)}
                       data-storyboard-clear-canvas-context="true"
                     >
@@ -7385,7 +8478,9 @@ export function AdminStoryboardGenerator({
                             className="block text-[10px] text-muted-foreground"
                             data-storyboard-chat-attachment-size="true"
                           >
-                            {formatStoryboardChatAttachmentBytes(attachment.size)}
+                            {formatStoryboardChatAttachmentBytes(
+                              attachment.size,
+                            )}
                           </span>
                         </span>
                         <Button
@@ -7407,47 +8502,137 @@ export function AdminStoryboardGenerator({
                   </div>
                 ) : null}
                 <div
-                  className="rounded-3xl border border-border/60 bg-background p-2 shadow-sm focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/20"
+                  className="overflow-hidden rounded-[1.75rem] border border-border/80 bg-background/95 p-1.5 text-foreground shadow-sm transition focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/15 dark:border-white/10 dark:bg-zinc-950/95 dark:text-white dark:focus-within:border-white/20"
                   data-storyboard-chat-composer="true"
+                  style={{ borderRadius: "1.75rem" }}
                 >
-                  <div className="flex items-end gap-2">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-9 w-9 shrink-0 rounded-full text-muted-foreground hover:text-foreground"
-                      onClick={openStoryboardChatImageAttachmentPicker}
-                      disabled={
-                        isChatAgentStreaming ||
-                        storyboardChatImageAttachments.length >=
-                          STORYBOARD_CHAT_IMAGE_ATTACHMENT_LIMIT
-                      }
-                      aria-label="사진 첨부"
-                      title="사진 첨부"
-                      data-storyboard-chat-attachment-upload="true"
-                    >
-                      <ImageIcon className="h-4 w-4" aria-hidden="true" />
-                    </Button>
+                  <div
+                    className={cn(
+                      "grid grid-cols-[auto_minmax(0,1fr)_auto] gap-1.5",
+                      isStoryboardChatMultilineLayout
+                        ? "grid-rows-[auto_auto] px-1 pb-0.5 pt-2"
+                        : "items-center",
+                    )}
+                    data-storyboard-chat-composer-layout={
+                      isStoryboardChatMultilineLayout
+                        ? "multiline-input-over-actions"
+                        : "inline-actions-one-line"
+                    }
+                    style={{
+                      gridTemplateColumns: "auto minmax(0, 1fr) auto",
+                      gridTemplateRows: isStoryboardChatMultilineLayout
+                        ? "auto auto"
+                        : "auto",
+                    }}
+                  >
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className={cn(
+                            "col-start-1 h-9 w-9 shrink-0 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-primary/30 dark:text-white/80 dark:hover:bg-white/10 dark:hover:text-white dark:focus-visible:ring-white/40 dark:focus-visible:ring-offset-zinc-950",
+                            isStoryboardChatMultilineLayout
+                              ? "row-start-2 self-center justify-self-start"
+                              : "row-start-1",
+                          )}
+                          disabled={isChatAgentStreaming}
+                          aria-label="첨부 메뉴 열기"
+                          title="첨부 메뉴"
+                          data-storyboard-chat-action-menu-trigger="true"
+                          style={{
+                            gridColumn: "1",
+                            gridRow: isStoryboardChatMultilineLayout
+                              ? "2"
+                              : "1",
+                          }}
+                        >
+                          <Plus className="h-5 w-5" aria-hidden="true" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent
+                        align="start"
+                        side="top"
+                        className="w-44 rounded-xl border-border/70 bg-popover p-1 shadow-lg"
+                        data-storyboard-chat-action-menu="true"
+                      >
+                        <DropdownMenuItem
+                          onSelect={(event) => {
+                            event.preventDefault();
+                            openStoryboardChatImageAttachmentPicker();
+                          }}
+                          disabled={
+                            isChatAgentStreaming ||
+                            storyboardChatImageAttachments.length >=
+                              STORYBOARD_CHAT_IMAGE_ATTACHMENT_LIMIT
+                          }
+                          aria-label="사진 첨부"
+                          className="gap-2 rounded-lg"
+                          data-storyboard-chat-attachment-upload="true"
+                        >
+                          <ImageIcon className="h-4 w-4" aria-hidden="true" />
+                          사진 첨부
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                     <Textarea
+                      ref={storyboardChatTextareaRef}
                       id="storyboard-prompt"
                       name="storyboard-prompt"
                       value={chatDraft}
-                      onChange={(event) =>
-                        handleChatDraftChange(event.target.value)
-                      }
+                      rows={1}
+                      onChange={(event) => {
+                        handleChatDraftChange(event.target.value);
+                        setIsStoryboardChatMultilineLayout(
+                          resizeStoryboardChatTextarea(event.currentTarget),
+                        );
+                      }}
                       onKeyDown={handleStoryboardChatKeyDown}
                       disabled={isChatAgentStreaming}
                       autoComplete="off"
-                      className="max-h-24 min-h-10 resize-none border-0 bg-transparent p-2 text-sm shadow-none focus-visible:ring-0"
+                      className={cn(
+                        "w-full resize-none overflow-hidden border-0 bg-transparent text-left text-sm leading-5 text-foreground shadow-none placeholder:text-muted-foreground focus-visible:ring-0 dark:text-white dark:placeholder:text-white/55",
+                        isStoryboardChatMultilineLayout
+                          ? "col-span-3 col-start-1 row-start-1 max-h-24 min-h-[72px] px-3 py-1"
+                          : "col-start-2 row-start-1 h-10 max-h-10 min-h-10 px-1 py-2",
+                      )}
+                      style={{
+                        gridColumn: isStoryboardChatMultilineLayout
+                          ? "1 / -1"
+                          : "2",
+                        gridRow: "1",
+                        minHeight: isStoryboardChatMultilineLayout
+                          ? STORYBOARD_CHAT_TEXTAREA_MULTILINE_MIN_HEIGHT_PX
+                          : STORYBOARD_CHAT_TEXTAREA_MIN_HEIGHT_PX,
+                        maxHeight: isStoryboardChatMultilineLayout
+                          ? STORYBOARD_CHAT_TEXTAREA_MAX_HEIGHT_PX
+                          : STORYBOARD_CHAT_TEXTAREA_MIN_HEIGHT_PX,
+                      }}
                       maxLength={400}
                       placeholder={storyboardChatPlaceholder}
                       aria-label="스토리보드 요구사항 채팅 입력"
                       aria-describedby="storyboard-prompt-help"
+                      data-storyboard-chat-input-plane={
+                        isStoryboardChatMultilineLayout
+                          ? "above-actions-top-left"
+                          : "between-actions-one-line"
+                      }
                     />
                     <Button
                       type="button"
                       size="icon"
-                      className="h-9 w-9 shrink-0 rounded-full"
+                      className={cn(
+                        "col-start-3 flex h-9 w-9 shrink-0 items-center justify-center rounded-full shadow-sm",
+                        isStoryboardChatCancelMode
+                          ? "bg-red-600 text-white hover:bg-red-700"
+                          : isStoryboardChatSubmitDisabled
+                            ? "border border-border/70 bg-muted text-muted-foreground hover:bg-muted disabled:opacity-100"
+                            : "bg-foreground text-background hover:bg-foreground/90 dark:bg-white dark:text-zinc-950 dark:hover:bg-white/90",
+                        isStoryboardChatMultilineLayout
+                          ? "row-start-2 self-center justify-self-end"
+                          : "row-start-1",
+                      )}
                       onClick={
                         isChatAgentStreaming
                           ? abortStoryboardChatWork
@@ -7461,7 +8646,7 @@ export function AdminStoryboardGenerator({
                           ? "채팅 스트림 중단"
                           : isGeneratingImages
                             ? "스토리보드 이미지 생성 중단"
-                          : "요구사항 채팅 반영"
+                            : "요구사항 채팅 반영"
                       }
                       data-storyboard-chat-submit={
                         isStoryboardChatCancelMode ? undefined : "true"
@@ -7472,11 +8657,24 @@ export function AdminStoryboardGenerator({
                       data-storyboard-image-generation-cancel={
                         isGeneratingImages ? "true" : undefined
                       }
+                      style={{
+                        gridColumn: "3",
+                        gridRow: isStoryboardChatMultilineLayout ? "2" : "1",
+                      }}
                     >
                       {isStoryboardChatCancelMode ? (
-                        <Square className="h-4 w-4" aria-hidden="true" />
+                        <Square
+                          className="h-4 w-4"
+                          aria-hidden="true"
+                          data-storyboard-chat-stop-icon="true"
+                        />
                       ) : (
-                        <Send className="h-4 w-4" aria-hidden="true" />
+                        <ArrowUp
+                          className="h-4 w-4"
+                          strokeWidth={2.75}
+                          aria-hidden="true"
+                          data-storyboard-chat-send-icon="arrow-up"
+                        />
                       )}
                     </Button>
                   </div>
@@ -7517,373 +8715,414 @@ export function AdminStoryboardGenerator({
               className="flex min-w-0 items-center gap-2 text-sm"
               aria-label="캔버스 편집 / PNG 내보내기"
             >
-              <span
-                className="shrink-0 whitespace-nowrap font-semibold"
-              >
+              <span className="shrink-0 whitespace-nowrap font-semibold">
                 캔버스
               </span>
-            </CardTitle>
-              <div
-                className="ml-auto flex min-w-0 flex-nowrap items-center gap-1.5 overflow-x-auto pb-1"
-                data-storyboard-canvas-toolbar="thumbnail-like"
-                data-storyboard-compact-toolbar="true"
+              <Badge
+                variant="outline"
+                className="h-6 shrink-0 rounded-full px-2 text-[11px]"
+                data-storyboard-generated-image-count="title"
+                title={`현재 페이지 ${activePageGeneratedCount}/${activeStoryboardImageGenerationTargetScenes.length || storyboardFramePageSize} · 전체 ${generatedImageCount}/${totalCutCount}`}
               >
-                <Badge
-                  variant="secondary"
-                  className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+                이미지 {generatedImageCount}/{totalCutCount}
+              </Badge>
+              <span
+                className="min-w-0 max-w-[min(24rem,36vw)] truncate text-xs font-medium text-muted-foreground"
+                data-storyboard-current-generation-title="canvas"
+                title={storyboardCurrentImageGenerationTitleLabel}
+              >
+                {storyboardCurrentImageGenerationTitleLabel}
+              </span>
+            </CardTitle>
+            <div
+              className="ml-auto flex min-w-0 flex-nowrap items-center gap-1 overflow-x-auto px-1 py-1 scrollbar-hide [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              data-storyboard-canvas-toolbar="thumbnail-like"
+              data-storyboard-compact-toolbar="true"
+            >
+              <div
+                className="flex h-8 shrink-0 items-center gap-0.5 rounded-md border border-input bg-background px-1"
+                data-storyboard-frame-view-mode="true"
+                aria-label="스토리보드 컷 보기 단위"
+              >
+                {([1, STORYBOARD_FRAMES_PER_PAGE] as const).map((pageSize) => (
+                  <Button
+                    key={`storyboard-frame-view-${pageSize}`}
+                    type="button"
+                    size="sm"
+                    variant={
+                      storyboardFramePageSize === pageSize
+                        ? "secondary"
+                        : "ghost"
+                    }
+                    className="h-6 shrink-0 rounded px-2 text-[11px]"
+                    onClick={() =>
+                      handleStoryboardFramePageSizeChange(pageSize)
+                    }
+                    aria-pressed={storyboardFramePageSize === pageSize}
+                    data-storyboard-frame-view-option={String(pageSize)}
+                  >
+                    {pageSize}컷
+                  </Button>
+                ))}
+              </div>
+              <div
+                className="flex h-8 shrink-0 items-center gap-0.5 rounded-md border border-input bg-background px-1"
+                data-storyboard-frame-pagination="true"
+                aria-label="스토리보드 컷 페이지 이동"
+              >
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7"
+                  onClick={() =>
+                    handleStoryboardPageChange(activeStoryboardPage - 1)
+                  }
+                  disabled={!hasPreviousStoryboardPage}
+                  data-storyboard-page-prev="true"
+                  aria-label={`이전 ${storyboardFramePageSize}컷 보기`}
+                >
+                  <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+                </Button>
+                <span
+                  className="min-w-[8.75rem] text-center text-xs font-semibold text-muted-foreground"
+                  data-storyboard-page-indicator="true"
                   data-storyboard-frame-page-range="true"
                   aria-label="현재 스토리보드 페이지 컷 범위"
                 >
-                  CUT {String(activeCutStart).padStart(2, "0")}–
-                  {String(activeCutEnd).padStart(2, "0")} /{" "}
-                  {String(totalCutCount).padStart(2, "0")}
-                </Badge>
-                <Badge
-                  variant="outline"
-                  className="h-7 shrink-0 rounded-full px-2 text-[11px]"
-                  data-storyboard-generated-image-count="true"
-                >
-                  이미지 {activePageGeneratedCount}/
-                  {activeStoryboardImageGenerationTargetScenes.length ||
-                    STORYBOARD_FRAMES_PER_PAGE}
-                  · 전체 {generatedImageCount}/{totalCutCount}
-                </Badge>
-                <div
-                  className="flex h-8 shrink-0 items-center gap-0.5 rounded-md border border-input bg-background px-1"
-                  data-storyboard-frame-pagination="true"
-                  aria-label="스토리보드 컷 페이지 이동"
-                >
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    className="h-7 w-7"
-                    onClick={() =>
-                      handleStoryboardPageChange(activeStoryboardPage - 1)
-                    }
-                    disabled={!hasPreviousStoryboardPage}
-                    data-storyboard-page-prev="true"
-                    aria-label="이전 4컷 보기"
-                  >
-                    <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-                  </Button>
-                  <span
-                    className="min-w-12 text-center text-xs font-semibold text-muted-foreground"
-                    data-storyboard-page-indicator="true"
-                  >
-                    {activeStoryboardPage + 1} / {storyboardTotalPages}
-                  </span>
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    className="h-7 w-7"
-                    onClick={() =>
-                      handleStoryboardPageChange(activeStoryboardPage + 1)
-                    }
-                    disabled={!hasNextStoryboardPage}
-                    data-storyboard-page-next="true"
-                    aria-label="다음 4컷 보기"
-                  >
-                    <ChevronRight className="h-4 w-4" aria-hidden="true" />
-                  </Button>
-                </div>
-                <Select
-                  value={exportPresetId}
-                  onValueChange={(value) =>
-                    setExportPresetId(value as StoryboardExportPresetId)
+                  CUT {String(activeCutStart).padStart(2, "0")}
+                  {activeCutStart === activeCutEnd
+                    ? ""
+                    : `–${String(activeCutEnd).padStart(2, "0")}`}{" "}
+                  / {String(totalCutCount).padStart(2, "0")} ·{" "}
+                  {activeStoryboardPage + 1}/{storyboardTotalPages}
+                </span>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7"
+                  onClick={() =>
+                    handleStoryboardPageChange(activeStoryboardPage + 1)
                   }
+                  disabled={!hasNextStoryboardPage}
+                  data-storyboard-page-next="true"
+                  aria-label={`다음 ${storyboardFramePageSize}컷 보기`}
                 >
-                  <SelectTrigger
-                    className="h-8 w-[112px] shrink-0 text-xs"
-                    data-storyboard-export-preset="true"
-                    aria-label="PNG 저장 해상도"
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {storyboardExportPresets.map((preset) => (
-                      <SelectItem key={preset.id} value={preset.id}>
-                        {preset.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={handleStoryboardGuideToggle}
-                  className="h-8 shrink-0 px-2 text-xs"
-                  data-storyboard-safe-area-toggle="true"
-                >
-                  {showStoryboardGuide ? "가이드 숨김" : "가이드"}
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => void handleGenerateStoryboardImages()}
-                  disabled={
-                    isGenerating ||
-                    isGeneratingImages ||
-                    activePageGenerationTargetCount === 0
-                  }
-                  className="h-8 shrink-0 px-2 text-xs"
-                  data-storyboard-generate-images={storyboardImageGenerationProviderId}
-                  data-storyboard-image-provider-action-status={
-                    storyboardImageProviderReadiness.status
-                  }
-                  aria-label={imageGenerationButtonLabel}
-                  title={imageGenerationButtonLabel}
-                >
-                  {isGeneratingImages ? (
-                    <Loader2
-                      className="mr-1.5 h-3.5 w-3.5 animate-spin"
-                      aria-hidden="true"
-                    />
-                  ) : (
-                    <ImageIcon
-                      className="mr-1.5 h-3.5 w-3.5"
-                      aria-hidden="true"
-                    />
-                  )}
-                  {isGeneratingImages
-                    ? "생성 중"
-                    : compactImageGenerationButtonLabel}
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => void handleCopyStoryboardPlanMarkdown()}
-                  disabled={isGenerating}
-                  className="h-8 shrink-0 px-2 text-xs"
-                  data-storyboard-copy-plan="true"
-                  aria-label="촬영 기획표 복사"
-                >
-                  <ClipboardCopy
-                    className="mr-1.5 h-3.5 w-3.5"
-                    aria-hidden="true"
-                  />
-                  기획서 복사
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  onClick={handleExportStoryboardPng}
-                  disabled={isGenerating}
-                  className="h-8 shrink-0 px-2 text-xs"
-                  data-storyboard-export-png="true"
-                  aria-label={`현재 페이지 4컷 PNG 저장 (${exportResolutionToken})`}
-                >
-                  <Download className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
-                  PNG 저장
+                  <ChevronRight className="h-4 w-4" aria-hidden="true" />
                 </Button>
               </div>
+              <Select
+                value={exportPresetId}
+                onValueChange={(value) =>
+                  setExportPresetId(value as StoryboardExportPresetId)
+                }
+              >
+                <SelectTrigger
+                  className="h-8 w-[112px] shrink-0 text-xs"
+                  data-storyboard-export-preset="true"
+                  aria-label="PNG 저장 해상도"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {storyboardExportPresets.map((preset) => (
+                    <SelectItem key={preset.id} value={preset.id}>
+                      {preset.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={() => void handleCopyStoryboardPlanMarkdown()}
+                disabled={isGenerating}
+                className="h-8 shrink-0 px-2 text-xs"
+                data-storyboard-copy-plan="true"
+                aria-label="촬영 기획표 복사"
+              >
+                <ClipboardCopy
+                  className="mr-1.5 h-3.5 w-3.5"
+                  aria-hidden="true"
+                />
+                기획서 복사
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={handleExportStoryboardPng}
+                disabled={isGenerating}
+                className="h-8 shrink-0 px-2 text-xs"
+                data-storyboard-export-png="true"
+                aria-label={`현재 페이지 ${activeFrameViewLabel} PNG 저장 (${exportResolutionToken})`}
+              >
+                <Download className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+                PNG 저장
+              </Button>
+            </div>
           </CardHeader>
-          <CardContent className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-3 pt-0">
+          <CardContent
+            className={cn(
+              "min-h-0 flex-1 overflow-x-hidden p-3 pt-0",
+              storyboardFramePageSize === 1
+                ? "overflow-hidden"
+                : "overflow-y-auto",
+            )}
+          >
             <div className="flex h-full min-h-0 flex-col gap-2">
               <div
-                className="relative grid min-h-0 flex-1 grid-cols-2 gap-2"
+                className="relative grid min-h-0 flex-1 gap-2"
                 data-storyboard-image-board="true"
                 data-storyboard-frame-grid="true"
                 data-storyboard-frame-fill="true"
                 data-storyboard-frame-page={String(activeStoryboardPage + 1)}
                 data-storyboard-frame-page-size={String(
-                  STORYBOARD_FRAMES_PER_PAGE,
+                  storyboardFramePageSize,
+                )}
+                data-storyboard-frame-view-mode={String(
+                  storyboardFramePageSize,
                 )}
                 style={{
-                  gridTemplateRows: "minmax(0, 1fr) minmax(0, 1fr)",
+                  gridTemplateColumns:
+                    storyboardFramePageSize === 1
+                      ? "minmax(0, 1fr)"
+                      : "repeat(2, minmax(0, 1fr))",
+                  gridTemplateRows:
+                    storyboardFramePageSize === 1
+                      ? "minmax(0, 1fr)"
+                      : "repeat(2, minmax(0, 1fr))",
                 }}
               >
-              {activeStoryboardPageScenes.length === 0 ? (
-                <StoryboardEmptyCanvasState
-                  activeCutStart={activeCutStart}
-                  activeCutEnd={activeCutEnd}
-                />
-              ) : (
-                activeStoryboardPageScenes.map((scene) => {
-                  const frameVisual = getStoryboardFrameVisual(scene.sceneNo);
-                  const trustedGeneratedImage =
-                    getTrustedStoryboardGeneratedImage(scene.generatedImage);
-                  const isSceneImageGenerating =
-                    generatingStoryboardImageSceneNoSet.has(scene.sceneNo);
-                  const isSceneImageActivelyGenerating =
-                    isSceneImageGenerating;
-                  const frameBackground = trustedGeneratedImage
-                    ? frameVisual.background
-                    : STORYBOARD_PENDING_IMAGE_BACKGROUND;
-                  const audioText = sanitizeStoryboardChatDisplayText(scene.hostBeat);
-                  const subtitleText = sanitizeStoryboardChatDisplayText(
-                    scene.captionIdea,
-                  );
-                  const productionNote = formatStoryboardFrameProductionNote(scene);
-                  return (
-                    <button
-                      type="button"
-                      key={`frame-${scene.sceneNo}-${scene.heatmapEvidence.videoId}`}
-                      className={cn(
-                        "group relative grid h-full min-h-0 overflow-hidden rounded-2xl border-0 bg-background p-0 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
-                        selectedStoryboardSceneNo === scene.sceneNo
-                          ? "shadow-md"
-                          : "shadow-sm",
-                      )}
-                      onClick={() => handleSelectStoryboardScene(scene)}
-                      aria-label={`${scene.sceneNo}컷을 선택해서 채팅 맥락으로 사용`}
-                      aria-pressed={selectedStoryboardSceneNo === scene.sceneNo}
-                      data-storyboard-image-frame={String(scene.sceneNo)}
-                      data-storyboard-selected-frame={
-                        selectedStoryboardSceneNo === scene.sceneNo
-                          ? "true"
-                          : undefined
-                      }
-                      data-storyboard-image-generation-state={
-                        isSceneImageGenerating
-                          ? "generating"
-                          : trustedGeneratedImage
-                            ? "ready"
-                            : "empty"
-                      }
-                      data-storyboard-frame-fit="image-and-script-visible"
-                      style={{ gridTemplateRows: "minmax(0, 1fr) auto" }}
-                      >
-                      {selectedStoryboardSceneNo === scene.sceneNo ? (
-                        <span
-                          aria-hidden="true"
-                          className="pointer-events-none absolute inset-0 z-50 rounded-2xl border-2 border-primary"
-                          data-storyboard-selected-frame-border="true"
-                        />
-                      ) : null}
-                      <div
-                        className="relative min-h-0 flex-1 overflow-hidden rounded-t-2xl"
-                        style={{ background: frameBackground }}
-                        aria-label={`${scene.sceneNo}컷 이미지 생성 결과`}
-                        data-storyboard-cut-image-loading-scope={
-                          isSceneImageGenerating ? "image-only" : undefined
+                {activeStoryboardPageScenes.length === 0 ? (
+                  <StoryboardEmptyCanvasState
+                    activeCutStart={activeCutStart}
+                    activeCutEnd={activeCutEnd}
+                  />
+                ) : (
+                  activeStoryboardPageScenes.map((scene) => {
+                    const frameVisual = getStoryboardFrameVisual(scene.sceneNo);
+                    const trustedGeneratedImage =
+                      getTrustedStoryboardGeneratedImage(scene.generatedImage);
+                    const isSceneImageGenerating =
+                      generatingStoryboardImageSceneNoSet.has(scene.sceneNo);
+                    const isSceneImageActivelyGenerating =
+                      isSceneImageGenerating;
+                    const frameBackground = trustedGeneratedImage
+                      ? frameVisual.background
+                      : STORYBOARD_PENDING_IMAGE_BACKGROUND;
+                    const audioText = sanitizeStoryboardChatDisplayText(
+                      scene.hostBeat,
+                    );
+                    const subtitleText = sanitizeStoryboardChatDisplayText(
+                      scene.captionIdea,
+                    );
+                    const productionNote =
+                      formatStoryboardFrameProductionNote(scene);
+                    const isSingleFramePage = storyboardFramePageSize === 1;
+                    const frameScriptPreviewLength = 64;
+                    const audioPreviewText = isSingleFramePage
+                      ? audioText
+                      : truncateStoryboardFrameText(
+                          audioText,
+                          frameScriptPreviewLength,
+                        );
+                    const subtitlePreviewText = isSingleFramePage
+                      ? subtitleText
+                      : truncateStoryboardFrameText(
+                          subtitleText,
+                          frameScriptPreviewLength,
+                        );
+                    const productionNotePreviewText = isSingleFramePage
+                      ? productionNote
+                      : truncateStoryboardFrameText(
+                          productionNote,
+                          frameScriptPreviewLength,
+                        );
+                    return (
+                      <button
+                        type="button"
+                        key={`frame-${scene.sceneNo}-${scene.heatmapEvidence.videoId}`}
+                        className={cn(
+                          "group relative grid h-full min-h-0 overflow-hidden rounded-2xl border bg-background p-0 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
+                          selectedStoryboardSceneNo === scene.sceneNo
+                            ? "border-primary/70 shadow-md"
+                            : "border-border/75 shadow-sm hover:border-primary/30",
+                        )}
+                        onClick={() => handleSelectStoryboardScene(scene)}
+                        aria-label={`${scene.sceneNo}컷을 선택해서 채팅 맥락으로 사용`}
+                        aria-pressed={
+                          selectedStoryboardSceneNo === scene.sceneNo
                         }
+                        data-storyboard-image-frame={String(scene.sceneNo)}
+                        data-storyboard-selected-frame={
+                          selectedStoryboardSceneNo === scene.sceneNo
+                            ? "true"
+                            : undefined
+                        }
+                        data-storyboard-image-generation-state={
+                          isSceneImageGenerating
+                            ? "generating"
+                            : trustedGeneratedImage
+                              ? "ready"
+                              : "empty"
+                        }
+                        data-storyboard-frame-fit="image-and-script-visible"
+                        data-storyboard-frame-image-fit={
+                          storyboardFramePageSize === 1 ? "contain" : "cover"
+                        }
+                        style={{ gridTemplateRows: "minmax(0, 1fr) auto" }}
                       >
-                        {trustedGeneratedImage ? (
-                          // eslint-disable-next-line @next/next/no-img-element -- CUT canvas images are browser-verified blob/static storyboard outputs; plain eager img avoids Next fill zero-height regressions.
-                          <img
-                            src={trustedGeneratedImage.dataUrl}
-                            alt={`${scene.sceneNo}컷 스토리보드 이미지`}
-                            className="h-full w-full object-cover"
-                            loading="eager"
-                            decoding="async"
-                            onError={() => {
-                              setResult((current) =>
-                                stripStoryboardGeneratedImageForScene(
-                                  current,
-                                  scene.sceneNo,
-                                  trustedGeneratedImage.dataUrl,
-                                ),
-                              );
-                            }}
-                            data-storyboard-generated-image={trustedGeneratedImage.providerId}
-                          />
-                        ) : null}
-                        {isSceneImageGenerating ? (
-                          <StoryboardCutImageSkeleton
-                            sceneNo={scene.sceneNo}
-                            hasExistingImage={Boolean(trustedGeneratedImage)}
-                            isActive={isSceneImageActivelyGenerating}
+                        {selectedStoryboardSceneNo === scene.sceneNo ? (
+                          <span
+                            aria-hidden="true"
+                            className="pointer-events-none absolute inset-0 z-50 rounded-2xl border-2 border-primary"
+                            data-storyboard-selected-frame-border="true"
                           />
                         ) : null}
                         <div
-                          className="pointer-events-none absolute flex items-center justify-between gap-2"
-                          data-storyboard-cut-overlay="true"
-                          style={{
-                            left: "0.75rem",
-                            right: "0.75rem",
-                            top: "0.75rem",
-                            zIndex: 30,
-                          }}
+                          className="relative min-h-0 flex-1 overflow-hidden rounded-t-2xl"
+                          style={{ background: frameBackground }}
+                          aria-label={`${scene.sceneNo}컷 이미지 생성 결과`}
+                          data-storyboard-cut-image-loading-scope={
+                            isSceneImageGenerating ? "image-only" : undefined
+                          }
                         >
-                          <Badge
-                            className="rounded-full bg-black/70 px-2 py-0.5 text-[11px] font-bold text-white shadow-sm hover:bg-black/70"
-                            data-storyboard-cut-badge="true"
-                          >
-                            CUT {String(scene.sceneNo).padStart(2, "0")}
-                          </Badge>
-                          <Badge
-                            className="rounded-full bg-white/85 px-2 py-0.5 text-[11px] font-bold text-slate-900 shadow-sm hover:bg-white/85"
-                            data-storyboard-cut-time-badge="true"
-                          >
-                            {scene.heatmapEvidence.peakTime}
-                          </Badge>
-                        </div>
-                        {showStoryboardGuide ? (
+                          {trustedGeneratedImage ? (
+                            // eslint-disable-next-line @next/next/no-img-element -- CUT canvas images are browser-verified blob/static storyboard outputs; plain eager img avoids Next fill zero-height regressions.
+                            <img
+                              src={trustedGeneratedImage.dataUrl}
+                              alt={`${scene.sceneNo}컷 스토리보드 이미지`}
+                              className={cn(
+                                "h-full w-full",
+                                storyboardFramePageSize === 1
+                                  ? "object-contain"
+                                  : "object-cover",
+                              )}
+                              loading="eager"
+                              decoding="async"
+                              onError={() => {
+                                setResult((current) =>
+                                  stripStoryboardGeneratedImageForScene(
+                                    current,
+                                    scene.sceneNo,
+                                    trustedGeneratedImage.dataUrl,
+                                  ),
+                                );
+                              }}
+                              data-storyboard-generated-image={
+                                trustedGeneratedImage.providerId
+                              }
+                            />
+                          ) : null}
+                          {isSceneImageGenerating ? (
+                            <StoryboardCutImageSkeleton
+                              sceneNo={scene.sceneNo}
+                              hasExistingImage={Boolean(trustedGeneratedImage)}
+                              isActive={isSceneImageActivelyGenerating}
+                            />
+                          ) : null}
                           <div
-                            className="pointer-events-none absolute inset-[12%] rounded-2xl border border-dashed border-white/70"
-                            data-storyboard-safe-area-guide="true"
-                          />
-                        ) : null}
-                      </div>
-                      <div
-                        className="shrink-0 space-y-1 border-t border-border/70 bg-background/95 px-2.5 py-1.5 text-foreground shadow-[0_-1px_0_rgba(15,23,42,0.06)]"
-                        data-storyboard-frame-script="true"
-                        data-storyboard-frame-script-panel="true"
-                        data-storyboard-frame-script-placement="separated"
-                        data-storyboard-frame-script-layout="stacked-rows"
-                      >
-                        <div
-                          className="grid min-w-0 items-start gap-2 rounded-xl bg-muted/25 px-2 py-1 text-[11px] leading-4"
-                          data-storyboard-frame-audio="true"
-                          data-storyboard-frame-audio-row="true"
-                          style={{ gridTemplateColumns: "58px minmax(0, 1fr)" }}
-                        >
-                          <span className="rounded-full bg-muted px-2 py-0.5 text-center text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-                            오디오
-                          </span>
-                          <span
-                            className="block min-w-0 truncate whitespace-nowrap font-semibold text-foreground"
-                            title={audioText}
-                            data-storyboard-frame-audio-text="true"
+                            className="pointer-events-none absolute flex items-center justify-between gap-2"
+                            data-storyboard-cut-overlay="true"
+                            style={{
+                              left: "0.75rem",
+                              right: "0.75rem",
+                              top: "0.75rem",
+                              zIndex: 30,
+                            }}
                           >
-                            {audioText}
-                          </span>
+                            <Badge
+                              className="rounded-full bg-black/70 px-2 py-0.5 text-[11px] font-bold text-white shadow-sm hover:bg-black/70"
+                              data-storyboard-cut-badge="true"
+                            >
+                              CUT {String(scene.sceneNo).padStart(2, "0")}
+                            </Badge>
+                            <Badge
+                              className="rounded-full bg-white/85 px-2 py-0.5 text-[11px] font-bold text-slate-900 shadow-sm hover:bg-white/85"
+                              data-storyboard-cut-time-badge="true"
+                            >
+                              {scene.heatmapEvidence.peakTime}
+                            </Badge>
+                          </div>
+                          {showStoryboardGuide ? (
+                            <div
+                              className="pointer-events-none absolute inset-[12%] rounded-2xl border border-dashed border-white/70"
+                              data-storyboard-safe-area-guide="true"
+                            />
+                          ) : null}
                         </div>
                         <div
-                          className="grid min-w-0 items-start gap-2 rounded-xl bg-primary/5 px-2 py-1 text-[11px] leading-4"
-                          data-storyboard-frame-subtitle="true"
-                          data-storyboard-frame-subtitle-row="true"
-                          style={{ gridTemplateColumns: "58px minmax(0, 1fr)" }}
+                          className="shrink-0 space-y-1 border-t border-border/45 bg-background/90 px-2.5 py-1.5 text-foreground shadow-[0_-1px_0_rgba(15,23,42,0.03)]"
+                          data-storyboard-frame-script="true"
+                          data-storyboard-frame-script-panel="true"
+                          data-storyboard-frame-script-placement="separated"
+                          data-storyboard-frame-script-layout="stacked-rows"
                         >
-                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-center text-[10px] font-bold uppercase tracking-wide text-primary">
-                            자막
-                          </span>
-                          <span
-                            className="block min-w-0 truncate whitespace-nowrap font-bold text-foreground"
-                            title={subtitleText}
-                            data-storyboard-frame-subtitle-text="true"
+                          <div
+                            className="grid min-w-0 items-start gap-2 rounded-lg bg-muted/15 px-2 py-0.5 text-[11px] leading-4"
+                            data-storyboard-frame-audio="true"
+                            data-storyboard-frame-audio-row="true"
+                            style={{
+                              gridTemplateColumns: "58px minmax(0, 1fr)",
+                            }}
                           >
-                            {subtitleText}
-                          </span>
-                        </div>
-                        <div
-                          className="grid min-w-0 items-start gap-2 rounded-xl bg-amber-500/10 px-2 py-1 text-[11px] leading-4"
-                          data-storyboard-frame-production-note="true"
-                          data-storyboard-frame-production-note-row="true"
-                          style={{ gridTemplateColumns: "58px minmax(0, 1fr)" }}
-                        >
-                          <span className="rounded-full bg-amber-200 px-2 py-0.5 text-center text-[10px] font-bold uppercase tracking-wide text-amber-950">
-                            촬영
-                          </span>
-                          <span
-                            className="block min-w-0 truncate whitespace-nowrap font-semibold text-foreground"
-                            title={productionNote}
-                            data-storyboard-frame-production-note-text="true"
+                            <span className="rounded-full bg-muted/65 px-2 py-0.5 text-center text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                              오디오
+                            </span>
+                            <span
+                              className="block min-w-0 truncate whitespace-nowrap font-semibold text-foreground"
+                              title={audioText}
+                              data-storyboard-frame-audio-text="true"
+                            >
+                              {audioPreviewText}
+                            </span>
+                          </div>
+                          <div
+                            className="grid min-w-0 items-start gap-2 rounded-lg bg-rose-500/[0.045] px-2 py-0.5 text-[11px] leading-4"
+                            data-storyboard-frame-subtitle="true"
+                            data-storyboard-frame-subtitle-row="true"
+                            style={{
+                              gridTemplateColumns: "58px minmax(0, 1fr)",
+                            }}
                           >
-                            {productionNote}
-                          </span>
+                            <span className="rounded-full bg-rose-100/70 px-2 py-0.5 text-center text-[10px] font-bold uppercase tracking-wide text-rose-700 dark:bg-rose-500/15 dark:text-rose-200">
+                              자막
+                            </span>
+                            <span
+                              className="block min-w-0 truncate whitespace-nowrap font-bold text-foreground"
+                              title={subtitleText}
+                              data-storyboard-frame-subtitle-text="true"
+                            >
+                              {subtitlePreviewText}
+                            </span>
+                          </div>
+                          <div
+                            className="grid min-w-0 items-start gap-2 rounded-lg bg-amber-400/[0.10] px-2 py-0.5 text-[11px] leading-4"
+                            data-storyboard-frame-production-note="true"
+                            data-storyboard-frame-production-note-row="true"
+                            style={{
+                              gridTemplateColumns: "58px minmax(0, 1fr)",
+                            }}
+                          >
+                            <span className="rounded-full bg-amber-100/75 px-2 py-0.5 text-center text-[10px] font-bold uppercase tracking-wide text-amber-800 dark:bg-amber-500/15 dark:text-amber-200">
+                              촬영
+                            </span>
+                            <span
+                              className="block min-w-0 truncate whitespace-nowrap font-semibold text-foreground"
+                              title={productionNote}
+                              data-storyboard-frame-production-note-text="true"
+                            >
+                              {productionNotePreviewText}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    </button>
-                  );
-                })
-              )}
+                      </button>
+                    );
+                  })
+                )}
               </div>
             </div>
           </CardContent>
