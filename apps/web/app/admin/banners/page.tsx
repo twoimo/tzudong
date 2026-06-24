@@ -475,7 +475,7 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
     };
 
     return (
-        <div className={cn("font-serif text-foreground", embedded ? "flex h-full min-h-0 flex-col overflow-hidden bg-background" : "min-h-screen bg-[#fdfbf7]")}>
+        <div className={cn("text-foreground", embedded ? "flex h-full min-h-0 flex-col overflow-hidden bg-background font-sans tracking-normal" : "min-h-screen bg-[#fdfbf7] font-serif")}>
             {!embedded && (
                 <div
                     className="fixed inset-0 opacity-30 pointer-events-none z-0"
