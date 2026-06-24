@@ -7,7 +7,10 @@ import {
   generateLocalStoryboard,
   normalizeStoryboardExportMarkdown,
 } from "./generator";
-import { sanitizeStoryboardPublicText } from "./prompt-safety";
+import {
+  hasUnsafeStoryboardInstructionRequest,
+  sanitizeStoryboardPublicText,
+} from "./prompt-safety";
 import {
   STORYBOARD_CHAT_MIN_SEGMENT_COUNT,
   STORYBOARD_MAX_SEGMENT_COUNT,
@@ -697,6 +700,7 @@ function hasStoryboardImageGenerationNegation(message: string) {
 }
 
 function wantsStoryboardGeneration(message: string) {
+  if (hasUnsafeStoryboardInstructionRequest(message)) return false;
   if (hasStoryboardFullGenerationNegation(message)) return false;
   const explicitCommand =
     /(?:생성|만들|구성|작성|뽑|실행)\s*(?:해\s*)?(?:줘|주세요|줘요|주라|줘라)/i.test(message) ||
@@ -728,6 +732,33 @@ function hasStoryboardMutationCommand(message: string) {
     wantsStoryboardReset(message) ||
     /(?:수정|변경|바꿔|바꿔줘|고쳐|보완|짧게|줄여|재생성|다시\s*생성|보여줘|이동|가줘|열어|선택|포커스|focus|show|open)/i.test(
       message,
+    )
+  );
+}
+
+function isStoryboardRuntimeMetaQuestion(message: string) {
+  const normalized = normalizeStoryboardChatRequirement(message);
+  if (!normalized || hasStoryboardMutationCommand(normalized)) return false;
+  const hasMetaSubject =
+    /(?:임베딩|embedding|리랭커|reranker|rerank|bge|모델|model|gpt|openai|langgraph|랭그래프|그래프|graph|에이전트|agent|supervisor|researcher|intern|designer|로컬\s*어댑터|폴백|fallback|런타임|runtime|브릿지|bridge|프로세스|process|메모리|memory|node\.?exe|bun\.?exe)/i.test(
+      normalized,
+    );
+  const hasQuestionIntent =
+    /(?:사용|쓰|붙|지원|동작|연결|상태|어떤|무슨|뭐|무엇|가능|되나|되나요|돼|돼요|인가|인지|알려|설명|왜|어떻게|\?)/i.test(
+      normalized,
+    );
+  return hasMetaSubject && hasQuestionIntent;
+}
+
+function isStoryboardAttachmentCapabilityQuestion(message: string) {
+  const normalized = normalizeStoryboardChatRequirement(message);
+  if (!normalized || hasStoryboardMutationCommand(normalized)) return false;
+  return (
+    /(?:사진|첨부|업로드|reference|레퍼런스|참고\s*이미지)/i.test(
+      normalized,
+    ) &&
+    /(?:가능|지원|되나|되나요|돼|돼요|어떻게|방법|어디|알려|설명|\?)/i.test(
+      normalized,
     )
   );
 }
@@ -785,6 +816,8 @@ export function isGeneralStoryboardConversationMessage(message: string) {
   if (!normalized || isCasualStoryboardChatMessage(normalized)) return false;
 
   const compact = normalized.replace(/[\s!?.,。~…]+/g, "").toLowerCase();
+  if (hasUnsafeStoryboardInstructionRequest(normalized)) return true;
+
   if (/^(고마워|고맙|감사|감사해|땡큐|thanks|thankyou|ok|okay|ㅇㅋ|오케이|좋아|좋습니다|괜찮아|ㅋㅋ+|ㅎㅎ+|굿|nice)$/.test(compact)) {
     return true;
   }
@@ -798,6 +831,13 @@ export function isGeneralStoryboardConversationMessage(message: string) {
   }
 
   if (/(?:오류|에러|실패|안\s*돼|안됨|문제|멈췄|느려|느림|작동|권한|permission|denied|clipboard|클립보드|복사).*(?:왜|뭐|어떻게|가능|해결|확인|알려|설명|\?)/i.test(normalized)) {
+    return true;
+  }
+
+  if (
+    isStoryboardRuntimeMetaQuestion(normalized) ||
+    isStoryboardAttachmentCapabilityQuestion(normalized)
+  ) {
     return true;
   }
 
@@ -1097,9 +1137,21 @@ function createStoryboardChatCanvasPatch(
   };
 }
 
-function buildStoryboardConversationMessage(message: string) {
+function buildStoryboardConversationMessage(message: string, forceSafety = false) {
+  const raw = typeof message === "string" ? message : "";
   const normalized = normalizeStoryboardChatRequirement(message);
   const compact = normalized.replace(/[\s!?.,。~…]+/g, "").toLowerCase();
+  if (
+    forceSafety ||
+    hasUnsafeStoryboardInstructionRequest(raw) ||
+    hasUnsafeStoryboardInstructionRequest(normalized)
+  ) {
+    return [
+      "안전상 운영 지시, 비밀값, 내부 상태 삭제 요청은 처리하지 않아요.",
+      "화면은 바꾸지 않고, 스토리보드 주제·CUT 구성·자막·오디오·이미지 진행 상태처럼 작업에 필요한 범위만 도와드릴게요.",
+    ].join(" ");
+  }
+
   if (/(고마워|고맙|감사|땡큐|thanks|thank)/i.test(message)) {
     return [
       "천만에요. 지금 화면은 그대로 두고 대화만 이어갈게요.",
@@ -1125,6 +1177,32 @@ function buildStoryboardConversationMessage(message: string) {
     return [
       "문제 확인 질문으로 이해했어요. 화면은 바꾸지 않고 점검 순서만 안내할게요.",
       "먼저 로컬 브릿지 연결 아이콘, 이미지 라우터 설정, 브라우저 권한을 확인하세요. 복사 실패는 클립보드 권한이나 포커스 상태 때문에 생길 수 있어 다시 눌러도 실패하면 브라우저 권한을 확인하는 흐름이 안전합니다.",
+    ].join(" ");
+  }
+
+  if (/(?:임베딩|embedding|리랭커|reranker|rerank|bge|모델|model|gpt|openai)/i.test(normalized)) {
+    return [
+      "모델 사용 여부 질문으로 이해했어요. 화면은 바꾸지 않고 현재 구조 기준으로 답할게요.",
+      "로컬 폴백에서는 BGE 임베딩이나 리랭커를 썼다고 표시하지 않습니다. 원격 Python 에이전트와 FlagEmbedding 계열 의존성이 활성화된 경우에만 임베딩·리랭커 경로를 사용할 수 있고, 그렇지 않으면 로컬 키워드/문맥 기반 폴백으로 답변과 스토리보드를 처리합니다.",
+    ].join(" ");
+  }
+
+  if (
+    !isStoryboardSuggestionConversation(normalized) &&
+    /(?:langgraph|랭그래프|그래프|graph|에이전트|agent|supervisor|researcher|intern|designer|로컬\s*어댑터|폴백|fallback)/i.test(
+      normalized,
+    )
+  ) {
+    return [
+      "에이전트 구조 질문으로 이해했어요. 화면은 바꾸지 않고 구조만 설명할게요.",
+      "정식 경로는 Supervisor가 Researcher·Intern·Designer 역할을 나눠 지시하고, 로컬 폴백도 같은 상태 이름과 감사 이벤트를 남겨 캔버스 결과가 그래프 흐름을 따라갔는지 확인할 수 있게 설계되어 있습니다.",
+    ].join(" ");
+  }
+
+  if (isStoryboardAttachmentCapabilityQuestion(normalized)) {
+    return [
+      "사진 첨부 질문으로 이해했어요. 화면은 바꾸지 않고 사용 방법만 안내할게요.",
+      "입력창의 + 버튼에서 참고 이미지를 첨부할 수 있고, 첨부 이미지는 스토리보드 방향이나 특정 CUT 수정 요청의 맥락으로만 요약해서 사용합니다.",
     ].join(" ");
   }
 
@@ -1254,12 +1332,17 @@ export async function generateStoryboardChatWithBackendAgent(
   request: StoryboardChatAgentRequest,
   env: NodeJS.ProcessEnv = process.env,
 ): Promise<StoryboardChatAgentResult> {
+  const rawMessage = typeof request.message === "string" ? request.message : "";
+  const isRawSafetyConversation =
+    hasUnsafeStoryboardInstructionRequest(rawMessage);
   const normalizedMessage = normalizeStoryboardChatRequirement(request.message);
   if (!normalizedMessage) {
     throw new Error("채팅 요구사항을 입력하세요.");
   }
 
-  const canvasPatch = createStoryboardChatCanvasPatch(request);
+  const canvasPatch = createStoryboardChatCanvasPatch(
+    isRawSafetyConversation ? { ...request, message: "" } : request,
+  );
   const focusContext = normalizeStoryboardChatFocusContext(
     request.focusContext,
   );
@@ -1290,15 +1373,21 @@ export async function generateStoryboardChatWithBackendAgent(
       ? ""
       : focusText;
   const status = getStoryboardBackendAgentStatus();
-  const shouldReset = wantsStoryboardReset(normalizedMessage);
+  const isSafetyConversation =
+    isRawSafetyConversation ||
+    hasUnsafeStoryboardInstructionRequest(normalizedMessage);
+  const shouldReset =
+    !isSafetyConversation && wantsStoryboardReset(normalizedMessage);
   const isReviewOnly = wantsStoryboardReviewOnly(normalizedMessage);
   const isCasualChat = isCasualStoryboardChatMessage(normalizedMessage);
   const isGeneralConversation =
-    !isReviewOnly && isGeneralStoryboardConversationMessage(normalizedMessage);
+    isSafetyConversation ||
+    (!isReviewOnly && isGeneralStoryboardConversationMessage(normalizedMessage));
   const shouldRegenerateSelectedSceneImage = Boolean(
     canvasPatch.scenePatch?.regenerateImage,
   );
   const shouldGenerate =
+    !isSafetyConversation &&
     wantsStoryboardGeneration(normalizedMessage) &&
     !shouldReset &&
     !isGeneralConversation &&
@@ -1309,6 +1398,7 @@ export async function generateStoryboardChatWithBackendAgent(
   const runtime = status.runtime ?? DEFAULT_STORYBOARD_AGENT_RUNTIME;
   const model = status.codexModel ?? resolveStoryboardAgentCodexModel(env);
   const effort = status.codexEffort ?? resolveStoryboardAgentCodexEffort(env);
+  const safeNormalizedMessage = sanitizeStoryboardPublicText(normalizedMessage);
 
   return {
     assistantMessage: isCasualChat
@@ -1318,6 +1408,8 @@ export async function generateStoryboardChatWithBackendAgent(
           "원하는 음식이나 장면, 컷 수, 꼭 보여주고 싶은 순간을 적어 주면 바로 스토리보드를 만들 수 있어요.",
           "예시가 필요하면 “예시 만들기”를 누르거나, 바로 만들려면 “생성해줘”라고 입력하세요.",
         ].join(" ")
+      : isSafetyConversation
+      ? buildStoryboardConversationMessage(rawMessage || normalizedMessage, true)
       : isGeneralConversation
       ? buildStoryboardConversationMessage(normalizedMessage)
       : isReviewOnly
@@ -1371,7 +1463,7 @@ export async function generateStoryboardChatWithBackendAgent(
       layoutBrief: `좌측 2×2 캔버스 페이지에 ${canvasPatch.tone} 톤으로 ${canvasPatch.targetLengthMinutes}분 분량의 컷 흐름을 반영`,
       promptAddendum: [
         "Storyboard chat agent task.",
-        `User chat request: ${normalizedMessage}`,
+        `User chat request: ${safeNormalizedMessage}`,
         conversationText ? `Conversation context: ${conversationText}` : "",
         effectiveFocusText ? `Canvas focus context: ${effectiveFocusText}` : "",
         imageAttachmentText ? `Image attachments: ${imageAttachmentText}` : "",
@@ -1414,6 +1506,8 @@ export async function generateStoryboardChatWithBackendAgent(
         imageAttachmentCount: imageAttachments.length,
         chatIntent: isCasualChat
           ? "casual_chat"
+          : isSafetyConversation
+            ? "safety"
           : isGeneralConversation
             ? "conversation"
             : shouldRegenerateSelectedSceneImage

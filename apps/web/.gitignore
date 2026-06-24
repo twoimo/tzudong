@@ -30,6 +30,7 @@ design/pencil/drift/**
 # next.js
 /.next/
 /out/
+/.codex-artifacts/
 
 # production
 /build
