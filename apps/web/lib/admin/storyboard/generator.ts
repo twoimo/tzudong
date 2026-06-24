@@ -143,6 +143,13 @@ const GENERIC_TOPIC_PROFILE: StoryboardTopicProfile = {
   sensoryWords: ['푸짐한', '맛있는', '든든한', '생생한'],
 };
 
+function buildStoryboardAudienceTitle(profile: StoryboardTopicProfile) {
+  const label = profile.label.trim();
+  if (!label) return '조회수 많이 나올 것 같은 먹방 스토리보드';
+  if (/조회수|바이럴|반복\s*시청/.test(label)) return label;
+  return `조회수 많이 나올 것 같은 ${label}`;
+}
+
 function toNumber(value: unknown, fallback = 0) {
   const parsed = typeof value === 'number' ? value : Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
@@ -805,7 +812,7 @@ export function buildStoryboardExportMarkdown(
 ) {
   const scenes = result.storyboard.scenes;
   const canonical = [
-    `# ${TONE_LABELS[result.request.tone]} 스토리보드`,
+    `# ${normalizeStoryboardMarkdownText(result.storyboard.title)}`,
     '',
     `- 요청: ${normalizeStoryboardMarkdownText(result.request.prompt)}`,
     `- 구성: ${scenes.length}컷 / ${result.request.targetLengthMinutes}분`,
@@ -922,7 +929,7 @@ export function generateLocalStoryboard(input?: Partial<StoryboardGenerateReques
       ],
     },
     storyboard: {
-      title: `${TONE_LABELS[request.tone]} — 구독자 반복시청 기반 다음 영상안`,
+      title: `${buildStoryboardAudienceTitle(planner.topicProfile)} — ${TONE_LABELS[request.tone]}`,
       logline: `쯔양님 기존 영상의 가장 많이 본 구간 ${totalMarkers}개를 근거로 ${request.targetLengthMinutes}분 분량의 새 먹방 흐름을 구성합니다.`,
       operatorBrief: '관리자 콘솔에서 프롬프트와 톤을 조정한 뒤, 씬별 히트맵 근거를 확인하고 제작 회의 자료로 복사해 사용합니다.',
       scenes,
