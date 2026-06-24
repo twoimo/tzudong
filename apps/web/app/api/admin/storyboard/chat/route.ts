@@ -1,5 +1,9 @@
 import { NextRequest } from 'next/server';
 
+import {
+  hasUnsafeStoryboardInstructionRequest,
+  sanitizeStoryboardPublicText,
+} from '@/lib/admin/storyboard/prompt-safety';
 import { requireAdmin } from '@/lib/auth/require-admin';
 import type { StoryboardThinkingTraceEntry } from '@/lib/admin/storyboard/types';
 
@@ -287,7 +291,10 @@ function getRouteFocusSummary(payload: StoryboardChatPayload) {
 }
 
 function getRouteRequestSummary(payload: StoryboardChatPayload) {
-  const message = sanitizeStatusText(payload.message, 54);
+  const message = sanitizeStatusText(
+    sanitizeStoryboardPublicText(String(payload.message ?? '')),
+    54,
+  );
   const imageAttachmentCount = Array.isArray(payload.imageAttachments)
     ? payload.imageAttachments.length
     : 0;
@@ -344,6 +351,7 @@ function hasRouteStoryboardImageGenerationNegation(message: string) {
 }
 
 function wantsRouteStoryboardGeneration(message: string) {
+  if (hasUnsafeStoryboardInstructionRequest(message)) return false;
   if (hasRouteStoryboardFullGenerationNegation(message)) return false;
   const explicitCommand =
     /(?:생성|만들|구성|작성|뽑|실행)\s*(?:해\s*)?(?:줘|주세요|줘요|주라|줘라)/i.test(message) ||
@@ -363,6 +371,33 @@ function hasRouteStoryboardMutationCommand(message: string) {
     /(?:초기화|리셋|reset)/i.test(message) ||
     wantsRouteStoryboardGeneration(message) ||
     /(?:수정|변경|바꿔|바꿔줘|고쳐|보완|짧게|줄여|재생성|다시\s*생성|보여줘|이동|가줘|열어|선택|포커스|focus|show|open)/i.test(message)
+  );
+}
+
+function isRouteStoryboardRuntimeMetaQuestion(message: string) {
+  const normalized = normalizeRouteChatMessage(message);
+  if (!normalized || hasRouteStoryboardMutationCommand(normalized)) return false;
+  const hasMetaSubject =
+    /(?:임베딩|embedding|리랭커|reranker|rerank|bge|모델|model|gpt|openai|langgraph|랭그래프|그래프|graph|에이전트|agent|supervisor|researcher|intern|designer|로컬\s*어댑터|폴백|fallback|런타임|runtime|브릿지|bridge|프로세스|process|메모리|memory|node\.?exe|bun\.?exe)/i.test(
+      normalized,
+    );
+  const hasQuestionIntent =
+    /(?:사용|쓰|붙|지원|동작|연결|상태|어떤|무슨|뭐|무엇|가능|되나|되나요|돼|돼요|인가|인지|알려|설명|왜|어떻게|\?)/i.test(
+      normalized,
+    );
+  return hasMetaSubject && hasQuestionIntent;
+}
+
+function isRouteStoryboardAttachmentCapabilityQuestion(message: string) {
+  const normalized = normalizeRouteChatMessage(message);
+  if (!normalized || hasRouteStoryboardMutationCommand(normalized)) return false;
+  return (
+    /(?:사진|첨부|업로드|reference|레퍼런스|참고\s*이미지)/i.test(
+      normalized,
+    ) &&
+    /(?:가능|지원|되나|되나요|돼|돼요|어떻게|방법|어디|알려|설명|\?)/i.test(
+      normalized,
+    )
   );
 }
 
@@ -425,6 +460,7 @@ function isRouteGeneralStoryboardConversationMessage(message: string) {
   if (!normalized || isRouteCasualStoryboardChatMessage(normalized)) return false;
 
   const compact = normalized.replace(/[\s!?.,。~…]+/g, '').toLowerCase();
+  if (hasUnsafeStoryboardInstructionRequest(normalized)) return true;
   if (/^(고마워|고맙|감사|감사해|땡큐|thanks|thankyou|ok|okay|ㅇㅋ|오케이|좋아|좋습니다|괜찮아|ㅋㅋ+|ㅎㅎ+|굿|nice)$/.test(compact)) {
     return true;
   }
@@ -438,6 +474,13 @@ function isRouteGeneralStoryboardConversationMessage(message: string) {
   }
 
   if (/(?:오류|에러|실패|안\s*돼|안됨|문제|멈췄|느려|느림|작동|권한|permission|denied|clipboard|클립보드|복사).*(?:왜|뭐|어떻게|가능|해결|확인|알려|설명|\?)/i.test(normalized)) {
+    return true;
+  }
+
+  if (
+    isRouteStoryboardRuntimeMetaQuestion(normalized) ||
+    isRouteStoryboardAttachmentCapabilityQuestion(normalized)
+  ) {
     return true;
   }
 
@@ -474,7 +517,7 @@ function isConversationResult(
   result: StoryboardChatAgentResultForRoute,
 ) {
   const chatIntent = String(result.backendAgent.diagnostics.chatIntent ?? '');
-  return chatIntent === 'casual_chat' || chatIntent === 'conversation';
+  return chatIntent === 'casual_chat' || chatIntent === 'conversation' || chatIntent === 'safety';
 }
 
 function isAnswerOnlyResult(
