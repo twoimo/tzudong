@@ -5653,14 +5653,14 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-storyboard-chat-starter-panel="true"',
     );
     expect(storyboardSource).toContain(
-      'data-storyboard-chat-starter-panel-layout="compact-centered-recommendations"',
+      'data-storyboard-chat-starter-panel-layout="inline-centered-recommendations"',
     );
     expect(storyboardSource).toContain(
-      '"min-h-full items-center justify-center"',
+      '"min-h-full items-stretch justify-center"',
     );
-    expect(storyboardSource).toContain('"w-full max-w-[21rem]"');
+    expect(storyboardSource).toContain('"w-full"');
     expect(storyboardSource).toContain(
-      '"mx-auto flex w-full flex-col gap-3 rounded-2xl border border-border/70 bg-background/90 p-4 text-center shadow-sm"',
+      '"mx-auto flex min-h-[72%] w-full flex-col justify-center gap-4 px-3 py-8 text-left"',
     );
     expect(storyboardSource).toContain('"grid grid-cols-2 gap-2"');
     expect(storyboardSource).toContain(
@@ -6299,14 +6299,22 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).toContain(
       'data-storyboard-frame-page-range="true"',
     );
+    expect(storyboardSource).toContain('data-storyboard-canvas-title="true"');
     expect(storyboardSource).toContain(
       'data-storyboard-generated-image-count="title"',
     );
     expect(storyboardSource).toContain(
+      'data-storyboard-canvas-topic-title="true"',
+    );
+    expect(storyboardSource).not.toContain(
       'data-storyboard-current-generation-title="canvas"',
     );
-    expect(storyboardSource).toContain("storyboardCurrentImageGenerationTitle");
+    expect(storyboardSource).toContain("getStoryboardCanvasTopicTitle");
+    expect(storyboardSource).toContain("buildStoryboardAudienceTopicTitle");
     expect(storyboardSource).toContain(
+      "storyboardCanvasTopicTitle",
+    );
+    expect(storyboardSource).not.toContain(
       "storyboardCurrentImageGenerationTitleLabel",
     );
     expect(storyboardSource).toContain("activeCutStart");
