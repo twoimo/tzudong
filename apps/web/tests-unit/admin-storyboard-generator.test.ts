@@ -359,6 +359,9 @@ describe('admin storyboard generator', () => {
       expect(dessert.planner?.topicProfile.id).toBe('dessert_cafe');
       expect(seafood.planner?.topicProfile.id).toBe('seafood');
       expect(spicyNoodle.planner?.topicProfile.id).toBe('noodle_soup');
+      expect(dessert.storyboard.title).toContain('조회수 많이 나올 것 같은 디저트 카페 먹방');
+      expect(seafood.storyboard.title).toContain('조회수 많이 나올 것 같은 해산물 한상 먹방');
+      expect(spicyNoodle.storyboard.title).toContain('조회수 많이 나올 것 같은 면·국물 먹방');
       expect(JSON.stringify(dessert.storyboard.scenes)).toContain('딸기빙수');
       expect(JSON.stringify(dessert.storyboard.scenes)).toContain('케이크');
       expect(JSON.stringify(seafood.storyboard.scenes)).toContain('대게');
@@ -368,6 +371,7 @@ describe('admin storyboard generator', () => {
       expect(JSON.stringify(spicyNoodle.storyboard.scenes)).not.toContain('떡볶이');
       expect(dessert.storyboard.scenes[0].captionIdea).not.toBe(seafood.storyboard.scenes[0].captionIdea);
       expect(dessert.storyboard.exportMarkdown).toContain('데모/샘플 근거');
+      expect(dessert.storyboard.exportMarkdown).toContain('# 조회수 많이 나올 것 같은 디저트 카페 먹방');
     } finally {
       if (previous === undefined) {
         delete process.env.TZUYANG_HEATMAP_DIR;

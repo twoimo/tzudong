@@ -3031,6 +3031,27 @@ function summarizeStoryboardPromptForCaption(prompt: string) {
   return `${normalized.slice(0, 27)}…`;
 }
 
+function buildStoryboardAudienceTopicTitle(label: string) {
+  const normalized = sanitizeStoryboardChatDisplayText(label);
+  if (!normalized) return "";
+  if (/조회수|바이럴|반복\s*시청/.test(normalized)) return normalized;
+  return `조회수 많이 나올 것 같은 ${normalized}`;
+}
+
+function getStoryboardCanvasTopicTitle(result: StoryboardGenerationResult) {
+  const topicLabel = result.planner?.topicProfile.label;
+  const topicTitle = topicLabel
+    ? buildStoryboardAudienceTopicTitle(topicLabel)
+    : "";
+  if (topicTitle) return topicTitle;
+
+  const title = sanitizeStoryboardChatDisplayText(result.storyboard.title)
+    .split("—")[0]
+    ?.trim();
+  if (title) return title;
+  return summarizeStoryboardPromptForCaption(result.request.prompt);
+}
+
 function normalizeStaleStoryboardCaptionIdeas(
   result: StoryboardGenerationResult,
 ) {
@@ -4968,18 +4989,10 @@ export function AdminStoryboardGenerator({
   );
   const activePageGenerationTargetCount =
     activeStoryboardImageGenerationTargetScenes.length;
-  const storyboardCurrentImageGenerationTitle = useMemo(() => {
-    const title = sanitizeStoryboardChatDisplayText(result.storyboard.title);
-    if (title) return title;
-    return summarizeStoryboardPromptForCaption(result.request.prompt);
-  }, [result.request.prompt, result.storyboard.title]);
-  const storyboardCurrentImageGenerationTitleLabel = `${
-    isGeneratingImages
-      ? "이미지 생성 중"
-      : generatedImageCount > 0
-        ? "이미지 생성 완료"
-        : "이미지 생성 대기"
-  } · ${storyboardCurrentImageGenerationTitle}`;
+  const storyboardCanvasTopicTitle = useMemo(
+    () => getStoryboardCanvasTopicTitle(result),
+    [result],
+  );
   const isStoryboardBrowserOpenAIApiKeySaved = Boolean(
     storyboardBrowserOpenAIApiKey,
   );
@@ -8201,7 +8214,7 @@ export function AdminStoryboardGenerator({
                       key={message.id}
                       className={`flex ${
                         isStoryboardChatStarterMessage
-                          ? "min-h-full items-center justify-center"
+                          ? "min-h-full items-stretch justify-center"
                           : message.role === "user"
                             ? "justify-end"
                             : "justify-start"
@@ -8224,7 +8237,7 @@ export function AdminStoryboardGenerator({
                       <div
                         className={`space-y-1.5 ${
                           message.role === "user" ? "text-right" : "text-left"
-                        } ${isStoryboardChatStarterMessage ? "w-full max-w-[21rem]" : ""}`}
+                        } ${isStoryboardChatStarterMessage ? "w-full" : ""}`}
                         style={{
                           maxWidth: message.role === "user" ? "88%" : "100%",
                         }}
@@ -8261,25 +8274,25 @@ export function AdminStoryboardGenerator({
                           </div>
                         ) : isStoryboardChatStarterMessage ? (
                           <div
-                            className="mx-auto flex w-full flex-col gap-3 rounded-2xl border border-border/70 bg-background/90 p-4 text-center shadow-sm"
+                            className="mx-auto flex min-h-[72%] w-full flex-col justify-center gap-4 px-3 py-8 text-left"
                             data-storyboard-chat-starter-panel="true"
-                            data-storyboard-chat-starter-panel-layout="compact-centered-recommendations"
+                            data-storyboard-chat-starter-panel-layout="inline-centered-recommendations"
                           >
-                            <div className="space-y-1.5">
+                            <div className="space-y-2">
                               <p
-                                className="text-[11px] font-medium text-primary"
+                                className="text-[11px] font-semibold text-primary"
                                 data-storyboard-chat-starter-eyebrow="true"
                               >
                                 스토리보드 시작
                               </p>
                               <h4
-                                className="text-base font-semibold tracking-tight text-foreground"
+                                className="text-lg font-semibold tracking-tight text-foreground"
                                 data-storyboard-chat-starter-title="true"
                               >
                                 무엇부터 만들까요?
                               </h4>
                               <p
-                                className="mx-auto max-w-[18rem] whitespace-pre-wrap break-keep text-xs leading-5 text-muted-foreground [overflow-wrap:anywhere]"
+                                className="max-w-[18rem] whitespace-pre-wrap break-keep text-xs leading-5 text-muted-foreground [overflow-wrap:anywhere]"
                                 aria-label={message.text}
                                 data-storyboard-chat-typewriter-text="true"
                                 data-storyboard-chat-typewriter-state={
@@ -8298,7 +8311,7 @@ export function AdminStoryboardGenerator({
                               <Button
                                 type="button"
                                 variant="outline"
-                                className="h-9 justify-center rounded-xl border-border/70 bg-background/85 px-3 text-xs shadow-sm"
+                                className="h-9 justify-center rounded-full border-border/70 bg-background/80 px-3 text-xs shadow-sm"
                                 onClick={handleStoryboardUsageGuideClick}
                                 disabled={
                                   isGenerating ||
@@ -8313,7 +8326,7 @@ export function AdminStoryboardGenerator({
                               </Button>
                               <Button
                                 type="button"
-                                className="h-9 justify-center rounded-xl px-3 text-xs shadow-sm"
+                                className="h-9 justify-center rounded-full px-3 text-xs shadow-sm"
                                 onClick={() =>
                                   void handleStoryboardGuidedExampleGenerate()
                                 }
@@ -8714,6 +8727,7 @@ export function AdminStoryboardGenerator({
             <CardTitle
               className="flex min-w-0 items-center gap-2 text-sm"
               aria-label="캔버스 편집 / PNG 내보내기"
+              data-storyboard-canvas-title="true"
             >
               <span className="shrink-0 whitespace-nowrap font-semibold">
                 캔버스
@@ -8727,11 +8741,11 @@ export function AdminStoryboardGenerator({
                 이미지 {generatedImageCount}/{totalCutCount}
               </Badge>
               <span
-                className="min-w-0 max-w-[min(24rem,36vw)] truncate text-xs font-medium text-muted-foreground"
-                data-storyboard-current-generation-title="canvas"
-                title={storyboardCurrentImageGenerationTitleLabel}
+                className="min-w-0 max-w-[min(24rem,36vw)] truncate text-xs font-semibold text-foreground/75"
+                data-storyboard-canvas-topic-title="true"
+                title={storyboardCanvasTopicTitle}
               >
-                {storyboardCurrentImageGenerationTitleLabel}
+                {storyboardCanvasTopicTitle}
               </span>
             </CardTitle>
             <div
