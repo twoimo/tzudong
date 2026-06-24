@@ -962,7 +962,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("return null;");
     expect(adminLoadingSource).not.toContain("AdminConsoleLoadingSkeleton");
     expect(source("app/app-globals.css")).toMatch(
-      /grid-template-columns:\s*fit-content\(\s*var\(--admin-sidebar-expanded-max-width\)\s*\)\s*minmax\(0, 1fr\);/,
+      /grid-template-columns:\s*var\(--admin-sidebar-expanded-width\)\s*minmax\(0, 1fr\);/,
     );
     expect(consoleSource).not.toContain("lg:w-[280px]");
     expect(consoleSource).not.toContain(
@@ -2584,7 +2584,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain(
       "pb-[calc(env(safe-area-inset-bottom)+5.75rem)]",
     );
-    expect(consoleSource).not.toContain("h-[var(--full-height,100vh)]");
+    expect(consoleSource).toContain("h-[var(--full-height,100vh)]");
     expect(appGlobalsSource).toContain('[data-admin-console-shell="true"]');
     expectCssDeclaration(
       appGlobalsSource,
@@ -2652,11 +2652,11 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       '[data-admin-console-layout="sidebar-content"]',
     );
     expect(appGlobalsSource).toMatch(
-      /grid-template-columns:\s*fit-content\(\s*var\(--admin-sidebar-expanded-max-width\)\s*\)\s*minmax\(0, 1fr\);/,
+      /grid-template-columns:\s*var\(--admin-sidebar-expanded-width\)\s*minmax\(0, 1fr\);/,
     );
     expect(
       appGlobalsSource.match(
-        /grid-template-columns:\s*fit-content\(\s*var\(--admin-sidebar-expanded-max-width\)\s*\)\s*minmax\(0, 1fr\);/g,
+        /grid-template-columns:\s*var\(--admin-sidebar-expanded-width\)\s*minmax\(0, 1fr\);/g,
       ) ?? [],
     ).toHaveLength(1);
     expect(
@@ -2670,10 +2670,17 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(appGlobalsSource).toContain(
       "--admin-sidebar-expanded-max-width: min(18rem, 28vw);",
     );
-    expect(appGlobalsSource).toContain("width: max-content;");
-    expect(appGlobalsSource).toContain("min-width: 14.25rem;");
     expect(appGlobalsSource).toContain(
-      "max-width: var(--admin-sidebar-expanded-max-width);",
+      "--admin-sidebar-expanded-width: 14.25rem;",
+    );
+    expect(appGlobalsSource).toContain(
+      "width: var(--admin-sidebar-expanded-width);",
+    );
+    expect(appGlobalsSource).toContain(
+      "min-width: var(--admin-sidebar-expanded-width);",
+    );
+    expect(appGlobalsSource).toContain(
+      "max-width: var(--admin-sidebar-expanded-width);",
     );
     expect(appGlobalsSource).toContain(
       '[data-admin-console-layout="sidebar-content"]\n    > [data-admin-left-panel-expanded="false"]',
@@ -2737,7 +2744,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       '? "md:w-16 md:min-w-16 md:max-w-16 md:items-center md:px-1.5"',
     );
     expect(consoleSource).toContain(
-      ': "md:min-w-[14.25rem] md:max-w-[var(--admin-sidebar-expanded-max-width)]"',
+      ': "md:w-[var(--admin-sidebar-expanded-width)] md:min-w-[var(--admin-sidebar-expanded-width)] md:max-w-[var(--admin-sidebar-expanded-width)]"',
     );
   });
 
@@ -4898,7 +4905,13 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "[data-storyboard-chat-avatar] > svg",
     );
     expect(storyboardSource).toContain(
-      'maxWidth: message.role === "user" ? "88%" : "100%"',
+      '"ml-auto flex max-w-[88%] flex-col items-end space-y-1.5 text-right"',
+    );
+    expect(storyboardSource).toContain(
+      "!message.thinkingTrace?.length",
+    );
+    expect(storyboardSource).toContain(
+      "!message.imageGenerationProgress",
     );
     expect(storyboardSource).not.toContain("max-w-[86%]");
     expect(storyboardSource).not.toContain(
@@ -5658,24 +5671,33 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).toContain(
       '"min-h-full items-stretch justify-center"',
     );
-    expect(storyboardSource).toContain('"w-full"');
+    expect(storyboardSource).toContain('"w-full space-y-1.5 text-left"');
     expect(storyboardSource).toContain(
-      '"mx-auto flex min-h-[72%] w-full flex-col justify-center gap-4 px-3 py-8 text-left"',
+      '"mx-auto flex min-h-full w-full flex-col justify-center gap-3 px-3 py-4 text-left"',
     );
-    expect(storyboardSource).toContain('"grid grid-cols-2 gap-2"');
+    expect(storyboardSource).toContain('"grid grid-cols-1 gap-2"');
+    expect(storyboardSource).toContain(
+      'data-storyboard-chat-starter-icon="true"',
+    );
+    expect(storyboardSource).toContain(
+      '"flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/15"',
+    );
+    expect(storyboardSource).toContain(
+      '"text-2xl font-semibold tracking-tight text-foreground"',
+    );
     expect(storyboardSource).toContain(
       'data-storyboard-chat-starter-actions="true"',
     );
     expect(storyboardSource).toContain(
       'data-storyboard-chat-starter-action="guide"',
     );
-    expect(storyboardSource).toContain(
+    expect(storyboardSource).not.toContain(
       'data-storyboard-chat-starter-action="example"',
     );
     expect(storyboardSource).toContain(
       'data-storyboard-chat-message-action="guide"',
     );
-    expect(storyboardSource).toContain(
+    expect(storyboardSource).not.toContain(
       'data-storyboard-chat-message-action="example"',
     );
     expect(storyboardSource).not.toContain(
@@ -5684,19 +5706,57 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).toContain(
       'data-storyboard-chat-guide-button="true"',
     );
-    expect(storyboardSource).toContain(
+    expect(storyboardSource).not.toContain(
       'data-storyboard-chat-guide-generate="true"',
     );
     expect(storyboardSource).toContain("STORYBOARD_USAGE_GUIDE_TEXT");
     expect(storyboardSource).toContain("STORYBOARD_GUIDED_EXAMPLE_PROMPT");
     expect(storyboardSource).toContain("STORYBOARD_GUIDED_EXAMPLE_PRESETS");
+    expect(storyboardSource).toContain(
+      "const STORYBOARD_GUIDED_EXAMPLE_GRID_COUNT = 10",
+    );
+    expect(storyboardSource).toContain(
+      "const STORYBOARD_GUIDED_EXAMPLE_STARTER_COUNT = 6",
+    );
+    expect(storyboardSource).toContain(
+      "STORYBOARD_GUIDED_EXAMPLE_GRID_PRESETS",
+    );
+    expect(storyboardSource).toContain(
+      "STORYBOARD_GUIDED_EXAMPLE_STARTER_PRESETS",
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-chat-example-grid="true"',
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-chat-example-grid-layout="3x2"',
+    );
+    expect(storyboardSource).toContain(
+      "STORYBOARD_GUIDED_EXAMPLE_STARTER_PRESETS.map",
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-chat-example-card="true"',
+    );
+    expect(storyboardSource).toContain(
+      "handleStoryboardGuidedExampleGenerate(",
+    );
     expect(storyboardSource).toContain("storyboardGuidedExampleIndexRef");
     expect(storyboardSource).toContain("킹크랩 해산물 한상");
     expect(storyboardSource).toContain("디저트 카페 코스");
+    expect(storyboardSource).toContain("시장 통닭 튀김");
+    expect(storyboardSource).toContain("새벽 편의점 야식");
+    expect(storyboardSource).toContain("치즈 부대찌개 라면");
+    expect(storyboardSource).toContain("초밥 오마카세 클로즈업");
     expect(storyboardSource).toContain("handleStoryboardGuidedExampleGenerate");
     expect(storyboardSource).toContain(
-      "스토리보드와 전체 CUT 이미지를 함께 만들고 있어요",
+      "예시를 왼쪽 캔버스에 로딩하고 있어요",
     );
+    expect(storyboardSource).not.toContain(
+      "처음이면 가이드를 보고, 바로 확인하려면 예시 만들기를 눌러보세요.",
+    );
+    expect(storyboardSource).toContain(
+      "추천 카드를 고르면 이 흐름대로 바로 스토리보드를 만들어볼게요.",
+    );
+    expect(storyboardSource).not.toContain("스토리보드 시작");
     expect(storyboardSource).toContain(
       "handleGenerateAllStoryboardImagesForResult",
     );
@@ -5817,6 +5877,18 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).toContain("스토리보드 도우미");
     expect(storyboardSource).toContain("예시 만들기");
     expect(storyboardSource).toContain("가이드 보기");
+    expect(storyboardSource).toContain(
+      'current.filter((message) => message.id !== "assistant-intake")',
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-chat-inline-actions="true"',
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-chat-inline-action="example"',
+    );
+    expect(storyboardSource).toContain(
+      "추천 카드를 고르면 이 흐름대로 바로 스토리보드를 만들어볼게요.",
+    );
     expect(storyboardSource).not.toContain(
       "mb-1.5 flex items-center justify-end gap-1.5",
     );
@@ -6008,7 +6080,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).toContain(
       'aria-label="스토리보드 이미지 생성 결과"',
     );
-    expect(storyboardSource).toContain("캔버스 편집 / PNG 내보내기");
+    expect(storyboardSource).toContain(
+      "aria-label={`스토리보드 주제 ${storyboardCanvasTopicTitle} · 이미지 ${generatedImageCount}/${totalCutCount} · PNG 내보내기`}",
+    );
+    expect(storyboardSource).not.toContain("캔버스 편집 / PNG 내보내기");
     expect(storyboardSource).toContain("StoryboardExportPresetId");
     expect(storyboardSource).toContain("storyboardExportPresets");
     expect(storyboardSource).toContain('data-storyboard-export-preset="true"');
@@ -6104,8 +6179,19 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'className="flex shrink-0 flex-row items-center gap-2 p-2 pb-1"',
     );
     expect(storyboardSource).toContain('className="sr-only"');
-    expect(storyboardSource).toContain("캔버스 편집 / PNG 내보내기");
-    expect(storyboardSource).toContain("캔버스");
+    expect(storyboardSource).toContain(
+      "aria-label={`스토리보드 주제 ${storyboardCanvasTopicTitle} · 이미지 ${generatedImageCount}/${totalCutCount} · PNG 내보내기`}",
+    );
+    expect(storyboardSource).toContain("Clapperboard");
+    expect(storyboardSource).toContain(
+      'data-storyboard-canvas-topic-icon="true"',
+    );
+    expect(storyboardSource).toContain(
+      '"flex h-6 w-6 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15"',
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-canvas-topic-title="true"',
+    );
     expect(storyboardSource).not.toContain(
       'className="flex flex-wrap items-center justify-between gap-2 text-base"',
     );
@@ -6301,6 +6387,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(storyboardSource).toContain('data-storyboard-canvas-title="true"');
     expect(storyboardSource).toContain(
+      'data-storyboard-canvas-topic-icon="true"',
+    );
+    expect(storyboardSource).toContain(
       'data-storyboard-generated-image-count="title"',
     );
     expect(storyboardSource).toContain(
@@ -6310,7 +6399,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-storyboard-current-generation-title="canvas"',
     );
     expect(storyboardSource).toContain("getStoryboardCanvasTopicTitle");
-    expect(storyboardSource).toContain("buildStoryboardAudienceTopicTitle");
+    expect(storyboardSource).toContain("buildStoryboardCanvasTopicTitle");
+    expect(storyboardSource).not.toContain("buildStoryboardAudienceTopicTitle");
     expect(storyboardSource).toContain(
       "storyboardCanvasTopicTitle",
     );
@@ -7297,15 +7387,14 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       '<Icon className="h-3.5 w-3.5" aria-hidden="true" />',
     );
     expect(consoleSource).toContain(
-      "const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);",
+      "const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);",
     );
     expect(consoleSource).toContain(
-      "const showSidebarLabels = !isSidebarCollapsed;",
+      "const [showSidebarLabels, setShowSidebarLabels] = useState(true);",
     );
-    expect(consoleSource).not.toContain("ADMIN_SIDEBAR_COLLAPSED_STORAGE_KEY");
-    expect(consoleSource).toContain(
-      "setIsSidebarCollapsed((currentCollapsed) => !currentCollapsed)",
-    );
+    expect(consoleSource).toContain("ADMIN_SIDEBAR_COLLAPSED_STORAGE_KEY");
+    expect(consoleSource).toContain("SIDEBAR_LABEL_REVEAL_DELAY_MS");
+    expect(consoleSource).toContain("handleToggleSidebarCollapsed");
     expect(consoleSource).toContain("PanelLeftOpen");
     expect(consoleSource).toContain("PanelLeftClose");
     expect(consoleSource).toContain(
@@ -7328,9 +7417,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       "relative z-30 hidden h-full min-h-0 w-max shrink-0 flex-col",
     );
-    expect(consoleSource).toContain("md:min-w-[14.25rem]");
+    expect(consoleSource).toContain("md:min-w-[var(--admin-sidebar-expanded-width)]");
     expect(consoleSource).toContain(
-      "md:max-w-[var(--admin-sidebar-expanded-max-width)]",
+      "md:max-w-[var(--admin-sidebar-expanded-width)]",
     );
     expect(consoleSource).toContain("isCollapsed &&");
     expect(consoleSource).toContain(
@@ -7568,7 +7657,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
 
     expect(source("app/app-globals.css")).toMatch(
-      /grid-template-columns:\s*fit-content\(\s*var\(--admin-sidebar-expanded-max-width\)\s*\)\s*minmax\(0, 1fr\);/,
+      /grid-template-columns:\s*var\(--admin-sidebar-expanded-width\)\s*minmax\(0, 1fr\);/,
     );
     expect(consoleSource).toContain(
       'data-admin-console-menu-trigger="hamburger"',
