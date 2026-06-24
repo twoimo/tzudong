@@ -14,6 +14,7 @@ import {
   ArrowUp,
   ChevronLeft,
   ChevronRight,
+  Clapperboard,
   ClipboardCopy,
   Download,
   History,
@@ -157,6 +158,7 @@ type StoryboardChatMessage = {
   role: "user" | "assistant";
   text: string;
   status?: "streaming" | "done";
+  actions?: Array<"guide" | "example">;
   imageGenerationProgress?: StoryboardImageGenerationProgress;
   thinkingTrace?: StoryboardThinkingTraceEntry[];
 };
@@ -727,7 +729,9 @@ type StoryboardGuidedExamplePreset = Pick<
   GeneratorForm,
   "prompt" | "tone" | "targetLengthMinutes" | "sourceLimit" | "segmentCount"
 > & {
+  id: string;
   label: string;
+  description: string;
 };
 
 const STORYBOARD_GUIDED_EXAMPLE_PROMPT =
@@ -735,7 +739,9 @@ const STORYBOARD_GUIDED_EXAMPLE_PROMPT =
 
 const STORYBOARD_GUIDED_EXAMPLE_PRESETS: StoryboardGuidedExamplePreset[] = [
   {
+    id: "seafood-feast",
     label: "킹크랩 해산물 한상",
+    description: "수산시장 도입부터 게살, 회, 매운탕까지 이어지는 고급 한상",
     prompt:
       "킹크랩과 회, 매운탕까지 이어지는 해산물 한상 먹방을 11컷 스토리보드로 만들어줘. 수산시장 기대감, 손질 장면, 첫 입, 게살 발라내는 디테일, 매운탕 클라이맥스, 맛 평가, 다음 영상 예고까지 자연스럽게 이어지게 구성해줘.",
     tone: "documentary",
@@ -744,7 +750,9 @@ const STORYBOARD_GUIDED_EXAMPLE_PRESETS: StoryboardGuidedExamplePreset[] = [
     segmentCount: 11,
   },
   {
+    id: "night-market-spicy",
     label: "야시장 매운 분식",
+    description: "떡볶이, 튀김, 순대, 어묵을 빠르게 몰아치는 야시장 흐름",
     prompt:
       "야시장 매운 분식 먹방을 10컷 스토리보드로 만들어줘. 붉은 떡볶이 소스, 튀김 바삭한 소리, 순대와 어묵 조합, 매운맛 리액션, 사람 많은 골목 분위기, 완식 후 다음 코스 기대감까지 보여줘.",
     tone: "energetic",
@@ -753,7 +761,9 @@ const STORYBOARD_GUIDED_EXAMPLE_PRESETS: StoryboardGuidedExamplePreset[] = [
     segmentCount: 10,
   },
   {
+    id: "dessert-cafe-course",
     label: "디저트 카페 코스",
+    description: "빙수, 케이크, 크림 단면을 부드러운 리액션으로 연결",
     prompt:
       "딸기빙수와 케이크를 중심으로 한 디저트 카페 먹방을 9컷 스토리보드로 만들어줘. 카페 입장, 쇼케이스 선택, 크림과 과일 클로즈업, 첫 숟가락, 케이크 단면, 달콤한 리액션, 마무리 평가까지 부드럽게 이어줘.",
     tone: "comfort",
@@ -762,7 +772,9 @@ const STORYBOARD_GUIDED_EXAMPLE_PRESETS: StoryboardGuidedExamplePreset[] = [
     segmentCount: 9,
   },
   {
+    id: "pork-grill-table",
     label: "삼겹살 불판 한상",
+    description: "불판 예열, 굽는 소리, 쌈 조합, 찌개까지 이어지는 고기 코스",
     prompt:
       "삼겹살과 갈비가 함께 나오는 고기 구이 먹방을 12컷 스토리보드로 만들어줘. 가게 앞 도입, 불판 예열, 고기 굽는 소리, 쌈 조합, 육즙 단면, 된장찌개 연결, 클라이맥스 한상, 완식 평가까지 구성해줘.",
     tone: "warm",
@@ -771,7 +783,9 @@ const STORYBOARD_GUIDED_EXAMPLE_PRESETS: StoryboardGuidedExamplePreset[] = [
     segmentCount: 12,
   },
   {
+    id: "soup-noodle-comfort",
     label: "국밥과 칼국수 국물",
+    description: "김 오른 국물, 면 들어 올림, 반찬 조합을 따뜻하게 구성",
     prompt:
       "뜨끈한 국밥과 칼국수를 중심으로 한 면·국물 먹방을 10컷 스토리보드로 만들어줘. 김이 오르는 첫 장면, 국물 한 숟가락, 면 들어 올리는 컷, 반찬 조합, 속이 풀리는 리액션, 완식 후 여운까지 담아줘.",
     tone: "warm",
@@ -780,17 +794,76 @@ const STORYBOARD_GUIDED_EXAMPLE_PRESETS: StoryboardGuidedExamplePreset[] = [
     segmentCount: 10,
   },
   {
+    id: "convenience-ramen-mix",
     label: "편의점 라면 조합",
+    description: "편의점 재료 조합, 첫 입, 소스 변주, 다음 메뉴 예고까지 압축",
     prompt: STORYBOARD_GUIDED_EXAMPLE_PROMPT,
     tone: "energetic",
     targetLengthMinutes: 14,
     sourceLimit: 80,
     segmentCount: 10,
   },
+  {
+    id: "market-fried-chicken",
+    label: "시장 통닭 튀김",
+    description: "튀김 소리, 골목 활기, 한입 리액션을 선명하게 보여주는 시장 먹방",
+    prompt:
+      "전통시장 통닭과 모둠 튀김 먹방을 10컷 스토리보드로 만들어줘. 시장 골목 도입, 튀김 기름 소리, 바삭한 단면, 소스 찍는 장면, 맥주 없이도 잘 맞는 조합, 사람 많은 분위기, 완식 평가까지 빠르게 이어줘.",
+    tone: "energetic",
+    targetLengthMinutes: 13,
+    sourceLimit: 80,
+    segmentCount: 10,
+  },
+  {
+    id: "late-night-store-snack",
+    label: "새벽 편의점 야식",
+    description: "늦은 밤 매장 조명, 컵라면, 삼각김밥, 디저트 후식을 한 흐름으로",
+    prompt:
+      "새벽 편의점 야식 루틴을 9컷 스토리보드로 만들어줘. 늦은 밤 편의점 입장, 컵라면 조리, 삼각김밥 조합, 음료 선택, 첫 입 리액션, 조용한 새벽 분위기, 디저트 후식, 다음 야식 예고까지 구성해줘.",
+    tone: "comfort",
+    targetLengthMinutes: 11,
+    sourceLimit: 70,
+    segmentCount: 9,
+  },
+  {
+    id: "cheese-budae-ramen",
+    label: "치즈 부대찌개 라면",
+    description: "햄, 라면사리, 치즈 늘어남, 얼큰한 국물 리액션 중심",
+    prompt:
+      "치즈 부대찌개 라면 먹방을 10컷 스토리보드로 만들어줘. 가게 앞 도입, 끓는 냄비, 햄과 소시지 클로즈업, 라면사리 들어 올림, 치즈 늘어나는 장면, 얼큰한 국물 리액션, 밥 말기, 완식 평가까지 구성해줘.",
+    tone: "energetic",
+    targetLengthMinutes: 14,
+    sourceLimit: 80,
+    segmentCount: 10,
+  },
+  {
+    id: "sushi-omakase-closeup",
+    label: "초밥 오마카세 클로즈업",
+    description: "쥐는 손동작, 광택 있는 생선, 한입 집중감을 차분하게 구성",
+    prompt:
+      "초밥 오마카세 먹방을 10컷 스토리보드로 만들어줘. 카운터 도입, 셰프가 초밥을 쥐는 손동작, 생선 광택 클로즈업, 간장 찍는 장면, 첫 입 집중감, 코스별 리액션, 마지막 한 점과 평가까지 차분하게 이어줘.",
+    tone: "documentary",
+    targetLengthMinutes: 15,
+    sourceLimit: 85,
+    segmentCount: 10,
+  },
 ];
 
+const STORYBOARD_GUIDED_EXAMPLE_GRID_COUNT = 10;
+const STORYBOARD_GUIDED_EXAMPLE_GRID_PRESETS =
+  STORYBOARD_GUIDED_EXAMPLE_PRESETS.slice(
+    0,
+    STORYBOARD_GUIDED_EXAMPLE_GRID_COUNT,
+  );
+const STORYBOARD_GUIDED_EXAMPLE_STARTER_COUNT = 6;
+const STORYBOARD_GUIDED_EXAMPLE_STARTER_PRESETS =
+  STORYBOARD_GUIDED_EXAMPLE_GRID_PRESETS.slice(
+    0,
+    STORYBOARD_GUIDED_EXAMPLE_STARTER_COUNT,
+  );
+
 const STORYBOARD_USAGE_GUIDE_TEXT =
-  "간단히 3가지만 적으면 됩니다. 1) 어떤 음식이나 장면인지 2) 몇 컷이 필요한지 3) 꼭 보여주고 싶은 순간입니다. 예시 버튼을 누르면 이 흐름대로 바로 스토리보드를 만들어볼게요.";
+  "간단히 3가지만 적으면 됩니다. 1) 어떤 음식이나 장면인지 2) 몇 컷이 필요한지 3) 꼭 보여주고 싶은 순간입니다. 추천 카드를 고르면 이 흐름대로 바로 스토리보드를 만들어볼게요.";
 
 const STORYBOARD_CHAT_IMAGE_ATTACHMENT_LIMIT = 3;
 const STORYBOARD_CHAT_IMAGE_ATTACHMENT_MAX_BYTES = 4 * 1024 * 1024;
@@ -3031,7 +3104,7 @@ function summarizeStoryboardPromptForCaption(prompt: string) {
   return `${normalized.slice(0, 27)}…`;
 }
 
-function buildStoryboardAudienceTopicTitle(label: string) {
+function buildStoryboardCanvasTopicTitle(label: string) {
   const normalized = sanitizeStoryboardChatDisplayText(label);
   if (!normalized) return "";
   if (/조회수|바이럴|반복\s*시청/.test(normalized)) return normalized;
@@ -3041,7 +3114,7 @@ function buildStoryboardAudienceTopicTitle(label: string) {
 function getStoryboardCanvasTopicTitle(result: StoryboardGenerationResult) {
   const topicLabel = result.planner?.topicProfile.label;
   const topicTitle = topicLabel
-    ? buildStoryboardAudienceTopicTitle(topicLabel)
+    ? buildStoryboardCanvasTopicTitle(topicLabel)
     : "";
   if (topicTitle) return topicTitle;
 
@@ -3634,7 +3707,7 @@ function makeInitialStoryboardChatMessages(
   const intakeMessage = formatStoryboardChatMessageForDisplay({
     id: "assistant-intake",
     role: "assistant",
-    text: "처음이면 가이드를 보고, 바로 확인하려면 예시 만들기를 눌러보세요.",
+    text: "무엇부터 만들까요?",
     status: "done",
   });
 
@@ -5238,10 +5311,16 @@ export function AdminStoryboardGenerator({
   }
 
   function appendStoryboardChatMessages(messages: StoryboardChatMessage[]) {
+    const formattedMessages = messages.map(formatStoryboardChatMessageForDisplay);
+    const shouldDismissStarter = formattedMessages.some(
+      (message) => message.id !== "assistant-intake",
+    );
     setChatMessages((current) =>
       [
-        ...current,
-        ...messages.map(formatStoryboardChatMessageForDisplay),
+        ...(shouldDismissStarter
+          ? current.filter((message) => message.id !== "assistant-intake")
+          : current),
+        ...formattedMessages,
       ].slice(-10),
     );
   }
@@ -5375,7 +5454,12 @@ export function AdminStoryboardGenerator({
   }
 
   function handleStoryboardUsageGuideClick() {
-    appendStoryboardQuickCommandMessages("가이드", STORYBOARD_USAGE_GUIDE_TEXT);
+    appendStoryboardQuickCommandMessages(
+      "가이드",
+      STORYBOARD_USAGE_GUIDE_TEXT,
+      "done",
+      ["example"],
+    );
   }
 
   async function handleGenerateAllStoryboardImagesForResult(
@@ -5416,15 +5500,23 @@ export function AdminStoryboardGenerator({
     });
   }
 
-  async function handleStoryboardGuidedExampleGenerate() {
-    if (isGenerating || isChatAgentStreaming || isGeneratingImages) return;
+  function getNextStoryboardGuidedExamplePreset() {
     const presetIndex =
       storyboardGuidedExampleIndexRef.current %
       STORYBOARD_GUIDED_EXAMPLE_PRESETS.length;
     storyboardGuidedExampleIndexRef.current += 1;
-    const guidedPreset =
+    return (
       STORYBOARD_GUIDED_EXAMPLE_PRESETS[presetIndex] ??
-      STORYBOARD_GUIDED_EXAMPLE_PRESETS[0];
+      STORYBOARD_GUIDED_EXAMPLE_PRESETS[0]
+    );
+  }
+
+  async function handleStoryboardGuidedExampleGenerate(
+    selectedPreset?: StoryboardGuidedExamplePreset,
+  ) {
+    if (isGenerating || isChatAgentStreaming || isGeneratingImages) return;
+    const guidedPreset =
+      selectedPreset ?? getNextStoryboardGuidedExamplePreset();
     const guidedForm: GeneratorForm = {
       ...DEFAULT_FORM,
       prompt: guidedPreset.prompt,
@@ -5435,7 +5527,7 @@ export function AdminStoryboardGenerator({
     };
     const assistantMessageId = appendStoryboardQuickCommandMessages(
       `예시 생성 · ${guidedPreset.label}`,
-      `${guidedPreset.label} 예시 흐름에 맞춰 스토리보드와 전체 CUT 이미지를 함께 만들고 있어요.`,
+      `${guidedPreset.label} 예시를 왼쪽 캔버스에 로딩하고 있어요. 스토리보드가 준비되면 CUT별 이미지 생성까지 이어집니다.`,
       "streaming",
     );
     const generated = await handleGenerate(guidedForm, {
@@ -6008,6 +6100,7 @@ export function AdminStoryboardGenerator({
     submittedPrompt: string,
     assistantText: string,
     status: StoryboardChatMessage["status"] = "done",
+    actions?: StoryboardChatMessage["actions"],
   ) {
     const now = Date.now();
     appendStoryboardChatMessages([
@@ -6021,6 +6114,7 @@ export function AdminStoryboardGenerator({
         role: "assistant",
         text: assistantText,
         status,
+        actions,
       },
     ]);
     return `assistant-command-${now}`;
@@ -8200,15 +8294,17 @@ export function AdminStoryboardGenerator({
                     message.id === "assistant-intake";
                   const messageProgressLabel =
                     message.role === "assistant" &&
-                    (message.status === "streaming" ||
-                      message.imageGenerationProgress ||
-                      message.thinkingTrace?.length)
-                      ? message.status === "streaming"
-                        ? currentStreamingLabel
-                        : message.imageGenerationProgress
-                          ? "진행 상황"
-                          : "생각 중"
+                    message.status === "streaming" &&
+                    !message.thinkingTrace?.length &&
+                    !message.imageGenerationProgress
+                      ? currentStreamingLabel
                       : null;
+                  const messageStackClassName =
+                    isStoryboardChatStarterMessage
+                      ? "w-full space-y-1.5 text-left"
+                      : message.role === "user"
+                        ? "ml-auto flex max-w-[88%] flex-col items-end space-y-1.5 text-right"
+                        : "w-full space-y-1.5 text-left";
                   return (
                     <div
                       key={message.id}
@@ -8234,14 +8330,8 @@ export function AdminStoryboardGenerator({
                           : undefined
                       }
                     >
-                        <div
-                          className={`space-y-1.5 ${
-                            message.role === "user" ? "text-right" : "text-left"
-                        } ${isStoryboardChatStarterMessage ? "w-full" : ""}`}
-                        } ${isStoryboardChatStarterMessage ? "w-full" : ""}`}
-                          style={{
-                            maxWidth: message.role === "user" ? "88%" : "100%",
-                          }}
+                      <div
+                        className={messageStackClassName}
                         data-storyboard-chat-message-stack={
                           message.role === "user"
                             ? "user-bubble"
@@ -8275,38 +8365,31 @@ export function AdminStoryboardGenerator({
                           </div>
                         ) : isStoryboardChatStarterMessage ? (
                           <div
-                            className="mx-auto flex min-h-[72%] w-full flex-col justify-center gap-4 px-3 py-8 text-left"
+                            className="mx-auto flex min-h-full w-full flex-col justify-center gap-3 px-3 py-4 text-left"
                             data-storyboard-chat-starter-panel="true"
                             data-storyboard-chat-starter-panel-layout="inline-centered-recommendations"
                           >
-                            <div className="space-y-2">
-                              <p
-                                className="text-[11px] font-semibold text-primary"
-                                data-storyboard-chat-starter-eyebrow="true"
+                            <div className="flex items-center gap-2">
+                              <div
+                                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/15"
+                                data-storyboard-chat-starter-icon="true"
                               >
-                                스토리보드 시작
-                              </p>
-                              <h4
-                                className="text-lg font-semibold tracking-tight text-foreground"
-                                data-storyboard-chat-starter-title="true"
-                              >
-                                무엇부터 만들까요?
-                              </h4>
-                              <p
-                                className="max-w-[18rem] whitespace-pre-wrap break-keep text-xs leading-5 text-muted-foreground [overflow-wrap:anywhere]"
-                                aria-label={message.text}
-                                data-storyboard-chat-typewriter-text="true"
-                                data-storyboard-chat-typewriter-state={
-                                  isStoryboardChatMessageTyping
-                                    ? "typing"
-                                    : "complete"
-                                }
-                              >
-                                {storyboardChatMessageText}
-                              </p>
+                                <ImageIcon
+                                  className="h-4 w-4"
+                                  aria-hidden="true"
+                                />
+                              </div>
+                              <div className="min-w-0 space-y-0.5">
+                                <h4
+                                  className="text-2xl font-semibold tracking-tight text-foreground"
+                                  data-storyboard-chat-starter-title="true"
+                                >
+                                  무엇부터 만들까요?
+                                </h4>
+                              </div>
                             </div>
                             <div
-                              className="grid grid-cols-2 gap-2"
+                              className="grid grid-cols-1 gap-2"
                               data-storyboard-chat-starter-actions="true"
                             >
                               <Button
@@ -8325,23 +8408,47 @@ export function AdminStoryboardGenerator({
                               >
                                 가이드 보기
                               </Button>
-                              <Button
-                                type="button"
-                                className="h-9 justify-center rounded-full px-3 text-xs shadow-sm"
-                                onClick={() =>
-                                  void handleStoryboardGuidedExampleGenerate()
-                                }
-                                disabled={
-                                  isGenerating ||
-                                  isChatAgentStreaming ||
-                                  isGeneratingImages
-                                }
-                                data-storyboard-chat-guide-generate="true"
-                                data-storyboard-chat-message-action="example"
-                                data-storyboard-chat-starter-action="example"
-                              >
-                                예시 만들기
-                              </Button>
+                            </div>
+                            <div
+                              className="grid grid-cols-2 gap-2"
+                              data-storyboard-chat-example-grid="true"
+                              data-storyboard-chat-example-grid-layout="3x2"
+                            >
+                              {STORYBOARD_GUIDED_EXAMPLE_STARTER_PRESETS.map(
+                                (preset) => (
+                                  <button
+                                    key={preset.id}
+                                    type="button"
+                                    className="group min-h-[4.25rem] rounded-2xl border border-border/70 bg-background/75 p-2 text-left shadow-sm transition hover:border-primary/45 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                    onClick={() =>
+                                      void handleStoryboardGuidedExampleGenerate(
+                                        preset,
+                                      )
+                                    }
+                                    disabled={
+                                      isGenerating ||
+                                      isChatAgentStreaming ||
+                                      isGeneratingImages
+                                    }
+                                    aria-label={`${preset.label} 예시 불러오기`}
+                                    data-storyboard-chat-example-card="true"
+                                    data-storyboard-chat-example-preset={
+                                      preset.id
+                                    }
+                                  >
+                                    <span className="block truncate text-[11px] font-semibold text-foreground">
+                                      {preset.label}
+                                    </span>
+                                    <span className="mt-0.5 block text-[10px] font-medium text-primary">
+                                      {preset.segmentCount}컷 ·{" "}
+                                      {preset.targetLengthMinutes}분
+                                    </span>
+                                    <span className="mt-1 block line-clamp-2 text-[10px] leading-4 text-muted-foreground">
+                                      {preset.description}
+                                    </span>
+                                  </button>
+                                ),
+                              )}
                             </div>
                           </div>
                         ) : (
@@ -8361,6 +8468,49 @@ export function AdminStoryboardGenerator({
                             >
                               {storyboardChatMessageText}
                             </p>
+                            {message.actions?.length &&
+                            !isStoryboardChatMessageTyping ? (
+                              <div
+                                className="mt-2 flex flex-wrap gap-2"
+                                data-storyboard-chat-inline-actions="true"
+                              >
+                                {message.actions.includes("guide") ? (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 rounded-full px-3 text-[11px]"
+                                    onClick={handleStoryboardUsageGuideClick}
+                                    disabled={
+                                      isGenerating ||
+                                      isChatAgentStreaming ||
+                                      isGeneratingImages
+                                    }
+                                    data-storyboard-chat-inline-action="guide"
+                                  >
+                                    가이드 보기
+                                  </Button>
+                                ) : null}
+                                {message.actions.includes("example") ? (
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    className="h-8 rounded-full px-3 text-[11px]"
+                                    onClick={() =>
+                                      void handleStoryboardGuidedExampleGenerate()
+                                    }
+                                    disabled={
+                                      isGenerating ||
+                                      isChatAgentStreaming ||
+                                      isGeneratingImages
+                                    }
+                                    data-storyboard-chat-inline-action="example"
+                                  >
+                                    예시 만들기
+                                  </Button>
+                                ) : null}
+                              </div>
+                            ) : null}
                           </div>
                         )}
                         {message.thinkingTrace?.length ? (
@@ -8727,11 +8877,22 @@ export function AdminStoryboardGenerator({
           <CardHeader className="flex shrink-0 flex-row items-center gap-2 p-2 pb-1">
             <CardTitle
               className="flex min-w-0 items-center gap-2 text-sm"
-              aria-label="캔버스 편집 / PNG 내보내기"
+              aria-label={`스토리보드 주제 ${storyboardCanvasTopicTitle} · 이미지 ${generatedImageCount}/${totalCutCount} · PNG 내보내기`}
               data-storyboard-canvas-title="true"
             >
-              <span className="shrink-0 whitespace-nowrap font-semibold">
-                캔버스
+              <span
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15"
+                data-storyboard-canvas-topic-icon="true"
+                aria-hidden="true"
+              >
+                <Clapperboard className="h-3.5 w-3.5" />
+              </span>
+              <span
+                className="min-w-0 max-w-[min(32rem,40vw)] truncate font-semibold text-foreground"
+                data-storyboard-canvas-topic-title="true"
+                title={storyboardCanvasTopicTitle}
+              >
+                {storyboardCanvasTopicTitle}
               </span>
               <Badge
                 variant="outline"
@@ -8741,13 +8902,6 @@ export function AdminStoryboardGenerator({
               >
                 이미지 {generatedImageCount}/{totalCutCount}
               </Badge>
-              <span
-                className="min-w-0 max-w-[min(24rem,36vw)] truncate text-xs font-semibold text-foreground/75"
-                data-storyboard-canvas-topic-title="true"
-                title={storyboardCanvasTopicTitle}
-              >
-                {storyboardCanvasTopicTitle}
-              </span>
             </CardTitle>
             <div
               className="ml-auto flex min-w-0 flex-nowrap items-center gap-1 overflow-x-auto px-1 py-1 scrollbar-hide [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
