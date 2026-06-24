@@ -8048,10 +8048,10 @@ function AdminSidebar({
 
       <aside
         className={cn(
-          "relative z-30 hidden h-full min-h-0 w-max shrink-0 flex-col overflow-hidden border-r border-border bg-gradient-to-b from-card via-card to-background/95 p-2 shadow-sm transition-[width,padding] duration-300 motion-reduce:transition-none md:flex",
+          "relative z-30 hidden h-full min-h-0 w-max shrink-0 flex-col overflow-hidden border-r border-border bg-gradient-to-b from-card via-card to-background/95 p-2 font-sans tracking-normal shadow-sm transition-[width,padding] duration-300 motion-reduce:transition-none md:flex",
           isCollapsed
-            ? "md:w-16 md:min-w-16 md:max-w-16 md:items-center md:px-1.5"
-            : "md:w-[var(--admin-sidebar-expanded-width)] md:min-w-[var(--admin-sidebar-expanded-width)] md:max-w-[var(--admin-sidebar-expanded-width)]",
+            ? "md:w-[4.5rem] md:min-w-[4.5rem] md:max-w-[4.5rem] md:items-center md:px-1.5"
+            : "md:min-w-[var(--admin-sidebar-expanded-width)] md:max-w-[var(--admin-sidebar-expanded-max-width)]",
         )}
         aria-label="관리자 콘솔 사이드바"
         data-admin-left-panel-expanded={isCollapsed ? "false" : "true"}
@@ -8090,7 +8090,7 @@ function AdminSidebar({
             )}
             data-admin-sidebar-header-copy="true"
           >
-            <h2 className="truncate whitespace-nowrap text-sm font-bold tracking-[-0.03em] text-foreground text-pretty">
+            <h2 className="truncate whitespace-nowrap text-sm font-bold tracking-normal text-foreground text-pretty">
               관리자 콘솔
             </h2>
             <p className="mt-0.5 whitespace-nowrap text-[11px] leading-4 text-muted-foreground">
@@ -8974,8 +8974,8 @@ export function AdminConsoleOverview({
   } = useAdminOverviewStats(canLoadAdminConsoleData);
   const [activeModuleId, setActiveModuleId] =
     useState<AdminModuleId>(requestedModuleId);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [showSidebarLabels, setShowSidebarLabels] = useState(true);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+  const [showSidebarLabels, setShowSidebarLabels] = useState(false);
   const [isMobileHeaderVisible, setIsMobileHeaderVisible] = useState(true);
   const [isAdminMobileViewport, setIsAdminMobileViewport] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -8995,13 +8995,9 @@ export function AdminConsoleOverview({
   }, []);
 
   useEffect(() => {
-    const storedSidebarState = window.localStorage.getItem(
-      ADMIN_SIDEBAR_COLLAPSED_STORAGE_KEY,
-    );
-    const shouldCollapseSidebar = storedSidebarState === "1";
-
-    setIsSidebarCollapsed(shouldCollapseSidebar);
-    setShowSidebarLabels(!shouldCollapseSidebar);
+    window.localStorage.setItem(ADMIN_SIDEBAR_COLLAPSED_STORAGE_KEY, "1");
+    setIsSidebarCollapsed(true);
+    setShowSidebarLabels(false);
   }, []);
 
   useEffect(() => {
@@ -9062,7 +9058,7 @@ export function AdminConsoleOverview({
 
       window.localStorage.setItem(
         ADMIN_SIDEBAR_COLLAPSED_STORAGE_KEY,
-        nextCollapsed ? "1" : "0",
+        nextCollapsed ? "1" : "session-expanded",
       );
 
       return nextCollapsed;
@@ -9241,7 +9237,7 @@ export function AdminConsoleOverview({
 
   return (
     <main
-      className="h-[var(--full-height,100vh)] min-h-0 w-full overflow-hidden bg-background text-foreground"
+      className="h-[var(--full-height,100vh)] min-h-0 w-full overflow-hidden bg-background font-sans text-foreground tracking-normal"
       data-admin-console-shell="true"
     >
       <a
@@ -9278,7 +9274,7 @@ export function AdminConsoleOverview({
           tabIndex={-1}
           aria-label="관리자 콘솔 작업 화면"
           className={cn(
-            "h-full min-h-0 min-w-0 overflow-x-hidden overscroll-contain border-y border-border bg-background p-2 md:border-y-0 md:p-4",
+            "h-full min-h-0 min-w-0 overflow-x-hidden overscroll-contain border-y border-border bg-background p-2 font-sans tracking-normal md:border-y-0 md:p-4",
             activeModuleId === "overview"
               ? "overflow-y-auto lg:overflow-hidden"
               : activeModuleId === "storyboard"

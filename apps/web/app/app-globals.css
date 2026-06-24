@@ -937,6 +937,26 @@ div[style*="z-index"] > div > .custom-marker {
   min-height: 0;
   width: 100%;
   overflow: hidden;
+  font-family:
+    var(--font-sans, ui-sans-serif), system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic",
+    sans-serif;
+  letter-spacing: 0;
+}
+
+[data-admin-console-content="true"] {
+  font-family:
+    var(--font-sans, ui-sans-serif), system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic",
+    sans-serif;
+  letter-spacing: 0;
+}
+
+[data-admin-console-shell="true"] .font-sans,
+[data-admin-console-shell="true"] .font-serif,
+[data-admin-console-content="true"] .font-sans,
+[data-admin-console-content="true"] .font-serif {
+  font-family: inherit;
 }
 
 [data-admin-console-layout="sidebar-content"] {
@@ -1063,23 +1083,23 @@ div[style*="z-index"] > div > .custom-marker {
 @media (min-width: 768px) {
   [data-admin-console-layout="sidebar-content"] {
     grid-template-columns:
-      var(--admin-sidebar-expanded-width)
+      fit-content(var(--admin-sidebar-expanded-max-width))
       minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr);
   }
 
   [data-admin-console-layout="sidebar-content"]
     > [data-admin-left-panel-expanded="true"] {
-    width: var(--admin-sidebar-expanded-width);
+    width: max-content;
     min-width: var(--admin-sidebar-expanded-width);
-    max-width: var(--admin-sidebar-expanded-width);
+    max-width: var(--admin-sidebar-expanded-max-width);
   }
 
   [data-admin-console-layout="sidebar-content"]
     > [data-admin-left-panel-expanded="false"] {
-    width: 4rem;
-    min-width: 4rem;
-    max-width: 4rem;
+    width: 4.5rem;
+    min-width: 4.5rem;
+    max-width: 4.5rem;
   }
 
   [data-admin-left-panel-expanded="false"]
@@ -1207,7 +1227,7 @@ div[style*="z-index"] > div > .custom-marker {
   }
 
   [data-admin-console-layout="sidebar-content"][data-admin-console-sidebar-collapsed="true"] {
-    grid-template-columns: 4rem minmax(0, 1fr);
+    grid-template-columns: 4.5rem minmax(0, 1fr);
   }
 }
 
