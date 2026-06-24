@@ -266,6 +266,8 @@ function getSidebarConsoleItems(
 
 const guardedSteps = ["미리보기", "확인", "적용", "재확인", "감사 기록"];
 const ADMIN_THEME_STORAGE_KEY = "tzudong-admin-theme";
+const ADMIN_SIDEBAR_COLLAPSED_STORAGE_KEY = "tzudong-admin-sidebar-collapsed";
+const SIDEBAR_LABEL_REVEAL_DELAY_MS = 120;
 
 type AdminThemePreference = "light" | "dark" | "system";
 
@@ -8049,7 +8051,7 @@ function AdminSidebar({
           "relative z-30 hidden h-full min-h-0 w-max shrink-0 flex-col overflow-hidden border-r border-border bg-gradient-to-b from-card via-card to-background/95 p-2 shadow-sm transition-[width,padding] duration-300 motion-reduce:transition-none md:flex",
           isCollapsed
             ? "md:w-16 md:min-w-16 md:max-w-16 md:items-center md:px-1.5"
-            : "md:min-w-[14.25rem] md:max-w-[var(--admin-sidebar-expanded-max-width)]",
+            : "md:w-[var(--admin-sidebar-expanded-width)] md:min-w-[var(--admin-sidebar-expanded-width)] md:max-w-[var(--admin-sidebar-expanded-width)]",
         )}
         aria-label="관리자 콘솔 사이드바"
         data-admin-left-panel-expanded={isCollapsed ? "false" : "true"}
@@ -8972,8 +8974,8 @@ export function AdminConsoleOverview({
   } = useAdminOverviewStats(canLoadAdminConsoleData);
   const [activeModuleId, setActiveModuleId] =
     useState<AdminModuleId>(requestedModuleId);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
-  const showSidebarLabels = !isSidebarCollapsed;
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [showSidebarLabels, setShowSidebarLabels] = useState(true);
   const [isMobileHeaderVisible, setIsMobileHeaderVisible] = useState(true);
   const [isAdminMobileViewport, setIsAdminMobileViewport] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -8991,6 +8993,31 @@ export function AdminConsoleOverview({
     setHasHydrated(true);
     setHasE2EAdminShellBypass(hasLocalE2EAdminShellBypass());
   }, []);
+
+  useEffect(() => {
+    const storedSidebarState = window.localStorage.getItem(
+      ADMIN_SIDEBAR_COLLAPSED_STORAGE_KEY,
+    );
+    const shouldCollapseSidebar = storedSidebarState === "1";
+
+    setIsSidebarCollapsed(shouldCollapseSidebar);
+    setShowSidebarLabels(!shouldCollapseSidebar);
+  }, []);
+
+  useEffect(() => {
+    if (isSidebarCollapsed) {
+      setShowSidebarLabels(false);
+      return;
+    }
+
+    const revealLabelsTimer = window.setTimeout(() => {
+      setShowSidebarLabels(true);
+    }, SIDEBAR_LABEL_REVEAL_DELAY_MS);
+
+    return () => {
+      window.clearTimeout(revealLabelsTimer);
+    };
+  }, [isSidebarCollapsed]);
 
   useEffect(() => {
     if (activeModuleId === "storyboard") {
@@ -9028,6 +9055,19 @@ export function AdminConsoleOverview({
     },
     [router],
   );
+
+  const handleToggleSidebarCollapsed = useCallback(() => {
+    setIsSidebarCollapsed((currentCollapsed) => {
+      const nextCollapsed = !currentCollapsed;
+
+      window.localStorage.setItem(
+        ADMIN_SIDEBAR_COLLAPSED_STORAGE_KEY,
+        nextCollapsed ? "1" : "0",
+      );
+
+      return nextCollapsed;
+    });
+  }, []);
 
   useEffect(() => {
     const stateWarning = getAdminModuleStateWarning(searchParams);
@@ -9201,7 +9241,7 @@ export function AdminConsoleOverview({
 
   return (
     <main
-      className="h-full min-h-0 w-full overflow-hidden bg-background text-foreground"
+      className="h-[var(--full-height,100vh)] min-h-0 w-full overflow-hidden bg-background text-foreground"
       data-admin-console-shell="true"
     >
       <a
@@ -9226,9 +9266,7 @@ export function AdminConsoleOverview({
           onSelectModule={selectModule}
           isCollapsed={isSidebarCollapsed}
           showLabels={showSidebarLabels}
-          onToggleCollapsed={() =>
-            setIsSidebarCollapsed((currentCollapsed) => !currentCollapsed)
-          }
+          onToggleCollapsed={handleToggleSidebarCollapsed}
           showMobileHeader={isMobileHeaderVisible}
           canLoadPreferences={canLoadAdminConsoleData}
           stats={stats}
