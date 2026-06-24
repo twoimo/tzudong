@@ -573,6 +573,16 @@
   color: hsl(var(--primary-foreground));
 }
 
+[data-storyboard-chat-message="user"] {
+  justify-content: flex-end;
+}
+
+[data-storyboard-chat-message="user"]
+  [data-storyboard-chat-message-stack="user-bubble"] {
+  align-items: flex-end;
+  margin-left: auto;
+}
+
 @media (max-width: 1099px) {
   [data-admin-console-content="true"][data-admin-console-active-module="storyboard"] {
     overflow-y: auto !important;
@@ -662,6 +672,7 @@ All colors MUST be HSL.
     --mobile-sheet-header-progress: 0;
     --mobile-sheet-header-offset: 0px;
     --app-header-height: 56px;
+    --admin-sidebar-expanded-width: 14.25rem;
     --admin-sidebar-expanded-max-width: min(18rem, 28vw);
 
     --sidebar-background: 38 30% 98%;
@@ -1052,16 +1063,16 @@ div[style*="z-index"] > div > .custom-marker {
 @media (min-width: 768px) {
   [data-admin-console-layout="sidebar-content"] {
     grid-template-columns:
-      fit-content(var(--admin-sidebar-expanded-max-width))
+      var(--admin-sidebar-expanded-width)
       minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr);
   }
 
   [data-admin-console-layout="sidebar-content"]
     > [data-admin-left-panel-expanded="true"] {
-    width: max-content;
-    min-width: 14.25rem;
-    max-width: var(--admin-sidebar-expanded-max-width);
+    width: var(--admin-sidebar-expanded-width);
+    min-width: var(--admin-sidebar-expanded-width);
+    max-width: var(--admin-sidebar-expanded-width);
   }
 
   [data-admin-console-layout="sidebar-content"]
