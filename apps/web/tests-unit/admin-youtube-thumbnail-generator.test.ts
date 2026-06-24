@@ -1624,7 +1624,7 @@ process.stdin.on("end", () => {
     }
   });
 
-  test("rejects exact-looking local Codex proof when durable path is a symlink escape", () => {
+  test("rejects exact-looking local Codex proof when durable path escapes its durable root", () => {
     const tempDir = mkdtempSync(join(tmpdir(), "thumbnail-local-codex-symlink-proof-"));
     const outsideDir = mkdtempSync(join(tmpdir(), "thumbnail-local-codex-outside-"));
     const outsidePng = join(outsideDir, "outside.png");
@@ -1634,8 +1634,17 @@ process.stdin.on("end", () => {
     try {
       writeTinyPng(outsidePng);
       mkdirSync(dirname(durableLink), { recursive: true });
-      symlinkSync(outsidePng, durableLink);
-      writeExactLocalCodexProof(proofPath, durableLink, { bytes: readFileSync(outsidePng).byteLength });
+      let proofOutputPath = durableLink;
+      try {
+        symlinkSync(outsidePng, durableLink);
+      } catch (error) {
+        const code = error && typeof error === "object" && "code" in error
+          ? String((error as { code?: unknown }).code)
+          : "";
+        if (code !== "EPERM" && code !== "EACCES") throw error;
+        proofOutputPath = outsidePng;
+      }
+      writeExactLocalCodexProof(proofPath, proofOutputPath, { bytes: readFileSync(outsidePng).byteLength });
 
       expect(getThumbnailProviderAvailability({
         THUMBNAIL_LOCAL_CODEX_IMAGE_MODEL: "gpt-image-2",
