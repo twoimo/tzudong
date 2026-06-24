@@ -105,6 +105,25 @@ describe('storyboard agent graph fidelity', () => {
     expect(report.roles.find((role) => role.id === 'intern')?.evidenceState).toBe('blocked');
   });
 
+  test('passes local adapter when it provides canonical reference graph evidence', () => {
+    const report = buildStoryboardAgentGraphFidelity({
+      candidate: { referenceGraph: canonicalReferenceGraph() },
+      graph: {
+        ...genericGraph,
+        runtime: 'local_adapter_fallback',
+        mode: 'local_adapter',
+      },
+      mode: 'backend_agent_local_adapter',
+      finalOutputReady: true,
+      storyboardHistoryCount: 2,
+    });
+
+    expect(report.status).toBe('passed');
+    expect(report.score).toBeGreaterThanOrEqual(98);
+    expect(report.evidenceMode).toBe('canonical_reference_graph');
+    expect(report.blockers).toEqual([]);
+  });
+
   test('passes only with canonical Supervisor/Researcher/Intern/Designer evidence', () => {
     const report = buildStoryboardAgentGraphFidelity({
       candidate: { referenceGraph: canonicalReferenceGraph() },
