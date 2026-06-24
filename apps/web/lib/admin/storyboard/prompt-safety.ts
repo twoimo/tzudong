@@ -36,6 +36,21 @@ function collapseSafetyReplacements(value: string) {
     .trim();
 }
 
+function matchesAnySafetyPattern(value: string, patterns: RegExp[]) {
+  return patterns.some((pattern) => {
+    pattern.lastIndex = 0;
+    return pattern.test(value);
+  });
+}
+
+export function hasUnsafeStoryboardInstructionRequest(value: string) {
+  return (
+    matchesAnySafetyPattern(value, SECRET_VALUE_PATTERNS) ||
+    matchesAnySafetyPattern(value, SECRET_REFERENCE_PATTERNS) ||
+    matchesAnySafetyPattern(value, HOSTILE_INSTRUCTION_PATTERNS)
+  );
+}
+
 export function sanitizeStoryboardPublicText(value: string) {
   const withoutSecretValues = SECRET_VALUE_PATTERNS.reduce(
     (text, pattern) => text.replace(pattern, STORYBOARD_PUBLIC_SAFETY_REPLACEMENT),
