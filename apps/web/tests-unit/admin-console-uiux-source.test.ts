@@ -962,7 +962,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("return null;");
     expect(adminLoadingSource).not.toContain("AdminConsoleLoadingSkeleton");
     expect(source("app/app-globals.css")).toMatch(
-      /grid-template-columns:\s*var\(--admin-sidebar-expanded-width\)\s*minmax\(0, 1fr\);/,
+      /grid-template-columns:\s*fit-content\(var\(--admin-sidebar-expanded-max-width\)\)\s*minmax\(0, 1fr\);/,
     );
     expect(consoleSource).not.toContain("lg:w-[280px]");
     expect(consoleSource).not.toContain(
@@ -1021,6 +1021,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
 
   test("keeps overview reference widgets uncluttered and source-honest", () => {
     const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
+    const appGlobalsSource = source("app/app-globals.css");
     const overviewSource = source(
       "components/admin/AdminOverviewDashboard.tsx",
     );
@@ -1128,6 +1129,13 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       "flex min-h-full min-w-0 flex-col overflow-visible bg-background p-0 font-sans text-foreground lg:h-full lg:min-h-0 lg:overflow-hidden",
     );
+    expect(consoleSource).toContain(
+      "h-full min-h-0 min-w-0 overflow-x-hidden overscroll-contain border-y border-border bg-background p-2 font-sans tracking-normal md:border-y-0 md:p-4",
+    );
+    expect(appGlobalsSource).toContain(
+      '[data-admin-console-content="true"] .font-serif',
+    );
+    expect(appGlobalsSource).toContain("font-family: inherit;");
     expect(consoleSource).toContain(
       "grid min-h-0 min-w-0 flex-1 auto-rows-min grid-cols-1 gap-2 overflow-x-hidden overflow-y-visible sm:grid-cols-2 lg:grid-cols-10 lg:grid-rows-[132px_minmax(0,1fr)_minmax(0,0.86fr)]",
     );
@@ -2580,7 +2588,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-admin-console-layout="sidebar-content"',
     );
     expect(consoleSource).toContain('data-admin-console-content="true"');
-    expect(consoleSource).toContain("p-2 md:border-y-0 md:p-4");
+    expect(consoleSource).toContain(
+      "p-2 font-sans tracking-normal md:border-y-0 md:p-4",
+    );
     expect(consoleSource).not.toContain(
       "pb-[calc(env(safe-area-inset-bottom)+5.75rem)]",
     );
@@ -2652,16 +2662,16 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       '[data-admin-console-layout="sidebar-content"]',
     );
     expect(appGlobalsSource).toMatch(
-      /grid-template-columns:\s*var\(--admin-sidebar-expanded-width\)\s*minmax\(0, 1fr\);/,
+      /grid-template-columns:\s*fit-content\(var\(--admin-sidebar-expanded-max-width\)\)\s*minmax\(0, 1fr\);/,
     );
     expect(
       appGlobalsSource.match(
-        /grid-template-columns:\s*var\(--admin-sidebar-expanded-width\)\s*minmax\(0, 1fr\);/g,
+        /grid-template-columns:\s*fit-content\(var\(--admin-sidebar-expanded-max-width\)\)\s*minmax\(0, 1fr\);/g,
       ) ?? [],
     ).toHaveLength(1);
     expect(
       appGlobalsSource.match(
-        /grid-template-columns: 4rem minmax\(0, 1fr\);/g,
+        /grid-template-columns: 4\.5rem minmax\(0, 1fr\);/g,
       ) ?? [],
     ).toHaveLength(1);
     expect(appGlobalsSource).toContain(
@@ -2674,20 +2684,20 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "--admin-sidebar-expanded-width: 14.25rem;",
     );
     expect(appGlobalsSource).toContain(
-      "width: var(--admin-sidebar-expanded-width);",
+      "width: max-content;",
     );
     expect(appGlobalsSource).toContain(
       "min-width: var(--admin-sidebar-expanded-width);",
     );
     expect(appGlobalsSource).toContain(
-      "max-width: var(--admin-sidebar-expanded-width);",
+      "max-width: var(--admin-sidebar-expanded-max-width);",
     );
     expect(appGlobalsSource).toContain(
       '[data-admin-console-layout="sidebar-content"]\n    > [data-admin-left-panel-expanded="false"]',
     );
-    expect(appGlobalsSource).toContain("width: 4rem;");
-    expect(appGlobalsSource).toContain("min-width: 4rem;");
-    expect(appGlobalsSource).toContain("max-width: 4rem;");
+    expect(appGlobalsSource).toContain("width: 4.5rem;");
+    expect(appGlobalsSource).toContain("min-width: 4.5rem;");
+    expect(appGlobalsSource).toContain("max-width: 4.5rem;");
     expectCssDeclaration(
       appGlobalsSource,
       '[data-admin-left-panel-expanded="false"] > [data-admin-sidebar-header="true"]',
@@ -2738,13 +2748,13 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(appGlobalsSource).toContain("max-width: 100% !important;");
     expect(appGlobalsSource).toContain(
-      "grid-template-columns: 4rem minmax(0, 1fr);",
+      "grid-template-columns: 4.5rem minmax(0, 1fr);",
     );
     expect(consoleSource).toContain(
-      '? "md:w-16 md:min-w-16 md:max-w-16 md:items-center md:px-1.5"',
+      '? "md:w-[4.5rem] md:min-w-[4.5rem] md:max-w-[4.5rem] md:items-center md:px-1.5"',
     );
     expect(consoleSource).toContain(
-      ': "md:w-[var(--admin-sidebar-expanded-width)] md:min-w-[var(--admin-sidebar-expanded-width)] md:max-w-[var(--admin-sidebar-expanded-width)]"',
+      ': "md:min-w-[var(--admin-sidebar-expanded-width)] md:max-w-[var(--admin-sidebar-expanded-max-width)]"',
     );
   });
 
@@ -7387,10 +7397,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       '<Icon className="h-3.5 w-3.5" aria-hidden="true" />',
     );
     expect(consoleSource).toContain(
-      "const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);",
+      "const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);",
     );
     expect(consoleSource).toContain(
-      "const [showSidebarLabels, setShowSidebarLabels] = useState(true);",
+      "const [showSidebarLabels, setShowSidebarLabels] = useState(false);",
     );
     expect(consoleSource).toContain("ADMIN_SIDEBAR_COLLAPSED_STORAGE_KEY");
     expect(consoleSource).toContain("SIDEBAR_LABEL_REVEAL_DELAY_MS");
@@ -7419,7 +7429,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(consoleSource).toContain("md:min-w-[var(--admin-sidebar-expanded-width)]");
     expect(consoleSource).toContain(
-      "md:max-w-[var(--admin-sidebar-expanded-width)]",
+      "md:max-w-[var(--admin-sidebar-expanded-max-width)]",
     );
     expect(consoleSource).toContain("isCollapsed &&");
     expect(consoleSource).toContain(
@@ -7657,7 +7667,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
 
     expect(source("app/app-globals.css")).toMatch(
-      /grid-template-columns:\s*var\(--admin-sidebar-expanded-width\)\s*minmax\(0, 1fr\);/,
+      /grid-template-columns:\s*fit-content\(var\(--admin-sidebar-expanded-max-width\)\)\s*minmax\(0, 1fr\);/,
     );
     expect(consoleSource).toContain(
       'data-admin-console-menu-trigger="hamburger"',
@@ -7666,7 +7676,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-admin-dashboard-period-select-trigger="true"',
     );
     expect(consoleSource).toContain('data-admin-dashboard-period-menu="true"');
-    expect(consoleSource).toContain("p-2 md:border-y-0 md:p-4");
+    expect(consoleSource).toContain(
+      "p-2 font-sans tracking-normal md:border-y-0 md:p-4",
+    );
     expect(consoleSource).not.toContain(
       "pb-[calc(env(safe-area-inset-bottom)+5.75rem)]",
     );
@@ -7742,6 +7754,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain("공지사항 운영 화면 준비 중");
     expect(consoleSource).not.toContain("사용자 관리 화면 준비 중");
     expect(bannersSource).toContain('embedded ? "px-2 py-1.5"');
+    expect(bannersSource).toContain(
+      'embedded ? "flex h-full min-h-0 flex-col overflow-hidden bg-background font-sans tracking-normal" : "min-h-screen bg-[#fdfbf7] font-serif"',
+    );
     expect(bannersSource).toContain(
       "xl:grid-cols-[minmax(330px,0.95fr)_minmax(420px,1.05fr)]",
     );
