@@ -53,14 +53,16 @@ describe("mobile and desktop parity source contracts", () => {
     expect(consoleSource).toContain("md:hidden");
     expect(consoleSource).toContain("md:flex");
     expect(source("app/app-globals.css")).toMatch(
-      /grid-template-columns:\s*var\(--admin-sidebar-expanded-width\)\s*minmax\(0, 1fr\);/,
+      /grid-template-columns:\s*fit-content\(var\(--admin-sidebar-expanded-max-width\)\)\s*minmax\(0, 1fr\);/,
     );
     expect(source("app/app-globals.css")).toContain(
-      "grid-template-columns: 4rem minmax(0, 1fr);",
+      "grid-template-columns: 4.5rem minmax(0, 1fr);",
     );
     expect(consoleSource).toContain("md:w-full");
     expect(consoleSource).toContain("md:items-center md:px-1.5");
-    expect(consoleSource).toContain("p-2 md:border-y-0 md:p-4");
+    expect(consoleSource).toContain(
+      "p-2 font-sans tracking-normal md:border-y-0 md:p-4",
+    );
     expect(consoleSource).not.toContain("pb-[calc(env(safe-area-inset-bottom)+5.75rem)]");
     expect(consoleSource).toContain("flex h-14 shrink-0 transform-gpu items-center gap-2");
     expect(consoleSource).toContain("translate3d(0, 0, 0)");
@@ -68,15 +70,15 @@ describe("mobile and desktop parity source contracts", () => {
       'data-admin-left-panel-expanded={isCollapsed ? "false" : "true"}',
     );
     expect(consoleSource).toContain(
-      "const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);",
+      "const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);",
     );
     expect(consoleSource).toContain(
-      "const [showSidebarLabels, setShowSidebarLabels] = useState(true);",
+      "const [showSidebarLabels, setShowSidebarLabels] = useState(false);",
     );
     expect(consoleSource).toContain("ADMIN_SIDEBAR_COLLAPSED_STORAGE_KEY");
     expect(consoleSource).toContain("SIDEBAR_LABEL_REVEAL_DELAY_MS");
     expect(consoleSource).toContain("handleToggleSidebarCollapsed");
-    expect(consoleSource).toContain("setShowSidebarLabels(!shouldCollapseSidebar)");
+    expect(consoleSource).toContain("setShowSidebarLabels(false)");
     expect(consoleSource).toContain("관리자 사이드바 펼치기");
     expect(consoleSource).toContain("관리자 사이드바 접기");
     expect(consoleSource).toContain('aria-controls="admin-console-canvas"');
