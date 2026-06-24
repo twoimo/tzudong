@@ -8234,13 +8234,14 @@ export function AdminStoryboardGenerator({
                           : undefined
                       }
                     >
-                      <div
-                        className={`space-y-1.5 ${
-                          message.role === "user" ? "text-right" : "text-left"
+                        <div
+                          className={`space-y-1.5 ${
+                            message.role === "user" ? "text-right" : "text-left"
                         } ${isStoryboardChatStarterMessage ? "w-full" : ""}`}
-                        style={{
-                          maxWidth: message.role === "user" ? "88%" : "100%",
-                        }}
+                        } ${isStoryboardChatStarterMessage ? "w-full" : ""}`}
+                          style={{
+                            maxWidth: message.role === "user" ? "88%" : "100%",
+                          }}
                         data-storyboard-chat-message-stack={
                           message.role === "user"
                             ? "user-bubble"
