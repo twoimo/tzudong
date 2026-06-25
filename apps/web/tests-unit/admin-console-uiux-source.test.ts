@@ -1022,6 +1022,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
   test("keeps overview reference widgets uncluttered and source-honest", () => {
     const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
     const appGlobalsSource = source("app/app-globals.css");
+    const appLayoutSource = source("app/layout.tsx");
     const overviewSource = source(
       "components/admin/AdminOverviewDashboard.tsx",
     );
@@ -1136,6 +1137,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       '[data-admin-console-content="true"] .font-serif',
     );
     expect(appGlobalsSource).toContain("font-family: inherit;");
+    expect(appLayoutSource).toContain("className={notoSerifKr.variable}");
     expect(appGlobalsSource).toContain(
       '[data-admin-dashboard-management="true"]',
     );
@@ -1282,7 +1284,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("dark:bg-muted/35");
     expect(consoleSource).toContain("dark:text-white");
     expect(consoleSource).not.toContain("dark:text-slate-950");
-    expect(consoleSource).toContain("bg-amber-600 text-white");
+    expect(consoleSource).toContain("bg-teal-500 text-white dark:bg-teal-500 dark:text-white");
+    expect(consoleSource).toContain("bg-muted-foreground/45 text-background");
+    expect(consoleSource).not.toContain("bg-amber-600 text-white");
     expect(consoleSource).not.toContain("toneClass.split");
     expect(consoleSource).not.toContain("text-[9px]");
     expect(consoleSource).not.toContain(
@@ -1357,15 +1361,14 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain("textClassName?: string");
     expect(consoleSource).not.toContain("option.textClassName");
     expect(consoleSource).toContain(
-      "border-sky-500/25 bg-sky-50 text-foreground",
+      "border-teal-500/25 bg-teal-50 text-foreground",
     );
     expect(consoleSource).toContain(
-      "border-rose-500/25 bg-rose-50 text-foreground",
+      "border-border bg-muted/35 text-muted-foreground dark:bg-muted/20",
     );
-    expect(consoleSource).toContain(
-      "border-orange-500/25 bg-orange-50 text-foreground",
-    );
-    expect(consoleSource).toContain('dotClassName: "bg-orange-500"');
+    expect(consoleSource).toContain('dotClassName: "bg-amber-500"');
+    expect(consoleSource).toContain('dotClassName: "bg-muted-foreground/45"');
+    expect(consoleSource).toContain('dotClassName: "bg-muted-foreground/30"');
     expect(consoleSource).not.toContain(
       'textClassName: "text-orange-700 dark:text-orange-300"',
     );
@@ -1619,8 +1622,11 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain('dataKey="참여최저"');
     expect(consoleSource).toContain('dataKey="참여율최고"');
     expect(consoleSource).toContain('dataKey="참여율최저"');
-    expect(consoleSource).toContain('stroke="#f59e0b"');
-    expect(consoleSource).toContain('stroke="#0f766e"');
+    expect(consoleSource).toContain("adminDashboardFocusPalette");
+    expect(consoleSource).toContain('warning: "#f59e0b"');
+    expect(consoleSource).toContain("stroke={adminDashboardFocusPalette.primary}");
+    expect(consoleSource).toContain("stroke={adminDashboardFocusPalette.warning}");
+    expect(consoleSource).toContain("stopColor={adminDashboardFocusPalette.warning}");
     expect(consoleSource).toContain(
       "계산식: 정규화 점수 = 해당 값 / 해당 지표 최고값 × 100.",
     );
@@ -1784,6 +1790,11 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain("조회 보강 후보");
     expect(consoleSource).not.toContain("참여 보강 후보");
     expect(consoleSource).toContain("신규 반응 확인");
+    expect(consoleSource).toContain('tone: "primary"');
+    expect(consoleSource).toContain('tone: "warning"');
+    expect(consoleSource).toContain('tone: "risk"');
+    expect(consoleSource).not.toContain('tone: "emerald"');
+    expect(consoleSource).not.toContain('tone: "sky"');
     expect(consoleSource).not.toContain("진단 대기");
     expect(consoleSource).not.toContain("비교 데이터 부족");
     expect(consoleSource).not.toContain(
@@ -2292,6 +2303,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(consoleSource).toContain("text-teal-700 dark:text-teal-300");
     expect(consoleSource).toContain("text-rose-700 dark:text-rose-300");
+    expect(consoleSource).toContain("bg-muted-foreground/35");
     expect(consoleSource).not.toContain(
       "rounded-xl border border-border/60 bg-card/45 p-3",
     );
