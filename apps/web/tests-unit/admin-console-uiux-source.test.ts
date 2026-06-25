@@ -7751,6 +7751,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "lg:grid-rows-[132px_minmax(0,1fr)_minmax(0,0.9fr)]",
     );
     expect(tailwindSource).toContain("lg:col-span-5");
+    expect(tailwindSource).toContain("font-extrabold");
+    expect(tailwindSource).toContain("md:p-4");
+    expect(tailwindSource).toContain("gap-0");
+    expect(tailwindSource).toContain("text-[clamp(1.42rem,1.75vw,2.1rem)]");
     expect(overviewSource).toContain("overflow-visible lg:h-full lg:min-h-0");
     expect(overviewSource).toContain(
       "lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]",
