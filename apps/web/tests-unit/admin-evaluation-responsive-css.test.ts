@@ -24,6 +24,55 @@ const criticalAdminConsoleLayoutUtilities = [
   "lg:place-items-center",
 ] as const;
 
+const criticalKpiDashboardProductionUtilities = [
+  {
+    utility: "font-extrabold",
+    declarations: ["font-weight:800"],
+  },
+  {
+    utility: "font-black",
+    declarations: ["font-weight:900"],
+  },
+  {
+    utility: "md:p-4",
+    declarations: ["padding:1rem"],
+  },
+  {
+    utility: "gap-0",
+    declarations: ["gap:0px"],
+  },
+  {
+    utility: "tracking-[0.01em]",
+    declarations: ["letter-spacing:.01em", "letter-spacing:0.01em"],
+    match: "any",
+  },
+  {
+    utility: "tracking-[0.04em]",
+    declarations: ["letter-spacing:.04em", "letter-spacing:0.04em"],
+    match: "any",
+  },
+  {
+    utility: "text-[clamp(1.42rem,1.75vw,2.1rem)]",
+    declarations: ["font-size:clamp(1.42rem,1.75vw,2.1rem)"],
+    selectorOptional: true,
+  },
+  {
+    utility: "min-h-[132px]",
+    declarations: ["min-height:132px"],
+  },
+  {
+    utility: "grid-rows-[auto_minmax(0,1fr)_auto]",
+    declarations: ["grid-template-rows:auto minmax(0,1fr) auto"],
+    selectorOptional: true,
+  },
+  {
+    utility: "grid-cols-[5.5rem_minmax(0,1fr)_3rem]",
+    declarations: ["grid-template-columns:5.5rem minmax(0,1fr) 3rem"],
+    selectorOptional: true,
+  },
+] as const;
+
+
 afterAll(() => {
   for (const dir of tempDirs) {
     rmSync(dir, { recursive: true, force: true });
@@ -31,7 +80,11 @@ afterAll(() => {
 });
 
 function escapeCssClass(className: string) {
-  return className.replace(/[:.]/g, "\\$&");
+  return className.replace(/([:.[\]()%,])/g, "\\$1");
+}
+
+function compactCss(value: string) {
+  return value.replace(/\s+/g, "");
 }
 
 function escapeRegExp(value: string) {
@@ -85,6 +138,24 @@ describe("admin responsive CSS guard", () => {
       expect(css, `${utility} should be emitted`).toContain(
         `.${escapeCssClass(utility)}`,
       );
+    }
+
+    const compactedCss = compactCss(css);
+    for (const rule of criticalKpiDashboardProductionUtilities) {
+      if (!("selectorOptional" in rule)) {
+        expect(css, `${rule.utility} should be emitted`).toContain(
+          `.${escapeCssClass(rule.utility)}`,
+        );
+      }
+
+      const declarations = [...rule.declarations];
+      const hasDeclaration = declarations.some((declaration) =>
+        compactedCss.includes(compactCss(declaration)),
+      );
+      expect(
+        hasDeclaration,
+        `${rule.utility} should include one of ${declarations.join(", ")}`,
+      ).toBe(true);
     }
   }, 20_000);
 });
