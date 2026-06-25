@@ -54,7 +54,6 @@ const criticalKpiDashboardProductionUtilities = [
   {
     utility: "text-[clamp(1.42rem,1.75vw,2.1rem)]",
     declarations: ["font-size:clamp(1.42rem,1.75vw,2.1rem)"],
-    selectorOptional: true,
   },
   {
     utility: "min-h-[132px]",
@@ -63,12 +62,10 @@ const criticalKpiDashboardProductionUtilities = [
   {
     utility: "grid-rows-[auto_minmax(0,1fr)_auto]",
     declarations: ["grid-template-rows:auto minmax(0,1fr) auto"],
-    selectorOptional: true,
   },
   {
     utility: "grid-cols-[5.5rem_minmax(0,1fr)_3rem]",
     declarations: ["grid-template-columns:5.5rem minmax(0,1fr) 3rem"],
-    selectorOptional: true,
   },
 ] as const;
 
@@ -80,7 +77,9 @@ afterAll(() => {
 });
 
 function escapeCssClass(className: string) {
-  return className.replace(/([:.[\]()%,])/g, "\\$1");
+  return className
+    .replace(/,/g, "\\2c ")
+    .replace(/([:.[\]()/%])/g, "\\$1");
 }
 
 function compactCss(value: string) {
@@ -142,11 +141,9 @@ describe("admin responsive CSS guard", () => {
 
     const compactedCss = compactCss(css);
     for (const rule of criticalKpiDashboardProductionUtilities) {
-      if (!("selectorOptional" in rule)) {
-        expect(css, `${rule.utility} should be emitted`).toContain(
-          `.${escapeCssClass(rule.utility)}`,
-        );
-      }
+      expect(css, `${rule.utility} should be emitted`).toContain(
+        `.${escapeCssClass(rule.utility)}`,
+      );
 
       const declarations = [...rule.declarations];
       const hasDeclaration = declarations.some((declaration) =>
