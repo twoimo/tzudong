@@ -38,6 +38,10 @@ const criticalKpiDashboardProductionUtilities = [
     declarations: ["padding:1rem"],
   },
   {
+    utility: "md:border-y-0",
+    declarations: ["border-top-width:0px", "border-bottom-width:0px"],
+  },
+  {
     utility: "gap-0",
     declarations: ["gap:0px"],
   },
