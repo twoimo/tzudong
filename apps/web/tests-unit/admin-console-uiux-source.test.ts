@@ -1137,7 +1137,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(appGlobalsSource).toContain("font-family: inherit;");
     expect(consoleSource).toContain(
-      "grid min-h-0 min-w-0 flex-1 auto-rows-min grid-cols-1 gap-2 overflow-x-hidden overflow-y-visible sm:grid-cols-2 lg:grid-cols-10 lg:grid-rows-[132px_minmax(0,1fr)_minmax(0,0.86fr)]",
+      "grid min-h-0 min-w-0 flex-1 auto-rows-min grid-cols-1 gap-2 overflow-x-hidden overflow-y-visible sm:grid-cols-2 lg:grid-cols-10 lg:grid-rows-[132px_minmax(0,1fr)_minmax(0,0.9fr)] lg:overflow-hidden",
     );
     expect(consoleSource).toContain('activeModuleId === "overview"');
     expect(consoleSource).toContain("overflow-y-auto lg:overflow-hidden");
@@ -2448,10 +2448,11 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     const viewModelSource = source("lib/admin/system-status/view-model.ts");
     const routeSource = source("app/api/admin/system-status/route.ts");
 
-    expect(consoleSource).toContain(
+    expect(consoleSource).not.toContain(
       'import("@/components/admin/system-status/AdminSystemStatusCenter")',
     );
-    expect(consoleSource).toContain("<AdminSystemStatusCenter");
+    expect(consoleSource).not.toContain("<AdminSystemStatusCenter");
+    expect(consoleSource).not.toContain("운영 상태 센터");
     expect(centerSource).toContain('data-admin-system-status-center="true"');
     expect(centerSource).toContain("data-admin-run-daily-state=");
     expect(centerSource).toContain("data-admin-run-daily-artifact-state=");
@@ -2646,10 +2647,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "padding-top",
       "1rem",
     );
-    expect(appGlobalsSource).toContain(
+    expect(appGlobalsSource).not.toContain(
       '[data-admin-sidebar-theme-toggle="true"][data-admin-sidebar-theme-layout="sidebar"]',
     );
-    expect(appGlobalsSource).toContain(
+    expect(appGlobalsSource).not.toContain(
       "grid-template-columns: repeat(3, minmax(0, 1fr));",
     );
     expect(consoleSource).not.toContain("grid-rows-[auto_minmax(0,1fr)]");
@@ -7369,15 +7370,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       "data-admin-sidebar-theme-layout={placement}",
     );
-    expect(consoleSource).toContain(
-      'gridTemplateColumns: "repeat(3, minmax(0, 1fr))"',
-    );
-    expect(consoleSource).toContain(
-      "inline-flex w-8 flex-col items-center gap-1 self-center rounded-2xl",
-    );
-    expect(consoleSource).toContain(
-      'isCompactSidebar ? "w-7" : "w-full min-w-0"',
-    );
+    expect(consoleSource).toContain('data-admin-sidebar-theme-cycle="single-button"');
+    expect(consoleSource).toContain('data-admin-sidebar-theme-current={currentTheme}');
+    expect(consoleSource).toContain('getNextAdminThemePreference(themePreference)');
     expect(consoleSource).toContain(
       'className="rounded-2xl bg-background/85 p-2"',
     );
@@ -7417,17 +7412,18 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       "window.localStorage.setItem(ADMIN_THEME_STORAGE_KEY",
     );
-    expect(consoleSource).toContain('aria-label="화면 모드 선택"');
-    expect(consoleSource).toContain("aria-label={`${label}으로 변경`}");
-    expect(consoleSource).toContain("aria-pressed={themePreference === theme}");
+    expect(consoleSource).toContain("const controlLabel = `${currentThemeLabel} 사용 중 · 클릭하면 ${getAdminThemeChangeLabel(nextThemeLabel)}`");
+    expect(consoleSource).toContain("function getAdminThemeChangeLabel");
+    expect(consoleSource).toContain("aria-label={controlLabel}");
+    expect(consoleSource).not.toContain("aria-pressed={themePreference === theme}");
     expect(consoleSource).toContain(
-      '"border border-border bg-white p-1 shadow-inner dark:bg-card"',
+      '"h-9 rounded-full border border-border bg-white text-xs font-bold text-muted-foreground shadow-inner',
     );
-    expect(consoleSource).toContain('["light", "화이트 모드", Sun]');
-    expect(consoleSource).toContain('["dark", "다크모드", Moon]');
-    expect(consoleSource).toContain('["system", "시스템 설정", Monitor]');
+    expect(consoleSource).toContain('["light", "라이트 모드", "다크모드", Sun]');
+    expect(consoleSource).toContain('["dark", "다크모드", "시스템 모드", Moon]');
+    expect(consoleSource).toContain('["system", "시스템 모드", "라이트 모드", Monitor]');
     expect(consoleSource).toContain(
-      '<Icon className="h-3.5 w-3.5" aria-hidden="true" />',
+      '<ThemeIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />',
     );
     expect(consoleSource).toContain(
       "const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);",
@@ -7726,11 +7722,11 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("md:h-full md:min-h-0");
     expect(consoleSource).toContain("lg:grid-cols-10");
     expect(consoleSource).toContain(
-      "lg:grid-rows-[132px_minmax(0,1fr)_minmax(0,0.86fr)]",
+      "lg:grid-rows-[132px_minmax(0,1fr)_minmax(0,0.9fr)]",
     );
     expect(tailwindSource).toContain("lg:grid-cols-10");
     expect(tailwindSource).toContain(
-      "lg:grid-rows-[132px_minmax(0,1fr)_minmax(0,0.86fr)]",
+      "lg:grid-rows-[132px_minmax(0,1fr)_minmax(0,0.9fr)]",
     );
     expect(tailwindSource).toContain("lg:col-span-5");
     expect(overviewSource).toContain("overflow-visible lg:h-full lg:min-h-0");
