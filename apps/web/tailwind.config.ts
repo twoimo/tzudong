@@ -73,6 +73,7 @@ const ADMIN_DASHBOARD_STYLE_CLASSES = [
   "justify-end",
   "md:justify-end",
   "md:p-4",
+  "md:border-y-0",
   "overflow-visible",
   "overflow-y-visible",
   "px-0.5",
