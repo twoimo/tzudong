@@ -90,6 +90,23 @@ function escapeCssClass(className: string) {
 function compactCss(value: string) {
   return value.replace(/\s+/g, "");
 }
+function getRuleBlock(css: string, escapedClass: string) {
+  const selector = `.${escapedClass}`;
+  const selectorIndex = css.indexOf(selector);
+  expect(css, `${selector} should be emitted`).toContain(selector);
+
+  const blockStart = css.indexOf("{", selectorIndex);
+  const blockEnd = css.indexOf("}", blockStart);
+  expect(blockStart, `${selector} should open a CSS rule`).toBeGreaterThan(
+    selectorIndex,
+  );
+  expect(blockEnd, `${selector} should close a CSS rule`).toBeGreaterThan(
+    blockStart,
+  );
+
+  return css.slice(blockStart + 1, blockEnd);
+}
+
 
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -144,19 +161,18 @@ describe("admin responsive CSS guard", () => {
       );
     }
 
-    const compactedCss = compactCss(css);
     for (const rule of criticalKpiDashboardProductionUtilities) {
-      expect(css, `${rule.utility} should be emitted`).toContain(
-        `.${escapeCssClass(rule.utility)}`,
-      );
+      const escapedClass = escapeCssClass(rule.utility);
+      const ruleBlock = getRuleBlock(css, escapedClass);
+      const compactedRuleBlock = compactCss(ruleBlock);
 
       const declarations = [...rule.declarations];
       const hasDeclaration = declarations.some((declaration) =>
-        compactedCss.includes(compactCss(declaration)),
+        compactedRuleBlock.includes(compactCss(declaration)),
       );
       expect(
         hasDeclaration,
-        `${rule.utility} should include one of ${declarations.join(", ")}`,
+        `${rule.utility} should include one of ${declarations.join(", ")} in its own generated rule`,
       ).toBe(true);
     }
   }, 20_000);
