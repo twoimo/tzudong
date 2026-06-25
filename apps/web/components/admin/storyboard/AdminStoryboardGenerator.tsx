@@ -4708,6 +4708,7 @@ export function AdminStoryboardGenerator({
     null,
   );
   const storyboardChatTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const storyboardChatComposerImeRef = useRef(false);
   const [isStoryboardChatMultilineLayout, setIsStoryboardChatMultilineLayout] =
     useState(false);
   const chatTranscriptRef = useRef<HTMLDivElement | null>(null);
@@ -6752,10 +6753,34 @@ export function AdminStoryboardGenerator({
     }
   }
 
+  function handleStoryboardChatCompositionStart() {
+    storyboardChatComposerImeRef.current = true;
+  }
+
+  function handleStoryboardChatCompositionEnd() {
+    storyboardChatComposerImeRef.current = false;
+  }
+
+  function isStoryboardChatImeComposing(
+    event: ReactKeyboardEvent<HTMLTextAreaElement>,
+  ) {
+    return (
+      storyboardChatComposerImeRef.current ||
+      event.nativeEvent.isComposing ||
+      event.key === "Process"
+    );
+  }
+
   function handleStoryboardChatKeyDown(
     event: ReactKeyboardEvent<HTMLTextAreaElement>,
   ) {
-    if (event.key !== "Enter" || event.shiftKey) return;
+    if (
+      event.key !== "Enter" ||
+      event.shiftKey ||
+      isStoryboardChatImeComposing(event)
+    ) {
+      return;
+    }
     event.preventDefault();
     void handleStoryboardChatSubmit();
   }
@@ -8611,6 +8636,13 @@ export function AdminStoryboardGenerator({
                 >
                   음식, 컷 수, 꼭 보여줄 장면을 한 문장으로 입력합니다.
                 </p>
+                <p
+                  id="storyboard-chat-keyboard-hint"
+                  className="sr-only"
+                  data-storyboard-chat-keyboard-hint="true"
+                >
+                  한글 조합 중 Enter는 전송하지 않고, 조합이 끝난 뒤 Enter로 전송합니다.
+                </p>
                 {storyboardChatImageAttachments.length ? (
                   <div
                     className="flex gap-1.5 overflow-x-auto pb-0.5"
@@ -8752,6 +8784,8 @@ export function AdminStoryboardGenerator({
                           resizeStoryboardChatTextarea(event.currentTarget),
                         );
                       }}
+                      onCompositionStart={handleStoryboardChatCompositionStart}
+                      onCompositionEnd={handleStoryboardChatCompositionEnd}
                       onKeyDown={handleStoryboardChatKeyDown}
                       disabled={isChatAgentStreaming}
                       autoComplete="off"
@@ -8776,12 +8810,13 @@ export function AdminStoryboardGenerator({
                       maxLength={400}
                       placeholder={storyboardChatPlaceholder}
                       aria-label="스토리보드 요구사항 채팅 입력"
-                      aria-describedby="storyboard-prompt-help"
+                      aria-describedby="storyboard-prompt-help storyboard-chat-keyboard-hint"
                       data-storyboard-chat-input-plane={
                         isStoryboardChatMultilineLayout
                           ? "above-actions-top-left"
                           : "between-actions-one-line"
                       }
+                      data-storyboard-chat-ime-safe="true"
                     />
                     <Button
                       type="button"
@@ -8883,6 +8918,7 @@ export function AdminStoryboardGenerator({
               <span
                 className="flex h-6 w-6 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15"
                 data-storyboard-canvas-topic-icon="true"
+                data-storyboard-canvas-title-icon="clapperboard"
                 aria-hidden="true"
               >
                 <Clapperboard className="h-3.5 w-3.5" />
