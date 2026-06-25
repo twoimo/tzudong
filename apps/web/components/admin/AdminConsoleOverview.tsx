@@ -8115,6 +8115,9 @@ function AdminSidebar({
             data-admin-sidebar-collapse-logo-mode={
               isCollapsed ? "logo-hover-open-icon" : "icon"
             }
+            data-admin-sidebar-collapse-visibility={
+              isCollapsed ? "logo-hover" : "always-visible"
+            }
             onClick={onToggleCollapsed}
           >
             {isCollapsed ? (
