@@ -48,7 +48,7 @@ const ADMIN_CONSOLE_RESPONSIVE_LAYOUT_CLASSES = [
   "lg:flex-row",
   "lg:grid-cols-10",
   "lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]",
-  "lg:grid-rows-[132px_minmax(0,1fr)_minmax(0,0.86fr)]",
+  "lg:grid-rows-[132px_minmax(0,1fr)_minmax(0,0.9fr)]",
   "lg:h-full",
   "lg:items-start",
   "lg:justify-between",
