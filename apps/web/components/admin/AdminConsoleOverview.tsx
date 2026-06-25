@@ -401,7 +401,7 @@ function moveItemInArray<T>(items: T[], index: number, direction: -1 | 1): T[] {
 
 type AdminDashboardTableWidgetId = Extract<
   AdminDashboardWidgetId,
-  "impact" | "trend" | "topContent" | "engagementRate"
+  "impact" | "trend" | "ops" | "topContent" | "engagementRate"
 >;
 
 type AdminDashboardCardView = "chart" | "table";
@@ -413,6 +413,7 @@ type AdminDashboardSeriesVisibility<Key extends string> = Record<Key, boolean>;
 type AdminDashboardSkeletonVariant =
   | "chart"
   | "table"
+  | "ops"
   | "bubble"
   | "line"
   | "stacked"
@@ -437,6 +438,7 @@ const ADMIN_DASHBOARD_WIDGET_LABELS: Record<AdminDashboardWidgetId, string> = {
   videos: "영상 수",
   impact: "상위 영상 영향도",
   trend: "조회·참여 추이",
+  ops: "운영·검수 요약",
   topContent: "콘텐츠 성과 TOP 5",
   engagementRate: "성과 진단",
 };
@@ -444,7 +446,7 @@ const ADMIN_DASHBOARD_WIDGET_LABELS: Record<AdminDashboardWidgetId, string> = {
 const ADMIN_DASHBOARD_WIDGET_LAYOUT_GROUPS = [
   ["subscribers", "views", "likes", "comments", "videos"],
   ["impact", "trend"],
-  ["topContent", "engagementRate"],
+  ["ops", "topContent", "engagementRate"],
 ] as const satisfies ReadonlyArray<ReadonlyArray<AdminDashboardWidgetId>>;
 
 const adminDashboardWidgetLayoutGroupMap = new Map<
@@ -466,6 +468,7 @@ const DEFAULT_ADMIN_DASHBOARD_CARD_VIEWS: Record<
 > = {
   impact: "chart",
   trend: "chart",
+  ops: "chart",
   topContent: "chart",
   engagementRate: "chart",
 };
@@ -3101,6 +3104,34 @@ function AdminDashboardPanelBodySkeleton({
     );
   }
 
+  if (variant === "ops") {
+    return (
+      <div
+        className="grid min-h-0 flex-1 gap-3"
+        data-admin-dashboard-dynamic-skeleton="ops"
+        aria-hidden="true"
+      >
+        {Array.from({ length: 2 }).map((_, sectionIndex) => (
+          <div key={sectionIndex} className="grid gap-2">
+            <div className="flex items-center justify-between gap-3">
+              <Skeleton className="h-4 w-20 rounded-full motion-reduce:animate-none" />
+              <Skeleton className="h-4 w-12 rounded-full motion-reduce:animate-none" />
+            </div>
+            {Array.from({ length: 4 }).map((__, rowIndex) => (
+              <div
+                key={rowIndex}
+                className="grid grid-cols-[5.5rem_minmax(0,1fr)_3rem] items-center gap-2"
+              >
+                <Skeleton className="h-3 rounded-full motion-reduce:animate-none" />
+                <Skeleton className="h-2 rounded-full motion-reduce:animate-none" />
+                <Skeleton className="h-3 rounded-full motion-reduce:animate-none" />
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   if (variant === "bubble") {
     return (
@@ -3431,7 +3462,7 @@ function AdminDashboardManagementSkeleton() {
         <div
           className={cn(
             adminDashboardCardClass,
-            "flex min-h-[280px] flex-col overflow-hidden p-3 sm:col-span-2 lg:col-span-5 lg:min-h-0",
+            "flex min-h-[280px] flex-col overflow-hidden p-3 sm:col-span-2 lg:col-span-3 lg:min-h-0",
           )}
           data-admin-dashboard-skeleton-card="impact"
         >
@@ -3456,7 +3487,7 @@ function AdminDashboardManagementSkeleton() {
         <div
           className={cn(
             adminDashboardCardClass,
-            "flex min-h-[280px] flex-col overflow-hidden p-3 sm:col-span-2 lg:col-span-5 lg:min-h-0",
+            "flex min-h-[280px] flex-col overflow-hidden p-3 sm:col-span-2 lg:col-span-4 lg:min-h-0",
           )}
           data-admin-dashboard-skeleton-card="trend"
         >
@@ -3499,6 +3530,27 @@ function AdminDashboardManagementSkeleton() {
           <AdminDashboardPanelBodySkeleton variant="line" />
         </div>
 
+        <div
+          className={cn(
+            adminDashboardCardClass,
+            "flex h-full min-h-[280px] flex-col p-3 text-xs sm:col-span-2 lg:col-span-3 lg:min-h-0",
+          )}
+          data-admin-dashboard-skeleton-card="ops"
+        >
+          <AdminDashboardCardTitle
+            title="운영·검수 요약"
+            metric="검수 리스크 0"
+            infoLines={placeholderInfoLines}
+            action={
+              <AdminDashboardViewToggle
+                value="chart"
+                onChange={() => undefined}
+                label="운영·검수 요약"
+              />
+            }
+          />
+          <AdminDashboardPanelBodySkeleton variant="ops" />
+        </div>
 
         <div
           className={cn(
@@ -3827,6 +3879,188 @@ function AdminDashboardKpiCard({
               style={{ width: `${safeProgress}%` }}
             />
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AdminDashboardOpsSummaryCard({
+  sections,
+  className,
+  style,
+  reorderProps,
+  view = "chart",
+  onViewChange,
+  isLoading = false,
+}: {
+  sections: Array<{
+    title: string;
+    rows: Array<{ label: string; value: string; rawValue: number | null }>;
+    totalLabel: string;
+    totalValue: string;
+  }>;
+  className?: string;
+  style?: CSSProperties;
+  reorderProps?: AdminDashboardCardReorderProps;
+  view?: AdminDashboardCardView;
+  onViewChange?: (value: AdminDashboardCardView) => void;
+  isLoading?: boolean;
+}) {
+  const tableRows = sections.flatMap((section) =>
+    section.rows.map((row) => ({
+      section: section.title,
+      label: row.label,
+      value: row.value,
+      rawValue: row.rawValue,
+    })),
+  );
+  const riskTotal = sections.reduce(
+    (sum, section) =>
+      section.title === "검수 리스크"
+        ? sum +
+          section.rows.reduce((rowSum, row) => rowSum + (row.rawValue ?? 0), 0)
+        : sum,
+    0,
+  );
+
+  return (
+    <div
+      className={cn(
+        adminDashboardCardClass,
+        "flex h-full min-h-[280px] flex-col p-3 text-xs",
+        className,
+      )}
+      data-admin-dashboard-ops-summary-visual="progress-bars"
+      data-admin-dashboard-widget-card="ops"
+      style={style}
+      {...reorderProps}
+    >
+      <AdminDashboardCardTitle
+        title="운영·검수 요약"
+        metric={`검수 리스크 ${formatNumber(riskTotal)}`}
+        infoLines={[
+          "설명: 위쪽은 운영 중인 데이터 수, 아래쪽은 확인이 필요한 데이터 수입니다.",
+          "읽는 법: 막대는 같은 묶음 안에서 가장 큰 항목을 기준으로 얼마나 큰지 보여줍니다.",
+          "막대 기준: 같은 묶음 안에서 가장 큰 항목을 100%로 두고 비교합니다.",
+          "계산식: 검수 리스크 합계 = 제보 대기 + 리뷰 대기 + 좌표 미완료 + 비활성 배너.",
+          "주의: 검수 리스크가 큰 항목부터 운영자가 먼저 확인해야 합니다.",
+        ]}
+        action={
+          <div className="flex min-w-fit flex-nowrap items-center justify-end gap-1">
+            {onViewChange ? (
+              <AdminDashboardViewToggle
+                value={view}
+                onChange={onViewChange}
+                label="운영·검수 요약"
+              />
+            ) : null}
+          </div>
+        }
+      />
+      {isLoading ? (
+        <AdminDashboardPanelBodySkeleton
+          variant={view === "table" ? "table" : "ops"}
+        />
+      ) : view === "table" ? (
+        <AdminDashboardScrollTable
+          rows={tableRows}
+          emptyText="표시할 운영·검수 데이터가 없습니다."
+          getRowKey={(row) => `${row.section}-${row.label}`}
+          columns={[
+            {
+              key: "section",
+              header: "구분",
+              className: "w-[34%]",
+              cell: (row) => (
+                <span className="block truncate font-bold text-muted-foreground">
+                  {row.section}
+                </span>
+              ),
+            },
+            {
+              key: "label",
+              header: "항목",
+              className: "w-[38%]",
+              cell: (row) => (
+                <span className="block truncate">{row.label}</span>
+              ),
+            },
+            {
+              key: "value",
+              header: "값",
+              align: "right",
+              className: "w-[28%]",
+              cell: (row) => row.value,
+            },
+          ]}
+        />
+      ) : (
+        <div
+          className={cn(
+            adminDashboardVisualizationShellClassName,
+            "grid content-stretch gap-2",
+          )}
+        >
+          {sections.map((section, sectionIndex) => {
+            const maxRawValue = Math.max(
+              1,
+              ...section.rows.map((row) => row.rawValue ?? 0),
+            );
+            const barTone =
+              sectionIndex === 0
+                ? "bg-teal-500 dark:bg-teal-400"
+                : "bg-rose-500 dark:bg-rose-400";
+            const labelTone =
+              sectionIndex === 0
+                ? "text-teal-700 dark:text-teal-300"
+                : "text-rose-700 dark:text-rose-300";
+
+            return (
+              <div key={section.title} className="grid min-h-0 gap-2">
+                <div className="flex items-center justify-between gap-3">
+                  <p
+                    className={cn("truncate text-xs font-extrabold", labelTone)}
+                  >
+                    {section.title}
+                  </p>
+                  <span className="shrink-0 text-xs font-black tabular-nums text-foreground">
+                    {section.totalValue}
+                  </span>
+                </div>
+                <div className="grid gap-2">
+                  {section.rows.map((row) => {
+                    const rowPercent = clampDashboardPercent(
+                      ((row.rawValue ?? 0) / maxRawValue) * 100,
+                    );
+
+                    return (
+                      <div
+                        key={`${section.title}-${row.label}`}
+                        className="grid grid-cols-[5.5rem_minmax(0,1fr)_3rem] items-center gap-2"
+                      >
+                        <span className="min-w-0 truncate text-muted-foreground">
+                          {row.label}
+                        </span>
+                        <div
+                          className="h-1.5 overflow-hidden rounded-full bg-muted"
+                          aria-hidden="true"
+                        >
+                          <div
+                            className={cn("h-full rounded-full", barTone)}
+                            style={{ width: `${rowPercent}%` }}
+                          />
+                        </div>
+                        <span className="shrink-0 text-right text-[13px] font-extrabold tabular-nums text-foreground">
+                          {row.value}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
@@ -5179,10 +5413,12 @@ function AdminDashboardManagementPanel({
   stats,
   isLoading,
   hasError,
+  isAdmin,
 }: {
   stats: AdminOverviewStats;
   isLoading: boolean;
   hasError: boolean;
+  isAdmin: boolean;
 }) {
   const [period, setPeriod] = useState<AdminDashboardPeriod>("1M");
   const [pendingSkeletonPeriod, setPendingSkeletonPeriod] =
@@ -6035,6 +6271,60 @@ function AdminDashboardManagementPanel({
   const commentCardTitle = hasPeriodGrowthComparison
     ? "기간 댓글 증가"
     : "기간 댓글 합계";
+  const pendingTotal =
+    typeof stats.pendingSubmissions === "number" &&
+    typeof stats.pendingReviews === "number"
+      ? stats.pendingSubmissions + stats.pendingReviews
+      : null;
+  const missingCoordinates =
+    typeof stats.totalRestaurants === "number" &&
+    typeof stats.withCoordinates === "number"
+      ? Math.max(0, stats.totalRestaurants - stats.withCoordinates)
+      : null;
+  const operationalAssets = [
+    {
+      label: "영상 수",
+      value: formatNumber(visibleVideoTotal),
+      rawValue: visibleVideoTotal ?? 0,
+    },
+    {
+      label: "맛집 데이터",
+      value: formatNumber(stats.totalRestaurants),
+      rawValue: stats.totalRestaurants ?? 0,
+    },
+    {
+      label: "좌표 완료",
+      value: formatNumber(stats.withCoordinates),
+      rawValue: stats.withCoordinates ?? 0,
+    },
+    {
+      label: "영상 연결",
+      value: formatNumber(stats.totalVideos),
+      rawValue: stats.totalVideos ?? 0,
+    },
+  ];
+  const operationalLiabilities = [
+    {
+      label: "제보 대기",
+      value: formatNumber(stats.pendingSubmissions),
+      rawValue: stats.pendingSubmissions,
+    },
+    {
+      label: "리뷰 대기",
+      value: formatNumber(stats.pendingReviews),
+      rawValue: stats.pendingReviews,
+    },
+    {
+      label: "좌표 미완료",
+      value: formatNumber(missingCoordinates),
+      rawValue: missingCoordinates ?? 0,
+    },
+    {
+      label: "비활성 배너",
+      value: formatNumber(stats.inactiveBanners),
+      rawValue: stats.inactiveBanners ?? 0,
+    },
+  ];
   const impactTableRows = useMemo(
     () =>
       videosByInsightScore.map((video) => ({
@@ -6684,7 +6974,7 @@ function AdminDashboardManagementPanel({
         <div
           className={cn(
             adminDashboardCardClass,
-            "flex min-h-[280px] flex-col overflow-hidden p-3 sm:col-span-2 lg:col-span-5 lg:min-h-0",
+            "flex min-h-[280px] flex-col overflow-hidden p-3 sm:col-span-2 lg:col-span-3 lg:min-h-0",
             getDashboardReorderCardClassName("impact"),
             isDashboardWidgetFullscreen("impact") &&
               adminDashboardFullscreenCardClassName,
@@ -6802,7 +7092,7 @@ function AdminDashboardManagementPanel({
         <div
           className={cn(
             adminDashboardCardClass,
-            "flex min-h-[280px] flex-col overflow-hidden p-3 sm:col-span-2 lg:col-span-5 lg:min-h-0",
+            "flex min-h-[280px] flex-col overflow-hidden p-3 sm:col-span-2 lg:col-span-4 lg:min-h-0",
             getDashboardReorderCardClassName("trend"),
             isDashboardWidgetFullscreen("trend") &&
               adminDashboardFullscreenCardClassName,
@@ -6894,6 +7184,41 @@ function AdminDashboardManagementPanel({
           </AdminDashboardDeferredBody>
         </div>
 
+        <AdminDashboardOpsSummaryCard
+          sections={[
+            {
+              title: "운영 자산",
+              rows: operationalAssets,
+              totalLabel: "합계",
+              totalValue: formatNumber(
+                (stats.totalRestaurants ?? 0) +
+                  (stats.totalVideos ?? 0) +
+                  (stats.activeBanners ?? 0),
+              ),
+            },
+            {
+              title: "검수 리스크",
+              rows: operationalLiabilities,
+              totalLabel: "합계",
+              totalValue: formatNumber(
+                pendingTotal === null
+                  ? null
+                  : pendingTotal +
+                      (missingCoordinates ?? 0) +
+                      (stats.inactiveBanners ?? 0),
+              ),
+            },
+          ]}
+          className={cn(
+            "sm:col-span-2 lg:col-span-3",
+            getDashboardReorderCardClassName("ops"),
+          )}
+          reorderProps={getDashboardCardReorderProps("ops")}
+          style={getDashboardCardOrderStyle("ops")}
+          view={getDashboardCardView("ops")}
+          onViewChange={(view) => setDashboardCardView("ops", view)}
+          isLoading={isLoading}
+        />
 
 
         <div
@@ -8992,6 +9317,7 @@ export function AdminConsoleOverview({
               stats={stats}
               isLoading={statsLoading}
               hasError={statsHasError}
+              isAdmin={canLoadAdminConsoleData}
             />
           ) : activeModuleId === "routes" ? (
             <AdminRouteRecommendationModule
