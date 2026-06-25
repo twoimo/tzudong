@@ -6,6 +6,7 @@ export const ADMIN_DASHBOARD_WIDGET_IDS = [
   "videos",
   "impact",
   "trend",
+  "ops",
   "topContent",
   "engagementRate",
 ] as const;
