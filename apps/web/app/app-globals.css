@@ -959,6 +959,14 @@ div[style*="z-index"] > div > .custom-marker {
   font-family: inherit;
 }
 
+[data-admin-dashboard-management="true"],
+[data-admin-dashboard-management-skeleton="true"] {
+  font-family:
+    var(--font-noto-serif-kr, "Noto Serif KR"), "Noto Serif KR",
+    "Apple SD Gothic Neo", "Malgun Gothic", ui-serif, Georgia, serif !important;
+  letter-spacing: -0.025em !important;
+}
+
 [data-admin-console-layout="sidebar-content"] {
   grid-template-rows: auto minmax(0, 1fr);
 }
