@@ -92,19 +92,38 @@ function compactCss(value: string) {
 }
 function getRuleBlock(css: string, escapedClass: string) {
   const selector = `.${escapedClass}`;
-  const selectorIndex = css.indexOf(selector);
-  expect(css, `${selector} should be emitted`).toContain(selector);
+  let searchFrom = 0;
 
-  const blockStart = css.indexOf("{", selectorIndex);
-  const blockEnd = css.indexOf("}", blockStart);
-  expect(blockStart, `${selector} should open a CSS rule`).toBeGreaterThan(
-    selectorIndex,
-  );
-  expect(blockEnd, `${selector} should close a CSS rule`).toBeGreaterThan(
-    blockStart,
-  );
+  while (searchFrom < css.length) {
+    const selectorIndex = css.indexOf(selector, searchFrom);
+    if (selectorIndex === -1) {
+      break;
+    }
 
-  return css.slice(blockStart + 1, blockEnd);
+    const before = css.slice(0, selectorIndex).trimEnd().at(-1);
+    const afterSelector = css.slice(selectorIndex + selector.length);
+    const after = afterSelector.trimStart().at(0);
+    const isStandaloneRule =
+      (before === undefined || before === "{" || before === "}") &&
+      after === "{";
+
+    if (isStandaloneRule) {
+      const blockStart = css.indexOf("{", selectorIndex + selector.length);
+      const blockEnd = css.indexOf("}", blockStart);
+      expect(blockStart, `${selector} should open a CSS rule`).toBeGreaterThan(
+        selectorIndex,
+      );
+      expect(blockEnd, `${selector} should close a CSS rule`).toBeGreaterThan(
+        blockStart,
+      );
+
+      return css.slice(blockStart + 1, blockEnd);
+    }
+
+    searchFrom = selectorIndex + selector.length;
+  }
+
+  throw new Error(`${selector} should be emitted as a standalone CSS rule`);
 }
 
 
