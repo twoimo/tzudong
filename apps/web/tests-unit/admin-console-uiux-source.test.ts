@@ -1136,6 +1136,15 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       '[data-admin-console-content="true"] .font-serif',
     );
     expect(appGlobalsSource).toContain("font-family: inherit;");
+    expect(appGlobalsSource).toContain(
+      '[data-admin-dashboard-management="true"]',
+    );
+    expect(appGlobalsSource).toContain(
+      '[data-admin-dashboard-management-skeleton="true"]',
+    );
+    expect(appGlobalsSource).toContain(
+      'var(--font-noto-serif-kr, "Noto Serif KR")',
+    );
     expect(consoleSource).toContain(
       "grid min-h-0 min-w-0 flex-1 auto-rows-min grid-cols-1 gap-2 overflow-x-hidden overflow-y-visible sm:grid-cols-2 lg:grid-cols-10 lg:grid-rows-[132px_minmax(0,1fr)_minmax(0,0.9fr)] lg:overflow-hidden",
     );
@@ -1633,7 +1642,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       "계산식: 신호 강도 = 카드별 규칙 점수를 0~100 범위로 표시한 값입니다.",
     );
-    expect(consoleSource).toContain(
+    expect(consoleSource).not.toContain(
       "막대 기준: 같은 묶음 안에서 가장 큰 항목을 100%로 두고 비교합니다.",
     );
     expect(consoleSource).not.toContain('stroke="#dfcf65"');
@@ -1707,7 +1716,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("[text-wrap:pretty]");
     const infoLineTooltipBlocks =
       consoleSource.match(/infoLines=\{\[[\s\S]*?\]\}/g) ?? [];
-    expect(infoLineTooltipBlocks.length).toBeGreaterThanOrEqual(10);
+    expect(infoLineTooltipBlocks.length).toBeGreaterThanOrEqual(9);
     expect(
       infoLineTooltipBlocks.filter(
         (block) => (block.match(/계산식:/g) ?? []).length > 1,
@@ -1922,7 +1931,6 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "likes",
       "comments",
       "videos",
-      "ops",
       "topContent",
       "engagementRate",
     ].forEach((widgetId) => {
@@ -2099,7 +2107,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       'value={getDashboardCardView("engagementRate")}',
     );
-    expect(consoleSource).toContain('view={getDashboardCardView("ops")}');
+    expect(consoleSource).not.toContain('view={getDashboardCardView("ops")}');
     expect(consoleSource).toContain("impactTableRows");
     expect(consoleSource).toContain("trendTableRows");
     expect(consoleSource).toContain("topContentTableRows");
@@ -2224,7 +2232,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     const kpiSparklineSource = consoleSource.slice(
       consoleSource.indexOf('data-admin-dashboard-kpi-sparkline="true"'),
-      consoleSource.indexOf("function AdminDashboardOpsSummaryCard"),
+      consoleSource.indexOf("function buildAdminDashboardExtremeLabels"),
     );
     expect(kpiSparklineSource).toContain("<RechartsTooltip");
     expect(kpiSparklineSource).toMatch(
@@ -2256,37 +2264,24 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       "wrapperStyle={adminDashboardTooltipWrapperStyle}",
     );
-    expect(consoleSource).toContain("AdminDashboardOpsSummaryCard");
-    expect(consoleSource).toContain("운영·검수 요약");
-    expect(consoleSource).toContain(
-      "설명: 위쪽은 운영 중인 데이터 수, 아래쪽은 확인이 필요한 데이터 수입니다.",
-    );
-    expect(consoleSource).toContain(
-      "flex h-full min-h-[280px] flex-col p-3 text-xs",
-    );
-    expect(consoleSource).toContain("text-[13px] font-extrabold tabular-nums");
-    expect(consoleSource).toContain(
+    expect(consoleSource).not.toContain("AdminDashboardOpsSummaryCard");
+    expect(consoleSource).not.toContain("운영·검수 요약");
+    expect(consoleSource).not.toContain(
       'data-admin-dashboard-ops-summary-visual="progress-bars"',
     );
-    expect(consoleSource).toContain("rawValue: stats.totalRestaurants ?? 0");
-    expect(consoleSource).toContain("rawValue: missingCoordinates ?? 0");
-    expect(consoleSource).toContain("const maxRawValue = Math.max");
-    expect(consoleSource).toContain("const rowPercent = clampDashboardPercent");
+    expect(consoleSource).not.toContain("rawValue: missingCoordinates ?? 0");
+    expect(consoleSource).not.toContain("variant === \"ops\"");
+    expect(consoleSource).not.toContain('data-admin-dashboard-dynamic-skeleton="ops"');
     expect(consoleSource).toContain(
-      "adminDashboardVisualizationShellClassName",
+      '"flex min-h-[280px] flex-col overflow-hidden p-3 sm:col-span-2 lg:col-span-5 lg:min-h-0"',
     );
+    expect(consoleSource).toContain("adminDashboardVisualizationShellClassName");
     expect(consoleSource).toContain("rounded-xl p-1 sm:p-1.5");
-    expect(consoleSource).toContain("grid content-stretch gap-2");
-    expect(consoleSource).toContain(
-      "grid grid-cols-[5.5rem_minmax(0,1fr)_3rem]",
-    );
-    expect(consoleSource).toContain("text-teal-700 dark:text-teal-300");
-    expect(consoleSource).toContain("text-rose-700 dark:text-rose-300");
     expect(consoleSource).not.toContain(
       "rounded-xl border border-border/60 bg-card/45 p-3",
     );
     expect(consoleSource).toContain('"lg:col-span-2"');
-    expect(consoleSource).toContain('"sm:col-span-2 lg:col-span-3"');
+    expect(consoleSource).not.toContain('"sm:col-span-2 lg:col-span-3"');
     expect(consoleSource).toContain(
       "flex min-h-[280px] flex-col overflow-hidden p-3",
     );
