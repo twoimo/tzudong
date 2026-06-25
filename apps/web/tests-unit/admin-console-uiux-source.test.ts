@@ -1276,6 +1276,11 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("gap-x-1.5 gap-y-0");
     expect(consoleSource).toContain("fontSize: 11");
     expect(consoleSource).toContain("toneClass.bar");
+    expect(consoleSource).toContain('emphasis?: "primary" | "supporting";');
+    expect(consoleSource).toContain("data-admin-dashboard-kpi-emphasis={emphasis}");
+    expect(consoleSource).toContain("data-admin-dashboard-kpi-tone={tone}");
+    expect(consoleSource).toContain("border-sky-500/35 bg-sky-50/20");
+    expect(consoleSource).toContain("dark:border-sky-400/45 dark:bg-sky-950/20");
     expect(consoleSource).toContain("toneClass.text");
     expect(consoleSource).toContain("dark:text-sky-300");
     expect(consoleSource).toContain("dark:text-rose-300");
@@ -1287,6 +1292,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("bg-teal-500 text-white dark:bg-teal-500 dark:text-white");
     expect(consoleSource).toContain("bg-muted-foreground/45 text-background");
     expect(consoleSource).not.toContain("bg-amber-600 text-white");
+    expect(consoleSource).not.toContain("bg-${");
+    expect(consoleSource).not.toContain("text-${");
+    expect(consoleSource).not.toContain("border-${");
     expect(consoleSource).not.toContain("toneClass.split");
     expect(consoleSource).not.toContain("text-[9px]");
     expect(consoleSource).not.toContain(
@@ -2304,6 +2312,36 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("text-teal-700 dark:text-teal-300");
     expect(consoleSource).toContain("text-rose-700 dark:text-rose-300");
     expect(consoleSource).toContain("bg-muted-foreground/35");
+    const subscriberKpiSource = consoleSource.slice(
+      consoleSource.lastIndexOf('widgetId="subscribers"'),
+      consoleSource.lastIndexOf('widgetId="views"'),
+    );
+    const viewsKpiSource = consoleSource.slice(
+      consoleSource.lastIndexOf('widgetId="views"'),
+      consoleSource.lastIndexOf('widgetId="likes"'),
+    );
+    const likesKpiSource = consoleSource.slice(
+      consoleSource.lastIndexOf('widgetId="likes"'),
+      consoleSource.lastIndexOf('widgetId="comments"'),
+    );
+    const commentsKpiSource = consoleSource.slice(
+      consoleSource.lastIndexOf('widgetId="comments"'),
+      consoleSource.lastIndexOf('widgetId="videos"'),
+    );
+    const videosKpiSource = consoleSource.slice(
+      consoleSource.lastIndexOf('widgetId="videos"'),
+      consoleSource.indexOf('data-admin-dashboard-widget-card="impact"'),
+    );
+    expect(viewsKpiSource).toContain('tone="sky"');
+    expect(viewsKpiSource).toContain('emphasis="primary"');
+    expect(subscriberKpiSource).toContain('tone="teal"');
+    expect(subscriberKpiSource).toContain('emphasis="supporting"');
+    expect(likesKpiSource).toContain('tone="rose"');
+    expect(likesKpiSource).toContain('emphasis="supporting"');
+    expect(commentsKpiSource).toContain('tone="amber"');
+    expect(commentsKpiSource).toContain('emphasis="supporting"');
+    expect(videosKpiSource).toContain('tone="teal"');
+    expect(videosKpiSource).toContain('emphasis="supporting"');
     expect(consoleSource).not.toContain(
       "rounded-xl border border-border/60 bg-card/45 p-3",
     );
