@@ -5506,6 +5506,36 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "onKeyDown={handleStoryboardChatKeyDown}",
     );
     expect(storyboardSource).toContain(
+      "const storyboardChatComposerImeRef = useRef(false);",
+    );
+    expect(storyboardSource).toContain(
+      "handleStoryboardChatCompositionStart",
+    );
+    expect(storyboardSource).toContain(
+      "handleStoryboardChatCompositionEnd",
+    );
+    expect(storyboardSource).toContain("isStoryboardChatImeComposing");
+    expect(storyboardSource).toContain("event.nativeEvent.isComposing");
+    expect(storyboardSource).toContain('event.key === "Process"');
+    expect(storyboardSource).toContain(
+      "onCompositionStart={handleStoryboardChatCompositionStart}",
+    );
+    expect(storyboardSource).toContain(
+      "onCompositionEnd={handleStoryboardChatCompositionEnd}",
+    );
+    expect(storyboardSource).toContain(
+      'aria-describedby="storyboard-prompt-help storyboard-chat-keyboard-hint"',
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-chat-ime-safe="true"',
+    );
+    expect(storyboardSource).toContain(
+      'id="storyboard-chat-keyboard-hint"',
+    );
+    expect(storyboardSource).toContain(
+      "한글 조합 중 Enter는 전송하지 않고, 조합이 끝난 뒤 Enter로 전송합니다.",
+    );
+    expect(storyboardSource).toContain(
       'const STORYBOARD_CHAT_AGENT_STREAM_URL = "/api/admin/storyboard/chat";',
     );
     expect(storyboardSource).toContain("extractStoryboardChatSseEvents");
@@ -6036,7 +6066,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).toContain('name="storyboard-prompt"');
     expect(storyboardSource).toContain('autoComplete="off"');
     expect(storyboardSource).toContain(
-      'aria-describedby="storyboard-prompt-help"',
+      'aria-describedby="storyboard-prompt-help storyboard-chat-keyboard-hint"',
     );
     expect(storyboardSource).toContain(
       'data-storyboard-chat-prompt-help="true"',
@@ -6195,6 +6225,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).toContain("Clapperboard");
     expect(storyboardSource).toContain(
       'data-storyboard-canvas-topic-icon="true"',
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-canvas-title-icon="clapperboard"',
     );
     expect(storyboardSource).toContain(
       '"flex h-6 w-6 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15"',
@@ -7452,6 +7485,12 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "data-admin-sidebar-collapse-logo-mode={",
     );
     expect(consoleSource).toContain("logo-hover-open-icon");
+    expect(consoleSource).toContain(
+      'data-admin-sidebar-collapse-visibility={',
+    );
+    expect(consoleSource).toContain(
+      'isCollapsed ? "logo-hover" : "always-visible"',
+    );
     expect(consoleSource).toContain(
       'data-admin-sidebar-collapsed-logo="true"',
     );
