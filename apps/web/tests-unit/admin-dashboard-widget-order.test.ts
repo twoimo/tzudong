@@ -17,7 +17,6 @@ describe("admin dashboard widget order normalization", () => {
       "videos",
       "impact",
       "trend",
-      "ops",
       "topContent",
       "engagementRate",
     ]);
@@ -31,10 +30,10 @@ describe("admin dashboard widget order normalization", () => {
     ).toEqual(["trend", "impact", "subscribers", "views"]);
 
     expect(normalizeAdminDashboardWidgetOrder(["ops", "videos"]).slice(0, 4)).toEqual([
-      "ops",
       "videos",
       "subscribers",
       "views",
+      "likes",
     ]);
   });
 
@@ -54,7 +53,6 @@ describe("admin dashboard widget order normalization", () => {
       "comments",
       "videos",
       "impact",
-      "ops",
       "topContent",
       "engagementRate",
     ]);
