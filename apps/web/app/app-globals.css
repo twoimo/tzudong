@@ -996,23 +996,6 @@ div[style*="z-index"] > div > .custom-marker {
   margin-top: 0.75rem;
 }
 
-[data-admin-left-panel-expanded="true"]
-  [data-admin-sidebar-theme-toggle="true"][data-admin-sidebar-theme-layout="sidebar"] {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.25rem;
-  width: 100%;
-}
-
-[data-admin-left-panel-expanded="false"]
-  [data-admin-sidebar-theme-toggle="true"][data-admin-sidebar-theme-layout="sidebar"] {
-  display: inline-flex;
-  width: 2rem;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.25rem;
-  align-self: center;
-}
 
 [data-admin-console-content]:focus {
   outline: none;
