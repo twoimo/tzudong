@@ -971,7 +971,7 @@ function buildAdminDashboardPdfReportHtml(report: AdminDashboardPdfReportData) {
     .metric-card span, .insight-card span { color: #7a7066; font-size: 11px; font-weight: 700; }
     .mini-bar, .bar-track, .diagnosis-meter { height: 7px; overflow: hidden; border-radius: 999px; background: #eee8df; }
     .mini-bar { margin-top: 10px; }
-    .mini-bar i, .bar-track i, .diagnosis-meter i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #0ea5e9, #14b8a6); }
+    .mini-bar i, .bar-track i, .diagnosis-meter i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #14b8a6, #5eead4); }
     .report-visual { display: grid; gap: 8px; margin: 12px 0 14px; padding: 12px; border: 1px solid #e4ddd2; border-radius: 16px; background: #fff; }
     .bar-row { display: grid; grid-template-columns: minmax(0, 1fr) 42%; gap: 12px; align-items: center; break-inside: avoid; }
     .bar-meta { min-width: 0; }
@@ -979,7 +979,7 @@ function buildAdminDashboardPdfReportHtml(report: AdminDashboardPdfReportData) {
     .bar-meta span { color: #766b60; font-size: 11px; font-weight: 700; }
     .bar-track { height: 10px; }
     .diagnosis-meter { margin-top: 10px; height: 8px; }
-    .diagnosis-meter i { background: linear-gradient(90deg, #f59e0b, #10b981); }
+    .diagnosis-meter i { background: linear-gradient(90deg, #f59e0b, #14b8a6); }
     table { width: 100%; border-collapse: collapse; overflow: hidden; border-radius: 14px; font-size: 12px; }
     th, td { border-bottom: 1px solid #ebe5dc; padding: 9px 8px; text-align: left; vertical-align: top; }
     th { background: #f3eee6; color: #5c5248; font-size: 11px; }
@@ -2155,7 +2155,7 @@ type AdminDashboardContentInsight = {
   label: string;
   title: string;
   description: string;
-  tone: "emerald" | "sky" | "amber" | "rose";
+  tone: "primary" | "warning" | "risk";
   score: number;
   scoreLabel: string;
 };
@@ -2342,7 +2342,7 @@ function buildAdminDashboardContentInsights(
       label: "성과 기여",
       title: strongestContribution.video.title,
       description: `${metricNoun} ${scoreLabel} · ${strongestContributionRank}위 · ${strongestContributionTopPercentLabel}`,
-      tone: "emerald",
+      tone: "primary",
       score: Math.max(8, Math.min(100, strongestContributionScore * 2)),
       scoreLabel: `${scoreLabel} · 평균 참고 ${averageComparison}`,
     });
@@ -2358,7 +2358,7 @@ function buildAdminDashboardContentInsights(
       label: "참여율 강세",
       title: strongestEngagement.video.title,
       description: `참여율 ${scoreLabel} · ${formatDashboardPercent(strongestEngagement.engagementRate)}`,
-      tone: "sky",
+      tone: "warning",
       score: getDashboardInsightSignalScore(
         strongestEngagement.engagementRate,
         engagementRateAverage,
@@ -2377,7 +2377,7 @@ function buildAdminDashboardContentInsights(
       label: "초반 반응 점검",
       title: recentUnderperformer.video.title,
       description: `일평균 조회 ${scoreLabel} · 업로드 ${Math.round(recentUnderperformer.ageDays ?? 0)}일`,
-      tone: "rose",
+      tone: "risk",
       score: getDashboardInsightSignalScore(
         recentUnderperformer.viewsPerDay,
         dailyViewAverage,
@@ -2398,7 +2398,7 @@ function buildAdminDashboardContentInsights(
       description: `업로드 ${Math.round(
         reboundCandidate.ageDays ?? 0,
       )}일 · 조회 ${metricNoun} ${formatCompactNumber(reboundCandidate.viewValue)}`,
-      tone: "amber",
+      tone: "warning",
       score: getDashboardInsightSignalScore(
         reboundCandidate.viewValue,
         viewAverage,
@@ -2418,7 +2418,7 @@ function buildAdminDashboardContentInsights(
       description: `구독자 ${formatSignedNumber(
         subscriberDelta,
       )} 기간의 성과 ${metricNoun} 1위 후보`,
-      tone: "emerald",
+      tone: "primary",
       score: Math.max(8, Math.min(100, strongestContributionScore)),
       scoreLabel: `구독자 ${formatSignedNumber(subscriberDelta)}`,
     });
@@ -2444,7 +2444,7 @@ function buildAdminDashboardContentInsights(
       label: "신규 반응 확인",
       title: newestCandidate.video.title,
       description: `업로드 ${Math.round(newestCandidate.ageDays ?? 0)}일 · 일평균 조회 ${scoreLabel}`,
-      tone: "sky",
+      tone: "warning",
       score: getDashboardInsightSignalScore(
         newestCandidate.viewsPerDay,
         dailyViewAverage,
@@ -2509,6 +2509,15 @@ const adminDashboardTooltipFirstLineClassName =
   "font-extrabold text-foreground";
 const adminDashboardGridColor = "hsl(var(--border) / 0.55)";
 const adminDashboardAxisColor = "hsl(var(--muted-foreground))";
+const adminDashboardFocusPalette = {
+  primary: "#14b8a6",
+  primarySoft: "#5eead4",
+  primaryFaint: "#99f6e4",
+  muted: "#94a3b8",
+  mutedStrong: "#64748b",
+  warning: "#f59e0b",
+  risk: "#f43f5e",
+} as const;
 const adminDashboardControlGroupClassName =
   "inline-flex h-7 shrink-0 items-center rounded-full border border-border bg-muted/25 p-0.5";
 const adminDashboardControlButtonClassName =
@@ -2946,11 +2955,11 @@ function AdminDashboardSeriesToggle<Key extends string>({
 
 function AdminDashboardImpactRankLegend() {
   const rankLegendColors = [
-    "bg-sky-300",
-    "bg-cyan-300",
-    "bg-teal-300",
-    "bg-emerald-200",
-    "bg-green-200",
+    "bg-teal-500",
+    "bg-teal-500/75",
+    "bg-teal-500/55",
+    "bg-muted-foreground/40",
+    "bg-muted-foreground/25",
   ];
 
   return (
@@ -3143,14 +3152,20 @@ function AdminDashboardPanelBodySkeleton({
         <div className="absolute inset-x-5 bottom-10 h-px bg-border/60" />
         <div className="absolute inset-y-5 left-10 w-px bg-border/60" />
         {[
-          ["left-[9%] top-[58%] h-10 w-10", "bg-sky-100 dark:bg-sky-950/45"],
-          ["left-[25%] top-[38%] h-14 w-14", "bg-teal-100 dark:bg-teal-950/45"],
+          ["left-[9%] top-[58%] h-10 w-10", "bg-teal-100 dark:bg-teal-950/45"],
+          ["left-[25%] top-[38%] h-14 w-14", "bg-teal-100/80 dark:bg-teal-950/35"],
           [
             "left-[43%] top-[52%] h-11 w-11",
-            "bg-emerald-100 dark:bg-emerald-950/45",
+            "bg-teal-100/60 dark:bg-teal-950/25",
           ],
-          ["left-[62%] top-[30%] h-16 w-16", "bg-cyan-100 dark:bg-cyan-950/45"],
-          ["left-[78%] top-[62%] h-9 w-9", "bg-blue-100 dark:bg-blue-950/45"],
+          [
+            "left-[62%] top-[30%] h-16 w-16",
+            "bg-muted-foreground/20 dark:bg-muted-foreground/18",
+          ],
+          [
+            "left-[78%] top-[62%] h-9 w-9",
+            "bg-muted-foreground/10 dark:bg-muted-foreground/12",
+          ],
         ].map(([positionClassName, colorClassName], index) => (
           <Skeleton
             key={index}
@@ -3503,12 +3518,12 @@ function AdminDashboardManagementSkeleton() {
                     {
                       key: "views",
                       label: "조회수",
-                      dotClassName: "bg-sky-500",
+                      dotClassName: "bg-teal-500",
                     },
                     {
                       key: "engagement",
                       label: "참여",
-                      dotClassName: "bg-teal-500",
+                      dotClassName: "bg-muted-foreground/45",
                     },
                     {
                       key: "engagementRate",
@@ -3571,17 +3586,17 @@ function AdminDashboardManagementSkeleton() {
                     {
                       key: "views",
                       label: "조회수",
-                      dotClassName: "bg-sky-500",
+                      dotClassName: "bg-teal-500",
                     },
                     {
                       key: "likes",
                       label: "좋아요",
-                      dotClassName: "bg-rose-500",
+                      dotClassName: "bg-muted-foreground/45",
                     },
                     {
                       key: "comments",
                       label: "댓글",
-                      dotClassName: "bg-orange-500",
+                      dotClassName: "bg-muted-foreground/30",
                     },
                   ]}
                   visibility={
@@ -3706,7 +3721,7 @@ function AdminDashboardKpiCard({
   className?: string;
   style?: CSSProperties;
   reorderProps?: AdminDashboardCardReorderProps;
-  tone?: "teal" | "blue" | "amber" | "rose" | "neutral";
+  tone?: "teal" | "amber" | "rose" | "neutral";
   sparklineData?: AdminDashboardSparklinePoint[];
   infoLines?: string[];
   isLoading?: boolean;
@@ -3718,27 +3733,22 @@ function AdminDashboardKpiCard({
     teal: {
       bar: "bg-teal-500 dark:bg-teal-400",
       text: "text-teal-700 dark:text-teal-300",
-      stroke: "#14b8a6",
-    },
-    blue: {
-      bar: "bg-sky-500 dark:bg-sky-400",
-      text: "text-sky-700 dark:text-sky-300",
-      stroke: "#38a5db",
+      stroke: adminDashboardFocusPalette.primary,
     },
     amber: {
       bar: "bg-amber-500 dark:bg-amber-400",
       text: "text-amber-700 dark:text-amber-300",
-      stroke: "#f59e0b",
+      stroke: adminDashboardFocusPalette.warning,
     },
     rose: {
       bar: "bg-rose-500 dark:bg-rose-400",
       text: "text-rose-700 dark:text-rose-300",
-      stroke: "#f43f5e",
+      stroke: adminDashboardFocusPalette.risk,
     },
     neutral: {
-      bar: "bg-muted-foreground",
+      bar: "bg-muted-foreground/55",
       text: "text-muted-foreground",
-      stroke: "#94a3b8",
+      stroke: adminDashboardFocusPalette.muted,
     },
   }[tone];
   const chartData = sparklineData.filter((point) =>
@@ -4009,11 +4019,11 @@ function AdminDashboardOpsSummaryCard({
             );
             const barTone =
               sectionIndex === 0
-                ? "bg-teal-500 dark:bg-teal-400"
+                ? "bg-muted-foreground/35"
                 : "bg-rose-500 dark:bg-rose-400";
             const labelTone =
               sectionIndex === 0
-                ? "text-teal-700 dark:text-teal-300"
+                ? "text-muted-foreground"
                 : "text-rose-700 dark:text-rose-300";
 
             return (
@@ -4200,7 +4210,7 @@ function AdminDashboardMultiLineChart({
               <Line
                 type="monotone"
                 dataKey="조회수"
-                stroke="#5aa6d8"
+                stroke={adminDashboardFocusPalette.primary}
                 strokeWidth={2.4}
                 dot={isDenseChart ? false : { r: 2.4 }}
                 activeDot={{ r: isDenseChart ? 3 : 4 }}
@@ -4209,14 +4219,14 @@ function AdminDashboardMultiLineChart({
                 <LabelList
                   dataKey="조회수최고"
                   position="top"
-                  fill="#2563eb"
+                  fill={adminDashboardFocusPalette.primary}
                   fontSize={10}
                   fontWeight={800}
                 />
                 <LabelList
                   dataKey="조회수최저"
                   position="bottom"
-                  fill="#2563eb"
+                  fill={adminDashboardFocusPalette.mutedStrong}
                   fontSize={10}
                   fontWeight={800}
                 />
@@ -4226,7 +4236,7 @@ function AdminDashboardMultiLineChart({
               <Line
                 type="monotone"
                 dataKey="참여"
-                stroke="#57c6ca"
+                stroke={adminDashboardFocusPalette.muted}
                 strokeWidth={2.4}
                 dot={isDenseChart ? false : { r: 2.4 }}
                 activeDot={{ r: isDenseChart ? 3 : 4 }}
@@ -4235,14 +4245,14 @@ function AdminDashboardMultiLineChart({
                 <LabelList
                   dataKey="참여최고"
                   position="top"
-                  fill="#0f766e"
+                  fill={adminDashboardFocusPalette.mutedStrong}
                   fontSize={10}
                   fontWeight={800}
                 />
                 <LabelList
                   dataKey="참여최저"
                   position="bottom"
-                  fill="#0f766e"
+                  fill={adminDashboardFocusPalette.mutedStrong}
                   fontSize={10}
                   fontWeight={800}
                 />
@@ -4252,7 +4262,7 @@ function AdminDashboardMultiLineChart({
               <Line
                 type="monotone"
                 dataKey="참여율"
-                stroke="#f59e0b"
+                stroke={adminDashboardFocusPalette.warning}
                 strokeWidth={2.8}
                 dot={isDenseChart ? false : { r: 2.6 }}
                 activeDot={{ r: isDenseChart ? 3 : 4.2 }}
@@ -4261,14 +4271,14 @@ function AdminDashboardMultiLineChart({
                 <LabelList
                   dataKey="참여율최고"
                   position="top"
-                  fill="#b45309"
+                  fill={adminDashboardFocusPalette.warning}
                   fontSize={10}
                   fontWeight={900}
                 />
                 <LabelList
                   dataKey="참여율최저"
                   position="bottom"
-                  fill="#b45309"
+                  fill={adminDashboardFocusPalette.warning}
                   fontSize={10}
                   fontWeight={900}
                 />
@@ -4328,7 +4338,13 @@ function AdminDashboardBubbleChart({
     조회수최고: viewExtremeLabels[index]?.high ?? "",
     조회수최저: viewExtremeLabels[index]?.low ?? "",
   }));
-  const colors = ["#93c5fd", "#7dd3fc", "#67e8f9", "#99f6e4", "#a7f3d0"];
+  const colors = [
+    adminDashboardFocusPalette.primary,
+    adminDashboardFocusPalette.primarySoft,
+    adminDashboardFocusPalette.primaryFaint,
+    "#cbd5e1",
+    "#e2e8f0",
+  ];
 
   if (topVideos.length === 0) {
     return (
@@ -4414,13 +4430,13 @@ function AdminDashboardBubbleChart({
                         label: "조회수",
                         value: formatNumber(row.조회수),
                         note: "오른쪽일수록 큼",
-                        color: "#5aa6d8",
+                        color: adminDashboardFocusPalette.primary,
                       },
                       {
                         label: "참여",
                         value: formatNumber(row.참여),
                         note: "좋아요+댓글",
-                        color: "#57c6ca",
+                        color: adminDashboardFocusPalette.muted,
                       },
                     ]}
                     footer="계산식: 참여 = 좋아요 + 댓글 · 원 크기 = 참여"
@@ -4433,14 +4449,14 @@ function AdminDashboardBubbleChart({
               <LabelList
                 dataKey="조회수최고"
                 position="top"
-                fill="#b91c1c"
+                fill={adminDashboardFocusPalette.primary}
                 fontSize={10}
                 fontWeight={900}
               />
               <LabelList
                 dataKey="조회수최저"
                 position="bottom"
-                fill="#0f766e"
+                fill={adminDashboardFocusPalette.mutedStrong}
                 fontSize={10}
                 fontWeight={900}
               />
@@ -4477,24 +4493,26 @@ function AdminDashboardGroupedBarChart({
   const topRow = visibleRows[0];
   const rankColors = [
     {
-      barClass: "bg-sky-500 text-white dark:bg-sky-500 dark:text-white",
-      dotClass: "bg-sky-500 dark:bg-sky-400",
-    },
-    {
       barClass: "bg-teal-500 text-white dark:bg-teal-500 dark:text-white",
       dotClass: "bg-teal-500 dark:bg-teal-400",
     },
     {
-      barClass: "bg-rose-500 text-white dark:bg-rose-500 dark:text-white",
-      dotClass: "bg-rose-500 dark:bg-rose-400",
+      barClass: "bg-teal-500/75 text-white dark:bg-teal-400/75 dark:text-white",
+      dotClass: "bg-teal-500/75 dark:bg-teal-400/75",
     },
     {
-      barClass: "bg-amber-600 text-white dark:bg-amber-500 dark:text-white",
-      dotClass: "bg-amber-500 dark:bg-amber-400",
+      barClass: "bg-teal-500/55 text-white dark:bg-teal-400/55 dark:text-white",
+      dotClass: "bg-teal-500/55 dark:bg-teal-400/55",
     },
     {
-      barClass: "bg-violet-500 text-white dark:bg-violet-500 dark:text-white",
-      dotClass: "bg-violet-500 dark:bg-violet-400",
+      barClass:
+        "bg-muted-foreground/45 text-background dark:bg-muted-foreground/50 dark:text-background",
+      dotClass: "bg-muted-foreground/45 dark:bg-muted-foreground/50",
+    },
+    {
+      barClass:
+        "bg-muted-foreground/28 text-background dark:bg-muted-foreground/35 dark:text-background",
+      dotClass: "bg-muted-foreground/28 dark:bg-muted-foreground/35",
     },
   ] as const;
   const metricRows = [
@@ -4503,21 +4521,21 @@ function AdminDashboardGroupedBarChart({
       key: "viewCount",
       label: "조회수",
       labelClass:
-        "border-sky-500/25 bg-sky-50 text-foreground dark:border-sky-400/30 dark:bg-sky-950/35",
+        "border-teal-500/25 bg-teal-50 text-foreground dark:border-teal-400/30 dark:bg-teal-950/35",
     },
     {
       seriesKey: "likes",
       key: "likeCount",
       label: "좋아요",
       labelClass:
-        "border-rose-500/25 bg-rose-50 text-foreground dark:border-rose-400/30 dark:bg-rose-950/35",
+        "border-border bg-muted/35 text-muted-foreground dark:bg-muted/20",
     },
     {
       seriesKey: "comments",
       key: "commentCount",
       label: "댓글",
       labelClass:
-        "border-orange-500/25 bg-orange-50 text-foreground dark:border-orange-400/30 dark:bg-orange-950/35",
+        "border-border bg-muted/35 text-muted-foreground dark:bg-muted/20",
     },
   ] as const satisfies ReadonlyArray<{
     seriesKey: AdminDashboardTopContentSeriesKey;
@@ -4676,12 +4694,11 @@ function AdminDashboardContentInsightStrip({
   if (insights.length === 0) return null;
 
   const toneClass = {
-    emerald:
-      "border-emerald-500/25 bg-emerald-50/70 text-emerald-800 dark:bg-emerald-950/25 dark:text-emerald-200",
-    sky: "border-sky-500/25 bg-sky-50/70 text-sky-800 dark:bg-sky-950/25 dark:text-sky-200",
-    amber:
+    primary:
+      "border-teal-500/25 bg-teal-50/70 text-teal-800 dark:bg-teal-950/25 dark:text-teal-200",
+    warning:
       "border-amber-500/25 bg-amber-50/70 text-amber-800 dark:bg-amber-950/25 dark:text-amber-200",
-    rose: "border-rose-500/25 bg-rose-50/70 text-rose-800 dark:bg-rose-950/25 dark:text-rose-200",
+    risk: "border-rose-500/25 bg-rose-50/70 text-rose-800 dark:bg-rose-950/25 dark:text-rose-200",
   } satisfies Record<AdminDashboardContentInsight["tone"], string>;
 
   return (
@@ -4756,10 +4773,9 @@ function AdminDashboardDiagnosisBoard({
   const modeLabel =
     metricMode === "delta" ? "기간 순증 평균 대비" : "기간 영상 현재 평균 대비";
   const signalBarClass = {
-    emerald: "bg-emerald-500",
-    sky: "bg-sky-500",
-    amber: "bg-amber-500",
-    rose: "bg-rose-500",
+    primary: "bg-teal-500",
+    warning: "bg-amber-500",
+    risk: "bg-rose-500",
   } satisfies Record<AdminDashboardContentInsight["tone"], string>;
 
   const visibleInsights = insights.slice(
@@ -4935,8 +4951,16 @@ function AdminDashboardAreaChart({
               x2="0"
               y2="1"
             >
-              <stop offset="5%" stopColor="#57c6b8" stopOpacity={0.42} />
-              <stop offset="95%" stopColor="#57c6b8" stopOpacity={0.08} />
+              <stop
+                offset="5%"
+                stopColor={adminDashboardFocusPalette.warning}
+                stopOpacity={0.42}
+              />
+              <stop
+                offset="95%"
+                stopColor={adminDashboardFocusPalette.warning}
+                stopOpacity={0.08}
+              />
             </linearGradient>
           </defs>
           <CartesianGrid stroke={adminDashboardGridColor} vertical={false} />
@@ -4970,7 +4994,7 @@ function AdminDashboardAreaChart({
                       label: "참여율",
                       value: `${Number(value).toFixed(2)}%`,
                       note: "조회수 대비 참여 비율",
-                      color: "#0f766e",
+                      color: adminDashboardFocusPalette.warning,
                     },
                   ]}
                   footer="계산식: 참여율 = 참여 / 조회수 × 100."
@@ -4984,7 +5008,7 @@ function AdminDashboardAreaChart({
           <Area
             type="monotone"
             dataKey="참여율"
-            stroke="#0f766e"
+            stroke={adminDashboardFocusPalette.warning}
             strokeWidth={2.6}
             fill="url(#adminDashboardEngagementArea)"
             dot={{ r: 2.4 }}
@@ -4994,14 +5018,14 @@ function AdminDashboardAreaChart({
             <LabelList
               dataKey="참여율최고"
               position="top"
-              fill="#0f766e"
+              fill={adminDashboardFocusPalette.warning}
               fontSize={10}
               fontWeight={900}
             />
             <LabelList
               dataKey="참여율최저"
               position="bottom"
-              fill="#0f766e"
+              fill={adminDashboardFocusPalette.warning}
               fontSize={10}
               fontWeight={900}
             />
@@ -6843,7 +6867,7 @@ function AdminDashboardManagementPanel({
           value={subscriberValue}
           caption={subscriberCaption}
           progress={hasSubscriberCount ? 100 : 0}
-          tone={hasSubscriberCount ? "teal" : "neutral"}
+          tone="neutral"
           sparklineData={subscriberSparklinePoints}
           delta={formatDashboardChangeLabel(subscriberChange)}
           deltaLabel="기간 대비"
@@ -6870,7 +6894,7 @@ function AdminDashboardManagementPanel({
           delta={formatDashboardChangeLabel(viewChange)}
           deltaLabel="기간 대비"
           progress={getDashboardChangeProgress(viewChange)}
-          tone="blue"
+          tone="teal"
           sparklineData={viewSparklineDisplayPoints}
           isLoading={isChartLoading}
           infoLines={[
@@ -6901,7 +6925,7 @@ function AdminDashboardManagementPanel({
           delta={formatDashboardChangeLabel(likeChange)}
           deltaLabel="기간 대비"
           progress={getDashboardChangeProgress(likeChange)}
-          tone="rose"
+          tone="neutral"
           sparklineData={likeSparklineDisplayPoints}
           isLoading={isChartLoading}
           infoLines={[
@@ -6932,7 +6956,7 @@ function AdminDashboardManagementPanel({
           delta={formatDashboardChangeLabel(commentChange)}
           deltaLabel="기간 대비"
           progress={getDashboardChangeProgress(commentChange)}
-          tone="amber"
+          tone="neutral"
           sparklineData={commentSparklineDisplayPoints}
           isLoading={isChartLoading}
           infoLines={[
@@ -6959,7 +6983,7 @@ function AdminDashboardManagementPanel({
           delta={formatDashboardChangeLabel(videoCountChange)}
           deltaLabel="기간 대비"
           progress={periodUploadVideoProgress}
-          tone="teal"
+          tone="neutral"
           sparklineData={videoCountSparklinePoints}
           isLoading={isChartLoading}
           infoLines={[
@@ -7126,12 +7150,12 @@ function AdminDashboardManagementPanel({
                     {
                       key: "views",
                       label: "조회수",
-                      dotClassName: "bg-sky-500",
+                      dotClassName: "bg-teal-500",
                     },
                     {
                       key: "engagement",
                       label: "참여",
-                      dotClassName: "bg-teal-500",
+                      dotClassName: "bg-muted-foreground/45",
                     },
                     {
                       key: "engagementRate",
@@ -7263,17 +7287,17 @@ function AdminDashboardManagementPanel({
                     {
                       key: "views",
                       label: "조회수",
-                      dotClassName: "bg-sky-500",
+                      dotClassName: "bg-teal-500",
                     },
                     {
                       key: "likes",
                       label: "좋아요",
-                      dotClassName: "bg-rose-500",
+                      dotClassName: "bg-muted-foreground/45",
                     },
                     {
                       key: "comments",
                       label: "댓글",
-                      dotClassName: "bg-orange-500",
+                      dotClassName: "bg-muted-foreground/30",
                     },
                   ]}
                   visibility={topContentSeriesVisibility}
