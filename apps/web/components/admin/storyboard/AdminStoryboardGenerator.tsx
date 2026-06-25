@@ -1556,7 +1556,6 @@ async function writeStoryboardClipboardText(text: string) {
   try {
     document.addEventListener("copy", handleCopy);
     textarea.focus();
-    textarea.select();
     textarea.setSelectionRange(0, textarea.value.length);
 
     if (!document.execCommand("copy")) {
