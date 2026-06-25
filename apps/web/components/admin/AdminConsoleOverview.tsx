@@ -2513,6 +2513,7 @@ const adminDashboardFocusPalette = {
   primary: "#14b8a6",
   primarySoft: "#5eead4",
   primaryFaint: "#99f6e4",
+  reach: "#38a5db",
   muted: "#94a3b8",
   mutedStrong: "#64748b",
   warning: "#f59e0b",
@@ -3705,6 +3706,7 @@ function AdminDashboardKpiCard({
   style,
   reorderProps,
   tone = "teal",
+  emphasis = "supporting",
   sparklineData = [],
   infoLines = [],
   isLoading = false,
@@ -3721,7 +3723,8 @@ function AdminDashboardKpiCard({
   className?: string;
   style?: CSSProperties;
   reorderProps?: AdminDashboardCardReorderProps;
-  tone?: "teal" | "amber" | "rose" | "neutral";
+  tone?: "sky" | "teal" | "amber" | "rose" | "neutral";
+  emphasis?: "primary" | "supporting";
   sparklineData?: AdminDashboardSparklinePoint[];
   infoLines?: string[];
   isLoading?: boolean;
@@ -3730,6 +3733,11 @@ function AdminDashboardKpiCard({
 }) {
   const safeProgress = clampDashboardPercent(progress);
   const toneClass = {
+    sky: {
+      bar: "bg-sky-500 dark:bg-sky-400",
+      text: "text-sky-700 dark:text-sky-300",
+      stroke: adminDashboardFocusPalette.reach,
+    },
     teal: {
       bar: "bg-teal-500 dark:bg-teal-400",
       text: "text-teal-700 dark:text-teal-300",
@@ -3751,6 +3759,13 @@ function AdminDashboardKpiCard({
       stroke: adminDashboardFocusPalette.muted,
     },
   }[tone];
+  const emphasisClass = {
+    primary:
+      "border-sky-500/35 bg-sky-50/20 dark:border-sky-400/45 dark:bg-sky-950/20",
+    supporting: undefined,
+  }[emphasis];
+  const cursorStrokeOpacity = emphasis === "primary" ? 0.45 : 0.32;
+  const sparklineFillOpacity = emphasis === "primary" ? 0.36 : 0.24;
   const chartData = sparklineData.filter((point) =>
     Number.isFinite(point.value),
   );
@@ -3760,11 +3775,14 @@ function AdminDashboardKpiCard({
       className={cn(
         adminDashboardCardClass,
         "relative z-0 grid min-h-[132px] grid-rows-[auto_minmax(0,1fr)_auto] gap-3 overflow-visible p-3 sm:p-3.5 hover:z-20 focus-within:z-20",
+        emphasisClass,
         className,
         isFullscreen && adminDashboardFullscreenCardClassName,
       )}
       data-admin-dashboard-kpi-card="recharts-sparkline"
       data-admin-dashboard-widget-card={widgetId}
+      data-admin-dashboard-kpi-emphasis={emphasis}
+      data-admin-dashboard-kpi-tone={tone}
       data-admin-dashboard-card-fullscreen={isFullscreen ? "true" : undefined}
       style={style}
       {...reorderProps}
@@ -3854,7 +3872,7 @@ function AdminDashboardKpiCard({
                     wrapperStyle={adminDashboardTooltipWrapperStyle}
                     cursor={{
                       stroke: toneClass.stroke,
-                      strokeOpacity: 0.32,
+                      strokeOpacity: cursorStrokeOpacity,
                     }}
                   />
                   <Area
@@ -3863,7 +3881,7 @@ function AdminDashboardKpiCard({
                     stroke={toneClass.stroke}
                     strokeWidth={2}
                     fill={toneClass.stroke}
-                    fillOpacity={0.28}
+                    fillOpacity={sparklineFillOpacity}
                     dot={false}
                     isAnimationActive={false}
                   />
@@ -6867,7 +6885,8 @@ function AdminDashboardManagementPanel({
           value={subscriberValue}
           caption={subscriberCaption}
           progress={hasSubscriberCount ? 100 : 0}
-          tone="neutral"
+          tone="teal"
+          emphasis="supporting"
           sparklineData={subscriberSparklinePoints}
           delta={formatDashboardChangeLabel(subscriberChange)}
           deltaLabel="기간 대비"
@@ -6894,7 +6913,8 @@ function AdminDashboardManagementPanel({
           delta={formatDashboardChangeLabel(viewChange)}
           deltaLabel="기간 대비"
           progress={getDashboardChangeProgress(viewChange)}
-          tone="teal"
+          tone="sky"
+          emphasis="primary"
           sparklineData={viewSparklineDisplayPoints}
           isLoading={isChartLoading}
           infoLines={[
@@ -6925,7 +6945,8 @@ function AdminDashboardManagementPanel({
           delta={formatDashboardChangeLabel(likeChange)}
           deltaLabel="기간 대비"
           progress={getDashboardChangeProgress(likeChange)}
-          tone="neutral"
+          tone="rose"
+          emphasis="supporting"
           sparklineData={likeSparklineDisplayPoints}
           isLoading={isChartLoading}
           infoLines={[
@@ -6956,7 +6977,8 @@ function AdminDashboardManagementPanel({
           delta={formatDashboardChangeLabel(commentChange)}
           deltaLabel="기간 대비"
           progress={getDashboardChangeProgress(commentChange)}
-          tone="neutral"
+          tone="amber"
+          emphasis="supporting"
           sparklineData={commentSparklineDisplayPoints}
           isLoading={isChartLoading}
           infoLines={[
@@ -6983,7 +7005,8 @@ function AdminDashboardManagementPanel({
           delta={formatDashboardChangeLabel(videoCountChange)}
           deltaLabel="기간 대비"
           progress={periodUploadVideoProgress}
-          tone="neutral"
+          tone="teal"
+          emphasis="supporting"
           sparklineData={videoCountSparklinePoints}
           isLoading={isChartLoading}
           infoLines={[
