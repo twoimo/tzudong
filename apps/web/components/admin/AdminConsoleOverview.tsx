@@ -293,6 +293,33 @@ function normalizeAdminThemePreference(
 
   return "light";
 }
+const ADMIN_THEME_OPTIONS = [
+  ["light", "라이트 모드", "다크모드", Sun],
+  ["dark", "다크모드", "시스템 모드", Moon],
+  ["system", "시스템 모드", "라이트 모드", Monitor],
+] as const;
+
+function getAdminThemeOption(theme: AdminThemePreference) {
+  return (
+    ADMIN_THEME_OPTIONS.find(([themeValue]) => themeValue === theme) ??
+    ADMIN_THEME_OPTIONS[0]
+  );
+}
+
+function getNextAdminThemePreference(theme: AdminThemePreference) {
+  const currentIndex = ADMIN_THEME_OPTIONS.findIndex(
+    ([themeValue]) => themeValue === theme,
+  );
+  const nextIndex =
+    currentIndex < 0 ? 0 : (currentIndex + 1) % ADMIN_THEME_OPTIONS.length;
+
+  return ADMIN_THEME_OPTIONS[nextIndex][0];
+}
+
+function getAdminThemeChangeLabel(themeLabel: string) {
+  return `${themeLabel}${themeLabel.endsWith("모드") ? "로" : "으로"} 변경`;
+}
+
 
 function getSidebarBadgeClassName(sectionLabel: string, isActive: boolean) {
   if (isActive) return "text-primary-foreground/75";
@@ -669,16 +696,7 @@ const AdminRouteRecommendationModule = dynamic(
     loading: () => <AdminConsoleCanvasSkeleton />,
   },
 );
-const AdminSystemStatusCenter = dynamic(
-  () =>
-    import("@/components/admin/system-status/AdminSystemStatusCenter").then(
-      (module) => module.AdminSystemStatusCenter,
-    ),
-  {
-    ssr: false,
-    loading: () => <AdminConsoleCanvasSkeleton />,
-  },
-);
+
 
 type AdminPendingCounts = {
   submissions: number;
@@ -3379,7 +3397,7 @@ function AdminDashboardManagementSkeleton() {
         </div>
       </div>
 
-      <div className="grid min-h-0 min-w-0 flex-1 auto-rows-min grid-cols-1 gap-2 overflow-x-hidden overflow-y-visible sm:grid-cols-2 lg:grid-cols-10 lg:grid-rows-[132px_minmax(0,1fr)_minmax(0,0.86fr)]">
+      <div className="grid min-h-0 min-w-0 flex-1 auto-rows-min grid-cols-1 gap-2 overflow-x-hidden overflow-y-visible sm:grid-cols-2 lg:grid-cols-10 lg:grid-rows-[132px_minmax(0,1fr)_minmax(0,0.9fr)] lg:overflow-hidden">
         <AdminDashboardKpiCard
           widgetId="subscribers"
           title="현재 구독자"
@@ -3444,7 +3462,7 @@ function AdminDashboardManagementSkeleton() {
         <div
           className={cn(
             adminDashboardCardClass,
-            "flex min-h-[280px] flex-col overflow-hidden p-3 sm:col-span-2 lg:col-span-3",
+            "flex min-h-[280px] flex-col overflow-hidden p-3 sm:col-span-2 lg:col-span-3 lg:min-h-0",
           )}
           data-admin-dashboard-skeleton-card="impact"
         >
@@ -3469,7 +3487,7 @@ function AdminDashboardManagementSkeleton() {
         <div
           className={cn(
             adminDashboardCardClass,
-            "flex min-h-[280px] flex-col overflow-hidden p-3 sm:col-span-2 lg:col-span-4",
+            "flex min-h-[280px] flex-col overflow-hidden p-3 sm:col-span-2 lg:col-span-4 lg:min-h-0",
           )}
           data-admin-dashboard-skeleton-card="trend"
         >
@@ -3515,7 +3533,7 @@ function AdminDashboardManagementSkeleton() {
         <div
           className={cn(
             adminDashboardCardClass,
-            "flex h-full min-h-[280px] flex-col p-3 text-xs sm:col-span-2 lg:col-span-3",
+            "flex h-full min-h-[280px] flex-col p-3 text-xs sm:col-span-2 lg:col-span-3 lg:min-h-0",
           )}
           data-admin-dashboard-skeleton-card="ops"
         >
@@ -3537,7 +3555,7 @@ function AdminDashboardManagementSkeleton() {
         <div
           className={cn(
             adminDashboardCardClass,
-            "flex min-h-[220px] flex-col overflow-hidden p-3 sm:col-span-2 lg:col-span-5",
+            "flex min-h-[220px] flex-col overflow-hidden p-3 sm:col-span-2 lg:col-span-5 lg:min-h-0",
           )}
           data-admin-dashboard-skeleton-card="topContent"
         >
@@ -3585,7 +3603,7 @@ function AdminDashboardManagementSkeleton() {
         <div
           className={cn(
             adminDashboardCardClass,
-            "flex min-h-[220px] flex-col overflow-hidden p-2 sm:col-span-2 lg:col-span-5",
+            "flex min-h-[220px] flex-col overflow-hidden p-2 sm:col-span-2 lg:col-span-5 lg:min-h-0",
           )}
           data-admin-dashboard-skeleton-card="engagementRate"
         >
@@ -6808,7 +6826,7 @@ function AdminDashboardManagementPanel({
       ) : null}
 
       <div
-        className="grid min-h-0 min-w-0 flex-1 auto-rows-min grid-cols-1 gap-2 overflow-x-hidden overflow-y-visible sm:grid-cols-2 lg:grid-cols-10 lg:grid-rows-[132px_minmax(0,1fr)_minmax(0,0.86fr)]"
+        className="grid min-h-0 min-w-0 flex-1 auto-rows-min grid-cols-1 gap-2 overflow-x-hidden overflow-y-visible sm:grid-cols-2 lg:grid-cols-10 lg:grid-rows-[132px_minmax(0,1fr)_minmax(0,0.9fr)] lg:overflow-hidden"
         data-admin-dashboard-order-mode={
           isDashboardOrderEditorOpen ? "direct-drag" : "off"
         }
@@ -6956,7 +6974,7 @@ function AdminDashboardManagementPanel({
         <div
           className={cn(
             adminDashboardCardClass,
-            "flex min-h-[280px] flex-col overflow-hidden p-3 sm:col-span-2 lg:col-span-3",
+            "flex min-h-[280px] flex-col overflow-hidden p-3 sm:col-span-2 lg:col-span-3 lg:min-h-0",
             getDashboardReorderCardClassName("impact"),
             isDashboardWidgetFullscreen("impact") &&
               adminDashboardFullscreenCardClassName,
@@ -7074,7 +7092,7 @@ function AdminDashboardManagementPanel({
         <div
           className={cn(
             adminDashboardCardClass,
-            "flex min-h-[280px] flex-col overflow-hidden p-3 sm:col-span-2 lg:col-span-4",
+            "flex min-h-[280px] flex-col overflow-hidden p-3 sm:col-span-2 lg:col-span-4 lg:min-h-0",
             getDashboardReorderCardClassName("trend"),
             isDashboardWidgetFullscreen("trend") &&
               adminDashboardFullscreenCardClassName,
@@ -7201,15 +7219,12 @@ function AdminDashboardManagementPanel({
           onViewChange={(view) => setDashboardCardView("ops", view)}
           isLoading={isLoading}
         />
-        <AdminSystemStatusCenter
-          isAdmin={isAdmin}
-          className="sm:col-span-2 lg:col-span-2"
-        />
+
 
         <div
           className={cn(
             adminDashboardCardClass,
-            "flex min-h-[220px] flex-col overflow-hidden p-3 sm:col-span-2 lg:col-span-5",
+            "flex min-h-[220px] flex-col overflow-hidden p-3 sm:col-span-2 lg:col-span-5 lg:min-h-0",
             getDashboardReorderCardClassName("topContent"),
           )}
           style={getDashboardCardOrderStyle("topContent")}
@@ -7310,7 +7325,7 @@ function AdminDashboardManagementPanel({
         <div
           className={cn(
             adminDashboardCardClass,
-            "flex min-h-[220px] flex-col overflow-hidden p-2 sm:col-span-2 lg:col-span-5",
+            "flex min-h-[220px] flex-col overflow-hidden p-2 sm:col-span-2 lg:col-span-5 lg:min-h-0",
             getDashboardReorderCardClassName("engagementRate"),
           )}
           style={getDashboardCardOrderStyle("engagementRate")}
@@ -7883,52 +7898,45 @@ function AdminSidebar({
   const renderThemeControls = (placement: "dropdown" | "sidebar") => {
     const isSidebarPlacement = placement === "sidebar";
     const isCompactSidebar = isSidebarPlacement && isCollapsed;
+    const [currentTheme, currentThemeLabel, nextThemeLabel, ThemeIcon] =
+      getAdminThemeOption(themePreference);
+    const nextTheme = getNextAdminThemePreference(themePreference);
+    const controlLabel = `${currentThemeLabel} 사용 중 · 클릭하면 ${getAdminThemeChangeLabel(nextThemeLabel)}`;
 
     return (
-      <div
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
         className={cn(
-          "border border-border bg-white p-1 shadow-inner dark:bg-card",
+          "h-9 rounded-full border border-border bg-white text-xs font-bold text-muted-foreground shadow-inner transition-[background-color,color,box-shadow,transform] duration-150 hover:bg-background/80 hover:text-foreground focus-visible:ring-primary focus-visible:ring-offset-background dark:bg-card",
           isCompactSidebar
-            ? "inline-flex w-8 flex-col items-center gap-1 self-center rounded-2xl"
-            : "grid w-full grid-cols-3 gap-1 rounded-full",
+            ? "w-9 justify-center p-0"
+            : "w-full min-w-0 justify-start gap-2 px-3",
         )}
-        style={
-          isCompactSidebar
-            ? undefined
-            : { gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }
-        }
-        aria-label="화면 모드 선택"
+        aria-label={controlLabel}
+        title={controlLabel}
         data-admin-sidebar-theme-toggle="true"
+        data-admin-sidebar-theme-cycle="single-button"
+        data-admin-sidebar-theme-current={currentTheme}
         data-admin-sidebar-preference-placement={placement}
         data-admin-sidebar-theme-layout={placement}
+        onClick={() => updateThemePreference(nextTheme)}
       >
-        {(
-          [
-            ["light", "화이트 모드", Sun],
-            ["dark", "다크모드", Moon],
-            ["system", "시스템 설정", Monitor],
-          ] as const
-        ).map(([theme, label, Icon]) => (
-          <Button
-            key={theme}
-            type="button"
-            variant="ghost"
-            size="sm"
-            className={cn(
-              "h-8 rounded-full border border-transparent p-0 text-muted-foreground shadow-none transition-[background-color,color,box-shadow,transform] duration-150 hover:bg-background/80 hover:text-foreground focus-visible:ring-primary focus-visible:ring-offset-background",
-              isCompactSidebar ? "w-7" : "w-full min-w-0",
-              themePreference === theme &&
-                "bg-primary text-primary-foreground shadow-primary hover:bg-primary hover:text-primary-foreground",
-            )}
-            aria-label={`${label}으로 변경`}
-            aria-pressed={themePreference === theme}
-            onClick={() => updateThemePreference(theme)}
-          >
-            <Icon className="h-3.5 w-3.5" aria-hidden="true" />
-            <span className="sr-only">{label}</span>
-          </Button>
-        ))}
-      </div>
+        <ThemeIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+        <span className={cn("min-w-0 truncate", isCompactSidebar && "sr-only")}>
+          {currentThemeLabel}
+        </span>
+        <span
+          className={cn(
+            "ml-auto shrink-0 text-[10px] font-semibold text-muted-foreground",
+            isCompactSidebar && "sr-only",
+          )}
+          aria-hidden="true"
+        >
+          다음: {nextThemeLabel}
+        </span>
+      </Button>
     );
   };
 
