@@ -2056,16 +2056,33 @@ function formatStoryboardChatMessageForDisplay(
   };
 }
 
+const STORYBOARD_LEGACY_DEFAULT_READBACK_NEEDLE = [
+  "공용 기본",
+  "스토리보드",
+].join(" ");
+
+function isStoryboardChatMessageUsefulForAgentContext(
+  message: StoryboardChatMessage,
+) {
+  if (message.status === "streaming" || !message.text.trim()) return false;
+  if (message.id === "assistant-intake") return false;
+  if (message.role === "user") return true;
+
+  const normalizedText = sanitizeStoryboardChatDisplayText(message.text);
+  const isStoryboardReadbackMessage =
+    message.id.startsWith("assistant-history-load") ||
+    normalizedText.includes(STORYBOARD_LEGACY_DEFAULT_READBACK_NEEDLE) ||
+    normalizedText.startsWith("선택한 스토리보드를 불러왔어요") ||
+    normalizedText.startsWith("준비된 스토리보드를 불러왔어요");
+
+  return !isStoryboardReadbackMessage;
+}
+
 function buildStoryboardChatConversationContext(
   messages: StoryboardChatMessage[],
 ): StoryboardChatConversationMessage[] {
   return messages
-    .filter(
-      (message) =>
-        message.status !== "streaming" &&
-        message.id !== "assistant-intake" &&
-        message.text.trim(),
-    )
+    .filter(isStoryboardChatMessageUsefulForAgentContext)
     .slice(-STORYBOARD_CHAT_CONVERSATION_CONTEXT_LIMIT)
     .map((message) => ({
       id: message.id,
