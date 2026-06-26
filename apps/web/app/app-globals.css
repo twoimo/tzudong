@@ -993,9 +993,6 @@ div[style*="z-index"] > div > .custom-marker {
   margin-top: 0.375rem;
 }
 
-[data-admin-sidebar-footer-separator="spacious"] {
-  padding-top: 1rem;
-}
 
 [data-admin-left-panel-expanded="true"]
   [data-admin-sidebar-footer-actions="true"]
@@ -1115,16 +1112,14 @@ div[style*="z-index"] > div > .custom-marker {
   [data-admin-left-panel-expanded="false"]
     > [data-admin-sidebar-header="true"] {
     display: flex;
-    min-height: 2.5rem;
-    height: 2.5rem;
-    width: 100%;
+    min-height: 3.5625rem;
+    height: 3.5625rem;
+    width: 3.5625rem;
     align-items: center;
     justify-content: center;
-    border-bottom-width: 0;
-    padding-right: 0;
-    padding-left: 0;
-    padding-top: 0.25rem;
-    padding-bottom: 0.25rem;
+    border-bottom-width: 1px;
+    border-bottom-color: hsl(var(--border) / 0.7);
+    padding: 0;
   }
 
   [data-admin-left-panel-expanded="false"]
@@ -1135,9 +1130,9 @@ div[style*="z-index"] > div > .custom-marker {
     margin-left: auto !important;
     align-self: center;
     justify-content: center;
-    border-color: hsl(var(--border) / 0.8);
-    background: hsl(var(--background) / 0.72);
-    box-shadow: 0 1px 2px hsl(24 10% 10% / 0.04);
+    background: transparent;
+    box-shadow: none;
+    transform: translateY(0.5px);
   }
 
   [data-admin-left-panel-expanded="false"]
@@ -1217,13 +1212,35 @@ div[style*="z-index"] > div > .custom-marker {
   [data-admin-left-panel-expanded="false"]
     [data-admin-sidebar-section-list="spacious"]
     button[aria-controls="admin-console-canvas"] {
-    width: 2rem;
-    min-width: 2rem;
-    max-width: 2rem;
+    width: 2.25rem;
+    min-width: 2.25rem;
+    max-width: 2.25rem;
+    min-height: 2.25rem;
+    height: 2.25rem;
     justify-content: center;
     gap: 0;
+    border-radius: 0.75rem;
     padding-right: 0;
     padding-left: 0;
+  }
+
+  [data-admin-left-panel-expanded="false"]
+    [data-admin-sidebar-section-list="spacious"]
+    button[aria-controls="admin-console-canvas"]
+    > span:first-child {
+    width: 1.25rem;
+    height: 1.25rem;
+    border-width: 0;
+    background: transparent;
+  }
+
+  [data-admin-left-panel-expanded="false"]
+    [data-admin-sidebar-section-list="spacious"]
+    button[aria-controls="admin-console-canvas"]
+    > span:first-child
+    > svg {
+    width: 1.25rem;
+    height: 1.25rem;
   }
 
   [data-admin-left-panel-expanded="false"]
