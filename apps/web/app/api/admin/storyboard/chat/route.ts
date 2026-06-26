@@ -104,6 +104,19 @@ const STORYBOARD_CHAT_IMAGE_ATTACHMENT_MIME_TYPES = new Set([
 const STORYBOARD_CHAT_CONVERSATION_MESSAGE_LIMIT = 8;
 const STORYBOARD_CHAT_CONVERSATION_CONTENT_LIMIT = 320;
 
+function isRouteConversationReadbackMessage(
+  message: StoryboardChatConversationMessageForRoute,
+) {
+  if (message.role === 'user') return false;
+
+  return (
+    message.id?.startsWith('assistant-history-load') ||
+    message.content.includes('공용 기본 스토리보드') ||
+    message.content.startsWith('선택한 스토리보드를 불러왔어요') ||
+    message.content.startsWith('준비된 스토리보드를 불러왔어요')
+  );
+}
+
 function shouldSkipLocalStoryboardBackendAgentOnVercel() {
   return (
     process.env.VERCEL === '1' &&
@@ -162,7 +175,6 @@ function normalizeRouteConversationMessages(value: unknown):
   }
 
   const conversationMessages: StoryboardChatConversationMessageForRoute[] = value
-    .slice(-STORYBOARD_CHAT_CONVERSATION_MESSAGE_LIMIT)
     .flatMap((item): StoryboardChatConversationMessageForRoute[] => {
       if (!item || typeof item !== 'object' || Array.isArray(item)) return [];
       const candidate = item as Record<string, unknown>;
@@ -177,15 +189,15 @@ function normalizeRouteConversationMessages(value: unknown):
       if (!role || !content) return [];
       const id = sanitizeStatusText(candidate.id, 80);
       const createdAt = sanitizeStatusText(candidate.createdAt, 80);
-      return [
-        {
-          role,
-          content,
-          ...(id ? { id } : {}),
-          ...(createdAt ? { createdAt } : {}),
-        },
-      ];
-    });
+      const message: StoryboardChatConversationMessageForRoute = {
+        role,
+        content,
+        ...(id ? { id } : {}),
+        ...(createdAt ? { createdAt } : {}),
+      };
+      return isRouteConversationReadbackMessage(message) ? [] : [message];
+    })
+    .slice(-STORYBOARD_CHAT_CONVERSATION_MESSAGE_LIMIT);
 
   return { ok: true, conversationMessages };
 }

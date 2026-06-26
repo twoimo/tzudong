@@ -692,6 +692,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "components/admin/SubmissionListView.tsx",
     );
     const usersSource = source("components/admin/AdminUsersPanel.tsx");
+    const refreshHistorySource = source(
+      "components/admin/AdminRestaurantRefreshHistoryPanel.tsx",
+    );
+    const insightsSource = source("app/insights/insights-client.tsx");
 
     expect(consoleSource).not.toContain(
       "aria-label={`${title} 작업 화면 준비 상태`}",
@@ -702,9 +706,24 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(adminLoadingSource).toContain("return null;");
     expect(adminLoadingSource).toContain("모듈별 스켈레톤만 한 번");
     expect(consoleSource).not.toContain("AdminConsoleLoadingSkeleton");
-    expect(consoleSource).toContain("function AdminConsoleCanvasSkeleton()");
+    expect(consoleSource).toContain("function AdminConsoleCanvasSkeleton");
     expect(consoleSource).toContain(
       'data-admin-console-content-loading="true"',
+    );
+    expect(consoleSource).toContain(
+      'data-admin-sidebar-module-loading="page-shell"',
+    );
+    expect(consoleSource).toContain(
+      'data-admin-sidebar-module-loading-header="true"',
+    );
+    expect(consoleSource).toContain(
+      'data-admin-sidebar-module-loading-grid="true"',
+    );
+    expect(consoleSource).toContain(
+      'data-admin-sidebar-module-loading-list="true"',
+    );
+    expect(consoleSource).toContain(
+      'data-admin-sidebar-module-loading-detail="true"',
     );
     expect(consoleSource).toContain(
       "function AdminStoryboardModuleLoadingSkeleton()",
@@ -732,6 +751,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(consoleSource).toContain(
       "loading: () => <AdminYoutubeThumbnailModuleLoadingSkeleton />",
+    );
+    expect(consoleSource).toContain(
+      "loading: () => <AdminConsoleCanvasSkeleton />",
     );
     expect(consoleSource).not.toContain(
       'isShellBootstrapping && activeModuleId !== "storyboard"',
@@ -942,6 +964,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(consoleSource).toContain("<AdminDashboardManagementSkeleton />");
     expect(consoleSource).toContain(
+      "<AdminConsoleCanvasSkeleton title={activeModuleLabel} />",
+    );
+    expect(consoleSource).toContain(
       'data-admin-dashboard-management-skeleton="true"',
     );
     expect(consoleSource).toContain(
@@ -975,6 +1000,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "lg:grid-cols-[40px_minmax(180px,1fr)_repeat(6,78px)_112px]",
     );
     expect(routeSkeletonSource).not.toContain("repeat(8,96px)");
+    expect(routeSkeletonSource).toContain(
+      "fallback={<AdminEvaluationRouteSkeleton />}",
+    );
     expect(consoleSource).toContain('role="status"');
     expect(evaluationTableSource).toContain(
       'aria-label="맛집 검수 카드 로딩 중"',
@@ -1003,6 +1031,15 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(usersSource).toContain(
       '<th scope="col" className="px-3 py-2 font-semibold">사용자</th>',
     );
+    expect(refreshHistorySource).toContain(
+      "function RefreshCandidateListSkeleton()",
+    );
+    expect(refreshHistorySource).toContain(
+      'aria-label="맛집 최신화 이력 로딩 중"',
+    );
+    expect(insightsSource).toContain("function InsightsClientLoadingSkeleton()");
+    expect(insightsSource).toContain('data-insights-client-loading="true"');
+    expect(insightsSource).toContain("return <InsightsClientLoadingSkeleton />;");
     expect(usersSource).toContain("block min-w-0 text-left");
     expect(usersSource).toContain("overflow-hidden rounded-lg border bg-card");
     expect(usersSource).toContain(
@@ -2713,11 +2750,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "margin-top",
       "0.375rem",
     );
-    expectCssDeclaration(
-      appGlobalsSource,
+    expect(appGlobalsSource).not.toContain(
       '[data-admin-sidebar-footer-separator="spacious"]',
-      "padding-top",
-      "1rem",
     );
     expect(appGlobalsSource).not.toContain(
       '[data-admin-sidebar-theme-toggle="true"][data-admin-sidebar-theme-layout="sidebar"]',
@@ -2775,22 +2809,43 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       appGlobalsSource,
       '[data-admin-left-panel-expanded="false"] > [data-admin-sidebar-header="true"]',
       "height",
-      "2.5rem",
+      "3.5625rem",
     );
     expectCssDeclaration(
       appGlobalsSource,
       '[data-admin-left-panel-expanded="false"] > [data-admin-sidebar-header="true"]',
-      "padding-top",
-      "0.25rem",
+      "width",
+      "3.5625rem",
+    );
+    expectCssDeclaration(
+      appGlobalsSource,
+      '[data-admin-left-panel-expanded="false"] > [data-admin-sidebar-header="true"]',
+      "padding",
+      "0",
+    );
+    expectCssDeclaration(
+      appGlobalsSource,
+      '[data-admin-left-panel-expanded="false"] > [data-admin-sidebar-header="true"]',
+      "border-bottom-width",
+      "1px",
+    );
+    expectCssDeclaration(
+      appGlobalsSource,
+      '[data-admin-left-panel-expanded="false"] > [data-admin-sidebar-header="true"]',
+      "border-bottom-color",
+      "hsl(var(--border) / 0.7)",
     );
     expect(appGlobalsSource).toContain(
       '[data-admin-left-panel-expanded="false"]\n    [data-admin-sidebar-collapse-toggle="true"]',
     );
     expect(appGlobalsSource).toContain("margin-left: auto !important;");
     expect(appGlobalsSource).toContain("margin-right: auto !important;");
-    expect(appGlobalsSource).toContain(
+    expect(appGlobalsSource).not.toContain(
       "border-color: hsl(var(--border) / 0.8);",
     );
+    expect(appGlobalsSource).toContain("background: transparent;");
+    expect(appGlobalsSource).toContain("box-shadow: none;");
+    expect(appGlobalsSource).toContain("transform: translateY(0.5px);");
     expect(appGlobalsSource).toContain(
       '> [data-admin-sidebar-header="true"]\n    > [data-admin-sidebar-header-copy="true"]',
     );
@@ -2803,6 +2858,30 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(appGlobalsSource).toContain("gap: 0.375rem;");
     expect(appGlobalsSource).toContain(
       'button[aria-controls="admin-console-canvas"]',
+    );
+    expectCssDeclaration(
+      appGlobalsSource,
+      '[data-admin-left-panel-expanded="false"] [data-admin-sidebar-section-list="spacious"] button[aria-controls="admin-console-canvas"]',
+      "width",
+      "2.25rem",
+    );
+    expectCssDeclaration(
+      appGlobalsSource,
+      '[data-admin-left-panel-expanded="false"] [data-admin-sidebar-section-list="spacious"] button[aria-controls="admin-console-canvas"]',
+      "height",
+      "2.25rem",
+    );
+    expectCssDeclaration(
+      appGlobalsSource,
+      '[data-admin-left-panel-expanded="false"] [data-admin-sidebar-section-list="spacious"] button[aria-controls="admin-console-canvas"] > span:first-child',
+      "border-width",
+      "0",
+    );
+    expectCssDeclaration(
+      appGlobalsSource,
+      '[data-admin-left-panel-expanded="false"] [data-admin-sidebar-section-list="spacious"] button[aria-controls="admin-console-canvas"] > span:first-child > svg',
+      "width",
+      "1.25rem",
     );
     expect(appGlobalsSource).toContain("> span:not(:first-child)");
     expect(appGlobalsSource).toContain("[data-admin-console-content]:focus");
@@ -7414,7 +7493,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       'data-admin-sidebar-section-list="spacious"',
     );
-    expect(consoleSource).toContain(
+    expect(consoleSource).not.toContain(
       'data-admin-sidebar-footer-separator="spacious"',
     );
     expect(consoleSource).toContain(
@@ -7433,8 +7512,16 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(source("app/app-globals.css")).toContain(
       ".scrollbar-hide::-webkit-scrollbar",
     );
-    expect(consoleSource).toContain(
+    expect(consoleSource).toContain("shrink-0 pt-4");
+    expect(consoleSource).not.toContain(
       "shrink-0 border-t border-dashed border-border/70 pt-4",
+    );
+    expect(consoleSource).not.toContain(
+      "mb-0 shrink-0 rounded-2xl border border-destructive/20 bg-destructive/5",
+    );
+    expect(consoleSource).toContain('title: "지표 데이터 로드 실패"');
+    expect(consoleSource).toContain(
+      'description: "대시보드 정적 영역은 유지합니다."',
     );
     expect(consoleSource).toContain(
       "data-admin-sidebar-preference-placement={placement}",
@@ -7458,17 +7545,43 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain(
       'className="rounded-xl border border-border bg-card/80 p-1.5"',
     );
-    expect(consoleSource).toContain('aria-label="메뉴 순서 설정"');
+    expect(consoleSource).toContain('aria-label="계정 및 사이드바 설정"');
     expect(consoleSource).toContain('aria-label="관리자 사이드바 설정"');
     expect(consoleSource).toContain("isCollapsed");
+    expect(consoleSource).toContain(
+      'data-admin-sidebar-account-trigger={isCollapsed ? "collapsed" : "expanded"}',
+    );
+    expect(consoleSource).toContain(
+      'data-admin-sidebar-account-menu-content="true"',
+    );
+    expect(consoleSource).toContain('data-admin-sidebar-account-chrome="integrated"');
+    expect(consoleSource).toContain(
+      '"group/sidebar-account bg-transparent text-muted-foreground shadow-none',
+    );
+    expect(consoleSource).toContain(
+      '? "h-9 w-9 justify-center rounded-xl p-0"',
+    );
+    expect(consoleSource).toContain(
+      '"flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground',
+    );
+    expect(consoleSource).not.toContain(
+      "border border-border bg-background/95 text-foreground shadow-lg backdrop-blur-sm",
+    );
+    expect(consoleSource).toContain("UserRound");
+    expect(consoleSource).toContain(
+      'data-admin-sidebar-account-theme-section="true"',
+    );
+    expect(consoleSource).toContain(
+      'data-admin-sidebar-account-order-section="true"',
+    );
     expect(consoleSource).toContain(
       '"flex w-full flex-col items-center gap-2"',
     );
     expect(consoleSource).toContain('"space-y-3"');
-    expect(consoleSource).toContain(
+    expect(consoleSource).not.toContain(
       'data-admin-sidebar-order-trigger="expanded"',
     );
-    expect(consoleSource).toContain(
+    expect(consoleSource).not.toContain(
       'data-admin-sidebar-order-trigger="collapsed"',
     );
     expect(consoleSource).toContain("ADMIN_THEME_STORAGE_KEY");
@@ -7540,8 +7653,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(consoleSource).toContain("isCollapsed &&");
     expect(consoleSource).toContain(
-      '"md:min-h-10 md:w-full md:items-center md:justify-center md:border-b-0 md:px-0 md:py-1"',
+      '"md:h-[3.5625rem] md:min-h-[3.5625rem] md:w-[3.5625rem] md:items-center md:justify-center md:px-0 md:py-0"',
     );
+    expect(consoleSource).not.toContain("md:border-b-0");
     expect(consoleSource).toContain(
       '"flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl',
     );
@@ -7550,9 +7664,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'className="h-7 w-7 rounded-lg object-contain"',
     );
     expect(consoleSource).toContain(
-      '"group relative ml-auto inline-flex h-8 w-8 shrink-0 overflow-hidden rounded-xl border border-transparent p-0',
+      '"group relative ml-auto inline-flex h-8 w-8 shrink-0 overflow-hidden rounded-xl bg-transparent p-0',
     );
-    expect(consoleSource).toContain(
+    expect(consoleSource).toContain('isCollapsed && "md:m-0"');
+    expect(consoleSource).not.toContain(
       '"md:m-0 md:border-border md:bg-background/70 md:text-foreground"',
     );
     expect(consoleSource).toContain(
@@ -7594,6 +7709,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(consoleSource).not.toContain("hover:bg-primary/10");
     expect(consoleSource).toContain(
+      "overflow-hidden rounded-xl bg-transparent text-foreground transition hover:bg-transparent",
+    );
+    expect(consoleSource).not.toContain(
       "border border-border bg-transparent text-foreground transition hover:border-border hover:bg-transparent",
     );
     expect(consoleSource).toContain('src="/logo.webp"');
@@ -7610,7 +7728,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       'data-admin-sidebar-section-list="spacious"',
     );
-    expect(consoleSource).toContain(
+    expect(consoleSource).not.toContain(
       'data-admin-sidebar-footer-separator="spacious"',
     );
     expect(consoleSource).toContain(
@@ -7629,11 +7747,23 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(source("app/app-globals.css")).toContain(
       ".scrollbar-hide::-webkit-scrollbar",
     );
-    expect(consoleSource).toContain(
+    expect(consoleSource).toContain("shrink-0 pt-4");
+    expect(consoleSource).not.toContain(
       "shrink-0 border-t border-dashed border-border/70 pt-4",
     );
-    expect(consoleSource).toContain('renderThemeControls("sidebar")');
+    expect(consoleSource).toContain(
+      'renderThemeControls("sidebar", { compact: false })',
+    );
     expect(consoleSource).toContain('renderOrderControls("sidebar")');
+    const sidebarThemeControlIndex = consoleSource.indexOf(
+      '{renderThemeControls("sidebar", { compact: false })}',
+    );
+    const accountOrderSectionIndex = consoleSource.indexOf(
+      'data-admin-sidebar-account-order-section="true"',
+    );
+    expect(sidebarThemeControlIndex).toBeGreaterThan(-1);
+    expect(accountOrderSectionIndex).toBeGreaterThan(-1);
+    expect(sidebarThemeControlIndex).toBeLessThan(accountOrderSectionIndex);
     expect(consoleSource).toContain("block space-y-3");
     expect(consoleSource).toContain("메뉴 순서");
     expect(consoleSource).toContain("초기화");
