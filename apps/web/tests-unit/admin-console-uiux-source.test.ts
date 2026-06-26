@@ -7556,13 +7556,20 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(consoleSource).toContain('data-admin-sidebar-account-chrome="integrated"');
     expect(consoleSource).toContain(
-      '"group/sidebar-account bg-transparent text-muted-foreground shadow-none',
+      '"group/sidebar-account transition-colors duration-150 focus-visible:ring-primary',
     );
     expect(consoleSource).toContain(
-      '? "h-9 w-9 justify-center rounded-xl p-0"',
+      '? "h-9 w-9 justify-center rounded-xl bg-transparent p-0 text-muted-foreground shadow-none',
+    );
+    expect(consoleSource).toContain("const sidebarAccountAvatarClassName");
+    expect(consoleSource).toContain(
+      '"relative grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-primary/10 text-primary transition-colors group-hover/sidebar-account:bg-primary/15"',
     );
     expect(consoleSource).toContain(
-      '"flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground',
+      ': "h-11 w-full min-w-0 justify-start gap-2 rounded-2xl border border-border bg-background/95 px-1.5 py-1 text-foreground shadow-sm backdrop-blur-sm',
+    );
+    expect(consoleSource).toContain(
+      'className={sidebarAccountAvatarClassName}',
     );
     expect(consoleSource).not.toContain(
       "border border-border bg-background/95 text-foreground shadow-lg backdrop-blur-sm",
