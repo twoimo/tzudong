@@ -33,7 +33,7 @@ const ADMIN_CONSOLE_RESPONSIVE_LAYOUT_CLASSES = [
   "lg:w-0",
   "lg:w-11",
   "lg:w-14",
-  "lg:w-60",
+  "lg:w-56",
   // The KPI dashboard is intentionally dense on desktop. If these grid
   // utilities are dropped during dev CSS regeneration, the desktop dashboard
   // falls back to a one-column mobile layout and appears broken.
