@@ -12,6 +12,7 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 type RefreshCandidateStatus =
@@ -217,6 +218,36 @@ function RefreshWorkflowSteps() {
   );
 }
 
+function RefreshCandidateListSkeleton() {
+  return (
+    <div
+      className="divide-y divide-border"
+      role="status"
+      aria-busy="true"
+      aria-label="맛집 최신화 이력 로딩 중"
+    >
+      <span className="sr-only">맛집 최신화 후보 목록을 불러오는 중입니다.</span>
+      {Array.from({ length: 5 }).map((_, rowIndex) => (
+        <div
+          key={rowIndex}
+          className="grid gap-3 px-3 py-3 xl:grid-cols-[1.2fr_1fr_0.9fr_0.9fr_110px] xl:items-center"
+          aria-hidden="true"
+        >
+          <div className="space-y-1.5">
+            <Skeleton className="h-4 w-36 rounded-full motion-reduce:animate-none" />
+            <Skeleton className="h-3 w-48 max-w-full rounded-full motion-reduce:animate-none" />
+            <Skeleton className="h-3 w-28 rounded-full motion-reduce:animate-none" />
+          </div>
+          <Skeleton className="h-10 rounded-lg motion-reduce:animate-none" />
+          <Skeleton className="h-7 rounded-full motion-reduce:animate-none" />
+          <Skeleton className="h-7 rounded-full motion-reduce:animate-none" />
+          <Skeleton className="h-8 rounded-lg motion-reduce:animate-none" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 type RefreshCandidateListProps = {
   candidates: RefreshCandidateRow[];
   isLoading: boolean;
@@ -259,9 +290,7 @@ function RefreshCandidateList({
         data-admin-restaurant-refresh-list="management-like"
       >
         {isLoading ? (
-          <div className="p-6 text-center text-sm text-muted-foreground">
-            이력을 불러오는 중입니다…
-          </div>
+          <RefreshCandidateListSkeleton />
         ) : candidates.length === 0 ? (
           <div className="p-6 text-center text-sm text-muted-foreground">
             아직 기록된 최신화 후보가 없습니다. 승인 맛집 점검 job 또는 수동
