@@ -19,7 +19,7 @@ const criticalAdminConsoleLayoutUtilities = [
   "lg:m-0",
   "lg:px-1.5",
   "lg:w-14",
-  "lg:w-60",
+  "lg:w-56",
   "lg:grid",
   "lg:place-items-center",
 ] as const;
