@@ -42,6 +42,7 @@ import {
   ScrollText,
   RefreshCw,
   Store,
+  UserRound,
   UsersRound,
   XCircle,
 } from "lucide-react";
@@ -79,6 +80,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdBannersAdmin } from "@/hooks/use-ad-banners";
 import { useMobileBottomNavAutoHide } from "@/hooks/use-mobile-bottom-nav-auto-hide";
+import { useToast } from "@/hooks/use-toast";
 import {
   DEFAULT_ADMIN_DASHBOARD_WIDGET_ORDER,
   isAdminDashboardWidgetId,
@@ -632,11 +634,13 @@ const AdminEvaluationModule = dynamic(
   () => import("@/app/admin/evaluations/page"),
   {
     ssr: false,
+    loading: () => <AdminConsoleCanvasSkeleton />,
   },
 );
 
 const AdminBannerModule = dynamic(() => import("@/app/admin/banners/page"), {
   ssr: false,
+  loading: () => <AdminConsoleCanvasSkeleton />,
 });
 
 const AdminRestaurantRefreshHistoryModule = dynamic(
@@ -654,6 +658,7 @@ const AdminUsersModule = dynamic(
   () => import("@/components/admin/AdminUsersPanel"),
   {
     ssr: false,
+    loading: () => <AdminConsoleCanvasSkeleton />,
   },
 );
 
@@ -684,6 +689,7 @@ const AdminYoutubeThumbnailGenerator = dynamic(
 
 const InsightsModule = dynamic(() => import("@/app/insights/insights-client"), {
   ssr: false,
+  loading: () => <AdminConsoleCanvasSkeleton />,
 });
 
 const AdminRouteRecommendationModule = dynamic(
@@ -5466,6 +5472,8 @@ function AdminDashboardManagementPanel({
   hasError: boolean;
   isAdmin: boolean;
 }) {
+  const { toast } = useToast();
+  const hasShownDashboardDataErrorToastRef = useRef(false);
   const [period, setPeriod] = useState<AdminDashboardPeriod>("1M");
   const [pendingSkeletonPeriod, setPendingSkeletonPeriod] =
     useState<AdminDashboardPeriod | null>(null);
@@ -6150,6 +6158,21 @@ function AdminDashboardManagementPanel({
   const isChartLoading = isInsightDynamicLoading;
   const chartHasError =
     hasError || insightQuery.isError || growthInsightQuery.isError;
+  useEffect(() => {
+    if (!chartHasError) {
+      hasShownDashboardDataErrorToastRef.current = false;
+      return;
+    }
+
+    if (hasShownDashboardDataErrorToastRef.current) return;
+    hasShownDashboardDataErrorToastRef.current = true;
+    toast({
+      variant: "destructive",
+      title: "지표 데이터 로드 실패",
+      description: "대시보드 정적 영역은 유지합니다.",
+    });
+  }, [chartHasError, toast]);
+
   const periodCohortViewValue = videos.reduce(
     (sum, video) => sum + video.viewCount,
     0,
@@ -6855,11 +6878,6 @@ function AdminDashboardManagementPanel({
         </p>
       ) : null}
 
-      {chartHasError ? (
-        <div className="mb-0 shrink-0 rounded-2xl border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs font-semibold text-destructive">
-          지표 데이터를 불러오지 못했습니다. 대시보드 정적 영역은 유지합니다.
-        </div>
-      ) : null}
 
       {fullscreenWidgetId ? (
         <button
@@ -7491,6 +7509,9 @@ function AdminSidebar({
   showMobileHeader,
   canLoadPreferences,
   stats,
+  accountDisplayName,
+  accountEmail,
+  accountInitial,
 }: {
   activeModuleId: AdminModuleId;
   onSelectModule: (moduleId: AdminModuleId) => void;
@@ -7500,6 +7521,9 @@ function AdminSidebar({
   showMobileHeader: boolean;
   canLoadPreferences: boolean;
   stats: AdminOverviewStats;
+  accountDisplayName: string;
+  accountEmail: string;
+  accountInitial: string;
 }) {
   const [sidebarOrder, setSidebarOrder] = useState<AdminSidebarOrderPreference>(
     DEFAULT_ADMIN_SIDEBAR_ORDER,
@@ -7946,9 +7970,13 @@ function AdminSidebar({
     </div>
   );
 
-  const renderThemeControls = (placement: "dropdown" | "sidebar") => {
+  const renderThemeControls = (
+    placement: "dropdown" | "sidebar",
+    options: { compact?: boolean } = {},
+  ) => {
     const isSidebarPlacement = placement === "sidebar";
-    const isCompactSidebar = isSidebarPlacement && isCollapsed;
+    const isCompactSidebar =
+      options.compact ?? (isSidebarPlacement && isCollapsed);
     const [currentTheme, currentThemeLabel, nextThemeLabel, ThemeIcon] =
       getAdminThemeOption(themePreference);
     const nextTheme = getNextAdminThemePreference(themePreference);
@@ -8003,7 +8031,7 @@ function AdminSidebar({
       <div className="mb-2 flex items-center gap-2 rounded-2xl bg-muted/35 p-2">
         <Link
           href="/"
-          className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-background"
+          className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-background"
           aria-label="쯔동여지도 홈으로 이동"
           onClick={() => setIsAdminMenuOpen(false)}
         >
@@ -8046,6 +8074,100 @@ function AdminSidebar({
     </PopoverContent>
   );
 
+  const renderSidebarAccountMenuContent = (contentId: string) => (
+    <PopoverContent
+      id={contentId}
+      side="right"
+      align="end"
+      sideOffset={10}
+      className="max-h-[min(760px,calc(100dvh-24px))] w-[min(24rem,calc(100vw-24px))] overflow-y-auto rounded-2xl border-border bg-card p-2.5 shadow-primary"
+      aria-label="계정 및 사이드바 설정"
+      data-admin-sidebar-account-menu-content="true"
+    >
+      <div
+        className="mb-3 flex items-center gap-2 rounded-2xl bg-muted/35 p-2"
+        data-admin-sidebar-account-summary="true"
+      >
+        <span
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-background text-sm font-black text-foreground shadow-inner"
+          aria-hidden="true"
+          data-admin-sidebar-account-avatar="true"
+        >
+          {accountInitial}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-extrabold text-foreground">
+            {accountDisplayName}
+          </p>
+          <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+            {accountEmail}
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-2" data-admin-sidebar-account-theme-section="true">
+        <p className="px-1 text-[11px] font-bold tracking-[0.08em] text-muted-foreground">
+          표시 모드
+        </p>
+        {renderThemeControls("sidebar", { compact: false })}
+      </div>
+
+      <div
+        className="mt-3 border-t border-border/60 pt-3"
+        data-admin-sidebar-account-order-section="true"
+      >
+        {renderOrderControls("sidebar")}
+      </div>
+    </PopoverContent>
+  );
+
+  const renderSidebarAccountMenu = () => (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className={cn(
+            "group/sidebar-account bg-transparent text-muted-foreground shadow-none transition-colors duration-150 hover:bg-background/80 hover:text-foreground focus-visible:ring-primary focus-visible:ring-offset-background dark:hover:bg-muted/55",
+            isCollapsed
+              ? "h-9 w-9 justify-center rounded-xl p-0"
+              : "h-10 w-full min-w-0 justify-start gap-2 rounded-xl px-2",
+          )}
+          aria-label={`${accountDisplayName} 계정 및 사이드바 설정 열기`}
+          data-admin-sidebar-account-trigger={isCollapsed ? "collapsed" : "expanded"}
+          data-admin-sidebar-account-chrome="integrated"
+        >
+          <span
+            className={cn(
+              "flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 group-hover/sidebar-account:text-primary",
+              !isCollapsed && "h-7 w-7 rounded-lg",
+            )}
+            aria-hidden="true"
+            data-admin-sidebar-account-avatar="true"
+          >
+            <UserRound
+              className={cn("h-5 w-5", !isCollapsed && "h-4 w-4")}
+              style={{
+                width: isCollapsed ? "1.25rem" : "1rem",
+                height: isCollapsed ? "1.25rem" : "1rem",
+              }}
+            />
+          </span>
+          <span className={cn("min-w-0 flex-1 text-left", isCollapsed && "sr-only")}>
+            <span className="block truncate text-xs font-extrabold text-foreground">
+              {accountDisplayName}
+            </span>
+            <span className="block truncate text-[10px] font-semibold text-muted-foreground">
+              계정·표시·메뉴 설정
+            </span>
+          </span>
+        </Button>
+      </PopoverTrigger>
+      {renderSidebarAccountMenuContent("admin-sidebar-account-menu")}
+    </Popover>
+  );
+
   return (
     <>
       <Popover open={isAdminMenuOpen} onOpenChange={setIsAdminMenuOpen}>
@@ -8066,7 +8188,7 @@ function AdminSidebar({
         >
           <Link
             href="/"
-            className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-background text-foreground"
+            className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-background text-foreground"
             aria-label="쯔동여지도 홈으로 이동"
           >
             <Image
@@ -8120,14 +8242,14 @@ function AdminSidebar({
           className={cn(
             "mb-1.5 flex min-h-9 items-center gap-2 border-b border-border/70 px-1 pb-1.5 transition-[border-color] duration-200 motion-reduce:transition-none",
             isCollapsed &&
-              "md:min-h-10 md:w-full md:items-center md:justify-center md:border-b-0 md:px-0 md:py-1",
+              "md:h-[3.5625rem] md:min-h-[3.5625rem] md:w-[3.5625rem] md:items-center md:justify-center md:px-0 md:py-0",
           )}
           data-admin-sidebar-header="true"
         >
           <Link
             href="/"
             className={cn(
-              "flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-transparent text-foreground transition hover:border-border hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none",
+              "flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-transparent text-foreground transition hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none",
               isCollapsed && "md:hidden",
             )}
             aria-label="쯔동여지도 홈으로 이동"
@@ -8161,9 +8283,8 @@ function AdminSidebar({
             variant="ghost"
             size="sm"
             className={cn(
-              "group relative ml-auto inline-flex h-8 w-8 shrink-0 overflow-hidden rounded-xl border border-transparent p-0 text-muted-foreground shadow-none hover:border-primary/15 hover:bg-background/80 hover:text-foreground focus-visible:ring-primary focus-visible:ring-offset-background",
-              isCollapsed &&
-                "md:m-0 md:border-border md:bg-background/70 md:text-foreground",
+              "group relative ml-auto inline-flex h-8 w-8 shrink-0 overflow-hidden rounded-xl bg-transparent p-0 text-muted-foreground shadow-none transition-colors hover:bg-background/80 hover:text-foreground focus-visible:ring-primary focus-visible:ring-offset-background dark:hover:bg-muted/55",
+              isCollapsed && "md:m-0",
             )}
             aria-label={
               isCollapsed ? "관리자 사이드바 펼치기" : "관리자 사이드바 접기"
@@ -8197,13 +8318,13 @@ function AdminSidebar({
                   />
                 </span>
                 <PanelLeftOpen
-                  className="relative z-10 h-4 w-4 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none"
+                  className="relative z-10 h-5 w-5 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none"
                   aria-hidden="true"
                   data-admin-sidebar-collapsed-open-icon="true"
                 />
               </>
             ) : (
-              <PanelLeftClose className="h-4 w-4" aria-hidden="true" />
+              <PanelLeftClose className="h-5 w-5" aria-hidden="true" />
             )}
           </Button>
         </div>
@@ -8252,72 +8373,15 @@ function AdminSidebar({
 
         <div
           className={cn(
-            "shrink-0 border-t border-dashed border-border/70 pt-4",
+            "shrink-0 pt-4",
             isCollapsed
               ? "flex w-full flex-col items-center gap-2"
               : "space-y-3",
           )}
           data-admin-sidebar-footer-actions="true"
-          data-admin-sidebar-footer-separator="spacious"
           aria-label="관리자 사이드바 설정"
         >
-          {isCollapsed ? (
-            <>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 w-8 rounded-lg border border-border bg-background/70 p-0 text-muted-foreground hover:text-foreground"
-                    aria-label="메뉴 순서 설정 열기"
-                    data-admin-sidebar-order-trigger="collapsed"
-                  >
-                    <Menu className="h-4 w-4" aria-hidden="true" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent
-                  side="right"
-                  align="end"
-                  sideOffset={10}
-                  className="max-h-[min(760px,calc(100dvh-24px))] w-[min(24rem,calc(100vw-24px))] overflow-y-auto rounded-2xl border-border bg-card p-2.5 shadow-primary"
-                  aria-label="메뉴 순서 설정"
-                >
-                  {renderOrderControls("sidebar")}
-                </PopoverContent>
-              </Popover>
-
-              {renderThemeControls("sidebar")}
-            </>
-          ) : (
-            <>
-              {renderThemeControls("sidebar")}
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-9 w-full justify-start rounded-xl px-3 text-xs font-bold"
-                    aria-label="메뉴 순서 설정 열기"
-                    data-admin-sidebar-order-trigger="expanded"
-                  >
-                    <Menu className="mr-2 h-3.5 w-3.5" aria-hidden="true" />
-                    메뉴 순서 설정
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent
-                  side="right"
-                  align="end"
-                  sideOffset={10}
-                  className="max-h-[min(760px,calc(100dvh-24px))] w-[min(24rem,calc(100vw-24px))] overflow-y-auto rounded-2xl border-border bg-card p-2.5 shadow-primary"
-                  aria-label="메뉴 순서 설정"
-                >
-                  {renderOrderControls("sidebar")}
-                </PopoverContent>
-              </Popover>
-            </>
-          )}
+          {renderSidebarAccountMenu()}
         </div>
       </aside>
     </>
@@ -8585,27 +8649,116 @@ function InlineModulePanel({
   );
 }
 
-function AdminConsoleCanvasSkeleton() {
+const ADMIN_CONSOLE_CANVAS_SKELETON_ROWS = [0, 1, 2, 3, 4] as const;
+const ADMIN_CONSOLE_CANVAS_SKELETON_CARDS = [
+  "primary",
+  "secondary",
+  "tertiary",
+] as const;
+
+function AdminConsoleCanvasSkeleton({
+  title = "관리자 작업 화면",
+}: {
+  title?: string;
+} = {}) {
   return (
-    <div
-      className="grid min-h-full grid-cols-1 gap-2 lg:h-full lg:min-h-0 lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]"
+    <section
+      className="flex h-full min-h-[520px] min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-background shadow-sm md:min-h-0"
       data-admin-console-content-loading="true"
+      data-admin-sidebar-module-loading="page-shell"
+      data-admin-sidebar-module-loading-title={title}
       role="status"
       aria-busy="true"
       aria-label="관리자 콘솔 작업 화면 로딩 중"
     >
-      <div className="min-h-[390px] rounded-xl border border-border bg-card p-3 lg:min-h-0">
-        <Skeleton className="h-full min-h-[220px] rounded-lg motion-reduce:animate-none" />
-      </div>
-      <div className="min-h-[420px] rounded-xl border border-border bg-card p-3 lg:min-h-0">
-        <div className="space-y-3">
-          <Skeleton className="h-8 w-40 rounded-lg motion-reduce:animate-none" />
-          <Skeleton className="h-24 w-full rounded-xl motion-reduce:animate-none" />
-          <Skeleton className="h-24 w-full rounded-xl motion-reduce:animate-none" />
-          <Skeleton className="h-24 w-full rounded-xl motion-reduce:animate-none" />
+      <span className="sr-only">
+        {title} 화면의 레이아웃을 먼저 준비하고 내부 데이터를 불러오는 중입니다.
+      </span>
+      <header
+        className="flex shrink-0 flex-col gap-2 border-b border-border bg-card/95 px-3 py-2 lg:flex-row lg:items-center lg:justify-between"
+        data-admin-sidebar-module-loading-header="true"
+      >
+        <div className="flex min-w-0 items-center gap-2">
+          <Skeleton
+            className="h-9 w-9 shrink-0 rounded-xl motion-reduce:animate-none"
+            aria-hidden="true"
+          />
+          <div className="min-w-0 space-y-1.5">
+            <p className="truncate text-sm font-bold text-foreground">
+              {title}
+            </p>
+            <Skeleton
+              className="h-3 w-52 max-w-full rounded-full motion-reduce:animate-none"
+              aria-hidden="true"
+            />
+          </div>
         </div>
+        <div
+          className="flex flex-wrap items-center gap-1.5"
+          aria-hidden="true"
+          data-admin-sidebar-module-loading-toolbar="true"
+        >
+          {ADMIN_CONSOLE_CANVAS_SKELETON_CARDS.map((card) => (
+            <Skeleton
+              key={card}
+              className="h-7 w-20 rounded-full motion-reduce:animate-none"
+            />
+          ))}
+        </div>
+      </header>
+
+      <div
+        className="grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-hidden p-2 lg:grid-cols-[minmax(0,0.95fr)_minmax(360px,1.05fr)]"
+        data-admin-sidebar-module-loading-grid="true"
+      >
+        <section
+          className="min-h-[300px] overflow-hidden rounded-xl border border-border bg-card/95 lg:min-h-0"
+          aria-hidden="true"
+          data-admin-sidebar-module-loading-list="true"
+        >
+          <div className="border-b border-border bg-muted/30 px-3 py-2">
+            <Skeleton className="h-4 w-28 rounded-full motion-reduce:animate-none" />
+          </div>
+          <div className="divide-y divide-border">
+            {ADMIN_CONSOLE_CANVAS_SKELETON_ROWS.map((row) => (
+              <div
+                key={row}
+                className="grid items-center gap-2 px-3 py-3 sm:grid-cols-[minmax(0,1fr)_80px]"
+              >
+                <div className="min-w-0 space-y-1.5">
+                  <Skeleton className="h-4 w-4/5 rounded-full motion-reduce:animate-none" />
+                  <Skeleton className="h-3 w-3/5 rounded-full motion-reduce:animate-none" />
+                </div>
+                <Skeleton className="h-7 rounded-lg motion-reduce:animate-none" />
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section
+          className="min-h-[360px] overflow-hidden rounded-xl border border-border bg-card/95 p-3 lg:min-h-0"
+          aria-hidden="true"
+          data-admin-sidebar-module-loading-detail="true"
+        >
+          <div className="mb-3 flex items-start justify-between gap-3">
+            <div className="space-y-1.5">
+              <Skeleton className="h-5 w-36 rounded-full motion-reduce:animate-none" />
+              <Skeleton className="h-3 w-56 max-w-full rounded-full motion-reduce:animate-none" />
+            </div>
+            <Skeleton className="h-8 w-20 rounded-lg motion-reduce:animate-none" />
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {ADMIN_CONSOLE_CANVAS_SKELETON_CARDS.map((card) => (
+              <Skeleton
+                key={card}
+                className="h-24 rounded-xl motion-reduce:animate-none"
+              />
+            ))}
+            <Skeleton className="h-32 rounded-xl motion-reduce:animate-none sm:col-span-2" />
+          </div>
+        </section>
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -9020,7 +9173,7 @@ export function AdminConsoleOverview({
   const router = useRouter();
   const searchParams = useSearchParams() ?? EMPTY_SEARCH_PARAMS;
   const requestedModuleId = getAdminModuleIdFromSearchParams(searchParams);
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, profileNickname } = useAuth();
   const [hasHydrated, setHasHydrated] = useState(false);
   const [hasE2EAdminShellBypass, setHasE2EAdminShellBypass] = useState(() =>
     hasLocalE2EAdminShellBypass(),
@@ -9050,6 +9203,19 @@ export function AdminConsoleOverview({
   const activeModule = consoleModules.find(
     (module) => module.id === activeModuleId,
   );
+
+  const userMetadataNickname =
+    typeof user?.user_metadata?.nickname === "string"
+      ? user.user_metadata.nickname.trim()
+      : "";
+  const adminAccountDisplayName =
+    profileNickname ||
+    userMetadataNickname ||
+    user?.email?.split("@")[0] ||
+    "관리자";
+  const adminAccountEmail = user?.email ?? "관리자 세션";
+  const adminAccountInitial =
+    adminAccountDisplayName.trim().slice(0, 1).toUpperCase() || "관";
 
   useEffect(() => {
     setHasHydrated(true);
@@ -9328,6 +9494,9 @@ export function AdminConsoleOverview({
           showMobileHeader={isMobileHeaderVisible}
           canLoadPreferences={canLoadAdminConsoleData}
           stats={stats}
+          accountDisplayName={adminAccountDisplayName}
+          accountEmail={adminAccountEmail}
+          accountInitial={adminAccountInitial}
         />
 
         <section
@@ -9361,7 +9530,7 @@ export function AdminConsoleOverview({
             ) : activeModuleId === "storyboard" ? (
               <AdminStoryboardModuleLoadingSkeleton />
             ) : (
-              <AdminConsoleCanvasSkeleton />
+              <AdminConsoleCanvasSkeleton title={activeModuleLabel} />
             )
           ) : activeModuleId === "overview" ? (
             <AdminDashboardManagementPanel

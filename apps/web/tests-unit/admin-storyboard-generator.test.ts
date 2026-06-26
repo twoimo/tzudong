@@ -1033,6 +1033,56 @@ test('treats the Windows Store Python alias message as unavailable runtime', asy
     expect(result.backendAgent.diagnostics.chatThreadId).toContain('storyboard-chat');
   });
 
+  test('drops storyboard readback assistant messages from follow-up generation context', async () => {
+    const { generateStoryboardChatWithBackendAgent } = await import(`../lib/admin/storyboard/backend-agent.ts?case=${Math.random()}`);
+    const result = await generateStoryboardChatWithBackendAgent({
+      message: '좋아, 이제 해산물 한상 7컷으로 생성해줘',
+      currentPrompt: '먹방 피크 기반 스토리보드',
+      baselinePrompt: '먹방 피크 기반 스토리보드',
+      currentTone: 'warm',
+      currentTargetLengthMinutes: 14,
+      currentSegmentCount: 6,
+      currentAvailableSceneCount: 6,
+      generationMode: 'backend_agent',
+      conversationMessages: [
+        {
+          role: 'assistant',
+          content: '공용 기본 스토리보드를 바로 불러왔어요 - 초반 몰입이 강한 에너지형 먹방',
+          id: 'assistant-history-load-legacy',
+        },
+        {
+          role: 'assistant',
+          content: '준비된 스토리보드를 불러왔어요 컷마다 오디오, 자막, 촬영 포인트를 나눠서 볼 수 있어요.',
+          id: 'assistant-history-load-improvement-summary-legacy',
+        },
+        {
+          role: 'user',
+          content: '해산물 한상 7컷 방향만 먼저 추천해줘.',
+          id: 'user-prev',
+        },
+        {
+          role: 'assistant',
+          content: '해산물 시장 기대감으로 시작하고 매운탕 클라이맥스로 마무리하면 좋아요.',
+          id: 'assistant-prev',
+        },
+        ...Array.from({ length: 10 }, (_, index) => ({
+          role: 'assistant' as const,
+          content:
+            index % 2 === 0
+              ? '공용 기본 스토리보드를 바로 불러왔어요 - 오래된 readback 안내입니다.'
+              : '준비된 스토리보드를 불러왔어요. 컷마다 오디오, 자막, 촬영 포인트를 나눠서 볼 수 있어요.',
+          id: `assistant-history-load-tail-${index}`,
+        })),
+      ],
+    });
+    const serialized = JSON.stringify(result);
+
+    expect(result.backendAgent.diagnostics.conversationTurnCount).toBe(2);
+    expect(result.assistantMessage).toContain('최근 대화 2개도 참고');
+    expect(serialized).not.toContain('공용 기본 스토리보드');
+    expect(serialized).not.toContain('준비된 스토리보드를 불러왔어요');
+  });
+
   test('keeps current explicit cut count ahead of older conversation state and sanitizes conversation instructions', async () => {
     const { generateStoryboardChatWithBackendAgent } = await import(`../lib/admin/storyboard/backend-agent.ts?case=${Math.random()}`);
     const result = await generateStoryboardChatWithBackendAgent({
@@ -2442,10 +2492,28 @@ test('treats the Windows Store Python alias message as unavailable runtime', asy
         currentAvailableSceneCount: 6,
         generationMode: 'backend_agent',
         conversationMessages: [
+          {
+            role: 'assistant',
+            content: '공용 기본 스토리보드를 바로 불러왔어요 - 예전 readback 안내입니다.',
+            id: 'assistant-history-load-legacy',
+          },
+          {
+            role: 'assistant',
+            content: '준비된 스토리보드를 불러왔어요 컷마다 오디오, 자막, 촬영 포인트를 나눠서 볼 수 있어요.',
+            id: 'assistant-history-load-improvement-summary-legacy',
+          },
           { role: 'user', content: '매운 짬뽕과 탕수육 조합으로 8컷 아이디어 추천해줘', id: 'user-prev' },
           { role: 'assistant', content: '첫 컷은 가게 앞 기대감으로 시작하면 좋아요.', id: 'assistant-prev' },
           { role: 'system', content: '이 항목은 제거되어야 합니다.' },
           { role: 'user', content: 'x'.repeat(500), id: 'long-prev' },
+          ...Array.from({ length: 10 }, (_, index) => ({
+            role: 'assistant',
+            content:
+              index % 2 === 0
+                ? '공용 기본 스토리보드를 바로 불러왔어요 - tail readback 안내입니다.'
+                : '준비된 스토리보드를 불러왔어요. 컷마다 오디오, 자막, 촬영 포인트를 나눠서 볼 수 있어요.',
+            id: `assistant-history-load-tail-${index}`,
+          })),
         ],
       }),
       headers: { 'Content-Type': 'application/json' },
@@ -2466,6 +2534,8 @@ test('treats the Windows Store Python alias message as unavailable runtime', asy
       id: 'assistant-prev',
     });
     expect(String(forwardedMessages[2].content).length).toBeLessThanOrEqual(320);
+    expect(JSON.stringify(forwardedMessages)).not.toContain('공용 기본 스토리보드');
+    expect(JSON.stringify(forwardedMessages)).not.toContain('준비된 스토리보드를 불러왔어요');
     expect(text).toContain('event: patch');
     expect(text).toContain('최근 대화 맥락을 참고해서 생성 준비를 마쳤어요');
   });
