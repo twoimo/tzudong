@@ -4918,6 +4918,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     const storyboardSource = source(
       "components/admin/storyboard/AdminStoryboardGenerator.tsx",
     );
+    const guidedPresetSource = source(
+      "lib/admin/storyboard/guided-example-presets.ts",
+    );
     const appGlobalsSource = source("app/app-globals.css");
     const routeSource = source("app/api/admin/storyboard/route.ts");
     const chatRouteSource = source("app/api/admin/storyboard/chat/route.ts");
@@ -5902,25 +5905,33 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-storyboard-chat-guide-generate="true"',
     );
     expect(storyboardSource).toContain("STORYBOARD_USAGE_GUIDE_TEXT");
-    expect(storyboardSource).toContain("STORYBOARD_GUIDED_EXAMPLE_PROMPT");
+    expect(storyboardSource).toContain(
+      'from "@/lib/admin/storyboard/guided-example-presets"',
+    );
     expect(storyboardSource).toContain("STORYBOARD_GUIDED_EXAMPLE_PRESETS");
     expect(storyboardSource).toContain(
-      "const STORYBOARD_GUIDED_EXAMPLE_GRID_COUNT = 10",
+      "STORYBOARD_GUIDED_EXAMPLE_STARTER_PRESETS",
     );
-    expect(storyboardSource).toContain(
-      "const STORYBOARD_GUIDED_EXAMPLE_STARTER_COUNT = 6",
+    expect(guidedPresetSource).toContain("export type StoryboardGuidedExamplePreset");
+    expect(guidedPresetSource).toContain("export const STORYBOARD_GUIDED_EXAMPLE_PROMPT");
+    expect(guidedPresetSource).toContain("export const STORYBOARD_GUIDED_EXAMPLE_PRESETS");
+    expect(guidedPresetSource).toContain(
+      "export const STORYBOARD_GUIDED_EXAMPLE_GRID_COUNT = 10",
     );
-    expect(storyboardSource).toContain(
+    expect(guidedPresetSource).toContain(
+      "export const STORYBOARD_GUIDED_EXAMPLE_STARTER_COUNT = 8",
+    );
+    expect(guidedPresetSource).toContain(
       "STORYBOARD_GUIDED_EXAMPLE_GRID_PRESETS",
     );
-    expect(storyboardSource).toContain(
+    expect(guidedPresetSource).toContain(
       "STORYBOARD_GUIDED_EXAMPLE_STARTER_PRESETS",
     );
     expect(storyboardSource).toContain(
       'data-storyboard-chat-example-grid="true"',
     );
     expect(storyboardSource).toContain(
-      'data-storyboard-chat-example-grid-layout="3x2"',
+      'data-storyboard-chat-example-grid-layout="4x2"',
     );
     expect(storyboardSource).toContain(
       "STORYBOARD_GUIDED_EXAMPLE_STARTER_PRESETS.map",
@@ -5932,12 +5943,12 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "handleStoryboardGuidedExampleGenerate(",
     );
     expect(storyboardSource).toContain("storyboardGuidedExampleIndexRef");
-    expect(storyboardSource).toContain("킹크랩 해산물 한상");
-    expect(storyboardSource).toContain("디저트 카페 코스");
-    expect(storyboardSource).toContain("시장 통닭 튀김");
-    expect(storyboardSource).toContain("새벽 편의점 야식");
-    expect(storyboardSource).toContain("치즈 부대찌개 라면");
-    expect(storyboardSource).toContain("초밥 오마카세 클로즈업");
+    expect(guidedPresetSource).toContain("킹크랩 해산물 한상");
+    expect(guidedPresetSource).toContain("디저트 카페 코스");
+    expect(guidedPresetSource).toContain("시장 통닭 튀김");
+    expect(guidedPresetSource).toContain("새벽 편의점 야식");
+    expect(guidedPresetSource).toContain("치즈 부대찌개 라면");
+    expect(guidedPresetSource).toContain("초밥 오마카세 클로즈업");
     expect(storyboardSource).toContain("handleStoryboardGuidedExampleGenerate");
     expect(storyboardSource).toContain(
       "예시를 왼쪽 캔버스에 로딩하고 있어요",
