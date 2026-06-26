@@ -7511,7 +7511,6 @@ function AdminSidebar({
   stats,
   accountDisplayName,
   accountEmail,
-  accountInitial,
 }: {
   activeModuleId: AdminModuleId;
   onSelectModule: (moduleId: AdminModuleId) => void;
@@ -7523,7 +7522,6 @@ function AdminSidebar({
   stats: AdminOverviewStats;
   accountDisplayName: string;
   accountEmail: string;
-  accountInitial: string;
 }) {
   const [sidebarOrder, setSidebarOrder] = useState<AdminSidebarOrderPreference>(
     DEFAULT_ADMIN_SIDEBAR_ORDER,
@@ -8073,6 +8071,8 @@ function AdminSidebar({
       <div className="mt-2">{renderOrderControls("dropdown")}</div>
     </PopoverContent>
   );
+  const sidebarAccountAvatarClassName =
+    "relative grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-primary/10 text-primary transition-colors group-hover/sidebar-account:bg-primary/15";
 
   const renderSidebarAccountMenuContent = (contentId: string) => (
     <PopoverContent
@@ -8089,11 +8089,11 @@ function AdminSidebar({
         data-admin-sidebar-account-summary="true"
       >
         <span
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-background text-sm font-black text-foreground shadow-inner"
+          className={sidebarAccountAvatarClassName}
           aria-hidden="true"
           data-admin-sidebar-account-avatar="true"
         >
-          {accountInitial}
+          <UserRound className="h-5 w-5" aria-hidden="true" />
         </span>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-extrabold text-foreground">
@@ -8129,30 +8129,21 @@ function AdminSidebar({
           variant="ghost"
           size="sm"
           className={cn(
-            "group/sidebar-account bg-transparent text-muted-foreground shadow-none transition-colors duration-150 hover:bg-background/80 hover:text-foreground focus-visible:ring-primary focus-visible:ring-offset-background dark:hover:bg-muted/55",
+            "group/sidebar-account transition-colors duration-150 focus-visible:ring-primary focus-visible:ring-offset-background",
             isCollapsed
-              ? "h-9 w-9 justify-center rounded-xl p-0"
-              : "h-10 w-full min-w-0 justify-start gap-2 rounded-xl px-2",
+              ? "h-9 w-9 justify-center rounded-xl bg-transparent p-0 text-muted-foreground shadow-none hover:bg-background/80 hover:text-foreground dark:hover:bg-muted/55"
+              : "h-11 w-full min-w-0 justify-start gap-2 rounded-2xl border border-border bg-background/95 px-1.5 py-1 text-foreground shadow-sm backdrop-blur-sm hover:bg-secondary/80 hover:text-accent-foreground dark:border-border/70 dark:bg-background/80",
           )}
           aria-label={`${accountDisplayName} 계정 및 사이드바 설정 열기`}
           data-admin-sidebar-account-trigger={isCollapsed ? "collapsed" : "expanded"}
           data-admin-sidebar-account-chrome="integrated"
         >
           <span
-            className={cn(
-              "flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 group-hover/sidebar-account:text-primary",
-              !isCollapsed && "h-7 w-7 rounded-lg",
-            )}
+            className={sidebarAccountAvatarClassName}
             aria-hidden="true"
             data-admin-sidebar-account-avatar="true"
           >
-            <UserRound
-              className={cn("h-5 w-5", !isCollapsed && "h-4 w-4")}
-              style={{
-                width: isCollapsed ? "1.25rem" : "1rem",
-                height: isCollapsed ? "1.25rem" : "1rem",
-              }}
-            />
+            <UserRound className="h-5 w-5" aria-hidden="true" />
           </span>
           <span className={cn("min-w-0 flex-1 text-left", isCollapsed && "sr-only")}>
             <span className="block truncate text-xs font-extrabold text-foreground">
@@ -9214,8 +9205,6 @@ export function AdminConsoleOverview({
     user?.email?.split("@")[0] ||
     "관리자";
   const adminAccountEmail = user?.email ?? "관리자 세션";
-  const adminAccountInitial =
-    adminAccountDisplayName.trim().slice(0, 1).toUpperCase() || "관";
 
   useEffect(() => {
     setHasHydrated(true);
@@ -9496,7 +9485,6 @@ export function AdminConsoleOverview({
           stats={stats}
           accountDisplayName={adminAccountDisplayName}
           accountEmail={adminAccountEmail}
-          accountInitial={adminAccountInitial}
         />
 
         <section
