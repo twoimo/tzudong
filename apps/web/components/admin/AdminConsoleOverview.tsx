@@ -2770,12 +2770,14 @@ function AdminDashboardInlineTooltip({
   lines,
   className,
   style,
+  rankSegment,
   children,
 }: {
   label: string;
   lines: string[];
   className?: string;
   style?: CSSProperties;
+  rankSegment?: number;
   children: ReactNode;
 }) {
   return (
@@ -2788,6 +2790,7 @@ function AdminDashboardInlineTooltip({
             style={style}
             aria-label={`${label}: ${lines.join(" ")}`}
             data-admin-dashboard-inline-tooltip="true"
+            data-admin-dashboard-rank-segment={rankSegment}
           >
             {children}
           </span>
@@ -4524,13 +4527,13 @@ function AdminDashboardGroupedBarChart({
     },
     {
       barClass:
-        "bg-muted-foreground/45 text-background dark:bg-muted-foreground/50 dark:text-background",
-      dotClass: "bg-muted-foreground/45 dark:bg-muted-foreground/50",
+        "bg-muted-foreground/42 text-foreground dark:bg-muted-foreground/45 dark:text-foreground",
+      dotClass: "bg-muted-foreground/55 dark:bg-muted-foreground/60",
     },
     {
       barClass:
-        "bg-muted-foreground/28 text-background dark:bg-muted-foreground/35 dark:text-background",
-      dotClass: "bg-muted-foreground/28 dark:bg-muted-foreground/35",
+        "bg-muted text-foreground ring-1 ring-inset ring-border/60 dark:bg-muted-foreground/28 dark:text-foreground dark:ring-border/40",
+      dotClass: "bg-muted-foreground/35 dark:bg-muted-foreground/45",
     },
   ] as const;
   const metricRows = [
@@ -4654,10 +4657,11 @@ function AdminDashboardGroupedBarChart({
                             ]
                       }
                       className={cn(
-                        "flex min-w-[8%] items-center justify-center px-0.5 text-[10px] font-black leading-none tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                        "flex min-w-[8%] items-center justify-center px-0.5 text-[11px] font-black leading-none tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-primary",
                         rankColors[index]?.barClass ??
-                          "bg-muted-foreground text-background",
+                          "bg-muted-foreground/28 text-foreground dark:bg-muted-foreground/35 dark:text-foreground",
                       )}
+                      rankSegment={index + 1}
                       style={{ width: `${Math.max(8, percent)}%` }}
                     >
                       {percent.toFixed(0)}%
@@ -7956,7 +7960,7 @@ function AdminSidebar({
         variant="ghost"
         size="sm"
         className={cn(
-          "h-9 rounded-full border border-border bg-white text-xs font-bold text-muted-foreground shadow-inner transition-[background-color,color,box-shadow,transform] duration-150 hover:bg-background/80 hover:text-foreground focus-visible:ring-primary focus-visible:ring-offset-background dark:bg-card",
+          "h-9 rounded-full border border-border bg-card text-xs font-bold text-muted-foreground shadow-inner transition-[background-color,color,box-shadow,transform] duration-150 hover:bg-muted/70 hover:text-foreground focus-visible:ring-primary focus-visible:ring-offset-background dark:border-border/70 dark:bg-muted/35 dark:text-foreground dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] dark:hover:bg-muted/55 data-[admin-sidebar-theme-current=dark]:border-border/70 data-[admin-sidebar-theme-current=dark]:bg-muted/35 data-[admin-sidebar-theme-current=dark]:text-foreground data-[admin-sidebar-theme-current=dark]:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] data-[admin-sidebar-theme-current=dark]:hover:bg-muted/55",
           isCompactSidebar
             ? "w-9 justify-center p-0"
             : "w-full min-w-0 justify-start gap-2 px-3",
