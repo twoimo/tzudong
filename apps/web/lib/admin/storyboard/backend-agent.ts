@@ -578,12 +578,24 @@ function normalizeStoryboardChatThreadId(value: unknown) {
     : "";
 }
 
+function isStoryboardConversationReadbackMessage(
+  message: StoryboardChatConversationMessage,
+) {
+  if (message.role === "user") return false;
+
+  return (
+    message.id?.startsWith("assistant-history-load") ||
+    message.content.includes("공용 기본 스토리보드") ||
+    message.content.startsWith("선택한 스토리보드를 불러왔어요") ||
+    message.content.startsWith("준비된 스토리보드를 불러왔어요")
+  );
+}
+
 function normalizeStoryboardChatConversationMessages(
   value: unknown,
 ): StoryboardChatConversationMessage[] {
   if (!Array.isArray(value)) return [];
   return value
-    .slice(-STORYBOARD_CHAT_CONVERSATION_CONTEXT_LIMIT)
     .flatMap((item): StoryboardChatConversationMessage[] => {
       if (!item || typeof item !== "object" || Array.isArray(item)) return [];
       const candidate = item as Partial<StoryboardChatConversationMessage>;
@@ -596,17 +608,17 @@ function normalizeStoryboardChatConversationMessages(
       );
       if (!role || !content) return [];
       const id = normalizeStoryboardChatThreadId(candidate.id);
-      return [
-        {
-          role,
-          content,
-          ...(id ? { id } : {}),
-          ...(typeof candidate.createdAt === "string"
-            ? { createdAt: candidate.createdAt.slice(0, 80) }
-            : {}),
-        },
-      ];
-    });
+      const message: StoryboardChatConversationMessage = {
+        role,
+        content,
+        ...(id ? { id } : {}),
+        ...(typeof candidate.createdAt === "string"
+          ? { createdAt: candidate.createdAt.slice(0, 80) }
+          : {}),
+      };
+      return isStoryboardConversationReadbackMessage(message) ? [] : [message];
+    })
+    .slice(-STORYBOARD_CHAT_CONVERSATION_CONTEXT_LIMIT);
 }
 
 function formatStoryboardChatConversationContext(

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { hierarchy, treemap, treemapResquarify, type HierarchyRectangularNode } from 'd3-hierarchy';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import type { InsightTreemapPeriod, InsightTreemapResponse, InsightTreemapVideoRow } from '@/lib/public-insights/treemap';
 import { useDeviceType } from '@/hooks/useDeviceType';
@@ -719,6 +720,45 @@ const TreemapTiles = memo(function TreemapTiles({
     );
 });
 
+function InsightsClientLoadingSkeleton() {
+    return (
+        <div
+            className="flex h-full min-h-0 flex-col overflow-hidden bg-background"
+            data-insights-client-loading="true"
+            role="status"
+            aria-busy="true"
+            aria-label="핵심 인사이트 화면 로딩 중"
+        >
+            <span className="sr-only">핵심 인사이트 필터와 트리맵 영역을 불러오는 중입니다.</span>
+            <div className="min-h-0 flex-1 overflow-hidden p-2 md:p-4">
+                <Card className="flex h-full min-h-0 flex-col overflow-hidden border border-border">
+                    <div className="border-b border-border p-2 md:p-3">
+                        <div className="flex flex-wrap items-center gap-2 md:gap-3" aria-hidden="true">
+                            <Skeleton className="h-4 w-20 rounded-full motion-reduce:animate-none" />
+                            {Array.from({ length: 4 }).map((_, groupIndex) => (
+                                <div key={groupIndex} className="flex items-center gap-1.5">
+                                    <Skeleton className="h-3 w-10 rounded-full motion-reduce:animate-none" />
+                                    <Skeleton className="h-8 w-28 rounded-lg motion-reduce:animate-none" />
+                                </div>
+                            ))}
+                            <Skeleton className="ml-auto h-6 w-44 rounded-md motion-reduce:animate-none" />
+                        </div>
+                    </div>
+                    <CardContent className="min-h-0 flex-1 overflow-hidden p-2">
+                        <div className="grid h-full min-h-[360px] grid-cols-2 gap-2 md:grid-cols-4 md:grid-rows-3">
+                            <Skeleton className="col-span-2 row-span-2 rounded-xl motion-reduce:animate-none" />
+                            <Skeleton className="rounded-xl motion-reduce:animate-none" />
+                            <Skeleton className="rounded-xl motion-reduce:animate-none" />
+                            <Skeleton className="rounded-xl motion-reduce:animate-none" />
+                            <Skeleton className="rounded-xl motion-reduce:animate-none md:col-span-2" />
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        </div>
+    );
+}
+
 export default function InsightsClient() {
     const router = useRouter();
     const { isLoading: isAuthLoading, user } = useAuth();
@@ -1207,12 +1247,8 @@ export default function InsightsClient() {
     }, [treemapQuery]);
 
 
-    if (isLoading && !canRender) {
-        return null;
-    }
-
-    if (isAuthLoading) {
-        return null;
+    if ((isLoading && !canRender) || isAuthLoading) {
+        return <InsightsClientLoadingSkeleton />;
     }
     if (treemapQuery.isError || !treemapQuery.data) {
         return (
