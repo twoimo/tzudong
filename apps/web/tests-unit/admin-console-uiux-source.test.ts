@@ -1290,7 +1290,19 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("dark:text-white");
     expect(consoleSource).not.toContain("dark:text-slate-950");
     expect(consoleSource).toContain("bg-teal-500 text-white dark:bg-teal-500 dark:text-white");
-    expect(consoleSource).toContain("bg-muted-foreground/45 text-background");
+    expect(consoleSource).toContain("bg-muted-foreground/42 text-foreground");
+    expect(consoleSource).toContain("text-[11px] font-black leading-none");
+    expect(consoleSource).toContain(
+      "bg-muted text-foreground ring-1 ring-inset ring-border/60",
+    );
+    expect(consoleSource).toContain("data-admin-dashboard-rank-segment={rankSegment}");
+    expect(consoleSource).toContain("rankSegment={index + 1}");
+    expect(consoleSource).toContain(
+      "bg-muted-foreground/28 text-foreground dark:bg-muted-foreground/35 dark:text-foreground",
+    );
+    expect(source("app/app-globals.css")).toContain(
+      '[data-admin-dashboard-rank-segment="5"]',
+    );
     expect(consoleSource).not.toContain("bg-amber-600 text-white");
     expect(consoleSource).not.toContain("bg-${");
     expect(consoleSource).not.toContain("text-${");
@@ -2739,10 +2751,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       '[data-admin-left-panel-expanded="true"]',
     );
     expect(appGlobalsSource).toContain(
-      "--admin-sidebar-expanded-max-width: min(18rem, 28vw);",
+      "--admin-sidebar-expanded-max-width: min(17.5rem, 27vw);",
     );
     expect(appGlobalsSource).toContain(
-      "--admin-sidebar-expanded-width: 14.25rem;",
+      "--admin-sidebar-expanded-width: 14rem;",
     );
     expect(appGlobalsSource).toContain(
       "width: max-content;",
@@ -7477,7 +7489,13 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("aria-label={controlLabel}");
     expect(consoleSource).not.toContain("aria-pressed={themePreference === theme}");
     expect(consoleSource).toContain(
-      '"h-9 rounded-full border border-border bg-white text-xs font-bold text-muted-foreground shadow-inner',
+      '"h-9 rounded-full border border-border bg-card text-xs font-bold text-muted-foreground shadow-inner',
+    );
+    expect(consoleSource).toContain(
+      "dark:border-border/70 dark:bg-muted/35 dark:text-foreground",
+    );
+    expect(consoleSource).toContain(
+      "data-[admin-sidebar-theme-current=dark]:bg-muted/35",
     );
     expect(consoleSource).toContain('["light", "라이트 모드", "다크모드", Sun]');
     expect(consoleSource).toContain('["dark", "다크모드", "시스템 모드", Moon]');
