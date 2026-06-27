@@ -1001,7 +1001,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(routeSkeletonSource).not.toContain("repeat(8,96px)");
     expect(routeSkeletonSource).toContain(
-      "fallback={<AdminEvaluationRouteSkeleton />}",
+      "fallback={embedded ? null : <AdminEvaluationRouteSkeleton />}",
     );
     expect(consoleSource).toContain('role="status"');
     expect(evaluationTableSource).toContain(
@@ -5163,6 +5163,15 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-storyboard-local-bridge-server-relay="forbidden"',
     );
     expect(storyboardSource).toContain(
+      'data-storyboard-local-bridge-pairing-guide="true"',
+    );
+    expect(storyboardSource).toContain("페어링 순서");
+    expect(storyboardSource).toContain(
+      "cd apps/web &amp;&amp; bun run storyboard:local-bridge",
+    );
+    expect(storyboardSource).toContain("pairing_token");
+    expect(storyboardSource).toContain("http://127.0.0.1:8787");
+    expect(storyboardSource).toContain(
       "postStoryboardLocalBridgeImagesRequest",
     );
     expect(storyboardSource).toContain('command: "generateStoryboard"');
@@ -5356,11 +5365,17 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(storyboardSource).toContain("ref={chatTranscriptRef}");
     expect(storyboardSource).toContain(
+      "const chatTranscriptBottomRef = useRef<HTMLDivElement | null>(null);",
+    );
+    expect(storyboardSource).toContain("ref={chatTranscriptBottomRef}");
+    expect(storyboardSource).toContain(
       "const transcript = chatTranscriptRef.current;",
     );
     expect(storyboardSource).toContain("window.requestAnimationFrame");
     expect(storyboardSource).toContain("transcript.scrollTo({");
     expect(storyboardSource).toContain("top: transcript.scrollHeight");
+    expect(storyboardSource).toContain('data-storyboard-chat-bottom-anchor="true"');
+    expect(storyboardSource).toContain("scrollIntoView({");
     expect(storyboardSource).toContain("latestDisplayedText.length");
     expect(storyboardSource).toContain("isGeneratingImages");
     expect(storyboardSource).toContain('data-storyboard-chat-controls="true"');
@@ -5628,8 +5643,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "컷마다 오디오, 자막, 촬영 포인트를 나눠서 볼 수 있어요.",
     );
     expect(storyboardSource).toContain("첫 컷은 가게 앞 인트로부터 시작해요.");
-    expect(storyboardSource).toContain("왜\\s*(?:이렇게");
-    expect(storyboardSource).toContain("어떻게");
+    expect(storyboardSource).toContain("데이터\\s*흐름");
+    expect(storyboardSource).toContain("isStoryboardRagProcessIntent(normalized)");
     expect(storyboardSource).toContain(
       "/^(이미지상태|이미지생성상태|생성상태|provider|gpt-image-2|gptimage2)$/",
     );
@@ -5861,35 +5876,42 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-storyboard-chat-starter-panel="true"',
     );
     expect(storyboardSource).toContain(
-      'data-storyboard-chat-starter-panel-layout="inline-centered-recommendations"',
+      'data-storyboard-chat-starter-panel-layout="centered-beginner-guide"',
     );
     expect(storyboardSource).toContain(
       '"min-h-full items-stretch justify-center"',
     );
-    expect(storyboardSource).toContain('"w-full space-y-1.5 text-left"');
     expect(storyboardSource).toContain(
-      '"mx-auto flex min-h-full w-full flex-col justify-center gap-3 px-3 py-4 text-left"',
+      '"flex min-h-full w-full flex-col items-center justify-center text-center"',
     );
-    expect(storyboardSource).toContain('"grid grid-cols-1 gap-2"');
     expect(storyboardSource).toContain(
+      '"mx-auto flex w-full max-w-sm flex-col items-center justify-center gap-3 px-3 py-6 text-center"',
+    );
+    expect(storyboardSource).not.toContain(
       'data-storyboard-chat-starter-icon="true"',
     );
-    expect(storyboardSource).toContain(
+    expect(storyboardSource).not.toContain(
       '"flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/15"',
     );
     expect(storyboardSource).toContain(
-      '"text-2xl font-semibold tracking-tight text-foreground"',
+      '"text-xl font-semibold tracking-tight text-foreground"',
     );
     expect(storyboardSource).toContain(
+      'data-storyboard-chat-starter-title-size="reduced"',
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-chat-starter-guide-copy="true"',
+    );
+    expect(storyboardSource).not.toContain(
       'data-storyboard-chat-starter-actions="true"',
     );
-    expect(storyboardSource).toContain(
+    expect(storyboardSource).not.toContain(
       'data-storyboard-chat-starter-action="guide"',
     );
     expect(storyboardSource).not.toContain(
       'data-storyboard-chat-starter-action="example"',
     );
-    expect(storyboardSource).toContain(
+    expect(storyboardSource).not.toContain(
       'data-storyboard-chat-message-action="guide"',
     );
     expect(storyboardSource).not.toContain(
@@ -5898,7 +5920,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).not.toContain(
       'data-storyboard-role-view="composer-inline"',
     );
-    expect(storyboardSource).toContain(
+    expect(storyboardSource).not.toContain(
       'data-storyboard-chat-guide-button="true"',
     );
     expect(storyboardSource).not.toContain(
@@ -6078,6 +6100,27 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "처음이면 가이드, 바로 보려면 예시 생성.",
     );
     expect(storyboardSource).toContain("스토리보드 도우미");
+    expect(storyboardSource).toContain(
+      'data-storyboard-chat-starter-panel-layout="centered-beginner-guide"',
+    );
+    expect(storyboardSource).toContain(
+      "flex min-h-full w-full flex-col items-center justify-center text-center",
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-chat-starter-title-size="reduced"',
+    );
+    expect(storyboardSource).toContain(
+      'className="text-xl font-semibold tracking-tight text-foreground"',
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-chat-starter-guide-copy="true"',
+    );
+    expect(storyboardSource).toContain(
+      "주제·음식·원하는 CUT 수를 한두 문장으로 적거나,",
+    );
+    expect(storyboardSource).toContain(
+      "아래 예시를 눌러 바로 시작하세요.",
+    );
     expect(storyboardSource).toContain("예시 만들기");
     expect(storyboardSource).toContain("가이드 보기");
     expect(storyboardSource).toContain(
@@ -6503,6 +6546,15 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).toContain("createStoryboardCutFocusContext");
     expect(storyboardSource).toContain("createStoryboardActionFocusContext");
     expect(storyboardSource).toContain("handleSelectStoryboardScene");
+    expect(storyboardSource).toContain("createStoryboardCutFocusContextFromScenes");
+    expect(storyboardSource).toContain("getStoryboardSelectedSceneNosFromFocus");
+    expect(storyboardSource).toContain("const selectedStoryboardSceneNoSet = useMemo");
+    expect(storyboardSource).toContain("currentSceneNos.includes(scene.sceneNo)");
+    expect(storyboardSource).toContain(
+      "currentSceneNos.filter((sceneNo) => sceneNo !== scene.sceneNo)",
+    );
+    expect(storyboardSource).toContain("다중 선택");
+    expect(storyboardSource).toContain("sceneNos: selectedScenes.map");
     expect(storyboardSource).toContain("focusContext: storyboardCanvasFocus");
     expect(storyboardSource).toContain(
       'data-storyboard-chat-canvas-context="true"',
@@ -6606,6 +6658,12 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(storyboardSource).toContain("getStoryboardCanvasTopicTitle");
     expect(storyboardSource).toContain("buildStoryboardCanvasTopicTitle");
+    expect(storyboardSource).toContain(
+      'sanitizeStoryboardChatDisplayText(result.storyboard.title).split("—")[0]',
+    );
+    expect(storyboardSource).toContain(
+      '.replace(/^조회수\\s*많이\\s*나올\\s*것\\s*같은\\s*/i, "")',
+    );
     expect(storyboardSource).not.toContain("buildStoryboardAudienceTopicTitle");
     expect(storyboardSource).toContain(
       "storyboardCanvasTopicTitle",
@@ -6965,9 +7023,21 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(storyboardSource).toContain('data-storyboard-cut-overlay="true"');
     expect(storyboardSource).toContain('data-storyboard-cut-badge="true"');
+    expect(storyboardSource).toContain(
+      'data-storyboard-cut-badge-background="visible"',
+    );
     expect(storyboardSource).toContain('data-storyboard-cut-time-badge="true"');
+    expect(storyboardSource).toContain(
+      'data-storyboard-cut-time-badge-background="visible"',
+    );
     expect(storyboardSource).toContain("zIndex: 30");
-    expect(storyboardSource).toContain("bg-black/70");
+    expect(storyboardSource).toContain('backgroundColor: "rgba(15, 23, 42, 0.82)"');
+    expect(storyboardSource).toContain(
+      'backgroundColor: "rgba(255, 255, 255, 0.92)"',
+    );
+    expect(storyboardSource).toContain('color: "#0f172a"');
+    expect(storyboardSource).toContain('context.fillStyle = "rgba(15,23,42,0.82)"');
+    expect(storyboardSource).toContain('context.fillStyle = "rgba(255,255,255,0.92)"');
     expect(storyboardSource).not.toContain('"copy-markdown"');
     expect(storyboardSource).not.toContain('"view-full"');
     expect(storyboardSource).not.toContain('"view-evidence"');
@@ -7024,12 +7094,12 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(requireAdminSource).toContain("return 'e2e-admin-route-bypass'");
     expect(routeSource).toContain("generateStoryboardWithBackendAgent");
     expect(routeSource).toContain("getStoryboardBackendAgentStatus");
-    expect(routeSource).toContain("body?.generationMode === 'backend_agent'");
+    expect(routeSource).toContain("generateStoryboardWithRouteBackendAgent(body)");
     expect(routeSource).toContain(
       "backendAgent: await getPublicStoryboardBackendAgentStatus()",
     );
     expect(chatRouteSource).toContain("generateStoryboardChatWithBackendAgent");
-    expect(chatRouteSource).toContain("text/event-stream");
+    expect(chatRouteSource).toContain("STORYBOARD_ROUTE_SSE_HEADERS");
     expect(chatRouteSource).toContain("event: ${event}");
     expect(chatRouteSource).toContain("getInitialStatusMessages");
     expect(chatRouteSource).toContain("getResolvedStatusMessage");
@@ -7051,7 +7121,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(chatRouteSource).toContain("곧 화면에 바로 반영할게요");
     expect(chatRouteSource).toContain("send('status'");
     expect(chatRouteSource).toContain("send('patch', publicResult)");
-    expect(chatRouteSource).toContain("send('done', publicResult)");
+    expect(chatRouteSource).toContain("duplicateResultOmitted: true");
+    expect(chatRouteSource).not.toContain("send('done', publicResult)");
     expect(chatRouteSource).toContain("await requireAdmin({");
     expect(imageRouteSource).toContain("generateStoryboardSceneImages");
     expect(imageRouteSource).toContain(
@@ -7361,7 +7432,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(routeSource).toContain("await requireAdmin({");
     expect(storyboardPostSource.indexOf("await requireAdmin({")).toBeLessThan(
-      storyboardPostSource.indexOf("const result = body?.generationMode"),
+      storyboardPostSource.indexOf("const body = await readStoryboardRouteJson(request, telemetry)")
     );
     expect(storyboardGetSource.indexOf("await requireAdmin({")).toBeLessThan(
       storyboardGetSource.indexOf("} = loadStoryboardHeatmapSources"),
@@ -8235,5 +8306,52 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "page.route('**/api/admin/youtube-thumbnail-generator/history",
     );
     expect(batchSpecSource).not.toContain("route.fulfill({");
+  });
+  test("exposes storyboard RAG trace and mid-stream steer contracts in chat", () => {
+    const storyboardSource = source(
+      "components/admin/storyboard/AdminStoryboardGenerator.tsx",
+    );
+    const backendAgentSource = source("lib/admin/storyboard/backend-agent.ts");
+    const chatRouteSource = source("app/api/admin/storyboard/chat/route.ts");
+    const ragSource = source("lib/admin/storyboard/rag.ts");
+
+    expect(ragSource).toContain("buildStoryboardRagModelStackDiagnostics");
+    expect(backendAgentSource).toContain("buildStoryboardChatRagTraceEntries");
+    expect(backendAgentSource).toContain(
+      'ragTraceSurface: "storyboard_chat_thinking_panel"',
+    );
+    expect(backendAgentSource).toContain("LangSmith 대신 답변 말풍선");
+    expect(backendAgentSource).toContain("exaone3.5:7.8b");
+    expect(backendAgentSource).toContain("EEVE-Korean-Instruct-10.8B");
+    expect(backendAgentSource).toContain("solar:10.7b-instruct-v1-q5_0");
+    expect(chatRouteSource).toContain("sendBackendRagTrace(send, result)");
+    expect(chatRouteSource).toContain("normalizeRouteTraceStatus");
+    expect(chatRouteSource).toContain("sanitizeStatusText(candidate.detail, 520)");
+    expect(storyboardSource).toContain("생각 중 · RAG 추적");
+    expect(storyboardSource).toContain("function isStoryboardRagProcessIntent");
+    expect(storyboardSource).toContain(
+      "if (isStoryboardRagProcessIntent(normalized)) return false;",
+    );
+    expect(storyboardSource).toContain("function isStoryboardChatCanvasPatchActionable");
+    expect(storyboardSource).toContain("if (isStoryboardChatCanvasPatchActionable(item.data))");
+    expect(storyboardSource).toContain("pendingStoryboardChatSteerRef");
+    expect(storyboardSource).toContain("steeredReplay?: boolean");
+    expect(storyboardSource).toContain("appendStoryboardChatSteerTrace");
+    expect(storyboardSource).toContain(
+      "새 메시지를 반영하기 위해 현재 답변을 멈추고 다시 생각할게요.",
+    );
+    expect(storyboardSource).toContain(
+      "현재 스트림을 중단하고 새 요청으로 다시 실행",
+    );
+    expect(storyboardSource).toContain("data-storyboard-chat-steer={");
+    expect(storyboardSource).toContain('"현재 답변에 추가 지시 보내기"');
+    expect(storyboardSource).toContain(
+      "disabled={isGenerating || isGeneratingImages}",
+    );
+    expect(storyboardSource).not.toContain(
+      "disabled={isChatAgentStreaming}\n                      autoComplete=\"off\"",
+    );
+    expect(backendAgentSource).toContain("rag|r\\.a\\.g");
+    expect(chatRouteSource).toContain("rag|r\\.a\\.g");
   });
 });
