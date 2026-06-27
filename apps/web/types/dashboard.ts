@@ -21,11 +21,24 @@ export interface DashboardVideoSummary {
     updatedAt: string | null;
 }
 
+export interface DashboardSummaryFreshness {
+    generatedAt: string;
+    source: 'row-derived' | 'row-derived-cache';
+    approvedOnly: boolean;
+    rowCount: number;
+    checksum: string;
+    ttlMs: number;
+    videoLimit: number;
+    expiresAt: string | null;
+    cacheStatus: 'bypass' | 'miss' | 'hit' | 'shared';
+}
+
 export interface DashboardSummaryResponse {
     asOf: string;
     totals: DashboardTotals;
     topCategories: DashboardCategoryStat[];
     videos: DashboardVideoSummary[];
+    freshness?: DashboardSummaryFreshness;
 }
 
 export interface DashboardRestaurantItem {

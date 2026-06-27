@@ -1,0 +1,167 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Tzudong Storyboard RAG Actions",
+    "version": "1.0.0",
+    "description": "Custom GPT Actions contract for user-scoped storyboard RAG documents. Vercel routes validate OAuth bearer tokens, call the local Python RAG worker for BGE-M3 embedding/reranking, and use Supabase pgvector RPC for hybrid retrieval."
+  },
+  "servers": [
+    {
+      "url": "https://www.tzudong.app"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "OAuthBearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "OAuth"
+      }
+    },
+    "schemas": {
+      "RagDocumentInput": {
+        "type": "object",
+        "required": ["externalId", "title", "content"],
+        "properties": {
+          "externalId": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "content": { "type": "string", "minLength": 1, "maxLength": 20000 },
+          "metadata": { "type": "object", "additionalProperties": true }
+        },
+        "additionalProperties": false
+      },
+      "UpsertDocumentsRequest": {
+        "type": "object",
+        "required": ["documents"],
+        "properties": {
+          "documents": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 20,
+            "items": { "$ref": "#/components/schemas/RagDocumentInput" }
+          }
+        },
+        "additionalProperties": false
+      },
+      "UpsertDocumentsResponse": {
+        "type": "object",
+        "required": ["ids"],
+        "properties": {
+          "ids": { "type": "array", "items": { "type": "string", "format": "uuid" } },
+          "traceId": { "type": "string" }
+        }
+      },
+      "SearchRequest": {
+        "type": "object",
+        "required": ["query"],
+        "properties": {
+          "query": { "type": "string", "minLength": 1, "maxLength": 2000 },
+          "topK": { "type": "integer", "minimum": 1, "maximum": 3, "default": 3 },
+          "candidateCount": { "type": "integer", "minimum": 10, "maximum": 50, "default": 20 },
+          "metadataFilter": { "type": "object", "additionalProperties": true }
+        },
+        "additionalProperties": false
+      },
+      "SearchResult": {
+        "type": "object",
+        "required": ["id", "title", "content", "metadata", "scores"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "title": { "type": "string" },
+          "content": { "type": "string" },
+          "metadata": { "type": "object", "additionalProperties": true },
+          "scores": {
+            "type": "object",
+            "properties": {
+              "dense": { "type": "number" },
+              "sparse": { "type": "number" },
+              "weighted": { "type": "number" },
+              "rerank": { "type": "number" }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "SearchResponse": {
+        "type": "object",
+        "required": ["results", "traceId"],
+        "properties": {
+          "results": {
+            "type": "array",
+            "maxItems": 3,
+            "items": { "$ref": "#/components/schemas/SearchResult" }
+          },
+          "traceId": { "type": "string" },
+          "trace": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["step", "status"],
+              "properties": {
+                "step": { "type": "string" },
+                "status": { "type": "string", "enum": ["started", "passed", "failed"] },
+                "detail": { "type": "string" }
+              },
+              "additionalProperties": false
+            }
+          }
+        }
+      },
+      "FailClosedError": {
+        "type": "object",
+        "required": ["error", "traceId"],
+        "properties": {
+          "error": { "type": "string" },
+          "traceId": { "type": "string" }
+        }
+      }
+    }
+  },
+  "security": [{ "OAuthBearer": [] }],
+  "paths": {
+    "/api/admin/storyboard/rag/documents": {
+      "post": {
+        "operationId": "upsertStoryboardRagDocuments",
+        "summary": "Embed and upsert storyboard RAG documents for the authenticated user.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpsertDocumentsRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Documents embedded and stored.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpsertDocumentsResponse" } } }
+          },
+          "401": { "description": "OAuth bearer token missing or invalid.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/FailClosedError" } } } },
+          "503": { "description": "Required worker/model/Supabase dependency unavailable; no fake fallback is returned.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/FailClosedError" } } } }
+        }
+      }
+    },
+    "/api/admin/storyboard/rag/search": {
+      "post": {
+        "operationId": "searchStoryboardRagDocuments",
+        "summary": "Hybrid-search storyboard RAG documents and rerank final top 3.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/SearchRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Top RAG matches with worker-visible trace.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SearchResponse" } } }
+          },
+          "401": { "description": "OAuth bearer token missing or invalid.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/FailClosedError" } } } },
+          "503": { "description": "Required worker/model/Supabase dependency unavailable; no fake fallback is returned.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/FailClosedError" } } } }
+        }
+      }
+    }
+  }
+}

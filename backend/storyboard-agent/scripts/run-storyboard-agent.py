@@ -317,10 +317,25 @@ def run_langgraph_fixture(fixture: str, payload: dict[str, Any]) -> dict[str, An
         graph = make_graph_diagnostics(
             status="used",
             thread_id=thread_id,
-            nodes_visited=[*base_nodes, "researcher", "designer"],
+            nodes_visited=[*base_nodes, "researcher", "intern", "designer"],
+            interrupts=[
+                {
+                    "node": "intern.review_create",
+                    "resumable": True,
+                    "outputReady": True,
+                    "summary": "intern reviewed tool/RPC plan before execution",
+                },
+                {
+                    "node": "designer_node",
+                    "resumable": True,
+                    "outputReady": True,
+                    "summary": "designer output awaits human review",
+                },
+            ],
             tools_called=["search_scene_data"],
             retrieval={
                 "status": "used",
+                "requiredModelStack": True,
                 "usedModels": {
                     "embedding": "BAAI/bge-m3",
                     "reranker": "BAAI/bge-reranker-v2-m3",
@@ -371,6 +386,8 @@ def run_langgraph_fixture(fixture: str, payload: dict[str, Any]) -> dict[str, An
             retrieval={"status": "not_used"},
         )
 
+    reference_graph = build_reference_graph({"final_output": markdown}, graph, None)
+
     return {
         "final_output": markdown,
         "markdown": markdown,
@@ -378,7 +395,8 @@ def run_langgraph_fixture(fixture: str, payload: dict[str, Any]) -> dict[str, An
             markdown or "LangGraph interrupted before final storyboard output.",
             "LangGraph fixture runner output",
         ),
-        "backendAgent": {"graph": graph},
+        "backendAgent": {"graph": graph, "referenceGraph": reference_graph},
+        "referenceGraph": reference_graph,
         "diagnostics": {
             "runtime": "langgraph",
             "threadId": thread_id,
@@ -488,6 +506,7 @@ def derive_retrieval_diagnostics(tools_called: list[str], state: dict[str, Any])
                 break
     return {
         "status": "used",
+        "requiredModelStack": True,
         "usedModels": {
             "embedding": "BAAI/bge-m3",
             "reranker": "BAAI/bge-reranker-v2-m3",
@@ -546,14 +565,14 @@ def _caption_diagnostics_from_transcripts(transcripts: list[dict[str, Any]]) -> 
 
 
 def run_search_scene_data_probe(payload: dict[str, Any], timeout: float) -> tuple[dict[str, Any], list[dict[str, Any]], list[str]]:
-    """Run the real search_scene_data tool in a bounded subprocess.
+    """Run the real search_scene_data tool in a bounded required-model subprocess.
 
-    The subprocess boundary lets the admin API fail closed if first-time BGE
-    model loading or Supabase RPC stalls. BGE/reranker labels are returned only
-    when the real tool succeeds with usable transcript rows.
+    The admin storyboard path is fail-closed: BGE-M3 dense/sparse embedding,
+    BGE-reranker-v2-m3, Supabase hybrid RPC, MMR, and caption lookup must all be
+    attempted by the real tool. Missing packages, credentials, models, RPC data,
+    or captions are surfaced as hard retrieval failures instead of silently
+    downgrading to local deterministic evidence.
     """
-    if not truthy_env("STORYBOARD_AGENT_ENABLE_BGE_RETRIEVAL", True):
-        return {"status": "not_used"}, [], []
 
     request = payload.get("request") if isinstance(payload.get("request"), dict) else {}
     query = str(request.get("prompt") or "먹방 하이라이트 스토리보드 장면").strip()[:300]
@@ -611,6 +630,7 @@ def run_search_scene_data_probe(payload: dict[str, Any], timeout: float) -> tupl
         }, [], ["search_scene_data"]
     return {
         "status": "used",
+        "requiredModelStack": True,
         "usedModels": {
             "embedding": "BAAI/bge-m3",
             "reranker": "BAAI/bge-reranker-v2-m3",
@@ -813,22 +833,20 @@ def run_local_orchestrated_langgraph(payload: dict[str, Any]) -> dict[str, Any]:
 
     def researcher_node(state: dict[str, Any]) -> dict[str, Any]:
         retrieval, transcripts, tools = run_search_scene_data_probe(payload, timeout)
-        local_scene_data = [
-            {
-                "page_content": scene.get("visualDirection") or scene.get("operatorIntent") or scene.get("title"),
-                "metadata": scene.get("heatmapEvidence") if isinstance(scene.get("heatmapEvidence"), dict) else {},
-            }
-            for scene in _local_scenes(payload)[:5]
-        ]
-        scene_data = transcripts or local_scene_data
+        if retrieval.get("status") != "used" or not transcripts:
+            raise RuntimeError(
+                "required_storyboard_rag_failed:"
+                + redact(json.dumps(retrieval, ensure_ascii=False)[:800])
+            )
+        scene_data = transcripts
         return {
             "tools_called": tools,
             "retrieval_diagnostics": retrieval,
             "research_scene_data": scene_data,
             "research_results": {"scene_data": scene_data, "transcripts": transcripts},
-            "research_web_summary": "Local heatmap/caption evidence is sufficient; external web search not required for this admin generation.",
-            "research_sufficient": bool(scene_data),
-            "research_summary": "Researcher completed bounded self-RAG with search_scene_data." if transcripts else "Researcher used local heatmap seed after bounded search_scene_data attempt.",
+            "research_web_summary": "Required local/Supabase scene retrieval completed; external web search was not used for this admin generation.",
+            "research_sufficient": True,
+            "research_summary": "Researcher completed required self-RAG with search_scene_data, BGE-M3, BGE reranker, MMR, and caption lookup.",
             "previous_queries": [state.get("prompt") or "먹방 하이라이트 장면"],
             "researcher_think_count": 1,
             "intern_request": {

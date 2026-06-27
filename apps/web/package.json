@@ -29,7 +29,8 @@
     "thumbnail:release-certify": "node scripts/thumbnail-release-readback-certification.mjs",
     "storyboard:quality-loop": "node scripts/storyboard-quality-loop.mjs",
     "storyboard:local-bridge": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/storyboard-local-bridge.ts",
-    "storyboard:eight-real-smoke": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/storyboard-eight-real-provider-smoke.ts"
+    "storyboard:eight-real-smoke": "bun scripts/storyboard-eight-real-provider-smoke.ts",
+    "storyboard:rag-ollama-pull": "node scripts/storyboard-rag-ollama-pull.mjs"
   },
   "dependencies": {
     "@ffmpeg/ffmpeg": "^0.12.15",
