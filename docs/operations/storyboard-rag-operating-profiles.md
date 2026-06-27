@@ -74,3 +74,25 @@ Correct implementation:
 - Unit tests validate Korean fail-closed mapping for worker, BGE, Supabase, reranker, LLaVA, and judge failures.
 - Focused API/source tests validate that Next.js does not run BGE/reranker locally and does not synthesize success.
 - Live provider/browser QA is manual or explicit local/GPU worker verification only; it is never required in normal CI.
+
+## Coverage audit and safe backfill runbook
+
+Storyboard RAG coverage/backfill runs are audit-first and no-write by default. Store every run under `artifacts/storyboard-rag-coverage/<run_id>/` and keep the durable ledger in `.gjc/ultragoal/ledger.jsonl` (or the active `.gjc/_session-*/ultragoal/ledger.jsonl` runtime path). Required artifacts:
+
+- `coverage-report.json` compares the frozen latest Tzuyang video window to live Supabase `documents` coverage, schema, indexes, grants, RLS, v1/v2 RPC behavior, and local source availability.
+- `identity-conflicts.json` records the canonical write identity (`metadata.video_id`, `external_id`, `user_id`, `content_hash`, `embed_input_hash`, and `rollback_key`) and blocks conflicts instead of auto-repairing them.
+- `embedding-contract-report.json` proves BGE-M3 dense shape/model/version (`vector(1024)` / `BAAI/bge-m3`), sparse lexical weights, reranker model/version (`BAAI/bge-reranker-v2-m3`), and route/batch input parity.
+- `role-probes.json` proves anon denial, owner scoping, non-owner isolation, and `service_role` server/batch-only access without leaking tokens.
+- `dry-run-manifest.json`, `canary-report.json`, and `blocked-backlog.json` separate preview counts, canary eligibility, readback, rollback drill, and durable blocked/unknown rows.
+
+Safe execution order is fixed: Coverage -> Identity gates -> Embedding/RPC contract -> RLS/grants probes -> Dry-run Preview -> Canary -> Readback -> Rollback drill -> Full backfill or durable blocked backlog. Destructive production DB writes, quota-consuming APIs, and bulk provider calls require the previous gate's evidence plus rollback evidence before apply.
+
+Next.js route handlers must remain bounded: they may authenticate, validate, call the live RAG worker, call Supabase, and return Korean fail-closed status. They must not run crawlers, ffmpeg, Gemini bulk jobs, full-channel scraping, or bulk embedding loops. Bulk/backfill work belongs in backend batch tooling with explicit preview/readback artifacts.
+
+The route and batch embedding input must stay identical: `title + "\n\n" + content`. The `documents` route is bounded to 20 documents per request and calls the live worker; it must not embed locally or synthesize fallback vectors. Search rollback is controlled by `STORYBOARD_RAG_SEARCH_RPC_VERSION=v1`; the default path uses the versioned v2 RPC and additive indexes, with dual-read parity evidence recorded before any migration-dependent apply.
+
+Do not use legacy one-off embedding scripts for this backfill path unless they are explicitly reviewed and wrapped in the same preview/readback/rollback gates. The current excluded legacy scripts are:
+
+- `backend/storyboard-agent/scripts/01-bge-embed-and-store-supabase.py`
+- `backend/storyboard-agent/scripts/99-openai-embed-and-store-supabase.py`
+- `backend/storyboard-agent/scripts/migrate-embeddings-to-supabase.py`
