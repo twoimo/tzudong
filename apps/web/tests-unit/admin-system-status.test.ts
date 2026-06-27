@@ -862,6 +862,7 @@ describe('admin system status API route', () => {
             const payload: AdminSystemStatusResponse = await getAdminSystemStatus(process.env as NodeJS.ProcessEnv);
 
             expect(payload.runDaily?.latestManifestPath).toBe(manifestPath);
+            expect(payload.runDaily?.manifestStatus).toBe('available');
             expect(payload.runDaily?.finalStatus).toBe('ERROR');
             expect(payload.runDaily?.finalExitCode).toBe(1);
             expect(payload.runDaily?.failedRequiredSteps).toContain('Step 13 (Supabase) - exit=23');
@@ -881,6 +882,56 @@ describe('admin system status API route', () => {
             expect(payload.githubActions?.detail).toBe('disabled');
             expect(payload.supabaseCounters?.enabled).toBe(false);
             expect(payload.supabaseCounters?.detail).toBe('disabled');
+            expect(seen).toEqual([]);
+        } finally {
+            global.fetch = originalFetch;
+            restoreEnv();
+            tempDir.cleanup();
+        }
+    });
+
+    test('reports missing run_daily current-summary as explicit unknown state', async () => {
+        const tempDir = withTempDir('tzudong-run-daily-missing-manifest-');
+        const scriptPath = path.join(tempDir.dir, 'run_daily.sh');
+        const logDir = path.join(tempDir.dir, 'log', 'cron');
+        mkdirSync(logDir, { recursive: true });
+        await Bun.write(scriptPath, '#!/bin/sh\n');
+        await Bun.write(path.join(logDir, 'daily_2026-06-27.log'), [
+            '[00:00] 실패한 필수 단계 요약',
+            '  - Step 13 (Supabase) - exit=23',
+            '[00:01] 완료',
+        ].join('\n'));
+        const missingManifestPath = path.join(tempDir.dir, 'current-summary.json');
+        const restoreEnv = withEnv({
+            STORYBOARD_AGENT_ENABLED: 'false',
+            STORYBOARD_BGE_ENABLED: 'false',
+            INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS: '0',
+            RUN_DAILY_SCRIPT_PATH: scriptPath,
+            RUN_DAILY_MANIFEST_PATH: missingManifestPath,
+            INSIGHT_GITHUB_ACTIONS_STATUS_ENABLED: undefined,
+            INSIGHT_SUPABASE_COUNTER_STATUS_ENABLED: undefined,
+        });
+
+        const originalFetch = global.fetch;
+        const seen: string[] = [];
+        global.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+            seen.push(`${init?.method ?? 'GET'} ${String(input)}`);
+            return new Response('unexpected', { status: 500 });
+        };
+
+        try {
+            const { getAdminSystemStatus } = await loadSystemStatusHelper();
+            const payload: AdminSystemStatusResponse = await getAdminSystemStatus(process.env as NodeJS.ProcessEnv);
+
+            expect(payload.runDaily?.latestManifestPath).toBe(missingManifestPath);
+            expect(payload.runDaily?.manifestStatus).toBe('missing');
+            expect(payload.runDaily?.finalStatus).toBe('UNKNOWN');
+            expect(payload.runDaily?.detail).toBeUndefined();
+            expect(payload.runDaily?.failedRequiredSteps).toContain('Step 13 (Supabase) - exit=23');
+            expect(payload.checklist.some((item) => item.id === 'run-daily-required-failed')).toBe(true);
+            expect(payload.checklist.some((item) => item.id === 'run-daily-manifest-missing')).toBe(true);
+            expect(payload.githubActions?.enabled).toBe(false);
+            expect(payload.supabaseCounters?.enabled).toBe(false);
             expect(seen).toEqual([]);
         } finally {
             global.fetch = originalFetch;

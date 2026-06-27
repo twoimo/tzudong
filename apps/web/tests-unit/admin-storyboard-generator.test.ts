@@ -359,9 +359,10 @@ describe('admin storyboard generator', () => {
       expect(dessert.planner?.topicProfile.id).toBe('dessert_cafe');
       expect(seafood.planner?.topicProfile.id).toBe('seafood');
       expect(spicyNoodle.planner?.topicProfile.id).toBe('noodle_soup');
-      expect(dessert.storyboard.title).toContain('조회수 많이 나올 것 같은 디저트 카페 먹방');
-      expect(seafood.storyboard.title).toContain('조회수 많이 나올 것 같은 해산물 한상 먹방');
-      expect(spicyNoodle.storyboard.title).toContain('조회수 많이 나올 것 같은 면·국물 먹방');
+      expect(dessert.storyboard.title).toContain('딸기빙수와 케이크 디저트 카페 먹방');
+      expect(seafood.storyboard.title).toContain('해산물 회, 대게, 매운탕 한상 먹방');
+      expect(spicyNoodle.storyboard.title).toContain('매운 짬뽕과 탕수육 조합 먹방');
+      expect(dessert.storyboard.title).not.toContain('조회수 많이 나올 것 같은');
       expect(JSON.stringify(dessert.storyboard.scenes)).toContain('딸기빙수');
       expect(JSON.stringify(dessert.storyboard.scenes)).toContain('케이크');
       expect(JSON.stringify(seafood.storyboard.scenes)).toContain('대게');
@@ -371,7 +372,7 @@ describe('admin storyboard generator', () => {
       expect(JSON.stringify(spicyNoodle.storyboard.scenes)).not.toContain('떡볶이');
       expect(dessert.storyboard.scenes[0].captionIdea).not.toBe(seafood.storyboard.scenes[0].captionIdea);
       expect(dessert.storyboard.exportMarkdown).toContain('데모/샘플 근거');
-      expect(dessert.storyboard.exportMarkdown).toContain('# 조회수 많이 나올 것 같은 디저트 카페 먹방');
+      expect(dessert.storyboard.exportMarkdown).toContain('# 딸기빙수와 케이크 디저트 카페 먹방');
     } finally {
       if (previous === undefined) {
         delete process.env.TZUYANG_HEATMAP_DIR;
@@ -486,7 +487,7 @@ describe('admin storyboard generator', () => {
     }
   });
 
-  test('connects backend storyboard-agent mode through the safe local adapter when no command is configured', async () => {
+  test('fails closed when backend storyboard-agent mode has no required command runner', async () => {
     const previousDirectory = process.env.TZUYANG_HEATMAP_DIR;
     const previousCommand = process.env.STORYBOARD_AGENT_COMMAND;
     const previousDisableAutoRunner = process.env.STORYBOARD_AGENT_DISABLE_AUTO_RUNNER;
@@ -497,7 +498,7 @@ describe('admin storyboard generator', () => {
     try {
       const { generateStoryboardWithBackendAgent, getStoryboardBackendAgentStatus } = await import(`../lib/admin/storyboard/backend-agent.ts?case=${Math.random()}`);
       const status = getStoryboardBackendAgentStatus();
-      const result = await generateStoryboardWithBackendAgent({
+      await expect(generateStoryboardWithBackendAgent({
         prompt: '백엔드 스토리보드 에이전트 기반으로 다음 먹방 흐름을 만들어줘.',
         tone: 'documentary',
         targetLengthMinutes: 18,
@@ -505,58 +506,11 @@ describe('admin storyboard generator', () => {
         segmentCount: 6,
         includeProductionNotes: true,
         generationMode: 'backend_agent',
-      });
+      })).rejects.toThrow('required_storyboard_backend_command_unavailable');
 
       expect(status.available).toBe(true);
       expect(status.mode).toBe('local_adapter');
       expect(status.notebooks).toContain('scripts/03-storyboard-agent.ipynb');
-      expect(result.mode).toBe('backend_agent_local_adapter');
-      expect(result.request.generationMode).toBe('backend_agent');
-      expect(result.sourceSummary.dataModeLabel).toBe('백엔드 에이전트 어댑터');
-      expect(result.planner?.sourceTrace.evidenceLabel).toBe('백엔드 에이전트 근거');
-      expect(result.storyboard.scenes[0].heatmapEvidence.reason).toContain('백엔드 에이전트 근거');
-      expect(result.backendAnalysis.backendAgent?.invokedCommand).toBe(false);
-      expect(result.agentGraphFidelity?.status).toBe('passed');
-      expect(result.agentGraphFidelity?.score ?? 0).toBeGreaterThanOrEqual(98);
-      expect(result.backendAnalysis.backendAgent?.graph?.nodesVisited).toEqual([
-        'extract_slots',
-        'supervisor',
-        'researcher',
-        'intern',
-        'designer',
-      ]);
-      const referenceGraph = result.backendAnalysis.backendAgent?.referenceGraph as any;
-      expect(referenceGraph.lifecycle).toMatchObject({
-        start: true,
-        extractSlots: true,
-        supervisor: true,
-        researcherDelegated: true,
-        designerDelegated: true,
-        internRoutedByResearcher: true,
-        end: true,
-      });
-      expect(referenceGraph.supervisor).toMatchObject({
-        research_sufficient: true,
-        is_approved: { researcher: true, designer: true },
-      });
-      expect(referenceGraph.supervisor.agent_instructions.researcher).toContain('self-RAG');
-      expect(referenceGraph.supervisor.agent_instructions.designer).toContain('storyboard');
-      expect(referenceGraph.researcher.loop).toMatchObject({
-        think: true,
-        tools: true,
-        evaluate: true,
-      });
-      expect(referenceGraph.intern.humanInterrupts).toMatchObject({
-        beforeCreateDelete: true,
-        afterToolRpcGeneration: true,
-        blocksUnapprovedExecution: true,
-      });
-      expect(referenceGraph.designer.final_output).toContain(result.storyboard.title);
-      expect(referenceGraph.designer.final_output).toContain('## 촬영 기획표');
-      expect(referenceGraph.audit.eventsOrdered).toBe(true);
-      expect(result.backendAnalysis.reusedLogic.join('\n')).toContain('backend/storyboard-agent/src/graph.py');
-      expect(result.backendAnalysis.reusedLogic.join('\n')).toContain('StoryboardSlots');
-      expect(result.storyboard.operatorBrief).toContain('backend/storyboard-agent');
     } finally {
       if (previousDirectory === undefined) {
         delete process.env.TZUYANG_HEATMAP_DIR;
@@ -679,7 +633,7 @@ test('uses backend storyboard-agent command output when STORYBOARD_AGENT_COMMAND
   }
 });
 
-test('keeps local adapter fallback and redacts command stdout and stderr when command fails', async () => {
+test('fails closed and redacts command stdout and stderr when command fails', async () => {
   const tempDir = mkdtempSync(path.join(os.tmpdir(), 'tzudong-storyboard-command-fail-'));
   const commandPath = path.join(tempDir, process.platform === 'win32' ? 'storyboard-command-fail.cmd' : 'storyboard-command-fail.sh');
   writeExecutableShim(
@@ -703,24 +657,15 @@ test('keeps local adapter fallback and redacts command stdout and stderr when co
 
   try {
     const { generateStoryboardWithBackendAgent } = await import(`../lib/admin/storyboard/backend-agent.ts?case=${Math.random()}`);
-    const result = await generateStoryboardWithBackendAgent({
-      prompt: '실패하면 안전하게 fallback 해줘.',
+    await expect(generateStoryboardWithBackendAgent({
+      prompt: '실패하면 안전하게 중단해줘.',
       tone: 'documentary',
       targetLengthMinutes: 18,
       sourceLimit: 20,
       segmentCount: 4,
       includeProductionNotes: true,
       generationMode: 'backend_agent',
-    });
-
-    expect(result.mode).toBe('backend_agent_local_adapter');
-    expect(result.backendAnalysis.backendAgent?.invokedCommand).toBe(true);
-    expect(result.backendAnalysis.backendAgent?.commandAvailable).toBe(true);
-    expect(result.backendAnalysis.backendAgent?.commandExitCode).toBe(2);
-    expect(result.backendAnalysis.backendAgent?.rawOutputPreview).toContain('[안전상 제거된 운영 지시]');
-    expect(result.backendAnalysis.backendAgent?.rawOutputPreview).not.toContain('sk-proj-fakeSecretValue');
-    expect(result.backendAnalysis.backendAgent?.rawOutputPreview).not.toContain('eyJfakeSecretValue');
-    expect(result.storyboard.operatorBrief).toContain('backend/storyboard-agent');
+    })).rejects.toThrow(/required_storyboard_backend_graph_failed:(?!.*sk-proj-fakeSecretValue)(?!.*eyJfakeSecretValue)/);
   } finally {
     if (previousCommand === undefined) delete process.env.STORYBOARD_AGENT_COMMAND;
     else process.env.STORYBOARD_AGENT_COMMAND = previousCommand;
@@ -747,7 +692,7 @@ test('rejects unsafe shell command strings instead of executing through a shell'
   try {
     const { generateStoryboardWithBackendAgent, getStoryboardBackendAgentStatus } = await import(`../lib/admin/storyboard/backend-agent.ts?case=${Math.random()}`);
     const status = getStoryboardBackendAgentStatus();
-    const result = await generateStoryboardWithBackendAgent({
+    await expect(generateStoryboardWithBackendAgent({
       prompt: 'unsafe command는 실행하면 안 돼.',
       tone: 'documentary',
       targetLengthMinutes: 18,
@@ -755,15 +700,12 @@ test('rejects unsafe shell command strings instead of executing through a shell'
       segmentCount: 4,
       includeProductionNotes: true,
       generationMode: 'backend_agent',
-    });
+    })).rejects.toThrow('required_storyboard_backend_command_unavailable');
 
     expect(status.mode).toBe('local_adapter');
     expect(status.commandConfigured).toBe(true);
     expect(status.commandAvailable).toBe(false);
     expect(status.commandRejectionReason).toBe('unsafe-command-string');
-    expect(result.mode).toBe('backend_agent_local_adapter');
-    expect(result.backendAnalysis.backendAgent?.invokedCommand).toBe(false);
-    expect(result.backendAnalysis.backendAgent?.commandAvailable).toBe(false);
     expect(existsSync(markerPath)).toBe(false);
   } finally {
     if (previousCommand === undefined) delete process.env.STORYBOARD_AGENT_COMMAND;
@@ -866,23 +808,20 @@ test('degrades honestly when the configured Python runtime is unavailable', asyn
   try {
     const { generateStoryboardWithBackendAgent, getStoryboardBackendAgentStatus } = await import(`../lib/admin/storyboard/backend-agent.ts?case=${Math.random()}`);
     const status = getStoryboardBackendAgentStatus();
-    const result = await generateStoryboardWithBackendAgent({
-      prompt: 'python runtime이 없으면 솔직하게 fallback 해줘.',
+    await expect(generateStoryboardWithBackendAgent({
+      prompt: 'python runtime이 없으면 솔직하게 실패해줘.',
       tone: 'documentary',
       targetLengthMinutes: 18,
       sourceLimit: 20,
       segmentCount: 4,
       includeProductionNotes: true,
       generationMode: 'backend_agent',
-    });
+    })).rejects.toThrow('required_storyboard_backend_graph_failed');
 
     expect(status.mode).toBe('command');
     expect(status.missingPythonModules).toEqual([]);
     expect(status.pythonRuntimeAvailable).toBe(false);
     expect(status.pythonRuntimeError).toBeTruthy();
-    expect(result.mode).toBe('backend_agent_local_adapter');
-    expect(result.backendAnalysis.backendAgent?.graph?.status).toBe('fallback');
-    expect(result.backendAnalysis.backendAgent?.graph?.fallbackReason).toBe('unsupported_runtime');
   } finally {
     if (previousCommand === undefined) delete process.env.STORYBOARD_AGENT_COMMAND;
     else process.env.STORYBOARD_AGENT_COMMAND = previousCommand;
@@ -911,7 +850,7 @@ test('treats the Windows Store Python alias message as unavailable runtime', asy
   try {
     const { generateStoryboardWithBackendAgent, getStoryboardBackendAgentStatus } = await import(`../lib/admin/storyboard/backend-agent.ts?case=${Math.random()}`);
     const status = getStoryboardBackendAgentStatus();
-    const result = await generateStoryboardWithBackendAgent({
+    await expect(generateStoryboardWithBackendAgent({
       prompt: 'store alias 오류도 runtime unavailable로 처리해줘.',
       tone: 'documentary',
       targetLengthMinutes: 18,
@@ -919,11 +858,10 @@ test('treats the Windows Store Python alias message as unavailable runtime', asy
       segmentCount: 4,
       includeProductionNotes: true,
       generationMode: 'backend_agent',
-    });
+    })).rejects.toThrow('required_storyboard_backend_graph_failed');
 
     expect(status.pythonRuntimeAvailable).toBe(false);
     expect(status.pythonRuntimeError).toContain('Python was not found');
-    expect(result.backendAnalysis.backendAgent?.graph?.fallbackReason).toBe('unsupported_runtime');
   } finally {
     if (previousCommand === undefined) delete process.env.STORYBOARD_AGENT_COMMAND;
     else process.env.STORYBOARD_AGENT_COMMAND = previousCommand;
@@ -1418,12 +1356,16 @@ test('treats the Windows Store Python alias message as unavailable runtime', asy
       ...baseRequest,
       message: '로컬 어댑터 폴백으로 동작하더라도 첨부 그림 같은 랭그래프 구조를 지원하고 있는가',
     });
+    const ragProcessQuestion = await generateStoryboardChatWithBackendAgent({
+      ...baseRequest,
+      message: 'RAG 과정과 모델 스택을 보여줘',
+    });
     const attachmentQuestion = await generateStoryboardChatWithBackendAgent({
       ...baseRequest,
       message: '사진 첨부도 가능해',
     });
 
-    for (const result of [modelQuestion, graphQuestion, attachmentQuestion]) {
+    for (const result of [modelQuestion, graphQuestion, ragProcessQuestion, attachmentQuestion]) {
       expect(result.shouldGenerate).toBe(false);
       expect(result.shouldReset).toBe(false);
       expect(result.canvasPatch.scenePatch).toBeUndefined();
@@ -1432,7 +1374,14 @@ test('treats the Windows Store Python alias message as unavailable runtime', asy
       expect(result.backendAgent.diagnostics.chatIntent).toBe('conversation');
       expect(result.assistantMessage).toContain('화면은 바꾸지 않고');
     }
-    expect(modelQuestion.assistantMessage).toContain('로컬 폴백에서는 BGE 임베딩이나 리랭커를 썼다고 표시하지 않습니다');
+    expect(modelQuestion.assistantMessage).toContain('required provider');
+    expect(ragProcessQuestion.assistantMessage).toContain('RAG 작동 과정 질문으로 이해했어요');
+    expect(ragProcessQuestion.assistantMessage).toContain('required provider');
+    const ragTraceText = JSON.stringify(ragProcessQuestion.backendAgent.diagnostics.ragTrace);
+    expect(ragTraceText).toContain('현재 실행 프로파일');
+    expect(ragTraceText).toContain('원격/로컬 provider 위치');
+    expect(ragTraceText).toContain('대기열/타임아웃');
+    expect(ragTraceText).toContain('모델 미설치 조치');
     expect(graphQuestion.assistantMessage).toContain('Supervisor');
     expect(graphQuestion.assistantMessage).toContain('Researcher');
     expect(attachmentQuestion.assistantMessage).toContain('입력창의 + 버튼');
