@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "kind": "ai-slop-cleanup-report",
+  "scope": "G007 DB decision artifacts only",
+  "changedFiles": [
+    "artifacts/storyboard-rag-coverage/rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw/db-change-decision.json",
+    "artifacts/storyboard-rag-coverage/rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw/g007-db-decision-validation.json"
+  ],
+  "blockingFindings": [],
+  "advisoryFindings": [],
+  "result": "passed-no-product-code-edits"
+}

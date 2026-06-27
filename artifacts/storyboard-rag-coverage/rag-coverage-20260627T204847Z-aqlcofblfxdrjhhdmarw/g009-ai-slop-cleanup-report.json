@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "kind": "ai-slop-cleanup-report",
+  "scope": "G009 blocked backlog artifacts only",
+  "changedFiles": [
+    "artifacts/storyboard-rag-coverage/rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw/blocked-backlog.json",
+    "artifacts/storyboard-rag-coverage/rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw/g009-backlog-validation.json"
+  ],
+  "blockingFindings": [],
+  "advisoryFindings": [],
+  "result": "passed-no-product-code-edits"
+}

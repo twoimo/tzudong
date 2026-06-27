@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "kind": "g005-role-probes-validation",
+  "generatedAt": "2026-06-27T21:28:00.857913+00:00",
+  "passed": true,
+  "checks": [
+    {
+      "id": "anon-denied",
+      "passed": true,
+      "evidence": {
+        "restAnonTable": true,
+        "restAnonRpc": true,
+        "sqlAnonDenied": true
+      }
+    },
+    {
+      "id": "service-role-read",
+      "passed": true,
+      "evidence": {
+        "anonTableDenied": true,
+        "anonRpcDenied": true,
+        "serviceRoleReadOk": true,
+        "authenticatedOwnerSelectOk": true,
+        "authenticatedOwnerRpcOk": true,
+        "authenticatedNonOwnerRpcNoRows": true,
+        "blockedCount": 0,
+        "notes": [
+          "documents table currently empty, so owner/non-owner probes prove call/authorization boundaries return no rows but cannot prove row isolation with data until canary rows exist"
+        ],
+        "sqlAnonDenied": true,
+        "sqlAuthenticatedOwnerSelectOk": true,
+        "sqlAuthenticatedOwnerRpcOk": true,
+        "sqlAuthenticatedNonOwnerRpcNoRows": true,
+        "restAuthenticatedJwtExpired": true,
+        "restAuthenticatedJwtExpiredHandledBySqlRoleProbes": true
+      }
+    },
+    {
+      "id": "authenticated-owner-sql",
+      "passed": true,
+      "evidence": {
+        "anonTableDenied": true,
+        "anonRpcDenied": true,
+        "serviceRoleReadOk": true,
+        "authenticatedOwnerSelectOk": true,
+        "authenticatedOwnerRpcOk": true,
+        "authenticatedNonOwnerRpcNoRows": true,
+        "blockedCount": 0,
+        "notes": [
+          "documents table currently empty, so owner/non-owner probes prove call/authorization boundaries return no rows but cannot prove row isolation with data until canary rows exist"
+        ],
+        "sqlAnonDenied": true,
+        "sqlAuthenticatedOwnerSelectOk": true,
+        "sqlAuthenticatedOwnerRpcOk": true,
+        "sqlAuthenticatedNonOwnerRpcNoRows": true,
+        "restAuthenticatedJwtExpired": true,
+        "restAuthenticatedJwtExpiredHandledBySqlRoleProbes": true
+      }
+    },
+    {
+      "id": "authenticated-non-owner-sql",
+      "passed": true,
+      "evidence": {
+        "anonTableDenied": true,
+        "anonRpcDenied": true,
+        "serviceRoleReadOk": true,
+        "authenticatedOwnerSelectOk": true,
+        "authenticatedOwnerRpcOk": true,
+        "authenticatedNonOwnerRpcNoRows": true,
+        "blockedCount": 0,
+        "notes": [
+          "documents table currently empty, so owner/non-owner probes prove call/authorization boundaries return no rows but cannot prove row isolation with data until canary rows exist"
+        ],
+        "sqlAnonDenied": true,
+        "sqlAuthenticatedOwnerSelectOk": true,
+        "sqlAuthenticatedOwnerRpcOk": true,
+        "sqlAuthenticatedNonOwnerRpcNoRows": true,
+        "restAuthenticatedJwtExpired": true,
+        "restAuthenticatedJwtExpiredHandledBySqlRoleProbes": true
+      }
+    },
+    {
+      "id": "no-secrets",
+      "passed": true,
+      "evidence": {
+        "anonKeyPresent": true,
+        "serviceRolePresent": true,
+        "adminAuthStatePresent": true,
+        "adminRefreshToken": {
+          "present": true,
+          "sha256Prefix": "3a3d22cefc6a"
+        },
+        "adminAccessToken": {
+          "present": false,
+          "error": "refresh_failed:400:{\"code\":400,\"error_code\":\"refresh_token_already_used\",\"msg\":\"Invalid Refresh Token: Already Used\"}"
+        }
+      }
+    },
+    {
+      "id": "known-limitation-recorded",
+      "passed": true,
+      "evidence": {
+        "limitations": [
+          {
+            "probe": "authenticated_owner_non_owner",
+            "reason": "unable_to_refresh_admin_auth_state",
+            "details": "refresh_failed:400:{\"code\":400,\"error_code\":\"refresh_token_already_used\",\"msg\":\"Invalid Refresh Token: Already Used\"}"
+          }
+        ]
+      }
+    }
+  ],
+  "roleProbesSha256": "31045c87d03eb8e9e2a9bd0b5682bec8ac764e45cb9770c2f7744cf5f4d59be7"
+}

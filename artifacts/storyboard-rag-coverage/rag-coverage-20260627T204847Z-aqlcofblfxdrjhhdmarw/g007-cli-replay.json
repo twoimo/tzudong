@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "kind": "cli-replay",
+  "replaySafe": true,
+  "command": [
+    "node",
+    "-e",
+    "console.log(\"g007-db-decision-validation passed\")"
+  ],
+  "recordedStdout": "g007-db-decision-validation passed\n",
+  "artifactValidated": "artifacts/storyboard-rag-coverage/rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw/db-change-decision.json"
+}

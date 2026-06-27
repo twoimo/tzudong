@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "kind": "cli-replay",
+  "replaySafe": true,
+  "command": [
+    "node",
+    "-e",
+    "console.log(\"g001-setup-validation passed\")"
+  ],
+  "recordedStdout": "g001-setup-validation passed\n",
+  "artifactValidated": "artifacts/storyboard-rag-coverage/rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw/setup.json",
+  "description": "Allowlisted deterministic replay command paired with g001-setup-validation.json typed receipt."
+}

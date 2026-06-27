@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "kind": "g003-identity-validation",
+  "generatedAt": "2026-06-27T21:05:59.645688+00:00",
+  "passed": true,
+  "checks": [
+    {
+      "id": "no-write",
+      "passed": true,
+      "evidence": {
+        "latestVideos": 3,
+        "plannedWrites": 0,
+        "blockedRows": 3,
+        "conflicts": 0,
+        "writesAllowed": false,
+        "unknowns": 0
+      }
+    },
+    {
+      "id": "no-planned-unsafe-writes",
+      "passed": true,
+      "evidence": []
+    },
+    {
+      "id": "all-latest-blocked",
+      "passed": true,
+      "evidence": [
+        {
+          "videoId": "HOzoiAOaJKA",
+          "status": "blocked_before_write",
+          "sourceStatus": "doc_generation_missing_or_not_backfilled",
+          "reasons": [
+            "no existing Supabase document rows for canonical video_id",
+            "no generated transcript-document chunks, so no safe content/external_id/content_hash can be planned",
+            "frame-caption source missing",
+            "heatmap source missing"
+          ],
+          "wouldRequire": [
+            "generated document chunks",
+            "target_user_id selection",
+            "canonical metadata.video_id",
+            "deterministic external_id",
+            "content_hash",
+            "embed_input_hash",
+            "rollback_key"
+          ]
+        },
+        {
+          "videoId": "dJONr8ZpwhM",
+          "status": "blocked_before_write",
+          "sourceStatus": "doc_generation_missing_or_not_backfilled",
+          "reasons": [
+            "no existing Supabase document rows for canonical video_id",
+            "no generated transcript-document chunks, so no safe content/external_id/content_hash can be planned",
+            "frame-caption source missing",
+            "heatmap source missing"
+          ],
+          "wouldRequire": [
+            "generated document chunks",
+            "target_user_id selection",
+            "canonical metadata.video_id",
+            "deterministic external_id",
+            "content_hash",
+            "embed_input_hash",
+            "rollback_key"
+          ]
+        },
+        {
+          "videoId": "IS6z1fyxCyI",
+          "status": "blocked_before_write",
+          "sourceStatus": "doc_generation_missing_or_not_backfilled",
+          "reasons": [
+            "no existing Supabase document rows for canonical video_id",
+            "no generated transcript-document chunks, so no safe content/external_id/content_hash can be planned",
+            "frame-caption source missing",
+            "heatmap source missing"
+          ],
+          "wouldRequire": [
+            "generated document chunks",
+            "target_user_id selection",
+            "canonical metadata.video_id",
+            "deterministic external_id",
+            "content_hash",
+            "embed_input_hash",
+            "rollback_key"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "canonical-rules-present",
+      "passed": true,
+      "evidence": {
+        "metadata.video_id": "required and exactly equal to frozen canonical video_id before any write",
+        "external_id": "deterministic <video_id>:<chunk_index> only after generated document chunks exist",
+        "user_id": "blocked until Story 1/2 selects a concrete target_user_id; current live documents table has zero rows and no existing owner UUID",
+        "content_hash": "sha256 of exact title/content document payload before embedding/upsert",
+        "embed_input_hash": "sha256 of title + \"\\n\\n\" + content; generated only after chunks exist",
+        "rollback_key": "target_user_id + external_id + backfill_run_id + pre-run snapshot id when applicable"
+      }
+    },
+    {
+      "id": "conflict-probe",
+      "passed": true,
+      "evidence": {
+        "documentsTotal": 0,
+        "latestDocumentRows": 0,
+        "result": "no existing public.documents rows; no live external_id/video_id/cross-user conflicts found, but target_user_id remains unselected because no owner rows exist"
+      }
+    }
+  ],
+  "identitySha256": "b8b4b1f64011ee194640bbadbdbab024c05ef18884dc476917cf44a6de5a92aa"
+}
