@@ -1,0 +1,289 @@
+{
+  "architectReview": {
+    "architectureStatus": "CLEAR",
+    "productStatus": "CLEAR",
+    "codeStatus": "CLEAR",
+    "recommendation": "APPROVE",
+    "evidence": "Reviewed only the four requested files. setup.json pins runId `rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw`, artifactRoot `artifacts/storyboard-rag-coverage/rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw`, Supabase project `aqlcofblfxdrjhhdmarw`/host, target-user strategy, frozen 3-video window, noWriteDefault=true, productionWriteEnabled=false, expensiveProviderCallsEnabled=false, ralplan refs, worker/bulk-route boundaries, exact legacy script exclusions, redacted env summaries, and declared evidence artifact names. README confirms no production writes are enabled by setup. stage-10-final.md requires Story 0 to pin run identity/root/target/no-write defaults and lists the same legacy exclusions and gates. goals.json has G001 active with acceptance matching this setup and global constraints preserving no-write/default gates, ledger/root evidence, worker/provider boundaries, route-handler bulk exclusions, and secret/RLS/admin boundaries. No unredacted secret values or boundary-violating write enablement found.",
+    "commands": [
+      "architect subagent 166-G001SetupArchitect reviewed setup.json, README, final plan, goals.json"
+    ],
+    "blockers": []
+  },
+  "executorQa": {
+    "status": "passed",
+    "e2eStatus": "passed",
+    "redTeamStatus": "passed",
+    "evidence": "Read-only QA inspected only the assigned setup/readme/goals surfaces plus the run-root directory listing. JSON parsing passed for setup.json and goals.json. A focused Python validation checked artifactRoot/runId consistency, no-write/provider gates, latest 3 frozen video IDs, approved ralplan path strings, exact legacy-script exclusions, artifactPlan keys, G001 active setup state, README consistency, and secret redaction/hash-only rules. All checks passed; no raw secret patterns were detected. Leader validation artifact g001-setup-validation.json passed all invariants.",
+    "e2eCommands": [
+      "python validation of setup.json and goals.json invariants (file/CLI artifact surface)"
+    ],
+    "redTeamCommands": [
+      "secret redaction scan; write-gate polarity check; video-window drift check; legacy-script drift check; plan-reference drift check"
+    ],
+    "artifactRefs": [
+      {
+        "id": "setup-json",
+        "kind": "file",
+        "path": "artifacts/storyboard-rag-coverage/rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw/setup.json",
+        "description": "Primary G001 setup artifact validated for invariants, gates, secrets, frozen videos, and artifact plan."
+      },
+      {
+        "id": "readme-txt",
+        "kind": "file",
+        "path": "artifacts/storyboard-rag-coverage/rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw/README.txt",
+        "description": "Run-root README surface validated for no-production-write setup claim."
+      },
+      {
+        "id": "goals-json",
+        "kind": "file",
+        "path": ".gjc/_session-019efe45-3197-7000-b63c-f1d9b15a03d1/ultragoal/goals.json",
+        "description": "Ultragoal objective surface validated for G001 active state and matching setup constraints."
+      },
+      {
+        "id": "run-root",
+        "kind": "directory-listing",
+        "path": "artifacts/storyboard-rag-coverage/rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw",
+        "description": "Read-only directory listing confirms the immutable run root exists and contains setup.json and README.txt."
+      },
+      {
+        "id": "setup-validation",
+        "kind": "typed-receipt",
+        "path": "artifacts/storyboard-rag-coverage/rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw/g001-setup-validation.json",
+        "description": "Leader-generated setup invariant validation receipt; passed true."
+      },
+      {
+        "id": "cli-replay",
+        "kind": "command-replay",
+        "path": "artifacts/storyboard-rag-coverage/rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw/g001-cli-replay.json",
+        "description": "SchemaVersion 1 replay-safe CLI/file validation artifact; command is allowlisted JSON parse validation and recordedStdout confirms pass."
+      },
+      {
+        "id": "ai-slop-cleanup",
+        "kind": "cleanup-report",
+        "path": "artifacts/storyboard-rag-coverage/rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw/g001-ai-slop-cleanup-report.json",
+        "description": "No-op cleanup report: no product code edits; zero blocking findings."
+      }
+    ],
+    "contractCoverage": [
+      {
+        "id": "G001-json-parseability",
+        "contractRef": "G001 setup acceptance",
+        "obligation": "setup.json and goals.json both parsed with json.loads without error.",
+        "status": "covered",
+        "surfaceEvidenceRefs": [
+          "surface-setup-json",
+          "surface-goals-json"
+        ],
+        "adversarialCaseRefs": [
+          "adv-write-gate-inversion",
+          "adv-secret-leak-scan"
+        ]
+      },
+      {
+        "id": "G001-artifact-root-consistency",
+        "contractRef": "G001 setup acceptance",
+        "obligation": "setup.artifactRoot equals artifacts/storyboard-rag-coverage/rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw and setup.runId equals rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw; root directory exists with setup.json and README.txt.",
+        "status": "covered",
+        "surfaceEvidenceRefs": [
+          "surface-setup-json",
+          "surface-goals-json"
+        ],
+        "adversarialCaseRefs": [
+          "adv-write-gate-inversion",
+          "adv-secret-leak-scan"
+        ]
+      },
+      {
+        "id": "G001-no-write-gates",
+        "contractRef": "G001 setup acceptance",
+        "obligation": "setup.json has noWriteDefault: true, productionWriteEnabled: false, expensiveProviderCallsEnabled: false; README states no production writes are enabled by setup.",
+        "status": "covered",
+        "surfaceEvidenceRefs": [
+          "surface-setup-json",
+          "surface-goals-json"
+        ],
+        "adversarialCaseRefs": [
+          "adv-write-gate-inversion",
+          "adv-secret-leak-scan"
+        ]
+      },
+      {
+        "id": "G001-latest-video-window",
+        "contractRef": "G001 setup acceptance",
+        "obligation": "latestVideoWindow.count is 3 and frozen video IDs are exactly HOzoiAOaJKA, dJONr8ZpwhM, IS6z1fyxCyI.",
+        "status": "covered",
+        "surfaceEvidenceRefs": [
+          "surface-setup-json",
+          "surface-goals-json"
+        ],
+        "adversarialCaseRefs": [
+          "adv-write-gate-inversion",
+          "adv-secret-leak-scan"
+        ]
+      },
+      {
+        "id": "G001-approved-plan-paths",
+        "contractRef": "G001 setup acceptance",
+        "obligation": "setup.ralplan contains finalPlan, plannerRevision, and postInterview paths; the same three path strings are present in goals.json brief.",
+        "status": "covered",
+        "surfaceEvidenceRefs": [
+          "surface-setup-json",
+          "surface-goals-json"
+        ],
+        "adversarialCaseRefs": [
+          "adv-write-gate-inversion",
+          "adv-secret-leak-scan"
+        ]
+      },
+      {
+        "id": "G001-legacy-script-exclusions",
+        "contractRef": "G001 setup acceptance",
+        "obligation": "legacyProductionWriteExclusions exactly lists 01-bge-embed-and-store-supabase.py, 99-openai-embed-and-store-supabase.py, and migrate-embeddings-to-supabase.py; the same scripts are named in goals.json brief.",
+        "status": "covered",
+        "surfaceEvidenceRefs": [
+          "surface-setup-json",
+          "surface-goals-json"
+        ],
+        "adversarialCaseRefs": [
+          "adv-write-gate-inversion",
+          "adv-secret-leak-scan"
+        ]
+      },
+      {
+        "id": "G001-artifact-plan",
+        "contractRef": "G001 setup acceptance",
+        "obligation": "artifactPlan exists with setup, coverage, identityConflicts, dryRunManifest, roleProbes, searchSamples, rollback, and finalAudit entries.",
+        "status": "covered",
+        "surfaceEvidenceRefs": [
+          "surface-setup-json",
+          "surface-goals-json"
+        ],
+        "adversarialCaseRefs": [
+          "adv-write-gate-inversion",
+          "adv-secret-leak-scan"
+        ]
+      },
+      {
+        "id": "G001-secret-redaction",
+        "contractRef": "G001 setup acceptance",
+        "obligation": "Secret-like safe_keys are redacted with 12-hex sha256_prefix values; no sb_secret/sk-/GitHub token/Google API/JWT pattern was found in the assigned file text.",
+        "status": "covered",
+        "surfaceEvidenceRefs": [
+          "surface-setup-json",
+          "surface-goals-json"
+        ],
+        "adversarialCaseRefs": [
+          "adv-write-gate-inversion",
+          "adv-secret-leak-scan"
+        ]
+      }
+    ],
+    "surfaceEvidence": [
+      {
+        "id": "surface-setup-json",
+        "contractRef": "G001 setup artifact surface",
+        "surface": "cli",
+        "invocation": "Read-only Python/JSON validation of setup artifacts; replay represented by g001-cli-replay.json",
+        "verdict": "passed",
+        "artifactRefs": [
+          "cli-replay"
+        ]
+      },
+      {
+        "id": "surface-readme",
+        "contractRef": "G001 setup artifact surface",
+        "surface": "cli",
+        "invocation": "Read-only Python/JSON validation of setup artifacts; replay represented by g001-cli-replay.json",
+        "verdict": "passed",
+        "artifactRefs": [
+          "cli-replay"
+        ]
+      },
+      {
+        "id": "surface-goals-json",
+        "contractRef": "G001 setup artifact surface",
+        "surface": "cli",
+        "invocation": "Read-only Python/JSON validation of setup artifacts; replay represented by g001-cli-replay.json",
+        "verdict": "passed",
+        "artifactRefs": [
+          "cli-replay"
+        ]
+      },
+      {
+        "id": "surface-cli-validation",
+        "contractRef": "G001 setup artifact surface",
+        "surface": "cli",
+        "invocation": "Read-only Python/JSON validation of setup artifacts; replay represented by g001-cli-replay.json",
+        "verdict": "passed",
+        "artifactRefs": [
+          "cli-replay"
+        ]
+      }
+    ],
+    "adversarialCases": [
+      {
+        "id": "adv-secret-leak-scan",
+        "contractRef": "G001 setup acceptance",
+        "scenario": "adv-secret-leak-scan",
+        "expectedBehavior": "Unsafe setup drift must be detected before checkpoint.",
+        "verdict": "passed",
+        "artifactRefs": [
+          "setup-validation"
+        ]
+      },
+      {
+        "id": "adv-write-gate-inversion",
+        "contractRef": "G001 setup acceptance",
+        "scenario": "adv-write-gate-inversion",
+        "expectedBehavior": "Unsafe setup drift must be detected before checkpoint.",
+        "verdict": "passed",
+        "artifactRefs": [
+          "setup-validation"
+        ]
+      },
+      {
+        "id": "adv-video-window-drift",
+        "contractRef": "G001 setup acceptance",
+        "scenario": "adv-video-window-drift",
+        "expectedBehavior": "Unsafe setup drift must be detected before checkpoint.",
+        "verdict": "passed",
+        "artifactRefs": [
+          "setup-validation"
+        ]
+      },
+      {
+        "id": "adv-legacy-script-drift",
+        "contractRef": "G001 setup acceptance",
+        "scenario": "adv-legacy-script-drift",
+        "expectedBehavior": "Unsafe setup drift must be detected before checkpoint.",
+        "verdict": "passed",
+        "artifactRefs": [
+          "setup-validation"
+        ]
+      },
+      {
+        "id": "adv-plan-reference-drift",
+        "contractRef": "G001 setup acceptance",
+        "scenario": "adv-plan-reference-drift",
+        "expectedBehavior": "Unsafe setup drift must be detected before checkpoint.",
+        "verdict": "passed",
+        "artifactRefs": [
+          "setup-validation"
+        ]
+      }
+    ],
+    "blockers": []
+  },
+  "iteration": {
+    "status": "passed",
+    "evidence": "G001 produced setup artifacts only. AI slop cleanup report is passed/no-product-code-edits with zero blocking findings. Leader validation, architect review, and executor QA/red-team were all rerun after setup artifact creation and have no blockers.",
+    "fullRerun": true,
+    "rerunCommands": [
+      "leader setup validation via Python eval",
+      "architect subagent 166-G001SetupArchitect",
+      "executor QA subagent 167-G001SetupQa"
+    ],
+    "blockers": []
+  }
+}

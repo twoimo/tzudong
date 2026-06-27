@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 1,
+  "kind": "g004-embedding-contract-validation",
+  "generatedAt": "2026-06-27T21:17:11.466161+00:00",
+  "passed": true,
+  "checks": [
+    {
+      "id": "worker-health",
+      "passed": true,
+      "evidence": {
+        "ok": true,
+        "service": "storyboard-rag-worker",
+        "schemaVersion": 1,
+        "settings": {
+          "timeoutSeconds": 120,
+          "queueTimeoutSeconds": 15,
+          "batchSizeDefault": 8,
+          "maxLengthDefault": 8192,
+          "device": "cpu",
+          "concurrency": {
+            "models": 1,
+            "embed": 1,
+            "rerank": 1,
+            "caption": 1
+          },
+          "memoryBudgetMb": null,
+          "localLlavaWarmupEnabled": false
+        },
+        "runtimeProfile": {
+          "platform": "Windows-10-10.0.26200-SP0",
+          "python": "3.11.9",
+          "cpuCount": 8,
+          "configuredDevice": "cpu",
+          "resolvedDevice": "cpu",
+          "cudaAvailable": false,
+          "remoteLlavaConfigured": false,
+          "remoteLlavaUrl": null,
+          "localLlavaWarmupEnabled": false
+        },
+        "memoryProfile": {
+          "budgetMb": null,
+          "processRssMb": 215.324,
+          "overBudget": false,
+          "budgetPolicy": "warn"
+        },
+        "counters": {
+          "operations": {},
+          "queued": {},
+          "inflight": {},
+          "compatibilityFallbacks": {}
+        },
+        "readinessEndpoint": "/models?load=true"
+      }
+    },
+    {
+      "id": "embed-contract",
+      "passed": true,
+      "evidence": {
+        "schemaVersion": 1,
+        "provider": "bge-m3",
+        "model": "BAAI/bge-m3",
+        "dimensions": 1024,
+        "itemCount": 1,
+        "denseLength": 1024,
+        "sparseKeyCount": 15,
+        "denseFinite": true
+      }
+    },
+    {
+      "id": "rerank-contract",
+      "passed": true,
+      "evidence": {
+        "schemaVersion": 1,
+        "provider": "bge-reranker-v2-m3",
+        "model": "BAAI/bge-reranker-v2-m3",
+        "resultCount": 1,
+        "firstId": "c1",
+        "scoreFinite": true
+      }
+    },
+    {
+      "id": "db-vector-shape",
+      "passed": true,
+      "evidence": {
+        "embedding_type": "vector(1024)"
+      }
+    },
+    {
+      "id": "route-input-parity",
+      "passed": true,
+      "evidence": {
+        "source": "apps/web/app/api/admin/storyboard/rag/documents/route.ts:92-94",
+        "requiredExpression": "`${document.title}\\n\\n${document.content}`",
+        "sample": {
+          "title": "쯔양 최신 RAG 테스트",
+          "content": "삼겹살과 갈비가 함께 나오는 장면",
+          "expected": "쯔양 최신 RAG 테스트\n\n삼겹살과 갈비가 함께 나오는 장면"
+        },
+        "passed": true
+      }
+    },
+    {
+      "id": "rpc-parity",
+      "passed": true,
+      "evidence": {
+        "v1": {
+          "count": 0
+        },
+        "v2": {
+          "count": 0
+        },
+        "parity": {
+          "passed": true,
+          "reason": "zero-document read-only RPC calls should both return count 0 for zero UUID"
+        },
+        "latestNonEmpty": "blocked_no_documents"
+      }
+    },
+    {
+      "id": "latest-search-blocked",
+      "passed": true,
+      "evidence": {
+        "v1": {
+          "count": 0
+        },
+        "v2": {
+          "count": 0
+        },
+        "parity": {
+          "passed": true,
+          "reason": "zero-document read-only RPC calls should both return count 0 for zero UUID"
+        },
+        "latestNonEmpty": "blocked_no_documents"
+      }
+    },
+    {
+      "id": "no-errors",
+      "passed": true,
+      "evidence": {
+        "worker": [],
+        "db": []
+      }
+    }
+  ],
+  "contractSha256": "fb9458b899a22f3e7dfed42338e6dc6cc8519296549ba09e4aa7b27c029fef45"
+}

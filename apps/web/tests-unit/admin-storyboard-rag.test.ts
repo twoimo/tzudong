@@ -273,6 +273,45 @@ describe('storyboard local RAG layer', () => {
     expect(migration).toContain('revoke all on function public.match_storyboard_documents_hybrid(uuid');
   });
 
+  test('documents audit/backfill gates and preserves route/batch parity source contracts', () => {
+    const documentsRoute = readFileSync(
+      new URL('../app/api/admin/storyboard/rag/documents/route.ts', import.meta.url),
+      'utf8',
+    );
+    const searchRoute = readFileSync(
+      new URL('../app/api/admin/storyboard/rag/search/route.ts', import.meta.url),
+      'utf8',
+    );
+    const runbook = readFileSync(
+      new URL('../../../docs/operations/storyboard-rag-operating-profiles.md', import.meta.url),
+      'utf8',
+    );
+
+    expect(documentsRoute).toContain('documents: z.array(documentSchema).min(1).max(20)');
+    expect(documentsRoute).toContain(
+      'parsed.data.documents.map((document) => `${document.title}\\n\\n${document.content}`)',
+    );
+    expect(documentsRoute).toContain('embedStoryboardRagTexts(');
+    expect(documentsRoute).toContain('createSupabaseServiceRoleClient()');
+    expect(documentsRoute).not.toContain('FlagEmbedding');
+    expect(documentsRoute).not.toContain('new OpenAI');
+    expect(documentsRoute).not.toContain('ffmpeg');
+    expect(searchRoute).toContain("process.env.STORYBOARD_RAG_SEARCH_RPC_VERSION === 'v1'");
+    expect(searchRoute).toContain('p_metadata_filter: parsed.data.metadataFilter');
+
+    expect(runbook).toContain('## Coverage audit and safe backfill runbook');
+    expect(runbook).toContain('artifacts/storyboard-rag-coverage/<run_id>/');
+    expect(runbook).toContain('coverage-report.json');
+    expect(runbook).toContain('metadata.video_id');
+    expect(runbook).toContain('vector(1024)');
+    expect(runbook).toContain('Preview -> Canary -> Readback -> Rollback drill -> Full backfill');
+    expect(runbook).toContain('STORYBOARD_RAG_SEARCH_RPC_VERSION=v1');
+    expect(runbook).toContain('service_role` server/batch-only');
+    expect(runbook).toContain('backend/storyboard-agent/scripts/01-bge-embed-and-store-supabase.py');
+    expect(runbook).toContain('backend/storyboard-agent/scripts/99-openai-embed-and-store-supabase.py');
+    expect(runbook).toContain('backend/storyboard-agent/scripts/migrate-embeddings-to-supabase.py');
+  });
+
   test('instruments storyboard route payloads and preserves cache boundaries', () => {
     const statusRoute = readFileSync(
       new URL('../app/api/admin/storyboard/route.ts', import.meta.url),

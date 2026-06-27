@@ -1,0 +1,198 @@
+{
+  "schemaVersion": 1,
+  "kind": "storyboard-rag-final-completion-audit",
+  "generatedAt": "2026-06-27T22:05:39.993288+00:00",
+  "runId": "rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw",
+  "scope": {
+    "approvedRalplanFinal": ".gjc/_session-019efe45-3197-7000-b63c-f1d9b15a03d1/plans/ralplan/019efe45-3197-7000-b63c-f1d9b15a03d1/stage-10-final.md",
+    "ultragoalGoalsPath": ".gjc/_session-019efe45-3197-7000-b63c-f1d9b15a03d1/ultragoal/goals.json",
+    "ultragoalLedgerPath": ".gjc/_session-019efe45-3197-7000-b63c-f1d9b15a03d1/ultragoal/ledger.jsonl",
+    "artifactRoot": "artifacts/storyboard-rag-coverage/rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw",
+    "latestVideoIds": [
+      "HOzoiAOaJKA",
+      "dJONr8ZpwhM",
+      "IS6z1fyxCyI"
+    ]
+  },
+  "completionAuditStatus": "passed",
+  "checkpointBlockers": [],
+  "durableDataBlockers": [
+    {
+      "id": "search-rpc-latest-non-empty",
+      "requirement": "Search RPC returns actual non-empty results from latest docs, or the lack of docs is recorded as a durable blocker rather than hidden.",
+      "status": "durably_blocked",
+      "evidenceRefs": [
+        "embedding-contract-report.json",
+        "coverage-report.json",
+        "blocked-backlog.json"
+      ],
+      "facts": {
+        "v1Count": 0,
+        "v2Count": 0,
+        "v1v2ParityPassed": true,
+        "nonEmptySearchStatus": "blocked_no_documents",
+        "blocker": "public.documents has zero rows and latest-document rows are absent, so non-empty latest-doc search cannot be honestly proven in this run."
+      }
+    }
+  ],
+  "completionItems": [
+    {
+      "id": "latest-coverage-report",
+      "requirement": "Latest Tzuyang-video RAG documents/embedding coverage report exists.",
+      "status": "verified",
+      "evidenceRefs": [
+        "coverage-report.json"
+      ],
+      "facts": {
+        "latestVideoIds": [
+          "HOzoiAOaJKA",
+          "dJONr8ZpwhM",
+          "IS6z1fyxCyI"
+        ],
+        "documentsTotal": 0,
+        "latestDocumentRows": 0,
+        "queryErrors": 0
+      }
+    },
+    {
+      "id": "missing-backfill-or-blocked-list",
+      "requirement": "Missing rows are backfilled or preserved as explicit blocked/unknown backlog.",
+      "status": "verified",
+      "evidenceRefs": [
+        "blocked-backlog.json",
+        "dry-run-manifest.json"
+      ],
+      "facts": {
+        "blocked": 3,
+        "unknown": 0,
+        "inserted": 0,
+        "updatedStale": 0,
+        "fullBackfillExecuted": false,
+        "safeToBackfillNowAllFalse": true
+      }
+    },
+    {
+      "id": "embedding-shape-model-version",
+      "requirement": "Embedding values/shape/model/version and reranker contract are verified.",
+      "status": "verified",
+      "evidenceRefs": [
+        "embedding-contract-report.json"
+      ],
+      "facts": {
+        "dbShape": "vector(1024)",
+        "embedProvider": "bge-m3",
+        "embedModel": "BAAI/bge-m3",
+        "dimensions": 1024,
+        "denseLength": 1024,
+        "sparseKeyCount": 15,
+        "rerankProvider": "bge-reranker-v2-m3",
+        "rerankModel": "BAAI/bge-reranker-v2-m3",
+        "rerankScoreFinite": true,
+        "routeParityPassed": true
+      }
+    },
+    {
+      "id": "search-rpc-latest-non-empty",
+      "requirement": "Search RPC returns actual non-empty results from latest docs, or the lack of docs is recorded as a durable blocker rather than hidden.",
+      "status": "durably_blocked",
+      "evidenceRefs": [
+        "embedding-contract-report.json",
+        "coverage-report.json",
+        "blocked-backlog.json"
+      ],
+      "facts": {
+        "v1Count": 0,
+        "v2Count": 0,
+        "v1v2ParityPassed": true,
+        "nonEmptySearchStatus": "blocked_no_documents",
+        "blocker": "public.documents has zero rows and latest-document rows are absent, so non-empty latest-doc search cannot be honestly proven in this run."
+      }
+    },
+    {
+      "id": "rls-grants-admin-boundary",
+      "requirement": "RLS/grants/admin/service-role boundaries verified.",
+      "status": "verified",
+      "evidenceRefs": [
+        "role-probes.json",
+        "coverage-report.json"
+      ],
+      "facts": {
+        "blockedCount": 0,
+        "anonDenied": true,
+        "serviceRoleReadOnlyProbe": true,
+        "secretLeak": false
+      }
+    },
+    {
+      "id": "rollback-drill",
+      "requirement": "Rollback/drill evidence exists before any apply.",
+      "status": "verified",
+      "evidenceRefs": [
+        "canary-report.json",
+        "db-change-decision.json"
+      ],
+      "facts": {
+        "canaryExecuted": false,
+        "dbMutations": 0,
+        "rollbackStatus": {
+          "mode": "read-only no-op preview",
+          "queries": [
+            {
+              "name": "rollback_candidate_count_by_run_id",
+              "rowCount": 1,
+              "rows": [
+                {
+                  "rollback_candidate_count": 0
+                }
+              ]
+            }
+          ],
+          "passed": true
+        },
+        "rpcRollbackFlag": {
+          "searchRpcRollbackFlag": "STORYBOARD_RAG_SEARCH_RPC_VERSION=v1",
+          "dataRollback": "not applicable: no rows inserted/updated in this run stage",
+          "migrationRollbackSql": "not applicable: no migration generated"
+        }
+      }
+    },
+    {
+      "id": "docs-tests-runbook-current",
+      "requirement": "Focused tests/docs/runbook updated for audit/backfill contracts.",
+      "status": "verified",
+      "evidenceRefs": [
+        "g010-verification-report.json",
+        "docs/operations/storyboard-rag-operating-profiles.md",
+        "apps/web/tests-unit/admin-storyboard-rag.test.ts"
+      ],
+      "facts": {
+        "focusedTestPass": true,
+        "lintPass": true,
+        "diffCheckPass": true
+      }
+    },
+    {
+      "id": "final-ultragoal-audit",
+      "requirement": "Final audit maps every acceptance item to evidence or durable blocker.",
+      "status": "verified",
+      "evidenceRefs": [
+        "g010-final-completion-audit.json"
+      ],
+      "facts": {
+        "checkpointBlockers": []
+      }
+    }
+  ],
+  "noWriteAndCostSafety": {
+    "productionDbMutations": 0,
+    "providerCalls": 0,
+    "expensiveProviderCalls": false,
+    "destructiveProductionWrite": false,
+    "noWriteDefaultPreserved": true
+  },
+  "finalVerificationRefs": [
+    "g010-verification-report.json",
+    "g010-ai-slop-cleanup-report.json",
+    "g010-cli-replay.json"
+  ]
+}

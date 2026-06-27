@@ -1,0 +1,152 @@
+{
+  "schemaVersion": 1,
+  "kind": "g008-canary-validation",
+  "generatedAt": "2026-06-27T21:42:59.308731+00:00",
+  "passed": true,
+  "checks": [
+    {
+      "id": "canary-ineligible-explicit",
+      "passed": true,
+      "evidence": {
+        "schemaVersion": 1,
+        "kind": "storyboard-rag-canary-report",
+        "generatedAt": "2026-06-27T21:42:27.675Z",
+        "runId": "rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw",
+        "noWrite": true,
+        "canaryExecuted": false,
+        "canaryEligible": false,
+        "reason": "No planned write rows: latest videos lack generated transcript-document chunks and target_user_id is unselected.",
+        "bulkRouteHandlerUsed": false,
+        "backendBatchUsed": false,
+        "providerCalls": 0,
+        "dbMutations": 0,
+        "readback": {
+          "documentsTotal": 0
+        },
+        "rollbackDrill": {
+          "mode": "read-only no-op preview",
+          "queries": [
+            {
+              "name": "rollback_candidate_count_by_run_id",
+              "rowCount": 1,
+              "rows": [
+                {
+                  "rollback_candidate_count": 0
+                }
+              ]
+            }
+          ],
+          "passed": true
+        },
+        "blockers": [
+          {
+            "id": "canary-ineligible",
+            "reason": "No planned write rows: latest videos lack generated transcript-document chunks and target_user_id is unselected.",
+            "blockedRows": 3
+          }
+        ],
+        "summary": {
+          "canaryExecuted": false,
+          "canaryEligible": false,
+          "providerCalls": 0,
+          "dbMutations": 0,
+          "rollbackPreviewPassed": true,
+          "blockers": 1,
+          "bulkRouteHandlerUsed": false
+        }
+      }
+    },
+    {
+      "id": "no-route-bulk",
+      "passed": true,
+      "evidence": {
+        "schemaVersion": 1,
+        "kind": "storyboard-rag-canary-report",
+        "generatedAt": "2026-06-27T21:42:27.675Z",
+        "runId": "rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw",
+        "noWrite": true,
+        "canaryExecuted": false,
+        "canaryEligible": false,
+        "reason": "No planned write rows: latest videos lack generated transcript-document chunks and target_user_id is unselected.",
+        "bulkRouteHandlerUsed": false,
+        "backendBatchUsed": false,
+        "providerCalls": 0,
+        "dbMutations": 0,
+        "readback": {
+          "documentsTotal": 0
+        },
+        "rollbackDrill": {
+          "mode": "read-only no-op preview",
+          "queries": [
+            {
+              "name": "rollback_candidate_count_by_run_id",
+              "rowCount": 1,
+              "rows": [
+                {
+                  "rollback_candidate_count": 0
+                }
+              ]
+            }
+          ],
+          "passed": true
+        },
+        "blockers": [
+          {
+            "id": "canary-ineligible",
+            "reason": "No planned write rows: latest videos lack generated transcript-document chunks and target_user_id is unselected.",
+            "blockedRows": 3
+          }
+        ],
+        "summary": {
+          "canaryExecuted": false,
+          "canaryEligible": false,
+          "providerCalls": 0,
+          "dbMutations": 0,
+          "rollbackPreviewPassed": true,
+          "blockers": 1,
+          "bulkRouteHandlerUsed": false
+        }
+      }
+    },
+    {
+      "id": "no-provider-or-db-mutation",
+      "passed": true,
+      "evidence": {
+        "canaryExecuted": false,
+        "canaryEligible": false,
+        "providerCalls": 0,
+        "dbMutations": 0,
+        "rollbackPreviewPassed": true,
+        "blockers": 1,
+        "bulkRouteHandlerUsed": false
+      }
+    },
+    {
+      "id": "rollback-preview",
+      "passed": true,
+      "evidence": {
+        "mode": "read-only no-op preview",
+        "queries": [
+          {
+            "name": "rollback_candidate_count_by_run_id",
+            "rowCount": 1,
+            "rows": [
+              {
+                "rollback_candidate_count": 0
+              }
+            ]
+          }
+        ],
+        "passed": true
+      }
+    },
+    {
+      "id": "readback-documents-total",
+      "passed": true,
+      "evidence": {
+        "documentsTotal": 0
+      }
+    }
+  ],
+  "canaryReportSha256": "159127be55957808cf43baa58b835aa781fc4d6e85f12e3faa934e03380070b2"
+}

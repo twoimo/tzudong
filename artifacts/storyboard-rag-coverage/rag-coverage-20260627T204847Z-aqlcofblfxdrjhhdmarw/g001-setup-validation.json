@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "kind": "g001-setup-validation",
+  "generatedAt": "2026-06-27T20:50:36.838171+00:00",
+  "passed": true,
+  "checks": [
+    {
+      "id": "run-id",
+      "passed": true,
+      "evidence": "rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw"
+    },
+    {
+      "id": "artifact-root",
+      "passed": true,
+      "evidence": "artifacts/storyboard-rag-coverage/rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw"
+    },
+    {
+      "id": "no-write-default",
+      "passed": true,
+      "evidence": {
+        "noWriteDefault": true,
+        "productionWriteEnabled": false,
+        "expensiveProviderCallsEnabled": false
+      }
+    },
+    {
+      "id": "supabase-project",
+      "passed": true,
+      "evidence": {
+        "supabaseProjectRef": "aqlcofblfxdrjhhdmarw",
+        "supabaseUrlHost": "aqlcofblfxdrjhhdmarw.supabase.co",
+        "targetUserIdStrategy": "Discover existing storyboard RAG documents/admin owner UUIDs during read-only Story 1; block all writes until one target_user_id is explicitly selected and recorded.",
+        "latestVideoWindow": {
+          "source": "backend/restaurant-crawling/data/tzuyang/urls.txt",
+          "count": 3,
+          "frozenVideos": [
+            {
+              "url": "https://www.youtube.com/watch?v=HOzoiAOaJKA",
+              "video_id": "HOzoiAOaJKA"
+            },
+            {
+              "url": "https://www.youtube.com/watch?v=dJONr8ZpwhM",
+              "video_id": "dJONr8ZpwhM"
+            },
+            {
+              "url": "https://www.youtube.com/watch?v=IS6z1fyxCyI",
+              "video_id": "IS6z1fyxCyI"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "latest-window",
+      "passed": true,
+      "evidence": [
+        {
+          "url": "https://www.youtube.com/watch?v=HOzoiAOaJKA",
+          "video_id": "HOzoiAOaJKA"
+        },
+        {
+          "url": "https://www.youtube.com/watch?v=dJONr8ZpwhM",
+          "video_id": "dJONr8ZpwhM"
+        },
+        {
+          "url": "https://www.youtube.com/watch?v=IS6z1fyxCyI",
+          "video_id": "IS6z1fyxCyI"
+        }
+      ]
+    },
+    {
+      "id": "legacy-exclusions",
+      "passed": true,
+      "evidence": [
+        "backend/storyboard-agent/scripts/01-bge-embed-and-store-supabase.py",
+        "backend/storyboard-agent/scripts/99-openai-embed-and-store-supabase.py",
+        "backend/storyboard-agent/scripts/migrate-embeddings-to-supabase.py"
+      ]
+    },
+    {
+      "id": "worker-contract",
+      "passed": true,
+      "evidence": {
+        "embedProvider": "bge-m3",
+        "embedModel": "BAAI/bge-m3",
+        "embeddingDimensions": 1024,
+        "sparseWeights": "non-empty",
+        "rerankProvider": "bge-reranker-v2-m3",
+        "rerankModel": "BAAI/bge-reranker-v2-m3"
+      }
+    },
+    {
+      "id": "secret-redaction",
+      "passed": true,
+      "evidence": "all secret-like env keys redacted/hash-only"
+    },
+    {
+      "id": "artifact-plan",
+      "passed": true,
+      "evidence": {
+        "setup": "setup.json",
+        "coverage": "coverage-report.json",
+        "identityConflicts": "identity-conflicts.json",
+        "dryRunManifest": "dry-run-manifest.json",
+        "roleProbes": "role-probes.json",
+        "searchSamples": "search-samples.json",
+        "rollback": "rollback-drill.json",
+        "finalAudit": "final-completion-audit.json"
+      }
+    }
+  ],
+  "setupSha256": "838bbb8a78daa194431b04c529b10b905d39e20a6ac9073c747c14a146180293"
+}

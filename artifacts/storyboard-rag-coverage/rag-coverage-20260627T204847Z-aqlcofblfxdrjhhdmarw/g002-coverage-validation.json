@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "kind": "g002-coverage-validation",
+  "generatedAt": "2026-06-27T20:59:14.542472+00:00",
+  "passed": true,
+  "checks": [
+    {
+      "id": "no-write",
+      "passed": true,
+      "evidence": true
+    },
+    {
+      "id": "latest-window",
+      "passed": true,
+      "evidence": [
+        "HOzoiAOaJKA",
+        "dJONr8ZpwhM",
+        "IS6z1fyxCyI"
+      ]
+    },
+    {
+      "id": "local-sources-all-targets",
+      "passed": true,
+      "evidence": [
+        "HOzoiAOaJKA",
+        "dJONr8ZpwhM",
+        "IS6z1fyxCyI"
+      ]
+    },
+    {
+      "id": "supabase-connected",
+      "passed": true,
+      "evidence": {
+        "connected": true,
+        "errors": []
+      }
+    },
+    {
+      "id": "documents-total-readback",
+      "passed": true,
+      "evidence": {
+        "latestVideos": 3,
+        "supabaseConnected": true,
+        "documentsTotal": 0,
+        "latestDocumentRows": 0,
+        "blockedOrMissing": 3,
+        "unknowns": 0,
+        "queryErrors": 0
+      }
+    },
+    {
+      "id": "rls-catalog",
+      "passed": true,
+      "evidence": [
+        {
+          "relrowsecurity": true,
+          "relforcerowsecurity": false
+        }
+      ]
+    },
+    {
+      "id": "policies-present",
+      "passed": true,
+      "evidence": [
+        "documents_delete_own",
+        "documents_insert_own",
+        "documents_select_own",
+        "documents_update_own"
+      ]
+    },
+    {
+      "id": "indexes-present",
+      "passed": true,
+      "evidence": [
+        "documents_embedding_hnsw_idx",
+        "documents_metadata_gin_idx",
+        "documents_metadata_path_gin_idx",
+        "documents_pkey",
+        "documents_sparse_lexical_weights_gin_idx",
+        "documents_sparse_lexical_weights_keys_gin_idx",
+        "documents_user_created_idx",
+        "documents_user_external_id_idx"
+      ]
+    },
+    {
+      "id": "rpc-v1-v2-present",
+      "passed": true,
+      "evidence": [
+        "match_storyboard_documents_hybrid",
+        "match_storyboard_documents_hybrid_v2"
+      ]
+    },
+    {
+      "id": "blocked-list-explicit",
+      "passed": true,
+      "evidence": [
+        {
+          "videoId": "HOzoiAOaJKA",
+          "status": "doc_generation_missing_or_not_backfilled",
+          "reasons": [
+            "no Supabase documents for latest video",
+            "generated transcript-document source missing",
+            "frame-caption missing",
+            "heatmap missing"
+          ]
+        },
+        {
+          "videoId": "dJONr8ZpwhM",
+          "status": "doc_generation_missing_or_not_backfilled",
+          "reasons": [
+            "no Supabase documents for latest video",
+            "generated transcript-document source missing",
+            "frame-caption missing",
+            "heatmap missing"
+          ]
+        },
+        {
+          "videoId": "IS6z1fyxCyI",
+          "status": "doc_generation_missing_or_not_backfilled",
+          "reasons": [
+            "no Supabase documents for latest video",
+            "generated transcript-document source missing",
+            "frame-caption missing",
+            "heatmap missing"
+          ]
+        }
+      ]
+    }
+  ],
+  "coverageSha256": "bace7270967fa7aa6e79ba56b2b33991f122d33c85ffbac19682da6e9af3d50a"
+}

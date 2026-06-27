@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "kind": "storyboard-rag-role-probes",
+  "generatedAt": "2026-06-27T21:25:46.778Z",
+  "runId": "rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw",
+  "noWrite": true,
+  "supabaseHost": "aqlcofblfxdrjhhdmarw.supabase.co",
+  "credentials": {
+    "anonKeyPresent": true,
+    "serviceRolePresent": true,
+    "adminAuthStatePresent": true,
+    "adminRefreshToken": {
+      "present": true,
+      "sha256Prefix": "3a3d22cefc6a"
+    },
+    "adminAccessToken": {
+      "present": false,
+      "error": "refresh_failed:400:{\"code\":400,\"error_code\":\"refresh_token_already_used\",\"msg\":\"Invalid Refresh Token: Already Used\"}"
+    }
+  },
+  "probes": [
+    {
+      "label": "anon_select_documents",
+      "status": 401,
+      "ok": false,
+      "body": "{\"code\":\"42501\",\"details\":null,\"hint\":null,\"message\":\"permission denied for table documents\"}"
+    },
+    {
+      "label": "anon_rpc_v2_execute",
+      "status": 401,
+      "ok": false,
+      "body": "{\"code\":\"42501\",\"details\":null,\"hint\":null,\"message\":\"permission denied for function match_storyboard_documents_hybrid_v2\"}"
+    },
+    {
+      "label": "service_role_select_documents",
+      "status": 200,
+      "ok": true,
+      "body": "[]"
+    }
+  ],
+  "blocked": [],
+  "summary": {
+    "anonTableDenied": true,
+    "anonRpcDenied": true,
+    "serviceRoleReadOk": true,
+    "authenticatedOwnerSelectOk": true,
+    "authenticatedOwnerRpcOk": true,
+    "authenticatedNonOwnerRpcNoRows": true,
+    "blockedCount": 0,
+    "notes": [
+      "documents table currently empty, so owner/non-owner probes prove call/authorization boundaries return no rows but cannot prove row isolation with data until canary rows exist"
+    ],
+    "sqlAnonDenied": true,
+    "sqlAuthenticatedOwnerSelectOk": true,
+    "sqlAuthenticatedOwnerRpcOk": true,
+    "sqlAuthenticatedNonOwnerRpcNoRows": true,
+    "restAuthenticatedJwtExpired": true,
+    "restAuthenticatedJwtExpiredHandledBySqlRoleProbes": true
+  },
+  "sqlRoleProbes": [
+    {
+      "name": "sql_anon_select_documents",
+      "role": "anon",
+      "jwtSubSha256Prefix": null,
+      "ok": false,
+      "code": "42501",
+      "message": "permission denied for table documents"
+    },
+    {
+      "name": "sql_authenticated_owner_select_documents",
+      "role": "authenticated",
+      "jwtSubSha256Prefix": "bd7662a5eeb4",
+      "ok": true,
+      "rowCount": 1,
+      "rows": [
+        {
+          "count": 0
+        }
+      ]
+    },
+    {
+      "name": "sql_authenticated_owner_rpc_v2",
+      "role": "authenticated",
+      "jwtSubSha256Prefix": "bd7662a5eeb4",
+      "ok": true,
+      "rowCount": 1,
+      "rows": [
+        {
+          "count": 0
+        }
+      ]
+    },
+    {
+      "name": "sql_authenticated_non_owner_rpc_v2",
+      "role": "authenticated",
+      "jwtSubSha256Prefix": "bd7662a5eeb4",
+      "ok": true,
+      "rowCount": 1,
+      "rows": [
+        {
+          "count": 0
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    {
+      "probe": "authenticated_owner_non_owner",
+      "reason": "unable_to_refresh_admin_auth_state",
+      "details": "refresh_failed:400:{\"code\":400,\"error_code\":\"refresh_token_already_used\",\"msg\":\"Invalid Refresh Token: Already Used\"}"
+    }
+  ]
+}
