@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "kind": "storyboard-rag-g010-verification-report",
+  "generatedAt": "2026-06-27T22:05:14.460802+00:00",
+  "runId": "rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw",
+  "changedFiles": [
+    {
+      "path": "docs/operations/storyboard-rag-operating-profiles.md",
+      "sha256": "190a14841c1a1a12490bc995f317f933287544fed4fa78c116d18803b94a1960"
+    },
+    {
+      "path": "apps/web/tests-unit/admin-storyboard-rag.test.ts",
+      "sha256": "ec3751c3123271c20c0655427f5b34a9be3cca9599c72b55e3d69e087b5b5289"
+    }
+  ],
+  "commands": [
+    {
+      "command": "bun test tests-unit/admin-storyboard-rag.test.ts",
+      "cwd": "apps/web",
+      "exitCode": 0,
+      "observedOutput": "24 pass, 0 fail, 341 expect() calls; Ran 24 tests across 1 file.",
+      "covers": [
+        "runbook source-contract anchors",
+        "documents route bounded max(20)",
+        "route/batch embedding input parity title + blank line + content",
+        "live worker call boundary and no local embedding fallback",
+        "v1/v2 RPC rollback flag and metadata filter wiring"
+      ]
+    },
+    {
+      "command": "git diff --check -- docs/operations/storyboard-rag-operating-profiles.md apps/web/tests-unit/admin-storyboard-rag.test.ts",
+      "cwd": ".",
+      "exitCode": 0,
+      "observedOutput": "no whitespace errors",
+      "covers": [
+        "changed-file whitespace integrity"
+      ]
+    },
+    {
+      "command": "bun run lint",
+      "cwd": "apps/web",
+      "exitCode": 0,
+      "observedOutput": "eslint . --ext .js,.jsx,.ts,.tsx --max-warnings=0 completed successfully",
+      "covers": [
+        "full web TypeScript/JS lint gate for changed source-contract test"
+      ]
+    }
+  ],
+  "docsEvidence": {
+    "runbook": "docs/operations/storyboard-rag-operating-profiles.md:78-98",
+    "covers": [
+      "artifact paths and durable ledger",
+      "coverage/identity/embedding/role/dry-run/canary/backlog required artifacts",
+      "safe gate order with preview/canary/readback/rollback",
+      "Next.js route handler no crawler/ffmpeg/Gemini/bulk loops boundary",
+      "route/batch input parity and bounded 20-document route",
+      "STORYBOARD_RAG_SEARCH_RPC_VERSION=v1 rollback flag",
+      "legacy script exclusions"
+    ]
+  },
+  "testEvidence": {
+    "test": "apps/web/tests-unit/admin-storyboard-rag.test.ts:276-313",
+    "assertions": 341
+  },
+  "status": "passed",
+  "blockers": []
+}

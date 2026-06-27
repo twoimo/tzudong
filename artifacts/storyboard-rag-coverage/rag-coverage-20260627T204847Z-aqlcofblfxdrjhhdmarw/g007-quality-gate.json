@@ -1,0 +1,278 @@
+{
+  "architectReview": {
+    "architectureStatus": "CLEAR",
+    "productStatus": "CLEAR",
+    "codeStatus": "CLEAR",
+    "recommendation": "APPROVE",
+    "evidence": "Reviewed only the four requested artifacts. db-change-decision.json records decision=no_schema_or_rpc_change_required_for_current_run, noWrite=true, migrationCreated=false, v1 rollback flag STORYBOARD_RAG_SEARCH_RPC_VERSION=v1, noDbMutation=true, existingRoutesRpcUnchanged=true, and dbEvidence for vector(1024), HNSW/GIN/user-external indexes, and both hybrid RPCs. g007-db-decision-validation.json passed all checks, including existing-contract-present, rollback-flag-present, no-db-mutation with insert=0/update_stale=0/writesAllowed=false/blocked=3, and dual-read parity. coverage-report.json shows Supabase connected with queryErrors=0, documentsTotal=0/latestDocumentRows=0, RLS/policies/indexes/functions present, embedding/user/external_id/metadata/sparse columns present, and all current blockers are missing generated document/frame/heatmap sources plus no Supabase documents, not schema. embedding-contract-report.json confirms db embedding_shape vector(1024), v1/v2 zero-call RPC queries have no errors and parity passed, route parity passed, and latest search is blocked_no_documents. Metadata-only remains sufficient because documents.metadata exists and is indexed, no write path reached a need for extra schema, and the decision explicitly defers re-evaluation until target_user_id/source chunks exist and dry-run rows require metadata beyond documents.metadata.",
+    "commands": [
+      "architect subagent 180-G007DbArchitect reviewed DB decision artifacts"
+    ],
+    "blockers": []
+  },
+  "executorQa": {
+    "status": "passed",
+    "e2eStatus": "passed",
+    "redTeamStatus": "passed",
+    "evidence": "Read and parsed the three assigned JSON artifacts. Exact CRLF-preserving SHA-256 of db-change-decision.json is e379587aea0753fe9641420753adb00c81261d4af3b1ac261da17e1f6f57f7d1, matching g007-db-decision-validation.json. Focused replay of g007-cli-replay.json command exited 0 with stdout 'g007-db-decision-validation passed\\n'. Regex scan of the three assigned files found no SQL migration/destructive-command tokens, and find found no *.sql or migration-named artifact under the run directory.",
+    "e2eCommands": [
+      "DB decision artifact validation and CLI replay"
+    ],
+    "redTeamCommands": [
+      "hidden migration scan",
+      "rollback flag check",
+      "parity false-claim check",
+      "hidden DB mutation check",
+      "destructive replay command check"
+    ],
+    "artifactRefs": [
+      {
+        "id": "db-change-decision",
+        "kind": "test-report",
+        "path": "artifacts/storyboard-rag-coverage/rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw/db-change-decision.json",
+        "description": "No-schema/RPC-change decision with rollback flag and dual-read parity evidence."
+      },
+      {
+        "id": "db-decision-validation",
+        "kind": "typed-receipt",
+        "path": "artifacts/storyboard-rag-coverage/rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw/g007-db-decision-validation.json",
+        "description": "Leader validation receipt; passed true with decision hash."
+      },
+      {
+        "id": "cli-replay",
+        "kind": "command-replay",
+        "path": "artifacts/storyboard-rag-coverage/rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw/g007-cli-replay.json",
+        "description": "SchemaVersion 1 replay-safe CLI validation artifact."
+      },
+      {
+        "id": "ai-slop-cleanup",
+        "kind": "cleanup-report",
+        "path": "artifacts/storyboard-rag-coverage/rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw/g007-ai-slop-cleanup-report.json",
+        "description": "No-op cleanup report: no product code edits; zero blocking findings."
+      }
+    ],
+    "contractCoverage": [
+      {
+        "id": "parseability",
+        "contractRef": "G007 additive DB/RPC decision acceptance",
+        "obligation": "db-change-decision.json, g007-db-decision-validation.json, and g007-cli-replay.json all parsed as JSON objects via focused Python JSON load.",
+        "status": "covered",
+        "surfaceEvidenceRefs": [
+          "file-artifacts",
+          "cli-replay"
+        ],
+        "adversarialCaseRefs": [
+          "hidden-migration",
+          "missing-rollback-flag",
+          "hidden-db-mutation"
+        ]
+      },
+      {
+        "id": "migrationCreated-false",
+        "contractRef": "G007 additive DB/RPC decision acceptance",
+        "obligation": "db-change-decision.json has migrationCreated: false and rollback.migrationRollbackSql: 'not applicable: no migration generated'.",
+        "status": "covered",
+        "surfaceEvidenceRefs": [
+          "file-artifacts",
+          "cli-replay"
+        ],
+        "adversarialCaseRefs": [
+          "hidden-migration",
+          "missing-rollback-flag",
+          "hidden-db-mutation"
+        ]
+      },
+      {
+        "id": "decision-no-schema-or-rpc-change",
+        "contractRef": "G007 additive DB/RPC decision acceptance",
+        "obligation": "db-change-decision.json decision is exactly 'no_schema_or_rpc_change_required_for_current_run'.",
+        "status": "covered",
+        "surfaceEvidenceRefs": [
+          "file-artifacts",
+          "cli-replay"
+        ],
+        "adversarialCaseRefs": [
+          "hidden-migration",
+          "missing-rollback-flag",
+          "hidden-db-mutation"
+        ]
+      },
+      {
+        "id": "v1-rollback-flag-present",
+        "contractRef": "G007 additive DB/RPC decision acceptance",
+        "obligation": "rollback.searchRpcRollbackFlag is exactly 'STORYBOARD_RAG_SEARCH_RPC_VERSION=v1'; validation check rollback-flag-present passed.",
+        "status": "covered",
+        "surfaceEvidenceRefs": [
+          "file-artifacts",
+          "cli-replay"
+        ],
+        "adversarialCaseRefs": [
+          "hidden-migration",
+          "missing-rollback-flag",
+          "hidden-db-mutation"
+        ]
+      },
+      {
+        "id": "dual-read-parity-passed",
+        "contractRef": "G007 additive DB/RPC decision acceptance",
+        "obligation": "dualReadParity.passed is true in the decision artifact and validation check dual-read-parity passed.",
+        "status": "covered",
+        "surfaceEvidenceRefs": [
+          "file-artifacts",
+          "cli-replay"
+        ],
+        "adversarialCaseRefs": [
+          "hidden-migration",
+          "missing-rollback-flag",
+          "hidden-db-mutation"
+        ]
+      },
+      {
+        "id": "no-db-mutation-true",
+        "contractRef": "G007 additive DB/RPC decision acceptance",
+        "obligation": "acceptance.noDbMutation is true; validation no-db-mutation evidence has writesAllowed false, insert 0, update_stale 0, and blocked 3.",
+        "status": "covered",
+        "surfaceEvidenceRefs": [
+          "file-artifacts",
+          "cli-replay"
+        ],
+        "adversarialCaseRefs": [
+          "hidden-migration",
+          "missing-rollback-flag",
+          "hidden-db-mutation"
+        ]
+      },
+      {
+        "id": "data-rollback-not-applicable",
+        "contractRef": "G007 additive DB/RPC decision acceptance",
+        "obligation": "rollback.dataRollback is 'not applicable: no rows inserted/updated in this run stage', consistent with documentsTotal 0 and validation write counts of 0.",
+        "status": "covered",
+        "surfaceEvidenceRefs": [
+          "file-artifacts",
+          "cli-replay"
+        ],
+        "adversarialCaseRefs": [
+          "hidden-migration",
+          "missing-rollback-flag",
+          "hidden-db-mutation"
+        ]
+      },
+      {
+        "id": "validation-integrity",
+        "contractRef": "G007 additive DB/RPC decision acceptance",
+        "obligation": "g007-db-decision-validation.json has passed: true, all checks passed, and decisionSha256 matches the exact file bytes of db-change-decision.json.",
+        "status": "covered",
+        "surfaceEvidenceRefs": [
+          "file-artifacts",
+          "cli-replay"
+        ],
+        "adversarialCaseRefs": [
+          "hidden-migration",
+          "missing-rollback-flag",
+          "hidden-db-mutation"
+        ]
+      }
+    ],
+    "surfaceEvidence": [
+      {
+        "id": "file-artifacts",
+        "contractRef": "G007 additive DB/RPC decision artifact surface",
+        "surface": "cli",
+        "invocation": "Read-only JSON validation and replay represented by g007-cli-replay.json",
+        "verdict": "passed",
+        "artifactRefs": [
+          "cli-replay"
+        ]
+      },
+      {
+        "id": "cli-replay",
+        "contractRef": "G007 additive DB/RPC decision artifact surface",
+        "surface": "cli",
+        "invocation": "Read-only JSON validation and replay represented by g007-cli-replay.json",
+        "verdict": "passed",
+        "artifactRefs": [
+          "cli-replay"
+        ]
+      },
+      {
+        "id": "hidden-migration-scan",
+        "contractRef": "G007 additive DB/RPC decision artifact surface",
+        "surface": "cli",
+        "invocation": "Read-only JSON validation and replay represented by g007-cli-replay.json",
+        "verdict": "passed",
+        "artifactRefs": [
+          "cli-replay"
+        ]
+      }
+    ],
+    "adversarialCases": [
+      {
+        "id": "hidden-migration",
+        "contractRef": "G007 additive DB/RPC decision acceptance",
+        "scenario": "hidden-migration",
+        "expectedBehavior": "Hidden migration, missing rollback, parity false-claim, or hidden DB mutation must be detected.",
+        "verdict": "passed",
+        "artifactRefs": [
+          "db-decision-validation",
+          "cli-replay"
+        ]
+      },
+      {
+        "id": "missing-rollback-flag",
+        "contractRef": "G007 additive DB/RPC decision acceptance",
+        "scenario": "missing-rollback-flag",
+        "expectedBehavior": "Hidden migration, missing rollback, parity false-claim, or hidden DB mutation must be detected.",
+        "verdict": "passed",
+        "artifactRefs": [
+          "db-decision-validation",
+          "cli-replay"
+        ]
+      },
+      {
+        "id": "parity-false-claim",
+        "contractRef": "G007 additive DB/RPC decision acceptance",
+        "scenario": "parity-false-claim",
+        "expectedBehavior": "Hidden migration, missing rollback, parity false-claim, or hidden DB mutation must be detected.",
+        "verdict": "passed",
+        "artifactRefs": [
+          "db-decision-validation",
+          "cli-replay"
+        ]
+      },
+      {
+        "id": "hidden-db-mutation",
+        "contractRef": "G007 additive DB/RPC decision acceptance",
+        "scenario": "hidden-db-mutation",
+        "expectedBehavior": "Hidden migration, missing rollback, parity false-claim, or hidden DB mutation must be detected.",
+        "verdict": "passed",
+        "artifactRefs": [
+          "db-decision-validation",
+          "cli-replay"
+        ]
+      },
+      {
+        "id": "destructive-command-in-replay",
+        "contractRef": "G007 additive DB/RPC decision acceptance",
+        "scenario": "destructive-command-in-replay",
+        "expectedBehavior": "Hidden migration, missing rollback, parity false-claim, or hidden DB mutation must be detected.",
+        "verdict": "passed",
+        "artifactRefs": [
+          "db-decision-validation",
+          "cli-replay"
+        ]
+      }
+    ],
+    "blockers": []
+  },
+  "iteration": {
+    "status": "passed",
+    "evidence": "G007 recorded db-change-decision.json with no schema/RPC change required, migrationCreated=false, noDbMutation=true, v1 rollback flag retained, existing vector/RPC/index evidence, and dual-read parity passed. AI slop cleanup passed/no-product-code-edits. Leader validation, architect review, and executor QA/red-team all passed.",
+    "fullRerun": true,
+    "rerunCommands": [
+      "leader DB decision validation via Python eval",
+      "architect subagent 180-G007DbArchitect",
+      "executor QA subagent 181-G007DbQa"
+    ],
+    "blockers": []
+  }
+}

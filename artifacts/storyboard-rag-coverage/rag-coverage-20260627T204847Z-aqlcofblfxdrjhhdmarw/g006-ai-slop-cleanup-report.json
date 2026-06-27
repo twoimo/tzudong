@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "kind": "ai-slop-cleanup-report",
+  "scope": "G006 dry-run manifest artifacts only",
+  "changedFiles": [
+    "artifacts/storyboard-rag-coverage/rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw/dry-run-manifest.json",
+    "artifacts/storyboard-rag-coverage/rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw/g006-dry-run-validation.json"
+  ],
+  "blockingFindings": [],
+  "advisoryFindings": [
+    "Dry-run correctly produces zero canary/write rows because source chunks and target_user_id are blocked."
+  ],
+  "result": "passed-no-product-code-edits"
+}

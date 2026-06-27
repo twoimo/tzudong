@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-06-27T22:11:07.745997+00:00",
+  "source": "goal({op:\"get\"}) rendered immediately before G010 checkpoint retry",
+  "goal": {
+    "objective": "Complete the durable ultragoal plan in .gjc/ultragoal/goals.json, including later accepted/appended stories, under the original brief constraints; use .gjc/ultragoal/ledger.jsonl as the audit trail.",
+    "status": "active",
+    "tokensUsed": 834154,
+    "updatedAt": "2026-06-27T22:11:07.745997+00:00"
+  }
+}

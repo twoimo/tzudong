@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "kind": "ai-slop-cleanup-report",
+  "scope": "G004 embedding/search contract artifacts only",
+  "changedFiles": [
+    "artifacts/storyboard-rag-coverage/rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw/embedding-contract-report.json",
+    "artifacts/storyboard-rag-coverage/rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw/g004-embedding-contract-validation.json"
+  ],
+  "blockingFindings": [],
+  "advisoryFindings": [
+    "Latest-doc non-empty search is blocked because live documents table has zero rows; this is recorded as a durable data coverage blocker, not a contract-probe failure."
+  ],
+  "result": "passed-no-product-code-edits"
+}

@@ -1,0 +1,284 @@
+{
+  "architectReview": {
+    "architectureStatus": "CLEAR",
+    "productStatus": "CLEAR",
+    "codeStatus": "CLEAR",
+    "recommendation": "APPROVE",
+    "evidence": "Reviewed only artifacts/storyboard-rag-coverage/rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw/coverage-report.json and g002-coverage-validation.json. coverage-report.json is no-write, covers latestVideoIds HOzoiAOaJKA/dJONr8ZpwhM/IS6z1fyxCyI, has Supabase connected with errors [], unknowns 0, queryErrors 0, and explicitly lists all 3 missing/not-backfilled video document gaps. g002-coverage-validation.json has passed: true, all checks passed, including no-write, latest-window, local-sources-all-targets, supabase-connected, documents-total-readback, RLS/policies/indexes/RPC presence, and blocked-list-explicit. The listed data gaps are expected backfill findings, not G002 checkpoint blockers.",
+    "commands": [
+      "architect subagent 170-G002CoverageArchClean strict schema rereview"
+    ],
+    "blockers": []
+  },
+  "executorQa": {
+    "status": "passed",
+    "e2eStatus": "passed",
+    "redTeamStatus": "passed",
+    "evidence": "Read-only QA of the three assigned JSON artifacts only. JSON parsing succeeded for coverage-report.json (14606 bytes, sha256 bace7270967fa7aa...), g002-coverage-validation.json (3236 bytes, sha256 b3865827f5e26875...), and setup.json (7894 bytes, sha256 7d30757e556761aa...). Independent Python validation confirmed setup frozenVideos, report.latestVideoIds, and validation latest-window all match [HOzoiAOaJKA, dJONr8ZpwhM, IS6z1fyxCyI]; noWrite controls are true/false as expected; Supabase connected=true with errors=[] and queryErrors=0; documentsTotal=0/latestDocumentRows=0 are reported; RLS/policies/indexes/functions/table grants/function grants are populated; all three latest videos have explicit status plus four reasons and are surfaced as blockers rather than hidden as unknowns. Coverage gaps are explicit durable findings and not hidden as completion.",
+    "e2eCommands": [
+      "read-only coverage artifact validation via Python eval"
+    ],
+    "redTeamCommands": [
+      "hidden latest-video gap check",
+      "hidden missing-doc gap check",
+      "write side-effect claim check",
+      "catalog false-positive check",
+      "classification false-positive check"
+    ],
+    "artifactRefs": [
+      {
+        "id": "coverage-report",
+        "kind": "json",
+        "path": "artifacts/storyboard-rag-coverage/rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw/coverage-report.json",
+        "description": "Primary G002 coverage report inspected read-only."
+      },
+      {
+        "id": "g002-coverage-validation",
+        "kind": "json",
+        "path": "artifacts/storyboard-rag-coverage/rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw/g002-coverage-validation.json",
+        "description": "Validation artifact inspected read-only; passed=true and hash matches coverage report."
+      },
+      {
+        "id": "setup",
+        "kind": "json",
+        "path": "artifacts/storyboard-rag-coverage/rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw/setup.json",
+        "description": "Setup artifact inspected read-only for frozen latest IDs and no-write boundaries."
+      },
+      {
+        "id": "coverage-validation",
+        "kind": "typed-receipt",
+        "path": "artifacts/storyboard-rag-coverage/rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw/g002-coverage-validation.json",
+        "description": "Leader-generated coverage validation receipt; passed true."
+      },
+      {
+        "id": "cli-replay",
+        "kind": "command-replay",
+        "path": "artifacts/storyboard-rag-coverage/rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw/g002-cli-replay.json",
+        "description": "SchemaVersion 1 replay-safe CLI/file validation artifact for coverage report."
+      },
+      {
+        "id": "ai-slop-cleanup",
+        "kind": "cleanup-report",
+        "path": "artifacts/storyboard-rag-coverage/rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw/g002-ai-slop-cleanup-report.json",
+        "description": "No-op cleanup report: no product code edits; zero blocking findings."
+      }
+    ],
+    "contractCoverage": [
+      {
+        "id": "json-parseability",
+        "contractRef": "G002 coverage report acceptance",
+        "obligation": "All three target files parsed as JSON via Python json.loads; top-level keys were present for report, validation, and setup.",
+        "status": "covered",
+        "surfaceEvidenceRefs": [
+          "python-readonly-validation"
+        ],
+        "adversarialCaseRefs": [
+          "hidden-missing-doc-gap",
+          "write-side-effect-claim"
+        ]
+      },
+      {
+        "id": "no-write-contract",
+        "contractRef": "G002 coverage report acceptance",
+        "obligation": "coverage-report.json report.noWrite=true; setup.json noWriteDefault=true and productionWriteEnabled=false; g002-coverage-validation no-write check passed=true.",
+        "status": "covered",
+        "surfaceEvidenceRefs": [
+          "python-readonly-validation"
+        ],
+        "adversarialCaseRefs": [
+          "hidden-missing-doc-gap",
+          "write-side-effect-claim"
+        ]
+      },
+      {
+        "id": "latest-ids-frozen",
+        "contractRef": "G002 coverage report acceptance",
+        "obligation": "setup target.latestVideoWindow.frozenVideos, report.latestVideoIds, and validation latest-window evidence all match exactly: HOzoiAOaJKA, dJONr8ZpwhM, IS6z1fyxCyI.",
+        "status": "covered",
+        "surfaceEvidenceRefs": [
+          "python-readonly-validation"
+        ],
+        "adversarialCaseRefs": [
+          "hidden-missing-doc-gap",
+          "write-side-effect-claim"
+        ]
+      },
+      {
+        "id": "local-source-states-recorded",
+        "contractRef": "G002 coverage report acceptance",
+        "obligation": "For each latest video, report.localSources records transcript, meta, crawling, heatmap, frame-caption, transcript-document-with-context, and transcript-document-with-meta with explicit exists state. Missing states are explicit false, not omitted.",
+        "status": "covered",
+        "surfaceEvidenceRefs": [
+          "python-readonly-validation"
+        ],
+        "adversarialCaseRefs": [
+          "hidden-missing-doc-gap",
+          "write-side-effect-claim"
+        ]
+      },
+      {
+        "id": "supabase-readback",
+        "contractRef": "G002 coverage report acceptance",
+        "obligation": "report.supabase.connected=true, report.supabase.errors=[], report.summary.queryErrors=0, documentsTotal=[{count:0}], latestDocuments=[], summary.documentsTotal=0, summary.latestDocumentRows=0.",
+        "status": "covered",
+        "surfaceEvidenceRefs": [
+          "python-readonly-validation"
+        ],
+        "adversarialCaseRefs": [
+          "hidden-missing-doc-gap",
+          "write-side-effect-claim"
+        ]
+      },
+      {
+        "id": "catalog-coverage",
+        "contractRef": "G002 coverage report acceptance",
+        "obligation": "report.supabase includes rls row, 4 policies, 8 indexes, RPCs match_storyboard_documents_hybrid and match_storyboard_documents_hybrid_v2, 18 table grants, and 6 function grants.",
+        "status": "covered",
+        "surfaceEvidenceRefs": [
+          "python-readonly-validation"
+        ],
+        "adversarialCaseRefs": [
+          "hidden-missing-doc-gap",
+          "write-side-effect-claim"
+        ]
+      },
+      {
+        "id": "latest-video-classification",
+        "contractRef": "G002 coverage report acceptance",
+        "obligation": "classification.videos contains all three latest IDs; each has status doc_generation_missing_or_not_backfilled, four explicit reasons, supabaseDocCount=0, and supabaseDocs=[].",
+        "status": "covered",
+        "surfaceEvidenceRefs": [
+          "python-readonly-validation"
+        ],
+        "adversarialCaseRefs": [
+          "hidden-missing-doc-gap",
+          "write-side-effect-claim"
+        ]
+      },
+      {
+        "id": "validation-artifact-consistency",
+        "contractRef": "G002 coverage report acceptance",
+        "obligation": "g002-coverage-validation.json passed=true and coverageSha256 matches the computed sha256 of coverage-report.json: bace7270967fa7aa6e79ba56b2b33991f122d33c85ffbac19682da6e9af3d50a.",
+        "status": "covered",
+        "surfaceEvidenceRefs": [
+          "python-readonly-validation"
+        ],
+        "adversarialCaseRefs": [
+          "hidden-missing-doc-gap",
+          "write-side-effect-claim"
+        ]
+      }
+    ],
+    "surfaceEvidence": [
+      {
+        "id": "coverage-report-json",
+        "contractRef": "G002 coverage artifact surface",
+        "surface": "cli",
+        "invocation": "Read-only Python/JSON validation of coverage artifacts; replay represented by g002-cli-replay.json",
+        "verdict": "passed",
+        "artifactRefs": [
+          "cli-replay"
+        ]
+      },
+      {
+        "id": "g002-coverage-validation-json",
+        "contractRef": "G002 coverage artifact surface",
+        "surface": "cli",
+        "invocation": "Read-only Python/JSON validation of coverage artifacts; replay represented by g002-cli-replay.json",
+        "verdict": "passed",
+        "artifactRefs": [
+          "cli-replay"
+        ]
+      },
+      {
+        "id": "setup-json",
+        "contractRef": "G002 coverage artifact surface",
+        "surface": "cli",
+        "invocation": "Read-only Python/JSON validation of coverage artifacts; replay represented by g002-cli-replay.json",
+        "verdict": "passed",
+        "artifactRefs": [
+          "cli-replay"
+        ]
+      },
+      {
+        "id": "python-readonly-validation",
+        "contractRef": "G002 coverage artifact surface",
+        "surface": "cli",
+        "invocation": "Read-only Python/JSON validation of coverage artifacts; replay represented by g002-cli-replay.json",
+        "verdict": "passed",
+        "artifactRefs": [
+          "cli-replay"
+        ]
+      }
+    ],
+    "adversarialCases": [
+      {
+        "id": "hidden-latest-video-gap",
+        "contractRef": "G002 coverage report acceptance",
+        "scenario": "hidden-latest-video-gap",
+        "expectedBehavior": "Coverage gaps and write side effects must be explicit, not hidden.",
+        "verdict": "passed",
+        "artifactRefs": [
+          "coverage-validation",
+          "cli-replay"
+        ]
+      },
+      {
+        "id": "hidden-missing-doc-gap",
+        "contractRef": "G002 coverage report acceptance",
+        "scenario": "hidden-missing-doc-gap",
+        "expectedBehavior": "Coverage gaps and write side effects must be explicit, not hidden.",
+        "verdict": "passed",
+        "artifactRefs": [
+          "coverage-validation",
+          "cli-replay"
+        ]
+      },
+      {
+        "id": "write-side-effect-claim",
+        "contractRef": "G002 coverage report acceptance",
+        "scenario": "write-side-effect-claim",
+        "expectedBehavior": "Coverage gaps and write side effects must be explicit, not hidden.",
+        "verdict": "passed",
+        "artifactRefs": [
+          "coverage-validation",
+          "cli-replay"
+        ]
+      },
+      {
+        "id": "catalog-false-positive",
+        "contractRef": "G002 coverage report acceptance",
+        "scenario": "catalog-false-positive",
+        "expectedBehavior": "Coverage gaps and write side effects must be explicit, not hidden.",
+        "verdict": "passed",
+        "artifactRefs": [
+          "coverage-validation",
+          "cli-replay"
+        ]
+      },
+      {
+        "id": "classification-false-positive",
+        "contractRef": "G002 coverage report acceptance",
+        "scenario": "classification-false-positive",
+        "expectedBehavior": "Coverage gaps and write side effects must be explicit, not hidden.",
+        "verdict": "passed",
+        "artifactRefs": [
+          "coverage-validation",
+          "cli-replay"
+        ]
+      }
+    ],
+    "blockers": []
+  },
+  "iteration": {
+    "status": "passed",
+    "evidence": "G002 generated coverage-report.json with no writes. AI slop cleanup report is passed/no-product-code-edits with zero blocking findings. Leader validation, strict architect rereview, and executor QA/red-team all passed after the final coverage report was generated. Durable backfill gaps are carried in coverage-report.json blockers for later goals.",
+    "fullRerun": true,
+    "rerunCommands": [
+      "leader coverage validation via Python eval",
+      "architect subagent 170-G002CoverageArchClean",
+      "executor QA subagent 169-G002CoverageQa"
+    ],
+    "blockers": []
+  }
+}
