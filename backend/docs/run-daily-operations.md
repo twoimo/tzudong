@@ -34,6 +34,7 @@
   기록해야 합니다. success 경로에서 manifest를 기록/확인하지 못하면
   프로세스는 non-zero로 내려가야 하며, manifest가 없거나 파싱 실패할
   때만 bounded log-tail fallback을 사용합니다.
+Admin `/api/admin/system-status` reads only bounded manifest/log evidence. If `current-summary.json` is missing or unreadable, it exposes `runDaily.manifestStatus=missing|unreadable` and `runDaily.finalStatus=UNKNOWN` rather than treating a stale log tail or absent file as success.
 
 예시 확인 명령:
 

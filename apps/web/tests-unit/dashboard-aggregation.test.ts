@@ -89,6 +89,18 @@ describe('dashboard aggregations', () => {
         expect(topVideo.restaurantCount).toBe(2);
         expect(topVideo.notSelectedCount).toBe(1);
         expect(topVideo.geocodingFailedCount).toBe(1);
+
+        expect(result.freshness).toMatchObject({
+            source: 'row-derived',
+            approvedOnly: true,
+            rowCount: 3,
+            cacheStatus: 'bypass',
+            ttlMs: 0,
+            expiresAt: null,
+            videoLimit: 2,
+        });
+        expect(result.freshness?.generatedAt).toBe('2026-02-10T00:00:00.000Z');
+        expect(result.freshness?.checksum).toMatch(/^[a-f0-9]{24}$/);
     });
 
     test('buildDashboardRestaurantsFromRows filters raw rows before paging and normalization', () => {

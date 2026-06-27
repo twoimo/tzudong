@@ -307,7 +307,7 @@ export default function AdminEvaluationPageWrapper({
   initialSubmissionTab,
 }: AdminEvaluationPageWrapperProps = {}) {
   return (
-    <Suspense fallback={<AdminEvaluationRouteSkeleton />}>
+    <Suspense fallback={embedded ? null : <AdminEvaluationRouteSkeleton />}>
       <AdminEvaluationPage
         embedded={embedded}
         initialView={initialView}

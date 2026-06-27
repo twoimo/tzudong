@@ -63,6 +63,26 @@ function classifyRunDailyMetric(runDaily: AdminSystemRunDailyStatus | undefined)
     || optionalSkips.length > 0
     || downstreamSkips.length > 0;
 
+  if (runDaily.manifestStatus === 'missing') {
+    return {
+      id: 'run_daily',
+      label: 'run_daily',
+      value: 'UNKNOWN',
+      detail: 'current-summary manifest가 없어 현재 run_daily 상태를 알 수 없습니다.',
+      state: 'unknown',
+    };
+  }
+
+  if (runDaily.manifestStatus === 'unreadable') {
+    return {
+      id: 'run_daily',
+      label: 'run_daily',
+      value: 'UNKNOWN',
+      detail: 'current-summary manifest를 읽지 못해 현재 run_daily 상태를 알 수 없습니다.',
+      state: 'unknown',
+    };
+  }
+
   if (runDaily.detail) {
     return {
       id: 'run_daily',
@@ -148,6 +168,26 @@ function classifyArtifactMetric(runDaily: AdminSystemRunDailyStatus | undefined)
       label: '아티팩트',
       value: '파싱 실패',
       detail: 'manifest 또는 로그 읽기 실패가 감지되었습니다.',
+      state: 'unknown',
+    };
+  }
+
+  if (runDaily?.manifestStatus === 'missing') {
+    return {
+      id: 'artifacts',
+      label: '아티팩트',
+      value: 'manifest 없음',
+      detail: 'current-summary manifest가 없어 상태 증거가 불완전합니다.',
+      state: 'unknown',
+    };
+  }
+
+  if (runDaily?.manifestStatus === 'unreadable') {
+    return {
+      id: 'artifacts',
+      label: '아티팩트',
+      value: '파싱 실패',
+      detail: 'current-summary manifest를 파싱하지 못했습니다.',
       state: 'unknown',
     };
   }
