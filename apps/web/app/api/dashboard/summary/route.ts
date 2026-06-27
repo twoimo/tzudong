@@ -6,7 +6,21 @@ export const runtime = 'nodejs';
 export async function GET() {
     try {
         const data = await getDashboardSummary(false);
-        return NextResponse.json(data);
+        const freshness = data.freshness;
+        return NextResponse.json(data, {
+            headers: {
+                'Cache-Control': 'private, max-age=60, stale-while-revalidate=240',
+                ...(freshness
+                    ? {
+                        'X-Dashboard-Summary-Source': freshness.source,
+                        'X-Dashboard-Summary-Generated-At': freshness.generatedAt,
+                        'X-Dashboard-Summary-Checksum': freshness.checksum,
+                        'X-Dashboard-Summary-Cache-Status': freshness.cacheStatus,
+                        'X-Dashboard-Summary-Video-Limit': String(freshness.videoLimit),
+                    }
+                    : {}),
+            },
+        });
     } catch (error) {
         console.error('[dashboard/summary] failed:', error);
         return NextResponse.json(

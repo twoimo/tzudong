@@ -42,6 +42,8 @@ export type StoryboardGraphDiagnostics = {
   toolsCalled: string[];
   retrieval?: {
     status: 'not_used' | 'used' | 'failed';
+    requiredModelStack?: boolean;
+    failureReason?: string;
     usedModels?: {
       embedding?: 'BAAI/bge-m3';
       reranker?: 'BAAI/bge-reranker-v2-m3';
@@ -55,7 +57,7 @@ export type StoryboardGraphDiagnostics = {
       lookupStatus?: 'used' | 'unavailable' | 'not_reported';
       provider?: 'llava_next_video' | 'openai_vision_gpt55' | 'codex_cli_vision_gpt55' | 'unknown_legacy';
       model?: string;
-      authMode?: 'platform_api_key' | 'codex_cli_oauth_local' | 'offline_local' | 'unknown_legacy';
+      authMode?: 'platform_api_key' | 'codex_cli_oauth_local' | 'unknown_legacy';
       schemaVersion?: number;
       frameCount?: number;
       truncatedFrames?: number;
@@ -135,6 +137,7 @@ export type StoryboardChatFocusContext = {
   label: string;
   detail: string;
   sceneNo?: number;
+  sceneNos?: number[];
   promptContext: string;
   createdAt: string;
 };
@@ -433,6 +436,7 @@ export type StoryboardGenerationResult = {
   backendAnalysis: {
     reusedLogic: string[];
     localGapsHandled: string[];
+    localRag?: import('./rag').StoryboardRagDiagnostics;
     backendAgent?: StoryboardBackendAgentStatus & {
       invokedCommand: boolean;
       commandExitCode?: number | null;
