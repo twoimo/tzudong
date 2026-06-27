@@ -97,6 +97,7 @@ export type AdminSystemRunDailyStatus = {
   latestLogPath?: string;
   latestLogUpdatedAt?: string;
   latestManifestPath?: string;
+  manifestStatus?: 'available' | 'missing' | 'unreadable';
   finalStatus?: 'OK' | 'WARN' | 'ERROR' | 'UNKNOWN';
   finalExitCode?: number;
   failedRequiredSteps?: string[];

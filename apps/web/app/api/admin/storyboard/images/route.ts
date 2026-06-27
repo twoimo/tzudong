@@ -6,6 +6,14 @@ import {
 } from '@/lib/admin/storyboard/image-provider-readiness';
 import { sanitizeStoryboardPublicText } from '@/lib/admin/storyboard/prompt-safety';
 import {
+  buildStoryboardRouteFreshness,
+  buildStoryboardRouteHeaders,
+  createStoryboardRouteTelemetry,
+  readStoryboardRouteJson,
+  STORYBOARD_ROUTE_NO_STORE_HEADERS,
+  STORYBOARD_ROUTE_PRIVATE_NO_STORE_CACHE_CONTROL,
+} from '@/lib/admin/storyboard/route-telemetry';
+import {
   STORYBOARD_CHAT_MIN_SEGMENT_COUNT,
   STORYBOARD_IMAGE_GENERATION_BATCH_SIZE,
   STORYBOARD_MAX_SEGMENT_COUNT,
@@ -63,7 +71,7 @@ async function generateStoryboardSceneImagesForRoute(
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const noStoreHeaders = { 'Cache-Control': 'no-store' } as const;
+const noStoreHeaders = STORYBOARD_ROUTE_NO_STORE_HEADERS;
 const storyboardTones = new Set<StoryboardTone>(['warm', 'energetic', 'documentary', 'comfort']);
 
 function getStoryboardImageRouteEnv() {
@@ -231,31 +239,47 @@ function createPersistableImageResult(
 }
 
 export async function GET(request: NextRequest) {
+  const telemetry = createStoryboardRouteTelemetry('admin-storyboard-image-status');
   try {
     const auth = await requireAdmin({ allowDevAdminBypassCookie: true });
     if (!auth.ok) return auth.response;
     const browserOpenAIApiKey = getBrowserOpenAIApiKeyFromRequest(request);
 
-    return NextResponse.json(
-      {
-        provider: await getStoryboardImageProviderAvailabilityForRoute(process.env, {
-          browserOpenAIApiKey,
-        }),
-        limits: {
-          maxScenesPerRequest: STORYBOARD_IMAGE_GENERATION_BATCH_SIZE,
-          target: { width: 1280, height: 720, aspectRatio: '16:9' },
-        },
-        configuration: {
-          localCodexCommand: 'STORYBOARD_LOCAL_CODEX_COMMAND 또는 scripts/codex-imagegen-storyboard-provider.py',
-          localCodexModel: 'STORYBOARD_LOCAL_CODEX_IMAGE_MODEL',
-          localCodexProof: 'STORYBOARD_LOCAL_CODEX_PROVENANCE_FILE 또는 bun run storyboard:image-proof',
-          browserOpenAIApiKey: '브라우저 localStorage에만 저장하고 요청 헤더로만 임시 전달',
-          browserKeyStorage: 'browser_local_storage_only',
-          browserApiKeyHeader: STORYBOARD_BROWSER_OPENAI_API_KEY_HEADER,
-          browserImageTransport: 'data_url_response_no_server_file_write',
-        },
+    const freshness = buildStoryboardRouteFreshness('storyboard_image_provider_status', {
+      cacheControl: STORYBOARD_ROUTE_PRIVATE_NO_STORE_CACHE_CONTROL,
+      maxAgeSeconds: 0,
+    });
+    const payload = {
+      provider: await getStoryboardImageProviderAvailabilityForRoute(process.env, {
+        browserOpenAIApiKey,
+      }),
+      limits: {
+        maxScenesPerRequest: STORYBOARD_IMAGE_GENERATION_BATCH_SIZE,
+        target: { width: 1280, height: 720, aspectRatio: '16:9' },
       },
-      { headers: noStoreHeaders },
+      configuration: {
+        localCodexCommand: 'STORYBOARD_LOCAL_CODEX_COMMAND 또는 scripts/codex-imagegen-storyboard-provider.py',
+        localCodexModel: 'STORYBOARD_LOCAL_CODEX_IMAGE_MODEL',
+        localCodexProof: 'STORYBOARD_LOCAL_CODEX_PROVENANCE_FILE 또는 bun run storyboard:image-proof',
+        browserOpenAIApiKey: '브라우저 localStorage에만 저장하고 요청 헤더로만 임시 전달',
+        browserKeyStorage: 'browser_local_storage_only',
+        browserApiKeyHeader: STORYBOARD_BROWSER_OPENAI_API_KEY_HEADER,
+        browserImageTransport: 'data_url_response_no_server_file_write',
+      },
+      freshness,
+    };
+    return NextResponse.json(
+      payload,
+      {
+        headers: buildStoryboardRouteHeaders(
+          telemetry,
+          {
+            'Cache-Control': STORYBOARD_ROUTE_PRIVATE_NO_STORE_CACHE_CONTROL,
+            Vary: 'Cookie, Authorization, X-Storyboard-Browser-OpenAI-Api-Key',
+          },
+          payload,
+        ),
+      },
     );
   } catch (error) {
     return normalizeRouteError(error);
@@ -263,11 +287,13 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const telemetry = createStoryboardRouteTelemetry('admin-storyboard-images-generate');
+
   try {
     const auth = await requireAdmin({ allowDevAdminBypassCookie: true });
     if (!auth.ok) return auth.response;
 
-    const body = await request.json().catch(() => null);
+    const body = await readStoryboardRouteJson(request, telemetry);
     const payload = parsePayload(body);
     const imageRouteEnv = getStoryboardImageRouteEnv();
     const browserOpenAIApiKey = getBrowserOpenAIApiKeyFromRequest(request);
@@ -293,15 +319,16 @@ export async function POST(request: NextRequest) {
           })
       : { persisted: false as const, reason: 'missing_source_result' as const };
 
+    const responsePayload = {
+      provider: await getStoryboardImageProviderAvailabilityForRoute(imageRouteEnv, {
+        browserOpenAIApiKey,
+      }),
+      images,
+      history,
+    };
     return NextResponse.json(
-      {
-        provider: await getStoryboardImageProviderAvailabilityForRoute(imageRouteEnv, {
-          browserOpenAIApiKey,
-        }),
-        images,
-        history,
-      },
-      { headers: noStoreHeaders },
+      responsePayload,
+      { headers: buildStoryboardRouteHeaders(telemetry, noStoreHeaders, responsePayload) },
     );
   } catch (error) {
     return normalizeRouteError(error);

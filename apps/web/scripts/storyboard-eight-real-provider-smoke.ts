@@ -157,7 +157,7 @@ async function main() {
       sourceLimit: preset.sourceLimit,
       segmentCount: preset.segmentCount,
       includeProductionNotes: true,
-      generationMode: 'backend_agent',
+      generationMode: 'backend_agent' as const,
     };
     const result = generatorModule.generateLocalStoryboard(request);
     const scenes = result.storyboard.scenes.slice(0, 4);

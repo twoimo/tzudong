@@ -149,7 +149,7 @@ describe('frontend unused route compatibility', () => {
         expect(adminConsoleSource).toContain('key="reviews"');
         expect(adminConsoleSource).toContain('initialSubmissionTab="reviews"');
         expect(adminConsoleSource).not.toContain('AdminConsoleLoadingSkeleton');
-        expect(adminConsoleSource).toContain('function AdminConsoleCanvasSkeleton()');
+        expect(adminConsoleSource).toContain('function AdminConsoleCanvasSkeleton({');
         expect(adminConsoleSource).toContain('data-admin-console-content-loading="true"');
         expect(adminConsoleSource).toContain(
             '{isShellBootstrapping ? (',
