@@ -1,0 +1,251 @@
+{
+  "schemaVersion": 1,
+  "kind": "storyboard-rag-embedding-contract-report",
+  "generatedAt": "2026-06-27T21:16:04.625Z",
+  "runId": "rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw",
+  "noWrite": true,
+  "worker": {
+    "url": "http://127.0.0.1:8765",
+    "health": {
+      "ok": true,
+      "service": "storyboard-rag-worker",
+      "schemaVersion": 1,
+      "settings": {
+        "timeoutSeconds": 120,
+        "queueTimeoutSeconds": 15,
+        "batchSizeDefault": 8,
+        "maxLengthDefault": 8192,
+        "device": "cpu",
+        "concurrency": {
+          "models": 1,
+          "embed": 1,
+          "rerank": 1,
+          "caption": 1
+        },
+        "memoryBudgetMb": null,
+        "localLlavaWarmupEnabled": false
+      },
+      "runtimeProfile": {
+        "platform": "Windows-10-10.0.26200-SP0",
+        "python": "3.11.9",
+        "cpuCount": 8,
+        "configuredDevice": "cpu",
+        "resolvedDevice": "cpu",
+        "cudaAvailable": false,
+        "remoteLlavaConfigured": false,
+        "remoteLlavaUrl": null,
+        "localLlavaWarmupEnabled": false
+      },
+      "memoryProfile": {
+        "budgetMb": null,
+        "processRssMb": 215.324,
+        "overBudget": false,
+        "budgetPolicy": "warn"
+      },
+      "counters": {
+        "operations": {},
+        "queued": {},
+        "inflight": {},
+        "compatibilityFallbacks": {}
+      },
+      "readinessEndpoint": "/models?load=true"
+    },
+    "models": {
+      "schemaVersion": 1,
+      "ready": false,
+      "providers": [
+        {
+          "id": "BAAI/bge-m3",
+          "required": true,
+          "ready": false,
+          "reason": "load_not_requested"
+        },
+        {
+          "id": "BAAI/bge-reranker-v2-m3",
+          "required": true,
+          "ready": false,
+          "reason": "load_not_requested"
+        },
+        {
+          "id": "llava-hf/LLaVA-NeXT-Video-7B-hf",
+          "required": true,
+          "ready": false,
+          "reason": "load_not_requested"
+        },
+        {
+          "id": "cookieshake/a.x-4.0-light-imatrix:Q8_0",
+          "required": true,
+          "ready": true,
+          "reason": null
+        },
+        {
+          "id": "exaone3.5:7.8b",
+          "required": true,
+          "ready": true,
+          "reason": null
+        },
+        {
+          "id": "bnksys/eeve:10.8b-korean-instruct-q8-v1",
+          "required": true,
+          "ready": true,
+          "reason": null
+        },
+        {
+          "id": "qwen3:8b",
+          "required": true,
+          "ready": true,
+          "reason": null
+        },
+        {
+          "id": "solar:10.7b-instruct-v1-q5_0",
+          "required": true,
+          "ready": true,
+          "reason": null
+        },
+        {
+          "id": "gemini-cli-oauth",
+          "required": true,
+          "ready": true,
+          "reason": null
+        },
+        {
+          "id": "openai-codex-oauth",
+          "required": true,
+          "ready": true,
+          "reason": null
+        }
+      ],
+      "timings": {
+        "operation": "models.peek",
+        "workload": "models",
+        "queueMs": 0.095,
+        "executionMs": 349.584,
+        "totalMs": 349.681,
+        "timeoutMs": 120000,
+        "queueTimeoutMs": 15000,
+        "concurrencyLimit": 1,
+        "queueDepthBefore": 0
+      },
+      "settings": {
+        "timeoutSeconds": 120,
+        "queueTimeoutSeconds": 15,
+        "batchSizeDefault": 8,
+        "maxLengthDefault": 8192,
+        "device": "cpu",
+        "concurrency": {
+          "models": 1,
+          "embed": 1,
+          "rerank": 1,
+          "caption": 1
+        },
+        "memoryBudgetMb": null,
+        "localLlavaWarmupEnabled": false
+      },
+      "runtimeProfile": {
+        "platform": "Windows-10-10.0.26200-SP0",
+        "python": "3.11.9",
+        "cpuCount": 8,
+        "configuredDevice": "cpu",
+        "resolvedDevice": "cpu",
+        "cudaAvailable": false,
+        "remoteLlavaConfigured": false,
+        "remoteLlavaUrl": null,
+        "localLlavaWarmupEnabled": false
+      },
+      "memoryProfile": {
+        "budgetMb": null,
+        "processRssMb": 215.934,
+        "overBudget": false,
+        "budgetPolicy": "warn"
+      },
+      "counters": {
+        "operations": {
+          "models.peek": {
+            "calls": 1,
+            "failures": 0,
+            "timeouts": 0,
+            "queueTimeouts": 0,
+            "lastError": null
+          }
+        },
+        "queued": {
+          "models": 0
+        },
+        "inflight": {
+          "models": 1
+        },
+        "compatibilityFallbacks": {}
+      }
+    },
+    "embed": {
+      "schemaVersion": 1,
+      "provider": "bge-m3",
+      "model": "BAAI/bge-m3",
+      "dimensions": 1024,
+      "itemCount": 1,
+      "denseLength": 1024,
+      "sparseKeyCount": 15,
+      "denseFinite": true
+    },
+    "rerank": {
+      "schemaVersion": 1,
+      "provider": "bge-reranker-v2-m3",
+      "model": "BAAI/bge-reranker-v2-m3",
+      "resultCount": 1,
+      "firstId": "c1",
+      "scoreFinite": true
+    },
+    "errors": []
+  },
+  "db": {
+    "queries": [
+      {
+        "name": "embedding_shape",
+        "rowCount": 1
+      },
+      {
+        "name": "rpc_v1_zero_call",
+        "rowCount": 1
+      },
+      {
+        "name": "rpc_v2_zero_call",
+        "rowCount": 1
+      }
+    ],
+    "errors": [],
+    "embeddingShape": {
+      "embedding_type": "vector(1024)"
+    }
+  },
+  "routeParity": {
+    "source": "apps/web/app/api/admin/storyboard/rag/documents/route.ts:92-94",
+    "requiredExpression": "`${document.title}\\n\\n${document.content}`",
+    "sample": {
+      "title": "쯔양 최신 RAG 테스트",
+      "content": "삼겹살과 갈비가 함께 나오는 장면",
+      "expected": "쯔양 최신 RAG 테스트\n\n삼겹살과 갈비가 함께 나오는 장면"
+    },
+    "passed": true
+  },
+  "search": {
+    "v1": {
+      "count": 0
+    },
+    "v2": {
+      "count": 0
+    },
+    "parity": {
+      "passed": true,
+      "reason": "zero-document read-only RPC calls should both return count 0 for zero UUID"
+    },
+    "latestNonEmpty": "blocked_no_documents"
+  },
+  "summary": {
+    "workerHealthOk": true,
+    "embedContractOk": true,
+    "rerankContractOk": true,
+    "dbVectorShapeOk": true,
+    "rpcParityOk": true,
+    "latestSearchNonEmpty": "blocked_no_documents"
+  }
+}

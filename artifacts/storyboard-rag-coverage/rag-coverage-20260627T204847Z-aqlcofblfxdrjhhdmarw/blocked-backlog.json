@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "kind": "storyboard-rag-blocked-backlog",
+  "generatedAt": "2026-06-27T21:47:59.397378+00:00",
+  "runId": "rag-coverage-20260627T204847Z-aqlcofblfxdrjhhdmarw",
+  "fullBackfillExecuted": false,
+  "fullBackfillReason": "blocked_before_full_run: canary ineligible and dry-run produced zero planned write rows",
+  "noWrite": true,
+  "rows": [
+    {
+      "videoId": "HOzoiAOaJKA",
+      "status": "blocked_backlog",
+      "blockReason": "no existing Supabase document rows for canonical video_id; no generated transcript-document chunks, so no safe content/external_id/content_hash can be planned; frame-caption source missing; heatmap source missing",
+      "sourceStatus": "doc_generation_missing_or_not_backfilled",
+      "nextActions": [
+        "Generate approved transcript-document chunks outside Next.js route handlers using backend batch/source pipeline.",
+        "Select/record concrete target_user_id before any write.",
+        "Generate/verify frame-caption source only after quota/cost preview if needed.",
+        "Generate/verify heatmap/context source if required by document construction policy."
+      ],
+      "safeToBackfillNow": false
+    },
+    {
+      "videoId": "dJONr8ZpwhM",
+      "status": "blocked_backlog",
+      "blockReason": "no existing Supabase document rows for canonical video_id; no generated transcript-document chunks, so no safe content/external_id/content_hash can be planned; frame-caption source missing; heatmap source missing",
+      "sourceStatus": "doc_generation_missing_or_not_backfilled",
+      "nextActions": [
+        "Generate approved transcript-document chunks outside Next.js route handlers using backend batch/source pipeline.",
+        "Select/record concrete target_user_id before any write.",
+        "Generate/verify frame-caption source only after quota/cost preview if needed.",
+        "Generate/verify heatmap/context source if required by document construction policy."
+      ],
+      "safeToBackfillNow": false
+    },
+    {
+      "videoId": "IS6z1fyxCyI",
+      "status": "blocked_backlog",
+      "blockReason": "no existing Supabase document rows for canonical video_id; no generated transcript-document chunks, so no safe content/external_id/content_hash can be planned; frame-caption source missing; heatmap source missing",
+      "sourceStatus": "doc_generation_missing_or_not_backfilled",
+      "nextActions": [
+        "Generate approved transcript-document chunks outside Next.js route handlers using backend batch/source pipeline.",
+        "Select/record concrete target_user_id before any write.",
+        "Generate/verify frame-caption source only after quota/cost preview if needed.",
+        "Generate/verify heatmap/context source if required by document construction policy."
+      ],
+      "safeToBackfillNow": false
+    }
+  ],
+  "summary": {
+    "latestVideos": 3,
+    "fullBackfillExecuted": false,
+    "currentDocs": 0,
+    "latestDocumentRows": 0,
+    "blocked": 3,
+    "unknown": 0,
+    "inserted": 0,
+    "updatedStale": 0,
+    "skippedCurrent": 0,
+    "providerCalls": 0,
+    "dbMutations": 0
+  }
+}
