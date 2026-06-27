@@ -180,6 +180,7 @@ export type RunDailyManifestGdriveUpload = {
 
 export type RunDailyManifestStatus = {
   manifestPath?: string;
+  manifestStatus?: 'available' | 'missing' | 'unreadable';
   finalStatus?: 'OK' | 'WARN' | 'ERROR' | 'UNKNOWN';
   finalExitCode?: number;
   failedRequiredSteps: string[];
@@ -327,8 +328,21 @@ export function resolveRunDailyManifestStatus(
   scriptPath: string | undefined,
 ): RunDailyManifestStatus {
   const manifestPath = resolveRunDailyManifestCandidate(env, scriptPath);
-  if (!manifestPath || !existsSync(/* turbopackIgnore: true */ manifestPath)) {
+  if (!manifestPath) {
     return {
+      manifestStatus: 'missing',
+      finalStatus: 'UNKNOWN',
+      failedRequiredSteps: [],
+      optionalSkips: [],
+      downstreamSkips: [],
+    };
+  }
+
+  if (!existsSync(/* turbopackIgnore: true */ manifestPath)) {
+    return {
+      manifestPath,
+      manifestStatus: 'missing',
+      finalStatus: 'UNKNOWN',
       failedRequiredSteps: [],
       optionalSkips: [],
       downstreamSkips: [],
@@ -340,6 +354,7 @@ export function resolveRunDailyManifestStatus(
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     return {
       manifestPath,
+      manifestStatus: 'available',
       finalStatus: normalizeFinalStatus(parsed.finalStatus),
       finalExitCode: typeof parsed.finalExitCode === 'number' ? parsed.finalExitCode : undefined,
       failedRequiredSteps: toStringList(parsed.failedRequiredSteps),
@@ -354,6 +369,8 @@ export function resolveRunDailyManifestStatus(
   } catch (error) {
     return {
       manifestPath,
+      manifestStatus: 'unreadable',
+      finalStatus: 'UNKNOWN',
       failedRequiredSteps: [],
       optionalSkips: [],
       downstreamSkips: [],

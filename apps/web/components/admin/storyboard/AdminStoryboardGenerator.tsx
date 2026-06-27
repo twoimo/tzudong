@@ -168,6 +168,11 @@ type StoryboardChatMessage = {
   thinkingTrace?: StoryboardThinkingTraceEntry[];
 };
 
+type PendingStoryboardChatSteerRequest = {
+  prompt: string;
+  attachments: StoryboardChatImageAttachment[];
+};
+
 const STORYBOARD_CHAT_TYPEWRITER_START_DELAY_MS = 180;
 const STORYBOARD_CHAT_TYPEWRITER_INTERVAL_MS = 24;
 const STORYBOARD_CHAT_TYPEWRITER_STEP_CHARS = 1;
@@ -806,10 +811,19 @@ type StoryboardChatQuickCommand =
   | "status"
   | "trace";
 
+function isStoryboardRagProcessIntent(message: string) {
+  const normalized = message.trim().replace(/\s+/g, " ").toLowerCase();
+  if (!normalized) return false;
+
+  return /(?:rag|r\.a\.g|검색\s*과정|retrieval|retrieve|랭스미스|langsmith|contextual|컨텍스트|context\s*retrieval|임베딩|embedding|리랭커|reranker|bge|llava|캡셔닝|captioning|ollama|올라마|exaone|eeve|qwen|solar|모델\s*스택|model\s*stack)/i.test(
+    normalized,
+  );
+}
+
 function isStoryboardTraceIntent(message: string) {
   const normalized = message.trim().replace(/\s+/g, " ").toLowerCase();
-  const compact = normalized.replace(/[\s?!?.。~]/g, "");
   if (!normalized) return false;
+  if (isStoryboardRagProcessIntent(normalized)) return false;
   if (
     /(초기화|리셋|reset|clear|재생성|다시\s*생성|이미지\s*(?:만들|생성|재생성)|생성해|만들어\s*줘|만들어줘|구성해|짜줘|뽑아)/i.test(
       normalized,
@@ -817,10 +831,11 @@ function isStoryboardTraceIntent(message: string) {
   ) {
     return false;
   }
-  if (/^(과정|이유|왜|근거|추적|trace|why|how)$/.test(compact)) {
-    return true;
+  if (!/(?:pdf|데이터\s*흐름|맛집\s*지도|창작자|시청자|히스토리|db|스토리보드\s*흐름)/i.test(normalized)) {
+    return false;
   }
-  return /(왜\s*(?:이렇게|이런|이 컷|이 장면|이 순서|나왔|됐|선택|골랐)|어떻게\s*(?:만들|구성|나왔)|이유가\s*뭐|무슨\s*근거|어떤\s*과정|선택\s*이유|근거.*(?:뭐|알려|설명)|trace|why|how)/i.test(
+
+  return /(?:pdf|데이터\s*흐름|맛집\s*지도|창작자|시청자|히스토리|db|스토리보드\s*흐름).*(?:흐름|과정|추적|trace|이유|근거)|(?:흐름|과정|추적|trace|이유|근거).*(?:pdf|데이터\s*흐름|맛집\s*지도|창작자|시청자|히스토리|db|스토리보드\s*흐름)/i.test(
     normalized,
   );
 }
@@ -1840,21 +1855,31 @@ function sanitizeStoryboardAssistantSourceText(value: string) {
   return normalizeLegacyKoreanParticleDisplayText(safe);
 }
 
+function shouldPreserveStoryboardRagTransparencyTerms(value: string) {
+  return /(?:RAG\s*작동\s*과정|생각\s*중\s*·?\s*RAG\s*추적|모델\s*스택|model\s*stack|a\.x-4\.0|bge-m3|bge-reranker|LangSmith|랭스미스)/i.test(
+    value,
+  );
+}
+
 function formatStoryboardAssistantDisplayText(value: string) {
   const protectedNoImageLabel = STORYBOARD_NO_TRUSTED_IMAGE_LABEL.replace(
     " · ",
     " __STORYBOARD_NO_IMAGE_DOT__ ",
   );
-  const safe = sanitizeStoryboardAssistantSourceText(value)
+  const preserveRagTerms = shouldPreserveStoryboardRagTransparencyTerms(value);
+  let safe = sanitizeStoryboardAssistantSourceText(value)
     .replace(
       /Codex CLI\s+[A-Za-z0-9._-]+\s+\w+\s+작업 완료/gi,
       "요청을 이해했어요",
     )
-    .replace(/GPT\s*Image\s*2|gpt-image-2/gi, "이미지 만들기")
-    .replace(
+    .replace(/GPT\s*Image\s*2|gpt-image-2/gi, "이미지 만들기");
+  if (!preserveRagTerms) {
+    safe = safe.replace(
       /LangGraph|BGE|리랭커|provider|provenance|fallback|model/gi,
       "내부 처리",
-    )
+    );
+  }
+  safe = safe
     .replace(/백엔드\s*에이전트|백엔드|에이전트/g, "도우미")
     .replace(/패치/g, "수정")
     .replace(/스트리밍/g, "진행 상태")
@@ -2232,6 +2257,13 @@ function StoryboardThinkingTracePanel({
       ? `${runningCount}단계 진행 중`
       : `${finishedCount}/${trace.length}단계 기록`;
   const durationLabel = getStoryboardThinkingTraceDurationLabel(trace);
+  const hasRagTrace = trace.some(
+    (entry) =>
+      entry.id.startsWith("rag-") ||
+      /rag|검색|retrieval|임베딩|embedding|리랭커|rerank|contextual/i.test(
+        entry.label,
+      ),
+  );
 
   return (
     <details
@@ -2243,7 +2275,7 @@ function StoryboardThinkingTracePanel({
           {runningCount > 0 ? (
             <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
           ) : null}
-          <span>생각 중</span>
+          <span>{hasRagTrace ? "생각 중 · RAG 추적" : "생각 중"}</span>
         </span>
         <span
           className="shrink-0 text-muted-foreground"
@@ -2446,22 +2478,67 @@ function formatStoryboardFrameProductionNote(scene: StoryboardScene) {
 function createStoryboardCutFocusContext(
   scene: StoryboardGenerationResult["storyboard"]["scenes"][number],
 ): StoryboardChatFocusContext {
-  const cutLabel = `CUT ${String(scene.sceneNo).padStart(2, "0")}`;
+  return createStoryboardCutFocusContextFromScenes([scene]);
+}
+
+function createStoryboardCutFocusContextFromScenes(
+  scenes: StoryboardScene[],
+): StoryboardChatFocusContext {
+  const selectedScenes = scenes
+    .filter((scene, index, all) =>
+      all.findIndex((candidate) => candidate.sceneNo === scene.sceneNo) === index,
+    )
+    .sort((left, right) => left.sceneNo - right.sceneNo);
+  const primaryScene = selectedScenes[0];
+  const cutLabels = selectedScenes.map(
+    (scene) => `CUT ${String(scene.sceneNo).padStart(2, "0")}`,
+  );
+  const cutLabel = cutLabels.join(", ");
+  if (!primaryScene) {
+    return createStoryboardActionFocusContext(
+      "CUT 선택 해제됨",
+      "현재 선택된 CUT이 없습니다.",
+      "사용자가 스토리보드 CUT 선택을 해제했습니다. 전체 흐름 기준으로 대화를 이어가세요.",
+    );
+  }
+  const isMultiSelection = selectedScenes.length > 1;
   return {
     kind: "cut",
     label: `${cutLabel} 선택됨`,
-    detail: `멘트·자막·구도 수정 가능 · ${scene.title} · ${scene.heatmapEvidence.peakTime} · ${truncateStoryboardFrameText(scene.hostBeat, 36)}`,
-    sceneNo: scene.sceneNo,
+    detail: isMultiSelection
+      ? `${selectedScenes.length}개 CUT 다중 선택 · ${selectedScenes
+          .map((scene) => `${scene.title}(${scene.heatmapEvidence.peakTime})`)
+          .join(" · ")}`
+      : `멘트·자막·구도 수정 가능 · ${primaryScene.title} · ${primaryScene.heatmapEvidence.peakTime} · ${truncateStoryboardFrameText(primaryScene.hostBeat, 36)}`,
+    sceneNo: isMultiSelection ? undefined : primaryScene.sceneNo,
+    sceneNos: selectedScenes.map((scene) => scene.sceneNo),
     promptContext: [
-      `${cutLabel}을 선택한 상태입니다.`,
-      `제목: ${scene.title}`,
-      `연출: ${scene.visualDirection}`,
-      `오디오 후보 · ${scene.hostBeat}`,
-      `자막 후보: ${scene.captionIdea}`,
-      `근거: ${scene.heatmapEvidence.reason}`,
+      isMultiSelection
+        ? `${cutLabel}을 다중 선택한 상태입니다.`
+        : `${cutLabel}을 선택한 상태입니다.`,
+      ...selectedScenes.map((scene) =>
+        [
+          `CUT ${String(scene.sceneNo).padStart(2, "0")}`,
+          `제목: ${scene.title}`,
+          `연출: ${scene.visualDirection}`,
+          `오디오 후보: ${scene.hostBeat}`,
+          `자막 후보: ${scene.captionIdea}`,
+          `근거: ${scene.heatmapEvidence.reason}`,
+        ].join(" · "),
+      ),
     ].join(" "),
     createdAt: new Date().toISOString(),
   };
+}
+
+function getStoryboardSelectedSceneNosFromFocus(
+  focus: StoryboardChatFocusContext | null,
+): number[] {
+  if (focus?.kind !== "cut") return [];
+  if (Array.isArray(focus.sceneNos) && focus.sceneNos.length) {
+    return focus.sceneNos.filter((sceneNo) => Number.isFinite(sceneNo));
+  }
+  return Number.isFinite(focus.sceneNo) ? [Number(focus.sceneNo)] : [];
 }
 
 function createStoryboardActionFocusContext(
@@ -2841,23 +2918,45 @@ function drawStoryboardFrameToCanvas(
     context.fill();
   }
 
-  context.fillStyle = "rgba(0,0,0,0.58)";
-  drawRoundedRect(context, x + 18, y + 18, 92, 30, 15);
+  const cutBadgeLabel = `CUT ${String(scene.sceneNo).padStart(2, "0")}`;
+  context.save();
+  context.shadowColor = "rgba(0,0,0,0.28)";
+  context.shadowBlur = 18;
+  context.shadowOffsetY = 8;
+  context.fillStyle = "rgba(15,23,42,0.82)";
+  drawRoundedRect(context, x + 18, y + 18, 100, 34, 17);
   context.fill();
+  context.restore();
+  context.strokeStyle = "rgba(255,255,255,0.28)";
+  context.lineWidth = 1;
+  drawRoundedRect(context, x + 18, y + 18, 100, 34, 17);
+  context.stroke();
   context.fillStyle = "#fff";
   context.font = "700 18px system-ui, sans-serif";
-  context.fillText(
-    `CUT ${String(scene.sceneNo).padStart(2, "0")}`,
-    x + 31,
-    y + 40,
-  );
+  context.fillText(cutBadgeLabel, x + 32, y + 41);
 
-  context.fillStyle = "rgba(255,255,255,0.84)";
-  drawRoundedRect(context, x + width - 88, y + 18, 70, 30, 15);
-  context.fill();
-  context.fillStyle = "#111827";
+  const timeBadgeLabel = scene.heatmapEvidence.peakTime;
   context.font = "700 15px system-ui, sans-serif";
-  context.fillText(scene.heatmapEvidence.peakTime, x + width - 75, y + 39);
+  const timeBadgeWidth = Math.max(
+    76,
+    context.measureText(timeBadgeLabel).width + 28,
+  );
+  const timeBadgeX = x + width - timeBadgeWidth - 18;
+  context.save();
+  context.shadowColor = "rgba(0,0,0,0.22)";
+  context.shadowBlur = 18;
+  context.shadowOffsetY = 8;
+  context.fillStyle = "rgba(255,255,255,0.92)";
+  drawRoundedRect(context, timeBadgeX, y + 18, timeBadgeWidth, 34, 17);
+  context.fill();
+  context.restore();
+  context.strokeStyle = "rgba(255,255,255,0.62)";
+  context.lineWidth = 1;
+  drawRoundedRect(context, timeBadgeX, y + 18, timeBadgeWidth, 34, 17);
+  context.stroke();
+  context.fillStyle = "#0f172a";
+  context.font = "700 15px system-ui, sans-serif";
+  context.fillText(timeBadgeLabel, timeBadgeX + 14, y + 40);
 
   const scriptPanelHeight = Math.max(92, height * 0.25);
   const scriptPanelY = y + height - scriptPanelHeight;
@@ -2990,23 +3089,24 @@ function summarizeStoryboardPromptForCaption(prompt: string) {
 }
 
 function buildStoryboardCanvasTopicTitle(label: string) {
-  const normalized = sanitizeStoryboardChatDisplayText(label);
-  if (!normalized) return "";
-  if (/조회수|바이럴|반복\s*시청/.test(normalized)) return normalized;
-  return `조회수 많이 나올 것 같은 ${normalized}`;
+  return sanitizeStoryboardChatDisplayText(label)
+    .replace(/^조회수\s*많이\s*나올\s*것\s*같은\s*/i, "")
+    .trim();
 }
 
 function getStoryboardCanvasTopicTitle(result: StoryboardGenerationResult) {
+  const title = buildStoryboardCanvasTopicTitle(
+    sanitizeStoryboardChatDisplayText(result.storyboard.title).split("—")[0] ??
+      "",
+  );
+  if (title) return title;
+
   const topicLabel = result.planner?.topicProfile.label;
   const topicTitle = topicLabel
     ? buildStoryboardCanvasTopicTitle(topicLabel)
     : "";
   if (topicTitle) return topicTitle;
 
-  const title = sanitizeStoryboardChatDisplayText(result.storyboard.title)
-    .split("—")[0]
-    ?.trim();
-  if (title) return title;
   return summarizeStoryboardPromptForCaption(result.request.prompt);
 }
 
@@ -4586,6 +4686,8 @@ export function AdminStoryboardGenerator({
   const [storyboardCanvasFocus, setStoryboardCanvasFocus] =
     useState<StoryboardChatFocusContext | null>(null);
   const chatAbortControllerRef = useRef<AbortController | null>(null);
+  const pendingStoryboardChatSteerRef =
+    useRef<PendingStoryboardChatSteerRequest | null>(null);
   const imageGenerationAbortControllerRef = useRef<AbortController | null>(
     null,
   );
@@ -4597,6 +4699,7 @@ export function AdminStoryboardGenerator({
   const [isStoryboardChatMultilineLayout, setIsStoryboardChatMultilineLayout] =
     useState(false);
   const chatTranscriptRef = useRef<HTMLDivElement | null>(null);
+  const chatTranscriptBottomRef = useRef<HTMLDivElement | null>(null);
   const [chatMessages, setChatMessages] = useState<StoryboardChatMessage[]>(
     () => makeInitialStoryboardChatMessages(trustedInitialStoryboardResult),
   );
@@ -4844,14 +4947,22 @@ export function AdminStoryboardGenerator({
     const transcript = chatTranscriptRef.current;
     if (!transcript) return;
 
-    const frame = window.requestAnimationFrame(() => {
+    const scrollToLatestMessage = () => {
+      chatTranscriptBottomRef.current?.scrollIntoView({
+        block: "end",
+        behavior: "auto",
+      });
       transcript.scrollTo({
         top: transcript.scrollHeight,
         behavior: "auto",
       });
+    };
+    const firstFrame = window.requestAnimationFrame(() => {
+      scrollToLatestMessage();
+      window.requestAnimationFrame(scrollToLatestMessage);
     });
 
-    return () => window.cancelAnimationFrame(frame);
+    return () => window.cancelAnimationFrame(firstFrame);
   }, [latestChatScrollKey]);
 
   useEffect(() => {
@@ -4979,10 +5090,15 @@ export function AdminStoryboardGenerator({
     isStoryboardImageProviderAvailable
       ? "이미지 생성 브릿지 연결됨"
       : "이미지 생성 브릿지 연결 안됨";
-  const selectedStoryboardSceneNo =
-    storyboardCanvasFocus?.kind === "cut"
-      ? storyboardCanvasFocus.sceneNo
-      : null;
+  const selectedStoryboardSceneNos = useMemo(
+    () => getStoryboardSelectedSceneNosFromFocus(storyboardCanvasFocus),
+    [storyboardCanvasFocus],
+  );
+  const selectedStoryboardSceneNo = selectedStoryboardSceneNos[0] ?? null;
+  const selectedStoryboardSceneNoSet = useMemo(
+    () => new Set(selectedStoryboardSceneNos),
+    [selectedStoryboardSceneNos],
+  );
   const storyboardUserPerspectiveReadiness = useMemo(
     () =>
       buildStoryboardUserPerspectiveReadiness({
@@ -5076,11 +5192,19 @@ export function AdminStoryboardGenerator({
   const hasStoryboardChatImageAttachments =
     storyboardChatImageAttachments.length > 0;
   const isStoryboardChatBusy = isGenerating || isGeneratingImages;
-  const isStoryboardChatCancelMode = isChatAgentStreaming || isGeneratingImages;
-  const isStoryboardChatSubmitDisabled = isStoryboardChatCancelMode
+  const isStoryboardChatSteerMode =
+    isChatAgentStreaming &&
+    !isGenerating &&
+    !isGeneratingImages &&
+    (Boolean(chatDraft.trim()) || hasStoryboardChatImageAttachments);
+  const isStoryboardChatCancelMode =
+    (isChatAgentStreaming && !isStoryboardChatSteerMode) || isGeneratingImages;
+  const isStoryboardChatSubmitDisabled = isStoryboardChatSteerMode
     ? false
-    : isStoryboardChatBusy ||
-      (!chatDraft.trim() && !hasStoryboardChatImageAttachments);
+    : isStoryboardChatCancelMode
+      ? false
+      : isStoryboardChatBusy ||
+        (!chatDraft.trim() && !hasStoryboardChatImageAttachments);
   const isChatDraftActive =
     Boolean(chatDraft.trim()) ||
     hasStoryboardChatImageAttachments ||
@@ -5126,6 +5250,19 @@ export function AdminStoryboardGenerator({
       segmentCount: patch.segmentCount,
       generationMode: patch.generationMode,
     };
+  }
+
+  function isStoryboardChatCanvasPatchActionable(
+    resultPatch: StoryboardChatAgentResult,
+  ) {
+    const patch = resultPatch.canvasPatch;
+    return Boolean(
+      resultPatch.shouldGenerate ||
+        resultPatch.shouldReset ||
+        patch.scenePatch ||
+        patch.focusSceneNo ||
+        patch.unavailableFocusSceneNo,
+    );
   }
 
   function applyStoryboardChatPatchToCanvas(patch: StoryboardChatCanvasPatch) {
@@ -5259,6 +5396,38 @@ export function AdminStoryboardGenerator({
                 normalizedEntries,
               ),
             }
+          : message,
+      ),
+    );
+  }
+
+  function appendStoryboardChatSteerTrace(
+    prompt: string,
+    attachmentCount: number,
+  ) {
+    const steerTrace = makeStoryboardThinkingTraceEntries({
+      id: `chat-steer-${Date.now()}`,
+      label: "사용자 Steer 수신",
+      status: "done",
+      detail: [
+        prompt ? `새 요청: ${prompt.slice(0, 120)}` : "",
+        attachmentCount ? `첨부 ${attachmentCount}장` : "",
+        "현재 스트림을 중단하고 새 요청으로 다시 실행",
+      ]
+        .filter(Boolean)
+        .join(" · "),
+    });
+    setChatMessages((current) =>
+      current.map((message) =>
+        message.role === "assistant" && message.status === "streaming"
+          ? formatStoryboardChatMessageForDisplay({
+              ...message,
+              text: "새 메시지를 반영하기 위해 현재 답변을 멈추고 다시 생각할게요.",
+              thinkingTrace: mergeStoryboardThinkingTraceEntries(
+                message.thinkingTrace,
+                steerTrace,
+              ),
+            })
           : message,
       ),
     );
@@ -5788,14 +5957,24 @@ export function AdminStoryboardGenerator({
     ]);
   }
 
-  function applyStoryboardCanvasFocus(focus: StoryboardChatFocusContext) {
+  function applyStoryboardCanvasFocus(focus: StoryboardChatFocusContext | null) {
     setStoryboardCanvasFocus(focus);
   }
 
   function handleSelectStoryboardScene(
     scene: StoryboardGenerationResult["storyboard"]["scenes"][number],
   ) {
-    applyStoryboardCanvasFocus(createStoryboardCutFocusContext(scene));
+    setStoryboardCanvasFocus((currentFocus) => {
+      const currentSceneNos = getStoryboardSelectedSceneNosFromFocus(currentFocus);
+      const nextSceneNos = currentSceneNos.includes(scene.sceneNo)
+        ? currentSceneNos.filter((sceneNo) => sceneNo !== scene.sceneNo)
+        : [...currentSceneNos, scene.sceneNo];
+      if (!nextSceneNos.length) return null;
+      const nextScenes = result.storyboard.scenes.filter((candidate) =>
+        nextSceneNos.includes(candidate.sceneNo),
+      );
+      return createStoryboardCutFocusContextFromScenes(nextScenes);
+    });
   }
 
   function getStoryboardSourcePageRange(page: number) {
@@ -5951,6 +6130,7 @@ export function AdminStoryboardGenerator({
   function abortStoryboardChatWork() {
     chatAbortControllerRef.current?.abort();
     chatAbortControllerRef.current = null;
+    pendingStoryboardChatSteerRef.current = null;
     setIsChatAgentStreaming(false);
     appendStoryboardChatMessages([
       {
@@ -6198,6 +6378,7 @@ export function AdminStoryboardGenerator({
     options: {
       prompt?: string;
       attachments?: StoryboardChatImageAttachment[];
+      steeredReplay?: boolean;
     } = {},
   ) {
     const submittedAttachments =
@@ -6207,12 +6388,26 @@ export function AdminStoryboardGenerator({
       (submittedAttachments.length
         ? STORYBOARD_CHAT_IMAGE_ATTACHMENT_ONLY_PROMPT
         : "");
-    if (
-      (!submittedPrompt && submittedAttachments.length === 0) ||
-      isGenerating ||
-      isChatAgentStreaming ||
-      isGeneratingImages
-    ) {
+    const hasSubmittedStoryboardChatContent =
+      Boolean(submittedPrompt) || submittedAttachments.length > 0;
+    if (!hasSubmittedStoryboardChatContent) {
+      return;
+    }
+    if (isChatAgentStreaming && !options.steeredReplay) {
+      pendingStoryboardChatSteerRef.current = {
+        prompt: submittedPrompt,
+        attachments: submittedAttachments,
+      };
+      appendStoryboardChatSteerTrace(
+        submittedPrompt,
+        submittedAttachments.length,
+      );
+      setChatDraft("");
+      setStoryboardChatImageAttachments([]);
+      chatAbortControllerRef.current?.abort();
+      return;
+    }
+    if (isGenerating || isGeneratingImages) {
       return;
     }
     hasUserStoryboardMutationRef.current = true;
@@ -6498,11 +6693,13 @@ export function AdminStoryboardGenerator({
             isStoryboardChatAgentResult(item.data)
           ) {
             finalResult = item.data;
-            finalForm = createFormWithStoryboardChatPatch(
-              finalForm,
-              item.data.canvasPatch,
-            );
-            applyStoryboardChatPatchToCanvas(item.data.canvasPatch);
+            if (isStoryboardChatCanvasPatchActionable(item.data)) {
+              finalForm = createFormWithStoryboardChatPatch(
+                finalForm,
+                item.data.canvasPatch,
+              );
+              applyStoryboardChatPatchToCanvas(item.data.canvasPatch);
+            }
             updateStoryboardChatMessage(
               nextAssistantMessageId,
               item.data.assistantMessage,
@@ -6635,6 +6832,16 @@ export function AdminStoryboardGenerator({
         chatAbortControllerRef.current = null;
       }
       setIsChatAgentStreaming(false);
+      const pendingSteerRequest = pendingStoryboardChatSteerRef.current;
+      if (pendingSteerRequest && !options.steeredReplay) {
+        pendingStoryboardChatSteerRef.current = null;
+        window.setTimeout(() => {
+          void handleStoryboardChatSubmit({
+            ...pendingSteerRequest,
+            steeredReplay: true,
+          });
+        }, 0);
+      }
     }
   }
 
@@ -8074,6 +8281,29 @@ export function AdminStoryboardGenerator({
                             OAuth는 동일합니다. 차이는 서버 대신 사용자 PC
                             helper가 loopback 브릿지를 호출한다는 점입니다.
                           </p>
+                          <div
+                            className="rounded-lg bg-background/80 p-2 text-[10px] leading-4 text-foreground"
+                            data-storyboard-local-bridge-pairing-guide="true"
+                          >
+                            <p className="font-semibold">페어링 순서</p>
+                            <ol className="mt-1 list-decimal space-y-0.5 pl-4 text-muted-foreground">
+                              <li>
+                                터미널에서 <code>cd apps/web &amp;&amp; bun run storyboard:local-bridge</code> 실행
+                              </li>
+                              <li>
+                                터미널에 나온 <code>pairing_token</code>을 아래 토큰 칸에 붙여넣기
+                              </li>
+                              <li>
+                                URL이 <code>http://127.0.0.1:8787</code>인지 확인하고 저장
+                              </li>
+                              <li>
+                                “로컬 브릿지 다시 연결”을 눌러 연결됨 배지를 확인
+                              </li>
+                            </ol>
+                            <p className="mt-1 text-muted-foreground">
+                              토큰은 이 탭 sessionStorage에만 저장되고, 서버나 DB로 저장하지 않습니다.
+                            </p>
+                          </div>
                           <div className="grid gap-1">
                             <Input
                               id="storyboard-local-bridge-url"
@@ -8186,7 +8416,7 @@ export function AdminStoryboardGenerator({
             >
               <div
                 ref={chatTranscriptRef}
-                className="scrollbar-hide flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain p-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                className="scrollbar-hide flex min-h-0 flex-1 scroll-pb-6 flex-col gap-3 overflow-y-auto overscroll-contain px-3 pb-5 pt-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                 data-storyboard-chat-log="true"
                 data-storyboard-chat-transcript="true"
                 aria-live="polite"
@@ -8211,7 +8441,7 @@ export function AdminStoryboardGenerator({
                       : null;
                   const messageStackClassName =
                     isStoryboardChatStarterMessage
-                      ? "w-full space-y-1.5 text-left"
+                      ? "flex min-h-full w-full flex-col items-center justify-center text-center"
                       : message.role === "user"
                         ? "ml-auto flex max-w-[88%] flex-col items-end space-y-1.5 text-right"
                         : "w-full space-y-1.5 text-left";
@@ -8275,49 +8505,27 @@ export function AdminStoryboardGenerator({
                           </div>
                         ) : isStoryboardChatStarterMessage ? (
                           <div
-                            className="mx-auto flex min-h-full w-full flex-col justify-center gap-3 px-3 py-4 text-left"
+                            className="mx-auto flex w-full max-w-sm flex-col items-center justify-center gap-3 px-3 py-6 text-center"
                             data-storyboard-chat-starter-panel="true"
-                            data-storyboard-chat-starter-panel-layout="inline-centered-recommendations"
+                            data-storyboard-chat-starter-panel-layout="centered-beginner-guide"
                           >
-                            <div className="flex items-center gap-2">
-                              <div
-                                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/15"
-                                data-storyboard-chat-starter-icon="true"
-                              >
-                                <ImageIcon
-                                  className="h-4 w-4"
-                                  aria-hidden="true"
-                                />
-                              </div>
-                              <div className="min-w-0 space-y-0.5">
+                            <div className="flex flex-col items-center gap-2">
+                              <div className="min-w-0 space-y-1">
                                 <h4
-                                  className="text-2xl font-semibold tracking-tight text-foreground"
+                                  className="text-xl font-semibold tracking-tight text-foreground"
                                   data-storyboard-chat-starter-title="true"
+                                  data-storyboard-chat-starter-title-size="reduced"
                                 >
                                   무엇부터 만들까요?
                                 </h4>
+                                <p
+                                  className="mx-auto max-w-[17rem] text-[11px] leading-5 text-muted-foreground"
+                                  data-storyboard-chat-starter-guide-copy="true"
+                                >
+                                  주제·음식·원하는 CUT 수를 한두 문장으로 적거나,
+                                  아래 예시를 눌러 바로 시작하세요.
+                                </p>
                               </div>
-                            </div>
-                            <div
-                              className="grid grid-cols-1 gap-2"
-                              data-storyboard-chat-starter-actions="true"
-                            >
-                              <Button
-                                type="button"
-                                variant="outline"
-                                className="h-9 justify-center rounded-full border-border/70 bg-background/80 px-3 text-xs shadow-sm"
-                                onClick={handleStoryboardUsageGuideClick}
-                                disabled={
-                                  isGenerating ||
-                                  isChatAgentStreaming ||
-                                  isGeneratingImages
-                                }
-                                data-storyboard-chat-guide-button="true"
-                                data-storyboard-chat-message-action="guide"
-                                data-storyboard-chat-starter-action="guide"
-                              >
-                                가이드 보기
-                              </Button>
                             </div>
                             <div
                               className="grid grid-cols-2 gap-2"
@@ -8441,6 +8649,12 @@ export function AdminStoryboardGenerator({
                     </div>
                   );
                 })}
+                <div
+                  ref={chatTranscriptBottomRef}
+                  aria-hidden="true"
+                  className="h-1 shrink-0"
+                  data-storyboard-chat-bottom-anchor="true"
+                />
               </div>
 
               <div
@@ -8462,9 +8676,11 @@ export function AdminStoryboardGenerator({
                       storyboardCanvasFocus.kind
                     }
                     data-storyboard-chat-canvas-context-scene={
-                      storyboardCanvasFocus.sceneNo
-                        ? String(storyboardCanvasFocus.sceneNo)
-                        : undefined
+                      storyboardCanvasFocus.sceneNos?.length
+                        ? storyboardCanvasFocus.sceneNos.join(",")
+                        : storyboardCanvasFocus.sceneNo
+                          ? String(storyboardCanvasFocus.sceneNo)
+                          : undefined
                     }
                   >
                     <div className="flex min-w-0 items-center gap-1.5">
@@ -8672,7 +8888,7 @@ export function AdminStoryboardGenerator({
                       onCompositionStart={handleStoryboardChatCompositionStart}
                       onCompositionEnd={handleStoryboardChatCompositionEnd}
                       onKeyDown={handleStoryboardChatKeyDown}
-                      disabled={isChatAgentStreaming}
+                      disabled={isGenerating || isGeneratingImages}
                       autoComplete="off"
                       className={cn(
                         "w-full resize-none overflow-hidden border-0 bg-transparent text-left text-sm leading-5 text-foreground shadow-none placeholder:text-muted-foreground focus-visible:ring-0 dark:text-white dark:placeholder:text-white/55",
@@ -8718,22 +8934,29 @@ export function AdminStoryboardGenerator({
                           : "row-start-1",
                       )}
                       onClick={
-                        isChatAgentStreaming
-                          ? abortStoryboardChatWork
-                          : isGeneratingImages
-                            ? abortStoryboardImageGeneration
-                            : () => void handleStoryboardChatSubmit()
+                        isStoryboardChatSteerMode
+                          ? () => void handleStoryboardChatSubmit()
+                          : isChatAgentStreaming
+                            ? abortStoryboardChatWork
+                            : isGeneratingImages
+                              ? abortStoryboardImageGeneration
+                              : () => void handleStoryboardChatSubmit()
                       }
                       disabled={isStoryboardChatSubmitDisabled}
                       aria-label={
-                        isChatAgentStreaming
-                          ? "채팅 스트림 중단"
-                          : isGeneratingImages
-                            ? "스토리보드 이미지 생성 중단"
-                            : "요구사항 채팅 반영"
+                        isStoryboardChatSteerMode
+                          ? "현재 답변에 추가 지시 보내기"
+                          : isChatAgentStreaming
+                            ? "채팅 스트림 중단"
+                            : isGeneratingImages
+                              ? "스토리보드 이미지 생성 중단"
+                              : "요구사항 채팅 반영"
                       }
                       data-storyboard-chat-submit={
                         isStoryboardChatCancelMode ? undefined : "true"
+                      }
+                      data-storyboard-chat-steer={
+                        isStoryboardChatSteerMode ? "true" : undefined
                       }
                       data-storyboard-chat-cancel={
                         isStoryboardChatCancelMode ? "true" : undefined
@@ -9012,6 +9235,9 @@ export function AdminStoryboardGenerator({
                     const productionNote =
                       formatStoryboardFrameProductionNote(scene);
                     const isSingleFramePage = storyboardFramePageSize === 1;
+                    const isSceneSelected = selectedStoryboardSceneNoSet.has(
+                      scene.sceneNo,
+                    );
                     const frameScriptPreviewLength = 64;
                     const audioPreviewText = isSingleFramePage
                       ? audioText
@@ -9037,20 +9263,20 @@ export function AdminStoryboardGenerator({
                         key={`frame-${scene.sceneNo}-${scene.heatmapEvidence.videoId}`}
                         className={cn(
                           "group relative grid h-full min-h-0 overflow-hidden rounded-2xl border bg-background p-0 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
-                          selectedStoryboardSceneNo === scene.sceneNo
+                          isSceneSelected
                             ? "border-primary/70 shadow-md"
                             : "border-border/75 shadow-sm hover:border-primary/30",
                         )}
                         onClick={() => handleSelectStoryboardScene(scene)}
-                        aria-label={`${scene.sceneNo}컷을 선택해서 채팅 맥락으로 사용`}
-                        aria-pressed={
-                          selectedStoryboardSceneNo === scene.sceneNo
+                        aria-label={
+                          isSceneSelected
+                            ? `${scene.sceneNo}컷 선택 해제`
+                            : `${scene.sceneNo}컷을 선택해서 채팅 맥락으로 사용`
                         }
+                        aria-pressed={isSceneSelected}
                         data-storyboard-image-frame={String(scene.sceneNo)}
                         data-storyboard-selected-frame={
-                          selectedStoryboardSceneNo === scene.sceneNo
-                            ? "true"
-                            : undefined
+                          isSceneSelected ? "true" : undefined
                         }
                         data-storyboard-image-generation-state={
                           isSceneImageGenerating
@@ -9065,7 +9291,7 @@ export function AdminStoryboardGenerator({
                         }
                         style={{ gridTemplateRows: "minmax(0, 1fr) auto" }}
                       >
-                        {selectedStoryboardSceneNo === scene.sceneNo ? (
+                        {isSceneSelected ? (
                           <span
                             aria-hidden="true"
                             className="pointer-events-none absolute inset-0 z-50 rounded-2xl border-2 border-primary"
@@ -9125,14 +9351,24 @@ export function AdminStoryboardGenerator({
                             }}
                           >
                             <Badge
-                              className="rounded-full bg-black/70 px-2 py-0.5 text-[11px] font-bold text-white shadow-sm hover:bg-black/70"
+                              className="rounded-full px-2 py-0.5 text-[11px] font-bold shadow-sm"
                               data-storyboard-cut-badge="true"
+                              data-storyboard-cut-badge-background="visible"
+                              style={{
+                                backgroundColor: "rgba(15, 23, 42, 0.82)",
+                                color: "#fff",
+                              }}
                             >
                               CUT {String(scene.sceneNo).padStart(2, "0")}
                             </Badge>
                             <Badge
-                              className="rounded-full bg-white/85 px-2 py-0.5 text-[11px] font-bold text-slate-900 shadow-sm hover:bg-white/85"
+                              className="rounded-full px-2 py-0.5 text-[11px] font-bold shadow-sm"
                               data-storyboard-cut-time-badge="true"
+                              data-storyboard-cut-time-badge-background="visible"
+                              style={{
+                                backgroundColor: "rgba(255, 255, 255, 0.92)",
+                                color: "#0f172a",
+                              }}
                             >
                               {scene.heatmapEvidence.peakTime}
                             </Badge>

@@ -123,6 +123,15 @@ function buildRunDailyStaleWarningSnippet(): string {
   ].join('\n');
 }
 
+function buildRunDailyManifestChecklistSnippet(): string {
+  return [
+    '# run_daily current-summary manifest 점검',
+    'RUN_DAILY_MANIFEST_PATH="${RUN_DAILY_MANIFEST_PATH:-/path/to/backend/log/cron/current-summary.json}"',
+    'test -s "$RUN_DAILY_MANIFEST_PATH" || { echo "current-summary manifest missing"; exit 1; }',
+    'python3 -m json.tool "$RUN_DAILY_MANIFEST_PATH" >/dev/null',
+  ].join('\n');
+}
+
 function buildRunDailyGdriveUploadSnippet(): string {
   return [
     '# run_daily GDrive upload 상태 확인',
@@ -517,6 +526,10 @@ export function buildAdminOpsChecklist(
   const hasRunDailyExecutableIssue = Boolean(runDaily?.scriptPath) && !(runDaily?.executable ?? false);
   const hasRunDailyStaleIssue = Boolean(runDaily && runDaily.stale);
   const hasRunDailyFailureIssue = Boolean(runDaily?.failedRequiredSteps && runDaily.failedRequiredSteps.length > 0);
+  const hasRunDailyManifestIssue = Boolean(
+    runDaily?.manifestStatus === 'missing'
+    || runDaily?.manifestStatus === 'unreadable',
+  );
   const gdriveUploadStatus = runDaily?.gdriveUpload?.status;
   const hasRunDailyGdriveUploadIssue = Boolean(
     runDaily?.gdriveUpload?.terminalIncomplete
@@ -562,6 +575,21 @@ export function buildAdminOpsChecklist(
         'run_daily 스크립트가 실행 권한을 갖고 있지 않습니다. 운영 서버에서 `chmod +x`로 실행 권한을 부여해 주세요.',
       command: buildRunDailyChecklistSnippet(),
       commandSnippet: buildRunDailyChecklistSnippet(),
+      source: 'run_daily',
+    });
+  }
+  if (hasRunDailyManifestIssue) {
+    const unreadable = runDaily?.manifestStatus === 'unreadable';
+    checklist.push({
+      id: unreadable ? 'run-daily-manifest-unreadable' : 'run-daily-manifest-missing',
+      title: unreadable ? 'run_daily current-summary 읽기 실패' : 'run_daily current-summary 미감지',
+      severity: unreadable ? 'high' : 'medium',
+      category: 'environment',
+      action: unreadable
+        ? 'run_daily current-summary manifest가 있지만 파싱하지 못했습니다. JSON 형식과 마지막 실행 쓰기 완료 여부를 확인하세요.'
+        : 'run_daily current-summary manifest가 없어 운영 상태를 UNKNOWN으로 표시합니다. 다음 run_daily 실행이 manifest를 쓰는지와 RUN_DAILY_MANIFEST_PATH를 확인하세요.',
+      command: buildRunDailyManifestChecklistSnippet(),
+      commandSnippet: buildRunDailyManifestChecklistSnippet(),
       source: 'run_daily',
     });
   }
@@ -908,10 +936,17 @@ export async function getAdminSystemStatus(
   const runDailyScriptPath = runtime.resolveRunDailyScriptPath(env);
   const runDailyLogInfo = runtime.resolveRunDailyLogInfo(env, runDailyScriptPath);
   const runDailyManifestInfo = runtime.resolveRunDailyManifestStatus(env, runDailyScriptPath);
-  const runDailyLogTailInfo = runDailyManifestInfo.finalStatus
+  const hasReadableRunDailyManifest = runDailyManifestInfo.manifestStatus === 'available';
+  const runDailyLogTailInfo = hasReadableRunDailyManifest
     ? { failedRequiredSteps: [], optionalSkips: [], downstreamSkips: [] }
     : runtime.parseRunDailyLogTailStatus(runDailyLogInfo.logPath);
-  const runDailyFailureInfo = runDailyManifestInfo.finalStatus ? runDailyManifestInfo : runDailyLogTailInfo;
+  const runDailyFailureInfo = hasReadableRunDailyManifest
+    ? runDailyManifestInfo
+    : {
+      ...runDailyLogTailInfo,
+      finalStatus: runDailyManifestInfo.finalStatus ?? runDailyLogTailInfo.finalStatus,
+      detail: runDailyLogTailInfo.detail ?? runDailyManifestInfo.detail,
+    };
   const [githubActions, supabaseCounters] = await Promise.all([
     resolveGithubActionsStatus(env, asOf, timeoutMs),
     resolveSupabaseCounterStatus(env, asOf, timeoutMs),
@@ -933,6 +968,7 @@ export async function getAdminSystemStatus(
       ...(runDailyLogInfo.logPath ? { latestLogPath: sanitizeRunDailyPath(runDailyLogInfo.logPath) } : {}),
       ...(runDailyLogInfo.logUpdatedAt ? { latestLogUpdatedAt: runDailyLogInfo.logUpdatedAt } : {}),
       ...(runDailyManifestInfo.manifestPath ? { latestManifestPath: sanitizeRunDailyPath(runDailyManifestInfo.manifestPath) } : {}),
+      ...(runDailyManifestInfo.manifestStatus ? { manifestStatus: runDailyManifestInfo.manifestStatus } : {}),
       ...(runDailyFailureInfo.finalStatus ? { finalStatus: runDailyFailureInfo.finalStatus } : {}),
       ...(runDailyManifestInfo.finalExitCode !== undefined ? { finalExitCode: runDailyManifestInfo.finalExitCode } : {}),
       ...(runDailyDetail ? { detail: runDailyDetail } : {}),
