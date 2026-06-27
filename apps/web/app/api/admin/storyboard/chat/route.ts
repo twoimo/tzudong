@@ -4,32 +4,57 @@ import {
   hasUnsafeStoryboardInstructionRequest,
   sanitizeStoryboardPublicText,
 } from '@/lib/admin/storyboard/prompt-safety';
+import {
+  buildStoryboardRagErrorStatus,
+  formatStoryboardRagFailureTraceDetail,
+} from '@/lib/admin/storyboard/rag-error-status';
+import {
+  buildStoryboardRouteHeaders,
+  createStoryboardRouteTelemetry,
+  readStoryboardRouteJson,
+  STORYBOARD_ROUTE_NO_STORE_HEADERS,
+  STORYBOARD_ROUTE_SSE_HEADERS,
+} from '@/lib/admin/storyboard/route-telemetry';
 import { requireAdmin } from '@/lib/auth/require-admin';
 import type { StoryboardThinkingTraceEntry } from '@/lib/admin/storyboard/types';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const streamHeaders = {
-  'Cache-Control': 'no-store, no-transform',
-  'Content-Type': 'text/event-stream; charset=utf-8',
-  Connection: 'keep-alive',
-  'X-Accel-Buffering': 'no',
-} as const;
 
 function encodeSse(event: string, data: unknown) {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 }
 
-function jsonError(error: string, status: number, detail?: string) {
-  return Response.json({ error, detail }, { status, headers: { 'Cache-Control': 'no-store' } });
+function jsonError(
+  error: string,
+  status: number,
+  telemetry: ReturnType<typeof createStoryboardRouteTelemetry>,
+  detail?: string,
+) {
+  const payload = { error, detail };
+  return Response.json(
+    payload,
+    {
+      status,
+      headers: buildStoryboardRouteHeaders(telemetry, STORYBOARD_ROUTE_NO_STORE_HEADERS, payload),
+    },
+  );
 }
 
 function normalizeRouteError(error: unknown) {
   console.error('[admin/storyboard/chat] unexpected failure:', error);
+  const failure = buildStoryboardRagErrorStatus(error, {
+    fallbackCauseCode: 'storyboard_chat_agent_failed',
+  });
   return {
     error: 'storyboard_chat_agent_failed',
-    detail: error instanceof Error ? error.message : '채팅 작업을 처리하지 못했습니다.',
+    causeCode: failure.causeCode,
+    stage: failure.stage,
+    stageLabel: failure.stageLabel,
+    detail: failure.message,
+    nextActions: failure.nextActions,
+    trace: failure.trace,
     status: 500,
   };
 }
@@ -117,11 +142,18 @@ function isRouteConversationReadbackMessage(
   );
 }
 
+function hasRequiredStoryboardRagWorkerUrl() {
+  return Boolean(process.env.STORYBOARD_RAG_WORKER_URL?.trim());
+}
+
 function shouldSkipLocalStoryboardBackendAgentOnVercel() {
   return (
     process.env.VERCEL === '1' &&
-    !process.env.STORYBOARD_AGENT_COMMAND?.trim() &&
-    !process.env.STORYBOARD_AGENT_ROOT?.trim()
+    (
+      !process.env.STORYBOARD_AGENT_COMMAND?.trim() ||
+      !process.env.STORYBOARD_AGENT_ROOT?.trim() ||
+      !hasRequiredStoryboardRagWorkerUrl()
+    )
   );
 }
 
@@ -146,7 +178,7 @@ function createRouteTraceEntry({
     id: sanitizeStatusText(id, 80) || `route-trace-${Date.now()}`,
     label: sanitizeStatusText(label, 80) || '처리 단계',
     status,
-    ...(detail ? { detail: sanitizeStatusText(detail, 180) } : {}),
+    ...(detail ? { detail: sanitizeStatusText(detail, 520) } : {}),
     timestamp: new Date().toISOString(),
   };
 }
@@ -293,9 +325,15 @@ function getRouteFocusSummary(payload: StoryboardChatPayload) {
   if (!focusContext || typeof focusContext !== 'object' || Array.isArray(focusContext)) {
     return '현재 화면 기준';
   }
-  const candidate = focusContext as { kind?: unknown; label?: unknown; sceneNo?: unknown };
+  const candidate = focusContext as { kind?: unknown; label?: unknown; sceneNo?: unknown; sceneNos?: unknown };
   const label = sanitizeStatusText(candidate.label, 48);
   const sceneNo = Number(candidate.sceneNo);
+  const sceneNos = Array.isArray(candidate.sceneNos)
+    ? candidate.sceneNos.map((item) => Number(item)).filter(Number.isFinite)
+    : [];
+  if (candidate.kind === 'cut' && sceneNos.length > 1) {
+    return `${sceneNos.length}개 CUT 선택 기준`;
+  }
   if (candidate.kind === 'cut' && Number.isFinite(sceneNo)) {
     return `CUT ${String(Math.trunc(sceneNo)).padStart(2, '0')} 선택 기준`;
   }
@@ -377,20 +415,39 @@ function wantsRouteStoryboardGeneration(message: string) {
     /(?:생성해|만들어|구성해|작성해|뽑아|실행해|짜줘|짜\s*줘)$/i.test(message.trim())
   );
 }
+function isRouteStoryboardRagProcessQuestionLike(message: string) {
+  const normalized = normalizeRouteChatMessage(message);
+  if (!normalized) return false;
+  if (wantsRouteStoryboardGeneration(normalized) || /(?:초기화|리셋|reset)/i.test(normalized)) {
+    return false;
+  }
+
+  return (
+    /(?:rag|r\.a\.g|검색\s*과정|retrieval|retrieve|랭스미스|langsmith|trace|추적|컨텍스트|contextual|임베딩|embedding|리랭커|reranker|bge|llava|캡셔닝|captioning|ollama|올라마|exaone|eeve|qwen|solar|모델\s*스택|model\s*stack)/i.test(
+      normalized,
+    ) &&
+    /(?:과정|작동|동작|보여|알려|설명|왜|어떻게|무슨|뭐|무엇|trace|추적|stack|스택|model|모델|langsmith|랭스미스|\?)/i.test(
+      normalized,
+    )
+  );
+}
+
 
 function hasRouteStoryboardMutationCommand(message: string) {
   return (
-    /(?:초기화|리셋|reset)/i.test(message) ||
-    wantsRouteStoryboardGeneration(message) ||
-    /(?:수정|변경|바꿔|바꿔줘|고쳐|보완|짧게|줄여|재생성|다시\s*생성|보여줘|이동|가줘|열어|선택|포커스|focus|show|open)/i.test(message)
+    !isRouteStoryboardRagProcessQuestionLike(message) &&
+    (/(?:초기화|리셋|reset)/i.test(message) ||
+      wantsRouteStoryboardGeneration(message) ||
+      /(?:수정|변경|바꿔|바꿔줘|고쳐|보완|짧게|줄여|재생성|다시\s*생성|보여줘|이동|가줘|열어|선택|포커스|focus|show|open)/i.test(message))
   );
 }
 
 function isRouteStoryboardRuntimeMetaQuestion(message: string) {
   const normalized = normalizeRouteChatMessage(message);
   if (!normalized || hasRouteStoryboardMutationCommand(normalized)) return false;
+  if (isRouteStoryboardRagProcessQuestionLike(normalized)) return true;
   const hasMetaSubject =
-    /(?:임베딩|embedding|리랭커|reranker|rerank|bge|모델|model|gpt|openai|langgraph|랭그래프|그래프|graph|에이전트|agent|supervisor|researcher|intern|designer|로컬\s*어댑터|폴백|fallback|런타임|runtime|브릿지|bridge|프로세스|process|메모리|memory|node\.?exe|bun\.?exe)/i.test(
+    /(?:rag|r\.a\.g|검색|검색\s*과정|retrieval|retrieve|랭스미스|langsmith|trace|추적|컨텍스트|contextual|캡셔닝|captioning|llava|ollama|올라마|exaone|eeve|qwen|solar|임베딩|embedding|리랭커|reranker|rerank|bge|모델|model|gpt|openai|langgraph|랭그래프|그래프|graph|에이전트|agent|supervisor|researcher|intern|designer|로컬\s*어댑터|폴백|fallback|런타임|runtime|브릿지|bridge|프로세스|process|메모리|memory|node\.?exe|bun\.?exe)/i.test(
       normalized,
     );
   const hasQuestionIntent =
@@ -462,6 +519,7 @@ function isRouteStoryboardFieldQuestion(message: string) {
 }
 
 function isRouteStoryboardReviewRequest(message: string) {
+  if (isRouteStoryboardRagProcessQuestionLike(message)) return false;
   if (wantsRouteStoryboardGeneration(message) || /(?:초기화|리셋|reset)/i.test(message)) return false;
   if (isRouteStoryboardSuggestionConversation(message) || isRouteStoryboardFieldQuestion(message)) return false;
   return /(검토|리뷰|평가|피드백|설명|알려줘|요약|정리|괜찮|어때|확인)/i.test(message);
@@ -644,13 +702,39 @@ function getRouteDecisionTraceDetail(result: StoryboardChatAgentResultForRoute) 
   return '대화 답변 또는 현재 화면 검토';
 }
 
+function normalizeRouteTraceStatus(value: unknown): StoryboardRouteTraceStatus {
+  return value === 'pending' ||
+    value === 'running' ||
+    value === 'done' ||
+    value === 'failed' ||
+    value === 'cancelled'
+    ? value
+    : 'done';
+}
+
+function sendBackendRagTrace(send: SseSend, result: StoryboardChatAgentResultForRoute) {
+  const rawTrace = result.backendAgent.diagnostics.ragTrace;
+  if (!Array.isArray(rawTrace)) return;
+  for (const [index, item] of rawTrace.entries()) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) continue;
+    const candidate = item as Record<string, unknown>;
+    sendTrace(send, {
+      id: sanitizeStatusText(candidate.id, 80) || `rag-trace-${index}`,
+      label: sanitizeStatusText(candidate.label, 80) || 'RAG 추적',
+      status: normalizeRouteTraceStatus(candidate.status),
+      detail: sanitizeStatusText(candidate.detail, 520),
+    });
+  }
+}
+
 export async function POST(request: NextRequest) {
+  const telemetry = createStoryboardRouteTelemetry('admin-storyboard-chat');
   const auth = await requireAdmin({ allowDevAdminBypassCookie: true });
   if (!auth.ok) return auth.response;
 
-  const payload = await request.json().catch(() => null) as unknown;
+  const payload = await readStoryboardRouteJson(request, telemetry) as unknown;
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
-    return jsonError('payload_json_invalid', 400, '채팅 요청 JSON이 필요합니다.');
+    return jsonError('payload_json_invalid', 400, telemetry, '채팅 요청 JSON이 필요합니다.');
   }
   const imageAttachmentResult = normalizeRouteImageAttachments(
     (payload as { imageAttachments?: unknown }).imageAttachments,
@@ -659,6 +743,7 @@ export async function POST(request: NextRequest) {
     return jsonError(
       imageAttachmentResult.error,
       imageAttachmentResult.status,
+      telemetry,
       imageAttachmentResult.detail,
     );
   }
@@ -669,13 +754,14 @@ export async function POST(request: NextRequest) {
     return jsonError(
       conversationMessageResult.error,
       conversationMessageResult.status,
+      telemetry,
       conversationMessageResult.detail,
     );
   }
   const message = (payload as { message?: unknown }).message;
   const normalizedMessage = typeof message === 'string' ? message.trim() : '';
   if (!normalizedMessage && imageAttachmentResult.attachments.length === 0) {
-    return jsonError('message_required', 400, '채팅에 반영할 내용을 입력해 주세요.');
+    return jsonError('message_required', 400, telemetry, '채팅에 반영할 내용을 입력해 주세요.');
   }
   const normalizedPayload: StoryboardChatPayload = {
     ...(payload as StoryboardChatPayload),
@@ -698,11 +784,17 @@ export async function POST(request: NextRequest) {
           status: 'done',
           detail: getRouteRequestSummary(normalizedPayload),
         });
+        sendTrace(send, {
+          id: 'route-payload',
+          label: '요청 페이로드 계측',
+          status: 'done',
+          detail: `${telemetry.requestBytes} bytes · 첨부 ${imageAttachmentResult.attachments.length}장 · 최근 대화 ${conversationMessageResult.conversationMessages.length}개`,
+        });
         for (const statusMessage of getInitialStatusMessages(normalizedPayload)) {
           send('status', { message: statusMessage });
         }
         if (shouldSkipLocalStoryboardBackendAgentOnVercel()) {
-          throw new Error('Vercel production does not include the local storyboard backend agent. Configure STORYBOARD_AGENT_COMMAND to enable storyboard chat.');
+          throw new Error('required_storyboard_rag_worker_url_missing');
         }
         sendTrace(send, {
           id: 'route-agent',
@@ -722,6 +814,7 @@ export async function POST(request: NextRequest) {
           status: 'done',
           detail: getRouteAgentTraceDetail(result),
         });
+        sendBackendRagTrace(send, result);
         sendTrace(send, {
           id: 'route-decision',
           label: '화면 반영 결정',
@@ -746,13 +839,16 @@ export async function POST(request: NextRequest) {
           send('status', { message: getResolvedStatusMessage(result) });
         }
         send('patch', publicResult);
-        send('done', publicResult);
+        send('done', { ok: true, transport: { patchEvent: 'patch', duplicateResultOmitted: true } });
       } catch (error) {
+        const failure = buildStoryboardRagErrorStatus(error, {
+          fallbackCauseCode: 'storyboard_chat_agent_failed',
+        });
         sendTrace(send, {
-          id: 'route-agent',
-          label: '채팅 에이전트 실행',
+          id: `rag-failure-${failure.stage}`,
+          label: `${failure.stageLabel} 중단`,
           status: 'failed',
-          detail: error instanceof Error ? error.message : '채팅 처리 실패',
+          detail: formatStoryboardRagFailureTraceDetail(failure),
         });
         send('error', normalizeRouteError(error));
       } finally {
@@ -761,5 +857,5 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  return new Response(stream, { headers: streamHeaders });
+  return new Response(stream, { headers: buildStoryboardRouteHeaders(telemetry, STORYBOARD_ROUTE_SSE_HEADERS) });
 }

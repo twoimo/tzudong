@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { buildStoryboardAgentGraphFidelity } from './agent-graph-fidelity';
+import { runStoryboardLocalRag } from './rag';
 import { sanitizeStoryboardPrompt } from './prompt-safety';
 import {
   STORYBOARD_MAX_SEGMENT_COUNT,
@@ -143,11 +144,37 @@ const GENERIC_TOPIC_PROFILE: StoryboardTopicProfile = {
   sensoryWords: ['푸짐한', '맛있는', '든든한', '생생한'],
 };
 
-function buildStoryboardAudienceTitle(profile: StoryboardTopicProfile) {
-  const label = profile.label.trim();
-  if (!label) return '조회수 많이 나올 것 같은 먹방 스토리보드';
-  if (/조회수|바이럴|반복\s*시청/.test(label)) return label;
-  return `조회수 많이 나올 것 같은 ${label}`;
+function normalizeStoryboardTitleCandidate(value: string) {
+  return value
+    .replace(/[“”"'`]/g, '')
+    .replace(/\s+/g, ' ')
+    .replace(/^조회수\s*많이\s*나올\s*것\s*같은\s*/i, '')
+    .replace(/\s*(?:이|가)\s*나오는\s*/g, ' ')
+    .replace(/\s*(?:을|를)?\s*\d+\s*컷(?:으로)?\s*.*$/u, '')
+    .replace(/\s*(?:으로|로)?\s*(?:구성|생성|제작|만들).*/u, '')
+    .replace(/\s*(?:해줘|해주세요|짜줘|만들어줘)\s*$/u, '')
+    .trim();
+}
+
+function trimStoryboardTitleCandidate(candidate: string) {
+  const normalized = candidate.replace(/\s+/g, ' ').trim();
+  if (normalized.length <= 34) return normalized;
+  return `${normalized.slice(0, 33)}…`;
+}
+
+function buildStoryboardAudienceTitle(
+  request: StoryboardGenerateRequest,
+  profile: StoryboardTopicProfile,
+) {
+  const promptTitle = trimStoryboardTitleCandidate(
+    normalizeStoryboardTitleCandidate(request.prompt),
+  );
+  if (promptTitle) return promptTitle;
+
+  const label = normalizeStoryboardTitleCandidate(profile.label);
+  if (label) return label;
+
+  return '먹방 하이라이트 스토리보드';
 }
 
 function toNumber(value: unknown, fallback = 0) {
@@ -897,6 +924,13 @@ export function generateLocalStoryboard(input?: Partial<StoryboardGenerateReques
     isFallbackData,
     mode,
   });
+  const localRag = runStoryboardLocalRag({
+    request,
+    planner,
+    sources: selectedSources,
+    topK: request.segmentCount,
+    candidateLimit: Math.min(32, selectedSources.length * 2),
+  });
   const scenes = buildScenes(request, selectedSources, planner);
   const ahp = buildAhpReport(request, selectedSources, scannedFiles);
   const agentGraphFidelity = buildStoryboardAgentGraphFidelity({
@@ -916,20 +950,29 @@ export function generateLocalStoryboard(input?: Partial<StoryboardGenerateReques
         'backend/storyboard-agent의 supervisor→researcher→designer 구조를 콘솔 단일 생성 플로우로 축약',
         'search_scene_data의 피크 구간 캡션 보강 원칙을 로컬 히트맵 marker 기반 근거로 대체',
         'backend/restaurant-crawling/data/tzuyang/heatmap jsonl의 most_replayed_markers와 intensityScoreNormalized를 핵심 랭킹 신호로 사용',
+        '로컬 RAG 진단은 heatmap_marker 기반 사전 점검만 수행하며, BGE/리랭커 사용은 required Python worker 성공 시에만 인정',
+        '스크린샷 모델 스택(a.x contextual retrieval, bge-m3 dense/sparse, bge-reranker-v2-m3, LLaVA-NeXT-Video, Gemini/OpenAI/Ollama judge 모델)은 required provider로 등록하고 미설치/미연결 시 fail-closed 처리',
         `StoryboardPlannerOutput ${planner.topicProfile.label} / ${planner.arcPlan.roles.length}컷 역할 매핑 사용`,
       ],
       localGapsHandled: [
-        'LangGraph/OpenAI/Supabase/Tavily 자격증명 없이도 로컬 jsonl 히트맵으로 생성 가능',
+        '스토리보드 생성 API는 required backend/RAG worker 경로를 사용하며 자격증명·모델·worker 누락 시 성공처럼 꾸미지 않음',
         '라이브 자막/프레임 캡션이 없을 때도 씬별 URL·피크 시간·리플레이 강도를 노출',
         'PD가 관리자 콘솔에서 파라미터를 조정하고 결과를 복사할 수 있게 API와 UI를 분리',
         `${planner.sourceTrace.evidenceLabel} / ${planner.sourceTrace.imageStatusLabel} 상태를 생성 결과에 명시`,
+        localRag.status === 'fixture_only'
+          ? `로컬 RAG 사전점검: ${localRag.selectedCount}개 heatmap_marker 근거를 선택했지만 required worker 성공 전에는 fixture_only로만 기록`
+          : localRag.status === 'used'
+            ? `라이브 RAG worker 검증: ${localRag.selectedCount}개 근거를 required provider 결과로 선택`
+            : `로컬 RAG fail-closed: ${localRag.providerUnavailableReason ?? 'not_used'}`,
+        `RAG 모델 스택: ${localRag.modelStack.models.length}개 스크린샷 모델/프로바이더 역할을 required fail-closed provider로 등록`,
         ...(isFallbackData
-          ? ['히트맵 디렉터리 또는 사용 가능한 jsonl이 없어도 데모/샘플 모드로 로컬 생성 흐름을 검증']
+          ? ['히트맵 디렉터리 또는 jsonl 누락은 required backend generation의 실패 사유로 전달']
           : []),
       ],
+      localRag,
     },
     storyboard: {
-      title: `${buildStoryboardAudienceTitle(planner.topicProfile)} — ${TONE_LABELS[request.tone]}`,
+      title: `${buildStoryboardAudienceTitle(request, planner.topicProfile)} — ${TONE_LABELS[request.tone]}`,
       logline: `쯔양님 기존 영상의 가장 많이 본 구간 ${totalMarkers}개를 근거로 ${request.targetLengthMinutes}분 분량의 새 먹방 흐름을 구성합니다.`,
       operatorBrief: '관리자 콘솔에서 프롬프트와 톤을 조정한 뒤, 씬별 히트맵 근거를 확인하고 제작 회의 자료로 복사해 사용합니다.',
       scenes,

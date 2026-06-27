@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import type {
     DashboardRestaurantItem,
     DashboardRestaurantsResponse,
@@ -12,6 +13,17 @@ import {
     type DashboardRestaurantRow,
 } from '@/lib/dashboard/supabase';
 
+const SUMMARY_CACHE_TTL_MS = Math.max(0, Number(process.env.DASHBOARD_SUMMARY_CACHE_TTL_MS) || 60_000);
+const SUMMARY_CACHE_ENABLED = process.env.DASHBOARD_SUMMARY_CACHE_ENABLED !== '0';
+const SUMMARY_VIDEO_LIMIT = Math.min(Math.max(Number(process.env.DASHBOARD_SUMMARY_VIDEO_LIMIT) || 40, 1), 80);
+
+type DashboardSummaryCacheEntry = {
+    expiresAt: number;
+    response: DashboardSummaryResponse;
+};
+
+let dashboardSummaryCache: DashboardSummaryCacheEntry | null = null;
+let dashboardSummaryInFlight: Promise<DashboardSummaryResponse> | null = null;
 type RestaurantsFilter = {
     q?: string;
     category?: string;
@@ -60,6 +72,76 @@ function sortRowsByUpdatedDesc(rows: DashboardRestaurantRow[]): DashboardRestaur
         const bMs = b.updated_at ? new Date(b.updated_at).getTime() : 0;
         return bMs - aMs;
     });
+}
+
+function buildDashboardSummaryChecksum(rows: DashboardRestaurantRow[]): string {
+    const hash = createHash('sha256');
+    for (const row of sortRowsByUpdatedDesc(rows)) {
+        const meta = parseYoutubeMeta(row.youtube_meta);
+        hash.update(JSON.stringify({
+            id: row.id,
+            updatedAt: row.updated_at || null,
+            status: row.status || null,
+            name: row.name || null,
+            categories: [...(row.categories || [])].sort(),
+            hasCoordinates: typeof row.lat === 'number' && typeof row.lng === 'number',
+            youtubeLink: row.youtube_link || null,
+            youtubeTitle: meta.title || null,
+            youtubePublishedAt: meta.publishedAt || null,
+            isNotSelected: row.is_not_selected,
+            geocodingSuccess: row.geocoding_success,
+        }));
+        hash.update('\n');
+    }
+    return hash.digest('hex').slice(0, 24);
+}
+
+function withDashboardSummaryFreshness(
+    response: DashboardSummaryResponse,
+    options: {
+        generatedAt: string;
+        source: 'row-derived' | 'row-derived-cache';
+        cacheStatus: NonNullable<DashboardSummaryResponse['freshness']>['cacheStatus'];
+        ttlMs: number;
+        videoLimit: number;
+        expiresAt: string | null;
+        checksum: string;
+        rowCount: number;
+    },
+): DashboardSummaryResponse {
+    return {
+        ...response,
+        freshness: {
+            generatedAt: options.generatedAt,
+            source: options.source,
+            approvedOnly: true,
+            rowCount: options.rowCount,
+            checksum: options.checksum,
+            ttlMs: options.ttlMs,
+            videoLimit: options.videoLimit,
+            expiresAt: options.expiresAt,
+            cacheStatus: options.cacheStatus,
+        },
+    };
+}
+
+function copyDashboardSummaryWithCacheStatus(
+    response: DashboardSummaryResponse,
+    cacheStatus: NonNullable<DashboardSummaryResponse['freshness']>['cacheStatus'],
+): DashboardSummaryResponse {
+    if (!response.freshness) return response;
+    return {
+        ...response,
+        freshness: {
+            ...response.freshness,
+            cacheStatus,
+        },
+    };
+}
+
+export function clearDashboardSummaryCache() {
+    dashboardSummaryCache = null;
+    dashboardSummaryInFlight = null;
 }
 
 function normalizeRestaurantsFilter(filter: RestaurantsFilter) {
@@ -201,24 +283,78 @@ export function buildDashboardSummaryFromRows(
         .slice(0, 12)
         .map(([name, count]) => ({ name, count }));
 
-    const videos = makeVideoList(rows).slice(0, 80);
+    const videos = makeVideoList(rows).slice(0, SUMMARY_VIDEO_LIMIT);
 
-    return {
-        asOf: latestUpdatedAt || now.toISOString(),
-        totals: {
-            restaurants: rows.length,
-            videos: videoIds.size,
-            categories: categories.size,
-            withCoordinates,
+    const generatedAt = now.toISOString();
+    return withDashboardSummaryFreshness(
+        {
+            asOf: latestUpdatedAt || generatedAt,
+            totals: {
+                restaurants: rows.length,
+                videos: videoIds.size,
+                categories: categories.size,
+                withCoordinates,
+            },
+            topCategories,
+            videos,
         },
-        topCategories,
-        videos,
-    };
+        {
+            generatedAt,
+            source: 'row-derived',
+            cacheStatus: 'bypass',
+            ttlMs: 0,
+            expiresAt: null,
+            checksum: buildDashboardSummaryChecksum(rows),
+            videoLimit: videos.length,
+            rowCount: rows.length,
+        },
+    );
 }
 
 export async function getDashboardSummary(forceRefresh = false): Promise<DashboardSummaryResponse> {
-    const rows = await getRestaurantRows(forceRefresh, 'anon');
-    return buildDashboardSummaryFromRows(rows);
+    if (forceRefresh || !SUMMARY_CACHE_ENABLED || SUMMARY_CACHE_TTL_MS <= 0) {
+        clearDashboardSummaryCache();
+        const rows = await getRestaurantRows(forceRefresh, 'anon');
+        return buildDashboardSummaryFromRows(rows);
+    }
+
+    const cached = dashboardSummaryCache;
+    if (cached && cached.expiresAt > Date.now()) {
+        return copyDashboardSummaryWithCacheStatus(cached.response, 'hit');
+    }
+
+    if (dashboardSummaryInFlight) {
+        const response = await dashboardSummaryInFlight;
+        return copyDashboardSummaryWithCacheStatus(response, 'shared');
+    }
+
+    dashboardSummaryInFlight = (async () => {
+        const rows = await getRestaurantRows(forceRefresh, 'anon');
+        const generatedAt = new Date();
+        const expiresAt = generatedAt.getTime() + SUMMARY_CACHE_TTL_MS;
+        const baseResponse = buildDashboardSummaryFromRows(rows, generatedAt);
+        const response = withDashboardSummaryFreshness(
+            baseResponse,
+            {
+                generatedAt: generatedAt.toISOString(),
+                source: 'row-derived-cache',
+                cacheStatus: 'miss',
+                ttlMs: SUMMARY_CACHE_TTL_MS,
+                expiresAt: new Date(expiresAt).toISOString(),
+                checksum: buildDashboardSummaryChecksum(rows),
+                videoLimit: baseResponse.videos.length,
+                rowCount: rows.length,
+            },
+        );
+        dashboardSummaryCache = { expiresAt, response };
+        return response;
+    })();
+
+    try {
+        return await dashboardSummaryInFlight;
+    } finally {
+        dashboardSummaryInFlight = null;
+    }
 }
 
 export async function getDashboardRestaurants(
