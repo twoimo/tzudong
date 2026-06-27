@@ -1,8 +1,15 @@
 # 2026-06-20 RLM 운영 요약
 
 ## 상태
-이 문서는 **2026-06-20 시점의 역사적 요약본**이며 현재 운영 수치의 source of truth가 아니다.
-현재 geocoding backlog 수치는 `backend/docs/pending-geocoding-backlog-20260507.md`를 보고, 현재 코드 기준 운영 상태는 `/admin`의 운영 상태 센터를 기준으로 확인한다.
+
+이 문서는 **2026-06-20 시점의 역사적 요약본**이며 현재 운영 수치의 source of truth가 아니다. 2026-06-27 G006 refresh는 `artifacts/infra-g006-rlm-current-verification.json`, `artifacts/infra-g006-live-system-status.json`, `artifacts/infra-g006-pending-geocoding-summary.json`을 기준으로 한다. 현재 geocoding backlog 세부 큐는 `artifacts/infra-g006-pending-geocoding-backlog.json` / `artifacts/infra-g006-browser-review-lane.json`을 보고, 현재 코드 기준 운영 상태는 `/admin`의 운영 상태 센터를 기준으로 확인한다.
+
+## 2026-06-27 G006 refresh
+
+- run_daily live manifest: `manifestStatus=missing`, `finalStatus=UNKNOWN`, expected path `backend/log/cron/current-summary.json`; admin status now reports this explicitly instead of treating absent evidence as success.
+- data-contract drift: `python -m unittest backend.pipeline.test_data_contracts_unittest` is current green (`19 tests / 0 failures`).
+- run_daily regression: `python -m unittest backend.utils.tests.test_run_daily_regression` is current green (`53 tests`, `4 skipped`).
+- geocoding backlog: `638` pending rows (`stage 1=317`, `stage 2=320`, `unknown=1`), direct same-name coordinate reuse lane `11`, browser-review lane `627`.
 ## 우선순위
 ### P0
 1. **run_daily live manifest 수집/노출 복구**

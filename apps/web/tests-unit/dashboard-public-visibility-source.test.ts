@@ -19,6 +19,18 @@ describe('dashboard public Supabase visibility contracts', () => {
     expect(supabaseSource).toContain('Public dashboard APIs must match the public home/map visibility contract');
   });
 
+  test('restaurants Data API migration restricts browser reads to approved rows', () => {
+    const migrationSource = source('..\\..\\backend\\supabase\\migrations\\20260627150000_restrict_restaurants_public_select_approved.sql');
+
+    expect(migrationSource).toContain('alter table public.restaurants enable row level security');
+    expect(migrationSource).toContain('drop policy if exists "Enable read access for all users"');
+    expect(migrationSource).toContain('restaurants_public_approved_select');
+    expect(migrationSource).toContain("using (status = 'approved')");
+    expect(migrationSource).toContain('restaurants_authenticated_admin_update');
+    expect(migrationSource).toContain('public.is_user_admin((select auth.uid()))');
+    expect(migrationSource).toContain("notify pgrst, 'reload schema'");
+  });
+
   test('public dashboard endpoints use anon-scoped rows rather than service-role rows', () => {
     const summarySource = source('lib/dashboard/summary.ts');
     const summaryRouteSource = source('app/api/dashboard/summary/route.ts');
@@ -36,6 +48,25 @@ describe('dashboard public Supabase visibility contracts', () => {
     expect(summaryRouteSource).not.toContain('SUPABASE_SERVICE_ROLE_KEY');
     expect(restaurantsRouteSource).not.toContain('SUPABASE_SERVICE_ROLE_KEY');
     expect(videoRouteSource).not.toContain('SUPABASE_SERVICE_ROLE_KEY');
+  });
+
+  test('dashboard summary cache keeps anon row fallback and explicit rollback metadata', () => {
+    const summarySource = source('lib/dashboard/summary.ts');
+    const summaryRouteSource = source('app/api/dashboard/summary/route.ts');
+    const dashboardTypesSource = source('types/dashboard.ts');
+
+    expect(summarySource).toContain('DASHBOARD_SUMMARY_CACHE_ENABLED');
+    expect(summarySource).toContain('dashboardSummaryCache');
+    expect(summarySource).toContain("getRestaurantRows(forceRefresh, 'anon')");
+    expect(summarySource).toContain("source: 'row-derived-cache'");
+    expect(summarySource).toContain('buildDashboardSummaryChecksum(rows)');
+    expect(summarySource).toContain('SUMMARY_VIDEO_LIMIT');
+    expect(summarySource).toContain('clearDashboardSummaryCache');
+    expect(summaryRouteSource).toContain('X-Dashboard-Summary-Checksum');
+    expect(summaryRouteSource).toContain('X-Dashboard-Summary-Cache-Status');
+    expect(summaryRouteSource).toContain('X-Dashboard-Summary-Video-Limit');
+    expect(dashboardTypesSource).toContain('DashboardSummaryFreshness');
+    expect(dashboardTypesSource).toContain("cacheStatus: 'bypass' | 'miss' | 'hit' | 'shared'");
   });
 
   test('client-side home/map restaurant visibility remains approved-only for parity', () => {
