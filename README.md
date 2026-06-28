@@ -53,13 +53,17 @@ The README visuals are recorded from the local Next.js app in a real browser ses
 
 ![Tzudong Map real browser product tour](apps/web/public/images/readme-product-tour.gif)
 
-| Map discovery | Storyboard workspace |
-| --- | --- |
-| ![Real browser GIF of Tzudong Map restaurant discovery](apps/web/public/images/readme-map-demo.gif) | ![Real browser GIF of the storyboard workspace](apps/web/public/images/readme-storyboard-demo.gif) |
+### Map discovery
 
-| Local bridge setup |
-| --- |
-| ![Real browser GIF of the local storyboard bridge setup](apps/web/public/images/readme-local-bridge-demo.gif) |
+![Real browser GIF of Tzudong Map restaurant discovery](apps/web/public/images/readme-map-demo.gif)
+
+### Storyboard workspace
+
+![Real browser GIF of the storyboard workspace](apps/web/public/images/readme-storyboard-demo.gif)
+
+### Local bridge setup
+
+![Real browser GIF of the local storyboard bridge setup](apps/web/public/images/readme-local-bridge-demo.gif)
 
 ## What is implemented today
 
