@@ -25,7 +25,7 @@
 ## Table of contents
 
 - [Overview](#overview)
-- [Product screenshots](#product-screenshots)
+- [Product tour](#product-tour)
 - [What is implemented today](#what-is-implemented-today)
 - [Architecture](#architecture)
 - [Tech stack](#tech-stack)
@@ -47,23 +47,19 @@ The repository contains two main surfaces:
 
 Supabase is the shared persistence boundary between the web app and the backend pipeline. Long-running ingestion, media processing, evaluation, and bulk writes stay in `backend`; Next.js route handlers stay bounded and authenticated.
 
-## Product screenshots
+## Product tour
 
-### Public restaurant map
+The README visuals are generated with the repository's local Codex OAuth bridge pinned to `gpt-image-2`, then wrapped as lightweight macOS-style GIFs for GitHub.
 
-The public app is a map-first experience with clustered food markers, restaurant search, category filters, region filters, and responsive controls.
+![Tzudong Map generated product tour](apps/web/public/images/readme-product-tour.gif)
 
-![Tzudong Map desktop restaurant map](apps/web/public/images/readme-home-desktop.webp)
+| Map discovery | Storyboard workspace |
+| --- | --- |
+| ![Mac-style GIF of Tzudong Map restaurant discovery](apps/web/public/images/readme-map-demo.gif) | ![Mac-style GIF of the storyboard workspace](apps/web/public/images/readme-storyboard-demo.gif) |
 
-<p align="center">
-  <img src="apps/web/public/images/readme-home-mobile.webp" width="340" alt="Tzudong Map mobile restaurant map" />
-</p>
-
-### Admin storyboard workspace
-
-The admin console includes a storyboard generation workspace with preset examples, generated image readback, cut-level metadata, local bridge status, and a chat-style trace for setup and execution feedback.
-
-![Tzudong Map admin storyboard workspace](apps/web/public/images/readme-admin-storyboard.webp)
+| Data and AI pipeline |
+| --- |
+| ![Mac-style GIF of the data and AI pipeline](apps/web/public/images/readme-pipeline-demo.gif) |
 
 ## What is implemented today
 
@@ -79,15 +75,11 @@ The admin console includes a storyboard generation workspace with preset example
 
 ## Architecture
 
-### System architecture
+### System shape
 
-![Tzudong Map system architecture](apps/web/public/images/architecture.png)
+The product is organized around one persistence boundary and two operating surfaces: a public map for users, and a guarded admin console for data review, storyboard generation, and local AI/RAG helper workflows.
 
-### Storyboard agent orchestration
-
-![Tzudong Map storyboard agent architecture](apps/web/public/images/storyboard_agent_diagram.png)
-
-> The RAGAS box in the diagrams is an evaluation axis. Numeric RAGAS improvement claims should not be treated as production claims unless a reproducible benchmark artifact is committed with the claim.
+> RAGAS and LangSmith are treated as evaluation axes. Numeric RAGAS improvement claims should not be treated as production claims unless a reproducible benchmark artifact is committed with the claim.
 
 ### Runtime flow
 
