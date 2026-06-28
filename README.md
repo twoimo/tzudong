@@ -1,120 +1,240 @@
-# 쯔동여지도 (Tzudong Map)
-
-**쯔양이 다녀간 맛집을 한눈에! 전국 & 해외 맛집 지도 플랫폼**
-
-**Live Demo**: [https://tzudong.app](https://tzudong.app)
-
-## 전체 시스템 아키텍처 (System Architecture)
-
-![System Architecture](apps/web/public/images/architecture.png)
-
-## 멀티 에이전트 아키텍처 (Multi-Agent Orchestration)
-
-![Storyboard Agent Diagram](apps/web/public/images/storyboard_agent_diagram.png)
-> 다이어그램의 RAGAS box는 **평가 축**을 나타냅니다. 커밋된 재현 리포트가 없는 수치형 RAGAS 개선율은 운영 성능 claim으로 쓰지 않습니다.
-
-
-## 주요 기능
-
-### 지도 기반 맛집 검색
-- **국내/해외 지도**: Naver Maps + Google Maps API (전국 18개 지역, 해외 8개 국가)
-- **마커 클러스터링**: Supercluster 기반 대량 마커 그룹화
-- **스마트 필터링**: 카테고리(15개), 지역, 방문횟수, 리뷰수
-- **검색 시스템**: 디바운싱, 인기 검색어, 최근 검색 기록.
-- **주간 인기 맛집**: 검색 남용 방지 시스템 (1시간 3회 제한)
-
-#### 다채로운 카테고리 마커 아이콘 지원 (15종)
-지도 상의 맛집 메뉴를 한눈에 직관적으로 인지할 수 있도록 다채롭고 세련된 커스텀 마커 세트가 적용되어 있습니다.
-
-<div align="left">
-  <img src="apps/web/public/images/maker-images/korean.png" width="48" alt="한식">
-  <img src="apps/web/public/images/maker-images/chinese.png" width="48" alt="중식">
-  <img src="apps/web/public/images/maker-images/asian.png" width="48" alt="아시안">
-  <img src="apps/web/public/images/maker-images/western.png" width="48" alt="양식">
-  <img src="apps/web/public/images/maker-images/fastfood.png" width="48" alt="패스트푸드">
-  <img src="apps/web/public/images/maker-images/chicken.png" width="48" alt="치킨">
-  <img src="apps/web/public/images/maker-images/pizza.png" width="48" alt="피자">
-  <img src="apps/web/public/images/maker-images/meat_bbq.png" width="48" alt="고기/구이">
-  <img src="apps/web/public/images/maker-images/pork_feet.png" width="48" alt="족발/보쌈">
-  <img src="apps/web/public/images/maker-images/cutlet_sashimi.png" width="48" alt="돈까스/회">
-  <img src="apps/web/public/images/maker-images/stew.png" width="48" alt="찜/탕/찌개">
-  <img src="apps/web/public/images/maker-images/lunch_box.png" width="48" alt="도시락">
-  <img src="apps/web/public/images/maker-images/cafe_dessert.png" width="48" alt="카페/디저트">
-  <img src="apps/web/public/images/maker-images/snack_bar.png" width="48" alt="분식">
-  <img src="apps/web/public/images/maker-images/late_night.png" width="48" alt="야식">
+<div align="center">
+  <img src="apps/web/public/logo.png" width="96" alt="Tzudong Map logo" />
+  <h1>Tzudong Map</h1>
+  <p><strong>A map-first restaurant discovery product and AI storyboard workspace for restaurants featured in Tzuyang videos.</strong></p>
+  <p>
+    <a href="https://tzudong.app">Live app</a>
+    ·
+    <a href="https://github.com/twoimo/tzudong/releases/tag/v1.1.1">Latest release</a>
+    ·
+    <a href="DESIGN.md">Design contract</a>
+    ·
+    <a href="backend/ARCHITECTURE.md">Backend boundaries</a>
+  </p>
+  <p>
+    <img alt="Next.js 16" src="https://img.shields.io/badge/Next.js-16-black?logo=nextdotjs" />
+    <img alt="React 19" src="https://img.shields.io/badge/React-19-149eca?logo=react&logoColor=white" />
+    <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white" />
+    <img alt="Supabase" src="https://img.shields.io/badge/Supabase-PostgreSQL%20%2B%20Auth-3ecf8e?logo=supabase&logoColor=white" />
+    <img alt="Runtime" src="https://img.shields.io/badge/runtime-Node%2024.x%20%2B%20Bun-c8a2c8" />
+  </p>
 </div>
-
-### 반응형 UI/UX
-- **모바일 최적화**: 드래그 가능 바텀시트, 하단 네비게이션
-- **터치 인터랙션**: 부드러운 스크롤 및 제스처
-- **반응형 디자인**: 모바일/태블릿/데스크톱 완벽 대응
-
-### 사용자 기능
-- **소셜 로그인**: Google OAuth 인증
-- **리뷰 시스템**: 별점, 사진, 영수증 인증
-- **스탬프 투어**: 방문 맛집 스탬프 수집
-- **리더보드**: 리뷰 수/신뢰도 기반 랭킹
-
-### AI 평가 시스템, 스토리보드 에이전트, 데이터 인프라
-- **맛집 데이터 파이프라인**: `backend/run_daily.sh` 기반으로 유튜브/웹 근거를 수집하고 Rule 평가, LLM-as-a-Judge, 변환, Supabase 적재까지 manifest-first로 처리합니다.
-- **검수 기준**: 맛집 정보의 정확성은 “관리자/검수 승인 데이터 기준”으로 표현합니다. LLM 출력 자체를 절대적 100% 정답으로 주장하지 않습니다.
-- **스토리보드 생성 관리자**: `/admin?module=storyboard`에서 예시 프리셋, 기존 생성 이미지 즉시 표시, 컷별 오디오/자막/촬영 지시, 로컬 브릿지 연결 상태와 대화형 trace를 제공합니다.
-- **LangGraph 에이전트 구조**: `backend/storyboard-agent`는 Supervisor, Researcher, Intern, Designer 역할의 그래프/어댑터 구조를 제공합니다. 운영 UI에서는 실제 backend evidence가 있을 때만 해당 경로를 노출합니다.
-- **RAG/모델 worker 인프라**: BGE-M3 dense/sparse, bge-reranker-v2-m3, LLaVA-NeXT-Video captioning, Gemini/OpenAI/Ollama judge 경로를 fail-closed readiness와 함께 다룹니다.
-- **평가 한계 명시**: 현재 커밋된 스토리보드 RAG 평가는 `deterministic_fixtures` 루브릭과 live worker smoke를 분리합니다. 발표 자료의 RAGAS 수치나 LangSmith 노트북 흔적은 재현 artifact가 붙기 전까지 “실험/평가 축”으로만 표기합니다.
-
-## 구현 상태와 증거 기준
-
-| 구분 | 현재 상태 | 공개 claim 기준 |
-| --- | --- | --- |
-| 맛집 지도 서비스 | Next.js/Supabase 기반 지도, 검색, 필터, 상세, 관리자 경로 구현 | 구현됨 |
-| 데이터 수집·평가·적재 | run_daily, validators, Rule/LAAJ, Supabase insert contract 운영 | 구현됨; 데이터 정확도는 검수 승인 기준 |
-| 스토리보드 생성 | 관리자 UI, 10개 예시, 기존 이미지 즉시 표시, 로컬 브릿지 연결 UX 구현 | 구현됨 |
-| LangGraph 멀티 에이전트 | Supervisor/Researcher/Intern/Designer 그래프와 로컬/command bridge 구조 구현 | 구현됨; backend evidence가 있을 때만 live graph claim |
-| RAG/모델 worker | BGE/reranker/LLaVA/Gemini/Ollama readiness·fail-closed 인프라 구현 | 인프라 구현; live smoke와 fixture 점수 분리 |
-| RAGAS·LangSmith 수치 | 슬라이드/노트북/실험 맥락 존재, 커밋된 운영 벤치마크는 별도 필요 | 실험/평가 축; 운영 수치 claim 금지 |
 
 ---
 
-## 기술 스택
+## Table of contents
 
-### Frontend
-- **Framework**: Next.js 16 (App Router, webpack dev/build parity; Turbopack은 비교/실험용 별도 실행), React 19, TypeScript
-- **Styling**: Tailwind CSS, shadcn/ui (Radix UI)
-- **State**: TanStack Query, Zustand
-- **Maps**: Naver Maps API, Google Maps API
+- [Overview](#overview)
+- [Product screenshots](#product-screenshots)
+- [What is implemented today](#what-is-implemented-today)
+- [Architecture](#architecture)
+- [Tech stack](#tech-stack)
+- [Repository layout](#repository-layout)
+- [Quick start](#quick-start)
+- [Development commands](#development-commands)
+- [Testing and QA](#testing-and-qa)
+- [Operational guardrails](#operational-guardrails)
+- [Documentation](#documentation)
 
-### Backend
-- **Database**: Supabase (PostgreSQL, pgvector)
-- **AI/LLM**: Google Gemini, OpenAI, Anthropic (Multi-LLM LLM-as-a-Judge Router)
-- **LangGraph**: RAG 기반 Storyboard Agent Orchestrator (Supervisor/Researcher/Designer/Intern)
-- **APIs**: YouTube Data API, Kakao/Naver Geocoding, Tavily Web Search
-- **Runtime**: apps/web은 Node 24.x, Bun 기반 실행/테스트를 기준으로 하며 backend는 Python 3.11+와 Node/Bun 혼합 런타임을 사용
+## Overview
 
-### Performance / 운영 품질
-- **빌드 경로**: 기본 개발/빌드는 production parity를 위해 webpack 경로를 사용합니다.
-- **번들 최적화**: Dynamic imports, route-level code splitting, heavy admin/map surface 지연 로딩
-- **이미지 최적화**: AVIF/WebP, Lazy loading
-- **상태/캐시**: React Query 기반 stale/cache 정책과 admin live-status no-store 경계
+Tzudong Map turns video-based restaurant information into a product that users can browse and operators can verify.
 
-## 스크린샷
+The repository contains two main surfaces:
 
-### 모바일 페이지 (메인 페이지, 리뷰 페이지, 도장 페이지)
+- **`apps/web`** — the Next.js public map, feed, mypage, insights surfaces, and the guarded `/admin` operating console.
+- **`backend`** — the crawling, evaluation, validation, Supabase preparation, and local AI-helper backend pipeline.
 
-<div align="center">
-  <img src="apps/web/public/images/mobile_main_page.png" width="32%" alt="모바일 페이지 1">
-  <img src="apps/web/public/images/mobile_review_page.png" width="32%" alt="모바일 페이지 2">
-  <img src="apps/web/public/images/mobile_stamp_page.png" width="32%" alt="모바일 페이지 3">
-</div>
+Supabase is the shared persistence boundary between the web app and the backend pipeline. Long-running ingestion, media processing, evaluation, and bulk writes stay in `backend`; Next.js route handlers stay bounded and authenticated.
 
-### 데스크탑 메인 페이지 (Naver Map, OpenFreeMap)
+## Product screenshots
 
-![메인 페이지](apps/web/public/images/main_page.png)
+### Public restaurant map
 
-### 데스크탑 관리자 검수 페이지 (승인, 수정, 삭제 등)
+The public app is a map-first experience with clustered food markers, restaurant search, category filters, region filters, and responsive controls.
 
-![관리자 검수 페이지](apps/web/public/images/admin_page.png)
+![Tzudong Map desktop restaurant map](apps/web/public/images/readme-home-desktop.webp)
 
-### 스토리보드 생성 에이전트 (Nano Banana)
+<p align="center">
+  <img src="apps/web/public/images/readme-home-mobile.webp" width="340" alt="Tzudong Map mobile restaurant map" />
+</p>
 
-![스토리보드 생성 에이전트](apps/web/public/images/storyboard_agent.png)
+### Admin storyboard workspace
+
+The admin console includes a storyboard generation workspace with preset examples, generated image readback, cut-level metadata, local bridge status, and a chat-style trace for setup and execution feedback.
+
+![Tzudong Map admin storyboard workspace](apps/web/public/images/readme-admin-storyboard.webp)
+
+## What is implemented today
+
+| Surface | Current state | Evidence standard used in this repository |
+| --- | --- | --- |
+| Public restaurant map | Next.js/Supabase map, search, filters, detail views, and responsive mobile/desktop shells are implemented. | Product behavior is verified through Playwright/browser checks and source-contract tests. |
+| Restaurant data pipeline | `backend/run_daily.sh`, validators, Rule/LAAJ evaluation, transform contracts, and Supabase insert boundaries are implemented. | Accuracy claims are scoped to reviewed/approved data, not raw LLM output. |
+| Admin moderation | Guarded admin routes support review, approval, deletion/restoration, and operational readback flows. | Risky flows should follow Preview → Confirm → Apply → Readback → Audit. |
+| Storyboard generator | Admin UI, starter examples, existing image readback, cut metadata, local bridge setup, and provider status UX are implemented. | Live provider claims require provider proof or explicit local smoke evidence. |
+| Storyboard RAG/model worker infrastructure | BGE-M3, reranker, LLaVA captioning, Gemini/OpenAI/Ollama judge paths, and fail-closed readiness rules are represented in code and docs. | Deterministic fixture scores and live worker smoke are kept separate. |
+| LangGraph-style storyboard agent | `backend/storyboard-agent` contains Supervisor/Researcher/Intern/Designer graph and adapter structure. | The UI should expose live graph capability only when backend evidence is available. |
+| RAGAS/LangSmith metrics | Diagrams and notes keep RAGAS/LangSmith as an evaluation axis. | Numeric RAGAS improvements are not production performance claims without reproducible committed artifacts. |
+
+## Architecture
+
+### System architecture
+
+![Tzudong Map system architecture](apps/web/public/images/architecture.png)
+
+### Storyboard agent orchestration
+
+![Tzudong Map storyboard agent architecture](apps/web/public/images/storyboard_agent_diagram.png)
+
+> The RAGAS box in the diagrams is an evaluation axis. Numeric RAGAS improvement claims should not be treated as production claims unless a reproducible benchmark artifact is committed with the claim.
+
+### Runtime flow
+
+```mermaid
+flowchart LR
+  YouTube[YouTube / web evidence] --> Backend[Backend batch pipeline]
+  Backend --> Eval[Rule + LLM-as-a-Judge evaluation]
+  Eval --> Transform[Contracted Supabase payloads]
+  Transform --> Supabase[(Supabase PostgreSQL / Auth / RPC)]
+  Supabase --> Web[Next.js public map]
+  Supabase --> Admin[Guarded admin console]
+  Admin --> Storyboard[Storyboard workspace]
+  Storyboard --> Bridge[Local bridge / provider adapters]
+  Bridge --> ImageModel[Image + RAG/model workers]
+```
+
+## Tech stack
+
+| Layer | Tools |
+| --- | --- |
+| Frontend | Next.js 16 App Router, React 19, TypeScript, Tailwind CSS, shadcn/Radix primitives |
+| Client state | TanStack Query, Zustand, stable query keys and invalidation |
+| Maps | Naver Maps, Google Maps/OpenFreeMap fallback contexts, Supercluster marker grouping |
+| Persistence | Supabase PostgreSQL, Auth, RPC, service-role server boundaries |
+| Backend pipeline | Python, Node ESM, shell entrypoints, manifest-first daily batch helpers |
+| AI/storyboard | Gemini/OpenAI/Anthropic/Ollama adapters, local bridge, RAG worker profiles, image provider proof paths |
+| Testing | Bun test, Playwright, Python `unittest`, source-contract tests |
+
+## Repository layout
+
+```text
+.
+├── apps/web                    # Next.js app, public map, admin console, tests
+│   ├── app                     # App Router pages, layouts, route handlers
+│   ├── components              # UI modules for admin, home, layout, map, etc.
+│   ├── hooks / contexts        # Shared client state and providers
+│   ├── lib                     # Auth, Supabase clients, admin workflows, map utilities
+│   ├── tests                   # Playwright coverage
+│   └── tests-unit              # Bun unit and source-contract tests
+├── backend                     # Batch pipeline, validators, AI helper backends
+│   ├── bin                     # Focused operational CLIs and checks
+│   ├── pipeline                # Pipeline nodes, state, validators, tests
+│   ├── storyboard-agent        # Local storyboard/RAG helper backend
+│   ├── thumbnail-agent         # Local thumbnail helper backend
+│   └── utils                   # Run-daily helpers and reusable utilities
+├── docs                        # Operational notes and handoffs
+├── scripts                     # Repo-level helper scripts
+├── DESIGN.md                   # UI/admin design contract
+└── AGENTS.md                   # Repository operating guide for coding agents
+```
+
+## Quick start
+
+### Prerequisites
+
+- Node.js **24.x** for `apps/web`
+- Bun for frontend install/test workflows
+- Python 3.11+ for backend validation and pipeline tooling
+- Supabase environment variables in `apps/web/.env.local` and backend env files as required by the target command
+
+### Run the web app locally
+
+```sh
+cd apps/web
+bun install
+bun run dev:webpack
+```
+
+Open `http://localhost:8080`.
+
+### Run the backend contract checks
+
+```sh
+python3 backend/bin/check_env_contract.py --profile daily
+python -m unittest backend.utils.tests.test_run_daily_regression
+python -m unittest backend.pipeline.test_validators_unittest
+python -m unittest backend.pipeline.test_data_contracts_unittest
+```
+
+## Development commands
+
+### Frontend (`apps/web`)
+
+| Task | Command |
+| --- | --- |
+| Install dependencies | `cd apps/web && bun install` |
+| Start dev server | `cd apps/web && bun run dev` |
+| Clean webpack dev server | `cd apps/web && bun run dev:clean` |
+| Webpack parity dev server | `cd apps/web && bun run dev:webpack` |
+| Build | `cd apps/web && bun run build` |
+| Lint | `cd apps/web && bun run lint` |
+| Unit/source-contract tests | `cd apps/web && bun run test:unit` |
+| Responsive Playwright wrapper | `cd apps/web && bun run test:responsive` |
+| Full Playwright | `cd apps/web && npx playwright test` |
+
+### Backend / pipeline
+
+| Task | Command |
+| --- | --- |
+| Install Node helper dependencies | `cd backend && npm ci` |
+| Env contract check | `python3 backend/bin/check_env_contract.py --profile daily` |
+| Run-daily regression suite | `python -m unittest backend.utils.tests.test_run_daily_regression` |
+| Pipeline validator suite | `python -m unittest backend.pipeline.test_validators_unittest` |
+| Data-contract suite | `python -m unittest backend.pipeline.test_data_contracts_unittest` |
+| Stable daily entrypoint | `backend/run_daily.sh` |
+
+## Testing and QA
+
+This repository favors contract-heavy verification over broad, shallow coverage.
+
+- **Frontend unit/source tests** live in `apps/web/tests-unit` and are run with Bun.
+- **Browser/e2e tests** live in `apps/web/tests` and use Playwright with an authenticated admin bootstrap path.
+- **Backend regression tests** live under `backend/utils/tests` and `backend/pipeline/*_unittest.py`.
+- **Storyboard provider smoke** is explicit and quota-aware; see `docs/operations/storyboard-eight-real-provider-smoke.md`.
+- **Storyboard RAG worker profiles** are fail-closed by design; see `docs/operations/storyboard-rag-operating-profiles.md`.
+
+Recommended focused checks before shipping user-visible web/admin changes:
+
+```sh
+cd apps/web
+bun run test:unit
+bun run lint
+```
+
+Recommended focused checks before backend contract changes:
+
+```sh
+python -m unittest backend.utils.tests.test_run_daily_regression
+python -m unittest backend.pipeline.test_validators_unittest
+python -m unittest backend.pipeline.test_data_contracts_unittest
+```
+
+## Operational guardrails
+
+- Keep crawler execution, ffmpeg/media work, Gemini bulk evaluation, long Supabase inserts, and GDrive sync out of Next.js route handlers.
+- Use the correct Supabase client for the context: browser client, session-aware server client, or service-role server-only client.
+- Admin APIs should gate early with `requireAdmin`, return bounded JSON, and avoid exposing raw provider or database errors.
+- Heavy web/admin surfaces should stay code-split with `dynamic`, `lazy`, `Suspense`, or client-only loading where appropriate.
+- Backend validation is fail-closed. Contract changes should update docs, validators, and regression tests together.
+- AI-generated or model-assisted claims need matching artifacts. Do not promote experimental notebook or slide numbers into production claims without committed reproducible evidence.
+
+## Documentation
+
+- [`AGENTS.md`](AGENTS.md) — repository guidelines and operating conventions.
+- [`DESIGN.md`](DESIGN.md) — UI/admin design contract and route expectations.
+- [`backend/ARCHITECTURE.md`](backend/ARCHITECTURE.md) — backend/API/batch boundary rules.
+- [`backend/DATA_CONTRACTS.md`](backend/DATA_CONTRACTS.md) — backend-to-Supabase-to-web data contract baseline.
+- [`backend/docs/run-daily-operations.md`](backend/docs/run-daily-operations.md) — manifest-first batch runbook.
+- [`docs/operations/storyboard-rag-operating-profiles.md`](docs/operations/storyboard-rag-operating-profiles.md) — required-provider RAG execution profiles.
+- [`docs/operations/storyboard-eight-real-provider-smoke.md`](docs/operations/storyboard-eight-real-provider-smoke.md) — quota-aware storyboard image-provider smoke guide.
