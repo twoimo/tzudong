@@ -15,6 +15,10 @@ apps/web/.cache/
 apps/web/tmp/
 apps/web/public/qa-history/
 output/
+# Local verification/release artifacts (not product source)
+artifacts/
+apps/artifacts/
+apps/web/artifacts/
 
 # ── 로그 / Logs ──────────────────────────────────────────
 logs/
@@ -25,6 +29,7 @@ pnpm-debug.log*
 backend/log/
 daily_run.log
 run_*.log
+backend/storyboard-agent/log.md
 
 # ── 런타임 데이터 / Runtime ──────────────────────────────
 pids/
@@ -77,6 +82,7 @@ summary.md
 body.md
 pr_body*.md
 gha-creds-*.json
+apps/web/tests/temp-*.spec.ts
 
 # ── AI 코딩 / 에이전트 도구 (Codex/OMX/Gemini/OMC) ─────────
 .omc/
@@ -86,6 +92,14 @@ gha-creds-*.json
 .gemini/
 AGENTS.md
 OMX_MODERNIZATION_WORKLOG.md
+# Local AI/browser helper state and packaged agent drops
+.antigravitycli/
+.tmp-gjc-*/
+.venv-storyboard-rag/
+gajae-code-coding-agent-*.tgz
+
+# Root has no package.json; keep accidental root npm lockfiles out of public branches.
+package-lock.json
 
 # ── 크롤링 데이터 무시 ────────────────────────────────────
 backend/restaurant-crawling/data/*/frames/
