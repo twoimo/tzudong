@@ -250,18 +250,18 @@ INSERT INTO public.announcements (
 ) VALUES
 (
     'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-    '쯔동여지도 v2.0 업데이트 안내',
-    $a1$안녕하세요, 쯔동여지도입니다!
+    'Tzudong Map v1.1.1 Release Notes',
+    $a1$Hello from Tzudong Map.
 
-오랫동안 준비해온 대규모 업데이트를 드디어 공개합니다. 이번 업데이트에서는 사용자분들의 피드백을 적극 반영하여 더욱 편리하고 다양한 기능을 제공합니다.
+Version v1.1.1 focuses on making the public restaurant map, the admin moderation console, and the storyboard generation workspace easier to verify and operate.
 
-해외 맛집 지도 기능이 추가되어 쯔양이 방문한 해외 맛집들도 이제 지도에서 확인할 수 있습니다. 일본, 태국, 베트남 등 다양한 국가의 맛집 정보를 제공하며, 구글 지도 기반으로 정확한 위치를 안내합니다.
+The public map keeps the map-first browsing flow with clustered restaurant markers, category filters, region filters, mobile controls, and restaurant detail entry points.
 
-리뷰 인증샷 업로드 기능도 추가되었습니다. 맛집 방문 후 인증샷을 업로드하면 특별한 뱃지를 획득할 수 있습니다.
+The admin workspace includes guarded review and readback flows, and the storyboard module now surfaces starter examples, generated storyboard images, cut-level metadata, local bridge state, and setup traces more clearly.
 
-맛집 도장깨기 시스템으로 전국의 쯔양 맛집을 도장깨기 형식으로 방문해보세요. 지역별, 카테고리별 도장을 모두 모으면 특별한 칭호가 부여됩니다.
+AI and RAG-related claims are scoped to verified evidence: deterministic fixtures, explicit local/provider smoke runs, and fail-closed worker readiness checks are tracked separately from experimental RAGAS or LangSmith notes.
 
-앞으로도 더 나은 서비스를 위해 노력하겠습니다. 많은 이용 부탁드립니다!$a1$,
+Thank you for using Tzudong Map.$a1$,
     true,
     true,
     100,
