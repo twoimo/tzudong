@@ -5165,12 +5165,27 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).toContain(
       'data-storyboard-local-bridge-pairing-guide="true"',
     );
-    expect(storyboardSource).toContain("페어링 순서");
+    expect(storyboardSource).toContain("쉬운 페어링");
     expect(storyboardSource).toContain(
-      "cd apps/web &amp;&amp; bun run storyboard:local-bridge",
+      'data-storyboard-local-bridge-command="true"',
+    );
+    expect(storyboardSource).toContain(
+      "cd apps/web && bun run storyboard:local-bridge",
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-local-bridge-auto-connect="true"',
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-local-bridge-chat-trace-copy="true"',
     );
     expect(storyboardSource).toContain("pairing_token");
-    expect(storyboardSource).toContain("http://127.0.0.1:8787");
+    expect(storyboardSource).toContain("STORYBOARD_LOCAL_BRIDGE_DEFAULT_URL");
+    expect(storyboardSource).not.toContain("void initialStoryboardResult;");
+    expect(storyboardSource).toContain(
+      "저장된 검증 이미지가 있으면 첫 화면에 즉시 표시합니다.",
+    );
+    expect(storyboardSource).toContain("makeStoryboardImprovementSummaryMessage(");
+    expect(storyboardSource).toContain("setChatMessages((current) => {");
     expect(storyboardSource).toContain(
       "postStoryboardLocalBridgeImagesRequest",
     );
@@ -5181,6 +5196,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).toContain(
       "normalizeStoryboardLocalBridgeToken(token)",
     );
+    expect(storyboardSource).toContain("event.origin !== helperOrigin");
+    expect(storyboardSource).toContain("event.source !== popup");
+    expect(storyboardSource).toContain("getStoryboardLocalBridgeAuthHeaders(token)");
     expect(storyboardSource).toContain(
       "normalizeStoryboardLocalBridgeImagesResponse",
     );
@@ -5960,6 +5978,28 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(storyboardSource).toContain(
       'data-storyboard-chat-example-card="true"',
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-chat-more-examples="true"',
+    );
+    expect(storyboardSource).toContain(
+      "STORYBOARD_GUIDED_EXAMPLE_PRESETS.slice(",
+    );
+    expect(storyboardSource).toContain(
+      "STORYBOARD_GUIDED_EXAMPLE_STARTER_PRESETS.length",
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-chat-more-example-card="true"',
+    );
+    expect(storyboardSource).toContain("더 많은 예시");
+    expect(storyboardSource).toContain(
+      'data-storyboard-chat-all-examples="true"',
+    );
+    expect(storyboardSource).toContain(
+      'data-storyboard-chat-all-example-card="true"',
+    );
+    expect(storyboardSource).toContain(
+      "STORYBOARD_GUIDED_EXAMPLE_PRESETS.map((preset)",
     );
     expect(storyboardSource).toContain(
       "handleStoryboardGuidedExampleGenerate(",
