@@ -49,17 +49,17 @@ Supabase is the shared persistence boundary between the web app and the backend 
 
 ## Product tour
 
-The README visuals are generated with the repository's local Codex OAuth bridge pinned to `gpt-image-2`, then wrapped as lightweight macOS-style GIFs for GitHub.
+The README visuals are recorded from the local Next.js app in a real browser session, then wrapped as lightweight macOS-style GIFs for GitHub.
 
-![Tzudong Map generated product tour](apps/web/public/images/readme-product-tour.gif)
+![Tzudong Map real browser product tour](apps/web/public/images/readme-product-tour.gif)
 
 | Map discovery | Storyboard workspace |
 | --- | --- |
 | ![Mac-style GIF of Tzudong Map restaurant discovery](apps/web/public/images/readme-map-demo.gif) | ![Mac-style GIF of the storyboard workspace](apps/web/public/images/readme-storyboard-demo.gif) |
 
-| Data and AI pipeline |
+| Local bridge setup |
 | --- |
-| ![Mac-style GIF of the data and AI pipeline](apps/web/public/images/readme-pipeline-demo.gif) |
+| ![Mac-style GIF of the local storyboard bridge setup](apps/web/public/images/readme-local-bridge-demo.gif) |
 
 ## What is implemented today
 
