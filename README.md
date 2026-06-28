@@ -49,17 +49,17 @@ Supabase is the shared persistence boundary between the web app and the backend 
 
 ## Product tour
 
-The README visuals are recorded from the local Next.js app in a real browser session, then wrapped as lightweight macOS-style GIFs for GitHub.
+The README visuals are recorded from the local Next.js app in a real browser session and exported as app-first feature GIFs for GitHub.
 
 ![Tzudong Map real browser product tour](apps/web/public/images/readme-product-tour.gif)
 
 | Map discovery | Storyboard workspace |
 | --- | --- |
-| ![Mac-style GIF of Tzudong Map restaurant discovery](apps/web/public/images/readme-map-demo.gif) | ![Mac-style GIF of the storyboard workspace](apps/web/public/images/readme-storyboard-demo.gif) |
+| ![Real browser GIF of Tzudong Map restaurant discovery](apps/web/public/images/readme-map-demo.gif) | ![Real browser GIF of the storyboard workspace](apps/web/public/images/readme-storyboard-demo.gif) |
 
 | Local bridge setup |
 | --- |
-| ![Mac-style GIF of the local storyboard bridge setup](apps/web/public/images/readme-local-bridge-demo.gif) |
+| ![Real browser GIF of the local storyboard bridge setup](apps/web/public/images/readme-local-bridge-demo.gif) |
 
 ## What is implemented today
 
