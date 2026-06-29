@@ -234,8 +234,36 @@ export type ThumbnailChatTextLayerPatch = {
   zIndex?: number;
 };
 
+export type ThumbnailChatConversationMessage = {
+  role: 'user' | 'assistant';
+  content: string;
+  id?: string;
+  createdAt?: string;
+};
+
+export type ThumbnailChatFocusContext = {
+  kind: 'text-layer' | 'canvas';
+  label: string;
+  promptContext: string;
+  layerId?: string;
+  role?: 'headline' | 'subHeadline' | 'custom';
+  detail?: string;
+  createdAt?: string;
+};
+
+export type ThumbnailChatReferenceImageAttachment = {
+  id?: string;
+  name: string;
+  mime?: ThumbnailReferenceImage['mime'];
+  size?: number;
+  role?: ThumbnailReferenceRole;
+  width?: number;
+  height?: number;
+};
+
 export type ThumbnailChatAgentRequest = {
   chatRunId?: string;
+  chatThreadId?: string;
   message: string;
   currentTopic?: string;
   currentHeadline?: string;
@@ -244,6 +272,9 @@ export type ThumbnailChatAgentRequest = {
   editingLayerId?: string;
   lastCanvasActionLabel?: string;
   currentTextLayers?: ThumbnailTextLayer[];
+  conversationMessages?: ThumbnailChatConversationMessage[];
+  focusContext?: ThumbnailChatFocusContext | null;
+  referenceImageAttachments?: ThumbnailChatReferenceImageAttachment[];
   providerId?: ThumbnailProviderId;
   generationMode?: ThumbnailGenerationMode;
 };
@@ -263,6 +294,13 @@ export type ThumbnailChatAgentResult = {
     effort: string;
     streaming: 'sse-progress';
     chatRunId?: string;
+    chatThreadId?: string;
+    conversationTurnCount?: number;
+    conversationSummary?: string;
+    imageAttachmentCount?: number;
+    focusContextUsed?: boolean;
+    chatIntent?: string;
+    canvasMutation?: boolean;
   };
 };
 

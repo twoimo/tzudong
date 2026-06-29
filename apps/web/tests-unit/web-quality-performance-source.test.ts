@@ -1056,10 +1056,10 @@ describe("web quality performance source contracts", () => {
       "const desktopMapMenuItemClass =",
     );
     expect(homeDesktopControlPanelSource).toContain(
-      "z-[180] w-max min-w-[max-content] max-w-[min(24rem,calc(100vw-2rem))] rounded-2xl border-border bg-card p-1.5 font-serif shadow-2xl",
+      "z-[180] w-max min-w-[max-content] max-w-[min(24rem,calc(100vw-2rem))] rounded-2xl border-border bg-card p-1.5 font-sans shadow-2xl",
     );
     expect(homeDesktopControlPanelSource).not.toContain(
-      "z-[180] w-44 rounded-2xl border-border bg-card p-1.5 font-serif shadow-2xl",
+      "z-[180] w-44 rounded-2xl border-border bg-card p-1.5 font-sans shadow-2xl",
     );
     expect(homeDesktopControlPanelSource).not.toContain(
       "DropdownMenuLabel",
@@ -3869,10 +3869,16 @@ describe("web quality performance source contracts", () => {
     );
     expect(layoutSource).not.toContain("next/script");
     expect(layoutSource).not.toContain('strategy="beforeInteractive"');
+    expect(layoutSource).toContain('import localFont from "next/font/local"');
     expect(layoutSource).toContain(
       'import { Noto_Serif_KR } from "next/font/google"',
     );
-    expect(layoutSource).toContain("className={notoSerifKr.variable}");
+    expect(layoutSource).toContain("variable: \"--font-pretendard\"");
+    expect(layoutSource).toContain("variable: \"--font-display\"");
+    expect(layoutSource).toContain('src: "./fonts/pretendard/PretendardVariable.woff2"');
+    expect(layoutSource).toContain('weight: "45 920"');
+    expect(layoutSource).toContain("preload: false");
+    expect(layoutSource).toContain("className={`${pretendard.variable} ${notoSerifKr.variable}`}");
     expect(layoutSource).not.toContain("QueryProvider");
     expect(layoutSource).not.toContain("AppProviders");
     expect(layoutSource).not.toContain("MainLayout");
@@ -4160,7 +4166,7 @@ describe("web quality performance source contracts", () => {
       "style={MOBILE_BOTTOM_NAV_BUTTON_STYLE}",
     );
     expect(mobileBottomNavSource).toContain("'mobile-bottom-nav'");
-    expect(mobileBottomNavSource).toContain("'font-serif'");
+    expect(mobileBottomNavSource).toContain("'font-sans'");
     expect(mobileBottomNavSource).not.toContain(
       "MOBILE_BOTTOM_NAV_FONT_FAMILY",
     );
@@ -4171,7 +4177,7 @@ describe("web quality performance source contracts", () => {
       "'text-foreground/65 active:text-foreground'",
     );
     expect(mobileBottomNavSource).toContain(
-      "'text-[12px] font-medium leading-none tracking-tight'",
+      "'text-[12px] font-medium leading-none tracking-normal'",
     );
     expect(mobileBottomNavSource).toContain("isActive && 'font-semibold'");
     expect(tailwindConfigSource).toContain("MOBILE_BOTTOM_NAV_CLASSES");
@@ -4181,7 +4187,7 @@ describe("web quality performance source contracts", () => {
     expect(tailwindConfigSource).toContain('"text-foreground/65"');
     expect(tailwindConfigSource).toContain('"text-[12px]"');
     expect(tailwindConfigSource).toContain('"leading-none"');
-    expect(tailwindConfigSource).toContain('"tracking-tight"');
+    expect(tailwindConfigSource).toContain('"tracking-normal"');
     expect(tailwindConfigSource).toContain("LEADERBOARD_RANK_ICON_CLASSES");
     expect(tailwindConfigSource).toContain('"text-yellow-500"');
     expect(tailwindConfigSource).toContain('"text-amber-600"');
@@ -4294,16 +4300,34 @@ describe("web quality performance source contracts", () => {
     const rootGlobalsSource = source("app/globals.css");
     const tailwindConfigSource = source("tailwind.config.ts");
 
+    expect(rootLayoutSource).toContain('import localFont from "next/font/local"');
     expect(rootLayoutSource).toContain(
       'import { Noto_Serif_KR } from "next/font/google"',
     );
-    expect(rootLayoutSource).toContain("variable: '--font-noto-serif-kr'");
-    expect(rootLayoutSource).toContain("subsets: ['latin']");
-    expect(rootLayoutSource).not.toContain("preload: false");
-    expect(rootLayoutSource).toContain("className={notoSerifKr.variable}");
-    expect(rootGlobalsSource).toContain(
-      "font-family: var(--font-noto-serif-kr, 'Noto Serif KR')",
-    );
-    expect(tailwindConfigSource).toContain('"var(--font-noto-serif-kr)"');
+    expect(rootLayoutSource).toContain("PretendardVariable.woff2");
+    expect(rootLayoutSource).toContain('variable: "--font-pretendard"');
+    expect(rootLayoutSource).toContain('variable: "--font-display"');
+    expect(rootLayoutSource).toContain('subsets: ["latin"]');
+    expect(rootLayoutSource).toContain('weight: "45 920"');
+    expect(rootLayoutSource).toContain("preload: false");
+    for (const staticWeightFile of [
+      "Pretendard-Regular.woff2",
+      "Pretendard-Medium.woff2",
+      "Pretendard-SemiBold.woff2",
+      "Pretendard-Bold.woff2",
+      "Pretendard-ExtraBold.woff2",
+      "Pretendard-Black.woff2",
+    ]) {
+      expect(rootLayoutSource).not.toContain(staticWeightFile);
+    }
+    expect(rootLayoutSource).not.toContain("cdn.jsdelivr.net/gh/orioncactus/pretendard");
+    expect(rootLayoutSource).toContain("className={`${pretendard.variable} ${notoSerifKr.variable}`}");
+    expect(rootGlobalsSource).toContain("--font-sans: var(--font-pretendard");
+    expect(rootGlobalsSource).toContain("--font-noto-serif-kr: var(--font-display");
+    expect(rootGlobalsSource).toContain("font-family: var(--font-sans);");
+    expect(rootGlobalsSource).not.toContain("font-family: var(--font-noto-serif-kr");
+    expect(tailwindConfigSource).toContain('"var(--font-sans)"');
+    expect(tailwindConfigSource).toContain('"var(--font-display, var(--font-display-fallback))"');
+    expect(tailwindConfigSource).toContain('"var(--font-mono)"');
   });
 });
