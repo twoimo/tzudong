@@ -93,8 +93,8 @@ const ADMIN_DASHBOARD_STYLE_CLASSES = [
   "sm:p-1.5",
   "sm:p-3.5",
   "text-[13px]",
-  "text-[clamp(1.42rem,1.75vw,2.1rem)]",
-  "tracking-[-0.055em]",
+  "text-[clamp(1.2rem,1.45vw,1.75rem)]",
+  "tracking-[-0.035em]",
   "tracking-[0.01em]",
   "tracking-[0.04em]",
   "bg-border/70",
@@ -189,7 +189,7 @@ const MOBILE_BOTTOM_NAV_CLASSES = [
   "font-medium",
   "font-semibold",
   "leading-none",
-  "tracking-tight",
+  "tracking-normal",
 ] as const;
 const LEADERBOARD_RANK_ICON_CLASSES = [
   // Rank icons are created from a helper, so direct mobile route chunks must keep their color utilities.
@@ -227,7 +227,18 @@ const config: Config = {
       },
       fontFamily: {
         sans: [
-          "var(--font-noto-serif-kr)",
+          "var(--font-sans)",
+          '"Pretendard"',
+          '"Apple SD Gothic Neo"',
+          '"Malgun Gothic"',
+          '"Segoe UI"',
+          "system-ui",
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "sans-serif",
+        ],
+        display: [
+          "var(--font-display, var(--font-display-fallback))",
           '"Noto Serif KR"',
           '"Apple SD Gothic Neo"',
           '"Malgun Gothic"',
@@ -236,7 +247,7 @@ const config: Config = {
           "serif",
         ],
         serif: [
-          "var(--font-noto-serif-kr)",
+          "var(--font-display, var(--font-display-fallback))",
           '"Noto Serif KR"',
           '"Apple SD Gothic Neo"',
           '"Malgun Gothic"',
@@ -244,19 +255,17 @@ const config: Config = {
           "Georgia",
           "serif",
         ],
-        display: [
-          '"ChosunCentennial"',
-          "var(--font-noto-serif-kr)",
-          '"Noto Serif KR"',
-          '"Apple SD Gothic Neo"',
-          '"Malgun Gothic"',
-          "cursive",
+        mono: [
+          "var(--font-mono)",
+          "ui-monospace",
+          "SFMono-Regular",
+          "Menlo",
+          "Monaco",
+          "Consolas",
+          '"Liberation Mono"',
+          '"Courier New"',
+          "monospace",
         ],
-        stylish: ['"Stylish"', "sans-serif"],
-        gugi: ['"Gugi"', "cursive"],
-        brush: ['"Nanum Brush Script"', "cursive"],
-        yeon: ['"Yeon Sung"', "cursive"],
-        chosun: ['"ChosunCentennial"', "serif"],
       },
       colors: {
         background: "hsl(var(--background))",

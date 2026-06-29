@@ -269,9 +269,9 @@ describe("mobile and desktop parity source contracts", () => {
     expect(navigationRoutesSource).toContain("'/admin/banners'");
     expect(mobileBottomNavSource).toContain("path: '/'");
     expect(mobileBottomNavSource).toContain("path: '/stamp'");
-    expect(mobileBottomNavSource).toContain("'font-serif'");
+    expect(mobileBottomNavSource).toContain("'font-sans'");
     expect(mobileBottomNavSource).toContain(
-      "'text-[12px] font-medium leading-none tracking-tight'",
+      "'text-[12px] font-medium leading-none tracking-normal'",
     );
     expect(mobileBottomNavSource).toContain(
       "'text-foreground/65 active:text-foreground'",
@@ -402,10 +402,10 @@ describe("mobile and desktop parity source contracts", () => {
       "const desktopMapMenuItemClass =",
     );
     expect(homeDesktopControlPanelSource).toContain(
-      "z-[180] w-max min-w-[max-content] max-w-[min(24rem,calc(100vw-2rem))] rounded-2xl border-border bg-card p-1.5 font-serif shadow-2xl",
+      "z-[180] w-max min-w-[max-content] max-w-[min(24rem,calc(100vw-2rem))] rounded-2xl border-border bg-card p-1.5 font-sans shadow-2xl",
     );
     expect(homeDesktopControlPanelSource).not.toContain(
-      "z-[180] w-44 rounded-2xl border-border bg-card p-1.5 font-serif shadow-2xl",
+      "z-[180] w-44 rounded-2xl border-border bg-card p-1.5 font-sans shadow-2xl",
     );
     expect(homeDesktopControlPanelSource).not.toContain(
       "DropdownMenuLabel",

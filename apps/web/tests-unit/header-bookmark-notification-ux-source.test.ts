@@ -27,7 +27,7 @@ describe('header bookmark and notification UX source contracts', () => {
     expect(bookmarkSource).toContain('[&_svg]:!text-primary');
     expect(bookmarkSource).toContain('flex h-5 min-w-5 items-center justify-center rounded-full border border-primary/20 bg-primary px-1.5 py-0 text-[10px] font-bold leading-none tabular-nums text-primary-foreground shadow-sm');
     expect(bookmarkSource).toContain("triggerBookmarkCount > 99 ? '99+' : triggerBookmarkCount");
-    expect(bookmarkSource).toContain('w-[min(calc(100vw-1rem),22rem)] rounded-2xl border-border bg-card p-2 font-serif shadow-primary');
+    expect(bookmarkSource).toContain('w-[min(calc(100vw-1rem),22rem)] rounded-2xl border-border bg-card p-2 font-sans shadow-primary');
     expect(bookmarkSource).toContain('flex items-start justify-between gap-3 px-1 py-1 text-foreground');
     expect(bookmarkSource).toContain('h-8 w-8 shrink-0 rounded-full text-muted-foreground hover:bg-transparent hover:text-foreground');
     expect(bookmarkSource).not.toContain('rounded-xl bg-muted/40 px-3 py-2.5 text-foreground');
@@ -79,7 +79,7 @@ describe('header bookmark and notification UX source contracts', () => {
     expect(headerSource).not.toContain('ml-1 mt-1 flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2');
     expect(headerSource).not.toContain('Fragment key={notification.id}');
     expect(headerSource).toContain('새 알림');
-    expect(headerSource).toContain('w-[min(calc(100vw-1rem),22rem)] rounded-2xl border-border bg-card p-2 font-serif shadow-primary');
+    expect(headerSource).toContain('w-[min(calc(100vw-1rem),22rem)] rounded-2xl border-border bg-card p-2 font-sans shadow-primary');
     expect(headerSource).toContain('flex items-start justify-between gap-3 px-1 py-1 text-foreground');
     expect(headerSource).toContain('h-8 shrink-0 rounded-full px-2.5 text-xs text-muted-foreground hover:bg-transparent hover:text-foreground');
     expect(headerSource).not.toContain('rounded-xl bg-muted/40 px-3 py-2.5 text-foreground');
@@ -154,7 +154,7 @@ describe('header bookmark and notification UX source contracts', () => {
     expect(mobileOverlaySource).toContain('const mobileTopIconButtonClass = cn(');
     expect(mobileOverlaySource).toContain("const mobileTopIconGlyphClass = 'h-[18px] w-[18px]'");
     expect(mobileOverlaySource).toContain("const mobileTopUserIconGlyphClass = 'h-5 w-5'");
-    expect(mobileOverlaySource).toContain("const mobileUserMenuContentClass = 'w-max max-w-[calc(100vw-1rem)] bg-card border-border font-serif z-[110]'");
+    expect(mobileOverlaySource).toContain("const mobileUserMenuContentClass = 'w-max max-w-[calc(100vw-1rem)] bg-card border-border font-sans z-[110]'");
     expect(mobileOverlaySource).toContain("const mobileUserMenuItemClass = 'text-foreground hover:bg-accent py-1.5 whitespace-nowrap'");
     expect(mobileOverlaySource).toContain('!text-primary hover:!text-primary data-[state=open]:!text-primary [&_svg]:!text-primary');
     expect(mobileOverlaySource).toContain('className={mobileTopUserIconGlyphClass}');
@@ -166,6 +166,7 @@ describe('header bookmark and notification UX source contracts', () => {
     expect(mobileOverlaySource).toContain("const isUserMenuOpen = openTopDropdown === 'user'");
     expect(mobileOverlaySource).toContain('<DropdownMenu open={isUserMenuOpen} onOpenChange={handleUserMenuOpenChange}>');
     expect(mobileOverlaySource).not.toContain('bg-card border-border font-serif w-44 z-[110]');
+    expect(mobileOverlaySource).not.toContain('bg-card border-border font-serif');
     expect(mobileOverlaySource).toContain('aria-label="북마크 전체보기 로그인 안내"');
     expect(mobileOverlaySource).toContain('loadMobileNotificationMenuButton');
     expect(mobileOverlaySource).toContain('<DeferredMobileNotificationMenuButton user={user} open={isNotificationMenuOpen} onOpenChange={handleNotificationMenuOpenChange} />');
@@ -195,7 +196,7 @@ describe('header bookmark and notification UX source contracts', () => {
     expect(mobileNotificationSource).toContain('formatDistanceToNow(notification.createdAt');
     expect(mobileNotificationSource).toContain('removeNotification(notification.id)');
     expect(mobileNotificationSource).toContain('h-9 w-9 rounded-full');
-    expect(mobileNotificationSource).toContain('w-[min(calc(100vw-1rem),22rem)] rounded-2xl border-border bg-card p-2 font-serif shadow-primary');
+    expect(mobileNotificationSource).toContain('w-[min(calc(100vw-1rem),22rem)] rounded-2xl border-border bg-card p-2 font-sans shadow-primary');
     expect(mobileNotificationSource).toContain('flex w-full max-w-full cursor-pointer items-center gap-2 rounded-xl p-2.5');
     expect(mobileNotificationSource).toContain('!notification.isRead && "bg-primary/5"');
     expect(mobileOverlaySource).toContain('w-[min(calc(100vw-1rem),22rem)]');

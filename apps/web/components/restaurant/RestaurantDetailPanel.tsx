@@ -234,12 +234,65 @@ export function RestaurantDetailPanel({
                 const reviewLookupName = getRestaurantReviewLookupName(restaurant);
 
                 if (reviewLookupName) {
-                    const { data: relatedRestaurants } = await supabase
-                        .from('restaurants')
-                        .select('id, name:approved_name, approved_name, road_address, jibun_address')
-                        .eq('approved_name', reviewLookupName);
+                    const candidateSelect = 'id, name:approved_name, approved_name, origin_name, naver_name, google_name, road_address, jibun_address';
+                    const lookupNames = Array.from(new Set([
+                        reviewLookupName,
+                        restaurant.origin_name,
+                        restaurant.naver_name,
+                        restaurant.google_name,
+                        ...(restaurant.mergedRestaurants || []).flatMap((mergedRestaurant) => [
+                            mergedRestaurant.approved_name,
+                            mergedRestaurant.name,
+                            mergedRestaurant.origin_name,
+                            mergedRestaurant.naver_name,
+                            mergedRestaurant.google_name,
+                        ]),
+                    ].map((name) => name?.trim()).filter((name): name is string => Boolean(name))));
+                    const lookupAddresses = Array.from(new Set([
+                        restaurant.road_address,
+                        restaurant.jibun_address,
+                        ...(restaurant.mergedRestaurants || []).flatMap((mergedRestaurant) => [
+                            mergedRestaurant.road_address,
+                            mergedRestaurant.jibun_address,
+                        ]),
+                    ].filter((address): address is string => Boolean(address))));
 
-                    allIds = selectRelatedRestaurantReviewIds(restaurant, (relatedRestaurants || []) as Restaurant[]);
+                    const relatedRestaurantResults = await Promise.all([
+                        ...lookupNames.flatMap((name) => [
+                            supabase
+                                .from('restaurants')
+                                .select(candidateSelect)
+                                .eq('approved_name', name),
+                            supabase
+                                .from('restaurants')
+                                .select(candidateSelect)
+                                .eq('origin_name', name),
+                            supabase
+                                .from('restaurants')
+                                .select(candidateSelect)
+                                .eq('naver_name', name),
+                            supabase
+                                .from('restaurants')
+                                .select(candidateSelect)
+                                .eq('google_name', name),
+                        ]),
+                        ...lookupAddresses.map((address) =>
+                            supabase
+                                .from('restaurants')
+                                .select(candidateSelect)
+                                .eq('road_address', address)
+                        ),
+                        ...lookupAddresses.map((address) =>
+                            supabase
+                                .from('restaurants')
+                                .select(candidateSelect)
+                                .eq('jibun_address', address)
+                        ),
+                    ]);
+
+                    const relatedRestaurants = relatedRestaurantResults.flatMap((result) => result.data || []);
+
+                    allIds = selectRelatedRestaurantReviewIds(restaurant, relatedRestaurants as Restaurant[]);
                 }
 
                 // 1. 해당 맛집의 승인된 리뷰 조회 (Paging)
