@@ -10,7 +10,7 @@ export const siteConfig = {
     representative: process.env.NEXT_PUBLIC_OPERATOR_REPRESENTATIVE || '최연우',
     businessRegistrationNumber:
       process.env.NEXT_PUBLIC_OPERATOR_BUSINESS_REGISTRATION_NUMBER || '601-09-04613',
-    copyrightLabel: process.env.NEXT_PUBLIC_COPYRIGHT_LABEL || 'v2.0.0 © 타이니번',
+    copyrightLabel: process.env.NEXT_PUBLIC_COPYRIGHT_LABEL || 'v1.1.1 © Tzudong Map',
   },
   legal: {
     privacyPath: '/privacy',
