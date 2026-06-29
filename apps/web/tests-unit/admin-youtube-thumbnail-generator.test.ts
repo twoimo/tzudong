@@ -794,8 +794,9 @@ describe("admin youtube thumbnail generator", () => {
       generationMode: "backend_agent",
     });
 
-    expect(parsed).toEqual({
+    expect(parsed).toMatchObject({
       chatRunId: "thumbnail-chat-test-001",
+      chatThreadId: undefined,
       message: "메인: 역대급 먹방, 스티커: 한입만 가능? 생성해줘",
       currentTopic: "기존 주제",
       currentHeadline: "기존 메인",
@@ -807,6 +808,9 @@ describe("admin youtube thumbnail generator", () => {
         expect.objectContaining({ id: "headline", content: "역대급 먹방", fontSize: 92 }),
         expect.objectContaining({ id: "subHeadline", content: "한입만 가능?", fontSize: 46 }),
       ],
+      conversationMessages: [],
+      focusContext: null,
+      referenceImageAttachments: [],
       providerId: "local-codex",
       generationMode: "backend_agent",
     });
@@ -816,6 +820,37 @@ describe("admin youtube thumbnail generator", () => {
     })).toMatchObject({
       message: "메인 문구는 제육볶음 밥도둑 한상 으로 바꿔줘",
       currentTextLayers: [expect.objectContaining({ content: "해산물 먹방" })],
+    });
+    expect(parseThumbnailChatAgentRequest({
+      message: "좋아 그걸로 생성해줘",
+      chatThreadId: " thumbnail-chat:thread 01! ",
+      conversationMessages: [
+        { role: "assistant", id: "assistant-intro", content: "원하는 썸네일을 말로 적어 주세요" },
+        { role: "user", id: "user-prev", content: " 제육볶음 밥도둑 한상 " },
+        { role: "assistant", id: "assistant-prev", content: "좋아요. 큰 문구는 밥도둑 한상이 좋습니다." },
+      ],
+      focusContext: {
+        kind: "text-layer",
+        label: "메인 문구",
+        layerId: "headline",
+        role: "headline",
+        detail: "최근 선택됨",
+        promptContext: "headline=역대급 먹방; x=640; y=520",
+      },
+      referenceImageAttachments: [
+        { id: "ref-1", name: "host.png", mime: "image/png", size: 12345, role: "host", width: 1280, height: 720 },
+        { id: "raw", name: "", mime: "image/png", size: 10, role: "food" },
+      ],
+    })).toMatchObject({
+      chatThreadId: "thumbnail-chat:thread01",
+      conversationMessages: [
+        { role: "user", id: "user-prev", content: "제육볶음 밥도둑 한상" },
+        { role: "assistant", id: "assistant-prev", content: "좋아요. 큰 문구는 밥도둑 한상이 좋습니다." },
+      ],
+      focusContext: expect.objectContaining({ kind: "text-layer", layerId: "headline", role: "headline" }),
+      referenceImageAttachments: [
+        expect.objectContaining({ name: "host.png", mime: "image/png", size: 12345, role: "host", width: 1280, height: 720 }),
+      ],
     });
     expectThumbnailError(() => parseThumbnailChatAgentRequest(null), "thumbnail_chat_payload_invalid");
     expectThumbnailError(() => parseThumbnailChatAgentRequest({}), "thumbnail_chat_message_required");
@@ -2646,7 +2681,194 @@ process.stdin.on("end", () => {
       expect(result.assistantMessage).toContain("그 요청은 안전하게 처리할 수 없어요");
       expect(result.assistantMessage).toContain("확인 과정 건너뛰기");
       expect(result.assistantMessage).not.toContain("검증 완료");
-      expect(result.backendAgent?.diagnostics.chatIntent).toBe("blocked_unsafe_instruction");
+      expect(result.backendAgent?.diagnostics.chatIntent).toBe("safety");
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+  test("answers non-mutating thumbnail chat intents locally without invoking backend-agent commands", async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "thumbnail-chat-non-mutating-"));
+    const markerPath = join(tempDir, "invoked.txt");
+    const commandPath = writeThumbnailAgentCommand(tempDir, "thumbnail-chat-should-not-run", `
+const fs = require("node:fs");
+fs.writeFileSync(${JSON.stringify(markerPath)}, "invoked");
+process.exit(42);
+`);
+    const env = {
+      THUMBNAIL_AGENT_COMMAND: commandPath,
+      THUMBNAIL_AGENT_RUNTIME: "codex_cli_oauth",
+      THUMBNAIL_AGENT_CODEX_MODEL: "gpt-5.5",
+      THUMBNAIL_AGENT_CODEX_EFFORT: "high",
+    } as NodeJS.ProcessEnv;
+
+    try {
+      const casual = await generateYoutubeThumbnailChatWithBackendAgent({
+        message: "ㅎㅇ",
+        currentTopic: "제육볶음 썸네일",
+        currentHeadline: "밥도둑 한상",
+        currentSubHeadline: "한입만 가능?",
+        chatThreadId: "thumbnail-thread-unit",
+      }, env);
+      expect(casual.shouldGenerate).toBe(false);
+      expect(casual.textLayerPatches).toEqual([]);
+      expect(casual.backendAgent.diagnostics.chatIntent).toBe("casual_chat");
+      expect(casual.backendAgent.diagnostics.externalAgentInvoked).toBe(false);
+      expect(casual.canvasPatch).toMatchObject({ headline: "밥도둑 한상", subHeadline: "한입만 가능?" });
+
+      const question = await generateYoutubeThumbnailChatWithBackendAgent({
+        message: "이미지 생성은 얼마나 걸려?",
+        currentTopic: "제육볶음 썸네일",
+        currentHeadline: "밥도둑 한상",
+        currentSubHeadline: "한입만 가능?",
+        chatThreadId: "thumbnail-thread-unit",
+      }, env);
+      expect(question.shouldGenerate).toBe(false);
+      expect(question.backendAgent.diagnostics.chatIntent).toBe("conversation");
+      expect(question.canvasPatch).toMatchObject({ headline: "밥도둑 한상", subHeadline: "한입만 가능?" });
+      expect(question.diagnostics.canvasMutation).toBe(false);
+
+      const editHelp = await generateYoutubeThumbnailChatWithBackendAgent({
+        message: "선택된 문구를 어떻게 바꾸면 돼?",
+        currentTopic: "제육볶음 썸네일",
+        currentHeadline: "밥도둑 한상",
+        currentSubHeadline: "한입만 가능?",
+        activeLayerId: "headline",
+        currentTextLayers: createSelectedLayerChatTextLayers(),
+        chatThreadId: "thumbnail-thread-unit",
+      }, env);
+      expect(editHelp.shouldGenerate).toBe(false);
+      expect(editHelp.textLayerPatches).toEqual([]);
+      expect(editHelp.backendAgent.diagnostics.chatIntent).toBe("conversation");
+      expect(editHelp.backendAgent.diagnostics.externalAgentInvoked).toBe(false);
+      expect(editHelp.diagnostics.canvasMutation).toBe(false);
+      expect(editHelp.canvasPatch).toMatchObject({ headline: "밥도둑 한상", subHeadline: "한입만 가능?" });
+
+      const resetHelp = await generateYoutubeThumbnailChatWithBackendAgent({
+        message: "초기화는 어떻게 해?",
+        currentTopic: "제육볶음 썸네일",
+        currentHeadline: "밥도둑 한상",
+        currentSubHeadline: "한입만 가능?",
+        chatThreadId: "thumbnail-thread-unit",
+      }, env);
+      expect(resetHelp.shouldReset).toBe(false);
+      expect(resetHelp.backendAgent.diagnostics.chatIntent).toBe("conversation");
+      expect(resetHelp.backendAgent.diagnostics.externalAgentInvoked).toBe(false);
+      expect(resetHelp.diagnostics.canvasMutation).toBe(false);
+
+      const permissionQuestion = await generateYoutubeThumbnailChatWithBackendAgent({
+        message: "이미지 만들어도 돼?",
+        currentTopic: "제육볶음 썸네일",
+        currentHeadline: "밥도둑 한상",
+        currentSubHeadline: "한입만 가능?",
+        chatThreadId: "thumbnail-thread-unit",
+      }, env);
+      expect(permissionQuestion.shouldGenerate).toBe(false);
+      expect(permissionQuestion.backendAgent.diagnostics.chatIntent).toBe("conversation");
+      expect(permissionQuestion.diagnostics.canvasMutation).toBe(false);
+
+      const review = await generateYoutubeThumbnailChatWithBackendAgent({
+        message: "초보자도 이해할 수 있게 현재 썸네일을 검토해줘",
+        currentTopic: "제육볶음 썸네일",
+        currentHeadline: "밥도둑 한상",
+        currentSubHeadline: "한입만 가능?",
+        chatThreadId: "thumbnail-thread-unit",
+      }, env);
+      expect(review.shouldGenerate).toBe(false);
+      expect(review.backendAgent.diagnostics.chatIntent).toBe("review");
+      expect(review.assistantMessage).toContain("화면은 바꾸지 않았습니다");
+      expect(existsSync(markerPath)).toBe(false);
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test("uses bounded conversation and reference metadata for follow-up generation without image bytes", async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "thumbnail-chat-context-"));
+    const inputPath = join(tempDir, "input.json");
+    const commandPath = writeThumbnailAgentCommand(tempDir, "thumbnail-chat-context-capture", `
+const { writeFileSync } = require("node:fs");
+let input = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => { input += chunk; });
+process.stdin.on("end", () => {
+  writeFileSync(${JSON.stringify(inputPath)}, input, "utf8");
+  process.stdout.write(JSON.stringify({
+    mode: "command",
+    runtime: "codex_cli_oauth",
+    concept: "context-aware chat concept",
+    layoutBrief: "context-aware chat layout",
+    promptAddendum: "context-aware prompt addendum",
+    safetyReview: "review",
+    nextActions: ["생성 이미지 검수"],
+    warnings: [],
+    diagnostics: { model: "gpt-5.5", effort: "high" },
+  }));
+});
+`);
+
+    try {
+      const conversationMessages = [
+        ...Array.from({ length: 9 }, (_, index) => ({
+          role: "user" as const,
+          id: `user-context-${index + 1}`,
+          content: `맥락 ${index + 1}`,
+        })),
+        {
+          role: "assistant" as const,
+          id: "assistant-context-final",
+          content: "제육볶음 밥도둑 한상 콘셉트로 가면 좋아요",
+        },
+      ];
+
+      const result = await generateYoutubeThumbnailChatWithBackendAgent({
+        message: "좋아 그걸로 생성해줘",
+        currentTopic: "기존 주제",
+        currentHeadline: "역대급 먹방",
+        currentSubHeadline: "한입만 가능?",
+        chatThreadId: "thumbnail-context-thread",
+        conversationMessages,
+        focusContext: {
+          kind: "text-layer",
+          label: "메인 문구",
+          layerId: "headline",
+          role: "headline",
+          detail: "최근 선택됨",
+          promptContext: "headline=역대급 먹방; x=640; y=520",
+        },
+        referenceImageAttachments: [
+          { id: "host-1", name: "host.png", mime: "image/png", size: 12345, role: "host", width: 1280, height: 720 },
+        ],
+        providerId: "local-codex",
+        generationMode: "backend_agent",
+      }, {
+        THUMBNAIL_AGENT_COMMAND: commandPath,
+        THUMBNAIL_AGENT_RUNTIME: "codex_cli_oauth",
+        THUMBNAIL_AGENT_CODEX_MODEL: "gpt-5.5",
+        THUMBNAIL_AGENT_CODEX_EFFORT: "high",
+      } as NodeJS.ProcessEnv);
+
+      expect(result.shouldGenerate).toBe(true);
+      expect(result.backendAgent.diagnostics.chatIntent).toBe("generate");
+      expect(result.backendAgent.diagnostics.chatThreadId).toBe("thumbnail-context-thread");
+      expect(result.backendAgent.diagnostics.conversationTurnCount).toBe(8);
+      expect(result.backendAgent.diagnostics.imageAttachmentCount).toBe(1);
+      expect(result.backendAgent.diagnostics.focusContextUsed).toBe(true);
+      expect(result.assistantMessage).toContain("최근 대화 8개");
+
+      const captured = JSON.parse(readFileSync(inputPath, "utf8")) as {
+        request: { topic: string; headline: string; referenceImageRoles: string[] };
+        basePrompt: string;
+        referenceImages: unknown[];
+      };
+      expect(captured.referenceImages).toEqual([]);
+      expect(captured.request.referenceImageRoles).toEqual([]);
+      expect(captured.request.topic).toContain("제육볶음");
+      expect(captured.request.headline.length).toBeLessThanOrEqual(36);
+      expect(captured.basePrompt).toContain("Conversation context:");
+      expect(captured.basePrompt).not.toContain("맥락 1");
+      expect(captured.basePrompt).toContain("맥락 9");
+      expect(captured.basePrompt).toContain("Canvas focus context: 선택 문구: 메인 문구");
+      expect(captured.basePrompt).toContain("Reference image attachments: 1. host.png role=host mime=image/png size=12345 1280x720");
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
@@ -2752,6 +2974,22 @@ process.stdin.on("end", () => {
         headline: "제육볶음 먹방",
         subHeadline: "밥도둑 인정?",
       });
+
+      const noReferenceNeeded = await generateYoutubeThumbnailChatWithBackendAgent({
+        message: "참고 이미지는 필요 없이 제육볶음 썸네일 생성해줘",
+        currentTopic: "기존 주제",
+        currentHeadline: "역대급 먹방",
+        currentSubHeadline: "한입만 가능?",
+        providerId: "local-codex",
+        generationMode: "direct_provider",
+      }, {
+        THUMBNAIL_AGENT_COMMAND: commandPath,
+        THUMBNAIL_AGENT_RUNTIME: "codex_cli_oauth",
+        THUMBNAIL_AGENT_CODEX_MODEL: "gpt-5.5",
+        THUMBNAIL_AGENT_CODEX_EFFORT: "high",
+      } as NodeJS.ProcessEnv);
+      expect(noReferenceNeeded.shouldGenerate).toBe(true);
+      expect(noReferenceNeeded.backendAgent.diagnostics.chatIntent).toBe("generate");
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
@@ -4398,10 +4636,11 @@ test("youtube thumbnail release candidates stay hidden and auto-seed the initial
   expect(component).toContain("data-thumbnail-initial-preview-source");
   expect(component).toContain("userCanvasResultLockedRef");
   expect(component).toContain("pendingChatGenerationRequirementRef");
-  expect(component).toContain("const submittedHasGenerationIntent = hasThumbnailGenerationIntent(submittedRequirement)");
+  expect(component).toContain("const nonMutatingPrompt = isNonMutatingThumbnailChatPrompt(submittedRequirement)");
+  expect(component).toContain("const submittedHasGenerationIntent = hasThumbnailGenerationIntent(submittedRequirement) && !nonMutatingPrompt");
   expect(component).toContain("const replacementEditPrompt = isThumbnailChatReplacementPrompt(submittedRequirement)");
-  expect(component).toContain("const shouldUseStructuredEditPreview = structuredEditPrompt && (!submittedHasGenerationIntent || replacementEditPrompt)");
-  expect(component).toContain("if (!selectedLayerPrompt && !shouldUseStructuredEditPreview) applyChatRequirementToCanvas(submittedRequirement)");
+  expect(component).toContain("const shouldUseStructuredEditPreview = !nonMutatingPrompt && structuredEditPrompt && (!submittedHasGenerationIntent || replacementEditPrompt)");
+  expect(component).toContain("if (!selectedLayerPrompt && !shouldUseStructuredEditPreview && !nonMutatingPrompt) applyChatRequirementToCanvas(submittedRequirement)");
   expect(component).toContain("pendingChatGenerationRequirementRef.current = submittedHasGenerationIntent");
   expect(component).toContain("if (submittedHasGenerationIntent)");
   expect(component).toContain("const chatGenerationRequirement = chatAssistantMessageId");

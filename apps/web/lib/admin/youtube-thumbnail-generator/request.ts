@@ -32,6 +32,15 @@ const THUMBNAIL_CHAT_RUN_ID_MAX_LENGTH = 120;
 const THUMBNAIL_CHAT_LAYER_ID_MAX_LENGTH = 40;
 const THUMBNAIL_CHAT_ACTION_MAX_LENGTH = 80;
 const THUMBNAIL_CHAT_RUN_ID_PATTERN = /^[A-Za-z0-9_.:-]+$/;
+const THUMBNAIL_CHAT_THREAD_ID_MAX_LENGTH = 120;
+const THUMBNAIL_CHAT_CONVERSATION_CONTEXT_LIMIT = 8;
+const THUMBNAIL_CHAT_CONVERSATION_CONTENT_MAX_LENGTH = 280;
+const THUMBNAIL_CHAT_CONVERSATION_ID_MAX_LENGTH = 120;
+const THUMBNAIL_CHAT_FOCUS_LABEL_MAX_LENGTH = 80;
+const THUMBNAIL_CHAT_FOCUS_DETAIL_MAX_LENGTH = 180;
+const THUMBNAIL_CHAT_FOCUS_PROMPT_MAX_LENGTH = 260;
+const THUMBNAIL_CHAT_ATTACHMENT_ID_MAX_LENGTH = 120;
+const THUMBNAIL_CHAT_ATTACHMENT_NAME_MAX_LENGTH = 120;
 const THUMBNAIL_CONTROL_CHARS_PATTERN = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
 const THUMBNAIL_SESSION_OPENAI_API_KEY_PATTERN = /^sk-[A-Za-z0-9_-]{16,}$/;
 const THUMBNAIL_SESSION_API_KEY_FORBIDDEN_CHARS_PATTERN = /[\s\u0000-\u001F\u007F]/;
@@ -127,6 +136,103 @@ function parseOptionalChatString(value: unknown, fieldName: string, maxLength: n
   return trimmed ? trimmed.slice(0, maxLength) : undefined;
 }
 
+function parseThumbnailChatThreadId(value: unknown) {
+  const raw = parseOptionalChatString(value, 'chatThreadId', THUMBNAIL_CHAT_THREAD_ID_MAX_LENGTH);
+  if (!raw) return undefined;
+  const safe = raw.replace(/[^\w:.-]/g, '').slice(0, THUMBNAIL_CHAT_THREAD_ID_MAX_LENGTH);
+  return safe || undefined;
+}
+
+function isThumbnailChatReadbackMessage(message: { role: 'user' | 'assistant'; content: string; id?: string }) {
+  if (message.role === 'user') return false;
+  const normalized = message.content.replace(/\s+/g, ' ').trim();
+  return (
+    message.id?.startsWith('assistant-intro') ||
+    message.id?.startsWith('assistant-history-load') ||
+    normalized.startsWith('원하는 썸네일을 말로 적어 주세요') ||
+    normalized.startsWith('간단히 3가지만 적어 주세요') ||
+    normalized.startsWith('현재 상태를 쉽게 정리했어요') ||
+    normalized.startsWith('생성 히스토리를 이 페이지 안에서 열었습니다') ||
+    normalized.startsWith('히스토리 결과 불러오기') ||
+    normalized.startsWith('현재 캔버스를 PNG로 저장했습니다') ||
+    normalized.startsWith('참고 이미지 파일 선택창을 열었습니다') ||
+    normalized.startsWith('참고 이미지를 모두 비웠습니다') ||
+    normalized.includes('실제 생성 결과를 캔버스에 반영했습니다') ||
+    normalized.includes('공용 릴리즈') ||
+    normalized.includes('릴리즈 후보')
+  );
+}
+
+function parseThumbnailChatConversationMessages(value: unknown): ThumbnailChatAgentRequest['conversationMessages'] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .flatMap((item): NonNullable<ThumbnailChatAgentRequest['conversationMessages']> => {
+      if (!isRecord(item)) return [];
+      const role = item.role === 'user' || item.role === 'assistant' ? item.role : null;
+      const content = toStringValue(item.content, THUMBNAIL_CHAT_CONVERSATION_CONTENT_MAX_LENGTH);
+      if (!role || !content) return [];
+      const id = toStringValue(item.id, THUMBNAIL_CHAT_CONVERSATION_ID_MAX_LENGTH);
+      const createdAt = toStringValue(item.createdAt, 80);
+      const message = {
+        role,
+        content,
+        ...(id ? { id } : {}),
+        ...(createdAt ? { createdAt } : {}),
+      };
+      return isThumbnailChatReadbackMessage(message) ? [] : [message];
+    })
+    .slice(-THUMBNAIL_CHAT_CONVERSATION_CONTEXT_LIMIT);
+}
+
+function parseThumbnailChatFocusContext(value: unknown): ThumbnailChatAgentRequest['focusContext'] {
+  if (!isRecord(value)) return null;
+  const kind = value.kind === 'text-layer' || value.kind === 'canvas' ? value.kind : null;
+  const label = toStringValue(value.label, THUMBNAIL_CHAT_FOCUS_LABEL_MAX_LENGTH);
+  const promptContext = toStringValue(value.promptContext, THUMBNAIL_CHAT_FOCUS_PROMPT_MAX_LENGTH);
+  if (!kind || !label || !promptContext) return null;
+  const role = value.role === 'headline' || value.role === 'subHeadline' || value.role === 'custom'
+    ? value.role
+    : undefined;
+  const layerId = toStringValue(value.layerId, THUMBNAIL_CHAT_LAYER_ID_MAX_LENGTH);
+  const detail = toStringValue(value.detail, THUMBNAIL_CHAT_FOCUS_DETAIL_MAX_LENGTH);
+  const createdAt = toStringValue(value.createdAt, 80);
+  return {
+    kind,
+    label,
+    promptContext,
+    ...(layerId ? { layerId } : {}),
+    ...(role ? { role } : {}),
+    ...(detail ? { detail } : {}),
+    ...(createdAt ? { createdAt } : {}),
+  };
+}
+
+function parseThumbnailChatReferenceImageAttachments(value: unknown): ThumbnailChatAgentRequest['referenceImageAttachments'] {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, THUMBNAIL_MAX_FILES).flatMap((item): NonNullable<ThumbnailChatAgentRequest['referenceImageAttachments']> => {
+    if (!isRecord(item)) return [];
+    const name = toStringValue(item.name, THUMBNAIL_CHAT_ATTACHMENT_NAME_MAX_LENGTH);
+    if (!name) return [];
+    const id = toStringValue(item.id, THUMBNAIL_CHAT_ATTACHMENT_ID_MAX_LENGTH);
+    const mime = item.mime === 'image/png' || item.mime === 'image/jpeg' || item.mime === 'image/webp'
+      ? item.mime
+      : undefined;
+    const role = isThumbnailReferenceRole(item.role) ? item.role : undefined;
+    const size = Number(item.size);
+    const width = Number(item.width);
+    const height = Number(item.height);
+    return [{
+      ...(id ? { id } : {}),
+      name,
+      ...(mime ? { mime } : {}),
+      ...(Number.isFinite(size) && size >= 0 ? { size: Math.min(size, THUMBNAIL_MAX_FILE_BYTES) } : {}),
+      ...(role ? { role } : {}),
+      ...(Number.isFinite(width) && width > 0 ? { width: Math.round(width) } : {}),
+      ...(Number.isFinite(height) && height > 0 ? { height: Math.round(height) } : {}),
+    }];
+  });
+}
+
 export function parseThumbnailChatAgentRequest(value: unknown): ThumbnailChatAgentRequest {
   if (!isRecord(value)) {
     throw new ThumbnailGenerationError('thumbnail_chat_payload_invalid', '채팅 요청 JSON이 필요합니다.', 400);
@@ -184,6 +290,7 @@ export function parseThumbnailChatAgentRequest(value: unknown): ThumbnailChatAge
 
   return {
     chatRunId,
+    chatThreadId: parseThumbnailChatThreadId(value.chatThreadId),
     message,
     currentTopic: parseOptionalChatString(value.currentTopic, 'currentTopic', THUMBNAIL_CHAT_CONTEXT_MAX_LENGTH),
     currentHeadline: parseOptionalChatString(value.currentHeadline, 'currentHeadline', THUMBNAIL_CHAT_TEXT_MAX_LENGTH),
@@ -192,6 +299,9 @@ export function parseThumbnailChatAgentRequest(value: unknown): ThumbnailChatAge
     editingLayerId: parseOptionalChatString(value.editingLayerId, 'editingLayerId', THUMBNAIL_CHAT_LAYER_ID_MAX_LENGTH),
     lastCanvasActionLabel: parseOptionalChatString(value.lastCanvasActionLabel, 'lastCanvasActionLabel', THUMBNAIL_CHAT_ACTION_MAX_LENGTH),
     currentTextLayers: parseTextLayers(value.currentTextLayers),
+    conversationMessages: parseThumbnailChatConversationMessages(value.conversationMessages),
+    focusContext: parseThumbnailChatFocusContext(value.focusContext),
+    referenceImageAttachments: parseThumbnailChatReferenceImageAttachments(value.referenceImageAttachments),
     providerId,
     generationMode,
   };

@@ -444,7 +444,7 @@ export default function DesktopLeftPanelMapHome({
               </SelectTrigger>
               <SelectContent
                 align="end"
-                className="z-[190] min-w-[92px] rounded-2xl border-border bg-card p-1 font-serif shadow-xl"
+                className="z-[190] min-w-[92px] rounded-2xl border-border bg-card p-1 font-sans shadow-xl"
               >
                 {latestRestaurantSortOptions.map((option) => (
                   <SelectItem
