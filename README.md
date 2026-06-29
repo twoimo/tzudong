@@ -1,6 +1,7 @@
 <div align="center">
   <p>
     <img src="apps/web/public/logo.png" width="72" alt="Tzudong Map logo" />
+  </p>
   <h1>Tzudong Map</h1>
   <p><strong>A map-first restaurant discovery product and AI storyboard workspace for restaurants featured in Tzuyang videos.</strong></p>
   <p>
