@@ -1,8 +1,8 @@
 <div align="center">
-  <h1>
-    <img src="apps/web/public/logo.png" width="48" alt="Tzudong Map logo" />
-    Tzudong Map
-  </h1>
+  <p>
+    <img src="apps/web/public/logo.png" width="72" alt="Tzudong Map logo" />
+  </p>
+  <h1>Tzudong Map</h1>
   <p><strong>A map-first restaurant discovery product and AI storyboard workspace for restaurants featured in Tzuyang videos.</strong></p>
   <p>
     <a href="https://tzudong.app">Live app</a>
@@ -67,12 +67,12 @@ The README visuals are recorded from the local Next.js app in a real browser ses
 
 <table>
   <tr>
-    <td width="50%"><img src="apps/web/public/images/readme-mobile-home-map.gif" alt="Mobile GIF showing the home map focusing Gangnam Station, opening a marker, and scrolling the restaurant detail bottom sheet" /></td>
-    <td width="50%"><img src="apps/web/public/images/readme-mobile-reviews-feed.gif" alt="Mobile GIF showing the review feed expanding a review and opening the linked restaurant detail sheet" /></td>
+    <td width="50%"><img src="apps/web/public/images/readme-mobile-home-map.gif" alt="Mobile GIF showing the home map tapping current location twice, sampling multiple Gangnam markers, and expanding the final restaurant detail sheet" /></td>
+    <td width="50%"><img src="apps/web/public/images/readme-mobile-reviews-feed.gif" alt="Mobile GIF showing the review feed scrolling, browsing a review carousel, expanding the review, and opening the restaurant detail sheet" /></td>
   </tr>
   <tr>
-    <td width="50%"><img src="apps/web/public/images/readme-mobile-stamp-passport.gif" alt="Mobile GIF showing the stamp passport filtering restaurants and opening a stamped restaurant detail sheet" /></td>
-    <td width="50%"><img src="apps/web/public/images/readme-mobile-leaderboard-ranking.gif" alt="Mobile GIF showing the ranking page switching leaderboard context and scrolling the ranking list" /></td>
+    <td width="50%"><img src="apps/web/public/images/readme-mobile-stamp-passport.gif" alt="Mobile GIF showing the stamp passport scrolling, opening a restaurant card, and reading the expanded restaurant detail sheet" /></td>
+    <td width="50%"><img src="apps/web/public/images/readme-mobile-leaderboard-ranking.gif" alt="Mobile GIF showing the ranking page opening the top profile and previewing stamps, reviews, and likes tabs" /></td>
   </tr>
 </table>
 

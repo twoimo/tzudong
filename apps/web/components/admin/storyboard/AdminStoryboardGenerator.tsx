@@ -4263,7 +4263,7 @@ function StoryboardCutImageSkeleton({
         className="storyboard-cut-image-shimmer pointer-events-none absolute"
         aria-hidden="true"
         data-storyboard-cut-image-shimmer="true"
-        data-storyboard-cut-image-shimmer-effect="diagonal-glass-sweep"
+        data-storyboard-cut-image-shimmer-effect="glass-sweep"
         data-storyboard-glass-shimmer="true"
       />
       <span className="sr-only">

@@ -1,8 +1,8 @@
 <div align="center">
-  <h1>
-    <img src="apps/web/public/logo.png" width="48" alt="쯔동여지도 로고" />
-    Tzudong Map
-  </h1>
+  <p>
+    <img src="apps/web/public/logo.png" width="72" alt="쯔동여지도 로고" />
+  </p>
+  <h1>Tzudong Map</h1>
   <p><strong>모두를 위한 Tzudong Map. 쯔양 영상 속 맛집을 지도, 검수, 스토리보드 워크스페이스로 연결하는 제품입니다.</strong></p>
   <p>
     <a href="https://tzudong.app">라이브 앱</a>
@@ -67,12 +67,12 @@ Supabase는 웹 앱과 백엔드 파이프라인 사이의 공유 영속성 경�
 
 <table>
   <tr>
-    <td width="50%"><img src="apps/web/public/images/readme-mobile-home-map.gif" alt="강남역으로 이동한 홈 지도에서 마커를 열고 맛집 상세 바텀시트를 스크롤하는 모바일 GIF" /></td>
-    <td width="50%"><img src="apps/web/public/images/readme-mobile-reviews-feed.gif" alt="리뷰 피드에서 리뷰를 펼치고 연결된 맛집 상세 바텀시트를 여는 모바일 GIF" /></td>
+    <td width="50%"><img src="apps/web/public/images/readme-mobile-home-map.gif" alt="홈 지도에서 현재 위치를 두 번 누르고 강남역 주변 마커 여러 개를 확인한 뒤 마지막 맛집 상세를 전체 화면으로 여는 모바일 GIF" /></td>
+    <td width="50%"><img src="apps/web/public/images/readme-mobile-reviews-feed.gif" alt="리뷰 피드에서 스크롤, 캐러셀 탐색, 더보기, 맛집명 선택 후 상세 바텀시트를 여는 모바일 GIF" /></td>
   </tr>
   <tr>
-    <td width="50%"><img src="apps/web/public/images/readme-mobile-stamp-passport.gif" alt="도장 페이지에서 맛집을 필터링하고 도장 맛집 상세 바텀시트를 여는 모바일 GIF" /></td>
-    <td width="50%"><img src="apps/web/public/images/readme-mobile-leaderboard-ranking.gif" alt="랭킹 페이지에서 전체와 월간 문맥을 전환하고 랭킹 목록을 스크롤하는 모바일 GIF" /></td>
+    <td width="50%"><img src="apps/web/public/images/readme-mobile-stamp-passport.gif" alt="도장 페이지를 스크롤하고 맛집 카드를 열어 전체 화면 상세를 끝까지 보는 모바일 GIF" /></td>
+    <td width="50%"><img src="apps/web/public/images/readme-mobile-leaderboard-ranking.gif" alt="랭킹 페이지에서 쯔동마스터 프로필을 열고 도장, 리뷰, 좋아요 탭을 확인하는 모바일 GIF" /></td>
   </tr>
 </table>
 

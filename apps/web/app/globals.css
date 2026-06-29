@@ -108,24 +108,6 @@ button {
     transform: translate3d(320%, 0, 0) skewX(-10deg);
   }
 }
-@keyframes storyboard-cut-glass-diagonal-shimmer {
-  0% {
-    transform: translate3d(-64%, -54%, 0) rotate(-18deg);
-    opacity: 0;
-  }
-
-  28%,
-  72% {
-    opacity: 0.74;
-  }
-
-  100% {
-    transform: translate3d(360%, 54%, 0) rotate(-18deg);
-    opacity: 0;
-  }
-}
-
-
 [data-storyboard-cut-image-skeleton="true"] {
   position: absolute;
   inset: 0;
@@ -157,20 +139,20 @@ button {
 
 [data-storyboard-cut-image-shimmer="true"] {
   position: absolute;
-  top: -58%;
-  left: -56%;
+  top: -14%;
+  bottom: -14%;
+  left: -42%;
   z-index: 4;
   display: block;
-  width: max(12rem, 42%);
-  height: 216%;
-  transform-origin: center;
+  width: max(10rem, 34%);
+  height: 128%;
   background:
-    linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.1) 30%, rgba(255, 255, 255, 0.82) 50%, rgba(255, 255, 255, 0.13) 70%, transparent 100%);
+    linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.12) 30%, rgba(255, 255, 255, 0.82) 50%, rgba(255, 255, 255, 0.14) 70%, transparent 100%);
 }
 
 [data-storyboard-cut-image-skeleton-active="true"]
   [data-storyboard-cut-image-shimmer="true"] {
-  animation: storyboard-cut-glass-diagonal-shimmer 1.45s ease-in-out infinite;
+  animation: storyboard-glass-shimmer 1.35s ease-in-out infinite;
   opacity: 0.76;
   will-change: transform, opacity;
 }
