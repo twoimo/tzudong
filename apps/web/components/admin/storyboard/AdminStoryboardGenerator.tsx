@@ -38,7 +38,7 @@ import {
 import {
   type StoryboardGuidedExamplePreset,
   STORYBOARD_GUIDED_EXAMPLE_PRESETS,
-  STORYBOARD_GUIDED_EXAMPLE_STARTER_PRESETS,
+  STORYBOARD_GUIDED_EXAMPLE_GRID_PRESETS,
 } from "@/lib/admin/storyboard/guided-example-presets";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8756,22 +8756,26 @@ export function AdminStoryboardGenerator({
                                   className="mx-auto max-w-[17rem] text-[11px] leading-5 text-muted-foreground"
                                   data-storyboard-chat-starter-guide-copy="true"
                                 >
-                                  주제·음식·원하는 CUT 수를 한두 문장으로 적거나,
-                                  아래 예시를 눌러 바로 시작하세요.
+                                  <span className="block">
+                                    주제·음식·원하는 CUT 수를 한두 문장으로 적거나,
+                                  </span>
+                                  <span className="block">
+                                    아래 예시를 눌러 바로 시작하세요.
+                                  </span>
                                 </p>
                               </div>
                             </div>
                             <div
-                              className="grid grid-cols-2 gap-2"
+                              className="grid grid-cols-2 gap-1.5"
                               data-storyboard-chat-example-grid="true"
-                              data-storyboard-chat-example-grid-layout="4x2"
+                              data-storyboard-chat-example-grid-layout="10-card-grid"
                             >
-                              {STORYBOARD_GUIDED_EXAMPLE_STARTER_PRESETS.map(
+                              {STORYBOARD_GUIDED_EXAMPLE_GRID_PRESETS.map(
                                 (preset) => (
                                   <button
                                     key={preset.id}
                                     type="button"
-                                    className="group min-h-[4.25rem] rounded-2xl border border-border/70 bg-background/75 p-2 text-left shadow-sm transition hover:border-primary/45 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="group min-h-[3.9rem] rounded-2xl border border-border/70 bg-background/75 p-2 text-left shadow-sm transition hover:border-primary/45 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                                     onClick={() =>
                                       void handleStoryboardGuidedExampleGenerate(
                                         preset,
@@ -8801,52 +8805,6 @@ export function AdminStoryboardGenerator({
                                   </button>
                                 ),
                               )}
-                            </div>
-                            <div
-                              className="grid w-full gap-1"
-                              data-storyboard-chat-more-examples="true"
-                              data-storyboard-chat-more-examples-count={String(
-                                STORYBOARD_GUIDED_EXAMPLE_PRESETS.length -
-                                  STORYBOARD_GUIDED_EXAMPLE_STARTER_PRESETS.length,
-                              )}
-                            >
-                              <span className="text-[10px] font-semibold text-muted-foreground">
-                                더 많은 예시
-                              </span>
-                              <div
-                                className="grid grid-cols-2 gap-1.5"
-                                data-storyboard-chat-more-example-grid="true"
-                              >
-                                {STORYBOARD_GUIDED_EXAMPLE_PRESETS.slice(
-                                  STORYBOARD_GUIDED_EXAMPLE_STARTER_PRESETS.length,
-                                ).map((preset) => (
-                                  <button
-                                    key={preset.id}
-                                    type="button"
-                                    className="rounded-xl border border-border/70 bg-muted/35 px-2 py-1.5 text-left text-[10px] transition hover:border-primary/45 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                                    onClick={() =>
-                                      void handleStoryboardGuidedExampleGenerate(
-                                        preset,
-                                      )
-                                    }
-                                    disabled={
-                                      isGenerating ||
-                                      isChatAgentStreaming ||
-                                      isGeneratingImages
-                                    }
-                                    aria-label={`${preset.label} 추가 예시 불러오기`}
-                                    data-storyboard-chat-more-example-card="true"
-                                    data-storyboard-chat-example-preset={preset.id}
-                                  >
-                                    <span className="block truncate font-semibold text-foreground">
-                                      {preset.label}
-                                    </span>
-                                    <span className="block truncate text-muted-foreground">
-                                      {preset.segmentCount}컷 · {preset.description}
-                                    </span>
-                                  </button>
-                                ))}
-                              </div>
                             </div>
                           </div>
                         ) : (
