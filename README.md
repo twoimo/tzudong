@@ -9,14 +9,18 @@
     ·
     <a href="DESIGN.md">Design contract</a>
     ·
-    <a href="backend/ARCHITECTURE.md">Backend boundaries</a>
+    <a href="SECURITY.md">Security policy</a>
+    ·
+    <a href="LICENSE">MIT license</a>
   </p>
+  <p><strong>Language:</strong> English · <a href="README.ko.md">한국어</a></p>
   <p>
     <img alt="Next.js 16" src="https://img.shields.io/badge/Next.js-16-black?logo=nextdotjs" />
     <img alt="React 19" src="https://img.shields.io/badge/React-19-149eca?logo=react&logoColor=white" />
     <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white" />
     <img alt="Supabase" src="https://img.shields.io/badge/Supabase-PostgreSQL%20%2B%20Auth-3ecf8e?logo=supabase&logoColor=white" />
     <img alt="Runtime" src="https://img.shields.io/badge/runtime-Node%2024.x%20%2B%20Bun-c8a2c8" />
+    <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-green.svg" />
   </p>
 </div>
 
@@ -221,6 +225,8 @@ python -m unittest backend.pipeline.test_data_contracts_unittest
 
 - [`AGENTS.md`](AGENTS.md) — repository guidelines and operating conventions.
 - [`DESIGN.md`](DESIGN.md) — UI/admin design contract and route expectations.
+- [`SECURITY.md`](SECURITY.md) — vulnerability reporting, supported branches, and safe testing rules.
+- [`LICENSE`](LICENSE) — MIT license terms.
 - [`backend/ARCHITECTURE.md`](backend/ARCHITECTURE.md) — backend/API/batch boundary rules.
 - [`backend/DATA_CONTRACTS.md`](backend/DATA_CONTRACTS.md) — backend-to-Supabase-to-web data contract baseline.
 - [`backend/docs/run-daily-operations.md`](backend/docs/run-daily-operations.md) — manifest-first batch runbook.

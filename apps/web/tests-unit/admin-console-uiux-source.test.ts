@@ -5181,11 +5181,12 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).toContain("pairing_token");
     expect(storyboardSource).toContain("STORYBOARD_LOCAL_BRIDGE_DEFAULT_URL");
     expect(storyboardSource).not.toContain("void initialStoryboardResult;");
-    expect(storyboardSource).toContain(
+    expect(storyboardSource).not.toContain(
       "저장된 검증 이미지가 있으면 첫 화면에 즉시 표시합니다.",
     );
+    expect(storyboardSource).toContain("무엇부터 만들까요?");
     expect(storyboardSource).toContain("makeStoryboardImprovementSummaryMessage(");
-    expect(storyboardSource).toContain("setChatMessages((current) => {");
+    expect(storyboardSource).toContain("setChatMessages((current) =>");
     expect(storyboardSource).toContain(
       "postStoryboardLocalBridgeImagesRequest",
     );

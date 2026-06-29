@@ -3700,39 +3700,16 @@ function getTrustedInitialStoryboardResult(
 }
 
 function makeInitialStoryboardChatMessages(
-  initialStoryboardResult: StoryboardInitialResult | null,
+  _initialStoryboardResult: StoryboardInitialResult | null,
 ): StoryboardChatMessage[] {
-  if (!initialStoryboardResult) {
-    const intakeMessage = formatStoryboardChatMessageForDisplay({
-      id: "assistant-intake",
-      role: "assistant",
-      text: "무엇부터 만들까요?",
-      status: "done",
-    });
+  const intakeMessage = formatStoryboardChatMessageForDisplay({
+    id: "assistant-intake",
+    role: "assistant",
+    text: "무엇부터 만들까요?",
+    status: "done",
+  });
 
-    return [intakeMessage];
-  }
-
-  const sourceLabel =
-    initialStoryboardResult.source === "latest-history"
-      ? "최근 실제 기록"
-      : "공용 예시";
-  const messageSuffix = `${initialStoryboardResult.source}-${initialStoryboardResult.result.generatedAt}`
-    .replace(/[^a-zA-Z0-9_-]+/g, "-")
-    .slice(0, 64);
-
-  return [
-    formatStoryboardChatMessageForDisplay({
-      id: `assistant-initial-storyboard-${messageSuffix}`,
-      role: "assistant",
-      text: `${sourceLabel} 스토리보드를 바로 불러왔어요 · ${initialStoryboardResult.result.storyboard.title}. 저장된 검증 이미지가 있으면 첫 화면에 즉시 표시합니다.`,
-      status: "done",
-    }),
-    makeStoryboardImprovementSummaryMessage(
-      initialStoryboardResult.result,
-      `assistant-initial-storyboard-summary-${messageSuffix}`,
-    ),
-  ];
+  return [intakeMessage];
 }
 
 async function postStoryboardRequest(
@@ -4539,6 +4516,31 @@ export function AdminStoryboardGenerator({
       [resetStoryboardLocalBridgeHelperTransport],
     );
 
+  const appendStoryboardThinkingTrace = useCallback(
+    (
+      messageId: string,
+      entries: Array<StoryboardThinkingTraceEntry | null>,
+    ) => {
+      const normalizedEntries = entries.filter(
+        (entry): entry is StoryboardThinkingTraceEntry => Boolean(entry),
+      );
+      if (!normalizedEntries.length) return;
+      setChatMessages((current) =>
+        current.map((message) =>
+          message.id === messageId
+            ? {
+                ...message,
+                thinkingTrace: mergeStoryboardThinkingTraceEntries(
+                  message.thinkingTrace,
+                  normalizedEntries,
+                ),
+              }
+            : message,
+        ),
+      );
+    },
+    [],
+  );
   const handleConnectStoryboardLocalBridgeHelper = useCallback(
     async (options?: {
       bridgeUrl?: string;
@@ -4842,18 +4844,6 @@ export function AdminStoryboardGenerator({
         );
         setStoryboardHistoryStatus("ready");
         setStoryboardHistoryError(null);
-        const initialChatMessages = makeInitialStoryboardChatMessages(initialResult);
-        setChatMessages((current) => {
-          const currentIds = new Set(current.map((message) => message.id));
-          const newMessages = initialChatMessages.filter(
-            (message) => !currentIds.has(message.id),
-          );
-          if (!newMessages.length) return current;
-          return [
-            ...current.filter((message) => message.id !== "assistant-intake"),
-            ...newMessages,
-          ].slice(-10);
-        });
       })
       .catch(() => {
         // 최신 실제 스토리보드 기록가 없으면 초기 미리보기를 유지합니다.
@@ -5460,28 +5450,6 @@ export function AdminStoryboardGenerator({
     );
   }
 
-  function appendStoryboardThinkingTrace(
-    messageId: string,
-    entries: Array<StoryboardThinkingTraceEntry | null>,
-  ) {
-    const normalizedEntries = entries.filter(
-      (entry): entry is StoryboardThinkingTraceEntry => Boolean(entry),
-    );
-    if (!normalizedEntries.length) return;
-    setChatMessages((current) =>
-      current.map((message) =>
-        message.id === messageId
-          ? {
-              ...message,
-              thinkingTrace: mergeStoryboardThinkingTraceEntries(
-                message.thinkingTrace,
-                normalizedEntries,
-              ),
-            }
-          : message,
-      ),
-    );
-  }
 
   function appendStoryboardChatSteerTrace(
     prompt: string,
@@ -8155,7 +8123,7 @@ export function AdminStoryboardGenerator({
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
                     align="end"
-                    className="w-[min(280px,calc(100vw-2rem))] p-0"
+                    className="w-[min(22rem,calc(100vw-2rem))] max-h-[min(32rem,calc(100vh-7rem))] overflow-y-auto rounded-2xl p-0"
                     data-storyboard-chat-settings-dropdown="true"
                   >
                     <div
@@ -8321,7 +8289,7 @@ export function AdminStoryboardGenerator({
                       </div>
 
                       <div
-                        className="grid gap-1.5"
+                        className="grid gap-1.5 rounded-xl bg-muted/20 px-2.5 py-2"
                         data-storyboard-browser-api-key-settings="local-storage-only"
                         data-storyboard-api-key-storage="browser-local-storage-only"
                         data-storyboard-api-key-db-storage="forbidden"
@@ -8366,102 +8334,115 @@ export function AdminStoryboardGenerator({
                             백업 사용
                           </button>
                         </div>
-                        <div className="flex gap-2">
-                          <Input
-                            id="storyboard-browser-openai-api-key"
-                            type="password"
-                            value={storyboardBrowserOpenAIApiKeyDraft}
-                            onChange={(event) => {
-                              setStoryboardBrowserOpenAIApiKeyDraft(
-                                event.target.value,
-                              );
-                              setStoryboardBrowserOpenAIApiKeyError(null);
-                              if (storyboardBrowserOpenAIApiKeyMessage) {
-                                setStoryboardBrowserOpenAIApiKeyMessage(null);
-                              }
-                            }}
-                            placeholder={
-                              storyboardBrowserOpenAIApiKey
-                                ? `${maskedStoryboardBrowserOpenAIApiKey} 저장됨`
-                                : "sk-..."
-                            }
-                            autoComplete="off"
-                            spellCheck={false}
-                            className="h-8 text-xs"
-                            aria-label="브라우저에만 저장할 OpenAI API 키"
-                            data-storyboard-browser-api-key-input="true"
-                          />
-                          <Button
-                            type="button"
-                            size="sm"
-                            className="h-8 shrink-0 px-2 text-xs"
-                            onClick={handleSaveStoryboardBrowserOpenAIApiKey}
-                            data-storyboard-browser-api-key-save="true"
-                          >
-                            저장
-                          </Button>
-                        </div>
-                        <p
-                          className="text-[10px] leading-4 text-muted-foreground"
-                          data-storyboard-browser-api-key-browser-only-copy="true"
-                          data-storyboard-browser-api-key-model-policy="gpt-image-2-only"
-                        >
-                          OAuth가 안 될 때만 사용 · gpt-image-2 전용 · 브라우저
-                          저장 · DB 저장 없음
-                        </p>
-                        <div className="flex flex-wrap items-center gap-2">
+                        {storyboardImageRouteChoice ===
+                        "browser-openai-api-key" ? (
+                          <>
+                            <div className="flex gap-2">
+                              <Input
+                                id="storyboard-browser-openai-api-key"
+                                type="password"
+                                value={storyboardBrowserOpenAIApiKeyDraft}
+                                onChange={(event) => {
+                                  setStoryboardBrowserOpenAIApiKeyDraft(
+                                    event.target.value,
+                                  );
+                                  setStoryboardBrowserOpenAIApiKeyError(null);
+                                  if (storyboardBrowserOpenAIApiKeyMessage) {
+                                    setStoryboardBrowserOpenAIApiKeyMessage(null);
+                                  }
+                                }}
+                                placeholder={
+                                  storyboardBrowserOpenAIApiKey
+                                    ? `${maskedStoryboardBrowserOpenAIApiKey} 저장됨`
+                                    : "sk-..."
+                                }
+                                autoComplete="off"
+                                spellCheck={false}
+                                className="h-8 text-xs"
+                                aria-label="브라우저에만 저장할 OpenAI API 키"
+                                data-storyboard-browser-api-key-input="true"
+                              />
+                              <Button
+                                type="button"
+                                size="sm"
+                                className="h-8 shrink-0 px-2 text-xs"
+                                onClick={handleSaveStoryboardBrowserOpenAIApiKey}
+                                data-storyboard-browser-api-key-save="true"
+                              >
+                                저장
+                              </Button>
+                            </div>
+                            <p
+                              className="text-[10px] leading-4 text-muted-foreground"
+                              data-storyboard-browser-api-key-browser-only-copy="true"
+                              data-storyboard-browser-api-key-model-policy="gpt-image-2-only"
+                            >
+                              OAuth가 안 될 때만 사용 · gpt-image-2 전용 ·
+                              브라우저 저장 · DB 저장 없음
+                            </p>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p
+                                className="min-w-0 flex-1 text-[11px] text-muted-foreground"
+                                data-storyboard-browser-api-key-status={
+                                  isStoryboardBrowserOpenAIApiKeySaved
+                                    ? "saved"
+                                    : "empty"
+                                }
+                              >
+                                {isStoryboardBrowserOpenAIApiKeySaved
+                                  ? `저장됨 · ${maskedStoryboardBrowserOpenAIApiKey}${
+                                      storyboardBrowserOpenAIApiKeySavedAt
+                                        ? ` · ${new Date(
+                                            storyboardBrowserOpenAIApiKeySavedAt,
+                                          ).toLocaleString("ko-KR")}`
+                                        : ""
+                                    }`
+                                  : "저장된 키 없음"}
+                              </p>
+                              {storyboardBrowserOpenAIApiKey ? (
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+                                  onClick={handleClearStoryboardBrowserOpenAIApiKey}
+                                  data-storyboard-browser-api-key-clear="true"
+                                >
+                                  삭제
+                                </Button>
+                              ) : null}
+                              {storyboardBrowserOpenAIApiKeyError ? (
+                                <p
+                                  className="basis-full text-[11px] text-destructive"
+                                  data-storyboard-browser-api-key-error="true"
+                                >
+                                  {storyboardBrowserOpenAIApiKeyError}
+                                </p>
+                              ) : null}
+                              {storyboardBrowserOpenAIApiKeyMessage &&
+                              !storyboardBrowserOpenAIApiKeyError ? (
+                                <p
+                                  className="basis-full text-[11px] text-muted-foreground"
+                                  data-storyboard-browser-api-key-message="true"
+                                >
+                                  {storyboardBrowserOpenAIApiKeyMessage}
+                                </p>
+                              ) : null}
+                            </div>
+                          </>
+                        ) : (
                           <p
-                            className="min-w-0 flex-1 text-[11px] text-muted-foreground"
-                            data-storyboard-browser-api-key-status={
-                              isStoryboardBrowserOpenAIApiKeySaved
-                                ? "saved"
-                                : "empty"
-                            }
+                            className="text-[10px] leading-4 text-muted-foreground"
+                            data-storyboard-browser-api-key-browser-only-copy="true"
+                            data-storyboard-browser-api-key-model-policy="gpt-image-2-only"
                           >
-                            {isStoryboardBrowserOpenAIApiKeySaved
-                              ? `저장됨 · ${maskedStoryboardBrowserOpenAIApiKey}${
-                                  storyboardBrowserOpenAIApiKeySavedAt
-                                    ? ` · ${new Date(
-                                        storyboardBrowserOpenAIApiKeySavedAt,
-                                      ).toLocaleString("ko-KR")}`
-                                    : ""
-                                }`
-                              : "저장된 키 없음"}
+                            OAuth가 안 될 때만 여는 브라우저 저장 백업입니다.
                           </p>
-                          {storyboardBrowserOpenAIApiKey ? (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="h-7 shrink-0 rounded-full px-2 text-[11px]"
-                              onClick={handleClearStoryboardBrowserOpenAIApiKey}
-                              data-storyboard-browser-api-key-clear="true"
-                            >
-                              삭제
-                            </Button>
-                          ) : null}
-                          {storyboardBrowserOpenAIApiKeyError ? (
-                            <p
-                              className="basis-full text-[11px] text-destructive"
-                              data-storyboard-browser-api-key-error="true"
-                            >
-                              {storyboardBrowserOpenAIApiKeyError}
-                            </p>
-                          ) : null}
-                          {storyboardBrowserOpenAIApiKeyMessage &&
-                          !storyboardBrowserOpenAIApiKeyError ? (
-                            <p
-                              className="basis-full text-[11px] text-muted-foreground"
-                              data-storyboard-browser-api-key-message="true"
-                            >
-                              {storyboardBrowserOpenAIApiKeyMessage}
-                            </p>
-                          ) : null}
-                        </div>
+                        )}
                       </div>
                       {shouldShowStoryboardLocalBridgeSettings ? (
                         <div
-                          className="grid gap-1.5 rounded-xl border border-dashed border-primary/25 bg-primary/5 p-2"
+                          className="grid max-h-64 gap-1.5 overflow-y-auto rounded-xl border border-dashed border-primary/25 bg-primary/5 p-2 pr-1.5 [scrollbar-width:thin]"
                           data-storyboard-local-bridge-settings="session-only"
                           data-storyboard-local-bridge-settings-visibility="advanced-selected"
                           data-storyboard-local-bridge-storage="browser-session-storage-only"
@@ -8501,30 +8482,30 @@ export function AdminStoryboardGenerator({
                             className="text-[10px] leading-4 text-muted-foreground"
                             data-storyboard-local-bridge-guidance="true"
                           >
-                            OAuth는 동일합니다. 차이는 서버 대신 사용자 PC
-                            helper가 loopback 브릿지를 호출한다는 점입니다.
-                            이제 저장·helper 연결·상태 확인 흐름을 대화창
-                            trace로 보면서 한 번에 진행할 수 있습니다.
+                            사용자 PC helper의 loopback 브릿지만 호출합니다.
+                            토큰은 이 탭 sessionStorage에만 저장됩니다.
                           </p>
-                          <div
+                          <details
                             className="rounded-lg bg-background/80 p-2 text-[10px] leading-4 text-foreground"
                             data-storyboard-local-bridge-pairing-guide="true"
                           >
-                            <div className="flex items-center justify-between gap-2">
-                              <p className="font-semibold">쉬운 페어링</p>
+                            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden">
+                              <span className="font-semibold">쉬운 페어링</span>
                               <Button
                                 type="button"
                                 variant="ghost"
                                 size="sm"
                                 className="h-6 shrink-0 rounded-full px-2 text-[10px]"
-                                onClick={() =>
-                                  void handleCopyStoryboardLocalBridgeCommand()
-                                }
+                                onClick={(event) => {
+                                  event.preventDefault();
+                                  event.stopPropagation();
+                                  void handleCopyStoryboardLocalBridgeCommand();
+                                }}
                                 data-storyboard-local-bridge-copy-command="true"
                               >
                                 명령 복사
                               </Button>
-                            </div>
+                            </summary>
                             <div
                               className="mt-1 rounded-md bg-muted/45 px-2 py-1 font-mono text-[10px] text-muted-foreground"
                               data-storyboard-local-bridge-command="true"
@@ -8532,24 +8513,19 @@ export function AdminStoryboardGenerator({
                               {STORYBOARD_LOCAL_BRIDGE_TERMINAL_COMMAND}
                             </div>
                             <ol className="mt-1 list-decimal space-y-0.5 pl-4 text-muted-foreground">
-                              <li>위 명령을 터미널에서 실행</li>
+                              <li>명령 실행</li>
                               <li>
-                                터미널에 나온 <code>pairing_token</code>을 아래 토큰 칸에 붙여넣기
+                                터미널의 <code>pairing_token</code> 붙여넣기
                               </li>
-                              <li>
-                                “저장하고 자동 연결”을 눌러 저장, helper 연결, health/auth 확인을 한 번에 실행
-                              </li>
-                              <li>
-                                진행 과정은 대화창의 생각 trace에 그대로 표시됩니다
-                              </li>
+                              <li>저장하고 자동 연결</li>
                             </ol>
                             <p
                               className="mt-1 text-muted-foreground"
                               data-storyboard-local-bridge-chat-trace-copy="true"
                             >
-                              토큰은 이 탭 sessionStorage에만 저장되고, 서버나 DB로 저장하지 않습니다.
+                              진행 과정은 대화창 생각 trace에 표시됩니다.
                             </p>
-                          </div>
+                          </details>
                           <div className="grid gap-1">
                             <Input
                               id="storyboard-local-bridge-url"
@@ -8589,11 +8565,11 @@ export function AdminStoryboardGenerator({
                               data-storyboard-local-bridge-token-input="true"
                             />
                           </div>
-                          <div className="flex flex-wrap items-center gap-2">
+                          <div className="grid grid-cols-2 gap-1.5">
                             <Button
                               type="button"
                               size="sm"
-                              className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+                              className="h-7 justify-center rounded-full px-2 text-[11px]"
                               onClick={() =>
                                 void handleSaveStoryboardLocalBridgeSession()
                               }
@@ -8605,7 +8581,7 @@ export function AdminStoryboardGenerator({
                               type="button"
                               variant="secondary"
                               size="sm"
-                              className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+                              className="h-7 justify-center rounded-full px-2 text-[11px]"
                               onClick={() =>
                                 void handleAutoSetupStoryboardLocalBridgeSession()
                               }
@@ -8617,7 +8593,7 @@ export function AdminStoryboardGenerator({
                               type="button"
                               variant="outline"
                               size="sm"
-                              className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+                              className="h-7 justify-center rounded-full px-2 text-[11px]"
                               onClick={() =>
                                 void handleConnectStoryboardLocalBridgeHelper()
                               }
@@ -8632,7 +8608,7 @@ export function AdminStoryboardGenerator({
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+                                className="h-7 justify-center rounded-full px-2 text-[11px]"
                                 onClick={
                                   handleClearStoryboardLocalBridgeSession
                                 }
@@ -8642,7 +8618,7 @@ export function AdminStoryboardGenerator({
                               </Button>
                             ) : null}
                             <p
-                              className={`basis-full text-[11px] ${
+                              className={`col-span-2 text-[11px] ${
                                 storyboardLocalBridgeError
                                   ? "text-destructive"
                                   : "text-muted-foreground"
@@ -8702,7 +8678,7 @@ export function AdminStoryboardGenerator({
                       ? "flex min-h-full w-full flex-col items-center justify-center text-center"
                       : message.role === "user"
                         ? "ml-auto flex max-w-[88%] flex-col items-end space-y-1.5 text-right"
-                        : "w-full space-y-1.5 text-left";
+                        : "mr-auto flex max-w-[92%] flex-col items-start space-y-1.5 text-left";
                   return (
                     <div
                       key={message.id}
@@ -8875,11 +8851,11 @@ export function AdminStoryboardGenerator({
                           </div>
                         ) : (
                           <div
-                            className="px-1 text-xs leading-5 text-foreground"
+                            className="rounded-2xl rounded-bl-md border border-border/60 bg-background/85 px-3 py-2 text-xs leading-5 text-foreground shadow-sm"
                             data-storyboard-chat-assistant-message="plain-text"
                           >
                             <p
-                              className="whitespace-pre-wrap break-keep [overflow-wrap:anywhere]"
+                              className="whitespace-pre-wrap break-keep text-justify [overflow-wrap:anywhere] [text-align-last:left]"
                               aria-label={message.text}
                               data-storyboard-chat-typewriter-text="true"
                               data-storyboard-chat-typewriter-state={
