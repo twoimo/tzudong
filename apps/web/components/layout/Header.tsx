@@ -279,7 +279,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
         style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.1'/%3E%3C/svg%3E")` }}
       />
 
-      {/* 전통 문양 테두리 - 다크모드에서 숨김 */}
+      {/* 전통 문양 테두리 - 다크모드에서는 차분한 경계선으로 유지 */}
       <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-border to-transparent dark:via-border" />
 
       {/* 좌측: 로고 */}
@@ -308,7 +308,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
             type="button"
             aria-label="사이드바 토글"
             onClick={onToggleSidebar}
-            className="h-9 w-9 hover:bg-accent text-foreground font-serif transition-colors"
+            className="h-9 w-9 hover:bg-accent text-foreground font-sans transition-colors"
           >
             <PanelLeft className="h-5 w-5" />
           </Button>
@@ -419,7 +419,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
-              className="w-[min(calc(100vw-1rem),22rem)] rounded-2xl border-border bg-card p-2 font-serif shadow-primary z-[100]"
+              className="w-[min(calc(100vw-1rem),22rem)] rounded-2xl border-border bg-card p-2 font-sans shadow-primary z-[100]"
             >
               <DropdownMenuLabel className="flex items-start justify-between gap-3 px-1 py-1 text-foreground">
                 <div className="min-w-0">
@@ -570,7 +570,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                 <User className="h-5 w-5" aria-hidden="true" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-card border-border font-serif w-36 z-[100]">
+            <DropdownMenuContent align="end" className="bg-card border-border font-sans w-36 z-[100]">
               <DropdownMenuItem onClick={handleMyPageClick} className="text-foreground hover:bg-accent focus:bg-accent py-2 touch-manipulation">
                 <User className="mr-2 h-4 w-4" />
                 마이페이지
@@ -631,7 +631,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
               type="button"
               aria-label="로그인"
               className={cn(
-                "bg-red-800 hover:bg-red-900 text-white font-serif transition-colors shadow-md",
+                "bg-red-800 hover:bg-red-900 text-white font-sans transition-colors shadow-md",
                 "h-8 px-4 text-xs md:h-9 md:px-4 md:text-sm"
               )}
             >
@@ -661,7 +661,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
           layoutSource="header-announcement-bottom-sheet"
           className="z-[95] p-0"
         >
-          <div className="h-full min-h-0 overflow-hidden bg-background font-serif">
+          <div className="h-full min-h-0 overflow-hidden bg-background font-sans">
             {HeaderAnnouncementPanel ? (
               <HeaderAnnouncementPanel
                 key={selectedAnnouncement?.id ?? 'announcement-list'}

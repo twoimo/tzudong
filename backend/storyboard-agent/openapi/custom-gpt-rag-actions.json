@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Tzudong Storyboard RAG Actions",
-    "version": "1.0.0",
+    "version": "1.1.1",
     "description": "Custom GPT Actions contract for user-scoped storyboard RAG documents. Vercel routes validate OAuth bearer tokens, call the local Python RAG worker for BGE-M3 embedding/reranking, and use Supabase pgvector RPC for hybrid retrieval."
   },
   "servers": [
