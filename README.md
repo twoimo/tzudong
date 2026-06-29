@@ -77,26 +77,52 @@ The README visuals are recorded from the local Next.js app in a real browser ses
 
 ## Architecture
 
-### System shape
+### System boundaries
 
-The product is organized around one persistence boundary and two operating surfaces: a public map for users, and a guarded admin console for data review, storyboard generation, and local AI/RAG helper workflows.
+Tzudong Map keeps the product split into explicit runtime boundaries instead of one large full-stack service.
 
-> RAGAS and LangSmith are treated as evaluation axes. Numeric RAGAS improvement claims should not be treated as production claims unless a reproducible benchmark artifact is committed with the claim.
+| Boundary | Owns | Does not own |
+| --- | --- | --- |
+| `apps/web` public app | Map-first restaurant discovery, responsive mobile/desktop shells, review/stamp/ranking screens, and lightweight API reads. | Long-running crawling, ffmpeg/media processing, bulk LLM evaluation, or batch inserts. |
+| `apps/web` admin console | Authenticated moderation, source readback, storyboard workspace orchestration, provider status UX, and bounded admin APIs. | Secret-bearing provider execution in the browser or request/response batch jobs. |
+| `backend` pipeline | Crawling, evidence normalization, Rule/LAAJ evaluation, fail-closed validation, manifests, and Supabase-ready payload construction. | User-facing page rendering or interactive admin session state. |
+| `backend/*-agent` helpers | Local storyboard/thumbnail adapters, RAG/model worker profiles, and provider smoke tooling used by admin workflows. | Production claims without committed smoke evidence or reproducible benchmark artifacts. |
+| Supabase | PostgreSQL persistence, Auth, RPCs, migrations, RLS/service-role boundaries, and the shared contract between batch and web. | File-system batch state, crawler orchestration, or provider runtime policy. |
 
-### Runtime flow
+### Runtime request paths
+
+- **Public home/map path:** `app/page.tsx` loads the special home shell (`home-runtime-shell.tsx` → `home-client.tsx` → `hooks/useHomeState.ts`) and delegates map, filter, marker, and detail-panel UI to `components/home/**` and `components/map/**`.
+- **General app path:** non-home routes use `app-runtime-layout.tsx` → `app-runtime-shell.tsx` → `components/layout/MainLayout.tsx` so feed, review, stamp, ranking, mypage, and insight surfaces share navigation and responsive behavior.
+- **Auth/session path:** requests pass through `apps/web/proxy.ts`; session-aware server work uses `lib/supabase/server.ts`, browser work uses `integrations/supabase/client.ts`, and privileged server-only operations use `lib/supabase/service-role.ts`.
+- **Admin API path:** `/admin` and `app/api/admin/**` gate early with `requireAdmin`, return bounded `NextResponse.json(...)`, sanitize provider/database errors, and keep risky mutations on a Preview → Confirm → Apply → Readback → Audit path.
+- **Storyboard path:** the admin storyboard UI keeps chat/cut state in the web app, then calls bounded admin orchestration helpers under `apps/web/lib/admin/**`; provider execution and local RAG/model workers remain behind backend adapters and explicit readiness checks.
+
+### Batch and data flow
 
 ```mermaid
 flowchart LR
-  YouTube[YouTube / web evidence] --> Backend[Backend batch pipeline]
-  Backend --> Eval[Rule + LLM-as-a-Judge evaluation]
-  Eval --> Transform[Contracted Supabase payloads]
-  Transform --> Supabase[(Supabase PostgreSQL / Auth / RPC)]
-  Supabase --> Web[Next.js public map]
-  Supabase --> Admin[Guarded admin console]
+  Evidence[YouTube / web evidence] --> Crawl[restaurant-crawling]
+  Crawl --> Eval[restaurant-evaluation<br/>Rule + LLM-as-a-Judge]
+  Eval --> Validate[backend/pipeline validators<br/>stage + cross-stage contracts]
+  Validate --> Transform[Supabase insert payloads]
+  Transform --> DB[(Supabase PostgreSQL<br/>Auth / RPC / RLS)]
+  DB --> Public[Next.js public map<br/>home / feed / review / stamp / ranking]
+  DB --> Admin[Guarded admin console<br/>moderation / readback / insights]
   Admin --> Storyboard[Storyboard workspace]
-  Storyboard --> Providers[Provider adapters]
-  Providers --> ImageModel[Image + RAG/model workers]
+  Storyboard --> Orchestrator[apps/web/lib/admin orchestration]
+  Orchestrator --> Agents[backend/storyboard-agent<br/>backend/thumbnail-agent]
+  Agents --> Providers[Gemini / OpenAI / Anthropic / Ollama<br/>image + RAG/model workers]
 ```
+
+The stable daily entrypoint is `backend/run_daily.sh`. It loads the runtime environment, preserves cron/CI exit semantics, and delegates policy-heavy work to Python helpers such as `backend/utils/run_daily_helpers.py`, pipeline nodes, validators, and review-queue utilities. Contract changes across `restaurant-crawling` → `restaurant-evaluation` → Supabase payloads → web/admin consumers require documentation, validators/fixtures, tests, and a stored-data migration/defaulting plan when both old and new shapes can be visible.
+
+### Trust, verification, and AI boundaries
+
+- Backend validation is fail-closed: missing required evidence, malformed payloads, and unsafe cross-stage states should block promotion rather than silently degrade.
+- Admin surfaces expose operational state with bounded readbacks; raw secrets, local sensitive paths, full provider traces, and unbounded logs stay out of responses.
+- React Query is the default client async boundary; stable query keys and invalidation are preferred over ad-hoc fetch state.
+- Heavy UI and client-only dependencies are code-split with `dynamic`, `lazy`, `Suspense`, and `ssr: false` where appropriate.
+- RAGAS and LangSmith are evaluation axes. Numeric RAGAS improvement claims are not production claims unless a reproducible benchmark artifact is committed with the claim.
 
 ## Tech stack
 
