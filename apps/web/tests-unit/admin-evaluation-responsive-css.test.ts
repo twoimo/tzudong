@@ -56,13 +56,13 @@ const criticalKpiDashboardProductionUtilities = [
     match: "any",
   },
   {
-    utility: "tracking-[-0.055em]",
-    declarations: ["letter-spacing:-.055em", "letter-spacing:-0.055em"],
+    utility: "tracking-[-0.035em]",
+    declarations: ["letter-spacing:-.035em", "letter-spacing:-0.035em"],
     match: "any",
   },
   {
-    utility: "text-[clamp(1.42rem,1.75vw,2.1rem)]",
-    declarations: ["font-size:clamp(1.42rem,1.75vw,2.1rem)"],
+    utility: "text-[clamp(1.2rem,1.45vw,1.75rem)]",
+    declarations: ["font-size:clamp(1.2rem,1.45vw,1.75rem)"],
   },
   {
     utility: "min-h-[132px]",

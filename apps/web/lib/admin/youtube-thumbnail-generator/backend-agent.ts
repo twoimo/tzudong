@@ -2,6 +2,10 @@ import { accessSync, constants, existsSync } from 'node:fs';
 import { spawn, spawnSync } from 'node:child_process';
 import path from 'node:path';
 
+import {
+  hasExplicitThumbnailGenerationCommand as hasSharedExplicitThumbnailGenerationCommand,
+  isThumbnailChatGuidanceQuestion as isSharedThumbnailChatGuidanceQuestion,
+} from './chat-intent';
 import { buildYoutubeThumbnailPrompt } from './prompt';
 import { generateYoutubeThumbnailWithPrompt } from './providers';
 import type {
@@ -289,6 +293,23 @@ export function getThumbnailBackendAgentStatus(env: NodeJS.ProcessEnv = process.
     localAdapterAvailable,
     missingPythonModules,
     runtime,
+    codexModel: resolveThumbnailAgentCodexModel(env),
+    codexEffort: resolveThumbnailAgentCodexEffort(env),
+    streamingAvailable: true,
+  };
+}
+
+function createLocalThumbnailChatStatus(env: NodeJS.ProcessEnv = process.env): ThumbnailBackendAgentStatus {
+  return {
+    available: true,
+    mode: 'local_adapter',
+    rootPath: BACKEND_AGENT_ROOT,
+    graphEntrypoint: null,
+    commandConfigured: false,
+    commandAvailable: false,
+    localAdapterAvailable: true,
+    missingPythonModules: [],
+    runtime: resolveThumbnailAgentRuntime(env),
     codexModel: resolveThumbnailAgentCodexModel(env),
     codexEffort: resolveThumbnailAgentCodexEffort(env),
     streamingAvailable: true,
@@ -917,6 +938,266 @@ function isUnsafeThumbnailChatInstructionPrompt(value: string) {
 function getUnsafeThumbnailChatInstructionMessage() {
   return '그 요청은 안전하게 처리할 수 없어요. 비밀 정보 보여주기, 확인 과정 건너뛰기, 사실과 다른 성공 처리는 하지 않습니다. 썸네일 문구나 배치를 어떻게 바꾸고 싶은지만 다시 적어 주세요.';
 }
+type ThumbnailChatIntent =
+  | 'safety'
+  | 'casual_chat'
+  | 'conversation'
+  | 'review'
+  | 'edit'
+  | 'generate'
+  | 'reset';
+
+function normalizeThumbnailChatThreadId(value: string | undefined) {
+  return value?.replace(/[^\w:.-]/g, '').slice(0, 120) || `thumbnail-chat-${Date.now().toString(36)}`;
+}
+
+function stripThumbnailChatExecutionControls(value: string) {
+  return normalizeChatRequirement(value)
+    .replace(/(?:아직|지금은|우선|먼저|일단|당장은)?\s*(?:이미지|썸네일)[^.!?。]{0,48}(?:만들|생성|재생성|실행)\s*지?\s*(?:마|말고|마세요|말아|않|안\s*해|금지|중단|멈춰)[^.!?。]*(?:[.!?。]|$)/gi, ' ')
+    .replace(/(?:추천|제안)\s*해\s*(?:줘|주세요|줘요)/gi, '')
+    .replace(/^(?:좋아|좋습니다|오케이|ㅇㅋ|okay|ok)[,\s]*/i, '')
+    .replace(/^(?:그걸로|그\s*방향으로|이걸로)[,\s]*/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function normalizeThumbnailChatConversationMessages(messages: ThumbnailChatAgentRequest['conversationMessages']) {
+  return (messages ?? [])
+    .flatMap((message) => {
+      const content = stripThumbnailChatExecutionControls(message.content).slice(0, 280);
+      if (!content || isUnsafeThumbnailChatInstructionPrompt(content)) return [];
+      return [{
+        role: message.role,
+        content,
+        ...(message.id ? { id: message.id.slice(0, 120) } : {}),
+      }];
+    })
+    .slice(-8);
+}
+
+function formatThumbnailChatConversationContext(messages: ReturnType<typeof normalizeThumbnailChatConversationMessages>) {
+  return messages
+    .map((message, index) => `${index + 1}. ${message.role === 'user' ? '사용자' : '도우미'}: ${message.content}`)
+    .join(' / ');
+}
+
+function formatThumbnailChatConversationBrief(messages: ReturnType<typeof normalizeThumbnailChatConversationMessages>) {
+  return messages
+    .map((message) => message.content)
+    .join(' ')
+    .slice(0, 560);
+}
+
+function formatThumbnailChatFocusContext(context: ThumbnailChatAgentRequest['focusContext']) {
+  if (!context) return '';
+  return [
+    context.kind === 'text-layer' ? `선택 문구: ${context.label}` : `캔버스 맥락: ${context.label}`,
+    context.detail,
+    context.promptContext,
+  ].filter(Boolean).join(' · ');
+}
+
+function formatThumbnailChatReferenceAttachmentSummary(attachments: ThumbnailChatAgentRequest['referenceImageAttachments']) {
+  const safeAttachments = (attachments ?? []).slice(0, 8);
+  if (!safeAttachments.length) return '';
+  return safeAttachments
+    .map((attachment, index) => {
+      const parts = [
+        `${index + 1}. ${attachment.name}`,
+        attachment.role ? `role=${attachment.role}` : '',
+        attachment.mime ? `mime=${attachment.mime}` : '',
+        typeof attachment.size === 'number' ? `size=${attachment.size}` : '',
+        attachment.width && attachment.height ? `${attachment.width}x${attachment.height}` : '',
+      ].filter(Boolean);
+      return parts.join(' ');
+    })
+    .join(' / ');
+}
+
+function isCasualThumbnailChatMessage(message: string) {
+  return /^(?:ㅎㅇ|하이|안녕|안녕하세요|고마워|감사|ㄱㅅ|도움말|help|사용법)$/i.test(message) ||
+    /(?:뭐\s*할\s*수|무엇을\s*할\s*수|어떻게\s*쓰|사용법|도움말|help)/i.test(message);
+}
+
+function isThumbnailReviewOnlyMessage(message: string) {
+  return /(검토|리뷰|평가|어때|괜찮|초보자도\s*이해|왜\s*이렇게|분석|클릭률.*어떻게|가독성.*어때)/i.test(message) &&
+    !CHAT_REPLACEMENT_ACTION_PATTERN.test(message) &&
+    !isSelectedLayerChatIntent(message);
+}
+
+function hasExplicitThumbnailGenerationCommand(message: string) {
+  return hasSharedExplicitThumbnailGenerationCommand(message);
+}
+
+function isThumbnailChatGuidanceQuestion(message: string) {
+  return isSharedThumbnailChatGuidanceQuestion(message);
+}
+
+function isThumbnailGeneralConversationMessage(message: string) {
+  if (isCasualThumbnailChatMessage(message) || isThumbnailReviewOnlyMessage(message)) return true;
+  if (isThumbnailChatGuidanceQuestion(message) && !hasExplicitThumbnailGenerationCommand(message)) return true;
+  if (CHAT_REPLACEMENT_ACTION_PATTERN.test(message) || isSelectedLayerChatIntent(message) || isThumbnailChatCanvasOptimizationIntent(message)) return false;
+  if (hasExplicitThumbnailGenerationCommand(message)) return false;
+  return isThumbnailChatGuidanceQuestion(message);
+}
+
+function resolveThumbnailChatIntent(message: string): ThumbnailChatIntent {
+  if (isUnsafeThumbnailChatInstructionPrompt(message)) return 'safety';
+  if (isCasualThumbnailChatMessage(message)) return 'casual_chat';
+  if (isThumbnailReviewOnlyMessage(message)) return 'review';
+  if (isThumbnailGeneralConversationMessage(message)) return 'conversation';
+  if (wantsReset(message)) return 'reset';
+  if (hasExplicitThumbnailGenerationCommand(message) || wantsGeneration(message)) return 'generate';
+  return 'edit';
+}
+
+function createPreservedThumbnailChatCanvasPatch(request: ThumbnailChatAgentRequest): ThumbnailChatCanvasPatch {
+  return {
+    topic: normalizeChatRequirement(request.currentTopic ?? '') || '먹방 썸네일',
+    headline: sanitizeCanvasChatText(request.currentHeadline ?? '', '역대급 먹방', MAIN_HEADLINE_MAX_LENGTH),
+    subHeadline: sanitizeCanvasChatText(request.currentSubHeadline ?? '', '한입만 가능?', SUB_HEADLINE_MAX_LENGTH),
+  };
+}
+
+function createLocalThumbnailChatAgentPlan(args: {
+  status: ThumbnailBackendAgentStatus;
+  chatIntent: ThumbnailChatIntent;
+  chatRunId?: string;
+  chatThreadId: string;
+  conversationText: string;
+  focusText: string;
+  attachmentText: string;
+}): ThumbnailAgentPlan {
+  return {
+    mode: 'local_adapter',
+    runtime: args.status.runtime ?? DEFAULT_THUMBNAIL_AGENT_RUNTIME,
+    concept: 'thumbnail chat local intent response',
+    layoutBrief: '질문·검토·안전 대화는 캔버스와 외부 이미지 생성 경로를 바꾸지 않고 현재 페이지 안에서만 답변',
+    promptAddendum: [
+      'Thumbnail chat local deterministic response.',
+      `Intent: ${args.chatIntent}`,
+      args.conversationText ? `Conversation context: ${args.conversationText}` : '',
+      args.focusText ? `Canvas focus context: ${args.focusText}` : '',
+      args.attachmentText ? `Reference image attachments: ${args.attachmentText}` : '',
+    ].filter(Boolean).join('\n'),
+    safetyReview: '비밀 정보, 검증 우회, 일반 질문, 검토 요청은 외부 썸네일 에이전트 명령을 호출하지 않고 로컬 응답으로 종료합니다.',
+    nextActions: ['채팅 응답 확인', '필요하면 명시적으로 생성 또는 편집 요청'],
+    warnings: [],
+    diagnostics: {
+      chatRunId: args.chatRunId,
+      chatThreadId: args.chatThreadId,
+      chatIntent: args.chatIntent,
+      conversationTurnCount: args.conversationText ? args.conversationText.split(' / ').length : 0,
+      conversationSummary: args.conversationText,
+      imageAttachmentCount: args.attachmentText ? args.attachmentText.split(' / ').length : 0,
+      focusContextUsed: Boolean(args.focusText),
+      localDeterministicResponse: true,
+      externalAgentInvoked: false,
+    },
+  };
+}
+
+function buildThumbnailConversationResponse(message: string) {
+  if (isCasualThumbnailChatMessage(message)) {
+    return '안녕하세요! 유튜브 썸네일 도우미입니다. 화면은 바꾸지 않았어요. 음식 주제, 짧은 메인 문구, 참고 이미지 사용 여부를 말해 주면 문구와 배치를 정리하고, “생성해줘”라고 하면 실제 썸네일까지 만들 수 있어요.';
+  }
+  return [
+    '쉽게 답변드릴게요. 화면은 바꾸지 않았어요.',
+    '이미지 생성은 참고 이미지 수와 provider 상태에 따라 보통 수십 초에서 몇 분 정도 걸릴 수 있습니다.',
+    '지금 바로 만들려면 음식 주제와 짧은 문구를 적고 “생성해줘”라고 입력하세요.',
+  ].join(' ');
+}
+
+function buildThumbnailReviewResponse(request: ThumbnailChatAgentRequest, focusText: string) {
+  const headline = request.currentHeadline || '메인 문구';
+  const subHeadline = request.currentSubHeadline || '스티커 문구';
+  return [
+    '현재 썸네일을 검토했어요. 화면은 바꾸지 않았습니다.',
+    `메인 문구 “${headline}”는 짧고 크게 보일수록 좋아요.`,
+    `스티커 문구 “${subHeadline}”는 얼굴이나 음식 핵심을 가리지 않는 위치가 좋습니다.`,
+    focusText ? `선택한 항목(${focusText})도 함께 참고했어요.` : '수정하고 싶은 문구를 선택한 뒤 “이 문구를 더 크게”처럼 말하면 그 항목만 바꿀 수 있어요.',
+  ].join(' ');
+}
+
+function createThumbnailChatResult(args: {
+  request: ThumbnailChatAgentRequest;
+  status: ThumbnailBackendAgentStatus;
+  assistantMessage: string;
+  canvasPatch: ThumbnailChatCanvasPatch;
+  textLayerPatches?: ThumbnailChatTextLayerPatch[];
+  providerId?: ThumbnailGeneratorPayload['providerId'];
+  generationMode?: ThumbnailGeneratorPayload['generationMode'];
+  shouldGenerate: boolean;
+  shouldReset: boolean;
+  chatIntent: ThumbnailChatIntent;
+  chatRunId?: string;
+  chatThreadId: string;
+  conversationText: string;
+  focusText: string;
+  attachmentText: string;
+  agentPlan?: ThumbnailAgentPlan;
+}) {
+  const agentPlan = args.agentPlan ?? createLocalThumbnailChatAgentPlan({
+    status: args.status,
+    chatIntent: args.chatIntent,
+    chatRunId: args.chatRunId,
+    chatThreadId: args.chatThreadId,
+    conversationText: args.conversationText,
+    focusText: args.focusText,
+    attachmentText: args.attachmentText,
+  });
+  const conversationTurnCount = args.conversationText ? args.conversationText.split(' / ').length : 0;
+  const imageAttachmentCount = args.attachmentText ? args.attachmentText.split(' / ').length : 0;
+  const canvasMutation = args.shouldGenerate ||
+    args.shouldReset ||
+    Boolean(args.textLayerPatches?.length) ||
+    !['safety', 'casual_chat', 'conversation', 'review'].includes(args.chatIntent);
+  return {
+    assistantMessage: args.assistantMessage,
+    canvasPatch: args.canvasPatch,
+    textLayerPatches: args.textLayerPatches ?? [],
+    providerId: args.providerId ?? args.request.providerId ?? 'local-codex',
+    generationMode: args.generationMode ?? args.request.generationMode ?? 'direct_provider',
+    shouldGenerate: args.shouldGenerate,
+    shouldReset: args.shouldReset,
+    backendAgent: {
+      mode: agentPlan.mode,
+      runtime: agentPlan.runtime,
+      concept: agentPlan.concept,
+      layoutBrief: agentPlan.layoutBrief,
+      promptAddendum: agentPlan.promptAddendum,
+      safetyReview: agentPlan.safetyReview,
+      nextActions: agentPlan.nextActions,
+      diagnostics: {
+        ...agentPlan.diagnostics,
+        chatRunId: args.chatRunId,
+        chatThreadId: args.chatThreadId,
+        chatIntent: args.chatIntent,
+        codexModel: args.status.codexModel,
+        codexEffort: args.status.codexEffort,
+        conversationTurnCount,
+        conversationSummary: args.conversationText,
+        imageAttachmentCount,
+        focusContextUsed: Boolean(args.focusText),
+        canvasMutation,
+      },
+    },
+    diagnostics: {
+      runtime: agentPlan.runtime,
+      model: args.status.codexModel,
+      effort: args.status.codexEffort,
+      streaming: 'sse-progress' as const,
+      chatRunId: args.chatRunId,
+      chatThreadId: args.chatThreadId,
+      conversationTurnCount,
+      conversationSummary: args.conversationText,
+      imageAttachmentCount,
+      focusContextUsed: Boolean(args.focusText),
+      chatIntent: args.chatIntent,
+      canvasMutation,
+    },
+  } satisfies ThumbnailChatAgentResult;
+}
 
 function wantsReset(message: string) {
   return /(초기화|리셋|reset)/i.test(message);
@@ -947,15 +1228,111 @@ export async function generateYoutubeThumbnailChatWithBackendAgent(
     throw new ThumbnailGenerationError('invalid_text', '채팅 요구사항을 입력하세요.', 400);
   }
 
-  const canvasPatch = createChatCanvasPatch(request);
-  const textLayerPatches = createChatTextLayerPatches(request);
-  const replacementIntent = parseThumbnailChatTextReplacementIntent(request);
+  const localStatus = createLocalThumbnailChatStatus(env);
+  const chatRunId = options.runId ?? request.chatRunId;
+  const chatThreadId = normalizeThumbnailChatThreadId(request.chatThreadId);
+  const conversationMessages = normalizeThumbnailChatConversationMessages(request.conversationMessages);
+  const conversationText = formatThumbnailChatConversationContext(conversationMessages);
+  const conversationBrief = formatThumbnailChatConversationBrief(conversationMessages);
+  const focusText = formatThumbnailChatFocusContext(request.focusContext);
+  const attachmentText = formatThumbnailChatReferenceAttachmentSummary(request.referenceImageAttachments);
+  const chatIntent = resolveThumbnailChatIntent(normalizedMessage);
+  const preservedCanvasPatch = createPreservedThumbnailChatCanvasPatch(request);
+
+  if (chatIntent === 'safety') {
+    return createThumbnailChatResult({
+      request,
+      status: localStatus,
+      assistantMessage: getUnsafeThumbnailChatInstructionMessage(),
+      canvasPatch: preservedCanvasPatch,
+      textLayerPatches: [],
+      shouldGenerate: false,
+      shouldReset: false,
+      chatIntent,
+      chatRunId,
+      chatThreadId,
+      conversationText,
+      focusText,
+      attachmentText,
+    });
+  }
+
+  if (chatIntent === 'casual_chat' || chatIntent === 'conversation') {
+    return createThumbnailChatResult({
+      request,
+      status: localStatus,
+      assistantMessage: buildThumbnailConversationResponse(normalizedMessage),
+      canvasPatch: preservedCanvasPatch,
+      textLayerPatches: [],
+      shouldGenerate: false,
+      shouldReset: false,
+      chatIntent,
+      chatRunId,
+      chatThreadId,
+      conversationText,
+      focusText,
+      attachmentText,
+    });
+  }
+
+  if (chatIntent === 'review') {
+    return createThumbnailChatResult({
+      request,
+      status: localStatus,
+      assistantMessage: buildThumbnailReviewResponse(request, focusText),
+      canvasPatch: preservedCanvasPatch,
+      textLayerPatches: [],
+      shouldGenerate: false,
+      shouldReset: false,
+      chatIntent,
+      chatRunId,
+      chatThreadId,
+      conversationText,
+      focusText,
+      attachmentText,
+    });
+  }
+
+  if (chatIntent === 'reset') {
+    return createThumbnailChatResult({
+      request,
+      status: localStatus,
+      assistantMessage: '입력값을 처음 상태로 되돌릴게요.',
+      canvasPatch: preservedCanvasPatch,
+      textLayerPatches: [],
+      shouldGenerate: false,
+      shouldReset: true,
+      chatIntent,
+      chatRunId,
+      chatThreadId,
+      conversationText,
+      focusText,
+      attachmentText,
+    });
+  }
+
+  const status = getThumbnailBackendAgentStatus(env);
+
+  const shouldUseConversationForFollowup = chatIntent === 'generate' &&
+    conversationBrief &&
+    /^(?:좋아|좋습니다|오케이|ㅇㅋ|okay|ok|그걸로|그\s*방향으로|이걸로)/i.test(normalizedMessage);
+  const orchestrationMessage = shouldUseConversationForFollowup
+    ? `${conversationBrief} ${normalizedMessage}`
+    : normalizedMessage;
+  const orchestrationRequest: ThumbnailChatAgentRequest = orchestrationMessage === request.message
+    ? request
+    : { ...request, message: orchestrationMessage };
+
+  const canvasPatch = createChatCanvasPatch(orchestrationRequest);
+  const textLayerPatches = createChatTextLayerPatches(orchestrationRequest);
+  const replacementIntent = parseThumbnailChatTextReplacementIntent(orchestrationRequest);
   const replacementTarget = replacementIntent
-    ? resolveThumbnailChatReplacementTarget(request, replacementIntent)
+    ? resolveThumbnailChatReplacementTarget(orchestrationRequest, replacementIntent)
     : null;
-  const optimizationIntent = isThumbnailChatCanvasOptimizationIntent(normalizedMessage);
-  const resolvedProviderId = resolveChatProviderId(normalizedMessage, request.providerId ?? 'local-codex');
-  const resolvedGenerationMode = resolveChatGenerationMode(normalizedMessage, request.generationMode ?? 'direct_provider');
+  const optimizationIntent = isThumbnailChatCanvasOptimizationIntent(orchestrationMessage);
+  const resolvedProviderId = resolveChatProviderId(orchestrationMessage, request.providerId ?? 'local-codex');
+  const resolvedGenerationMode = resolveChatGenerationMode(orchestrationMessage, request.generationMode ?? 'direct_provider');
+  const shouldGenerate = chatIntent === 'generate';
   const agentPayload: ThumbnailGeneratorPayload = {
     providerId: resolvedProviderId,
     generationMode: resolvedGenerationMode,
@@ -970,6 +1347,12 @@ export async function generateYoutubeThumbnailChatWithBackendAgent(
   const basePrompt = [
     'Thumbnail chat agent task.',
     `User chat request: ${normalizedMessage}`,
+    conversationText ? `Conversation context: ${conversationText}` : '',
+    focusText ? `Canvas focus context: ${focusText}` : '',
+    attachmentText ? `Reference image attachments: ${attachmentText}` : '',
+    `Resolved topic: ${canvasPatch.topic}`,
+    `Resolved headline: ${canvasPatch.headline}`,
+    `Resolved subHeadline: ${canvasPatch.subHeadline}`,
     `Current topic: ${request.currentTopic ?? ''}`,
     `Current headline: ${request.currentHeadline ?? ''}`,
     `Current subHeadline: ${request.currentSubHeadline ?? ''}`,
@@ -988,55 +1371,13 @@ export async function generateYoutubeThumbnailChatWithBackendAgent(
       align: layer.align,
       rotation: layer.rotation,
     })))}`,
-    'Return orchestration guidance for canvas edits, generation, reset/export intent, and safety review.',
-  ].join('\n');
-  const chatRunId = options.runId ?? request.chatRunId;
+    `Text layer patch summary: ${JSON.stringify(textLayerPatches)}`,
+    'Return orchestration guidance for safe canvas edits, generation, reset/export intent, and safety review.',
+  ].filter(Boolean).join('\n');
   const agentPlan = await resolveAgentPlan(agentPayload, [], basePrompt, env, {
     ...options,
     runId: chatRunId,
   });
-  const status = getThumbnailBackendAgentStatus(env);
-  const unsafeInstruction = isUnsafeThumbnailChatInstructionPrompt(normalizedMessage);
-  const shouldReset = !unsafeInstruction && wantsReset(normalizedMessage);
-  const shouldGenerate = !unsafeInstruction && wantsGeneration(normalizedMessage) && !shouldReset;
-  if (unsafeInstruction) {
-    return {
-      assistantMessage: getUnsafeThumbnailChatInstructionMessage(),
-      canvasPatch: {
-        topic: request.currentTopic || '먹방 썸네일',
-        headline: request.currentHeadline || '역대급 먹방',
-        subHeadline: request.currentSubHeadline || '한입만 가능?',
-      },
-      textLayerPatches: [],
-      providerId: request.providerId ?? 'local-codex',
-      generationMode: request.generationMode ?? 'direct_provider',
-      shouldGenerate: false,
-      shouldReset: false,
-      backendAgent: {
-        mode: agentPlan.mode,
-        runtime: agentPlan.runtime,
-        concept: agentPlan.concept,
-        layoutBrief: agentPlan.layoutBrief,
-        promptAddendum: agentPlan.promptAddendum,
-        safetyReview: agentPlan.safetyReview,
-        nextActions: agentPlan.nextActions,
-        diagnostics: {
-          ...agentPlan.diagnostics,
-          chatRunId,
-          chatIntent: 'blocked_unsafe_instruction',
-          codexModel: status.codexModel,
-          codexEffort: status.codexEffort,
-        },
-      },
-      diagnostics: {
-        runtime: agentPlan.runtime,
-        model: status.codexModel,
-        effort: status.codexEffort,
-        streaming: 'sse-progress',
-        chatRunId,
-      },
-    };
-  }
   const describeLayerForChat = (layerId: string | undefined) => {
     if (layerId === 'headline') return '메인 문구';
     if (layerId === 'subHeadline') return '스티커 문구';
@@ -1051,9 +1392,7 @@ export async function generateYoutubeThumbnailChatWithBackendAgent(
     return jong === 0 || jong === 8 ? '로' : '으로';
   };
   let canvasSummary = `캔버스에 메인 문구 “${canvasPatch.headline}”와 스티커 문구 “${canvasPatch.subHeadline}”를 반영했어요.`;
-  if (shouldReset) {
-    canvasSummary = '입력값을 처음 상태로 되돌릴게요.';
-  } else if (replacementIntent && replacementTarget) {
+  if (replacementIntent && replacementTarget) {
     canvasSummary = `${describeLayerForChat(replacementTarget.id)}를 “${replacementIntent.newText}”${getKoreanRoroParticle(replacementIntent.newText)} 바꿨어요.`;
   } else if (replacementIntent && !replacementTarget) {
     canvasSummary = '바꿀 문구를 찾지 못해서 캔버스 문구는 그대로 두었어요.';
@@ -1062,11 +1401,19 @@ export async function generateYoutubeThumbnailChatWithBackendAgent(
   } else if (textLayerPatches.length) {
     canvasSummary = `${describeLayerForChat(textLayerPatches[0]?.id)}를 다듬고, 메인 문구 “${canvasPatch.headline}”와 스티커 문구 “${canvasPatch.subHeadline}”를 확인했어요.`;
   }
+  const contextSummary = [
+    shouldUseConversationForFollowup ? `최근 대화 ${conversationMessages.length}개도 참고했어요.` : '',
+    focusText && textLayerPatches.length ? '선택한 문구도 함께 참고했어요.' : '',
+    attachmentText && shouldGenerate ? `참고 이미지 ${request.referenceImageAttachments?.length ?? 0}장도 메타데이터만 참고했어요.` : '',
+  ].filter(Boolean).join(' ');
 
-  return {
+  return createThumbnailChatResult({
+    request,
+    status,
     assistantMessage: [
       '요청을 이해했어요.',
       canvasSummary,
+      contextSummary,
       shouldGenerate ? '이어서 실제 썸네일 이미지까지 만들게요.' : '바로 만들고 싶으면 “생성해줘”라고 입력하세요.',
     ].filter(Boolean).join(' '),
     canvasPatch,
@@ -1074,31 +1421,15 @@ export async function generateYoutubeThumbnailChatWithBackendAgent(
     providerId: resolvedProviderId,
     generationMode: resolvedGenerationMode,
     shouldGenerate,
-    shouldReset,
-    backendAgent: {
-      mode: agentPlan.mode,
-      runtime: agentPlan.runtime,
-      concept: agentPlan.concept,
-      layoutBrief: agentPlan.layoutBrief,
-      promptAddendum: agentPlan.promptAddendum,
-      safetyReview: agentPlan.safetyReview,
-      nextActions: agentPlan.nextActions,
-      diagnostics: {
-        ...agentPlan.diagnostics,
-        chatRunId,
-        chatIntent: shouldGenerate ? 'generate' : shouldReset ? 'reset' : 'edit',
-        codexModel: status.codexModel,
-        codexEffort: status.codexEffort,
-      },
-    },
-    diagnostics: {
-      runtime: agentPlan.runtime,
-      model: status.codexModel,
-      effort: status.codexEffort,
-      streaming: 'sse-progress',
-      chatRunId,
-    },
-  };
+    shouldReset: false,
+    chatIntent,
+    chatRunId,
+    chatThreadId,
+    conversationText,
+    focusText,
+    attachmentText,
+    agentPlan,
+  });
 }
 
 function parseCommandPlan(text: string): Partial<ThumbnailAgentPlan> | null {

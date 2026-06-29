@@ -26,6 +26,8 @@ const expectedStarterIds = [
   'convenience-ramen-mix',
   'market-fried-chicken',
   'late-night-store-snack',
+  'cheese-budae-ramen',
+  'sushi-omakase-closeup',
 ];
 
 function sha256(value: string | Buffer) {
@@ -51,15 +53,15 @@ function writeExactProof(dir: string) {
       requestToolModel: 'gpt-image-2',
       model: 'gpt-image-2',
       modelProvenance: 'exact',
-      responseId: 'resp_storyboard_eight_committed_ultraqa',
-      imageCallId: 'ig_storyboard_eight_committed_ultraqa',
+      responseId: 'resp_storyboard_ten_committed_ultraqa',
+      imageCallId: 'ig_storyboard_ten_committed_ultraqa',
       imageItemCount: 1,
       generatedImageItemTypes: ['image_generation_call'],
       rawImageItemTypes: ['image_generation_call'],
       mime: 'image/png',
       bytes: image.length,
       outputPath: imagePath,
-      requestHash: sha256('storyboard-eight-committed-ultraqa-proof-request'),
+      requestHash: sha256('storyboard-ten-committed-ultraqa-proof-request'),
       responseHash: sha256(image),
       hasOpenAIAPIKey: false,
       generatedAt: new Date().toISOString(),
@@ -113,22 +115,22 @@ function buildFakeLocalProviderScript(markerPath: string) {
   `;
 }
 
-describe('storyboard eight guided preset UltraQA coverage', () => {
-  test('generates trusted exact-provenance images for all eight starter presets without credentials or ambient heatmap data', async () => {
+describe('storyboard ten guided preset UltraQA coverage', () => {
+  test('generates trusted exact-provenance images for all ten starter presets without credentials or ambient heatmap data', async () => {
     const previousHeatmapDir = process.env.TZUYANG_HEATMAP_DIR;
     const missingHeatmapDir = join(
       tmpdir(),
-      `storyboard-eight-missing-heatmap-${Date.now()}`,
+      `storyboard-ten-missing-heatmap-${Date.now()}`,
     );
-    const proofDir = join(tmpdir(), `storyboard-eight-proof-${Date.now()}`);
-    const markerPath = join(tmpdir(), `storyboard-eight-marker-${Date.now()}.jsonl`);
+    const proofDir = join(tmpdir(), `storyboard-ten-proof-${Date.now()}`);
+    const markerPath = join(tmpdir(), `storyboard-ten-marker-${Date.now()}.jsonl`);
     const generatedDirs = new Set<string>();
     const { proofPath } = writeExactProof(proofDir);
 
     process.env.TZUYANG_HEATMAP_DIR = missingHeatmapDir;
 
     try {
-      expect(STORYBOARD_GUIDED_EXAMPLE_STARTER_PRESETS).toHaveLength(8);
+      expect(STORYBOARD_GUIDED_EXAMPLE_STARTER_PRESETS).toHaveLength(10);
       expect(STORYBOARD_GUIDED_EXAMPLE_STARTER_PRESETS.map((preset) => preset.id))
         .toEqual(expectedStarterIds);
 
