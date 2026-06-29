@@ -64,7 +64,7 @@ The README visuals are recorded from the local Next.js app in a real browser ses
 | Public restaurant map | Next.js/Supabase map, search, filters, detail views, and responsive mobile/desktop shells are implemented. | Product behavior is verified through Playwright/browser checks and source-contract tests. |
 | Restaurant data pipeline | `backend/run_daily.sh`, validators, Rule/LAAJ evaluation, transform contracts, and Supabase insert boundaries are implemented. | Accuracy claims are scoped to reviewed/approved data, not raw LLM output. |
 | Admin moderation | Guarded admin routes support review, approval, deletion/restoration, and operational readback flows. | Risky flows should follow Preview → Confirm → Apply → Readback → Audit. |
-| Storyboard generator | Admin UI, starter examples, existing image readback, cut metadata, local bridge setup, and provider status UX are implemented. | Live provider claims require provider proof or explicit local smoke evidence. |
+| Storyboard generator | Admin UI, starter examples, existing image readback, cut metadata, guided provider setup, and provider status UX are implemented. | Live provider claims require provider proof or explicit local smoke evidence. |
 | Storyboard RAG/model worker infrastructure | BGE-M3, reranker, LLaVA captioning, Gemini/OpenAI/Ollama judge paths, and fail-closed readiness rules are represented in code and docs. | Deterministic fixture scores and live worker smoke are kept separate. |
 | LangGraph-style storyboard agent | `backend/storyboard-agent` contains Supervisor/Researcher/Intern/Designer graph and adapter structure. | The UI should expose live graph capability only when backend evidence is available. |
 | RAGAS/LangSmith metrics | Diagrams and notes keep RAGAS/LangSmith as an evaluation axis. | Numeric RAGAS improvements are not production performance claims without reproducible committed artifacts. |
@@ -88,8 +88,8 @@ flowchart LR
   Supabase --> Web[Next.js public map]
   Supabase --> Admin[Guarded admin console]
   Admin --> Storyboard[Storyboard workspace]
-  Storyboard --> Bridge[Local bridge / provider adapters]
-  Bridge --> ImageModel[Image + RAG/model workers]
+  Storyboard --> Providers[Provider adapters]
+  Providers --> ImageModel[Image + RAG/model workers]
 ```
 
 ## Tech stack
@@ -101,7 +101,7 @@ flowchart LR
 | Maps | Naver Maps, Google Maps/OpenFreeMap fallback contexts, Supercluster marker grouping |
 | Persistence | Supabase PostgreSQL, Auth, RPC, service-role server boundaries |
 | Backend pipeline | Python, Node ESM, shell entrypoints, manifest-first daily batch helpers |
-| AI/storyboard | Gemini/OpenAI/Anthropic/Ollama adapters, local bridge, RAG worker profiles, image provider proof paths |
+| AI/storyboard | Gemini/OpenAI/Anthropic/Ollama adapters, RAG worker profiles, and image provider proof paths |
 | Testing | Bun test, Playwright, Python `unittest`, source-contract tests |
 
 ## Repository layout
