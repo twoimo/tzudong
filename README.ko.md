@@ -77,26 +77,52 @@ Supabase는 웹 앱과 백엔드 파이프라인 사이의 공유 영속성 경�
 
 ## 아키텍처
 
-### 시스템 형태
+### 시스템 경계
 
-제품은 하나의 영속성 경계와 두 개의 운영 표면을 중심으로 구성됩니다. 사용자를 위한 공개 지도와 데이터 검수, 스토리보드 생성, AI/RAG 헬퍼 워크플로우를 위한 보호된 관리자 콘솔입니다.
+Tzudong Map은 하나의 거대한 full-stack 서비스가 아니라 명시적인 런타임 경계들의 조합으로 유지합니다.
 
-> RAGAS와 LangSmith는 평가 축입니다. 재현 가능한 benchmark artifact가 커밋되어 있지 않은 수치 개선은 production claim으로 취급하지 않습니다.
+| 경계 | 책임 | 책임지지 않는 것 |
+| --- | --- | --- |
+| `apps/web` 공개 앱 | 지도 우선 맛집 탐색, 반응형 모바일/데스크톱 셸, 리뷰/도장/랭킹 화면, 가벼운 API read. | 장시간 크롤링, ffmpeg/media 처리, 대량 LLM 평가, batch insert. |
+| `apps/web` 관리자 콘솔 | 인증된 검수, source readback, 스토리보드 워크스페이스 orchestration, provider 상태 UX, bounded admin API. | 브라우저 안의 secret-bearing provider 실행 또는 request/response batch job. |
+| `backend` 파이프라인 | 크롤링, evidence 정규화, Rule/LAAJ 평가, fail-closed 검증, manifest, Supabase 적재 payload 생성. | 사용자 페이지 렌더링 또는 interactive admin session state. |
+| `backend/*-agent` 헬퍼 | 로컬 storyboard/thumbnail adapter, RAG/model worker profile, admin workflow용 provider smoke tooling. | 커밋된 smoke evidence 또는 재현 가능한 benchmark artifact 없는 production claim. |
+| Supabase | PostgreSQL 영속성, Auth, RPC, migration, RLS/service-role 경계, batch와 web 사이의 공유 계약. | 파일시스템 batch state, crawler orchestration, provider runtime policy. |
 
-### 런타임 흐름
+### 런타임 요청 경로
+
+- **공개 홈/지도 경로:** `app/page.tsx`가 특수 home shell(`home-runtime-shell.tsx` → `home-client.tsx` → `hooks/useHomeState.ts`)을 로드하고, 지도/필터/마커/상세 패널 UI를 `components/home/**`와 `components/map/**`로 위임합니다.
+- **일반 앱 경로:** home이 아닌 route는 `app-runtime-layout.tsx` → `app-runtime-shell.tsx` → `components/layout/MainLayout.tsx`를 사용해 feed, review, stamp, ranking, mypage, insight surface의 navigation과 responsive behavior를 공유합니다.
+- **인증/session 경로:** 요청은 `apps/web/proxy.ts`를 통과합니다. session-aware server 작업은 `lib/supabase/server.ts`, browser 작업은 `integrations/supabase/client.ts`, privileged server-only 작업은 `lib/supabase/service-role.ts`를 사용합니다.
+- **Admin API 경로:** `/admin`과 `app/api/admin/**`는 초기에 `requireAdmin`으로 gate하고, bounded `NextResponse.json(...)`을 반환하며, provider/database error를 sanitize하고, 위험한 mutation은 Preview → Confirm → Apply → Readback → Audit 경로를 유지합니다.
+- **스토리보드 경로:** admin storyboard UI는 chat/cut state를 web app에 유지한 뒤 `apps/web/lib/admin/**`의 bounded orchestration helper를 호출합니다. provider 실행과 local RAG/model worker는 backend adapter와 명시적인 readiness check 뒤에 남습니다.
+
+### 배치와 데이터 흐름
 
 ```mermaid
 flowchart LR
-  YouTube[YouTube / web evidence] --> Backend[Backend batch pipeline]
-  Backend --> Eval[Rule + LLM-as-a-Judge evaluation]
-  Eval --> Transform[Contracted Supabase payloads]
-  Transform --> Supabase[(Supabase PostgreSQL / Auth / RPC)]
-  Supabase --> Web[Next.js public map]
-  Supabase --> Admin[Guarded admin console]
+  Evidence[YouTube / web evidence] --> Crawl[restaurant-crawling]
+  Crawl --> Eval[restaurant-evaluation<br/>Rule + LLM-as-a-Judge]
+  Eval --> Validate[backend/pipeline validators<br/>stage + cross-stage contracts]
+  Validate --> Transform[Supabase insert payloads]
+  Transform --> DB[(Supabase PostgreSQL<br/>Auth / RPC / RLS)]
+  DB --> Public[Next.js public map<br/>home / feed / review / stamp / ranking]
+  DB --> Admin[Guarded admin console<br/>moderation / readback / insights]
   Admin --> Storyboard[Storyboard workspace]
-  Storyboard --> Providers[Provider adapters]
-  Providers --> ImageModel[Image + RAG/model workers]
+  Storyboard --> Orchestrator[apps/web/lib/admin orchestration]
+  Orchestrator --> Agents[backend/storyboard-agent<br/>backend/thumbnail-agent]
+  Agents --> Providers[Gemini / OpenAI / Anthropic / Ollama<br/>image + RAG/model workers]
 ```
+
+안정적인 daily entrypoint는 `backend/run_daily.sh`입니다. 이 스크립트는 런타임 환경을 로드하고 cron/CI exit semantics를 보존하며, policy-heavy 작업은 `backend/utils/run_daily_helpers.py`, pipeline node, validator, review queue utility 같은 Python helper로 위임합니다. `restaurant-crawling` → `restaurant-evaluation` → Supabase payload → web/admin consumer를 가로지르는 계약 변경은 문서, validator/fixture, test, 그리고 저장된 데이터에서 이전/새 shape가 동시에 보일 수 있는 경우의 migration/defaulting 계획을 함께 요구합니다.
+
+### 신뢰, 검증, AI 경계
+
+- Backend validation은 fail-closed입니다. 필수 evidence 누락, malformed payload, unsafe cross-stage state는 조용히 degrade하지 않고 승격을 막아야 합니다.
+- Admin surface는 bounded readback으로 운영 상태를 보여줍니다. raw secret, 민감한 local path, provider trace 전문, unbounded log는 response 밖에 둡니다.
+- React Query가 기본 client async boundary입니다. ad-hoc fetch state보다 stable query key와 invalidation을 우선합니다.
+- 무거운 UI와 client-only dependency는 필요에 따라 `dynamic`, `lazy`, `Suspense`, `ssr: false`로 code-split합니다.
+- RAGAS와 LangSmith는 평가 축입니다. 재현 가능한 benchmark artifact가 함께 커밋되지 않은 수치 RAGAS 개선은 production claim이 아닙니다.
 
 ## 기술 스택
 
