@@ -2,12 +2,12 @@
 
 ## Source of truth
 - Status: Active
-- Last refreshed: 2026-05-13
+- Last refreshed: 2026-06-29
 - Primary product surfaces: public map/home shell, admin unified console, admin moderation/evaluations, submissions/reviews, banner management, user/account management, insights, LLM operations session panel
 - Evidence reviewed:
-  - `apps/web/app/globals.css`: warm ivory background, red primary, muted borders, radius, Noto Serif KR, app header height, body overflow hidden with layout-owned scrolling.
+  - `apps/web/app/globals.css`: warm ivory background, red primary, muted borders, radius, semantic Pretendard UI + Noto Serif KR display typography, app header height, body overflow hidden with layout-owned scrolling.
   - `apps/web/app/app-globals.css`: runtime tokens, accessibility utilities, subtle noise/background, shadow/elevation, motion conventions.
-  - `apps/web/components/layout/Header.tsx`: rounded controls, red primary actions, serif typography, compact responsive behavior.
+  - `apps/web/components/layout/Header.tsx`: rounded controls, red primary actions, semantic sans typography for chrome, compact responsive behavior.
   - `apps/web/components/layout/OverlayLayout.tsx`, `apps/web/components/layout/MainLayout.tsx`: desktop overlay/panel composition and mobile-specific layout behavior.
   - `apps/web/components/admin/AdminConsoleOverview.tsx`: unified admin console, collapsible sidebar, right content canvas, direct inline modules, guarded apply and LLM workspace concepts.
   - `apps/web/components/admin/AdminUsersPanel.tsx`, `apps/web/app/api/admin/users/**`: administrator-only user/account management with server-side Supabase Auth Admin boundaries, self-lockout guards, and audit events.
@@ -65,7 +65,7 @@
 
 ## Visual language
 - Color: warm ivory/off-white surfaces (`hsl(38 30% 98%)`), red primary (`hsl(0 74% 42%)`) for high-emphasis actions/active states, muted border/status colors for secondary information.
-- Typography: Noto Serif KR; compact strong headings; avoid switching to sterile enterprise typography.
+- Typography: Pretendard for Korean UI/body density; Noto Serif KR remains the intentional display/editorial role. Compact strong headings are allowed, but avoid sterile enterprise typography and avoid global serif body text.
 - Spacing/layout rhythm: full-width admin viewport, tight but readable operational density, `min-h-0` and layout-owned scroll containers.
 - Shape/radius/elevation: rounded cards/pills/sidebar controls (`rounded-xl`/`rounded-2xl`), subtle borders, soft shadow/glow only for hierarchy.
 - Motion: subtle transitions; collapse/expand should not show text squeezing or awkward reflow.

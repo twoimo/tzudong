@@ -71,6 +71,51 @@ describe('restaurant review lookup helpers', () => {
         ]);
     });
 
+    test('includes duplicate ids when only raw name matches the approved restaurant name', () => {
+        const approvedMarkerRestaurant = makeRestaurant({
+            id: 'approved-dailyfix',
+        });
+        const rawNameOnlyDuplicate = makeRestaurant({
+            id: 'deleted-raw-name-dailyfix',
+            status: 'deleted',
+            approved_name: null,
+            name: '데일리픽스 강남본점',
+        });
+
+        expect(selectRelatedRestaurantReviewIds(approvedMarkerRestaurant, [
+            rawNameOnlyDuplicate,
+        ])).toEqual([
+            'approved-dailyfix',
+            'deleted-raw-name-dailyfix',
+        ]);
+    });
+
+    test('includes shorter raw-name duplicates when the address matches', () => {
+        const approvedMarkerRestaurant = makeRestaurant({
+            id: 'approved-dailyfix',
+        });
+        const shortNameDuplicate = makeRestaurant({
+            id: 'deleted-short-name-dailyfix',
+            status: 'deleted',
+            approved_name: null,
+            name: '데일리픽스',
+        });
+        const unrelatedSameAddress = makeRestaurant({
+            id: 'same-address-unrelated',
+            status: 'deleted',
+            approved_name: null,
+            name: '전혀다른가게',
+        });
+
+        expect(selectRelatedRestaurantReviewIds(approvedMarkerRestaurant, [
+            shortNameDuplicate,
+            unrelatedSameAddress,
+        ])).toEqual([
+            'approved-dailyfix',
+            'deleted-short-name-dailyfix',
+        ]);
+    });
+
     test('uses approved_name as lookup fallback when name alias is absent', () => {
         expect(getRestaurantReviewLookupName(makeRestaurant({ name: undefined }))).toBe('데일리픽스 강남본점');
     });

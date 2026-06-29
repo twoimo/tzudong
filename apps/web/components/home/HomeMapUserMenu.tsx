@@ -231,7 +231,7 @@ export default function HomeMapUserMenu({
           <DropdownMenuContent
             align="end"
             sideOffset={10}
-            className="z-[180] w-max min-w-[max-content] max-w-[min(24rem,calc(100vw-2rem))] rounded-2xl border-border bg-card p-1.5 font-serif shadow-2xl"
+            className="z-[180] w-max min-w-[max-content] max-w-[min(24rem,calc(100vw-2rem))] rounded-2xl border-border bg-card p-1.5 font-sans shadow-2xl"
           >
             <DropdownMenuLabel className="max-w-[min(22rem,calc(100vw-4rem))] rounded-xl px-3 py-2 text-foreground">
               <span className="block truncate text-sm font-semibold">
