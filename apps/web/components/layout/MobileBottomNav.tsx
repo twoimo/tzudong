@@ -161,7 +161,7 @@ function MobileBottomNavComponent({ className, style }: MobileBottomNavProps) {
                 // 기본 스타일 및 고정 위치
                 'mobile-bottom-nav',
                 'fixed bottom-0 left-0 right-0 z-50',
-                'font-serif',
+                'font-sans',
                 // 배경 및 테두리
                 'bg-background/95 backdrop-blur-md border-t border-border',
                 // 그리드 레이아웃
@@ -213,7 +213,7 @@ function MobileBottomNavComponent({ className, style }: MobileBottomNavProps) {
                             )}
                         />
                         <span className={cn(
-                            'text-[12px] font-medium leading-none tracking-tight',
+                            'text-[12px] font-medium leading-none tracking-normal',
                             isActive && 'font-semibold'
                         )}>
                             {item.label}
