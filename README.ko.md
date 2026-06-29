@@ -1,6 +1,8 @@
 <div align="center">
-  <img src="apps/web/public/logo.png" width="96" alt="쯔동여지도 로고" />
-  <h1>Tzudong Map</h1>
+  <h1>
+    <img src="apps/web/public/logo.png" width="48" alt="쯔동여지도 로고" />
+    Tzudong Map
+  </h1>
   <p><strong>모두를 위한 Tzudong Map. 쯔양 영상 속 맛집을 지도, 검수, 스토리보드 워크스페이스로 연결하는 제품입니다.</strong></p>
   <p>
     <a href="https://tzudong.app">라이브 앱</a>
