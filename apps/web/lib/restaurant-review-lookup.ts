@@ -1,18 +1,57 @@
 import type { Restaurant } from '@/types/restaurant';
 
+type ReviewLookupNameFields = Pick<Restaurant, 'name' | 'approved_name'> &
+    Partial<Pick<Restaurant, 'origin_name' | 'naver_name' | 'google_name'>>;
+
 type ReviewLookupRestaurant = Pick<
     Restaurant,
-    'id' | 'name' | 'approved_name' | 'road_address' | 'jibun_address' | 'mergedRestaurants'
->;
+    'id' | 'road_address' | 'jibun_address' | 'mergedRestaurants'
+> & ReviewLookupNameFields;
 
 type ReviewLookupCandidate = Pick<
     Restaurant,
-    'id' | 'name' | 'approved_name' | 'road_address' | 'jibun_address'
->;
+    'id' | 'road_address' | 'jibun_address'
+> & ReviewLookupNameFields;
 
-function getLookupName(restaurant: Pick<Restaurant, 'name' | 'approved_name'>): string {
-    return (restaurant.name || restaurant.approved_name || '').trim();
+function getLookupName(restaurant: ReviewLookupNameFields): string {
+    return (restaurant.name || restaurant.approved_name || restaurant.naver_name || restaurant.origin_name || restaurant.google_name || '').trim();
 }
+
+function collectLookupNames(restaurant: ReviewLookupNameFields): string[] {
+    return [...new Set([
+        restaurant.name,
+        restaurant.approved_name,
+        restaurant.naver_name,
+        restaurant.origin_name,
+        restaurant.google_name,
+    ].map((name) => name?.trim()).filter((name): name is string => Boolean(name)))];
+}
+
+function normalizeReviewLookupName(name: string | null | undefined): string {
+    return (name || '')
+        .replace(/\s+/g, '')
+        .replace(/[^\w가-힣]/g, '')
+        .toLowerCase();
+}
+
+function areReviewLookupNamesCompatible(sourceName: string, candidateName: string): boolean {
+    if (sourceName === candidateName) return true;
+
+    const normalizedSource = normalizeReviewLookupName(sourceName);
+    const normalizedCandidate = normalizeReviewLookupName(candidateName);
+    if (!normalizedSource || !normalizedCandidate) return false;
+    if (normalizedSource === normalizedCandidate) return true;
+
+    const shorter = normalizedSource.length <= normalizedCandidate.length
+        ? normalizedSource
+        : normalizedCandidate;
+    const longer = normalizedSource.length > normalizedCandidate.length
+        ? normalizedSource
+        : normalizedCandidate;
+
+    return shorter.length >= 3 && longer.includes(shorter);
+}
+
 
 export function normalizeReviewLookupAddress(address: string | null | undefined): string {
     return (address || '')
@@ -58,7 +97,7 @@ export function selectRelatedRestaurantReviewIds(
     if (!restaurant) return [];
 
     const ids = new Set(collectDirectRestaurantReviewIds(restaurant));
-    const lookupName = getLookupName(restaurant);
+    const lookupNames = collectLookupNames(restaurant);
     const lookupAddresses = collectNormalizedAddresses([
         restaurant,
         ...(restaurant.mergedRestaurants || []),
@@ -67,8 +106,18 @@ export function selectRelatedRestaurantReviewIds(
     candidates.forEach((candidate) => {
         if (!candidate.id) return;
 
-        const candidateName = getLookupName(candidate);
-        if (lookupName && candidateName && candidateName !== lookupName) return;
+        const candidateNames = collectLookupNames(candidate);
+        if (
+            lookupNames.length > 0 &&
+            candidateNames.length > 0 &&
+            !lookupNames.some((lookupName) =>
+                candidateNames.some((candidateName) =>
+                    areReviewLookupNamesCompatible(lookupName, candidateName)
+                )
+            )
+        ) {
+            return;
+        }
 
         const candidateAddresses = collectNormalizedAddresses([candidate]);
         const hasAddressMatch =

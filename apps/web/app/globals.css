@@ -3,7 +3,10 @@
 :root {
   --vh: 1vh;
   --full-height: 100vh;
-  --font-noto-serif-kr: 'Noto Serif KR', 'Apple SD Gothic Neo', 'Malgun Gothic', ui-serif, Georgia, serif;
+  --font-sans: var(--font-pretendard, "Pretendard"), "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display-fallback: "Noto Serif KR", "Apple SD Gothic Neo", "Malgun Gothic", ui-serif, Georgia, serif;
+  --font-noto-serif-kr: var(--font-display, "Noto Serif KR"), "Apple SD Gothic Neo", "Malgun Gothic", ui-serif, Georgia, serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
   --background: 38 30% 98%;
   --foreground: 24 10% 10%;
@@ -53,13 +56,6 @@
   :root { --full-height: 100svh; }
 }
 
-@font-face {
-  font-family: 'Noto Serif KR';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: local('Noto Serif KR'), local('NotoSerifKR-Regular');
-}
 
 *,
 *::before,
@@ -80,8 +76,8 @@ body {
   overflow: hidden;
   background: hsl(var(--background));
   color: hsl(var(--foreground));
-  font-family: var(--font-noto-serif-kr, 'Noto Serif KR'), 'Apple SD Gothic Neo', 'Malgun Gothic', ui-serif, Georgia, serif;
-  letter-spacing: -0.025em;
+  font-family: var(--font-sans);
+  letter-spacing: 0;
 }
 
 button,
@@ -108,7 +104,6 @@ button {
     transform: translate3d(320%, 0, 0) skewX(-10deg);
   }
 }
-
 [data-storyboard-cut-image-skeleton="true"] {
   position: absolute;
   inset: 0;

@@ -58,6 +58,10 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import {
+  hasExplicitThumbnailGenerationCommand as hasSharedExplicitThumbnailGenerationCommand,
+  isThumbnailChatGuidanceQuestion as isSharedThumbnailChatGuidanceQuestion,
+} from "@/lib/admin/youtube-thumbnail-generator/chat-intent";
+import {
   THUMBNAIL_LOCAL_BRIDGE_DEFAULT_URL,
   THUMBNAIL_LOCAL_BRIDGE_IMAGES_PATH,
   THUMBNAIL_LOCAL_BRIDGE_ROUTE_ID,
@@ -363,6 +367,30 @@ type ThumbnailChatMessage = {
   content: string;
   mode?: "system" | "submitted" | "live" | "stream";
 };
+type ThumbnailChatConversationMessagePayload = {
+  id?: string;
+  role: "assistant" | "user";
+  content: string;
+};
+
+type ThumbnailChatFocusContextPayload = {
+  kind: "text-layer" | "canvas";
+  label: string;
+  promptContext: string;
+  layerId?: string;
+  role?: "headline" | "subHeadline" | "custom";
+  detail?: string;
+  createdAt?: string;
+};
+
+type ThumbnailChatReferenceImageAttachmentPayload = {
+  id: string;
+  name: string;
+  mime?: "image/png" | "image/jpeg" | "image/webp";
+  size: number;
+  role: ReferenceImageRole;
+};
+
 
 
 type ThumbnailChatCanvasPatch = {
@@ -401,6 +429,8 @@ type ThumbnailChatAgentResult = {
     model?: string;
     effort?: string;
     streaming?: string;
+    chatIntent?: string;
+    canvasMutation?: boolean;
   };
 };
 
@@ -634,6 +664,12 @@ const THUMBNAIL_LOCAL_BRIDGE_HELPER_PATH = "/helper" as const;
 const THUMBNAIL_LOCAL_BRIDGE_HELPER_PROTOCOL_VERSION = 1 as const;
 
 let thumbnailLocalBridgeHelperSessionCounter = 0;
+let thumbnailChatThreadIdCounter = 0;
+
+function createThumbnailChatThreadId() {
+  thumbnailChatThreadIdCounter += 1;
+  return `thumbnail-chat-${Date.now().toString(36)}-${thumbnailChatThreadIdCounter.toString(36)}`;
+}
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object";
@@ -1152,6 +1188,8 @@ const CHAT_EXPLICIT_HEADLINE_PARTICLE_PATTERN = /(?:^|[\n,;.])\s*(?:메인\s*)?(
 const CHAT_EXPLICIT_SUBHEADLINE_PATTERN = /(?:^|[\n,;])\s*(?:보조\s*문구|보조|스티커|서브|sub)\s*[:：]\s*([^\n,;]+)/i;
 const CHAT_EXPLICIT_SUBHEADLINE_PARTICLE_PATTERN = /(?:^|[\n,;.])\s*(?:보조\s*)?(?:스티커|서브|보조\s*문구)\s*(?:은|는|=)\s*["“'‘]?([^"”'’\n,;.]{2,20})/i;
 const CHAT_GENERATION_INTENT_PATTERN = /(생성|만들|제작|그려|뽑아|렌더|render|generate|create)/i;
+const THUMBNAIL_CHAT_CONVERSATION_CONTEXT_LIMIT = 8;
+const THUMBNAIL_CHAT_CONVERSATION_CONTENT_MAX_LENGTH = 280;
 const MAIN_HEADLINE_MAX_LENGTH = 36;
 const AUTO_GENERATED_MAIN_HEADLINE_MAX_LENGTH = 14;
 const SUB_HEADLINE_MAX_LENGTH = 20;
@@ -1276,6 +1314,36 @@ function isUnsafeThumbnailChatInstructionPrompt(value: string) {
 function getUnsafeThumbnailChatInstructionMessage() {
   return "그 요청은 안전하게 처리할 수 없어요. 비밀 정보 보여주기, 확인 과정 건너뛰기, 사실과 다른 성공 처리는 하지 않습니다. 썸네일 문구나 배치를 어떻게 바꾸고 싶은지만 다시 적어 주세요.";
 }
+function isThumbnailChatReviewOnlyPrompt(value: string) {
+  const normalized = normalizeThumbnailChatRequirement(value);
+  return /(검토|리뷰|평가|어때|괜찮|초보자도\s*이해|왜\s*이렇게|분석|클릭률.*어떻게|가독성.*어때)/i.test(normalized) &&
+    !isThumbnailChatReplacementPrompt(normalized) &&
+    !isSelectedLayerChatPrompt(normalized);
+}
+
+function isThumbnailChatCasualPrompt(value: string) {
+  const normalized = normalizeThumbnailChatRequirement(value);
+  return /^(?:ㅎㅇ|하이|안녕|안녕하세요|고마워|감사|ㄱㅅ|도움말|help|사용법)$/i.test(normalized) ||
+    /(?:뭐\s*할\s*수|무엇을\s*할\s*수|어떻게\s*쓰|사용법|도움말|help)/i.test(normalized);
+}
+
+function hasExplicitThumbnailGenerationCommand(value: string) {
+  return hasSharedExplicitThumbnailGenerationCommand(normalizeThumbnailChatRequirement(value));
+}
+
+function isThumbnailChatGuidanceQuestion(value: string) {
+  return isSharedThumbnailChatGuidanceQuestion(normalizeThumbnailChatRequirement(value));
+}
+
+function isNonMutatingThumbnailChatPrompt(value: string) {
+  const normalized = normalizeThumbnailChatRequirement(value);
+  if (!normalized) return false;
+  if (isThumbnailChatCasualPrompt(normalized) || isThumbnailChatReviewOnlyPrompt(normalized)) return true;
+  if (isThumbnailChatGuidanceQuestion(normalized) && !hasExplicitThumbnailGenerationCommand(normalized)) return true;
+  if (isThumbnailChatReplacementPrompt(normalized) || isSelectedLayerChatPrompt(normalized) || isThumbnailChatOptimizationPrompt(normalized)) return false;
+  if (hasExplicitThumbnailGenerationCommand(normalized)) return false;
+  return isThumbnailChatGuidanceQuestion(normalized);
+}
 
 function isSelectedLayerChatPrompt(value: string) {
   return /(선택된|선택\s*항목|현재\s*캔버스에서\s*선택된|이\s*선택|이거|그거|해당\s*문구|현재\s*문구|선택\s*문구)/i.test(value);
@@ -1365,6 +1433,7 @@ function resolveThumbnailChatLocalCommand(value: string): ThumbnailChatLocalComm
   if (hasThumbnailGenerationIntent(normalized)) return null;
   if (isCanvasContextChatPrompt(normalized)) return null;
   if (isThumbnailChatStructuredEditPrompt(normalized)) return null;
+  if (isThumbnailChatGuidanceQuestion(normalized)) return null;
 
   const wantsReferenceImage = /(참고\s*이미지|레퍼런스|reference|이미지\s*(?:첨부|업로드)|파일\s*(?:첨부|업로드))/i.test(normalized);
   if (wantsReferenceImage && /(삭제|지워|비워|제거|초기화|clear)/i.test(normalized)) return "reference-clear";
@@ -2649,6 +2718,7 @@ export function AdminYoutubeThumbnailGenerator() {
   const thumbnailDurableReleaseRequestIdRef = useRef(0);
   const chatAbortControllerRef = useRef<AbortController | null>(null);
   const activeChatAssistantMessageIdRef = useRef<string | null>(null);
+  const thumbnailChatThreadIdRef = useRef(createThumbnailChatThreadId());
   const pendingChatGenerationRequirementRef = useRef<string | null>(null);
   const guidedExampleVariantIndexRef = useRef(0);
   const generationAbortControllerRef = useRef<AbortController | null>(null);
@@ -3023,20 +3093,25 @@ export function AdminYoutubeThumbnailGenerator() {
           : thumbnailChatStatusState === "needs-setup"
             ? "준비 필요"
             : "확인 중";
+  const chatDraftIsNonMutating = isNonMutatingThumbnailChatPrompt(chatDraft);
   const currentThumbnailStreamingLabel = isGenerating
     ? "이미지 생성 중"
     : isChatAgentStreaming
       ? "요청 반영 중"
-      : isThumbnailChatStructuredEditPrompt(chatDraft)
-        ? "전송 후 편집"
-        : "입력 프리뷰";
+      : chatDraftIsNonMutating
+        ? "전송 후 답변"
+        : isThumbnailChatStructuredEditPrompt(chatDraft)
+          ? "전송 후 편집"
+          : "입력 프리뷰";
   const currentThumbnailStreamingPhase = isGenerating
     ? "썸네일 이미지를 만들고 있어요. 오래 걸리면 아래 중단 버튼을 누를 수 있습니다."
     : isChatAgentStreaming
       ? "요청을 쉽게 정리하는 중이에요..."
-      : isThumbnailChatStructuredEditPrompt(chatDraft)
-        ? "입력 중 · 전송하면 문구를 바꿉니다"
-        : "입력 중 · 전송하면 캔버스에 반영됩니다";
+      : chatDraftIsNonMutating
+        ? "입력 중 · 전송하면 캔버스는 그대로 두고 답변합니다"
+        : isThumbnailChatStructuredEditPrompt(chatDraft)
+          ? "입력 중 · 전송하면 문구를 바꿉니다"
+          : "입력 중 · 전송하면 캔버스에 반영됩니다";
 
   useEffect(() => {
     textLayersRef.current = textLayers;
@@ -4469,15 +4544,78 @@ export function AdminYoutubeThumbnailGenerator() {
   function handleChatDraftChange(value: string) {
     setChatDraft(value);
   }
+  function sanitizeThumbnailChatConversationContent(value: string) {
+    return normalizeThumbnailChatRequirement(value).slice(0, THUMBNAIL_CHAT_CONVERSATION_CONTENT_MAX_LENGTH);
+  }
+
+  function isThumbnailChatReadbackMessage(message: ThumbnailChatMessage) {
+    if (message.role === "user") return false;
+    const normalized = sanitizeThumbnailChatConversationContent(message.content);
+    return (
+      message.mode === "system" ||
+      message.id === "assistant-intro" ||
+      message.id.startsWith("assistant-history-load") ||
+      normalized.startsWith("원하는 썸네일을 말로 적어 주세요") ||
+      normalized.startsWith("간단히 3가지만 적어 주세요") ||
+      normalized.startsWith("현재 상태를 쉽게 정리했어요") ||
+      normalized.startsWith("생성 히스토리를 이 페이지 안에서 열었습니다") ||
+      normalized.startsWith("현재 캔버스를 PNG로 저장했습니다") ||
+      normalized.startsWith("참고 이미지 파일 선택창을 열었습니다") ||
+      normalized.startsWith("참고 이미지를 모두 비웠습니다") ||
+      normalized.includes("실제 생성 결과를 캔버스에 반영했습니다") ||
+      normalized.includes("공용 릴리즈") ||
+      normalized.includes("릴리즈 후보")
+    );
+  }
+
+  function buildThumbnailChatConversationMessages(): ThumbnailChatConversationMessagePayload[] {
+    return chatMessages
+      .flatMap((message): ThumbnailChatConversationMessagePayload[] => {
+        if (message.mode === "stream" || isThumbnailChatReadbackMessage(message)) return [];
+        const content = sanitizeThumbnailChatConversationContent(message.content);
+        if (!content || isUnsafeThumbnailChatInstructionPrompt(content)) return [];
+        return [{ id: message.id, role: message.role, content }];
+      })
+      .slice(-THUMBNAIL_CHAT_CONVERSATION_CONTEXT_LIMIT);
+  }
+
+  function buildThumbnailChatFocusContext(): ThumbnailChatFocusContextPayload | null {
+    if (!canvasContextLayer) return null;
+    const role = canvasContextLayer.id === "headline" || canvasContextLayer.id === "subHeadline"
+      ? canvasContextLayer.id
+      : "custom";
+    return {
+      kind: "text-layer",
+      label: getCanvasLayerDisplayName(canvasContextLayer),
+      layerId: canvasContextLayer.id,
+      role,
+      detail: canvasContextSummary,
+      promptContext: canvasContextPrompt,
+      createdAt: new Date().toISOString(),
+    };
+  }
+
+  function buildThumbnailReferenceImageAttachments(): ThumbnailChatReferenceImageAttachmentPayload[] {
+    return files.map((file, index) => ({
+      id: `thumbnail-reference-${index + 1}-${file.name}-${file.size}`,
+      name: file.name.slice(0, 120),
+      mime: file.type === "image/png" || file.type === "image/jpeg" || file.type === "image/webp"
+        ? file.type
+        : undefined,
+      size: file.size,
+      role: referenceImageRoles[index] ?? (index === 0 ? "host" : "other"),
+    }));
+  }
 
   async function handleThumbnailChatSubmit() {
     const submittedRequirement = normalizeThumbnailChatRequirement(chatDraft);
     if (!submittedRequirement || isChatAgentStreaming || isGenerating) return;
 
-    const submittedHasGenerationIntent = hasThumbnailGenerationIntent(submittedRequirement);
+    const nonMutatingPrompt = isNonMutatingThumbnailChatPrompt(submittedRequirement);
+    const submittedHasGenerationIntent = hasThumbnailGenerationIntent(submittedRequirement) && !nonMutatingPrompt;
     const structuredEditPrompt = isThumbnailChatStructuredEditPrompt(submittedRequirement);
     const replacementEditPrompt = isThumbnailChatReplacementPrompt(submittedRequirement);
-    const shouldUseStructuredEditPreview = structuredEditPrompt && (!submittedHasGenerationIntent || replacementEditPrompt);
+    const shouldUseStructuredEditPreview = !nonMutatingPrompt && structuredEditPrompt && (!submittedHasGenerationIntent || replacementEditPrompt);
     const localCommand = resolveThumbnailChatLocalCommand(submittedRequirement);
     if (localCommand) {
       commitPendingTextLayerUndoSnapshot();
@@ -4517,7 +4655,7 @@ export function AdminYoutubeThumbnailGenerator() {
       subHeadline,
     };
     const selectedLayerPrompt = isSelectedLayerChatPrompt(submittedRequirement);
-    if (!selectedLayerPrompt && !shouldUseStructuredEditPreview) applyChatRequirementToCanvas(submittedRequirement);
+    if (!selectedLayerPrompt && !shouldUseStructuredEditPreview && !nonMutatingPrompt) applyChatRequirementToCanvas(submittedRequirement);
     pendingChatGenerationRequirementRef.current = submittedHasGenerationIntent
       ? submittedRequirement
       : null;
@@ -4554,6 +4692,7 @@ export function AdminYoutubeThumbnailGenerator() {
         signal: controller.signal,
         body: JSON.stringify({
           chatRunId,
+          chatThreadId: thumbnailChatThreadIdRef.current,
           message: submittedRequirement,
           currentTopic: topic,
           currentHeadline: headline,
@@ -4562,6 +4701,9 @@ export function AdminYoutubeThumbnailGenerator() {
           editingLayerId,
           lastCanvasActionLabel,
           currentTextLayers: textLayersRef.current,
+          conversationMessages: buildThumbnailChatConversationMessages(),
+          focusContext: buildThumbnailChatFocusContext(),
+          referenceImageAttachments: buildThumbnailReferenceImageAttachments(),
           providerId,
           generationMode,
         }),
@@ -4612,19 +4754,22 @@ export function AdminYoutubeThumbnailGenerator() {
               textLayerPatches: generationSafeTextLayerPatches,
           };
           finalResult = nextAgentResult;
-          applyThumbnailChatResultToCanvas(
-            nextAgentResult.canvasPatch,
-            nextAgentResult.textLayerPatches ?? [],
-            {
-              preserveActiveLayer: Boolean(nextAgentResult.textLayerPatches?.length),
-              normalizeGeneratedLayout: Boolean(nextAgentResult.shouldGenerate || shouldPreferSubmittedPromptCopy),
-            },
-          );
-          if (nextAgentResult.providerId && thumbnailImageRouteChoice !== THUMBNAIL_LOCAL_BRIDGE_ROUTE_ID) {
-            setProviderId(nextAgentResult.providerId);
-          }
-          if (nextAgentResult.generationMode && thumbnailImageRouteChoice !== THUMBNAIL_LOCAL_BRIDGE_ROUTE_ID) {
-            setGenerationMode(nextAgentResult.generationMode);
+          const shouldApplyCanvasMutation = nextAgentResult.diagnostics?.canvasMutation !== false;
+          if (shouldApplyCanvasMutation) {
+            applyThumbnailChatResultToCanvas(
+              nextAgentResult.canvasPatch,
+              nextAgentResult.textLayerPatches ?? [],
+              {
+                preserveActiveLayer: Boolean(nextAgentResult.textLayerPatches?.length),
+                normalizeGeneratedLayout: Boolean(nextAgentResult.shouldGenerate || shouldPreferSubmittedPromptCopy),
+              },
+            );
+            if (nextAgentResult.providerId && thumbnailImageRouteChoice !== THUMBNAIL_LOCAL_BRIDGE_ROUTE_ID) {
+              setProviderId(nextAgentResult.providerId);
+            }
+            if (nextAgentResult.generationMode && thumbnailImageRouteChoice !== THUMBNAIL_LOCAL_BRIDGE_ROUTE_ID) {
+              setGenerationMode(nextAgentResult.generationMode);
+            }
           }
           updateThumbnailChatMessage(nextAssistantMessageId, nextAgentResult.assistantMessage, "live");
         }
