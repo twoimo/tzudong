@@ -59,6 +59,35 @@ The README visuals are recorded from the local Next.js app in a real browser ses
 
 ![Tzudong Map real browser product tour](apps/web/public/images/readme-product-tour.gif)
 
+### Mobile app flows
+
+<table>
+  <tr>
+    <td width="50%">
+      <strong>Home map</strong><br />
+      Location permission focuses Gangnam Station, opens a restaurant marker, and scrolls the mobile detail bottom sheet.<br />
+      <img src="apps/web/public/images/readme-mobile-home-map.gif" alt="Mobile GIF showing the home map focusing Gangnam Station, opening a marker, and scrolling the restaurant detail bottom sheet" />
+    </td>
+    <td width="50%">
+      <strong>Review feed</strong><br />
+      Verified reviews expand from card preview into full copy, then open the linked restaurant detail sheet.<br />
+      <img src="apps/web/public/images/readme-mobile-reviews-feed.gif" alt="Mobile GIF showing the review feed expanding a review and opening the linked restaurant detail sheet" />
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <strong>Stamp passport</strong><br />
+      Stamp cards filter by restaurant, open a stamped place, and scroll through the same detail readback pattern.<br />
+      <img src="apps/web/public/images/readme-mobile-stamp-passport.gif" alt="Mobile GIF showing the stamp passport filtering restaurants and opening a stamped restaurant detail sheet" />
+    </td>
+    <td width="50%">
+      <strong>Ranking</strong><br />
+      The leaderboard switches between all-time and monthly context while preserving the bottom navigation shell.<br />
+      <img src="apps/web/public/images/readme-mobile-leaderboard-ranking.gif" alt="Mobile GIF showing the ranking page switching leaderboard context and scrolling the ranking list" />
+    </td>
+  </tr>
+</table>
+
 ### Storyboard workspace
 
 ![Real browser GIF of storyboard generation from a chat prompt](apps/web/public/images/readme-storyboard-demo.gif)
