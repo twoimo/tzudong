@@ -64,7 +64,7 @@ export default function MobileBookmarkMenuButton({ user, defaultOpen = false, op
                     )}
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[min(calc(100vw-1rem),22rem)] rounded-2xl border-border bg-card p-2 font-serif shadow-primary z-[110]">
+            <DropdownMenuContent align="end" className="w-[min(calc(100vw-1rem),22rem)] rounded-2xl border-border bg-card p-2 font-sans shadow-primary z-[110]">
                 <DropdownMenuLabel className="flex items-start justify-between gap-3 px-1 py-1 text-foreground">
                     <div className="min-w-0">
                         <span className="block font-semibold">북마크</span>

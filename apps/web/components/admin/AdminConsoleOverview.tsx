@@ -959,7 +959,7 @@ function buildAdminDashboardPdfReportHtml(report: AdminDashboardPdfReportData) {
   <style>
     @page { size: A4; margin: 14mm; }
     * { box-sizing: border-box; }
-    body { margin: 0; background: #f7f4ef; color: #211b16; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.45; }
+    body { margin: 0; background: #f7f4ef; color: #211b16; font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif; line-height: 1.45; }
     main { max-width: 960px; margin: 0 auto; padding: 28px; background: #fffdf9; }
     header { display: flex; justify-content: space-between; gap: 24px; border-bottom: 2px solid #211b16; padding-bottom: 18px; }
     h1 { margin: 0; font-size: 28px; letter-spacing: -0.03em; }
@@ -3853,7 +3853,7 @@ function AdminDashboardKpiCard({
       ) : (
         <div className="flex min-h-0 min-w-0 items-center justify-between gap-3">
           <div className="min-w-0">
-            <p className="truncate text-[clamp(1.42rem,1.75vw,2.1rem)] font-black leading-none tracking-[-0.055em] text-foreground">
+            <p className="whitespace-nowrap text-[clamp(1.2rem,1.45vw,1.75rem)] font-black leading-none tracking-[-0.035em] tabular-nums text-foreground">
               {value}
             </p>
             {caption ? (
