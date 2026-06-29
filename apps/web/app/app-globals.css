@@ -619,17 +619,14 @@
 All colors MUST be HSL.
 */
 
-/* 성능 최적화: 폰트 로딩 최적화 */
-@font-face {
-  font-family: "Noto Serif KR";
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: local("Noto Serif KR"), local("NotoSerifKR-Regular");
-}
 
 @layer base {
   :root {
+    --font-sans: var(--font-pretendard, "Pretendard"), "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-display-fallback: "Noto Serif KR", "Apple SD Gothic Neo", "Malgun Gothic", ui-serif, Georgia, serif;
+    --font-noto-serif-kr: var(--font-display, "Noto Serif KR"), "Apple SD Gothic Neo", "Malgun Gothic", ui-serif, Georgia, serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
     /* 한지 색상 (Background) - HSL: 38 30% 98% */
     --background: 38 30% 98%;
     /* 먹물 색상 (Foreground - Stone 900) - HSL: 24 10% 10% */
@@ -745,7 +742,7 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground font-serif tracking-tight;
+    @apply bg-background text-foreground font-sans tracking-normal;
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
     /* 동적 뷰포트 높이 적용 */
     height: 100%;
@@ -961,10 +958,8 @@ div[style*="z-index"] > div > .custom-marker {
 
 [data-admin-dashboard-management="true"],
 [data-admin-dashboard-management-skeleton="true"] {
-  font-family:
-    var(--font-noto-serif-kr, "Noto Serif KR"), "Noto Serif KR",
-    "Apple SD Gothic Neo", "Malgun Gothic", ui-serif, Georgia, serif !important;
-  letter-spacing: -0.025em !important;
+  font-family: var(--font-sans);
+  letter-spacing: 0;
 }
 
 [data-admin-console-layout="sidebar-content"] {
