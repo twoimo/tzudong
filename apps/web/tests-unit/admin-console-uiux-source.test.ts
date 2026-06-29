@@ -5951,7 +5951,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(storyboardSource).toContain("STORYBOARD_GUIDED_EXAMPLE_PRESETS");
     expect(storyboardSource).toContain(
-      "STORYBOARD_GUIDED_EXAMPLE_STARTER_PRESETS",
+      "STORYBOARD_GUIDED_EXAMPLE_GRID_PRESETS",
     );
     expect(guidedPresetSource).toContain("export type StoryboardGuidedExamplePreset");
     expect(guidedPresetSource).toContain("export const STORYBOARD_GUIDED_EXAMPLE_PROMPT");
@@ -5960,7 +5960,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "export const STORYBOARD_GUIDED_EXAMPLE_GRID_COUNT = 10",
     );
     expect(guidedPresetSource).toContain(
-      "export const STORYBOARD_GUIDED_EXAMPLE_STARTER_COUNT = 8",
+      "export const STORYBOARD_GUIDED_EXAMPLE_STARTER_COUNT = 10",
     );
     expect(guidedPresetSource).toContain(
       "STORYBOARD_GUIDED_EXAMPLE_GRID_PRESETS",
@@ -5972,27 +5972,24 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-storyboard-chat-example-grid="true"',
     );
     expect(storyboardSource).toContain(
-      'data-storyboard-chat-example-grid-layout="4x2"',
+      'data-storyboard-chat-example-grid-layout="10-card-grid"',
     );
     expect(storyboardSource).toContain(
-      "STORYBOARD_GUIDED_EXAMPLE_STARTER_PRESETS.map",
+      "STORYBOARD_GUIDED_EXAMPLE_GRID_PRESETS.map",
     );
     expect(storyboardSource).toContain(
       'data-storyboard-chat-example-card="true"',
     );
-    expect(storyboardSource).toContain(
+    expect(storyboardSource).not.toContain(
       'data-storyboard-chat-more-examples="true"',
     );
-    expect(storyboardSource).toContain(
+    expect(storyboardSource).not.toContain(
       "STORYBOARD_GUIDED_EXAMPLE_PRESETS.slice(",
     );
-    expect(storyboardSource).toContain(
-      "STORYBOARD_GUIDED_EXAMPLE_STARTER_PRESETS.length",
-    );
-    expect(storyboardSource).toContain(
+    expect(storyboardSource).not.toContain(
       'data-storyboard-chat-more-example-card="true"',
     );
-    expect(storyboardSource).toContain("더 많은 예시");
+    expect(storyboardSource).not.toContain("더 많은 예시");
     expect(storyboardSource).toContain(
       'data-storyboard-chat-all-examples="true"',
     );
