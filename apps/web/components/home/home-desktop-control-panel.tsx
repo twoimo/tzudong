@@ -1718,7 +1718,7 @@ export default function HomeDesktopControlPanel({
                   <DropdownMenuContent
                     align="end"
                     sideOffset={8}
-                    className="z-[180] w-max min-w-[max-content] max-w-[min(24rem,calc(100vw-2rem))] rounded-2xl border-border bg-card p-1.5 font-serif shadow-2xl"
+                    className="z-[180] w-max min-w-[max-content] max-w-[min(24rem,calc(100vw-2rem))] rounded-2xl border-border bg-card p-1.5 font-sans shadow-2xl"
                     data-desktop-map-menu="true"
                   >
                     {desktopMapMenuItems.map((item) => {

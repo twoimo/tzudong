@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import localFont from "next/font/local";
 import { Noto_Serif_KR } from "next/font/google";
 import { DEFAULT_DESCRIPTION, DEFAULT_TITLE, OG_IMAGE_ALT, OG_IMAGE_PATH, SITE_NAME, SITE_URL } from "@/lib/seo";
 import { RootSpeedInsights } from "./root-speed-insights";
@@ -8,10 +9,18 @@ import "./globals.css";
 const siteUrl = SITE_URL;
 const supabasePreconnectUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
 const shouldPreconnectSupabase = Boolean(supabasePreconnectUrl && /^https?:\/\//i.test(supabasePreconnectUrl));
+const pretendard = localFont({
+    src: "./fonts/pretendard/PretendardVariable.woff2",
+    variable: "--font-pretendard",
+    display: "swap",
+    preload: false,
+    weight: "45 920",
+});
+
 const notoSerifKr = Noto_Serif_KR({
-    subsets: ['latin'],
-    variable: '--font-noto-serif-kr',
-    display: 'swap',
+    subsets: ["latin"],
+    variable: "--font-display",
+    display: "swap",
 });
 export const metadata: Metadata = {
     metadataBase: new URL(siteUrl),
@@ -78,7 +87,7 @@ export default function RootLayout({
     return (
         <html
             lang="ko"
-            className={notoSerifKr.variable}
+            className={`${pretendard.variable} ${notoSerifKr.variable}`}
             suppressHydrationWarning
         >
             <head>
