@@ -2355,7 +2355,7 @@ function StoryboardImageGenerationProgressPanel({
 
   return (
     <div
-      className="mt-2 rounded-xl border border-sky-200/70 bg-background/80 p-2 text-[11px] text-foreground shadow-sm dark:border-sky-400/30 dark:bg-slate-950/35"
+      className="mt-2 rounded-xl border border-border/70 bg-background/80 p-2 text-[11px] text-foreground shadow-sm dark:bg-slate-950/35"
       data-storyboard-image-generation-progress="true"
       aria-label={`${progress.label} ${progress.completed}/${progress.total}컷 완료`}
     >

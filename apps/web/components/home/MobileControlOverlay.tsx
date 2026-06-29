@@ -118,7 +118,7 @@ const mobileTopIconButtonClass = cn(
 const mobileTopIconButtonWithBadgeClass = cn(mobileTopIconButtonClass, 'relative');
 const mobileTopIconGlyphClass = 'h-[18px] w-[18px]';
 const mobileTopUserIconGlyphClass = 'h-5 w-5';
-const mobileUserMenuContentClass = 'w-max max-w-[calc(100vw-1rem)] bg-card border-border font-serif z-[110]';
+const mobileUserMenuContentClass = 'w-max max-w-[calc(100vw-1rem)] bg-card border-border font-sans z-[110]';
 const mobileUserMenuItemClass = 'text-foreground hover:bg-accent py-1.5 whitespace-nowrap';
 
 const loadRestaurantSearch = async () => {
@@ -623,7 +623,7 @@ function MobileControlOverlayComponent({
                     <Bookmark className={cn(mobileTopIconGlyphClass, '!text-primary')} aria-hidden="true" />
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[min(calc(100vw-1rem),22rem)] bg-card border-border font-serif z-[110] shadow-primary">
+            <DropdownMenuContent align="end" className="w-[min(calc(100vw-1rem),22rem)] bg-card border-border font-sans z-[110] shadow-primary">
                 <DropdownMenuLabel className="flex items-start justify-between gap-3 text-foreground">
                     <div className="min-w-0">
                         <span className="block font-semibold">북마크</span>
@@ -675,7 +675,7 @@ function MobileControlOverlayComponent({
                     <Bell className={mobileTopIconGlyphClass} aria-hidden="true" />
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[min(calc(100vw-1rem),22rem)] bg-card border-border font-serif z-[110] shadow-primary">
+            <DropdownMenuContent align="end" className="w-[min(calc(100vw-1rem),22rem)] bg-card border-border font-sans z-[110] shadow-primary">
                 <DropdownMenuLabel className="flex items-start justify-between gap-3 text-foreground">
                     <div className="min-w-0">
                         <span className="block font-semibold">알림</span>
