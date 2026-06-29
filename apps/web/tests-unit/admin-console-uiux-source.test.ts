@@ -1174,17 +1174,18 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       '[data-admin-console-content="true"] .font-serif',
     );
     expect(appGlobalsSource).toContain("font-family: inherit;");
-    expect(appLayoutSource).toContain("className={notoSerifKr.variable}");
+    expect(appLayoutSource).toContain("className={`${pretendard.variable} ${notoSerifKr.variable}`}");
+    expect(appLayoutSource).toContain('variable: "--font-pretendard"');
+    expect(appLayoutSource).toContain('variable: "--font-display"');
     expect(appGlobalsSource).toContain(
       '[data-admin-dashboard-management="true"]',
     );
     expect(appGlobalsSource).toContain(
       '[data-admin-dashboard-management-skeleton="true"]',
     );
-    expect(appGlobalsSource).toContain(
-      'var(--font-noto-serif-kr, "Noto Serif KR")',
-    );
-    expect(appGlobalsSource).toContain("serif !important;");
+    expect(appGlobalsSource).toContain("font-family: var(--font-sans);");
+    expect(appGlobalsSource).not.toContain('var(--font-noto-serif-kr, "Noto Serif KR")');
+    expect(appGlobalsSource).not.toContain("serif !important;");
     expect(consoleSource).toContain(
       "grid min-h-0 min-w-0 flex-1 auto-rows-min grid-cols-1 gap-2 overflow-x-hidden overflow-y-visible sm:grid-cols-2 lg:grid-cols-10 lg:grid-rows-[132px_minmax(0,1fr)_minmax(0,0.9fr)] lg:overflow-hidden",
     );
@@ -1300,7 +1301,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       '<h1 className="text-xl font-extrabold leading-tight tracking-[0.01em] text-foreground text-balance">',
     );
-    expect(consoleSource).toContain("text-[clamp(1.42rem,1.75vw,2.1rem)]");
+    expect(consoleSource).toContain("text-[clamp(1.2rem,1.45vw,1.75rem)]");
     expect(consoleSource).toContain("function AdminDashboardTooltipPanel");
     expect(consoleSource).toContain("min-w-44 space-y-1");
     expect(consoleSource).toContain(
@@ -3520,16 +3521,16 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "if (isThumbnailChatStructuredEditPrompt(normalized)) return null;",
     );
     expect(componentSource).toContain(
-      "const submittedHasGenerationIntent = hasThumbnailGenerationIntent(submittedRequirement);",
+      "const submittedHasGenerationIntent = hasThumbnailGenerationIntent(submittedRequirement) && !nonMutatingPrompt;",
     );
     expect(componentSource).toContain(
       "const replacementEditPrompt = isThumbnailChatReplacementPrompt(submittedRequirement);",
     );
     expect(componentSource).toContain(
-      "const shouldUseStructuredEditPreview = structuredEditPrompt && (!submittedHasGenerationIntent || replacementEditPrompt);",
+      "const shouldUseStructuredEditPreview = !nonMutatingPrompt && structuredEditPrompt && (!submittedHasGenerationIntent || replacementEditPrompt);",
     );
     expect(componentSource).toContain(
-      "if (!selectedLayerPrompt && !shouldUseStructuredEditPreview) applyChatRequirementToCanvas(submittedRequirement);",
+      "if (!selectedLayerPrompt && !shouldUseStructuredEditPreview && !nonMutatingPrompt) applyChatRequirementToCanvas(submittedRequirement);",
     );
     expect(componentSource).toContain("CHAT_GENERATION_INTENT_PATTERN");
     expect(componentSource).toContain(
@@ -4789,7 +4790,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(chatRouteSource).toContain("signal: request.signal");
     expect(chatRouteSource).toContain("runId: chatRunId");
     expect(chatRouteSource).toContain(
-      "요청을 읽고 어떤 썸네일을 만들지 정리하고 있어요",
+      "요청을 읽고 답변, 편집, 생성 중 어디에 해당하는지 분류하고 있어요",
     );
     expect(chatRouteSource).toContain("send('status'");
     expect(chatRouteSource).toContain("send('agent_started'");
@@ -6106,6 +6107,12 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(storyboardSource).toContain(
       'data-storyboard-image-generation-progress-bar="true"',
+    );
+    expect(storyboardSource).toContain(
+      "border border-border/70 bg-background/80",
+    );
+    expect(storyboardSource).not.toContain(
+      "border border-sky-200/70 bg-background/80",
     );
     expect(storyboardSource).toContain(
       "data-storyboard-image-generation-cut-status={cut.status}",
@@ -8067,7 +8074,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(tailwindSource).toContain("font-extrabold");
     expect(tailwindSource).toContain("md:p-4");
     expect(tailwindSource).toContain("gap-0");
-    expect(tailwindSource).toContain("text-[clamp(1.42rem,1.75vw,2.1rem)]");
+    expect(tailwindSource).toContain("text-[clamp(1.2rem,1.45vw,1.75rem)]");
     expect(overviewSource).toContain("overflow-visible lg:h-full lg:min-h-0");
     expect(overviewSource).toContain(
       "lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]",
@@ -8129,7 +8136,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain("사용자 관리 화면 준비 중");
     expect(bannersSource).toContain('embedded ? "px-2 py-1.5"');
     expect(bannersSource).toContain(
-      'embedded ? "flex h-full min-h-0 flex-col overflow-hidden bg-background font-sans tracking-normal" : "min-h-screen bg-[#fdfbf7] font-serif"',
+      'embedded ? "flex h-full min-h-0 flex-col overflow-hidden bg-background font-sans tracking-normal" : "min-h-screen bg-[#fdfbf7] font-sans"',
     );
     expect(bannersSource).toContain(
       "xl:grid-cols-[minmax(330px,0.95fr)_minmax(420px,1.05fr)]",
