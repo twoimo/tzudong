@@ -198,7 +198,7 @@ class ProviderReadinessResponse(BaseModel):
 
 app = FastAPI(
     title="Tzudong Storyboard RAG Worker",
-    version="1.0.0",
+    version="1.1.1",
     description=(
         "Required local model worker for storyboard RAG. Heavy embedding, "
         "reranking, and caption readiness stay outside Vercel/Next.js."

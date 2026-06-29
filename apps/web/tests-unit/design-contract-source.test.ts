@@ -31,7 +31,7 @@ describe('repo design contract source', () => {
     }
   });
 
-  test('current admin/home UI surfaces use the documented warm editorial token family', () => {
+  test('current admin/home UI surfaces use documented semantic typography tokens', () => {
     const designSource = repoSource('DESIGN.md');
     const appGlobalsSource = appSource('app/app-globals.css');
     const adminConsoleSource = appSource('components/admin/AdminConsoleOverview.tsx');
@@ -41,8 +41,13 @@ describe('repo design contract source', () => {
 
     expect(designSource).toContain('warm ivory');
     expect(designSource).toContain('red primary');
-    expect(designSource).toContain('Noto Serif KR');
-    expect(appGlobalsSource).toMatch(/font-family: ['"]Noto Serif KR['"]/);
+    expect(designSource).toContain('Pretendard for Korean UI/body density');
+    expect(designSource).toContain('Noto Serif KR remains the intentional display/editorial role');
+    expect(appGlobalsSource).toContain('--font-sans: var(--font-pretendard');
+    expect(appGlobalsSource).toContain('--font-noto-serif-kr: var(--font-display');
+    expect(appGlobalsSource).toContain('@apply bg-background text-foreground font-sans tracking-normal;');
+    expect(appGlobalsSource).not.toContain("font-family: 'Noto Serif KR'");
+    expect(appGlobalsSource).not.toContain('@apply bg-background text-foreground font-serif tracking-tight;');
     expect(appGlobalsSource).toContain('--primary: 0 74% 42%');
     expect(appGlobalsSource).toContain('--shadow-primary');
     expect(adminConsoleSource).toContain('rounded-2xl border border-border');
@@ -52,7 +57,7 @@ describe('repo design contract source', () => {
     expect(adminConsoleSource).toContain('사용자 관리');
     expect(adminOverviewSource).toContain('aria-label="관리자 지도 운영 개요 2분할"');
     expect(adminOverviewSource).toContain('getNaverIndividualMarkerVisual');
-    expect(headerSource).toContain('font-serif');
+    expect(headerSource).toContain('font-sans');
     expect(headerSource).toContain('bg-red-800 hover:bg-red-900');
   });
 });
