@@ -138,6 +138,7 @@ type GeneratorForm = {
 };
 
 type StoryboardImageGenerationCutStatus =
+  | "queued"
   | "generating"
   | "done"
   | "failed"
@@ -2114,12 +2115,14 @@ function useStoryboardChatTypewriterMessages(
 function buildStoryboardImageGenerationProgress({
   label,
   scenes,
+  activeSceneNo = null,
   completedSceneNos = new Set<number>(),
   failedSceneNos = new Set<number>(),
   cancelledSceneNos = new Set<number>(),
 }: {
   label: string;
   scenes: StoryboardScene[];
+  activeSceneNo?: number | null;
   completedSceneNos?: Set<number>;
   failedSceneNos?: Set<number>;
   cancelledSceneNos?: Set<number>;
@@ -2137,7 +2140,9 @@ function buildStoryboardImageGenerationProgress({
         ? "failed"
         : cancelledSceneNos.has(sceneNo)
           ? "cancelled"
-          : "generating";
+          : activeSceneNo === sceneNo
+            ? "generating"
+            : "queued";
     if (status === "done") completed += 1;
     if (status === "failed") failed += 1;
     if (status === "cancelled") cancelled += 1;
@@ -2380,10 +2385,12 @@ function StoryboardImageGenerationProgressPanel({
             cut.status === "done"
               ? "완료"
               : cut.status === "failed"
-                ? "확인 필요"
+                ? "미반영"
                 : cut.status === "cancelled"
                   ? "중단"
-                  : "생성 중";
+                  : cut.status === "queued"
+                    ? "대기"
+                    : "생성 중";
           return (
             <div
               key={`image-progress-${cut.sceneNo}`}
@@ -6805,7 +6812,15 @@ export function AdminStoryboardGenerator({
     chatAbortControllerRef.current = abortController;
 
     let finalResult: StoryboardChatAgentResult | null = null;
-    let finalForm: GeneratorForm = { ...form, prompt: submittedPrompt };
+    const submittedSegmentCount = deriveStoryboardUiSegmentCount(
+      submittedPrompt,
+      form.segmentCount,
+    );
+    let finalForm: GeneratorForm = {
+      ...form,
+      prompt: submittedPrompt,
+      segmentCount: submittedSegmentCount,
+    };
 
     try {
       const response = await fetch(STORYBOARD_CHAT_AGENT_STREAM_URL, {
@@ -6817,7 +6832,7 @@ export function AdminStoryboardGenerator({
           baselinePrompt: result.request.prompt,
           currentTone: form.tone,
           currentTargetLengthMinutes: form.targetLengthMinutes,
-          currentSegmentCount: form.segmentCount,
+          currentSegmentCount: submittedSegmentCount,
           currentAvailableSceneCount:
             storyboardFrameScenes.length || result.storyboard.scenes.length,
           generationMode: form.generationMode,
@@ -7302,6 +7317,7 @@ export function AdminStoryboardGenerator({
         buildStoryboardImageGenerationProgress({
           label: imageGenerationProgressLabel,
           scenes: targetScenes,
+          activeSceneNo: targetScenes[0]?.sceneNo ?? null,
         });
       updateStoryboardChatMessage(
         options.assistantMessageId,
@@ -7415,6 +7431,7 @@ export function AdminStoryboardGenerator({
               buildStoryboardImageGenerationProgress({
                 label: imageGenerationProgressLabel,
                 scenes: targetScenes,
+                activeSceneNo: scene.sceneNo,
                 completedSceneNos: completedImageSceneNos,
                 failedSceneNos: failedImageSceneNos,
               }),
@@ -7454,13 +7471,19 @@ export function AdminStoryboardGenerator({
             );
           }
           if (options.assistantMessageId) {
+            const nextSceneNo = targetScenes[index + 1]?.sceneNo ?? null;
+            const progressedCount =
+              completedImageSceneNos.size + failedImageSceneNos.size;
             updateStoryboardChatMessage(
               options.assistantMessageId,
-              `CUT ${String(scene.sceneNo).padStart(2, "0")} 이미지 반영 확인 · ${index + 1}/${targetScenes.length}`,
+              nextSceneNo === null
+                ? `CUT 이미지 생성 마무리 중 · ${progressedCount}/${targetScenes.length}`
+                : `CUT 이미지를 순서대로 생성 중입니다 · ${progressedCount}/${targetScenes.length}`,
               "streaming",
               buildStoryboardImageGenerationProgress({
                 label: imageGenerationProgressLabel,
                 scenes: targetScenes,
+                activeSceneNo: nextSceneNo,
                 completedSceneNos: completedImageSceneNos,
                 failedSceneNos: failedImageSceneNos,
               }),
@@ -7536,23 +7559,8 @@ export function AdminStoryboardGenerator({
                 : `${appliedImageCount}/${targetCount}컷 모두 캔버스 반영 완료`,
           }),
         );
-        updateStoryboardChatMessage(
-          options.assistantMessageId,
-          missingImageSceneNos.size + failedImageSceneNos.size > 0
-            ? `응답 완료 · ${appliedImageCount}/${targetCount}컷 이미지를 캔버스에 반영했고 ${missingImageSceneNos.size + failedImageSceneNos.size}컷은 확인이 필요합니다.`
-            : `응답 완료 · ${appliedImageCount}/${targetCount}컷 이미지가 캔버스에 반영됐습니다.`,
-          "streaming",
-          buildStoryboardImageGenerationProgress({
-            label: imageGenerationProgressLabel,
-            scenes: targetScenes,
-            completedSceneNos: completedImageSceneNos,
-            failedSceneNos: new Set([
-              ...failedImageSceneNos,
-              ...missingImageSceneNos,
-            ]),
-          }),
-        );
       }
+
       applyStoryboardCanvasFocus(
         createStoryboardActionFocusContext(
           "컷별 스토리보드 이미지 생성",
@@ -7651,9 +7659,7 @@ export function AdminStoryboardGenerator({
             ? `이미지 생성 중단됨 · 반영 ${appliedImageCount}/${targetScenes.length}`
             : isSelectedScope
               ? `현재 컷 재생성 실패 · ${message}`
-              : isAllScope
-                ? `전체 CUT 이미지 생성 실패 · ${message} · 반영 ${appliedImageCount}/${targetScenes.length}`
-                : `4컷 재생성 실패 · ${message} · 반영 ${appliedImageCount}/${targetScenes.length}`,
+              : `${targetLabel} 이미지 생성 실패 · ${message} · 반영 ${appliedImageCount}/${targetScenes.length}`,
           "done",
           buildStoryboardImageGenerationProgress({
             label: imageGenerationProgressLabel,
