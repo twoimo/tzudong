@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
       request.signal.addEventListener('abort', sendAbort, { once: true });
       try {
         send('status', {
-          message: '요청을 읽고 어떤 썸네일을 만들지 정리하고 있어요.',
+          message: '요청을 읽고 답변, 편집, 생성 중 어디에 해당하는지 분류하고 있어요.',
           runtime: 'codex_cli_oauth',
           model: 'gpt-5.5',
           effort: 'low',
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
         send('agent_started', {
           stage: 'agent_started',
           chatRunId,
-          message: '작업을 시작했습니다.',
+          message: '채팅 요청 처리를 시작했습니다.',
           model: 'gpt-5.5',
           effort: 'low',
         });
@@ -110,11 +110,11 @@ export async function POST(request: NextRequest) {
           send('heartbeat', {
             stage: 'agent_running',
             chatRunId,
-            message: '캔버스에 넣을 문구와 배치를 정리하고 있어요.',
+            message: '페이지 안에서 답할지, 캔버스에 반영할지 정리하고 있어요.',
             elapsedMs: Date.now() - startedAt,
           });
         }, 1500);
-        send('status', { chatRunId, message: '문구, 위치, 이미지 생성 여부를 쉽게 정리하고 있어요.' });
+        send('status', { chatRunId, message: '문구, 위치, 이미지 생성 여부를 안전하게 분류하고 있어요.' });
         if (request.signal.aborted) {
           sendAbort();
           return;

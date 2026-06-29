@@ -18,7 +18,7 @@ describe("mypage mobile cleanup source contracts", () => {
     const mapMenuItemClass =
       "cursor-pointer rounded-xl px-3 py-2.5 text-sm font-medium text-foreground whitespace-nowrap focus:bg-accent focus:text-foreground";
     const mapMenuContentClass =
-      "z-[180] w-max min-w-[max-content] max-w-[min(24rem,calc(100vw-2rem))] rounded-2xl border-border bg-card p-1.5 font-serif shadow-2xl";
+      "z-[180] w-max min-w-[max-content] max-w-[min(24rem,calc(100vw-2rem))] rounded-2xl border-border bg-card p-1.5 font-sans shadow-2xl";
     const mapMenuLabelClass =
       "max-w-[min(22rem,calc(100vw-4rem))] rounded-xl px-3 py-2 text-foreground";
     const myPageCenteredAvatarClass =
