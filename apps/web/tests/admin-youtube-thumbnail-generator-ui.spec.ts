@@ -434,10 +434,14 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
   });
   await page.route('**/api/admin/youtube-thumbnail-generator/chat', async (route) => {
     const requestBody = route.request().postDataJSON() as {
+      chatThreadId?: string;
       message?: string;
       currentTopic?: string;
       currentHeadline?: string;
       currentSubHeadline?: string;
+      conversationMessages?: Array<{ role?: string; content?: string; id?: string }>;
+      focusContext?: { kind?: string; label?: string; layerId?: string; role?: string; promptContext?: string };
+      referenceImageAttachments?: unknown[];
     };
     chatRequestBodies.push(requestBody);
     const message = requestBody.message ?? '';
@@ -450,6 +454,7 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
     };
     const shouldGenerateThumbnail = message.includes('새 썸네일 이미지를 만들고 캔버스에 넣었습니다 메시지 테스트');
     const shouldKeepProcessSceneProbeState = message.includes('조리 과정이 보이는 썸네일 생성해줘');
+    const shouldAnswerEditHelp = message.includes('어떻게 바꾸면');
     const chatResult = message.includes('제육볶음')
       ? {
         assistantMessage: '요청을 이해했어요. 메인 문구를 “제육볶음 먹방”로 바꿨어요.',
@@ -487,6 +492,15 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
           shouldGenerate: false,
           shouldReset: false,
           diagnostics: { runtime: 'codex_cli_oauth', model: 'gpt-5.5', effort: 'low', streaming: 'sse-progress' },
+        }
+      : shouldAnswerEditHelp
+        ? {
+          assistantMessage: '쉽게 답변드릴게요. 화면은 바꾸지 않았어요.',
+          canvasPatch,
+          textLayerPatches: [],
+          shouldGenerate: false,
+          shouldReset: false,
+          diagnostics: { runtime: 'codex_cli_oauth', model: 'gpt-5.5', effort: 'low', streaming: 'sse-progress', chatIntent: 'conversation', canvasMutation: false },
         }
       : {
         assistantMessage: `요청을 이해했어요. 스티커 문구를 다듬고, 메인 문구 “${canvasPatch.headline}”와 스티커 문구 “${canvasPatch.subHeadline}”를 확인했어요.`,
@@ -600,12 +614,22 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
   await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('제육볶음 먹방');
   await expect(canvasContextSummary).toContainText('제육볶음 먹방');
   expect(chatRequestBodies.at(-1)).toMatchObject({
+    chatThreadId: expect.stringMatching(/^thumbnail-chat-/),
     message: '제육볶음 먹방 썸네일로 해줘',
     activeLayerId: 'headline',
+    conversationMessages: [],
+    focusContext: expect.objectContaining({
+      kind: 'text-layer',
+      label: '메인 문구',
+      layerId: 'headline',
+      role: 'headline',
+    }),
+    referenceImageAttachments: [],
     currentTextLayers: expect.arrayContaining([
       expect.objectContaining({ id: 'headline', content: '제육볶음 한상' }),
     ]),
   });
+  const thumbnailChatThreadId = (chatRequestBodies.at(-1) as { chatThreadId?: string }).chatThreadId;
   const chatRequestsAfterSubmitOnlyProbe = chatRequestBodies.length;
   await chatComposer.fill('');
 
@@ -624,6 +648,22 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
   await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('이미지 만들기:');
   expect(chatRequestBodies).toHaveLength(chatRequestsAfterSubmitOnlyProbe);
 
+  const chatRequestsBeforeEditHelpProbe = chatRequestBodies.length;
+  await chatComposer.fill('선택된 문구를 어떻게 바꾸면 돼?');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-live-stream="true"]')).toBeVisible();
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-live-stream="true"]')).toContainText('전송 후 답변');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-live-stream="true"]')).toContainText('캔버스는 그대로 두고 답변합니다');
+  await chatComposer.press('Enter');
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('화면은 바꾸지 않았어요');
+  expect(chatRequestBodies).toHaveLength(chatRequestsBeforeEditHelpProbe + 1);
+  expect(chatRequestBodies.at(-1)).toMatchObject({
+    chatThreadId: thumbnailChatThreadId,
+    message: '선택된 문구를 어떻게 바꾸면 돼?',
+  });
+  await chatComposer.fill('');
+  await thumbnailModule.locator('[data-thumbnail-editor-tool="select-headline"]').click();
+  await expect(canvasContextSummary).toContainText('메인 문구');
+
   await chatComposer.fill('메인 문구를 레전드 음식으로 수정해줘');
   await expect(thumbnailModule.locator('[data-thumbnail-chat-live-stream="true"]')).toBeVisible();
   await expect(thumbnailModule.locator('[data-thumbnail-chat-live-stream="true"]')).toContainText('전송 후 편집');
@@ -633,11 +673,20 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
   await expect(thumbnailModule.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('레전드 음식');
   await expect(canvasContextSummary).toContainText('레전드 음식');
   expect(chatRequestBodies.at(-1)).toMatchObject({
+    chatThreadId: thumbnailChatThreadId,
     message: '메인 문구를 레전드 음식으로 수정해줘',
     activeLayerId: 'headline',
-    currentTextLayers: expect.arrayContaining([
-      expect.objectContaining({ id: 'headline', content: '제육볶음 먹방' }),
+    conversationMessages: expect.arrayContaining([
+      expect.objectContaining({ role: 'user', content: '제육볶음 먹방 썸네일로 해줘' }),
+      expect.objectContaining({ role: 'assistant', content: expect.stringContaining('제육볶음 먹방') }),
     ]),
+    focusContext: expect.objectContaining({
+      kind: 'text-layer',
+      label: '메인 문구',
+      layerId: 'headline',
+      role: 'headline',
+    }),
+    referenceImageAttachments: [],
   });
   await chatComposer.fill('');
 
@@ -1035,4 +1084,5 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
   expect(bounds.toolbarBottom).toBeLessThanOrEqual(bounds.viewportHeight + 2);
   expect(bounds.moduleRight).toBeLessThanOrEqual(bounds.viewportWidth + 2);
   expect(bounds.documentWidth).toBeLessThanOrEqual(bounds.viewportWidth + 2);
+  await page.screenshot({ path: testInfo.outputPath('thumbnail-chat-parity.png'), fullPage: true });
 });
