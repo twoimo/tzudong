@@ -57,40 +57,24 @@ Supabase는 웹 앱과 백엔드 파이프라인 사이의 공유 영속성 경�
 
 아래 GIF는 로컬 Next.js 앱을 실제 브라우저에서 조작해 녹화한 GitHub용 제품 데모입니다. 스토리보드 클립은 채팅 프롬프트에서 시작해 보호된 관리자 워크스페이스에서 새 스토리보드가 생성되는 과정을 보여줍니다.
 
+### PC
+
 ![Tzudong Map 실제 브라우저 제품 투어](apps/web/public/images/readme-product-tour.gif)
 
-### 모바일 앱 플로우
+![채팅 프롬프트에서 실제 스토리보드가 생성되는 브라우저 GIF](apps/web/public/images/readme-storyboard-demo.gif)
+
+### Mobile
 
 <table>
   <tr>
-    <td width="50%">
-      <strong>홈 지도</strong><br />
-      위치 허용 후 강남역으로 이동하고, 지도 마커를 열어 맛집 상세 바텀시트를 스크롤합니다.<br />
-      <img src="apps/web/public/images/readme-mobile-home-map.gif" alt="강남역으로 이동한 홈 지도에서 마커를 열고 맛집 상세 바텀시트를 스크롤하는 모바일 GIF" />
-    </td>
-    <td width="50%">
-      <strong>리뷰 피드</strong><br />
-      인증 리뷰 카드가 전문으로 펼쳐지고, 연결된 맛집 상세 바텀시트로 이어집니다.<br />
-      <img src="apps/web/public/images/readme-mobile-reviews-feed.gif" alt="리뷰 피드에서 리뷰를 펼치고 연결된 맛집 상세 바텀시트를 여는 모바일 GIF" />
-    </td>
+    <td width="50%"><img src="apps/web/public/images/readme-mobile-home-map.gif" alt="강남역으로 이동한 홈 지도에서 마커를 열고 맛집 상세 바텀시트를 스크롤하는 모바일 GIF" /></td>
+    <td width="50%"><img src="apps/web/public/images/readme-mobile-reviews-feed.gif" alt="리뷰 피드에서 리뷰를 펼치고 연결된 맛집 상세 바텀시트를 여는 모바일 GIF" /></td>
   </tr>
   <tr>
-    <td width="50%">
-      <strong>도장</strong><br />
-      도장 카드를 맛집 기준으로 필터링하고, 도장을 찍은 맛집의 상세 readback을 확인합니다.<br />
-      <img src="apps/web/public/images/readme-mobile-stamp-passport.gif" alt="도장 페이지에서 맛집을 필터링하고 도장 맛집 상세 바텀시트를 여는 모바일 GIF" />
-    </td>
-    <td width="50%">
-      <strong>랭킹</strong><br />
-      전체/월간 랭킹 문맥을 전환하면서 하단 모바일 내비게이션을 유지합니다.<br />
-      <img src="apps/web/public/images/readme-mobile-leaderboard-ranking.gif" alt="랭킹 페이지에서 전체와 월간 문맥을 전환하고 랭킹 목록을 스크롤하는 모바일 GIF" />
-    </td>
+    <td width="50%"><img src="apps/web/public/images/readme-mobile-stamp-passport.gif" alt="도장 페이지에서 맛집을 필터링하고 도장 맛집 상세 바텀시트를 여는 모바일 GIF" /></td>
+    <td width="50%"><img src="apps/web/public/images/readme-mobile-leaderboard-ranking.gif" alt="랭킹 페이지에서 전체와 월간 문맥을 전환하고 랭킹 목록을 스크롤하는 모바일 GIF" /></td>
   </tr>
 </table>
-
-### 스토리보드 워크스페이스
-
-![채팅 프롬프트에서 실제 스토리보드가 생성되는 브라우저 GIF](apps/web/public/images/readme-storyboard-demo.gif)
 
 ## 현재 구현 범위
 

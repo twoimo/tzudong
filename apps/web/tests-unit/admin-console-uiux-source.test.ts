@@ -6869,7 +6869,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).toContain('data-storyboard-glass-surface="true"');
     expect(storyboardSource).toContain("storyboard-cut-image-shimmer");
     expect(storyboardSource).toContain(
-      'data-storyboard-cut-image-shimmer-effect="glass-sweep"',
+      'data-storyboard-cut-image-shimmer-effect="diagonal-glass-sweep"',
     );
     expect(storyboardSource).toContain("const storyboardTotalPages = useMemo(");
     expect(storyboardSource).toContain(
@@ -6936,10 +6936,12 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(storyboardSource).not.toContain("motion-reduce:hidden");
     expect(appGlobalsSource).toMatch(/radial-gradient\(\s*ellipse at 16% 12%/);
-    expect(appGlobalsSource).toContain("left: -42%;");
-    expect(appGlobalsSource).toContain("width: max(10rem, 34%);");
-    expect(appGlobalsSource).toContain("contain: paint;");
-    expect(appGlobalsSource).toContain("rgba(255, 255, 255, 0.78) 50%");
+    expect(appGlobalsSource).toContain("@keyframes storyboard-cut-glass-diagonal-shimmer");
+    expect(appGlobalsSource).toContain("top: -58%;");
+    expect(appGlobalsSource).toContain("left: -56%;");
+    expect(appGlobalsSource).toContain("width: max(12rem, 42%);");
+    expect(appGlobalsSource).toContain("height: 216%;");
+    expect(appGlobalsSource).toContain("rgba(255, 255, 255, 0.8) 50%");
     expect(appGlobalsSource).toContain(
       '[data-storyboard-cut-image-skeleton-active="false"]',
     );
@@ -6965,7 +6967,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "grid-template-rows: repeat(2, minmax(0, 1fr));",
     );
     expect(appGlobalsSource).toContain("@keyframes storyboard-glass-shimmer");
-    expect(appGlobalsSource).toContain("transform: translate3d(380%, 0, 0)");
+    expect(appGlobalsSource).toContain("transform: translate3d(360%, 54%, 0) rotate(-18deg)");
     expect(appGlobalsSource).toContain("will-change: transform, opacity");
     expect(appGlobalsSource).toContain(
       '[data-thumbnail-generation-skeleton="true"]',
