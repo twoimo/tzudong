@@ -37,6 +37,28 @@ describe("Vercel ignored build branch policy", () => {
     expect(result.stdout).toContain("ref=main");
   });
 
+  it("skips preview builds from main", () => {
+    const result = runIgnoreCommand({
+      VERCEL_ENV: "preview",
+      VERCEL_GIT_COMMIT_REF: "main",
+    });
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("skip: preview deployments are limited to develop");
+    expect(result.stdout).toContain("ref=main");
+  });
+
+  it("skips accidental production deployments from non-main branches", () => {
+    const result = runIgnoreCommand({
+      VERCEL_ENV: "production",
+      VERCEL_GIT_COMMIT_REF: "data",
+    });
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("skip: production deployments are limited to main");
+    expect(result.stdout).toContain("ref=data");
+  });
+
   it("continues preview builds only for develop", () => {
     const result = runIgnoreCommand({
       VERCEL_ENV: "preview",
@@ -69,6 +91,26 @@ describe("Vercel ignored build branch policy", () => {
 
     expect(fullRefResult.status).toBe(1);
     expect(fullRefResult.stdout).toContain("ref=develop");
+
+    const fallbackRefResult = runIgnoreCommand({
+      VERCEL_ENV: "preview",
+      VERCEL_GIT_COMMIT_REF: "",
+      GITHUB_HEAD_REF: "",
+      GITHUB_REF_NAME: "develop",
+    });
+
+    expect(fallbackRefResult.status).toBe(1);
+    expect(fallbackRefResult.stdout).toContain("ref=develop");
+
+    const headRefPriorityResult = runIgnoreCommand({
+      VERCEL_ENV: "preview",
+      VERCEL_GIT_COMMIT_REF: "",
+      GITHUB_HEAD_REF: "develop",
+      GITHUB_REF_NAME: "main",
+    });
+
+    expect(headRefPriorityResult.status).toBe(1);
+    expect(headRefPriorityResult.stdout).toContain("ref=develop");
 
     const missingRefResult = runIgnoreCommand({
       VERCEL_ENV: "preview",
