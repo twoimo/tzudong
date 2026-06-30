@@ -1,6 +1,14 @@
 import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
+import {
+  buildInsightTreemapResponseQualityMeta,
+  createInsightTreemapQualityFlag,
+  enrichInsightTreemapVideosWithQuality,
+  normalizeInsightTreemapMetric,
+} from '@/lib/public-insights/treemap';
 import type {
   InsightTreemapComparisonCoverage,
+  InsightTreemapMetricNormalizationReason,
+  InsightTreemapQualityFlag,
   InsightTreemapPeriod,
   InsightTreemapResponse,
   InsightTreemapVideoRow,
@@ -42,13 +50,22 @@ type BucketRow = {
   bucket_started_at: string;
 };
 
-function toNonNegativeNumber(value: unknown): number {
-  if (typeof value === 'number' && Number.isFinite(value)) return Math.max(0, value);
-  if (typeof value === 'string' && value.trim()) {
-    const parsed = Number.parseFloat(value);
-    return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
-  }
-  return 0;
+function toNonNegativeNumber(
+  value: unknown,
+  metric: 'views' | 'likes' | 'comments' | 'duration' | 'subscribers' | 'videos' | 'channel_views' = 'views',
+): number {
+  return normalizeInsightTreemapMetric(value, metric).value;
+}
+
+function buildSnapshotMetricNormalizationReasons(
+  row: Pick<VideoSnapshotRow, 'view_count' | 'like_count' | 'comment_count' | 'duration_seconds'>,
+): InsightTreemapMetricNormalizationReason[] {
+  return [
+    ...normalizeInsightTreemapMetric(row.view_count, 'views').reasons,
+    ...normalizeInsightTreemapMetric(row.like_count, 'likes').reasons,
+    ...normalizeInsightTreemapMetric(row.comment_count, 'comments').reasons,
+    ...normalizeInsightTreemapMetric(row.duration_seconds, 'duration').reasons,
+  ];
 }
 
 function getPeriodDurationMs(period: InsightTreemapPeriod): number | null {
@@ -191,20 +208,23 @@ function mapSnapshotRowToVideo(
   previous: VideoSnapshotRow | undefined,
   comparisonBucketStartedAt: string | null,
 ): InsightTreemapVideoRow {
+  const normalizedMetricReasons = buildSnapshotMetricNormalizationReasons(row);
+
   return {
     id: row.video_id,
     title: row.title?.trim() || '제목 없음',
     publishedAt: row.published_at,
     category: row.category_id ?? 'YouTube',
-    viewCount: toNonNegativeNumber(row.view_count),
-    likeCount: toNonNegativeNumber(row.like_count),
-    commentCount: toNonNegativeNumber(row.comment_count),
-    duration: Math.floor(toNonNegativeNumber(row.duration_seconds)),
-    previousViewCount: previous ? toNonNegativeNumber(previous.view_count) : null,
-    previousLikeCount: previous ? toNonNegativeNumber(previous.like_count) : null,
-    previousCommentCount: previous ? toNonNegativeNumber(previous.comment_count) : null,
-    previousDuration: previous ? Math.floor(toNonNegativeNumber(previous.duration_seconds)) : null,
+    viewCount: toNonNegativeNumber(row.view_count, 'views'),
+    likeCount: toNonNegativeNumber(row.like_count, 'likes'),
+    commentCount: toNonNegativeNumber(row.comment_count, 'comments'),
+    duration: Math.floor(toNonNegativeNumber(row.duration_seconds, 'duration')),
+    previousViewCount: previous ? toNonNegativeNumber(previous.view_count, 'views') : null,
+    previousLikeCount: previous ? toNonNegativeNumber(previous.like_count, 'likes') : null,
+    previousCommentCount: previous ? toNonNegativeNumber(previous.comment_count, 'comments') : null,
+    previousDuration: previous ? Math.floor(toNonNegativeNumber(previous.duration_seconds, 'duration')) : null,
     comparisonStatus: getSnapshotComparisonStatus(row, previous, comparisonBucketStartedAt),
+    ...(normalizedMetricReasons.length > 0 ? { normalizedMetricReasons } : {}),
   };
 }
 
@@ -259,8 +279,11 @@ export async function getYouTubeKpiSnapshotData(
     comparisonBucket,
     rows.map((row) => row.video_id),
   );
-  const videos = rows.map((row) =>
-    mapSnapshotRowToVideo(row, previousMap.get(row.video_id), comparisonBucket),
+  const videos = enrichInsightTreemapVideosWithQuality(
+    rows.map((row) =>
+      mapSnapshotRowToVideo(row, previousMap.get(row.video_id), comparisonBucket),
+    ),
+    'youtube-snapshot',
   );
   const comparisonCoverage = buildSnapshotComparisonCoverage(
     rows,
@@ -280,6 +303,12 @@ export async function getYouTubeKpiSnapshotData(
       latestBucketStartedAt: latestBucket,
       comparisonBucketStartedAt: comparisonBucket,
       comparisonCoverage,
+      ...buildInsightTreemapResponseQualityMeta({
+        videos,
+        source: 'youtube-snapshot',
+        asOf: latestBucket,
+        comparisonCoverage,
+      }),
     },
   };
 }
@@ -301,6 +330,7 @@ export type YouTubeChannelKpiSnapshot = {
   viewDelta?: number | null;
   videoDelta?: number | null;
   comparisonFetchedAt?: string | null;
+  qualityFlags?: InsightTreemapQualityFlag[];
   deltaSource?: 'snapshot-delta' | 'derived-snapshot-comparison' | 'unavailable';
 };
 
@@ -381,18 +411,40 @@ function getStoredOrDerivedDelta(
   { preferStoredDelta = false }: { preferStoredDelta?: boolean } = {},
 ) {
   const parsedStoredDelta = parseNullableFiniteNumber(storedDelta);
-  if (preferStoredDelta && parsedStoredDelta != null) {
-    return { value: parsedStoredDelta, source: 'snapshot-delta' as const };
-  }
+  const derivedValue =
+    typeof currentValue === 'number' && typeof previousValue === 'number'
+      ? currentValue - previousValue
+      : null;
+  const hasDeltaConflict =
+    preferStoredDelta &&
+    parsedStoredDelta != null &&
+    derivedValue != null &&
+    parsedStoredDelta !== derivedValue;
 
-  if (typeof currentValue === 'number' && typeof previousValue === 'number') {
+  if (preferStoredDelta && parsedStoredDelta != null) {
     return {
-      value: currentValue - previousValue,
-      source: 'derived-snapshot-comparison' as const,
+      value: parsedStoredDelta,
+      source: 'snapshot-delta' as const,
+      derivedValue,
+      hasDeltaConflict,
     };
   }
 
-  return { value: null, source: 'unavailable' as const };
+  if (derivedValue != null) {
+    return {
+      value: derivedValue,
+      source: 'derived-snapshot-comparison' as const,
+      derivedValue,
+      hasDeltaConflict: false,
+    };
+  }
+
+  return {
+    value: null,
+    source: 'unavailable' as const,
+    derivedValue,
+    hasDeltaConflict: false,
+  };
 }
 
 function mapChannelSnapshotRow(
@@ -430,6 +482,39 @@ function mapChannelSnapshotRow(
     previousVideoCount,
     { preferStoredDelta },
   );
+  const qualityFlags: InsightTreemapQualityFlag[] = [
+    ...(subscriberDelta.hasDeltaConflict
+      ? [
+          createInsightTreemapQualityFlag('delta_conflict', {
+            metric: 'subscribers',
+            source: 'youtube-snapshot',
+            value: subscriberDelta.value,
+            threshold: subscriberDelta.derivedValue,
+          }),
+        ]
+      : []),
+    ...(viewDelta.hasDeltaConflict
+      ? [
+          createInsightTreemapQualityFlag('delta_conflict', {
+            metric: 'channel_views',
+            source: 'youtube-snapshot',
+            value: viewDelta.value,
+            threshold: viewDelta.derivedValue,
+          }),
+        ]
+      : []),
+    ...(videoDelta.hasDeltaConflict
+      ? [
+          createInsightTreemapQualityFlag('delta_conflict', {
+            metric: 'videos',
+            source: 'youtube-snapshot',
+            value: videoDelta.value,
+            threshold: videoDelta.derivedValue,
+          }),
+        ]
+      : []),
+  ];
+
 
   return {
     channelId: data.channel_id,
@@ -452,6 +537,7 @@ function mapChannelSnapshotRow(
     viewDelta: viewDelta.value,
     videoDelta: videoDelta.value,
     comparisonFetchedAt: previous ? previous.fetched_at ?? previous.bucket_started_at : null,
+    ...(qualityFlags.length > 0 ? { qualityFlags } : {}),
     deltaSource:
       subscriberDelta.source !== 'unavailable'
         ? subscriberDelta.source
