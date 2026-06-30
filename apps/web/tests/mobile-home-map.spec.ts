@@ -177,4 +177,42 @@ test.describe('Phase 1: mobile home map regressions', () => {
             { timeout: 15000 }
         );
     });
+
+    test('MHM-08: zoomed individual markers expose a visible-marker restaurant sheet', async ({ page }) => {
+        await zoomMockMap(page, 8);
+        await page.waitForFunction(
+            () => document.querySelectorAll('.cluster-marker-container').length > 0,
+            undefined,
+            { timeout: 15000 }
+        );
+
+        const clicked = await page.locator('.cluster-marker-container').evaluateAll((elements) => {
+            const target = elements[0];
+            if (!(target instanceof HTMLElement)) return false;
+
+            target.click();
+            return true;
+        });
+        expect(clicked).toBe(true);
+
+        await waitForMarkerCount(page, 3);
+
+        const trigger = page.locator('[data-mobile-visible-marker-restaurants-trigger="true"]');
+        await expect(trigger).toBeVisible({ timeout: 5000 });
+        await expect(trigger).toContainText('보이는 맛집');
+
+        await trigger.click();
+
+        const sheet = page.locator('[data-mobile-visible-marker-restaurants-sheet="true"]');
+        await expect(sheet).toBeVisible();
+        await expect(sheet).toContainText(/정원분식|명동칼국수|서울돈까스/);
+        await page.screenshot({
+            path: 'test-results/home-map-contextual-discovery-mobile.png',
+            fullPage: true,
+        });
+
+        await sheet.getByRole('button', { name: /명동칼국수 지도에 보이는 맛집 상세 보기/ }).click();
+        await expect(sheet).not.toBeVisible();
+        await expect(page.getByTestId('restaurant-detail-panel')).toContainText('명동칼국수');
+    });
 });

@@ -1063,6 +1063,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     const overviewSource = source(
       "components/admin/AdminOverviewDashboard.tsx",
     );
+    const runtimeSpecSource = source("tests/admin-kpi-dashboard-runtime.spec.ts");
 
     expect(overviewSource).toContain(
       "네이버 Directions 5 기준 실제 도로 주행 경로",
@@ -1165,7 +1166,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(consoleSource).toContain('data-admin-dashboard-channel-kpi="true"');
     expect(consoleSource).toContain(
-      "flex min-h-full min-w-0 flex-col overflow-visible bg-background p-0 font-sans text-foreground lg:h-full lg:min-h-0 lg:overflow-hidden",
+      "flex h-full min-h-0 min-w-0 flex-col overflow-visible bg-background p-0 font-sans text-foreground lg:min-h-0 lg:overflow-visible",
     );
     expect(consoleSource).toContain(
       "h-full min-h-0 min-w-0 overflow-x-hidden overscroll-contain border-y border-border bg-background p-2 font-sans tracking-normal md:border-y-0 md:p-4",
@@ -1187,10 +1188,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(appGlobalsSource).not.toContain('var(--font-noto-serif-kr, "Noto Serif KR")');
     expect(appGlobalsSource).not.toContain("serif !important;");
     expect(consoleSource).toContain(
-      "grid min-h-0 min-w-0 flex-1 auto-rows-min grid-cols-1 gap-2 overflow-x-hidden overflow-y-visible sm:grid-cols-2 lg:grid-cols-10 lg:grid-rows-[132px_minmax(0,1fr)_minmax(0,0.9fr)] lg:overflow-hidden",
+      "grid min-w-0 auto-rows-min grid-cols-1 gap-2 overflow-x-hidden overflow-y-visible sm:grid-cols-2 lg:min-h-0 lg:flex-1 lg:grid-cols-10 lg:grid-rows-[auto_minmax(0,1.15fr)_minmax(0,1fr)] lg:overflow-visible",
     );
     expect(consoleSource).toContain('activeModuleId === "overview"');
-    expect(consoleSource).toContain("overflow-y-auto lg:overflow-hidden");
+    expect(consoleSource).toContain('? "overflow-y-auto"');
     expect(consoleSource).toContain('activeModuleId === "storyboard"');
     expect(consoleSource).toContain("overflow-y-auto md:overflow-hidden");
     expect(consoleSource).toContain('from "recharts"');
@@ -1488,9 +1489,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-admin-dashboard-bar-chart="rank-distribution"',
     );
     expect(consoleSource).toContain(
-      "grid h-full grid-rows-[minmax(0,1fr)_auto] gap-2 pb-0",
+      "grid h-full content-center gap-3 pb-0",
     );
-    expect(consoleSource).toContain("grid min-h-0 content-evenly gap-2");
+    expect(consoleSource).toContain('className={cn("grid min-h-0 gap-3"');
     expect(consoleSource).toContain(
       'className={cn("grid gap-1.5", isFullscreen && "gap-2.5")}',
     );
@@ -1498,7 +1499,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "flex min-w-0 overflow-x-auto overflow-y-visible",
     );
     expect(consoleSource).toContain('isFullscreen ? "h-12 sm:h-14" : "h-9"');
-    expect(consoleSource).toContain("grid gap-1 sm:grid-cols-5");
+    expect(consoleSource).not.toContain("grid gap-1 sm:grid-cols-5");
     expect(consoleSource).toContain(
       "flex min-h-[220px] flex-col overflow-hidden p-3 sm:col-span-2 lg:col-span-5",
     );
@@ -1588,7 +1589,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-admin-dashboard-diagnosis-visual="signal-bar"',
     );
     expect(consoleSource).toContain(
-      'data-admin-dashboard-diagnosis-tooltip-trigger="true"',
+      'data-admin-dashboard-diagnosis-tooltip-trigger="title"',
     );
     expect(consoleSource).toContain(
       'data-admin-dashboard-diagnosis-tooltip="standard"',
@@ -1753,14 +1754,25 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       "처리: 비교 버킷 이후 신규 영상은 이전값 0으로 보고, 비교 버킷 이전 영상인데 이전값이 없으면 비교 불가로 분리합니다.",
     );
-    expect(consoleSource).toContain(
+    expect(consoleSource).not.toContain(
       'data-admin-dashboard-data-confidence="true"',
     );
-    expect(consoleSource).toContain("AdminDashboardDataConfidenceRail");
-    expect(consoleSource).toContain("data-admin-dashboard-anomaly-badges");
-    expect(consoleSource).toContain("stale_snapshot");
-    expect(consoleSource).toContain("fallback_source");
-    expect(consoleSource).toContain("low_comparison_coverage");
+    expect(consoleSource).not.toContain("AdminDashboardDataConfidenceRail");
+    expect(runtimeSpecSource).not.toContain("title: `KPI 회귀");
+    expect(runtimeSpecSource).not.toContain("MOCK_VIDEO_TITLES");
+    expect(runtimeSpecSource).not.toContain("mockAdminDashboardApis");
+    expect(runtimeSpecSource).not.toContain("createMockVideo");
+    expect(runtimeSpecSource).not.toContain("createKpiQualityMeta");
+    expect(runtimeSpecSource).not.toContain("api/admin/youtube-kpis**");
+    expect(runtimeSpecSource).not.toContain("api/dashboard/summary', async");
+    expect(runtimeSpecSource).toContain("expectOperationalKpiPayload");
+    expect(runtimeSpecSource).toContain("kpi-dashboard-real-data-fhd.png");
+    expect(runtimeSpecSource).toContain("waitForResponse");
+    expect(runtimeSpecSource).toContain("width: 1920, height: 1080");
+    expect(runtimeSpecSource).toContain("not.toContainText('KPI 회귀 테스트 영상')");
+    expect(runtimeSpecSource).toContain("getByText(operationalVideoTitle");
+    expect(consoleSource).not.toContain("단일 지배");
+    expect(consoleSource).not.toContain("집중도");
     expect(consoleSource).toContain("slice(0, maxVisible)");
     expect(consoleSource).toContain("max-w-[7rem]");
     expect(consoleSource).toContain("flex-wrap");
@@ -1807,7 +1819,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(consoleSource).toContain("viewBenchmarkTooltipLines");
     expect(consoleSource).toContain('viewBenchmarkTooltipLines.join(" ")');
-    expect(consoleSource).toContain("lines={row.viewBenchmarkTooltipLines}");
+    expect(consoleSource).not.toContain("lines={row.viewBenchmarkTooltipLines}");
+    expect(consoleSource).not.toContain(
+      "mt-1 block truncate text-[11px] font-extrabold leading-4 tabular-nums text-teal-800",
+    );
     expect(consoleSource).toContain("...row.viewBenchmarkTooltipLines");
     expect(consoleSource).toContain(
       "className={adminDashboardTooltipPortalClassName}",
@@ -1853,7 +1868,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("viewBenchmark");
     expect(consoleSource).toContain("buildAdminDashboardContentInsights");
     expect(consoleSource).toContain("getDashboardVideoAgeDays");
-    expect(consoleSource).toContain(
+    expect(consoleSource).not.toContain(
       'data-admin-dashboard-content-insights="average-benchmark"',
     );
     expect(consoleSource).toContain("초반 반응 점검");
@@ -2448,8 +2463,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain('class="brand"');
     expect(consoleSource).toContain('alt="Tzudong 로고"');
     expect(consoleSource).toContain("reportWithAbsoluteLogo");
-    expect(consoleSource).toContain("데이터 신뢰도와 이상치");
-    expect(consoleSource).toContain("report.dataConfidence");
+    expect(consoleSource).not.toContain("데이터 신뢰도와 이상치");
+    expect(consoleSource).not.toContain("report.dataConfidence");
     expect(consoleSource).toContain("PDF 보고서");
     expect(consoleSource).toContain("콘텐츠 성과 TOP 5");
     expect(consoleSource).toContain("성과 진단");
@@ -2654,6 +2669,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("} catch {");
     expect(consoleSource).toContain("return false;");
     expect(consoleSource).toContain("hasLocalE2EAdminShellBypass()");
+    expect(consoleSource).toContain(
+      "(Boolean(user) || hasE2EAdminShellBypass) && !isShellBootstrapping",
+    );
     expect(consoleSource).toContain(
       "useAdminOverviewStats(canLoadAdminConsoleData)",
     );
@@ -2985,6 +3003,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(sidebarOrderRouteSource).toContain(
       'from "@/lib/admin/sidebar-order"',
     );
+    expect(sidebarOrderRouteSource).toContain("isAdminPreferenceUserIdPersistable");
+    expect(sidebarOrderRouteSource).toContain(
+      "!isAdminPreferenceUserIdPersistable(auth.userId)",
+    );
     expect(sidebarOrderSource).not.toContain("'announcements'");
   });
 
@@ -3110,6 +3132,34 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(componentSource).toContain(
       'data-thumbnail-chat-style="storyboard-like"',
     );
+    expect(componentSource).toContain(
+      'data-thumbnail-chat-starter-panel="true"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-chat-starter-panel-layout="centered-thumbnail-guide"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-chat-starter-logo="true"',
+    );
+    expect(componentSource).toContain('src="/logo.webp"');
+    expect(componentSource).toContain("무엇부터 만들까요?");
+    expect(componentSource).toContain(
+      'data-thumbnail-chat-starter-title="true"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-chat-starter-guide-copy="true"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-chat-example-grid="true"',
+    );
+    expect(componentSource).toContain(
+      'data-thumbnail-chat-example-grid-layout="3-card-grid"',
+    );
+    expect(componentSource).toContain("THUMBNAIL_GUIDED_EXAMPLE_PRESETS.map");
+    expect(componentSource).toContain(
+      'data-thumbnail-chat-example-card="true"',
+    );
+    expect(componentSource).toContain("handleThumbnailGuidedExamplePresetClick");
     expect(componentSource).toContain('data-thumbnail-chat-log="true"');
     expect(componentSource).toContain('data-thumbnail-chat-header="true"');
     expect(componentSource).toContain(
@@ -3364,7 +3414,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-thumbnail-chat-message-actions="true"',
     );
     expect(componentSource).toContain(
-      'data-thumbnail-chat-message-actions-placement="outside-bubble"',
+      'data-thumbnail-chat-message-actions-placement="starter-panel"',
     );
     expect(componentSource).toContain(
       'data-thumbnail-chat-guide-button="true"',
@@ -5915,6 +5965,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-storyboard-chat-starter-panel-layout="centered-beginner-guide"',
     );
     expect(storyboardSource).toContain(
+      'data-storyboard-chat-starter-logo="true"',
+    );
+    expect(storyboardSource).toContain('alt="Tzudong 프로젝트 로고"');
+    expect(storyboardSource).toContain(
       '"min-h-full items-stretch justify-center"',
     );
     expect(storyboardSource).toContain(
@@ -7702,11 +7756,14 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       '"group/sidebar-account transition-colors duration-150 focus-visible:ring-primary',
     );
     expect(consoleSource).toContain(
-      '? "h-9 w-9 justify-center rounded-xl bg-transparent p-0 text-muted-foreground shadow-none',
+      '? "grid h-9 w-9 place-items-center rounded-xl bg-transparent p-0 text-muted-foreground shadow-none',
     );
     expect(consoleSource).toContain("const sidebarAccountAvatarClassName");
     expect(consoleSource).toContain(
       '"relative grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-primary/10 text-primary transition-colors group-hover/sidebar-account:bg-primary/15"',
+    );
+    expect(consoleSource).toContain(
+      'const sidebarAccountAvatarIconClassName = "h-5 w-5 -translate-y-px"',
     );
     expect(consoleSource).toContain(
       ': "h-11 w-full min-w-0 justify-start gap-2 rounded-2xl border border-border bg-background/95 px-1.5 py-1 text-foreground shadow-sm backdrop-blur-sm',
@@ -7725,7 +7782,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-admin-sidebar-account-order-section="true"',
     );
     expect(consoleSource).toContain(
-      '"flex w-full flex-col items-center gap-2"',
+      '"flex w-full flex-col items-center gap-2 pb-1"',
     );
     expect(consoleSource).toContain('"space-y-3"');
     expect(consoleSource).not.toContain(
@@ -8080,10 +8137,17 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("md:h-full md:min-h-0");
     expect(consoleSource).toContain("lg:grid-cols-10");
     expect(consoleSource).toContain(
+      "lg:grid-rows-[auto_minmax(0,1.15fr)_minmax(0,1fr)]",
+    );
+    expect(consoleSource).not.toContain(
       "lg:grid-rows-[132px_minmax(0,1fr)_minmax(0,0.9fr)]",
     );
     expect(tailwindSource).toContain("lg:grid-cols-10");
+    expect(tailwindSource).toContain("lg:flex-1");
     expect(tailwindSource).toContain(
+      "lg:grid-rows-[auto_minmax(0,1.15fr)_minmax(0,1fr)]",
+    );
+    expect(tailwindSource).not.toContain(
       "lg:grid-rows-[132px_minmax(0,1fr)_minmax(0,0.9fr)]",
     );
     expect(tailwindSource).toContain("lg:col-span-5");
