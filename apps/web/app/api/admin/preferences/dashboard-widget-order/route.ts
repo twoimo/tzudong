@@ -15,11 +15,24 @@ type PreferenceRow = {
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
+function isAdminPreferenceUserIdPersistable(userId: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    userId,
+  );
+}
+
 
 export async function GET() {
   try {
     const auth = await requireAdmin();
     if (!auth.ok) return auth.response;
+    if (!isAdminPreferenceUserIdPersistable(auth.userId)) {
+      return NextResponse.json(
+        { order: normalizeAdminDashboardWidgetOrder(null) },
+        { headers: { "Cache-Control": "no-store" } },
+      );
+    }
+
 
     const supabase = createSupabaseServiceRoleClient();
     const { data, error } = await supabase
@@ -52,6 +65,14 @@ export async function PATCH(request: NextRequest) {
   try {
     const auth = await requireAdmin();
     if (!auth.ok) return auth.response;
+    if (!isAdminPreferenceUserIdPersistable(auth.userId)) {
+      const body = await request.json().catch(() => null);
+      return NextResponse.json(
+        { order: normalizeAdminDashboardWidgetOrder(isRecord(body) ? body.order : null) },
+        { headers: { "Cache-Control": "no-store" } },
+      );
+    }
+
 
     const body = await request.json().catch(() => null);
     const order = normalizeAdminDashboardWidgetOrder(
@@ -94,6 +115,12 @@ export async function DELETE() {
   try {
     const auth = await requireAdmin();
     if (!auth.ok) return auth.response;
+    if (!isAdminPreferenceUserIdPersistable(auth.userId)) {
+      return NextResponse.json(
+        { order: normalizeAdminDashboardWidgetOrder(null) },
+        { headers: { "Cache-Control": "no-store" } },
+      );
+    }
 
     const supabase = createSupabaseServiceRoleClient();
     const { error } = await supabase
