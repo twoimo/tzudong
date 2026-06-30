@@ -632,38 +632,23 @@ function buildOrderedSidebarSections(
   });
 }
 
-const AdminEvaluationModule = dynamic(
-  () => import("@/app/admin/evaluations/page"),
-  {
-    ssr: false,
-    loading: () => getAdminConsoleModuleLoadingSkeleton("restaurants"),
-  },
-);
+function loadAdminEvaluationModule() {
+  return import("@/app/admin/evaluations/page");
+}
 
-const AdminBannerModule = dynamic(() => import("@/app/admin/banners/page"), {
-  ssr: false,
-  loading: () => getAdminConsoleModuleLoadingSkeleton("banners"),
-});
+function loadAdminBannerModule() {
+  return import("@/app/admin/banners/page");
+}
 
-const AdminRestaurantRefreshHistoryModule = dynamic(
-  () =>
-    import("@/components/admin/AdminRestaurantRefreshHistoryPanel").then(
-      (module) => module.AdminRestaurantRefreshHistoryPanel,
-    ),
-  {
-    ssr: false,
-    loading: () =>
-      getAdminConsoleModuleLoadingSkeleton("restaurant-refresh-history"),
-  },
-);
+function loadAdminRestaurantRefreshHistoryModule() {
+  return import("@/components/admin/AdminRestaurantRefreshHistoryPanel").then(
+    (module) => module.AdminRestaurantRefreshHistoryPanel,
+  );
+}
 
-const AdminUsersModule = dynamic(
-  () => import("@/components/admin/AdminUsersPanel"),
-  {
-    ssr: false,
-    loading: () => getAdminConsoleModuleLoadingSkeleton("users"),
-  },
-);
+function loadAdminUsersModule() {
+  return import("@/components/admin/AdminUsersPanel");
+}
 
 function loadAdminStoryboardGenerator() {
   return import("@/components/admin/storyboard/AdminStoryboardGenerator").then(
@@ -671,40 +656,110 @@ function loadAdminStoryboardGenerator() {
   );
 }
 
-const AdminStoryboardGenerator = dynamic(
-  loadAdminStoryboardGenerator,
+function loadAdminYoutubeThumbnailGenerator() {
+  return import(
+    "@/components/admin/thumbnail-generator/AdminYoutubeThumbnailGenerator"
+  ).then((module) => module.AdminYoutubeThumbnailGenerator);
+}
+
+function loadInsightsModule() {
+  return import("@/app/insights/insights-client");
+}
+
+function loadAdminRouteRecommendationModule() {
+  return import("@/components/admin/AdminOverviewDashboard").then(
+    (module) => module.AdminOverviewDashboard,
+  );
+}
+
+const AdminEvaluationModule = dynamic(loadAdminEvaluationModule, {
+  ssr: false,
+  loading: () => null,
+});
+
+const AdminBannerModule = dynamic(loadAdminBannerModule, {
+  ssr: false,
+  loading: () => null,
+});
+
+const AdminRestaurantRefreshHistoryModule = dynamic(
+  loadAdminRestaurantRefreshHistoryModule,
   {
     ssr: false,
-    loading: () => <AdminStoryboardModuleLoadingSkeleton />,
+    loading: () => null,
   },
 );
+
+const AdminUsersModule = dynamic(loadAdminUsersModule, {
+  ssr: false,
+  loading: () => null,
+});
+
+const AdminStoryboardGenerator = dynamic(loadAdminStoryboardGenerator, {
+  ssr: false,
+  loading: () => null,
+});
 
 const AdminYoutubeThumbnailGenerator = dynamic(
-  () =>
-    import("@/components/admin/thumbnail-generator/AdminYoutubeThumbnailGenerator").then(
-      (module) => module.AdminYoutubeThumbnailGenerator,
-    ),
+  loadAdminYoutubeThumbnailGenerator,
   {
     ssr: false,
-    loading: () => <AdminYoutubeThumbnailModuleLoadingSkeleton />,
+    loading: () => null,
   },
 );
 
-const InsightsModule = dynamic(() => import("@/app/insights/insights-client"), {
+const InsightsModule = dynamic(loadInsightsModule, {
   ssr: false,
-  loading: () => getAdminConsoleModuleLoadingSkeleton("insights"),
+  loading: () => null,
 });
 
 const AdminRouteRecommendationModule = dynamic(
-  () =>
-    import("@/components/admin/AdminOverviewDashboard").then(
-      (module) => module.AdminOverviewDashboard,
-    ),
+  loadAdminRouteRecommendationModule,
   {
     ssr: false,
-    loading: () => getAdminConsoleModuleLoadingSkeleton("routes"),
+    loading: () => null,
   },
 );
+const ADMIN_CONSOLE_INLINE_MODULE_IDS = new Set<AdminModuleId>([
+  "overview",
+  "llm",
+  "audit",
+]);
+
+function preloadAdminConsoleModule(moduleId: AdminModuleId): Promise<unknown> {
+  switch (moduleId) {
+    case "overview":
+    case "llm":
+    case "audit":
+      return Promise.resolve();
+    case "restaurants":
+    case "submissions":
+    case "reviews":
+      return loadAdminEvaluationModule();
+    case "restaurant-refresh-history":
+      return loadAdminRestaurantRefreshHistoryModule();
+    case "banners":
+      return loadAdminBannerModule();
+    case "storyboard":
+      return loadAdminStoryboardGenerator();
+    case "youtube-thumbnail-generator":
+      return loadAdminYoutubeThumbnailGenerator();
+    case "users":
+      return loadAdminUsersModule();
+    case "insights":
+      return loadInsightsModule();
+    case "routes":
+      return loadAdminRouteRecommendationModule();
+    default: {
+      const exhaustiveModuleId: never = moduleId;
+      return Promise.resolve(exhaustiveModuleId);
+    }
+  }
+}
+
+function createInitialAdminConsoleLoadedModuleIds() {
+  return new Set<AdminModuleId>(ADMIN_CONSOLE_INLINE_MODULE_IDS);
+}
 
 
 type AdminPendingCounts = {
@@ -9701,6 +9756,9 @@ export function AdminConsoleOverview({
   const activeModule = consoleModules.find(
     (module) => module.id === activeModuleId,
   );
+  const [loadedModuleIds, setLoadedModuleIds] = useState<
+    ReadonlySet<AdminModuleId>
+  >(createInitialAdminConsoleLoadedModuleIds);
 
   const userMetadataNickname =
     typeof user?.user_metadata?.nickname === "string"
@@ -9740,10 +9798,35 @@ export function AdminConsoleOverview({
   }, [isSidebarCollapsed]);
 
   useEffect(() => {
-    if (activeModuleId === "storyboard") {
-      void loadAdminStoryboardGenerator();
+    if (loadedModuleIds.has(activeModuleId)) {
+      return;
     }
-  }, [activeModuleId]);
+
+    let isCancelled = false;
+
+    void preloadAdminConsoleModule(activeModuleId)
+      .catch((error) => {
+        console.warn(
+          `[admin-console] failed to preload ${activeModuleId} module chunk`,
+          error,
+        );
+      })
+      .finally(() => {
+        if (isCancelled) return;
+
+        setLoadedModuleIds((currentModuleIds) => {
+          if (currentModuleIds.has(activeModuleId)) return currentModuleIds;
+
+          const nextModuleIds = new Set(currentModuleIds);
+          nextModuleIds.add(activeModuleId);
+          return nextModuleIds;
+        });
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [activeModuleId, loadedModuleIds]);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 767px)");
@@ -9958,6 +10041,8 @@ export function AdminConsoleOverview({
         : activeModuleId === "llm"
           ? "운영 보조"
           : activeModule?.title;
+  const isAdminCanvasBootstrapping =
+    isShellBootstrapping || !loadedModuleIds.has(activeModuleId);
 
   return (
     <main
@@ -10017,16 +10102,8 @@ export function AdminConsoleOverview({
           <p className="sr-only" aria-live="polite">
             {activeModuleLabel} 작업 화면으로 전환됨
           </p>
-          {isShellBootstrapping ? (
-            activeModuleId === "overview" ? (
-              <AdminDashboardManagementSkeleton />
-            ) : activeModuleId === "youtube-thumbnail-generator" ? (
-              <AdminYoutubeThumbnailModuleLoadingSkeleton />
-            ) : activeModuleId === "storyboard" ? (
-              <AdminStoryboardModuleLoadingSkeleton />
-            ) : (
-              <AdminConsoleCanvasSkeleton moduleId={activeModuleId} title={activeModuleLabel} />
-            )
+          {isAdminCanvasBootstrapping ? (
+            getAdminConsoleModuleLoadingSkeleton(activeModuleId, activeModuleLabel)
           ) : activeModuleId === "overview" ? (
             <AdminDashboardManagementPanel
               stats={stats}
