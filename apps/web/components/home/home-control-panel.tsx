@@ -8,6 +8,7 @@ import { BREAKPOINTS, useDeviceType } from '@/hooks/useDeviceType';
 import type { User } from '@supabase/supabase-js';
 import type { DeviceMapLocation } from '@/lib/device-location-map';
 import type { HomeMapPanelSide } from '@/lib/home-map-user-preferences';
+import type { HomeMapContextualRestaurantsPayload } from '@/lib/home-map-contextual-restaurants';
 import { useDeferredComponent } from '@/hooks/use-deferred-component';
 
 
@@ -30,6 +31,8 @@ type HomeDesktopControlPanelProps = {
     initialIntent?: MobileControlOverlayIntent | null;
     panelRestaurant?: Restaurant | null;
     isPanelOpen?: boolean;
+    contextualRestaurantsPayload?: HomeMapContextualRestaurantsPayload | null;
+    isMapFullscreen?: boolean;
     onPanelClose?: () => void;
     onReviewModalOpen?: () => void;
     onAdminEditRestaurant?: (restaurant: Restaurant) => void;
@@ -73,6 +76,8 @@ export interface HomeControlPanelProps {
     onPanelClick?: (panel: 'map' | 'detail' | 'control') => void;
     panelRestaurant?: Restaurant | null;
     isPanelOpen?: boolean;
+    contextualRestaurantsPayload?: HomeMapContextualRestaurantsPayload | null;
+    isMapFullscreen?: boolean;
     onPanelClose?: () => void;
     onReviewModalOpen?: () => void;
     onAdminEditRestaurant?: (restaurant: Restaurant) => void;
@@ -110,6 +115,8 @@ function HomeControlPanelComponent({
     onPanelClick,
     panelRestaurant = null,
     isPanelOpen = false,
+    contextualRestaurantsPayload = null,
+    isMapFullscreen = false,
     onPanelClose,
     onReviewModalOpen,
     onAdminEditRestaurant,
@@ -202,6 +209,10 @@ function HomeControlPanelComponent({
                 onRestaurantSelect={onRestaurantSelect}
                 onRestaurantSearch={onRestaurantSearch}
                 onSearchExecute={onSearchExecute}
+                panelRestaurant={panelRestaurant}
+                isPanelOpen={isPanelOpen}
+                contextualRestaurantsPayload={contextualRestaurantsPayload}
+                isMapFullscreen={isMapFullscreen}
                 isAdmin={isAdmin}
                 onModeChange={onModeChange}
                 user={user}
@@ -237,6 +248,8 @@ function HomeControlPanelComponent({
             initialIntent={initialIntent}
             panelRestaurant={panelRestaurant}
             isPanelOpen={isPanelOpen}
+            contextualRestaurantsPayload={contextualRestaurantsPayload}
+            isMapFullscreen={isMapFullscreen}
             onPanelClose={onPanelClose}
             onReviewModalOpen={onReviewModalOpen}
             onAdminEditRestaurant={onAdminEditRestaurant}
