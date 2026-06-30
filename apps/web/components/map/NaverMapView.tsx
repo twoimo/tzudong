@@ -26,6 +26,12 @@ import {
     resolveDeviceLocationMapRenderPlan,
     type DeviceMapLocation,
 } from "@/lib/device-location-map";
+import {
+    HOME_MAP_CONTEXTUAL_VISIBLE_RESTAURANTS_MIN_ZOOM,
+    type HomeMapContextualRestaurantsIneligibilityReason,
+    type HomeMapContextualRestaurantsPayload,
+    type HomeMapRenderMode,
+} from "@/lib/home-map-contextual-restaurants";
 import type Supercluster from 'supercluster';
 import {
     createClusterIndex,
@@ -274,6 +280,35 @@ const MOBILE_MARKER_CENTER_FINE_TUNE_PX = -6; // 선택 마커 translateY(-5px) 
 // [성능 최적화] 가시영역 필터링 및 이벤트 처리 상수
 const VIEWPORT_FILTER_ENABLED = true; // 가시영역 필터링 활성화
 const VIEWPORT_PADDING = 0.05; // 가시영역 여백 (5% 확장)
+const resolveHomeMapContextualRenderMode = ({
+    shouldUseRegionalCluster,
+    shouldUseSeoulDistrictCluster,
+    shouldCluster,
+}: {
+    shouldUseRegionalCluster: boolean;
+    shouldUseSeoulDistrictCluster: boolean;
+    shouldCluster: boolean;
+}): HomeMapRenderMode => {
+    if (shouldUseRegionalCluster) return 'regional-cluster';
+    if (shouldUseSeoulDistrictCluster) return 'seoul-district';
+    if (shouldCluster) return 'supercluster';
+    return 'individual';
+};
+
+const resolveHomeMapContextualIneligibilityReason = ({
+    renderMode,
+    zoom,
+    visibleCount,
+}: {
+    renderMode: HomeMapRenderMode;
+    zoom: number;
+    visibleCount: number;
+}): HomeMapContextualRestaurantsIneligibilityReason | undefined => {
+    if (renderMode !== 'individual') return 'clustered-render-mode';
+    if (zoom < HOME_MAP_CONTEXTUAL_VISIBLE_RESTAURANTS_MIN_ZOOM) return 'below-threshold';
+    if (visibleCount === 0) return 'empty';
+    return undefined;
+};
 
 // 클러스터링 상수 (네이버 지도 스타일)
 const ENABLE_CLUSTERING = true; // 클러스터링 전체 활성화
@@ -305,6 +340,7 @@ interface NaverMapViewProps {
     reservesDesktopLeftPanelSpace?: boolean; // 외부 좌측 패널이 지도 위에 겹치지 않고 레이아웃 공간을 선점하는지
     mobileSheetHeightPercent?: number; // 모바일 바텀시트 높이(%) - 마커 Y축 중앙 보정
     onVisibleRestaurantsChange?: (restaurants: Restaurant[]) => void;
+    onContextualRestaurantsChange?: (payload: HomeMapContextualRestaurantsPayload) => void;
     onSearchSelectionRelease?: () => void;
     onMapBlankClick?: () => void;
     deviceLocation?: DeviceMapLocation | null;
@@ -417,6 +453,7 @@ const NaverMapView = memo(({
     reservesDesktopLeftPanelSpace = false,
     mobileSheetHeightPercent = 0,
     onVisibleRestaurantsChange,
+    onContextualRestaurantsChange,
     onSearchSelectionRelease,
     onMapBlankClick,
     deviceLocation = null,
@@ -1815,7 +1852,28 @@ const NaverMapView = memo(({
             Array.from(overlappingMarkerCandidates.values())
         );
 
+        const contextualRestaurants = getRestaurantsWithRenderableCoordinates(restaurantsForMarkerRender);
+        const contextualRenderMode = resolveHomeMapContextualRenderMode({
+            shouldUseRegionalCluster,
+            shouldUseSeoulDistrictCluster,
+            shouldCluster,
+        });
+        const contextualIneligibilityReason = resolveHomeMapContextualIneligibilityReason({
+            renderMode: contextualRenderMode,
+            zoom: currentZoom,
+            visibleCount: contextualRestaurants.length,
+        });
+        const isContextualPayloadEligible = !contextualIneligibilityReason;
         onVisibleRestaurantsChange?.(swipeCandidates);
+        onContextualRestaurantsChange?.({
+            mode: 'domestic',
+            restaurants: isContextualPayloadEligible ? contextualRestaurants : [],
+            renderMode: contextualRenderMode,
+            zoom: currentZoom,
+            isEligible: isContextualPayloadEligible,
+            ineligibilityReason: contextualIneligibilityReason,
+            totalVisibleCount: contextualRestaurants.length,
+        });
 
         const renderTargetIdsForSignature = buildRenderTargetIdsForSignature({
             activeSearchedRestaurant,
@@ -2117,7 +2175,7 @@ const NaverMapView = memo(({
             }
         }
 
-    }, [clusters, regionalClusters, seoulDistrictClusters, seoulDistrictClustersFiltered, seoulIndividualIds, activeSearchedRestaurant, displayRestaurants, displayRestaurantIds, expandedClusterRestaurantIds, restaurantById, mergedRestaurantById, restaurantsForSwipe, selectedRegion, selectedRestaurant, isClusterMode, isRegionalClusterMode, isSeoulDistrictMode, isMapInitialized, activateNoncriticalMapEffects, fitIslandClusterViewport, jumpWithPanelOffset, onMarkerClick, onRestaurantSelect, onVisibleRestaurantsChange, handleMarkerRestaurantSelection]);
+    }, [clusters, regionalClusters, seoulDistrictClusters, seoulDistrictClustersFiltered, seoulIndividualIds, activeSearchedRestaurant, displayRestaurants, displayRestaurantIds, expandedClusterRestaurantIds, restaurantById, mergedRestaurantById, restaurantsForSwipe, selectedRegion, selectedRestaurant, isClusterMode, isRegionalClusterMode, isSeoulDistrictMode, isMapInitialized, activateNoncriticalMapEffects, fitIslandClusterViewport, jumpWithPanelOffset, onMarkerClick, onRestaurantSelect, onVisibleRestaurantsChange, onContextualRestaurantsChange, handleMarkerRestaurantSelection]);
 
     // [Animation] 카테고리 이모지 순환 업데이트
     useEffect(() => {

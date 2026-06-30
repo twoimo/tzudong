@@ -32,6 +32,7 @@ import DesktopLeftPanelMapHome from "@/components/home/DesktopLeftPanelMapHome";
 import CategoryFilter from "@/components/filters/CategoryFilter";
 import { OVERSEAS_REGION_LIST } from "@/constants/overseas-regions";
 import type { FilterState } from "@/components/filters/filter-state";
+import type { HomeMapContextualRestaurantsPayload } from "@/lib/home-map-contextual-restaurants";
 import type { Announcement } from "@/types/announcement";
 import type { Region, Restaurant } from "@/types/restaurant";
 import { useOverseasCountryCounts } from "@/components/home/use-overseas-country-counts";
@@ -239,6 +240,8 @@ interface HomeDesktopControlPanelProps {
   initialIntent?: "search" | "bookmark" | "notification" | "user" | null;
   panelRestaurant?: Restaurant | null;
   isPanelOpen?: boolean;
+  contextualRestaurantsPayload?: HomeMapContextualRestaurantsPayload | null;
+  isMapFullscreen?: boolean;
   onPanelClose?: () => void;
   onReviewModalOpen?: () => void;
   onAdminEditRestaurant?: (restaurant: Restaurant) => void;
@@ -761,6 +764,8 @@ export default function HomeDesktopControlPanel({
   initialIntent = null,
   panelRestaurant = null,
   isPanelOpen = false,
+  contextualRestaurantsPayload = null,
+  isMapFullscreen = false,
   onPanelClose,
   onReviewModalOpen,
   onAdminEditRestaurant,
@@ -1935,6 +1940,7 @@ export default function HomeDesktopControlPanel({
                       mapMode === "domestic" ? selectedRegion : selectedCountry
                     }
                     isKoreanOnly={mapMode === "domestic"}
+                    contextualRestaurantsPayload={mapMode === "domestic" && !isMapFullscreen ? contextualRestaurantsPayload : null}
                   />
                 ) : null}
               </>
