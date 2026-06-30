@@ -1275,6 +1275,12 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       '{ onConflict: "user_id,preference_key" }',
     );
     expect(dashboardOrderRouteSource).toContain('"Cache-Control": "no-store"');
+    expect(dashboardOrderRouteSource).toContain(
+      "isAdminPreferenceUserIdPersistable",
+    );
+    expect(dashboardOrderRouteSource).toContain(
+      "!isAdminPreferenceUserIdPersistable(auth.userId)",
+    );
     expect(dashboardOrderRouteSource).toContain(".delete()");
     expect(dashboardOrderRouteSource).toContain(
       'preference_key", DASHBOARD_WIDGET_ORDER_KEY',
@@ -1747,9 +1753,17 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       "처리: 비교 버킷 이후 신규 영상은 이전값 0으로 보고, 비교 버킷 이전 영상인데 이전값이 없으면 비교 불가로 분리합니다.",
     );
-    expect(consoleSource).not.toContain(
+    expect(consoleSource).toContain(
       'data-admin-dashboard-data-confidence="true"',
     );
+    expect(consoleSource).toContain("AdminDashboardDataConfidenceRail");
+    expect(consoleSource).toContain("data-admin-dashboard-anomaly-badges");
+    expect(consoleSource).toContain("stale_snapshot");
+    expect(consoleSource).toContain("fallback_source");
+    expect(consoleSource).toContain("low_comparison_coverage");
+    expect(consoleSource).toContain("slice(0, maxVisible)");
+    expect(consoleSource).toContain("max-w-[7rem]");
+    expect(consoleSource).toContain("flex-wrap");
     expect(consoleSource).toContain("fallbackReasonCode");
     expect(consoleSource).toContain("getAdminDashboardCoverageLabel");
     expect(consoleSource).toContain(
@@ -2434,6 +2448,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain('class="brand"');
     expect(consoleSource).toContain('alt="Tzudong 로고"');
     expect(consoleSource).toContain("reportWithAbsoluteLogo");
+    expect(consoleSource).toContain("데이터 신뢰도와 이상치");
+    expect(consoleSource).toContain("report.dataConfidence");
     expect(consoleSource).toContain("PDF 보고서");
     expect(consoleSource).toContain("콘텐츠 성과 TOP 5");
     expect(consoleSource).toContain("성과 진단");
