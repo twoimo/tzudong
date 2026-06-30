@@ -752,8 +752,56 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       "loading: () => <AdminYoutubeThumbnailModuleLoadingSkeleton />",
     );
-    expect(consoleSource).toContain(
+    expect(consoleSource).not.toContain(
       "loading: () => <AdminConsoleCanvasSkeleton />",
+    );
+    expect(consoleSource).toContain(
+      "function getAdminConsoleModuleLoadingSkeleton(",
+    );
+    expect(consoleSource).toContain(
+      'data-admin-sidebar-module-loading-viewport="true"',
+    );
+    expect(consoleSource).toContain(
+      'data-admin-sidebar-module-loading-module={config.moduleId}',
+    );
+    expect(consoleSource).toContain(
+      'loading: () => getAdminConsoleModuleLoadingSkeleton("restaurants")',
+    );
+    expect(consoleSource).toContain(
+      'loading: () => getAdminConsoleModuleLoadingSkeleton("banners")',
+    );
+    expect(consoleSource).toContain(
+      'getAdminConsoleModuleLoadingSkeleton("restaurant-refresh-history")',
+    );
+    expect(consoleSource).toContain(
+      'loading: () => getAdminConsoleModuleLoadingSkeleton("users")',
+    );
+    expect(consoleSource).toContain(
+      'loading: () => getAdminConsoleModuleLoadingSkeleton("insights")',
+    );
+    expect(consoleSource).toContain(
+      'loading: () => getAdminConsoleModuleLoadingSkeleton("routes")',
+    );
+    expect(consoleSource).toContain(
+      'data-admin-sidebar-module-loading-evaluation="viewport-table"',
+    );
+    expect(consoleSource).toContain(
+      'data-admin-sidebar-module-loading-refresh-history="viewport-split"',
+    );
+    expect(consoleSource).toContain(
+      'data-admin-sidebar-module-loading-banners="viewport-editor"',
+    );
+    expect(consoleSource).toContain(
+      'data-admin-sidebar-module-loading-users="viewport-table"',
+    );
+    expect(consoleSource).toContain(
+      'data-admin-sidebar-module-loading-insights="viewport-charts"',
+    );
+    expect(consoleSource).toContain(
+      'data-admin-sidebar-module-loading-routes="viewport-map"',
+    );
+    expect(consoleSource).toContain(
+      'data-admin-sidebar-module-loading-ops="viewport-cards"',
     );
     expect(consoleSource).not.toContain(
       'isShellBootstrapping && activeModuleId !== "storyboard"',
@@ -948,7 +996,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'className="grid h-full min-h-[420px] grid-cols-2 grid-rows-2 gap-2 bg-transparent p-3 md:min-h-0"',
     );
     expect(consoleSource).toContain(
-      'aria-label="관리자 콘솔 작업 화면 로딩 중"',
+      "aria-label={`${config.title} 화면 로딩 중`}",
     );
     expect(consoleSource).toContain('aria-busy="true"');
     expect(source("components/admin/AdminOverviewDashboard.tsx")).toContain(
@@ -964,7 +1012,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(consoleSource).toContain("<AdminDashboardManagementSkeleton />");
     expect(consoleSource).toContain(
-      "<AdminConsoleCanvasSkeleton title={activeModuleLabel} />",
+      "<AdminConsoleCanvasSkeleton moduleId={activeModuleId} title={activeModuleLabel} />",
     );
     expect(consoleSource).toContain(
       'data-admin-dashboard-management-skeleton="true"',
@@ -1489,9 +1537,11 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-admin-dashboard-bar-chart="rank-distribution"',
     );
     expect(consoleSource).toContain(
-      "grid h-full content-center gap-3 pb-0",
+      "grid h-full grid-rows-[minmax(0,1fr)_auto] gap-2 pb-0",
     );
-    expect(consoleSource).toContain('className={cn("grid min-h-0 gap-3"');
+    expect(consoleSource).toContain(
+      '"grid min-h-0 content-evenly gap-2",',
+    );
     expect(consoleSource).toContain(
       'className={cn("grid gap-1.5", isFullscreen && "gap-2.5")}',
     );
@@ -1499,7 +1549,17 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "flex min-w-0 overflow-x-auto overflow-y-visible",
     );
     expect(consoleSource).toContain('isFullscreen ? "h-12 sm:h-14" : "h-9"');
-    expect(consoleSource).not.toContain("grid gap-1 sm:grid-cols-5");
+    expect(consoleSource).toContain("grid shrink-0 gap-1 sm:grid-cols-5");
+    expect(consoleSource).toContain(
+      'data-admin-dashboard-top-content-rank-list="true"',
+    );
+    expect(consoleSource).toContain(
+      "data-admin-dashboard-top-content-rank-item={index + 1}",
+    );
+    expect(consoleSource).toContain("{index + 1}위");
+    expect(consoleSource).toContain(
+      "formatDashboardContribution(row.performanceContributionPercent)",
+    );
     expect(consoleSource).toContain(
       "flex min-h-[220px] flex-col overflow-hidden p-3 sm:col-span-2 lg:col-span-5",
     );
@@ -1819,7 +1879,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(consoleSource).toContain("viewBenchmarkTooltipLines");
     expect(consoleSource).toContain('viewBenchmarkTooltipLines.join(" ")');
-    expect(consoleSource).not.toContain("lines={row.viewBenchmarkTooltipLines}");
+    expect(consoleSource).toContain("lines={row.viewBenchmarkTooltipLines}");
     expect(consoleSource).not.toContain(
       "mt-1 block truncate text-[11px] font-extrabold leading-4 tabular-nums text-teal-800",
     );
