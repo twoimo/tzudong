@@ -41,6 +41,7 @@ const execPromise = util.promisify(exec);
 const DEFAULT_YT_DLP_DOWNLOAD_TIMEOUT_MS = 5 * 60 * 1000;
 const DEFAULT_YT_DLP_MAX_RETRIES = 3;
 const YT_DLP_EXEC_MAX_BUFFER_BYTES = 20 * 1024 * 1024;
+const DEFAULT_HEATMAP_RATE_LIMIT_STORM_LIMIT = 5;
 
 function parsePositiveInteger(value) {
     if (value === undefined || value === null || value === '') return null;
@@ -60,6 +61,15 @@ function getYtDlpDownloadTimeoutMs(env = process.env) {
 
 function getYtDlpMaxRetries(env = process.env) {
     return parsePositiveInteger(env.YT_DLP_MAX_RETRIES) || DEFAULT_YT_DLP_MAX_RETRIES;
+}
+
+function getHeatmapRateLimitStormLimit(env = process.env) {
+    return parsePositiveInteger(env.HEATMAP_RATE_LIMIT_STORM_LIMIT) || DEFAULT_HEATMAP_RATE_LIMIT_STORM_LIMIT;
+}
+
+function isHeatmapRateLimitError(error) {
+    const message = (error?.message || String(error || '')).toLowerCase();
+    return message.includes('429') || message.includes('block') || message.includes('sorry_redirect');
 }
 
 function buildYtDlpExecOptions(env = process.env) {
@@ -892,10 +902,10 @@ async function fetchAndSaveHeatmap(channel, videoId, url) {
         } catch (e) {
             log('warn', `[Fetch] 요청 실패 (${attempt}/${MAX_RETRIES}): ${e.message}`);
 
-            // [Fix] 429/차단 관련 에러면 즉시 중단 (무리한 재시도 방지)
-            if (e.message.includes('429') || e.message.includes('Block') || e.message.includes('SORRY_REDIRECT')) {
+            // [Fix] 429/차단 관련 에러면 즉시 중단 (무리한 재시도 방지)하고 상위 배치 breaker에 전달
+            if (isHeatmapRateLimitError(e)) {
                 log('error', `429/차단 감지됨. 추가 재시도를 중단합니다.`);
-                break;
+                throw e;
             }
 
             // 마지막 시도가 아니면 대기 후 재시도
@@ -1618,7 +1628,11 @@ async function main() {
     }
 }
 
-async function processBatch(params) {
+async function processBatch(params, dependencies = {}) {
+    const {
+        processVideo = processSingleVideo,
+        collectPredicate = shouldCollect,
+    } = dependencies;
     const { channel } = params;
     const urlsPath = path.join(getChannelDir(channel), 'urls.txt');
     const deletedPath = path.join(getChannelDir(channel), 'deleted_urls.txt');
@@ -1669,7 +1683,7 @@ async function processBatch(params) {
         }
 
         // [수정] shouldCollect 반환값 처리 (true/false 또는 객체)
-        const result = shouldCollect(channel, videoId, params);
+        const result = collectPredicate(channel, videoId, params);
 
         if (result === true) {
             pendingUrls.push(url);
@@ -1720,21 +1734,27 @@ async function processBatch(params) {
     let failedCount = 0;
     let activeCount = 0;
     let urlIndex = 0;
+    const heatmapRateLimitStormLimit = getHeatmapRateLimitStormLimit();
+    let heatmapRateLimitErrors = 0;
+    let heatmapRateLimitStormTripped = false;
 
     // [PERF] Promise 기반 동시성 제어 (외부 의존성 없음)
     const processNext = async () => {
         while (urlIndex < pendingUrls.length) {
+            if (heatmapRateLimitStormTripped) {
+                break;
+            }
             const currentIndex = urlIndex++;
             const url = pendingUrls[currentIndex];
             const videoId = extractVideoId(url);
 
-            log('info', `\n--- [${currentIndex + 1}/${pendingUrls.length}] 처리 시작: ${videoId} (Active: ${activeCount + 1}/${CONCURRENCY}) ---`);
+            log('info', `\n--- [${currentIndex + 1}/${pendingUrls.length}] 처리 시작: ${videoId} (Active: ${activeCount}/${CONCURRENCY}) ---`);
             
             // params를 복사하여 병렬 작업 간 url 충돌 방지
             const taskParams = { ...params, url };
             
             try {
-                const downloadPerformed = await processSingleVideo(videoId, taskParams);
+                const downloadPerformed = await processVideo(videoId, taskParams);
                 processedCount++;
 
                 // [변경] 다운로드가 실제로 수행되었을 때만 짧은 대기 (속도 제한 방지)
@@ -1743,6 +1763,15 @@ async function processBatch(params) {
                 }
             } catch (e) {
                 log('error', `[${videoId}] 처리 중 오류: ${e.message}`);
+                if (isHeatmapRateLimitError(e)) {
+                    heatmapRateLimitErrors++;
+                    logFailedUrl(channel, url);
+                    log('error', `[Breaker] 히트맵 429/차단 오류 누적: ${heatmapRateLimitErrors}/${heatmapRateLimitStormLimit}`);
+                    if (heatmapRateLimitErrors >= heatmapRateLimitStormLimit) {
+                        heatmapRateLimitStormTripped = true;
+                        log('error', `[Breaker] 히트맵 429/차단 storm 감지. 신규 영상 스케줄링을 중단합니다.`);
+                    }
+                }
                 failedCount++;
                 processedCount++;
             }
@@ -1758,6 +1787,11 @@ async function processBatch(params) {
     await Promise.all(workers);
 
     log('info', `=== 배치 작업 완료: 처리 ${processedCount}개, 스킵 ${skippedCount}개, 실패 ${failedCount}개 ===`);
+    if (heatmapRateLimitStormTripped) {
+        const unscheduledCount = pendingUrls.length - processedCount;
+        log('error', `[Breaker] 신규 스케줄 중단으로 ${unscheduledCount}개 영상이 이번 실행에서 처리되지 않았습니다.`);
+        throw new Error(`heatmap rate-limit storm breaker tripped after ${heatmapRateLimitErrors} global block error(s); batch frame extraction failed for ${failedCount} video(s)`);
+    }
     if (failedCount > 0) {
         throw new Error(`batch frame extraction failed for ${failedCount} video(s)`);
     }
@@ -1779,9 +1813,12 @@ export {
     buildYtDlpExecOptions,
     fetchUsableGDriveVideo,
     getYtDlpDownloadTimeoutMs,
+    getHeatmapRateLimitStormLimit,
     getYtDlpMaxRetries,
+    isHeatmapRateLimitError,
     hasVideoStream,
     pickUsableLocalVideoCandidate,
+    processBatch,
     processSingleVideo,
     sortVideoCandidates,
 };

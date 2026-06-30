@@ -45,7 +45,7 @@ jobs:
     # Public standard runners do not consume the Pro 3000-minute quota, and
     # catch-up backfills can legitimately exceed the former budget guard.
     timeout-minutes: 360
-    if: ${{ github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.event == 'schedule') }}
+    if: ${{ (github.event_name != 'workflow_dispatch' || github.ref_name == github.event.repository.default_branch) && (github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == github.event.repository.default_branch && github.event.workflow_run.event == 'schedule')) }}
     env:
       GDRIVE_FRAMES_PATH: "gdrive:04_빠른공유/tzudong_tzuyang_data/frames"
       GDRIVE_STATUS_PATH: "gdrive:04_빠른공유/tzudong_tzuyang_data/status"
@@ -56,6 +56,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # actions/checkout@v6
+        with:
+          ref: ${{ github.event.repository.default_branch }}
 
       - name: Check Actions budget posture before backfill
         id: budget
@@ -284,7 +286,7 @@ jobs:
           fi
 
           rclone copyto "$STATUS_REMOTE/current-upload-expected.json" "$EXPECTED_MANIFEST" --stats 0 "${RCLONE_DRIVE_FLAGS[@]}" "${RCLONE_RETRY_FLAGS[@]}"
-          if ! rclone lsjson "$GDRIVE_FRAMES_PATH" --recursive --files-only --stats 0 "${RCLONE_DRIVE_FLAGS[@]}" "${RCLONE_RETRY_FLAGS[@]}" > "$REMOTE_LIST_JSON"; then
+          if ! rclone lsjson "$GDRIVE_FRAMES_PATH" --recursive --files-only --hash --stats 0 "${RCLONE_DRIVE_FLAGS[@]}" "${RCLONE_RETRY_FLAGS[@]}" > "$REMOTE_LIST_JSON"; then
             echo "Remote preflight inventory failed; planning from residual queue only."
             printf '[]\n' > "$REMOTE_LIST_JSON"
           fi
@@ -298,19 +300,24 @@ jobs:
           max_items = max(1, int(max_items_raw or '500'))
           expected = json.load(open(expected_path, encoding='utf-8'))
           remote_entries = json.load(open(remote_list_path, encoding='utf-8'))
-          remote_sizes = {str(entry.get('Path', '')): int(entry.get('Size', -1)) for entry in remote_entries if isinstance(entry, dict)}
-          expected_sizes = {}
+          remote_md5s = {}
+          for entry in remote_entries:
+              if not isinstance(entry, dict):
+                  continue
+              rel = str(entry.get('Path', ''))
+              hashes = entry.get('Hashes') if isinstance(entry.get('Hashes'), dict) else {}
+              md5 = str(hashes.get('MD5') or hashes.get('md5') or '').lower()
+              if rel and md5:
+                  remote_md5s[rel] = md5
+          expected_md5s = {}
           for expected_item in expected.get('items', []):
               if not isinstance(expected_item, dict):
                   continue
               rel = str(expected_item.get('relativePath') or '')
-              if not rel:
-                  continue
-              try:
-                  expected_sizes[rel] = int(expected_item.get('size'))
-              except Exception:
-                  continue
-          remote_verified = {rel for rel, size in expected_sizes.items() if remote_sizes.get(rel) == size}
+              md5 = str(expected_item.get('md5') or '').lower()
+              if rel and md5:
+                  expected_md5s[rel] = md5
+          remote_verified = {rel for rel, md5 in expected_md5s.items() if remote_md5s.get(rel) == md5}
           Path(verified_path).write_text('\n'.join(sorted(remote_verified)) + ('\n' if remote_verified else ''), encoding='utf-8')
           staging_by_rel = {}
           shard_items = OrderedDict()
@@ -422,7 +429,7 @@ jobs:
                   "${RCLONE_DRIVE_FLAGS[@]}" "${RCLONE_RETRY_FLAGS[@]}"
                 rclone check . "$GDRIVE_FRAMES_PATH" \
                   --files-from "$FILES_FROM_ABS" \
-                  --size-only --one-way --stats 0 \
+                  --one-way --stats 0 \
                   --checkers 2 \
                   --log-file "$RCLONE_LOG_ABS" \
                   "${RCLONE_DRIVE_FLAGS[@]}" "${RCLONE_RETRY_FLAGS[@]}"
@@ -434,63 +441,41 @@ jobs:
             set -e
             if [ "$SHARD_EXIT" -eq 0 ]; then
               cat "$FILES_FROM" >> "$VERIFIED_FILES"
-              # Publish durable progress after every verified shard.  The final
-              # cumulative proof below still decides terminal success, but this
-              # prevents long catch-up runs from losing verified progress if the
-              # runner times out before the last shard finishes.
-              python3 backend/utils/run_daily_helpers.py write-gdrive-upload-status \
-                --expected-manifest "$EXPECTED_MANIFEST" \
-                --output "$UPLOAD_STATUS" \
-                --residual-queue "$RESIDUAL_QUEUE" \
-                --verified-files-from "$VERIFIED_FILES" \
-                --staging-manifest "$STAGING_MANIFEST" \
-                --run-id "${GITHUB_RUN_ID:-}" \
-                --policy warn \
-                --upload-mode backfill \
-                --completion-proof remote_size_check \
-                --source-root "$EXTRACT_DIR" \
-                --remote-root "$GDRIVE_FRAMES_PATH" \
-                --started-at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-                --completed-at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-                --exit-code 0 \
-                --timeout false \
-                --skipped true \
-                --backfill-threshold-attempts 3 \
-                --note "backfill verified shard progress"
-              rclone copyto "$RESIDUAL_QUEUE" "$STATUS_REMOTE/gdrive-upload-residual-queue.jsonl" --stats 0 "${RCLONE_DRIVE_FLAGS[@]}" "${RCLONE_RETRY_FLAGS[@]}" || true
-              rclone copyto "$UPLOAD_STATUS" "$STATUS_REMOTE/current-upload-status.json" --stats 0 "${RCLONE_DRIVE_FLAGS[@]}" "${RCLONE_RETRY_FLAGS[@]}" || true
-              rclone copyto "$EXPECTED_MANIFEST" "$STATUS_REMOTE/current-upload-expected.json" --stats 0 "${RCLONE_DRIVE_FLAGS[@]}" "${RCLONE_RETRY_FLAGS[@]}" || true
+              echo "Backfill shard $(basename "$REMOTE_SHARD") copied; terminal status is deferred until cumulative lsjson --hash proof completes."
             else
               BACKFILL_EXIT="$SHARD_EXIT"
               echo "Backfill shard $(basename "$REMOTE_SHARD") failed with exit=$SHARD_EXIT; preserving residual queue."
             fi
           done
 
-          COMPLETION_PROOF="remote_size_check"
+          COMPLETION_PROOF="remote_manifest_check"
           if [ "$BACKFILL_EXIT" -eq 0 ]; then
-            if rclone lsjson "$GDRIVE_FRAMES_PATH" --recursive --files-only --stats 0 "${RCLONE_DRIVE_FLAGS[@]}" "${RCLONE_RETRY_FLAGS[@]}" > "$REMOTE_LIST_JSON"; then
+            if rclone lsjson "$GDRIVE_FRAMES_PATH" --recursive --files-only --hash --stats 0 "${RCLONE_DRIVE_FLAGS[@]}" "${RCLONE_RETRY_FLAGS[@]}" > "$REMOTE_LIST_JSON"; then
               python3 - "$EXPECTED_MANIFEST" "$REMOTE_LIST_JSON" "$VERIFIED_FILES" <<'PY'
           import json, sys
           expected_path, remote_list_path, verified_path = sys.argv[1:4]
           expected = json.load(open(expected_path, encoding='utf-8'))
           remote_entries = json.load(open(remote_list_path, encoding='utf-8'))
-          remote_sizes = {str(entry.get('Path', '')): int(entry.get('Size', -1)) for entry in remote_entries if isinstance(entry, dict)}
+          remote_md5s = {}
+          for entry in remote_entries:
+              if not isinstance(entry, dict):
+                  continue
+              rel = str(entry.get('Path', ''))
+              hashes = entry.get('Hashes') if isinstance(entry.get('Hashes'), dict) else {}
+              md5 = str(hashes.get('MD5') or hashes.get('md5') or '').lower()
+              if rel and md5:
+                  remote_md5s[rel] = md5
           verified = []
           for item in expected.get('items', []):
               if not isinstance(item, dict):
                   continue
               rel = str(item.get('relativePath') or '')
-              if not rel:
-                  continue
-              try:
-                  size = int(item.get('size'))
-              except Exception:
-                  continue
-              if remote_sizes.get(rel) == size:
+              md5 = str(item.get('md5') or '').lower()
+              if rel and md5 and remote_md5s.get(rel) == md5:
                   verified.append(rel)
           with open(verified_path, 'w', encoding='utf-8') as fh:
               fh.write('\n'.join(sorted(set(verified))) + ('\n' if verified else ''))
-          print(json.dumps({'remoteVerifiedCount': len(set(verified)), 'remoteListedCount': len(remote_sizes)}, sort_keys=True))
+          print(json.dumps({'remoteVerifiedCount': len(set(verified)), 'remoteListedCount': len(remote_md5s)}, sort_keys=True))
           PY
             else
               BACKFILL_EXIT=1
@@ -550,4 +535,13 @@ jobs:
           retention-days: 7
           path: |
             backend/log/cron/gdrive-backfill/current-upload-status.json
+            backend/log/cron/gdrive-backfill/current-upload-expected.json
+            backend/log/cron/gdrive-backfill/gdrive-upload-residual-queue.jsonl
+            backend/log/cron/gdrive-backfill/backfill-plan.json
+            backend/log/cron/gdrive-backfill/backfill-verified-files.txt
+            backend/log/cron/gdrive-backfill/backfill-remote-files.json
+            backend/log/cron/gdrive-backfill/current-upload-staging-manifest.json
+            backend/log/cron/gdrive-backfill/backfill-rclone.log
+            backend/log/cron/gdrive-backfill/staging-manifests/**
+            backend/log/cron/gdrive-backfill/restored/**
             backend/log/cron/gdrive-backfill/backfill.lock.json

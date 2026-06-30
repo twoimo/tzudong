@@ -130,6 +130,53 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertEqual("residual_retry", expected["items"][0]["reason"])
         self.assertEqual("old.webp\nrecent.jpg\n", "".join(sorted(self.files_from_path.read_text(encoding="utf-8").splitlines(True))))
 
+    def test_gdrive_remote_verification_requires_matching_md5(self) -> None:
+        frame = self.frames_dir / "verified.jpg"
+        frame.write_text("frame\n", encoding="utf-8")
+        self._write_expected()
+        expected = json.loads(self.expected_path.read_text(encoding="utf-8"))
+        remote_list_path = self.root / "remote-list.json"
+        proof_path = self.root / "remote-proof.json"
+        verified_path = self.root / "verified-remote.txt"
+        remote_list_path.write_text(
+            json.dumps(
+                [
+                    {
+                        "Path": "verified.jpg",
+                        "Size": expected["items"][0]["size"],
+                        "Hashes": {"MD5": expected["items"][0]["md5"]},
+                    },
+                    {
+                        "Path": "stale-same-size.jpg",
+                        "Size": expected["items"][0]["size"],
+                        "Hashes": {"MD5": "00000000000000000000000000000000"},
+                    },
+                ],
+                sort_keys=True,
+            ),
+            encoding="utf-8",
+        )
+
+        result = self._helper(
+            "write-gdrive-remote-verification",
+            "--expected-manifest",
+            str(self.expected_path),
+            "--remote-list",
+            str(remote_list_path),
+            "--output",
+            str(proof_path),
+            "--verified-files-output",
+            str(verified_path),
+        )
+
+        self.assertEqual(0, result.returncode, self._format_process_output(result))
+        proof = json.loads(proof_path.read_text(encoding="utf-8"))
+        self.assertEqual("remote_manifest_check", proof["completionProof"])
+        self.assertEqual(1, proof["verifiedCount"])
+        self.assertEqual(2, proof["remoteHashCount"])
+        self.assertEqual(["verified.jpg"], proof["verifiedRelativePaths"])
+        self.assertEqual("verified.jpg\n", verified_path.read_text(encoding="utf-8"))
+
     def test_count_frame_files_counts_supported_extensions_recursively(self) -> None:
         (self.frames_dir / "nested").mkdir()
         (self.frames_dir / "recent.jpg").write_text("jpg\n", encoding="utf-8")
@@ -309,8 +356,13 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertIn('--max-items "${GDRIVE_UPLOAD_MAX_FILES:-0}"', upload_step)
         self.assertIn("write-gdrive-upload-batches", upload_step)
         self.assertIn("write-gdrive-staging-shards", upload_step)
+        self.assertIn("write-gdrive-remote-verification", upload_step)
         self.assertIn("rclone check", upload_step)
+        self.assertIn("--hash", upload_step)
+        self.assertNotIn("--size-only", upload_step)
         self.assertIn("current-upload-batches.json", workflow)
+        self.assertIn("current-upload-remote-proof.json", workflow)
+        self.assertIn("github.ref_name == github.event.repository.default_branch", workflow)
         self.assertIn("current-upload-staging-manifest.json", workflow)
 
     def test_workflows_validate_canonical_env_contracts_without_removed_secrets(self) -> None:
@@ -493,7 +545,7 @@ class GDriveUploadContractTests(unittest.TestCase):
             "--remote-root",
             "gdrive:frames",
             "--completion-proof",
-            "remote_size_check",
+            "remote_manifest_check",
             "--exit-code",
             "0",
         )
@@ -517,7 +569,7 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertIn('workflows: ["Daily Data Collection"]', workflow)
         self.assertIn("types: [completed]", workflow)
         self.assertIn("github.event.workflow_run.event == 'schedule'", workflow)
-        self.assertIn("github.event.workflow_run.head_branch == 'main'", workflow)
+        self.assertIn("github.event.workflow_run.head_branch == github.event.repository.default_branch", workflow)
         self.assertIn("MAX_BACKFILL_BATCHES: ${{ github.event.inputs.max_batches || '1' }}", workflow)
         self.assertIn("MAX_BACKFILL_ITEMS: ${{ github.event.inputs.max_items || '500' }}", workflow)
         self.assertIn("check_actions_budget.py", workflow)
@@ -528,8 +580,13 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertIn("gdrive-frame-backfill", workflow)
         self.assertIn("backfill.lock.json", workflow)
         self.assertIn("rclone check", workflow)
+        self.assertNotIn("--size-only", workflow)
+        self.assertIn("--hash", workflow)
+        self.assertIn("ref: ${{ github.event.repository.default_branch }}", workflow)
         self.assertIn("--upload-mode backfill", workflow)
         self.assertIn('--completion-proof "$COMPLETION_PROOF"', workflow)
+        self.assertNotIn("--completion-proof remote_manifest_check", workflow)
+        self.assertIn("remote_manifest_check", workflow)
         self.assertIn("actions/upload-artifact@v7.0.1", workflow)
         self.assertIn("STATUS_SCOPE_SAFE", workflow)
         self.assertIn("status_scope must match [A-Za-z0-9._-]+", workflow)
@@ -730,7 +787,7 @@ class GDriveUploadContractTests(unittest.TestCase):
             "--verified-files-from",
             str(verified_path),
             "--completion-proof",
-            "remote_size_check",
+            "remote_manifest_check",
             "--source-root",
             str(self.frames_dir),
             "--remote-root",
@@ -742,13 +799,47 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertEqual(0, result.returncode, self._format_process_output(result))
         status = json.loads(self.status_path.read_text(encoding="utf-8"))
         self.assertEqual("complete", status["status"])
-        self.assertEqual("remote_size_check", status["completionProof"])
+        self.assertEqual("remote_manifest_check", status["completionProof"])
         self.assertEqual(1, status["verifiedCount"])
         self.assertEqual(0, status["uploadedCount"])
         self.assertEqual(0, status["skippedExistingCount"])
         self.assertEqual("unknown", status["uploadedCountConfidence"])
         self.assertEqual(0, status["residualCount"])
         self.assertEqual("", self.residual_queue_path.read_text(encoding="utf-8"))
+
+    def test_gdrive_upload_status_rejects_size_only_proof_as_terminal(self) -> None:
+        frame = self.frames_dir / "same-size-stale-risk.jpg"
+        frame.write_text("frame\n", encoding="utf-8")
+        self._write_expected()
+        verified_path = self.root / "verified-size-only.txt"
+        verified_path.write_text("same-size-stale-risk.jpg\n", encoding="utf-8")
+
+        result = self._helper(
+            "write-gdrive-upload-status",
+            "--expected-manifest",
+            str(self.expected_path),
+            "--output",
+            str(self.status_path),
+            "--residual-queue",
+            str(self.residual_queue_path),
+            "--verified-files-from",
+            str(verified_path),
+            "--completion-proof",
+            "remote_size_check",
+            "--source-root",
+            str(self.frames_dir),
+            "--remote-root",
+            "gdrive:frames",
+            "--exit-code",
+            "0",
+        )
+
+        self.assertEqual(0, result.returncode, self._format_process_output(result))
+        status = json.loads(self.status_path.read_text(encoding="utf-8"))
+        self.assertEqual("backfill_required", status["status"])
+        self.assertEqual(0, status["verifiedCount"])
+        self.assertEqual(1, status["residualCount"])
+        self.assertEqual("remote_size_check", status["completionProof"])
 
     def test_run_daily_summary_manifest_records_runtime_telemetry(self) -> None:
         summary_path = self.root / "runtime-summary.json"
@@ -911,7 +1002,7 @@ class GDriveUploadContractTests(unittest.TestCase):
             "--verified-files-from",
             str(verified_path),
             "--completion-proof",
-            "remote_size_check",
+            "remote_manifest_check",
             "--source-root",
             str(self.frames_dir),
             "--remote-root",
