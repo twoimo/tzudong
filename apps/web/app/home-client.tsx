@@ -28,6 +28,7 @@ import {
   resolveDeviceLocationStateUpdatePlan,
   type DeviceMapLocation,
 } from "@/lib/device-location-map";
+import type { HomeMapContextualRestaurantsPayload } from "@/lib/home-map-contextual-restaurants";
 
 function HomeMapContainerPendingShell() {
   return (
@@ -166,6 +167,8 @@ export default function HomeClient() {
   );
   const [isAnnouncementSheetOpen, setIsAnnouncementSheetOpen] = useState(false);
   const [isMapFullscreen, setIsMapFullscreen] = useState(false);
+  const [contextualRestaurantsPayload, setContextualRestaurantsPayload] =
+    useState<HomeMapContextualRestaurantsPayload | null>(null);
   const [deviceLocation, setDeviceLocation] =
     useState<DeviceMapLocation | null>(null);
   const [initialMobileOverlayIntent, setInitialMobileOverlayIntent] =
@@ -179,6 +182,11 @@ export default function HomeClient() {
   const openDetailPanelRef = useRef<
     (restaurant: Restaurant, focusZoom?: number) => void
   >(() => {});
+  useEffect(() => {
+    if (mapMode !== "domestic" || isMapFullscreen) {
+      setContextualRestaurantsPayload(null);
+    }
+  }, [isMapFullscreen, mapMode]);
 
   useEffect(() => {
     const preferences = readLastHomeMapUserPreferences();
@@ -731,6 +739,7 @@ export default function HomeClient() {
         onMapFullscreenChange={setIsMapFullscreen}
         deviceLocation={deviceLocation}
         onReleaseSearchSelectionOwnership={releaseSearchSelectionOwnership}
+        onContextualRestaurantsChange={setContextualRestaurantsPayload}
         renderDesktopDetailPanel={!isDesktop}
       />
 
@@ -751,6 +760,8 @@ export default function HomeClient() {
           onPanelClick={setActivePanel}
           panelRestaurant={state.panelRestaurant}
           isPanelOpen={state.isPanelOpen && !isPanelCollapsed}
+          contextualRestaurantsPayload={contextualRestaurantsPayload}
+          isMapFullscreen={isMapFullscreen}
           onPanelClose={closeAllPanels}
           onReviewModalOpen={() => state.setIsReviewModalOpen(true)}
           onAdminEditRestaurant={onAdminEditRestaurant}
