@@ -1,6 +1,7 @@
 import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
 import {
   buildInsightTreemapResponseQualityMeta,
+  buildInsightTreemapComparisonCoverageFromVideos,
   createInsightTreemapQualityFlag,
   enrichInsightTreemapVideosWithQuality,
   normalizeInsightTreemapMetric,
@@ -229,39 +230,15 @@ function mapSnapshotRowToVideo(
 }
 
 function buildSnapshotComparisonCoverage(
-  rows: VideoSnapshotRow[],
-  previousMap: Map<string, VideoSnapshotRow>,
+  videos: InsightTreemapVideoRow[],
   latestBucketStartedAt: string,
   comparisonBucketStartedAt: string | null,
 ): InsightTreemapComparisonCoverage {
-  let newVideos = 0;
-  let missingPreviousVideos = 0;
-
-  for (const row of rows) {
-    if (previousMap.has(row.video_id)) continue;
-
-    const comparisonStatus = getSnapshotComparisonStatus(
-      row,
-      undefined,
-      comparisonBucketStartedAt,
-    );
-
-    if (comparisonStatus === 'new') {
-      newVideos += 1;
-    } else if (comparisonStatus === 'missing_previous') {
-      missingPreviousVideos += 1;
-    }
-  }
-
-  return {
+  return buildInsightTreemapComparisonCoverageFromVideos(
+    videos,
     latestBucketStartedAt,
     comparisonBucketStartedAt,
-    totalVideos: rows.length,
-    comparedVideos: previousMap.size,
-    newVideos,
-    missingPreviousVideos,
-    comparisonAvailable: Boolean(comparisonBucketStartedAt && previousMap.size > 0),
-  };
+  );
 }
 
 export async function getYouTubeKpiSnapshotData(
@@ -286,8 +263,7 @@ export async function getYouTubeKpiSnapshotData(
     'youtube-snapshot',
   );
   const comparisonCoverage = buildSnapshotComparisonCoverage(
-    rows,
-    previousMap,
+    videos,
     latestBucket,
     comparisonBucket,
   );

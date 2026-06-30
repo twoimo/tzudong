@@ -3,7 +3,9 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   buildInsightTreemapResponseQualityMeta,
+  buildInsightTreemapComparisonCoverageFromVideos,
   enrichInsightTreemapVideosWithQuality,
+  preprocessInsightTreemapVideos,
   normalizeInsightTreemapMetric,
   type InsightTreemapVideoRow,
 } from "../lib/public-insights/treemap";
@@ -97,9 +99,12 @@ describe("YouTube KPI snapshot collector contract", () => {
 
     for (const reason of [
       "clamped_metric",
+      "missing_metric",
       "negative_delta",
       "extreme_spike",
+      "iqr_outlier",
       "dominates_total",
+      "duplicate_video",
       "missing_previous",
       "low_comparison_coverage",
       "stale_snapshot",
@@ -117,9 +122,12 @@ describe("YouTube KPI snapshot collector contract", () => {
     expect(treemap).toContain("YOUTUBE_KPI_DATA_QUALITY_THRESHOLDS");
     expect(treemap).toContain("dominantContributionRatio: 0.7");
     expect(treemap).toContain("extremeMedianMultiple: 20");
+    expect(treemap).toContain("iqrOutlierMultiplier: 1.5");
+    expect(treemap).toContain("minimumIqrSampleSize: 4");
     expect(treemap).toContain("staleSnapshotHours: 2");
     expect(treemap).toContain("buildInsightTreemapResponseQualityMeta");
     expect(treemap).toContain("enrichInsightTreemapVideosWithQuality");
+    expect(snapshots).toContain("buildInsightTreemapComparisonCoverageFromVideos");
     expect(snapshots).toContain("buildSnapshotMetricNormalizationReasons");
     expect(snapshots).toContain("buildInsightTreemapResponseQualityMeta");
     expect(snapshots).toContain("enrichInsightTreemapVideosWithQuality");
@@ -207,6 +215,278 @@ describe("YouTube KPI snapshot collector contract", () => {
     expect(reasons).toContain("missing_previous");
     expect(qualityMeta.dataQuality.status).toBe("risk");
     expect(qualityMeta.anomalySummary.totalFlags).toBeGreaterThan(0);
+  });
+  test("preprocesses missing metrics, duplicate videos, and IQR outliers", () => {
+    const missing = normalizeInsightTreemapMetric(null, "likes");
+    expect(missing.value).toBe(0);
+    expect(missing.reasons).toEqual([
+      {
+        reason: "missing_metric",
+        metric: "likes",
+        rawValue: null,
+        normalizedValue: 0,
+      },
+    ]);
+
+    const commaSeparated = normalizeInsightTreemapMetric("1,250", "views");
+    expect(commaSeparated.value).toBe(1250);
+    expect(commaSeparated.reasons).toEqual([]);
+    for (const malformedComma of ["1,,250", "12,50", ",1250"]) {
+      const normalizedMalformed = normalizeInsightTreemapMetric(
+        malformedComma,
+        "views",
+      );
+      expect(normalizedMalformed.value).toBe(0);
+      expect(normalizedMalformed.reasons).toEqual([
+        {
+          reason: "clamped_metric",
+          metric: "views",
+          rawValue: malformedComma,
+          normalizedValue: 0,
+        },
+      ]);
+    }
+
+    const baseVideo: InsightTreemapVideoRow = {
+      id: "v-1",
+      title: "일반 영상",
+      publishedAt: "2026-06-30T00:00:00.000Z",
+      category: "YouTube",
+      viewCount: 100,
+      likeCount: 10,
+      commentCount: 1,
+      duration: 600,
+      previousViewCount: 90,
+      previousLikeCount: 9,
+      previousCommentCount: 1,
+      previousDuration: null,
+      comparisonStatus: "compared",
+    };
+    const duplicateLower: InsightTreemapVideoRow = {
+      ...baseVideo,
+      viewCount: 80,
+      likeCount: 8,
+      normalizedMetricReasons: missing.reasons,
+    };
+    const duplicateHigher: InsightTreemapVideoRow = {
+      ...baseVideo,
+      viewCount: 140,
+      likeCount: 14,
+    };
+    const outlier: InsightTreemapVideoRow = {
+      ...baseVideo,
+      id: "v-outlier",
+      title: "IQR 이상치 영상",
+      viewCount: 10_000,
+      likeCount: 500,
+    };
+    const videos = [
+      duplicateLower,
+      duplicateHigher,
+      { ...baseVideo, id: "v-2", viewCount: 110 },
+      { ...baseVideo, id: "v-3", viewCount: 120 },
+      outlier,
+    ];
+
+    const preprocessed = preprocessInsightTreemapVideos(videos, "youtube-snapshot");
+    expect(preprocessed).toHaveLength(4);
+    expect(preprocessed.find((video) => video.id === "v-1")?.viewCount).toBe(140);
+    expect(
+      preprocessed
+        .find((video) => video.id === "v-1")
+        ?.qualityFlags?.map((flag) => flag.reason),
+    ).toContain("duplicate_video");
+    const incompleteDuplicate: InsightTreemapVideoRow = {
+      ...baseVideo,
+      id: "v-completeness",
+      title: "제목 없음",
+      publishedAt: null,
+      category: "",
+      viewCount: 500,
+      likeCount: 0,
+      commentCount: 0,
+      duration: 0,
+      normalizedMetricReasons: missing.reasons,
+    };
+    const completeDuplicate: InsightTreemapVideoRow = {
+      ...baseVideo,
+      id: "v-completeness",
+      title: "완성 중복 영상",
+      viewCount: 300,
+      likeCount: 30,
+      commentCount: 3,
+    };
+    const lateLowerCleanDuplicate: InsightTreemapVideoRow = {
+      ...baseVideo,
+      id: "v-completeness",
+      title: "늦게 들어온 낮은 중복",
+      viewCount: 250,
+      likeCount: 25,
+      commentCount: 2,
+    };
+    const higherLikeDuplicate: InsightTreemapVideoRow = {
+      ...baseVideo,
+      id: "v-like-tie",
+      likeCount: 50,
+      commentCount: 1,
+    };
+    const lowerLikeDuplicate: InsightTreemapVideoRow = {
+      ...baseVideo,
+      id: "v-like-tie",
+      title: "낮은 좋아요 중복",
+      likeCount: 20,
+      commentCount: 20,
+    };
+    const olderDuplicate: InsightTreemapVideoRow = {
+      ...baseVideo,
+      id: "v-date-tie",
+      title: "오래된 중복",
+      publishedAt: "2026-06-29T00:00:00.000Z",
+    };
+    const newerDuplicate: InsightTreemapVideoRow = {
+      ...baseVideo,
+      id: "v-date-tie",
+      title: "최신 중복",
+      publishedAt: "2026-06-30T01:00:00.000Z",
+    };
+    const tieFirst: InsightTreemapVideoRow = {
+      ...baseVideo,
+      id: "v-tie",
+      title: "먼저 들어온 중복",
+    };
+    const tieSecond: InsightTreemapVideoRow = {
+      ...baseVideo,
+      id: "v-tie",
+      title: "나중 중복",
+      normalizedMetricReasons: missing.reasons,
+    };
+    const comparatorPreprocessed = preprocessInsightTreemapVideos(
+      [
+        incompleteDuplicate,
+        completeDuplicate,
+        lateLowerCleanDuplicate,
+        tieFirst,
+        tieSecond,
+        lowerLikeDuplicate,
+        higherLikeDuplicate,
+        olderDuplicate,
+        newerDuplicate,
+      ],
+      "youtube-snapshot",
+    );
+    expect(
+      comparatorPreprocessed.find((video) => video.id === "v-completeness")
+        ?.title,
+    ).toBe("완성 중복 영상");
+    expect(
+      comparatorPreprocessed.find((video) => video.id === "v-completeness")
+        ?.viewCount,
+    ).toBe(300);
+    expect(
+      comparatorPreprocessed
+        .find((video) => video.id === "v-completeness")
+        ?.normalizedMetricReasons?.map((reason) => reason.reason),
+    ).toContain("missing_metric");
+    expect(
+      comparatorPreprocessed.find((video) => video.id === "v-tie")?.title,
+    ).toBe("먼저 들어온 중복");
+    expect(
+      comparatorPreprocessed.find((video) => video.id === "v-like-tie")
+        ?.title,
+    ).toBe("일반 영상");
+    expect(
+      comparatorPreprocessed.find((video) => video.id === "v-date-tie")
+        ?.title,
+    ).toBe("최신 중복");
+    expect(
+      comparatorPreprocessed
+        .find((video) => video.id === "v-tie")
+        ?.normalizedMetricReasons?.map((reason) => reason.reason),
+    ).toContain("missing_metric");
+
+    const enriched = enrichInsightTreemapVideosWithQuality(videos, "youtube-snapshot");
+    expect(
+      enriched
+        .find((video) => video.id === "v-outlier")
+        ?.anomalyFlags?.map((flag) => flag.reason),
+    ).toContain("iqr_outlier");
+    const enrichedOutlier = enriched.find((video) => video.id === "v-outlier");
+    expect(
+      enrichedOutlier?.anomalyFlags?.find(
+        (flag) => flag.reason === "iqr_outlier",
+      )?.severity,
+    ).toBe("risk");
+    expect(
+      enriched
+        .find((video) => video.id === "v-1")
+        ?.qualityFlags?.map((flag) => flag.reason),
+    ).toContain("missing_metric");
+    const qualityMeta = buildInsightTreemapResponseQualityMeta({
+      videos: enriched,
+      source: "youtube-snapshot",
+      asOf: new Date().toISOString(),
+      comparisonCoverage: {
+        totalVideos: enriched.length,
+        comparedVideos: enriched.length,
+        newVideos: 0,
+        missingPreviousVideos: 0,
+        comparisonAvailable: true,
+      },
+    });
+    expect(qualityMeta.dataQuality.status).toBe("risk");
+  });
+  test("builds comparison coverage from selected deduped videos", () => {
+    const makeVideo = (
+      id: string,
+      comparisonStatus: InsightTreemapVideoRow["comparisonStatus"],
+    ): InsightTreemapVideoRow => ({
+      id,
+      title: `커버리지 ${id}`,
+      publishedAt: "2026-06-30T00:00:00.000Z",
+      category: "YouTube",
+      viewCount: 100,
+      likeCount: 10,
+      commentCount: 1,
+      duration: 600,
+      previousViewCount: comparisonStatus === "compared" ? 90 : null,
+      previousLikeCount: comparisonStatus === "compared" ? 9 : null,
+      previousCommentCount: comparisonStatus === "compared" ? 1 : null,
+      previousDuration: null,
+      comparisonStatus,
+    });
+    const selectedVideos = [
+      makeVideo("v-compared", "compared"),
+      makeVideo("v-new", "new"),
+      makeVideo("v-missing", "missing_previous"),
+      makeVideo("v-unknown", "not_applicable"),
+    ];
+    const coverage = buildInsightTreemapComparisonCoverageFromVideos(
+      selectedVideos,
+      "2026-06-30T00:00:00.000Z",
+      "2026-05-30T00:00:00.000Z",
+    );
+
+    expect(coverage.totalVideos).toBe(selectedVideos.length);
+    expect(coverage.comparedVideos).toBe(1);
+    expect(coverage.newVideos).toBe(1);
+    expect(coverage.missingPreviousVideos).toBe(2);
+    expect(
+      coverage.comparedVideos +
+        coverage.newVideos +
+        coverage.missingPreviousVideos,
+    ).toBe(coverage.totalVideos);
+    expect(coverage.comparisonAvailable).toBe(true);
+
+    const noComparisonCoverage = buildInsightTreemapComparisonCoverageFromVideos(
+      selectedVideos,
+      "2026-06-30T00:00:00.000Z",
+      null,
+    );
+    expect(noComparisonCoverage.totalVideos).toBe(selectedVideos.length);
+    expect(noComparisonCoverage.comparedVideos).toBe(0);
+    expect(noComparisonCoverage.newVideos).toBe(0);
+    expect(noComparisonCoverage.missingPreviousVideos).toBe(0);
+    expect(noComparisonCoverage.comparisonAvailable).toBe(false);
   });
   test("distinguishes live no-comparison from snapshot comparison gaps", () => {
     const video: InsightTreemapVideoRow = {
