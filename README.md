@@ -42,7 +42,9 @@ Tzudong Map turns mukbang video evidence into a usable restaurant map: users dis
 
 **Map discovery and restaurant detail**
 
-![Tzudong Map desktop product tour](apps/web/public/images/readme-product-tour.gif)
+<p align="center">
+  <img src="apps/web/public/images/readme-product-tour.gif" width="900" alt="Tzudong Map desktop product tour" />
+</p>
 
 **Admin storyboard workspace**
 

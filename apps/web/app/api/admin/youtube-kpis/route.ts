@@ -3,7 +3,10 @@ import { requireAdmin } from "@/lib/auth/require-admin";
 import { getYouTubeKpiSnapshotData } from "@/lib/admin/youtube-kpi-snapshots";
 import {
   getInsightTreemapData,
+  buildInsightTreemapResponseQualityMeta,
+  enrichInsightTreemapVideosWithQuality,
   parseTreemapPeriod,
+  normalizeInsightTreemapMetric,
   type InsightTreemapPeriod,
   type InsightTreemapResponse,
   type InsightTreemapVideoRow,
@@ -113,10 +116,11 @@ function getYouTubeChannelFilter() {
   };
 }
 
-function parseYouTubeCount(value: unknown) {
-  if (typeof value !== "string" && typeof value !== "number") return 0;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
+function parseYouTubeCount(
+  value: unknown,
+  metric: "views" | "likes" | "comments" = "views",
+) {
+  return normalizeInsightTreemapMetric(value, metric).value;
 }
 
 function parseYouTubeDurationSeconds(duration: string | undefined) {
@@ -261,19 +265,26 @@ async function fetchVideoRows(
       if (!item.id) continue;
       const fallback = playlistVideoMap.get(item.id);
 
+      const normalizedMetricReasons = [
+        ...normalizeInsightTreemapMetric(item.statistics?.viewCount, "views").reasons,
+        ...normalizeInsightTreemapMetric(item.statistics?.likeCount, "likes").reasons,
+        ...normalizeInsightTreemapMetric(item.statistics?.commentCount, "comments").reasons,
+      ];
+
       rows.push({
         id: item.id,
         title: item.snippet?.title ?? fallback?.title ?? "제목 없음",
         publishedAt: item.snippet?.publishedAt ?? fallback?.publishedAt ?? null,
         category: item.snippet?.categoryId ?? "YouTube",
-        viewCount: parseYouTubeCount(item.statistics?.viewCount),
-        likeCount: parseYouTubeCount(item.statistics?.likeCount),
-        commentCount: parseYouTubeCount(item.statistics?.commentCount),
+        viewCount: parseYouTubeCount(item.statistics?.viewCount, "views"),
+        likeCount: parseYouTubeCount(item.statistics?.likeCount, "likes"),
+        commentCount: parseYouTubeCount(item.statistics?.commentCount, "comments"),
         duration: parseYouTubeDurationSeconds(item.contentDetails?.duration),
         previousViewCount: null,
         previousLikeCount: null,
         previousCommentCount: null,
         previousDuration: null,
+        ...(normalizedMetricReasons.length > 0 ? { normalizedMetricReasons } : {}),
       });
     }
   }
@@ -283,6 +294,38 @@ async function fetchVideoRows(
     const bMs = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
     return bMs - aMs;
   });
+}
+
+function withYouTubeKpiQualityMeta(
+  payload: InsightTreemapResponse,
+  metaPatch: Partial<NonNullable<InsightTreemapResponse["meta"]>>,
+  options: { liveNoComparison?: boolean; includeComparisonQuality?: boolean } = {},
+): InsightTreemapResponse {
+  const meta = {
+    ...payload.meta,
+    ...metaPatch,
+  };
+  const source = meta.dataSource ?? "supabase-treemap";
+  const videos = enrichInsightTreemapVideosWithQuality(payload.videos, source);
+
+  return {
+    ...payload,
+    videos,
+    meta: {
+      ...meta,
+      dataSource: source,
+      ...buildInsightTreemapResponseQualityMeta({
+        videos,
+        source,
+        asOf: payload.asOf,
+        comparisonCoverage: meta.comparisonCoverage,
+        fallbackReasonCode: meta.fallbackReasonCode,
+        fallbackSource: meta.fallbackSource,
+        liveNoComparison: options.liveNoComparison,
+        includeComparisonQuality: options.includeComparisonQuality,
+      }),
+    },
+  };
 }
 
 export async function GET(request: NextRequest) {
@@ -315,15 +358,11 @@ export async function GET(request: NextRequest) {
             ?.comparisonAvailable === true
         ) {
           return NextResponse.json(
-            {
-              ...historyComparisonPayload,
-              meta: {
-                ...historyComparisonPayload.meta,
-                dataSource: "supabase-treemap",
-                fallbackSource: "supabase-treemap",
-                fallbackReasonCode: "snapshot-comparison-unavailable",
-              },
-            } satisfies InsightTreemapResponse,
+            withYouTubeKpiQualityMeta(historyComparisonPayload, {
+              dataSource: "supabase-treemap",
+              fallbackSource: "supabase-treemap",
+              fallbackReasonCode: "snapshot-comparison-unavailable",
+            }),
             {
               headers: {
                 "Cache-Control":
@@ -334,7 +373,7 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      return NextResponse.json(snapshotPayload, {
+      return NextResponse.json(withYouTubeKpiQualityMeta(snapshotPayload, {}), {
         headers: {
           "Cache-Control": "private, max-age=60, stale-while-revalidate=180",
         },
@@ -351,15 +390,11 @@ export async function GET(request: NextRequest) {
         metricMode: "views",
       });
 
-      return NextResponse.json({
-        ...fallbackPayload,
-        meta: {
-          ...fallbackPayload.meta,
-          dataSource: "supabase-treemap",
-          fallbackSource: "supabase-treemap",
-          fallbackReasonCode: "youtube-api-key-missing",
-        },
-      } satisfies InsightTreemapResponse, {
+      return NextResponse.json(withYouTubeKpiQualityMeta(fallbackPayload, {
+        dataSource: "supabase-treemap",
+        fallbackSource: "supabase-treemap",
+        fallbackReasonCode: "youtube-api-key-missing",
+      }), {
         headers: {
           "Cache-Control": "private, max-age=60, stale-while-revalidate=300",
         },
@@ -399,7 +434,10 @@ export async function GET(request: NextRequest) {
       },
     };
 
-    return NextResponse.json(payload, {
+    return NextResponse.json(withYouTubeKpiQualityMeta(payload, {}, {
+      liveNoComparison: true,
+      includeComparisonQuality: false,
+    }), {
       headers: {
         "Cache-Control": "private, no-store, max-age=0",
       },
@@ -413,15 +451,11 @@ export async function GET(request: NextRequest) {
         metricMode: "views",
       });
 
-      return NextResponse.json({
-        ...fallbackPayload,
-        meta: {
-          ...fallbackPayload.meta,
-          dataSource: "supabase-treemap",
-          fallbackSource: "supabase-treemap",
-          fallbackReasonCode: "youtube-live-fetch-failed",
-        },
-      } satisfies InsightTreemapResponse, {
+      return NextResponse.json(withYouTubeKpiQualityMeta(fallbackPayload, {
+        dataSource: "supabase-treemap",
+        fallbackSource: "supabase-treemap",
+        fallbackReasonCode: "youtube-live-fetch-failed",
+      }), {
         headers: {
           "Cache-Control": "private, max-age=60, stale-while-revalidate=300",
         },

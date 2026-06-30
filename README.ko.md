@@ -42,7 +42,9 @@ Tzudong Map은 먹방 영상의 장소 근거를 사용자용 지도, 운영자�
 
 **지도 탐색과 맛집 상세**
 
-![Tzudong Map 데스크톱 제품 투어](apps/web/public/images/readme-product-tour.gif)
+<p align="center">
+  <img src="apps/web/public/images/readme-product-tour.gif" width="900" alt="쯔동여지도 데스크톱 제품 투어" />
+</p>
 
 **관리자 스토리보드 워크스페이스**
 
