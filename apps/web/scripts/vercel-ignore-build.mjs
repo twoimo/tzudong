@@ -7,11 +7,22 @@ function normalizeBranchRef(value) {
   return raw;
 }
 
+function resolveBranchRef(env) {
+  for (const candidate of [
+    env.VERCEL_GIT_COMMIT_REF,
+    env.GITHUB_HEAD_REF,
+    env.GITHUB_REF_NAME,
+  ]) {
+    const ref = normalizeBranchRef(candidate);
+    if (ref) return ref;
+  }
+  return "";
+}
+
+
 function getVercelBuildDecision(env) {
   const vercelEnv = String(env.VERCEL_ENV ?? "").trim();
-  const ref = normalizeBranchRef(
-    env.VERCEL_GIT_COMMIT_REF ?? env.GITHUB_HEAD_REF ?? env.GITHUB_REF_NAME,
-  );
+  const ref = resolveBranchRef(env);
 
   if (!ref) {
     return {
@@ -22,11 +33,20 @@ function getVercelBuildDecision(env) {
     };
   }
 
-  if (vercelEnv === "production" || PRODUCTION_BRANCHES.has(ref)) {
+  if (vercelEnv === "production") {
+    if (PRODUCTION_BRANCHES.has(ref)) {
+      return {
+        ignore: false,
+        ref,
+        reason: "production branch deployment",
+        vercelEnv,
+      };
+    }
+
     return {
-      ignore: false,
+      ignore: true,
       ref,
-      reason: "production branch deployment",
+      reason: "production deployments are limited to main; skipping non-production branch",
       vercelEnv,
     };
   }
