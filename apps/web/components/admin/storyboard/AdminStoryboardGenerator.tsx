@@ -8750,6 +8750,19 @@ export function AdminStoryboardGenerator({
                             data-storyboard-chat-starter-panel-layout="centered-beginner-guide"
                           >
                             <div className="flex flex-col items-center gap-2">
+                              <div
+                                className="relative grid h-14 w-14 place-items-center overflow-hidden rounded-[1.35rem] border border-primary/15 bg-background shadow-sm ring-4 ring-primary/5"
+                                data-storyboard-chat-starter-logo="true"
+                              >
+                                <NextImage
+                                  src="/logo.webp"
+                                  alt="Tzudong 프로젝트 로고"
+                                  width={40}
+                                  height={40}
+                                  className="h-10 w-10 object-contain"
+                                  priority={false}
+                                />
+                              </div>
                               <div className="min-w-0 space-y-1">
                                 <h4
                                   className="text-xl font-semibold tracking-tight text-foreground"
