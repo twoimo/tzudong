@@ -241,6 +241,76 @@ test('processSingleVideo fails closed when no usable media fallback exists', asy
     fs.rmSync(channelDir, { recursive: true, force: true });
 });
 
+test('processBatch stops scheduling after heatmap 429 storm limit and logs failed URLs', async () => {
+    const cacheDir = makeTempDir('heatmap-cache-');
+    const framesDir = makeTempDir('heatmap-frames-');
+    const channel = `heatmap-storm-breaker-${Date.now()}`;
+    const channelDir = path.join(DATA_ROOT, channel);
+    fs.mkdirSync(channelDir, { recursive: true });
+    fs.writeFileSync(
+        path.join(channelDir, 'urls.txt'),
+        [
+            'https://www.youtube.com/watch?v=storm001',
+            'https://www.youtube.com/watch?v=storm002',
+            'https://www.youtube.com/watch?v=storm003',
+        ].join('\n') + '\n',
+        'utf8'
+    );
+
+    const { processBatch, getHeatmapRateLimitStormLimit, isHeatmapRateLimitError } = await loadModule({
+        VIDEO_CACHE_DIR: cacheDir,
+        FRAMES_ROOT_DIR: framesDir,
+    });
+
+    const previousMaxJobs = process.env.MAX_JOBS;
+    const previousStormLimit = process.env.HEATMAP_RATE_LIMIT_STORM_LIMIT;
+    process.env.MAX_JOBS = '1';
+    process.env.HEATMAP_RATE_LIMIT_STORM_LIMIT = '2';
+
+    const attempted = [];
+    try {
+        assert.equal(getHeatmapRateLimitStormLimit(), 2);
+        assert.equal(isHeatmapRateLimitError(new Error('429_GOOGLE_SORRY_REDIRECT')), true);
+
+        await assert.rejects(
+            processBatch(
+                {
+                    channel,
+                    fps: 1.0,
+                    buffer: 0.0,
+                    quality: ['360p'],
+                    ext: ['jpg'],
+                    force: true,
+                },
+                {
+                    collectPredicate: () => true,
+                    processVideo: async (videoId) => {
+                        attempted.push(videoId);
+                        throw new Error('429_GOOGLE_SORRY_REDIRECT');
+                    },
+                }
+            ),
+            /heatmap rate-limit storm breaker tripped after 2 global block error/
+        );
+    } finally {
+        if (previousMaxJobs === undefined) delete process.env.MAX_JOBS; else process.env.MAX_JOBS = previousMaxJobs;
+        if (previousStormLimit === undefined) delete process.env.HEATMAP_RATE_LIMIT_STORM_LIMIT; else process.env.HEATMAP_RATE_LIMIT_STORM_LIMIT = previousStormLimit;
+    }
+
+    assert.deepEqual(attempted, ['storm001', 'storm002']);
+
+    const failedUrlsPath = path.join(channelDir, 'failed_urls.txt');
+    assert.equal(fs.existsSync(failedUrlsPath), true);
+    const failedUrls = fs.readFileSync(failedUrlsPath, 'utf8');
+    assert.match(failedUrls, /storm001/);
+    assert.match(failedUrls, /storm002/);
+    assert.doesNotMatch(failedUrls, /storm003/);
+
+    fs.rmSync(cacheDir, { recursive: true, force: true });
+    fs.rmSync(framesDir, { recursive: true, force: true });
+    fs.rmSync(channelDir, { recursive: true, force: true });
+});
+
 test('downloadVideo gives up when yt-dlp exceeds the configured per-attempt timeout', async () => {
     const cacheDir = makeTempDir('heatmap-cache-');
     const framesDir = makeTempDir('heatmap-frames-');
