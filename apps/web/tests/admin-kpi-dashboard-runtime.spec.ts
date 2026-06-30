@@ -335,8 +335,189 @@ async function mockAdminDashboardApis(page: Page) {
         });
     });
 
+type MockKpiQualityScenario = 'risk' | 'ok' | 'fallback' | 'live' | 'clamped' | 'overflow';
+
+function createMockQualityFlag(
+    reason:
+        | 'dominates_total'
+        | 'extreme_spike'
+        | 'low_comparison_coverage'
+        | 'fallback_source'
+        | 'live_no_comparison'
+        | 'clamped_metric',
+    severity: 'info' | 'warning' | 'risk',
+    source: string,
+    index = 0,
+) {
+    return {
+        reason,
+        severity,
+        metric: reason === 'fallback_source' || reason === 'live_no_comparison' ? undefined : 'views',
+        source,
+        videoId:
+            reason === 'fallback_source' || reason === 'live_no_comparison'
+                ? undefined
+                : `kpi-runtime-${index + 1}`,
+        value:
+            reason === 'dominates_total'
+                ? 0.75
+                : reason === 'extreme_spike'
+                  ? 24
+                  : reason === 'low_comparison_coverage'
+                    ? 0.33
+                    : reason === 'clamped_metric'
+                      ? 0
+                      : undefined,
+        threshold:
+            reason === 'dominates_total'
+                ? 0.7
+                : reason === 'extreme_spike'
+                  ? 20
+                  : reason === 'low_comparison_coverage'
+                    ? 0.9
+                    : undefined,
+        count: reason === 'low_comparison_coverage' ? 1 : undefined,
+    };
+}
+
+function getMockKpiScenario(period: string): MockKpiQualityScenario {
+    if (period === '3M') return 'ok';
+    if (period === '6H') return 'live';
+    if (period === '12H') return 'clamped';
+    if (period === '6M') return 'fallback';
+    if (period === '1Y') return 'overflow';
+    return 'risk';
+}
+
+function getMockKpiSource(scenario: MockKpiQualityScenario) {
+    if (scenario === 'live') return 'youtube-live';
+    if (scenario === 'fallback') return 'public-treemap-fallback';
+    return 'youtube-snapshot';
+}
+
+function createKpiQualityMeta(
+    source = 'youtube-snapshot',
+    scenario: MockKpiQualityScenario = 'risk',
+) {
+    if (scenario === 'ok') {
+        return {
+            dataSource: source,
+            comparisonCoverage: {
+                totalVideos: 3,
+                comparedVideos: 3,
+                newVideos: 0,
+                missingPreviousVideos: 0,
+                comparisonAvailable: true,
+            },
+            dataQuality: {
+                status: 'ok',
+                flags: [],
+                reasonCounts: [],
+                thresholds: {
+                    highComparisonCoverageRatio: 0.9,
+                    lowComparisonCoverageRatio: 0.5,
+                    dominantContributionRatio: 0.7,
+                    extremeMedianMultiple: 20,
+                    staleSnapshotHours: 2,
+                    rowCap: 500,
+                },
+            },
+            anomalySummary: {
+                totalFlags: 0,
+                flags: [],
+                reasonCounts: [],
+            },
+        };
+    }
+
+    const flags =
+        scenario === 'fallback'
+            ? [
+                  createMockQualityFlag('fallback_source', 'warning', source),
+                  createMockQualityFlag('low_comparison_coverage', 'warning', source),
+              ]
+            : scenario === 'live'
+              ? [createMockQualityFlag('live_no_comparison', 'warning', source)]
+              : scenario === 'clamped'
+                ? [
+                      createMockQualityFlag('clamped_metric', 'warning', source),
+                      createMockQualityFlag('dominates_total', 'risk', source),
+                  ]
+                : scenario === 'overflow'
+                  ? Array.from({ length: 6 }, (_, index) =>
+                        createMockQualityFlag(
+                            index % 2 === 0 ? 'dominates_total' : 'extreme_spike',
+                            'risk',
+                            source,
+                            index,
+                        ),
+                    )
+                  : [
+                        createMockQualityFlag('dominates_total', 'risk', source),
+                        createMockQualityFlag('low_comparison_coverage', 'warning', source),
+                    ];
+    const anomalyFlags = flags.filter(
+        (flag) => flag.reason === 'dominates_total' || flag.reason === 'extreme_spike',
+    );
+    const warningCount = flags.filter((flag) => flag.severity === 'warning').length;
+    const riskCount = flags.filter((flag) => flag.severity === 'risk').length;
+
+    return {
+        dataSource: source,
+        fallbackReasonCode: scenario === 'fallback' ? 'runtime-fallback' : undefined,
+        fallbackSource: scenario === 'fallback' ? 'supabase-treemap' : undefined,
+        comparisonCoverage: {
+            totalVideos: 3,
+            comparedVideos: scenario === 'live' ? 0 : 1,
+            newVideos: scenario === 'live' ? 3 : 2,
+            missingPreviousVideos: 0,
+            comparisonAvailable: scenario !== 'live',
+        },
+        dataQuality: {
+            status: riskCount > 0 ? 'risk' : 'watch',
+            flags,
+            reasonCounts: [
+                ...new Set(flags.map((flag) => flag.reason)),
+            ].map((reason) => {
+                const reasonFlags = flags.filter((flag) => flag.reason === reason);
+                return {
+                    reason,
+                    severity: reasonFlags.some((flag) => flag.severity === 'risk')
+                        ? 'risk'
+                        : reasonFlags.some((flag) => flag.severity === 'warning')
+                          ? 'warning'
+                          : 'info',
+                    count: reasonFlags.length,
+                };
+            }),
+            thresholds: {
+                highComparisonCoverageRatio: 0.9,
+                lowComparisonCoverageRatio: 0.5,
+                dominantContributionRatio: 0.7,
+                extremeMedianMultiple: 20,
+                staleSnapshotHours: 2,
+                rowCap: 500,
+            },
+        },
+        anomalySummary: {
+            totalFlags: anomalyFlags.length,
+            flags: anomalyFlags,
+            reasonCounts: [
+                ...(riskCount > 0
+                    ? [{ reason: 'dominates_total', severity: 'risk', count: riskCount }]
+                    : []),
+                ...(warningCount > 0
+                    ? [{ reason: 'low_comparison_coverage', severity: 'warning', count: warningCount }]
+                    : []),
+            ],
+        },
+    };
+}
+
     await page.route('**/api/admin/youtube-kpis**', async (route) => {
         const period = new URL(route.request().url()).searchParams.get('period') ?? '1M';
+        const qualityScenario = getMockKpiScenario(period);
+        const source = getMockKpiSource(qualityScenario);
         await route.fulfill({
             status: 200,
             contentType: 'application/json',
@@ -344,8 +525,20 @@ async function mockAdminDashboardApis(page: Page) {
                 asOf: '2026-05-27T00:00:00.000Z',
                 period,
                 totalVideos: MOCK_VIDEOS.length,
-                videos: MOCK_VIDEOS,
-                availablePeriods: ['1M', '3M', 'ALL'],
+                videos: MOCK_VIDEOS.map((video, index) =>
+                    qualityScenario !== 'ok' && index === 0
+                        ? {
+                              ...video,
+                              viewCount: qualityScenario === 'clamped' ? 0 : video.viewCount,
+                              anomalyFlags: createKpiQualityMeta(source, qualityScenario).anomalySummary
+                                  .flags,
+                              qualityFlags: createKpiQualityMeta(source, qualityScenario).dataQuality
+                                  .flags,
+                          }
+                        : video,
+                ),
+                availablePeriods: ['1M', '3M', '6H', '12H', '6M', '1Y', 'ALL'],
+                meta: createKpiQualityMeta(source, qualityScenario),
             }),
         });
     });
@@ -512,6 +705,30 @@ test.describe('Admin KPI dashboard runtime guard', () => {
             timeout: 20000,
         });
 
+        const confidenceRail = page.locator('[data-admin-dashboard-data-confidence="true"]');
+        await expect(confidenceRail).toBeVisible({
+            timeout: 20000,
+        });
+        await expect(confidenceRail).toHaveAttribute(
+            'data-admin-dashboard-data-confidence-status',
+            'risk',
+        );
+        await expect(confidenceRail).toContainText('단일 지배');
+        await expect(confidenceRail.locator('[data-admin-dashboard-anomaly-badges="true"]').first()).toBeVisible();
+        await page.screenshot({
+            path: testInfo.outputPath('kpi-dashboard-data-confidence.png'),
+            fullPage: false,
+        });
+        const [reportPage] = await Promise.all([
+            page.waitForEvent('popup'),
+            page.locator('[data-admin-dashboard-kpi-pdf-export-trigger="true"]').click(),
+        ]);
+        await expect(reportPage.getByLabel('데이터 신뢰도와 이상치')).toContainText(
+            '데이터 신뢰도: 위험',
+        );
+        await expect(reportPage.getByLabel('데이터 신뢰도와 이상치')).toContainText('단일 지배');
+        await reportPage.close();
+
         for (const widgetId of ADMIN_DASHBOARD_WIDGET_IDS) {
             await expect(page.locator(`[data-admin-dashboard-widget-card="${widgetId}"]`)).toBeVisible({
                 timeout: 20000,
@@ -520,6 +737,49 @@ test.describe('Admin KPI dashboard runtime guard', () => {
 
         await page.getByRole('button', { name: '3개월' }).click();
         await expect(page.getByRole('button', { name: '3개월' })).toHaveAttribute('aria-pressed', 'true');
+        await expect(confidenceRail).toHaveAttribute(
+            'data-admin-dashboard-data-confidence-status',
+            'ok',
+        );
+        await expect(page.locator('[data-admin-dashboard-anomaly-badges="true"]')).toHaveCount(0);
+
+        await page.getByRole('button', { name: '6시간' }).click();
+        await expect(page.getByRole('button', { name: '6시간' })).toHaveAttribute('aria-pressed', 'true');
+        await expect(confidenceRail).toHaveAttribute(
+            'data-admin-dashboard-data-confidence-status',
+            'watch',
+        );
+        await expect(confidenceRail).toContainText('실시간 비교 없음');
+        await expect(confidenceRail).not.toContainText('커버리지 낮음');
+
+        await page.getByRole('button', { name: '12시간' }).click();
+        await expect(page.getByRole('button', { name: '12시간' })).toHaveAttribute('aria-pressed', 'true');
+        await expect(confidenceRail).toHaveAttribute(
+            'data-admin-dashboard-data-confidence-status',
+            'risk',
+        );
+        await expect(confidenceRail).toContainText('정규화');
+
+        await page.getByRole('button', { name: '6개월' }).click();
+        await expect(page.getByRole('button', { name: '6개월' })).toHaveAttribute('aria-pressed', 'true');
+        await expect(confidenceRail).toHaveAttribute(
+            'data-admin-dashboard-data-confidence-status',
+            'watch',
+        );
+        await expect(confidenceRail).toContainText('폴백');
+
+        await page.getByRole('button', { name: '1년' }).click();
+        await expect(page.getByRole('button', { name: '1년' })).toHaveAttribute('aria-pressed', 'true');
+        await expect(confidenceRail).toHaveAttribute(
+            'data-admin-dashboard-data-confidence-status',
+            'risk',
+        );
+        await expect(
+            confidenceRail.locator(
+                '[data-admin-dashboard-anomaly-badges="true"] [data-admin-dashboard-inline-tooltip="true"]',
+            ),
+        ).toHaveCount(4);
+
         const impactCard = page.locator('[data-admin-dashboard-widget-card="impact"]').first();
         const impactTableButton = impactCard
             .locator('[data-admin-dashboard-card-view-toggle="true"]')

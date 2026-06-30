@@ -18,6 +18,78 @@ type HistoryCacheEntry = {
 
 export type InsightTreemapPeriod = '30MIN' | '1H' | '6H' | '12H' | '1D' | '1W' | '2W' | '1M' | '3M' | '6M' | '1Y' | 'ALL';
 
+export type InsightTreemapDataQualityReason =
+    | 'clamped_metric'
+    | 'negative_delta'
+    | 'extreme_spike'
+    | 'dominates_total'
+    | 'missing_previous'
+    | 'low_comparison_coverage'
+    | 'stale_snapshot'
+    | 'fallback_source'
+    | 'live_no_comparison'
+    | 'row_cap'
+    | 'delta_conflict';
+
+export type InsightTreemapDataQualitySeverity = 'info' | 'warning' | 'risk';
+
+export type InsightTreemapMetricKey =
+    | 'views'
+    | 'likes'
+    | 'comments'
+    | 'duration'
+    | 'subscribers'
+    | 'videos'
+    | 'channel_views';
+
+export type InsightTreemapMetricNormalizationReason = {
+    reason: Extract<InsightTreemapDataQualityReason, 'clamped_metric'>;
+    metric: InsightTreemapMetricKey;
+    rawValue: string | number | null;
+    normalizedValue: number | null;
+};
+
+export type InsightTreemapQualityFlag = {
+    reason: InsightTreemapDataQualityReason;
+    severity: InsightTreemapDataQualitySeverity;
+    metric?: InsightTreemapMetricKey;
+    source?: InsightTreemapDataSource;
+    videoId?: string;
+    value?: number | null;
+    threshold?: number | null;
+    count?: number | null;
+};
+
+export type InsightTreemapQualityReasonCount = {
+    reason: InsightTreemapDataQualityReason;
+    severity: InsightTreemapDataQualitySeverity;
+    count: number;
+};
+
+export type InsightTreemapDataQualityStatus = 'ok' | 'watch' | 'risk';
+
+export type InsightTreemapDataQualitySummary = {
+    status: InsightTreemapDataQualityStatus;
+    flags: InsightTreemapQualityFlag[];
+    reasonCounts: InsightTreemapQualityReasonCount[];
+    thresholds: typeof YOUTUBE_KPI_DATA_QUALITY_THRESHOLDS;
+};
+
+export type InsightTreemapAnomalySummary = {
+    totalFlags: number;
+    flags: InsightTreemapQualityFlag[];
+    reasonCounts: InsightTreemapQualityReasonCount[];
+};
+
+export const YOUTUBE_KPI_DATA_QUALITY_THRESHOLDS = {
+    highComparisonCoverageRatio: 0.9,
+    lowComparisonCoverageRatio: 0.5,
+    dominantContributionRatio: 0.7,
+    extremeMedianMultiple: 20,
+    staleSnapshotHours: 2,
+    rowCap: MAX_PUBLIC_TREEMAP_ROWS,
+} as const;
+
 export type InsightTreemapVideoRow = {
     id: string;
     title: string;
@@ -32,6 +104,9 @@ export type InsightTreemapVideoRow = {
     previousCommentCount: number | null;
     previousDuration: number | null;
     comparisonStatus?: 'compared' | 'new' | 'missing_previous' | 'not_applicable';
+    qualityFlags?: InsightTreemapQualityFlag[];
+    anomalyFlags?: InsightTreemapQualityFlag[];
+    normalizedMetricReasons?: InsightTreemapMetricNormalizationReason[];
 };
 
 export type InsightTreemapDataSource =
@@ -57,6 +132,8 @@ export type InsightTreemapResponseMeta = {
     comparisonCoverage?: InsightTreemapComparisonCoverage;
     fallbackReasonCode?: string | null;
     fallbackSource?: string | null;
+    dataQuality?: InsightTreemapDataQualitySummary;
+    anomalySummary?: InsightTreemapAnomalySummary;
 };
 
 export type InsightTreemapResponse = {
@@ -179,17 +256,47 @@ const treemapResponseCache = new Map<string, CacheEntry<InsightTreemapResponse>>
 const TREEMAP_RESPONSE_CACHE_TTL_MS = 60 * 1000;
 
 
-function toNonNegativeNumber(value: unknown): number {
-    if (typeof value === 'number' && Number.isFinite(value)) {
-        return Math.max(0, value);
-    }
+function toMetricRawValue(value: unknown): string | number | null {
+    if (typeof value === 'number' || typeof value === 'string') return value;
+    return null;
+}
 
-    if (typeof value === 'string' && value.trim()) {
-        const parsed = Number.parseFloat(value);
-        return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
-    }
+export function normalizeInsightTreemapMetric(
+    value: unknown,
+    metric: InsightTreemapMetricKey,
+): { value: number; reasons: InsightTreemapMetricNormalizationReason[] } {
+    const parsed =
+        typeof value === 'number' && Number.isFinite(value)
+            ? value
+            : typeof value === 'string' && value.trim()
+              ? Number.parseFloat(value)
+              : Number.NaN;
+    const normalizedValue = Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
+    const reasons: InsightTreemapMetricNormalizationReason[] =
+        !Number.isFinite(parsed) || parsed < 0
+            ? [
+                  {
+                      reason: 'clamped_metric',
+                      metric,
+                      rawValue: toMetricRawValue(value),
+                      normalizedValue,
+                  },
+              ]
+            : [];
 
-    return 0;
+    return { value: normalizedValue, reasons };
+}
+
+function toNonNegativeNumber(value: unknown, metric: InsightTreemapMetricKey = 'views'): number {
+    return normalizeInsightTreemapMetric(value, metric).value;
+}
+
+function buildNormalizedMetricReasons(
+    metrics: Array<{ value: unknown; metric: InsightTreemapMetricKey }>,
+): InsightTreemapMetricNormalizationReason[] {
+    return metrics.flatMap(({ value, metric }) =>
+        normalizeInsightTreemapMetric(value, metric).reasons,
+    );
 }
 
 function parseDurationToSeconds(value: unknown): number {
@@ -631,6 +738,403 @@ export function getTreemapMetricValue(
     return Math.floor(toNonNegativeNumber(row.duration));
 }
 
+function getInsightTreemapDefaultSeverity(
+    reason: InsightTreemapDataQualityReason,
+): InsightTreemapDataQualitySeverity {
+    if (
+        reason === 'extreme_spike' ||
+        reason === 'dominates_total' ||
+        reason === 'delta_conflict'
+    ) {
+        return 'risk';
+    }
+
+    if (
+        reason === 'clamped_metric' ||
+        reason === 'negative_delta' ||
+        reason === 'low_comparison_coverage' ||
+        reason === 'stale_snapshot' ||
+        reason === 'fallback_source' ||
+        reason === 'live_no_comparison' ||
+        reason === 'row_cap'
+    ) {
+        return 'warning';
+    }
+
+    return 'info';
+}
+
+export function createInsightTreemapQualityFlag(
+    reason: InsightTreemapDataQualityReason,
+    options: Omit<Partial<InsightTreemapQualityFlag>, 'reason'> = {},
+): InsightTreemapQualityFlag {
+    return {
+        reason,
+        severity: options.severity ?? getInsightTreemapDefaultSeverity(reason),
+        metric: options.metric,
+        source: options.source,
+        videoId: options.videoId,
+        value: options.value,
+        threshold: options.threshold,
+        count: options.count,
+    };
+}
+
+function getInsightTreemapSeverityRank(severity: InsightTreemapDataQualitySeverity) {
+    if (severity === 'risk') return 3;
+    if (severity === 'warning') return 2;
+    return 1;
+}
+
+function getInsightTreemapFlagKey(flag: InsightTreemapQualityFlag) {
+    return [
+        flag.reason,
+        flag.severity,
+        flag.metric ?? '',
+        flag.source ?? '',
+        flag.videoId ?? '',
+        flag.value ?? '',
+        flag.threshold ?? '',
+        flag.count ?? '',
+    ].join(':');
+}
+
+function uniqueInsightTreemapFlags(flags: InsightTreemapQualityFlag[]) {
+    const seen = new Set<string>();
+    return flags.filter((flag) => {
+        const key = getInsightTreemapFlagKey(flag);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+}
+
+function summarizeInsightTreemapReasonCounts(
+    flags: InsightTreemapQualityFlag[],
+): InsightTreemapQualityReasonCount[] {
+    const countByReason = new Map<
+        InsightTreemapDataQualityReason,
+        InsightTreemapQualityReasonCount
+    >();
+
+    for (const flag of flags) {
+        const existing = countByReason.get(flag.reason);
+        if (!existing) {
+            countByReason.set(flag.reason, {
+                reason: flag.reason,
+                severity: flag.severity,
+                count: 1,
+            });
+            continue;
+        }
+
+        existing.count += 1;
+        if (
+            getInsightTreemapSeverityRank(flag.severity) >
+            getInsightTreemapSeverityRank(existing.severity)
+        ) {
+            existing.severity = flag.severity;
+        }
+    }
+
+    return [...countByReason.values()].sort(
+        (a, b) =>
+            getInsightTreemapSeverityRank(b.severity) -
+                getInsightTreemapSeverityRank(a.severity) ||
+            b.count - a.count ||
+            a.reason.localeCompare(b.reason),
+    );
+}
+
+function getInsightTreemapDataQualityStatus(
+    flags: InsightTreemapQualityFlag[],
+): InsightTreemapDataQualityStatus {
+    if (flags.some((flag) => flag.severity === 'risk')) return 'risk';
+    if (flags.some((flag) => flag.severity === 'warning')) return 'watch';
+    return 'ok';
+}
+
+export function buildInsightTreemapDataQualitySummary(
+    flags: InsightTreemapQualityFlag[],
+): InsightTreemapDataQualitySummary {
+    const uniqueFlags = uniqueInsightTreemapFlags(flags);
+    return {
+        status: getInsightTreemapDataQualityStatus(uniqueFlags),
+        flags: uniqueFlags,
+        reasonCounts: summarizeInsightTreemapReasonCounts(uniqueFlags),
+        thresholds: YOUTUBE_KPI_DATA_QUALITY_THRESHOLDS,
+    };
+}
+
+function isInsightTreemapAnomalyReason(reason: InsightTreemapDataQualityReason) {
+    return reason === 'extreme_spike' || reason === 'dominates_total';
+}
+
+export function buildInsightTreemapAnomalySummary(
+    flags: InsightTreemapQualityFlag[],
+): InsightTreemapAnomalySummary {
+    const anomalyFlags = uniqueInsightTreemapFlags(
+        flags.filter((flag) => isInsightTreemapAnomalyReason(flag.reason)),
+    );
+    return {
+        totalFlags: anomalyFlags.length,
+        flags: anomalyFlags,
+        reasonCounts: summarizeInsightTreemapReasonCounts(anomalyFlags),
+    };
+}
+
+function getMedianMetricValue(values: number[]) {
+    const finiteValues = values
+        .filter((value) => Number.isFinite(value))
+        .sort((a, b) => a - b);
+    if (finiteValues.length === 0) return 0;
+
+    const midpoint = Math.floor(finiteValues.length / 2);
+    if (finiteValues.length % 2 === 1) return finiteValues[midpoint] ?? 0;
+    return ((finiteValues[midpoint - 1] ?? 0) + (finiteValues[midpoint] ?? 0)) / 2;
+}
+
+function buildVideoMetricQualityFlags(
+    video: InsightTreemapVideoRow,
+    source?: InsightTreemapDataSource,
+): InsightTreemapQualityFlag[] {
+    const flags = [
+        ...(video.normalizedMetricReasons ?? []).map((reason) =>
+            createInsightTreemapQualityFlag(reason.reason, {
+                metric: reason.metric,
+                source,
+                videoId: video.id,
+                value: reason.normalizedValue,
+            }),
+        ),
+    ];
+
+    if (video.comparisonStatus === 'missing_previous') {
+        flags.push(
+            createInsightTreemapQualityFlag('missing_previous', {
+                severity: 'info',
+                source,
+                videoId: video.id,
+            }),
+        );
+    }
+
+    const metricPairs: Array<{
+        metric: InsightTreemapMetricKey;
+        current: number;
+        previous: number | null;
+    }> = [
+        { metric: 'views', current: video.viewCount, previous: video.previousViewCount },
+        { metric: 'likes', current: video.likeCount, previous: video.previousLikeCount },
+        { metric: 'comments', current: video.commentCount, previous: video.previousCommentCount },
+    ];
+
+    for (const { metric, current, previous } of metricPairs) {
+        if (
+            typeof previous === 'number' &&
+            Number.isFinite(previous) &&
+            Number.isFinite(current) &&
+            current < previous
+        ) {
+            flags.push(
+                createInsightTreemapQualityFlag('negative_delta', {
+                    metric,
+                    source,
+                    videoId: video.id,
+                    value: current - previous,
+                }),
+            );
+        }
+    }
+
+    return flags;
+}
+
+export function enrichInsightTreemapVideosWithQuality(
+    videos: InsightTreemapVideoRow[],
+    source?: InsightTreemapDataSource,
+): InsightTreemapVideoRow[] {
+    const totalViews = videos.reduce((sum, video) => sum + video.viewCount, 0);
+    const medianViews = getMedianMetricValue(videos.map((video) => video.viewCount));
+
+    return videos.map((video) => {
+        const qualityFlags = [
+            ...(video.qualityFlags ?? []),
+            ...buildVideoMetricQualityFlags(video, source),
+        ];
+        const anomalyFlags = [...(video.anomalyFlags ?? [])];
+
+        if (
+            totalViews > 0 &&
+            video.viewCount / totalViews >=
+                YOUTUBE_KPI_DATA_QUALITY_THRESHOLDS.dominantContributionRatio
+        ) {
+            anomalyFlags.push(
+                createInsightTreemapQualityFlag('dominates_total', {
+                    severity: 'risk',
+                    metric: 'views',
+                    source,
+                    videoId: video.id,
+                    value: video.viewCount / totalViews,
+                    threshold:
+                        YOUTUBE_KPI_DATA_QUALITY_THRESHOLDS.dominantContributionRatio,
+                }),
+            );
+        }
+
+        if (
+            medianViews > 0 &&
+            video.viewCount / medianViews >=
+                YOUTUBE_KPI_DATA_QUALITY_THRESHOLDS.extremeMedianMultiple
+        ) {
+            anomalyFlags.push(
+                createInsightTreemapQualityFlag('extreme_spike', {
+                    severity: 'risk',
+                    metric: 'views',
+                    source,
+                    videoId: video.id,
+                    value: video.viewCount / medianViews,
+                    threshold: YOUTUBE_KPI_DATA_QUALITY_THRESHOLDS.extremeMedianMultiple,
+                }),
+            );
+        }
+
+        const uniqueQualityFlags = uniqueInsightTreemapFlags(qualityFlags);
+        const uniqueAnomalyFlags = uniqueInsightTreemapFlags(anomalyFlags);
+
+        return {
+            ...video,
+            ...(uniqueQualityFlags.length > 0 ? { qualityFlags: uniqueQualityFlags } : {}),
+            ...(uniqueAnomalyFlags.length > 0 ? { anomalyFlags: uniqueAnomalyFlags } : {}),
+        };
+    });
+}
+
+export function buildInsightTreemapResponseQualityMeta({
+    videos,
+    source,
+    asOf,
+    comparisonCoverage,
+    fallbackReasonCode,
+    fallbackSource,
+    rowCapReached = false,
+    liveNoComparison = false,
+    includeComparisonQuality = true,
+}: {
+    videos: InsightTreemapVideoRow[];
+    source: InsightTreemapDataSource;
+    asOf: string;
+    comparisonCoverage?: InsightTreemapComparisonCoverage;
+    fallbackReasonCode?: string | null;
+    fallbackSource?: string | null;
+    rowCapReached?: boolean;
+    liveNoComparison?: boolean;
+    includeComparisonQuality?: boolean;
+}): Pick<InsightTreemapResponseMeta, 'dataQuality' | 'anomalySummary'> {
+    const flags: InsightTreemapQualityFlag[] = videos.flatMap((video) => [
+        ...(video.qualityFlags ?? []),
+        ...(video.anomalyFlags ?? []),
+    ]);
+
+    if (includeComparisonQuality && comparisonCoverage?.totalVideos) {
+        const coverageRatio =
+            comparisonCoverage.totalVideos > 0
+                ? comparisonCoverage.comparedVideos / comparisonCoverage.totalVideos
+                : 1;
+
+        if (
+            comparisonCoverage.comparisonAvailable &&
+            coverageRatio < YOUTUBE_KPI_DATA_QUALITY_THRESHOLDS.highComparisonCoverageRatio
+        ) {
+            flags.push(
+                createInsightTreemapQualityFlag('low_comparison_coverage', {
+                    severity:
+                        coverageRatio <
+                        YOUTUBE_KPI_DATA_QUALITY_THRESHOLDS.lowComparisonCoverageRatio
+                            ? 'risk'
+                            : 'warning',
+                    source,
+                    value: coverageRatio,
+                    threshold:
+                        YOUTUBE_KPI_DATA_QUALITY_THRESHOLDS.highComparisonCoverageRatio,
+                    count: comparisonCoverage.comparedVideos,
+                }),
+            );
+        }
+
+        if (
+            !comparisonCoverage.comparisonAvailable &&
+            comparisonCoverage.totalVideos > 0 &&
+            comparisonCoverage.comparedVideos === 0
+        ) {
+            flags.push(
+                createInsightTreemapQualityFlag('low_comparison_coverage', {
+                    severity: 'warning',
+                    source,
+                    value: 0,
+                    threshold:
+                        YOUTUBE_KPI_DATA_QUALITY_THRESHOLDS.highComparisonCoverageRatio,
+                    count: 0,
+                }),
+            );
+        }
+
+        if (comparisonCoverage.missingPreviousVideos > 0) {
+            flags.push(
+                createInsightTreemapQualityFlag('missing_previous', {
+                    severity: 'info',
+                    source,
+                    count: comparisonCoverage.missingPreviousVideos,
+                }),
+            );
+        }
+    }
+
+    if (rowCapReached) {
+        flags.push(
+            createInsightTreemapQualityFlag('row_cap', {
+                source,
+                count: videos.length,
+                threshold: YOUTUBE_KPI_DATA_QUALITY_THRESHOLDS.rowCap,
+            }),
+        );
+    }
+
+    if (fallbackReasonCode || fallbackSource) {
+        flags.push(
+            createInsightTreemapQualityFlag('fallback_source', {
+                source,
+            }),
+        );
+    }
+
+    if (liveNoComparison) {
+        flags.push(createInsightTreemapQualityFlag('live_no_comparison', { source }));
+    }
+
+    const asOfMs = Date.parse(asOf);
+    if (
+        Number.isFinite(asOfMs) &&
+        Date.now() - asOfMs >
+            YOUTUBE_KPI_DATA_QUALITY_THRESHOLDS.staleSnapshotHours * HOUR_MS
+    ) {
+        flags.push(
+            createInsightTreemapQualityFlag('stale_snapshot', {
+                source,
+                value: Date.now() - asOfMs,
+                threshold:
+                    YOUTUBE_KPI_DATA_QUALITY_THRESHOLDS.staleSnapshotHours * HOUR_MS,
+            }),
+        );
+    }
+
+    const uniqueFlags = uniqueInsightTreemapFlags(flags);
+    return {
+        dataQuality: buildInsightTreemapDataQualitySummary(uniqueFlags),
+        anomalySummary: buildInsightTreemapAnomalySummary(uniqueFlags),
+    };
+}
+
 export async function getInsightTreemapData(
     period: InsightTreemapPeriod,
     options: TreemapRequestOptions = {},
@@ -647,37 +1151,61 @@ export async function getInsightTreemapData(
 
     const result: InsightTreemapResponse = (() => {
         if (filterByPeriod) {
-            const videos: InsightTreemapVideoRow[] = rows.map((row) => ({
-                id: row.id,
-                title: normalizeTitle(row.title),
-                publishedAt: row.published_at,
-                category: normalizeCategory(row.category),
-                viewCount: toNonNegativeNumber(row.view_count),
-                likeCount: toNonNegativeNumber(row.like_count),
-                commentCount: toNonNegativeNumber(row.comment_count),
-                duration: parseDurationToSeconds(row.duration),
-                previousViewCount: null,
-                previousLikeCount: null,
-                previousCommentCount: null,
-                previousDuration: null,
-                comparisonStatus: 'not_applicable',
-            }));
+            const videos: InsightTreemapVideoRow[] = enrichInsightTreemapVideosWithQuality(
+                rows.map((row) => {
+                    const normalizedMetricReasons = buildNormalizedMetricReasons([
+                        { value: row.view_count, metric: 'views' },
+                        { value: row.like_count, metric: 'likes' },
+                        { value: row.comment_count, metric: 'comments' },
+                    ]);
+
+                    return {
+                        id: row.id,
+                        title: normalizeTitle(row.title),
+                        publishedAt: row.published_at,
+                        category: normalizeCategory(row.category),
+                        viewCount: toNonNegativeNumber(row.view_count, 'views'),
+                        likeCount: toNonNegativeNumber(row.like_count, 'likes'),
+                        commentCount: toNonNegativeNumber(row.comment_count, 'comments'),
+                        duration: parseDurationToSeconds(row.duration),
+                        previousViewCount: null,
+                        previousLikeCount: null,
+                        previousCommentCount: null,
+                        previousDuration: null,
+                        comparisonStatus: 'not_applicable',
+                        ...(normalizedMetricReasons.length > 0
+                            ? { normalizedMetricReasons }
+                            : {}),
+                    };
+                }),
+                'supabase-treemap',
+            );
+            const asOf = new Date().toISOString();
+            const comparisonCoverage: InsightTreemapComparisonCoverage = {
+                totalVideos: videos.length,
+                comparedVideos: 0,
+                newVideos: videos.length,
+                missingPreviousVideos: 0,
+                comparisonAvailable: false,
+            };
 
             return {
-                asOf: new Date().toISOString(),
+                asOf,
                 period,
                 totalVideos: videos.length,
                 videos,
                 availablePeriods: [],
                 meta: {
                     dataSource: 'supabase-treemap',
-                    comparisonCoverage: {
-                        totalVideos: videos.length,
-                        comparedVideos: 0,
-                        newVideos: videos.length,
-                        missingPreviousVideos: 0,
-                        comparisonAvailable: false,
-                    },
+                    comparisonCoverage,
+                    ...buildInsightTreemapResponseQualityMeta({
+                        videos,
+                        source: 'supabase-treemap',
+                        asOf,
+                        comparisonCoverage,
+                        rowCapReached: rows.length >= MAX_PUBLIC_TREEMAP_ROWS,
+                        includeComparisonQuality: false,
+                    }),
                 },
             };
         }
@@ -688,55 +1216,75 @@ export async function getInsightTreemapData(
         }));
         const availablePeriods = getAvailablePeriods(rowsWithHistory, metricMode);
 
-        const videos: InsightTreemapVideoRow[] = rowsWithHistory.map(({ row, history }) => {
-            const previousViewCount = getPreviousMetricFromHistory(history, 'views', period);
-            const previousLikeCount = getPreviousMetricFromHistory(history, 'likes', period);
-            const previousCommentCount = getPreviousMetricFromHistory(history, 'comments', period);
-            const previousDuration = getPreviousMetricFromHistory(history, 'duration', period);
-            const previousMetricValue =
-                metricMode === 'views'
-                    ? previousViewCount
-                    : metricMode === 'likes'
-                      ? previousLikeCount
-                      : metricMode === 'comments'
-                        ? previousCommentCount
-                        : previousDuration;
+        const videos: InsightTreemapVideoRow[] = enrichInsightTreemapVideosWithQuality(
+            rowsWithHistory.map(({ row, history }) => {
+                const previousViewCount = getPreviousMetricFromHistory(history, 'views', period);
+                const previousLikeCount = getPreviousMetricFromHistory(history, 'likes', period);
+                const previousCommentCount = getPreviousMetricFromHistory(history, 'comments', period);
+                const previousDuration = getPreviousMetricFromHistory(history, 'duration', period);
+                const previousMetricValue =
+                    metricMode === 'views'
+                        ? previousViewCount
+                        : metricMode === 'likes'
+                          ? previousLikeCount
+                          : metricMode === 'comments'
+                            ? previousCommentCount
+                            : previousDuration;
+                const normalizedMetricReasons = buildNormalizedMetricReasons([
+                    { value: row.view_count, metric: 'views' },
+                    { value: row.like_count, metric: 'likes' },
+                    { value: row.comment_count, metric: 'comments' },
+                ]);
 
-            return {
-                id: row.id,
-                title: normalizeTitle(row.title),
-                publishedAt: row.published_at,
-                category: normalizeCategory(row.category),
-                viewCount: getLatestMetricValueFromHistory(history, 'views') ?? toNonNegativeNumber(row.view_count),
-                likeCount: getLatestMetricValueFromHistory(history, 'likes') ?? toNonNegativeNumber(row.like_count),
-                commentCount: getLatestMetricValueFromHistory(history, 'comments') ?? toNonNegativeNumber(row.comment_count),
-                duration: parseDurationToSeconds(row.duration),
-                previousViewCount,
-                previousLikeCount,
-                previousCommentCount,
-                previousDuration,
-                comparisonStatus: getComparisonStatusFromHistory(row, previousMetricValue, period),
-            };
-        });
+                return {
+                    id: row.id,
+                    title: normalizeTitle(row.title),
+                    publishedAt: row.published_at,
+                    category: normalizeCategory(row.category),
+                    viewCount: getLatestMetricValueFromHistory(history, 'views') ?? toNonNegativeNumber(row.view_count, 'views'),
+                    likeCount: getLatestMetricValueFromHistory(history, 'likes') ?? toNonNegativeNumber(row.like_count, 'likes'),
+                    commentCount: getLatestMetricValueFromHistory(history, 'comments') ?? toNonNegativeNumber(row.comment_count, 'comments'),
+                    duration: parseDurationToSeconds(row.duration),
+                    previousViewCount,
+                    previousLikeCount,
+                    previousCommentCount,
+                    previousDuration,
+                    comparisonStatus: getComparisonStatusFromHistory(row, previousMetricValue, period),
+                    ...(normalizedMetricReasons.length > 0
+                        ? { normalizedMetricReasons }
+                        : {}),
+                };
+            }),
+            'supabase-treemap',
+        );
         const comparedVideos = videos.filter((video) => video.comparisonStatus === 'compared').length;
         const newVideos = videos.filter((video) => video.comparisonStatus === 'new').length;
         const missingPreviousVideos = videos.filter((video) => video.comparisonStatus === 'missing_previous').length;
+        const comparisonCoverage: InsightTreemapComparisonCoverage = {
+            totalVideos: videos.length,
+            comparedVideos,
+            newVideos,
+            missingPreviousVideos,
+            comparisonAvailable: comparedVideos > 0,
+        };
+        const asOf = new Date().toISOString();
 
         return {
-            asOf: new Date().toISOString(),
+            asOf,
             period,
             totalVideos: videos.length,
             videos,
             availablePeriods,
             meta: {
                 dataSource: 'supabase-treemap',
-                comparisonCoverage: {
-                    totalVideos: videos.length,
-                    comparedVideos,
-                    newVideos,
-                    missingPreviousVideos,
-                    comparisonAvailable: comparedVideos > 0,
-                },
+                comparisonCoverage,
+                ...buildInsightTreemapResponseQualityMeta({
+                    videos,
+                    source: 'supabase-treemap',
+                    asOf,
+                    comparisonCoverage,
+                    rowCapReached: rows.length >= MAX_PUBLIC_TREEMAP_ROWS,
+                }),
             },
         };
     })();
