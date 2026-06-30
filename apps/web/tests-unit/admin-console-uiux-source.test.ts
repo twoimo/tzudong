@@ -738,50 +738,35 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "const AdminStoryboardGenerator = dynamic(",
     );
     expect(consoleSource).toContain(
-      "void loadAdminStoryboardGenerator();",
+      "function preloadAdminConsoleModule(moduleId: AdminModuleId)",
     );
     expect(consoleSource).toContain(
-      'import type { StoryboardInitialResult } from "@/lib/admin/storyboard/initial-result";',
+      "void preloadAdminConsoleModule(activeModuleId)",
     );
     expect(consoleSource).toContain(
+      "const isAdminCanvasBootstrapping =",
+    );
+    expect(consoleSource).toContain(
+      "isShellBootstrapping || !loadedModuleIds.has(activeModuleId)",
+    );
+    expect(consoleSource).toContain(
+      "getAdminConsoleModuleLoadingSkeleton(activeModuleId, activeModuleLabel)",
+    );
+    expect(consoleSource).toContain(
+      "function createInitialAdminConsoleLoadedModuleIds()",
+    );
+    expect(consoleSource).not.toContain(
       "loading: () => <AdminStoryboardModuleLoadingSkeleton />",
     );
-    expect(consoleSource).toContain(
-      "function AdminYoutubeThumbnailModuleLoadingSkeleton()",
-    );
-    expect(consoleSource).toContain(
+    expect(consoleSource).not.toContain(
       "loading: () => <AdminYoutubeThumbnailModuleLoadingSkeleton />",
     );
     expect(consoleSource).not.toContain(
-      "loading: () => <AdminConsoleCanvasSkeleton />",
+      "loading: () => getAdminConsoleModuleLoadingSkeleton(",
     );
-    expect(consoleSource).toContain(
-      "function getAdminConsoleModuleLoadingSkeleton(",
-    );
-    expect(consoleSource).toContain(
-      'data-admin-sidebar-module-loading-viewport="true"',
-    );
-    expect(consoleSource).toContain(
-      'data-admin-sidebar-module-loading-module={config.moduleId}',
-    );
-    expect(consoleSource).toContain(
-      'loading: () => getAdminConsoleModuleLoadingSkeleton("restaurants")',
-    );
-    expect(consoleSource).toContain(
-      'loading: () => getAdminConsoleModuleLoadingSkeleton("banners")',
-    );
-    expect(consoleSource).toContain(
-      'getAdminConsoleModuleLoadingSkeleton("restaurant-refresh-history")',
-    );
-    expect(consoleSource).toContain(
-      'loading: () => getAdminConsoleModuleLoadingSkeleton("users")',
-    );
-    expect(consoleSource).toContain(
-      'loading: () => getAdminConsoleModuleLoadingSkeleton("insights")',
-    );
-    expect(consoleSource).toContain(
-      'loading: () => getAdminConsoleModuleLoadingSkeleton("routes")',
-    );
+    expect(
+      (consoleSource.match(/loading: \(\) => null/g) ?? []).length,
+    ).toBeGreaterThanOrEqual(8);
     expect(consoleSource).toContain(
       'data-admin-sidebar-module-loading-evaluation="viewport-table"',
     );
@@ -811,7 +796,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "initialStoryboardResult={initialStoryboardResult}",
     );
     expect(consoleSource).toContain(
-      'activeModuleId === "youtube-thumbnail-generator" ? (',
+      'moduleId === "youtube-thumbnail-generator"',
     );
     expect(consoleSource).toContain(
       "<AdminYoutubeThumbnailModuleLoadingSkeleton />",
@@ -1005,14 +990,14 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       "const isShellBootstrapping = authLoading || !hasHydrated;",
     );
-    expect(consoleSource).toContain("{isShellBootstrapping ? (");
-    expect(consoleSource).toContain('activeModuleId === "storyboard" ? (');
+    expect(consoleSource).toContain("{isAdminCanvasBootstrapping ? (");
+    expect(consoleSource).not.toContain("{isShellBootstrapping ? (");
     expect(consoleSource).toContain(
       "function AdminDashboardManagementSkeleton()",
     );
     expect(consoleSource).toContain("<AdminDashboardManagementSkeleton />");
     expect(consoleSource).toContain(
-      "<AdminConsoleCanvasSkeleton moduleId={activeModuleId} title={activeModuleLabel} />",
+      "getAdminConsoleModuleLoadingSkeleton(activeModuleId, activeModuleLabel)",
     );
     expect(consoleSource).toContain(
       'data-admin-dashboard-management-skeleton="true"',
@@ -8245,8 +8230,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'embedded ? "border-b border-border bg-card px-2 py-1.5"',
     );
     expect(evaluationsSource).toContain("p-2 sm:p-2");
+    expect(consoleSource).toContain("function loadAdminBannerModule()");
     expect(consoleSource).toContain(
-      'const AdminBannerModule = dynamic(() => import("@/app/admin/banners/page"), {',
+      'return import("@/app/admin/banners/page");',
     );
     expect(consoleSource).not.toContain(
       "const AdminAnnouncementModule = dynamic(",
@@ -8254,9 +8240,12 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain(
       '() => import("@/components/announcement/AnnouncementPanel")',
     );
-    expect(consoleSource).toContain("const AdminUsersModule = dynamic(");
     expect(consoleSource).toContain(
-      '() => import("@/components/admin/AdminUsersPanel")',
+      "const AdminUsersModule = dynamic(loadAdminUsersModule",
+    );
+    expect(consoleSource).toContain("function loadAdminUsersModule()");
+    expect(consoleSource).toContain(
+      'return import("@/components/admin/AdminUsersPanel");',
     );
     expect(consoleSource).toContain("const AdminEvaluationModule = dynamic(");
     expect(consoleSource).not.toContain(
