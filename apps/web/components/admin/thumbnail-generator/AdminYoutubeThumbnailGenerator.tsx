@@ -12,6 +12,7 @@ import {
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
+import NextImage from "next/image";
 import {
   AlignCenter,
   AlignLeft,
@@ -4389,13 +4390,12 @@ export function AdminYoutubeThumbnailGenerator() {
     return nextLayers;
   }
 
-  function handleThumbnailGuidedExampleClick() {
-    const example = THUMBNAIL_GUIDED_EXAMPLE_PRESETS[
-      guidedExampleVariantIndexRef.current % THUMBNAIL_GUIDED_EXAMPLE_PRESETS.length
-    ] ?? THUMBNAIL_GUIDED_EXAMPLE_PRESETS[0];
-    guidedExampleVariantIndexRef.current += 1;
+  function handleThumbnailGuidedExamplePresetClick(example: ThumbnailGuidedExamplePreset) {
     const nextLayers = applyThumbnailGuidedExamplePreviewToCanvas(example);
-    const assistantMessageId = appendThumbnailChatCommand("예시 만들기", example.response);
+    const assistantMessageId = appendThumbnailChatCommand(
+      "예시 만들기",
+      example.response,
+    );
     void runThumbnailGeneration({
       providerId,
       generationMode,
@@ -4404,6 +4404,16 @@ export function AdminYoutubeThumbnailGenerator() {
       subHeadline: example.subHeadline,
       textLayers: nextLayers,
     }, assistantMessageId);
+  }
+
+  function handleThumbnailGuidedExampleClick() {
+    const example =
+      THUMBNAIL_GUIDED_EXAMPLE_PRESETS[
+        guidedExampleVariantIndexRef.current %
+          THUMBNAIL_GUIDED_EXAMPLE_PRESETS.length
+      ] ?? THUMBNAIL_GUIDED_EXAMPLE_PRESETS[0];
+    guidedExampleVariantIndexRef.current += 1;
+    handleThumbnailGuidedExamplePresetClick(example);
   }
 
   function getAbortNotice(kind: "chat" | "generation") {
@@ -6613,110 +6623,194 @@ export function AdminYoutubeThumbnailGenerator() {
                 data-thumbnail-chat-transcript="true"
                 aria-live="polite"
               >
-                {chatMessages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex gap-2 ${
-                      message.role === "user" ? "justify-end" : "justify-start"
-                    }`}
-                    data-thumbnail-chat-message={message.role}
-                    data-thumbnail-chat-message-mode={message.mode ?? "submitted"}
-                    data-thumbnail-chat-message-status={
-                      message.mode === "stream"
-                        ? "streaming"
-                        : message.mode === "system"
-                          ? "guide"
-                          : "done"
-                    }
-                  >
-                    {message.role !== "user" ? (
-                      <div className="mt-5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
-                        {message.mode === "stream" ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <Wand2 className="h-3.5 w-3.5" />
-                        )}
-                      </div>
-                    ) : null}
+                {chatMessages.map((message) => {
+                  const isThumbnailChatStarterMessage =
+                    message.role === "assistant" && message.id === "assistant-intro";
+                  return (
                     <div
-                      className={`max-w-[86%] space-y-1 ${message.role === "user" ? "text-right" : "text-left"}`}
+                      key={message.id}
+                      className={
+                        isThumbnailChatStarterMessage
+                          ? "flex min-h-full items-stretch justify-center"
+                          : `flex gap-2 ${
+                              message.role === "user" ? "justify-end" : "justify-start"
+                            }`
+                      }
+                      data-thumbnail-chat-message={message.role}
+                      data-thumbnail-chat-message-mode={message.mode ?? "submitted"}
+                      data-thumbnail-chat-message-status={
+                        message.mode === "stream"
+                          ? "streaming"
+                          : message.mode === "system"
+                            ? "guide"
+                            : "done"
+                      }
                     >
-                      <div
-                        className={`text-[10px] font-medium uppercase tracking-wide ${
-                          message.role === "user" ? "text-primary" : "text-muted-foreground"
-                        }`}
-                        data-thumbnail-chat-message-meta="true"
-                      >
-                        {message.role === "user"
-                          ? "나"
-                          : message.mode === "stream"
-                            ? currentThumbnailStreamingLabel
-                            : message.mode === "system"
-                              ? "가이드"
-                              : "유튜브 썸네일 도우미"}
-                      </div>
-                      <div
-                        className={`rounded-2xl px-3 py-2 text-xs leading-5 shadow-sm ${
-                          message.role === "user"
-                            ? "rounded-br-md bg-primary text-primary-foreground"
-                            : message.mode === "live" || message.mode === "stream"
-                              ? "rounded-bl-md border border-sky-300/60 bg-sky-500/10 text-sky-950 dark:text-sky-100"
-                              : "rounded-bl-md bg-background text-foreground ring-1 ring-border/60"
-                        }`}
-                        data-thumbnail-chat-message-bubble="true"
-                      >
-                        <p className="whitespace-pre-wrap break-keep [overflow-wrap:anywhere]">
-                          {message.content}
-                        </p>
-                        {message.mode === "stream" ? (
-                          <p className="mt-1 flex items-center gap-1.5 whitespace-pre-wrap break-keep opacity-80 [overflow-wrap:anywhere]">
-                            <Loader2
-                              className="h-3 w-3 animate-spin"
-                              aria-hidden="true"
-                            />
-                            {currentThumbnailStreamingPhase}
-                          </p>
-                        ) : null}
-                      </div>
-                      {message.role === "assistant" && message.id === "assistant-intro" ? (
+                      {isThumbnailChatStarterMessage ? (
                         <div
-                          className="flex flex-wrap gap-1.5 pl-1"
-                          data-thumbnail-chat-message-actions="true"
-                          data-thumbnail-chat-message-actions-placement="outside-bubble"
+                          className="mx-auto flex w-full max-w-sm flex-col items-center justify-center gap-3 px-3 py-6 text-center"
+                          data-thumbnail-chat-starter-panel="true"
+                          data-thumbnail-chat-starter-panel-layout="centered-thumbnail-guide"
                         >
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            className="h-7 rounded-full bg-background/80 px-2 text-[11px] shadow-sm"
-                            onClick={handleThumbnailUsageGuideClick}
-                            disabled={isGenerating || isChatAgentStreaming}
-                            data-thumbnail-chat-guide-button="true"
-                            data-thumbnail-chat-message-action="guide"
+                          <div
+                            className="relative grid h-14 w-14 place-items-center overflow-hidden rounded-[1.35rem] border border-primary/15 bg-background shadow-sm ring-4 ring-primary/5"
+                            data-thumbnail-chat-starter-logo="true"
                           >
-                            가이드 보기
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            className="h-7 rounded-full px-2 text-[11px] shadow-sm"
-                            onClick={handleThumbnailGuidedExampleClick}
-                            disabled={isGenerating || isChatAgentStreaming}
-                            data-thumbnail-chat-guide-example="true"
-                            data-thumbnail-chat-message-action="example"
+                            <NextImage
+                              src="/logo.webp"
+                              alt="Tzudong 프로젝트 로고"
+                              width={40}
+                              height={40}
+                              className="h-10 w-10 object-contain"
+                              priority={false}
+                            />
+                          </div>
+                          <div className="min-w-0 space-y-1">
+                            <h4
+                              className="text-xl font-semibold tracking-tight text-foreground"
+                              data-thumbnail-chat-starter-title="true"
+                              data-thumbnail-chat-starter-title-size="storyboard-parity"
+                            >
+                              무엇부터 만들까요?
+                            </h4>
+                            <p
+                              className="mx-auto max-w-[18rem] text-[11px] leading-5 text-muted-foreground"
+                              data-thumbnail-chat-starter-guide-copy="true"
+                            >
+                              <span className="block">
+                                음식·인물·짧은 문구를 한두 문장으로 적거나,
+                              </span>
+                              <span className="block">
+                                아래 예시를 골라 썸네일 방향을 바로 잡아보세요.
+                              </span>
+                            </p>
+                          </div>
+                          <div
+                            className="grid w-full grid-cols-1 gap-1.5 sm:grid-cols-3"
+                            data-thumbnail-chat-example-grid="true"
+                            data-thumbnail-chat-example-grid-layout="3-card-grid"
                           >
-                            예시 만들기
-                          </Button>
+                            {THUMBNAIL_GUIDED_EXAMPLE_PRESETS.map((preset) => (
+                              <button
+                                key={preset.topic}
+                                type="button"
+                                className="group min-h-[4.25rem] rounded-2xl border border-border/70 bg-background/75 p-2 text-left shadow-sm transition hover:border-primary/45 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                onClick={() =>
+                                  handleThumbnailGuidedExamplePresetClick(preset)
+                                }
+                                disabled={isGenerating || isChatAgentStreaming}
+                                aria-label={`${preset.headline} 썸네일 예시 불러오기`}
+                                data-thumbnail-chat-example-card="true"
+                                data-thumbnail-chat-example-headline={preset.headline}
+                              >
+                                <span className="block truncate text-[11px] font-semibold text-foreground">
+                                  {preset.headline}
+                                </span>
+                                <span className="mt-0.5 block truncate text-[10px] font-medium text-primary">
+                                  {preset.subHeadline}
+                                </span>
+                                <span className="mt-1 block line-clamp-2 text-[10px] leading-4 text-muted-foreground">
+                                  {preset.topic}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                          <div
+                            className="flex flex-wrap justify-center gap-1.5"
+                            data-thumbnail-chat-message-actions="true"
+                            data-thumbnail-chat-message-actions-placement="starter-panel"
+                          >
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-7 rounded-full bg-background/80 px-2 text-[11px] shadow-sm"
+                              onClick={handleThumbnailUsageGuideClick}
+                              disabled={isGenerating || isChatAgentStreaming}
+                              data-thumbnail-chat-guide-button="true"
+                              data-thumbnail-chat-message-action="guide"
+                            >
+                              가이드 보기
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              className="h-7 rounded-full px-2 text-[11px] shadow-sm"
+                              onClick={handleThumbnailGuidedExampleClick}
+                              disabled={isGenerating || isChatAgentStreaming}
+                              data-thumbnail-chat-guide-example="true"
+                              data-thumbnail-chat-message-action="example"
+                            >
+                              예시 만들기
+                            </Button>
+                          </div>
                         </div>
-                      ) : null}
+                      ) : (
+                        <>
+                          {message.role !== "user" ? (
+                            <div className="mt-5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+                              {message.mode === "stream" ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Wand2 className="h-3.5 w-3.5" />
+                              )}
+                            </div>
+                          ) : null}
+                          <div
+                            className={`max-w-[86%] space-y-1 ${
+                              message.role === "user" ? "text-right" : "text-left"
+                            }`}
+                          >
+                            <div
+                              className={`text-[10px] font-medium uppercase tracking-wide ${
+                                message.role === "user"
+                                  ? "text-primary"
+                                  : "text-muted-foreground"
+                              }`}
+                              data-thumbnail-chat-message-meta="true"
+                            >
+                              {message.role === "user"
+                                ? "나"
+                                : message.mode === "stream"
+                                  ? currentThumbnailStreamingLabel
+                                  : message.mode === "system"
+                                    ? "가이드"
+                                    : "유튜브 썸네일 도우미"}
+                            </div>
+                            <div
+                              className={`rounded-2xl px-3 py-2 text-xs leading-5 shadow-sm ${
+                                message.role === "user"
+                                  ? "rounded-br-md bg-primary text-primary-foreground"
+                                  : message.mode === "live" || message.mode === "stream"
+                                    ? "rounded-bl-md border border-sky-300/60 bg-sky-500/10 text-sky-950 dark:text-sky-100"
+                                    : "rounded-bl-md bg-background text-foreground ring-1 ring-border/60"
+                              }`}
+                              data-thumbnail-chat-message-bubble="true"
+                            >
+                              <p className="whitespace-pre-wrap break-keep [overflow-wrap:anywhere]">
+                                {message.content}
+                              </p>
+                              {message.mode === "stream" ? (
+                                <p className="mt-1 flex items-center gap-1.5 whitespace-pre-wrap break-keep opacity-80 [overflow-wrap:anywhere]">
+                                  <Loader2
+                                    className="h-3 w-3 animate-spin"
+                                    aria-hidden="true"
+                                  />
+                                  {currentThumbnailStreamingPhase}
+                                </p>
+                              ) : null}
+                            </div>
+                          </div>
+                          {message.role === "user" ? (
+                            <div className="mt-5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground">
+                              <MessageCircle className="h-3.5 w-3.5" />
+                            </div>
+                          ) : null}
+                        </>
+                      )}
                     </div>
-                    {message.role === "user" ? (
-                      <div className="mt-5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground">
-                        <MessageCircle className="h-3.5 w-3.5" />
-                      </div>
-                    ) : null}
-                  </div>
-                ))}
+                  );
+                })}
                 {chatDraft.trim() || isChatAgentStreaming || isGenerating ? (
                   <div
                     className="flex gap-2"

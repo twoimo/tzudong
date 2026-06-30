@@ -578,6 +578,10 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
   const canvasPanel = thumbnailModule.locator('[data-thumbnail-canvas-panel="primary-left"]');
   const chatPanel = thumbnailModule.locator('[data-thumbnail-chat-panel="true"]');
   const chatComposer = thumbnailModule.locator('[data-thumbnail-chat-composer="true"] textarea');
+  const chatStarterPanel = thumbnailModule.locator('[data-thumbnail-chat-starter-panel="true"]');
+  const chatStarterLogo = thumbnailModule.locator('[data-thumbnail-chat-starter-logo="true"]');
+  const chatStarterTitle = thumbnailModule.locator('[data-thumbnail-chat-starter-title="true"]');
+  const chatStarterExampleCards = thumbnailModule.locator('[data-thumbnail-chat-example-card="true"]');
   const chatHeaderActions = thumbnailModule.locator('[data-thumbnail-chat-header-actions="true"]');
   const canvasContext = thumbnailModule.locator('[data-thumbnail-chat-canvas-context="true"]');
   const canvasContextSummary = thumbnailModule.locator('[data-thumbnail-chat-canvas-context-summary="true"]');
@@ -588,6 +592,16 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
   await expect(inputPanel).toBeVisible();
   await expect(canvasPanel).toBeVisible();
   await expect(chatPanel).toBeVisible();
+  await expect(chatStarterPanel).toBeVisible();
+  await expect(chatStarterPanel).toHaveAttribute(
+    'data-thumbnail-chat-starter-panel-layout',
+    'centered-thumbnail-guide',
+  );
+  await expect(chatStarterLogo).toBeVisible();
+  await expect(chatStarterTitle).toHaveText('무엇부터 만들까요?');
+  await expect(chatStarterExampleCards).toHaveCount(3);
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-guide-button="true"]')).toBeVisible();
+  await expect(thumbnailModule.locator('[data-thumbnail-chat-guide-example="true"]')).toBeVisible();
   await expect(chatHeaderActions).toBeVisible();
   await expect(chatComposer).toBeVisible();
   await expect(chatComposer).toHaveAttribute('placeholder', '원하는 썸네일 내용을 입력해 주세요');
