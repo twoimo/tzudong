@@ -4835,7 +4835,7 @@ function AdminDashboardGroupedBarChart({
             <AdminDashboardInlineTooltip
               label={`${row.label} 성과 기여`}
               lines={row.viewBenchmarkTooltipLines}
-              className="mt-0.5 block truncate text-[10px] font-black tabular-nums text-foreground/75 outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              className="mt-0.5 block truncate text-[10px] font-semibold tabular-nums text-foreground/70 outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
               {formatDashboardContribution(row.performanceContributionPercent)} ·{" "}
               {row.viewTopPercentLabel}
