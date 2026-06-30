@@ -8751,7 +8751,7 @@ export function AdminStoryboardGenerator({
                           >
                             <div className="flex flex-col items-center gap-2">
                               <div
-                                className="relative grid h-14 w-14 place-items-center overflow-hidden rounded-[1.35rem] border border-primary/15 bg-background shadow-sm ring-4 ring-primary/5"
+                                className="relative grid h-14 w-14 place-items-center overflow-hidden rounded-[1.35rem] bg-transparent"
                                 data-storyboard-chat-starter-logo="true"
                               >
                                 <NextImage
