@@ -6653,7 +6653,7 @@ export function AdminYoutubeThumbnailGenerator() {
                           data-thumbnail-chat-starter-panel-layout="centered-thumbnail-guide"
                         >
                           <div
-                            className="relative grid h-14 w-14 place-items-center overflow-hidden rounded-[1.35rem] border border-primary/15 bg-background shadow-sm ring-4 ring-primary/5"
+                            className="relative grid h-14 w-14 place-items-center overflow-hidden rounded-[1.35rem] bg-transparent"
                             data-thumbnail-chat-starter-logo="true"
                           >
                             <NextImage
