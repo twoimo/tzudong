@@ -13,6 +13,8 @@ on:
       - 'apps/web/tests-unit/**'
       - 'apps/web/scripts/restaurant-refresh-cron.mjs'
       - 'apps/web/scripts/apply-supabase-migration.mjs'
+      - 'apps/web/scripts/vercel-ignore-build.mjs'
+      - 'apps/web/vercel.json'
       - 'apps/web/package.json'
       - 'apps/web/package-lock.json'
       - 'apps/web/bun.lock'
@@ -46,6 +48,8 @@ on:
       - 'apps/web/tests-unit/**'
       - 'apps/web/scripts/restaurant-refresh-cron.mjs'
       - 'apps/web/scripts/apply-supabase-migration.mjs'
+      - 'apps/web/scripts/vercel-ignore-build.mjs'
+      - 'apps/web/vercel.json'
       - 'apps/web/package.json'
       - 'apps/web/package-lock.json'
       - 'apps/web/bun.lock'
@@ -175,3 +179,4 @@ jobs:
           tests-unit/supabase-migration-apply-source.test.ts
           tests-unit/mobile-desktop-parity-source.test.ts
           tests-unit/web-quality-performance-source.test.ts
+          tests-unit/vercel-ignore-build.test.ts
