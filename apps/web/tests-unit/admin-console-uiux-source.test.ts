@@ -1883,6 +1883,12 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain(
       "mt-1 block truncate text-[11px] font-extrabold leading-4 tabular-nums text-teal-800",
     );
+    expect(consoleSource).not.toContain(
+      "mt-0.5 block truncate text-[10px] font-black tabular-nums text-foreground/75",
+    );
+    expect(consoleSource).toContain(
+      "mt-0.5 block truncate text-[10px] font-semibold tabular-nums text-foreground/70",
+    );
     expect(consoleSource).toContain("...row.viewBenchmarkTooltipLines");
     expect(consoleSource).toContain(
       "className={adminDashboardTooltipPortalClassName}",
