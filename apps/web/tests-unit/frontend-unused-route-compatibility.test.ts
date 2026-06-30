@@ -152,6 +152,9 @@ describe('frontend unused route compatibility', () => {
         expect(adminConsoleSource).toContain('function AdminConsoleCanvasSkeleton({');
         expect(adminConsoleSource).toContain('data-admin-console-content-loading="true"');
         expect(adminConsoleSource).toContain(
+            '{isAdminCanvasBootstrapping ? (',
+        );
+        expect(adminConsoleSource).not.toContain(
             '{isShellBootstrapping ? (',
         );
         expect(adminConsoleSource).toContain('return null;');
