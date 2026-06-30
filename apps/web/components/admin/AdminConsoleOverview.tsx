@@ -4745,7 +4745,7 @@ function AdminDashboardGroupedBarChart({
                 >
                   {metric.label}
                 </span>
-                <span className="text-[11px] font-black tabular-nums text-muted-foreground">
+                <span className="shrink-0 text-[11px] font-black tabular-nums text-muted-foreground">
                   합계 {formatCompactNumber(total)} · 전체 평균{" "}
                   {formatCompactNumber(average)}
                 </span>

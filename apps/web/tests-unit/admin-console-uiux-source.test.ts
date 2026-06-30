@@ -3111,7 +3111,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "flex h-full min-h-0 flex-col overflow-hidden bg-background p-3",
     );
     expect(componentSource).toContain(
-      "grid h-full min-h-0 grid-cols-1 grid-rows-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-3 overflow-hidden xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] xl:grid-rows-1",
+      "grid h-full min-h-0 grid-cols-1 grid-rows-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-3 overflow-hidden lg:grid-cols-[minmax(0,1fr)_minmax(320px,400px)] lg:grid-rows-1 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]",
     );
     expect(componentSource).toContain(
       'data-thumbnail-chat-right-layout="true"',
