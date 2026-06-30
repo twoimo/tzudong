@@ -20,9 +20,12 @@ export type InsightTreemapPeriod = '30MIN' | '1H' | '6H' | '12H' | '1D' | '1W' |
 
 export type InsightTreemapDataQualityReason =
     | 'clamped_metric'
+    | 'missing_metric'
     | 'negative_delta'
     | 'extreme_spike'
+    | 'iqr_outlier'
     | 'dominates_total'
+    | 'duplicate_video'
     | 'missing_previous'
     | 'low_comparison_coverage'
     | 'stale_snapshot'
@@ -43,7 +46,7 @@ export type InsightTreemapMetricKey =
     | 'channel_views';
 
 export type InsightTreemapMetricNormalizationReason = {
-    reason: Extract<InsightTreemapDataQualityReason, 'clamped_metric'>;
+    reason: Extract<InsightTreemapDataQualityReason, 'clamped_metric' | 'missing_metric'>;
     metric: InsightTreemapMetricKey;
     rawValue: string | number | null;
     normalizedValue: number | null;
@@ -86,6 +89,8 @@ export const YOUTUBE_KPI_DATA_QUALITY_THRESHOLDS = {
     lowComparisonCoverageRatio: 0.5,
     dominantContributionRatio: 0.7,
     extremeMedianMultiple: 20,
+    iqrOutlierMultiplier: 1.5,
+    minimumIqrSampleSize: 4,
     staleSnapshotHours: 2,
     rowCap: MAX_PUBLIC_TREEMAP_ROWS,
 } as const;
@@ -124,6 +129,38 @@ export type InsightTreemapComparisonCoverage = {
     missingPreviousVideos: number;
     comparisonAvailable: boolean;
 };
+export function buildInsightTreemapComparisonCoverageFromVideos(
+    videos: InsightTreemapVideoRow[],
+    latestBucketStartedAt: string,
+    comparisonBucketStartedAt: string | null,
+): InsightTreemapComparisonCoverage {
+    let comparedVideos = 0;
+    let newVideos = 0;
+    let missingPreviousVideos = 0;
+
+    if (comparisonBucketStartedAt) {
+        for (const video of videos) {
+            if (video.comparisonStatus === 'compared') {
+                comparedVideos += 1;
+            } else if (video.comparisonStatus === 'new') {
+                newVideos += 1;
+            } else {
+                missingPreviousVideos += 1;
+            }
+        }
+    }
+
+    return {
+        latestBucketStartedAt,
+        comparisonBucketStartedAt,
+        totalVideos: videos.length,
+        comparedVideos,
+        newVideos,
+        missingPreviousVideos,
+        comparisonAvailable: Boolean(comparisonBucketStartedAt && comparedVideos > 0),
+    };
+}
+
 
 export type InsightTreemapResponseMeta = {
     dataSource: InsightTreemapDataSource;
@@ -260,29 +297,51 @@ function toMetricRawValue(value: unknown): string | number | null {
     if (typeof value === 'number' || typeof value === 'string') return value;
     return null;
 }
+const PLAIN_NUMERIC_METRIC_PATTERN = /^[+-]?\d+(?:\.\d+)?$/;
+const GROUPED_NUMERIC_METRIC_PATTERN = /^[+-]?\d{1,3}(?:,\d{3})+(?:\.\d+)?$/;
+
+function parseInsightTreemapMetricNumber(value: unknown) {
+    if (typeof value === 'number') return Number.isFinite(value) ? value : Number.NaN;
+    if (typeof value !== 'string') return Number.NaN;
+
+    const trimmed = value.trim();
+    if (!trimmed) return Number.NaN;
+
+    const isValidNumeric =
+        PLAIN_NUMERIC_METRIC_PATTERN.test(trimmed) ||
+        GROUPED_NUMERIC_METRIC_PATTERN.test(trimmed);
+    if (!isValidNumeric) return Number.NaN;
+
+    return Number(trimmed.replace(/,/g, ''));
+}
+
+function isInsightTreemapMissingMetric(value: unknown) {
+    return value == null || (typeof value === 'string' && value.trim() === '');
+}
+
 
 export function normalizeInsightTreemapMetric(
     value: unknown,
     metric: InsightTreemapMetricKey,
 ): { value: number; reasons: InsightTreemapMetricNormalizationReason[] } {
-    const parsed =
-        typeof value === 'number' && Number.isFinite(value)
-            ? value
-            : typeof value === 'string' && value.trim()
-              ? Number.parseFloat(value)
-              : Number.NaN;
+    const parsed = parseInsightTreemapMetricNumber(value);
     const normalizedValue = Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
-    const reasons: InsightTreemapMetricNormalizationReason[] =
-        !Number.isFinite(parsed) || parsed < 0
-            ? [
-                  {
-                      reason: 'clamped_metric',
-                      metric,
-                      rawValue: toMetricRawValue(value),
-                      normalizedValue,
-                  },
-              ]
-            : [];
+    const reason: InsightTreemapMetricNormalizationReason['reason'] | null =
+        isInsightTreemapMissingMetric(value)
+            ? 'missing_metric'
+            : !Number.isFinite(parsed) || parsed < 0
+              ? 'clamped_metric'
+              : null;
+    const reasons: InsightTreemapMetricNormalizationReason[] = reason
+        ? [
+              {
+                  reason,
+                  metric,
+                  rawValue: toMetricRawValue(value),
+                  normalizedValue,
+              },
+          ]
+        : [];
 
     return { value: normalizedValue, reasons };
 }
@@ -743,6 +802,7 @@ function getInsightTreemapDefaultSeverity(
 ): InsightTreemapDataQualitySeverity {
     if (
         reason === 'extreme_spike' ||
+        reason === 'iqr_outlier' ||
         reason === 'dominates_total' ||
         reason === 'delta_conflict'
     ) {
@@ -751,6 +811,8 @@ function getInsightTreemapDefaultSeverity(
 
     if (
         reason === 'clamped_metric' ||
+        reason === 'missing_metric' ||
+        reason === 'duplicate_video' ||
         reason === 'negative_delta' ||
         reason === 'low_comparison_coverage' ||
         reason === 'stale_snapshot' ||
@@ -867,7 +929,11 @@ export function buildInsightTreemapDataQualitySummary(
 }
 
 function isInsightTreemapAnomalyReason(reason: InsightTreemapDataQualityReason) {
-    return reason === 'extreme_spike' || reason === 'dominates_total';
+    return (
+        reason === 'extreme_spike' ||
+        reason === 'iqr_outlier' ||
+        reason === 'dominates_total'
+    );
 }
 
 export function buildInsightTreemapAnomalySummary(
@@ -893,6 +959,207 @@ function getMedianMetricValue(values: number[]) {
     if (finiteValues.length % 2 === 1) return finiteValues[midpoint] ?? 0;
     return ((finiteValues[midpoint - 1] ?? 0) + (finiteValues[midpoint] ?? 0)) / 2;
 }
+function getQuantileMetricValue(values: number[], quantile: number) {
+    const finiteValues = values
+        .filter((value) => Number.isFinite(value))
+        .sort((a, b) => a - b);
+    if (finiteValues.length === 0) return 0;
+
+    const position = (finiteValues.length - 1) * quantile;
+    const lowerIndex = Math.floor(position);
+    const upperIndex = Math.ceil(position);
+    const lowerValue = finiteValues[lowerIndex] ?? 0;
+    const upperValue = finiteValues[upperIndex] ?? lowerValue;
+    return lowerValue + (upperValue - lowerValue) * (position - lowerIndex);
+}
+
+function getIqrOutlierUpperFence(values: number[]) {
+    const finiteValues = values.filter((value) => Number.isFinite(value));
+    if (finiteValues.length < YOUTUBE_KPI_DATA_QUALITY_THRESHOLDS.minimumIqrSampleSize) {
+        return null;
+    }
+
+    const firstQuartile = getQuantileMetricValue(finiteValues, 0.25);
+    const thirdQuartile = getQuantileMetricValue(finiteValues, 0.75);
+    const iqr = thirdQuartile - firstQuartile;
+    if (iqr <= 0) return null;
+
+    return (
+        thirdQuartile +
+        iqr * YOUTUBE_KPI_DATA_QUALITY_THRESHOLDS.iqrOutlierMultiplier
+    );
+}
+
+type InsightTreemapVideoCandidate = {
+    video: InsightTreemapVideoRow;
+    originalIndex: number;
+};
+
+function isFiniteMetricValue(value: number | null | undefined): value is number {
+    return typeof value === 'number' && Number.isFinite(value);
+}
+
+function hasUsableText(value: string | null | undefined) {
+    return Boolean(value?.trim());
+}
+
+function getInsightTreemapPublishedAtMs(video: InsightTreemapVideoRow) {
+    const publishedAtMs = video.publishedAt ? Date.parse(video.publishedAt) : 0;
+    return Number.isFinite(publishedAtMs) ? publishedAtMs : 0;
+}
+
+function hasCleanCurrentMetric(
+    video: InsightTreemapVideoRow,
+    metric: InsightTreemapMetricKey,
+    value: number,
+) {
+    return (
+        Number.isFinite(value) &&
+        !(video.normalizedMetricReasons ?? []).some(
+            (reason) => reason.metric === metric,
+        )
+    );
+}
+
+function getInsightTreemapVideoCompletenessScore(video: InsightTreemapVideoRow) {
+    let score = 0;
+
+    if (hasUsableText(video.title) && video.title.trim() !== '제목 없음') score += 1;
+    if (getInsightTreemapPublishedAtMs(video) > 0) score += 1;
+    if (hasUsableText(video.category)) score += 1;
+    if (hasCleanCurrentMetric(video, 'views', video.viewCount)) score += 1;
+    if (hasCleanCurrentMetric(video, 'likes', video.likeCount)) score += 1;
+    if (hasCleanCurrentMetric(video, 'comments', video.commentCount)) score += 1;
+    if (hasCleanCurrentMetric(video, 'duration', video.duration)) score += 1;
+    if (isFiniteMetricValue(video.previousViewCount)) score += 1;
+    if (isFiniteMetricValue(video.previousLikeCount)) score += 1;
+    if (isFiniteMetricValue(video.previousCommentCount)) score += 1;
+    if (video.comparisonStatus && video.comparisonStatus !== 'not_applicable') score += 1;
+
+    return score;
+}
+
+function compareInsightTreemapVideoCandidates(
+    left: InsightTreemapVideoCandidate,
+    right: InsightTreemapVideoCandidate,
+) {
+    const completenessDelta =
+        getInsightTreemapVideoCompletenessScore(left.video) -
+        getInsightTreemapVideoCompletenessScore(right.video);
+    if (completenessDelta !== 0) return completenessDelta;
+
+    const viewDelta = left.video.viewCount - right.video.viewCount;
+    if (viewDelta !== 0) return viewDelta;
+
+    const likeDelta = left.video.likeCount - right.video.likeCount;
+    if (likeDelta !== 0) return likeDelta;
+
+    const commentDelta = left.video.commentCount - right.video.commentCount;
+    if (commentDelta !== 0) return commentDelta;
+
+    const publishedAtDelta =
+        getInsightTreemapPublishedAtMs(left.video) -
+        getInsightTreemapPublishedAtMs(right.video);
+    if (publishedAtDelta !== 0) return publishedAtDelta;
+
+    return right.originalIndex - left.originalIndex;
+}
+
+function mergeInsightTreemapVideoAnnotations(
+    primary: InsightTreemapVideoRow,
+    secondary: InsightTreemapVideoRow,
+): InsightTreemapVideoRow {
+    const qualityFlags = uniqueInsightTreemapFlags([
+        ...(primary.qualityFlags ?? []),
+        ...(secondary.qualityFlags ?? []),
+    ]);
+    const anomalyFlags = uniqueInsightTreemapFlags([
+        ...(primary.anomalyFlags ?? []),
+        ...(secondary.anomalyFlags ?? []),
+    ]);
+    const normalizedMetricReasons = [
+        ...(primary.normalizedMetricReasons ?? []),
+        ...(secondary.normalizedMetricReasons ?? []),
+    ];
+
+    return {
+        ...primary,
+        ...(qualityFlags.length > 0 ? { qualityFlags } : {}),
+        ...(anomalyFlags.length > 0 ? { anomalyFlags } : {}),
+        ...(normalizedMetricReasons.length > 0 ? { normalizedMetricReasons } : {}),
+    };
+}
+
+export function preprocessInsightTreemapVideos(
+    videos: InsightTreemapVideoRow[],
+    source?: InsightTreemapDataSource,
+): InsightTreemapVideoRow[] {
+    const orderedIds: string[] = [];
+    const grouped = new Map<
+        string,
+        {
+            candidate: InsightTreemapVideoCandidate;
+            output: InsightTreemapVideoRow;
+            count: number;
+        }
+    >();
+
+    for (const [originalIndex, video] of videos.entries()) {
+        const existing = grouped.get(video.id);
+        if (!existing) {
+            grouped.set(video.id, {
+                candidate: { video, originalIndex },
+                output: video,
+                count: 1,
+            });
+            orderedIds.push(video.id);
+            continue;
+        }
+
+        const incomingCandidate = { video, originalIndex };
+        if (
+            compareInsightTreemapVideoCandidates(
+                incomingCandidate,
+                existing.candidate,
+            ) > 0
+        ) {
+            existing.candidate = incomingCandidate;
+            existing.output = mergeInsightTreemapVideoAnnotations(
+                incomingCandidate.video,
+                existing.output,
+            );
+        } else {
+            existing.output = mergeInsightTreemapVideoAnnotations(
+                existing.output,
+                incomingCandidate.video,
+            );
+        }
+        existing.count += 1;
+    }
+
+    return orderedIds.map((id) => {
+        const group = grouped.get(id);
+        if (!group) {
+            throw new Error(`missing-preprocessed-video:${id}`);
+        }
+
+        const video = group.output;
+        if (group.count <= 1) return video;
+
+        return {
+            ...video,
+            qualityFlags: uniqueInsightTreemapFlags([
+                ...(video.qualityFlags ?? []),
+                createInsightTreemapQualityFlag('duplicate_video', {
+                    source,
+                    videoId: video.id,
+                    count: group.count,
+                }),
+            ]),
+        };
+    });
+}
+
 
 function buildVideoMetricQualityFlags(
     video: InsightTreemapVideoRow,
@@ -954,10 +1221,16 @@ export function enrichInsightTreemapVideosWithQuality(
     videos: InsightTreemapVideoRow[],
     source?: InsightTreemapDataSource,
 ): InsightTreemapVideoRow[] {
-    const totalViews = videos.reduce((sum, video) => sum + video.viewCount, 0);
-    const medianViews = getMedianMetricValue(videos.map((video) => video.viewCount));
+    const preprocessedVideos = preprocessInsightTreemapVideos(videos, source);
+    const totalViews = preprocessedVideos.reduce((sum, video) => sum + video.viewCount, 0);
+    const medianViews = getMedianMetricValue(
+        preprocessedVideos.map((video) => video.viewCount),
+    );
+    const iqrOutlierUpperFence = getIqrOutlierUpperFence(
+        preprocessedVideos.map((video) => video.viewCount),
+    );
 
-    return videos.map((video) => {
+    return preprocessedVideos.map((video) => {
         const qualityFlags = [
             ...(video.qualityFlags ?? []),
             ...buildVideoMetricQualityFlags(video, source),
@@ -995,6 +1268,23 @@ export function enrichInsightTreemapVideosWithQuality(
                     videoId: video.id,
                     value: video.viewCount / medianViews,
                     threshold: YOUTUBE_KPI_DATA_QUALITY_THRESHOLDS.extremeMedianMultiple,
+                }),
+            );
+        }
+
+        if (
+            iqrOutlierUpperFence != null &&
+            Number.isFinite(video.viewCount) &&
+            video.viewCount > iqrOutlierUpperFence
+        ) {
+            anomalyFlags.push(
+                createInsightTreemapQualityFlag('iqr_outlier', {
+                    severity: 'risk',
+                    metric: 'views',
+                    source,
+                    videoId: video.id,
+                    value: video.viewCount,
+                    threshold: iqrOutlierUpperFence,
                 }),
             );
         }

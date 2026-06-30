@@ -311,6 +311,7 @@ function withYouTubeKpiQualityMeta(
   return {
     ...payload,
     videos,
+    totalVideos: videos.length,
     meta: {
       ...meta,
       dataSource: source,
