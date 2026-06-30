@@ -636,13 +636,13 @@ const AdminEvaluationModule = dynamic(
   () => import("@/app/admin/evaluations/page"),
   {
     ssr: false,
-    loading: () => <AdminConsoleCanvasSkeleton />,
+    loading: () => getAdminConsoleModuleLoadingSkeleton("restaurants"),
   },
 );
 
 const AdminBannerModule = dynamic(() => import("@/app/admin/banners/page"), {
   ssr: false,
-  loading: () => <AdminConsoleCanvasSkeleton />,
+  loading: () => getAdminConsoleModuleLoadingSkeleton("banners"),
 });
 
 const AdminRestaurantRefreshHistoryModule = dynamic(
@@ -652,7 +652,8 @@ const AdminRestaurantRefreshHistoryModule = dynamic(
     ),
   {
     ssr: false,
-    loading: () => <AdminConsoleCanvasSkeleton />,
+    loading: () =>
+      getAdminConsoleModuleLoadingSkeleton("restaurant-refresh-history"),
   },
 );
 
@@ -660,7 +661,7 @@ const AdminUsersModule = dynamic(
   () => import("@/components/admin/AdminUsersPanel"),
   {
     ssr: false,
-    loading: () => <AdminConsoleCanvasSkeleton />,
+    loading: () => getAdminConsoleModuleLoadingSkeleton("users"),
   },
 );
 
@@ -691,7 +692,7 @@ const AdminYoutubeThumbnailGenerator = dynamic(
 
 const InsightsModule = dynamic(() => import("@/app/insights/insights-client"), {
   ssr: false,
-  loading: () => <AdminConsoleCanvasSkeleton />,
+  loading: () => getAdminConsoleModuleLoadingSkeleton("insights"),
 });
 
 const AdminRouteRecommendationModule = dynamic(
@@ -701,7 +702,7 @@ const AdminRouteRecommendationModule = dynamic(
     ),
   {
     ssr: false,
-    loading: () => <AdminConsoleCanvasSkeleton />,
+    loading: () => getAdminConsoleModuleLoadingSkeleton("routes"),
   },
 );
 
@@ -4701,7 +4702,7 @@ function AdminDashboardGroupedBarChart({
     <div
       className={cn(
         adminDashboardVisualizationShellClassName,
-        "grid h-full content-center gap-3 pb-0",
+        "grid h-full grid-rows-[minmax(0,1fr)_auto] gap-2 pb-0",
         isFullscreen && "gap-4 p-3 sm:gap-5 sm:p-4",
       )}
       role="img"
@@ -4715,7 +4716,10 @@ function AdminDashboardGroupedBarChart({
         {formatNumber(topRow.commentCount)}입니다.
       </p>
       <div
-        className={cn("grid min-h-0 gap-3", isFullscreen && "gap-4 sm:gap-5")}
+        className={cn(
+          "grid min-h-0 content-evenly gap-2",
+          isFullscreen && "gap-4 sm:gap-5",
+        )}
       >
         {visibleMetricRows.map((metric) => {
           const total = visibleRows.reduce(
@@ -4796,6 +4800,49 @@ function AdminDashboardGroupedBarChart({
           );
         })}
       </div>
+      <ol
+        className={cn(
+          "grid shrink-0 gap-1 sm:grid-cols-5",
+          isFullscreen && "gap-2",
+        )}
+        data-admin-dashboard-top-content-rank-list="true"
+        aria-label="콘텐츠 성과 TOP 5 영상 순위"
+      >
+        {visibleRows.map((row, index) => (
+          <li
+            key={row.label}
+            className="min-w-0 rounded-lg bg-muted/20 px-1.5 py-1"
+            data-admin-dashboard-top-content-rank-item={index + 1}
+          >
+            <div className="flex min-w-0 items-center gap-1.5">
+              <span
+                className={cn(
+                  "h-2.5 w-2.5 shrink-0 rounded-full",
+                  rankColors[index]?.dotClass ?? "bg-muted-foreground",
+                )}
+                aria-hidden="true"
+              />
+              <span className="shrink-0 text-[10px] font-black tabular-nums text-muted-foreground">
+                {index + 1}위
+              </span>
+              <span
+                className="min-w-0 truncate text-[11px] font-extrabold text-foreground"
+                title={row.label}
+              >
+                {row.label}
+              </span>
+            </div>
+            <AdminDashboardInlineTooltip
+              label={`${row.label} 성과 기여`}
+              lines={row.viewBenchmarkTooltipLines}
+              className="mt-0.5 block truncate text-[10px] font-black tabular-nums text-foreground/75 outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            >
+              {formatDashboardContribution(row.performanceContributionPercent)} ·{" "}
+              {row.viewTopPercentLabel}
+            </AdminDashboardInlineTooltip>
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }
@@ -8677,48 +8724,208 @@ function InlineModulePanel({
   );
 }
 
-const ADMIN_CONSOLE_CANVAS_SKELETON_ROWS = [0, 1, 2, 3, 4] as const;
+type AdminConsoleCanvasSkeletonVariant =
+  | "split-list-detail"
+  | "evaluation-table"
+  | "submission-queue"
+  | "refresh-history"
+  | "banner-editor"
+  | "user-table"
+  | "insights-grid"
+  | "route-map"
+  | "llm-workspace"
+  | "audit-log";
+
+type AdminConsoleCanvasSkeletonModuleId = AdminModuleId | "generic";
+
+type AdminConsoleCanvasSkeletonConfig = {
+  moduleId: AdminConsoleCanvasSkeletonModuleId;
+  title: string;
+  description: string;
+  icon: typeof Store;
+  variant: AdminConsoleCanvasSkeletonVariant;
+};
+
+const ADMIN_CONSOLE_CANVAS_SKELETON_ROWS = [0, 1, 2, 3, 4, 5] as const;
 const ADMIN_CONSOLE_CANVAS_SKELETON_CARDS = [
   "primary",
   "secondary",
   "tertiary",
+  "quaternary",
+] as const;
+const ADMIN_CONSOLE_CANVAS_SKELETON_METRICS = [
+  "metric-a",
+  "metric-b",
+  "metric-c",
+  "metric-d",
+] as const;
+const ADMIN_CONSOLE_CANVAS_SKELETON_TIMELINE = [
+  "queued",
+  "checking",
+  "applying",
+  "readback",
 ] as const;
 
+function getAdminConsoleModuleLoadingSkeleton(
+  moduleId: AdminModuleId,
+  title?: string,
+) {
+  if (moduleId === "overview") {
+    return <AdminDashboardManagementSkeleton />;
+  }
+
+  if (moduleId === "storyboard") {
+    return <AdminStoryboardModuleLoadingSkeleton />;
+  }
+
+  if (moduleId === "youtube-thumbnail-generator") {
+    return <AdminYoutubeThumbnailModuleLoadingSkeleton />;
+  }
+
+  return <AdminConsoleCanvasSkeleton moduleId={moduleId} title={title} />;
+}
+
+function getAdminConsoleCanvasSkeletonConfig({
+  moduleId,
+  title,
+}: {
+  moduleId: AdminConsoleCanvasSkeletonModuleId;
+  title?: string;
+}): AdminConsoleCanvasSkeletonConfig {
+  switch (moduleId) {
+    case "restaurants":
+      return {
+        moduleId,
+        title: title ?? "맛집 관리",
+        description: "검수 테이블과 세부 액션 영역을 뷰포트 안에서 준비합니다.",
+        icon: Store,
+        variant: "evaluation-table",
+      };
+    case "submissions":
+      return {
+        moduleId,
+        title: title ?? "제보 관리",
+        description: "제보·수정 요청 목록과 판정 패널을 함께 준비합니다.",
+        icon: ClipboardList,
+        variant: "submission-queue",
+      };
+    case "reviews":
+      return {
+        moduleId,
+        title: title ?? "리뷰 관리",
+        description: "리뷰 검수 큐와 증빙 확인 패널을 함께 준비합니다.",
+        icon: MessageSquareText,
+        variant: "submission-queue",
+      };
+    case "restaurant-refresh-history":
+      return {
+        moduleId,
+        title: title ?? "맛집 최신화",
+        description: "최신화 후보 목록과 변경 이력 패널을 먼저 배치합니다.",
+        icon: RefreshCw,
+        variant: "refresh-history",
+      };
+    case "banners":
+      return {
+        moduleId,
+        title: title ?? "배너 관리",
+        description: "배너 목록, 미디어 미리보기, 편집 폼을 한 화면에 준비합니다.",
+        icon: ImageIcon,
+        variant: "banner-editor",
+      };
+    case "users":
+      return {
+        moduleId,
+        title: title ?? "사용자 관리",
+        description: "계정 요약 카드와 사용자 표 구조를 먼저 고정합니다.",
+        icon: UsersRound,
+        variant: "user-table",
+      };
+    case "insights":
+      return {
+        moduleId,
+        title: title ?? "핵심 인사이트",
+        description: "지표 카드, 트리맵, 추세 차트를 뷰포트에 맞춰 준비합니다.",
+        icon: BarChart2,
+        variant: "insights-grid",
+      };
+    case "routes":
+      return {
+        moduleId,
+        title: title ?? "맛집 동선 추천",
+        description: "지도, 후보 목록, 동선 준비도 패널을 먼저 배치합니다.",
+        icon: Route,
+        variant: "route-map",
+      };
+    case "llm":
+      return {
+        moduleId,
+        title: title ?? "운영 보조",
+        description: "읽기 전용 요약 카드와 위험 액션 체크리스트를 준비합니다.",
+        icon: Bot,
+        variant: "llm-workspace",
+      };
+    case "audit":
+      return {
+        moduleId,
+        title: title ?? "감사 로그",
+        description: "결정 기록과 상태 재확인 타임라인 구조를 준비합니다.",
+        icon: ScrollText,
+        variant: "audit-log",
+      };
+    default:
+      return {
+        moduleId: "generic",
+        title: title ?? "관리자 작업 화면",
+        description: "사이드바 메뉴 화면의 구조를 먼저 준비합니다.",
+        icon: Store,
+        variant: "split-list-detail",
+      };
+  }
+}
+
 function AdminConsoleCanvasSkeleton({
-  title = "관리자 작업 화면",
+  title,
+  moduleId = "generic",
 }: {
   title?: string;
+  moduleId?: AdminConsoleCanvasSkeletonModuleId;
 } = {}) {
+  const config = getAdminConsoleCanvasSkeletonConfig({ moduleId, title });
+  const HeaderIcon = config.icon;
+
   return (
     <section
       className="flex h-full min-h-[520px] min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-background shadow-sm md:min-h-0"
       data-admin-console-content-loading="true"
       data-admin-sidebar-module-loading="page-shell"
-      data-admin-sidebar-module-loading-title={title}
+      data-admin-sidebar-module-loading-viewport="true"
+      data-admin-sidebar-module-loading-module={config.moduleId}
+      data-admin-sidebar-module-loading-title={config.title}
+      data-admin-sidebar-module-loading-variant={config.variant}
       role="status"
       aria-busy="true"
-      aria-label="관리자 콘솔 작업 화면 로딩 중"
+      aria-label={`${config.title} 화면 로딩 중`}
     >
       <span className="sr-only">
-        {title} 화면의 레이아웃을 먼저 준비하고 내부 데이터를 불러오는 중입니다.
+        {config.title} 화면의 뷰포트 기준 레이아웃을 먼저 준비하고 내부 데이터를
+        불러오는 중입니다.
       </span>
       <header
         className="flex shrink-0 flex-col gap-2 border-b border-border bg-card/95 px-3 py-2 lg:flex-row lg:items-center lg:justify-between"
         data-admin-sidebar-module-loading-header="true"
       >
         <div className="flex min-w-0 items-center gap-2">
-          <Skeleton
-            className="h-9 w-9 shrink-0 rounded-xl motion-reduce:animate-none"
-            aria-hidden="true"
-          />
-          <div className="min-w-0 space-y-1.5">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+            <HeaderIcon className="h-4 w-4" aria-hidden="true" />
+          </span>
+          <div className="min-w-0 space-y-1">
             <p className="truncate text-sm font-bold text-foreground">
-              {title}
+              {config.title}
             </p>
-            <Skeleton
-              className="h-3 w-52 max-w-full rounded-full motion-reduce:animate-none"
-              aria-hidden="true"
-            />
+            <p className="truncate text-xs font-semibold text-muted-foreground">
+              {config.description}
+            </p>
           </div>
         </div>
         <div
@@ -8735,58 +8942,320 @@ function AdminConsoleCanvasSkeleton({
         </div>
       </header>
 
+      <AdminConsoleCanvasSkeletonBody variant={config.variant} />
+    </section>
+  );
+}
+
+function AdminConsoleSkeletonMetricStrip({
+  className,
+}: {
+  className?: string;
+}) {
+  return (
+    <div className={cn("grid shrink-0 gap-2 sm:grid-cols-2 xl:grid-cols-4", className)}>
+      {ADMIN_CONSOLE_CANVAS_SKELETON_METRICS.map((metric) => (
+        <div
+          key={metric}
+          className="min-h-20 rounded-xl border border-border bg-card/95 p-3"
+          aria-hidden="true"
+        >
+          <Skeleton className="h-3 w-20 rounded-full motion-reduce:animate-none" />
+          <Skeleton className="mt-3 h-6 w-24 rounded-full motion-reduce:animate-none" />
+          <Skeleton className="mt-3 h-2 w-full rounded-full motion-reduce:animate-none" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function AdminConsoleSkeletonRows({
+  count = ADMIN_CONSOLE_CANVAS_SKELETON_ROWS.length,
+  withMedia = false,
+}: {
+  count?: number;
+  withMedia?: boolean;
+}) {
+  return (
+    <div className="divide-y divide-border">
+      {ADMIN_CONSOLE_CANVAS_SKELETON_ROWS.slice(0, count).map((row) => (
+        <div
+          key={row}
+          className={cn(
+            "grid items-center gap-2 px-3 py-3",
+            withMedia
+              ? "sm:grid-cols-[56px_minmax(0,1fr)_90px]"
+              : "sm:grid-cols-[minmax(0,1fr)_80px]",
+          )}
+        >
+          {withMedia ? (
+            <Skeleton className="h-10 w-14 rounded-md motion-reduce:animate-none" />
+          ) : null}
+          <div className="min-w-0 space-y-1.5">
+            <Skeleton className="h-4 w-4/5 rounded-full motion-reduce:animate-none" />
+            <Skeleton className="h-3 w-3/5 rounded-full motion-reduce:animate-none" />
+          </div>
+          <Skeleton className="h-7 rounded-lg motion-reduce:animate-none" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function AdminConsoleCanvasSkeletonBody({
+  variant,
+}: {
+  variant: AdminConsoleCanvasSkeletonVariant;
+}) {
+  if (variant === "evaluation-table" || variant === "submission-queue") {
+    return (
       <div
-        className="grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-hidden p-2 lg:grid-cols-[minmax(0,0.95fr)_minmax(360px,1.05fr)]"
+        className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-2"
         data-admin-sidebar-module-loading-grid="true"
+        data-admin-sidebar-module-loading-evaluation="viewport-table"
+      >
+        <AdminConsoleSkeletonMetricStrip className="xl:grid-cols-5" />
+        <section
+          className="min-h-0 flex-1 overflow-hidden rounded-xl border border-border bg-card/95"
+          aria-hidden="true"
+          data-admin-sidebar-module-loading-list="true"
+        >
+          <div className="grid border-b border-border bg-muted/30 px-3 py-2 lg:grid-cols-[40px_minmax(180px,1fr)_repeat(5,78px)_112px]">
+            {ADMIN_CONSOLE_CANVAS_SKELETON_CARDS.map((cell) => (
+              <Skeleton
+                key={cell}
+                className="h-3 w-20 rounded-full motion-reduce:animate-none"
+              />
+            ))}
+          </div>
+          <AdminConsoleSkeletonRows count={6} withMedia />
+        </section>
+      </div>
+    );
+  }
+
+  if (variant === "refresh-history") {
+    return (
+      <div
+        className="grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-hidden p-2 xl:grid-cols-[minmax(320px,0.8fr)_minmax(0,1.2fr)]"
+        data-admin-sidebar-module-loading-grid="true"
+        data-admin-sidebar-module-loading-refresh-history="viewport-split"
       >
         <section
-          className="min-h-[300px] overflow-hidden rounded-xl border border-border bg-card/95 lg:min-h-0"
+          className="min-h-0 overflow-hidden rounded-xl border border-border bg-card/95"
+          aria-hidden="true"
+          data-admin-sidebar-module-loading-list="true"
+        >
+          <div className="border-b border-border bg-muted/30 px-3 py-2">
+            <Skeleton className="h-4 w-32 rounded-full motion-reduce:animate-none" />
+          </div>
+          <AdminConsoleSkeletonRows count={6} />
+        </section>
+        <section
+          className="grid min-h-0 gap-2 overflow-hidden rounded-xl border border-border bg-card/95 p-3 md:grid-cols-2"
+          aria-hidden="true"
+          data-admin-sidebar-module-loading-detail="true"
+        >
+          {ADMIN_CONSOLE_CANVAS_SKELETON_CARDS.map((card) => (
+            <Skeleton
+              key={card}
+              className="h-full min-h-28 rounded-xl motion-reduce:animate-none"
+            />
+          ))}
+        </section>
+      </div>
+    );
+  }
+
+  if (variant === "banner-editor") {
+    return (
+      <div
+        className="grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-hidden p-2 xl:grid-cols-[minmax(280px,0.72fr)_minmax(0,1.28fr)]"
+        data-admin-sidebar-module-loading-grid="true"
+        data-admin-sidebar-module-loading-banners="viewport-editor"
+      >
+        <section
+          className="min-h-0 overflow-hidden rounded-xl border border-border bg-card/95"
           aria-hidden="true"
           data-admin-sidebar-module-loading-list="true"
         >
           <div className="border-b border-border bg-muted/30 px-3 py-2">
             <Skeleton className="h-4 w-28 rounded-full motion-reduce:animate-none" />
           </div>
-          <div className="divide-y divide-border">
-            {ADMIN_CONSOLE_CANVAS_SKELETON_ROWS.map((row) => (
-              <div
-                key={row}
-                className="grid items-center gap-2 px-3 py-3 sm:grid-cols-[minmax(0,1fr)_80px]"
-              >
-                <div className="min-w-0 space-y-1.5">
-                  <Skeleton className="h-4 w-4/5 rounded-full motion-reduce:animate-none" />
-                  <Skeleton className="h-3 w-3/5 rounded-full motion-reduce:animate-none" />
-                </div>
-                <Skeleton className="h-7 rounded-lg motion-reduce:animate-none" />
-              </div>
-            ))}
-          </div>
+          <AdminConsoleSkeletonRows count={5} withMedia />
         </section>
-
         <section
-          className="min-h-[360px] overflow-hidden rounded-xl border border-border bg-card/95 p-3 lg:min-h-0"
+          className="grid min-h-0 gap-2 overflow-hidden rounded-xl border border-border bg-card/95 p-3 lg:grid-cols-[minmax(0,0.95fr)_minmax(300px,0.8fr)]"
           aria-hidden="true"
           data-admin-sidebar-module-loading-detail="true"
         >
-          <div className="mb-3 flex items-start justify-between gap-3">
-            <div className="space-y-1.5">
-              <Skeleton className="h-5 w-36 rounded-full motion-reduce:animate-none" />
-              <Skeleton className="h-3 w-56 max-w-full rounded-full motion-reduce:animate-none" />
-            </div>
-            <Skeleton className="h-8 w-20 rounded-lg motion-reduce:animate-none" />
-          </div>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {ADMIN_CONSOLE_CANVAS_SKELETON_CARDS.map((card) => (
+          <Skeleton className="min-h-48 rounded-2xl motion-reduce:animate-none" />
+          <div className="space-y-2">
+            {ADMIN_CONSOLE_CANVAS_SKELETON_ROWS.slice(0, 5).map((row) => (
               <Skeleton
-                key={card}
-                className="h-24 rounded-xl motion-reduce:animate-none"
+                key={row}
+                className="h-10 rounded-lg motion-reduce:animate-none"
               />
             ))}
-            <Skeleton className="h-32 rounded-xl motion-reduce:animate-none sm:col-span-2" />
           </div>
         </section>
       </div>
-    </section>
+    );
+  }
+
+  if (variant === "user-table") {
+    return (
+      <div
+        className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-2"
+        data-admin-sidebar-module-loading-grid="true"
+        data-admin-sidebar-module-loading-users="viewport-table"
+      >
+        <AdminConsoleSkeletonMetricStrip />
+        <section
+          className="min-h-0 flex-1 overflow-hidden rounded-xl border border-border bg-card/95"
+          aria-hidden="true"
+          data-admin-sidebar-module-loading-list="true"
+        >
+          <div className="grid border-b border-border bg-muted/30 px-3 py-2 md:grid-cols-[minmax(0,1.2fr)_120px_120px_96px]">
+            {ADMIN_CONSOLE_CANVAS_SKELETON_CARDS.map((cell) => (
+              <Skeleton
+                key={cell}
+                className="h-3 w-24 rounded-full motion-reduce:animate-none"
+              />
+            ))}
+          </div>
+          <AdminConsoleSkeletonRows count={6} />
+        </section>
+      </div>
+    );
+  }
+
+  if (variant === "insights-grid") {
+    return (
+      <div
+        className="grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-hidden p-2 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]"
+        data-admin-sidebar-module-loading-grid="true"
+        data-admin-sidebar-module-loading-insights="viewport-charts"
+      >
+        <section
+          className="grid min-h-0 gap-2 overflow-hidden rounded-xl border border-border bg-card/95 p-3"
+          aria-hidden="true"
+          data-admin-sidebar-module-loading-detail="true"
+        >
+          <AdminConsoleSkeletonMetricStrip />
+          <Skeleton className="min-h-72 flex-1 rounded-2xl motion-reduce:animate-none" />
+        </section>
+        <section
+          className="grid min-h-0 gap-2 overflow-hidden rounded-xl border border-border bg-card/95 p-3"
+          aria-hidden="true"
+          data-admin-sidebar-module-loading-list="true"
+        >
+          <Skeleton className="min-h-48 rounded-2xl motion-reduce:animate-none" />
+          <AdminConsoleSkeletonRows count={4} />
+        </section>
+      </div>
+    );
+  }
+
+  if (variant === "route-map") {
+    return (
+      <div
+        className="grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-hidden p-2 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)]"
+        data-admin-sidebar-module-loading-grid="true"
+        data-admin-sidebar-module-loading-routes="viewport-map"
+      >
+        <section
+          className="min-h-0 overflow-hidden rounded-xl border border-border bg-card/95 p-3"
+          aria-hidden="true"
+          data-admin-sidebar-module-loading-detail="true"
+        >
+          <Skeleton className="h-full min-h-96 rounded-2xl motion-reduce:animate-none" />
+        </section>
+        <section
+          className="min-h-0 overflow-hidden rounded-xl border border-border bg-card/95"
+          aria-hidden="true"
+          data-admin-sidebar-module-loading-list="true"
+        >
+          <div className="border-b border-border bg-muted/30 px-3 py-2">
+            <Skeleton className="h-4 w-36 rounded-full motion-reduce:animate-none" />
+          </div>
+          <AdminConsoleSkeletonRows count={6} />
+        </section>
+      </div>
+    );
+  }
+
+  if (variant === "llm-workspace" || variant === "audit-log") {
+    return (
+      <div
+        className="grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-hidden p-2 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.8fr)]"
+        data-admin-sidebar-module-loading-grid="true"
+        data-admin-sidebar-module-loading-ops="viewport-cards"
+      >
+        <section
+          className="grid min-h-0 gap-2 overflow-hidden rounded-xl border border-border bg-card/95 p-3"
+          aria-hidden="true"
+          data-admin-sidebar-module-loading-list="true"
+        >
+          {ADMIN_CONSOLE_CANVAS_SKELETON_TIMELINE.map((item) => (
+            <div key={item} className="rounded-xl border border-border/70 p-3">
+              <Skeleton className="h-4 w-32 rounded-full motion-reduce:animate-none" />
+              <Skeleton className="mt-3 h-3 w-full rounded-full motion-reduce:animate-none" />
+              <Skeleton className="mt-2 h-3 w-4/5 rounded-full motion-reduce:animate-none" />
+            </div>
+          ))}
+        </section>
+        <section
+          className="grid min-h-0 gap-2 overflow-hidden rounded-xl border border-border bg-card/95 p-3"
+          aria-hidden="true"
+          data-admin-sidebar-module-loading-detail="true"
+        >
+          <Skeleton className="min-h-32 rounded-2xl motion-reduce:animate-none" />
+          <Skeleton className="min-h-32 rounded-2xl motion-reduce:animate-none" />
+        </section>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-hidden p-2 lg:grid-cols-[minmax(0,0.95fr)_minmax(360px,1.05fr)]"
+      data-admin-sidebar-module-loading-grid="true"
+    >
+      <section
+        className="min-h-[300px] overflow-hidden rounded-xl border border-border bg-card/95 lg:min-h-0"
+        aria-hidden="true"
+        data-admin-sidebar-module-loading-list="true"
+      >
+        <div className="border-b border-border bg-muted/30 px-3 py-2">
+          <Skeleton className="h-4 w-28 rounded-full motion-reduce:animate-none" />
+        </div>
+        <AdminConsoleSkeletonRows count={5} />
+      </section>
+
+      <section
+        className="min-h-[360px] overflow-hidden rounded-xl border border-border bg-card/95 p-3 lg:min-h-0"
+        aria-hidden="true"
+        data-admin-sidebar-module-loading-detail="true"
+      >
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div className="space-y-1.5">
+            <Skeleton className="h-5 w-36 rounded-full motion-reduce:animate-none" />
+            <Skeleton className="h-3 w-56 max-w-full rounded-full motion-reduce:animate-none" />
+          </div>
+          <Skeleton className="h-8 w-20 rounded-lg motion-reduce:animate-none" />
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {ADMIN_CONSOLE_CANVAS_SKELETON_CARDS.map((card) => (
+            <Skeleton
+              key={card}
+              className="h-24 rounded-xl motion-reduce:animate-none"
+            />
+          ))}
+          <Skeleton className="h-32 rounded-xl motion-reduce:animate-none sm:col-span-2" />
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -8981,7 +9450,7 @@ function AdminYoutubeThumbnailModuleLoadingSkeleton() {
         aria-hidden="true"
         data-thumbnail-module-loading-page-shimmer="true"
       />
-      <div className="relative z-10 grid h-full min-h-0 grid-cols-1 grid-rows-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-3 overflow-hidden xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] xl:grid-rows-1">
+      <div className="relative z-10 grid h-full min-h-0 grid-cols-1 grid-rows-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-3 overflow-hidden lg:grid-cols-[minmax(0,1fr)_minmax(320px,400px)] lg:grid-rows-1 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]">
         <Card
           className="relative order-2 flex min-h-0 flex-col overflow-hidden border border-border/70 bg-background/86 shadow-none"
           aria-label="유튜브 썸네일 도우미 준비 영역"
@@ -9556,7 +10025,7 @@ export function AdminConsoleOverview({
             ) : activeModuleId === "storyboard" ? (
               <AdminStoryboardModuleLoadingSkeleton />
             ) : (
-              <AdminConsoleCanvasSkeleton title={activeModuleLabel} />
+              <AdminConsoleCanvasSkeleton moduleId={activeModuleId} title={activeModuleLabel} />
             )
           ) : activeModuleId === "overview" ? (
             <AdminDashboardManagementPanel
