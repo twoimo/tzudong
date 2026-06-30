@@ -4,6 +4,7 @@ import { isIP } from 'node:net';
 import type {
   ThumbnailBriefPreset,
   ThumbnailChatAgentRequest,
+  ThumbnailChatConversationMessage,
   ThumbnailGeneratorPayload,
   ThumbnailGenerationMode,
   ThumbnailReferenceImage,
@@ -166,14 +167,14 @@ function isThumbnailChatReadbackMessage(message: { role: 'user' | 'assistant'; c
 function parseThumbnailChatConversationMessages(value: unknown): ThumbnailChatAgentRequest['conversationMessages'] {
   if (!Array.isArray(value)) return [];
   return value
-    .flatMap((item): NonNullable<ThumbnailChatAgentRequest['conversationMessages']> => {
+    .flatMap((item): ThumbnailChatConversationMessage[] => {
       if (!isRecord(item)) return [];
       const role = item.role === 'user' || item.role === 'assistant' ? item.role : null;
       const content = toStringValue(item.content, THUMBNAIL_CHAT_CONVERSATION_CONTENT_MAX_LENGTH);
       if (!role || !content) return [];
       const id = toStringValue(item.id, THUMBNAIL_CHAT_CONVERSATION_ID_MAX_LENGTH);
       const createdAt = toStringValue(item.createdAt, 80);
-      const message = {
+      const message: ThumbnailChatConversationMessage = {
         role,
         content,
         ...(id ? { id } : {}),

@@ -97,8 +97,10 @@ import { cn } from "@/lib/utils";
 import type { DashboardSummaryResponse } from "@/types/dashboard";
 import type {
   InsightTreemapPeriod,
+  InsightTreemapDataQualityReason,
   InsightTreemapResponse,
   InsightTreemapVideoRow,
+  InsightTreemapQualityFlag,
 } from "@/lib/public-insights/treemap";
 import type { StoryboardInitialResult } from "@/lib/admin/storyboard/initial-result";
 import {
@@ -737,6 +739,7 @@ type AdminYouTubeChannelStats = {
   viewDelta?: number | null;
   videoDelta?: number | null;
   comparisonFetchedAt?: string | null;
+  qualityFlags?: InsightTreemapQualityFlag[];
   deltaSource?:
     | "snapshot-delta"
     | "derived-live-comparison"
@@ -869,6 +872,12 @@ type AdminDashboardPdfReportData = {
   basisLabel: string;
   summaryLabel: string;
   contributionFormula: string;
+  dataConfidence: {
+    statusLabel: string;
+    summaryLabel: string;
+    lines: string[];
+    anomalyLabels: string[];
+  };
   metrics: AdminDashboardPdfReportMetric[];
   topContents: AdminDashboardPdfReportContentRow[];
   insights: AdminDashboardPdfReportInsightRow[];
@@ -949,6 +958,19 @@ function buildAdminDashboardPdfReportHtml(report: AdminDashboardPdfReportData) {
         )
         .join("")
     : `<p class="empty">표시할 성과 진단이 없습니다.</p>`;
+  const dataConfidenceRows = report.dataConfidence.lines.length
+    ? report.dataConfidence.lines
+        .map(
+          (line) => `
+            <li>${escapeAdminDashboardReportHtml(line)}</li>`,
+        )
+        .join("")
+    : `<li>이상치·폴백·정규화 경고 없이 KPI를 표시했습니다.</li>`;
+  const anomalyLabels = report.dataConfidence.anomalyLabels.length
+    ? report.dataConfidence.anomalyLabels
+        .map((label) => `<span class="chip">${escapeAdminDashboardReportHtml(label)}</span>`)
+        .join("")
+    : `<span class="chip">이상치 없음</span>`;
 
   return `<!doctype html>
 <html lang="ko">
@@ -970,6 +992,11 @@ function buildAdminDashboardPdfReportHtml(report: AdminDashboardPdfReportData) {
     .brand { display: flex; align-items: center; gap: 12px; }
     .brand img { width: 42px; height: 42px; border-radius: 14px; object-fit: contain; border: 1px solid #e4ddd2; background: #fff; }
     .summary { margin: 18px 0; padding: 12px 14px; border: 1px solid #ded7cd; border-radius: 16px; background: #faf7f1; color: #5b5148; font-size: 13px; }
+    .data-confidence { margin: 14px 0 6px; padding: 12px 14px; border: 1px solid #d8d0c4; border-radius: 16px; background: #fff8e8; color: #4f463d; font-size: 12px; break-inside: avoid; }
+    .data-confidence strong { display: block; color: #211b16; font-size: 14px; }
+    .data-confidence ul { margin: 8px 0 0; padding-left: 18px; }
+    .data-confidence li { margin: 3px 0; }
+    .data-confidence .chip { margin-right: 4px; }
     .metrics { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin: 18px 0; }
     .metric-card, .insight-card { border: 1px solid #e4ddd2; border-radius: 16px; background: white; padding: 12px; break-inside: avoid; }
     .metric-label { margin: 0 0 8px; font-size: 11px; color: #766b60; font-weight: 800; }
@@ -1018,6 +1045,12 @@ function buildAdminDashboardPdfReportHtml(report: AdminDashboardPdfReportData) {
         <span>${escapeAdminDashboardReportHtml(report.basisLabel)}</span>
       </div>
     </header>
+    <section class="data-confidence" aria-label="데이터 신뢰도와 이상치">
+      <strong>${escapeAdminDashboardReportHtml(report.dataConfidence.statusLabel)}</strong>
+      <span>${escapeAdminDashboardReportHtml(report.dataConfidence.summaryLabel)}</span>
+      <div>${anomalyLabels}</div>
+      <ul>${dataConfidenceRows}</ul>
+    </section>
     <section class="metrics" aria-label="핵심 KPI">${metricCards}</section>
     <section class="section">
       <h2>콘텐츠 성과 TOP 5</h2>
@@ -1221,8 +1254,44 @@ type AdminDashboardBarRow = {
   viewBenchmark: string;
   viewBenchmarkTooltip: string;
   viewBenchmarkTooltipLines: string[];
+  qualityBadges: AdminDashboardDataQualityBadge[];
   meta: string;
 };
+type AdminDashboardDataConfidenceStatus = "ok" | "watch" | "risk";
+
+type AdminDashboardDataQualityBadge = {
+  label: string;
+  description: string;
+  severity: "info" | "warning" | "risk";
+};
+
+const ADMIN_DASHBOARD_DATA_QUALITY_REASON_LABELS = {
+  clamped_metric: "정규화",
+  negative_delta: "감소 신호",
+  extreme_spike: "급등",
+  dominates_total: "단일 지배",
+  missing_previous: "이전값 없음",
+  low_comparison_coverage: "커버리지 낮음",
+  stale_snapshot: "스냅샷 지연",
+  fallback_source: "폴백",
+  live_no_comparison: "실시간 비교 없음",
+  row_cap: "행 제한",
+  delta_conflict: "증감 충돌",
+} satisfies Record<InsightTreemapDataQualityReason, string>;
+
+const ADMIN_DASHBOARD_DATA_QUALITY_REASON_DESCRIPTIONS = {
+  clamped_metric: "원천 값이 음수·비정상이라 0 이상 숫자로 정규화된 지표가 있습니다.",
+  negative_delta: "현재값이 이전 스냅샷보다 낮아 기간 증가량 해석에 주의가 필요합니다.",
+  extreme_spike: "중앙값 대비 과도하게 큰 영상이 있어 전체 흐름을 왜곡할 수 있습니다.",
+  dominates_total: "단일 영상이 전체 합계 대부분을 차지해 평균·합계 해석을 지배합니다.",
+  missing_previous: "비교 대상 스냅샷이 없어 기간 증감 대신 현재값 또는 신규 처리로 보입니다.",
+  low_comparison_coverage: "이전값을 가진 영상 비율이 낮아 기간 비교 신뢰도가 제한됩니다.",
+  stale_snapshot: "최신 KPI 스냅샷 시각이 오래되어 현재 상태와 차이가 날 수 있습니다.",
+  fallback_source: "관리자 KPI API가 보조 데이터 경로로 응답했습니다.",
+  live_no_comparison: "실시간 YouTube API 응답이라 이전 스냅샷 비교가 없습니다.",
+  row_cap: "응답 행 제한에 도달해 일부 영상이 요약에서 빠졌을 수 있습니다.",
+  delta_conflict: "저장 delta와 재계산 delta가 달라 원천 확인이 필요합니다.",
+} satisfies Record<InsightTreemapDataQualityReason, string>;
 
 const ADMIN_DASHBOARD_PERIOD_OPTIONS: Array<{
   value: AdminDashboardPeriod;
@@ -1445,6 +1514,129 @@ function getAdminDashboardCoverageLabel(
 ) {
   if (!coverage || !coverage.comparisonAvailable) return "비교 대기";
   return `비교 ${formatNumber(coverage.comparedVideos)}/${formatNumber(coverage.totalVideos)}`;
+}
+function getAdminDashboardQualityReasonLabel(
+  reason: InsightTreemapDataQualityReason,
+) {
+  return ADMIN_DASHBOARD_DATA_QUALITY_REASON_LABELS[reason] ?? reason;
+}
+
+function getAdminDashboardQualityReasonDescription(
+  reason: InsightTreemapDataQualityReason,
+) {
+  return ADMIN_DASHBOARD_DATA_QUALITY_REASON_DESCRIPTIONS[reason] ?? reason;
+}
+
+function getAdminDashboardQualityBadge(
+  flag: InsightTreemapQualityFlag,
+): AdminDashboardDataQualityBadge {
+  const label = getAdminDashboardQualityReasonLabel(flag.reason);
+  const metricLabel = flag.metric ? ` · ${flag.metric}` : "";
+  const countLabel =
+    typeof flag.count === "number" && Number.isFinite(flag.count)
+      ? ` · ${formatNumber(flag.count)}건`
+      : "";
+  return {
+    label,
+    description: `${label}${metricLabel}${countLabel}: ${getAdminDashboardQualityReasonDescription(flag.reason)}`,
+    severity: flag.severity,
+  };
+}
+
+function getAdminDashboardQualityFlagLine(flag: InsightTreemapQualityFlag) {
+  const badge = getAdminDashboardQualityBadge(flag);
+  return badge.description;
+}
+
+function isAdminDashboardAnomalyReason(reason: InsightTreemapDataQualityReason) {
+  return reason === "extreme_spike" || reason === "dominates_total";
+}
+
+function getAdminDashboardVideoQualityBadges(video: InsightTreemapVideoRow) {
+  return [...(video.anomalyFlags ?? []), ...(video.qualityFlags ?? [])]
+    .slice(0, 3)
+    .map(getAdminDashboardQualityBadge);
+}
+
+function getAdminDashboardDataQualityFlags(
+  ...responses: Array<InsightTreemapResponse | undefined>
+) {
+  const flags = responses.flatMap((response) => {
+    const meta = response?.meta;
+    const metaFlags: InsightTreemapQualityFlag[] = [];
+    if (meta?.fallbackReasonCode || meta?.fallbackSource) {
+      metaFlags.push({
+        reason: "fallback_source",
+        severity: "warning",
+        source: meta.dataSource,
+      });
+    }
+    if (
+      meta?.comparisonCoverage &&
+      meta.comparisonCoverage.comparisonAvailable === false &&
+      meta.dataSource === "youtube-live"
+    ) {
+      metaFlags.push({
+        reason: "live_no_comparison",
+        severity: "warning",
+        source: meta.dataSource,
+      });
+    }
+
+    return [
+      ...(meta?.dataQuality?.flags ?? []),
+      ...metaFlags,
+      ...((response?.videos ?? []).flatMap((video) => [
+        ...(video.anomalyFlags ?? []),
+        ...(video.qualityFlags ?? []),
+      ])),
+    ];
+  });
+  const seen = new Set<string>();
+  return flags.filter((flag) => {
+    const key = [
+      flag.reason,
+      flag.severity,
+      flag.metric ?? "",
+      flag.source ?? "",
+      flag.videoId ?? "",
+      flag.value ?? "",
+      flag.threshold ?? "",
+      flag.count ?? "",
+    ].join(":");
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function getAdminDashboardDataConfidenceStatus(
+  flags: InsightTreemapQualityFlag[],
+): AdminDashboardDataConfidenceStatus {
+  if (flags.some((flag) => flag.severity === "risk")) return "risk";
+  if (flags.some((flag) => flag.severity === "warning")) return "watch";
+  return "ok";
+}
+
+function getAdminDashboardDataConfidenceLabel(
+  status: AdminDashboardDataConfidenceStatus,
+) {
+  if (status === "risk") return "데이터 신뢰도: 위험";
+  if (status === "watch") return "데이터 신뢰도: 주의";
+  return "데이터 신뢰도: 정상";
+}
+
+function getAdminDashboardDataConfidenceDescription(
+  status: AdminDashboardDataConfidenceStatus,
+  flags: InsightTreemapQualityFlag[],
+) {
+  const riskCount = flags.filter((flag) => flag.severity === "risk").length;
+  const warningCount = flags.filter((flag) => flag.severity === "warning").length;
+  const anomalyCount = flags.filter((flag) =>
+    isAdminDashboardAnomalyReason(flag.reason),
+  ).length;
+  if (status === "ok") return "이상치·폴백·정규화 경고 없이 표시 중입니다.";
+  return `위험 ${formatNumber(riskCount)}건 · 주의 ${formatNumber(warningCount)}건 · 이상치 ${formatNumber(anomalyCount)}건`;
 }
 
 function getAdminDashboardDeltaSourceLabel(
@@ -1712,6 +1904,53 @@ function calculateDashboardUploadCountChange(
 
   return calculateDashboardChange(currentCount, previousCount);
 }
+function buildAdminDashboardFallbackInsightMeta(
+  payload: InsightTreemapResponse,
+  fallbackReasonCode: string,
+): NonNullable<InsightTreemapResponse["meta"]> {
+  const fallbackSource = "public-insights-treemap";
+  const dataSource = "public-treemap-fallback" as const;
+  const fallbackFlag: InsightTreemapQualityFlag = {
+    reason: "fallback_source",
+    severity: "warning",
+    source: dataSource,
+  };
+  const dataQuality = payload.meta?.dataQuality;
+  const nextFlags = [...(dataQuality?.flags ?? []), fallbackFlag];
+  const existingFallbackCount =
+    dataQuality?.reasonCounts.find((item) => item.reason === "fallback_source")
+      ?.count ?? 0;
+  const nextReasonCounts = dataQuality
+    ? [
+        ...dataQuality.reasonCounts.filter(
+          (item) => item.reason !== "fallback_source",
+        ),
+        {
+          reason: "fallback_source" as const,
+          severity: "warning" as const,
+          count: existingFallbackCount + 1,
+        },
+      ]
+    : [];
+
+  return {
+    ...payload.meta,
+    dataSource,
+    fallbackSource,
+    fallbackReasonCode,
+    ...(dataQuality
+      ? {
+          dataQuality: {
+            ...dataQuality,
+            status: getAdminDashboardDataConfidenceStatus(nextFlags),
+            flags: nextFlags,
+            reasonCounts: nextReasonCounts,
+          },
+        }
+      : {}),
+  };
+}
+
 
 async function fetchAdminDashboardInsightSummary(
   period: AdminDashboardPeriod,
@@ -1754,12 +1993,10 @@ async function fetchAdminDashboardInsightSummary(
 
   return {
     ...fallbackPayload,
-    meta: {
-      ...fallbackPayload.meta,
-      dataSource: "public-treemap-fallback",
-      fallbackSource: "public-insights-treemap",
-      fallbackReasonCode: `admin-youtube-kpis-${liveResponse.status}`,
-    },
+    meta: buildAdminDashboardFallbackInsightMeta(
+      fallbackPayload,
+      `admin-youtube-kpis-${liveResponse.status}`,
+    ),
   };
 }
 
@@ -2019,6 +2256,7 @@ function buildAdminDashboardBarRows(
       viewBenchmark,
       viewBenchmarkTooltip,
       viewBenchmarkTooltipLines,
+      qualityBadges: getAdminDashboardVideoQualityBadges(row.video),
       meta: `조회${metricPrefix} ${formatCompactNumber(row.viewCount)} · ${viewBenchmark} · ${viewMedianMultipleLabel} · 좋아요${metricPrefix} ${formatCompactNumber(
         row.likeCount,
       )} · 댓글${metricPrefix} ${formatCompactNumber(row.commentCount)}`,
@@ -2164,6 +2402,7 @@ type AdminDashboardContentInsight = {
   tone: "primary" | "warning" | "risk";
   score: number;
   scoreLabel: string;
+  qualityBadges: AdminDashboardDataQualityBadge[];
 };
 
 function getDashboardInsightSignalScore(value: number, average: number) {
@@ -2351,6 +2590,7 @@ function buildAdminDashboardContentInsights(
       tone: "primary",
       score: Math.max(8, Math.min(100, strongestContributionScore * 2)),
       scoreLabel: `${scoreLabel} · 평균 참고 ${averageComparison}`,
+      qualityBadges: getAdminDashboardVideoQualityBadges(strongestContribution.video),
     });
   }
 
@@ -2370,6 +2610,7 @@ function buildAdminDashboardContentInsights(
         engagementRateAverage,
       ),
       scoreLabel,
+      qualityBadges: getAdminDashboardVideoQualityBadges(strongestEngagement.video),
     });
   }
 
@@ -2389,6 +2630,7 @@ function buildAdminDashboardContentInsights(
         dailyViewAverage,
       ),
       scoreLabel,
+      qualityBadges: getAdminDashboardVideoQualityBadges(recentUnderperformer.video),
     });
   }
 
@@ -2410,6 +2652,7 @@ function buildAdminDashboardContentInsights(
         viewAverage,
       ),
       scoreLabel,
+      qualityBadges: getAdminDashboardVideoQualityBadges(reboundCandidate.video),
     });
   }
 
@@ -2427,6 +2670,7 @@ function buildAdminDashboardContentInsights(
       tone: "primary",
       score: Math.max(8, Math.min(100, strongestContributionScore)),
       scoreLabel: `구독자 ${formatSignedNumber(subscriberDelta)}`,
+      qualityBadges: getAdminDashboardVideoQualityBadges(strongestContribution.video),
     });
   }
 
@@ -2456,6 +2700,7 @@ function buildAdminDashboardContentInsights(
         dailyViewAverage,
       ),
       scoreLabel,
+      qualityBadges: getAdminDashboardVideoQualityBadges(newestCandidate.video),
     });
   }
 
@@ -3702,6 +3947,101 @@ function AdminDashboardCardTitle({
     </div>
   );
 }
+function AdminDashboardQualityBadges({
+  badges,
+  maxVisible = 2,
+}: {
+  badges?: AdminDashboardDataQualityBadge[];
+  maxVisible?: number;
+}) {
+  const visibleBadges = (badges ?? []).slice(0, maxVisible);
+  if (visibleBadges.length === 0) return null;
+
+  const toneClass = {
+    info: "border-muted-foreground/20 bg-muted/35 text-muted-foreground",
+    warning: "border-amber-500/30 bg-amber-50 text-amber-800 dark:bg-amber-950/25 dark:text-amber-200",
+    risk: "border-rose-500/30 bg-rose-50 text-rose-800 dark:bg-rose-950/25 dark:text-rose-200",
+  } satisfies Record<AdminDashboardDataQualityBadge["severity"], string>;
+
+  return (
+    <span
+      className="ml-1 inline-flex max-w-full flex-wrap items-center gap-1 align-middle"
+      data-admin-dashboard-anomaly-badges="true"
+    >
+      {visibleBadges.map((badge, index) => (
+        <AdminDashboardInlineTooltip
+          key={`${badge.label}-${badge.description}-${index}`}
+          label={`${badge.label} 데이터 신호`}
+          lines={[badge.description]}
+          className={cn(
+            "inline-flex max-w-[7rem] items-center rounded-full border px-1.5 py-0.5 text-[10px] font-black leading-none outline-none focus-visible:ring-2 focus-visible:ring-primary",
+            toneClass[badge.severity],
+          )}
+        >
+          <span className="truncate">{badge.label}</span>
+        </AdminDashboardInlineTooltip>
+      ))}
+    </span>
+  );
+}
+
+function AdminDashboardDataConfidenceRail({
+  status,
+  summaryLabel,
+  flags,
+  anomalyFlags,
+  isLoading,
+}: {
+  status: AdminDashboardDataConfidenceStatus;
+  summaryLabel: string;
+  flags: InsightTreemapQualityFlag[];
+  anomalyFlags: InsightTreemapQualityFlag[];
+  isLoading: boolean;
+}) {
+  const statusTone = {
+    ok: "border-teal-500/25 bg-teal-50/70 text-teal-800 dark:bg-teal-950/25 dark:text-teal-200",
+    watch: "border-amber-500/30 bg-amber-50/80 text-amber-800 dark:bg-amber-950/25 dark:text-amber-200",
+    risk: "border-rose-500/30 bg-rose-50/80 text-rose-800 dark:bg-rose-950/25 dark:text-rose-200",
+  } satisfies Record<AdminDashboardDataConfidenceStatus, string>;
+  const flagLines = flags.slice(0, 6).map(getAdminDashboardQualityFlagLine);
+  const anomalyBadges = anomalyFlags.slice(0, 4).map(getAdminDashboardQualityBadge);
+
+  return (
+    <section
+      className={cn(
+        "mb-2 grid shrink-0 gap-2 rounded-2xl border px-3 py-2 text-xs sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center",
+        statusTone[status],
+      )}
+      data-admin-dashboard-data-confidence="true"
+      data-admin-dashboard-data-confidence-status={status}
+      aria-label="KPI 데이터 신뢰도와 이상치 경고"
+    >
+      <div className="min-w-0">
+        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+          <strong className="font-black">{getAdminDashboardDataConfidenceLabel(status)}</strong>
+          <span className="font-semibold text-current/75">{summaryLabel}</span>
+        </div>
+        <p className="mt-1 truncate font-semibold text-current/75">
+          {isLoading
+            ? "KPI 데이터 신뢰도를 계산하는 중입니다."
+            : flagLines[0] ?? "이상치·폴백·정규화 경고 없이 KPI를 표시합니다."}
+        </p>
+      </div>
+      <div className="flex min-w-0 flex-wrap items-center gap-1.5 sm:justify-end">
+        <AdminDashboardQualityBadges badges={anomalyBadges} maxVisible={4} />
+        {flagLines.length > 1 ? (
+          <AdminDashboardInlineTooltip
+            label="KPI 데이터 신뢰도 상세"
+            lines={flagLines}
+            className="inline-flex rounded-full border border-current/20 px-2 py-1 text-[11px] font-black outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            상세 {formatNumber(flagLines.length)}건
+          </AdminDashboardInlineTooltip>
+        ) : null}
+      </div>
+    </section>
+  );
+}
 
 function AdminDashboardKpiCard({
   widgetId,
@@ -4739,6 +5079,7 @@ function AdminDashboardContentInsightStrip({
           `${insight.label}: ${insight.title}`,
           insight.description,
           `신호 강도: ${insight.scoreLabel}`,
+          ...insight.qualityBadges.map((badge) => badge.description),
         ];
 
         return (
@@ -4760,9 +5101,12 @@ function AdminDashboardContentInsightStrip({
                   <p className="truncate text-[10px] font-black leading-none opacity-75">
                     {insight.label}
                   </p>
-                  <p className="mt-1 truncate text-[11px] font-extrabold leading-none">
-                    {insight.title}
-                  </p>
+                  <div className="mt-1 inline-flex max-w-full items-center gap-1">
+                    <p className="truncate text-[11px] font-extrabold leading-none">
+                      {insight.title}
+                    </p>
+                    <AdminDashboardQualityBadges badges={insight.qualityBadges} />
+                  </div>
                   <p className="mt-1 truncate text-[10px] font-bold leading-none opacity-85">
                     {insight.description}
                   </p>
@@ -4842,6 +5186,7 @@ function AdminDashboardDiagnosisBoard({
             `${insight.label}: ${insight.title}`,
             insight.description,
             `신호 강도: ${insight.scoreLabel}`,
+            ...insight.qualityBadges.map((badge) => badge.description),
             "계산식: 신호 강도 = 카드별 규칙 점수를 0~100으로 표시합니다.",
           ];
 
@@ -4867,14 +5212,17 @@ function AdminDashboardDiagnosisBoard({
                     </span>
                   </div>
                   <UiTooltipTrigger asChild>
-                    <p
+                    <div
                       tabIndex={0}
-                      className="mt-1.5 truncate rounded-sm text-sm font-extrabold text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                      className="mt-1.5 inline-flex max-w-full items-center gap-1 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-primary"
                       aria-label={tooltipLines.join(" ")}
                       data-admin-dashboard-diagnosis-tooltip-trigger="title"
                     >
-                      {insight.title}
-                    </p>
+                      <p className="truncate text-sm font-extrabold text-foreground">
+                        {insight.title}
+                      </p>
+                      <AdminDashboardQualityBadges badges={insight.qualityBadges} />
+                    </div>
                   </UiTooltipTrigger>
                   <p className="mt-1 truncate text-[11px] font-semibold text-muted-foreground">
                     {insight.description}
@@ -5994,6 +6342,45 @@ function AdminDashboardManagementPanel({
     () => growthInsightQuery.data?.videos ?? [],
     [growthInsightQuery.data?.videos],
   );
+  const dashboardDataQualityFlags = useMemo(
+    () => [
+      ...getAdminDashboardDataQualityFlags(insightQuery.data, growthInsightQuery.data),
+      ...(youtubeChannelQuery.data?.qualityFlags ?? []),
+    ],
+    [
+      growthInsightQuery.data,
+      insightQuery.data,
+      youtubeChannelQuery.data?.qualityFlags,
+    ],
+  );
+  const dashboardAnomalyFlags = useMemo(
+    () =>
+      dashboardDataQualityFlags.filter((flag) =>
+        isAdminDashboardAnomalyReason(flag.reason),
+      ),
+    [dashboardDataQualityFlags],
+  );
+  const dashboardDataConfidenceStatus = useMemo(
+    () => getAdminDashboardDataConfidenceStatus(dashboardDataQualityFlags),
+    [dashboardDataQualityFlags],
+  );
+  const dashboardDataConfidenceSummaryLabel =
+    getAdminDashboardDataConfidenceDescription(
+      dashboardDataConfidenceStatus,
+      dashboardDataQualityFlags,
+    );
+  const dashboardDataQualityTooltipLines = useMemo(
+    () =>
+      dashboardDataQualityFlags.length > 0
+        ? [
+            `데이터 신뢰도: ${getAdminDashboardDataConfidenceLabel(dashboardDataConfidenceStatus)}.`,
+            ...dashboardDataQualityFlags
+              .slice(0, 4)
+              .map(getAdminDashboardQualityFlagLine),
+          ]
+        : ["데이터 신뢰도: 이상치·폴백·정규화 경고 없이 표시 중입니다."],
+    [dashboardDataConfidenceStatus, dashboardDataQualityFlags],
+  );
   const videosByPublishedAt = useMemo(
     () =>
       [...videos].sort((a, b) => {
@@ -6399,6 +6786,7 @@ function AdminDashboardManagementPanel({
       videosByInsightScore.map((video) => ({
         id: video.id,
         title: video.title,
+        qualityBadges: getAdminDashboardVideoQualityBadges(video),
         views: hasPeriodGrowthComparison
           ? getNonNegativeMetricDelta(getVideoViewDelta(video))
           : video.viewCount,
@@ -6428,6 +6816,7 @@ function AdminDashboardManagementPanel({
 
         return {
           label: formatDashboardDateLabel(video.publishedAt),
+          qualityBadges: getAdminDashboardVideoQualityBadges(video),
           views,
           engagement,
           engagementRate: getDashboardRatio(engagement, views),
@@ -6439,6 +6828,7 @@ function AdminDashboardManagementPanel({
     () =>
       barRows.map((row) => ({
         title: row.label,
+        qualityBadges: row.qualityBadges,
         views: row.viewCount,
         likes: row.likeCount,
         comments: row.commentCount,
@@ -6502,7 +6892,12 @@ function AdminDashboardManagementPanel({
       {
         key: "label",
         header: "게시일",
-        cell: (row) => row.label,
+        cell: (row) => (
+          <span className="inline-flex max-w-full items-center gap-1">
+            <span className="truncate">{row.label}</span>
+            <AdminDashboardQualityBadges badges={row.qualityBadges} />
+          </span>
+        ),
       },
     ];
 
@@ -6550,8 +6945,9 @@ function AdminDashboardManagementPanel({
         header: "영상 제목",
         className: "w-[34%] max-w-0",
         cell: (row) => (
-          <span className="block truncate font-bold" title={row.title}>
-            {row.title}
+          <span className="inline-flex max-w-full items-center gap-1" title={row.title}>
+            <span className="block truncate font-bold">{row.title}</span>
+            <AdminDashboardQualityBadges badges={row.qualityBadges} />
           </span>
         ),
       },
@@ -6642,6 +7038,7 @@ function AdminDashboardManagementPanel({
         id: `${insight.label}-${insight.title}-${index}`,
         signal: insight.label,
         title: insight.title,
+        qualityBadges: insight.qualityBadges,
         description: insight.description,
       })),
     [topContentInsights],
@@ -6713,6 +7110,14 @@ function AdminDashboardManagementPanel({
       basisLabel: dashboardViewMetricLabel,
       summaryLabel: `${selectedPeriodLabel} 기준 핵심 KPI, 상위 콘텐츠, 성과 진단을 한 페이지 보고서로 정리했습니다.`,
       contributionFormula: topContentContributionFormula,
+      dataConfidence: {
+        statusLabel: getAdminDashboardDataConfidenceLabel(dashboardDataConfidenceStatus),
+        summaryLabel: dashboardDataConfidenceSummaryLabel,
+        lines: dashboardDataQualityTooltipLines,
+        anomalyLabels: dashboardAnomalyFlags
+          .slice(0, 4)
+          .map((flag) => getAdminDashboardQualityReasonLabel(flag.reason)),
+      },
       metrics: metricInputs.map((metric) => ({
         label: metric.label,
         value: metric.value,
@@ -6749,6 +7154,10 @@ function AdminDashboardManagementPanel({
     cumulativeCommentValue,
     cumulativeLikeValue,
     cumulativeViewValue,
+    dashboardAnomalyFlags,
+    dashboardDataConfidenceStatus,
+    dashboardDataConfidenceSummaryLabel,
+    dashboardDataQualityTooltipLines,
     dashboardViewMetricLabel,
     isChartLoading,
     likeCardTitle,
@@ -6877,6 +7286,13 @@ function AdminDashboardManagementPanel({
           {dashboardOrderMessage}
         </p>
       ) : null}
+      <AdminDashboardDataConfidenceRail
+        status={dashboardDataConfidenceStatus}
+        summaryLabel={dashboardDataConfidenceSummaryLabel}
+        flags={dashboardDataQualityFlags}
+        anomalyFlags={dashboardAnomalyFlags}
+        isLoading={isChartLoading}
+      />
 
 
       {fullscreenWidgetId ? (
@@ -6919,6 +7335,7 @@ function AdminDashboardManagementPanel({
             "계산식: 기간 구독자 증가 = API가 제공한 delta를 우선 사용하고, 없을 때만 현재 구독자 - 이전 구독자로 계산합니다.",
             `참고: 채널 delta 원천은 ${getAdminDashboardDeltaSourceLabel(channelStats?.deltaSource)}입니다.`,
             "주의: 제목 옆 변화율은 이전 스냅샷 대비 증가 또는 감소 비율입니다.",
+            ...dashboardDataQualityTooltipLines,
           ]}
         />
         <AdminDashboardKpiCard
@@ -6947,6 +7364,7 @@ function AdminDashboardManagementPanel({
             `비교 커버리지: ${getAdminDashboardCoverageLabel(insightQuery.data?.meta?.comparisonCoverage)}.`,
             "참고: 제목 옆 기간 대비는 이전 스냅샷 대비 증감률입니다.",
             "주의: 아래 작은 선은 영상 게시일 순서에 따른 조회수 흐름입니다.",
+            ...dashboardDataQualityTooltipLines,
           ]}
         />
         <AdminDashboardKpiCard
@@ -6979,6 +7397,7 @@ function AdminDashboardManagementPanel({
             `비교 커버리지: ${getAdminDashboardCoverageLabel(insightQuery.data?.meta?.comparisonCoverage)}.`,
             "참고: 좋아요 비율은 조회수 중 좋아요로 반응한 비중입니다.",
             "주의: 조회 대비 비율은 조회수 중 좋아요로 반응한 비중을 뜻합니다.",
+            ...dashboardDataQualityTooltipLines,
           ]}
         />
         <AdminDashboardKpiCard
@@ -7011,6 +7430,7 @@ function AdminDashboardManagementPanel({
             `비교 커버리지: ${getAdminDashboardCoverageLabel(insightQuery.data?.meta?.comparisonCoverage)}.`,
             "참고: 댓글 비율은 조회수 중 댓글로 반응한 비중입니다.",
             "주의: 조회 대비 댓글 비율은 조회수 중 댓글로 반응한 비중을 뜻합니다.",
+            ...dashboardDataQualityTooltipLines,
           ]}
         />
         <AdminDashboardKpiCard
@@ -7037,6 +7457,7 @@ function AdminDashboardManagementPanel({
             "계산식: 업로드 영상 수 = API가 제공한 videoDelta를 우선 사용하고, 없을 때만 현재 channel videoCount - 이전 channel videoCount로 계산합니다.",
             `참고: 채널 delta 원천은 ${getAdminDashboardDeltaSourceLabel(channelStats?.deltaSource)}입니다.`,
             "주의: 업로드 수는 조회수·좋아요·댓글 카드와 함께 봐야 성과를 판단할 수 있습니다.",
+            ...dashboardDataQualityTooltipLines,
           ]}
         />
 
@@ -7070,6 +7491,7 @@ function AdminDashboardManagementPanel({
               hasPeriodGrowthComparison
                 ? "기간 비교 때는 현재값에서 이전값을 뺀 증가량으로 위치를 잡습니다."
                 : "비교 스냅샷이 없을 때는 증감률 대신 현재 조회수와 현재 반응값으로 위치를 잡습니다.",
+              "참고: 감소분은 성과 기여 계산에서 0으로 분리하고 데이터 신뢰도 배지에 감소 신호로 표시합니다.",
               "주의: 색보다 위치와 원 크기를 먼저 확인하세요.",
             ]}
             action={
@@ -7113,10 +7535,13 @@ function AdminDashboardManagementPanel({
                     className: "w-[34%] max-w-0",
                     cell: (row) => (
                       <span
-                        className="block truncate font-bold"
+                        className="inline-flex max-w-full items-center gap-1"
                         title={row.title}
                       >
-                        {row.title}
+                        <span className="block truncate font-bold">
+                          {row.title}
+                        </span>
+                        <AdminDashboardQualityBadges badges={row.qualityBadges} />
                       </span>
                     ),
                   },
@@ -7322,6 +7747,7 @@ function AdminDashboardManagementPanel({
               hasPeriodGrowthComparison
                 ? "전체값: 선택 기간 업로드 영상의 조회·좋아요·댓글 증가 합계를 각각 분모로 사용합니다."
                 : "전체값: 선택 기간 영상의 조회·좋아요·댓글 합계를 각각 분모로 사용합니다.",
+              "참고: 감소분은 성과 기여 계산에서 0으로 분리하고 데이터 신뢰도 배지에 감소 신호로 표시합니다.",
               "주의: 그래프는 빠른 요약이고, 표 보기는 선택 기간 전체 영상을 확인하는 용도입니다.",
             ]}
             action={
@@ -7467,10 +7893,13 @@ function AdminDashboardManagementPanel({
                     className: "w-[38%] max-w-0",
                     cell: (row) => (
                       <span
-                        className="block truncate font-bold"
+                        className="inline-flex max-w-full items-center gap-1"
                         title={row.title}
                       >
-                        {row.title}
+                        <span className="block truncate font-bold">
+                          {row.title}
+                        </span>
+                        <AdminDashboardQualityBadges badges={row.qualityBadges} />
                       </span>
                     ),
                   },
