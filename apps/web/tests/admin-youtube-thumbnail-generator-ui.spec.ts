@@ -88,7 +88,7 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
     );
   }, { storageKey: getSupabaseAuthStorageKey() });
 
-  await page.setViewportSize({ width: 1920, height: 1000 });
+  await page.setViewportSize({ width: 1366, height: 900 });
   const chatRequestBodies: unknown[] = [];
   const generationRequestBodies: unknown[] = [];
   const localBridgeRequestBodies: unknown[] = [];
