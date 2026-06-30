@@ -9,6 +9,7 @@ cron/GitHub Actions before the rest of the Python environment is guaranteed.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import tarfile
@@ -20,7 +21,7 @@ from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
 FRAME_UPLOAD_EXTENSIONS = {".jpg", ".jpeg", ".webp"}
 UPLOAD_SCHEMA_VERSION = 2
-STRONG_COMPLETION_PROOFS = {"remote_size_check", "remote_manifest_check"}
+STRONG_COMPLETION_PROOFS = {"remote_manifest_check"}
 QUEUE_STATES = {"pending_local", "staged", "missing_local", "remote_verified", "failed_permanent"}
 TOP_LEVEL_STATUSES = {"skipped", "complete", "partial", "backfill_required", "backfill_complete", "failed"}
 STEP_EVENT_STATUSES = {"completed", "failed", "optional_skipped", "downstream_skipped"}
@@ -112,6 +113,20 @@ def _dedupe_key(relative_path: str, size: int, mtime_epoch: int) -> str:
     return f"{relative_path}:{size}:{mtime_epoch}"
 
 
+def _file_md5(path: Path) -> str:
+    """Return an MD5 digest for remote manifest comparison.
+
+    Google Drive exposes MD5 hashes for normal binary frame objects through
+    rclone. This is an integrity check for upload identity, not a cryptographic
+    security boundary.
+    """
+    digest = hashlib.md5()  # noqa: S324 - file identity for rclone/GDrive proof.
+    with path.open("rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def _manifest_item(path: Path, frames_dir: Path, reason: str, required: bool = True, remote_root: Optional[str] = None) -> dict:
     stat = path.stat()
     relative_path = path.relative_to(frames_dir).as_posix()
@@ -122,6 +137,7 @@ def _manifest_item(path: Path, frames_dir: Path, reason: str, required: bool = T
         "size": size,
         "mtimeEpoch": mtime_epoch,
         "dedupeKey": _dedupe_key(relative_path, size, mtime_epoch),
+        "md5": _file_md5(path),
         "required": bool(required),
         "reason": reason,
         "sourceState": "local",
@@ -247,6 +263,75 @@ def _load_staging_manifest(path: Optional[str]) -> Dict[str, dict]:
             if isinstance(relative_path, str) and relative_path:
                 staged[relative_path] = {"stagingShard": remote_shard, "shardId": shard_id}
     return staged
+def _remote_md5_from_entry(entry: dict) -> Optional[str]:
+    hashes = entry.get("Hashes") if isinstance(entry.get("Hashes"), dict) else {}
+    value = hashes.get("MD5") or hashes.get("md5")
+    if not value:
+        return None
+    return str(value).lower()
+
+
+def build_gdrive_remote_verification(args: argparse.Namespace) -> dict:
+    expected = _load_expected_manifest(Path(args.expected_manifest))
+    expected_items = [item for item in expected.get("items", []) if isinstance(item, dict)]
+    remote_entries = json.loads(Path(args.remote_list).read_text(encoding="utf-8"))
+    if not isinstance(remote_entries, list):
+        raise ValueError("remote list must be a JSON array from rclone lsjson")
+
+    remote_md5s: Dict[str, str] = {}
+    for entry in remote_entries:
+        if not isinstance(entry, dict):
+            continue
+        relative_path = str(entry.get("Path") or "")
+        md5 = _remote_md5_from_entry(entry)
+        if relative_path and md5:
+            remote_md5s[relative_path] = md5
+
+    verified: List[str] = []
+    missing_expected_hash: List[str] = []
+    missing_remote_hash: List[str] = []
+    mismatched_hash: List[str] = []
+    for item in expected_items:
+        relative_path = str(item.get("relativePath") or "")
+        expected_md5 = str(item.get("md5") or "").lower()
+        if not relative_path:
+            continue
+        if not expected_md5:
+            missing_expected_hash.append(relative_path)
+            continue
+        remote_md5 = remote_md5s.get(relative_path)
+        if not remote_md5:
+            missing_remote_hash.append(relative_path)
+            continue
+        if remote_md5 == expected_md5:
+            verified.append(relative_path)
+        else:
+            mismatched_hash.append(relative_path)
+
+    verified_output = _optional_path(args.verified_files_output)
+    if verified_output:
+        target = Path(verified_output)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("\n".join(sorted(verified)) + ("\n" if verified else ""), encoding="utf-8")
+
+    return {
+        "schemaVersion": UPLOAD_SCHEMA_VERSION,
+        "generatedAt": args.generated_at or _utc_now_iso(),
+        "runId": args.run_id or expected.get("runId", ""),
+        "completionProof": "remote_manifest_check",
+        "expectedCount": len(expected_items),
+        "remoteListedCount": len(remote_entries),
+        "remoteHashCount": len(remote_md5s),
+        "verifiedCount": len(verified),
+        "missingExpectedHashCount": len(missing_expected_hash),
+        "missingRemoteHashCount": len(missing_remote_hash),
+        "mismatchedHashCount": len(mismatched_hash),
+        "verifiedRelativePaths": sorted(verified),
+        "missingExpectedHashRelativePaths": sorted(missing_expected_hash),
+        "missingRemoteHashRelativePaths": sorted(missing_remote_hash),
+        "mismatchedHashRelativePaths": sorted(mismatched_hash),
+    }
+
 
 
 def resolve_policy_action(
@@ -1140,6 +1225,14 @@ def _add_gdrive_status_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--backfill-threshold-attempts", type=int, default=3)
     parser.add_argument("--note", action="append", default=[])
 
+def _add_gdrive_remote_verification_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--expected-manifest", required=True)
+    parser.add_argument("--remote-list", required=True)
+    parser.add_argument("--output", required=True)
+    parser.add_argument("--verified-files-output", default="")
+    parser.add_argument("--run-id", default="")
+    parser.add_argument("--generated-at", default="")
+
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = argparse.ArgumentParser(description="run_daily.sh helper commands")
@@ -1193,6 +1286,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     gdrive_status_parser = subparsers.add_parser("write-gdrive-upload-status")
     _add_gdrive_status_args(gdrive_status_parser)
+
+    gdrive_remote_verification_parser = subparsers.add_parser("write-gdrive-remote-verification")
+    _add_gdrive_remote_verification_args(gdrive_remote_verification_parser)
 
     args = parser.parse_args(argv)
 
@@ -1259,6 +1355,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     if args.command == "write-gdrive-staging-shards":
         payload = create_gdrive_staging_shards(args)
+        write_json(Path(args.output), payload)
+        return 0
+
+    if args.command == "write-gdrive-remote-verification":
+        payload = build_gdrive_remote_verification(args)
         write_json(Path(args.output), payload)
         return 0
 
