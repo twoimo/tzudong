@@ -41,12 +41,17 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchSupabaseRows } from '@/lib/supabase-rest-client';
 import { mergeRestaurants } from '@/hooks/use-restaurants';
 import { toast } from '@/lib/no-toast';
+import { incrementSearchCount } from '@/lib/search-count';
 import type { User } from '@supabase/supabase-js';
 import { useAuth } from '@/contexts/AuthContextBase';
 import { resolveDeviceLocationButtonLabel, type DeviceMapLocation } from '@/lib/device-location-map';
 import { useDeferredComponent } from '@/hooks/use-deferred-component';
 import { useOverseasCountryCounts } from '@/components/home/use-overseas-country-counts';
 import { siteConfig } from "@/lib/site-config";
+import {
+    HOME_MAP_CONTEXTUAL_MOBILE_LIMIT,
+    type HomeMapContextualRestaurantsPayload,
+} from '@/lib/home-map-contextual-restaurants';
 
 // 카테고리 상수
 const CATEGORIES = [
@@ -155,6 +160,10 @@ interface MobileControlOverlayProps {
     onRestaurantSelect: (restaurant: Restaurant) => void;
     onRestaurantSearch: (restaurant: Restaurant) => void;
     onSearchExecute: (region?: Region | null) => void;
+    panelRestaurant?: Restaurant | null;
+    isPanelOpen?: boolean;
+    contextualRestaurantsPayload?: HomeMapContextualRestaurantsPayload | null;
+    isMapFullscreen?: boolean;
     isAdmin?: boolean;
     onModeChange?: (mode: 'domestic' | 'overseas') => void;
     user?: User | null;
@@ -167,7 +176,7 @@ interface MobileControlOverlayProps {
     initialIntent?: 'search' | 'bookmark' | 'notification' | 'user' | null;
 }
 
-type ActiveSheet = 'none' | 'region' | 'category' | 'search';
+type ActiveSheet = 'none' | 'region' | 'category' | 'search' | 'visibleMarkers';
 type MobileTopDropdown = 'bookmark' | 'notification' | 'user' | null;
 type InertableHTMLElement = HTMLElement & { inert: boolean };
 
@@ -203,6 +212,10 @@ function MobileControlOverlayComponent({
     onRestaurantSelect,
     onRestaurantSearch,
     onSearchExecute,
+    panelRestaurant = null,
+    isPanelOpen = false,
+    contextualRestaurantsPayload = null,
+    isMapFullscreen = false,
     isAdmin = false,
     onModeChange,
     user,
@@ -268,6 +281,32 @@ function MobileControlOverlayComponent({
         isHeadingMode: isDeviceHeadingMode,
         isPending: isDeviceLocationPending,
     });
+    const visibleMarkerRestaurants = useMemo(
+        () =>
+            contextualRestaurantsPayload?.isEligible
+                ? contextualRestaurantsPayload.restaurants.slice(0, HOME_MAP_CONTEXTUAL_MOBILE_LIMIT)
+                : [],
+        [contextualRestaurantsPayload],
+    );
+    const canShowVisibleMarkerSheet =
+        (activeSheet === 'none' || activeSheet === 'visibleMarkers') &&
+        mapMode === 'domestic' &&
+        !isMapFullscreen &&
+        !isPanelOpen &&
+        !panelRestaurant &&
+        visibleMarkerRestaurants.length > 0;
+
+    const handleVisibleMarkerRestaurantSelect = useCallback((restaurant: Restaurant) => {
+        incrementSearchCount(restaurant.id).catch(() => {});
+        setActiveSheet('none');
+        onRestaurantSearch(restaurant);
+    }, [onRestaurantSearch]);
+
+    useEffect(() => {
+        if (activeSheet !== 'visibleMarkers') return;
+        if (canShowVisibleMarkerSheet) return;
+        setActiveSheet('none');
+    }, [activeSheet, canShowVisibleMarkerSheet]);
 
     const searchInputRef = useRef<HTMLInputElement>(null);
     const searchLayerRef = useRef<HTMLDivElement>(null);
@@ -445,6 +484,12 @@ function MobileControlOverlayComponent({
     const regionLabel = useMemo(() =>
         mapMode === 'domestic' ? (selectedRegion || '전체') : (selectedCountry || '국가'),
         [mapMode, selectedRegion, selectedCountry]);
+    const activeBottomSheetTitle =
+        activeSheet === 'region'
+            ? (mapMode === 'domestic' ? '지역 선택' : '국가 선택')
+            : activeSheet === 'category'
+                ? '카테고리 필터'
+                : '지도에 보이는 맛집';
 
     const quickTopCategories = useMemo(() => CATEGORIES.slice(0, 8), []);
 
@@ -939,6 +984,24 @@ function MobileControlOverlayComponent({
                         </div>
                     </div>
                 </Button>
+                {canShowVisibleMarkerSheet ? (
+                    <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => toggleSheet('visibleMarkers')}
+                        aria-expanded={activeSheet === 'visibleMarkers'}
+                        aria-label={`지도에 보이는 맛집 ${visibleMarkerRestaurants.length}곳 보기`}
+                        className={cn(
+                            'rounded-full shadow-lg bg-primary text-primary-foreground border border-primary/30',
+                            'hover:bg-primary/90 w-[clamp(112px,36vw,140px)] h-9 px-3 text-xs font-bold',
+                            activeSheet === 'visibleMarkers' && 'ring-2 ring-primary ring-offset-2'
+                        )}
+                        data-mobile-visible-marker-restaurants-trigger="true"
+                    >
+                        <MapPin className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+                        보이는 맛집 {visibleMarkerRestaurants.length}
+                    </Button>
+                ) : null}
 
             </div>
 
@@ -1124,14 +1187,13 @@ function MobileControlOverlayComponent({
                 >
                     <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-background">
                         <h3 className="text-lg font-semibold">
-                            {activeSheet === 'region' && (mapMode === 'domestic' ? '지역 선택' : '국가 선택')}
-                            {activeSheet === 'category' && '카테고리 필터'}
+                            {activeBottomSheetTitle}
                         </h3>
                         <Button
                             variant="ghost"
                             size="icon"
                             onClick={handleClose}
-                            aria-label={`${activeSheet === 'region' ? (mapMode === 'domestic' ? '지역 선택' : '국가 선택') : '카테고리 필터'} 닫기`}
+                            aria-label={`${activeBottomSheetTitle} 닫기`}
                             className="min-h-11 min-w-11"
                         >
                             <X className="h-5 w-5" aria-hidden="true" />
@@ -1203,6 +1265,42 @@ function MobileControlOverlayComponent({
                             </div>
                         )}
 
+                        {activeSheet === 'visibleMarkers' && (
+                            <div
+                                className="space-y-2"
+                                data-mobile-visible-marker-restaurants-sheet="true"
+                            >
+                                <p className="text-sm font-semibold text-muted-foreground">
+                                    확대한 지도에서 현재 마커로 보이는 맛집이에요.
+                                </p>
+                                <div className="space-y-2">
+                                    {visibleMarkerRestaurants.map((restaurant) => (
+                                        <button
+                                            key={restaurant.id}
+                                            type="button"
+                                            onClick={() => handleVisibleMarkerRestaurantSelect(restaurant)}
+                                            className="flex w-full items-center gap-3 rounded-2xl border border-border bg-background px-3 py-3 text-left shadow-sm transition-colors hover:bg-secondary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                                            aria-label={`${restaurant.name} 지도에 보이는 맛집 상세 보기`}
+                                        >
+                                            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+                                                <MapPin className="h-4 w-4" aria-hidden="true" />
+                                            </span>
+                                            <span className="min-w-0 flex-1">
+                                                <span className="block truncate text-sm font-bold text-foreground">
+                                                    {restaurant.name}
+                                                </span>
+                                                <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                                                    {restaurant.road_address ||
+                                                        restaurant.jibun_address ||
+                                                        restaurant.english_address ||
+                                                        '주소 없음'}
+                                                </span>
+                                            </span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                         {activeSheet === 'category' && (
                             <div className="space-y-3">
                                 {selectedCategories.length > 0 && (

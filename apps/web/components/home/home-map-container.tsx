@@ -21,6 +21,11 @@ import { resolveMobileMapBlankTapAction } from '@/lib/mobile-map-fullscreen-togg
 import type { DeviceMapLocation } from '@/lib/device-location-map';
 import type { HomeMapLayoutMode, HomeMapPanelSide } from '@/lib/home-map-user-preferences';
 
+import {
+    EMPTY_DOMESTIC_CONTEXTUAL_RESTAURANTS,
+    EMPTY_OVERSEAS_CONTEXTUAL_RESTAURANTS,
+    type HomeMapContextualRestaurantsPayload,
+} from '@/lib/home-map-contextual-restaurants';
 // [CSR] 지도 컴포넌트 지연 로딩 - 번들 사이즈 최적화
 const NaverMapView = lazy(() => import("@/components/map/NaverMapView"));
 const OverseasMap = lazy(() => import("@/components/map/OverseasMap"));
@@ -59,6 +64,7 @@ interface HomeMapContainerProps {
     desktopMapLayout?: HomeMapLayoutMode;
     desktopPanelSide?: HomeMapPanelSide;
     onSwipeableRestaurantsChange?: (restaurants: Restaurant[]) => void;
+    onContextualRestaurantsChange?: (payload: HomeMapContextualRestaurantsPayload | null) => void;
     isMapFullscreen?: boolean;
     onMapFullscreenChange?: (isFullscreen: boolean) => void;
     deviceLocation?: DeviceMapLocation | null;
@@ -144,6 +150,19 @@ const isSameRestaurantForSwipe = (a: Restaurant, b: Restaurant) => {
 
     return false;
 };
+const dedupeHomeMapRestaurants = (restaurants: Restaurant[]) => {
+    const uniqueRestaurants: Restaurant[] = [];
+
+    for (const restaurant of restaurants) {
+        if (!restaurant) continue;
+        if (uniqueRestaurants.some((existing) => isSameRestaurantForSwipe(existing, restaurant))) {
+            continue;
+        }
+        uniqueRestaurants.push(restaurant);
+    }
+
+    return uniqueRestaurants;
+};
 
 const RESTAURANT_CONTENT_SCROLL_SELECTOR = "[data-restaurant-detail-swipe-area='content']";
 
@@ -176,6 +195,7 @@ function HomeMapContainerComponent({
     desktopMapLayout = 'panel-aware',
     desktopPanelSide = 'left',
     onSwipeableRestaurantsChange,
+    onContextualRestaurantsChange,
     isMapFullscreen = false,
     onMapFullscreenChange,
     deviceLocation = null,
@@ -216,6 +236,8 @@ function HomeMapContainerComponent({
     const contentScrollResetNeededRef = useRef(false);
     const pendingSwipeableRestaurantsRef = useRef<Restaurant[]>([]);
     const swipeableRestaurantsRafRef = useRef(0);
+    const pendingContextualRestaurantsPayloadRef = useRef<HomeMapContextualRestaurantsPayload | null>(null);
+    const contextualRestaurantsRafRef = useRef(0);
     const lastMarkerClickAtRef = useRef(0);
 
     // [PERFORMANCE] 렌더링에 필요한 상태만 useState로 관리
@@ -917,47 +939,7 @@ function HomeMapContainerComponent({
 
     const handleSwipeableRestaurantsChange = useCallback((restaurants: Restaurant[]) => {
         const filteredRestaurants = getRestaurantListByMode(restaurants);
-
-        const uniqueRestaurants: Restaurant[] = [];
-        const seenIds = new Set<string>();
-        const seenMergeIds = new Set<string>();
-        const seenLocationKeys = new Set<string>();
-        const seenRestaurantKeys = new Set<string>();
-
-        for (const restaurant of filteredRestaurants) {
-            if (!restaurant) continue;
-
-            const normalizedName = (restaurant.name || '').trim().toLowerCase();
-            const lat = Number(restaurant.lat);
-            const lng = Number(restaurant.lng);
-            const hasLatLng = Number.isFinite(lat) && Number.isFinite(lng);
-            const locationKey = hasLatLng
-                ? `${lat.toFixed(5)}:${lng.toFixed(5)}:${normalizedName}`
-                : normalizedName;
-
-            const mergedRestaurants = restaurant.mergedRestaurants ?? [];
-            const restaurantIds = [restaurant.id, ...mergedRestaurants.map((merged) => merged.id)].filter(Boolean);
-
-            const isDuplicateById =
-                !!restaurantIds.length &&
-                restaurantIds.some((id) => seenIds.has(id) || seenMergeIds.has(id));
-
-            if (isDuplicateById) continue;
-            if (seenLocationKeys.has(locationKey)) continue;
-            if (seenRestaurantKeys.has(restaurant.id)) continue;
-
-            if (restaurant.id) {
-                seenIds.add(restaurant.id);
-                for (const mergedId of restaurantIds) {
-                    if (mergedId) seenMergeIds.add(mergedId);
-                }
-            }
-            seenRestaurantKeys.add(restaurant.id);
-            if (locationKey) {
-                seenLocationKeys.add(locationKey);
-            }
-            uniqueRestaurants.push(restaurant);
-        }
+        const uniqueRestaurants = dedupeHomeMapRestaurants(filteredRestaurants);
 
         pendingSwipeableRestaurantsRef.current = uniqueRestaurants;
 
@@ -994,13 +976,72 @@ function HomeMapContainerComponent({
             });
         });
     }, [mapMode, getRestaurantListByMode]);
+    const clearContextualRestaurants = useCallback((payload: HomeMapContextualRestaurantsPayload) => {
+        if (contextualRestaurantsRafRef.current !== 0) {
+            cancelAnimationFrame(contextualRestaurantsRafRef.current);
+            contextualRestaurantsRafRef.current = 0;
+        }
+        pendingContextualRestaurantsPayloadRef.current = payload;
+        onContextualRestaurantsChange?.(payload);
+    }, [onContextualRestaurantsChange]);
+    const handleContextualRestaurantsChange = useCallback((payload: HomeMapContextualRestaurantsPayload) => {
+        if (mapMode === 'overseas') {
+            clearContextualRestaurants(EMPTY_OVERSEAS_CONTEXTUAL_RESTAURANTS);
+            return;
+        }
+
+        if (isMapFullscreen || payload.mode !== 'domestic') {
+            clearContextualRestaurants(EMPTY_DOMESTIC_CONTEXTUAL_RESTAURANTS);
+            return;
+        }
+        const filteredRestaurants = getRestaurantListByMode(payload.restaurants);
+        const uniqueRestaurants = dedupeHomeMapRestaurants(filteredRestaurants);
+        const isEligible = payload.mode === 'domestic' && mapMode === 'domestic' && payload.isEligible && uniqueRestaurants.length > 0;
+        const nextPayload: HomeMapContextualRestaurantsPayload = {
+            ...payload,
+            mode: 'domestic',
+            restaurants: isEligible ? uniqueRestaurants : [],
+            isEligible,
+            ineligibilityReason: isEligible
+                ? undefined
+                : (payload.ineligibilityReason ?? (uniqueRestaurants.length === 0 ? 'empty' : 'map-unavailable')),
+            totalVisibleCount: uniqueRestaurants.length,
+        };
+
+        pendingContextualRestaurantsPayloadRef.current = nextPayload;
+
+        if (contextualRestaurantsRafRef.current !== 0) {
+            return;
+        }
+
+        contextualRestaurantsRafRef.current = requestAnimationFrame(() => {
+            contextualRestaurantsRafRef.current = 0;
+            onContextualRestaurantsChange?.(pendingContextualRestaurantsPayloadRef.current);
+        });
+    }, [clearContextualRestaurants, getRestaurantListByMode, isMapFullscreen, mapMode, onContextualRestaurantsChange]);
+
+    useEffect(() => {
+        if (mapMode === 'overseas') {
+            clearContextualRestaurants(EMPTY_OVERSEAS_CONTEXTUAL_RESTAURANTS);
+            return;
+        }
+
+        if (isMapFullscreen) {
+            clearContextualRestaurants(EMPTY_DOMESTIC_CONTEXTUAL_RESTAURANTS);
+        }
+    }, [clearContextualRestaurants, isMapFullscreen, mapMode]);
 
     useEffect(() => () => {
         if (swipeableRestaurantsRafRef.current !== 0) {
             cancelAnimationFrame(swipeableRestaurantsRafRef.current);
             swipeableRestaurantsRafRef.current = 0;
         }
-    }, []);
+        if (contextualRestaurantsRafRef.current !== 0) {
+            cancelAnimationFrame(contextualRestaurantsRafRef.current);
+            contextualRestaurantsRafRef.current = 0;
+        }
+        onContextualRestaurantsChange?.(null);
+    }, [onContextualRestaurantsChange]);
 
     const handleSwipeToRestaurant = useCallback((step: -1 | 1) => {
         const modeScopedRestaurants = getRestaurantListByMode(activeSwipeableRestaurants);
@@ -1262,6 +1303,7 @@ function HomeMapContainerComponent({
                         reservesDesktopLeftPanelSpace={shouldReserveDesktopSidePanel}
                         mobileSheetHeightPercent={isMobileOrTablet && isPanelOpen && !isMapFullscreen ? sheetHeight : 0}
                         onVisibleRestaurantsChange={handleSwipeableRestaurantsChange}
+                        onContextualRestaurantsChange={handleContextualRestaurantsChange}
                         onSearchSelectionRelease={handleReleaseSearchSelectionOwnership}
                         onMapBlankClick={handleMapBlankClick}
                         deviceLocation={deviceLocation}
