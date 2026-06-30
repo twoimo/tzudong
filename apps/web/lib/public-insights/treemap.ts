@@ -191,7 +191,7 @@ type VideoDbRow = {
     like_count: number | string | null;
     comment_count: number | string | null;
     category: string | null;
-    meta_history: unknown;
+    meta_history?: unknown;
 };
 
 type MetricHistoryPoint = {
@@ -205,6 +205,10 @@ type MetricHistoryPoint = {
 type TreemapRequestOptions = {
     filterByPeriod?: boolean;
     metricMode?: TreemapMetric;
+};
+
+type TreemapFetchOptions = {
+    includeHistory?: boolean;
 };
 
 type TreemapMetric = 'views' | 'likes' | 'comments' | 'duration';
@@ -728,12 +732,15 @@ function createPublicTreemapSupabaseClient() {
     });
 }
 
-async function fetchVideosFromSupabase(period: InsightTreemapPeriod = 'ALL'): Promise<VideoDbRow[]> {
+async function fetchVideosFromSupabase(period: InsightTreemapPeriod = 'ALL', options: TreemapFetchOptions = {}): Promise<VideoDbRow[]> {
     const supabase = createPublicTreemapSupabaseClient();
     const rows: VideoDbRow[] = [];
     let page = 0;
     const cutoff = getPeriodCutoff(period);
     const cutoffValue = cutoff?.toISOString() ?? null;
+    const selectColumns = options.includeHistory
+        ? 'id,title,published_at,duration,view_count,like_count,comment_count,category,meta_history'
+        : 'id,title,published_at,duration,view_count,like_count,comment_count,category';
 
     while (rows.length < MAX_PUBLIC_TREEMAP_ROWS) {
         const from = page * PAGE_SIZE;
@@ -742,7 +749,7 @@ async function fetchVideosFromSupabase(period: InsightTreemapPeriod = 'ALL'): Pr
 
         let query = supabase
             .from('videos')
-            .select('id,title,published_at,duration,view_count,like_count,comment_count,category,meta_history')
+            .select(selectColumns)
             .order('published_at', { ascending: false, nullsFirst: false });
 
         if (cutoffValue) {
@@ -769,15 +776,22 @@ async function fetchVideosFromSupabase(period: InsightTreemapPeriod = 'ALL'): Pr
     return rows;
 }
 
-function cacheOrFetchVideos(period: InsightTreemapPeriod = 'ALL'): Promise<VideoDbRow[]> {
-    const cacheKey = period;
+function cacheOrFetchVideos(
+    period: InsightTreemapPeriod = 'ALL',
+    options: TreemapFetchOptions = {},
+): Promise<VideoDbRow[]> {
+    const cacheKey = JSON.stringify({
+        period,
+        includeHistory: options.includeHistory === true,
+        rowCap: MAX_PUBLIC_TREEMAP_ROWS,
+    });
     const cached = videoPeriodCache.get(cacheKey);
 
     if (cached && cached.expiresAt > Date.now() && cached.value) {
         return Promise.resolve(cached.value);
     }
 
-    return fetchVideosFromSupabase(period).then((rows) => {
+    return fetchVideosFromSupabase(period, options).then((rows) => {
         videoPeriodCache.set(cacheKey, {
             expiresAt: Date.now() + CACHE_TTL_MS,
             value: rows,
@@ -1431,13 +1445,25 @@ export async function getInsightTreemapData(
 ): Promise<InsightTreemapResponse> {
     const { filterByPeriod = true, metricMode = 'views' } = options;
     const now = Date.now();
-    const responseCacheKey = `${filterByPeriod ? 'filtered' : 'change'}:${period}:${metricMode}`;
+    const responseCacheKey = JSON.stringify({
+        period,
+        filterMode: filterByPeriod ? 'period' : 'change',
+        viewMode: filterByPeriod ? 'current' : 'change',
+        metricMode,
+        source: 'supabase-treemap',
+        scope: 'public-insights',
+        fallbackSource: null,
+        fallbackReasonCode: null,
+        rowCap: MAX_PUBLIC_TREEMAP_ROWS,
+    });
     const cachedResponse = treemapResponseCache.get(responseCacheKey);
     if (cachedResponse && cachedResponse.expiresAt > now) {
         return cachedResponse.value;
     }
 
-    const rows = await cacheOrFetchVideos(filterByPeriod ? period : 'ALL');
+    const rows = await cacheOrFetchVideos(filterByPeriod ? period : 'ALL', {
+        includeHistory: !filterByPeriod,
+    });
 
     const result: InsightTreemapResponse = (() => {
         if (filterByPeriod) {
