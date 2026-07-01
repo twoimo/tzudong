@@ -1249,19 +1249,11 @@ function MobileControlOverlayComponent({
                     }
                     className="z-[95]"
                 >
-                    <div
-                        className="flex items-center justify-between px-4 py-3 border-b border-border bg-background"
-                        data-mobile-visible-marker-restaurants-sheet-frame={activeSheet === 'visibleMarkers' ? 'true' : undefined}
-                    >
-                        <h3 className="flex min-w-0 items-center gap-2 text-lg font-semibold">
-                            <span className="truncate">{activeBottomSheetTitle}</span>
-                            {activeSheet === 'visibleMarkers' ? (
-                                <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-[11px] font-semibold leading-5 text-primary-foreground">
-                                    {visibleMarkerRestaurantCount}곳
-                                </span>
-                            ) : null}
-                        </h3>
-                        {activeSheet !== 'visibleMarkers' ? (
+                    {activeSheet !== 'visibleMarkers' ? (
+                        <div className="flex items-center justify-between border-b border-border bg-background px-4 py-3">
+                            <h3 className="flex min-w-0 items-center gap-2 text-lg font-semibold">
+                                <span className="truncate">{activeBottomSheetTitle}</span>
+                            </h3>
                             <Button
                                 variant="ghost"
                                 size="icon"
@@ -1271,8 +1263,8 @@ function MobileControlOverlayComponent({
                             >
                                 <X className="h-5 w-5" aria-hidden="true" />
                             </Button>
-                        ) : null}
-                    </div>
+                        </div>
+                    ) : null}
 
                     <div className="p-4 pb-8">
                         {activeSheet === 'region' && (
@@ -1345,9 +1337,6 @@ function MobileControlOverlayComponent({
                                 data-mobile-visible-marker-restaurants-sheet="true"
                                 data-mobile-visible-marker-restaurants-sheet-frame="true"
                             >
-                                <p className="text-sm font-semibold text-muted-foreground">
-                                    확대한 지도에서 현재 마커로 보이는 맛집이에요.
-                                </p>
                                 {visibleMarkerRestaurants.map((restaurant) => (
                                     <StampCard
                                         key={restaurant.id}
