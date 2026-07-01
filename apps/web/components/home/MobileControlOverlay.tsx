@@ -568,7 +568,7 @@ function MobileControlOverlayComponent({
             ? (mapMode === 'domestic' ? '지역 선택' : '국가 선택')
             : activeSheet === 'category'
                 ? '카테고리 필터'
-                : '지도에 보이는 맛집';
+                : '맛집 목록';
 
     const quickTopCategories = useMemo(() => CATEGORIES.slice(0, 8), []);
 
@@ -1230,7 +1230,7 @@ function MobileControlOverlayComponent({
                 </div>
             )}
 
-            {/* 바텀시트 (지역/카테고리/지도에 보이는 맛집) - 맛집 바텀시트와 동일한 인터랙션 */}
+            {/* 바텀시트 (지역/카테고리/맛집 목록) - 맛집 바텀시트와 동일한 인터랙션 */}
             {activeSheet !== 'none' && activeSheet !== 'search' && (
                 <BottomSheet
                     isOpen
@@ -1273,7 +1273,7 @@ function MobileControlOverlayComponent({
                         </div>
                     ) : null}
 
-                    <div className={cn(activeSheet === 'visibleMarkers' ? "p-3 pb-6" : "p-4 pb-8")}>
+                    <div className={cn(activeSheet === 'visibleMarkers' ? "px-3 pb-6 pt-2" : "p-4 pb-8")}>
                         {activeSheet === 'region' && (
                             <div className="space-y-3">
                                 {mapMode === 'domestic' ? (
@@ -1340,30 +1340,32 @@ function MobileControlOverlayComponent({
 
                         {activeSheet === 'visibleMarkers' && (
                             <div
-                                className="grid grid-cols-1 gap-2"
+                                className="grid grid-cols-1 gap-1"
                                 data-mobile-visible-marker-restaurants-sheet="true"
                                 data-mobile-visible-marker-restaurants-sheet-frame="true"
                             >
-                                <div className="sticky top-0 z-10 -mx-1 -mt-2 flex items-center justify-between gap-3 bg-background/95 py-1 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-                                    <div className="flex min-w-0 items-center gap-1.5 pl-1 text-sm font-semibold text-foreground">
-                                        <MapPin className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
-                                        <span className="truncate">지도에 보이는 맛집</span>
-                                        <span
-                                            className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-[11px] font-semibold leading-5 text-primary-foreground"
-                                            aria-label={`지도에 보이는 맛집 ${visibleMarkerRestaurantCount}곳`}
+                                <div className="sticky top-0 z-10 -mx-1 -mt-1 bg-background/95 px-1 py-1 backdrop-blur supports-[backdrop-filter]:bg-background/85">
+                                    <div className="flex min-w-0 items-center justify-between gap-2">
+                                        <h2 className="flex min-w-0 items-center gap-1.5 text-[13px] font-bold leading-5 text-foreground">
+                                            <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
+                                            <span className="truncate">맛집 목록</span>
+                                            <span
+                                                className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold leading-4 text-primary-foreground"
+                                                aria-label={`맛집 목록 ${visibleMarkerRestaurantCount}곳`}
+                                            >
+                                                {visibleMarkerRestaurantCount}곳
+                                            </span>
+                                        </h2>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={handleVisibleMarkerSheetClose}
+                                            aria-label="맛집 목록 닫기"
+                                            className="h-8 w-8 shrink-0 rounded-full"
                                         >
-                                            {visibleMarkerRestaurantCount}곳
-                                        </span>
+                                            <X className="h-4 w-4" aria-hidden="true" />
+                                        </Button>
                                     </div>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={handleVisibleMarkerSheetClose}
-                                        aria-label="지도에 보이는 맛집 닫기"
-                                        className="h-9 w-9 shrink-0 rounded-full"
-                                    >
-                                        <X className="h-4 w-4" aria-hidden="true" />
-                                    </Button>
                                 </div>
                                 {visibleMarkerRestaurants.map((restaurant) => (
                                     <StampCard
@@ -1380,6 +1382,7 @@ function MobileControlOverlayComponent({
                                         stampSize="mobile"
                                         density="dense"
                                         showAddress
+                                        layout="list"
                                         categoryFallback="맛집"
                                     />
                                 ))}
