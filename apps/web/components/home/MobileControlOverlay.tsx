@@ -1234,7 +1234,7 @@ function MobileControlOverlayComponent({
                     enablePeek
                     hideBottomNavWhenOpen
                     progressiveHeaderHide
-                    hideHandleWhenFull
+                    hideHandleWhenFull={activeSheet !== 'visibleMarkers'}
                     showBackdrop={false}
                     closeOnOutsidePointerDown={activeSheet !== 'visibleMarkers'}
                     layoutSource="mobile-control-overlay-sheet"

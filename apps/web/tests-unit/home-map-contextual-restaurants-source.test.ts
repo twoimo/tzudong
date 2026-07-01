@@ -81,6 +81,7 @@ describe('home map contextual visible-marker restaurants', () => {
     expect(mobileOverlaySource).toContain('visibleMarkerRestaurantsSignatureRef.current === visibleMarkerRestaurantsSignature');
     expect(mobileOverlaySource).toContain('data-bottom-sheet-layout-source="mobile-control-overlay-sheet"');
     expect(mobileOverlaySource).toContain('setVisibleMarkerSheetHeightRequestKey(0);');
+    expect(mobileOverlaySource).toContain("hideHandleWhenFull={activeSheet !== 'visibleMarkers'}");
     expect(mobileOverlaySource).toContain('visibleMarkerSheetHeightRequestKey > 0');
     expect(mobileOverlaySource).toContain('height: VISIBLE_MARKER_PEEK_SHEET_HEIGHT');
     expect(mobileOverlaySource).toContain("mode: 'exact'");
