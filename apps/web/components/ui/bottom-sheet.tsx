@@ -1310,6 +1310,7 @@ function BottomSheetComponent({
                     className
                 )}
                 data-sheet-state={isAtFullHeight ? 'full' : 'partial'}
+                data-bottom-sheet-layout-source={layoutSource}
                 role={isModal ? 'dialog' : undefined}
                 aria-modal={isModal ? true : undefined}
                 aria-label={isModal && !ariaLabelledBy ? ariaLabel : undefined}
