@@ -132,6 +132,16 @@ describe('bottom sheet height requests', () => {
         })).toBe(70);
     });
 
+    test('supports exact height requests for persistent peek sheets', () => {
+        expect(resolveBottomSheetHeightRequest({
+            currentHeight: 70,
+            requestedHeight: 25,
+            minHeight: 25,
+            maxHeight: 90,
+            mode: 'exact',
+        })).toBe(25);
+    });
+
     test('clamps requested height inside the sheet bounds', () => {
         expect(resolveBottomSheetHeightRequest({
             currentHeight: 25,

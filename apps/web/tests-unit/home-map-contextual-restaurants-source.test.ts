@@ -63,16 +63,21 @@ describe('home map contextual visible-marker restaurants', () => {
     expect(desktopHomeSource).toContain('{!hasContextualRestaurants ? (');
     expect(desktopHomeSource).not.toContain('bg-primary/5 px-3 pb-2 pt-3');
     expect(desktopHomeSource).toContain('restaurantThumbnailIndexes[restaurant.id] ?? 0');
+    expect(desktopHomeSource).toContain('const visibleMarkerRestaurantCount =');
+    expect(desktopHomeSource).toContain('aria-label={`지도에 보이는 맛집 ${visibleMarkerRestaurantCount}곳`}');
     expect(desktopHomeSource).toContain('onThumbnailChange={handleRestaurantThumbnailChange}');
     expect(desktopHomeSource).not.toContain('지도에 보이는 맛집 상세 보기');
     expect(desktopHomeSource.match(/\{!hasContextualRestaurants \? \(/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
 
     expect(mobileOverlaySource).toContain("type ActiveSheet = 'none' | 'region' | 'category' | 'search' | 'visibleMarkers';");
-    expect(mobileOverlaySource).toContain('const canShowVisibleMarkerSheet =');
-    expect(mobileOverlaySource).toContain("(activeSheet === 'none' || activeSheet === 'visibleMarkers')");
-    expect(mobileOverlaySource).toContain("activeSheet !== 'visibleMarkers'");
-    expect(mobileOverlaySource).toContain('data-mobile-visible-marker-restaurants-trigger="true"');
+    expect(mobileOverlaySource).toContain('const canAutoShowVisibleMarkerSheet =');
+    expect(mobileOverlaySource).toContain("setActiveSheet('visibleMarkers');");
+    expect(mobileOverlaySource).not.toContain('data-mobile-visible-marker-restaurants-trigger="true"');
     expect(mobileOverlaySource).toContain('data-mobile-visible-marker-restaurants-sheet="true"');
+    expect(mobileOverlaySource).toContain('data-mobile-visible-marker-restaurants-sheet-frame="true"');
+    expect(mobileOverlaySource).toContain('visibleMarkerThumbnailIndexes[restaurant.id] ?? 0');
+    expect(mobileOverlaySource).toContain('onThumbnailChange={handleVisibleMarkerThumbnailChange}');
+    expect(mobileOverlaySource).toContain("mode: 'exact'");
     expect(mobileOverlaySource).toContain('incrementSearchCount(restaurant.id).catch(() => {});');
   });
 });
