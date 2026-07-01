@@ -55,6 +55,8 @@ export interface StampCardProps {
     size?: 'default' | 'compact';
     /** 방문 완료 도장 이미지 크기 variant */
     stampSize?: 'default' | 'compact' | 'mobile';
+    /** 카드 내부 여백/썸네일 밀도 */
+    density?: 'normal' | 'dense';
     guideLabel?: string;
     guideTitle?: string;
     guideDescription?: string;
@@ -78,6 +80,7 @@ export const StampCard = memo(function StampCard({
     onClick,
     size = 'default',
     stampSize,
+    density = 'normal',
     guideLabel,
     guideTitle,
     guideDescription,
@@ -114,6 +117,7 @@ export const StampCard = memo(function StampCard({
     };
 
     const isCompact = size === 'compact';
+    const isDense = density === 'dense';
     const resolvedStampSize = stampSize ?? size;
     const isStampCompact = resolvedStampSize === 'compact';
     const isStampMobile = resolvedStampSize === 'mobile';
@@ -162,7 +166,7 @@ export const StampCard = memo(function StampCard({
             tabIndex={isGuideCard ? undefined : 0}
             aria-label={isGuideCard ? undefined : `${restaurantDisplayName} 도장 카드 열기`}
         >
-            <div className="aspect-video relative">
+            <div className={cn("relative", isDense && isCompact ? "aspect-[16/5]" : "aspect-video")}>
                 {thumbnailUrl ? (
                     <>
                         <Image
@@ -280,7 +284,7 @@ export const StampCard = memo(function StampCard({
                     </div>
                 )}
             </div>
-            <div className={cn("p-2", isCompact ? "px-2 py-1.5" : "p-3")}>
+            <div className={cn("p-2", isCompact ? (isDense ? "px-2 py-1" : "px-2 py-1.5") : "p-3")}>
                 {isGuideCard ? (
                     <div className="flex items-center justify-between gap-2 min-w-0">
                         <div className="flex items-center gap-2 min-w-0">
@@ -310,10 +314,10 @@ export const StampCard = memo(function StampCard({
                         </span>
                     </div>
                 ) : (
-                    <div className={cn("min-w-0", showAddress && displayAddress ? "space-y-1.5" : "")}>
+                    <div className={cn("min-w-0", showAddress && displayAddress ? (isDense ? "space-y-0.5" : "space-y-1.5") : "")}>
                         <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-2 min-w-0">
-                                <h3 className={cn("font-medium truncate", isCompact ? "text-xs" : "text-sm")} title={restaurantDisplayName}>
+                                <h3 className={cn("font-medium truncate", isCompact ? (isDense ? "text-[13px]" : "text-xs") : "text-sm")} title={restaurantDisplayName}>
                                     {restaurantDisplayName}
                                 </h3>
                                 {category && (
@@ -329,13 +333,13 @@ export const StampCard = memo(function StampCard({
                                 )}
                             </div>
                             {(!isCompact || showAddress) && (
-                                <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
+                                <span className={cn("text-muted-foreground whitespace-nowrap shrink-0", isDense ? "text-[11px]" : "text-xs")}>
                                     리뷰 {reviewCount}
                                 </span>
                             )}
                         </div>
                         {showAddress && displayAddress && (
-                            <p className="flex min-w-0 items-center gap-1 text-xs leading-4 text-muted-foreground">
+                            <p className={cn("flex min-w-0 items-center gap-1 text-muted-foreground", isDense ? "text-[11px] leading-3.5" : "text-xs leading-4")}>
                                 <MapPin className="h-3 w-3 shrink-0" aria-hidden="true" />
                                 <span className="truncate">{displayAddress}</span>
                             </p>
