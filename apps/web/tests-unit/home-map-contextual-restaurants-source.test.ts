@@ -77,6 +77,9 @@ describe('home map contextual visible-marker restaurants', () => {
     expect(mobileOverlaySource).toContain('data-mobile-visible-marker-restaurants-sheet-frame="true"');
     expect(mobileOverlaySource).not.toContain('확대한 지도에서 현재 마커로 보이는 맛집이에요.');
     expect(mobileOverlaySource).toContain("activeSheet !== 'visibleMarkers' ? (");
+    expect(mobileOverlaySource).toContain('dismissedVisibleMarkerRestaurantsSignatureRef.current === visibleMarkerRestaurantsSignature');
+    expect(mobileOverlaySource).toContain('aria-label="지도에 보이는 맛집 닫기"');
+    expect(mobileOverlaySource).toContain('onClick={handleVisibleMarkerSheetClose}');
     expect(mobileOverlaySource).toContain('visibleMarkerThumbnailIndexes[restaurant.id] ?? 0');
     expect(mobileOverlaySource).toContain('onThumbnailChange={handleVisibleMarkerThumbnailChange}');
     expect(mobileOverlaySource).toContain('VISIBLE_MARKER_PEEK_SHEET_HEIGHT = 16');

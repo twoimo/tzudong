@@ -343,6 +343,7 @@ interface NaverMapViewProps {
     onContextualRestaurantsChange?: (payload: HomeMapContextualRestaurantsPayload) => void;
     onSearchSelectionRelease?: () => void;
     onMapBlankClick?: () => void;
+    onMapInteraction?: () => void;
     deviceLocation?: DeviceMapLocation | null;
 }
 
@@ -456,6 +457,7 @@ const NaverMapView = memo(({
     onContextualRestaurantsChange,
     onSearchSelectionRelease,
     onMapBlankClick,
+    onMapInteraction,
     deviceLocation = null,
 }: NaverMapViewProps) => {
     const mapRef = useRef<HTMLDivElement>(null);
@@ -667,7 +669,10 @@ const NaverMapView = memo(({
 
         const { handleSearchReleaseInteraction, handleUserInteraction } = buildNaverMapInteractionHandlers({
             hasUserMovedMapRef,
-            onUserInteraction: activateNoncriticalMapEffects,
+            onUserInteraction: () => {
+                activateNoncriticalMapEffects();
+                onMapInteraction?.();
+            },
             releaseSearchSelectionOnUserInteraction,
         });
         const interactionListenerPlan = buildNaverMapInteractionListenerPlan();
@@ -705,7 +710,7 @@ const NaverMapView = memo(({
                 });
             }
         };
-    }, [activateNoncriticalMapEffects, isMapInitialized, releaseSearchSelectionOnUserInteraction]);
+    }, [activateNoncriticalMapEffects, isMapInitialized, onMapInteraction, releaseSearchSelectionOnUserInteraction]);
 
     useEffect(() => {
         if (!isMapInitialized || !mapInstanceRef.current || !window.naver?.maps) return;
@@ -1149,11 +1154,19 @@ const NaverMapView = memo(({
         // prevSelectedRestaurantIdRef는 marker click 등 다른 곳에서도 쓰일 수 있으니 주의.
         // 여기서는 이 Effect 전용으로 판단 로직을 수행.
 
+        const previousSelectedId = prevSelectedRestaurantIdRef.current;
         const { isSelectionChanged, nextSelectedId } = resolveNaverSelectionChange({
             currentSelectedId,
-            previousSelectedId: prevSelectedRestaurantIdRef.current,
+            previousSelectedId,
         });
         prevSelectedRestaurantIdRef.current = nextSelectedId;
+        const isSelectionClearedByPanelClose =
+            isSelectionChanged &&
+            previousSelectedId !== null &&
+            currentSelectedId === null &&
+            selectedRegion === null &&
+            !propIsPanelOpen &&
+            !internalPanelOpen;
 
         // B. 지역 선택 변경 확인 (Ref가 없어서 Effect 내 로컬 변수로는 안됨, 
         // 하지만 selectedRegion 값이 바뀌면 Effect가 실행되므로, 이전에 저장해둔 Ref가 필요함)
@@ -1180,8 +1193,12 @@ const NaverMapView = memo(({
         // 여기서는 "이동해야 하는지" 여부만 결정하면 됨.
 
         // hasUserMovedMapRef.current = false; // [Delete] 기존의 무조건 리셋 삭제
+        if (isSelectionClearedByPanelClose) {
+            return;
+        }
 
-        if (isSelectionChanged) {
+
+        if (isSelectionChanged && currentSelectedId) {
             hasUserMovedMapRef.current = false;
         }
 
@@ -1395,6 +1412,18 @@ const NaverMapView = memo(({
             naver.maps.Event.trigger(map, 'resize');
 
             const { urlLat, urlLng, urlZoom } = parseNaverMapUrlState(window.location.search);
+            if (
+                !selectedRestaurant &&
+                !selectedRegion &&
+                !propIsPanelOpen &&
+                !internalPanelOpen &&
+                Number.isNaN(urlLat) &&
+                Number.isNaN(urlLng) &&
+                Number.isNaN(urlZoom)
+            ) {
+                return;
+            }
+
             const resizePlan = resolveNaverResizePlan({
                 currentCenter: map.getCenter(),
                 currentZoom: map.getZoom(),
@@ -1459,7 +1488,7 @@ const NaverMapView = memo(({
             cancel,
             disconnect: () => resizeObserver.disconnect(),
         });
-    }, [getMobileVerticalOffset, isMapInitialized, isMobileOrTablet, selectedRestaurant, selectedRegion]);
+    }, [getMobileVerticalOffset, internalPanelOpen, isMapInitialized, isMobileOrTablet, propIsPanelOpen, selectedRestaurant, selectedRegion]);
 
     // 브라우저 창 크기 변경 시 지도 리사이즈 및 중심 이동
     // 브라우저 창 크기 변경 시 지도 리사이즈 및 중심 이동 (디바운스 적용)
