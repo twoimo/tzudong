@@ -756,14 +756,14 @@ async function fetchVideosFromSupabase(period: InsightTreemapPeriod = 'ALL', opt
             query = query.gte('published_at', cutoffValue);
         }
 
-        const { data, error } = await query.range(from, to);
+        const { data, error } = await query.range(from, to).overrideTypes<VideoDbRow[], { merge: false }>();
 
         if (error) {
             throw new Error(`Failed to fetch videos: ${error.message}`);
         }
 
         if (data && data.length > 0) {
-            rows.push(...(data as VideoDbRow[]));
+            rows.push(...data);
         }
 
         if (!data || data.length < PAGE_SIZE) {
