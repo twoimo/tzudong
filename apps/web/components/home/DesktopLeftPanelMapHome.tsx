@@ -216,6 +216,8 @@ export default function DesktopLeftPanelMapHome({
     [contextualRestaurantsPayload, isKoreanOnly],
   );
   const hasContextualRestaurants = contextualRestaurants.length > 0;
+  const visibleMarkerRestaurantCount =
+    contextualRestaurantsPayload?.totalVisibleCount ?? contextualRestaurants.length;
   const hasBufferedLatestRestaurants =
     visibleLatestRestaurantCount < visibleLatestRestaurants.length;
   const hasMoreLatestRestaurants =
@@ -341,19 +343,22 @@ export default function DesktopLeftPanelMapHome({
             className="border-b border-border/70 px-3 pb-2 pt-3"
             data-desktop-left-panel-visible-marker-restaurants="true"
           >
-            <div className="mb-2 flex items-center justify-between gap-2">
+            <div className="mb-2 flex items-center gap-2">
               <div className="min-w-0">
-                <h2 className="flex items-center gap-1.5 text-sm font-bold text-foreground">
-                  <MapPin className="h-4 w-4 text-primary" aria-hidden="true" />
-                  <span>지도에 보이는 맛집</span>
+                <h2 className="flex min-w-0 items-center gap-1.5 text-sm font-bold text-foreground">
+                  <MapPin className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                  <span className="truncate">지도에 보이는 맛집</span>
+                  <span
+                    className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-[11px] font-semibold leading-5 text-primary-foreground"
+                    aria-label={`지도에 보이는 맛집 ${visibleMarkerRestaurantCount}곳`}
+                  >
+                    {visibleMarkerRestaurantCount}곳
+                  </span>
                 </h2>
                 <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">
                   확대된 지도에서 현재 마커로 보이는 곳이에요
                 </p>
               </div>
-              <span className="shrink-0 rounded-full bg-primary px-2 py-1 text-[11px] font-semibold text-primary-foreground">
-                {contextualRestaurantsPayload?.totalVisibleCount ?? contextualRestaurants.length}곳
-              </span>
             </div>
 
             <div className="grid grid-cols-1 gap-3">
