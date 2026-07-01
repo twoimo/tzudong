@@ -63,6 +63,42 @@ const RESTAURANT_FIXTURES = [
     },
 ] as const;
 
+const REVIEW_FIXTURES = [
+    {
+        id: 'review-marker-1',
+        restaurant_id: 'restaurant-marker-1',
+        user_id: 'user-reviewer-1',
+        content: '국물이 진하고 만두가 푸짐해서 재방문하고 싶어요.',
+        food_photos: ['https://images.unsplash.com/photo-1496116218417-1a781b1c416c?auto=format&fit=crop&w=320&q=80'],
+        created_at: '2026-02-01T00:00:00.000Z',
+        is_pinned: false,
+    },
+    {
+        id: 'review-marker-2',
+        restaurant_id: 'restaurant-marker-2',
+        user_id: 'user-reviewer-2',
+        content: '튀김이 바삭하고 소스가 깔끔했어요.',
+        food_photos: ['https://images.unsplash.com/photo-1551024506-0bccd828d307?auto=format&fit=crop&w=320&q=80'],
+        created_at: '2026-02-02T00:00:00.000Z',
+        is_pinned: false,
+    },
+    {
+        id: 'review-search',
+        restaurant_id: 'restaurant-search',
+        user_id: 'user-reviewer-3',
+        content: '분식집 분위기가 좋고 떡볶이가 매콤해요.',
+        food_photos: ['https://images.unsplash.com/photo-1553621042-f6e147245754?auto=format&fit=crop&w=320&q=80'],
+        created_at: '2026-02-03T00:00:00.000Z',
+        is_pinned: true,
+    },
+] as const;
+
+const PROFILE_FIXTURES = [
+    { user_id: 'user-reviewer-1', nickname: '칼국수러버' },
+    { user_id: 'user-reviewer-2', nickname: '돈까스탐험가' },
+    { user_id: 'user-reviewer-3', nickname: '분식요정' },
+] as const;
+
 const MOCK_NAVER_MAPS_SOURCE = `
 (() => {
   if (window.naver && window.naver.maps) return;
@@ -470,12 +506,12 @@ async function handleSupabaseRestRoute(route: Route) {
     }
 
     if (url.pathname.endsWith('/rest/v1/reviews')) {
-        await fulfillJson(route, []);
+        await fulfillJson(route, REVIEW_FIXTURES);
         return;
     }
 
     if (url.pathname.endsWith('/rest/v1/profiles')) {
-        await fulfillJson(route, []);
+        await fulfillJson(route, PROFILE_FIXTURES);
         return;
     }
 
