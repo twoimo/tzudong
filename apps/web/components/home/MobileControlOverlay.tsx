@@ -1273,7 +1273,7 @@ function MobileControlOverlayComponent({
                         </div>
                     ) : null}
 
-                    <div className="p-4 pb-8">
+                    <div className={cn(activeSheet === 'visibleMarkers' ? "p-3 pb-6" : "p-4 pb-8")}>
                         {activeSheet === 'region' && (
                             <div className="space-y-3">
                                 {mapMode === 'domestic' ? (
@@ -1340,17 +1340,27 @@ function MobileControlOverlayComponent({
 
                         {activeSheet === 'visibleMarkers' && (
                             <div
-                                className="grid grid-cols-1 gap-3"
+                                className="grid grid-cols-1 gap-2"
                                 data-mobile-visible-marker-restaurants-sheet="true"
                                 data-mobile-visible-marker-restaurants-sheet-frame="true"
                             >
-                                <div className="sticky top-0 z-10 -mx-1 -mt-2 flex justify-end bg-background/95 py-1 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+                                <div className="sticky top-0 z-10 -mx-1 -mt-2 flex items-center justify-between gap-3 bg-background/95 py-1 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+                                    <div className="flex min-w-0 items-center gap-1.5 pl-1 text-sm font-semibold text-foreground">
+                                        <MapPin className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                                        <span className="truncate">지도에 보이는 맛집</span>
+                                        <span
+                                            className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-[11px] font-semibold leading-5 text-primary-foreground"
+                                            aria-label={`지도에 보이는 맛집 ${visibleMarkerRestaurantCount}곳`}
+                                        >
+                                            {visibleMarkerRestaurantCount}곳
+                                        </span>
+                                    </div>
                                     <Button
                                         variant="ghost"
                                         size="icon"
                                         onClick={handleVisibleMarkerSheetClose}
                                         aria-label="지도에 보이는 맛집 닫기"
-                                        className="h-9 w-9 rounded-full"
+                                        className="h-9 w-9 shrink-0 rounded-full"
                                     >
                                         <X className="h-4 w-4" aria-hidden="true" />
                                     </Button>
@@ -1368,6 +1378,7 @@ function MobileControlOverlayComponent({
                                         onClick={handleVisibleMarkerRestaurantSelect}
                                         size="compact"
                                         stampSize="mobile"
+                                        density="dense"
                                         showAddress
                                         categoryFallback="맛집"
                                     />
