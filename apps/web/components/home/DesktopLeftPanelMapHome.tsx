@@ -338,7 +338,7 @@ export default function DesktopLeftPanelMapHome({
       >
         {hasContextualRestaurants ? (
           <div
-            className="border-b border-border/70 bg-primary/5 px-3 pb-2 pt-3"
+            className="border-b border-border/70 px-3 pb-2 pt-3"
             data-desktop-left-panel-visible-marker-restaurants="true"
           >
             <div className="mb-2 flex items-center justify-between gap-2">
@@ -386,10 +386,11 @@ export default function DesktopLeftPanelMapHome({
             </div>
           </div>
         ) : null}
-        <div
-          className="bg-background px-3 pb-2 pt-3"
-          data-desktop-left-panel-popular-restaurants="true"
-        >
+        {!hasContextualRestaurants ? (
+          <div
+            className="bg-background px-3 pb-2 pt-3"
+            data-desktop-left-panel-popular-restaurants="true"
+          >
           <div className="mb-2 flex items-center justify-between gap-2">
             <div className="min-w-0">
               <h2 className="flex items-center gap-1.5 text-sm font-bold text-foreground">
@@ -478,7 +479,8 @@ export default function DesktopLeftPanelMapHome({
               })
             )}
           </div>
-        </div>
+          </div>
+        ) : null}
 
         <div
           className="px-3 pt-1"
