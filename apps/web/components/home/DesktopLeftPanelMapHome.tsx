@@ -101,7 +101,7 @@ export default function DesktopLeftPanelMapHome({
   contextualRestaurantsPayload = null,
 }: DesktopLeftPanelMapHomeProps) {
   const queryClient = useQueryClient();
-  const [latestThumbnailIndexes, setLatestThumbnailIndexes] = useState<
+  const [restaurantThumbnailIndexes, setRestaurantThumbnailIndexes] = useState<
     Record<string, number>
   >({});
   const [latestRestaurantSort, setLatestRestaurantSort] =
@@ -315,9 +315,9 @@ export default function DesktopLeftPanelMapHome({
     [desktopLeftPanelHomePopularQueryKey, onRestaurantOpen, queryClient],
   );
 
-  const handleLatestThumbnailChange = useCallback(
+  const handleRestaurantThumbnailChange = useCallback(
     (id: string, index: number) => {
-      setLatestThumbnailIndexes((current) => ({
+      setRestaurantThumbnailIndexes((current) => ({
         ...current,
         [id]: index,
       }));
@@ -356,32 +356,23 @@ export default function DesktopLeftPanelMapHome({
               </span>
             </div>
 
-            <div className="space-y-1.5">
+            <div className="grid grid-cols-1 gap-3">
               {contextualRestaurants.map((restaurant) => (
-                <button
+                <StampCard
                   key={restaurant.id}
-                  type="button"
-                  onClick={() => handleRestaurantOpen(restaurant)}
-                  className="group flex w-full items-center gap-2 rounded-xl border border-border/70 bg-background px-2.5 py-2 text-left shadow-sm transition-colors hover:bg-secondary/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                  aria-label={`${restaurant.name} 지도에 보이는 맛집 상세 보기`}
-                >
-                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
-                    <MapPin className="h-4 w-4" aria-hidden="true" />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-bold text-foreground">
-                      {restaurant.name}
-                    </span>
-                    <span className="mt-0.5 flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
-                      <span className="truncate">
-                        {restaurant.road_address ||
-                          restaurant.jibun_address ||
-                          restaurant.english_address ||
-                          '주소 없음'}
-                      </span>
-                    </span>
-                  </span>
-                </button>
+                  restaurant={restaurant}
+                  isVisited={false}
+                  isUserStampsReady={false}
+                  currentThumbnailIndex={
+                    restaurantThumbnailIndexes[restaurant.id] ?? 0
+                  }
+                  onThumbnailChange={handleRestaurantThumbnailChange}
+                  onClick={handleRestaurantOpen}
+                  size="default"
+                  stampSize="compact"
+                  showAddress
+                  categoryFallback="맛집"
+                />
               ))}
             </div>
           </div>
@@ -482,6 +473,7 @@ export default function DesktopLeftPanelMapHome({
           </div>
         ) : null}
 
+        {!hasContextualRestaurants ? (
         <div
           className="px-3 pt-1"
           data-desktop-left-panel-latest-restaurants="true"
@@ -554,9 +546,9 @@ export default function DesktopLeftPanelMapHome({
                     isVisited={false}
                     isUserStampsReady={false}
                     currentThumbnailIndex={
-                      latestThumbnailIndexes[restaurant.id] ?? 0
+                      restaurantThumbnailIndexes[restaurant.id] ?? 0
                     }
-                    onThumbnailChange={handleLatestThumbnailChange}
+                    onThumbnailChange={handleRestaurantThumbnailChange}
                     onClick={handleRestaurantOpen}
                     size="default"
                     stampSize="compact"
@@ -595,6 +587,7 @@ export default function DesktopLeftPanelMapHome({
             )}
           </div>
         </div>
+        ) : null}
       </div>
     </section>
   );
