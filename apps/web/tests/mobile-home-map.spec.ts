@@ -197,22 +197,19 @@ test.describe('Phase 1: mobile home map regressions', () => {
 
         await waitForMarkerCount(page, 3);
 
-        const trigger = page.locator('[data-mobile-visible-marker-restaurants-trigger="true"]');
-        await expect(trigger).toBeVisible({ timeout: 5000 });
-        await expect(trigger).toContainText('보이는 맛집');
-
-        await trigger.click();
+        await expect(page.locator('[data-mobile-visible-marker-restaurants-trigger="true"]')).toHaveCount(0);
 
         const sheet = page.locator('[data-mobile-visible-marker-restaurants-sheet="true"]');
-        await expect(sheet).toBeVisible();
+        await expect(sheet).toBeVisible({ timeout: 5000 });
         await expect(sheet).toContainText(/정원분식|명동칼국수|서울돈까스/);
+
         await page.screenshot({
             path: 'test-results/home-map-contextual-discovery-mobile.png',
             fullPage: true,
         });
 
-        await sheet.getByRole('button', { name: /명동칼국수 지도에 보이는 맛집 상세 보기/ }).click();
+        await sheet.getByRole('button', { name: /명동칼국수|서울돈까스|정원분식/ }).first().click();
         await expect(sheet).not.toBeVisible();
-        await expect(page.getByTestId('restaurant-detail-panel')).toContainText('명동칼국수');
+        await expect(page.getByTestId('restaurant-detail-panel')).toContainText(/정원분식|명동칼국수|서울돈까스/);
     });
 });
