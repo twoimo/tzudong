@@ -300,6 +300,7 @@ function MobileControlOverlayComponent({
         [visibleMarkerRestaurantCount, visibleMarkerRestaurants],
     );
     const visibleMarkerRestaurantsSignatureRef = useRef(visibleMarkerRestaurantsSignature);
+    const dismissedVisibleMarkerRestaurantsSignatureRef = useRef<string | null>(null);
     const canAutoShowVisibleMarkerSheet =
         mapMode === 'domestic' &&
         !isMapFullscreen &&
@@ -324,15 +325,21 @@ function MobileControlOverlayComponent({
         [],
     );
 
+    const handleVisibleMarkerSheetClose = useCallback(() => {
+        dismissedVisibleMarkerRestaurantsSignatureRef.current = visibleMarkerRestaurantsSignature;
+        setActiveSheet('none');
+    }, [visibleMarkerRestaurantsSignature]);
+
     const requestVisibleMarkerSheetPeek = useCallback(() => {
         setVisibleMarkerSheetHeightRequestKey((current) => current + 1);
     }, []);
 
     useEffect(() => {
         if (!canAutoShowVisibleMarkerSheet || activeSheet !== 'none') return;
+        if (dismissedVisibleMarkerRestaurantsSignatureRef.current === visibleMarkerRestaurantsSignature) return;
         setVisibleMarkerSheetHeightRequestKey(0);
         setActiveSheet('visibleMarkers');
-    }, [activeSheet, canAutoShowVisibleMarkerSheet]);
+    }, [activeSheet, canAutoShowVisibleMarkerSheet, visibleMarkerRestaurantsSignature]);
 
     useEffect(() => {
         if (activeSheet !== 'visibleMarkers') return;
@@ -1337,6 +1344,17 @@ function MobileControlOverlayComponent({
                                 data-mobile-visible-marker-restaurants-sheet="true"
                                 data-mobile-visible-marker-restaurants-sheet-frame="true"
                             >
+                                <div className="sticky top-0 z-10 -mx-1 -mt-2 flex justify-end bg-background/95 py-1 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={handleVisibleMarkerSheetClose}
+                                        aria-label="지도에 보이는 맛집 닫기"
+                                        className="h-9 w-9 rounded-full"
+                                    >
+                                        <X className="h-4 w-4" aria-hidden="true" />
+                                    </Button>
+                                </div>
                                 {visibleMarkerRestaurants.map((restaurant) => (
                                     <StampCard
                                         key={restaurant.id}
