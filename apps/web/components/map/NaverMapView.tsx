@@ -10,6 +10,7 @@ import { useRestaurants } from "@/hooks/use-restaurants";
 import type { FilterState } from "@/components/filters/filter-state";
 import type { Restaurant, Region } from "@/types/restaurant";
 import type { Announcement } from "@/types/announcement";
+import type { Tables } from "@/integrations/supabase/types";
 import { REGION_MAP_CONFIG } from "@/config/maps";
 import { MapSkeleton } from "@/components/skeletons/MapSkeleton";
 import { NaverMapLoadErrorState } from "@/components/map/map-view-status-panels";
@@ -21,6 +22,7 @@ import {
 } from "@/components/map/naver-map-sidepanels";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useDeviceType } from "@/hooks/useDeviceType";
+import { supabase } from "@/integrations/supabase/client";
 import {
     buildDeviceLocationMarkerHtml,
     resolveDeviceLocationMapRenderPlan,
@@ -202,6 +204,17 @@ import {
     resolveNaverWheelPostAdjustPlan,
     type NaverWheelInput,
 } from "@/lib/naver-map-wheel-helpers";
+import {
+    buildVisibleMarkerReviewBubbleHtml,
+    buildVisibleMarkerReviewBubbleMapSignature,
+    buildVisibleMarkerReviewBubbleTargetSignature,
+    selectVisibleMarkerReviewBubbleTargets,
+    truncateVisibleMarkerReviewBubbleText,
+    VISIBLE_MARKER_REVIEW_BUBBLE_DESKTOP_LIMIT,
+    VISIBLE_MARKER_REVIEW_BUBBLE_MOBILE_LIMIT,
+    type VisibleMarkerReviewBubble,
+    type VisibleMarkerReviewBubbleTarget,
+} from "@/lib/visible-marker-review-bubbles";
 
 interface NaverLatLngLike {
     lat: () => number;
@@ -352,6 +365,139 @@ interface NaverMapViewProps {
  * 각 레스토랑의 선택/비선택 상태별로 HTML을 캐싱하여 재사용
  */
 const markerContentCache = new LruCache<string, string>(500);
+type VisibleMarkerReviewRow = Pick<
+    Tables<'reviews'>,
+    'id' | 'restaurant_id' | 'user_id' | 'content' | 'food_photos' | 'created_at' | 'is_pinned'
+>;
+
+type VisibleMarkerReviewProfileRow = Pick<Tables<'profiles'>, 'user_id' | 'nickname'>;
+
+function buildVisibleMarkerReviewSeed(
+    zoom: number,
+    bounds: { south: number; west: number; north: number; east: number } | null,
+) {
+    if (!bounds) return String(zoom);
+    return [
+        zoom,
+        bounds.south.toFixed(3),
+        bounds.west.toFixed(3),
+        bounds.north.toFixed(3),
+        bounds.east.toFixed(3),
+    ].join(':');
+}
+
+function filterVisibleMarkerReviewBubbleViewportCandidates(
+    restaurants: Restaurant[],
+    options: {
+        isMobile: boolean;
+        map: NaverMapLike;
+        mapElement: HTMLDivElement | null;
+    },
+) {
+    const projection = options.map.getProjection?.();
+    const rect = options.mapElement?.getBoundingClientRect();
+    if (!projection || !rect?.width || !rect?.height) return restaurants;
+
+    const bubbleHalfWidth = options.isMobile ? 118 : 118;
+    const minY = options.isMobile ? 220 : 112;
+    const maxY = options.isMobile ? rect.height * 0.46 : rect.height - 140;
+    const minX = bubbleHalfWidth + 16;
+    const maxX = rect.width - bubbleHalfWidth - 16;
+
+    const scoredRestaurants = restaurants.flatMap((restaurant) => {
+        if (typeof restaurant.lat !== 'number' || typeof restaurant.lng !== 'number') return [];
+
+        try {
+            const point = projection.fromCoordToOffset(
+                new window.naver.maps.LatLng(restaurant.lat, restaurant.lng),
+            );
+            const targetY = options.isMobile ? rect.height * 0.34 : rect.height * 0.45;
+            return [{
+                restaurant,
+                x: point.x,
+                y: point.y,
+                centralityScore: Math.abs(point.x - rect.width / 2) * 1.2 + Math.abs(point.y - targetY),
+            }];
+        } catch {
+            return [];
+        }
+    });
+
+    const viewportSafeRestaurants = scoredRestaurants
+        .filter(({ x, y }) => x >= minX && x <= maxX && y >= minY && y <= maxY)
+        .map(({ restaurant }) => restaurant);
+
+    if (viewportSafeRestaurants.length > 0) return viewportSafeRestaurants;
+
+    const broadMinY = options.isMobile ? 148 : 84;
+    const broadMaxY = options.isMobile ? rect.height * 0.62 : rect.height - 96;
+    const broadCandidates = scoredRestaurants
+        .filter(({ x, y }) =>
+            x >= bubbleHalfWidth &&
+            x <= rect.width - bubbleHalfWidth &&
+            y >= broadMinY &&
+            y <= broadMaxY
+        )
+        .sort((left, right) => left.centralityScore - right.centralityScore)
+        .slice(0, options.isMobile ? 12 : 24)
+        .map(({ restaurant }) => restaurant);
+
+    return broadCandidates.length > 0 ? broadCandidates : restaurants;
+}
+
+function clampVisibleMarkerReviewBubbleElements() {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
+    const viewportMinX = 8;
+    const viewportMaxX = window.innerWidth - 8;
+    document.querySelectorAll<HTMLElement>('[data-visible-marker-review-bubble="true"]').forEach((element) => {
+        element.style.marginLeft = '0px';
+        const rect = element.getBoundingClientRect();
+        let offsetX = 0;
+
+        if (rect.left < viewportMinX) {
+            offsetX = viewportMinX - rect.left;
+        } else if (rect.right > viewportMaxX) {
+            offsetX = viewportMaxX - rect.right;
+        }
+
+        if (Math.abs(offsetX) > 0.5) {
+            element.style.marginLeft = `${offsetX}px`;
+        }
+    });
+}
+
+function scheduleVisibleMarkerReviewBubbleClamp() {
+    if (typeof window === 'undefined') return;
+
+    window.requestAnimationFrame(() => {
+        clampVisibleMarkerReviewBubbleElements();
+    });
+}
+
+function wrapNaverMarkerContentWithReviewBubble(
+    markerContent: string,
+    bubble: VisibleMarkerReviewBubble | undefined,
+    isMobile: boolean,
+) {
+    if (!bubble) return markerContent;
+
+    return `
+        <div
+          data-visible-marker-review-bubble-anchor="true"
+          style="
+            position:relative;
+            width:${isMobile ? 32 : 32}px;
+            height:${isMobile ? 32 : 32}px;
+            overflow:visible;
+            pointer-events:auto;
+          "
+        >
+          ${buildVisibleMarkerReviewBubbleHtml(bubble, { isMobile })}
+          ${markerContent}
+        </div>
+    `;
+}
 
 type NaverClusterFeature =
     | Supercluster.ClusterFeature<ClusterProperties>
@@ -498,6 +644,11 @@ const NaverMapView = memo(({
     const [isClusterMode, setIsClusterMode] = useState(false); // 클러스터 모드 활성화 여부
     const [isRegionalClusterMode, setIsRegionalClusterMode] = useState(false); // 행정구역 클러스터 모드
     const [isSeoulDistrictMode, setIsSeoulDistrictMode] = useState(false); // 서울 자치구 모드
+    const [visibleMarkerReviewBubbleTargets, setVisibleMarkerReviewBubbleTargets] =
+        useState<VisibleMarkerReviewBubbleTarget[]>([]);
+    const [visibleMarkerReviewBubbles, setVisibleMarkerReviewBubbles] =
+        useState<Record<string, VisibleMarkerReviewBubble>>({});
+    const visibleMarkerReviewBubbleTargetSignatureRef = useRef('');
 
     // 사이드바 상태 가져오기
     const { isSidebarOpen } = useLayout();
@@ -622,6 +773,117 @@ const NaverMapView = memo(({
         searchedRestaurant,
         selectedRestaurant,
     }), [searchedRestaurant, selectedRestaurant]);
+    useEffect(() => {
+        if (visibleMarkerReviewBubbleTargets.length === 0) {
+            setVisibleMarkerReviewBubbles((previous) =>
+                Object.keys(previous).length === 0 ? previous : {}
+            );
+            return;
+        }
+
+        const relatedRestaurantIdToTargetId = new Map<string, string>();
+        visibleMarkerReviewBubbleTargets.forEach((target) => {
+            target.relatedRestaurantIds.forEach((restaurantId) => {
+                relatedRestaurantIdToTargetId.set(restaurantId, target.restaurantId);
+            });
+        });
+        const relatedRestaurantIds = [...relatedRestaurantIdToTargetId.keys()];
+
+        if (relatedRestaurantIds.length === 0) {
+            setVisibleMarkerReviewBubbles((previous) =>
+                Object.keys(previous).length === 0 ? previous : {}
+            );
+            return;
+        }
+
+        let isCancelled = false;
+
+        const fetchVisibleMarkerReviewBubbles = async () => {
+            const { data: reviewsData, error: reviewsError } = await supabase
+                .from('reviews')
+                .select('id,restaurant_id,user_id,content,food_photos,created_at,is_pinned')
+                .in('restaurant_id', relatedRestaurantIds)
+                .eq('is_verified', true)
+                .order('is_pinned', { ascending: false })
+                .order('created_at', { ascending: false })
+                .limit(Math.max(visibleMarkerReviewBubbleTargets.length * 4, visibleMarkerReviewBubbleTargets.length));
+
+            if (isCancelled) return;
+
+            if (reviewsError || !reviewsData?.length) {
+                setVisibleMarkerReviewBubbles((previous) =>
+                    Object.keys(previous).length === 0 ? previous : {}
+                );
+                return;
+            }
+
+            const typedReviews = reviewsData as VisibleMarkerReviewRow[];
+            const userIds = [
+                ...new Set(
+                    typedReviews
+                        .map((review) => review.user_id)
+                        .filter((userId): userId is string => typeof userId === 'string' && userId.length > 0),
+                ),
+            ];
+            const { data: profilesData } = userIds.length > 0
+                ? await supabase
+                    .from('profiles')
+                    .select('user_id,nickname')
+                    .in('user_id', userIds)
+                : { data: [] as VisibleMarkerReviewProfileRow[] };
+
+            if (isCancelled) return;
+
+            const profilesByUserId = new Map(
+                ((profilesData || []) as VisibleMarkerReviewProfileRow[])
+                    .map((profile) => [profile.user_id, profile.nickname || '익명 사용자'])
+            );
+            const nextBubbles: Record<string, VisibleMarkerReviewBubble> = {};
+            const reviewsByPhotoPriority = [...typedReviews].sort((left, right) => {
+                const leftHasPhoto = Array.isArray(left.food_photos) && left.food_photos.length > 0;
+                const rightHasPhoto = Array.isArray(right.food_photos) && right.food_photos.length > 0;
+                if (leftHasPhoto !== rightHasPhoto) return rightHasPhoto ? 1 : -1;
+                const leftPinned = left.is_pinned ? 1 : 0;
+                const rightPinned = right.is_pinned ? 1 : 0;
+                if (leftPinned !== rightPinned) return rightPinned - leftPinned;
+                return String(right.created_at ?? '').localeCompare(String(left.created_at ?? ''));
+            });
+
+            for (const review of reviewsByPhotoPriority) {
+                if (!review.restaurant_id) continue;
+                const restaurantId = relatedRestaurantIdToTargetId.get(review.restaurant_id);
+                if (!restaurantId || nextBubbles[restaurantId]) continue;
+
+                const photoUrl = Array.isArray(review.food_photos)
+                    ? review.food_photos.find((photo): photo is string => typeof photo === 'string' && photo.trim().length > 0) ?? null
+                    : null;
+                const content = truncateVisibleMarkerReviewBubbleText(
+                    review.content || '사진 리뷰를 남겼어요',
+                    80,
+                );
+
+                nextBubbles[restaurantId] = {
+                    restaurantId,
+                    reviewId: review.id,
+                    userName: profilesByUserId.get(review.user_id) || '익명 사용자',
+                    content,
+                    photoUrl,
+                };
+            }
+
+            setVisibleMarkerReviewBubbles((previous) =>
+                buildVisibleMarkerReviewBubbleMapSignature(previous) === buildVisibleMarkerReviewBubbleMapSignature(nextBubbles)
+                    ? previous
+                    : nextBubbles
+            );
+        };
+
+        fetchVisibleMarkerReviewBubbles();
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [visibleMarkerReviewBubbleTargets]);
 
     const activateNoncriticalMapEffects = useCallback(() => {
         setShouldRunNoncriticalMapEffects((previous) => previous ? previous : true);
@@ -1893,6 +2155,31 @@ const NaverMapView = memo(({
             visibleCount: contextualRestaurants.length,
         });
         const isContextualPayloadEligible = !contextualIneligibilityReason;
+        const visibleMarkerReviewCandidateRestaurants = getRestaurantsWithRenderableCoordinates(visibleRestaurants);
+        const reviewBubbleCandidateRestaurants = isContextualPayloadEligible && !selectedRestaurant
+            ? filterVisibleMarkerReviewBubbleViewportCandidates(visibleMarkerReviewCandidateRestaurants, {
+                isMobile: isMobileOrTablet,
+                map,
+                mapElement: mapRef.current,
+            })
+            : [];
+        const nextReviewBubbleTargets = reviewBubbleCandidateRestaurants.length > 0
+            ? selectVisibleMarkerReviewBubbleTargets(reviewBubbleCandidateRestaurants, {
+                limit: isMobileOrTablet
+                    ? VISIBLE_MARKER_REVIEW_BUBBLE_MOBILE_LIMIT
+                    : VISIBLE_MARKER_REVIEW_BUBBLE_DESKTOP_LIMIT,
+                seed: buildVisibleMarkerReviewSeed(currentZoom, extendedBounds),
+            })
+            : [];
+        const nextReviewBubbleTargetSignature =
+            buildVisibleMarkerReviewBubbleTargetSignature(nextReviewBubbleTargets);
+        if (visibleMarkerReviewBubbleTargetSignatureRef.current !== nextReviewBubbleTargetSignature) {
+            visibleMarkerReviewBubbleTargetSignatureRef.current = nextReviewBubbleTargetSignature;
+            setVisibleMarkerReviewBubbleTargets(nextReviewBubbleTargets);
+        }
+        const activeVisibleMarkerReviewBubbles = isContextualPayloadEligible && !selectedRestaurant
+            ? visibleMarkerReviewBubbles
+            : {};
         onVisibleRestaurantsChange?.(swipeCandidates);
         onContextualRestaurantsChange?.({
             mode: 'domestic',
@@ -1921,6 +2208,9 @@ const NaverMapView = memo(({
         });
         expandedClusterRestaurantIds.forEach((restaurantId) => {
             renderTargetIdsForSignature.push(`expanded-cluster-${restaurantId}`);
+        });
+        Object.values(activeVisibleMarkerReviewBubbles).forEach((bubble) => {
+            renderTargetIdsForSignature.push(`review-bubble-${bubble.restaurantId}-${bubble.reviewId}`);
         });
 
         const nextMarkerRenderSignature = buildMarkerRenderSignature({
@@ -2060,11 +2350,17 @@ const NaverMapView = memo(({
                     activeIds.add(restaurant.id);
                     const isSelected = selectedRestaurant?.id === restaurant.id;
                     const visual = getNaverIndividualMarkerVisual(restaurant, isSelected);
+                    const bubble = activeVisibleMarkerReviewBubbles[restaurant.id];
+                    const markerContent = wrapNaverMarkerContentWithReviewBubble(
+                        visual.content,
+                        bubble,
+                        isMobileOrTablet,
+                    );
 
                     markerPool.acquire(
                         restaurant.id,
                         createIndividualMarkerPosition(restaurant),
-                        { content: visual.content, anchor: new naver.maps.Point(visual.anchor.x, visual.anchor.y) },
+                        { content: markerContent, anchor: new naver.maps.Point(visual.anchor.x, visual.anchor.y) },
                         map,
                         () => handleMarkerRestaurantSelection(restaurant)
                     );
@@ -2139,6 +2435,12 @@ const NaverMapView = memo(({
                             const isSelected = selectedRestaurant?.id === restaurantId;
                             const restaurant = restaurantById.get(restaurantId) ?? mergedRestaurantById.get(restaurantId);
                             const visual = getNaverIndividualMarkerVisual(restaurant ?? { categories: [], category }, isSelected);
+                            const bubble = restaurant ? activeVisibleMarkerReviewBubbles[restaurant.id] : undefined;
+                            const markerContent = wrapNaverMarkerContentWithReviewBubble(
+                                visual.content,
+                                bubble,
+                                isMobileOrTablet,
+                            );
                             const position = typeof restaurant?.lat === 'number' && typeof restaurant?.lng === 'number'
                                 ? createIndividualMarkerPosition({
                                     id: restaurantId,
@@ -2150,7 +2452,7 @@ const NaverMapView = memo(({
                             markerPool.acquire(
                                 restaurantId,
                                 position,
-                                { content: visual.content, anchor: new naver.maps.Point(visual.anchor.x, visual.anchor.y) },
+                                { content: markerContent, anchor: new naver.maps.Point(visual.anchor.x, visual.anchor.y) },
                                 map,
                                 () => {
                                     // ... existing click logic ...
@@ -2180,11 +2482,17 @@ const NaverMapView = memo(({
                     activeIds.add(restaurant.id);
                     const isSelected = selectedRestaurant?.id === restaurant.id;
                     const visual = getNaverIndividualMarkerVisual(restaurant, isSelected);
+                    const bubble = activeVisibleMarkerReviewBubbles[restaurant.id];
+                    const markerContent = wrapNaverMarkerContentWithReviewBubble(
+                        visual.content,
+                        bubble,
+                        isMobileOrTablet,
+                    );
 
                     markerPool.acquire(
                         restaurant.id,
                         createIndividualMarkerPosition(restaurant),
-                        { content: visual.content, anchor: new naver.maps.Point(visual.anchor.x, visual.anchor.y) },
+                        { content: markerContent, anchor: new naver.maps.Point(visual.anchor.x, visual.anchor.y) },
                         map,
                         () => handleMarkerRestaurantSelection(restaurant)
                     );
@@ -2193,6 +2501,7 @@ const NaverMapView = memo(({
 
             // Cleanup
             markerPool.releaseExcept(activeIds);
+            scheduleVisibleMarkerReviewBubbleClamp();
 
             // [PERFORMANCE] 렌더링 종료 시간 측정 및 로그 (개발 모드)
             perfMonitor.endMeasure('RenderMarkers');
@@ -2204,7 +2513,7 @@ const NaverMapView = memo(({
             }
         }
 
-    }, [clusters, regionalClusters, seoulDistrictClusters, seoulDistrictClustersFiltered, seoulIndividualIds, activeSearchedRestaurant, displayRestaurants, displayRestaurantIds, expandedClusterRestaurantIds, restaurantById, mergedRestaurantById, restaurantsForSwipe, selectedRegion, selectedRestaurant, isClusterMode, isRegionalClusterMode, isSeoulDistrictMode, isMapInitialized, activateNoncriticalMapEffects, fitIslandClusterViewport, jumpWithPanelOffset, onMarkerClick, onRestaurantSelect, onVisibleRestaurantsChange, onContextualRestaurantsChange, handleMarkerRestaurantSelection]);
+    }, [clusters, regionalClusters, seoulDistrictClusters, seoulDistrictClustersFiltered, seoulIndividualIds, activeSearchedRestaurant, displayRestaurants, displayRestaurantIds, expandedClusterRestaurantIds, restaurantById, mergedRestaurantById, restaurantsForSwipe, selectedRegion, selectedRestaurant, isClusterMode, isRegionalClusterMode, isSeoulDistrictMode, isMapInitialized, isMobileOrTablet, visibleMarkerReviewBubbles, activateNoncriticalMapEffects, fitIslandClusterViewport, jumpWithPanelOffset, onMarkerClick, onRestaurantSelect, onVisibleRestaurantsChange, onContextualRestaurantsChange, handleMarkerRestaurantSelection]);
 
     // [Animation] 카테고리 이모지 순환 업데이트
     useEffect(() => {
@@ -2326,10 +2635,17 @@ const NaverMapView = memo(({
                 const restaurant = restaurantById.get(restaurantId) ?? mergedRestaurantById.get(restaurantId);
                 if (restaurant) {
                     const visual = getNaverIndividualMarkerVisual(restaurant, isSelected);
+                    const bubble = selectedRestaurant ? undefined : visibleMarkerReviewBubbles[restaurant.id];
+                    const markerContent = wrapNaverMarkerContentWithReviewBubble(
+                        visual.content,
+                        bubble,
+                        isMobileOrTablet,
+                    );
+
 
                     markerPool.update(restaurantId, {
                         icon: {
-                            content: visual.content,
+                            content: markerContent,
                             anchor: new naver.maps.Point(visual.anchor.x, visual.anchor.y)
                         },
                         zIndex: visual.zIndex
@@ -2337,12 +2653,13 @@ const NaverMapView = memo(({
                 }
             }
         });
+        scheduleVisibleMarkerReviewBubbleClamp();
 
         // ref 업데이트
         prevSelectedMarkerIdRef.current = styleUpdatePlan.nextPreviousSelectedId;
         prevSelectedRestaurantIdRef.current = styleUpdatePlan.nextPreviousSelectedId;
 
-    }, [selectedRestaurant, gridSelectedRestaurant, isGridMode, displayRestaurants, restaurantById, mergedRestaurantById]);
+    }, [selectedRestaurant, gridSelectedRestaurant, isGridMode, displayRestaurants, restaurantById, mergedRestaurantById, visibleMarkerReviewBubbles, isMobileOrTablet]);
 
 
     // selectedRestaurant이 기존 데이터와 다른 경우 기존 데이터로 교체
