@@ -77,6 +77,12 @@ describe('home map contextual visible-marker restaurants', () => {
     expect(mobileOverlaySource).toContain('data-mobile-visible-marker-restaurants-sheet-frame="true"');
     expect(mobileOverlaySource).toContain('visibleMarkerThumbnailIndexes[restaurant.id] ?? 0');
     expect(mobileOverlaySource).toContain('onThumbnailChange={handleVisibleMarkerThumbnailChange}');
+    expect(mobileOverlaySource).toContain('VISIBLE_MARKER_PEEK_SHEET_HEIGHT = 16');
+    expect(mobileOverlaySource).toContain('visibleMarkerRestaurantsSignatureRef.current === visibleMarkerRestaurantsSignature');
+    expect(mobileOverlaySource).toContain('data-bottom-sheet-layout-source="mobile-control-overlay-sheet"');
+    expect(mobileOverlaySource).toContain('setVisibleMarkerSheetHeightRequestKey(0);');
+    expect(mobileOverlaySource).toContain('visibleMarkerSheetHeightRequestKey > 0');
+    expect(mobileOverlaySource).toContain('height: VISIBLE_MARKER_PEEK_SHEET_HEIGHT');
     expect(mobileOverlaySource).toContain("mode: 'exact'");
     expect(mobileOverlaySource).toContain('incrementSearchCount(restaurant.id).catch(() => {});');
   });
