@@ -61,6 +61,7 @@ const CATEGORIES = [
     "카페·디저트", "찜·탕", "야식", "도시락"
 ];
 const MIN_SHEET_HEIGHT = 25;
+const VISIBLE_MARKER_PEEK_SHEET_HEIGHT = 16;
 const HALF_SHEET_HEIGHT = 50;
 const MAX_SHEET_HEIGHT = 100;
 const MOBILE_SEARCH_FOCUSABLE_SELECTOR = [
@@ -298,6 +299,7 @@ function MobileControlOverlayComponent({
         () => `${visibleMarkerRestaurantCount}:${visibleMarkerRestaurants.map((restaurant) => restaurant.id).join('|')}`,
         [visibleMarkerRestaurantCount, visibleMarkerRestaurants],
     );
+    const visibleMarkerRestaurantsSignatureRef = useRef(visibleMarkerRestaurantsSignature);
     const canAutoShowVisibleMarkerSheet =
         mapMode === 'domestic' &&
         !isMapFullscreen &&
@@ -328,6 +330,7 @@ function MobileControlOverlayComponent({
 
     useEffect(() => {
         if (!canAutoShowVisibleMarkerSheet || activeSheet !== 'none') return;
+        setVisibleMarkerSheetHeightRequestKey(0);
         setActiveSheet('visibleMarkers');
     }, [activeSheet, canAutoShowVisibleMarkerSheet]);
 
@@ -338,7 +341,14 @@ function MobileControlOverlayComponent({
     }, [activeSheet, canAutoShowVisibleMarkerSheet]);
 
     useEffect(() => {
-        if (activeSheet !== 'visibleMarkers' || !canAutoShowVisibleMarkerSheet) return;
+        if (activeSheet !== 'visibleMarkers' || !canAutoShowVisibleMarkerSheet) {
+            visibleMarkerRestaurantsSignatureRef.current = visibleMarkerRestaurantsSignature;
+            return;
+        }
+
+        if (visibleMarkerRestaurantsSignatureRef.current === visibleMarkerRestaurantsSignature) return;
+
+        visibleMarkerRestaurantsSignatureRef.current = visibleMarkerRestaurantsSignature;
         requestVisibleMarkerSheetPeek();
     }, [
         activeSheet,
@@ -353,7 +363,7 @@ function MobileControlOverlayComponent({
         const handlePointerDown = (event: PointerEvent) => {
             const target = event.target;
             if (!(target instanceof Element)) return;
-            if (target.closest('[data-mobile-visible-marker-restaurants-sheet-frame="true"]')) return;
+            if (target.closest('[data-bottom-sheet-layout-source="mobile-control-overlay-sheet"]')) return;
             requestVisibleMarkerSheetPeek();
         };
 
@@ -1218,8 +1228,8 @@ function MobileControlOverlayComponent({
                 <BottomSheet
                     isOpen
                     onClose={handleBottomSheetClose}
-                    defaultHeight={activeSheet === 'visibleMarkers' ? MIN_SHEET_HEIGHT : HALF_SHEET_HEIGHT}
-                    minHeight={MIN_SHEET_HEIGHT}
+                    defaultHeight={HALF_SHEET_HEIGHT}
+                    minHeight={activeSheet === 'visibleMarkers' ? VISIBLE_MARKER_PEEK_SHEET_HEIGHT : MIN_SHEET_HEIGHT}
                     maxHeight={MAX_SHEET_HEIGHT}
                     enablePeek
                     hideBottomNavWhenOpen
@@ -1229,10 +1239,10 @@ function MobileControlOverlayComponent({
                     closeOnOutsidePointerDown={activeSheet !== 'visibleMarkers'}
                     layoutSource="mobile-control-overlay-sheet"
                     heightRequest={
-                        activeSheet === 'visibleMarkers'
+                        activeSheet === 'visibleMarkers' && visibleMarkerSheetHeightRequestKey > 0
                             ? {
                                 key: visibleMarkerSheetHeightRequestKey,
-                                height: MIN_SHEET_HEIGHT,
+                                height: VISIBLE_MARKER_PEEK_SHEET_HEIGHT,
                                 mode: 'exact',
                             }
                             : undefined
