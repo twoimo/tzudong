@@ -235,4 +235,25 @@ describe('mobile home map regression guards', () => {
         expect(mapSource).toContain('jumpWithPanelOffset(lat, lng, targetZoom)');
         expect(mapSource).not.toContain('morphWithPanelOffset');
     });
+    test('mobile restaurant detail sheet peeks on map interaction without skipping fullscreen tap sequence', () => {
+        const containerSource = source('components/home/home-map-container.tsx');
+        const naverMapSource = source('components/map/NaverMapView.tsx');
+        const overseasMapSource = source('components/map/OverseasMap.tsx');
+
+        expect(containerSource).toContain('const lastMapInteractionCollapseAtRef = useRef(0);');
+        expect(containerSource).toContain('const handleMapUserInteraction = useCallback(() => {');
+        expect(containerSource).toContain('lastMapInteractionCollapseAtRef.current = Date.now();');
+        expect(containerSource).toContain('setSheetHeightSafe(PEEK_SHEET_HEIGHT, true);');
+        expect(containerSource).toContain('if (now - lastMapInteractionCollapseAtRef.current < 450) return;');
+        expect(containerSource.match(/onMapInteraction=\{handleMapUserInteraction\}/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
+        expect(naverMapSource).toContain('const isSelectionClearedByPanelClose =');
+        expect(naverMapSource).toContain('if (isSelectionClearedByPanelClose) {');
+        expect(naverMapSource).toContain('if (isSelectionChanged && currentSelectedId) {');
+        expect(naverMapSource).toContain('Number.isNaN(urlZoom)');
+
+        expect(naverMapSource).toContain('onMapInteraction?: () => void;');
+        expect(naverMapSource).toContain('onMapInteraction?.();');
+        expect(overseasMapSource).toContain('onMapInteraction?: () => void;');
+        expect(overseasMapSource).toContain('onMapInteractionRef.current?.();');
+    });
 });
