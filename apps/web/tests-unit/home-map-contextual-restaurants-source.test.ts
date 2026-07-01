@@ -62,6 +62,10 @@ describe('home map contextual visible-marker restaurants', () => {
     expect(desktopHomeSource).toContain('handleRestaurantOpen(restaurant)');
     expect(desktopHomeSource).toContain('{!hasContextualRestaurants ? (');
     expect(desktopHomeSource).not.toContain('bg-primary/5 px-3 pb-2 pt-3');
+    expect(desktopHomeSource).toContain('restaurantThumbnailIndexes[restaurant.id] ?? 0');
+    expect(desktopHomeSource).toContain('onThumbnailChange={handleRestaurantThumbnailChange}');
+    expect(desktopHomeSource).not.toContain('지도에 보이는 맛집 상세 보기');
+    expect(desktopHomeSource.match(/\{!hasContextualRestaurants \? \(/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
 
     expect(mobileOverlaySource).toContain("type ActiveSheet = 'none' | 'region' | 'category' | 'search' | 'visibleMarkers';");
     expect(mobileOverlaySource).toContain('const canShowVisibleMarkerSheet =');
