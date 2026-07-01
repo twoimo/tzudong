@@ -47,6 +47,7 @@ interface OverseasMapProps {
     mapPadding?: { top: number; bottom: number; left: number; right: number };
     onVisibleRestaurantsChange?: (restaurants: Restaurant[]) => void;
     onMapBlankClick?: () => void;
+    onMapInteraction?: () => void;
     deviceLocation?: DeviceMapLocation | null;
 }
 
@@ -66,6 +67,7 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
     mapPadding = DEFAULT_OVERSEAS_PADDING,
     onVisibleRestaurantsChange,
     onMapBlankClick,
+    onMapInteraction,
     deviceLocation = null,
 }) => {
     const mapContainer = useRef<HTMLDivElement>(null);
@@ -75,6 +77,7 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
     const lastFocusedDeviceLocationRequestRef = useRef<number | null>(null);
     const mapPaddingRef = useRef(mapPadding);
     const onMapBlankClickRef = useRef(onMapBlankClick);
+    const onMapInteractionRef = useRef(onMapInteraction);
     const [isMapLoaded, setIsMapLoaded] = useState(false);
 
 
@@ -86,6 +89,10 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
     useEffect(() => {
         onMapBlankClickRef.current = onMapBlankClick;
     }, [onMapBlankClick]);
+    useEffect(() => {
+        onMapInteractionRef.current = onMapInteraction;
+    }, [onMapInteraction]);
+
 
     // Filtered restaurants with optimization
     const restaurantsOptions = useMemo(() => buildOverseasRestaurantsQueryOptions({
@@ -186,6 +193,14 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
             mapInstance.on('click', () => {
                 onMapBlankClickRef.current?.();
             });
+            mapInstance.on('dragstart', () => {
+                onMapInteractionRef.current?.();
+            });
+
+            mapInstance.on('zoomstart', () => {
+                onMapInteractionRef.current?.();
+            });
+
 
             map.current = mapInstance;
         } catch (err) {
@@ -200,6 +215,7 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
         const handleWheel = (e: WheelEvent) => {
             if (!map.current) return;
             e.preventDefault();
+            onMapInteractionRef.current?.();
 
             const now = Date.now();
             const timeDiff = now - lastWheelTime;
