@@ -38,6 +38,7 @@ interface BottomSheetProps {
     heightRequest?: {
         key: number;
         height: number;
+        mode?: 'atLeast' | 'exact';
     };
 }
 
@@ -132,13 +133,16 @@ export const resolveBottomSheetHeightRequest = ({
     requestedHeight,
     minHeight,
     maxHeight,
+    mode = 'atLeast',
 }: {
     currentHeight: number;
     requestedHeight: number;
     minHeight: number;
     maxHeight: number;
+    mode?: 'atLeast' | 'exact';
 }) => {
-    const targetHeight = Math.max(currentHeight, requestedHeight);
+    const targetHeight =
+        mode === 'exact' ? requestedHeight : Math.max(currentHeight, requestedHeight);
     return Math.max(minHeight, Math.min(maxHeight, targetHeight));
 };
 
@@ -450,6 +454,7 @@ function BottomSheetComponent({
 
     const heightRequestKey = heightRequest?.key;
     const heightRequestHeight = heightRequest?.height;
+    const heightRequestMode = heightRequest?.mode ?? 'atLeast';
 
     useEffect(() => {
         if (!isOpen || heightRequestKey === undefined || heightRequestHeight === undefined) return;
@@ -459,9 +464,10 @@ function BottomSheetComponent({
             requestedHeight: heightRequestHeight,
             minHeight,
             maxHeight: getCurrentMaxHeight(),
+            mode: heightRequestMode,
         });
         setSheetHeightSafe(requestedHeight, true);
-    }, [getCurrentMaxHeight, heightRequestHeight, heightRequestKey, isOpen, minHeight, setSheetHeightSafe]);
+    }, [getCurrentMaxHeight, heightRequestHeight, heightRequestKey, heightRequestMode, isOpen, minHeight, setSheetHeightSafe]);
 
     const unlockContentScrollDuringDrag = useCallback(() => {
         const lockedTarget = lockedContentScrollTargetRef.current;
