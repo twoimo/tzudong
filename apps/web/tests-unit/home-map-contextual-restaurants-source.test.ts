@@ -1,6 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import {
+  buildVisibleMarkerReviewBubbleHtml,
+  selectVisibleMarkerReviewBubbleTargets,
+} from '../lib/visible-marker-review-bubbles';
 
 const root = join(import.meta.dir, '..');
 const source = (relativePath: string) => readFileSync(join(root, relativePath), 'utf8');
@@ -9,6 +13,7 @@ describe('home map contextual visible-marker restaurants', () => {
   test('keeps raw visible swipe callback separate from contextual presentation payload', () => {
     const naverMapSource = source('components/map/NaverMapView.tsx');
     const contractSource = source('lib/home-map-contextual-restaurants.ts');
+    const reviewBubbleSource = source('lib/visible-marker-review-bubbles.ts');
 
     expect(contractSource).toContain('HOME_MAP_CONTEXTUAL_VISIBLE_RESTAURANTS_MIN_ZOOM = 14');
     expect(contractSource).toContain("| 'regional-cluster'");
@@ -23,10 +28,67 @@ describe('home map contextual visible-marker restaurants', () => {
     expect(naverMapSource).toContain("if (renderMode !== 'individual') return 'clustered-render-mode';");
     expect(naverMapSource).toContain('zoom < HOME_MAP_CONTEXTUAL_VISIBLE_RESTAURANTS_MIN_ZOOM');
 
+    expect(reviewBubbleSource).toContain('VISIBLE_MARKER_REVIEW_BUBBLE_MOBILE_LIMIT = 3');
+    expect(reviewBubbleSource).toContain('VISIBLE_MARKER_REVIEW_BUBBLE_DESKTOP_LIMIT = 5');
+    expect(reviewBubbleSource).toContain('data-visible-marker-review-bubble="true"');
+    expect(naverMapSource).toContain('filterVisibleMarkerReviewBubbleViewportCandidates(visibleMarkerReviewCandidateRestaurants');
+    expect(naverMapSource).toContain('selectVisibleMarkerReviewBubbleTargets(reviewBubbleCandidateRestaurants');
+    expect(naverMapSource).toContain('buildVisibleMarkerReviewSeed(currentZoom, extendedBounds)');
+    expect(naverMapSource).toContain('wrapNaverMarkerContentWithReviewBubble(');
+    expect(naverMapSource).toContain(".from('reviews')");
+    expect(naverMapSource).toContain(".select('id,restaurant_id,user_id,content,food_photos,created_at,is_pinned')");
     const rawCallbackIndex = naverMapSource.indexOf('onVisibleRestaurantsChange?.(swipeCandidates);');
     const contextualCallbackIndex = naverMapSource.indexOf('onContextualRestaurantsChange?.({');
     expect(rawCallbackIndex).toBeGreaterThan(0);
     expect(contextualCallbackIndex).toBeGreaterThan(rawCallbackIndex);
+  });
+
+  test('selects a bounded deterministic subset for marker review bubbles', () => {
+    const restaurants = [
+      { id: 'zero-review', review_count: 0 },
+      { id: 'with-review-1', review_count: 2 },
+      {
+        id: 'with-review-2',
+        review_count: 1,
+        mergedRestaurants: [{ id: 'merged-review-2' }],
+      },
+      { id: 'with-review-3', review_count: 5 },
+    ] as never;
+
+    const firstRun = selectVisibleMarkerReviewBubbleTargets(restaurants, {
+      limit: 2,
+      seed: 'zoom:14:bounds',
+    });
+    const secondRun = selectVisibleMarkerReviewBubbleTargets(restaurants, {
+      limit: 2,
+      seed: 'zoom:14:bounds',
+    });
+
+    expect(firstRun).toEqual(secondRun);
+    expect(firstRun).toHaveLength(2);
+    expect(firstRun.some((target) => target.restaurantId === 'zero-review')).toBe(false);
+    expect(firstRun.find((target) => target.restaurantId === 'with-review-2')?.relatedRestaurantIds)
+      .toEqual(['with-review-2', 'merged-review-2']);
+  });
+
+  test('renders compact review bubble markup with photo and escaped content', () => {
+    const html = buildVisibleMarkerReviewBubbleHtml(
+      {
+        restaurantId: 'restaurant-1',
+        reviewId: 'review-1',
+        userName: '맛탐험가<script>',
+        content: '사진이 있는 최신 리뷰 <좋아요> 아주 길어서 잘립니다 '.repeat(3),
+        photoUrl: 'https://example.com/review.jpg',
+      },
+      { isMobile: true },
+    );
+
+    expect(html).toContain('data-visible-marker-review-bubble="true"');
+    expect(html).toContain('맛탐험가');
+    expect(html).not.toContain('<script>');
+    expect(html).toContain('&lt;좋아요&gt;');
+    expect(html).toContain('https://example.com/review.jpg');
+    expect(html).toContain('width:172px');
   });
 
   test('wires contextual state through container and home controls without overseas presentation', () => {
