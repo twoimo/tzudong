@@ -239,6 +239,7 @@ function HomeMapContainerComponent({
     const pendingContextualRestaurantsPayloadRef = useRef<HomeMapContextualRestaurantsPayload | null>(null);
     const contextualRestaurantsRafRef = useRef(0);
     const lastMarkerClickAtRef = useRef(0);
+    const lastMapInteractionCollapseAtRef = useRef(0);
 
     // [PERFORMANCE] 렌더링에 필요한 상태만 useState로 관리
     const [sheetHeight, setSheetHeight] = useState(INITIAL_HEIGHT);
@@ -1067,9 +1068,25 @@ function HomeMapContainerComponent({
         onMapFullscreenChange?.(false);
         onMarkerClick(restaurant);
     }, [onMapFullscreenChange, onMarkerClick]);
+    const handleMapUserInteraction = useCallback(() => {
+        if (!isMobileOrTablet || !isPanelOpen || !panelRestaurant || isMapFullscreen) return;
+        if (sheetHeightRef.current <= PEEK_SHEET_HEIGHT + SHEET_HALF_OPEN_TOLERANCE) return;
+
+        lastMapInteractionCollapseAtRef.current = Date.now();
+        setSheetHeightSafe(PEEK_SHEET_HEIGHT, true);
+    }, [
+        isMapFullscreen,
+        isMobileOrTablet,
+        isPanelOpen,
+        panelRestaurant,
+        setSheetHeightSafe,
+    ]);
+
 
     const handleMapBlankClick = useCallback(() => {
-        if (Date.now() - lastMarkerClickAtRef.current < 350) return;
+        const now = Date.now();
+        if (now - lastMarkerClickAtRef.current < 350) return;
+        if (now - lastMapInteractionCollapseAtRef.current < 450) return;
 
         const action = resolveMobileMapBlankTapAction({
             isMobileOrTablet,
@@ -1306,6 +1323,7 @@ function HomeMapContainerComponent({
                         onContextualRestaurantsChange={handleContextualRestaurantsChange}
                         onSearchSelectionRelease={handleReleaseSearchSelectionOwnership}
                         onMapBlankClick={handleMapBlankClick}
+                        onMapInteraction={handleMapUserInteraction}
                         deviceLocation={deviceLocation}
                     />
                 </Suspense>
@@ -1326,6 +1344,7 @@ function HomeMapContainerComponent({
                         mapPadding={mapPadding}
                         onVisibleRestaurantsChange={handleSwipeableRestaurantsChange}
                         onMapBlankClick={handleMapBlankClick}
+                        onMapInteraction={handleMapUserInteraction}
                         deviceLocation={deviceLocation}
                     />
                 </Suspense>
