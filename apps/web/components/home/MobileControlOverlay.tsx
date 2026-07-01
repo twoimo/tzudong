@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
+import { StampCard } from '@/components/stamp/StampCard';
 import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
@@ -256,6 +257,9 @@ function MobileControlOverlayComponent({
 
         return null;
     });
+    const [visibleMarkerThumbnailIndexes, setVisibleMarkerThumbnailIndexes] =
+        useState<Record<string, number>>({});
+    const [visibleMarkerSheetHeightRequestKey, setVisibleMarkerSheetHeightRequestKey] = useState(0);
     const [isBusinessInfoExpanded, setIsBusinessInfoExpanded] = useState(false);
     const isBookmarkMenuOpen = openTopDropdown === 'bookmark';
     const isNotificationMenuOpen = openTopDropdown === 'notification';
@@ -288,13 +292,19 @@ function MobileControlOverlayComponent({
                 : [],
         [contextualRestaurantsPayload],
     );
-    const canShowVisibleMarkerSheet =
-        (activeSheet === 'none' || activeSheet === 'visibleMarkers') &&
+    const visibleMarkerRestaurantCount =
+        contextualRestaurantsPayload?.totalVisibleCount ?? visibleMarkerRestaurants.length;
+    const visibleMarkerRestaurantsSignature = useMemo(
+        () => `${visibleMarkerRestaurantCount}:${visibleMarkerRestaurants.map((restaurant) => restaurant.id).join('|')}`,
+        [visibleMarkerRestaurantCount, visibleMarkerRestaurants],
+    );
+    const canAutoShowVisibleMarkerSheet =
         mapMode === 'domestic' &&
         !isMapFullscreen &&
         !isPanelOpen &&
         !panelRestaurant &&
         visibleMarkerRestaurants.length > 0;
+
 
     const handleVisibleMarkerRestaurantSelect = useCallback((restaurant: Restaurant) => {
         incrementSearchCount(restaurant.id).catch(() => {});
@@ -302,11 +312,54 @@ function MobileControlOverlayComponent({
         onRestaurantSearch(restaurant);
     }, [onRestaurantSearch]);
 
+    const handleVisibleMarkerThumbnailChange = useCallback(
+        (id: string, index: number) => {
+            setVisibleMarkerThumbnailIndexes((current) => ({
+                ...current,
+                [id]: index,
+            }));
+        },
+        [],
+    );
+
+    const requestVisibleMarkerSheetPeek = useCallback(() => {
+        setVisibleMarkerSheetHeightRequestKey((current) => current + 1);
+    }, []);
+
+    useEffect(() => {
+        if (!canAutoShowVisibleMarkerSheet || activeSheet !== 'none') return;
+        setActiveSheet('visibleMarkers');
+    }, [activeSheet, canAutoShowVisibleMarkerSheet]);
+
     useEffect(() => {
         if (activeSheet !== 'visibleMarkers') return;
-        if (canShowVisibleMarkerSheet) return;
+        if (canAutoShowVisibleMarkerSheet) return;
         setActiveSheet('none');
-    }, [activeSheet, canShowVisibleMarkerSheet]);
+    }, [activeSheet, canAutoShowVisibleMarkerSheet]);
+
+    useEffect(() => {
+        if (activeSheet !== 'visibleMarkers' || !canAutoShowVisibleMarkerSheet) return;
+        requestVisibleMarkerSheetPeek();
+    }, [
+        activeSheet,
+        canAutoShowVisibleMarkerSheet,
+        requestVisibleMarkerSheetPeek,
+        visibleMarkerRestaurantsSignature,
+    ]);
+
+    useEffect(() => {
+        if (activeSheet !== 'visibleMarkers') return;
+
+        const handlePointerDown = (event: PointerEvent) => {
+            const target = event.target;
+            if (!(target instanceof Element)) return;
+            if (target.closest('[data-mobile-visible-marker-restaurants-sheet-frame="true"]')) return;
+            requestVisibleMarkerSheetPeek();
+        };
+
+        document.addEventListener('pointerdown', handlePointerDown, true);
+        return () => document.removeEventListener('pointerdown', handlePointerDown, true);
+    }, [activeSheet, requestVisibleMarkerSheetPeek]);
 
     const searchInputRef = useRef<HTMLInputElement>(null);
     const searchLayerRef = useRef<HTMLDivElement>(null);
@@ -337,6 +390,15 @@ function MobileControlOverlayComponent({
     const handleClose = useCallback(() => {
         setActiveSheet('none');
     }, []);
+
+    const handleBottomSheetClose = useCallback(() => {
+        if (activeSheet === 'visibleMarkers' && canAutoShowVisibleMarkerSheet) {
+            requestVisibleMarkerSheetPeek();
+            return;
+        }
+
+        handleClose();
+    }, [activeSheet, canAutoShowVisibleMarkerSheet, handleClose, requestVisibleMarkerSheetPeek]);
 
     const handleSearchLayerKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
         if (event.key === 'Escape') {
@@ -984,24 +1046,7 @@ function MobileControlOverlayComponent({
                         </div>
                     </div>
                 </Button>
-                {canShowVisibleMarkerSheet ? (
-                    <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => toggleSheet('visibleMarkers')}
-                        aria-expanded={activeSheet === 'visibleMarkers'}
-                        aria-label={`지도에 보이는 맛집 ${visibleMarkerRestaurants.length}곳 보기`}
-                        className={cn(
-                            'rounded-full shadow-lg bg-primary text-primary-foreground border border-primary/30',
-                            'hover:bg-primary/90 w-[clamp(112px,36vw,140px)] h-9 px-3 text-xs font-bold',
-                            activeSheet === 'visibleMarkers' && 'ring-2 ring-primary ring-offset-2'
-                        )}
-                        data-mobile-visible-marker-restaurants-trigger="true"
-                    >
-                        <MapPin className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
-                        보이는 맛집 {visibleMarkerRestaurants.length}
-                    </Button>
-                ) : null}
+
 
             </div>
 
@@ -1168,12 +1213,12 @@ function MobileControlOverlayComponent({
                 </div>
             )}
 
-            {/* 바텀시트 (지역/카테고리 전용) - 맛집 바텀시트와 동일한 인터랙션 */}
+            {/* 바텀시트 (지역/카테고리/지도에 보이는 맛집) - 맛집 바텀시트와 동일한 인터랙션 */}
             {activeSheet !== 'none' && activeSheet !== 'search' && (
                 <BottomSheet
                     isOpen
-                    onClose={handleClose}
-                    defaultHeight={HALF_SHEET_HEIGHT}
+                    onClose={handleBottomSheetClose}
+                    defaultHeight={activeSheet === 'visibleMarkers' ? MIN_SHEET_HEIGHT : HALF_SHEET_HEIGHT}
                     minHeight={MIN_SHEET_HEIGHT}
                     maxHeight={MAX_SHEET_HEIGHT}
                     enablePeek
@@ -1181,23 +1226,42 @@ function MobileControlOverlayComponent({
                     progressiveHeaderHide
                     hideHandleWhenFull
                     showBackdrop={false}
-                    closeOnOutsidePointerDown
+                    closeOnOutsidePointerDown={activeSheet !== 'visibleMarkers'}
                     layoutSource="mobile-control-overlay-sheet"
+                    heightRequest={
+                        activeSheet === 'visibleMarkers'
+                            ? {
+                                key: visibleMarkerSheetHeightRequestKey,
+                                height: MIN_SHEET_HEIGHT,
+                                mode: 'exact',
+                            }
+                            : undefined
+                    }
                     className="z-[95]"
                 >
-                    <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-background">
-                        <h3 className="text-lg font-semibold">
-                            {activeBottomSheetTitle}
+                    <div
+                        className="flex items-center justify-between px-4 py-3 border-b border-border bg-background"
+                        data-mobile-visible-marker-restaurants-sheet-frame={activeSheet === 'visibleMarkers' ? 'true' : undefined}
+                    >
+                        <h3 className="flex min-w-0 items-center gap-2 text-lg font-semibold">
+                            <span className="truncate">{activeBottomSheetTitle}</span>
+                            {activeSheet === 'visibleMarkers' ? (
+                                <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-[11px] font-semibold leading-5 text-primary-foreground">
+                                    {visibleMarkerRestaurantCount}곳
+                                </span>
+                            ) : null}
                         </h3>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={handleClose}
-                            aria-label={`${activeBottomSheetTitle} 닫기`}
-                            className="min-h-11 min-w-11"
-                        >
-                            <X className="h-5 w-5" aria-hidden="true" />
-                        </Button>
+                        {activeSheet !== 'visibleMarkers' ? (
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={handleClose}
+                                aria-label={`${activeBottomSheetTitle} 닫기`}
+                                className="min-h-11 min-w-11"
+                            >
+                                <X className="h-5 w-5" aria-hidden="true" />
+                            </Button>
+                        ) : null}
                     </div>
 
                     <div className="p-4 pb-8">
@@ -1267,38 +1331,30 @@ function MobileControlOverlayComponent({
 
                         {activeSheet === 'visibleMarkers' && (
                             <div
-                                className="space-y-2"
+                                className="grid grid-cols-1 gap-3"
                                 data-mobile-visible-marker-restaurants-sheet="true"
+                                data-mobile-visible-marker-restaurants-sheet-frame="true"
                             >
                                 <p className="text-sm font-semibold text-muted-foreground">
                                     확대한 지도에서 현재 마커로 보이는 맛집이에요.
                                 </p>
-                                <div className="space-y-2">
-                                    {visibleMarkerRestaurants.map((restaurant) => (
-                                        <button
-                                            key={restaurant.id}
-                                            type="button"
-                                            onClick={() => handleVisibleMarkerRestaurantSelect(restaurant)}
-                                            className="flex w-full items-center gap-3 rounded-2xl border border-border bg-background px-3 py-3 text-left shadow-sm transition-colors hover:bg-secondary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                                            aria-label={`${restaurant.name} 지도에 보이는 맛집 상세 보기`}
-                                        >
-                                            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
-                                                <MapPin className="h-4 w-4" aria-hidden="true" />
-                                            </span>
-                                            <span className="min-w-0 flex-1">
-                                                <span className="block truncate text-sm font-bold text-foreground">
-                                                    {restaurant.name}
-                                                </span>
-                                                <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-                                                    {restaurant.road_address ||
-                                                        restaurant.jibun_address ||
-                                                        restaurant.english_address ||
-                                                        '주소 없음'}
-                                                </span>
-                                            </span>
-                                        </button>
-                                    ))}
-                                </div>
+                                {visibleMarkerRestaurants.map((restaurant) => (
+                                    <StampCard
+                                        key={restaurant.id}
+                                        restaurant={restaurant}
+                                        isVisited={false}
+                                        isUserStampsReady={false}
+                                        currentThumbnailIndex={
+                                            visibleMarkerThumbnailIndexes[restaurant.id] ?? 0
+                                        }
+                                        onThumbnailChange={handleVisibleMarkerThumbnailChange}
+                                        onClick={handleVisibleMarkerRestaurantSelect}
+                                        size="compact"
+                                        stampSize="mobile"
+                                        showAddress
+                                        categoryFallback="맛집"
+                                    />
+                                ))}
                             </div>
                         )}
                         {activeSheet === 'category' && (
