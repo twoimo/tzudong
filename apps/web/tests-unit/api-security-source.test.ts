@@ -149,6 +149,21 @@ describe('public API security source contracts', () => {
     const ocrRerunSource = source('app/api/admin/ocr-receipts/rerun/route.ts');
     const ocrResetAllSource = source('app/api/admin/ocr-receipts/reset-all/route.ts');
     const ocrProcessSource = source('app/api/admin/ocr-receipts/process/route.ts');
+    const adminUsersSource = source('app/api/admin/users/route.ts');
+    const adminUserUpdateSource = source('app/api/admin/users/[userId]/route.ts');
+    const restaurantRequestReviewSource = source('app/api/admin/restaurant-requests/[requestId]/review/route.ts');
+    const directionsSource = source('app/api/admin/routes/directions/route.ts');
+    const thumbnailRouteSources = [
+      source('app/api/admin/youtube-thumbnail-generator/route.ts'),
+      source('app/api/admin/youtube-thumbnail-generator/chat/route.ts'),
+      source('app/api/admin/youtube-thumbnail-generator/history/route.ts'),
+      source('app/api/admin/youtube-thumbnail-generator/reference-image/route.ts'),
+      source('app/api/admin/youtube-thumbnail-generator/release-candidates/route.ts'),
+      source('app/api/admin/youtube-thumbnail-generator/release-candidates/promote/route.ts'),
+      source('app/api/admin/youtube-thumbnail-generator/releases/assets/[releaseId]/route.ts'),
+      source('app/api/admin/youtube-thumbnail-generator/releases/current/route.ts'),
+      source('app/api/admin/youtube-thumbnail-generator/releases/publish/route.ts'),
+    ];
 
     expect(naverSearchSource).not.toContain('NextResponse.json(errorData');
     expect(naverSearchSource).not.toContain("console.error('[API] Naver API Error Response:', errorData)");
@@ -159,10 +174,31 @@ describe('public API security source contracts', () => {
       expect(routeSource).not.toContain('errorText);');
       expect(routeSource).not.toContain('${updateError.message}');
       expect(routeSource).not.toContain('${resetError.message}');
+      expect(routeSource).toContain('errorName: getGuardedMutationErrorName');
     }
 
     for (const routeSource of [ocrReceiptsSource, ocrRerunSource, ocrResetAllSource]) {
       expect(routeSource).toContain('await response.text().catch(() => null)');
     }
+
+    for (const routeSource of [
+      adminUsersSource,
+      adminUserUpdateSource,
+      restaurantRequestReviewSource,
+      directionsSource,
+      ...thumbnailRouteSources,
+    ]) {
+      expect(routeSource).not.toContain("error?.message ??");
+      expect(routeSource).not.toContain("unexpected failure:', error");
+      expect(routeSource).not.toContain('failed:", error');
+      expect(routeSource).not.toContain('failed:\', error');
+      expect(routeSource).not.toContain('rollbackError);');
+      expect(routeSource).toContain('getAdminSafeErrorName');
+      expect(routeSource).toContain('errorName');
+    }
+
+    expect(adminUsersSource).toContain("error: '사용자를 만들지 못했습니다.'");
+    expect(adminUserUpdateSource).toContain("step: 'auth-rollback-after-db-audit'");
+    expect(directionsSource).toContain('diagnostics: { errorType: errorName }');
   });
 });

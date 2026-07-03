@@ -1149,12 +1149,33 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain('data-admin-audit-unavailable-state="true"');
     expect(consoleSource).toContain('data-admin-audit-session-expired-state={isAuditAuthUnavailable ? "true" : undefined}');
     expect(consoleSource).toContain("buildAdminAuditAuthUnavailableResponse");
+    expect(consoleSource).toContain("getAdminAuditCoverage");
+    expect(consoleSource).toContain('data-admin-audit-coverage="partial-domain-specific"');
+    expect(consoleSource).toContain('data-admin-audit-universal={coverage.universal ? "true" : "false"}');
+    expect(consoleSource).toContain("부분/도메인별");
+    expect(consoleSource).toContain("restaurant_request_review_audit");
+    expect(consoleSource).toContain("범용 감사 로그처럼 표시하지 않습니다.");
+    expect(consoleSource).toContain("부분 감사 · ${events.length}개");
+    expect(consoleSource).toContain("isAuditCoverageMissing");
+    expect(consoleSource).toContain("범위 확인 필요");
+    expect(consoleSource).toContain("읽기 확인 필요");
+    expect(consoleSource).toContain("세션 확인 필요");
+    expect(consoleSource).toContain("event.readbackId");
+    expect(consoleSource).toContain("event.correlationId");
+    expect(consoleSource).toContain("isAdminAuditEventsResponsePayload");
+    expect(consoleSource).toContain("admin-audit-events-invalid-response");
     expect(consoleSource).toContain('"admin-audit-session-expired"');
     expect(consoleSource).toContain("관리자 세션 확인이 필요합니다.");
     expect(consoleSource).toContain("다시 로그인하기");
     expect(consoleSource).toContain('/api/admin/audit-events?limit=20');
     expect(consoleSource).toContain("PDF 보고서 창을 열었습니다.");
+    expect(consoleSource).not.toContain('badge: "준비 중"');
+    expect(consoleSource).not.toContain("`${events.length}개 표시`");
+    expect(consoleSource).not.toContain("전체 운영 변경을 포괄하는 범용 감사 로그입니다");
     expect(auditEventsRouteSource).toContain('"admin_audit_events"');
+    expect(auditEventsRouteSource).toContain("getAdminAuditCoverage()");
+    expect(auditEventsRouteSource).toContain("domain: \"admin_user_management\"");
+    expect(auditEventsRouteSource).toContain("readbackId: String(row.id ?? \"\")");
     expect(overviewSource).not.toContain(
       'data-admin-creator-layer-controls="active-only"',
     );
@@ -7655,6 +7676,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "app/api/admin/preferences/sidebar-order/route.ts",
     );
     const sidebarOrderSource = source("lib/admin/sidebar-order.ts");
+    const hydrationSmokeSource = source("tests/admin-console-module-hydration.spec.ts");
     const overviewSource = source(
       "components/admin/AdminOverviewDashboard.tsx",
     );
@@ -7762,6 +7784,20 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       "data-admin-sidebar-order-editor={placement}",
     );
+    expect(consoleSource).toContain("isSidebarOrderEditMode");
+    expect(consoleSource).toContain('data-admin-sidebar-order-edit-toggle="true"');
+    expect(consoleSource).toContain('data-admin-sidebar-order-edit-mode={isSidebarOrderEditMode ? "enabled" : "locked"}');
+    expect(consoleSource).toContain('data-admin-sidebar-order-edit-lock-message="true"');
+    expect(consoleSource).toContain("!isSidebarOrderEditMode ||");
+    expect(hydrationSmokeSource).toContain("ADMIN_MODULE_SMOKE_TARGETS");
+    expect(hydrationSmokeSource).toContain("/admin?module=routes");
+    expect(hydrationSmokeSource).toContain("/admin?module=youtube-thumbnail-generator");
+    expect(hydrationSmokeSource).toContain("/admin?module=audit");
+    expect(hydrationSmokeSource).toContain("minified react error");
+    expect(hydrationSmokeSource).toContain("readySelector");
+    expect(hydrationSmokeSource).toContain('data-admin-youtube-thumbnail-generator="true"');
+    expect(hydrationSmokeSource).toContain('data-admin-audit-coverage="partial-domain-specific"');
+    expect(hydrationSmokeSource).toContain("관리자 지도 운영 개요 2분할");
     expect(consoleSource).toContain('renderOrderControls("dropdown")');
     expect(consoleSource).toContain('data-admin-sidebar-theme-toggle="true"');
     expect(consoleSource).toContain('data-admin-sidebar-footer-actions="true"');
@@ -8178,7 +8214,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain("module.description");
     expect(consoleSource).toContain("aria-label={`${module.title} 작업 화면`}");
     expect(consoleSource).toContain("사용자");
-    expect(consoleSource).toContain("사용자 생성·권한 변경 감사 이벤트");
+    expect(consoleSource).toContain("사용자 관리 감사 이벤트");
   });
 
   test("keeps admin pages dense without sacrificing responsive boundaries", () => {
@@ -8435,8 +8471,15 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       submissionSource.indexOf("setOverrideApprovalConfirmation('');"),
     ).toBeLessThan(submissionSource.indexOf("setShowWarningModal(true);"));
     expect(submissionSource).toContain(
-      "body: JSON.stringify({ confirmation: OCR_RESET_ALL_CONFIRMATION })",
+      "confirmation: OCR_RESET_ALL_CONFIRMATION",
     );
+    expect(submissionSource).toContain(
+      "guardedMutationConfirmation: GUARDED_MUTATION_CONFIRMATION",
+    );
+    expect(submissionSource).toContain("buildGuardedOcrSuccessMessage");
+    expect(submissionSource).toContain("감사 추적");
+    expect(submissionSource).toContain("getGuardedMutationReadbackLabel");
+    expect(submissionSource).toContain("재확인");
     expect(resetAllSource).toContain(
       "const OCR_RESET_ALL_CONFIRMATION = 'OCR초기화'",
     );
@@ -8543,6 +8586,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(reviewRouteSource).not.toContain('.from("restaurant_request_review_audit"');
     expect(reviewRouteSource).toContain("review_audit_id");
     expect(reviewRouteSource).toContain("검토 상태를 확인하지 못했습니다");
+    expect(reviewRouteSource).toContain('buildMutationAuditReceipt');
+    expect(reviewRouteSource).toContain('domain: "restaurant_request_reviews"');
+    expect(reviewRouteSource).toContain('source: RESTAURANT_REQUEST_REVIEW_AUDIT_SOURCE');
     expect(migrationSource).toContain("add column if not exists status text");
     expect(migrationSource).toContain("restaurant_requests_status_check");
     expect(migrationSource).toContain("create table if not exists public.restaurant_request_review_audit");
@@ -8556,6 +8602,102 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(submissionSource).toContain("submissionDetailPanelRef");
     expect(submissionSource).toContain("scrollIntoView");
     expect(submissionSource).toContain("tabIndex={-1}");
+  });
+
+  test("guards legacy direct browser admin restaurant and review mutations", () => {
+    const reviewPanelSource = source("components/admin/AdminReviewPanel.tsx");
+    const restaurantModalSource = source("components/admin/AdminRestaurantModal.tsx");
+
+    expect(reviewPanelSource).toContain(
+      'import { assertLegacyBrowserAdminMutationEnabled } from "@/lib/admin/guarded-mutation-contract";',
+    );
+    expect(restaurantModalSource).toContain(
+      'import { assertLegacyBrowserAdminMutationEnabled } from "@/lib/admin/guarded-mutation-contract";',
+    );
+
+    for (const action of ["approve_review", "reject_review", "delete_review"]) {
+      expect(reviewPanelSource).toContain(
+        `assertLegacyBrowserAdminMutationEnabled("review_moderation", "${action}")`,
+      );
+    }
+
+    for (const action of [
+      "update_restaurant",
+      "insert_restaurant",
+      "delete_restaurant_link",
+      "update_restaurant_link",
+      "insert_restaurant_link",
+      "delete_restaurant",
+    ]) {
+      expect(restaurantModalSource).toContain(
+        action === "update_restaurant" || action === "insert_restaurant"
+          ? `restaurant ? "update_restaurant" : "insert_restaurant"`
+          : `assertLegacyBrowserAdminMutationEnabled("restaurant_record", "${action}")`,
+      );
+    }
+
+    expect(
+      reviewPanelSource.indexOf(
+        'assertLegacyBrowserAdminMutationEnabled("review_moderation", "approve_review")',
+      ),
+    ).toBeLessThan(reviewPanelSource.indexOf(".update({"));
+    expect(
+      reviewPanelSource.indexOf(
+        'assertLegacyBrowserAdminMutationEnabled("review_moderation", "delete_review")',
+      ),
+    ).toBeLessThan(reviewPanelSource.indexOf(".delete()"));
+
+    expect(
+      restaurantModalSource.indexOf(
+        'restaurant ? "update_restaurant" : "insert_restaurant"',
+      ),
+    ).toBeLessThan(restaurantModalSource.indexOf(".update({"));
+    expect(
+      restaurantModalSource.indexOf(
+        'assertLegacyBrowserAdminMutationEnabled("restaurant_record", "insert_restaurant_link")',
+      ),
+    ).toBeLessThan(restaurantModalSource.indexOf(".insert({"));
+    expect(
+      restaurantModalSource.indexOf(
+        'assertLegacyBrowserAdminMutationEnabled("restaurant_record", "delete_restaurant")',
+      ),
+    ).toBeLessThan(restaurantModalSource.lastIndexOf(".update({"));
+  });
+
+  test("retires legacy browser admin evaluation mutations behind the explicit guard flag", () => {
+    const adminEvaluationSource = source("app/admin/evaluations/page.tsx");
+
+    const expectGuardBefore = (domain: string, operation: string, privilegedSnippet: string) => {
+      const guardCall = `assertLegacyBrowserAdminMutationEnabled('${domain}', '${operation}')`;
+      const guardIndex = adminEvaluationSource.indexOf(guardCall);
+      expect(guardIndex).toBeGreaterThanOrEqual(0);
+      const privilegedIndex = adminEvaluationSource.indexOf(privilegedSnippet, guardIndex);
+      expect(privilegedIndex).toBeGreaterThan(guardIndex);
+    };
+
+    expect(adminEvaluationSource).toContain("@/lib/admin/guarded-mutation-contract");
+    expect(adminEvaluationSource).toContain("assertLegacyBrowserAdminMutationEnabled");
+    expect(adminEvaluationSource).toContain("isLegacyBrowserAdminMutationEnabled");
+    expect(adminEvaluationSource).toContain(
+      "autoDeleteTargets.length > 0 && user?.id && isLegacyBrowserAdminMutationEnabled()",
+    );
+
+    expectGuardBefore("restaurant_record", "record duplicate error update", "db_error_details: errorDetails");
+    expectGuardBefore("restaurant_record", "restaurant approval update", "status: 'approved'");
+    expectGuardBefore("restaurant_record", "restaurant delete update", "status: 'deleted'");
+    expectGuardBefore("restaurant_record", "restaurant restore update", "status: 'pending'");
+    expectGuardBefore("review_moderation", "review approval update", "is_verified: true");
+    expectGuardBefore("review_moderation", "review rejection update", "is_verified: false");
+    expectGuardBefore("review_moderation", "review delete mutation", ".from('review-photos')");
+    expectGuardBefore("review_moderation", "review delete mutation", "supabase.from('reviews').delete()");
+    expectGuardBefore("restaurant_submission", "submission approval direct RPC/update", "'approve_edit_submission_item'");
+    expectGuardBefore("restaurant_submission", "submission approval direct RPC/update", "'approve_submission_item'");
+    expectGuardBefore("restaurant_submission", "submission approval direct RPC/update", "resolved_by_admin_id: user.id");
+    expectGuardBefore("restaurant_submission", "submission rejection direct update", "item_status: 'rejected'");
+    expectGuardBefore("restaurant_submission", "submission rejection direct update", "rejection_reason: reason");
+    expectGuardBefore("restaurant_submission", "submission delete direct update", "rejection_reason: '관리자에 의해 삭제됨'");
+    expectGuardBefore("restaurant_submission", "submission edit direct update", "restaurant_name: updatedData.restaurant_name");
+    expectGuardBefore("restaurant_submission", "submission edit direct update", "youtube_link: updatedData.youtube_link");
   });
 
   test("excludes Python QA seeds from actual GPT Image 2 page history", () => {
