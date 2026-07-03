@@ -6,6 +6,12 @@ import { Restaurant, Region, YoutubeMeta } from "@/types/restaurant";
 import type { Tables } from "@/integrations/supabase/types";
 import { fetchSupabaseRows, postgrestArrayOverlap, postgrestIn } from "@/lib/supabase-rest-client";
 import { buildRelatedVerifiedReviewCountMap } from "@/lib/restaurant-review-counts";
+import {
+    applyHomeMapThemeFilter,
+    isHomeMapThemeFilterId,
+    type HomeMapThemeFilterId,
+} from "@/lib/home-map-theme-filters";
+
 
 type DBRestaurant = Tables<"restaurants">;
 
@@ -81,6 +87,7 @@ interface UseRestaurantsOptions {
     category?: string[];
     region?: Region;
     minReviews?: number;
+    featuredTheme?: HomeMapThemeFilterId | null;
     enabled?: boolean;
     includeVerifiedReviewCounts?: boolean;
     compact?: boolean;
@@ -247,19 +254,32 @@ function normalizeMinReviews(minReviews?: number): number | null {
     return typeof minReviews === "number" && Number.isFinite(minReviews) && minReviews > 0 ? minReviews : null;
 }
 
+function normalizeFeaturedTheme(featuredTheme?: HomeMapThemeFilterId | null): HomeMapThemeFilterId | null {
+    return isHomeMapThemeFilterId(featuredTheme) ? featuredTheme : null;
+}
+
 function buildRestaurantQueryKey(
     normalizedBounds: NormalizedBounds | null,
     normalizedCategory: string[],
     normalizedRegion: string | null,
-    normalizedMinReviews: number | null
+    normalizedMinReviews: number | null,
+    normalizedFeaturedTheme: HomeMapThemeFilterId | null
 ): [
     "restaurants",
     NormalizedBounds | null,
     string[],
     string | null,
-    number | null
+    number | null,
+    HomeMapThemeFilterId | null
 ] {
-    return ["restaurants", normalizedBounds, normalizedCategory, normalizedRegion, normalizedMinReviews];
+    return [
+        "restaurants",
+        normalizedBounds,
+        normalizedCategory,
+        normalizedRegion,
+        normalizedMinReviews,
+        normalizedFeaturedTheme,
+    ];
 }
 
 function hydrateDbRestaurant(dbData: DBRestaurant): Restaurant {
@@ -537,14 +557,30 @@ export function mergeRestaurants(restaurants: DBRestaurant[]): Restaurant[] {
 }
 
 export function useRestaurants(options: UseRestaurantsOptions = {}) {
-    const { bounds, category, region, minReviews, enabled = true, includeVerifiedReviewCounts = true, compact = false } = options;
+    const {
+        bounds,
+        category,
+        region,
+        minReviews,
+        featuredTheme,
+        enabled = true,
+        includeVerifiedReviewCounts = true,
+        compact = false,
+    } = options;
 
     const normalizedBounds = normalizeBounds(bounds);
     const normalizedCategory = normalizeCategories(category);
     const normalizedRegion = normalizeRegion(region);
     const normalizedMinReviews = normalizeMinReviews(minReviews);
+    const normalizedFeaturedTheme = normalizeFeaturedTheme(featuredTheme);
     const queryKey = [
-        ...buildRestaurantQueryKey(normalizedBounds, normalizedCategory, normalizedRegion, normalizedMinReviews),
+        ...buildRestaurantQueryKey(
+            normalizedBounds,
+            normalizedCategory,
+            normalizedRegion,
+            normalizedMinReviews,
+            normalizedFeaturedTheme,
+        ),
         includeVerifiedReviewCounts,
         compact,
     ] as const;
@@ -556,7 +592,7 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
         queryFn: async () => {
             // [OPTIMIZATION] 필요한 필드만 선택하여 네트워크 전송량 및 파싱 시간 감소
             const selectFields = compact
-                ? "id, name:approved_name, approved_name, lat, lng, road_address, jibun_address, categories, review_count, youtube_link, tzuyang_review, status"
+                ? "id, name:approved_name, approved_name, lat, lng, road_address, jibun_address, categories, review_count, youtube_link, tzuyang_review, status, created_at"
                 : "id, name:approved_name, lat, lng, road_address, jibun_address, categories, phone, review_count, youtube_link, tzuyang_review, youtube_meta, english_address, status, created_at";
 
             const query: Array<[string, string | number]> = [
@@ -628,15 +664,18 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
             const rawRestaurants = (data || []) as RestaurantWithOptionalName[];
             const restaurants = mergeRestaurants(rawRestaurants);
             if (!includeVerifiedReviewCounts) {
-                return restaurants as Restaurant[];
+                return applyHomeMapThemeFilter(restaurants, normalizedFeaturedTheme) as Restaurant[];
             }
 
             const verifiedCountMap = await buildRelatedVerifiedReviewCounts(restaurants as RestaurantWithOptionalName[]);
 
-            return restaurants.map(r => ({
-                ...r,
-                verified_review_count: verifiedCountMap.get(r.id) || 0,
-            })) as Restaurant[];
+            return applyHomeMapThemeFilter(
+                restaurants.map(r => ({
+                    ...r,
+                    verified_review_count: verifiedCountMap.get(r.id) || 0,
+                })) as Restaurant[],
+                normalizedFeaturedTheme,
+            );
         },
         enabled,
         refetchOnWindowFocus: false, // 윈도우 포커스 시 재요청 안 함

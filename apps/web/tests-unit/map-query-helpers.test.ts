@@ -27,6 +27,7 @@ describe('map query helpers', () => {
             category: ['한식'],
             region: '미국',
             minReviews: 5,
+            featuredTheme: null,
             includeVerifiedReviewCounts: false,
             enabled: true,
         });
@@ -48,6 +49,7 @@ describe('map query helpers', () => {
         expect(options).toEqual({
             category: undefined,
             minReviews: 3,
+            featuredTheme: null,
             region: '일본(나고야)',
             includeVerifiedReviewCounts: false,
             enabled: true,
@@ -74,6 +76,7 @@ describe('map query helpers', () => {
             compact: false,
             region: '서울',
             minReviews: 11,
+            featuredTheme: null,
             includeVerifiedReviewCounts: false,
             enabled: true,
         });
@@ -110,6 +113,7 @@ describe('map query helpers', () => {
             compact: true,
             region: '서울',
             minReviews: 0,
+            featuredTheme: null,
             includeVerifiedReviewCounts: false,
             enabled: true,
         });

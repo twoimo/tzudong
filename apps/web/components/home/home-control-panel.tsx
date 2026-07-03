@@ -9,6 +9,8 @@ import type { User } from '@supabase/supabase-js';
 import type { DeviceMapLocation } from '@/lib/device-location-map';
 import type { HomeMapPanelSide } from '@/lib/home-map-user-preferences';
 import type { HomeMapContextualRestaurantsPayload } from '@/lib/home-map-contextual-restaurants';
+import type { HomeMapThemeFilterId } from '@/lib/home-map-theme-filters';
+
 import { useDeferredComponent } from '@/hooks/use-deferred-component';
 
 
@@ -24,6 +26,7 @@ type HomeDesktopControlPanelProps = {
     onRegionChange: (region: Region | null) => void;
     onCountryChange: (country: string) => void;
     onCategoryChange: (categories: string[]) => void;
+    onThemeChange: (themeId: HomeMapThemeFilterId | null) => void;
     onRestaurantSelect: (restaurant: Restaurant) => void;
     onRestaurantSearch: (restaurant: Restaurant) => void;
     onSearchExecute: (region?: Region | null) => void;
@@ -69,6 +72,7 @@ export interface HomeControlPanelProps {
     onRegionChange: (region: Region | null) => void;
     onCountryChange: (country: string) => void;
     onCategoryChange: (categories: string[]) => void;
+    onThemeChange: (themeId: HomeMapThemeFilterId | null) => void;
     onRestaurantSelect: (restaurant: Restaurant) => void;
     onRestaurantSearch: (restaurant: Restaurant) => void;
     onSearchExecute: (region?: Region | null) => void;
@@ -109,6 +113,7 @@ function HomeControlPanelComponent({
     onRegionChange,
     onCountryChange,
     onCategoryChange,
+    onThemeChange,
     onRestaurantSelect,
     onRestaurantSearch,
     onSearchExecute,
@@ -206,6 +211,7 @@ function HomeControlPanelComponent({
                 onRegionChange={onRegionChange}
                 onCountryChange={onCountryChange}
                 onCategoryChange={onCategoryChange}
+                onThemeChange={onThemeChange}
                 onRestaurantSelect={onRestaurantSelect}
                 onRestaurantSearch={onRestaurantSearch}
                 onSearchExecute={onSearchExecute}
@@ -241,6 +247,7 @@ function HomeControlPanelComponent({
             onRegionChange={onRegionChange}
             onCountryChange={onCountryChange}
             onCategoryChange={onCategoryChange}
+            onThemeChange={onThemeChange}
             onRestaurantSelect={onRestaurantSelect}
             onRestaurantSearch={onRestaurantSearch}
             onSearchExecute={onSearchExecute}

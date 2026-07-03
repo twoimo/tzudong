@@ -53,6 +53,10 @@ import {
     HOME_MAP_CONTEXTUAL_MOBILE_LIMIT,
     type HomeMapContextualRestaurantsPayload,
 } from '@/lib/home-map-contextual-restaurants';
+import {
+    HOME_MAP_THEME_FILTERS,
+    type HomeMapThemeFilterId,
+} from '@/lib/home-map-theme-filters';
 
 // 카테고리 상수
 const CATEGORIES = [
@@ -159,6 +163,7 @@ interface MobileControlOverlayProps {
     onRegionChange: (region: Region | null) => void;
     onCountryChange: (country: string) => void;
     onCategoryChange: (categories: string[]) => void;
+    onThemeChange: (themeId: HomeMapThemeFilterId | null) => void;
     onRestaurantSelect: (restaurant: Restaurant) => void;
     onRestaurantSearch: (restaurant: Restaurant) => void;
     onSearchExecute: (region?: Region | null) => void;
@@ -211,6 +216,7 @@ function MobileControlOverlayComponent({
     onRegionChange,
     onCountryChange,
     onCategoryChange,
+    onThemeChange,
     onRestaurantSelect,
     onRestaurantSearch,
     onSearchExecute,
@@ -247,7 +253,6 @@ function MobileControlOverlayComponent({
     }, []);
 
     const [activeSheet, setActiveSheet] = useState<ActiveSheet>('none');
-    const [quickSelectedCategories, setQuickSelectedCategories] = useState<string[]>(selectedCategories);
     const [searchViewportHeight, setSearchViewportHeight] = useState<number | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchType, setSearchType] = useState<'name' | 'youtube'>('name');
@@ -563,6 +568,7 @@ function MobileControlOverlayComponent({
     const regionLabel = useMemo(() =>
         mapMode === 'domestic' ? (selectedRegion || '전체') : (selectedCountry || '국가'),
         [mapMode, selectedRegion, selectedCountry]);
+    const selectedTheme = filters.featuredTheme ?? null;
     const activeBottomSheetTitle =
         activeSheet === 'region'
             ? (mapMode === 'domestic' ? '지역 선택' : '국가 선택')
@@ -570,19 +576,6 @@ function MobileControlOverlayComponent({
                 ? '카테고리 필터'
                 : '맛집 목록';
 
-    const quickTopCategories = useMemo(() => CATEGORIES.slice(0, 8), []);
-
-    const handleQuickCategoryToggle = useCallback((category: string) => {
-        const nextCategories = quickSelectedCategories.includes(category)
-            ? quickSelectedCategories.filter((item) => item !== category)
-            : [...quickSelectedCategories, category];
-        setQuickSelectedCategories(nextCategories);
-        onCategoryChange(nextCategories);
-    }, [onCategoryChange, quickSelectedCategories]);
-
-    useEffect(() => {
-        setQuickSelectedCategories(selectedCategories);
-    }, [selectedCategories]);
 
     useEffect(() => {
         if (activeSheet !== 'search') {
@@ -965,45 +958,33 @@ function MobileControlOverlayComponent({
 
                 <div
                     id="tzudong-mobile-category-slider"
+                    data-mobile-topic-slider="true"
                     className="pointer-events-auto mt-2 -mx-3 flex gap-2 overflow-x-auto pl-[calc(env(safe-area-inset-left)+8px)] pr-[calc(env(safe-area-inset-right)+8px)] py-0.5 scrollbar-hide [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                 >
-                    {quickTopCategories.map((category) => {
-                        const isSelected = quickSelectedCategories.includes(category);
+                    {HOME_MAP_THEME_FILTERS.map((theme) => {
+                        const isSelected = selectedTheme === theme.id;
                         return (
-                        <Button
-                            key={category}
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => handleQuickCategoryToggle(category)}
-                            aria-pressed={isSelected}
-                            aria-label={`${category} 카테고리 ${isSelected ? '선택 해제' : '선택'}`}
-                            className={cn(
-                                'pointer-events-auto h-9 shrink-0 rounded-full shadow-sm border border-border bg-background/95 backdrop-blur-sm',
-                                'px-3 text-xs font-medium transition-colors motion-reduce:transition-none hover:bg-secondary/80',
-                                isSelected
-                                    ? 'bg-red-700 text-white border-red-700 hover:bg-red-800'
-                                    : 'text-foreground'
-                            )}
-                        >
-                            {category}
-                        </Button>
+                            <Button
+                                key={theme.id}
+                                variant="secondary"
+                                size="sm"
+                                type="button"
+                                onClick={() => onThemeChange(isSelected ? null : theme.id)}
+                                aria-pressed={isSelected}
+                                aria-label={theme.ariaLabel}
+                                title={`${theme.label}: ${theme.description}`}
+                                className={cn(
+                                    'pointer-events-auto h-9 shrink-0 rounded-full shadow-sm border border-border bg-background/95 backdrop-blur-sm',
+                                    'px-3 text-xs font-semibold transition-colors motion-reduce:transition-none hover:bg-secondary/80',
+                                    isSelected
+                                        ? 'bg-primary text-primary-foreground border-primary hover:bg-primary/90'
+                                        : 'text-foreground'
+                                )}
+                            >
+                                {theme.label}
+                            </Button>
                         );
                     })}
-                    <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => toggleSheet('category')}
-                        aria-expanded={activeSheet === 'category'}
-                        aria-label="카테고리 더보기"
-                        className={cn(
-                            'pointer-events-auto h-9 shrink-0 rounded-full shadow-sm border border-border bg-background/95 backdrop-blur-sm',
-                            'hover:bg-secondary/80 px-3 text-xs font-medium transition-colors motion-reduce:transition-none',
-                            activeSheet === 'category' && 'ring-2 ring-primary'
-                        )}
-                    >
-                        <Filter className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
-                        더보기
-                    </Button>
                 </div>
             </div>
 
@@ -1060,6 +1041,29 @@ function MobileControlOverlayComponent({
                         </div>
                         <div className="flex-1 flex items-center justify-center min-w-0">
                             <span className="text-xs truncate">{regionLabel}</span>
+                        </div>
+                    </div>
+                </Button>
+                <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => toggleSheet('category')}
+                    aria-expanded={activeSheet === 'category'}
+                    aria-label={`카테고리 필터 열기${selectedCategories.length > 0 ? `: ${selectedCategories.length}개 선택됨` : ''}`}
+                    className={cn(
+                        'rounded-full shadow-lg bg-background/95 backdrop-blur-sm border border-border',
+                        'hover:bg-secondary/80 w-[clamp(84px,28vw,105px)] h-9 px-2',
+                        activeSheet === 'category' && 'ring-2 ring-primary'
+                    )}
+                >
+                    <div className="flex items-center w-full gap-1">
+                        <div className="flex items-center justify-center w-4 shrink-0">
+                            <Filter className="h-3.5 w-3.5" aria-hidden="true" />
+                        </div>
+                        <div className="flex-1 flex items-center justify-center min-w-0">
+                            <span className="text-xs truncate">
+                                카테고리{selectedCategories.length > 0 ? ` ${selectedCategories.length}` : ''}
+                            </span>
                         </div>
                     </div>
                 </Button>
@@ -1400,7 +1404,6 @@ function MobileControlOverlayComponent({
                                         variant="outline"
                                         className="w-full min-h-11"
                                         onClick={() => {
-                                            setQuickSelectedCategories([]);
                                             onCategoryChange([]);
                                         }}
                                     >
@@ -1421,7 +1424,6 @@ function MobileControlOverlayComponent({
                                                     const newCategories = isSelected
                                                         ? selectedCategories.filter(cat => cat !== category)
                                                         : [...selectedCategories, category];
-                                                    setQuickSelectedCategories(newCategories);
                                                     onCategoryChange(newCategories);
                                                 }}
                                             >
