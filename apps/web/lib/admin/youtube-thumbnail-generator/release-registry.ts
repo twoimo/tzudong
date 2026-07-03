@@ -11,6 +11,7 @@ import {
   type ThumbnailReleaseOptions,
 } from './release-candidates';
 import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
+import type { AdminProviderReadiness as ProviderReadiness } from '@/types/admin-system-status';
 
 export const THUMBNAIL_RELEASE_KEY = 'youtube-thumbnail-generator/current';
 export const THUMBNAIL_RELEASE_STORAGE_BUCKET = 'youtube-thumbnail-releases';
@@ -18,6 +19,8 @@ export const THUMBNAIL_RELEASE_TABLE = 'youtube_thumbnail_releases';
 export const THUMBNAIL_DURABLE_RELEASE_REASON_MISSING_ENV = 'missing_supabase_env';
 export const THUMBNAIL_DURABLE_RELEASE_REASON_MISSING_TABLE = 'missing_release_table';
 export const THUMBNAIL_DURABLE_RELEASE_REASON_LOCAL_CANDIDATE_FALLBACK = 'local_release_candidate_fallback';
+export const THUMBNAIL_DURABLE_RELEASE_REASON_EMPTY = 'durable_release_empty';
+export const THUMBNAIL_DURABLE_RELEASE_PROVIDER_ID = 'youtube-thumbnail-durable-release' as const;
 
 const TARGET_WIDTH = 1280;
 const TARGET_HEIGHT = 720;
@@ -93,6 +96,7 @@ export type ThumbnailDurableReleasePayload = {
     reason?: string;
     warnings: string[];
   };
+  readiness: ProviderReadiness;
 };
 
 export type ThumbnailPublishDurableReleaseRequest = {
@@ -399,18 +403,79 @@ function normalizeReleaseRow(row: ReleaseRow): ThumbnailDurableRelease | null {
   return release;
 }
 
-function createUnavailablePayload(reason: string, warnings: string[] = []): ThumbnailDurableReleasePayload {
+function getThumbnailDurableReleaseRemediation(reasonCode: string) {
+  switch (reasonCode) {
+    case 'ready':
+      return '현재 durable release를 기본 썸네일로 사용할 수 있습니다.';
+    case THUMBNAIL_DURABLE_RELEASE_REASON_LOCAL_CANDIDATE_FALLBACK:
+      return 'Supabase durable registry를 복구한 뒤 검증된 후보를 publish해 로컬 read-only fallback을 해제하세요.';
+    case THUMBNAIL_DURABLE_RELEASE_REASON_EMPTY:
+      return '검증된 exact gpt-image-2 후보를 durable release로 publish하세요.';
+    case THUMBNAIL_DURABLE_RELEASE_REASON_MISSING_ENV:
+      return 'Supabase URL과 서버 관리자 키를 설정한 서버에서 durable registry를 다시 확인하세요.';
+    case THUMBNAIL_DURABLE_RELEASE_REASON_MISSING_TABLE:
+      return 'youtube_thumbnail_releases 테이블과 publish_youtube_thumbnail_release RPC 마이그레이션을 적용하세요.';
+    case 'invalid_release_row':
+      return '활성 release row를 검토하고 exact gpt-image-2 및 admin proxy 경로 계약에 맞게 다시 publish하세요.';
+    default:
+      return 'durable release registry 상태를 확인하고 안전한 현재 릴리즈를 다시 publish하세요.';
+  }
+}
+
+function createThumbnailDurableReleaseReadiness(
+  status: ProviderReadiness['status'],
+  reasonCode: string,
+  diagnostics: ThumbnailDurableReleasePayload['diagnostics'],
+  release: ThumbnailDurableRelease | null,
+): ProviderReadiness {
   return {
-    status: 'unavailable',
-    updatedAt: null,
-    release: null,
+    provider: THUMBNAIL_DURABLE_RELEASE_PROVIDER_ID,
+    status,
+    reasonCode,
+    checkedAt: new Date().toISOString(),
+    remediation: getThumbnailDurableReleaseRemediation(reasonCode),
     diagnostics: {
+      durableRegistryAvailable: diagnostics.durableRegistryAvailable,
+      releaseKey: diagnostics.releaseKey,
+      durableReason: diagnostics.reason ?? reasonCode,
+      warningCount: diagnostics.warnings.length,
+      hasRelease: Boolean(release),
+    },
+  };
+}
+
+function createThumbnailDurableReleasePayload(
+  status: ThumbnailDurableReleasePayload['status'],
+  release: ThumbnailDurableRelease | null,
+  diagnostics: ThumbnailDurableReleasePayload['diagnostics'],
+  readinessStatus: ProviderReadiness['status'],
+  reasonCode: string,
+  updatedAt: string | null = release?.updatedAt ?? null,
+): ThumbnailDurableReleasePayload {
+  const payload: ThumbnailDurableReleasePayload = {
+    status,
+    updatedAt,
+    release,
+    diagnostics,
+    readiness: createThumbnailDurableReleaseReadiness(readinessStatus, reasonCode, diagnostics, release),
+  };
+  assertRedactedPublicPayload(payload);
+  return payload;
+}
+
+function createUnavailablePayload(reason: string, warnings: string[] = []): ThumbnailDurableReleasePayload {
+  return createThumbnailDurableReleasePayload(
+    'unavailable',
+    null,
+    {
       durableRegistryAvailable: false,
       releaseKey: THUMBNAIL_RELEASE_KEY,
       reason,
       warnings,
     },
-  };
+    'unavailable',
+    reason,
+  );
 }
 
 function deterministicReleaseIdFromCandidate(candidate: ThumbnailReleaseCandidate) {
@@ -485,6 +550,20 @@ function createLocalFallbackDurableReleasePayload(
         'using-local-exact-release-candidate-readonly',
       ],
     },
+    readiness: createThumbnailDurableReleaseReadiness(
+      'degraded',
+      THUMBNAIL_DURABLE_RELEASE_REASON_LOCAL_CANDIDATE_FALLBACK,
+      {
+        durableRegistryAvailable: false,
+        releaseKey: THUMBNAIL_RELEASE_KEY,
+        reason: THUMBNAIL_DURABLE_RELEASE_REASON_LOCAL_CANDIDATE_FALLBACK,
+        warnings: [
+          `durable-registry-unavailable:${fallbackReason}`,
+          'using-local-exact-release-candidate-readonly',
+        ],
+      },
+      release,
+    ),
   };
   assertRedactedPublicPayload(fallbackPayload);
   return fallbackPayload;
@@ -577,29 +656,33 @@ export async function readCurrentThumbnailDurableRelease(
   try {
     const row = await adapter.readCurrentRelease(THUMBNAIL_RELEASE_KEY);
     if (!row) {
-      return {
-        status: 'empty',
-        updatedAt: null,
-        release: null,
-        diagnostics: {
+      return createThumbnailDurableReleasePayload(
+        'empty',
+        null,
+        {
           durableRegistryAvailable: true,
           releaseKey: THUMBNAIL_RELEASE_KEY,
+          reason: THUMBNAIL_DURABLE_RELEASE_REASON_EMPTY,
           warnings: [],
         },
-      };
+        'degraded',
+        THUMBNAIL_DURABLE_RELEASE_REASON_EMPTY,
+      );
     }
     const release = normalizeReleaseRow(row);
     if (!release) return createUnavailablePayload('invalid_release_row', ['active row failed strict normalization']);
-    const payload: ThumbnailDurableReleasePayload = {
-      status: 'ready',
-      updatedAt: release.updatedAt,
+    const payload = createThumbnailDurableReleasePayload(
+      'ready',
       release,
-      diagnostics: {
+      {
         durableRegistryAvailable: true,
         releaseKey: THUMBNAIL_RELEASE_KEY,
         warnings: [],
       },
-    };
+      'ready',
+      'ready',
+      release.updatedAt,
+    );
     assertRedactedPublicPayload(payload);
     return payload;
   } catch (error) {
@@ -677,7 +760,7 @@ export async function publishThumbnailDurableRelease(
     try {
       await adapter.deleteReleaseAsset(THUMBNAIL_RELEASE_STORAGE_BUCKET, objectPath);
     } catch (cleanupError) {
-      console.error('[youtube-thumbnail/durable-release] failed to clean uploaded asset after publish error:', cleanupError);
+      console.error('[youtube-thumbnail/durable-release] failed to clean uploaded asset after publish error:', cleanupError instanceof Error ? cleanupError.name : 'unknown_error');
     }
     if (isMissingReleaseTableError(error)) return createUnavailablePayload(THUMBNAIL_DURABLE_RELEASE_REASON_MISSING_TABLE);
     throw error;

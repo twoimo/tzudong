@@ -35,6 +35,7 @@ import type {
   DashboardRestaurantsResponse,
   DashboardSummaryResponse,
 } from "@/types/dashboard";
+import type { AdminProviderReadiness } from "@/types/admin-system-status";
 
 const ADMIN_OVERVIEW_MAP_PAGE_SIZE = 500;
 const ADMIN_OVERVIEW_CLUSTER_MAX_ZOOM = 13;
@@ -117,7 +118,34 @@ type AdminDirectionsRoute = {
   summary: AdminDirectionsSummary | null;
   fallbackReasonCode?: string | null;
   message?: string | null;
+  readiness?: AdminProviderReadiness;
 };
+type AdminDirectionsRouteError = Error & {
+  readiness?: AdminProviderReadiness;
+  responseMessage?: string | null;
+};
+
+function createAdminDirectionsRouteError(
+  fallbackMessage: string,
+  readiness?: AdminProviderReadiness,
+): AdminDirectionsRouteError {
+  const error = new Error("admin-directions-route-failed") as AdminDirectionsRouteError;
+  error.readiness = readiness;
+  error.responseMessage = fallbackMessage;
+  return error;
+}
+
+function formatAdminDirectionsReadinessMessage(
+  message: string | null | undefined,
+  readiness: AdminProviderReadiness | null | undefined,
+) {
+  const parts = [
+    message,
+    readiness?.reasonCode ? `reason=${readiness.reasonCode}` : null,
+    readiness?.remediation,
+  ].filter(Boolean);
+  return parts.join(" · ");
+}
 
 type AdminDirectionsStatus = "idle" | "loading" | "ready" | "fallback";
 
@@ -234,12 +262,17 @@ async function fetchAdminDirectionsRoute(
     cache: "no-store",
     signal,
   });
+  const payload = await response.json().catch(() => null) as AdminDirectionsRoute | null;
 
   if (!response.ok) {
-    throw new Error("admin-directions-route-failed");
+    throw createAdminDirectionsRouteError(
+      payload?.message ?? "네이버 Directions 응답을 사용할 수 없어 직선거리 기반 후보를 표시합니다.",
+      payload?.readiness,
+    );
   }
 
-  return response.json() as Promise<AdminDirectionsRoute>;
+  if (!payload) throw createAdminDirectionsRouteError("네이버 Directions 응답을 해석하지 못했습니다.");
+  return payload;
 }
 
 function toAdminMapRestaurant(
@@ -1455,20 +1488,25 @@ export function AdminOverviewDashboard({
         setDirectionsFallbackMessage(
           hasRoadRoute
             ? null
-            : route.message ??
-                "네이버 Directions 응답을 사용할 수 없어 직선거리 기반 후보를 표시합니다.",
+            : formatAdminDirectionsReadinessMessage(
+                route.message ?? "네이버 Directions 응답을 사용할 수 없어 직선거리 기반 후보를 표시합니다.",
+                route.readiness,
+              ),
         );
       })
       .catch((error) => {
         if (controller.signal.aborted) return;
-        console.warn(
-          "[Admin Directions] Falling back to route candidates",
-          error,
-        );
+        const routeError = error as AdminDirectionsRouteError;
+        console.warn("[Admin Directions] Falling back to route candidates", {
+          reasonCode: routeError.readiness?.reasonCode ?? "admin-directions-route-failed",
+        });
         setDirectionsRoute(null);
         setDirectionsStatus("fallback");
         setDirectionsFallbackMessage(
-          "네이버 Directions 요청 실패로 직선거리 기반 후보를 표시합니다.",
+          formatAdminDirectionsReadinessMessage(
+            routeError.responseMessage ?? "네이버 Directions 요청 실패로 직선거리 기반 후보를 표시합니다.",
+            routeError.readiness,
+          ),
         );
       });
 

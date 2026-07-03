@@ -32,6 +32,7 @@ import { Restaurant, RESTAURANT_CATEGORIES } from "@/types/restaurant";
 import { RESTAURANT_MERGE_SELECT } from "@/hooks/use-restaurants";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/lib/no-toast";
+import { assertLegacyBrowserAdminMutationEnabled } from "@/lib/admin/guarded-mutation-contract";
 import { Loader2, ChevronDown, X } from "lucide-react";
 import { checkRestaurantDuplicate } from '@/lib/db-conflict-checker';
 import { canonicalizeYoutubeLink, extractVideoIdFromYoutubeLink } from '@/lib/dashboard/helpers';
@@ -600,6 +601,11 @@ export function AdminRestaurantModal({
         setIsSubmitting(true);
 
         try {
+            assertLegacyBrowserAdminMutationEnabled(
+                "restaurant_record",
+                restaurant ? "update_restaurant" : "insert_restaurant",
+            );
+
             if (restaurant) {
                 // 공통 필드: 모든 레코드에 적용
                 const commonData = {
@@ -624,6 +630,7 @@ export function AdminRestaurantModal({
 
                 // 1. X 버튼으로 삭제된 레코드를 소프트 삭제 (status = 'deleted')
                 if (deletedReviewIds.length > 0) {
+                    assertLegacyBrowserAdminMutationEnabled("restaurant_record", "delete_restaurant_link");
                     const { error: deleteError } = await supabase
                         .from('restaurants')
                         // @ts-expect-error - Supabase 자동 생성 타입 문제
@@ -642,6 +649,7 @@ export function AdminRestaurantModal({
                 }
 
                 // 2. 공통 필드를 모든 기존 레코드에 업데이트
+                assertLegacyBrowserAdminMutationEnabled("restaurant_record", "update_restaurant");
                 const { error: commonError } = await supabase
                     .from("restaurants" as never)
                     .update(commonData as never)
@@ -653,6 +661,7 @@ export function AdminRestaurantModal({
                 for (const review of formData.youtube_reviews) {
                     if (review.id.startsWith('new-')) continue; // 새 레코드는 스킵
 
+                    assertLegacyBrowserAdminMutationEnabled("restaurant_record", "update_restaurant_link");
                     const { error: reviewError } = await supabase
                         .from("restaurants" as never)
                         .update({
@@ -711,6 +720,7 @@ export function AdminRestaurantModal({
                     }
 
                     // 신규 레코드 생성
+                    assertLegacyBrowserAdminMutationEnabled("restaurant_record", "insert_restaurant_link");
                     const { error: insertError } = await supabase
                         .from("restaurants" as never)
                         .insert({
@@ -848,6 +858,7 @@ export function AdminRestaurantModal({
         setIsSubmitting(true);
 
         try {
+            assertLegacyBrowserAdminMutationEnabled("restaurant_record", "delete_restaurant");
             // 소프트 삭제: status를 'deleted'로 변경
             const { error } = await supabase
                 .from("restaurants")

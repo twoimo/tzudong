@@ -1,5 +1,11 @@
+import {
+  buildNaverDirectionsReadiness,
+  buildProviderReadiness,
+  THUMBNAIL_DURABLE_RELEASE_PROVIDER_ID,
+} from '@/lib/admin/provider-readiness';
 import type {
   AdminGithubActionsStatus,
+  AdminProviderReadiness,
   AdminSystemIntegrationStatus,
   AdminSystemFrameCaptionStatus,
   AdminSystemRunDailyStatus,
@@ -516,8 +522,114 @@ async function resolveSupabaseCounterStatus(
   }
 }
 
+type ThumbnailDurableReleaseReadinessPayload = {
+  status: 'ready' | 'empty' | 'unavailable';
+  release: unknown;
+  diagnostics: {
+    durableRegistryAvailable: boolean;
+    releaseKey: string;
+    reason?: string;
+    warnings: string[];
+  };
+};
+
+export function mapThumbnailDurableReleasePayloadToReadiness(
+  payload: ThumbnailDurableReleaseReadinessPayload,
+  checkedAt: string,
+): AdminProviderReadiness {
+  const reason = typeof payload.diagnostics.reason === 'string' ? payload.diagnostics.reason : undefined;
+
+  if (payload.status === 'ready' && reason === 'local_release_candidate_fallback') {
+    return buildProviderReadiness({
+      provider: THUMBNAIL_DURABLE_RELEASE_PROVIDER_ID,
+      status: 'degraded',
+      reasonCode: 'thumbnail-durable-release-local-fallback',
+      checkedAt,
+      remediation: 'Publish a Supabase-backed durable thumbnail release before relying on the local fallback.',
+      diagnostics: {
+        durableRegistryAvailable: payload.diagnostics.durableRegistryAvailable,
+        releaseKey: payload.diagnostics.releaseKey,
+        warningCount: payload.diagnostics.warnings.length,
+      },
+    });
+  }
+
+  if (payload.status === 'ready') {
+    return buildProviderReadiness({
+      provider: THUMBNAIL_DURABLE_RELEASE_PROVIDER_ID,
+      status: 'ready',
+      reasonCode: 'thumbnail-durable-release-ready',
+      checkedAt,
+      remediation: 'Durable thumbnail release readback is available.',
+      diagnostics: {
+        durableRegistryAvailable: payload.diagnostics.durableRegistryAvailable,
+        releaseKey: payload.diagnostics.releaseKey,
+        hasRelease: Boolean(payload.release),
+      },
+    });
+  }
+
+  if (payload.status === 'empty') {
+    return buildProviderReadiness({
+      provider: THUMBNAIL_DURABLE_RELEASE_PROVIDER_ID,
+      status: 'unavailable',
+      reasonCode: 'thumbnail-durable-release-empty',
+      checkedAt,
+      remediation: 'Publish the current thumbnail release to the durable registry.',
+      diagnostics: {
+        durableRegistryAvailable: payload.diagnostics.durableRegistryAvailable,
+        releaseKey: payload.diagnostics.releaseKey,
+        hasRelease: false,
+      },
+    });
+  }
+
+  return buildProviderReadiness({
+    provider: THUMBNAIL_DURABLE_RELEASE_PROVIDER_ID,
+    status: 'unavailable',
+    reasonCode: reason === 'missing_release_table'
+      ? 'thumbnail-durable-release-table-missing'
+      : reason === 'missing_supabase_env'
+        ? 'thumbnail-durable-release-env-missing'
+        : 'thumbnail-durable-release-unavailable',
+    checkedAt,
+    remediation: reason === 'missing_supabase_env'
+      ? 'Configure Supabase URL and service-role key for durable release readback.'
+      : reason === 'missing_release_table'
+        ? 'Apply the thumbnail durable release table migration.'
+        : 'Restore durable thumbnail release readback.',
+    diagnostics: {
+      durableRegistryAvailable: payload.diagnostics.durableRegistryAvailable,
+      releaseKey: payload.diagnostics.releaseKey,
+      warningCount: payload.diagnostics.warnings.length,
+    },
+  });
+}
+
+async function resolveThumbnailDurableReleaseReadiness(
+  env: NodeJS.ProcessEnv,
+  checkedAt: string,
+): Promise<AdminProviderReadiness> {
+  try {
+    const { readCurrentThumbnailDurableRelease } = await import('@/lib/admin/youtube-thumbnail-generator/release-registry');
+    const payload = await readCurrentThumbnailDurableRelease(env);
+    return mapThumbnailDurableReleasePayloadToReadiness(payload, checkedAt);
+  } catch {
+    return buildProviderReadiness({
+      provider: THUMBNAIL_DURABLE_RELEASE_PROVIDER_ID,
+      status: 'unavailable',
+      reasonCode: 'thumbnail-durable-release-error',
+      checkedAt,
+      remediation: 'Inspect server logs and restore durable thumbnail release readback.',
+      diagnostics: {
+        durableRegistryAvailable: false,
+      },
+    });
+  }
+}
+
 export function buildAdminOpsChecklist(
-  status: Pick<AdminSystemStatusResponse, 'keys' | 'storyboardAgent' | 'bgeEmbedding' | 'frameCaption'>,
+  status: Pick<AdminSystemStatusResponse, 'keys' | 'storyboardAgent' | 'bgeEmbedding' | 'frameCaption' | 'providerReadiness'>,
   runDaily?: AdminSystemRunDailyStatus,
 ): AdminSystemStatusChecklistItem[] {
   const checklist: AdminSystemStatusChecklistItem[] = [];
@@ -846,6 +958,29 @@ export function buildAdminOpsChecklist(
     });
   }
 
+  const naverReadiness = status.providerReadiness['naver-directions'];
+  if (naverReadiness.status !== 'ready') {
+    checklist.push({
+      id: 'provider-readiness-naver-directions',
+      title: 'Naver Directions 준비 상태 확인 필요',
+      severity: 'high',
+      category: 'provider-readiness',
+      action: naverReadiness.remediation,
+      source: 'provider-readiness',
+    });
+  }
+
+  const thumbnailReadiness = status.providerReadiness['youtube-thumbnail-durable-release'];
+  if (thumbnailReadiness.status !== 'ready') {
+    checklist.push({
+      id: 'provider-readiness-thumbnail-durable-release',
+      title: '썸네일 durable release 준비 상태 확인 필요',
+      severity: thumbnailReadiness.status === 'degraded' ? 'medium' : 'high',
+      category: 'provider-readiness',
+      action: thumbnailReadiness.remediation,
+      source: 'provider-readiness',
+    });
+  }
   return checklist;
 }
 
@@ -947,10 +1082,12 @@ export async function getAdminSystemStatus(
       finalStatus: runDailyManifestInfo.finalStatus ?? runDailyLogTailInfo.finalStatus,
       detail: runDailyLogTailInfo.detail ?? runDailyManifestInfo.detail,
     };
-  const [githubActions, supabaseCounters] = await Promise.all([
+  const [githubActions, supabaseCounters, thumbnailDurableReleaseReadiness] = await Promise.all([
     resolveGithubActionsStatus(env, asOf, timeoutMs),
     resolveSupabaseCounterStatus(env, asOf, timeoutMs),
+    resolveThumbnailDurableReleaseReadiness(env, asOf),
   ]);
+  const naverDirectionsReadiness = buildNaverDirectionsReadiness(env, asOf);
 
   const runDailyDetail = sanitizeTextForDisplay(
     runDailyManifestInfo.detail ?? runDailyFailureInfo.detail,
@@ -985,6 +1122,10 @@ export async function getAdminSystemStatus(
     },
     githubActions,
     supabaseCounters,
+    providerReadiness: {
+      'naver-directions': naverDirectionsReadiness,
+      'youtube-thumbnail-durable-release': thumbnailDurableReleaseReadiness,
+    },
     checklist: [],
   };
   response.checklist = buildAdminOpsChecklist(response, response.runDaily);
