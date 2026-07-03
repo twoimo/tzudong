@@ -7,7 +7,7 @@
   <p>
     <a href="https://tzudong.app">라이브 앱</a>
     ·
-    <a href="https://github.com/twoimo/tzudong/releases/tag/v1.2.0">최신 릴리즈</a>
+    <a href="https://github.com/twoimo/tzudong/releases/tag/v1.2.1">최신 릴리즈</a>
     ·
     <a href="README.md">English</a>
     ·
