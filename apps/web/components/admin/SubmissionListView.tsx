@@ -44,8 +44,12 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useIsMobile } from '@/hooks/use-mobile';
 
-const SUBMISSION_TAB_ORDER: Array<'new' | 'edit' | 'reviews'> = ['new', 'edit', 'reviews'];
+type SubmissionAdminTab = 'new' | 'edit' | 'recommend' | 'reviews';
+
+const SUBMISSION_TAB_ORDER: SubmissionAdminTab[] = ['new', 'edit', 'recommend', 'reviews'];
 const SUBMISSION_DELETE_CONFIRMATION = '제보삭제';
+const RECOMMEND_APPROVE_CONFIRMATION = '추천승인';
+const RECOMMEND_REJECT_CONFIRMATION = '추천거부';
 const REVIEW_DELETE_CONFIRMATION = '리뷰삭제';
 const OCR_RESET_ALL_CONFIRMATION = 'OCR초기화';
 const OVERRIDE_APPROVAL_CONFIRMATION = '무시승인';
@@ -181,7 +185,7 @@ const ReviewPhotoItem = memo(function ReviewPhotoItem({
 
 interface SubmissionListViewProps {
     submissions: SubmissionRecord[];
-    onApprove: (submission: SubmissionRecord, approvalData: ApprovalData, itemDecisions: Record<string, ItemDecision>, forceApprove: boolean, editableData: { name: string; address: string; phone: string; categories: string[] }) => void;
+    onApprove: (submission: SubmissionRecord, approvalData: ApprovalData, itemDecisions: Record<string, ItemDecision>, forceApprove: boolean, editableData: { name: string; address: string; phone: string; categories: string[] }, adminNote?: string) => void;
     onReject: (submission: SubmissionRecord, reason: string) => void;
     onDelete: (submission: SubmissionRecord) => void;
     hasNextSubmissionPage?: boolean;
@@ -196,7 +200,7 @@ interface SubmissionListViewProps {
     onDeleteReview?: (review: Review) => void;
     reviewsLoading?: boolean;
     // 초기 탭 설정
-    initialTab?: 'new' | 'edit' | 'reviews';
+    initialTab?: SubmissionAdminTab;
 }
 
 export function SubmissionListView({
@@ -217,7 +221,7 @@ export function SubmissionListView({
     initialTab = 'new',
 }: SubmissionListViewProps) {
     // 탭 상태 (초기 탭 지정 가능)
-    const [activeTab, setActiveTab] = useState<'new' | 'edit' | 'reviews'>(initialTab);
+    const [activeTab, setActiveTab] = useState<SubmissionAdminTab>(initialTab);
     const isMobile = useIsMobile();
     const SUBMISSION_LIST_PAGE_SIZE = 10;
 
@@ -227,6 +231,7 @@ export function SubmissionListView({
 
     // 선택된 제보
     const [selectedSubmission, setSelectedSubmission] = useState<SubmissionRecord | null>(null);
+    const submissionDetailPanelRef = useRef<HTMLElement>(null);
 
     // 지오코딩 관련 상태
     const [approvalData, setApprovalData] = useState<ApprovalData>({
@@ -256,6 +261,9 @@ export function SubmissionListView({
     // 거부 모달
     const [showRejectModal, setShowRejectModal] = useState(false);
     const [rejectionReason, setRejectionReason] = useState('');
+    const [recommendationAdminNote, setRecommendationAdminNote] = useState('');
+    const [recommendationApprovalConfirmation, setRecommendationApprovalConfirmation] = useState('');
+    const [recommendationRejectionConfirmation, setRecommendationRejectionConfirmation] = useState('');
 
     // 네이버 검색 검증 상태
     const [naverSearchLoading, setNaverSearchLoading] = useState(false);
@@ -296,6 +304,7 @@ export function SubmissionListView({
 
     const [visibleNewCount, setVisibleNewCount] = useState(SUBMISSION_LIST_PAGE_SIZE);
     const [visibleEditCount, setVisibleEditCount] = useState(SUBMISSION_LIST_PAGE_SIZE);
+    const [visibleRecommendCount, setVisibleRecommendCount] = useState(SUBMISSION_LIST_PAGE_SIZE);
     const [visibleReviewCount, setVisibleReviewCount] = useState(SUBMISSION_LIST_PAGE_SIZE);
 
     const handleClearSubmissionSearch = useCallback(() => setSearchQuery(''), []);
@@ -319,7 +328,7 @@ export function SubmissionListView({
         submissionTabSwipeEndYRef.current = e.touches[0].clientY;
     }, []);
 
-    const resetVisibleCountByTab = useCallback((tab: 'new' | 'edit' | 'reviews') => {
+    const resetVisibleCountByTab = useCallback((tab: SubmissionAdminTab) => {
         if (tab === 'new') {
             setVisibleNewCount(SUBMISSION_LIST_PAGE_SIZE);
             return;
@@ -330,17 +339,26 @@ export function SubmissionListView({
             return;
         }
 
+        if (tab === 'recommend') {
+            setVisibleRecommendCount(SUBMISSION_LIST_PAGE_SIZE);
+            return;
+        }
+
         setVisibleReviewCount(SUBMISSION_LIST_PAGE_SIZE);
     }, []);
 
-    const setActiveTabWithReset = useCallback((tab: 'new' | 'edit' | 'reviews') => {
+    const setActiveTabWithReset = useCallback((tab: SubmissionAdminTab) => {
         setActiveTab(tab);
         resetVisibleCountByTab(tab);
     }, [resetVisibleCountByTab]);
 
-    const increaseSubmissionVisibleCount = useCallback((tab: 'new' | 'edit') => {
+    const increaseSubmissionVisibleCount = useCallback((tab: Exclude<SubmissionAdminTab, 'reviews'>) => {
         if (tab === 'new') {
             setVisibleNewCount((prev) => prev + SUBMISSION_LIST_PAGE_SIZE);
+            return;
+        }
+        if (tab === 'recommend') {
+            setVisibleRecommendCount((prev) => prev + SUBMISSION_LIST_PAGE_SIZE);
             return;
         }
 
@@ -768,15 +786,16 @@ export function SubmissionListView({
     const filteredSubmissions = useMemo(() => {
         if (activeTab === 'reviews') return [];
 
-        let filtered = submissions.filter(s =>
-            activeTab === 'new' ? s.submission_type === 'new' : s.submission_type === 'edit'
-        );
+        let filtered = submissions.filter(s => s.submission_type === activeTab);
 
         if (searchQuery.trim()) {
             const query = searchQuery.toLowerCase();
             filtered = filtered.filter(s =>
                 s.restaurant_name.toLowerCase().includes(query) ||
                 s.restaurant_address?.toLowerCase().includes(query) ||
+                s.restaurant_phone?.toLowerCase().includes(query) ||
+                s.recommendation_reason?.toLowerCase().includes(query) ||
+                s.items.some(item => item.youtube_link?.toLowerCase().includes(query) || item.tzuyang_review?.toLowerCase().includes(query)) ||
                 s.profiles?.nickname?.toLowerCase().includes(query)
             );
         }
@@ -816,6 +835,8 @@ export function SubmissionListView({
         submissions.filter(s => s.submission_type === 'new'), [submissions]);
     const editSubmissions = useMemo(() =>
         submissions.filter(s => s.submission_type === 'edit'), [submissions]);
+    const recommendSubmissions = useMemo(() =>
+        submissions.filter(s => s.submission_type === 'recommend'), [submissions]);
 
     const newPendingCount = useMemo(() =>
         newSubmissions.filter(s => s.status === 'pending' || s.status === 'partially_approved').length, [newSubmissions]);
@@ -831,6 +852,13 @@ export function SubmissionListView({
     const editRejectedCount = useMemo(() =>
         editSubmissions.filter(s => s.status === 'rejected').length, [editSubmissions]);
 
+    const recommendPendingCount = useMemo(() =>
+        recommendSubmissions.filter(s => s.status === 'pending').length, [recommendSubmissions]);
+    const recommendApprovedCount = useMemo(() =>
+        recommendSubmissions.filter(s => s.status === 'approved').length, [recommendSubmissions]);
+    const recommendRejectedCount = useMemo(() =>
+        recommendSubmissions.filter(s => s.status === 'rejected').length, [recommendSubmissions]);
+
     // 통계 (탭 버튼 배지용)
     const newCount = useMemo(() =>
         submissions.filter(s => s.submission_type === 'new' && (s.status === 'pending' || s.status === 'partially_approved')).length
@@ -838,6 +866,10 @@ export function SubmissionListView({
 
     const editCount = useMemo(() =>
         submissions.filter(s => s.submission_type === 'edit' && (s.status === 'pending' || s.status === 'partially_approved')).length
+        , [submissions]);
+
+    const recommendCount = useMemo(() =>
+        submissions.filter(s => s.submission_type === 'recommend' && s.status === 'pending').length
         , [submissions]);
 
     const reviewPendingCount = useMemo(() => pendingReviews.length, [pendingReviews]);
@@ -862,6 +894,16 @@ export function SubmissionListView({
             };
         }
 
+        if (activeTab === 'recommend') {
+            return {
+                label: '쯔양 제보',
+                pending: recommendPendingCount,
+                approved: recommendApprovedCount,
+                rejected: recommendRejectedCount,
+                total: recommendSubmissions.length,
+            };
+        }
+
         return {
             label: '리뷰',
             pending: pendingReviews.length,
@@ -879,6 +921,10 @@ export function SubmissionListView({
         editApprovedCount,
         editRejectedCount,
         editSubmissions.length,
+        recommendPendingCount,
+        recommendApprovedCount,
+        recommendRejectedCount,
+        recommendSubmissions.length,
         pendingReviews.length,
         approvedReviews.length,
         rejectedReviews.length,
@@ -937,11 +983,15 @@ export function SubmissionListView({
         [pendingReviews, approvedReviews, rejectedReviews]
     );
 
-    const visibleSubmissionCount = useMemo(() => (activeTab === 'new' ? visibleNewCount : visibleEditCount), [activeTab, visibleEditCount, visibleNewCount]);
+    const visibleSubmissionCount = useMemo(() => {
+        if (activeTab === 'new') return visibleNewCount;
+        if (activeTab === 'recommend') return visibleRecommendCount;
+        return visibleEditCount;
+    }, [activeTab, visibleEditCount, visibleNewCount, visibleRecommendCount]);
     const displayedSubmissions = useMemo(() => filteredSubmissions.slice(0, visibleSubmissionCount), [filteredSubmissions, visibleSubmissionCount]);
     const displayedReviews = useMemo(() => orderedReviews.slice(0, visibleReviewCount), [orderedReviews, visibleReviewCount]);
 
-    const hasMoreSubmissions = filteredSubmissions.length > visibleSubmissionCount || hasNextSubmissionPage;
+    const hasMoreSubmissions = filteredSubmissions.length > visibleSubmissionCount || (activeTab !== 'recommend' && hasNextSubmissionPage);
     const hasMoreReviews = orderedReviews.length > visibleReviewCount;
     const hasMoreCards = activeTab === 'reviews' ? hasMoreReviews : hasMoreSubmissions;
     const isCurrentListLoading = activeTab === 'reviews'
@@ -981,6 +1031,14 @@ export function SubmissionListView({
             return;
         }
 
+        if (activeTab === 'recommend') {
+            setVisibleRecommendCount((prev) => Math.min(prev + SUBMISSION_LIST_PAGE_SIZE, filteredSubmissions.length));
+            requestAnimationFrame(() => {
+                isLoadingMoreRef.current = false;
+            });
+            return;
+        }
+
         setVisibleEditCount((prev) => Math.min(prev + SUBMISSION_LIST_PAGE_SIZE, filteredSubmissions.length));
         requestAnimationFrame(() => {
             isLoadingMoreRef.current = false;
@@ -1014,6 +1072,11 @@ export function SubmissionListView({
 
         if (activeTab === 'edit') {
             setVisibleEditCount(SUBMISSION_LIST_PAGE_SIZE);
+            return;
+        }
+
+        if (activeTab === 'recommend') {
+            setVisibleRecommendCount(SUBMISSION_LIST_PAGE_SIZE);
             return;
         }
 
@@ -1145,6 +1208,9 @@ export function SubmissionListView({
         setSelectedGeocodingIndex(null);
         setForceApprove(false);
         setRejectionReason('');
+        setRecommendationAdminNote(submission.recommendation_admin_note || '');
+        setRecommendationApprovalConfirmation('');
+        setRecommendationRejectionConfirmation('');
 
         setEditableData({
             name: submission.restaurant_name,
@@ -1165,7 +1231,14 @@ export function SubmissionListView({
                 };
             });
         setItemDecisions(initialDecisions);
-    }, []);
+        window.requestAnimationFrame(() => {
+            submissionDetailPanelRef.current?.scrollIntoView({
+                block: isMobile ? 'start' : 'nearest',
+                behavior: 'smooth',
+            });
+            submissionDetailPanelRef.current?.focus({ preventScroll: true });
+        });
+    }, [isMobile]);
 
     // 상세 패널 닫기
     const closeSubmissionDetail = useCallback(() => {
@@ -1175,6 +1248,9 @@ export function SubmissionListView({
         setOverrideApprovalConfirmation('');
         setSubmissionDeleteTarget(null);
         setSubmissionDeleteConfirmation('');
+        setRecommendationAdminNote('');
+        setRecommendationApprovalConfirmation('');
+        setRecommendationRejectionConfirmation('');
     }, []);
 
     // 네이버 검색 API 호출 함수
@@ -1369,6 +1445,21 @@ export function SubmissionListView({
     const handleApprove = async () => {
         if (!selectedSubmission) return;
 
+        if (selectedSubmission.submission_type === 'recommend') {
+            if (recommendationApprovalConfirmation !== RECOMMEND_APPROVE_CONFIRMATION) {
+                toast.error('추천 승인 확인 문구가 일치하지 않습니다.');
+                return;
+            }
+            onApprove(selectedSubmission, approvalData, {}, false, {
+                name: selectedSubmission.restaurant_name,
+                address: selectedSubmission.restaurant_address || '',
+                phone: selectedSubmission.restaurant_phone || '',
+                categories: selectedSubmission.restaurant_categories || [],
+            }, recommendationAdminNote.trim());
+            closeSubmissionDetail();
+            return;
+        }
+
         if (!approvalData.lat || !approvalData.lng || !approvalData.road_address) {
             toast.error('지오코딩을 완료하고 주소를 선택해주세요');
             return;
@@ -1411,11 +1502,15 @@ export function SubmissionListView({
             toast.error('거부 사유를 입력해주세요');
             return;
         }
+        if (selectedSubmission.submission_type === 'recommend' && recommendationRejectionConfirmation !== RECOMMEND_REJECT_CONFIRMATION) {
+            toast.error('추천 거부 확인 문구가 일치하지 않습니다.');
+            return;
+        }
         onReject(selectedSubmission, rejectionReason.trim());
         setShowRejectModal(false);
         setRejectionReason('');
         closeSubmissionDetail();
-    }, [selectedSubmission, onReject, rejectionReason, closeSubmissionDetail]);
+    }, [selectedSubmission, onReject, rejectionReason, recommendationRejectionConfirmation, closeSubmissionDetail]);
 
     // 삭제 핸들러
     const handleDelete = useCallback((submission: SubmissionRecord, e?: React.MouseEvent) => {
@@ -1574,9 +1669,121 @@ export function SubmissionListView({
         );
     };
 
+    const renderRecommendationDetailContent = (submission: SubmissionRecord) => (
+        <div className="space-y-3">
+            <Card className="p-3 shadow-none">
+                <div className="space-y-2 text-sm">
+                    <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                            <p className="font-semibold">{submission.restaurant_name}</p>
+                            <p className="mt-1 break-all text-xs text-muted-foreground">{submission.restaurant_address || '주소 없음'}</p>
+                        </div>
+                        {getStatusBadge(submission.status)}
+                    </div>
+                    <div className="grid gap-2 rounded-md bg-muted/40 p-2 text-xs sm:grid-cols-2">
+                        <div>
+                            <span className="text-muted-foreground">전화번호</span>
+                            <p className="mt-0.5 break-all">{submission.restaurant_phone || '-'}</p>
+                        </div>
+                        <div>
+                            <span className="text-muted-foreground">추천자</span>
+                            <p className="mt-0.5">{submission.profiles?.nickname || '익명'}</p>
+                        </div>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                        {submission.restaurant_categories?.length ? (
+                            submission.restaurant_categories.map((category, index) => (
+                                <Badge key={`${category}-${index}`} variant="outline" className={listCategoryBadgeClassName}>
+                                    {category}
+                                </Badge>
+                            ))
+                        ) : (
+                            <span className="text-xs text-muted-foreground">카테고리 없음</span>
+                        )}
+                    </div>
+                </div>
+            </Card>
+
+            <Card className="p-3 shadow-none">
+                <Label className="text-sm font-medium">추천 사유</Label>
+                <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">
+                    {submission.recommendation_reason || submission.items[0]?.tzuyang_review || '추천 사유가 없습니다.'}
+                </p>
+            </Card>
+
+            {submission.items[0]?.youtube_link && (
+                <Card className="p-3 shadow-none">
+                    <Label className="text-sm font-medium">YouTube 링크</Label>
+                    <a
+                        href={submission.items[0].youtube_link}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-2 block break-all text-sm text-primary underline-offset-4 hover:underline"
+                    >
+                        {submission.items[0].youtube_link}
+                    </a>
+                </Card>
+            )}
+
+            {(submission.recommendation_audit_id || submission.reviewed_at || submission.recommendation_admin_note || submission.rejection_reason) && (
+                <Card className="border-blue-200 bg-blue-50/70 p-3 text-xs shadow-none dark:border-blue-900/50 dark:bg-blue-950/20">
+                    <p className="font-semibold text-blue-900 dark:text-blue-100">최근 처리 readback</p>
+                    {submission.reviewed_at && <p className="mt-1">처리일: {new Date(submission.reviewed_at).toLocaleString('ko-KR')}</p>}
+                    {submission.recommendation_audit_id && <p className="break-all">감사 ID: {submission.recommendation_audit_id}</p>}
+                    {submission.recommendation_admin_note && <p className="whitespace-pre-wrap">관리자 메모: {submission.recommendation_admin_note}</p>}
+                    {submission.rejection_reason && <p className="whitespace-pre-wrap">거부 사유: {submission.rejection_reason}</p>}
+                </Card>
+            )}
+
+            {submission.status === 'pending' && (
+                <Card className="border-amber-200 bg-amber-50/70 p-3 shadow-none dark:border-amber-900/50 dark:bg-amber-950/20">
+                    <div className="space-y-3">
+                        <div>
+                            <Label htmlFor="recommendation-admin-note">관리자 메모 (승인 선택)</Label>
+                            <Textarea
+                                id="recommendation-admin-note"
+                                value={recommendationAdminNote}
+                                onChange={(e) => setRecommendationAdminNote(e.target.value)}
+                                placeholder="승인 시 남길 메모가 있으면 입력하세요"
+                                rows={3}
+                                className="mt-2 bg-background"
+                            />
+                        </div>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                            <div>
+                                <Label htmlFor="recommendation-approve-confirmation">승인 확인 문구</Label>
+                                <Input
+                                    id="recommendation-approve-confirmation"
+                                    value={recommendationApprovalConfirmation}
+                                    onChange={(e) => setRecommendationApprovalConfirmation(e.target.value)}
+                                    placeholder={RECOMMEND_APPROVE_CONFIRMATION}
+                                    className="mt-2 h-9 bg-background"
+                                />
+                            </div>
+                            <div>
+                                <Label htmlFor="recommendation-reject-confirmation">거부 확인 문구</Label>
+                                <Input
+                                    id="recommendation-reject-confirmation"
+                                    value={recommendationRejectionConfirmation}
+                                    onChange={(e) => setRecommendationRejectionConfirmation(e.target.value)}
+                                    placeholder={RECOMMEND_REJECT_CONFIRMATION}
+                                    className="mt-2 h-9 bg-background"
+                                />
+                            </div>
+                        </div>
+                        <p className="text-xs leading-5 text-amber-900/80 dark:text-amber-100/80">
+                            승인/거부는 /api/admin/restaurant-requests/{'{id}'}/review readback과 감사 ID가 확인된 경우에만 완료됩니다.
+                        </p>
+                    </div>
+                </Card>
+            )}
+        </div>
+    );
     const renderSubmissionDetailPanel = () => (
         <section
             aria-label="제보 상세 작업 패널"
+            ref={submissionDetailPanelRef}
+            tabIndex={-1}
             className="min-h-[520px] overflow-hidden rounded-lg border bg-card shadow-sm xl:flex xl:min-h-0 xl:flex-col"
         >
             <div className="flex min-h-12 items-center justify-between gap-2 border-b px-3 py-2">
@@ -1608,44 +1815,48 @@ export function SubmissionListView({
                                 {getStatusBadge(selectedSubmission.status)}
                             </div>
                         </Card>
-                        <SubmissionDetailView
-                            submission={selectedSubmission}
-                            approvalData={approvalData}
-                            onApprovalDataChange={setApprovalData}
-                            geocodingResults={geocodingResults}
-                            onGeocodingResultsChange={setGeocodingResults}
-                            selectedGeocodingIndex={selectedGeocodingIndex}
-                            onSelectedGeocodingIndexChange={setSelectedGeocodingIndex}
-                            itemDecisions={itemDecisions}
-                            onItemDecisionsChange={setItemDecisions}
-                            forceApprove={forceApprove}
-                            onForceApproveChange={setForceApprove}
-                            editableData={editableData}
-                            onEditableDataChange={handleEditableDataChange}
-                            naverSearchResults={naverSearchResults}
-                            naverSearchLoading={naverSearchLoading}
-                            onVerifyNaverSearch={handleNaverSearchAndVerify}
-                            onGeocodingSelect={handleGeocodingSelect}
-                        />
+                        {selectedSubmission.submission_type === 'recommend' ? (
+                            renderRecommendationDetailContent(selectedSubmission)
+                        ) : (
+                            <SubmissionDetailView
+                                submission={selectedSubmission}
+                                approvalData={approvalData}
+                                onApprovalDataChange={setApprovalData}
+                                geocodingResults={geocodingResults}
+                                onGeocodingResultsChange={setGeocodingResults}
+                                selectedGeocodingIndex={selectedGeocodingIndex}
+                                onSelectedGeocodingIndexChange={setSelectedGeocodingIndex}
+                                itemDecisions={itemDecisions}
+                                onItemDecisionsChange={setItemDecisions}
+                                forceApprove={forceApprove}
+                                onForceApproveChange={setForceApprove}
+                                editableData={editableData}
+                                onEditableDataChange={handleEditableDataChange}
+                                naverSearchResults={naverSearchResults}
+                                naverSearchLoading={naverSearchLoading}
+                                onVerifyNaverSearch={handleNaverSearchAndVerify}
+                                onGeocodingSelect={handleGeocodingSelect}
+                            />
+                        )}
                         {renderOverrideApprovalPanel()}
                         {showRejectModal && (
                             <Card className="border-destructive/30 bg-destructive/5 p-3 shadow-none">
                                 <div className="space-y-2">
-                                    <Label htmlFor="rejection-reason">제보 전체 거부 사유</Label>
+                                    <Label htmlFor="rejection-reason">{selectedSubmission.submission_type === 'recommend' ? '추천 거부 사유' : '제보 전체 거부 사유'}</Label>
                                     <Textarea
                                         id="rejection-reason"
                                         value={rejectionReason}
                                         onChange={(e) => setRejectionReason(e.target.value)}
-                                        placeholder="예: 이미 등록된 맛집입니다 / 정보가 정확하지 않습니다"
+                                        placeholder={selectedSubmission.submission_type === 'recommend' ? '추천을 거부하는 사유를 입력해주세요' : '예: 이미 등록된 맛집입니다 / 정보가 정확하지 않습니다'}
                                         rows={4}
                                     />
                                     <div className="grid grid-cols-2 gap-2">
                                         <Button variant="outline" size="sm" onClick={() => setShowRejectModal(false)}>
                                             취소
                                         </Button>
-                                        <Button variant="destructive" size="sm" onClick={handleReject} disabled={!rejectionReason.trim() || loading}>
+                                        <Button variant="destructive" size="sm" onClick={handleReject} disabled={!rejectionReason.trim() || loading || (selectedSubmission.submission_type === 'recommend' && recommendationRejectionConfirmation !== RECOMMEND_REJECT_CONFIRMATION)}>
                                             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin motion-reduce:animate-none" />}
-                                            전체 거부
+                                            {selectedSubmission.submission_type === 'recommend' ? '추천 거부' : '전체 거부'}
                                         </Button>
                                     </div>
                                 </div>
@@ -1654,9 +1865,11 @@ export function SubmissionListView({
                         {submissionDeleteTarget && (
                             <Card className="border-red-200 bg-red-50/80 p-3 shadow-none dark:border-red-900/60 dark:bg-red-950/30">
                                 <div className="space-y-2">
-                                    <p className="text-sm font-semibold text-red-900 dark:text-red-100">제보 삭제 확인</p>
+                                    <p className="text-sm font-semibold text-red-900 dark:text-red-100">
+                                        {submissionDeleteTarget.submission_type === 'recommend' ? '추천 거부 처리 확인' : '제보 삭제 확인'}
+                                    </p>
                                     <p className="text-xs leading-5 text-red-800 dark:text-red-100/80">
-                                        “{submissionDeleteTarget.restaurant_name}” 제보를 삭제하려면 {SUBMISSION_DELETE_CONFIRMATION}를 입력하세요.
+                                        “{submissionDeleteTarget.restaurant_name}” {submissionDeleteTarget.submission_type === 'recommend' ? '추천을 거부 상태로 처리하려면' : '제보를 삭제하려면'} {SUBMISSION_DELETE_CONFIRMATION}를 입력하세요.
                                     </p>
                                     <Input
                                         value={submissionDeleteConfirmation}
@@ -1695,16 +1908,16 @@ export function SubmissionListView({
                             </Button>
                             <Button type="button" size="sm" variant="destructive" onClick={() => setShowRejectModal(true)} disabled={loading}>
                                 <XCircle className="mr-1 h-4 w-4" />
-                                전체 거부
+                                {selectedSubmission.submission_type === 'recommend' ? '추천 거부' : '전체 거부'}
                             </Button>
                             <Button
                                 size="sm"
                                 onClick={handleApprove}
-                                disabled={loading || !canApprove}
-                                title={!canApprove ? '지오코딩 완료 및 선택된 항목의 메타데이터를 가져와주세요' : '승인'}
+                                disabled={loading || (selectedSubmission.submission_type !== 'recommend' && !canApprove) || (selectedSubmission.submission_type === 'recommend' && recommendationApprovalConfirmation !== RECOMMEND_APPROVE_CONFIRMATION)}
+                                title={selectedSubmission.submission_type !== 'recommend' && !canApprove ? '지오코딩 완료 및 선택된 항목의 메타데이터를 가져와주세요' : '승인'}
                             >
                                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin motion-reduce:animate-none" />}
-                                승인
+                                {selectedSubmission.submission_type === 'recommend' ? '추천 승인' : '승인'}
                             </Button>
                         </div>
                     )}
@@ -2113,16 +2326,7 @@ export function SubmissionListView({
                         {/* 오른쪽: 탭 버튼들 */}
                         <div className={cn("w-full overflow-x-auto pb-1 xl:w-auto xl:overflow-visible xl:pb-0", isMobile && "overflow-visible pb-0")}>
                             <div
-                                className={cn("flex min-w-max items-center gap-2", isMobile && "grid min-w-0 grid-cols-3 gap-1")}
-                                style={isMobile ? { touchAction: 'pan-y' } : undefined}
-                                onPointerDown={isMobile ? handleSubmissionTabPointerDown : undefined}
-                                onPointerMove={isMobile ? handleSubmissionTabPointerMove : undefined}
-                                onPointerUp={isMobile ? handleSubmissionTabPointerEnd : undefined}
-                                onPointerCancel={isMobile ? handleSubmissionTabPointerCancel : undefined}
-                                onTouchStart={isMobile ? handleSubmissionTabTouchStart : undefined}
-                                onTouchMove={isMobile ? handleSubmissionTabTouchMove : undefined}
-                                onTouchEnd={isMobile ? handleSubmissionTabSwipeEnd : undefined}
-                                onTouchCancel={isMobile ? handleSubmissionTabTouchCancel : undefined}
+                                className={cn("flex min-w-max items-center gap-2", isMobile && "grid min-w-0 grid-cols-4 gap-1")}
                             >
                                 <Button
                                     variant={activeTab === 'new' ? 'default' : 'outline'}
@@ -2152,6 +2356,21 @@ export function SubmissionListView({
                                         className={getTabCountBadgeClassName(editCount)}
                                     >
                                         {editCount}
+                                    </Badge>
+                                </Button>
+                                <Button
+                                    variant={activeTab === 'recommend' ? 'default' : 'outline'}
+                                    size="sm"
+                                    onClick={() => setActiveTabWithReset('recommend')}
+                                    className={tabTriggerClassName}
+                                >
+                                    <Youtube className="h-4 w-4" />
+                                    <span>{isMobile ? '추천' : '쯔양 제보'}</span>
+                                    <Badge
+                                        variant={getTabCountBadgeVariant(recommendCount)}
+                                        className={getTabCountBadgeClassName(recommendCount)}
+                                    >
+                                        {recommendCount}
                                     </Badge>
                                 </Button>
                                 <Button
@@ -2352,24 +2571,13 @@ export function SubmissionListView({
                         )}
                     </div>
                 ) : (
-                    <div
-                        className={listContainerClassName}
-                        style={isMobile ? { touchAction: 'pan-y' } : undefined}
-                        onPointerDown={isMobile ? handleSubmissionTabPointerDown : undefined}
-                        onPointerMove={isMobile ? handleSubmissionTabPointerMove : undefined}
-                        onPointerUp={isMobile ? handleSubmissionTabPointerEnd : undefined}
-                        onPointerCancel={isMobile ? handleSubmissionTabPointerCancel : undefined}
-                        onTouchStart={isMobile ? handleSubmissionTabTouchStart : undefined}
-                        onTouchMove={isMobile ? handleSubmissionTabTouchMove : undefined}
-                        onTouchEnd={isMobile ? handleSubmissionTabSwipeEnd : undefined}
-                        onTouchCancel={isMobile ? handleSubmissionTabTouchCancel : undefined}
-                    >
+                    <div className={listContainerClassName}>
                         {loading && filteredSubmissions.length === 0 ? (
-                            renderListSkeletonCards(activeTab === 'new' ? '신규 제보' : '수정 제보')
+                            renderListSkeletonCards(activeTab === 'new' ? '신규 제보' : activeTab === 'recommend' ? '쯔양 제보' : '수정 제보')
                         ) : filteredSubmissions.length === 0 && !searchQuery ? (
                             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                                 <AlertCircle className="w-10 h-10 mb-3" />
-                                <p>{activeTab === 'new' ? '신규 제보가 없습니다.' : '수정 요청이 없습니다.'}</p>
+                                <p>{activeTab === 'new' ? '신규 제보가 없습니다.' : activeTab === 'recommend' ? '쯔양 제보가 없습니다.' : '수정 요청이 없습니다.'}</p>
                             </div>
                         ) : (
                             <div className={listBodyClassName}>
@@ -2377,7 +2585,7 @@ export function SubmissionListView({
                                     <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                     <Input
                                         type="text"
-                                        placeholder="맛집명, 주소, 제보자..."
+                                        placeholder={activeTab === 'recommend' ? '맛집명, 주소, 추천 사유, 제보자...' : '맛집명, 주소, 제보자...'}
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
                                         className={listSearchInputClassName}
@@ -2401,6 +2609,7 @@ export function SubmissionListView({
                                 ) : (
                                     displayedSubmissions.map((submission) => {
                                         const isPending = submission.status === 'pending' || submission.status === 'partially_approved';
+                                        const canDeleteSubmissionCard = submission.submission_type !== 'recommend';
 
                                         return (
                                             <Card
@@ -2410,7 +2619,7 @@ export function SubmissionListView({
                                             >
                                                 <div className="flex items-start justify-between gap-2">
                                                     <div className="min-w-0">
-                                                        <p className={listTitleClassName}>{submission.restaurant_name}</p>
+                                                        <p className={listTitleClassName}>{submission.restaurant_name}{submission.submission_type === 'recommend' && <span className="ml-1 text-xs font-normal text-primary">쯔양 제보</span>}</p>
                                                         <p className="mt-1 line-clamp-1 text-xs text-muted-foreground xl:text-[13px]">
                                                             {submission.restaurant_address || '-'}
                                                         </p>
@@ -2435,42 +2644,57 @@ export function SubmissionListView({
                                                 </div>
 
                                                 <div className="mt-2 space-y-1">
-                                                    {submission.items.slice(0, 2).map((item) => (
-                                                        <p key={item.id} className="line-clamp-1 text-xs text-muted-foreground">
-                                                            {item.tzuyang_review?.slice(0, 90) || '리뷰없음'}
-                                                        </p>
-                                                    ))}
-                                                    {submission.items.length > 2 && (
-                                                        <span className="text-[10px] text-muted-foreground">
-                                                            +{submission.items.length - 2}개 리뷰
-                                                        </span>
+                                                    {submission.submission_type === 'recommend' ? (
+                                                        <>
+                                                            <p className="line-clamp-2 text-xs text-muted-foreground">
+                                                                {submission.recommendation_reason || submission.items[0]?.tzuyang_review || '추천 사유 없음'}
+                                                            </p>
+                                                            {submission.items[0]?.youtube_link && (
+                                                                <p className="line-clamp-1 text-[11px] text-primary">{submission.items[0].youtube_link}</p>
+                                                            )}
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            {submission.items.slice(0, 2).map((item) => (
+                                                                <p key={item.id} className="line-clamp-1 text-xs text-muted-foreground">
+                                                                    {item.tzuyang_review?.slice(0, 90) || '리뷰없음'}
+                                                                </p>
+                                                            ))}
+                                                            {submission.items.length > 2 && (
+                                                                <span className="text-[10px] text-muted-foreground">
+                                                                    +{submission.items.length - 2}개 리뷰
+                                                                </span>
+                                                            )}
+                                                        </>
                                                     )}
                                                 </div>
 
-                                                <div
-                                                    className="mt-2 flex items-center gap-1.5"
-                                                    onPointerDownCapture={(e) => e.stopPropagation()}
-                                                    onClickCapture={(e) => e.stopPropagation()}
-                                                >
+                                                <div className="mt-2 flex items-center gap-1.5">
                                                     {isPending && (
                                                         <Button
                                                             size="sm"
                                                             variant="outline"
                                                             className={listActionButtonClassName}
-                                                            onClick={() => openSubmissionDetail(submission)}
+                                                            onClick={(event) => {
+                                                                event.stopPropagation();
+                                                                openSubmissionDetail(submission);
+                                                            }}
                                                         >
                                                             <Edit className="mr-1 h-3 w-3" />
-                                                            상세 검수
+                                                            {submission.submission_type === 'recommend' ? '추천 검수' : '상세 검수'}
                                                         </Button>
                                                     )}
-                                                    <Button
-                                                        size="sm"
-                                                        variant="destructive"
-                                                        className={listActionIconButtonClassName}
-                                                        onClick={(e) => handleDelete(submission, e)}
-                                                    >
-                                                        <Trash2 className="h-3.5 w-3.5" />
-                                                    </Button>
+                                                    {canDeleteSubmissionCard && (
+                                                        <Button
+                                                            size="sm"
+                                                            variant="destructive"
+                                                            className={listActionIconButtonClassName}
+                                                            onClick={(e) => handleDelete(submission, e)}
+                                                            aria-label={`${submission.restaurant_name} 제보 삭제`}
+                                                        >
+                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                    )}
                                                 </div>
                                             </Card>
                                         );

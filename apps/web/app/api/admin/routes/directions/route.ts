@@ -56,6 +56,11 @@ type NaverDirectionsResponse = {
   route?: Record<string, NaverDirectionsCandidate[] | undefined>;
 };
 
+type AdminDirectionsFallbackReason =
+  | "naver-directions-credentials-missing"
+  | "naver-directions-auth-failed"
+  | "naver-directions-empty-route";
+
 function isFiniteCoordinate(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
@@ -118,16 +123,28 @@ function normalizeNaverDirectionsPath(path: unknown) {
     );
 }
 
+function buildLocalDirectionsFallback(
+  points: AdminDirectionsPoint[],
+  fallbackReasonCode: AdminDirectionsFallbackReason,
+  message: string,
+) {
+  return NextResponse.json(
+    {
+      provider: "local-heuristic",
+      points,
+      path: [],
+      summary: null,
+      fallbackReasonCode,
+      message,
+    },
+    { headers: { "Cache-Control": "no-store" } },
+  );
+}
+
 export async function POST(request: NextRequest) {
   const auth = await requireAdmin();
   if (!auth.ok) return auth.response;
 
-  if (!NAVER_DIRECTIONS_CLIENT_ID || !NAVER_DIRECTIONS_CLIENT_SECRET) {
-    return NextResponse.json(
-      { error: "Naver Directions credentials are not configured" },
-      { status: 500 },
-    );
-  }
 
   let body: AdminDirectionsRequestBody;
   try {
@@ -145,6 +162,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { error: "At least two valid route points are required" },
       { status: 400 },
+    );
+  }
+
+  if (!NAVER_DIRECTIONS_CLIENT_ID || !NAVER_DIRECTIONS_CLIENT_SECRET) {
+    return buildLocalDirectionsFallback(
+      points,
+      "naver-directions-credentials-missing",
+      "네이버 Directions 키가 없어 직선거리 기반 후보로 표시합니다.",
     );
   }
 
@@ -172,9 +197,25 @@ export async function POST(request: NextRequest) {
       cache: "no-store",
     });
 
-    const data = (await response.json()) as NaverDirectionsResponse;
+    const responseText = await response.text();
+    let data: NaverDirectionsResponse = {};
+    if (responseText) {
+      try {
+        data = JSON.parse(responseText) as NaverDirectionsResponse;
+      } catch {
+        data = { message: responseText.slice(0, 160) };
+      }
+    }
 
     if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        return buildLocalDirectionsFallback(
+          points,
+          "naver-directions-auth-failed",
+          `네이버 Directions 인증 실패(${response.status})로 직선거리 기반 후보를 표시합니다.`,
+        );
+      }
+
       return NextResponse.json(
         {
           error: "Naver Directions request failed",
@@ -188,9 +229,10 @@ export async function POST(request: NextRequest) {
     const path = normalizeNaverDirectionsPath(candidate?.path);
 
     if (path.length < 2) {
-      return NextResponse.json(
-        { error: "Naver Directions returned an empty route" },
-        { status: 502 },
+      return buildLocalDirectionsFallback(
+        points,
+        "naver-directions-empty-route",
+        "네이버 Directions가 빈 경로를 반환해 직선거리 기반 후보를 표시합니다.",
       );
     }
 

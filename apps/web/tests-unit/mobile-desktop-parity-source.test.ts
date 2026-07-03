@@ -1009,6 +1009,10 @@ describe("mobile and desktop parity source contracts", () => {
     expect(source("components/home/MobileControlOverlay.tsx")).toContain(
       "toast.error('로그인 후 알림을 확인할 수 있어요');",
     );
+    expect(source("components/home/MobileControlOverlay.tsx")).toContain("z-[90] flex flex-col gap-2");
+    expect(source("components/home/MobileControlOverlay.tsx")).toContain("event.stopPropagation();");
+    expect(source("components/home/MobileControlOverlay.tsx")).toContain("onDeviceLocationClick?.();");
+    expect(source("components/home/MobileControlOverlay.tsx")).toContain("activeSheet !== 'search'");
     expect(source("app/home-client.tsx")).not.toContain(
       "현재 위치를 가져오지 못했어요. 잠시 후 다시 시도해주세요",
     );
