@@ -55,6 +55,9 @@ const clampDesktopSubmissionPanelAxis = (value: number, min: number, max: number
     return Math.min(Math.max(value, min), max);
 };
 
+const normalizePhoneForRequestReadback = (phone: string | null | undefined) =>
+    (phone ?? '').trim().replace(/[^\d+]/g, '');
+
 export default function RestaurantSubmissionModal({
     isOpen,
     onClose,
@@ -85,6 +88,9 @@ export default function RestaurantSubmissionModal({
     const mobileFormRef = useRef<HTMLFormElement>(null);
     const desktopSubmissionPanelRef = useRef<HTMLElement>(null);
     const desktopSubmissionPanelDragRef = useRef<DesktopSubmissionPanelDragState | null>(null);
+    const requestSubmitInFlightRef = useRef(false);
+    const requestClientKeyRef = useRef<string | null>(null);
+    const requestPayloadFingerprintRef = useRef<string | null>(null);
 
     // 모달 열릴 때 초기화
     useEffect(() => {
@@ -164,10 +170,82 @@ export default function RestaurantSubmissionModal({
         },
     });
 
+    const buildRequestPayloadFingerprint = useCallback((data: typeof formData) => JSON.stringify({
+        restaurant_name: data.restaurant_name.trim(),
+        origin_address: data.address.trim(),
+        phone: data.phone.trim() || null,
+        categories: data.categories,
+        recommendation_reason: data.description.trim(),
+        youtube_link: data.youtube_link.trim() || null,
+    }), []);
+
+    const getRestaurantRequestClientKey = useCallback((data: typeof formData) => {
+        const fingerprint = buildRequestPayloadFingerprint(data);
+        if (!requestClientKeyRef.current || requestPayloadFingerprintRef.current !== fingerprint) {
+            requestPayloadFingerprintRef.current = fingerprint;
+            requestClientKeyRef.current =
+                typeof crypto !== 'undefined' && 'randomUUID' in crypto
+                    ? crypto.randomUUID()
+                    : `request-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        }
+
+        return requestClientKeyRef.current;
+    }, [buildRequestPayloadFingerprint]);
+
+    const findRestaurantRequestByClientKey = useCallback(async (clientRequestKey: string) => {
+        if (!user) return null;
+
+        const { data: existingRequest, error } = await supabase
+            .from('restaurant_requests')
+            .select('id,phone,client_request_key')
+            .eq('user_id', user.id)
+            .eq('client_request_key', clientRequestKey)
+            .maybeSingle();
+
+        if (error) {
+            console.warn('쯔양 맛집 제보 idempotency 확인 실패:', error);
+            return null;
+        }
+
+        return existingRequest as { id: string; phone: string | null; client_request_key: string | null } | null;
+    }, [user]);
+
+    const readBackRestaurantRequestByClientKey = useCallback(async (
+        clientRequestKey: string,
+        submittedPhone: string,
+    ) => {
+        if (!user) throw new Error('로그인이 필요합니다');
+
+        const { data: request, error } = await supabase
+            .from('restaurant_requests')
+            .select('id,phone,client_request_key')
+            .eq('user_id', user.id)
+            .eq('client_request_key', clientRequestKey)
+            .maybeSingle();
+
+        if (error) throw error;
+        if (!request) {
+            throw new Error('맛집 추천 저장 확인에 실패했습니다. 다시 시도해주세요.');
+        }
+
+        const expectedPhone = normalizePhoneForRequestReadback(submittedPhone);
+        const actualPhone = normalizePhoneForRequestReadback(
+            (request as { phone: string | null }).phone,
+        );
+
+        if (expectedPhone && actualPhone !== expectedPhone) {
+            throw new Error('입력한 전화번호가 저장 확인 결과와 일치하지 않습니다. 다시 시도해주세요.');
+        }
+
+        return request as { id: string; phone: string | null; client_request_key: string | null };
+    }, [user]);
+
     // 쯔양에게 맛집 제보 (request) - restaurant_requests
     const submitRequestMutation = useMutation({
         mutationFn: async (data: typeof formData) => {
             if (!user) throw new Error('로그인이 필요합니다');
+
+            const clientRequestKey = getRestaurantRequestClientKey(data);
 
             const { error } = await supabase
                 .from('restaurant_requests')
@@ -179,18 +257,32 @@ export default function RestaurantSubmissionModal({
                     categories: data.categories.length > 0 ? data.categories : null,
                     recommendation_reason: data.description.trim(),
                     youtube_link: data.youtube_link.trim() || null,
-                } as never);
+                    client_request_key: clientRequestKey,
+                } as never)
+                .select('id')
+                .single();
 
-            if (error) throw error;
+            if (error) {
+                const createdWithClientKey = await findRestaurantRequestByClientKey(clientRequestKey);
+                if (!createdWithClientKey) throw error;
+            }
+
+            await readBackRestaurantRequestByClientKey(clientRequestKey, data.phone);
         },
         onSuccess: async () => {
+            requestSubmitInFlightRef.current = false;
+            requestClientKeyRef.current = null;
+            requestPayloadFingerprintRef.current = null;
             await clearDraft();
             toast.success('맛집 추천이 성공적으로 제출되었습니다!');
             queryClient.invalidateQueries({ queryKey: ['my-requests'] });
+            queryClient.invalidateQueries({ queryKey: ['myRecommendRequests', user?.id] });
+            queryClient.invalidateQueries({ queryKey: ['admin-restaurant-requests-inline'] });
             onClose();
             resetForm();
         },
         onError: (error: unknown) => {
+            requestSubmitInFlightRef.current = false;
             toast.error(getErrorMessage(error, '추천 제출에 실패했습니다'));
         },
     });
@@ -206,6 +298,8 @@ export default function RestaurantSubmissionModal({
         });
         setCategoryInput("");
         setLastSavedAt(null);
+        requestClientKeyRef.current = null;
+        requestPayloadFingerprintRef.current = null;
     };
 
     // 임시 저장된 데이터 불러오기
@@ -311,10 +405,18 @@ export default function RestaurantSubmissionModal({
             toast.error(validationError);
             return;
         }
+        if (isPending) {
+            return;
+        }
+
 
         if (submissionMode === 'new') {
             submitNewMutation.mutate(formData);
         } else {
+            if (requestSubmitInFlightRef.current) {
+                return;
+            }
+            requestSubmitInFlightRef.current = true;
             submitRequestMutation.mutate(formData);
         }
     };

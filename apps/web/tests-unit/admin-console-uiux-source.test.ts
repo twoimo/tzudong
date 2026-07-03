@@ -413,6 +413,11 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       );
       expect(layoutSource).toContain("<CombinedPopup />");
     }
+    expect(mainLayoutSource).toContain("{shouldRenderMobileBottomNav && (");
+    expect(mainLayoutSource).toContain('pathname === "/feed"');
+    expect(mainLayoutSource).toContain('pathname === "/stamp"');
+    expect(mainLayoutSource).toContain('pathname === "/leaderboard"');
+    expect(mainLayoutSource).toContain(': "0px"');
   });
 
   test("removes repeated beginner guidance cards from the admin console", () => {
@@ -1097,6 +1102,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "components/admin/AdminOverviewDashboard.tsx",
     );
     const runtimeSpecSource = source("tests/admin-kpi-dashboard-runtime.spec.ts");
+    const auditEventsRouteSource = source("app/api/admin/audit-events/route.ts");
+    const directionsRouteSource = source("app/api/admin/routes/directions/route.ts");
 
     expect(overviewSource).toContain(
       "네이버 Directions 5 기준 실제 도로 주행 경로",
@@ -1106,6 +1113,12 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(overviewSource).toContain("fetchAdminDirectionsRoute");
     expect(overviewSource).toContain("/api/admin/routes/directions");
+    expect(overviewSource).toContain('data-admin-directions-unavailable="true"');
+    expect(overviewSource).toContain('"local-heuristic"');
+    expect(directionsRouteSource).toContain("buildLocalDirectionsFallback");
+    expect(directionsRouteSource).toContain('"naver-directions-auth-failed"');
+    expect(directionsRouteSource).toContain('"naver-directions-credentials-missing"');
+    expect(directionsRouteSource).toContain("const responseText = await response.text()");
     expect(source("lib/admin-route-planner.ts")).toContain('id: "driving"');
     expect(source("lib/admin-route-planner.ts")).toContain('id: "walking"');
     expect(source("lib/admin-route-planner.ts")).toContain('id: "mixed"');
@@ -1131,6 +1144,17 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(overviewSource).toContain(
       "네이버 Directions 5는 자동차만 지원하므로 도보·혼합은 근거리 촬영 초안",
     );
+    expect(consoleSource).toContain("fetchAdminAuditEvents");
+    expect(consoleSource).toContain('data-admin-audit-event-list="admin_audit_events"');
+    expect(consoleSource).toContain('data-admin-audit-unavailable-state="true"');
+    expect(consoleSource).toContain('data-admin-audit-session-expired-state={isAuditAuthUnavailable ? "true" : undefined}');
+    expect(consoleSource).toContain("buildAdminAuditAuthUnavailableResponse");
+    expect(consoleSource).toContain('"admin-audit-session-expired"');
+    expect(consoleSource).toContain("관리자 세션 확인이 필요합니다.");
+    expect(consoleSource).toContain("다시 로그인하기");
+    expect(consoleSource).toContain('/api/admin/audit-events?limit=20');
+    expect(consoleSource).toContain("PDF 보고서 창을 열었습니다.");
+    expect(auditEventsRouteSource).toContain('"admin_audit_events"');
     expect(overviewSource).not.toContain(
       'data-admin-creator-layer-controls="active-only"',
     );
@@ -5041,6 +5065,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     const appGlobalsSource = source("app/app-globals.css");
     const routeSource = source("app/api/admin/storyboard/route.ts");
+    expect(routeSource).toContain("storyboard_generation_unavailable");
+    expect(routeSource).toContain("vercel_local_storyboard_backend_agent_unavailable");
+    expect(routeSource).toContain("status: 503");
     const chatRouteSource = source("app/api/admin/storyboard/chat/route.ts");
     const imageRouteSource = source("app/api/admin/storyboard/images/route.ts");
     const imageProviderSource = source(
@@ -8151,7 +8178,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain("module.description");
     expect(consoleSource).toContain("aria-label={`${module.title} 작업 화면`}");
     expect(consoleSource).toContain("사용자");
-    expect(consoleSource).toContain("권한 변경 감사는 저장되며");
+    expect(consoleSource).toContain("사용자 생성·권한 변경 감사 이벤트");
   });
 
   test("keeps admin pages dense without sacrificing responsive boundaries", () => {
@@ -8444,6 +8471,91 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(submissionSource).not.toContain(
       "confirm('모든 리뷰의 OCR을 초기화하고 다시 실행합니다. 계속하시겠습니까?')",
     );
+  });
+
+  test("surfaces restaurant recommendation requests as a guarded admin lane", () => {
+    const adminEvaluationSource = source("app/admin/evaluations/page.tsx");
+    const submissionSource = source("components/admin/SubmissionListView.tsx");
+    const detailSource = source("components/admin/SubmissionDetailView.tsx");
+    const reviewRouteSource = source(
+      "app/api/admin/restaurant-requests/[requestId]/review/route.ts",
+    );
+    const pendingCountsSource = source("app/api/admin/pending-counts/route.ts");
+    const migrationSource = source(
+      "supabase/migrations/20260702000100_restaurant_request_review_lifecycle.sql",
+    );
+
+    expect(detailSource).toContain("submission_type: 'new' | 'edit' | 'recommend'");
+    expect(adminEvaluationSource).toContain("ADMIN_RESTAURANT_REQUEST_SELECT");
+    expect(adminEvaluationSource).toContain(".from('restaurant_requests')");
+    expect(adminEvaluationSource).toContain("origin_address");
+    expect(adminEvaluationSource).toContain("road_address");
+    expect(adminEvaluationSource).toContain("submission_type: 'recommend' as const");
+    expect(adminEvaluationSource).toContain("admin-restaurant-requests-inline");
+    expect(adminEvaluationSource).toContain("applyRestaurantRequestReadbackToSubmission");
+    expect(adminEvaluationSource).toContain("restaurant_phone: request.phone");
+    expect(adminEvaluationSource).toContain("restaurant_name: request.restaurant_name");
+    expect(adminEvaluationSource).toContain("restaurant_categories: request.categories");
+    expect(adminEvaluationSource).toContain("recommendation_admin_note: request.admin_note");
+    expect(adminEvaluationSource).toContain("recommendation_audit_id: auditId || request.review_audit_id");
+    expect(adminEvaluationSource).toContain("updateRecommendationRequestReadbackInCache");
+    expect(adminEvaluationSource).toContain("queryClient.setQueryData<SubmissionRecord[]>");
+    expect(adminEvaluationSource).toContain("ADMIN_RESTAURANT_REQUEST_LEGACY_SELECT");
+    expect(adminEvaluationSource).toContain("isMissingRestaurantRequestLifecycleError(requestsError)");
+    expect(adminEvaluationSource).toContain(
+      "/api/admin/restaurant-requests/${encodeURIComponent(submission.id)}/review",
+    );
+    expect(pendingCountsSource).toContain('.from("restaurant_requests")');
+    expect(pendingCountsSource).toContain("recommendationRequests");
+    expect(pendingCountsSource).toContain("recommendationRequestsLifecycleReady");
+    expect(pendingCountsSource).toContain("isRestaurantRequestLifecycleMissing");
+    expect(pendingCountsSource).toContain("isMissingRestaurantRequestLifecycleError");
+
+    expect(submissionSource).toContain("type SubmissionAdminTab = 'new' | 'edit' | 'recommend' | 'reviews'");
+    expect(submissionSource).toContain("const RECOMMEND_APPROVE_CONFIRMATION = '추천승인'");
+    expect(submissionSource).toContain("const RECOMMEND_REJECT_CONFIRMATION = '추천거부'");
+    expect(submissionSource).toContain("쯔양 제보");
+    expect(submissionSource).toContain("추천 검수");
+    expect(submissionSource).toContain("renderRecommendationDetailContent");
+    expect(submissionSource).toContain("추천 승인 확인 문구가 일치하지 않습니다.");
+    expect(submissionSource).toContain("추천 거부 확인 문구가 일치하지 않습니다.");
+    expect(submissionSource).not.toContain("submission.submission_type === 'recommend' && !canApprove");
+    expect(submissionSource).toContain("const canDeleteSubmissionCard = submission.submission_type !== 'recommend';");
+    expect(submissionSource).toContain("onClick={(event) => {");
+    expect(submissionSource).toContain("event.stopPropagation();");
+
+    expect(submissionSource).toContain(
+      'className={cn("flex min-w-max items-center gap-2", isMobile && "grid min-w-0 grid-cols-4 gap-1")}',
+    );
+    expect(submissionSource).not.toContain(
+      `className={cn("flex min-w-max items-center gap-2", isMobile && "grid min-w-0 grid-cols-4 gap-1")}\n                                style={isMobile ? { touchAction: 'pan-y' } : undefined}`,
+    );
+    expect(
+      submissionSource.match(/onPointerDown=\{isMobile \? handleSubmissionTabPointerDown : undefined\}/g)
+        ?.length ?? 0,
+    ).toBe(1);
+    expect(submissionSource).toContain(
+      ") : (\n                    <div className={listContainerClassName}>",
+    );
+    expect(reviewRouteSource).toContain("requireAdmin()");
+    expect(reviewRouteSource).toContain("createSupabaseServiceRoleClient()");
+    expect(reviewRouteSource).toContain("review_restaurant_request");
+    expect(reviewRouteSource).not.toContain('.from("restaurant_request_review_audit"');
+    expect(reviewRouteSource).toContain("review_audit_id");
+    expect(reviewRouteSource).toContain("검토 상태를 확인하지 못했습니다");
+    expect(migrationSource).toContain("add column if not exists status text");
+    expect(migrationSource).toContain("restaurant_requests_status_check");
+    expect(migrationSource).toContain("create table if not exists public.restaurant_request_review_audit");
+    expect(migrationSource).toContain("create or replace function public.review_restaurant_request");
+    expect(migrationSource).toContain("for update");
+    expect(migrationSource).toContain("return query select false, '이미 검토가 완료된 맛집 추천 요청입니다.'");
+    expect(migrationSource).toContain("revoke all on function public.review_restaurant_request");
+    expect(migrationSource).toContain("to service_role");
+    expect(migrationSource).not.toContain("grant execute on function public.review_restaurant_request(uuid, uuid, text, text, text) to authenticated");
+    expect(migrationSource).toContain("Admins can view request review audit");
+    expect(submissionSource).toContain("submissionDetailPanelRef");
+    expect(submissionSource).toContain("scrollIntoView");
+    expect(submissionSource).toContain("tabIndex={-1}");
   });
 
   test("excludes Python QA seeds from actual GPT Image 2 page history", () => {

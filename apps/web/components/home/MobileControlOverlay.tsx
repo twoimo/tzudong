@@ -1067,8 +1067,8 @@ function MobileControlOverlayComponent({
 
             </div>
 
-            {/* 우측 하단: 제보, 현재 위치 버튼 */}
-            <div className="fixed bottom-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1rem)] right-4 z-40 flex flex-col gap-2">
+            {activeSheet !== 'search' && (
+            <div className="fixed bottom-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1rem)] right-4 z-[90] flex flex-col gap-2">
                 {/* 제보 버튼 */}
                 <Button
                     onClick={() => {
@@ -1091,7 +1091,11 @@ function MobileControlOverlayComponent({
                 {/* 기기 위치 버튼: 첫 탭은 현재 위치, 두 번째 탭부터 방향 표시 */}
                 <Button
                     type="button"
-                    onClick={onDeviceLocationClick}
+                    onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        onDeviceLocationClick?.();
+                    }}
                     disabled={isDeviceLocationPending}
                     aria-label={deviceLocationButtonLabel}
                     className={cn(
@@ -1115,6 +1119,7 @@ function MobileControlOverlayComponent({
                     )}
                 </Button>
             </div>
+            )}
 
             {/* 전체 화면 검색 레이어 */}
             {activeSheet === 'search' && (
