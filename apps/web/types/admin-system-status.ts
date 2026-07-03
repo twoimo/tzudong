@@ -13,6 +13,7 @@ export type AdminSystemStatusChecklistCategory =
   | 'environment'
   | 'integration'
   | 'provider-key'
+  | 'provider-readiness'
   | 'general';
 
 export type AdminSystemStatusChecklistSource =
@@ -20,6 +21,7 @@ export type AdminSystemStatusChecklistSource =
   | 'storyboard-agent'
   | 'bge-embedding'
   | 'provider-key'
+  | 'provider-readiness'
   | 'frame-caption-storage';
 
 export type AdminSystemStatusChecklistItem = {
@@ -141,6 +143,22 @@ export type AdminSupabaseCounterStatus = {
   checkedAt: string;
 };
 
+export type AdminProviderReadinessStatus = 'ready' | 'degraded' | 'unavailable' | 'unknown';
+
+export type AdminProviderReadiness = {
+  provider: string;
+  status: AdminProviderReadinessStatus;
+  reasonCode: string;
+  checkedAt: string;
+  remediation: string;
+  diagnostics: Record<string, string | number | boolean | null>;
+};
+
+export type AdminProviderReadinessMap = {
+  'naver-directions': AdminProviderReadiness;
+  'youtube-thumbnail-durable-release': AdminProviderReadiness;
+};
+
 export type AdminSystemStatusResponse = {
   asOf: string;
   keys: AdminSystemStatusKeyFlags;
@@ -150,6 +168,7 @@ export type AdminSystemStatusResponse = {
   runDaily?: AdminSystemRunDailyStatus;
   githubActions?: AdminGithubActionsStatus;
   supabaseCounters?: AdminSupabaseCounterStatus;
+  providerReadiness: AdminProviderReadinessMap;
   checklist: AdminSystemStatusChecklistItem[];
 };
 
