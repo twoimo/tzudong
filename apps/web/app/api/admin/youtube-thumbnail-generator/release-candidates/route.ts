@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { requireAdmin } from '@/lib/auth/require-admin';
+import { getAdminSafeErrorName } from '@/lib/admin/guarded-mutation-contract';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -51,7 +52,12 @@ export async function GET(_request: NextRequest) {
     const payload = await readThumbnailReleaseCandidates(process.env);
     return NextResponse.json(payload, { headers: noStoreHeaders });
   } catch (error) {
-    console.error('[admin/youtube-thumbnail-generator/release-candidates] unexpected failure:', error);
+    console.error('[admin/youtube-thumbnail-generator/release-candidates] unexpected failure', {
+      domain: 'youtube_thumbnail_generator',
+      action: 'read_release_candidates',
+      step: 'unexpected',
+      errorName: getAdminSafeErrorName(error),
+    });
     return jsonError('thumbnail_release_candidates_failed', 500, '릴리즈 후보를 불러오지 못했습니다.');
   }
 }

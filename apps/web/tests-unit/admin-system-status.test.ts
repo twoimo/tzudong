@@ -93,6 +93,11 @@ async function loadSystemStatusRoute() {
     return import(moduleId);
 }
 
+async function loadDirectionsRoute() {
+    const moduleId = `../app/api/admin/routes/directions/route.ts?cache=${Math.random()}`;
+    return import(moduleId);
+}
+
 async function loadSystemStatusHelper() {
     const moduleId = `../lib/admin/system-status/status.ts?cache=${Math.random()}`;
     return import(moduleId);
@@ -576,6 +581,134 @@ describe('admin system status helper', () => {
             tempRoot.cleanup();
         }
     });
+    test('reports Naver provider readiness through system status without leaking secrets', async () => {
+        const restoreEnv = withEnv({
+            NEXT_NAVER_CLIENT_ID: undefined,
+            NEXT_NAVER_CLIENT_SECRET: undefined,
+            STORYBOARD_AGENT_ENABLED: 'false',
+            STORYBOARD_BGE_ENABLED: 'false',
+            INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS: '0',
+            RUN_DAILY_SCRIPT_PATH: '__invalid__/run_daily_missing.sh',
+        });
+
+        try {
+            const { getAdminSystemStatus } = await loadSystemStatusHelper();
+            const missingPayload: AdminSystemStatusResponse = await getAdminSystemStatus(process.env as NodeJS.ProcessEnv);
+
+            expect(missingPayload.providerReadiness['naver-directions'].provider).toBe('naver-directions');
+            expect(missingPayload.providerReadiness['naver-directions'].status).toBe('unavailable');
+            expect(missingPayload.providerReadiness['naver-directions'].reasonCode).toBe('naver-directions-credentials-missing');
+            expect(findChecklistItem(missingPayload, 'provider-readiness-naver-directions')?.source).toBe('provider-readiness');
+        } finally {
+            restoreEnv();
+        }
+
+        const restoreConfiguredEnv = withEnv({
+            NEXT_NAVER_CLIENT_ID: 'naver-client-id-secretish',
+            NEXT_NAVER_CLIENT_SECRET: 'naver-client-secret-value',
+            STORYBOARD_AGENT_ENABLED: 'false',
+            STORYBOARD_BGE_ENABLED: 'false',
+            INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS: '0',
+            RUN_DAILY_SCRIPT_PATH: '__invalid__/run_daily_missing.sh',
+        });
+
+        try {
+            const { getAdminSystemStatus } = await loadSystemStatusHelper();
+            const configuredPayload: AdminSystemStatusResponse = await getAdminSystemStatus(process.env as NodeJS.ProcessEnv);
+
+            expect(configuredPayload.providerReadiness['naver-directions'].status).toBe('ready');
+            expect(configuredPayload.providerReadiness['naver-directions'].reasonCode).toBe('naver-directions-ready');
+            expect(JSON.stringify(configuredPayload)).not.toContain('naver-client-secret-value');
+        } finally {
+            restoreConfiguredEnv();
+        }
+    });
+
+    test('maps thumbnail durable release payloads to stable readiness without module mocks', async () => {
+        const { mapThumbnailDurableReleasePayloadToReadiness } = await loadSystemStatusHelper();
+        const checkedAt = '2026-07-03T00:00:00.000Z';
+        const cases = [
+            {
+                payload: {
+                    status: 'ready',
+                    release: { id: 'active-release' },
+                    diagnostics: {
+                        durableRegistryAvailable: true,
+                        releaseKey: 'youtube-thumbnail-generator/current',
+                        warnings: [],
+                    },
+                },
+                expectedStatus: 'ready',
+                expectedReason: 'thumbnail-durable-release-ready',
+            },
+            {
+                payload: {
+                    status: 'empty',
+                    release: null,
+                    diagnostics: {
+                        durableRegistryAvailable: true,
+                        releaseKey: 'youtube-thumbnail-generator/current',
+                        reason: 'durable_release_empty',
+                        warnings: [],
+                    },
+                },
+                expectedStatus: 'unavailable',
+                expectedReason: 'thumbnail-durable-release-empty',
+            },
+            {
+                payload: {
+                    status: 'ready',
+                    release: { id: 'local-release' },
+                    diagnostics: {
+                        durableRegistryAvailable: false,
+                        releaseKey: 'youtube-thumbnail-generator/current',
+                        reason: 'local_release_candidate_fallback',
+                        warnings: ['durable-registry-unavailable:missing_supabase_env'],
+                    },
+                },
+                expectedStatus: 'degraded',
+                expectedReason: 'thumbnail-durable-release-local-fallback',
+            },
+            {
+                payload: {
+                    status: 'unavailable',
+                    release: null,
+                    diagnostics: {
+                        durableRegistryAvailable: false,
+                        releaseKey: 'youtube-thumbnail-generator/current',
+                        reason: 'missing_release_table',
+                        warnings: ['local-release-candidate-fallback-unavailable'],
+                    },
+                },
+                expectedStatus: 'unavailable',
+                expectedReason: 'thumbnail-durable-release-table-missing',
+            },
+            {
+                payload: {
+                    status: 'unavailable',
+                    release: null,
+                    diagnostics: {
+                        durableRegistryAvailable: false,
+                        releaseKey: 'youtube-thumbnail-generator/current',
+                        reason: 'missing_supabase_env',
+                        warnings: ['local-release-candidate-fallback-unavailable'],
+                    },
+                },
+                expectedStatus: 'unavailable',
+                expectedReason: 'thumbnail-durable-release-env-missing',
+            },
+        ] as const;
+
+        for (const item of cases) {
+            const readiness = mapThumbnailDurableReleasePayloadToReadiness(item.payload, checkedAt);
+            expect(readiness.provider).toBe('youtube-thumbnail-durable-release');
+            expect(readiness.status).toBe(item.expectedStatus);
+            expect(readiness.reasonCode).toBe(item.expectedReason);
+            expect(readiness.checkedAt).toBe(checkedAt);
+            expect(JSON.stringify(readiness)).not.toContain('service-role-secret');
+            expect(JSON.stringify(readiness)).not.toContain('storage_object_path');
+        }
+    });
 });
 
 describe('admin system status API route', () => {
@@ -1010,7 +1143,143 @@ describe('admin system status API route', () => {
         }
     });
 
+    test('adds stable readiness to Directions local fallback and validation errors', async () => {
+        const restoreEnv = withEnv({
+            NEXT_NAVER_CLIENT_ID: undefined,
+            NEXT_NAVER_CLIENT_SECRET: undefined,
+        });
+
+        mock.restore();
+        setAuthMock('ok');
+
+        try {
+            const { POST } = await loadDirectionsRoute();
+            const response = await POST(new Request('http://localhost/api/admin/routes/directions', {
+                method: 'POST',
+                body: JSON.stringify({ points: [{ lat: 37.1, lng: 127.1 }, { lat: 37.2, lng: 127.2 }] }),
+            }) as never);
+            const payload = await response.json();
+
+            expect(response.status).toBe(200);
+            expect(payload.provider).toBe('local-heuristic');
+            expect(payload.fallbackReasonCode).toBe('naver-directions-credentials-missing');
+            expect(payload.readiness.provider).toBe('naver-directions');
+            expect(payload.readiness.status).toBe('unavailable');
+            expect(payload.readiness.reasonCode).toBe('naver-directions-credentials-missing');
+            expect(payload.readiness.diagnostics.configured).toBe(false);
+
+            const invalidJsonResponse = await POST(new Request('http://localhost/api/admin/routes/directions', {
+                method: 'POST',
+                body: '{not-json',
+            }) as never);
+            const invalidJsonPayload = await invalidJsonResponse.json();
+            expect(invalidJsonResponse.status).toBe(400);
+            expect(invalidJsonPayload.readiness.provider).toBe('naver-directions');
+            expect(invalidJsonPayload.readiness.status).toBe('unknown');
+            expect(invalidJsonPayload.readiness.reasonCode).toBe('naver-directions-request-invalid');
+
+            const tooFewPointsResponse = await POST(new Request('http://localhost/api/admin/routes/directions', {
+                method: 'POST',
+                body: JSON.stringify({ points: [{ lat: 37.1, lng: 127.1 }] }),
+            }) as never);
+            const tooFewPointsPayload = await tooFewPointsResponse.json();
+            expect(tooFewPointsResponse.status).toBe(400);
+            expect(tooFewPointsPayload.readiness.provider).toBe('naver-directions');
+            expect(tooFewPointsPayload.readiness.status).toBe('unknown');
+            expect(tooFewPointsPayload.readiness.reasonCode).toBe('naver-directions-points-invalid');
+            expect(tooFewPointsPayload.readiness.diagnostics.validPointCount).toBe(1);
+        } finally {
+            mock.restore();
+            restoreEnv();
+        }
+    });
+
+    test('adds redacted Directions readiness for provider auth failure, provider non-OK, and fetch exceptions', async () => {
+        const restoreEnv = withEnv({
+            NEXT_NAVER_CLIENT_ID: 'naver-client-id',
+            NEXT_NAVER_CLIENT_SECRET: 'naver-client-secret-no-leak',
+        });
+        const originalFetch = global.fetch;
+
+        mock.restore();
+        setAuthMock('ok');
+
+        const requestBody = JSON.stringify({
+            points: [{ lat: 37.1, lng: 127.1 }, { lat: 37.2, lng: 127.2 }],
+        });
+
+        try {
+            const { POST } = await loadDirectionsRoute();
+
+            global.fetch = async () => new Response('raw provider body naver-client-secret-no-leak', { status: 401 });
+            const authResponse = await POST(new Request('http://localhost/api/admin/routes/directions', {
+                method: 'POST',
+                body: requestBody,
+            }) as never);
+            const authPayload = await authResponse.json();
+            expect(authPayload.provider).toBe('local-heuristic');
+            expect(authPayload.fallbackReasonCode).toBe('naver-directions-auth-failed');
+            expect(authPayload.readiness.status).toBe('unavailable');
+            expect(authPayload.readiness.reasonCode).toBe('naver-directions-auth-failed');
+            expect(JSON.stringify(authPayload)).not.toContain('naver-client-secret-no-leak');
+            expect(JSON.stringify(authPayload)).not.toContain('raw provider body');
+
+            global.fetch = async () => new Response('raw provider body naver-client-secret-no-leak', { status: 429 });
+            const nonOkResponse = await POST(new Request('http://localhost/api/admin/routes/directions', {
+                method: 'POST',
+                body: requestBody,
+            }) as never);
+            const nonOkPayload = await nonOkResponse.json();
+            expect(nonOkResponse.status).toBe(429);
+            expect(nonOkPayload.error).toBe('Naver Directions request failed');
+            expect(nonOkPayload.message).toBe('Unable to calculate route');
+            expect(nonOkPayload.readiness.status).toBe('degraded');
+            expect(nonOkPayload.readiness.reasonCode).toBe('naver-directions-provider-non-ok');
+            expect(nonOkPayload.readiness.diagnostics.httpStatus).toBe(429);
+            expect(JSON.stringify(nonOkPayload)).not.toContain('raw provider body');
+            expect(JSON.stringify(nonOkPayload)).not.toContain('naver-client-secret-no-leak');
+
+            global.fetch = async () => {
+                throw new Error('raw network naver-client-secret-no-leak');
+            };
+            const exceptionResponse = await POST(new Request('http://localhost/api/admin/routes/directions', {
+                method: 'POST',
+                body: requestBody,
+            }) as never);
+            const exceptionPayload = await exceptionResponse.json();
+            expect(exceptionResponse.status).toBe(500);
+            expect(exceptionPayload.readiness.status).toBe('unavailable');
+            expect(exceptionPayload.readiness.reasonCode).toBe('naver-directions-request-failed');
+            expect(JSON.stringify(exceptionPayload)).not.toContain('naver-client-secret-no-leak');
+            expect(JSON.stringify(exceptionPayload)).not.toContain('raw network');
+        } finally {
+            global.fetch = originalFetch;
+            mock.restore();
+            restoreEnv();
+        }
+    });
 });
+
+function buildTestProviderReadiness(): AdminSystemStatusResponse['providerReadiness'] {
+    return {
+        'naver-directions': {
+            provider: 'naver-directions',
+            status: 'ready',
+            reasonCode: 'naver-directions-ready',
+            checkedAt: '2026-06-21T00:00:00.000Z',
+            remediation: 'ready',
+            diagnostics: {},
+        },
+        'youtube-thumbnail-durable-release': {
+            provider: 'youtube-thumbnail-durable-release',
+            status: 'ready',
+            reasonCode: 'thumbnail-durable-release-ready',
+            checkedAt: '2026-06-21T00:00:00.000Z',
+            remediation: 'ready',
+            diagnostics: {},
+        },
+    };
+}
 
 function buildStatusCenterPayload(
     runDailyPatch: Partial<NonNullable<AdminSystemStatusResponse['runDaily']>> = {},
@@ -1040,6 +1309,7 @@ function buildStatusCenterPayload(
             checkedAt: '2026-06-21T00:00:00.000Z',
             ...runDailyPatch,
         },
+        providerReadiness: buildTestProviderReadiness(),
         checklist: [],
     };
 }
@@ -1130,6 +1400,7 @@ describe('admin system status center view model', () => {
                 stale: false,
                 checkedAt: '2026-06-21T00:00:00.000Z',
             },
+            providerReadiness: buildTestProviderReadiness(),
             checklist: [],
         }, { submissions: 0, reviews: 0 });
 
@@ -1164,6 +1435,7 @@ describe('admin system status center view model', () => {
                 stale: false,
                 checkedAt: '2026-06-21T00:00:00.000Z',
             },
+            providerReadiness: buildTestProviderReadiness(),
             checklist: [],
         }, { submissions: 1, reviews: 2 });
 
@@ -1203,12 +1475,61 @@ describe('admin system status center view model', () => {
                 stale: false,
                 checkedAt: '2026-06-21T00:00:00.000Z',
             },
+            providerReadiness: buildTestProviderReadiness(),
             checklist: [],
         }, { submissions: 3, reviews: 4 });
 
         expect(viewModel.overallState).toBe('partial');
         expect(viewModel.metrics.find((metric) => metric.id === 'gdrive')?.state).toBe('partial');
         expect(viewModel.metrics.find((metric) => metric.id === 'pending')?.value).toBe('7건');
+    });
+
+    test('surfaces canonical pending-count domains and lifecycle degraded state', async () => {
+        const { buildAdminStatusCenterViewModel } = await import(`../lib/admin/system-status/view-model.ts?cache=${Math.random()}`);
+        const viewModel = buildAdminStatusCenterViewModel(buildStatusCenterPayload({
+            gdriveUpload: {
+                status: 'complete',
+                terminalIncomplete: false,
+                completionProof: 'remote_size_check',
+            },
+        }), {
+            submissions: 5,
+            recommendationRequests: 2,
+            reviews: 4,
+            recommendationRequestsLifecycleReady: false,
+            total: 9,
+            domains: {
+                restaurant_submissions: {
+                    id: 'restaurant_submissions',
+                    count: 3,
+                    ready: true,
+                    status: 'ready',
+                },
+                restaurant_recommendation_requests: {
+                    id: 'restaurant_recommendation_requests',
+                    count: 2,
+                    ready: false,
+                    status: 'degraded',
+                },
+                reviews: {
+                    id: 'reviews',
+                    count: 4,
+                    ready: true,
+                    status: 'ready',
+                },
+            },
+            readiness: {
+                status: 'degraded',
+                recommendationRequestsLifecycleReady: false,
+            },
+        });
+
+        const pendingMetric = viewModel.metrics.find((metric) => metric.id === 'pending');
+        expect(viewModel.overallState).toBe('degraded');
+        expect(pendingMetric?.state).toBe('degraded');
+        expect(pendingMetric?.value).toBe('9건');
+        expect(pendingMetric?.detail).toContain('제보 3건 · 추천 2건 · 리뷰 4건');
+        expect(pendingMetric?.detail).toContain('lifecycle 확인 필요');
     });
 
     test('keeps missing log or unreadable pending counts out of healthy state', async () => {
@@ -1236,6 +1557,7 @@ describe('admin system status center view model', () => {
                 stale: false,
                 checkedAt: '2026-06-21T00:00:00.000Z',
             },
+            providerReadiness: buildTestProviderReadiness(),
             checklist: [],
         }, { submissions: null, reviews: null });
 

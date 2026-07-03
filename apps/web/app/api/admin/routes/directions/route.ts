@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/require-admin";
+import { getAdminSafeErrorName } from "@/lib/admin/guarded-mutation-contract";
+import {
+  buildNaverDirectionsReadiness,
+  buildProviderReadiness,
+  NAVER_DIRECTIONS_PROVIDER_ID,
+  resolveNaverDirectionsCredentials,
+} from "@/lib/admin/provider-readiness";
 
 export const runtime = "nodejs";
 
@@ -8,15 +15,10 @@ const NAVER_DIRECTIONS_ENDPOINT =
 const MAX_DIRECTIONS_POINTS = 7; // start + goal + up to 5 waypoints (Directions 5)
 const DEFAULT_DIRECTIONS_OPTION = "trafast";
 
-const NAVER_DIRECTIONS_CLIENT_ID =
-  process.env.NEXT_NAVER_CLIENT_ID ||
-  process.env.NEXT_NAVER_CLIENT_ID_BYEON ||
-  process.env.NEXT_PUBLIC_NAVER_CLIENT_ID ||
-  process.env.NEXT_PUBLIC_NAVER_CLIENT_ID_BYEON;
+function getCheckedAt() {
+  return new Date().toISOString();
+}
 
-const NAVER_DIRECTIONS_CLIENT_SECRET =
-  process.env.NEXT_NAVER_CLIENT_SECRET ||
-  process.env.NEXT_NAVER_CLIENT_SECRET_BYEON;
 
 type AdminDirectionsRequestPoint = {
   id?: unknown;
@@ -56,7 +58,21 @@ type NaverDirectionsResponse = {
   route?: Record<string, NaverDirectionsCandidate[] | undefined>;
 };
 
+function normalizeNaverDirectionsSummary(summary: NaverDirectionsSummary | undefined): NaverDirectionsSummary | null {
+  if (!summary) return null;
+
+  const normalized: NaverDirectionsSummary = {};
+  for (const key of ["distance", "duration", "tollFare", "taxiFare", "fuelPrice"] as const) {
+    const value = summary[key];
+    if (isFiniteCoordinate(value)) normalized[key] = value;
+  }
+
+  return Object.keys(normalized).length > 0 ? normalized : null;
+}
+
 type AdminDirectionsFallbackReason =
+  | "naver-directions-provider-non-ok"
+  | "naver-directions-request-failed"
   | "naver-directions-credentials-missing"
   | "naver-directions-auth-failed"
   | "naver-directions-empty-route";
@@ -127,6 +143,14 @@ function buildLocalDirectionsFallback(
   points: AdminDirectionsPoint[],
   fallbackReasonCode: AdminDirectionsFallbackReason,
   message: string,
+  readiness = buildProviderReadiness({
+    provider: NAVER_DIRECTIONS_PROVIDER_ID,
+    status: "degraded",
+    reasonCode: fallbackReasonCode,
+    checkedAt: getCheckedAt(),
+    remediation: "Use local route fallback while Naver Directions readiness is restored.",
+    diagnostics: {},
+  }),
 ) {
   return NextResponse.json(
     {
@@ -135,6 +159,7 @@ function buildLocalDirectionsFallback(
       path: [],
       summary: null,
       fallbackReasonCode,
+      readiness,
       message,
     },
     { headers: { "Cache-Control": "no-store" } },
@@ -150,7 +175,20 @@ export async function POST(request: NextRequest) {
   try {
     body = (await request.json()) as AdminDirectionsRequestBody;
   } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    return NextResponse.json(
+      {
+        error: "Invalid JSON body",
+        readiness: buildProviderReadiness({
+          provider: NAVER_DIRECTIONS_PROVIDER_ID,
+          status: "unknown",
+          reasonCode: "naver-directions-request-invalid",
+          checkedAt: getCheckedAt(),
+          remediation: "Send a valid route JSON body before provider readiness can be applied.",
+          diagnostics: {},
+        }),
+      },
+      { status: 400 },
+    );
   }
 
   const points = (body.points ?? [])
@@ -160,16 +198,30 @@ export async function POST(request: NextRequest) {
 
   if (points.length < 2) {
     return NextResponse.json(
-      { error: "At least two valid route points are required" },
+      {
+        error: "At least two valid route points are required",
+        readiness: buildProviderReadiness({
+          provider: NAVER_DIRECTIONS_PROVIDER_ID,
+          status: "unknown",
+          reasonCode: "naver-directions-points-invalid",
+          checkedAt: getCheckedAt(),
+          remediation: "Send at least two valid latitude/longitude points before calling Naver Directions.",
+          diagnostics: { validPointCount: points.length },
+        }),
+      },
       { status: 400 },
     );
   }
 
-  if (!NAVER_DIRECTIONS_CLIENT_ID || !NAVER_DIRECTIONS_CLIENT_SECRET) {
+  const credentials = resolveNaverDirectionsCredentials(process.env);
+  const configuredReadiness = buildNaverDirectionsReadiness(process.env, getCheckedAt());
+
+  if (!credentials.clientId || !credentials.clientSecret) {
     return buildLocalDirectionsFallback(
       points,
       "naver-directions-credentials-missing",
       "네이버 Directions 키가 없어 직선거리 기반 후보로 표시합니다.",
+      configuredReadiness,
     );
   }
 
@@ -191,19 +243,19 @@ export async function POST(request: NextRequest) {
     const response = await fetch(url, {
       headers: {
         Accept: "application/json",
-        "x-ncp-apigw-api-key-id": NAVER_DIRECTIONS_CLIENT_ID,
-        "x-ncp-apigw-api-key": NAVER_DIRECTIONS_CLIENT_SECRET,
+        "x-ncp-apigw-api-key-id": credentials.clientId,
+        "x-ncp-apigw-api-key": credentials.clientSecret,
       },
       cache: "no-store",
     });
 
     const responseText = await response.text();
     let data: NaverDirectionsResponse = {};
-    if (responseText) {
+    if (responseText && response.ok) {
       try {
         data = JSON.parse(responseText) as NaverDirectionsResponse;
       } catch {
-        data = { message: responseText.slice(0, 160) };
+        data = {};
       }
     }
 
@@ -213,13 +265,29 @@ export async function POST(request: NextRequest) {
           points,
           "naver-directions-auth-failed",
           `네이버 Directions 인증 실패(${response.status})로 직선거리 기반 후보를 표시합니다.`,
+          buildProviderReadiness({
+            provider: NAVER_DIRECTIONS_PROVIDER_ID,
+            status: "unavailable",
+            reasonCode: "naver-directions-auth-failed",
+            checkedAt: getCheckedAt(),
+            remediation: "Verify Naver Directions client id and secret.",
+            diagnostics: { httpStatus: response.status },
+          }),
         );
       }
 
       return NextResponse.json(
         {
           error: "Naver Directions request failed",
-          message: data.message ?? "Unable to calculate route",
+          message: "Unable to calculate route",
+          readiness: buildProviderReadiness({
+            provider: NAVER_DIRECTIONS_PROVIDER_ID,
+            status: "degraded",
+            reasonCode: "naver-directions-provider-non-ok",
+            checkedAt: getCheckedAt(),
+            remediation: "Check Naver Directions provider status and request limits.",
+            diagnostics: { httpStatus: response.status },
+          }),
         },
         { status: response.status },
       );
@@ -233,6 +301,14 @@ export async function POST(request: NextRequest) {
         points,
         "naver-directions-empty-route",
         "네이버 Directions가 빈 경로를 반환해 직선거리 기반 후보를 표시합니다.",
+        buildProviderReadiness({
+          provider: NAVER_DIRECTIONS_PROVIDER_ID,
+          status: "degraded",
+          reasonCode: "naver-directions-empty-route",
+          checkedAt: getCheckedAt(),
+          remediation: "Use the local fallback and review waypoint coordinates.",
+          diagnostics: { routeCandidateFound: Boolean(candidate) },
+        }),
       );
     }
 
@@ -240,12 +316,40 @@ export async function POST(request: NextRequest) {
       provider: "naver-directions5",
       points,
       path,
-      summary: candidate?.summary ?? null,
+      summary: normalizeNaverDirectionsSummary(candidate?.summary),
+      readiness: buildProviderReadiness({
+        provider: NAVER_DIRECTIONS_PROVIDER_ID,
+        status: "ready",
+        reasonCode: "naver-directions-ready",
+        checkedAt: getCheckedAt(),
+        remediation: "Naver Directions returned a route.",
+        diagnostics: {
+          pathPointCount: path.length,
+          waypointCount: waypoints.length,
+        },
+      }),
     });
   } catch (error) {
-    console.error("[Admin Directions] Naver Directions request failed", error);
+    const errorName = getAdminSafeErrorName(error);
+    console.error("[admin/routes/directions] provider request failed", {
+      domain: "route_planner",
+      action: "naver_directions",
+      step: "provider-request",
+      provider: NAVER_DIRECTIONS_PROVIDER_ID,
+      errorName,
+    });
     return NextResponse.json(
-      { error: "Failed to calculate route" },
+      {
+        error: "Failed to calculate route",
+        readiness: buildProviderReadiness({
+          provider: NAVER_DIRECTIONS_PROVIDER_ID,
+          status: "unavailable",
+          reasonCode: "naver-directions-request-failed",
+          checkedAt: getCheckedAt(),
+          remediation: "Retry after checking server network access to Naver Directions.",
+          diagnostics: { errorType: errorName },
+        }),
+      },
       { status: 500 },
     );
   }

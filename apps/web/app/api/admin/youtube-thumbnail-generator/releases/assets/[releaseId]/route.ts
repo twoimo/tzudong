@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { requireAdmin } from '@/lib/auth/require-admin';
+import { getAdminSafeErrorName } from '@/lib/admin/guarded-mutation-contract';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -34,7 +35,12 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       },
     });
   } catch (error) {
-    console.error('[admin/youtube-thumbnail-generator/releases/assets] unexpected failure:', error);
+    console.error('[admin/youtube-thumbnail-generator/releases/assets] unexpected failure', {
+      domain: 'youtube_thumbnail_generator',
+      action: 'read_release_asset',
+      step: 'unexpected',
+      errorName: getAdminSafeErrorName(error),
+    });
     const message = error instanceof Error ? error.message : 'thumbnail_durable_release_asset_failed';
     if (message === 'thumbnail_durable_release_asset_not_found' || message === 'thumbnail_durable_release_id_invalid') {
       return jsonError('thumbnail_durable_release_asset_not_found', 404, '릴리즈 이미지를 찾을 수 없습니다.');
