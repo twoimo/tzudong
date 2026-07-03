@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { requireAdmin } from '@/lib/auth/require-admin';
+import { getAdminSafeErrorName } from '@/lib/admin/guarded-mutation-contract';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -28,7 +29,12 @@ export async function POST(request: NextRequest) {
     const payload = await promoteThumbnailReleaseCandidateFromRoute(candidateId);
     return NextResponse.json(payload, { headers: noStoreHeaders });
   } catch (error) {
-    console.error('[admin/youtube-thumbnail-generator/release-candidates/promote] unexpected failure:', error);
+    console.error('[admin/youtube-thumbnail-generator/release-candidates/promote] unexpected failure', {
+      domain: 'youtube_thumbnail_generator',
+      action: 'promote_release_candidate',
+      step: 'unexpected',
+      errorName: getAdminSafeErrorName(error),
+    });
     const message = error instanceof Error ? error.message : 'thumbnail_release_candidate_promote_failed';
     if (message === 'thumbnail_release_candidate_not_found') {
       return jsonError('thumbnail_release_candidate_not_found', 404, '현재 릴리즈 후보 목록에서 찾을 수 없습니다.');

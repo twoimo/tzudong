@@ -43,6 +43,7 @@ import {
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { GUARDED_MUTATION_CONFIRMATION } from '@/lib/admin/guarded-mutation-contract';
 
 type SubmissionAdminTab = 'new' | 'edit' | 'recommend' | 'reviews';
 
@@ -53,6 +54,63 @@ const RECOMMEND_REJECT_CONFIRMATION = '추천거부';
 const REVIEW_DELETE_CONFIRMATION = '리뷰삭제';
 const OCR_RESET_ALL_CONFIRMATION = 'OCR초기화';
 const OVERRIDE_APPROVAL_CONFIRMATION = '무시승인';
+const GUARDED_OCR_CONFIRMATION_MESSAGE =
+    `이 OCR 작업은 ${GUARDED_MUTATION_CONFIRMATION} 보호 절차로 실행됩니다. 계속하시겠습니까?`;
+
+function confirmGuardedOcrMutation(actionLabel: string): boolean {
+    return window.confirm(`${actionLabel}\n\n${GUARDED_OCR_CONFIRMATION_MESSAGE}`);
+}
+
+function getGuardedMutationCorrelationId(payload: unknown): string | null {
+    if (!payload || typeof payload !== 'object') return null;
+    const guardedMutation = (payload as { guardedMutation?: unknown }).guardedMutation;
+    if (!guardedMutation || typeof guardedMutation !== 'object') return null;
+    const audit = (guardedMutation as { audit?: unknown }).audit;
+    if (!audit || typeof audit !== 'object') return null;
+    const correlationId = (audit as { correlationId?: unknown }).correlationId;
+    return typeof correlationId === 'string' && correlationId.trim()
+        ? correlationId.trim()
+        : null;
+}
+
+function getGuardedMutationReadbackLabel(payload: unknown): string | null {
+    if (!payload || typeof payload !== 'object') return null;
+    const guardedMutation = (payload as { guardedMutation?: unknown }).guardedMutation;
+    if (!guardedMutation || typeof guardedMutation !== 'object') return null;
+    const readback = (guardedMutation as { readback?: unknown }).readback;
+    if (!readback || typeof readback !== 'object') return null;
+
+    const readbackRecord = readback as {
+        affectedCount?: unknown;
+        resetApplied?: unknown;
+        reviewId?: unknown;
+        workflowDispatched?: unknown;
+    };
+    if (typeof readbackRecord.reviewId === 'string' && readbackRecord.reviewId.trim()) {
+        return `재확인 리뷰 ${readbackRecord.reviewId.trim()}`;
+    }
+    if (typeof readbackRecord.affectedCount === 'number') {
+        return `재확인 ${readbackRecord.affectedCount}건`;
+    }
+    if (typeof readbackRecord.workflowDispatched === 'boolean') {
+        return readbackRecord.workflowDispatched ? '재확인 워크플로우 접수' : '재확인 필요';
+    }
+    if (typeof readbackRecord.resetApplied === 'boolean') {
+        return readbackRecord.resetApplied ? '재확인 초기화 적용' : '재확인 초기화 미적용';
+    }
+    return null;
+}
+
+function buildGuardedOcrSuccessMessage(payload: unknown, fallback: string): string {
+    const readbackLabel = getGuardedMutationReadbackLabel(payload);
+    const correlationId = getGuardedMutationCorrelationId(payload);
+    return [
+        fallback,
+        readbackLabel,
+        correlationId ? `감사 추적 ${correlationId}` : null,
+    ].filter(Boolean).join(' · ');
+}
+
 
 // Supabase Storage에서 리뷰 사진 public URL 생성
 function getReviewPhotoUrl(path: string, cacheBuster?: string | null): string {
@@ -494,12 +552,18 @@ export function SubmissionListView({
 
     // OCR 실행 (미처리 리뷰만)
     const handleRunOcr = useCallback(async () => {
+        if (!confirmGuardedOcrMutation('미처리 리뷰 OCR 처리를 시작합니다.')) return;
+
         setIsOcrRunning(true);
         try {
-            const response = await fetch('/api/admin/ocr-receipts', { method: 'POST' });
+            const response = await fetch('/api/admin/ocr-receipts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ guardedMutationConfirmation: GUARDED_MUTATION_CONFIRMATION }),
+            });
             const data = await response.json();
             if (response.ok && data.success) {
-                toast.success(data.message || 'OCR 처리가 시작되었습니다.');
+                toast.success(buildGuardedOcrSuccessMessage(data, data.message || 'OCR 처리가 시작되었습니다.'));
                 // GitHub Actions가 완료되면 상태가 갱신되므로 잠시 후 다시 조회
                 setTimeout(() => fetchOcrStatus(), 3000);
             } else {
@@ -519,16 +583,21 @@ export function SubmissionListView({
             return;
         }
 
+        if (!confirmGuardedOcrMutation('모든 리뷰 OCR 데이터를 초기화하고 재실행합니다.')) return;
+
         setIsOcrRunning(true);
         try {
             const response = await fetch('/api/admin/ocr-receipts/reset-all', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ confirmation: OCR_RESET_ALL_CONFIRMATION }),
+                body: JSON.stringify({
+                    confirmation: OCR_RESET_ALL_CONFIRMATION,
+                    guardedMutationConfirmation: GUARDED_MUTATION_CONFIRMATION,
+                }),
             });
             const data = await response.json();
             if (response.ok && data.success) {
-                toast.success(data.message || 'OCR 전체 재실행이 시작되었습니다.');
+                toast.success(buildGuardedOcrSuccessMessage(data, data.message || 'OCR 전체 재실행이 시작되었습니다.'));
                 setOcrResetConfirmation('');
                 setTimeout(() => fetchOcrStatus(), 3000);
             } else {
@@ -587,6 +656,8 @@ export function SubmissionListView({
 
     // 단일 리뷰 OCR 재실행 (GitHub Actions 트리거)
     const handleRerunOcr = useCallback(async (reviewId: string) => {
+        if (!confirmGuardedOcrMutation('선택한 리뷰 OCR 데이터를 초기화하고 재실행합니다.')) return;
+
         // 해당 리뷰 ID를 재실행 중 상태로 추가
         setOcrRerunningIds(prev => new Set(prev).add(reviewId));
         // 40초 카운트다운 시작
@@ -597,11 +668,14 @@ export function SubmissionListView({
             const response = await fetch('/api/admin/ocr-receipts/rerun', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ reviewId }),
+                body: JSON.stringify({
+                    reviewId,
+                    guardedMutationConfirmation: GUARDED_MUTATION_CONFIRMATION,
+                }),
             });
             const data = await response.json();
             if (response.ok && data.success) {
-                toast.success('OCR 처리가 시작되었습니다.');
+                toast.success(buildGuardedOcrSuccessMessage(data, data.message || 'OCR 처리가 시작되었습니다.'));
 
                 // 선택된 리뷰 OCR 상태 초기화 (UI 즉시 반영)
                 if (selectedReview && selectedReview.id === reviewId) {
