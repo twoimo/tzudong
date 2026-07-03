@@ -8,6 +8,12 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth/require-admin';
 import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
+import {
+    GUARDED_MUTATION_CONFIRMATION,
+    buildGuardedMutationRequiredResponse,
+    getGuardedMutationErrorName,
+    isGuardedMutationConfirmationValid,
+} from '@/lib/admin/guarded-mutation-contract';
 
 export const runtime = 'nodejs';
 
@@ -18,21 +24,41 @@ const GITHUB_REPO = process.env.GITHUB_REPO!;
 
 const OCR_RESET_ALL_CONFIRMATION = 'OCR초기화';
 
+function hasGuardedMutationConfirmation(
+    request: Request,
+    body: { guardedMutationConfirmation?: string },
+): boolean {
+    return (
+        isGuardedMutationConfirmationValid(body.guardedMutationConfirmation) ||
+        isGuardedMutationConfirmationValid(request.headers.get('x-admin-guarded-mutation-confirmation'))
+    );
+}
+
 export async function POST(request: Request) {
     try {
         const auth = await requireAdmin();
         if (!auth.ok) return auth.response;
 
-        let body: { confirmation?: string } = {};
+        let body: { confirmation?: string; guardedMutationConfirmation?: string } = {};
         try {
             body = await request.json();
         } catch {
             body = {};
         }
 
+        if (!hasGuardedMutationConfirmation(request, body)) {
+            return NextResponse.json(
+                buildGuardedMutationRequiredResponse('ocr_receipt', 'reset_all'),
+                { status: 400 }
+            );
+        }
+
         if (body.confirmation !== OCR_RESET_ALL_CONFIRMATION) {
             return NextResponse.json(
-                { error: 'OCR 전체 초기화 확인 문구가 일치하지 않습니다.' },
+                {
+                    ...buildGuardedMutationRequiredResponse('ocr_receipt', 'reset_all'),
+                    error: 'OCR 전체 초기화 확인 문구가 일치하지 않습니다.',
+                },
                 { status: 400 }
             );
         }
@@ -43,6 +69,8 @@ export async function POST(request: Request) {
                 { status: 500 }
             );
         }
+
+        const correlationId = `ocr-reset-all-${Date.now()}`;
 
         const workflowUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/actions/workflows/ocr-review-receipts.yml`;
         const githubHeaders = {
@@ -58,7 +86,13 @@ export async function POST(request: Request) {
 
         if (!workflowPreflightResponse.ok) {
             await workflowPreflightResponse.text().catch(() => null);
-            console.error('GitHub Actions 사전 확인 실패:', workflowPreflightResponse.status);
+            console.error('[admin/ocr-receipts/reset-all] guarded mutation preflight failed', {
+                domain: 'ocr_receipt',
+                action: 'reset_all',
+                step: 'workflow-preflight',
+                status: workflowPreflightResponse.status,
+                correlationId,
+            });
             return NextResponse.json(
                 { error: `GitHub Actions 사전 확인 실패: ${workflowPreflightResponse.status}` },
                 { status: workflowPreflightResponse.status }
@@ -85,7 +119,13 @@ export async function POST(request: Request) {
             .not('verification_photo', 'is', null);
 
         if (resetError) {
-            console.error('OCR 초기화 실패:', resetError);
+            console.error('[admin/ocr-receipts/reset-all] guarded mutation reset failed', {
+                domain: 'ocr_receipt',
+                action: 'reset_all',
+                step: 'ocr-reset',
+                correlationId,
+                errorName: getGuardedMutationErrorName(resetError),
+            });
             return NextResponse.json(
                 { error: 'OCR 초기화에 실패했습니다.' },
                 { status: 500 }
@@ -93,6 +133,7 @@ export async function POST(request: Request) {
         }
 
         // 3. GitHub Actions 워크플로우 트리거
+
         const response = await fetch(`${workflowUrl}/dispatches`, {
             method: 'POST',
             headers: githubHeaders,
@@ -101,13 +142,33 @@ export async function POST(request: Request) {
 
         if (!response.ok) {
             await response.text().catch(() => null);
-            console.error('GitHub API 오류:', response.status);
+            console.error('[admin/ocr-receipts/reset-all] guarded mutation dispatch failed', {
+                domain: 'ocr_receipt',
+                action: 'reset_all',
+                step: 'workflow-dispatch',
+                status: response.status,
+                correlationId,
+            });
             return NextResponse.json(
                 {
                     error: `GitHub Actions 트리거 실패: ${response.status}`,
                     partialFailure: true,
                     resetApplied: true,
                     readbackRequired: true,
+                    guardedMutation: {
+                        domain: 'ocr_receipt',
+                        action: 'reset_all',
+                        confirmation: GUARDED_MUTATION_CONFIRMATION,
+                        readback: {
+                            resetApplied: true,
+                            workflowDispatched: false,
+                            affectedCount: count || 0,
+                        },
+                        audit: {
+                            source: 'github-actions-workflow-dispatch',
+                            correlationId,
+                        },
+                    },
                 },
                 { status: response.status }
             );
@@ -116,10 +177,29 @@ export async function POST(request: Request) {
         return NextResponse.json({
             success: true,
             message: `모든 리뷰(${count || 0}개)의 OCR을 초기화하고 재실행을 시작했습니다.`,
+            guardedMutation: {
+                domain: 'ocr_receipt',
+                action: 'reset_all',
+                confirmation: GUARDED_MUTATION_CONFIRMATION,
+                readback: {
+                    resetApplied: true,
+                    workflowDispatched: true,
+                    affectedCount: count || 0,
+                },
+                audit: {
+                    source: 'github-actions-workflow-dispatch',
+                    correlationId,
+                },
+            },
         });
 
     } catch (err) {
-        console.error('OCR 전체 재실행 오류:', err);
+        console.error('[admin/ocr-receipts/reset-all] guarded mutation failed', {
+            domain: 'ocr_receipt',
+            action: 'reset_all',
+            step: 'unexpected',
+            errorName: getGuardedMutationErrorName(err),
+        });
         return NextResponse.json(
             { error: 'OCR 전체 재실행을 시작하지 못했습니다.' },
             { status: 500 }

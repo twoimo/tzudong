@@ -3,12 +3,12 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { buildAdminStatusCenterViewModel, type AdminStatusCenterPendingCounts } from '@/lib/admin/system-status/view-model';
+import {
+  normalizeAdminPendingCountsResponse,
+  type AdminPendingCountsResponse,
+} from '@/lib/admin/pending-counts';
 import type { AdminSystemStatusResponse } from '@/types/admin-system-status';
 
-type AdminPendingCounts = {
-  submissions: number;
-  reviews: number;
-};
 
 async function fetchAdminSystemStatus(): Promise<AdminSystemStatusResponse> {
   const response = await fetch('/api/admin/system-status', {
@@ -19,13 +19,13 @@ async function fetchAdminSystemStatus(): Promise<AdminSystemStatusResponse> {
   return response.json() as Promise<AdminSystemStatusResponse>;
 }
 
-async function fetchAdminPendingCounts(): Promise<AdminPendingCounts> {
+async function fetchAdminPendingCounts(): Promise<AdminPendingCountsResponse> {
   const response = await fetch('/api/admin/pending-counts', {
     headers: { Accept: 'application/json' },
     cache: 'no-store',
   });
   if (!response.ok) throw new Error('admin-pending-counts-failed');
-  return response.json() as Promise<AdminPendingCounts>;
+  return normalizeAdminPendingCountsResponse(await response.json());
 }
 
 export function useAdminStatusCenter(enabled: boolean) {
@@ -58,16 +58,15 @@ export function useAdminStatusCenter(enabled: boolean) {
             submissions: null,
             reviews: null,
           }
-        : {
-            submissions: pendingCountsQuery.data?.submissions ?? null,
-            reviews: pendingCountsQuery.data?.reviews ?? null,
+        : pendingCountsQuery.data ?? {
+            submissions: null,
+            reviews: null,
           };
 
       return buildAdminStatusCenterViewModel(systemStatus, pendingCounts);
     },
     [
-      pendingCountsQuery.data?.reviews,
-      pendingCountsQuery.data?.submissions,
+      pendingCountsQuery.data,
       pendingCountsQueryFailed,
       systemStatus,
     ],
