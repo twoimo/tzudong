@@ -35,8 +35,9 @@ describe('home map contextual visible-marker restaurants', () => {
     expect(naverMapSource).toContain('selectVisibleMarkerReviewBubbleTargets(reviewBubbleCandidateRestaurants');
     expect(naverMapSource).toContain('buildVisibleMarkerReviewSeed(currentZoom, extendedBounds)');
     expect(naverMapSource).toContain('wrapNaverMarkerContentWithReviewBubble(');
-    expect(naverMapSource).toContain(".from('reviews')");
-    expect(naverMapSource).toContain(".select('id,restaurant_id,user_id,content,food_photos,created_at,is_pinned')");
+    expect(naverMapSource).toContain("fetchSupabaseRows<VisibleMarkerReviewRow>('reviews'");
+    expect(naverMapSource).toContain("VISIBLE_MARKER_REVIEW_SELECT = 'id,restaurant_id,user_id,content,food_photos,created_at,is_pinned'");
+    expect(naverMapSource).not.toContain('import { supabase } from "@/integrations/supabase/client"');
     const rawCallbackIndex = naverMapSource.indexOf('onVisibleRestaurantsChange?.(swipeCandidates);');
     const contextualCallbackIndex = naverMapSource.indexOf('onContextualRestaurantsChange?.({');
     expect(rawCallbackIndex).toBeGreaterThan(0);
@@ -120,14 +121,15 @@ describe('home map contextual visible-marker restaurants', () => {
     expect(desktopPanelSource).toContain('shouldShowDesktopMapHome ? (');
     expect(desktopPanelSource).toContain('contextualRestaurantsPayload={mapMode === "domestic" && !isMapFullscreen ? contextualRestaurantsPayload : null}');
     expect(desktopHomeSource).toContain('data-desktop-left-panel-visible-marker-restaurants="true"');
-    expect(desktopHomeSource).toContain('지도에 보이는 맛집');
     expect(desktopHomeSource).toContain('handleRestaurantOpen(restaurant)');
     expect(desktopHomeSource).toContain('{!hasContextualRestaurants ? (');
     expect(desktopHomeSource).not.toContain('bg-primary/5 px-3 pb-2 pt-3');
+    expect(desktopHomeSource).not.toContain('확대된 지도에서 현재 마커로 보이는 곳이에요');
+    expect(desktopHomeSource).toContain('맛집 목록');
+    expect(desktopHomeSource).toContain('aria-label={`맛집 목록 ${visibleMarkerRestaurantCount}곳`}');
     expect(desktopHomeSource).toContain('restaurantThumbnailIndexes[restaurant.id] ?? 0');
-    expect(desktopHomeSource).toContain('const visibleMarkerRestaurantCount =');
-    expect(desktopHomeSource).toContain('aria-label={`지도에 보이는 맛집 ${visibleMarkerRestaurantCount}곳`}');
     expect(desktopHomeSource).toContain('onThumbnailChange={handleRestaurantThumbnailChange}');
+    expect(desktopHomeSource).toContain('layout="list"');
     expect(desktopHomeSource).not.toContain('지도에 보이는 맛집 상세 보기');
     expect(desktopHomeSource.match(/\{!hasContextualRestaurants \? \(/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
 
@@ -140,12 +142,13 @@ describe('home map contextual visible-marker restaurants', () => {
     expect(mobileOverlaySource).not.toContain('확대한 지도에서 현재 마커로 보이는 맛집이에요.');
     expect(mobileOverlaySource).toContain("activeSheet !== 'visibleMarkers' ? (");
     expect(mobileOverlaySource).toContain('dismissedVisibleMarkerRestaurantsSignatureRef.current === visibleMarkerRestaurantsSignature');
-    expect(mobileOverlaySource).toContain('<span className="truncate">지도에 보이는 맛집</span>');
-    expect(mobileOverlaySource).toContain('aria-label={`지도에 보이는 맛집 ${visibleMarkerRestaurantCount}곳`}');
-    expect(mobileOverlaySource).toContain('aria-label="지도에 보이는 맛집 닫기"');
+    expect(mobileOverlaySource).toContain('<span className="truncate">맛집 목록</span>');
+    expect(mobileOverlaySource).toContain('aria-label={`맛집 목록 ${visibleMarkerRestaurantCount}곳`}');
+    expect(mobileOverlaySource).toContain('aria-label="맛집 목록 닫기"');
     expect(mobileOverlaySource).toContain('onClick={handleVisibleMarkerSheetClose}');
     expect(mobileOverlaySource).toContain('density="dense"');
-    expect(mobileOverlaySource).toContain("activeSheet === 'visibleMarkers' ? \"p-3 pb-6\" : \"p-4 pb-8\"");
+    expect(mobileOverlaySource).toContain('layout="list"');
+    expect(mobileOverlaySource).toContain("activeSheet === 'visibleMarkers' ? \"px-3 pb-6 pt-2\" : \"p-4 pb-8\"");
     expect(mobileOverlaySource).toContain('visibleMarkerThumbnailIndexes[restaurant.id] ?? 0');
     expect(mobileOverlaySource).toContain('onThumbnailChange={handleVisibleMarkerThumbnailChange}');
     expect(mobileOverlaySource).toContain('VISIBLE_MARKER_PEEK_SHEET_HEIGHT = 16');

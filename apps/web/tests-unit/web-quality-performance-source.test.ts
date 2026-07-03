@@ -37,6 +37,43 @@ describe("web quality performance source contracts", () => {
     expect(clusterMarkerSource).not.toContain("createCategoryMarkerGlyphHTML");
   });
 
+  test("global map exposes bounded Google failure exploration fallback", () => {
+    const globalMapSource = source("app/global-map/page.tsx");
+    const googleMapsHookSource = source("hooks/use-google-maps.tsx");
+
+    expect(googleMapsHookSource).toContain(
+      'GOOGLE_MAPS_LOAD_STATE_EVENT = "tzudong:google-maps-load-state"',
+    );
+    expect(googleMapsHookSource).toContain("window.gm_authFailure = () =>");
+    expect(googleMapsHookSource).toContain(
+      "dispatchGoogleMapsLoadState({ status: \"error\"",
+    );
+    expect(googleMapsHookSource).toContain(
+      "dispatchGoogleMapsLoadState({ status: \"loaded\"",
+    );
+
+    expect(globalMapSource).toContain("GOOGLE_MAPS_LOAD_STATE_EVENT");
+    expect(globalMapSource).toContain(
+      'data-global-map-fallback-source="globalRestaurants"',
+    );
+    expect(globalMapSource).toContain("GLOBAL_MAP_FALLBACK_RESULT_LIMIT = 10");
+    expect(globalMapSource).toContain(
+      "fallbackRestaurants.slice(0, GLOBAL_MAP_FALLBACK_RESULT_LIMIT)",
+    );
+    expect(globalMapSource).toContain(
+      'aria-label="글로벌 지도 대체 목록 검색"',
+    );
+    expect(globalMapSource).toContain("setFallbackSearchQuery");
+    expect(globalMapSource).toContain("globalRestaurants.filter((restaurant)");
+    expect(globalMapSource).toContain("filters.categories.some");
+    expect(globalMapSource).toContain("setSelectedRestaurant(restaurant);");
+    expect(globalMapSource).toContain("setPanelRestaurant(restaurant);");
+    expect(globalMapSource).toContain("setIsPanelOpen(true);");
+    expect(globalMapSource).toContain(
+      "onClick={() => handleFallbackRestaurantSelect(restaurant)}",
+    );
+  });
+
   test("map marker WebP assets are present and substantially smaller than PNG fallbacks", () => {
     const markerDir = join(import.meta.dir, "..", "public/images/maker-images");
     const webpDir = join(markerDir, "webp");

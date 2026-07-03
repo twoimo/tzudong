@@ -28,6 +28,7 @@ import { mergeRestaurants, RESTAURANT_MERGE_SELECT } from "@/hooks/use-restauran
 import { Skeleton } from "@/components/ui/skeleton";
 import { debugLog as logDebug } from "@/lib/debug-log";
 import { restaurantMatchesOverseasCountry } from "@/lib/overseas-region-matching";
+import { GOOGLE_MAPS_LOAD_STATE_EVENT } from "@/hooks/use-google-maps";
 import {
     EDIT_RESTAURANT_REQUEST_KIND_OPTIONS,
     EDIT_RESTAURANT_REQUEST_CLOSURE_HELPER_TEXT,
@@ -77,6 +78,30 @@ function GlobalMapSearchSkeleton() {
 // 그리드 지역 설정 (글로벌 국가)
 const GRID_COUNTRIES: GlobalCountry[] = ["미국", "일본", "태국", "인도네시아"];
 
+type GoogleMapsFallbackState = "idle" | "loaded" | "error";
+
+const GLOBAL_MAP_FALLBACK_RESULT_LIMIT = 10;
+
+function getGlobalMapFallbackCategories(restaurant: Restaurant): string[] {
+    if (Array.isArray(restaurant.categories)) {
+        return restaurant.categories.filter(Boolean);
+    }
+
+    if (typeof restaurant.categories === "string") {
+        return [restaurant.categories];
+    }
+
+    if (Array.isArray(restaurant.category)) {
+        return restaurant.category.filter(Boolean);
+    }
+
+    return restaurant.category ? [restaurant.category] : [];
+}
+
+function getGlobalMapFallbackAddress(restaurant: Restaurant): string {
+    return restaurant.road_address || restaurant.jibun_address || restaurant.address || "주소 정보 없음";
+}
+
 export default function GlobalMapPage() {
     const { isAdmin } = useAuth();
 
@@ -125,6 +150,8 @@ export default function GlobalMapPage() {
         minUserVisits: 0,
         minJjyangVisits: 0,
     });
+    const [googleMapsFallbackState, setGoogleMapsFallbackState] = useState<GoogleMapsFallbackState>("idle");
+    const [fallbackSearchQuery, setFallbackSearchQuery] = useState("");
 
     // 팝업에서 선택된 맛집 처리 (초기 로딩 시 + 이벤트 수신 시)
     useEffect(() => {
@@ -158,6 +185,32 @@ export default function GlobalMapPage() {
 
         return () => {
             window.removeEventListener('restaurant-selected', handleRestaurantSelected);
+        };
+    }, []);
+
+    useEffect(() => {
+        const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
+
+        if (!apiKey) {
+            setGoogleMapsFallbackState("error");
+            return;
+        }
+
+        const currentState = window.__tzudongGoogleMapsLoadState;
+        if (currentState?.status === "error" || currentState?.status === "loaded") {
+            setGoogleMapsFallbackState(currentState.status);
+        }
+
+        const handleGoogleMapsLoadState = (event: Event) => {
+            const detail = (event as CustomEvent<{ status?: GoogleMapsFallbackState }>).detail;
+            if (detail?.status === "error" || detail?.status === "loaded") {
+                setGoogleMapsFallbackState(detail.status);
+            }
+        };
+
+        window.addEventListener(GOOGLE_MAPS_LOAD_STATE_EVENT, handleGoogleMapsLoadState);
+        return () => {
+            window.removeEventListener(GOOGLE_MAPS_LOAD_STATE_EVENT, handleGoogleMapsLoadState);
         };
     }, []);
 
@@ -195,6 +248,43 @@ export default function GlobalMapPage() {
 
         return counts;
     }, [globalRestaurants]);
+
+    const normalizedFallbackSearchQuery = fallbackSearchQuery.trim().toLowerCase();
+    const fallbackRestaurants = useMemo(() => {
+        return globalRestaurants.filter((restaurant) => {
+            if (selectedCountry && !restaurantMatchesOverseasCountry(restaurant, selectedCountry)) {
+                return false;
+            }
+
+            const restaurantCategories = getGlobalMapFallbackCategories(restaurant);
+            if (
+                filters.categories.length > 0 &&
+                !filters.categories.some((category) => restaurantCategories.includes(category))
+            ) {
+                return false;
+            }
+
+            if (!normalizedFallbackSearchQuery) {
+                return true;
+            }
+
+            const searchableText = [
+                restaurant.name,
+                getGlobalMapFallbackAddress(restaurant),
+                restaurantCategories.join(" "),
+            ].join(" ").toLowerCase();
+
+            return searchableText.includes(normalizedFallbackSearchQuery);
+        });
+    }, [filters.categories, globalRestaurants, normalizedFallbackSearchQuery, selectedCountry]);
+    const visibleFallbackRestaurants = fallbackRestaurants.slice(0, GLOBAL_MAP_FALLBACK_RESULT_LIMIT);
+    const shouldShowGoogleMapsFallback = !isGridMode && googleMapsFallbackState === "error";
+
+    const handleFallbackRestaurantSelect = useCallback((restaurant: Restaurant) => {
+        setSelectedRestaurant(restaurant);
+        setPanelRestaurant(restaurant);
+        setIsPanelOpen(true);
+    }, []);
 
     // selectedRestaurant 변경 감지 - 팝업에서 전달된 경우에만 패널 열기
     useEffect(() => {
@@ -526,19 +616,84 @@ export default function GlobalMapPage() {
                 <Suspense fallback={null}>
                     <PanelGroup direction="horizontal" className="w-full h-full">
                         <Panel id="map-panel" order={1} defaultSize={panelRestaurant && isPanelOpen ? 75 : 100} minSize={40} maxSize={100}>
-                            <MapView
-                                filters={filters}
-                                selectedCountry={selectedCountry}
-                                searchedRestaurant={searchedRestaurant} // 검색 시 지도 재조정용
-                                selectedRestaurant={selectedRestaurant}
-                                refreshTrigger={refreshTrigger}
-                                onAdminEditRestaurant={onAdminEditRestaurant}
-                                onRestaurantSelect={setSelectedRestaurant}
-                                onMapReady={handleMapReady}
-                                onRequestEditRestaurant={handleRequestEditRestaurant}
-                                onMarkerClick={handleMarkerClick}
-                                panelWidth={panelWidth}
-                            />
+                            <div className="relative h-full w-full">
+                                <MapView
+                                    filters={filters}
+                                    selectedCountry={selectedCountry}
+                                    searchedRestaurant={searchedRestaurant} // 검색 시 지도 재조정용
+                                    selectedRestaurant={selectedRestaurant}
+                                    refreshTrigger={refreshTrigger}
+                                    onAdminEditRestaurant={onAdminEditRestaurant}
+                                    onRestaurantSelect={setSelectedRestaurant}
+                                    onMapReady={handleMapReady}
+                                    onRequestEditRestaurant={handleRequestEditRestaurant}
+                                    onMarkerClick={handleMarkerClick}
+                                    panelWidth={panelWidth}
+                                />
+
+                                {shouldShowGoogleMapsFallback && (
+                                    <Card
+                                        className="absolute left-3 top-3 z-20 max-h-[calc(100%-1.5rem)] w-[min(calc(100%-1.5rem),24rem)] overflow-hidden border-border bg-background/95 p-3 shadow-lg backdrop-blur"
+                                        data-global-map-google-fallback="true"
+                                        data-global-map-fallback-source="globalRestaurants"
+                                    >
+                                        <div className="space-y-3">
+                                            <div className="space-y-1">
+                                                <p className="text-sm font-semibold text-foreground">지도 없이 글로벌 맛집 둘러보기</p>
+                                                <p className="text-xs leading-5 text-muted-foreground">
+                                                    Google 지도가 준비되지 않아도 현재 필터와 검색으로 맛집을 고르고 상세 정보를 볼 수 있어요.
+                                                </p>
+                                            </div>
+
+                                            <Input
+                                                aria-label="글로벌 지도 대체 목록 검색"
+                                                value={fallbackSearchQuery}
+                                                onChange={(event) => setFallbackSearchQuery(event.target.value)}
+                                                placeholder="이름, 주소, 카테고리 검색"
+                                                className="h-9"
+                                            />
+
+                                            <div className="text-xs text-muted-foreground" aria-live="polite">
+                                                {fallbackRestaurants.length}개 중 {visibleFallbackRestaurants.length}개 표시
+                                            </div>
+
+                                            <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
+                                                {visibleFallbackRestaurants.length > 0 ? (
+                                                    visibleFallbackRestaurants.map((restaurant) => {
+                                                        const categories = getGlobalMapFallbackCategories(restaurant);
+                                                        return (
+                                                            <button
+                                                                key={restaurant.id}
+                                                                type="button"
+                                                                className="w-full rounded-md border border-border bg-card/80 p-2 text-left transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                                                                onClick={() => handleFallbackRestaurantSelect(restaurant)}
+                                                            >
+                                                                <span className="block truncate text-sm font-medium text-foreground">{restaurant.name}</span>
+                                                                <span className="mt-1 block truncate text-xs text-muted-foreground">
+                                                                    {getGlobalMapFallbackAddress(restaurant)}
+                                                                </span>
+                                                                {categories.length > 0 && (
+                                                                    <span className="mt-2 flex flex-wrap gap-1">
+                                                                        {categories.slice(0, 3).map((category) => (
+                                                                            <Badge key={category} variant="secondary" className="text-[10px]">
+                                                                                {category}
+                                                                            </Badge>
+                                                                        ))}
+                                                                    </span>
+                                                                )}
+                                                            </button>
+                                                        );
+                                                    })
+                                                ) : (
+                                                    <p className="rounded-md border border-dashed border-border p-3 text-sm text-muted-foreground">
+                                                        현재 국가, 카테고리, 검색어에 맞는 맛집이 없습니다.
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </Card>
+                                )}
+                            </div>
                         </Panel>
 
                         {/* Resize Handle */}

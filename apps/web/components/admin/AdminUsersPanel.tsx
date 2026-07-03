@@ -57,6 +57,13 @@ type AdminUsersResponse = {
   perPage: number;
   total: number;
 };
+type AdminUserMutationResponse = {
+  error?: string;
+  message?: string;
+  auditId?: string | null;
+  preflightAuditId?: string | null;
+  step?: string | null;
+};
 
 type EditableProfile = {
   nickname: string;
@@ -307,13 +314,19 @@ export default function AdminUsersPanel() {
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({ ...createForm, confirmation: createForm.adminConfirmation || undefined }),
       });
-      const payload = await response.json().catch(() => null) as { error?: string; message?: string } | null;
-      if (!response.ok) throw new Error(payload?.error ?? "사용자를 만들지 못했습니다.");
+      const payload = await response.json().catch(() => null) as AdminUserMutationResponse | null;
+      if (!response.ok) {
+        const stepText = payload?.step ? ` (${payload.step})` : "";
+        const failedAuditId = payload?.auditId ?? payload?.preflightAuditId ?? null;
+        const auditText = failedAuditId ? ` 감사 ID: ${failedAuditId}` : "";
+        throw new Error(`${payload?.error ?? "사용자를 만들지 못했습니다."}${stepText}${auditText}`);
+      }
 
       const message = payload?.message ?? "사용자 계정을 만들었습니다.";
-      setLastActionMessage(`적용 완료: ${message} 목록을 다시 확인했습니다.`);
+      const auditText = payload?.auditId ? ` 감사 ID: ${payload.auditId}` : "";
+      setLastActionMessage(`적용 완료: ${message}${auditText} 목록을 다시 확인했습니다.`);
       setCreateForm(EMPTY_CREATE_FORM);
-      toast({ title: "사용자 생성 완료", description: message });
+      toast({ title: "사용자 생성 완료", description: `${message}${auditText}` });
       await loadUsers();
     } catch (error) {
       const message = error instanceof Error ? error.message : "사용자 생성 중 오류가 발생했습니다.";
