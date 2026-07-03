@@ -265,12 +265,12 @@ export default function RecommendSubmissionsPage() {
                 </div>
               </div>
             )}
-            {request.phone && (
-              <div className="flex items-center gap-2">
-                <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
-                <p className="text-sm">{request.phone}</p>
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
+              <p className="text-sm">
+                {request.phone || "전화번호 없음"}
+              </p>
+            </div>
             {request.categories && request.categories.length > 0 && (
               <div className="flex items-start gap-2">
                 <Tag className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />

@@ -166,6 +166,26 @@ describe('OCR extract route normalization/cache contract', () => {
     expect(securitySource).toContain('hasSupportedImageSignature(buffer)');
     expect(routeSource).toContain('limitInputPixels: OCR_MAX_INPUT_PIXELS');
     expect(streamRouteSource).toContain('limitInputPixels: OCR_MAX_INPUT_PIXELS');
+    expect(streamRouteSource).toContain("terminal: true");
+    expect(streamRouteSource).toContain("status: 422");
+  });
+
+  test('admin OCR rerun preflights workflow before destructive reset and rolls back dispatch failures', () => {
+    const rerunRouteSource = source('app/api/admin/ocr-receipts/rerun/route.ts');
+
+    expect(rerunRouteSource).toContain('workflowPreflightResponse');
+    expect(rerunRouteSource).toContain('resetSkipped: true');
+    expect(rerunRouteSource).toContain('previousOcrState');
+    expect(rerunRouteSource).toContain("ocr_processed_at: review.ocr_processed_at");
+    expect(rerunRouteSource).toContain("receipt_data: review.receipt_data");
+    expect(rerunRouteSource.indexOf('workflowPreflightResponse')).toBeLessThan(
+      rerunRouteSource.indexOf("const previousOcrState"),
+    );
+    expect(rerunRouteSource.indexOf("const previousOcrState")).toBeLessThan(
+      rerunRouteSource.indexOf(".update({"),
+    );
+    expect(rerunRouteSource).toContain('resetRolledBack: !rollbackError');
+    expect(rerunRouteSource).toContain("step: 'workflow-dispatch'");
   });
 
 });

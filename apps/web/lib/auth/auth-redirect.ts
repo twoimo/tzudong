@@ -3,9 +3,9 @@ export const AUTH_LOGIN_QUERY_VALUE = 'login';
 export const AUTH_REDIRECT_REASON_PARAM = 'reason';
 export const AUTH_REDIRECT_NEXT_PARAM = 'next';
 
-export type AuthRedirectReason = 'admin' | 'mypage';
+export type AuthRedirectReason = 'admin' | 'mypage' | 'review';
 
-const SAFE_AUTH_NEXT_PATH_PATTERN = /^\/(?:admin(?:\/[A-Za-z0-9_-]+)*|mypage(?:\/[A-Za-z0-9_-]+)*|submissions(?:\/[A-Za-z0-9_-]+)*|user(?:\/[A-Za-z0-9_-]+)*|)$/;
+const SAFE_AUTH_NEXT_PATH_PATTERN = /^\/(?:admin(?:\/[A-Za-z0-9_-]+)*|mypage(?:\/[A-Za-z0-9_-]+)*|submissions(?:\/[A-Za-z0-9_-]+)*|user(?:\/[A-Za-z0-9_-]+)*|feed|)$/;
 const SAFE_AUTH_NEXT_QUERY_PATTERN = /^[A-Za-z0-9._~!$&'()*+,;=:@/?%-]*$/;
 
 export function getSafeAuthNextPath(value: string | null | undefined) {
