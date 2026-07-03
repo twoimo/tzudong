@@ -21,6 +21,18 @@ describe('public API security source contracts', () => {
     expect(shortenSource).toContain("target_url: allowedTarget.canonicalTargetUrl");
   });
 
+  test('keeps auth required feed redirects truthful and safe', () => {
+    const authRequiredSource = source('app/auth/required/page.tsx');
+    const authRedirectSource = source('lib/auth/auth-redirect.ts');
+
+    expect(authRequiredSource).toContain("params.reason === 'review'");
+    expect(authRequiredSource).toContain("리뷰 작성과 피드 활동은 로그인한 뒤 사용할 수 있습니다.");
+    expect(authRequiredSource).toContain("buildHomeAuthLoginPath({ reason: loginReason, next: nextPath })");
+    expect(authRedirectSource).toContain("export type AuthRedirectReason = 'admin' | 'mypage' | 'review'");
+    expect(authRedirectSource).toContain("|feed|");
+    expect(authRedirectSource).toContain("next.startsWith('//')");
+  });
+
   test('self account deletion revokes current sessions before deleting the auth user', () => {
     const accountDeleteSource = source('app/api/account/delete/route.ts');
     const revocationSource = source('lib/auth/session-revocation.ts');

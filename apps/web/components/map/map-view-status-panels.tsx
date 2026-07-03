@@ -53,17 +53,18 @@ export function MapViewGoogleLoadErrorState() {
                         구글 지도 로딩 실패
                     </h2>
                     <p className="text-muted-foreground">
-                        Google Maps API를 불러오는데 실패했습니다.
+                        Google Maps API를 불러오는데 실패했습니다. 콘솔에 InvalidKeyMapError가 표시되면
+                        브라우저 도메인 제한과 Maps JavaScript API 활성화 상태를 먼저 확인해 주세요.
                     </p>
                     <div className="text-sm text-muted-foreground space-y-1">
                         <p>🔧 해결 방법:</p>
                         <p>1. Google Cloud Console에서 API 키 확인</p>
                         <p>2. Application restrictions → HTTP referrers 설정</p>
                         <p>3. 다음 도메인 추가: <code className="bg-muted px-1 rounded">localhost:8080/*</code></p>
-                        <p>4. Maps JavaScript API 활성화 확인</p>
-                    </div>
+                        <p>4. Maps JavaScript API 활성화 및 InvalidKeyMapError 여부 확인</p>
                 </div>
             </div>
+        </div>
         </div>
     );
 }

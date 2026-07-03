@@ -143,6 +143,28 @@ export async function POST(request: NextRequest) {
     const auth = await requireAdmin({ allowDevAdminBypassCookie: true });
     if (!auth.ok) return auth.response;
 
+    if (shouldSkipLocalStoryboardBackendAgentOnVercel()) {
+      const payload = {
+        error: 'storyboard_generation_unavailable',
+        causeCode: 'vercel_local_storyboard_backend_agent_unavailable',
+        stage: 'backend-agent',
+        stageLabel: '스토리보드 생성 백엔드',
+        message: 'Vercel production does not include the required storyboard RAG worker. Configure STORYBOARD_AGENT_COMMAND and STORYBOARD_RAG_WORKER_URL.',
+        nextActions: [
+          'STORYBOARD_AGENT_COMMAND, STORYBOARD_AGENT_ROOT, STORYBOARD_RAG_WORKER_URL 환경 변수를 확인해 주세요.',
+          '로컬 helper 또는 API Key 백업 경로가 준비되기 전에는 생성 성공처럼 처리하지 않습니다.',
+        ],
+        trace: [],
+      };
+      return NextResponse.json(
+        payload,
+        {
+          status: 503,
+          headers: buildStoryboardRouteHeaders(telemetry, STORYBOARD_ROUTE_NO_STORE_HEADERS, payload),
+        },
+      );
+    }
+
     const body = await readStoryboardRouteJson(request, telemetry) as Record<string, unknown> | null;
     const result = await generateStoryboardWithRouteBackendAgent(body);
     if (process.env.VERCEL !== '1') {
