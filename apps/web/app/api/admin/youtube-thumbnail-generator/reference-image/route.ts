@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { fetchThumbnailReferenceImageFromUrl } from '@/lib/admin/youtube-thumbnail-generator/request';
-import { ThumbnailGenerationError } from '@/lib/admin/youtube-thumbnail-generator/types';
+import { ThumbnailGenerationError, getPublicThumbnailGenerationErrorDetail } from '@/lib/admin/youtube-thumbnail-generator/types';
 import { requireAdmin } from '@/lib/auth/require-admin';
+import { getAdminSafeErrorName } from '@/lib/admin/guarded-mutation-contract';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -15,10 +16,15 @@ function jsonError(error: string, status: number, detail?: string) {
 
 function normalizeRouteError(error: unknown) {
   if (error instanceof ThumbnailGenerationError) {
-    return jsonError(error.code, error.status, error.message);
+    return jsonError(error.code, error.status, getPublicThumbnailGenerationErrorDetail(error));
   }
 
-  console.error('[admin/youtube-thumbnail-generator/reference-image] unexpected failure:', error);
+  console.error('[admin/youtube-thumbnail-generator/reference-image] unexpected failure', {
+    domain: 'youtube_thumbnail_generator',
+    action: 'fetch_reference_image',
+    step: 'unexpected',
+    errorName: getAdminSafeErrorName(error),
+  });
   return jsonError('thumbnail_reference_image_failed', 500, '참고 이미지 URL을 처리하지 못했습니다.');
 }
 

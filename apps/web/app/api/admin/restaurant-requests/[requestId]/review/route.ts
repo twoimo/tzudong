@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { requireAdmin } from "@/lib/auth/require-admin";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/service-role";
+import {
+  RESTAURANT_REQUEST_REVIEW_AUDIT_SOURCE,
+  buildMutationAuditReceipt,
+} from "@/lib/admin/audit-contract";
+import { getAdminSafeErrorName } from "@/lib/admin/guarded-mutation-contract";
 
 export const runtime = "nodejs";
 
@@ -86,6 +91,19 @@ function conflict(message: string) {
   return NextResponse.json({ success: false, message }, { status: 409 });
 }
 
+function getSafeReviewSuccessMessage(action: ReviewAction) {
+  return action === "approve"
+    ? "맛집 추천 요청을 승인했습니다."
+    : "맛집 추천 요청을 반려했습니다.";
+}
+
+function getSafeReviewFailureMessage(message: string) {
+  if (message.includes("찾을 수 없습니다")) {
+    return { status: 404, message: "맛집 추천 요청을 찾을 수 없습니다." };
+  }
+  return { status: 409, message: "맛집 추천 요청 검토 상태를 변경하지 못했습니다." };
+}
+
 export async function POST(request: NextRequest, context: RouteContext) {
   try {
     const auth = await requireAdmin();
@@ -137,11 +155,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
       ? reviewResultData[0]
       : reviewResultData;
     if (!reviewResult?.success || !reviewResult.audit_id) {
-      const message = reviewResult?.message || "맛집 추천 요청 검토 상태를 변경하지 못했습니다.";
-      if (message.includes("찾을 수 없습니다")) {
-        return NextResponse.json({ success: false, message }, { status: 404 });
+      const safeFailure = getSafeReviewFailureMessage(reviewResult?.message ?? "");
+      if (safeFailure.status === 404) {
+        return NextResponse.json({ success: false, message: safeFailure.message }, { status: 404 });
       }
-      return conflict(message);
+      return conflict(safeFailure.message);
     }
 
     const auditId = reviewResult.audit_id;
@@ -161,10 +179,22 @@ export async function POST(request: NextRequest, context: RouteContext) {
       success: true,
       request: reviewedRequest,
       auditId,
-      message: reviewResult.message,
+      audit: buildMutationAuditReceipt({
+        domain: "restaurant_request_reviews",
+        source: RESTAURANT_REQUEST_REVIEW_AUDIT_SOURCE,
+        readbackId: auditId,
+        correlationId: auditId,
+        auditIds: [auditId],
+      }),
+      message: getSafeReviewSuccessMessage(action),
     });
   } catch (error) {
-    console.error("[admin/restaurant-requests/review] failed:", error);
+    console.error("[admin/restaurant-requests/review] guarded mutation failed", {
+      domain: "restaurant_request_reviews",
+      action: "review_restaurant_request",
+      step: "unexpected",
+      errorName: getAdminSafeErrorName(error),
+    });
     return NextResponse.json(
       { success: false, message: "맛집 추천 요청 검토 중 오류가 발생했습니다." },
       { status: 500 },
