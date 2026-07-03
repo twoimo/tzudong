@@ -66,6 +66,29 @@ ALLOW_LOCAL_CLI_THUMBNAIL=true
 
 현재 로컬 Codex 경로는 `codex --version`/`codex --help` 탐지만 수행합니다. 검증된 파일 출력 명령 계약이 생기기 전까지 실제 생성 결과 대신 안전한 mock 결과를 반환합니다.
 
+## Durable release readback readiness
+
+`/api/admin/youtube-thumbnail-generator/releases/current`는 기존 `status`, `release`, `diagnostics.reason` 필드를 유지하면서 `readiness`를 함께 반환합니다.
+
+- `readiness.provider`: `youtube-thumbnail-durable-release`
+- `readiness.status`: `ready`, `degraded`, `unavailable`, `unknown`
+- `readiness.reasonCode`: 운영자가 조치할 수 있는 안정적인 사유 코드
+- `readiness.checkedAt`: 서버가 readback 상태를 확인한 ISO 시각
+- `readiness.remediation`: 다음 운영 조치
+- `readiness.diagnostics`: allowlist된 값만 포함하며 raw storage path, service-role key, provider secret, raw DB/provider error는 포함하지 않습니다.
+
+주요 사유 코드와 조치:
+
+| reasonCode | 상태 | 의미 | 운영 조치 |
+| --- | --- | --- | --- |
+| `ready` | `ready` | 활성 durable release가 admin asset proxy로 안전하게 제공됩니다. | 별도 조치 없음. |
+| `local_release_candidate_fallback` | `degraded` | Supabase durable registry를 읽지 못해 이미 공개 폴더에 mirror된 exact 후보를 read-only fallback으로 사용합니다. | Supabase 환경/테이블/RPC를 복구한 뒤 후보를 durable release로 publish합니다. |
+| `durable_release_empty` | `degraded` | registry는 접근 가능하지만 활성 release row가 없습니다. | 검증된 exact gpt-image-2 후보를 publish합니다. |
+| `missing_supabase_env` | `unavailable` | `NEXT_PUBLIC_SUPABASE_URL` 또는 `SUPABASE_SERVICE_ROLE_KEY`가 없습니다. | 서버 환경변수를 설정하고 재시작합니다. |
+| `missing_release_table` | `unavailable` | `youtube_thumbnail_releases` 테이블 또는 publish RPC가 없습니다. | Supabase migration을 적용합니다. |
+| `invalid_release_row` | `unavailable` | 활성 row가 strict public contract를 통과하지 못했습니다. | row를 폐기/수정하고 안전한 후보를 다시 publish합니다. |
+| `thumbnail_durable_release_current_failed` | `unavailable` | current route의 예기치 않은 실패가 redacted payload로 bounded 처리되었습니다. | 서버 로그에서 원인을 확인하되 API 응답에 raw error를 노출하지 않습니다. |
+
 ## 안전/운영 제약
 
 - 실제 개인 이름, 계정명, URL, 가격, 주소, 전화번호, 실제 브랜드 로고를 생성 지시나 렌더링 텍스트에 넣지 않습니다.

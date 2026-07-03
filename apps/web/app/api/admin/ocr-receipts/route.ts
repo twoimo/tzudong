@@ -8,6 +8,12 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth/require-admin';
 import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
+import {
+    GUARDED_MUTATION_CONFIRMATION,
+    buildGuardedMutationRequiredResponse,
+    getGuardedMutationErrorName,
+    isGuardedMutationConfirmationValid,
+} from '@/lib/admin/guarded-mutation-contract';
 
 export const runtime = 'nodejs';
 
@@ -16,11 +22,32 @@ const GITHUB_TOKEN = process.env.GITHUB_TOKEN!;
 const GITHUB_OWNER = process.env.GITHUB_OWNER!;
 const GITHUB_REPO = process.env.GITHUB_REPO!;
 
+function hasGuardedMutationConfirmation(
+    request: Request,
+    body: { guardedMutationConfirmation?: string },
+): boolean {
+    return (
+        isGuardedMutationConfirmationValid(body.guardedMutationConfirmation) ||
+        isGuardedMutationConfirmationValid(request.headers.get('x-admin-guarded-mutation-confirmation'))
+    );
+}
+
 // POST: GitHub Actions 워크플로우 트리거
-export async function POST() {
+export async function POST(request: Request) {
     try {
         const auth = await requireAdmin();
         if (!auth.ok) return auth.response;
+
+        const body = await request.json().catch(() => ({})) as {
+            guardedMutationConfirmation?: string;
+        };
+
+        if (!hasGuardedMutationConfirmation(request, body)) {
+            return NextResponse.json(
+                buildGuardedMutationRequiredResponse('ocr_receipt', 'dispatch_workflow'),
+                { status: 400 }
+            );
+        }
 
         if (!GITHUB_TOKEN || !GITHUB_OWNER || !GITHUB_REPO) {
             return NextResponse.json(
@@ -28,6 +55,8 @@ export async function POST() {
                 { status: 500 }
             );
         }
+
+        const correlationId = `ocr-dispatch-${Date.now()}`;
 
         // GitHub Actions workflow_dispatch 트리거
         const response = await fetch(
@@ -45,7 +74,13 @@ export async function POST() {
 
         if (!response.ok) {
             await response.text().catch(() => null);
-            console.error('GitHub API 오류:', response.status);
+            console.error('[admin/ocr-receipts] guarded mutation dispatch failed', {
+                domain: 'ocr_receipt',
+                action: 'dispatch_workflow',
+                step: 'workflow-dispatch',
+                status: response.status,
+                correlationId,
+            });
             return NextResponse.json(
                 { error: `GitHub Actions 트리거 실패: ${response.status}` },
                 { status: response.status }
@@ -54,11 +89,30 @@ export async function POST() {
 
         return NextResponse.json({
             success: true,
-            message: 'OCR 처리가 시작되었습니다.'
+            message: 'OCR 처리가 시작되었습니다.',
+            guardedMutation: {
+                domain: 'ocr_receipt',
+                action: 'dispatch_workflow',
+                confirmation: GUARDED_MUTATION_CONFIRMATION,
+                readback: {
+                    workflowDispatched: true,
+                    workflow: 'ocr-review-receipts.yml',
+                    ref: 'main',
+                },
+                audit: {
+                    source: 'github-actions-workflow-dispatch',
+                    correlationId,
+                },
+            },
         });
 
     } catch (err) {
-        console.error('OCR 트리거 오류:', err);
+        console.error('[admin/ocr-receipts] guarded mutation dispatch failed', {
+            domain: 'ocr_receipt',
+            action: 'dispatch_workflow',
+            step: 'unexpected',
+            errorName: getGuardedMutationErrorName(err),
+        });
         return NextResponse.json(
             { error: 'OCR 처리를 시작하지 못했습니다.' },
             { status: 500 }
@@ -97,7 +151,12 @@ export async function GET() {
         });
 
     } catch (err) {
-        console.error('OCR 처리 상태 조회 오류:', err);
+        console.error('[admin/ocr-receipts] status read failed', {
+            domain: 'ocr_receipt',
+            action: 'status',
+            step: 'status-read',
+            errorName: getGuardedMutationErrorName(err),
+        });
         return NextResponse.json(
             { error: 'OCR 처리 상태를 조회하지 못했습니다.' },
             { status: 500 }

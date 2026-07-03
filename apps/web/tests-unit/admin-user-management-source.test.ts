@@ -88,6 +88,9 @@ describe('admin user-management source contract', () => {
     expect(auditSource).toContain('ip_hash');
     expect(auditSource).toContain('user_agent_hash');
     expect(listRouteSource).toContain('preflightAuditId');
+    expect(listRouteSource).toContain('buildMutationAuditReceipt');
+    expect(listRouteSource).toContain("domain: 'admin_user_management'");
+    expect(listRouteSource).toContain('source: ADMIN_AUDIT_PRIMARY_SOURCE');
     expect(listRouteSource).toContain('recordFailedCreateAuditEvent');
     expect(listRouteSource).toContain("status: 'failed'");
     expect(listRouteSource).toContain('감사 기록 확정에 실패해 사용자 생성을 취소했습니다.');
@@ -106,6 +109,11 @@ describe('admin user-management source contract', () => {
     expect(updateRouteSource).toContain('getActiveAdminUserIds');
     expect(updateRouteSource).toContain('recordFailedAuditEvent');
     expect(updateRouteSource).toContain("reason: 'failed-admin-user-mutation'");
+    expect(updateRouteSource).toContain('buildMutationAuditReceipt');
+    expect(updateRouteSource).toContain("domain: 'admin_user_management'");
+    expect(updateRouteSource).toContain('source: ADMIN_AUDIT_PRIMARY_SOURCE');
+    expect(updateRouteSource).toContain('readbackId: readbackAuditId');
+    expect(updateRouteSource).toContain('latestPreflightAuditId');
     expect(updateRouteSource).toContain("status: 'failed'");
     expect(requireAdminSource).toContain('user_account_status');
     expect(requireAdminSource).toContain("accountStatus?.account_status === 'disabled'");
