@@ -31,6 +31,7 @@ export function buildMapViewRestaurantsQueryOptions({
         category: filters.categories.length > 0 ? filters.categories : undefined,
         region: selectedCountry as Region | undefined,
         minReviews: filters.minReviews,
+        featuredTheme: filters.featuredTheme ?? null,
         includeVerifiedReviewCounts: false,
         enabled: isLoaded && !!selectedCountry,
     };
@@ -48,6 +49,7 @@ export function buildOverseasRestaurantsQueryOptions({
     return {
         category: filters.categories.length > 0 ? filters.categories : undefined,
         minReviews: filters.minReviews,
+        featuredTheme: filters.featuredTheme ?? null,
         region: selectedCountry as Region | undefined,
         includeVerifiedReviewCounts: false,
         enabled: !!selectedCountry,
@@ -79,6 +81,7 @@ export function buildNaverRestaurantsQueryOptions({
         compact,
         region: selectedRegion || undefined,
         minReviews: filters.minReviews,
+        featuredTheme: filters.featuredTheme ?? null,
         includeVerifiedReviewCounts: false,
         enabled: isLoaded,
     };
