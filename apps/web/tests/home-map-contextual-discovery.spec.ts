@@ -43,7 +43,7 @@ test.describe('home map contextual visible-marker discovery', () => {
 
     const contextualSection = page.locator('[data-desktop-left-panel-visible-marker-restaurants="true"]');
     await expect(contextualSection).toBeVisible({ timeout: 5000 });
-    await expect(contextualSection).toContainText('지도에 보이는 맛집');
+    await expect(contextualSection).toContainText('맛집 목록');
     await expect(contextualSection).toContainText(/정원분식|명동칼국수|서울돈까스/);
     await page.locator('[data-desktop-left-panel-map-home="true"]').screenshot({
       path: 'test-results/home-map-contextual-discovery-desktop.png',

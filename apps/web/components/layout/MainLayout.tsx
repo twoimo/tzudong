@@ -114,6 +114,7 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
     pathname === "/feed" ||
     pathname === "/stamp" ||
     pathname === "/leaderboard";
+  const shouldRenderMobileBottomNav = !shouldSuppressNoncriticalChrome;
 
   // 성능 최적화: 핸들러 메모이제이션
   const handleOpenAuth = useCallback(() => setIsAuthModalOpen(true), []);
@@ -266,10 +267,10 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
         )}
         style={{
           transitionTimingFunction: "cubic-bezier(0.25, 0.1, 0.25, 1.0)",
-          paddingBottom:
-            "calc(var(--mobile-bottom-nav-height, 60px) * (1 - var(--mobile-sheet-hide-bottom-nav, 0)))",
-        }}
-      >
+          paddingBottom: shouldRenderMobileBottomNav
+            ? "calc(var(--mobile-bottom-nav-height, 60px) * (1 - var(--mobile-sheet-hide-bottom-nav, 0)))"
+            : "0px",
+        }}>
         <a href="#main-content" className="skip-link">
           본문 바로가기
         </a>
@@ -285,24 +286,26 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* 모바일/태블릿용 하단 네비게이션바 (1599px 이하) */}
-      <div
-        className={cn(
-          // CSS 미디어 쿼리: 1600px 이상에서 숨김 (데스크탑)
-          "min-[1600px]:hidden",
-          // JS 기반 조건: isDesktop이 true면 숨김 (hydration 후)
-          isDesktop && "hidden",
-          "transition-transform duration-300",
-        )}
-      >
-        <MobileBottomNav
-          className="transition-transform duration-300"
-          style={{
-            transform:
-              "translate3d(0, calc(var(--mobile-sheet-hide-bottom-nav, 0) * 120%), 0)",
-            willChange: "transform",
-          }}
-        />
-      </div>
+      {shouldRenderMobileBottomNav && (
+        <div
+          className={cn(
+            // CSS 미디어 쿼리: 1600px 이상에서 숨김 (데스크탑)
+            "min-[1600px]:hidden",
+            // JS 기반 조건: isDesktop이 true면 숨김 (hydration 후)
+            isDesktop && "hidden",
+            "transition-transform duration-300",
+          )}
+        >
+          <MobileBottomNav
+            className="transition-transform duration-300"
+            style={{
+              transform:
+                "translate3d(0, calc(var(--mobile-sheet-hide-bottom-nav, 0) * 120%), 0)",
+              willChange: "transform",
+            }}
+          />
+        </div>
+      )}
 
       {/* [PERF] 조건부 렌더링 - 모달이 닫혀있을 때 DOM 마운트 방지 (TBT 개선) */}
       {isAuthModalOpen && (

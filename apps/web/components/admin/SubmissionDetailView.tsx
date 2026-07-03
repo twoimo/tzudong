@@ -77,7 +77,7 @@ export interface SubmissionItem {
 export interface SubmissionRecord {
     id: string;
     user_id: string;
-    submission_type: 'new' | 'edit';
+    submission_type: 'new' | 'edit' | 'recommend';
     status: 'pending' | 'approved' | 'partially_approved' | 'rejected';
     restaurant_name: string;
     restaurant_address: string | null;
@@ -92,6 +92,10 @@ export interface SubmissionRecord {
     updated_at: string;
     items: SubmissionItem[];
     profiles?: { nickname: string } | null;
+    recommendation_reason?: string | null;
+    recommendation_status?: 'pending' | 'approved' | 'rejected' | null;
+    recommendation_admin_note?: string | null;
+    recommendation_audit_id?: string | null;
     original_restaurant_data?: {
         id: string;
         unique_id: string;

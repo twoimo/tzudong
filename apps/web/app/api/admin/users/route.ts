@@ -30,6 +30,17 @@ function toAuditErrorCode(error: unknown) {
   return 'unknown-admin-user-create-error';
 }
 
+function isAuthUserNotFoundReadback(error: unknown) {
+  if (!error || typeof error !== 'object') return false;
+  const status = (error as { status?: unknown }).status;
+  const message = error instanceof Error
+    ? error.message
+    : typeof (error as { message?: unknown }).message === 'string'
+      ? (error as { message: string }).message
+      : '';
+  return status === 404 || /not found|user not found/i.test(message);
+}
+
 async function recordFailedCreateAuditEvent(
   supabase: ReturnType<typeof createSupabaseServiceRoleClient>,
   request: NextRequest,
@@ -57,6 +68,34 @@ async function recordFailedCreateAuditEvent(
     console.error('[admin/users] failed to record failed create audit event:', auditError);
     return null;
   }
+}
+
+async function deleteCreatedAuthUserWithReadback(
+  supabase: ReturnType<typeof createSupabaseServiceRoleClient>,
+  userId: string,
+  context: string,
+) {
+  const { error: deleteError } = await supabase.auth.admin.deleteUser(userId);
+  if (deleteError) {
+    console.error(`[admin/users] failed to clean up auth user after ${context}:`, deleteError);
+    return { verified: false, error: 'auth-user-cleanup-delete-failed' };
+  }
+
+  const { data, error: readbackError } = await supabase.auth.admin.getUserById(userId);
+  if (data?.user) {
+    console.error(`[admin/users] auth user still exists after ${context} cleanup:`, userId);
+    return { verified: false, error: 'auth-user-cleanup-readback-still-present' };
+  }
+
+  if (readbackError) {
+    if (isAuthUserNotFoundReadback(readbackError)) {
+      return { verified: true, error: null };
+    }
+    console.error(`[admin/users] failed to verify auth cleanup after ${context}:`, readbackError);
+    return { verified: false, error: 'auth-user-cleanup-readback-failed' };
+  }
+
+  return { verified: false, error: 'auth-user-cleanup-readback-empty' };
 }
 
 type ProfileRow = {
@@ -245,14 +284,27 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createSupabaseServiceRoleClient();
-    const preflightAuditId = await recordAdminUserAuditEvent(supabase, request, {
-      actorUserId: auth.userId,
-      action: 'admin_user_created',
-      reason: shouldGrantAdmin ? 'preflight-create-with-admin-role' : 'preflight-create-standard-user',
-      beforeState: {},
-      afterState: { email, username, nickname, isAdmin: shouldGrantAdmin, confirmation: shouldGrantAdmin ? ADMIN_ROLE_CONFIRMATION : null },
-      status: 'intent',
-    });
+    let preflightAuditId: string;
+    try {
+      preflightAuditId = await recordAdminUserAuditEvent(supabase, request, {
+        actorUserId: auth.userId,
+        action: 'admin_user_created',
+        reason: shouldGrantAdmin ? 'preflight-create-with-admin-role' : 'preflight-create-standard-user',
+        beforeState: {},
+        afterState: { email, username, nickname, isAdmin: shouldGrantAdmin, confirmation: shouldGrantAdmin ? ADMIN_ROLE_CONFIRMATION : null },
+        status: 'intent',
+      });
+    } catch (auditError) {
+      console.error('[admin/users] failed to record create preflight audit event:', auditError);
+      return NextResponse.json(
+        {
+          error: '감사 로그 준비에 실패해 사용자 생성을 시작하지 않았습니다.',
+          step: 'preflight-audit',
+          auditUnavailable: true,
+        },
+        { status: 503 },
+      );
+    }
 
     const { data, error } = await supabase.auth.admin.createUser({
       email,
@@ -262,13 +314,21 @@ export async function POST(request: NextRequest) {
     });
 
     if (error || !data.user) {
-      await recordFailedCreateAuditEvent(supabase, request, {
+      const failedAuditId = await recordFailedCreateAuditEvent(supabase, request, {
         actorUserId: auth.userId,
         preflightAuditId,
         error: error ?? new Error('auth-user-create-returned-empty-user'),
-        afterState: { email, username, nickname, isAdmin: shouldGrantAdmin },
+        afterState: { email, username, nickname, isAdmin: shouldGrantAdmin, failedStep: 'auth-user-create' },
       });
-      return NextResponse.json({ error: error?.message ?? '사용자를 만들지 못했습니다.' }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: error?.message ?? '사용자를 만들지 못했습니다.',
+          step: 'auth-user-create',
+          auditId: failedAuditId,
+          preflightAuditId,
+        },
+        { status: 400 },
+      );
     }
 
     const profileRole = shouldGrantAdmin ? 'admin' : 'user';
@@ -277,17 +337,29 @@ export async function POST(request: NextRequest) {
       .insert({ user_id: data.user.id, account_status: 'active' });
 
     if (accountStatusError) {
-      await recordFailedCreateAuditEvent(supabase, request, {
+      const failedAuditId = await recordFailedCreateAuditEvent(supabase, request, {
         actorUserId: auth.userId,
         targetUserId: data.user.id,
         preflightAuditId,
         error: accountStatusError,
         afterState: { email, username, nickname, isAdmin: shouldGrantAdmin, failedStep: 'account-status-insert' },
       });
-      await supabase.auth.admin.deleteUser(data.user.id).catch((cleanupError) => {
-        console.error('[admin/users] failed to clean up auth user after account status insert error:', cleanupError);
-      });
-      return NextResponse.json({ error: '계정 상태 초기화에 실패해 사용자 생성을 취소했습니다.' }, { status: 500 });
+      const cleanup = await deleteCreatedAuthUserWithReadback(
+        supabase,
+        data.user.id,
+        'account status insert error',
+      );
+      return NextResponse.json(
+        {
+          error: '계정 상태 초기화에 실패해 사용자 생성을 취소했습니다.',
+          step: 'account-status-insert',
+          auditId: failedAuditId,
+          preflightAuditId,
+          cleanupVerified: cleanup.verified,
+          cleanupError: cleanup.error,
+        },
+        { status: 500 },
+      );
     }
 
     const { error: profileError } = await supabase
@@ -300,17 +372,29 @@ export async function POST(request: NextRequest) {
       });
 
     if (profileError) {
-      await recordFailedCreateAuditEvent(supabase, request, {
+      const failedAuditId = await recordFailedCreateAuditEvent(supabase, request, {
         actorUserId: auth.userId,
         targetUserId: data.user.id,
         preflightAuditId,
         error: profileError,
         afterState: { email, username, nickname, isAdmin: shouldGrantAdmin, failedStep: 'profile-insert' },
       });
-      await supabase.auth.admin.deleteUser(data.user.id).catch((cleanupError) => {
-        console.error('[admin/users] failed to clean up auth user after profile insert error:', cleanupError);
-      });
-      return NextResponse.json({ error: '프로필 생성에 실패해 사용자 생성을 취소했습니다.' }, { status: 500 });
+      const cleanup = await deleteCreatedAuthUserWithReadback(
+        supabase,
+        data.user.id,
+        'profile insert error',
+      );
+      return NextResponse.json(
+        {
+          error: '프로필 생성에 실패해 사용자 생성을 취소했습니다.',
+          step: 'profile-insert',
+          auditId: failedAuditId,
+          preflightAuditId,
+          cleanupVerified: cleanup.verified,
+          cleanupError: cleanup.error,
+        },
+        { status: 500 },
+      );
     }
 
     if (shouldGrantAdmin) {
@@ -319,17 +403,29 @@ export async function POST(request: NextRequest) {
         .insert({ user_id: data.user.id, role: 'admin' });
 
       if (roleError) {
-        await recordFailedCreateAuditEvent(supabase, request, {
+        const failedAuditId = await recordFailedCreateAuditEvent(supabase, request, {
           actorUserId: auth.userId,
           targetUserId: data.user.id,
           preflightAuditId,
           error: roleError,
           afterState: { email, username, nickname, isAdmin: shouldGrantAdmin, failedStep: 'admin-role-insert' },
         });
-        await supabase.auth.admin.deleteUser(data.user.id).catch((cleanupError) => {
-          console.error('[admin/users] failed to clean up auth user after role insert error:', cleanupError);
-        });
-        return NextResponse.json({ error: '관리자 권한 연결에 실패해 사용자 생성을 취소했습니다.' }, { status: 500 });
+        const cleanup = await deleteCreatedAuthUserWithReadback(
+          supabase,
+          data.user.id,
+          'role insert error',
+        );
+        return NextResponse.json(
+          {
+            error: '관리자 권한 연결에 실패해 사용자 생성을 취소했습니다.',
+            step: 'admin-role-insert',
+            auditId: failedAuditId,
+            preflightAuditId,
+            cleanupVerified: cleanup.verified,
+            cleanupError: cleanup.error,
+          },
+          { status: 500 },
+        );
       }
     }
 
@@ -346,17 +442,29 @@ export async function POST(request: NextRequest) {
         correlationId: preflightAuditId,
       });
     } catch (auditError) {
-      await recordFailedCreateAuditEvent(supabase, request, {
+      const failedAuditId = await recordFailedCreateAuditEvent(supabase, request, {
         actorUserId: auth.userId,
         targetUserId: data.user.id,
         preflightAuditId,
         error: auditError,
         afterState: { email, username, nickname, isAdmin: shouldGrantAdmin, failedStep: 'applied-audit' },
       });
-      await supabase.auth.admin.deleteUser(data.user.id).catch((cleanupError) => {
-        console.error('[admin/users] failed to clean up auth user after applied audit error:', cleanupError);
-      });
-      return NextResponse.json({ error: '감사 기록 확정에 실패해 사용자 생성을 취소했습니다.' }, { status: 500 });
+      const cleanup = await deleteCreatedAuthUserWithReadback(
+        supabase,
+        data.user.id,
+        'applied audit error',
+      );
+      return NextResponse.json(
+        {
+          error: '감사 기록 확정에 실패해 사용자 생성을 취소했습니다.',
+          step: 'applied-audit',
+          auditId: failedAuditId,
+          preflightAuditId,
+          cleanupVerified: cleanup.verified,
+          cleanupError: cleanup.error,
+        },
+        { status: 500 },
+      );
     }
 
     return NextResponse.json({
@@ -368,6 +476,14 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('[admin/users] failed to create user:', error);
-    return NextResponse.json({ error: '사용자 생성 중 오류가 발생했습니다.' }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: '사용자 생성 중 오류가 발생했습니다.',
+        step: 'unhandled-create-error',
+        auditId: null,
+        preflightAuditId: null,
+      },
+      { status: 500 },
+    );
   }
 }
