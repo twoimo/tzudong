@@ -595,16 +595,16 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
     };
   }, [isLoaded, selectedRestaurant?.id, searchedRestaurant?.id, restaurantsById]);
 
+  if (!apiKey) {
+    return <MapViewMissingApiKeyState />;
+  }
+
   if (loadError || hasGoogleRuntimeError) {
     return <MapViewGoogleLoadErrorState />;
   }
 
   if (!isLoaded) {
     return <MapSkeleton message="지도 화면을 준비하고 있어요" />;
-  }
-
-  if (!apiKey) {
-    return <MapViewMissingApiKeyState />;
   }
 
   return (

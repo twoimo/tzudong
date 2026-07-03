@@ -124,6 +124,41 @@ const ADMIN_SUBMISSION_ITEM_SELECT = [
   'rejection_reason',
   'created_at',
 ].join(', ');
+const ADMIN_RESTAURANT_REQUEST_SELECT = [
+  'id',
+  'user_id',
+  'restaurant_name',
+  'origin_address',
+  'road_address',
+  'jibun_address',
+  'english_address',
+  'phone',
+  'categories',
+  'recommendation_reason',
+  'youtube_link',
+  'status',
+  'reviewed_by_admin_id',
+  'reviewed_at',
+  'admin_note',
+  'rejection_reason',
+  'review_audit_id',
+  'created_at',
+  'updated_at',
+].join(', ');
+const ADMIN_RESTAURANT_REQUEST_LEGACY_SELECT = [
+  'id',
+  'user_id',
+  'restaurant_name',
+  'origin_address',
+  'road_address',
+  'jibun_address',
+  'english_address',
+  'phone',
+  'categories',
+  'recommendation_reason',
+  'youtube_link',
+  'created_at',
+].join(', ');
 const ADMIN_REVIEW_SELECT = [
   'id',
   'user_id',
@@ -242,6 +277,115 @@ interface SubmissionRow {
   updated_at: string;
 }
 
+interface RestaurantRequestRow {
+  id: string;
+  user_id: string;
+  restaurant_name: string;
+  origin_address: string | null;
+  road_address: string | null;
+  jibun_address: string | null;
+  english_address: string | null;
+  phone: string | null;
+  categories: string[] | null;
+  recommendation_reason: string | null;
+  youtube_link: string | null;
+  status: 'pending' | 'approved' | 'rejected' | null;
+  reviewed_by_admin_id: string | null;
+  reviewed_at: string | null;
+  admin_note: string | null;
+  rejection_reason: string | null;
+  review_audit_id: string | null;
+  created_at: string;
+  updated_at: string | null;
+}
+
+type RestaurantRequestListRow =
+  Omit<RestaurantRequestRow,
+    | 'status'
+    | 'reviewed_by_admin_id'
+    | 'reviewed_at'
+    | 'admin_note'
+    | 'rejection_reason'
+    | 'review_audit_id'
+    | 'updated_at'
+  >
+  & Partial<Pick<RestaurantRequestRow,
+    | 'status'
+    | 'reviewed_by_admin_id'
+    | 'reviewed_at'
+    | 'admin_note'
+    | 'rejection_reason'
+    | 'review_audit_id'
+    | 'updated_at'
+  >>;
+
+type SupabaseQueryError = {
+  code?: string;
+  message?: string;
+};
+
+function isMissingRestaurantRequestLifecycleError(error: SupabaseQueryError | null | undefined) {
+  if (!error) return false;
+  if (error.code === '42703') return true;
+
+  return /column\s+restaurant_requests\.(status|reviewed_by_admin_id|reviewed_at|admin_note|rejection_reason|review_audit_id|updated_at)\s+does\s+not\s+exist/i.test(
+    error.message ?? '',
+  );
+}
+
+interface RestaurantRequestReviewResponse {
+  success?: boolean;
+  request?: RestaurantRequestRow | null;
+  auditId?: string | null;
+  message?: string;
+  error?: string;
+}
+
+const applyRestaurantRequestReadbackToSubmission = (
+  submission: SubmissionRecord,
+  request: RestaurantRequestRow | null | undefined,
+  auditId: string | null | undefined,
+  fallbackStatus: 'approved' | 'rejected',
+): SubmissionRecord => {
+  if (!request) {
+    return {
+      ...submission,
+      recommendation_audit_id: auditId || submission.recommendation_audit_id || null,
+    };
+  }
+
+  const status = request.status || fallbackStatus;
+
+  return {
+    ...submission,
+    status,
+    restaurant_name: request.restaurant_name,
+    restaurant_address: request.road_address || request.jibun_address || request.origin_address,
+    restaurant_phone: request.phone,
+    restaurant_categories: request.categories,
+    admin_notes: request.admin_note,
+    rejection_reason: request.rejection_reason,
+    resolved_by_admin_id: request.reviewed_by_admin_id,
+    reviewed_at: request.reviewed_at,
+    updated_at: request.updated_at || submission.updated_at,
+    recommendation_reason: request.recommendation_reason,
+    recommendation_status: status,
+    recommendation_admin_note: request.admin_note,
+    recommendation_audit_id: auditId || request.review_audit_id,
+    items: submission.items.map((item, index) =>
+      index === 0
+        ? {
+            ...item,
+            youtube_link: request.youtube_link || item.youtube_link,
+            tzuyang_review: request.recommendation_reason || item.tzuyang_review,
+            item_status: status,
+            rejection_reason: request.rejection_reason,
+          }
+        : item,
+    ),
+  };
+};
+
 type SubmissionOriginalRestaurantData = NonNullable<SubmissionRecord['original_restaurant_data']>;
 
 interface ProfileNicknameRow {
@@ -297,7 +441,7 @@ const getErrorMessage = (error: unknown): string => {
 type AdminEvaluationPageWrapperProps = {
   embedded?: boolean;
   initialView?: 'evaluations' | 'submissions';
-  initialSubmissionTab?: 'new' | 'edit' | 'reviews';
+  initialSubmissionTab?: 'new' | 'edit' | 'recommend' | 'reviews';
 };
 
 // Suspense 래퍼 컴포넌트
@@ -386,7 +530,7 @@ function AdminEvaluationPage({
 }: {
   embedded: boolean;
   initialView: 'evaluations' | 'submissions';
-  initialSubmissionTab?: 'new' | 'edit' | 'reviews';
+  initialSubmissionTab?: 'new' | 'edit' | 'recommend' | 'reviews';
 }) {
   const { toast } = useToast();
   const router = useRouter();
@@ -485,7 +629,7 @@ function AdminEvaluationPage({
 
   // 사용자 제보 검수 상태 (URL 쿼리 파라미터로 초기화)
   const [showSubmissionView, setShowSubmissionView] = useState(false);
-  const [submissionInitialTab, setSubmissionInitialTab] = useState<'new' | 'edit' | 'reviews'>('new');
+  const [submissionInitialTab, setSubmissionInitialTab] = useState<'new' | 'edit' | 'recommend' | 'reviews'>('new');
 
   // Deep-link 필터 (운영지표/이슈보드 -> 검수 화면 이동)
   const deepLinkInitializedRef = useRef(false);
@@ -536,6 +680,8 @@ function AdminEvaluationPage({
       const tab = initialSubmissionTab ?? routeTab;
       if (tab === 'reviews') {
         setSubmissionInitialTab('reviews');
+      } else if (tab === 'recommend') {
+        setSubmissionInitialTab('recommend');
       } else if (tab === 'edit') {
         setSubmissionInitialTab('edit');
       } else {
@@ -1757,6 +1903,99 @@ function AdminEvaluationPage({
     refetchOnWindowFocus: true,
   });
 
+  const { data: recommendationRequestsData = [], isLoading: recommendationRequestsLoading } = useQuery({
+    queryKey: ['admin-restaurant-requests-inline', user?.id, isAdmin],
+    queryFn: async () => {
+      if (!user || !isAdmin) return [];
+
+      const { data: requestsData, error: requestsError } = await supabase
+        .from('restaurant_requests')
+        .select(ADMIN_RESTAURANT_REQUEST_SELECT)
+        .in('status', ['pending', 'approved', 'rejected'])
+        .order('created_at', { ascending: false });
+
+      let rawRequests: RestaurantRequestListRow[] | null = requestsData as RestaurantRequestListRow[] | null;
+
+      if (requestsError) {
+        if (!isMissingRestaurantRequestLifecycleError(requestsError)) throw requestsError;
+
+        const { data: legacyRequestsData, error: legacyRequestsError } = await supabase
+          .from('restaurant_requests')
+          .select(ADMIN_RESTAURANT_REQUEST_LEGACY_SELECT)
+          .order('created_at', { ascending: false });
+
+        if (legacyRequestsError) throw legacyRequestsError;
+        rawRequests = legacyRequestsData as RestaurantRequestListRow[] | null;
+      }
+
+      if (!rawRequests?.length) return [];
+
+      const typedRequests = rawRequests;
+      const userIds = [...new Set(typedRequests.map((request) => request.user_id).filter(Boolean))];
+
+      const { data: profilesData } = userIds.length
+        ? await supabase
+          .from('profiles')
+          .select('user_id, nickname')
+          .in('user_id', userIds)
+        : { data: [] };
+
+      const typedProfilesData = (profilesData || []) as ProfileNicknameRow[];
+      const profilesMap = new Map(typedProfilesData.map((profile) => [profile.user_id, profile.nickname]));
+
+      return typedRequests.map((request) => ({
+        id: request.id,
+        user_id: request.user_id,
+        submission_type: 'recommend' as const,
+        status: request.status || 'pending',
+        restaurant_name: request.restaurant_name,
+        restaurant_address: request.road_address || request.jibun_address || request.origin_address,
+        restaurant_phone: request.phone,
+        restaurant_categories: request.categories,
+        admin_notes: request.admin_note,
+        rejection_reason: request.rejection_reason,
+        resolved_by_admin_id: request.reviewed_by_admin_id,
+        reviewed_at: request.reviewed_at,
+        created_at: request.created_at,
+        updated_at: request.updated_at || request.created_at,
+        items: [{
+          id: `${request.id}:recommend`,
+          submission_id: request.id,
+          youtube_link: request.youtube_link || '',
+          tzuyang_review: request.recommendation_reason || '',
+          target_restaurant_id: null,
+          item_status: request.status || 'pending',
+          rejection_reason: request.rejection_reason,
+          created_at: request.created_at,
+        }],
+        profiles: { nickname: profilesMap.get(request.user_id) || '알 수 없음' },
+        recommendation_reason: request.recommendation_reason,
+        recommendation_status: request.status || 'pending',
+        recommendation_admin_note: request.admin_note,
+        recommendation_audit_id: request.review_audit_id,
+        original_restaurant_data: null,
+      })) as SubmissionRecord[];
+    },
+    enabled: !!user && isAdmin,
+    refetchInterval: 30000,
+    refetchOnWindowFocus: true,
+  });
+
+  const allSubmissionRecords = useMemo(
+    () => [...submissionsData, ...recommendationRequestsData],
+    [submissionsData, recommendationRequestsData],
+  );
+
+  const updateRecommendationRequestReadbackInCache = useCallback((submission: SubmissionRecord) => {
+    queryClient.setQueryData<SubmissionRecord[]>(
+      ['admin-restaurant-requests-inline', user?.id, isAdmin],
+      (current) =>
+        current?.map((currentSubmission) =>
+          currentSubmission.id === submission.id ? submission : currentSubmission,
+        ) ?? current,
+    );
+  }, [isAdmin, queryClient, user?.id]);
+
   // 리뷰 데이터 쿼리
   const { data: reviewsData = [], isLoading: reviewsLoading } = useQuery({
     queryKey: ['admin-reviews-inline', user?.id, isAdmin],
@@ -1810,8 +2049,12 @@ function AdminEvaluationPage({
     ).length;
   }, [reviewsData]);
 
+  const pendingRecommendationCount = useMemo(() => {
+    return recommendationRequestsData.filter((request) => request.status === 'pending').length;
+  }, [recommendationRequestsData]);
+
   // 전체 대기 건수 (제보 + 리뷰)
-  const totalPendingCount = submissionsData.length + pendingReviewsCount;
+  const totalPendingCount = submissionsData.length + pendingRecommendationCount + pendingReviewsCount;
 
   // 리뷰 승인 mutation
   const approveReviewMutation = useMutation({
@@ -1994,16 +2237,44 @@ function AdminEvaluationPage({
       approvalData,
       itemDecisions,
       forceApprove,
-      editableData
+      editableData,
+      adminNote
 	    }: {
       submission: SubmissionRecord;
       approvalData: ApprovalData;
       itemDecisions: Record<string, ItemDecision>;
 	      forceApprove: boolean;
 	      editableData: { name: string; address: string; phone: string; categories: string[] };
+	      adminNote?: string;
 		    }) => {
 		      if (!user) throw new Error('로그인이 필요합니다');
       void forceApprove;
+
+      if (submission.submission_type === 'recommend') {
+        const response = await fetch(`/api/admin/restaurant-requests/${encodeURIComponent(submission.id)}/review`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'approve',
+            ...(adminNote?.trim() ? { adminNote: adminNote.trim() } : {}),
+          }),
+        });
+        const data = (await response.json().catch(() => null)) as RestaurantRequestReviewResponse | null;
+        if (!response.ok || !data?.success || !data.request || !data.auditId) {
+          throw new Error(data?.message || data?.error || '추천 승인에 실패했습니다. 잠시 후 다시 시도해주세요.');
+        }
+        return {
+          submission: applyRestaurantRequestReadbackToSubmission(
+            submission,
+            data.request,
+            data.auditId,
+            'approved',
+          ),
+          restaurant: null,
+          recommendationAuditId: data.auditId,
+          recommendationMessage: data.message || '추천이 승인되었습니다.',
+        };
+      }
 	      const rpcClient = supabase as unknown as {
         rpc: (
           functionName: string,
@@ -2121,9 +2392,15 @@ function AdminEvaluationPage({
 	        } as never)
 	        .eq('id', submission.id);
 
-      return { submission, restaurant };
+      return { submission, restaurant, recommendationAuditId: null, recommendationMessage: null };
     },
-    onSuccess: ({ submission }) => {
+    onSuccess: ({ submission, recommendationAuditId, recommendationMessage }) => {
+      if (submission.submission_type === 'recommend') {
+        updateRecommendationRequestReadbackInCache(submission);
+        toast({ title: '추천 승인 완료', description: `${recommendationMessage || '추천이 승인되었습니다.'} 감사 ID: ${recommendationAuditId || '확인됨'}` });
+        queryClient.invalidateQueries({ queryKey: ['admin-restaurant-requests-inline'] });
+        return;
+      }
       toast({ title: '제보 승인 완료', description: `"${submission.restaurant_name}" 맛집이 등록되었습니다` });
       createNewRestaurantNotification(submission.restaurant_name, submission.restaurant_address || '', {
         category: submission.restaurant_categories,
@@ -2139,6 +2416,7 @@ function AdminEvaluationPage({
         );
       }
       queryClient.invalidateQueries({ queryKey: ['admin-submissions-inline'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-restaurant-requests-inline'] });
       void invalidateRestaurantDiscoveryQueries(queryClient);
       if (currentSubmissionIndex >= submissionsData.length - 1 && currentSubmissionIndex > 0) {
         setCurrentSubmissionIndex(currentSubmissionIndex - 1);
@@ -2153,6 +2431,32 @@ function AdminEvaluationPage({
   const rejectSubmissionMutation = useMutation({
     mutationFn: async ({ submission, reason }: { submission: SubmissionRecord; reason: string }) => {
       if (!user) throw new Error('로그인이 필요합니다');
+
+      if (submission.submission_type === 'recommend') {
+        const response = await fetch(`/api/admin/restaurant-requests/${encodeURIComponent(submission.id)}/review`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'reject',
+            rejectionReason: reason,
+          }),
+        });
+        const data = (await response.json().catch(() => null)) as RestaurantRequestReviewResponse | null;
+        if (!response.ok || !data?.success || !data.request || !data.auditId) {
+          throw new Error(data?.message || data?.error || '추천 거부에 실패했습니다. 잠시 후 다시 시도해주세요.');
+        }
+        return {
+          submission: applyRestaurantRequestReadbackToSubmission(
+            submission,
+            data.request,
+            data.auditId,
+            'rejected',
+          ),
+          reason: data.request.rejection_reason || reason,
+          recommendationAuditId: data.auditId,
+          recommendationMessage: data.message || '추천이 거부되었습니다.',
+        };
+      }
 
 	      // 모든 pending 아이템 거부
 	      for (const item of submission.items) {
@@ -2176,9 +2480,15 @@ function AdminEvaluationPage({
 	        } as never)
 	        .eq('id', submission.id);
       if (error) throw error;
-      return { submission, reason };
+      return { submission, reason, recommendationAuditId: null, recommendationMessage: null };
     },
-    onSuccess: ({ submission, reason }) => {
+    onSuccess: ({ submission, reason, recommendationAuditId, recommendationMessage }) => {
+      if (submission.submission_type === 'recommend') {
+        updateRecommendationRequestReadbackInCache(submission);
+        toast({ title: '추천 거부됨', description: `${recommendationMessage || '추천이 거부되었습니다.'} 감사 ID: ${recommendationAuditId || '확인됨'}` });
+        queryClient.invalidateQueries({ queryKey: ['admin-restaurant-requests-inline'] });
+        return;
+      }
       toast({ title: '제보 거부됨', description: `"${submission.restaurant_name}" 제보가 거부되었습니다` });
       // 제보자에게 거부 알림 전송 (거부 사유 포함)
       if (submission.user_id) {
@@ -2191,6 +2501,7 @@ function AdminEvaluationPage({
         );
       }
       queryClient.invalidateQueries({ queryKey: ['admin-submissions-inline'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-restaurant-requests-inline'] });
       if (currentSubmissionIndex >= submissionsData.length - 1 && currentSubmissionIndex > 0) {
         setCurrentSubmissionIndex(currentSubmissionIndex - 1);
       }
@@ -2204,6 +2515,27 @@ function AdminEvaluationPage({
   const deleteSubmissionMutation = useMutation({
     mutationFn: async (submission: SubmissionRecord) => {
       if (!user) throw new Error('로그인이 필요합니다');
+
+      if (submission.submission_type === 'recommend') {
+        const response = await fetch(`/api/admin/restaurant-requests/${encodeURIComponent(submission.id)}/review`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'reject',
+            rejectionReason: '관리자에 의해 삭제 처리됨',
+          }),
+        });
+        const data = (await response.json().catch(() => null)) as RestaurantRequestReviewResponse | null;
+        if (!response.ok || !data?.success || !data.auditId) {
+          throw new Error(data?.message || data?.error || '추천 삭제 처리에 실패했습니다. 잠시 후 다시 시도해주세요.');
+        }
+        return applyRestaurantRequestReadbackToSubmission(
+          submission,
+          data.request,
+          data.auditId,
+          'rejected',
+        );
+      }
 
 	      // 모든 pending 아이템 거부
 	      for (const item of submission.items) {
@@ -2229,9 +2561,16 @@ function AdminEvaluationPage({
       if (error) throw error;
       return submission;
     },
-    onSuccess: ({ restaurant_name }) => {
-      toast({ title: '제보 삭제됨', description: `"${restaurant_name}" 제보가 삭제되었습니다` });
+    onSuccess: (submission) => {
+      if (submission.submission_type === 'recommend') {
+        updateRecommendationRequestReadbackInCache(submission);
+        toast({ title: '추천 삭제 처리됨', description: `"${submission.restaurant_name}" 추천이 거부 상태로 처리되었습니다. 감사 ID: ${submission.recommendation_audit_id || '확인됨'}` });
+        queryClient.invalidateQueries({ queryKey: ['admin-restaurant-requests-inline'] });
+        return;
+      }
+      toast({ title: '제보 삭제됨', description: `"${submission.restaurant_name}" 제보가 삭제되었습니다` });
       queryClient.invalidateQueries({ queryKey: ['admin-submissions-inline'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-restaurant-requests-inline'] });
       if (currentSubmissionIndex >= submissionsData.length - 1 && currentSubmissionIndex > 0) {
         setCurrentSubmissionIndex(currentSubmissionIndex - 1);
       }
@@ -2248,9 +2587,10 @@ function AdminEvaluationPage({
     approvalData: ApprovalData,
     itemDecisions: Record<string, ItemDecision>,
     forceApprove: boolean,
-    editableData: { name: string; address: string; phone: string; categories: string[] }
+    editableData: { name: string; address: string; phone: string; categories: string[] },
+    adminNote?: string
   ) => {
-    approveSubmissionMutation.mutate({ submission, approvalData, itemDecisions, forceApprove, editableData });
+    approveSubmissionMutation.mutate({ submission, approvalData, itemDecisions, forceApprove, editableData, adminNote });
   };
 
   const handleRejectSubmission = (submission: SubmissionRecord, reason: string) => {
@@ -2449,7 +2789,7 @@ function AdminEvaluationPage({
                       variant={showSubmissionView ? 'secondary' : 'ghost'}
                       size="sm"
                       className="relative h-8 gap-1 px-2 text-xs lg:h-8 lg:w-8 lg:gap-1 lg:px-0"
-                      title={`사용자 제보/리뷰 검수 (제보 ${submissionsData.length}건, 리뷰 ${pendingReviewsCount}건)`}
+                      title={`사용자 제보/리뷰 검수 (제보 ${submissionsData.length}건, 추천 ${pendingRecommendationCount}건, 리뷰 ${pendingReviewsCount}건)`}
                       aria-label={`사용자 제보/리뷰 검수, 대기 ${totalPendingCount}건`}
                     >
                       <Send className="h-4 w-4 shrink-0" />
@@ -2555,12 +2895,15 @@ function AdminEvaluationPage({
         {showSubmissionView ? (
           /* 사용자 제보 목록 검수 뷰 */
           <SubmissionListView
-            submissions={submissionsData}
+            submissions={allSubmissionRecords}
             onApprove={handleApproveSubmission}
             onReject={handleRejectSubmission}
             onDelete={handleDeleteSubmission}
-            onRefresh={() => queryClient.invalidateQueries({ queryKey: ['admin-submissions'] })}
-            loading={submissionsLoading || approveSubmissionMutation.isPending || rejectSubmissionMutation.isPending || deleteSubmissionMutation.isPending}
+            onRefresh={() => {
+              queryClient.invalidateQueries({ queryKey: ['admin-submissions-inline'] });
+              queryClient.invalidateQueries({ queryKey: ['admin-restaurant-requests-inline'] });
+            }}
+            loading={submissionsLoading || recommendationRequestsLoading || approveSubmissionMutation.isPending || rejectSubmissionMutation.isPending || deleteSubmissionMutation.isPending}
             reviews={reviewsData as Review[]}
             onApproveReview={handleApproveReview}
             onRejectReview={handleRejectReview}
