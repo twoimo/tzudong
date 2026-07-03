@@ -8,6 +8,12 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth/require-admin';
 import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
+import {
+    GUARDED_MUTATION_CONFIRMATION,
+    buildGuardedMutationRequiredResponse,
+    getGuardedMutationErrorName,
+    isGuardedMutationConfirmationValid,
+} from '@/lib/admin/guarded-mutation-contract';
 
 export const runtime = 'nodejs';
 
@@ -16,12 +22,26 @@ const GITHUB_TOKEN = process.env.GITHUB_TOKEN!;
 const GITHUB_OWNER = process.env.GITHUB_OWNER!;
 const GITHUB_REPO = process.env.GITHUB_REPO!;
 
+function hasGuardedMutationConfirmation(
+    request: Request,
+    body: { guardedMutationConfirmation?: string },
+): boolean {
+    return (
+        isGuardedMutationConfirmationValid(body.guardedMutationConfirmation) ||
+        isGuardedMutationConfirmationValid(request.headers.get('x-admin-guarded-mutation-confirmation'))
+    );
+}
+
 export async function POST(request: Request) {
     try {
         const auth = await requireAdmin();
         if (!auth.ok) return auth.response;
 
-        const { reviewId } = await request.json();
+        const body = await request.json().catch(() => ({})) as {
+            reviewId?: string;
+            guardedMutationConfirmation?: string;
+        };
+        const { reviewId } = body;
 
         if (!reviewId) {
             return NextResponse.json(
@@ -29,6 +49,15 @@ export async function POST(request: Request) {
                 { status: 400 }
             );
         }
+
+        if (!hasGuardedMutationConfirmation(request, body)) {
+            return NextResponse.json(
+                buildGuardedMutationRequiredResponse('ocr_receipt', 'rerun'),
+                { status: 400 }
+            );
+        }
+
+        const correlationId = `ocr-rerun-${reviewId}-${Date.now()}`;
 
         const supabase = createSupabaseServiceRoleClient();
 
@@ -78,7 +107,13 @@ export async function POST(request: Request) {
 
         if (!workflowPreflightResponse.ok) {
             await workflowPreflightResponse.text().catch(() => null);
-            console.error('GitHub OCR workflow preflight failed:', workflowPreflightResponse.status);
+            console.error('[admin/ocr-receipts/rerun] guarded mutation preflight failed', {
+                domain: 'ocr_receipt',
+                action: 'rerun',
+                step: 'workflow-preflight',
+                status: workflowPreflightResponse.status,
+                correlationId,
+            });
             return NextResponse.json(
                 {
                     error: `GitHub Actions 권한 확인 실패: ${workflowPreflightResponse.status}. OCR 데이터를 초기화하지 않았습니다.`,
@@ -88,6 +123,7 @@ export async function POST(request: Request) {
                 { status: workflowPreflightResponse.status === 401 || workflowPreflightResponse.status === 403 ? 502 : 503 }
             );
         }
+
 
         // 3. OCR 데이터 초기화 (재처리 대상으로 만들기)
         const previousOcrState = {
@@ -107,7 +143,13 @@ export async function POST(request: Request) {
             .eq('id', reviewId);
 
         if (updateError) {
-            console.error('OCR 초기화 실패:', updateError);
+            console.error('[admin/ocr-receipts/rerun] guarded mutation reset failed', {
+                domain: 'ocr_receipt',
+                action: 'rerun',
+                step: 'ocr-reset',
+                correlationId,
+                errorName: getGuardedMutationErrorName(updateError),
+            });
             return NextResponse.json(
                 { error: 'OCR 초기화에 실패했습니다.', step: 'ocr-reset' },
                 { status: 500 }
@@ -136,7 +178,13 @@ export async function POST(request: Request) {
 
         if (!response.ok) {
             await response.text().catch(() => null);
-            console.error('GitHub API 오류:', response.status);
+            console.error('[admin/ocr-receipts/rerun] guarded mutation dispatch failed', {
+                domain: 'ocr_receipt',
+                action: 'rerun',
+                step: 'workflow-dispatch',
+                status: response.status,
+                correlationId,
+            });
             const { error: rollbackError } = await supabase
                 .from('reviews')
                 .update(previousOcrState)
@@ -147,6 +195,21 @@ export async function POST(request: Request) {
                     step: 'workflow-dispatch',
                     resetRolledBack: !rollbackError,
                     rollbackError: rollbackError ? 'OCR 초기화 롤백에 실패했습니다. 수동 확인이 필요합니다.' : null,
+                    guardedMutation: {
+                        domain: 'ocr_receipt',
+                        action: 'rerun',
+                        confirmation: GUARDED_MUTATION_CONFIRMATION,
+                        readback: {
+                            resetApplied: true,
+                            resetRolledBack: !rollbackError,
+                            workflowDispatched: false,
+                            reviewId,
+                        },
+                        audit: {
+                            source: 'github-actions-workflow-dispatch',
+                            correlationId,
+                        },
+                    },
                 },
                 { status: response.status === 401 || response.status === 403 ? 502 : response.status }
             );
@@ -156,10 +219,29 @@ export async function POST(request: Request) {
             success: true,
             message: 'OCR 재실행이 시작되었습니다. 약 30~40초 후 결과가 반영됩니다.',
             reviewId,
+            guardedMutation: {
+                domain: 'ocr_receipt',
+                action: 'rerun',
+                confirmation: GUARDED_MUTATION_CONFIRMATION,
+                readback: {
+                    resetApplied: true,
+                    workflowDispatched: true,
+                    reviewId,
+                },
+                audit: {
+                    source: 'github-actions-workflow-dispatch',
+                    correlationId,
+                },
+            },
         });
 
     } catch (err) {
-        console.error('OCR 재실행 오류:', err);
+        console.error('[admin/ocr-receipts/rerun] guarded mutation failed', {
+            domain: 'ocr_receipt',
+            action: 'rerun',
+            step: 'unexpected',
+            errorName: getGuardedMutationErrorName(err),
+        });
         return NextResponse.json(
             { error: 'OCR 재실행을 시작하지 못했습니다.' },
             { status: 500 }

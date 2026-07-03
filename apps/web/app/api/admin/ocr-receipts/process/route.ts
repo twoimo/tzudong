@@ -20,6 +20,13 @@ import sharp from 'sharp';
 import { requireAdmin } from '@/lib/auth/require-admin';
 import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
 import { getGeminiOcrModels, getGeminiOcrThinkingLevel } from '@/lib/ocr/gemini';
+import {
+    GUARDED_MUTATION_CONFIRMATION,
+    buildGuardedMutationRequiredResponse,
+    getGuardedMutationErrorName,
+    isGuardedMutationConfirmationValid,
+    isInlineOcrProcessEnabled,
+} from '@/lib/admin/guarded-mutation-contract';
 
 export const runtime = 'nodejs';
 
@@ -155,7 +162,13 @@ async function uploadToStorage(localPath: string, storagePath: string): Promise<
         });
 
     if (error) {
-        console.error('업로드 실패:', storagePath);
+        console.error('[admin/ocr-receipts/process] storage upload failed', {
+            domain: 'ocr_receipt',
+            action: 'inline_process',
+            step: 'storage-upload',
+            bucket: 'review-photos',
+            errorName: getGuardedMutationErrorName(error),
+        });
         return null;
     }
 
@@ -202,27 +215,104 @@ function cleanupTempDir(dirPath: string) {
             fs.rmSync(/* turbopackIgnore: true */ dirPath, { recursive: true, force: true });
         }
     } catch (e) {
-        console.error(`임시 디렉토리 정리 실패: ${e}`);
+        console.error('[admin/ocr-receipts/process] temp cleanup failed', {
+            domain: 'ocr_receipt',
+            action: 'inline_process',
+            step: 'temp-cleanup',
+            errorName: getGuardedMutationErrorName(e),
+        });
     }
+}
+
+type InlineOcrProcessBody = {
+    reviewId?: unknown;
+    guardedMutationConfirmation?: unknown;
+};
+
+function hasGuardedMutationConfirmation(
+    request: Request,
+    body: InlineOcrProcessBody,
+): boolean {
+    return (
+        isGuardedMutationConfirmationValid(
+            typeof body.guardedMutationConfirmation === 'string'
+                ? body.guardedMutationConfirmation
+                : undefined,
+        ) ||
+        isGuardedMutationConfirmationValid(request.headers.get('x-admin-guarded-mutation-confirmation'))
+    );
+}
+
+function buildInlineOcrGuardedMutation(
+    correlationId: string,
+    readback: Record<string, unknown>,
+) {
+    return {
+        domain: 'ocr_receipt',
+        action: 'inline_process',
+        confirmation: GUARDED_MUTATION_CONFIRMATION,
+        readback,
+        audit: {
+            source: 'local-inline-ocr-process',
+            correlationId,
+        },
+    };
+}
+
+function getSafeOcrFailureCode(value: unknown): string {
+    if (typeof value !== 'string') return 'low_confidence';
+    const trimmed = value.trim();
+    if (!/^[a-z0-9_-]{1,64}$/i.test(trimmed)) return 'ocr_failed';
+    return trimmed;
 }
 
 export async function POST(request: Request) {
     const auth = await requireAdmin();
     if (!auth.ok) return auth.response;
 
+    if (!isInlineOcrProcessEnabled()) {
+        return NextResponse.json(
+            buildGuardedMutationRequiredResponse('ocr_receipt', 'inline_process'),
+            { status: 403 }
+        );
+    }
+
+    const body = await request.json().catch(() => null) as InlineOcrProcessBody | null;
+    const correlationId = `ocr-inline-${crypto.randomUUID()}`;
+
+    if (!hasGuardedMutationConfirmation(request, body ?? {})) {
+        return NextResponse.json(
+            buildGuardedMutationRequiredResponse('ocr_receipt', 'inline_process'),
+            { status: 400 }
+        );
+    }
+
+    const reviewId = typeof body?.reviewId === 'string' ? body.reviewId.trim() : '';
+    if (!reviewId) {
+        return NextResponse.json(
+            { error: '리뷰 ID가 필요합니다.' },
+            { status: 400 }
+        );
+    }
+
+    if (!GEMINI_API_KEY?.trim()) {
+        return NextResponse.json(
+            {
+                error: 'OCR provider is not configured.',
+                guardedMutation: buildInlineOcrGuardedMutation(correlationId, {
+                    reviewId,
+                    providerConfigured: false,
+                    applied: false,
+                }),
+            },
+            { status: 503 }
+        );
+    }
+
     const tempDir = path.join(os.tmpdir(), `ocr-${Date.now()}`);
     const supabase = getSupabaseAdmin();
 
     try {
-        const { reviewId } = await request.json();
-
-        if (!reviewId) {
-            return NextResponse.json(
-                { error: '리뷰 ID가 필요합니다.' },
-                { status: 400 }
-            );
-        }
-
         // 1. 리뷰 조회
         const { data: review, error: fetchError } = await supabase
             .from('reviews')
@@ -269,11 +359,31 @@ export async function POST(request: Request) {
         try {
             preprocessResult = await runPythonPreprocess(tempInputPath, preprocessOutputDir);
         } catch (preprocessError) {
-            console.warn('전처리 실패, 원본 사용:', preprocessError);
+            console.warn('[admin/ocr-receipts/process] preprocess fallback used', {
+                domain: 'ocr_receipt',
+                action: 'inline_process',
+                step: 'preprocess',
+                correlationId,
+                errorName: getGuardedMutationErrorName(preprocessError),
+            });
             preprocessResult = { warped: tempInputPath };
         }
 
-        // 4. 중간 단계 이미지 업로드
+        // 4. Gemini OCR provider preparation happens before debug-stage storage writes.
+        const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+        const geminiOcrModel = getGeminiOcrModels(process.env)[0];
+        const geminiOcrThinkingLevel = getGeminiOcrThinkingLevel(process.env);
+        const generationConfig = {
+            temperature: 0,
+            responseMimeType: 'application/json',
+            thinkingConfig: { thinkingLevel: geminiOcrThinkingLevel },
+        };
+        const model = genAI.getGenerativeModel({
+            model: geminiOcrModel,
+            generationConfig,
+        });
+
+        // 5. 중간 단계 이미지 업로드
         const stages: Record<string, string> = {};
         const stageNames = ['warped'];  // 최종 이미지만 저장 (스토리지 최적화)
 
@@ -288,20 +398,7 @@ export async function POST(request: Request) {
             }
         }
 
-        // 5. Gemini OCR 실행
-        const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-        const geminiOcrModel = getGeminiOcrModels(process.env)[0];
-        const geminiOcrThinkingLevel = getGeminiOcrThinkingLevel(process.env);
-        const generationConfig = {
-            temperature: 0,
-            responseMimeType: 'application/json',
-            thinkingConfig: { thinkingLevel: geminiOcrThinkingLevel },
-        };
-        const model = genAI.getGenerativeModel({
-            model: geminiOcrModel,
-            generationConfig,
-        });
-
+        // 6. Gemini OCR 실행
         const finalImagePath = preprocessResult.warped || tempInputPath;
         const finalImageBuffer = fs.readFileSync(/* turbopackIgnore: true */ finalImagePath);
         const imageBase64 = finalImageBuffer.toString('base64');
@@ -318,16 +415,18 @@ export async function POST(request: Request) {
 
         const responseText = result.response.text();
         const ocrData = parseOCRResponse(responseText) as Record<string, unknown>;
+        const stageKeys = Object.keys(stages);
 
-        // 6. OCR 실패 처리
+        // 7. OCR 실패 처리
         if (ocrData.error || (ocrData.confidence as number) < 0.5) {
+            const errorCode = getSafeOcrFailureCode(ocrData.error || 'low_confidence');
             await supabase
                 .from('reviews')
                 .update({
                     receipt_data: {
-                        error: ocrData.error || 'low_confidence',
+                        error: errorCode,
                         raw: ocrData,
-                        stages: Object.keys(stages).length > 0 ? stages : undefined
+                        stages: stageKeys.length > 0 ? stages : undefined
                     },
                     ocr_processed_at: new Date().toISOString(),
                 })
@@ -336,12 +435,21 @@ export async function POST(request: Request) {
             return NextResponse.json({
                 success: false,
                 message: 'OCR 처리 실패',
-                error: ocrData.error || 'low_confidence',
-                stages,
+                error: errorCode,
+                stageKeys,
+                stageCount: stageKeys.length,
+                guardedMutation: buildInlineOcrGuardedMutation(correlationId, {
+                    reviewId,
+                    applied: true,
+                    success: false,
+                    ocrProcessed: true,
+                    stageKeys,
+                    stageCount: stageKeys.length,
+                }),
             });
         }
 
-        // 7. 해시 및 중복 검사
+        // 8. 해시 및 중복 검사
         const receiptHash = generateReceiptHash(ocrData as { store_name?: string; date?: string; time?: string; total_amount?: number });
 
         const { data: existingReviews } = await supabase
@@ -353,7 +461,7 @@ export async function POST(request: Request) {
         const isDuplicate = existingReviews && existingReviews.length > 0;
         const duplicateOfId = isDuplicate ? existingReviews[0].id : null;
 
-        // 8. DB 업데이트
+        // 9. DB 업데이트
         const updateData = {
             receipt_hash: isDuplicate ? null : receiptHash,
             receipt_data: isDuplicate
@@ -372,7 +480,7 @@ export async function POST(request: Request) {
             throw new Error('DB 업데이트 실패');
         }
 
-        // 9. OCR 성공 후: 이미지를 WebP로 압축하여 스토리지 용량 절약
+        // 10. OCR 성공 후: 이미지를 WebP로 압축하여 스토리지 용량 절약
         let compressionResult = '원본 유지';
         try {
             const originalStoragePath = review.verification_photo;
@@ -413,20 +521,41 @@ export async function POST(request: Request) {
                 compressionResult = `WebP 압축 완료 (${savings}% 절약, ${Math.round(compressedSize / 1024)}KB)`;
             }
         } catch (compressError) {
-            console.warn('WebP 압축 실패 (원본 유지):', compressError);
+            console.warn('[admin/ocr-receipts/process] image compression skipped', {
+                domain: 'ocr_receipt',
+                action: 'inline_process',
+                step: 'compression',
+                correlationId,
+                errorName: getGuardedMutationErrorName(compressError),
+            });
         }
 
         return NextResponse.json({
             success: true,
             message: isDuplicate ? 'OCR 처리 완료 (중복 의심)' : 'OCR 처리 완료',
-            data: ocrData,
-            stages,
             isDuplicate,
+            stageKeys,
+            stageCount: stageKeys.length,
             compression: compressionResult,
+            guardedMutation: buildInlineOcrGuardedMutation(correlationId, {
+                reviewId,
+                applied: true,
+                success: true,
+                isDuplicate,
+                ocrProcessed: true,
+                stageKeys,
+                stageCount: stageKeys.length,
+            }),
         });
 
     } catch (err) {
-        console.error('OCR 처리 오류:', err);
+        console.error('[admin/ocr-receipts/process] inline process failed', {
+            domain: 'ocr_receipt',
+            action: 'inline_process',
+            step: 'unexpected',
+            correlationId,
+            errorName: getGuardedMutationErrorName(err),
+        });
         return NextResponse.json(
             { error: 'OCR 처리에 실패했습니다.' },
             { status: 500 }

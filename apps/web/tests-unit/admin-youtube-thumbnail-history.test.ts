@@ -81,7 +81,7 @@ describe("admin youtube thumbnail history", () => {
       routeSource.indexOf("await persistLocalThumbnailHistory(responseResult, payloadWithRetrieval, process.env, { runId: generationRunId });"),
     );
     expect(routeSource).toContain("thumbnail_history_persist_failed");
-    expect(routeSource).toContain("return NextResponse.json(responseResult, { headers: noStoreHeaders });");
+    expect(routeSource).toContain("return NextResponse.json(buildThumbnailGenerationRouteResponse(responseResult), { headers: noStoreHeaders });");
   });
 
   test("resolves the default canonical root outside public history", () => {

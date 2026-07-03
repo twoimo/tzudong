@@ -93,6 +93,13 @@ import {
   type AdminSidebarOrderPreference,
 } from "@/lib/admin/sidebar-order";
 import { getMobileScrollNavVisibilityAction } from "@/lib/mobile-scroll-nav-visibility";
+import {
+  getAdminPendingCountsTotal,
+  getAdminPendingReviewCount,
+  getAdminPendingSubmissionCount,
+  normalizeAdminPendingCountsResponse,
+  type AdminPendingCountsResponse,
+} from "@/lib/admin/pending-counts";
 import { cn } from "@/lib/utils";
 import type { DashboardSummaryResponse } from "@/types/dashboard";
 import type {
@@ -103,6 +110,10 @@ import type {
   InsightTreemapQualityFlag,
 } from "@/lib/public-insights/treemap";
 import type { StoryboardInitialResult } from "@/lib/admin/storyboard/initial-result";
+import {
+  getAdminAuditCoverage,
+  type AdminAuditCoverage,
+} from "@/lib/admin/audit-contract";
 import {
   buildCanonicalAdminHrefFromSearchParams,
   buildCanonicalAdminModuleHref,
@@ -233,11 +244,11 @@ const consoleModules: ConsoleModule[] = [
     id: "audit",
     title: "감사 로그",
     description:
-      "승인·반려·삭제·복구 이력을 상태 재확인과 함께 추적하는 영역입니다.",
+      "사용자 관리 감사는 admin_audit_events 기준의 부분/도메인별 범위로 추적합니다.",
     href: "/admin?module=audit",
     icon: ScrollText,
-    badge: "준비 중",
-    actionLabel: "감사 기준 보기",
+    badge: "부분 감사",
+    actionLabel: "감사 범위 보기",
   },
   {
     id: "youtube-thumbnail-generator",
@@ -762,14 +773,13 @@ function createInitialAdminConsoleLoadedModuleIds() {
 }
 
 
-type AdminPendingCounts = {
-  submissions: number;
-  reviews: number;
-};
 
 type AdminOverviewStats = {
   pendingSubmissions: number | null;
   pendingReviews: number | null;
+  pendingRestaurantSubmissions: number | null;
+  pendingRecommendationRequests: number | null;
+  pendingTotal: number | null;
   totalRestaurants: number | null;
   totalVideos: number | null;
   withCoordinates: number | null;
@@ -853,6 +863,17 @@ type AdminYouTubeKpiCollectionLogs = {
     error?: string | null;
   };
 };
+type AdminAuditCoverageView = AdminAuditCoverage & {
+  label?: string;
+  summary?: string;
+  source?: string;
+  sources?: string[];
+  domain?: string;
+  domains?: string[];
+  mode?: string;
+  universal?: boolean;
+};
+
 type AdminAuditEvent = {
   id: string;
   actorUserId: string | null;
@@ -860,6 +881,9 @@ type AdminAuditEvent = {
   action: string;
   reason: string | null;
   status: string;
+  domain: string | null;
+  source: string | null;
+  readbackId: string | null;
   correlationId: string | null;
   appliedAt: string | null;
   errorCode: string | null;
@@ -870,6 +894,7 @@ type AdminAuditEvent = {
 type AdminAuditEventsResponse = {
   asOf: string;
   source: "admin_audit_events";
+  coverage?: AdminAuditCoverageView;
   events: AdminAuditEvent[];
   unavailable: {
     reason: string;
@@ -880,6 +905,96 @@ type AdminAuditUnavailableReason =
   | "admin-audit-events-read-failed"
   | "admin-audit-session-expired"
   | "admin-audit-admin-required";
+const adminAuditFallbackCoverage =
+  getAdminAuditCoverage() as AdminAuditCoverageView;
+
+function isRecordValue(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isAdminAuditCoveragePayload(value: unknown): value is AdminAuditCoverageView {
+  return (
+    isRecordValue(value) &&
+    value.mode === "truthful-partial-domain-specific" &&
+    value.universal === false
+  );
+}
+
+function isAdminAuditUnavailablePayload(
+  value: unknown,
+): value is AdminAuditEventsResponse["unavailable"] {
+  return (
+    value === null ||
+    (isRecordValue(value) &&
+      typeof value.reason === "string" &&
+      typeof value.message === "string")
+  );
+}
+
+function isAdminAuditEventsResponsePayload(
+  value: unknown,
+): value is AdminAuditEventsResponse {
+  return (
+    isRecordValue(value) &&
+    value.source === "admin_audit_events" &&
+    Array.isArray(value.events) &&
+    isAdminAuditCoveragePayload(value.coverage) &&
+    isAdminAuditUnavailablePayload(value.unavailable)
+  );
+}
+
+function getPayloadErrorMessage(value: unknown) {
+  return isRecordValue(value) && typeof value.error === "string"
+    ? value.error
+    : null;
+}
+
+function getAdminAuditCoverageLabel(
+  coverage: AdminAuditCoverageView | undefined,
+) {
+  return coverage?.universal === false
+    ? "부분/도메인별 감사 범위"
+    : (coverage?.label ?? "부분/도메인별 감사 범위");
+}
+
+function getAdminAuditCoverageSourceSummary(
+  coverage: AdminAuditCoverageView | undefined,
+) {
+  const sources =
+    coverage?.sources?.length
+      ? coverage.sources
+      : [
+          coverage?.primary?.source,
+          ...(coverage?.domainSpecific?.map((feed) => feed.source) ?? []),
+        ].filter((source): source is string => Boolean(source));
+  return (sources.length ? sources : ["admin_audit_events"]).join(" · ");
+}
+
+function getAdminAuditCoverageDomainSummary(
+  coverage: AdminAuditCoverageView | undefined,
+) {
+  const domains =
+    coverage?.domains?.length
+      ? coverage.domains
+      : [
+          coverage?.primary?.domain,
+          ...(coverage?.domainSpecific?.map((feed) => feed.domain) ?? []),
+        ].filter((domain): domain is string => Boolean(domain));
+  return (domains.length
+    ? domains
+    : ["admin_user_management", "restaurant_request_reviews"]
+  ).join(" · ");
+}
+
+function hasTruthfulAdminAuditCoverage(
+  coverage: AdminAuditCoverageView | undefined,
+) {
+  return (
+    coverage?.universal === false &&
+    coverage?.mode === "truthful-partial-domain-specific"
+  );
+}
+
 
 
 const E2E_ADMIN_SHELL_BYPASS_STORAGE_KEY = "tzudong:e2e-admin-shell-bypass";
@@ -1155,7 +1270,7 @@ function openAdminDashboardPdfReport(report: AdminDashboardPdfReportData) {
   }
 }
 
-async function fetchAdminPendingCounts(): Promise<AdminPendingCounts> {
+async function fetchAdminPendingCounts(): Promise<AdminPendingCountsResponse> {
   const response = await fetch("/api/admin/pending-counts", {
     headers: { Accept: "application/json" },
     cache: "no-store",
@@ -1165,7 +1280,7 @@ async function fetchAdminPendingCounts(): Promise<AdminPendingCounts> {
     throw new Error("admin-pending-counts-failed");
   }
 
-  return response.json() as Promise<AdminPendingCounts>;
+  return normalizeAdminPendingCountsResponse(await response.json());
 }
 
 async function fetchDashboardSummary(): Promise<DashboardSummaryResponse> {
@@ -1223,6 +1338,7 @@ function buildAdminAuditAuthUnavailableResponse(
   return {
     asOf: new Date().toISOString(),
     source: "admin_audit_events",
+    coverage: adminAuditFallbackCoverage,
     events: [],
     unavailable: {
       reason,
@@ -1238,25 +1354,22 @@ async function fetchAdminAuditEvents(): Promise<AdminAuditEventsResponse> {
     headers: { Accept: "application/json" },
     cache: "no-store",
   });
-  const payload = (await response.json().catch(() => null)) as
-    | AdminAuditEventsResponse
-    | { error?: string }
-    | null;
+  const payload = await response.json().catch(() => null);
 
   const authUnavailable = buildAdminAuditAuthUnavailableResponse(response.status);
   if (authUnavailable) return authUnavailable;
   if (!response.ok) {
-    if (payload && "unavailable" in payload && payload.unavailable) {
-      return payload as AdminAuditEventsResponse;
+    if (isAdminAuditEventsResponsePayload(payload) && payload.unavailable) {
+      return payload;
     }
-    throw new Error(
-      payload && "error" in payload && payload.error
-        ? payload.error
-        : "admin-audit-events-failed",
-    );
+    throw new Error(getPayloadErrorMessage(payload) ?? "admin-audit-events-failed");
   }
 
-  return payload as AdminAuditEventsResponse;
+  if (!isAdminAuditEventsResponsePayload(payload)) {
+    throw new Error("admin-audit-events-invalid-response");
+  }
+
+  return payload;
 }
 
 function useAdminOverviewStats(isAdmin: boolean): {
@@ -1281,10 +1394,21 @@ function useAdminOverviewStats(isAdmin: boolean): {
 
   const bannersQuery = useAdBannersAdmin(isAdmin);
   const banners = bannersQuery.data ?? [];
+  const pendingCounts = pendingCountsQuery.data ?? null;
+
   return {
     stats: {
-      pendingSubmissions: pendingCountsQuery.data?.submissions ?? null,
-      pendingReviews: pendingCountsQuery.data?.reviews ?? null,
+      pendingSubmissions: pendingCounts
+        ? getAdminPendingSubmissionCount(pendingCounts)
+        : null,
+      pendingRestaurantSubmissions: pendingCounts
+        ? pendingCounts.domains.restaurant_submissions.count
+        : null,
+      pendingRecommendationRequests: pendingCounts
+        ? pendingCounts.domains.restaurant_recommendation_requests.count
+        : null,
+      pendingTotal: pendingCounts ? getAdminPendingCountsTotal(pendingCounts) : null,
+      pendingReviews: pendingCounts ? getAdminPendingReviewCount(pendingCounts) : null,
       totalRestaurants: dashboardSummaryQuery.data?.totals.restaurants ?? null,
       totalVideos: dashboardSummaryQuery.data?.totals.videos ?? null,
       withCoordinates:
@@ -4235,7 +4359,7 @@ function AdminDashboardOpsSummaryCard({
           "설명: 위쪽은 운영 중인 데이터 수, 아래쪽은 확인이 필요한 데이터 수입니다.",
           "읽는 법: 막대는 같은 묶음 안에서 가장 큰 항목을 기준으로 얼마나 큰지 보여줍니다.",
           "막대 기준: 같은 묶음 안에서 가장 큰 항목을 100%로 두고 비교합니다.",
-          "계산식: 검수 리스크 합계 = 제보 대기 + 리뷰 대기 + 좌표 미완료 + 비활성 배너.",
+          "계산식: 검수 리스크 합계 = 제보 대기 + 추천 대기 + 리뷰 대기 + 좌표 미완료 + 비활성 배너.",
           "주의: 검수 리스크가 큰 항목부터 운영자가 먼저 확인해야 합니다.",
         ]}
         action={
@@ -6539,11 +6663,7 @@ function AdminDashboardManagementPanel({
   const commentCardTitle = hasPeriodGrowthComparison
     ? "기간 댓글 증가"
     : "기간 댓글 합계";
-  const pendingTotal =
-    typeof stats.pendingSubmissions === "number" &&
-    typeof stats.pendingReviews === "number"
-      ? stats.pendingSubmissions + stats.pendingReviews
-      : null;
+  const pendingTotal = stats.pendingTotal;
   const missingCoordinates =
     typeof stats.totalRestaurants === "number" &&
     typeof stats.withCoordinates === "number"
@@ -6574,8 +6694,13 @@ function AdminDashboardManagementPanel({
   const operationalLiabilities = [
     {
       label: "제보 대기",
-      value: formatNumber(stats.pendingSubmissions),
-      rawValue: stats.pendingSubmissions,
+      value: formatNumber(stats.pendingRestaurantSubmissions),
+      rawValue: stats.pendingRestaurantSubmissions,
+    },
+    {
+      label: "추천 대기",
+      value: formatNumber(stats.pendingRecommendationRequests),
+      rawValue: stats.pendingRecommendationRequests,
     },
     {
       label: "리뷰 대기",
@@ -7753,6 +7878,7 @@ function AdminSidebar({
   const [sidebarOrderMessage, setSidebarOrderMessage] = useState(
     "메뉴 순서는 관리자 계정별로 저장됩니다.",
   );
+  const [isSidebarOrderEditMode, setIsSidebarOrderEditMode] = useState(false);
   const orderedSidebarSections = useMemo(
     () => buildOrderedSidebarSections(sidebarOrder),
     [sidebarOrder],
@@ -8026,6 +8152,7 @@ function AdminSidebar({
       className="rounded-2xl bg-background/85 p-2"
       aria-label="메뉴 순서 설정"
       data-admin-sidebar-order-editor={placement}
+      data-admin-sidebar-order-edit-mode={isSidebarOrderEditMode ? "enabled" : "locked"}
       data-admin-sidebar-order-editor-density="compact"
     >
       <div className="mb-1.5 flex items-center justify-between gap-2 px-0.5">
@@ -8034,23 +8161,57 @@ function AdminSidebar({
             메뉴 순서
           </p>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-6 shrink-0 rounded-full px-2 text-[11px] font-bold"
-          disabled={!canLoadPreferences || isOrderLoading || isOrderSaving}
-          data-admin-sidebar-order-loading={isOrderLoading ? "true" : "false"}
-          onClick={() =>
-            void persistSidebarOrder(
-              DEFAULT_ADMIN_SIDEBAR_ORDER,
-              "처음 상태로 되돌렸습니다.",
-            )
-          }
-        >
-          초기화
-        </Button>
+        <div className="flex shrink-0 items-center gap-1">
+          <Button
+            type="button"
+            variant={isSidebarOrderEditMode ? "default" : "outline"}
+            size="sm"
+            className="h-6 shrink-0 rounded-full px-2 text-[11px] font-bold"
+            aria-pressed={isSidebarOrderEditMode}
+            data-admin-sidebar-order-edit-toggle="true"
+            onClick={() => {
+              setIsSidebarOrderEditMode((current) => !current);
+              setSidebarOrderMessage(
+                isSidebarOrderEditMode
+                  ? "메뉴 순서 편집을 잠갔습니다."
+                  : "메뉴 순서 편집을 켰습니다. 화살표로 변경 후 자동 저장됩니다.",
+              );
+            }}
+          >
+            {isSidebarOrderEditMode ? "편집 잠금" : "편집 켜기"}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-6 shrink-0 rounded-full px-2 text-[11px] font-bold"
+            disabled={
+              !isSidebarOrderEditMode ||
+              !canLoadPreferences ||
+              isOrderLoading ||
+              isOrderSaving
+            }
+            data-admin-sidebar-order-loading={isOrderLoading ? "true" : "false"}
+            onClick={() =>
+              void persistSidebarOrder(
+                DEFAULT_ADMIN_SIDEBAR_ORDER,
+                "처음 상태로 되돌렸습니다.",
+              )
+            }
+          >
+            초기화
+          </Button>
+        </div>
       </div>
+
+      {!isSidebarOrderEditMode && (
+        <p
+          className="mb-1.5 rounded-lg border border-dashed border-border bg-muted/25 px-2 py-1 text-[11px] leading-5 text-muted-foreground"
+          data-admin-sidebar-order-edit-lock-message="true"
+        >
+          순서 편집을 켜야 이동 버튼이 활성화됩니다.
+        </p>
+      )}
 
       <div className="space-y-2">
         {orderedSidebarSections.map((section, sectionIndex) => (
@@ -8072,6 +8233,7 @@ function AdminSidebar({
                   aria-label={`${section.label} 섹션 앞으로`}
                   disabled={
                     !canLoadPreferences ||
+                    !isSidebarOrderEditMode ||
                     isOrderLoading ||
                     sectionIndex === 0 ||
                     isOrderSaving
@@ -8093,6 +8255,7 @@ function AdminSidebar({
                   aria-label={`${section.label} 섹션 뒤로`}
                   disabled={
                     !canLoadPreferences ||
+                    !isSidebarOrderEditMode ||
                     isOrderLoading ||
                     sectionIndex === orderedSidebarSections.length - 1 ||
                     isOrderSaving
@@ -8128,6 +8291,7 @@ function AdminSidebar({
                       aria-label={`${item.title} 메뉴 앞으로`}
                       disabled={
                         !canLoadPreferences ||
+                        !isSidebarOrderEditMode ||
                         isOrderLoading ||
                         itemIndex === 0 ||
                         isOrderSaving
@@ -8154,6 +8318,7 @@ function AdminSidebar({
                       aria-label={`${item.title} 메뉴 뒤로`}
                       disabled={
                         !canLoadPreferences ||
+                        !isSidebarOrderEditMode ||
                         isOrderLoading ||
                         itemIndex === section.items.length - 1 ||
                         isOrderSaving
@@ -8759,11 +8924,25 @@ function AuditPlaceholder() {
     staleTime: 30 * 1000,
     refetchInterval: 60 * 1000,
   });
-  const events = auditEventsQuery.data?.events ?? [];
-  const unavailable = auditEventsQuery.data?.unavailable ?? null;
+  const auditPayload = auditEventsQuery.data;
+  const events = auditPayload?.events ?? [];
+  const unavailable = auditPayload?.unavailable ?? null;
+  const coverage = auditPayload?.coverage ?? adminAuditFallbackCoverage;
+  const isAuditCoverageMissing =
+    auditPayload !== undefined && !auditPayload.coverage;
+  const hasTruthfulCoverage =
+    !isAuditCoverageMissing && hasTruthfulAdminAuditCoverage(coverage);
   const isAuditAuthUnavailable =
     unavailable?.reason === "admin-audit-session-expired" ||
     unavailable?.reason === "admin-audit-admin-required";
+  const coverageBadgeLabel =
+    isAuditAuthUnavailable
+      ? "세션 확인 필요"
+      : unavailable || auditEventsQuery.isError
+        ? "읽기 확인 필요"
+        : hasTruthfulCoverage
+          ? `부분 감사 · ${events.length}개`
+          : "범위 확인 필요";
   const adminAuditLoginHref = "/?auth=login&reason=admin&next=%2Fadmin%3Fmodule%3Daudit";
 
   return (
@@ -8776,9 +8955,10 @@ function AuditPlaceholder() {
               감사 로그
             </CardTitle>
             <p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground">
-              사용자 생성·권한 변경 감사 이벤트를 admin_audit_events에서 읽어
-              최근 처리 상태와 감사 ID를 확인합니다. 읽기 권한이나 마이그레이션
-              문제가 있으면 성공처럼 숨기지 않고 사용 불가 상태를 표시합니다.
+              사용자 관리 감사 이벤트는 admin_audit_events 기준의 부분/도메인별
+              범위에서 읽습니다. 맛집 추천 검토 감사는 restaurant_request_review_audit의
+              별도 도메인별 읽기 경로로 구분하며, 전체 운영 변경을 포괄하는
+              범용 감사 로그처럼 표시하지 않습니다.
             </p>
           </div>
           <Badge
@@ -8789,18 +8969,36 @@ function AuditPlaceholder() {
                 ? "border-destructive/30 text-destructive"
                 : unavailable || auditEventsQuery.isError
                   ? "border-amber-300 text-amber-700"
-                  : "border-primary/30 text-primary",
+                  : hasTruthfulCoverage
+                    ? "border-primary/30 text-primary"
+                    : "border-amber-300 text-amber-700",
             )}
           >
-            {isAuditAuthUnavailable
-              ? "세션 확인 필요"
-              : unavailable || auditEventsQuery.isError
-                ? "읽기 확인 필요"
-                : `${events.length}개 표시`}
+            {coverageBadgeLabel}
           </Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
+        <div
+          className="rounded-2xl border border-border bg-muted/25 p-3 text-xs leading-5 text-muted-foreground"
+          data-admin-audit-coverage="partial-domain-specific"
+          data-admin-audit-coverage-source={getAdminAuditCoverageSourceSummary(coverage)}
+          data-admin-audit-coverage-domain={getAdminAuditCoverageDomainSummary(coverage)}
+          data-admin-audit-universal={coverage.universal ? "true" : "false"}
+        >
+          <p className="font-bold text-foreground">
+            {getAdminAuditCoverageLabel(coverage)}
+          </p>
+          <p className="mt-1">
+            소스: {getAdminAuditCoverageSourceSummary(coverage)} · 도메인:{" "}
+            {getAdminAuditCoverageDomainSummary(coverage)}
+          </p>
+          <p className="mt-1">
+            admin_audit_events는 사용자 관리 감사의 현재 1차 피드이며, 맛집 추천
+            검토 감사는 restaurant_request_review_audit의 별도 도메인별 경로입니다.
+          </p>
+        </div>
+
         {auditEventsQuery.isLoading ? (
           <div className="space-y-2" aria-label="감사 로그 로딩 중">
             <Skeleton className="h-16 rounded-2xl" />
@@ -8863,7 +9061,7 @@ function AuditPlaceholder() {
             data-admin-audit-empty-state="true"
           >
             아직 표시할 사용자 관리 감사 이벤트가 없습니다. 새 사용자 생성이나 권한 변경을 적용하면
-            intent → applied/failed 순서로 이 영역에 표시됩니다.
+            부분 감사 범위 안에서 intent → applied/failed 순서로 이 영역에 표시됩니다.
           </div>
         ) : null}
 
@@ -8902,6 +9100,21 @@ function AuditPlaceholder() {
                   <div>
                     <dt className="font-semibold text-foreground">대상</dt>
                     <dd className="break-all font-mono">{event.targetUserId ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold text-foreground">범위</dt>
+                    <dd className="break-all font-mono">
+                      {event.domain ?? "admin_user_management"} ·{" "}
+                      {event.source ?? "admin_audit_events"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold text-foreground">읽기 확인 ID</dt>
+                    <dd className="break-all font-mono">{event.readbackId ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold text-foreground">상관 ID</dt>
+                    <dd className="break-all font-mono">{event.correlationId ?? "—"}</dd>
                   </div>
                   {event.errorCode ? (
                     <div className="sm:col-span-2">
