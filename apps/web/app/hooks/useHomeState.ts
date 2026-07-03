@@ -42,6 +42,7 @@ export function useHomeState(mapMode: 'domestic' | 'overseas') {
         minReviews: 0,
         minUserVisits: 0,
         minJjyangVisits: 0,
+        featuredTheme: null,
     });
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
