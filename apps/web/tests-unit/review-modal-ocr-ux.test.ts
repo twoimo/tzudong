@@ -1,10 +1,13 @@
 import { describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
 import {
   addAiFilledField,
   getOcrProgressRank,
   shouldSuppressOcrAutoNavigation,
   type ReviewOcrFieldKey,
 } from '@/lib/ocr/review-modal-ocr-ux';
+
+const reviewModalSource = readFileSync(new URL('../components/reviews/ReviewModal.tsx', import.meta.url), 'utf8');
 
 describe('review modal OCR UX helpers', () => {
   test('suppresses automatic OCR navigation while the user is actively editing', () => {
@@ -58,5 +61,22 @@ describe('review modal OCR selected restaurant guard', () => {
       manuallyEditedRestaurant: false,
       fieldTrust: [{ field: 'store_name', level: 'high', source: 'db_exact' }],
     })).toBe(true);
+  });
+});
+
+describe('review modal OCR terminal recovery contract', () => {
+  test('keeps the receipt photo attached and reuses one terminal notice helper', () => {
+    expect(reviewModalSource).toContain('사진만 첨부하고 직접 입력');
+    expect(reviewModalSource).toContain('다시 분석');
+    expect(reviewModalSource).toContain('void analyzeReceipt(verificationPhoto)');
+    expect(reviewModalSource).toContain('disabled={!verificationPhoto || isAnalyzing || ocrLimitReached}');
+
+    expect(reviewModalSource.match(/const renderOcrFallbackNotice = \(\) =>/g)).toHaveLength(1);
+    expect(reviewModalSource.match(/\{renderOcrFallbackNotice\(\)\}/g)).toHaveLength(3);
+    expect(reviewModalSource).toContain("const isTerminalError = ocrFallbackNotice.type === 'error'");
+    expect(reviewModalSource).toContain('terminal?: boolean');
+    expect(reviewModalSource).toContain('status?: number');
+    expect(reviewModalSource).toContain('if (parsed.payload.terminal)');
+    expect(reviewModalSource).toContain('new OcrStreamHttpError(streamErrorMessage, parsed.payload.status ?? 422)');
   });
 });

@@ -1,10 +1,14 @@
 import { describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 import {
     buildGoogleMapOptions,
     getRestaurantLatLng,
     panGoogleMapToPosition,
 } from '../lib/map-view-google-helpers';
+
+const source = (relativePath: string) => readFileSync(join(import.meta.dir, '..', relativePath), 'utf8');
 
 describe('map view google helpers', () => {
     test('returns numeric restaurant coordinates', () => {
@@ -46,5 +50,15 @@ describe('map view google helpers', () => {
         });
 
         expect(calls).toEqual(['resize', 'pan:37.5,127', 'zoom:14']);
+    });
+
+    test('shows missing key before generic Google load errors and names InvalidKeyMapError', () => {
+        const mapViewSource = source('components/map/MapView.tsx');
+        const statusPanelSource = source('components/map/map-view-status-panels.tsx');
+
+        expect(mapViewSource.indexOf('if (!apiKey)')).toBeLessThan(
+            mapViewSource.indexOf('if (loadError || hasGoogleRuntimeError)'),
+        );
+        expect(statusPanelSource).toContain('InvalidKeyMapError');
     });
 });

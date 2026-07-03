@@ -22,7 +22,7 @@ import {
 } from "@/components/map/naver-map-sidepanels";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useDeviceType } from "@/hooks/useDeviceType";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchSupabaseRows, postgrestIn } from "@/lib/supabase-rest-client";
 import {
     buildDeviceLocationMarkerHtml,
     resolveDeviceLocationMapRenderPlan,
@@ -371,6 +371,9 @@ type VisibleMarkerReviewRow = Pick<
 >;
 
 type VisibleMarkerReviewProfileRow = Pick<Tables<'profiles'>, 'user_id' | 'nickname'>;
+const VISIBLE_MARKER_REVIEW_SELECT = 'id,restaurant_id,user_id,content,food_photos,created_at,is_pinned';
+const VISIBLE_MARKER_REVIEW_PROFILE_SELECT = 'user_id,nickname';
+
 
 function buildVisibleMarkerReviewSeed(
     zoom: number,
@@ -799,25 +802,31 @@ const NaverMapView = memo(({
         let isCancelled = false;
 
         const fetchVisibleMarkerReviewBubbles = async () => {
-            const { data: reviewsData, error: reviewsError } = await supabase
-                .from('reviews')
-                .select('id,restaurant_id,user_id,content,food_photos,created_at,is_pinned')
-                .in('restaurant_id', relatedRestaurantIds)
-                .eq('is_verified', true)
-                .order('is_pinned', { ascending: false })
-                .order('created_at', { ascending: false })
-                .limit(Math.max(visibleMarkerReviewBubbleTargets.length * 4, visibleMarkerReviewBubbleTargets.length));
+            const reviewLimit = Math.max(
+                visibleMarkerReviewBubbleTargets.length * 4,
+                visibleMarkerReviewBubbleTargets.length,
+            );
+            const reviewsData = await fetchSupabaseRows<VisibleMarkerReviewRow>('reviews', [
+                ['select', VISIBLE_MARKER_REVIEW_SELECT],
+                ['restaurant_id', postgrestIn(relatedRestaurantIds)],
+                ['is_verified', 'eq.true'],
+                ['order', 'is_pinned.desc,created_at.desc'],
+                ['limit', reviewLimit],
+            ]).catch((error) => {
+                console.warn('NaverMapView: review bubble fetch skipped', error);
+                return [] as VisibleMarkerReviewRow[];
+            });
 
             if (isCancelled) return;
 
-            if (reviewsError || !reviewsData?.length) {
+            if (!reviewsData.length) {
                 setVisibleMarkerReviewBubbles((previous) =>
                     Object.keys(previous).length === 0 ? previous : {}
                 );
                 return;
             }
 
-            const typedReviews = reviewsData as VisibleMarkerReviewRow[];
+            const typedReviews = reviewsData;
             const userIds = [
                 ...new Set(
                     typedReviews
@@ -825,12 +834,15 @@ const NaverMapView = memo(({
                         .filter((userId): userId is string => typeof userId === 'string' && userId.length > 0),
                 ),
             ];
-            const { data: profilesData } = userIds.length > 0
-                ? await supabase
-                    .from('profiles')
-                    .select('user_id,nickname')
-                    .in('user_id', userIds)
-                : { data: [] as VisibleMarkerReviewProfileRow[] };
+            const profilesData = userIds.length > 0
+                ? await fetchSupabaseRows<VisibleMarkerReviewProfileRow>('profiles', [
+                    ['select', VISIBLE_MARKER_REVIEW_PROFILE_SELECT],
+                    ['user_id', postgrestIn(userIds)],
+                ]).catch((error) => {
+                    console.warn('NaverMapView: review bubble profile fetch skipped', error);
+                    return [] as VisibleMarkerReviewProfileRow[];
+                })
+                : [];
 
             if (isCancelled) return;
 
