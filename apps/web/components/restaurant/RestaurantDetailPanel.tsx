@@ -988,25 +988,27 @@ export function RestaurantDetailPanel({
                             {showDesktopBackButton && !isMobile && viewMode === 'detail' && (
                                 <Button
                                     variant="outline"
-                                    size="icon"
+                                    size="sm"
                                     onClick={onClose}
-                                    title="상세 패널 닫기"
-                                    aria-label="상세 패널 닫기"
-                                    className="border-red-800 text-red-800 hover:border-red-900 hover:bg-red-50 hover:text-red-900 dark:border-red-500 dark:text-red-400 dark:hover:border-red-400 dark:hover:bg-red-950/30 dark:hover:text-red-300"
+                                    title="이전 목록으로 돌아가기"
+                                    aria-label="이전 목록으로 돌아가기"
+                                    className="h-9 shrink-0 rounded-full border-primary/40 px-3 text-primary hover:border-primary hover:bg-primary/5 hover:text-primary"
                                 >
-                                    <X className="h-4 w-4" aria-hidden="true" />
+                                    <ArrowLeft className="mr-1.5 h-4 w-4" aria-hidden="true" />
+                                    뒤로가기
                                 </Button>
                             )}
-                            {isMobile && (
+                            {isMobile && viewMode === 'detail' && (
                                 <Button
                                     variant="outline"
-                                    size="icon"
+                                    size="sm"
                                     onClick={onClose}
-                                    title="상세 바텀시트 닫기"
-                                    aria-label="상세 바텀시트 닫기"
-                                    className="border-red-800 text-red-800 hover:border-red-900 hover:bg-red-50 hover:text-red-900 dark:border-red-500 dark:text-red-400 dark:hover:border-red-400 dark:hover:bg-red-950/30 dark:hover:text-red-300"
+                                    title="이전 화면으로 돌아가기"
+                                    aria-label="이전 화면으로 돌아가기"
+                                    className="h-9 shrink-0 rounded-full border-primary/40 px-3 text-primary hover:border-primary hover:bg-primary/5 hover:text-primary"
                                 >
-                                    <X className="h-4 w-4" />
+                                    <ArrowLeft className="mr-1.5 h-4 w-4" aria-hidden="true" />
+                                    뒤로가기
                                 </Button>
                             )}
                         </div>
