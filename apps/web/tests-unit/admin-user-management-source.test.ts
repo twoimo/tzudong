@@ -42,6 +42,8 @@ describe('admin user-management source contract', () => {
     expect(panelSource).not.toContain('border-border bg-card/95 shadow-sm');
     expect(panelSource).not.toContain('rounded-xl border border-border bg-background/80 p-3');
     expect(panelSource).toContain('aria-live="polite"');
+    expect(panelSource).toContain('AdminUserMutationResponse');
+    expect(panelSource).toContain('감사 ID:');
     expect(panelSource).toContain('<caption className="sr-only">관리자 사용자 목록</caption>');
     expect(panelSource).toContain('role="alert"');
     expect(panelSource).not.toContain('AdminAccessGate');
@@ -52,6 +54,7 @@ describe('admin user-management source contract', () => {
     const updateRouteSource = source('app/api/admin/users/[userId]/route.ts');
     const serviceRoleSource = source('lib/supabase/service-role.ts');
     const auditSource = source('lib/admin/user-audit.ts');
+    const auditEventsRouteSource = source('app/api/admin/audit-events/route.ts');
     const requireAdminSource = source('lib/auth/require-admin.ts');
     const middlewareSource = source('lib/supabase/middleware.ts');
 
@@ -88,6 +91,17 @@ describe('admin user-management source contract', () => {
     expect(listRouteSource).toContain('recordFailedCreateAuditEvent');
     expect(listRouteSource).toContain("status: 'failed'");
     expect(listRouteSource).toContain('감사 기록 확정에 실패해 사용자 생성을 취소했습니다.');
+    expect(listRouteSource).toContain('감사 로그 준비에 실패해 사용자 생성을 시작하지 않았습니다.');
+    expect(listRouteSource).toContain("step: 'preflight-audit'");
+    expect(listRouteSource).toContain("auditId: failedAuditId");
+    expect(listRouteSource).toContain("failedStep: 'auth-user-create'");
+    expect(listRouteSource).toContain('deleteCreatedAuthUserWithReadback');
+    expect(listRouteSource).toContain('getUserById(userId)');
+    expect(listRouteSource).toContain('isAuthUserNotFoundReadback');
+    expect(listRouteSource).toContain('auth-user-cleanup-readback-failed');
+    expect(listRouteSource).toContain('auth-user-cleanup-readback-empty');
+    expect(listRouteSource).toContain('cleanupVerified: cleanup.verified');
+    expect(listRouteSource).toContain("step: 'unhandled-create-error'");
     expect(listRouteSource).toContain("failedStep: 'applied-audit'");
     expect(updateRouteSource).toContain('getActiveAdminUserIds');
     expect(updateRouteSource).toContain('recordFailedAuditEvent');
@@ -98,6 +112,11 @@ describe('admin user-management source contract', () => {
     expect(middlewareSource).toContain('user_account_status');
     expect(middlewareSource).toContain("accountStatus?.account_status === 'disabled'");
     expect(auditSource).not.toContain('service_role');
+    expect(auditEventsRouteSource).toContain('await requireAdmin()');
+    expect(auditEventsRouteSource).toContain('createSupabaseServiceRoleClient()');
+    expect(auditEventsRouteSource).toContain('.from("admin_audit_events")');
+    expect(auditEventsRouteSource).toContain('admin-audit-events-read-failed');
+    expect(auditEventsRouteSource).toContain('"Cache-Control": "no-store"');
   });
 
   test('does not keep ad-hoc service-role helper scripts in the web package root', () => {

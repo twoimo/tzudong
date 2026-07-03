@@ -35,8 +35,9 @@ describe('home map contextual visible-marker restaurants', () => {
     expect(naverMapSource).toContain('selectVisibleMarkerReviewBubbleTargets(reviewBubbleCandidateRestaurants');
     expect(naverMapSource).toContain('buildVisibleMarkerReviewSeed(currentZoom, extendedBounds)');
     expect(naverMapSource).toContain('wrapNaverMarkerContentWithReviewBubble(');
-    expect(naverMapSource).toContain(".from('reviews')");
-    expect(naverMapSource).toContain(".select('id,restaurant_id,user_id,content,food_photos,created_at,is_pinned')");
+    expect(naverMapSource).toContain("fetchSupabaseRows<VisibleMarkerReviewRow>('reviews'");
+    expect(naverMapSource).toContain("VISIBLE_MARKER_REVIEW_SELECT = 'id,restaurant_id,user_id,content,food_photos,created_at,is_pinned'");
+    expect(naverMapSource).not.toContain('import { supabase } from "@/integrations/supabase/client"');
     const rawCallbackIndex = naverMapSource.indexOf('onVisibleRestaurantsChange?.(swipeCandidates);');
     const contextualCallbackIndex = naverMapSource.indexOf('onContextualRestaurantsChange?.({');
     expect(rawCallbackIndex).toBeGreaterThan(0);

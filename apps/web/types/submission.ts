@@ -5,6 +5,7 @@ export type SubmissionType = 'new' | 'edit';
 
 // 제보 상태 (submissions 테이블)
 export type SubmissionStatus = 'pending' | 'approved' | 'partially_approved' | 'rejected';
+export type RecommendationStatus = 'pending' | 'approved' | 'rejected';
 
 // 개별 항목 상태 (items 테이블)
 export type ItemStatus = 'pending' | 'approved' | 'rejected';
@@ -14,15 +15,25 @@ export interface RestaurantRequest {
     id: string;
     user_id: string;
     restaurant_name: string;
-    address: string;
+    origin_address: string | null;
+    road_address: string | null;
+    jibun_address: string | null;
+    english_address: string | null;
     phone: string | null;
     categories: string[] | null;
-    recommendation_reason: string;
+    recommendation_reason: string | null;
     youtube_link: string | null;
     lat: number | null;
     lng: number | null;
-    geocoding_success: boolean;
+    geocoding_success: boolean | null;
+    status: RecommendationStatus;
+    reviewed_by_admin_id: string | null;
+    reviewed_at: string | null;
+    admin_note: string | null;
+    rejection_reason: string | null;
+    review_audit_id: string | null;
     created_at: string;
+    updated_at: string;
 }
 
 // restaurant_submissions 테이블
