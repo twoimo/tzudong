@@ -1,11 +1,27 @@
+import {
+  normalizeAdminPendingCountsResponse,
+  type AdminPendingCountDomain,
+  type AdminPendingCountDomainId,
+  type AdminPendingCountsResponse,
+} from '@/lib/admin/pending-counts';
 import type { AdminSystemRunDailyStatus, AdminSystemStatusChecklistItem, AdminSystemStatusResponse } from '@/types/admin-system-status';
 
 export type AdminStatusCenterState = 'healthy' | 'partial' | 'degraded' | 'unknown';
 
-export type AdminStatusCenterPendingCounts = {
-  submissions: number | null;
-  reviews: number | null;
-};
+export type AdminStatusCenterPendingCounts =
+  | AdminPendingCountsResponse
+  | {
+      submissions: number | null;
+      recommendationRequests?: number | null;
+      reviews: number | null;
+      total?: number | null;
+      recommendationRequestsLifecycleReady?: boolean | null;
+      domains?: Partial<Record<AdminPendingCountDomainId, Partial<AdminPendingCountDomain>>>;
+      readiness?: {
+        status?: 'ready' | 'degraded';
+        recommendationRequestsLifecycleReady?: boolean;
+      };
+    };
 
 export type AdminStatusCenterMetric = {
   id: 'run_daily' | 'artifacts' | 'gdrive' | 'pending';
@@ -40,6 +56,34 @@ function formatCount(value: number | null) {
   return typeof value === 'number' && Number.isFinite(value)
     ? new Intl.NumberFormat('ko-KR').format(value)
     : '—';
+}
+
+function isPendingCountUnavailable(pending: AdminStatusCenterPendingCounts): boolean {
+  return pending.submissions === null || pending.reviews === null;
+}
+
+function normalizePendingCountsForMetric(
+  pending: AdminStatusCenterPendingCounts,
+): AdminPendingCountsResponse | null {
+  if (isPendingCountUnavailable(pending)) return null;
+  return normalizeAdminPendingCountsResponse(pending);
+}
+
+function isPendingCountsDegraded(pending: AdminPendingCountsResponse): boolean {
+  return (
+    pending.readiness.status !== 'ready'
+    || pending.domains.restaurant_recommendation_requests.ready !== true
+    || pending.recommendationRequestsLifecycleReady !== true
+  );
+}
+
+function hasPendingLifecycleDegradation(pending: AdminStatusCenterPendingCounts): boolean {
+  return (
+    pending.recommendationRequestsLifecycleReady === false
+    || pending.recommendationRequestsLifecycleReady === null
+    || pending.readiness?.status === 'degraded'
+    || pending.readiness?.recommendationRequestsLifecycleReady === false
+  );
 }
 
 function classifyRunDailyMetric(runDaily: AdminSystemRunDailyStatus | undefined): AdminStatusCenterMetric {
@@ -289,8 +333,9 @@ function classifyGdriveMetric(runDaily: AdminSystemRunDailyStatus | undefined): 
 function buildPendingMetric(
   pending: AdminStatusCenterPendingCounts,
 ): AdminStatusCenterMetric {
+  const normalizedPending = normalizePendingCountsForMetric(pending);
 
-  if (pending.submissions === null || pending.reviews === null) {
+  if (!normalizedPending) {
     return {
       id: 'pending',
       label: '검수 대기',
@@ -300,15 +345,22 @@ function buildPendingMetric(
     };
   }
 
-  const submissions = pending.submissions;
-  const reviews = pending.reviews;
-  const total = submissions + reviews;
+  const restaurantSubmissions = normalizedPending.domains.restaurant_submissions.count;
+  const recommendationRequests =
+    normalizedPending.domains.restaurant_recommendation_requests.count;
+  const reviews = normalizedPending.domains.reviews.count;
+  const total = normalizedPending.total;
+  const degraded =
+    isPendingCountsDegraded(normalizedPending) || hasPendingLifecycleDegradation(pending);
+
   return {
     id: 'pending',
     label: '검수 대기',
     value: `${formatCount(total)}건`,
-    detail: `제보 ${formatCount(pending.submissions)}건 · 리뷰 ${formatCount(pending.reviews)}건`,
-    state: total > 0 ? 'partial' : 'healthy',
+    detail: degraded
+      ? `제보 ${formatCount(restaurantSubmissions)}건 · 추천 ${formatCount(recommendationRequests)}건 · 리뷰 ${formatCount(reviews)}건 · 추천 요청 lifecycle 확인 필요`
+      : `제보 ${formatCount(restaurantSubmissions)}건 · 추천 ${formatCount(recommendationRequests)}건 · 리뷰 ${formatCount(reviews)}건`,
+    state: degraded ? 'degraded' : total > 0 ? 'partial' : 'healthy',
   };
 }
 

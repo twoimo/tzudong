@@ -3344,18 +3344,22 @@ setTimeout(() => {}, 30_000);
       },
     }));
 
-    const routeModule = await import(`../app/api/admin/youtube-thumbnail-generator/chat/route.ts?cache=${Math.random()}`);
-    const response = await routeModule.POST(new Request("http://localhost/api/admin/youtube-thumbnail-generator/chat", {
-      method: "POST",
-      body: JSON.stringify({ message: "   " }),
-      headers: { "Content-Type": "application/json" },
-    }) as unknown as NextRequest);
-    const payload = await response.json() as { error: string; detail?: string };
+    try {
+      const routeModule = await import(`../app/api/admin/youtube-thumbnail-generator/chat/route.ts?cache=${Math.random()}`);
+      const response = await routeModule.POST(new Request("http://localhost/api/admin/youtube-thumbnail-generator/chat", {
+        method: "POST",
+        body: JSON.stringify({ message: "   " }),
+        headers: { "Content-Type": "application/json" },
+      }) as unknown as NextRequest);
+      const payload = await response.json() as { error: string; detail?: string };
 
-    expect(response.status).toBe(400);
-    expect(payload.error).toBe("thumbnail_chat_message_required");
-    expect(payload.detail).toContain("채팅 메시지");
-    expect(backendAgentCalls).toBe(0);
+      expect(response.status).toBe(400);
+      expect(payload.error).toBe("thumbnail_chat_message_required");
+      expect(payload.detail).toContain("채팅 메시지");
+      expect(backendAgentCalls).toBe(0);
+    } finally {
+      mock.restore();
+    }
   });
 
 
@@ -3566,11 +3570,15 @@ test("youtube thumbnail release candidates ignore exact food-only defaults witho
   }
 });
 
-function createFakeThumbnailReleaseRegistryAdapter(initialRows: Array<Record<string, unknown>> = [], options: { failPublish?: boolean | unknown } = {}) {
+function createFakeThumbnailReleaseRegistryAdapter(initialRows: Array<Record<string, unknown>> = [], options: { failRead?: boolean | unknown; failPublish?: boolean | unknown } = {}) {
   const rows: Array<Record<string, unknown>> = [...initialRows];
   const uploads: Array<{ bucket: string; objectPath: string; bytes: Buffer }> = [];
   const adapter: ThumbnailReleaseRegistryAdapter = {
     async readCurrentRelease(releaseKey: string) {
+      if (options.failRead) {
+        if (options.failRead === true) throw new Error("fake_read_failed");
+        throw options.failRead;
+      }
       return rows.find((row) => row.release_key === releaseKey && row.status === "active") as never ?? null;
     },
     async publishRelease(row) {
@@ -3657,6 +3665,18 @@ test("youtube thumbnail durable release readback strips private source quality g
   } as NodeJS.ProcessEnv, { adapter: fake.adapter });
 
   expect(payload.status).toBe("ready");
+  expect(payload.readiness).toMatchObject({
+    provider: "youtube-thumbnail-durable-release",
+    status: "ready",
+    reasonCode: "ready",
+    diagnostics: {
+      durableRegistryAvailable: true,
+      releaseKey: "youtube-thumbnail-generator/current",
+      durableReason: "ready",
+      warningCount: 0,
+      hasRelease: true,
+    },
+  });
   expect(payload.release?.sourceQualityGate).toMatchObject({
     candidateId: "01-safe",
     providerId: "local-codex",
@@ -3772,6 +3792,17 @@ test("youtube thumbnail durable release registry fails soft when Supabase env an
     expect(payload.diagnostics.reason).toBe("missing_supabase_env");
     expect(payload.diagnostics.warnings).toContain("local-release-candidate-fallback-unavailable");
     expect(payload.release).toBeNull();
+    expect(payload.readiness).toMatchObject({
+      provider: "youtube-thumbnail-durable-release",
+      status: "unavailable",
+      reasonCode: "missing_supabase_env",
+      diagnostics: {
+        durableRegistryAvailable: false,
+        durableReason: "missing_supabase_env",
+        warningCount: 1,
+        hasRelease: false,
+      },
+    });
   } finally {
     rmSync(tempDir, { recursive: true, force: true });
   }
@@ -3871,6 +3902,17 @@ test("youtube thumbnail durable release registry uses an already mirrored local 
     expect(payload.diagnostics.durableRegistryAvailable).toBe(false);
     expect(payload.diagnostics.reason).toBe("local_release_candidate_fallback");
     expect(payload.diagnostics.warnings).toContain("durable-registry-unavailable:missing_supabase_env");
+    expect(payload.readiness).toMatchObject({
+      provider: "youtube-thumbnail-durable-release",
+      status: "degraded",
+      reasonCode: "local_release_candidate_fallback",
+      diagnostics: {
+        durableRegistryAvailable: false,
+        durableReason: "local_release_candidate_fallback",
+        warningCount: 2,
+        hasRelease: true,
+      },
+    });
     expect(payload.release?.candidateId).toBe("01-local-fallback");
     expect(payload.release?.browserImagePath).toBe("/qa-history/youtube-thumbnail-generator/release-candidates/01-local-fallback-4b5c5c92cec3.png");
     expect(payload.release?.model).toBe("gpt-image-2");
@@ -3879,6 +3921,61 @@ test("youtube thumbnail durable release registry uses an already mirrored local 
     expect(JSON.stringify(payload)).not.toContain(".omx/artifacts");
     expect(JSON.stringify(payload)).not.toContain("storage_object_path");
     expect(existsSync(publicImagePath)).toBe(true);
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+test("youtube thumbnail durable release readiness reports empty active registry and missing table without leaking internals", async () => {
+  const tempDir = mkdtempSync(join(tmpdir(), "thumbnail-durable-release-readiness-"));
+  try {
+    const repoRoot = tempDir;
+    const webRoot = join(repoRoot, "apps", "web");
+    mkdirSync(webRoot, { recursive: true });
+    writeFileSync(join(webRoot, "package.json"), "{}", "utf8");
+    const env = {
+      NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co",
+      SUPABASE_SERVICE_ROLE_KEY: "service-role-test",
+    } as NodeJS.ProcessEnv;
+
+    const empty = createFakeThumbnailReleaseRegistryAdapter();
+    const emptyPayload = await readCurrentThumbnailDurableRelease(env, { adapter: empty.adapter, repoRoot, webRoot });
+    expect(emptyPayload.status).toBe("empty");
+    expect(emptyPayload.diagnostics.reason).toBe("durable_release_empty");
+    expect(emptyPayload.readiness).toMatchObject({
+      provider: "youtube-thumbnail-durable-release",
+      status: "degraded",
+      reasonCode: "durable_release_empty",
+      diagnostics: {
+        durableRegistryAvailable: true,
+        durableReason: "durable_release_empty",
+        warningCount: 0,
+        hasRelease: false,
+      },
+    });
+
+    const missingTableError = Object.assign(new Error("Could not find the table public.youtube_thumbnail_releases in the schema cache at C:/secret/storage_object_path.png"), { code: "PGRST205" });
+    const missingTable = createFakeThumbnailReleaseRegistryAdapter([], { failRead: missingTableError });
+    const missingTablePayload = await readCurrentThumbnailDurableRelease(env, { adapter: missingTable.adapter, repoRoot, webRoot });
+    expect(missingTablePayload.status).toBe("unavailable");
+    expect(missingTablePayload.diagnostics.reason).toBe("missing_release_table");
+    expect(missingTablePayload.readiness).toMatchObject({
+      provider: "youtube-thumbnail-durable-release",
+      status: "unavailable",
+      reasonCode: "missing_release_table",
+      diagnostics: {
+        durableRegistryAvailable: false,
+        durableReason: "missing_release_table",
+        warningCount: 1,
+        hasRelease: false,
+      },
+    });
+
+    const serialized = JSON.stringify([emptyPayload, missingTablePayload]);
+    expect(serialized).not.toContain("C:/secret");
+    expect(serialized).not.toContain("storage_object_path");
+    expect(serialized).not.toContain("service-role-test");
+    expect(serialized).not.toContain("SUPABASE_SERVICE_ROLE_KEY");
   } finally {
     rmSync(tempDir, { recursive: true, force: true });
   }
@@ -4006,6 +4103,16 @@ test("youtube thumbnail durable publish maps missing registry RPC to unavailable
 
     expect(payload.status).toBe("unavailable");
     expect(payload.diagnostics.reason).toBe("missing_release_table");
+    expect(payload.readiness).toMatchObject({
+      provider: "youtube-thumbnail-durable-release",
+      status: "unavailable",
+      reasonCode: "missing_release_table",
+      diagnostics: {
+        durableRegistryAvailable: false,
+        durableReason: "missing_release_table",
+        hasRelease: false,
+      },
+    });
     expect(fake.uploads).toHaveLength(0);
     expect(fake.rows).toHaveLength(0);
   } finally {
@@ -4102,48 +4209,74 @@ test("youtube thumbnail durable asset proxy rejects corrupted storage bucket or 
   }
 });
 
-test("youtube thumbnail durable release routes return 503 when the durable registry is unavailable", async () => {
+test("youtube thumbnail durable release routes return 503 with readiness when the durable registry is unavailable", async () => {
+  const unavailableReadiness = {
+    provider: "youtube-thumbnail-durable-release",
+    status: "unavailable",
+    reasonCode: "missing_supabase_env",
+    checkedAt: "2026-07-03T00:00:00.000Z",
+    remediation: "Supabase URL과 서버 관리자 키를 설정한 서버에서 durable registry를 다시 확인하세요.",
+    diagnostics: {
+      durableRegistryAvailable: false,
+      releaseKey: "youtube-thumbnail-generator/current",
+      durableReason: "missing_supabase_env",
+      warningCount: 0,
+      hasRelease: false,
+    },
+  } as const;
+  const unavailablePayload = {
+    status: "unavailable",
+    updatedAt: null,
+    release: null,
+    diagnostics: {
+      durableRegistryAvailable: false,
+      releaseKey: "youtube-thumbnail-generator/current",
+      reason: "missing_supabase_env",
+      warnings: [],
+    },
+    readiness: unavailableReadiness,
+  } as const;
+
   mock.module("@/lib/auth/require-admin", () => ({
     requireAdmin: async () => ({ ok: true, userId: "admin-user" }),
   }));
   mock.module("@/lib/admin/youtube-thumbnail-generator/release-registry", () => ({
-    readCurrentThumbnailDurableRelease: async () => ({
-      status: "unavailable",
-      updatedAt: null,
-      release: null,
-      diagnostics: {
-        durableRegistryAvailable: false,
-        releaseKey: "youtube-thumbnail-generator/current",
-        reason: "missing_supabase_env",
-        warnings: [],
-      },
-    }),
-    publishThumbnailDurableRelease: async () => ({
-      status: "unavailable",
-      updatedAt: null,
-      release: null,
-      diagnostics: {
-        durableRegistryAvailable: false,
-        releaseKey: "youtube-thumbnail-generator/current",
-        reason: "missing_supabase_env",
-        warnings: [],
-      },
-    }),
+    readCurrentThumbnailDurableRelease: async () => unavailablePayload,
+    publishThumbnailDurableRelease: async () => unavailablePayload,
   }));
 
-  const currentRoute = await import(`../app/api/admin/youtube-thumbnail-generator/releases/current/route.ts?cache=${Math.random()}`);
-  const currentResponse = await currentRoute.GET(new Request("http://localhost/api/admin/youtube-thumbnail-generator/releases/current") as unknown as NextRequest);
-  expect(currentResponse.status).toBe(503);
-  expect((await currentResponse.json() as { status: string; diagnostics: { reason: string } }).diagnostics.reason).toBe("missing_supabase_env");
+  try {
+    const currentRoute = await import(`../app/api/admin/youtube-thumbnail-generator/releases/current/route.ts?cache=${Math.random()}`);
+    const currentResponse = await currentRoute.GET(new Request("http://localhost/api/admin/youtube-thumbnail-generator/releases/current") as unknown as NextRequest);
+    expect(currentResponse.status).toBe(503);
+    const currentPayload = await currentResponse.json() as typeof unavailablePayload;
+    expect(currentPayload.diagnostics.reason).toBe("missing_supabase_env");
+    expect(currentPayload.readiness).toMatchObject({
+      provider: "youtube-thumbnail-durable-release",
+      status: "unavailable",
+      reasonCode: "missing_supabase_env",
+      diagnostics: {
+        durableRegistryAvailable: false,
+        durableReason: "missing_supabase_env",
+        hasRelease: false,
+      },
+    });
 
-  const publishRoute = await import(`../app/api/admin/youtube-thumbnail-generator/releases/publish/route.ts?cache=${Math.random()}`);
-  const publishResponse = await publishRoute.POST(new Request("http://localhost/api/admin/youtube-thumbnail-generator/releases/publish", {
-    method: "POST",
-    body: JSON.stringify({ candidateId: "release-candidate" }),
-    headers: { "Content-Type": "application/json" },
-  }) as unknown as NextRequest);
-  expect(publishResponse.status).toBe(503);
-  expect((await publishResponse.json() as { status: string; diagnostics: { reason: string } }).diagnostics.reason).toBe("missing_supabase_env");
+    const publishRoute = await import(`../app/api/admin/youtube-thumbnail-generator/releases/publish/route.ts?cache=${Math.random()}`);
+    const publishResponse = await publishRoute.POST(new Request("http://localhost/api/admin/youtube-thumbnail-generator/releases/publish", {
+      method: "POST",
+      body: JSON.stringify({ candidateId: "release-candidate" }),
+      headers: { "Content-Type": "application/json" },
+    }) as unknown as NextRequest);
+    expect(publishResponse.status).toBe(503);
+    const publishPayload = await publishResponse.json() as typeof unavailablePayload;
+    expect(publishPayload.diagnostics.reason).toBe("missing_supabase_env");
+    expect(publishPayload.readiness.reasonCode).toBe("missing_supabase_env");
+    expect(JSON.stringify([currentPayload, publishPayload])).not.toContain("SUPABASE_SERVICE_ROLE_KEY");
+    expect(JSON.stringify([currentPayload, publishPayload])).not.toContain("storage_object_path");
+  } finally {
+    mock.restore();
+  }
 });
 
 test("youtube thumbnail durable release routes and UI keep admin proxy and no raw storage paths as source contract", () => {

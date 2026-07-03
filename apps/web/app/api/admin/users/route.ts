@@ -5,6 +5,11 @@ import { requireAdmin } from '@/lib/auth/require-admin';
 import { recordAdminUserAuditEvent } from '@/lib/admin/user-audit';
 import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
 import { ADMIN_ROLE_CONFIRMATION, validateAdminUserConfirmation } from '@/lib/admin/user-management-guards';
+import {
+  ADMIN_AUDIT_PRIMARY_SOURCE,
+  buildMutationAuditReceipt,
+} from '@/lib/admin/audit-contract';
+import { getAdminSafeErrorCode, getAdminSafeErrorName } from '@/lib/admin/guarded-mutation-contract';
 
 export const runtime = 'nodejs';
 
@@ -26,8 +31,7 @@ function toStringValue(value: unknown) {
 }
 
 function toAuditErrorCode(error: unknown) {
-  if (error instanceof Error && error.message) return error.message.slice(0, 160);
-  return 'unknown-admin-user-create-error';
+  return getAdminSafeErrorCode(error, 'admin-user-create-failed');
 }
 
 function isAuthUserNotFoundReadback(error: unknown) {
@@ -65,7 +69,13 @@ async function recordFailedCreateAuditEvent(
       errorCode: toAuditErrorCode(payload.error),
     });
   } catch (auditError) {
-    console.error('[admin/users] failed to record failed create audit event:', auditError);
+    console.error('[admin/users] failed to record failed create audit event', {
+      domain: 'admin_user_management',
+      action: 'admin_user_created',
+      step: 'failed-audit-record',
+      correlationId: payload.preflightAuditId,
+      errorName: getAdminSafeErrorName(auditError),
+    });
     return null;
   }
 }
@@ -77,13 +87,24 @@ async function deleteCreatedAuthUserWithReadback(
 ) {
   const { error: deleteError } = await supabase.auth.admin.deleteUser(userId);
   if (deleteError) {
-    console.error(`[admin/users] failed to clean up auth user after ${context}:`, deleteError);
+    console.error('[admin/users] failed to clean up auth user', {
+      domain: 'admin_user_management',
+      action: 'admin_user_created',
+      step: 'auth-cleanup-delete',
+      context,
+      errorName: getAdminSafeErrorName(deleteError),
+    });
     return { verified: false, error: 'auth-user-cleanup-delete-failed' };
   }
 
   const { data, error: readbackError } = await supabase.auth.admin.getUserById(userId);
   if (data?.user) {
-    console.error(`[admin/users] auth user still exists after ${context} cleanup:`, userId);
+    console.error('[admin/users] auth user cleanup readback still present', {
+      domain: 'admin_user_management',
+      action: 'admin_user_created',
+      step: 'auth-cleanup-readback',
+      context,
+    });
     return { verified: false, error: 'auth-user-cleanup-readback-still-present' };
   }
 
@@ -91,7 +112,13 @@ async function deleteCreatedAuthUserWithReadback(
     if (isAuthUserNotFoundReadback(readbackError)) {
       return { verified: true, error: null };
     }
-    console.error(`[admin/users] failed to verify auth cleanup after ${context}:`, readbackError);
+    console.error('[admin/users] failed to verify auth cleanup', {
+      domain: 'admin_user_management',
+      action: 'admin_user_created',
+      step: 'auth-cleanup-readback',
+      context,
+      errorName: getAdminSafeErrorName(readbackError),
+    });
     return { verified: false, error: 'auth-user-cleanup-readback-failed' };
   }
 
@@ -250,7 +277,12 @@ export async function GET(request: NextRequest) {
       { headers: { 'Cache-Control': 'no-store' } },
     );
   } catch (error) {
-    console.error('[admin/users] failed to list users:', error);
+    console.error('[admin/users] failed to list users', {
+      domain: 'admin_user_management',
+      action: 'list_users',
+      step: 'list',
+      errorName: getAdminSafeErrorName(error),
+    });
     return NextResponse.json({ error: '사용자 목록을 불러오지 못했습니다.' }, { status: 500 });
   }
 }
@@ -295,7 +327,12 @@ export async function POST(request: NextRequest) {
         status: 'intent',
       });
     } catch (auditError) {
-      console.error('[admin/users] failed to record create preflight audit event:', auditError);
+      console.error('[admin/users] failed to record create preflight audit event', {
+        domain: 'admin_user_management',
+        action: 'admin_user_created',
+        step: 'preflight-audit',
+        errorName: getAdminSafeErrorName(auditError),
+      });
       return NextResponse.json(
         {
           error: '감사 로그 준비에 실패해 사용자 생성을 시작하지 않았습니다.',
@@ -322,7 +359,7 @@ export async function POST(request: NextRequest) {
       });
       return NextResponse.json(
         {
-          error: error?.message ?? '사용자를 만들지 못했습니다.',
+          error: '사용자를 만들지 못했습니다.',
           step: 'auth-user-create',
           auditId: failedAuditId,
           preflightAuditId,
@@ -467,15 +504,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const auditIds = Array.from(new Set([preflightAuditId, auditId]));
+
     return NextResponse.json({
       success: true,
       auditId,
       preflightAuditId,
+      audit: buildMutationAuditReceipt({
+        domain: 'admin_user_management',
+        source: ADMIN_AUDIT_PRIMARY_SOURCE,
+        readbackId: auditId,
+        correlationId: preflightAuditId,
+        auditIds,
+      }),
       user: buildManagedUser(data.user, { user_id: data.user.id, username, nickname, role: profileRole }, shouldGrantAdmin ? new Set([data.user.id]) : new Set(), 'active'),
       message: shouldGrantAdmin ? '관리자 계정을 만들었습니다.' : '일반 사용자 계정을 만들었습니다.',
     });
   } catch (error) {
-    console.error('[admin/users] failed to create user:', error);
+    console.error('[admin/users] failed to create user', {
+      domain: 'admin_user_management',
+      action: 'admin_user_created',
+      step: 'unexpected',
+      errorName: getAdminSafeErrorName(error),
+    });
     return NextResponse.json(
       {
         error: '사용자 생성 중 오류가 발생했습니다.',
