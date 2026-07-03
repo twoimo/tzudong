@@ -1193,7 +1193,10 @@ describe("web quality performance source contracts", () => {
       'data-desktop-map-mode-toggle="true"',
     );
     expect(homeDesktopControlPanelSource).toContain(
-      'className="fixed top-4 z-[70] grid auto-rows-auto grid-cols-[max-content] items-start gap-2"',
+      'className="fixed top-4 z-[70] max-w-[calc(100vw-2rem)]"',
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      'data-desktop-map-theme-filters="true"',
     );
     expect(homeDesktopControlPanelSource).toContain(
       "const desktopMapFloatingControlStyle = {",
@@ -1213,6 +1216,7 @@ describe("web quality performance source contracts", () => {
     expect(homeDesktopControlPanelSource).toContain(
       "flex w-[var(--desktop-map-floating-filter-width)] items-center gap-0.5 rounded-full",
     );
+    expect(homeDesktopControlPanelSource).toContain("HOME_MAP_THEME_FILTERS.map");
     expect(homeDesktopControlPanelSource).toContain("!w-full !min-w-max");
     expect(homeDesktopControlPanelSource).toContain("국내 맛집 지도 보기");
     expect(homeDesktopControlPanelSource).toContain("해외 맛집 지도 보기");
@@ -1372,7 +1376,7 @@ describe("web quality performance source contracts", () => {
       "components/restaurant/RestaurantDetailPanel.tsx",
     );
     expect(restaurantDetailPanelSource).toContain(
-      'aria-label="상세 패널 닫기"',
+      'aria-label="이전 목록으로 돌아가기"',
     );
     expect(restaurantDetailPanelSource).toContain(
       "{isAdmin && onEditRestaurant && viewMode === 'detail' && (",
@@ -1385,16 +1389,16 @@ describe("web quality performance source contracts", () => {
         '<Settings className="h-4 w-4" aria-hidden="true" />',
       ),
     ).toBeLessThan(
-      restaurantDetailPanelSource.indexOf('aria-label="상세 패널 닫기"'),
+      restaurantDetailPanelSource.indexOf('aria-label="이전 목록으로 돌아가기"'),
     );
     expect(restaurantDetailPanelSource).not.toContain(
       'className="mr-1 h-9 w-9 shrink-0 rounded-full border border-border bg-background hover:bg-secondary/80"',
     );
     expect(restaurantDetailPanelSource).toContain(
-      'className="border-red-800 text-red-800 hover:border-red-900 hover:bg-red-50 hover:text-red-900 dark:border-red-500 dark:text-red-400 dark:hover:border-red-400 dark:hover:bg-red-950/30 dark:hover:text-red-300"',
+      'className="h-9 shrink-0 rounded-full border-primary/40 px-3 text-primary hover:border-primary hover:bg-primary/5 hover:text-primary"',
     );
     expect(restaurantDetailPanelSource).toContain(
-      '<X className="h-4 w-4" aria-hidden="true" />',
+      '<ArrowLeft className="mr-1.5 h-4 w-4" aria-hidden="true" />',
     );
     expect(homeDesktopControlPanelSource).toContain('resultView="inline"');
     expect(homeDesktopControlPanelSource).toContain("hideSearchControls");
@@ -1582,9 +1586,8 @@ describe("web quality performance source contracts", () => {
     );
     expect(mobileControlSource).toContain("inertSibling.inert = true");
     expect(mobileControlSource).toContain("aria-pressed={isSelected}");
-    expect(mobileControlSource).toContain(
-      "aria-label={`${category} 카테고리 ${isSelected ? '선택 해제' : '선택'}`}",
-    );
+    expect(mobileControlSource).toContain("aria-label={theme.ariaLabel}");
+    expect(mobileControlSource).toContain("카테고리 필터 열기");
     expect(mobileControlSource).toContain("min-h-11");
     expect(mobileControlSource).toContain('role="status"');
     expect(mobileControlSource).toContain("목록을 불러오는 중입니다");
