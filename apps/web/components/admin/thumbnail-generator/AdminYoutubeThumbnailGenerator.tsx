@@ -58,6 +58,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
+import type { AdminProviderReadiness as ProviderReadiness } from "@/types/admin-system-status";
 import {
   hasExplicitThumbnailGenerationCommand as hasSharedExplicitThumbnailGenerationCommand,
   isThumbnailChatGuidanceQuestion as isSharedThumbnailChatGuidanceQuestion,
@@ -330,7 +331,7 @@ type ThumbnailReleaseCandidatesPayload = {
 };
 
 type ThumbnailHistoryStatus = "idle" | "loading" | "ready" | "empty" | "error";
-type ThumbnailInitialPreviewSource = "idle" | "bundled" | "durable" | "durable-empty" | "durable-error" | "candidate" | "candidate-empty" | "candidate-error" | "history";
+type ThumbnailInitialPreviewSource = "idle" | "bundled" | "durable" | "durable-empty" | "durable-unavailable" | "durable-error" | "candidate" | "candidate-empty" | "candidate-error" | "history";
 type ThumbnailDurableReleaseLoadResult = "applied" | "available" | "empty-or-unavailable" | "hard-error" | "stale";
 type ThumbnailReleaseCandidateLoadResult = "applied" | "empty" | "failed" | "stale";
 type ThumbnailDurableRelease = {
@@ -360,6 +361,7 @@ type ThumbnailDurableReleasePayload = {
     reason?: string;
     warnings: string[];
   };
+  readiness?: ProviderReadiness;
 };
 
 type ThumbnailChatMessage = {
@@ -2048,6 +2050,8 @@ function getThumbnailInitialPreviewSourceLabel(source: ThumbnailInitialPreviewSo
       return "공용 릴리즈";
     case "durable-empty":
       return "공용 릴리즈 없음";
+    case "durable-unavailable":
+      return "공용 릴리즈 사용 불가";
     case "durable-error":
       return "공용 릴리즈 읽기 실패";
     case "candidate":
@@ -2061,6 +2065,18 @@ function getThumbnailInitialPreviewSourceLabel(source: ThumbnailInitialPreviewSo
     default:
       return "준비 중";
   }
+}
+
+function formatThumbnailDurableReadinessActionLabel(payload: ThumbnailDurableReleasePayload | null, fallbackReason: string) {
+  const readiness = payload?.readiness;
+  const reasonCode = readiness?.reasonCode || payload?.diagnostics?.reason || fallbackReason;
+  const remediation = readiness?.remediation?.trim();
+  const readinessStatus = readiness?.status || payload?.status || "unknown";
+  return [
+    `공용 릴리즈 readback ${readinessStatus}`,
+    reasonCode,
+    remediation,
+  ].filter(Boolean).join(" · ");
 }
 
 function getThumbnailHistoryRunSourceLabel(run: ThumbnailHistoryRun) {
@@ -3314,7 +3330,8 @@ export function AdminYoutubeThumbnailGenerator() {
       if (!response.ok && payload?.status !== "unavailable") throw new Error("thumbnail_durable_release_api_failed");
       if (thumbnailDurableReleaseRequestIdRef.current !== requestId) return "stale";
       if (payload?.status === "empty" || payload?.status === "unavailable") {
-        setInitialPreviewSource("durable-empty");
+        setInitialPreviewSource(payload.status === "unavailable" ? "durable-unavailable" : "durable-empty");
+        setLastCanvasActionLabel(formatThumbnailDurableReadinessActionLabel(payload, "durable_release_empty"));
         return "empty-or-unavailable";
       }
       if (payload?.status !== "ready") throw new Error("thumbnail_durable_release_status_unrecognized");

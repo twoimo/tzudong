@@ -37,6 +37,10 @@ import { getAddressConsistencyStatus } from '@/lib/admin-address-consistency';
 import { needsEvaluationRerun } from '@/lib/admin-evaluation-completeness';
 import { buildCanonicalAdminEvaluationsHref } from '@/lib/admin/admin-module-routing';
 import {
+  buildAdminPendingCountsResponse,
+  getAdminPendingCountsTotal,
+} from '@/lib/admin/pending-counts';
+import {
   MISSING_EVALUATION_AUTO_DELETE_MESSAGE,
   getMissingEvaluationAutoDeleteReason,
   shouldAutoDeleteMissingEvaluationRecord,
@@ -51,6 +55,10 @@ import {
   hasBlockingRestaurantIdentityWarning,
 } from '@/lib/admin-restaurant-identity-warning';
 import { invalidateRestaurantDiscoveryQueries } from '@/lib/restaurant-discovery-cache';
+import {
+  assertLegacyBrowserAdminMutationEnabled,
+  isLegacyBrowserAdminMutationEnabled,
+} from '@/lib/admin/guarded-mutation-contract';
 import { RESTAURANT_MERGE_SELECT } from '@/hooks/use-restaurants';
 import {
   AlertDialog,
@@ -1269,7 +1277,7 @@ function AdminEvaluationPage({
       let typedRecords = records as unknown as EvaluationRecord[];
       const autoDeleteTargets = typedRecords.filter(shouldAutoDeleteMissingEvaluationRecord);
 
-      if (autoDeleteTargets.length > 0 && user?.id) {
+      if (autoDeleteTargets.length > 0 && user?.id && isLegacyBrowserAdminMutationEnabled()) {
         const updatedAt = new Date().toISOString();
         const autoDeleteIds = autoDeleteTargets.map((record) => record.id);
 
@@ -1534,6 +1542,7 @@ function AdminEvaluationPage({
         };
 
         // status는 유지하고 에러 메시지만 저장
+        assertLegacyBrowserAdminMutationEnabled('restaurant_record', 'record duplicate error update');
         await supabase
           .from('restaurants')
           // @ts-expect-error Supabase update inference is stale in the local generated client types.
@@ -1587,6 +1596,7 @@ function AdminEvaluationPage({
     });
 
     // status를 'approved'로 업데이트 및 approved_name 저장
+    assertLegacyBrowserAdminMutationEnabled('restaurant_record', 'restaurant approval update');
     const updatedAt = new Date().toISOString();
     const { data: updatedData, error } = await supabase
       .from('restaurants')
@@ -1650,6 +1660,7 @@ function AdminEvaluationPage({
     try {
       const adminUserId = requireAdminUserId();
       const updatedAt = new Date().toISOString();
+      assertLegacyBrowserAdminMutationEnabled('restaurant_record', 'restaurant delete update');
 
       // Soft Delete: 휴지통 아이콘 클릭 즉시 status를 'deleted'로 변경
       const { error } = await supabase
@@ -1722,6 +1733,7 @@ function AdminEvaluationPage({
       setLoading(true);
       const adminUserId = requireAdminUserId();
       const updatedAt = new Date().toISOString();
+      assertLegacyBrowserAdminMutationEnabled('restaurant_record', 'restaurant restore update');
 
       // status를 'pending'으로 업데이트
       const { error } = await supabase
@@ -2049,12 +2061,27 @@ function AdminEvaluationPage({
     ).length;
   }, [reviewsData]);
 
-  const pendingRecommendationCount = useMemo(() => {
-    return recommendationRequestsData.filter((request) => request.status === 'pending').length;
-  }, [recommendationRequestsData]);
+  const pendingCounts = useMemo(() => {
+    const pendingRecommendationRequests = recommendationRequestsData.filter(
+      (request) => request.status === 'pending',
+    ).length;
+
+    return buildAdminPendingCountsResponse({
+      restaurantSubmissions: submissionsData.length,
+      restaurantRecommendationRequests: pendingRecommendationRequests,
+      reviews: pendingReviewsCount,
+      recommendationRequestsLifecycleReady: true,
+    });
+  }, [pendingReviewsCount, recommendationRequestsData, submissionsData.length]);
+
+  const pendingRestaurantSubmissionCount =
+    pendingCounts.domains.restaurant_submissions.count;
+  const pendingRecommendationCount =
+    pendingCounts.domains.restaurant_recommendation_requests.count;
+  const pendingReviewCount = pendingCounts.domains.reviews.count;
 
   // 전체 대기 건수 (제보 + 리뷰)
-  const totalPendingCount = submissionsData.length + pendingRecommendationCount + pendingReviewsCount;
+  const totalPendingCount = getAdminPendingCountsTotal(pendingCounts);
 
   // 리뷰 승인 mutation
   const approveReviewMutation = useMutation({
@@ -2076,6 +2103,7 @@ function AdminEvaluationPage({
         .eq('id', typedReview.restaurant_id)
         .single();
 
+      assertLegacyBrowserAdminMutationEnabled('review_moderation', 'review approval update');
       const { error: approveError } = await supabase.from('reviews' as never)
         .update({
           is_verified: true,
@@ -2136,6 +2164,7 @@ function AdminEvaluationPage({
         .single();
 
       const rejectionReason = adminNote || '관리자에 의해 거부됨';
+      assertLegacyBrowserAdminMutationEnabled('review_moderation', 'review rejection update');
       const { error: rejectError } = await supabase.from('reviews' as never)
         .update({
           is_verified: false,
@@ -2191,6 +2220,7 @@ function AdminEvaluationPage({
 
       const review = reviewData as { verification_photo: string | null; food_photos: string[] | null } | null;
 
+      assertLegacyBrowserAdminMutationEnabled('review_moderation', 'review delete mutation');
       // 2. Storage에서 이미지 삭제
       const photosToDelete: string[] = [];
 
@@ -2275,6 +2305,7 @@ function AdminEvaluationPage({
           recommendationMessage: data.message || '추천이 승인되었습니다.',
         };
       }
+      assertLegacyBrowserAdminMutationEnabled('restaurant_submission', 'submission approval direct RPC/update');
 	      const rpcClient = supabase as unknown as {
         rpc: (
           functionName: string,
@@ -2457,6 +2488,7 @@ function AdminEvaluationPage({
           recommendationMessage: data.message || '추천이 거부되었습니다.',
         };
       }
+      assertLegacyBrowserAdminMutationEnabled('restaurant_submission', 'submission rejection direct update');
 
 	      // 모든 pending 아이템 거부
 	      for (const item of submission.items) {
@@ -2536,6 +2568,7 @@ function AdminEvaluationPage({
           'rejected',
         );
       }
+      assertLegacyBrowserAdminMutationEnabled('restaurant_submission', 'submission delete direct update');
 
 	      // 모든 pending 아이템 거부
 	      for (const item of submission.items) {
@@ -2629,6 +2662,7 @@ function AdminEvaluationPage({
     }) => {
       const { submission, updatedData } = data;
 
+      assertLegacyBrowserAdminMutationEnabled('restaurant_submission', 'submission edit direct update');
 	      // 제보 기본 정보 업데이트
 	      const { error } = await supabase
 	        .from('restaurant_submissions' as never)
@@ -2789,7 +2823,7 @@ function AdminEvaluationPage({
                       variant={showSubmissionView ? 'secondary' : 'ghost'}
                       size="sm"
                       className="relative h-8 gap-1 px-2 text-xs lg:h-8 lg:w-8 lg:gap-1 lg:px-0"
-                      title={`사용자 제보/리뷰 검수 (제보 ${submissionsData.length}건, 추천 ${pendingRecommendationCount}건, 리뷰 ${pendingReviewsCount}건)`}
+                      title={`사용자 제보/리뷰 검수 (제보 ${pendingRestaurantSubmissionCount}건, 추천 ${pendingRecommendationCount}건, 리뷰 ${pendingReviewCount}건)`}
                       aria-label={`사용자 제보/리뷰 검수, 대기 ${totalPendingCount}건`}
                     >
                       <Send className="h-4 w-4 shrink-0" />
