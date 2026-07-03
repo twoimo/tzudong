@@ -172,6 +172,10 @@ describe('OCR extract route normalization/cache contract', () => {
 
   test('admin OCR rerun preflights workflow before destructive reset and rolls back dispatch failures', () => {
     const rerunRouteSource = source('app/api/admin/ocr-receipts/rerun/route.ts');
+    const dispatchRouteSource = source('app/api/admin/ocr-receipts/route.ts');
+    const resetAllRouteSource = source('app/api/admin/ocr-receipts/reset-all/route.ts');
+    const processRouteSource = source('app/api/admin/ocr-receipts/process/route.ts');
+    const submissionListViewSource = source('components/admin/SubmissionListView.tsx');
 
     expect(rerunRouteSource).toContain('workflowPreflightResponse');
     expect(rerunRouteSource).toContain('resetSkipped: true');
@@ -186,6 +190,68 @@ describe('OCR extract route normalization/cache contract', () => {
     );
     expect(rerunRouteSource).toContain('resetRolledBack: !rollbackError');
     expect(rerunRouteSource).toContain("step: 'workflow-dispatch'");
-  });
 
+    expect(dispatchRouteSource).toContain("buildGuardedMutationRequiredResponse('ocr_receipt', 'dispatch_workflow')");
+    expect(dispatchRouteSource).toContain("guardedMutationConfirmation");
+    expect(dispatchRouteSource).toContain("GUARDED_MUTATION_CONFIRMATION");
+    expect(dispatchRouteSource.indexOf('if (!hasGuardedMutationConfirmation')).toBeLessThan(
+      dispatchRouteSource.indexOf('if (!GITHUB_TOKEN'),
+    );
+    expect(dispatchRouteSource.indexOf('if (!hasGuardedMutationConfirmation')).toBeLessThan(
+      dispatchRouteSource.indexOf("method: 'POST'"),
+    );
+
+    expect(rerunRouteSource).toContain("buildGuardedMutationRequiredResponse('ocr_receipt', 'rerun')");
+    expect(rerunRouteSource).toContain("guardedMutation");
+    expect(rerunRouteSource.indexOf('if (!hasGuardedMutationConfirmation')).toBeLessThan(
+      rerunRouteSource.indexOf("const supabase = createSupabaseServiceRoleClient()"),
+    );
+
+    expect(resetAllRouteSource).toContain("buildGuardedMutationRequiredResponse('ocr_receipt', 'reset_all')");
+    expect(resetAllRouteSource).toContain("readbackRequired: true");
+    expect(resetAllRouteSource).toContain("guardedMutation");
+    expect(resetAllRouteSource.indexOf('if (!hasGuardedMutationConfirmation')).toBeLessThan(
+      resetAllRouteSource.indexOf('if (body.confirmation !== OCR_RESET_ALL_CONFIRMATION)'),
+    );
+
+
+    expect(processRouteSource).toContain("buildGuardedMutationRequiredResponse('ocr_receipt', 'inline_process')");
+    expect(processRouteSource).toContain('hasGuardedMutationConfirmation(request, body ?? {})');
+    expect(processRouteSource).toContain('buildInlineOcrGuardedMutation');
+    expect(processRouteSource).toContain('stageKeys');
+    expect(processRouteSource).not.toContain('data: ocrData');
+    expect(processRouteSource).not.toContain('stages,');
+    const inlineConfirmIndex = processRouteSource.indexOf('if (!hasGuardedMutationConfirmation(request, body ?? {}))');
+    const inlineSupabaseIndex = processRouteSource.indexOf("const supabase = getSupabaseAdmin()", inlineConfirmIndex);
+    const inlineProviderModelIndex = processRouteSource.indexOf('const model = genAI.getGenerativeModel', inlineConfirmIndex);
+    const inlineStorageUploadIndex = processRouteSource.indexOf('await uploadToStorage(localPath, storagePath)', inlineConfirmIndex);
+    expect(inlineConfirmIndex).toBeGreaterThanOrEqual(0);
+    expect(inlineSupabaseIndex).toBeGreaterThan(inlineConfirmIndex);
+    expect(processRouteSource.indexOf("if (!GEMINI_API_KEY?.trim())")).toBeLessThan(inlineSupabaseIndex);
+    expect(inlineProviderModelIndex).toBeGreaterThan(inlineConfirmIndex);
+    expect(inlineStorageUploadIndex).toBeGreaterThan(inlineProviderModelIndex);
+    expect(submissionListViewSource).toContain("GUARDED_MUTATION_CONFIRMATION");
+    expect(submissionListViewSource).toContain("confirmGuardedOcrMutation");
+    expect(submissionListViewSource).toContain("guardedMutationConfirmation: GUARDED_MUTATION_CONFIRMATION");
+    const runOcrConfirmIndex = submissionListViewSource.indexOf(
+      "confirmGuardedOcrMutation('미처리 리뷰 OCR 처리를 시작합니다.'",
+    );
+    const rerunOcrConfirmIndex = submissionListViewSource.indexOf(
+      "confirmGuardedOcrMutation('선택한 리뷰 OCR 데이터를 초기화하고 재실행합니다.'",
+    );
+    expect(runOcrConfirmIndex).toBeGreaterThanOrEqual(0);
+    expect(rerunOcrConfirmIndex).toBeGreaterThanOrEqual(0);
+    expect(
+      submissionListViewSource.indexOf(
+        "body: JSON.stringify({ guardedMutationConfirmation: GUARDED_MUTATION_CONFIRMATION })",
+        runOcrConfirmIndex,
+      ),
+    ).toBeGreaterThan(runOcrConfirmIndex);
+    expect(
+      submissionListViewSource.indexOf(
+        "guardedMutationConfirmation: GUARDED_MUTATION_CONFIRMATION",
+        rerunOcrConfirmIndex,
+      ),
+    ).toBeGreaterThan(rerunOcrConfirmIndex);
+  });
 });

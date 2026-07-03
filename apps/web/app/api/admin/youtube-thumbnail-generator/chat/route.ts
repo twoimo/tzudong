@@ -2,8 +2,9 @@ import { NextRequest } from 'next/server';
 import { randomUUID } from 'node:crypto';
 
 import { requireAdmin } from '@/lib/auth/require-admin';
+import { getAdminSafeErrorName } from '@/lib/admin/guarded-mutation-contract';
 import { parseThumbnailChatAgentRequest } from '@/lib/admin/youtube-thumbnail-generator/request';
-import { ThumbnailGenerationError } from '@/lib/admin/youtube-thumbnail-generator/types';
+import { ThumbnailGenerationError, getPublicThumbnailGenerationErrorDetail } from '@/lib/admin/youtube-thumbnail-generator/types';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -23,11 +24,67 @@ function jsonError(error: string, status: number, detail?: string) {
   return Response.json({ error, detail }, { status, headers: { 'Cache-Control': 'no-store' } });
 }
 
+function isRouteRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function buildPublicThumbnailChatBackendAgent(value: unknown) {
+  if (!isRouteRecord(value)) return undefined;
+  const diagnostics = isRouteRecord(value.diagnostics) ? value.diagnostics : {};
+  return {
+    mode: value.mode,
+    runtime: value.runtime,
+    concept: value.concept,
+    layoutBrief: value.layoutBrief,
+    promptAddendum: value.promptAddendum,
+    safetyReview: value.safetyReview,
+    nextActions: Array.isArray(value.nextActions)
+      ? value.nextActions.filter((item): item is string => typeof item === 'string').map((item) => item.slice(0, 160))
+      : [],
+    diagnostics: {
+      diagnosticsRedacted: true,
+      chatIntent: diagnostics.chatIntent,
+      externalAgentInvoked: diagnostics.externalAgentInvoked,
+    },
+  };
+}
+
+function buildPublicThumbnailChatResult(result: Record<string, unknown>) {
+  const diagnostics = isRouteRecord(result.diagnostics) ? result.diagnostics : {};
+  return {
+    assistantMessage: result.assistantMessage,
+    canvasPatch: result.canvasPatch,
+    textLayerPatches: result.textLayerPatches,
+    providerId: result.providerId,
+    generationMode: result.generationMode,
+    shouldGenerate: result.shouldGenerate,
+    shouldReset: result.shouldReset,
+    backendAgent: buildPublicThumbnailChatBackendAgent(result.backendAgent),
+    diagnostics: {
+      runtime: diagnostics.runtime,
+      streaming: diagnostics.streaming,
+      chatRunId: diagnostics.chatRunId,
+      chatThreadId: diagnostics.chatThreadId,
+      conversationTurnCount: diagnostics.conversationTurnCount,
+      imageAttachmentCount: diagnostics.imageAttachmentCount,
+      focusContextUsed: diagnostics.focusContextUsed,
+      chatIntent: diagnostics.chatIntent,
+      canvasMutation: diagnostics.canvasMutation,
+      diagnosticsRedacted: true,
+    },
+  };
+}
+
 function normalizeRouteError(error: unknown) {
   if (error instanceof ThumbnailGenerationError) {
-    return { error: error.code, detail: error.message, status: error.status };
+    return { error: error.code, detail: getPublicThumbnailGenerationErrorDetail(error), status: error.status };
   }
-  console.error('[admin/youtube-thumbnail-generator/chat] unexpected failure:', error);
+  console.error('[admin/youtube-thumbnail-generator/chat] unexpected failure', {
+    domain: 'youtube_thumbnail_generator',
+    action: 'chat_agent',
+    step: 'unexpected',
+    errorName: getAdminSafeErrorName(error),
+  });
   return { error: 'thumbnail_chat_agent_failed', detail: '채팅 작업을 처리하지 못했습니다.', status: 500 };
 }
 
@@ -133,8 +190,9 @@ export async function POST(request: NextRequest) {
           shouldReset: result.shouldReset,
           elapsedMs: Date.now() - startedAt,
         });
-        send('patch', result);
-        send('done', result);
+        const publicResult = buildPublicThumbnailChatResult(result);
+        send('patch', publicResult);
+        send('done', publicResult);
       } catch (error) {
         stopHeartbeat();
         if (request.signal.aborted) {

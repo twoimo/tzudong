@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { requireAdmin } from '@/lib/auth/require-admin';
+import { getAdminSafeErrorName } from '@/lib/admin/guarded-mutation-contract';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -34,7 +35,12 @@ export async function GET(_request: NextRequest) {
     const history = await readThumbnailHistoryFromRoute();
     return NextResponse.json(history, { headers: noStoreHeaders });
   } catch (error) {
-    console.error('[admin/youtube-thumbnail-generator/history] unexpected failure:', error);
+    console.error('[admin/youtube-thumbnail-generator/history] unexpected failure', {
+      domain: 'youtube_thumbnail_generator',
+      action: 'read_history',
+      step: 'unexpected',
+      errorName: getAdminSafeErrorName(error),
+    });
     return jsonError('thumbnail_history_failed', 500, '썸네일 생성 히스토리를 불러오지 못했습니다.');
   }
 }
