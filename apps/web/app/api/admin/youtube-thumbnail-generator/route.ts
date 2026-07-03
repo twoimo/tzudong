@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
 
 import { requireAdmin } from '@/lib/auth/require-admin';
+import { getAdminSafeErrorName } from '@/lib/admin/guarded-mutation-contract';
 import {
   buildThumbnailProviderRequestEnv,
   getContentLengthRejection,
@@ -10,7 +11,7 @@ import {
   readThumbnailReferenceImages,
 } from '@/lib/admin/youtube-thumbnail-generator/request';
 
-import { ThumbnailGenerationError } from '@/lib/admin/youtube-thumbnail-generator/types';
+import { ThumbnailGenerationError, getPublicThumbnailGenerationErrorDetail } from '@/lib/admin/youtube-thumbnail-generator/types';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -37,8 +38,8 @@ function buildUnavailableBackendAgentStatus() {
     localAdapterAvailable: false,
     missingPythonModules: [],
     runtime: 'unavailable',
-    codexModel: process.env.THUMBNAIL_AGENT_CODEX_MODEL?.trim() || 'gpt-5.5',
-    codexEffort: process.env.THUMBNAIL_AGENT_CODEX_EFFORT?.trim() || 'low',
+    codexModel: 'unavailable',
+    codexEffort: 'unavailable',
     streamingAvailable: false,
     diagnosticsRedacted: true,
   };
@@ -88,7 +89,7 @@ function buildVercelThumbnailProviderAvailability() {
     ? {
       available: false,
       reason: 'openai_model_not_allowed' as const,
-      model: openAiModel,
+      model: openAiModel === 'gpt-image-2' ? 'gpt-image-2' : 'unsupported',
     }
     : !process.env.OPENAI_API_KEY?.trim()
       ? {
@@ -102,7 +103,7 @@ function buildVercelThumbnailProviderAvailability() {
     localCodex: {
       available: false,
       reason: 'local_codex_unavailable_on_vercel' as const,
-      model: process.env.THUMBNAIL_LOCAL_CODEX_IMAGE_MODEL?.trim() || 'unconfigured:gpt-image-2',
+      model: 'unconfigured:gpt-image-2',
       strictExactModelRequired: true,
       command: null,
       providerId: 'local-codex' as const,
@@ -161,12 +162,89 @@ function jsonError(error: string, status: number, detail?: string) {
   return NextResponse.json({ error, detail }, { status, headers: noStoreHeaders });
 }
 
+function isRouteRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function toPublicStringArray(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string').map((item) => item.slice(0, 160))
+    : [];
+}
+
+function buildPublicThumbnailBackendAgent(value: unknown) {
+  if (!isRouteRecord(value)) return undefined;
+  return {
+    mode: value.mode,
+    runtime: value.runtime,
+    concept: value.concept,
+    layoutBrief: value.layoutBrief,
+    promptAddendum: value.promptAddendum,
+    safetyReview: value.safetyReview,
+    nextActions: toPublicStringArray(value.nextActions),
+    diagnostics: { diagnosticsRedacted: true },
+  };
+}
+
+function buildPublicThumbnailRetrieval(value: unknown) {
+  if (!isRouteRecord(value)) return undefined;
+  const diagnostics = isRouteRecord(value.diagnostics) ? value.diagnostics : {};
+  const evidence = Array.isArray(value.evidence)
+    ? value.evidence
+      .filter(isRouteRecord)
+      .map((item) => ({
+        id: item.id,
+        source: item.source,
+        intent: item.intent,
+        uploadRole: item.uploadRole,
+        videoId: item.videoId,
+        title: typeof item.title === 'string' ? item.title.slice(0, 120) : undefined,
+        startSec: item.startSec,
+        endSec: item.endSec,
+        hybridScore: item.hybridScore,
+        mmrRank: item.mmrRank,
+        rerankScore: item.rerankScore,
+      }))
+    : [];
+
+  return {
+    evidence,
+    diagnostics: {
+      status: diagnostics.status,
+      candidateCount: diagnostics.candidateCount,
+      selectedReferenceIds: Array.isArray(diagnostics.selectedReferenceIds)
+        ? diagnostics.selectedReferenceIds.filter((item): item is string => typeof item === 'string')
+        : [],
+      fallbackReason: diagnostics.fallbackReason,
+      usedModels: diagnostics.usedModels,
+      operations: diagnostics.operations,
+      commandRuntime: diagnostics.commandRuntime,
+      elapsedMs: diagnostics.elapsedMs,
+    },
+  };
+}
+
+function buildThumbnailGenerationRouteResponse(result: Record<string, unknown>) {
+  return {
+    baseImage: result.baseImage,
+    prompt: result.prompt,
+    warnings: toPublicStringArray(result.warnings),
+    backendAgent: buildPublicThumbnailBackendAgent(result.backendAgent),
+    retrieval: buildPublicThumbnailRetrieval(result.retrieval),
+  };
+}
+
 function normalizeRouteError(error: unknown) {
   if (error instanceof ThumbnailGenerationError) {
-    return jsonError(error.code, error.status, error.message);
+    return jsonError(error.code, error.status, getPublicThumbnailGenerationErrorDetail(error));
   }
 
-  console.error('[admin/youtube-thumbnail-generator] unexpected failure:', error);
+  console.error('[admin/youtube-thumbnail-generator] unexpected failure', {
+    domain: 'youtube_thumbnail_generator',
+    action: 'generate_thumbnail',
+    step: 'unexpected',
+    errorName: getAdminSafeErrorName(error),
+  });
   return jsonError('thumbnail_generation_failed', 500, '썸네일 생성 요청을 처리하지 못했습니다.');
 }
 
@@ -358,13 +436,19 @@ export async function POST(request: NextRequest) {
         await persistLocalThumbnailHistory(responseResult, payloadWithRetrieval, process.env, { runId: generationRunId });
       }
     } catch (historyError) {
-      console.error('[admin/youtube-thumbnail-generator] history persistence failed:', historyError);
+      console.error('[admin/youtube-thumbnail-generator] history persistence failed', {
+        domain: 'youtube_thumbnail_generator',
+        action: 'generate_thumbnail',
+        step: 'history-persistence',
+        correlationId: generationRunId,
+        errorName: getAdminSafeErrorName(historyError),
+      });
       responseResult.warnings.push('thumbnail_history_persist_failed');
     }
     responseResult.warnings.push(`thumbnail_timing_ms:history=${Date.now() - historyStartedAt}`);
     responseResult.warnings.push(`thumbnail_timing_ms:total=${Date.now() - routeStartedAt}`);
 
-    return NextResponse.json(responseResult, { headers: noStoreHeaders });
+    return NextResponse.json(buildThumbnailGenerationRouteResponse(responseResult), { headers: noStoreHeaders });
   } catch (error) {
     if (error instanceof SyntaxError) {
       return jsonError('payload_json_invalid', 400, 'payload 필드는 JSON 문자열이어야 합니다.');

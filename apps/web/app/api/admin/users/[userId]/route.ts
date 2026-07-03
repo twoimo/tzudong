@@ -4,7 +4,12 @@ import { requireAdmin } from '@/lib/auth/require-admin';
 import { buildAdminUserAuditRequestContext, recordAdminUserAuditEvent } from '@/lib/admin/user-audit';
 import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
 import { isBannedUntilActive, validateAdminUserConfirmation } from '@/lib/admin/user-management-guards';
+import {
+  ADMIN_AUDIT_PRIMARY_SOURCE,
+  buildMutationAuditReceipt,
+} from '@/lib/admin/audit-contract';
 
+import { getAdminSafeErrorCode, getAdminSafeErrorName } from '@/lib/admin/guarded-mutation-contract';
 export const runtime = 'nodejs';
 
 const DISABLE_BAN_DURATION = '876600h';
@@ -18,8 +23,7 @@ function toStringValue(value: unknown) {
 }
 
 function toAuditErrorCode(error: unknown) {
-  if (error instanceof Error && error.message) return error.message.slice(0, 160);
-  return 'unknown-admin-user-update-error';
+  return getAdminSafeErrorCode(error, 'admin-user-update-failed');
 }
 
 async function recordFailedAuditEvent(
@@ -48,7 +52,13 @@ async function recordFailedAuditEvent(
     });
     return failedAuditId;
   } catch (auditError) {
-    console.error('[admin/users] failed to record failed audit event:', auditError);
+    console.error('[admin/users] failed to record failed audit event', {
+      domain: 'admin_user_management',
+      action: payload.action,
+      step: 'failed-audit-record',
+      correlationId: payload.preflightAuditId,
+      errorName: getAdminSafeErrorName(auditError),
+    });
     return null;
   }
 }
@@ -189,6 +199,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       requestedAccountStatus: nextAccountStatus ?? null,
     };
     const auditIds: string[] = [];
+    let latestPreflightAuditId: string | null = null;
 
     const profile = body.profile && typeof body.profile === 'object' ? body.profile : null;
     if (profile) {
@@ -210,6 +221,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         status: 'intent',
       });
       auditIds.push(auditId);
+      latestPreflightAuditId = auditId;
 
       try {
         const appliedAuditId = await applyAdminUserDbMutation(supabase, request, {
@@ -249,6 +261,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         status: 'intent',
       });
       auditIds.push(auditId);
+      latestPreflightAuditId = auditId;
 
       try {
         const appliedAuditId = await applyAdminUserDbMutation(supabase, request, {
@@ -288,6 +301,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         status: 'intent',
       });
       auditIds.push(auditId);
+      latestPreflightAuditId = auditId;
 
       try {
         const { error } = await supabase.auth.admin.updateUserById(targetUserId, {
@@ -307,11 +321,17 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
             nextAccountStatus,
           });
           auditIds.push(appliedAuditId);
-          } catch (dbMutationError) {
+        } catch (dbMutationError) {
           await supabase.auth.admin.updateUserById(targetUserId, {
             ban_duration: nextAccountStatus === 'disabled' ? 'none' : DISABLE_BAN_DURATION,
           }).catch((rollbackError) => {
-            console.error('[admin/users] failed to roll back auth account status after DB audit error:', rollbackError);
+            console.error('[admin/users] failed to roll back auth account status after DB audit error', {
+              domain: 'admin_user_management',
+              action,
+              step: 'auth-rollback-after-db-audit',
+              correlationId: auditId,
+              errorName: getAdminSafeErrorName(rollbackError),
+            });
           });
           throw dbMutationError;
         }
@@ -329,9 +349,19 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       }
     }
 
+    const preflightAuditId = latestPreflightAuditId ?? auditIds[0] ?? null;
+    const readbackAuditId = auditIds[auditIds.length - 1] ?? preflightAuditId;
+
     return NextResponse.json({
       success: true,
       auditIds,
+      audit: buildMutationAuditReceipt({
+        domain: 'admin_user_management',
+        source: ADMIN_AUDIT_PRIMARY_SOURCE,
+        readbackId: readbackAuditId,
+        correlationId: preflightAuditId,
+        auditIds,
+      }),
       message: '사용자 계정 변경을 적용했습니다.',
       safeguards: {
         selfLockoutBlocked: isSelfTarget,
@@ -339,7 +369,12 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       },
     });
   } catch (error) {
-    console.error('[admin/users] failed to update user:', error);
+    console.error('[admin/users] failed to update user', {
+      domain: 'admin_user_management',
+      action: 'update_user',
+      step: 'unexpected',
+      errorName: getAdminSafeErrorName(error),
+    });
     return NextResponse.json({ error: '사용자 계정 변경 중 오류가 발생했습니다.' }, { status: 500 });
   }
 }

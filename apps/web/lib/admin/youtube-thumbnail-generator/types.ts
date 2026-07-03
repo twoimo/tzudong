@@ -335,3 +335,29 @@ export class ThumbnailGenerationError extends Error {
     this.name = 'ThumbnailGenerationError';
   }
 }
+
+const PUBLIC_THUMBNAIL_ERROR_DETAILS: Record<ThumbnailGenerationErrorCode, string | null> = {
+  required_ack: null,
+  invalid_text: null,
+  thumbnail_chat_payload_invalid: null,
+  thumbnail_chat_message_required: null,
+  thumbnail_chat_message_too_long: null,
+  thumbnail_chat_aborted: '썸네일 작업이 중단되었습니다.',
+  thumbnail_generation_aborted: '썸네일 이미지 생성 작업이 중단되었습니다.',
+  invalid_session_api_key: null,
+  unsafe_instruction: null,
+  unsafe_identity: null,
+  unsafe_brand: null,
+  unsafe_contact: null,
+  unsafe_price: null,
+  unsafe_copy: null,
+  unsafe_crowd: null,
+  unsupported_model: null,
+  invalid_generation_mode: null,
+  host_reference_required: '쯔양님이 실제로 보이는 썸네일은 검증된 인물 참고 이미지가 필요합니다.',
+  provider_unavailable: '현재 이미지 생성 준비가 끝나지 않았습니다. 설정을 확인한 뒤 다시 시도하세요.',
+};
+
+export function getPublicThumbnailGenerationErrorDetail(error: ThumbnailGenerationError): string {
+  return PUBLIC_THUMBNAIL_ERROR_DETAILS[error.code] ?? error.message;
+}

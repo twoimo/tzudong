@@ -12,6 +12,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/lib/no-toast";
+import { assertLegacyBrowserAdminMutationEnabled } from "@/lib/admin/guarded-mutation-contract";
 import {
     CheckCircle2,
     XCircle,
@@ -219,6 +220,8 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
 
     const approveMutation = useMutation({
         mutationFn: async (reviewId: string) => {
+            assertLegacyBrowserAdminMutationEnabled("review_moderation", "approve_review");
+
             const { data: review, error: reviewError } = await supabase
                 .from('reviews')
                 .select('restaurant_id, is_verified')
@@ -295,6 +298,8 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
 
     const rejectMutation = useMutation({
         mutationFn: async (reviewId: string) => {
+            assertLegacyBrowserAdminMutationEnabled("review_moderation", "reject_review");
+
             const { data: review, error: reviewError } = await supabase
                 .from('reviews')
                 .select('restaurant_id, is_verified')
@@ -370,6 +375,7 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
 
     const deleteMutation = useMutation({
         mutationFn: async (reviewId: string) => {
+            assertLegacyBrowserAdminMutationEnabled("review_moderation", "delete_review");
             const { error } = await supabase
                 .from('reviews')
                 .delete()
