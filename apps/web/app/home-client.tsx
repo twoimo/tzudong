@@ -753,6 +753,7 @@ export default function HomeClient() {
           onRegionChange={handlers.handleRegionChange}
           onCountryChange={handlers.handleCountryChange}
           onCategoryChange={handlers.handleCategoryChange}
+          onThemeChange={handlers.handleThemeChange}
           onRestaurantSelect={handlers.handleRestaurantSelect}
           onRestaurantSearch={handlers.handleRestaurantSearch}
           onSearchExecute={handlers.switchToSingleMap}
