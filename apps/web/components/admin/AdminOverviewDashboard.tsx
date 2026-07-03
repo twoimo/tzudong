@@ -112,9 +112,11 @@ type AdminDirectionsSummary = {
 };
 
 type AdminDirectionsRoute = {
-  provider: "naver-directions5";
+  provider: "naver-directions5" | "local-heuristic";
   path: AdminDirectionsPoint[];
   summary: AdminDirectionsSummary | null;
+  fallbackReasonCode?: string | null;
+  message?: string | null;
 };
 
 type AdminDirectionsStatus = "idle" | "loading" | "ready" | "fallback";
@@ -912,6 +914,7 @@ function AdminMapInfoPanel({
   routeMode,
   directionsRoute,
   directionsStatus,
+  directionsFallbackMessage,
   isLoading,
   hasError,
   coordinateRestaurantCount,
@@ -924,6 +927,7 @@ function AdminMapInfoPanel({
   routeMode: AdminRouteMode;
   directionsRoute: AdminDirectionsRoute | null;
   directionsStatus: AdminDirectionsStatus;
+  directionsFallbackMessage: string | null;
   isLoading: boolean;
   hasError: boolean;
   coordinateRestaurantCount: number;
@@ -959,9 +963,11 @@ function AdminMapInfoPanel({
       ? "실제 도로 경로"
       : directionsStatus === "loading"
         ? "경로 계산 중"
-        : routeMode === "driving"
-          ? "거리 기반 후보"
-          : "촬영 초안";
+        : directionsStatus === "fallback" && directionsFallbackMessage
+          ? "Directions 사용 불가"
+          : routeMode === "driving"
+            ? "거리 기반 후보"
+            : "촬영 초안";
   const routeSummaryText =
     directionsStatus === "ready" &&
     [routeDistanceText, routeDurationText].filter(Boolean).length > 0
@@ -1255,6 +1261,17 @@ function AdminMapInfoPanel({
           </div>
         </div>
 
+        {directionsStatus === "fallback" && directionsFallbackMessage ? (
+          <div
+            className="mt-1.5 rounded-xl border border-amber-200 bg-amber-50/80 p-2 text-[11px] leading-4 text-amber-900"
+            data-admin-directions-unavailable="true"
+            role="status"
+          >
+            <p className="font-bold">도로 경로 대신 로컬 후보를 표시합니다.</p>
+            <p className="mt-0.5">{directionsFallbackMessage}</p>
+          </div>
+        ) : null}
+
         {routePlan.warnings.length > 0 ? (
           <div
             className="mt-1.5 rounded-xl bg-amber-50 p-1.5 text-[11px] leading-4 text-amber-900"
@@ -1344,6 +1361,7 @@ export function AdminOverviewDashboard({
     useState<AdminDirectionsRoute | null>(null);
   const [directionsStatus, setDirectionsStatus] =
     useState<AdminDirectionsStatus>("idle");
+  const [directionsFallbackMessage, setDirectionsFallbackMessage] = useState<string | null>(null);
   const [routeMode, setRouteMode] = useState<AdminRouteMode>("driving");
   const [routeStopLimit, setRouteStopLimit] = useState<number>(
     ADMIN_DIRECTIONS_MAX_POINTS,
@@ -1419,17 +1437,27 @@ export function AdminOverviewDashboard({
     if (routeMode !== "driving" || routeRequestPoints.length < 2) {
       setDirectionsRoute(null);
       setDirectionsStatus("idle");
+      setDirectionsFallbackMessage(null);
       return;
     }
 
     const controller = new AbortController();
     setDirectionsStatus("loading");
+    setDirectionsFallbackMessage(null);
 
     fetchAdminDirectionsRoute(routeRequestPoints, controller.signal)
       .then((route) => {
         if (controller.signal.aborted) return;
-        setDirectionsRoute(route.path.length >= 2 ? route : null);
-        setDirectionsStatus(route.path.length >= 2 ? "ready" : "fallback");
+        const hasRoadRoute =
+          route.provider === "naver-directions5" && route.path.length >= 2;
+        setDirectionsRoute(hasRoadRoute ? route : null);
+        setDirectionsStatus(hasRoadRoute ? "ready" : "fallback");
+        setDirectionsFallbackMessage(
+          hasRoadRoute
+            ? null
+            : route.message ??
+                "네이버 Directions 응답을 사용할 수 없어 직선거리 기반 후보를 표시합니다.",
+        );
       })
       .catch((error) => {
         if (controller.signal.aborted) return;
@@ -1439,6 +1467,9 @@ export function AdminOverviewDashboard({
         );
         setDirectionsRoute(null);
         setDirectionsStatus("fallback");
+        setDirectionsFallbackMessage(
+          "네이버 Directions 요청 실패로 직선거리 기반 후보를 표시합니다.",
+        );
       });
 
     return () => controller.abort();
@@ -1470,6 +1501,7 @@ export function AdminOverviewDashboard({
           routePlan={routePlan}
           routeMode={routeMode}
           directionsRoute={directionsRoute}
+          directionsFallbackMessage={directionsFallbackMessage}
             directionsStatus={directionsStatus}
             isLoading={isMapLoading}
             hasError={hasMapError}

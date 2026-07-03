@@ -6,6 +6,11 @@ import { createSupabaseServiceRoleClient } from "@/lib/supabase/service-role";
 export const runtime = "nodejs";
 
 type SubmissionDeleteType = "new" | "edit" | "recommend";
+type DeleteSubmissionRpcResult = {
+  success: boolean;
+  message: string;
+};
+
 
 function normalizeDeleteType(value: unknown): SubmissionDeleteType | null {
   if (value === "new" || value === "edit" || value === "recommend") {
@@ -48,7 +53,7 @@ export async function DELETE(request: NextRequest) {
       const { data: requestRow, error: requestFetchError } =
         await supabaseAdmin
           .from("restaurant_requests")
-          .select("id,user_id")
+          .select("id,user_id,status")
           .eq("id", id)
           .eq("user_id", user.id)
           .maybeSingle();
@@ -61,13 +66,29 @@ export async function DELETE(request: NextRequest) {
         );
       }
 
-      const { error: deleteRequestError } = await supabaseAdmin
+      if (requestRow.status && requestRow.status !== "pending") {
+        return NextResponse.json(
+          { error: "이미 검토가 완료된 쯔양 맛집 제보는 삭제할 수 없습니다." },
+          { status: 409 },
+        );
+      }
+
+      const { data: deletedRequestRow, error: deleteRequestError } = await supabaseAdmin
         .from("restaurant_requests")
         .delete()
         .eq("id", id)
-        .eq("user_id", user.id);
+        .eq("user_id", user.id)
+        .eq("status", "pending")
+        .select("id")
+        .maybeSingle();
 
       if (deleteRequestError) throw deleteRequestError;
+      if (!deletedRequestRow) {
+        return NextResponse.json(
+          { error: "이미 검토가 완료된 쯔양 맛집 제보는 삭제할 수 없습니다." },
+          { status: 409 },
+        );
+      }
 
       return NextResponse.json({ success: true });
     }
@@ -75,7 +96,7 @@ export async function DELETE(request: NextRequest) {
     const { data: submissionRow, error: submissionFetchError } =
       await supabaseAdmin
         .from("restaurant_submissions")
-        .select("id,user_id,submission_type")
+        .select("id,user_id,submission_type,status")
         .eq("id", id)
         .eq("user_id", user.id)
         .eq("submission_type", type)
@@ -89,21 +110,33 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const { error: deleteItemsError } = await supabaseAdmin
-      .from("restaurant_submission_items")
-      .delete()
-      .eq("submission_id", id);
+    if (submissionRow.status !== "pending") {
+      return NextResponse.json(
+        { error: "이미 검토가 완료된 제보 내역은 삭제할 수 없습니다." },
+        { status: 409 },
+      );
+    }
 
-    if (deleteItemsError) throw deleteItemsError;
+    const { data: deletionResultData, error: deletionError } = await supabaseAdmin
+      .rpc("delete_pending_restaurant_submission" as never, {
+        p_submission_id: id,
+        p_user_id: user.id,
+        p_submission_type: type,
+      } as never)
+      .returns<DeleteSubmissionRpcResult>();
 
-    const { error: deleteSubmissionError } = await supabaseAdmin
-      .from("restaurant_submissions")
-      .delete()
-      .eq("id", id)
-      .eq("user_id", user.id)
-      .eq("submission_type", type);
+    if (deletionError) throw deletionError;
 
-    if (deleteSubmissionError) throw deleteSubmissionError;
+    const deletionResult = Array.isArray(deletionResultData)
+      ? deletionResultData[0]
+      : deletionResultData;
+    if (!deletionResult?.success) {
+      const message = deletionResult?.message || "제보 내역을 삭제하지 못했습니다.";
+      if (message.includes("찾지 못했습니다")) {
+        return NextResponse.json({ error: message }, { status: 404 });
+      }
+      return NextResponse.json({ error: message }, { status: 409 });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

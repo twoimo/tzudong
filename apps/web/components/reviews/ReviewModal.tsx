@@ -200,6 +200,9 @@ type OcrStreamPayload = {
     data?: Partial<OCRResult>;
     final?: boolean;
     attempt?: { model?: string; ok?: boolean; elapsedMs?: number };
+    detail?: string;
+    terminal?: boolean;
+    status?: number;
 };
 
 type OcrFallbackNotice = {
@@ -957,7 +960,11 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                 const parsed = parseOcrStreamFrame(frame);
                 if (!parsed) continue;
                 if (parsed.event === 'error') {
-                    throw new Error(parsed.payload.message || 'OCR 스트리밍 분석 실패');
+                    const streamErrorMessage = parsed.payload.detail || parsed.payload.message || 'OCR 스트리밍 분석 실패';
+                    if (parsed.payload.terminal) {
+                        throw new OcrStreamHttpError(streamErrorMessage, parsed.payload.status ?? 422);
+                    }
+                    throw new Error(streamErrorMessage);
                 }
                 handleOcrStreamEvent(parsed.event, parsed.payload);
                 if (parsed.event === 'done' && parsed.payload.data) {
@@ -968,7 +975,13 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
 
         const parsed = parseOcrStreamFrame(buffer + decoder.decode());
         if (parsed) {
-            if (parsed.event === 'error') throw new Error(parsed.payload.message || 'OCR 스트리밍 분석 실패');
+            if (parsed.event === 'error') {
+                const streamErrorMessage = parsed.payload.detail || parsed.payload.message || 'OCR 스트리밍 분석 실패';
+                if (parsed.payload.terminal) {
+                    throw new OcrStreamHttpError(streamErrorMessage, parsed.payload.status ?? 422);
+                }
+                throw new Error(streamErrorMessage);
+            }
             handleOcrStreamEvent(parsed.event, parsed.payload);
             if (parsed.event === 'done' && parsed.payload.data) {
                 finalData = parsed.payload.data as OCRResult;
@@ -1506,6 +1519,53 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
 
     const ocrLimitReached = quota?.unlimited ? false : quota?.remaining === 0;
     const canForceOcrRefresh = process.env.NODE_ENV !== "production" || quota?.unlimited === true;
+    const handleUseReceiptPhotoOnly = () => {
+        setVerificationInputMode("manual");
+        setOcrFallbackNotice(null);
+        setCurrentStep(2);
+    };
+
+    const handleRetryReceiptOcr = () => {
+        if (!verificationPhoto || isAnalyzing || ocrLimitReached) return;
+        void analyzeReceipt(verificationPhoto);
+    };
+
+    const renderOcrFallbackNotice = () => {
+        if (!ocrFallbackNotice) return null;
+
+        const isTerminalError = ocrFallbackNotice.type === 'error';
+
+        return (
+            <div className={`rounded-lg border px-3 py-2 text-xs ${isTerminalError ? 'border-destructive/30 bg-destructive/5 text-destructive' : 'border-amber-200 bg-amber-50 text-amber-700'}`} role="status" aria-live="polite">
+                <p className="font-semibold">{ocrFallbackNotice.message}</p>
+                {ocrFallbackNotice.detail ? <p className="mt-1 opacity-80">{ocrFallbackNotice.detail}</p> : null}
+                {isTerminalError ? (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-7 border-destructive/30 bg-background px-2 text-xs text-destructive hover:bg-destructive/10"
+                            onClick={handleUseReceiptPhotoOnly}
+                        >
+                            사진만 첨부하고 직접 입력
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-7 border-destructive/30 bg-background px-2 text-xs text-destructive hover:bg-destructive/10"
+                            disabled={!verificationPhoto || isAnalyzing || ocrLimitReached}
+                            onClick={handleRetryReceiptOcr}
+                        >
+                            다시 분석
+                        </Button>
+                    </div>
+                ) : null}
+            </div>
+        );
+    };
+
     const renderOcrQuotaBadge = useCallback(() => {
         if (!quota) return null;
 
@@ -1785,12 +1845,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                     </p>
                                 )}
                                 {renderForceOcrRefreshToggle()}
-                                {ocrFallbackNotice ? (
-                                    <div className={`rounded-lg border px-3 py-2 text-xs ${ocrFallbackNotice.type === 'error' ? 'border-destructive/30 bg-destructive/5 text-destructive' : 'border-amber-200 bg-amber-50 text-amber-700'}`} role="status" aria-live="polite">
-                                        <p className="font-semibold">{ocrFallbackNotice.message}</p>
-                                        {ocrFallbackNotice.detail ? <p className="mt-1 opacity-80">{ocrFallbackNotice.detail}</p> : null}
-                                    </div>
-                                ) : null}
+                                {renderOcrFallbackNotice()}
                             </div>
                             <Card
                                 ref={verificationDropRef}
@@ -2302,12 +2357,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                             </p>
                                         )}
                                         {renderForceOcrRefreshToggle()}
-                                        {ocrFallbackNotice ? (
-                                            <div className={`rounded-lg border px-3 py-2 text-xs ${ocrFallbackNotice.type === 'error' ? 'border-destructive/30 bg-destructive/5 text-destructive' : 'border-amber-200 bg-amber-50 text-amber-700'}`} role="status" aria-live="polite">
-                                                <p className="font-semibold">{ocrFallbackNotice.message}</p>
-                                                {ocrFallbackNotice.detail ? <p className="mt-1 opacity-80">{ocrFallbackNotice.detail}</p> : null}
-                                            </div>
-                                        ) : null}
+                                        {renderOcrFallbackNotice()}
                                     </div>
                                     <Card
                                         ref={verificationDropRef}
@@ -2901,12 +2951,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                             </p>
                                         )}
                                         {renderForceOcrRefreshToggle()}
-                                        {ocrFallbackNotice ? (
-                                            <div className={`rounded-lg border px-3 py-2 text-xs ${ocrFallbackNotice.type === 'error' ? 'border-destructive/30 bg-destructive/5 text-destructive' : 'border-amber-200 bg-amber-50 text-amber-700'}`} role="status" aria-live="polite">
-                                                <p className="font-semibold">{ocrFallbackNotice.message}</p>
-                                                {ocrFallbackNotice.detail ? <p className="mt-1 opacity-80">{ocrFallbackNotice.detail}</p> : null}
-                                            </div>
-                                        ) : null}
+                                        {renderOcrFallbackNotice()}
                                     </div>
                                     <Card
                                         ref={verificationDropRef}

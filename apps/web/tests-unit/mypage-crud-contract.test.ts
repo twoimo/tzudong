@@ -66,6 +66,9 @@ describe("mypage CRUD QA/QC source contracts", () => {
     const editSubmissionModalSource = source(
       "components/modals/EditRestaurantModal.tsx",
     );
+    const requestIdempotencyMigrationSource = source(
+      "supabase/migrations/20260702000200_restaurant_request_client_idempotency.sql",
+    );
 
     expect(newSubmissionModalSource).toContain(".from('restaurant_submissions')");
     expect(newSubmissionModalSource).toContain("submission_type: 'new'");
@@ -77,6 +80,20 @@ describe("mypage CRUD QA/QC source contracts", () => {
     );
     expect(newSubmissionModalSource).toContain(".from('restaurant_requests')");
     expect(newSubmissionModalSource).toContain("recommendation_reason");
+    expect(newSubmissionModalSource).toContain("getRestaurantRequestClientKey");
+    expect(newSubmissionModalSource).toContain("findRestaurantRequestByClientKey");
+    expect(newSubmissionModalSource).toContain("client_request_key: clientRequestKey");
+    expect(newSubmissionModalSource).toContain("createdWithClientKey");
+    expect(newSubmissionModalSource).toContain("requestSubmitInFlightRef");
+    expect(newSubmissionModalSource).toContain("requestPayloadFingerprintRef");
+    expect(newSubmissionModalSource).toContain("admin-restaurant-requests-inline");
+    expect(newSubmissionModalSource).toContain("readBackRestaurantRequestByClientKey");
+    expect(newSubmissionModalSource).toContain(".select('id,phone,client_request_key')");
+    expect(newSubmissionModalSource).toContain("입력한 전화번호가 저장 확인 결과와 일치하지 않습니다.");
+    expect(newSubmissionModalSource).toContain("queryKey: ['myRecommendRequests', user?.id]");
+    expect(requestIdempotencyMigrationSource).toContain("add column if not exists client_request_key text");
+    expect(requestIdempotencyMigrationSource).toContain("restaurant_requests_user_client_request_key_idx");
+    expect(requestIdempotencyMigrationSource).toContain("where client_request_key is not null");
 
     expect(editSubmissionModalSource).toContain(".from('restaurant_submissions')");
     expect(editSubmissionModalSource).toContain("submission_type: 'edit'");
@@ -92,17 +109,48 @@ describe("mypage CRUD QA/QC source contracts", () => {
     const deleteRouteSource = source("app/api/mypage/submissions/delete/route.ts");
     const newSubmissionsSource = source("app/mypage/submissions/new/page.tsx");
     const editSubmissionsSource = source("app/mypage/submissions/edit/page.tsx");
+    const newSubmissionModalSource = source(
+      "components/modals/RestaurantSubmissionModal.tsx",
+    );
     const recommendSubmissionsSource = source(
       "app/mypage/submissions/recommend/page.tsx",
     );
+    const lifecycleMigrationSource = source(
+      "supabase/migrations/20260702000100_restaurant_request_review_lifecycle.sql",
+    );
+
 
     expect(deleteRouteSource).toContain("await supabase.auth.getUser()");
     expect(deleteRouteSource).toContain('type === "recommend"');
     expect(deleteRouteSource).toContain('.from("restaurant_requests")');
     expect(deleteRouteSource).toContain('.from("restaurant_submissions")');
-    expect(deleteRouteSource).toContain('.from("restaurant_submission_items")');
-    expect(deleteRouteSource.match(/\.eq\("user_id", user\.id\)/g)?.length ?? 0).toBeGreaterThanOrEqual(3);
+    expect(deleteRouteSource).toContain("delete_pending_restaurant_submission");
+    expect(deleteRouteSource.match(/\.eq\("user_id", user\.id\)/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
+    expect(deleteRouteSource).toContain('select("id,user_id,status")');
+    expect(deleteRouteSource).toContain('select("id,user_id,submission_type,status")');
+    expect(deleteRouteSource).toContain('.eq("status", "pending")');
+    expect(deleteRouteSource).toContain('submissionRow.status !== "pending"');
+    expect(deleteRouteSource).toContain("deletedRequestRow");
+    expect(deleteRouteSource).toContain("deletionResult");
+    expect(deleteRouteSource).toContain("이미 검토가 완료된 쯔양 맛집 제보는 삭제할 수 없습니다.");
+    expect(deleteRouteSource).toContain("이미 검토가 완료된 제보 내역은 삭제할 수 없습니다.");
     expect(deleteRouteSource).toContain('.eq("submission_type", type)');
+    expect(deleteRouteSource).toContain("p_user_id: user.id");
+    expect(lifecycleMigrationSource).toContain("create or replace function public.delete_pending_restaurant_submission");
+    expect(lifecycleMigrationSource).toContain("from public.restaurant_submissions");
+    expect(lifecycleMigrationSource).toContain("for update");
+    expect(lifecycleMigrationSource).toContain("delete from public.restaurant_submission_items");
+    expect(lifecycleMigrationSource).toContain("and restaurant_submissions.status = 'pending'");
+    expect(lifecycleMigrationSource).toContain("revoke all on function public.delete_pending_restaurant_submission");
+    expect(lifecycleMigrationSource).toContain("to service_role");
+
+    expect(newSubmissionModalSource).toContain('<dt className="w-16 shrink-0 text-muted-foreground">전화</dt>');
+    expect(newSubmissionsSource).toContain("submission.restaurant_phone");
+    expect(editSubmissionsSource).toContain("submission.restaurant_phone");
+    expect(recommendSubmissionsSource).toContain("request.phone");
+    expect(recommendSubmissionsSource).toContain("RESTAURANT_REQUEST_SELECT");
+    expect(recommendSubmissionsSource).toContain('"phone"');
+    expect(recommendSubmissionsSource).toContain('request.phone || "전화번호 없음"');
 
     const pageExpectations = [
       [newSubmissionsSource, "new", "신규 맛집 제보"],

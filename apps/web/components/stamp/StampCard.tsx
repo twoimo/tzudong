@@ -57,6 +57,8 @@ export interface StampCardProps {
     stampSize?: 'default' | 'compact' | 'mobile';
     /** 카드 내부 여백/썸네일 밀도 */
     density?: 'normal' | 'dense';
+    /** 카드 레이아웃 variant */
+    layout?: 'card' | 'list';
     guideLabel?: string;
     guideTitle?: string;
     guideDescription?: string;
@@ -81,6 +83,7 @@ export const StampCard = memo(function StampCard({
     size = 'default',
     stampSize,
     density = 'normal',
+    layout = 'card',
     guideLabel,
     guideTitle,
     guideDescription,
@@ -118,6 +121,7 @@ export const StampCard = memo(function StampCard({
 
     const isCompact = size === 'compact';
     const isDense = density === 'dense';
+    const isList = layout === 'list';
     const resolvedStampSize = stampSize ?? size;
     const isStampCompact = resolvedStampSize === 'compact';
     const isStampMobile = resolvedStampSize === 'mobile';
@@ -152,6 +156,79 @@ export const StampCard = memo(function StampCard({
         onClick(restaurant);
     };
 
+    if (isList) {
+        return (
+            <Card
+                className={cn(
+                    "group relative flex min-h-[76px] items-stretch gap-2 overflow-hidden rounded-xl border border-border bg-card p-2 transition-[background-color,box-shadow,border-color] duration-200",
+                    isGuideCard ? "cursor-default" : "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+                    showStamp ? "ring-2 ring-green-500 ring-opacity-50" : "hover:bg-accent/35 hover:shadow-md",
+                    isSelected && "ring-2 ring-primary"
+                )}
+                onClick={handleCardOpen}
+                onKeyDown={handleCardKeyDown}
+                role={isGuideCard ? undefined : "button"}
+                tabIndex={isGuideCard ? undefined : 0}
+                aria-label={isGuideCard ? undefined : `${restaurantDisplayName} 맛집 상세 열기`}
+            >
+                <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5 pr-1">
+                    <div className="flex min-w-0 items-start justify-between gap-2">
+                        <div className="min-w-0">
+                            <h3 className="truncate text-[14px] font-semibold leading-5 text-foreground" title={restaurantDisplayName}>
+                                {restaurantDisplayName}
+                            </h3>
+                            <div className="mt-0 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[10px] leading-3.5 text-muted-foreground">
+                                {category && (
+                                    <Badge
+                                        variant="secondary"
+                                        className="h-4 shrink-0 border-transparent bg-secondary/50 px-1 text-[9px] font-normal text-secondary-foreground/90 hover:bg-secondary/60"
+                                    >
+                                        {category}
+                                    </Badge>
+                                )}
+                                <span className="shrink-0">리뷰 {reviewCount}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {showAddress && displayAddress && (
+                        <p className="flex min-w-0 items-center gap-1 text-[11px] leading-3.5 text-muted-foreground">
+                            <MapPin className="h-3 w-3 shrink-0" aria-hidden="true" />
+                            <span className="truncate">{displayAddress}</span>
+                        </p>
+                    )}
+                    {typedRestaurant.tzuyang_review && (
+                        <p className="truncate text-[11px] leading-3.5 text-muted-foreground">
+                            “{typedRestaurant.tzuyang_review}”
+                        </p>
+                    )}
+                </div>
+
+                <div className="relative h-16 shrink-0 self-center overflow-hidden rounded-lg bg-muted" style={{ width: '5rem', minWidth: '5rem' }}>
+                    {thumbnailUrl ? (
+                        <Image
+                            src={thumbnailUrl}
+                            alt={`${restaurantDisplayName} 썸네일`}
+                            fill
+                            sizes="112px"
+                            className={cn(
+                                "h-full w-full object-cover transition-[filter,opacity,transform] duration-300",
+                                showStamp ? "grayscale opacity-60" : "group-hover:brightness-110"
+                            )}
+                            style={{ objectFit: 'cover' }}
+                            onError={(event) => {
+                                if (!fallbackThumbnailUrl || event.currentTarget.src.includes('/hqdefault.jpg')) return;
+                                event.currentTarget.src = fallbackThumbnailUrl;
+                            }}
+                        />
+                    ) : (
+                        <div className="flex h-full w-full items-center justify-center">
+                            <MapPin className="h-8 w-8 text-muted-foreground/70" aria-hidden="true" />
+                        </div>
+                    )}
+                </div>
+            </Card>
+        );
+    }
     return (
         <Card
             className={cn(
@@ -166,7 +243,7 @@ export const StampCard = memo(function StampCard({
             tabIndex={isGuideCard ? undefined : 0}
             aria-label={isGuideCard ? undefined : `${restaurantDisplayName} 도장 카드 열기`}
         >
-            <div className={cn("relative", isDense && isCompact ? "aspect-[16/5]" : "aspect-video")}>
+            <div className="relative aspect-video">
                 {thumbnailUrl ? (
                     <>
                         <Image
