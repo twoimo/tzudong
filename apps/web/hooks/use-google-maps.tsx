@@ -12,6 +12,18 @@ const globalLoadState: { isLoaded: boolean; error: Error | null; isLoading: bool
     isLoading: false
 };
 
+export const GOOGLE_MAPS_LOAD_STATE_EVENT = "tzudong:google-maps-load-state";
+
+type GoogleMapsLoadStateDetail =
+    | { status: "loaded" }
+    | { status: "error"; message: string };
+
+function dispatchGoogleMapsLoadState(detail: GoogleMapsLoadStateDetail) {
+    window.__tzudongGoogleMapsLoadState = detail;
+    window.dispatchEvent(new CustomEvent(GOOGLE_MAPS_LOAD_STATE_EVENT, { detail }));
+}
+
+
 export function useGoogleMaps({ apiKey, libraries = ["places", "marker"] }: UseGoogleMapsOptions) {
     const [isLoaded, setIsLoaded] = useState(false);
     const [loadError, setLoadError] = useState<Error | null>(null);
@@ -24,17 +36,20 @@ export function useGoogleMaps({ apiKey, libraries = ["places", "marker"] }: UseG
             globalLoadState.isLoading = false;
             setIsLoaded(false);
             setLoadError(error);
+            dispatchGoogleMapsLoadState({ status: "error", message: error.message });
         };
 
         // 이미 로드된 경우
         if (globalLoadState.error) {
             setLoadError(globalLoadState.error);
+            dispatchGoogleMapsLoadState({ status: "error", message: globalLoadState.error.message });
             return;
         }
 
         // 이미 로드된 경우
         if (globalLoadState.isLoaded) {
             setIsLoaded(true);
+            dispatchGoogleMapsLoadState({ status: "loaded" });
             return;
         }
 
@@ -43,8 +58,10 @@ export function useGoogleMaps({ apiKey, libraries = ["places", "marker"] }: UseG
             const checkLoaded = () => {
                 if (globalLoadState.isLoaded) {
                     setIsLoaded(true);
+                    dispatchGoogleMapsLoadState({ status: "loaded" });
                 } else if (globalLoadState.error) {
                     setLoadError(globalLoadState.error);
+                    dispatchGoogleMapsLoadState({ status: "error", message: globalLoadState.error.message });
                 } else {
                     setTimeout(checkLoaded, 100);
                 }
@@ -57,6 +74,7 @@ export function useGoogleMaps({ apiKey, libraries = ["places", "marker"] }: UseG
         if (window.google && window.google.maps && window.google.maps.Map) {
             globalLoadState.isLoaded = true;
             setIsLoaded(true);
+            dispatchGoogleMapsLoadState({ status: "loaded" });
             return;
         }
 
@@ -68,11 +86,13 @@ export function useGoogleMaps({ apiKey, libraries = ["places", "marker"] }: UseG
                 globalLoadState.isLoaded = true;
                 globalLoadState.isLoading = false;
                 setIsLoaded(true);
+                dispatchGoogleMapsLoadState({ status: "loaded" });
             });
             existingScript.addEventListener("error", () => {
                 globalLoadState.error = new Error("Failed to load Google Maps");
                 globalLoadState.isLoading = false;
                 setLoadError(globalLoadState.error);
+                dispatchGoogleMapsLoadState({ status: "error", message: globalLoadState.error.message });
             });
             return;
         }
@@ -89,6 +109,7 @@ export function useGoogleMaps({ apiKey, libraries = ["places", "marker"] }: UseG
                 globalLoadState.isLoaded = true;
                 globalLoadState.isLoading = false;
                 setIsLoaded(true);
+                dispatchGoogleMapsLoadState({ status: "loaded" });
             }
         };
 
@@ -98,6 +119,7 @@ export function useGoogleMaps({ apiKey, libraries = ["places", "marker"] }: UseG
                 globalLoadState.error = new Error("Google Maps 로딩 시간 초과 (네트워크 연결을 확인해주세요)");
                 globalLoadState.isLoading = false;
                 setLoadError(globalLoadState.error);
+                dispatchGoogleMapsLoadState({ status: "error", message: globalLoadState.error.message });
             }
         }, 5000);
 
@@ -111,6 +133,7 @@ export function useGoogleMaps({ apiKey, libraries = ["places", "marker"] }: UseG
                     globalLoadState.isLoaded = true;
                     globalLoadState.isLoading = false;
                     setIsLoaded(true);
+                    dispatchGoogleMapsLoadState({ status: "loaded" });
                 }
             }, 100);
         });
@@ -120,6 +143,7 @@ export function useGoogleMaps({ apiKey, libraries = ["places", "marker"] }: UseG
             globalLoadState.error = new Error("Google Maps 로딩 실패: 알 수 없는 오류");
             globalLoadState.isLoading = false;
             setLoadError(globalLoadState.error);
+            dispatchGoogleMapsLoadState({ status: "error", message: globalLoadState.error.message });
         });
 
         document.head.appendChild(script);
@@ -137,6 +161,7 @@ declare global {
         google: typeof google;
         googleMapsCallback?: () => void;
         gm_authFailure?: () => void;
+        __tzudongGoogleMapsLoadState?: GoogleMapsLoadStateDetail;
     }
 }
 
