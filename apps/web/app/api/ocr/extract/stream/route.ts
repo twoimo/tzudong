@@ -357,7 +357,7 @@ export async function POST(req: Request) {
       } catch {
         // Ignore logging failures.
       }
-      send('error', { message: 'OCR 처리 중 오류가 발생했습니다.', detail: process.env.NODE_ENV === 'production' ? undefined : errorMessage });
+      send('error', { message: 'OCR 처리 중 오류가 발생했습니다.', detail: process.env.NODE_ENV === 'production' ? undefined : errorMessage, terminal: true, status: 422 });
     }
   });
 }
