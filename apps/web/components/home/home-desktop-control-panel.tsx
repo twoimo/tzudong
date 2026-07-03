@@ -53,6 +53,10 @@ import {
   type HomeMapPanelSide,
   type HomeMapUserPreferences,
 } from "@/lib/home-map-user-preferences";
+import {
+  HOME_MAP_THEME_FILTERS,
+  type HomeMapThemeFilterId,
+} from "@/lib/home-map-theme-filters";
 import type { User } from "@supabase/supabase-js";
 import {
   Bell,
@@ -233,6 +237,7 @@ interface HomeDesktopControlPanelProps {
   onRegionChange: (region: Region | null) => void;
   onCountryChange: (country: string) => void;
   onCategoryChange: (categories: string[]) => void;
+  onThemeChange: (themeId: HomeMapThemeFilterId | null) => void;
   onRestaurantSelect: (restaurant: Restaurant) => void;
   onRestaurantSearch: (restaurant: Restaurant) => void;
   onSearchExecute: (region?: Region | null) => void;
@@ -757,6 +762,7 @@ export default function HomeDesktopControlPanel({
   onRegionChange,
   onCountryChange,
   onCategoryChange,
+  onThemeChange,
   onRestaurantSelect,
   onRestaurantSearch,
   onSearchExecute,
@@ -1442,6 +1448,7 @@ export default function HomeDesktopControlPanel({
   const hasActiveDetail = isPanelOpen && Boolean(panelRestaurant);
   const isInlinePanelViewActive = activeLeftPanelView !== "map";
   const hasDesktopSearchQuery = desktopSearchQuery.trim().length > 0;
+  const selectedTheme = filters.featuredTheme ?? null;
   // The hamburger menu intentionally lives in the expanded desktop search slot.
   // When the panel is collapsed, the persistent edge toggle reveals this slot;
   // we do not add a second map-floating nav because the old map overlay buttons
@@ -1462,15 +1469,52 @@ export default function HomeDesktopControlPanel({
     <>
       {!hasActiveDetail && (
         <>
-          {onModeChange && (
-            <div
-              className="fixed top-4 z-[70] grid auto-rows-auto grid-cols-[max-content] items-start gap-2"
-              style={desktopMapFloatingControlStyle}
-              data-desktop-map-mode-toggle="true"
-              onMouseDownCapture={handlePanelMouseDownCapture}
-              onFocusCapture={handlePanelFocusCapture}
-            >
-              <div className="flex w-[var(--desktop-map-floating-filter-width)] items-center gap-0.5 rounded-full border border-border bg-background/95 p-0.5 shadow-lg backdrop-blur-sm">
+          <div
+            className="fixed top-4 z-[70] max-w-[calc(100vw-2rem)]"
+            style={desktopMapFloatingControlStyle}
+            data-desktop-map-theme-filters="true"
+            onMouseDownCapture={handlePanelMouseDownCapture}
+            onFocusCapture={handlePanelFocusCapture}
+          >
+            <div className="flex w-max max-w-[calc(100vw-2rem)] items-center gap-1 overflow-x-auto rounded-full border border-border bg-background/95 p-1 shadow-lg backdrop-blur-sm scrollbar-hide [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {HOME_MAP_THEME_FILTERS.map((theme) => {
+                const isSelected = selectedTheme === theme.id;
+                return (
+                  <Button
+                    key={theme.id}
+                    variant="ghost"
+                    size="sm"
+                    type="button"
+                    onClick={() => onThemeChange(isSelected ? null : theme.id)}
+                    aria-pressed={isSelected}
+                    aria-label={theme.ariaLabel}
+                    title={`${theme.label}: ${theme.description}`}
+                    className={cn(
+                      "h-9 shrink-0 rounded-full px-3 text-xs font-semibold transition-colors motion-reduce:transition-none",
+                      isSelected
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-foreground hover:bg-secondary/80",
+                    )}
+                  >
+                    {theme.label}
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div
+            className="fixed bottom-6 z-[70] grid auto-rows-auto grid-cols-[max-content] items-start gap-2"
+            style={desktopMapFloatingControlStyle}
+            data-desktop-map-floating-filters="true"
+            onMouseDownCapture={handlePanelMouseDownCapture}
+            onFocusCapture={handlePanelFocusCapture}
+          >
+            {onModeChange && (
+              <div
+                className="flex w-[var(--desktop-map-floating-filter-width)] items-center gap-0.5 rounded-full border border-border bg-background/95 p-0.5 shadow-lg backdrop-blur-sm"
+                data-desktop-map-mode-toggle="true"
+              >
                 <Button
                   variant="ghost"
                   size="sm"
@@ -1502,16 +1546,7 @@ export default function HomeDesktopControlPanel({
                   해외
                 </Button>
               </div>
-            </div>
-          )}
-
-          <div
-            className="fixed bottom-6 z-[70] grid auto-rows-auto grid-cols-[max-content] items-start gap-2"
-            style={desktopMapFloatingControlStyle}
-            data-desktop-map-floating-filters="true"
-            onMouseDownCapture={handlePanelMouseDownCapture}
-            onFocusCapture={handlePanelFocusCapture}
-          >
+            )}
             {mapMode === "domestic" ? (
               <RegionSelector
                 selectedRegion={selectedRegion}

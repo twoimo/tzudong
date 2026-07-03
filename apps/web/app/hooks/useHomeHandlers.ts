@@ -1,6 +1,8 @@
 import { useCallback } from 'react';
 import type { Restaurant, Region } from '@/types/restaurant';
 import type { FilterState } from '@/components/filters/filter-state';
+import type { HomeMapThemeFilterId } from '@/lib/home-map-theme-filters';
+
 
 interface UseHomeHandlersProps {
     setFilters: React.Dispatch<React.SetStateAction<FilterState>>;
@@ -63,6 +65,13 @@ export function useHomeHandlers(props: UseHomeHandlersProps) {
             categories: categories
         }));
     }, [setSelectedCategories, setFilters]);
+
+    const handleThemeChange = useCallback((themeId: HomeMapThemeFilterId | null) => {
+        setFilters(prev => ({
+            ...prev,
+            featuredTheme: themeId,
+        }));
+    }, [setFilters]);
 
     const handleAdminEditRestaurant = useCallback((restaurant: Restaurant) => {
         setAdminRestaurantToEdit(restaurant);
@@ -170,6 +179,7 @@ export function useHomeHandlers(props: UseHomeHandlersProps) {
     return {
         handleFilterChange,
         handleCategoryChange,
+        handleThemeChange,
         handleAdminEditRestaurant,
         handleRequestEditRestaurant,
         handleEditFormChange,
