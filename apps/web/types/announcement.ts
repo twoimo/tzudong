@@ -28,23 +28,23 @@ export type AnnouncementFormData = z.infer<typeof AnnouncementFormSchema>;
 export const DUMMY_ANNOUNCEMENTS: Announcement[] = [
     {
         id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-        title: 'Tzudong Map v1.1.1 Release Notes',
-        content: `Hello from Tzudong Map.
+        title: '쯔동여지도 v1.2.0 운영 안정화 업데이트 안내',
+        content: `안녕하세요, 쯔동여지도입니다.
 
-Version v1.1.1 focuses on making the public restaurant map, the admin moderation console, and the storyboard generation workspace easier to verify and operate.
+v1.2.0은 겉으로 보이는 장식보다 서비스가 더 안전하고 정확하게 운영되도록 만든 안정화 업데이트입니다.
 
-The public map keeps the map-first browsing flow with clustered restaurant markers, category filters, region filters, mobile controls, and restaurant detail entry points.
+관리자 콘솔의 검토·OCR·사용자 관리·감사 로그 흐름을 Preview → Confirm → Apply → Readback → Audit 기준에 맞춰 더 엄격하게 정리했습니다. 위험한 변경은 적용 전 확인하고, 적용 후에는 재확인과 감사 추적 정보를 남기도록 했습니다.
 
-The admin workspace includes guarded review and readback flows, and the storyboard module now surfaces starter examples, generated storyboard images, cut-level metadata, local bridge state, and setup traces more clearly.
+네이버 길찾기, 유튜브 썸네일 릴리즈, OCR 처리처럼 외부 제공자나 배치 작업이 연결되는 기능은 준비 상태와 실패 사유를 더 명확하게 보여주도록 개선했습니다. 민감한 provider 응답, 저장소 경로, secret 값은 화면이나 로그에 그대로 노출되지 않게 정리했습니다.
 
-AI and RAG-related claims are scoped to verified evidence: deterministic fixtures, explicit local/provider smoke runs, and fail-closed worker readiness checks are tracked separately from experimental RAGAS or LangSmith notes.
+관리자 집계와 감사 범위도 더 솔직하게 표시합니다. 로딩 중이거나 일부 도메인만 조회되는 경우를 구분하고, 리뷰·맛집 추천·사용자 관리 흐름의 수치와 상태를 공통 계약으로 맞췄습니다.
 
-Thank you for using Tzudong Map.`,
+이번 업데이트는 쯔동여지도를 더 오래 안정적으로 운영하기 위한 기반 작업입니다. 앞으로도 맛집 지도와 관리자 도구를 더 신뢰할 수 있게 다듬어가겠습니다.`,
         isActive: true,
         showOnBanner: true,
         priority: 100,
         createdAt: '2025-12-01T09:00:00.000Z',
-        updatedAt: '2025-12-01T09:00:00.000Z',
+        updatedAt: '2026-07-03T20:00:00.000Z',
     },
     {
         id: 'b2c3d4e5-f6a7-8901-bcde-f23456789012',
