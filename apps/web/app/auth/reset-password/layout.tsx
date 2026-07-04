@@ -1,11 +1,12 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+
 import { buildNoIndexMetadata } from '@/lib/seo';
 
 export const metadata: Metadata = buildNoIndexMetadata({
-    title: '지도 프레임 - 쯔동여지도',
+    title: '비밀번호 재설정 - 쯔동여지도',
 });
 
-export default function HomeFrameLayout({ children }: { children: ReactNode }) {
+export default function ResetPasswordLayout({ children }: { children: ReactNode }) {
     return children;
 }
