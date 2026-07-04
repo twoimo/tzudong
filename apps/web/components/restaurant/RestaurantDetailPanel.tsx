@@ -44,6 +44,7 @@ import {
 } from "@/lib/restaurant-review-lookup";
 import { collectRestaurantMergedMedia } from "@/lib/restaurant-merged-media";
 import { buildRestaurantDetailMediaCopy } from "@/lib/restaurant-detail-media-copy";
+import { buildRestaurantAddressDisplayEntries, type RestaurantAddressEntryType } from "@/lib/restaurant-address-presenter";
 
 type ReviewRow = Tables<'reviews'>;
 type ProfileRow = Pick<Tables<'profiles'>, 'user_id' | 'nickname' | 'avatar_url'>;
@@ -128,7 +129,7 @@ export function RestaurantDetailPanel({
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
     const [viewMode, setViewMode] = useState<'detail' | 'reviews'>('detail');
     const [likedReviews, setLikedReviews] = useState<Set<string>>(new Set());
-    const [copiedAddress, setCopiedAddress] = useState<'road' | 'jibun' | 'english' | null>(null);
+    const [copiedAddress, setCopiedAddress] = useState<RestaurantAddressEntryType | null>(null);
     const [isYoutubeExpanded, setIsYoutubeExpanded] = useState(false);
     const [isReviewExpanded, setIsReviewExpanded] = useState(false);
     const [isDirectionSheetOpen, setIsDirectionSheetOpen] = useState(false);
@@ -206,9 +207,11 @@ export function RestaurantDetailPanel({
 
 
         return {
-            roadAddresses: roadAddress ? [roadAddress] : [],
-            jibunAddresses: jibunAddress ? [jibunAddress] : [],
-            englishAddresses: englishAddress ? [englishAddress] : [],
+            addressEntries: buildRestaurantAddressDisplayEntries({
+                road_address: roadAddress,
+                jibun_address: jibunAddress,
+                english_address: englishAddress,
+            }),
         };
     }, [restaurant]);
 
@@ -443,7 +446,7 @@ export function RestaurantDetailPanel({
 
 
     // [핸들러] 주소 복사
-    const handleCopyAddress = useCallback(async (address: string, type: 'road' | 'jibun' | 'english') => {
+    const handleCopyAddress = useCallback(async (address: string, type: RestaurantAddressEntryType) => {
         try {
             await navigator.clipboard.writeText(address);
             setCopiedAddress(type);
@@ -1032,62 +1035,20 @@ export function RestaurantDetailPanel({
                                         매장 정보
                                     </h3>
 
-                                    {uniqueData?.roadAddresses.map((address, index) => (
+                                    {uniqueData?.addressEntries.map((entry) => (
                                         <button
                                             type="button"
-                                            key={index}
+                                            key={`${entry.type}-${entry.address}`}
                                             className="flex w-full gap-3 cursor-pointer hover:bg-muted/50 p-2 -m-2 rounded-lg transition-colors group text-left"
-                                            onClick={() => handleCopyAddress(address, 'road')}
-                                            aria-label="도로명 주소 복사"
+                                            onClick={() => handleCopyAddress(entry.address, entry.type)}
+                                            aria-label={`${entry.label} 복사`}
                                         >
                                             <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                                             <div className="flex-1">
-                                                <p className="text-xs text-muted-foreground">도로명 주소</p>
-                                                <p className="text-sm">{address}</p>
+                                                <p className="text-xs text-muted-foreground">{entry.label}</p>
+                                                <p className="text-sm">{entry.address}</p>
                                             </div>
-                                            {copiedAddress === 'road' ? (
-                                                <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                                            ) : (
-                                                <Copy className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                            )}
-                                        </button>
-                                    ))}
-
-                                    {uniqueData?.jibunAddresses && uniqueData.jibunAddresses.length > 0 && uniqueData.jibunAddresses.map((address, index) => (
-                                        <button
-                                            type="button"
-                                            key={index}
-                                            className="flex w-full gap-3 cursor-pointer hover:bg-muted/50 p-2 -m-2 rounded-lg transition-colors group text-left"
-                                            onClick={() => handleCopyAddress(address, 'jibun')}
-                                            aria-label="지번 주소 복사"
-                                        >
-                                            <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                                            <div className="flex-1">
-                                                <p className="text-xs text-muted-foreground">지번 주소</p>
-                                                <p className="text-sm">{address}</p>
-                                            </div>
-                                            {copiedAddress === 'jibun' ? (
-                                                <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                                            ) : (
-                                                <Copy className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                            )}
-                                        </button>
-                                    ))}
-
-                                    {uniqueData?.englishAddresses && uniqueData.englishAddresses.length > 0 && uniqueData.englishAddresses.map((address, index) => (
-                                        <button
-                                            type="button"
-                                            key={index}
-                                            className="flex w-full gap-3 cursor-pointer hover:bg-muted/50 p-2 -m-2 rounded-lg transition-colors group text-left"
-                                            onClick={() => handleCopyAddress(address, 'english')}
-                                            aria-label="영문 주소 복사"
-                                        >
-                                            <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                                            <div className="flex-1">
-                                                <p className="text-xs text-muted-foreground">영어 주소</p>
-                                                <p className="text-sm">{address}</p>
-                                            </div>
-                                            {copiedAddress === 'english' ? (
+                                            {copiedAddress === entry.type ? (
                                                 <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
                                             ) : (
                                                 <Copy className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -1482,28 +1443,28 @@ export function RestaurantDetailPanel({
                                         onClick={handleRequestEditRestaurant}
                                         variant="outline"
                                         size="sm"
-                                        className="flex flex-col gap-1 h-auto py-3 px-2"
+                                        className="h-12 min-w-0 items-center justify-center gap-1.5 rounded-xl px-2 text-xs font-semibold"
                                     >
-                                        <Edit className="h-4 w-4" />
-                                        <span className="text-xs">수정 요청</span>
+                                        <Edit className="h-4 w-4 shrink-0" aria-hidden="true" />
+                                        <span className="truncate">수정 요청</span>
                                     </Button>
 
                                     <Button
                                         onClick={handleGetDirections}
-                                        className="flex flex-col gap-1 h-auto py-3 px-2 bg-gradient-primary hover:opacity-90"
+                                        className="h-12 min-w-0 items-center justify-center gap-2 rounded-xl bg-gradient-primary px-3 text-sm font-bold shadow-sm hover:opacity-90"
                                     >
-                                        <Navigation className="h-4 w-4" />
-                                        <span className="text-xs font-medium">길찾기</span>
+                                        <Navigation className="h-4 w-4 shrink-0" aria-hidden="true" />
+                                        <span className="truncate">길찾기</span>
                                     </Button>
 
                                     <Button
                                         onClick={handleWriteReview}
                                         variant="outline"
                                         size="sm"
-                                        className="flex flex-col gap-1 h-auto py-3 px-2"
+                                        className="h-12 min-w-0 items-center justify-center gap-1.5 rounded-xl px-2 text-xs font-semibold"
                                     >
-                                        <MessageSquare className="h-4 w-4" />
-                                        <span className="text-xs">리뷰 작성</span>
+                                        <MessageSquare className="h-4 w-4 shrink-0" aria-hidden="true" />
+                                        <span className="truncate">리뷰 작성</span>
                                     </Button>
                                 </div>
                             </div>

@@ -25,13 +25,17 @@ export function isHttpUrl(value: string): boolean {
     return /^https?:\/\//.test(value.trim());
 }
 
+function hasRequiredCategory(categories: string[]) {
+    return categories.some((category) => category.trim().length > 0);
+}
+
 export function validateRestaurantSubmissionStep(
     step: RestaurantSubmissionStep,
     mode: RestaurantSubmissionMode,
     data: RestaurantSubmissionFormData
 ): string | null {
     if (step === 1) {
-        if (!data.restaurant_name.trim() || !data.address.trim() || data.categories.length === 0) {
+        if (!data.restaurant_name.trim() || !data.address.trim() || !hasRequiredCategory(data.categories)) {
             return '맛집 이름, 주소, 카테고리는 필수입니다';
         }
 
