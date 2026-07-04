@@ -5,7 +5,7 @@ import { buildPublicMetadata } from '@/lib/seo';
 import { siteConfig, supportMailto } from '@/lib/site-config';
 
 export const metadata: Metadata = buildPublicMetadata({
-  title: '데이터 삭제 요청 | 쯔동여지도',
+  title: '데이터 삭제 요청 - 쯔동여지도',
   description: '쯔동여지도 계정과 개인정보 삭제 방법, 앱 내 삭제 경로, 이메일 요청 절차를 안내합니다.',
   path: siteConfig.legal.dataDeletionPath,
   keywords: ['쯔동여지도 데이터 삭제', '계정 삭제', '개인정보 삭제 요청'],

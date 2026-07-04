@@ -13,6 +13,9 @@ export interface YoutubeMeta {
     duration?: number;
     is_shorts?: boolean;
     publishedAt?: string; // ISO 8601 날짜 문자열
+    viewCount?: number | string | null;
+    likeCount?: number | string | null;
+    commentCount?: number | string | null;
 }
 
 // 호환성을 위한 확장 Restaurant 타입
