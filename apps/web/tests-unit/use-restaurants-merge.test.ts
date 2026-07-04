@@ -2,7 +2,8 @@ import { describe, expect, mock, test } from 'bun:test';
 
 type MergeInput = Array<Record<string, unknown>>;
 
-type MergeRestaurantsExports = {
+type UseRestaurantsExports = {
+    buildRestaurantSelectFields: (options: { compact: boolean; includeYoutubeMetaForTheme: boolean }) => string;
     mergeRestaurants: (restaurants: MergeInput) => unknown[];
 };
 
@@ -37,8 +38,8 @@ mock.module('@/integrations/supabase/client', () => ({
 
 type MergeFixtureRestaurant = MergeInput[number];
 
-const loadUseRestaurants = async (): Promise<MergeRestaurantsExports> => {
-    const mergeModule = (await import('../hooks/use-restaurants')) as unknown as MergeRestaurantsExports;
+const loadUseRestaurants = async (): Promise<UseRestaurantsExports> => {
+    const mergeModule = (await import('../hooks/use-restaurants')) as unknown as UseRestaurantsExports;
     return mergeModule;
 };
 
@@ -68,6 +69,22 @@ function makeRestaurant(overrides: Partial<MergeFixtureRestaurant>): MergeFixtur
         ...overrides,
     } as MergeFixtureRestaurant;
 }
+
+describe('buildRestaurantSelectFields', () => {
+    test('includes youtube_meta only for full or metadata-backed compact projections', async () => {
+        const { buildRestaurantSelectFields } = await loadUseRestaurants();
+
+        expect(buildRestaurantSelectFields({ compact: false, includeYoutubeMetaForTheme: false })).toContain(
+            'youtube_meta',
+        );
+        expect(buildRestaurantSelectFields({ compact: true, includeYoutubeMetaForTheme: false })).not.toContain(
+            'youtube_meta',
+        );
+        expect(buildRestaurantSelectFields({ compact: true, includeYoutubeMetaForTheme: true })).toContain(
+            'youtube_meta',
+        );
+    });
+});
 
 describe('mergeRestaurants', () => {
     test('merges restaurants with same normalized name and address', async () => {
@@ -136,7 +153,13 @@ describe('mergeRestaurants', () => {
                 road_address: '서울특별시 강남구 영동대로 123',
                 youtube_link: 'https://www.youtube.com/watch?v=oldvideo001',
                 tzuyang_review: '오래된 영상 리뷰',
-                youtube_meta: { title: '오래된 영상', publishedAt: '2026-03-01T00:00:00Z' },
+                youtube_meta: {
+                    title: '오래된 영상',
+                    publishedAt: '2026-03-01T00:00:00Z',
+                    viewCount: 100,
+                    likeCount: 10,
+                    commentCount: 1,
+                },
             }),
             makeRestaurant({
                 id: 'video-new',
@@ -144,7 +167,13 @@ describe('mergeRestaurants', () => {
                 road_address: '서울특별시  강남구 영동대로 123',
                 youtube_link: 'https://www.youtube.com/watch?v=newvideo001',
                 tzuyang_review: '최신 영상 리뷰',
-                youtube_meta: { title: '최신 영상', publishedAt: '2026-03-05T00:00:00Z' },
+                youtube_meta: {
+                    title: '최신 영상',
+                    publishedAt: '2026-03-05T00:00:00Z',
+                    viewCount: 300,
+                    likeCount: 30,
+                    commentCount: 3,
+                },
             }),
             makeRestaurant({
                 id: 'video-mid',
@@ -152,7 +181,13 @@ describe('mergeRestaurants', () => {
                 road_address: '서울특별시 강남구 영동대로 123 2층',
                 youtube_link: 'https://www.youtube.com/watch?v=midvideo001',
                 tzuyang_review: '중간 영상 리뷰',
-                youtube_meta: { title: '중간 영상', publishedAt: '2026-03-03T00:00:00Z' },
+                youtube_meta: {
+                    title: '중간 영상',
+                    publishedAt: '2026-03-03T00:00:00Z',
+                    viewCount: 200,
+                    likeCount: 20,
+                    commentCount: 2,
+                },
             }),
         ]);
 
@@ -175,6 +210,19 @@ describe('mergeRestaurants', () => {
             '최신 영상',
             '중간 영상',
             '오래된 영상',
+        ]);
+        expect(
+            restaurant?.mergedYoutubeMetas?.map(
+                (meta: { viewCount?: number; likeCount?: number; commentCount?: number }) => ({
+                    viewCount: meta.viewCount,
+                    likeCount: meta.likeCount,
+                    commentCount: meta.commentCount,
+                }),
+            ),
+        ).toEqual([
+            { viewCount: 300, likeCount: 30, commentCount: 3 },
+            { viewCount: 200, likeCount: 20, commentCount: 2 },
+            { viewCount: 100, likeCount: 10, commentCount: 1 },
         ]);
     });
 
