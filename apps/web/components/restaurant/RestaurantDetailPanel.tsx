@@ -992,7 +992,6 @@ export function RestaurantDetailPanel({
                                     onClick={onClose}
                                     title="이전 목록으로 돌아가기"
                                     aria-label="이전 목록으로 돌아가기"
-                                    className="h-9 w-9 shrink-0 rounded-full"
                                 >
                                     <ArrowLeft className="h-4 w-4" aria-hidden="true" />
                                 </Button>
@@ -1004,7 +1003,6 @@ export function RestaurantDetailPanel({
                                     onClick={onClose}
                                     title="이전 화면으로 돌아가기"
                                     aria-label="이전 화면으로 돌아가기"
-                                    className="h-9 w-9 shrink-0 rounded-full"
                                 >
                                     <ArrowLeft className="h-4 w-4" aria-hidden="true" />
                                 </Button>
