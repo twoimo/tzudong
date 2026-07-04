@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
@@ -6,6 +7,12 @@ import {
     buildHomeAuthLoginPath,
     getSafeAuthNextPath,
 } from '@/lib/auth/auth-redirect';
+
+import { buildNoIndexMetadata } from '@/lib/seo';
+
+export const metadata: Metadata = buildNoIndexMetadata({
+    title: '로그인이 필요합니다 - 쯔동여지도',
+});
 
 type AuthRequiredPageProps = {
     searchParams: Promise<{
