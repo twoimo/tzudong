@@ -248,6 +248,7 @@ interface HomeDesktopControlPanelProps {
   contextualRestaurantsPayload?: HomeMapContextualRestaurantsPayload | null;
   isMapFullscreen?: boolean;
   onPanelClose?: () => void;
+  onDetailPanelBack?: () => void;
   onReviewModalOpen?: () => void;
   onAdminEditRestaurant?: (restaurant: Restaurant) => void;
   onRequestEditRestaurant?: (restaurant: Restaurant) => void;
@@ -773,6 +774,7 @@ export default function HomeDesktopControlPanel({
   contextualRestaurantsPayload = null,
   isMapFullscreen = false,
   onPanelClose,
+  onDetailPanelBack,
   onReviewModalOpen,
   onAdminEditRestaurant,
   onRequestEditRestaurant,
@@ -1209,7 +1211,7 @@ export default function HomeDesktopControlPanel({
     const returnProfileUserId = returnState.profileUserId;
 
     pendingDetailReturnCaptureRef.current = false;
-    onPanelClose?.();
+    (onDetailPanelBack ?? onPanelClose)?.();
 
     setDesktopSearchQuery(returnState.searchQuery);
     setDesktopSearchType(returnState.searchType);
@@ -1242,7 +1244,7 @@ export default function HomeDesktopControlPanel({
     }
     router.replace(returnRoute, { scroll: false });
     replaceBrowserHistoryRoute(returnRoute);
-  }, [onPanelClose, onSetPanelCollapsed, router, user]);
+  }, [onDetailPanelBack, onPanelClose, onSetPanelCollapsed, router, user]);
 
   const handleShortcutClick = useCallback(
     (
@@ -1476,7 +1478,7 @@ export default function HomeDesktopControlPanel({
             onMouseDownCapture={handlePanelMouseDownCapture}
             onFocusCapture={handlePanelFocusCapture}
           >
-            <div className="flex w-max max-w-[calc(100vw-2rem)] items-center gap-1 overflow-x-auto rounded-full border border-border bg-background/95 p-1 shadow-lg backdrop-blur-sm scrollbar-hide [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="flex w-max max-w-[calc(100vw-2rem)] items-center gap-2 overflow-x-auto scrollbar-hide [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {HOME_MAP_THEME_FILTERS.map((theme) => {
                 const isSelected = selectedTheme === theme.id;
                 return (
@@ -1490,10 +1492,10 @@ export default function HomeDesktopControlPanel({
                     aria-label={theme.ariaLabel}
                     title={`${theme.label}: ${theme.description}`}
                     className={cn(
-                      "h-9 shrink-0 rounded-full px-3 text-xs font-semibold transition-colors motion-reduce:transition-none",
+                      "h-9 shrink-0 rounded-full border px-3 text-xs font-semibold shadow-lg backdrop-blur-sm transition-colors motion-reduce:transition-none",
                       isSelected
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "text-foreground hover:bg-secondary/80",
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-background/95 text-foreground hover:bg-secondary/80",
                     )}
                   >
                     {theme.label}
