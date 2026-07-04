@@ -1,19 +1,21 @@
 // [SSR] 서버 컴포넌트 - SEO 메타데이터와 홈 지도 런타임
 import type { Metadata } from 'next';
-import { DEFAULT_DESCRIPTION, DEFAULT_TITLE, homeJsonLd, OG_IMAGE_ALT, OG_IMAGE_PATH, SITE_NAME } from '@/lib/seo';
+import { DEFAULT_DESCRIPTION, homeJsonLd, OG_IMAGE_ALT, OG_IMAGE_PATH, SITE_NAME } from '@/lib/seo';
 import { HomeRuntimeShell } from './home-runtime-shell';
 import HomeClient from './home-client';
 
+const HOME_TITLE = '쯔양이 다녀간 맛집 지도 - 쯔동여지도';
+
 // [SSR] 메타데이터 생성 - 검색 엔진 최적화
 export const metadata: Metadata = {
-    title: DEFAULT_TITLE,
+    title: HOME_TITLE,
     description: DEFAULT_DESCRIPTION,
     alternates: {
         canonical: '/',
     },
     keywords: ['쯔양', '맛집', '맛집지도', '음식', '레스토랑', '쯔양맛집'],
     openGraph: {
-        title: DEFAULT_TITLE,
+        title: HOME_TITLE,
         description: DEFAULT_DESCRIPTION,
         type: 'website',
         locale: 'ko_KR',
@@ -29,7 +31,7 @@ export const metadata: Metadata = {
     },
     twitter: {
         card: 'summary_large_image',
-        title: DEFAULT_TITLE,
+        title: HOME_TITLE,
         description: DEFAULT_DESCRIPTION,
         images: [OG_IMAGE_PATH],
     },

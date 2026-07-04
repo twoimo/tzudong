@@ -16,9 +16,11 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { useMobileBottomNavAutoHide } from "@/hooks/use-mobile-bottom-nav-auto-hide";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/lib/no-toast";
+import { buildBrowserTitle } from "@/lib/seo";
 
 const STAT_SKELETON_WIDTHS = ["w-full", "w-11/12", "w-10/12"];
 const ACTION_SKELETON_WIDTHS = ["w-full", "w-[92%]", "w-[84%]", "w-[76%]"];
@@ -75,6 +77,10 @@ function resolveMobileRouteHeader(pathname: string | null) {
     MOBILE_ROUTE_HEADERS.find((item) => pathname?.startsWith(item.href)) ??
     MOBILE_ROUTE_HEADERS[MOBILE_ROUTE_HEADERS.length - 1]
   );
+}
+
+function getMyPageBrowserTitleLabel(header: MyPageMobileRouteHeader) {
+  return header.href === "/mypage/profile" ? "마이페이지" : header.title;
 }
 
 const MyPageSidebar = dynamic(
@@ -182,6 +188,7 @@ export function MyPageLayoutContent({
   const shouldShowSidebarFrame = userLoading || Boolean(user);
   const mobileRouteHeader = resolveMobileRouteHeader(pathname);
   const MobileRouteIcon = mobileRouteHeader.icon;
+  useDocumentTitle(buildBrowserTitle(getMyPageBrowserTitleLabel(mobileRouteHeader)));
 
   const handleLogout = async () => {
     try {
