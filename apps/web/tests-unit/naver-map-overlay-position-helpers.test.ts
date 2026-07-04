@@ -16,7 +16,8 @@ describe('naver map overlay position helpers', () => {
 
         expect(result.centerOffsetStyle).toEqual({ left: 'calc(50% - 0px)' });
         expect(result.floatingBadgePositionClass).toContain('safe-area-inset-top');
-        expect(result.floatingToastPositionClass).toContain('safe-area-inset-top');
+        expect(result.floatingToastPositionClass).toContain('right-3');
+        expect(result.floatingToastPositionClass).toContain('bottom-[calc(var(--mobile-bottom-nav-effective-height');
     });
 
     test('uses zero offset when desktop panel is collapsed', () => {
@@ -46,7 +47,7 @@ describe('naver map overlay position helpers', () => {
         });
 
         expect(result.centerOffsetStyle).toEqual({ left: 'calc(50% - 200px)' });
-        expect(result.floatingToastPositionClass).toContain('top-4');
+        expect(result.floatingToastPositionClass).toContain('bottom-4');
     });
 
     test('keeps zero offset in grid mode', () => {
