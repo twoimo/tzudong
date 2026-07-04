@@ -312,6 +312,9 @@ function MobileControlOverlayComponent({
         !isPanelOpen &&
         !panelRestaurant &&
         visibleMarkerRestaurants.length > 0;
+    const doesDetailOwnBottomRightSafeArea = isPanelOpen && Boolean(panelRestaurant);
+    const shouldRenderMobileFloatingActions =
+        activeSheet !== 'search' && !doesDetailOwnBottomRightSafeArea;
 
 
     const handleVisibleMarkerRestaurantSelect = useCallback((restaurant: Restaurant) => {
@@ -1071,8 +1074,11 @@ function MobileControlOverlayComponent({
 
             </div>
 
-            {activeSheet !== 'search' && (
-            <div className="fixed bottom-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1rem)] right-4 z-[90] flex flex-col gap-2">
+            {shouldRenderMobileFloatingActions && (
+            <div
+                className="fixed bottom-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1rem)] right-4 z-[90] flex flex-col gap-2"
+                data-mobile-bottom-right-safe-area-owner="mobile-floating-actions"
+            >
                 {/* 제보 버튼 */}
                 <Button
                     onClick={() => {
@@ -1437,9 +1443,12 @@ function MobileControlOverlayComponent({
                                     })}
                                 </div>
 
-                                <Button className="w-full min-h-11" onClick={handleClose}>
-                                    적용하기
-                                </Button>
+                                <p
+                                    className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs leading-5 text-muted-foreground"
+                                    data-mobile-category-sheet-commit="immediate"
+                                >
+                                    선택 즉시 지도에 반영됩니다. 닫기는 상단 버튼을 사용하세요.
+                                </p>
                             </div>
                         )}
                     </div>
