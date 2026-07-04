@@ -60,9 +60,9 @@ export const AnnouncementToastBadge = memo(({ title, style, className, onClick }
 ));
 AnnouncementToastBadge.displayName = 'AnnouncementToastBadge';
 
-export const EmptyStateIndicator = memo(() => (
-    <MapOverlayNotice className="rounded-lg px-5 py-3 text-muted-foreground">
-        이 지역에 등록된 맛집이 없습니다
+export const EmptyStateIndicator = memo(({ message = '이 지역에 등록된 맛집이 없습니다' }: { message?: string }) => (
+    <MapOverlayNotice className="rounded-lg border border-border/60 px-4 py-3 text-muted-foreground shadow-lg">
+        {message}
     </MapOverlayNotice>
 ));
 EmptyStateIndicator.displayName = 'EmptyStateIndicator';
