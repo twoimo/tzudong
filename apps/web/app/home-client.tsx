@@ -31,6 +31,20 @@ import {
   type DeviceMapLocation,
 } from "@/lib/device-location-map";
 import type { HomeMapContextualRestaurantsPayload } from "@/lib/home-map-contextual-restaurants";
+import {
+  buildHomeDetailState,
+  buildHomeDetailUrl,
+  buildHomeListState,
+  createHomeRestoreKey,
+  dispatchHomeRestoreEvent,
+  isHomeDetailHistoryState,
+  isHomeListHistoryState,
+  readHomeRestoreSnapshot,
+  writeHomeRestoreSnapshot,
+  type HomeMapMode,
+  type HomeRestoreCompactRestaurant,
+  type HomeRestoreSnapshotV1,
+} from "@/lib/home-detail-route-state";
 
 function HomeMapContainerPendingShell() {
   return (
@@ -138,6 +152,13 @@ const isHomeStartupIntent = (
   value === "notification" ||
   value === "user";
 
+type HomeDetailOpenOptions = {
+  source?: "user" | "url";
+  searchFocusRestaurant?: Restaurant | null;
+  mapMode?: HomeMapMode;
+  restoreKey?: string | null;
+};
+
 export default function HomeClient() {
   const { isAdmin, user } = useAuth();
   const { isSidebarOpen } = useLayout();
@@ -182,7 +203,7 @@ export default function HomeClient() {
   const deviceOrientationCleanupRef = useRef<(() => void) | null>(null);
   const openPanelRef = useRef<(panel: PanelType) => void>(() => {});
   const openDetailPanelRef = useRef<
-    (restaurant: Restaurant, focusZoom?: number) => void
+    (restaurant: Restaurant, focusZoom?: number, options?: HomeDetailOpenOptions) => void
   >(() => {});
   useEffect(() => {
     if (mapMode !== "domestic" || isMapFullscreen) {
@@ -214,26 +235,22 @@ export default function HomeClient() {
     ? buildBrowserTitle(visibleDetailRestaurant.name)
     : null;
   useDocumentTitle(visibleDetailTitle);
-  // Deep-link restaurant params are consumed after the parent-owned
-  // selection contract opens the detail panel; using history avoids
-  // triggering a home refresh/reset loop while preserving other params.
-  const clearConsumedRestaurantParams = useCallback(() => {
-    if (typeof window === "undefined") return;
+  const toCompactRestaurant = useCallback(
+    (restaurant: Restaurant | null): HomeRestoreCompactRestaurant | null => {
+      if (!restaurant) return null;
 
-    const currentUrl = new URL(window.location.href);
-    const hadRestaurantParam =
-      currentUrl.searchParams.has("r") ||
-      currentUrl.searchParams.has("restaurant");
-    if (!hadRestaurantParam) return;
-
-    currentUrl.searchParams.delete("r");
-    currentUrl.searchParams.delete("restaurant");
-    currentUrl.searchParams.delete("z");
-
-    const nextSearch = currentUrl.searchParams.toString();
-    const nextUrl = `${currentUrl.pathname}${nextSearch ? `?${nextSearch}` : ""}${currentUrl.hash}`;
-    window.history.replaceState(window.history.state, "", nextUrl);
-  }, []);
+      return {
+        id: restaurant.id,
+        name: restaurant.name,
+        lat: restaurant.lat,
+        lng: restaurant.lng,
+        road_address: restaurant.road_address,
+        jibun_address: restaurant.jibun_address,
+        categories: restaurant.categories,
+      };
+    },
+    [],
+  );
 
   // 패널 열기 (상호 배타적) - 마이페이지, 제보관리, 리뷰관리용
   // [OPTIMIZATION] useCallback으로 메모이제이션하여 불필요한 리렌더링 방지
@@ -272,12 +289,110 @@ export default function HomeClient() {
   }, [clearRestaurantDetailSelection]);
 
   const returnToRestaurantListPanel = useCallback(() => {
+    if (
+      typeof window !== "undefined" &&
+      isHomeDetailHistoryState(window.history.state)
+    ) {
+      const { snapshot } = readHomeRestoreSnapshot(window.history.state.restoreKey);
+      if (snapshot) {
+        window.history.back();
+        return;
+      }
+    }
+
     closeRestaurantDetailPanel();
     setActiveRightPanel(null);
     setIsAnnouncementSheetOpen(false);
     setSelectedAnnouncement(null);
     clearAnnouncementPanelUrl();
   }, [closeRestaurantDetailPanel]);
+
+  const createHomeRestoreSnapshot = useCallback(
+    (): HomeRestoreSnapshotV1 => ({
+      version: 1,
+      createdAt: Date.now(),
+      mapMode,
+      selectedRestaurantId: state.selectedRestaurant?.id ?? null,
+      panelRestaurantId: state.panelRestaurant?.id ?? null,
+      searchedRestaurantId: state.searchedRestaurant?.id ?? null,
+      searchedRestaurant: toCompactRestaurant(state.searchedRestaurant),
+      filters: {
+        categories: state.filters.categories,
+        featuredTheme: state.filters.featuredTheme,
+      },
+      selectedRegion: state.selectedRegion,
+      selectedCountry: state.selectedCountry,
+      activePanel,
+      activeRightPanel,
+      isPanelCollapsed,
+      isAnnouncementSheetOpen,
+      contextualRestaurantIds:
+        contextualRestaurantsPayload?.restaurants.map((restaurant) => restaurant.id) ?? [],
+    }),
+    [
+      activePanel,
+      activeRightPanel,
+      contextualRestaurantsPayload,
+      isAnnouncementSheetOpen,
+      isPanelCollapsed,
+      mapMode,
+      state.filters.categories,
+      state.filters.featuredTheme,
+      state.panelRestaurant,
+      state.searchedRestaurant,
+      state.selectedCountry,
+      state.selectedRegion,
+      state.selectedRestaurant,
+      toCompactRestaurant,
+    ],
+  );
+
+  const applyHomeRestoreSnapshot = useCallback(
+    (restoreKey: string) => {
+      const { snapshot, reason } = readHomeRestoreSnapshot(restoreKey);
+      if (!snapshot) {
+        dispatchHomeRestoreEvent("home.restore.failed", {
+          restoreKey,
+          reason: reason ?? "missing",
+        });
+        state.syncRestaurantDetailSelection(null, {
+          isPanelOpen: false,
+          searchFocusRestaurant: null,
+        });
+        return;
+      }
+
+      setMapMode(snapshot.mapMode);
+      state.setFilters((previous) => ({
+        ...previous,
+        categories: snapshot.filters.categories,
+        featuredTheme: snapshot.filters.featuredTheme,
+      }));
+      state.setSelectedCategories(snapshot.filters.categories);
+      state.setSelectedRegion(snapshot.selectedRegion);
+      state.setSelectedCountry(snapshot.selectedCountry);
+      const restoredSearchRestaurant = snapshot.searchedRestaurant
+        ? (snapshot.searchedRestaurant as Restaurant)
+        : null;
+      state.syncRestaurantDetailSelection(null, {
+        isPanelOpen: false,
+        searchFocusRestaurant: restoredSearchRestaurant,
+      });
+      setActivePanel(snapshot.activePanel);
+      setActiveRightPanel(snapshot.activeRightPanel);
+      setIsAnnouncementSheetOpen(snapshot.isAnnouncementSheetOpen);
+      setIsPanelCollapsed(snapshot.isPanelCollapsed);
+      setSelectedAnnouncement(null);
+      dispatchHomeRestoreEvent("home.restore.succeeded", { restoreKey });
+    },
+    [
+      state.setFilters,
+      state.setSelectedCategories,
+      state.setSelectedCountry,
+      state.setSelectedRegion,
+      state.syncRestaurantDetailSelection,
+    ],
+  );
 
   useEffect(() => {
     const handleHomeOverlayPanelOpened = () => {
@@ -394,30 +509,87 @@ export default function HomeClient() {
   // 맛집 상세 패널 열기 (다른 패널 닫기 포함)
   // [OPTIMIZATION] useCallback으로 메모이제이션
   const openDetailPanel = useCallback(
-    (restaurant: Restaurant, focusZoom?: number) => {
+    (restaurant: Restaurant, focusZoom?: number, options?: HomeDetailOpenOptions) => {
       requestDesktopDetailReturnCapture();
       setIsMapFullscreen(false);
-      // 먼저 다른 패널들 닫기
+
       setActiveRightPanel(null);
       setIsPanelCollapsed(false);
-      // 그 다음 상세 패널 열기
-      openRestaurantDetailSelection(restaurant);
+      openRestaurantDetailSelection(restaurant, {
+        searchFocusRestaurant: options?.searchFocusRestaurant ?? null,
+      });
 
-      // [Fix] 줌 레벨 설정 (북마크 등에서 요청 시)
       if (focusZoom) {
         setMapFocusZoom(focusZoom);
       } else {
-        setMapFocusZoom(null); // 일반 선택 시에는 줌 레벨 강제하지 않음
+        setMapFocusZoom(null);
       }
 
-      // [Fix] 마커 클릭 시 URL의 restaurant 파라미터 제거하여 스티키 현상 방지
-      clearConsumedRestaurantParams();
+      const detailMapMode = options?.mapMode ?? mapMode;
+      if (typeof window !== "undefined") {
+        const restoreKey =
+          isHomeDetailHistoryState(window.history.state) &&
+          window.history.state.restaurantId === restaurant.id
+            ? window.history.state.restoreKey
+            : options?.restoreKey?.trim() || createHomeRestoreKey();
+        const detailState = buildHomeDetailState({
+          restaurantId: restaurant.id,
+          mapMode: detailMapMode,
+          restoreKey,
+        });
+        const detailUrl = buildHomeDetailUrl({
+          restaurantId: restaurant.id,
+          mapMode: detailMapMode,
+          restoreKey,
+          focusZoom,
+        });
+
+        if (options?.source === "url") {
+          window.history.replaceState(detailState, "", detailUrl);
+        } else {
+          const snapshot = createHomeRestoreSnapshot();
+          const wroteSnapshot = writeHomeRestoreSnapshot(restoreKey, snapshot);
+          if (!wroteSnapshot) {
+            dispatchHomeRestoreEvent("home.restore.failed", {
+              restoreKey,
+              reason: "snapshot-write-failed",
+            });
+          }
+          window.history.replaceState(
+            buildHomeListState({
+              restaurantId: restaurant.id,
+              mapMode: detailMapMode,
+              restoreKey,
+            }),
+            "",
+            window.location.href,
+          );
+          window.history.pushState(detailState, "", detailUrl);
+        }
+      }
     },
-    [clearConsumedRestaurantParams, openRestaurantDetailSelection],
+    [createHomeRestoreSnapshot, mapMode, openRestaurantDetailSelection],
   );
   useEffect(() => {
     openDetailPanelRef.current = openDetailPanel;
   }, [openDetailPanel]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handlePopState = (event: PopStateEvent) => {
+      if (isHomeListHistoryState(event.state)) {
+        applyHomeRestoreSnapshot(event.state.restoreKey);
+        return;
+      }
+
+      if (isHomeDetailHistoryState(event.state)) {
+        setMapMode(event.state.mapMode);
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [applyHomeRestoreSnapshot]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -452,6 +624,20 @@ export default function HomeClient() {
       openRestaurantDetailSelection(restaurant);
     },
     [clearRestaurantDetailSelection, openRestaurantDetailSelection],
+  );
+
+  const handleControlRestaurantSelect = useCallback(
+    (restaurant: Restaurant) => {
+      openDetailPanel(restaurant);
+    },
+    [openDetailPanel],
+  );
+
+  const handleControlRestaurantSearch = useCallback(
+    (restaurant: Restaurant) => {
+      openDetailPanel(restaurant, undefined, { searchFocusRestaurant: restaurant });
+    },
+    [openDetailPanel],
   );
 
   // 팝업 이벤트 리스너
@@ -773,8 +959,8 @@ export default function HomeClient() {
           onCountryChange={handlers.handleCountryChange}
           onCategoryChange={handlers.handleCategoryChange}
           onThemeChange={handlers.handleThemeChange}
-          onRestaurantSelect={handlers.handleRestaurantSelect}
-          onRestaurantSearch={handlers.handleRestaurantSearch}
+          onRestaurantSelect={handleControlRestaurantSelect}
+          onRestaurantSearch={handleControlRestaurantSearch}
           onSearchExecute={handlers.switchToSingleMap}
           activePanel={activePanel}
           onPanelClick={setActivePanel}

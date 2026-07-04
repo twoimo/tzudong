@@ -33,6 +33,7 @@ import { RESTAURANT_MERGE_SELECT } from "@/hooks/use-restaurants";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/lib/no-toast";
 import { assertLegacyBrowserAdminMutationEnabled } from "@/lib/admin/guarded-mutation-contract";
+import { RESTAURANT_DESTRUCTIVE_ACTION_CONFIRMATIONS } from "@/lib/admin/restaurant-destructive-action-contract";
 import { Loader2, ChevronDown, X } from "lucide-react";
 import { checkRestaurantDuplicate } from '@/lib/db-conflict-checker';
 import { canonicalizeYoutubeLink, extractVideoIdFromYoutubeLink } from '@/lib/dashboard/helpers';
@@ -179,6 +180,8 @@ export function AdminRestaurantModal({
     const shouldRenderSheetFrame = isMobileOrTablet || shouldRenderMapPanel;
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [deleteReason, setDeleteReason] = useState("");
+    const [deleteConfirmation, setDeleteConfirmation] = useState("");
     const [deletedReviewIds, setDeletedReviewIds] = useState<string[]>([]); // X 버튼으로 삭제된 기존 레코드 ID 추적
     const [customCategory, setCustomCategory] = useState(""); // 커스텀 카테고리 입력용
     const [isGeocodingNaver, setIsGeocodingNaver] = useState(false);
@@ -207,6 +210,8 @@ export function AdminRestaurantModal({
         if (isOpen && restaurant) {
             // 모달이 열릴 때마다 데이터베이스의 원본 데이터로 초기화
             setDeletedReviewIds([]); // 삭제 추적 초기화
+            setDeleteReason("");
+            setDeleteConfirmation("");
             // mergedRestaurants에서 status가 'approved'인 유튜브 링크-리뷰 쌍만 추출
             const youtubeReviews = restaurant.mergedRestaurants
                 ?.filter(r => r.status === 'approved') // 승인된 것만
@@ -858,20 +863,38 @@ export function AdminRestaurantModal({
         setIsSubmitting(true);
 
         try {
-            assertLegacyBrowserAdminMutationEnabled("restaurant_record", "delete_restaurant");
-            // 소프트 삭제: status를 'deleted'로 변경
-            const { error } = await supabase
-                .from("restaurants")
-                // @ts-expect-error - Supabase 자동 생성 타입 문제
-                .update({
-                    status: 'deleted',
-                    updated_at: new Date().toISOString(),
-                })
-                .eq("id", restaurant.id);
+            const response = await fetch(`/api/admin/restaurants/${encodeURIComponent(restaurant.id)}/destructive-action`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                },
+                body: JSON.stringify({
+                    action: "soft_delete_restaurant",
+                    targetRestaurantIds: [restaurant.id],
+                    reason: deleteReason,
+                    confirmation: deleteConfirmation,
+                    expectedRestaurantName: restaurant.name,
+                }),
+            });
 
-            if (error) throw error;
+            const result = await response.json().catch(() => null) as {
+                error?: string;
+                audit?: { id?: string };
+                correlationId?: string;
+                readback?: { targetCount?: number };
+            } | null;
 
-            toast.success("맛집이 삭제되었습니다");
+            if (!response.ok || !result) {
+                throw new Error(result?.error || "삭제에 실패했습니다");
+            }
+
+            const auditSuffix = result.audit?.id && result.correlationId
+                ? ` (감사 ID: ${result.audit.id}, 추적 ID: ${result.correlationId})`
+                : "";
+            toast.success(`맛집이 삭제되었습니다${auditSuffix}`);
+            setDeleteReason("");
+            setDeleteConfirmation("");
             onSuccess();
             onClose();
         } catch (error) {
@@ -1434,12 +1457,44 @@ export function AdminRestaurantModal({
                                 </p>
                             </div>
                         )}
+                        <div className="mt-4 space-y-3">
+                            <div className="space-y-1">
+                                <Label htmlFor="restaurant-delete-reason">삭제 사유</Label>
+                                <Textarea
+                                    id="restaurant-delete-reason"
+                                    value={deleteReason}
+                                    onChange={(event) => setDeleteReason(event.target.value)}
+                                    placeholder="삭제 사유를 입력해 주세요"
+                                    disabled={isSubmitting}
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <Label htmlFor="restaurant-delete-confirmation">
+                                    확인 문구: {RESTAURANT_DESTRUCTIVE_ACTION_CONFIRMATIONS.soft_delete_restaurant}
+                                </Label>
+                                <Input
+                                    id="restaurant-delete-confirmation"
+                                    value={deleteConfirmation}
+                                    onChange={(event) => setDeleteConfirmation(event.target.value)}
+                                    placeholder={RESTAURANT_DESTRUCTIVE_ACTION_CONFIRMATIONS.soft_delete_restaurant}
+                                    disabled={isSubmitting}
+                                />
+                            </div>
+                        </div>
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter className={ADMIN_MODAL_FOOTER}>
                     <AlertDialogCancel className={ADMIN_MODAL_ACTION}>취소</AlertDialogCancel>
                     <AlertDialogAction
-                        onClick={handleDelete}
+                        onClick={(event) => {
+                            event.preventDefault();
+                            void handleDelete();
+                        }}
+                        disabled={
+                            isSubmitting ||
+                            !deleteReason.trim() ||
+                            deleteConfirmation.trim() !== RESTAURANT_DESTRUCTIVE_ACTION_CONFIRMATIONS.soft_delete_restaurant
+                        }
                         className={`${ADMIN_MODAL_ACTION} bg-destructive hover:bg-destructive/90`}
                     >
                         삭제

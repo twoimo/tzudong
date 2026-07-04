@@ -2,7 +2,10 @@
 
 import { useState, useEffect, useCallback, useRef, type PointerEvent as ReactPointerEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import {
+    getClientRequestKeyDecision,
+    getRestaurantSubmissionPayloadFingerprint,
+} from "@/lib/restaurant-submission-submit-contract";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -55,8 +58,10 @@ const clampDesktopSubmissionPanelAxis = (value: number, min: number, max: number
     return Math.min(Math.max(value, min), max);
 };
 
-const normalizePhoneForRequestReadback = (phone: string | null | undefined) =>
-    (phone ?? '').trim().replace(/[^\d+]/g, '');
+const createRestaurantSubmissionClientKey = (mode: 'new' | 'request') =>
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `${mode}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 export default function RestaurantSubmissionModal({
     isOpen,
@@ -89,8 +94,10 @@ export default function RestaurantSubmissionModal({
     const desktopSubmissionPanelRef = useRef<HTMLElement>(null);
     const desktopSubmissionPanelDragRef = useRef<DesktopSubmissionPanelDragState | null>(null);
     const requestSubmitInFlightRef = useRef(false);
-    const requestClientKeyRef = useRef<string | null>(null);
-    const requestPayloadFingerprintRef = useRef<string | null>(null);
+    const submissionClientKeysRef = useRef<Record<'new' | 'request', { key: string | null; fingerprint: string | null }>>({
+        new: { key: null, fingerprint: null },
+        request: { key: null, fingerprint: null },
+    });
 
     // 모달 열릴 때 초기화
     useEffect(() => {
@@ -119,46 +126,56 @@ export default function RestaurantSubmissionModal({
         setDesktopSubmissionPanelPosition(DEFAULT_DESKTOP_SUBMISSION_PANEL_POSITION);
     }, [isOpen]);
 
-    // 신규 제보 (new) - restaurant_submissions + restaurant_submission_items
+    const getRestaurantSubmissionClientKey = useCallback((mode: 'new' | 'request', data: typeof formData) => {
+        const nextFingerprint = getRestaurantSubmissionPayloadFingerprint(mode, data);
+        const current = submissionClientKeysRef.current[mode];
+        const decision = getClientRequestKeyDecision({
+            previousKey: current.key,
+            previousFingerprint: current.fingerprint,
+            nextFingerprint,
+        });
+
+        if (!decision.reuse) {
+            current.key = createRestaurantSubmissionClientKey(mode);
+        }
+        current.fingerprint = decision.fingerprint;
+
+        return current.key;
+    }, []);
+
+    const clearRestaurantSubmissionClientKey = useCallback((mode: 'new' | 'request') => {
+        submissionClientKeysRef.current[mode] = { key: null, fingerprint: null };
+    }, []);
+
+    const postRestaurantSubmission = useCallback(async (mode: 'new' | 'request', data: typeof formData) => {
+        if (!user) throw new Error('로그인이 필요합니다');
+
+        const clientRequestKey = getRestaurantSubmissionClientKey(mode, data);
+        const response = await fetch('/api/mypage/submissions/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                mode,
+                payload: data,
+                clientRequestKey,
+            }),
+        });
+        const result = await response.json().catch(() => null) as { error?: string } | null;
+
+        if (!response.ok) {
+            throw new Error(result?.error || '제출 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
+        }
+
+        return result;
+    }, [getRestaurantSubmissionClientKey, user]);
+
+    // 신규 제보 (new) - server route owns parent/item atomic insert + readback
     const submitNewMutation = useMutation({
         mutationFn: async (data: typeof formData) => {
-            if (!user) throw new Error('로그인이 필요합니다');
-
-            // 1. restaurant_submissions 테이블에 INSERT
-            const { data: submission, error: submissionError } = await supabase
-                .from('restaurant_submissions')
-                .insert({
-                    user_id: user.id,
-                    submission_type: 'new',
-                    status: 'pending',
-                    restaurant_name: data.restaurant_name.trim(),
-                    restaurant_address: data.address.trim(),
-                    restaurant_phone: data.phone.trim() || null,
-                    restaurant_categories: data.categories.length > 0 ? data.categories : null,
-                } as never)
-                .select('id')
-                .single();
-
-            if (submissionError) throw submissionError;
-
-            const submissionId = (submission as { id: string }).id;
-
-            // 2. restaurant_submission_items 테이블에 INSERT
-            const { error: itemError } = await supabase
-                .from('restaurant_submission_items')
-                .insert({
-                    submission_id: submissionId,
-                    youtube_link: data.youtube_link.trim(),
-                    tzuyang_review: data.description.trim() || null,
-                } as never);
-
-            if (itemError) {
-                // 롤백: submission 삭제
-                await supabase.from('restaurant_submissions').delete().eq('id', submissionId);
-                throw itemError;
-            }
+            await postRestaurantSubmission('new', data);
         },
         onSuccess: async () => {
+            clearRestaurantSubmissionClientKey('new');
             await clearDraft();
             toast.success('맛집 제보가 성공적으로 제출되었습니다!');
             queryClient.invalidateQueries({ queryKey: ['my-submissions'] });
@@ -170,109 +187,18 @@ export default function RestaurantSubmissionModal({
         },
     });
 
-    const buildRequestPayloadFingerprint = useCallback((data: typeof formData) => JSON.stringify({
-        restaurant_name: data.restaurant_name.trim(),
-        origin_address: data.address.trim(),
-        phone: data.phone.trim() || null,
-        categories: data.categories,
-        recommendation_reason: data.description.trim(),
-        youtube_link: data.youtube_link.trim() || null,
-    }), []);
-
-    const getRestaurantRequestClientKey = useCallback((data: typeof formData) => {
-        const fingerprint = buildRequestPayloadFingerprint(data);
-        if (!requestClientKeyRef.current || requestPayloadFingerprintRef.current !== fingerprint) {
-            requestPayloadFingerprintRef.current = fingerprint;
-            requestClientKeyRef.current =
-                typeof crypto !== 'undefined' && 'randomUUID' in crypto
-                    ? crypto.randomUUID()
-                    : `request-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-        }
-
-        return requestClientKeyRef.current;
-    }, [buildRequestPayloadFingerprint]);
-
-    const findRestaurantRequestByClientKey = useCallback(async (clientRequestKey: string) => {
-        if (!user) return null;
-
-        const { data: existingRequest, error } = await supabase
-            .from('restaurant_requests')
-            .select('id,phone,client_request_key')
-            .eq('user_id', user.id)
-            .eq('client_request_key', clientRequestKey)
-            .maybeSingle();
-
-        if (error) {
-            console.warn('쯔양 맛집 제보 idempotency 확인 실패:', error);
-            return null;
-        }
-
-        return existingRequest as { id: string; phone: string | null; client_request_key: string | null } | null;
-    }, [user]);
-
-    const readBackRestaurantRequestByClientKey = useCallback(async (
-        clientRequestKey: string,
-        submittedPhone: string,
-    ) => {
-        if (!user) throw new Error('로그인이 필요합니다');
-
-        const { data: request, error } = await supabase
-            .from('restaurant_requests')
-            .select('id,phone,client_request_key')
-            .eq('user_id', user.id)
-            .eq('client_request_key', clientRequestKey)
-            .maybeSingle();
-
-        if (error) throw error;
-        if (!request) {
-            throw new Error('맛집 추천 저장 확인에 실패했습니다. 다시 시도해주세요.');
-        }
-
-        const expectedPhone = normalizePhoneForRequestReadback(submittedPhone);
-        const actualPhone = normalizePhoneForRequestReadback(
-            (request as { phone: string | null }).phone,
-        );
-
-        if (expectedPhone && actualPhone !== expectedPhone) {
-            throw new Error('입력한 전화번호가 저장 확인 결과와 일치하지 않습니다. 다시 시도해주세요.');
-        }
-
-        return request as { id: string; phone: string | null; client_request_key: string | null };
-    }, [user]);
-
-    // 쯔양에게 맛집 제보 (request) - restaurant_requests
+    // 쯔양에게 맛집 제보 (request) - server route owns idempotent insert + readback
     const submitRequestMutation = useMutation({
         mutationFn: async (data: typeof formData) => {
-            if (!user) throw new Error('로그인이 필요합니다');
-
-            const clientRequestKey = getRestaurantRequestClientKey(data);
-
-            const { error } = await supabase
-                .from('restaurant_requests')
-                .insert({
-                    user_id: user.id,
-                    restaurant_name: data.restaurant_name.trim(),
-                    origin_address: data.address.trim(),
-                    phone: data.phone.trim() || null,
-                    categories: data.categories.length > 0 ? data.categories : null,
-                    recommendation_reason: data.description.trim(),
-                    youtube_link: data.youtube_link.trim() || null,
-                    client_request_key: clientRequestKey,
-                } as never)
-                .select('id')
-                .single();
-
-            if (error) {
-                const createdWithClientKey = await findRestaurantRequestByClientKey(clientRequestKey);
-                if (!createdWithClientKey) throw error;
+            if (requestSubmitInFlightRef.current) {
+                return;
             }
-
-            await readBackRestaurantRequestByClientKey(clientRequestKey, data.phone);
+            requestSubmitInFlightRef.current = true;
+            await postRestaurantSubmission('request', data);
         },
         onSuccess: async () => {
             requestSubmitInFlightRef.current = false;
-            requestClientKeyRef.current = null;
-            requestPayloadFingerprintRef.current = null;
+            clearRestaurantSubmissionClientKey('request');
             await clearDraft();
             toast.success('맛집 추천이 성공적으로 제출되었습니다!');
             queryClient.invalidateQueries({ queryKey: ['my-requests'] });
@@ -298,8 +224,10 @@ export default function RestaurantSubmissionModal({
         });
         setCategoryInput("");
         setLastSavedAt(null);
-        requestClientKeyRef.current = null;
-        requestPayloadFingerprintRef.current = null;
+        submissionClientKeysRef.current = {
+            new: { key: null, fingerprint: null },
+            request: { key: null, fingerprint: null },
+        };
     };
 
     // 임시 저장된 데이터 불러오기
@@ -413,10 +341,6 @@ export default function RestaurantSubmissionModal({
         if (submissionMode === 'new') {
             submitNewMutation.mutate(formData);
         } else {
-            if (requestSubmitInFlightRef.current) {
-                return;
-            }
-            requestSubmitInFlightRef.current = true;
             submitRequestMutation.mutate(formData);
         }
     };
@@ -430,14 +354,28 @@ export default function RestaurantSubmissionModal({
     };
 
     const handleNextStep = () => {
-        const validationError = validateRestaurantSubmissionStep(currentStep, submissionMode, formData);
+        const transitionStartedAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
+        const fromStep = currentStep;
+        const validationError = validateRestaurantSubmissionStep(fromStep, submissionMode, formData);
         if (validationError) {
             setValidationMessage(validationError);
             toast.error(validationError);
             return;
         }
 
-        setCurrentStep((step) => Math.min(step + 1, 3) as RestaurantSubmissionStep);
+        const toStep = Math.min(fromStep + 1, 3) as RestaurantSubmissionStep;
+        setCurrentStep(toStep);
+
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('restaurant-submission.step-transition', {
+                detail: {
+                    mode: submissionMode,
+                    fromStep,
+                    toStep,
+                    durationMs: (typeof performance !== 'undefined' ? performance.now() : Date.now()) - transitionStartedAt,
+                },
+            }));
+        }
     };
 
     const handlePreviousStep = () => {
