@@ -439,6 +439,18 @@ function getFilterToken(value: string | null): string | null {
         .replace(/\*/g, '')
         .toLowerCase();
 }
+function getArrayFilterTokens(value: string | null): string[] {
+    const token = getFilterToken(value);
+    if (!token) return [];
+
+    return token
+        .replace(/^\{/, '')
+        .replace(/\}$/, '')
+        .split(',')
+        .map((item) => item.trim().replace(/^"|"$/g, '').toLowerCase())
+        .filter(Boolean);
+}
+
 
 function applyBoundsFilter(restaurants: RestaurantFixture[], url: URL): RestaurantFixture[] {
     const latFilters = url.searchParams.getAll('lat');
@@ -470,7 +482,7 @@ function applyBoundsFilter(restaurants: RestaurantFixture[], url: URL): Restaura
 
 function filterRestaurantsForRequest(url: URL): RestaurantFixture[] {
     const approvedNameFilter = getFilterToken(url.searchParams.get('approved_name'));
-    const categoriesFilter = getFilterToken(url.searchParams.get('categories'));
+    const categoryFilters = getArrayFilterTokens(url.searchParams.get('categories'));
 
     let restaurants = [...RESTAURANT_FIXTURES];
 
@@ -480,9 +492,13 @@ function filterRestaurantsForRequest(url: URL): RestaurantFixture[] {
         );
     }
 
-    if (categoriesFilter) {
+    if (categoryFilters.length > 0) {
         restaurants = restaurants.filter((restaurant) =>
-            restaurant.categories.some((category) => category.toLowerCase().includes(categoriesFilter))
+            restaurant.categories.some((category) =>
+                categoryFilters.some((categoryFilter) =>
+                    category.toLowerCase().includes(categoryFilter)
+                )
+            )
         );
     }
 
