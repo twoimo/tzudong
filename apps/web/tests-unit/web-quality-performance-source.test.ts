@@ -1401,7 +1401,7 @@ describe("web quality performance source contracts", () => {
     expect(restaurantDetailPanelSource).toContain(
       'size="icon"',
     );
-    expect(restaurantDetailPanelSource).toContain(
+    expect(restaurantDetailPanelSource).not.toContain(
       'className="h-9 w-9 shrink-0 rounded-full"',
     );
     expect(restaurantDetailPanelSource).toContain(
