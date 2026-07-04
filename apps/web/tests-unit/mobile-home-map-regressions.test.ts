@@ -256,4 +256,43 @@ describe('mobile home map regression guards', () => {
         expect(overseasMapSource).toContain('onMapInteraction?: () => void;');
         expect(overseasMapSource).toContain('onMapInteractionRef.current?.();');
     });
+
+    test('G002 mobile category sheet commits immediately without delayed apply affordance', () => {
+        const overlaySource = source('components/home/MobileControlOverlay.tsx');
+
+        expect(overlaySource).not.toContain('적용하기');
+        expect(overlaySource).toContain('data-mobile-category-sheet-commit="immediate"');
+        expect(overlaySource).toContain('onCategoryChange([])');
+        expect(overlaySource).toContain('onCategoryChange(newCategories)');
+        expect(overlaySource).toContain('선택 즉시 지도에 반영됩니다.');
+        const desktopPanelSource = source('components/home/home-desktop-control-panel.tsx');
+        expect(desktopPanelSource).toContain('선택하면 즉시 적용됩니다.');
+        expect(desktopPanelSource).toContain('onCategoryChange={onCategoryChange}');
+    });
+
+    test('G002 detail-active safe area owns mobile bottom-right floating actions', () => {
+        const overlaySource = source('components/home/MobileControlOverlay.tsx');
+
+        expect(overlaySource).toContain(
+            'const doesDetailOwnBottomRightSafeArea = isPanelOpen && Boolean(panelRestaurant);'
+        );
+        expect(overlaySource).toContain(
+            "activeSheet !== 'search' && !doesDetailOwnBottomRightSafeArea"
+        );
+        expect(overlaySource).toContain('data-mobile-bottom-right-safe-area-owner="mobile-floating-actions"');
+        expect(overlaySource).toContain('{shouldRenderMobileFloatingActions && (');
+    });
+    test('home detail route history uses app-owned list/detail states and browser back restoration contracts', () => {
+        const homeSource = source('app/home-client.tsx');
+        const effectsSource = source('app/home-client-effects.tsx');
+
+        expect(homeSource).toContain('window.addEventListener("popstate", handlePopState)');
+        expect(homeSource).toContain('window.history.pushState(detailState, "", detailUrl)');
+        expect(homeSource).toContain('buildHomeListState({');
+        expect(homeSource).toContain('buildHomeDetailState({');
+        expect(homeSource).toContain('isHomeDetailHistoryState(window.history.state)');
+        expect(homeSource).toContain('window.history.back();');
+        expect(effectsSource).toContain('resolveHomeDetailMapModeParam(searchParams)');
+        expect(effectsSource).toContain("{ source: 'url', mapMode: targetMode ?? undefined, restoreKey }");
+    });
 });

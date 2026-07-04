@@ -9,6 +9,10 @@ import type { Restaurant } from '@/types/restaurant';
 import { requestAuthUi } from '@/lib/auth-ui-events';
 import { toast } from '@/lib/no-toast';
 import { HOME_DESKTOP_INLINE_DETAIL_OPEN_FAILED_EVENT } from '@/lib/desktop-left-panel-entry';
+import {
+    resolveHomeDetailMapModeParam,
+    resolveHomeDetailRestaurantParam,
+} from '@/lib/home-detail-route-state';
 
 type HomeSupabaseActions = typeof import('./home-supabase-actions');
 type HomeRestaurantDeepLinkResult = Awaited<ReturnType<HomeSupabaseActions['resolveHomeRestaurantDeepLink']>>;
@@ -24,7 +28,7 @@ type HomeClientEffectsProps = {
     isLoggedIn: boolean;
     isAnnouncementSheetOpen: boolean;
     mapMode: 'domestic' | 'overseas';
-    openDetailPanelRef: MutableRefObject<(restaurant: Restaurant, focusZoom?: number) => void>;
+    openDetailPanelRef: MutableRefObject<(restaurant: Restaurant, focusZoom?: number, options?: { source?: 'user' | 'url'; searchFocusRestaurant?: Restaurant | null; mapMode?: 'domestic' | 'overseas'; restoreKey?: string | null }) => void>;
     openPanelRef: MutableRefObject<(panel: PanelType) => void>;
     selectedAnnouncement: Announcement | null;
     setMapMode: (mode: 'domestic' | 'overseas') => void;
@@ -79,7 +83,7 @@ export default function HomeClientEffects({
     useEffect(() => {
         const panelParam = searchParams.get('panel');
         const announcementId = searchParams.get('announcementId');
-        const restaurantId = searchParams.get('r') || searchParams.get('restaurant');
+        const restaurantId = resolveHomeDetailRestaurantParam(searchParams);
         const timers: number[] = [];
         let isCancelled = false;
         let registeredAnnouncementKey: string | null = null;
@@ -143,10 +147,11 @@ export default function HomeClientEffects({
         }
 
         if (restaurantId) {
+            const requestedMode = resolveHomeDetailMapModeParam(searchParams);
             const restaurantKey = [
                 restaurantId,
                 searchParams.get('z') ?? '',
-                searchParams.get('mode') ?? '',
+                requestedMode ?? '',
             ].join('|');
             registeredRestaurantDeepLinkKey = restaurantKey;
 
@@ -180,9 +185,9 @@ export default function HomeClientEffects({
 
                         const zoomParam = searchParams.get('z');
                         const focusZoom = zoomParam ? parseFloat(zoomParam) : undefined;
-                        const modeParam = searchParams.get('mode');
                         const targetMode: 'domestic' | 'overseas' | null =
-                            modeParam === 'overseas' ? 'overseas' : (modeParam === 'domestic' ? 'domestic' : result.inferredMode);
+                            requestedMode ?? result.inferredMode;
+                        const restoreKey = searchParams.get('restore');
 
                         if (targetMode) {
                             setMapMode(targetMode);
@@ -191,7 +196,8 @@ export default function HomeClientEffects({
                         schedule(() => {
                             openDetailPanelRef.current(
                                 result.restaurant,
-                                !isNaN(Number(focusZoom)) ? Number(focusZoom) : undefined
+                                !isNaN(Number(focusZoom)) ? Number(focusZoom) : undefined,
+                                { source: 'url', mapMode: targetMode ?? undefined, restoreKey },
                             );
                         }, 0);
                     });
@@ -240,7 +246,7 @@ export default function HomeClientEffects({
                     }
 
                     schedule(() => {
-                        openDetailPanelRef.current(restaurant);
+                        openDetailPanelRef.current(restaurant, undefined, { source: 'url', mapMode });
                     }, 500);
                 });
             } else if (isNaN(lat) || isNaN(lng)) {
@@ -290,7 +296,7 @@ export default function HomeClientEffects({
             clearRegisteredRequestKeys();
             timers.forEach((timer) => window.clearTimeout(timer));
         };
-    }, [openDetailPanelRef, openPanelRef, router, searchParams, setMapMode, setSelectedAnnouncement]);
+    }, [mapMode, openDetailPanelRef, openPanelRef, router, searchParams, setMapMode, setSelectedAnnouncement]);
 
     useEffect(() => {
         const handleChangeMapMode = (event: Event) => {
