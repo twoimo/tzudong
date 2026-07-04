@@ -1163,11 +1163,14 @@ describe("web quality performance source contracts", () => {
     expect(homeDesktopControlPanelSource).toContain(
       "handleExternalDetailReturnCapture",
     );
-    expect(source("app/home-client.tsx")).toContain(
-      "requestDesktopDetailReturnCapture();",
-    );
+    expect(homeClientSource).toContain("requestDesktopDetailReturnCapture();");
+    expect(homeClientSource).toContain("returnToRestaurantListPanel");
+    expect(homeClientSource).toContain("closeRestaurantDetailPanel");
     expect(homeDesktopControlPanelSource).toContain(
       "const returnRoute = getDesktopLeftPanelRoute(",
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      "(onDetailPanelBack ?? onPanelClose)?.()",
     );
     expect(homeDesktopControlPanelSource).toContain(
       "router.replace(returnRoute, { scroll: false })",
@@ -1394,11 +1397,15 @@ describe("web quality performance source contracts", () => {
     expect(restaurantDetailPanelSource).not.toContain(
       'className="mr-1 h-9 w-9 shrink-0 rounded-full border border-border bg-background hover:bg-secondary/80"',
     );
+    expect(restaurantDetailPanelSource).not.toContain("뒤로가기");
     expect(restaurantDetailPanelSource).toContain(
-      'className="h-9 shrink-0 rounded-full border-primary/40 px-3 text-primary hover:border-primary hover:bg-primary/5 hover:text-primary"',
+      'size="icon"',
     );
     expect(restaurantDetailPanelSource).toContain(
-      '<ArrowLeft className="mr-1.5 h-4 w-4" aria-hidden="true" />',
+      'className="h-9 w-9 shrink-0 rounded-full"',
+    );
+    expect(restaurantDetailPanelSource).toContain(
+      '<ArrowLeft className="h-4 w-4" aria-hidden="true" />',
     );
     expect(homeDesktopControlPanelSource).toContain('resultView="inline"');
     expect(homeDesktopControlPanelSource).toContain("hideSearchControls");
