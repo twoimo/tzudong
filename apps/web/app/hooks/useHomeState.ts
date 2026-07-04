@@ -79,6 +79,12 @@ export function useHomeState(mapMode: 'domestic' | 'overseas') {
             searchFocusRestaurant: null,
         });
     }, [syncRestaurantDetailSelection]);
+    const closeRestaurantDetailPanel = useCallback(() => {
+        setSelectedRestaurant((current) => current ?? panelRestaurant);
+        setPanelRestaurant(null);
+        setIsPanelOpen(false);
+    }, [panelRestaurant]);
+
 
     const releaseSearchSelectionOwnership = useCallback(() => {
         const nextSnapshot = releaseSearchSelectionOwnershipSnapshot({
@@ -151,6 +157,7 @@ export function useHomeState(mapMode: 'domestic' | 'overseas') {
         syncRestaurantDetailSelection,
         openRestaurantDetailSelection,
         clearRestaurantDetailSelection,
+        closeRestaurantDetailPanel,
         releaseSearchSelectionOwnership,
     }), [
         selectedRestaurant,
@@ -173,6 +180,7 @@ export function useHomeState(mapMode: 'domestic' | 'overseas') {
         syncRestaurantDetailSelection,
         openRestaurantDetailSelection,
         clearRestaurantDetailSelection,
+        closeRestaurantDetailPanel,
         releaseSearchSelectionOwnership,
     ]);
 }

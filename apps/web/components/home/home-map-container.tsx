@@ -55,6 +55,7 @@ interface HomeMapContainerProps {
     onMapReady: (moveFunction: (restaurant: Restaurant) => void) => void;
     onMarkerClick: (restaurant: Restaurant) => void;
     onPanelClose: () => void;
+    onDetailPanelBack?: () => void;
     onReviewModalOpen: () => void;
     onTogglePanelCollapse?: () => void;
     activePanel?: 'map' | 'detail' | 'control';
@@ -186,6 +187,7 @@ function HomeMapContainerComponent({
     onMapReady,
     onMarkerClick,
     onPanelClose,
+    onDetailPanelBack = onPanelClose,
     onReviewModalOpen,
     onTogglePanelCollapse,
     activePanel,
@@ -1387,7 +1389,7 @@ function HomeMapContainerComponent({
                                 <Suspense fallback={null}>
                                     <RestaurantDetailPanel
                                         restaurant={detailPanelRestaurant}
-                                        onClose={onPanelClose}
+                                        onClose={onDetailPanelBack}
                                         onWriteReview={onReviewModalOpen}
                                         onEditRestaurant={onAdminEditRestaurant ? handleAdminEditRestaurant : undefined}
                                         onRequestEditRestaurant={handleRequestEditRestaurant}
@@ -1466,7 +1468,7 @@ function HomeMapContainerComponent({
                                     <Suspense fallback={null}>
                                         <RestaurantDetailPanel
                                             restaurant={detailPanelRestaurant}
-                                            onClose={onPanelClose}
+                                            onClose={onDetailPanelBack}
                                             onWriteReview={onReviewModalOpen}
                                             onEditRestaurant={onAdminEditRestaurant ? handleAdminEditRestaurant : undefined}
                                             onRequestEditRestaurant={handleRequestEditRestaurant}
