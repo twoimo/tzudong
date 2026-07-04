@@ -988,27 +988,25 @@ export function RestaurantDetailPanel({
                             {showDesktopBackButton && !isMobile && viewMode === 'detail' && (
                                 <Button
                                     variant="outline"
-                                    size="sm"
+                                    size="icon"
                                     onClick={onClose}
                                     title="이전 목록으로 돌아가기"
                                     aria-label="이전 목록으로 돌아가기"
-                                    className="h-9 shrink-0 rounded-full border-primary/40 px-3 text-primary hover:border-primary hover:bg-primary/5 hover:text-primary"
+                                    className="h-9 w-9 shrink-0 rounded-full"
                                 >
-                                    <ArrowLeft className="mr-1.5 h-4 w-4" aria-hidden="true" />
-                                    뒤로가기
+                                    <ArrowLeft className="h-4 w-4" aria-hidden="true" />
                                 </Button>
                             )}
                             {isMobile && viewMode === 'detail' && (
                                 <Button
                                     variant="outline"
-                                    size="sm"
+                                    size="icon"
                                     onClick={onClose}
                                     title="이전 화면으로 돌아가기"
                                     aria-label="이전 화면으로 돌아가기"
-                                    className="h-9 shrink-0 rounded-full border-primary/40 px-3 text-primary hover:border-primary hover:bg-primary/5 hover:text-primary"
+                                    className="h-9 w-9 shrink-0 rounded-full"
                                 >
-                                    <ArrowLeft className="mr-1.5 h-4 w-4" aria-hidden="true" />
-                                    뒤로가기
+                                    <ArrowLeft className="h-4 w-4" aria-hidden="true" />
                                 </Button>
                             )}
                         </div>
