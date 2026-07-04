@@ -14,6 +14,7 @@ export function NaverMapOverlayStack({
     badgePositionClass,
     centerOffsetStyle,
     count,
+    emptyStateMessage,
     floatingToastPositionClass,
     isLoaded,
     isLoadingRestaurants,
@@ -30,6 +31,7 @@ export function NaverMapOverlayStack({
     badgePositionClass: string;
     centerOffsetStyle: CSSProperties;
     count: number;
+    emptyStateMessage?: string;
     floatingToastPositionClass: string;
     isLoaded: boolean;
     isLoadingRestaurants: boolean;
@@ -83,14 +85,13 @@ export function NaverMapOverlayStack({
             )}
 
             {isMobileOverlayReady && !isLoadingRestaurants && isLoaded && restaurantsLength === 0 && (
-                <div style={centerOffsetStyle} className={badgePositionClass}>
-                    <EmptyStateIndicator />
+                <div className={floatingToastPositionClass}>
+                    <EmptyStateIndicator message={emptyStateMessage} />
                 </div>
             )}
 
             {mapToast && mapToast.isVisible && (
                 <MapOverlayNotice
-                    style={centerOffsetStyle}
                     className={`${floatingToastPositionClass} rounded-lg border border-border shadow-lg animate-in fade-in zoom-in duration-300 motion-reduce:animate-none`}
                     role={mapToast.type === 'error' ? 'alert' : 'status'}
                     ariaLive={mapToast.type === 'error' ? 'assertive' : 'polite'}
