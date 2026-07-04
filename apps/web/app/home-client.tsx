@@ -203,6 +203,7 @@ export default function HomeClient() {
     clearRestaurantDetailSelection,
     openRestaurantDetailSelection,
     releaseSearchSelectionOwnership,
+    closeRestaurantDetailPanel,
   } = state;
   // Deep-link restaurant params are consumed after the parent-owned
   // selection contract opens the detail panel; using history avoids
@@ -260,6 +261,14 @@ export default function HomeClient() {
     setIsPanelCollapsed(false);
     clearAnnouncementPanelUrl();
   }, [clearRestaurantDetailSelection]);
+
+  const returnToRestaurantListPanel = useCallback(() => {
+    closeRestaurantDetailPanel();
+    setActiveRightPanel(null);
+    setIsAnnouncementSheetOpen(false);
+    setSelectedAnnouncement(null);
+    clearAnnouncementPanelUrl();
+  }, [closeRestaurantDetailPanel]);
 
   useEffect(() => {
     const handleHomeOverlayPanelOpened = () => {
@@ -727,6 +736,7 @@ export default function HomeClient() {
         onMapReady={handlers.handleMapReady}
         onMarkerClick={openDetailPanel}
         onPanelClose={closeAllPanels}
+        onDetailPanelBack={returnToRestaurantListPanel}
         onReviewModalOpen={() => state.setIsReviewModalOpen(true)}
         onTogglePanelCollapse={togglePanelCollapse}
         activePanel={activePanel}
@@ -764,6 +774,7 @@ export default function HomeClient() {
           contextualRestaurantsPayload={contextualRestaurantsPayload}
           isMapFullscreen={isMapFullscreen}
           onPanelClose={closeAllPanels}
+          onDetailPanelBack={returnToRestaurantListPanel}
           onReviewModalOpen={() => state.setIsReviewModalOpen(true)}
           onAdminEditRestaurant={onAdminEditRestaurant}
           onRequestEditRestaurant={handlers.handleRequestEditRestaurant}
