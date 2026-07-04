@@ -9,6 +9,7 @@ import { buildRelatedVerifiedReviewCountMap } from "@/lib/restaurant-review-coun
 import {
     applyHomeMapThemeFilter,
     isHomeMapThemeFilterId,
+    isYoutubeMetadataBackedHomeMapThemeFilterId,
     type HomeMapThemeFilterId,
 } from "@/lib/home-map-theme-filters";
 
@@ -76,6 +77,23 @@ export const RESTAURANT_MERGE_SELECT = [
     'created_at',
     'updated_at',
 ].join(', ');
+const RESTAURANT_COMPACT_SELECT =
+    "id, name:approved_name, approved_name, lat, lng, road_address, jibun_address, categories, review_count, youtube_link, tzuyang_review, status, created_at";
+const RESTAURANT_COMPACT_WITH_YOUTUBE_META_SELECT =
+    "id, name:approved_name, approved_name, lat, lng, road_address, jibun_address, categories, review_count, youtube_link, tzuyang_review, youtube_meta, status, created_at";
+const RESTAURANT_FULL_SELECT =
+    "id, name:approved_name, lat, lng, road_address, jibun_address, categories, phone, review_count, youtube_link, tzuyang_review, youtube_meta, english_address, status, created_at";
+
+export function buildRestaurantSelectFields({
+    compact,
+    includeYoutubeMetaForTheme,
+}: {
+    compact: boolean;
+    includeYoutubeMetaForTheme: boolean;
+}): string {
+    if (!compact) return RESTAURANT_FULL_SELECT;
+    return includeYoutubeMetaForTheme ? RESTAURANT_COMPACT_WITH_YOUTUBE_META_SELECT : RESTAURANT_COMPACT_SELECT;
+}
 
 interface UseRestaurantsOptions {
     bounds?: {
@@ -573,6 +591,8 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
     const normalizedRegion = normalizeRegion(region);
     const normalizedMinReviews = normalizeMinReviews(minReviews);
     const normalizedFeaturedTheme = normalizeFeaturedTheme(featuredTheme);
+    const includeYoutubeMetaForTheme =
+        compact && isYoutubeMetadataBackedHomeMapThemeFilterId(normalizedFeaturedTheme);
     const queryKey = [
         ...buildRestaurantQueryKey(
             normalizedBounds,
@@ -583,6 +603,7 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
         ),
         includeVerifiedReviewCounts,
         compact,
+        includeYoutubeMetaForTheme,
     ] as const;
 
     return useQuery({
@@ -591,9 +612,10 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
         gcTime: 10 * 60 * 1000, // 10분 동안 캐시 유지
         queryFn: async () => {
             // [OPTIMIZATION] 필요한 필드만 선택하여 네트워크 전송량 및 파싱 시간 감소
-            const selectFields = compact
-                ? "id, name:approved_name, approved_name, lat, lng, road_address, jibun_address, categories, review_count, youtube_link, tzuyang_review, status, created_at"
-                : "id, name:approved_name, lat, lng, road_address, jibun_address, categories, phone, review_count, youtube_link, tzuyang_review, youtube_meta, english_address, status, created_at";
+            const selectFields = buildRestaurantSelectFields({
+                compact,
+                includeYoutubeMetaForTheme,
+            });
 
             const query: Array<[string, string | number]> = [
                 ['select', selectFields],
