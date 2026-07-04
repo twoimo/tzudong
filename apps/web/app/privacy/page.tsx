@@ -6,7 +6,7 @@ import { buildPublicMetadata } from '@/lib/seo';
 import { siteConfig } from '@/lib/site-config';
 
 export const metadata: Metadata = buildPublicMetadata({
-  title: '개인정보 처리방침 | 쯔동여지도',
+  title: '개인정보 처리방침 - 쯔동여지도',
   description: '쯔동여지도 서비스의 개인정보 수집, 이용, 보관, 파기 및 이용자 권리 행사 방법을 안내합니다.',
   path: siteConfig.legal.privacyPath,
   keywords: ['쯔동여지도 개인정보 처리방침', '개인정보 보호', '데이터 삭제'],
