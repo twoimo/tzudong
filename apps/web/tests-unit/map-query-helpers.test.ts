@@ -118,6 +118,24 @@ describe('map query helpers', () => {
             enabled: true,
         });
     });
+    test('forwards metadata-backed compact naver featured theme', () => {
+        const options = buildNaverRestaurantsQueryOptions({
+            compact: true,
+            filters: {
+                categories: [],
+                minRating: 1,
+                minReviews: 0,
+                minUserVisits: 0,
+                minJjyangVisits: 0,
+                featuredTheme: 'hot-view' as never,
+            },
+            isLoaded: true,
+            selectedRegion: '서울',
+        });
+
+        expect(options.featuredTheme).toBe('hot-view');
+        expect(options.compact).toBe(true);
+    });
 
     test('uses bounded naver data only before deferred full-map effects run', () => {
         const initialBounds = {

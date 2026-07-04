@@ -1,11 +1,11 @@
-import type { Restaurant } from '@/types/restaurant';
+import type { Restaurant, YoutubeMeta } from '@/types/restaurant';
 
 export type HomeMapThemeFilterId =
-    | 'new'
-    | 'repeat'
-    | 'favorite'
-    | 'review-rich'
-    | 'video-rich';
+    | 'hot-view'
+    | 'comment-hot'
+    | 'fresh-video'
+    | 'repeat-video'
+    | 'fan-signal';
 
 export type HomeMapThemeFilter = {
     id: HomeMapThemeFilterId;
@@ -15,56 +15,51 @@ export type HomeMapThemeFilter = {
     description: string;
 };
 
-const NEW_RESTAURANT_DAYS = 90;
-const REPEAT_VISIT_MIN_COUNT = 2;
-const REVIEW_RICH_MIN_COUNT = 10;
-const FAVORITE_REVIEW_KEYWORDS = [
-    '최애',
-    '인생',
-    '또 오',
-    '또 갈',
-    '재방문',
-    '강추',
-    '추천',
-    '맛있',
-    '행복',
-] as const;
+const FRESH_VIDEO_DAYS = 90;
+const REPEAT_VIDEO_MIN_COUNT = 2;
+const TOP_BAND_RATIO = 0.2;
+const YOUTUBE_METADATA_BACKED_HOME_MAP_THEME_FILTER_IDS = [
+    'hot-view',
+    'comment-hot',
+    'fresh-video',
+    'fan-signal',
+] as const satisfies ReadonlyArray<HomeMapThemeFilterId>;
 
 export const HOME_MAP_THEME_FILTERS = [
     {
-        id: 'new',
-        label: '신규 맛집',
-        shortLabel: '신규',
-        ariaLabel: '최근 등록된 신규 맛집 필터',
-        description: `데이터 최신 등록일 기준 최근 ${NEW_RESTAURANT_DAYS}일 이내 등록`,
+        id: 'hot-view',
+        label: '조회수 폭발',
+        shortLabel: '조회수',
+        ariaLabel: '조회수가 높은 쯔양 영상 맛집 필터',
+        description: '연결된 쯔양 영상 조회수가 현재 결과 상위권인 맛집',
     },
     {
-        id: 'repeat',
-        label: `${REPEAT_VISIT_MIN_COUNT}번 이상`,
-        shortLabel: 'N번 방문',
-        ariaLabel: '두 번 이상 소개되거나 리뷰된 맛집 필터',
-        description: '쯔양 영상 또는 서비스 리뷰가 2개 이상인 재등장 맛집',
+        id: 'comment-hot',
+        label: '댓글 폭주',
+        shortLabel: '댓글',
+        ariaLabel: '댓글 반응이 많은 쯔양 영상 맛집 필터',
+        description: '연결된 쯔양 영상 댓글 수가 현재 결과 상위권인 맛집',
     },
     {
-        id: 'favorite',
-        label: '최애 후보',
-        shortLabel: '최애',
-        ariaLabel: '쯔양 리뷰 표현 기반 최애 후보 맛집 필터',
-        description: '쯔양 리뷰 문구에서 최애·인생·재방문·강추 등 호감 표현이 확인된 맛집',
+        id: 'fresh-video',
+        label: '최근 영상',
+        shortLabel: '최근',
+        ariaLabel: '최근 쯔양 영상에 나온 맛집 필터',
+        description: `가장 최근 공개된 쯔양 영상 기준 최근 ${FRESH_VIDEO_DAYS}일 안에 등장한 맛집`,
     },
     {
-        id: 'review-rich',
-        label: '리뷰 많은 곳',
-        shortLabel: '리뷰多',
-        ariaLabel: '사용자 리뷰가 많은 맛집 필터',
-        description: `서비스 리뷰 ${REVIEW_RICH_MIN_COUNT}개 이상`,
+        id: 'repeat-video',
+        label: '또 나온 곳',
+        shortLabel: 'N번',
+        ariaLabel: '쯔양 영상에 두 번 이상 등장한 맛집 필터',
+        description: '연결된 쯔양 영상이 2개 이상인 재등장 맛집',
     },
     {
-        id: 'video-rich',
-        label: '영상 맛집',
-        shortLabel: '영상多',
-        ariaLabel: '연결된 쯔양 영상이 많은 맛집 필터',
-        description: '연결된 쯔양 영상이 2개 이상인 맛집',
+        id: 'fan-signal',
+        label: '반응 찐함',
+        shortLabel: '반응',
+        ariaLabel: '조회수 대비 댓글 반응이 진한 쯔양 영상 맛집 필터',
+        description: '조회수 대비 댓글 밀도가 높은 영상의 맛집',
     },
 ] as const satisfies ReadonlyArray<HomeMapThemeFilter>;
 
@@ -74,75 +69,160 @@ export function isHomeMapThemeFilterId(value: unknown): value is HomeMapThemeFil
     return typeof value === 'string' && HOME_MAP_THEME_FILTER_IDS.includes(value as HomeMapThemeFilterId);
 }
 
-function parseRestaurantDate(value: unknown): number | null {
+export function isYoutubeMetadataBackedHomeMapThemeFilterId(value: unknown): value is HomeMapThemeFilterId {
+    return (
+        typeof value === 'string' &&
+        YOUTUBE_METADATA_BACKED_HOME_MAP_THEME_FILTER_IDS.includes(
+            value as (typeof YOUTUBE_METADATA_BACKED_HOME_MAP_THEME_FILTER_IDS)[number],
+        )
+    );
+}
+
+function parseYoutubeMetric(value: unknown): number | null {
+    const numericValue = typeof value === 'string' && value.trim().length > 0 ? Number(value) : value;
+    if (typeof numericValue !== 'number') return null;
+    if (!Number.isFinite(numericValue) || numericValue < 0) return null;
+    return numericValue;
+}
+
+function parseYoutubePublishedAt(value: unknown): number | null {
     if (typeof value !== 'string' || value.trim().length === 0) return null;
     const timestamp = Date.parse(value);
     return Number.isFinite(timestamp) ? timestamp : null;
 }
 
-function getRestaurantCreatedAtMs(restaurant: Restaurant): number | null {
-    return parseRestaurantDate(restaurant.created_at);
+function isYoutubeMeta(value: unknown): value is YoutubeMeta {
+    return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function getYoutubeMetaDedupeKey(meta: YoutubeMeta): string {
+    return [meta.title, meta.publishedAt, meta.viewCount, meta.likeCount, meta.commentCount]
+        .map((value) => String(value ?? ''))
+        .join('\u0000');
+}
+
+function collectMergedYoutubeMetas(restaurant: Restaurant): YoutubeMeta[] {
+    const metas: YoutubeMeta[] = [];
+    const seen = new Set<string>();
+
+    const addMeta = (value: unknown) => {
+        if (!isYoutubeMeta(value)) return;
+        const key = getYoutubeMetaDedupeKey(value);
+        if (seen.has(key)) return;
+        seen.add(key);
+        metas.push(value);
+    };
+
+    restaurant.mergedYoutubeMetas?.forEach(addMeta);
+    addMeta(restaurant.youtube_meta);
+    restaurant.mergedRestaurants?.forEach((mergedRestaurant) => addMeta(mergedRestaurant.youtube_meta));
+
+    return metas;
 }
 
 function getMergedVideoCount(restaurant: Restaurant): number {
-    if (Array.isArray(restaurant.mergedYoutubeLinks) && restaurant.mergedYoutubeLinks.length > 0) {
-        return restaurant.mergedYoutubeLinks.filter(Boolean).length;
-    }
+    const links = new Set<string>();
+    const addLink = (value: unknown) => {
+        if (typeof value !== 'string') return;
+        const normalized = value.trim();
+        if (normalized.length > 0) links.add(normalized);
+    };
 
-    if (Array.isArray(restaurant.mergedRestaurants) && restaurant.mergedRestaurants.length > 0) {
-        return restaurant.mergedRestaurants.filter((item) => Boolean(item.youtube_link)).length;
-    }
+    restaurant.mergedYoutubeLinks?.forEach(addLink);
+    addLink(restaurant.youtube_link);
+    restaurant.mergedRestaurants?.forEach((mergedRestaurant) => addLink(mergedRestaurant.youtube_link));
 
-    return restaurant.youtube_link ? 1 : 0;
+    return links.size;
 }
 
-function getMergedReviewCount(restaurant: Restaurant): number {
-    const explicitReviewCount = typeof restaurant.review_count === 'number' ? restaurant.review_count : 0;
-    const verifiedReviewCount =
-        'verified_review_count' in restaurant && typeof restaurant.verified_review_count === 'number'
-            ? restaurant.verified_review_count
-            : 0;
-
-    return Math.max(explicitReviewCount, verifiedReviewCount);
+function getTopBandThreshold(values: number[]): number | null {
+    if (values.length === 0) return null;
+    const sortedValues = [...values].sort((a, b) => b - a);
+    const thresholdIndex = Math.max(0, Math.ceil(sortedValues.length * TOP_BAND_RATIO) - 1);
+    return sortedValues[thresholdIndex];
 }
 
-function collectTzuyangReviewText(restaurant: Restaurant): string {
-    const reviews = new Set<string>();
+function getMedian(values: number[]): number | null {
+    if (values.length === 0) return null;
+    const sortedValues = [...values].sort((a, b) => a - b);
+    const middle = Math.floor(sortedValues.length / 2);
+    if (sortedValues.length % 2 === 1) return sortedValues[middle];
+    return (sortedValues[middle - 1] + sortedValues[middle]) / 2;
+}
 
-    if (typeof restaurant.tzuyang_review === 'string') {
-        reviews.add(restaurant.tzuyang_review);
-    }
+function filterByTopYoutubeMetric(
+    restaurants: Restaurant[],
+    metricKey: 'viewCount' | 'commentCount',
+): Restaurant[] {
+    const metricByRestaurant = new Map<Restaurant, number>();
 
-    restaurant.mergedTzuyangReviews?.forEach((review) => {
-        if (typeof review === 'string') reviews.add(review);
+    restaurants.forEach((restaurant) => {
+        const values = collectMergedYoutubeMetas(restaurant)
+            .map((meta) => parseYoutubeMetric(meta[metricKey]))
+            .filter((value): value is number => value !== null);
+        if (values.length === 0) return;
+        metricByRestaurant.set(restaurant, Math.max(...values));
     });
 
-    restaurant.mergedRestaurants?.forEach((mergedRestaurant) => {
-        if (typeof mergedRestaurant.tzuyang_review === 'string') {
-            reviews.add(mergedRestaurant.tzuyang_review);
+    const threshold = getTopBandThreshold([...metricByRestaurant.values()]);
+    if (threshold === null) return [];
+
+    return restaurants.filter((restaurant) => {
+        const metric = metricByRestaurant.get(restaurant);
+        return metric !== undefined && metric >= threshold;
+    });
+}
+
+function filterByFreshVideo(restaurants: Restaurant[]): Restaurant[] {
+    const publishedAtByRestaurant = new Map<Restaurant, number[]>();
+    let latestPublishedAt: number | null = null;
+
+    restaurants.forEach((restaurant) => {
+        const publishedAtValues = collectMergedYoutubeMetas(restaurant)
+            .map((meta) => parseYoutubePublishedAt(meta.publishedAt))
+            .filter((value): value is number => value !== null);
+        if (publishedAtValues.length === 0) return;
+        publishedAtByRestaurant.set(restaurant, publishedAtValues);
+        for (const publishedAt of publishedAtValues) {
+            latestPublishedAt = latestPublishedAt === null ? publishedAt : Math.max(latestPublishedAt, publishedAt);
         }
     });
 
-    return [...reviews].join(' ');
+    if (latestPublishedAt === null) return [];
+
+    const threshold = latestPublishedAt - FRESH_VIDEO_DAYS * 24 * 60 * 60 * 1000;
+    return restaurants.filter((restaurant) => publishedAtByRestaurant.get(restaurant)?.some((publishedAt) => publishedAt >= threshold));
 }
 
-function hasFavoriteReviewSignal(restaurant: Restaurant): boolean {
-    const reviewText = collectTzuyangReviewText(restaurant);
-    if (!reviewText) return false;
+function filterByFanSignal(restaurants: Restaurant[]): Restaurant[] {
+    const maxViewByRestaurant = new Map<Restaurant, number>();
+    const maxRatioByRestaurant = new Map<Restaurant, number>();
 
-    return FAVORITE_REVIEW_KEYWORDS.some((keyword) => reviewText.includes(keyword));
-}
+    restaurants.forEach((restaurant) => {
+        for (const meta of collectMergedYoutubeMetas(restaurant)) {
+            const viewCount = parseYoutubeMetric(meta.viewCount);
+            if (viewCount === null || viewCount <= 0) continue;
+            maxViewByRestaurant.set(restaurant, Math.max(maxViewByRestaurant.get(restaurant) ?? 0, viewCount));
 
-function getLatestCreatedAtMs(restaurants: Restaurant[]): number | null {
-    let latest: number | null = null;
+            const commentCount = parseYoutubeMetric(meta.commentCount);
+            if (commentCount === null || commentCount <= 0) continue;
+            maxRatioByRestaurant.set(restaurant, Math.max(maxRatioByRestaurant.get(restaurant) ?? 0, commentCount / viewCount));
+        }
+    });
 
-    for (const restaurant of restaurants) {
-        const createdAt = getRestaurantCreatedAtMs(restaurant);
-        if (createdAt === null) continue;
-        latest = latest === null ? createdAt : Math.max(latest, createdAt);
-    }
+    const medianViewCount = getMedian([...maxViewByRestaurant.values()]);
+    if (medianViewCount === null) return [];
 
-    return latest;
+    const eligibleRatios = [...maxRatioByRestaurant.entries()]
+        .filter(([restaurant]) => (maxViewByRestaurant.get(restaurant) ?? 0) >= medianViewCount)
+        .map(([, ratio]) => ratio);
+    const threshold = getTopBandThreshold(eligibleRatios);
+    if (threshold === null) return [];
+
+    return restaurants.filter((restaurant) => {
+        const ratio = maxRatioByRestaurant.get(restaurant);
+        return ratio !== undefined && (maxViewByRestaurant.get(restaurant) ?? 0) >= medianViewCount && ratio >= threshold;
+    });
 }
 
 export function applyHomeMapThemeFilter(
@@ -151,35 +231,24 @@ export function applyHomeMapThemeFilter(
 ): Restaurant[] {
     if (!themeId) return restaurants;
 
-    if (themeId === 'new') {
-        const latestCreatedAt = getLatestCreatedAtMs(restaurants);
-        if (latestCreatedAt === null) return restaurants;
-
-        const threshold = latestCreatedAt - NEW_RESTAURANT_DAYS * 24 * 60 * 60 * 1000;
-        return restaurants.filter((restaurant) => {
-            const createdAt = getRestaurantCreatedAtMs(restaurant);
-            return createdAt !== null && createdAt >= threshold;
-        });
+    if (themeId === 'hot-view') {
+        return filterByTopYoutubeMetric(restaurants, 'viewCount');
     }
 
-    if (themeId === 'repeat') {
-        return restaurants.filter(
-            (restaurant) =>
-                getMergedVideoCount(restaurant) >= REPEAT_VISIT_MIN_COUNT ||
-                getMergedReviewCount(restaurant) >= REPEAT_VISIT_MIN_COUNT,
-        );
+    if (themeId === 'comment-hot') {
+        return filterByTopYoutubeMetric(restaurants, 'commentCount');
     }
 
-    if (themeId === 'favorite') {
-        return restaurants.filter(hasFavoriteReviewSignal);
+    if (themeId === 'fresh-video') {
+        return filterByFreshVideo(restaurants);
     }
 
-    if (themeId === 'review-rich') {
-        return restaurants.filter((restaurant) => getMergedReviewCount(restaurant) >= REVIEW_RICH_MIN_COUNT);
+    if (themeId === 'repeat-video') {
+        return restaurants.filter((restaurant) => getMergedVideoCount(restaurant) >= REPEAT_VIDEO_MIN_COUNT);
     }
 
-    if (themeId === 'video-rich') {
-        return restaurants.filter((restaurant) => getMergedVideoCount(restaurant) >= REPEAT_VISIT_MIN_COUNT);
+    if (themeId === 'fan-signal') {
+        return filterByFanSignal(restaurants);
     }
 
     return restaurants;
