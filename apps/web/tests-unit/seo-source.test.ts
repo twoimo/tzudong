@@ -64,12 +64,23 @@ describe('SEO source contracts', () => {
         }
     });
 
-    test('private and utility routes are noindexed at the segment layout boundary', () => {
+    test('private and utility routes are noindexed with explicit segment titles', () => {
+        const expectedTitles: Record<(typeof privateSegments)[number], string> = {
+            admin: '관리자 콘솔 - 쯔동여지도',
+            auth: '인증 - 쯔동여지도',
+            'home-frame': '지도 프레임 - 쯔동여지도',
+            mypage: '마이페이지 - 쯔동여지도',
+            submissions: '제보 내역 - 쯔동여지도',
+            user: '사용자 프로필 - 쯔동여지도',
+            s: '리다이렉트 중 - 쯔동여지도',
+        };
+
         for (const segment of privateSegments) {
             const layoutSource = source(`app/${segment}/layout.tsx`);
 
-            expect(layoutSource).toContain('noIndexMetadata');
+            expect(layoutSource).toContain('buildNoIndexMetadata');
             expect(layoutSource).toContain('export const metadata');
+            expect(layoutSource).toContain(`title: '${expectedTitles[segment]}'`);
         }
     });
 });
