@@ -9,6 +9,7 @@ export function NaverMapSurface({
     className,
     count,
     dataTestId,
+    emptyStateMessage,
     floatingToastPositionClass,
     isLoaded,
     isLoadingRestaurants,
@@ -28,6 +29,7 @@ export function NaverMapSurface({
     className?: string;
     count: number;
     dataTestId?: string;
+    emptyStateMessage?: string;
     floatingToastPositionClass: string;
     isLoaded: boolean;
     isLoadingRestaurants: boolean;
@@ -55,6 +57,7 @@ export function NaverMapSurface({
                     badgePositionClass={badgePositionClass}
                     centerOffsetStyle={centerOffsetStyle}
                     count={count}
+                    emptyStateMessage={emptyStateMessage}
                     floatingToastPositionClass={floatingToastPositionClass}
                     isLoaded={isLoaded}
                     isLoadingRestaurants={isLoadingRestaurants}

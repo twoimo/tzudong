@@ -11,8 +11,10 @@ import {
 } from '@/components/ui/toast';
 import { useToast } from '@/hooks/use-toast';
 
-const HOME_MAP_TOAST_VIEWPORT_CLASS_NAME = 'bottom-auto top-[calc(env(safe-area-inset-top)+114px)]';
-const APP_MOBILE_TOAST_VIEWPORT_CLASS_NAME = 'top-auto bottom-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+env(safe-area-inset-bottom)+0.75rem)]';
+const HOME_MAP_TOAST_VIEWPORT_CLASS_NAME =
+  'top-auto bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:bottom-4';
+const APP_MOBILE_TOAST_VIEWPORT_CLASS_NAME =
+  'top-auto bottom-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+env(safe-area-inset-bottom)+0.75rem)] sm:bottom-4';
 
 const isHomeMapToastRoute = (pathname: string | null) => pathname === '/' || pathname === '/home-frame';
 
