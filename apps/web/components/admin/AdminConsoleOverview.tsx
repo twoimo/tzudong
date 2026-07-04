@@ -81,6 +81,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useAdBannersAdmin } from "@/hooks/use-ad-banners";
 import { useMobileBottomNavAutoHide } from "@/hooks/use-mobile-bottom-nav-auto-hide";
 import { useToast } from "@/hooks/use-toast";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 import {
   DEFAULT_ADMIN_DASHBOARD_WIDGET_ORDER,
   isAdminDashboardWidgetId,
@@ -101,6 +102,7 @@ import {
   type AdminPendingCountsResponse,
 } from "@/lib/admin/pending-counts";
 import { cn } from "@/lib/utils";
+import { buildScopedBrowserTitle } from "@/lib/seo";
 import type { DashboardSummaryResponse } from "@/types/dashboard";
 import type {
   InsightTreemapPeriod,
@@ -10193,6 +10195,18 @@ export function AdminConsoleOverview({
   const activeModule = consoleModules.find(
     (module) => module.id === activeModuleId,
   );
+  const activeModuleLabel =
+    activeModuleId === "overview"
+      ? "대시보드 (KPI)"
+      : activeModuleId === "routes"
+        ? "맛집 동선 추천"
+        : activeModuleId === "llm"
+          ? "운영 보조"
+          : activeModule?.title;
+  const activeBrowserTitle = activeModuleLabel
+    ? buildScopedBrowserTitle([activeModuleLabel, "관리자 콘솔"])
+    : null;
+  useDocumentTitle(activeBrowserTitle);
   const [loadedModuleIds, setLoadedModuleIds] = useState<
     ReadonlySet<AdminModuleId>
   >(createInitialAdminConsoleLoadedModuleIds);
@@ -10470,14 +10484,6 @@ export function AdminConsoleOverview({
     return null;
   }
 
-  const activeModuleLabel =
-    activeModuleId === "overview"
-      ? "대시보드 (KPI)"
-      : activeModuleId === "routes"
-        ? "맛집 동선 추천"
-        : activeModuleId === "llm"
-          ? "운영 보조"
-          : activeModule?.title;
   const isAdminCanvasBootstrapping =
     isShellBootstrapping || !loadedModuleIds.has(activeModuleId);
 
