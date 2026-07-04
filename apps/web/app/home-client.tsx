@@ -7,7 +7,9 @@ import { useAuth } from "@/contexts/AuthContextBase";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useHomeViewportMode } from "@/hooks/useHomeViewportMode";
 import { toast } from "@/lib/no-toast";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 import { requestAuthUi } from "@/lib/auth-ui-events";
+import { buildBrowserTitle } from "@/lib/seo";
 import {
   DESKTOP_LEFT_PANEL_EXPAND_ON_ENTRY_EVENT,
   shouldExpandDesktopLeftPanelForRoute,
@@ -205,6 +207,13 @@ export default function HomeClient() {
     releaseSearchSelectionOwnership,
     closeRestaurantDetailPanel,
   } = state;
+  const visibleDetailRestaurant = state.isPanelOpen
+    ? (state.panelRestaurant ?? state.selectedRestaurant)
+    : null;
+  const visibleDetailTitle = visibleDetailRestaurant
+    ? buildBrowserTitle(visibleDetailRestaurant.name)
+    : null;
+  useDocumentTitle(visibleDetailTitle);
   // Deep-link restaurant params are consumed after the parent-owned
   // selection contract opens the detail panel; using history avoids
   // triggering a home refresh/reset loop while preserving other params.
