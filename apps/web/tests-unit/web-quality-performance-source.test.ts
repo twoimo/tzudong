@@ -1739,8 +1739,17 @@ describe("web quality performance source contracts", () => {
     expect(overlayStackSource).toContain(
       "ariaLive={mapToast.type === 'error' ? 'assertive' : 'polite'}",
     );
+    expect(overlayStackSource).toContain("emptyStateMessage?: string");
+    expect(overlayStackSource).toContain("className={floatingToastPositionClass}");
+    expect(overlayStackSource).toContain("<EmptyStateIndicator message={emptyStateMessage} />");
+    expect(naverMapSource).toContain("const emptyStateMessage = filters.featuredTheme");
+    expect(naverMapSource).toContain('"선택한 필터에 맞는 맛집이 없습니다"');
     expect(overlayPositionSource).toContain(
-      "top-[calc(env(safe-area-inset-top)+114px)]",
+      "bottom-[calc(var(--mobile-bottom-nav-effective-height",
+    );
+    expect(overlayPositionSource).toContain("absolute right-4 bottom-4");
+    expect(overlayPositionSource).not.toContain(
+      "fixed top-[calc(env(safe-area-inset-top)+114px)] left-1/2 -translate-x-1/2 transition-[left] ease-in-out z-[70]",
     );
     expect(overlayPositionSource).not.toContain(
       "top-[calc(env(safe-area-inset-top)+132px)]",
@@ -3980,6 +3989,9 @@ describe("web quality performance source contracts", () => {
       "HOME_MAP_TOAST_VIEWPORT_CLASS_NAME",
     );
     expect(appToasterSource).toContain(
+      "bottom-[calc(env(safe-area-inset-bottom)+0.75rem)]",
+    );
+    expect(appToasterSource).not.toContain(
       "top-[calc(env(safe-area-inset-top)+114px)]",
     );
     expect(appToasterSource).toContain(
@@ -3998,14 +4010,15 @@ describe("web quality performance source contracts", () => {
       "top-[calc(env(safe-area-inset-top)+7.25rem)]",
     );
     expect(toastSource).toContain("z-[250]");
-    expect(toastSource).toContain("w-[min(300px,calc(100vw-1.5rem))]");
-    expect(toastSource).toContain("sm:w-[min(300px,calc(100vw-1.5rem))]");
-    expect(toastSource).toContain("sm:right-3");
+    expect(toastSource).toContain("bottom-4 right-3");
+    expect(toastSource).toContain("w-[min(360px,calc(100vw-1.5rem))]");
+    expect(toastSource).toContain("sm:w-max");
+    expect(toastSource).toContain("sm:max-w-[min(42rem,calc(100vw-2rem))]");
+    expect(toastSource).toContain("sm:right-4");
+    expect(toastSource).toContain("items-end");
+    expect(toastSource).toContain("sm:whitespace-nowrap");
     expect(toastSource).not.toContain("pr-7");
     expect(toastSource).not.toContain("absolute right-2 top-2");
-    expect(toastSource).not.toContain("sm:w-[min(340px,calc(100vw-2rem))]");
-    expect(toastSource).not.toContain("sm:w-[min(360px,calc(100vw-2rem))]");
-    expect(toastSource).not.toContain("sm:w-[min(420px,calc(100vw-2rem))]");
     expect(toastSource).toContain("data-[state=open]:fade-in-0");
     expect(toastSource).not.toContain(
       "data-[state=open]:slide-in-from-top-full",

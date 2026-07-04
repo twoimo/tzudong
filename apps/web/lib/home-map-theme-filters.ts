@@ -49,8 +49,8 @@ export const HOME_MAP_THEME_FILTERS = [
     },
     {
         id: 'repeat-video',
-        label: '또 나온 곳',
-        shortLabel: 'N번',
+        label: '재등장 맛집',
+        shortLabel: '재등장',
         ariaLabel: '쯔양 영상에 두 번 이상 등장한 맛집 필터',
         description: '연결된 쯔양 영상이 2개 이상인 재등장 맛집',
     },
