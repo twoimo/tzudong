@@ -37,6 +37,179 @@ test.describe('Phase 1: mobile home map regressions', () => {
         await page.getByLabel('검색 닫기').click();
     });
 
+    test('MHM-01b: browser back from search detail restores mobile search context without leaving home', async ({ page }) => {
+        await page.evaluate(() => {
+            const restoreEvents: Array<{ type: string; detail: unknown }> = [];
+            Object.defineProperty(window, '__TZUDONG_HOME_RESTORE_EVENTS__', {
+                configurable: true,
+                value: restoreEvents,
+            });
+            window.addEventListener('home.restore.succeeded', (event) => {
+                restoreEvents.push({
+                    type: event.type,
+                    detail: event instanceof CustomEvent ? event.detail : null,
+                });
+            });
+            window.addEventListener('home.restore.failed', (event) => {
+                restoreEvents.push({
+                    type: event.type,
+                    detail: event instanceof CustomEvent ? event.detail : null,
+                });
+            });
+        });
+
+        await openMobileSearchAndSelect(page, '정원분식');
+        await expect(page.getByTestId('restaurant-detail-panel')).toContainText('정원분식');
+
+        const detailRouteState = await page.evaluate(() => ({
+            url: window.location.href,
+            state: window.history.state,
+        }));
+        const detailUrl = new URL(detailRouteState.url);
+        expect(detailUrl.pathname).toBe('/');
+        expect(detailUrl.searchParams.get('restaurant')).toBe('restaurant-search');
+        expect(detailUrl.searchParams.get('mapMode')).toBe('domestic');
+        expect(detailUrl.searchParams.get('restore')).toBeTruthy();
+        expect(detailUrl.searchParams.has('r')).toBe(false);
+        expect(detailRouteState.state?.kind).toBe('tzudong.home.detail.v1');
+
+        await page.goBack();
+
+        await expect(page.getByTestId('restaurant-detail-panel')).toBeHidden({ timeout: 5000 });
+        await expect(page.getByLabel('맛집 검색 열기')).toContainText('정원분식');
+        await page.screenshot({
+            path: 'test-results/home-route-restore-mobile.png',
+            fullPage: true,
+        });
+        await page.getByLabel('맛집 검색 열기').click();
+        await expect(page.getByLabel('맛집 검색어 입력')).toHaveValue('정원분식');
+
+        const restoredState = await page.evaluate(() => ({
+            pathname: window.location.pathname,
+            search: window.location.search,
+            state: window.history.state,
+            restoreEvents: (window as typeof window & {
+                __TZUDONG_HOME_RESTORE_EVENTS__?: Array<{ type: string; detail: unknown }>;
+            }).__TZUDONG_HOME_RESTORE_EVENTS__ ?? [],
+        }));
+        expect(restoredState.pathname).toBe('/');
+        expect(restoredState.search).toBe('');
+        expect(restoredState.state?.kind).toBe('tzudong.home.list.v1');
+        expect(restoredState.restoreEvents.some((event) => event.type === 'home.restore.succeeded')).toBe(true);
+    });
+
+    test('MHM-01c: missing restore snapshot emits failed instrumentation without leaving home', async ({ page }) => {
+        await page.evaluate(() => {
+            const restoreEvents: Array<{ type: string; detail: unknown }> = [];
+            Object.defineProperty(window, '__TZUDONG_HOME_RESTORE_EVENTS__', {
+                configurable: true,
+                value: restoreEvents,
+            });
+            window.addEventListener('home.restore.failed', (event) => {
+                restoreEvents.push({
+                    type: event.type,
+                    detail: event instanceof CustomEvent ? event.detail : null,
+                });
+            });
+        });
+
+        await page.evaluate(() => {
+            window.dispatchEvent(
+                new PopStateEvent('popstate', {
+                    state: {
+                        kind: 'tzudong.home.list.v1',
+                        restaurantId: 'restaurant-search',
+                        mapMode: 'domestic',
+                        restoreKey: 'missing-restore',
+                        createdAt: Date.now(),
+                    },
+                })
+            );
+        });
+
+        const failedEvent = await page.waitForFunction(() => {
+            const events = (window as typeof window & {
+                __TZUDONG_HOME_RESTORE_EVENTS__?: Array<{ type: string; detail: { reason?: string } | null }>;
+            }).__TZUDONG_HOME_RESTORE_EVENTS__ ?? [];
+            return events.find((event) => event.type === 'home.restore.failed') ?? null;
+        });
+
+        expect(await failedEvent.jsonValue()).toMatchObject({
+            type: 'home.restore.failed',
+            detail: {
+                restoreKey: 'missing-restore',
+                reason: 'missing',
+            },
+        });
+        expect(new URL(page.url()).pathname).toBe('/');
+    });
+
+    test('G002: detail panel owns mobile bottom-right floating actions until in-app close', async ({ page }) => {
+        await expect(page.getByLabel('맛집 제보하기')).toBeVisible();
+        await expect(page.getByLabel('현재 위치 보기')).toBeVisible();
+
+        await openMobileSearchAndSelect(page, '정원분식');
+        await expect(page.getByTestId('restaurant-detail-panel')).toContainText('정원분식');
+
+        await expect(page.getByLabel('맛집 제보하기')).toHaveCount(0);
+        await expect(page.getByLabel('현재 위치 보기')).toHaveCount(0);
+        await page.screenshot({
+            path: 'test-results/g002-mobile-detail-safe-area.png',
+            fullPage: true,
+        });
+
+        await page.getByLabel('이전 화면으로 돌아가기').click();
+        await expect(page.getByTestId('restaurant-detail-panel')).toBeHidden({ timeout: 5000 });
+
+        await expect(page.getByLabel('맛집 제보하기')).toBeVisible();
+        await expect(page.getByLabel('현재 위치 보기')).toBeVisible();
+        await page.screenshot({
+            path: 'test-results/g002-mobile-floating-actions-restored.png',
+            fullPage: true,
+        });
+    });
+    test('G004: mobile detail presents typed distinct domestic addresses', async ({ page }) => {
+        await openMobileSearchAndSelect(page, '정원분식');
+
+        const detailPanel = page.getByTestId('restaurant-detail-panel');
+        await expect(detailPanel).toContainText('정원분식');
+        await expect(detailPanel.getByText('도로명 주소')).toBeVisible();
+        await expect(detailPanel.getByText('서울특별시 중구 세종대로 110')).toBeVisible();
+        await expect(detailPanel.getByText('지번 주소')).toBeVisible();
+        await expect(detailPanel.getByText('서울특별시 중구 태평로1가 31')).toBeVisible();
+        await expect(detailPanel.getByText('영어 주소')).toBeVisible();
+        await expect(detailPanel.getByText('110 Sejong-daero, Jung-gu, Seoul')).toBeVisible();
+        await page.screenshot({
+            path: 'test-results/g004-mobile-address-presenter.png',
+            fullPage: true,
+        });
+    });
+
+    test('G002: mobile category taps commit immediately without hidden apply action', async ({ page }) => {
+        await page.getByLabel(/카테고리 필터 열기/).click();
+        await expect(page.getByText('카테고리 필터')).toBeVisible();
+        await expect(page.getByRole('button', { name: '적용하기' })).toHaveCount(0);
+        const categoryResponse = page.waitForResponse((response) => {
+            const url = new URL(response.url());
+            return url.pathname.endsWith('/rest/v1/restaurants') &&
+                response.status() === 200 &&
+                (url.searchParams.get('categories') || '').includes('한식');
+        });
+
+
+        await page.getByRole('button', { name: /한식\s*\(\d+\)/ }).click({ force: true });
+        await expect(page.getByLabel(/카테고리 필터 열기/)).toContainText('카테고리 1');
+        const filteredRows = await categoryResponse.then((response) => response.json());
+        expect(filteredRows).toHaveLength(1);
+        expect(filteredRows[0].approved_name).toBe('명동칼국수');
+        await page.screenshot({
+            path: 'test-results/g002-mobile-category-immediate.png',
+            fullPage: true,
+        });
+
+        await page.getByRole('button', { name: /초기화 \(1개 선택됨\)/ }).click();
+        await expect(page.getByLabel(/카테고리 필터 열기/)).not.toContainText('카테고리 1');
+    });
     test('MHM-02: search-selected detail can swipe to the next restaurant', async ({ page }) => {
         await openMobileSearchAndSelect(page, '정원분식');
         await expect(page.getByTestId('restaurant-detail-panel')).toContainText('정원분식');
