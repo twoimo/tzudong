@@ -5,6 +5,10 @@ import { requireAdmin } from '@/lib/auth/require-admin';
 import { getAdminSafeErrorName } from '@/lib/admin/guarded-mutation-contract';
 import { parseThumbnailChatAgentRequest } from '@/lib/admin/youtube-thumbnail-generator/request';
 import { ThumbnailGenerationError, getPublicThumbnailGenerationErrorDetail } from '@/lib/admin/youtube-thumbnail-generator/types';
+import {
+  getThumbnailProviderReadinessBlocker,
+  shouldCheckThumbnailProviderReadinessForChat,
+} from '@/lib/admin/youtube-thumbnail-generator/readiness-gate';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -156,6 +160,22 @@ export async function POST(request: NextRequest) {
           effort: 'low',
           chatRunId,
         });
+        if (shouldCheckThumbnailProviderReadinessForChat(payload.message)) {
+          const readinessBlocker = await getThumbnailProviderReadinessBlocker(process.env);
+          if (readinessBlocker) {
+            send('provider_readiness_blocker', {
+              ...readinessBlocker,
+              status: 503,
+              chatRunId,
+            });
+            send('error', {
+              ...readinessBlocker,
+              status: 503,
+              chatRunId,
+            });
+            return;
+          }
+        }
         send('agent_started', {
           stage: 'agent_started',
           chatRunId,
