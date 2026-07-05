@@ -323,7 +323,8 @@ export type ThumbnailGenerationErrorCode =
   | 'unsupported_model'
   | 'invalid_generation_mode'
   | 'host_reference_required'
-  | 'provider_unavailable';
+  | 'provider_unavailable'
+  | 'thumbnail_anycap_gpt_image_2_not_ready';
 
 export class ThumbnailGenerationError extends Error {
   constructor(
@@ -335,6 +336,30 @@ export class ThumbnailGenerationError extends Error {
     this.name = 'ThumbnailGenerationError';
   }
 }
+
+export type ThumbnailProviderReadinessBlocker = {
+  error: 'provider_unavailable';
+  code: 'thumbnail_anycap_gpt_image_2_not_ready';
+  detail: string;
+  readiness: {
+    providerId: 'anycap';
+    model: 'gpt-image-2';
+    strictExactModelRequired: true;
+    fallbackAllowed: false;
+    status: 'missing' | 'auth_required' | 'invalid' | 'error';
+    reason: string;
+    remediation: string[];
+    diagnostics: {
+      checkedAt: string;
+      requestedModel: string;
+      statusCommand?: string[];
+      statusExitCode?: number | null;
+      modelsCommand?: string[];
+      modelsExitCode?: number | null;
+      snippets: string[];
+    };
+  };
+};
 
 const PUBLIC_THUMBNAIL_ERROR_DETAILS: Record<ThumbnailGenerationErrorCode, string | null> = {
   required_ack: null,
@@ -356,6 +381,7 @@ const PUBLIC_THUMBNAIL_ERROR_DETAILS: Record<ThumbnailGenerationErrorCode, strin
   invalid_generation_mode: null,
   host_reference_required: '쯔양님이 실제로 보이는 썸네일은 검증된 인물 참고 이미지가 필요합니다.',
   provider_unavailable: '현재 이미지 생성 준비가 끝나지 않았습니다. 설정을 확인한 뒤 다시 시도하세요.',
+  thumbnail_anycap_gpt_image_2_not_ready: '현재 AnyCap gpt-image-2 이미지 생성 준비가 끝나지 않았습니다. 설정을 확인한 뒤 다시 시도하세요.',
 };
 
 export function getPublicThumbnailGenerationErrorDetail(error: ThumbnailGenerationError): string {

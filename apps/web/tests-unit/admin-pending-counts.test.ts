@@ -22,7 +22,7 @@ type PendingCountsSupabaseResult = {
 type PendingCountsQueryState = {
   table: string;
   selectColumns?: string;
-  filters: Array<{ op: "eq" | "in"; column: string; value: unknown }>;
+  filters: Array<{ op: "eq" | "in" | "or"; column: string; value: unknown }>;
   limitCount?: number;
 };
 
@@ -44,19 +44,25 @@ function createPendingCountsSupabaseMock(
         return createQuery({ ...state, selectColumns: columns });
       },
       eq(column: string, value: unknown) {
-        return resolve({
+        return createQuery({
           ...state,
           filters: [...state.filters, { op: "eq", column, value }],
         });
       },
       in(column: string, value: unknown[]) {
-        return resolve({
+        return createQuery({
           ...state,
           filters: [...state.filters, { op: "in", column, value }],
         });
       },
+      or(value: string) {
+        return createQuery({
+          ...state,
+          filters: [...state.filters, { op: "or", column: "or", value }],
+        });
+      },
       limit(limitCount: number) {
-        return resolve({ ...state, limitCount });
+        return createQuery({ ...state, limitCount });
       },
       then(onFulfilled: unknown, onRejected: unknown) {
         return resolve(state).then(
@@ -243,6 +249,11 @@ describe("admin pending counts contract", () => {
             op: "eq",
             column: "is_verified",
             value: false,
+          });
+          expect(state.filters).toContainEqual({
+            op: "or",
+            column: "or",
+            value: "admin_note.is.null,admin_note.not.ilike.%거부%",
           });
           return { count: 4 };
         }
