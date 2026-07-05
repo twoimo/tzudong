@@ -14,7 +14,6 @@ export function NaverMapOverlayStack({
     badgePositionClass,
     centerOffsetStyle,
     count,
-    emptyStateMessage,
     floatingToastPositionClass,
     isLoaded,
     isLoadingRestaurants,
@@ -31,7 +30,6 @@ export function NaverMapOverlayStack({
     badgePositionClass: string;
     centerOffsetStyle: CSSProperties;
     count: number;
-    emptyStateMessage?: string;
     floatingToastPositionClass: string;
     isLoaded: boolean;
     isLoadingRestaurants: boolean;
@@ -86,7 +84,7 @@ export function NaverMapOverlayStack({
 
             {isMobileOverlayReady && !isLoadingRestaurants && isLoaded && restaurantsLength === 0 && (
                 <div className={floatingToastPositionClass}>
-                    <EmptyStateIndicator message={emptyStateMessage} />
+                    <EmptyStateIndicator />
                 </div>
             )}
 
