@@ -1148,9 +1148,15 @@ describe('admin system status API route', () => {
             NEXT_NAVER_CLIENT_ID: undefined,
             NEXT_NAVER_CLIENT_SECRET: undefined,
         });
+        const originalFetch = global.fetch;
+        let fetchCalls = 0;
 
         mock.restore();
         setAuthMock('ok');
+        global.fetch = async () => {
+            fetchCalls += 1;
+            throw new Error('missing credentials should not call provider');
+        };
 
         try {
             const { POST } = await loadDirectionsRoute();
@@ -1163,6 +1169,21 @@ describe('admin system status API route', () => {
             expect(response.status).toBe(200);
             expect(payload.provider).toBe('local-heuristic');
             expect(payload.fallbackReasonCode).toBe('naver-directions-credentials-missing');
+            expect(payload.mode).toBe('read_only_local_heuristic');
+            expect(payload.readOnly).toBe(true);
+            expect(payload.path).toEqual([]);
+            expect(payload.summary).toBeNull();
+            expect(payload.fallbackContract).toMatchObject({
+                mode: 'read_only_local_heuristic',
+                readOnly: true,
+                localHeuristic: true,
+                roadRouteAvailable: false,
+                roadDistanceTrusted: false,
+                routeGeometrySource: 'none',
+                distanceSource: 'local-coordinate-estimate',
+                providerRequestAttempted: false,
+            });
+            expect(fetchCalls).toBe(0);
             expect(payload.readiness.provider).toBe('naver-directions');
             expect(payload.readiness.status).toBe('unavailable');
             expect(payload.readiness.reasonCode).toBe('naver-directions-credentials-missing');
@@ -1191,6 +1212,7 @@ describe('admin system status API route', () => {
         } finally {
             mock.restore();
             restoreEnv();
+            global.fetch = originalFetch;
         }
     });
 
@@ -1200,6 +1222,7 @@ describe('admin system status API route', () => {
             NEXT_NAVER_CLIENT_SECRET: 'naver-client-secret-no-leak',
         });
         const originalFetch = global.fetch;
+        let fetchCalls = 0;
 
         mock.restore();
         setAuthMock('ok');
@@ -1211,7 +1234,10 @@ describe('admin system status API route', () => {
         try {
             const { POST } = await loadDirectionsRoute();
 
-            global.fetch = async () => new Response('raw provider body naver-client-secret-no-leak', { status: 401 });
+            global.fetch = async () => {
+                fetchCalls += 1;
+                return new Response('raw provider body naver-client-secret-no-leak', { status: 401 });
+            };
             const authResponse = await POST(new Request('http://localhost/api/admin/routes/directions', {
                 method: 'POST',
                 body: requestBody,
@@ -1219,12 +1245,26 @@ describe('admin system status API route', () => {
             const authPayload = await authResponse.json();
             expect(authPayload.provider).toBe('local-heuristic');
             expect(authPayload.fallbackReasonCode).toBe('naver-directions-auth-failed');
+            expect(authPayload.mode).toBe('read_only_local_heuristic');
+            expect(authPayload.readOnly).toBe(true);
+            expect(authPayload.path).toEqual([]);
+            expect(authPayload.summary).toBeNull();
+            expect(authPayload.fallbackContract).toMatchObject({
+                fallbackReasonCode: 'naver-directions-auth-failed',
+                roadRouteAvailable: false,
+                roadDistanceTrusted: false,
+                providerRequestAttempted: true,
+            });
+            expect(fetchCalls).toBe(1);
             expect(authPayload.readiness.status).toBe('unavailable');
             expect(authPayload.readiness.reasonCode).toBe('naver-directions-auth-failed');
             expect(JSON.stringify(authPayload)).not.toContain('naver-client-secret-no-leak');
             expect(JSON.stringify(authPayload)).not.toContain('raw provider body');
 
-            global.fetch = async () => new Response('raw provider body naver-client-secret-no-leak', { status: 429 });
+            global.fetch = async () => {
+                fetchCalls += 1;
+                return new Response('raw provider body naver-client-secret-no-leak', { status: 429 });
+            };
             const nonOkResponse = await POST(new Request('http://localhost/api/admin/routes/directions', {
                 method: 'POST',
                 body: requestBody,
@@ -1236,6 +1276,7 @@ describe('admin system status API route', () => {
             expect(nonOkPayload.readiness.status).toBe('degraded');
             expect(nonOkPayload.readiness.reasonCode).toBe('naver-directions-provider-non-ok');
             expect(nonOkPayload.readiness.diagnostics.httpStatus).toBe(429);
+            expect(fetchCalls).toBe(2);
             expect(JSON.stringify(nonOkPayload)).not.toContain('raw provider body');
             expect(JSON.stringify(nonOkPayload)).not.toContain('naver-client-secret-no-leak');
 

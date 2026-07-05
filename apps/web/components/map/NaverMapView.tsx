@@ -1224,9 +1224,6 @@ const NaverMapView = memo(({
         panelWidth: PANEL_WIDTH,
     });
 
-    const emptyStateMessage = filters.featuredTheme
-        ? "선택한 필터에 맞는 맛집이 없습니다"
-        : "이 지역에 등록된 맛집이 없습니다";
 
     // 외부에서 패널 닫기 요청 시 닫기 (externalPanelOpen이 false면 닫기)
     useEffect(() => {
@@ -3039,7 +3036,6 @@ const NaverMapView = memo(({
                     centerOffsetStyle={centerOffsetStyle}
                     count={onlineUsersCount}
                     dataTestId="map-container"
-                    emptyStateMessage={emptyStateMessage}
                     floatingToastPositionClass={floatingToastPositionClass}
                     isLoaded={isLoaded}
                     isLoadingRestaurants={isLoadingRestaurants}
@@ -3060,7 +3056,6 @@ const NaverMapView = memo(({
                         badgePositionClass={floatingBadgePositionClass}
                         centerOffsetStyle={centerOffsetStyle}
                         count={onlineUsersCount}
-                        emptyStateMessage={emptyStateMessage}
                         floatingToastPositionClass={floatingToastPositionClass}
                         isLoaded={isLoaded}
                         isLoadingRestaurants={isLoadingRestaurants}
@@ -3090,7 +3085,6 @@ const NaverMapView = memo(({
                 className="flex-1 h-full relative z-0"
                 count={onlineUsersCount}
                 dataTestId="map-container"
-                emptyStateMessage={emptyStateMessage}
                 floatingToastPositionClass={floatingToastPositionClass}
                 isLoaded={isLoaded}
                 isLoadingRestaurants={isLoadingRestaurants}
@@ -3112,7 +3106,6 @@ const NaverMapView = memo(({
                     badgePositionClass={floatingBadgePositionClass}
                     centerOffsetStyle={centerOffsetStyle}
                     count={onlineUsersCount}
-                    emptyStateMessage={emptyStateMessage}
                     floatingToastPositionClass={floatingToastPositionClass}
                     isLoaded={isLoaded}
                     isLoadingRestaurants={isLoadingRestaurants}
