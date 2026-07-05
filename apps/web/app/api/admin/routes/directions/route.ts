@@ -77,6 +77,19 @@ type AdminDirectionsFallbackReason =
   | "naver-directions-auth-failed"
   | "naver-directions-empty-route";
 
+type AdminDirectionsFallbackContract = {
+  mode: "read_only_local_heuristic";
+  readOnly: true;
+  localHeuristic: true;
+  provider: "local-heuristic";
+  fallbackReasonCode: AdminDirectionsFallbackReason;
+  roadRouteAvailable: false;
+  roadDistanceTrusted: false;
+  routeGeometrySource: "none";
+  distanceSource: "local-coordinate-estimate";
+  providerRequestAttempted: boolean;
+};
+
 function isFiniteCoordinate(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
@@ -139,6 +152,23 @@ function normalizeNaverDirectionsPath(path: unknown) {
     );
 }
 
+function buildLocalDirectionsFallbackContract(
+  fallbackReasonCode: AdminDirectionsFallbackReason,
+): AdminDirectionsFallbackContract {
+  return {
+    mode: "read_only_local_heuristic",
+    readOnly: true,
+    localHeuristic: true,
+    provider: "local-heuristic",
+    fallbackReasonCode,
+    roadRouteAvailable: false,
+    roadDistanceTrusted: false,
+    routeGeometrySource: "none",
+    distanceSource: "local-coordinate-estimate",
+    providerRequestAttempted: fallbackReasonCode !== "naver-directions-credentials-missing",
+  };
+}
+
 function buildLocalDirectionsFallback(
   points: AdminDirectionsPoint[],
   fallbackReasonCode: AdminDirectionsFallbackReason,
@@ -152,6 +182,7 @@ function buildLocalDirectionsFallback(
     diagnostics: {},
   }),
 ) {
+  const fallbackContract = buildLocalDirectionsFallbackContract(fallbackReasonCode);
   return NextResponse.json(
     {
       provider: "local-heuristic",
@@ -159,6 +190,9 @@ function buildLocalDirectionsFallback(
       path: [],
       summary: null,
       fallbackReasonCode,
+      fallbackContract,
+      mode: fallbackContract.mode,
+      readOnly: fallbackContract.readOnly,
       readiness,
       message,
     },

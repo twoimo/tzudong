@@ -44,6 +44,7 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { GUARDED_MUTATION_CONFIRMATION } from '@/lib/admin/guarded-mutation-contract';
+import { getSubmissionApprovalState } from '@/lib/admin/submission-approval-state';
 
 type SubmissionAdminTab = 'new' | 'edit' | 'recommend' | 'reviews';
 
@@ -1439,29 +1440,77 @@ export function SubmissionListView({
         }
     };
 
-    // 승인 가능 여부 체크 (엄격한 기준 적용)
-    const canApprove = useMemo(() => {
-        if (!selectedSubmission) return false;
+    const approvalState = useMemo(() => {
+        if (!selectedSubmission) {
+            return getSubmissionApprovalState({});
+        }
 
-        // 1. 지오코딩 완료
-        const geocodingDone = !!approvalData.lat && !!approvalData.lng && !!approvalData.road_address;
+        return getSubmissionApprovalState({
+            requestState: selectedSubmission.status,
+            submissionType: selectedSubmission.submission_type,
+            forceApprove,
+            editableName: editableData.name,
+            editableAddress: editableData.address,
+            selectedGeocodingIndex,
+            geocodingResults,
+            approvalData,
+            localSearchEvidence: naverSearchResults,
+            itemDecisions,
+            items: selectedSubmission.items,
+            recommendationApprovalConfirmed: recommendationApprovalConfirmation === RECOMMEND_APPROVE_CONFIRMATION,
+        });
+    }, [
+        approvalData,
+        editableData.address,
+        editableData.name,
+        forceApprove,
+        geocodingResults,
+        itemDecisions,
+        naverSearchResults,
+        recommendationApprovalConfirmation,
+        selectedGeocodingIndex,
+        selectedSubmission,
+    ]);
 
-        // 2. 최소 하나의 아이템 승인
-        const hasSelectedItem = Object.values(itemDecisions).some(d => d.approved);
 
-        // 3. 승인된 아이템의 메타데이터 존재
-        const selectedItemsMetaFetched = Object.entries(itemDecisions)
-            .filter(([, d]) => d.approved)
-            .every(([, d]) => d.metaFetched || d.metaData);
+    const renderApprovalContractPanel = () => {
+        if (!selectedSubmission) return null;
 
-        // 4. 이름 존재
-        const hasName = !!editableData.name.trim();
-
-        // 5. 네이버 검색 검증 완료
-        const isVerified = verificationDone;
-
-        return geocodingDone && hasSelectedItem && selectedItemsMetaFetched && hasName && isVerified;
-    }, [approvalData, selectedSubmission, itemDecisions, editableData.name, verificationDone]);
+        return (
+            <Card className={cn(
+                "p-3 shadow-none",
+                approvalState.canApprove
+                    ? "border-green-200 bg-green-50/80 dark:border-green-900/60 dark:bg-green-950/20"
+                    : "border-amber-200 bg-amber-50/80 dark:border-amber-900/60 dark:bg-amber-950/20"
+            )}>
+                <div className="space-y-2 text-xs">
+                    <div className="flex items-center justify-between gap-2">
+                        <p className="font-semibold">
+                            승인 계약 상태: {approvalState.canApprove ? '승인 가능' : '승인 보류'}
+                        </p>
+                        <Badge variant={approvalState.canApprove ? 'default' : 'secondary'}>
+                            {approvalState.canApprove ? 'all-clear' : `${approvalState.blockers.length} blockers`}
+                        </Badge>
+                    </div>
+                    <p className="text-muted-foreground">{approvalState.nextAction}</p>
+                    {approvalState.blockers.length > 0 && (
+                        <ul className="list-disc space-y-1 pl-4 text-amber-900 dark:text-amber-100">
+                            {approvalState.blockers.map((blocker) => (
+                                <li key={blocker}>{blocker}</li>
+                            ))}
+                        </ul>
+                    )}
+                    {approvalState.auditHints.length > 0 && (
+                        <ul className="list-disc space-y-1 pl-4 text-blue-900 dark:text-blue-100">
+                            {approvalState.auditHints.map((hint) => (
+                                <li key={hint}>{hint}</li>
+                            ))}
+                        </ul>
+                    )}
+                </div>
+            </Card>
+        );
+    };
 
     // 데이터 변경 핸들러 (검증 상태 초기화)
     const handleEditableDataChange = (newData: typeof editableData) => {
@@ -1515,11 +1564,33 @@ export function SubmissionListView({
         setNaverSearchResults([]);
     };
 
+    const buildApprovalAuditNote = useCallback(() => {
+        const matchedEvidence = naverSearchResults
+            .filter((result) => result.isMatch)
+            .slice(0, 3)
+            .map((result, index) => {
+                const title = result.title.replace(/<[^>]+>/g, '').trim() || 'unknown';
+                const address = result.roadAddress || result.address || 'unknown-address';
+                return `browser-local-search-evidence:not-backend-truth:${index + 1}:${title}:${address}`;
+            });
+        const parts = [
+            'submission-approval-state:v1',
+            `forceApprove=${forceApprove ? 'true' : 'false'}`,
+            ...approvalState.auditHints,
+            ...matchedEvidence,
+        ].filter((entry) => entry.trim().length > 0);
+        return parts.join('\n');
+    }, [approvalState.auditHints, forceApprove, naverSearchResults]);
+
     // 승인 핸들러
     const handleApprove = async () => {
         if (!selectedSubmission) return;
 
         if (selectedSubmission.submission_type === 'recommend') {
+            if (!approvalState.canApprove) {
+                toast.error(`${approvalState.nextAction} ${approvalState.blockers.join(' ')}`.trim());
+                return;
+            }
             if (recommendationApprovalConfirmation !== RECOMMEND_APPROVE_CONFIRMATION) {
                 toast.error('추천 승인 확인 문구가 일치하지 않습니다.');
                 return;
@@ -1534,21 +1605,8 @@ export function SubmissionListView({
             return;
         }
 
-        if (!approvalData.lat || !approvalData.lng || !approvalData.road_address) {
-            toast.error('지오코딩을 완료하고 주소를 선택해주세요');
-            return;
-        }
-
-        const selectedWithoutMeta = Object.entries(itemDecisions)
-            .filter(([, d]) => d.approved && !d.metaFetched);
-
-        if (selectedWithoutMeta.length > 0) {
-            toast.error('선택된 모든 항목의 메타데이터를 가져와주세요');
-            return;
-        }
-
-        if (!canApprove) {
-            toast.error('모든 필수 항목을 완료해주세요');
+        if (!approvalState.canApprove) {
+            toast.error(`${approvalState.nextAction} ${approvalState.blockers.join(' ')}`.trim());
             return;
         }
 
@@ -1557,10 +1615,15 @@ export function SubmissionListView({
             setShowWarningModal(true);
             return;
         }
+        if (verificationDone) {
+            onApprove(selectedSubmission, approvalData, itemDecisions, false, editableData, buildApprovalAuditNote());
+            closeSubmissionDetail();
+            return;
+        }
 
         // 이미 검증한 경우 바로 승인
         if (verificationDone) {
-            onApprove(selectedSubmission, approvalData, itemDecisions, false, editableData);
+            onApprove(selectedSubmission, approvalData, itemDecisions, false, editableData, buildApprovalAuditNote());
             closeSubmissionDetail();
             return;
         }
@@ -1730,7 +1793,8 @@ export function SubmissionListView({
                                     setShowWarningModal(false);
                                     setOverrideApprovalConfirmation('');
                                     setVerificationDone(true);
-                                    onApprove(selectedSubmission, approvalData, itemDecisions, forceApprove, editableData);
+                                    const approvalAuditNote = buildApprovalAuditNote();
+                                    onApprove(selectedSubmission, approvalData, itemDecisions, forceApprove, editableData, approvalAuditNote);
                                     closeSubmissionDetail();
                                 }}
                             >
@@ -1889,6 +1953,7 @@ export function SubmissionListView({
                                 {getStatusBadge(selectedSubmission.status)}
                             </div>
                         </Card>
+                        {renderApprovalContractPanel()}
                         {selectedSubmission.submission_type === 'recommend' ? (
                             renderRecommendationDetailContent(selectedSubmission)
                         ) : (
@@ -1987,8 +2052,8 @@ export function SubmissionListView({
                             <Button
                                 size="sm"
                                 onClick={handleApprove}
-                                disabled={loading || (selectedSubmission.submission_type !== 'recommend' && !canApprove) || (selectedSubmission.submission_type === 'recommend' && recommendationApprovalConfirmation !== RECOMMEND_APPROVE_CONFIRMATION)}
-                                title={selectedSubmission.submission_type !== 'recommend' && !canApprove ? '지오코딩 완료 및 선택된 항목의 메타데이터를 가져와주세요' : '승인'}
+                                disabled={loading || !approvalState.canApprove}
+                                title={approvalState.canApprove ? '승인' : `${approvalState.nextAction} ${approvalState.blockers.join(' ')}`.trim()}
                             >
                                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin motion-reduce:animate-none" />}
                                 {selectedSubmission.submission_type === 'recommend' ? '추천 승인' : '승인'}
