@@ -1739,11 +1739,11 @@ describe("web quality performance source contracts", () => {
     expect(overlayStackSource).toContain(
       "ariaLive={mapToast.type === 'error' ? 'assertive' : 'polite'}",
     );
-    expect(overlayStackSource).toContain("emptyStateMessage?: string");
+    expect(overlayStackSource).not.toContain("emptyStateMessage?: string");
     expect(overlayStackSource).toContain("className={floatingToastPositionClass}");
-    expect(overlayStackSource).toContain("<EmptyStateIndicator message={emptyStateMessage} />");
-    expect(naverMapSource).toContain("const emptyStateMessage = filters.featuredTheme");
-    expect(naverMapSource).toContain('"선택한 필터에 맞는 맛집이 없습니다"');
+    expect(overlayStackSource).toContain("<EmptyStateIndicator />");
+    expect(mapIndicatorsSource).toContain("이 지역에 등록된 맛집이 없습니다");
+    expect(naverMapSource).not.toContain("선택한 필터에 맞는 맛집이 없습니다");
     expect(overlayPositionSource).toContain(
       "bottom-[calc(var(--mobile-bottom-nav-effective-height",
     );
