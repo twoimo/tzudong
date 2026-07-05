@@ -635,6 +635,7 @@ export function AdminRestaurantModal({
 
                 // 1. X 버튼으로 삭제된 레코드를 소프트 삭제 (status = 'deleted')
                 if (deletedReviewIds.length > 0) {
+                    assertLegacyBrowserAdminMutationEnabled("restaurant_record", "delete_restaurant");
                     assertLegacyBrowserAdminMutationEnabled("restaurant_record", "delete_restaurant_link");
                     const { error: deleteError } = await supabase
                         .from('restaurants')

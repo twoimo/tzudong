@@ -2661,6 +2661,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
     const routeSource = source("app/api/admin/pending-counts/route.ts");
 
+
     expect(consoleSource).toContain('fetch("/api/admin/pending-counts"');
     expect(consoleSource).not.toContain("fetchSupabaseExactCount");
     expect(routeSource).toContain("await requireAdmin()");
