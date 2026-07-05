@@ -11,7 +11,12 @@ import {
   readThumbnailReferenceImages,
 } from '@/lib/admin/youtube-thumbnail-generator/request';
 
-import { ThumbnailGenerationError, getPublicThumbnailGenerationErrorDetail } from '@/lib/admin/youtube-thumbnail-generator/types';
+import {
+  ThumbnailGenerationError,
+  getPublicThumbnailGenerationErrorDetail,
+  type ThumbnailProviderReadinessBlocker,
+} from '@/lib/admin/youtube-thumbnail-generator/types';
+import { getThumbnailProviderReadinessBlocker } from '@/lib/admin/youtube-thumbnail-generator/readiness-gate';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -160,6 +165,10 @@ const noStoreHeaders = { 'Cache-Control': 'no-store' } as const;
 
 function jsonError(error: string, status: number, detail?: string) {
   return NextResponse.json({ error, detail }, { status, headers: noStoreHeaders });
+}
+
+function jsonReadinessBlocker(blocker: ThumbnailProviderReadinessBlocker) {
+  return NextResponse.json(blocker, { status: 503, headers: noStoreHeaders });
 }
 
 function isRouteRecord(value: unknown): value is Record<string, unknown> {
@@ -355,6 +364,8 @@ export async function POST(request: NextRequest) {
     const rawPayload = JSON.parse(payloadEntries[0]) as unknown;
     const routeStartedAt = Date.now();
     const payload = parseThumbnailPayload(rawPayload);
+    const readinessBlocker = await getThumbnailProviderReadinessBlocker(process.env);
+    if (readinessBlocker) return jsonReadinessBlocker(readinessBlocker);
     const files = formData
       .getAll('referenceImages')
       .filter((entry): entry is File => entry instanceof File && entry.size > 0);

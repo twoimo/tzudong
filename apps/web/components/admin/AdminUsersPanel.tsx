@@ -65,6 +65,15 @@ type AdminUserMutationResponse = {
   step?: string | null;
 };
 
+type AdminUserMutationAction = "create" | "profile" | "role" | "accountStatus";
+
+type AdminUserMutationResult = {
+  action: AdminUserMutationAction;
+  targetUserId: string | null;
+  status: "success" | "error";
+  message: string;
+};
+
 type EditableProfile = {
   nickname: string;
   username: string;
@@ -114,6 +123,16 @@ function getProfileForm(user: ManagedUser): EditableProfile {
     avatarUrl: user.avatarUrl ?? "",
   };
 }
+function getMutationAuditText(payload: AdminUserMutationResponse | null) {
+  const auditEntries = [
+    payload?.auditId ? `감사 ID: ${payload.auditId}` : "",
+    payload?.preflightAuditId ? `사전 감사 ID: ${payload.preflightAuditId}` : "",
+    payload?.step ? `단계: ${payload.step}` : "",
+  ].filter(Boolean);
+
+  return auditEntries.length > 0 ? ` ${auditEntries.join(" · ")}` : "";
+}
+
 
 function SummaryMetric({ label, value, tone = "default", isLoading = false }: { label: string; value: number | string; tone?: "default" | "danger" | "primary"; isLoading?: boolean }) {
   return (
@@ -211,11 +230,16 @@ export default function AdminUsersPanel() {
   const [profileForm, setProfileForm] = useState<EditableProfile>({ nickname: "", username: "", avatarUrl: "" });
   const [createForm, setCreateForm] = useState<CreateUserForm>(EMPTY_CREATE_FORM);
   const [riskConfirmation, setRiskConfirmation] = useState("");
-  const [lastActionMessage, setLastActionMessage] = useState("");
+  const [mutationResult, setMutationResult] = useState<AdminUserMutationResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isMutating, setIsMutating] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
+  const clearCreateErrorResult = useCallback(() => {
+    setMutationResult((current) =>
+      current?.action === "create" && current.status === "error" ? null : current,
+    );
+  }, []);
   const currentUserId = currentUser?.id ?? null;
   const selectedUser = useMemo(
     () => users.find((candidate) => candidate.id === selectedUserId) ?? users[0] ?? null,
@@ -229,6 +253,7 @@ export default function AdminUsersPanel() {
   const loadUsers = useCallback(async (signal?: AbortSignal) => {
     setIsLoading(true);
     setErrorMessage("");
+    clearCreateErrorResult();
 
     try {
       const params = new URLSearchParams({ perPage: "120" });
@@ -261,7 +286,7 @@ export default function AdminUsersPanel() {
         setIsLoading(false);
       }
     }
-  }, [searchQuery]);
+  }, [clearCreateErrorResult, searchQuery]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -276,10 +301,21 @@ export default function AdminUsersPanel() {
     }
   }, [selectedUser]);
 
-  const patchSelectedUser = async (body: Record<string, unknown>, successMessage: string) => {
+  useEffect(() => {
+    setMutationResult((current) => {
+      if (!current?.targetUserId) return current;
+      return current.targetUserId === selectedUser?.id ? current : null;
+    });
+  }, [selectedUser?.id]);
+
+  const patchSelectedUser = async (
+    body: Record<string, unknown>,
+    successMessage: string,
+    action: Exclude<AdminUserMutationAction, "create">,
+  ) => {
     if (!selectedUser) return;
     setIsMutating(true);
-    setLastActionMessage("");
+    setMutationResult(null);
 
     try {
       const response = await fetch(`/api/admin/users/${encodeURIComponent(selectedUser.id)}`, {
@@ -287,16 +323,29 @@ export default function AdminUsersPanel() {
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({ ...body, confirmation: riskConfirmation }),
       });
-      const payload = await response.json().catch(() => null) as { error?: string; message?: string } | null;
-      if (!response.ok) throw new Error(payload?.error ?? "사용자 변경을 적용하지 못했습니다.");
+      const payload = await response.json().catch(() => null) as AdminUserMutationResponse | null;
+      const auditText = getMutationAuditText(payload);
+      if (!response.ok) {
+        throw new Error(`${payload?.error ?? "사용자 변경을 적용하지 못했습니다."}${auditText}`);
+      }
 
       const message = payload?.message ?? successMessage;
-      setLastActionMessage(`적용 완료: ${message} 상태를 다시 확인했습니다.`);
+      setMutationResult({
+        action,
+        targetUserId: selectedUser.id,
+        status: "success",
+        message: `적용 완료: ${message}${auditText} 상태를 다시 확인했습니다.`,
+      });
       toast({ title: "적용 완료", description: message });
       await loadUsers();
     } catch (error) {
       const message = error instanceof Error ? error.message : "사용자 변경을 적용하지 못했습니다.";
-      setLastActionMessage(`적용 실패: ${message}`);
+      setMutationResult({
+        action,
+        targetUserId: selectedUser.id,
+        status: "error",
+        message: `적용 실패: ${message}`,
+      });
       toast({ title: "적용 실패", description: message, variant: "destructive" });
     } finally {
       setIsMutating(false);
@@ -306,7 +355,7 @@ export default function AdminUsersPanel() {
 
   const createUser = async () => {
     setIsMutating(true);
-    setLastActionMessage("");
+    setMutationResult(null);
 
     try {
       const response = await fetch("/api/admin/users", {
@@ -315,27 +364,40 @@ export default function AdminUsersPanel() {
         body: JSON.stringify({ ...createForm, confirmation: createForm.adminConfirmation || undefined }),
       });
       const payload = await response.json().catch(() => null) as AdminUserMutationResponse | null;
+      const auditText = getMutationAuditText(payload);
       if (!response.ok) {
-        const stepText = payload?.step ? ` (${payload.step})` : "";
-        const failedAuditId = payload?.auditId ?? payload?.preflightAuditId ?? null;
-        const auditText = failedAuditId ? ` 감사 ID: ${failedAuditId}` : "";
-        throw new Error(`${payload?.error ?? "사용자를 만들지 못했습니다."}${stepText}${auditText}`);
+        throw new Error(`${payload?.error ?? "사용자를 만들지 못했습니다."}${auditText}`);
       }
 
       const message = payload?.message ?? "사용자 계정을 만들었습니다.";
-      const auditText = payload?.auditId ? ` 감사 ID: ${payload.auditId}` : "";
-      setLastActionMessage(`적용 완료: ${message}${auditText} 목록을 다시 확인했습니다.`);
+      setMutationResult({
+        action: "create",
+        targetUserId: null,
+        status: "success",
+        message: `적용 완료: ${message}${auditText} 목록을 다시 확인했습니다.`,
+      });
       setCreateForm(EMPTY_CREATE_FORM);
       toast({ title: "사용자 생성 완료", description: `${message}${auditText}` });
       await loadUsers();
     } catch (error) {
       const message = error instanceof Error ? error.message : "사용자 생성 중 오류가 발생했습니다.";
-      setLastActionMessage(`적용 실패: ${message}`);
+      setMutationResult({
+        action: "create",
+        targetUserId: null,
+        status: "error",
+        message: `적용 실패: ${message}`,
+      });
       toast({ title: "생성 실패", description: message, variant: "destructive" });
     } finally {
       setIsMutating(false);
     }
   };
+  const visibleMutationResult =
+    !mutationResult?.targetUserId || mutationResult.targetUserId === selectedUser?.id
+      ? mutationResult
+      : null;
+  const mutationResultMessage = visibleMutationResult?.message ?? "";
+
 
   return (
     <section aria-labelledby="admin-users-title" className="flex h-full min-h-0 flex-col bg-background">
@@ -380,6 +442,7 @@ export default function AdminUsersPanel() {
               className="flex gap-2"
               onSubmit={(event) => {
                 event.preventDefault();
+                clearCreateErrorResult();
                 setSearchQuery(searchInput);
               }}
             >
@@ -559,7 +622,7 @@ export default function AdminUsersPanel() {
                       <Input id="selected-avatar" value={profileForm.avatarUrl} onChange={(event) => setProfileForm((current) => ({ ...current, avatarUrl: event.target.value }))} className="rounded-lg" />
                     </div>
                     <div className="md:col-span-2">
-                      <Button type="button" variant="outline" className="rounded-lg" disabled={isMutating} onClick={() => void patchSelectedUser({ profile: profileForm }, "프로필 정보를 저장했습니다.")}>
+                      <Button type="button" variant="outline" className="rounded-lg" disabled={isMutating} onClick={() => void patchSelectedUser({ profile: profileForm }, "프로필 정보를 저장했습니다.", "profile")}>
                         <Save className="h-4 w-4" aria-hidden="true" />
                         프로필 저장
                       </Button>
@@ -578,10 +641,10 @@ export default function AdminUsersPanel() {
                     </p>
                     <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                       <Input aria-label="권한 변경 확인 문구" value={riskConfirmation} onChange={(event) => setRiskConfirmation(event.target.value)} placeholder="권한변경 / 비활성화 / 재활성화" className="rounded-xl bg-background" />
-                      <Button type="button" variant="outline" className="rounded-lg" disabled={isMutating || selectedUser.isAdmin || !canApplyRoleAction} onClick={() => void patchSelectedUser({ role: "admin" }, "관리자 권한을 부여했습니다.")}>
+                      <Button type="button" variant="outline" className="rounded-lg" disabled={isMutating || selectedUser.isAdmin || !canApplyRoleAction} onClick={() => void patchSelectedUser({ role: "admin" }, "관리자 권한을 부여했습니다.", "role")}>
                         관리자 부여
                       </Button>
-                      <Button type="button" variant="outline" className="rounded-lg" disabled={isMutating || !selectedUser.isAdmin || isSelfSelected || !canApplyRoleAction} onClick={() => void patchSelectedUser({ role: "user" }, "관리자 권한을 회수했습니다.")}>
+                      <Button type="button" variant="outline" className="rounded-lg" disabled={isMutating || !selectedUser.isAdmin || isSelfSelected || !canApplyRoleAction} onClick={() => void patchSelectedUser({ role: "user" }, "관리자 권한을 회수했습니다.", "role")}>
                         권한 회수
                       </Button>
                     </div>
@@ -596,11 +659,11 @@ export default function AdminUsersPanel() {
                       영구 삭제 대신 비활성화/재활성화를 우선 사용합니다. 비활성화하려면 확인 문구에 <strong>비활성화</strong>를 입력하세요.
                     </p>
                     <div className="mt-3 flex flex-wrap gap-2">
-                      <Button type="button" variant="destructive" className="rounded-lg" disabled={isMutating || selectedUser.isDisabled || isSelfSelected || !canDisableAction} onClick={() => void patchSelectedUser({ accountStatus: "disabled" }, "계정을 비활성화했습니다.")}>
+                      <Button type="button" variant="destructive" className="rounded-lg" disabled={isMutating || selectedUser.isDisabled || isSelfSelected || !canDisableAction} onClick={() => void patchSelectedUser({ accountStatus: "disabled" }, "계정을 비활성화했습니다.", "accountStatus")}>
                         <Ban className="h-4 w-4" aria-hidden="true" />
                         계정 비활성화
                       </Button>
-                      <Button type="button" variant="outline" className="rounded-lg" disabled={isMutating || !selectedUser.isDisabled || !canReactivateAction} onClick={() => void patchSelectedUser({ accountStatus: "active" }, "계정을 재활성화했습니다.")}>
+                      <Button type="button" variant="outline" className="rounded-lg" disabled={isMutating || !selectedUser.isDisabled || !canReactivateAction} onClick={() => void patchSelectedUser({ accountStatus: "active" }, "계정을 재활성화했습니다.", "accountStatus")}>
                         <RotateCcw className="h-4 w-4" aria-hidden="true" />
                         재활성화
                       </Button>
@@ -609,10 +672,15 @@ export default function AdminUsersPanel() {
                 </>
               )}
 
-              <p className="min-h-5 text-sm text-muted-foreground" aria-live="polite">
-                {lastActionMessage || "변경 결과는 적용 후 상태를 다시 읽어 확인합니다."}
+              <p
+                className="min-h-5 text-sm text-muted-foreground"
+                aria-live="polite"
+                data-admin-user-mutation-action={visibleMutationResult?.action ?? undefined}
+                data-admin-user-mutation-target={visibleMutationResult?.targetUserId ?? undefined}
+              >
+                {mutationResultMessage || "변경 결과는 적용 후 상태를 다시 읽어 확인합니다."}
               </p>
-              {lastActionMessage.startsWith("적용 완료") && (
+              {visibleMutationResult?.status === "success" && (
                 <p className="flex items-center gap-2 text-sm text-emerald-700">
                   <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
                   상태 재확인이 완료되었습니다.
