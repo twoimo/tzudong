@@ -90,7 +90,8 @@ export async function GET() {
       supabase
         .from("reviews")
         .select("id", { count: "exact", head: true })
-        .eq("is_verified", false),
+        .eq("is_verified", false)
+        .or("admin_note.is.null,admin_note.not.ilike.%거부%"),
     ]);
 
     const submissionsCount = normalizeCount(submissionsResult, "restaurant_submissions");

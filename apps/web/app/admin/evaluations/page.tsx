@@ -39,6 +39,8 @@ import { buildCanonicalAdminEvaluationsHref } from '@/lib/admin/admin-module-rou
 import {
   buildAdminPendingCountsResponse,
   getAdminPendingCountsTotal,
+  normalizeAdminPendingCountsResponse,
+  type AdminPendingCountsResponse,
 } from '@/lib/admin/pending-counts';
 import {
   MISSING_EVALUATION_AUTO_DELETE_MESSAGE,
@@ -80,6 +82,20 @@ import {
 const PAGE_SIZE = 10; // 한 번에 로드할 레코드 수
 const STORAGE_KEY = 'adminEvaluationPageState'; // localStorage 키
 const EMPTY_SEARCH_PARAMS = new URLSearchParams();
+const ADMIN_PENDING_COUNTS_QUERY_KEY = ['admin-pending-counts', 'evaluations'] as const;
+
+async function fetchAdminEvaluationPendingCounts(): Promise<AdminPendingCountsResponse> {
+  const response = await fetch('/api/admin/pending-counts', {
+    headers: { Accept: 'application/json' },
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    throw new Error('admin-pending-counts-failed');
+  }
+
+  return normalizeAdminPendingCountsResponse(await response.json());
+}
 const EVALUATION_FILTER_KEYS = [
   'visit_authenticity',
   'rb_inference_score',
@@ -723,6 +739,10 @@ function AdminEvaluationPage({
   const [currentSubmissionIndex, setCurrentSubmissionIndex] = useState(0);
   const [editingSubmission, setEditingSubmission] = useState<SubmissionRecord | null>(null);
   const queryClient = useQueryClient();
+  const invalidateAdminPendingCounts = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['admin-pending-counts'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-overview', 'pending-counts'] });
+  }, [queryClient]);
 
   // localStorage에서 상태 복원
   useEffect(() => {
@@ -2054,6 +2074,15 @@ function AdminEvaluationPage({
     refetchInterval: 30000,
   });
 
+  const { data: canonicalPendingCounts } = useQuery({
+    queryKey: [...ADMIN_PENDING_COUNTS_QUERY_KEY, user?.id, isAdmin],
+    queryFn: fetchAdminEvaluationPendingCounts,
+    enabled: !!user && isAdmin,
+    staleTime: 15 * 1000,
+    refetchInterval: 30 * 1000,
+    refetchOnWindowFocus: true,
+  });
+
   // pending 리뷰(미승인, 거부 아닌) 건수 계산
   const pendingReviewsCount = useMemo(() => {
     return reviewsData.filter((r: Review) =>
@@ -2061,7 +2090,7 @@ function AdminEvaluationPage({
     ).length;
   }, [reviewsData]);
 
-  const pendingCounts = useMemo(() => {
+  const localPendingCounts = useMemo(() => {
     const pendingRecommendationRequests = recommendationRequestsData.filter(
       (request) => request.status === 'pending',
     ).length;
@@ -2074,6 +2103,8 @@ function AdminEvaluationPage({
     });
   }, [pendingReviewsCount, recommendationRequestsData, submissionsData.length]);
 
+  const pendingCounts = canonicalPendingCounts ?? localPendingCounts;
+
   const pendingRestaurantSubmissionCount =
     pendingCounts.domains.restaurant_submissions.count;
   const pendingRecommendationCount =
@@ -2082,6 +2113,9 @@ function AdminEvaluationPage({
 
   // 전체 대기 건수 (제보 + 리뷰)
   const totalPendingCount = getAdminPendingCountsTotal(pendingCounts);
+  const pendingQueueSummaryText = showSubmissionView
+    ? `제보/리뷰 대기: 제보 ${pendingRestaurantSubmissionCount}건 | 추천 ${pendingRecommendationCount}건 | 리뷰 ${pendingReviewCount}건 | 전체 ${totalPendingCount}건`
+    : `필터링: ${filteredRecords.length}개 | 현 ${stats.total}개 레코드 | 삭제한 레코드 ${stats.deleted}개`;
 
   // 리뷰 승인 mutation
   const approveReviewMutation = useMutation({
@@ -2138,6 +2172,7 @@ function AdminEvaluationPage({
         createReviewApprovedNotification(userId, restaurantName);
       }
       queryClient.invalidateQueries({ queryKey: ['admin-reviews-inline'] });
+      invalidateAdminPendingCounts();
     },
     onError: (error: unknown) => {
       toast({ variant: 'destructive', title: '승인 실패', description: getErrorMessage(error) });
@@ -2200,6 +2235,7 @@ function AdminEvaluationPage({
         createReviewRejectedNotification(userId, restaurantName, rejectionReason);
       }
       queryClient.invalidateQueries({ queryKey: ['admin-reviews-inline'] });
+      invalidateAdminPendingCounts();
     },
     onError: (error: unknown) => {
       toast({ variant: 'destructive', title: '거부 실패', description: getErrorMessage(error) });
@@ -2254,6 +2290,7 @@ function AdminEvaluationPage({
         description: `리뷰가 삭제되었습니다. (이미지 ${deletedPhotos}개 삭제)`
       });
       queryClient.invalidateQueries({ queryKey: ['admin-reviews-inline'] });
+      invalidateAdminPendingCounts();
     },
     onError: (error: unknown) => {
       toast({ variant: 'destructive', title: '삭제 실패', description: getErrorMessage(error) });
@@ -2278,7 +2315,11 @@ function AdminEvaluationPage({
 	      adminNote?: string;
 		    }) => {
 		      if (!user) throw new Error('로그인이 필요합니다');
-      void forceApprove;
+      const trimmedApprovalAuditNote = adminNote?.trim() || '';
+      const approvalAuditNote = [
+        trimmedApprovalAuditNote,
+        forceApprove && !trimmedApprovalAuditNote.includes('forceApprove=true') ? 'forceApprove=true' : '',
+      ].filter(Boolean).join('\n') || null;
 
       if (submission.submission_type === 'recommend') {
         const response = await fetch(`/api/admin/restaurant-requests/${encodeURIComponent(submission.id)}/review`, {
@@ -2406,22 +2447,25 @@ function AdminEvaluationPage({
 	          }
 	        } else {
 	          // 거부
-	          await supabase.from('restaurant_submission_items' as never)
-	            .update({
-	              item_status: 'rejected',
-	              rejection_reason: decision?.rejectionReason || '관리자에 의해 반려됨',
-	            } as never)
-	            .eq('id', item.id);
+          const { error: itemRejectionError } = await supabase.from('restaurant_submission_items' as never)
+            .update({
+              item_status: 'rejected',
+              rejection_reason: decision?.rejectionReason || '관리자에 의해 반려됨',
+            } as never)
+            .eq('id', item.id);
+          if (itemRejectionError) throw itemRejectionError;
 	        }
 	      }
 
 	      // 관리자 메모 업데이트
-	      await supabase.from('restaurant_submissions' as never)
-	        .update({
-	          resolved_by_admin_id: user.id,
-	          reviewed_at: new Date().toISOString(),
-	        } as never)
-	        .eq('id', submission.id);
+      const { error: submissionUpdateError } = await supabase.from('restaurant_submissions' as never)
+        .update({
+          resolved_by_admin_id: user.id,
+          reviewed_at: new Date().toISOString(),
+          ...(approvalAuditNote ? { admin_notes: approvalAuditNote } : {}),
+        } as never)
+        .eq('id', submission.id);
+      if (submissionUpdateError) throw submissionUpdateError;
 
       return { submission, restaurant, recommendationAuditId: null, recommendationMessage: null };
     },
@@ -2430,6 +2474,7 @@ function AdminEvaluationPage({
         updateRecommendationRequestReadbackInCache(submission);
         toast({ title: '추천 승인 완료', description: `${recommendationMessage || '추천이 승인되었습니다.'} 감사 ID: ${recommendationAuditId || '확인됨'}` });
         queryClient.invalidateQueries({ queryKey: ['admin-restaurant-requests-inline'] });
+        invalidateAdminPendingCounts();
         return;
       }
       toast({ title: '제보 승인 완료', description: `"${submission.restaurant_name}" 맛집이 등록되었습니다` });
@@ -2448,6 +2493,7 @@ function AdminEvaluationPage({
       }
       queryClient.invalidateQueries({ queryKey: ['admin-submissions-inline'] });
       queryClient.invalidateQueries({ queryKey: ['admin-restaurant-requests-inline'] });
+      invalidateAdminPendingCounts();
       void invalidateRestaurantDiscoveryQueries(queryClient);
       if (currentSubmissionIndex >= submissionsData.length - 1 && currentSubmissionIndex > 0) {
         setCurrentSubmissionIndex(currentSubmissionIndex - 1);
@@ -2519,6 +2565,7 @@ function AdminEvaluationPage({
         updateRecommendationRequestReadbackInCache(submission);
         toast({ title: '추천 거부됨', description: `${recommendationMessage || '추천이 거부되었습니다.'} 감사 ID: ${recommendationAuditId || '확인됨'}` });
         queryClient.invalidateQueries({ queryKey: ['admin-restaurant-requests-inline'] });
+        invalidateAdminPendingCounts();
         return;
       }
       toast({ title: '제보 거부됨', description: `"${submission.restaurant_name}" 제보가 거부되었습니다` });
@@ -2534,6 +2581,7 @@ function AdminEvaluationPage({
       }
       queryClient.invalidateQueries({ queryKey: ['admin-submissions-inline'] });
       queryClient.invalidateQueries({ queryKey: ['admin-restaurant-requests-inline'] });
+      invalidateAdminPendingCounts();
       if (currentSubmissionIndex >= submissionsData.length - 1 && currentSubmissionIndex > 0) {
         setCurrentSubmissionIndex(currentSubmissionIndex - 1);
       }
@@ -2599,11 +2647,13 @@ function AdminEvaluationPage({
         updateRecommendationRequestReadbackInCache(submission);
         toast({ title: '추천 삭제 처리됨', description: `"${submission.restaurant_name}" 추천이 거부 상태로 처리되었습니다. 감사 ID: ${submission.recommendation_audit_id || '확인됨'}` });
         queryClient.invalidateQueries({ queryKey: ['admin-restaurant-requests-inline'] });
+        invalidateAdminPendingCounts();
         return;
       }
       toast({ title: '제보 삭제됨', description: `"${submission.restaurant_name}" 제보가 삭제되었습니다` });
       queryClient.invalidateQueries({ queryKey: ['admin-submissions-inline'] });
       queryClient.invalidateQueries({ queryKey: ['admin-restaurant-requests-inline'] });
+      invalidateAdminPendingCounts();
       if (currentSubmissionIndex >= submissionsData.length - 1 && currentSubmissionIndex > 0) {
         setCurrentSubmissionIndex(currentSubmissionIndex - 1);
       }
@@ -2772,7 +2822,7 @@ function AdminEvaluationPage({
               </div>
             )}
             <p className={embedded ? "mt-0.5 text-xs text-muted-foreground" : "mt-0.5 text-xs text-muted-foreground sm:text-sm"}>
-              필터링: {filteredRecords.length}개 | 현 {stats.total}개 레코드 | 삭제한 레코드 {stats.deleted}개
+              {pendingQueueSummaryText}
             </p>
           </div>
 
@@ -2936,6 +2986,7 @@ function AdminEvaluationPage({
             onRefresh={() => {
               queryClient.invalidateQueries({ queryKey: ['admin-submissions-inline'] });
               queryClient.invalidateQueries({ queryKey: ['admin-restaurant-requests-inline'] });
+              invalidateAdminPendingCounts();
             }}
             loading={submissionsLoading || recommendationRequestsLoading || approveSubmissionMutation.isPending || rejectSubmissionMutation.isPending || deleteSubmissionMutation.isPending}
             reviews={reviewsData as Review[]}
