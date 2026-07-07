@@ -2278,8 +2278,8 @@ const NaverMapView = memo(({
                 onClick
             );
         };
-        const createIndividualMarkerPosition = (restaurant: { id: string; lat: number; lng: number }) => {
-            const basePosition = new naver.maps.LatLng(restaurant.lat, restaurant.lng);
+        const createIndividualMarkerPosition = (restaurant: { id: string }, lat: number, lng: number) => {
+            const basePosition = new naver.maps.LatLng(lat, lng);
             return resolveNaverOverlappingMarkerPosition({
                 basePosition,
                 createPoint: (x, y) => new naver.maps.Point(x, y),
@@ -2316,7 +2316,7 @@ const NaverMapView = memo(({
 
                     markerPool.acquire(
                         restaurant.id,
-                        createIndividualMarkerPosition(restaurant),
+                        createIndividualMarkerPosition(restaurant, restaurant.lat, restaurant.lng),
                         { content: markerContent, anchor: new naver.maps.Point(visual.anchor.x, visual.anchor.y) },
                         map,
                         () => handleMarkerRestaurantSelection(restaurant)
@@ -2421,7 +2421,7 @@ const NaverMapView = memo(({
 
                     markerPool.acquire(
                         restaurant.id,
-                        createIndividualMarkerPosition(restaurant),
+                        createIndividualMarkerPosition(restaurant, restaurant.lat, restaurant.lng),
                         { content: markerContent, anchor: new naver.maps.Point(visual.anchor.x, visual.anchor.y) },
                         map,
                         () => handleMarkerRestaurantSelection(restaurant)
@@ -2511,11 +2511,7 @@ const NaverMapView = memo(({
                                 isMobileOrTablet,
                             );
                             const position = typeof restaurant?.lat === 'number' && typeof restaurant?.lng === 'number'
-                                ? createIndividualMarkerPosition({
-                                    id: restaurantId,
-                                    lat: restaurant.lat,
-                                    lng: restaurant.lng,
-                                })
+                                ? createIndividualMarkerPosition(restaurant, restaurant.lat, restaurant.lng)
                                 : new naver.maps.LatLng(lat, lng);
 
                             markerPool.acquire(
@@ -2560,7 +2556,7 @@ const NaverMapView = memo(({
 
                     markerPool.acquire(
                         restaurant.id,
-                        createIndividualMarkerPosition(restaurant),
+                        createIndividualMarkerPosition(restaurant, restaurant.lat, restaurant.lng),
                         { content: markerContent, anchor: new naver.maps.Point(visual.anchor.x, visual.anchor.y) },
                         map,
                         () => handleMarkerRestaurantSelection(restaurant)
