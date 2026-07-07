@@ -4,6 +4,7 @@
 
 import type Supercluster from 'supercluster';
 import type { ClusterProperties } from './clustering';
+import { escapeHtmlAttribute } from './html-escape';
 
 /**
  * 카테고리 이모지 순환 애니메이션 상태 관리
@@ -278,7 +279,8 @@ export const createClusterMarkerHTML = (
 export const createIndividualMarkerHTML = (
   category: string,
   isSelected: boolean,
-  visitCount = 0
+  visitCount = 0,
+  restaurantId?: string | null
 ): string => {
   const image = getCategoryImage(category);
   // 이미지 마커: 선택 시 42px, 기본 32px
@@ -289,6 +291,7 @@ export const createIndividualMarkerHTML = (
   const visitBadgeFontSize = isSelected ? 11 : 10;
   const visitBadgeOffset = isSelected ? -6 : -5;
   const displayVisitCount = normalizedVisitCount >= 100 ? '99+' : String(normalizedVisitCount);
+  const safeRestaurantId = restaurantId ? escapeHtmlAttribute(restaurantId) : null;
 
   const dropShadow = isSelected
     ? 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4)) drop-shadow(0 0 0 2px rgba(255, 255, 255, 0.9))'
@@ -318,6 +321,7 @@ export const createIndividualMarkerHTML = (
       "
       role="button"
       data-testid="marker"
+      ${safeRestaurantId ? `data-restaurant-id="${safeRestaurantId}"` : ''}
     >
         ${createCategoryImageHTML({ image, alt: 'marker' })}
         ${shouldShowVisitBadge ? `
