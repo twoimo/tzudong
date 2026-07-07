@@ -84,6 +84,20 @@ describe('buildRestaurantSelectFields', () => {
             'youtube_meta',
         );
     });
+
+    test('includes source_type in compact and full projections for marker classification', async () => {
+        const { buildRestaurantSelectFields } = await loadUseRestaurants();
+
+        expect(buildRestaurantSelectFields({ compact: false, includeYoutubeMetaForTheme: false })).toContain(
+            'source_type',
+        );
+        expect(buildRestaurantSelectFields({ compact: true, includeYoutubeMetaForTheme: false })).toContain(
+            'source_type',
+        );
+        expect(buildRestaurantSelectFields({ compact: true, includeYoutubeMetaForTheme: true })).toContain(
+            'source_type',
+        );
+    });
 });
 
 describe('mergeRestaurants', () => {

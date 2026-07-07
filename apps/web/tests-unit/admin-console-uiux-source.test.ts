@@ -149,6 +149,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     const storyboardSource = source(
       "components/admin/storyboard/AdminStoryboardGenerator.tsx",
     );
+    const canvasShellSource = source(
+      "components/admin/storyboard/StoryboardCanvasShell.tsx",
+    );
+    const canvasInlineGeometrySource = `${storyboardSource}\n${canvasShellSource}`;
 
     expectCssDeclaration(
       appGlobalsSource,
@@ -203,10 +207,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "grid-row",
       "var(--storyboard-result-panel-row)",
     );
-    expect(storyboardSource).toContain(
+    expect(canvasInlineGeometrySource).toContain(
       'gridColumn: "var(--storyboard-result-panel-column, 1)"',
     );
-    expect(storyboardSource).toContain(
+    expect(canvasInlineGeometrySource).toContain(
       'gridRow: "var(--storyboard-result-panel-row, 1)"',
     );
 
@@ -5082,6 +5086,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     const storyboardSource = source(
       "components/admin/storyboard/AdminStoryboardGenerator.tsx",
     );
+    const canvasShellSource = source(
+      "components/admin/storyboard/StoryboardCanvasShell.tsx",
+    );
+    const canvasModuleSource = `${storyboardSource}\n${canvasShellSource}`;
     const guidedPresetSource = source(
       "lib/admin/storyboard/guided-example-presets.ts",
     );
@@ -5153,7 +5161,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).toContain(
       '"var(--storyboard-split-columns, minmax(0, 1fr) minmax(320px, 400px))"',
     );
-    expect(storyboardSource).toContain(
+    expect(canvasModuleSource).toContain(
       'gridColumn: "var(--storyboard-result-panel-column, 1)"',
     );
     expect(storyboardSource).toContain(
@@ -6636,7 +6644,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).toContain(
       "data-storyboard-frame-view-option={String(pageSize)}",
     );
-    expect(storyboardSource).toContain(
+    expect(canvasModuleSource).toContain(
       'className="flex shrink-0 flex-row items-center gap-2 p-2 pb-1"',
     );
     expect(storyboardSource).toContain('className="sr-only"');
@@ -6660,11 +6668,11 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'className="flex flex-wrap items-center justify-between gap-2 text-base"',
     );
     expect(storyboardSource).not.toContain('className="flex flex-wrap gap-2"');
-    expect(storyboardSource).toContain(
+    expect(canvasModuleSource).toContain(
       '"min-h-0 flex-1 overflow-x-hidden p-3 pt-0"',
     );
-    expect(storyboardSource).toContain('"overflow-hidden"');
-    expect(storyboardSource).toContain('"overflow-y-auto"');
+    expect(canvasModuleSource).toContain('"overflow-hidden"');
+    expect(canvasModuleSource).toContain('"overflow-y-auto"');
     expect(storyboardSource).toContain(
       'className="h-8 w-[112px] shrink-0 text-xs"',
     );
@@ -6835,8 +6843,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).not.toContain(
       'data-storyboard-tool-palette="true"',
     );
-    expect(storyboardSource).toContain('data-storyboard-image-board="true"');
-    expect(storyboardSource).toContain('data-storyboard-frame-grid="true"');
+    expect(canvasModuleSource).toContain('data-storyboard-image-board="true"');
+    expect(canvasModuleSource).toContain('data-storyboard-frame-grid="true"');
     expect(storyboardSource).toContain("storyboardFrameScenes");
     expect(storyboardSource).toContain("STORYBOARD_FRAMES_PER_PAGE = 4");
     expect(storyboardSource).not.toContain("isStoryboardResultSkeletonVisible");
@@ -6950,7 +6958,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).toContain(
       "getStoryboardImageGenerationTargetScenes",
     );
-    expect(storyboardSource).toContain('data-storyboard-frame-fill="true"');
+    expect(canvasModuleSource).toContain('data-storyboard-frame-fill="true"');
     expect(storyboardSource).toContain('data-storyboard-glass-skeleton="true"');
     expect(storyboardSource).toContain(
       'data-storyboard-unified-skeleton="true"',
@@ -7185,19 +7193,19 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "Array.from({ length: STORYBOARD_FRAMES_PER_PAGE }",
     );
     expect(storyboardSource).toContain('"flex h-full min-h-0 flex-col gap-2"');
-    expect(storyboardSource).toContain('"relative grid min-h-0 flex-1 gap-2"');
+    expect(canvasModuleSource).toContain('"relative grid min-h-0 flex-1 gap-2"');
     expect(storyboardSource).toContain("gridTemplateColumns:");
     expect(storyboardSource).toContain("storyboardFramePageSize === 1");
     expect(storyboardSource).toContain('"repeat(2, minmax(0, 1fr))"');
-    expect(storyboardSource).toContain(
+    expect(canvasModuleSource).toContain(
       '"min-h-0 flex-1 overflow-x-hidden p-3 pt-0"',
     );
-    expect(storyboardSource).toContain('"overflow-hidden"');
-    expect(storyboardSource).toContain('"overflow-y-auto"');
-    expect(storyboardSource).toContain(
-      "data-storyboard-frame-page={String(activeStoryboardPage + 1)}",
+    expect(canvasModuleSource).toContain('"overflow-hidden"');
+    expect(canvasModuleSource).toContain('"overflow-y-auto"');
+    expect(canvasModuleSource).toContain(
+      "data-storyboard-frame-page={String(activePage + 1)}",
     );
-    expect(storyboardSource).toContain("data-storyboard-frame-page-size={");
+    expect(canvasModuleSource).toContain("data-storyboard-frame-page-size={");
     expect(storyboardSource).toContain("storyboardFramePageSize");
     expect(storyboardSource).not.toContain('"h-full grid-cols-1 grid-rows-3"');
     expect(storyboardSource).not.toContain(
