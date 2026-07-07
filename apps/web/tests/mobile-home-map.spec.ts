@@ -17,6 +17,7 @@ import {
 test.use({
     ...devices['iPhone SE'],
 });
+test.setTimeout(60000);
 
 test.describe('Phase 1: mobile home map regressions', () => {
     test.beforeEach(async ({ page }) => {

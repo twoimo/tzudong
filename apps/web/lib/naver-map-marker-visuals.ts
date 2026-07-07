@@ -5,6 +5,7 @@ import { getTzuyangVisitCount } from '@/lib/restaurant-visit-count';
 
 type NaverIndividualMarkerRestaurant = Partial<Pick<
     Restaurant,
+    | 'id'
     | 'categories'
     | 'youtube_link'
     | 'youtube_links'
@@ -31,7 +32,7 @@ export function getNaverIndividualMarkerVisual(
     const visitCount = getTzuyangVisitCount(restaurant);
 
     return {
-        content: createIndividualMarkerHTML(category, isSelected, visitCount),
+        content: createIndividualMarkerHTML(category, isSelected, visitCount, restaurant.id),
         anchor: isSelected ? { x: 18, y: 18 } : { x: 14, y: 14 },
         zIndex: isSelected ? 100 : 1,
     };
