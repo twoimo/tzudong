@@ -193,6 +193,8 @@ describe('naver map marker render guard', () => {
         const source = readFileSync(join(process.cwd(), 'components/map/NaverMapView.tsx'), 'utf8');
 
         expect(source).toContain('MARKER_RENDER_EMPTY_RETRY_LIMIT');
+        expect(source).toContain('CLUSTER_INDEX_IDLE_TIMEOUT_MS');
+        expect(source).toContain("window.requestIdleCallback(callback, { timeout: CLUSTER_INDEX_IDLE_TIMEOUT_MS })");
         expect(source).toContain('markerRenderSignatureRef.current = null;');
         expect(source).toContain('setMarkerRenderRetryTick((tick) => tick + 1)');
         expect(source).toContain("document.querySelector('.cluster-marker-container')");

@@ -333,6 +333,7 @@ const resolveHomeMapContextualIneligibilityReason = ({
 const ENABLE_CLUSTERING = true; // 클러스터링 전체 활성화
 const MARKER_RENDER_EMPTY_RETRY_LIMIT = 6;
 const MARKER_RENDER_EMPTY_RETRY_DELAY_MS = 250;
+const CLUSTER_INDEX_IDLE_TIMEOUT_MS = 750;
 // [OPTIMIZATION] 클러스터 반경, 최소 포인트, 애니메이션은 useMapOptimization 훅에서 동적으로 결정
 
 // [Zoom Control] 지도 최소/최대 줌 레벨
@@ -2008,12 +2009,16 @@ const NaverMapView = memo(({
         }
 
         let cancelled = false;
-        const scheduleIdleWork = window.requestIdleCallback
-            ? window.requestIdleCallback.bind(window)
-            : ((callback: IdleRequestCallback) => window.setTimeout(() => callback({
+        const scheduleIdleWork = (callback: IdleRequestCallback): number => {
+            if (window.requestIdleCallback) {
+                return window.requestIdleCallback(callback, { timeout: CLUSTER_INDEX_IDLE_TIMEOUT_MS });
+            }
+
+            return window.setTimeout(() => callback({
                 didTimeout: false,
                 timeRemaining: () => 0,
-            } as IdleDeadline), 0) as unknown as number);
+            } as IdleDeadline), 0);
+        };
         const cancelIdleWork = window.cancelIdleCallback
             ? window.cancelIdleCallback.bind(window)
             : window.clearTimeout.bind(window);
