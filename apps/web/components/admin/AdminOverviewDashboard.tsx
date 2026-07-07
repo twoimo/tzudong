@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Image as ImageIcon } from "lucide-react";
+import { Image as ImageIcon, Layers3 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -30,6 +30,10 @@ import {
   type AdminRouteMode,
   type AdminRoutePlan,
 } from "@/lib/admin-route-planner";
+import {
+  type AdminMapOverlaysResponse,
+  type AdminRestaurantMapOverlay,
+} from "@/lib/admin-map-overlays";
 import type {
   DashboardRestaurantItem,
   DashboardRestaurantsResponse,
@@ -248,6 +252,19 @@ async function fetchAdminMapRestaurants(): Promise<DashboardRestaurantsResponse>
   return response.json() as Promise<DashboardRestaurantsResponse>;
 }
 
+async function fetchAdminMapOverlays(): Promise<AdminMapOverlaysResponse> {
+  const response = await fetch("/api/admin/map-overlays?types=trend,seasonal", {
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error("admin-map-overlays-failed");
+  }
+
+  return response.json() as Promise<AdminMapOverlaysResponse>;
+}
+
 async function fetchAdminDirectionsRoute(
   points: AdminDirectionsPoint[],
   signal?: AbortSignal,
@@ -440,6 +457,7 @@ function AdminNaverMapSurface({
   restaurants,
   selectedRestaurant,
   routeRestaurants,
+  overlays,
   directionsPath,
   isLoading,
   onSelectRestaurant,
@@ -448,6 +466,7 @@ function AdminNaverMapSurface({
   selectedRestaurant: AdminMapRestaurant | null;
   routeRestaurants: AdminMapRestaurant[];
   directionsPath: AdminDirectionsPoint[];
+  overlays: AdminRestaurantMapOverlay[];
   isLoading: boolean;
   onSelectRestaurant: (restaurant: AdminMapRestaurant) => void;
 }) {
@@ -487,6 +506,18 @@ function AdminNaverMapSurface({
       ),
     [visibleRestaurants],
   );
+  const overlayKindsByRestaurantId = useMemo(() => {
+    const next = new Map<string, Array<AdminRestaurantMapOverlay["overlayType"]>>();
+    overlays.forEach((overlay) => {
+      const existing = next.get(overlay.restaurantId) ?? [];
+      if (!existing.includes(overlay.overlayType)) {
+        existing.push(overlay.overlayType);
+      }
+      next.set(overlay.restaurantId, existing);
+    });
+    return next;
+  }, [overlays]);
+
   const adminMapClusterIndex = useMemo(() => {
     const clusterIndex = createClusterIndex(
       null,
@@ -686,6 +717,7 @@ function AdminNaverMapSurface({
       const markerVisual = getNaverIndividualMarkerVisual(
         restaurant,
         isSelected,
+        overlayKindsByRestaurantId.get(restaurant.id) ?? [],
       );
       const marker = new maps.Marker({
         map,
@@ -715,6 +747,7 @@ function AdminNaverMapSurface({
     isLoaded,
     adminMapClusterIndex,
     onSelectRestaurant,
+    overlayKindsByRestaurantId,
     restaurantById,
     selectedRestaurant?.id,
     visibleRestaurants,
@@ -828,19 +861,29 @@ function AdminMapOverviewCanvas({
   selectedRestaurant,
   routeCandidates,
   directionsRoute,
+  overlays,
+  showAdminMapOverlays,
+  isOverlayLoading,
+  hasOverlayError,
   isLoading,
   hasError,
   onSelectRestaurant,
   onSelectModule,
+  onToggleAdminMapOverlays,
 }: {
   restaurants: AdminMapRestaurant[];
   selectedRestaurant: AdminMapRestaurant | null;
   routeCandidates: AdminMapRestaurant[];
   directionsRoute: AdminDirectionsRoute | null;
+  overlays: AdminRestaurantMapOverlay[];
+  showAdminMapOverlays: boolean;
+  isOverlayLoading: boolean;
+  hasOverlayError: boolean;
   isLoading: boolean;
   hasError: boolean;
   onSelectRestaurant: (restaurant: AdminMapRestaurant) => void;
   onSelectModule: (moduleId: AdminOverviewModuleId) => void;
+  onToggleAdminMapOverlays: () => void;
 }) {
   const visibleRestaurants = useMemo(
     () => restaurants.filter(hasAdminMapCoordinates),
@@ -862,10 +905,50 @@ function AdminMapOverviewCanvas({
             restaurants={visibleRestaurants}
             selectedRestaurant={selectedRestaurant}
             routeRestaurants={routeCandidates}
+            overlays={showAdminMapOverlays ? overlays : []}
             directionsPath={directionsRoute?.path ?? []}
             isLoading={isLoading}
             onSelectRestaurant={onSelectRestaurant}
           />
+
+          <div className="absolute left-3 top-3 z-20 flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant={showAdminMapOverlays ? "default" : "secondary"}
+              className="h-9 rounded-full shadow-lg backdrop-blur"
+              aria-pressed={showAdminMapOverlays}
+              data-admin-map-overlay-toggle="true"
+              onClick={onToggleAdminMapOverlays}
+            >
+              <Layers3 className="mr-1.5 h-4 w-4" aria-hidden="true" />
+              관리자 오버레이
+              {showAdminMapOverlays && overlays.length > 0 ? (
+                <Badge variant="secondary" className="ml-1.5 rounded-full px-1.5">
+                  {overlays.length}
+                </Badge>
+              ) : null}
+            </Button>
+            {showAdminMapOverlays && (
+              <span
+                className={cn(
+                  "rounded-full border px-2.5 py-1 text-[11px] font-semibold shadow-sm backdrop-blur",
+                  hasOverlayError
+                    ? "border-destructive/30 bg-destructive/10 text-destructive"
+                    : "border-border/70 bg-card/90 text-muted-foreground"
+                )}
+                data-admin-map-overlay-status="true"
+              >
+                {hasOverlayError
+                  ? "오버레이를 불러오지 못했습니다"
+                  : isOverlayLoading
+                    ? "오버레이 확인 중"
+                    : overlays.length > 0
+                      ? "트렌드·제철 표시 중"
+                      : "등록된 활성 오버레이 없음"}
+              </span>
+            )}
+          </div>
 
           {shouldShowMapStatusOverlay && (
             <div
@@ -1395,6 +1478,7 @@ export function AdminOverviewDashboard({
   const [directionsStatus, setDirectionsStatus] =
     useState<AdminDirectionsStatus>("idle");
   const [directionsFallbackMessage, setDirectionsFallbackMessage] = useState<string | null>(null);
+  const [showAdminMapOverlays, setShowAdminMapOverlays] = useState(false);
   const [routeMode, setRouteMode] = useState<AdminRouteMode>("driving");
   const [routeStopLimit, setRouteStopLimit] = useState<number>(
     ADMIN_DIRECTIONS_MAX_POINTS,
@@ -1405,6 +1489,14 @@ export function AdminOverviewDashboard({
     staleTime: 5 * 60 * 1000,
     refetchInterval: 5 * 60 * 1000,
   });
+  const adminMapOverlaysQuery = useQuery({
+    queryKey: ["admin-overview", "map-overlays"],
+    queryFn: fetchAdminMapOverlays,
+    enabled: showAdminMapOverlays,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
 
   const realRestaurants = useMemo(
     () =>
@@ -1413,6 +1505,10 @@ export function AdminOverviewDashboard({
         .filter(hasAdminMapCoordinates),
     [mapRestaurantsQuery.data?.items],
   );
+  const adminMapOverlays = showAdminMapOverlays
+    ? adminMapOverlaysQuery.data?.overlays ?? []
+    : [];
+
   const selectedRestaurant =
     realRestaurants.find(
       (restaurant) => restaurant.id === selectedRestaurantId,
@@ -1525,12 +1621,19 @@ export function AdminOverviewDashboard({
           selectedRestaurant={selectedRestaurant}
           routeCandidates={routeCandidates}
           directionsRoute={directionsRoute}
+          overlays={adminMapOverlays}
+          showAdminMapOverlays={showAdminMapOverlays}
+          isOverlayLoading={adminMapOverlaysQuery.isFetching}
+          hasOverlayError={adminMapOverlaysQuery.isError}
           isLoading={isMapLoading}
           hasError={hasMapError}
           onSelectRestaurant={(restaurant) =>
             setSelectedRestaurantId(restaurant.id)
           }
           onSelectModule={onSelectModule}
+          onToggleAdminMapOverlays={() =>
+            setShowAdminMapOverlays((current) => !current)
+          }
         />
       </div>
       <div className="min-h-[420px] min-w-0 lg:min-h-0">

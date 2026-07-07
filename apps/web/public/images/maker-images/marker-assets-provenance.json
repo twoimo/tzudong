@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "generatedAt": "2026-07-07T11:12:00.000Z",
+  "providerId": "local-codex",
+  "authMode": "codex_oauth",
+  "endpoint": "https://chatgpt.com/backend-api/codex/responses",
+  "requestToolType": "image_generation",
+  "requestToolModel": "gpt-image-2",
+  "model": "gpt-image-2",
+  "modelProvenance": "exact",
+  "hasOpenAIAPIKey": false,
+  "assets": [
+    {
+      "kind": "user-submitted",
+      "baseName": "user_submitted",
+      "prompt": "Create one safe standalone restaurant map marker icon for a Korean food map: friendly community-submitted place marker, blue and violet rounded map pin with a small sparkle, centered subject, opaque light background, no text, no letters, no logos, no people, no internal panels.",
+      "responseId": "resp_003f5154ae73c159016a4cde5be06881918440e831e1ac03e0",
+      "imageCallId": "ig_003f5154ae73c159016a4cde6051e08191b827cb215b51a668",
+      "requestHash": "721193e9d5725d437569296d07f6cdf18e865c7aea78782ee4e1fd244e52da4a",
+      "responseHash": "b83b28aa881cf21b099ba81537587db3a0827871ef3efb9eb9848c6bdc3b814e",
+      "generatedAt": "2026-07-07T11:10:17.777920Z",
+      "png": {
+        "path": "/images/maker-images/user_submitted.png",
+        "sha256": "b92d475e4be617c94b872a71441baee6ab0f5716e3f3967b5c2f1240ddeeb463",
+        "bytes": 1090950
+      },
+      "webp": {
+        "path": "/images/maker-images/webp/user_submitted.webp",
+        "sha256": "ca94b866ce9782db3d4de134823c9ff2e361ee8f9572ab33cece080a1bad93b5",
+        "bytes": 44840
+      }
+    },
+    {
+      "kind": "trend",
+      "baseName": "trend",
+      "prompt": "Create one safe standalone restaurant map marker icon for a Korean food map: trending hot place marker, warm orange-red rounded map pin with a subtle upward flame or upward arrow motif, centered subject, opaque light background, no text, no letters, no logos, no people, no internal panels.",
+      "responseId": "resp_0777474c938271a4016a4cde9adf84819194fd666fa1f87e61",
+      "imageCallId": "ig_0777474c938271a4016a4cde9b98ac81919035c0fb877f2fce",
+      "requestHash": "3f6c770797a6d460063b987bc42b0b637bc49fe763d9eb597df3397108ad9fce",
+      "responseHash": "d96b92ded30280bce2aa1d32114170798274093b9fc7347d89aba7ff06013146",
+      "generatedAt": "2026-07-07T11:10:44.933440Z",
+      "png": {
+        "path": "/images/maker-images/trend.png",
+        "sha256": "8c94eb6a2ae5bc38ce6771c4f1c97b3a1e6ec8dd5a636b9bccb6349349670176",
+        "bytes": 1272264
+      },
+      "webp": {
+        "path": "/images/maker-images/webp/trend.webp",
+        "sha256": "44080db856072ee3e8422c0422ef0e4c31205d8cd7a8ceaff8b18b022d587226",
+        "bytes": 57738
+      }
+    },
+    {
+      "kind": "seasonal",
+      "baseName": "seasonal",
+      "prompt": "Create one safe standalone restaurant map marker icon for a Korean food map: seasonal fresh food marker, green-teal rounded map pin with a small leaf and bowl motif, centered subject, opaque light background, no text, no letters, no logos, no people, no internal panels.",
+      "responseId": "resp_03dc00c97451963d016a4cdeb62a7481918d5fd3e3fb29b285",
+      "imageCallId": "ig_03dc00c97451963d016a4cdebb9ff88191b259ef6257264534",
+      "requestHash": "ffbee7101ad8b6e5ccbecca7daa3e65baa93f99f21c943912af683843452dd90",
+      "responseHash": "7a45197e40ab2801e2a138d0744660a4256127f07a28383011a895dc65139e78",
+      "generatedAt": "2026-07-07T11:11:21.718413Z",
+      "png": {
+        "path": "/images/maker-images/seasonal.png",
+        "sha256": "8498e6602c7fc9b9d35b49c7dca8092f65a4d13a8af40f25927fcf7fc91815d7",
+        "bytes": 1080764
+      },
+      "webp": {
+        "path": "/images/maker-images/webp/seasonal.webp",
+        "sha256": "aad63d2c8c73051e90e915bba843f719663da2dcbe410b12eaa850528631ccfb",
+        "bytes": 64056
+      }
+    }
+  ]
+}

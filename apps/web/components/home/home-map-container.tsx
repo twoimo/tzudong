@@ -70,6 +70,7 @@ interface HomeMapContainerProps {
     isMapFullscreen?: boolean;
     onMapFullscreenChange?: (isFullscreen: boolean) => void;
     deviceLocation?: DeviceMapLocation | null;
+    showUserSubmittedMarkers?: boolean;
     renderDesktopDetailPanel?: boolean;
 }
 
@@ -202,6 +203,7 @@ function HomeMapContainerComponent({
     isMapFullscreen = false,
     onMapFullscreenChange,
     deviceLocation = null,
+    showUserSubmittedMarkers = true,
     renderDesktopDetailPanel = true,
 }: HomeMapContainerProps) {
     const { isMobileOrTablet, isDesktop } = useDeviceType();
@@ -1456,6 +1458,7 @@ function HomeMapContainerComponent({
                         onMapBlankClick={handleMapBlankClick}
                         onMapInteraction={handleMapUserInteraction}
                         deviceLocation={deviceLocation}
+                        showUserSubmittedMarkers={showUserSubmittedMarkers}
                     />
                 </Suspense>
             ) : (
