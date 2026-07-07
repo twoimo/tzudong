@@ -59,6 +59,12 @@ import {
 } from "@/lib/cluster-marker";
 import { getNaverIndividualMarkerVisual } from "@/lib/naver-map-marker-visuals";
 import {
+    buildRestaurantMarkerKindSignature,
+    isUserSubmittedRestaurant,
+    RESTAURANT_MARKER_ASSET_VERSION,
+    resolveRestaurantMarkerKind,
+} from "@/lib/restaurant-marker-kind";
+import {
     buildClusterMarkerContent,
     buildClusterMarkerFeature,
     buildNaverClusterAnimationIconPlan,
@@ -358,6 +364,7 @@ interface NaverMapViewProps {
     onMapBlankClick?: () => void;
     onMapInteraction?: () => void;
     deviceLocation?: DeviceMapLocation | null;
+    showUserSubmittedMarkers?: boolean;
 }
 
 /**
@@ -608,6 +615,7 @@ const NaverMapView = memo(({
     onMapBlankClick,
     onMapInteraction,
     deviceLocation = null,
+    showUserSubmittedMarkers = true,
 }: NaverMapViewProps) => {
     const mapRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<NaverMapLike | null>(null);
@@ -1891,18 +1899,36 @@ const NaverMapView = memo(({
     }, [announcementToastPayload]);
 
     // 표시할 마커 데이터 (로딩 중에는 이전 데이터를 사용) - 메모이제이션
-    const displayRestaurants = useMemo(() => {
+    const unfilteredDisplayRestaurants = useMemo(() => {
         return isLoadingRestaurants && previousRestaurants.length > 0 ? previousRestaurants : restaurants;
     }, [isLoadingRestaurants, previousRestaurants, restaurants]);
 
+    const displayRestaurants = useMemo(() => {
+        if (showUserSubmittedMarkers) return unfilteredDisplayRestaurants;
+        return unfilteredDisplayRestaurants.filter((restaurant) => !isUserSubmittedRestaurant(restaurant));
+    }, [showUserSubmittedMarkers, unfilteredDisplayRestaurants]);
+
+    const markerKindSignature = useMemo(
+        () => buildRestaurantMarkerKindSignature(displayRestaurants),
+        [displayRestaurants],
+    );
+
     const restaurantLookup = useMemo(() => buildRestaurantLookup(displayRestaurants), [displayRestaurants]);
     const { byId: restaurantById, idSet: displayRestaurantIds, mergedRestaurantIds, mergedRestaurantById } = restaurantLookup;
+    const markerVisibleActiveSearchedRestaurant =
+        showUserSubmittedMarkers || !isUserSubmittedRestaurant(activeSearchedRestaurant)
+            ? activeSearchedRestaurant
+            : null;
+    const markerVisibleSelectedRestaurant =
+        showUserSubmittedMarkers || !isUserSubmittedRestaurant(selectedRestaurant)
+            ? selectedRestaurant
+            : null;
     const restaurantsForSwipe = useMemo(() => buildRestaurantsForSwipe({
-        activeSearchedRestaurant,
-        selectedRestaurant,
+        activeSearchedRestaurant: markerVisibleActiveSearchedRestaurant,
+        selectedRestaurant: markerVisibleSelectedRestaurant,
         displayRestaurantIds,
         displayRestaurants,
-    }), [activeSearchedRestaurant, displayRestaurants, displayRestaurantIds, selectedRestaurant]);
+    }), [displayRestaurants, displayRestaurantIds, markerVisibleActiveSearchedRestaurant, markerVisibleSelectedRestaurant]);
     const filterSignature = useMemo(
         () => [
             ...filters.categories,
@@ -2119,7 +2145,7 @@ const NaverMapView = memo(({
 
         const visibleRestaurants = getVisibleRestaurantsForRender(
             restaurantsForSwipe,
-            selectedRestaurant?.id ?? null,
+            markerVisibleSelectedRestaurant?.id ?? null,
             extendedBounds,
             VIEWPORT_FILTER_ENABLED,
         );
@@ -2137,7 +2163,7 @@ const NaverMapView = memo(({
         const swipeCandidates = buildPostSearchSwipeCandidates({
             visibleRestaurants: restaurantsForMarkerRender,
             allRestaurants: restaurantsForSwipe,
-            activeSearchedRestaurant,
+            activeSearchedRestaurant: markerVisibleActiveSearchedRestaurant,
         });
         const overlappingMarkerCandidates = new Map<string, { id: string; lat?: number | null; lng?: number | null }>();
         [...displayRestaurants, ...restaurantsForMarkerRender].forEach((restaurant) => {
@@ -2210,8 +2236,8 @@ const NaverMapView = memo(({
         });
 
         const renderTargetIdsForSignature = buildRenderTargetIdsForSignature({
-            activeSearchedRestaurant,
-            selectedRestaurant,
+            activeSearchedRestaurant: markerVisibleActiveSearchedRestaurant,
+            selectedRestaurant: markerVisibleSelectedRestaurant,
             clusters,
             displayRestaurantIds,
             displayRestaurants,
@@ -2228,7 +2254,11 @@ const NaverMapView = memo(({
             renderTargetIdsForSignature.push(`expanded-cluster-${restaurantId}`);
         });
         Object.values(activeVisibleMarkerReviewBubbles).forEach((bubble) => {
-            renderTargetIdsForSignature.push(`review-bubble-${bubble.restaurantId}-${bubble.reviewId}`);
+            renderTargetIdsForSignature.push([
+                'review-bubble',
+                isMobileOrTablet ? 'mobile' : 'desktop',
+                buildVisibleMarkerReviewBubbleMapSignature({ [bubble.restaurantId]: bubble }),
+            ].join(':'));
         });
 
         const nextMarkerRenderSignature = buildMarkerRenderSignature({
@@ -2236,10 +2266,17 @@ const NaverMapView = memo(({
             bounds: extendedBounds,
             displayRestaurantIds: renderTargetIdsForSignature,
             selectedRestaurantId: selectedRestaurant?.id || null,
-            searchedRestaurantId: activeSearchedRestaurant?.id || null,
+            searchedRestaurantId: markerVisibleActiveSearchedRestaurant?.id || null,
             isClusterMode: nextIsClusterMode,
             isRegionalClusterMode: nextIsRegionalClusterMode,
             isSeoulDistrictMode: nextIsSeoulDistrictMode,
+            markerKindEntries: displayRestaurants.map((restaurant) => ({
+                id: restaurant.id,
+                kind: resolveRestaurantMarkerKind(restaurant),
+                assetVersion: RESTAURANT_MARKER_ASSET_VERSION,
+            })),
+            markerLayerVersion: `${RESTAURANT_MARKER_ASSET_VERSION}:${markerKindSignature}`,
+            showUserSubmittedMarkers,
         });
 
         const previousMarkerRenderSignature = markerRenderSignatureRef.current;
@@ -2578,7 +2615,7 @@ const NaverMapView = memo(({
             }
         }
 
-    }, [clusters, regionalClusters, seoulDistrictClusters, seoulDistrictClustersFiltered, seoulIndividualIds, activeSearchedRestaurant, displayRestaurants, displayRestaurantIds, expandedClusterRestaurantIds, restaurantById, mergedRestaurantById, restaurantsForSwipe, selectedRegion, selectedRestaurant, isClusterMode, isRegionalClusterMode, isSeoulDistrictMode, isMapInitialized, isMobileOrTablet, visibleMarkerReviewBubbles, activateNoncriticalMapEffects, fitIslandClusterViewport, jumpWithPanelOffset, onMarkerClick, onRestaurantSelect, onVisibleRestaurantsChange, onContextualRestaurantsChange, handleMarkerRestaurantSelection]);
+    }, [clusters, regionalClusters, seoulDistrictClusters, seoulDistrictClustersFiltered, seoulIndividualIds, activeSearchedRestaurant, displayRestaurants, displayRestaurantIds, expandedClusterRestaurantIds, markerKindSignature, markerVisibleActiveSearchedRestaurant, markerVisibleSelectedRestaurant, restaurantById, mergedRestaurantById, restaurantsForSwipe, selectedRegion, selectedRestaurant, showUserSubmittedMarkers, isClusterMode, isRegionalClusterMode, isSeoulDistrictMode, isMapInitialized, isMobileOrTablet, visibleMarkerReviewBubbles, activateNoncriticalMapEffects, fitIslandClusterViewport, jumpWithPanelOffset, onMarkerClick, onRestaurantSelect, onVisibleRestaurantsChange, onContextualRestaurantsChange, handleMarkerRestaurantSelection]);
 
     // [Animation] 카테고리 이모지 순환 업데이트
     useEffect(() => {

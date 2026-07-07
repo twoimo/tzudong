@@ -1,7 +1,7 @@
 'use client';
 
 import { memo } from 'react';
-import { LocateFixed, Navigation, Send } from "lucide-react";
+import { Eye, EyeOff, LocateFixed, Navigation, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useDeviceType } from "@/hooks/useDeviceType";
@@ -19,6 +19,8 @@ interface SubmissionFloatingButtonProps {
     isDeviceHeadingMode?: boolean;
     desktopPanelSide?: HomeMapPanelSide;
     isPanelCollapsed?: boolean;
+    showUserSubmittedMarkers?: boolean;
+    onUserSubmittedMarkersToggle?: () => void;
 }
 
 const DESKTOP_MAP_SIDE_PANEL_WIDTH_CSS = "min(392px, calc(100vw - 32px))";
@@ -34,6 +36,8 @@ const SubmissionFloatingButton = memo(function SubmissionFloatingButton({
     isDeviceHeadingMode = false,
     desktopPanelSide = "left",
     isPanelCollapsed = false,
+    showUserSubmittedMarkers = true,
+    onUserSubmittedMarkersToggle,
 }: SubmissionFloatingButtonProps) {
     const { isMobileOrTablet } = useDeviceType();
     const isHydrated = useHydration();
@@ -71,6 +75,30 @@ const SubmissionFloatingButton = memo(function SubmissionFloatingButton({
             }
             aria-label="지도 빠른 작업"
         >
+            <Button
+                type="button"
+                onClick={onUserSubmittedMarkersToggle}
+                aria-pressed={showUserSubmittedMarkers}
+                aria-label={showUserSubmittedMarkers ? "사용자 제보 맛집 마커 숨기기" : "사용자 제보 맛집 마커 보이기"}
+                className={cn(
+                    isMobileOrTablet ? "h-12 w-12" : "h-14 w-14",
+                    "rounded-full shadow-xl",
+                    "transition-colors duration-150 ease-out motion-reduce:transition-none",
+                    "flex items-center justify-center",
+                    "border-2",
+                    showUserSubmittedMarkers
+                        ? "bg-blue-600 hover:bg-blue-700 text-white border-white/70 ring-2 ring-blue-200/70"
+                        : "bg-background hover:bg-secondary text-foreground border-border/70"
+                )}
+                title={showUserSubmittedMarkers ? "사용자 제보 맛집 마커 숨기기" : "사용자 제보 맛집 마커 보이기"}
+                data-user-submitted-marker-toggle="true"
+            >
+                {showUserSubmittedMarkers ? (
+                    <Eye className={isMobileOrTablet ? "h-5 w-5" : "h-6 w-6"} aria-hidden="true" />
+                ) : (
+                    <EyeOff className={isMobileOrTablet ? "h-5 w-5" : "h-6 w-6"} aria-hidden="true" />
+                )}
+            </Button>
             <Button
                 type="button"
                 onClick={onClick}

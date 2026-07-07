@@ -45,5 +45,38 @@ describe('naver map marker visuals', () => {
         expect(visual.content).not.toContain('tzuyang-visit-count-badge');
     });
 
+    test('marks user-submitted restaurants with a distinct marker wrapper without changing category asset', () => {
+        const visual = getNaverIndividualMarkerVisual({
+            id: 'user-rest-1',
+            categories: ['분식'],
+            category: [],
+            source_type: 'user_submission_new',
+        }, false);
+
+        expect(visual.content).toContain('data-restaurant-marker-kind="user-submitted"');
+        expect(visual.content).toContain('사용자 제보 맛집');
+        expect(visual.content).toContain('>제보</span>');
+        expect(visual.content).toContain('/images/maker-images/webp/user_submitted.webp');
+        expect(visual.content).toContain('data-restaurant-marker-asset-version="restaurant-marker-assets-gpt-image-2-20260707"');
+    });
+
+    test('uses admin overlay marker assets for trend and seasonal marker kinds', () => {
+        const trendVisual = getNaverIndividualMarkerVisual({
+            id: 'trend-rest-1',
+            categories: ['한식'],
+            category: [],
+        }, false, ['trend']);
+        const seasonalVisual = getNaverIndividualMarkerVisual({
+            id: 'seasonal-rest-1',
+            categories: ['한식'],
+            category: [],
+        }, false, ['seasonal']);
+
+        expect(trendVisual.content).toContain('data-restaurant-marker-kind="trend"');
+        expect(trendVisual.content).toContain('/images/maker-images/webp/trend.webp');
+        expect(seasonalVisual.content).toContain('data-restaurant-marker-kind="seasonal"');
+        expect(seasonalVisual.content).toContain('/images/maker-images/webp/seasonal.webp');
+    });
+
 
 });

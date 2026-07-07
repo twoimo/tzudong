@@ -173,6 +173,7 @@ export default function HomeClient() {
   );
   const [mapFocusZoom, setMapFocusZoom] = useState<number | null>(null); // [New] 지도 줌 레벨 제어
   const [isSubmissionModalOpen, setIsSubmissionModalOpen] = useState(false);
+  const [showUserSubmittedMarkers, setShowUserSubmittedMarkers] = useState(true);
 
   // 통합 패널 상태 관리
   // 'detail'은 맛집 상세 패널(state.isPanelOpen으로 관리), 나머지는 activeRightPanel로 관리
@@ -691,6 +692,14 @@ export default function HomeClient() {
     setIsSubmissionModalOpen(true);
   }, [user]);
 
+  const handleUserSubmittedMarkerToggle = useCallback(() => {
+    setShowUserSubmittedMarkers((current) => {
+      const next = !current;
+      toast.info(next ? "사용자 제보 맛집 마커를 표시해요" : "사용자 제보 맛집 마커를 숨겼어요");
+      return next;
+    });
+  }, []);
+
   const applyDevicePosition = useCallback(
     (
       position: GeolocationPosition,
@@ -967,7 +976,9 @@ export default function HomeClient() {
         onReleaseSearchSelectionOwnership={releaseSearchSelectionOwnership}
         onContextualRestaurantsChange={setContextualRestaurantsPayload}
         renderDesktopDetailPanel={!isDesktop}
+        showUserSubmittedMarkers={showUserSubmittedMarkers}
       />
+
 
       {isViewportResolved && !(isMobileOrTablet && isMapFullscreen) && (
         <HomeControlPanel
@@ -1007,6 +1018,8 @@ export default function HomeClient() {
           deviceLocation={deviceLocation}
           isDeviceLocationPending={isDeviceLocationPending}
           isDeviceHeadingMode={isDeviceHeadingMode}
+          showUserSubmittedMarkers={showUserSubmittedMarkers}
+          onUserSubmittedMarkersToggle={handleUserSubmittedMarkerToggle}
           isPanelCollapsed={isPanelCollapsed}
           onTogglePanelCollapse={togglePanelCollapse}
           onSetPanelCollapsed={setIsPanelCollapsed}
@@ -1032,6 +1045,8 @@ export default function HomeClient() {
             isDeviceHeadingMode={isDeviceHeadingMode}
             desktopPanelSide={desktopPanelSide}
             isPanelCollapsed={isPanelCollapsed}
+            showUserSubmittedMarkers={showUserSubmittedMarkers}
+            onUserSubmittedMarkersToggle={handleUserSubmittedMarkerToggle}
           />
         </>
       )}

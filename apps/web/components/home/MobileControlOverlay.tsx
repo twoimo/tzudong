@@ -18,7 +18,9 @@ import {
     ChevronDown,
     ChevronUp,
     LocateFixed,
-    Navigation
+    Navigation,
+    Eye,
+    EyeOff
 } from 'lucide-react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
@@ -179,6 +181,8 @@ interface MobileControlOverlayProps {
     deviceLocation?: DeviceMapLocation | null;
     isDeviceLocationPending?: boolean;
     isDeviceHeadingMode?: boolean;
+    showUserSubmittedMarkers?: boolean;
+    onUserSubmittedMarkersToggle?: () => void;
     initialIntent?: 'search' | 'bookmark' | 'notification' | 'user' | null;
 }
 
@@ -232,6 +236,8 @@ function MobileControlOverlayComponent({
     deviceLocation,
     isDeviceLocationPending = false,
     isDeviceHeadingMode = false,
+    showUserSubmittedMarkers = true,
+    onUserSubmittedMarkersToggle,
     initialIntent = null,
 }: MobileControlOverlayProps) {
     const pathname = usePathname();
@@ -1079,6 +1085,34 @@ function MobileControlOverlayComponent({
                 className="fixed bottom-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1rem)] right-4 z-[90] flex flex-col gap-2"
                 data-mobile-bottom-right-safe-area-owner="mobile-floating-actions"
             >
+                {/* 사용자 제보 마커 표시 토글 */}
+                <Button
+                    type="button"
+                    onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        onUserSubmittedMarkersToggle?.();
+                    }}
+                    aria-pressed={showUserSubmittedMarkers}
+                    className={cn(
+                        'h-12 w-12 rounded-full shadow-lg',
+                        'transition-colors duration-150 ease-out motion-reduce:transition-none',
+                        'flex items-center justify-center',
+                        'border-2',
+                        showUserSubmittedMarkers
+                            ? 'bg-blue-600 hover:bg-blue-700 text-white border-white/70 ring-2 ring-blue-200/70'
+                            : 'bg-background/95 hover:bg-secondary text-foreground border-border/70 backdrop-blur-sm'
+                    )}
+                    title={showUserSubmittedMarkers ? '사용자 제보 맛집 마커 숨기기' : '사용자 제보 맛집 마커 보이기'}
+                    aria-label={showUserSubmittedMarkers ? '사용자 제보 맛집 마커 숨기기' : '사용자 제보 맛집 마커 보이기'}
+                    data-user-submitted-marker-toggle="true"
+                >
+                    {showUserSubmittedMarkers ? (
+                        <Eye className="h-5 w-5" aria-hidden="true" />
+                    ) : (
+                        <EyeOff className="h-5 w-5" aria-hidden="true" />
+                    )}
+                </Button>
                 {/* 제보 버튼 */}
                 <Button
                     onClick={() => {
