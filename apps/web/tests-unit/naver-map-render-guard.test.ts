@@ -1,4 +1,6 @@
 import { describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 import {
     buildMarkerRenderSignature,
@@ -185,5 +187,16 @@ describe('naver map marker render guard', () => {
         expect(shouldSkipMarkerUpdate(previous, nextKindChanged)).toBe(false);
         expect(shouldSkipMarkerUpdate(previous, nextAssetChanged)).toBe(false);
         expect(shouldSkipMarkerUpdate(previous, nextToggleChanged)).toBe(false);
+    });
+
+    test('keeps an empty desktop marker render from poisoning the render signature', () => {
+        const source = readFileSync(join(process.cwd(), 'components/map/NaverMapView.tsx'), 'utf8');
+
+        expect(source).toContain('MARKER_RENDER_EMPTY_RETRY_LIMIT');
+        expect(source).toContain('markerRenderSignatureRef.current = null;');
+        expect(source).toContain('setMarkerRenderRetryTick((tick) => tick + 1)');
+        expect(source).toContain("document.querySelector('.cluster-marker-container')");
+        expect(source).toContain('activeIds.size === 0 && displayRestaurants.length > 0');
+        expect(source).toContain('markerRenderRetryTick');
     });
 });
