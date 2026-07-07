@@ -104,4 +104,86 @@ describe('naver map marker render guard', () => {
         expect(shouldSkipMarkerUpdate(previous, nextViewportChanged)).toBe(false);
         expect(shouldSkipMarkerUpdate(previous, nextModeChanged)).toBe(false);
     });
+
+    test('does not skip marker render when marker kind, asset version, or user toggle changes', () => {
+        const previous = buildMarkerRenderSignature({
+            zoom: 12,
+            bounds: {
+                south: 37.4569,
+                west: 127.0345,
+                north: 37.4669,
+                east: 127.0645,
+            },
+            displayRestaurantIds: ['r-1'],
+            selectedRestaurantId: null,
+            searchedRestaurantId: null,
+            isClusterMode: false,
+            isRegionalClusterMode: false,
+            isSeoulDistrictMode: false,
+            markerKindEntries: [{ id: 'r-1', kind: 'category', assetVersion: 'assets-v1' }],
+            markerLayerVersion: 'assets-v1',
+            showUserSubmittedMarkers: true,
+        });
+
+        const nextKindChanged = buildMarkerRenderSignature({
+            zoom: previous.zoom,
+            bounds: {
+                south: 37.4569,
+                west: 127.0345,
+                north: 37.4669,
+                east: 127.0645,
+            },
+            displayRestaurantIds: ['r-1'],
+            selectedRestaurantId: null,
+            searchedRestaurantId: null,
+            isClusterMode: false,
+            isRegionalClusterMode: false,
+            isSeoulDistrictMode: false,
+            markerKindEntries: [{ id: 'r-1', kind: 'user-submitted', assetVersion: 'assets-v1' }],
+            markerLayerVersion: 'assets-v1',
+            showUserSubmittedMarkers: true,
+        });
+
+        const nextAssetChanged = buildMarkerRenderSignature({
+            zoom: previous.zoom,
+            bounds: {
+                south: 37.4569,
+                west: 127.0345,
+                north: 37.4669,
+                east: 127.0645,
+            },
+            displayRestaurantIds: ['r-1'],
+            selectedRestaurantId: null,
+            searchedRestaurantId: null,
+            isClusterMode: false,
+            isRegionalClusterMode: false,
+            isSeoulDistrictMode: false,
+            markerKindEntries: [{ id: 'r-1', kind: 'category', assetVersion: 'assets-v2' }],
+            markerLayerVersion: 'assets-v2',
+            showUserSubmittedMarkers: true,
+        });
+
+        const nextToggleChanged = buildMarkerRenderSignature({
+            zoom: previous.zoom,
+            bounds: {
+                south: 37.4569,
+                west: 127.0345,
+                north: 37.4669,
+                east: 127.0645,
+            },
+            displayRestaurantIds: ['r-1'],
+            selectedRestaurantId: null,
+            searchedRestaurantId: null,
+            isClusterMode: false,
+            isRegionalClusterMode: false,
+            isSeoulDistrictMode: false,
+            markerKindEntries: [{ id: 'r-1', kind: 'category', assetVersion: 'assets-v1' }],
+            markerLayerVersion: 'assets-v1',
+            showUserSubmittedMarkers: false,
+        });
+
+        expect(shouldSkipMarkerUpdate(previous, nextKindChanged)).toBe(false);
+        expect(shouldSkipMarkerUpdate(previous, nextAssetChanged)).toBe(false);
+        expect(shouldSkipMarkerUpdate(previous, nextToggleChanged)).toBe(false);
+    });
 });

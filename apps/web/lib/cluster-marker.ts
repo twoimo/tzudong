@@ -144,6 +144,9 @@ const CATEGORY_IMAGES: Record<string, CategoryMarkerImage> = {
   '찜·탕': createCategoryMarkerImage('stew'),
   '야식': createCategoryMarkerImage('late_night'),
   '도시락': createCategoryMarkerImage('lunch_box'),
+  '사용자 제보': createCategoryMarkerImage('user_submitted'),
+  '트렌드': createCategoryMarkerImage('trend'),
+  '제철': createCategoryMarkerImage('seasonal'),
 };
 
 /**

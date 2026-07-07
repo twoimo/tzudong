@@ -3,6 +3,8 @@ import {
   assessAdminRouteReadiness,
   buildAdminRoutePlan,
   calculateAdminRouteDistanceKm,
+  calculateAdminRoutePathDistanceKm,
+  optimizeAdminRouteStopOrder,
 } from "../lib/admin-route-planner";
 
 const selected = {
@@ -113,6 +115,44 @@ describe("admin route planner", () => {
     expect(plan.stops).toHaveLength(3);
     expect(plan.summary.stopCount).toBe(3);
     expect(plan.legs).toHaveLength(2);
+  });
+
+  test("caps route requests at seven stops even when callers pass a larger limit", () => {
+    const restaurants = Array.from({ length: 10 }, (_, index) => ({
+      id: `r-${index}`,
+      name: `맛집 ${index}`,
+      category: "한식",
+      address: "서울",
+      lat: 37.5 + index * 0.001,
+      lng: 127.0 + index * 0.001,
+      videoId: `video-${index}`,
+    }));
+
+    const plan = buildAdminRoutePlan({
+      selectedRestaurant: restaurants[0],
+      restaurants,
+      mode: "driving",
+      maxStops: 10,
+    });
+
+    expect(plan.stops).toHaveLength(7);
+  });
+
+  test("applies bounded 2-opt without moving the selected anchor", () => {
+    const start = { ...selected, lat: 0, lng: 0 };
+    const initialStops = [
+      start,
+      { ...nearbySameVideo, id: "east", name: "동쪽", lat: 0, lng: 3 },
+      { ...nearbySameCategory, id: "west", name: "서쪽", lat: 0, lng: -3 },
+      { ...farRestaurant, id: "north", name: "북쪽", lat: 1, lng: 0 },
+    ];
+
+    const optimizedStops = optimizeAdminRouteStopOrder(initialStops);
+
+    expect(optimizedStops[0].id).toBe("start");
+    expect(calculateAdminRoutePathDistanceKm(optimizedStops)).toBeLessThan(
+      calculateAdminRoutePathDistanceKm(initialStops),
+    );
   });
 
   test("AHP assessment reaches the 98 gate only when road route and enough stops are present", () => {
