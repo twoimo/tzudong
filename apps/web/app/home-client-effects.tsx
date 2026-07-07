@@ -11,6 +11,7 @@ import { toast } from '@/lib/no-toast';
 import { HOME_DESKTOP_INLINE_DETAIL_OPEN_FAILED_EVENT } from '@/lib/desktop-left-panel-entry';
 import {
     resolveHomeDetailMapModeParam,
+    isHomeDetailHistoryState,
     resolveHomeDetailRestaurantParam,
 } from '@/lib/home-detail-route-state';
 
@@ -57,8 +58,19 @@ export default function HomeClientEffects({
     const lastCoordinateRequestKeyRef = useRef<string | null>(null);
     const pendingAnnouncementRequestRef = useRef<{ key: string; promise: Promise<Announcement | null> } | null>(null);
     const pendingRestaurantDeepLinkRequestRef = useRef<{ key: string; promise: Promise<HomeRestaurantDeepLinkResult | null> } | null>(null);
+    const userDetailOpenGenerationRef = useRef(0);
     const pendingCoordinateRequestRef = useRef<{ key: string; promise: Promise<Restaurant | null> } | null>(null);
     const wasAnnouncementUrlActiveRef = useRef(searchParams.get('panel') === 'announcement');
+    useEffect(() => {
+        const handleUserDetailOpened = () => {
+            userDetailOpenGenerationRef.current += 1;
+            lastRestaurantDeepLinkRequestKeyRef.current = null;
+            pendingRestaurantDeepLinkRequestRef.current = null;
+        };
+
+        window.addEventListener('home:detail-user-opened', handleUserDetailOpened);
+        return () => window.removeEventListener('home:detail-user-opened', handleUserDetailOpened);
+    }, []);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -86,9 +98,6 @@ export default function HomeClientEffects({
         const restaurantId = resolveHomeDetailRestaurantParam(searchParams);
         const timers: number[] = [];
         let isCancelled = false;
-        let registeredAnnouncementKey: string | null = null;
-        let registeredRestaurantDeepLinkKey: string | null = null;
-        let registeredCoordinateKey: string | null = null;
 
         const schedule = (callback: () => void, delay: number) => {
             const timer = window.setTimeout(() => {
@@ -107,7 +116,6 @@ export default function HomeClientEffects({
 
         if (panelParam === 'announcement') {
             const announcementKey = announcementId ? `detail:${announcementId}` : 'list';
-            registeredAnnouncementKey = announcementKey;
             openPanelRef.current('announcement');
 
             if (lastAnnouncementRequestKeyRef.current !== announcementKey) {
@@ -153,7 +161,7 @@ export default function HomeClientEffects({
                 searchParams.get('z') ?? '',
                 requestedMode ?? '',
             ].join('|');
-            registeredRestaurantDeepLinkKey = restaurantKey;
+            const requestGeneration = userDetailOpenGenerationRef.current;
 
             if (lastRestaurantDeepLinkRequestKeyRef.current !== restaurantKey) {
                 lastRestaurantDeepLinkRequestKeyRef.current = restaurantKey;
@@ -178,10 +186,18 @@ export default function HomeClientEffects({
 
                     void request.promise.then((result) => {
                         if (isCancelled || lastRestaurantDeepLinkRequestKeyRef.current !== restaurantKey) return;
+                        if (userDetailOpenGenerationRef.current !== requestGeneration) return;
                         if (!result) {
                             toast.error('맛집 정보를 불러오지 못했어요');
                             return;
                         }
+
+                        const currentRestaurantId = resolveHomeDetailRestaurantParam(new URLSearchParams(window.location.search));
+                        if (currentRestaurantId !== restaurantId) return;
+                        if (
+                            isHomeDetailHistoryState(window.history.state) &&
+                            window.history.state.restaurantId !== restaurantId
+                        ) return;
 
                         const zoomParam = searchParams.get('z');
                         const focusZoom = zoomParam ? parseFloat(zoomParam) : undefined;
@@ -194,6 +210,13 @@ export default function HomeClientEffects({
                         }
 
                         schedule(() => {
+                            if (userDetailOpenGenerationRef.current !== requestGeneration) return;
+                            const currentRestaurantId = resolveHomeDetailRestaurantParam(new URLSearchParams(window.location.search));
+                            if (currentRestaurantId !== restaurantId) return;
+                            if (
+                                isHomeDetailHistoryState(window.history.state) &&
+                                window.history.state.restaurantId !== restaurantId
+                            ) return;
                             openDetailPanelRef.current(
                                 result.restaurant,
                                 !isNaN(Number(focusZoom)) ? Number(focusZoom) : undefined,
@@ -218,7 +241,6 @@ export default function HomeClientEffects({
             const coordinateKey = `${urlLat}|${urlLng}|${urlZoom}`;
 
             if (!isNaN(lat) && !isNaN(lng) && lastCoordinateRequestKeyRef.current !== coordinateKey) {
-                registeredCoordinateKey = coordinateKey;
                 lastCoordinateRequestKeyRef.current = coordinateKey;
 
                 let request = pendingCoordinateRequestRef.current;
@@ -253,32 +275,11 @@ export default function HomeClientEffects({
                 toast.error('지도 좌표 링크가 올바르지 않아요');
                 lastCoordinateRequestKeyRef.current = null;
             } else {
-                registeredCoordinateKey = coordinateKey;
             }
         } else {
             lastCoordinateRequestKeyRef.current = null;
         }
 
-        const clearRegisteredRequestKeys = () => {
-            if (
-                registeredAnnouncementKey &&
-                lastAnnouncementRequestKeyRef.current === registeredAnnouncementKey
-            ) {
-                lastAnnouncementRequestKeyRef.current = null;
-            }
-            if (
-                registeredRestaurantDeepLinkKey &&
-                lastRestaurantDeepLinkRequestKeyRef.current === registeredRestaurantDeepLinkKey
-            ) {
-                lastRestaurantDeepLinkRequestKeyRef.current = null;
-            }
-            if (
-                registeredCoordinateKey &&
-                lastCoordinateRequestKeyRef.current === registeredCoordinateKey
-            ) {
-                lastCoordinateRequestKeyRef.current = null;
-            }
-        };
 
         const reviewId = searchParams.get('review');
         if (reviewId) {
@@ -293,7 +294,6 @@ export default function HomeClientEffects({
 
         return () => {
             isCancelled = true;
-            clearRegisteredRequestKeys();
             timers.forEach((timer) => window.clearTimeout(timer));
         };
     }, [mapMode, openDetailPanelRef, openPanelRef, router, searchParams, setMapMode, setSelectedAnnouncement]);
