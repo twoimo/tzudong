@@ -24,7 +24,9 @@ describe('home map contextual visible-marker restaurants', () => {
 
     expect(naverMapSource).toContain('onVisibleRestaurantsChange?: (restaurants: Restaurant[]) => void;');
     expect(naverMapSource).toContain('onContextualRestaurantsChange?: (payload: HomeMapContextualRestaurantsPayload) => void;');
-    expect(naverMapSource).toContain('const contextualRenderMode = resolveHomeMapContextualRenderMode({');
+    expect(naverMapSource).toContain('const hasExpandedClusterRestaurants = expandedClusterRestaurantIds.length > 0 && contextualRestaurants.length > 0;');
+    expect(naverMapSource).toContain('const contextualRenderMode: HomeMapRenderMode = expandedClusterRestaurantIds.length > 0');
+    expect(naverMapSource).toContain('const contextualIneligibilityReason = hasExpandedClusterRestaurants');
     expect(naverMapSource).toContain("if (renderMode !== 'individual') return 'clustered-render-mode';");
     expect(naverMapSource).toContain('zoom < HOME_MAP_CONTEXTUAL_VISIBLE_RESTAURANTS_MIN_ZOOM');
 
@@ -151,13 +153,13 @@ describe('home map contextual visible-marker restaurants', () => {
     expect(mobileOverlaySource).toContain("activeSheet === 'visibleMarkers' ? \"px-3 pb-6 pt-2\" : \"p-4 pb-8\"");
     expect(mobileOverlaySource).toContain('visibleMarkerThumbnailIndexes[restaurant.id] ?? 0');
     expect(mobileOverlaySource).toContain('onThumbnailChange={handleVisibleMarkerThumbnailChange}');
-    expect(mobileOverlaySource).toContain('VISIBLE_MARKER_PEEK_SHEET_HEIGHT = 16');
+    expect(mobileOverlaySource).toContain("minHeight={activeSheet === 'visibleMarkers' ? HALF_SHEET_HEIGHT : MIN_SHEET_HEIGHT}");
     expect(mobileOverlaySource).toContain('visibleMarkerRestaurantsSignatureRef.current === visibleMarkerRestaurantsSignature');
     expect(mobileOverlaySource).toContain('data-bottom-sheet-layout-source="mobile-control-overlay-sheet"');
     expect(mobileOverlaySource).toContain('setVisibleMarkerSheetHeightRequestKey(0);');
     expect(mobileOverlaySource).toContain("hideHandleWhenFull={activeSheet !== 'visibleMarkers'}");
     expect(mobileOverlaySource).toContain('visibleMarkerSheetHeightRequestKey > 0');
-    expect(mobileOverlaySource).toContain('height: VISIBLE_MARKER_PEEK_SHEET_HEIGHT');
+    expect(mobileOverlaySource).toContain('height: HALF_SHEET_HEIGHT');
     expect(mobileOverlaySource).toContain("mode: 'exact'");
     expect(mobileOverlaySource).toContain('incrementSearchCount(restaurant.id).catch(() => {});');
   });
