@@ -2157,16 +2157,21 @@ const NaverMapView = memo(({
         );
 
         const contextualRestaurants = getRestaurantsWithRenderableCoordinates(restaurantsForMarkerRender);
-        const contextualRenderMode = resolveHomeMapContextualRenderMode({
-            shouldUseRegionalCluster,
-            shouldUseSeoulDistrictCluster,
-            shouldCluster,
-        });
-        const contextualIneligibilityReason = resolveHomeMapContextualIneligibilityReason({
-            renderMode: contextualRenderMode,
-            zoom: currentZoom,
-            visibleCount: contextualRestaurants.length,
-        });
+        const hasExpandedClusterRestaurants = expandedClusterRestaurantIds.length > 0 && contextualRestaurants.length > 0;
+        const contextualRenderMode: HomeMapRenderMode = expandedClusterRestaurantIds.length > 0
+            ? 'individual'
+            : resolveHomeMapContextualRenderMode({
+                shouldUseRegionalCluster,
+                shouldUseSeoulDistrictCluster,
+                shouldCluster,
+            });
+        const contextualIneligibilityReason = hasExpandedClusterRestaurants
+            ? undefined
+            : resolveHomeMapContextualIneligibilityReason({
+                renderMode: contextualRenderMode,
+                zoom: currentZoom,
+                visibleCount: contextualRestaurants.length,
+            });
         const isContextualPayloadEligible = !contextualIneligibilityReason;
         const visibleMarkerReviewCandidateRestaurants = getRestaurantsWithRenderableCoordinates(visibleRestaurants);
         const reviewBubbleCandidateRestaurants = isContextualPayloadEligible && !selectedRestaurant
@@ -2283,6 +2288,10 @@ const NaverMapView = memo(({
             });
         };
 
+        const expandedClusterRestaurantIdSet = new Set(expandedClusterRestaurantIds);
+        const shouldSkipExpandedClusterMarker = (restaurantIds: string[]) =>
+            restaurantIds.length > 0 && restaurantIds.every((restaurantId) => expandedClusterRestaurantIdSet.has(restaurantId));
+
         if (shouldUseRegionalCluster) {
             // ===== 17개 행정구역 중앙 클러스터 모드 =====
             if (regionalClusters.length === 0) {
@@ -2290,8 +2299,36 @@ const NaverMapView = memo(({
                 return;
             }
             const activeIds = new Set<string>();
+            if (expandedClusterRestaurantIds.length > 0) {
+                expandedClusterRestaurantIds.forEach((restaurantId) => {
+                    const restaurant = restaurantById.get(restaurantId) ?? mergedRestaurantById.get(restaurantId);
+                    if (!restaurant || typeof restaurant.lat !== 'number' || typeof restaurant.lng !== 'number') return;
+
+                    activeIds.add(restaurant.id);
+                    const isSelected = selectedRestaurant?.id === restaurant.id;
+                    const visual = getNaverIndividualMarkerVisual(restaurant, isSelected);
+                    const bubble = activeVisibleMarkerReviewBubbles[restaurant.id];
+                    const markerContent = wrapNaverMarkerContentWithReviewBubble(
+                        visual.content,
+                        bubble,
+                        isMobileOrTablet,
+                    );
+
+                    markerPool.acquire(
+                        restaurant.id,
+                        createIndividualMarkerPosition(restaurant),
+                        { content: markerContent, anchor: new naver.maps.Point(visual.anchor.x, visual.anchor.y) },
+                        map,
+                        () => handleMarkerRestaurantSelection(restaurant)
+                    );
+                });
+            }
 
             regionalClusters.forEach((cluster) => {
+                if (expandedClusterRestaurantIdSet.size > 0 || shouldSkipExpandedClusterMarker(cluster.restaurantIds)) {
+                    return;
+                }
+
                 const markerId = `regional-${cluster.region}`;
                 activeIds.add(markerId);
 
@@ -2303,13 +2340,17 @@ const NaverMapView = memo(({
                         cluster.region,
                         () => {
                             activateNoncriticalMapEffects();
+                            hasUserMovedMapRef.current = true;
                             setExpandedClusterRestaurantIds(cluster.restaurantIds);
                             if (fitIslandClusterViewport(resolveNaverIslandClusterViewportByRegion(cluster.region))) {
                                 return;
                             }
 
                             const currentZoom = map.getZoom();
-                            const targetZoom = getRegionalClusterTargetZoom(currentZoom, clusterIndexMaxZoom);
+                            const targetZoom = Math.max(
+                                HOME_MAP_CONTEXTUAL_VISIBLE_RESTAURANTS_MIN_ZOOM,
+                                getRegionalClusterTargetZoom(currentZoom, clusterIndexMaxZoom),
+                            );
                             jumpWithPanelOffset(cluster.center.lat, cluster.center.lng, targetZoom);
                         }
                     );
@@ -2334,6 +2375,10 @@ const NaverMapView = memo(({
             // 줌 11-12: 마커 3개 이상인 구만 클러스터 (seoulDistrictClustersFiltered)
             if (seoulClustersToRender.length > 0) {
                 seoulClustersToRender.forEach((cluster) => {
+                    if (expandedClusterRestaurantIdSet.size > 0 || shouldSkipExpandedClusterMarker(cluster.restaurantIds)) {
+                        return;
+                    }
+
                     const markerId = `seoul-dist-${cluster.region}`;
                     activeIds.add(markerId);
 
@@ -2345,9 +2390,13 @@ const NaverMapView = memo(({
                         cluster.region,
                         () => {
                             activateNoncriticalMapEffects();
+                            hasUserMovedMapRef.current = true;
                             setExpandedClusterRestaurantIds(cluster.restaurantIds);
                             const currentZoom = map.getZoom();
-                            const targetZoom = getSeoulDistrictTargetZoom(currentZoom, clusterIndexMaxZoom);
+                            const targetZoom = Math.max(
+                                HOME_MAP_CONTEXTUAL_VISIBLE_RESTAURANTS_MIN_ZOOM,
+                                getSeoulDistrictTargetZoom(currentZoom, clusterIndexMaxZoom),
+                            );
                             jumpWithPanelOffset(cluster.center.lat, cluster.center.lng, targetZoom);
                         }
                     );
@@ -2400,6 +2449,9 @@ const NaverMapView = memo(({
 
                         if (isCluster(feature)) {
                             const clusterId = feature.properties.cluster_id!;
+                            if (expandedClusterRestaurantIdSet.size > 0) {
+                                return;
+                            }
                             const markerId = `cluster-${clusterId}`;
                             activeIds.add(markerId);
 
@@ -2418,6 +2470,7 @@ const NaverMapView = memo(({
                                 clusterId,
                                 () => {
                                     activateNoncriticalMapEffects();
+                                    hasUserMovedMapRef.current = true;
                                     let expandedRestaurantIds: string[] = [];
                                     try {
                                         expandedRestaurantIds = expandCluster(clusterIndexRef.current!, clusterId);
@@ -2436,7 +2489,10 @@ const NaverMapView = memo(({
 
                                     const expansionZoom = clusterIndexRef.current!.getClusterExpansionZoom(clusterId);
                                     const currentZoom = map.getZoom();
-                                    const targetZoom = getSuperclusterTargetZoom(currentZoom, expansionZoom, clusterIndexMaxZoom);
+                                    const targetZoom = Math.max(
+                                        HOME_MAP_CONTEXTUAL_VISIBLE_RESTAURANTS_MIN_ZOOM,
+                                        getSuperclusterTargetZoom(currentZoom, expansionZoom, clusterIndexMaxZoom),
+                                    );
                                     jumpWithPanelOffset(lat, lng, targetZoom);
                                 }
                             );

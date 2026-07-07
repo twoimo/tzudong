@@ -34,6 +34,7 @@ import type { HomeMapContextualRestaurantsPayload } from "@/lib/home-map-context
 import {
   buildHomeDetailState,
   buildHomeDetailUrl,
+  resolveHomeDetailRestaurantParam,
   buildHomeListState,
   createHomeRestoreKey,
   dispatchHomeRestoreEvent,
@@ -224,9 +225,14 @@ export default function HomeClient() {
   const state = useHomeState(mapMode);
   const {
     clearRestaurantDetailSelection,
+    closeRestaurantDetailPanel,
     openRestaurantDetailSelection,
     releaseSearchSelectionOwnership,
-    closeRestaurantDetailPanel,
+    setFilters,
+    setSelectedCategories,
+    setSelectedCountry,
+    setSelectedRegion,
+    syncRestaurantDetailSelection,
   } = state;
   const visibleDetailRestaurant = state.isPanelOpen
     ? (state.panelRestaurant ?? state.selectedRestaurant)
@@ -355,7 +361,7 @@ export default function HomeClient() {
           restoreKey,
           reason: reason ?? "missing",
         });
-        state.syncRestaurantDetailSelection(null, {
+        syncRestaurantDetailSelection(null, {
           isPanelOpen: false,
           searchFocusRestaurant: null,
         });
@@ -363,18 +369,18 @@ export default function HomeClient() {
       }
 
       setMapMode(snapshot.mapMode);
-      state.setFilters((previous) => ({
+      setFilters((previous) => ({
         ...previous,
         categories: snapshot.filters.categories,
         featuredTheme: snapshot.filters.featuredTheme,
       }));
-      state.setSelectedCategories(snapshot.filters.categories);
-      state.setSelectedRegion(snapshot.selectedRegion);
-      state.setSelectedCountry(snapshot.selectedCountry);
+      setSelectedCategories(snapshot.filters.categories);
+      setSelectedRegion(snapshot.selectedRegion);
+      setSelectedCountry(snapshot.selectedCountry);
       const restoredSearchRestaurant = snapshot.searchedRestaurant
         ? (snapshot.searchedRestaurant as Restaurant)
         : null;
-      state.syncRestaurantDetailSelection(null, {
+      syncRestaurantDetailSelection(null, {
         isPanelOpen: false,
         searchFocusRestaurant: restoredSearchRestaurant,
       });
@@ -386,11 +392,11 @@ export default function HomeClient() {
       dispatchHomeRestoreEvent("home.restore.succeeded", { restoreKey });
     },
     [
-      state.setFilters,
-      state.setSelectedCategories,
-      state.setSelectedCountry,
-      state.setSelectedRegion,
-      state.syncRestaurantDetailSelection,
+      setFilters,
+      setSelectedCategories,
+      setSelectedCountry,
+      setSelectedRegion,
+      syncRestaurantDetailSelection,
     ],
   );
 
@@ -510,6 +516,21 @@ export default function HomeClient() {
   // [OPTIMIZATION] useCallback으로 메모이제이션
   const openDetailPanel = useCallback(
     (restaurant: Restaurant, focusZoom?: number, options?: HomeDetailOpenOptions) => {
+      if (options?.source === "url" && typeof window !== "undefined") {
+        const currentRestaurantId = resolveHomeDetailRestaurantParam(
+          new URLSearchParams(window.location.search),
+        );
+        if (currentRestaurantId !== restaurant.id) {
+          return;
+        }
+      }
+      if (options?.source !== "url" && typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("home:detail-user-opened", {
+            detail: { restaurantId: restaurant.id },
+          }),
+        );
+      }
       requestDesktopDetailReturnCapture();
       setIsMapFullscreen(false);
 
