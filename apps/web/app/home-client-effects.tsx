@@ -114,6 +114,12 @@ export default function HomeClientEffects({
             callback();
         };
 
+        const clearRegisteredRequestKeys = () => {
+            lastAnnouncementRequestKeyRef.current = null;
+            lastRestaurantDeepLinkRequestKeyRef.current = null;
+            lastCoordinateRequestKeyRef.current = null;
+        };
+
         if (panelParam === 'announcement') {
             const announcementKey = announcementId ? `detail:${announcementId}` : 'list';
             openPanelRef.current('announcement');
@@ -294,6 +300,7 @@ export default function HomeClientEffects({
 
         return () => {
             isCancelled = true;
+            clearRegisteredRequestKeys();
             timers.forEach((timer) => window.clearTimeout(timer));
         };
     }, [mapMode, openDetailPanelRef, openPanelRef, router, searchParams, setMapMode, setSelectedAnnouncement]);
