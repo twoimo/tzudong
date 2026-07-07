@@ -207,13 +207,24 @@ export const buildPostSearchSwipeCandidates = ({
     activeSearchedRestaurant,
 }: BuildPostSearchSwipeCandidatesInput): Restaurant[] => {
     const dedupedVisibleRestaurants = dedupeRestaurants(visibleRestaurants);
-    if (!activeSearchedRestaurant || dedupedVisibleRestaurants.length !== 1) {
-        return dedupedVisibleRestaurants;
+    const orderedVisibleRestaurants = activeSearchedRestaurant
+        ? [
+            ...dedupedVisibleRestaurants.filter((restaurant) =>
+                isSameRestaurantSelection(restaurant, activeSearchedRestaurant)
+            ),
+            ...dedupedVisibleRestaurants.filter((restaurant) =>
+                !isSameRestaurantSelection(restaurant, activeSearchedRestaurant)
+            ),
+        ]
+        : dedupedVisibleRestaurants;
+
+    if (!activeSearchedRestaurant || orderedVisibleRestaurants.length !== 1) {
+        return orderedVisibleRestaurants;
     }
 
     const nearestFallbackRestaurant = dedupeRestaurants(allRestaurants).reduce<Restaurant | null>(
         (nearestRestaurant, candidateRestaurant) => {
-            if (dedupedVisibleRestaurants.some((restaurant) => isSameRestaurantSelection(restaurant, candidateRestaurant))) {
+            if (orderedVisibleRestaurants.some((restaurant) => isSameRestaurantSelection(restaurant, candidateRestaurant))) {
                 return nearestRestaurant;
             }
 
@@ -240,6 +251,6 @@ export const buildPostSearchSwipeCandidates = ({
     );
 
     return nearestFallbackRestaurant
-        ? [...dedupedVisibleRestaurants, nearestFallbackRestaurant]
-        : dedupedVisibleRestaurants;
+        ? [...orderedVisibleRestaurants, nearestFallbackRestaurant]
+        : orderedVisibleRestaurants;
 };
