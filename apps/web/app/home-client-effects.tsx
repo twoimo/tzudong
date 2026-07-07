@@ -114,14 +114,49 @@ export default function HomeClientEffects({
             callback();
         };
 
+        const resolveAnnouncementRequestKey = (params: URLSearchParams) => {
+            if (params.get('panel') !== 'announcement') return null;
+            const requestedAnnouncementId = params.get('announcementId');
+            return requestedAnnouncementId ? `detail:${requestedAnnouncementId}` : 'list';
+        };
+
+        const resolveRestaurantRequestKey = (params: URLSearchParams) => {
+            const requestedRestaurantId = resolveHomeDetailRestaurantParam(params);
+            if (!requestedRestaurantId) return null;
+            const requestedMode = resolveHomeDetailMapModeParam(params);
+            return [
+                requestedRestaurantId,
+                requestedMode ?? '',
+            ].join('|');
+        };
+
+        const resolveCoordinateRequestKey = (params: URLSearchParams) => {
+            const requestedRestaurantId = resolveHomeDetailRestaurantParam(params);
+            const requestedLat = params.get('lat');
+            const requestedLng = params.get('lng');
+            const requestedZoom = params.get('z');
+            const requestedReviewId = params.get('review');
+            if (!requestedLat || !requestedLng || !requestedZoom || requestedRestaurantId || requestedReviewId) {
+                return null;
+            }
+            return `${requestedLat}|${requestedLng}|${requestedZoom}`;
+        };
+
         const clearRegisteredRequestKeys = () => {
-            lastAnnouncementRequestKeyRef.current = null;
-            lastRestaurantDeepLinkRequestKeyRef.current = null;
-            lastCoordinateRequestKeyRef.current = null;
+            const currentSearchParams = new URLSearchParams(window.location.search);
+            if (lastAnnouncementRequestKeyRef.current !== resolveAnnouncementRequestKey(currentSearchParams)) {
+                lastAnnouncementRequestKeyRef.current = null;
+            }
+            if (lastRestaurantDeepLinkRequestKeyRef.current !== resolveRestaurantRequestKey(currentSearchParams)) {
+                lastRestaurantDeepLinkRequestKeyRef.current = null;
+            }
+            if (lastCoordinateRequestKeyRef.current !== resolveCoordinateRequestKey(currentSearchParams)) {
+                lastCoordinateRequestKeyRef.current = null;
+            }
         };
 
         if (panelParam === 'announcement') {
-            const announcementKey = announcementId ? `detail:${announcementId}` : 'list';
+            const announcementKey = resolveAnnouncementRequestKey(searchParams) ?? 'list';
             openPanelRef.current('announcement');
 
             if (lastAnnouncementRequestKeyRef.current !== announcementKey) {
@@ -162,11 +197,7 @@ export default function HomeClientEffects({
 
         if (restaurantId) {
             const requestedMode = resolveHomeDetailMapModeParam(searchParams);
-            const restaurantKey = [
-                restaurantId,
-                searchParams.get('z') ?? '',
-                requestedMode ?? '',
-            ].join('|');
+            const restaurantKey = resolveRestaurantRequestKey(searchParams) ?? restaurantId;
             const requestGeneration = userDetailOpenGenerationRef.current;
 
             if (lastRestaurantDeepLinkRequestKeyRef.current !== restaurantKey) {
