@@ -65,7 +65,6 @@ const CATEGORIES = [
     "카페·디저트", "찜·탕", "야식", "도시락"
 ];
 const MIN_SHEET_HEIGHT = 25;
-const VISIBLE_MARKER_PEEK_SHEET_HEIGHT = 16;
 const HALF_SHEET_HEIGHT = 50;
 const MAX_SHEET_HEIGHT = 100;
 const MOBILE_SEARCH_FOCUSABLE_SELECTOR = [
@@ -346,6 +345,7 @@ function MobileControlOverlayComponent({
         if (!canAutoShowVisibleMarkerSheet || activeSheet !== 'none') return;
         if (dismissedVisibleMarkerRestaurantsSignatureRef.current === visibleMarkerRestaurantsSignature) return;
         setVisibleMarkerSheetHeightRequestKey(0);
+        visibleMarkerRestaurantsSignatureRef.current = visibleMarkerRestaurantsSignature;
         setActiveSheet('visibleMarkers');
     }, [activeSheet, canAutoShowVisibleMarkerSheet, visibleMarkerRestaurantsSignature]);
 
@@ -1251,7 +1251,7 @@ function MobileControlOverlayComponent({
                     isOpen
                     onClose={handleBottomSheetClose}
                     defaultHeight={HALF_SHEET_HEIGHT}
-                    minHeight={activeSheet === 'visibleMarkers' ? VISIBLE_MARKER_PEEK_SHEET_HEIGHT : MIN_SHEET_HEIGHT}
+                    minHeight={activeSheet === 'visibleMarkers' ? HALF_SHEET_HEIGHT : MIN_SHEET_HEIGHT}
                     maxHeight={MAX_SHEET_HEIGHT}
                     enablePeek
                     hideBottomNavWhenOpen
@@ -1264,7 +1264,7 @@ function MobileControlOverlayComponent({
                         activeSheet === 'visibleMarkers' && visibleMarkerSheetHeightRequestKey > 0
                             ? {
                                 key: visibleMarkerSheetHeightRequestKey,
-                                height: VISIBLE_MARKER_PEEK_SHEET_HEIGHT,
+                                height: HALF_SHEET_HEIGHT,
                                 mode: 'exact',
                             }
                             : undefined

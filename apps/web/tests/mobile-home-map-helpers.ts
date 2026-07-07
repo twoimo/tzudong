@@ -320,7 +320,12 @@ const MOCK_NAVER_MAPS_SOURCE = `
         pointerEvents: 'auto',
       });
       this._element.addEventListener('click', (event) => {
-        trigger(this, 'click', { domEvent: event });
+        const markerEvent = { domEvent: event };
+        if (typeof this.__onClick === 'function') {
+          this.__onClick(markerEvent);
+          return;
+        }
+        trigger(this, 'click', markerEvent);
       });
       this.setIcon(this._icon);
       if (map) {
@@ -359,6 +364,17 @@ const MOCK_NAVER_MAPS_SOURCE = `
     setIcon(icon) {
       this._icon = icon || {};
       this._element.innerHTML = this._icon.content || '<div data-testid="marker"></div>';
+      this._element.querySelectorAll('[data-testid="marker"], .cluster-marker-container').forEach((interactiveElement) => {
+        interactiveElement.addEventListener('click', (event) => {
+          event.stopPropagation();
+          const markerEvent = { domEvent: event };
+          if (typeof this.__onClick === 'function') {
+            this.__onClick(markerEvent);
+            return;
+          }
+          trigger(this, 'click', markerEvent);
+        });
+      });
       this._render();
     }
 
@@ -622,6 +638,12 @@ export async function waitForMarkerCount(page: Page, count: number) {
 export async function clickAnyUnselectedMarker(page: Page) {
     const clicked = await page.locator('[data-testid="marker"][style*="width: 32px"]').evaluateAll((elements) => {
         const target = elements.find((element) => {
+            const rect = element.getBoundingClientRect();
+            return rect.width > 0 &&
+                rect.height > 0 &&
+                element.hasAttribute('data-restaurant-id') &&
+                element.getAttribute('data-restaurant-id') !== 'restaurant-search';
+        }) ?? elements.find((element) => {
             const rect = element.getBoundingClientRect();
             return rect.width > 0 && rect.height > 0;
         });

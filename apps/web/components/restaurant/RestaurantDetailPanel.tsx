@@ -88,6 +88,7 @@ const RESTAURANT_DETAIL_REVIEW_GC_MS = 5 * 60 * 1000;
 
 interface Review {
     id: string;
+    restaurantId: string;
     userId: string;
     restaurantName: string;
     restaurantCategories: string[];
@@ -310,9 +311,16 @@ export function RestaurantDetailPanel({
 
                 if (reviewsError) throw reviewsError;
                 if (!reviewsPageData || reviewsPageData.length === 0) {
-                    return { reviews: [], nextCursor: null };
+                    return { restaurantId: restaurant.id, reviews: [], nextCursor: null };
                 }
-                const typedReviewsPageData = reviewsPageData as ReviewRow[];
+                const allowedReviewRestaurantIds = new Set(allIds);
+                const typedReviewsPageData = (reviewsPageData as ReviewRow[]).filter((review) =>
+                    typeof review.restaurant_id === 'string' &&
+                    allowedReviewRestaurantIds.has(review.restaurant_id)
+                );
+                if (typedReviewsPageData.length === 0) {
+                    return { restaurantId: restaurant.id, reviews: [], nextCursor: null };
+                }
 
                 // 2. 필요한 user_id 수집
                 const userIds = [...new Set(typedReviewsPageData.map((review) => review.user_id))];
@@ -348,6 +356,7 @@ export function RestaurantDetailPanel({
                     const userProfile = profilesMap.get(review.user_id);
 
                     return {
+                        restaurantId: review.restaurant_id ?? restaurant.id,
                         id: review.id,
                         userId: review.user_id,
                         restaurantName: restaurant.name,
@@ -370,10 +379,10 @@ export function RestaurantDetailPanel({
                 }) as Review[];
 
                 const nextCursor = reviewsPageData.length === REVIEW_PAGE_SIZE ? pageParam + REVIEW_PAGE_SIZE : null;
-                return { reviews, nextCursor };
+                return { restaurantId: restaurant.id, reviews, nextCursor };
             } catch (error) {
                 console.error('❌ 리뷰 데이터 조회 중 오류:', error);
-                return { reviews: [], nextCursor: null };
+                return { restaurantId: restaurant?.id ?? null, reviews: [], nextCursor: null };
             }
         },
         initialPageParam: 0,
@@ -383,10 +392,12 @@ export function RestaurantDetailPanel({
         gcTime: RESTAURANT_DETAIL_REVIEW_GC_MS,
     });
 
-    // [리뷰 데이터 평탄화]
+    const currentRestaurantId = restaurant?.id ?? null;
     const safeReviewsData = useMemo(() =>
-        reviewsInfiniteData?.pages.flatMap(page => page.reviews) || [],
-        [reviewsInfiniteData]);
+        reviewsInfiniteData?.pages
+            .filter(page => page.restaurantId === currentRestaurantId)
+            .flatMap(page => page.reviews) || [],
+        [currentRestaurantId, reviewsInfiniteData]);
 
     // [리뷰 정렬] 최근 리뷰는 작성일순(Query에서 정렬됨)으로 표시 - 3개만 미리보기
     const recentReviews = safeReviewsData.slice(0, 3);

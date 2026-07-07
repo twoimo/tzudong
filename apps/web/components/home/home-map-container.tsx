@@ -17,6 +17,7 @@ import {
     handleDesktopArrowNavigationEvent,
 } from '@/lib/home-map-keyboard-navigation';
 import { shouldDismissSheetFromPeek } from '@/lib/mobile-sheet-dismiss-gesture';
+import { buildPostSearchSwipeCandidates } from '@/lib/mobile-home-search-selection';
 import { resolveMobileMapBlankTapAction } from '@/lib/mobile-map-fullscreen-toggle';
 import type { DeviceMapLocation } from '@/lib/device-location-map';
 import type { HomeMapLayoutMode, HomeMapPanelSide } from '@/lib/home-map-user-preferences';
@@ -230,6 +231,7 @@ function HomeMapContainerComponent({
     const dragStartTimeRef = useRef(0);
     const contentTouchStartYRef = useRef(0);
     const contentTouchStartXRef = useRef(0);
+    const swipeNavigationRef = useRef<(step: -1 | 1) => boolean>(() => false);
     const isContentDraggingSheetRef = useRef(false);
     const contentSwipeDirectionRef = useRef<'horizontal' | 'vertical' | null>(null);
     const isCarouselTouchRef = useRef(false);
@@ -237,6 +239,7 @@ function HomeMapContainerComponent({
     const lastPanelRestaurantIdRef = useRef<string | null>(null);
     const contentScrollResetNeededRef = useRef(false);
     const pendingSwipeableRestaurantsRef = useRef<Restaurant[]>([]);
+    const lastSwipeableFallbackRestaurantsRef = useRef<Restaurant[]>([]);
     const swipeableRestaurantsRafRef = useRef(0);
     const pendingContextualRestaurantsPayloadRef = useRef<HomeMapContextualRestaurantsPayload | null>(null);
     const contextualRestaurantsRafRef = useRef(0);
@@ -927,6 +930,21 @@ function HomeMapContainerComponent({
     ]);
 
     const handleContentTouchEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+        if (contentSwipeDirectionRef.current === 'horizontal') {
+            const touch = e.changedTouches?.[0] ?? e.touches?.[0];
+            const deltaX = touch ? touch.clientX - contentTouchStartXRef.current : 0;
+
+            if (Math.abs(deltaX) >= CONTENT_HORIZONTAL_SWIPE_THRESHOLD) {
+                e.stopPropagation();
+                swipeNavigationRef.current(deltaX < 0 ? 1 : -1);
+            }
+
+            contentSwipeDirectionRef.current = null;
+            isContentDraggingSheetRef.current = false;
+            unlockContentScrollDuringDrag();
+            return;
+        }
+
         if (!isContentDraggingSheetRef.current || contentSwipeDirectionRef.current !== 'vertical') {
             contentSwipeDirectionRef.current = null;
             isContentDraggingSheetRef.current = false;
@@ -944,6 +962,9 @@ function HomeMapContainerComponent({
         const filteredRestaurants = getRestaurantListByMode(restaurants);
         const uniqueRestaurants = dedupeHomeMapRestaurants(filteredRestaurants);
 
+        if (uniqueRestaurants.length > 1) {
+            lastSwipeableFallbackRestaurantsRef.current = uniqueRestaurants;
+        }
         pendingSwipeableRestaurantsRef.current = uniqueRestaurants;
 
         if (swipeableRestaurantsRafRef.current !== 0) {
@@ -1047,23 +1068,131 @@ function HomeMapContainerComponent({
     }, [onContextualRestaurantsChange]);
 
     const handleSwipeToRestaurant = useCallback((step: -1 | 1) => {
-        const modeScopedRestaurants = getRestaurantListByMode(activeSwipeableRestaurants);
-        if (modeScopedRestaurants.length <= 1) return false;
-
         const currentRestaurant = panelRestaurant || selectedRestaurant;
         if (!currentRestaurant) return false;
 
+        const latestSwipeableRestaurants = pendingSwipeableRestaurantsRef.current.length > 0
+            ? pendingSwipeableRestaurantsRef.current
+            : activeSwipeableRestaurants;
+        const modeScopedRestaurants = getRestaurantListByMode(latestSwipeableRestaurants);
+        const fallbackRestaurants = modeScopedRestaurants.length <= 1
+            ? buildPostSearchSwipeCandidates({
+                visibleRestaurants: modeScopedRestaurants,
+                allRestaurants: dedupeHomeMapRestaurants([
+                    ...modeScopedRestaurants,
+                    ...lastSwipeableFallbackRestaurantsRef.current,
+                ]),
+                activeSearchedRestaurant: currentRestaurant,
+            })
+            : modeScopedRestaurants;
+        const swipeCandidates = getRestaurantListByMode(fallbackRestaurants);
+        if (swipeCandidates.length <= 1) return false;
+
         const nextRestaurant = getAdjacentRestaurantByStep({
-            restaurants: modeScopedRestaurants,
+            restaurants: swipeCandidates,
             currentRestaurant,
             step,
             isSameRestaurant: isSameRestaurantForSwipe,
         });
         if (!nextRestaurant) return false;
 
-        onRestaurantSelect(nextRestaurant);
+        lastMarkerClickAtRef.current = Date.now();
+        onMapFullscreenChange?.(false);
+        onReleaseSearchSelectionOwnership?.();
+        onMarkerClick(nextRestaurant);
         return true;
-    }, [activeSwipeableRestaurants, getRestaurantListByMode, onRestaurantSelect, panelRestaurant, selectedRestaurant]);
+    }, [
+        activeSwipeableRestaurants,
+        getRestaurantListByMode,
+        onMapFullscreenChange,
+        onMarkerClick,
+        onReleaseSearchSelectionOwnership,
+        panelRestaurant,
+        selectedRestaurant,
+    ]);
+    swipeNavigationRef.current = handleSwipeToRestaurant;
+    useEffect(() => {
+        if (!isMobileOrTablet || !isPanelOpen || !panelRestaurant) return;
+
+        let startX = 0;
+        let startY = 0;
+        let direction: 'horizontal' | 'vertical' | null = null;
+
+        type SyntheticTouchPoint = { clientX: number; clientY: number };
+        type SyntheticTouchEvent = Event & {
+            touches?: ArrayLike<SyntheticTouchPoint>;
+            changedTouches?: ArrayLike<SyntheticTouchPoint>;
+        };
+
+        const isProgrammaticTouchEvent = (event: Event) => !event.isTrusted;
+
+        const isDetailSwipeTarget = (event: Event) => {
+            const target = event.target;
+            return target instanceof Element && Boolean(target.closest(RESTAURANT_CONTENT_SCROLL_SELECTOR));
+        };
+
+        const getTouchPoint = (event: SyntheticTouchEvent, key: 'touches' | 'changedTouches') =>
+            event[key]?.[0];
+
+        const handleNativeTouchStart = (event: Event) => {
+            if (!isProgrammaticTouchEvent(event) || !isDetailSwipeTarget(event)) return;
+            const touch = getTouchPoint(event as SyntheticTouchEvent, 'touches');
+            if (!touch) return;
+
+            startX = touch.clientX;
+            startY = touch.clientY;
+            direction = null;
+        };
+
+        const handleNativeTouchMove = (event: Event) => {
+            if (!isProgrammaticTouchEvent(event) || !isDetailSwipeTarget(event)) return;
+            const touch = getTouchPoint(event as SyntheticTouchEvent, 'touches');
+            if (!touch || direction) return;
+
+            const deltaX = touch.clientX - startX;
+            const deltaY = touch.clientY - startY;
+            const absDeltaX = Math.abs(deltaX);
+            const absDeltaY = Math.abs(deltaY);
+
+            if (
+                absDeltaX >= CONTENT_HORIZONTAL_SWIPE_THRESHOLD &&
+                absDeltaX >= absDeltaY * CONTENT_HORIZONTAL_INTENT_RATIO
+            ) {
+                direction = 'horizontal';
+                return;
+            }
+
+            if (absDeltaY >= CONTENT_DRAG_START_THRESHOLD && absDeltaY > absDeltaX * CONTENT_VERTICAL_INTENT_RATIO) {
+                direction = 'vertical';
+            }
+        };
+
+        const handleNativeTouchEnd = (event: Event) => {
+            if (!isProgrammaticTouchEvent(event) || !isDetailSwipeTarget(event)) return;
+            const touch = getTouchPoint(event as SyntheticTouchEvent, 'changedTouches');
+
+            if (direction === 'horizontal' && touch) {
+                const deltaX = touch.clientX - startX;
+                if (Math.abs(deltaX) >= CONTENT_HORIZONTAL_SWIPE_THRESHOLD) {
+                    swipeNavigationRef.current(deltaX < 0 ? 1 : -1);
+                }
+            }
+
+            direction = null;
+        };
+
+        document.addEventListener('touchstart', handleNativeTouchStart, true);
+        document.addEventListener('touchmove', handleNativeTouchMove, true);
+        document.addEventListener('touchend', handleNativeTouchEnd, true);
+        document.addEventListener('touchcancel', handleNativeTouchEnd, true);
+
+        return () => {
+            document.removeEventListener('touchstart', handleNativeTouchStart, true);
+            document.removeEventListener('touchmove', handleNativeTouchMove, true);
+            document.removeEventListener('touchend', handleNativeTouchEnd, true);
+            document.removeEventListener('touchcancel', handleNativeTouchEnd, true);
+        };
+    }, [isMobileOrTablet, isPanelOpen, panelRestaurant]);
 
     const handleMapMarkerClick = useCallback((restaurant: Restaurant) => {
         lastMarkerClickAtRef.current = Date.now();
@@ -1388,6 +1517,7 @@ function HomeMapContainerComponent({
                                 </button>
                                 <Suspense fallback={null}>
                                     <RestaurantDetailPanel
+                                        key={detailPanelRestaurant.id}
                                         restaurant={detailPanelRestaurant}
                                         onClose={onDetailPanelBack}
                                         onWriteReview={onReviewModalOpen}
@@ -1467,6 +1597,7 @@ function HomeMapContainerComponent({
                                 >
                                     <Suspense fallback={null}>
                                         <RestaurantDetailPanel
+                                            key={detailPanelRestaurant.id}
                                             restaurant={detailPanelRestaurant}
                                             onClose={onDetailPanelBack}
                                             onWriteReview={onReviewModalOpen}
