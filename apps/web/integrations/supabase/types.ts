@@ -9,6 +9,50 @@ export type Json =
 export interface Database {
     public: {
         Tables: {
+            admin_restaurant_map_overlays: {
+                Row: {
+                    restaurant_id: string
+                    overlay_type: 'trend' | 'seasonal'
+                    label: string
+                    description: string | null
+                    active_from: string | null
+                    active_until: string | null
+                    evidence: Json
+                    is_active: boolean
+                    created_by_admin_id: string | null
+                    updated_by_admin_id: string | null
+                    created_at: string
+                    updated_at: string
+                }
+                Insert: {
+                    restaurant_id: string
+                    overlay_type: 'trend' | 'seasonal'
+                    label: string
+                    description?: string | null
+                    active_from?: string | null
+                    active_until?: string | null
+                    evidence?: Json
+                    is_active?: boolean
+                    created_by_admin_id?: string | null
+                    updated_by_admin_id?: string | null
+                    created_at?: string
+                    updated_at?: string
+                }
+                Update: {
+                    restaurant_id?: string
+                    overlay_type?: 'trend' | 'seasonal'
+                    label?: string
+                    description?: string | null
+                    active_from?: string | null
+                    active_until?: string | null
+                    evidence?: Json
+                    is_active?: boolean
+                    created_by_admin_id?: string | null
+                    updated_by_admin_id?: string | null
+                    created_at?: string
+                    updated_at?: string
+                }
+            }
             restaurants: {
                 Row: {
                     id: string
