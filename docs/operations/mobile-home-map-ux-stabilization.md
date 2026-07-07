@@ -1,11 +1,12 @@
 # Mobile home map UX stabilization contract
 
-This note documents the phase-1 mobile-home fix from `.omx/plans/ralplan-mobile-home-map-ux-improvement.md` so future changes keep the same ownership model and do not reintroduce the original state divergence.
+This note documents the phase-1 mobile-home fixes and the P0 state-transition follow-up from the Tzudong usability audit so future changes keep the same ownership model and do not reintroduce the original state divergence.
 
 ## Scope
 
 - mobile **home** flow only
 - search selection, marker tap, swipe navigation, close/reset transitions
+- cluster expansion and visible-marker discovery sheet transitions
 - parent-owned state in:
   - `apps/web/app/home-client.tsx`
   - `apps/web/app/hooks/useHomeState.ts`
@@ -41,6 +42,13 @@ The map layer should rely on `apps/web/lib/mobile-home-search-selection.ts` to d
 - clear any stale `searchedRestaurant` ownership
 - if the entry came from `?r=` / `?restaurant=`, consume those params without causing a route reset
 
+### Cluster expansion and visible-marker discovery
+
+- treat a cluster tap as an intentional map movement so later mobile sheet/layout changes preserve the reveal zoom instead of snapping back to the national default
+- reveal expanded cluster members as individual markers at or above `HOME_MAP_CONTEXTUAL_VISIBLE_RESTAURANTS_MIN_ZOOM`
+- while a cluster is explicitly expanded, contextual restaurant payloads may remain eligible from the expanded member set even if a transient render pass reports a pre-threshold zoom
+- auto-open the mobile visible-marker sheet with a usable half-height list, not an unreachable peek-only trigger
+
 ### Close / mode change / region change / country change
 
 - clear `selectedRestaurant`
@@ -55,12 +63,13 @@ Restaurant deep-link params should be removed with `history.replaceState`, not `
 ## Quality review summary
 
 - No blocking issues were found in the parent-owned state lane after the canonical selection helper was introduced.
-- The main recurrence risk remains any future code that lets map-local behavior treat `searchedRestaurant` as durable selection state.
+- Marker taps, detail swipe navigation, and cluster expansion now explicitly release stale search/deep-link ownership before the next detail owner is rendered.
+- The main recurrence risk remains any future code that lets map-local behavior treat `searchedRestaurant` or a pending URL detail request as durable selection state.
 - Future fixes in map/container code should keep consuming the parent-owned contract instead of rebuilding a second selection owner.
+- Cluster and contextual-discovery changes should preserve the expanded-member payload path rather than depending only on zoom-derived cluster mode.
 
 ## Verification snapshot
 
-- modified-file diagnostics: clean
-- `apps/web` typecheck: clean
-- targeted mobile-map regression tests: pass (`home-map-keyboard-navigation`, `naver-map-render-guard`, `mobile-home-search-selection`)
-- full `bun test tests-unit`: currently has unrelated baseline failures in existing insight/Next-module suites; those failures were not introduced by this lane
+- `bun test tests-unit/mobile-home-search-selection.test.ts tests-unit/mobile-home-map-regressions.test.ts tests-unit/home-map-contextual-restaurants-source.test.ts`
+- `npx playwright test tests/mobile-home-map.spec.ts --project=chromium -g "MHM-02|MHM-03|MHM-06|MHM-07|MHM-08" --retries=0`
+- `npx playwright test tests/mobile-home-map.spec.ts --project=chromium --retries=0`
