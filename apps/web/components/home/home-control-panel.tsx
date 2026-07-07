@@ -101,6 +101,8 @@ export interface HomeControlPanelProps {
     deviceLocation?: DeviceMapLocation | null;
     isDeviceLocationPending?: boolean;
     isDeviceHeadingMode?: boolean;
+    showUserSubmittedMarkers?: boolean;
+    onUserSubmittedMarkersToggle?: () => void;
     initialIntent?: MobileControlOverlayIntent | null;
     activeRightPanel?: HomeOverlayPanelType;
     selectedAnnouncement?: Announcement | null;
@@ -138,6 +140,8 @@ function HomeControlPanelComponent({
     deviceLocation,
     isDeviceLocationPending = false,
     isDeviceHeadingMode = false,
+    showUserSubmittedMarkers = true,
+    onUserSubmittedMarkersToggle,
     isPanelCollapsed = false,
     onTogglePanelCollapse,
     onSetPanelCollapsed,
@@ -231,6 +235,8 @@ function HomeControlPanelComponent({
                 deviceLocation={deviceLocation}
                 isDeviceLocationPending={isDeviceLocationPending}
                 isDeviceHeadingMode={isDeviceHeadingMode}
+                showUserSubmittedMarkers={showUserSubmittedMarkers}
+                onUserSubmittedMarkersToggle={onUserSubmittedMarkersToggle}
                 initialIntent={pendingMobileOverlayIntent}
             />
         );

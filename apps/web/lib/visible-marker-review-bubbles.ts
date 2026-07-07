@@ -87,7 +87,13 @@ export function buildVisibleMarkerReviewBubbleTargetSignature(targets: VisibleMa
 
 export function buildVisibleMarkerReviewBubbleMapSignature(bubbles: Record<string, VisibleMarkerReviewBubble>) {
   return Object.values(bubbles)
-    .map((bubble) => `${bubble.restaurantId}:${bubble.reviewId}`)
+    .map((bubble) => JSON.stringify([
+      bubble.restaurantId,
+      bubble.reviewId,
+      bubble.userName,
+      bubble.content,
+      bubble.photoUrl,
+    ]))
     .sort()
     .join('|');
 }

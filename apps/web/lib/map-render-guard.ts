@@ -11,6 +11,12 @@ interface RenderBoundsLike {
     east: number;
 }
 
+interface MarkerRenderKindEntry {
+    id: string;
+    kind: string | null | undefined;
+    assetVersion?: string | null | undefined;
+}
+
 interface MarkerRenderSignatureInput {
     zoom: number;
     bounds: RenderBoundsLike | null;
@@ -20,6 +26,9 @@ interface MarkerRenderSignatureInput {
     isClusterMode: boolean;
     isRegionalClusterMode: boolean;
     isSeoulDistrictMode: boolean;
+    markerKindEntries?: readonly MarkerRenderKindEntry[];
+    markerLayerVersion?: string;
+    showUserSubmittedMarkers?: boolean;
 }
 
 export interface MarkerRenderSignature {
@@ -29,6 +38,7 @@ export interface MarkerRenderSignature {
     selectedRestaurantId: string | null;
     searchedRestaurantId: string | null;
     modeSignature: string;
+    markerLayerSignature: string;
 }
 
 const BOUNDS_PRECISION_DIGITS = 4;
@@ -56,6 +66,24 @@ function makeDisplayIdsSignature(ids: readonly string[]): string {
         .join("|");
 }
 
+function makeMarkerKindSignature(entries: readonly MarkerRenderKindEntry[] = []): string {
+    const latestById = new Map<string, MarkerRenderKindEntry>();
+
+    entries.forEach((entry) => {
+        if (!entry.id) return;
+        latestById.set(entry.id, entry);
+    });
+
+    return Array.from(latestById.values())
+        .map((entry) => [
+            entry.id,
+            entry.kind ?? 'category',
+            entry.assetVersion ?? 'asset:default',
+        ].join(":"))
+        .sort()
+        .join("|");
+}
+
 export function buildMarkerRenderSignature(input: MarkerRenderSignatureInput): MarkerRenderSignature {
     return {
         zoom: input.zoom,
@@ -64,6 +92,11 @@ export function buildMarkerRenderSignature(input: MarkerRenderSignatureInput): M
         selectedRestaurantId: input.selectedRestaurantId,
         searchedRestaurantId: input.searchedRestaurantId ?? null,
         modeSignature: `${input.isClusterMode ? "1" : "0"}${input.isRegionalClusterMode ? "1" : "0"}${input.isSeoulDistrictMode ? "1" : "0"}`,
+        markerLayerSignature: [
+            `user-submitted:${(input.showUserSubmittedMarkers ?? true) ? "1" : "0"}`,
+            `version:${input.markerLayerVersion ?? "default"}`,
+            makeMarkerKindSignature(input.markerKindEntries),
+        ].join(";"),
     };
 }
 
@@ -77,7 +110,8 @@ export function shouldSkipMarkerUpdate(
         previous.displayRestaurantIdsSignature === next.displayRestaurantIdsSignature &&
         previous.selectedRestaurantId === next.selectedRestaurantId &&
         previous.searchedRestaurantId === next.searchedRestaurantId &&
-        previous.modeSignature === next.modeSignature
+        previous.modeSignature === next.modeSignature &&
+        previous.markerLayerSignature === next.markerLayerSignature
     );
 }
 

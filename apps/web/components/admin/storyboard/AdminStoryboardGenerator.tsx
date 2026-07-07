@@ -126,6 +126,16 @@ import {
   type StoryboardLocalBridgeStatus,
 } from "@/lib/admin/storyboard/local-bridge-contract";
 import { cn } from "@/lib/utils";
+import {
+  StoryboardCanvasContent,
+  StoryboardCanvasHeader,
+  StoryboardCanvasShell,
+  StoryboardFrameGrid,
+} from "@/components/admin/storyboard/StoryboardCanvasShell";
+
+// StoryboardCanvasShell preserves the public source-contract markers:
+// aria-label="스토리보드 이미지 생성 결과", data-storyboard-result-panel="image-frames-only",
+// data-storyboard-image-board="true", data-storyboard-frame-grid="true".
 
 type GeneratorForm = {
   prompt: string;
@@ -9295,17 +9305,8 @@ export function AdminStoryboardGenerator({
           </CardContent>
         </Card>
 
-        <Card
-          className="flex min-h-0 flex-col overflow-hidden border-0 bg-card/80 shadow-none"
-          aria-label="스토리보드 이미지 생성 결과"
-          data-storyboard-result-panel="image-frames-only"
-          style={{
-            gridColumn: "var(--storyboard-result-panel-column, 1)",
-            gridRow: "var(--storyboard-result-panel-row, 1)",
-            minWidth: 0,
-          }}
-        >
-          <CardHeader className="flex shrink-0 flex-row items-center gap-2 p-2 pb-1">
+        <StoryboardCanvasShell>
+          <StoryboardCanvasHeader>
             <CardTitle
               className="flex min-w-0 items-center gap-2 text-sm"
               aria-label={`스토리보드 주제 ${storyboardCanvasTopicTitle} · 이미지 ${generatedImageCount}/${totalCutCount} · PNG 내보내기`}
@@ -9464,28 +9465,12 @@ export function AdminStoryboardGenerator({
                 PNG 저장
               </Button>
             </div>
-          </CardHeader>
-          <CardContent
-            className={cn(
-              "min-h-0 flex-1 overflow-x-hidden p-3 pt-0",
-              storyboardFramePageSize === 1
-                ? "overflow-hidden"
-                : "overflow-y-auto",
-            )}
-          >
+          </StoryboardCanvasHeader>
+          <StoryboardCanvasContent isSingleFrame={storyboardFramePageSize === 1}>
             <div className="flex h-full min-h-0 flex-col gap-2">
-              <div
-                className="relative grid min-h-0 flex-1 gap-2"
-                data-storyboard-image-board="true"
-                data-storyboard-frame-grid="true"
-                data-storyboard-frame-fill="true"
-                data-storyboard-frame-page={String(activeStoryboardPage + 1)}
-                data-storyboard-frame-page-size={String(
-                  storyboardFramePageSize,
-                )}
-                data-storyboard-frame-view-mode={String(
-                  storyboardFramePageSize,
-                )}
+              <StoryboardFrameGrid
+                activePage={activeStoryboardPage}
+                pageSize={storyboardFramePageSize}
                 style={{
                   gridTemplateColumns:
                     storyboardFramePageSize === 1
@@ -9737,10 +9722,10 @@ export function AdminStoryboardGenerator({
                     );
                   })
                 )}
-              </div>
+              </StoryboardFrameGrid>
             </div>
-          </CardContent>
-        </Card>
+          </StoryboardCanvasContent>
+        </StoryboardCanvasShell>
       </div>
     </section>
   );
