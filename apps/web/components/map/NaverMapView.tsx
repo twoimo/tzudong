@@ -331,6 +331,8 @@ const resolveHomeMapContextualIneligibilityReason = ({
 
 // 클러스터링 상수 (네이버 지도 스타일)
 const ENABLE_CLUSTERING = true; // 클러스터링 전체 활성화
+const MARKER_RENDER_EMPTY_RETRY_LIMIT = 6;
+const MARKER_RENDER_EMPTY_RETRY_DELAY_MS = 250;
 // [OPTIMIZATION] 클러스터 반경, 최소 포인트, 애니메이션은 useMapOptimization 훅에서 동적으로 결정
 
 // [Zoom Control] 지도 최소/최대 줌 레벨
@@ -655,6 +657,9 @@ const NaverMapView = memo(({
     const [isClusterMode, setIsClusterMode] = useState(false); // 클러스터 모드 활성화 여부
     const [isRegionalClusterMode, setIsRegionalClusterMode] = useState(false); // 행정구역 클러스터 모드
     const [isSeoulDistrictMode, setIsSeoulDistrictMode] = useState(false); // 서울 자치구 모드
+    const [markerRenderRetryTick, setMarkerRenderRetryTick] = useState(0);
+    const markerRenderEmptyRetryCountRef = useRef(0);
+    const markerRenderRetryTimerRef = useRef<number | null>(null);
     const [visibleMarkerReviewBubbleTargets, setVisibleMarkerReviewBubbleTargets] =
         useState<VisibleMarkerReviewBubbleTarget[]>([]);
     const [visibleMarkerReviewBubbles, setVisibleMarkerReviewBubbles] =
@@ -1944,6 +1949,36 @@ const NaverMapView = memo(({
         setExpandedClusterRestaurantIds([]);
     }, [filterSignature, selectedRegion]);
 
+    const clearMarkerRenderRetryTimer = useCallback(() => {
+        if (markerRenderRetryTimerRef.current === null) return;
+        window.clearTimeout(markerRenderRetryTimerRef.current);
+        markerRenderRetryTimerRef.current = null;
+    }, []);
+
+    const scheduleMarkerRenderRetry = useCallback(() => {
+        if (markerRenderEmptyRetryCountRef.current >= MARKER_RENDER_EMPTY_RETRY_LIMIT) return;
+        markerRenderEmptyRetryCountRef.current += 1;
+        clearMarkerRenderRetryTimer();
+        markerRenderRetryTimerRef.current = window.setTimeout(() => {
+            markerRenderRetryTimerRef.current = null;
+            markerRenderSignatureRef.current = null;
+            setMarkerRenderRetryTick((tick) => tick + 1);
+        }, MARKER_RENDER_EMPTY_RETRY_DELAY_MS);
+    }, [clearMarkerRenderRetryTimer]);
+
+    const resetMarkerRenderRetry = useCallback(() => {
+        markerRenderEmptyRetryCountRef.current = 0;
+        clearMarkerRenderRetryTimer();
+    }, [clearMarkerRenderRetryTimer]);
+
+    useEffect(() => () => clearMarkerRenderRetryTimer(), [clearMarkerRenderRetryTimer]);
+
+    useEffect(() => {
+        markerRenderEmptyRetryCountRef.current = 0;
+        markerRenderSignatureRef.current = null;
+        clearMarkerRenderRetryTimer();
+    }, [clearMarkerRenderRetryTimer, filterSignature, markerKindSignature, selectedRegion, showUserSubmittedMarkers]);
+
     useEffect(() => {
         const resetPlan = resolveReleasedSearchSelectionResetPlan({
             activeSearchedRestaurant,
@@ -2281,11 +2316,17 @@ const NaverMapView = memo(({
 
         const previousMarkerRenderSignature = markerRenderSignatureRef.current;
         if (previousMarkerRenderSignature && shouldSkipMarkerUpdate(previousMarkerRenderSignature, nextMarkerRenderSignature)) {
-            perfMonitor.endMeasure('RenderMarkers');
-            return;
-        }
+            const hasRenderedMarkerDom =
+                document.querySelector('.cluster-marker-container') !== null ||
+                document.querySelector('[data-testid="marker"]') !== null;
+            if (hasRenderedMarkerDom || displayRestaurants.length === 0) {
+                perfMonitor.endMeasure('RenderMarkers');
+                return;
+            }
 
-        markerRenderSignatureRef.current = nextMarkerRenderSignature;
+            markerRenderSignatureRef.current = null;
+            scheduleMarkerRenderRetry();
+        }
 
         // 헬퍼: 클러스터 마커 렌더링 (중복 로직 제거)
         const renderClusterHelper = (
@@ -2332,6 +2373,8 @@ const NaverMapView = memo(({
         if (shouldUseRegionalCluster) {
             // ===== 17개 행정구역 중앙 클러스터 모드 =====
             if (regionalClusters.length === 0) {
+                markerRenderSignatureRef.current = null;
+                scheduleMarkerRenderRetry();
                 perfMonitor.endMeasure('RenderMarkers');
                 return;
             }
@@ -2395,6 +2438,13 @@ const NaverMapView = memo(({
 
             // 사용하지 않는 마커 반환
             markerPool.releaseExcept(activeIds);
+            if (activeIds.size === 0 && displayRestaurants.length > 0) {
+                markerRenderSignatureRef.current = null;
+                scheduleMarkerRenderRetry();
+            } else {
+                markerRenderSignatureRef.current = nextMarkerRenderSignature;
+                resetMarkerRenderRetry();
+            }
             perfMonitor.endMeasure('RenderMarkers');
             if (shouldReportNaverMarkerRenderPerformance({
                 activeMarkerCount: activeIds.size,
@@ -2603,6 +2653,13 @@ const NaverMapView = memo(({
 
             // Cleanup
             markerPool.releaseExcept(activeIds);
+            if (activeIds.size === 0 && displayRestaurants.length > 0) {
+                markerRenderSignatureRef.current = null;
+                scheduleMarkerRenderRetry();
+            } else {
+                markerRenderSignatureRef.current = nextMarkerRenderSignature;
+                resetMarkerRenderRetry();
+            }
             scheduleVisibleMarkerReviewBubbleClamp();
 
             // [PERFORMANCE] 렌더링 종료 시간 측정 및 로그 (개발 모드)
@@ -2615,7 +2672,7 @@ const NaverMapView = memo(({
             }
         }
 
-    }, [clusters, regionalClusters, seoulDistrictClusters, seoulDistrictClustersFiltered, seoulIndividualIds, activeSearchedRestaurant, displayRestaurants, displayRestaurantIds, expandedClusterRestaurantIds, markerKindSignature, markerVisibleActiveSearchedRestaurant, markerVisibleSelectedRestaurant, restaurantById, mergedRestaurantById, restaurantsForSwipe, selectedRegion, selectedRestaurant, showUserSubmittedMarkers, isClusterMode, isRegionalClusterMode, isSeoulDistrictMode, isMapInitialized, isMobileOrTablet, visibleMarkerReviewBubbles, activateNoncriticalMapEffects, fitIslandClusterViewport, jumpWithPanelOffset, onMarkerClick, onRestaurantSelect, onVisibleRestaurantsChange, onContextualRestaurantsChange, handleMarkerRestaurantSelection]);
+    }, [clusters, regionalClusters, seoulDistrictClusters, seoulDistrictClustersFiltered, seoulIndividualIds, activeSearchedRestaurant, displayRestaurants, displayRestaurantIds, expandedClusterRestaurantIds, markerKindSignature, markerRenderRetryTick, markerVisibleActiveSearchedRestaurant, markerVisibleSelectedRestaurant, restaurantById, mergedRestaurantById, restaurantsForSwipe, selectedRegion, selectedRestaurant, showUserSubmittedMarkers, isClusterMode, isRegionalClusterMode, isSeoulDistrictMode, isMapInitialized, isMobileOrTablet, visibleMarkerReviewBubbles, activateNoncriticalMapEffects, fitIslandClusterViewport, jumpWithPanelOffset, onMarkerClick, onRestaurantSelect, onVisibleRestaurantsChange, onContextualRestaurantsChange, handleMarkerRestaurantSelection, resetMarkerRenderRetry, scheduleMarkerRenderRetry]);
 
     // [Animation] 카테고리 이모지 순환 업데이트
     useEffect(() => {
