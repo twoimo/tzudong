@@ -78,11 +78,11 @@ export const RESTAURANT_MERGE_SELECT = [
     'updated_at',
 ].join(', ');
 const RESTAURANT_COMPACT_SELECT =
-    "id, name:approved_name, approved_name, lat, lng, road_address, jibun_address, categories, review_count, youtube_link, tzuyang_review, status, created_at";
+    "id, name:approved_name, approved_name, lat, lng, road_address, jibun_address, categories, review_count, youtube_link, tzuyang_review, source_type, status, created_at";
 const RESTAURANT_COMPACT_WITH_YOUTUBE_META_SELECT =
-    "id, name:approved_name, approved_name, lat, lng, road_address, jibun_address, categories, review_count, youtube_link, tzuyang_review, youtube_meta, status, created_at";
+    "id, name:approved_name, approved_name, lat, lng, road_address, jibun_address, categories, review_count, youtube_link, tzuyang_review, youtube_meta, source_type, status, created_at";
 const RESTAURANT_FULL_SELECT =
-    "id, name:approved_name, lat, lng, road_address, jibun_address, categories, phone, review_count, youtube_link, tzuyang_review, youtube_meta, english_address, status, created_at";
+    "id, name:approved_name, lat, lng, road_address, jibun_address, categories, phone, review_count, youtube_link, tzuyang_review, youtube_meta, source_type, english_address, status, created_at";
 
 export function buildRestaurantSelectFields({
     compact,

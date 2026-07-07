@@ -71,6 +71,9 @@ const ADMIN_ROUTE_DRIVING_LOCAL_SPEED_KMH = 24;
 const ADMIN_ROUTE_WALKING_PREFERRED_KM = 1.2;
 const ADMIN_ROUTE_MIXED_PREFERRED_KM = 3.5;
 
+const ADMIN_ROUTE_TWO_OPT_MAX_PASSES = 3;
+const ADMIN_ROUTE_IMPROVEMENT_EPSILON_KM = 0.001;
+
 export function hasAdminRouteCoordinates(
   restaurant: AdminRoutePlannerRestaurant,
 ): restaurant is AdminRoutePlannerRestaurant & { lat: number; lng: number } {
@@ -99,6 +102,73 @@ export function calculateAdminRouteDistanceKm(
     Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
 
   return 2 * earthRadiusKm * Math.asin(Math.sqrt(h));
+}
+
+export function calculateAdminRoutePathDistanceKm(
+  stops: AdminRoutePlannerRestaurant[],
+) {
+  let totalDistanceKm = 0;
+
+  for (let index = 1; index < stops.length; index += 1) {
+    const distanceKm = calculateAdminRouteDistanceKm(stops[index - 1], stops[index]);
+    if (distanceKm == null) return Number.POSITIVE_INFINITY;
+    totalDistanceKm += distanceKm;
+  }
+
+  return totalDistanceKm;
+}
+
+function compareRouteCandidateTieBreakers(
+  left: AdminRoutePlannerRestaurant,
+  right: AdminRoutePlannerRestaurant,
+  current: AdminRoutePlannerRestaurant,
+) {
+  const leftDistance = calculateAdminRouteDistanceKm(current, left) ?? Number.POSITIVE_INFINITY;
+  const rightDistance = calculateAdminRouteDistanceKm(current, right) ?? Number.POSITIVE_INFINITY;
+  if (Math.abs(leftDistance - rightDistance) > ADMIN_ROUTE_IMPROVEMENT_EPSILON_KM) {
+    return leftDistance - rightDistance;
+  }
+
+  const leftName = left.name || '';
+  const rightName = right.name || '';
+  const nameCompare = leftName.localeCompare(rightName, 'ko');
+  if (nameCompare !== 0) return nameCompare;
+
+  return left.id.localeCompare(right.id);
+}
+
+export function optimizeAdminRouteStopOrder(
+  stops: AdminRoutePlannerRestaurant[],
+): AdminRoutePlannerRestaurant[] {
+  if (stops.length < 4) return stops;
+
+  let bestStops = [...stops];
+  let bestDistance = calculateAdminRoutePathDistanceKm(bestStops);
+
+  for (let pass = 0; pass < ADMIN_ROUTE_TWO_OPT_MAX_PASSES; pass += 1) {
+    let improved = false;
+
+    for (let startIndex = 1; startIndex < bestStops.length - 1; startIndex += 1) {
+      for (let endIndex = startIndex + 1; endIndex < bestStops.length; endIndex += 1) {
+        const candidateStops = [
+          ...bestStops.slice(0, startIndex),
+          ...bestStops.slice(startIndex, endIndex + 1).reverse(),
+          ...bestStops.slice(endIndex + 1),
+        ];
+        const candidateDistance = calculateAdminRoutePathDistanceKm(candidateStops);
+
+        if (candidateDistance + ADMIN_ROUTE_IMPROVEMENT_EPSILON_KM < bestDistance) {
+          bestStops = candidateStops;
+          bestDistance = candidateDistance;
+          improved = true;
+        }
+      }
+    }
+
+    if (!improved) break;
+  }
+
+  return bestStops;
 }
 
 function getModeSpeedKmh(mode: AdminRouteMode) {
@@ -212,8 +282,13 @@ export function buildAdminRoutePlan({
   const stops = [start];
   const seen = new Set([start.id]);
 
+  const stopLimit = Math.min(
+    ADMIN_ROUTE_DEFAULT_MAX_STOPS,
+    Math.max(1, Math.floor(maxStops)),
+  );
+
   while (
-    stops.length < maxStops &&
+    stops.length < stopLimit &&
     remaining.some((item) => !seen.has(item.id))
   ) {
     const current = stops[stops.length - 1];
@@ -228,16 +303,23 @@ export function buildAdminRoutePlan({
           mode,
         }),
       }))
-      .sort((a, b) => b.score - a.score)[0]?.restaurant;
+      .sort((a, b) => {
+        if (Math.abs(b.score - a.score) > ADMIN_ROUTE_IMPROVEMENT_EPSILON_KM) {
+          return b.score - a.score;
+        }
+
+        return compareRouteCandidateTieBreakers(a.restaurant, b.restaurant, current);
+      })[0]?.restaurant;
 
     if (!next) break;
     seen.add(next.id);
     stops.push(next);
   }
 
-  const legs = stops
+  const optimizedStops = optimizeAdminRouteStopOrder(stops);
+  const legs = optimizedStops
     .slice(1)
-    .map((stop, index) => buildRouteLeg(stops[index], stop, mode))
+    .map((stop, index) => buildRouteLeg(optimizedStops[index], stop, mode))
     .filter((leg): leg is AdminRoutePlanLeg => Boolean(leg));
   const totalDistanceKm = legs.reduce((sum, leg) => sum + leg.distanceKm, 0);
   const estimatedMinutes = legs.reduce(
@@ -264,7 +346,7 @@ export function buildAdminRoutePlan({
     );
   }
 
-  if (stops.length < 2) {
+  if (optimizedStops.length < 2) {
     warnings.push(
       "좌표가 있는 두 번째 맛집이 없어 방문 순서를 추천하지 못했습니다.",
     );
@@ -272,12 +354,12 @@ export function buildAdminRoutePlan({
 
   return {
     mode,
-    stops,
+    stops: optimizedStops,
     legs,
     summary: {
       totalDistanceKm,
       estimatedMinutes,
-      stopCount: stops.length,
+      stopCount: optimizedStops.length,
     },
     warnings,
   };

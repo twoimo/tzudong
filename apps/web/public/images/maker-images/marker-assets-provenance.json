@@ -1,0 +1,177 @@
+{
+  "version": 2,
+  "generatedAt": "2026-07-07T21:18:26.000Z",
+  "providerId": "local-codex",
+  "authMode": "codex_oauth",
+  "endpoint": "https://chatgpt.com/backend-api/codex/responses",
+  "requestToolType": "image_generation",
+  "requestToolModel": "gpt-image-2",
+  "model": "gpt-image-2",
+  "modelProvenance": "exact",
+  "hasOpenAIAPIKey": false,
+  "assets": [
+    {
+      "kind": "user-submitted",
+      "baseName": "user_submitted",
+      "prompt": "Create one safe standalone restaurant map marker icon for a Korean food map: friendly community-submitted place marker, blue and violet rounded map pin with a small sparkle, centered subject, opaque light background, no text, no letters, no logos, no people, no internal panels.",
+      "responseId": "resp_003f5154ae73c159016a4cde5be06881918440e831e1ac03e0",
+      "imageCallId": "ig_003f5154ae73c159016a4cde6051e08191b827cb215b51a668",
+      "requestHash": "721193e9d5725d437569296d07f6cdf18e865c7aea78782ee4e1fd244e52da4a",
+      "responseHash": "b83b28aa881cf21b099ba81537587db3a0827871ef3efb9eb9848c6bdc3b814e",
+      "generatedAt": "2026-07-07T11:10:17.777920Z",
+      "png": {
+        "path": "/images/maker-images/user_submitted.png",
+        "sha256": "52ff95cfba3c476e47ccdb0ccac7badf47912185b558473f3b3968789481ec3d",
+        "bytes": 440277
+      },
+      "webp": {
+        "path": "/images/maker-images/webp/user_submitted.webp",
+        "sha256": "d00c1cf6b0c6d1bebfe95f0dd68b02103d675dc7c58139afacc6480e5363fe1f",
+        "bytes": 46756
+      },
+      "transparentEdit": {
+        "providerId": "local-codex",
+        "authMode": "codex_oauth",
+        "requestToolModel": "gpt-image-2",
+        "model": "gpt-image-2",
+        "modelProvenance": "exact",
+        "operation": "background-removal-edit-plus-deterministic-alpha-extraction",
+        "responseId": "019f3c83-f6f6-7b11-a0dc-65b54d57f4a7",
+        "imageCallId": "ig_01688fa456ca6a7d016a4ceead1c488191a0231bf0a50923f0",
+        "requestHash": "bad21acaca261f0b73edb814fdc9a561f5a6888bd36b143c10d4d2658bf422f3",
+        "responseHash": "f4394696b3d5864b435ada898b448b26fe9f92763604595b1908e69a464c3edc",
+        "rawGeneratedCopy": "C:/Users/twoimo/Desktop/tzudong/.omx/artifacts/gpt-image-2-marker-cutouts/20260707-211826/user_submitted.generated.png",
+        "rawGeneratedSha256": "c4cc2250199637ee71ca86b12fa791932c50d9449108443ea4b6a68f9e8f59a2",
+        "rawGeneratedBytes": 1048812,
+        "alphaExtraction": {
+          "method": "flood-fill exterior light checkerboard pixels from GPT Image 2 cutout edit into alpha channel",
+          "source": "gpt-image-2 edited cutout output",
+          "tool": "Pillow",
+          "stats": {
+            "width": 1024,
+            "height": 1024,
+            "transparentPixels": 687582,
+            "semiTransparentPixels": 7325,
+            "opaquePixels": 353669,
+            "cornerAlpha": [
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          }
+        }
+      }
+    },
+    {
+      "kind": "trend",
+      "baseName": "trend",
+      "prompt": "Create one safe standalone restaurant map marker icon for a Korean food map: trending hot place marker, warm orange-red rounded map pin with a subtle upward flame or upward arrow motif, centered subject, opaque light background, no text, no letters, no logos, no people, no internal panels.",
+      "responseId": "resp_0777474c938271a4016a4cde9adf84819194fd666fa1f87e61",
+      "imageCallId": "ig_0777474c938271a4016a4cde9b98ac81919035c0fb877f2fce",
+      "requestHash": "3f6c770797a6d460063b987bc42b0b637bc49fe763d9eb597df3397108ad9fce",
+      "responseHash": "d96b92ded30280bce2aa1d32114170798274093b9fc7347d89aba7ff06013146",
+      "generatedAt": "2026-07-07T11:10:44.933440Z",
+      "png": {
+        "path": "/images/maker-images/trend.png",
+        "sha256": "e87e21806df6b00e958a529b3ca698356548eaba473be70705e3913aa6fa4327",
+        "bytes": 482446
+      },
+      "webp": {
+        "path": "/images/maker-images/webp/trend.webp",
+        "sha256": "a542d0d68093ba7e02a3a29341829a4d29625d970952d95ce6f2e74edbff2843",
+        "bytes": 50206
+      },
+      "transparentEdit": {
+        "providerId": "local-codex",
+        "authMode": "codex_oauth",
+        "requestToolModel": "gpt-image-2",
+        "model": "gpt-image-2",
+        "modelProvenance": "exact",
+        "operation": "background-removal-edit-plus-deterministic-alpha-extraction",
+        "responseId": "019f3c85-48d1-7022-8d16-dd7437670106",
+        "imageCallId": "ig_0c3064565b663436016a4cef00c304819197843c6be413c5f9",
+        "requestHash": "d3b045ddd940267975ec0ffda2f6ce78b6d98b14bf313018ae6b5a76e67fd748",
+        "responseHash": "7711ad91d4b38bcd327d7d386058e02fddb59f5b1125ea1d3eb48b52cd2c1325",
+        "rawGeneratedCopy": "C:/Users/twoimo/Desktop/tzudong/.omx/artifacts/gpt-image-2-marker-cutouts/20260707-211826/trend.generated.png",
+        "rawGeneratedSha256": "212ec4dd4a0de831e1e2101cf4c8a7c4bfb5c850cd35d8a05cfd05e92e167b0d",
+        "rawGeneratedBytes": 1155577,
+        "alphaExtraction": {
+          "method": "flood-fill exterior light checkerboard pixels from GPT Image 2 cutout edit into alpha channel",
+          "source": "gpt-image-2 edited cutout output",
+          "tool": "Pillow",
+          "stats": {
+            "width": 1024,
+            "height": 1024,
+            "transparentPixels": 704800,
+            "semiTransparentPixels": 7128,
+            "opaquePixels": 336648,
+            "cornerAlpha": [
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          }
+        }
+      }
+    },
+    {
+      "kind": "seasonal",
+      "baseName": "seasonal",
+      "prompt": "Create one safe standalone restaurant map marker icon for a Korean food map: seasonal fresh food marker, green-teal rounded map pin with a small leaf and bowl motif, centered subject, opaque light background, no text, no letters, no logos, no people, no internal panels.",
+      "responseId": "resp_03dc00c97451963d016a4cdeb62a7481918d5fd3e3fb29b285",
+      "imageCallId": "ig_03dc00c97451963d016a4cdebb9ff88191b259ef6257264534",
+      "requestHash": "ffbee7101ad8b6e5ccbecca7daa3e65baa93f99f21c943912af683843452dd90",
+      "responseHash": "7a45197e40ab2801e2a138d0744660a4256127f07a28383011a895dc65139e78",
+      "generatedAt": "2026-07-07T11:11:21.718413Z",
+      "png": {
+        "path": "/images/maker-images/seasonal.png",
+        "sha256": "b553b5afffb9da8249ecff330632fe8e25de37a0926d384129f779aa51450ea6",
+        "bytes": 549570
+      },
+      "webp": {
+        "path": "/images/maker-images/webp/seasonal.webp",
+        "sha256": "65af65f8b3898404d8b67038a5d4b8558fef3bc6be2cdc86f9859908550192ad",
+        "bytes": 63006
+      },
+      "transparentEdit": {
+        "providerId": "local-codex",
+        "authMode": "codex_oauth",
+        "requestToolModel": "gpt-image-2",
+        "model": "gpt-image-2",
+        "modelProvenance": "exact",
+        "operation": "background-removal-edit-plus-deterministic-alpha-extraction",
+        "responseId": "019f3c86-6475-7d30-b24c-41c18214fa30",
+        "imageCallId": "ig_0e95538ed20b6b05016a4cef496d048191a58af5378694a8af",
+        "requestHash": "6f40890ae597bcda00208e2291fbdfcdfaa35858cf4972f03ceed247eb971c16",
+        "responseHash": "697d2470bafcc7eb2b36c7da842ae0b0730376c2246db0ef4c1bf2045b42da0a",
+        "rawGeneratedCopy": "C:/Users/twoimo/Desktop/tzudong/.omx/artifacts/gpt-image-2-marker-cutouts/20260707-211826/seasonal.generated.png",
+        "rawGeneratedSha256": "441bd36648abe38c07ebdaddd04ac393ae50ac3061fc608d85762c1f0b499fdc",
+        "rawGeneratedBytes": 1197333,
+        "alphaExtraction": {
+          "method": "flood-fill exterior light checkerboard pixels from GPT Image 2 cutout edit into alpha channel",
+          "source": "gpt-image-2 edited cutout output",
+          "tool": "Pillow",
+          "stats": {
+            "width": 1024,
+            "height": 1024,
+            "transparentPixels": 682807,
+            "semiTransparentPixels": 7201,
+            "opaquePixels": 358568,
+            "cornerAlpha": [
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "assetPostProcessing": "GPT Image 2 produced cutout edits; deterministic alpha extraction converted generated exterior transparency/checkerboard pixels into real PNG/WebP transparency."
+}
