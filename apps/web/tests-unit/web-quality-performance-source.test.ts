@@ -1750,7 +1750,7 @@ describe("web quality performance source contracts", () => {
       "bottom-[calc(var(--mobile-bottom-nav-effective-height",
     );
     expect(overlayPositionSource).toContain("absolute right-4 bottom-4");
-    expect(overlayPositionSource).toContain("top-[calc(env(safe-area-inset-top)+126px)]");
+    expect(overlayPositionSource).toContain("top-[calc(env(safe-area-inset-top)_+_126px)]");
     expect(overlayPositionSource).not.toContain(
       "fixed top-[calc(env(safe-area-inset-top)+114px)] left-1/2 -translate-x-1/2 transition-[left] ease-in-out z-[70]",
     );
@@ -2612,6 +2612,8 @@ describe("web quality performance source contracts", () => {
     expect(mainLayoutSource).toContain('pathname === "/feed"');
     expect(mainLayoutSource).toContain('pathname === "/stamp"');
     expect(mainLayoutSource).toContain('pathname === "/leaderboard"');
+    expect(mainLayoutSource).toContain("const shouldSuppressMobileBottomNav =");
+    expect(mainLayoutSource).toContain("const shouldRenderMobileBottomNav = !shouldSuppressMobileBottomNav;");
     expect(overlayLayoutSource).toContain(
       'pathname?.startsWith("/auth/") || routeDirectPanelParam !== null',
     );

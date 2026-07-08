@@ -418,6 +418,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       expect(layoutSource).toContain("<CombinedPopup />");
     }
     expect(mainLayoutSource).toContain("{shouldRenderMobileBottomNav && (");
+    expect(mainLayoutSource).toContain("const shouldSuppressMobileBottomNav =");
+    expect(mainLayoutSource).toContain("const shouldRenderMobileBottomNav = !shouldSuppressMobileBottomNav;");
     expect(mainLayoutSource).toContain('pathname === "/feed"');
     expect(mainLayoutSource).toContain('pathname === "/stamp"');
     expect(mainLayoutSource).toContain('pathname === "/leaderboard"');
