@@ -1,6 +1,7 @@
 export const ADMIN_CONSOLE_MODULE_IDS = [
   "overview",
   "routes",
+  "map-overlays",
   "restaurants",
   "restaurant-refresh-history",
   "submissions",

@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "provider": "google_cse",
+  "capturedAt": "2026-07-07T00:00:00.000Z",
+  "queries": [
+    {
+      "templateId": "seasonal_food_month_ko",
+      "renderedQuery": "7월 한국 제철 음식 site:korean.visitkorea.or.kr OR site:www.mafra.go.kr OR site:www.nongsaro.go.kr",
+      "parameters": {
+        "country": "KR",
+        "language": "ko",
+        "month": "07"
+      },
+      "response": {
+        "items": [
+          {
+            "title": "여름 제철 식재료와 지역 음식 여행",
+            "link": "https://korean.visitkorea.or.kr/detail/rem_detail.do?cotid=seasonal-summer-food",
+            "snippet": "여름철 국내 여행에서 함께 즐기기 좋은 제철 식재료와 지역 음식 정보를 소개합니다.",
+            "displayLink": "korean.visitkorea.or.kr"
+          },
+          {
+            "title": "비공식 맛집 블로그의 여름 음식 순위",
+            "link": "https://example-food-blog.invalid/posts/summer-food-ranking",
+            "snippet": "개인 블로그가 정리한 여름 음식 순위입니다. allowlist 밖 도메인 discard 검증용 항목입니다.",
+            "displayLink": "example-food-blog.invalid"
+          }
+        ]
+      }
+    },
+    {
+      "templateId": "holiday_food_context_ko",
+      "renderedQuery": "추석 음식 문화 한국 공식 자료 site:www.korea.net OR site:www.mcst.go.kr OR site:www.foodsafetykorea.go.kr",
+      "parameters": {
+        "country": "KR",
+        "holiday": "chuseok",
+        "language": "ko"
+      },
+      "response": {
+        "items": [
+          {
+            "title": "한국 명절 음식과 문화 소개",
+            "link": "https://www.korea.net/NewsFocus/Culture/view?articleId=holiday-food-culture",
+            "snippet": "한국의 대표 명절과 전통 음식 문화에 대한 공식 소개 자료입니다.",
+            "displayLink": "www.korea.net"
+          }
+        ]
+      }
+    },
+    {
+      "templateId": "region_food_season_ko",
+      "renderedQuery": "부산 여름 제철 음식 관광 site:korean.visitkorea.or.kr OR site:www.nongsaro.go.kr",
+      "parameters": {
+        "country": "KR",
+        "language": "ko",
+        "month": "07",
+        "region": "부산"
+      },
+      "response": {
+        "items": [
+          {
+            "title": "부산에서 즐기는 여름 먹거리",
+            "link": "https://korean.visitkorea.or.kr/detail/ms_detail.do?cotid=busan-summer-food",
+            "snippet": "부산 여행 동선과 함께 참고할 수 있는 여름철 지역 먹거리 정보입니다.",
+            "displayLink": "korean.visitkorea.or.kr"
+          }
+        ]
+      }
+    },
+    {
+      "templateId": "tzuyang_video_context_ko",
+      "renderedQuery": "쯔양 부산 먹방 영상 음식 맥락 site:www.youtube.com",
+      "parameters": {
+        "creator": "쯔양",
+        "language": "ko",
+        "region": "부산"
+      },
+      "response": {
+        "items": [
+          {
+            "title": "쯔양 부산 먹방 영상",
+            "link": "https://www.youtube.com/watch?v=tzudongFixture01",
+            "snippet": "부산 음식과 먹방 맥락을 확인하기 위한 YouTube 검색 결과 카드입니다.",
+            "displayLink": "www.youtube.com"
+          }
+        ]
+      }
+    },
+    {
+      "templateId": "category_trend_context_ko",
+      "renderedQuery": "한국 여름 면요리 트렌드 공식 자료 site:www.mafra.go.kr OR site:www.foodsafetykorea.go.kr",
+      "parameters": {
+        "category": "면요리",
+        "country": "KR",
+        "language": "ko",
+        "season": "summer"
+      },
+      "response": {
+        "items": [
+          {
+            "title": "여름철 식품 안전과 면요리 정보",
+            "link": "https://www.foodsafetykorea.go.kr/portal/board/boardDetail.do?menu_no=summer-noodle-safety",
+            "snippet": "여름철 식품 안전과 조리 시 주의사항을 다루는 공식 식품안전 정보입니다.",
+            "displayLink": "www.foodsafetykorea.go.kr"
+          }
+        ]
+      }
+    }
+  ]
+}
