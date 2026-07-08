@@ -928,7 +928,11 @@ function MobileControlOverlayComponent({
     return (
         <>
             {/* 상단: 로고/검색/유저 아이콘 + 카테고리 플로팅 행 */}
-            <div className="pointer-events-none fixed inset-x-0 top-0 z-[60] px-3 pt-[calc(env(safe-area-inset-top)+10px)]">
+            <div
+                className="pointer-events-none fixed inset-x-0 top-0 z-[60] px-3 pt-[calc(env(safe-area-inset-top)+10px)]"
+                data-layout-primitives="cluster wrap-row overlay-stack"
+                data-scroll-owner="mobile-control-overlay"
+            >
                 <div
                     className={cn(
                         'pointer-events-auto flex items-center gap-2 h-12 rounded-full shadow-lg bg-background/95 backdrop-blur-sm border border-border px-2',
@@ -998,7 +1002,11 @@ function MobileControlOverlayComponent({
             </div>
 
             {/* 좌측 하단: 국내/해외, 지역/카테고리 버튼 */}
-            <div className="fixed bottom-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1rem)] left-4 z-40 flex flex-col gap-2">
+            <div
+                className="fixed bottom-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1rem)] left-4 z-40 flex flex-col gap-2"
+                data-layout-primitives="cluster wrap-row overlay-stack"
+                data-scroll-owner="mobile-control-overlay"
+            >
                 {/* 국내/해외 토글 버튼 - 모든 사용자에게 표시 */}
                 {onModeChange && (
                     <div className="flex items-center gap-0.5 p-0.5 bg-background/95 backdrop-blur-sm rounded-full shadow-lg border border-border w-[clamp(84px,28vw,105px)]">
@@ -1084,6 +1092,8 @@ function MobileControlOverlayComponent({
             <div
                 className="fixed bottom-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1rem)] right-4 z-[90] flex flex-col gap-2"
                 data-mobile-bottom-right-safe-area-owner="mobile-floating-actions"
+                data-layout-primitives="cluster wrap-row overlay-stack"
+                data-scroll-owner="mobile-control-overlay"
             >
                 {/* 사용자 제보 마커 표시 토글 */}
                 <Button
@@ -1392,6 +1402,8 @@ function MobileControlOverlayComponent({
                                 className="grid grid-cols-1 gap-1"
                                 data-mobile-visible-marker-restaurants-sheet="true"
                                 data-mobile-visible-marker-restaurants-sheet-frame="true"
+                                data-layout-primitives="list-detail frame stack"
+                                data-scroll-owner="visible-marker-list"
                             >
                                 <div className="sticky top-0 z-10 -mx-1 -mt-1 bg-background/95 px-1 py-1 backdrop-blur supports-[backdrop-filter]:bg-background/85">
                                     <div className="flex min-w-0 items-center justify-between gap-2">
