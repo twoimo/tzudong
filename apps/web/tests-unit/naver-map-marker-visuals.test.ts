@@ -54,6 +54,7 @@ describe('naver map marker visuals', () => {
         }, false);
 
         expect(visual.content).toContain('data-restaurant-marker-kind="user-submitted"');
+        expect(visual.content).toContain('data-restaurant-marker-provenance="source_type:user_submission_new"');
         expect(visual.content).toContain('사용자 제보 맛집');
         expect(visual.content).toContain('>제보</span>');
         expect(visual.content).toContain('/images/maker-images/webp/user_submitted.webp');
@@ -73,8 +74,10 @@ describe('naver map marker visuals', () => {
         }, false, ['seasonal']);
 
         expect(trendVisual.content).toContain('data-restaurant-marker-kind="trend"');
+        expect(trendVisual.content).toContain('data-restaurant-marker-provenance="overlay:trend"');
         expect(trendVisual.content).toContain('/images/maker-images/webp/trend.webp');
         expect(seasonalVisual.content).toContain('data-restaurant-marker-kind="seasonal"');
+        expect(seasonalVisual.content).toContain('data-restaurant-marker-provenance="overlay:seasonal"');
         expect(seasonalVisual.content).toContain('/images/maker-images/webp/seasonal.webp');
     });
 

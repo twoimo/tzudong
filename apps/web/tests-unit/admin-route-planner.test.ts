@@ -2,6 +2,9 @@ import { describe, expect, test } from "bun:test";
 import {
   assessAdminRouteReadiness,
   buildAdminRoutePlan,
+  buildAdminRouteCandidateSet,
+  buildAdminRouteExportPackage,
+  buildAdminRoutePlainTextExport,
   calculateAdminRouteDistanceKm,
   calculateAdminRoutePathDistanceKm,
   optimizeAdminRouteStopOrder,
@@ -182,5 +185,84 @@ describe("admin route planner", () => {
     expect(ready.label).toBe("excellent");
     expect(localOnly.score).toBeLessThan(98);
     expect(localOnly.blockers.join(" ")).toContain("네이버 도로 경로 응답 전");
+  });
+
+  test("returns route candidates with readback metadata and selected anchor included", () => {
+    const candidateSet = buildAdminRouteCandidateSet({
+      restaurants: [farRestaurant, noCoordinate, nearbySameCategory, selected, nearbySameVideo],
+      anchorRestaurantId: selected.id,
+      bbox: { west: 127.02, south: 37.5, east: 127.04, north: 37.51 },
+      limit: 3,
+    });
+
+    expect(candidateSet.items.map((item) => item.id)).toEqual([
+      "start",
+      "near-video",
+      "near-category",
+    ]);
+    expect(candidateSet.readback).toMatchObject({
+      candidateTotal: 4,
+      candidateReturned: 3,
+      candidateLimit: 3,
+      truncated: true,
+      candidateSource: "visible-bbox",
+      excludedNoCoordinateCount: 1,
+      selectedAnchorIncluded: true,
+    });
+  });
+
+  test("expands a sparse bbox before falling back to k-nearest candidates", () => {
+    const candidateSet = buildAdminRouteCandidateSet({
+      restaurants: [selected, nearbySameVideo, farRestaurant],
+      anchorRestaurantId: selected.id,
+      bbox: { west: 127.024, south: 37.5005, east: 127.0255, north: 37.5015 },
+      limit: 2,
+    });
+
+    expect(candidateSet.items.map((item) => item.id)).toEqual(["start", "near-video"]);
+    expect(candidateSet.readback.candidateSource).toBe("expanded-bbox");
+  });
+
+  test("does not report selected anchor included when requested anchor is absent", () => {
+    const candidateSet = buildAdminRouteCandidateSet({
+      restaurants: [nearbySameVideo, farRestaurant],
+      anchorRestaurantId: selected.id,
+      limit: 2,
+    });
+
+    expect(candidateSet.items[0]?.id).toBe("near-video");
+    expect(candidateSet.readback.selectedAnchorIncluded).toBe(false);
+  });
+
+  test("builds Tzudong route export JSON and plain text with provider cache readback", () => {
+    const routePlan = buildAdminRoutePlan({
+      selectedRestaurant: selected,
+      restaurants: [selected, nearbySameVideo, nearbySameCategory],
+      mode: "driving",
+      maxStops: 3,
+    });
+    const candidateSet = buildAdminRouteCandidateSet({
+      restaurants: [selected, nearbySameVideo, nearbySameCategory],
+      anchorRestaurantId: selected.id,
+      limit: 3,
+    });
+    const packageJson = buildAdminRouteExportPackage({
+      routePlan,
+      candidateReadback: candidateSet.readback,
+      directionsReadback: {
+        provider: "naver-directions5",
+        providerCache: "hit",
+        fallbackReasonCode: null,
+      },
+      generatedAt: "2026-07-07T00:00:00.000Z",
+    });
+    const plainText = buildAdminRoutePlainTextExport(packageJson);
+
+    expect(packageJson.schemaVersion).toBe(1);
+    expect(packageJson.anchorRestaurantId).toBe("start");
+    expect(packageJson.directionsReadback.providerCache).toBe("hit");
+    expect(plainText).toContain("Tzudong route plan v1");
+    expect(plainText).toContain("후보:");
+    expect(plainText).toContain("cache=hit");
   });
 });

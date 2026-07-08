@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { requireAdmin } from '@/lib/auth/require-admin';
+import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
 import { buildStoryboardRagErrorStatus } from '@/lib/admin/storyboard/rag-error-status';
 import {
   buildStoryboardRouteFreshness,
@@ -12,12 +13,15 @@ import {
   STORYBOARD_ROUTE_STATUS_CACHE_SECONDS,
   STORYBOARD_ROUTE_STATUS_STALE_SECONDS,
 } from '@/lib/admin/storyboard/route-telemetry';
+import { buildStoryboardJobInsert, sanitizeStoryboardJobRow, type StoryboardJobRow } from '@/lib/admin/storyboard/jobs';
 
 export const runtime = 'nodejs';
 
 type StoryboardRouteContext = {
   params?: never;
 };
+
+const STORYBOARD_JOB_SELECT = 'id, requested_by_admin_id, status, stage, request_payload, result_payload, error_code, readiness, claimed_by, claimed_at, completed_at, cancelled_at, created_at, updated_at';
 function hasRequiredStoryboardRagWorkerUrl() {
   return Boolean(process.env.STORYBOARD_RAG_WORKER_URL?.trim());
 }
@@ -67,20 +71,15 @@ async function readLocalStoryboardHeatmapStatus(limit: number) {
 }
 
 
-async function generateStoryboardWithRouteBackendAgent(body: Record<string, unknown> | null) {
-  if (shouldSkipLocalStoryboardBackendAgentOnVercel()) {
-    throw new Error('Vercel production does not include the required storyboard RAG worker. Configure STORYBOARD_AGENT_COMMAND and STORYBOARD_RAG_WORKER_URL.');
-  }
-
-  const { generateStoryboardWithBackendAgent } = await import('@/lib/admin/storyboard/backend-agent');
-  return generateStoryboardWithBackendAgent(body);
-}
 
 export async function GET(_request: NextRequest, _context: StoryboardRouteContext) {
   const telemetry = createStoryboardRouteTelemetry('admin-storyboard-status');
   try {
     const auth = await requireAdmin({ allowDevAdminBypassCookie: true });
-    if (!auth.ok) return auth.response;
+    if (!auth.ok) {
+      auth.response.headers.set('Cache-Control', 'no-store');
+      return auth.response;
+    }
 
     // source-contract: } = loadStoryboardHeatmapSources(40);
     const {
@@ -141,42 +140,42 @@ export async function POST(request: NextRequest) {
 
   try {
     const auth = await requireAdmin({ allowDevAdminBypassCookie: true });
-    if (!auth.ok) return auth.response;
-
-    if (shouldSkipLocalStoryboardBackendAgentOnVercel()) {
-      const payload = {
-        error: 'storyboard_generation_unavailable',
-        causeCode: 'vercel_local_storyboard_backend_agent_unavailable',
-        stage: 'backend-agent',
-        stageLabel: '스토리보드 생성 백엔드',
-        message: 'Vercel production does not include the required storyboard RAG worker. Configure STORYBOARD_AGENT_COMMAND and STORYBOARD_RAG_WORKER_URL.',
-        nextActions: [
-          'STORYBOARD_AGENT_COMMAND, STORYBOARD_AGENT_ROOT, STORYBOARD_RAG_WORKER_URL 환경 변수를 확인해 주세요.',
-          '로컬 helper 또는 API Key 백업 경로가 준비되기 전에는 생성 성공처럼 처리하지 않습니다.',
-        ],
-        trace: [],
-      };
-      return NextResponse.json(
-        payload,
-        {
-          status: 503,
-          headers: buildStoryboardRouteHeaders(telemetry, STORYBOARD_ROUTE_NO_STORE_HEADERS, payload),
-        },
-      );
+    if (!auth.ok) {
+      auth.response.headers.set('Cache-Control', 'no-store');
+      return auth.response;
     }
 
     const body = await readStoryboardRouteJson(request, telemetry) as Record<string, unknown> | null;
-    const result = await generateStoryboardWithRouteBackendAgent(body);
-    if (process.env.VERCEL !== '1') {
-      await (await import('@/lib/admin/storyboard/history'))
-        .persistLocalStoryboardHistory(result)
-        .catch((historyError) => {
-          console.error('[admin/storyboard] local history persistence failed:', historyError);
-        });
+    const supabase = createSupabaseServiceRoleClient();
+    const { data, error } = await supabase
+      .from('admin_storyboard_jobs')
+      .insert(buildStoryboardJobInsert({ requestedByAdminId: auth.userId, request: body }))
+      .select(STORYBOARD_JOB_SELECT)
+      .single();
+    if (error || !data) {
+      const failurePayload = { ok: false, error: 'storyboard_job_enqueue_failed' };
+      return NextResponse.json(
+        failurePayload,
+        {
+          status: 502,
+          headers: buildStoryboardRouteHeaders(telemetry, STORYBOARD_ROUTE_NO_STORE_HEADERS, failurePayload),
+        },
+      );
     }
+    const job = sanitizeStoryboardJobRow(data as StoryboardJobRow);
+    const payload = {
+      ok: true,
+      mode: 'async_job_control_plane',
+      job,
+      readiness: job.readiness,
+      message: '스토리보드 생성은 비동기 작업으로 등록되었습니다. 워커 상태를 확인하며 완료 전에는 성공처럼 표시하지 않습니다.',
+    };
     return NextResponse.json(
-      result,
-      { headers: buildStoryboardRouteHeaders(telemetry, STORYBOARD_ROUTE_NO_STORE_HEADERS, result) },
+      payload,
+      {
+        status: 202,
+        headers: buildStoryboardRouteHeaders(telemetry, STORYBOARD_ROUTE_NO_STORE_HEADERS, payload),
+      },
     );
   } catch (error) {
     console.error('[admin/storyboard] generation failed:', error);
