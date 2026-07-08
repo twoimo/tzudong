@@ -254,8 +254,11 @@ describe('mobile home map regression guards', () => {
 
         expect(naverMapSource).toContain('onMapInteraction?: () => void;');
         expect(naverMapSource).toContain('onMapInteraction?.();');
+        expect(naverMapSource).toContain("const listener = maps.Event.addListener(mapInstanceRef.current, 'click', () => {");
+        expect(naverMapSource).toContain('onMapBlankClick, onMapInteraction');
         expect(overseasMapSource).toContain('onMapInteraction?: () => void;');
         expect(overseasMapSource).toContain('onMapInteractionRef.current?.();');
+        expect(overseasMapSource).toContain("mapInstance.on('click', () => {");
     });
 
     test('G002 mobile category sheet commits immediately without delayed apply affordance', () => {
