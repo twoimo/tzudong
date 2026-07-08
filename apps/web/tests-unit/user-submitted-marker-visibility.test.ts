@@ -42,7 +42,7 @@ describe('user-submitted marker visibility contract', () => {
     );
   });
 
-  test('keeps public toggle state wired to map filtering and Korean accessible controls', () => {
+  test('keeps admin-only toggle state wired to map filtering and Korean accessible controls', () => {
     const homeClient = readSource('app/home-client.tsx');
     const naverMapView = readSource('components/map/NaverMapView.tsx');
     const mobileControls = readSource('components/home/MobileControlOverlay.tsx');
@@ -52,6 +52,7 @@ describe('user-submitted marker visibility contract', () => {
     expect(homeClient).toContain('title: next ? "사용자 제보 맛집 마커 표시" : "사용자 제보 맛집 마커 숨김",');
     expect(homeClient).toContain('showUserSubmittedMarkers={showUserSubmittedMarkers}');
     expect(homeClient).toContain('onUserSubmittedMarkersToggle={handleUserSubmittedMarkerToggle}');
+    expect(homeClient).toContain('isAdmin={isAdmin}');
 
     expect(naverMapView).toContain('return unfilteredDisplayRestaurants.filter((restaurant) => !isUserSubmittedRestaurant(restaurant));');
     expect(naverMapView).toContain('showUserSubmittedMarkers || !isUserSubmittedRestaurant(activeSearchedRestaurant)');
@@ -59,10 +60,12 @@ describe('user-submitted marker visibility contract', () => {
     expect(naverMapView).toContain('showUserSubmittedMarkers,');
 
     for (const source of [mobileControls, floatingButton]) {
+      expect(source).toContain('isAdmin && (');
       expect(source).toContain('aria-pressed={showUserSubmittedMarkers}');
-      expect(source).toContain('data-user-submitted-marker-toggle="true"');
+      expect(source).toContain('data-user-submitted-marker-toggle="admin-only"');
       expect(source).toContain('사용자 제보 맛집 마커 숨기기');
       expect(source).toContain('사용자 제보 맛집 마커 보이기');
+      expect(source).toContain('bg-blue-600 hover:bg-blue-700 text-white border-transparent');
     }
   });
 
