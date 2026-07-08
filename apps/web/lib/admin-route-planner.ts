@@ -430,3 +430,230 @@ export function assessAdminRouteReadiness({
     blockers,
   };
 }
+
+export type AdminRouteBbox = {
+  west: number;
+  south: number;
+  east: number;
+  north: number;
+};
+
+export type AdminRouteCandidateSource = "visible-bbox" | "expanded-bbox" | "k-nearest" | "mixed";
+
+export type AdminRouteCandidateReadback = {
+  candidateTotal: number;
+  candidateReturned: number;
+  candidateLimit: number;
+  truncated: boolean;
+  candidateSource: AdminRouteCandidateSource;
+  excludedNoCoordinateCount: number;
+  selectedAnchorIncluded: boolean;
+  exclusions: Array<{ reason: string; count: number }>;
+};
+
+export type AdminRouteCandidateSet = {
+  items: AdminRoutePlannerRestaurant[];
+  readback: AdminRouteCandidateReadback;
+};
+
+export type AdminRouteDirectionsReadback = {
+  provider: "naver-directions5" | "local-heuristic";
+  providerCache: "hit" | "miss" | "bypass";
+  rateLimit?: { limited: boolean; remaining: number; windowSeconds: number };
+  fallbackReasonCode?: string | null;
+};
+
+export type AdminRouteExportPackage = {
+  schemaVersion: 1;
+  generatedAt: string;
+  anchorRestaurantId: string | null;
+  mode: AdminRouteMode;
+  stops: Array<{
+    restaurantId: string;
+    name: string;
+    lat: number;
+    lng: number;
+    address: string | null;
+    order: number;
+  }>;
+  legs: AdminRoutePlanLeg[];
+  summary: AdminRoutePlan["summary"];
+  candidateReadback: AdminRouteCandidateReadback;
+  directionsReadback: AdminRouteDirectionsReadback;
+};
+
+function isInsideAdminRouteBbox(
+  restaurant: AdminRoutePlannerRestaurant & { lat: number; lng: number },
+  bbox: AdminRouteBbox | null,
+) {
+  if (!bbox) return false;
+  return (
+    restaurant.lng >= bbox.west &&
+    restaurant.lng <= bbox.east &&
+    restaurant.lat >= bbox.south &&
+    restaurant.lat <= bbox.north
+  );
+}
+
+function expandAdminRouteBbox(bbox: AdminRouteBbox | null): AdminRouteBbox | null {
+  if (!bbox) return null;
+  const latPadding = Math.max(0.005, (bbox.north - bbox.south) * 1.5);
+  const lngPadding = Math.max(0.005, (bbox.east - bbox.west) * 1.5);
+  return {
+    west: Math.max(-180, bbox.west - lngPadding),
+    south: Math.max(-90, bbox.south - latPadding),
+    east: Math.min(180, bbox.east + lngPadding),
+    north: Math.min(90, bbox.north + latPadding),
+  };
+}
+
+function compareByAnchorDistance(
+  anchor: AdminRoutePlannerRestaurant & { lat: number; lng: number },
+  left: AdminRoutePlannerRestaurant & { lat: number; lng: number },
+  right: AdminRoutePlannerRestaurant & { lat: number; lng: number },
+) {
+  const leftDistance = calculateAdminRouteDistanceKm(anchor, left) ?? Number.POSITIVE_INFINITY;
+  const rightDistance = calculateAdminRouteDistanceKm(anchor, right) ?? Number.POSITIVE_INFINITY;
+  if (Math.abs(leftDistance - rightDistance) > ADMIN_ROUTE_IMPROVEMENT_EPSILON_KM) {
+    return leftDistance - rightDistance;
+  }
+  return left.name.localeCompare(right.name, "ko") || left.id.localeCompare(right.id);
+}
+
+export function buildAdminRouteCandidateSet({
+  restaurants,
+  anchorRestaurantId,
+  bbox = null,
+  limit = ADMIN_ROUTE_DEFAULT_MAX_STOPS,
+}: {
+  restaurants: AdminRoutePlannerRestaurant[];
+  anchorRestaurantId: string | null;
+  bbox?: AdminRouteBbox | null;
+  limit?: number;
+}): AdminRouteCandidateSet {
+  const candidateLimit = Math.min(ADMIN_ROUTE_DEFAULT_MAX_STOPS, Math.max(1, Math.floor(limit)));
+  const coordinateRestaurants = restaurants.filter(hasAdminRouteCoordinates);
+  const excludedNoCoordinateCount = restaurants.length - coordinateRestaurants.length;
+  const requestedAnchor = anchorRestaurantId
+    ? coordinateRestaurants.find((restaurant) => restaurant.id === anchorRestaurantId) ?? null
+    : null;
+  const anchor =
+    requestedAnchor ??
+    coordinateRestaurants[0] ??
+    null;
+
+  if (!anchor) {
+    return {
+      items: [],
+      readback: {
+        candidateTotal: coordinateRestaurants.length,
+        candidateReturned: 0,
+        candidateLimit,
+        truncated: false,
+        candidateSource: "k-nearest",
+        excludedNoCoordinateCount,
+        selectedAnchorIncluded: false,
+        exclusions: [{ reason: "missing_coordinates", count: excludedNoCoordinateCount }],
+      },
+    };
+  }
+
+  const expandedBbox = expandAdminRouteBbox(bbox);
+  const visible = coordinateRestaurants
+    .filter((restaurant) => restaurant.id !== anchor.id && isInsideAdminRouteBbox(restaurant, bbox))
+    .sort((left, right) => compareByAnchorDistance(anchor, left, right));
+  const visibleIds = new Set(visible.map((restaurant) => restaurant.id));
+  const expanded = coordinateRestaurants
+    .filter(
+      (restaurant) =>
+        restaurant.id !== anchor.id &&
+        !visibleIds.has(restaurant.id) &&
+        isInsideAdminRouteBbox(restaurant, expandedBbox),
+    )
+    .sort((left, right) => compareByAnchorDistance(anchor, left, right));
+  const expandedIds = new Set(expanded.map((restaurant) => restaurant.id));
+  const nearest = coordinateRestaurants
+    .filter(
+      (restaurant) =>
+        restaurant.id !== anchor.id &&
+        !visibleIds.has(restaurant.id) &&
+        !expandedIds.has(restaurant.id),
+    )
+    .sort((left, right) => compareByAnchorDistance(anchor, left, right));
+
+  const merged = [anchor, ...visible, ...expanded, ...nearest];
+  const items = merged.slice(0, candidateLimit);
+  const visibleReturned = items.filter((item) => item.id !== anchor.id && visibleIds.has(item.id)).length;
+  const expandedReturned = items.filter((item) => item.id !== anchor.id && expandedIds.has(item.id)).length;
+  const nearestReturned = Math.max(0, items.length - 1 - visibleReturned - expandedReturned);
+  const candidateSource: AdminRouteCandidateSource =
+    nearestReturned > 0 && (visibleReturned > 0 || expandedReturned > 0)
+      ? "mixed"
+      : expandedReturned > 0
+        ? "expanded-bbox"
+        : visibleReturned > 0
+          ? "visible-bbox"
+          : "k-nearest";
+
+  return {
+    items,
+    readback: {
+      candidateTotal: coordinateRestaurants.length,
+      candidateReturned: items.length,
+      candidateLimit,
+      truncated: merged.length > items.length,
+      candidateSource,
+      excludedNoCoordinateCount,
+      selectedAnchorIncluded: Boolean(anchorRestaurantId && items.some((item) => item.id === anchorRestaurantId)),
+      exclusions: [
+        { reason: "missing_coordinates", count: excludedNoCoordinateCount },
+        { reason: "outside_limit", count: Math.max(0, merged.length - items.length) },
+      ].filter((item) => item.count > 0),
+    },
+  };
+}
+
+export function buildAdminRouteExportPackage({
+  routePlan,
+  candidateReadback,
+  directionsReadback,
+  generatedAt = new Date().toISOString(),
+}: {
+  routePlan: AdminRoutePlan;
+  candidateReadback: AdminRouteCandidateReadback;
+  directionsReadback: AdminRouteDirectionsReadback;
+  generatedAt?: string;
+}): AdminRouteExportPackage {
+  const anchor = routePlan.stops[0] ?? null;
+  return {
+    schemaVersion: 1,
+    generatedAt,
+    anchorRestaurantId: anchor?.id ?? null,
+    mode: routePlan.mode,
+    stops: routePlan.stops.filter(hasAdminRouteCoordinates).map((stop, index) => ({
+      restaurantId: stop.id,
+      name: stop.name,
+      lat: stop.lat,
+      lng: stop.lng,
+      address: stop.address,
+      order: index + 1,
+    })),
+    legs: routePlan.legs,
+    summary: routePlan.summary,
+    candidateReadback,
+    directionsReadback,
+  };
+}
+
+export function buildAdminRoutePlainTextExport(packageJson: AdminRouteExportPackage): string {
+  const lines = [
+    "Tzudong route plan v1",
+    `생성시각: ${packageJson.generatedAt}`,
+    `이동모드: ${packageJson.mode}`,
+    `후보: ${packageJson.candidateReadback.candidateReturned}/${packageJson.candidateReadback.candidateTotal} · limit=${packageJson.candidateReadback.candidateLimit} · source=${packageJson.candidateReadback.candidateSource} · truncated=${packageJson.candidateReadback.truncated} · missing=${packageJson.candidateReadback.excludedNoCoordinateCount} · anchor=${packageJson.candidateReadback.selectedAnchorIncluded}`,
+    `Directions: ${packageJson.directionsReadback.provider} · cache=${packageJson.directionsReadback.providerCache}${packageJson.directionsReadback.fallbackReasonCode ? ` · fallback=${packageJson.directionsReadback.fallbackReasonCode}` : ""}${packageJson.directionsReadback.rateLimit ? ` · rateLimitRemaining=${packageJson.directionsReadback.rateLimit.remaining}` : ""}`,
+    `요약: ${packageJson.summary.stopCount}곳 · ${packageJson.summary.totalDistanceKm.toFixed(1)}km · 약 ${packageJson.summary.estimatedMinutes}분`,
+    ...packageJson.stops.map((stop) => `${stop.order}. ${stop.name} (${stop.lat.toFixed(5)}, ${stop.lng.toFixed(5)})${stop.address ? ` · ${stop.address}` : ""}`),
+  ];
+  return lines.join("\n");
+}
