@@ -85,6 +85,81 @@ const RESTAURANT_DETAIL_SWIPE_HINT_KEY = 'restaurant-detail-swipe-hint-seen-v1';
 const RESTAURANT_DETAIL_REVIEW_SELECT = 'id,user_id,restaurant_id,visited_at,created_at,content,food_photos,categories,is_verified,is_pinned,is_edited_by_admin,admin_note,like_count';
 const RESTAURANT_DETAIL_REVIEW_STALE_MS = 60 * 1000;
 const RESTAURANT_DETAIL_REVIEW_GC_MS = 5 * 60 * 1000;
+type MapProviderLogoType = 'naver' | 'kakao' | 'google';
+
+function MapProviderLogo({ provider }: { provider: MapProviderLogoType }) {
+    if (provider === 'naver') {
+        return (
+            <span
+                aria-hidden="true"
+                data-map-provider-logo="naver"
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white shadow-sm ring-1 ring-white/70"
+            >
+                <svg viewBox="0 0 40 40" className="h-8 w-8" focusable="false">
+                    <rect width="40" height="40" rx="10" fill="#03C75A" />
+                    <path
+                        d="M24.35 9.5v12.08L15.65 9.5H9.5v21h6.15V18.42l8.7 12.08h6.15v-21h-6.15Z"
+                        fill="#fff"
+                    />
+                </svg>
+            </span>
+        );
+    }
+
+    if (provider === 'kakao') {
+        return (
+            <span
+                aria-hidden="true"
+                data-map-provider-logo="kakao"
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#FEE500] shadow-sm ring-1 ring-black/10"
+            >
+                <svg viewBox="0 0 40 40" className="h-8 w-8" focusable="false">
+                    <rect width="40" height="40" rx="10" fill="#FEE500" />
+                    <path
+                        d="M20 8.25c-6.35 0-11.5 4.05-11.5 9.05 0 3.2 2.12 6.02 5.33 7.63l-1.08 4.01c-.17.64.55 1.14 1.08.75l4.65-3.35c.5.06 1.01.09 1.52.09 6.35 0 11.5-4.05 11.5-9.13 0-5-5.15-9.05-11.5-9.05Z"
+                        fill="#191919"
+                    />
+                    <path
+                        d="M15.35 16h2.05v2.35L19.5 16h2.42l-2.48 2.58L22.05 23h-2.38l-1.62-2.77-.65.67V23h-2.05v-7Zm7.35 0h2.05v5.2h3V23H22.7v-7Z"
+                        fill="#FEE500"
+                    />
+                </svg>
+            </span>
+        );
+    }
+
+    return (
+        <span
+            aria-hidden="true"
+            data-map-provider-logo="google"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white shadow-sm ring-1 ring-border"
+        >
+            <svg viewBox="0 0 40 40" className="h-8 w-8" focusable="false">
+                <path
+                    d="M20 3.75c-5.78 0-10.47 4.58-10.47 10.22 0 7.74 10.47 22.28 10.47 22.28s10.47-14.54 10.47-22.28C30.47 8.33 25.78 3.75 20 3.75Z"
+                    fill="#34A853"
+                />
+                <path
+                    d="M20 3.75c-3.03 0-5.76 1.26-7.67 3.28l4.97 4.97A3.79 3.79 0 0 1 20 10.88h9.37C28.05 6.75 24.3 3.75 20 3.75Z"
+                    fill="#4285F4"
+                />
+                <path
+                    d="M12.33 7.03a10.03 10.03 0 0 0-2.8 6.94c0 1.94.66 4.31 1.67 6.83l6.1-6.1a3.79 3.79 0 0 1 0-2.7l-4.97-4.97Z"
+                    fill="#FBBC04"
+                />
+                <path
+                    d="M20 17.12a3.2 3.2 0 0 1-2.7-1.48l-6.1 6.1c2.7 6.48 8.8 14.51 8.8 14.51s3.24-4.5 6.12-9.72L20 17.12Z"
+                    fill="#EA4335"
+                />
+                <path
+                    d="M29.37 10.88H20a3.22 3.22 0 0 1 0 6.44l6.12 9.21c2.35-4.27 4.35-9.02 4.35-12.56 0-1.08-.17-2.12-.5-3.09h-.6Z"
+                    fill="#4285F4"
+                />
+                <circle cx="20" cy="14" r="3.35" fill="#fff" />
+            </svg>
+        </span>
+    );
+}
 
 interface Review {
     id: string;
@@ -1385,15 +1460,15 @@ export function RestaurantDetailPanel({
                                 {/* 네이버 지도 - 추천 */}
                                 <Button
                                     onClick={handleNaverMap}
+                                    variant="ghost"
                                     className={cn(
-                                        "w-full h-auto bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white shadow-sm",
+                                        "w-full h-auto !bg-gradient-to-r !from-[#03C75A] !to-[#00B050] hover:!from-[#02B351] hover:!to-[#029E49] !text-white shadow-sm",
                                         isMobile ? "min-h-[56px]" : "min-h-[64px]"
                                     )}
+                                    aria-label="네이버 지도로 길찾기 열기"
                                 >
                                     <div className="flex items-center gap-3 w-full py-1">
-                                        <div className="w-9 h-9 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
-                                            <span className="text-green-600 font-black text-lg">N</span>
-                                        </div>
+                                        <MapProviderLogo provider="naver" />
                                         <div className="flex-1 text-left">
                                             <div className="flex items-center gap-2 mb-0.5">
                                                 <span className="text-sm font-bold">네이버 지도</span>
@@ -1412,11 +1487,10 @@ export function RestaurantDetailPanel({
                                         "w-full h-auto border-2 hover:bg-yellow-50 hover:border-yellow-400",
                                         isMobile ? "min-h-[56px]" : "min-h-[64px]"
                                     )}
+                                    aria-label="카카오맵으로 길찾기 열기"
                                 >
                                     <div className="flex items-center gap-3 w-full py-1">
-                                        <div className="w-9 h-9 bg-yellow-400 rounded-lg flex items-center justify-center flex-shrink-0">
-                                            <span className="text-foreground font-black text-lg">K</span>
-                                        </div>
+                                        <MapProviderLogo provider="kakao" />
                                         <div className="flex-1 text-left">
                                             <div className="text-sm font-bold text-foreground mb-0.5">카카오맵</div>
                                             <p className="text-[11px] text-muted-foreground">대중교통 · 주차 정보</p>
@@ -1432,11 +1506,10 @@ export function RestaurantDetailPanel({
                                         "w-full h-auto border-2 hover:bg-blue-50 hover:border-blue-400",
                                         isMobile ? "min-h-[56px]" : "min-h-[64px]"
                                     )}
+                                    aria-label="구글 지도로 길찾기 열기"
                                 >
                                     <div className="flex items-center gap-3 w-full py-1">
-                                        <div className="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                                            <span className="text-white font-black text-lg">G</span>
-                                        </div>
+                                        <MapProviderLogo provider="google" />
                                         <div className="flex-1 text-left">
                                             <div className="text-sm font-bold text-foreground mb-0.5">구글 지도</div>
                                             <p className="text-[11px] text-muted-foreground">글로벌 지도 · 위성 뷰</p>
