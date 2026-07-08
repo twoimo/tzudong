@@ -10,7 +10,6 @@ export type HomeMapThemeFilterId =
 export type HomeMapThemeFilter = {
     id: HomeMapThemeFilterId;
     label: string;
-    shortLabel: string;
     ariaLabel: string;
     description: string;
 };
@@ -29,35 +28,30 @@ export const HOME_MAP_THEME_FILTERS = [
     {
         id: 'hot-view',
         label: '조회수 폭발',
-        shortLabel: '조회수',
         ariaLabel: '조회수가 높은 쯔양 영상 맛집 필터',
         description: '연결된 쯔양 영상 조회수가 현재 결과 상위권인 맛집',
     },
     {
         id: 'comment-hot',
         label: '댓글 폭주',
-        shortLabel: '댓글',
         ariaLabel: '댓글 반응이 많은 쯔양 영상 맛집 필터',
         description: '연결된 쯔양 영상 댓글 수가 현재 결과 상위권인 맛집',
     },
     {
         id: 'fresh-video',
         label: '최근 영상',
-        shortLabel: '최근',
         ariaLabel: '최근 쯔양 영상에 나온 맛집 필터',
         description: `가장 최근 공개된 쯔양 영상 기준 최근 ${FRESH_VIDEO_DAYS}일 안에 등장한 맛집`,
     },
     {
         id: 'repeat-video',
         label: '재등장 맛집',
-        shortLabel: '재등장',
         ariaLabel: '쯔양 영상에 두 번 이상 등장한 맛집 필터',
         description: '연결된 쯔양 영상이 2개 이상인 재등장 맛집',
     },
     {
         id: 'fan-signal',
         label: '반응 찐함',
-        shortLabel: '반응',
         ariaLabel: '조회수 대비 댓글 반응이 진한 쯔양 영상 맛집 필터',
         description: '조회수 대비 댓글 밀도가 높은 영상의 맛집',
     },

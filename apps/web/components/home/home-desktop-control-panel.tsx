@@ -1508,8 +1508,7 @@ export default function HomeDesktopControlPanel({
                     )}
                   >
                     <HomeMapThemeFilterIcon themeId={theme.id} />
-                    <span className="sm:hidden">{theme.shortLabel}</span>
-                    <span className="hidden sm:inline">{theme.label}</span>
+                    <span>{theme.label}</span>
                   </Button>
                 );
               })}
