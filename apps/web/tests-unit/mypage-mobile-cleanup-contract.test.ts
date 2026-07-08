@@ -54,6 +54,10 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(topActionsSource).toContain(mapMenuContentClass);
     expect(mapUserMenuSource).toContain(mapMenuLabelClass);
     expect(topActionsSource).toContain(mapMenuLabelClass);
+    expect(mapUserMenuSource).toContain('onSelect={() => navigateToPage("/admin")}');
+    expect(mapUserMenuSource).toContain('data-admin-console-menu-item="true"');
+    expect(topActionsSource).toContain('onSelect={() => router.push("/admin")}');
+    expect(topActionsSource).toContain('data-admin-console-menu-item="true"');
     expect(topActionsSource).toContain(myPageCenteredAvatarClass);
     expect(topActionsSource).toContain(myPageCenteredAvatarIconClass);
     expect(topActionsSource).toContain('data-mypage-user-avatar="centered"');
