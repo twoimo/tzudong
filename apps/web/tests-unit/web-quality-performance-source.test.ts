@@ -2614,6 +2614,18 @@ describe("web quality performance source contracts", () => {
     expect(mainLayoutSource).toContain('pathname === "/leaderboard"');
     expect(mainLayoutSource).toContain("const shouldSuppressMobileBottomNav =");
     expect(mainLayoutSource).toContain("const shouldRenderMobileBottomNav = !shouldSuppressMobileBottomNav;");
+    expect(mainLayoutSource).not.toContain(
+      "const shouldRenderMobileBottomNav = !shouldSuppressNoncriticalChrome;",
+    );
+    const mobileBottomNavSuppressionBlock =
+      mainLayoutSource.match(
+        /const shouldSuppressMobileBottomNav =([\s\S]*?)const shouldRenderMobileBottomNav/,
+      )?.[1] ?? "";
+    expect(mobileBottomNavSuppressionBlock).toContain('pathname?.startsWith("/auth/")');
+    expect(mobileBottomNavSuppressionBlock).toContain('pathname?.startsWith("/admin")');
+    expect(mobileBottomNavSuppressionBlock).not.toContain('pathname === "/feed"');
+    expect(mobileBottomNavSuppressionBlock).not.toContain('pathname === "/stamp"');
+    expect(mobileBottomNavSuppressionBlock).not.toContain('pathname === "/leaderboard"');
     expect(overlayLayoutSource).toContain(
       'pathname?.startsWith("/auth/") || routeDirectPanelParam !== null',
     );
