@@ -2884,9 +2884,9 @@ const adminDashboardFocusPalette = {
   risk: "#f43f5e",
 } as const;
 const adminDashboardControlGroupClassName =
-  "inline-flex h-7 shrink-0 items-center rounded-full border border-border bg-muted/25 p-0.5";
+  "inline-flex min-h-11 shrink-0 items-center rounded-full border border-border bg-muted/25 p-0.5";
 const adminDashboardControlButtonClassName =
-  "inline-flex h-6 items-center justify-center gap-1 rounded-full px-2.5 text-[11px] font-extrabold leading-none transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
+  "inline-flex min-h-11 min-w-[44px] items-center justify-center gap-1 rounded-full px-2.5 text-[11px] font-extrabold leading-none transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
 const adminDashboardFullscreenCardClassName =
   "fixed inset-2 z-[80] h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] overflow-auto rounded-3xl border-primary/35 bg-card p-4 shadow-2xl sm:inset-4 sm:h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-2rem)]";
 
@@ -3107,7 +3107,7 @@ function AdminDashboardInfoTooltip({
         <UiTooltipTrigger asChild>
           <button
             type="button"
-            className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             aria-label={`${label} · 초보자 설명`}
             data-admin-dashboard-metric-tooltip="beginner-plain"
           >
@@ -3198,6 +3198,7 @@ function AdminDashboardViewToggle({
             "text-muted-foreground hover:text-foreground",
             value === view && "bg-background text-foreground shadow-sm",
           )}
+          style={{ minWidth: 44 }}
           aria-pressed={value === view}
           onClick={() => onChange(view)}
         >
@@ -3226,7 +3227,7 @@ function AdminDashboardFullscreenButton({
       type="button"
       className={cn(
         adminDashboardControlButtonClassName,
-        "h-7 w-7 shrink-0 border border-border bg-background p-0 text-muted-foreground shadow-sm hover:text-foreground",
+        "h-11 min-h-11 w-11 min-w-[44px] shrink-0 border border-border bg-background p-0 text-muted-foreground shadow-sm hover:text-foreground",
         isFullscreen && "border-primary/50 text-primary",
       )}
       aria-label={`${label} 카드 ${isFullscreen ? "전체화면 닫기" : "전체화면으로 보기"}`}
@@ -3279,11 +3280,12 @@ function AdminDashboardSeriesToggle<Key extends string>({
   return (
     <div
       className={cn(
-        "inline-flex h-7 max-w-full min-w-0 shrink-0 items-center gap-0.5 overflow-x-auto overflow-y-hidden rounded-full border border-transparent bg-transparent p-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        "inline-flex min-h-11 max-w-full min-w-0 shrink-0 items-center gap-0.5 overflow-x-auto overflow-y-hidden rounded-full border border-transparent bg-transparent p-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
       )}
       aria-label={`${label} 지표 숨김/보임`}
       data-admin-dashboard-series-toggle="true"
       data-allow-horizontal-scroll="true"
+      data-horizontal-scroll-owner="admin-dashboard-series-toggle"
     >
       {options.map((option) => {
         const isVisible = visibility[option.key];
@@ -3301,6 +3303,7 @@ function AdminDashboardSeriesToggle<Key extends string>({
                 : "border-transparent bg-muted/35 text-muted-foreground hover:text-foreground",
               isLastVisible && "cursor-not-allowed opacity-70",
             )}
+            style={{ minWidth: 44 }}
             aria-pressed={isVisible}
             aria-label={`${option.label} ${isVisible ? "숨기기" : "보이기"}`}
             disabled={isLastVisible}
@@ -3685,13 +3688,14 @@ function AdminDashboardManagementSkeleton() {
       className="flex h-full min-h-0 min-w-0 flex-col overflow-visible bg-background p-0 font-sans text-foreground lg:min-h-0 lg:overflow-visible"
       aria-label="관리자 대시보드 (KPI) 로딩 중"
       data-admin-dashboard-management-skeleton="true"
+      data-layout-recipe="command-surface"
       role="status"
       aria-busy="true"
     >
       <div className="mb-2 flex shrink-0 flex-col gap-2 md:flex-row md:items-start md:justify-between">
         <div className="hidden min-w-0 md:block">
           <h1 className="text-xl font-extrabold leading-tight tracking-[0.01em] text-foreground text-balance">
-            Tzuyang KPI Dashboard
+            쯔양 KPI 대시보드
           </h1>
         </div>
         <div
@@ -3699,6 +3703,7 @@ function AdminDashboardManagementSkeleton() {
           data-admin-dashboard-action-bar="true"
           data-admin-dashboard-action-order="order-reset-report-collection-period"
           data-allow-horizontal-scroll="true"
+          data-horizontal-scroll-owner="admin-dashboard-action-bar"
         >
           <div
             className="order-1 flex shrink-0 items-center justify-end gap-1"
@@ -3708,7 +3713,7 @@ function AdminDashboardManagementSkeleton() {
               type="button"
               variant="outline"
               size="sm"
-              className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+              className="h-11 min-h-11 min-w-[44px] shrink-0 rounded-full px-2 text-[11px]"
               disabled
             >
               카드 순서
@@ -3717,7 +3722,7 @@ function AdminDashboardManagementSkeleton() {
               type="button"
               variant="outline"
               size="sm"
-              className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+              className="h-11 min-h-11 min-w-[44px] shrink-0 rounded-full px-2 text-[11px]"
               disabled
             >
               초기화
@@ -3731,7 +3736,7 @@ function AdminDashboardManagementSkeleton() {
               type="button"
               variant="outline"
               size="sm"
-              className="h-7 shrink-0 gap-1 rounded-full px-2 text-[11px] font-bold"
+              className="h-11 min-h-11 min-w-[44px] shrink-0 gap-1 rounded-full px-2 text-[11px] font-bold"
               disabled
             >
               <FileDown className="h-3.5 w-3.5" aria-hidden="true" />
@@ -3741,7 +3746,7 @@ function AdminDashboardManagementSkeleton() {
               type="button"
               variant="outline"
               size="sm"
-              className="h-7 w-7 shrink-0 rounded-full p-0"
+              className="h-11 min-h-11 w-11 min-w-[44px] shrink-0 rounded-full p-0"
               aria-label="데이터 수집 상태 로딩 중"
               disabled
             >
@@ -3752,7 +3757,7 @@ function AdminDashboardManagementSkeleton() {
             type="button"
             variant="outline"
             size="sm"
-            className="order-3 h-7 shrink-0 gap-1 rounded-full px-2 text-[11px] font-bold text-muted-foreground md:hidden"
+            className="order-3 h-11 min-h-11 min-w-[44px] shrink-0 gap-1 rounded-full px-2 text-[11px] font-bold text-muted-foreground md:hidden"
             aria-label="대시보드 타임프레임 로딩 중: 1개월"
             disabled
           >
@@ -3769,7 +3774,8 @@ function AdminDashboardManagementSkeleton() {
                 type="button"
                 variant={option.value === "1M" ? "default" : "outline"}
                 size="sm"
-                className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+                className="h-11 min-h-11 min-w-[44px] shrink-0 rounded-full px-2 text-[11px]"
+                style={{ minWidth: 44 }}
                 aria-pressed={option.value === "1M"}
                 disabled
               >
@@ -4050,6 +4056,7 @@ function AdminDashboardCardTitle({
           <div
             className="ml-auto flex max-w-[52%] min-w-0 shrink-0 items-center overflow-x-auto [scrollbar-width:none] sm:max-w-none sm:min-w-fit [&::-webkit-scrollbar]:hidden"
             data-allow-horizontal-scroll="true"
+            data-horizontal-scroll-owner="admin-dashboard-card-title-actions"
             data-admin-dashboard-card-title-actions="single-line-scroll"
           >
             {action}
@@ -4211,6 +4218,7 @@ function AdminDashboardKpiCard({
           <div
             className="flex max-w-[56%] min-w-0 shrink-0 items-center justify-end gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             data-allow-horizontal-scroll="true"
+            data-horizontal-scroll-owner="admin-dashboard-kpi-title-actions"
             data-admin-dashboard-kpi-title-actions="single-line-scroll"
           >
             {isLoading ? (
@@ -5034,7 +5042,6 @@ function AdminDashboardGroupedBarChart({
                   "flex min-w-0 overflow-x-auto overflow-y-visible rounded-xl bg-muted [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
                   isFullscreen ? "h-12 sm:h-14" : "h-9",
                 )}
-                aria-hidden="true"
               >
                 {visibleRows.map((row, index) => {
                   const value = row[metric.key];
@@ -5437,7 +5444,8 @@ function AdminDashboardPdfReportButton({ onExport }: { onExport: () => void }) {
       type="button"
       variant="outline"
       size="sm"
-      className="h-7 shrink-0 gap-1 rounded-full px-2 text-[11px] font-bold text-muted-foreground hover:text-foreground"
+      className="h-11 min-h-11 min-w-[44px] shrink-0 gap-1 rounded-full px-2 text-[11px] font-bold text-muted-foreground hover:text-foreground"
+      style={{ minWidth: 44 }}
       aria-label="KPI 대시보드를 PDF 보고서로 내보내기"
       data-admin-dashboard-kpi-pdf-export-trigger="true"
       onClick={onExport}
@@ -5476,7 +5484,8 @@ function AdminDashboardPeriodSelector({
               type="button"
               variant={isSelected ? "default" : "outline"}
               size="sm"
-              className="h-7 shrink-0 rounded-full px-2 text-[11px] font-bold"
+              className="h-11 min-h-11 min-w-[44px] shrink-0 rounded-full px-2 text-[11px] font-bold"
+              style={{ minWidth: 44 }}
               aria-pressed={isSelected}
               data-admin-dashboard-period-option={option.value}
               onClick={() => onChange(option.value)}
@@ -5492,7 +5501,7 @@ function AdminDashboardPeriodSelector({
             type="button"
             variant="outline"
             size="sm"
-            className="order-3 h-7 shrink-0 gap-1 rounded-full px-2 text-[11px] font-bold text-muted-foreground hover:text-foreground md:hidden"
+            className="order-3 h-11 min-h-11 min-w-[44px] shrink-0 gap-1 rounded-full px-2 text-[11px] font-bold text-muted-foreground hover:text-foreground md:hidden"
             aria-label={`대시보드 타임프레임 설정: ${selectedOption.label}`}
             data-admin-dashboard-period-select-trigger="true"
           >
@@ -5526,7 +5535,8 @@ function AdminDashboardPeriodSelector({
                   type="button"
                   variant={isSelected ? "default" : "ghost"}
                   size="sm"
-                  className="h-8 rounded-xl px-2 text-[11px] font-bold"
+                  className="h-11 min-h-11 min-w-[44px] rounded-xl px-2 text-[11px] font-bold"
+                  style={{ minWidth: 44 }}
                   aria-pressed={isSelected}
                   data-admin-dashboard-period-option={option.value}
                   onClick={() => onChange(option.value)}
@@ -5592,7 +5602,7 @@ function AdminDashboardCollectionLogPopover({
           variant="outline"
           size="sm"
           className={cn(
-            "h-7 w-7 shrink-0 rounded-full p-0 text-muted-foreground hover:text-foreground",
+            "h-11 min-h-11 w-11 min-w-[44px] shrink-0 rounded-full p-0 text-muted-foreground hover:text-foreground",
             isError && "border-destructive/30 text-destructive",
           )}
           aria-label="GitHub Actions KPI 데이터 수집 로그 열기"
@@ -5621,7 +5631,7 @@ function AdminDashboardCollectionLogPopover({
             type="button"
             variant="ghost"
             size="sm"
-            className="h-7 shrink-0 rounded-full px-2 text-[11px] font-bold"
+            className="h-11 min-h-11 min-w-[44px] shrink-0 rounded-full px-2 text-[11px] font-bold"
             disabled={isFetching}
             onClick={onRefresh}
           >
@@ -5744,7 +5754,7 @@ function AdminDashboardCollectionLogPopover({
                         href={latestRun.htmlUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        className="inline-flex h-11 min-h-11 w-11 min-w-[44px] items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                         aria-label="GitHub Actions 실행 로그 새 탭에서 열기"
                       >
                         <ExternalLink
@@ -7058,7 +7068,7 @@ function AdminDashboardManagementPanel({
       ),
     );
     return {
-      title: "Tzuyang KPI Dashboard Report",
+      title: "쯔양 KPI 대시보드 보고서",
       logoUrl: "/logo.webp",
       periodLabel: selectedPeriodLabel,
       basisLabel: dashboardViewMetricLabel,
@@ -7140,13 +7150,14 @@ function AdminDashboardManagementPanel({
       className="flex h-full min-h-0 min-w-0 flex-col overflow-visible bg-background p-0 font-sans text-foreground lg:min-h-0 lg:overflow-visible"
       aria-label="관리자 대시보드 (KPI)"
       data-admin-dashboard-management="true"
+      data-layout-recipe="command-surface"
       data-admin-dashboard-realtime-charts="true"
       data-admin-dashboard-channel-kpi="true"
     >
       <div className="mb-2 flex shrink-0 flex-col gap-2 md:flex-row md:items-start md:justify-between">
         <div className="hidden min-w-0 md:block">
           <h1 className="text-xl font-extrabold leading-tight tracking-[0.01em] text-foreground text-balance">
-            Tzuyang KPI Dashboard
+            쯔양 KPI 대시보드
           </h1>
         </div>
         <div
@@ -7154,6 +7165,7 @@ function AdminDashboardManagementPanel({
           data-admin-dashboard-action-bar="true"
           data-admin-dashboard-action-order="order-reset-report-collection-period"
           data-allow-horizontal-scroll="true"
+          data-horizontal-scroll-owner="admin-dashboard-action-bar"
         >
           <div
             className="order-1 flex shrink-0 items-center justify-end gap-1"
@@ -7163,7 +7175,7 @@ function AdminDashboardManagementPanel({
               type="button"
               variant={isDashboardOrderEditorOpen ? "default" : "outline"}
               size="sm"
-              className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+              className="h-11 min-h-11 min-w-[44px] shrink-0 rounded-full px-2 text-[11px]"
               aria-label="KPI 카드 직접 드래그 순서 설정"
               aria-pressed={isDashboardOrderEditorOpen}
               disabled={isDashboardOrderLoading}
@@ -7184,7 +7196,7 @@ function AdminDashboardManagementPanel({
               type="button"
               variant="outline"
               size="sm"
-              className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+              className="h-11 min-h-11 min-w-[44px] shrink-0 rounded-full px-2 text-[11px]"
               disabled={
                 isDashboardOrderLoading ||
                 isDashboardOrderSaving ||
@@ -8583,7 +8595,7 @@ function AdminSidebar({
         >
           <Link
             href="/"
-            className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-background text-foreground"
+            className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-background text-foreground"
             aria-label="쯔동여지도 홈으로 이동"
           >
             <Image
@@ -8609,7 +8621,7 @@ function AdminSidebar({
               type="button"
               variant="ghost"
               size="sm"
-              className="h-10 w-10 shrink-0 rounded-lg bg-transparent p-0 shadow-none hover:bg-muted/70 focus-visible:ring-primary focus-visible:ring-offset-background"
+              className="h-11 w-11 shrink-0 rounded-lg bg-transparent p-0 shadow-none hover:bg-muted/70 focus-visible:ring-primary focus-visible:ring-offset-background"
               aria-label="관리자 메뉴 열기"
               aria-expanded={isAdminMenuOpen}
               aria-controls="admin-console-menu-dropdown"
