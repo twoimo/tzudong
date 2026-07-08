@@ -4,6 +4,8 @@ import { cn } from '@/lib/utils';
 
 const baseNoticeClass =
     'z-10 flex min-h-9 w-fit max-w-[calc(100vw-2rem)] items-center justify-center rounded-2xl bg-card/95 px-3 py-2 text-sm font-medium leading-5 text-foreground shadow-sm backdrop-blur-sm sm:max-w-[26rem] sm:rounded-full';
+export const MAP_OVERLAY_TOAST_CLASS_NAME =
+    'pointer-events-auto relative flex w-[min(360px,calc(100vw-1.5rem))] max-w-[min(360px,calc(100vw-1.5rem))] items-start justify-start rounded-lg border border-border bg-background p-3 text-left text-sm font-medium leading-5 text-foreground shadow-lg backdrop-blur-sm sm:w-max sm:max-w-[min(42rem,calc(100vw-2rem))]';
 
 const noticeContentClass = 'grid max-w-full min-w-0 grid-cols-[1.25rem_max-content] items-center gap-1.5 pr-1';
 const noticeIconClass = 'flex h-5 w-5 shrink-0 items-center justify-center text-[15px] leading-none';

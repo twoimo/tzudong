@@ -288,6 +288,9 @@ describe("mobile and desktop parity source contracts", () => {
     const homeDesktopControlPanelSource = source(
       "components/home/home-desktop-control-panel.tsx",
     );
+    const themeFilterIconSource = source(
+      "components/home/home-map-theme-filter-icons.tsx",
+    );
     const homeAppGlobalsSource = source("app/home-app-globals.css");
     const floatingNavSource = source(
       "components/layout/FloatingNavButtons.tsx",
@@ -309,7 +312,7 @@ describe("mobile and desktop parity source contracts", () => {
     expect(mobileOverlaySource).toContain('aria-label="맛집 검색 열기"');
     expect(mobileOverlaySource).toContain("aria-pressed={isSelected}");
     expect(mobileOverlaySource).toContain(
-      "pointer-events-auto h-9 shrink-0 rounded-full",
+      "pointer-events-auto inline-flex h-9 snap-start shrink-0 items-center gap-1 rounded-full",
     );
     expect(mobileOverlaySource).toContain("text-xs font-medium");
     expect(mobileOverlaySource).toContain(
@@ -319,6 +322,7 @@ describe("mobile and desktop parity source contracts", () => {
       "w-[clamp(84px,28vw,105px)] h-9 px-2",
     );
     expect(mobileOverlaySource).toContain("data-mobile-topic-slider");
+    expect(mobileOverlaySource).toContain("<HomeMapThemeFilterIcon themeId={theme.id} />");
     expect(mobileOverlaySource).toContain("카테고리 필터 열기");
     expect(mobileOverlaySource).toContain("aria-expanded={activeSheet ===");
     expect(mobileOverlaySource).toContain('role="dialog"');
@@ -503,7 +507,7 @@ describe("mobile and desktop parity source contracts", () => {
       'data-desktop-map-mode-toggle="true"',
     );
     expect(homeDesktopControlPanelSource).toContain(
-      'className="fixed top-4 z-[70] max-w-[calc(100vw-2rem)]"',
+      'className="fixed right-4 top-4 z-[70] min-w-0"',
     );
     expect(homeDesktopControlPanelSource).toContain(
       'data-desktop-map-theme-filters="true"',
@@ -533,6 +537,12 @@ describe("mobile and desktop parity source contracts", () => {
       "flex w-[var(--desktop-map-floating-filter-width)] items-center gap-0.5 rounded-full",
     );
     expect(homeDesktopControlPanelSource).toContain("HOME_MAP_THEME_FILTERS.map");
+    expect(homeDesktopControlPanelSource).toContain("<HomeMapThemeFilterIcon themeId={theme.id} />");
+    expect(themeFilterIconSource).toContain('"hot-view": TrendingUp');
+    expect(themeFilterIconSource).toContain('"comment-hot": MessageCircle');
+    expect(themeFilterIconSource).toContain('"fresh-video": Clock3');
+    expect(themeFilterIconSource).toContain('"repeat-video": Repeat2');
+    expect(themeFilterIconSource).toContain('"fan-signal": Sparkles');
     expect(homeDesktopControlPanelSource).toContain("!w-full !min-w-max");
     expect(homeDesktopControlPanelSource).toContain("국내 맛집 지도 보기");
     expect(homeDesktopControlPanelSource).toContain("해외 맛집 지도 보기");
