@@ -125,13 +125,13 @@ const loadMobileNotificationMenuButton = async () => {
 };
 
 const mobileTopIconButtonClass = cn(
-    'h-11 w-11 rounded-full border border-border bg-background',
+    'h-9 w-9 rounded-full border border-border bg-background',
     'hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary touch-manipulation'
 );
 
 const mobileTopIconButtonWithBadgeClass = cn(mobileTopIconButtonClass, 'relative');
 const mobileTopIconGlyphClass = 'h-[18px] w-[18px]';
-const mobileTopUserIconGlyphClass = 'h-5 w-5';
+
 const mobileUserMenuContentClass = 'w-max max-w-[calc(100vw-1rem)] bg-card border-border font-sans z-[110]';
 const mobileUserMenuItemClass = 'text-foreground hover:bg-accent py-1.5 whitespace-nowrap';
 
@@ -174,6 +174,7 @@ interface MobileControlOverlayProps {
     isPanelOpen?: boolean;
     contextualRestaurantsPayload?: HomeMapContextualRestaurantsPayload | null;
     isMapFullscreen?: boolean;
+    mapInteractionEpoch?: number;
     isAdmin?: boolean;
     onModeChange?: (mode: 'domestic' | 'overseas') => void;
     user?: User | null;
@@ -229,6 +230,7 @@ function MobileControlOverlayComponent({
     isPanelOpen = false,
     contextualRestaurantsPayload = null,
     isMapFullscreen = false,
+    mapInteractionEpoch = 0,
     isAdmin = false,
     onModeChange,
     user,
@@ -272,6 +274,9 @@ function MobileControlOverlayComponent({
     });
     const [visibleMarkerThumbnailIndexes, setVisibleMarkerThumbnailIndexes] =
         useState<Record<string, number>>({});
+    const [visibleMarkerSheetHeightRequestKey, setVisibleMarkerSheetHeightRequestKey] =
+        useState(0);
+    const lastMapInteractionEpochRef = useRef(mapInteractionEpoch);
     const [isBusinessInfoExpanded, setIsBusinessInfoExpanded] = useState(false);
     const isBookmarkMenuOpen = openTopDropdown === 'bookmark';
     const isNotificationMenuOpen = openTopDropdown === 'notification';
@@ -354,8 +359,14 @@ function MobileControlOverlayComponent({
         dismissedVisibleMarkerSheetScopeRef.current = visibleMarkerSheetDismissScope;
         setActiveSheet('none');
     }, [visibleMarkerSheetDismissScope]);
+    useEffect(() => {
+        if (lastMapInteractionEpochRef.current === mapInteractionEpoch) return;
 
+        lastMapInteractionEpochRef.current = mapInteractionEpoch;
+        if (activeSheet !== 'visibleMarkers') return;
 
+        setVisibleMarkerSheetHeightRequestKey((key) => key + 1);
+    }, [activeSheet, mapInteractionEpoch]);
     useEffect(() => {
         if (!canAutoShowVisibleMarkerSheet || activeSheet !== 'none') return;
         if (dismissedVisibleMarkerSheetScopeRef.current === visibleMarkerSheetDismissScope) return;
@@ -847,7 +858,7 @@ function MobileControlOverlayComponent({
                     className={mobileTopIconButtonClass}
                     aria-label="사용자 메뉴"
                 >
-                    <UserIcon className={mobileTopUserIconGlyphClass} aria-hidden="true" />
+                    <UserIcon className={mobileTopIconGlyphClass} aria-hidden="true" />
                 </Button>
             );
         }
@@ -861,7 +872,7 @@ function MobileControlOverlayComponent({
                         className={mobileTopIconButtonClass}
                         aria-label="사용자 메뉴"
                     >
-                        <UserIcon className={mobileTopUserIconGlyphClass} aria-hidden="true" />
+                        <UserIcon className={mobileTopIconGlyphClass} aria-hidden="true" />
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className={mobileUserMenuContentClass}>
@@ -988,7 +999,7 @@ function MobileControlOverlayComponent({
                                 aria-label={`${theme.ariaLabel}${isSelected ? ' 선택됨' : ''}`}
                                 title={`${theme.label}: ${theme.description}`}
                                 className={cn(
-                                    'pointer-events-auto inline-flex h-11 min-h-11 snap-start shrink-0 items-center gap-1 rounded-full shadow-sm border border-border bg-background/95 backdrop-blur-sm',
+                                    'pointer-events-auto inline-flex h-9 snap-start shrink-0 items-center gap-1 rounded-full shadow-sm border border-border bg-background/95 backdrop-blur-sm',
                                     'px-2.5 text-xs font-semibold transition-colors motion-reduce:transition-none hover:bg-secondary/80',
                                     'focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
                                     isSelected
@@ -1019,7 +1030,7 @@ function MobileControlOverlayComponent({
                             onClick={() => onModeChange('domestic')}
                             aria-pressed={mapMode === 'domestic'}
                             aria-label="국내 맛집 지도 보기"
-                            className={`rounded-full h-11 min-h-11 px-2 text-xs font-medium transition-colors motion-reduce:transition-none flex-1 ${mapMode === 'domestic'
+                            className={`rounded-full h-9 px-2 text-xs font-medium transition-colors motion-reduce:transition-none flex-1 ${mapMode === 'domestic'
                                 ? 'bg-primary text-primary-foreground shadow-sm'
                                 : 'text-muted-foreground hover:text-foreground hover:bg-transparent'
                                 }`}
@@ -1032,7 +1043,7 @@ function MobileControlOverlayComponent({
                             onClick={() => onModeChange('overseas')}
                             aria-pressed={mapMode === 'overseas'}
                             aria-label="해외 맛집 지도 보기"
-                            className={`rounded-full h-11 min-h-11 px-2 text-xs font-medium transition-colors motion-reduce:transition-none flex-1 ${mapMode === 'overseas'
+                            className={`rounded-full h-9 px-2 text-xs font-medium transition-colors motion-reduce:transition-none flex-1 ${mapMode === 'overseas'
                                 ? 'bg-primary text-primary-foreground shadow-sm'
                                 : 'text-muted-foreground hover:text-foreground hover:bg-transparent'
                                 }`}
@@ -1051,7 +1062,7 @@ function MobileControlOverlayComponent({
                     aria-label={`${mapMode === 'domestic' ? '지역' : '국가'} 선택 열기: ${regionLabel}`}
                     className={cn(
                         'rounded-full shadow-lg bg-background/95 backdrop-blur-sm border border-border',
-                        'hover:bg-secondary/80 w-[clamp(84px,28vw,105px)] h-11 min-h-11 px-2',
+                        'hover:bg-secondary/80 w-[clamp(84px,28vw,105px)] h-9 px-2',
                         activeSheet === 'region' && 'ring-2 ring-primary'
                     )}
                 >
@@ -1072,7 +1083,7 @@ function MobileControlOverlayComponent({
                     aria-label={`카테고리 필터 열기${selectedCategories.length > 0 ? `: ${selectedCategories.length}개 선택됨` : ''}`}
                     className={cn(
                         'rounded-full shadow-lg bg-background/95 backdrop-blur-sm border border-border',
-                        'hover:bg-secondary/80 w-[clamp(84px,28vw,105px)] h-11 min-h-11 px-2',
+                        'hover:bg-secondary/80 w-[clamp(84px,28vw,105px)] h-9 px-2',
                         activeSheet === 'category' && 'ring-2 ring-primary'
                     )}
                 >
@@ -1311,6 +1322,11 @@ function MobileControlOverlayComponent({
                     showBackdrop={false}
                     closeOnOutsidePointerDown={activeSheet !== 'visibleMarkers'}
                     layoutSource="mobile-control-overlay-sheet"
+                    heightRequest={
+                        activeSheet === 'visibleMarkers' && visibleMarkerSheetHeightRequestKey > 0
+                            ? { key: visibleMarkerSheetHeightRequestKey, height: VISIBLE_MARKER_SHEET_HEIGHT, mode: 'exact' }
+                            : undefined
+                    }
                     className="z-[95]"
                 >
                     {activeSheet !== 'visibleMarkers' ? (
