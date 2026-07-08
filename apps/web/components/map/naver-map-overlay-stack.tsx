@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 
-import { MapOverlayNotice } from '@/components/map/map-overlay-notice';
+import { MAP_OVERLAY_TOAST_CLASS_NAME, MapOverlayNotice } from '@/components/map/map-overlay-notice';
 import {
     AnnouncementToastBadge,
     EmptyStateIndicator,
@@ -90,7 +90,7 @@ export function NaverMapOverlayStack({
 
             {mapToast && mapToast.isVisible && (
                 <MapOverlayNotice
-                    className={`${floatingToastPositionClass} rounded-lg border border-border shadow-lg animate-in fade-in zoom-in duration-300 motion-reduce:animate-none`}
+                    className={`${MAP_OVERLAY_TOAST_CLASS_NAME} ${floatingToastPositionClass} animate-in fade-in slide-in-from-bottom-2 duration-200 motion-reduce:animate-none`}
                     role={mapToast.type === 'error' ? 'alert' : 'status'}
                     ariaLive={mapToast.type === 'error' ? 'assertive' : 'polite'}
                 >

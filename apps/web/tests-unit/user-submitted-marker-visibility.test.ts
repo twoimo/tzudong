@@ -49,7 +49,7 @@ describe('user-submitted marker visibility contract', () => {
     const floatingButton = readSource('components/home/SubmissionFloatingButton.tsx');
 
     expect(homeClient).toContain('const [showUserSubmittedMarkers, setShowUserSubmittedMarkers] = useState(true);');
-    expect(homeClient).toContain('toast.info(next ? "사용자 제보 맛집 마커를 표시해요" : "사용자 제보 맛집 마커를 숨겼어요");');
+    expect(homeClient).toContain('title: next ? "사용자 제보 맛집 마커 표시" : "사용자 제보 맛집 마커 숨김",');
     expect(homeClient).toContain('showUserSubmittedMarkers={showUserSubmittedMarkers}');
     expect(homeClient).toContain('onUserSubmittedMarkersToggle={handleUserSubmittedMarkerToggle}');
 

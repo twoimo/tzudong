@@ -695,7 +695,12 @@ export default function HomeClient() {
   const handleUserSubmittedMarkerToggle = useCallback(() => {
     setShowUserSubmittedMarkers((current) => {
       const next = !current;
-      toast.info(next ? "사용자 제보 맛집 마커를 표시해요" : "사용자 제보 맛집 마커를 숨겼어요");
+      toast.info({
+        title: next ? "사용자 제보 맛집 마커 표시" : "사용자 제보 맛집 마커 숨김",
+        description: next
+          ? "지도에서 사용자 제보 맛집을 다시 보여줘요."
+          : "지도에서 사용자 제보 맛집을 잠시 숨겼어요.",
+      });
       return next;
     });
   }, []);

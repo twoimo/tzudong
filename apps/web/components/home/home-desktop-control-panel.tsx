@@ -57,6 +57,7 @@ import {
   HOME_MAP_THEME_FILTERS,
   type HomeMapThemeFilterId,
 } from "@/lib/home-map-theme-filters";
+import { HomeMapThemeFilterIcon } from "@/components/home/home-map-theme-filter-icons";
 import type { User } from "@supabase/supabase-js";
 import {
   Bell,
@@ -1466,19 +1467,26 @@ export default function HomeDesktopControlPanel({
         : "1rem",
     "--desktop-map-floating-filter-width": DESKTOP_MAP_FLOATING_FILTER_WIDTH,
   } as CSSProperties;
+  const desktopMapThemeFilterStyle = {
+    ...desktopMapFloatingControlStyle,
+    right:
+      !isPanelCollapsed && desktopPanelSide === "right"
+        ? `calc(min(${DESKTOP_LEFT_PANEL_WIDTH_PX}px, calc(100vw - 32px)) + 1rem)`
+        : "1rem",
+  } as CSSProperties;
 
   return (
     <>
       {!hasActiveDetail && (
         <>
           <div
-            className="fixed top-4 z-[70] max-w-[calc(100vw-2rem)]"
-            style={desktopMapFloatingControlStyle}
+            className="fixed right-4 top-4 z-[70] min-w-0"
+            style={desktopMapThemeFilterStyle}
             data-desktop-map-theme-filters="true"
             onMouseDownCapture={handlePanelMouseDownCapture}
             onFocusCapture={handlePanelFocusCapture}
           >
-            <div className="flex w-max max-w-[calc(100vw-2rem)] items-center gap-2 overflow-x-auto scrollbar-hide [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="flex min-w-0 max-w-full items-center gap-2 overflow-x-auto rounded-full p-0.5 scrollbar-hide [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {HOME_MAP_THEME_FILTERS.map((theme) => {
                 const isSelected = selectedTheme === theme.id;
                 return (
@@ -1489,16 +1497,19 @@ export default function HomeDesktopControlPanel({
                     type="button"
                     onClick={() => onThemeChange(isSelected ? null : theme.id)}
                     aria-pressed={isSelected}
-                    aria-label={theme.ariaLabel}
+                    aria-label={`${theme.ariaLabel}${isSelected ? " 선택됨" : ""}`}
                     title={`${theme.label}: ${theme.description}`}
                     className={cn(
-                      "h-9 shrink-0 rounded-full border px-3 text-xs font-semibold shadow-lg backdrop-blur-sm transition-colors motion-reduce:transition-none",
+                      "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold shadow-lg backdrop-blur-sm transition-colors motion-reduce:transition-none",
+                      "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
                       isSelected
                         ? "border-primary bg-primary text-primary-foreground"
                         : "border-border bg-background/95 text-foreground hover:bg-secondary/80",
                     )}
                   >
-                    {theme.label}
+                    <HomeMapThemeFilterIcon themeId={theme.id} />
+                    <span className="sm:hidden">{theme.shortLabel}</span>
+                    <span className="hidden sm:inline">{theme.label}</span>
                   </Button>
                 );
               })}
