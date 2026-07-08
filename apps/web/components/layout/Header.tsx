@@ -584,7 +584,11 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
               {isAdmin && (
                 <>
                   <DropdownMenuSeparator className="bg-border my-1" />
-                  <DropdownMenuItem onClick={() => router.push('/admin')} className="text-foreground hover:bg-accent focus:bg-accent py-2 touch-manipulation">
+                  <DropdownMenuItem
+                    onSelect={() => router.push('/admin')}
+                    data-admin-console-menu-item="true"
+                    className="text-foreground hover:bg-accent focus:bg-accent py-2 touch-manipulation"
+                  >
                     <PanelLeft className="mr-2 h-4 w-4" />
                     관리자 콘솔
                   </DropdownMenuItem>

@@ -68,6 +68,7 @@ const CATEGORIES = [
     "카페·디저트", "찜·탕", "야식", "도시락"
 ];
 const MIN_SHEET_HEIGHT = 25;
+const VISIBLE_MARKER_SHEET_HEIGHT = 25;
 const HALF_SHEET_HEIGHT = 50;
 const MAX_SHEET_HEIGHT = 100;
 const MOBILE_SEARCH_FOCUSABLE_SELECTOR = [
@@ -310,8 +311,19 @@ function MobileControlOverlayComponent({
         () => `${visibleMarkerRestaurantCount}:${visibleMarkerRestaurants.map((restaurant) => restaurant.id).join('|')}`,
         [visibleMarkerRestaurantCount, visibleMarkerRestaurants],
     );
+    const visibleMarkerSheetDismissScope = useMemo(
+        () =>
+            [
+                mapMode,
+                selectedRegion ?? '',
+                selectedCountry ?? '',
+                filters.featuredTheme ?? '',
+                [...selectedCategories].sort().join(','),
+            ].join('|'),
+        [filters.featuredTheme, mapMode, selectedCategories, selectedCountry, selectedRegion],
+    );
     const visibleMarkerRestaurantsSignatureRef = useRef(visibleMarkerRestaurantsSignature);
-    const dismissedVisibleMarkerRestaurantsSignatureRef = useRef<string | null>(null);
+    const dismissedVisibleMarkerSheetScopeRef = useRef<string | null>(null);
     const canAutoShowVisibleMarkerSheet =
         mapMode === 'domestic' &&
         !isMapFullscreen &&
@@ -326,8 +338,8 @@ function MobileControlOverlayComponent({
     const handleVisibleMarkerRestaurantSelect = useCallback((restaurant: Restaurant) => {
         incrementSearchCount(restaurant.id).catch(() => {});
         setActiveSheet('none');
-        onRestaurantSearch(restaurant);
-    }, [onRestaurantSearch]);
+        onRestaurantSelect(restaurant);
+    }, [onRestaurantSelect]);
 
     const handleVisibleMarkerThumbnailChange = useCallback(
         (id: string, index: number) => {
@@ -340,9 +352,9 @@ function MobileControlOverlayComponent({
     );
 
     const handleVisibleMarkerSheetClose = useCallback(() => {
-        dismissedVisibleMarkerRestaurantsSignatureRef.current = visibleMarkerRestaurantsSignature;
+        dismissedVisibleMarkerSheetScopeRef.current = visibleMarkerSheetDismissScope;
         setActiveSheet('none');
-    }, [visibleMarkerRestaurantsSignature]);
+    }, [visibleMarkerSheetDismissScope]);
 
     const requestVisibleMarkerSheetPeek = useCallback(() => {
         setVisibleMarkerSheetHeightRequestKey((current) => current + 1);
@@ -350,11 +362,16 @@ function MobileControlOverlayComponent({
 
     useEffect(() => {
         if (!canAutoShowVisibleMarkerSheet || activeSheet !== 'none') return;
-        if (dismissedVisibleMarkerRestaurantsSignatureRef.current === visibleMarkerRestaurantsSignature) return;
+        if (dismissedVisibleMarkerSheetScopeRef.current === visibleMarkerSheetDismissScope) return;
         setVisibleMarkerSheetHeightRequestKey(0);
         visibleMarkerRestaurantsSignatureRef.current = visibleMarkerRestaurantsSignature;
         setActiveSheet('visibleMarkers');
-    }, [activeSheet, canAutoShowVisibleMarkerSheet, visibleMarkerRestaurantsSignature]);
+    }, [
+        activeSheet,
+        canAutoShowVisibleMarkerSheet,
+        visibleMarkerRestaurantsSignature,
+        visibleMarkerSheetDismissScope,
+    ]);
 
     useEffect(() => {
         if (activeSheet !== 'visibleMarkers') return;
@@ -886,7 +903,11 @@ function MobileControlOverlayComponent({
                     {isAdmin && (
                         <>
                             <DropdownMenuSeparator className="bg-border my-1" />
-                            <DropdownMenuItem onClick={handleAdminConsoleClick} className={mobileUserMenuItemClass}>
+                            <DropdownMenuItem
+                                onSelect={handleAdminConsoleClick}
+                                data-admin-console-menu-item="true"
+                                className={mobileUserMenuItemClass}
+                            >
                                 <PanelLeft className="mr-2 h-4 w-4" />
                                 관리자 콘솔
                             </DropdownMenuItem>
@@ -1298,8 +1319,12 @@ function MobileControlOverlayComponent({
                 <BottomSheet
                     isOpen
                     onClose={handleBottomSheetClose}
-                    defaultHeight={HALF_SHEET_HEIGHT}
-                    minHeight={activeSheet === 'visibleMarkers' ? HALF_SHEET_HEIGHT : MIN_SHEET_HEIGHT}
+                    defaultHeight={
+                        activeSheet === 'visibleMarkers' ? VISIBLE_MARKER_SHEET_HEIGHT : HALF_SHEET_HEIGHT
+                    }
+                    minHeight={
+                        activeSheet === 'visibleMarkers' ? VISIBLE_MARKER_SHEET_HEIGHT : MIN_SHEET_HEIGHT
+                    }
                     maxHeight={MAX_SHEET_HEIGHT}
                     enablePeek
                     hideBottomNavWhenOpen
@@ -1309,10 +1334,10 @@ function MobileControlOverlayComponent({
                     closeOnOutsidePointerDown={activeSheet !== 'visibleMarkers'}
                     layoutSource="mobile-control-overlay-sheet"
                     heightRequest={
-                        activeSheet === 'visibleMarkers' && visibleMarkerSheetHeightRequestKey > 0
+                        activeSheet === 'visibleMarkers'
                             ? {
                                 key: visibleMarkerSheetHeightRequestKey,
-                                height: HALF_SHEET_HEIGHT,
+                                height: VISIBLE_MARKER_SHEET_HEIGHT,
                                 mode: 'exact',
                             }
                             : undefined
