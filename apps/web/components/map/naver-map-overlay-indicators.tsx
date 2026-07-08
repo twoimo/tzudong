@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import type { CSSProperties } from 'react';
 
-import { MapOverlayNotice, MapOverlayNoticeButton } from '@/components/map/map-overlay-notice';
+import { MAP_OVERLAY_TOAST_CLASS_NAME, MapOverlayNotice, MapOverlayNoticeButton } from '@/components/map/map-overlay-notice';
 
 export const MapLoadingIndicator = memo(({
     isLoaded,
@@ -61,7 +61,7 @@ export const AnnouncementToastBadge = memo(({ title, style, className, onClick }
 AnnouncementToastBadge.displayName = 'AnnouncementToastBadge';
 
 export const EmptyStateIndicator = memo(({ message = '이 지역에 등록된 맛집이 없습니다' }: { message?: string }) => (
-    <MapOverlayNotice className="rounded-lg border border-border/60 px-4 py-3 text-muted-foreground shadow-lg">
+    <MapOverlayNotice className={`${MAP_OVERLAY_TOAST_CLASS_NAME} animate-in fade-in slide-in-from-bottom-2 duration-200 motion-reduce:animate-none`}>
         {message}
     </MapOverlayNotice>
 ));
