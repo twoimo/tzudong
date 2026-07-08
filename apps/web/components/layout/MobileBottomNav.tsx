@@ -2,7 +2,7 @@
 
 import { memo, useCallback, useMemo, useRef, useEffect, useTransition, type CSSProperties } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, MessageSquareText, Stamp, Trophy, User } from 'lucide-react';
+import { Home, MessageSquareText, PlusCircle, Stamp, Trophy, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContextBase';
 import { AUTH_NAV_ROUTES } from '@/components/layout/navigation-routes';
@@ -13,17 +13,33 @@ interface NavItem {
     icon: typeof Home;
     label: string;
     path: string;
+    requiresAuth?: boolean;
+    testId: string;
 }
 
 // [OPTIMIZATION] 상수를 컴포넌트 외부로 이동하여 재생성 방지
 const NAV_ITEMS: NavItem[] = [
-    { icon: Home, label: '홈', path: '/' },
-    { icon: MessageSquareText, label: '리뷰', path: '/feed' },
-    { icon: Stamp, label: '도장', path: '/stamp' },
-    { icon: Trophy, label: '랭킹', path: '/leaderboard' },
-    { icon: User, label: 'MY', path: '/mypage/profile' },
+    { icon: Home, label: '홈', path: '/', testId: 'home' },
+    { icon: MessageSquareText, label: '리뷰', path: '/feed', testId: 'feed' },
+    { icon: PlusCircle, label: '제보', path: '/mypage/submissions/new', testId: 'submissions', requiresAuth: true },
+    { icon: Stamp, label: '도장', path: '/stamp', testId: 'stamp' },
+    { icon: Trophy, label: '랭킹', path: '/leaderboard', testId: 'leaderboard' },
+    { icon: User, label: 'MY', path: '/mypage/profile', testId: 'my', requiresAuth: true },
 ];
 const MYPAGE_SUB_ROUTES = AUTH_NAV_ROUTES.filter((route) => route !== '/mypage/profile');
+const isAuthNavRoute = (path: string) => AUTH_NAV_ROUTES.some((route) => route === path);
+const isProtectedNavItem = (item: NavItem) => item.requiresAuth === true || isAuthNavRoute(item.path);
+const isMobileNavItemActive = (pathname: string | null, item: NavItem) => {
+    if (item.path === '/') return pathname === '/';
+    if (item.path === '/mypage/submissions/new') {
+        return pathname?.startsWith('/mypage/submissions') === true;
+    }
+    if (item.path === '/mypage/profile') {
+        return pathname?.startsWith('/mypage') === true && pathname?.startsWith('/mypage/submissions') !== true;
+    }
+
+    return pathname === item.path;
+};
 type IdleCallbackHandle = number;
 const HOME_NAV_PREFETCH_IDLE_TIMEOUT_MS = 2500;
 const MOBILE_BOTTOM_NAV_BUTTON_STYLE: CSSProperties = {
@@ -94,28 +110,32 @@ function MobileBottomNavComponent({ className, style }: MobileBottomNavProps) {
         prefetchNavigationTargets();
     }, [pathname, prefetchRoute, user?.id]);
 
-    const handleNavIntent = useCallback((path: string, isActive: boolean) => {
+    const handleNavIntent = useCallback((item: NavItem, isActive: boolean) => {
         if (isActive) {
             return;
         }
 
-        prefetchRoute(path);
+        prefetchRoute(item.path);
 
-        if (path === '/mypage/profile' && user?.id) {
+        if (isProtectedNavItem(item) && user?.id) {
             MYPAGE_SUB_ROUTES.forEach((subPath) => prefetchRoute(subPath));
         }
     }, [prefetchRoute, user?.id]);
 
     // [OPTIMIZATION] startTransition으로 UI 블로킹 방지
-    const handleNavClick = useCallback((path: string) => {
-        if (path === '/mypage/profile' && !user?.id) {
-            requestAuthUi({ source: 'mobile-bottom-nav-my', route: pathname ?? undefined, reason: 'mypage' });
+    const handleNavClick = useCallback((item: NavItem) => {
+        if (isProtectedNavItem(item) && !user?.id) {
+            requestAuthUi({
+                source: item.path === '/mypage/submissions/new' ? 'mobile-bottom-nav-submissions' : 'mobile-bottom-nav-my',
+                route: pathname ?? undefined,
+                reason: item.path === '/mypage/submissions/new' ? 'submissions' : 'mypage',
+            });
             return;
         }
 
-        prefetchRoute(path);
+        prefetchRoute(item.path);
         startTransition(() => {
-            router.push(path);
+            router.push(item.path);
         });
     }, [pathname, prefetchRoute, router, startTransition, user?.id]);
 
@@ -123,8 +143,7 @@ function MobileBottomNavComponent({ className, style }: MobileBottomNavProps) {
     const activeStates = useMemo(() => {
         return NAV_ITEMS.map(item => ({
             path: item.path,
-            isActive: pathname === item.path ||
-                (item.path === '/mypage/profile' && pathname?.startsWith('/mypage') === true)
+            isActive: isMobileNavItemActive(pathname, item),
         }));
     }, [pathname]);
 
@@ -182,14 +201,14 @@ function MobileBottomNavComponent({ className, style }: MobileBottomNavProps) {
                 return (
                     <button
                         key={item.path}
-                        data-testid={`bottom-nav-${item.path === '/' ? 'home' : item.path.replace('/', '').replace('/profile', '')}`}
+                        data-testid={`bottom-nav-${item.testId}`}
                         type="button"
                         aria-label={`${item.label} 페이지로 이동`}
                         aria-current={isActive ? 'page' : undefined}
-                        onClick={() => handleNavClick(item.path)}
-                        onTouchStart={() => handleNavIntent(item.path, isActive)}
-                        onMouseEnter={() => handleNavIntent(item.path, isActive)}
-                        onFocus={() => handleNavIntent(item.path, isActive)}
+                        onClick={() => handleNavClick(item)}
+                        onTouchStart={() => handleNavIntent(item, isActive)}
+                        onMouseEnter={() => handleNavIntent(item, isActive)}
+                        onFocus={() => handleNavIntent(item, isActive)}
                         style={MOBILE_BOTTOM_NAV_BUTTON_STYLE}
                         className={cn(
                             'flex flex-col items-center justify-center py-2.5 px-1',
