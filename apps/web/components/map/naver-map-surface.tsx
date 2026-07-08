@@ -42,7 +42,12 @@ export function NaverMapSurface({
     showRestaurantCount: boolean;
 }) {
     return (
-        <div className={className}>
+        <div
+            className={className}
+            data-layout-primitives="overlay-stack frame"
+            data-scroll-owner="map-canvas-none"
+            data-map-layer-signature="naver-map-surface"
+        >
             <div
                 ref={mapRef}
                 data-testid={dataTestId}

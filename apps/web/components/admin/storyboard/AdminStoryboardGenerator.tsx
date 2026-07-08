@@ -3242,6 +3242,41 @@ function extractLatestStoryboardResult(
   return null;
 }
 
+function hydrateStoryboardJobResultForDisplay(
+  payload: unknown,
+  request: GeneratorForm,
+): StoryboardGenerationResult | null {
+  const directResult = extractLatestStoryboardResult(payload);
+  if (directResult) return directResult;
+
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return null;
+  }
+
+  const jobResult = payload as Record<string, unknown>;
+  const resultWithoutRequest = extractLatestStoryboardResult({
+    ...jobResult,
+    request,
+  });
+  if (resultWithoutRequest) return resultWithoutRequest;
+
+  if (
+    "result" in jobResult &&
+    jobResult.result &&
+    typeof jobResult.result === "object" &&
+    !Array.isArray(jobResult.result)
+  ) {
+    return extractLatestStoryboardResult({
+      result: {
+        ...(jobResult.result as Record<string, unknown>),
+        request,
+      },
+    });
+  }
+
+  return null;
+}
+
 function extractStoryboardHistoryRuns(payload: unknown): unknown[] {
   if (!payload || typeof payload !== "object") return [];
   const candidate = payload as { runs?: unknown };
@@ -3729,9 +3764,78 @@ function makeInitialStoryboardChatMessages(
   return [intakeMessage];
 }
 
+type StoryboardJobAcceptedResponse = {
+  ok: true;
+  mode: "async_job_control_plane";
+  job: {
+    jobId: string;
+    status: "queued" | "claimed" | "succeeded" | "failed" | "cancelled";
+    stage: string;
+    readiness?: {
+      status: string;
+      fallbackReasonCode: string | null;
+      message: string;
+    };
+    result?: unknown;
+    errorCode?: string | null;
+    createdAt?: string;
+    updatedAt?: string;
+    claimedAt?: string | null;
+    completedAt?: string | null;
+    cancelledAt?: string | null;
+  };
+  readiness?: {
+    status: string;
+    fallbackReasonCode: string | null;
+    message: string;
+  };
+  message?: string;
+};
+
+type StoryboardJobStatus = StoryboardJobAcceptedResponse["job"]["status"];
+type StoryboardJobStatusReadback = {
+  ok: true;
+  job: StoryboardJobAcceptedResponse["job"];
+  readiness?: StoryboardJobAcceptedResponse["readiness"];
+};
+type StoryboardJobStatusResponse =
+  | StoryboardJobStatusReadback
+  | {
+      ok: false;
+      error: string;
+      jobId?: string;
+    };
+
+const STORYBOARD_JOB_POLL_INTERVAL_MS = 5_000;
+
+function isTerminalStoryboardJobStatus(status: StoryboardJobStatus) {
+  return status === "succeeded" || status === "failed" || status === "cancelled";
+}
+
+function formatStoryboardJobStatusLabel(status: StoryboardJobStatus) {
+  switch (status) {
+    case "queued":
+      return "대기 중";
+    case "claimed":
+      return "워커 처리 중";
+    case "succeeded":
+      return "완료";
+    case "failed":
+      return "실패";
+    case "cancelled":
+      return "취소됨";
+  }
+}
+
+type StoryboardGenerationSubmission = StoryboardGenerationResult | StoryboardJobAcceptedResponse;
+
+function isStoryboardJobAcceptedResponse(value: StoryboardGenerationSubmission): value is StoryboardJobAcceptedResponse {
+  return "mode" in value && value.mode === "async_job_control_plane";
+}
+
 async function postStoryboardRequest(
   form: GeneratorForm,
-): Promise<StoryboardGenerationResult> {
+): Promise<StoryboardGenerationSubmission> {
   const response = await fetch("/api/admin/storyboard", {
     method: "POST",
     headers: {
@@ -3748,7 +3852,36 @@ async function postStoryboardRequest(
     throw new Error(payload?.error ?? "스토리보드를 생성하지 못했습니다.");
   }
 
-  return response.json() as Promise<StoryboardGenerationResult>;
+  return response.json() as Promise<StoryboardGenerationSubmission>;
+}
+
+async function getStoryboardJobStatus(
+  jobId: string,
+): Promise<StoryboardJobStatusReadback> {
+  const response = await fetch(
+    `/api/admin/storyboard/jobs/${encodeURIComponent(jobId)}`,
+    {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+      },
+      cache: "no-store",
+    },
+  );
+  const payload = (await response.json().catch(() => null)) as
+    | StoryboardJobStatusResponse
+    | null;
+  if (!response.ok || !payload) {
+    throw new Error(
+      payload && !payload.ok
+        ? payload.error
+        : "스토리보드 작업 상태를 불러오지 못했습니다.",
+    );
+  }
+  if (!payload.ok) {
+    throw new Error(payload.error);
+  }
+  return payload;
 }
 
 type StoryboardImagesResponse = {
@@ -4303,6 +4436,10 @@ export function AdminStoryboardGenerator({
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [acceptedStoryboardJob, setAcceptedStoryboardJob] =
+    useState<StoryboardJobAcceptedResponse["job"] | null>(null);
+  const [acceptedStoryboardJobRequest, setAcceptedStoryboardJobRequest] =
+    useState<GeneratorForm | null>(null);
   const [isGeneratingImages, setIsGeneratingImages] = useState(false);
   const [
     generatingStoryboardImageSceneNos,
@@ -4898,6 +5035,105 @@ export function AdminStoryboardGenerator({
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!acceptedStoryboardJob || !acceptedStoryboardJobRequest) return;
+    if (isTerminalStoryboardJobStatus(acceptedStoryboardJob.status)) return;
+
+    let cancelled = false;
+    let timeoutId: number | null = null;
+    const jobId = acceptedStoryboardJob.jobId;
+    const request = acceptedStoryboardJobRequest;
+
+    const schedulePoll = () => {
+      timeoutId = window.setTimeout(async () => {
+        try {
+          const statusPayload = await getStoryboardJobStatus(jobId);
+          if (cancelled) return;
+
+          setAcceptedStoryboardJob(statusPayload.job);
+          const nextJob = statusPayload.job;
+
+          if (nextJob.status === "succeeded") {
+            const completedResult = hydrateStoryboardJobResultForDisplay(
+              nextJob.result,
+              request,
+            );
+            if (!completedResult) {
+              setErrorMessage(
+                "스토리보드 작업은 완료됐지만 결과 페이로드가 표시 가능한 형식이 아닙니다.",
+              );
+              return;
+            }
+
+            setResult(completedResult);
+            setForm(completedResult.request);
+            setStoryboardHistoryCases((current) =>
+              mergeStoryboardHistoryCases(
+                [makeStoryboardHistoryCase(completedResult)],
+                current,
+              ),
+            );
+            setStoryboardHistoryStatus("ready");
+            setStoryboardHistoryError(null);
+            setStoryboardPage(0);
+            setErrorMessage(null);
+            setChatMessages((messages) =>
+              [
+                ...messages,
+                formatStoryboardChatMessageForDisplay({
+                  id: `assistant-storyboard-job-succeeded-${Date.now()}`,
+                  role: "assistant",
+                  text: `비동기 스토리보드 작업 ${jobId} 완료 · 결과를 캔버스에 반영했습니다.`,
+                  status: "done",
+                }),
+              ].slice(-10),
+            );
+            return;
+          }
+
+          if (nextJob.status === "failed" || nextJob.status === "cancelled") {
+            const statusLabel = formatStoryboardJobStatusLabel(nextJob.status);
+            const message =
+              nextJob.readiness?.message ??
+              (nextJob.status === "failed"
+                ? "비동기 스토리보드 작업이 실패했습니다."
+                : "비동기 스토리보드 작업이 취소되었습니다.");
+            setErrorMessage(`${statusLabel} · ${message}`);
+            setChatMessages((messages) =>
+              [
+                ...messages,
+                formatStoryboardChatMessageForDisplay({
+                  id: `assistant-storyboard-job-${nextJob.status}-${Date.now()}`,
+                  role: "assistant",
+                  text: `비동기 스토리보드 작업 ${jobId} ${statusLabel} · ${message}`,
+                  status: "done",
+                }),
+              ].slice(-10),
+            );
+            return;
+          }
+
+          schedulePoll();
+        } catch (error) {
+          if (cancelled) return;
+          setErrorMessage(
+            error instanceof Error
+              ? error.message
+              : "스토리보드 작업 상태를 불러오지 못했습니다.",
+          );
+          schedulePoll();
+        }
+      }, STORYBOARD_JOB_POLL_INTERVAL_MS);
+    };
+
+    schedulePoll();
+
+    return () => {
+      cancelled = true;
+      if (timeoutId) window.clearTimeout(timeoutId);
+    };
+  }, [acceptedStoryboardJob, acceptedStoryboardJobRequest]);
 
   useEffect(() => {
     const cache = readStoryboardBrowserModelKeysCache();
@@ -6453,6 +6689,46 @@ export function AdminStoryboardGenerator({
 
     try {
       const generated = await postStoryboardRequest(nextForm);
+      if (isStoryboardJobAcceptedResponse(generated)) {
+        setAcceptedStoryboardJob(generated.job);
+        setAcceptedStoryboardJobRequest(nextForm);
+        const queuedMessage =
+          generated.message ??
+          generated.readiness?.message ??
+          "스토리보드 생성 작업이 비동기 큐에 등록되었습니다. 상태 패널에서 진행 상황을 확인해 주세요.";
+        if (options.assistantMessageId) {
+          appendStoryboardThinkingTrace(
+            options.assistantMessageId,
+            makeStoryboardThinkingTraceEntries({
+              id: "storyboard-job-queued",
+              label: "비동기 작업 등록",
+              status: "done",
+              detail: `job=${generated.job.jobId} · ${generated.job.status}`,
+            }),
+          );
+          updateStoryboardChatMessage(
+            options.assistantMessageId,
+            `${queuedMessage} · 작업 ID ${generated.job.jobId}`,
+            "done",
+          );
+        } else {
+          setChatMessages((messages) =>
+            messages.map((message) =>
+              message.status === "streaming"
+                ? formatStoryboardChatMessageForDisplay({
+                    ...message,
+                    text: `${queuedMessage} · 작업 ID ${generated.job.jobId}`,
+                    status: "done",
+                  })
+                : message,
+            ),
+          );
+        }
+        setErrorMessage(null);
+        return null;
+      }
+      setAcceptedStoryboardJob(null);
+      setAcceptedStoryboardJobRequest(null);
       const generatedGraph = generated.backendAnalysis.backendAgent?.graph;
       const graphNodes =
         generatedGraph?.nodesVisited && generatedGraph.nodesVisited.length > 0
@@ -7700,6 +7976,30 @@ export function AdminStoryboardGenerator({
       aria-label="스토리보드 생성"
       data-admin-storyboard-generator="true"
       data-storyboard-viewport-fit="bounded"
+      data-layout-primitives="split-sidebar panel-layout list-detail frame step-nav stack"
+      data-storyboard-job-status={
+        acceptedStoryboardJob
+          ? `storyboard-job-${acceptedStoryboardJob.status}`
+          : isGenerating
+            ? "storyboard-generating"
+            : isGeneratingImages
+              ? "image-generating"
+              : isChatAgentStreaming
+                ? "chat-streaming"
+                : "idle"
+      }
+      data-storyboard-stage-progress={
+        acceptedStoryboardJob
+          ? acceptedStoryboardJob.stage
+          : isGenerating
+            ? "async-job-submit"
+            : isGeneratingImages
+              ? "image-batch"
+              : isChatAgentStreaming
+                ? "chat-stream"
+                : "idle"
+      }
+      data-storyboard-provider-readiness={acceptedStoryboardJob?.readiness?.status ?? "async-control-plane-readback"}
       style={{
         height: "calc(var(--full-height, 100vh) - 2rem)",
         maxHeight: "100%",
@@ -7721,6 +8021,7 @@ export function AdminStoryboardGenerator({
           aria-label="요구사항 채팅"
           data-storyboard-input-panel="chat-stream"
           data-storyboard-input-position="right-of-canvas"
+          data-layout-primitives="panel-layout stack"
           style={{
             gridColumn: "var(--storyboard-input-panel-column, 2)",
             gridRow: "var(--storyboard-input-panel-row, 1)",
@@ -8658,17 +8959,67 @@ export function AdminStoryboardGenerator({
               </div>
             </div>
           </CardHeader>
+          {acceptedStoryboardJob ? (
+            <div
+              className="mx-3 mb-2 space-y-1.5 rounded-2xl border border-border/70 bg-muted/35 p-2 text-xs"
+              data-storyboard-job-readback="true"
+              data-storyboard-job-readback-status={acceptedStoryboardJob.status}
+              data-storyboard-job-readback-stage={acceptedStoryboardJob.stage}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-semibold text-foreground">
+                  비동기 스토리보드 작업
+                </span>
+                <Badge
+                  variant={
+                    acceptedStoryboardJob.status === "failed" ||
+                    acceptedStoryboardJob.status === "cancelled"
+                      ? "destructive"
+                      : "secondary"
+                  }
+                  className="shrink-0 px-1.5 text-[10px]"
+                  data-storyboard-job-readback-label="true"
+                >
+                  {formatStoryboardJobStatusLabel(acceptedStoryboardJob.status)}
+                </Badge>
+              </div>
+              <p
+                className="truncate text-muted-foreground"
+                data-storyboard-job-readback-id="true"
+                title={acceptedStoryboardJob.jobId}
+              >
+                작업 ID {acceptedStoryboardJob.jobId}
+              </p>
+              <p
+                className="text-muted-foreground"
+                data-storyboard-job-readback-message="true"
+              >
+                {acceptedStoryboardJob.readiness?.message ??
+                  "작업 상태를 no-store readback으로 확인하고 있습니다."}
+              </p>
+              {acceptedStoryboardJob.errorCode ? (
+                <p
+                  className="font-medium text-destructive"
+                  data-storyboard-job-readback-error-code="true"
+                >
+                  오류 코드 {acceptedStoryboardJob.errorCode}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
           <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-2 pt-0">
             <section
               className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl bg-gradient-to-b from-background/95 to-muted/35"
               data-storyboard-chat-panel="true"
               data-storyboard-chat-style="thumbnail-like"
+              data-layout-primitives="panel-layout stack"
             >
               <div
                 ref={chatTranscriptRef}
                 className="scrollbar-hide flex min-h-0 flex-1 scroll-pb-6 flex-col gap-3 overflow-y-auto overscroll-contain px-3 pb-5 pt-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                 data-storyboard-chat-log="true"
                 data-storyboard-chat-transcript="true"
+                data-scroll-owner="storyboard-chat"
                 aria-live="polite"
               >
                 {chatMessages.map((message) => {
