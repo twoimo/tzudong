@@ -10,6 +10,15 @@ import { buildMarkerRenderSignature, shouldSkipMarkerUpdate } from '../lib/map-r
 import { resolveMobileMapBlankTapAction } from '../lib/mobile-map-fullscreen-toggle';
 
 const source = (relativePath: string) => readFileSync(join(import.meta.dir, '..', relativePath), 'utf8');
+const expectSourceOrder = (sourceText: string, before: string, after: string) => {
+    const beforeIndex = sourceText.indexOf(before);
+    const afterIndex = sourceText.indexOf(after);
+
+    expect(beforeIndex).toBeGreaterThanOrEqual(0);
+    expect(afterIndex).toBeGreaterThanOrEqual(0);
+    expect(beforeIndex).toBeLessThan(afterIndex);
+};
+
 
 const makeRestaurant = (id: string, name: string): Restaurant =>
     ({
@@ -259,6 +268,48 @@ describe('mobile home map regression guards', () => {
         expect(overseasMapSource).toContain('onMapInteraction?: () => void;');
         expect(overseasMapSource).toContain('onMapInteractionRef.current?.();');
         expect(overseasMapSource).toContain("mapInstance.on('click', () => {");
+        expect(naverMapSource).toContain('buildNaverMapInteractionHandlers({');
+        expect(naverMapSource).toContain('onUserInteraction: () => {');
+        expect(naverMapSource).toContain('const interactionListenerPlan = buildNaverMapInteractionListenerPlan();');
+        expect(naverMapSource).toContain('interactionListenerPlan.domListeners.forEach(({ eventName, handlerKey }) => {');
+        expect(naverMapSource).toContain('maps.Event.addListener(map, eventName, handleSearchReleaseInteraction)');
+        expect(source('lib/naver-map-interaction-helpers.ts')).toContain("mapEventNames: ['dragstart', 'pinchstart'] as const");
+        expect(overseasMapSource).toContain("mapInstance.on('dragstart', () => {");
+        expect(overseasMapSource).toContain("mapInstance.on('zoomstart', () => {");
+        expect(overseasMapSource).toContain("mapContainerEl.addEventListener('wheel', handleWheel, { passive: false });");
+        expectSourceOrder(
+            naverMapSource,
+            'onMapInteraction?.();',
+            'onMapBlankClick();'
+        );
+        expectSourceOrder(
+            overseasMapSource,
+            'onMapInteractionRef.current?.();',
+            'onMapBlankClickRef.current?.();'
+        );
+    });
+
+    test('mobile visible marker sheet receives map interaction epoch before requesting peek height', () => {
+        const homeClientSource = source('app/home-client.tsx');
+        const homeControlPanelSource = source('components/home/home-control-panel.tsx');
+        const overlaySource = source('components/home/MobileControlOverlay.tsx');
+
+        expect(homeClientSource).toContain('const [mapInteractionEpoch, setMapInteractionEpoch] = useState(0);');
+        expect(homeClientSource).toContain('const handleMapInteraction = useCallback(() => {');
+        expect(homeClientSource).toContain('setMapInteractionEpoch((current) => current + 1);');
+        expect(homeClientSource).toContain('onMapInteraction={handleMapInteraction}');
+        expect(homeClientSource).toContain('mapInteractionEpoch={mapInteractionEpoch}');
+        expect(homeControlPanelSource).toContain('mapInteractionEpoch?: number;');
+        expect(homeControlPanelSource).toContain('mapInteractionEpoch={mapInteractionEpoch}');
+        expect(overlaySource).toContain('const lastMapInteractionEpochRef = useRef(mapInteractionEpoch);');
+        expect(overlaySource).toContain("if (activeSheet !== 'visibleMarkers') return;");
+        expect(overlaySource).toContain('setVisibleMarkerSheetHeightRequestKey((key) => key + 1);');
+        expect(overlaySource).toContain("height: VISIBLE_MARKER_SHEET_HEIGHT, mode: 'exact'");
+        expectSourceOrder(
+            overlaySource,
+            'lastMapInteractionEpochRef.current = mapInteractionEpoch;',
+            "if (activeSheet !== 'visibleMarkers') return;"
+        );
     });
 
     test('G002 mobile category sheet commits immediately without delayed apply affordance', () => {
