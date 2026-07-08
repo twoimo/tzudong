@@ -137,6 +137,7 @@ describe('header bookmark and notification UX source contracts', () => {
     expect(mobileBookmarkSource).toContain('useUserBookmarkCount()');
     expect(mobileBookmarkSource).toContain('const visibleBookmarkCount = bookmarkCount ?? bookmarksData.length;');
     expect(mobileBookmarkSource).toContain('relative h-9 w-9 rounded-full');
+    expect(mobileBookmarkSource).not.toContain('relative h-11 w-11 rounded-full');
     expect(mobileBookmarkSource).toContain('hover:border-primary/40 hover:bg-primary/10 hover:!text-primary');
     expect(mobileBookmarkSource).toContain('data-[state=open]:border-primary/50 data-[state=open]:bg-primary/10 data-[state=open]:!text-primary');
     expect(mobileBookmarkSource).toContain('[&_svg]:!text-primary');
@@ -151,6 +152,7 @@ describe('header bookmark and notification UX source contracts', () => {
     expect(mobileBookmarkSource).toContain('MapPin className="h-8 w-8 shrink-0 rounded-full bg-primary/10 p-2 text-primary');
 
     expect(mobileOverlaySource).toContain('h-9 w-9 rounded-full');
+    expect(mobileOverlaySource).not.toContain('h-11 w-11 rounded-full');
     expect(mobileOverlaySource).toContain('const mobileTopIconButtonClass = cn(');
     expect(mobileOverlaySource).toContain("const mobileTopIconGlyphClass = 'h-[18px] w-[18px]'");
     expect(mobileOverlaySource).not.toContain('mobileTopUserIconGlyphClass');
@@ -196,6 +198,7 @@ describe('header bookmark and notification UX source contracts', () => {
     expect(mobileNotificationSource).toContain('formatDistanceToNow(notification.createdAt');
     expect(mobileNotificationSource).toContain('removeNotification(notification.id)');
     expect(mobileNotificationSource).toContain('h-9 w-9 rounded-full');
+    expect(mobileNotificationSource).not.toContain('h-11 w-11 rounded-full');
     expect(mobileNotificationSource).toContain('w-[min(calc(100vw-1rem),22rem)] rounded-2xl border-border bg-card p-2 font-sans shadow-primary');
     expect(mobileNotificationSource).toContain('flex w-full max-w-full cursor-pointer items-center gap-2 rounded-xl p-2.5');
     expect(mobileNotificationSource).toContain('!notification.isRead && "bg-primary/5"');
