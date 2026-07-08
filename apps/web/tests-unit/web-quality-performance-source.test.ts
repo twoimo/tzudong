@@ -1220,6 +1220,8 @@ describe("web quality performance source contracts", () => {
       "flex w-[var(--desktop-map-floating-filter-width)] items-center gap-0.5 rounded-full",
     );
     expect(homeDesktopControlPanelSource).toContain("HOME_MAP_THEME_FILTERS.map");
+    expect(homeDesktopControlPanelSource).toContain("<span>{theme.label}</span>");
+    expect(homeDesktopControlPanelSource).not.toContain("theme.shortLabel");
     expect(homeDesktopControlPanelSource).toContain("!w-full !min-w-max");
     expect(homeDesktopControlPanelSource).toContain("국내 맛집 지도 보기");
     expect(homeDesktopControlPanelSource).toContain("해외 맛집 지도 보기");
@@ -4226,6 +4228,8 @@ describe("web quality performance source contracts", () => {
       "style={MOBILE_BOTTOM_NAV_BUTTON_STYLE}",
     );
     expect(mobileBottomNavSource).toContain("'mobile-bottom-nav'");
+    expect(mobileBottomNavSource).toContain("testId: 'submissions'");
+    expect(mobileBottomNavSource).toContain("path: '/mypage/submissions/new'");
     expect(mobileBottomNavSource).toContain("'font-sans'");
     expect(mobileBottomNavSource).not.toContain(
       "MOBILE_BOTTOM_NAV_FONT_FAMILY",
