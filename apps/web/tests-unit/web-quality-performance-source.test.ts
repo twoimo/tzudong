@@ -1196,7 +1196,7 @@ describe("web quality performance source contracts", () => {
       'data-desktop-map-mode-toggle="true"',
     );
     expect(homeDesktopControlPanelSource).toContain(
-      'className="fixed top-4 z-[70] max-w-[calc(100vw-2rem)]"',
+      'className="fixed right-4 top-4 z-[70] min-w-0"',
     );
     expect(homeDesktopControlPanelSource).toContain(
       'data-desktop-map-theme-filters="true"',
@@ -1593,7 +1593,7 @@ describe("web quality performance source contracts", () => {
     );
     expect(mobileControlSource).toContain("inertSibling.inert = true");
     expect(mobileControlSource).toContain("aria-pressed={isSelected}");
-    expect(mobileControlSource).toContain("aria-label={theme.ariaLabel}");
+    expect(mobileControlSource).toContain("aria-label={`${theme.ariaLabel}${isSelected ? ' 선택됨' : ''}`}");
     expect(mobileControlSource).toContain("카테고리 필터 열기");
     expect(mobileControlSource).toContain("min-h-11");
     expect(mobileControlSource).toContain('role="status"');
@@ -3989,7 +3989,7 @@ describe("web quality performance source contracts", () => {
       "HOME_MAP_TOAST_VIEWPORT_CLASS_NAME",
     );
     expect(appToasterSource).toContain(
-      "bottom-[calc(env(safe-area-inset-bottom)+0.75rem)]",
+      "bottom-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+env(safe-area-inset-bottom)+0.75rem)]",
     );
     expect(appToasterSource).not.toContain(
       "top-[calc(env(safe-area-inset-top)+114px)]",
