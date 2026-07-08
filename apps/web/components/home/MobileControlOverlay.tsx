@@ -59,6 +59,7 @@ import {
     HOME_MAP_THEME_FILTERS,
     type HomeMapThemeFilterId,
 } from '@/lib/home-map-theme-filters';
+import { HomeMapThemeFilterIcon } from '@/components/home/home-map-theme-filter-icons';
 
 // 카테고리 상수
 const CATEGORIES = [
@@ -972,7 +973,7 @@ function MobileControlOverlayComponent({
                 <div
                     id="tzudong-mobile-category-slider"
                     data-mobile-topic-slider="true"
-                    className="pointer-events-auto mt-2 -mx-3 flex gap-2 overflow-x-auto pl-[calc(env(safe-area-inset-left)+8px)] pr-[calc(env(safe-area-inset-right)+8px)] py-0.5 scrollbar-hide [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                    className="pointer-events-auto mt-2 -mx-3 flex snap-x gap-2 overflow-x-auto pl-[calc(env(safe-area-inset-left)+8px)] pr-[calc(env(safe-area-inset-right)+8px)] py-0.5 scrollbar-hide [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                 >
                     {HOME_MAP_THEME_FILTERS.map((theme) => {
                         const isSelected = selectedTheme === theme.id;
@@ -984,17 +985,20 @@ function MobileControlOverlayComponent({
                                 type="button"
                                 onClick={() => onThemeChange(isSelected ? null : theme.id)}
                                 aria-pressed={isSelected}
-                                aria-label={theme.ariaLabel}
+                                aria-label={`${theme.ariaLabel}${isSelected ? ' 선택됨' : ''}`}
                                 title={`${theme.label}: ${theme.description}`}
                                 className={cn(
-                                    'pointer-events-auto h-9 shrink-0 rounded-full shadow-sm border border-border bg-background/95 backdrop-blur-sm',
-                                    'px-3 text-xs font-semibold transition-colors motion-reduce:transition-none hover:bg-secondary/80',
+                                    'pointer-events-auto inline-flex h-9 snap-start shrink-0 items-center gap-1 rounded-full shadow-sm border border-border bg-background/95 backdrop-blur-sm',
+                                    'px-2.5 text-xs font-semibold transition-colors motion-reduce:transition-none hover:bg-secondary/80',
+                                    'focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
                                     isSelected
                                         ? 'bg-primary text-primary-foreground border-primary hover:bg-primary/90'
                                         : 'text-foreground'
                                 )}
                             >
-                                {theme.label}
+                                <HomeMapThemeFilterIcon themeId={theme.id} />
+                                <span className="sm:hidden">{theme.shortLabel}</span>
+                                <span className="hidden sm:inline">{theme.label}</span>
                             </Button>
                         );
                     })}
