@@ -327,6 +327,15 @@ describe("mobile and desktop parity source contracts", () => {
     expect(mobileOverlaySource).toContain(
       "w-[clamp(84px,28vw,105px)] h-9 px-2",
     );
+    expect(mobileOverlaySource).not.toContain(
+      "pointer-events-auto inline-flex h-11 min-h-11 snap-start shrink-0 items-center gap-1 rounded-full",
+    );
+    expect(mobileOverlaySource).not.toContain(
+      "rounded-full h-11 min-h-11 px-2 text-xs font-medium",
+    );
+    expect(mobileOverlaySource).not.toContain(
+      "w-[clamp(84px,28vw,105px)] h-11 min-h-11 px-2",
+    );
     expect(mobileOverlaySource).toContain("data-mobile-topic-slider");
     expect(mobileOverlaySource).toContain("flex w-full max-w-full snap-x gap-2 overflow-x-auto px-0.5");
     expect(mobileOverlaySource).not.toContain("mt-2 -mx-3 flex snap-x");
