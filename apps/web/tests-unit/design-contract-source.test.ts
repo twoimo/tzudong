@@ -59,5 +59,9 @@ describe('repo design contract source', () => {
     expect(adminOverviewSource).toContain('getNaverIndividualMarkerVisual');
     expect(headerSource).toContain('font-sans');
     expect(headerSource).toContain('bg-red-800 hover:bg-red-900');
+    expect(designSource).toContain('StyleGallery');
+    expect(designSource).toContain('data-horizontal-scroll-owner');
+    expect(designSource).toContain('mobile-theme-filter-reel');
+    expect(designSource).toContain('command-surface');
   });
 });

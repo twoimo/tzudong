@@ -1572,7 +1572,7 @@ export function EvaluationTable({
 
         {shouldRenderDesktop && (
           <div className="hidden rounded-lg border lg:block">
-          <Table allowHorizontalScroll>
+          <Table allowHorizontalScroll horizontalScrollOwner="admin-evaluation-table">
           <TableHeader className="sticky top-0 bg-background z-20">
             <TableRow className="hover:bg-transparent">
               <TableHead className="w-10 sticky left-0 z-10 bg-background/95 px-2 sm:w-12 sm:px-4">

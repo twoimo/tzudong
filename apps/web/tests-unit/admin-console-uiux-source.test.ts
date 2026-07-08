@@ -1309,7 +1309,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain(
       "bg-white p-3 shadow-[inset_0_0_0_1px_rgba(15,23,42",
     );
-    expect(consoleSource).toContain("Tzuyang KPI Dashboard");
+    expect(consoleSource).toContain("쯔양 KPI 대시보드");
+    expect(consoleSource).not.toContain("Tzuyang KPI Dashboard");
     expect(consoleSource).not.toContain(
       "구독자·조회수·좋아요·댓글·영상 수를 1페이지 KPI 보드에서 한눈에 봅니다.",
     );
@@ -1468,16 +1469,16 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("adminDashboardControlGroupClassName");
     expect(consoleSource).toContain("adminDashboardControlButtonClassName");
     expect(consoleSource).toContain(
-      "inline-flex h-7 shrink-0 items-center rounded-full",
+      "inline-flex min-h-11 shrink-0 items-center rounded-full",
     );
     expect(consoleSource).toContain(
-      "inline-flex h-6 items-center justify-center gap-1",
+      "inline-flex min-h-11 min-w-[44px] items-center justify-center gap-1",
     );
     expect(consoleSource).toContain(
       'data-admin-dashboard-series-toggle="true"',
     );
     expect(consoleSource).toContain(
-      "inline-flex h-7 max-w-full min-w-0 shrink-0 items-center gap-0.5 overflow-x-auto overflow-y-hidden rounded-full border border-transparent bg-transparent p-0",
+      "inline-flex min-h-11 max-w-full min-w-0 shrink-0 items-center gap-0.5 overflow-x-auto overflow-y-hidden rounded-full border border-transparent bg-transparent p-0",
     );
     expect(consoleSource).toContain(
       'data-admin-dashboard-card-title-row="single-line"',
@@ -1914,6 +1915,12 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("viewBenchmarkTooltipLines");
     expect(consoleSource).toContain('viewBenchmarkTooltipLines.join(" ")');
     expect(consoleSource).toContain("lines={row.viewBenchmarkTooltipLines}");
+    const topContentMetricSource = consoleSource.slice(
+      consoleSource.indexOf("data-admin-dashboard-top-content-metric={metric.label}"),
+      consoleSource.indexOf('data-admin-dashboard-top-content-rank-list="true"'),
+    );
+    expect(topContentMetricSource).toContain("<AdminDashboardInlineTooltip");
+    expect(topContentMetricSource).not.toContain('aria-hidden="true"');
     expect(consoleSource).not.toContain(
       "mt-1 block truncate text-[11px] font-extrabold leading-4 tabular-nums text-teal-800",
     );
@@ -2558,7 +2565,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("buildAdminDashboardPdfReportHtml");
     expect(consoleSource).toContain("openAdminDashboardPdfReport");
     expect(consoleSource).toContain("window.print()");
-    expect(consoleSource).toContain("Tzuyang KPI Dashboard Report");
+    expect(consoleSource).toContain("쯔양 KPI 대시보드 보고서");
+    expect(consoleSource).not.toContain("Tzuyang KPI Dashboard Report");
     expect(consoleSource).toContain('logoUrl: "/logo.webp"');
     expect(consoleSource).toContain('class="brand"');
     expect(consoleSource).toContain('alt="Tzudong 로고"');
@@ -2568,9 +2576,13 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("PDF 보고서");
     expect(consoleSource).toContain("콘텐츠 성과 TOP 5");
     expect(consoleSource).toContain("성과 진단");
+    expect(consoleSource).toContain('data-layout-recipe="command-surface"');
     expect(consoleSource).toContain('data-admin-dashboard-action-bar="true"');
     expect(consoleSource).toContain(
       'data-admin-dashboard-action-order="order-reset-report-collection-period"',
+    );
+    expect(consoleSource).toContain(
+      'data-horizontal-scroll-owner="admin-dashboard-action-bar"',
     );
     expect(consoleSource).toContain(
       'data-admin-dashboard-action-group="order"',
@@ -2584,7 +2596,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       "order-2 flex shrink-0 items-center justify-end gap-1",
     );
-    expect(consoleSource).toContain("order-3 h-7 shrink-0 gap-1");
+    expect(consoleSource).toContain("order-3 h-11 min-h-11 min-w-[44px] shrink-0 gap-1");
     expect(consoleSource).toContain(
       'data-admin-dashboard-period-options-inline="desktop"',
     );
@@ -7772,6 +7784,18 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "flex w-full min-w-0 shrink-0 flex-nowrap items-center justify-end gap-1.5 overflow-x-auto",
     );
     expect(consoleSource).toContain('data-allow-horizontal-scroll="true"');
+    expect(consoleSource).toContain(
+      'data-horizontal-scroll-owner="admin-dashboard-action-bar"',
+    );
+    expect(consoleSource).toContain(
+      'data-horizontal-scroll-owner="admin-dashboard-series-toggle"',
+    );
+    expect(consoleSource).toContain(
+      'data-horizontal-scroll-owner="admin-dashboard-card-title-actions"',
+    );
+    expect(consoleSource).toContain(
+      'data-horizontal-scroll-owner="admin-dashboard-kpi-title-actions"',
+    );
     expect(consoleSource).toContain(
       "min-h-0 min-w-0 w-full overflow-hidden border",
     );

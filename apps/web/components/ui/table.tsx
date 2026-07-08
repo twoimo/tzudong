@@ -2,15 +2,26 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
+export type HorizontalScrollOwner =
+  | "mobile-theme-filter-reel"
+  | "admin-dashboard-action-bar"
+  | "admin-dashboard-series-toggle"
+  | "admin-dashboard-card-title-actions"
+  | "admin-dashboard-kpi-title-actions"
+  | "stamp-restaurant-list-table"
+  | "admin-evaluation-table";
+
 interface TableProps extends React.HTMLAttributes<HTMLTableElement> {
   allowHorizontalScroll?: boolean;
+  horizontalScrollOwner?: HorizontalScrollOwner;
 }
 
 const Table = React.forwardRef<HTMLTableElement, TableProps>(
-  ({ className, allowHorizontalScroll = false, ...props }, ref) => (
+  ({ className, allowHorizontalScroll = false, horizontalScrollOwner, ...props }, ref) => (
     <div
       className={cn("relative w-full", allowHorizontalScroll ? "overflow-x-auto overflow-y-hidden" : "overflow-auto")}
-      data-allow-horizontal-scroll={allowHorizontalScroll ? "true" : undefined}
+      data-allow-horizontal-scroll={allowHorizontalScroll && horizontalScrollOwner ? "true" : undefined}
+      data-horizontal-scroll-owner={allowHorizontalScroll && horizontalScrollOwner ? horizontalScrollOwner : undefined}
     >
       <table ref={ref} className={cn("w-full caption-bottom text-sm", className)} {...props} />
     </div>
