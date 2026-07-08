@@ -681,6 +681,19 @@ describe("mobile and desktop parity source contracts", () => {
     expect(restaurantDetailPanelSource).toContain(
       '<ArrowLeft className="h-4 w-4" aria-hidden="true" />',
     );
+    expect(restaurantDetailPanelSource).toContain("function MapProviderLogo");
+    expect(restaurantDetailPanelSource).toContain('data-map-provider-logo="naver"');
+    expect(restaurantDetailPanelSource).toContain('data-map-provider-logo="kakao"');
+    expect(restaurantDetailPanelSource).toContain('data-map-provider-logo="google"');
+    expect(restaurantDetailPanelSource).toContain('<MapProviderLogo provider="naver" />');
+    expect(restaurantDetailPanelSource).toContain('<MapProviderLogo provider="kakao" />');
+    expect(restaurantDetailPanelSource).toContain('<MapProviderLogo provider="google" />');
+    expect(restaurantDetailPanelSource).toContain('aria-label="네이버 지도로 길찾기 열기"');
+    expect(restaurantDetailPanelSource).toContain('aria-label="카카오맵으로 길찾기 열기"');
+    expect(restaurantDetailPanelSource).toContain('aria-label="구글 지도로 길찾기 열기"');
+    expect(restaurantDetailPanelSource).not.toContain('text-green-600 font-black text-lg">N</span>');
+    expect(restaurantDetailPanelSource).not.toContain('text-foreground font-black text-lg">K</span>');
+    expect(restaurantDetailPanelSource).not.toContain('text-white font-black text-lg">G</span>');
     expect(homeDesktopControlPanelSource).toContain('resultView="inline"');
     expect(homeDesktopControlPanelSource).toContain("hideSearchControls");
     expect(homeDesktopControlPanelSource).not.toContain(
