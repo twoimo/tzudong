@@ -150,7 +150,7 @@ describe('header bookmark and notification UX source contracts', () => {
     expect(mobileBookmarkSource).toContain('aria-label="북마크 전체보기 페이지로 이동"');
     expect(mobileBookmarkSource).toContain('MapPin className="h-8 w-8 shrink-0 rounded-full bg-primary/10 p-2 text-primary');
 
-    expect(mobileOverlaySource).toContain('h-9 w-9 rounded-full');
+    expect(mobileOverlaySource).toContain('h-11 w-11 rounded-full');
     expect(mobileOverlaySource).toContain('const mobileTopIconButtonClass = cn(');
     expect(mobileOverlaySource).toContain("const mobileTopIconGlyphClass = 'h-[18px] w-[18px]'");
     expect(mobileOverlaySource).toContain("const mobileTopUserIconGlyphClass = 'h-5 w-5'");
