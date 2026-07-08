@@ -26,9 +26,9 @@ function getVercelBuildDecision(env) {
 
   if (!ref) {
     return {
-      ignore: false,
+      ignore: true,
       ref,
-      reason: "branch ref unavailable; fail open to avoid blocking legitimate deployments",
+      reason: "branch ref unavailable; fail closed to prevent non-allowlisted deployments",
       vercelEnv,
     };
   }
