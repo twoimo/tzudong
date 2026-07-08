@@ -271,6 +271,11 @@ describe("mobile and desktop parity source contracts", () => {
     expect(navigationRoutesSource).toContain("'/admin/banners'");
     expect(mobileBottomNavSource).toContain("path: '/'");
     expect(mobileBottomNavSource).toContain("path: '/stamp'");
+    expect(mobileBottomNavSource).toContain("path: '/mypage/submissions/new'");
+    expect(mobileBottomNavSource).toContain("label: '제보'");
+    expect(mobileBottomNavSource).toContain("testId: 'submissions'");
+    expect(mobileBottomNavSource).toContain("mobile-bottom-nav-submissions");
+    expect(mobileBottomNavSource).toContain("isMobileNavItemActive(pathname, item)");
     expect(mobileBottomNavSource).toContain("'font-sans'");
     expect(mobileBottomNavSource).toContain(
       "'text-[12px] font-medium leading-none tracking-normal'",
@@ -540,6 +545,10 @@ describe("mobile and desktop parity source contracts", () => {
     );
     expect(homeDesktopControlPanelSource).toContain("HOME_MAP_THEME_FILTERS.map");
     expect(homeDesktopControlPanelSource).toContain("<HomeMapThemeFilterIcon themeId={theme.id} />");
+    expect(mobileOverlaySource).toContain("<span>{theme.label}</span>");
+    expect(homeDesktopControlPanelSource).toContain("<span>{theme.label}</span>");
+    expect(mobileOverlaySource).not.toContain("theme.shortLabel");
+    expect(homeDesktopControlPanelSource).not.toContain("theme.shortLabel");
     expect(themeFilterIconSource).toContain('"hot-view": TrendingUp');
     expect(themeFilterIconSource).toContain('"comment-hot": MessageCircle');
     expect(themeFilterIconSource).toContain('"fresh-video": Clock3');
