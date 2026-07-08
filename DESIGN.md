@@ -2,7 +2,7 @@
 
 ## Source of truth
 - Status: Active
-- Last refreshed: 2026-06-29
+- Last refreshed: 2026-07-08
 - Primary product surfaces: public map/home shell, admin unified console, admin moderation/evaluations, submissions/reviews, banner management, user/account management, insights, LLM operations session panel
 - Evidence reviewed:
   - `apps/web/app/globals.css`: warm ivory background, red primary, muted borders, radius, semantic Pretendard UI + Noto Serif KR display typography, app header height, body overflow hidden with layout-owned scrolling.
@@ -14,6 +14,9 @@
   - `apps/web/app/admin/evaluations/page.tsx`, `apps/web/app/admin/banners/page.tsx`, `apps/web/app/insights/insights-client.tsx`: canonical admin modules embedded into `/admin`; standalone routes must stay stable.
   - `apps/web/design/pencil/reports/admin-unified-console-design-brief-20260512T133359Z.md`: warm editorial operations hub, clear entry flows, status summaries, guarded destructive operations.
   - `apps/web/docs/pencil-storyboard-sync.md`, `apps/web/tests-unit/pencil-storyboard-contract.test.ts`: design artifacts should be reviewable, manifest-backed, and tied to repo source.
+  - `https://github.com/changeroa/StyleGallery`: layout-only reference for semantic primitives, single-owner scroll contracts, `reel` for intentional horizontal scanning, and command-surface recipes.
+  - `apps/web/components/home/home-map-container.tsx`, `apps/web/components/home/MobileControlOverlay.tsx`: home viewport label, StyleGallery `reel cluster` mobile theme filter, and 44px mobile map controls.
+  - `apps/web/components/ui/table.tsx`, `apps/web/tests/responsive-overflow.spec.ts`: owner-gated horizontal-scroll policy via `data-horizontal-scroll-owner` and responsive overflow guard allowlisting.
 
 ## Brand
 - Personality: warm Korean food-map product, editorial, trustworthy, calm, operationally clear.
@@ -62,6 +65,7 @@
 - Principle 3: 한국어 우선. Primary admin chrome and navigation should use concise Korean labels.
 - Principle 4: 기존 흐름 보존. Standalone routes and large admin modules stay compatible while `/admin` embeds them directly.
 - Tradeoffs: overview cards may duplicate some live counts, but active module screens should stay clean and focused; decorative warmth is acceptable only when readability and scroll behavior remain strong.
+- Principle 5: 레이아웃 소유권 명시. StyleGallery-style primitives document the one spatial job each surface owns; horizontal scan areas must expose a narrow owner instead of hiding overflow broadly.
 
 ## Visual language
 - Color: warm ivory/off-white surfaces (`hsl(38 30% 98%)`), red primary (`hsl(0 74% 42%)`) for high-emphasis actions/active states, muted border/status colors for secondary information.
@@ -81,6 +85,11 @@
   - Overview cards/guarded-apply panels: card/pill rhythm consistent with 맛집/제보/리뷰/배너/user management surfaces.
 - Variants and states: active, hover, focus-visible, collapsed, loading, empty, error, read-only, guarded.
 - Token/component ownership: prefer repo tokens and existing shadcn-style components; do not introduce a new design-system layer.
+- StyleGallery layout contracts:
+  - Public home map root owns the `viewport-shell overlay-stack cluster` contract and has the Korean region label `쯔동여지도 홈 지도 화면`.
+  - Mobile home theme filters are the only current home `reel cluster`; the approved horizontal owner is `mobile-theme-filter-reel`.
+  - Admin KPI dashboard management uses the `command-surface` recipe for the order/report/period command row.
+  - Shared table horizontal scrolling is owner-gated: `allowHorizontalScroll` may preserve visual overflow, but policy allowlisting requires an explicit `data-horizontal-scroll-owner` such as `stamp-restaurant-list-table` or `admin-evaluation-table`.
 
 ## Accessibility
 - Target standard: WCAG 2.2 AA for new UI and regressions.
@@ -97,6 +106,7 @@
   - Collapsed desktop sidebar should be narrower and icon-stable without squeezing text.
 - Mobile/desktop admin parity: authenticated admin user menus should expose a single “관리자 콘솔” entry that lands on `/admin`; detailed 맛집/제보/리뷰/배너/인사이트 task switching belongs inside the admin console sidebar/canvas so mobile and desktop do not drift.
 - Touch/hover differences: touch targets should be approximately 44px high where practical; hover affordances must not be the only state cue.
+- Horizontal scroll policy: `data-allow-horizontal-scroll="true"` is not a generic escape hatch. It must be paired with one of the approved owners: `mobile-theme-filter-reel`, `admin-dashboard-action-bar`, `admin-dashboard-series-toggle`, `admin-dashboard-card-title-actions`, `admin-dashboard-kpi-title-actions`, `stamp-restaurant-list-table`, or `admin-evaluation-table`. Naver map cluster marker overflow remains a provider-specific exception outside this policy.
 
 ## Interaction states
 - Loading: use `GlobalLoader` only for full auth/page gates. Inline admin moderation modules should render the work screen shell immediately and place skeletons inside the actual elements that are loading: header counts, filters, table rows, list cards, badges, and action cells. Avoid large route-level loading cards such as “제보 큐를 여는 중”, “리뷰 검수 큐를 여는 중”, or “맛집 검수 화면을 여는 중”; operators should see the target screen shape first, with per-element loading affordances and reduced-motion-safe animation.
@@ -114,6 +124,7 @@
   - Avoid English-first admin chrome such as “Unified admin console” unless it is internal-only and visually hidden from primary UI.
   - Answer: “현재 상태는 무엇이고, 다음 안전한 행동은 무엇인가?”
   - Keep LLM helper copy clearly advisory/read-only.
+  - Use Korean-first KPI/report chrome: `쯔양 KPI 대시보드` and `쯔양 KPI 대시보드 보고서` are user-facing; English dashboard names are internal-only at most.
 
 ## Implementation constraints
 - Framework/styling system: Next.js App Router, React, Tailwind utility classes, existing local UI components.
@@ -122,11 +133,14 @@
 - Performance constraints: keep admin pending-count/data summaries centralized in the `/admin` workspace where possible; avoid duplicating Supabase count queries in lightweight global/mobile shell menus.
 - Compatibility constraints: preserve `/admin`, `/admin/evaluations`, `/admin/banners`, `/admin/submissions`, `/insights`; preserve Supabase query/mutation semantics.
 - Supabase admin constraints: privileged user-management writes stay behind server-only service-role routes after `requireAdmin`; user-role mutation remains service-only; `admin_audit_events` records intent/applied status; `admin_user_preferences` stores only per-admin UI ordering preferences under RLS and explicit Data API grants.
+- Layout-contract constraints: keep StyleGallery primitive hooks source-visible (`data-layout-primitives`, `data-layout-recipe`, `data-scroll-owner`) and avoid adding decorative primitives that do not match the real spatial job.
 - Test/screenshot expectations:
   - `cd apps/web && npx eslint components/admin/AdminConsoleOverview.tsx --max-warnings=0`
   - `cd apps/web && npx tsc --noEmit --pretty false`
   - `cd apps/web && npm run build`
   - Authenticated browser smoke for `/admin`: sidebar label Korean-only, active module switching, no horizontal overflow, no console errors.
+  - Responsive overflow QA: `cd apps/web && bunx playwright test tests/responsive-overflow.spec.ts --project "Samsung Galaxy S20 Ultra" --project "iPhone 14 Pro Max" --project "iPad Pro" --project "Surface Pro 7"`.
+  - Privacy-safe browser QA evidence: device/route, viewport size, overflow counts, approved owner list, and narrowly scoped visible headings/buttons only; do not persist cookies, headers, localStorage, raw admin body text, raw table content, or Supabase payloads.
   - Visual verdict target: current admin console should score 90+ against this repo-local design contract, with any remaining issues recorded.
   - AHP committee target for the admin console: weighted score must be 99+ before claiming the expert-committee UI loop complete; source-honest pending data, canonical module URL state, typed confirmation for destructive operations, and task-first overview hierarchy are part of the scoring contract.
 
