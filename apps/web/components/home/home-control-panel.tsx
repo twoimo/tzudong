@@ -83,6 +83,7 @@ export interface HomeControlPanelProps {
     isPanelOpen?: boolean;
     contextualRestaurantsPayload?: HomeMapContextualRestaurantsPayload | null;
     isMapFullscreen?: boolean;
+    mapInteractionEpoch?: number;
     onPanelClose?: () => void;
     onDetailPanelBack?: () => void;
     onReviewModalOpen?: () => void;
@@ -126,6 +127,7 @@ function HomeControlPanelComponent({
     isPanelOpen = false,
     contextualRestaurantsPayload = null,
     isMapFullscreen = false,
+    mapInteractionEpoch = 0,
     onPanelClose,
     onDetailPanelBack,
     onReviewModalOpen,
@@ -226,6 +228,7 @@ function HomeControlPanelComponent({
                 isPanelOpen={isPanelOpen}
                 contextualRestaurantsPayload={contextualRestaurantsPayload}
                 isMapFullscreen={isMapFullscreen}
+                mapInteractionEpoch={mapInteractionEpoch}
                 isAdmin={isAdmin}
                 onModeChange={onModeChange}
                 user={user}

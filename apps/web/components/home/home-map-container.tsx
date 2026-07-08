@@ -69,6 +69,7 @@ interface HomeMapContainerProps {
     onContextualRestaurantsChange?: (payload: HomeMapContextualRestaurantsPayload | null) => void;
     isMapFullscreen?: boolean;
     onMapFullscreenChange?: (isFullscreen: boolean) => void;
+    onMapInteraction?: () => void;
     deviceLocation?: DeviceMapLocation | null;
     showUserSubmittedMarkers?: boolean;
     renderDesktopDetailPanel?: boolean;
@@ -202,6 +203,7 @@ function HomeMapContainerComponent({
     onContextualRestaurantsChange,
     isMapFullscreen = false,
     onMapFullscreenChange,
+    onMapInteraction,
     deviceLocation = null,
     showUserSubmittedMarkers = true,
     renderDesktopDetailPanel = true,
@@ -1202,6 +1204,7 @@ function HomeMapContainerComponent({
         onMarkerClick(restaurant);
     }, [onMapFullscreenChange, onMarkerClick]);
     const handleMapUserInteraction = useCallback(() => {
+        onMapInteraction?.();
         if (!isMobileOrTablet || !isPanelOpen || !panelRestaurant || isMapFullscreen) return;
         if (sheetHeightRef.current <= PEEK_SHEET_HEIGHT + SHEET_HALF_OPEN_TOLERANCE) return;
 
@@ -1211,6 +1214,7 @@ function HomeMapContainerComponent({
         isMapFullscreen,
         isMobileOrTablet,
         isPanelOpen,
+        onMapInteraction,
         panelRestaurant,
         setSheetHeightSafe,
     ]);
