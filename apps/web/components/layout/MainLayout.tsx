@@ -114,7 +114,10 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
     pathname === "/feed" ||
     pathname === "/stamp" ||
     pathname === "/leaderboard";
-  const shouldRenderMobileBottomNav = !shouldSuppressNoncriticalChrome;
+  const shouldSuppressMobileBottomNav =
+    pathname?.startsWith("/auth/") ||
+    pathname?.startsWith("/admin");
+  const shouldRenderMobileBottomNav = !shouldSuppressMobileBottomNav;
 
   // 성능 최적화: 핸들러 메모이제이션
   const handleOpenAuth = useCallback(() => setIsAuthModalOpen(true), []);
