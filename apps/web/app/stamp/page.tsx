@@ -1182,7 +1182,7 @@ export default function StampPage() {
                             ) : (
                                 /* 리스트 뷰 (List View) */
                                 <div className="border rounded-lg">
-                                    <Table allowHorizontalScroll>
+                                    <Table allowHorizontalScroll horizontalScrollOwner="stamp-restaurant-list-table">
                                         <TableHeader className="sticky top-0 bg-background z-20">
                                             <TableRow>
                                                 <TableHead className="w-[25%] min-w-[200px]">
