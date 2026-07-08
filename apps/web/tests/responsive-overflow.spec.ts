@@ -12,8 +12,25 @@ type OverflowIssue = {
     rightOverflow: number;
 };
 
+type UnapprovedPolicyException = {
+    tag: string;
+    id: string | null;
+    className: string | null;
+    owner: string | null;
+};
+
 const ADMIN_COOKIE_ENV = 'INSIGHTS_CHAT_ADMIN_COOKIE';
 const ADMIN_AUTH_FILE = path.resolve(process.cwd(), 'tests', '.auth', 'admin.json');
+
+const APPROVED_HORIZONTAL_SCROLL_OWNERS = [
+    'mobile-theme-filter-reel',
+    'admin-dashboard-action-bar',
+    'admin-dashboard-series-toggle',
+    'admin-dashboard-card-title-actions',
+    'admin-dashboard-kpi-title-actions',
+    'stamp-restaurant-list-table',
+    'admin-evaluation-table',
+] as const;
 
 function decodeBase64Url(value: string): string {
     const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
@@ -134,11 +151,22 @@ async function gotoForOverflowCheck(page: Page, route: string) {
 }
 
 async function collectOverflowData(page: Page) {
-    return page.evaluate(() => {
+    return page.evaluate((approvedHorizontalScrollOwners) => {
         const doc = document.documentElement;
         const body = document.body;
         const pageOverflow = Math.max(doc.scrollWidth, body?.scrollWidth ?? 0) - doc.clientWidth;
         const issues: OverflowIssue[] = [];
+        const approvedOwnerSet = new Set<string>(approvedHorizontalScrollOwners);
+        const unapprovedPolicyExceptions: UnapprovedPolicyException[] = Array.from(
+            document.querySelectorAll<HTMLElement>('[data-allow-horizontal-scroll="true"]')
+        )
+            .filter((el) => !approvedOwnerSet.has(el.dataset.horizontalScrollOwner ?? ''))
+            .map((el) => ({
+                tag: el.tagName.toLowerCase(),
+                id: el.id || null,
+                className: el.className ? String(el.className).slice(0, 160) : null,
+                owner: el.dataset.horizontalScrollOwner || null,
+            }));
 
         const nodes = Array.from(document.querySelectorAll<HTMLElement>('body *'));
         for (const el of nodes) {
@@ -146,7 +174,13 @@ async function collectOverflowData(page: Page) {
 
             const style = getComputedStyle(el);
             if (style.display === 'none' || style.visibility === 'hidden') continue;
-            if (el.closest('[data-allow-horizontal-scroll="true"]')) continue;
+            const horizontalScrollPolicyElement = el.closest<HTMLElement>('[data-allow-horizontal-scroll="true"]');
+            if (
+                horizontalScrollPolicyElement &&
+                approvedOwnerSet.has(horizontalScrollPolicyElement.dataset.horizontalScrollOwner ?? '')
+            ) {
+                continue;
+            }
             if (el.closest('[data-popup-overlay="true"]')) continue;
             if (el.closest('.cluster-marker-container')) continue;
             if (String(el.className ?? '').includes('cluster-marker-container')) continue;
@@ -176,8 +210,9 @@ async function collectOverflowData(page: Page) {
             clientWidth: doc.clientWidth,
             scrollWidth: doc.scrollWidth,
             issues,
+            unapprovedPolicyExceptions,
         };
-    });
+    }, [...APPROVED_HORIZONTAL_SCROLL_OWNERS]);
 }
 
 function expectNoOverflow(route: string, data: Awaited<ReturnType<typeof collectOverflowData>>) {
@@ -185,6 +220,10 @@ function expectNoOverflow(route: string, data: Awaited<ReturnType<typeof collect
         data.pageOverflow,
         `[${route}] document overflow: ${JSON.stringify(data, null, 2)}`
     ).toBeLessThanOrEqual(1);
+    expect.soft(
+        data.unapprovedPolicyExceptions.length,
+        `[${route}] unapproved horizontal scroll policy exceptions: ${JSON.stringify(data.unapprovedPolicyExceptions, null, 2)}`
+    ).toBe(0);
     if (data.pageOverflow > 1) {
         expect.soft(
             data.issues.length,
