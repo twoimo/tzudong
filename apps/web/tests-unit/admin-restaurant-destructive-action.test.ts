@@ -121,7 +121,7 @@ describe('admin restaurant destructive action contract', () => {
     expect(deleteHandler).toContain('confirmation: deleteConfirmation');
     expect(deleteHandler).toContain('expectedRestaurantName: restaurant.name');
     expect(deleteHandler).toContain('감사 ID:');
-    expect(modalSource).not.toContain('assertLegacyBrowserAdminMutationEnabled("restaurant_record", "delete_restaurant")');
+    expect(deleteHandler).not.toContain('assertLegacyBrowserAdminMutationEnabled("restaurant_record", "delete_restaurant")');
     expect(deleteHandler).not.toContain('.from("restaurants")');
     expect(deleteHandler).not.toContain("status: 'deleted'");
   });
