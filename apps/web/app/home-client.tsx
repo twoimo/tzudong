@@ -194,6 +194,7 @@ export default function HomeClient() {
   const [isMapFullscreen, setIsMapFullscreen] = useState(false);
   const [contextualRestaurantsPayload, setContextualRestaurantsPayload] =
     useState<HomeMapContextualRestaurantsPayload | null>(null);
+  const [mapInteractionEpoch, setMapInteractionEpoch] = useState(0);
   const [deviceLocation, setDeviceLocation] =
     useState<DeviceMapLocation | null>(null);
   const [initialMobileOverlayIntent, setInitialMobileOverlayIntent] =
@@ -459,6 +460,9 @@ export default function HomeClient() {
   // [OPTIMIZATION] useCallback으로 메모이제이션
   const togglePanelCollapse = useCallback(() => {
     setIsPanelCollapsed((prev) => !prev);
+  }, []);
+  const handleMapInteraction = useCallback(() => {
+    setMapInteractionEpoch((current) => current + 1);
   }, []);
 
   useEffect(() => {
@@ -980,6 +984,7 @@ export default function HomeClient() {
         deviceLocation={deviceLocation}
         onReleaseSearchSelectionOwnership={releaseSearchSelectionOwnership}
         onContextualRestaurantsChange={setContextualRestaurantsPayload}
+        onMapInteraction={handleMapInteraction}
         renderDesktopDetailPanel={!isDesktop}
         showUserSubmittedMarkers={showUserSubmittedMarkers}
       />
@@ -1005,6 +1010,7 @@ export default function HomeClient() {
           isPanelOpen={state.isPanelOpen && !isPanelCollapsed}
           contextualRestaurantsPayload={contextualRestaurantsPayload}
           isMapFullscreen={isMapFullscreen}
+          mapInteractionEpoch={mapInteractionEpoch}
           onPanelClose={closeAllPanels}
           onDetailPanelBack={returnToRestaurantListPanel}
           onReviewModalOpen={() => state.setIsReviewModalOpen(true)}
