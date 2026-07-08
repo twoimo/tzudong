@@ -1431,6 +1431,8 @@ function HomeMapContainerComponent({
             data-home-map-reserved-right-panel={shouldReserveDesktopRightPanel ? "true" : "false"}
             data-home-map-panel-side={desktopPanelSide}
             data-layout-primitives="viewport-shell overlay-stack cluster"
+            role="region"
+            aria-label="쯔동여지도 홈 지도 화면"
             data-scroll-owner="home-viewport"
             style={desktopMapLayoutStyle}
         >
