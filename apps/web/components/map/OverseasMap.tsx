@@ -191,6 +191,7 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
             });
 
             mapInstance.on('click', () => {
+                onMapInteractionRef.current?.();
                 onMapBlankClickRef.current?.();
             });
             mapInstance.on('dragstart', () => {
