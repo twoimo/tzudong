@@ -93,7 +93,7 @@ const g003SourceCoverageMatrix = {
         contains: [
           'data-layout-primitives="cluster wrap-row overlay-stack"',
           'data-scroll-owner="mobile-control-overlay"',
-          'data-user-submitted-marker-toggle="true"',
+          'data-user-submitted-marker-toggle="admin-only"',
         ],
       },
       {
@@ -101,7 +101,7 @@ const g003SourceCoverageMatrix = {
         contains: [
           'data-layout-primitives="cluster wrap-row overlay-stack"',
           'data-scroll-owner="mobile-control-overlay"',
-          'data-user-submitted-marker-toggle="true"',
+          'data-user-submitted-marker-toggle="admin-only"',
         ],
       },
     ],
