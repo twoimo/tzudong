@@ -249,6 +249,7 @@ describe('mobile home map regression guards', () => {
         expect(naverMapSource).toContain('const isSelectionClearedByPanelClose =');
         expect(naverMapSource).toContain('if (isSelectionClearedByPanelClose) {');
         expect(naverMapSource).toContain('if (isSelectionChanged && currentSelectedId) {');
+        expect(naverMapSource).toContain("map.panTo(newCenterLatLng, { duration: 340, easing: 'easeOutCubic' });");
         expect(naverMapSource).toContain('Number.isNaN(urlZoom)');
 
         expect(naverMapSource).toContain('onMapInteraction?: () => void;');

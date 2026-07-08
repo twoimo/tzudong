@@ -253,10 +253,12 @@ describe("mobile and desktop parity source contracts", () => {
     );
 
     expect(headerSource).toContain("router.push('/admin')");
+    expect(headerSource).toContain('data-admin-console-menu-item="true"');
     expect(headerSource).not.toContain(
       "router.push('/admin?module=announcements')",
     );
     expect(mobileOverlaySource).toContain("router.push('/admin')");
+    expect(mobileOverlaySource).toContain('data-admin-console-menu-item="true"');
     expect(headerSource).toContain("관리자 콘솔");
     expect(mobileOverlaySource).toContain("관리자 콘솔");
     expect(headerSource).toContain("인사이트");
