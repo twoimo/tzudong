@@ -190,7 +190,8 @@ export function MyPageTopActions() {
           </DropdownMenuItem>
           {isAdmin && (
             <DropdownMenuItem
-              onClick={() => router.push("/admin")}
+              onSelect={() => router.push("/admin")}
+              data-admin-console-menu-item="true"
               className={myPageUserMenuItemClass}
             >
               <ShieldCheck className="mr-2 h-4 w-4" aria-hidden="true" />

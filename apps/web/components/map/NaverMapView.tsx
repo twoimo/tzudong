@@ -1640,7 +1640,11 @@ const NaverMapView = memo(({
 
         const newCenterLatLng = getAdjustedCenter(targetLat, targetLng, targetZoom, targetOffsetX, targetOffsetY);
         map.setZoom(targetZoom);
-        map.setCenter(newCenterLatLng);
+        if (isMobileOrTablet && currentSelectedId) {
+            map.panTo(newCenterLatLng, { duration: 340, easing: 'easeOutCubic' });
+        } else {
+            map.setCenter(newCenterLatLng);
+        }
 
         // [FIX] 트랜지션 완료 후 resize만 트리거 (moveMap 중복 호출 제거 - ResizeObserver가 처리함)
         const transitionTimer = setTimeout(() => {

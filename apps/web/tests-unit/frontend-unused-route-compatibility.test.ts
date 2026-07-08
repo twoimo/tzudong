@@ -71,11 +71,13 @@ describe('frontend unused route compatibility', () => {
         expect(adminBannersSource).not.toContain('GlobalLoader');
         expect(headerSource).toContain("관리자 콘솔");
         expect(headerSource).toContain("router.push('/admin')");
+        expect(headerSource).toContain('data-admin-console-menu-item="true"');
         expect(headerSource).not.toContain("router.push('/admin?module=announcements')");
         expect(headerSource).not.toContain("/admin/evaluations?view=submissions");
         expect(headerSource).not.toContain("/admin/evaluations?view=submissions&tab=reviews");
         expect(mobileControlOverlaySource).toContain("관리자 콘솔");
         expect(mobileControlOverlaySource).toContain("router.push('/admin')");
+        expect(mobileControlOverlaySource).toContain('data-admin-console-menu-item="true"');
         expect(mobileControlOverlaySource).not.toContain('맛집관리');
         expect(mobileControlOverlaySource).not.toContain('제보관리');
         expect(mobileControlOverlaySource).not.toContain('리뷰관리');
