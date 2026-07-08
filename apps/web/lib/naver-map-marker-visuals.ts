@@ -61,10 +61,15 @@ function wrapSpecialMarkerContent(
     const badgeFontSize = isSelected ? 10 : 9;
     const badgeOffset = isSelected ? -10 : -9;
     const badgeConfig = getMarkerKindBadgeConfig(markerKind);
+    const markerProvenance =
+        markerKind === 'user-submitted'
+            ? 'source_type:user_submission_new'
+            : `overlay:${markerKind}`;
 
     return `
         <div
           data-restaurant-marker-kind="${markerKind}"
+          data-restaurant-marker-provenance="${markerProvenance}"
           data-restaurant-marker-asset-version="${RESTAURANT_MARKER_ASSET_VERSION}"
           style="
             position: relative;

@@ -1430,6 +1430,8 @@ function HomeMapContainerComponent({
             data-home-map-reserved-left-panel={shouldReserveDesktopLeftPanel ? "true" : "false"}
             data-home-map-reserved-right-panel={shouldReserveDesktopRightPanel ? "true" : "false"}
             data-home-map-panel-side={desktopPanelSide}
+            data-layout-primitives="viewport-shell overlay-stack cluster"
+            data-scroll-owner="home-viewport"
             style={desktopMapLayoutStyle}
         >
             {mapMode === 'domestic' ? (
@@ -1506,6 +1508,8 @@ function HomeMapContainerComponent({
                                     height: `calc(100vh - var(${APP_HEADER_HEIGHT_VAR}, 56px))`,
                                     overflow: 'visible',
                                 }}
+                                data-layout-primitives="list-detail frame stack"
+                                data-scroll-owner="visible-marker-list"
                             >
                                 {/* 접기 버튼 */}
                                 <button
@@ -1549,6 +1553,7 @@ function HomeMapContainerComponent({
                                     'pb-[env(safe-area-inset-bottom)]'
                                 )}
                                 data-sheet-state={isSheetAtFullHeight ? 'full' : 'partial'}
+                                data-scroll-owner="home-bottom-sheet"
                                 style={{
                                     [`${SHEET_HEIGHT_CSS_VAR}`]: `${viewportHeightRef.current * sheetHeight / 100}px`,
                                     height: `var(${SHEET_HEIGHT_CSS_VAR})`,
@@ -1593,6 +1598,8 @@ function HomeMapContainerComponent({
                                             : (sheetHeight <= PEEK_SHEET_HEIGHT + SHEET_HALF_OPEN_TOLERANCE ? 'none' : 'pan-y'),
                                         overflowY: isDragging ? 'hidden' : undefined,
                                     }}
+                                    data-layout-primitives="list-detail frame stack"
+                                    data-scroll-owner="visible-marker-list"
                                     onTouchStart={handleContentTouchStart}
                                     onTouchMove={handleContentTouchMove}
                                     onTouchEnd={handleContentTouchEnd}
