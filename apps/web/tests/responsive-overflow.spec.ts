@@ -15,18 +15,59 @@ type OverflowIssue = {
 const ADMIN_COOKIE_ENV = 'INSIGHTS_CHAT_ADMIN_COOKIE';
 const ADMIN_AUTH_FILE = path.resolve(process.cwd(), 'tests', '.auth', 'admin.json');
 
-function hasSupabaseCookieStorageState(filePath: string): boolean {
+function decodeBase64Url(value: string): string {
+    const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+    return Buffer.from(padded, 'base64').toString('utf8');
+}
+
+function hasUsableSupabaseCookieStorageState(filePath: string): boolean {
     try {
         const raw = fs.readFileSync(filePath, 'utf8');
         const parsed = JSON.parse(raw) as { cookies?: Array<{ name?: string; value?: string }> };
         const cookies = Array.isArray(parsed?.cookies) ? parsed.cookies : [];
-        return cookies.some(
-            (cookie) =>
-                typeof cookie?.name === 'string' &&
-                cookie.name.startsWith('sb-') &&
-                typeof cookie?.value === 'string' &&
-                cookie.value.length > 0
-        );
+        const groupedCookies = new Map<string, Array<{ index: number; value: string }>>();
+
+        for (const cookie of cookies) {
+            if (
+                typeof cookie?.name !== 'string' ||
+                !cookie.name.startsWith('sb-') ||
+                typeof cookie?.value !== 'string' ||
+                cookie.value.length === 0
+            ) {
+                continue;
+            }
+
+            const chunkMatch = cookie.name.match(/^(.*?)(?:\.(\d+))?$/);
+            const baseName = chunkMatch?.[1] ?? cookie.name;
+            const chunkIndex = Number.parseInt(chunkMatch?.[2] ?? '0', 10);
+            const entries = groupedCookies.get(baseName) ?? [];
+            entries.push({
+                index: Number.isFinite(chunkIndex) ? chunkIndex : 0,
+                value: cookie.value,
+            });
+            groupedCookies.set(baseName, entries);
+        }
+
+        const minimumExpiresAt = Math.floor(Date.now() / 1000) + 300;
+        for (const entries of groupedCookies.values()) {
+            const cookieValue = entries
+                .sort((left, right) => left.index - right.index)
+                .map((entry) => entry.value)
+                .join('');
+            if (!cookieValue.startsWith('base64-')) {
+                continue;
+            }
+
+            const session = JSON.parse(decodeBase64Url(cookieValue.slice('base64-'.length))) as {
+                expires_at?: unknown;
+            };
+            if (typeof session.expires_at === 'number' && session.expires_at > minimumExpiresAt) {
+                return true;
+            }
+        }
+
+        return false;
     } catch {
         return false;
     }
@@ -35,7 +76,7 @@ function hasSupabaseCookieStorageState(filePath: string): boolean {
 const HAS_ADMIN_AUTH_HINT = Boolean(
     (process.env.E2E_ADMIN_EMAIL && process.env.E2E_ADMIN_PASSWORD) ||
     String(process.env[ADMIN_COOKIE_ENV] ?? '').trim() ||
-    hasSupabaseCookieStorageState(ADMIN_AUTH_FILE)
+    hasUsableSupabaseCookieStorageState(ADMIN_AUTH_FILE)
 );
 const parsedNavTimeout = Number.parseInt(process.env.RESPONSIVE_TEST_NAV_TIMEOUT_MS ?? '120000', 10);
 const ROUTE_NAV_TIMEOUT_MS = Number.isFinite(parsedNavTimeout) && parsedNavTimeout > 0
