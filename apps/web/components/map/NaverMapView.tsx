@@ -939,13 +939,14 @@ const NaverMapView = memo(({
 
         const listener = maps.Event.addListener(mapInstanceRef.current, 'click', () => {
             activateNoncriticalMapEffects();
+            onMapInteraction?.();
             onMapBlankClick();
         });
 
         return () => {
             maps.Event.removeListener(listener);
         };
-    }, [activateNoncriticalMapEffects, isMapInitialized, onMapBlankClick]);
+    }, [activateNoncriticalMapEffects, isMapInitialized, onMapBlankClick, onMapInteraction]);
 
     useEffect(() => {
         if (!isMapInitialized || !mapInstanceRef.current) return;

@@ -341,6 +341,10 @@ describe("mobile and desktop parity source contracts", () => {
       '<span className="font-medium">전국</span>',
     );
     expect(mobileOverlaySource).toContain("handleSearchLayerKeyDown");
+    expect(source("app/home-client.tsx")).toContain("onMapInteraction={handleMapInteraction}");
+    expect(mobileOverlaySource).toContain("mapInteractionEpoch?: number");
+    expect(mobileOverlaySource).toContain("visibleMarkerSheetHeightRequestKey");
+    expect(mobileOverlaySource).toContain("height: VISIBLE_MARKER_SHEET_HEIGHT, mode: 'exact'");
     expect(mobileOverlaySource).toContain(
       "getFocusTrapContainers(searchLayerRef.current",
     );
