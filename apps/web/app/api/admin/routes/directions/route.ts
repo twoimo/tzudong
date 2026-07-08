@@ -14,6 +14,16 @@ const NAVER_DIRECTIONS_ENDPOINT =
   "https://maps.apigw.ntruss.com/map-direction/v1/driving";
 const MAX_DIRECTIONS_POINTS = 7; // start + goal + up to 5 waypoints (Directions 5)
 const DEFAULT_DIRECTIONS_OPTION = "trafast";
+const NAVER_DIRECTIONS_PROVIDER_CACHE_TTL_MS = 60 * 1000;
+const NAVER_DIRECTIONS_RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const NAVER_DIRECTIONS_RATE_LIMIT_MAX = 20;
+
+type AdminDirectionsProviderCacheState = "hit" | "miss" | "bypass";
+
+type AdminDirectionsRouteMode = "driving" | "walking" | "mixed";
+
+const adminDirectionsProviderCache = new Map<string, { expiresAt: number; payload: Record<string, unknown> }>();
+const adminDirectionsRateLimits = new Map<string, { windowStartedAt: number; count: number }>();
 
 function getCheckedAt() {
   return new Date().toISOString();
@@ -30,6 +40,7 @@ type AdminDirectionsRequestPoint = {
 type AdminDirectionsRequestBody = {
   points?: AdminDirectionsRequestPoint[];
   option?: unknown;
+  mode?: unknown;
 };
 
 type AdminDirectionsPoint = {
@@ -75,7 +86,8 @@ type AdminDirectionsFallbackReason =
   | "naver-directions-request-failed"
   | "naver-directions-credentials-missing"
   | "naver-directions-auth-failed"
-  | "naver-directions-empty-route";
+  | "naver-directions-empty-route"
+  | "naver-directions-rate-limited";
 
 type AdminDirectionsFallbackContract = {
   mode: "read_only_local_heuristic";
@@ -126,6 +138,57 @@ function normalizeDirectionsOption(option: unknown) {
   if (typeof option !== "string") return DEFAULT_DIRECTIONS_OPTION;
 
   return /^[a-z]+$/i.test(option) ? option : DEFAULT_DIRECTIONS_OPTION;
+}
+
+function normalizeDirectionsMode(mode: unknown): AdminDirectionsRouteMode {
+  return mode === "walking" || mode === "mixed" || mode === "driving" ? mode : "driving";
+}
+
+function buildDirectionsProviderCacheKey(
+  points: AdminDirectionsPoint[],
+  option: string,
+  mode: AdminDirectionsRouteMode,
+) {
+  return [
+    mode,
+    option,
+    ...points.map((point) => `${point.id ?? ""}:${point.name ?? ""}:${point.lat},${point.lng}`),
+  ].join("|");
+}
+
+function readAdminDirectionsRateLimit(userId: string) {
+  const now = Date.now();
+  const current = adminDirectionsRateLimits.get(userId);
+  if (!current || now - current.windowStartedAt >= NAVER_DIRECTIONS_RATE_LIMIT_WINDOW_MS) {
+    const next = { windowStartedAt: now, count: 1 };
+    adminDirectionsRateLimits.set(userId, next);
+    return { limited: false, remaining: NAVER_DIRECTIONS_RATE_LIMIT_MAX - 1, windowSeconds: 60 };
+  }
+  const windowSeconds = Math.ceil((NAVER_DIRECTIONS_RATE_LIMIT_WINDOW_MS - (now - current.windowStartedAt)) / 1000);
+  if (current.count >= NAVER_DIRECTIONS_RATE_LIMIT_MAX) {
+    return { limited: true, remaining: 0, windowSeconds };
+  }
+  current.count += 1;
+  return { limited: false, remaining: NAVER_DIRECTIONS_RATE_LIMIT_MAX - current.count, windowSeconds };
+}
+
+function buildDirectionsReadback({
+  provider,
+  providerCache,
+  fallbackReasonCode = null,
+  rateLimit,
+}: {
+  provider: "naver-directions5" | "local-heuristic";
+  providerCache: AdminDirectionsProviderCacheState;
+  fallbackReasonCode?: AdminDirectionsFallbackReason | null;
+  rateLimit?: { limited: boolean; remaining: number; windowSeconds: number };
+}) {
+  return {
+    provider,
+    providerCache,
+    rateLimit,
+    fallbackReasonCode,
+  };
 }
 
 function extractNaverDirectionsCandidate(data: NaverDirectionsResponse) {
@@ -181,6 +244,8 @@ function buildLocalDirectionsFallback(
     remediation: "Use local route fallback while Naver Directions readiness is restored.",
     diagnostics: {},
   }),
+  providerCache: AdminDirectionsProviderCacheState = "bypass",
+  rateLimit?: { limited: boolean; remaining: number; windowSeconds: number },
 ) {
   const fallbackContract = buildLocalDirectionsFallbackContract(fallbackReasonCode);
   return NextResponse.json(
@@ -195,6 +260,13 @@ function buildLocalDirectionsFallback(
       readOnly: fallbackContract.readOnly,
       readiness,
       message,
+      providerCache,
+      directionsReadback: buildDirectionsReadback({
+        provider: "local-heuristic",
+        providerCache,
+        fallbackReasonCode,
+        rateLimit,
+      }),
     },
     { headers: { "Cache-Control": "no-store" } },
   );
@@ -202,12 +274,18 @@ function buildLocalDirectionsFallback(
 
 export async function POST(request: NextRequest) {
   const auth = await requireAdmin();
-  if (!auth.ok) return auth.response;
+  if (!auth.ok) {
+    auth.response.headers.set("Cache-Control", "no-store");
+    return auth.response;
+  }
 
 
   let body: AdminDirectionsRequestBody;
   try {
-    body = (await request.json()) as AdminDirectionsRequestBody;
+    const rawBody = await request.json();
+    body = rawBody && typeof rawBody === "object" && !Array.isArray(rawBody)
+      ? rawBody as AdminDirectionsRequestBody
+      : {};
   } catch {
     return NextResponse.json(
       {
@@ -221,12 +299,17 @@ export async function POST(request: NextRequest) {
           diagnostics: {},
         }),
       },
-      { status: 400 },
+      { status: 400, headers: { "Cache-Control": "no-store" } },
     );
   }
 
-  const points = (body.points ?? [])
-    .map(normalizeDirectionsPoint)
+  const requestPoints = Array.isArray(body.points) ? body.points : [];
+  const points = requestPoints
+    .map((point) =>
+      point && typeof point === "object" && !Array.isArray(point)
+        ? normalizeDirectionsPoint(point)
+        : null,
+    )
     .filter((point): point is AdminDirectionsPoint => Boolean(point))
     .slice(0, MAX_DIRECTIONS_POINTS);
 
@@ -243,12 +326,15 @@ export async function POST(request: NextRequest) {
           diagnostics: { validPointCount: points.length },
         }),
       },
-      { status: 400 },
+      { status: 400, headers: { "Cache-Control": "no-store" } },
     );
   }
 
   const credentials = resolveNaverDirectionsCredentials(process.env);
   const configuredReadiness = buildNaverDirectionsReadiness(process.env, getCheckedAt());
+  const option = normalizeDirectionsOption(body.option);
+  const mode = normalizeDirectionsMode(body.mode);
+  const providerCacheKey = buildDirectionsProviderCacheKey(points, option, mode);
 
   if (!credentials.clientId || !credentials.clientSecret) {
     return buildLocalDirectionsFallback(
@@ -259,13 +345,48 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const rateLimit = readAdminDirectionsRateLimit(auth.userId);
+  if (rateLimit.limited) {
+    return buildLocalDirectionsFallback(
+      points,
+      "naver-directions-rate-limited",
+      "네이버 Directions 요청이 분당 한도를 넘어 직선거리 기반 후보를 표시합니다.",
+      buildProviderReadiness({
+        provider: NAVER_DIRECTIONS_PROVIDER_ID,
+        status: "degraded",
+        reasonCode: "naver-directions-rate-limited",
+        checkedAt: getCheckedAt(),
+        remediation: "Wait for the one-minute admin Directions window to reset.",
+        diagnostics: { maxPerMinute: NAVER_DIRECTIONS_RATE_LIMIT_MAX },
+      }),
+      "bypass",
+      rateLimit,
+    );
+  }
+
+  const cachedProviderRoute = adminDirectionsProviderCache.get(providerCacheKey);
+  if (cachedProviderRoute && cachedProviderRoute.expiresAt > Date.now()) {
+    return NextResponse.json(
+      {
+        ...cachedProviderRoute.payload,
+        providerCache: "hit",
+        directionsReadback: buildDirectionsReadback({
+          provider: "naver-directions5",
+          providerCache: "hit",
+          rateLimit,
+        }),
+      },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
   const [start, ...remainingPoints] = points;
   const goal = remainingPoints[remainingPoints.length - 1];
   const waypoints = remainingPoints.slice(0, -1);
   const url = new URL(NAVER_DIRECTIONS_ENDPOINT);
   url.searchParams.set("start", formatDirectionsCoordinate(start));
   url.searchParams.set("goal", formatDirectionsCoordinate(goal));
-  url.searchParams.set("option", normalizeDirectionsOption(body.option));
+  url.searchParams.set("option", option);
   if (waypoints.length > 0) {
     url.searchParams.set(
       "waypoints",
@@ -307,6 +428,8 @@ export async function POST(request: NextRequest) {
             remediation: "Verify Naver Directions client id and secret.",
             diagnostics: { httpStatus: response.status },
           }),
+          "miss",
+          rateLimit,
         );
       }
 
@@ -322,8 +445,15 @@ export async function POST(request: NextRequest) {
             remediation: "Check Naver Directions provider status and request limits.",
             diagnostics: { httpStatus: response.status },
           }),
+          providerCache: "miss",
+          directionsReadback: buildDirectionsReadback({
+            provider: "local-heuristic",
+            providerCache: "miss",
+            fallbackReasonCode: "naver-directions-provider-non-ok",
+            rateLimit,
+          }),
         },
-        { status: response.status },
+        { status: response.status, headers: { "Cache-Control": "no-store" } },
       );
     }
 
@@ -343,10 +473,12 @@ export async function POST(request: NextRequest) {
           remediation: "Use the local fallback and review waypoint coordinates.",
           diagnostics: { routeCandidateFound: Boolean(candidate) },
         }),
+        "miss",
+        rateLimit,
       );
     }
 
-    return NextResponse.json({
+    const successPayload = {
       provider: "naver-directions5",
       points,
       path,
@@ -362,7 +494,20 @@ export async function POST(request: NextRequest) {
           waypointCount: waypoints.length,
         },
       }),
+      providerCache: "miss",
+      directionsReadback: buildDirectionsReadback({
+        provider: "naver-directions5",
+        providerCache: "miss",
+        rateLimit,
+      }),
+    };
+
+    adminDirectionsProviderCache.set(providerCacheKey, {
+      expiresAt: Date.now() + NAVER_DIRECTIONS_PROVIDER_CACHE_TTL_MS,
+      payload: successPayload,
     });
+
+    return NextResponse.json(successPayload, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     const errorName = getAdminSafeErrorName(error);
     console.error("[admin/routes/directions] provider request failed", {
@@ -383,8 +528,15 @@ export async function POST(request: NextRequest) {
           remediation: "Retry after checking server network access to Naver Directions.",
           diagnostics: { errorType: errorName },
         }),
+        providerCache: "miss",
+        directionsReadback: buildDirectionsReadback({
+          provider: "local-heuristic",
+          providerCache: "miss",
+          fallbackReasonCode: "naver-directions-request-failed",
+          rateLimit,
+        }),
       },
-      { status: 500 },
+      { status: 500, headers: { "Cache-Control": "no-store" } },
     );
   }
 }

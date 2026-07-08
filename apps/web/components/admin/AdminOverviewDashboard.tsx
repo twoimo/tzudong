@@ -26,14 +26,19 @@ import {
   ADMIN_ROUTE_MODE_OPTIONS,
   assessAdminRouteReadiness,
   buildAdminRoutePlan,
+  buildAdminRouteExportPackage,
+  buildAdminRoutePlainTextExport,
   hasAdminRouteCoordinates,
   type AdminRouteMode,
   type AdminRoutePlan,
+  type AdminRouteCandidateReadback,
+  type AdminRouteDirectionsReadback,
 } from "@/lib/admin-route-planner";
 import {
   type AdminMapOverlaysResponse,
   type AdminRestaurantMapOverlay,
 } from "@/lib/admin-map-overlays";
+import { TrendProposalQueue } from "@/components/admin/TrendProposalQueue";
 import type {
   DashboardRestaurantItem,
   DashboardRestaurantsResponse,
@@ -123,19 +128,33 @@ type AdminDirectionsRoute = {
   fallbackReasonCode?: string | null;
   message?: string | null;
   readiness?: AdminProviderReadiness;
+  providerCache?: "hit" | "miss" | "bypass";
+  directionsReadback?: AdminRouteDirectionsReadback;
 };
+
+type AdminRouteCandidatesResponse = {
+  ok: true;
+  items: AdminMapRestaurant[];
+  candidateReadback: AdminRouteCandidateReadback;
+  asOf: string;
+};
+
+type AdminRouteViewportBbox = [number, number, number, number];
 type AdminDirectionsRouteError = Error & {
   readiness?: AdminProviderReadiness;
   responseMessage?: string | null;
+  directionsReadback?: AdminRouteDirectionsReadback;
 };
 
 function createAdminDirectionsRouteError(
   fallbackMessage: string,
   readiness?: AdminProviderReadiness,
+  directionsReadback?: AdminRouteDirectionsReadback,
 ): AdminDirectionsRouteError {
   const error = new Error("admin-directions-route-failed") as AdminDirectionsRouteError;
   error.readiness = readiness;
   error.responseMessage = fallbackMessage;
+  error.directionsReadback = directionsReadback;
   return error;
 }
 
@@ -265,8 +284,28 @@ async function fetchAdminMapOverlays(): Promise<AdminMapOverlaysResponse> {
   return response.json() as Promise<AdminMapOverlaysResponse>;
 }
 
+async function fetchAdminRouteCandidates(
+  anchorRestaurantId: string,
+  limit: number,
+  bbox?: AdminRouteViewportBbox | null,
+): Promise<AdminRouteCandidatesResponse> {
+  const params = new URLSearchParams({
+    anchorRestaurantId,
+    limit: String(limit),
+  });
+  if (bbox) params.set("bbox", bbox.join(","));
+  const response = await fetch(`/api/admin/routes/candidates?${params.toString()}`, {
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  });
+
+  if (!response.ok) throw new Error("admin-route-candidates-failed");
+  return response.json() as Promise<AdminRouteCandidatesResponse>;
+}
+
 async function fetchAdminDirectionsRoute(
   points: AdminDirectionsPoint[],
+  mode: AdminRouteMode,
   signal?: AbortSignal,
 ) {
   const response = await fetch("/api/admin/routes/directions", {
@@ -275,7 +314,7 @@ async function fetchAdminDirectionsRoute(
       Accept: "application/json",
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ points, option: "trafast" }),
+    body: JSON.stringify({ points, option: "trafast", mode }),
     cache: "no-store",
     signal,
   });
@@ -285,6 +324,7 @@ async function fetchAdminDirectionsRoute(
     throw createAdminDirectionsRouteError(
       payload?.message ?? "네이버 Directions 응답을 사용할 수 없어 직선거리 기반 후보를 표시합니다.",
       payload?.readiness,
+      payload?.directionsReadback,
     );
   }
 
@@ -461,6 +501,7 @@ function AdminNaverMapSurface({
   directionsPath,
   isLoading,
   onSelectRestaurant,
+  onViewportBboxChange,
 }: {
   restaurants: AdminMapRestaurant[];
   selectedRestaurant: AdminMapRestaurant | null;
@@ -469,6 +510,7 @@ function AdminNaverMapSurface({
   overlays: AdminRestaurantMapOverlay[];
   isLoading: boolean;
   onSelectRestaurant: (restaurant: AdminMapRestaurant) => void;
+  onViewportBboxChange?: (bbox: AdminRouteViewportBbox) => void;
 }) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<AdminNaverMapInstance | null>(null);
@@ -633,6 +675,11 @@ function AdminNaverMapSurface({
     scheduleViewportRefresh,
     visibleRestaurants.length,
   ]);
+
+  useEffect(() => {
+    if (!mapRef.current || !onViewportBboxChange) return;
+    onViewportBboxChange(getAdminMapBbox(mapRef.current));
+  }, [onViewportBboxChange, viewportVersion]);
 
   useEffect(() => {
     return () => {
@@ -870,6 +917,7 @@ function AdminMapOverviewCanvas({
   onSelectRestaurant,
   onSelectModule,
   onToggleAdminMapOverlays,
+  onViewportBboxChange,
 }: {
   restaurants: AdminMapRestaurant[];
   selectedRestaurant: AdminMapRestaurant | null;
@@ -884,6 +932,7 @@ function AdminMapOverviewCanvas({
   onSelectRestaurant: (restaurant: AdminMapRestaurant) => void;
   onSelectModule: (moduleId: AdminOverviewModuleId) => void;
   onToggleAdminMapOverlays: () => void;
+  onViewportBboxChange?: (bbox: AdminRouteViewportBbox) => void;
 }) {
   const visibleRestaurants = useMemo(
     () => restaurants.filter(hasAdminMapCoordinates),
@@ -909,6 +958,7 @@ function AdminMapOverviewCanvas({
             directionsPath={directionsRoute?.path ?? []}
             isLoading={isLoading}
             onSelectRestaurant={onSelectRestaurant}
+            onViewportBboxChange={onViewportBboxChange}
           />
 
           <div className="absolute left-3 top-3 z-20 flex flex-wrap items-center gap-2">
@@ -1029,6 +1079,7 @@ function AdminMapInfoPanel({
   routePlan,
   routeMode,
   directionsRoute,
+  routeCandidateReadback,
   directionsStatus,
   directionsFallbackMessage,
   isLoading,
@@ -1042,6 +1093,7 @@ function AdminMapInfoPanel({
   routePlan: AdminRoutePlan;
   routeMode: AdminRouteMode;
   directionsRoute: AdminDirectionsRoute | null;
+  routeCandidateReadback: AdminRouteCandidateReadback;
   directionsStatus: AdminDirectionsStatus;
   directionsFallbackMessage: string | null;
   isLoading: boolean;
@@ -1091,6 +1143,37 @@ function AdminMapInfoPanel({
       : routeStops.length >= 2
         ? `${routePlan.summary.totalDistanceKm.toFixed(1)}km · 약 ${adminNumberFormatter.format(routePlan.summary.estimatedMinutes)}분 · ${routeStops.length}곳`
         : "";
+  const routeDirectionsReadback = useMemo<AdminRouteDirectionsReadback>(
+    () =>
+      directionsRoute?.directionsReadback ?? {
+        provider: directionsStatus === "ready" ? "naver-directions5" : "local-heuristic",
+        providerCache: directionsRoute?.providerCache ?? "bypass",
+        fallbackReasonCode: directionsRoute?.fallbackReasonCode ?? null,
+      },
+    [
+      directionsRoute?.directionsReadback,
+      directionsRoute?.fallbackReasonCode,
+      directionsRoute?.providerCache,
+      directionsStatus,
+    ],
+  );
+  const routeExportPackage = useMemo(
+    () =>
+      buildAdminRouteExportPackage({
+        routePlan,
+        candidateReadback: routeCandidateReadback,
+        directionsReadback: routeDirectionsReadback,
+      }),
+    [routeCandidateReadback, routeDirectionsReadback, routePlan],
+  );
+  const routePlainTextExport = useMemo(
+    () => buildAdminRoutePlainTextExport(routeExportPackage),
+    [routeExportPackage],
+  );
+  const routeJsonExport = useMemo(
+    () => JSON.stringify(routeExportPackage, null, 2),
+    [routeExportPackage],
+  );
 
   if (isLoading && !selectedRestaurant) {
     return <AdminMapInfoPanelSkeleton />;
@@ -1217,7 +1300,12 @@ function AdminMapInfoPanel({
       <section
         className="rounded-xl bg-card/80 p-2 shadow-sm lg:min-h-0 lg:flex-1 lg:overflow-y-auto"
         aria-label="동선 추천 초안"
+        data-layout-primitives="panel-layout list-detail step-nav cluster frame"
+        data-scroll-owner="route-control-pane"
+        data-admin-route-planner="true"
         data-admin-route-recommendation-panel="enhanced"
+        data-admin-route-candidate-readback="server-readback"
+        data-admin-route-export="tzudong-json-v1"
       >
         <div className="flex items-center justify-between gap-2">
           <p className="text-[11px] font-bold tracking-[0.12em] text-muted-foreground">
@@ -1375,6 +1463,18 @@ function AdminMapInfoPanel({
             <p className="font-bold text-foreground">도로 경로</p>
             <p>{directionsStatus === "ready" ? "확보" : "로컬 후보"}</p>
           </div>
+          <div>
+            <p className="font-bold text-foreground">후보 출처</p>
+            <p>{routeCandidateReadback.candidateSource}</p>
+          </div>
+          <div>
+            <p className="font-bold text-foreground">후보 readback</p>
+            <p>
+              {routeCandidateReadback.candidateReturned}/
+              {routeCandidateReadback.candidateTotal}
+              {routeCandidateReadback.truncated ? " · truncated" : ""}
+            </p>
+          </div>
         </div>
 
         {directionsStatus === "fallback" && directionsFallbackMessage ? (
@@ -1454,8 +1554,29 @@ function AdminMapInfoPanel({
                 ? "도로 경로 계산 전이나 실패 시에는 같은 영상·카테고리·직선거리 기반 후보를 먼저 표시합니다."
                 : "네이버 Directions 5는 자동차만 지원하므로 도보·혼합은 근거리 촬영 초안으로 표시합니다."}
           </p>
+          <div
+            className="mt-2 rounded-xl bg-background/70 p-2 text-[11px] leading-4 text-muted-foreground"
+            data-admin-route-export="tzudong-json-v1"
+            data-admin-route-provider-cache={routeDirectionsReadback.providerCache}
+            data-admin-route-candidate-source={routeCandidateReadback.candidateSource}
+          >
+            <p className="font-bold text-foreground">Tzudong JSON/plain-text 내보내기</p>
+            <p className="mt-0.5">
+              후보 readback과 Directions providerCache를 포함해 재현 가능한 동선
+              패키지로 복사할 수 있습니다.
+            </p>
+            <pre className="mt-1 max-h-24 overflow-auto whitespace-pre-wrap rounded-lg bg-muted/30 p-1.5">
+              {routePlainTextExport}
+            </pre>
+            <script
+              type="application/json"
+              data-admin-route-export-json="true"
+              dangerouslySetInnerHTML={{ __html: routeJsonExport.replace(/</g, "\\u003c") }}
+            />
+          </div>
         </div>
       </section>
+      <TrendProposalQueue />
     </aside>
   );
 }
@@ -1483,6 +1604,29 @@ export function AdminOverviewDashboard({
   const [routeStopLimit, setRouteStopLimit] = useState<number>(
     ADMIN_DIRECTIONS_MAX_POINTS,
   );
+  const [routeViewportBbox, setRouteViewportBbox] =
+    useState<AdminRouteViewportBbox | null>(null);
+  const handleRouteViewportBboxChange = useCallback((bbox: AdminRouteViewportBbox) => {
+    const normalized = bbox.map((value) => Number(value.toFixed(6))) as AdminRouteViewportBbox;
+    setRouteViewportBbox((current) =>
+      current && current.every((value, index) => value === normalized[index])
+        ? current
+        : normalized,
+    );
+  }, []);
+  const [debouncedRouteViewportBbox, setDebouncedRouteViewportBbox] =
+    useState<AdminRouteViewportBbox | null>(null);
+
+  useEffect(() => {
+    if (!routeViewportBbox) {
+      setDebouncedRouteViewportBbox(null);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      setDebouncedRouteViewportBbox(routeViewportBbox);
+    }, 500);
+    return () => window.clearTimeout(timer);
+  }, [routeViewportBbox]);
   const mapRestaurantsQuery = useQuery({
     queryKey: ["admin-overview", "map-restaurants"],
     queryFn: fetchAdminMapRestaurants,
@@ -1515,22 +1659,62 @@ export function AdminOverviewDashboard({
     ) ??
     realRestaurants[0] ??
     null;
+  const routeCandidatesQuery = useQuery({
+    queryKey: [
+      "admin-overview",
+      "route-candidates",
+      selectedRestaurant?.id,
+      routeStopLimit,
+      debouncedRouteViewportBbox?.join(",") ?? "waiting-bbox",
+    ],
+    queryFn: () =>
+      fetchAdminRouteCandidates(selectedRestaurant!.id, routeStopLimit, debouncedRouteViewportBbox),
+    enabled: Boolean(selectedRestaurant?.id && debouncedRouteViewportBbox),
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+  const routeSourceRestaurants = useMemo(
+    () =>
+      (routeCandidatesQuery.data?.items ?? realRestaurants)
+        .map((restaurant): AdminMapRestaurant => ({
+          ...restaurant,
+          categories: restaurant.categories ?? (restaurant.category ? [restaurant.category] : []),
+          youtubeLink: restaurant.youtubeLink ?? null,
+          videoId: restaurant.videoId ?? null,
+          sourceType: restaurant.sourceType ?? null,
+          status: restaurant.status ?? null,
+          isMock: restaurant.isMock ?? false,
+        }))
+        .filter(hasAdminMapCoordinates),
+    [realRestaurants, routeCandidatesQuery.data?.items],
+  );
+  const routeCandidateReadback: AdminRouteCandidateReadback =
+    routeCandidatesQuery.data?.candidateReadback ?? {
+      candidateTotal: realRestaurants.length,
+      candidateReturned: Math.min(realRestaurants.length, routeStopLimit),
+      candidateLimit: routeStopLimit,
+      truncated: realRestaurants.length > routeStopLimit,
+      candidateSource: "k-nearest",
+      excludedNoCoordinateCount: 0,
+      selectedAnchorIncluded: Boolean(selectedRestaurant),
+      exclusions: [],
+    };
   const routePlan = useMemo(
     () =>
       buildAdminRoutePlan({
         selectedRestaurant,
-        restaurants: realRestaurants,
+        restaurants: routeSourceRestaurants,
         mode: routeMode,
         maxStops: routeStopLimit,
       }),
-    [realRestaurants, routeMode, routeStopLimit, selectedRestaurant],
+    [routeMode, routeSourceRestaurants, routeStopLimit, selectedRestaurant],
   );
   const restaurantById = useMemo(
     () =>
       new Map<string, AdminMapRestaurant & { lat: number; lng: number }>(
-        realRestaurants.map((restaurant) => [restaurant.id, restaurant]),
+        routeSourceRestaurants.map((restaurant) => [restaurant.id, restaurant]),
       ),
-    [realRestaurants],
+    [routeSourceRestaurants],
   );
   const routeStops = useMemo<
     Array<AdminMapRestaurant & { lat: number; lng: number }>
@@ -1574,39 +1758,57 @@ export function AdminOverviewDashboard({
     setDirectionsStatus("loading");
     setDirectionsFallbackMessage(null);
 
-    fetchAdminDirectionsRoute(routeRequestPoints, controller.signal)
-      .then((route) => {
-        if (controller.signal.aborted) return;
-        const hasRoadRoute =
-          route.provider === "naver-directions5" && route.path.length >= 2;
-        setDirectionsRoute(hasRoadRoute ? route : null);
-        setDirectionsStatus(hasRoadRoute ? "ready" : "fallback");
-        setDirectionsFallbackMessage(
-          hasRoadRoute
-            ? null
-            : formatAdminDirectionsReadinessMessage(
-                route.message ?? "네이버 Directions 응답을 사용할 수 없어 직선거리 기반 후보를 표시합니다.",
-                route.readiness,
-              ),
-        );
-      })
-      .catch((error) => {
-        if (controller.signal.aborted) return;
-        const routeError = error as AdminDirectionsRouteError;
-        console.warn("[Admin Directions] Falling back to route candidates", {
-          reasonCode: routeError.readiness?.reasonCode ?? "admin-directions-route-failed",
+    const timer = window.setTimeout(() => {
+      fetchAdminDirectionsRoute(routeRequestPoints, routeMode, controller.signal)
+        .then((route) => {
+          if (controller.signal.aborted) return;
+          const hasRoadRoute =
+            route.provider === "naver-directions5" && route.path.length >= 2;
+          setDirectionsRoute(route);
+          setDirectionsStatus(hasRoadRoute ? "ready" : "fallback");
+          setDirectionsFallbackMessage(
+            hasRoadRoute
+              ? null
+              : formatAdminDirectionsReadinessMessage(
+                  route.message ?? "네이버 Directions 응답을 사용할 수 없어 직선거리 기반 후보를 표시합니다.",
+                  route.readiness,
+                ),
+          );
+        })
+        .catch((error) => {
+          if (controller.signal.aborted) return;
+          const routeError = error as AdminDirectionsRouteError;
+          console.warn("[Admin Directions] Falling back to route candidates", {
+            reasonCode: routeError.readiness?.reasonCode ?? "admin-directions-route-failed",
+          });
+          setDirectionsRoute(
+            routeError.directionsReadback
+              ? {
+                  provider: "local-heuristic",
+                  path: [],
+                  summary: null,
+                  fallbackReasonCode: routeError.directionsReadback.fallbackReasonCode ?? null,
+                  message: routeError.responseMessage,
+                  readiness: routeError.readiness,
+                  providerCache: routeError.directionsReadback.providerCache,
+                  directionsReadback: routeError.directionsReadback,
+                }
+              : null,
+          );
+          setDirectionsStatus("fallback");
+          setDirectionsFallbackMessage(
+            formatAdminDirectionsReadinessMessage(
+              routeError.responseMessage ?? "네이버 Directions 요청 실패로 직선거리 기반 후보를 표시합니다.",
+              routeError.readiness,
+            ),
+          );
         });
-        setDirectionsRoute(null);
-        setDirectionsStatus("fallback");
-        setDirectionsFallbackMessage(
-          formatAdminDirectionsReadinessMessage(
-            routeError.responseMessage ?? "네이버 Directions 요청 실패로 직선거리 기반 후보를 표시합니다.",
-            routeError.readiness,
-          ),
-        );
-      });
+    }, 500);
 
-    return () => controller.abort();
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
   }, [routeMode, routeRequestKey, routeRequestPoints]);
 
   return (
@@ -1614,8 +1816,15 @@ export function AdminOverviewDashboard({
       role="region"
       aria-label="관리자 지도 운영 개요 2분할"
       className="grid min-h-full grid-cols-1 gap-2 overflow-visible lg:h-full lg:min-h-0 lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)] lg:overflow-hidden"
+      data-layout-primitives="panel-layout list-detail frame cluster"
+      data-scroll-owner="admin-overview-canvas"
+      data-admin-overview-layout="two-pane"
     >
-      <div className="min-h-[390px] min-w-0 lg:min-h-0">
+      <div
+        className="min-h-[390px] min-w-0 lg:min-h-0"
+        data-admin-map-pane="true"
+        data-scroll-owner="map-canvas-none"
+      >
         <AdminMapOverviewCanvas
           restaurants={realRestaurants}
           selectedRestaurant={selectedRestaurant}
@@ -1634,14 +1843,20 @@ export function AdminOverviewDashboard({
           onToggleAdminMapOverlays={() =>
             setShowAdminMapOverlays((current) => !current)
           }
+          onViewportBboxChange={handleRouteViewportBboxChange}
         />
       </div>
-      <div className="min-h-[420px] min-w-0 lg:min-h-0">
+      <div
+        className="min-h-[420px] min-w-0 lg:min-h-0"
+        data-admin-info-pane="true"
+        data-scroll-owner="admin-overview-info-pane"
+      >
         <AdminMapInfoPanel
           selectedRestaurant={selectedRestaurant}
           routePlan={routePlan}
           routeMode={routeMode}
           directionsRoute={directionsRoute}
+          routeCandidateReadback={routeCandidateReadback}
           directionsFallbackMessage={directionsFallbackMessage}
             directionsStatus={directionsStatus}
             isLoading={isMapLoading}
