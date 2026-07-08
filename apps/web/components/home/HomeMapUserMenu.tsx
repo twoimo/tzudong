@@ -260,7 +260,8 @@ export default function HomeMapUserMenu({
             </DropdownMenuItem>
             {isAdmin && (
               <DropdownMenuItem
-                onClick={() => navigateToPage("/admin")}
+                onSelect={() => navigateToPage("/admin")}
+                data-admin-console-menu-item="true"
                 className={desktopUserMenuItemClass}
               >
                 <ShieldCheck className="mr-2 h-4 w-4" aria-hidden="true" />
