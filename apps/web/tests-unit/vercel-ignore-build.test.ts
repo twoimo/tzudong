@@ -20,9 +20,17 @@ function runIgnoreCommand(env: Record<string, string>) {
 describe("Vercel ignored build branch policy", () => {
   it("is wired through the project vercel.json", () => {
     const config = JSON.parse(readFileSync(resolve(WEB_ROOT, "vercel.json"), "utf8")) as {
+      git?: {
+        deploymentEnabled?: Record<string, boolean>;
+      };
       ignoreCommand?: string;
     };
 
+    expect(config.git?.deploymentEnabled).toEqual({
+      "*": false,
+      main: true,
+      develop: true,
+    });
     expect(config.ignoreCommand).toBe("node scripts/vercel-ignore-build.mjs");
   });
 
@@ -83,7 +91,7 @@ describe("Vercel ignored build branch policy", () => {
     }
   });
 
-  it("normalizes full refs and fails open when the branch is unavailable", () => {
+  it("normalizes full refs and fails closed when the branch is unavailable", () => {
     const fullRefResult = runIgnoreCommand({
       VERCEL_ENV: "preview",
       VERCEL_GIT_COMMIT_REF: "refs/heads/develop",
@@ -119,7 +127,7 @@ describe("Vercel ignored build branch policy", () => {
       GITHUB_REF_NAME: "",
     });
 
-    expect(missingRefResult.status).toBe(1);
-    expect(missingRefResult.stdout).toContain("branch ref unavailable; fail open");
+    expect(missingRefResult.status).toBe(0);
+    expect(missingRefResult.stdout).toContain("branch ref unavailable; fail closed");
   });
 });

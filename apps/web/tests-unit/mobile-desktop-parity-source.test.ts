@@ -271,10 +271,9 @@ describe("mobile and desktop parity source contracts", () => {
     expect(navigationRoutesSource).toContain("'/admin/banners'");
     expect(mobileBottomNavSource).toContain("path: '/'");
     expect(mobileBottomNavSource).toContain("path: '/stamp'");
-    expect(mobileBottomNavSource).toContain("path: '/mypage/submissions/new'");
-    expect(mobileBottomNavSource).toContain("label: '제보'");
-    expect(mobileBottomNavSource).toContain("testId: 'submissions'");
-    expect(mobileBottomNavSource).toContain("mobile-bottom-nav-submissions");
+    expect(mobileBottomNavSource).not.toContain("label: '제보'");
+    expect(mobileBottomNavSource).not.toContain("testId: 'submissions'");
+    expect(mobileBottomNavSource).not.toContain("mobile-bottom-nav-submissions");
     expect(mobileBottomNavSource).toContain("isMobileNavItemActive(pathname, item)");
     expect(mobileBottomNavSource).toContain("'font-sans'");
     expect(mobileBottomNavSource).toContain(
@@ -329,6 +328,8 @@ describe("mobile and desktop parity source contracts", () => {
       "w-[clamp(84px,28vw,105px)] h-9 px-2",
     );
     expect(mobileOverlaySource).toContain("data-mobile-topic-slider");
+    expect(mobileOverlaySource).toContain("flex w-full max-w-full snap-x gap-2 overflow-x-auto px-0.5");
+    expect(mobileOverlaySource).not.toContain("mt-2 -mx-3 flex snap-x");
     expect(mobileOverlaySource).toContain("<HomeMapThemeFilterIcon themeId={theme.id} />");
     expect(mobileOverlaySource).toContain("카테고리 필터 열기");
     expect(mobileOverlaySource).toContain("aria-expanded={activeSheet ===");
