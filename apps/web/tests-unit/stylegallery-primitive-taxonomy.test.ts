@@ -21,6 +21,7 @@ const canonicalStyleGalleryPrimitives = [
   'sticky-footer',
   'stack',
   'step-nav',
+  'reel',
 ] as const;
 
 const primitiveAllowlist = new Set<string>(canonicalStyleGalleryPrimitives);
@@ -29,6 +30,7 @@ const packageABindingCoverageMatrix = {
   publicHomeShell: ['viewport-shell', 'overlay-stack', 'cluster'],
   naverMap: ['overlay-stack', 'frame'],
   mobileControls: ['cluster', 'wrap-row', 'overlay-stack'],
+  homeMobileThemeFilterReel: ['reel', 'cluster'],
   visibleMarkerListDetail: ['list-detail', 'frame', 'stack'],
   adminShellSidebar: ['fixed-sidenav-shell', 'scroll-body-shell', 'sidebar'],
   adminOverviewMapInfo: ['panel-layout', 'list-detail', 'frame', 'cluster'],
@@ -54,6 +56,8 @@ const g003SourceCoverageMatrix = {
         contains: [
           'data-layout-primitives="viewport-shell overlay-stack cluster"',
           'data-scroll-owner="home-viewport"',
+          'role="region"',
+          'aria-label="쯔동여지도 홈 지도 화면"',
         ],
       },
       {
@@ -82,6 +86,19 @@ const g003SourceCoverageMatrix = {
           'import { NaverMapSurface } from "@/components/map/naver-map-surface";',
           'markerLayerVersion',
           '<NaverMapSurface',
+        ],
+      },
+    ],
+  },
+  homeMobileThemeFilterReel: {
+    files: [
+      {
+        path: 'components/home/MobileControlOverlay.tsx',
+        contains: [
+          'id="tzudong-mobile-category-slider"',
+          'data-layout-primitives="reel cluster"',
+          'data-allow-horizontal-scroll="true"',
+          'data-horizontal-scroll-owner="mobile-theme-filter-reel"',
         ],
       },
     ],
@@ -296,7 +313,7 @@ function assertSourceCoverage(surface: string, contract: SourceCoverageContract)
 
 describe('StyleGallery primitive taxonomy source contract', () => {
   test('keeps Package A/G003 binding matrix primitives inside the canonical allowlist', () => {
-    expect(canonicalStyleGalleryPrimitives).toHaveLength(16);
+    expect(canonicalStyleGalleryPrimitives).toHaveLength(17);
 
     for (const [surface, requiredPrimitives] of Object.entries(packageABindingCoverageMatrix)) {
       expect(requiredPrimitives.length, `${surface} should bind at least one primitive`).toBeGreaterThan(0);
@@ -318,5 +335,36 @@ describe('StyleGallery primitive taxonomy source contract', () => {
 
     expect(unknownTokens).toEqual([]);
     expect(collectDynamicLayoutPrimitiveAttributes()).toEqual([]);
+  });
+  test('requires approved owners for horizontal-scroll policy exceptions', () => {
+    const tableSource = readSource('components/ui/table.tsx');
+    const stampPageSource = readSource('app/stamp/page.tsx');
+    const evaluationTableSource = readSource('components/admin/EvaluationTableNew.tsx');
+    const responsiveOverflowSource = readSource('tests/responsive-overflow.spec.ts');
+
+    for (const owner of [
+      'mobile-theme-filter-reel',
+      'admin-dashboard-action-bar',
+      'admin-dashboard-series-toggle',
+      'admin-dashboard-card-title-actions',
+      'admin-dashboard-kpi-title-actions',
+      'stamp-restaurant-list-table',
+      'admin-evaluation-table',
+    ]) {
+      expect(tableSource).toContain(owner);
+      expect(responsiveOverflowSource).toContain(owner);
+    }
+
+    expect(tableSource).toContain('export type HorizontalScrollOwner');
+    expect(tableSource).toContain('horizontalScrollOwner?: HorizontalScrollOwner');
+    expect(tableSource).toContain(
+      'data-allow-horizontal-scroll={allowHorizontalScroll && horizontalScrollOwner ? "true" : undefined}',
+    );
+    expect(tableSource).toContain(
+      'data-horizontal-scroll-owner={allowHorizontalScroll && horizontalScrollOwner ? horizontalScrollOwner : undefined}',
+    );
+    expect(stampPageSource).toContain('horizontalScrollOwner="stamp-restaurant-list-table"');
+    expect(evaluationTableSource).toContain('horizontalScrollOwner="admin-evaluation-table"');
+    expect(responsiveOverflowSource).toContain('unapprovedPolicyExceptions');
   });
 });

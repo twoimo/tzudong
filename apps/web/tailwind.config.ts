@@ -200,6 +200,15 @@ const LEADERBOARD_RANK_ICON_CLASSES = [
   "text-muted-foreground",
   "text-amber-600",
 ] as const;
+const MOBILE_MAP_OVERLAY_POSITION_CLASSES = [
+  // Map presence/count badges are positioned by helpers under lib/, which is
+  // outside Tailwind's content globs. Keep the mobile overlay offsets emitted
+  // so "N명이 함께 보는 중" never falls back to static flow near the search bar.
+  "top-[calc(env(safe-area-inset-top)_+_126px)]",
+  "bottom-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))_+_env(safe-area-inset-bottom)_+_0.75rem)]",
+  "z-[61]",
+  "z-[70]",
+] as const;
 
 
 
@@ -216,6 +225,7 @@ const config: Config = {
     ...ADMIN_DASHBOARD_STYLE_CLASSES,
     ...MOBILE_BOTTOM_NAV_CLASSES,
     ...LEADERBOARD_RANK_ICON_CLASSES,
+    ...MOBILE_MAP_OVERLAY_POSITION_CLASSES,
     // MyPage profile desktop matrix depends on display: contents + equal row tracks.
     // Keep these emitted when dev CSS is regenerated incrementally.
     "md:contents",

@@ -77,6 +77,28 @@ const criticalKpiDashboardProductionUtilities = [
     declarations: ["grid-template-columns:5.5rem minmax(0,1fr) 3rem"],
   },
 ] as const;
+const criticalMobileMapOverlayPositionUtilities = [
+  {
+    utility: "top-[calc(env(safe-area-inset-top)_+_126px)]",
+    declarations: ["top:calc(env(safe-area-inset-top) + 126px)"],
+  },
+  {
+    utility: "bottom-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))_+_env(safe-area-inset-bottom)_+_0.75rem)]",
+    declarations: [
+      "bottom:calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px)) + env(safe-area-inset-bottom) + .75rem)",
+      "bottom:calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px)) + env(safe-area-inset-bottom) + 0.75rem)",
+    ],
+    match: "any",
+  },
+  {
+    utility: "z-[61]",
+    declarations: ["z-index:61"],
+  },
+  {
+    utility: "z-[70]",
+    declarations: ["z-index:70"],
+  },
+] as const;
 
 
 afterAll(() => {
@@ -88,7 +110,7 @@ afterAll(() => {
 function escapeCssClass(className: string) {
   return className
     .replace(/,/g, "\\2c ")
-    .replace(/([:.[\]()/%])/g, "\\$1");
+    .replace(/([:.[\]()+/%])/g, "\\$1");
 }
 
 function compactCss(value: string) {
@@ -185,6 +207,21 @@ describe("admin responsive CSS guard", () => {
     }
 
     for (const rule of criticalKpiDashboardProductionUtilities) {
+      const escapedClass = escapeCssClass(rule.utility);
+      const ruleBlock = getRuleBlock(css, escapedClass);
+      const compactedRuleBlock = compactCss(ruleBlock);
+
+      const declarations = [...rule.declarations];
+      const hasDeclaration = declarations.some((declaration) =>
+        compactedRuleBlock.includes(compactCss(declaration)),
+      );
+      expect(
+        hasDeclaration,
+        `${rule.utility} should include one of ${declarations.join(", ")} in its own generated rule`,
+      ).toBe(true);
+    }
+
+    for (const rule of criticalMobileMapOverlayPositionUtilities) {
       const escapedClass = escapeCssClass(rule.utility);
       const ruleBlock = getRuleBlock(css, escapedClass);
       const compactedRuleBlock = compactCss(ruleBlock);
