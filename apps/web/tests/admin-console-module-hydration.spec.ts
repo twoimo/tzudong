@@ -21,6 +21,11 @@ const ADMIN_MODULE_SMOKE_TARGETS = [
     readySelector: '[aria-label="관리자 지도 운영 개요 2분할"]',
   },
   {
+    path: '/admin?module=map-overlays',
+    moduleId: 'map-overlays',
+    readySelector: '[data-admin-map-overlays-module="true"]',
+  },
+  {
     path: '/admin?module=youtube-thumbnail-generator',
     moduleId: 'youtube-thumbnail-generator',
     readySelector: '[data-admin-youtube-thumbnail-generator="true"]',

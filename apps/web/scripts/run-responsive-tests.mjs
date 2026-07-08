@@ -26,23 +26,36 @@ function run(command, args, options = {}) {
     });
 }
 
+
 function resolveChromiumExecutable() {
     const explicit = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE;
     if (explicit && fs.existsSync(explicit)) {
         return explicit;
     }
 
-    const cacheRoot = path.join(os.homedir(), '.cache', 'ms-playwright');
-    if (!fs.existsSync(cacheRoot)) {
-        return null;
-    }
+    const cacheRoots = [
+        path.join(os.homedir(), '.cache', 'ms-playwright'),
+        process.platform === 'win32'
+            ? path.join(os.homedir(), 'AppData', 'Local', 'ms-playwright')
+            : null,
+    ].filter(Boolean);
 
-    const candidates = fs
-        .readdirSync(cacheRoot, { withFileTypes: true })
-        .filter((entry) => entry.isDirectory() && entry.name.startsWith('chromium_headless_shell-'))
-        .map((entry) => path.join(cacheRoot, entry.name, 'chrome-headless-shell-linux64', 'chrome-headless-shell'))
-        .filter((candidate) => fs.existsSync(candidate))
-        .sort();
+    const platformExecutable =
+        process.platform === 'win32'
+            ? ['chrome-headless-shell-win64', 'chrome-headless-shell.exe']
+            : ['chrome-headless-shell-linux64', 'chrome-headless-shell'];
+
+    const candidates = cacheRoots.flatMap((cacheRoot) => {
+        if (!fs.existsSync(cacheRoot)) {
+            return [];
+        }
+
+        return fs
+            .readdirSync(cacheRoot, { withFileTypes: true })
+            .filter((entry) => entry.isDirectory() && entry.name.startsWith('chromium_headless_shell-'))
+            .map((entry) => path.join(cacheRoot, entry.name, ...platformExecutable))
+            .filter((candidate) => fs.existsSync(candidate));
+    }).sort();
 
     return candidates.at(-1) ?? null;
 }
@@ -89,6 +102,10 @@ function withSupplementalLibraryEnv() {
 }
 
 function collectMissingLibraries(binaryPath, env) {
+    if (process.platform === 'win32') {
+        return [];
+    }
+
     const ldd = run('ldd', [binaryPath], { env });
     if (ldd.status !== 0) {
         return [`ldd failed: ${ldd.stderr.trim() || ldd.stdout.trim() || 'unknown error'}`];
@@ -117,18 +134,57 @@ function hasWorkersFlag(args) {
     });
 }
 
-function hasSupabaseCookieStorageState(filePath) {
+function decodeBase64Url(value) {
+    const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+    return Buffer.from(padded, 'base64').toString('utf8');
+}
+
+function hasUsableSupabaseCookieStorageState(filePath) {
     try {
         const raw = fs.readFileSync(filePath, 'utf8');
         const parsed = JSON.parse(raw);
         const cookies = Array.isArray(parsed?.cookies) ? parsed.cookies : [];
-        return cookies.some(
-            (cookie) =>
-                typeof cookie?.name === 'string' &&
-                cookie.name.startsWith('sb-') &&
-                typeof cookie?.value === 'string' &&
-                cookie.value.length > 0
-        );
+        const groupedCookies = new Map();
+
+        for (const cookie of cookies) {
+            if (
+                typeof cookie?.name !== 'string' ||
+                !cookie.name.startsWith('sb-') ||
+                typeof cookie?.value !== 'string' ||
+                cookie.value.length === 0
+            ) {
+                continue;
+            }
+
+            const chunkMatch = cookie.name.match(/^(.*?)(?:\.(\d+))?$/);
+            const baseName = chunkMatch?.[1] ?? cookie.name;
+            const chunkIndex = Number.parseInt(chunkMatch?.[2] ?? '0', 10);
+            const entries = groupedCookies.get(baseName) ?? [];
+            entries.push({
+                index: Number.isFinite(chunkIndex) ? chunkIndex : 0,
+                value: cookie.value,
+            });
+            groupedCookies.set(baseName, entries);
+        }
+
+        const minimumExpiresAt = Math.floor(Date.now() / 1000) + 300;
+        for (const entries of groupedCookies.values()) {
+            const cookieValue = entries
+                .sort((left, right) => left.index - right.index)
+                .map((entry) => entry.value)
+                .join('');
+            if (!cookieValue.startsWith('base64-')) {
+                continue;
+            }
+
+            const session = JSON.parse(decodeBase64Url(cookieValue.slice('base64-'.length)));
+            if (typeof session?.expires_at === 'number' && session.expires_at > minimumExpiresAt) {
+                return true;
+            }
+        }
+
+        return false;
     } catch {
         return false;
     }
@@ -137,7 +193,7 @@ function hasSupabaseCookieStorageState(filePath) {
 function hasAdminAuthHint() {
     const hasAdminCreds = Boolean(process.env.E2E_ADMIN_EMAIL && process.env.E2E_ADMIN_PASSWORD);
     const hasAdminCookieEnv = Boolean(String(process.env.INSIGHTS_CHAT_ADMIN_COOKIE ?? '').trim());
-    const hasAdminCookieFile = hasSupabaseCookieStorageState(adminAuthFilePath);
+    const hasAdminCookieFile = hasUsableSupabaseCookieStorageState(adminAuthFilePath);
     return hasAdminCreds || hasAdminCookieEnv || hasAdminCookieFile;
 }
 
@@ -213,9 +269,11 @@ function main() {
     const workerArgs = hasWorkersFlag(forwardedArgs)
         ? forwardedArgs
         : [`--workers=${defaultWorkers}`, ...forwardedArgs];
+    const playwrightCli = path.join(projectRoot, 'node_modules', 'playwright', 'cli.js');
+    const playwrightArgs = ['test', 'tests/responsive-overflow.spec.ts', ...workerArgs];
     const result = spawnSync(
-        'npx',
-        ['playwright', 'test', 'tests/responsive-overflow.spec.ts', ...workerArgs],
+        process.execPath,
+        [playwrightCli, ...playwrightArgs],
         { stdio: 'inherit', shell: false, env: runtimeEnv }
     );
     if (typeof result.status === 'number') {

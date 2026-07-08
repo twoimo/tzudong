@@ -31,6 +31,7 @@ import {
   MessageSquareText,
   Info,
   Menu,
+  Layers3,
   Maximize2,
   Minimize2,
   Monitor,
@@ -123,6 +124,7 @@ import {
   getAdminModuleStateWarning,
   type AdminConsoleRouteModuleId,
 } from "@/lib/admin/admin-module-routing";
+import { TrendProposalQueue } from "@/components/admin/TrendProposalQueue";
 
 type AdminModuleId = AdminConsoleRouteModuleId;
 type ConsoleModuleId = Exclude<AdminModuleId, "overview" | "routes" | "llm">;
@@ -209,6 +211,17 @@ const consoleModules: ConsoleModule[] = [
     icon: Clapperboard,
     badge: "영상 기획",
     actionLabel: "스토리보드 만들기",
+    priority: "urgent",
+  },
+  {
+    id: "map-overlays",
+    title: "지도 오버레이",
+    description:
+      "수동 오버레이, 트렌드 제안, 트렌드 실행 상태를 한 작업대에서 확인합니다.",
+    href: "/admin?module=map-overlays",
+    icon: Layers3,
+    badge: "오버레이",
+    actionLabel: "지도 오버레이 관리",
     priority: "urgent",
   },
 
@@ -381,7 +394,7 @@ const sidebarSections: SidebarSection[] = [
   },
   {
     label: "운영",
-    items: getSidebarConsoleItems(["users", "banners", "insights"]),
+    items: getSidebarConsoleItems(["map-overlays", "users", "banners", "insights"]),
   },
   {
     label: "실험실",
@@ -735,6 +748,7 @@ const AdminRouteRecommendationModule = dynamic(
 );
 const ADMIN_CONSOLE_INLINE_MODULE_IDS = new Set<AdminModuleId>([
   "overview",
+  "map-overlays",
   "llm",
   "audit",
 ]);
@@ -744,6 +758,7 @@ function preloadAdminConsoleModule(moduleId: AdminModuleId): Promise<unknown> {
     case "overview":
     case "llm":
     case "audit":
+    case "map-overlays":
       return Promise.resolve();
     case "restaurants":
     case "submissions":
@@ -8617,6 +8632,7 @@ function AdminSidebar({
         aria-label="관리자 콘솔 사이드바"
         data-admin-left-panel-expanded={isCollapsed ? "false" : "true"}
         data-admin-sidebar-scroll="hidden-scrollbar"
+        data-layout-primitives="fixed-sidenav-shell scroll-body-shell sidebar"
       >
         <div
           className={cn(
@@ -9134,6 +9150,158 @@ function AuditPlaceholder() {
   );
 }
 
+type AdminMapOverlayTabId = "manual" | "trend-proposals" | "trend-runs";
+
+const ADMIN_MAP_OVERLAY_TABS: Array<{
+  id: AdminMapOverlayTabId;
+  label: string;
+  description: string;
+}> = [
+  {
+    id: "manual",
+    label: "수동 오버레이",
+    description: "Preview → Confirm → Apply → Readback → Audit 수동 적용 흐름",
+  },
+  {
+    id: "trend-proposals",
+    label: "트렌드 제안",
+    description: "승인 대기 트렌드/시즌 제안 검토와 원자적 승인",
+  },
+  {
+    id: "trend-runs",
+    label: "트렌드 실행",
+    description: "백엔드 전용 실행 요청, 큐 상태, 취소/readback 확인",
+  },
+];
+
+function AdminMapOverlayOperationsModule() {
+  const [activeTab, setActiveTab] = useState<AdminMapOverlayTabId>("manual");
+  const activeTabConfig =
+    ADMIN_MAP_OVERLAY_TABS.find((tab) => tab.id === activeTab) ??
+    ADMIN_MAP_OVERLAY_TABS[0];
+
+  return (
+    <section
+      className="flex min-h-full flex-col gap-3"
+      aria-labelledby="admin-map-overlays-title"
+      data-admin-map-overlays-module="true"
+      data-layout-primitives="panel-layout list-detail step-nav stack"
+      data-scroll-owner="admin-map-overlays"
+    >
+      <Card className="border-border/70 bg-card/95">
+        <CardHeader className="space-y-2 pb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                관리자 지도 오버레이 작업대
+              </p>
+              <CardTitle id="admin-map-overlays-title" className="text-xl">
+                지도 오버레이
+              </CardTitle>
+            </div>
+            <Badge variant="outline" className="rounded-full">
+              승인 데이터: admin_restaurant_map_overlays
+            </Badge>
+          </div>
+          <p className="text-sm leading-6 text-muted-foreground">
+            수동 오버레이, 트렌드 제안, 트렌드 실행 요청을 한 모듈에서
+            연결합니다. 승인된 지도 표시는 명시적 수동/RPC 흐름으로만
+            변경됩니다.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div
+            role="tablist"
+            aria-label="지도 오버레이 작업 탭"
+            className="grid gap-2 md:grid-cols-3"
+            data-admin-map-overlays-tabs="manual trend-proposals trend-runs"
+          >
+            {ADMIN_MAP_OVERLAY_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={activeTab === tab.id}
+                className={cn(
+                  "rounded-xl border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                  activeTab === tab.id
+                    ? "border-primary/40 bg-primary/5 text-foreground"
+                    : "border-border bg-background/70 text-muted-foreground hover:bg-muted/60",
+                )}
+                data-admin-map-overlays-tab={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+              >
+                <span className="block text-sm font-bold">{tab.label}</span>
+                <span className="mt-1 block text-xs leading-5">
+                  {tab.description}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <div
+            className="rounded-2xl border border-border/70 bg-background/70 p-3"
+            data-admin-map-overlays-active-tab={activeTab}
+          >
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
+              {activeTabConfig.label}
+            </p>
+            {activeTab === "manual" ? (
+              <div className="mt-2 grid gap-2 text-sm leading-6 text-muted-foreground md:grid-cols-2">
+                <div className="rounded-xl bg-card/80 p-3">
+                  <p className="font-bold text-foreground">수동 적용 계약</p>
+                  <p className="mt-1">
+                    `/api/admin/map-overlays/preview`에서 해시와 readback을
+                    확인한 뒤 `/api/admin/map-overlays/apply`가 audit RPC로만
+                    승인 데이터를 변경합니다.
+                  </p>
+                </div>
+                <div className="rounded-xl bg-card/80 p-3">
+                  <p className="font-bold text-foreground">운영 순서</p>
+                  <p className="mt-1">
+                    Preview → Confirm → Apply → Readback → Audit. 공개 홈 지도는
+                    관리자 오버레이 API를 직접 호출하지 않습니다.
+                  </p>
+                </div>
+              </div>
+            ) : activeTab === "trend-proposals" ? (
+              <div className="mt-3" data-admin-map-overlays-trend-proposals="true">
+                <TrendProposalQueue />
+              </div>
+            ) : (
+              <div
+                className="mt-2 grid gap-2 text-sm leading-6 text-muted-foreground md:grid-cols-3"
+                data-admin-map-overlays-trend-runs="true"
+              >
+                <div className="rounded-xl bg-card/80 p-3">
+                  <p className="font-bold text-foreground">요청 생성</p>
+                  <p className="mt-1">
+                    `/api/admin/trend-job-requests`는 관리자 요청만 큐에 등록하고
+                    컬렉터/스코어러를 inline 실행하지 않습니다.
+                  </p>
+                </div>
+                <div className="rounded-xl bg-card/80 p-3">
+                  <p className="font-bold text-foreground">상태/취소</p>
+                  <p className="mt-1">
+                    상태 조회와 queued 취소는 owner-scoped readback으로 표시하며
+                    worker claim 이후에는 취소를 성공처럼 꾸미지 않습니다.
+                  </p>
+                </div>
+                <div className="rounded-xl bg-card/80 p-3">
+                  <p className="font-bold text-foreground">백엔드 경계</p>
+                  <p className="mt-1">
+                    트렌드 수집/평가는 backend worker와 RPC finalization 경로에서만
+                    진행됩니다.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </section>
+  );
+}
 function InlineModulePanel({
   module,
   initialStoryboardResult,
@@ -9177,6 +9345,8 @@ function InlineModulePanel({
             initialSubmissionTab="reviews"
           />
         );
+      case "map-overlays":
+        return <AdminMapOverlayOperationsModule key="admin-map-overlays" />;
       case "banners":
         return <AdminBannerModule key="admin-banners" embedded />;
       case "storyboard":
@@ -9224,6 +9394,7 @@ type AdminConsoleCanvasSkeletonVariant =
   | "submission-queue"
   | "refresh-history"
   | "banner-editor"
+  | "overlay-workspace"
   | "user-table"
   | "insights-grid"
   | "route-map"
@@ -9318,6 +9489,14 @@ function getAdminConsoleCanvasSkeletonConfig({
         description: "최신화 후보 목록과 변경 이력 패널을 먼저 배치합니다.",
         icon: RefreshCw,
         variant: "refresh-history",
+      };
+    case "map-overlays":
+      return {
+        moduleId,
+        title: title ?? "지도 오버레이",
+        description: "수동 오버레이, 트렌드 제안, 트렌드 실행 탭을 준비합니다.",
+        icon: Layers3,
+        variant: "overlay-workspace",
       };
     case "banners":
       return {
@@ -10491,6 +10670,7 @@ export function AdminConsoleOverview({
     <main
       className="h-[var(--full-height,100vh)] min-h-0 w-full overflow-hidden bg-background font-sans text-foreground tracking-normal"
       data-admin-console-shell="true"
+      data-layout-primitives="fixed-sidenav-shell scroll-body-shell sidebar"
     >
       <a
         href="#admin-console-canvas"
@@ -10537,6 +10717,7 @@ export function AdminConsoleOverview({
           )}
           data-admin-console-content="true"
           data-admin-console-active-module={activeModuleId}
+          data-scroll-owner="admin-canvas"
           onScroll={handleAdminCanvasScroll}
           onWheel={handleAdminCanvasWheel}
           onTouchStart={handleAdminCanvasTouchStart}
