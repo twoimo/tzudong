@@ -1216,7 +1216,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(homeSectionSource).not.toContain('id: "routes"');
     expect(opsSectionSource).toContain(
-      'getSidebarConsoleItems(["users", "banners", "insights"])',
+      'getSidebarConsoleItems(["map-overlays", "users", "banners", "insights"])',
     );
     expect(opsSectionSource).not.toContain('id: "routes"');
     expect(opsSectionSource).not.toContain('"storyboard"');
@@ -3096,7 +3096,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       '검수: ["restaurants", "restaurant-refresh-history", "submissions", "reviews"]',
     );
     expect(sidebarOrderSource).toContain(
-      '운영: ["users", "banners", "insights"]',
+      '운영: ["map-overlays", "users", "banners", "insights"]',
     );
     expect(sidebarOrderSource).toContain(
       '실험실: ["youtube-thumbnail-generator", "storyboard", "routes", "llm", "audit"]',
@@ -5095,9 +5095,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     const appGlobalsSource = source("app/app-globals.css");
     const routeSource = source("app/api/admin/storyboard/route.ts");
-    expect(routeSource).toContain("storyboard_generation_unavailable");
-    expect(routeSource).toContain("vercel_local_storyboard_backend_agent_unavailable");
-    expect(routeSource).toContain("status: 503");
+    expect(routeSource).toContain("mode: 'async_job_control_plane'");
+    expect(routeSource).toContain("buildStoryboardJobInsert");
+    expect(routeSource).not.toContain("generateStoryboardWithBackendAgent");
     const chatRouteSource = source("app/api/admin/storyboard/chat/route.ts");
     const imageRouteSource = source("app/api/admin/storyboard/images/route.ts");
     const imageProviderSource = source(
@@ -7315,9 +7315,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "isLocalPlaywrightHost(requestHeaders.get('host'))",
     );
     expect(requireAdminSource).toContain("return 'e2e-admin-route-bypass'");
-    expect(routeSource).toContain("generateStoryboardWithBackendAgent");
-    expect(routeSource).toContain("getStoryboardBackendAgentStatus");
-    expect(routeSource).toContain("generateStoryboardWithRouteBackendAgent(body)");
+    expect(routeSource).toContain("buildStoryboardJobInsert");
+    expect(routeSource).toContain("sanitizeStoryboardJobRow");
+    expect(routeSource).not.toContain("generateStoryboardWithBackendAgent");
     expect(routeSource).toContain(
       "backendAgent: await getPublicStoryboardBackendAgentStatus()",
     );
@@ -7802,6 +7802,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(hydrationSmokeSource).toContain("/admin?module=routes");
     expect(hydrationSmokeSource).toContain("/admin?module=youtube-thumbnail-generator");
     expect(hydrationSmokeSource).toContain("/admin?module=audit");
+    expect(hydrationSmokeSource).toContain("/admin?module=map-overlays");
+    expect(hydrationSmokeSource).toContain("moduleId: 'map-overlays'");
+    expect(hydrationSmokeSource).toContain('data-admin-map-overlays-module="true"');
     expect(hydrationSmokeSource).toContain("minified react error");
     expect(hydrationSmokeSource).toContain("readySelector");
     expect(hydrationSmokeSource).toContain('data-admin-youtube-thumbnail-generator="true"');
@@ -8105,7 +8108,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(preferenceRouteSource).toContain('from "@/lib/admin/sidebar-order"');
     expect(sidebarOrderSource).toContain("mergeSidebarItemsWithDefaultSlots");
     expect(sidebarOrderSource).toContain(
-      '운영: ["users", "banners", "insights"]',
+      '운영: ["map-overlays", "users", "banners", "insights"]',
     );
     expect(preferenceRouteSource).toContain("await requireAdmin()");
     expect(preferenceRouteSource.indexOf("await requireAdmin()")).toBeLessThan(
@@ -8158,7 +8161,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(overviewSource).toContain(
       "네이버 지도 프레임은 유지한 채 맛집 관리에서 좌표 상태를 확인하세요.",
     );
-    expect(overviewSource).toContain("restaurants: realRestaurants,");
+    expect(overviewSource).toContain("restaurants={realRestaurants}");
     expect(overviewSource).toContain(
       "지도는 기본 위치로 유지하고 좌표가 있는 맛집만 표시합니다.",
     );

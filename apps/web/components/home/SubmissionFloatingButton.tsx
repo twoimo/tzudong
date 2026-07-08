@@ -74,6 +74,8 @@ const SubmissionFloatingButton = memo(function SubmissionFloatingButton({
                     }
             }
             aria-label="지도 빠른 작업"
+            data-layout-primitives="cluster wrap-row overlay-stack"
+            data-scroll-owner="mobile-control-overlay"
         >
             <Button
                 type="button"

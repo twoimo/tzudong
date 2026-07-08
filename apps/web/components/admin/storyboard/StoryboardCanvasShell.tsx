@@ -14,6 +14,8 @@ export function StoryboardCanvasShell({ children }: StoryboardCanvasShellProps) 
       aria-label="스토리보드 이미지 생성 결과"
       role="region"
       data-storyboard-result-panel="image-frames-only"
+      data-scroll-owner="storyboard-canvas"
+      data-layout-primitives="panel-layout frame stack"
       style={{
         gridColumn: "var(--storyboard-result-panel-column, 1)",
         gridRow: "var(--storyboard-result-panel-row, 1)",
@@ -45,6 +47,8 @@ export function StoryboardCanvasContent({
         "min-h-0 flex-1 overflow-x-hidden p-3 pt-0",
         isSingleFrame ? "overflow-hidden" : "overflow-y-auto",
       )}
+      data-scroll-owner="storyboard-readback"
+      data-layout-primitives="frame stack"
     >
       {children}
     </CardContent>
