@@ -1050,6 +1050,7 @@ export default function HomeClient() {
             isDeviceHeadingMode={isDeviceHeadingMode}
             desktopPanelSide={desktopPanelSide}
             isPanelCollapsed={isPanelCollapsed}
+            isAdmin={isAdmin}
             showUserSubmittedMarkers={showUserSubmittedMarkers}
             onUserSubmittedMarkersToggle={handleUserSubmittedMarkerToggle}
           />

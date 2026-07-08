@@ -70,27 +70,28 @@ describe("mypage CRUD QA/QC source contracts", () => {
       "supabase/migrations/20260702000200_restaurant_request_client_idempotency.sql",
     );
 
-    expect(newSubmissionModalSource).toContain(".from('restaurant_submissions')");
-    expect(newSubmissionModalSource).toContain("submission_type: 'new'");
-    expect(newSubmissionModalSource).toContain(
-      ".from('restaurant_submission_items')",
-    );
-    expect(newSubmissionModalSource).toContain(
-      "await supabase.from('restaurant_submissions').delete().eq('id', submissionId)",
-    );
-    expect(newSubmissionModalSource).toContain(".from('restaurant_requests')");
-    expect(newSubmissionModalSource).toContain("recommendation_reason");
-    expect(newSubmissionModalSource).toContain("getRestaurantRequestClientKey");
-    expect(newSubmissionModalSource).toContain("findRestaurantRequestByClientKey");
-    expect(newSubmissionModalSource).toContain("client_request_key: clientRequestKey");
-    expect(newSubmissionModalSource).toContain("createdWithClientKey");
+    const submitRouteSource = source("app/api/mypage/submissions/submit/route.ts");
+
+    expect(newSubmissionModalSource).toContain("fetch('/api/mypage/submissions/submit'");
+    expect(newSubmissionModalSource).toContain("postRestaurantSubmission('new', data)");
+    expect(newSubmissionModalSource).toContain("postRestaurantSubmission('request', data)");
+    expect(newSubmissionModalSource).toContain("getRestaurantSubmissionClientKey");
     expect(newSubmissionModalSource).toContain("requestSubmitInFlightRef");
-    expect(newSubmissionModalSource).toContain("requestPayloadFingerprintRef");
     expect(newSubmissionModalSource).toContain("admin-restaurant-requests-inline");
-    expect(newSubmissionModalSource).toContain("readBackRestaurantRequestByClientKey");
-    expect(newSubmissionModalSource).toContain(".select('id,phone,client_request_key')");
-    expect(newSubmissionModalSource).toContain("입력한 전화번호가 저장 확인 결과와 일치하지 않습니다.");
     expect(newSubmissionModalSource).toContain("queryKey: ['myRecommendRequests', user?.id]");
+    expect(submitRouteSource).toContain("await supabase.auth.getUser()");
+    expect(submitRouteSource).toContain('mode === "new"');
+    expect(submitRouteSource).toContain("return await submitRequest(expected, user.id, clientRequestKey)");
+    expect(submitRouteSource).toContain('rpc("submit_restaurant_submission"');
+    expect(submitRouteSource).toContain('p_submission_type: "new"');
+    expect(submitRouteSource).toContain('p_client_submission_key: clientRequestKey');
+    expect(submitRouteSource).toContain('.from("restaurant_requests")');
+    expect(submitRouteSource).toContain("recommendation_reason");
+    expect(submitRouteSource).toContain("client_request_key: clientRequestKey");
+    expect(submitRouteSource).toContain("readBackRequest");
+    expect(submitRouteSource).toContain("restaurantSubmissionRequestReadbackMatches");
+    expect(submitRouteSource).toContain("제보 저장 확인에 실패했습니다. 다시 시도해주세요.");
+    expect(submitRouteSource).toContain("맛집 추천 저장 확인에 실패했습니다. 다시 시도해주세요.");
     expect(requestIdempotencyMigrationSource).toContain("add column if not exists client_request_key text");
     expect(requestIdempotencyMigrationSource).toContain("restaurant_requests_user_client_request_key_idx");
     expect(requestIdempotencyMigrationSource).toContain("where client_request_key is not null");
