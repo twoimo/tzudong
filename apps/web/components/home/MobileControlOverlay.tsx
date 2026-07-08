@@ -272,7 +272,6 @@ function MobileControlOverlayComponent({
     });
     const [visibleMarkerThumbnailIndexes, setVisibleMarkerThumbnailIndexes] =
         useState<Record<string, number>>({});
-    const [visibleMarkerSheetHeightRequestKey, setVisibleMarkerSheetHeightRequestKey] = useState(0);
     const [isBusinessInfoExpanded, setIsBusinessInfoExpanded] = useState(false);
     const isBookmarkMenuOpen = openTopDropdown === 'bookmark';
     const isNotificationMenuOpen = openTopDropdown === 'notification';
@@ -356,14 +355,10 @@ function MobileControlOverlayComponent({
         setActiveSheet('none');
     }, [visibleMarkerSheetDismissScope]);
 
-    const requestVisibleMarkerSheetPeek = useCallback(() => {
-        setVisibleMarkerSheetHeightRequestKey((current) => current + 1);
-    }, []);
 
     useEffect(() => {
         if (!canAutoShowVisibleMarkerSheet || activeSheet !== 'none') return;
         if (dismissedVisibleMarkerSheetScopeRef.current === visibleMarkerSheetDismissScope) return;
-        setVisibleMarkerSheetHeightRequestKey(0);
         visibleMarkerRestaurantsSignatureRef.current = visibleMarkerRestaurantsSignature;
         setActiveSheet('visibleMarkers');
     }, [
@@ -385,30 +380,13 @@ function MobileControlOverlayComponent({
             return;
         }
 
-        if (visibleMarkerRestaurantsSignatureRef.current === visibleMarkerRestaurantsSignature) return;
-
         visibleMarkerRestaurantsSignatureRef.current = visibleMarkerRestaurantsSignature;
-        requestVisibleMarkerSheetPeek();
     }, [
         activeSheet,
         canAutoShowVisibleMarkerSheet,
-        requestVisibleMarkerSheetPeek,
         visibleMarkerRestaurantsSignature,
     ]);
 
-    useEffect(() => {
-        if (activeSheet !== 'visibleMarkers') return;
-
-        const handlePointerDown = (event: PointerEvent) => {
-            const target = event.target;
-            if (!(target instanceof Element)) return;
-            if (target.closest('[data-bottom-sheet-layout-source="mobile-control-overlay-sheet"]')) return;
-            requestVisibleMarkerSheetPeek();
-        };
-
-        document.addEventListener('pointerdown', handlePointerDown, true);
-        return () => document.removeEventListener('pointerdown', handlePointerDown, true);
-    }, [activeSheet, requestVisibleMarkerSheetPeek]);
 
     const searchInputRef = useRef<HTMLInputElement>(null);
     const searchLayerRef = useRef<HTMLDivElement>(null);
@@ -441,13 +419,10 @@ function MobileControlOverlayComponent({
     }, []);
 
     const handleBottomSheetClose = useCallback(() => {
-        if (activeSheet === 'visibleMarkers' && canAutoShowVisibleMarkerSheet) {
-            requestVisibleMarkerSheetPeek();
-            return;
-        }
+        if (activeSheet === 'visibleMarkers') return;
 
         handleClose();
-    }, [activeSheet, canAutoShowVisibleMarkerSheet, handleClose, requestVisibleMarkerSheetPeek]);
+    }, [activeSheet, handleClose]);
 
     const handleSearchLayerKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
         if (event.key === 'Escape') {
@@ -994,7 +969,7 @@ function MobileControlOverlayComponent({
                 <div
                     id="tzudong-mobile-category-slider"
                     data-mobile-topic-slider="true"
-                    className="pointer-events-auto mt-2 -mx-3 flex snap-x gap-2 overflow-x-auto pl-[calc(env(safe-area-inset-left)+8px)] pr-[calc(env(safe-area-inset-right)+8px)] py-0.5 scrollbar-hide [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                    className="pointer-events-auto mt-2 flex w-full max-w-full snap-x gap-2 overflow-x-auto px-0.5 py-0.5 scrollbar-hide [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                 >
                     {HOME_MAP_THEME_FILTERS.map((theme) => {
                         const isSelected = selectedTheme === theme.id;
@@ -1119,34 +1094,36 @@ function MobileControlOverlayComponent({
                 data-layout-primitives="cluster wrap-row overlay-stack"
                 data-scroll-owner="mobile-control-overlay"
             >
-                {/* 사용자 제보 마커 표시 토글 */}
-                <Button
-                    type="button"
-                    onClick={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        onUserSubmittedMarkersToggle?.();
-                    }}
-                    aria-pressed={showUserSubmittedMarkers}
-                    className={cn(
-                        'h-12 w-12 rounded-full shadow-lg',
-                        'transition-colors duration-150 ease-out motion-reduce:transition-none',
-                        'flex items-center justify-center',
-                        'border-2',
-                        showUserSubmittedMarkers
-                            ? 'bg-blue-600 hover:bg-blue-700 text-white border-white/70 ring-2 ring-blue-200/70'
-                            : 'bg-background/95 hover:bg-secondary text-foreground border-border/70 backdrop-blur-sm'
-                    )}
-                    title={showUserSubmittedMarkers ? '사용자 제보 맛집 마커 숨기기' : '사용자 제보 맛집 마커 보이기'}
-                    aria-label={showUserSubmittedMarkers ? '사용자 제보 맛집 마커 숨기기' : '사용자 제보 맛집 마커 보이기'}
-                    data-user-submitted-marker-toggle="true"
-                >
-                    {showUserSubmittedMarkers ? (
-                        <Eye className="h-5 w-5" aria-hidden="true" />
-                    ) : (
-                        <EyeOff className="h-5 w-5" aria-hidden="true" />
-                    )}
-                </Button>
+                {/* 사용자 제보 마커 표시 토글: 관리자 검수용 */}
+                {isAdmin && (
+                    <Button
+                        type="button"
+                        onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            onUserSubmittedMarkersToggle?.();
+                        }}
+                        aria-pressed={showUserSubmittedMarkers}
+                        className={cn(
+                            'h-12 w-12 rounded-full shadow-lg',
+                            'transition-colors duration-150 ease-out motion-reduce:transition-none',
+                            'flex items-center justify-center',
+                            'border-2',
+                            showUserSubmittedMarkers
+                                ? 'bg-blue-600 hover:bg-blue-700 text-white border-transparent'
+                                : 'bg-background/95 hover:bg-secondary text-foreground border-border/70 backdrop-blur-sm'
+                        )}
+                        title={showUserSubmittedMarkers ? '사용자 제보 맛집 마커 숨기기' : '사용자 제보 맛집 마커 보이기'}
+                        aria-label={showUserSubmittedMarkers ? '사용자 제보 맛집 마커 숨기기' : '사용자 제보 맛집 마커 보이기'}
+                        data-user-submitted-marker-toggle="admin-only"
+                    >
+                        {showUserSubmittedMarkers ? (
+                            <Eye className="h-5 w-5" aria-hidden="true" />
+                        ) : (
+                            <EyeOff className="h-5 w-5" aria-hidden="true" />
+                        )}
+                    </Button>
+                )}
                 {/* 제보 버튼 */}
                 <Button
                     onClick={() => {
@@ -1318,9 +1295,7 @@ function MobileControlOverlayComponent({
                 <BottomSheet
                     isOpen
                     onClose={handleBottomSheetClose}
-                    defaultHeight={
-                        activeSheet === 'visibleMarkers' ? VISIBLE_MARKER_SHEET_HEIGHT : HALF_SHEET_HEIGHT
-                    }
+                    defaultHeight={HALF_SHEET_HEIGHT}
                     minHeight={
                         activeSheet === 'visibleMarkers' ? VISIBLE_MARKER_SHEET_HEIGHT : MIN_SHEET_HEIGHT
                     }
@@ -1332,15 +1307,6 @@ function MobileControlOverlayComponent({
                     showBackdrop={false}
                     closeOnOutsidePointerDown={activeSheet !== 'visibleMarkers'}
                     layoutSource="mobile-control-overlay-sheet"
-                    heightRequest={
-                        activeSheet === 'visibleMarkers'
-                            ? {
-                                key: visibleMarkerSheetHeightRequestKey,
-                                height: VISIBLE_MARKER_SHEET_HEIGHT,
-                                mode: 'exact',
-                            }
-                            : undefined
-                    }
                     className="z-[95]"
                 >
                     {activeSheet !== 'visibleMarkers' ? (

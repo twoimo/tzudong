@@ -2,7 +2,7 @@
 
 import { memo, useCallback, useMemo, useRef, useEffect, useTransition, type CSSProperties } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, MessageSquareText, PlusCircle, Stamp, Trophy, User } from 'lucide-react';
+import { Home, MessageSquareText, Stamp, Trophy, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContextBase';
 import { AUTH_NAV_ROUTES } from '@/components/layout/navigation-routes';
@@ -21,7 +21,6 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
     { icon: Home, label: '홈', path: '/', testId: 'home' },
     { icon: MessageSquareText, label: '리뷰', path: '/feed', testId: 'feed' },
-    { icon: PlusCircle, label: '제보', path: '/mypage/submissions/new', testId: 'submissions', requiresAuth: true },
     { icon: Stamp, label: '도장', path: '/stamp', testId: 'stamp' },
     { icon: Trophy, label: '랭킹', path: '/leaderboard', testId: 'leaderboard' },
     { icon: User, label: 'MY', path: '/mypage/profile', testId: 'my', requiresAuth: true },
@@ -31,11 +30,8 @@ const isAuthNavRoute = (path: string) => AUTH_NAV_ROUTES.some((route) => route =
 const isProtectedNavItem = (item: NavItem) => item.requiresAuth === true || isAuthNavRoute(item.path);
 const isMobileNavItemActive = (pathname: string | null, item: NavItem) => {
     if (item.path === '/') return pathname === '/';
-    if (item.path === '/mypage/submissions/new') {
-        return pathname?.startsWith('/mypage/submissions') === true;
-    }
     if (item.path === '/mypage/profile') {
-        return pathname?.startsWith('/mypage') === true && pathname?.startsWith('/mypage/submissions') !== true;
+        return pathname?.startsWith('/mypage') === true;
     }
 
     return pathname === item.path;
@@ -126,9 +122,9 @@ function MobileBottomNavComponent({ className, style }: MobileBottomNavProps) {
     const handleNavClick = useCallback((item: NavItem) => {
         if (isProtectedNavItem(item) && !user?.id) {
             requestAuthUi({
-                source: item.path === '/mypage/submissions/new' ? 'mobile-bottom-nav-submissions' : 'mobile-bottom-nav-my',
+                source: 'mobile-bottom-nav-my',
                 route: pathname ?? undefined,
-                reason: item.path === '/mypage/submissions/new' ? 'submissions' : 'mypage',
+                reason: 'mypage',
             });
             return;
         }
