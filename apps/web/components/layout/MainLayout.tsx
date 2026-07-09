@@ -111,9 +111,7 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
 
   const shouldSuppressNoncriticalChrome =
     shouldSuppressNoncriticalChromeForPathname(pathname);
-  const shouldSuppressMobileBottomNav =
-    pathname?.startsWith("/auth/") ||
-    pathname?.startsWith("/admin");
+  const shouldSuppressMobileBottomNav = pathname?.startsWith("/auth/") === true;
   const shouldRenderMobileBottomNav = !shouldSuppressMobileBottomNav;
 
   // 성능 최적화: 핸들러 메모이제이션

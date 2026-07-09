@@ -1741,10 +1741,11 @@ describe("web quality performance source contracts", () => {
     expect(overlayStackSource).toContain(
       "ariaLive={mapToast.type === 'error' ? 'assertive' : 'polite'}",
     );
-    expect(overlayStackSource).not.toContain("emptyStateMessage?: string");
+    expect(overlayStackSource).toContain("emptyStateMessage?: string");
     expect(overlayStackSource).toContain("className={floatingToastPositionClass}");
-    expect(overlayStackSource).toContain("<EmptyStateIndicator />");
+    expect(overlayStackSource).toContain("<EmptyStateIndicator message={emptyStateMessage} />");
     expect(mapIndicatorsSource).toContain("이 지역에 등록된 맛집이 없습니다");
+    expect(naverMapSource).toContain("resolveNaverRestaurantEmptyStateMessage(filters)");
     expect(naverMapSource).not.toContain("선택한 필터에 맞는 맛집이 없습니다");
     expect(overlayPositionSource).toContain(
       "bottom-[calc(var(--mobile-bottom-nav-effective-height",
@@ -2625,7 +2626,7 @@ describe("web quality performance source contracts", () => {
         /const shouldSuppressMobileBottomNav =([\s\S]*?)const shouldRenderMobileBottomNav/,
       )?.[1] ?? "";
     expect(mobileBottomNavSuppressionBlock).toContain('pathname?.startsWith("/auth/")');
-    expect(mobileBottomNavSuppressionBlock).toContain('pathname?.startsWith("/admin")');
+    expect(mobileBottomNavSuppressionBlock).not.toContain('pathname?.startsWith("/admin")');
     expect(mobileBottomNavSuppressionBlock).not.toContain('pathname === "/feed"');
     expect(mobileBottomNavSuppressionBlock).not.toContain('pathname === "/stamp"');
     expect(mobileBottomNavSuppressionBlock).not.toContain('pathname === "/leaderboard"');

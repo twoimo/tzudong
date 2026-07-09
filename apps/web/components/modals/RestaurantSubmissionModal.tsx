@@ -249,21 +249,24 @@ export default function RestaurantSubmissionModal({
     const restoreDraft = useCallback(() => {
         if (!pendingDraft) return;
 
+        const draft = pendingDraft;
         setFormData({
-            restaurant_name: pendingDraft.restaurant_name,
-            address: pendingDraft.address,
-            phone: pendingDraft.phone,
-            categories: pendingDraft.categories,
-            youtube_link: pendingDraft.youtube_link,
-            description: pendingDraft.description,
+            restaurant_name: draft.restaurant_name,
+            address: draft.address,
+            phone: draft.phone,
+            categories: draft.categories,
+            youtube_link: draft.youtube_link,
+            description: draft.description,
         });
-        setCurrentStep(pendingDraft.currentStep === 2 ? 2 : 1);
-        setLastSavedAt(new Date(pendingDraft.savedAt));
+        if (draft.currentStep && RESTAURANT_SUBMISSION_STEPS.some((step) => step.id === draft.currentStep)) {
+            setCurrentStep(draft.currentStep);
+        }
+        setLastSavedAt(new Date(draft.savedAt));
         setPendingDraft(null);
         setValidationMessage(null);
 
         toast.success("임시 저장된 내용을 불러왔습니다", {
-            description: `저장 시간: ${new Date(pendingDraft.savedAt).toLocaleString('ko-KR')}`,
+            description: `저장 시간: ${new Date(draft.savedAt).toLocaleString('ko-KR')}`,
         });
     }, [pendingDraft]);
 

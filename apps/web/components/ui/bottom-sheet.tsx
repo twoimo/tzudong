@@ -18,6 +18,7 @@ interface BottomSheetProps {
     className?: string;
     closeThreshold?: number; // Percent
     disableContentScroll?: boolean;
+    contentClassName?: string;
     headerOffset?: number;   // Pixels (e.g., 80px for header + spacing)
     bottomNavOffset?: number; // Pixels (e.g., 56px for bottom nav)
     onSwipeLeft?: () => void;
@@ -254,6 +255,7 @@ function BottomSheetComponent({
     className,
     closeThreshold = 15,
     disableContentScroll = false,
+    contentClassName,
     headerOffset = 0,
     bottomNavOffset = 0,
     onSwipeLeft,
@@ -1394,8 +1396,9 @@ function BottomSheetComponent({
                 <div
                     ref={contentRef}
                     className={cn(
-                        "flex-1 overscroll-contain min-h-0 border-t border-border/50",
-                        disableContentScroll ? "overflow-hidden" : "overflow-y-auto"
+                        "scrollbar-hide flex-1 overscroll-contain min-h-0 border-t border-border/50",
+                        disableContentScroll ? "overflow-hidden" : "overflow-y-auto",
+                        contentClassName
                     )}
                     style={{
                         touchAction: isDragging
