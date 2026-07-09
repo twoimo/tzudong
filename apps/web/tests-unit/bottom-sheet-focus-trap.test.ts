@@ -117,6 +117,20 @@ describe('bottom sheet strict modal pointer blocking', () => {
             shouldBlockModalOutsidePointerDown(backdropTarget as unknown as Node, primary, [])
         ).toBe(false);
     });
+
+    test('allows nested modal portals even when generic portal allowances are disabled', () => {
+        const primary = createContainer('sheet', ['sheet-button']);
+        const alertDialogTarget = {
+            id: 'delete-confirm-button',
+            closest: (selector: string) => selector.includes('[role="alertdialog"')
+                ? alertDialogTarget
+                : null,
+        };
+
+        expect(
+            shouldBlockModalOutsidePointerDown(alertDialogTarget as unknown as Node, primary, [])
+        ).toBe(false);
+    });
 });
 
 describe('bottom sheet modal sibling hiding', () => {

@@ -207,7 +207,7 @@ function buildItemValidationReasons(
     }
   }
 
-  if (mode === 'request' || mode === 'edit') {
+  if (mode === 'request') {
     for (const item of relevantItems) {
       const itemDescription = trim(item.tzuyang_review);
       const descriptionValidationMessage = validateRestaurantSubmissionStep(2, 'request', {
