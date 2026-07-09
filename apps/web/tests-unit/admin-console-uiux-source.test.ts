@@ -405,24 +405,49 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain('aria-controls="admin-console-canvas"');
     expect(consoleSource).not.toContain("window.history.replaceState");
   });
+  test("aligns mobile admin menu state and KPI loading without desktop restyle", () => {
+    const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
+    const guardedSource = source("lib/admin/guarded-mutation-contract.ts");
+
+    expect(consoleSource).toContain('aria-current={isActive ? "page" : undefined}');
+    expect(consoleSource).toContain('data-admin-console-menu-item-mode={isDropdown ? "mobile-dropdown" : "desktop-sidebar"}');
+    expect(consoleSource).toContain('data-admin-console-menu-item-state={isActive ? "active" : "inactive"}');
+    expect(consoleSource).toContain('? "border-primary/20 bg-primary text-primary-foreground shadow-primary"');
+    expect(consoleSource).toContain('data-admin-dashboard-mobile-loading-prompt="true"');
+    expect(consoleSource).toContain('data-admin-dashboard-mobile-loading-prompt="live"');
+    expect(consoleSource).toContain("shouldShowMobileDashboardLoadingPrompt");
+    expect(consoleSource).toContain("KPI 데이터를 불러오는 중입니다. 모바일에서는 핵심 카드부터 순서대로 표시됩니다.");
+    expect(consoleSource).toContain("md:h-7 md:min-h-0 md:min-w-0");
+    expect(guardedSource).toContain('GUARDED_MUTATION_STEPS.join(" -> ")');
+  });
 
   test("suppresses public popup chrome on admin routes in both app layouts", () => {
     const mainLayoutSource = source("components/layout/MainLayout.tsx");
     const overlayLayoutSource = source("components/layout/OverlayLayout.tsx");
+    const routeHelperSource = source("lib/noncritical-chrome-routes.ts");
 
     for (const layoutSource of [mainLayoutSource, overlayLayoutSource]) {
-      expect(layoutSource).toContain('pathname?.startsWith("/admin")');
+      expect(layoutSource).toContain("shouldSuppressNoncriticalChromeForPathname(pathname)");
       expect(layoutSource).toContain(
         "canMountNoncriticalChrome && !shouldSuppressNoncriticalChrome",
       );
       expect(layoutSource).toContain("<CombinedPopup />");
     }
+    expect(routeHelperSource).toContain('"/admin"');
+    expect(routeHelperSource).toContain('"/mypage"');
+    expect(routeHelperSource).toContain('"/insights"');
+    expect(routeHelperSource).toContain('"/feed"');
+    expect(routeHelperSource).toContain('"/stamp"');
+    expect(routeHelperSource).toContain('"/leaderboard"');
     expect(mainLayoutSource).toContain("{shouldRenderMobileBottomNav && (");
     expect(mainLayoutSource).toContain("const shouldSuppressMobileBottomNav =");
     expect(mainLayoutSource).toContain("const shouldRenderMobileBottomNav = !shouldSuppressMobileBottomNav;");
-    expect(mainLayoutSource).toContain('pathname === "/feed"');
-    expect(mainLayoutSource).toContain('pathname === "/stamp"');
-    expect(mainLayoutSource).toContain('pathname === "/leaderboard"');
+    const mobileBottomNavSuppressionBlock =
+      mainLayoutSource.match(
+        /const shouldSuppressMobileBottomNav =([\s\S]*?)const shouldRenderMobileBottomNav/,
+      )?.[1] ?? "";
+    expect(mobileBottomNavSuppressionBlock).toContain('pathname?.startsWith("/auth/")');
+    expect(mobileBottomNavSuppressionBlock).not.toContain('pathname?.startsWith("/admin")');
     expect(mainLayoutSource).toContain(': "0px"');
   });
 
@@ -777,7 +802,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(
       (consoleSource.match(/loading: \(\) => null/g) ?? []).length,
-    ).toBeGreaterThanOrEqual(8);
+    ).toBeGreaterThanOrEqual(7);
+    expect(consoleSource).toContain(
+      "loading: () => <AdminEvaluationModuleStaticShell />",
+    );
     expect(consoleSource).toContain(
       'data-admin-sidebar-module-loading-evaluation="viewport-table"',
     );
@@ -1253,7 +1281,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "flex h-full min-h-0 min-w-0 flex-col overflow-visible bg-background p-0 font-sans text-foreground lg:min-h-0 lg:overflow-visible",
     );
     expect(consoleSource).toContain(
-      "h-full min-h-0 min-w-0 overflow-x-hidden overscroll-contain border-y border-border bg-background p-2 font-sans tracking-normal md:border-y-0 md:p-4",
+      "h-full min-h-0 min-w-0 overflow-x-hidden overscroll-contain scrollbar-hide border-y border-border bg-background p-2 font-sans tracking-normal md:border-y-0 md:p-4",
     );
     expect(appGlobalsSource).toContain(
       '[data-admin-console-content="true"] .font-serif',
@@ -1471,17 +1499,27 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("adminDashboardControlGroupClassName");
     expect(consoleSource).toContain("adminDashboardControlButtonClassName");
     expect(consoleSource).toContain(
-      "inline-flex min-h-11 shrink-0 items-center rounded-full",
+      'const adminDashboardControlGroupClassName =\n  "inline-flex h-7 shrink-0 items-center rounded-full border border-border bg-muted/25 p-0.5"',
     );
     expect(consoleSource).toContain(
-      "inline-flex min-h-11 min-w-[44px] items-center justify-center gap-1",
+      'const adminDashboardControlButtonClassName =\n  "inline-flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2.5 text-[11px] font-extrabold leading-none transition',
+    );
+    expect(consoleSource).toContain(
+      '"h-7 w-7 border border-border bg-background p-0 text-muted-foreground shadow-sm hover:text-foreground"',
     );
     expect(consoleSource).toContain(
       'data-admin-dashboard-series-toggle="true"',
     );
     expect(consoleSource).toContain(
-      "inline-flex min-h-11 max-w-full min-w-0 shrink-0 items-center gap-0.5 overflow-x-auto overflow-y-hidden rounded-full border border-transparent bg-transparent p-0",
+      "inline-flex h-7 max-w-full min-w-0 shrink-0 items-center gap-0.5 overflow-x-auto overflow-y-hidden rounded-full border border-transparent bg-transparent p-0",
     );
+    const compactDashboardCardControlSource = consoleSource.slice(
+      consoleSource.indexOf("const adminDashboardControlGroupClassName"),
+      consoleSource.indexOf("type AdminDashboardTableColumn"),
+    );
+    expect(compactDashboardCardControlSource).not.toContain("min-h-11");
+    expect(compactDashboardCardControlSource).not.toContain("min-w-[44px]");
+    expect(compactDashboardCardControlSource).not.toContain("md:h-7 md:min-h-0");
     expect(consoleSource).toContain(
       'data-admin-dashboard-card-title-row="single-line"',
     );
@@ -1574,10 +1612,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-admin-dashboard-bar-chart="rank-distribution"',
     );
     expect(consoleSource).toContain(
-      "grid h-full grid-rows-[minmax(0,1fr)_auto] gap-2 pb-0",
+      "grid h-full grid-rows-[auto_auto] gap-2 pb-0 sm:grid-rows-[minmax(0,1fr)_auto]",
     );
     expect(consoleSource).toContain(
-      '"grid min-h-0 content-evenly gap-2",',
+      '"grid min-h-0 content-start gap-2 sm:content-evenly",',
     );
     expect(consoleSource).toContain(
       'className={cn("grid gap-1.5", isFullscreen && "gap-2.5")}',
@@ -1586,7 +1624,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "flex min-w-0 overflow-x-auto overflow-y-visible",
     );
     expect(consoleSource).toContain('isFullscreen ? "h-12 sm:h-14" : "h-9"');
-    expect(consoleSource).toContain("grid shrink-0 gap-1 sm:grid-cols-5");
+    expect(consoleSource).toContain(
+      "grid max-h-[8.5rem] shrink-0 gap-1 overflow-y-auto scrollbar-hide sm:max-h-none sm:grid-cols-5 sm:overflow-visible",
+    );
     expect(consoleSource).toContain(
       'data-admin-dashboard-top-content-rank-list="true"',
     );
@@ -1598,7 +1638,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "formatDashboardContribution(row.performanceContributionPercent)",
     );
     expect(consoleSource).toContain(
-      "flex min-h-[220px] flex-col overflow-hidden p-3 sm:col-span-2 lg:col-span-5",
+      "flex min-h-[360px] flex-col overflow-hidden p-3 sm:min-h-[220px] sm:col-span-2 lg:col-span-5",
     );
     expect(consoleSource).toContain(
       "data-admin-dashboard-top-content-metric={metric.label}",
@@ -1654,13 +1694,13 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "ADMIN_DASHBOARD_CONTENT_INSIGHT_TARGET_COUNT,",
     );
     expect(consoleSource).toContain(
-      "grid min-h-0 flex-1 content-stretch gap-1",
+      "grid min-h-0 flex-1 content-start gap-2 sm:content-stretch sm:gap-1",
     );
     expect(consoleSource).toContain(
-      "grid h-full min-h-0 grid-cols-2 grid-rows-2 gap-1",
+      "grid min-h-0 grid-cols-1 gap-2 sm:h-full sm:grid-cols-2 sm:grid-rows-2 sm:gap-1",
     );
     expect(consoleSource).toContain(
-      "flex min-h-0 min-w-0 flex-col justify-between rounded-xl border border-border/70 bg-muted/20 px-2 py-1.5",
+      "flex min-h-[5.5rem] min-w-0 flex-col justify-between rounded-xl border border-border/70 bg-muted/20 px-2 py-1.5 sm:min-h-0",
     );
     expect(consoleSource).toContain(
       'data-admin-dashboard-diagnosis-meta="header-inline"',
@@ -2301,7 +2341,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("const progressiveTrendTableRows =");
     expect(consoleSource).toContain("const progressiveTopContentTableRows =");
     expect(consoleSource).toContain(
-      "overflow-y-auto overflow-x-hidden rounded-xl border border-border/70",
+      "overflow-y-auto overflow-x-hidden scrollbar-hide rounded-xl border border-border/70",
     );
     expect(consoleSource).toContain(
       'className="w-full table-fixed border-separate border-spacing-0 text-xs"',
@@ -2426,6 +2466,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-admin-dashboard-metric-tooltip="beginner-plain"',
     );
     expect(consoleSource).toContain(
+      'className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"',
+    );
+    expect(consoleSource).not.toContain("md:h-5 md:w-5");
+    expect(consoleSource).toContain(
       "설명: 선택 기간 업로드 영상을 게시일 순서로 놓고 조회수, 참여, 참여율을 비교합니다.",
     );
     expect(consoleSource).toContain('year: "2-digit"');
@@ -2465,6 +2509,15 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       'data-admin-dashboard-kpi-title-actions="single-line-scroll"',
     );
+    const compactKpiCardTitleSource = consoleSource.slice(
+      consoleSource.indexOf("function AdminDashboardKpiCard"),
+      consoleSource.indexOf("function AdminDashboardOpsSummaryCard"),
+    );
+    expect(compactKpiCardTitleSource).toContain(
+      'data-admin-dashboard-kpi-title-actions="single-line-scroll"',
+    );
+    expect(compactKpiCardTitleSource).not.toContain("min-h-11 min-w-[44px]");
+    expect(compactKpiCardTitleSource).not.toContain("md:h-7 md:min-h-0");
     expect(consoleSource).toContain("h-11 w-24 shrink-0 overflow-visible");
     expect(consoleSource).toContain("buildAdminDashboardSparklinePoints");
     expect(consoleSource).toContain(
@@ -2479,9 +2532,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "설명: 위쪽은 운영 중인 데이터 수, 아래쪽은 확인이 필요한 데이터 수입니다.",
     );
     expect(consoleSource).toContain(
-      "flex h-full min-h-[280px] flex-col p-3 text-xs",
+      "flex h-full min-h-[320px] flex-col p-3 text-xs sm:min-h-[280px]",
     );
-    expect(consoleSource).toContain("text-[13px] font-extrabold tabular-nums");
+    expect(consoleSource).toContain("text-[12px] font-extrabold tabular-nums text-foreground sm:text-[13px]");
     expect(consoleSource).toContain(
       'data-admin-dashboard-ops-summary-visual="progress-bars"',
     );
@@ -2495,7 +2548,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("rounded-xl p-1 sm:p-1.5");
     expect(consoleSource).toContain("grid content-stretch gap-2");
     expect(consoleSource).toContain(
-      "grid grid-cols-[5.5rem_minmax(0,1fr)_3rem]",
+      "grid grid-cols-[minmax(4.5rem,5.5rem)_minmax(0,1fr)_minmax(3.25rem,max-content)]",
     );
     expect(consoleSource).toContain("text-teal-700 dark:text-teal-300");
     expect(consoleSource).toContain("text-rose-700 dark:text-rose-300");
@@ -2539,10 +2592,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "flex min-h-[280px] flex-col overflow-hidden p-3",
     );
     expect(consoleSource).toContain(
-      "flex min-h-[220px] flex-col overflow-hidden p-3",
+      "flex min-h-[360px] flex-col overflow-hidden p-3 sm:min-h-[220px]",
     );
     expect(consoleSource).toContain(
-      "flex min-h-[220px] flex-col overflow-hidden p-2",
+      "flex min-h-[360px] flex-col overflow-hidden p-2 sm:min-h-[220px]",
     );
     expect(consoleSource).toContain("min-h-[190px] flex flex-1 flex-col");
     expect(consoleSource).toContain("min-h-[230px] flex flex-1 flex-col");
@@ -2598,7 +2651,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       "order-2 flex shrink-0 items-center justify-end gap-1",
     );
-    expect(consoleSource).toContain("order-3 h-11 min-h-11 min-w-[44px] shrink-0 gap-1");
+    expect(consoleSource).toContain("order-3 h-7 shrink-0 gap-1");
     expect(consoleSource).toContain(
       'data-admin-dashboard-period-options-inline="desktop"',
     );
@@ -2849,7 +2902,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(consoleSource).toContain('data-admin-console-content="true"');
     expect(consoleSource).toContain(
-      "p-2 font-sans tracking-normal md:border-y-0 md:p-4",
+      "overscroll-contain scrollbar-hide border-y border-border",
     );
     expect(consoleSource).not.toContain(
       "pb-[calc(env(safe-area-inset-bottom)+5.75rem)]",
@@ -7754,10 +7807,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("getAdminConsoleScrollTop");
     expect(consoleSource).toContain("getScrollTop: getAdminConsoleScrollTop");
     expect(consoleSource).toContain(
-      "const [isAdminMobileViewport, setIsAdminMobileViewport] = useState(() =>",
+      "const [isAdminMobileViewport, setIsAdminMobileViewport] = useState(false)",
     );
     expect(consoleSource).toContain(
-      'window.matchMedia("(max-width: 767px)").matches',
+      'window.matchMedia("(max-width: 767px)")',
     );
     expect(consoleSource).toContain(
       "const setAdminMobileChromeHidden = useCallback",
@@ -7783,12 +7836,16 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("transition-[transform,border-color]");
     expect(consoleSource).toContain("translate3d(0, -120%, 0)");
     expect(consoleSource).toContain(
-      "flex w-full min-w-0 shrink-0 flex-nowrap items-center justify-end gap-1.5 overflow-x-auto",
+      "flex w-full min-w-0 shrink-0 flex-nowrap items-center justify-start gap-1.5 overflow-x-auto",
     );
     expect(consoleSource).toContain('data-allow-horizontal-scroll="true"');
     expect(consoleSource).toContain(
       'data-horizontal-scroll-owner="admin-dashboard-action-bar"',
     );
+    expect(appGlobalsSource).toContain('[data-admin-dashboard-action-bar="true"]');
+    expect(appGlobalsSource).toContain('[data-admin-dashboard-table-view="true"]');
+    expect(appGlobalsSource).toContain('[data-admin-console-content="true"]::-webkit-scrollbar');
+    expect(appGlobalsSource).toContain('padding-bottom: calc(var(--mobile-bottom-nav-effective-height');
     expect(consoleSource).toContain(
       'data-horizontal-scroll-owner="admin-dashboard-series-toggle"',
     );
@@ -8279,7 +8336,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(consoleSource).toContain('data-admin-dashboard-period-menu="true"');
     expect(consoleSource).toContain(
-      "p-2 font-sans tracking-normal md:border-y-0 md:p-4",
+      "overscroll-contain scrollbar-hide border-y border-border",
     );
     expect(consoleSource).not.toContain(
       "pb-[calc(env(safe-area-inset-bottom)+5.75rem)]",

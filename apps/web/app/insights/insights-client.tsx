@@ -1197,6 +1197,17 @@ export default function InsightsClient() {
     }, [treeData, renderWidth, chartHeight]);
 
     const selectedCount = treemapQuery.data?.totalVideos ?? 0;
+    const metricLabel = getMetricLabel(metricMode);
+    const periodLabel = period === 'ALL' ? '전체 기간' : getPeriodLabel(period);
+    const modeLabel = viewMode === 'change' ? '증감률' : '비율';
+    const clusterContextText = clusterStep === null
+        ? '개별 영상'
+        : `${formatClusterValueByMode(metricMode, clusterStep)} 단위 클러스터`;
+    const treemapContextText = `트리맵 기준: ${metricLabel} · ${periodLabel} · ${selectedCount.toLocaleString()}개 영상 · ${modeLabel} · ${clusterContextText}`;
+    const treemapLegendText = viewMode === 'change'
+        ? `색상 범례: ${periodLabel} 대비 ${metricLabel} 증감률이 높을수록 밝은 초록색입니다.`
+        : `색상 범례: 전체 ${metricLabel} 비중이 높을수록 밝은 초록색입니다.`;
+    const treemapSmallCellGuidance = '작은 칸 안내: 공간이 좁으면 지표나 …만 표시되고, 마우스를 올리면 제목과 상세 지표를 확인할 수 있습니다.';
 
     const isLoading = isAuthLoading || treemapQuery.isLoading;
     const canRender = Boolean(treemapQuery.data);
@@ -1412,6 +1423,15 @@ export default function InsightsClient() {
                                 </div>
                             </div>
                         </div>
+                        <div
+                            id="insights-treemap-context"
+                            data-insights-treemap-context="true"
+                            className="flex flex-col gap-0.5 border-t border-border/60 pt-2 text-[11px] leading-snug text-muted-foreground md:flex-row md:flex-wrap md:items-center md:gap-x-3"
+                        >
+                            <p className="font-medium text-foreground/80">{treemapContextText}</p>
+                            <p>{treemapLegendText}</p>
+                            <p id="insights-treemap-small-cell-guidance">{treemapSmallCellGuidance}</p>
+                        </div>
                     </div>
 
                     <CardContent
@@ -1419,7 +1439,13 @@ export default function InsightsClient() {
                         className="p-0 flex-1 min-h-0 overflow-hidden"
                         style={{ minHeight: 0, minWidth: 0 }}
                     >
-                        <div className="relative w-full h-full" style={{ width: renderWidth, height: chartHeight }}>
+                        <div
+                            className="relative w-full h-full"
+                            style={{ width: renderWidth, height: chartHeight }}
+                            role="img"
+                            aria-label={treemapContextText}
+                            aria-describedby="insights-treemap-context insights-treemap-small-cell-guidance"
+                        >
                             {treeData.length === 0 ? (
                                 <div className="flex h-full items-center justify-center text-sm text-muted-foreground">대상 데이터가 없습니다.</div>
                             ) : (

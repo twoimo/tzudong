@@ -154,6 +154,23 @@ const isSameRestaurantForSwipe = (a: Restaurant, b: Restaurant) => {
 
     return false;
 };
+const buildSwipeableRestaurantsSignature = (restaurants: Restaurant[]) =>
+    restaurants.map((restaurant) => restaurant.id).join('|');
+
+const buildContextualRestaurantsSignature = (payload: HomeMapContextualRestaurantsPayload | null) => {
+    if (!payload) return 'null';
+
+    return [
+        payload.mode,
+        payload.renderMode,
+        payload.zoom ?? 'null',
+        payload.isEligible ? 'eligible' : 'ineligible',
+        payload.ineligibilityReason ?? 'none',
+        payload.totalVisibleCount,
+        payload.restaurants.map((restaurant) => restaurant.id).join('|'),
+    ].join('::');
+};
+
 const dedupeHomeMapRestaurants = (restaurants: Restaurant[]) => {
     const uniqueRestaurants: Restaurant[] = [];
 
@@ -246,6 +263,11 @@ function HomeMapContainerComponent({
     const lastSwipeableFallbackRestaurantsRef = useRef<Restaurant[]>([]);
     const swipeableRestaurantsRafRef = useRef(0);
     const pendingContextualRestaurantsPayloadRef = useRef<HomeMapContextualRestaurantsPayload | null>(null);
+    const lastSwipeableRestaurantsSignatureByModeRef = useRef({
+        domestic: '',
+        overseas: '',
+    });
+    const lastContextualRestaurantsPayloadSignatureRef = useRef<string | null>(null);
     const contextualRestaurantsRafRef = useRef(0);
     const lastMarkerClickAtRef = useRef(0);
     const lastMapInteractionCollapseAtRef = useRef(0);
@@ -965,10 +987,18 @@ function HomeMapContainerComponent({
     const handleSwipeableRestaurantsChange = useCallback((restaurants: Restaurant[]) => {
         const filteredRestaurants = getRestaurantListByMode(restaurants);
         const uniqueRestaurants = dedupeHomeMapRestaurants(filteredRestaurants);
+        const nextSignature = buildSwipeableRestaurantsSignature(uniqueRestaurants);
+        const targetMode = mapMode;
+        const lastSignature = lastSwipeableRestaurantsSignatureByModeRef.current[targetMode];
 
         if (uniqueRestaurants.length > 1) {
             lastSwipeableFallbackRestaurantsRef.current = uniqueRestaurants;
         }
+
+        if (lastSignature === nextSignature && swipeableRestaurantsRafRef.current === 0) {
+            return;
+        }
+
         pendingSwipeableRestaurantsRef.current = uniqueRestaurants;
 
         if (swipeableRestaurantsRafRef.current !== 0) {
@@ -979,9 +1009,21 @@ function HomeMapContainerComponent({
             swipeableRestaurantsRafRef.current = 0;
 
             const nextRestaurants = pendingSwipeableRestaurantsRef.current;
+            const committedSignature = buildSwipeableRestaurantsSignature(nextRestaurants);
+            const previousSignature = lastSwipeableRestaurantsSignatureByModeRef.current[targetMode];
+
+            if (previousSignature === committedSignature) {
+                return;
+            }
+
+            lastSwipeableRestaurantsSignatureByModeRef.current = {
+                ...lastSwipeableRestaurantsSignatureByModeRef.current,
+                [targetMode]: committedSignature,
+            };
+
             if (!nextRestaurants.length) {
                 setSwipeableRestaurantsByMode((prev) =>
-                    mapMode === 'domestic'
+                    targetMode === 'domestic'
                         ? (prev.domestic.length === 0 ? prev : { ...prev, domestic: [] })
                         : (prev.overseas.length === 0 ? prev : { ...prev, overseas: [] })
                 );
@@ -989,7 +1031,7 @@ function HomeMapContainerComponent({
             }
 
             setSwipeableRestaurantsByMode(prev => {
-                const prevRestaurants = mapMode === 'domestic' ? prev.domestic : prev.overseas;
+                const prevRestaurants = targetMode === 'domestic' ? prev.domestic : prev.overseas;
 
                 if (
                     prevRestaurants.length === nextRestaurants.length &&
@@ -998,7 +1040,7 @@ function HomeMapContainerComponent({
                     return prev;
                 }
 
-                return mapMode === 'domestic'
+                return targetMode === 'domestic'
                     ? { ...prev, domestic: nextRestaurants }
                     : { ...prev, overseas: nextRestaurants };
             });
@@ -1009,7 +1051,14 @@ function HomeMapContainerComponent({
             cancelAnimationFrame(contextualRestaurantsRafRef.current);
             contextualRestaurantsRafRef.current = 0;
         }
+
+        const nextSignature = buildContextualRestaurantsSignature(payload);
+        if (lastContextualRestaurantsPayloadSignatureRef.current === nextSignature) {
+            return;
+        }
+
         pendingContextualRestaurantsPayloadRef.current = payload;
+        lastContextualRestaurantsPayloadSignatureRef.current = nextSignature;
         onContextualRestaurantsChange?.(payload);
     }, [onContextualRestaurantsChange]);
     const handleContextualRestaurantsChange = useCallback((payload: HomeMapContextualRestaurantsPayload) => {
@@ -1036,6 +1085,11 @@ function HomeMapContainerComponent({
             totalVisibleCount: uniqueRestaurants.length,
         };
 
+        const nextSignature = buildContextualRestaurantsSignature(nextPayload);
+        if (lastContextualRestaurantsPayloadSignatureRef.current === nextSignature && contextualRestaurantsRafRef.current === 0) {
+            return;
+        }
+
         pendingContextualRestaurantsPayloadRef.current = nextPayload;
 
         if (contextualRestaurantsRafRef.current !== 0) {
@@ -1044,7 +1098,15 @@ function HomeMapContainerComponent({
 
         contextualRestaurantsRafRef.current = requestAnimationFrame(() => {
             contextualRestaurantsRafRef.current = 0;
-            onContextualRestaurantsChange?.(pendingContextualRestaurantsPayloadRef.current);
+            const pendingPayload = pendingContextualRestaurantsPayloadRef.current;
+            const pendingSignature = buildContextualRestaurantsSignature(pendingPayload);
+
+            if (lastContextualRestaurantsPayloadSignatureRef.current === pendingSignature) {
+                return;
+            }
+
+            lastContextualRestaurantsPayloadSignatureRef.current = pendingSignature;
+            onContextualRestaurantsChange?.(pendingPayload);
         });
     }, [clearContextualRestaurants, getRestaurantListByMode, isMapFullscreen, mapMode, onContextualRestaurantsChange]);
 

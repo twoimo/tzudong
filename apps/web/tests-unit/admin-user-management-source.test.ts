@@ -48,6 +48,19 @@ describe('admin user-management source contract', () => {
     expect(panelSource).toContain('role="alert"');
     expect(panelSource).not.toContain('AdminAccessGate');
   });
+  test('keeps admin user details explicit-selection only', () => {
+    const panelSource = source('components/admin/AdminUsersPanel.tsx');
+
+    expect(panelSource).toContain('users.find((candidate) => candidate.id === selectedUserId) ?? null');
+    expect(panelSource).not.toContain('?? users[0]');
+    expect(panelSource).not.toContain('return nextUsers[0]');
+    expect(panelSource).toContain('if (current && nextUsers.some((candidate) => candidate.id === current)) return current;');
+    expect(panelSource).toContain('return null;');
+    expect(panelSource).toContain('!selectedUser ? (');
+    expect(panelSource).toContain('사용자를 선택하면 상세 정보와 변경 작업이 표시됩니다.');
+    expect(panelSource).toContain('setProfileForm({ nickname: "", username: "", avatarUrl: "" });');
+    expect(panelSource).toContain('return current.targetUserId === selectedUser?.id ? current : null;');
+  });
 
   test('keeps admin user APIs server-only and service-role contained', () => {
     const listRouteSource = source('app/api/admin/users/route.ts');
