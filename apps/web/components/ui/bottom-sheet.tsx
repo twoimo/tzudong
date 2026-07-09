@@ -209,6 +209,28 @@ export const isInsideAllowedFocusRegion = (
 
     return getFocusTrapContainers(primaryContainer, allowSelectors, queryRoot).some((container) => container.contains(target));
 };
+export const isAllowedModalPointerTarget = (
+    target: Node | null,
+    primaryContainer: FocusTrapContainerLike | null,
+    allowSelectors: string[],
+    queryRoot?: FocusTrapQueryRoot
+) => {
+    if (!target) return false;
+    if (isInsideAllowedFocusRegion(target, primaryContainer, allowSelectors, queryRoot)) return true;
+
+    const closestTarget = typeof (target as Node & { closest?: (selector: string) => unknown }).closest === 'function'
+        ? (target as Node & { closest: (selector: string) => unknown })
+        : (target.parentElement as (Element & { closest: (selector: string) => Element | null }) | null);
+    return Boolean(closestTarget?.closest(`[${BOTTOM_SHEET_BACKDROP_ATTRIBUTE}]`));
+};
+
+export const shouldBlockModalOutsidePointerDown = (
+    target: Node | null,
+    primaryContainer: FocusTrapContainerLike | null,
+    allowSelectors: string[],
+    queryRoot?: FocusTrapQueryRoot
+) => !isAllowedModalPointerTarget(target, primaryContainer, allowSelectors, queryRoot);
+
 
 /**
  * 드래그 가능한 바텀시트 컴포넌트
@@ -1229,11 +1251,26 @@ function BottomSheetComponent({
     }, [cancelPendingDragHeightRender, isOpen, resetSheetInteractionState]);
 
     useEffect(() => {
-        if (!isOpen || showBackdrop || !closeOnOutsidePointerDown) return;
+        if (!isOpen) return;
 
         const handleOutsidePointerDown = (event: PointerEvent) => {
             const target = event.target as Node | null;
             if (!target) return;
+
+            if (isModal) {
+                if (!shouldBlockModalOutsidePointerDown(target, sheetRef.current, focusTrapAllowSelectors)) return;
+
+                event.preventDefault();
+                event.stopPropagation();
+                event.stopImmediatePropagation();
+
+                if (!showBackdrop && closeOnOutsidePointerDown) {
+                    onClose();
+                }
+                return;
+            }
+
+            if (showBackdrop || !closeOnOutsidePointerDown) return;
             if (sheetRef.current?.contains(target)) return;
             onClose();
         };
@@ -1242,7 +1279,7 @@ function BottomSheetComponent({
         return () => {
             document.removeEventListener('pointerdown', handleOutsidePointerDown, true);
         };
-    }, [closeOnOutsidePointerDown, isOpen, onClose, showBackdrop]);
+    }, [closeOnOutsidePointerDown, focusTrapAllowSelectors, isModal, isOpen, onClose, showBackdrop]);
 
     if (!isOpen) return null;
 

@@ -405,24 +405,43 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain('aria-controls="admin-console-canvas"');
     expect(consoleSource).not.toContain("window.history.replaceState");
   });
+  test("aligns mobile admin menu state and KPI loading without desktop restyle", () => {
+    const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
+    const guardedSource = source("lib/admin/guarded-mutation-contract.ts");
+
+    expect(consoleSource).toContain('aria-current={isActive ? "page" : undefined}');
+    expect(consoleSource).toContain('data-admin-console-menu-item-mode={isDropdown ? "mobile-dropdown" : "desktop-sidebar"}');
+    expect(consoleSource).toContain('data-admin-console-menu-item-state={isActive ? "active" : "inactive"}');
+    expect(consoleSource).toContain('? "border-primary/20 bg-primary text-primary-foreground shadow-primary"');
+    expect(consoleSource).toContain('data-admin-dashboard-mobile-loading-prompt="true"');
+    expect(consoleSource).toContain('data-admin-dashboard-mobile-loading-prompt="live"');
+    expect(consoleSource).toContain("shouldShowMobileDashboardLoadingPrompt");
+    expect(consoleSource).toContain("KPI 데이터를 불러오는 중입니다. 모바일에서는 핵심 카드부터 순서대로 표시됩니다.");
+    expect(consoleSource).toContain("md:h-7 md:min-h-0 md:min-w-0");
+    expect(guardedSource).toContain('GUARDED_MUTATION_STEPS.join(" -> ")');
+  });
 
   test("suppresses public popup chrome on admin routes in both app layouts", () => {
     const mainLayoutSource = source("components/layout/MainLayout.tsx");
     const overlayLayoutSource = source("components/layout/OverlayLayout.tsx");
+    const routeHelperSource = source("lib/noncritical-chrome-routes.ts");
 
     for (const layoutSource of [mainLayoutSource, overlayLayoutSource]) {
-      expect(layoutSource).toContain('pathname?.startsWith("/admin")');
+      expect(layoutSource).toContain("shouldSuppressNoncriticalChromeForPathname(pathname)");
       expect(layoutSource).toContain(
         "canMountNoncriticalChrome && !shouldSuppressNoncriticalChrome",
       );
       expect(layoutSource).toContain("<CombinedPopup />");
     }
+    expect(routeHelperSource).toContain('"/admin"');
+    expect(routeHelperSource).toContain('"/mypage"');
+    expect(routeHelperSource).toContain('"/insights"');
+    expect(routeHelperSource).toContain('"/feed"');
+    expect(routeHelperSource).toContain('"/stamp"');
+    expect(routeHelperSource).toContain('"/leaderboard"');
     expect(mainLayoutSource).toContain("{shouldRenderMobileBottomNav && (");
     expect(mainLayoutSource).toContain("const shouldSuppressMobileBottomNav =");
     expect(mainLayoutSource).toContain("const shouldRenderMobileBottomNav = !shouldSuppressMobileBottomNav;");
-    expect(mainLayoutSource).toContain('pathname === "/feed"');
-    expect(mainLayoutSource).toContain('pathname === "/stamp"');
-    expect(mainLayoutSource).toContain('pathname === "/leaderboard"');
     expect(mainLayoutSource).toContain(': "0px"');
   });
 
@@ -1476,6 +1495,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       "inline-flex min-h-11 min-w-[44px] items-center justify-center gap-1",
     );
+    expect(consoleSource).toContain("md:h-7 md:min-h-0");
+    expect(consoleSource).toContain("md:h-6 md:min-h-0 md:min-w-0");
     expect(consoleSource).toContain(
       'data-admin-dashboard-series-toggle="true"',
     );
@@ -7754,10 +7775,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("getAdminConsoleScrollTop");
     expect(consoleSource).toContain("getScrollTop: getAdminConsoleScrollTop");
     expect(consoleSource).toContain(
-      "const [isAdminMobileViewport, setIsAdminMobileViewport] = useState(() =>",
+      "const [isAdminMobileViewport, setIsAdminMobileViewport] = useState(false)",
     );
     expect(consoleSource).toContain(
-      'window.matchMedia("(max-width: 767px)").matches',
+      'window.matchMedia("(max-width: 767px)")',
     );
     expect(consoleSource).toContain(
       "const setAdminMobileChromeHidden = useCallback",

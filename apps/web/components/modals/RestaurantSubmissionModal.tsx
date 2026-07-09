@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "@/lib/no-toast";
 import { X, Send, CheckCircle2, ChevronLeft } from "lucide-react";
 import { RESTAURANT_CATEGORIES } from "@/types/restaurant";
-import { saveDraft, getDraft, deleteDraft } from "@/lib/submissionDraftDB";
+import { saveDraft, getDraft, deleteDraft, type SubmissionDraft } from "@/lib/submissionDraftDB";
 import { useImmediateMobileOrTablet } from "@/hooks/useDeviceType";
 import {
     RESTAURANT_SUBMISSION_STEPS,
@@ -89,6 +89,7 @@ export default function RestaurantSubmissionModal({
     });
     const [isSaving, setIsSaving] = useState(false);
     const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+    const [pendingDraft, setPendingDraft] = useState<SubmissionDraft | null>(null);
     const [desktopSubmissionPanelPosition, setDesktopSubmissionPanelPosition] = useState<DesktopSubmissionPanelPosition>(DEFAULT_DESKTOP_SUBMISSION_PANEL_POSITION);
     const mobileFormRef = useRef<HTMLFormElement>(null);
     const desktopSubmissionPanelRef = useRef<HTMLElement>(null);
@@ -105,6 +106,7 @@ export default function RestaurantSubmissionModal({
             resetForm();
             setCurrentStep(1);
             setValidationMessage(null);
+            setPendingDraft(null);
         }
     }, [isOpen, submissionMode]);
 
@@ -230,38 +232,47 @@ export default function RestaurantSubmissionModal({
         };
     };
 
-    // 임시 저장된 데이터 불러오기
+    // 임시 저장된 데이터 확인
     const loadDraft = useCallback(async () => {
         if (!user?.id) return;
 
         try {
             const draft = await getDraft(user.id, submissionMode);
-            if (draft) {
-                setFormData({
-                    restaurant_name: draft.restaurant_name,
-                    address: draft.address,
-                    phone: draft.phone,
-                    categories: draft.categories,
-                    youtube_link: draft.youtube_link,
-                    description: draft.description,
-                });
-                if (draft.currentStep && RESTAURANT_SUBMISSION_STEPS.some((step) => step.id === draft.currentStep)) {
-                    setCurrentStep(draft.currentStep);
-                }
-                setLastSavedAt(new Date(draft.savedAt));
-
-                toast.success("임시 저장된 내용을 불러왔습니다", {
-                    description: `저장 시간: ${new Date(draft.savedAt).toLocaleString('ko-KR')}`,
-                });
-            }
+            setPendingDraft(draft);
+            setLastSavedAt(null);
         } catch (error) {
-            console.error('임시 저장 데이터 로드 실패:', error);
+            console.error('임시 저장 데이터 확인 실패:', error);
+            setPendingDraft(null);
         }
     }, [user?.id, submissionMode]);
+
+    const restoreDraft = useCallback(() => {
+        if (!pendingDraft) return;
+
+        setFormData({
+            restaurant_name: pendingDraft.restaurant_name,
+            address: pendingDraft.address,
+            phone: pendingDraft.phone,
+            categories: pendingDraft.categories,
+            youtube_link: pendingDraft.youtube_link,
+            description: pendingDraft.description,
+        });
+        setCurrentStep(pendingDraft.currentStep === 2 ? 2 : 1);
+        setLastSavedAt(new Date(pendingDraft.savedAt));
+        setPendingDraft(null);
+        setValidationMessage(null);
+
+        toast.success("임시 저장된 내용을 불러왔습니다", {
+            description: `저장 시간: ${new Date(pendingDraft.savedAt).toLocaleString('ko-KR')}`,
+        });
+    }, [pendingDraft]);
+
 
     // 자동 저장
     const autoSave = useCallback(async () => {
         if (!user?.id) return;
+
+        if (pendingDraft) return;
 
         // 내용이 하나라도 있을 때만 저장
         if (!formData.restaurant_name && !formData.address && !formData.phone && formData.categories.length === 0 && !formData.youtube_link && !formData.description) {
@@ -287,7 +298,7 @@ export default function RestaurantSubmissionModal({
         } finally {
             setIsSaving(false);
         }
-    }, [user?.id, submissionMode, formData, currentStep]);
+    }, [user?.id, submissionMode, formData, currentStep, pendingDraft]);
 
     // 임시 저장 데이터 삭제
     const clearDraft = useCallback(async () => {
@@ -300,6 +311,17 @@ export default function RestaurantSubmissionModal({
             console.error('임시 저장 데이터 삭제 실패:', error);
         }
     }, [user?.id, submissionMode]);
+
+    const discardDraftAndStartNew = useCallback(async () => {
+        if (!pendingDraft || !user?.id) return;
+
+        await clearDraft();
+        resetForm();
+        setCurrentStep(1);
+        setValidationMessage(null);
+        setPendingDraft(null);
+        toast.success('임시 저장된 내용을 삭제했습니다');
+    }, [clearDraft, pendingDraft, user?.id]);
 
     // 디바운스된 자동 저장 (500ms)
     useEffect(() => {
@@ -350,6 +372,7 @@ export default function RestaurantSubmissionModal({
     const handleModeChange = (mode: 'new' | 'request') => {
         setSubmissionMode(mode);
         setCurrentStep(1);
+        setPendingDraft(null);
         setValidationMessage(null);
     };
 
@@ -397,6 +420,24 @@ export default function RestaurantSubmissionModal({
                     </span>
                 </>
             )}
+        </div>
+    );
+
+    const draftRestorePrompt = pendingDraft && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
+            <p className="font-semibold">임시 저장된 제보가 있습니다</p>
+            <p className="mt-1 text-xs">
+                저장 시간: {new Date(pendingDraft.savedAt).toLocaleString('ko-KR')} · 유형: {pendingDraft.submissionMode === submissionMode ? '현재 선택한 유형' : '다른 유형'}
+            </p>
+            <p className="mt-1 text-xs">복원 버튼을 눌러야 입력 내용과 단계가 적용됩니다.</p>
+            <div className="mt-3 flex gap-2">
+                <Button type="button" size="sm" onClick={restoreDraft}>
+                    복원하기
+                </Button>
+                <Button type="button" size="sm" variant="outline" onClick={discardDraftAndStartNew}>
+                    삭제하고 새로 작성
+                </Button>
+            </div>
         </div>
     );
 
@@ -769,6 +810,7 @@ export default function RestaurantSubmissionModal({
 
     const renderDesktopForm = () => (
         <form onSubmit={handleSubmit} className="space-y-4">
+            {draftRestorePrompt}
             {renderModeSelector()}
             {renderBasicFields()}
             {renderStoryFields()}
@@ -825,6 +867,7 @@ export default function RestaurantSubmissionModal({
                     </Button>
                 </div>
                 <p id={mobileDescriptionId} className="text-sm text-muted-foreground">{description}</p>
+                {draftRestorePrompt && <div className="mt-3">{draftRestorePrompt}</div>}
                 <div className="mt-3 grid grid-cols-3 gap-1.5" aria-label="제보 단계 진행률">
                     {RESTAURANT_SUBMISSION_STEPS.map((step) => (
                         <div key={step.id} className="space-y-1">

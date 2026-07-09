@@ -80,8 +80,10 @@ describe("header action loading source contract", () => {
       'data-desktop-map-fullscreen-toggle="true"',
     );
     expect(userMenuSource).not.toContain("if (!user) return null");
-    expect(userMenuSource).toContain("requestAuthUi({");
-    expect(userMenuSource).toContain('source: "desktop-map-user-menu"');
+    expect(userMenuSource).toContain("const DesktopAuthModal = dynamic(");
+    expect(userMenuSource).toContain("setIsAuthModalOpen(true);");
+    expect(userMenuSource).toContain("onAuthSuccess={closeAuthModal}");
+    expect(userMenuSource).toContain('redirectTo="/mypage/profile"');
     expect(userMenuSource).toContain("isLoading: isAuthLoading");
     expect(userMenuSource).toContain('data-auth-session-pending="true"');
     expect(userMenuSource).toContain('aria-label="사용자 세션 확인 중"');
