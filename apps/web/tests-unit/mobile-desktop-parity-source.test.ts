@@ -25,6 +25,7 @@ describe("mobile and desktop parity source contracts", () => {
   test("admin console exposes both mobile-width and desktop-width navigation affordances", () => {
     const adminPageSource = source("app/admin/page.tsx");
     const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
+    const insightsClientSource = source("app/insights/insights-client.tsx");
 
     expect(adminPageSource).toContain("<AdminConsoleOverview initialStoryboardResult={initialStoryboardResult} />");
     expect(consoleSource).toContain('aria-label="관리자 콘솔 사이드바"');
@@ -86,17 +87,20 @@ describe("mobile and desktop parity source contracts", () => {
     expect(consoleSource).toContain('initialView="submissions"');
     expect(consoleSource).toContain('initialSubmissionTab="reviews"');
     expect(consoleSource).toContain("AdminBannerModule");
+    expect(consoleSource).toContain('<InsightsModule key="admin-insights" embedded />');
+    expect(consoleSource).toContain('href: "/admin?module=banners"');
+    expect(consoleSource).toContain('href: "/admin?module=insights"');
+    expect(consoleSource).not.toContain('href: "/admin/banners"');
+    expect(consoleSource).not.toContain('href: "/insights"');
+    expect(insightsClientSource).toContain("embedded || (!isAuthLoading && !!user)");
     expect(consoleSource).not.toContain("AdminAnnouncementModule");
     expect(consoleSource).not.toContain('id: "announcements"');
     expect(consoleSource).not.toContain("/admin?module=announcements");
     expect(consoleSource).toContain("useSearchParams");
     expect(consoleSource).toContain("router.replace");
     expect(consoleSource).toContain(
-      "useAdminOverviewStats(canLoadAdminConsoleData)",
+      'window.history.replaceState(window.history.state, "", nextHref)',
     );
-    expect(consoleSource).not.toContain('router.replace("/")');
-    expect(consoleSource).toContain("getAdminModuleIdFromSearchParams");
-    expect(consoleSource).not.toContain("window.history.replaceState");
   });
 
   test("admin evaluations keep equivalent mobile-card and desktop-table controls", () => {
@@ -268,7 +272,9 @@ describe("mobile and desktop parity source contracts", () => {
     expect(mobileOverlaySource).not.toContain("Megaphone");
     expect(navigationRoutesSource).toContain("'/admin'");
     expect(navigationRoutesSource).toContain("'/admin?module=restaurants'");
-    expect(navigationRoutesSource).toContain("'/admin/banners'");
+    expect(navigationRoutesSource).toContain("'/admin?module=banners'");
+    expect(navigationRoutesSource).toContain("'/admin?module=insights'");
+    expect(navigationRoutesSource).not.toContain("'/admin/banners'");
     expect(mobileBottomNavSource).toContain("path: '/'");
     expect(mobileBottomNavSource).toContain("path: '/stamp'");
     expect(mobileBottomNavSource).not.toContain("label: '제보'");
