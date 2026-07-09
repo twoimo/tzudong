@@ -243,6 +243,53 @@ test.describe('Admin KPI dashboard runtime guard', () => {
         const layout = page.locator('[data-admin-console-layout="sidebar-content"]');
         const mobileHeader = page.locator('[data-admin-console-mobile-header="true"]');
         const canvas = page.locator('#admin-console-canvas');
+        const bottomNav = page.getByTestId('bottom-nav');
+        await expect(bottomNav).toBeVisible({ timeout: 20000 });
+        await expect(canvas).toBeVisible({ timeout: 20000 });
+
+        const compactCardViewToggle = page.locator('[data-admin-dashboard-card-view-toggle="true"]').first();
+        await expect(compactCardViewToggle).toBeVisible({ timeout: 20000 });
+        await expect
+            .poll(async () => Math.round((await compactCardViewToggle.boundingBox())?.height ?? 0))
+            .toBeLessThanOrEqual(32);
+        await expect
+            .poll(async () =>
+                Math.round((await compactCardViewToggle.getByRole('button').first().boundingBox())?.height ?? 0),
+            )
+            .toBeLessThanOrEqual(30);
+
+        const compactSeriesToggle = page.locator('[data-admin-dashboard-series-toggle="true"]').first();
+        await expect(compactSeriesToggle).toBeVisible({ timeout: 20000 });
+        await expect
+            .poll(async () => Math.round((await compactSeriesToggle.boundingBox())?.height ?? 0))
+            .toBeLessThanOrEqual(32);
+
+        const compactKpiTitleActions = page.locator('[data-admin-dashboard-kpi-title-actions="single-line-scroll"]').first();
+        await expect(compactKpiTitleActions).toBeVisible({ timeout: 20000 });
+        await expect
+            .poll(async () => Math.round((await compactKpiTitleActions.boundingBox())?.height ?? 0))
+            .toBeLessThanOrEqual(32);
+
+        const compactMetricTooltip = page.locator('[data-admin-dashboard-metric-tooltip="beginner-plain"]').first();
+        await expect(compactMetricTooltip).toBeVisible({ timeout: 20000 });
+        await expect
+            .poll(async () => Math.round((await compactMetricTooltip.boundingBox())?.height ?? 0))
+            .toBeLessThanOrEqual(24);
+        await expect
+            .poll(async () => Math.round((await compactMetricTooltip.boundingBox())?.width ?? 0))
+            .toBeLessThanOrEqual(24);
+
+        const lowerMobileCards = [
+            page.locator('[data-admin-dashboard-widget-card="ops"]').first(),
+            page.locator('[data-admin-dashboard-widget-card="topContent"]').first(),
+            page.locator('[data-admin-dashboard-widget-card="engagementRate"]').first(),
+        ];
+        for (const card of lowerMobileCards) {
+            await expect(card).toBeVisible({ timeout: 20000 });
+            await expect
+                .poll(async () => Math.round((await card.boundingBox())?.height ?? 0))
+                .toBeGreaterThanOrEqual(315);
+        }
 
         await expect(mobileHeader).toHaveAttribute('data-admin-console-mobile-header-visible', 'true');
         await expect(layout).toHaveAttribute('data-admin-console-mobile-header-visible', 'true');
@@ -256,10 +303,13 @@ test.describe('Admin KPI dashboard runtime guard', () => {
             )
             .toBe('0');
 
-        const canvasPaddingBottom = await canvas.evaluate((element) =>
-            Number.parseFloat(getComputedStyle(element).paddingBottom),
-        );
-        expect(canvasPaddingBottom).toBeLessThanOrEqual(16);
+        await expect
+            .poll(() =>
+                canvas.evaluate((element) =>
+                    Number.parseFloat(getComputedStyle(element).paddingBottom),
+                ),
+            )
+            .toBeGreaterThanOrEqual(60);
 
         await canvas.evaluate((element) => {
             const spacer = document.createElement('div');
@@ -268,14 +318,10 @@ test.describe('Admin KPI dashboard runtime guard', () => {
             spacer.style.flex = '0 0 auto';
             element.appendChild(spacer);
         });
-        const box = await canvas.boundingBox();
-        expect(box).not.toBeNull();
-
-        await page.mouse.move(
-            (box?.x ?? 0) + Math.min(160, (box?.width ?? 320) / 2),
-            (box?.y ?? 0) + Math.min(220, (box?.height ?? 440) / 2),
-        );
-        await page.mouse.wheel(0, 520);
+        await canvas.evaluate((element) => {
+            element.scrollTop = 360;
+            element.dispatchEvent(new Event('scroll', { bubbles: true }));
+        });
 
         await expect(layout).toHaveAttribute('data-admin-console-mobile-header-visible', 'false');
         await expect(mobileHeader).toHaveAttribute('data-admin-console-mobile-header-visible', 'false');
@@ -288,11 +334,13 @@ test.describe('Admin KPI dashboard runtime guard', () => {
                 ),
             )
             .toBe('1');
-
         await canvas.evaluate((element) => {
+            element.scrollTop = 20;
+            element.dispatchEvent(new Event('scroll', { bubbles: true }));
             element.scrollTop = 0;
             element.dispatchEvent(new Event('scroll', { bubbles: true }));
         });
+        await page.waitForTimeout(300);
 
         await expect(layout).toHaveAttribute('data-admin-console-mobile-header-visible', 'true');
         await expect(mobileHeader).toHaveAttribute('data-admin-console-mobile-header-visible', 'true');

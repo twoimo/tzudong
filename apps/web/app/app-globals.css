@@ -49,6 +49,32 @@
   /* Chrome, Safari and Opera */
 }
 
+/* 모바일 폭에서는 실제 모바일 브라우저처럼 스크롤 동작만 유지하고 네이티브 스크롤바 크롬은 숨긴다. */
+@media (max-width: 767px) {
+  :where(
+    .scrollbar-hide-mobile,
+    [data-mobile-scrollbarless="true"],
+    [class*="overflow-y-auto"],
+    [class*="overflow-x-auto"],
+    [class*="overflow-auto"]
+  ) {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  :where(
+    .scrollbar-hide-mobile,
+    [data-mobile-scrollbarless="true"],
+    [class*="overflow-y-auto"],
+    [class*="overflow-x-auto"],
+    [class*="overflow-auto"]
+  )::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+}
+
 @keyframes storyboard-glass-shimmer {
   0% {
     transform: translate3d(-36%, 0, 0);
@@ -1007,13 +1033,31 @@ div[style*="z-index"] > div > .custom-marker {
 }
 
 [data-storyboard-chat-log="true"],
-[data-storyboard-canvas-toolbar="thumbnail-like"] {
+[data-storyboard-canvas-toolbar="thumbnail-like"],
+[data-admin-console-content="true"],
+[data-admin-dashboard-table-view="true"],
+[data-admin-dashboard-action-bar="true"],
+[data-admin-dashboard-series-toggle="true"],
+[data-admin-dashboard-card-title-actions="single-line-scroll"],
+[data-admin-dashboard-kpi-title-actions="single-line-scroll"],
+[data-admin-dashboard-metric-tabs="true"],
+[data-admin-console-menu-dropdown="true"],
+[data-admin-sidebar-account-menu-content="true"] {
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
 
 [data-storyboard-chat-log="true"]::-webkit-scrollbar,
-[data-storyboard-canvas-toolbar="thumbnail-like"]::-webkit-scrollbar {
+[data-storyboard-canvas-toolbar="thumbnail-like"]::-webkit-scrollbar,
+[data-admin-console-content="true"]::-webkit-scrollbar,
+[data-admin-dashboard-table-view="true"]::-webkit-scrollbar,
+[data-admin-dashboard-action-bar="true"]::-webkit-scrollbar,
+[data-admin-dashboard-series-toggle="true"]::-webkit-scrollbar,
+[data-admin-dashboard-card-title-actions="single-line-scroll"]::-webkit-scrollbar,
+[data-admin-dashboard-kpi-title-actions="single-line-scroll"]::-webkit-scrollbar,
+[data-admin-dashboard-metric-tabs="true"]::-webkit-scrollbar,
+[data-admin-console-menu-dropdown="true"]::-webkit-scrollbar,
+[data-admin-sidebar-account-menu-content="true"]::-webkit-scrollbar {
   display: none;
 }
 
@@ -1038,6 +1082,7 @@ div[style*="z-index"] > div > .custom-marker {
 
   [data-admin-console-content="true"] {
     width: 100%;
+    padding-bottom: calc(var(--mobile-bottom-nav-effective-height, var(--mobile-bottom-nav-height, 60px)) + env(safe-area-inset-bottom) + 0.5rem) !important;
   }
 
   [data-admin-dashboard-management="true"] [data-admin-dashboard-widget-card],

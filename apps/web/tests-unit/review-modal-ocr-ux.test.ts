@@ -79,4 +79,10 @@ describe('review modal OCR terminal recovery contract', () => {
     expect(reviewModalSource).toContain('if (parsed.payload.terminal)');
     expect(reviewModalSource).toContain('new OcrStreamHttpError(streamErrorMessage, parsed.payload.status ?? 422)');
   });
+
+  test('uses safe user-facing copy for force OCR refresh toggle', () => {
+    expect(reviewModalSource).toContain('OCR 다시 분석');
+    expect(reviewModalSource).toContain('이번 분석은 캐시 없이 재호출');
+    expect(reviewModalSource).not.toContain('dev/admin: OCR 강제 재호출');
+  });
 });
