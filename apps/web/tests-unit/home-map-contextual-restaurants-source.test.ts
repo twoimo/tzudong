@@ -8,6 +8,13 @@ import {
 
 const root = join(import.meta.dir, '..');
 const source = (relativePath: string) => readFileSync(join(root, relativePath), 'utf8');
+const expectSourceOrder = (content: string, first: string, second: string) => {
+  const firstIndex = content.indexOf(first);
+  const secondIndex = content.indexOf(second);
+  expect(firstIndex).toBeGreaterThanOrEqual(0);
+  expect(secondIndex).toBeGreaterThanOrEqual(0);
+  expect(firstIndex).toBeLessThan(secondIndex);
+};
 
 describe('home map contextual visible-marker restaurants', () => {
   test('keeps raw visible swipe callback separate from contextual presentation payload', () => {
@@ -109,6 +116,10 @@ describe('home map contextual visible-marker restaurants', () => {
     expect(containerSource).toContain('clearContextualRestaurants(EMPTY_DOMESTIC_CONTEXTUAL_RESTAURANTS);');
     expect(containerSource).toContain('uniqueRestaurants.some((existing) => isSameRestaurantForSwipe(existing, restaurant))');
     expect(containerSource).toContain('onContextualRestaurantsChange={handleContextualRestaurantsChange}');
+    expect(containerSource).toContain('buildSwipeableRestaurantsSignature(uniqueRestaurants)');
+    expect(containerSource).toContain('lastSwipeableRestaurantsSignatureByModeRef.current[targetMode]');
+    expect(containerSource).toContain('buildContextualRestaurantsSignature(nextPayload)');
+    expect(containerSource).toContain('lastContextualRestaurantsPayloadSignatureRef.current === nextSignature');
 
     expect(controlPanelSource).toContain('contextualRestaurantsPayload?: HomeMapContextualRestaurantsPayload | null;');
     expect(controlPanelSource).toContain('isMapFullscreen?: boolean;');
@@ -144,6 +155,26 @@ describe('home map contextual visible-marker restaurants', () => {
     expect(mobileOverlaySource).not.toContain('확대한 지도에서 현재 마커로 보이는 맛집이에요.');
     expect(mobileOverlaySource).toContain("activeSheet !== 'visibleMarkers' ? (");
     expect(mobileOverlaySource).toContain('dismissedVisibleMarkerSheetScopeRef.current === visibleMarkerSheetDismissScope');
+    expect(mobileOverlaySource).toContain('const shouldShowVisibleMarkerListRestore =');
+    expect(mobileOverlaySource).toContain('data-mobile-visible-marker-restaurants-restore="true"');
+    expect(mobileOverlaySource).toContain('onClick={handleVisibleMarkerSheetRestore}');
+    expect(mobileOverlaySource).toContain('aria-label="맛집 목록 다시 열기"');
+    expect(mobileOverlaySource).toContain('title="맛집 목록 다시 열기"');
+    expect(mobileOverlaySource).toContain('h-12 w-12 rounded-full shadow-lg');
+    expect(mobileOverlaySource).toContain('bg-background/95 hover:bg-secondary text-foreground border-border/70 backdrop-blur-sm');
+    expect(mobileOverlaySource).toContain('<List className="h-5 w-5" aria-hidden="true" />');
+    expect(mobileOverlaySource).not.toContain('목록 보기 ·');
+    expect(mobileOverlaySource).not.toContain('absolute -right-1 -top-1 rounded-full bg-primary');
+    expectSourceOrder(
+      mobileOverlaySource,
+      'data-mobile-visible-marker-restaurants-restore="true"',
+      'data-mobile-submission-floating-action="true"',
+    );
+    expectSourceOrder(
+      mobileOverlaySource,
+      'data-mobile-visible-marker-restaurants-restore="true"',
+      'data-user-submitted-marker-toggle="admin-only"',
+    );
     expect(mobileOverlaySource).toContain('const VISIBLE_MARKER_SHEET_HEIGHT = 25;');
     expect(mobileOverlaySource).toContain('<span className="truncate">맛집 목록</span>');
     expect(mobileOverlaySource).toContain('aria-label={`맛집 목록 ${visibleMarkerRestaurantCount}곳`}');
@@ -156,7 +187,31 @@ describe('home map contextual visible-marker restaurants', () => {
     expect(mobileOverlaySource).toContain('onThumbnailChange={handleVisibleMarkerThumbnailChange}');
     expect(mobileOverlaySource).toContain("activeSheet === 'visibleMarkers' ? VISIBLE_MARKER_SHEET_HEIGHT : MIN_SHEET_HEIGHT");
     expect(mobileOverlaySource).toContain("defaultHeight={HALF_SHEET_HEIGHT}");
-    expect(mobileOverlaySource).toContain('visibleMarkerRestaurantsSignatureRef.current = visibleMarkerRestaurantsSignature');
+    expect(mobileOverlaySource).toContain("contentClassName={activeSheet === 'visibleMarkers' ? 'scrollbar-hide' : undefined}");
+    expect(source('components/ui/bottom-sheet.tsx')).toContain('contentClassName?: string;');
+    expect(source('components/ui/bottom-sheet.tsx')).toContain('contentClassName');
+    expect(source('components/ui/bottom-sheet.tsx')).toContain('"scrollbar-hide flex-1 overscroll-contain min-h-0 border-t border-border/50"');
+    for (const globalsPath of [
+      'app/app-globals.css',
+      'app/home-app-globals.css',
+      'app/home-deferred-globals.css',
+      'app/home-detail-globals.css',
+    ]) {
+      const globalsSource = source(globalsPath);
+      expect(globalsSource).toContain('@media (max-width: 767px)');
+      expect(globalsSource).toContain('[class*="overflow-y-auto"]');
+      expect(globalsSource).toContain('scrollbar-width: none;');
+      expect(globalsSource).toContain('::-webkit-scrollbar');
+    }
+    expect(mobileOverlaySource).not.toContain('visibleMarkerRestaurantsSignatureRef');
+    expect(mobileOverlaySource).toContain('dismissedVisibleMarkerSheetScopeRef.current = null;');
+    expect(mobileOverlaySource).toContain('fixed bottom-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1rem)] right-4 z-[90] flex flex-col gap-2');
+    expect(mobileOverlaySource).toContain('data-mobile-bottom-right-safe-area-owner="mobile-floating-actions"');
+    expect(mobileOverlaySource).not.toContain('env(safe-area-inset-bottom)+1rem');
+    expect(mobileOverlaySource.match(/const visibleMarkerSheetDismissScope = useMemo\(([\s\S]*?)\);\n    const dismissedVisibleMarkerSheetScopeRef/)?.[1]).not.toContain('visibleMarkerRestaurantsSignature');
+    expect(mobileOverlaySource).toContain('const visibleMarkerSheetDismissScope = useMemo(');
+    expect(mobileOverlaySource).toContain('[filters.featuredTheme, mapMode, selectedCategories, selectedCountry, selectedRegion]');
+    expect(mobileOverlaySource).not.toContain('[filters.featuredTheme, mapMode, selectedCategories, selectedCountry, selectedRegion, visibleMarkerRestaurantsSignature]');
     expect(mobileOverlaySource).toContain('layoutSource="mobile-control-overlay-sheet"');
     expect(mobileOverlaySource).toContain('setVisibleMarkerSheetHeightRequestKey');
     expect(mobileOverlaySource).not.toContain('requestVisibleMarkerSheetPeek');

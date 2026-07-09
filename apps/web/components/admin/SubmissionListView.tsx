@@ -45,6 +45,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { GUARDED_MUTATION_CONFIRMATION } from '@/lib/admin/guarded-mutation-contract';
 import { getSubmissionApprovalState } from '@/lib/admin/submission-approval-state';
+import {
+    ADMIN_SUBMISSION_QUEUE_REASON_FILTERS,
+    adminSubmissionQueueSummaryMatchesFilter,
+    getAdminSubmissionQueueSafetySummary,
+    type AdminSubmissionQueueReason,
+    type AdminSubmissionQueueReasonFilter,
+    type AdminSubmissionQueueSafetySummary,
+} from '@/lib/admin/submission-queue-safety';
 
 type SubmissionAdminTab = 'new' | 'edit' | 'recommend' | 'reviews';
 
@@ -287,6 +295,7 @@ export function SubmissionListView({
     // 검색어
     const [searchQuery, setSearchQuery] = useState('');
     const [reviewSearchQuery, setReviewSearchQuery] = useState('');
+    const [queueReasonFilter, setQueueReasonFilter] = useState<AdminSubmissionQueueReasonFilter>('all');
 
     // 선택된 제보
     const [selectedSubmission, setSelectedSubmission] = useState<SubmissionRecord | null>(null);
@@ -409,7 +418,12 @@ export function SubmissionListView({
     const setActiveTabWithReset = useCallback((tab: SubmissionAdminTab) => {
         setActiveTab(tab);
         resetVisibleCountByTab(tab);
+        setQueueReasonFilter('all');
     }, [resetVisibleCountByTab]);
+    const handleQueueReasonFilterChange = useCallback((filter: AdminSubmissionQueueReasonFilter) => {
+        setQueueReasonFilter(filter);
+        resetVisibleCountByTab(activeTab);
+    }, [activeTab, resetVisibleCountByTab]);
 
     const increaseSubmissionVisibleCount = useCallback((tab: Exclude<SubmissionAdminTab, 'reviews'>) => {
         if (tab === 'new') {
@@ -857,6 +871,34 @@ export function SubmissionListView({
         };
     }, [activeTab, selectedReview?.id, selectedReview?.ocr_processed_at, ocrRerunningIds]);
 
+    const submissionQueueSafetyById = useMemo(() => {
+        return new Map<string, AdminSubmissionQueueSafetySummary>(
+            submissions.map((submission) => [
+                submission.id,
+                getAdminSubmissionQueueSafetySummary(submission),
+            ])
+        );
+    }, [submissions]);
+
+    const queueReasonFilterOptions = useMemo(() => {
+        const activeSubmissions = activeTab === 'reviews'
+            ? []
+            : submissions.filter((submission) => submission.submission_type === activeTab);
+
+        return ADMIN_SUBMISSION_QUEUE_REASON_FILTERS.map((option) => {
+            const count = option.value === 'all'
+                ? activeSubmissions.length
+                : activeSubmissions.filter((submission) => {
+                    const summary = submissionQueueSafetyById.get(submission.id);
+                    return summary ? adminSubmissionQueueSummaryMatchesFilter(summary, option.value) : false;
+                }).length;
+
+            return { ...option, count };
+        });
+    }, [activeTab, submissions, submissionQueueSafetyById]);
+
+    const hasSubmissionQueueFilters = searchQuery.trim().length > 0 || queueReasonFilter !== 'all';
+
     // 필터링 (제보)
     const filteredSubmissions = useMemo(() => {
         if (activeTab === 'reviews') return [];
@@ -874,9 +916,16 @@ export function SubmissionListView({
                 s.profiles?.nickname?.toLowerCase().includes(query)
             );
         }
+        if (queueReasonFilter !== 'all') {
+            filtered = filtered.filter(s => {
+                const summary = submissionQueueSafetyById.get(s.id);
+                return summary ? adminSubmissionQueueSummaryMatchesFilter(summary, queueReasonFilter) : false;
+            });
+        }
+
 
         return filtered;
-    }, [submissions, activeTab, searchQuery]);
+    }, [submissions, activeTab, searchQuery, queueReasonFilter, submissionQueueSafetyById]);
 
     // 리뷰 필터링 및 분류 (검색어 적용)
     const filteredReviews = useMemo(() => {
@@ -1224,6 +1273,51 @@ export function SubmissionListView({
                 return <Badge variant="secondary" className="text-xs"><Clock className="h-3 w-3 mr-1" />대기</Badge>;
         }
     };
+    const getSubmissionQueueReasonBadgeClassName = (reason: AdminSubmissionQueueReason) =>
+        cn(
+            "max-w-full rounded-full px-2 py-0 text-[10px] font-semibold leading-5 xl:text-[11px]",
+            reason.severity === 'danger' && "border-red-200 bg-red-50 text-red-700 dark:border-red-900/70 dark:bg-red-950/25 dark:text-red-200",
+            reason.severity === 'warning' && "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/25 dark:text-amber-200",
+            reason.severity === 'info' && "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/70 dark:bg-blue-950/25 dark:text-blue-200"
+        );
+
+    const renderSubmissionQueueSafetyBadges = (
+        summary: AdminSubmissionQueueSafetySummary | undefined,
+        placement: 'card' | 'detail'
+    ) => {
+        if (!summary?.reasons.length) return null;
+
+        const reasons = placement === 'card' ? summary.reasons.slice(0, 3) : summary.reasons;
+
+        return (
+            <div
+                className="mt-2 flex flex-wrap gap-1"
+                data-admin-submission-safety-badges={placement}
+                aria-label="제보 큐 검수 사유"
+            >
+                {reasons.map((reason) => (
+                    <Badge
+                        key={reason.code}
+                        variant="outline"
+                        className={getSubmissionQueueReasonBadgeClassName(reason)}
+                        title={reason.message}
+                        data-admin-submission-safety-badge={reason.code}
+                    >
+                        {reason.label}
+                    </Badge>
+                ))}
+                {placement === 'card' && summary.reasons.length > reasons.length && (
+                    <Badge
+                        variant="outline"
+                        className="rounded-full px-2 py-0 text-[10px] leading-5 text-muted-foreground xl:text-[11px]"
+                        data-admin-submission-safety-badge="more"
+                    >
+                        +{summary.reasons.length - reasons.length}
+                    </Badge>
+                )}
+            </div>
+        );
+    };
 
     const getReviewFlags = (review: Review) => {
         const isPending = !review.is_verified && (!review.admin_note || !review.admin_note.includes('거부'));
@@ -1471,6 +1565,11 @@ export function SubmissionListView({
         selectedGeocodingIndex,
         selectedSubmission,
     ]);
+    const selectedSubmissionQueueSafetySummary = useMemo(() => {
+        if (!selectedSubmission) return undefined;
+        return submissionQueueSafetyById.get(selectedSubmission.id)
+            ?? getAdminSubmissionQueueSafetySummary(selectedSubmission);
+    }, [selectedSubmission, submissionQueueSafetyById]);
 
 
     const renderApprovalContractPanel = () => {
@@ -1952,6 +2051,7 @@ export function SubmissionListView({
                                 </div>
                                 {getStatusBadge(selectedSubmission.status)}
                             </div>
+                            {renderSubmissionQueueSafetyBadges(selectedSubmissionQueueSafetySummary, 'detail')}
                         </Card>
                         {renderApprovalContractPanel()}
                         {selectedSubmission.submission_type === 'recommend' ? (
@@ -2713,7 +2813,7 @@ export function SubmissionListView({
                     <div className={listContainerClassName}>
                         {loading && filteredSubmissions.length === 0 ? (
                             renderListSkeletonCards(activeTab === 'new' ? '신규 제보' : activeTab === 'recommend' ? '쯔양 제보' : '수정 제보')
-                        ) : filteredSubmissions.length === 0 && !searchQuery ? (
+                        ) : filteredSubmissions.length === 0 && !hasSubmissionQueueFilters ? (
                             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                                 <AlertCircle className="w-10 h-10 mb-3" />
                                 <p>{activeTab === 'new' ? '신규 제보가 없습니다.' : activeTab === 'recommend' ? '쯔양 제보가 없습니다.' : '수정 요청이 없습니다.'}</p>
@@ -2740,15 +2840,49 @@ export function SubmissionListView({
                                         </Button>
                                     )}
                                 </div>
+                                <div
+                                    className="flex flex-wrap gap-1"
+                                    data-admin-submission-queue-reason-filter="true"
+                                    aria-label="제보 큐 검수 사유 필터"
+                                >
+                                    {queueReasonFilterOptions.map((option) => {
+                                        const isSelected = queueReasonFilter === option.value;
+                                        const isUnavailable = option.value !== 'all' && option.count === 0 && !isSelected;
+
+                                        return (
+                                            <Button
+                                                key={option.value}
+                                                type="button"
+                                                variant={isSelected ? "default" : "outline"}
+                                                size="sm"
+                                                className="h-7 rounded-full px-2 text-[11px]"
+                                                aria-pressed={isSelected}
+                                                disabled={isUnavailable}
+                                                data-admin-submission-queue-reason-filter-option={option.value}
+                                                onClick={() => handleQueueReasonFilterChange(option.value)}
+                                            >
+                                                {option.label}
+                                                <span className={cn(
+                                                    "ml-1 rounded-full px-1.5 py-0 text-[10px] leading-4 tabular-nums",
+                                                    isSelected ? "bg-primary-foreground/15 text-primary-foreground" : "bg-muted text-muted-foreground"
+                                                )}>
+                                                    {option.count}
+                                                </span>
+                                            </Button>
+                                        );
+                                    })}
+                                </div>
+
 
                                 {filteredSubmissions.length === 0 ? (
-                                    <div className="flex h-24 items-center justify-center rounded-md border text-sm text-muted-foreground">
-                                        검색 결과가 없습니다
+                                    <div className="flex h-24 items-center justify-center rounded-md border px-3 text-center text-sm text-muted-foreground">
+                                        {queueReasonFilter !== 'all' ? '선택한 검수 사유에 맞는 제보가 없습니다' : '검색 결과가 없습니다'}
                                     </div>
                                 ) : (
                                     displayedSubmissions.map((submission) => {
                                         const isPending = submission.status === 'pending' || submission.status === 'partially_approved';
                                         const canDeleteSubmissionCard = submission.submission_type !== 'recommend';
+                                        const queueSafetySummary = submissionQueueSafetyById.get(submission.id);
 
                                         return (
                                             <Card
@@ -2765,6 +2899,7 @@ export function SubmissionListView({
                                                     </div>
                                                     <div className="shrink-0">{getStatusBadge(submission.status)}</div>
                                                 </div>
+                                                {renderSubmissionQueueSafetyBadges(queueSafetySummary, 'card')}
 
                                                 <div className={listMetaClassName}>
                                                     <span className="truncate pr-2">{submission.restaurant_phone || '전화번호 없음'}</span>

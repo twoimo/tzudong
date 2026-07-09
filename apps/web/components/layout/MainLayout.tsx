@@ -14,6 +14,7 @@ import {
   MOBILE_SHEET_HEADER_PROGRESS_VAR,
 } from "@/lib/mobile-sheet-layout";
 import { AUTH_UI_REQUEST_EVENT } from "@/lib/auth-ui-events";
+import { shouldSuppressNoncriticalChromeForPathname } from "@/lib/noncritical-chrome-routes";
 
 // [PERF] 모달과 비핵심 컴포넌트를 동적 임포트로 코드 스플리팅
 // 이 컴포넌트들은 사용자 인터랙션 후에만 필요하므로 초기 번들에서 제외
@@ -109,14 +110,8 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
   }, [pathname]);
 
   const shouldSuppressNoncriticalChrome =
-    pathname?.startsWith("/auth/") ||
-    pathname?.startsWith("/admin") ||
-    pathname === "/feed" ||
-    pathname === "/stamp" ||
-    pathname === "/leaderboard";
-  const shouldSuppressMobileBottomNav =
-    pathname?.startsWith("/auth/") ||
-    pathname?.startsWith("/admin");
+    shouldSuppressNoncriticalChromeForPathname(pathname);
+  const shouldSuppressMobileBottomNav = pathname?.startsWith("/auth/") === true;
   const shouldRenderMobileBottomNav = !shouldSuppressMobileBottomNav;
 
   // 성능 최적화: 핸들러 메모이제이션

@@ -12,6 +12,7 @@ import {
     isYoutubeMetadataBackedHomeMapThemeFilterId,
     type HomeMapThemeFilterId,
 } from "@/lib/home-map-theme-filters";
+import { enrichRestaurantsWithHomeMapYoutubeKpiMetrics } from "@/lib/home-map-youtube-kpi";
 
 
 type DBRestaurant = Tables<"restaurants">;
@@ -684,7 +685,10 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
 
             // 승인된 리뷰 수 조회: approved canonical과 동일 이름/동일 주소 deleted duplicate 리뷰도 합산합니다.
             const rawRestaurants = (data || []) as RestaurantWithOptionalName[];
-            const restaurants = mergeRestaurants(rawRestaurants);
+            const restaurants = await enrichRestaurantsWithHomeMapYoutubeKpiMetrics(
+                mergeRestaurants(rawRestaurants),
+                normalizedFeaturedTheme,
+            );
             if (!includeVerifiedReviewCounts) {
                 return applyHomeMapThemeFilter(restaurants, normalizedFeaturedTheme) as Restaurant[];
             }
