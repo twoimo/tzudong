@@ -66,6 +66,30 @@ describe('admin submission queue safety badges', () => {
     expect(laterJunkRecommendation.reasons.map((reason) => reason.code)).toContain('junk-text');
   });
 
+  test('does not require recommendation review text for edit queue items', () => {
+    const editSummary = getAdminSubmissionQueueSafetySummary(baseSubmission({
+      submission_type: 'edit',
+      items: [{
+        youtube_link: 'https://youtu.be/abc',
+        tzuyang_review: '',
+        item_status: 'pending',
+      }],
+    }));
+    const invalidEditYoutube = getAdminSubmissionQueueSafetySummary(baseSubmission({
+      submission_type: 'edit',
+      items: [{
+        youtube_link: 'https://example.com/watch?v=abc',
+        tzuyang_review: '',
+        item_status: 'pending',
+      }],
+    }));
+
+    expect(editSummary.validationMessage).toBeNull();
+    expect(editSummary.reasons.map((reason) => reason.code)).not.toContain('junk-text');
+    expect(editSummary.filterCodes).toEqual([]);
+    expect(invalidEditYoutube.reasons.map((reason) => reason.code)).toContain('invalid-youtube');
+  });
+
   test('marks duplicate candidates and missing pending items without mutating the queue', () => {
     const summary = getAdminSubmissionQueueSafetySummary(baseSubmission({
       items: [{

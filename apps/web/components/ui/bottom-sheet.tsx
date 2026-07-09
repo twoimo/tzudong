@@ -107,6 +107,12 @@ export const DEFAULT_FOCUS_TRAP_ALLOW_SELECTORS = [
     '[data-radix-portal]',
     '[data-radix-popper-content-wrapper]',
 ];
+const NESTED_MODAL_PORTAL_ALLOW_SELECTOR = [
+    '[role="dialog"]',
+    '[role="alertdialog"]',
+    '[data-radix-dialog-content]',
+    '[data-radix-alert-dialog-content]',
+].join(', ');
 
 export const BOTTOM_SHEET_BACKDROP_ATTRIBUTE = 'data-bottom-sheet-backdrop';
 
@@ -221,7 +227,8 @@ export const isAllowedModalPointerTarget = (
     const closestTarget = typeof (target as Node & { closest?: (selector: string) => unknown }).closest === 'function'
         ? (target as Node & { closest: (selector: string) => unknown })
         : (target.parentElement as (Element & { closest: (selector: string) => Element | null }) | null);
-    return Boolean(closestTarget?.closest(`[${BOTTOM_SHEET_BACKDROP_ATTRIBUTE}]`));
+    if (closestTarget?.closest(`[${BOTTOM_SHEET_BACKDROP_ATTRIBUTE}]`)) return true;
+    return Boolean(closestTarget?.closest(NESTED_MODAL_PORTAL_ALLOW_SELECTOR));
 };
 
 export const shouldBlockModalOutsidePointerDown = (
@@ -1129,7 +1136,7 @@ function BottomSheetComponent({
         const keepFocusInsideSheet = (event: FocusEvent) => {
             const target = event.target;
             if (!(target instanceof Node)) return;
-            if (isInsideAllowedFocusRegion(target, sheetRef.current, focusTrapAllowSelectors)) return;
+            if (isAllowedModalPointerTarget(target, sheetRef.current, focusTrapAllowSelectors)) return;
 
             const focusableElements = getFocusTrapContainers(sheetRef.current, focusTrapAllowSelectors)
                 .flatMap((container) => getFocusableElements(container as HTMLElement));
