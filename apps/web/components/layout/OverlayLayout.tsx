@@ -8,6 +8,7 @@ import type { OverlayPanelType } from "@/components/layout/FloatingNavButtons";
 import { useAuth } from "@/contexts/AuthContextBase";
 import { Restaurant } from "@/types/restaurant";
 import { AUTH_UI_REQUEST_EVENT } from "@/lib/auth-ui-events";
+import { shouldSuppressNoncriticalChromeForPathname } from "@/lib/noncritical-chrome-routes";
 import {
   AUTH_LOGIN_QUERY_PARAM,
   AUTH_LOGIN_QUERY_VALUE,
@@ -142,11 +143,9 @@ export default function OverlayLayout({
   const isHomeRoute = pathname === "/";
   const routeDirectPanelParam = getDirectOverlayPanel(panelParam);
   const directPanelParam = isHomeRoute ? null : routeDirectPanelParam;
-  const shouldSuppressNoncriticalChrome = pathname?.startsWith("/auth/") || routeDirectPanelParam !== null ||
-    pathname?.startsWith("/admin") ||
-    pathname === "/feed" ||
-    pathname === "/stamp" ||
-    pathname === "/leaderboard";
+  const shouldSuppressNoncriticalChrome =
+    routeDirectPanelParam !== null ||
+    shouldSuppressNoncriticalChromeForPathname(pathname);
   const shouldRenderRouteOverlayChrome =
     !isHomeRoute && routeDirectPanelParam !== null;
   const isFullPageRoute = !isHomeRoute && routeDirectPanelParam === null;
