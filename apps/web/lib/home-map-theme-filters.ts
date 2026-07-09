@@ -71,6 +71,15 @@ export function isYoutubeMetadataBackedHomeMapThemeFilterId(value: unknown): val
         )
     );
 }
+type YoutubeMetricKey = 'viewCount' | 'commentCount';
+type YoutubeMetricSnakeKey = 'view_count' | 'comment_count';
+type YoutubeMetaWithMetricAliases = YoutubeMeta & Partial<Record<YoutubeMetricSnakeKey | 'published_at', unknown>>;
+
+const YOUTUBE_METRIC_ALIASES: Record<YoutubeMetricKey, readonly [YoutubeMetricKey, YoutubeMetricSnakeKey]> = {
+    viewCount: ['viewCount', 'view_count'],
+    commentCount: ['commentCount', 'comment_count'],
+};
+
 
 function parseYoutubeMetric(value: unknown): number | null {
     const numericValue = typeof value === 'string' && value.trim().length > 0 ? Number(value) : value;
@@ -85,12 +94,38 @@ function parseYoutubePublishedAt(value: unknown): number | null {
     return Number.isFinite(timestamp) ? timestamp : null;
 }
 
+function getYoutubeMetric(meta: YoutubeMeta, metricKey: YoutubeMetricKey): number | null {
+    const aliasedMeta = meta as YoutubeMetaWithMetricAliases;
+
+    for (const alias of YOUTUBE_METRIC_ALIASES[metricKey]) {
+        const metric = parseYoutubeMetric(aliasedMeta[alias]);
+        if (metric !== null) return metric;
+    }
+
+    return null;
+}
+
+function getYoutubePublishedAt(meta: YoutubeMeta): number | null {
+    const aliasedMeta = meta as YoutubeMetaWithMetricAliases;
+
+    return parseYoutubePublishedAt(aliasedMeta.publishedAt ?? aliasedMeta.published_at);
+}
+
+
 function isYoutubeMeta(value: unknown): value is YoutubeMeta {
     return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
 function getYoutubeMetaDedupeKey(meta: YoutubeMeta): string {
-    return [meta.title, meta.publishedAt, meta.viewCount, meta.likeCount, meta.commentCount]
+    const aliasedMeta = meta as YoutubeMetaWithMetricAliases;
+
+    return [
+        meta.title,
+        aliasedMeta.publishedAt ?? aliasedMeta.published_at,
+        getYoutubeMetric(meta, 'viewCount'),
+        meta.likeCount,
+        getYoutubeMetric(meta, 'commentCount'),
+    ]
         .map((value) => String(value ?? ''))
         .join('\u0000');
 }
@@ -146,13 +181,13 @@ function getMedian(values: number[]): number | null {
 
 function filterByTopYoutubeMetric(
     restaurants: Restaurant[],
-    metricKey: 'viewCount' | 'commentCount',
+    metricKey: YoutubeMetricKey,
 ): Restaurant[] {
     const metricByRestaurant = new Map<Restaurant, number>();
 
     restaurants.forEach((restaurant) => {
         const values = collectMergedYoutubeMetas(restaurant)
-            .map((meta) => parseYoutubeMetric(meta[metricKey]))
+            .map((meta) => getYoutubeMetric(meta, metricKey))
             .filter((value): value is number => value !== null);
         if (values.length === 0) return;
         metricByRestaurant.set(restaurant, Math.max(...values));
@@ -173,7 +208,7 @@ function filterByFreshVideo(restaurants: Restaurant[]): Restaurant[] {
 
     restaurants.forEach((restaurant) => {
         const publishedAtValues = collectMergedYoutubeMetas(restaurant)
-            .map((meta) => parseYoutubePublishedAt(meta.publishedAt))
+            .map(getYoutubePublishedAt)
             .filter((value): value is number => value !== null);
         if (publishedAtValues.length === 0) return;
         publishedAtByRestaurant.set(restaurant, publishedAtValues);
@@ -194,11 +229,11 @@ function filterByFanSignal(restaurants: Restaurant[]): Restaurant[] {
 
     restaurants.forEach((restaurant) => {
         for (const meta of collectMergedYoutubeMetas(restaurant)) {
-            const viewCount = parseYoutubeMetric(meta.viewCount);
+            const viewCount = getYoutubeMetric(meta, 'viewCount');
             if (viewCount === null || viewCount <= 0) continue;
             maxViewByRestaurant.set(restaurant, Math.max(maxViewByRestaurant.get(restaurant) ?? 0, viewCount));
 
-            const commentCount = parseYoutubeMetric(meta.commentCount);
+            const commentCount = getYoutubeMetric(meta, 'commentCount');
             if (commentCount === null || commentCount <= 0) continue;
             maxRatioByRestaurant.set(restaurant, Math.max(maxRatioByRestaurant.get(restaurant) ?? 0, commentCount / viewCount));
         }

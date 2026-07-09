@@ -4,6 +4,7 @@ import { memo, useState, useCallback, useMemo, useRef, useEffect, type Component
 import { usePathname, useRouter } from 'next/navigation';
 import {
     Filter,
+    List,
     X,
     MapPin,
     Video,
@@ -326,7 +327,6 @@ function MobileControlOverlayComponent({
             ].join('|'),
         [filters.featuredTheme, mapMode, selectedCategories, selectedCountry, selectedRegion],
     );
-    const visibleMarkerRestaurantsSignatureRef = useRef(visibleMarkerRestaurantsSignature);
     const dismissedVisibleMarkerSheetScopeRef = useRef<string | null>(null);
     const canAutoShowVisibleMarkerSheet =
         mapMode === 'domestic' &&
@@ -334,6 +334,10 @@ function MobileControlOverlayComponent({
         !isPanelOpen &&
         !panelRestaurant &&
         visibleMarkerRestaurants.length > 0;
+    const shouldShowVisibleMarkerListRestore =
+        canAutoShowVisibleMarkerSheet &&
+        activeSheet === 'none' &&
+        dismissedVisibleMarkerSheetScopeRef.current === visibleMarkerSheetDismissScope;
     const doesDetailOwnBottomRightSafeArea = isPanelOpen && Boolean(panelRestaurant);
     const shouldRenderMobileFloatingActions =
         activeSheet !== 'search' && !doesDetailOwnBottomRightSafeArea;
@@ -359,6 +363,10 @@ function MobileControlOverlayComponent({
         dismissedVisibleMarkerSheetScopeRef.current = visibleMarkerSheetDismissScope;
         setActiveSheet('none');
     }, [visibleMarkerSheetDismissScope]);
+    const handleVisibleMarkerSheetRestore = useCallback(() => {
+        dismissedVisibleMarkerSheetScopeRef.current = null;
+        setActiveSheet('visibleMarkers');
+    }, []);
     useEffect(() => {
         if (lastMapInteractionEpochRef.current === mapInteractionEpoch) return;
 
@@ -370,7 +378,6 @@ function MobileControlOverlayComponent({
     useEffect(() => {
         if (!canAutoShowVisibleMarkerSheet || activeSheet !== 'none') return;
         if (dismissedVisibleMarkerSheetScopeRef.current === visibleMarkerSheetDismissScope) return;
-        visibleMarkerRestaurantsSignatureRef.current = visibleMarkerRestaurantsSignature;
         setActiveSheet('visibleMarkers');
     }, [
         activeSheet,
@@ -385,18 +392,6 @@ function MobileControlOverlayComponent({
         setActiveSheet('none');
     }, [activeSheet, canAutoShowVisibleMarkerSheet]);
 
-    useEffect(() => {
-        if (activeSheet !== 'visibleMarkers' || !canAutoShowVisibleMarkerSheet) {
-            visibleMarkerRestaurantsSignatureRef.current = visibleMarkerRestaurantsSignature;
-            return;
-        }
-
-        visibleMarkerRestaurantsSignatureRef.current = visibleMarkerRestaurantsSignature;
-    }, [
-        activeSheet,
-        canAutoShowVisibleMarkerSheet,
-        visibleMarkerRestaurantsSignature,
-    ]);
 
 
     const searchInputRef = useRef<HTMLInputElement>(null);
@@ -1109,6 +1104,24 @@ function MobileControlOverlayComponent({
                 data-layout-primitives="cluster wrap-row overlay-stack"
                 data-scroll-owner="mobile-control-overlay"
             >
+                {shouldShowVisibleMarkerListRestore && (
+                    <Button
+                        type="button"
+                        onClick={handleVisibleMarkerSheetRestore}
+                        aria-label="맛집 목록 다시 열기"
+                        title="맛집 목록 다시 열기"
+                        data-mobile-visible-marker-restaurants-restore="true"
+                        className={cn(
+                            'h-12 w-12 rounded-full shadow-lg',
+                            'bg-background/95 hover:bg-secondary text-foreground border-border/70 backdrop-blur-sm',
+                            'transition-colors duration-150 ease-out motion-reduce:transition-none',
+                            'flex items-center justify-center',
+                            'border-2'
+                        )}
+                    >
+                        <List className="h-5 w-5" aria-hidden="true" />
+                    </Button>
+                )}
                 {/* 사용자 제보 마커 표시 토글: 관리자 검수용 */}
                 {isAdmin && (
                     <Button
@@ -1154,6 +1167,7 @@ function MobileControlOverlayComponent({
                     )}
                     title="맛집 제보하기"
                     aria-label="맛집 제보하기"
+                    data-mobile-submission-floating-action="true"
                 >
                     <Send className="h-5 w-5" aria-hidden="true" />
                 </Button>
@@ -1327,6 +1341,7 @@ function MobileControlOverlayComponent({
                             ? { key: visibleMarkerSheetHeightRequestKey, height: VISIBLE_MARKER_SHEET_HEIGHT, mode: 'exact' }
                             : undefined
                     }
+                    contentClassName={activeSheet === 'visibleMarkers' ? 'scrollbar-hide' : undefined}
                     className="z-[95]"
                 >
                     {activeSheet !== 'visibleMarkers' ? (

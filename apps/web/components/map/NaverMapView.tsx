@@ -88,7 +88,11 @@ import {
     resolveReleasedSearchSelectionResetPlan,
     resolveSearchSelectionReleasePlan,
 } from "@/lib/mobile-home-search-selection";
-import { buildNaverRestaurantsQueryOptions, resolveNaverRestaurantQueryBounds } from "@/lib/map-query-helpers";
+import {
+    buildNaverRestaurantsQueryOptions,
+    resolveNaverRestaurantEmptyStateMessage,
+    resolveNaverRestaurantQueryBounds,
+} from "@/lib/map-query-helpers";
 import {
     getExtendedBounds,
     getPrimaryCategory,
@@ -1824,6 +1828,11 @@ const NaverMapView = memo(({
         isLoaded,
         selectedRegion,
     }), [filters, isLoaded, restaurantQueryBounds, selectedRegion]);
+    const restaurantEmptyStateMessage = useMemo(
+        () => resolveNaverRestaurantEmptyStateMessage(filters),
+        [filters],
+    );
+
 
     const {
         data: restaurants = [],
@@ -3201,6 +3210,7 @@ const NaverMapView = memo(({
                     renderOverlayStack={!isMobileOrTablet}
                     restaurantCountToastCount={restaurantCountToastCount}
                     restaurantsLength={restaurants.length}
+                    emptyStateMessage={restaurantEmptyStateMessage}
                     showAnnouncementToast={showAnnouncementToast}
                     showOnlineUsers={showOnlineUsers}
                     showRestaurantCount={showRestaurantCount}
@@ -3220,6 +3230,7 @@ const NaverMapView = memo(({
                         onAnnouncementToastClick={handleAnnouncementToastClick}
                         restaurantCountToastCount={restaurantCountToastCount}
                         restaurantsLength={restaurants.length}
+                        emptyStateMessage={restaurantEmptyStateMessage}
                         showAnnouncementToast={showAnnouncementToast}
                         showOnlineUsers={showOnlineUsers}
                         showRestaurantCount={showRestaurantCount}
@@ -3250,6 +3261,7 @@ const NaverMapView = memo(({
                 renderOverlayStack={!isMobileOrTablet}
                 restaurantCountToastCount={restaurantCountToastCount}
                 restaurantsLength={restaurants.length}
+                emptyStateMessage={restaurantEmptyStateMessage}
                 showAnnouncementToast={showAnnouncementToast}
                 showOnlineUsers={showOnlineUsers}
                 showRestaurantCount={showRestaurantCount}
@@ -3270,6 +3282,7 @@ const NaverMapView = memo(({
                     onAnnouncementToastClick={handleAnnouncementToastClick}
                     restaurantCountToastCount={restaurantCountToastCount}
                     restaurantsLength={restaurants.length}
+                    emptyStateMessage={restaurantEmptyStateMessage}
                     showAnnouncementToast={showAnnouncementToast}
                     showOnlineUsers={showOnlineUsers}
                     showRestaurantCount={showRestaurantCount}
