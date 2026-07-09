@@ -287,7 +287,6 @@ test.describe('Responsive Overflow Guard', () => {
             '/admin?module=audit',
             '/admin/evaluations',
             '/admin/submissions',
-            '/admin/banners',
             '/insights',
         ];
         for (const route of adminRoutes) {

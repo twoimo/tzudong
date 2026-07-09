@@ -158,10 +158,11 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
 
     // 권한 체크
     useEffect(() => {
+        if (embedded) return;
         if (!authLoading && (!user || !isAdmin)) {
             router.push('/');
         }
-    }, [authLoading, user, isAdmin, router]);
+    }, [authLoading, embedded, user, isAdmin, router]);
 
     // 정렬된 배너 목록 (조건부 return 전에 useMemo 호출)
     const sortedBanners = useMemo(() => {
@@ -172,11 +173,11 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
     const sidebarTargetCount = sortedBanners.filter((banner) => banner.display_target.includes('sidebar')).length;
     const mobileTargetCount = sortedBanners.filter((banner) => banner.display_target.includes('mobile_popup')).length;
 
-    if (authLoading) {
+    if (!embedded && authLoading) {
         return null;
     }
 
-    if (!user || !isAdmin) {
+    if (!embedded && (!user || !isAdmin)) {
         return null;
     }
 
@@ -505,17 +506,19 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
                             </div>
                         </div>
                     </div>
-                    <div className="flex flex-wrap items-center gap-1.5">
-                        <Badge variant="secondary" className="rounded-full border border-border bg-muted/50 text-muted-foreground"><Monitor className="mr-1 h-3.5 w-3.5" aria-hidden="true" />데스크톱 배너 {bannersLoading ? <InlineCountSkeleton className="ml-1 w-5" /> : sidebarTargetCount}</Badge>
-                        <Badge variant="secondary" className="rounded-full border border-border bg-muted/50 text-muted-foreground"><Smartphone className="mr-1 h-3.5 w-3.5" aria-hidden="true" />모바일 팝업 {bannersLoading ? <InlineCountSkeleton className="ml-1 w-5" /> : mobileTargetCount}</Badge>
-                        <Button onClick={openCreatePanel} className="h-9 rounded-xl bg-primary px-3 text-primary-foreground shadow-primary hover:bg-primary/90">
+                    <div className="flex w-full min-w-0 flex-col gap-1.5 sm:flex-row sm:items-center lg:w-auto">
+                        <div className="flex min-w-0 flex-nowrap items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide [scrollbar-width:none] sm:flex-wrap sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden">
+                            <Badge variant="secondary" className="shrink-0 whitespace-nowrap rounded-full border border-border bg-muted/50 text-muted-foreground"><Monitor className="mr-1 h-3.5 w-3.5" aria-hidden="true" />데스크톱 배너 {bannersLoading ? <InlineCountSkeleton className="ml-1 w-5" /> : sidebarTargetCount}</Badge>
+                            <Badge variant="secondary" className="shrink-0 whitespace-nowrap rounded-full border border-border bg-muted/50 text-muted-foreground"><Smartphone className="mr-1 h-3.5 w-3.5" aria-hidden="true" />모바일 팝업 {bannersLoading ? <InlineCountSkeleton className="ml-1 w-5" /> : mobileTargetCount}</Badge>
+                        </div>
+                        <Button onClick={openCreatePanel} className="h-9 w-full rounded-xl bg-primary px-3 text-primary-foreground shadow-primary hover:bg-primary/90 sm:w-auto">
                             <Plus className="mr-2 h-4 w-4" aria-hidden="true" />새 배너
                         </Button>
                     </div>
                 </div>
 
-                <div className={cn("grid min-h-0 flex-1 gap-2 overflow-y-auto", embedded ? "p-2 xl:grid-cols-[minmax(330px,0.95fr)_minmax(420px,1.05fr)] xl:overflow-hidden" : "rounded-b-2xl border border-t-0 bg-background/70 p-3 xl:grid-cols-[minmax(360px,0.95fr)_minmax(460px,1.05fr)] xl:overflow-hidden")}>
-                    <section className="min-h-0 overflow-hidden rounded-xl border border-border bg-card/95 shadow-sm xl:flex xl:flex-col" aria-labelledby="banner-list-title">
+                <div className={cn("grid min-h-0 flex-1 gap-2 overflow-y-auto overflow-x-hidden scrollbar-hide [scrollbar-width:none] [&::-webkit-scrollbar]:hidden", embedded ? "p-2 xl:grid-cols-[minmax(330px,0.95fr)_minmax(420px,1.05fr)] xl:overflow-hidden" : "rounded-b-2xl bg-background/70 p-2 sm:p-3 md:border md:border-t-0 xl:grid-cols-[minmax(360px,0.95fr)_minmax(460px,1.05fr)] xl:overflow-hidden")}>
+                    <section className="min-h-0 overflow-hidden rounded-xl bg-card/95 shadow-sm md:border md:border-border xl:flex xl:flex-col" aria-labelledby="banner-list-title">
                         <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border p-2.5">
                             <div>
                                 <h2 id="banner-list-title" className="text-sm font-bold text-foreground">배너 목록</h2>
@@ -523,7 +526,7 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
                             </div>
                         </div>
 
-                        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-2" role="list" aria-label="배너 목록">
+                        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto scrollbar-hide p-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="list" aria-label="배너 목록">
                             {bannersLoading ? (
                                 <div className="space-y-2" role="status" aria-busy="true" aria-label="배너 목록 로딩 중">
                                     <span className="sr-only">배너 목록 데이터를 불러오는 중입니다.</span>
@@ -540,10 +543,10 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
                                         key={banner.id}
                                         type="button"
                                         aria-current={isSelected ? "true" : undefined}
-                                        className={cn("w-full rounded-lg border bg-background/80 p-2 text-left transition hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary", isSelected ? "border-primary/40 bg-primary/5" : "border-border")}
+                                        className={cn("w-full rounded-lg border bg-background/80 p-2 text-left shadow-sm transition hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary", isSelected ? "border-primary/40 bg-primary/5" : "border-border/70")}
                                         onClick={() => openEditPanel(banner)}
                                     >
-                                        <div className="flex gap-2">
+                                        <div className="flex min-w-0 gap-2">
                                             {banner.image_url ? (
                                                 <div className="relative h-12 w-16 shrink-0 overflow-hidden rounded-md border border-border">
                                                     <Image src={banner.image_url} alt="" fill unoptimized sizes="64px" className="object-cover" />
@@ -554,15 +557,15 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
                                                 </div>
                                             )}
                                             <div className="min-w-0 flex-1">
-                                                <div className="flex items-start justify-between gap-2">
-                                                    <p className="truncate text-sm font-bold text-foreground">{banner.title}</p>
+                                                <div className="flex min-w-0 items-start justify-between gap-2">
+                                                    <p className="min-w-0 truncate text-sm font-bold text-foreground">{banner.title}</p>
                                                     <Badge variant={banner.is_active ? "default" : "outline"} className="shrink-0 rounded-full text-[10px]">{banner.is_active ? '활성' : '비활성'}</Badge>
                                                 </div>
                                                 <p className="mt-0.5 truncate text-xs text-muted-foreground">{banner.description || '설명 없음'} · 우선순위 {banner.priority}</p>
-                                                <div className="mt-1 flex flex-wrap gap-1">
-                                                    {banner.display_target.includes('sidebar') && <Badge variant="secondary" className="rounded-full text-[10px]">데스크톱 배너</Badge>}
-                                                    {banner.display_target.includes('mobile_popup') && <Badge variant="secondary" className="rounded-full text-[10px]">모바일 팝업</Badge>}
-                                                    {banner.link_url && <span className="inline-flex items-center text-[10px] text-primary"><ExternalLink className="mr-0.5 h-3 w-3" aria-hidden="true" />링크</span>}
+                                                <div className="mt-1 flex min-w-0 flex-nowrap gap-1 overflow-x-auto scrollbar-hide [scrollbar-width:none] sm:flex-wrap sm:overflow-visible [&::-webkit-scrollbar]:hidden">
+                                                    {banner.display_target.includes('sidebar') && <Badge variant="secondary" className="shrink-0 rounded-full text-[10px]">데스크톱 배너</Badge>}
+                                                    {banner.display_target.includes('mobile_popup') && <Badge variant="secondary" className="shrink-0 rounded-full text-[10px]">모바일 팝업</Badge>}
+                                                    {banner.link_url && <span className="inline-flex shrink-0 items-center text-[10px] text-primary"><ExternalLink className="mr-0.5 h-3 w-3" aria-hidden="true" />링크</span>}
                                                 </div>
                                             </div>
                                         </div>
@@ -572,16 +575,16 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
                         </div>
                     </section>
 
-                    <section className="min-h-0 overflow-hidden rounded-xl border border-border bg-card/95 shadow-sm xl:flex xl:flex-col" aria-labelledby="banner-editor-title">
+                    <section className="min-h-0 overflow-hidden rounded-xl bg-card/95 shadow-sm md:border md:border-border xl:flex xl:flex-col" aria-labelledby="banner-editor-title">
                         <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border p-2.5">
                             <div className="min-w-0">
                                 <h2 id="banner-editor-title" className="text-sm font-bold text-foreground">{editingBanner ? '배너 상세·수정' : '새 배너 작성'}</h2>
                                 <p className="text-xs text-muted-foreground">모달 없이 선택·편집·삭제를 이 패널에서 처리합니다.</p>
                             </div>
-                            {editingBanner && <Button type="button" variant="outline" size="sm" className="rounded-lg" onClick={openCreatePanel}>새로 작성</Button>}
+                            {editingBanner && <Button type="button" variant="outline" size="sm" className="shrink-0 rounded-lg" onClick={openCreatePanel}>새로 작성</Button>}
                         </div>
 
-                        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-2.5">
+                        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto scrollbar-hide p-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                             <div className="grid gap-2 md:grid-cols-2">
                                 <div className="space-y-1.5 md:col-span-2">
                                     <Label htmlFor="title">제목 *</Label>
@@ -608,11 +611,11 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
                                         {isUploading ? (
                                             <div className="flex items-center justify-center gap-2 py-5 text-sm text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />{compressionProgress > 0 ? `압축 중 ${compressionProgress}%` : '미디어 처리 중'}</div>
                                         ) : videoPreview ? (
-                                            <div className="space-y-2"><video src={videoPreview} controls className="aspect-video w-full rounded-md border object-cover" /><Button type="button" variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleMediaRemove(); }}>미디어 제거</Button></div>
+                                            <div className="space-y-2"><video src={videoPreview} controls className="aspect-video w-full rounded-md border object-cover" /><Button type="button" variant="outline" size="sm" className="w-full sm:w-auto" onClick={(e) => { e.stopPropagation(); handleMediaRemove(); }}>미디어 제거</Button></div>
                                         ) : imagePreview ? (
-                                            <div className="space-y-2"><div className="relative aspect-video w-full overflow-hidden rounded-md border"><Image src={imagePreview} alt="미리보기" fill unoptimized sizes="(max-width: 768px) 100vw, 768px" className="object-cover" /></div><Button type="button" variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleMediaRemove(); }}>미디어 제거</Button></div>
+                                            <div className="space-y-2"><div className="relative aspect-video w-full overflow-hidden rounded-md border"><Image src={imagePreview} alt="미리보기" fill unoptimized sizes="(max-width: 768px) 100vw, 768px" className="object-cover" /></div><Button type="button" variant="outline" size="sm" className="w-full sm:w-auto" onClick={(e) => { e.stopPropagation(); handleMediaRemove(); }}>미디어 제거</Button></div>
                                         ) : (
-                                            <div className="flex items-center gap-3 py-5 text-sm text-muted-foreground"><Upload className="h-6 w-6" aria-hidden="true" /><span>{isDragging ? '여기에 파일을 놓으세요' : '클릭 또는 드래그로 이미지/영상을 선택하세요'}</span></div>
+                                            <div className="flex items-center gap-3 py-5 text-sm text-muted-foreground"><Upload className="h-6 w-6 shrink-0" aria-hidden="true" /><span className="min-w-0">{isDragging ? '여기에 파일을 놓으세요' : '클릭 또는 드래그로 이미지/영상을 선택하세요'}</span></div>
                                         )}
                                         <input ref={fileInputRef} id="banner-media-upload" type="file" accept="image/*,video/*" onChange={handleFileInputChange} className="hidden" />
                                     </Card>
@@ -638,13 +641,13 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
                                 </div>
                             </div>
 
-                            <div className="flex flex-wrap gap-2 border-t border-border pt-3">
-                                <Button onClick={handleSubmit} disabled={isUploading || createBanner.isPending || updateBanner.isPending}>
+                            <div className="flex flex-col gap-2 border-t border-border pt-3 sm:flex-row sm:flex-wrap">
+                                <Button className="w-full sm:w-auto" onClick={handleSubmit} disabled={isUploading || createBanner.isPending || updateBanner.isPending}>
                                     {(isUploading || createBanner.isPending || updateBanner.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
                                     {editingBanner ? '수정 저장' : '배너 추가'}
                                 </Button>
-                                <Button variant="outline" onClick={resetEditorPanel}>초기화</Button>
-                                {formData.link_url && <Button type="button" variant="ghost" onClick={() => handleOpenExternalLink(formData.link_url || '')}><ExternalLink className="mr-2 h-4 w-4" aria-hidden="true" />링크 확인</Button>}
+                                <Button className="w-full sm:w-auto" variant="outline" onClick={resetEditorPanel}>초기화</Button>
+                                {formData.link_url && <Button className="w-full sm:w-auto" type="button" variant="ghost" onClick={() => handleOpenExternalLink(formData.link_url || '')}><ExternalLink className="mr-2 h-4 w-4" aria-hidden="true" />링크 확인</Button>}
                             </div>
 
                             {editingBanner && (
@@ -653,7 +656,7 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
                                     <p className="mt-1 text-xs leading-5 text-muted-foreground">삭제는 모달 없이 이 패널에서 처리합니다. 삭제하려면 <strong>배너삭제</strong>를 입력하세요.</p>
                                     <div className="mt-2 flex flex-col gap-2 sm:flex-row">
                                         <Input value={deleteConfirmation} onChange={(event) => { setBannerToDelete(editingBanner); setDeleteConfirmation(event.target.value); }} placeholder="배너삭제" className="bg-background" aria-label="배너 삭제 확인 문구" />
-                                        <Button type="button" variant="destructive" disabled={deleteConfirmation !== '배너삭제' || deleteBanner.isPending} onClick={() => { setBannerToDelete(editingBanner); void handleDelete(); }}>
+                                        <Button type="button" variant="destructive" className="w-full sm:w-auto" disabled={deleteConfirmation !== '배너삭제' || deleteBanner.isPending} onClick={() => { setBannerToDelete(editingBanner); void handleDelete(); }}>
                                             {deleteBanner.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" /> : <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />}
                                             삭제
                                         </Button>
