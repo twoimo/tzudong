@@ -1,4 +1,4 @@
-import { test, expect, devices } from '@playwright/test';
+import { test, expect, devices, type Locator, type Page } from '@playwright/test';
 import { hidePopupOverlay } from './helpers';
 import {
     clickAnyUnselectedMarker,
@@ -19,13 +19,80 @@ test.use({
 });
 test.setTimeout(60000);
 
+const LARGE_MOBILE_RESTORE_VIEWPORTS = [
+    {
+        name: 'Galaxy S20 Ultra',
+        viewport: { width: 412, height: 915 },
+        deviceScaleFactor: 3.5,
+    },
+    {
+        name: 'iPhone 14 Pro Max',
+        viewport: { width: 430, height: 932 },
+        deviceScaleFactor: 3,
+    },
+] as const;
+
+async function prepareMobileHomeMapPage(page: Page) {
+    await installMobileHomeMapTestMocks(page);
+    await page.goto('/');
+    await hidePopupOverlay(page);
+    await expect(page.getByTestId('map-container')).toBeVisible({ timeout: 15000 });
+    await waitForMockMapReady(page);
+}
+
+async function openVisibleMarkerSheetFromCluster(page: Page) {
+    await zoomMockMap(page, 8);
+    await page.waitForFunction(
+        () => document.querySelectorAll('.cluster-marker-container').length > 0,
+        undefined,
+        { timeout: 15000 }
+    );
+
+    const clicked = await page.locator('.cluster-marker-container').evaluateAll((elements) => {
+        const target = elements[0];
+        if (!(target instanceof HTMLElement)) return false;
+
+        target.click();
+        return true;
+    });
+    expect(clicked).toBe(true);
+
+    await waitForMarkerCount(page, 3);
+
+    const sheet = page.locator('[data-mobile-visible-marker-restaurants-sheet="true"]');
+    await expect(sheet).toBeVisible({ timeout: 5000 });
+    return sheet;
+}
+
+async function expectRestoreLayoutSafe(page: Page, restore: Locator) {
+    const restoreBox = await restore.boundingBox();
+    expect(restoreBox).not.toBeNull();
+
+    const bottomNav = page.getByTestId('bottom-nav');
+    await expect(bottomNav).toBeVisible();
+    const bottomNavBox = await bottomNav.boundingBox();
+    expect(bottomNavBox).not.toBeNull();
+    if (restoreBox && bottomNavBox) {
+        expect(restoreBox.y + restoreBox.height).toBeLessThanOrEqual(bottomNavBox.y - 4);
+    }
+
+    const submissionButton = page.locator('[data-mobile-submission-floating-action="true"]');
+    await expect(submissionButton).toBeVisible();
+    const submissionBox = await submissionButton.boundingBox();
+    expect(submissionBox).not.toBeNull();
+    if (restoreBox && submissionBox) {
+        expect(restoreBox.y + restoreBox.height).toBeLessThanOrEqual(submissionBox.y - 4);
+        const restoreCenterX = restoreBox.x + restoreBox.width / 2;
+        const submissionCenterX = submissionBox.x + submissionBox.width / 2;
+        expect(Math.abs(restoreCenterX - submissionCenterX)).toBeLessThanOrEqual(4);
+        expect(Math.abs(restoreBox.width - submissionBox.width)).toBeLessThanOrEqual(2);
+        expect(Math.abs(restoreBox.height - submissionBox.height)).toBeLessThanOrEqual(2);
+    }
+}
+
 test.describe('Phase 1: mobile home map regressions', () => {
     test.beforeEach(async ({ page }) => {
-        await installMobileHomeMapTestMocks(page);
-        await page.goto('/');
-        await hidePopupOverlay(page);
-        await expect(page.getByTestId('map-container')).toBeVisible({ timeout: 15000 });
-        await waitForMockMapReady(page);
+        await prepareMobileHomeMapPage(page);
     });
 
     test('MHM-01: search-selected restaurant name remains in the mobile search input', async ({ page }) => {
@@ -353,29 +420,27 @@ test.describe('Phase 1: mobile home map regressions', () => {
     });
 
     test('MHM-08: zoomed individual markers expose a visible-marker restaurant sheet', async ({ page }) => {
-        await zoomMockMap(page, 8);
-        await page.waitForFunction(
-            () => document.querySelectorAll('.cluster-marker-container').length > 0,
-            undefined,
-            { timeout: 15000 }
-        );
-
-        const clicked = await page.locator('.cluster-marker-container').evaluateAll((elements) => {
-            const target = elements[0];
-            if (!(target instanceof HTMLElement)) return false;
-
-            target.click();
-            return true;
-        });
-        expect(clicked).toBe(true);
-
-        await waitForMarkerCount(page, 3);
+        const sheet = await openVisibleMarkerSheetFromCluster(page);
 
         await expect(page.locator('[data-mobile-visible-marker-restaurants-trigger="true"]')).toHaveCount(0);
 
-        const sheet = page.locator('[data-mobile-visible-marker-restaurants-sheet="true"]');
-        await expect(sheet).toBeVisible({ timeout: 5000 });
         await expect(sheet).toContainText(/정원분식|명동칼국수|서울돈까스/);
+        const scrollbarState = await sheet.evaluate((element) => {
+            const scrollContainer = element.closest('[data-bottom-sheet-layout-source="mobile-control-overlay-sheet"]')
+                ?.querySelector(':scope > div.flex-1');
+            if (!(scrollContainer instanceof HTMLElement)) {
+                return null;
+            }
+
+            return {
+                scrollbarWidth: window.getComputedStyle(scrollContainer).scrollbarWidth,
+                webkitScrollbarDisplay: window.getComputedStyle(scrollContainer, '::-webkit-scrollbar').display,
+            };
+        });
+        expect(scrollbarState).toMatchObject({
+            scrollbarWidth: 'none',
+            webkitScrollbarDisplay: 'none',
+        });
 
         await page.screenshot({
             path: 'test-results/home-map-contextual-discovery-mobile.png',
@@ -386,4 +451,76 @@ test.describe('Phase 1: mobile home map regressions', () => {
         await expect(sheet).not.toBeVisible();
         await expect(page.getByTestId('restaurant-detail-panel')).toContainText(/정원분식|명동칼국수|서울돈까스/);
     });
+    test('MHM-08b: dismissed visible-marker sheet can be restored without covering mobile chrome', async ({ page }) => {
+        const sheet = await openVisibleMarkerSheetFromCluster(page);
+        await page.getByLabel('맛집 목록 닫기').click();
+        await expect(sheet).not.toBeVisible();
+
+        const restore = page.locator('[data-mobile-visible-marker-restaurants-restore="true"]');
+        await expect(restore).toBeVisible({ timeout: 5000 });
+        await expect(restore).not.toContainText('목록');
+        await expect(restore).not.toContainText('3곳');
+        const restoreByRole = page.getByRole('button', { name: '맛집 목록 다시 열기', exact: true });
+        await expect(restoreByRole).toBeVisible();
+        await expect(restore).toHaveAttribute('aria-label', '맛집 목록 다시 열기');
+
+        await expectRestoreLayoutSafe(page, restore);
+
+        await restore.click();
+        await expect(sheet).toBeVisible();
+        await expect(restore).not.toBeVisible();
+        await page.getByLabel('맛집 목록 닫기').click();
+        await expect(sheet).not.toBeVisible();
+        await expect(restore).toBeVisible();
+
+        await restore.focus();
+        await page.keyboard.press('Enter');
+        await expect(sheet).toBeVisible();
+        await expect(restore).not.toBeVisible();
+        await page.getByLabel('맛집 목록 닫기').click();
+        await expect(sheet).not.toBeVisible();
+        await expect(restore).toBeVisible();
+
+        await restore.focus();
+        await expect(restore).toBeFocused();
+        await page.keyboard.press('Space');
+        await expect(sheet).toBeVisible();
+        await expect(restore).not.toBeVisible();
+
+
+        await sheet.getByRole('button', { name: /명동칼국수|서울돈까스|정원분식/ }).first().click();
+        await expect(sheet).not.toBeVisible();
+        await expect(page.getByTestId('restaurant-detail-panel')).toContainText(/정원분식|명동칼국수|서울돈까스/);
+        await expect(restore).not.toBeVisible();
+    });
 });
+
+for (const deviceProfile of LARGE_MOBILE_RESTORE_VIEWPORTS) {
+    test.describe(`Large mobile visible-marker restore layout: ${deviceProfile.name}`, () => {
+        test.use({
+            viewport: deviceProfile.viewport,
+            deviceScaleFactor: deviceProfile.deviceScaleFactor,
+            isMobile: true,
+            hasTouch: true,
+        });
+
+        test(`MHM-08c: restore control stays safe on ${deviceProfile.name}`, async ({ page }) => {
+            await prepareMobileHomeMapPage(page);
+            const sheet = await openVisibleMarkerSheetFromCluster(page);
+
+            await page.getByLabel('맛집 목록 닫기').click();
+            await expect(sheet).not.toBeVisible();
+
+            const restore = page.locator('[data-mobile-visible-marker-restaurants-restore="true"]');
+            await expect(restore).toBeVisible({ timeout: 5000 });
+            await expect(restore).not.toContainText('목록');
+            await expect(restore).not.toContainText('3곳');
+            await expect(restore).toHaveAttribute('aria-label', '맛집 목록 다시 열기');
+            await expectRestoreLayoutSafe(page, restore);
+
+            await restore.click();
+            await expect(sheet).toBeVisible();
+            await expect(restore).not.toBeVisible();
+        });
+    });
+}

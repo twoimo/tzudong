@@ -1065,9 +1065,9 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className={`${ADMIN_MODAL_CONTENT_MD_FLEX} !overflow-hidden`}>
         <DialogHeader>
-          <DialogTitle>보류 레스토랑 편집 및 승인</DialogTitle>
+          <DialogTitle>맛집 정보 편집</DialogTitle>
           <DialogDescription>
-            정보를 수정하고 재지오코딩 후 승인할 수 있습니다.
+            정보를 수정해 저장하거나, 재지오코딩 후 승인 처리할 수 있습니다.
           </DialogDescription>
         </DialogHeader>
 

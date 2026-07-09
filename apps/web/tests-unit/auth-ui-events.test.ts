@@ -60,6 +60,7 @@ describe('auth ui request events', () => {
         const listeners = new Map<string, EventListener>();
         const dispatchedEvents: Event[] = [];
         let timeoutCallback: (() => void) | null = null;
+        let clearTimeoutCalls = 0;
 
         Object.defineProperty(globalThis, 'window', {
             configurable: true,
@@ -81,9 +82,10 @@ describe('auth ui request events', () => {
                 },
                 setTimeout(callback: () => void) {
                     timeoutCallback = callback;
-                    return 1;
+                    return 0;
                 },
                 clearTimeout() {
+                    clearTimeoutCalls += 1;
                     timeoutCallback = null;
                 },
             },
@@ -99,6 +101,7 @@ describe('auth ui request events', () => {
             timeoutCallback?.();
 
             expect(dispatchedEvents).toHaveLength(0);
+            expect(clearTimeoutCalls).toBe(1);
         } finally {
             Object.defineProperty(globalThis, 'window', {
                 configurable: true,
@@ -134,7 +137,7 @@ describe('auth ui request events', () => {
         });
 
         try {
-            requestAuthUi({ source: 'bookmark-button', reason: 'bookmark' });
+            requestAuthUi({ source: 'desktop-map-user-menu', route: '/', reason: 'mypage' });
         } finally {
             Object.defineProperty(globalThis, 'window', {
                 configurable: true,
@@ -145,5 +148,50 @@ describe('auth ui request events', () => {
         expect(dispatchedEvents).toHaveLength(1);
         expect(dispatchedEvents[0]).toBeInstanceOf(CustomEvent);
         expect(dispatchedEvents[0]?.type).toBe(AUTH_UI_REQUEST_EVENT);
+    });
+
+    test('forces known logged-out desktop prompts without waiting for stale session hints', () => {
+        const originalWindow = globalThis.window;
+        const dispatchedEvents: Event[] = [];
+        let retryScheduled = false;
+
+        Object.defineProperty(globalThis, 'window', {
+            configurable: true,
+            value: {
+                localStorage: {
+                    length: 1,
+                    key: () => 'sb-test-auth-token',
+                    getItem: () => '{"access_token":"token"}',
+                },
+                addEventListener() {},
+                removeEventListener() {},
+                dispatchEvent(event: Event) {
+                    dispatchedEvents.push(event);
+                    return true;
+                },
+                setTimeout() {
+                    retryScheduled = true;
+                    return 1;
+                },
+                clearTimeout() {},
+            },
+        });
+
+        try {
+            requestAuthUi({ source: 'desktop-map-user-menu', reason: 'mypage', force: true });
+        } finally {
+            Object.defineProperty(globalThis, 'window', {
+                configurable: true,
+                value: originalWindow,
+            });
+        }
+
+        expect(retryScheduled).toBe(true);
+        expect(dispatchedEvents).toHaveLength(1);
+        expect((dispatchedEvents[0] as CustomEvent).detail).toMatchObject({
+            source: 'desktop-map-user-menu',
+            reason: 'mypage',
+            force: true,
+        });
     });
 });
