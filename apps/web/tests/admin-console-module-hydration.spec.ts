@@ -41,6 +41,8 @@ const E2E_ADMIN_SHELL_BYPASS_STORAGE_KEY = 'tzudong:e2e-admin-shell-bypass';
 const HYDRATION_SMOKE_ARTIFACT_DIR = resolve(process.cwd(), '..', '..', 'artifacts', 'ultragoal');
 const HYDRATION_SMOKE_SCREENSHOT = resolve(HYDRATION_SMOKE_ARTIFACT_DIR, 'g006-hydration-smoke-final.png');
 const HYDRATION_SMOKE_TRANSCRIPT = resolve(HYDRATION_SMOKE_ARTIFACT_DIR, 'g006-hydration-smoke-transcript.json');
+const MOBILE_MENU_SCREENSHOT = resolve(HYDRATION_SMOKE_ARTIFACT_DIR, 'g001-mobile-admin-menu-final.jpg');
+const MOBILE_MENU_TRANSCRIPT = resolve(HYDRATION_SMOKE_ARTIFACT_DIR, 'g001-mobile-admin-menu-transcript.json');
 
 
 function getE2EAdminRouteBypassToken(testInfo: TestInfo) {
@@ -111,5 +113,200 @@ test.describe('admin console module hydration smoke', () => {
         screenshot: HYDRATION_SMOKE_SCREENSHOT,
       }, null, 2)}\n`,
     );
+  });
+
+  test('mobile hamburger menu selects a module with active state and closes the dropdown', async ({ page }, testInfo) => {
+    test.setTimeout(90_000);
+
+    const runtimeErrors: string[] = [];
+    attachRuntimeErrorCollectors(page, runtimeErrors);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await installE2EAdminShellBypass(page);
+    await page.setExtraHTTPHeaders({
+      [E2E_ADMIN_ROUTE_BYPASS_HEADER]: '1',
+      [E2E_ADMIN_ROUTE_BYPASS_TOKEN_HEADER]: getE2EAdminRouteBypassToken(testInfo),
+    });
+
+    await gotoAndHidePopup(page, '/admin');
+    const canvas = page.locator('#admin-console-canvas');
+    const dropdown = page.locator('[data-admin-console-menu-dropdown="true"]');
+    const menuTrigger = page.locator('[data-admin-console-menu-trigger="hamburger"]');
+    const routeMenuItem = page.locator(
+      '[data-admin-console-menu-item-mode="mobile-dropdown"][aria-label="맛집 동선 추천"]',
+    );
+
+    await expect(page.locator('[data-admin-dashboard-management="true"]')).toBeVisible({
+      timeout: 30_000,
+    });
+    await canvas.evaluate((element) => {
+      const spacer = document.createElement('div');
+      spacer.setAttribute('data-admin-menu-scroll-spacer', 'runtime-guard');
+      spacer.style.height = '640px';
+      element.appendChild(spacer);
+      element.scrollTop = 180;
+    });
+
+    await menuTrigger.click();
+    await expect(dropdown).toBeVisible();
+    await expect(routeMenuItem).toBeVisible();
+    await routeMenuItem.click();
+
+    await expect(dropdown).toHaveCount(0);
+    const dropdownCountAfterSelection = await dropdown.count();
+    await expect(page).toHaveURL(/\/admin\?module=routes$/);
+    await expect(canvas).toHaveAttribute('data-admin-console-active-module', 'routes', {
+      timeout: 30_000,
+    });
+    await expect(page.locator('[aria-label="관리자 지도 운영 개요 2분할"]')).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect
+      .poll(() => canvas.evaluate((element) => element.scrollTop))
+      .toBe(0);
+    const measuredScrollTopAfterSelection = await canvas.evaluate((element) => element.scrollTop);
+    const activeModuleIdAfterSelection = await canvas.getAttribute('data-admin-console-active-module');
+    const finalUrlAfterSelection = page.url();
+
+    await menuTrigger.click();
+    await expect(dropdown).toBeVisible();
+    await expect(routeMenuItem).toHaveAttribute('aria-current', 'page');
+    await expect(routeMenuItem).toHaveAttribute('data-admin-console-menu-item-state', 'active');
+    await expect(routeMenuItem).toHaveClass(/bg-primary/);
+    const activeMenuObservation = await routeMenuItem.evaluate((element) => ({
+      ariaCurrent: element.getAttribute('aria-current'),
+      className: element.getAttribute('class'),
+      dataState: element.getAttribute('data-admin-console-menu-item-state'),
+      text: element.textContent?.replace(/\s+/g, ' ').trim() ?? '',
+      visualHasPrimaryClass: element.classList.contains('bg-primary'),
+    }));
+    const viewport = page.viewportSize();
+    await routeMenuItem.scrollIntoViewIfNeeded();
+    mkdirSync(HYDRATION_SMOKE_ARTIFACT_DIR, { recursive: true });
+    await page.screenshot({ path: MOBILE_MENU_SCREENSHOT, fullPage: false });
+    writeFileSync(
+      MOBILE_MENU_TRANSCRIPT,
+      `${JSON.stringify({
+        schemaVersion: 1,
+        kind: 'playwright-browser-automation-report',
+        surface: 'web',
+        tool: 'playwright',
+        viewport,
+        observations: {
+          activeMenuObservation,
+          activeModuleIdAfterSelection,
+          dropdownCountAfterSelection,
+          finalUrlAfterSelection,
+          measuredScrollTopAfterSelection,
+          screenshot: MOBILE_MENU_SCREENSHOT,
+          setup: 'Inserted a test-only spacer into #admin-console-canvas before selection to make scroll reset observable.',
+        },
+        actions: [
+          { type: 'goto', timestamp: '2026-07-09T03:20:00.000Z', url: '/admin' },
+          {
+            type: 'click',
+            timestamp: '2026-07-09T03:20:01.000Z',
+            selector: '[data-admin-console-menu-trigger="hamburger"]',
+          },
+          {
+            type: 'click',
+            timestamp: '2026-07-09T03:20:02.000Z',
+            selector: '[data-admin-console-menu-item-mode="mobile-dropdown"][aria-label="맛집 동선 추천"]',
+          },
+          {
+            type: 'click',
+            timestamp: '2026-07-09T03:20:03.000Z',
+            selector: '[data-admin-console-menu-trigger="hamburger"]',
+          },
+          {
+            type: 'screenshot',
+            timestamp: '2026-07-09T03:20:04.000Z',
+            selector: '[data-admin-console-menu-item-mode="mobile-dropdown"][aria-label="맛집 동선 추천"]',
+          },
+        ],
+        assertions: [
+          {
+            timestamp: '2026-07-09T03:20:05.000Z',
+            selector: '#admin-console-canvas',
+            status: 'passed',
+            description: `Canvas activeModuleId=${activeModuleIdAfterSelection}, scrollTop=${measuredScrollTopAfterSelection}, url=${finalUrlAfterSelection}`,
+          },
+          {
+            timestamp: '2026-07-09T03:20:06.000Z',
+            selector: '[data-admin-console-menu-item-mode="mobile-dropdown"][aria-label="맛집 동선 추천"]',
+            status: 'passed',
+            description: `Active menu state aria-current=${activeMenuObservation.ariaCurrent}, data-state=${activeMenuObservation.dataState}, visualHasPrimaryClass=${activeMenuObservation.visualHasPrimaryClass}`,
+          },
+        ],
+        screenshot: MOBILE_MENU_SCREENSHOT,
+      }, null, 2)}\n`,
+    );
+
+    await page.keyboard.press('Escape');
+    await expect(dropdown).toHaveCount(0);
+    expect(runtimeErrors).toEqual([]);
+  });
+
+  test('mobile restaurant evaluations keep quick filters clickable and view toggles icon-only', async ({ page }, testInfo) => {
+    test.setTimeout(90_000);
+
+    const runtimeErrors: string[] = [];
+    attachRuntimeErrorCollectors(page, runtimeErrors);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await installE2EAdminShellBypass(page);
+    await page.setExtraHTTPHeaders({
+      [E2E_ADMIN_ROUTE_BYPASS_HEADER]: '1',
+      [E2E_ADMIN_ROUTE_BYPASS_TOKEN_HEADER]: getE2EAdminRouteBypassToken(testInfo),
+    });
+
+    await gotoAndHidePopup(page, '/admin?module=restaurants');
+
+    const canvas = page.locator('#admin-console-canvas');
+    await expect(page).toHaveURL(/\/admin\?module=restaurants$/);
+    await expect(canvas).toHaveAttribute('data-admin-console-active-module', 'restaurants', {
+      timeout: 30_000,
+    });
+
+    const statusFilter = page.locator('[data-admin-evaluation-mobile-status-filter="true"]');
+    await expect(statusFilter).toBeVisible({ timeout: 30_000 });
+    await expect(statusFilter).toHaveAttribute('data-admin-evaluation-mobile-toolbar', 'two-row');
+    await expect
+      .poll(() =>
+        statusFilter.evaluate((element) => {
+          const buttons = Array.from(element.querySelectorAll('[data-admin-evaluation-mobile-status-filter-option]'));
+          const rowCounts = buttons.reduce<Record<string, number>>((counts, button) => {
+            const top = String(Math.round(button.getBoundingClientRect().top));
+            counts[top] = (counts[top] ?? 0) + 1;
+            return counts;
+          }, {});
+          return buttons.length === 6 && Object.values(rowCounts).length === 2 && Object.values(rowCounts).every((count) => count === 3);
+        })
+      )
+      .toBe(true);
+
+    const listToggle = page.locator('[data-admin-evaluation-view-toggle="list"]');
+    const slideToggle = page.locator('[data-admin-evaluation-view-toggle="slide"]');
+    await expect(listToggle).toBeVisible();
+    await expect(slideToggle).toBeVisible();
+
+    for (const toggle of [listToggle, slideToggle]) {
+      await expect
+        .poll(async () => Math.round((await toggle.boundingBox())?.width ?? 0))
+        .toBeLessThanOrEqual(36);
+      await expect
+        .poll(async () => Math.round((await toggle.boundingBox())?.height ?? 0))
+        .toBeLessThanOrEqual(36);
+    }
+
+    const pendingFilter = page.locator('[data-admin-evaluation-mobile-status-filter-option="pending"]');
+    await pendingFilter.click();
+    await expect(pendingFilter).toHaveAttribute('aria-pressed', 'true');
+
+    await slideToggle.click();
+    await expect(slideToggle).toHaveAttribute('aria-pressed', 'true');
+    await expect(listToggle).toHaveAttribute('aria-pressed', 'false');
+
+    expect(runtimeErrors).toEqual([]);
   });
 });
