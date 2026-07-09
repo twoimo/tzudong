@@ -222,7 +222,7 @@ describe('restaurant submission modal source contract', () => {
         expect(loadDraftSource).not.toContain('setFormData(');
         expect(loadDraftSource).not.toContain('setCurrentStep(');
         expect(restoreDraftSource).toContain('setFormData(');
-        expect(restoreDraftSource).toContain('pendingDraft.currentStep === 2 ? 2 : 1');
+        expect(restoreDraftSource).toContain('setCurrentStep(draft.currentStep)');
         expect(modalSource).toContain('복원 버튼을 눌러야 입력 내용과 단계가 적용됩니다.');
         expect(modalSource).toContain('삭제하고 새로 작성');
         expect(modalSource).toContain('if (pendingDraft) return;');

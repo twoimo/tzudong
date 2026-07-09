@@ -243,7 +243,53 @@ test.describe('Admin KPI dashboard runtime guard', () => {
         const layout = page.locator('[data-admin-console-layout="sidebar-content"]');
         const mobileHeader = page.locator('[data-admin-console-mobile-header="true"]');
         const canvas = page.locator('#admin-console-canvas');
+        const bottomNav = page.getByTestId('bottom-nav');
+        await expect(bottomNav).toBeVisible({ timeout: 20000 });
         await expect(canvas).toBeVisible({ timeout: 20000 });
+
+        const compactCardViewToggle = page.locator('[data-admin-dashboard-card-view-toggle="true"]').first();
+        await expect(compactCardViewToggle).toBeVisible({ timeout: 20000 });
+        await expect
+            .poll(async () => Math.round((await compactCardViewToggle.boundingBox())?.height ?? 0))
+            .toBeLessThanOrEqual(32);
+        await expect
+            .poll(async () =>
+                Math.round((await compactCardViewToggle.getByRole('button').first().boundingBox())?.height ?? 0),
+            )
+            .toBeLessThanOrEqual(30);
+
+        const compactSeriesToggle = page.locator('[data-admin-dashboard-series-toggle="true"]').first();
+        await expect(compactSeriesToggle).toBeVisible({ timeout: 20000 });
+        await expect
+            .poll(async () => Math.round((await compactSeriesToggle.boundingBox())?.height ?? 0))
+            .toBeLessThanOrEqual(32);
+
+        const compactKpiTitleActions = page.locator('[data-admin-dashboard-kpi-title-actions="single-line-scroll"]').first();
+        await expect(compactKpiTitleActions).toBeVisible({ timeout: 20000 });
+        await expect
+            .poll(async () => Math.round((await compactKpiTitleActions.boundingBox())?.height ?? 0))
+            .toBeLessThanOrEqual(32);
+
+        const compactMetricTooltip = page.locator('[data-admin-dashboard-metric-tooltip="beginner-plain"]').first();
+        await expect(compactMetricTooltip).toBeVisible({ timeout: 20000 });
+        await expect
+            .poll(async () => Math.round((await compactMetricTooltip.boundingBox())?.height ?? 0))
+            .toBeLessThanOrEqual(24);
+        await expect
+            .poll(async () => Math.round((await compactMetricTooltip.boundingBox())?.width ?? 0))
+            .toBeLessThanOrEqual(24);
+
+        const lowerMobileCards = [
+            page.locator('[data-admin-dashboard-widget-card="ops"]').first(),
+            page.locator('[data-admin-dashboard-widget-card="topContent"]').first(),
+            page.locator('[data-admin-dashboard-widget-card="engagementRate"]').first(),
+        ];
+        for (const card of lowerMobileCards) {
+            await expect(card).toBeVisible({ timeout: 20000 });
+            await expect
+                .poll(async () => Math.round((await card.boundingBox())?.height ?? 0))
+                .toBeGreaterThanOrEqual(315);
+        }
 
         await expect(mobileHeader).toHaveAttribute('data-admin-console-mobile-header-visible', 'true');
         await expect(layout).toHaveAttribute('data-admin-console-mobile-header-visible', 'true');
@@ -263,7 +309,7 @@ test.describe('Admin KPI dashboard runtime guard', () => {
                     Number.parseFloat(getComputedStyle(element).paddingBottom),
                 ),
             )
-            .toBeLessThanOrEqual(16);
+            .toBeGreaterThanOrEqual(60);
 
         await canvas.evaluate((element) => {
             const spacer = document.createElement('div');

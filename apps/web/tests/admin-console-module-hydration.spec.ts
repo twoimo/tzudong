@@ -246,4 +246,67 @@ test.describe('admin console module hydration smoke', () => {
     await expect(dropdown).toHaveCount(0);
     expect(runtimeErrors).toEqual([]);
   });
+
+  test('mobile restaurant evaluations keep quick filters clickable and view toggles icon-only', async ({ page }, testInfo) => {
+    test.setTimeout(90_000);
+
+    const runtimeErrors: string[] = [];
+    attachRuntimeErrorCollectors(page, runtimeErrors);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await installE2EAdminShellBypass(page);
+    await page.setExtraHTTPHeaders({
+      [E2E_ADMIN_ROUTE_BYPASS_HEADER]: '1',
+      [E2E_ADMIN_ROUTE_BYPASS_TOKEN_HEADER]: getE2EAdminRouteBypassToken(testInfo),
+    });
+
+    await gotoAndHidePopup(page, '/admin?module=restaurants');
+
+    const canvas = page.locator('#admin-console-canvas');
+    await expect(page).toHaveURL(/\/admin\?module=restaurants$/);
+    await expect(canvas).toHaveAttribute('data-admin-console-active-module', 'restaurants', {
+      timeout: 30_000,
+    });
+
+    const statusFilter = page.locator('[data-admin-evaluation-mobile-status-filter="true"]');
+    await expect(statusFilter).toBeVisible({ timeout: 30_000 });
+    await expect(statusFilter).toHaveAttribute('data-admin-evaluation-mobile-toolbar', 'two-row');
+    await expect
+      .poll(() =>
+        statusFilter.evaluate((element) => {
+          const buttons = Array.from(element.querySelectorAll('[data-admin-evaluation-mobile-status-filter-option]'));
+          const rowCounts = buttons.reduce<Record<string, number>>((counts, button) => {
+            const top = String(Math.round(button.getBoundingClientRect().top));
+            counts[top] = (counts[top] ?? 0) + 1;
+            return counts;
+          }, {});
+          return buttons.length === 6 && Object.values(rowCounts).length === 2 && Object.values(rowCounts).every((count) => count === 3);
+        })
+      )
+      .toBe(true);
+
+    const listToggle = page.locator('[data-admin-evaluation-view-toggle="list"]');
+    const slideToggle = page.locator('[data-admin-evaluation-view-toggle="slide"]');
+    await expect(listToggle).toBeVisible();
+    await expect(slideToggle).toBeVisible();
+
+    for (const toggle of [listToggle, slideToggle]) {
+      await expect
+        .poll(async () => Math.round((await toggle.boundingBox())?.width ?? 0))
+        .toBeLessThanOrEqual(36);
+      await expect
+        .poll(async () => Math.round((await toggle.boundingBox())?.height ?? 0))
+        .toBeLessThanOrEqual(36);
+    }
+
+    const pendingFilter = page.locator('[data-admin-evaluation-mobile-status-filter-option="pending"]');
+    await pendingFilter.click();
+    await expect(pendingFilter).toHaveAttribute('aria-pressed', 'true');
+
+    await slideToggle.click();
+    await expect(slideToggle).toHaveAttribute('aria-pressed', 'true');
+    await expect(listToggle).toHaveAttribute('aria-pressed', 'false');
+
+    expect(runtimeErrors).toEqual([]);
+  });
 });
