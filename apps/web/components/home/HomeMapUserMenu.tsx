@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -25,7 +26,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContextBase";
 import { supabase } from "@/integrations/supabase/client";
-import { requestAuthUi } from "@/lib/auth-ui-events";
 import {
   DESKTOP_LEFT_PANEL_EXPAND_ON_ENTRY_EVENT,
   shouldExpandDesktopLeftPanelForRoute,
@@ -38,6 +38,10 @@ import { siteConfig } from "@/lib/site-config";
 const desktopUserMenuItemClass =
   "cursor-pointer rounded-xl px-3 py-2.5 text-sm font-medium text-foreground whitespace-nowrap focus:bg-accent focus:text-foreground";
 const DESKTOP_MAP_SIDE_PANEL_WIDTH_CSS = "min(392px, calc(100vw - 32px))";
+const DesktopAuthModal = dynamic(() => import("@/components/auth/AuthModal"), {
+  ssr: false,
+  loading: () => null,
+});
 
 const getDisplayName = (user: ReturnType<typeof useAuth>["user"]) => {
   if (!user) return "사용자";
@@ -70,6 +74,7 @@ export default function HomeMapUserMenu({
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isBusinessInfoExpanded, setIsBusinessInfoExpanded] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   const displayName = useMemo(() => getDisplayName(user), [user]);
   const { data: profileAvatarUrl = null } = useQuery({
@@ -137,6 +142,12 @@ export default function HomeMapUserMenu({
     };
   }, []);
 
+  useEffect(() => {
+    if (user) {
+      setIsAuthModalOpen(false);
+    }
+  }, [user]);
+
   const handleFullscreenToggle = useCallback(async () => {
     try {
       if (!document.fullscreenElement) {
@@ -151,13 +162,13 @@ export default function HomeMapUserMenu({
     }
   }, []);
 
+  const closeAuthModal = useCallback(() => {
+    setIsAuthModalOpen(false);
+  }, []);
+
   const handleLoginClick = useCallback(() => {
+    setIsAuthModalOpen(true);
     toast.info("로그인 후 마이페이지를 확인할 수 있어요");
-    requestAuthUi({
-      source: "desktop-map-user-menu",
-      route: "/",
-      reason: "mypage",
-    });
   }, []);
 
   const shouldOffsetForRightPanel = desktopPanelSide === "right" && !isPanelCollapsed;
@@ -351,6 +362,15 @@ export default function HomeMapUserMenu({
         >
           {userAvatarButton}
         </Button>
+      )}
+      {!user && isAuthModalOpen && (
+        <DesktopAuthModal
+          isOpen={isAuthModalOpen}
+          onClose={closeAuthModal}
+          onAuthSuccess={closeAuthModal}
+          redirectTo="/mypage/profile"
+          reason="mypage"
+        />
       )}
     </>
   );
