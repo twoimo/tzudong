@@ -1,5 +1,7 @@
 import { describe, expect, mock, test } from 'bun:test';
 import { NextRequest } from 'next/server';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 import {
   buildHomeAuthLoginPath,
@@ -18,6 +20,8 @@ type SupabaseMockState = {
 };
 
 let supabaseMockState: SupabaseMockState = { userId: null };
+
+const source = (relativePath: string) => readFileSync(join(import.meta.dir, '..', relativePath), 'utf8');
 
 mock.module('@supabase/ssr', () => ({
   createServerClient: () => ({
@@ -95,6 +99,20 @@ describe('admin auth redirect helpers', () => {
       reason: 'admin',
       nextPath: '/admin?module=storyboard',
     });
+  });
+
+  test('홈 쿼리 로그인 성공은 success-aware cleanup을 사용하고 관리자 redirect는 assign을 유지한다', () => {
+    const authModalSource = source('components/auth/AuthModal.tsx');
+    const homeRuntimeShellSource = source('app/home-runtime-shell.tsx');
+
+    expect(authModalSource).toContain('onAuthSuccess?: () => void;');
+    expect(authModalSource).toContain('const closeAfterAuthSuccess = useCallback(() => {');
+    expect(authModalSource).toContain('window.location.assign(safeRedirectTo);');
+    expect(authModalSource.indexOf('redirectAfterAdminLogin()')).toBeLessThan(
+      authModalSource.indexOf('closeAfterAuthSuccess();'),
+    );
+    expect(homeRuntimeShellSource).toContain('onAuthSuccess={closeAuthAfterSuccess}');
+    expect(homeRuntimeShellSource).toContain("window.history.replaceState(window.history.state, '', '/')");
   });
 });
 

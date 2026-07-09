@@ -42,6 +42,7 @@ const generateRandomNickname = (): string => {
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onAuthSuccess?: () => void;
   redirectTo?: string | null;
   reason?: string | null;
 }
@@ -75,7 +76,7 @@ const GoogleIcon = memo(() => (
 ));
 GoogleIcon.displayName = "GoogleIcon";
 
-const AuthModal = memo(({ isOpen, onClose, redirectTo, reason }: AuthModalProps) => {
+const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason }: AuthModalProps) => {
   const isMobileOrTablet = useImmediateMobileOrTablet();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -142,6 +143,14 @@ const AuthModal = memo(({ isOpen, onClose, redirectTo, reason }: AuthModalProps)
     window.location.assign(safeRedirectTo);
     return true;
   }, [isAdminRedirect, safeRedirectTo]);
+  const closeAfterAuthSuccess = useCallback(() => {
+    if (onAuthSuccess) {
+      onAuthSuccess();
+      return;
+    }
+    onClose();
+  }, [onAuthSuccess, onClose]);
+
 
   const handleLogin = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -163,7 +172,7 @@ const AuthModal = memo(({ isOpen, onClose, redirectTo, reason }: AuthModalProps)
       if (data.session?.user?.id && redirectAfterAdminLogin()) {
         return;
       }
-      onClose();
+      closeAfterAuthSuccess();
     } catch (error) {
       console.error("Login error:", error);
       const errorMessage = error instanceof Error ? error.message : "로그인에 실패했습니다";
@@ -171,7 +180,7 @@ const AuthModal = memo(({ isOpen, onClose, redirectTo, reason }: AuthModalProps)
     } finally {
       setIsLoading(false);
     }
-  }, [email, password, redirectAfterAdminLogin, resetForm, onClose]);
+  }, [email, password, redirectAfterAdminLogin, resetForm, closeAfterAuthSuccess]);
 
   const handleSignup = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -228,7 +237,7 @@ const AuthModal = memo(({ isOpen, onClose, redirectTo, reason }: AuthModalProps)
         toast.success("회원가입 완료! 이메일을 확인해주세요.");
       }
       resetForm();
-      onClose();
+      closeAfterAuthSuccess();
     } catch (error) {
       console.error("Signup error:", error);
       const errorMessage = error instanceof Error ? error.message : "회원가입에 실패했습니다";
@@ -236,7 +245,7 @@ const AuthModal = memo(({ isOpen, onClose, redirectTo, reason }: AuthModalProps)
     } finally {
       setIsLoading(false);
     }
-  }, [email, password, username, confirmPassword, privacyAgreed, resetForm, onClose]);
+  }, [email, password, username, confirmPassword, privacyAgreed, resetForm, closeAfterAuthSuccess]);
 
   const handleForgotPassword = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
