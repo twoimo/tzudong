@@ -403,7 +403,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("router.replace");
     expect(consoleSource).toContain("scroll: false");
     expect(consoleSource).toContain('aria-controls="admin-console-canvas"');
-    expect(consoleSource).not.toContain("window.history.replaceState");
+    expect(consoleSource).toContain("window.history.replaceState(window.history.state, \"\", nextHref)");
   });
   test("aligns mobile admin menu state and KPI loading without desktop restyle", () => {
     const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
@@ -654,22 +654,22 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-admin-route-recommendation-panel="enhanced"',
     );
     expect(overviewSource).toContain(
-      'className="flex min-h-0 flex-col gap-2 lg:h-full lg:overflow-hidden"',
+      'className="flex min-h-0 min-w-0 flex-col gap-2 lg:h-full lg:overflow-hidden"',
     );
     expect(overviewSource).toContain(
-      'className="shrink-0 rounded-xl bg-card/80 p-2 shadow-sm"',
+      'className="shrink-0 rounded-lg bg-card/80 p-2 shadow-sm md:rounded-xl"',
     );
     expect(overviewSource).toContain(
-      'className="rounded-xl bg-card/80 p-2 shadow-sm lg:min-h-0 lg:flex-1 lg:overflow-y-auto"',
+      'className="scrollbar-hide rounded-lg bg-card/80 p-2 shadow-sm md:rounded-xl lg:min-h-0 lg:flex-1 lg:overflow-y-auto"',
     );
     expect(overviewSource).toContain(
-      'className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-2xl bg-card/80 shadow-sm"',
+      'className="relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-xl bg-card/80 shadow-sm md:rounded-2xl"',
     );
     expect(overviewSource).toContain(
       'className="relative h-full min-h-[360px] overflow-hidden rounded-[24px] bg-muted/25"',
     );
     expect(overviewSource).toContain(
-      '<div className="overflow-hidden rounded-xl bg-background/70">',
+      '<div className="overflow-hidden rounded-lg bg-background/70 md:rounded-xl">',
     );
     expect(overviewSource).toContain(
       '<div className="absolute inset-x-0 bottom-0 bg-black/75 p-2.5 text-white">',
@@ -1113,7 +1113,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(insightsSource).toContain('data-insights-client-loading="true"');
     expect(insightsSource).toContain("return <InsightsClientLoadingSkeleton />;");
     expect(usersSource).toContain("block min-w-0 text-left");
-    expect(usersSource).toContain("overflow-hidden rounded-lg border bg-card");
+    expect(usersSource).toContain("hidden overflow-hidden rounded-lg border bg-card md:block");
     expect(usersSource).toContain(
       'Badge variant="secondary" className="border-transparent bg-muted text-muted-foreground"',
     );
@@ -8205,15 +8205,18 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
   test("cleans stale admin module query state and canonicalizes invalid modules", () => {
     const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
     const routingSource = source("lib/admin/admin-module-routing.ts");
+    const consoleModulesSource = consoleSource.slice(
+      consoleSource.indexOf("const consoleModules"),
+      consoleSource.indexOf("const consoleModuleById"),
+    );
 
     expect(consoleSource).toContain("buildCanonicalAdminModuleHref");
     expect(consoleSource).toContain("getAdminModuleStateWarning");
     expect(routingSource).toContain(
       "알 수 없는 관리자 화면 요청을 대시보드 (KPI)로 되돌렸습니다.",
     );
-    expect(consoleSource).toContain(
-      "router.replace(buildCanonicalAdminModuleHref(moduleId)",
-    );
+    expect(consoleSource).toContain("const nextHref = buildCanonicalAdminModuleHref(moduleId);");
+    expect(consoleSource).toContain("router.replace(nextHref, {");
     expect(consoleSource).toContain(
       "const canonicalHref = buildCanonicalAdminHrefFromSearchParams(searchParams);",
     );
@@ -8225,6 +8228,11 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "const params = new URLSearchParams(window.location.search);",
     );
     expect(consoleSource).not.toContain("window.location.hash");
+    expect(consoleModulesSource).toContain('href: "/admin?module=banners"');
+    expect(consoleModulesSource).toContain('href: "/admin?module=insights"');
+    expect(consoleModulesSource).not.toContain('href: "/admin/banners"');
+    expect(consoleModulesSource).not.toContain('href: "/insights"');
+    expect(consoleSource).toContain('<InsightsModule key="admin-insights" embedded />');
   });
 
   test("keeps route recommendation as only two source-honest map panes", () => {
@@ -8341,7 +8349,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain(
       "pb-[calc(env(safe-area-inset-bottom)+5.75rem)]",
     );
-    expect(consoleSource).toContain("min-h-[420px] flex-1");
+    expect(consoleSource).toContain("min-h-[360px] flex-1");
     expect(consoleSource).toContain("overflow-visible md:overflow-hidden");
     expect(consoleSource).toContain("md:h-full md:min-h-0");
     expect(consoleSource).toContain("lg:grid-cols-10");
@@ -8369,9 +8377,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]",
     );
     expect(consoleSource).not.toContain("function AnnouncementWorkspace");
-    expect(usersSource).toContain("flex h-full min-h-0 flex-col bg-background");
-    expect(usersSource).toContain("gap-2 overflow-y-auto p-2");
-    expect(usersSource).toContain("h-9 rounded-lg pl-9");
+    expect(usersSource).toContain("flex h-full min-h-0 flex-col overflow-hidden bg-background");
+    expect(usersSource).toContain("gap-2 overflow-y-auto p-2 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]");
+    expect(usersSource).toContain("h-9 rounded-full pl-9 sm:rounded-lg");
     expect(consoleSource).toContain(
       "const controller = new AbortController();",
     );
@@ -8503,7 +8511,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain("function ConnectedRoutesCard()");
     expect(usersSource).not.toContain("min-h-[560px]");
     expect(usersSource).toContain(
-      'isLoading ? <span className="inline-block h-6 w-12 rounded-full bg-muted/70 align-middle animate-pulse motion-reduce:animate-none"',
+      'isLoading ? <span className="inline-block h-5 w-10 rounded-full bg-muted/70 align-middle animate-pulse motion-reduce:animate-none sm:h-6 sm:w-12"',
     );
     expect(usersSource).not.toContain(
       "value={isLoading ? '—' : summary.loadedUsers}",

@@ -180,7 +180,7 @@ type StatusSummaryItem = {
 
 function ManagementStatusSummary({ items }: { items: StatusSummaryItem[] }) {
   return (
-    <div className="w-full overflow-x-auto lg:w-auto lg:flex-none lg:overflow-visible">
+    <div className="w-full overflow-x-auto scrollbar-hide [scrollbar-width:none] lg:w-auto lg:flex-none lg:overflow-visible [&::-webkit-scrollbar]:hidden">
       <div className="flex min-w-max items-center gap-1.5">
         {items.map((item) => (
           <div
@@ -221,7 +221,7 @@ function RefreshWorkflowSteps() {
 function RefreshCandidateListSkeleton() {
   return (
     <div
-      className="divide-y divide-border"
+      className="space-y-2 p-2 xl:divide-y xl:divide-border xl:space-y-0 xl:p-0"
       role="status"
       aria-busy="true"
       aria-label="맛집 최신화 이력 로딩 중"
@@ -230,7 +230,7 @@ function RefreshCandidateListSkeleton() {
       {Array.from({ length: 5 }).map((_, rowIndex) => (
         <div
           key={rowIndex}
-          className="grid gap-3 px-3 py-3 xl:grid-cols-[1.2fr_1fr_0.9fr_0.9fr_110px] xl:items-center"
+          className="grid gap-3 rounded-lg border border-border/70 bg-background/80 px-3 py-3 shadow-sm xl:rounded-none xl:border-x-0 xl:border-t-0 xl:bg-transparent xl:shadow-none xl:grid-cols-[1.2fr_1fr_0.9fr_0.9fr_110px] xl:items-center"
           aria-hidden="true"
         >
           <div className="space-y-1.5">
@@ -262,7 +262,7 @@ function RefreshCandidateList({
   onOpenReview,
 }: RefreshCandidateListProps) {
   return (
-    <div className="flex min-h-[360px] flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm lg:min-h-0">
+    <div className="flex min-h-[360px] flex-col overflow-hidden rounded-xl bg-card shadow-sm md:border md:border-border lg:min-h-0">
       <div className="flex flex-col gap-2 border-b border-border bg-muted/20 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <h2 className="flex items-center gap-1.5 text-sm font-bold text-foreground">
@@ -286,7 +286,7 @@ function RefreshCandidateList({
       </div>
 
       <div
-        className="min-h-0 flex-1 overflow-y-auto"
+        className="min-h-0 flex-1 overflow-y-auto scrollbar-hide [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         data-admin-restaurant-refresh-list="management-like"
       >
         {isLoading ? (
@@ -301,7 +301,7 @@ function RefreshCandidateList({
             <article
               key={candidate.id}
               className={cn(
-                "grid gap-3 border-b border-border px-3 py-3 last:border-b-0 xl:grid-cols-[1.2fr_1fr_0.9fr_0.9fr_110px] xl:items-center",
+                "mx-2 my-2 grid gap-3 rounded-lg border border-border/70 bg-background/80 px-3 py-3 shadow-sm last:mb-2 xl:mx-0 xl:my-0 xl:rounded-none xl:border-x-0 xl:border-t-0 xl:border-b xl:bg-transparent xl:shadow-none xl:last:mb-0 xl:last:border-b-0 xl:grid-cols-[1.2fr_1fr_0.9fr_0.9fr_110px] xl:items-center",
                 selectedCandidateId === candidate.id && "bg-primary/5",
               )}
             >
@@ -316,7 +316,7 @@ function RefreshCandidateList({
                   현재 전화: {candidate.current_phone || "—"}
                 </p>
               </div>
-              <div className="text-xs leading-5 text-muted-foreground">
+              <div className="break-words text-xs leading-5 text-muted-foreground">
                 <p>
                   <span className="font-medium text-foreground">상호</span>{" "}
                   {snapshotText(candidate.previous_snapshot, "name")} →{" "}
@@ -373,7 +373,7 @@ function RefreshCandidateList({
                   selectedCandidateId === candidate.id ? "secondary" : "outline"
                 }
                 size="sm"
-                className="h-8 gap-1.5 text-xs"
+                className="h-8 w-full gap-1.5 text-xs xl:w-auto"
                 disabled={candidate.candidate_status !== "needs_review"}
                 onClick={() => onOpenReview(candidate)}
               >
@@ -421,7 +421,7 @@ function RefreshCandidateDetailPanel({
 }: RefreshCandidateDetailPanelProps) {
   return (
     <aside
-      className="flex min-h-[360px] flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm lg:min-h-0"
+      className="flex min-h-[360px] flex-col overflow-hidden rounded-xl bg-card shadow-sm md:border md:border-border lg:min-h-0"
       aria-label="맛집 최신화 상세 검토"
       data-admin-restaurant-refresh-detail="management-like"
     >
@@ -443,7 +443,7 @@ function RefreshCandidateDetailPanel({
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 px-2 text-xs"
+              className="h-8 shrink-0 px-2 text-xs"
               onClick={onClose}
               disabled={isSavingDecision}
             >
@@ -451,9 +451,9 @@ function RefreshCandidateDetailPanel({
             </Button>
           </div>
 
-          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto scrollbar-hide p-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <div className="grid gap-2 sm:grid-cols-2">
-              <div className="rounded-lg border border-border bg-background/80 p-3 text-xs leading-5">
+              <div className="break-words rounded-lg border border-border/70 bg-background/80 p-3 text-xs leading-5">
                 <p className="font-semibold text-foreground">현재 스냅샷</p>
                 <p>
                   상호:{" "}
@@ -478,7 +478,7 @@ function RefreshCandidateDetailPanel({
                   )}
                 </p>
               </div>
-              <div className="rounded-lg border border-border bg-background/80 p-3 text-xs leading-5">
+              <div className="break-words rounded-lg border border-border/70 bg-background/80 p-3 text-xs leading-5">
                 <p className="font-semibold text-foreground">후보 스냅샷</p>
                 <p>
                   상호:{" "}
@@ -505,7 +505,7 @@ function RefreshCandidateDetailPanel({
               </div>
             </div>
 
-            <div className="rounded-lg border border-border bg-background/80 p-3 text-xs leading-5 text-muted-foreground">
+            <div className="break-words rounded-lg border border-border/70 bg-background/80 p-3 text-xs leading-5 text-muted-foreground">
               <p className="mb-1 flex items-center gap-1 font-semibold text-foreground">
                 <ListChecks className="h-3.5 w-3.5 text-primary" />
                 유형별 검토 체크리스트
@@ -780,28 +780,34 @@ export function AdminRestaurantRefreshHistoryPanel() {
       >
         <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-1.5">
+            <div className="grid w-full min-w-0 grid-cols-2 gap-1.5 sm:flex sm:flex-wrap sm:items-center">
               <Badge
                 variant="outline"
-                className="gap-1 border-primary/30 text-primary"
+                className="min-w-0 shrink-0 justify-center gap-1 truncate border-primary/30 text-primary sm:justify-start"
               >
                 <Store className="h-3.5 w-3.5" />
                 기록 관리
               </Badge>
               <Badge
                 variant="outline"
-                className="border-primary/30 text-primary"
+                className="min-w-0 shrink-0 justify-center truncate border-primary/30 text-primary sm:justify-start"
               >
-                맛집 관리 동일 구조
+                <span className="sm:hidden">동일 구조</span>
+                <span className="hidden sm:inline">맛집 관리 동일 구조</span>
               </Badge>
               <Badge
                 variant="outline"
-                className="border-emerald-300 text-emerald-700 dark:text-emerald-300"
+                className="min-w-0 shrink-0 justify-center truncate border-emerald-300 text-emerald-700 dark:text-emerald-300 sm:justify-start"
               >
-                승인 맛집 대상
+                <span className="sm:hidden">승인 맛집</span>
+                <span className="hidden sm:inline">승인 맛집 대상</span>
               </Badge>
-              <Badge variant="secondary" className="font-normal">
-                guarded apply · readback/recrawl
+              <Badge
+                variant="secondary"
+                className="min-w-0 shrink-0 justify-center truncate font-normal sm:justify-start"
+              >
+                <span className="sm:hidden">안전 적용</span>
+                <span className="hidden sm:inline">guarded apply · readback/recrawl</span>
               </Badge>
             </div>
             <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
@@ -809,7 +815,10 @@ export function AdminRestaurantRefreshHistoryPanel() {
               {summary?.needs_review ?? 0}개 | 최근 점검{" "}
               {formatDate(summary?.last_checked_at)}
             </p>
-            <p className="mt-0.5 max-w-4xl text-xs leading-5 text-muted-foreground">
+            <p className="mt-0.5 text-xs leading-5 text-muted-foreground sm:hidden">
+              후보 생성 → 운영자 판단 → 안전 적용 → 재확인 순서로 추적합니다.
+            </p>
+            <p className="mt-0.5 hidden max-w-4xl text-xs leading-5 text-muted-foreground sm:block">
               승인된 맛집의 상호명·전화번호·폐업·이전 가능성을 기록하고, 맛집
               관리와 같은 헤더-목록-상세 구조에서 후보 생성 → 운영자 판단 →
               guarded apply → readback/recrawl 순서로 추적합니다.
@@ -839,7 +848,7 @@ export function AdminRestaurantRefreshHistoryPanel() {
                     event.target.value as RefreshCandidateStatus | "all",
                   )
                 }
-                className="h-8 rounded-md border border-input bg-background px-2 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring sm:w-auto"
                 aria-label="최신화 후보 상태 필터"
               >
                 <option value="all">전체 상태</option>
@@ -853,7 +862,7 @@ export function AdminRestaurantRefreshHistoryPanel() {
                 onClick={loadHistory}
                 disabled={isLoading}
                 size="sm"
-                className="h-8 gap-1.5 px-2 text-xs"
+                className="h-8 w-full gap-1.5 px-2 text-xs sm:w-auto"
               >
                 <RefreshCw
                   className={cn("h-3.5 w-3.5", isLoading && "animate-spin")}
@@ -865,7 +874,7 @@ export function AdminRestaurantRefreshHistoryPanel() {
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2 lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)] lg:overflow-hidden">
+      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overflow-x-hidden scrollbar-hide p-2 [scrollbar-width:none] lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)] lg:overflow-hidden [&::-webkit-scrollbar]:hidden">
         {error || decisionMessage ? (
           <div className="space-y-2 lg:col-span-2">
             {error ? (

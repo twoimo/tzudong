@@ -759,16 +759,16 @@ function InsightsClientLoadingSkeleton() {
     );
 }
 
-export default function InsightsClient() {
+export default function InsightsClient({ embedded = false }: { embedded?: boolean } = {}) {
     const router = useRouter();
     const { isLoading: isAuthLoading, user } = useAuth();
     const { isMobile, isTablet } = useDeviceType();
 
     useEffect(() => {
-        if (!isAuthLoading && !user) {
+        if (!embedded && !isAuthLoading && !user) {
             router.replace('/');
         }
-    }, [isAuthLoading, user, router]);
+    }, [embedded, isAuthLoading, user, router]);
 
     const [viewMode, setViewMode] = useState<ViewMode>('all');
     const [metricMode, setMetricMode] = useState<MetricMode>('views');
@@ -790,7 +790,7 @@ export default function InsightsClient() {
     const treemapQuery = useQuery({
         queryKey: ['insight-treemap', viewMode, period, metricMode],
         queryFn: ({ signal }) => fetchTreemapData(viewMode, period, metricMode, signal),
-        enabled: !isAuthLoading && !!user,
+        enabled: embedded || (!isAuthLoading && !!user),
         staleTime: 1000 * 60 * 5,
         gcTime: 1000 * 60 * 20,
         refetchOnWindowFocus: false,
@@ -1209,7 +1209,7 @@ export default function InsightsClient() {
         : `색상 범례: 전체 ${metricLabel} 비중이 높을수록 밝은 초록색입니다.`;
     const treemapSmallCellGuidance = '작은 칸 안내: 공간이 좁으면 지표나 …만 표시되고, 마우스를 올리면 제목과 상세 지표를 확인할 수 있습니다.';
 
-    const isLoading = isAuthLoading || treemapQuery.isLoading;
+    const isLoading = (!embedded && isAuthLoading) || treemapQuery.isLoading;
     const canRender = Boolean(treemapQuery.data);
 
     const handleCellEnter = useCallback(
@@ -1258,7 +1258,7 @@ export default function InsightsClient() {
     }, [treemapQuery]);
 
 
-    if ((isLoading && !canRender) || isAuthLoading) {
+    if (isLoading && !canRender) {
         return <InsightsClientLoadingSkeleton />;
     }
     if (treemapQuery.isError || !treemapQuery.data) {
@@ -1275,15 +1275,17 @@ export default function InsightsClient() {
                         >
                             다시 시도
                         </Button>
-                        <Button
-                            variant="outline"
-                            className="h-10 px-4 py-2"
-                            onClick={() => {
-                                router.replace('/');
-                            }}
-                        >
-                            홈으로 이동
-                        </Button>
+                        {!embedded ? (
+                            <Button
+                                variant="outline"
+                                className="h-10 px-4 py-2"
+                                onClick={() => {
+                                    router.replace('/');
+                                }}
+                            >
+                                홈으로 이동
+                            </Button>
+                        ) : null}
                     </div>
                 </div>
             </div>
