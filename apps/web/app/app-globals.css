@@ -1038,6 +1038,7 @@ div[style*="z-index"] > div > .custom-marker {
 
   [data-admin-console-content="true"] {
     width: 100%;
+    padding-bottom: 0.5rem !important;
   }
 
   [data-admin-dashboard-management="true"] [data-admin-dashboard-widget-card],

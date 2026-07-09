@@ -44,7 +44,7 @@ describe('restaurant submission flow validation', () => {
         })).toBe('맛집 이름, 주소, 카테고리는 필수입니다');
     });
 
-    test('new submission step 2 requires an http(s) youtube link', () => {
+    test('new submission step 2 requires a recognized http(s) youtube link', () => {
         expect(validateRestaurantSubmissionStep(2, 'new', {
             ...completeForm,
             youtube_link: '',
@@ -54,6 +54,16 @@ describe('restaurant submission flow validation', () => {
             ...completeForm,
             youtube_link: 'youtube.com/watch?v=abc',
         })).toBe('유효한 유튜브 링크를 입력해주세요');
+
+        expect(validateRestaurantSubmissionStep(2, 'new', {
+            ...completeForm,
+            youtube_link: 'https://example.com/watch?v=abc',
+        })).toBe('유효한 유튜브 링크를 입력해주세요');
+
+        expect(validateRestaurantSubmissionStep(2, 'new', {
+            ...completeForm,
+            youtube_link: 'https://youtu.be/abc',
+        })).toBeNull();
 
         expect(validateRestaurantSubmissionStep(2, 'new', completeForm)).toBeNull();
     });
@@ -68,6 +78,55 @@ describe('restaurant submission flow validation', () => {
         expect(validateRestaurantSubmissionStep(2, 'request', {
             ...completeForm,
             description: '여기는 꼭 추천하고 싶어요',
+            youtube_link: '',
+        })).toBeNull();
+    });
+
+    test('rejects junk input while preserving short Korean names and normal Korean addresses', () => {
+        expect(validateRestaurantSubmissionStep(1, 'new', {
+            ...completeForm,
+            restaurant_name: 'ㅁㄴㅇ',
+        })).toBe('맛집 이름, 주소, 카테고리는 필수입니다');
+
+        expect(validateRestaurantSubmissionStep(1, 'new', {
+            ...completeForm,
+            restaurant_name: 'asdf',
+        })).toBe('맛집 이름, 주소, 카테고리는 필수입니다');
+
+        expect(validateRestaurantSubmissionStep(1, 'new', {
+            ...completeForm,
+            address: 'a/asd',
+        })).toBe('맛집 이름, 주소, 카테고리는 필수입니다');
+
+        expect(validateRestaurantSubmissionStep(1, 'new', {
+            ...completeForm,
+            categories: ['!!!'],
+        })).toBe('맛집 이름, 주소, 카테고리는 필수입니다');
+
+        expect(validateRestaurantSubmissionStep(1, 'new', {
+            ...completeForm,
+            restaurant_name: '스시선',
+            address: '서울 중구 명동길 123',
+            categories: ['일식'],
+        })).toBeNull();
+    });
+
+    test('request descriptions reject repeated or symbol-only junk but allow Korean reasons', () => {
+        expect(validateRestaurantSubmissionStep(2, 'request', {
+            ...completeForm,
+            description: '!!!!!!!!!!',
+            youtube_link: '',
+        })).toBe('추천 이유를 10자 이상 입력해주세요');
+
+        expect(validateRestaurantSubmissionStep(2, 'request', {
+            ...completeForm,
+            description: 'ㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋ',
+            youtube_link: '',
+        })).toBe('추천 이유를 10자 이상 입력해주세요');
+
+        expect(validateRestaurantSubmissionStep(2, 'request', {
+            ...completeForm,
+            description: '국물이 진하고 꼭 추천하고 싶어요',
             youtube_link: '',
         })).toBeNull();
     });
@@ -146,6 +205,27 @@ describe('restaurant submission modal source contract', () => {
         expect(handleNextStepSource).toContain('window.dispatchEvent');
         expect(handleNextStepSource).not.toContain('await ');
         expect(handleNextStepSource).not.toContain('fetch(');
+    });
+
+    test('draft restore requires an explicit user choice before applying saved form data', () => {
+        const modalSource = source('components/modals/RestaurantSubmissionModal.tsx');
+        const loadDraftSource = modalSource.slice(
+            modalSource.indexOf('const loadDraft = useCallback(async () => {'),
+            modalSource.indexOf('const restoreDraft = useCallback(() => {'),
+        );
+        const restoreDraftSource = modalSource.slice(
+            modalSource.indexOf('const restoreDraft = useCallback(() => {'),
+            modalSource.indexOf('const discardDraftAndStartNew = useCallback(async () => {'),
+        );
+
+        expect(loadDraftSource).toContain('setPendingDraft(draft)');
+        expect(loadDraftSource).not.toContain('setFormData(');
+        expect(loadDraftSource).not.toContain('setCurrentStep(');
+        expect(restoreDraftSource).toContain('setFormData(');
+        expect(restoreDraftSource).toContain('pendingDraft.currentStep === 2 ? 2 : 1');
+        expect(modalSource).toContain('복원 버튼을 눌러야 입력 내용과 단계가 적용됩니다.');
+        expect(modalSource).toContain('삭제하고 새로 작성');
+        expect(modalSource).toContain('if (pendingDraft) return;');
     });
 
     test('server route and migration own idempotency atomicity and bounded readback contracts', () => {

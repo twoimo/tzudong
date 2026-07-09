@@ -6,6 +6,7 @@ import {
     getFocusTrapContainers,
     isInsideAllowedFocusRegion,
     resolveBottomSheetHeightRequest,
+    shouldBlockModalOutsidePointerDown,
     shouldHideModalSibling,
 } from '../components/ui/bottom-sheet';
 
@@ -77,6 +78,47 @@ describe('bottom sheet focus trap helpers', () => {
     });
 });
 
+describe('bottom sheet strict modal pointer blocking', () => {
+    test('blocks pointerdown outside the sheet when no backdrop is present', () => {
+        const primary = createContainer('sheet', ['sheet-button']);
+
+        expect(
+            shouldBlockModalOutsidePointerDown({ id: 'bottom-nav-button' } as FakeNode as Node, primary, [])
+        ).toBe(true);
+    });
+
+    test('keeps explicit portal allowances while preserving empty selector strictness', () => {
+        const primary = createContainer('sheet', ['sheet-button']);
+        const portal = createContainer('portal', ['portal-option']);
+        const queryRoot = {
+            querySelectorAll() {
+                return [portal];
+            },
+        };
+
+        expect(
+            shouldBlockModalOutsidePointerDown({ id: 'portal-option' } as FakeNode as Node, primary, ['[data-radix-portal]'], queryRoot)
+        ).toBe(false);
+        expect(
+            shouldBlockModalOutsidePointerDown({ id: 'portal-option' } as FakeNode as Node, primary, [], queryRoot)
+        ).toBe(true);
+    });
+
+    test('allows backdrop pointer targets for the backdrop close handler', () => {
+        const primary = createContainer('sheet', ['sheet-button']);
+        const backdropTarget = {
+            id: 'backdrop',
+            closest: (selector: string) => selector === `[${BOTTOM_SHEET_BACKDROP_ATTRIBUTE}]`
+                ? backdropTarget
+                : null,
+        };
+
+        expect(
+            shouldBlockModalOutsidePointerDown(backdropTarget as unknown as Node, primary, [])
+        ).toBe(false);
+    });
+});
+
 describe('bottom sheet modal sibling hiding', () => {
     const sheet = { id: 'sheet' } as unknown as Node;
 
@@ -104,6 +146,12 @@ describe('bottom sheet modal sibling hiding', () => {
 
         expect(shouldHideModalSibling(candidate({ id: 'app-root' }), current, sheet)).toBe(true);
         expect(shouldHideModalSibling(candidate({ id: 'backdrop', isBackdrop: true }), current, sheet)).toBe(false);
+    });
+    test('hides bottom nav and fixed chrome siblings outside the modal branch', () => {
+        const current = candidate({ id: 'route-with-sheet' }) as unknown as Node;
+
+        expect(shouldHideModalSibling(candidate({ id: 'bottom-nav' }), current, sheet)).toBe(true);
+        expect(shouldHideModalSibling(candidate({ id: 'fixed-map-controls' }), current, sheet)).toBe(true);
     });
 
     test('does not hide the current modal branch or inert-safe document elements', () => {

@@ -2884,9 +2884,9 @@ const adminDashboardFocusPalette = {
   risk: "#f43f5e",
 } as const;
 const adminDashboardControlGroupClassName =
-  "inline-flex min-h-11 shrink-0 items-center rounded-full border border-border bg-muted/25 p-0.5";
+  "inline-flex min-h-11 shrink-0 items-center rounded-full border border-border bg-muted/25 p-0.5 md:h-7 md:min-h-0";
 const adminDashboardControlButtonClassName =
-  "inline-flex min-h-11 min-w-[44px] items-center justify-center gap-1 rounded-full px-2.5 text-[11px] font-extrabold leading-none transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
+  "inline-flex min-h-11 min-w-[44px] items-center justify-center gap-1 rounded-full px-2.5 text-[11px] font-extrabold leading-none transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary md:h-6 md:min-h-0 md:min-w-0";
 const adminDashboardFullscreenCardClassName =
   "fixed inset-2 z-[80] h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] overflow-auto rounded-3xl border-primary/35 bg-card p-4 shadow-2xl sm:inset-4 sm:h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-2rem)]";
 
@@ -3107,7 +3107,7 @@ function AdminDashboardInfoTooltip({
         <UiTooltipTrigger asChild>
           <button
             type="button"
-            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary md:h-5 md:w-5"
             aria-label={`${label} · 초보자 설명`}
             data-admin-dashboard-metric-tooltip="beginner-plain"
           >
@@ -3198,7 +3198,6 @@ function AdminDashboardViewToggle({
             "text-muted-foreground hover:text-foreground",
             value === view && "bg-background text-foreground shadow-sm",
           )}
-          style={{ minWidth: 44 }}
           aria-pressed={value === view}
           onClick={() => onChange(view)}
         >
@@ -3227,7 +3226,7 @@ function AdminDashboardFullscreenButton({
       type="button"
       className={cn(
         adminDashboardControlButtonClassName,
-        "h-11 min-h-11 w-11 min-w-[44px] shrink-0 border border-border bg-background p-0 text-muted-foreground shadow-sm hover:text-foreground",
+        "h-11 min-h-11 w-11 min-w-[44px] shrink-0 border border-border bg-background p-0 text-muted-foreground shadow-sm hover:text-foreground md:h-7 md:min-h-0 md:w-7 md:min-w-0",
         isFullscreen && "border-primary/50 text-primary",
       )}
       aria-label={`${label} 카드 ${isFullscreen ? "전체화면 닫기" : "전체화면으로 보기"}`}
@@ -3280,7 +3279,7 @@ function AdminDashboardSeriesToggle<Key extends string>({
   return (
     <div
       className={cn(
-        "inline-flex min-h-11 max-w-full min-w-0 shrink-0 items-center gap-0.5 overflow-x-auto overflow-y-hidden rounded-full border border-transparent bg-transparent p-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        "inline-flex min-h-11 max-w-full min-w-0 shrink-0 items-center gap-0.5 overflow-x-auto overflow-y-hidden rounded-full border border-transparent bg-transparent p-0 md:h-7 md:min-h-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
       )}
       aria-label={`${label} 지표 숨김/보임`}
       data-admin-dashboard-series-toggle="true"
@@ -3303,7 +3302,6 @@ function AdminDashboardSeriesToggle<Key extends string>({
                 : "border-transparent bg-muted/35 text-muted-foreground hover:text-foreground",
               isLastVisible && "cursor-not-allowed opacity-70",
             )}
-            style={{ minWidth: 44 }}
             aria-pressed={isVisible}
             aria-label={`${option.label} ${isVisible ? "숨기기" : "보이기"}`}
             disabled={isLastVisible}
@@ -3713,7 +3711,7 @@ function AdminDashboardManagementSkeleton() {
               type="button"
               variant="outline"
               size="sm"
-              className="h-11 min-h-11 min-w-[44px] shrink-0 rounded-full px-2 text-[11px]"
+              className="h-11 min-h-11 min-w-[44px] shrink-0 rounded-full px-2 text-[11px] md:h-7 md:min-h-0 md:min-w-0"
               disabled
             >
               카드 순서
@@ -3722,7 +3720,7 @@ function AdminDashboardManagementSkeleton() {
               type="button"
               variant="outline"
               size="sm"
-              className="h-11 min-h-11 min-w-[44px] shrink-0 rounded-full px-2 text-[11px]"
+              className="h-11 min-h-11 min-w-[44px] shrink-0 rounded-full px-2 text-[11px] md:h-7 md:min-h-0 md:min-w-0"
               disabled
             >
               초기화
@@ -3736,7 +3734,7 @@ function AdminDashboardManagementSkeleton() {
               type="button"
               variant="outline"
               size="sm"
-              className="h-11 min-h-11 min-w-[44px] shrink-0 gap-1 rounded-full px-2 text-[11px] font-bold"
+              className="h-11 min-h-11 min-w-[44px] shrink-0 gap-1 rounded-full px-2 text-[11px] font-bold md:h-7 md:min-h-0 md:min-w-0"
               disabled
             >
               <FileDown className="h-3.5 w-3.5" aria-hidden="true" />
@@ -3746,7 +3744,7 @@ function AdminDashboardManagementSkeleton() {
               type="button"
               variant="outline"
               size="sm"
-              className="h-11 min-h-11 w-11 min-w-[44px] shrink-0 rounded-full p-0"
+              className="h-11 min-h-11 w-11 min-w-[44px] shrink-0 rounded-full p-0 md:h-7 md:min-h-0 md:w-7 md:min-w-0"
               aria-label="데이터 수집 상태 로딩 중"
               disabled
             >
@@ -3774,8 +3772,7 @@ function AdminDashboardManagementSkeleton() {
                 type="button"
                 variant={option.value === "1M" ? "default" : "outline"}
                 size="sm"
-                className="h-11 min-h-11 min-w-[44px] shrink-0 rounded-full px-2 text-[11px]"
-                style={{ minWidth: 44 }}
+                className="h-11 min-h-11 min-w-[44px] shrink-0 rounded-full px-2 text-[11px] md:h-7 md:min-h-0 md:min-w-0"
                 aria-pressed={option.value === "1M"}
                 disabled
               >
@@ -3785,6 +3782,12 @@ function AdminDashboardManagementSkeleton() {
           </div>
         </div>
       </div>
+      <p
+        className="mb-2 rounded-xl border border-border/70 bg-muted/30 px-3 py-2 text-[11px] font-semibold leading-5 text-muted-foreground md:hidden"
+        data-admin-dashboard-mobile-loading-prompt="true"
+      >
+        KPI 데이터를 불러오는 중입니다. 모바일에서는 핵심 카드부터 순서대로 표시됩니다.
+      </p>
 
       <div className="grid min-w-0 auto-rows-min grid-cols-1 gap-2 overflow-x-hidden overflow-y-visible sm:grid-cols-2 lg:min-h-0 lg:flex-1 lg:grid-cols-10 lg:grid-rows-[auto_minmax(0,1.15fr)_minmax(0,1fr)] lg:overflow-visible">
         <AdminDashboardKpiCard
@@ -5444,8 +5447,7 @@ function AdminDashboardPdfReportButton({ onExport }: { onExport: () => void }) {
       type="button"
       variant="outline"
       size="sm"
-      className="h-11 min-h-11 min-w-[44px] shrink-0 gap-1 rounded-full px-2 text-[11px] font-bold text-muted-foreground hover:text-foreground"
-      style={{ minWidth: 44 }}
+      className="h-11 min-h-11 min-w-[44px] shrink-0 gap-1 rounded-full px-2 text-[11px] font-bold text-muted-foreground hover:text-foreground md:h-7 md:min-h-0 md:min-w-0"
       aria-label="KPI 대시보드를 PDF 보고서로 내보내기"
       data-admin-dashboard-kpi-pdf-export-trigger="true"
       onClick={onExport}
@@ -5484,8 +5486,7 @@ function AdminDashboardPeriodSelector({
               type="button"
               variant={isSelected ? "default" : "outline"}
               size="sm"
-              className="h-11 min-h-11 min-w-[44px] shrink-0 rounded-full px-2 text-[11px] font-bold"
-              style={{ minWidth: 44 }}
+              className="h-11 min-h-11 min-w-[44px] shrink-0 rounded-full px-2 text-[11px] font-bold md:h-7 md:min-h-0 md:min-w-0"
               aria-pressed={isSelected}
               data-admin-dashboard-period-option={option.value}
               onClick={() => onChange(option.value)}
@@ -5602,7 +5603,7 @@ function AdminDashboardCollectionLogPopover({
           variant="outline"
           size="sm"
           className={cn(
-            "h-11 min-h-11 w-11 min-w-[44px] shrink-0 rounded-full p-0 text-muted-foreground hover:text-foreground",
+            "h-11 min-h-11 w-11 min-w-[44px] shrink-0 rounded-full p-0 text-muted-foreground hover:text-foreground md:h-7 md:min-h-0 md:w-7 md:min-w-0",
             isError && "border-destructive/30 text-destructive",
           )}
           aria-label="GitHub Actions KPI 데이터 수집 로그 열기"
@@ -5631,7 +5632,7 @@ function AdminDashboardCollectionLogPopover({
             type="button"
             variant="ghost"
             size="sm"
-            className="h-11 min-h-11 min-w-[44px] shrink-0 rounded-full px-2 text-[11px] font-bold"
+            className="h-11 min-h-11 min-w-[44px] shrink-0 rounded-full px-2 text-[11px] font-bold md:h-7 md:min-h-0 md:min-w-0"
             disabled={isFetching}
             onClick={onRefresh}
           >
@@ -5754,7 +5755,7 @@ function AdminDashboardCollectionLogPopover({
                         href={latestRun.htmlUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex h-11 min-h-11 w-11 min-w-[44px] items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        className="inline-flex h-11 min-h-11 w-11 min-w-[44px] items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary md:h-6 md:min-h-0 md:w-6 md:min-w-0"
                         aria-label="GitHub Actions 실행 로그 새 탭에서 열기"
                       >
                         <ExternalLink
@@ -7145,6 +7146,9 @@ function AdminDashboardManagementPanel({
       );
     }
   }, [pdfReportData]);
+  const shouldShowMobileDashboardLoadingPrompt =
+    isDashboardMobileViewport && (isLoading || isSubscriberLoading || isChartLoading);
+
   return (
     <section
       className="flex h-full min-h-0 min-w-0 flex-col overflow-visible bg-background p-0 font-sans text-foreground lg:min-h-0 lg:overflow-visible"
@@ -7175,7 +7179,7 @@ function AdminDashboardManagementPanel({
               type="button"
               variant={isDashboardOrderEditorOpen ? "default" : "outline"}
               size="sm"
-              className="h-11 min-h-11 min-w-[44px] shrink-0 rounded-full px-2 text-[11px]"
+              className="h-11 min-h-11 min-w-[44px] shrink-0 rounded-full px-2 text-[11px] md:h-7 md:min-h-0 md:min-w-0"
               aria-label="KPI 카드 직접 드래그 순서 설정"
               aria-pressed={isDashboardOrderEditorOpen}
               disabled={isDashboardOrderLoading}
@@ -7196,7 +7200,7 @@ function AdminDashboardManagementPanel({
               type="button"
               variant="outline"
               size="sm"
-              className="h-11 min-h-11 min-w-[44px] shrink-0 rounded-full px-2 text-[11px]"
+              className="h-11 min-h-11 min-w-[44px] shrink-0 rounded-full px-2 text-[11px] md:h-7 md:min-h-0 md:min-w-0"
               disabled={
                 isDashboardOrderLoading ||
                 isDashboardOrderSaving ||
@@ -7235,6 +7239,14 @@ function AdminDashboardManagementPanel({
           />
         </div>
       </div>
+      {shouldShowMobileDashboardLoadingPrompt ? (
+        <p
+          className="mb-2 rounded-xl border border-border/70 bg-muted/30 px-3 py-2 text-[11px] font-semibold leading-5 text-muted-foreground md:hidden"
+          data-admin-dashboard-mobile-loading-prompt="live"
+        >
+          KPI 데이터를 불러오는 중입니다. 모바일에서는 핵심 카드부터 순서대로 표시됩니다.
+        </p>
+      ) : null}
 
       {isDashboardOrderEditorOpen ? (
         <p
@@ -7908,6 +7920,7 @@ function AdminSidebar({
     "메뉴 순서는 관리자 계정별로 저장됩니다.",
   );
   const [isSidebarOrderEditMode, setIsSidebarOrderEditMode] = useState(false);
+  const mobileHeaderRef = useRef<HTMLDivElement | null>(null);
   const orderedSidebarSections = useMemo(
     () => buildOrderedSidebarSections(sidebarOrder),
     [sidebarOrder],
@@ -8058,6 +8071,20 @@ function AdminSidebar({
       setIsAdminMenuOpen(false);
     }
   }, [showMobileHeader]);
+  useEffect(() => {
+    const element = mobileHeaderRef.current;
+    if (!element) return;
+
+    element.setAttribute(
+      "data-admin-console-mobile-header-visible",
+      showMobileHeader ? "true" : "false",
+    );
+    element.style.transform = showMobileHeader
+      ? "translate3d(0, 0, 0)"
+      : "translate3d(0, -120%, 0)";
+    element.style.pointerEvents = showMobileHeader ? "" : "none";
+  }, [showMobileHeader]);
+
 
   const renderMenuItem = (
     item: SidebarSection["items"][number],
@@ -8076,6 +8103,8 @@ function AdminSidebar({
         }
         aria-current={isActive ? "page" : undefined}
         aria-controls="admin-console-canvas"
+        data-admin-console-menu-item-mode={isDropdown ? "mobile-dropdown" : "desktop-sidebar"}
+        data-admin-console-menu-item-state={isActive ? "active" : "inactive"}
         className={cn(
           "group relative flex items-center gap-2 overflow-hidden whitespace-nowrap border text-left transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none",
           isDropdown
@@ -8579,6 +8608,7 @@ function AdminSidebar({
     <>
       <Popover open={isAdminMenuOpen} onOpenChange={setIsAdminMenuOpen}>
         <div
+          ref={mobileHeaderRef}
           className={cn(
             "flex h-14 shrink-0 transform-gpu items-center gap-2 overflow-hidden border-b border-border bg-card/95 px-3 py-2 shadow-sm transition-[transform,border-color] duration-300 ease-out will-change-transform motion-reduce:transition-none md:hidden",
             !showMobileHeader && "pointer-events-none border-transparent",
@@ -10375,12 +10405,12 @@ export function AdminConsoleOverview({
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [showSidebarLabels, setShowSidebarLabels] = useState(false);
   const [isMobileHeaderVisible, setIsMobileHeaderVisible] = useState(true);
-  const [isAdminMobileViewport, setIsAdminMobileViewport] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return window.matchMedia("(max-width: 767px)").matches;
-  });
+  const [isAdminMobileViewport, setIsAdminMobileViewport] = useState(false);
   const canvasRef = useRef<HTMLElement | null>(null);
   const previousMobileHeaderScrollTopRef = useRef(0);
+  const lastAdminMobileChromeHideAtRef = useRef(0);
+  const mobileChromeRevealTimeoutRef = useRef<number | null>(null);
+  const mobileChromeHadDownScrollRef = useRef(false);
   const adminCanvasTouchStartYRef = useRef<number | null>(null);
   const previousRequestedModuleIdRef = useRef(requestedModuleId);
   const activeModule = consoleModules.find(
@@ -10578,22 +10608,113 @@ export function AdminConsoleOverview({
 
   const setAdminMobileChromeHidden = useCallback(
     (hidden: boolean) => {
-      if (!isAdminMobileViewport) return;
-
-      setIsMobileHeaderVisible(!hidden);
+      const isMobileViewportNow =
+        isAdminMobileViewport ||
+        window.matchMedia("(max-width: 767px)").matches;
+      if (!isMobileViewportNow) return;
+      if (mobileChromeRevealTimeoutRef.current !== null) {
+        window.clearTimeout(mobileChromeRevealTimeoutRef.current);
+        mobileChromeRevealTimeoutRef.current = null;
+      }
+      const nextHeaderVisible = !hidden;
+      if (hidden) {
+        lastAdminMobileChromeHideAtRef.current = Date.now();
+        if (getAdminConsoleScrollTop() <= 12) {
+          mobileChromeHadDownScrollRef.current = false;
+        }
+      } else {
+        mobileChromeHadDownScrollRef.current = false;
+      }
+      setIsMobileHeaderVisible(nextHeaderVisible);
+      const mobileHeaderElement = document.querySelector<HTMLElement>(
+        '[data-admin-console-mobile-header="true"]',
+      );
+      const layoutElement = document.querySelector<HTMLElement>(
+        '[data-admin-console-layout="sidebar-content"]',
+      );
+      layoutElement?.setAttribute(
+        "data-admin-console-mobile-header-visible",
+        nextHeaderVisible ? "true" : "false",
+      );
+      if (mobileHeaderElement) {
+        mobileHeaderElement.setAttribute(
+          "data-admin-console-mobile-header-visible",
+          nextHeaderVisible ? "true" : "false",
+        );
+        mobileHeaderElement.style.transform = nextHeaderVisible
+          ? "translate3d(0, 0, 0)"
+          : "translate3d(0, -100%, 0)";
+        mobileHeaderElement.style.pointerEvents = nextHeaderVisible ? "auto" : "none";
+      }
       adminBottomNavAutoHide.setBottomNavHidden(hidden);
+      document.documentElement.style.setProperty(
+        "--mobile-sheet-hide-bottom-nav",
+        hidden ? "1" : "0",
+      );
+      document.documentElement.dataset.mobileSheetHideBottomNav = hidden
+        ? "true"
+        : "false";
     },
-    [adminBottomNavAutoHide, isAdminMobileViewport],
+    [adminBottomNavAutoHide, getAdminConsoleScrollTop, isAdminMobileViewport],
   );
 
   const handleAdminCanvasScroll = useCallback(() => {
+    const currentScrollTop = getAdminConsoleScrollTop();
+    const isMobileViewportNow =
+      isAdminMobileViewport ||
+      window.matchMedia("(max-width: 767px)").matches;
+
+
+    if (isMobileViewportNow && currentScrollTop > 24) {
+      previousMobileHeaderScrollTopRef.current = currentScrollTop;
+      mobileChromeHadDownScrollRef.current = true;
+      setAdminMobileChromeHidden(true);
+      return;
+    }
+
+    if (isMobileViewportNow && currentScrollTop <= 12) {
+      const millisecondsSinceHide =
+        Date.now() - lastAdminMobileChromeHideAtRef.current;
+      if (millisecondsSinceHide < 250) {
+        if (
+          mobileChromeHadDownScrollRef.current &&
+          mobileChromeRevealTimeoutRef.current === null
+        ) {
+          mobileChromeRevealTimeoutRef.current = window.setTimeout(() => {
+            mobileChromeRevealTimeoutRef.current = null;
+            const nextScrollTop = getAdminConsoleScrollTop();
+            const shouldRevealAtTop =
+              nextScrollTop <= 12 &&
+              (isAdminMobileViewport ||
+                window.matchMedia("(max-width: 767px)").matches);
+            if (shouldRevealAtTop) {
+              previousMobileHeaderScrollTopRef.current = nextScrollTop;
+              mobileChromeHadDownScrollRef.current = false;
+              setAdminMobileChromeHidden(false);
+            }
+          }, 250 - millisecondsSinceHide);
+        }
+        return;
+      }
+      previousMobileHeaderScrollTopRef.current = currentScrollTop;
+      mobileChromeHadDownScrollRef.current = false;
+      setAdminMobileChromeHidden(false);
+      return;
+    }
+
     updateMobileHeaderVisibility();
     adminBottomNavAutoHide.onScroll();
-  }, [adminBottomNavAutoHide, updateMobileHeaderVisibility]);
+  }, [
+    adminBottomNavAutoHide,
+    getAdminConsoleScrollTop,
+    isAdminMobileViewport,
+    setAdminMobileChromeHidden,
+    updateMobileHeaderVisibility,
+  ]);
 
   const handleAdminCanvasWheel = useCallback<WheelEventHandler<HTMLElement>>(
     (event) => {
-      if (!isAdminMobileViewport) return;
+      if (!isAdminMobileViewport && !window.matchMedia("(max-width: 767px)").matches) return;
 
       if (event.deltaY > 18) {
         setAdminMobileChromeHidden(true);
@@ -10610,6 +10731,26 @@ export function AdminConsoleOverview({
       setAdminMobileChromeHidden,
     ],
   );
+  const handleAdminWindowWheel = useCallback(
+    (event: WheelEvent) => {
+      if (!isAdminMobileViewport && !window.matchMedia("(max-width: 767px)").matches) return;
+
+      if (event.deltaY > 18) {
+        setAdminMobileChromeHidden(true);
+        return;
+      }
+
+      if (getAdminConsoleScrollTop() <= 12) {
+        setAdminMobileChromeHidden(false);
+      }
+    },
+    [
+      getAdminConsoleScrollTop,
+      isAdminMobileViewport,
+      setAdminMobileChromeHidden,
+    ],
+  );
+
 
   const handleAdminCanvasTouchStart = useCallback<
     TouchEventHandler<HTMLElement>
@@ -10629,7 +10770,11 @@ export function AdminConsoleOverview({
       const currentY = event.touches[0]?.clientY;
       let handledGestureIntent = false;
 
-      if (isAdminMobileViewport && startY !== null && currentY !== undefined) {
+      const isMobileViewportNow =
+        isAdminMobileViewport ||
+        window.matchMedia("(max-width: 767px)").matches;
+
+      if (isMobileViewportNow && startY !== null && currentY !== undefined) {
         const deltaY = currentY - startY;
 
         if (deltaY <= -24) {
@@ -10663,13 +10808,39 @@ export function AdminConsoleOverview({
 
     window.addEventListener("scroll", handleScroll, { passive: true });
     canvasElement?.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("wheel", handleAdminWindowWheel, { passive: true });
+    document.addEventListener("wheel", handleAdminWindowWheel, {
+      capture: true,
+      passive: true,
+    });
     window.requestAnimationFrame(handleScroll);
 
     return () => {
       window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("wheel", handleAdminWindowWheel);
+      document.removeEventListener("wheel", handleAdminWindowWheel, true);
       canvasElement?.removeEventListener("scroll", handleScroll);
+      if (mobileChromeRevealTimeoutRef.current !== null) {
+        window.clearTimeout(mobileChromeRevealTimeoutRef.current);
+        mobileChromeRevealTimeoutRef.current = null;
+      }
     };
-  }, [handleAdminCanvasScroll]);
+  }, [handleAdminCanvasScroll, handleAdminWindowWheel]);
+  useEffect(() => {
+    const mobileHeaderElement = document.querySelector<HTMLElement>(
+      '[data-admin-console-mobile-header="true"]',
+    );
+    if (!mobileHeaderElement) return;
+
+    mobileHeaderElement.setAttribute(
+      "data-admin-console-mobile-header-visible",
+      isMobileHeaderVisible ? "true" : "false",
+    );
+    mobileHeaderElement.style.transform = isMobileHeaderVisible
+      ? "translate3d(0, 0, 0)"
+      : "translate3d(0, -120%, 0)";
+    mobileHeaderElement.style.pointerEvents = isMobileHeaderVisible ? "" : "none";
+  }, [isMobileHeaderVisible]);
 
   if (!shouldRenderAdminShell) {
     return null;
@@ -10727,6 +10898,7 @@ export function AdminConsoleOverview({
                 ? "overflow-y-auto md:overflow-hidden"
                 : "overflow-y-auto",
           )}
+          style={{ paddingBottom: isAdminMobileViewport ? "8px" : "1rem" }}
           data-admin-console-content="true"
           data-admin-console-active-module={activeModuleId}
           data-scroll-owner="admin-canvas"

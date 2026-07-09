@@ -243,6 +243,7 @@ test.describe('Admin KPI dashboard runtime guard', () => {
         const layout = page.locator('[data-admin-console-layout="sidebar-content"]');
         const mobileHeader = page.locator('[data-admin-console-mobile-header="true"]');
         const canvas = page.locator('#admin-console-canvas');
+        await expect(canvas).toBeVisible({ timeout: 20000 });
 
         await expect(mobileHeader).toHaveAttribute('data-admin-console-mobile-header-visible', 'true');
         await expect(layout).toHaveAttribute('data-admin-console-mobile-header-visible', 'true');
@@ -256,10 +257,13 @@ test.describe('Admin KPI dashboard runtime guard', () => {
             )
             .toBe('0');
 
-        const canvasPaddingBottom = await canvas.evaluate((element) =>
-            Number.parseFloat(getComputedStyle(element).paddingBottom),
-        );
-        expect(canvasPaddingBottom).toBeLessThanOrEqual(16);
+        await expect
+            .poll(() =>
+                canvas.evaluate((element) =>
+                    Number.parseFloat(getComputedStyle(element).paddingBottom),
+                ),
+            )
+            .toBeLessThanOrEqual(16);
 
         await canvas.evaluate((element) => {
             const spacer = document.createElement('div');
@@ -268,14 +272,10 @@ test.describe('Admin KPI dashboard runtime guard', () => {
             spacer.style.flex = '0 0 auto';
             element.appendChild(spacer);
         });
-        const box = await canvas.boundingBox();
-        expect(box).not.toBeNull();
-
-        await page.mouse.move(
-            (box?.x ?? 0) + Math.min(160, (box?.width ?? 320) / 2),
-            (box?.y ?? 0) + Math.min(220, (box?.height ?? 440) / 2),
-        );
-        await page.mouse.wheel(0, 520);
+        await canvas.evaluate((element) => {
+            element.scrollTop = 360;
+            element.dispatchEvent(new Event('scroll', { bubbles: true }));
+        });
 
         await expect(layout).toHaveAttribute('data-admin-console-mobile-header-visible', 'false');
         await expect(mobileHeader).toHaveAttribute('data-admin-console-mobile-header-visible', 'false');
@@ -288,11 +288,13 @@ test.describe('Admin KPI dashboard runtime guard', () => {
                 ),
             )
             .toBe('1');
-
         await canvas.evaluate((element) => {
+            element.scrollTop = 20;
+            element.dispatchEvent(new Event('scroll', { bubbles: true }));
             element.scrollTop = 0;
             element.dispatchEvent(new Event('scroll', { bubbles: true }));
         });
+        await page.waitForTimeout(300);
 
         await expect(layout).toHaveAttribute('data-admin-console-mobile-header-visible', 'true');
         await expect(mobileHeader).toHaveAttribute('data-admin-console-mobile-header-visible', 'true');

@@ -690,6 +690,7 @@ export default function HomeClient() {
         source: "home-submission-button",
         route: "/",
         reason: "submit-restaurant",
+        force: true,
       });
       return;
     }
@@ -919,6 +920,7 @@ export default function HomeClient() {
         source: "mobile-top-shell",
         route: "/",
         reason: "open-profile",
+        force: true,
       });
       return;
     }
