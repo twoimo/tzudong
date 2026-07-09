@@ -943,11 +943,11 @@ function AdminMapOverviewCanvas({
   return (
     <section
       aria-label="관리자 지도 운영"
-      className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-2xl bg-card/80 shadow-sm"
+      className="relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-xl bg-card/80 shadow-sm md:rounded-2xl"
     >
-      <div className="min-h-0 flex-1 overflow-hidden p-2 sm:p-3">
+      <div className="min-h-0 flex-1 overflow-hidden p-1.5 sm:p-3">
         <div
-          className="relative h-full min-h-[360px]"
+          className="relative h-full min-h-[320px] md:min-h-[360px]"
           data-admin-overview-map-canvas="true"
         >
           <AdminNaverMapSurface
@@ -961,12 +961,12 @@ function AdminMapOverviewCanvas({
             onViewportBboxChange={onViewportBboxChange}
           />
 
-          <div className="absolute left-3 top-3 z-20 flex flex-wrap items-center gap-2">
+          <div className="absolute left-2 right-2 top-2 z-20 flex flex-wrap items-center gap-1.5 sm:left-3 sm:right-auto sm:top-3 sm:gap-2">
             <Button
               type="button"
               size="sm"
               variant={showAdminMapOverlays ? "default" : "secondary"}
-              className="h-9 rounded-full shadow-lg backdrop-blur"
+              className="h-8 rounded-full px-2.5 text-xs shadow-lg backdrop-blur sm:h-9 sm:text-sm"
               aria-pressed={showAdminMapOverlays}
               data-admin-map-overlay-toggle="true"
               onClick={onToggleAdminMapOverlays}
@@ -974,7 +974,7 @@ function AdminMapOverviewCanvas({
               <Layers3 className="mr-1.5 h-4 w-4" aria-hidden="true" />
               관리자 오버레이
               {showAdminMapOverlays && overlays.length > 0 ? (
-                <Badge variant="secondary" className="ml-1.5 rounded-full px-1.5">
+                <Badge variant="secondary" className="ml-1 rounded-full px-1.5">
                   {overlays.length}
                 </Badge>
               ) : null}
@@ -982,7 +982,7 @@ function AdminMapOverviewCanvas({
             {showAdminMapOverlays && (
               <span
                 className={cn(
-                  "rounded-full border px-2.5 py-1 text-[11px] font-semibold shadow-sm backdrop-blur",
+                  "rounded-full border px-2 py-0.5 text-[10px] font-semibold shadow-sm backdrop-blur sm:px-2.5 sm:py-1 sm:text-[11px]",
                   hasOverlayError
                     ? "border-destructive/30 bg-destructive/10 text-destructive"
                     : "border-border/70 bg-card/90 text-muted-foreground"
@@ -1036,7 +1036,7 @@ function AdminMapOverviewCanvas({
 function AdminMapInfoPanelSkeleton() {
   return (
     <aside
-      className="flex min-h-0 flex-col gap-2 lg:h-full lg:overflow-hidden"
+      className="flex min-h-0 min-w-0 flex-col gap-2 lg:h-full lg:overflow-hidden"
       data-admin-map-info-skeleton="true"
       role="status"
       aria-busy="true"
@@ -1180,13 +1180,13 @@ function AdminMapInfoPanel({
   }
 
   return (
-    <aside className="flex min-h-0 flex-col gap-2 lg:h-full lg:overflow-hidden">
+    <aside className="flex min-h-0 min-w-0 flex-col gap-2 lg:h-full lg:overflow-hidden">
       <section
-        className="shrink-0 rounded-xl bg-card/80 p-2 shadow-sm"
+        className="shrink-0 rounded-lg bg-card/80 p-2 shadow-sm md:rounded-xl"
         aria-labelledby="admin-map-selected-title"
       >
         {selectedRestaurant ? (
-          <div className="overflow-hidden rounded-xl bg-background/70">
+          <div className="overflow-hidden rounded-lg bg-background/70 md:rounded-xl">
             <a
               href={selectedYoutubeUrl ?? undefined}
               target={selectedYoutubeUrl ? "_blank" : undefined}
@@ -1298,7 +1298,7 @@ function AdminMapInfoPanel({
       </section>
 
       <section
-        className="rounded-xl bg-card/80 p-2 shadow-sm lg:min-h-0 lg:flex-1 lg:overflow-y-auto"
+        className="scrollbar-hide rounded-lg bg-card/80 p-2 shadow-sm md:rounded-xl lg:min-h-0 lg:flex-1 lg:overflow-y-auto"
         aria-label="동선 추천 초안"
         data-layout-primitives="panel-layout list-detail step-nav cluster frame"
         data-scroll-owner="route-control-pane"
@@ -1565,7 +1565,7 @@ function AdminMapInfoPanel({
               후보 readback과 Directions providerCache를 포함해 재현 가능한 동선
               패키지로 복사할 수 있습니다.
             </p>
-            <pre className="mt-1 max-h-24 overflow-auto whitespace-pre-wrap rounded-lg bg-muted/30 p-1.5">
+            <pre className="scrollbar-hide mt-1 max-h-24 overflow-auto whitespace-pre-wrap rounded-lg bg-muted/30 p-1.5">
               {routePlainTextExport}
             </pre>
             <script
@@ -1815,13 +1815,13 @@ export function AdminOverviewDashboard({
     <div
       role="region"
       aria-label="관리자 지도 운영 개요 2분할"
-      className="grid min-h-full grid-cols-1 gap-2 overflow-visible lg:h-full lg:min-h-0 lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)] lg:overflow-hidden"
+      className="grid min-h-full min-w-0 grid-cols-1 gap-2 overflow-visible lg:h-full lg:min-h-0 lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)] lg:overflow-hidden"
       data-layout-primitives="panel-layout list-detail frame cluster"
       data-scroll-owner="admin-overview-canvas"
       data-admin-overview-layout="two-pane"
     >
       <div
-        className="min-h-[390px] min-w-0 lg:min-h-0"
+        className="min-h-[340px] min-w-0 sm:min-h-[390px] lg:min-h-0"
         data-admin-map-pane="true"
         data-scroll-owner="map-canvas-none"
       >
@@ -1847,7 +1847,7 @@ export function AdminOverviewDashboard({
         />
       </div>
       <div
-        className="min-h-[420px] min-w-0 lg:min-h-0"
+        className="min-h-0 min-w-0"
         data-admin-info-pane="true"
         data-scroll-owner="admin-overview-info-pane"
       >

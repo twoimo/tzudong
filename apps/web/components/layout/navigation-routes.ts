@@ -20,7 +20,8 @@ export const ADMIN_NAV_ROUTES = [
     '/admin?module=restaurants',
     '/admin?module=submissions',
     '/admin?module=reviews',
-    '/admin/banners',
+    '/admin?module=banners',
+    '/admin?module=insights',
 ] as const;
 
 export function getNavigationPrefetchRoutes(params: {
