@@ -242,7 +242,7 @@ export default function AdminUsersPanel() {
   }, []);
   const currentUserId = currentUser?.id ?? null;
   const selectedUser = useMemo(
-    () => users.find((candidate) => candidate.id === selectedUserId) ?? users[0] ?? null,
+    () => users.find((candidate) => candidate.id === selectedUserId) ?? null,
     [selectedUserId, users],
   );
   const isSelfSelected = Boolean(selectedUser && selectedUser.id === currentUserId);
@@ -275,7 +275,7 @@ export default function AdminUsersPanel() {
       setSummary(nextSummary);
       setSelectedUserId((current) => {
         if (current && nextUsers.some((candidate) => candidate.id === current)) return current;
-        return nextUsers[0]?.id ?? null;
+        return null;
       });
     } catch (error) {
       if ((error as Error).name !== "AbortError") {
@@ -295,10 +295,14 @@ export default function AdminUsersPanel() {
   }, [loadUsers]);
 
   useEffect(() => {
-    if (selectedUser) {
-      setProfileForm(getProfileForm(selectedUser));
+    if (!selectedUser) {
+      setProfileForm({ nickname: "", username: "", avatarUrl: "" });
       setRiskConfirmation("");
+      return;
     }
+
+    setProfileForm(getProfileForm(selectedUser));
+    setRiskConfirmation("");
   }, [selectedUser]);
 
   useEffect(() => {

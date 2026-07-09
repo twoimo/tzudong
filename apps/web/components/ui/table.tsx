@@ -19,7 +19,7 @@ interface TableProps extends React.HTMLAttributes<HTMLTableElement> {
 const Table = React.forwardRef<HTMLTableElement, TableProps>(
   ({ className, allowHorizontalScroll = false, horizontalScrollOwner, ...props }, ref) => (
     <div
-      className={cn("relative w-full", allowHorizontalScroll ? "overflow-x-auto overflow-y-hidden" : "overflow-auto")}
+      className={cn("relative w-full scrollbar-hide", allowHorizontalScroll ? "overflow-x-auto overflow-y-hidden" : "overflow-auto")}
       data-allow-horizontal-scroll={allowHorizontalScroll && horizontalScrollOwner ? "true" : undefined}
       data-horizontal-scroll-owner={allowHorizontalScroll && horizontalScrollOwner ? horizontalScrollOwner : undefined}
     >

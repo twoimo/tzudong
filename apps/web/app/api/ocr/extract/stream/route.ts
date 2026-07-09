@@ -206,7 +206,7 @@ export async function POST(req: Request) {
     : false;
 
   if (forceRefreshRequested && !forceRefresh) {
-    return new Response(JSON.stringify({ error: 'OCR 강제 재호출은 개발 환경 또는 관리자 계정에서만 사용할 수 있습니다.' }), {
+    return new Response(JSON.stringify({ error: 'OCR 다시 분석 권한이 없습니다.' }), {
       status: 403,
       headers: { 'Content-Type': 'application/json' },
     });

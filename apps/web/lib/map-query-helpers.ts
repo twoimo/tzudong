@@ -86,6 +86,12 @@ export function buildNaverRestaurantsQueryOptions({
         enabled: isLoaded,
     };
 }
+export function resolveNaverRestaurantEmptyStateMessage(filters: Pick<FilterState, 'categories' | 'featuredTheme' | 'minReviews'>): string {
+    if (filters.featuredTheme) return '선택한 테마에 맞는 맛집이 없습니다';
+    if (filters.categories.length > 0 || (filters.minReviews ?? 0) > 0) return '선택한 조건에 맞는 맛집이 없습니다';
+
+    return '이 지역에 등록된 맛집이 없습니다';
+}
 
 export function resolveNaverRestaurantQueryBounds({
     firstLoadViewportBounds,
