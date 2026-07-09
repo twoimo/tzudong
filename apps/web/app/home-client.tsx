@@ -690,6 +690,7 @@ export default function HomeClient() {
         source: "home-submission-button",
         route: "/",
         reason: "submit-restaurant",
+        force: true,
       });
       return;
     }
@@ -697,17 +698,16 @@ export default function HomeClient() {
   }, [user]);
 
   const handleUserSubmittedMarkerToggle = useCallback(() => {
-    setShowUserSubmittedMarkers((current) => {
-      const next = !current;
-      toast.info({
-        title: next ? "사용자 제보 맛집 마커 표시" : "사용자 제보 맛집 마커 숨김",
-        description: next
-          ? "지도에서 사용자 제보 맛집을 다시 보여줘요."
-          : "지도에서 사용자 제보 맛집을 잠시 숨겼어요.",
-      });
-      return next;
+    const next = !showUserSubmittedMarkers;
+
+    setShowUserSubmittedMarkers(next);
+    toast.info({
+      title: next ? "사용자 제보 맛집 마커 표시" : "사용자 제보 맛집 마커 숨김",
+      description: next
+        ? "지도에서 사용자 제보 맛집을 다시 보여줘요."
+        : "지도에서 사용자 제보 맛집을 잠시 숨겼어요.",
     });
-  }, []);
+  }, [showUserSubmittedMarkers]);
 
   const applyDevicePosition = useCallback(
     (
@@ -919,6 +919,7 @@ export default function HomeClient() {
         source: "mobile-top-shell",
         route: "/",
         reason: "open-profile",
+        force: true,
       });
       return;
     }
