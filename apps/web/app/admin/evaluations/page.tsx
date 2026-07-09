@@ -25,7 +25,7 @@ import {
   createReviewApprovedNotification,
   createReviewRejectedNotification
 } from '@/contexts/NotificationContext';
-import { ClipboardCheck, Loader2, LayoutList, MonitorPlay, Send } from 'lucide-react';
+import { ClipboardCheck, Loader2, LayoutList, MonitorPlay, RotateCcw, Search, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from '@/components/ui/badge';
@@ -36,6 +36,11 @@ import { getAdminEvaluationApprovalName, getAdminEvaluationDisplayName } from '@
 import { getAddressConsistencyStatus } from '@/lib/admin-address-consistency';
 import { needsEvaluationRerun } from '@/lib/admin-evaluation-completeness';
 import { buildCanonicalAdminEvaluationsHref } from '@/lib/admin/admin-module-routing';
+import {
+  isAdminEvaluationRecordMissing,
+  isAdminEvaluationRecordNotSelected,
+  isAdminEvaluationRecordReadyForApproval,
+} from '@/lib/admin/evaluation-records';
 import {
   buildAdminPendingCountsResponse,
   getAdminPendingCountsTotal,
@@ -61,7 +66,6 @@ import {
   assertLegacyBrowserAdminMutationEnabled,
   isLegacyBrowserAdminMutationEnabled,
 } from '@/lib/admin/guarded-mutation-contract';
-import { RESTAURANT_MERGE_SELECT } from '@/hooks/use-restaurants';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -83,6 +87,23 @@ const PAGE_SIZE = 10; // 한 번에 로드할 레코드 수
 const STORAGE_KEY = 'adminEvaluationPageState'; // localStorage 키
 const EMPTY_SEARCH_PARAMS = new URLSearchParams();
 const ADMIN_PENDING_COUNTS_QUERY_KEY = ['admin-pending-counts', 'evaluations'] as const;
+const E2E_ADMIN_SHELL_BYPASS_STORAGE_KEY = 'tzudong:e2e-admin-shell-bypass';
+
+function isLocalE2EAdminShellBypassHost(hostname: string) {
+  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+}
+
+function hasLocalE2EAdminShellBypass() {
+  if (typeof window === 'undefined') return false;
+  if (!isLocalE2EAdminShellBypassHost(window.location.hostname)) return false;
+
+  try {
+    return window.localStorage.getItem(E2E_ADMIN_SHELL_BYPASS_STORAGE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
 
 async function fetchAdminEvaluationPendingCounts(): Promise<AdminPendingCountsResponse> {
   const response = await fetch('/api/admin/pending-counts', {
@@ -95,6 +116,20 @@ async function fetchAdminEvaluationPendingCounts(): Promise<AdminPendingCountsRe
   }
 
   return normalizeAdminPendingCountsResponse(await response.json());
+}
+
+async function fetchAdminEvaluationRecords(): Promise<Record<string, unknown>[]> {
+  const response = await fetch('/api/admin/evaluations', {
+    headers: { Accept: 'application/json' },
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    throw new Error('admin-evaluations-failed');
+  }
+
+  const payload = await response.json();
+  return Array.isArray(payload?.records) ? payload.records : [];
 }
 const EVALUATION_FILTER_KEYS = [
   'visit_authenticity',
@@ -485,6 +520,89 @@ export default function AdminEvaluationPageWrapper({
   );
 }
 
+function AdminEvaluationTitleIcon({ embedded = false }: { embedded?: boolean }) {
+  return (
+    <span
+      className={embedded
+        ? "inline-flex h-6 w-6 shrink-0 items-center justify-center text-primary"
+        : "inline-flex h-7 w-7 shrink-0 items-center justify-center text-primary"
+      }
+      data-admin-evaluation-title-icon="true"
+      aria-hidden="true"
+    >
+      <ClipboardCheck className={embedded ? "h-5 w-5" : "h-6 w-6"} strokeWidth={2.25} />
+    </span>
+  );
+}
+
+const ADMIN_EVALUATION_STATIC_STATUS_FILTERS = ['전체', '미처리', '승인대기', '승인됨', '누락', '삭제됨'] as const;
+
+function AdminEvaluationStaticMobileLoadingControls() {
+  return (
+    <div className="space-y-2 lg:hidden" data-admin-evaluation-static-loading-controls="true">
+      <div className="grid grid-cols-3 gap-1.5">
+        {ADMIN_EVALUATION_STATIC_STATUS_FILTERS.map((label, index) => (
+          <Button
+            key={label}
+            type="button"
+            variant={index === 0 ? "default" : "outline"}
+            size="sm"
+            disabled
+            className="h-8 min-w-0 rounded-full px-2 text-xs font-medium disabled:opacity-100"
+            aria-pressed={index === 0}
+          >
+            {label}
+          </Button>
+        ))}
+      </div>
+
+      <div className="relative">
+        <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+        <div className="flex h-9 items-center rounded-md border bg-background pl-8 pr-3 text-sm text-muted-foreground">
+          영상 제목 검색...
+        </div>
+      </div>
+
+      <div className="flex min-w-0 items-center justify-between gap-2 py-0.5">
+        <div className="min-w-0 truncate px-0.5 text-xs text-muted-foreground">
+          <span>검수 항목</span>
+          <span className="ml-1 font-medium">집계 중</span>
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
+          <Button type="button" variant="outline" size="sm" disabled className="h-8 rounded-full px-2.5 text-xs font-semibold disabled:opacity-100">
+            상세 필터
+          </Button>
+          <Button type="button" variant="ghost" size="sm" disabled aria-label="필터 초기화" className="h-8 w-8 rounded-full p-0 text-muted-foreground disabled:opacity-100">
+            <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AdminEvaluationStaticCardSkeleton() {
+  return (
+    <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:hidden" aria-hidden="true">
+      {Array.from({ length: 4 }).map((_, index) => (
+        <div key={index} className="rounded-2xl border border-border/70 bg-card/95 p-3 shadow-sm">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-12 w-16 shrink-0 rounded-md motion-reduce:animate-none" />
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <Skeleton className="h-3.5 w-4/5 rounded-full motion-reduce:animate-none" />
+              <Skeleton className="h-2.5 w-3/5 rounded-full motion-reduce:animate-none" />
+              <div className="grid grid-cols-3 gap-1.5">
+                <Skeleton className="h-5 rounded-full motion-reduce:animate-none" />
+                <Skeleton className="h-5 rounded-full motion-reduce:animate-none" />
+                <Skeleton className="h-5 rounded-full motion-reduce:animate-none" />
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 function AdminEvaluationRouteSkeleton() {
   return (
     <div
@@ -495,21 +613,34 @@ function AdminEvaluationRouteSkeleton() {
       className="flex h-full min-h-0 flex-col overflow-hidden"
     >
       <span className="sr-only">관리자 데이터 검수 화면의 필터, 테이블 행, 액션 영역을 불러오는 중입니다.</span>
-      <div className="border-b border-border bg-card px-2 py-1.5">
-        <div className="flex min-h-9 items-center gap-2">
-          <ClipboardCheck className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
-          <h1 className="min-w-0 flex-1 truncate text-sm font-bold text-foreground">관리자 데이터 검수</h1>
-          <div className="hidden items-center gap-1.5 sm:flex" aria-hidden="true">
-            <Skeleton className="h-5 w-16 rounded-full motion-reduce:animate-none" />
-            <Skeleton className="h-5 w-16 rounded-full motion-reduce:animate-none" />
-            <Skeleton className="h-5 w-20 rounded-full motion-reduce:animate-none" />
+      <div className="border-b border-border bg-card px-3 py-2.5">
+        <div className="flex min-h-10 items-start justify-between gap-2.5 lg:items-center">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <AdminEvaluationTitleIcon embedded />
+              <h1 className="truncate bg-gradient-primary bg-clip-text text-lg font-bold text-transparent">관리자 데이터 검수</h1>
+            </div>
+            <div className="mt-0.5 truncate text-xs text-muted-foreground">
+              필터링: 집계 중 | 현 레코드 집계 중 | 삭제한 레코드 집계 중
+            </div>
           </div>
-          <Skeleton className="h-7 w-20 rounded-md motion-reduce:animate-none" aria-hidden="true" />
+          <div className="flex shrink-0 items-center justify-end gap-1.5" data-admin-evaluation-view-actions="top-right">
+            <Button type="button" variant="secondary" size="sm" disabled className="h-8 w-8 p-0 disabled:opacity-100" aria-label="리스트 뷰" aria-pressed="true">
+              <LayoutList className="h-4 w-4" aria-hidden="true" />
+              <span className="sr-only">리스트</span>
+            </Button>
+            <Button type="button" variant="ghost" size="sm" disabled className="h-8 w-8 p-0 disabled:opacity-100" aria-label="슬라이드 뷰" aria-pressed="false">
+              <MonitorPlay className="h-4 w-4" aria-hidden="true" />
+              <span className="sr-only">슬라이드</span>
+            </Button>
+          </div>
         </div>
       </div>
-      <div className="flex min-h-0 flex-1 flex-col p-2">
-        <div className="min-h-0 overflow-hidden rounded-lg border bg-background">
-          <div className="hidden border-b bg-muted/35 lg:grid lg:grid-cols-[40px_minmax(180px,1fr)_repeat(6,78px)_112px]" aria-hidden="true">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 p-2">
+        <AdminEvaluationStaticMobileLoadingControls />
+        <AdminEvaluationStaticCardSkeleton />
+        <div className="hidden min-h-0 overflow-hidden rounded-lg border bg-background lg:block">
+          <div className="border-b bg-muted/35 lg:grid lg:grid-cols-[40px_minmax(180px,1fr)_repeat(6,78px)_112px]" aria-hidden="true">
             {Array.from({ length: 9 }).map((_, index) => (
               <div key={index} className="px-2 py-2">
                 <Skeleton className={index === 1 ? "h-3 w-24 rounded-full motion-reduce:animate-none" : "mx-auto h-3 w-12 rounded-full motion-reduce:animate-none"} />
@@ -522,9 +653,7 @@ function AdminEvaluationRouteSkeleton() {
                 key={rowIndex}
                 className="grid items-center gap-2 p-2 lg:grid-cols-[40px_minmax(180px,1fr)_repeat(6,78px)_112px]"
               >
-                <div className="hidden lg:block">
-                  <Skeleton className="h-6 w-6 rounded-md motion-reduce:animate-none" aria-hidden="true" />
-                </div>
+                <Skeleton className="h-6 w-6 rounded-md motion-reduce:animate-none" aria-hidden="true" />
                 <div className="flex min-w-0 items-center gap-2">
                   <Skeleton className="h-10 w-14 shrink-0 rounded-md motion-reduce:animate-none" aria-hidden="true" />
                   <div className="min-w-0 flex-1 space-y-1.5">
@@ -533,9 +662,7 @@ function AdminEvaluationRouteSkeleton() {
                   </div>
                 </div>
                 {Array.from({ length: 6 }).map((__, cellIndex) => (
-                  <div key={cellIndex} className="hidden lg:block">
-                    <Skeleton className="h-6 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-                  </div>
+                  <Skeleton key={cellIndex} className="h-6 rounded-full motion-reduce:animate-none" aria-hidden="true" />
                 ))}
                 <Skeleton className="h-7 rounded-md motion-reduce:animate-none" aria-hidden="true" />
               </div>
@@ -560,6 +687,7 @@ function AdminEvaluationPage({
   const router = useRouter();
   const searchParams = useSearchParams() ?? EMPTY_SEARCH_PARAMS;
   const { user, isAdmin, isLoading: authLoading } = useAuth();
+  const hasE2EAdminShellBypass = embedded && hasLocalE2EAdminShellBypass();
 
   const requireAdminUserId = () => {
     if (!user?.id) {
@@ -797,6 +925,11 @@ function AdminEvaluationPage({
 
   // 인증 체크 및 관리자 권한 확인
   useEffect(() => {
+    if (hasE2EAdminShellBypass) {
+      hasCheckedAuth.current = true;
+      return;
+    }
+
     // 인증 로딩 중에는 아무것도 하지 않음 (로딩 완료 후 권한 체크)
     if (authLoading) {
       return;
@@ -826,7 +959,7 @@ function AdminEvaluationPage({
 
     // user도 있고 isAdmin도 true인 경우
     hasCheckedAuth.current = true;
-  }, [user, isAdmin, authLoading, toast, router]);
+  }, [user, isAdmin, authLoading, hasE2EAdminShellBypass, toast, router]);
 
   // YouTube 제목 퍼지 검색
   useEffect(() => {
@@ -931,23 +1064,13 @@ function AdminEvaluationPage({
 
           switch (evalFilters.status) {
             case 'missing':
-              // Missing: 삭제 처리되지 않은 missing 레코드만 표시
-              match = r.status !== 'deleted' && r.is_missing === true;
+              match = isAdminEvaluationRecordMissing(r);
               break;
             case 'not_selected':
-              // 평가 미대상: 삭제 처리되지 않은 평가 미대상 레코드만 표시
-              match = r.status !== 'deleted' && r.is_not_selected === true;
+              match = isAdminEvaluationRecordNotSelected(r);
               break;
             case 'ready_for_approval':
-              // 승인 대기: 모든 평가 항목이 최고 점수를 받은 레코드 + status가 pending이거나 hold인 경우만
-              match = r.evaluation_results?.visit_authenticity?.eval_value === 1 &&
-                r.evaluation_results?.rb_inference_score?.eval_value === 1 &&
-                r.evaluation_results?.rb_grounding_TF?.eval_value === true &&
-                r.evaluation_results?.review_faithfulness_score?.eval_value === 1 &&
-                r.geocoding_success === true &&
-                r.evaluation_results?.category_validity_TF?.eval_value === true &&
-                r.evaluation_results?.category_TF?.eval_value === true &&
-                (r.status === 'pending' || r.status === 'hold'); // 승인되지 않은 것만
+              match = isAdminEvaluationRecordReadyForApproval(r);
               break;
             default:
               // 일반 상태: status 필드와 일치하는 레코드
@@ -1183,42 +1306,9 @@ function AdminEvaluationPage({
     try {
       setLoading(true);
 
-      // 모든 레코드 조회 (restaurants 테이블에서)
-      // Supabase API는 1000개 제한이 있으므로 페이지네이션으로 전체 로드
-      const PAGE_LIMIT = 1000;
-      let allData: Record<string, unknown>[] = [];
-      let from = 0;
-      let hasMore = true;
-
-      while (hasMore) {
-        const { data: pageData, error: pageError } = await supabase
-          .from('restaurants')
-          .select(RESTAURANT_MERGE_SELECT)
-          .range(from, from + PAGE_LIMIT - 1)
-          .order('created_at', { ascending: false })
-          .order('id', { ascending: true });
-
-        if (pageError) {
-          console.error('Supabase error:', pageError);
-          throw pageError;
-        }
-
-        if (pageData && pageData.length > 0) {
-          allData = [...allData, ...pageData];
-          from += PAGE_LIMIT;
-          hasMore = pageData.length === PAGE_LIMIT;  // 1000개 미만이면 마지막 페이지
-        } else {
-          hasMore = false;
-        }
-      }
-
-      const data = allData;
-      const error = null;
-
-      if (error) {
-        console.error('Supabase error:', error);
-        throw error;
-      }
+      // 관리자 검수 데이터는 서버 API에서 service-role로 조회한다.
+      // 브라우저 Supabase 클라이언트는 RLS 때문에 승인된 공개 레코드만 보일 수 있다.
+      const data = await fetchAdminEvaluationRecords();
 
       // 디버그: 실제 로드된 레코드 수 확인
       debugLog('📊 데이터 로드 완료:', data?.length, '개 로드됨');
@@ -1346,19 +1436,10 @@ function AdminEvaluationPage({
         pending: typedRecords.filter(r => r.status === 'pending').length,
         approved: typedRecords.filter(r => r.status === 'approved').length,
         hold: typedRecords.filter(r => r.status === 'hold').length,
-        missing: typedRecords.filter(r => r.status !== 'deleted' && r.is_missing).length,
+        missing: typedRecords.filter(isAdminEvaluationRecordMissing).length,
         db_conflict: typedRecords.filter(r => r.status === 'db_conflict').length,
-        ready_for_approval: typedRecords.filter(r =>
-          r.evaluation_results?.visit_authenticity?.eval_value === 1 &&
-          r.evaluation_results?.rb_inference_score?.eval_value === 1 &&
-          r.evaluation_results?.rb_grounding_TF?.eval_value === true &&
-          r.evaluation_results?.review_faithfulness_score?.eval_value === 1 &&
-          r.geocoding_success === true &&
-          r.evaluation_results?.category_validity_TF?.eval_value === true &&
-          r.evaluation_results?.category_TF?.eval_value === true &&
-          (r.status === 'pending' || r.status === 'hold') // 승인되지 않은 것만
-        ).length,
-        not_selected: typedRecords.filter(r => r.status !== 'deleted' && r.is_not_selected).length,
+        ready_for_approval: typedRecords.filter(isAdminEvaluationRecordReadyForApproval).length,
+        not_selected: typedRecords.filter(isAdminEvaluationRecordNotSelected).length,
         deleted: deletedCount,
       };
       setStats(newStats);
@@ -1396,11 +1477,11 @@ function AdminEvaluationPage({
       return;
     }
 
-    if (user && isAdmin && !authLoading) {
+    if (((user && isAdmin) || hasE2EAdminShellBypass) && !authLoading) {
       hasLoadedData.current = true;
       loadAllRecords();
     }
-  }, [user, isAdmin, authLoading, loadAllRecords]);
+  }, [user, isAdmin, authLoading, hasE2EAdminShellBypass, loadAllRecords]);
 
   // 개별 레코드 업데이트 (새로고침 없이 상태 반영)
   const updateRecordInState = (recordId: string, updates: Partial<EvaluationRecord>) => {
@@ -1419,18 +1500,9 @@ function AdminEvaluationPage({
       approved: allRecords.filter(r => r.status === 'approved').length,
       hold: allRecords.filter(r => r.status === 'hold').length,
       db_conflict: allRecords.filter(r => r.status === 'db_conflict').length,
-      ready_for_approval: allRecords.filter(r =>
-        r.evaluation_results?.visit_authenticity?.eval_value === 1 &&
-        r.evaluation_results?.rb_inference_score?.eval_value === 1 &&
-        r.evaluation_results?.rb_grounding_TF?.eval_value === true &&
-        r.evaluation_results?.review_faithfulness_score?.eval_value === 1 &&
-        r.geocoding_success === true &&
-        r.evaluation_results?.category_validity_TF?.eval_value === true &&
-        r.evaluation_results?.category_TF?.eval_value === true &&
-        (r.status === 'pending' || r.status === 'hold') // 승인되지 않은 것만
-      ).length,
-      missing: allRecords.filter(r => r.status !== 'deleted' && r.is_missing).length,
-      not_selected: allRecords.filter(r => r.status !== 'deleted' && r.is_not_selected).length,
+      ready_for_approval: allRecords.filter(isAdminEvaluationRecordReadyForApproval).length,
+      missing: allRecords.filter(isAdminEvaluationRecordMissing).length,
+      not_selected: allRecords.filter(isAdminEvaluationRecordNotSelected).length,
       deleted: deletedCount,
     };
 
@@ -2116,6 +2188,10 @@ function AdminEvaluationPage({
   const pendingQueueSummaryText = showSubmissionView
     ? `제보/리뷰 대기: 제보 ${pendingRestaurantSubmissionCount}건 | 추천 ${pendingRecommendationCount}건 | 리뷰 ${pendingReviewCount}건 | 전체 ${totalPendingCount}건`
     : `필터링: ${filteredRecords.length}개 | 현 ${stats.total}개 레코드 | 삭제한 레코드 ${stats.deleted}개`;
+  const isInitialEvaluationDataLoading = !showSubmissionView && loading && allRecords.length === 0;
+  const pendingQueueSummaryContent = showSubmissionView || !isInitialEvaluationDataLoading
+    ? pendingQueueSummaryText
+    : '필터링: 집계 중 | 현 레코드 집계 중 | 삭제한 레코드 집계 중';
 
   // 리뷰 승인 mutation
   const approveReviewMutation = useMutation({
@@ -2761,7 +2837,7 @@ function AdminEvaluationPage({
   }
 
   // 로그인하지 않았거나 관리자가 아닌 경우 (리다이렉트 전 화면 방지)
-  if (!authLoading && (!user || !isAdmin)) {
+  if (!hasE2EAdminShellBypass && !authLoading && (!user || !isAdmin)) {
     return null;
   }
 
@@ -2785,11 +2861,11 @@ function AdminEvaluationPage({
     >
       {/* Header */}
       <div className={embedded ? "border-b border-border bg-card px-2 py-1.5" : "border-b border-border bg-card px-3 py-2.5 sm:px-4 sm:py-3"}>
-        <div className={embedded ? "flex flex-col gap-1.5 lg:flex-row lg:items-center lg:justify-between" : "flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between"}>
-          <div className="min-w-0">
+        <div className={embedded ? "flex flex-row items-start justify-between gap-1.5 lg:items-center" : "flex flex-row items-start justify-between gap-2.5 lg:items-center"}>
+          <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <h1 className={embedded ? "flex items-center gap-1.5 bg-gradient-primary bg-clip-text text-base font-bold text-transparent" : "flex items-center gap-2 bg-gradient-primary bg-clip-text text-lg font-bold text-transparent sm:text-2xl"}>
-                <ClipboardCheck className={embedded ? "h-5 w-5 text-primary" : "h-6 w-6 text-primary"} />
+              <AdminEvaluationTitleIcon embedded={embedded} />
+              <h1 className={embedded ? "whitespace-nowrap bg-gradient-primary bg-clip-text text-base font-bold text-transparent" : "whitespace-nowrap bg-gradient-primary bg-clip-text text-lg font-bold text-transparent sm:text-2xl"}>
                 관리자 데이터 검수
               </h1>
             </div>
@@ -2821,40 +2897,46 @@ function AdminEvaluationPage({
                 </Button>
               </div>
             )}
-            <p className={embedded ? "mt-0.5 text-xs text-muted-foreground" : "mt-0.5 text-xs text-muted-foreground sm:text-sm"}>
-              {pendingQueueSummaryText}
-            </p>
+            <div className={embedded ? "mt-0.5 truncate text-xs text-muted-foreground" : "mt-0.5 truncate text-xs text-muted-foreground sm:text-sm"}>
+              {pendingQueueSummaryContent}
+            </div>
           </div>
 
           {/* 우측: 카테고리 필터 */}
-          <div className="w-full lg:flex lg:flex-1 lg:justify-end">
+          <div className="w-auto shrink-0 lg:flex lg:flex-1 lg:justify-end">
             <CategorySidebar
               stats={stats}
               selectedStatuses={selectedStatuses}
               onSelectStatuses={setSelectedStatuses}
             >
-              <div className="flex items-center gap-1.5 lg:gap-1">
+              <div className="ml-auto flex items-center justify-end gap-1.5 lg:gap-1" data-admin-evaluation-view-actions="top-right">
                 {canSwitchEvaluationView && (
                   <>
                     <Button
                       variant={!isAlternateView && !showSubmissionView ? "secondary" : "ghost"}
                       size="sm"
-                      className="h-7 gap-1 px-2 text-xs lg:h-8 lg:w-8 lg:px-0"
+                      className="h-8 w-8 p-0"
                       onClick={switchToEvaluationListView}
                       title="리스트 뷰"
+                      aria-label="리스트 뷰"
+                      aria-pressed={!isAlternateView && !showSubmissionView}
+                      data-admin-evaluation-view-toggle="list"
                     >
                       <LayoutList className="h-4 w-4" />
-                      <span className="lg:hidden">리스트</span>
+                      <span className="sr-only">리스트</span>
                     </Button>
                     <Button
                       variant={isAlternateView && !showSubmissionView ? "secondary" : "ghost"}
                       size="sm"
-                      className="h-7 gap-1 px-2 text-xs lg:h-8 lg:w-8 lg:px-0"
+                      className="h-8 w-8 p-0"
                       onClick={switchToEvaluationSlideView}
                       title="슬라이드 뷰"
+                      aria-label="슬라이드 뷰"
+                      aria-pressed={isAlternateView && !showSubmissionView}
+                      data-admin-evaluation-view-toggle="slide"
                     >
                       <MonitorPlay className="h-4 w-4" />
-                      <span className="lg:hidden">슬라이드</span>
+                      <span className="sr-only">슬라이드</span>
                     </Button>
                   </>
                 )}
@@ -3022,7 +3104,7 @@ function AdminEvaluationPage({
               onEdit={handleEdit}
               loading={loading || isSearching}
               evalFilters={evalFilters}
-              isDeletedFilterActive={selectedStatuses.includes('deleted' as EvaluationRecordStatus)}
+              isDeletedFilterActive={evalFilters.status === 'deleted'}
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
               onFilterChange={(key, value) => {

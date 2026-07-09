@@ -48,6 +48,11 @@ The map layer should rely on `apps/web/lib/mobile-home-search-selection.ts` to d
 - reveal expanded cluster members as individual markers at or above `HOME_MAP_CONTEXTUAL_VISIBLE_RESTAURANTS_MIN_ZOOM`
 - while a cluster is explicitly expanded, contextual restaurant payloads may remain eligible from the expanded member set even if a transient render pass reports a pre-threshold zoom
 - auto-open the mobile visible-marker sheet with a usable half-height list, not an unreachable peek-only trigger
+- keep mobile-width scroll surfaces scrollable while hiding native scrollbar chrome globally in the split runtime CSS (`app-globals.css`, `home-app-globals.css`, `home-deferred-globals.css`, `home-detail-globals.css`) and keep `BottomSheet` content scrollbarless by default so desktop-sized mobile QA windows and real mobile browsers use the same clean visual treatment
+- after the user closes that auto-opened mobile visible-marker sheet, keep the dismissal scoped only to the current map/filter tuple (`mapMode`, region/country, featured theme, categories), not the visible-marker restaurant signature
+- while that dismissed map/filter scope remains eligible and no sheet/detail/search/fullscreen/overseas UI owns the mobile chrome, show a simple icon-only circular restore button in the bottom-right floating-action stack, above the admin-only user-submitted-marker visibility toggle when that toggle is present, matching the same `48px` circular visual language as the report/location floating buttons without a numeric badge, and keep `data-mobile-visible-marker-restaurants-restore="true"`
+- place the restore button inside the existing `data-mobile-bottom-right-safe-area-owner="mobile-floating-actions"` stack so it inherits the bottom navigation offset and does not create a separate map-blocking overlay
+- verify large-mobile restore placement on Galaxy S20 Ultra-class (`412x915`, DPR 3.5) and iPhone 14 Pro Max-class (`430x932`, DPR 3) viewports so the restore button remains above bottom navigation and aligned above the report floating action on common flagship phones
 
 ### Close / mode change / region change / country change
 
@@ -71,5 +76,5 @@ Restaurant deep-link params should be removed with `history.replaceState`, not `
 ## Verification snapshot
 
 - `bun test tests-unit/mobile-home-search-selection.test.ts tests-unit/mobile-home-map-regressions.test.ts tests-unit/home-map-contextual-restaurants-source.test.ts`
-- `npx playwright test tests/mobile-home-map.spec.ts --project=chromium -g "MHM-02|MHM-03|MHM-06|MHM-07|MHM-08" --retries=0`
+- `npx playwright test tests/mobile-home-map.spec.ts --project=chromium -g "MHM-02|MHM-03|MHM-06|MHM-07|MHM-08|MHM-08b|MHM-08c" --retries=0`
 - `npx playwright test tests/mobile-home-map.spec.ts --project=chromium --retries=0`

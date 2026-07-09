@@ -4,6 +4,7 @@ import {
     buildMapViewRestaurantsQueryOptions,
     buildNaverRestaurantsQueryOptions,
     buildOverseasRestaurantsQueryOptions,
+    resolveNaverRestaurantEmptyStateMessage,
     resolveNaverRestaurantQueryBounds,
 } from '../lib/map-query-helpers';
 
@@ -135,6 +136,25 @@ describe('map query helpers', () => {
 
         expect(options.featuredTheme).toBe('hot-view');
         expect(options.compact).toBe(true);
+    });
+    test('uses filter-aware naver empty state copy', () => {
+        expect(resolveNaverRestaurantEmptyStateMessage({
+            categories: [],
+            featuredTheme: null,
+            minReviews: 0,
+        })).toBe('이 지역에 등록된 맛집이 없습니다');
+
+        expect(resolveNaverRestaurantEmptyStateMessage({
+            categories: [],
+            featuredTheme: 'hot-view' as never,
+            minReviews: 0,
+        })).toBe('선택한 테마에 맞는 맛집이 없습니다');
+
+        expect(resolveNaverRestaurantEmptyStateMessage({
+            categories: ['분식'],
+            featuredTheme: null,
+            minReviews: 0,
+        })).toBe('선택한 조건에 맞는 맛집이 없습니다');
     });
 
     test('uses bounded naver data only before deferred full-map effects run', () => {

@@ -1741,10 +1741,11 @@ describe("web quality performance source contracts", () => {
     expect(overlayStackSource).toContain(
       "ariaLive={mapToast.type === 'error' ? 'assertive' : 'polite'}",
     );
-    expect(overlayStackSource).not.toContain("emptyStateMessage?: string");
+    expect(overlayStackSource).toContain("emptyStateMessage?: string");
     expect(overlayStackSource).toContain("className={floatingToastPositionClass}");
-    expect(overlayStackSource).toContain("<EmptyStateIndicator />");
+    expect(overlayStackSource).toContain("<EmptyStateIndicator message={emptyStateMessage} />");
     expect(mapIndicatorsSource).toContain("이 지역에 등록된 맛집이 없습니다");
+    expect(naverMapSource).toContain("resolveNaverRestaurantEmptyStateMessage(filters)");
     expect(naverMapSource).not.toContain("선택한 필터에 맞는 맛집이 없습니다");
     expect(overlayPositionSource).toContain(
       "bottom-[calc(var(--mobile-bottom-nav-effective-height",
@@ -2497,6 +2498,7 @@ describe("web quality performance source contracts", () => {
     const mainLayoutSource = source("components/layout/MainLayout.tsx");
     const combinedPopupSource = source("components/layout/CombinedPopup.tsx");
     const testHelpersSource = source("tests/helpers.ts");
+    const noncriticalChromeRoutesSource = source("lib/noncritical-chrome-routes.ts");
 
     expect(feedPageSource).toContain(
       "const target = reviewId ? `/?panel=feed&review=${encodeURIComponent(reviewId)}` : '/?panel=feed';",
@@ -2608,10 +2610,12 @@ describe("web quality performance source contracts", () => {
       'router.replace(buildDirectOverlayHref("feed", reviewId),',
     );
     expect(overlayLayoutSource).toContain("scroll: false");
-    expect(mainLayoutSource).toContain('pathname?.startsWith("/auth/") ||');
-    expect(mainLayoutSource).toContain('pathname === "/feed"');
-    expect(mainLayoutSource).toContain('pathname === "/stamp"');
-    expect(mainLayoutSource).toContain('pathname === "/leaderboard"');
+    expect(mainLayoutSource).toContain("shouldSuppressNoncriticalChromeForPathname(pathname)");
+    expect(noncriticalChromeRoutesSource).toContain('"/feed"');
+    expect(noncriticalChromeRoutesSource).toContain('"/stamp"');
+    expect(noncriticalChromeRoutesSource).toContain('"/leaderboard"');
+    expect(noncriticalChromeRoutesSource).toContain('"/mypage"');
+    expect(noncriticalChromeRoutesSource).toContain('"/insights"');
     expect(mainLayoutSource).toContain("const shouldSuppressMobileBottomNav =");
     expect(mainLayoutSource).toContain("const shouldRenderMobileBottomNav = !shouldSuppressMobileBottomNav;");
     expect(mainLayoutSource).not.toContain(
@@ -2622,13 +2626,12 @@ describe("web quality performance source contracts", () => {
         /const shouldSuppressMobileBottomNav =([\s\S]*?)const shouldRenderMobileBottomNav/,
       )?.[1] ?? "";
     expect(mobileBottomNavSuppressionBlock).toContain('pathname?.startsWith("/auth/")');
-    expect(mobileBottomNavSuppressionBlock).toContain('pathname?.startsWith("/admin")');
+    expect(mobileBottomNavSuppressionBlock).not.toContain('pathname?.startsWith("/admin")');
     expect(mobileBottomNavSuppressionBlock).not.toContain('pathname === "/feed"');
     expect(mobileBottomNavSuppressionBlock).not.toContain('pathname === "/stamp"');
     expect(mobileBottomNavSuppressionBlock).not.toContain('pathname === "/leaderboard"');
-    expect(overlayLayoutSource).toContain(
-      'pathname?.startsWith("/auth/") || routeDirectPanelParam !== null',
-    );
+    expect(overlayLayoutSource).toContain("routeDirectPanelParam !== null");
+    expect(overlayLayoutSource).toContain("shouldSuppressNoncriticalChromeForPathname(pathname)");
     expect(overlayLayoutSource).toContain(
       "const directPanelParam = isHomeRoute ? null : routeDirectPanelParam",
     );

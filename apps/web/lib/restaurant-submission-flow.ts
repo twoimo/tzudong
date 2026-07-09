@@ -25,8 +25,57 @@ export function isHttpUrl(value: string): boolean {
     return /^https?:\/\//.test(value.trim());
 }
 
+const YOUTUBE_HOSTS = new Set(['youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be']);
+
+function hasMeaningfulText(value: string): boolean {
+    const compact = value.trim().replace(/\s+/g, '');
+    if (!compact) return false;
+    if (!/[\p{L}\p{N}]/u.test(compact)) return false;
+    if (/^[\u3130-\u318F\u1100-\u11FF]+$/u.test(compact)) return false;
+    if (compact.length >= 3 && new Set([...compact]).size === 1) return false;
+    return true;
+}
+
+function isKeyboardMash(value: string): boolean {
+    return /^(?:asdf?|qwer|zxcv)+$/i.test(value);
+}
+
+function hasMeaningfulCategory(category: string): boolean {
+    const compact = category.trim().replace(/\s+/g, '');
+    return compact.length > 0 && hasMeaningfulText(compact);
+}
+
 function hasRequiredCategory(categories: string[]) {
-    return categories.some((category) => category.trim().length > 0);
+    return categories.some(hasMeaningfulCategory);
+}
+
+function isMeaningfulRestaurantName(value: string): boolean {
+    const compact = value.trim().replace(/\s+/g, '');
+    return compact.length >= 2 && hasMeaningfulText(compact) && !isKeyboardMash(compact);
+}
+
+function isMeaningfulAddress(value: string): boolean {
+    const compact = value.trim().replace(/\s+/g, '');
+    if (!hasMeaningfulText(compact)) return false;
+    if (/^[A-Za-z]+\/[A-Za-z/]+$/.test(compact)) return false;
+    return compact.length >= 5 || /[\uAC00-\uD7A3]/u.test(compact);
+}
+
+function isMeaningfulRequestDescription(value: string): boolean {
+    const compact = value.trim().replace(/\s+/g, '');
+    if (!hasMeaningfulText(compact)) return false;
+    if (!/[\p{L}\p{N}]/u.test(compact)) return false;
+    return true;
+}
+
+export function isRecognizedYouTubeUrl(value: string): boolean {
+    try {
+        const url = new URL(value.trim());
+        if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
+        return YOUTUBE_HOSTS.has(url.hostname.toLowerCase());
+    } catch {
+        return false;
+    }
 }
 
 export function validateRestaurantSubmissionStep(
@@ -35,7 +84,7 @@ export function validateRestaurantSubmissionStep(
     data: RestaurantSubmissionFormData
 ): string | null {
     if (step === 1) {
-        if (!data.restaurant_name.trim() || !data.address.trim() || !hasRequiredCategory(data.categories)) {
+        if (!isMeaningfulRestaurantName(data.restaurant_name) || !isMeaningfulAddress(data.address) || !hasRequiredCategory(data.categories)) {
             return '맛집 이름, 주소, 카테고리는 필수입니다';
         }
 
@@ -48,14 +97,14 @@ export function validateRestaurantSubmissionStep(
                 return '유튜브 영상 링크를 입력해주세요';
             }
 
-            if (!isHttpUrl(data.youtube_link)) {
+            if (!isRecognizedYouTubeUrl(data.youtube_link)) {
                 return '유효한 유튜브 링크를 입력해주세요';
             }
 
             return null;
         }
 
-        if (!data.description.trim() || data.description.trim().length < 10) {
+        if (!data.description.trim() || data.description.trim().length < 10 || !isMeaningfulRequestDescription(data.description)) {
             return '추천 이유를 10자 이상 입력해주세요';
         }
 
