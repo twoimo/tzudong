@@ -28,6 +28,7 @@ const OverlayLayout = lazy(() => import('@/components/layout/OverlayLayout'));
 type AuthModalProps = {
     isOpen: boolean;
     onClose: () => void;
+    onAuthSuccess?: () => void;
     redirectTo?: string | null;
     reason?: string | null;
 };
@@ -147,6 +148,10 @@ function MobileHomeLayout({ children }: { children: ReactNode }) {
             return { requested: false, reason: null, nextPath: '/' };
         });
     }, []);
+    const closeAuthAfterSuccess = useCallback(() => {
+        closeAuth();
+    }, [closeAuth]);
+
     const openProfile = useCallback(() => setIsProfileModalOpen(true), []);
 
     useEffect(() => {
@@ -226,6 +231,7 @@ function MobileHomeLayout({ children }: { children: ReactNode }) {
                     <DeferredAuthModal
                         isOpen={isAuthModalOpen}
                         onClose={closeAuth}
+                        onAuthSuccess={closeAuthAfterSuccess}
                         redirectTo={authLoginRequest.requested ? authLoginRequest.nextPath : null}
                         reason={authLoginRequest.requested ? authLoginRequest.reason : null}
                     />

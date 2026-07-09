@@ -1596,7 +1596,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                 aria-pressed={forceOcrRefresh}
             >
                 <span className={`h-2 w-2 rounded-full ${forceOcrRefresh ? 'bg-primary' : 'bg-muted-foreground/50'}`} />
-                {forceOcrRefresh ? '이번 분석은 캐시 없이 재호출' : 'dev/admin: OCR 강제 재호출'}
+                {forceOcrRefresh ? '이번 분석은 캐시 없이 재호출' : 'OCR 다시 분석'}
             </button>
         );
     }, [canForceOcrRefresh, forceOcrRefresh]);
@@ -2837,7 +2837,6 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                 className="z-[110]"
                 ariaLabelledBy={mobileTitleId}
                 ariaDescribedBy={mobileDescriptionId}
-                focusTrapAllowSelectors={[]}
             >
                 {reviewSheetContent}
             </BottomSheet>
