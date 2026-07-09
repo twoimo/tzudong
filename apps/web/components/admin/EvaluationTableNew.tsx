@@ -697,6 +697,9 @@ export function EvaluationTable({
     [evalFilters]
   );
   const currentStatusFilter = evalFilters.status ?? '';
+  const handleMobileStatusQuickFilterChange = useCallback((status: string) => {
+    onFilterChange('status', status);
+  }, [onFilterChange]);
   const shouldRenderMobile = isDesktopLayout === null ? true : !isDesktopLayout;
   const shouldRenderDesktop = isDesktopLayout === null ? true : isDesktopLayout;
   const handleLoadMore = useCallback(() => {
@@ -756,151 +759,7 @@ export function EvaluationTable({
       }
     };
   }, [handleLoadMore, hasMore, isLoadingMore, shouldRenderMobile, onLoadMore]);
-  const quickFilterSwipeStartXRef = useRef<number | null>(null);
-  const quickFilterSwipeEndXRef = useRef<number | null>(null);
-  const quickFilterSwipeStartYRef = useRef<number | null>(null);
-  const quickFilterSwipeEndYRef = useRef<number | null>(null);
-  const quickFilterSwipeLastHandledAtRef = useRef(0);
-  const quickFilterSwipeActiveRef = useRef(false);
-  const quickFilterSwipeInputRef = useRef<'pointer' | 'touch' | null>(null);
-  const quickFilterSwipePointerIdRef = useRef<number | null>(null);
-  const quickFilterSwipeDistance = 24;
-  const quickFilterCurrentIndex = useMemo(
-    () => MOBILE_STATUS_QUICK_FILTERS.findIndex((filter) => filter.value === currentStatusFilter),
-    [currentStatusFilter]
-  );
 
-  const handleMobileFilterTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
-    if (quickFilterSwipeActiveRef.current || quickFilterSwipeInputRef.current === 'pointer') return;
-    quickFilterSwipeInputRef.current = 'touch';
-    quickFilterSwipeActiveRef.current = true;
-    quickFilterSwipePointerIdRef.current = null;
-    quickFilterSwipeStartXRef.current = e.touches[0].clientX;
-    quickFilterSwipeStartYRef.current = e.touches[0].clientY;
-    quickFilterSwipeEndXRef.current = null;
-    quickFilterSwipeEndYRef.current = null;
-  }, []);
-
-  const handleMobileFilterTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
-    if (!quickFilterSwipeActiveRef.current || quickFilterSwipeInputRef.current !== 'touch') return;
-    quickFilterSwipeEndXRef.current = e.touches[0].clientX;
-    quickFilterSwipeEndYRef.current = e.touches[0].clientY;
-  }, []);
-
-  const handleMobileFilterSwipeEndInternal = useCallback((): boolean => {
-    const startX = quickFilterSwipeStartXRef.current;
-    const endX = quickFilterSwipeEndXRef.current;
-    const startY = quickFilterSwipeStartYRef.current;
-    const endY = quickFilterSwipeEndYRef.current;
-
-    if (startX === null || endX === null || startY === null || endY === null) return false;
-
-    const distanceX = startX - endX;
-    const distanceY = startY - endY;
-    if (Math.abs(distanceX) < quickFilterSwipeDistance || Math.abs(distanceX) <= Math.abs(distanceY)) {
-      return false;
-    }
-
-    let nextIndex = quickFilterCurrentIndex;
-    if (distanceX > 0) {
-      nextIndex = Math.min(quickFilterCurrentIndex + 1, MOBILE_STATUS_QUICK_FILTERS.length - 1);
-    } else {
-      nextIndex = Math.max(quickFilterCurrentIndex - 1, 0);
-    }
-
-    if (nextIndex === -1) {
-      nextIndex = 0;
-    }
-
-    onFilterChange('status', MOBILE_STATUS_QUICK_FILTERS[nextIndex].value);
-    return true;
-  }, [quickFilterCurrentIndex, onFilterChange]);
-
-  const handleMobileFilterSwipeEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
-    if (!quickFilterSwipeActiveRef.current || quickFilterSwipeInputRef.current !== 'touch') return;
-    if (Date.now() - quickFilterSwipeLastHandledAtRef.current < 250) {
-      quickFilterSwipeActiveRef.current = false;
-      quickFilterSwipeInputRef.current = null;
-      return;
-    }
-
-    const didSwipe = handleMobileFilterSwipeEndInternal();
-    if (didSwipe) {
-      quickFilterSwipeLastHandledAtRef.current = Date.now();
-      e.preventDefault();
-    }
-    quickFilterSwipeActiveRef.current = false;
-    quickFilterSwipeInputRef.current = null;
-  }, [handleMobileFilterSwipeEndInternal]);
-
-  const handleMobileFilterTouchCancel = useCallback(() => {
-    if (!quickFilterSwipeActiveRef.current || quickFilterSwipeInputRef.current !== 'touch') return;
-    quickFilterSwipeActiveRef.current = false;
-    quickFilterSwipeInputRef.current = null;
-  }, []);
-
-  const handleMobileFilterPointerStart = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (quickFilterSwipeActiveRef.current || quickFilterSwipeInputRef.current === 'touch') return;
-    quickFilterSwipeInputRef.current = 'pointer';
-    quickFilterSwipeActiveRef.current = true;
-    quickFilterSwipePointerIdRef.current = e.pointerId;
-    quickFilterSwipeStartXRef.current = e.clientX;
-    quickFilterSwipeStartYRef.current = e.clientY;
-    quickFilterSwipeEndXRef.current = null;
-    quickFilterSwipeEndYRef.current = null;
-    try {
-      e.currentTarget.setPointerCapture(e.pointerId);
-    } catch {
-      // no-op
-    }
-  }, []);
-
-  const handleMobileFilterPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (!quickFilterSwipeActiveRef.current || quickFilterSwipeInputRef.current !== 'pointer' || quickFilterSwipePointerIdRef.current !== e.pointerId) return;
-    quickFilterSwipeEndXRef.current = e.clientX;
-    quickFilterSwipeEndYRef.current = e.clientY;
-  }, []);
-
-  const handleMobileFilterPointerEnd = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (!quickFilterSwipeActiveRef.current || quickFilterSwipeInputRef.current !== 'pointer' || quickFilterSwipePointerIdRef.current !== e.pointerId) return;
-    if (Date.now() - quickFilterSwipeLastHandledAtRef.current < 250) {
-      quickFilterSwipeActiveRef.current = false;
-      quickFilterSwipeInputRef.current = null;
-      quickFilterSwipePointerIdRef.current = null;
-      try {
-        e.currentTarget.releasePointerCapture(e.pointerId);
-      } catch {
-        // no-op
-      }
-      return;
-    }
-
-    const didSwipe = handleMobileFilterSwipeEndInternal();
-    if (didSwipe) {
-      quickFilterSwipeLastHandledAtRef.current = Date.now();
-      e.preventDefault();
-    }
-    quickFilterSwipeActiveRef.current = false;
-    quickFilterSwipeInputRef.current = null;
-    quickFilterSwipePointerIdRef.current = null;
-    try {
-      e.currentTarget.releasePointerCapture(e.pointerId);
-    } catch {
-      // no-op
-    }
-  }, [handleMobileFilterSwipeEndInternal]);
-
-  const handleMobileFilterPointerCancel = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (!quickFilterSwipeActiveRef.current || quickFilterSwipeInputRef.current !== 'pointer' || quickFilterSwipePointerIdRef.current !== e.pointerId) return;
-    quickFilterSwipeActiveRef.current = false;
-    quickFilterSwipeInputRef.current = null;
-    quickFilterSwipePointerIdRef.current = null;
-    try {
-      e.currentTarget.releasePointerCapture(e.pointerId);
-    } catch {
-      // no-op
-    }
-  }, []);
 
   // 썸네일 로딩 상태와 URL을 통합 관리
   const [thumbnailData, setThumbnailData] = useState<Record<string, { state: 'loading' | 'loaded' | 'error'; url?: string }>>({});
@@ -1000,8 +859,36 @@ export function EvaluationTable({
   }, [records, loadThumbnail]);
 
   const mobileControls = (
-    <div className="z-30 bg-background pb-2 pt-1 lg:hidden">
-      <div className="space-y-2 rounded-lg border bg-card p-3 shadow-sm">
+    <div className="sticky top-0 z-30 -mx-2 bg-background/95 px-2 pb-2 pt-1 backdrop-blur lg:hidden">
+      <div className="space-y-2 bg-transparent p-0 shadow-none" data-admin-evaluation-mobile-controls="borderless" data-layout-primitives="stack wrap-row">
+        <div
+          className="grid grid-cols-3 gap-1.5"
+          data-admin-evaluation-mobile-status-filter="true"
+          data-admin-evaluation-mobile-toolbar="two-row"
+        >
+          {MOBILE_STATUS_QUICK_FILTERS.map((filter) => {
+            const isActive = currentStatusFilter === filter.value;
+            return (
+              <Button
+                key={filter.label}
+                type="button"
+                variant={isActive ? "default" : "outline"}
+                size="sm"
+                aria-label={`상태 필터: ${filter.label}`}
+                aria-pressed={isActive}
+                data-admin-evaluation-mobile-status-filter-option={filter.value || 'all'}
+                className="h-8 min-w-0 rounded-full px-2 text-xs font-medium"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleMobileStatusQuickFilterChange(filter.value);
+                }}
+              >
+                {filter.label}
+              </Button>
+            );
+          })}
+        </div>
+
         <div className="relative">
           <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -1026,58 +913,52 @@ export function EvaluationTable({
           )}
         </div>
 
-        <div className="overflow-x-auto pb-1">
-          <div className="flex min-w-max items-center gap-2">
-            {MOBILE_STATUS_QUICK_FILTERS.map((filter) => {
-              const isActive = currentStatusFilter === filter.value;
-              return (
-                <Button
-                  key={filter.label}
-                  variant={isActive ? "default" : "outline"}
-                  size="sm"
-                  className="h-7 px-2 text-xs"
-                  onClick={() => onFilterChange('status', filter.value)}
-                >
-                  {filter.label}
-                </Button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">검수 항목 {records.length}개</span>
+        <div
+          className="flex min-w-0 items-center justify-between gap-2 py-0.5"
+          data-admin-evaluation-mobile-filter-actions="true"
+          data-layout-primitives="cluster"
+        >
+          <div className="min-w-0 truncate px-0.5 text-xs text-muted-foreground">
+            <span>검수 항목</span>
+            {loading && records.length === 0 ? (
+              <span className="ml-1 font-medium">집계 중</span>
+            ) : (
+              <strong className="ml-1 text-sm font-bold text-foreground">{records.length}개</strong>
+            )}
             {activeFilterCount > 0 && (
-              <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">
-                필터 {activeFilterCount}
-              </Badge>
+              <>
+                <span className="mx-1 text-muted-foreground/60">·</span>
+                <span className="font-medium">필터 {activeFilterCount}개</span>
+              </>
             )}
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex shrink-0 items-center gap-1">
             <Button
               variant={showMobileAdvancedFilters ? "secondary" : "outline"}
               size="sm"
-              className="h-7 text-xs"
+              className="h-8 rounded-full px-2.5 text-xs font-semibold"
               onClick={() => setShowMobileAdvancedFilters(prev => !prev)}
             >
-              {showMobileAdvancedFilters ? '필터 닫기' : '상세 필터'}
+              {showMobileAdvancedFilters ? '닫기' : '상세 필터'}
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onResetFilters}
-              disabled={!hasActiveFilters}
-              className="h-7 text-xs"
-            >
-              <RotateCcw className="mr-1 h-3 w-3" />
-              초기화
-            </Button>
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onResetFilters}
+                aria-label="필터 초기화"
+                title="필터 초기화"
+                className="h-8 w-8 rounded-full p-0 text-muted-foreground hover:bg-muted hover:text-foreground"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                <span className="sr-only">초기화</span>
+              </Button>
+            )}
           </div>
         </div>
 
         {showMobileAdvancedFilters && (
-          <div className="grid grid-cols-2 gap-2 border-t pt-2">
+          <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted/35 p-2">
             {renderFilterDropdown(
               "status",
               "상태",
@@ -1254,21 +1135,25 @@ export function EvaluationTable({
           { label: '카테고리 유효', value: categoryValidity },
           { label: '카테고리 정합', value: categoryMatch },
         ];
+        const titleId = `admin-evaluation-mobile-title-${record.id}`;
 
           return (
-            <div
+            <article
               key={record.id}
+              aria-labelledby={titleId}
+              data-layout-primitives="stack frame"
+              data-admin-evaluation-mobile-card="true"
               className={cn(
-                "rounded-lg border bg-card p-3",
+                "rounded-2xl border border-border/70 bg-card/95 p-3 shadow-sm",
                 getMobileCardTone(record.status),
                 isExpanded && "shadow-sm"
               )}
             >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex-1">
-                <p className="line-clamp-2 text-sm font-semibold">
+                <h2 id={titleId} className="line-clamp-2 text-sm font-semibold">
                   {record.restaurant_name || record.name || '이름 없음'}
-                </p>
+                </h2>
                 <p className="mt-0.5 text-[11px] text-muted-foreground">
                   {publishedAt} | ID {record.id.slice(0, 8)}
                 </p>
@@ -1329,19 +1214,21 @@ export function EvaluationTable({
               </div>
             </div>
 
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              <Badge variant="outline" className="text-[11px]">방문 {visitValue}</Badge>
-              <Badge variant="outline" className="text-[11px]">추론 {inferenceValue}</Badge>
-              <Badge variant="outline" className="text-[11px]">근거 {groundingValue}</Badge>
-              <Badge variant="outline" className="text-[11px]">주소 {geocodingText}</Badge>
+            <div className="-mx-1 mt-3 overflow-x-auto px-1 scrollbar-hide [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div className="flex min-w-max flex-nowrap gap-1.5">
+                <Badge variant="outline" className="shrink-0 rounded-full text-[11px]">방문 {visitValue}</Badge>
+                <Badge variant="outline" className="shrink-0 rounded-full text-[11px]">추론 {inferenceValue}</Badge>
+                <Badge variant="outline" className="shrink-0 rounded-full text-[11px]">근거 {groundingValue}</Badge>
+                <Badge variant="outline" className="shrink-0 rounded-full text-[11px]">주소 {geocodingText}</Badge>
+              </div>
             </div>
 
-            <div className="mt-3 flex flex-wrap gap-2">
+            <div className="mt-3 flex flex-nowrap gap-2">
               {record.status === 'deleted' ? (
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-8 w-full"
+                  className="h-9 w-full rounded-full"
                   onClick={(e) => {
                     e.stopPropagation();
                     onRestore?.(record);
@@ -1356,7 +1243,7 @@ export function EvaluationTable({
                   <Button
                     size="sm"
                     variant="outline"
-                    className="h-8 flex-1 min-w-[96px]"
+                    className="h-9 min-w-0 flex-1 rounded-full"
                     onClick={(e) => {
                       e.stopPropagation();
                       onEdit?.(record);
@@ -1371,7 +1258,7 @@ export function EvaluationTable({
                     variant="destructive"
                     aria-label="검수 항목 삭제"
                     title="검수 항목 삭제"
-                    className="h-8 w-9 p-0"
+                    className="h-9 w-10 rounded-full p-0"
                     onClick={(e) => {
                       e.stopPropagation();
                       onDelete(record);
@@ -1385,7 +1272,7 @@ export function EvaluationTable({
                 <>
                   <Button
                     size="sm"
-                    className="h-8 flex-1 min-w-[96px]"
+                    className="h-9 min-w-0 flex-1 rounded-full"
                     onClick={(e) => {
                       e.stopPropagation();
                       onApprove(record);
@@ -1400,7 +1287,7 @@ export function EvaluationTable({
                     <Button
                       size="sm"
                       variant="outline"
-                      className="h-8 flex-1 min-w-[96px]"
+                      className="h-9 min-w-0 flex-1 rounded-full"
                       onClick={(e) => {
                         e.stopPropagation();
                         onEdit(record);
@@ -1416,7 +1303,7 @@ export function EvaluationTable({
                     variant="destructive"
                     aria-label="검수 항목 삭제"
                     title="검수 항목 삭제"
-                    className="h-8 w-9 p-0"
+                    className="h-9 w-10 rounded-full p-0"
                     onClick={(e) => {
                       e.stopPropagation();
                       onDelete(record);
@@ -1432,7 +1319,7 @@ export function EvaluationTable({
             <Button
               variant="ghost"
               size="sm"
-              className="mt-2 h-8 w-full justify-between text-xs"
+              className="mt-2 h-8 w-full justify-between rounded-full bg-muted/40 px-3 text-xs"
               onClick={() => toggleExpand(record.id)}
             >
               전체 검수 정보
@@ -1440,7 +1327,7 @@ export function EvaluationTable({
             </Button>
 
             {isExpanded && (
-              <div className="mt-2 space-y-2 rounded-md border bg-muted/20 p-2.5 text-[11px]">
+              <div className="mt-2 space-y-2 rounded-xl bg-muted/35 p-2.5 text-[11px]">
                 <div>
                   <p className="font-semibold text-foreground">평가 항목</p>
                   <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5">
@@ -1458,7 +1345,7 @@ export function EvaluationTable({
                   )}
                 </div>
 
-                <div className="rounded-md border bg-background p-2">
+                <div className="rounded-lg bg-background/70 p-2">
                   <p className="font-semibold text-foreground">검수 정보</p>
                   <dl className="mt-1.5 space-y-1.5">
                     <div className="flex justify-between gap-2">
@@ -1484,7 +1371,7 @@ export function EvaluationTable({
                   </dl>
                 </div>
 
-                <div className="rounded-md border bg-background p-2">
+                <div className="rounded-lg bg-background/70 p-2">
                   <p className="font-semibold text-foreground">주소</p>
                   <p className="mt-1 break-all"><span className="text-muted-foreground">원본:</span> {originAddress}</p>
                   <p className="mt-1 break-all"><span className="text-muted-foreground">도로명:</span> {roadAddress}</p>
@@ -1492,7 +1379,7 @@ export function EvaluationTable({
                 </div>
 
                 {(record.is_missing || record.status === 'not_selected' || record.db_error_message) && (
-                  <div className="space-y-1 rounded-md border border-destructive/40 bg-destructive/5 p-2">
+                  <div className="space-y-1 rounded-lg bg-destructive/5 p-2">
                     {record.is_missing && (
                       <p className="text-destructive">
                         누락 사유: {record.missing_message || 'restaurants 배열 누락'}
@@ -1511,17 +1398,17 @@ export function EvaluationTable({
                   </div>
                 )}
 
-                <div className="rounded-md border bg-background p-2">
+                <div className="rounded-lg bg-background/70 p-2">
                   <p className="font-semibold text-foreground">판정 근거</p>
                   <p className="mt-1 whitespace-pre-wrap break-all text-muted-foreground">{reasoningBasis}</p>
                 </div>
 
-                <div className="rounded-md border bg-background p-2">
+                <div className="rounded-lg bg-background/70 p-2">
                   <p className="font-semibold text-foreground">쯔양 리뷰 요약</p>
                   <p className="mt-1 whitespace-pre-wrap break-all text-muted-foreground">{tzuyangReview}</p>
                 </div>
 
-                <div className="overflow-hidden rounded-md border bg-background">
+                <div className="overflow-hidden rounded-lg bg-background/70">
                   <EvaluationRowDetails
                     record={record}
                     onEdit={() => onEdit?.(record)}
@@ -1529,7 +1416,7 @@ export function EvaluationTable({
                 </div>
               </div>
             )}
-          </div>
+          </article>
           );
         })}
       </div>
@@ -1545,15 +1432,6 @@ export function EvaluationTable({
             ? "flex h-full min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain space-y-3 pb-[calc(var(--mobile-bottom-nav-height,60px)+env(safe-area-inset-bottom)+12px)]"
             : "space-y-3"
         )}
-        style={shouldRenderMobile ? { touchAction: 'pan-y' } : undefined}
-        onTouchStart={shouldRenderMobile ? handleMobileFilterTouchStart : undefined}
-        onTouchMove={shouldRenderMobile ? handleMobileFilterTouchMove : undefined}
-        onTouchEnd={shouldRenderMobile ? handleMobileFilterSwipeEnd : undefined}
-        onPointerDown={shouldRenderMobile ? handleMobileFilterPointerStart : undefined}
-        onPointerMove={shouldRenderMobile ? handleMobileFilterPointerMove : undefined}
-        onPointerUp={shouldRenderMobile ? handleMobileFilterPointerEnd : undefined}
-        onPointerCancel={shouldRenderMobile ? handleMobileFilterPointerCancel : undefined}
-        onTouchCancel={shouldRenderMobile ? handleMobileFilterTouchCancel : undefined}
       >
         {shouldRenderMobile && (
           <>

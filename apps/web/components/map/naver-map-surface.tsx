@@ -9,6 +9,7 @@ export function NaverMapSurface({
     className,
     count,
     dataTestId,
+    emptyStateMessage,
     floatingToastPositionClass,
     isLoaded,
     isLoadingRestaurants,
@@ -27,6 +28,7 @@ export function NaverMapSurface({
     centerOffsetStyle: CSSProperties;
     className?: string;
     count: number;
+    emptyStateMessage?: string;
     dataTestId?: string;
     floatingToastPositionClass: string;
     isLoaded: boolean;
@@ -67,6 +69,7 @@ export function NaverMapSurface({
                     onAnnouncementToastClick={onAnnouncementToastClick}
                     restaurantCountToastCount={restaurantCountToastCount}
                     restaurantsLength={restaurantsLength}
+                    emptyStateMessage={emptyStateMessage}
                     showAnnouncementToast={showAnnouncementToast}
                     showOnlineUsers={showOnlineUsers}
                     showRestaurantCount={showRestaurantCount}
