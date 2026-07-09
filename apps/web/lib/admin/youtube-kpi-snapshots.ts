@@ -50,6 +50,18 @@ type VideoSnapshotRow = {
 type BucketRow = {
   bucket_started_at: string;
 };
+export type LatestYouTubeKpiMetric = {
+  videoId: string;
+  title: string | null;
+  publishedAt: string | null;
+  duration: number;
+  viewCount: number;
+  likeCount: number;
+  commentCount: number;
+  bucketStartedAt: string;
+  fetchedAt: string | null;
+};
+
 
 function toNonNegativeNumber(
   value: unknown,
@@ -165,6 +177,13 @@ async function fetchPreviousSnapshotMap(
 ): Promise<Map<string, VideoSnapshotRow>> {
   if (!bucketStartedAt || videoIds.length === 0) return new Map();
 
+  return fetchSnapshotMapForVideoIds(bucketStartedAt, videoIds);
+}
+
+async function fetchSnapshotMapForVideoIds(
+  bucketStartedAt: string,
+  videoIds: string[],
+): Promise<Map<string, VideoSnapshotRow>> {
   const supabase = createSupabaseServiceRoleClient();
   const result = new Map<string, VideoSnapshotRow>();
   const chunkSize = 200;
@@ -177,7 +196,7 @@ async function fetchPreviousSnapshotMap(
       .eq('bucket_started_at', bucketStartedAt)
       .in('video_id', chunk);
 
-    if (error) throw new Error(`youtube-kpi-snapshot-previous:${error.message}`);
+    if (error) throw new Error(`youtube-kpi-snapshot-video-map:${error.message}`);
     for (const row of (data ?? []) as VideoSnapshotRow[]) {
       result.set(row.video_id, row);
     }
@@ -185,6 +204,7 @@ async function fetchPreviousSnapshotMap(
 
   return result;
 }
+
 
 function getSnapshotComparisonStatus(
   row: VideoSnapshotRow,
@@ -227,6 +247,32 @@ function mapSnapshotRowToVideo(
     comparisonStatus: getSnapshotComparisonStatus(row, previous, comparisonBucketStartedAt),
     ...(normalizedMetricReasons.length > 0 ? { normalizedMetricReasons } : {}),
   };
+}
+export async function getLatestYouTubeKpiMetricsForVideoIds(
+  videoIds: string[],
+): Promise<LatestYouTubeKpiMetric[]> {
+  const uniqueVideoIds = [...new Set(videoIds.map((videoId) => videoId.trim()).filter(Boolean))];
+  if (uniqueVideoIds.length === 0) return [];
+
+  const latestBucket = await fetchLatestBucket();
+  if (!latestBucket) return [];
+
+  const snapshotMap = await fetchSnapshotMapForVideoIds(latestBucket, uniqueVideoIds);
+
+  return uniqueVideoIds
+    .map((videoId) => snapshotMap.get(videoId))
+    .filter((row): row is VideoSnapshotRow => Boolean(row))
+    .map((row) => ({
+      videoId: row.video_id,
+      title: row.title,
+      publishedAt: row.published_at,
+      duration: Math.floor(toNonNegativeNumber(row.duration_seconds, 'duration')),
+      viewCount: toNonNegativeNumber(row.view_count, 'views'),
+      likeCount: toNonNegativeNumber(row.like_count, 'likes'),
+      commentCount: toNonNegativeNumber(row.comment_count, 'comments'),
+      bucketStartedAt: row.bucket_started_at,
+      fetchedAt: row.fetched_at,
+    }));
 }
 
 function buildSnapshotComparisonCoverage(

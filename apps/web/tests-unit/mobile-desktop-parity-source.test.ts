@@ -61,7 +61,7 @@ describe("mobile and desktop parity source contracts", () => {
     expect(consoleSource).toContain("md:w-full");
     expect(consoleSource).toContain("md:items-center md:px-1.5");
     expect(consoleSource).toContain(
-      "p-2 font-sans tracking-normal md:border-y-0 md:p-4",
+      "overscroll-contain scrollbar-hide border-y border-border",
     );
     expect(consoleSource).not.toContain("pb-[calc(env(safe-area-inset-bottom)+5.75rem)]");
     expect(consoleSource).toContain("flex h-14 shrink-0 transform-gpu items-center gap-2");

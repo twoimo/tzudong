@@ -355,7 +355,7 @@ export default function HomeClientEffects({
         const handleMyPageOpen = () => {
             if (!isLoggedIn) {
                 toast.info('로그인 후 마이페이지를 확인할 수 있어요');
-                requestAuthUi({ source: 'home-open-mypage-event', route: '/', reason: 'mypage' });
+                requestAuthUi({ source: 'home-open-mypage-event', route: '/', reason: 'mypage', force: true });
                 return;
             }
 

@@ -170,6 +170,16 @@ describe('OCR extract route normalization/cache contract', () => {
     expect(streamRouteSource).toContain("status: 422");
   });
 
+  test('force refresh rejection copy does not expose dev/admin internals', () => {
+    const routeSource = source('app/api/ocr/extract/route.ts');
+    const streamRouteSource = source('app/api/ocr/extract/stream/route.ts');
+
+    for (const ocrRouteSource of [routeSource, streamRouteSource]) {
+      expect(ocrRouteSource).toContain('OCR 다시 분석 권한이 없습니다.');
+      expect(ocrRouteSource).not.toContain('OCR 강제 재호출은 개발 환경 또는 관리자 계정에서만 사용할 수 있습니다.');
+    }
+  });
+
   test('admin OCR rerun preflights workflow before destructive reset and rolls back dispatch failures', () => {
     const rerunRouteSource = source('app/api/admin/ocr-receipts/rerun/route.ts');
     const dispatchRouteSource = source('app/api/admin/ocr-receipts/route.ts');

@@ -9,6 +9,7 @@ export type AuthUiRequestDetail = {
     route?: string;
     reason?: string;
     ts?: number;
+    force?: boolean;
 };
 
 export function createAuthUiRequestDetail(detail: AuthUiRequestDetail = {}): AuthUiRequestDetail {
@@ -28,6 +29,12 @@ export function requestAuthUi(detail: AuthUiRequestDetail = {}) {
         }));
     };
 
+    if (requestDetail.force) {
+        dispatchRequest();
+        window.setTimeout(dispatchRequest, 50);
+        return;
+    }
+
     if (!hasSupabaseAuthSessionHint()) {
         dispatchRequest();
         return;
@@ -38,7 +45,7 @@ export function requestAuthUi(detail: AuthUiRequestDetail = {}) {
     const finish = (shouldDispatch: boolean) => {
         if (isResolved) return;
         isResolved = true;
-        if (timer) window.clearTimeout(timer);
+        if (timer !== undefined) window.clearTimeout(timer);
         window.removeEventListener(HOME_AUTH_SESSION_UPDATED_EVENT, handleSessionUpdated);
         if (shouldDispatch) dispatchRequest();
     };

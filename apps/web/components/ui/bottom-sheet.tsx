@@ -18,6 +18,7 @@ interface BottomSheetProps {
     className?: string;
     closeThreshold?: number; // Percent
     disableContentScroll?: boolean;
+    contentClassName?: string;
     headerOffset?: number;   // Pixels (e.g., 80px for header + spacing)
     bottomNavOffset?: number; // Pixels (e.g., 56px for bottom nav)
     onSwipeLeft?: () => void;
@@ -107,6 +108,12 @@ export const DEFAULT_FOCUS_TRAP_ALLOW_SELECTORS = [
     '[data-radix-portal]',
     '[data-radix-popper-content-wrapper]',
 ];
+const NESTED_MODAL_PORTAL_ALLOW_SELECTOR = [
+    '[role="dialog"]',
+    '[role="alertdialog"]',
+    '[data-radix-dialog-content]',
+    '[data-radix-alert-dialog-content]',
+].join(', ');
 
 export const BOTTOM_SHEET_BACKDROP_ATTRIBUTE = 'data-bottom-sheet-backdrop';
 
@@ -209,6 +216,29 @@ export const isInsideAllowedFocusRegion = (
 
     return getFocusTrapContainers(primaryContainer, allowSelectors, queryRoot).some((container) => container.contains(target));
 };
+export const isAllowedModalPointerTarget = (
+    target: Node | null,
+    primaryContainer: FocusTrapContainerLike | null,
+    allowSelectors: string[],
+    queryRoot?: FocusTrapQueryRoot
+) => {
+    if (!target) return false;
+    if (isInsideAllowedFocusRegion(target, primaryContainer, allowSelectors, queryRoot)) return true;
+
+    const closestTarget = typeof (target as Node & { closest?: (selector: string) => unknown }).closest === 'function'
+        ? (target as Node & { closest: (selector: string) => unknown })
+        : (target.parentElement as (Element & { closest: (selector: string) => Element | null }) | null);
+    if (closestTarget?.closest(`[${BOTTOM_SHEET_BACKDROP_ATTRIBUTE}]`)) return true;
+    return Boolean(closestTarget?.closest(NESTED_MODAL_PORTAL_ALLOW_SELECTOR));
+};
+
+export const shouldBlockModalOutsidePointerDown = (
+    target: Node | null,
+    primaryContainer: FocusTrapContainerLike | null,
+    allowSelectors: string[],
+    queryRoot?: FocusTrapQueryRoot
+) => !isAllowedModalPointerTarget(target, primaryContainer, allowSelectors, queryRoot);
+
 
 /**
  * 드래그 가능한 바텀시트 컴포넌트
@@ -225,6 +255,7 @@ function BottomSheetComponent({
     className,
     closeThreshold = 15,
     disableContentScroll = false,
+    contentClassName,
     headerOffset = 0,
     bottomNavOffset = 0,
     onSwipeLeft,
@@ -1107,7 +1138,7 @@ function BottomSheetComponent({
         const keepFocusInsideSheet = (event: FocusEvent) => {
             const target = event.target;
             if (!(target instanceof Node)) return;
-            if (isInsideAllowedFocusRegion(target, sheetRef.current, focusTrapAllowSelectors)) return;
+            if (isAllowedModalPointerTarget(target, sheetRef.current, focusTrapAllowSelectors)) return;
 
             const focusableElements = getFocusTrapContainers(sheetRef.current, focusTrapAllowSelectors)
                 .flatMap((container) => getFocusableElements(container as HTMLElement));
@@ -1229,11 +1260,26 @@ function BottomSheetComponent({
     }, [cancelPendingDragHeightRender, isOpen, resetSheetInteractionState]);
 
     useEffect(() => {
-        if (!isOpen || showBackdrop || !closeOnOutsidePointerDown) return;
+        if (!isOpen) return;
 
         const handleOutsidePointerDown = (event: PointerEvent) => {
             const target = event.target as Node | null;
             if (!target) return;
+
+            if (isModal) {
+                if (!shouldBlockModalOutsidePointerDown(target, sheetRef.current, focusTrapAllowSelectors)) return;
+
+                event.preventDefault();
+                event.stopPropagation();
+                event.stopImmediatePropagation();
+
+                if (!showBackdrop && closeOnOutsidePointerDown) {
+                    onClose();
+                }
+                return;
+            }
+
+            if (showBackdrop || !closeOnOutsidePointerDown) return;
             if (sheetRef.current?.contains(target)) return;
             onClose();
         };
@@ -1242,7 +1288,7 @@ function BottomSheetComponent({
         return () => {
             document.removeEventListener('pointerdown', handleOutsidePointerDown, true);
         };
-    }, [closeOnOutsidePointerDown, isOpen, onClose, showBackdrop]);
+    }, [closeOnOutsidePointerDown, focusTrapAllowSelectors, isModal, isOpen, onClose, showBackdrop]);
 
     if (!isOpen) return null;
 
@@ -1350,8 +1396,9 @@ function BottomSheetComponent({
                 <div
                     ref={contentRef}
                     className={cn(
-                        "flex-1 overscroll-contain min-h-0 border-t border-border/50",
-                        disableContentScroll ? "overflow-hidden" : "overflow-y-auto"
+                        "scrollbar-hide flex-1 overscroll-contain min-h-0 border-t border-border/50",
+                        disableContentScroll ? "overflow-hidden" : "overflow-y-auto",
+                        contentClassName
                     )}
                     style={{
                         touchAction: isDragging
