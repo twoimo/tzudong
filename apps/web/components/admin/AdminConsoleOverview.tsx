@@ -234,7 +234,7 @@ const consoleModules: ConsoleModule[] = [
     title: "배너 관리",
     description:
       "사이드바/모바일 팝업 배너의 노출 위치, 우선순위, 미디어 상태를 관리합니다.",
-    href: "/admin/banners",
+    href: "/admin?module=banners",
     icon: ImageIcon,
     badge: "공개 노출",
     actionLabel: "배너 노출 관리",
@@ -254,7 +254,7 @@ const consoleModules: ConsoleModule[] = [
     title: "핵심 인사이트",
     description:
       "조회수/좋아요/댓글/영상 길이 기반 트리맵과 변화 추이를 확인합니다.",
-    href: "/insights",
+    href: "/admin?module=insights",
     icon: BarChart2,
     badge: "분석",
     actionLabel: "핵심 인사이트 보기",
@@ -8246,9 +8246,9 @@ function AdminSidebar({
         data-admin-console-menu-item-mode={isDropdown ? "mobile-dropdown" : "desktop-sidebar"}
         data-admin-console-menu-item-state={isActive ? "active" : "inactive"}
         className={cn(
-          "group relative flex items-center gap-2 overflow-hidden whitespace-nowrap border text-left transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none",
+          "group relative flex min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap border text-left transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none",
           isDropdown
-            ? "min-h-10 w-full rounded-xl px-2.5 py-1.5 text-sm"
+            ? "min-h-9 w-full rounded-lg px-2 py-1.5 text-[13px]"
             : "min-h-9 w-full rounded-lg px-2 py-1 text-sm",
           !isDropdown &&
             isCollapsed &&
@@ -8264,14 +8264,14 @@ function AdminSidebar({
         <span
           className={cn(
             "flex shrink-0 items-center justify-center border transition-colors motion-reduce:transition-none",
-            isDropdown ? "h-7 w-7 rounded-lg" : "h-6 w-6 rounded-md",
+            isDropdown ? "h-6 w-6 rounded-md" : "h-6 w-6 rounded-md",
             isActive
               ? "border-primary-foreground/20 bg-primary-foreground/15 text-primary-foreground"
               : "border-border bg-background/80 text-muted-foreground group-hover:border-primary/20 group-hover:text-primary",
           )}
           aria-hidden="true"
         >
-          <Icon className={cn(isDropdown ? "h-4 w-4" : "h-3.5 w-3.5")} />
+          <Icon className={cn(isDropdown ? "h-3.5 w-3.5" : "h-3.5 w-3.5")} />
         </span>
         <span
           className={cn(
@@ -8606,11 +8606,12 @@ function AdminSidebar({
       id={contentId}
       align="end"
       sideOffset={10}
-      className="max-h-[min(760px,calc(100dvh-24px))] w-[min(25rem,calc(100vw-24px))] overflow-y-auto rounded-2xl border-border bg-card p-2.5 shadow-primary"
+      className="scrollbar-hide max-h-[min(720px,calc(100dvh-20px))] w-[min(23rem,calc(100vw-16px))] overflow-y-auto overscroll-contain rounded-xl border-border bg-card p-2 shadow-primary"
+      style={{ maxHeight: "min(720px, calc(100dvh - 20px))" }}
       aria-label="관리자 콘솔 메뉴"
       data-admin-console-menu-dropdown="true"
     >
-      <div className="mb-2 flex items-center gap-2 rounded-2xl bg-muted/35 p-2">
+      <div className="mb-2 flex items-center gap-2 rounded-xl bg-muted/35 p-2">
         <Link
           href="/"
           className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-background"
@@ -8637,10 +8638,10 @@ function AdminSidebar({
         </div>
       </div>
 
-      <nav className="space-y-2" aria-label="관리자 통합 메뉴">
+      <nav className="grid gap-1.5" aria-label="관리자 통합 메뉴">
         {orderedSidebarSections.map((section) => (
-          <div key={section.label} className="space-y-1">
-            <p className="px-1 text-[11px] font-bold tracking-[0.08em] text-muted-foreground">
+          <div key={section.label} className="min-w-0 rounded-xl bg-background/45 p-1">
+            <p className="px-1.5 pb-1 text-[10px] font-extrabold tracking-[0.08em] text-muted-foreground">
               {section.label}
             </p>
             {section.items.map((item) =>
@@ -9364,14 +9365,14 @@ function AdminMapOverlayOperationsModule() {
 
   return (
     <section
-      className="flex min-h-full flex-col gap-3"
+      className="flex min-h-full min-w-0 flex-col gap-2 md:gap-3"
       aria-labelledby="admin-map-overlays-title"
       data-admin-map-overlays-module="true"
       data-layout-primitives="panel-layout list-detail step-nav stack"
       data-scroll-owner="admin-map-overlays"
     >
-      <Card className="border-border/70 bg-card/95">
-        <CardHeader className="space-y-2 pb-3">
+      <Card className="rounded-xl border-border/60 bg-card/95 shadow-sm">
+        <CardHeader className="space-y-2 p-3 pb-2 md:p-6 md:pb-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
@@ -9391,11 +9392,11 @@ function AdminMapOverlayOperationsModule() {
             변경됩니다.
           </p>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-2 p-3 pt-0 md:space-y-3 md:p-6 md:pt-0">
           <div
             role="tablist"
             aria-label="지도 오버레이 작업 탭"
-            className="grid gap-2 md:grid-cols-3"
+            className="grid grid-cols-3 gap-1 rounded-xl bg-muted/35 p-1 md:gap-2 md:bg-transparent md:p-0"
             data-admin-map-overlays-tabs="manual trend-proposals trend-runs"
           >
             {ADMIN_MAP_OVERLAY_TABS.map((tab) => (
@@ -9405,7 +9406,7 @@ function AdminMapOverlayOperationsModule() {
                 role="tab"
                 aria-selected={activeTab === tab.id}
                 className={cn(
-                  "rounded-xl border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                  "min-w-0 rounded-lg border px-2 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary md:rounded-xl md:p-3",
                   activeTab === tab.id
                     ? "border-primary/40 bg-primary/5 text-foreground"
                     : "border-border bg-background/70 text-muted-foreground hover:bg-muted/60",
@@ -9413,8 +9414,8 @@ function AdminMapOverlayOperationsModule() {
                 data-admin-map-overlays-tab={tab.id}
                 onClick={() => setActiveTab(tab.id)}
               >
-                <span className="block text-sm font-bold">{tab.label}</span>
-                <span className="mt-1 block text-xs leading-5">
+                <span className="block truncate text-xs font-extrabold md:text-sm">{tab.label}</span>
+                <span className="mt-0.5 hidden text-xs leading-5 md:block">
                   {tab.description}
                 </span>
               </button>
@@ -9422,7 +9423,7 @@ function AdminMapOverlayOperationsModule() {
           </div>
 
           <div
-            className="rounded-2xl border border-border/70 bg-background/70 p-3"
+            className="min-w-0 rounded-xl bg-background/70 p-2 md:rounded-2xl md:border md:border-border/70 md:p-3"
             data-admin-map-overlays-active-tab={activeTab}
           >
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
@@ -9430,7 +9431,7 @@ function AdminMapOverlayOperationsModule() {
             </p>
             {activeTab === "manual" ? (
               <div className="mt-2 grid gap-2 text-sm leading-6 text-muted-foreground md:grid-cols-2">
-                <div className="rounded-xl bg-card/80 p-3">
+                <div className="rounded-lg bg-card/80 p-2 md:rounded-xl md:p-3">
                   <p className="font-bold text-foreground">수동 적용 계약</p>
                   <p className="mt-1">
                     `/api/admin/map-overlays/preview`에서 해시와 readback을
@@ -9438,7 +9439,7 @@ function AdminMapOverlayOperationsModule() {
                     승인 데이터를 변경합니다.
                   </p>
                 </div>
-                <div className="rounded-xl bg-card/80 p-3">
+                <div className="rounded-lg bg-card/80 p-2 md:rounded-xl md:p-3">
                   <p className="font-bold text-foreground">운영 순서</p>
                   <p className="mt-1">
                     Preview → Confirm → Apply → Readback → Audit. 공개 홈 지도는
@@ -9455,21 +9456,21 @@ function AdminMapOverlayOperationsModule() {
                 className="mt-2 grid gap-2 text-sm leading-6 text-muted-foreground md:grid-cols-3"
                 data-admin-map-overlays-trend-runs="true"
               >
-                <div className="rounded-xl bg-card/80 p-3">
+                <div className="rounded-lg bg-card/80 p-2 md:rounded-xl md:p-3">
                   <p className="font-bold text-foreground">요청 생성</p>
                   <p className="mt-1">
                     `/api/admin/trend-job-requests`는 관리자 요청만 큐에 등록하고
                     컬렉터/스코어러를 inline 실행하지 않습니다.
                   </p>
                 </div>
-                <div className="rounded-xl bg-card/80 p-3">
+                <div className="rounded-lg bg-card/80 p-2 md:rounded-xl md:p-3">
                   <p className="font-bold text-foreground">상태/취소</p>
                   <p className="mt-1">
                     상태 조회와 queued 취소는 owner-scoped readback으로 표시하며
                     worker claim 이후에는 취소를 성공처럼 꾸미지 않습니다.
                   </p>
                 </div>
-                <div className="rounded-xl bg-card/80 p-3">
+                <div className="rounded-lg bg-card/80 p-2 md:rounded-xl md:p-3">
                   <p className="font-bold text-foreground">백엔드 경계</p>
                   <p className="mt-1">
                     트렌드 수집/평가는 backend worker와 RPC finalization 경로에서만
@@ -9545,7 +9546,7 @@ function InlineModulePanel({
       case "users":
         return <AdminUsersModule key="admin-users" />;
       case "insights":
-        return <InsightsModule key="admin-insights" />;
+        return <InsightsModule key="admin-insights" embedded />;
       default: {
         const exhaustiveModuleId: never = module.id;
         return exhaustiveModuleId;
@@ -9556,13 +9557,14 @@ function InlineModulePanel({
   return (
     <section
       aria-label={`${module.title} 작업 화면`}
-      className="flex min-h-full flex-col md:h-full md:min-h-0"
+      className="flex min-h-full min-w-0 flex-col md:h-full md:min-h-0"
     >
       <div
         className={cn(
-          "min-h-[420px] flex-1 rounded-xl border border-border bg-background shadow-sm md:min-h-0",
+          "min-h-[360px] flex-1 rounded-lg bg-background shadow-none md:min-h-0 md:rounded-xl md:border md:border-border md:shadow-sm",
           "overflow-visible md:overflow-hidden",
         )}
+        data-admin-console-inline-module-panel="true"
       >
         {moduleContent}
       </div>
@@ -10456,7 +10458,7 @@ function AdminYoutubeThumbnailModuleLoadingSkeleton() {
                 캔버스 편집 / PNG 내보내기
               </span>
             </CardTitle>
-            <div className="ml-auto flex min-w-0 flex-nowrap items-center gap-1.5 overflow-hidden pb-1">
+            <div className="ml-auto hidden min-w-0 flex-nowrap items-center gap-1.5 overflow-hidden pb-1 sm:flex">
               <div className="h-8 w-24 shrink-0 rounded-md border border-input bg-background" />
               <div className="h-8 w-20 shrink-0 rounded-md border border-input bg-background" />
               <div className="h-8 w-24 shrink-0 rounded-md border border-input bg-background" />
@@ -10656,14 +10658,19 @@ export function AdminConsoleOverview({
 
   const selectModule = useCallback(
     (moduleId: AdminModuleId) => {
+      const nextHref = buildCanonicalAdminModuleHref(moduleId);
       setActiveModuleId(moduleId);
       setIsMobileHeaderVisible(true);
 
-      router.replace(buildCanonicalAdminModuleHref(moduleId), {
+      router.replace(nextHref, {
         scroll: false,
       });
 
       window.requestAnimationFrame(() => {
+        const currentHref = `${window.location.pathname}${window.location.search}`;
+        if (currentHref !== nextHref) {
+          window.history.replaceState(window.history.state, "", nextHref);
+        }
         canvasRef.current?.scrollTo({ top: 0, left: 0, behavior: "instant" });
         canvasRef.current?.focus({ preventScroll: true });
       });
@@ -10807,8 +10814,9 @@ export function AdminConsoleOverview({
 
     if (isMobileViewportNow && currentScrollTop > 24) {
       previousMobileHeaderScrollTopRef.current = currentScrollTop;
-      mobileChromeHadDownScrollRef.current = true;
-      setAdminMobileChromeHidden(true);
+      if (mobileChromeHadDownScrollRef.current) {
+        setAdminMobileChromeHidden(true);
+      }
       return;
     }
 
@@ -10857,6 +10865,7 @@ export function AdminConsoleOverview({
       if (!isAdminMobileViewport && !window.matchMedia("(max-width: 767px)").matches) return;
 
       if (event.deltaY > 18) {
+        mobileChromeHadDownScrollRef.current = true;
         setAdminMobileChromeHidden(true);
         return;
       }
@@ -10876,6 +10885,7 @@ export function AdminConsoleOverview({
       if (!isAdminMobileViewport && !window.matchMedia("(max-width: 767px)").matches) return;
 
       if (event.deltaY > 18) {
+        mobileChromeHadDownScrollRef.current = true;
         setAdminMobileChromeHidden(true);
         return;
       }
@@ -10918,6 +10928,7 @@ export function AdminConsoleOverview({
         const deltaY = currentY - startY;
 
         if (deltaY <= -24) {
+          mobileChromeHadDownScrollRef.current = true;
           setAdminMobileChromeHidden(true);
           adminCanvasTouchStartYRef.current = currentY;
           handledGestureIntent = true;
