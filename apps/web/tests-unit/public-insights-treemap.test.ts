@@ -67,6 +67,15 @@ describe('public insights treemap route support', () => {
     expect(routeSource).toContain("'Cache-Control': buildTreemapApiCacheControl()");
   });
 
+  test('renders dense public insights treemap context and small-cell guidance', () => {
+    const insightsSource = source('app/insights/insights-client.tsx');
+
+    expect(insightsSource).toContain('data-insights-treemap-context="true"');
+    expect(insightsSource).toContain('트리맵 기준: ${metricLabel} · ${periodLabel} · ${selectedCount.toLocaleString()}개 영상 · ${modeLabel} · ${clusterContextText}');
+    expect(insightsSource).toContain('색상 범례: 전체 ${metricLabel} 비중이 높을수록 밝은 초록색입니다.');
+    expect(insightsSource).toContain('작은 칸 안내: 공간이 좁으면 지표나 …만 표시되고');
+  });
+
   test('builds the exact public treemap CDN cache header', () => {
     expect(buildTreemapApiCacheControl()).toBe('public, max-age=0, s-maxage=60, stale-while-revalidate=300, must-revalidate');
   });

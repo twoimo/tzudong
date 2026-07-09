@@ -38,10 +38,10 @@ export function CategorySidebar({
   );
 
   return (
-    <div className="flex w-full flex-col gap-2 lg:ml-auto lg:w-auto lg:flex-row lg:items-center lg:justify-end lg:gap-2">
+    <div className="flex w-full items-center justify-end gap-1.5 lg:ml-auto lg:w-auto lg:gap-2">
       {children && (
-        <div className="w-full overflow-x-auto py-0.5 lg:w-auto lg:flex-none lg:overflow-visible lg:py-0">
-          <div className="flex min-w-max items-center gap-2 lg:min-w-0 lg:gap-1">{children}</div>
+        <div className="flex w-full justify-end overflow-x-auto py-0.5 scrollbar-hide [scrollbar-width:none] lg:w-auto lg:flex-none lg:overflow-visible lg:py-0 [&::-webkit-scrollbar]:hidden">
+          <div className="flex min-w-max items-center justify-end gap-2 lg:min-w-0 lg:gap-1">{children}</div>
         </div>
       )}
 
@@ -51,28 +51,6 @@ export function CategorySidebar({
         )}
       </div>
 
-      <div className="lg:hidden">
-        <details className="rounded-md border border-border bg-muted/20 p-1.5">
-          <summary className="flex cursor-pointer list-none items-center justify-between text-xs font-medium text-muted-foreground [&::-webkit-details-marker]:hidden">
-            <span>통계 펼치기</span>
-            <span>총 {stats.total}</span>
-          </summary>
-
-          <div className="mt-1.5 space-y-1.5">
-            <div className="grid grid-cols-2 gap-1.5 md:grid-cols-4">
-              {statCategoriesGroup1.map((category, index) =>
-                renderStatChip(category.label, category.count, `g1-${index}`)
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-1.5 md:grid-cols-4">
-              {statCategoriesGroup2.map((category, index) =>
-                renderStatChip(category.label, category.count, `g2-${index}`)
-              )}
-            </div>
-          </div>
-        </details>
-      </div>
     </div>
   );
 }

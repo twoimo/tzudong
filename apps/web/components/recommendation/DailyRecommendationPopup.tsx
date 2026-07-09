@@ -123,6 +123,17 @@ export function DailyRecommendationPopup() {
         window.dispatchEvent(new CustomEvent('dailyRecommendationPopupClosed'));
     };
 
+    const handleDismissToday = () => {
+        if (typeof window !== 'undefined') {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(0, 0, 0, 0);
+            localStorage.setItem(POPUP_STORAGE_KEY, tomorrow.toISOString());
+        }
+        setIsVisible(false);
+        window.dispatchEvent(new CustomEvent('dailyRecommendationPopupClosed'));
+    };
+
     // 맛집의 지역 정보를 추출하는 함수
     const getRestaurantRegion = (restaurant: typeof unvisitedRestaurants[0]): string | null => {
         if (restaurant.address_elements && typeof restaurant.address_elements === 'object') {
@@ -266,15 +277,7 @@ export function DailyRecommendationPopup() {
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
-                                // 오늘 하루 안 보기 설정 후 닫기
-                                if (typeof window !== 'undefined') {
-                                    const tomorrow = new Date();
-                                    tomorrow.setDate(tomorrow.getDate() + 1);
-                                    tomorrow.setHours(0, 0, 0, 0);
-                                    localStorage.setItem(POPUP_STORAGE_KEY, tomorrow.toISOString());
-                                }
-                                setIsVisible(false);
-                                window.dispatchEvent(new CustomEvent('dailyRecommendationPopupClosed'));
+                                handleDismissToday();
                             }}
                             className="flex-1 py-3 text-sm text-muted-foreground hover:bg-accent transition-colors"
                         >

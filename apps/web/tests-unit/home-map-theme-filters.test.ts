@@ -113,6 +113,15 @@ describe('home map theme filters', () => {
 
         expect(ids(applyHomeMapThemeFilter(restaurants, 'hot-view'))).toEqual(['only-valid']);
     });
+    test('accepts snake_case YouTube KPI metric aliases from snapshot-backed metadata', () => {
+        const restaurants = [
+            restaurant('snake-top', { mergedYoutubeMetas: [meta({ view_count: '1000' } as unknown as YoutubeMeta)] }),
+            restaurant('camel-low', { mergedYoutubeMetas: [meta({ viewCount: 10 })] }),
+        ];
+
+        expect(ids(applyHomeMapThemeFilter(restaurants, 'hot-view'))).toEqual(['snake-top']);
+    });
+
 
     test('anchors fresh-video to the latest candidate publish date rather than wall clock', () => {
         const restaurants = [
@@ -123,6 +132,14 @@ describe('home map theme filters', () => {
         ];
 
         expect(ids(applyHomeMapThemeFilter(restaurants, 'fresh-video'))).toEqual(['latest', 'within-window']);
+    });
+    test('accepts snake_case published_at aliases for fresh-video', () => {
+        const restaurants = [
+            restaurant('latest', { mergedYoutubeMetas: [meta({ published_at: '2024-03-01T00:00:00.000Z' } as unknown as YoutubeMeta)] }),
+            restaurant('old', { mergedYoutubeMetas: [meta({ published_at: '2023-01-01T00:00:00.000Z' } as unknown as YoutubeMeta)] }),
+        ];
+
+        expect(ids(applyHomeMapThemeFilter(restaurants, 'fresh-video'))).toEqual(['latest']);
     });
 
     test('counts repeat-video from merged links without metadata and dedupes duplicate links', () => {
