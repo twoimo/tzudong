@@ -32,7 +32,7 @@ export async function GET() {
 
       if (!data || data.length === 0) break;
 
-      records.push(...(data as Record<string, unknown>[]));
+      records.push(...(data as unknown as Record<string, unknown>[]));
 
       if (data.length < PAGE_LIMIT) break;
     }
