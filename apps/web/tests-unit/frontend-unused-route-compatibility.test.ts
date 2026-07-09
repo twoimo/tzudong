@@ -64,7 +64,7 @@ describe('frontend unused route compatibility', () => {
         expect(adminLoadingSource).not.toContain('AdminConsoleLoadingSkeleton');
         expect(adminLoadingSource).not.toContain('GlobalLoader');
         expect(adminBannersSource).toContain('<Suspense fallback={null}>');
-        expect(adminBannersSource).toContain('if (authLoading) {');
+        expect(adminBannersSource).toContain('if (!embedded && authLoading) {');
         expect(adminBannersSource).toContain('return null;');
         expect(adminBannersSource).not.toContain('EmbeddedBannerLoading');
         expect(adminBannersSource).not.toContain('배너 관리 준비 중');
@@ -98,7 +98,9 @@ describe('frontend unused route compatibility', () => {
         expect(adminRoutes).toContain('/admin?module=restaurants');
         expect(adminRoutes).toContain('/admin?module=submissions');
         expect(adminRoutes).toContain('/admin?module=reviews');
-        expect(adminRoutes).toContain('/admin/banners');
+        expect(adminRoutes).toContain('/admin?module=banners');
+        expect(adminRoutes).toContain('/admin?module=insights');
+        expect(adminRoutes).not.toContain('/admin/banners');
         expect(adminRoutes).not.toContain(RETIRED_ADMIN_COSTS_ROUTE);
         const retiredAiSettingsRoute = `/admin/${'ai-settings'}`;
         expect(adminRoutes).not.toContain(retiredAiSettingsRoute);
@@ -108,6 +110,8 @@ describe('frontend unused route compatibility', () => {
         expect(userRoutes).not.toContain('/admin?module=restaurants');
         expect(userRoutes).not.toContain('/admin?module=submissions');
         expect(userRoutes).not.toContain('/admin?module=reviews');
+        expect(userRoutes).not.toContain('/admin?module=banners');
+        expect(userRoutes).not.toContain('/admin?module=insights');
         expect(userRoutes).not.toContain('/admin/banners');
         expect(userRoutes).not.toContain('/admin/submissions');
         expect(userRoutes).not.toContain(retiredAiSettingsRoute);
@@ -129,17 +133,19 @@ describe('frontend unused route compatibility', () => {
     test('keeps the unified admin console as the canonical embedded module hub', () => {
         const adminPageSource = source('app/admin/page.tsx');
         const adminConsoleSource = source('components/admin/AdminConsoleOverview.tsx');
+        const insightsClientSource = source('app/insights/insights-client.tsx');
 
         expect(adminPageSource).toContain('<AdminConsoleOverview initialStoryboardResult={initialStoryboardResult} />');
         expect(adminConsoleSource).toContain('getAdminModuleIdFromSearchParams(searchParams)');
         expect(adminConsoleSource).toContain('buildCanonicalAdminModuleHref');
         expect(adminConsoleSource).toContain('buildCanonicalAdminHrefFromSearchParams(searchParams)');
-        expect(adminConsoleSource).toContain('router.replace(buildCanonicalAdminModuleHref(moduleId)');
+        expect(adminConsoleSource).toContain('const nextHref = buildCanonicalAdminModuleHref(moduleId);');
+        expect(adminConsoleSource).toContain('router.replace(nextHref, {');
         expect(adminConsoleSource).toContain('currentHref !== canonicalHref');
         expect(adminConsoleSource).toContain('router.replace(canonicalHref, { scroll: false });');
         expect(adminConsoleSource).toContain('router.replace');
+        expect(adminConsoleSource).toContain('window.history.replaceState(window.history.state, "", nextHref)');
         expect(adminConsoleSource).not.toContain('검수 큐 작업 화면 연결 중');
-        expect(adminConsoleSource).not.toContain('window.history.replaceState');
         expect(adminConsoleSource).toContain('<AdminEvaluationModule');
         expect(adminConsoleSource).toContain('key="restaurants"');
         expect(adminConsoleSource).toContain('initialView="evaluations"');
@@ -166,7 +172,15 @@ describe('frontend unused route compatibility', () => {
         expect(adminConsoleSource).not.toContain('adminActionsMode="inline"');
         expect(adminConsoleSource).not.toContain('id: "announcements"');
         expect(adminConsoleSource).not.toContain('/admin?module=announcements');
-        expect(adminConsoleSource).toContain('<InsightsModule key="admin-insights" />');
+        expect(adminConsoleSource).toContain('<InsightsModule key="admin-insights" embedded />');
+        expect(adminConsoleSource).toContain('href: "/admin?module=banners"');
+        expect(adminConsoleSource).toContain('href: "/admin?module=insights"');
+        expect(adminConsoleSource).not.toContain('href: "/admin/banners"');
+        expect(adminConsoleSource).not.toContain('href: "/insights"');
+        expect(insightsClientSource).toContain('export default function InsightsClient({ embedded = false }: { embedded?: boolean } = {})');
+        expect(insightsClientSource).toContain('if (!embedded && !isAuthLoading && !user) {');
+        expect(insightsClientSource).toContain('enabled: embedded || (!isAuthLoading && !!user),');
+        expect(insightsClientSource).toContain('{!embedded ? (');
         expect(adminConsoleSource).toContain('shouldRenderAdminShell');
         expect(adminConsoleSource).not.toContain('router.replace("/")');
         expect(adminConsoleSource).not.toContain('if (!user || !isAdmin)');
