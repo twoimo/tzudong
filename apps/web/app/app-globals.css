@@ -1042,7 +1042,9 @@ div[style*="z-index"] > div > .custom-marker {
 [data-admin-dashboard-kpi-title-actions="single-line-scroll"],
 [data-admin-dashboard-metric-tabs="true"],
 [data-admin-console-menu-dropdown="true"],
-[data-admin-sidebar-account-menu-content="true"] {
+[data-admin-sidebar-account-menu-content="true"],
+[data-admin-console-inline-module-panel="true"],
+[data-scroll-owner="route-control-pane"] {
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -1057,7 +1059,9 @@ div[style*="z-index"] > div > .custom-marker {
 [data-admin-dashboard-kpi-title-actions="single-line-scroll"]::-webkit-scrollbar,
 [data-admin-dashboard-metric-tabs="true"]::-webkit-scrollbar,
 [data-admin-console-menu-dropdown="true"]::-webkit-scrollbar,
-[data-admin-sidebar-account-menu-content="true"]::-webkit-scrollbar {
+[data-admin-sidebar-account-menu-content="true"]::-webkit-scrollbar,
+[data-admin-console-inline-module-panel="true"]::-webkit-scrollbar,
+[data-scroll-owner="route-control-pane"]::-webkit-scrollbar {
   display: none;
 }
 
@@ -1083,6 +1087,26 @@ div[style*="z-index"] > div > .custom-marker {
   [data-admin-console-content="true"] {
     width: 100%;
     padding-bottom: calc(var(--mobile-bottom-nav-effective-height, var(--mobile-bottom-nav-height, 60px)) + env(safe-area-inset-bottom) + 0.5rem) !important;
+  }
+
+  [data-admin-console-menu-dropdown="true"] {
+    min-width: min(18rem, calc(100vw - 1rem));
+    max-width: calc(100vw - 1rem);
+  }
+
+  [data-admin-console-inline-module-panel="true"],
+  [data-admin-overview-layout="two-pane"],
+  [data-admin-map-pane="true"],
+  [data-admin-info-pane="true"],
+  [data-admin-map-overlays-module="true"],
+  [data-admin-map-overlays-active-tab],
+  [data-admin-route-planner="true"] {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  [data-admin-console-inline-module-panel="true"] {
+    overflow-x: clip;
   }
 
   [data-admin-dashboard-management="true"] [data-admin-dashboard-widget-card],

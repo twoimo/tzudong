@@ -36,11 +36,11 @@ describe('admin user-management source contract', () => {
     expect(panelSource).toContain('자기 잠금 방지');
     expect(panelSource).toContain('border-b border-border bg-card px-2 py-1.5');
     expect(panelSource).toContain('bg-gradient-primary bg-clip-text text-base font-bold text-transparent');
-    expect(panelSource).toContain('rounded-lg bg-muted/35 p-2');
+    expect(panelSource).toContain('min-w-0 rounded-2xl border border-border/70 bg-muted/25 px-3 py-2 shadow-sm');
     expect(panelSource).toContain('min-h-0 border-border bg-card shadow-sm');
-    expect(panelSource).toContain('overflow-hidden rounded-lg border bg-card');
+    expect(panelSource).toContain('hidden overflow-hidden rounded-lg border bg-card md:block');
+    expect(panelSource).toContain('data-admin-users-mobile-card');
     expect(panelSource).not.toContain('border-border bg-card/95 shadow-sm');
-    expect(panelSource).not.toContain('rounded-xl border border-border bg-background/80 p-3');
     expect(panelSource).toContain('aria-live="polite"');
     expect(panelSource).toContain('AdminUserMutationResponse');
     expect(panelSource).toContain('감사 ID:');
