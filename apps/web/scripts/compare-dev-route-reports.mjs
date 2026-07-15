@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { logCliError } from './privacy-safe-cli-log.mjs';
 
 const args = process.argv.slice(2);
 
@@ -25,7 +26,7 @@ function parseNumberArg(name, fallback) {
   const raw = readArg(name, String(fallback));
   const value = Number(raw);
   if (!Number.isFinite(value) || value < 0) {
-    throw new Error(`${name} must be a non-negative number, got: ${raw}`);
+    throw new Error('Invalid numeric option');
   }
   return value;
 }
@@ -39,7 +40,7 @@ function loadReport(filePath) {
   const resolved = path.resolve(filePath);
   const report = JSON.parse(fs.readFileSync(resolved, 'utf8'));
   if (!report.summaries?.by_route) {
-    throw new Error(`Report does not contain summaries.by_route: ${filePath}`);
+    throw new Error('Invalid report structure');
   }
   return { resolved, report };
 }
@@ -186,6 +187,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(error instanceof Error ? error.message : error);
+  logCliError(error, (line) => process.stderr.write(`[compare-dev-route-reports] ${line}`));
   process.exitCode = 1;
 });

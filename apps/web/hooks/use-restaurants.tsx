@@ -679,7 +679,7 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
             try {
                 data = await fetchSupabaseRows<RestaurantWithOptionalName>('restaurants', query);
             } catch (error) {
-                console.error('레스토랑 데이터 조회 실패:', error instanceof Error ? error.message : error);
+                console.error('레스토랑 데이터 조회 실패:')
                 throw error;
             }
 

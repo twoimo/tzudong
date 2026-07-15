@@ -4,6 +4,8 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
+import { logCliError, safeCliErrorName } from './privacy-safe-cli-log.mjs';
+
 const MANUAL_GATE_ENV = 'STORYBOARD_RAG_PULL_OLLAMA_MODELS';
 const DEFAULT_OUTPUT = '.omx/artifacts/storyboard-rag-ollama-pull/latest.json';
 
@@ -80,14 +82,35 @@ function argValue(name, fallback) {
 }
 
 
-function safeLine(line) {
-  return String(line || '')
-    .replace(/sk-[A-Za-z0-9_-]{12,}/g, '[REDACTED]')
-    .replace(/(token|secret|key)=\S+/gi, '$1=[REDACTED]')
-    .slice(0, 2000);
+function createOllamaListCollector() {
+  const names = new Set();
+  let firstLine = true;
+  let remainder = '';
+
+  const consumeLine = (line) => {
+    if (firstLine) {
+      firstLine = false;
+      return;
+    }
+    const name = line.trim().split(/\s+/)[0];
+    if (name) names.add(name);
+  };
+
+  return {
+    write(chunk) {
+      const lines = `${remainder}${chunk}`.split(/\r?\n/);
+      remainder = lines.pop() || '';
+      for (const line of lines) consumeLine(line);
+    },
+    names() {
+      if (remainder) consumeLine(remainder);
+      remainder = '';
+      return names;
+    },
+  };
 }
 
-function runProcess(command, args, { timeoutMs = 30_000, stream = false } = {}) {
+function runProcess(command, args, { timeoutMs = 30_000, onStdout } = {}) {
   return new Promise((resolve) => {
     const startedAt = new Date().toISOString();
     const child = spawn(command, args, {
@@ -95,8 +118,6 @@ function runProcess(command, args, { timeoutMs = 30_000, stream = false } = {}) 
       stdio: ['ignore', 'pipe', 'pipe'],
       windowsHide: true,
     });
-    const stdout = [];
-    const stderr = [];
     let timedOut = false;
     const timer = setTimeout(() => {
       timedOut = true;
@@ -104,49 +125,37 @@ function runProcess(command, args, { timeoutMs = 30_000, stream = false } = {}) 
     }, timeoutMs);
 
     child.stdout.on('data', (chunk) => {
-      const text = safeLine(chunk.toString('utf8'));
-      stdout.push(text);
-      if (stream) process.stdout.write(text);
+      onStdout?.(chunk.toString('utf8'));
     });
-    child.stderr.on('data', (chunk) => {
-      const text = safeLine(chunk.toString('utf8'));
-      stderr.push(text);
-      if (stream) process.stderr.write(text);
-    });
+    child.stderr.on('data', () => {});
     child.on('error', (error) => {
       clearTimeout(timer);
       resolve({
-        command: [command, ...args],
         exitCode: null,
         timedOut,
         startedAt,
         completedAt: new Date().toISOString(),
-        stdout: stdout.join('').slice(-6000),
-        stderr: `${stderr.join('')}\n${error.name}: ${error.message}`.slice(-6000),
+        errorName: safeCliErrorName(error),
+        errorCode: 'ollama_process_error',
       });
     });
     child.on('close', (exitCode) => {
       clearTimeout(timer);
       resolve({
-        command: [command, ...args],
         exitCode,
         timedOut,
         startedAt,
         completedAt: new Date().toISOString(),
-        stdout: stdout.join('').slice(-6000),
-        stderr: stderr.join('').slice(-6000),
       });
     });
   });
 }
 
-function parseOllamaList(stdout) {
-  const names = new Set();
-  for (const line of String(stdout || '').split(/\r?\n/).slice(1)) {
-    const name = line.trim().split(/\s+/)[0];
-    if (name) names.add(name);
-  }
-  return names;
+function selectedOllamaModels(names) {
+  return OLLAMA_MODELS
+    .filter((model) => names.has(model.id) || (model.pullId && names.has(model.pullId)))
+    .map((model) => model.id)
+    .sort();
 }
 
 async function main() {
@@ -216,21 +225,25 @@ async function main() {
 
   const version = await runProcess('ollama', ['--version'], { timeoutMs: 30_000 });
   result.ollamaAvailable = version.exitCode === 0;
-  result.ollamaVersion = version.exitCode === 0 ? version.stdout.trim() : null;
+  result.ollamaVersion = version.exitCode === 0 ? 'ollama_available' : null;
   if (!result.ollamaAvailable) {
     result.completedAt = new Date().toISOString();
     result.summary.failed = OLLAMA_MODELS.length;
     result.error = 'ollama_unavailable';
     result.installHint = 'Install Ollama locally, then rerun with STORYBOARD_RAG_PULL_OLLAMA_MODELS=1.';
-    result.versionCheck = version;
+    result.versionCheck = {
+      operationCode: 'ollama_version_check',
+      ...version,
+    };
     writeResult(outputPath, result);
     console.log(JSON.stringify(result, null, 2));
     process.exit(strict ? 1 : 0);
   }
 
-  const before = await runProcess('ollama', ['list'], { timeoutMs: 30_000 });
-  const beforeNames = parseOllamaList(before.stdout);
-  result.beforeList = Array.from(beforeNames).sort();
+  const beforeCollector = createOllamaListCollector();
+  await runProcess('ollama', ['list'], { timeoutMs: 30_000, onStdout: beforeCollector.write });
+  const beforeNames = beforeCollector.names();
+  result.beforeList = selectedOllamaModels(beforeNames);
 
   for (const model of OLLAMA_MODELS) {
     const pullId = model.pullId || model.id;
@@ -250,7 +263,6 @@ async function main() {
     }
     const pull = await runProcess('ollama', ['pull', pullId], {
       timeoutMs: pullTimeoutMs,
-      stream: true,
     });
     if (pull.exitCode === 0) {
       result.summary.pulled += 1;
@@ -270,15 +282,17 @@ async function main() {
         status: pull.timedOut ? 'timeout' : 'failed',
         exitCode: pull.exitCode,
         timedOut: pull.timedOut,
-        stderrTail: pull.stderr.slice(-1000),
-        stdoutTail: pull.stdout.slice(-1000),
+        operationCode: 'ollama_pull',
+        errorCode: pull.timedOut ? 'ollama_pull_timeout' : 'ollama_pull_failed',
+        ...(pull.errorName ? { errorName: pull.errorName } : {}),
       });
       console.log(`\nPULL_FAILED ${model.id} via ${pullId} exit=${pull.exitCode ?? 'null'}`);
     }
   }
 
-  const after = await runProcess('ollama', ['list'], { timeoutMs: 30_000 });
-  result.afterList = Array.from(parseOllamaList(after.stdout)).sort();
+  const afterCollector = createOllamaListCollector();
+  await runProcess('ollama', ['list'], { timeoutMs: 30_000, onStdout: afterCollector.write });
+  result.afterList = selectedOllamaModels(afterCollector.names());
   result.completedAt = new Date().toISOString();
   writeResult(outputPath, result);
   console.log(JSON.stringify(result, null, 2));
@@ -296,11 +310,14 @@ main().catch((error) => {
     schemaVersion: 1,
     kind: 'storyboard-rag-ollama-pull',
     status: 'script_error',
-    error: `${error?.name || 'Error'}: ${safeLine(error?.message || error)}`,
+    operationCode: 'storyboard_rag_ollama_pull',
+    errorName: safeCliErrorName(error),
+    errorCode: 'storyboard_rag_ollama_pull_failed',
     completedAt: new Date().toISOString(),
   };
   const outputPath = argValue('--output', DEFAULT_OUTPUT);
   writeResult(outputPath, failed);
+  logCliError({ name: failed.errorName, code: failed.errorCode }, (line) => process.stderr.write(`[storyboard-rag-ollama-pull] ${line}`));
   console.log(JSON.stringify(failed, null, 2));
   process.exit(1);
 });

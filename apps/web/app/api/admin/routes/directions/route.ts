@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/require-admin";
+import { reserveAdminProviderBudget } from "@/lib/security/admin-provider-budget";
 import { getAdminSafeErrorName } from "@/lib/admin/guarded-mutation-contract";
+import { readBoundedJsonRequest } from "@/lib/security/bounded-json-request";
+import { isTrustedSameOriginMutation } from "@/lib/security/same-origin-mutation";
 import {
   buildNaverDirectionsReadiness,
   buildProviderReadiness,
@@ -13,22 +16,33 @@ export const runtime = "nodejs";
 const NAVER_DIRECTIONS_ENDPOINT =
   "https://maps.apigw.ntruss.com/map-direction/v1/driving";
 const MAX_DIRECTIONS_POINTS = 7; // start + goal + up to 5 waypoints (Directions 5)
-const DEFAULT_DIRECTIONS_OPTION = "trafast";
-const NAVER_DIRECTIONS_PROVIDER_CACHE_TTL_MS = 60 * 1000;
-const NAVER_DIRECTIONS_RATE_LIMIT_WINDOW_MS = 60 * 1000;
-const NAVER_DIRECTIONS_RATE_LIMIT_MAX = 20;
+const MAX_DIRECTIONS_POINT_ID_LENGTH = 96;
+const MAX_DIRECTIONS_POINT_NAME_LENGTH = 160;
+const MAX_NAVER_DIRECTIONS_RESPONSE_BYTES = 256 * 1024;
+const MAX_NAVER_DIRECTIONS_ROUTE_GROUPS = 6;
+const MAX_NAVER_DIRECTIONS_CANDIDATES_PER_GROUP = 3;
+const MAX_NAVER_DIRECTIONS_PATH_POINTS = 2_000;
+const NAVER_DIRECTIONS_PROVIDER_TIMEOUT_MS = 7_500;
+const NAVER_DIRECTIONS_OPTIONS = [
+  "trafast",
+  "tracomfort",
+  "traoptimal",
+  "trarecommend",
+  "traavoidcaronly",
+  "traavoidtoll",
+] as const;
+const MAX_DIRECTIONS_REQUEST_BYTES = 16 * 1024;
+const CONTROL_CHARACTERS = /[\u0000-\u001f\u007f]/;
+const ADMIN_DIRECTIONS_REQUEST_KEYS = ["points", "option", "mode"] as const;
+const ADMIN_DIRECTIONS_REQUIRED_REQUEST_KEYS = ["points"] as const;
+const ADMIN_DIRECTIONS_POINT_KEYS = ["id", "name", "lat", "lng"] as const;
+const ADMIN_DIRECTIONS_REQUIRED_POINT_KEYS = ["lat", "lng"] as const;
+const ADMIN_DIRECTIONS_MODES = ["driving", "walking", "mixed"] as const;
 
 type AdminDirectionsProviderCacheState = "hit" | "miss" | "bypass";
 
-type AdminDirectionsRouteMode = "driving" | "walking" | "mixed";
-
-const adminDirectionsProviderCache = new Map<string, { expiresAt: number; payload: Record<string, unknown> }>();
-const adminDirectionsRateLimits = new Map<string, { windowStartedAt: number; count: number }>();
-
-function getCheckedAt() {
-  return new Date().toISOString();
-}
-
+type NaverDirectionsOption = (typeof NAVER_DIRECTIONS_OPTIONS)[number];
+type AdminDirectionsMode = (typeof ADMIN_DIRECTIONS_MODES)[number];
 
 type AdminDirectionsRequestPoint = {
   id?: unknown;
@@ -60,25 +74,254 @@ type NaverDirectionsSummary = {
 
 type NaverDirectionsCandidate = {
   summary?: NaverDirectionsSummary;
-  path?: unknown;
+  path: [number, number][];
 };
 
 type NaverDirectionsResponse = {
-  code?: number;
-  message?: string;
-  route?: Record<string, NaverDirectionsCandidate[] | undefined>;
+  route: Partial<Record<NaverDirectionsOption, NaverDirectionsCandidate[]>>;
 };
 
-function normalizeNaverDirectionsSummary(summary: NaverDirectionsSummary | undefined): NaverDirectionsSummary | null {
-  if (!summary) return null;
+function getCheckedAt() {
+  return new Date().toISOString();
+}
 
-  const normalized: NaverDirectionsSummary = {};
-  for (const key of ["distance", "duration", "tollFare", "taxiFare", "fuelPrice"] as const) {
-    const value = summary[key];
-    if (isFiniteCoordinate(value)) normalized[key] = value;
+function isFiniteCoordinate(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function isValidLatitude(value: unknown): value is number {
+  return isFiniteCoordinate(value) && value >= -90 && value <= 90;
+}
+
+function isValidLongitude(value: unknown): value is number {
+  return isFiniteCoordinate(value) && value >= -180 && value <= 180;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+function hasExactDirectionsKeys(
+  value: Record<string, unknown>,
+  allowedKeys: readonly string[],
+  requiredKeys: readonly string[],
+) {
+  const keys = Object.keys(value);
+  return (
+    keys.every((key) => allowedKeys.includes(key))
+    && requiredKeys.every((key) => Object.hasOwn(value, key))
+  );
+}
+
+function hasExactDirectionsRequestKeys(value: Record<string, unknown>) {
+  return hasExactDirectionsKeys(
+    value,
+    ADMIN_DIRECTIONS_REQUEST_KEYS,
+    ADMIN_DIRECTIONS_REQUIRED_REQUEST_KEYS,
+  );
+}
+
+function hasExactDirectionsPointKeys(value: Record<string, unknown>) {
+  return hasExactDirectionsKeys(
+    value,
+    ADMIN_DIRECTIONS_POINT_KEYS,
+    ADMIN_DIRECTIONS_REQUIRED_POINT_KEYS,
+  );
+}
+
+function hasValidDirectionsPointTypes(value: Record<string, unknown>) {
+  return (
+    typeof value.lat === "number"
+    && typeof value.lng === "number"
+    && (!Object.hasOwn(value, "id") || typeof value.id === "string")
+    && (!Object.hasOwn(value, "name") || typeof value.name === "string")
+  );
+}
+
+function normalizeDirectionsLabel(value: unknown, maximumLength: number) {
+  if (value === undefined) return undefined;
+  if (
+    typeof value !== "string"
+    || value.length === 0
+    || value.length > maximumLength
+    || value.trim().length === 0
+    || CONTROL_CHARACTERS.test(value)
+  ) {
+    return null;
+  }
+  return value;
+}
+
+function normalizeDirectionsPoint(
+  point: AdminDirectionsRequestPoint,
+): AdminDirectionsPoint | null {
+  if (!isValidLatitude(point.lat) || !isValidLongitude(point.lng)) {
+    return null;
   }
 
-  return Object.keys(normalized).length > 0 ? normalized : null;
+  const id = normalizeDirectionsLabel(point.id, MAX_DIRECTIONS_POINT_ID_LENGTH);
+  const name = normalizeDirectionsLabel(point.name, MAX_DIRECTIONS_POINT_NAME_LENGTH);
+  if (id === null || name === null) return null;
+
+  return {
+    id,
+    name,
+    lat: point.lat,
+    lng: point.lng,
+  };
+}
+
+function formatDirectionsCoordinate(point: AdminDirectionsPoint) {
+  return `${point.lng},${point.lat}`;
+}
+
+function isNaverDirectionsOption(value: string): value is NaverDirectionsOption {
+  return (NAVER_DIRECTIONS_OPTIONS as readonly string[]).includes(value);
+}
+function isAdminDirectionsMode(value: string): value is AdminDirectionsMode {
+  return (ADMIN_DIRECTIONS_MODES as readonly string[]).includes(value);
+}
+
+function normalizeDirectionsMode(value: unknown): AdminDirectionsMode | null {
+  if (value === undefined) return "driving";
+  return typeof value === "string" && isAdminDirectionsMode(value) ? value : null;
+}
+
+
+function normalizeDirectionsOption(option: unknown): NaverDirectionsOption | null {
+  if (option === undefined) return "trafast";
+  return typeof option === "string" && isNaverDirectionsOption(option) ? option : null;
+}
+
+
+async function readBoundedNaverDirectionsJson(response: Response): Promise<unknown> {
+  const contentLength = response.headers.get("content-length");
+  if (contentLength !== null) {
+    const declaredLength = Number(contentLength);
+    if (!Number.isSafeInteger(declaredLength) || declaredLength < 0) {
+      throw new Error("NAVER_DIRECTIONS_RESPONSE_LENGTH_INVALID");
+    }
+    if (declaredLength > MAX_NAVER_DIRECTIONS_RESPONSE_BYTES) {
+      throw new Error("NAVER_DIRECTIONS_RESPONSE_TOO_LARGE");
+    }
+  }
+
+  if (!response.body) throw new Error("NAVER_DIRECTIONS_RESPONSE_MISSING");
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > MAX_NAVER_DIRECTIONS_RESPONSE_BYTES) {
+        await reader.cancel();
+        throw new Error("NAVER_DIRECTIONS_RESPONSE_TOO_LARGE");
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)) as unknown;
+}
+
+function normalizeNaverDirectionsSummary(value: unknown): NaverDirectionsSummary | undefined {
+  if (value === undefined) return undefined;
+  if (!isRecord(value)) throw new Error("NAVER_DIRECTIONS_SUMMARY_INVALID");
+
+  const summary: NaverDirectionsSummary = {};
+  for (const key of ["distance", "duration", "tollFare", "taxiFare", "fuelPrice"] as const) {
+    const amount = value[key];
+    if (amount === undefined) continue;
+    if (!isFiniteCoordinate(amount) || amount < 0) {
+      throw new Error("NAVER_DIRECTIONS_SUMMARY_INVALID");
+    }
+    summary[key] = amount;
+  }
+  return Object.keys(summary).length > 0 ? summary : undefined;
+}
+
+function parseNaverDirectionsResponse(
+  value: unknown,
+): NaverDirectionsResponse {
+  if (!isRecord(value) || value.code !== 0 || !isRecord(value.route)) {
+    throw new Error("NAVER_DIRECTIONS_RESPONSE_INVALID");
+  }
+
+  const routeEntries = Object.entries(value.route);
+  if (
+    routeEntries.length === 0
+    || routeEntries.length > MAX_NAVER_DIRECTIONS_ROUTE_GROUPS
+  ) {
+    throw new Error("NAVER_DIRECTIONS_ROUTE_GROUPS_INVALID");
+  }
+
+  const route: Partial<Record<NaverDirectionsOption, NaverDirectionsCandidate[]>> = {};
+  for (const [label, rawCandidates] of routeEntries) {
+    if (
+      !isNaverDirectionsOption(label)
+      || !Array.isArray(rawCandidates)
+      || rawCandidates.length > MAX_NAVER_DIRECTIONS_CANDIDATES_PER_GROUP
+    ) {
+      throw new Error("NAVER_DIRECTIONS_ROUTE_INVALID");
+    }
+
+    route[label] = rawCandidates.map((rawCandidate) => {
+      if (!isRecord(rawCandidate) || !Array.isArray(rawCandidate.path)) {
+        throw new Error("NAVER_DIRECTIONS_CANDIDATE_INVALID");
+      }
+      if (rawCandidate.path.length > MAX_NAVER_DIRECTIONS_PATH_POINTS) {
+        throw new Error("NAVER_DIRECTIONS_PATH_TOO_LARGE");
+      }
+
+      const path = rawCandidate.path.map((coordinate) => {
+        if (!Array.isArray(coordinate) || coordinate.length !== 2) {
+          throw new Error("NAVER_DIRECTIONS_PATH_INVALID");
+        }
+        const [lng, lat] = coordinate;
+        if (!isValidLongitude(lng) || !isValidLatitude(lat)) {
+          throw new Error("NAVER_DIRECTIONS_PATH_INVALID");
+        }
+        return [lng, lat] as [number, number];
+      });
+
+      return {
+        path,
+        summary: normalizeNaverDirectionsSummary(rawCandidate.summary),
+      };
+    });
+  }
+
+  return { route };
+}
+
+function extractNaverDirectionsCandidate(
+  data: NaverDirectionsResponse,
+  option: NaverDirectionsOption,
+) {
+  return data.route[option]?.find((candidate) => candidate.path.length > 1);
+}
+
+function normalizeNaverDirectionsPath(path: [number, number][]) {
+  if (path.length > MAX_NAVER_DIRECTIONS_PATH_POINTS) return [];
+
+  const normalized: { lat: number; lng: number }[] = [];
+  for (const coordinate of path) {
+    const [lng, lat] = coordinate;
+    if (!isValidLatitude(lat) || !isValidLongitude(lng)) return [];
+    normalized.push({ lat, lng });
+  }
+  return normalized;
 }
 
 type AdminDirectionsFallbackReason =
@@ -87,7 +330,8 @@ type AdminDirectionsFallbackReason =
   | "naver-directions-credentials-missing"
   | "naver-directions-auth-failed"
   | "naver-directions-empty-route"
-  | "naver-directions-rate-limited";
+  | "naver-directions-rate-limited"
+  | "naver-directions-budget-unavailable";
 
 type AdminDirectionsFallbackContract = {
   mode: "read_only_local_heuristic";
@@ -98,121 +342,24 @@ type AdminDirectionsFallbackContract = {
   roadRouteAvailable: false;
   roadDistanceTrusted: false;
   routeGeometrySource: "none";
-  distanceSource: "local-coordinate-estimate";
+  distanceSource: "none";
   providerRequestAttempted: boolean;
 };
-
-function isFiniteCoordinate(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value);
-}
-
-function normalizeDirectionsPoint(
-  point: AdminDirectionsRequestPoint,
-): AdminDirectionsPoint | null {
-  if (!isFiniteCoordinate(point.lat) || !isFiniteCoordinate(point.lng)) {
-    return null;
-  }
-
-  if (
-    point.lat < -90 ||
-    point.lat > 90 ||
-    point.lng < -180 ||
-    point.lng > 180
-  ) {
-    return null;
-  }
-
-  return {
-    id: typeof point.id === "string" ? point.id : undefined,
-    name: typeof point.name === "string" ? point.name : undefined,
-    lat: point.lat,
-    lng: point.lng,
-  };
-}
-
-function formatDirectionsCoordinate(point: AdminDirectionsPoint) {
-  return `${point.lng},${point.lat}`;
-}
-
-function normalizeDirectionsOption(option: unknown) {
-  if (typeof option !== "string") return DEFAULT_DIRECTIONS_OPTION;
-
-  return /^[a-z]+$/i.test(option) ? option : DEFAULT_DIRECTIONS_OPTION;
-}
-
-function normalizeDirectionsMode(mode: unknown): AdminDirectionsRouteMode {
-  return mode === "walking" || mode === "mixed" || mode === "driving" ? mode : "driving";
-}
-
-function buildDirectionsProviderCacheKey(
-  points: AdminDirectionsPoint[],
-  option: string,
-  mode: AdminDirectionsRouteMode,
-) {
-  return [
-    mode,
-    option,
-    ...points.map((point) => `${point.id ?? ""}:${point.name ?? ""}:${point.lat},${point.lng}`),
-  ].join("|");
-}
-
-function readAdminDirectionsRateLimit(userId: string) {
-  const now = Date.now();
-  const current = adminDirectionsRateLimits.get(userId);
-  if (!current || now - current.windowStartedAt >= NAVER_DIRECTIONS_RATE_LIMIT_WINDOW_MS) {
-    const next = { windowStartedAt: now, count: 1 };
-    adminDirectionsRateLimits.set(userId, next);
-    return { limited: false, remaining: NAVER_DIRECTIONS_RATE_LIMIT_MAX - 1, windowSeconds: 60 };
-  }
-  const windowSeconds = Math.ceil((NAVER_DIRECTIONS_RATE_LIMIT_WINDOW_MS - (now - current.windowStartedAt)) / 1000);
-  if (current.count >= NAVER_DIRECTIONS_RATE_LIMIT_MAX) {
-    return { limited: true, remaining: 0, windowSeconds };
-  }
-  current.count += 1;
-  return { limited: false, remaining: NAVER_DIRECTIONS_RATE_LIMIT_MAX - current.count, windowSeconds };
-}
 
 function buildDirectionsReadback({
   provider,
   providerCache,
   fallbackReasonCode = null,
-  rateLimit,
 }: {
   provider: "naver-directions5" | "local-heuristic";
   providerCache: AdminDirectionsProviderCacheState;
   fallbackReasonCode?: AdminDirectionsFallbackReason | null;
-  rateLimit?: { limited: boolean; remaining: number; windowSeconds: number };
 }) {
   return {
     provider,
     providerCache,
-    rateLimit,
     fallbackReasonCode,
   };
-}
-
-function extractNaverDirectionsCandidate(data: NaverDirectionsResponse) {
-  const routeGroups = data.route ? Object.values(data.route) : [];
-  return routeGroups
-    .flatMap((group) => group ?? [])
-    .find(
-      (candidate) => Array.isArray(candidate.path) && candidate.path.length > 1,
-    );
-}
-
-function normalizeNaverDirectionsPath(path: unknown) {
-  if (!Array.isArray(path)) return [];
-
-  return path
-    .map((coordinate) => {
-      if (!Array.isArray(coordinate) || coordinate.length < 2) return null;
-      const [lng, lat] = coordinate;
-      if (!isFiniteCoordinate(lat) || !isFiniteCoordinate(lng)) return null;
-      return { lat, lng };
-    })
-    .filter((coordinate): coordinate is { lat: number; lng: number } =>
-      Boolean(coordinate),
-    );
 }
 
 function buildLocalDirectionsFallbackContract(
@@ -227,7 +374,7 @@ function buildLocalDirectionsFallbackContract(
     roadRouteAvailable: false,
     roadDistanceTrusted: false,
     routeGeometrySource: "none",
-    distanceSource: "local-coordinate-estimate",
+    distanceSource: "none",
     providerRequestAttempted: fallbackReasonCode !== "naver-directions-credentials-missing",
   };
 }
@@ -245,7 +392,6 @@ function buildLocalDirectionsFallback(
     diagnostics: {},
   }),
   providerCache: AdminDirectionsProviderCacheState = "bypass",
-  rateLimit?: { limited: boolean; remaining: number; windowSeconds: number },
 ) {
   const fallbackContract = buildLocalDirectionsFallbackContract(fallbackReasonCode);
   return NextResponse.json(
@@ -265,10 +411,26 @@ function buildLocalDirectionsFallback(
         provider: "local-heuristic",
         providerCache,
         fallbackReasonCode,
-        rateLimit,
       }),
     },
     { headers: { "Cache-Control": "no-store" } },
+  );
+}
+
+function buildInvalidDirectionsPointsResponse(validPointCount: number) {
+  return NextResponse.json(
+    {
+      error: "At least two valid route points are required",
+      readiness: buildProviderReadiness({
+        provider: NAVER_DIRECTIONS_PROVIDER_ID,
+        status: "unknown",
+        reasonCode: "naver-directions-points-invalid",
+        checkedAt: getCheckedAt(),
+        remediation: "Send two to seven valid, bounded route points before calling Naver Directions.",
+        diagnostics: { validPointCount },
+      }),
+    },
+    { status: 400, headers: { "Cache-Control": "no-store" } },
   );
 }
 
@@ -278,15 +440,15 @@ export async function POST(request: NextRequest) {
     auth.response.headers.set("Cache-Control", "no-store");
     return auth.response;
   }
+  if (!isTrustedSameOriginMutation(request)) {
+    return NextResponse.json(
+      { error: "Forbidden" },
+      { status: 403, headers: { "Cache-Control": "no-store" } },
+    );
+  }
 
-
-  let body: AdminDirectionsRequestBody;
-  try {
-    const rawBody = await request.json();
-    body = rawBody && typeof rawBody === "object" && !Array.isArray(rawBody)
-      ? rawBody as AdminDirectionsRequestBody
-      : {};
-  } catch {
+  const requestBody = await readBoundedJsonRequest(request, MAX_DIRECTIONS_REQUEST_BYTES);
+  if (!requestBody.ok) {
     return NextResponse.json(
       {
         error: "Invalid JSON body",
@@ -303,84 +465,145 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const requestPoints = Array.isArray(body.points) ? body.points : [];
-  const points = requestPoints
-    .map((point) =>
-      point && typeof point === "object" && !Array.isArray(point)
-        ? normalizeDirectionsPoint(point)
-        : null,
-    )
-    .filter((point): point is AdminDirectionsPoint => Boolean(point))
-    .slice(0, MAX_DIRECTIONS_POINTS);
+  if (
+    !isRecord(requestBody.value)
+    || !hasExactDirectionsRequestKeys(requestBody.value)
+  ) {
+    return buildInvalidDirectionsPointsResponse(0);
+  }
 
-  if (points.length < 2) {
+  const body = requestBody.value as AdminDirectionsRequestBody;
+  const requestPoints = body.points;
+  if (
+    !Array.isArray(requestPoints)
+    || requestPoints.length > MAX_DIRECTIONS_POINTS
+    || !requestPoints.every(
+      (point) =>
+        isRecord(point)
+        && hasExactDirectionsPointKeys(point)
+        && hasValidDirectionsPointTypes(point),
+    )
+  ) {
+    return buildInvalidDirectionsPointsResponse(0);
+  }
+
+  const option = normalizeDirectionsOption(body.option);
+  if (!option) {
     return NextResponse.json(
       {
-        error: "At least two valid route points are required",
+        error: "Invalid route option",
         readiness: buildProviderReadiness({
           provider: NAVER_DIRECTIONS_PROVIDER_ID,
           status: "unknown",
-          reasonCode: "naver-directions-points-invalid",
+          reasonCode: "naver-directions-request-invalid",
           checkedAt: getCheckedAt(),
-          remediation: "Send at least two valid latitude/longitude points before calling Naver Directions.",
-          diagnostics: { validPointCount: points.length },
+          remediation: "Use a supported Naver Directions route option.",
+          diagnostics: {},
         }),
       },
       { status: 400, headers: { "Cache-Control": "no-store" } },
     );
   }
 
+  if (!normalizeDirectionsMode(body.mode)) {
+    return NextResponse.json(
+      {
+        error: "Invalid route mode",
+        readiness: buildProviderReadiness({
+          provider: NAVER_DIRECTIONS_PROVIDER_ID,
+          status: "unknown",
+          reasonCode: "naver-directions-request-invalid",
+          checkedAt: getCheckedAt(),
+          remediation: "Use a supported route planning mode.",
+          diagnostics: {},
+        }),
+      },
+      { status: 400, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
+  const points = requestPoints.map((point) => normalizeDirectionsPoint(point));
+  if (points.some((point) => point === null)) {
+    return buildInvalidDirectionsPointsResponse(
+      points.filter((point): point is AdminDirectionsPoint => point !== null).length,
+    );
+  }
+
+  const normalizedPoints = points as AdminDirectionsPoint[];
+  if (normalizedPoints.length < 2) {
+    return buildInvalidDirectionsPointsResponse(normalizedPoints.length);
+  }
+
   const credentials = resolveNaverDirectionsCredentials(process.env);
   const configuredReadiness = buildNaverDirectionsReadiness(process.env, getCheckedAt());
-  const option = normalizeDirectionsOption(body.option);
-  const mode = normalizeDirectionsMode(body.mode);
-  const providerCacheKey = buildDirectionsProviderCacheKey(points, option, mode);
-
   if (!credentials.clientId || !credentials.clientSecret) {
     return buildLocalDirectionsFallback(
-      points,
+      normalizedPoints,
       "naver-directions-credentials-missing",
       "네이버 Directions 키가 없어 직선거리 기반 후보로 표시합니다.",
       configuredReadiness,
     );
   }
 
-  const rateLimit = readAdminDirectionsRateLimit(auth.userId);
-  if (rateLimit.limited) {
-    return buildLocalDirectionsFallback(
-      points,
-      "naver-directions-rate-limited",
-      "네이버 Directions 요청이 분당 한도를 넘어 직선거리 기반 후보를 표시합니다.",
-      buildProviderReadiness({
-        provider: NAVER_DIRECTIONS_PROVIDER_ID,
-        status: "degraded",
-        reasonCode: "naver-directions-rate-limited",
-        checkedAt: getCheckedAt(),
-        remediation: "Wait for the one-minute admin Directions window to reset.",
-        diagnostics: { maxPerMinute: NAVER_DIRECTIONS_RATE_LIMIT_MAX },
-      }),
-      "bypass",
-      rateLimit,
-    );
-  }
-
-  const cachedProviderRoute = adminDirectionsProviderCache.get(providerCacheKey);
-  if (cachedProviderRoute && cachedProviderRoute.expiresAt > Date.now()) {
+  let budget: Awaited<ReturnType<typeof reserveAdminProviderBudget>>;
+  try {
+    budget = await reserveAdminProviderBudget({
+      actorUserId: auth.userId,
+      provider: "naver_directions",
+    });
+  } catch {
     return NextResponse.json(
       {
-        ...cachedProviderRoute.payload,
-        providerCache: "hit",
+        error: "Provider budget unavailable",
+        readiness: buildProviderReadiness({
+          provider: NAVER_DIRECTIONS_PROVIDER_ID,
+          status: "unavailable",
+          reasonCode: "naver-directions-budget-unavailable",
+          checkedAt: getCheckedAt(),
+          remediation: "Restore the durable provider budget service before retrying.",
+          diagnostics: {},
+        }),
+        providerCache: "bypass",
         directionsReadback: buildDirectionsReadback({
-          provider: "naver-directions5",
-          providerCache: "hit",
-          rateLimit,
+          provider: "local-heuristic",
+          providerCache: "bypass",
+          fallbackReasonCode: "naver-directions-budget-unavailable",
         }),
       },
-      { headers: { "Cache-Control": "no-store" } },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
     );
   }
 
-  const [start, ...remainingPoints] = points;
+  if (!budget.allowed) {
+    return NextResponse.json(
+      {
+        error: "Provider request limit exceeded",
+        readiness: buildProviderReadiness({
+          provider: NAVER_DIRECTIONS_PROVIDER_ID,
+          status: "degraded",
+          reasonCode: "naver-directions-rate-limited",
+          checkedAt: getCheckedAt(),
+          remediation: "Retry after the durable provider budget resets.",
+          diagnostics: {},
+        }),
+        providerCache: "bypass",
+        directionsReadback: buildDirectionsReadback({
+          provider: "local-heuristic",
+          providerCache: "bypass",
+          fallbackReasonCode: "naver-directions-rate-limited",
+        }),
+      },
+      {
+        status: 429,
+        headers: {
+          "Cache-Control": "no-store",
+          "Retry-After": String(budget.retryAfterSeconds),
+        },
+      },
+    );
+  }
+
+  const [start, ...remainingPoints] = normalizedPoints;
   const goal = remainingPoints[remainingPoints.length - 1];
   const waypoints = remainingPoints.slice(0, -1);
   const url = new URL(NAVER_DIRECTIONS_ENDPOINT);
@@ -396,28 +619,22 @@ export async function POST(request: NextRequest) {
 
   try {
     const response = await fetch(url, {
+      method: "GET",
       headers: {
         Accept: "application/json",
         "x-ncp-apigw-api-key-id": credentials.clientId,
         "x-ncp-apigw-api-key": credentials.clientSecret,
       },
       cache: "no-store",
+      redirect: "error",
+      signal: AbortSignal.timeout(NAVER_DIRECTIONS_PROVIDER_TIMEOUT_MS),
     });
 
-    const responseText = await response.text();
-    let data: NaverDirectionsResponse = {};
-    if (responseText && response.ok) {
-      try {
-        data = JSON.parse(responseText) as NaverDirectionsResponse;
-      } catch {
-        data = {};
-      }
-    }
-
     if (!response.ok) {
+      await response.body?.cancel();
       if (response.status === 401 || response.status === 403) {
         return buildLocalDirectionsFallback(
-          points,
+          normalizedPoints,
           "naver-directions-auth-failed",
           `네이버 Directions 인증 실패(${response.status})로 직선거리 기반 후보를 표시합니다.`,
           buildProviderReadiness({
@@ -429,7 +646,6 @@ export async function POST(request: NextRequest) {
             diagnostics: { httpStatus: response.status },
           }),
           "miss",
-          rateLimit,
         );
       }
 
@@ -450,19 +666,25 @@ export async function POST(request: NextRequest) {
             provider: "local-heuristic",
             providerCache: "miss",
             fallbackReasonCode: "naver-directions-provider-non-ok",
-            rateLimit,
           }),
         },
         { status: response.status, headers: { "Cache-Control": "no-store" } },
       );
     }
 
-    const candidate = extractNaverDirectionsCandidate(data);
-    const path = normalizeNaverDirectionsPath(candidate?.path);
+    const contentType = response.headers.get("content-type")?.toLowerCase();
+    if (!contentType?.startsWith("application/json")) {
+      await response.body?.cancel();
+      throw new Error("NAVER_DIRECTIONS_RESPONSE_CONTENT_TYPE_INVALID");
+    }
+
+    const data = parseNaverDirectionsResponse(await readBoundedNaverDirectionsJson(response));
+    const candidate = extractNaverDirectionsCandidate(data, option);
+    const path = candidate ? normalizeNaverDirectionsPath(candidate.path) : [];
 
     if (path.length < 2) {
       return buildLocalDirectionsFallback(
-        points,
+        normalizedPoints,
         "naver-directions-empty-route",
         "네이버 Directions가 빈 경로를 반환해 직선거리 기반 후보를 표시합니다.",
         buildProviderReadiness({
@@ -474,15 +696,14 @@ export async function POST(request: NextRequest) {
           diagnostics: { routeCandidateFound: Boolean(candidate) },
         }),
         "miss",
-        rateLimit,
       );
     }
 
     const successPayload = {
       provider: "naver-directions5",
-      points,
+      points: normalizedPoints,
       path,
-      summary: normalizeNaverDirectionsSummary(candidate?.summary),
+      summary: candidate?.summary ?? null,
       readiness: buildProviderReadiness({
         provider: NAVER_DIRECTIONS_PROVIDER_ID,
         status: "ready",
@@ -498,14 +719,8 @@ export async function POST(request: NextRequest) {
       directionsReadback: buildDirectionsReadback({
         provider: "naver-directions5",
         providerCache: "miss",
-        rateLimit,
       }),
     };
-
-    adminDirectionsProviderCache.set(providerCacheKey, {
-      expiresAt: Date.now() + NAVER_DIRECTIONS_PROVIDER_CACHE_TTL_MS,
-      payload: successPayload,
-    });
 
     return NextResponse.json(successPayload, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
@@ -533,7 +748,6 @@ export async function POST(request: NextRequest) {
           provider: "local-heuristic",
           providerCache: "miss",
           fallbackReasonCode: "naver-directions-request-failed",
-          rateLimit,
         }),
       },
       { status: 500, headers: { "Cache-Control": "no-store" } },

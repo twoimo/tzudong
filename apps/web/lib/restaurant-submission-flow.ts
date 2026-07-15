@@ -1,3 +1,5 @@
+import { normalizeCanonicalYouTubeWatchUrl } from '@/lib/youtube-url';
+
 export type RestaurantSubmissionMode = 'new' | 'request';
 
 export interface RestaurantSubmissionFormData {
@@ -24,8 +26,6 @@ export const RESTAURANT_SUBMISSION_STEPS: Array<{
 export function isHttpUrl(value: string): boolean {
     return /^https?:\/\//.test(value.trim());
 }
-
-const YOUTUBE_HOSTS = new Set(['youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be']);
 
 function hasMeaningfulText(value: string): boolean {
     const compact = value.trim().replace(/\s+/g, '');
@@ -69,13 +69,7 @@ function isMeaningfulRequestDescription(value: string): boolean {
 }
 
 export function isRecognizedYouTubeUrl(value: string): boolean {
-    try {
-        const url = new URL(value.trim());
-        if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
-        return YOUTUBE_HOSTS.has(url.hostname.toLowerCase());
-    } catch {
-        return false;
-    }
+    return normalizeCanonicalYouTubeWatchUrl(value) !== null;
 }
 
 export function validateRestaurantSubmissionStep(

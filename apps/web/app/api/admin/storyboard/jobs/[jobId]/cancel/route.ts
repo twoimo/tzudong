@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { requireAdmin } from '@/lib/auth/require-admin';
+import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation';
 import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
 import {
   buildStoryboardRouteHeaders,
@@ -29,12 +30,15 @@ function noStoreJson(telemetry: ReturnType<typeof createStoryboardRouteTelemetry
   });
 }
 
-export async function POST(_request: NextRequest, context: StoryboardJobCancelRouteContext) {
+export async function POST(request: NextRequest, context: StoryboardJobCancelRouteContext) {
   const telemetry = createStoryboardRouteTelemetry('admin-storyboard-job-cancel');
   const auth = await requireAdmin({ allowDevAdminBypassCookie: true });
   if (!auth.ok) {
     auth.response.headers.set('Cache-Control', 'no-store');
     return auth.response;
+  }
+  if (!isTrustedSameOriginMutation(request)) {
+    return noStoreJson(telemetry, { ok: false, error: 'storyboard_job_cancel_forbidden' }, { status: 403 });
   }
 
   const { jobId } = await context.params;

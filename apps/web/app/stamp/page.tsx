@@ -30,7 +30,7 @@ import type { Restaurant } from "@/types/restaurant";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
+import { Group, Panel, Separator } from "react-resizable-panels";
 import { cn } from "@/lib/utils";
 import { StampGridSkeleton } from "@/components/ui/skeleton-loaders";
 import { buildRelatedVerifiedReviewCounts, useRestaurants, mergeRestaurants } from "@/hooks/use-restaurants";
@@ -49,7 +49,7 @@ import {
 import { compareStampRestaurants, type StampRestaurantSortColumn, type StampRestaurantSortDirection } from "@/lib/stamp-restaurant-order";
 import { buildEditRestaurantInitialFormData } from "@/lib/edit-restaurant-request-form";
 import { withRestaurantDisplayName } from "@/lib/restaurant-display-name";
-import type { Json, Tables } from "@/integrations/supabase/types";
+import type { Tables } from "@/integrations/supabase/types";
 
 type SortColumn = StampRestaurantSortColumn;
 
@@ -80,17 +80,6 @@ type ProfileRow = Pick<Tables<'profiles'>, 'user_id' | 'nickname' | 'avatar_url'
 type ReviewLikeRow = Pick<Tables<'review_likes'>, 'review_id'>;
 type RestaurantWithVerifiedCount = Restaurant & { verified_review_count?: number };
 type UserReviewWithRestaurant = UserReview & { restaurant?: RestaurantWithVerifiedCount | null };
-type CreateUserNotificationArgs = {
-    p_user_id: string;
-    p_type: string;
-    p_title: string;
-    p_message: string;
-    p_data: Json;
-};
-type SupabaseRpcClient = {
-    rpc: (fn: 'create_user_notification', args: CreateUserNotificationArgs) => Promise<{ error: unknown }>;
-};
-const RPC_CLIENT = supabase as unknown as SupabaseRpcClient;
 const STAMP_GUIDE_DEMO_RESTAURANT = {
     id: "guide-stamp-demo",
     name: "명동 얼큰수제비",
@@ -364,7 +353,7 @@ export default function StampPage() {
                     verified_review_count: verifiedCountMap.get(restaurant.id) || 0
                 }));
             } catch (error) {
-                console.error('맛집 검색 중 오류:', error);
+                console.error('맛집 검색 중 오류:');
                 return [];
             }
         },
@@ -576,7 +565,7 @@ export default function StampPage() {
                         isPinned: review.is_pinned || false,
                         isEditedByAdmin: review.is_edited_by_admin || false,
                         admin_note: review.admin_note || null,
-                        photos: review.food_photos ? review.food_photos.map((url) => ({ url, type: 'food' as const })) : [],
+                        photos: review.food_photos ? review.food_photos.map((url: string) => ({ url, type: 'food' as const })) : [],
                         category: review.categories?.[0] || '',
                         categories: review.categories || [],
                         likeCount: review.like_count || 0, // 캐시된 값 사용
@@ -587,7 +576,7 @@ export default function StampPage() {
                 const nextCursor = reviewsData.length === REVIEW_PAGE_SIZE ? pageParam + REVIEW_PAGE_SIZE : null;
                 return { reviews, nextCursor };
             } catch (error) {
-                console.error('리뷰 데이터 조회 중 오류:', error);
+                console.error('리뷰 데이터 조회 중 오류:');
                 return { reviews: [], nextCursor: null };
             }
         },
@@ -720,39 +709,40 @@ export default function StampPage() {
         }
         try {
             if (currentIsLiked) {
-                await supabase.from('review_likes').delete().eq('review_id', reviewId).eq('user_id', user.id);
+                const { error } = await supabase
+                    .from('review_likes')
+                    .delete()
+                    .eq('review_id', reviewId)
+                    .eq('user_id', user.id);
+
+                if (error) throw error;
             } else {
-                await supabase.from('review_likes').insert({ review_id: reviewId, user_id: user.id } as never);
+                const { error } = await supabase
+                    .from('review_likes')
+                    .insert({ review_id: reviewId, user_id: user.id } as never);
 
-                // 리뷰 작성자에게 알림 전송 (자기 자신 제외)
-                const targetReview = restaurantReviews.find(r => r.id === reviewId);
-                if (targetReview && targetReview.userId && targetReview.userId !== user.id) {
-                    try {
-                        const likerName =
-                            typeof user.user_metadata?.nickname === 'string'
-                                ? user.user_metadata.nickname
-                                : typeof user.user_metadata?.name === 'string'
-                                    ? user.user_metadata.name
-                                    : '누군가';
+                if (error) throw error;
 
-                        await RPC_CLIENT.rpc('create_user_notification', {
-                            p_user_id: targetReview.userId,
-                            p_type: 'review_like',
-                            p_title: '리뷰에 좋아요가 눌렸어요!',
-                            p_message: `${likerName}님이 ${selectedRestaurant?.name}에 대한 리뷰에 좋아요를 눌렀습니다.`,
-                            p_data: { reviewId, restaurantId: selectedRestaurant?.id, restaurantName: selectedRestaurant?.name }
-                        });
-                    } catch (notifError) {
-                        console.error('알림 생성 실패:', notifError);
+                try {
+                    const notificationResponse = await fetch('/api/notifications/review-like', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ reviewId }),
+                    });
+
+                    if (!notificationResponse.ok) {
+                        // 알림 실패는 이미 적용된 좋아요를 되돌리지 않는다.
                     }
+                } catch {
+                    // 네트워크 오류는 이미 적용된 좋아요를 되돌리지 않는다.
                 }
             }
             queryClient.invalidateQueries({ queryKey: ['restaurant-reviews', selectedRestaurant?.id] });
         } catch (error) {
-            console.error('좋아요 토글 실패:', error);
+            console.error('좋아요 토글 실패:');
             throw error;
         }
-    }, [user, queryClient, selectedRestaurant, restaurantReviews]);
+    }, [user, queryClient, selectedRestaurant]);
 
     const handleWriteReview = useCallback(() => {
         if (!user) {
@@ -856,9 +846,9 @@ export default function StampPage() {
 
     return (
         <>
-            <PanelGroup direction="horizontal" className="h-full bg-background" data-testid="stamp-page-container">
+            <Group orientation="horizontal" className="h-full bg-background" data-testid="stamp-page-container">
                 {/* 왼쪽 패널 - 메인 콘텐츠 */}
-                <Panel id="main-list-panel" order={1} defaultSize={isRightPanelVisible ? 70 : 100} minSize={30} className="overflow-hidden">
+                <Panel id="main-list-panel" defaultSize={isRightPanelVisible ? "70%" : "100%"} minSize="30%" className="overflow-hidden">
                     {/* 스크롤 컨테이너 */}
                     <div
                         ref={mainScrollRef}
@@ -1248,8 +1238,8 @@ export default function StampPage() {
                 {/* 오른쪽 패널 - 리뷰 (데스크톱 전용) */}
                 {isRightPanelVisible && isDesktop && (
                     <>
-                        <PanelResizeHandle className="w-1 bg-border hover:bg-primary/50 transition-colors" />
-                        <Panel id="review-detail-panel" order={2} defaultSize={30} minSize={20} maxSize={50} className="flex flex-col border-l border-border bg-card">
+                        <Separator className="w-1 bg-border hover:bg-primary/50 transition-colors" />
+                        <Panel id="review-detail-panel" defaultSize="30%" minSize="20%" maxSize="50%" className="flex flex-col border-l border-border bg-card">
                             <RestaurantReviewsPanel
                                 restaurant={selectedRestaurant}
                                 reviews={restaurantReviews}
@@ -1276,7 +1266,7 @@ export default function StampPage() {
                         </Panel>
                     </>
                 )}
-            </PanelGroup>
+            </Group>
 
             {/* 바텀 시트 - 리뷰 (모바일/태블릿 전용) */}
             {isMobileOrTablet && isRightPanelVisible && selectedRestaurant && (

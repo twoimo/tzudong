@@ -3,7 +3,7 @@
 Supabase 데이터 삽입 스크립트
 transforms.jsonl 데이터를 Supabase에 삽입합니다.
 
-- trace_id 기반 exact upsert
+- trace_id 기반 exact compare-and-set insert/update
 - reviewed/admin lock 필드 보존
 - reviewed row의 bounded trace_id rebind
 """
@@ -13,10 +13,8 @@ from __future__ import annotations
 import argparse
 from copy import deepcopy
 import json
-import os
 import re
 import sys
-import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable
@@ -31,7 +29,12 @@ BACKEND_ROOT = Path(__file__).resolve().parents[2]
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
+from utils.privacy_log import safe_error_name
 from utils.runtime_paths import load_backend_env, resolve_backend_root
+from utils.supabase_rest import (
+    SupabaseRestConfigurationError,
+    resolve_privileged_supabase_rest_credentials,
+)
 
 SUPABASE_IMPORT_ERROR = None
 try:
@@ -87,9 +90,26 @@ PIPELINE_REFRESH_FIELDS = (
 LEGACY_REVIEW_LOCK_STATUSES = {"approved", "deleted"}
 OPTIONAL_SCHEMA_COMPAT_FIELDS = {"google_name"}
 MISSING_SCHEMA_COLUMN_RE = re.compile(r"Could not find the '([^']+)' column of '([^']+)' in the schema cache")
-MAX_RETRIES = 2
-RETRY_DELAY = 2
 YOUTUBE_LOOKUP_CHUNK_SIZE = 50
+COMPARE_AND_SET_CONFLICT = "compare_and_set_conflict"
+CONDITIONAL_WRITE_FAILED = "conditional_write_failed"
+RESTAURANT_CAS_FIELDS = (
+    "id",
+    "trace_id",
+    "updated_at",
+    *ROW_OWNED_FIELDS,
+    *REVIEW_OWNED_FIELDS,
+    "is_missing",
+    "is_not_selected",
+    "evaluation_results",
+)
+RESTAURANT_CAS_JSONB_FIELDS = {
+    "address_elements",
+    "evaluation_results",
+}
+RESTAURANT_CAS_TEXT_ARRAY_FIELDS = {"categories"}
+RESTAURANT_CAS_READBACK_FIELDS = ",".join(RESTAURANT_CAS_FIELDS)
+
 
 
 def unique_non_empty(values: Iterable[Any]) -> list[Any]:
@@ -329,9 +349,9 @@ def classify_batch_operations(
     existing_map: dict[str, dict[str, Any]],
     review_candidate_map: dict[tuple[str, str], list[dict[str, Any]]],
     stats: dict[str, int],
-) -> tuple[list[dict[str, Any]], list[tuple[str, dict[str, Any]]]]:
+) -> tuple[list[dict[str, Any]], list[tuple[str, dict[str, Any], dict[str, Any]]]]:
     upsert_rows: list[dict[str, Any]] = []
-    rebind_updates: list[tuple[str, dict[str, Any]]] = []
+    rebind_updates: list[tuple[str, dict[str, Any], dict[str, Any]]] = []
 
     for item in batch_data:
         trace_id = item.get("trace_id")
@@ -348,7 +368,13 @@ def classify_batch_operations(
 
         if len(candidates) == 1 and candidates[0].get("id"):
             rebind_target = candidates[0]
-            rebind_updates.append((rebind_target["id"], merge_restaurant_record(rebind_target, item, rebind_trace_id=True)))
+            rebind_updates.append(
+                (
+                    rebind_target["id"],
+                    merge_restaurant_record(rebind_target, item, rebind_trace_id=True),
+                    rebind_target,
+                )
+            )
             stats["trace_rebinds"] += 1
             note_review_lock(rebind_target, stats, exact_match=False)
             continue
@@ -452,11 +478,163 @@ def handle_optional_schema_mismatch_for_rows(
     return sanitized_rows, True
 
 
+def json_filter_value(value: Any) -> str:
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+
+
+def text_array_filter_value(value: list[Any]) -> str:
+    entries = []
+    for item in value:
+        if item is None:
+            entries.append("NULL")
+        else:
+            entries.append('"' + str(item).replace("\\", "\\\\").replace('"', '\\"') + '"')
+    return "{" + ",".join(entries) + "}"
+
+
+def bind_exact_value(query: Any, column: str, value: Any, *, text_array: bool = False, jsonb: bool = False) -> Any:
+    if value is None:
+        return query.is_(column, None)
+    if text_array:
+        return query.eq(column, text_array_filter_value(value))
+    if jsonb:
+        return query.eq(column, json_filter_value(value))
+    return query.eq(column, value)
+
+
+def reviewed_snapshot(existing: dict[str, Any]) -> dict[str, Any]:
+    if any(field not in existing for field in RESTAURANT_CAS_FIELDS):
+        print("[ERROR] restaurants CAS snapshot unavailable; batch aborted.")
+        raise RuntimeError(CONDITIONAL_WRITE_FAILED)
+    return {field: existing[field] for field in RESTAURANT_CAS_FIELDS}
+
+
+def bind_restaurant_compare_and_set(query: Any, snapshot: dict[str, Any]) -> Any:
+    for field in RESTAURANT_CAS_FIELDS:
+        query = bind_exact_value(
+            query,
+            field,
+            snapshot[field],
+            text_array=field in RESTAURANT_CAS_TEXT_ARRAY_FIELDS,
+            jsonb=field in RESTAURANT_CAS_JSONB_FIELDS,
+        )
+    return query
+
+
+def restaurant_snapshot_matches(row: dict[str, Any], snapshot: dict[str, Any]) -> bool:
+    return all(row.get(field) == snapshot[field] for field in RESTAURANT_CAS_FIELDS)
+
+
+def restaurant_readback_matches_payload(row: dict[str, Any], payload: dict[str, Any]) -> bool:
+    return all(row.get(field) == value for field, value in payload.items())
+
+
+def response_rows(response: Any) -> list[dict[str, Any]]:
+    rows = getattr(response, "data", None)
+    return rows if isinstance(rows, list) else []
+
+
+def raise_compare_and_set_conflict() -> None:
+    print("[ERROR] restaurants compare-and-set conflict; batch aborted.")
+    raise RuntimeError(COMPARE_AND_SET_CONFLICT)
+
+
+def raise_conditional_write_failed() -> None:
+    print("[ERROR] restaurants conditional write failed; batch aborted.")
+    raise RuntimeError(CONDITIONAL_WRITE_FAILED)
+
+
+def read_restaurant_by_id(
+    supabase: Client,
+    row_id: Any,
+    columns: str = "*",
+) -> list[dict[str, Any]]:
+    try:
+        return response_rows(
+            supabase.table("restaurants").select(columns).eq("id", row_id).execute()
+        )
+    except Exception:
+        raise_conditional_write_failed()
+    raise AssertionError("unreachable")
+
+
+def execute_conditional_update(
+    supabase: Client,
+    row_id: str,
+    payload: dict[str, Any],
+    existing: dict[str, Any],
+) -> None:
+    snapshot = reviewed_snapshot(existing)
+    if row_id != snapshot["id"]:
+        raise_compare_and_set_conflict()
+
+    current = read_restaurant_by_id(supabase, row_id, RESTAURANT_CAS_READBACK_FIELDS)
+    if len(current) != 1 or not restaurant_snapshot_matches(current[0], snapshot):
+        raise_compare_and_set_conflict()
+
+    update_payload = dict(payload)
+    omitted_columns: set[str] = set()
+    while True:
+        try:
+            affected = response_rows(
+                bind_restaurant_compare_and_set(
+                    supabase.table("restaurants").update(update_payload),
+                    snapshot,
+                ).execute()
+            )
+        except Exception as exc:
+            sanitized_rows, handled = handle_optional_schema_mismatch_for_rows(
+                exc,
+                [update_payload],
+                omitted_columns,
+            )
+            if handled:
+                update_payload = sanitized_rows[0]
+                continue
+            raise_conditional_write_failed()
+
+        if len(affected) != 1:
+            raise_compare_and_set_conflict()
+        break
+
+    readback = read_restaurant_by_id(supabase, row_id)
+    if len(readback) != 1 or not restaurant_readback_matches_payload(readback[0], update_payload):
+        raise_compare_and_set_conflict()
+
+
+def execute_conditional_insert(supabase: Client, payload: dict[str, Any]) -> None:
+    insert_payload = dict(payload)
+    omitted_columns: set[str] = set()
+    while True:
+        try:
+            affected = response_rows(supabase.table("restaurants").insert(insert_payload).execute())
+        except Exception as exc:
+            sanitized_rows, handled = handle_optional_schema_mismatch_for_rows(
+                exc,
+                [insert_payload],
+                omitted_columns,
+            )
+            if handled:
+                insert_payload = sanitized_rows[0]
+                continue
+            raise_conditional_write_failed()
+
+        if len(affected) != 1 or not affected[0].get("id"):
+            raise_compare_and_set_conflict()
+        break
+
+    readback = read_restaurant_by_id(supabase, affected[0]["id"])
+    if len(readback) != 1 or not restaurant_readback_matches_payload(readback[0], insert_payload):
+        raise_compare_and_set_conflict()
+
+
+
 def execute_upsert_rows(
     supabase: Client,
     rows: list[dict[str, Any]],
     dry_run: bool,
     stats: dict[str, int],
+    existing_map: dict[str, dict[str, Any]] | None = None,
 ) -> None:
     if not rows:
         return
@@ -465,33 +643,19 @@ def execute_upsert_rows(
         stats["inserted"] += len(rows)
         return
 
-    upsert_rows = [dict(row) for row in rows]
-    omitted_columns: set[str] = set()
-    attempt = 1
-
-    while attempt <= MAX_RETRIES + 1:
-        try:
-            supabase.table("restaurants").upsert(upsert_rows, on_conflict="trace_id").execute()
-            stats["inserted"] += len(upsert_rows)
-            return
-        except Exception as exc:
-            upsert_rows, handled = handle_optional_schema_mismatch_for_rows(exc, upsert_rows, omitted_columns)
-            if handled:
-                continue
-
-            if attempt <= MAX_RETRIES:
-                print(f"[WARN] 배치 Upsert 실패 (시도 {attempt}/{MAX_RETRIES + 1}): {exc}")
-                time.sleep(RETRY_DELAY)
-                attempt += 1
-            else:
-                print(f"[ERROR] 배치 Upsert 최종 실패 ({MAX_RETRIES + 1}회 시도 후): {exc}")
-                stats["errors"] += len(upsert_rows)
-                return
+    existing_map = existing_map or {}
+    for payload in rows:
+        existing = existing_map.get(payload.get("trace_id"))
+        if existing is None:
+            execute_conditional_insert(supabase, payload)
+        else:
+            execute_conditional_update(supabase, existing["id"], payload, existing)
+        stats["inserted"] += 1
 
 
 def execute_rebind_updates(
     supabase: Client,
-    updates: list[tuple[str, dict[str, Any]]],
+    updates: list[tuple[str, dict[str, Any], dict[str, Any]]],
     dry_run: bool,
     stats: dict[str, int],
 ) -> None:
@@ -502,36 +666,10 @@ def execute_rebind_updates(
         stats["inserted"] += len(updates)
         return
 
-    for row_id, payload in updates:
-        update_payload = dict(payload)
-        omitted_columns: set[str] = set()
-        attempt = 1
+    for row_id, payload, existing in updates:
+        execute_conditional_update(supabase, row_id, payload, existing)
+        stats["inserted"] += 1
 
-        while attempt <= MAX_RETRIES + 1:
-            try:
-                supabase.table("restaurants").update(update_payload).eq("id", row_id).execute()
-                stats["inserted"] += 1
-                break
-            except Exception as exc:
-                sanitized_rows, handled = handle_optional_schema_mismatch_for_rows(
-                    exc,
-                    [update_payload],
-                    omitted_columns,
-                )
-                if handled:
-                    update_payload = sanitized_rows[0]
-                    continue
-
-                if attempt <= MAX_RETRIES:
-                    print(
-                        f"[WARN] trace_id rebind 실패 (id={row_id}, 시도 {attempt}/{MAX_RETRIES + 1}): {exc}"
-                    )
-                    time.sleep(RETRY_DELAY)
-                    attempt += 1
-                else:
-                    print(f"[ERROR] trace_id rebind 최종 실패 (id={row_id}): {exc}")
-                    stats["errors"] += 1
-                    break
 
 
 def process_and_upsert(
@@ -550,15 +688,17 @@ def process_and_upsert(
     if trace_ids:
         try:
             existing_map = fetch_existing_rows_by_trace_id(supabase, trace_ids)
-        except Exception as exc:
-            print(f"[WARN] 기존 trace_id 데이터 조회 실패 (Batch): {exc}")
+        except Exception:
+            print("[ERROR] 기존 trace_id 보호 상태를 확인하지 못해 배치를 중단합니다.")
+            raise RuntimeError("existing_trace_id_prerequisite_read_failed") from None
 
     review_candidate_map: dict[tuple[str, str], list[dict[str, Any]]] = {}
     if youtube_links:
         try:
             review_candidate_map = fetch_review_rebind_candidates(supabase, youtube_links)
-        except Exception as exc:
-            print(f"[WARN] reviewed row 후보 조회 실패 (Batch): {exc}")
+        except Exception:
+            print("[ERROR] reviewed row 보호 상태를 확인하지 못해 배치를 중단합니다.")
+            raise RuntimeError("review_rebind_prerequisite_read_failed") from None
 
     upsert_rows, rebind_updates = classify_batch_operations(
         batch_data,
@@ -568,7 +708,7 @@ def process_and_upsert(
     )
 
     execute_rebind_updates(supabase, rebind_updates, dry_run, stats)
-    execute_upsert_rows(supabase, upsert_rows, dry_run, stats)
+    execute_upsert_rows(supabase, upsert_rows, dry_run, stats, existing_map)
 
     if upsert_rows or rebind_updates:
         print(
@@ -646,30 +786,25 @@ def main() -> None:
     backend_root = resolve_backend_root(Path(__file__).resolve())
     loaded_env = load_backend_env(backend_root, prefer_local=False)
     if loaded_env is not None:
-        print(f"[{datetime.now(KST).strftime('%H:%M:%S')}] [OK] .env 로드: {loaded_env}")
+        print(f"[{datetime.now(KST).strftime('%H:%M:%S')}] [OK] .env 로드 완료")
 
     if create_client is None:
         print("[ERROR] supabase 패키지가 설치되지 않았습니다.")
         print("   pip install supabase 실행")
         if SUPABASE_IMPORT_ERROR is not None:
-            print(f"   상세: {SUPABASE_IMPORT_ERROR}")
+            print(f"   상세: {safe_error_name(SUPABASE_IMPORT_ERROR)}")
         sys.exit(1)
 
-    # Supabase 설정
-    supabase_url = os.getenv("SUPABASE_URL") or os.getenv("VITE_SUPABASE_URL")
-    supabase_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv(
-        "VITE_SUPABASE_PUBLISHABLE_KEY"
-    )
-
-    if not supabase_url or not supabase_key:
-        print("[ERROR] SUPABASE_URL 또는 SUPABASE_KEY 환경변수가 설정되지 않았습니다.")
+    try:
+        credentials = resolve_privileged_supabase_rest_credentials()
+    except SupabaseRestConfigurationError:
+        print("[ERROR] Supabase REST configuration invalid.")
         sys.exit(1)
 
     print(f"[{datetime.now(KST).strftime('%H:%M:%S')}] [OK] Supabase 설정 완료")
-    print(f"   URL: {supabase_url}")
 
     # Supabase 클라이언트 생성
-    supabase: Client = create_client(supabase_url, supabase_key)
+    supabase: Client = create_client(credentials.url, credentials.service_role_key)
 
     # 입력 파일
     input_file = evaluation_path / "evaluation" / "transforms.jsonl"

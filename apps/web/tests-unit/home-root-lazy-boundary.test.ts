@@ -36,6 +36,7 @@ describe('home root runtime boundary', () => {
         const pageSource = source('app/page.tsx');
         const homeFrameSource = source('app/home-frame/page.tsx');
         const proxySource = source('proxy.ts');
+        const publicEligibilitySource = source('lib/auth/public-eligibility-session.ts');
         const homeClientSource = source('app/home-client.tsx');
         const homeRuntimeShellSource = source('app/home-runtime-shell.tsx');
         const homeViewportModeSource = source('hooks/useHomeViewportMode.ts');
@@ -60,8 +61,8 @@ describe('home root runtime boundary', () => {
         expect(homeFrameSource).toContain('<HomeClient />');
         expect(proxySource).not.toContain("NextResponse.rewrite(new URL('/home-static.html', request.url))");
         expect(proxySource).not.toContain('isRootPageRequest');
-        expect(proxySource).toContain("'/'");
-        expect(proxySource).toContain("'/home-frame'");
+        expect(publicEligibilitySource).toContain("'/'");
+        expect(publicEligibilitySource).toContain("'/home-frame'");
 
         expect(homeClientSource.indexOf('<HomeMapContainer')).toBeLessThan(homeClientSource.indexOf('{isViewportResolved && !(isMobileOrTablet && isMapFullscreen)'));
         expect(homeClientSource).toContain('loading: () => null');
@@ -154,13 +155,15 @@ describe('home root runtime boundary', () => {
 
         expect(layoutSource).not.toContain('@vercel/speed-insights/next');
         expect(layoutSource).toContain('<RootSpeedInsights />');
-        expect(rootSpeedInsightsSource).toContain("process.env.VERCEL === '1'");
+        expect(rootSpeedInsightsSource).toContain("environment.VERCEL === '1'");
+        expect(rootSpeedInsightsSource).toContain("= process.env as");
         expect(rootSpeedInsightsSource).toContain("await import('./app-speed-insights')");
         expect(layoutSource).not.toContain('QueryProvider');
         expect(layoutSource).not.toContain('AppProviders');
         expect(layoutSource).not.toContain('MainLayout');
         expect(speedInsightsSource).toContain("import('@vercel/speed-insights/next')");
-        expect(speedInsightsSource).toContain("process.env.NODE_ENV !== 'production'");
+        expect(speedInsightsSource).toContain("nodeEnv === 'production'");
+        expect(speedInsightsSource).toContain('shouldRenderSpeedInsights');
         expect(speedInsightsSource).toContain('enabled');
         expect(speedInsightsSource).toContain('return null');
     });

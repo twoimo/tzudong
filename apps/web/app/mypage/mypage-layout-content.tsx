@@ -197,7 +197,7 @@ export function MyPageLayoutContent({
       toast.success("로그아웃되었습니다");
       router.push("/");
     } catch (error) {
-      console.error("로그아웃 실패:", error);
+      console.error("로그아웃 실패:");
       toast.error("로그아웃에 실패했습니다");
     }
   };
