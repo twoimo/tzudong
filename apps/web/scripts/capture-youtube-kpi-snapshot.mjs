@@ -1,6 +1,13 @@
 #!/usr/bin/env node
 import { existsSync, readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
+import { logCliError, redactCliText } from "./privacy-safe-cli-log.mjs";
+
+const operationError = (code) => {
+  const error = new Error(code);
+  error.code = code;
+  return error;
+};
 
 const YOUTUBE_CHANNELS_ENDPOINT =
   "https://www.googleapis.com/youtube/v3/channels";
@@ -56,7 +63,7 @@ function pickEnv(...names) {
 function requireEnv(...names) {
   const value = pickEnv(...names);
   if (!value) {
-    throw new Error(`Missing required env: ${names.join(" or ")}`);
+    throw operationError("YOUTUBE_KPI_REQUIRED_ENV_MISSING");
   }
   return value;
 }
@@ -114,7 +121,7 @@ function getYouTubeChannelFilter() {
 }
 
 async function fetchYouTubeJson(url) {
-  let lastError;
+  let lastStatus = null;
 
   for (let attempt = 0; attempt <= YOUTUBE_FETCH_RETRY_COUNT; attempt += 1) {
     try {
@@ -123,28 +130,24 @@ async function fetchYouTubeJson(url) {
         signal: AbortSignal.timeout(YOUTUBE_FETCH_TIMEOUT_MS),
       });
       if (!response.ok) {
-        const body = await response.text().catch(() => "");
-        const error = new Error(
-          `youtube-api-failed:${response.status}:${body.slice(0, 240)}`,
-        );
-        error.status = response.status;
-        throw error;
+        lastStatus = response.status;
+      } else {
+        return await response.json();
       }
-      return response.json();
-    } catch (error) {
-      lastError = error;
-      const status = typeof error?.status === "number" ? error.status : null;
-      const shouldRetry =
-        attempt < YOUTUBE_FETCH_RETRY_COUNT &&
-        (status === null || status === 429 || status >= 500);
-      if (!shouldRetry) break;
-      await new Promise((resolve) =>
-        setTimeout(resolve, YOUTUBE_RETRY_BASE_DELAY_MS * (attempt + 1)),
-      );
+    } catch {
+      lastStatus = null;
     }
+
+    const shouldRetry =
+      attempt < YOUTUBE_FETCH_RETRY_COUNT &&
+      (lastStatus === null || lastStatus === 429 || lastStatus >= 500);
+    if (!shouldRetry) break;
+    await new Promise((resolve) =>
+      setTimeout(resolve, YOUTUBE_RETRY_BASE_DELAY_MS * (attempt + 1)),
+    );
   }
 
-  throw lastError;
+  throw operationError("YOUTUBE_API_REQUEST_FAILED");
 }
 
 async function fetchChannel(apiKey) {
@@ -162,7 +165,7 @@ async function fetchChannel(apiKey) {
   const channel = payload.items?.[0];
   const uploadsPlaylistId = channel?.contentDetails?.relatedPlaylists?.uploads;
   if (!channel?.id || !uploadsPlaylistId) {
-    throw new Error("youtube-channel-or-uploads-playlist-not-found");
+    throw operationError("YOUTUBE_CHANNEL_NOT_FOUND");
   }
   return { channel, uploadsPlaylistId };
 }
@@ -269,7 +272,7 @@ async function fetchPreviousChannelSnapshot({
     .maybeSingle();
 
   if (error) {
-    throw new Error(`previous-channel-snapshot:${error.message}`);
+    throw operationError("YOUTUBE_CHANNEL_SNAPSHOT_READ_FAILED");
   }
 
   return data ?? null;
@@ -338,7 +341,7 @@ async function upsertSnapshots({
     .from("youtube_channel_kpi_snapshots")
     .upsert(channelRow, { onConflict: "channel_id,bucket_started_at" });
   if (channelError)
-    throw new Error(`channel-snapshot-upsert:${channelError.message}`);
+    throw operationError("YOUTUBE_CHANNEL_SNAPSHOT_UPSERT_FAILED");
 
   const fetchedAt = new Date().toISOString();
   const videoRows = videoStats.map((video) => ({
@@ -360,7 +363,7 @@ async function upsertSnapshots({
     const { error } = await supabase
       .from("youtube_video_kpi_snapshots")
       .upsert(videoChunk, { onConflict: "video_id,bucket_started_at" });
-    if (error) throw new Error(`video-snapshot-upsert:${error.message}`);
+    if (error) throw operationError("YOUTUBE_VIDEO_SNAPSHOT_UPSERT_FAILED");
   }
 
   return {
@@ -408,18 +411,18 @@ async function main() {
   });
 
   console.log(
-    JSON.stringify({
+    redactCliText(JSON.stringify({
       ok: true,
       bucketStartedAt,
-      channelId: channel.id,
-      uploadsPlaylistId,
       maxPlaylistPages,
       ...result,
-    }),
+    }), 512),
   );
 }
 
 main().catch((error) => {
-  console.error("[capture-youtube-kpi-snapshot] failed:", error);
+  logCliError(error, (line) =>
+    process.stderr.write(`[capture-youtube-kpi-snapshot] ${line}`),
+  );
   process.exit(1);
 });

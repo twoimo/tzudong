@@ -29,8 +29,15 @@ from pathlib import Path
 from tqdm import tqdm
 from PIL import Image
 
-# 경로 설정
+# Shared backend utilities must be imported through the repository root.
 SCRIPT_DIR = Path(__file__).parent.resolve()
+BACKEND_ROOT = SCRIPT_DIR.parents[1]
+REPO_ROOT = BACKEND_ROOT.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from backend.utils.privacy_log import safe_error_name
+
 STORYBOARD_AGENT_SRC = (SCRIPT_DIR / "../../storyboard-agent/src").resolve()
 if str(STORYBOARD_AGENT_SRC) not in sys.path:
     sys.path.insert(0, str(STORYBOARD_AGENT_SRC))
@@ -97,8 +104,8 @@ def load_frames_from_segment(segment_path: Path) -> list[Image.Image]:
         try:
             img = Image.open(f).convert("RGB")
             frames.append(img)
-        except Exception as e:
-            print(f"[WARN] 프레임 로드 실패 {f}: {e}")
+        except Exception as error:
+            print(f"op=frame_load_failed error={safe_error_name(error)}")
     return frames
 
 
@@ -126,8 +133,8 @@ def get_duration_from_meta(
                     data = json.loads(line)
                     if data.get("recollect_id") == recollect_id:
                         return data.get("duration")
-    except Exception as e:
-        print(f"[WARN] 메타 파일 읽기 실패 {meta_file}: {e}")
+    except Exception as error:
+        print(f"op=metadata_duration_read_failed error={safe_error_name(error)}")
 
     return None
 
@@ -146,8 +153,7 @@ def load_model(model_id: str, device: str = None):
     if device is None:
         device = get_device()
 
-    print(f"모델 로딩 중: {model_id}")
-    print(f"디바이스: {device}")
+    print("op=caption_model_loading")
 
     processor = LlavaNextVideoProcessor.from_pretrained(model_id)
 
@@ -174,7 +180,7 @@ def load_model(model_id: str, device: str = None):
             low_cpu_mem_usage=True,
         )
 
-    print(f"[OK] 모델 로드 완료 ({device})")
+    print("op=caption_model_loaded")
     return model, processor
 
 
@@ -259,7 +265,7 @@ def process_video_frames(
     """
     video_frames_path = frames_dir / video_id
     if not video_frames_path.exists():
-        print(f"[WARN] 프레임 디렉토리 없음: {video_frames_path}")
+        print("op=frame_directory_missing")
         return 0
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -315,18 +321,16 @@ def process_video_frames(
 
     processed_count = 0
 
-    print(f"작업 수집 완료: {len(tasks)}개 세그먼트 (provider 순차 처리 시작)", flush=True)
+    print(f"op=caption_tasks_collected segments={len(tasks)}", flush=True)
 
     for task in tasks:
         try:
             frame_paths = get_frame_paths(task["folder"])
             if not frame_paths:
-                print(f"[WARN] 프레임 없음: {task['folder']}")
+                print("op=segment_frames_missing")
                 continue
 
-            print(
-                f"처리 중 {task['video_id']}/{task['recollect_id']}/{task['rank']} ({len(frame_paths)}장)"
-            )
+            print(f"op=caption_task_started frames={len(frame_paths)}")
 
             caption_result = caption_provider.generate(
                 CaptionRequest(
@@ -343,7 +347,7 @@ def process_video_frames(
             )
             result = caption_result.to_jsonl_record()
             result["frames"] = frame_paths
-            print(f"   캡션({result.get('caption_provider')}): {str(result.get('raw_caption'))[:100]}...")
+            print(f"op=caption_task_generated frames={len(frame_paths)}")
 
             with open(caption_path, "a", encoding="utf-8") as f:
                 f.write(json.dumps(result, ensure_ascii=False) + "\n")
@@ -352,9 +356,9 @@ def process_video_frames(
 
         except (CaptionProviderUnavailable, CaptionProviderError):
             raise
-        except Exception as e:
-            print(f"[ERROR] 처리 실패 {task['folder']}: {e}")
-            raise RuntimeError(f"frame caption task failed: {task['folder']}") from e
+        except Exception as error:
+            print(f"op=caption_task_failed error={safe_error_name(error)}")
+            raise RuntimeError("frame_caption_task_failed") from None
 
     return processed_count
 
@@ -435,11 +439,11 @@ def main():
     meta_dir = data_dir / "meta"
 
     if not frames_dir.exists():
-        print(f"[ERROR] Frames directory not found: {frames_dir}")
+        print("op=frames_root_missing")
         return
 
     if not meta_dir.exists():
-        print(f"[WARN] Meta directory not found: {meta_dir} (duration 조회 불가)")
+        print("op=metadata_directory_missing")
 
     provider_id = args.provider or resolve_provider_id()
     if provider_id == "llava_next_video":
@@ -451,7 +455,7 @@ def main():
     if args.video_id:
         video_ids = [args.video_id]
         if not (frames_dir / args.video_id).exists():
-            print(f"[ERROR] Video directory not found: {frames_dir / args.video_id}")
+            print("op=video_directory_missing")
             return
     else:
         video_ids = [
@@ -460,12 +464,7 @@ def main():
             if d.is_dir() and d.name != ".DS_Store"
         ]
 
-    print(f"\n{'='*60}")
-    print(f"{len(video_ids)}개 비디오 폴더 발견: {frames_dir}")
-    print(f"캡션 Provider: {provider_id}")
-    print(f"모델: {getattr(caption_provider, 'model', args.model)}")
-    print(f"출력 경로: {output_dir}")
-    print(f"{'='*60}\n")
+    print(f"op=caption_batch_start videos={len(video_ids)}")
 
     total_processed = 0
 
@@ -480,14 +479,21 @@ def main():
         )
         total_processed += count
 
-    print(f"\n{'='*60}")
-    print(f"[OK] 완료: {total_processed}개 세그먼트 처리")
-    print(f"저장 경로: {output_dir}")
+    print(f"op=caption_batch_complete segments={total_processed}")
 
 
 if __name__ == "__main__":
     try:
         main()
-    except CaptionProviderUnavailable as exc:
-        print(f"[ERROR] Caption provider unavailable: {exc}", file=sys.stderr)
+    except CaptionProviderUnavailable as error:
+        print(
+            f"op=caption_provider_unavailable error={safe_error_name(error)}",
+            file=sys.stderr,
+        )
         sys.exit(2)
+    except Exception as error:
+        print(
+            f"op=caption_generation_failed error={safe_error_name(error)}",
+            file=sys.stderr,
+        )
+        sys.exit(1)

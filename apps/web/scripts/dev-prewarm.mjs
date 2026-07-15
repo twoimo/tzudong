@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
 import process from 'node:process';
+import { logCliError, redactCliText } from './privacy-safe-cli-log.mjs';
 
 const args = process.argv.slice(2);
 const readArg = (name, fallback) => {
@@ -10,7 +11,7 @@ const hasFlag = (name) => args.includes(name);
 
 const port = Number(readArg('--port', process.env.PORT ?? '8080'));
 if (!Number.isInteger(port) || port <= 0) {
-  console.error(`[dev-prewarm] invalid --port: ${readArg('--port', process.env.PORT ?? '8080')}`);
+  process.stderr.write('[dev-prewarm] error=InvalidPort\n');
   process.exit(1);
 }
 
@@ -42,10 +43,20 @@ const child = spawn(
   },
 );
 
+const childOutputLimit = 4_096;
+
 const forward = (stream, target) => {
+  if (!stream?.on) return;
+
   stream.on('data', (chunk) => {
-    target.write(chunk);
-    const text = chunk.toString();
+    const text = typeof chunk === 'string'
+      ? chunk
+      : Buffer.isBuffer(chunk)
+        ? chunk.toString('utf8')
+        : '';
+    if (!text) return;
+
+    target.write(redactCliText(text, childOutputLimit));
     if (shouldPrewarm && !prewarmStarted && readyPattern.test(text)) {
       prewarmStarted = true;
       void runPrewarm();
@@ -68,7 +79,7 @@ async function fetchWithTimeout(url, timeoutMs = 120_000) {
 
 async function runPrewarm() {
   const baseUrl = `http://${host}:${port}`;
-  console.log(`[dev-prewarm] starting ${prewarmPaths.join(', ')} on ${baseUrl}`);
+  console.log(`[dev-prewarm] starting ${prewarmPaths.join(', ')}`);
 
   for (const path of prewarmPaths) {
     const url = `${baseUrl}${path}`;
@@ -80,8 +91,7 @@ async function runPrewarm() {
         console.warn(`[dev-prewarm] ${path} returned ${result.status}; continuing dev server without failing startup`);
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      console.warn(`[dev-prewarm] failed ${path}: ${message}`);
+      logCliError(error, (line) => process.stderr.write(`[dev-prewarm] prewarm ${line}`));
     }
   }
 
@@ -92,7 +102,7 @@ forward(child.stdout, process.stdout);
 forward(child.stderr, process.stderr);
 
 child.on('error', (error) => {
-  console.error(error instanceof Error ? error.message : String(error));
+  logCliError(error, (line) => process.stderr.write(`[dev-prewarm] child-process ${line}`));
   process.exit(1);
 });
 

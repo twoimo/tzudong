@@ -1,10 +1,17 @@
 import { describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+const naverMapSidepanelsSource = () =>
+    readFileSync(join(import.meta.dir, '..', 'components/map/naver-map-sidepanels.tsx'), 'utf8');
 
 describe('lazy map panel boundaries', () => {
-    test('loads the restaurant detail panel module used by on-demand map detail panels', async () => {
-        const mod = await import('../components/restaurant/RestaurantDetailPanel');
+    test('keeps the restaurant detail panel behind the on-demand Naver map loader', () => {
+        const source = naverMapSidepanelsSource();
 
-        expect(typeof mod.RestaurantDetailPanel).toBe('function');
+        expect(source).toContain("const mod = await import('@/components/restaurant/RestaurantDetailPanel')");
+        expect(source).toContain('return mod.RestaurantDetailPanel as ComponentType<RestaurantDetailPanelProps>;');
+        expect(source).not.toContain("import { RestaurantDetailPanel } from '@/components/restaurant/RestaurantDetailPanel'");
     });
 
     test('loads the review modal module used by the on-demand Naver map review modal', async () => {

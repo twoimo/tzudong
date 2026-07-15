@@ -37,16 +37,18 @@ ENV_FILES=(
 )
 
 ENV_LOADED=false
-for env_file in "${ENV_FILES[@]}"; do
-    if [ -f "$env_file" ]; then
-        set -a
-        source "$env_file"
-        set +a
-        ENV_LOADED=true
-        echo "[$(date '+%H:%M:%S')] [OK] .env 파일 로드: $env_file"
-        break
-    fi
-done
+if [ "${TZUDONG_PIPELINE_ISOLATED:-0}" != "1" ]; then
+    for env_file in "${ENV_FILES[@]}"; do
+        if [ -f "$env_file" ]; then
+            set -a
+            source "$env_file"
+            set +a
+            ENV_LOADED=true
+            echo "[$(date '+%H:%M:%S')] [OK] .env 파일 로드: $env_file"
+            break
+        fi
+    done
+fi
 
 if [ "$ENV_LOADED" = false ]; then
     if [ -n "$GEMINI_API_KEY" ]; then

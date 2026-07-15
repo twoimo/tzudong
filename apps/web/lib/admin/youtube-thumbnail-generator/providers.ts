@@ -1195,7 +1195,7 @@ export function getThumbnailProviderAvailability(env: NodeJS.ProcessEnv = proces
       providerId: OPENAI_GPT_IMAGE_2_PROVIDER_ID,
       modelProvenance: 'requested-label' as const,
       liveEnabled: true,
-      browserKeyStorage: 'browser_local_storage_only' as const,
+      browserKeyStorage: 'memory_only_operation_scoped' as const,
       strictExactModelRequired: false,
     }
     : {
@@ -1205,7 +1205,7 @@ export function getThumbnailProviderAvailability(env: NodeJS.ProcessEnv = proces
       providerId: OPENAI_GPT_IMAGE_2_PROVIDER_ID,
       modelProvenance: 'requested-label' as const,
       liveEnabled: true,
-      browserKeyStorage: 'browser_local_storage_only' as const,
+      browserKeyStorage: 'memory_only_operation_scoped' as const,
       strictExactModelRequired: false,
     };
   if (strictBlock) {

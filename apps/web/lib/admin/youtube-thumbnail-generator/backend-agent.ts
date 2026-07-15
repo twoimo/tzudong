@@ -30,11 +30,40 @@ const APP_WEB_MARKER = 'app/api/admin/youtube-thumbnail-generator/route.ts';
 const DEFAULT_THUMBNAIL_AGENT_TIMEOUT_MS = 120_000;
 const MIN_THUMBNAIL_AGENT_TIMEOUT_MS = 5_000;
 const MAX_THUMBNAIL_AGENT_TIMEOUT_MS = 600_000;
+const MAX_THUMBNAIL_AGENT_OUTPUT_BYTES = 64 * 1024;
+const THUMBNAIL_AGENT_TERMINATION_GRACE_MS = 1_000;
 const DEFAULT_THUMBNAIL_AGENT_RUNTIME = 'codex_cli_oauth';
 const DEFAULT_THUMBNAIL_AGENT_CODEX_MODEL = 'gpt-5.5';
 const DEFAULT_THUMBNAIL_AGENT_CODEX_EFFORT = 'low';
 const REQUIRED_PYTHON_MODULES = ['langgraph', 'langchain_core', 'langchain_openai'];
 const UNSAFE_COMMAND_PATTERN = /[;&|`$<>()[\]{}!#\n\r]/;
+const THUMBNAIL_AGENT_ENV_ALLOWLIST = [
+  // Process lookup/runtime state and OAuth credential locations required by the local adapter.
+  'PATH',
+  'Path',
+  'PATHEXT',
+  'SYSTEMROOT',
+  'SystemRoot',
+  'WINDIR',
+  'ComSpec',
+  'HOME',
+  'USERPROFILE',
+  'APPDATA',
+  'LOCALAPPDATA',
+  'XDG_CONFIG_HOME',
+  'TMPDIR',
+  'TMP',
+  'TEMP',
+  'LANG',
+  'LC_ALL',
+  // Adapter-only configuration. The request itself is always delivered through stdin.
+  'THUMBNAIL_AGENT_RUNTIME',
+  'THUMBNAIL_AGENT_CODEX_BIN',
+  'THUMBNAIL_AGENT_TIMEOUT_MS',
+  'THUMBNAIL_AGENT_CODEX_TIMEOUT_MS',
+  'THUMBNAIL_AGENT_CODEX_TIMEOUT_SECONDS',
+] as const;
+const CONFIGURED_SECRET_ENV_NAME = /(?:API(?:_|)?KEY|TOKEN|SECRET|PASSWORD|CREDENTIAL|AUTHORIZATION|BEARER)/i;
 
 function getRuntimeCwd() {
   const cwd = Reflect.get(process, 'cwd');
@@ -44,13 +73,7 @@ function getRuntimeCwd() {
 function resolveFromRuntimeCwd(...segments: string[]) {
   return path.resolve(/* turbopackIgnore: true */ getRuntimeCwd(), ...segments);
 }
-const SECRET_PATTERNS = [
-  /sk-proj-[A-Za-z0-9_-]{12,}/g,
-  /sk-[A-Za-z0-9_-]{12,}/g,
-  /eyJ[A-Za-z0-9_.-]{20,}/g,
-  /(OPENAI[_A-Z]*|SERVICE[_A-Z]*|SUPABASE[_A-Z]*|API[_A-Z]*KEY|TOKEN|SECRET)\s*[:=]\s*[^\s,;]+/gi,
-  /https:\/\/[^\s]+(?:token|key|secret)[^\s]*/gi,
-];
+type CommandTerminationReason = 'aborted' | 'output_limit' | 'spawn_error' | 'timed_out';
 
 type ResolvedThumbnailAgentCommand =
   | { ok: true; executable: string; args: string[]; displayPath: string }
@@ -62,7 +85,6 @@ type CommandResult = {
   timedOut: boolean;
   aborted: boolean;
   stdout: string;
-  stderr: string;
 };
 
 type ThumbnailAgentExecutionOptions = {
@@ -188,9 +210,36 @@ function resolveThumbnailAgentTimeoutMs(env: NodeJS.ProcessEnv = process.env) {
   return Math.min(MAX_THUMBNAIL_AGENT_TIMEOUT_MS, Math.max(MIN_THUMBNAIL_AGENT_TIMEOUT_MS, Math.floor(parsed)));
 }
 
-function sanitizeCommandOutput(raw: string) {
-  return SECRET_PATTERNS.reduce((text, pattern) => text.replace(pattern, '[REDACTED]'), raw);
+function configuredSecretValues(env: NodeJS.ProcessEnv) {
+  const values = new Set<string>();
+  for (const source of [process.env, env]) {
+    for (const [name, value] of Object.entries(source)) {
+      if (CONFIGURED_SECRET_ENV_NAME.test(name) && typeof value === 'string' && value.length >= 8) {
+        values.add(value);
+      }
+    }
+  }
+  return [...values].sort((left, right) => right.length - left.length);
 }
+
+function redactConfiguredSecrets(value: string, env: NodeJS.ProcessEnv) {
+  return configuredSecretValues(env).reduce((text, secret) => text.replaceAll(secret, '[REDACTED]'), value);
+}
+
+function createThumbnailAgentCommandEnv(env: NodeJS.ProcessEnv, options: ThumbnailAgentExecutionOptions): NodeJS.ProcessEnv {
+  const childEnv: NodeJS.ProcessEnv = {
+    NODE_ENV: env.NODE_ENV ?? process.env.NODE_ENV,
+  };
+  for (const name of THUMBNAIL_AGENT_ENV_ALLOWLIST) {
+    const value = env[name] ?? process.env[name];
+    if (typeof value === 'string') childEnv[name] = value;
+  }
+  childEnv.THUMBNAIL_AGENT_CODEX_MODEL = resolveThumbnailAgentCodexModel(env);
+  childEnv.THUMBNAIL_AGENT_CODEX_EFFORT = resolveThumbnailAgentCodexEffort(env);
+  childEnv.THUMBNAIL_AGENT_RUN_ID = options.runId ?? '';
+  return childEnv;
+}
+
 function toShellScriptArg(command: string) {
   return process.platform === 'win32' ? command.replaceAll('\\', '/') : command;
 }
@@ -204,6 +253,10 @@ function resolveScriptCommand(command: string, args: string[], env: NodeJS.Proce
   }
   if (extension === '.sh') {
     return { executable: resolveThumbnailAgentBash(), args: [toShellScriptArg(command), ...args] };
+  }
+  if (process.platform === 'win32' && (extension === '.cmd' || extension === '.bat')) {
+    const commandProcessor = env.ComSpec?.trim() || env.COMSPEC?.trim() || process.env.ComSpec || process.env.COMSPEC || 'cmd.exe';
+    return { executable: commandProcessor, args: ['/d', '/s', '/c', `call "${command}"`, ...args] };
   }
   return { executable: command, args };
 }
@@ -225,7 +278,7 @@ function resolveThumbnailAgentCommand(
   if (command && UNSAFE_COMMAND_PATTERN.test(command)) return { ok: false, reason: 'unsafe-command-string' };
   const executable = firstExistingPath(executableCandidates);
   const extension = path.extname(executable).toLowerCase();
-  if (['.py', '.sh', '.js', '.mjs', '.cjs'].includes(extension) && existsSync(executable)) {
+  if (['.py', '.sh', '.js', '.mjs', '.cjs', '.cmd', '.bat'].includes(extension) && existsSync(executable)) {
     const runnable = resolveScriptCommand(executable, [], env);
     return { ok: true, executable: runnable.executable, args: runnable.args, displayPath: executable };
   }
@@ -428,6 +481,45 @@ function buildLocalAgentPlan(
   };
 }
 
+function hasValidThumbnailAgentPid(pid: number | undefined): pid is number {
+  return typeof pid === 'number' && Number.isSafeInteger(pid) && pid > 0;
+}
+
+function terminateWindowsThumbnailAgentProcessTree(pid: number): Promise<void> {
+  return new Promise((resolve) => {
+    let operationObserved = false;
+    const observeOperation = () => {
+      if (operationObserved) return;
+      operationObserved = true;
+      resolve();
+    };
+    try {
+      const taskkill = spawn('taskkill.exe', ['/pid', String(pid), '/t', '/f'], {
+        shell: false,
+        stdio: 'ignore',
+        windowsHide: true,
+      });
+      taskkill.once('error', observeOperation);
+      taskkill.once('close', observeOperation);
+    } catch {
+      observeOperation();
+    }
+  });
+}
+
+function terminateThumbnailAgentProcessTree(pid: number | undefined, signal: 'SIGTERM' | 'SIGKILL'): Promise<void> {
+  if (!hasValidThumbnailAgentPid(pid)) return Promise.resolve();
+  if (process.platform === 'win32') {
+    return signal === 'SIGKILL' ? terminateWindowsThumbnailAgentProcessTree(pid) : Promise.resolve();
+  }
+  try {
+    process.kill(-pid, signal);
+  } catch {
+    // The close boundary below produces the same fixed failure.
+  }
+  return Promise.resolve();
+}
+
 function runThumbnailAgentCommand(
   command: Extract<ResolvedThumbnailAgentCommand, { ok: true }>,
   payload: Record<string, unknown>,
@@ -436,62 +528,120 @@ function runThumbnailAgentCommand(
 ): Promise<CommandResult> {
   return new Promise((resolve) => {
     if (options.signal?.aborted) {
-      resolve({ ok: false, exitCode: null, timedOut: false, aborted: true, stdout: '', stderr: 'aborted-before-start' });
+      resolve({ ok: false, exitCode: null, timedOut: false, aborted: true, stdout: '' });
       return;
     }
+
     const timeoutMs = resolveThumbnailAgentTimeoutMs(env);
-    const child = spawn(command.executable, command.args, {
-      cwd: existsSync(/* turbopackIgnore: true */ BACKEND_AGENT_ROOT) ? BACKEND_AGENT_ROOT : getRuntimeCwd(),
-      shell: false,
-      stdio: ['pipe', 'pipe', 'pipe'],
-      env: {
-        ...process.env,
-        ...env,
-        THUMBNAIL_AGENT_CODEX_MODEL: resolveThumbnailAgentCodexModel(env),
-        THUMBNAIL_AGENT_CODEX_EFFORT: resolveThumbnailAgentCodexEffort(env),
-        THUMBNAIL_AGENT_RUN_ID: options.runId ?? '',
-        THUMBNAIL_AGENT_JSON: JSON.stringify(payload),
-      },
-    });
+    const child = (() => {
+      try {
+        return spawn(command.executable, command.args, {
+          cwd: existsSync(/* turbopackIgnore: true */ BACKEND_AGENT_ROOT) ? BACKEND_AGENT_ROOT : getRuntimeCwd(),
+          detached: process.platform !== 'win32',
+          shell: false,
+          stdio: ['pipe', 'pipe', 'pipe'],
+          env: createThumbnailAgentCommandEnv(env, options),
+        });
+      } catch {
+        return null;
+      }
+    })();
+    if (!child) {
+      resolve({
+        ok: false,
+        exitCode: null,
+        timedOut: false,
+        aborted: Boolean(options.signal?.aborted),
+        stdout: '',
+      });
+      return;
+    }
+
     let stdout = '';
-    let stderr = '';
+    let outputBytes = 0;
     let settled = false;
+    let closeObserved = false;
+    let closeExitCode: number | null = null;
+    let terminationReason: CommandTerminationReason | null = null;
+    let terminationComplete = false;
+    let terminationTimer: ReturnType<typeof setTimeout> | undefined;
     let cleanup = () => undefined;
-    const timer = setTimeout(() => {
-      if (settled) return;
-      settled = true;
-      child.kill('SIGTERM');
-      cleanup();
-      resolve({ ok: false, exitCode: null, timedOut: true, aborted: false, stdout: sanitizeCommandOutput(stdout), stderr: sanitizeCommandOutput(stderr) });
-    }, timeoutMs);
-    const abort = () => {
+
+    const finish = (exitCode: number | null) => {
       if (settled) return;
       settled = true;
       cleanup();
-      child.kill('SIGTERM');
-      resolve({ ok: false, exitCode: null, timedOut: false, aborted: true, stdout: sanitizeCommandOutput(stdout), stderr: sanitizeCommandOutput(stderr) });
+      resolve({
+        ok: terminationReason === null && exitCode === 0,
+        exitCode,
+        timedOut: terminationReason === 'timed_out',
+        aborted: terminationReason === 'aborted',
+        stdout,
+      });
     };
+    const finishWhenCleanupCompletes = () => {
+      if (settled || !closeObserved || (terminationReason !== null && !terminationComplete)) return;
+      finish(closeExitCode);
+    };
+    const terminate = (reason: CommandTerminationReason) => {
+      if (settled || terminationReason) return;
+      terminationReason = reason;
+      void (async () => {
+        const gracefulTermination = terminateThumbnailAgentProcessTree(child.pid, 'SIGTERM');
+        await new Promise<void>((resolveGrace) => {
+          terminationTimer = setTimeout(resolveGrace, THUMBNAIL_AGENT_TERMINATION_GRACE_MS);
+        });
+        await Promise.all([
+          gracefulTermination,
+          terminateThumbnailAgentProcessTree(child.pid, 'SIGKILL'),
+        ]);
+      })().catch(() => undefined).finally(() => {
+        terminationComplete = true;
+        finishWhenCleanupCompletes();
+      });
+    };
+    const timer = setTimeout(() => terminate('timed_out'), timeoutMs);
+    const abort = () => terminate('aborted');
     options.signal?.addEventListener('abort', abort, { once: true });
     cleanup = () => {
       clearTimeout(timer);
+      if (terminationTimer) clearTimeout(terminationTimer);
       options.signal?.removeEventListener('abort', abort);
     };
 
-    child.stdout.on('data', (chunk) => { stdout += String(chunk); });
-    child.stderr.on('data', (chunk) => { stderr += String(chunk); });
+    const handleOutput = (stream: 'stdout' | 'stderr', chunk: unknown) => {
+      if (terminationReason) return;
+      const chunkBytes = typeof chunk === 'string'
+        ? Buffer.byteLength(chunk)
+        : Buffer.isBuffer(chunk)
+          ? chunk.byteLength
+          : null;
+      if (chunkBytes === null || chunkBytes > MAX_THUMBNAIL_AGENT_OUTPUT_BYTES - outputBytes) {
+        terminate('output_limit');
+        return;
+      }
+      outputBytes += chunkBytes;
+      if (stream === 'stdout' && typeof chunk === 'string') stdout += chunk;
+    };
+
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
+    child.stdout.on('data', (chunk) => handleOutput('stdout', chunk));
+    child.stderr.on('data', (chunk) => handleOutput('stderr', chunk));
+    child.stdin.on('error', () => undefined);
     child.on('close', (exitCode) => {
-      if (settled) return;
-      settled = true;
-      cleanup();
-      resolve({ ok: exitCode === 0, exitCode, timedOut: false, aborted: false, stdout: sanitizeCommandOutput(stdout), stderr: sanitizeCommandOutput(stderr) });
+      closeObserved = true;
+      closeExitCode = exitCode;
+      finishWhenCleanupCompletes();
     });
-    child.on('error', (error) => {
-      if (settled) return;
-      settled = true;
-      cleanup();
-      resolve({ ok: false, exitCode: null, timedOut: false, aborted: false, stdout: sanitizeCommandOutput(stdout), stderr: sanitizeCommandOutput(String(error)) });
-    });
-    child.stdin.end(JSON.stringify(payload));
+    child.on('error', () => terminate('spawn_error'));
+
+    if (options.signal?.aborted) terminate('aborted');
+    try {
+      child.stdin.end(JSON.stringify(payload));
+    } catch {
+      terminate('spawn_error');
+    }
   });
 }
 
@@ -1432,35 +1582,161 @@ export async function generateYoutubeThumbnailChatWithBackendAgent(
   });
 }
 
+const COMMAND_PLAN_FIELDS = new Set([
+  'mode',
+  'runtime',
+  'concept',
+  'layoutBrief',
+  'promptAddendum',
+  'safetyReview',
+  'nextActions',
+  'warnings',
+  'diagnostics',
+]);
+const COMMAND_PLAN_STRING_LIMITS: Record<string, number> = {
+  runtime: 96,
+  concept: 600,
+  layoutBrief: 1200,
+  promptAddendum: 4000,
+  safetyReview: 1000,
+};
+const COMMAND_DIAGNOSTIC_STRING_LIMITS: Record<string, number> = {
+  runtime: 96,
+  model: 128,
+  effort: 32,
+  threadPolicy: 128,
+  imageModelLabel: 256,
+  threadId: 160,
+  graph: 96,
+  graphRuntime: 128,
+  retrievalProof: 1000,
+};
+const COMMAND_DIAGNOSTIC_NUMBER_LIMITS: Record<string, readonly [number, number]> = {
+  referenceImageCount: [0, 8],
+  retrievalEvidenceCount: [0, 32],
+  basePromptLength: [0, 16_000],
+  timeoutSeconds: [5, 600],
+};
+const COMMAND_DIAGNOSTIC_BOOLEAN_FIELDS = new Set(['graphFallback', 'parseFallback']);
+const SUPPRESSED_COMMAND_DIAGNOSTIC_FIELDS = new Set(['stdoutPreview', 'stderrPreview']);
+const MAX_COMMAND_PLAN_DIAGNOSTICS = 12;
+const MAX_COMMAND_PLAN_WARNINGS = 8;
+const MAX_COMMAND_PLAN_NEXT_ACTIONS = 6;
+const MAX_COMMAND_PLAN_WARNING_LENGTH = 320;
+const MAX_COMMAND_PLAN_NEXT_ACTION_LENGTH = 160;
+
+function isCommandPlanRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function parseBoundedCommandStringArray(value: unknown, maxItems: number, maxItemLength: number) {
+  if (!Array.isArray(value) || value.length > maxItems) return null;
+  if (!value.every((item) => typeof item === 'string' && item.length <= maxItemLength)) return null;
+  return value;
+}
+
+function parseCommandDiagnostics(value: unknown): Record<string, string | number | boolean> | null {
+  if (!isCommandPlanRecord(value) || Object.keys(value).length > MAX_COMMAND_PLAN_DIAGNOSTICS) return null;
+
+  const diagnostics: Record<string, string | number | boolean> = {};
+  for (const [name, field] of Object.entries(value)) {
+    if (SUPPRESSED_COMMAND_DIAGNOSTIC_FIELDS.has(name)) {
+      if (field !== '[SUPPRESSED]') return null;
+      continue;
+    }
+
+    const stringLimit = COMMAND_DIAGNOSTIC_STRING_LIMITS[name];
+    if (stringLimit !== undefined) {
+      if (typeof field !== 'string' || field.length > stringLimit) return null;
+      diagnostics[name] = field;
+      continue;
+    }
+
+    const numberLimit = COMMAND_DIAGNOSTIC_NUMBER_LIMITS[name];
+    if (numberLimit) {
+      if (typeof field !== 'number' || !Number.isFinite(field) || field < numberLimit[0] || field > numberLimit[1]) return null;
+      diagnostics[name] = field;
+      continue;
+    }
+
+    if (COMMAND_DIAGNOSTIC_BOOLEAN_FIELDS.has(name) && typeof field === 'boolean') {
+      diagnostics[name] = field;
+      continue;
+    }
+
+    return null;
+  }
+  return diagnostics;
+}
+
 function parseCommandPlan(text: string): Partial<ThumbnailAgentPlan> | null {
   const trimmed = text.trim();
   if (!trimmed) return null;
-  const jsonCandidate = trimmed.startsWith('{') ? trimmed : trimmed.match(/\{[\s\S]*\}/)?.[0] ?? '';
-  if (!jsonCandidate) return null;
+
   try {
-    const parsed = JSON.parse(jsonCandidate) as unknown;
-    return parsed && typeof parsed === 'object' ? parsed as Partial<ThumbnailAgentPlan> : null;
+    const parsed = JSON.parse(trimmed) as unknown;
+    if (!isCommandPlanRecord(parsed) || Object.keys(parsed).some((key) => !COMMAND_PLAN_FIELDS.has(key))) return null;
+    if (parsed.mode !== undefined && parsed.mode !== 'command') return null;
+
+    const plan: Record<string, unknown> = {};
+    for (const [name, maxLength] of Object.entries(COMMAND_PLAN_STRING_LIMITS)) {
+      const value = parsed[name];
+      if (value === undefined) continue;
+      if (typeof value !== 'string' || value.length > maxLength) return null;
+      plan[name] = value;
+    }
+
+    if (parsed.warnings !== undefined) {
+      const warnings = parseBoundedCommandStringArray(
+        parsed.warnings,
+        MAX_COMMAND_PLAN_WARNINGS,
+        MAX_COMMAND_PLAN_WARNING_LENGTH,
+      );
+      if (!warnings) return null;
+      plan.warnings = warnings;
+    }
+    if (parsed.nextActions !== undefined) {
+      const nextActions = parseBoundedCommandStringArray(
+        parsed.nextActions,
+        MAX_COMMAND_PLAN_NEXT_ACTIONS,
+        MAX_COMMAND_PLAN_NEXT_ACTION_LENGTH,
+      );
+      if (!nextActions) return null;
+      plan.nextActions = nextActions;
+    }
+    if (parsed.diagnostics !== undefined) {
+      const diagnostics = parseCommandDiagnostics(parsed.diagnostics);
+      if (!diagnostics) return null;
+      plan.diagnostics = diagnostics;
+    }
+
+    return plan as Partial<ThumbnailAgentPlan>;
   } catch {
     return null;
   }
 }
 
-function normalizeCommandPlan(parsed: Partial<ThumbnailAgentPlan>, fallback: ThumbnailAgentPlan, stderr: string): ThumbnailAgentPlan {
-  const warnings = Array.isArray(parsed.warnings) ? parsed.warnings.filter((warning): warning is string => typeof warning === 'string') : [];
-  const nextActions = Array.isArray(parsed.nextActions) ? parsed.nextActions.filter((action): action is string => typeof action === 'string') : fallback.nextActions;
+function normalizeCommandPlan(
+  parsed: Partial<ThumbnailAgentPlan>,
+  fallback: ThumbnailAgentPlan,
+  env: NodeJS.ProcessEnv,
+): ThumbnailAgentPlan {
+  const redact = (value: string) => redactConfiguredSecrets(value, env);
+  const warnings = (parsed.warnings ?? []).map(redact);
+  const nextActions = (parsed.nextActions ?? fallback.nextActions).map(redact);
+  const diagnostics = Object.fromEntries(
+    Object.entries(parsed.diagnostics ?? {}).map(([name, value]) => [name, typeof value === 'string' ? redact(value) : value]),
+  );
   return {
     mode: 'command',
-    runtime: typeof parsed.runtime === 'string' && parsed.runtime.trim() ? parsed.runtime.trim() : resolveThumbnailAgentRuntime(),
-    concept: typeof parsed.concept === 'string' && parsed.concept.trim() ? parsed.concept.trim().slice(0, 600) : fallback.concept,
-    layoutBrief: typeof parsed.layoutBrief === 'string' && parsed.layoutBrief.trim() ? parsed.layoutBrief.trim().slice(0, 1200) : fallback.layoutBrief,
-    promptAddendum: typeof parsed.promptAddendum === 'string' && parsed.promptAddendum.trim() ? parsed.promptAddendum.trim().slice(0, 4000) : fallback.promptAddendum,
-    safetyReview: typeof parsed.safetyReview === 'string' && parsed.safetyReview.trim() ? parsed.safetyReview.trim().slice(0, 1000) : fallback.safetyReview,
+    runtime: typeof parsed.runtime === 'string' && parsed.runtime.trim() ? redact(parsed.runtime.trim()) : resolveThumbnailAgentRuntime(),
+    concept: typeof parsed.concept === 'string' && parsed.concept.trim() ? redact(parsed.concept.trim()) : fallback.concept,
+    layoutBrief: typeof parsed.layoutBrief === 'string' && parsed.layoutBrief.trim() ? redact(parsed.layoutBrief.trim()) : fallback.layoutBrief,
+    promptAddendum: typeof parsed.promptAddendum === 'string' && parsed.promptAddendum.trim() ? redact(parsed.promptAddendum.trim()) : fallback.promptAddendum,
+    safetyReview: typeof parsed.safetyReview === 'string' && parsed.safetyReview.trim() ? redact(parsed.safetyReview.trim()) : fallback.safetyReview,
     nextActions,
     warnings: ['backend_agent_command: thumbnail backend-agent runner가 orchestration brief를 생성했습니다.', ...warnings],
-    diagnostics: {
-      ...(parsed.diagnostics && typeof parsed.diagnostics === 'object' ? parsed.diagnostics : {}),
-      stderrPreview: stderr.slice(-400),
-    },
+    diagnostics,
   };
 }
 
@@ -1477,7 +1753,7 @@ async function resolveAgentPlan(
     if (env.THUMBNAIL_AGENT_COMMAND?.trim()) {
       throw new ThumbnailGenerationError(
         'provider_unavailable',
-        `Thumbnail backend-agent command를 사용할 수 없습니다: ${command.reason}`,
+        'Thumbnail backend-agent command is unavailable.',
         503,
       );
     }
@@ -1503,7 +1779,7 @@ async function resolveAgentPlan(
     }
     throw new ThumbnailGenerationError(
       'provider_unavailable',
-      `Thumbnail backend-agent 실행 실패: ${result.timedOut ? 'timeout' : `exit=${result.exitCode}`}${result.stderr ? ` stderr: ${result.stderr.slice(-600)}` : ''}`,
+      'Thumbnail backend-agent command failed.',
       503,
     );
   }
@@ -1512,12 +1788,12 @@ async function resolveAgentPlan(
   if (!parsed) {
     throw new ThumbnailGenerationError(
       'provider_unavailable',
-      `Thumbnail backend-agent 출력 JSON을 해석하지 못했습니다.${result.stderr ? ` stderr: ${result.stderr.slice(-600)}` : ''}`,
+      'Thumbnail backend-agent returned invalid output.',
       503,
     );
   }
 
-  return normalizeCommandPlan(parsed, fallback, result.stderr);
+  return normalizeCommandPlan(parsed, fallback, env);
 }
 
 export async function generateYoutubeThumbnailWithBackendAgent(

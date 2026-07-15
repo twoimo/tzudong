@@ -91,6 +91,7 @@ apps/web/tests/temp-*.spec.ts
 .agents/
 .gemini/
 AGENTS.md
+!/AGENTS.md
 OMX_MODERNIZATION_WORKLOG.md
 # Local AI/browser helper state and packaged agent drops
 .antigravitycli/

@@ -112,7 +112,7 @@ describe("admin audit coverage contract", () => {
     });
   });
 
-  test("returns coverage and bounded event metadata while preserving legacy root fields", async () => {
+  test("returns coverage and privacy-bounded event metadata", async () => {
     try {
       let observedState: AuditEventsQueryState | null = null;
       const GET = await loadAuditEventsRoute((state) => {
@@ -124,13 +124,16 @@ describe("admin audit coverage contract", () => {
               actor_user_id: "actor-1",
               target_user_id: "target-1",
               action: "admin_user_role_granted",
-              reason: "support coverage",
+              reason: "ADMIN_USER_ROLE_GRANT_APPLIED",
               status: "applied",
               correlation_id: "correlation-1",
               applied_at: "2026-07-03T00:00:00.000Z",
               error_code: null,
               created_at: "2026-07-03T00:00:00.000Z",
-              after_state: { role: "admin" },
+              audit_counts: { updated: 1 },
+              audit_flags: { roleAdmin: true },
+              before_state: {},
+              after_state: {},
             },
           ],
         };
@@ -152,13 +155,19 @@ describe("admin audit coverage contract", () => {
       expect(payload.coverage.mode).toBe("truthful-partial-domain-specific");
       expect(payload.coverage.primary.source).toBe("admin_audit_events");
       expect(payload.events).toHaveLength(1);
-      expect(payload.events[0]).toMatchObject({
+      expect(payload.events[0]).toEqual({
         id: "audit-1",
-        domain: "admin_user_management",
-        source: "admin_audit_events",
-        readbackId: "audit-1",
+        actorUserId: "actor-1",
+        targetUserId: "target-1",
+        action: "admin_user_role_granted",
+        status: "applied",
+        reasonCode: "ADMIN_USER_ROLE_GRANT_APPLIED",
+        errorCode: null,
         correlationId: "correlation-1",
-        afterState: { role: "admin" },
+        counts: { updated: 1 },
+        flags: { roleAdmin: true },
+        appliedAt: "2026-07-03T00:00:00.000Z",
+        createdAt: "2026-07-03T00:00:00.000Z",
       });
     } finally {
       mock.restore();
@@ -191,7 +200,8 @@ describe("admin audit coverage contract", () => {
       expect(payload.unavailable.reason).toBe("admin-audit-events-read-failed");
       expect(payload.coverage.universal).toBe(false);
       expect(payload.coverage.primary.domain).toBe("admin_user_management");
-      expect(logged).toContain("42501");
+      expect(logged).toContain("ADMIN_AUDIT_EVENTS_READ_FAILED");
+      expect(logged).not.toContain("42501");
       expect(logged).not.toContain("secret-token");
       expect(logged).not.toContain("do-not-log");
     } finally {

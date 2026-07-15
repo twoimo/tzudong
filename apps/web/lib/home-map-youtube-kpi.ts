@@ -118,8 +118,8 @@ export async function enrichRestaurantsWithHomeMapYoutubeKpiMetrics(
             restaurants,
             await fetchHomeMapYoutubeKpiMetrics(videoIds),
         );
-    } catch (error) {
-        console.warn('[home-map-youtube-kpi] metric enrichment failed:', error instanceof Error ? error.message : error);
+    } catch {
+        console.warn('[home-map-youtube-kpi] metric enrichment failed:');
         return restaurants;
     }
 }

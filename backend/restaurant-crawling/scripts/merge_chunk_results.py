@@ -106,7 +106,7 @@ def parse_response_file(filepath: Path) -> tuple:
     try:
         data = json.loads(text)
     except json.JSONDecodeError:
-        print(f"[WARN] JSON 파싱 실패: {filepath}", file=sys.stderr)
+        print("[WARN] op=chunk_response_json_invalid", file=sys.stderr)
         return [], None
 
     if isinstance(data, dict) and "restaurants" in data:

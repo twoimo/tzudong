@@ -4,6 +4,16 @@ import { createClient } from '@/lib/supabase/server';
 
 export const OCR_MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 export const OCR_MAX_INPUT_PIXELS = 24_000_000;
+export const OCR_MAX_MULTIPART_BYTES = OCR_MAX_UPLOAD_BYTES + 64 * 1024;
+
+const OCR_FORM_STRING_LIMITS = new Map<string, number>([
+  ['force', 5],
+  ['selectedRestaurantId', 64],
+  ['selectedRestaurantName', 256],
+  ['selectedRestaurantRoadAddress', 256],
+  ['selectedRestaurantJibunAddress', 256],
+  ['selectedRestaurantCategory', 64],
+]);
 
 type OcrAuthResult =
   | {
@@ -18,14 +28,15 @@ type OcrAuthResult =
       error: string;
     };
 
-export function getOcrUploadRejectionForRequest(headers: Headers): { status: 413; error: string } | null {
+export function getOcrUploadRejectionForRequest(headers: Headers): { status: 400 | 413; error: string } | null {
   const rawContentLength = headers.get('content-length');
   if (!rawContentLength) return null;
+  if (!/^\d+$/.test(rawContentLength)) {
+    return { status: 400, error: '유효하지 않은 업로드 길이입니다.' };
+  }
 
-  const contentLength = Number.parseInt(rawContentLength, 10);
-  if (!Number.isFinite(contentLength)) return null;
-
-  if (contentLength > OCR_MAX_UPLOAD_BYTES) {
+  const contentLength = Number(rawContentLength);
+  if (!Number.isSafeInteger(contentLength) || contentLength > OCR_MAX_MULTIPART_BYTES) {
     return {
       status: 413,
       error: `이미지 파일은 최대 ${Math.floor(OCR_MAX_UPLOAD_BYTES / 1024 / 1024)}MB까지 업로드할 수 있습니다.`,
@@ -33,6 +44,86 @@ export function getOcrUploadRejectionForRequest(headers: Headers): { status: 413
   }
 
   return null;
+}
+
+type OcrFormDataResult =
+  | { ok: true; formData: FormData }
+  | { ok: false; status: 400 | 413; error: string };
+
+export async function readBoundedOcrFormData(req: Request): Promise<OcrFormDataResult> {
+  const contentType = req.headers.get('content-type') ?? '';
+  if (
+    contentType.length > 200
+    || !/^multipart\/form-data;\s*boundary=[A-Za-z0-9'()+_,./:=?-]{1,120}$/i.test(contentType)
+    || !req.body
+  ) {
+    return { ok: false, status: 400, error: '유효하지 않은 multipart 요청입니다.' };
+  }
+
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > OCR_MAX_MULTIPART_BYTES) {
+        await reader.cancel();
+        return {
+          ok: false,
+          status: 413,
+          error: `이미지 파일은 최대 ${Math.floor(OCR_MAX_UPLOAD_BYTES / 1024 / 1024)}MB까지 업로드할 수 있습니다.`,
+        };
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  let formData: FormData;
+  try {
+    formData = await new Request('http://localhost/ocr-upload', {
+      method: 'POST',
+      headers: { 'content-type': contentType },
+      body: bytes,
+    }).formData();
+  } catch {
+    return { ok: false, status: 400, error: 'multipart 요청을 해석할 수 없습니다.' };
+  }
+
+  const seen = new Set<string>();
+  for (const [key, value] of formData.entries()) {
+    if (seen.has(key) || (key !== 'image' && !OCR_FORM_STRING_LIMITS.has(key))) {
+      return { ok: false, status: 400, error: '허용되지 않은 multipart 필드입니다.' };
+    }
+    seen.add(key);
+
+    if (key === 'image') {
+      if (!(value instanceof File)) {
+        return { ok: false, status: 400, error: '이미지가 제공되지 않았습니다.' };
+      }
+      continue;
+    }
+
+    const maximum = OCR_FORM_STRING_LIMITS.get(key);
+    if (typeof value !== 'string' || maximum === undefined || value.length > maximum) {
+      return { ok: false, status: 400, error: 'multipart 필드가 너무 깁니다.' };
+    }
+  }
+
+  if (!seen.has('image')) {
+    return { ok: false, status: 400, error: '이미지가 제공되지 않았습니다.' };
+  }
+  return { ok: true, formData };
 }
 
 export async function authenticateOcrRequest(req: Request): Promise<OcrAuthResult> {

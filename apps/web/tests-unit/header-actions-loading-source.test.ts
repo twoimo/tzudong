@@ -175,7 +175,7 @@ describe("header action loading source contract", () => {
     const adminConsoleSource = source(
       "components/admin/AdminConsoleOverview.tsx",
     );
-    const tailwindConfigSource = source("tailwind.config.ts");
+    const tailwindConfigSource = source("app/app-globals.css");
 
     expect(overlayLayoutSource).toContain(
       "const shouldRenderRouteOverlayChrome =",
@@ -188,10 +188,13 @@ describe("header action loading source contract", () => {
     );
     expect(overlayLayoutSource).not.toContain("{!isHomeRoute && (");
     expect(adminConsoleSource).toContain(
-      "h-[var(--full-height,100vh)] min-h-0 w-full overflow-hidden",
+      "h-[var(--full-height,100vh)] min-h-0 min-w-0 w-full overflow-hidden",
     );
     expect(tailwindConfigSource).toContain(
-      "lg:h-[calc(100dvh_-_var(--app-header-height,0px))]",
+      '[data-admin-console-shell="true"] {',
+    );
+    expect(tailwindConfigSource).toContain(
+      "height: var(--full-height, 100vh);",
     );
   });
 

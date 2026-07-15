@@ -28,6 +28,7 @@ import { useUserProfileIdentity } from "@/hooks/useUserProfile";
 import { toast } from "@/lib/no-toast";
 import { cn } from "@/lib/utils";
 import { siteConfig } from "@/lib/site-config";
+import { resolveProfileAvatarUrl } from "@/lib/profile-avatar-url";
 
 const myPageTopActionButtonClass =
   "h-11 w-11 rounded-full border border-border bg-background/95 p-0 shadow-lg backdrop-blur-sm transition-colors hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2";
@@ -55,10 +56,7 @@ export function MyPageTopActions() {
     [profile?.nickname, profileNickname, user?.email],
   );
 
-  const profileAvatarUrl =
-    typeof profile?.avatarUrl === "string" && profile.avatarUrl.trim()
-      ? profile.avatarUrl
-      : null;
+  const profileAvatarUrl = resolveProfileAvatarUrl(profile?.avatarUrl, user?.id);
 
   useEffect(() => {
     const syncFullscreenState = () => {
@@ -82,7 +80,7 @@ export function MyPageTopActions() {
 
       await document.exitFullscreen();
     } catch (error) {
-      console.error("마이페이지 전체화면 전환 실패:", error);
+      console.error("마이페이지 전체화면 전환 실패:");
       toast.error("전체화면 전환에 실패했습니다");
     }
   }, []);
@@ -94,7 +92,7 @@ export function MyPageTopActions() {
       toast.success("로그아웃되었습니다");
       router.push("/");
     } catch (error) {
-      console.error("로그아웃 실패:", error);
+      console.error("로그아웃 실패:");
       toast.error("로그아웃에 실패했습니다");
     }
   }, [queryClient, router, signOut]);

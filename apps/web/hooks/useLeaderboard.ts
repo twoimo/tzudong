@@ -70,8 +70,8 @@ export const useLeaderboard = (period: 'all' | 'monthly' = 'all') => {
                     .neq('nickname', '탈퇴한 사용자');
 
                 if (profilesError) {
-                    console.warn('프로필 데이터 조회 실패:', profilesError.message);
-                    throw new Error(`프로필 데이터 조회 실패: ${profilesError.message}`);
+                    console.warn('프로필 데이터 조회 실패:');
+                    throw new Error('프로필 데이터 조회 실패');
                 }
 
                 const profilesData = (profilesRawData ?? []) as ProfileRow[];
@@ -96,7 +96,7 @@ export const useLeaderboard = (period: 'all' | 'monthly' = 'all') => {
                 const { data: allReviewsRawData, error: allReviewsError } = await reviewsQuery;
 
                 if (allReviewsError) {
-                    console.warn('전체 리뷰 데이터 조회 실패:', allReviewsError.message);
+                    console.warn('전체 리뷰 데이터 조회 실패:');
                 }
                 const allReviewsData = (allReviewsRawData ?? []) as ReviewRow[];
 
@@ -157,7 +157,7 @@ export const useLeaderboard = (period: 'all' | 'monthly' = 'all') => {
                     }));
 
             } catch (error) {
-                console.warn('리더보드 데이터 조회 중 오류 발생:', error);
+                console.warn('리더보드 데이터 조회 중 오류 발생:');
                 return [];
             }
         },
