@@ -305,7 +305,10 @@ function runPsql(databaseUrl, query, singleTransaction) {
     const undefinedFunction = sqlstate === '42883'
       ? /function ([a-z_][a-z0-9_.]*\([a-z0-9_., ]*\)) does not exist/i.exec(stderr)?.[1]
       : null;
-    const classifier = undefinedFunction
+    const undefinedOperator = sqlstate === '42883'
+      ? /operator does not exist:\s*([a-z0-9_[\]. =<>!+-]+)/i.exec(stderr)?.[1]
+      : null;
+    const classifier = (undefinedFunction ?? undefinedOperator)
       ?.slice(0, 96)
       .replace(/[^a-z0-9_]+/gi, '_')
       .replace(/_+/g, '_')
