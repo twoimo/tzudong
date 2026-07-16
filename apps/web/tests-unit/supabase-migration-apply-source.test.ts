@@ -21,6 +21,9 @@ const migrationScriptSource = readFileSync(
   new URL("../scripts/apply-supabase-migration.mjs", import.meta.url),
   "utf8",
 );
+expect(migrationScriptSource).toContain("input: `\\\\set VERBOSITY sqlstate\\n${query}`");
+expect(migrationScriptSource).toContain("MIGRATION_PSQL_FAILED_${sqlstate}");
+expect(migrationScriptSource).not.toContain("result.stderr.trim()");
 
 const digest = (bytes: Buffer) => createHash("sha256").update(bytes).digest("hex");
 const canonicalBytes = (document: unknown) =>
