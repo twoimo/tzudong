@@ -23,7 +23,7 @@ const migrationScriptSource = readFileSync(
 );
 expect(migrationScriptSource).toContain("input: `\\\\set VERBOSITY verbose\\n${query}`");
 expect(migrationScriptSource).toContain("MIGRATION_PSQL_FAILED_${sqlstate}");
-expect(migrationScriptSource).toContain("const sqlstate = /\\b([0-9A-Z]{5})\\b/m");
+expect(migrationScriptSource).toContain("const sqlstate = /ERROR:\\s+([0-9A-Z]{5}):/m");
 expect(migrationScriptSource).toContain("public\\.is_user_admin\\(uuid\\)|auth\\.uid\\(\\)|gen_random_uuid\\(\\)");
 expect(migrationScriptSource).not.toContain("result.stderr.trim()");
 
