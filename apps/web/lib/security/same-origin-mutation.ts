@@ -47,6 +47,7 @@ export function isTrustedSameOriginMutation(
     return true;
   }
   const internalCapabilityHeader = INTERNAL_CAPABILITY_ROUTES.get(new URL(request.url).pathname);
+  const internalCapabilityFetchMode = request.headers.get('sec-fetch-mode');
   if (
     internalCapabilityHeader
     && !cookie
@@ -54,7 +55,7 @@ export function isTrustedSameOriginMutation(
     && !request.headers.get('origin')
     && !request.headers.get('referer')
     && !request.headers.get('sec-fetch-site')
-    && !request.headers.get('sec-fetch-mode')
+    && (internalCapabilityFetchMode === null || internalCapabilityFetchMode === 'cors')
     && !request.headers.get('sec-fetch-dest')
     && (request.headers.get(internalCapabilityHeader)?.trim().length ?? 0) >= 32
   ) {
