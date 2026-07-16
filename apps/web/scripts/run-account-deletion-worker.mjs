@@ -21,7 +21,15 @@ const boundedInteger = (value, minimum, maximum) => (
     : null
 );
 
-const emptySummary = () => ({ attempted: 0, completed: 0, partial: 0, failed: 0, unknown: 0, empty: 0 });
+const emptySummary = () => ({
+  attempted: 0,
+  completed: 0,
+  partial: 0,
+  failed: 0,
+  unknown: 0,
+  empty: 0,
+  diagnostic: 'not_run',
+});
 
 export function parseArgs(argv) {
   const options = { limit: DEFAULT_LIMIT, deadlineMs: DEFAULT_DEADLINE_MS };
@@ -88,6 +96,36 @@ async function boundedResponseText(stream, maxBytes) {
   }
 }
 
+const SCHEDULER_DIAGNOSTICS = new Set([
+  'config_invalid',
+  'queue_empty',
+  'completed',
+  'partial',
+  'http_401',
+  'http_403',
+  'http_4xx',
+  'http_5xx',
+  'http_other',
+  'redirected',
+  'content_type_invalid',
+  'response_body_invalid',
+  'response_json_invalid',
+  'response_shape_invalid',
+  'transport_error',
+]);
+
+const responseDiagnostic = (response) => {
+  if (response.redirected === true) return 'redirected';
+  if (response.status === 401) return 'http_401';
+  if (response.status === 403) return 'http_403';
+  if (response.status >= 500) return 'http_5xx';
+  if (response.status >= 400) return 'http_4xx';
+  if (response.status !== 200 && response.status !== 409 && response.status !== 423) return 'http_other';
+  return response.headers.get('content-type')?.toLowerCase().startsWith('application/json')
+    ? null
+    : 'content_type_invalid';
+};
+
 function responseStatus(responseStatus, body) {
   if (responseStatus === 409 || responseStatus === 423) return 'partial';
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
@@ -134,15 +172,23 @@ async function claimAndRun(configuration, deadlineMs, fetchImpl) {
       redirect: 'error',
       signal: controller.signal,
     });
+    const diagnostic = responseDiagnostic(response);
+    if (diagnostic) {
+      return { status: response.status >= 500 ? 'unknown' : 'failed', diagnostic };
+    }
     const text = await boundedResponseText(response.body, MAX_RESPONSE_BYTES);
-    if (!text) return response.status >= 500 ? 'unknown' : 'failed';
+    if (!text) return { status: 'failed', diagnostic: 'response_body_invalid' };
     try {
-      return responseStatus(response.status, JSON.parse(text));
+      const status = responseStatus(response.status, JSON.parse(text));
+      return {
+        status,
+        diagnostic: status === 'empty' ? 'queue_empty' : status === 'completed' ? 'completed' : status === 'partial' ? 'partial' : 'response_shape_invalid',
+      };
     } catch {
-      return response.status >= 500 ? 'unknown' : 'failed';
+      return { status: 'failed', diagnostic: 'response_json_invalid' };
     }
   } catch {
-    return 'unknown';
+    return { status: 'unknown', diagnostic: 'transport_error' };
   } finally {
     clearTimeout(timeout);
   }
@@ -157,7 +203,8 @@ export function summaryCode(summary) {
 }
 
 export function formatSummary(summary) {
-  return `code=${summaryCode(summary)} attempted=${summary.attempted} completed=${summary.completed} partial=${summary.partial} failed=${summary.failed} unknown=${summary.unknown} empty=${summary.empty}\n`;
+  const diagnostic = SCHEDULER_DIAGNOSTICS.has(summary.diagnostic) ? summary.diagnostic : 'transport_error';
+  return `code=${summaryCode(summary)} diagnostic=${diagnostic} attempted=${summary.attempted} completed=${summary.completed} partial=${summary.partial} failed=${summary.failed} unknown=${summary.unknown} empty=${summary.empty}\n`;
 }
 
 export async function runAccountDeletionWorkerScheduler({
@@ -171,19 +218,21 @@ export async function runAccountDeletionWorkerScheduler({
   const configuration = schedulerConfiguration(env);
   if (!options || !configuration || typeof fetchImpl !== 'function') {
     summary.failed = 1;
+    summary.diagnostic = 'config_invalid';
     write(formatSummary(summary));
     return summary;
   }
 
   for (let index = 0; index < options.limit; index += 1) {
-    const status = await claimAndRun(configuration, options.deadlineMs, fetchImpl);
-    if (status === 'empty') {
+    const result = await claimAndRun(configuration, options.deadlineMs, fetchImpl);
+    summary.diagnostic = result.diagnostic;
+    if (result.status === 'empty') {
       summary.empty += 1;
       break;
     }
     summary.attempted += 1;
-    summary[status] += 1;
-    if (status !== 'completed') break;
+    summary[result.status] += 1;
+    if (result.status !== 'completed') break;
   }
 
   write(formatSummary(summary));

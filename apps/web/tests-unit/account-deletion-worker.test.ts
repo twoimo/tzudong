@@ -881,15 +881,15 @@ describe('account-deletion durable scheduler contract', () => {
           status: 'empty',
           code: 'account_deletion_queue_empty',
           counts: { workItems: 0, providerProofs: 0 },
-        }), { status: 200 });
+        }), { status: 200, headers: { 'content-type': 'application/json' } });
       },
       write: (line: string) => output.push(line),
     });
 
-    expect(summary).toEqual({ attempted: 0, completed: 0, partial: 0, failed: 0, unknown: 0, empty: 1 });
+    expect(summary).toEqual({ attempted: 0, completed: 0, partial: 0, failed: 0, unknown: 0, empty: 1, diagnostic: 'queue_empty' });
     expect(requests).toHaveLength(1);
     expect(requests[0]?.body).toBe(JSON.stringify({ mode: 'claim_next', deadlineMs: 4000 }));
-    expect(output).toEqual(['code=empty attempted=0 completed=0 partial=0 failed=0 unknown=0 empty=1\n']);
+    expect(output).toEqual(['code=empty diagnostic=queue_empty attempted=0 completed=0 partial=0 failed=0 unknown=0 empty=1\n']);
     expect(output.join('')).not.toContain('private/raw-locator-never-log');
   });
 
@@ -909,15 +909,15 @@ describe('account-deletion durable scheduler contract', () => {
           phase: 'storage',
           requestHash: 'a'.repeat(64),
           counts: { workItems: 1, providerProofs: 0 },
-        }), { status: 503 });
+        }), { status: 503, headers: { 'content-type': 'application/json' } });
       },
       write: (line: string) => output.push(line),
     });
 
     expect(calls).toBe(1);
-    expect(summary).toEqual({ attempted: 1, completed: 0, partial: 1, failed: 0, unknown: 0, empty: 0 });
-    expect(scheduler.summaryCode(summary)).toBe('partial');
-    expect(output).toEqual(['code=partial attempted=1 completed=0 partial=1 failed=0 unknown=0 empty=0\n']);
+    expect(summary).toEqual({ attempted: 1, completed: 0, partial: 0, failed: 0, unknown: 1, empty: 0, diagnostic: 'http_5xx' });
+    expect(scheduler.summaryCode(summary)).toBe('unknown');
+    expect(output).toEqual(['code=unknown diagnostic=http_5xx attempted=1 completed=0 partial=0 failed=0 unknown=1 empty=0\n']);
     expect(output.join('')).not.toContain('a'.repeat(64));
   });
   test('the bounded CLI rejects an unexpected raw field as unknown without logging it', async () => {
@@ -932,12 +932,46 @@ describe('account-deletion durable scheduler contract', () => {
         code: 'account_deletion_queue_empty',
         counts: { workItems: 0, providerProofs: 0 },
         objectName: 'private/raw-locator-never-log',
-      }), { status: 200 }),
+      }), { status: 200, headers: { 'content-type': 'application/json' } }),
       write: (line: string) => output.push(line),
     });
 
-    expect(summary).toEqual({ attempted: 1, completed: 0, partial: 0, failed: 0, unknown: 1, empty: 0 });
-    expect(output).toEqual(['code=unknown attempted=1 completed=0 partial=0 failed=0 unknown=1 empty=0\n']);
+    expect(summary).toEqual({ attempted: 1, completed: 0, partial: 0, failed: 0, unknown: 1, empty: 0, diagnostic: 'response_shape_invalid' });
+    expect(output).toEqual(['code=unknown diagnostic=response_shape_invalid attempted=1 completed=0 partial=0 failed=0 unknown=1 empty=0\n']);
     expect(output.join('')).not.toContain('private/raw-locator-never-log');
+  });
+  test('emits finite HTTP and response-shape diagnostics without capability or body values', async () => {
+    const capability = 'secret-capability-never-log-123456';
+    const rawBody = 'private/raw-response-never-log';
+    for (const [status, expectedDiagnostic] of [[401, 'http_401'], [403, 'http_403'], [502, 'http_5xx']] as const) {
+      const output: string[] = [];
+      const summary = await scheduler.runAccountDeletionWorkerScheduler({
+        env: {
+          ACCOUNT_DELETION_WORKER_URL: 'https://internal.example.test/api/internal/account-deletion',
+          ACCOUNT_DELETION_WORKER_CAPABILITY: capability,
+        },
+        fetchImpl: async () => new Response(rawBody, { status, headers: { 'content-type': 'text/plain' } }),
+        write: (line: string) => output.push(line),
+      });
+      expect(summary.diagnostic).toBe(expectedDiagnostic);
+      expect(output.join('')).not.toContain(capability);
+      expect(output.join('')).not.toContain(rawBody);
+    }
+
+    const output: string[] = [];
+    const summary = await scheduler.runAccountDeletionWorkerScheduler({
+      env: {
+        ACCOUNT_DELETION_WORKER_URL: 'https://internal.example.test/api/internal/account-deletion',
+        ACCOUNT_DELETION_WORKER_CAPABILITY: capability,
+      },
+      fetchImpl: async () => new Response(JSON.stringify({ unexpected: rawBody }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+      write: (line: string) => output.push(line),
+    });
+    expect(summary.diagnostic).toBe('response_shape_invalid');
+    expect(output.join('')).not.toContain(capability);
+    expect(output.join('')).not.toContain(rawBody);
   });
 });
