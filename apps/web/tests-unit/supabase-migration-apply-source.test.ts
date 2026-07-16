@@ -27,6 +27,8 @@ expect(migrationScriptSource).toContain("const sqlstate = /ERROR:\\s+([0-9A-Z]{5
 expect(migrationScriptSource).toContain("function ([a-z_][a-z0-9_.]*\\([a-z0-9_., ]*\\)) does not exist");
 expect(migrationScriptSource).toContain("?.slice(0, 96)");
 expect(migrationScriptSource).toContain(".replace(/[^a-z0-9_]+/gi, '_')");
+expect(migrationScriptSource).toContain("operator does not exist:");
+expect(migrationScriptSource).toContain("undefinedFunction ?? undefinedOperator");
 expect(migrationScriptSource).not.toContain("result.stderr.trim()");
 
 const digest = (bytes: Buffer) => createHash("sha256").update(bytes).digest("hex");
