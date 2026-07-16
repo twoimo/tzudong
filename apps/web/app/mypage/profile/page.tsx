@@ -995,7 +995,7 @@ export default function ProfilePage() {
 
   return (
     <div
-      className="grid min-w-0 gap-3 sm:gap-5 md:h-full md:min-h-0 md:grid-cols-2 md:grid-rows-2 md:auto-rows-fr md:content-stretch md:items-stretch lg:gap-3"
+      className="grid min-w-0 gap-3 sm:gap-5 md:h-full md:min-h-0 md:grid-cols-2 md:grid-rows-2 md:auto-rows-auto md:content-stretch md:items-stretch lg:gap-3"
       data-mypage-profile-page="true"
       data-mypage-profile-density="dashboard-matrix"
       data-mypage-profile-viewport-fit="true"
@@ -1645,7 +1645,7 @@ export default function ProfilePage() {
         </Card>
 
         <Card
-          className="min-w-0 border-border/70 md:order-5 md:col-span-2 md:rounded-3xl md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"
+          className="min-w-0 border-border/70 md:order-5 md:col-span-2 md:row-start-3 md:rounded-3xl md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"
           data-privacy-consent-settings="true"
         >
           <CardHeader className="pb-3 lg:p-4 lg:pb-2">
