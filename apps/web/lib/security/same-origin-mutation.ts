@@ -1,5 +1,9 @@
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
+const INTERNAL_CAPABILITY_ROUTES = new Map([
+  ['/api/internal/account-deletion', 'x-account-deletion-worker-capability'],
+  ['/api/internal/privacy-retention', 'x-privacy-retention-capability'],
+]);
 
 function parseCanonicalOrigin(value: string, production: boolean) {
   try {
@@ -40,6 +44,20 @@ export function isTrustedSameOriginMutation(
   const authorization = request.headers.get('authorization')?.trim();
   // Bearer credentials only bypass this CSRF-origin check; routes still authenticate them.
   if (!cookie && /^Bearer\s+\S+$/i.test(authorization ?? '')) {
+    return true;
+  }
+  const internalCapabilityHeader = INTERNAL_CAPABILITY_ROUTES.get(new URL(request.url).pathname);
+  if (
+    internalCapabilityHeader
+    && !cookie
+    && !authorization
+    && !request.headers.get('origin')
+    && !request.headers.get('referer')
+    && !request.headers.get('sec-fetch-site')
+    && !request.headers.get('sec-fetch-mode')
+    && !request.headers.get('sec-fetch-dest')
+    && (request.headers.get(internalCapabilityHeader)?.trim().length ?? 0) >= 32
+  ) {
     return true;
   }
 
