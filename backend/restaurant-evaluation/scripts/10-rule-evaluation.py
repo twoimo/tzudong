@@ -38,6 +38,7 @@ if str(BACKEND_ROOT) not in sys.path:
 
 from utils.jsonl_utils import load_last_jsonl_record
 from utils.runtime_paths import load_backend_env, resolve_backend_root
+from utils.privacy_log import safe_error_name
 
 # 한국 시간대
 KST = timezone(timedelta(hours=9))
@@ -397,8 +398,10 @@ def _run_gemini_fallback_query(name: str, origin_address: str) -> Dict[str, Any]
     if cached is not None:
         return cached
 
-    if not Path.home().joinpath(".gemini/oauth_creds.json").exists():
-        result = {"ok": False, "pending_reason": PENDING_REASON_INSUFFICIENT, "error": "missing_gemini_oauth"}
+    gemini_api_key = os.getenv("GEMINI_API_KEY", "").strip()
+    has_oauth = Path.home().joinpath(".gemini/oauth_creds.json").is_file()
+    if not gemini_api_key and not has_oauth:
+        result = {"ok": False, "pending_reason": PENDING_REASON_INSUFFICIENT, "error": "missing_gemini_credentials"}
         _gemini_fallback_cache[cache_key] = result
         return result
 
@@ -406,7 +409,8 @@ def _run_gemini_fallback_query(name: str, origin_address: str) -> Dict[str, Any]
 
     cmd = ["gemini", "--model", GEMINI_MODEL, "--output-format", "json"]
     env = os.environ.copy()
-    env["GEMINI_API_KEY"] = ""
+    if not gemini_api_key:
+        env["GEMINI_API_KEY"] = ""
     timeout_sec = max(GEMINI_TIMEOUT_SEC, 10)
 
     try:
@@ -425,7 +429,7 @@ def _run_gemini_fallback_query(name: str, origin_address: str) -> Dict[str, Any]
         return result
 
     if proc.returncode != 0:
-        result = {"ok": False, "pending_reason": PENDING_REASON_INSUFFICIENT, "error": proc.stderr.strip() or "gemini_failed"}
+        result = {"ok": False, "pending_reason": PENDING_REASON_INSUFFICIENT, "error": "GEMINI_PROCESS_FAILED"}
         _gemini_fallback_cache[cache_key] = result
         return result
 
@@ -555,7 +559,11 @@ def naver_local_search_one(query: str, display: int = 5) -> List[Dict[str, Any]]
             return results
         except Exception as e:
             naver_api_errors += 1
-            print(f"[WARN] 네이버 검색 실패 (시도 {attempt+1}/3): {query} - {e}")
+            print(
+                f"[WARN] operation=naver_local_search_failed "
+                f"attempt={attempt + 1}/3 error={safe_error_name(e)} "
+                "code=NAVER_LOCAL_SEARCH_FAILED"
+            )
             if attempt < 2:
                 time.sleep(2**attempt)
             else:
@@ -590,7 +598,11 @@ def ncp_geocode_to_jibun_address(query: str) -> Optional[str]:
                 time.sleep(1)
         except Exception as e:
             ncp_api_errors += 1
-            print(f"[WARN] 지오코딩 실패 (시도 {attempt+1}/3): {query} - {e}")
+            print(
+                f"[WARN] operation=ncp_geocode_jibun_failed "
+                f"attempt={attempt + 1}/3 error={safe_error_name(e)} "
+                "code=NCP_GEOCODE_JIBUN_FAILED"
+            )
             if attempt < 2:
                 time.sleep(2**attempt)
     _geocode_jibun_cache[cache_key] = None
@@ -620,7 +632,11 @@ def ncp_geocode_addresses(addr: str) -> Optional[List[Dict[str, Any]]]:
             return result
         except Exception as e:
             ncp_api_errors += 1
-            print(f"[WARN] 주소 지오코딩 실패 (시도 {attempt+1}/3): {addr} - {e}")
+            print(
+                f"[WARN] operation=ncp_geocode_addresses_failed "
+                f"attempt={attempt + 1}/3 error={safe_error_name(e)} "
+                "code=NCP_GEOCODE_ADDRESSES_FAILED"
+            )
             if attempt < 2:
                 time.sleep(2**attempt)
     _geocode_addresses_cache[cache_key] = None
@@ -1242,8 +1258,11 @@ def process_one_line(obj: Dict[str, Any]) -> Dict[str, Any]:
                 naver_name=None,
                 google_name=None,
                 pending_reason=PENDING_REASON_INSUFFICIENT,
-                false_message=f"평가 실패: {str(e)}",
-                evidence_summary=[f"Evaluation failed with exception: {str(e)}"],
+                false_message="평가 실패 (EVALUATION_FAILED)",
+                evidence_summary=[
+                    f"operation=evaluation_failed error={safe_error_name(e)} "
+                    "code=EVALUATION_FAILED"
+                ],
                 match_status="failed",
             )
         location_eval_list.append(res)
@@ -1277,8 +1296,7 @@ def main():
     channel = args.channel
     evaluation_path = Path(args.evaluation_path)
 
-    print(f"\n[{datetime.now(KST).strftime('%H:%M:%S')}] Rule 평가 시작: {channel}")
-    print(f"평가 경로: {evaluation_path}")
+    print(f"\n[{datetime.now(KST).strftime('%H:%M:%S')}] Rule evaluation started")
 
     # 입출력 폴더
     selection_dir = evaluation_path / "evaluation" / "selection"
@@ -1286,7 +1304,7 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
 
     if not selection_dir.exists():
-        print(f"[ERROR] selection 폴더 없음: {selection_dir}")
+        print("[ERROR] operation=rule_evaluation_input_unavailable code=SELECTION_DIRECTORY_MISSING")
         return
 
     # video_id 수집
@@ -1321,7 +1339,7 @@ def main():
         data = load_last_jsonl_record(input_file)
 
         if not data:
-            print(f"[WARN] 마지막 JSONL 레코드 로드 실패(빈 파일/손상): {input_file}")
+            print("[WARN] operation=rule_evaluation_input_unreadable code=SELECTION_RECORD_UNAVAILABLE")
             continue
 
         # evaluation_target에 true 값이 있는 경우에만 평가 진행

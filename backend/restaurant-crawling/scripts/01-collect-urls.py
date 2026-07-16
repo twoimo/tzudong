@@ -31,6 +31,7 @@ from utils.config_loader import (
 )
 from utils.logger import PipelineLogger
 from utils.runtime_paths import load_backend_env, get_backend_log_dir, resolve_backend_root
+from utils.privacy_log import safe_error_name
 
 try:
     from googleapiclient.discovery import build
@@ -49,6 +50,34 @@ KST = timezone(timedelta(hours=9))
 
 # 로그 디렉토리 (backend/log/restaurant-crawling/)
 LOG_DIR = get_backend_log_dir(BACKEND_ROOT, "restaurant-crawling")
+
+
+def _youtube_error_status(error: BaseException) -> int | None:
+    """Read a provider status code without stringifying provider diagnostics."""
+    try:
+        for attribute in ("status", "status_code", "code"):
+            value = getattr(error, attribute, None)
+            if type(value) is int:
+                return value
+        response = getattr(error, "resp", None)
+        value = getattr(response, "status", None)
+        return value if type(value) is int else None
+    except Exception:
+        return None
+
+
+def classify_youtube_failure(error: BaseException) -> str:
+    """Map structured YouTube failures to stable, public-safe reason codes."""
+    status = _youtube_error_status(error)
+    if isinstance(error, ValueError):
+        return "youtube_channel_not_found"
+    if status in (401, 403):
+        return "youtube_api_auth_failed"
+    if status == 404:
+        return "youtube_channel_not_found"
+    if status == 429:
+        return "youtube_api_rate_limited"
+    return "youtube_api_request_failed"
 
 
 def load_existing_urls(urls_file: Path) -> Set[str]:
@@ -94,16 +123,13 @@ def fetch_all_video_urls(
             api_call_count += 1
 
         if not channel_response.get("items"):
-            raise ValueError(f"채널을 찾을 수 없습니다: {channel_id}")
+            raise ValueError("youtube_channel_not_found")
 
         channel_info = channel_response["items"][0]
-        channel_title = channel_info["snippet"]["title"]
         uploads_playlist_id = channel_info["contentDetails"]["relatedPlaylists"][
             "uploads"
         ]
-
-        logger.info(f"채널: {channel_title}")
-        logger.info(f"업로드 플레이리스트 ID: {uploads_playlist_id}")
+        logger.info("op=youtube_channel_response status=accepted")
 
         # 플레이리스트의 모든 동영상 가져오기
         next_page_token = None
@@ -111,7 +137,7 @@ def fetch_all_video_urls(
 
         while True:
             page_count += 1
-            logger.debug(f"페이지 {page_count} 로딩 중...")
+            logger.debug(f"op=youtube_playlist_page_load page={page_count}")
 
             with logger.timer(f"youtube_api_playlist_page_{page_count}"):
                 playlist_response = (
@@ -132,7 +158,8 @@ def fetch_all_video_urls(
                 urls.append(f"https://www.youtube.com/watch?v={video_id}")
 
             logger.debug(
-                f'페이지 {page_count}: {len(playlist_response.get("items", []))}개'
+                f"op=youtube_playlist_page_loaded page={page_count} "
+                f"item_count={len(playlist_response.get('items', []))}"
             )
 
             # 다음 페이지 확인
@@ -140,14 +167,20 @@ def fetch_all_video_urls(
             if not next_page_token:
                 break
 
-        logger.success(f"총 {len(urls)}개 URL 수집 완료")
+        logger.success(
+            f"op=youtube_video_url_collection_completed fetched={len(urls)}"
+        )
         logger.add_statistic("total_urls_fetched", len(urls))
         logger.add_statistic("youtube_api_calls", api_call_count)
 
         return urls
 
-    except HttpError as e:
-        logger.error(f"YouTube API 오류: {e}")
+    except (HttpError, ValueError) as error:
+        logger.error(
+            f"op=youtube_video_url_collection_failed "
+            f"reason={classify_youtube_failure(error)} "
+            f"error={safe_error_name(error)}"
+        )
         raise
 
 
@@ -174,9 +207,11 @@ def save_urls(
         with open(urls_file, "a", encoding="utf-8") as f:
             for url in new_urls:
                 f.write(url + "\n")
-                logger.info(f"  [New URL] {url}")
 
-    logger.info(f"신규 저장: {len(new_urls)}개, 스킵 (기존): {skip_count}개")
+    logger.info(
+        f"op=youtube_url_storage_completed new_count={len(new_urls)} "
+        f"existing_count={skip_count}"
+    )
     logger.add_statistic("new_urls_saved", len(new_urls))
     logger.add_statistic("skipped_existing", skip_count)
 
@@ -211,7 +246,10 @@ def save_deleted_urls(
             for url in remaining_urls:
                 f.write(url + "\n")
 
-    logger.warning(f"삭제된 영상 감지: {len(deleted_urls)}개 -> deleted_urls.txt 이동")
+    logger.warning(
+        f"op=youtube_deleted_video_reconciliation_completed "
+        f"deleted_count={len(deleted_urls)}"
+    )
     logger.add_statistic("deleted_urls_count", len(deleted_urls))
 
 
@@ -226,14 +264,12 @@ def collect_channel_urls(
     channel_data_path = get_channel_data_path(channel_name)
     urls_file = channel_data_path / "urls.txt"
 
-    logger.info(f'채널 처리: {channel_info["name"]} ({channel_name})')
-    logger.info(f"채널 ID: {channel_id}")
-    logger.info(f"URL 파일: {urls_file}")
+    logger.info("op=youtube_channel_collection_started")
 
     # 기존 URL 로드
     with logger.timer("load_existing_urls"):
         existing_urls = load_existing_urls(urls_file)
-    logger.info(f"기존 수집된 URL: {len(existing_urls)}개")
+    logger.info(f"op=youtube_existing_urls_loaded count={len(existing_urls)}")
 
     # 동영상 URL 수집
     with logger.timer("fetch_all_video_urls"):
@@ -301,15 +337,14 @@ def main():
         else:
             channel_names = list(get_all_channels().keys())
 
-        logger.info(f"대상 채널: {channel_names}")
+        logger.info(f"op=collect_urls_started channel_count={len(channel_names)}")
 
         if args.dry_run:
             logger.warning("DRY-RUN 모드: 실제 저장하지 않음")
 
         results = []
         for channel_name in channel_names:
-            logger.info("")
-            logger.info(f"--- {channel_name} 처리 시작 ---")
+            logger.info("op=youtube_channel_collection_started")
             result = collect_channel_urls(channel_name, api_key, logger, args.dry_run)
             results.append(result)
 
@@ -321,12 +356,18 @@ def main():
 
         for result in results:
             logger.info(
-                f"  {result['channel_name']}: 신규 {result['new_saved']}개 / 삭제 {result.get('deleted_count', 0)}개 / 전체 {result['total_fetched']}개"
+                f"op=youtube_channel_collection_summary "
+                f"new_count={result['new_saved']} "
+                f"deleted_count={result.get('deleted_count', 0)} "
+                f"total_count={result['total_fetched']}"
             )
 
-    except Exception as e:
-        logger.error(f"실행 중 오류 발생: {e}")
-        raise
+    except Exception as error:
+        logger.error(
+            f"op=collect_urls_failed reason=unexpected_failure "
+            f"error={safe_error_name(error)}"
+        )
+        raise SystemExit(1) from None
     finally:
         logger.end_stage()
         logger.save_json_log()

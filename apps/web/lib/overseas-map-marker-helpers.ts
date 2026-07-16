@@ -1,4 +1,7 @@
-import { escapeHtmlAttribute } from './html-escape';
+import { escapeHtmlAttribute, sanitizeMarkerImageUrl } from './html-escape';
+
+const OVERSEAS_MARKER_BASE_SIZE_CLASSES = ['!h-8', '!w-8'] as const;
+const OVERSEAS_MARKER_SELECTED_SIZE_CLASSES = ['!h-[42px]', '!w-[42px]'] as const;
 
 export function buildOverseasMarkerHtml({
     imagePath,
@@ -7,12 +10,12 @@ export function buildOverseasMarkerHtml({
     imagePath: string;
     name: string;
 }) {
-    const safeImagePath = escapeHtmlAttribute(imagePath);
+    const safeImagePath = escapeHtmlAttribute(sanitizeMarkerImageUrl(imagePath));
     const safeName = escapeHtmlAttribute(name);
 
     return `
-        <div class="marker-container" style="width: 100%; height: 100%; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
-            <img src="${safeImagePath}" style="width: 100%; height: 100%; object-fit: contain;" alt="${safeName}" />
+        <div class="marker-container relative h-full w-full cursor-pointer drop-shadow-md transition-transform duration-200 hover:scale-110">
+            <img src="${safeImagePath}" class="h-full w-full object-contain" alt="${safeName}" draggable="false" />
         </div>
     `;
 }
@@ -38,16 +41,21 @@ export function applyOverseasMarkerSelectedState({
 }) {
     if (!container) return;
 
+    markerElement.classList.remove(
+        ...OVERSEAS_MARKER_BASE_SIZE_CLASSES,
+        ...OVERSEAS_MARKER_SELECTED_SIZE_CLASSES,
+        'selected',
+    );
+    markerElement.classList.add(
+        ...(isSelected ? OVERSEAS_MARKER_SELECTED_SIZE_CLASSES : OVERSEAS_MARKER_BASE_SIZE_CLASSES),
+    );
+    container.classList.remove('scale-100', 'scale-110');
+
     if (isSelected) {
-        markerElement.style.width = '42px';
-        markerElement.style.height = '42px';
         markerElement.classList.add('selected');
-        container.style.transform = 'scale(1.1)';
+        container.classList.add('scale-110');
         return;
     }
 
-    markerElement.style.width = '32px';
-    markerElement.style.height = '32px';
-    markerElement.classList.remove('selected');
-    container.style.transform = 'scale(1)';
+    container.classList.add('scale-100');
 }

@@ -3,6 +3,11 @@ import fs from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
 import { config as loadEnv } from 'dotenv';
+import {
+    logCliError,
+    redactCliText,
+    safeCliErrorName,
+} from './privacy-safe-cli-log.mjs';
 
 const projectRoot = process.cwd();
 const repoRoot = path.resolve(projectRoot, '..', '..');
@@ -66,7 +71,28 @@ const tryRemove = (targetPath) => {
     });
 };
 
-const toMessage = (error) => (error instanceof Error ? error.message : String(error));
+const childOutputLimit = 4_096;
+
+const writeCliError = (scope, error) => {
+    logCliError(error, (line) => process.stderr.write(`[clean-next] ${scope} ${line}`));
+};
+
+const forwardChildOutput = (stream, target) => {
+    if (!stream?.on) {
+        return;
+    }
+
+    stream.on('data', (chunk) => {
+        const text = typeof chunk === 'string'
+            ? chunk
+            : Buffer.isBuffer(chunk)
+                ? chunk.toString('utf8')
+                : '';
+        if (text) {
+            target.write(redactCliText(text, childOutputLimit));
+        }
+    });
+};
 
 const isLockLikeError = (error) => {
     if (!error || typeof error !== 'object') {
@@ -74,16 +100,7 @@ const isLockLikeError = (error) => {
     }
 
     const code = 'code' in error ? String(error.code) : '';
-    if (code === 'EBUSY' || code === 'EPERM' || code === 'ENOTEMPTY' || code === 'UNKNOWN') {
-        return true;
-    }
-
-    const message = toMessage(error).toLowerCase();
-    return (
-        message.includes('resource busy') ||
-        message.includes('cannot be accessed by the system') ||
-        message.includes('directory not empty')
-    );
+    return code === 'EBUSY' || code === 'EPERM' || code === 'ENOTEMPTY' || code === 'UNKNOWN';
 };
 
 const purgeStaleCaches = () => {
@@ -106,14 +123,13 @@ const purgeStaleCaches = () => {
                 continue;
             }
 
-            const message = toMessage(error);
-            const key = `${entry.name}:${message}`;
+            const key = safeCliErrorName(error);
             if (warnedStaleEntries.has(key)) {
                 continue;
             }
 
             warnedStaleEntries.add(key);
-            console.warn(`[clean-next] failed to remove ${entry.name}: ${message}`);
+            writeCliError('stale-cache-cleanup', error);
         }
     }
 };
@@ -128,9 +144,7 @@ process.env.BROWSERSLIST_IGNORE_OLD_DATA ??= 'true';
 if (!skipClean) {
     const guardedDevPort = getGuardedDevPort();
     if (guardedDevPort && !(await canBindPort(guardedDevPort))) {
-        console.error(
-            `[clean-next] refusing to remove .next because port ${guardedDevPort} is already in use. Stop the existing dev server first.`,
-        );
+        process.stderr.write('[clean-next] error=ActiveDevServer\n');
         process.exit(1);
     }
 
@@ -139,9 +153,8 @@ if (!skipClean) {
     try {
         tryRemove(nextDir);
     } catch (error) {
-        const message = toMessage(error);
         if (verbose || !isLockLikeError(error)) {
-            console.warn(`[clean-next] primary remove failed: ${message}`);
+            writeCliError('primary-cache-cleanup', error);
         }
 
         try {
@@ -150,11 +163,10 @@ if (!skipClean) {
             fs.renameSync(nextDir, fallbackPath);
             tryRemove(fallbackPath);
             if (verbose) {
-                console.warn(`[clean-next] renamed + removed stale cache: ${fallbackName}`);
+                process.stderr.write('[clean-next] stale-cache-cleanup completed\n');
             }
         } catch (fallbackError) {
-            const fallbackMessage = toMessage(fallbackError);
-            console.warn(`[clean-next] fallback cleanup skipped: ${fallbackMessage}`);
+            writeCliError('fallback-cache-cleanup', fallbackError);
         }
     }
 
@@ -168,12 +180,15 @@ if (commandArgs.length > 0) {
         childEnv.NODE_ENV = 'development';
     }
     const child = spawn(command, args, {
-        stdio: 'inherit',
+        stdio: ['inherit', 'pipe', 'pipe'],
         env: childEnv,
     });
 
+    forwardChildOutput(child.stdout, process.stdout);
+    forwardChildOutput(child.stderr, process.stderr);
+
     child.on('error', (error) => {
-        console.error(error instanceof Error ? error.message : String(error));
+        writeCliError('child-process', error);
         process.exit(1);
     });
 

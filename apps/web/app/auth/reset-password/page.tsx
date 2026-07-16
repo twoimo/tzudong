@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from '@/lib/no-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { DEBUG_LOG_EVENT, DEBUG_LOG_REASON_CODE, debugLog } from '@/lib/debug-log';
 
 export default function ResetPasswordPage() {
     const router = useRouter();
@@ -57,9 +58,10 @@ export default function ResetPasswordPage() {
                         setIsCheckingSession(false);
                         return;
                     }
-                } catch (error) {
-                    console.error('Code Exchange Error:', error);
-                    // 실패 시에도 세션 체크 계속
+                } catch {
+                    debugLog(DEBUG_LOG_EVENT.PASSWORD_RECOVERY_CODE_EXCHANGE_FAILED, {
+                        reason: DEBUG_LOG_REASON_CODE.PASSWORD_RECOVERY_CODE_EXCHANGE_FAILED,
+                    });
                 }
             }
 
@@ -101,7 +103,13 @@ export default function ResetPasswordPage() {
             };
         };
 
-        handleRecoverySession();
+        void handleRecoverySession().catch(() => {
+            debugLog(DEBUG_LOG_EVENT.PASSWORD_RECOVERY_SESSION_CHECK_FAILED, {
+                reason: DEBUG_LOG_REASON_CODE.PASSWORD_RECOVERY_SESSION_CHECK_FAILED,
+            });
+            setIsValidSession(false);
+            setIsCheckingSession(false);
+        });
     }, [router, isValidSession]);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -128,10 +136,11 @@ export default function ResetPasswordPage() {
             toast.success('비밀번호가 성공적으로 변경되었습니다');
             setIsOpen(false);
             router.push('/');
-        } catch (error) {
-            console.error('Password update error:', error);
-            const errorMessage = error instanceof Error ? error.message : '비밀번호 변경에 실패했습니다';
-            toast.error(errorMessage);
+        } catch {
+            debugLog(DEBUG_LOG_EVENT.PASSWORD_UPDATE_FAILED, {
+                reason: DEBUG_LOG_REASON_CODE.PASSWORD_UPDATE_FAILED,
+            });
+            toast.error('비밀번호 변경에 실패했습니다. 잠시 후 다시 시도해주세요.');
         } finally {
             setIsLoading(false);
         }

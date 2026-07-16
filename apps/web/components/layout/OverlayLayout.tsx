@@ -316,8 +316,9 @@ export default function OverlayLayout({
 
   return (
     <div
-      className="flex flex-col overflow-hidden"
+      className="flex min-h-0 min-w-0 flex-col overflow-hidden"
       style={{ height: "var(--full-height, 100vh)" }}
+      data-layout-primitives="viewport-shell overlay-stack"
     >
       <a
         href="#tzudong-map-main"
@@ -331,11 +332,11 @@ export default function OverlayLayout({
       {/* 메인 콘텐츠 - 지도 100% 너비 */}
       <main
         id="tzudong-map-main"
-        className="flex-1 relative overflow-hidden"
+        className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden"
         tabIndex={-1}
         aria-label={mainContentLabel}
       >
-        <div className="h-full w-full">{children}</div>
+        <div className="h-full min-h-0 min-w-0 w-full">{children}</div>
 
         {shouldRenderRouteOverlayChrome && (
           <FloatingNavButtons

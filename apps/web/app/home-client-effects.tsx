@@ -169,7 +169,7 @@ export default function HomeClientEffects({
                         const promise = import('./home-supabase-actions')
                             .then(({ fetchHomeAnnouncementById }) => fetchHomeAnnouncementById(announcementId))
                             .catch((error) => {
-                                console.error('공지사항 조회 실패:', error);
+                                console.error('공지사항 조회 실패:');
                                 toast.error('공지사항을 불러오지 못했어요');
                                 return null;
                             });
@@ -209,7 +209,7 @@ export default function HomeClientEffects({
                         const promise = import('./home-supabase-actions')
                             .then(({ resolveHomeRestaurantDeepLink }) => resolveHomeRestaurantDeepLink(restaurantId))
                             .catch((error) => {
-                                console.error('맛집 조회 실패:', error);
+                                console.error('맛집 조회 실패:');
                                 return null;
                             });
                         request = { key: restaurantKey, promise };
@@ -285,7 +285,7 @@ export default function HomeClientEffects({
                     const promise = import('./home-supabase-actions')
                         .then(({ resolveHomeRestaurantByCoordinates }) => resolveHomeRestaurantByCoordinates(lat, lng))
                         .catch((error) => {
-                            console.error('맛집 조회 실패:', error);
+                            console.error('맛집 조회 실패:');
                             return null;
                         });
                     request = { key: coordinateKey, promise };
@@ -429,7 +429,7 @@ export default function HomeClientEffects({
             } catch (error) {
                 notifyInlineDetailOpenFailed();
                 toast.error('맛집 정보를 불러오지 못했어요');
-                console.error('맛집 조회 실패:', error);
+                console.error('맛집 조회 실패:');
             }
         };
 

@@ -1,59 +1,106 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
-import { randomInt } from 'node:crypto';
+import { createHmac, randomInt } from 'node:crypto';
+import { isIP } from 'node:net';
+import {
+    BOUNDED_JSON_REQUEST_ERROR,
+    readBoundedJsonRequest,
+} from '@/lib/security/bounded-json-request';
+import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
+import type { Database } from '@/integrations/supabase/types';
 
-// 환경변수에서 Supabase URL과 Service Role Key 가져오기
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const DEFAULT_SITE_ORIGIN = 'https://www.tzudong.app';
-const SHORTEN_RATE_LIMIT_WINDOW_MS = 60_000;
-const SHORTEN_RATE_LIMIT_MAX_REQUESTS = 20;
-const shortenRateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
+const MAX_SHORTEN_BODY_BYTES = 4 * 1024;
+const MAX_TARGET_URL_LENGTH = 2_048;
+const SHORT_CODE_CANDIDATE_COUNT = 5;
+const SHORT_CODE_LENGTH = 6;
+const SHORT_CODE_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+const NO_STORE_HEADERS = { 'Cache-Control': 'no-store' };
 
+const SHORTEN_ERRORS = {
+    unsupportedMediaType: 'JSON 형식의 요청만 허용됩니다.',
+    bodyTooLarge: '요청 본문이 너무 큽니다.',
+    invalidBody: '요청 본문이 올바르지 않습니다.',
+    targetRequired: '대상 URL이 필요합니다.',
+    invalidTarget: '허용되지 않는 단축 URL 대상입니다.',
+    storageUnavailable: '단축 URL 저장소가 설정되지 않았습니다.',
+    reviewNotFound: '존재하지 않는 리뷰입니다.',
+    rateLimited: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.',
+    codeGenerationFailed: '단축 코드 생성에 실패했습니다. 다시 시도해주세요.',
+    storageFailed: '단축 URL 저장에 실패했습니다.',
+    serverError: '서버 오류가 발생했습니다.',
+} as const;
 export const runtime = 'nodejs';
 
-function getRequesterKey(request: NextRequest) {
-    const forwardedFor = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
-    const realIp = request.headers.get('x-real-ip')?.trim();
-    return forwardedFor || realIp || 'unknown';
+function noStoreJson(body: object, status = 200, headers?: Record<string, string>) {
+    return NextResponse.json(body, {
+        status,
+        headers: {
+            ...NO_STORE_HEADERS,
+            ...headers,
+        },
+    });
 }
 
-function isRateLimited(request: NextRequest) {
-    const now = Date.now();
-    const key = getRequesterKey(request);
-    const bucket = shortenRateLimitBuckets.get(key);
+function shortenError(error: string, status: number, headers?: Record<string, string>) {
+    return noStoreJson({ error }, status, headers);
+}
 
-    if (!bucket || bucket.resetAt <= now) {
-        shortenRateLimitBuckets.set(key, { count: 1, resetAt: now + SHORTEN_RATE_LIMIT_WINDOW_MS });
-        return false;
+function getRequesterBucket(request: NextRequest) {
+    const privacyHashKey = process.env.PRIVACY_AUDIT_HASH_KEY?.trim();
+    if (
+        process.env.VERCEL !== '1'
+        || !privacyHashKey
+        || Buffer.byteLength(privacyHashKey, 'utf8') < 32
+    ) {
+        return 'unknown';
     }
 
-    bucket.count += 1;
-    if (bucket.count > SHORTEN_RATE_LIMIT_MAX_REQUESTS) {
-        return true;
+    const vercelForwardedFor = request.headers.get('x-vercel-forwarded-for')?.trim();
+    if (
+        !vercelForwardedFor
+        || vercelForwardedFor.includes(',')
+        || isIP(vercelForwardedFor) === 0
+    ) {
+        return 'unknown';
     }
 
-    return false;
+    return `ip:${createHmac('sha256', privacyHashKey).update(vercelForwardedFor).digest('hex')}`;
+}
+
+function parseTrustedSiteOrigin(value: string, allowLoopbackHttp: boolean) {
+    try {
+        const parsed = new URL(value);
+        const isLoopback = parsed.hostname === 'localhost'
+            || parsed.hostname === '127.0.0.1'
+            || parsed.hostname === '[::1]';
+        if (
+            parsed.username
+            || parsed.password
+            || parsed.pathname !== '/'
+            || parsed.search
+            || parsed.hash
+            || (parsed.protocol !== 'https:' && !(allowLoopbackHttp && parsed.protocol === 'http:' && isLoopback))
+        ) {
+            return null;
+        }
+        return parsed.origin;
+    } catch {
+        return null;
+    }
 }
 
 function getShortUrlOrigin(request: NextRequest) {
     const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
     if (configuredSiteUrl) {
-        try {
-            return new URL(configuredSiteUrl).origin;
-        } catch {
-            return DEFAULT_SITE_ORIGIN;
-        }
+        return parseTrustedSiteOrigin(configuredSiteUrl, process.env.NODE_ENV !== 'production')
+            ?? DEFAULT_SITE_ORIGIN;
     }
 
     if (process.env.NODE_ENV !== 'production') {
-        const developmentOrigin = request.headers.get('origin') || request.nextUrl.origin;
-        try {
-            return new URL(developmentOrigin).origin;
-        } catch {
-            return DEFAULT_SITE_ORIGIN;
-        }
+        return parseTrustedSiteOrigin(request.nextUrl.origin, true) ?? DEFAULT_SITE_ORIGIN;
     }
 
     return DEFAULT_SITE_ORIGIN;
@@ -67,12 +114,14 @@ function getAllowedShortUrlTarget(targetUrl: string, request: NextRequest) {
 
         const target = new URL(trimmedTargetUrl, origin);
         const reviewId = target.searchParams.get('review');
-        if (target.origin !== new URL(origin).origin) return null;
-        if (target.pathname !== '/' || !isValidReviewId(reviewId)) return null;
+        if (target.origin !== new URL(origin).origin || target.pathname !== '/' || !isValidReviewId(reviewId)) {
+            return null;
+        }
 
+        const canonicalReviewId = reviewId.toLowerCase();
         return {
-            canonicalTargetUrl: `/?review=${encodeURIComponent(reviewId)}`,
-            reviewId,
+            canonicalTargetUrl: `/?review=${canonicalReviewId}`,
+            reviewId: canonicalReviewId,
         };
     } catch {
         return null;
@@ -88,7 +137,7 @@ function createSupabasePublicClient() {
         return null;
     }
 
-    return createSupabaseClient(supabaseUrl, supabaseAnonKey, {
+    return createSupabaseClient<Database>(supabaseUrl, supabaseAnonKey, {
         auth: {
             persistSession: false,
             autoRefreshToken: false,
@@ -97,66 +146,76 @@ function createSupabasePublicClient() {
 }
 
 function createSupabaseAdminClient() {
-    if (!supabaseUrl || !supabaseServiceKey) {
+    try {
+        return createSupabaseServiceRoleClient();
+    } catch {
         return null;
     }
-
-    return createSupabaseClient(supabaseUrl, supabaseServiceKey, {
-        auth: {
-            persistSession: false,
-            autoRefreshToken: false,
-        },
-    });
 }
 
-// 6자리 영숫자 코드 생성
 function generateShortCode(): string {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     let code = '';
-    for (let i = 0; i < 6; i++) {
-        code += chars.charAt(randomInt(chars.length));
+    for (let index = 0; index < SHORT_CODE_LENGTH; index += 1) {
+        code += SHORT_CODE_ALPHABET.charAt(randomInt(SHORT_CODE_ALPHABET.length));
     }
     return code;
 }
 
+function generateShortCodeCandidates() {
+    return Array.from({ length: SHORT_CODE_CANDIDATE_COUNT }, generateShortCode);
+}
+
 export async function POST(request: NextRequest) {
     try {
-        if (isRateLimited(request)) {
-            return NextResponse.json(
-                { error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
-                { status: 429 }
-            );
+        const bodyResult = await readBoundedJsonRequest(request, MAX_SHORTEN_BODY_BYTES);
+        if (!bodyResult.ok) {
+            if (bodyResult.code === BOUNDED_JSON_REQUEST_ERROR.unsupportedMediaType) {
+                return shortenError(SHORTEN_ERRORS.unsupportedMediaType, 415);
+            }
+            if (bodyResult.code === BOUNDED_JSON_REQUEST_ERROR.bodyTooLarge) {
+                return shortenError(SHORTEN_ERRORS.bodyTooLarge, 413);
+            }
+            return shortenError(SHORTEN_ERRORS.invalidBody, 400);
         }
 
-        const body = await request.json();
-        const { targetUrl } = body;
+        const body = bodyResult.value;
+        if (
+            typeof body !== 'object'
+            || body === null
+            || Array.isArray(body)
+            || Object.getPrototypeOf(body) !== Object.prototype
+        ) {
+            return shortenError(SHORTEN_ERRORS.invalidBody, 400);
+        }
 
-        if (!targetUrl) {
-            return NextResponse.json(
-                { error: '대상 URL이 필요합니다.' },
-                { status: 400 }
-            );
+        const payload = body as Record<string, unknown>;
+        const keys = Object.keys(payload);
+        if (
+            keys.length !== 1
+            || keys[0] !== 'targetUrl'
+            || typeof payload.targetUrl !== 'string'
+            || payload.targetUrl.length > MAX_TARGET_URL_LENGTH
+        ) {
+            return shortenError(SHORTEN_ERRORS.invalidBody, 400);
+        }
+
+        const targetUrl = payload.targetUrl;
+        if (!targetUrl.trim()) {
+            return shortenError(SHORTEN_ERRORS.targetRequired, 400);
         }
 
         const allowedTarget = getAllowedShortUrlTarget(targetUrl, request);
         if (!allowedTarget) {
-            return NextResponse.json(
-                { error: '허용되지 않는 단축 URL 대상입니다.' },
-                { status: 400 }
-            );
+            return shortenError(SHORTEN_ERRORS.invalidTarget, 400);
         }
 
         const supabasePublic = createSupabasePublicClient();
-        const supabaseAdmin = createSupabaseAdminClient();
-        if (!supabasePublic || !supabaseAdmin) {
-            return NextResponse.json(
-                { error: '단축 URL 저장소가 설정되지 않았습니다.' },
-                { status: 500 }
-            );
+        if (!supabasePublic) {
+            return shortenError(SHORTEN_ERRORS.storageUnavailable, 500);
         }
 
         // 공개 리뷰 검증은 anon/RLS 경로로 먼저 수행한다. service-role은 검증된
-        // 대상의 short_urls 저장에만 사용해 공개 API의 데이터 노출면을 줄인다.
+        // 대상의 원자적 할당 RPC에만 사용해 공개 API의 데이터 노출면을 줄인다.
         const { data: review, error: reviewError } = await supabasePublic
             .from('reviews')
             .select('id, restaurant_id, is_verified')
@@ -165,83 +224,47 @@ export async function POST(request: NextRequest) {
             .maybeSingle();
 
         if (reviewError || !review) {
-            return NextResponse.json(
-                { error: '존재하지 않는 리뷰입니다.' },
-                { status: 404 }
+            return shortenError(SHORTEN_ERRORS.reviewNotFound, 404);
+        }
+
+        const supabaseAdmin = createSupabaseAdminClient();
+        if (!supabaseAdmin) {
+            return shortenError(SHORTEN_ERRORS.storageUnavailable, 500);
+        }
+
+        const { data: allocation, error: allocationError } = await supabaseAdmin
+            .rpc('allocate_short_url', {
+                p_target_url: allowedTarget.canonicalTargetUrl,
+                p_restaurant_id: review.restaurant_id,
+                p_review_id: allowedTarget.reviewId,
+                p_client_bucket: getRequesterBucket(request),
+                p_candidate_codes: generateShortCodeCandidates(),
+            })
+            .maybeSingle();
+
+        if (allocationError || !allocation) {
+            return shortenError(SHORTEN_ERRORS.storageFailed, 500);
+        }
+
+        if (allocation.rate_limited) {
+            return shortenError(
+                SHORTEN_ERRORS.rateLimited,
+                429,
+                { 'Retry-After': String(Math.max(1, allocation.retry_after_seconds)) }
             );
         }
 
-        // 동일한 targetUrl이 이미 존재하는지 확인
-        const { data: existing } = await supabaseAdmin
-            .from('short_urls')
-            .select('code')
-            .eq('target_url', allowedTarget.canonicalTargetUrl)
-            .single();
-
-        if (existing) {
-            // 이미 존재하면 기존 코드 반환
-            const origin = getShortUrlOrigin(request);
-            return NextResponse.json({
-                shortUrl: `${origin}/s/${existing.code}`,
-                code: existing.code,
-                isExisting: true,
-            });
-        }
-
-        // 새 코드 생성 (충돌 방지를 위해 최대 5회 시도)
-        let code = '';
-        let attempts = 0;
-        const maxAttempts = 5;
-
-        while (attempts < maxAttempts) {
-            code = generateShortCode();
-            const { data: codeExists } = await supabaseAdmin
-                .from('short_urls')
-                .select('id')
-                .eq('code', code)
-                .single();
-
-            if (!codeExists) break;
-            attempts++;
-        }
-
-        if (attempts >= maxAttempts) {
-            return NextResponse.json(
-                { error: '단축 코드 생성에 실패했습니다. 다시 시도해주세요.' },
-                { status: 500 }
-            );
-        }
-
-        // 단축 URL 저장
-        const { error: insertError } = await supabaseAdmin
-            .from('short_urls')
-            .insert({
-                code,
-                target_url: allowedTarget.canonicalTargetUrl,
-                restaurant_id: review.restaurant_id,
-                restaurant_name: null,
-            });
-
-        if (insertError) {
-            console.error('단축 URL 저장 실패:', insertError);
-            return NextResponse.json(
-                { error: '단축 URL 저장에 실패했습니다.' },
-                { status: 500 }
-            );
+        if (allocation.allocation_failed || !allocation.code) {
+            return shortenError(SHORTEN_ERRORS.codeGenerationFailed, 500);
         }
 
         const origin = getShortUrlOrigin(request);
-        return NextResponse.json({
-            shortUrl: `${origin}/s/${code}`,
-            code,
-            isExisting: false,
+        return noStoreJson({
+            shortUrl: `${origin}/s/${allocation.code}`,
+            code: allocation.code,
+            isExisting: allocation.is_existing,
         });
-
-    } catch (error) {
-        console.error('단축 URL 생성 오류:', error);
-        return NextResponse.json(
-            { error: '서버 오류가 발생했습니다.' },
-            { status: 500 }
-        );
+    } catch {
+        return shortenError(SHORTEN_ERRORS.serverError, 500);
     }
 }

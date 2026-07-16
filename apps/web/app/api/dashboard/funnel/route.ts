@@ -12,7 +12,7 @@ export async function GET() {
         const data = await getDashboardFunnel(false);
         return NextResponse.json(data);
     } catch (error) {
-        console.error('[dashboard/funnel] failed:', error);
+        console.error('[dashboard/funnel] failed:');
         return NextResponse.json(
             { error: 'Failed to build dashboard funnel.' },
             { status: 500 },

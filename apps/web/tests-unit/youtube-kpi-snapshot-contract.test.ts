@@ -582,6 +582,12 @@ describe("YouTube KPI snapshot collector contract", () => {
     expect(route.indexOf("process.env.GITHUB_ACTIONS_TOKEN")).toBeLessThan(
       route.indexOf("process.env.GITHUB_TOKEN"),
     );
+    expect(route).toContain('"GITHUB_RUNS_UNAVAILABLE"');
+    expect(route).toContain('"SNAPSHOT_QUERY_FAILED"');
+    expect(route).toContain('"SNAPSHOT_COUNT_FAILED"');
+    expect(route).toContain('"SNAPSHOT_STATUS_UNAVAILABLE"');
+    expect(route).not.toContain("error.message");
+    expect(route).not.toContain("countError?.message");
     expect(dashboard).toContain("/api/admin/youtube-kpi-collection-logs");
     expect(dashboard).toContain("데이터 수집 상태");
     expect(dashboard).toContain("수집 정상");

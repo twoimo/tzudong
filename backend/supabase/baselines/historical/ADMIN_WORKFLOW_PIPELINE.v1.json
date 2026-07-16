@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "kind": "admin-workflow-pipeline-source-reconstruction",
+  "repository": "twoimo/tzudong",
+  "sourceCommit": "e88da627cee0c08eed994584d0cd6b5ac7f3c7f2",
+  "originalPath": "backend/supabase/migrations/20260310_create_admin_workflow_pipeline_tables.sql",
+  "gitBlob": "d9062430984a7c8a0b87f1c2dd5d79ace891ef9f",
+  "sha256": "83acbf7f9ad5abf66de2aae7350db1a23a1f53d940336629252cdcb9d4f47a6e",
+  "byteLength": 5998,
+  "purpose": "Generator-only source reconstruction from immutable tracked Git history; not production evidence."
+}

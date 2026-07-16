@@ -3,10 +3,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { normalizeAdminSidebarOrder } from "@/lib/admin/sidebar-order";
 import { requireAdmin } from "@/lib/auth/require-admin";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/service-role";
+import { readBoundedJsonRequest } from "@/lib/security/bounded-json-request";
+import { isTrustedSameOriginMutation } from "@/lib/security/same-origin-mutation";
 
 export const runtime = "nodejs";
 
 const SIDEBAR_ORDER_KEY = "admin_sidebar_order";
+const MAX_SIDEBAR_ORDER_REQUEST_BYTES = 4 * 1024;
 
 type PreferenceRow = {
   value: unknown;
@@ -49,10 +52,7 @@ export async function GET() {
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {
-    console.error(
-      "[admin/preferences/sidebar-order] failed to read sidebar order:",
-      error,
-    );
+    console.error("[admin/preferences/sidebar-order] failed to read sidebar order:");
     return NextResponse.json(
       { error: "사이드바 순서를 불러오지 못했습니다." },
       { status: 500 },
@@ -64,14 +64,24 @@ export async function PATCH(request: NextRequest) {
   try {
     const auth = await requireAdmin();
     if (!auth.ok) return auth.response;
+    if (!isTrustedSameOriginMutation(request)) {
+      return NextResponse.json(
+        { error: "Forbidden" },
+        { status: 403, headers: { "Cache-Control": "no-store" } },
+      );
+    }
+
+    const requestBody = await readBoundedJsonRequest(
+      request,
+      MAX_SIDEBAR_ORDER_REQUEST_BYTES,
+    );
+    const body = requestBody.ok ? requestBody.value : null;
     if (!isAdminPreferenceUserIdPersistable(auth.userId)) {
-      const body = await request.json().catch(() => null);
       return NextResponse.json(
         { order: normalizeAdminSidebarOrder(isRecord(body) ? body.order : null) },
         { headers: { "Cache-Control": "no-store" } },
       );
     }
-    const body = await request.json().catch(() => null);
     const order = normalizeAdminSidebarOrder(
       isRecord(body) ? body.order : null,
     );
@@ -97,10 +107,7 @@ export async function PATCH(request: NextRequest) {
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {
-    console.error(
-      "[admin/preferences/sidebar-order] failed to save sidebar order:",
-      error,
-    );
+    console.error("[admin/preferences/sidebar-order] failed to save sidebar order:");
     return NextResponse.json(
       { error: "사이드바 순서를 저장하지 못했습니다." },
       { status: 500 },
