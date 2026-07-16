@@ -13,7 +13,7 @@ import {
   validateReleaseMigrationManifest,
 } from "../scripts/apply-supabase-migration.mjs";
 
-const MANIFEST_SHA256 = "355051ef7e015c46bb56c674f36cee1f4ec543971c444acf95e04035b91c9fab";
+const MANIFEST_SHA256 = "25e9000825b6f739d400c416f18627142b461aa14b95ec663dd5dcf35c5fc2f4";
 const manifestBytes = readFileSync(RELEASE_MIGRATION_MANIFEST_PATH);
 const manifestDocument = JSON.parse(manifestBytes.toString("utf8"));
 const migration = manifestDocument.migrations[0];
@@ -40,6 +40,18 @@ describe("reviewed Supabase migration apply contract", () => {
     expect(migrationScriptSource).not.toContain("export const RELEASE_MIGRATION_MANIFEST =");
     expect(migrationScriptSource).not.toContain(migration.path);
     expect(migrationScriptSource).not.toContain(migration.sha256);
+    expect(migration.terminalReadback.query).toContain(
+      "array_agg(attname::text ORDER BY attnum)",
+    );
+    expect(migration.terminalReadback.query).toContain(
+      "array_agg(conname::text ORDER BY conname)",
+    );
+    expect(migration.terminalReadback.query).not.toContain(
+      "array_agg(attname ORDER BY attnum)",
+    );
+    expect(migration.terminalReadback.query).not.toContain(
+      "array_agg(conname ORDER BY conname)",
+    );
 
     const loaded = await loadReleaseMigrationManifest({
       expectedManifestSha256: MANIFEST_SHA256,
