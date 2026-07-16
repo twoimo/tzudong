@@ -293,16 +293,27 @@ function runPsql(databaseUrl, query, singleTransaction) {
   args.push(databaseUrl);
   const result = spawnSync('psql', args, {
     encoding: 'utf8',
-    input: `\\set VERBOSITY sqlstate\n${query}`,
+    input: `\\set VERBOSITY verbose\n${query}`,
     maxBuffer: 10 * 1024 * 1024,
   });
   if (result.error) {
     throw operationError('MIGRATION_PSQL_EXECUTION_FAILED');
   }
   if (result.status !== 0) {
-    const sqlstate = /(?:^|\s)([0-9A-Z]{5})(?:\s|$)/m.exec(result.stderr || '')?.[1];
+    const stderr = result.stderr || '';
+    const sqlstate = /(?:^|\s)([0-9A-Z]{5})(?:\s|$)/m.exec(stderr)?.[1];
+    const undefinedFunction = sqlstate === '42883'
+      ? /function (public\.is_user_admin\(uuid\)|auth\.uid\(\)|gen_random_uuid\(\)) does not exist/i.exec(stderr)?.[1]
+      : null;
+    const classifier = undefinedFunction
+      ?.replace(/[().]/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_|_$/g, '')
+      .toUpperCase();
     throw operationError(
-      sqlstate ? `MIGRATION_PSQL_FAILED_${sqlstate}` : 'MIGRATION_PSQL_FAILED',
+      sqlstate
+        ? `MIGRATION_PSQL_FAILED_${sqlstate}${classifier ? `_${classifier}` : ''}`
+        : 'MIGRATION_PSQL_FAILED',
     );
   }
   return result.stdout || '';
