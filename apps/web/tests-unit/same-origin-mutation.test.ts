@@ -66,23 +66,54 @@ describe('same-origin mutation authorization', () => {
   });
   test('allows only exact cookie-free internal capability routes through the CSRF layer', () => {
     const capability = 'c'.repeat(32);
+    const accountDeletionUrl = 'https://www.tzudong.app/api/internal/account-deletion';
+    const privacyRetentionUrl = 'https://www.tzudong.app/api/internal/privacy-retention';
+
     expect(isTrustedSameOriginMutation(mutation({
       'x-account-deletion-worker-capability': capability,
-    }, 'https://www.tzudong.app/api/internal/account-deletion'), productionEnv)).toBe(true);
+    }, accountDeletionUrl), productionEnv)).toBe(true);
     expect(isTrustedSameOriginMutation(mutation({
       'x-privacy-retention-capability': capability,
-    }, 'https://www.tzudong.app/api/internal/privacy-retention'), productionEnv)).toBe(true);
+    }, privacyRetentionUrl), productionEnv)).toBe(true);
+    expect(isTrustedSameOriginMutation(mutation({
+      'x-account-deletion-worker-capability': capability,
+      'sec-fetch-mode': 'cors',
+    }, accountDeletionUrl), productionEnv)).toBe(true);
+    expect(isTrustedSameOriginMutation(mutation({
+      'x-privacy-retention-capability': capability,
+      'sec-fetch-mode': 'cors',
+    }, privacyRetentionUrl), productionEnv)).toBe(true);
+
+    for (const fetchMode of ['CORS', 'navigate', 'no-cors', 'same-origin', '']) {
+      expect(isTrustedSameOriginMutation(mutation({
+        'x-account-deletion-worker-capability': capability,
+        'sec-fetch-mode': fetchMode,
+      }, accountDeletionUrl), productionEnv), fetchMode || 'empty').toBe(false);
+    }
+
     expect(isTrustedSameOriginMutation(mutation({
       'x-account-deletion-worker-capability': capability,
     }, 'https://www.tzudong.app/api/internal/other'), productionEnv)).toBe(false);
     expect(isTrustedSameOriginMutation(mutation({
-      cookie: 'browser=session',
       'x-account-deletion-worker-capability': capability,
-    }, 'https://www.tzudong.app/api/internal/account-deletion'), productionEnv)).toBe(false);
+    }, privacyRetentionUrl), productionEnv)).toBe(false);
     expect(isTrustedSameOriginMutation(mutation({
-      origin: 'https://attacker.example',
-      'x-account-deletion-worker-capability': capability,
-    }, 'https://www.tzudong.app/api/internal/account-deletion'), productionEnv)).toBe(false);
+      'x-account-deletion-worker-capability': 'short',
+    }, accountDeletionUrl), productionEnv)).toBe(false);
+    for (const headers of [
+      { cookie: 'browser=session' },
+      { authorization: 'Basic browser-credentials' },
+      { origin: 'https://attacker.example' },
+      { referer: 'https://www.tzudong.app/account' },
+      { 'sec-fetch-site': 'same-origin' },
+      { 'sec-fetch-dest': 'empty' },
+    ]) {
+      expect(isTrustedSameOriginMutation(mutation({
+        ...headers,
+        'x-account-deletion-worker-capability': capability,
+        'sec-fetch-mode': 'cors',
+      }, accountDeletionUrl), productionEnv)).toBe(false);
+    }
   });
 
   test('allows only cookie-free Bearer credentials through this CSRF layer', () => {
