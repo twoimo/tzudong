@@ -12,6 +12,11 @@ on:
         required: false
         default: true
         type: boolean
+      verify_terminal_state:
+        description: 'Verify the exact terminal database state without replaying migration SQL'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -142,8 +147,11 @@ jobs:
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           MIGRATION_ID: ${{ needs.validate.outputs.migration_id }}
+          VERIFY_TERMINAL_STATE: ${{ github.event.inputs.verify_terminal_state }}
         run: |
           set -euo pipefail
-          node apps/web/scripts/apply-supabase-migration.mjs \
-            --migration-id "$MIGRATION_ID" \
-            --json
+          args=(--migration-id "$MIGRATION_ID" --json)
+          if [ "$VERIFY_TERMINAL_STATE" = "true" ]; then
+            args+=(--verify-terminal-state)
+          fi
+          node apps/web/scripts/apply-supabase-migration.mjs "${args[@]}"

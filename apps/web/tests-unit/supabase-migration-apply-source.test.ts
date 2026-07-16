@@ -30,6 +30,8 @@ expect(migrationScriptSource).toContain(".replace(/[^a-z0-9_]+/gi, '_')");
 expect(migrationScriptSource).toContain("operator does not exist:");
 expect(migrationScriptSource).toContain("undefinedFunction ?? undefinedOperator");
 expect(migrationScriptSource).not.toContain("result.stderr.trim()");
+expect(migrationScriptSource).toContain("--verify-terminal-state");
+expect(migrationScriptSource).toContain("MIGRATION_TERMINAL_READBACK_FAILED");
 
 const digest = (bytes: Buffer) => createHash("sha256").update(bytes).digest("hex");
 const canonicalBytes = (document: unknown) =>
@@ -136,6 +138,12 @@ describe("reviewed Supabase migration apply contract", () => {
       "--migration-id",
       migration.id,
     ])).rejects.toThrow("MIGRATION_ARGUMENT_DUPLICATE");
+    await expect(main([
+      "--migration-id",
+      migration.id,
+      "--dry-run",
+      "--verify-terminal-state",
+    ])).rejects.toThrow("MIGRATION_ARGUMENT_INVALID");
   });
 
   test("keeps dry-run credential-free after external manifest and migration byte validation", async () => {
@@ -152,6 +160,7 @@ describe("reviewed Supabase migration apply contract", () => {
       manifest_sha256: MANIFEST_SHA256,
       migration_id: migration.id,
       dry_run: true,
+      verify_terminal_state: false,
       migration_applied: false,
       terminal_readback: null,
     });

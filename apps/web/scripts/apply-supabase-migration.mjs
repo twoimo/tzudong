@@ -168,7 +168,7 @@ export function resolveReviewedMigration(migrationId, manifest) {
 }
 
 function parseArgs(argv) {
-  const args = { migrationId: '', dryRun: false, json: false };
+  const args = { migrationId: '', dryRun: false, verifyTerminalState: false, json: false };
   const seen = new Set();
   const readValue = (option, index) => {
     if (seen.has(option)) throw operationError('MIGRATION_ARGUMENT_DUPLICATE');
@@ -186,18 +186,25 @@ function parseArgs(argv) {
       if (seen.has(arg)) throw operationError('MIGRATION_ARGUMENT_DUPLICATE');
       seen.add(arg);
       args.dryRun = true;
+    } else if (arg === '--verify-terminal-state') {
+      if (seen.has(arg)) throw operationError('MIGRATION_ARGUMENT_DUPLICATE');
+      seen.add(arg);
+      args.verifyTerminalState = true;
     } else if (arg === '--json') {
       if (seen.has(arg)) throw operationError('MIGRATION_ARGUMENT_DUPLICATE');
       seen.add(arg);
       args.json = true;
     } else if (arg === '--help' || arg === '-h') {
-      console.log('Usage: node scripts/apply-supabase-migration.mjs --migration-id ID [--dry-run] [--json]');
+      console.log('Usage: node scripts/apply-supabase-migration.mjs --migration-id ID [--dry-run | --verify-terminal-state] [--json]');
       process.exit(0);
     } else {
       throw operationError('MIGRATION_ARGUMENT_INVALID');
     }
   }
   if (!args.migrationId) throw operationError('MIGRATION_ID_REQUIRED');
+  if (args.dryRun && args.verifyTerminalState) {
+    throw operationError('MIGRATION_ARGUMENT_INVALID');
+  }
   return args;
 }
 
@@ -404,25 +411,41 @@ export async function main(
     sha256: migration.sha256,
     apply_method: 'direct_postgres',
     dry_run: args.dryRun,
+    verify_terminal_state: args.verifyTerminalState,
     migration_applied: false,
     terminal_readback: null,
   };
 
   if (!args.dryRun) {
     const { databaseUrl } = selectDirectDatabaseTransport(environment);
-    const priorState = parseReadback(runPsql(databaseUrl, migration.expectedPriorState.query, false));
     const terminalReadback = parseReadback(
       runPsql(databaseUrl, migration.terminalReadback.query, false),
     );
-    assertExpectedPriorState(priorState, terminalReadback, migration);
-    result.terminal_readback = applyMigrationWithTerminalReadback(databaseUrl, migration, query);
-    result.migration_applied = true;
+    if (args.verifyTerminalState) {
+      result.terminal_readback = assertExactReadback(
+        terminalReadback,
+        migration.terminalReadback.expected,
+        'MIGRATION_TERMINAL_READBACK_FAILED',
+      );
+    } else {
+      const priorState = parseReadback(
+        runPsql(databaseUrl, migration.expectedPriorState.query, false),
+      );
+      assertExpectedPriorState(priorState, terminalReadback, migration);
+      result.terminal_readback = applyMigrationWithTerminalReadback(databaseUrl, migration, query);
+      result.migration_applied = true;
+    }
   }
 
   if (args.json) {
     console.log(redactCliText(JSON.stringify(result, null, 2)));
   } else {
-    console.log(`Supabase migration ${args.dryRun ? 'dry-run checked' : 'applied'}: ${redactCliText(migration.id, 128)}`);
+    const operation = args.dryRun
+      ? 'dry-run checked'
+      : args.verifyTerminalState
+        ? 'terminal state verified'
+        : 'applied';
+    console.log(`Supabase migration ${operation}: ${redactCliText(migration.id, 128)}`);
   }
   return result;
 }
