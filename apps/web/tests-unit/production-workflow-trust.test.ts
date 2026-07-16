@@ -10,7 +10,7 @@ const releaseManifestPath = join(
   "supabase-migration-release-manifest.v1.json",
 );
 const releaseManifest = readFileSync(releaseManifestPath);
-const RELEASE_MANIFEST_SHA256 = "25e9000825b6f739d400c416f18627142b461aa14b95ec663dd5dcf35c5fc2f4";
+const RELEASE_MANIFEST_SHA256 = "9f4b053f48622805746ec36879a8b91df29a4ab45699c691abddbb3ae5f2b1c3";
 const workflow = (name: string) =>
   readFileSync(join(root, ".github", "workflows", name), "utf8");
 
