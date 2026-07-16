@@ -162,7 +162,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       appGlobalsSource,
       '[data-admin-storyboard-generator="true"][data-storyboard-viewport-fit="bounded"]',
       "height",
-      "100%",
+      "calc(var(--full-height, 100vh) - 2rem)",
+    );
+    expect(appGlobalsSource).toMatch(
+      /@media \(max-width: 1099px\) \{[\s\S]*?\[data-admin-storyboard-generator="true"\]\[data-storyboard-viewport-fit="bounded"\] \{\s*height: auto !important;/,
     );
     expect(storyboardSource).not.toContain(
       'height: "calc(var(--full-height, 100vh) - 2rem)"',
