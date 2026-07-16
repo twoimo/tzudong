@@ -301,7 +301,7 @@ function runPsql(databaseUrl, query, singleTransaction) {
   }
   if (result.status !== 0) {
     const stderr = result.stderr || '';
-    const sqlstate = /(?:^|\s)([0-9A-Z]{5})(?:\s|$)/m.exec(stderr)?.[1];
+    const sqlstate = /\b([0-9A-Z]{5})\b/m.exec(stderr)?.[1];
     const undefinedFunction = sqlstate === '42883'
       ? /function (public\.is_user_admin\(uuid\)|auth\.uid\(\)|gen_random_uuid\(\)) does not exist/i.exec(stderr)?.[1]
       : null;
