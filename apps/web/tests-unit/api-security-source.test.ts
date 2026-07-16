@@ -32,6 +32,35 @@ describe('public API security source contracts', () => {
     expect(shortenSource).not.toContain('SUPABASE_SERVICE_ROLE_KEY');
     expect(shortenSource).not.toContain('console.');
   });
+  test('health 503 diagnostics report only the bounded missing required environment names', () => {
+    const healthSource = source('app/api/health/route.ts');
+    const requiredEnvironmentVariables = healthSource.match(
+      /const REQUIRED_ENVIRONMENT_VARIABLES = \[([\s\S]*?)\] as const;/,
+    )?.[1].match(/'[^']+'/g);
+
+    expect(requiredEnvironmentVariables).toEqual([
+      "'TS7_RELEASE_ID'",
+      "'VERCEL_GIT_COMMIT_SHA'",
+      "'VERCEL_DEPLOYMENT_ID'",
+      "'VERCEL_PROJECT_ID'",
+    ]);
+
+    const failureBlock = healthSource.match(
+      /if \(missingRequiredEnvironmentVariables\.length > 0\) \{([\s\S]*?)\n    \}/,
+    )?.[1];
+
+    expect(failureBlock).toContain(
+      "console.error('Health check missing required environment variables', missingRequiredEnvironmentVariables);",
+    );
+    expect(failureBlock).not.toContain('process.env');
+    expect(failureBlock).not.toContain('releaseId');
+    expect(failureBlock).not.toContain('gitSha');
+    expect(failureBlock).not.toContain('deploymentId');
+    expect(failureBlock).not.toContain('projectId');
+    expect(failureBlock).toContain(
+      "return NextResponse.json({ ok: false, service: 'tzudong-web' }, { status: 503, headers: { 'cache-control': 'no-store' } });",
+    );
+  });
 
   test('uses one bounded JSON reader for request bodies and keeps shorten request identity fail-closed', async () => {
     const shortenSource = source('app/api/shorten/route.ts');
