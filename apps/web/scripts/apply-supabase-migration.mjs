@@ -303,10 +303,11 @@ function runPsql(databaseUrl, query, singleTransaction) {
     const stderr = result.stderr || '';
     const sqlstate = /ERROR:\s+([0-9A-Z]{5}):/m.exec(stderr)?.[1];
     const undefinedFunction = sqlstate === '42883'
-      ? /function (public\.is_user_admin\(uuid\)|auth\.uid\(\)|gen_random_uuid\(\)) does not exist/i.exec(stderr)?.[1]
+      ? /function ([a-z_][a-z0-9_.]*\([a-z0-9_., ]*\)) does not exist/i.exec(stderr)?.[1]
       : null;
     const classifier = undefinedFunction
-      ?.replace(/[().]/g, '_')
+      ?.slice(0, 96)
+      .replace(/[^a-z0-9_]+/gi, '_')
       .replace(/_+/g, '_')
       .replace(/^_|_$/g, '')
       .toUpperCase();
