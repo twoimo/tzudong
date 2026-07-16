@@ -24,7 +24,9 @@ const migrationScriptSource = readFileSync(
 expect(migrationScriptSource).toContain("input: `\\\\set VERBOSITY verbose\\n${query}`");
 expect(migrationScriptSource).toContain("MIGRATION_PSQL_FAILED_${sqlstate}");
 expect(migrationScriptSource).toContain("const sqlstate = /ERROR:\\s+([0-9A-Z]{5}):/m");
-expect(migrationScriptSource).toContain("public\\.is_user_admin\\(uuid\\)|auth\\.uid\\(\\)|gen_random_uuid\\(\\)");
+expect(migrationScriptSource).toContain("function ([a-z_][a-z0-9_.]*\\([a-z0-9_., ]*\\)) does not exist");
+expect(migrationScriptSource).toContain("?.slice(0, 96)");
+expect(migrationScriptSource).toContain(".replace(/[^a-z0-9_]+/gi, '_')");
 expect(migrationScriptSource).not.toContain("result.stderr.trim()");
 
 const digest = (bytes: Buffer) => createHash("sha256").update(bytes).digest("hex");
