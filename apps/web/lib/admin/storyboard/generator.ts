@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import { buildStoryboardAgentGraphFidelity } from './agent-graph-fidelity';
 import { runStoryboardLocalRag } from './rag';
-import { sanitizeStoryboardPrompt } from './prompt-safety';
+import { sanitizeStoryboardPrompt, sanitizeStoryboardPublicText } from './prompt-safety';
 import {
   STORYBOARD_MAX_SEGMENT_COUNT,
   STORYBOARD_MIN_SEGMENT_COUNT,
@@ -339,7 +339,7 @@ function parseLatestJsonLine(filePath: string): Record<string, unknown> | null {
       }
     } catch (error) {
       if (index === 0) {
-        console.warn(`[admin/storyboard] skipped malformed latest heatmap row in ${filePath}:`, error);
+        console.warn(`[admin/storyboard] skipped malformed latest heatmap row in ${filePath}:`);
       }
       // Keep scanning older jsonl rows; some recollection files contain partial rows.
     }
@@ -865,7 +865,9 @@ export function buildStoryboardExportMarkdown(
     ]),
   ].join('\n');
 
-  const backendMarkdown = options.backendMarkdown?.trim();
+  const backendMarkdown = options.backendMarkdown
+    ? sanitizeStoryboardPublicText(options.backendMarkdown).trim()
+    : '';
   if (!backendMarkdown) return canonical;
 
   return [

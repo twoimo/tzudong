@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "platforms": ["win32", "linux"],
+  "cases": [
+    {
+      "id": "short-lived-child",
+      "rootPid": 100,
+      "samples": [
+        {"monotonicMs": 0, "totalPhysicalBytes": 1000, "availablePhysicalBytes": 500, "errors": [], "processes": [{"pid": 100, "parentPid": 1, "startIdentity": "1000", "rssBytes": 100}, {"pid": 101, "parentPid": 100, "startIdentity": "1001", "rssBytes": 50}]},
+        {"monotonicMs": 20, "totalPhysicalBytes": 1000, "availablePhysicalBytes": 500, "errors": [], "processes": [{"pid": 100, "parentPid": 1, "startIdentity": "1000", "rssBytes": 100}]},
+        {"monotonicMs": 40, "totalPhysicalBytes": 1000, "availablePhysicalBytes": 500, "errors": [], "processes": [{"pid": 100, "parentPid": 1, "startIdentity": "1000", "rssBytes": 100}]}
+      ],
+      "expectedSamples": [{"included": ["100:1000", "101:1001"], "includedRssBytes": 150, "errors": []}, {"included": ["100:1000"], "includedRssBytes": 100, "errors": []}, {"included": ["100:1000"], "includedRssBytes": 100, "errors": []}],
+      "expected": {"invalidReasons": [], "terminalObserved": true, "valid": true}
+    },
+    {
+      "id": "non-root-pid-reused",
+      "rootPid": 100,
+      "samples": [
+        {"monotonicMs": 0, "totalPhysicalBytes": 1000, "availablePhysicalBytes": 500, "errors": [], "processes": [{"pid": 100, "parentPid": 1, "startIdentity": "1000", "rssBytes": 100}, {"pid": 101, "parentPid": 100, "startIdentity": "1001", "rssBytes": 50}]},
+        {"monotonicMs": 20, "totalPhysicalBytes": 1000, "availablePhysicalBytes": 500, "errors": [], "processes": [{"pid": 100, "parentPid": 1, "startIdentity": "1000", "rssBytes": 100}, {"pid": 101, "parentPid": 100, "startIdentity": "2001", "rssBytes": 75}]},
+        {"monotonicMs": 40, "totalPhysicalBytes": 1000, "availablePhysicalBytes": 500, "errors": [], "processes": [{"pid": 100, "parentPid": 1, "startIdentity": "1000", "rssBytes": 100}]}
+      ],
+      "expectedSamples": [{"included": ["100:1000", "101:1001"], "includedRssBytes": 150, "errors": []}, {"included": ["100:1000", "101:2001"], "includedRssBytes": 175, "errors": ["process-identity-reused"]}, {"included": ["100:1000"], "includedRssBytes": 100, "errors": []}],
+      "expected": {"invalidReasons": ["process-identity-reused"], "terminalObserved": true, "valid": false}
+    },
+    {
+      "id": "malformed-inaccessible-exited-child-records",
+      "rootPid": 100,
+      "samples": [
+        {"monotonicMs": 0, "totalPhysicalBytes": 1000, "availablePhysicalBytes": 500, "errors": [], "processes": [{"pid": 100, "parentPid": 1, "startIdentity": "1000", "rssBytes": 100}]},
+        {"monotonicMs": 20, "totalPhysicalBytes": 1000, "availablePhysicalBytes": 500, "errors": ["inaccessible-child-record", "exited-child-record"], "processes": [{"pid": 100, "parentPid": 1, "startIdentity": "1000", "rssBytes": 100}, {"pid": 101, "parentPid": 100, "startIdentity": "1001", "rssBytes": "50"}]},
+        {"monotonicMs": 40, "totalPhysicalBytes": 1000, "availablePhysicalBytes": 500, "errors": [], "processes": [{"pid": 100, "parentPid": 1, "startIdentity": "1000", "rssBytes": 100}]}
+      ],
+      "expectedSamples": [{"included": ["100:1000"], "includedRssBytes": 100, "errors": []}, {"included": ["100:1000"], "includedRssBytes": 100, "errors": ["inaccessible-child-record", "exited-child-record", "malformed-process-identity"]}, {"included": ["100:1000"], "includedRssBytes": 100, "errors": []}],
+      "expected": {"invalidReasons": ["exited-child-record", "inaccessible-child-record", "malformed-process-identity"], "terminalObserved": true, "valid": false}
+    },
+    {
+      "id": "root-identity-reused",
+      "rootPid": 100,
+      "samples": [
+        {"monotonicMs": 0, "totalPhysicalBytes": 1000, "availablePhysicalBytes": 500, "errors": [], "processes": [{"pid": 100, "parentPid": 1, "startIdentity": "1000", "rssBytes": 100}]},
+        {"monotonicMs": 20, "totalPhysicalBytes": 1000, "availablePhysicalBytes": 500, "errors": [], "processes": [{"pid": 100, "parentPid": 1, "startIdentity": "2000", "rssBytes": 100}]},
+        {"monotonicMs": 40, "totalPhysicalBytes": 1000, "availablePhysicalBytes": 500, "errors": [], "processes": [{"pid": 100, "parentPid": 1, "startIdentity": "2000", "rssBytes": 100}]}
+      ],
+      "expectedSamples": [{"included": ["100:1000"], "includedRssBytes": 100, "errors": []}, {"included": ["100:2000"], "includedRssBytes": 100, "errors": ["root-identity-reused", "root-identity-reused"]}, {"included": ["100:2000"], "includedRssBytes": 100, "errors": ["root-identity-reused"]}],
+      "expected": {"invalidReasons": ["root-identity-reused"], "terminalObserved": true, "valid": false}
+    },
+    {
+      "id": "missing-root-identity",
+      "rootPid": 100,
+      "samples": [
+        {"monotonicMs": 0, "totalPhysicalBytes": 1000, "availablePhysicalBytes": 500, "errors": [], "processes": [{"pid": 100, "parentPid": 1, "startIdentity": "1000", "rssBytes": 100}]},
+        {"monotonicMs": 20, "totalPhysicalBytes": 1000, "availablePhysicalBytes": 500, "errors": [], "processes": [{"pid": 101, "parentPid": 100, "startIdentity": "1001", "rssBytes": 50}]},
+        {"monotonicMs": 40, "totalPhysicalBytes": 1000, "availablePhysicalBytes": 500, "errors": [], "processes": [{"pid": 100, "parentPid": 1, "startIdentity": "1000", "rssBytes": 100}]}
+      ],
+      "expectedSamples": [{"included": ["100:1000"], "includedRssBytes": 100, "errors": []}, {"included": ["101:1001"], "includedRssBytes": 50, "errors": ["missing-root-identity"]}, {"included": ["100:1000"], "includedRssBytes": 100, "errors": []}],
+      "expected": {"invalidReasons": ["missing-root-identity"], "terminalObserved": true, "valid": false}
+    },
+    {
+      "id": "monotonic-gap-and-host-pressure",
+      "rootPid": 100,
+      "samples": [
+        {"monotonicMs": 0, "totalPhysicalBytes": 1000, "availablePhysicalBytes": 500, "errors": [], "processes": [{"pid": 100, "parentPid": 1, "startIdentity": "1000", "rssBytes": 100}]},
+        {"monotonicMs": 61, "totalPhysicalBytes": 1000, "availablePhysicalBytes": 199, "errors": [], "processes": [{"pid": 100, "parentPid": 1, "startIdentity": "1000", "rssBytes": 100}]},
+        {"monotonicMs": 81, "totalPhysicalBytes": 1000, "availablePhysicalBytes": 500, "errors": [], "processes": [{"pid": 100, "parentPid": 1, "startIdentity": "1000", "rssBytes": 100}]}
+      ],
+      "expectedSamples": [{"included": ["100:1000"], "includedRssBytes": 100, "errors": []}, {"included": ["100:1000"], "includedRssBytes": 100, "errors": ["sampling-gap-exceeded", "host-memory-pressure"]}, {"included": ["100:1000"], "includedRssBytes": 100, "errors": []}],
+      "expected": {"invalidReasons": ["host-memory-pressure", "sampling-gap-exceeded"], "terminalObserved": true, "valid": false}
+    },
+    {
+      "id": "terminal-requires-three-clean-samples",
+      "rootPid": 100,
+      "samples": [
+        {"monotonicMs": 0, "totalPhysicalBytes": 1000, "availablePhysicalBytes": 500, "errors": [], "processes": [{"pid": 100, "parentPid": 1, "startIdentity": "1000", "rssBytes": 100}]},
+        {"monotonicMs": 20, "totalPhysicalBytes": 1000, "availablePhysicalBytes": 500, "errors": [], "processes": [{"pid": 100, "parentPid": 1, "startIdentity": "1000", "rssBytes": 100}]}
+      ],
+      "expectedSamples": [{"included": ["100:1000"], "includedRssBytes": 100, "errors": []}, {"included": ["100:1000"], "includedRssBytes": 100, "errors": []}],
+      "expected": {"invalidReasons": [], "terminalObserved": true, "valid": false}
+    },
+    {
+      "id": "root-access-failure-is-not-clean-exit",
+      "rootPid": 100,
+      "samples": [
+        {"monotonicMs": 0, "totalPhysicalBytes": 1000, "availablePhysicalBytes": 500, "errors": [], "processes": [{"pid": 100, "parentPid": 1, "startIdentity": "1000", "rssBytes": 100}]},
+        {"monotonicMs": 20, "totalPhysicalBytes": 1000, "availablePhysicalBytes": 500, "errors": ["inaccessible-root-record:100"], "processes": []},
+        {"monotonicMs": 40, "totalPhysicalBytes": 1000, "availablePhysicalBytes": 500, "errors": [], "processes": [{"pid": 100, "parentPid": 1, "startIdentity": "1000", "rssBytes": 100}]}
+      ],
+      "expectedSamples": [{"included": ["100:1000"], "includedRssBytes": 100, "errors": []}, {"included": [], "includedRssBytes": 0, "errors": ["inaccessible-root-record:100", "missing-root-identity"]}, {"included": ["100:1000"], "includedRssBytes": 100, "errors": []}],
+      "expected": {"invalidReasons": ["inaccessible-root-record:100", "missing-root-identity"], "terminalObserved": true, "valid": false}
+    }
+  ]
+}

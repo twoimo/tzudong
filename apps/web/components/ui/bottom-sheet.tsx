@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef, memo } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo, memo } from 'react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/useDeviceType';
 import { resetMobileSheetLayoutState, setMobileSheetLayoutState } from '@/lib/mobile-sheet-layout';
@@ -335,6 +335,12 @@ function BottomSheetComponent({
             ? ((vh - headerOffset) / vh) * 100
             : maxHeight;
     }, [headerOffset, maxHeight]);
+    const renderMaxHeight = useMemo(() => Math.max(
+        minHeight,
+        headerOffset > 0
+            ? ((viewportFrame.height - headerOffset) / viewportFrame.height) * 100
+            : maxHeight
+    ), [headerOffset, maxHeight, minHeight, viewportFrame.height]);
 
     const pxToPercent = useCallback((px: number) => {
         return (px / viewportHeightRef.current) * 100;
@@ -1292,8 +1298,7 @@ function BottomSheetComponent({
 
     if (!isOpen) return null;
 
-    const currentMaxHeight = Math.max(minHeight, getCurrentMaxHeight());
-    const isAtFullHeight = sheetHeight >= currentMaxHeight - SHEET_HALF_OPEN_TOLERANCE;
+    const isAtFullHeight = sheetHeight >= renderMaxHeight - SHEET_HALF_OPEN_TOLERANCE;
     const useStableKeyboardLayout = keyboardBehavior === 'stable' && isAtFullHeight;
     const contentKeyboardPadding = useStableKeyboardLayout ? viewportFrame.bottomOffset : 0;
 

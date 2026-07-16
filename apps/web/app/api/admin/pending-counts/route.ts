@@ -23,7 +23,7 @@ const RESTAURANT_REQUESTS_LIFECYCLE_SELECT =
 
 function normalizeCount(result: SupabaseCountResult, label: string) {
   if (result.error) {
-    throw new Error(`${label}: ${result.error.message ?? "count failed"}`);
+    throw new Error(`${label}: count failed`);
   }
 
   return result.count ?? 0;

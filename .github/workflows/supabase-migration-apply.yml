@@ -3,18 +3,12 @@ name: Supabase Migration Apply
 on:
   workflow_dispatch:
     inputs:
-      migration_file:
-        description: 'SQL migration file to apply'
-        required: false
-        default: 'backend/supabase/migrations/20260531105250_restaurant_refresh_history.sql'
-        type: string
-      migration_name:
-        description: 'Supabase migration name'
-        required: false
-        default: 'restaurant_refresh_history'
+      migration_id:
+        description: 'Committed release manifest migration identity'
+        required: true
         type: string
       dry_run:
-        description: 'Validate inputs without applying the migration'
+        description: 'Validate the committed manifest and migration bytes without credentials'
         required: false
         default: true
         type: boolean
@@ -24,46 +18,132 @@ permissions:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-
+  RELEASE_MIGRATION_MANIFEST_SHA256: "355051ef7e015c46bb56c674f36cee1f4ec543971c444acf95e04035b91c9fab"
 concurrency:
   group: supabase-migration-apply
   cancel-in-progress: false
 
 jobs:
-  apply:
+  validate:
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.repository == 'twoimo/tzudong' &&
+      github.event.repository.full_name == 'twoimo/tzudong' &&
+      github.event.repository.default_branch == 'main' &&
+      github.ref == 'refs/heads/main' &&
+      github.ref_name == 'main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    env:
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
-      MIGRATION_FILE: ${{ github.event.inputs.migration_file }}
-      MIGRATION_NAME: ${{ github.event.inputs.migration_name }}
-      DRY_RUN: ${{ github.event.inputs.dry_run }}
+    outputs:
+      migration_id: ${{ steps.manifest.outputs.migration_id }}
+      manifest_sha256: ${{ steps.manifest.outputs.manifest_sha256 }}
+      expected_manifest_sha256: ${{ steps.manifest.outputs.expected_manifest_sha256 }}
+      validated_sha: ${{ steps.checkout.outputs.sha }}
     steps:
-      - name: Checkout repository
+      - name: Checkout exact triggering commit
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # actions/checkout@v6
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
+
+      - name: Verify canonical detached checkout
+        id: checkout
+        env:
+          CANONICAL_REPOSITORY: twoimo/tzudong
+          PROTECTED_DEFAULT_BRANCH: main
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = "workflow_dispatch"
+          test "$GITHUB_REPOSITORY" = "$CANONICAL_REPOSITORY"
+          test "$GITHUB_REF" = "refs/heads/$PROTECTED_DEFAULT_BRANCH"
+          test "$GITHUB_REF_NAME" = "$PROTECTED_DEFAULT_BRANCH"
+          test "$GITHUB_SHA" = "$(git rev-parse --verify HEAD)"
+          test "$GITHUB_SHA" = "$(git show -s --format=%H HEAD)"
+          test -z "$(git symbolic-ref --quiet HEAD || true)"
+          [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]
+          printf 'sha=%s\n' "$GITHUB_SHA" >> "$GITHUB_OUTPUT"
 
       - name: Set up Node.js
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # actions/setup-node@v6
         with:
           node-version: '24'
 
-      - name: Install PostgreSQL client for direct DB migrations
-        if: ${{ github.event.inputs.dry_run != 'true' }}
+      - name: Validate reviewed manifest without production credentials
+        id: manifest
+        env:
+          MIGRATION_ID: ${{ github.event.inputs.migration_id }}
+        run: |
+          set -euo pipefail
+          actual_manifest_sha256="$(sha256sum .github/supabase-migration-release-manifest.v1.json)"
+          actual_manifest_sha256="${actual_manifest_sha256%% *}"
+          test "$actual_manifest_sha256" = "$RELEASE_MIGRATION_MANIFEST_SHA256"
+          node apps/web/scripts/apply-supabase-migration.mjs \
+            --migration-id "$MIGRATION_ID" \
+            --dry-run \
+            --json
+          printf 'migration_id=%s\n' "$MIGRATION_ID" >> "$GITHUB_OUTPUT"
+          printf 'manifest_sha256=%s\n' "$actual_manifest_sha256" >> "$GITHUB_OUTPUT"
+          printf 'expected_manifest_sha256=%s\n' "$RELEASE_MIGRATION_MANIFEST_SHA256" >> "$GITHUB_OUTPUT"
+
+  apply:
+    needs: validate
+    if: >-
+      needs.validate.result == 'success' &&
+      github.event.inputs.dry_run != 'true' &&
+      needs.validate.outputs.validated_sha == github.sha &&
+      needs.validate.outputs.manifest_sha256 == needs.validate.outputs.expected_manifest_sha256 &&
+      github.repository == 'twoimo/tzudong' &&
+      github.event.repository.full_name == 'twoimo/tzudong' &&
+      github.event.repository.default_branch == 'main' &&
+      github.ref == 'refs/heads/main' &&
+      github.ref_name == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: production-database
+    steps:
+      - name: Checkout validated triggering commit
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # actions/checkout@v6
+        with:
+          ref: ${{ needs.validate.outputs.validated_sha }}
+          persist-credentials: false
+
+      - name: Recheck canonical detached checkout and bound release manifest
+        env:
+          CANONICAL_REPOSITORY: twoimo/tzudong
+          PROTECTED_DEFAULT_BRANCH: main
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = "workflow_dispatch"
+          test "$GITHUB_REPOSITORY" = "$CANONICAL_REPOSITORY"
+          test "$GITHUB_REF" = "refs/heads/$PROTECTED_DEFAULT_BRANCH"
+          test "$GITHUB_REF_NAME" = "$PROTECTED_DEFAULT_BRANCH"
+          test "$GITHUB_SHA" = "${{ needs.validate.outputs.validated_sha }}"
+          test "$GITHUB_SHA" = "$(git rev-parse --verify HEAD)"
+          test "$GITHUB_SHA" = "$(git show -s --format=%H HEAD)"
+          test -z "$(git symbolic-ref --quiet HEAD || true)"
+          [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]
+          actual_manifest_sha256="$(sha256sum .github/supabase-migration-release-manifest.v1.json)"
+          actual_manifest_sha256="${actual_manifest_sha256%% *}"
+          test "$actual_manifest_sha256" = "$RELEASE_MIGRATION_MANIFEST_SHA256"
+          test "$actual_manifest_sha256" = "${{ needs.validate.outputs.manifest_sha256 }}"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - name: Install PostgreSQL client for direct DB migration
         run: |
           sudo apt-get update
           sudo apt-get install -y postgresql-client
 
-      - name: Apply selected Supabase migration
+      - name: Apply reviewed migration through direct Postgres
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          MIGRATION_ID: ${{ needs.validate.outputs.migration_id }}
         run: |
           set -euo pipefail
-          args=(--migration-file "$MIGRATION_FILE" --name "$MIGRATION_NAME" --verify-table restaurant_refresh_candidates --json)
-          if [ "$DRY_RUN" = "true" ]; then
-            args+=(--dry-run)
-          fi
-          node apps/web/scripts/apply-supabase-migration.mjs "${args[@]}"
+          node apps/web/scripts/apply-supabase-migration.mjs \
+            --migration-id "$MIGRATION_ID" \
+            --json

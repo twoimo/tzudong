@@ -13,6 +13,8 @@ import {
   STORYBOARD_ROUTE_NO_STORE_HEADERS,
   STORYBOARD_ROUTE_PRIVATE_NO_STORE_CACHE_CONTROL,
 } from '@/lib/admin/storyboard/route-telemetry';
+import { BOUNDED_JSON_REQUEST_ERROR } from '@/lib/security/bounded-json-request';
+import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation';
 import {
   STORYBOARD_CHAT_MIN_SEGMENT_COUNT,
   STORYBOARD_IMAGE_GENERATION_BATCH_SIZE,
@@ -73,6 +75,7 @@ export const dynamic = 'force-dynamic';
 
 const noStoreHeaders = STORYBOARD_ROUTE_NO_STORE_HEADERS;
 const storyboardTones = new Set<StoryboardTone>(['warm', 'energetic', 'documentary', 'comfort']);
+const MAX_STORYBOARD_IMAGE_GENERATION_REQUEST_BYTES = 1 * 1024 * 1024;
 
 function getStoryboardImageRouteEnv() {
   return {
@@ -112,7 +115,7 @@ function normalizeRouteError(error: unknown) {
     );
   }
 
-  console.error('[admin/storyboard/images] unexpected failure:', error);
+  console.error('[admin/storyboard/images] unexpected failure:');
   return jsonError('storyboard_image_generation_failed', 500, '스토리보드 이미지 생성 요청을 처리하지 못했습니다.');
 }
 
@@ -261,8 +264,9 @@ export async function GET(request: NextRequest) {
         localCodexCommand: 'STORYBOARD_LOCAL_CODEX_COMMAND 또는 scripts/codex-imagegen-storyboard-provider.py',
         localCodexModel: 'STORYBOARD_LOCAL_CODEX_IMAGE_MODEL',
         localCodexProof: 'STORYBOARD_LOCAL_CODEX_PROVENANCE_FILE 또는 bun run storyboard:image-proof',
-        browserOpenAIApiKey: '브라우저 localStorage에만 저장하고 요청 헤더로만 임시 전달',
-        browserKeyStorage: 'browser_local_storage_only',
+        browserOpenAIApiKey:
+          '활성 작업 동안 컴포넌트 메모리에만 존재하며, 보호된 요청 헤더로 한 번만 전송되고 저장되지 않음',
+        browserKeyStorage: 'memory_only_operation_scoped',
         browserApiKeyHeader: STORYBOARD_BROWSER_OPENAI_API_KEY_HEADER,
         browserImageTransport: 'data_url_response_no_server_file_write',
       },
@@ -287,14 +291,33 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const telemetry = createStoryboardRouteTelemetry('admin-storyboard-images-generate');
+  const telemetry = createStoryboardRouteTelemetry(
+    'admin-storyboard-images-generate',
+  );
 
   try {
     const auth = await requireAdmin({ allowDevAdminBypassCookie: true });
-    if (!auth.ok) return auth.response;
+    if (!auth.ok) {
+      auth.response.headers.set('Cache-Control', 'no-store');
+      return auth.response;
+    }
+    if (!isTrustedSameOriginMutation(request)) {
+      return jsonError('Forbidden', 403);
+    }
 
-    const body = await readStoryboardRouteJson(request, telemetry);
-    const payload = parsePayload(body);
+    const bodyResult = await readStoryboardRouteJson(
+      request,
+      telemetry,
+      MAX_STORYBOARD_IMAGE_GENERATION_REQUEST_BYTES,
+    );
+    if (!bodyResult.ok) {
+      return jsonError(
+        'invalid_payload',
+        bodyResult.code === BOUNDED_JSON_REQUEST_ERROR.bodyTooLarge ? 413 : 400,
+        'JSON body가 필요합니다.',
+      );
+    }
+    const payload = parsePayload(bodyResult.value);
     const imageRouteEnv = getStoryboardImageRouteEnv();
     const browserOpenAIApiKey = getBrowserOpenAIApiKeyFromRequest(request);
     const images = await generateStoryboardSceneImagesForRoute(
@@ -314,7 +337,7 @@ export async function POST(request: NextRequest) {
         : await (await import('@/lib/admin/storyboard/history'))
           .persistLocalStoryboardHistory(historyResult, imageRouteEnv)
           .catch((historyError) => {
-            console.error('[admin/storyboard/images] local history persistence failed:', historyError);
+            console.error('[admin/storyboard/images] local history persistence failed:');
             return { persisted: false as const, reason: 'storyboard_image_history_persist_failed' as const };
           })
       : { persisted: false as const, reason: 'missing_source_result' as const };

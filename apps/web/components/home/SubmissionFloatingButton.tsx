@@ -56,12 +56,12 @@ const SubmissionFloatingButton = memo(function SubmissionFloatingButton({
         <div
             className={cn(
                 "fixed z-50",
-                // 모바일/태블릿: 우측 하단 (검색 버튼 위)
-                // 검색 버튼: bottom-20(80px) + h-12(48px) = top at 128px
-                // 제보 버튼: bottom-36(144px) -> 16px 간격
+                // 모바일/태블릿: 하단 내비게이션과 안전 영역 위에 고정
                 // 데스크탑: 우측 하단 고정
-                isMobileOrTablet ? "right-4 bottom-36" : "bottom-6",
-                "flex flex-col gap-2",
+                isMobileOrTablet
+                    ? "right-[max(1rem,env(safe-area-inset-right))] bottom-[calc(env(safe-area-inset-bottom)+9rem)]"
+                    : "bottom-[max(1.5rem,env(safe-area-inset-bottom))]",
+                "flex min-w-0 flex-col gap-2",
                 // Hydration 깜빡임 방지
                 isHydrated ? "opacity-100" : "opacity-0",
                 className
@@ -71,13 +71,14 @@ const SubmissionFloatingButton = memo(function SubmissionFloatingButton({
                     ? undefined
                     : {
                         right: shouldOffsetForRightPanel
-                            ? `calc(${DESKTOP_MAP_SIDE_PANEL_WIDTH_CSS} + 1.5rem)`
-                            : "1.5rem",
+                            ? `calc(${DESKTOP_MAP_SIDE_PANEL_WIDTH_CSS} + max(1.5rem, env(safe-area-inset-right)))`
+                            : "max(1.5rem, env(safe-area-inset-right))",
                     }
             }
+            role="group"
             aria-label="지도 빠른 작업"
             data-layout-primitives="cluster wrap-row overlay-stack"
-            data-scroll-owner="mobile-control-overlay"
+            data-fixed-control-region="map-submission-actions"
         >
             {isAdmin && (
                 <Button

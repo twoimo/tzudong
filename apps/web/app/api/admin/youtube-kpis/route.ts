@@ -381,7 +381,7 @@ export async function GET(request: NextRequest) {
       });
     }
   } catch (error) {
-    console.warn("YouTube KPI snapshot fallback failed:", error);
+    console.warn("YouTube KPI snapshot fallback failed:");
   }
 
   if (!apiKey) {
@@ -401,7 +401,7 @@ export async function GET(request: NextRequest) {
         },
       });
     } catch (fallbackError) {
-      console.error("YouTube KPI Supabase fallback error:", fallbackError);
+      console.error("YouTube KPI Supabase fallback error:");
       return NextResponse.json(
         { error: "YouTube KPI fallback data is unavailable" },
         { status: 500 },
@@ -444,7 +444,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("YouTube KPI fetch error:", error);
+    console.error("YouTube KPI fetch error:");
 
     try {
       const fallbackPayload = await getInsightTreemapData(period, {
@@ -462,7 +462,7 @@ export async function GET(request: NextRequest) {
         },
       });
     } catch (fallbackError) {
-      console.error("YouTube KPI Supabase fallback error:", fallbackError);
+      console.error("YouTube KPI Supabase fallback error:");
       return NextResponse.json(
         { error: "Failed to fetch live YouTube KPI data" },
         { status: 502 },

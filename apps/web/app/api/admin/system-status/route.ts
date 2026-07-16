@@ -16,7 +16,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error('[admin/system-status] failed:', error);
+    console.error('[admin/system-status] failed:');
     return NextResponse.json(
       { error: 'Failed to build admin system status.' },
       {

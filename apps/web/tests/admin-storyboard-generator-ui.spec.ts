@@ -835,7 +835,7 @@ test("storyboard canvas counts only visible trusted GPT Image 2 storyboard panel
   }
 });
 
-test("storyboard settings keeps production image API keys in browser localStorage only", async ({
+test("storyboard settings keeps production image API keys in component memory and sends them through the guarded request header", async ({
   page,
 }, testInfo) => {
   test.setTimeout(90_000);
@@ -914,8 +914,8 @@ test("storyboard settings keeps production image API keys in browser localStorag
           available: true,
           reason: "ready",
           providerId: "browser-openai-api-key",
-          authMode: "browser_local_storage_api_key",
-          browserKeyStorage: "browser_local_storage_only",
+          authMode: "browser_memory_only_api_key",
+          browserKeyStorage: "memory_only_operation_scoped",
           model: "gpt-image-2",
           modelProvenance: "exact",
           target: { width: 1280, height: 720, aspectRatio: "16:9" },
@@ -924,8 +924,8 @@ test("storyboard settings keeps production image API keys in browser localStorag
           maxScenesPerRequest: 12,
           target: { width: 1280, height: 720, aspectRatio: "16:9" },
         },
-        config: {
-          browserKeyStorage: "browser_local_storage_only",
+        configuration: {
+          browserKeyStorage: "memory_only_operation_scoped",
           browserApiKeyHeader: "x-storyboard-openai-api-key",
         },
       }),
@@ -1199,38 +1199,34 @@ test("storyboard settings keeps production image API keys in browser localStorag
   ).toBeNull();
 
   const refreshedApiKeySettings = page.locator(
-    '[data-storyboard-browser-api-key-settings="local-storage-only"]',
+    '[data-storyboard-browser-api-key-settings="memory-only"]',
   );
   await expect(refreshedApiKeySettings).toBeVisible({ timeout: 10_000 });
-  const fakeApiKey = "sk-proj_browserlocalonly1234567890";
+  const fakeApiKey = "sk-proj_memoryonly1234567890";
   const apiKeyInput = refreshedApiKeySettings.locator(
     '[data-storyboard-browser-api-key-input="true"]',
   );
   await apiKeyInput.fill("not-a-key");
-  await refreshedApiKeySettings.locator('[data-storyboard-browser-api-key-save="true"]').click();
+  await refreshedApiKeySettings.locator('[data-storyboard-browser-api-key-apply="true"]').click();
   await expect(
     refreshedApiKeySettings.locator('[data-storyboard-browser-api-key-error="true"]'),
   ).toContainText(/형식/);
 
   await apiKeyInput.fill(fakeApiKey);
-  await refreshedApiKeySettings.locator('[data-storyboard-browser-api-key-save="true"]').click();
+  await refreshedApiKeySettings.locator('[data-storyboard-browser-api-key-apply="true"]').click();
   await expect(
-    page.locator('[data-storyboard-browser-api-key-status="saved"]'),
+    page.locator('[data-storyboard-browser-api-key-status="memory-active"]'),
   ).toBeVisible({ timeout: 10_000 });
   await expect(
-    page.locator('[data-storyboard-browser-api-key-status="saved"]'),
+    page.locator('[data-storyboard-browser-api-key-status="memory-active"]'),
   ).toContainText(/sk-proj…/);
   await expect(refreshedApiKeySettings).not.toContainText(fakeApiKey);
 
-  const localStorageSnapshot = await page.evaluate(() =>
-    window.localStorage.getItem("tzudong.admin.storyboard.modelKeys.v1"),
-  );
-  expect(localStorageSnapshot).toBeTruthy();
-  expect(JSON.parse(localStorageSnapshot ?? "{}")).toMatchObject({
-    version: 1,
-    openAIApiKey: fakeApiKey,
-    storage: "browser_local_storage_only",
-  });
+  expect(
+    await page.evaluate(() =>
+      window.localStorage.getItem("tzudong.admin.storyboard.modelKeys.v1"),
+    ),
+  ).toBeNull();
   await expect
     .poll(() => seenImageStatusHeaders.includes(fakeApiKey), {
       timeout: 10_000,

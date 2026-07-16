@@ -20,15 +20,17 @@ import {
   serializePgVector,
 } from '@/lib/admin/storyboard/rag-worker-client';
 import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
+import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation';
 
 export const runtime = 'nodejs';
+const MAX_STORYBOARD_RAG_SEARCH_REQUEST_BYTES = 32 * 1024;
 
 const searchSchema = z.object({
   query: z.string().trim().min(1).max(2000),
   topK: z.number().int().min(1).max(3).optional().default(3),
   candidateCount: z.number().int().min(10).max(50).optional().default(20),
-  metadataFilter: z.record(z.unknown()).optional().default({}),
-});
+  metadataFilter: z.record(z.string(), z.unknown()).optional().default({}),
+}).strict();
 
 function resolveStoryboardRagSearchRpcName() {
   return process.env.STORYBOARD_RAG_SEARCH_RPC_VERSION === 'v1'
@@ -84,10 +86,40 @@ export async function POST(request: NextRequest) {
   const telemetry = createStoryboardRouteTelemetry('admin-storyboard-rag-search');
   const auth = await authenticateStoryboardRagAction(request, traceId);
   if (!auth.ok) return auth.response;
+  if (!isTrustedSameOriginMutation(request)) {
+    return NextResponse.json(
+      { error: 'invalid_storyboard_rag_search_request', traceId },
+      {
+        status: 403,
+        headers: buildStoryboardRouteHeaders(
+          telemetry,
+          STORYBOARD_ROUTE_NO_STORE_HEADERS,
+          { error: 'invalid_storyboard_rag_search_request', traceId },
+        ),
+      },
+    );
+  }
 
   try {
-    const rawBody = await readStoryboardRouteJson(request, telemetry);
-    const parsed = searchSchema.safeParse(rawBody);
+    const bodyResult = await readStoryboardRouteJson(
+      request,
+      telemetry,
+      MAX_STORYBOARD_RAG_SEARCH_REQUEST_BYTES,
+    );
+    if (!bodyResult.ok) {
+      return NextResponse.json(
+        { error: 'invalid_storyboard_rag_search_request', traceId },
+        {
+          status: 400,
+          headers: buildStoryboardRouteHeaders(
+            telemetry,
+            STORYBOARD_ROUTE_NO_STORE_HEADERS,
+            { error: 'invalid_storyboard_rag_search_request', traceId },
+          ),
+        },
+      );
+    }
+    const parsed = searchSchema.safeParse(bodyResult.value);
     if (!parsed.success) {
       return NextResponse.json(
         { error: 'invalid_storyboard_rag_search_request', traceId },

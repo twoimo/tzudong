@@ -2,12 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { requireAdmin } from '@/lib/auth/require-admin';
 import { getAdminSafeErrorName } from '@/lib/admin/guarded-mutation-contract';
+import { readBoundedJsonRequest } from '@/lib/security/bounded-json-request';
+import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const noStoreHeaders = { 'Cache-Control': 'no-store' } as const;
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const MAX_THUMBNAIL_DURABLE_RELEASE_PUBLISH_REQUEST_BYTES = 4 * 1024;
 
 function jsonError(error: string, status: number, detail?: string) {
   return NextResponse.json({ error, detail }, { status, headers: noStoreHeaders });
@@ -24,8 +27,14 @@ export async function POST(request: NextRequest) {
   try {
     const auth = await requireAdmin({ allowDevAdminBypassCookie: true });
     if (!auth.ok) return auth.response;
+    if (!isTrustedSameOriginMutation(request)) {
+      return jsonError('thumbnail_durable_release_publish_request_forbidden', 403, '요청을 처리할 수 없습니다.');
+    }
 
-    const body = await request.json().catch(() => null) as { candidateId?: unknown; textLayers?: unknown } | null;
+    const requestBody = await readBoundedJsonRequest(request, MAX_THUMBNAIL_DURABLE_RELEASE_PUBLISH_REQUEST_BYTES);
+    const body = requestBody.ok
+      ? requestBody.value as { candidateId?: unknown; textLayers?: unknown } | null
+      : null;
     const candidateId = typeof body?.candidateId === 'string' ? body.candidateId : '';
     if (!candidateId.trim()) return jsonError('thumbnail_durable_release_candidate_id_required', 400, '게시할 릴리즈 후보 ID가 필요합니다.');
 

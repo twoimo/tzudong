@@ -395,8 +395,10 @@ test('Playwright 관리자 우회는 env와 토큰 헤더가 모두 맞는 /admi
         expect(missingHostResponse.headers.get('x-auth-checked')).toBe('1')
         expect(nonAdminVariantResponse.headers.get('x-auth-checked')).toBe('1')
         expect(childRouteResponse.headers.get('x-auth-checked')).toBe('1')
-        expect(postResponse.headers.get('x-auth-checked')).toBe('1')
-        expect(updateSessionCalls).toBe(12)
+        expect(postResponse.status).toBe(403)
+        expect(postResponse.headers.get('x-middleware-next')).toBeNull()
+        expect(postResponse.headers.get('x-auth-checked')).toBeNull()
+        expect(updateSessionCalls).toBe(11)
     } finally {
         resetAdminBypassEnv()
     }
@@ -463,10 +465,12 @@ test('개발자 썸네일 bootstrap 쿠키는 일반 브라우저의 썸네일 �
         expect(allowedHeadResponse.headers.get('x-auth-checked')).toBeNull()
         expect(wrongModuleResponse.headers.get('x-auth-checked')).toBe('1')
         expect(childRouteResponse.headers.get('x-auth-checked')).toBe('1')
-        expect(postResponse.headers.get('x-auth-checked')).toBe('1')
+        expect(postResponse.status).toBe(403)
+        expect(postResponse.headers.get('x-middleware-next')).toBeNull()
+        expect(postResponse.headers.get('x-auth-checked')).toBeNull()
         expect(invalidCookieResponse.headers.get('x-auth-checked')).toBe('1')
         expect(nonLocalHostResponse.headers.get('x-auth-checked')).toBe('1')
-        expect(updateSessionCalls).toBe(5)
+        expect(updateSessionCalls).toBe(4)
     } finally {
         resetAdminBypassEnv()
     }

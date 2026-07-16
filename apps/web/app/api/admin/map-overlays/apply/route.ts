@@ -10,9 +10,12 @@ import {
   mapAdminMapOverlayRouteActionToRpcAction,
   normalizeAdminMapOverlayPreviewRequest,
 } from '@/lib/admin-map-overlays';
+import { readBoundedJsonRequest } from '@/lib/security/bounded-json-request';
+import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+const MAX_MAP_OVERLAY_APPLY_REQUEST_BYTES = 64 * 1024;
 
 function noStoreJson(body: unknown, init: ResponseInit = {}) {
   const response = NextResponse.json(body, init);
@@ -72,14 +75,20 @@ export async function POST(request: NextRequest) {
     return admin.response;
   }
 
-  let body: Record<string, unknown>;
-  try {
-    const parsed = await request.json();
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('invalid-request');
-    body = parsed as Record<string, unknown>;
-  } catch {
+  if (!isTrustedSameOriginMutation(request)) {
+    return noStoreJson({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  const requestBody = await readBoundedJsonRequest(request, MAX_MAP_OVERLAY_APPLY_REQUEST_BYTES);
+  if (!requestBody.ok) {
     return noStoreJson({ error: 'invalid_overlay_apply_request' }, { status: 400 });
   }
+
+  const parsed = requestBody.value;
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return noStoreJson({ error: 'invalid_overlay_apply_request' }, { status: 400 });
+  }
+  const body = parsed as Record<string, unknown>;
 
   let normalized: ReturnType<typeof normalizeAdminMapOverlayPreviewRequest>;
   try {

@@ -12,19 +12,26 @@ import argparse
 import importlib.util
 import json
 import os
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from utils.supabase_rest import (
+    SUPABASE_REST_CONFIGURATION_ERROR,
+    SupabaseRestConfigurationError,
+    resolve_privileged_supabase_rest_credentials,
+)
+
 try:  # pragma: no cover
     from supabase import create_client
-except Exception as exc:  # pragma: no cover
+except Exception:  # pragma: no cover
     create_client = None  # type: ignore[assignment]
-    SUPABASE_IMPORT_ERROR = exc
-else:  # pragma: no cover
-    SUPABASE_IMPORT_ERROR = None
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_REPORT_ROOT = PROJECT_ROOT.parent / ".omx" / "reports" / "refined-data"
 DEFAULT_CORRECTIONS = PROJECT_ROOT / "restaurant-crawling" / "data" / "manual_place_corrections.json"
 
@@ -92,13 +99,13 @@ def load_env() -> None:
 
 def supabase_check(youtube_link: str, expected_name: str, expected_address_fragment: str) -> dict[str, Any]:
     if create_client is None:
-        return {"enabled": False, "ok": False, "reason": f"supabase unavailable: {SUPABASE_IMPORT_ERROR}"}
+        return {"enabled": False, "ok": False, "reason": "SUPABASE_CLIENT_UNAVAILABLE"}
     load_env()
-    url = os.environ.get("SUPABASE_URL")
-    key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("NEXT_PUBLIC_SUPABASE_ANON_KEY")
-    if not url or not key:
-        return {"enabled": False, "ok": False, "reason": "supabase env missing"}
-    client = create_client(url, key)
+    try:
+        credentials = resolve_privileged_supabase_rest_credentials()
+    except SupabaseRestConfigurationError:
+        return {"enabled": False, "ok": False, "reason": SUPABASE_REST_CONFIGURATION_ERROR}
+    client = create_client(credentials.url, credentials.service_role_key)
     rows = (
         client.table("restaurants")
         .select("id,status,approved_name,origin_name,naver_name,categories,road_address,youtube_link")

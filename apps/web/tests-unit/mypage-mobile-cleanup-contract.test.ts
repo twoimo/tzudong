@@ -81,7 +81,7 @@ describe("mypage mobile cleanup source contracts", () => {
 
   test("profile page keeps a quiet mobile-first action hierarchy without noisy duplicate chrome", () => {
     const layoutSource = source("app/mypage/mypage-layout-content.tsx");
-    const profileSource = source("app/mypage/profile/page.tsx");
+    const profileSource = source("app/mypage/profile/page.tsx").replace(/\r\n/g, "\n");
     const sidebarSource = source("components/mypage/MyPageSidebar.tsx");
 
     expect(layoutSource).toContain('data-mypage-mobile-route-header="true"');
@@ -272,7 +272,7 @@ describe("mypage mobile cleanup source contracts", () => {
       'data-mypage-danger-zone-guidance="compact"',
     );
     expect(profileSource).toContain(
-      "비활성화는 복구 가능, 완전 삭제는 복구 불가입니다.",
+      "완전 삭제는 복구할 수 없으며, 서버 미리보기와 읽기검증을 거칩니다.",
     );
     expect(profileSource).not.toContain("진행 전 확인");
     expect(profileSource).toContain(
@@ -438,7 +438,7 @@ describe("mypage mobile cleanup source contracts", () => {
   });
 
   test("profile photo controls are compact and not duplicated as a large mobile identity card", () => {
-    const profileSource = source("app/mypage/profile/page.tsx");
+    const profileSource = source("app/mypage/profile/page.tsx").replace(/\r\n/g, "\n");
     const sidebarSource = source("components/mypage/MyPageSidebar.tsx");
 
     expect(profileSource).not.toContain(
@@ -466,7 +466,7 @@ describe("mypage mobile cleanup source contracts", () => {
   });
 
   test("mobile icon-only mypage actions have labels and touch-sized targets", () => {
-    const profileSource = source("app/mypage/profile/page.tsx");
+    const profileSource = source("app/mypage/profile/page.tsx").replace(/\r\n/g, "\n");
     const sidebarSource = source("components/mypage/MyPageSidebar.tsx");
     const bookmarksSource = source("app/mypage/bookmarks/page.tsx");
     const reviewsSource = source("app/mypage/reviews/page.tsx");
@@ -495,7 +495,7 @@ describe("mypage mobile cleanup source contracts", () => {
       'className="group rounded-2xl border border-border/70 bg-background p-3 md:flex md:flex-1 md:flex-col lg:p-2.5"',
     );
     expect(profileSource).toContain("<details\n              open");
-    expect(profileSource).toContain("비활성화·삭제 옵션 보기");
+    expect(profileSource).toContain("계정 삭제 옵션 보기");
     expect(profileSource).toContain('className="mt-3 grid gap-2 md:flex-1"');
     expect(profileSource).not.toContain(
       'data-mypage-danger-zone-impact-grid="true"',
@@ -505,8 +505,10 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(profileSource).not.toContain(
       'className="mt-3 grid gap-2 sm:grid-cols-2"',
     );
-    expect(profileSource).toContain('aria-label="계정 비활성화 확인 이메일"');
-    expect(profileSource).toContain('aria-label="계정 영구 삭제 확인 이메일"');
+    expect(profileSource).not.toContain('aria-label="계정 비활성화 확인 이메일"');
+    expect(profileSource).toContain('aria-label="계정 삭제 확인 문구"');
+    expect(profileSource).toContain('ACCOUNT_DELETION_CONFIRMATION_TEXT');
+    expect(profileSource).not.toContain('aria-label="계정 영구 삭제 확인 이메일"');
     expect(profileSource).toContain('autoComplete="current-password"');
     expect(profileSource).toContain('autoComplete="new-password"');
     expect(profileSource).toContain("onSubmit={handlePasswordChange}");

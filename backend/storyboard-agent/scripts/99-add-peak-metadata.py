@@ -10,10 +10,21 @@ Peak 기준: 해당 구간의 평균 intensityScoreNormalized가 상위 20% 이�
     python 02-add-peak-metadata.py --channel tzuyang
 """
 
-import json
 import argparse
+import json
+import sys
 from pathlib import Path
+
+CANONICAL_BACKEND_ROOT = Path(__file__).resolve().parents[2]
+if str(CANONICAL_BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(CANONICAL_BACKEND_ROOT))
+
+from utils.privacy_log import redact_log_text, safe_error_name
 from tqdm import tqdm
+
+
+def log(message: str) -> None:
+    print(redact_log_text(message), flush=True)
 
 
 # 경로 설정
@@ -58,8 +69,8 @@ def load_heatmap_by_recollect_id(heatmap_path: Path) -> dict[int, dict]:
                     continue
 
         return heatmap_by_id
-    except IOError as e:
-        print(f"⚠️ Heatmap 로드 실패 {heatmap_path.name}: {e}")
+    except IOError as error:
+        log(f"⚠️ Heatmap 로드 실패: {safe_error_name(error)}")
         return {}
 
 
@@ -161,14 +172,14 @@ def add_peak_metadata_to_documents(docs_dir: Path, heatmap_dir: Path) -> dict:
     }
 
     if not docs_dir.exists():
-        print(f"❌ 문서 디렉토리 없음: {docs_dir}")
+        log("❌ 문서 디렉토리 없음")
         return stats
 
     doc_files = list(docs_dir.glob("*.jsonl"))
     stats["total_files"] = len(doc_files)
 
     print(f"📁 문서 파일: {len(doc_files)}개")
-    print(f"📁 Heatmap 디렉토리: {heatmap_dir}")
+    log("📁 Heatmap 디렉토리 구성됨")
 
     for doc_file in tqdm(doc_files, desc="문서 처리"):
         video_id = doc_file.stem
@@ -366,41 +377,38 @@ def add_peak_metadata_to_documents(docs_dir: Path, heatmap_dir: Path) -> dict:
 
                         updated_docs.append(docs)
 
-        except (json.JSONDecodeError, IOError) as e:
-            print(f"⚠️ 문서 읽기 실패 {doc_file.name}: {e}")
+        except (json.JSONDecodeError, IOError) as error:
+            log(f"⚠️ 문서 읽기 실패: {safe_error_name(error)}")
             continue
 
         if not file_has_matching_heatmap:
             stats["skipped_no_matching_recollect"] += 1
 
-        # 문서 덮어쓰기
         try:
             with open(doc_file, "w", encoding="utf-8") as f:
-                for doc in updated_docs:
-                    f.write(json.dumps(doc, ensure_ascii=False) + "\n")
+                for docs in updated_docs:
+                    f.write(json.dumps(docs, ensure_ascii=False) + "\n")
             stats["processed_files"] += 1
-        except IOError as e:
-            print(f"⚠️ 문서 저장 실패 {doc_file.name}: {e}")
+        except IOError as error:
+            log(f"⚠️ 문서 저장 실패: {safe_error_name(error)}")
 
     return stats
 
 
 def verify_results(docs_dir: Path, sample_count: int = 3):
-    """결과 검증: 샘플 문서 확인"""
-    print("\n🔍 결과 검증...")
+    """결과 검증: 샘플 문서의 고정 스키마만 확인."""
+    log("\n🔍 결과 검증...")
 
     doc_files = list(docs_dir.glob("*.jsonl"))
     if not doc_files:
-        print("❌ 문서 파일 없음")
+        log("❌ 문서 파일 없음")
         return
 
-    # 샘플 파일 선택
     import random
 
     sample_files = random.sample(doc_files, min(sample_count, len(doc_files)))
-
+    verified_metadata_rows = 0
     for doc_file in sample_files:
-        print(f"\n📄 {doc_file.name}:")
         try:
             with open(doc_file, "r", encoding="utf-8") as f:
                 lines = f.readlines()
@@ -408,14 +416,17 @@ def verify_results(docs_dir: Path, sample_count: int = 3):
                     first_doc = json.loads(lines[0].strip())
                     if isinstance(first_doc, list):
                         first_doc = first_doc[0] if first_doc else {}
+                    metadata = first_doc.get("metadata", {}) if isinstance(first_doc, dict) else {}
+                    if isinstance(metadata, dict):
+                        verified_metadata_rows += 1
+        except Exception as error:
+            log(f"⚠️ 읽기 실패: {safe_error_name(error)}")
 
-                    metadata = first_doc.get("metadata", {})
-                    print(f"   is_peak: {metadata.get('is_peak')}")
-                    print(f"   peak_score: {metadata.get('peak_score')}")
-                    print(f"   start_time: {metadata.get('start_time')}")
-                    print(f"   end_time: {metadata.get('end_time')}")
-        except Exception as e:
-            print(f"   ⚠️ 읽기 실패: {e}")
+    log(
+        f"✅ 결과 검증: sample_files_checked={len(sample_files)}, "
+        f"metadata_rows_checked={verified_metadata_rows}, "
+        "schema_fields=is_peak,peak_score,matched_heatmap_recollect_id"
+    )
 
 
 def main():
@@ -425,14 +436,13 @@ def main():
 
     print("=" * 60)
     print("문서 Peak 메타데이터 추가")
-    print(f"채널: {args.channel}")
+    print("채널 구성됨")
     print("기준: intensityScoreNormalized 상위 20% (80th percentile)")
     print("=" * 60)
 
     docs_dir, heatmap_dir = get_paths(args.channel)
 
-    print(f"\n📂 문서 디렉토리: {docs_dir}")
-    print(f"📂 Heatmap 디렉토리: {heatmap_dir}")
+    print("\n📂 문서 및 Heatmap 디렉토리 구성됨")
 
     # Peak 메타데이터 추가
     stats = add_peak_metadata_to_documents(docs_dir, heatmap_dir)
@@ -458,4 +468,12 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as error:
+        print(
+            redact_log_text(f"peak_metadata_error: {safe_error_name(error)}"),
+            file=sys.stderr,
+            flush=True,
+        )
+        raise SystemExit(1)

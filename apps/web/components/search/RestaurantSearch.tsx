@@ -180,7 +180,7 @@ const RestaurantSearch = ({
           isKoreanOnly,
         });
       } catch (error) {
-        console.error("주간 인기 검색어 조회 실패:", error);
+        console.error("주간 인기 검색어 조회 실패:");
         return [];
       }
     },
@@ -241,7 +241,7 @@ const RestaurantSearch = ({
           const { data, error } = await query;
 
           if (error) {
-            console.warn("맛집 이름 검색 실패:", error);
+            console.warn("맛집 이름 검색 실패:");
             return [];
           }
 
@@ -269,7 +269,7 @@ const RestaurantSearch = ({
           );
 
           if (error) {
-            console.warn("유튜브 제목 검색 실패:", error);
+            console.warn("유튜브 제목 검색 실패:");
             return [];
           }
 
@@ -285,7 +285,7 @@ const RestaurantSearch = ({
         // 최대 10개로 제한
         return merged.slice(0, 10);
       } catch (error) {
-        console.error("검색 오류:", error);
+        console.error("검색 오류:");
         return [];
       }
     },
