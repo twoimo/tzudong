@@ -129,8 +129,10 @@ class FrameCaptionEntrypointTests(unittest.TestCase):
                 check=False,
                 env=env,
             )
+            output = completed.stderr + completed.stdout
             self.assertNotEqual(completed.returncode, 0)
-            self.assertIn("requires OPENAI_API_KEY", completed.stderr + completed.stdout)
+            self.assertIn("op=caption_provider_unavailable error=CaptionProviderUnavailable", output)
+            self.assertNotIn("OPENAI_API_KEY", output)
         finally:
             shutil.rmtree(data_dir, ignore_errors=True)
 
@@ -216,7 +218,7 @@ class CaptionStoreScriptTests(unittest.TestCase):
         import importlib.util
         from pathlib import Path
 
-        script = Path(__file__).resolve().parents[1] / "scripts" / "02-video-caption-store-supbase.py"
+        script = Path(__file__).resolve().parents[1] / "scripts" / "02-video-caption-store-supabase.py"
         spec = importlib.util.spec_from_file_location("caption_store_script", script)
         self.assertIsNotNone(spec)
         self.assertIsNotNone(spec.loader)

@@ -20,7 +20,7 @@ describe('dashboard public Supabase visibility contracts', () => {
   });
 
   test('restaurants Data API migration restricts browser reads to approved rows', () => {
-    const migrationSource = source('..\\..\\backend\\supabase\\migrations\\20260627150000_restrict_restaurants_public_select_approved.sql');
+    const migrationSource = source('../../backend/supabase/migrations/20260627150000_restrict_restaurants_public_select_approved.sql');
 
     expect(migrationSource).toContain('alter table public.restaurants enable row level security');
     expect(migrationSource).toContain('drop policy if exists "Enable read access for all users"');

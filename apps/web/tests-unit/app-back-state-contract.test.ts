@@ -39,24 +39,40 @@ describe("app back navigation state contracts", () => {
     expect(editModalSource).toContain("setCurrentStep(draft.currentStep)");
   });
 
-  test("review edit drafts survive ordinary close and retain photo edit state", () => {
+  test("review edit drafts persist short-lived text state without browser-stored image files", () => {
     const reviewDraftSource = source("lib/reviewDraftDB.ts");
     const reviewEditModalSource = source("components/reviews/ReviewEditModal.tsx");
 
-    expect(reviewDraftSource).toContain("existingFoodPhotos?: string[]");
-    expect(reviewDraftSource).toContain("removedPhotos?: string[]");
-    expect(reviewEditModalSource).toContain("foodPhotos: newFoodPhotos");
-    expect(reviewEditModalSource).toContain("existingFoodPhotos,");
-    expect(reviewEditModalSource).toContain("removedPhotos,");
-    expect(reviewEditModalSource).toContain("setNewFoodPhotos(draft.foodPhotos)");
-    expect(reviewEditModalSource).toContain("setExistingFoodPhotos(draft.existingFoodPhotos)");
-    expect(reviewEditModalSource).toContain("setRemovedPhotos(draft.removedPhotos)");
+    expect(reviewDraftSource).toContain("const DB_VERSION = 3");
+    expect(reviewDraftSource).toContain("REVIEW_DRAFT_TTL_MS = 24 * 60 * 60 * 1000");
+    expect(reviewDraftSource).toContain("keyPath: ['userId', 'restaurantId']");
+    expect(reviewDraftSource).toContain("const persistedDraft: PersistedReviewDraft = {");
+    expect(reviewDraftSource).toContain("const publicDraft: ReviewDraft = {");
+    expect(reviewDraftSource).toContain("expiresAt: now + REVIEW_DRAFT_TTL_MS");
+    expect(reviewDraftSource).not.toContain("getAll(");
+    expect(reviewDraftSource).not.toContain("getAllKeys(");
+    expect(reviewEditModalSource).toContain("foodPhotos: []");
+    expect(reviewEditModalSource).not.toContain("foodPhotos: newFoodPhotos");
+    expect(reviewEditModalSource).not.toContain("setNewFoodPhotos(draft.foodPhotos)");
+    expect(reviewEditModalSource).toContain("텍스트만 임시 저장됨");
 
     const handleCloseStart = reviewEditModalSource.indexOf("const handleClose = useCallback");
     const handleCloseEnd = reviewEditModalSource.indexOf("// Form validation", handleCloseStart);
     const handleCloseSource = reviewEditModalSource.slice(handleCloseStart, handleCloseEnd);
 
     expect(handleCloseSource).not.toContain("deleteEditDraft");
+  });
+  test("sign-out clears every user-scoped browser draft store", () => {
+    const authContextSource = source("contexts/AuthContext.tsx");
+    const cleanupSource = source("lib/privacy/browser-draft-cleanup.ts");
+    const accountDeletionSource = source("lib/privacy/account-deletion.ts");
+
+    expect(authContextSource).toContain("await clearBrowserDraftsForUser(signingOutUserId)");
+    expect(authContextSource.match(/await clearPrivateDrafts\(\);/g)).toHaveLength(2);
+    expect(cleanupSource).toContain("deleteAllSubmissionDraftsByUser(userId)");
+    expect(cleanupSource).toContain("deleteAllReviewDraftsByUser(userId)");
+    expect(cleanupSource).toContain("deleteAllEditRequestDraftsByUser(userId)");
+    expect(accountDeletionSource).toContain("await clearBrowserDraftsForUser(deletedUserId)");
   });
 
   test("visible home panels create back-stack entries while close actions canonicalize", () => {

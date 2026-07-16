@@ -5,7 +5,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/integrations/supabase/client';
+import { resolveReviewPhotoUrl } from '@/lib/review-photo-url';
+import { resolveProfileAvatarUrl } from '@/lib/profile-avatar-url';
 import { cn } from '@/lib/utils';
 
 export interface ReviewCardProps {
@@ -74,10 +75,22 @@ export const ReviewCard = React.memo(function ReviewCard({
 
     // [PERFORMANCE] 이미지 URL 미리 생성 - 매 렌더링마다 재계산 방지
     const photoUrls = useMemo(() => {
-        return review.photos.map(photo =>
-            supabase.storage.from('review-photos').getPublicUrl(photo.url).data.publicUrl
-        );
-    }, [review.photos]);
+        const ownership = {
+            ownerId: review.userId,
+            reviewId: review.id,
+            purpose: 'food' as const,
+        };
+
+        return review.photos.reduce<string[]>((urls, photo) => {
+            const url = resolveReviewPhotoUrl(photo.url, ownership);
+            if (url) urls.push(url);
+            return urls;
+        }, []);
+    }, [review.id, review.photos, review.userId]);
+    const profileAvatarUrl = useMemo(
+        () => resolveProfileAvatarUrl(review.userAvatarUrl, review.userId),
+        [review.userAvatarUrl, review.userId],
+    );
 
     // [PERFORMANCE] 인접 이미지 프리로드 (±1 인덱스)
     useEffect(() => {
@@ -267,9 +280,9 @@ export const ReviewCard = React.memo(function ReviewCard({
             <div className="flex items-center justify-between p-3 border-b border-border/50">
                 <div className="flex items-center gap-2">
                     <Avatar className="h-8 w-8 bg-primary/10">
-                        {review.userAvatarUrl && (
+                        {profileAvatarUrl && (
                             <AvatarImage
-                                src={review.userAvatarUrl}
+                                src={profileAvatarUrl}
                                 alt={review.userName}
                                 className="object-cover"
                             />
@@ -383,12 +396,12 @@ export const ReviewCard = React.memo(function ReviewCard({
 
             {/* 사진 영역 */}
             {
-                review.photos && review.photos.length > 0 && (
+                photoUrls.length > 0 && (
                     <div className="relative w-full aspect-square bg-muted select-none overflow-hidden group">
                         <Carousel setApi={setApi} className="w-full h-full" opts={{ loop: true }}>
                             <CarouselContent>
                                 {photoUrls.map((url, index) => (
-                                    <CarouselItem key={index}>
+                                    <CarouselItem key={url}>
                                         <div className="relative w-full aspect-square">
                                             <Image
                                                 src={url}
@@ -404,7 +417,7 @@ export const ReviewCard = React.memo(function ReviewCard({
                                 ))}
                             </CarouselContent>
                             {/* Instagram-style overlay navigation buttons */}
-                            {review.photos.length > 1 && (
+                            {photoUrls.length > 1 && (
                                 <>
                                     <CarouselOverlayPrevious />
                                     <CarouselOverlayNext />
@@ -413,11 +426,11 @@ export const ReviewCard = React.memo(function ReviewCard({
                         </Carousel>
 
                         {/* 인디케이터 */}
-                        {review.photos.length > 1 && (
+                        {photoUrls.length > 1 && (
                             <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
-                                {review.photos.map((_, index) => (
+                                {photoUrls.map((url, index) => (
                                     <div
-                                        key={index}
+                                        key={url}
                                         className={`h-1.5 rounded-full transition-all ${index === currentPhotoIndex ? 'bg-white w-3' : 'bg-white/50 w-1.5'}`}
                                     ></div>
                                 ))}

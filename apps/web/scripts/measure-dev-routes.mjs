@@ -4,6 +4,7 @@ import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
+import { logCliError, redactCliText } from './privacy-safe-cli-log.mjs';
 
 const projectRoot = process.cwd();
 const args = process.argv.slice(2);
@@ -28,12 +29,13 @@ const cold = hasFlag('--cold');
 const trace = hasFlag('--trace');
 const failOnHttpError = !hasFlag('--allow-http-errors');
 const measurementMode = readArg('--measurement-mode', cold ? 'clean-cold' : 'persistent-cache-restart');
+const statusError = (code) => Object.assign(new Error(code), { code });
 
 function parsePositiveIntegerArg(name, fallback) {
   const raw = readArg(name, String(fallback));
   const value = Number(raw);
   if (!Number.isInteger(value) || value <= 0) {
-    throw new Error(`Invalid ${name} value: ${raw}`);
+    return null;
   }
   return value;
 }
@@ -45,7 +47,7 @@ const retryDelayMs = parsePositiveIntegerArg('--retry-delay-ms', 1000);
 const repeat = parsePositiveIntegerArg('--repeat', 1);
 
 const artifactTimestamp = new Date().toISOString().replace(/[:.]/g, '');
-const safeLabel = String(label).replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || 'routes';
+const safeLabel = redactCliText(String(label), 120).replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || 'routes';
 const artifactBase = path.join(outputDir, `${artifactTimestamp}-${safeLabel}`);
 const logPath = `${artifactBase}.log`;
 const jsonPath = `${artifactBase}.json`;
@@ -136,14 +138,14 @@ async function choosePort() {
   if (explicitPort) {
     const port = Number(explicitPort);
     if (!Number.isInteger(port) || port <= 0) {
-      throw new Error(`Invalid --port value: ${explicitPort}`);
+      throw statusError('DEV_ROUTE_INVALID_PORT');
     }
     return port;
   }
   for (let port = DEFAULT_PORT_RANGE[0]; port <= DEFAULT_PORT_RANGE[1]; port += 1) {
     if (await canListen(port)) return port;
   }
-  throw new Error(`No free port in ${DEFAULT_PORT_RANGE[0]}..${DEFAULT_PORT_RANGE[1]}`);
+  throw statusError('DEV_ROUTE_NO_FREE_PORT');
 }
 
 async function waitForReady({ getLog, processExited, timeoutAt }) {
@@ -160,7 +162,7 @@ function shouldRetryRequest(result) {
   return result.status === 0 || result.status >= 500;
 }
 
-async function timedFetch(url, requestLabel) {
+async function timedFetch(url) {
   const controller = new AbortController();
   const abortTimer = setTimeout(() => controller.abort(), routeTimeoutMs);
   const started = nowMs();
@@ -168,17 +170,25 @@ async function timedFetch(url, requestLabel) {
     const response = await fetch(url, { redirect: 'manual', signal: controller.signal });
     const text = await response.text().catch(() => '');
     return { status: response.status, ok: response.ok, elapsed_ms: nowMs() - started, bytes: text.length, error: null };
-  } catch (error) {
-    return { status: 0, ok: false, elapsed_ms: nowMs() - started, bytes: 0, error: `${requestLabel}: ${error instanceof Error ? error.message : String(error)}` };
+  } catch {
+    return {
+      status: 0,
+      ok: false,
+      elapsed_ms: nowMs() - started,
+      bytes: 0,
+      error: controller.signal.aborted
+        ? 'DEV_ROUTE_REQUEST_TIMEOUT'
+        : 'DEV_ROUTE_REQUEST_FAILED',
+    };
   } finally {
     clearTimeout(abortTimer);
   }
 }
 
-async function timedFetchWithRetries(url, requestLabel) {
+async function timedFetchWithRetries(url) {
   const attempts = [];
   for (let attempt = 0; attempt <= retries; attempt += 1) {
-    const result = await timedFetch(url, attempt === 0 ? requestLabel : `${requestLabel} retry ${attempt}`);
+    const result = await timedFetch(url);
     attempts.push({ ...result, attempt: attempt + 1 });
     if (!shouldRetryRequest(result) || attempt === retries) break;
     await delay(retryDelayMs);
@@ -312,15 +322,18 @@ async function removeNextCacheForColdIteration() {
     try {
       fs.rmSync(nextPath, { recursive: true, force: true, maxRetries: 3, retryDelay: 150 });
       return;
-    } catch (error) {
-      if (attempt === 6) throw error;
+    } catch {
+      if (attempt === 6) throw statusError('DEV_ROUTE_CACHE_CLEAR_FAILED');
       await delay(250 * attempt);
     }
   }
 }
 
 function collectEnvironmentSnapshot(stage) {
-  const diskLine = commandOutput('df', ['-Pk', projectRoot])?.split('\n').at(-1) ?? null;
+  const diskLine = redactCliText(
+    commandOutput('df', ['-Pk', projectRoot])?.split('\n').at(-1) ?? '',
+    512,
+  );
   const processLines = commandOutput('pgrep', ['-af', 'next dev|measure-dev-routes|node_modules/next/dist/bin/next|bun'])
     ?.split('\n')
     .filter(Boolean)
@@ -390,7 +403,7 @@ function writeArtifacts(result) {
   fs.writeFileSync(csvPath, `${rows.join('\n')}\n`);
 
   const lines = [];
-  lines.push(`# Dev route compile measurement: ${label}`);
+  lines.push(`# Dev route compile measurement: ${safeLabel}`);
   lines.push('');
   lines.push(`- started: ${result.run_started_at}`);
   lines.push(`- cwd: ${result.cwd}`);
@@ -480,7 +493,7 @@ async function runIteration({ iteration, routes, port, command, env, result }) {
   const appendLog = (chunk) => {
     const text = chunk.toString();
     logChunks.push(text);
-    fs.appendFileSync(logPath, text);
+    fs.appendFileSync(logPath, redactCliText(text, 1_024));
   };
   const useDetachedProcessGroup = process.platform !== 'win32';
   const child = spawn(command[0], command.slice(1), { cwd: projectRoot, env, stdio: ['ignore', 'pipe', 'pipe'], detached: useDetachedProcessGroup });
@@ -491,6 +504,10 @@ async function runIteration({ iteration, routes, port, command, env, result }) {
     exited = true;
     iterationResult.exit_code = code;
     iterationResult.exit_signal = signal;
+  });
+  child.on('error', () => {
+    exited = true;
+    result.errors.push('DEV_ROUTE_CHILD_PROCESS_ERROR');
   });
   const getLog = () => logChunks.join('');
   const stopChild = async () => {
@@ -512,11 +529,11 @@ async function runIteration({ iteration, routes, port, command, env, result }) {
     const timeoutAt = nowMs() + timeoutMs;
     iterationResult.ready_ms = await waitForReady({ getLog, processExited: () => exited, timeoutAt });
     if (result.ready_ms === null) result.ready_ms = iterationResult.ready_ms;
-    if (iterationResult.ready_ms === null) throw new Error(`Next dev did not become ready within ${timeoutMs}ms on iteration ${iteration}`);
+    if (iterationResult.ready_ms === null) throw statusError('DEV_ROUTE_READY_TIMEOUT');
     const baseUrl = `http://127.0.0.1:${port}`;
     for (const round of ['coldish', ...(includeWarm ? ['warm'] : [])]) {
       for (const route of routes) {
-        const request = await timedFetchWithRetries(`${baseUrl}${route.route}`, `iteration ${iteration} ${round} GET ${route.route}`);
+        const request = await timedFetchWithRetries(`${baseUrl}${route.route}`);
         await delay(50);
         const timing = parseRouteTiming(getLog(), route.route);
         result.requests.push({
@@ -536,23 +553,32 @@ async function runIteration({ iteration, routes, port, command, env, result }) {
           log_next_ms: timing?.next_ms ?? null,
           log_proxy_ms: timing?.proxy_ms ?? null,
           log_app_ms: timing?.app_ms ?? null,
-          log_line: timing?.line ?? null,
+          log_line: timing ? redactCliText(timing.line, 512) : null,
         });
       }
     }
     await delay(500);
-  } catch (error) {
-    result.errors.push(error instanceof Error ? error.message : String(error));
+  } catch {
+    result.errors.push('DEV_ROUTE_ITERATION_FAILED');
   } finally {
     await stopChild();
     await delay(150);
     iterationResult.environment_after = collectEnvironmentSnapshot(`iteration-${iteration}-after`);
     const log = getLog();
-    result.error_like_lines.push(...log.split(/\r?\n/).filter((line) => /Error:|Failed|Module not found|uncaught|panic/i.test(line) && !/terminated by signal SIGTERM/.test(line)));
+    result.error_like_lines.push(
+      ...log
+        .split(/\r?\n/)
+        .filter((line) => /Error:|Failed|Module not found|uncaught|panic/i.test(line)
+          && !/terminated by signal SIGTERM/.test(line))
+        .map((line) => redactCliText(line, 180)),
+    );
   }
 }
 
 async function main() {
+  if (![timeoutMs, routeTimeoutMs, retries, retryDelayMs, repeat].every(Number.isInteger)) {
+    throw statusError('DEV_ROUTE_INVALID_POSITIVE_INTEGER');
+  }
   fs.mkdirSync(outputDir, { recursive: true });
 
   const routes = discoverRoutes();
@@ -610,6 +636,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(error instanceof Error ? error.stack || error.message : String(error));
+  logCliError(error, (line) => process.stderr.write(`[measure-dev-routes] ${line}`));
   process.exit(1);
 });

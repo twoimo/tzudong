@@ -4,6 +4,9 @@ const CACHE_TTL_MS = 5 * 60 * 1000;
 const HISTORY_CACHE_TTL_MS = 5 * 60 * 1000;
 const PAGE_SIZE = 1000;
 const MAX_PUBLIC_TREEMAP_ROWS = 500;
+const TREEMAP_API_BROWSER_MAX_AGE_SECONDS = 0;
+const TREEMAP_API_CDN_FRESH_SECONDS = 60;
+const TREEMAP_API_CDN_STALE_SECONDS = 5 * 60;
 
 type CacheEntry<T> = {
     expiresAt: number;
@@ -17,6 +20,15 @@ type HistoryCacheEntry = {
 };
 
 export type InsightTreemapPeriod = '30MIN' | '1H' | '6H' | '12H' | '1D' | '1W' | '2W' | '1M' | '3M' | '6M' | '1Y' | 'ALL';
+export function buildTreemapApiCacheControl() {
+    return [
+        'public',
+        `max-age=${TREEMAP_API_BROWSER_MAX_AGE_SECONDS}`,
+        `s-maxage=${TREEMAP_API_CDN_FRESH_SECONDS}`,
+        `stale-while-revalidate=${TREEMAP_API_CDN_STALE_SECONDS}`,
+        'must-revalidate',
+    ].join(', ');
+}
 
 export type InsightTreemapDataQualityReason =
     | 'clamped_metric'
@@ -759,7 +771,7 @@ async function fetchVideosFromSupabase(period: InsightTreemapPeriod = 'ALL', opt
         const { data, error } = await query.range(from, to).overrideTypes<VideoDbRow[], { merge: false }>();
 
         if (error) {
-            throw new Error(`Failed to fetch videos: ${error.message}`);
+            throw new Error('Failed to fetch videos');
         }
 
         if (data && data.length > 0) {

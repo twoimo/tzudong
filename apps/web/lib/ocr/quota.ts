@@ -1,16 +1,20 @@
-import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
-
 export const OCR_DAILY_QUOTA = 5;
 
 type QueryBuilder = {
   select: (...args: unknown[]) => QueryBuilder;
   eq: (column: string, value: unknown) => QueryBuilder;
-  gte: (column: string, value: unknown) => QueryBuilder;
   maybeSingle: () => Promise<{ data: unknown; error: unknown }>;
 };
 
 export type QueryableSupabase = {
   from: (table: string) => QueryBuilder;
+};
+
+export type OcrQuotaSupabase = QueryableSupabase & {
+  rpc: (
+    functionName: 'get_ocr_daily_quota_status' | 'reserve_ocr_daily_quota',
+    args?: { p_operation_id: string },
+  ) => PromiseLike<{ data: unknown; error: unknown }>;
 };
 
 export type OcrQuotaStatus = {
@@ -25,41 +29,110 @@ export type OcrQuotaCheck = OcrQuotaStatus & {
   exceeded: boolean;
 };
 
-function serviceRoleConfigured(env: NodeJS.ProcessEnv = process.env) {
-  return Boolean(env.NEXT_PUBLIC_SUPABASE_URL?.trim() && env.SUPABASE_SERVICE_ROLE_KEY?.trim());
-}
+type OcrQuotaRpcRow = {
+  allowed: boolean;
+  used_count: number;
+  quota_limit: number | null;
+  remaining_count: number | null;
+  unlimited: boolean;
+  reset_at: string;
+};
 
-function getTodayWindow(now = new Date()) {
-  const today = new Date(now);
-  today.setHours(0, 0, 0, 0);
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
 
-  const resetAt = new Date(today);
-  resetAt.setDate(resetAt.getDate() + 1);
+const isNonNegativeSafeInteger = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
 
-  return { today, resetAt };
+const isNullableNonNegativeSafeInteger = (
+  value: unknown,
+): value is number | null => value === null || isNonNegativeSafeInteger(value);
+
+function parseOcrQuotaRpcRow(data: unknown): OcrQuotaRpcRow {
+  if (Array.isArray(data) && data.length !== 1) {
+    throw new Error('OCR_QUOTA_RESPONSE_INVALID');
+  }
+
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!isRecord(row)) {
+    throw new Error('OCR_QUOTA_RESPONSE_INVALID');
+  }
+
+  const {
+    allowed,
+    used_count: usedCount,
+    quota_limit: quotaLimit,
+    remaining_count: remainingCount,
+    unlimited,
+    reset_at: resetAt,
+  } = row;
+
+  if (
+    typeof allowed !== 'boolean'
+    || !isNonNegativeSafeInteger(usedCount)
+    || !isNullableNonNegativeSafeInteger(quotaLimit)
+    || !isNullableNonNegativeSafeInteger(remainingCount)
+    || typeof unlimited !== 'boolean'
+  ) {
+    throw new Error('OCR_QUOTA_RESPONSE_INVALID');
+  }
+
+  if (
+    typeof resetAt !== 'string'
+    || !Number.isFinite(Date.parse(resetAt))
+  ) {
+    throw new Error('OCR_QUOTA_RESPONSE_INVALID');
+  }
+
+  const parsed: OcrQuotaRpcRow = {
+    allowed,
+    used_count: usedCount,
+    quota_limit: quotaLimit,
+    remaining_count: remainingCount,
+    unlimited,
+    reset_at: resetAt,
+  };
+  if (
+    parsed.unlimited !== (parsed.quota_limit === null && parsed.remaining_count === null)
+    || (
+      !parsed.unlimited
+      && (
+        parsed.quota_limit !== OCR_DAILY_QUOTA
+        || parsed.remaining_count === null
+        || parsed.used_count > parsed.quota_limit
+        || parsed.remaining_count !== parsed.quota_limit - parsed.used_count
+      )
+    )
+  ) {
+    throw new Error('OCR_QUOTA_RESPONSE_INVALID');
+  }
+
+  return parsed;
 }
 
 export async function hasAdminRole(
   userId: string,
   fallbackClient?: QueryableSupabase,
-  env: NodeJS.ProcessEnv = process.env,
 ): Promise<boolean> {
-  const client = serviceRoleConfigured(env)
-    ? (createSupabaseServiceRoleClient() as unknown as QueryableSupabase)
-    : fallbackClient;
-
+  const client = fallbackClient;
   if (!client) return false;
 
   try {
-    const { data, error } = await client
+    const { data: role, error: roleError } = await client
       .from('user_roles')
       .select('role')
       .eq('user_id', userId)
       .eq('role', 'admin')
       .maybeSingle();
+    if (roleError || !role) return false;
 
-    if (error) return false;
-    return Boolean(data);
+    const { data: status, error: statusError } = await client
+      .from('user_account_status')
+      .select('account_status')
+      .eq('user_id', userId)
+      .eq('account_status', 'active')
+      .maybeSingle();
+    return !statusError && Boolean(status);
   } catch {
     return false;
   }
@@ -87,63 +160,45 @@ export async function canForceRefreshOcr(params: {
   const env = params.env ?? process.env;
   if (isOcrForceRefreshAllowedInEnvironment(env)) return true;
 
-  return hasAdminRole(params.userId, params.roleClient, env);
+  return hasAdminRole(params.userId, params.roleClient);
 }
 
 export async function getOcrQuotaStatus(params: {
-  userId: string;
-  logsClient: QueryableSupabase;
-  roleClient?: QueryableSupabase;
-  now?: Date;
-  env?: NodeJS.ProcessEnv;
+  quotaClient: OcrQuotaSupabase;
 }): Promise<OcrQuotaStatus> {
-  const { today, resetAt } = getTodayWindow(params.now);
-  const [{ count, error: countError }, unlimited] = await Promise.all([
-    params.logsClient
-      .from('ocr_logs')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', params.userId)
-      .eq('success', true)
-      .gte('created_at', today.toISOString()) as unknown as Promise<{ count: number | null; error: unknown }>,
-    hasAdminRole(params.userId, params.roleClient ?? params.logsClient, params.env),
-  ]);
+  const { data, error } = await params.quotaClient.rpc('get_ocr_daily_quota_status');
+  if (error) throw new Error('OCR_QUOTA_UNAVAILABLE');
 
-  if (countError) {
-    throw countError;
-  }
-
-  const used = count ?? 0;
-
-  if (unlimited) {
-    return {
-      used,
-      max: null,
-      remaining: null,
-      unlimited: true,
-      resetAt: resetAt.toISOString(),
-    };
-  }
-
+  const quota = parseOcrQuotaRpcRow(data);
   return {
-    used,
-    max: OCR_DAILY_QUOTA,
-    remaining: Math.max(0, OCR_DAILY_QUOTA - used),
-    unlimited: false,
-    resetAt: resetAt.toISOString(),
+    used: quota.used_count,
+    max: quota.quota_limit,
+    remaining: quota.remaining_count,
+    unlimited: quota.unlimited,
+    resetAt: quota.reset_at,
   };
 }
 
 export async function checkOcrDailyQuota(params: {
-  userId: string;
-  logsClient: QueryableSupabase;
-  roleClient?: QueryableSupabase;
-  now?: Date;
-  env?: NodeJS.ProcessEnv;
+  quotaClient: OcrQuotaSupabase;
+  operationId: string;
 }): Promise<OcrQuotaCheck> {
-  const status = await getOcrQuotaStatus(params);
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(params.operationId)) {
+    throw new Error('OCR_QUOTA_OPERATION_INVALID');
+  }
 
+  const { data, error } = await params.quotaClient.rpc('reserve_ocr_daily_quota', {
+    p_operation_id: params.operationId,
+  });
+  if (error) throw new Error('OCR_QUOTA_UNAVAILABLE');
+
+  const quota = parseOcrQuotaRpcRow(data);
   return {
-    ...status,
-    exceeded: !status.unlimited && status.remaining === 0,
+    used: quota.used_count,
+    max: quota.quota_limit,
+    remaining: quota.remaining_count,
+    unlimited: quota.unlimited,
+    resetAt: quota.reset_at,
+    exceeded: !quota.allowed,
   };
 }

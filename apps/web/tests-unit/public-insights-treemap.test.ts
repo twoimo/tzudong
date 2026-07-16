@@ -3,11 +3,11 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import {
+  buildTreemapApiCacheControl,
   parseTreemapMetricMode,
   parseTreemapPeriod,
   type InsightTreemapPeriod,
 } from '@/lib/public-insights/treemap';
-import { buildTreemapApiCacheControl } from '@/app/api/insights/treemap/route';
 
 const source = (relativePath: string) => readFileSync(join(import.meta.dir, '..', relativePath), 'utf8');
 
@@ -60,10 +60,10 @@ describe('public insights treemap route support', () => {
       expect(treemapSource).toContain(dimension);
     }
 
-    expect(routeSource).toContain('TREEMAP_API_BROWSER_MAX_AGE_SECONDS = 0');
-    expect(routeSource).toContain('TREEMAP_API_CDN_FRESH_SECONDS = 60');
-    expect(routeSource).toContain('TREEMAP_API_CDN_STALE_SECONDS = 5 * 60');
-    expect(routeSource).toContain('s-maxage=${TREEMAP_API_CDN_FRESH_SECONDS}');
+    expect(treemapSource).toContain('TREEMAP_API_BROWSER_MAX_AGE_SECONDS = 0');
+    expect(treemapSource).toContain('TREEMAP_API_CDN_FRESH_SECONDS = 60');
+    expect(treemapSource).toContain('TREEMAP_API_CDN_STALE_SECONDS = 5 * 60');
+    expect(treemapSource).toContain('s-maxage=${TREEMAP_API_CDN_FRESH_SECONDS}');
     expect(routeSource).toContain("'Cache-Control': buildTreemapApiCacheControl()");
   });
 

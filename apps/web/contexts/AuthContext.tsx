@@ -4,6 +4,11 @@ import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { AuthContext, type AuthContextType } from "@/contexts/AuthContextBase";
 import { dispatchHomeAuthSessionUpdated } from "@/lib/home-auth-events";
+import { DEBUG_LOG_EVENT, DEBUG_LOG_REASON_CODE, debugLog } from "@/lib/debug-log";
+import {
+    getCurrentPrivacyEligibility,
+    signOutRejectedPrivacySession,
+} from "@/lib/privacy/eligibility";
 import { hasSupabaseAuthSessionHint } from "@/lib/supabase-auth-session-hints";
 
 export { AnonymousHomeAuthProvider, useAuth } from "@/contexts/AuthContextBase";
@@ -70,48 +75,29 @@ const isSessionExpired = (currentSession: Session | null) => {
     return currentSession.expires_at * 1000 <= Date.now();
 };
 
+const PASSWORD_SIGN_IN_ERROR = 'AUTH_PASSWORD_SIGN_IN_FAILED';
+
 type AuthUserState = {
+    isEligible: boolean;
     isAdmin: boolean;
     needsNicknameSetup: boolean;
     profileNickname: string | null;
 };
 
-type AuthUserStateCacheEntry = {
-    userId: string;
-    state: AuthUserState;
-    expiresAt: number;
+const INELIGIBLE_AUTH_USER_STATE: AuthUserState = {
+    isEligible: false,
+    isAdmin: false,
+    needsNicknameSetup: false,
+    profileNickname: null,
 };
-
-const AUTH_USER_STATE_CACHE_TTL_MS = 5 * 60 * 1000;
-
-let authUserStateCache: AuthUserStateCacheEntry | null = null;
-const authUserStateRequests = new Map<string, Promise<AuthUserState>>();
-
-function invalidateAuthUserStateCache(userId?: string) {
-    if (!userId || authUserStateCache?.userId === userId) {
-        authUserStateCache = null;
-    }
-
-    if (userId) {
-        authUserStateRequests.delete(userId);
-        return;
-    }
-
-    authUserStateRequests.clear();
-}
-
-function getCachedAuthUserState(userId: string) {
-    if (authUserStateCache?.userId !== userId) return null;
-    if (authUserStateCache.expiresAt <= Date.now()) {
-        authUserStateCache = null;
-        return null;
-    }
-
-    return authUserStateCache.state;
-}
 
 async function fetchAuthUserState(userId: string): Promise<AuthUserState> {
     const supabase = await getSupabaseClient();
+    const eligibility = await getCurrentPrivacyEligibility(supabase);
+    if (!eligibility.eligible) {
+        return INELIGIBLE_AUTH_USER_STATE;
+    }
+
     const [roleResponse, profileResponse] = await Promise.all([
         supabase
             .from("user_roles")
@@ -134,46 +120,19 @@ async function fetchAuthUserState(userId: string): Promise<AuthUserState> {
     }
 
     if (profileResponse.error) {
-        console.error("Profile check error:", profileResponse.error);
+        debugLog(DEBUG_LOG_EVENT.AUTH_PROFILE_LOOKUP_FAILED, {
+            reason: DEBUG_LOG_REASON_CODE.AUTH_PROFILE_LOOKUP_FAILED,
+        });
     }
 
     const profileData = profileResponse.data as { nickname?: string } | null;
     const nickname = profileData?.nickname;
-    const state: AuthUserState = {
+    return {
+        isEligible: true,
         isAdmin: !roleResponse.error && Boolean(roleResponse.data),
         needsNicknameSetup: profileResponse.error ? false : !profileData || nickname === "탈퇴한 사용자",
         profileNickname: typeof nickname === "string" && nickname.trim().length > 0 ? nickname.trim() : null,
     };
-
-    authUserStateCache = {
-        userId,
-        state,
-        expiresAt: Date.now() + AUTH_USER_STATE_CACHE_TTL_MS,
-    };
-
-    return state;
-}
-
-function loadAuthUserState(userId: string, options: { force?: boolean } = {}) {
-    if (!options.force) {
-        const cachedState = getCachedAuthUserState(userId);
-        if (cachedState) return Promise.resolve(cachedState);
-
-        const pendingRequest = authUserStateRequests.get(userId);
-        if (pendingRequest) return pendingRequest;
-    } else {
-        invalidateAuthUserStateCache(userId);
-    }
-
-    const request = fetchAuthUserState(userId);
-    authUserStateRequests.set(userId, request);
-    const releaseRequest = () => {
-        if (authUserStateRequests.get(userId) === request) {
-            authUserStateRequests.delete(userId);
-        }
-    };
-    void request.then(releaseRequest, releaseRequest);
-    return request;
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -184,41 +143,98 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [needsNicknameSetup, setNeedsNicknameSetup] = useState(false);
     const [profileNickname, setProfileNickname] = useState<string | null>(null);
     const activeAuthUserIdRef = useRef<string | null>(null);
+    const pendingAuthUserIdRef = useRef<string | null>(null);
 
-    const clearStaleSession = useCallback(async () => {
-        invalidateAuthUserStateCache();
+    const clearPrivateDrafts = useCallback(async (userId: string | null) => {
+        if (!userId) return;
+
         try {
-            const supabase = await getSupabaseClient();
-            await supabase.auth.signOut({ scope: 'local' });
+            const { clearBrowserDraftsForUser } = await import("@/lib/privacy/browser-draft-cleanup");
+            await clearBrowserDraftsForUser(userId);
         } catch {
-            // no-op
+            // Session and published state still need to be cleared when local draft cleanup is unavailable.
         }
+    }, []);
 
+    const clearPublishedAuthState = useCallback((source: string) => {
         activeAuthUserIdRef.current = null;
+        pendingAuthUserIdRef.current = null;
         setSession(null);
         setUser(null);
         setIsAdmin(false);
         setNeedsNicknameSetup(false);
         setProfileNickname(null);
-        dispatchHomeAuthSessionUpdated({ hasSession: false, source: 'auth-clear-stale-session' });
+        dispatchHomeAuthSessionUpdated({ hasSession: false, source });
     }, []);
 
-    const applyAuthUserState = useCallback(async (userId: string, options: { force?: boolean } = {}) => {
+    const clearStaleSession = useCallback(async (userId?: string, revokeGlobally = false) => {
+        const signedOutUserId = userId ?? pendingAuthUserIdRef.current ?? activeAuthUserIdRef.current;
+        await clearPrivateDrafts(signedOutUserId);
+
         try {
-            const state = await loadAuthUserState(userId, options);
-            if (activeAuthUserIdRef.current !== userId) return;
+            const supabase = await getSupabaseClient();
+            if (revokeGlobally) {
+                await signOutRejectedPrivacySession(supabase);
+            } else {
+                await supabase.auth.signOut({ scope: 'local' });
+            }
+        } catch {
+            // The local React state below must be cleared even when the client cannot be loaded.
+        }
+
+        clearPublishedAuthState('auth-clear-stale-session');
+    }, [clearPrivateDrafts, clearPublishedAuthState]);
+
+    const publishEligibleSession = useCallback(async (nextSession: Session) => {
+        const userId = nextSession.user?.id;
+        if (!userId) {
+            await clearStaleSession();
+            return;
+        }
+
+        pendingAuthUserIdRef.current = userId;
+        try {
+            const state = await fetchAuthUserState(userId);
+            if (pendingAuthUserIdRef.current !== userId) return;
+            if (!state.isEligible) {
+                await clearStaleSession(userId, true);
+                return;
+            }
+
+            activeAuthUserIdRef.current = userId;
+            pendingAuthUserIdRef.current = null;
+            setSession(nextSession);
+            setUser(nextSession.user);
             setIsAdmin(state.isAdmin);
             setNeedsNicknameSetup(state.needsNicknameSetup);
             setProfileNickname(state.profileNickname);
-        } catch (error) {
-            if (isAuthSessionInvalidError(error)) {
-                await clearStaleSession();
+            dispatchHomeAuthSessionUpdated({ hasSession: true, source: 'auth-eligible-session' });
+        } catch {
+            if (pendingAuthUserIdRef.current !== userId) return;
+            debugLog(DEBUG_LOG_EVENT.AUTH_USER_STATE_LOAD_FAILED, {
+                reason: DEBUG_LOG_REASON_CODE.AUTH_USER_STATE_LOAD_FAILED,
+            });
+            await clearStaleSession(userId);
+        }
+    }, [clearStaleSession]);
+
+    const refreshPublishedAuthUserState = useCallback(async (userId: string) => {
+        try {
+            const state = await fetchAuthUserState(userId);
+            if (activeAuthUserIdRef.current !== userId) return;
+            if (!state.isEligible) {
+                await clearStaleSession(userId, true);
                 return;
             }
-            console.error("Error loading auth user state:", error);
-            setIsAdmin(false);
-            setNeedsNicknameSetup(false);
-            setProfileNickname(null);
+            setIsAdmin(state.isAdmin);
+            setNeedsNicknameSetup(state.needsNicknameSetup);
+            setProfileNickname(state.profileNickname);
+        } catch {
+            if (activeAuthUserIdRef.current !== userId) return;
+            debugLog(DEBUG_LOG_EVENT.AUTH_USER_STATE_LOAD_FAILED, {
+                reason: DEBUG_LOG_REASON_CODE.AUTH_USER_STATE_LOAD_FAILED,
+            });
+            await clearStaleSession(userId);
         }
     }, [clearStaleSession]);
 
@@ -229,78 +245,71 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const startAuthBootstrap = () => {
             void getSupabaseClient()
                 .then((supabase) => {
-                if (isCancelled) return;
+                    if (isCancelled) return;
 
-                // 초기 세션 가져오기
-                supabase.auth.getSession().then(async ({ data: { session }, error }) => {
-                    if (error && isAuthSessionInvalidError(error)) {
-                        await clearStaleSession();
-                        setIsLoading(false);
-                        return;
-                    }
-
-                    let nextSession = session;
-
-                    if (isSessionExpired(nextSession)) {
-                        const { data, error: refreshError } = await supabase.auth.refreshSession();
-                        if (refreshError || !data.session) {
-                            if (refreshError && !isAuthSessionInvalidError(refreshError)) {
-                                console.error('Error refreshing session:', refreshError);
-                            }
+                    supabase.auth.getSession().then(async ({ data: { session: currentSession }, error }) => {
+                        if (error && isAuthSessionInvalidError(error)) {
                             await clearStaleSession();
                             setIsLoading(false);
                             return;
                         }
-                        nextSession = data.session;
-                    }
+                        if (error) {
+                            debugLog(DEBUG_LOG_EVENT.AUTH_SESSION_LOAD_FAILED, {
+                                reason: DEBUG_LOG_REASON_CODE.AUTH_SESSION_LOAD_FAILED,
+                            });
+                        }
 
-                    setSession(nextSession);
-                    setUser(nextSession?.user ?? null);
-                    activeAuthUserIdRef.current = nextSession?.user?.id ?? null;
-                    if (nextSession?.user) {
-                        await applyAuthUserState(nextSession.user.id);
-                    }
-                    setIsLoading(false);
-                }).catch(async (error) => {
-                    if (isAuthSessionInvalidError(error)) {
-                        await clearStaleSession();
-                    } else {
-                        console.error('Error loading session:', error);
-                    }
-                    setIsLoading(false);
-                });
+                        let nextSession = currentSession;
+                        if (isSessionExpired(nextSession)) {
+                            const { data, error: refreshError } = await supabase.auth.refreshSession();
+                            if (refreshError || !data.session) {
+                                if (refreshError && !isAuthSessionInvalidError(refreshError)) {
+                                    debugLog(DEBUG_LOG_EVENT.AUTH_SESSION_REFRESH_FAILED, {
+                                        reason: DEBUG_LOG_REASON_CODE.AUTH_SESSION_REFRESH_FAILED,
+                                    });
+                                }
+                                await clearStaleSession();
+                                setIsLoading(false);
+                                return;
+                            }
+                            nextSession = data.session;
+                        }
 
-                // 인증 상태 변경 감지
-                const authSubscription = supabase.auth.onAuthStateChange((_event, session) => {
-                    if (isSessionExpired(session)) {
-                        void clearStaleSession();
-                        return;
-                    }
-                    dispatchHomeAuthSessionUpdated({
-                        hasSession: Boolean(session),
-                        source: `auth-state:${_event}`,
+                        if (nextSession?.user) {
+                            await publishEligibleSession(nextSession);
+                        } else {
+                            clearPublishedAuthState('auth-no-session');
+                        }
+                        setIsLoading(false);
+                    }).catch(async (error) => {
+                        if (isAuthSessionInvalidError(error)) {
+                            await clearStaleSession();
+                        } else {
+                            debugLog(DEBUG_LOG_EVENT.AUTH_SESSION_LOAD_FAILED, {
+                                reason: DEBUG_LOG_REASON_CODE.AUTH_SESSION_LOAD_FAILED,
+                            });
+                        }
+                        setIsLoading(false);
                     });
-                    setSession(session);
-                    setUser(session?.user ?? null);
-                    activeAuthUserIdRef.current = session?.user?.id ?? null;
-                    if (session?.user) {
-                        const userId = session.user.id;
-                        window.setTimeout(() => {
-                            if (isCancelled) return;
-                            void applyAuthUserState(userId, { force: _event === 'USER_UPDATED' });
-                        }, 0);
-                    } else {
-                        invalidateAuthUserStateCache();
-                        setIsAdmin(false);
-                        setNeedsNicknameSetup(false);
-                        setProfileNickname(null);
-                    }
-                });
-                subscription = authSubscription.data.subscription;
-            })
-                .catch((error) => {
+
+                    const authSubscription = supabase.auth.onAuthStateChange((_event, nextSession) => {
+                        if (isSessionExpired(nextSession)) {
+                            void clearStaleSession(nextSession?.user?.id);
+                            return;
+                        }
+                        if (!nextSession?.user) {
+                            clearPublishedAuthState(`auth-state:${_event}`);
+                            return;
+                        }
+                        void publishEligibleSession(nextSession);
+                    });
+                    subscription = authSubscription.data.subscription;
+                })
+                .catch(() => {
                     if (!isCancelled) {
-                        console.error('Error loading auth client:', error);
+                        debugLog(DEBUG_LOG_EVENT.AUTH_CLIENT_LOAD_FAILED, {
+                            reason: DEBUG_LOG_REASON_CODE.AUTH_CLIENT_LOAD_FAILED,
+                        });
                         setIsLoading(false);
                     }
                 });
@@ -341,76 +350,64 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             removeBootstrapListeners();
             subscription?.unsubscribe();
         };
-    }, [applyAuthUserState, clearStaleSession]);
+    }, [clearPublishedAuthState, clearStaleSession, publishEligibleSession]);
 
     const completeNicknameSetup = useCallback(() => {
         setNeedsNicknameSetup(false);
         if (user) {
-            invalidateAuthUserStateCache(user.id);
-            void applyAuthUserState(user.id, { force: true });
+            void refreshPublishedAuthUserState(user.id);
         }
-    }, [user, applyAuthUserState]);
+    }, [user, refreshPublishedAuthUserState]);
 
     const signIn = useCallback(async (email: string, password: string) => {
-        const supabase = await getSupabaseClient();
-        const { error } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-        });
-        if (error) throw error;
-    }, []);
+        let signedInUserId: string | null = null;
+        try {
+            const supabase = await getSupabaseClient();
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+            });
+            signedInUserId = data.session?.user?.id ?? null;
+            if (error || !signedInUserId) {
+                throw new Error(PASSWORD_SIGN_IN_ERROR);
+            }
 
-    const signInWithGoogle = useCallback(async () => {
-        const redirectUrl = `${window.location.origin}/auth/callback`;
-        const supabase = await getSupabaseClient();
-
-        const { error } = await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: {
-                redirectTo: redirectUrl,
-            },
-        });
-
-        if (error) throw error;
-    }, []);
-
-    const signUp = useCallback(async (email: string, password: string, username: string) => {
-        const supabase = await getSupabaseClient();
-        const { data, error } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-                data: {
-                    nickname: username,
-                },
-            },
-        });
-        if (error) throw error;
-        return { session: data.session };
-    }, []);
+            const eligibility = await getCurrentPrivacyEligibility(supabase);
+            if (!eligibility.eligible) {
+                throw new Error(PASSWORD_SIGN_IN_ERROR);
+            }
+        } catch {
+            if (signedInUserId) {
+                await clearStaleSession(signedInUserId, true);
+            }
+            throw new Error(PASSWORD_SIGN_IN_ERROR);
+        }
+    }, [clearStaleSession]);
 
     const signOut = useCallback(async () => {
+        const signingOutUserId = activeAuthUserIdRef.current;
+        const clearPrivateDrafts = async () => {
+            if (!signingOutUserId) return;
+            const { clearBrowserDraftsForUser } = await import("@/lib/privacy/browser-draft-cleanup");
+            await clearBrowserDraftsForUser(signingOutUserId);
+        };
+
         const supabase = await getSupabaseClient();
         const { error } = await supabase.auth.signOut({ scope: 'local' });
         if (!error) {
-            invalidateAuthUserStateCache();
-            activeAuthUserIdRef.current = null;
-            setSession(null);
-            setUser(null);
-            setIsAdmin(false);
-            setNeedsNicknameSetup(false);
-            setProfileNickname(null);
-            dispatchHomeAuthSessionUpdated({ hasSession: false, source: 'auth-signout' });
+            await clearPrivateDrafts();
+            clearPublishedAuthState('auth-signout');
             return;
         }
 
         if (isAuthSessionInvalidError(error)) {
-            await clearStaleSession();
+            await clearPrivateDrafts();
+            await clearStaleSession(signingOutUserId ?? undefined);
             return;
         }
 
         throw error;
-    }, [clearStaleSession]);
+    }, [clearPublishedAuthState, clearStaleSession]);
 
     const resetPassword = useCallback(async (email: string) => {
         const redirectUrl = `${window.location.origin}/auth/reset-password`;
@@ -429,7 +426,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (error) throw error;
     }, []);
 
-    const value = useMemo(() => ({
+    const value = useMemo<AuthContextType>(() => ({
         user,
         session,
         isLoading,
@@ -437,13 +434,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         needsNicknameSetup,
         profileNickname,
         signIn,
-        signInWithGoogle,
-        signUp,
         signOut,
         completeNicknameSetup,
         resetPassword,
         updatePassword,
-    }), [user, session, isLoading, isAdmin, needsNicknameSetup, profileNickname, signIn, signInWithGoogle, signUp, signOut, completeNicknameSetup, resetPassword, updatePassword]);
+    }), [user, session, isLoading, isAdmin, needsNicknameSetup, profileNickname, signIn, signOut, completeNicknameSetup, resetPassword, updatePassword]);
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

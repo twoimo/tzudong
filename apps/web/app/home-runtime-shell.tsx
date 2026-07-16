@@ -1,4 +1,5 @@
 'use client';
+// Keep the home Tailwind entry separate from the full app stylesheet loaded by AppRuntimeShell.
 
 import './home-app-globals.css';
 import { Suspense, lazy, type ComponentType, type ReactNode, useCallback, useEffect, useState } from 'react';
@@ -209,7 +210,7 @@ function MobileHomeLayout({ children }: { children: ReactNode }) {
                 <a href="#main-content" className="skip-link">
                     본문 바로가기
                 </a>
-                <main id="main-content" className="flex-1 relative overflow-hidden">
+                <main id="main-content" className="flex-1 relative overflow-hidden" aria-label="쯔동여지도 지도 본문">
                     <div className="h-full w-full">
                         {children}
                     </div>
@@ -279,11 +280,11 @@ function HomeLayoutContent({ children }: { children: ReactNode }) {
 
 function HomeRuntimePendingShell({ children }: { children: ReactNode }) {
     return (
-        <div className="min-h-[var(--full-height,100vh)] bg-background text-foreground">
+        <div className="bg-background text-foreground" style={{ height: 'var(--full-height, 100vh)' }}>
             <a href="#main-content" className="skip-link">
                 본문 바로가기
             </a>
-            <main id="main-content" className="h-full w-full bg-background">
+            <main id="main-content" className="h-full w-full bg-background" aria-label="쯔동여지도 지도 본문">
                 {children}
             </main>
         </div>

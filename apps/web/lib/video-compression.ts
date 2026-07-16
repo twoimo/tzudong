@@ -87,12 +87,12 @@ export const compressVideo = async (
             await ffmpegInstance.deleteFile(inputName);
             await ffmpegInstance.deleteFile(outputName);
         } catch (cleanupError) {
-            console.warn('임시 파일 삭제 실패:', cleanupError);
+            console.warn('임시 파일 삭제 실패:');
         }
 
         return compressedFile;
     } catch (error) {
-        console.error('영상 압축 실패:', error);
+        console.error('영상 압축 실패:');
         if (error instanceof Error) {
             throw error;
         }

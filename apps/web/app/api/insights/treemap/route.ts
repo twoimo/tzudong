@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import {
+    buildTreemapApiCacheControl,
     getInsightTreemapData,
     parseTreemapMetricMode,
     parseTreemapPeriod,
@@ -8,19 +9,6 @@ import {
 } from '@/lib/public-insights/treemap';
 
 export const runtime = 'nodejs';
-const TREEMAP_API_BROWSER_MAX_AGE_SECONDS = 0;
-const TREEMAP_API_CDN_FRESH_SECONDS = 60;
-const TREEMAP_API_CDN_STALE_SECONDS = 5 * 60;
-
-export function buildTreemapApiCacheControl() {
-    return [
-        'public',
-        `max-age=${TREEMAP_API_BROWSER_MAX_AGE_SECONDS}`,
-        `s-maxage=${TREEMAP_API_CDN_FRESH_SECONDS}`,
-        `stale-while-revalidate=${TREEMAP_API_CDN_STALE_SECONDS}`,
-        'must-revalidate',
-    ].join(', ');
-}
 
 function normalizePeriod(value: string | null): InsightTreemapPeriod {
     return parseTreemapPeriod(value);
@@ -36,7 +24,7 @@ export async function GET(request: NextRequest) {
         const headers = { 'Cache-Control': buildTreemapApiCacheControl() };
         return NextResponse.json(data, { headers });
     } catch (error) {
-        console.error('[insights/treemap] failed:', error);
+        console.error('[insights/treemap] failed:');
         return NextResponse.json(
             { error: 'Failed to build insights treemap.' },
             { status: 500 },

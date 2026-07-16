@@ -26,22 +26,350 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { fileURLToPath, pathToFileURL } from 'url';
-import { exec } from 'child_process';
-import util from 'util';
+import { spawn } from 'child_process';
 import https from 'https';
 // [추가] 정적 빌드 FFmpeg/FFprobe 경로 로드
 import ffmpegStatic from 'ffmpeg-static';
 import ffprobeStatic from 'ffprobe-static';
+import { safeErrorName } from '../../utils/privacy-log.mjs';
+
 const ffmpegPath = ffmpegStatic;
 const ffprobePath = ffprobeStatic.path;
 const SUPPORTED_VIDEO_CONTAINER_RE = /\.(mp4|webm|mkv)$/i;
 const YTDLP_FRAGMENT_FILE_RE = /\.f\d+\.(mp4|webm|mkv)$/i;
-
-const execPromise = util.promisify(exec);
+const YOUTUBE_VIDEO_ID_RE = /^[A-Za-z0-9_-]{11}$/;
+const SAFE_PROVIDER_BASENAME_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
+const SAFE_CHANNEL_NAME_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
+const SAFE_GDRIVE_REMOTE_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}:[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
+const SHELL_METACHARACTER_RE = /[&|;<>()$`"'*?[\]{}!~#%]/;
+const CONTROL_CHARACTER_RE = /[\u0000-\u001F\u007F]/;
+const WINDOWS_DEVICE_NAME_RE = /^(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\.|$)/i;
+const PATH_TRAVERSAL_SEGMENT_RE = /(?:^|[\\/])\.\.(?:[\\/]|$)/;
+const UNC_OR_DEVICE_PATH_RE = /^(?:\\\\|\/\/)/;
 const DEFAULT_YT_DLP_DOWNLOAD_TIMEOUT_MS = 5 * 60 * 1000;
 const DEFAULT_YT_DLP_MAX_RETRIES = 3;
 const YT_DLP_EXEC_MAX_BUFFER_BYTES = 20 * 1024 * 1024;
+const PROCESS_STDOUT_MAX_BYTES = 1024 * 1024;
+const PROCESS_STDERR_MAX_BYTES = 1024 * 1024;
+const PROCESS_TERMINATION_GRACE_MS = 1000;
+const RCLONE_TIMEOUT_MS = 5 * 60 * 1000;
+const FFPROBE_TIMEOUT_MS = 30 * 1000;
+const FFMPEG_TIMEOUT_MS = 5 * 60 * 1000;
 const DEFAULT_HEATMAP_RATE_LIMIT_STORM_LIMIT = 5;
+const STAGE_ENVIRONMENT_KEYS = ['PATH', 'HOME', 'USERPROFILE', 'SystemRoot', 'SYSTEMROOT', 'TEMP', 'TMP', 'TMPDIR', 'LANG', 'LC_ALL'];
+
+function createOperationError(code) {
+    const error = new Error(code);
+    error.code = code;
+    return error;
+}
+
+function hasControlCharacters(value) {
+    return typeof value !== 'string' || CONTROL_CHARACTER_RE.test(value);
+}
+function assertSafeChannelName(channelName) {
+    if (typeof channelName !== 'string' || !SAFE_CHANNEL_NAME_RE.test(channelName)) {
+        throw createOperationError('FRAME_INVALID_CHANNEL');
+    }
+    return channelName;
+}
+
+function isValidYouTubeVideoId(videoId) {
+    return typeof videoId === 'string' && YOUTUBE_VIDEO_ID_RE.test(videoId);
+}
+
+function assertValidYouTubeVideoId(videoId) {
+    if (!isValidYouTubeVideoId(videoId)) {
+        throw createOperationError('FRAME_INVALID_VIDEO_ID');
+    }
+    return videoId;
+}
+
+function getSafeProviderBasename(value) {
+    if (hasControlCharacters(value) || value.length > 128 || !SAFE_PROVIDER_BASENAME_RE.test(value)) {
+        return null;
+    }
+
+    if (
+        value === '.' ||
+        value === '..' ||
+        value.includes('/') ||
+        value.includes('\\') ||
+        value.includes('..') ||
+        path.basename(value) !== value ||
+        path.win32.basename(value) !== value ||
+        path.isAbsolute(value) ||
+        path.win32.isAbsolute(value) ||
+        WINDOWS_DEVICE_NAME_RE.test(value) ||
+        SHELL_METACHARACTER_RE.test(value)
+    ) {
+        return null;
+    }
+
+    return value;
+}
+
+function getSafeGDriveRemotePath(value) {
+    const remoteName = typeof value === 'string' ? value.split(':', 1)[0] : '';
+    if (
+        hasControlCharacters(value) ||
+        value.length > 192 ||
+        !SAFE_GDRIVE_REMOTE_RE.test(value) ||
+        value.includes('/') ||
+        value.includes('\\') ||
+        value.includes('..') ||
+        path.isAbsolute(value) ||
+        path.win32.isAbsolute(value) ||
+        SHELL_METACHARACTER_RE.test(value) ||
+        /^[A-Za-z]$/.test(remoteName) ||
+        WINDOWS_DEVICE_NAME_RE.test(remoteName)
+    ) {
+        return null;
+    }
+
+    return value;
+}
+
+function isAbsolutePath(value) {
+    return path.isAbsolute(value) || path.win32.isAbsolute(value);
+}
+
+function resolveConfiguredExecutable(value, label, allowlistedNames) {
+    if (value === undefined || value === null || value === '') {
+        return null;
+    }
+
+    if (
+        hasControlCharacters(value) ||
+        value !== value.trim() ||
+        value.length > 1024 ||
+        SHELL_METACHARACTER_RE.test(value) ||
+        PATH_TRAVERSAL_SEGMENT_RE.test(value) ||
+        UNC_OR_DEVICE_PATH_RE.test(value)
+    ) {
+        throw createOperationError(`FRAME_INVALID_${label}`);
+    }
+
+    const allowlistedName = allowlistedNames.find(name => name.toLowerCase() === value.toLowerCase());
+    if (allowlistedName) {
+        return allowlistedName;
+    }
+
+    if (!isAbsolutePath(value)) {
+        throw createOperationError(`FRAME_INVALID_${label}`);
+    }
+
+    try {
+        const resolved = fs.realpathSync(value);
+        if (!fs.statSync(resolved).isFile()) {
+            throw createOperationError(`FRAME_INVALID_${label}`);
+        }
+        return resolved;
+    } catch {
+        throw createOperationError(`FRAME_INVALID_${label}`);
+    }
+}
+
+function resolveYtDlpInvocation(env = process.env) {
+    const ytDlp = resolveConfiguredExecutable(env.YT_DLP_CMD, 'YT_DLP_CMD', ['yt-dlp', 'yt-dlp.exe']);
+    const python = resolveConfiguredExecutable(env.PYTHON_CMD, 'PYTHON_CMD', ['python', 'python.exe', 'python3', 'python3.exe']);
+
+    if (ytDlp) {
+        return { file: ytDlp, args: [] };
+    }
+
+    if (process.platform === 'win32') {
+        return { file: python || 'python', args: ['-m', 'yt_dlp'] };
+    }
+
+    return { file: 'yt-dlp', args: [] };
+}
+function resolveDownloadConfiguration(env = process.env) {
+    const configuredRemotePath = env.GDRIVE_REMOTE_PATH;
+    const gdriveRemotePath = configuredRemotePath ? getSafeGDriveRemotePath(configuredRemotePath) : null;
+    if (configuredRemotePath && !gdriveRemotePath) {
+        throw createOperationError('FRAME_INVALID_GDRIVE_REMOTE_PATH');
+    }
+
+    return {
+        gdriveRemotePath,
+        ytDlpInvocation: resolveYtDlpInvocation(env),
+    };
+}
+
+function getStageEnvironment(env = process.env) {
+    const stageEnvironment = {};
+    for (const key of STAGE_ENVIRONMENT_KEYS) {
+        if (typeof env[key] === 'string' && !hasControlCharacters(env[key])) {
+            stageEnvironment[key] = env[key];
+        }
+    }
+    return stageEnvironment;
+}
+
+function isPathContained(rootPath, candidatePath) {
+    const relativePath = path.relative(path.resolve(rootPath), path.resolve(candidatePath));
+    return relativePath === '' || (!relativePath.startsWith(`..${path.sep}`) && relativePath !== '..' && !path.isAbsolute(relativePath));
+}
+
+function resolveContainedPath(rootPath, ...segments) {
+    const resolvedRoot = path.resolve(rootPath);
+    const targetPath = path.resolve(resolvedRoot, ...segments);
+    if (!isPathContained(resolvedRoot, targetPath)) {
+        throw createOperationError('FRAME_PATH_OUTSIDE_ROOT');
+    }
+    return targetPath;
+}
+
+function assertPathContainmentBeforeMutation(rootPath, targetPath) {
+    const resolvedRoot = fs.realpathSync(rootPath);
+    let existingPath = path.resolve(targetPath);
+    while (!fs.existsSync(existingPath)) {
+        const parentPath = path.dirname(existingPath);
+        if (parentPath === existingPath) {
+            throw createOperationError('FRAME_PATH_OUTSIDE_ROOT');
+        }
+        existingPath = parentPath;
+    }
+
+    if (!isPathContained(resolvedRoot, fs.realpathSync(existingPath))) {
+        throw createOperationError('FRAME_PATH_OUTSIDE_ROOT');
+    }
+}
+
+function assertExistingPathContained(rootPath, targetPath) {
+    if (!isPathContained(rootPath, targetPath)) {
+        throw createOperationError('FRAME_PATH_OUTSIDE_ROOT');
+    }
+    if (!fs.existsSync(targetPath) || !isPathContained(fs.realpathSync(rootPath), fs.realpathSync(targetPath))) {
+        throw createOperationError('FRAME_PATH_OUTSIDE_ROOT');
+    }
+}
+
+function ensureContainedDirectory(rootPath, ...segments) {
+    const targetPath = resolveContainedPath(rootPath, ...segments);
+    assertPathContainmentBeforeMutation(rootPath, targetPath);
+    fs.mkdirSync(targetPath, { recursive: true });
+    assertExistingPathContained(rootPath, targetPath);
+    return targetPath;
+}
+
+function removeContainedFile(rootPath, targetPath) {
+    assertExistingPathContained(rootPath, targetPath);
+    fs.unlinkSync(targetPath);
+}
+
+function removeContainedDirectory(rootPath, targetPath) {
+    assertExistingPathContained(rootPath, targetPath);
+    fs.rmSync(targetPath, { recursive: true, force: true });
+}
+
+function requireExistingDirectory(directoryPath) {
+    if (hasControlCharacters(directoryPath)) {
+        throw createOperationError('FRAME_INVALID_OUTPUT_DIRECTORY');
+    }
+
+    const resolved = path.resolve(directoryPath);
+    if (!fs.existsSync(resolved) || !fs.statSync(resolved).isDirectory()) {
+        throw createOperationError('FRAME_INVALID_OUTPUT_DIRECTORY');
+    }
+    return resolved;
+}
+
+function runProcess(file, args, options = {}) {
+    const {
+        timeoutMs = FFMPEG_TIMEOUT_MS,
+        stdoutMaxBytes = PROCESS_STDOUT_MAX_BYTES,
+        stderrMaxBytes = PROCESS_STDERR_MAX_BYTES,
+        env = getStageEnvironment(),
+    } = options;
+
+    return new Promise((resolve, reject) => {
+        let child;
+        try {
+            child = spawn(file, args, {
+                shell: false,
+                windowsHide: true,
+                env,
+                stdio: ['ignore', 'pipe', 'pipe'],
+            });
+        } catch {
+            reject(createOperationError('FRAME_PROCESS_START_FAILED'));
+            return;
+        }
+
+        let stdout = '';
+        let stderr = '';
+        let stdoutBytes = 0;
+        let stderrBytes = 0;
+        let failure = null;
+        let terminationTimer = null;
+        let timeoutTimer = null;
+
+        const requestTermination = (error) => {
+            if (failure) return;
+            failure = error;
+            try {
+                child.kill('SIGTERM');
+            } catch {
+                // Close handling below reports the bounded failure code.
+            }
+            terminationTimer = setTimeout(() => {
+                try {
+                    child.kill('SIGKILL');
+                } catch {
+                    // Close handling below reports the bounded failure code.
+                }
+            }, PROCESS_TERMINATION_GRACE_MS);
+            terminationTimer.unref?.();
+        };
+
+        const collectOutput = (streamName, limit) => (chunk) => {
+            if (failure) return;
+            const text = Buffer.isBuffer(chunk) ? chunk.toString('utf8') : String(chunk);
+            const byteLength = Buffer.byteLength(text);
+            if (streamName === 'stdout') {
+                stdoutBytes += byteLength;
+                if (stdoutBytes > limit) {
+                    requestTermination(createOperationError('FRAME_PROCESS_STDOUT_LIMIT'));
+                    return;
+                }
+                stdout += text;
+                return;
+            }
+
+            stderrBytes += byteLength;
+            if (stderrBytes > limit) {
+                requestTermination(createOperationError('FRAME_PROCESS_STDERR_LIMIT'));
+                return;
+            }
+            stderr += text;
+        };
+
+        child.stdout.on('data', collectOutput('stdout', stdoutMaxBytes));
+        child.stderr.on('data', collectOutput('stderr', stderrMaxBytes));
+        child.once('error', () => {
+            requestTermination(createOperationError('FRAME_PROCESS_START_FAILED'));
+        });
+        child.once('close', (code, signal) => {
+            if (timeoutTimer) clearTimeout(timeoutTimer);
+            if (terminationTimer) clearTimeout(terminationTimer);
+
+            if (failure) {
+                reject(failure);
+            } else if (code !== 0) {
+                reject(createOperationError(signal ? 'FRAME_PROCESS_TERMINATED' : 'FRAME_PROCESS_EXIT_FAILED'));
+            } else {
+                resolve({ stdout, stderr });
+            }
+        });
+
+        timeoutTimer = setTimeout(() => {
+            requestTermination(createOperationError('FRAME_PROCESS_TIMEOUT'));
+        }, timeoutMs);
+        timeoutTimer.unref?.();
+    });
+}
 
 function parsePositiveInteger(value) {
     if (value === undefined || value === null || value === '') return null;
@@ -77,12 +405,10 @@ function buildYtDlpExecOptions(env = process.env) {
         timeout: getYtDlpDownloadTimeoutMs(env),
         killSignal: 'SIGTERM',
         maxBuffer: YT_DLP_EXEC_MAX_BUFFER_BYTES,
+        shell: false,
     };
 }
 
-function isExecTimeoutError(error) {
-    return Boolean(error && (error.killed || error.signal === 'SIGTERM'));
-}
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -98,12 +424,6 @@ const LOCAL_DRIVE_FRAMES = 'H:\\My Drive\\04_빠른공유\\tzudong_tzuyang_data\
 let VIDEO_CACHE_DIR = process.env.VIDEO_CACHE_DIR || (fs.existsSync(LOCAL_DRIVE_CACHE) ? LOCAL_DRIVE_CACHE : path.join(BASE_DATA_DIR, 'video_cache'));
 let FRAMES_ROOT_DIR = process.env.FRAMES_ROOT_DIR || (fs.existsSync(LOCAL_DRIVE_FRAMES) ? LOCAL_DRIVE_FRAMES : path.join(BASE_DATA_DIR, 'frames'));
 
-// 캐시/프레임 디렉토리 자동 생성
-if (!fs.existsSync(VIDEO_CACHE_DIR)) fs.mkdirSync(VIDEO_CACHE_DIR, { recursive: true });
-if (!fs.existsSync(FRAMES_ROOT_DIR)) fs.mkdirSync(FRAMES_ROOT_DIR, { recursive: true });
-
-log('info', `[Config] Video Cache: ${VIDEO_CACHE_DIR}`);
-log('info', `[Config] Frames Dir: ${FRAMES_ROOT_DIR}`);
 
 // --- 로깅 헬퍼 ---
 function log(level, message) {
@@ -111,18 +431,13 @@ function log(level, message) {
     // [Styling] 레벨에 따라 색상이나 포맷을 다르게 할 수 있지만, 일단 직관적인 텍스트로 통일
     console.log(`[${timestamp}] [${level.toUpperCase().padEnd(5)}] ${message}`);
 }
-
-function toRelativePath(p) {
-    if (!p) return '';
-    try {
-        return path.relative(process.cwd(), p);
-    } catch (e) {
-        return p;
-    }
+function logOperationError(level, operation, error) {
+    log(level, `${operation} ${safeErrorName(error)}`);
 }
 
+
 function isSupportedVideoContainer(fileName) {
-    return SUPPORTED_VIDEO_CONTAINER_RE.test(fileName);
+    return Boolean(getSafeProviderBasename(fileName)) && SUPPORTED_VIDEO_CONTAINER_RE.test(fileName);
 }
 
 function getVideoCandidatePriority(fileName, videoId) {
@@ -146,6 +461,10 @@ function getVideoCandidatePriority(fileName, videoId) {
 }
 
 function sortVideoCandidates(candidateNames, videoId) {
+    if (!isValidYouTubeVideoId(videoId) || !Array.isArray(candidateNames)) {
+        return [];
+    }
+
     return [...candidateNames]
         .filter(fileName => isSupportedVideoContainer(fileName))
         .sort((left, right) => {
@@ -156,15 +475,21 @@ function sortVideoCandidates(candidateNames, videoId) {
 
 async function hasVideoStream(mediaPath) {
     try {
-        const { stdout } = await execPromise(
-            `"${ffprobePath}" -v error -select_streams v:0 -show_entries stream=codec_type -of csv=p=0 "${mediaPath}"`
+        if (hasControlCharacters(mediaPath) || !fs.existsSync(mediaPath) || !fs.statSync(mediaPath).isFile()) {
+            return false;
+        }
+
+        const { stdout } = await runProcess(
+            ffprobePath,
+            ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=codec_type', '-of', 'csv=p=0', mediaPath],
+            { timeoutMs: FFPROBE_TIMEOUT_MS }
         );
         return stdout
             .split('\n')
             .map(line => line.trim())
             .some(line => line === 'video');
     } catch (e) {
-        log('warn', `[Probe] 비디오 스트림 확인 실패: ${toRelativePath(mediaPath)} (${e.message})`);
+        logOperationError('warn', 'FRAME_PROBE_FAILED', e);
         return false;
     }
 }
@@ -173,16 +498,32 @@ async function pickUsableLocalVideoCandidate(
     videoId,
     candidateNames,
     baseDir,
-    sourceLabel,
+    _sourceLabel,
     validateMediaPath = hasVideoStream
 ) {
+    if (!isValidYouTubeVideoId(videoId)) {
+        return null;
+    }
+
+    let candidateRoot;
+    try {
+        candidateRoot = requireExistingDirectory(baseDir);
+    } catch {
+        return null;
+    }
+
     for (const candidateName of sortVideoCandidates(candidateNames, videoId)) {
-        const candidatePath = path.join(baseDir, candidateName);
-        const usable = await validateMediaPath(candidatePath);
-        if (usable) {
-            return candidatePath;
+        try {
+            const candidatePath = resolveContainedPath(candidateRoot, candidateName);
+            assertExistingPathContained(candidateRoot, candidatePath);
+            const usable = await validateMediaPath(candidatePath);
+            if (usable) {
+                return candidatePath;
+            }
+        } catch {
+            // Unsafe or unusable local candidate is never passed to a child process.
         }
-        log('warn', `[${sourceLabel}] 비디오 스트림이 없어 후보 제외: ${candidateName}`);
+        log('warn', 'FRAME_VIDEO_CANDIDATE_REJECTED');
     }
 
     return null;
@@ -194,52 +535,73 @@ async function setupRCloneConfig() {
     // Base64 인코딩된 Config가 있으면 디코딩해서 파일로 저장 (GitHub Actions 환경 등)
     if (configBase64) {
         try {
-            const configPath = path.join(process.env.HOME || process.env.USERPROFILE, '.config', 'rclone', 'rclone.conf');
-            const configDir = path.dirname(configPath);
-            if (!fs.existsSync(configDir)) fs.mkdirSync(configDir, { recursive: true });
+            const homeDir = requireExistingDirectory(process.env.HOME || process.env.USERPROFILE);
+            const configDir = ensureContainedDirectory(homeDir, '.config', 'rclone');
+            const configPath = resolveContainedPath(configDir, 'rclone.conf');
+            assertPathContainmentBeforeMutation(configDir, configPath);
 
             const configContent = Buffer.from(configBase64, 'base64').toString('utf-8');
             fs.writeFileSync(configPath, configContent, 'utf-8');
-            log('info', `[RClone] Config 설정 완료: ${configPath}`);
+            assertExistingPathContained(configDir, configPath);
+            log('info', 'FRAME_RCLONE_CONFIGURED');
             return true;
         } catch (e) {
-            log('warn', `[RClone] Config 설정 실패: ${e.message}`);
+            logOperationError('warn', 'FRAME_RCLONE_CONFIG_FAILED', e);
         }
     }
     return false;
 }
 
 async function findVideoInGDrive(remotePath, videoId) {
-    // rclone lsf로 해당 비디오 ID를 포함하는 파일 검색
-    // 예: rclone lsf "remote:path" --files-only --include "*videoId*"
-    const cmd = `rclone lsf "${remotePath}" --files-only --include "*${videoId}*" --format "p"`;
+    const safeRemotePath = getSafeGDriveRemotePath(remotePath);
+    if (!safeRemotePath || !isValidYouTubeVideoId(videoId)) {
+        return [];
+    }
+
     try {
-        const { stdout } = await execPromise(cmd);
-        const files = stdout.trim().split('\n').filter(f => f);
+        const { stdout } = await runProcess(
+            'rclone',
+            ['lsf', safeRemotePath, '--files-only', '--include', `*${videoId}*`, '--format', 'p'],
+            { timeoutMs: RCLONE_TIMEOUT_MS }
+        );
+        const files = stdout.trim().split('\n').filter(fileName => getSafeProviderBasename(fileName));
         if (files.length > 0) {
             return sortVideoCandidates(files, videoId);
         }
     } catch (e) {
-        log('warn', `[RClone] 파일 검색 실패: ${e.message}`);
+        logOperationError('warn', 'FRAME_RCLONE_LIST_FAILED', e);
     }
     return [];
 }
 
 async function fetchVideoFromGDrive(remotePath, fileName, outputDir) {
-    const source = `${remotePath}/${fileName}`.replace('//', '/');
-    const target = path.join(outputDir, fileName);
+    const safeRemotePath = getSafeGDriveRemotePath(remotePath);
+    const safeFileName = getSafeProviderBasename(fileName);
+    if (!safeRemotePath || !safeFileName) {
+        return null;
+    }
 
-    log('info', `[RClone] GDrive 다운로드 시작: ${source} -> ${toRelativePath(target)}`);
-    const cmd = `rclone copy "${source}" "${outputDir}" --progress`;
-
+    let outputDirectory;
     try {
-        await execPromise(cmd);
+        outputDirectory = requireExistingDirectory(outputDir);
+        const source = `${safeRemotePath}/${safeFileName}`;
+        const target = resolveContainedPath(outputDirectory, safeFileName);
+        assertPathContainmentBeforeMutation(outputDirectory, target);
+
+        log('info', 'FRAME_RCLONE_DOWNLOAD_STARTED');
+        await runProcess(
+            'rclone',
+            ['copy', source, outputDirectory, '--progress'],
+            { timeoutMs: RCLONE_TIMEOUT_MS }
+        );
+
         if (fs.existsSync(target)) {
-            log('info', `[RClone] 다운로드 완료: ${fileName}`);
+            assertExistingPathContained(outputDirectory, target);
+            log('info', 'FRAME_RCLONE_DOWNLOAD_COMPLETED');
             return target;
         }
     } catch (e) {
-        log('error', `[RClone] 다운로드 실패: ${e.message}`);
+        logOperationError('error', 'FRAME_RCLONE_DOWNLOAD_FAILED', e);
     }
     return null;
 }
@@ -250,27 +612,45 @@ async function fetchUsableGDriveVideo(videoId, remotePath, outputDir, options = 
         fetchCandidate = fetchVideoFromGDrive,
         validateMediaPath = hasVideoStream,
     } = options;
+    const safeRemotePath = getSafeGDriveRemotePath(remotePath);
+    if (!isValidYouTubeVideoId(videoId) || !safeRemotePath) {
+        return null;
+    }
 
-    const gdriveCandidates = await listCandidates(remotePath, videoId);
-    if (!gdriveCandidates || gdriveCandidates.length === 0) {
-        log('info', `[GDrive] 영상 없음 (${videoId}) -> HTTP 다운로드(yt-dlp)로 전환`);
+    let outputDirectory;
+    try {
+        outputDirectory = requireExistingDirectory(outputDir);
+    } catch {
+        return null;
+    }
+
+    const gdriveCandidates = await listCandidates(safeRemotePath, videoId);
+    if (!gdriveCandidates || !Array.isArray(gdriveCandidates) || gdriveCandidates.length === 0) {
+        log('info', 'FRAME_GDRIVE_VIDEO_UNAVAILABLE');
         return null;
     }
 
     for (const gdriveFileName of sortVideoCandidates(gdriveCandidates, videoId)) {
-        log('info', `[GDrive] 영상 발견: ${gdriveFileName} -> 다운로드 시도`);
-        const downloaded = await fetchCandidate(remotePath, gdriveFileName, outputDir);
+        log('info', 'FRAME_GDRIVE_VIDEO_FOUND');
+        const downloaded = await fetchCandidate(safeRemotePath, gdriveFileName, outputDirectory);
         if (!downloaded) {
+            continue;
+        }
+
+        try {
+            assertExistingPathContained(outputDirectory, downloaded);
+        } catch {
+            log('warn', 'FRAME_GDRIVE_DOWNLOAD_PATH_REJECTED');
             continue;
         }
 
         const usableDownloaded = await validateMediaPath(downloaded);
         if (!usableDownloaded) {
-            log('warn', `[GDrive] 비디오 스트림이 없어 HTTP 다운로드로 폴백: ${gdriveFileName}`);
+            log('warn', 'FRAME_GDRIVE_VIDEO_INVALID');
             try {
-                fs.unlinkSync(downloaded);
+                removeContainedFile(outputDirectory, downloaded);
             } catch (e) {
-                log('warn', `[GDrive] 무효 후보 정리 실패: ${e.message}`);
+                logOperationError('warn', 'FRAME_GDRIVE_CLEANUP_FAILED', e);
             }
             continue;
         }
@@ -278,7 +658,7 @@ async function fetchUsableGDriveVideo(videoId, remotePath, outputDir, options = 
         return downloaded;
     }
 
-    log('info', `[GDrive] 사용 가능한 비디오 후보 없음 (${videoId}) -> HTTP 다운로드(yt-dlp)로 전환`);
+    log('info', 'FRAME_GDRIVE_CANDIDATES_EXHAUSTED');
     return null;
 }
 
@@ -315,66 +695,79 @@ function parseArgs() {
 }
 
 // --- 경로 헬퍼 ---
-function copyFolderRecursiveSync(source, target) {
-    if (!fs.existsSync(target)) fs.mkdirSync(target, { recursive: true });
+function copyFolderRecursiveSync(source, target, targetRoot) {
+    assertExistingPathContained(source, source);
+    assertPathContainmentBeforeMutation(targetRoot, target);
+    if (!fs.existsSync(target)) {
+        fs.mkdirSync(target, { recursive: true });
+        assertExistingPathContained(targetRoot, target);
+    }
 
-    if (fs.lstatSync(source).isDirectory()) {
-        const files = fs.readdirSync(source);
-        for (const file of files) {
-            const curSource = path.join(source, file);
-            const curTarget = path.join(target, file);
-            if (fs.lstatSync(curSource).isDirectory()) {
-                copyFolderRecursiveSync(curSource, curTarget);
-            } else {
-                // [최적화] 하드 링크 시도 -> 실패 시 복사 (Cross-device 등 대비)
-                try {
-                    // 이미 타겟이 있으면 건너뜀 (덮어쓰기 방지)
-                    if (!fs.existsSync(curTarget)) {
-                        fs.linkSync(curSource, curTarget);
-                    }
-                } catch (e) {
-                    // 하드 링크 실패 시 일반 복사 (폴백)
-                    if (!fs.existsSync(curTarget)) {
-                        fs.copyFileSync(curSource, curTarget);
-                    }
-                }
+    if (!fs.lstatSync(source).isDirectory()) return;
+
+    for (const fileName of fs.readdirSync(source)) {
+        if (!getSafeProviderBasename(fileName)) continue;
+
+        const sourcePath = resolveContainedPath(source, fileName);
+        const targetPath = resolveContainedPath(target, fileName);
+        assertExistingPathContained(source, sourcePath);
+        if (fs.lstatSync(sourcePath).isDirectory()) {
+            copyFolderRecursiveSync(sourcePath, targetPath, targetRoot);
+            continue;
+        }
+
+        // [최적화] 하드 링크 시도 -> 실패 시 복사 (Cross-device 등 대비)
+        if (!fs.existsSync(targetPath)) {
+            assertPathContainmentBeforeMutation(targetRoot, targetPath);
+            try {
+                fs.linkSync(sourcePath, targetPath);
+            } catch {
+                fs.copyFileSync(sourcePath, targetPath);
             }
+            assertExistingPathContained(targetRoot, targetPath);
         }
     }
 }
 
 function getChannelDir(channelName) {
-    return path.join(BASE_DATA_DIR, channelName);
+    return resolveContainedPath(BASE_DATA_DIR, assertSafeChannelName(channelName));
 }
 
 // 프레임 저장 경로: channel/frames/videoId/recollectId/
 function getFramesOutputDir(channelName, videoId, recollectId) {
-    const rId = recollectId !== undefined && recollectId !== null ? recollectId.toString() : '0';
-    // [수정] FRAMES_ROOT_DIR 전역 변수 사용 (채널 구분 없이 루트 사용 혹은 채널 하위?)
-    // 사용자 요청 경로에 'tzudong_tzuyang_data'가 있으므로, 이미 채널(tzuyang) 특화 경로일 수 있음.
-    // 하지만 channelName이 바뀌면 꼬일 수 있으므로, 만약 기본값이 아니면 채널명을 붙일지 고민.
-    // 일단 요청사항대로 고정 경로 하위에 videoId 생성
-    // 만약 채널별 구분이 필요하다면 FRAMES_ROOT_DIR 하위에 channelName을 붙여야 함.
-    // 여기서는 사용자가 지정한 'frames' 폴더 바로 아래에 videoId를 둠.
-    return path.join(FRAMES_ROOT_DIR, videoId, rId);
+    assertSafeChannelName(channelName);
+    assertValidYouTubeVideoId(videoId);
+    const normalizedRecollectId = recollectId === undefined || recollectId === null ? 0 : Number(recollectId);
+    if (!Number.isSafeInteger(normalizedRecollectId) || normalizedRecollectId < 0) {
+        throw createOperationError('FRAME_INVALID_RECOLLECT_ID');
+    }
+
+    return resolveContainedPath(FRAMES_ROOT_DIR, videoId, String(normalizedRecollectId));
 }
 
 function getHeatmapOutputPath(channelName, videoId) {
-    const dir = path.join(getChannelDir(channelName), 'heatmap');
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    return path.join(dir, `${videoId}.jsonl`);
+    assertValidYouTubeVideoId(videoId);
+    const safeChannelName = assertSafeChannelName(channelName);
+    const dir = ensureContainedDirectory(BASE_DATA_DIR, safeChannelName, 'heatmap');
+    return resolveContainedPath(dir, `${videoId}.jsonl`);
 }
 
 function getMetaOutputPath(channelName, videoId) {
-    return path.join(getChannelDir(channelName), 'meta', `${videoId}.jsonl`);
+    assertValidYouTubeVideoId(videoId);
+    return resolveContainedPath(getChannelDir(channelName), 'meta', `${videoId}.jsonl`);
 }
 
 // [추가] 완료된 프레임 수집 기록 관리
-function getCompletedFramesPath(channelName) {
-    return path.join(getChannelDir(channelName), 'completed_frames.jsonl');
+function getCompletedFramesPath(channelName, createDirectory = false) {
+    const safeChannelName = assertSafeChannelName(channelName);
+    const channelDir = createDirectory
+        ? ensureContainedDirectory(BASE_DATA_DIR, safeChannelName)
+        : getChannelDir(safeChannelName);
+    return resolveContainedPath(channelDir, 'completed_frames.jsonl');
 }
 
 function isFrameCollectionCompleted(channelName, videoId, metaRecollectId) {
+    if (!isValidYouTubeVideoId(videoId)) return false;
     const logPath = getCompletedFramesPath(channelName);
     if (!fs.existsSync(logPath)) return false;
 
@@ -392,30 +785,44 @@ function isFrameCollectionCompleted(channelName, videoId, metaRecollectId) {
             } catch (e) { }
         }
     } catch (e) {
-        log('warn', `완료 로그 읽기 실패: ${e.message}`);
+        logOperationError('warn', 'FRAME_COMPLETION_LOG_READ_FAILED', e);
     }
     return false;
 }
 
 function markFrameCollectionCompleted(channelName, videoId, metaRecollectId) {
-    const logPath = getCompletedFramesPath(channelName);
+    assertValidYouTubeVideoId(videoId);
+    const logPath = getCompletedFramesPath(channelName, true);
     const data = {
         video_id: videoId,
         recollect_id: metaRecollectId,
         completed_at: new Date().toISOString()
     };
     try {
+        assertPathContainmentBeforeMutation(path.dirname(logPath), logPath);
         fs.appendFileSync(logPath, JSON.stringify(data) + '\n', 'utf8');
-        // log('info', `[Log] 수집 완료 기록 저장: ${videoId} (v${metaRecollectId})`);
+        assertExistingPathContained(path.dirname(logPath), logPath);
     } catch (e) {
-        log('warn', `완료 로그 저장 실패: ${e.message}`);
+        logOperationError('warn', 'FRAME_COMPLETION_LOG_WRITE_FAILED', e);
     }
 }
 
 function extractVideoId(url) {
-    if (!url) return null;
-    const match = url.match(/[?&]v=([^&]+)/) || url.match(/youtu\.be\/([^?]+)/);
-    return match ? match[1] : null;
+    if (typeof url !== 'string' || hasControlCharacters(url) || url.length > 2048) return null;
+
+    try {
+        const parsed = new URL(url);
+        const host = parsed.hostname.toLowerCase();
+        let videoId = null;
+        if (host === 'youtu.be' || host.endsWith('.youtu.be')) {
+            videoId = parsed.pathname.split('/').filter(Boolean)[0] || null;
+        } else if (host === 'youtube.com' || host.endsWith('.youtube.com')) {
+            videoId = parsed.searchParams.get('v');
+        }
+        return isValidYouTubeVideoId(videoId) ? videoId : null;
+    } catch {
+        return null;
+    }
 }
 
 // --- 메타 데이터 유틸리티 ---
@@ -454,7 +861,7 @@ function getRecollectVars(channelName, videoId) {
         const fallbackPath = path.join(BASE_DATA_DIR, 'tzuyang', 'meta', `${videoId}.jsonl`);
         if (fs.existsSync(fallbackPath)) {
             metaPath = fallbackPath;
-            log('info', `[Meta] 메타 참조 변경: 'tzuyang' 채널 데이터 사용 -> ${path.basename(metaPath)}`);
+            log('info', 'FRAME_META_FALLBACK_SELECTED');
         }
     }
 
@@ -464,11 +871,11 @@ function getRecollectVars(channelName, videoId) {
             if (content) {
                 const data = JSON.parse(content);
                 const vars = data.recollect_vars || [];
-                log('info', `[Meta] 감지된 변경 변수: [${vars.join(', ')}]`);
+                log('info', 'FRAME_META_RECOLLECT_VARS_FOUND');
                 return vars;
             }
         } catch (e) {
-            log('warn', `메타 파일 파싱 오류: ${e.message}`);
+            logOperationError('warn', 'FRAME_META_PARSE_FAILED', e);
         }
     }
     return [];
@@ -491,7 +898,7 @@ function getMetaInfo(channelName, videoId) {
                 return JSON.parse(content);
             }
         } catch (e) {
-            log('warn', `메타 파일 읽기 실패: ${e.message}`);
+        logOperationError('warn', 'FRAME_META_READ_FAILED', e);
         }
     }
     return null;
@@ -541,7 +948,6 @@ function shouldCollect(channelName, videoId, params) {
 
     // [추가] "완료 기록" 확인 (CI 환경 등에서 파일이 없어도 기록이 있으면 스킵)
     if (isFrameCollectionCompleted(channelName, videoId, metaRecollectId)) {
-        // log('info', `[Skip] ${videoId}: 수집 완료 기록 있음 (v${metaRecollectId})`);
         return false;
     }
 
@@ -584,7 +990,7 @@ function shouldCollect(channelName, videoId, params) {
                         });
 
                         if (missingInSegments) {
-                            log('info', `[Check] ${videoId}: ${configDirName} (${e}) 데이터 누락 확인 -> 수집 필요`);
+                            log('info', 'FRAME_OUTPUT_INCOMPLETE');
                             isFullyCollected = false;
                             break;
                         }
@@ -610,7 +1016,7 @@ function shouldCollect(channelName, videoId, params) {
                                     const TRIGGER_VARS = ['new_video', 'duration_changed', 'scheduled_daily', 'scheduled_weekly', 'scheduled_biweekly', 'scheduled_monthly'];
                                     const shouldTrigger = recollectVars.some(variable => TRIGGER_VARS.includes(variable));
                                     if (shouldTrigger) {
-                                        log('info', `[Trigger] ${videoId}: 트리거 변수 발견 [${recollectVars.join(', ')}]`);
+                                        log('info', 'FRAME_RECOLLECT_TRIGGERED');
                                         return true;
                                     }
                                 }
@@ -618,7 +1024,6 @@ function shouldCollect(channelName, videoId, params) {
                         } catch (e) { }
                     }
                     // 데이터도 있고 트리거도 없으면 스킵
-                    // log('info', `[스킵] ${videoId}: 이미 최신 데이터 보유 (${qualities.join(', ')})`);
                     return false;
                 }
 
@@ -626,7 +1031,7 @@ function shouldCollect(channelName, videoId, params) {
                 return true;
             }
         } catch (e) {
-            log('warn', `프레임 폴더 체크 중 오류 ${videoId}: ${e.message}`);
+            logOperationError('warn', 'FRAME_OUTPUT_CHECK_FAILED', e);
         }
     }
 
@@ -642,7 +1047,7 @@ function shouldCollect(channelName, videoId, params) {
     // D+7 경과 확인 (위에서 계산한 diffDays 사용)
     if (diffDays >= 7) {
         if (!hasHeatmap) {
-            log('info', `[Force] ${videoId}: D+7 경과 & 히트맵 없음 -> 강제 수집 트리거 (Initial Collection)`);
+            log('info', 'FRAME_HEATMAP_COLLECTION_FORCED');
             return true;
         }
     }
@@ -655,7 +1060,6 @@ function shouldCollect(channelName, videoId, params) {
 
     // 강제 수집 모드가 아니고 트리거가 없다면 스킵 (daily_collection은 메타만 수집)
     if (!ignoreExisting && !hasTrigger && recollectVars.includes('daily_collection')) {
-        // log('info', `[스킵] ${videoId}: Daily Collection (프레임 수집 대상 아님)`);
         return false;
     }
 
@@ -675,10 +1079,10 @@ async function loadCookies() {
         try {
             const content = fs.readFileSync(jsonPath, 'utf-8');
             const cookies = JSON.parse(content);
-            log('info', `[Auth] cookies.json 로드 완료 (${cookies.length}개)`);
+            log('info', 'FRAME_JSON_COOKIES_LOADED');
             return cookies.map(c => `${c.name}=${c.value}`).join('; ');
         } catch (e) {
-            log('warn', `cookies.json 로드 실패: ${e.message}`);
+            logOperationError('warn', 'FRAME_JSON_COOKIES_LOAD_FAILED', e);
         }
     }
 
@@ -696,10 +1100,10 @@ async function loadCookies() {
                     cookies.push(`${parts[5]}=${parts[6]}`);
                 }
             }
-            log('info', `[Auth] cookies.txt 로드 완료 (${cookies.length}개)`);
+            log('info', 'FRAME_TEXT_COOKIES_LOADED');
             return cookies.join('; ');
         } catch (e) {
-            log('warn', `cookies.txt 로드 실패: ${e.message}`);
+            logOperationError('warn', 'FRAME_TEXT_COOKIES_LOAD_FAILED', e);
         }
     }
     return '';
@@ -708,7 +1112,7 @@ async function loadCookies() {
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 async function fetchPage(url, cookieHeader, redirectCount = 0, retryCount = 0) {
-    if (redirectCount > 5) throw new Error('이동 횟수 초과 (Too many redirects)');
+    if (redirectCount > 5) throw new Error('FRAME_HEATMAP_REDIRECT_LIMIT');
 
     const headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -737,9 +1141,9 @@ async function fetchPage(url, cookieHeader, redirectCount = 0, retryCount = 0) {
 
                     // [Fix] Cookie Mismatch or Auth Redirect Check
                     if (redirectUrl.includes('CookieMismatch') || redirectUrl.includes('accounts.google.com')) {
-                        log('warn', `[WARN] 인증 리다이렉트 감지: ${redirectUrl}`);
+                        log('warn', 'FRAME_HEATMAP_AUTH_REDIRECT');
                         if (cookieHeader && cookieHeader.length > 0) {
-                            log('info', `유효하지 않은 쿠키 제거 후 재시도...`);
+                            log('info', 'FRAME_HEATMAP_COOKIE_RETRY');
                             // 쿠키 없이 현재 URL 다시 요청
                             resolve(fetchPage(url, '', 0, retryCount));
                             return;
@@ -751,7 +1155,7 @@ async function fetchPage(url, cookieHeader, redirectCount = 0, retryCount = 0) {
                         const parsedUrl = new URL(url);
                         redirectUrl = new URL(redirectUrl, parsedUrl.origin).toString();
                     }
-                    log('info', `Redirecting to: ${redirectUrl} (Status: ${res.statusCode})`);
+                    log('info', 'FRAME_HEATMAP_REDIRECT');
 
                     // 재귀 호출 (retryCount 유지)
                     resolve(fetchPage(redirectUrl, cookieHeader, redirectCount + 1, retryCount));
@@ -759,7 +1163,7 @@ async function fetchPage(url, cookieHeader, redirectCount = 0, retryCount = 0) {
                 }
 
                 if (res.statusCode !== 200) {
-                    reject(new Error(`상태 코드 오류: ${res.statusCode}`));
+                    reject(new Error('FRAME_HEATMAP_HTTP_STATUS'));
                     return;
                 }
 
@@ -834,13 +1238,16 @@ function parseHeatmap(html) {
         };
 
     } catch (e) {
-        log('error', `HTML 파싱 실패: ${e.message}`);
+        logOperationError('error', 'FRAME_HEATMAP_PARSE_FAILED', e);
         return null;
     }
 }
 
 // 히트맵 데이터 수집 및 저장
-async function fetchAndSaveHeatmap(channel, videoId, url) {
+async function fetchAndSaveHeatmap(channel, videoId, _url) {
+    assertSafeChannelName(channel);
+    assertValidYouTubeVideoId(videoId);
+    const canonicalVideoUrl = `https://www.youtube.com/watch?v=${videoId}`;
     const outPath = getHeatmapOutputPath(channel, videoId);
 
     // [추가] 스케줄 트리거 확인 (scheduled_daily, scheduled_monthly 등)
@@ -862,14 +1269,13 @@ async function fetchAndSaveHeatmap(channel, videoId, url) {
 
                     // 메타 ID가 더 크면 재수집 (업데이트)
                     if (currentMetaId > existingData.recollect_id) {
-                        const vars = getRecollectVars(channel, videoId);
-                        log('info', `[Check] 히트맵 ID 변경 감지 (ID: ${existingData.recollect_id} -> ${currentMetaId}), 사유: [${vars.join(', ')}]`);
+                        log('info', 'FRAME_HEATMAP_RECOLLECT_DETECTED');
 
                         // [최적화] 여기서 무조건 재수집하지 않고, "진짜 바뀌었는지" 확인하기 위해
                         // 아래로 흘려보내서 새 히트맵을 가져온 뒤 비교 로직 수행 (Intersection Check)
                     } else {
                         // ID도 같고 데이터도 있으면 재사용
-                        log('info', `[Reuse] 기존 히트맵 데이터 사용: ${toRelativePath(outPath)}`);
+                        log('info', 'FRAME_HEATMAP_REUSED');
                         return existingData.most_replayed_markers.map(m => ({
                             startSec: m.startMillis / 1000,
                             endSec: m.endMillis / 1000,
@@ -879,7 +1285,7 @@ async function fetchAndSaveHeatmap(channel, videoId, url) {
                 }
             }
         } catch (e) {
-            log('warn', `기존 파일 읽기 실패 (재수집 진행): ${e.message}`);
+            logOperationError('warn', 'FRAME_HEATMAP_READ_FAILED', e);
         }
     }
 
@@ -888,37 +1294,37 @@ async function fetchAndSaveHeatmap(channel, videoId, url) {
     const MAX_RETRIES = 3;
 
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-        log('info', `[Fetch] 히트맵 데이터 요청 (${attempt}/${MAX_RETRIES})...`);
+        log('info', 'FRAME_HEATMAP_REQUEST_ATTEMPTED');
         try {
-            html = await fetchPage(url, '');
+            html = await fetchPage(canonicalVideoUrl, '');
             parsed = parseHeatmap(html);
 
             // 데이터가 유효하면 루프 탈출
             if (parsed && (parsed.mostReplayedMarkers.length || parsed.interactionData)) {
                 break;
             } else {
-                throw new Error("히트맵 데이터 미발견 (HTML 파싱 실패)");
+                throw new Error('FRAME_HEATMAP_DATA_MISSING');
             }
         } catch (e) {
-            log('warn', `[Fetch] 요청 실패 (${attempt}/${MAX_RETRIES}): ${e.message}`);
+            logOperationError('warn', 'FRAME_HEATMAP_REQUEST_FAILED', e);
 
             // [Fix] 429/차단 관련 에러면 즉시 중단 (무리한 재시도 방지)하고 상위 배치 breaker에 전달
             if (isHeatmapRateLimitError(e)) {
-                log('error', `429/차단 감지됨. 추가 재시도를 중단합니다.`);
+                log('error', 'FRAME_HEATMAP_REQUEST_ABORTED');
                 throw e;
             }
 
             // 마지막 시도가 아니면 대기 후 재시도
             if (attempt < MAX_RETRIES) {
                 const delay = attempt * 2000 + Math.random() * 1000; // 2s~, 4s~...
-                log('info', `${Math.round(delay / 1000)}초 후 재시도...`);
+                log('info', 'FRAME_HEATMAP_RETRY_SCHEDULED');
                 await sleep(delay);
             }
         }
     }
 
     if (!parsed || (!parsed.mostReplayedMarkers.length && !parsed.interactionData)) {
-        log('warn', `[Warn] ${videoId}: 히트맵 정보가 없습니다.`);
+        log('warn', 'FRAME_HEATMAP_UNAVAILABLE');
         return null;
     }
 
@@ -953,10 +1359,10 @@ async function fetchAndSaveHeatmap(channel, videoId, url) {
     let isHeatmapChanged = false;
 
     if (isDurationChanged) {
-        log('info', `[Change] 영상 길이 변경 감지 -> 히트맵 전면 재수집`);
+        log('info', 'FRAME_HEATMAP_DURATION_CHANGED');
         isHeatmapChanged = true;
     } else if (existingMarkers.length !== newMarkers.length) {
-        log('info', `[Change] 히트맵 구간 개수 변경 (${existingMarkers.length} -> ${newMarkers.length})`);
+        log('info', 'FRAME_HEATMAP_MARKER_COUNT_CHANGED');
         isHeatmapChanged = true;
     } else {
         // 개수 같음 -> 구간별 시간 비교
@@ -969,11 +1375,11 @@ async function fetchAndSaveHeatmap(channel, videoId, url) {
         });
 
         if (hasDiff) {
-            log('info', `[Change] 히트맵 구간 시간 변경 감지 (> ${TOLERANCE_SEC}s)`);
+            log('info', 'FRAME_HEATMAP_MARKERS_CHANGED');
             isHeatmapChanged = true;
         } else {
             // 변경 없음
-            log('info', `[Skip] 히트맵 변경 없음 (허용오차 ±${TOLERANCE_SEC}s 이내) -> ID 동기화 및 수집 중단`);
+            log('info', 'FRAME_HEATMAP_UNCHANGED');
             // [Fix] return null 제거 -> 아래 저장 로직을 태워서 Heatmap ID를 Meta ID와 동기화시킴
             // 이렇게 해야 다음 실행 시 'ID 불일치'로 인한 중복 검사를 방지할 수 있음.
         }
@@ -1016,7 +1422,7 @@ async function fetchAndSaveHeatmap(channel, videoId, url) {
     }
 
     const saveData = {
-        youtube_link: url,
+        youtube_link: canonicalVideoUrl,
         channel_name: channel,
         video_id: videoId,
         duration: duration, // duration 필드 추가
@@ -1028,8 +1434,10 @@ async function fetchAndSaveHeatmap(channel, videoId, url) {
         recollect_vars: finalVars
     };
 
+    assertPathContainmentBeforeMutation(path.dirname(outPath), outPath);
     fs.appendFileSync(outPath, JSON.stringify(saveData) + '\n', 'utf8');
-    log('info', `[Heatmap Saved] ${videoId} (Points: ${formattedInteraction.length})`);
+    assertExistingPathContained(path.dirname(outPath), outPath);
+    log('info', 'FRAME_HEATMAP_SAVED');
 
     // [Fix] 변경 없으면 저장(ID동기화) 후 여기서 종료 -> 프레임 추출 스킵
     // [수정] 단, 프레임 파일이 실제로 없는 경우에는 히트맵 변경 여부와 관계없이 추출 진행
@@ -1060,10 +1468,10 @@ async function fetchAndSaveHeatmap(channel, videoId, url) {
         }
 
         if (hasFrames) {
-            log('info', `[Skip] 히트맵 변경 없음 & 프레임 존재 -> 프레임 추출 단계 건너뜀`);
+            log('info', 'FRAME_EXTRACTION_SKIPPED');
             return null;
         } else {
-            log('info', `[Force] 히트맵 변경 없으나 프레임 누락 -> 프레임 추출 강제 진행`);
+            log('info', 'FRAME_EXTRACTION_FORCED');
             // 아래로 계속 진행하여 프레임 추출
         }
     }
@@ -1085,102 +1493,150 @@ async function fetchAndSaveHeatmap(channel, videoId, url) {
 
 // --- 비디오 다운로드 및 프레임 추출 ---
 
+function assertFrameQuality(quality) {
+    if (typeof quality !== 'string' || !/^[1-9]\d{2,3}p$/.test(quality)) {
+        throw createOperationError('FRAME_INVALID_QUALITY');
+    }
+
+    const height = Number.parseInt(quality, 10);
+    if (height > 4320) {
+        throw createOperationError('FRAME_INVALID_QUALITY');
+    }
+    return { quality, height };
+}
+
+function assertFrameExtension(ext) {
+    const normalizedExt = typeof ext === 'string' ? ext.toLowerCase() : '';
+    if (!['webp', 'png', 'jpg', 'jpeg', 'bmp'].includes(normalizedExt)) {
+        throw createOperationError('FRAME_INVALID_EXTENSION');
+    }
+    return normalizedExt;
+}
+
+function getFrameEncodingArgs(ext) {
+    if (ext === 'webp') return ['-c:v', 'libwebp', '-lossless', '1', '-q:v', '100'];
+    if (ext === 'png') return ['-c:v', 'png', '-compression_level', '3'];
+    if (ext === 'jpg' || ext === 'jpeg') return ['-q:v', '2'];
+    return ['-c:v', 'bmp'];
+}
+
+function assertFrameSegments(segments) {
+    if (!Array.isArray(segments)) {
+        throw createOperationError('FRAME_INVALID_SEGMENTS');
+    }
+
+    return segments.map((segment) => {
+        const startSec = Number(segment?.startSec);
+        const endSec = Number(segment?.endSec);
+        if (!Number.isFinite(startSec) || !Number.isFinite(endSec) || startSec < 0 || endSec < startSec) {
+            throw createOperationError('FRAME_INVALID_SEGMENTS');
+        }
+        return { startSec, endSec };
+    });
+}
+
+function copyDownloadedVideoToCache(downloadedPath, sourceRoot, cacheRoot) {
+    const safeFileName = getSafeProviderBasename(path.basename(downloadedPath));
+    if (!safeFileName) {
+        throw createOperationError('FRAME_INVALID_PROVIDER_FILENAME');
+    }
+
+    const resolvedSourceRoot = requireExistingDirectory(sourceRoot);
+    assertExistingPathContained(resolvedSourceRoot, downloadedPath);
+    const resolvedCacheRoot = requireExistingDirectory(cacheRoot);
+    const cachePath = resolveContainedPath(resolvedCacheRoot, safeFileName);
+    assertPathContainmentBeforeMutation(resolvedCacheRoot, cachePath);
+    if (!fs.existsSync(cachePath)) {
+        fs.copyFileSync(downloadedPath, cachePath);
+        assertExistingPathContained(resolvedCacheRoot, cachePath);
+    }
+}
+
 async function downloadVideo(videoId, outputDir, quality, options = {}) {
     const { validateMediaPath = hasVideoStream } = options;
-    const match = quality.match(/\d+/);
-    const height = match ? parseInt(match[0]) : 1080;
+    assertValidYouTubeVideoId(videoId);
+    const { height } = assertFrameQuality(quality);
+    const outputDirectory = requireExistingDirectory(outputDir);
+    const cacheDirectory = requireExistingDirectory(VIDEO_CACHE_DIR);
+    const { gdriveRemotePath: safeGDriveRemotePath, ytDlpInvocation } = resolveDownloadConfiguration();
 
     const cookieTxt = path.join(BASE_DATA_DIR, 'cookies.txt');
-    const cookieArg = fs.existsSync(cookieTxt) ? `--cookies "${cookieTxt}"` : '';
+    const cookieArgs = fs.existsSync(cookieTxt) ? ['--cookies', cookieTxt] : [];
 
     // 포맷 유연성 확보: mp4 강제 제거 후 remux 사용 (n-challenge 해결 확률 높임)
     const format = `bestvideo[height<=${height}]+bestaudio/best[height<=${height}]/best`;
-
-    // 1. Python 모듈 사용 (최신 버전 보장)
-    // 2. Node.js 경로 명시 (n-challenge 해결 필수)
-    // 3. Remote Solver 허용 (최신 yt-dlp 정책 대응)
-    // 4. Output Template: 확장자 자동 결정 (%(ext)s) - Merge 에러 방지
-    const outputFileTemplate = path.join(outputDir, `${videoId}.%(ext)s`);
+    const outputFileTemplate = resolveContainedPath(outputDirectory, `${videoId}.%(ext)s`);
+    assertPathContainmentBeforeMutation(outputDirectory, outputFileTemplate);
 
     // [최적화] 캐시된 파일 확인
-    const cacheFiles = fs.readdirSync(VIDEO_CACHE_DIR).filter(f => f.startsWith(videoId));
-    const cachedVideoPath = await pickUsableLocalVideoCandidate(videoId, cacheFiles, VIDEO_CACHE_DIR, 'Cache', validateMediaPath);
+    const cacheFiles = fs.readdirSync(cacheDirectory).filter(fileName => fileName.startsWith(videoId));
+    const cachedVideoPath = await pickUsableLocalVideoCandidate(videoId, cacheFiles, cacheDirectory, 'Cache', validateMediaPath);
     if (cachedVideoPath) {
-        log('info', `[Cache] 캐시된 비디오 사용: ${path.basename(cachedVideoPath)}`);
+        log('info', 'FRAME_VIDEO_CACHE_HIT');
         return cachedVideoPath;
     }
 
     // [추가] GDrive 우선 검색 및 다운로드 로직
-    const gdriveRemotePath = process.env.GDRIVE_REMOTE_PATH; // 예: "gdrive:tzuyang_archive"
-    if (gdriveRemotePath) {
+    if (safeGDriveRemotePath) {
         // RClone Config 설정 시도 (없으면 로컬 설정 사용)
         await setupRCloneConfig();
 
-        const downloadedFromGDrive = await fetchUsableGDriveVideo(videoId, gdriveRemotePath, outputDir, {
+        const downloadedFromGDrive = await fetchUsableGDriveVideo(videoId, safeGDriveRemotePath, outputDirectory, {
             validateMediaPath,
         });
         if (downloadedFromGDrive) {
-            // 캐시 업데이트
             try {
-                const cachePath = path.join(VIDEO_CACHE_DIR, path.basename(downloadedFromGDrive));
-                if (!fs.existsSync(cachePath)) {
-                    fs.copyFileSync(downloadedFromGDrive, cachePath);
-                    log('info', `[Cache] GDrive 원본 캐시 저장 완료: ${toRelativePath(cachePath)}`);
-                }
+                copyDownloadedVideoToCache(downloadedFromGDrive, outputDirectory, cacheDirectory);
+                log('info', 'FRAME_GDRIVE_CACHE_SAVED');
             } catch (e) {
-                log('warn', `캐시 저장 실패: ${e.message}`);
+                logOperationError('warn', 'FRAME_CACHE_WRITE_FAILED', e);
             }
             return downloadedFromGDrive;
         }
     }
 
-
-    // --merge-output-format 제거: 원본 컨테이너 그대로 저장
-    // Linux/WSL에서는 standalone yt-dlp binary를 우선 사용한다.
-    // python -m yt_dlp는 시스템 Python에 모듈이 없을 때 쉽게 깨지므로 fallback으로만 둔다.
-    const defaultPythonPath = process.platform === 'win32' ? 'python' : 'python3';
-    const pythonPath = process.env.PYTHON_CMD || defaultPythonPath;
-    const ytDlpCmd = process.env.YT_DLP_CMD
-        || (process.platform === 'win32' ? `"${pythonPath}" -m yt_dlp` : 'yt-dlp');
-
-    const nodePath = process.execPath;
-    const runtimesArg = `--js-runtimes "node:${nodePath}"`;
-
-    // [수정] ffmpeg-static 경로를 yt-dlp에 명시적으로 전달하여 병합(Merge)이 가능하도록 함
-    // 이를 통해 비디오+오디오가 분리된 포맷(예: f251+f303)도 정상적으로 합쳐짐
-    const cmd = `${ytDlpCmd} --ffmpeg-location "${ffmpegPath}" ${cookieArg} ${runtimesArg} --remote-components ejs:github --no-part -f "${format}" -o "${outputFileTemplate}" "https://www.youtube.com/watch?v=${videoId}"`;
+    const ytDlpArgs = [
+        ...ytDlpInvocation.args,
+        '--ffmpeg-location', ffmpegPath,
+        ...cookieArgs,
+        '--js-runtimes', `node:${process.execPath}`,
+        '--remote-components', 'ejs:github',
+        '--no-part',
+        '-f', format,
+        '-o', outputFileTemplate,
+        `https://www.youtube.com/watch?v=${videoId}`,
+    ];
     const execOptions = buildYtDlpExecOptions();
 
     const maxRetries = getYtDlpMaxRetries();
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-            log('info', `[Downloader] 영상 다운로드 시작(HTTP): ${videoId} (목표 화질: ${height}p) [시도 ${attempt}/${maxRetries}]`);
-            // yt-dlp 명령어는 stderr로 진행상황을 출력하므로, 오류 감지가 까다로울 수 있음.
-            // execPromise 사용 시 stderr도 에러로 간주되지 않음.
-            await execPromise(cmd, execOptions);
+            log('info', 'FRAME_VIDEO_DOWNLOAD_ATTEMPTED');
+            await runProcess(ytDlpInvocation.file, ytDlpArgs, {
+                timeoutMs: execOptions.timeout,
+                stdoutMaxBytes: execOptions.maxBuffer,
+                stderrMaxBytes: execOptions.maxBuffer,
+            });
 
             // 다운로드된 파일 찾기
-            const files = fs.readdirSync(outputDir).filter(f => f.startsWith(videoId));
-            const downloadedPath = await pickUsableLocalVideoCandidate(videoId, files, outputDir, 'Downloader', validateMediaPath);
+            const files = fs.readdirSync(outputDirectory).filter(fileName => fileName.startsWith(videoId));
+            const downloadedPath = await pickUsableLocalVideoCandidate(videoId, files, outputDirectory, 'Downloader', validateMediaPath);
 
             if (downloadedPath) {
                 // [최적화] 다운로드 성공 시 캐시에 복사
                 try {
-                    const cachePath = path.join(VIDEO_CACHE_DIR, path.basename(downloadedPath));
-                    fs.copyFileSync(downloadedPath, cachePath);
-                    log('info', `[Cache] 비디오 캐시 저장 완료: ${toRelativePath(cachePath)}`);
+                    copyDownloadedVideoToCache(downloadedPath, outputDirectory, cacheDirectory);
+                    log('info', 'FRAME_VIDEO_CACHE_SAVED');
                 } catch (e) {
-                    log('warn', `캐시 저장 실패: ${e.message}`);
+                    logOperationError('warn', 'FRAME_CACHE_WRITE_FAILED', e);
                 }
 
                 return downloadedPath;
             }
 
-            log('warn', `[Warn] 다운로드 완료 보고되었으나 사용 가능한 비디오 파일 없음 (재시도 대기...)`);
-
+            log('warn', 'FRAME_VIDEO_DOWNLOAD_OUTPUT_MISSING');
         } catch (e) {
-            const timeoutNote = isExecTimeoutError(e) ? ` after ${execOptions.timeout}ms timeout` : '';
-            log('warn', `[Warn] 다운로드 실패 (시도 ${attempt}/${maxRetries})${timeoutNote}: ${e.message}`);
+            logOperationError('warn', 'FRAME_VIDEO_DOWNLOAD_FAILED', e);
         }
 
         // 재시도 전 대기 (2초)
@@ -1189,107 +1645,123 @@ async function downloadVideo(videoId, outputDir, quality, options = {}) {
         }
     }
 
-    log('error', '[Error] 최대 재시도 횟수 초과. 다운로드 포기.');
+    log('error', 'FRAME_VIDEO_DOWNLOAD_RETRIES_EXHAUSTED');
     return null;
 }
 
 // [수정] quality 인자 추가, compress -> ext 변경
 async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, bufferSec, ext) {
-    if (!fs.existsSync(videoPath)) {
-        return { totalSegments: segments.length, failedSegments: segments.length, totalFrames: 0 };
+    const safeSegments = assertFrameSegments(segments);
+    const { quality: safeQuality } = assertFrameQuality(quality);
+    const safeExt = assertFrameExtension(ext);
+    const safeFps = Number(fps);
+    const safeBufferSec = Number(bufferSec);
+    if (!Number.isFinite(safeFps) || safeFps <= 0 || safeFps > 120 || !Number.isFinite(safeBufferSec) || safeBufferSec < 0 || safeBufferSec > 3600) {
+        throw createOperationError('FRAME_INVALID_EXTRACTION_OPTIONS');
+    }
+
+    const outputDirectory = requireExistingDirectory(outputBaseDir);
+    if (hasControlCharacters(videoPath) || !fs.existsSync(videoPath) || !fs.statSync(videoPath).isFile()) {
+        return { totalSegments: safeSegments.length, failedSegments: safeSegments.length, totalFrames: 0 };
     }
 
     let duration = 0;
     try {
-        const { stdout } = await execPromise(`"${ffprobePath}" -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${videoPath}"`);
-        duration = parseFloat(stdout);
-        log('info', `[Video] 영상 길이 확인: ${duration}초`);
+        const { stdout } = await runProcess(
+            ffprobePath,
+            ['-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', videoPath],
+            { timeoutMs: FFPROBE_TIMEOUT_MS }
+        );
+        duration = Number.parseFloat(stdout);
+        if (!Number.isFinite(duration) || duration < 0) duration = 0;
+        log('info', 'FRAME_VIDEO_DURATION_PROBED');
     } catch (e) {
-        log('warn', `길이 확인 실패 (진행): ${e.message}`);
+        logOperationError('warn', 'FRAME_VIDEO_DURATION_PROBE_FAILED', e);
     }
 
-    log('info', `[Image] 이미지 포맷 설정: ${ext.toUpperCase()}`);
-
-    // 확장자별 FFMPEG 인코딩 옵션 설정
-    let encodingOpts = '';
-    if (ext === 'webp') {
-        encodingOpts = '-c:v libwebp -lossless 1 -q:v 100'; // WebP 무손실 + 최대 압축 (용량 최소화)
-    } else if (ext === 'png') {
-        encodingOpts = '-c:v png -compression_level 3'; // PNG (속도/압축 균형)
-    } else if (ext === 'jpg' || ext === 'jpeg') {
-        encodingOpts = '-q:v 2'; // JPG 고화질 (1-31, 낮을수록 좋음)
-    } else if (ext === 'bmp') {
-        encodingOpts = '-c:v bmp'; // BMP (기본)
-    }
+    log('info', 'FRAME_IMAGE_FORMAT_CONFIGURED');
+    const encodingArgs = getFrameEncodingArgs(safeExt);
 
     // [최적화] Promise.all을 사용하여 모든 구간을 병렬로 처리 (CPU 활용 극대화)
-    const results = await Promise.all(segments.map(async (seg, i) => {
+    const results = await Promise.all(safeSegments.map(async (seg, i) => {
         // [수정] 피크 지점 기준이 아닌, 마커의 전체 범위(startSec ~ endSec)에 버퍼를 더한 구간 추출
-        const startTime = Math.max(0, seg.startSec - bufferSec);
-        const endTime = Math.min(duration || 99999, seg.endSec + bufferSec);
+        const startTime = Math.max(0, seg.startSec - safeBufferSec);
+        const endTime = Math.min(duration || 99999, seg.endSec + safeBufferSec);
 
         const segDirName = `${i + 1}_${Math.floor(startTime)}_${Math.floor(endTime)}`;
-
-        const fpsStr = Number.isInteger(fps) ? `${fps}.0` : `${fps}`;
-        const configDirName = `${quality}_${fpsStr}fps`;
+        const fpsStr = Number.isInteger(safeFps) ? `${safeFps}.0` : `${safeFps}`;
+        const configDirName = `${safeQuality}_${fpsStr}fps`;
 
         // 구조: frames/VIDEO_ID/RECOLLECT_ID/SEGMENT_DIR/EXT_DIR/QUALITY_FPS/frame_x.ext
-        const segDirPath = path.join(outputBaseDir, segDirName, ext, configDirName);
-        fs.mkdirSync(segDirPath, { recursive: true });
+        const segDirPath = ensureContainedDirectory(outputDirectory, segDirName, safeExt, configDirName);
 
         // [최적화] 이미 프레임이 추출되어 있다면 스킵
-        const existingFiles = fs.readdirSync(segDirPath).filter(f => f.endsWith(`.${ext}`));
+        const existingFiles = fs.readdirSync(segDirPath).filter(fileName => fileName.endsWith(`.${safeExt}`));
         if (existingFiles.length > 0) {
-            log('info', `   [Skip] 이미 프레임이 존재하여 건너뜀 [${i + 1}/${segments.length}]: ${toRelativePath(segDirPath)}`);
+            log('info', 'FRAME_SEGMENT_SKIPPED');
             return { failed: false, frameCount: existingFiles.length };
         }
 
-        log('info', `   [Extract] 구간 추출 시작 [${i + 1}/${segments.length}]: ${startTime.toFixed(1)}초 ~ ${endTime.toFixed(1)}초 -> .../${configDirName}`);
+        log('info', 'FRAME_SEGMENT_EXTRACTION_STARTED');
 
         let segDuration = endTime - startTime;
-        if (segDuration < (1.0 / fps)) {
-            segDuration = 1.0 / fps; // 최소 1프레임 보장
+        if (segDuration < (1.0 / safeFps)) {
+            segDuration = 1.0 / safeFps; // 최소 1프레임 보장
         }
 
-        // ffmpeg 명령 생성 (인코딩 옵션 추가)
-        // [수정] 정적 ffmpeg 경로 사용
-        const cmd = `"${ffmpegPath}" -y -ss ${startTime} -t ${segDuration} -i "${videoPath}" -vf "fps=${fps}" ${encodingOpts} -frame_pts 1 "${path.join(segDirPath, `frame_%d.${ext}`)}"`;
-
+        const outputPattern = resolveContainedPath(segDirPath, `frame_%d.${safeExt}`);
+        assertPathContainmentBeforeMutation(segDirPath, outputPattern);
         try {
-            await execPromise(cmd);
+            await runProcess(
+                ffmpegPath,
+                [
+                    '-y',
+                    '-ss', String(startTime),
+                    '-t', String(segDuration),
+                    '-i', videoPath,
+                    '-vf', `fps=${safeFps}`,
+                    ...encodingArgs,
+                    '-frame_pts', '1',
+                    outputPattern,
+                ],
+                { timeoutMs: FFMPEG_TIMEOUT_MS }
+            );
 
             // 파일명 정리: frame_1.ext -> 정확한 시간(초).ext 로 변경
-            const files = fs.readdirSync(segDirPath).filter(f => f.startsWith('frame_'));
+            const files = fs.readdirSync(segDirPath).filter(fileName => fileName.startsWith('frame_'));
             let count = 0;
-            for (const file of files) {
-                const match = file.match(new RegExp(`frame_(\\d+)\\.${ext}`));
-                if (match) {
-                    const idx = parseInt(match[1]);
-                    const timeOffset = (idx - 1) / fps;
+            for (const fileName of files) {
+                const match = fileName.match(new RegExp(`^frame_(\\d+)\\.${safeExt}$`));
+                if (match && getSafeProviderBasename(fileName)) {
+                    const idx = Number.parseInt(match[1], 10);
+                    const timeOffset = (idx - 1) / safeFps;
                     const actualTime = startTime + timeOffset;
-                    const newName = `${actualTime.toFixed(2)}.${ext}`;
-
-                    fs.renameSync(path.join(segDirPath, file), path.join(segDirPath, newName));
+                    const newName = `${actualTime.toFixed(2)}.${safeExt}`;
+                    const oldPath = resolveContainedPath(segDirPath, fileName);
+                    const newPath = resolveContainedPath(segDirPath, newName);
+                    assertExistingPathContained(segDirPath, oldPath);
+                    assertPathContainmentBeforeMutation(segDirPath, newPath);
+                    fs.renameSync(oldPath, newPath);
+                    assertExistingPathContained(segDirPath, newPath);
                     count++;
                 }
             }
             if (count === 0) {
-                log('error', `      [Error] FFmpeg 출력 없음 [${i + 1}/${segments.length}]: 추출된 프레임이 없습니다.`);
+                log('error', 'FRAME_SEGMENT_OUTPUT_MISSING');
                 return { failed: true, frameCount: 0 };
             }
-            log('info', `      [Done] 추출 완료 [${i + 1}/${segments.length}]: ${count}장`);
+            log('info', 'FRAME_SEGMENT_EXTRACTION_COMPLETED');
             return { failed: false, frameCount: count };
-
         } catch (e) {
-            log('error', `      [Error] FFmpeg 오류 [${i + 1}/${segments.length}]: ${e.message}`);
+            logOperationError('error', 'FRAME_SEGMENT_EXTRACTION_FAILED', e);
             return { failed: true, frameCount: 0 };
         }
     }));
 
     return {
         totalSegments: results.length,
-        failedSegments: results.filter(r => r.failed).length,
-        totalFrames: results.reduce((sum, r) => sum + (r.frameCount || 0), 0),
+        failedSegments: results.filter(result => result.failed).length,
+        totalFrames: results.reduce((sum, result) => sum + (result.frameCount || 0), 0),
     };
 }
 
@@ -1299,40 +1771,48 @@ async function processSingleVideo(videoId, params, dependencies = {}) {
         acquireVideo = downloadVideo,
         extractFramesFn = extractFrames,
     } = dependencies;
+    const { channel, fps, buffer, quality, ext } = params;
+    assertValidYouTubeVideoId(videoId);
+    assertSafeChannelName(channel);
+    const qualities = (Array.isArray(quality) ? quality : [quality]).map(value => assertFrameQuality(value).quality);
+    const extensions = (Array.isArray(ext) ? ext : [ext]).map(assertFrameExtension);
+    const safeFps = Number(fps);
+    const safeBuffer = Number(buffer);
+    if (!Number.isFinite(safeFps) || safeFps <= 0 || safeFps > 120 || !Number.isFinite(safeBuffer) || safeBuffer < 0 || safeBuffer > 3600) {
+        throw createOperationError('FRAME_INVALID_EXTRACTION_OPTIONS');
+    }
+
+    // Validate all externally configured process commands before any path mutation or child process.
+    resolveDownloadConfiguration();
+
     let downloadPerformed = false;
     let videoHadFailure = false;
     let latestRecollectId = null;
-    const { channel, fps, buffer, quality, url, ext } = params; // quality는 이제 배열입니다
+    const canonicalVideoUrl = `https://www.youtube.com/watch?v=${videoId}`;
 
     // 1. 히트맵 데이터 수집 (Recollect ID 자동 감지)
-    const segments = await loadSegments(channel, videoId, url);
+    const segments = await loadSegments(channel, videoId, canonicalVideoUrl);
     // [Mod] segments가 null이면 '변경 없음' 또는 '데이터 없음' -> 수집 중단
     if (!segments) {
-        // log('info', `[Info] ${videoId}: 처리할 구간이 없거나 변경사항이 없습니다.`);
         return;
     }
-    if (segments.length === 0) {
-        log('info', `[Info] ${videoId}: 히트맵 데이터가 비어있습니다.`);
+    const safeSegments = assertFrameSegments(segments);
+    if (safeSegments.length === 0) {
+        log('info', 'FRAME_HEATMAP_EMPTY');
         return;
     }
 
-    log('info', `[Heatmap] ${videoId}: ${segments.length}개의 주요 구간 발견`);
+    log('info', 'FRAME_HEATMAP_SEGMENTS_FOUND');
+    log('info', 'FRAME_QUALITIES_CONFIGURED');
+    log('info', 'FRAME_FORMATS_CONFIGURED');
 
-    // 모든 화질에 대해 반복 처리
-    const qualities = Array.isArray(quality) ? quality : [quality];
-    const extensions = Array.isArray(ext) ? ext : [ext];
-
-    log('info', `[Target] 처리할 화질 목록: [${qualities.join(', ')}]`);
-    log('info', `[Format] 처리할 포맷 목록: [${extensions.join(', ')}]`);
-
+    const tempVideoRoot = ensureContainedDirectory(BASE_DATA_DIR, channel, 'temp_video');
     for (const currentQuality of qualities) {
-        log('info', `\n[Process] 화질 처리 시작: ${currentQuality}`);
+        log('info', 'FRAME_QUALITY_STARTED');
 
         // 2. 영상 다운로드 (임시 폴더) - 파일 잠금 충돌 방지용 랜덤 접미사
         const uniqueSuffix = `${Date.now()}_${Math.floor(Math.random() * 10000)}`;
-        const tempDir = path.join(getChannelDir(channel), 'temp_video', uniqueSuffix);
-        fs.mkdirSync(tempDir, { recursive: true });
-
+        const tempDir = ensureContainedDirectory(tempVideoRoot, uniqueSuffix);
         // 다운로드 및 처리 로직
         let videoPath = null;
         try {
@@ -1342,180 +1822,136 @@ async function processSingleVideo(videoId, params, dependencies = {}) {
 
             const recollectId = getMetaRecollectId(channel, videoId);
             latestRecollectId = recollectId;
-            const outputDir = getFramesOutputDir(channel, videoId, recollectId);
-            const fpsStr = Number.isInteger(fps) ? `${fps}.0` : `${fps}`;
+            const outputDir = ensureContainedDirectory(FRAMES_ROOT_DIR, videoId, String(recollectId));
+            const fpsStr = Number.isInteger(safeFps) ? `${safeFps}.0` : `${safeFps}`;
             const configDirName = `${currentQuality}_${fpsStr}fps`;
+            const framesVideoRoot = resolveContainedPath(FRAMES_ROOT_DIR, videoId);
 
-            // [재사용] 하드링크 부분 업데이트 (Smart Partial Update)
-            // fetchAndSaveHeatmap에서 '변경 없음'이면 아예 여기로 오지 않음 (processSingleVideo에서 return)
-            // 하지만 '변경 있음' 상태로 왔다면, 바뀐 구간은 새로 따고 안 바뀐 구간은 링크를 걸어야 함.
+            const existingIds = fs.readdirSync(framesVideoRoot)
+                .filter(directoryName => /^\d+$/.test(directoryName))
+                .map(directoryName => Number.parseInt(directoryName, 10))
+                .filter(id => Number.isSafeInteger(id) && id < recollectId)
+                .sort((left, right) => right - left);
+            const previousId = existingIds.length > 0 ? existingIds[0] : -1;
 
-            const framesVideoRoot = path.dirname(outputDir); // channel/frames/videoId
-            if (fs.existsSync(framesVideoRoot)) {
-                const existingIds = fs.readdirSync(framesVideoRoot)
-                    .map(d => parseInt(d))
-                    .filter(n => !isNaN(n) && n < recollectId)
-                    .sort((a, b) => b - a); // 내림차순 정렬
+            if (previousId >= 0) {
+                const prevDir = resolveContainedPath(framesVideoRoot, String(previousId));
+                assertExistingPathContained(framesVideoRoot, prevDir);
+                const previousSegments = fs.readdirSync(prevDir)
+                    .filter(directoryName => /^\d+_\d+_\d+$/.test(directoryName))
+                    .map(directoryName => {
+                        const [index, start, end] = directoryName.split('_').map(value => Number.parseInt(value, 10));
+                        return { directoryName, index, start, end };
+                    });
 
-                const previousId = existingIds.length > 0 ? existingIds[0] : -1;
+                let reusedCount = 0;
+                const toleranceSec = 2.0;
+                for (let i = 0; i < safeSegments.length; i++) {
+                    const segment = safeSegments[i];
+                    const segmentStart = Math.max(0, segment.startSec - safeBuffer);
+                    const segmentEnd = Math.min(duration || 99999, segment.endSec + safeBuffer);
+                    const currentSegDirName = `${i + 1}_${Math.floor(segmentStart)}_${Math.floor(segmentEnd)}`;
+                    const currentSegPath = resolveContainedPath(outputDir, currentSegDirName);
+                    const matchedPrevious = previousSegments.find(previousSegment =>
+                        Math.abs(previousSegment.start - Math.floor(segmentStart)) <= toleranceSec &&
+                        Math.abs(previousSegment.end - Math.floor(segmentEnd)) <= toleranceSec
+                    );
 
-                if (previousId >= 0) {
-                    const prevDir = path.join(framesVideoRoot, previousId.toString());
-
-                    // [Partial Update Logic]
-                    // 모든 세그먼트에 대해 순회하며:
-                    // 1. 이전 버전에 "비슷한 구간(±2초)" 폴더가 있는지 확인
-                    // 2. 있으면 해당 폴더 내용을 현재 버전으로 하드링크 복사
-                    // 3. 없으면(새로 생긴 구간) 다운로드 대상(needsDownload)에 추가
-
-                    const TOLERANCE_SEC = 2.0;
-
-                    // 이전 폴더의 세그먼트 목록 파싱
-                    // 폴더명 포맷: {index}_{start}_{end} (예: 1_90_100)
-                    // 정확한 매칭을 위해 폴더명을 파싱해서 시간 정보를 추출해야 함
-
-                    let prevSegmentsMap = [];
-                    try {
-                        const prevSegDirs = fs.readdirSync(prevDir);
-                        prevSegmentsMap = prevSegDirs.map(dirName => {
-                            const parts = dirName.split('_');
-                            if (parts.length >= 3) {
-                                return {
-                                    dirName,
-                                    index: parseInt(parts[0]),
-                                    start: parseInt(parts[1]),
-                                    end: parseInt(parts[2])
-                                };
-                            }
-                            return null;
-                        }).filter(x => x);
-                    } catch (e) { }
-
-                    let reusedCount = 0;
-
-                    // 현재 세그먼트와 비교
-                    for (let i = 0; i < segments.length; i++) {
-                        const seg = segments[i];
-                        const segStart = Math.max(0, seg.startSec - buffer);
-                        const segEnd = Math.min(duration || 99999, seg.endSec + buffer);
-
-                        // 현재 생성될 폴더명 (정수형 변환됨)
-                        const currentSegDirName = `${i + 1}_${Math.floor(segStart)}_${Math.floor(segEnd)}`;
-                        const currentSegPath = path.join(outputDir, currentSegDirName);
-
-                        // 매칭되는 이전 세그먼트 찾기 (Loop)
-                        const matchedPrev = prevSegmentsMap.find(p => {
-                            // 시간 차이가 허용오차 이내인지
-                            const sDiff = Math.abs(p.start - Math.floor(segStart));
-                            const eDiff = Math.abs(p.end - Math.floor(segEnd));
-
-                            // 인덱스는 달라도 되지만, 시간이 비슷해야 함.
-                            // 하지만 안전을 위해 내용물(파일 존재 여부) 체크는 필수
-                            return sDiff <= TOLERANCE_SEC && eDiff <= TOLERANCE_SEC;
-                        });
-
-                        if (matchedPrev) {
-                            // 하드링크 수행
-                            const srcPath = path.join(prevDir, matchedPrev.dirName);
-                            if (fs.existsSync(srcPath)) {
-                                try {
-                                    copyFolderRecursiveSync(srcPath, currentSegPath);
-                                    // [중요] 타임스탬프가 조금 다를 수 있으므로, 내용물은 그대로 쓰되
-                                    // 폴더명은 현재(currentSegDirName)로 맞춰짐.
-                                    // (copyFolderRecursiveSync가 destPath로 복사/링크함)
-                                    reusedCount++;
-                                    // log('info', `   [Link] 구간 재사용: ${matchedPrev.dirName} -> ${currentSegDirName}`);
-                                } catch (e) { }
+                    if (matchedPrevious) {
+                        const sourcePath = resolveContainedPath(prevDir, matchedPrevious.directoryName);
+                        if (fs.existsSync(sourcePath)) {
+                            try {
+                                assertExistingPathContained(prevDir, sourcePath);
+                                assertPathContainmentBeforeMutation(outputDir, currentSegPath);
+                                copyFolderRecursiveSync(sourcePath, currentSegPath, outputDir);
+                                assertExistingPathContained(outputDir, currentSegPath);
+                                reusedCount++;
+                            } catch (e) {
+                                logOperationError('warn', 'FRAME_SEGMENT_REUSE_FAILED', e);
                             }
                         }
                     }
+                }
 
-                    if (reusedCount > 0) {
-                        log('info', `[Partial] 총 ${segments.length}개 구간 중 ${reusedCount}개 재사용(Hard Link) 완료.`);
-                    }
-
-                    if (reusedCount === segments.length) {
-                        log('info', `[Partial] 모든 구간 재사용 완료. 요청된 포맷/설정 완전성 확인 후 다운로드 여부를 결정합니다.`);
-                    } else {
-                        log('info', `[Partial] ${segments.length - reusedCount}개 신규 구간 추출 필요.`);
-                    }
+                if (reusedCount > 0) {
+                    log('info', 'FRAME_SEGMENTS_REUSED');
+                }
+                if (reusedCount === safeSegments.length) {
+                    log('info', 'FRAME_ALL_SEGMENTS_REUSED');
+                } else {
+                    log('info', 'FRAME_SEGMENTS_PENDING');
                 }
             }
 
 
             let allSegmentsExist = true;
             for (const currentExt of extensions) {
-                if (!fs.existsSync(outputDir)) {
-                    allSegmentsExist = false;
-                    break;
-                }
-
-                const segDirs = fs.readdirSync(outputDir);
+                const segDirs = fs.readdirSync(outputDir).filter(directoryName => /^\d+_\d+_\d+$/.test(directoryName));
                 let completedSegs = 0;
-                for (const sd of segDirs) {
-                    const targetPath = path.join(outputDir, sd, currentExt, configDirName);
-                    if (fs.existsSync(targetPath) && fs.readdirSync(targetPath).length > 0) {
-                        completedSegs++;
+                for (const segDirName of segDirs) {
+                    const targetPath = resolveContainedPath(outputDir, segDirName, currentExt, configDirName);
+                    if (fs.existsSync(targetPath)) {
+                        assertExistingPathContained(outputDir, targetPath);
+                        if (fs.readdirSync(targetPath).length > 0) {
+                            completedSegs++;
+                        }
                     }
                 }
 
-                if (completedSegs < segments.length) {
+                if (completedSegs < safeSegments.length) {
                     allSegmentsExist = false;
                     break;
                 }
             }
 
             if (allSegmentsExist) {
-                log('info', `[Skip] ${videoId}: 이미 ${currentQuality} 프레임 수집 완료됨.`);
+                log('info', 'FRAME_QUALITY_SKIPPED');
                 continue;
             }
 
             videoPath = await acquireVideo(videoId, tempDir, currentQuality);
-
             if (videoPath && !videoPath.startsWith(VIDEO_CACHE_DIR)) {
                 downloadPerformed = true;
             }
 
             if (!videoPath) {
-                log('error', `[Fail] 비디오 파일 확보 실패 (${currentQuality}). 건너뜁니다.`);
-                logFailedUrl(channel, url);
+                log('error', 'FRAME_VIDEO_UNAVAILABLE');
+                logFailedUrl(channel, canonicalVideoUrl);
                 videoHadFailure = true;
                 continue;
             }
 
             for (const currentExt of extensions) {
-                const extractionSummary = await extractFramesFn(videoPath, segments, outputDir, currentQuality, fps, buffer, currentExt);
+                const extractionSummary = await extractFramesFn(videoPath, safeSegments, outputDir, currentQuality, safeFps, safeBuffer, currentExt);
                 if (extractionSummary.failedSegments > 0) {
-                    throw new Error(`[${currentExt}] 프레임 추출 실패: ${extractionSummary.failedSegments}/${extractionSummary.totalSegments} 구간 실패`);
+                    throw createOperationError('FRAME_SEGMENT_EXTRACTION_FAILED');
                 }
-                log('info', `[Frames Extracted] ${videoId} (${currentExt}) - ${extractionSummary.totalFrames}장`);
+                log('info', 'FRAME_EXTRACTION_COMPLETED');
             }
-
         } catch (e) {
-            log('error', `오류 발생 (${currentQuality}): ${e.message}`);
-            logFailedUrl(channel, url);
+            logOperationError('error', 'FRAME_VIDEO_PROCESSING_FAILED', e);
+            logFailedUrl(channel, canonicalVideoUrl);
             videoHadFailure = true;
         } finally {
             // 4. 임시 파일 정리 (항상 수행)
-            // tempDir은 매번 생성되는 고유 임시 폴더이므로 무조건 삭제해도 안전함 (캐시 폴더와 무관)
             try {
                 if (fs.existsSync(tempDir)) {
-                    fs.rmSync(tempDir, { recursive: true, force: true });
+                    removeContainedDirectory(tempVideoRoot, tempDir);
                 }
 
-                // 상위 temp_video 폴더가 비어있으면 삭제 시도
-                const parentTempDir = path.dirname(tempDir);
-                if (fs.existsSync(parentTempDir) && fs.readdirSync(parentTempDir).length === 0) {
-                    fs.rmdirSync(parentTempDir);
+                if (fs.existsSync(tempVideoRoot) && fs.readdirSync(tempVideoRoot).length === 0) {
+                    const channelDir = getChannelDir(channel);
+                    assertExistingPathContained(channelDir, tempVideoRoot);
+                    fs.rmdirSync(tempVideoRoot);
                 }
             } catch (e) {
-                log('warn', `임시 폴더 청소 중 오류 (치명적이지 않음): ${e.message}`);
+                logOperationError('warn', 'FRAME_TEMP_CLEANUP_FAILED', e);
             }
         }
     }
 
     if (videoHadFailure) {
-        throw new Error(`${videoId}: one or more quality/extension jobs failed`);
+        throw new Error('FRAME_VIDEO_PROCESSING_FAILED');
     }
 
     if (latestRecollectId !== null) {
@@ -1526,104 +1962,114 @@ async function processSingleVideo(videoId, params, dependencies = {}) {
     // 주의: 모든 확장자/화질 처리가 끝난 후 삭제해야 함
     if (params.deleteCache) {
         try {
-            const cacheFiles = fs.readdirSync(VIDEO_CACHE_DIR);
-            const targetCacheFiles = cacheFiles.filter(f => f.startsWith(videoId + '.'));
+            const cacheDirectory = requireExistingDirectory(VIDEO_CACHE_DIR);
+            const targetCacheFiles = fs.readdirSync(cacheDirectory)
+                .filter(fileName => fileName.startsWith(`${videoId}.`) && getSafeProviderBasename(fileName));
 
-            for (const f of targetCacheFiles) {
-                const targetPath = path.join(VIDEO_CACHE_DIR, f);
+            for (const fileName of targetCacheFiles) {
+                const targetPath = resolveContainedPath(cacheDirectory, fileName);
                 if (fs.existsSync(targetPath)) {
-                    fs.unlinkSync(targetPath);
-                    log('info', `[Clean] 비디오 캐시 파일 삭제 완료: ${toRelativePath(targetPath)}`);
+                    removeContainedFile(cacheDirectory, targetPath);
+                    log('info', 'FRAME_CACHE_REMOVED');
                 }
             }
         } catch (e) {
-            log('warn', `캐시 삭제 실패: ${e.message}`);
+            logOperationError('warn', 'FRAME_CACHE_REMOVE_FAILED', e);
         }
     }
 
-    removeFailedUrl(channel, url);
+    removeFailedUrl(channel, canonicalVideoUrl);
     return downloadPerformed;
 }
 
 // [추가] 실패한 URL 로깅 함수
 function logFailedUrl(channel, url) {
-    const failedPath = path.join(getChannelDir(channel), 'failed_urls.txt');
+    const videoId = extractVideoId(url);
+    if (!videoId) return;
 
     try {
+        const channelDir = ensureContainedDirectory(BASE_DATA_DIR, assertSafeChannelName(channel));
+        const failedPath = resolveContainedPath(channelDir, 'failed_urls.txt');
+        const canonicalVideoUrl = `https://www.youtube.com/watch?v=${videoId}`;
         const content = fs.existsSync(failedPath) ? fs.readFileSync(failedPath, 'utf8') : '';
-        const lines = content.split('\n').map(l => l.trim()).filter(l => l);
-        const targetId = extractVideoId(url);
-
-        // 이미 존재하는지 확인
-        const exists = lines.some(line => extractVideoId(line) === targetId);
+        const lines = content.split('\n').map(line => line.trim()).filter(Boolean);
+        const exists = lines.some(line => extractVideoId(line) === videoId);
         if (!exists) {
-            fs.appendFileSync(failedPath, url + '\n', 'utf8');
+            assertPathContainmentBeforeMutation(channelDir, failedPath);
+            fs.appendFileSync(failedPath, `${canonicalVideoUrl}\n`, 'utf8');
+            assertExistingPathContained(channelDir, failedPath);
         }
     } catch (e) {
-        log('warn', `실패 목록 업데이트 실패: ${e.message}`);
+        logOperationError('warn', 'FRAME_FAILURE_LIST_UPDATE_FAILED', e);
     }
 }
 
 // [추가] 성공한 URL을 실패 목록에서 제거
 function removeFailedUrl(channel, url) {
-    const failedPath = path.join(getChannelDir(channel), 'failed_urls.txt');
+    const videoId = extractVideoId(url);
+    if (!videoId) return;
+
+    const failedPath = resolveContainedPath(getChannelDir(channel), 'failed_urls.txt');
     if (!fs.existsSync(failedPath)) return;
 
     try {
-        const content = fs.readFileSync(failedPath, 'utf8');
-        const lines = content.split('\n').map(l => l.trim()).filter(l => l);
-        const targetId = extractVideoId(url);
-
-        const newLines = lines.filter(line => {
-            const vid = extractVideoId(line);
-            return vid !== targetId;
-        });
+        const channelDir = getChannelDir(channel);
+        assertExistingPathContained(channelDir, failedPath);
+        const lines = fs.readFileSync(failedPath, 'utf8').split('\n').map(line => line.trim()).filter(Boolean);
+        const newLines = lines.filter(line => extractVideoId(line) !== videoId);
 
         if (lines.length !== newLines.length) {
+            assertPathContainmentBeforeMutation(channelDir, failedPath);
             fs.writeFileSync(failedPath, newLines.join('\n') + (newLines.length ? '\n' : ''), 'utf8');
-            log('info', `[Resolved] 실패 목록에서 제거됨: ${targetId}`);
+            assertExistingPathContained(channelDir, failedPath);
+            log('info', 'FRAME_FAILURE_LIST_RESOLVED');
         }
     } catch (e) {
-        log('warn', `실패 목록 업데이트 실패: ${e.message}`);
+        logOperationError('warn', 'FRAME_FAILURE_LIST_UPDATE_FAILED', e);
     }
 }
 
 async function main() {
     const params = parseArgs();
+    const videoId = params.url ? extractVideoId(params.url) : null;
+    if (params.url && !videoId) {
+        log('error', 'FRAME_INVALID_URL');
+        return;
+    }
+
+    assertSafeChannelName(params.channel);
+    resolveDownloadConfiguration();
 
     // [설정 적용] 파라미터로 경로가 들어왔으면 덮어쓰기
     if (params.framesDir) FRAMES_ROOT_DIR = params.framesDir;
     if (params.videoCacheDir) VIDEO_CACHE_DIR = params.videoCacheDir;
 
-    // [초기화] 경로 생성
+    // All untrusted process configuration and identifiers are now validated.
+    if (!fs.existsSync(BASE_DATA_DIR)) fs.mkdirSync(BASE_DATA_DIR, { recursive: true });
+    requireExistingDirectory(BASE_DATA_DIR);
     if (!fs.existsSync(VIDEO_CACHE_DIR)) fs.mkdirSync(VIDEO_CACHE_DIR, { recursive: true });
     if (!fs.existsSync(FRAMES_ROOT_DIR)) fs.mkdirSync(FRAMES_ROOT_DIR, { recursive: true });
+    requireExistingDirectory(VIDEO_CACHE_DIR);
+    requireExistingDirectory(FRAMES_ROOT_DIR);
 
-    log('info', `[Config] Frame Output Dir: ${toRelativePath(FRAMES_ROOT_DIR)}`);
-    log('info', `[Config] Video Cache Dir: ${toRelativePath(VIDEO_CACHE_DIR)}`);
+    log('info', 'FRAME_OUTPUT_CONFIGURED');
+    log('info', 'FRAME_CACHE_CONFIGURED');
 
-    if (params.url) {
-        const videoId = extractVideoId(params.url);
-        if (!videoId) {
-            log('error', '잘못된 YouTube URL입니다.');
-            return;
-        }
-
+    if (videoId) {
         // URL 정규화 (youtu.be 단축 링크 등 리다이렉트 방지)
         params.url = `https://www.youtube.com/watch?v=${videoId}`;
 
-        log('info', `=== 비디오 Frame 추출 시작: ${videoId} ===`);
-        log('info', `[Config] 설정: FPS=${params.fps}, Buffer=${params.buffer}초, 화질=${params.quality.join(', ')}, 포맷=${params.ext.join(', ').toUpperCase()}`);
+        log('info', 'FRAME_SINGLE_VIDEO_STARTED');
+        log('info', 'FRAME_OPTIONS_CONFIGURED');
 
         if (params.channel === 'manual') {
-            fs.mkdirSync(path.join(BASE_DATA_DIR, 'manual'), { recursive: true });
+            ensureContainedDirectory(BASE_DATA_DIR, 'manual');
         }
 
         await processSingleVideo(videoId, params);
-
     } else {
         // 자동 배치 수집 모드
-        log('info', `\n=== 자동 배치 수집 모드 시작 [채널: ${params.channel}] ===`);
+        log('info', 'FRAME_BATCH_STARTED');
         await processBatch(params);
     }
 }
@@ -1634,11 +2080,13 @@ async function processBatch(params, dependencies = {}) {
         collectPredicate = shouldCollect,
     } = dependencies;
     const { channel } = params;
+    assertSafeChannelName(channel);
+    resolveDownloadConfiguration();
     const urlsPath = path.join(getChannelDir(channel), 'urls.txt');
     const deletedPath = path.join(getChannelDir(channel), 'deleted_urls.txt');
 
     if (!fs.existsSync(urlsPath)) {
-        log('error', `urls.txt를 찾을 수 없습니다: ${toRelativePath(urlsPath)}`);
+        log('error', 'FRAME_URL_LIST_MISSING');
         return;
     }
 
@@ -1651,7 +2099,9 @@ async function processBatch(params, dependencies = {}) {
                 const vid = extractVideoId(line);
                 if (vid) deletedIds.add(vid);
             }
-        } catch (e) { log('warn', `deleted_urls.txt 로드 실패: ${e.message}`); }
+        } catch (e) {
+            logOperationError('warn', 'FRAME_DELETED_URLS_READ_FAILED', e);
+        }
     }
 
     const urls = fs.readFileSync(urlsPath, 'utf8')
@@ -1659,14 +2109,13 @@ async function processBatch(params, dependencies = {}) {
         .map(line => line.trim())
         .filter(line => line.length > 0);
 
-    log('info', `총 ${urls.length}개 URL 발견`);
+    log('info', 'FRAME_URLS_DISCOVERED');
 
     // [Smart Filter] 처리 대상 영상 미리 선별
     console.log(`\n[SCAN] [Smart Filter] 처리 대상을 선별 중입니다...`);
     const pendingUrls = [];
 
     // 진행바 처럼 점찍기
-    let skippedCount = 0;
     let shortsCount = 0;  // [추가] Shorts 카운트
     let scanCount = 0;
     process.stdout.write('Scanning: ');
@@ -1678,7 +2127,6 @@ async function processBatch(params, dependencies = {}) {
         const videoId = extractVideoId(url);
         if (!videoId) continue;
         if (deletedIds.has(videoId)) {
-            skippedCount++;
             continue;
         }
 
@@ -1690,22 +2138,19 @@ async function processBatch(params, dependencies = {}) {
         } else if (result && result.skip && result.reason === 'shorts') {
             // Shorts는 별도 카운트 (개별 로그 출력 안함)
             shortsCount++;
-            skippedCount++;
-        } else {
-            skippedCount++;
         }
     }
     process.stdout.write('\n');
 
     // [수정] Shorts 요약 로그 출력 (한 줄로)
     if (shortsCount > 0) {
-        log('info', `[Skip] Shorts (3분 미만) ${shortsCount}개 건너뜀`);
+        log('info', 'FRAME_SHORTS_SKIPPED');
     }
-    log('info', `[OK] 스캔 완료: 총 ${urls.length}개 중 ${pendingUrls.length}개 처리 예정 (건너뜀: ${skippedCount}개)`);
+    log('info', 'FRAME_SCAN_COMPLETED');
 
 
     if (pendingUrls.length === 0) {
-        log('info', `처리할 대상이 없습니다.`);
+        log('info', 'FRAME_NO_PENDING_WORK');
         return;
     }
 
@@ -1728,11 +2173,9 @@ async function processBatch(params, dependencies = {}) {
         CONCURRENCY = parseInt(process.env.MAX_JOBS, 10) || CONCURRENCY;
     }
     
-    log('info', `[PERF] 병렬 처리 모드: 동시 ${CONCURRENCY}개 (CPU: ${cpuCores}코어, 여유 메모리: ${freeMemGB.toFixed(1)}GB)`);
+    log('info', 'FRAME_CONCURRENCY_CONFIGURED');
 
-    let processedCount = 0;
     let failedCount = 0;
-    let activeCount = 0;
     let urlIndex = 0;
     const heatmapRateLimitStormLimit = getHeatmapRateLimitStormLimit();
     let heatmapRateLimitErrors = 0;
@@ -1748,32 +2191,30 @@ async function processBatch(params, dependencies = {}) {
             const url = pendingUrls[currentIndex];
             const videoId = extractVideoId(url);
 
-            log('info', `\n--- [${currentIndex + 1}/${pendingUrls.length}] 처리 시작: ${videoId} (Active: ${activeCount}/${CONCURRENCY}) ---`);
+            log('info', 'FRAME_VIDEO_PROCESSING_STARTED');
             
             // params를 복사하여 병렬 작업 간 url 충돌 방지
             const taskParams = { ...params, url };
             
             try {
                 const downloadPerformed = await processVideo(videoId, taskParams);
-                processedCount++;
 
                 // [변경] 다운로드가 실제로 수행되었을 때만 짧은 대기 (속도 제한 방지)
                 if (downloadPerformed) {
                     await new Promise(r => setTimeout(r, 500));
                 }
             } catch (e) {
-                log('error', `[${videoId}] 처리 중 오류: ${e.message}`);
+                logOperationError('error', 'FRAME_VIDEO_PROCESSING_FAILED', e);
                 if (isHeatmapRateLimitError(e)) {
                     heatmapRateLimitErrors++;
                     logFailedUrl(channel, url);
-                    log('error', `[Breaker] 히트맵 429/차단 오류 누적: ${heatmapRateLimitErrors}/${heatmapRateLimitStormLimit}`);
+                    log('error', 'FRAME_BATCH_FAILURE_RECORDED');
                     if (heatmapRateLimitErrors >= heatmapRateLimitStormLimit) {
                         heatmapRateLimitStormTripped = true;
-                        log('error', `[Breaker] 히트맵 429/차단 storm 감지. 신규 영상 스케줄링을 중단합니다.`);
+                        log('error', 'FRAME_BATCH_SCHEDULING_STOPPED');
                     }
                 }
                 failedCount++;
-                processedCount++;
             }
         }
     };
@@ -1781,19 +2222,17 @@ async function processBatch(params, dependencies = {}) {
     // N개의 worker를 동시에 시작
     const workers = [];
     for (let i = 0; i < Math.min(CONCURRENCY, pendingUrls.length); i++) {
-        activeCount++;
         workers.push(processNext());
     }
     await Promise.all(workers);
 
-    log('info', `=== 배치 작업 완료: 처리 ${processedCount}개, 스킵 ${skippedCount}개, 실패 ${failedCount}개 ===`);
+    log('info', 'FRAME_BATCH_COMPLETED');
     if (heatmapRateLimitStormTripped) {
-        const unscheduledCount = pendingUrls.length - processedCount;
-        log('error', `[Breaker] 신규 스케줄 중단으로 ${unscheduledCount}개 영상이 이번 실행에서 처리되지 않았습니다.`);
-        throw new Error(`heatmap rate-limit storm breaker tripped after ${heatmapRateLimitErrors} global block error(s); batch frame extraction failed for ${failedCount} video(s)`);
+        log('error', 'FRAME_BATCH_SCHEDULING_STOPPED');
+        throw new Error('FRAME_BATCH_RATE_LIMIT_BREAKER_TRIPPED');
     }
     if (failedCount > 0) {
-        throw new Error(`batch frame extraction failed for ${failedCount} video(s)`);
+        throw new Error('FRAME_BATCH_FAILED');
     }
 }
 
@@ -1803,7 +2242,7 @@ const isDirectExecution = process.argv[1]
 
 if (isDirectExecution) {
     main().catch(e => {
-        console.error(e);
+        logOperationError('error', 'FRAME_MAIN_FAILED', e);
         process.exitCode = 1;
     });
 }

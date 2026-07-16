@@ -2,6 +2,7 @@
 /** Write a redacted Gemini runtime preflight report before expensive video work. */
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { safeErrorName } from '../utils/privacy-log.mjs';
 
 function parseArgs(argv) {
   const args = { output: '', model: process.env.CURRENT_MODEL || process.env.PRIMARY_MODEL || 'gemini-3.5-flash', requireApiAvailable: false, checkedAt: '' };
@@ -24,15 +25,10 @@ function resolveThinkingLevel(...candidates) {
   return 'MEDIUM';
 }
 
-function redact(value) {
-  return String(value || '')
-    .replace(/AIza[0-9A-Za-z_-]{20,}/g, '[REDACTED_API_KEY]')
-    .replace(/Bearer\s+[0-9A-Za-z._-]+/gi, 'Bearer [REDACTED]')
-    .slice(0, 500);
-}
-
 function classifyError(error) {
-  const text = `${error?.message || ''}\n${error?.stack || ''}`;
+  const code = String(error?.code || error?.status || '');
+  const message = typeof error?.message === 'string' ? error.message : '';
+  const text = `${code}\n${message}`;
   if (/429|quota|RESOURCE_EXHAUSTED|rate limit/i.test(text)) return 'quota_exhausted';
   if (/401|403|API key|permission|PERMISSION_DENIED|UNAUTHENTICATED/i.test(text)) return 'auth_failed';
   return 'api_error';
@@ -61,20 +57,25 @@ async function buildReport(args) {
   try {
     const { GoogleGenAI } = await import('@google/genai');
     const ai = new GoogleGenAI({ apiKey });
-    const response = await ai.models.generateContent({
+    await ai.models.generateContent({
       model: args.model,
       contents: 'Reply with only: ok',
       config: {
         thinkingConfig: { thinkingLevel },
       },
     });
-    const text = String(response?.text || '').trim();
-    return { ...report, status: 'ok', responsePreview: text.slice(0, 40) };
+    return { ...report, status: 'ok' };
   } catch (error) {
     if (error?.code === 'ERR_MODULE_NOT_FOUND') {
       return { ...report, status: 'dependency_missing', detail: '@google/genai_not_installed' };
     }
-    return { ...report, status: classifyError(error), detail: redact(error?.message || error) };
+    const status = classifyError(error);
+    return {
+      ...report,
+      status,
+      detail: `${status}_detected`,
+      errorName: safeErrorName(error),
+    };
   }
 }
 

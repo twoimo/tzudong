@@ -26,11 +26,6 @@ on:
         required: false
         default: ''
         type: string
-      checkout_ref:
-        description: '보안상 secrets 사용 실행은 default branch만 허용됩니다 (비default ref는 거부)'
-        required: false
-        default: ''
-        type: string
       allow_budget_risk:
         description: 'Actions budget posture가 critical이어도 default-branch 수동 실행 허용'
         required: false
@@ -38,7 +33,7 @@ on:
         type: boolean
 
 permissions:
-  contents: write
+  contents: read
 
 # GitHub Actions Node 20 deprecation 사전 대응: JS actions를 Node 24 런타임으로 강제
 env:
@@ -51,11 +46,19 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  daily-crawl:
+  daily-compute:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
-    # [PERF] 안전 타임아웃: 최대 90분 (월 3000분 한도 보호)
     timeout-minutes: 90
-    if: ${{ github.event_name != 'workflow_dispatch' || github.ref_name == github.event.repository.default_branch }}
+    if: ${{ github.repository == github.event.repository.full_name && github.ref_name == github.event.repository.default_branch && github.ref_protected }}
+    outputs:
+      publication_ready: ${{ steps.publication.outputs.ready }}
+      publication_manifest_sha256: ${{ steps.publication.outputs.manifest_sha256 }}
+      artifact_digest: ${{ steps.upload-publication.outputs.artifact-digest }}
+      pipeline_exit_code: ${{ steps.pipeline.outputs.exit_code }}
+    environment:
+      name: production-crawler
     env:
       MAX_CONTEXT_VIDEOS: ${{ github.event.inputs.max_videos || '-1' }}
     steps:
@@ -63,21 +66,6 @@ jobs:
       # 환경 준비 (Setup) - 캐시 최대 활용으로 시간 절약
       # ============================================================
 
-      - name: Guard trusted manual checkout ref
-        if: github.event_name == 'workflow_dispatch'
-        env:
-          DISPATCH_REF: ${{ github.ref_name }}
-          REQUESTED_CHECKOUT_REF: ${{ github.event.inputs.checkout_ref || '' }}
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-        run: |
-          if [ "$DISPATCH_REF" != "$DEFAULT_BRANCH" ]; then
-            echo "::error::daily-crawler uses production secrets and may only run from the default branch workflow ref."
-            exit 1
-          fi
-          if [ -n "$REQUESTED_CHECKOUT_REF" ] && [ "$REQUESTED_CHECKOUT_REF" != "$DEFAULT_BRANCH" ]; then
-            echo "::error::daily-crawler uses production secrets and may only run against the default branch. Use read-only PR/CI validation for non-default refs."
-            exit 1
-          fi
 
       - name: System Setup (Disk + Swap)
         if: env.MAX_CONTEXT_VIDEOS != '-1'
@@ -100,11 +88,40 @@ jobs:
           echo "[OK] System setup complete (Swap 8GB)"
           free -h
 
-      - name: Checkout repository
+      - name: Checkout exact triggering commit
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # actions/checkout@v6
         with:
-          ref: ${{ github.event.repository.default_branch }}
+          ref: ${{ github.sha }}
           fetch-depth: 0
+          persist-credentials: false
+
+      - name: Bind trusted compute source and data base
+        id: bind
+        env:
+          READ_TOKEN: ${{ github.token }}
+          CANONICAL_REPOSITORY: ${{ github.event.repository.full_name }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          TRIGGER_SHA: ${{ github.sha }}
+          REF_NAME: ${{ github.ref_name }}
+          REF_PROTECTED: ${{ github.ref_protected }}
+          TARGET_BRANCH: data
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = "$CANONICAL_REPOSITORY"
+          test "$REF_NAME" = "$DEFAULT_BRANCH"
+          test "$REF_PROTECTED" = "true"
+          test "$(git rev-parse HEAD)" = "$TRIGGER_SHA"
+          authorization="$(printf 'x-access-token:%s' "$READ_TOKEN" | base64 -w0)"
+          git -c http.https://github.com/.extraheader="AUTHORIZATION: basic $authorization" \
+            fetch --no-tags origin \
+            "refs/heads/$DEFAULT_BRANCH:refs/remotes/origin/$DEFAULT_BRANCH" \
+            "refs/heads/$TARGET_BRANCH:refs/remotes/origin/$TARGET_BRANCH"
+          test "$(git rev-parse HEAD)" = "$TRIGGER_SHA"
+          git merge-base --is-ancestor "$TRIGGER_SHA" "origin/$DEFAULT_BRANCH"
+          base_sha="$(git rev-parse "origin/$TARGET_BRANCH")"
+          base_tree="$(git rev-parse "origin/$TARGET_BRANCH^{tree}")"
+          printf 'base_sha=%s\n' "$base_sha" >> "$GITHUB_OUTPUT"
+          printf 'base_tree=%s\n' "$base_tree" >> "$GITHUB_OUTPUT"
 
       - name: Guard manual default-branch budget posture
         if: github.event_name == 'workflow_dispatch'
@@ -139,159 +156,60 @@ jobs:
               sys.exit(1)
           PY
 
-      - name: Install System Dependencies (ffmpeg, jq, rclone)
-        timeout-minutes: 12
+      - name: Verify approved runtime prerequisites
         run: |
           set -euo pipefail
-
-          missing_packages=()
-          command -v ffmpeg >/dev/null 2>&1 || missing_packages+=(ffmpeg)
-          command -v jq >/dev/null 2>&1 || missing_packages+=(jq)
-          command -v rclone >/dev/null 2>&1 || missing_packages+=(rclone)
-          command -v secret-tool >/dev/null 2>&1 || missing_packages+=(libsecret-tools)
-          command -v gnome-keyring-daemon >/dev/null 2>&1 || missing_packages+=(gnome-keyring)
-          command -v dbus-launch >/dev/null 2>&1 || missing_packages+=(dbus-x11)
-
-          if [ ${#missing_packages[@]} -eq 0 ]; then
-            echo "[OK] System dependencies already available"
-            ffmpeg -version | head -1 || true
-            jq --version || true
-            rclone version | head -1 || true
-            exit 0
-          fi
-
-          APT_OPTIONS=(
-            -o Acquire::Retries=3
-            -o Acquire::http::Timeout=30
-            -o Acquire::https::Timeout=30
-            -o DPkg::Lock::Timeout=60
-            -o Dpkg::Use-Pty=0
+          for tool in ffmpeg jq rclone node npm python3; do
+            command -v "$tool" >/dev/null 2>&1 || {
+              echo "::error::Approved runner prerequisite is unavailable: $tool"
+              exit 1
+            }
+          done
+          python3 - <<'PY'
+          import importlib
+          required = (
+              "googleapiclient", "dotenv", "yaml", "openai", "requests",
+              "langchain", "langchain_community", "langchain_ollama",
+              "supabase", "curl_cffi", "scrapling",
           )
+          missing = [name for name in required if importlib.util.find_spec(name) is None]
+          if missing:
+              raise SystemExit(f"Approved Python runtime image is missing: {', '.join(missing)}")
+          PY
 
-          retry_with_timeout() {
-            local description="$1"
-            local time_limit="$2"
-            shift 2
+      - name: Install locked Node dependencies
+        working-directory: backend
+        run: npm ci --ignore-scripts
 
-            local attempt
-            for attempt in 1 2; do
-              echo "[INFO] ${description} (attempt ${attempt}/2)"
-              if timeout "$time_limit" "$@"; then
-                return 0
-              fi
-
-              if [ "$attempt" -eq 2 ]; then
-                echo "[ERROR] ${description} failed after ${attempt} attempts"
-                return 1
-              fi
-
-              echo "[WARN] ${description} failed; retrying once..."
-            done
-          }
-
-          retry_with_timeout "apt-get update" 2m sudo env DEBIAN_FRONTEND=noninteractive apt-get "${APT_OPTIONS[@]}" update -qq
-          retry_with_timeout "apt-get install ${missing_packages[*]}" 4m sudo env DEBIAN_FRONTEND=noninteractive apt-get "${APT_OPTIONS[@]}" install -y -qq --no-install-recommends "${missing_packages[@]}"
-
-          command -v ffmpeg >/dev/null 2>&1
-          command -v jq >/dev/null 2>&1
-          command -v rclone >/dev/null 2>&1
-          command -v secret-tool >/dev/null 2>&1
-          command -v gnome-keyring-daemon >/dev/null 2>&1
-          command -v dbus-launch >/dev/null 2>&1
-
-          echo "[OK] Installed missing packages: ${missing_packages[*]}"
-          ffmpeg -version | head -1 || true
-          jq --version || true
-          rclone version | head -1 || true
-
-      # ============================================================
-      # 의존성 설치 (Dependencies) - 캐시 활용 극대화
-      # ============================================================
-
-      - name: Cache Puppeteer Browser
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # actions/cache@v5
-        with:
-          path: ~/.cache/puppeteer
-          key: ${{ runner.os }}-puppeteer-${{ hashFiles('backend/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-puppeteer-
-
-
-      - name: Set up Node.js
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # actions/setup-node@v6
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: backend/package-lock.json
-
-      - name: Setup Deno
-        uses: denoland/setup-deno@667a34cdef165d8d2b2e98dde39547c9daac7282 # denoland/setup-deno@v2
-        with:
-          deno-version: v2.x
-
-      - name: Set up Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # actions/setup-python@v6
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-          cache-dependency-path: backend/restaurant-crawling/scripts/requirements.txt
-
-      # [SECURITY/PERF] Python + Node 의존성 병렬 설치 (requirements.txt 고정 버전만 사용)
-      - name: Install Dependencies (Python + Node.js)
-        env:
-          PUPPETEER_CACHE_DIR: /home/runner/.cache/puppeteer
+      - name: Disable unapproved optional executable providers
         run: |
-          # Python: pip upgrade + pinned requirements (백그라운드)
-          (python -m pip install --upgrade pip -q && \
-           pip install --requirement backend/restaurant-crawling/scripts/requirements.txt -q && \
-           python -m camoufox fetch) &
-          PY_PID=$!
-          
-          # Node.js + OAuth CLI 의존성 (병렬)
-          (cd backend && npm ci --prefer-offline && npm install -g @google/gemini-cli && \
-           curl -fsSL https://antigravity.google/cli/install.sh | bash) &
-          NPM_PID=$!
-          
-          # 모든 설치 완료 대기
-          wait $PY_PID $NPM_PID
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-          echo "[OK] All dependencies installed"
-          command -v gemini >/dev/null 2>&1 && gemini --version || true
-          "$HOME/.local/bin/agy" --help | head -20 || true
+          printf '%s\n' 'RUN_DAILY_DISABLE_MUTABLE_PROVIDER_FALLBACK=true' >> "$GITHUB_ENV"
+          if [ "${MAX_CONTEXT_VIDEOS}" != "-1" ]; then
+            echo "::error::Local Ollama/model bootstrap is disabled. Use -1 until an operator provisions an approved immutable model image."
+            exit 1
+          fi
 
       # ============================================================
       # 자격 증명 설정 (Credentials) - 병렬 생성
       # ============================================================
 
-      - name: Setup Credentials
+      - name: Setup compute-only credentials
         env:
           GOOGLE_CREDENTIALS_BASE64: ${{ secrets.GOOGLE_CREDENTIALS_BASE64 }}
           YOUTUBE_COOKIES_TXT: ${{ secrets.YOUTUBE_COOKIES_TXT }}
           GDRIVE_RCLONE_CONFIG: ${{ secrets.GDRIVE_RCLONE_CONFIG }}
           GEMINI_CREDENTIALS_BASE64: ${{ secrets.GEMINI_CREDENTIALS_BASE64 }}
           GEMINI_CREDENTIALS_BASE64_2: ${{ secrets.GEMINI_CREDENTIALS_BASE64_2 }}
-          AGY_SETTINGS_JSON: ${{ secrets.AGY_SETTINGS_JSON }}
-          AGY_CREDENTIAL_B64: ${{ secrets.AGY_CREDENTIAL_B64 }}
         run: |
           set -euo pipefail
           umask 077
-          mkdir -p backend/restaurant-crawling/data ~/.gemini ~/.gemini/antigravity-cli ~/.config/rclone
-          
-          # Add wrapper to PATH
-          echo "${{ github.workspace }}/backend/bin" >> "$GITHUB_PATH"
-          chmod +x "${{ github.workspace }}/backend/bin/gemini"
-          
-          # Google Credentials (optional; kept only for legacy scripts that read credentials.json)
+          mkdir -p backend/restaurant-crawling/data ~/.gemini ~/.config/rclone
           if [ -n "$GOOGLE_CREDENTIALS_BASE64" ]; then
             printf '%s' "$GOOGLE_CREDENTIALS_BASE64" | base64 -d > backend/restaurant-crawling/data/credentials.json
           fi
-          
-          # YouTube Cookies
           if [ -n "$YOUTUBE_COOKIES_TXT" ]; then
             printf '%s' "$YOUTUBE_COOKIES_TXT" > backend/restaurant-crawling/data/cookies.txt
           fi
-          
-          # Gemini CLI OAuth accounts (optional): backend/bin/gemini rotates oauth_creds_*.json on quota.
           if [ -n "$GEMINI_CREDENTIALS_BASE64" ]; then
             printf '%s' "$GEMINI_CREDENTIALS_BASE64" | base64 -d > ~/.gemini/oauth_creds.json
             chmod 600 ~/.gemini/oauth_creds.json
@@ -300,77 +218,10 @@ jobs:
             printf '%s' "$GEMINI_CREDENTIALS_BASE64_2" | base64 -d > ~/.gemini/oauth_creds_2.json
             chmod 600 ~/.gemini/oauth_creds_2.json
           fi
-          if [ -f ~/.gemini/oauth_creds.json ]; then
-            python3 - <<'PY'
-          import json
-          from pathlib import Path
-
-          path = Path.home() / ".gemini" / "settings.json"
-          try:
-              data = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
-          except json.JSONDecodeError:
-              data = {}
-          data.setdefault("security", {}).setdefault("auth", {})["selectedType"] = "oauth-personal"
-          path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-          PY
-            chmod 600 ~/.gemini/settings.json
-          fi
-
-          start_secret_service() {
-            if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then
-              eval "$(dbus-launch --sh-syntax)"
-            fi
-            export DBUS_SESSION_BUS_ADDRESS
-            echo "DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS" >> "$GITHUB_ENV"
-            if [ -n "${DBUS_SESSION_BUS_PID:-}" ]; then
-              export DBUS_SESSION_BUS_PID
-              echo "DBUS_SESSION_BUS_PID=$DBUS_SESSION_BUS_PID" >> "$GITHUB_ENV"
-            fi
-
-            # Create/unlock an empty-password CI keyring and keep the daemon alive for later steps.
-            eval "$(printf '\n' | gnome-keyring-daemon --unlock 2>/dev/null || true)"
-            eval "$(gnome-keyring-daemon --start --components=secrets 2>/dev/null || true)"
-            if [ -n "${GNOME_KEYRING_CONTROL:-}" ]; then
-              export GNOME_KEYRING_CONTROL
-              echo "GNOME_KEYRING_CONTROL=$GNOME_KEYRING_CONTROL" >> "$GITHUB_ENV"
-            fi
-            if [ -n "${SSH_AUTH_SOCK:-}" ]; then
-              export SSH_AUTH_SOCK
-              echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> "$GITHUB_ENV"
-            fi
-          }
-
-          # Antigravity CLI stores auth in the OS keyring; settings.json controls the selected model.
-          if [ -n "$AGY_SETTINGS_JSON" ]; then
-            printf '%s' "$AGY_SETTINGS_JSON" > ~/.gemini/antigravity-cli/settings.json
-          elif [ ! -f ~/.gemini/antigravity-cli/settings.json ]; then
-            printf '%s\n' '{"model":"Gemini 3.5 Flash (High)","enableTelemetry":false}' > ~/.gemini/antigravity-cli/settings.json
-          fi
-          chmod 600 ~/.gemini/antigravity-cli/settings.json
-
-          if [ -n "${AGY_CREDENTIAL_B64:-}" ]; then
-            start_secret_service
-            agy_credential_file=$(mktemp)
-            trap 'rm -f "$agy_credential_file"' EXIT
-            printf '%s' "$AGY_CREDENTIAL_B64" | base64 -d > "$agy_credential_file"
-            secret-tool store --label="Antigravity OAuth token" service gemini username antigravity < "$agy_credential_file"
-            if secret-tool lookup service gemini username antigravity >/dev/null; then
-              echo "[OK] Antigravity OAuth credential restored to Secret Service"
-            else
-              echo "::error::Antigravity OAuth credential could not be read back from Secret Service"
-              exit 1
-            fi
-          else
-            echo "[WARN] AGY_CREDENTIAL_B64 is not set; Antigravity CLI may prompt for OAuth in CI."
-          fi
-          
-          # RClone Config
           if [ -n "$GDRIVE_RCLONE_CONFIG" ]; then
             printf '%s' "$GDRIVE_RCLONE_CONFIG" | base64 -d > ~/.config/rclone/rclone.conf
             chmod 600 ~/.config/rclone/rclone.conf
           fi
-          
-          echo "[OK] All credentials configured"
 
       - name: Validate runtime environment contract
         env:
@@ -388,135 +239,25 @@ jobs:
           OPENAI_API_KEY_BYEON: ${{ secrets.OPENAI_API_KEY_BYEON }}
           GEMINI_CREDENTIALS_BASE64: ${{ secrets.GEMINI_CREDENTIALS_BASE64 }}
           GEMINI_CREDENTIALS_BASE64_2: ${{ secrets.GEMINI_CREDENTIALS_BASE64_2 }}
-          AGY_SETTINGS_JSON: ${{ secrets.AGY_SETTINGS_JSON }}
-          AGY_CREDENTIAL_B64: ${{ secrets.AGY_CREDENTIAL_B64 }}
         run: python3 backend/bin/check_env_contract.py --profile daily
 
-      - name: Preflight Gemini/Antigravity AI quota
+      - name: Preflight approved Gemini API runtime
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_API_KEY_BYEON: ${{ secrets.GEMINI_API_KEY }}
-          GEMINI_CREDENTIALS_BASE64: ${{ secrets.GEMINI_CREDENTIALS_BASE64 }}
-          GEMINI_CREDENTIALS_BASE64_2: ${{ secrets.GEMINI_CREDENTIALS_BASE64_2 }}
         run: |
+          set -euo pipefail
           mkdir -p backend/log/cron
-
-          print_preflight_excerpt() {
-            local label="$1"
-            local file_path="$2"
-            if [ ! -s "$file_path" ]; then
-              return 0
-            fi
-            echo "::group::$label"
-            sed -E 's/(access_token|refresh_token|id_token|code)=([^&[:space:]]+)/\1=[redacted]/g' "$file_path" | sed -n '1,80p'
-            echo "::endgroup::"
-          }
-
-          ensure_gemini_cli_oauth_settings() {
-            if [ ! -f "$HOME/.gemini/oauth_creds.json" ]; then
-              return 1
-            fi
-            python3 - <<'PY'
-          import json
-          from pathlib import Path
-
-          path = Path.home() / ".gemini" / "settings.json"
-          try:
-              data = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
-          except json.JSONDecodeError:
-              data = {}
-          data.setdefault("security", {}).setdefault("auth", {})["selectedType"] = "oauth-personal"
-          path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-          PY
-            chmod 600 "$HOME/.gemini/settings.json"
-          }
-
-          set +e
           node backend/bin/check_gemini_runtime.mjs \
             --output backend/log/cron/gemini-runtime-preflight.json \
             --require-api-available
-          API_STATUS=$?
-          set -e
-
-          OAUTH_STATUS=1
-          AGY_STATUS=0
-          GEMINI_CLI_STATUS=0
-          if [ "$API_STATUS" -ne 0 ]; then
-            echo "[WARN] Gemini API preflight exited $API_STATUS; checking Antigravity CLI OAuth fallback."
-            set +e
-            python3 backend/bin/run_agy_prompt.py \
-              --prompt-text "Reply with only: ok" \
-              --output backend/log/cron/agy-runtime-preflight.txt \
-              --stderr-file backend/log/cron/agy-runtime-preflight.err \
-              --print-timeout 45s \
-              --timeout-sec 75
-            AGY_STATUS=$?
-            set -e
-
-            if [ "$AGY_STATUS" -eq 0 ]; then
-              OAUTH_STATUS=0
-            else
-              echo "[WARN] Antigravity CLI preflight exited $AGY_STATUS; checking Gemini CLI OAuth fallback."
-              print_preflight_excerpt "Antigravity CLI preflight stdout" backend/log/cron/agy-runtime-preflight.txt
-              print_preflight_excerpt "Antigravity CLI preflight stderr" backend/log/cron/agy-runtime-preflight.err
-
-              if command -v gemini >/dev/null 2>&1 && ensure_gemini_cli_oauth_settings; then
-                set +e
-                env GEMINI_API_KEY= timeout --foreground 75s gemini --skip-trust -p "Reply with only: ok" --model gemini-3-flash-preview --output-format json < /dev/null \
-                  > backend/log/cron/gemini-cli-runtime-preflight.json \
-                  2> backend/log/cron/gemini-cli-runtime-preflight.err
-                GEMINI_CLI_STATUS=$?
-                set -e
-                if [ "$GEMINI_CLI_STATUS" -eq 0 ]; then
-                  OAUTH_STATUS=0
-                else
-                  echo "[WARN] Gemini CLI OAuth preflight exited $GEMINI_CLI_STATUS."
-                  print_preflight_excerpt "Gemini CLI OAuth preflight stdout" backend/log/cron/gemini-cli-runtime-preflight.json
-                  print_preflight_excerpt "Gemini CLI OAuth preflight stderr" backend/log/cron/gemini-cli-runtime-preflight.err
-                fi
-              else
-                GEMINI_CLI_STATUS=127
-                echo "[WARN] Gemini CLI OAuth credentials/settings are unavailable."
-              fi
-            fi
-          fi
-
           {
-            echo "### Gemini/Antigravity runtime preflight"
-            echo
-            echo "API status: $API_STATUS"
-            echo "Antigravity CLI status: $AGY_STATUS"
-            echo "Gemini CLI OAuth status: $GEMINI_CLI_STATUS"
-            echo "OAuth fallback status: $OAUTH_STATUS"
+            echo "### Gemini API runtime preflight"
             echo
             echo '```json'
-            if [ -s backend/log/cron/gemini-runtime-preflight.json ]; then
-              cat backend/log/cron/gemini-runtime-preflight.json
-            else
-              echo '{"error":"gemini-runtime-preflight.json missing"}'
-            fi
+            cat backend/log/cron/gemini-runtime-preflight.json
             echo '```'
-            if [ -s backend/log/cron/agy-runtime-preflight.txt ]; then
-              echo
-              echo "Antigravity CLI stdout:"
-              sed -n '1,20p' backend/log/cron/agy-runtime-preflight.txt
-            fi
-            if [ -s backend/log/cron/agy-runtime-preflight.err ]; then
-              echo
-              echo "Antigravity CLI stderr:"
-              sed -n '1,20p' backend/log/cron/agy-runtime-preflight.err
-            fi
-            if [ -s backend/log/cron/gemini-cli-runtime-preflight.err ]; then
-              echo
-              echo "Gemini CLI OAuth stderr:"
-              sed -n '1,40p' backend/log/cron/gemini-cli-runtime-preflight.err
-            fi
           } >> "$GITHUB_STEP_SUMMARY"
-
-          if [ "$API_STATUS" -ne 0 ] && [ "$OAUTH_STATUS" -ne 0 ]; then
-            echo "::error::Gemini API and OAuth CLI fallbacks are unavailable (api=$API_STATUS agy=$AGY_STATUS gemini_cli=$GEMINI_CLI_STATUS)."
-            exit "$API_STATUS"
-          fi
 
       - name: Check production contract fixture drift
         run: |
@@ -525,99 +266,43 @@ jobs:
             --output backend/log/cron/production-contract-fixture-status.json \
             --max-records 200
 
-      # ============================================================
-      # Ollama 설정 (AI Model) - 조건부 실행
-      # ============================================================
 
-      - name: Cache Ollama Models
-        if: env.MAX_CONTEXT_VIDEOS != '-1'
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # actions/cache@v5
-        with:
-          path: |
-            ~/.ollama
-            /usr/share/ollama/.ollama
-          key: ${{ runner.os }}-ollama-models-v3
-          restore-keys: |
-            ${{ runner.os }}-ollama-models-
-
-      - name: Setup Ollama
-        if: env.MAX_CONTEXT_VIDEOS != '-1'
-        env:
-          OLLAMA_INSTALL_VERSION: v0.24.0
-          OLLAMA_INSTALL_SHA256: 25f64b810b947145095956533e1bdf56eacea2673c55a7e586be4515fc882c9f
-        run: |
-          set -euo pipefail
-          curl -fsSLo /tmp/ollama-install.sh "https://github.com/ollama/ollama/releases/download/${OLLAMA_INSTALL_VERSION}/install.sh"
-          echo "${OLLAMA_INSTALL_SHA256}  /tmp/ollama-install.sh" | sha256sum -c -
-          sh /tmp/ollama-install.sh
-          # [Fix] 캐시 복원 시 모델 디렉토리 권한 보정 (ollama 사용자에게 소유권 이전)
-          if [ -d /usr/share/ollama/.ollama ]; then
-            sudo chown -R ollama:ollama /usr/share/ollama/.ollama 2>/dev/null || true
-          fi
-          echo "[OK] Ollama installed"
-
-      - name: Start Ollama & Pull Model
-        if: env.MAX_CONTEXT_VIDEOS != '-1'
-        run: |
-          ollama serve &
-          
-          # Ollama 준비 대기 (최적화된 폴링)
-          for i in $(seq 1 15); do
-            if curl -s http://localhost:11434/api/tags > /dev/null 2>&1; then
-              echo "[OK] Ollama ready (${i}s)"
-              break
-            fi
-            [ $i -eq 15 ] && { echo "[ERROR] Ollama timeout"; exit 1; }
-            sleep 1
-          done
-          
-          # 모델 Pull (캐시 히트 시 즉시 완료)
-          ollama pull cookieshake/a.x-4.0-light-imatrix:Q8_0
-
-      # ============================================================
-      # 파이프라인 실행 (Main Pipeline)
-      # ============================================================
-
-      - name: Configure Git
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Run Daily Pipeline
+      - name: Run Daily Pipeline in compute-only mode
+        id: pipeline
         timeout-minutes: 80
         env:
-          # API Keys
           YOUTUBE_API_KEY_BYEON: ${{ secrets.YOUTUBE_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_API_KEY_BYEON: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_CREDENTIALS_BASE64: ${{ secrets.GEMINI_CREDENTIALS_BASE64 }}
           GEMINI_CREDENTIALS_BASE64_2: ${{ secrets.GEMINI_CREDENTIALS_BASE64_2 }}
-          GITHUB_TOKEN: ${{ github.token }}
-          # Supabase
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          # Naver & NCP API
           NAVER_CLIENT_ID_BYEON: ${{ secrets.NAVER_CLIENT_ID_BYEON }}
           NAVER_CLIENT_SECRET_BYEON: ${{ secrets.NAVER_CLIENT_SECRET_BYEON }}
           NCP_MAPS_KEY_ID_BYEON: ${{ secrets.NCP_MAPS_KEY_ID_BYEON }}
           NCP_MAPS_KEY_BYEON: ${{ secrets.NCP_MAPS_KEY_BYEON }}
-          # RClone / GDrive
           RCLONE_CONFIG_BASE64: ${{ secrets.GDRIVE_RCLONE_CONFIG }}
           GDRIVE_REMOTE_PATH: "gdrive:04_빠른공유/tzudong_tzuyang_data/video_cache"
           GDRIVE_FRAMES_PATH: "gdrive:04_빠른공유/tzudong_tzuyang_data/frames"
-          # Ollama
-          OLLAMA_HOST: http://localhost:11434
-          # CI
           CI: true
           RUN_DAILY_POLICY_MODE: ${{ github.event.inputs.policy_mode || 'end_to_end' }}
           RUN_DAILY_VERIFY_OPTIONAL_SCENARIO: ${{ github.event.inputs.verify_optional_scenario || '' }}
           RUN_DAILY_VERIFY_REQUIRED_SCENARIO: ${{ github.event.inputs.verify_required_scenario || '' }}
-          RUN_DAILY_EXECUTION_BRANCH: ${{ github.event.repository.default_branch }}
+          RUN_DAILY_WORKFLOW_COMPUTE: "true"
+          RUN_DAILY_EXECUTION_SHA: ${{ github.sha }}
           RUN_DAILY_TARGET_BRANCH: data
+          RUN_DAILY_PUBLICATION_BASE_SHA: ${{ steps.bind.outputs.base_sha }}
+          RUN_DAILY_PUBLICATION_BASE_TREE: ${{ steps.bind.outputs.base_tree }}
+          RUN_DAILY_PUBLICATION_DIR: ${{ runner.temp }}/daily-data-publication
           HEATMAP_RATE_LIMIT_STORM_LIMIT: "5"
         run: |
-          chmod +x backend/run_daily.sh
+          set +e
           bash backend/run_daily.sh
+          pipeline_exit=$?
+          set -e
+          printf 'exit_code=%s\n' "$pipeline_exit" >> "$GITHUB_OUTPUT"
+          exit 0
           
       # ============================================================
       # 후처리 (Post-processing) - 항상 실행
@@ -948,3 +633,204 @@ jobs:
             backend/log/cron/actions-budget-posture.json
             backend/log/cron/admin-data-quality-audit.json
             backend/log/cron/admin-data-quality-audit.md
+      - name: Prepare data-only publication artifact
+        id: publication
+        if: always()
+        env:
+          PUBLICATION_DIR: ${{ runner.temp }}/daily-data-publication
+        run: |
+          set -euo pipefail
+          if [ -f "$PUBLICATION_DIR/.ready" ] \
+            && [ -f "$PUBLICATION_DIR/daily-data-publication.tar" ] \
+            && [ -f "$PUBLICATION_DIR/publication-manifest.json" ] \
+            && [ -f "$PUBLICATION_DIR/publication-manifest.sha256" ]; then
+            manifest_sha256="$(python3 - "$PUBLICATION_DIR/publication-manifest.json" <<'PY'
+          import hashlib
+          import pathlib
+          import sys
+
+          print(hashlib.sha256(pathlib.Path(sys.argv[1]).read_bytes()).hexdigest())
+          PY
+          )"
+          case "$manifest_sha256" in
+            *[!0-9a-f]*|'')
+              echo "::error::Publication manifest digest is not lowercase SHA-256."
+              exit 1
+              ;;
+          esac
+          printf 'ready=true\n' >> "$GITHUB_OUTPUT"
+          printf 'manifest_sha256=%s\n' "$manifest_sha256" >> "$GITHUB_OUTPUT"
+          else
+            printf 'ready=false\n' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload validated data-only publication artifact
+        id: upload-publication
+        if: ${{ steps.publication.outputs.ready == 'true' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # actions/upload-artifact@v7.0.1
+        with:
+          name: daily-data-publication-${{ github.run_id }}
+          if-no-files-found: error
+          retention-days: 1
+          path: |
+            ${{ runner.temp }}/daily-data-publication/daily-data-publication.tar
+            ${{ runner.temp }}/daily-data-publication/publication-manifest.json
+            ${{ runner.temp }}/daily-data-publication/publication-manifest.sha256
+
+      - name: Propagate compute pipeline status
+        if: always()
+        env:
+          PIPELINE_EXIT_CODE: ${{ steps.pipeline.outputs.exit_code }}
+        run: |
+          case "$PIPELINE_EXIT_CODE" in
+            0) exit 0 ;;
+            *) exit 1 ;;
+          esac
+
+  daily-publish:
+    needs: daily-compute
+    if: ${{ always() && needs.daily-compute.outputs.publication_ready == 'true' && needs.daily-compute.outputs.publication_manifest_sha256 != '' }}
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: production-data-publication
+    steps:
+      - name: Checkout exact trusted publisher source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Bind publisher to the exact trusted source
+        env:
+          CANONICAL_REPOSITORY: ${{ github.event.repository.full_name }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          TRIGGER_SHA: ${{ github.sha }}
+          REF_NAME: ${{ github.ref_name }}
+          REF_PROTECTED: ${{ github.ref_protected }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = "$CANONICAL_REPOSITORY"
+          test "$REF_NAME" = "$DEFAULT_BRANCH"
+          test "$REF_PROTECTED" = "true"
+          test "$(git rev-parse HEAD)" = "$TRIGGER_SHA"
+          git show-ref --verify --quiet "refs/remotes/origin/$DEFAULT_BRANCH"
+          git show-ref --verify --quiet refs/remotes/origin/data
+          git merge-base --is-ancestor "$TRIGGER_SHA" "origin/$DEFAULT_BRANCH"
+
+      - name: Download data-only publication artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # actions/download-artifact@v4.3.0
+        with:
+          name: daily-data-publication-${{ github.run_id }}
+          path: ${{ runner.temp }}/daily-data-publication
+
+      - name: Verify compute-bound manifest digest, artifact action digest, and manifest
+        id: verify-publication
+        env:
+          PUBLICATION_DIR: ${{ runner.temp }}/daily-data-publication
+          EXPECTED_COMPUTE_MANIFEST_SHA256: ${{ needs.daily-compute.outputs.publication_manifest_sha256 }}
+          EXPECTED_ARTIFACT_DIGEST: ${{ needs.daily-compute.outputs.artifact_digest }}
+          EXPECTED_REPOSITORY: ${{ github.repository }}
+          EXPECTED_EXECUTION_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          base_sha="$(git rev-parse origin/data)"
+          base_tree="$(git rev-parse "origin/data^{tree}")"
+          python3 backend/bin/validate_daily_publication_bundle.py verify \
+            --manifest "$PUBLICATION_DIR/publication-manifest.json" \
+            --manifest-sha256 "$PUBLICATION_DIR/publication-manifest.sha256" \
+            --bundle "$PUBLICATION_DIR/daily-data-publication.tar" \
+            --expected-repository "$EXPECTED_REPOSITORY" \
+            --expected-execution-sha "$EXPECTED_EXECUTION_SHA" \
+            --expected-target-branch data \
+            --expected-base-sha "$base_sha" \
+            --expected-base-tree "$base_tree" \
+            --expected-compute-manifest-sha256 "$EXPECTED_COMPUTE_MANIFEST_SHA256" \
+            --expected-artifact-digest "$EXPECTED_ARTIFACT_DIGEST"
+          printf 'base_sha=%s\n' "$base_sha" >> "$GITHUB_OUTPUT"
+          printf 'base_tree=%s\n' "$base_tree" >> "$GITHUB_OUTPUT"
+
+      - name: Safely extract validated data bytes
+        env:
+          PUBLICATION_DIR: ${{ runner.temp }}/daily-data-publication
+          EXTRACTION_DIR: ${{ runner.temp }}/daily-data-extracted
+          EXPECTED_COMPUTE_MANIFEST_SHA256: ${{ needs.daily-compute.outputs.publication_manifest_sha256 }}
+          EXPECTED_ARTIFACT_DIGEST: ${{ needs.daily-compute.outputs.artifact_digest }}
+          EXPECTED_REPOSITORY: ${{ github.repository }}
+          EXPECTED_EXECUTION_SHA: ${{ github.sha }}
+          BASE_SHA: ${{ steps.verify-publication.outputs.base_sha }}
+          BASE_TREE: ${{ steps.verify-publication.outputs.base_tree }}
+        run: |
+          set -euo pipefail
+          python3 backend/bin/validate_daily_publication_bundle.py extract \
+            --manifest "$PUBLICATION_DIR/publication-manifest.json" \
+            --manifest-sha256 "$PUBLICATION_DIR/publication-manifest.sha256" \
+            --bundle "$PUBLICATION_DIR/daily-data-publication.tar" \
+            --destination "$EXTRACTION_DIR" \
+            --expected-repository "$EXPECTED_REPOSITORY" \
+            --expected-execution-sha "$EXPECTED_EXECUTION_SHA" \
+            --expected-target-branch data \
+            --expected-base-sha "$BASE_SHA" \
+            --expected-base-tree "$BASE_TREE" \
+            --expected-compute-manifest-sha256 "$EXPECTED_COMPUTE_MANIFEST_SHA256" \
+            --expected-artifact-digest "$EXPECTED_ARTIFACT_DIGEST"
+
+      - name: Create one content-only data commit
+        id: commit-publication
+        env:
+          EXTRACTION_DIR: ${{ runner.temp }}/daily-data-extracted
+          TARGET_WORKTREE: ${{ runner.temp }}/daily-data-target
+          BASE_SHA: ${{ steps.verify-publication.outputs.base_sha }}
+          MANIFEST: ${{ runner.temp }}/daily-data-publication/publication-manifest.json
+        run: |
+          set -euo pipefail
+          git -c core.hooksPath=/dev/null worktree add --detach "$TARGET_WORKTREE" "$BASE_SHA"
+          python3 backend/bin/validate_daily_publication_bundle.py apply \
+            --manifest "$MANIFEST" \
+            --source "$EXTRACTION_DIR" \
+            --target "$TARGET_WORKTREE"
+          git -C "$TARGET_WORKTREE" -c core.hooksPath=/dev/null add --all -- \
+            backend/restaurant-crawling/data backend/restaurant-evaluation/data
+          git -C "$TARGET_WORKTREE" diff --cached --check
+          git -C "$TARGET_WORKTREE" diff --cached --name-only -z > "$RUNNER_TEMP/daily-publication-index-paths"
+          python3 - "$MANIFEST" "$RUNNER_TEMP/daily-publication-index-paths" <<'PY'
+          import json
+          import pathlib
+          import sys
+          allowed = {entry["path"] for entry in json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))["files"]}
+          changed = [item.decode("utf-8") for item in pathlib.Path(sys.argv[2]).read_bytes().split(b"\0") if item]
+          unexpected = sorted(set(changed) - allowed)
+          if unexpected:
+              raise SystemExit(f"staged non-manifest data paths: {unexpected}")
+          PY
+          if git -C "$TARGET_WORKTREE" diff --cached --quiet; then
+            printf 'committed=false\n' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git -C "$TARGET_WORKTREE" -c core.hooksPath=/dev/null \
+            -c user.name="github-actions[bot]" \
+            -c user.email="github-actions[bot]@users.noreply.github.com" \
+            commit --no-verify -m "chore(data): publish daily data (${{ github.run_id }})"
+          test "$(git -C "$TARGET_WORKTREE" rev-parse HEAD^)" = "$BASE_SHA"
+          printf 'committed=true\n' >> "$GITHUB_OUTPUT"
+
+      - name: Push the one verified content commit
+        if: ${{ steps.commit-publication.outputs.committed == 'true' }}
+        env:
+          PUSH_TOKEN: ${{ github.token }}
+          TARGET_WORKTREE: ${{ runner.temp }}/daily-data-target
+          BASE_SHA: ${{ steps.verify-publication.outputs.base_sha }}
+        run: |
+          set -euo pipefail
+          test "$(git -C "$TARGET_WORKTREE" rev-parse HEAD^)" = "$BASE_SHA"
+          git -C "$TARGET_WORKTREE" merge-base --is-ancestor "$BASE_SHA" HEAD
+          askpass="$RUNNER_TEMP/daily-publication-askpass"
+          printf '%s\n' '#!/usr/bin/env bash' \
+            'case "$1" in *Username*) printf "%s" "x-access-token" ;; *) printf "%s" "$GIT_PASSWORD" ;; esac' > "$askpass"
+          chmod 700 "$askpass"
+          GIT_ASKPASS="$askpass" GIT_TERMINAL_PROMPT=0 GIT_PASSWORD="$PUSH_TOKEN" \
+            git -C "$TARGET_WORKTREE" -c credential.helper= push \
+            "https://github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/data

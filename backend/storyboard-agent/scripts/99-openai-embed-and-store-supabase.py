@@ -21,6 +21,15 @@ import sys
 import re
 import argparse
 from pathlib import Path
+CANONICAL_BACKEND_ROOT = Path(__file__).resolve().parents[2]
+if str(CANONICAL_BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(CANONICAL_BACKEND_ROOT))
+
+from utils.supabase_rest import (
+    SupabaseRestConfigurationError,
+    resolve_privileged_supabase_rest_credentials,
+)
+from utils.privacy_log import safe_error_name
 from collections import defaultdict
 from datetime import datetime
 from tqdm import tqdm
@@ -39,9 +48,6 @@ openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 EMBEDDING_MODEL = "text-embedding-3-small"
 EMBEDDING_DIMENSION = 1536
 
-# Supabase 설정
-SUPABASE_URL = os.getenv("PUBLIC_SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 
 # 경로 설정
 SCRIPT_DIR = Path(__file__).parent.resolve()
@@ -49,6 +55,34 @@ INPUT_DIR = (
     SCRIPT_DIR
     / "../../restaurant-crawling/data/tzuyang/transcript-document-with-context"
 )
+
+
+def _provider_error_status(error: BaseException) -> int | None:
+    """Read structured provider statuses without retaining provider diagnostics."""
+    try:
+        for attribute in ("status", "status_code", "code"):
+            value = getattr(error, attribute, None)
+            if type(value) is int:
+                return value
+        response = getattr(error, "response", None)
+        value = getattr(response, "status_code", None)
+        return value if type(value) is int else None
+    except Exception:
+        return None
+
+
+def classify_provider_failure(error: BaseException, fallback: str) -> str:
+    """Map typed and structured provider failures to stable reason codes."""
+    status = _provider_error_status(error)
+    if status == 429:
+        return "provider_rate_limited"
+    if status in (401, 403):
+        return "provider_auth_failed"
+    if status is not None and status >= 500:
+        return "provider_service_unavailable"
+    if isinstance(error, TimeoutError):
+        return "provider_timeout"
+    return fallback
 
 
 def extract_video_id_from_youtube_link(youtube_link: str) -> str | None:
@@ -134,7 +168,10 @@ def load_documents(video_restaurants: dict[str, list[str]]):
     documents = []
 
     if not INPUT_DIR.exists():
-        print(f"❌ 입력 디렉토리 없음: {INPUT_DIR}", flush=True)
+        print(
+            "op=embedding_document_load_skipped reason=input_directory_missing",
+            flush=True,
+        )
         return documents
 
     input_files = list(INPUT_DIR.glob("*.jsonl"))
@@ -232,8 +269,15 @@ def update_metadata_only(supabase: Client, documents: list[dict]):
                     "chunk_index", doc["chunk_index"]
                 ).execute()
                 success += 1
-            except Exception as e:
-                print(f"⚠️ 메타데이터 업데이트 실패: {e}", flush=True)
+            except Exception as error:
+                reason = classify_provider_failure(
+                    error, "supabase_metadata_update_failed"
+                )
+                print(
+                    f"op=embedding_metadata_update_failed reason={reason} "
+                    f"error={safe_error_name(error)}",
+                    flush=True,
+                )
                 errors += 1
 
     print(f"✅ 메타데이터 업데이트 완료: {success}개 성공, {errors}개 실패", flush=True)
@@ -286,37 +330,38 @@ def embed_and_store(supabase: Client, documents: list[dict], batch_size: int = 5
 
             inserted += len(batch)
 
-        except Exception as e:
-            print(f"\n⚠️ 배치 오류: {e}", flush=True)
+        except Exception as error:
+            reason = classify_provider_failure(error, "embedding_batch_failed")
+            print(
+                f"op=embedding_batch_failed reason={reason} "
+                f"error={safe_error_name(error)}",
+                flush=True,
+            )
             errors += len(batch)
 
     print(f"\n✅ 임베딩 완료: {inserted}개 성공, {errors}개 실패", flush=True)
 
 
 def verify_embeddings(supabase: Client):
-    """임베딩 검증"""
+    """Verify embedding counts without emitting stored provider data."""
     print("\n🔍 임베딩 검증...", flush=True)
 
-    # 총 개수
     result = supabase.table("document_embeddings").select("id", count="exact").execute()
-    count = result.count
-    print(f"  총 임베딩: {count}개", flush=True)
+    count = result.count if type(result.count) is int else 0
+    print(f"op=embedding_verification_count status=checked count={count}", flush=True)
 
-    # 샘플 데이터 확인
     sample = (
         supabase.table("document_embeddings")
         .select("video_id, page_content, metadata")
         .limit(3)
         .execute()
     )
-
-    print("\n📋 샘플 데이터:", flush=True)
-    for row in sample.data:
-        content_preview = row.get("page_content", "")[:60]
-        restaurants = row.get("metadata", {}).get("restaurants", [])
-        print(f"  - {row.get('video_id')}: {content_preview}...", flush=True)
-        print(f"    음식점: {restaurants}", flush=True)
-
+    sample_rows = sample.data if isinstance(sample.data, list) else []
+    print(
+        f"op=embedding_verification_sample status=checked "
+        f"sample_count={min(len(sample_rows), 3)}",
+        flush=True,
+    )
 
 def main():
     parser = argparse.ArgumentParser(
@@ -331,12 +376,13 @@ def main():
     print("=" * 60, flush=True)
 
     # 1. Supabase 연결
-    if not SUPABASE_URL or not SUPABASE_KEY:
-        print("❌ SUPABASE_URL 또는 SUPABASE_SERVICE_ROLE_KEY가 없습니다", flush=True)
+    print("\n🔌 Supabase 연결 준비됨", flush=True)
+    try:
+        credentials = resolve_privileged_supabase_rest_credentials()
+    except SupabaseRestConfigurationError:
+        print("❌ Supabase REST configuration invalid.", flush=True)
         return
-
-    print(f"\n🔌 Supabase 연결: {SUPABASE_URL}", flush=True)
-    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    supabase = create_client(credentials.url, credentials.service_role_key)
     print("✅ 연결 성공", flush=True)
 
     # 2. 음식점 정보 조회 (매번 최신화)
@@ -378,4 +424,14 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as error:
+        reason = classify_provider_failure(error, "embedding_run_failed")
+        print(
+            f"op=embedding_run_failed reason={reason} "
+            f"error={safe_error_name(error)}",
+            file=sys.stderr,
+            flush=True,
+        )
+        raise SystemExit(1) from None

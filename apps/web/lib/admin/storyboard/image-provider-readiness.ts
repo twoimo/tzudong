@@ -6,8 +6,6 @@ export const STORYBOARD_IMAGE_PROVIDER_MODEL_ENV = 'STORYBOARD_LOCAL_CODEX_IMAGE
 export const STORYBOARD_IMAGE_PROVIDER_COMMAND_ENV = 'STORYBOARD_LOCAL_CODEX_COMMAND' as const;
 export const STORYBOARD_IMAGE_PROVIDER_COMMAND_PLACEHOLDER = '<verified bridge>' as const;
 export const STORYBOARD_BROWSER_OPENAI_API_KEY_HEADER = 'x-storyboard-openai-api-key' as const;
-export const STORYBOARD_BROWSER_MODEL_KEYS_STORAGE_KEY =
-  'tzudong.admin.storyboard.modelKeys.v1' as const;
 
 export type StoryboardImageProviderReason =
   | 'local_codex_model_not_allowed'
@@ -51,8 +49,8 @@ export type StoryboardImageProviderAvailabilityPayload = {
   model?: string;
   providerId?: string;
   modelProvenance?: string;
-  authMode?: string;
-  browserKeyStorage?: 'browser_local_storage_only';
+  authMode?: 'codex_oauth' | 'browser_memory_only_api_key';
+  browserKeyStorage?: 'memory_only_operation_scoped';
   target?: StoryboardImageProviderTarget;
 };
 
@@ -63,7 +61,7 @@ export type StoryboardImageProviderStatusResponse = {
     localCodexModel?: string;
     localCodexProof?: string;
     browserOpenAIApiKey?: string;
-    browserKeyStorage?: 'browser_local_storage_only';
+    browserKeyStorage?: 'memory_only_operation_scoped';
     browserApiKeyHeader?: typeof STORYBOARD_BROWSER_OPENAI_API_KEY_HEADER;
     browserImageTransport?: 'data_url_response_no_server_file_write';
   };
@@ -119,11 +117,11 @@ export function mapStoryboardImageProviderReadiness(
       status: 'ready',
       label: '이미지 생성 준비됨',
       summary: isBrowserKeyProvider
-        ? '브라우저에 저장한 API 키로 이미지 생성 준비가 끝났습니다.'
+        ? '활성 작업의 컴포넌트 메모리에만 있는 API 키로 이미지 생성 준비가 끝났습니다.'
         : '이미지 만들기 준비가 끝났습니다.',
       detail:
         isBrowserKeyProvider
-          ? '키는 이 브라우저 캐시에만 보관되고, 이미지는 서버 파일로 저장하지 않고 현재 응답으로만 전달됩니다.'
+          ? '키는 활성 작업 동안 컴포넌트 메모리에만 있고, 보호된 요청 헤더로 한 번만 전송되며 저장되지 않습니다. 이미지는 서버 파일로 저장하지 않고 현재 응답으로만 전달됩니다.'
           : '현재 페이지의 스토리보드 컷을 새 이미지로 만들 수 있습니다.',
       reason: 'ready',
       model,

@@ -1,8 +1,22 @@
 @config "../tailwind.home.config.ts";
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss" source(none);
+@source "./page.tsx";
+@source "./home-runtime-shell.tsx";
+@source "./home-client.tsx";
+@source "./home-client-effects.tsx";
+@source "./app-providers.tsx";
+@source "./providers.tsx";
+@source "../hooks";
+@source "../contexts";
+@source "../components/home";
+@source "../components/layout";
+@source "../components/map";
+@source "../components/search";
+@source "../components/filters";
+@source "../components/region";
+@source "../components/skeletons";
+@source "../components/ui";
 
 /* ============================================
    모바일 뷰포트 높이 문제 해결 (Mobile Viewport Height Fix)

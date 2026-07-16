@@ -4,22 +4,30 @@ on:
   pull_request:
     paths:
       - '.github/workflows/web-admin-ci.yml'
+      - '.github/workflows/release-governance-ci.yml'
+      - '.github/workflows/ts7-release-evidence.yml'
       - '.github/workflows/restaurant-refresh-cron.yml'
       - '.github/workflows/supabase-migration-apply.yml'
-      - 'apps/web/app/admin/evaluations/**'
+      - 'apps/web/app/admin/**'
+      - 'apps/web/app/api/admin/**'
+      - 'apps/web/app/api/auth/**'
       - 'apps/web/components/admin/**'
-      - 'apps/web/app/api/admin/restaurant-refresh-history/**'
-      - 'apps/web/lib/admin-address-consistency.ts'
+      - 'apps/web/lib/auth/**'
+      - 'apps/web/tests/**'
       - 'apps/web/tests-unit/**'
-      - 'apps/web/scripts/restaurant-refresh-cron.mjs'
-      - 'apps/web/scripts/apply-supabase-migration.mjs'
-      - 'apps/web/scripts/vercel-ignore-build.mjs'
+      - 'apps/web/scripts/**'
+      - 'apps/web/config/**'
+      - 'apps/web/performance/**'
+      - 'apps/web/fixtures/performance-backlog/**'
+      - 'apps/web/fixtures/typecheck-benchmark/**'
       - 'apps/web/vercel.json'
       - 'apps/web/package.json'
       - 'apps/web/package-lock.json'
       - 'apps/web/bun.lock'
       - 'apps/web/tsconfig.json'
       - 'apps/web/eslint.config.mjs'
+      - 'apps/web/playwright.config.ts'
+      - 'apps/web/playwright.release.config.ts'
       - 'backend/bin/apply_tzuyang_address_evidence_ledger.mjs'
       - 'backend/bin/build_tzuyang_address_evidence_ledger.mjs'
       - 'backend/bin/build_tzuyang_case_review_pack.mjs'
@@ -33,28 +41,33 @@ on:
       - 'backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger.test.mjs'
       - 'backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger-cli-fixture.mjs'
   push:
-    branches:
-      - main
-      - develop
-      - data
+    branches: [main, develop, data]
     paths:
       - '.github/workflows/web-admin-ci.yml'
+      - '.github/workflows/release-governance-ci.yml'
+      - '.github/workflows/ts7-release-evidence.yml'
       - '.github/workflows/restaurant-refresh-cron.yml'
       - '.github/workflows/supabase-migration-apply.yml'
-      - 'apps/web/app/admin/evaluations/**'
+      - 'apps/web/app/admin/**'
+      - 'apps/web/app/api/admin/**'
+      - 'apps/web/app/api/auth/**'
       - 'apps/web/components/admin/**'
-      - 'apps/web/app/api/admin/restaurant-refresh-history/**'
-      - 'apps/web/lib/admin-address-consistency.ts'
+      - 'apps/web/lib/auth/**'
+      - 'apps/web/tests/**'
       - 'apps/web/tests-unit/**'
-      - 'apps/web/scripts/restaurant-refresh-cron.mjs'
-      - 'apps/web/scripts/apply-supabase-migration.mjs'
-      - 'apps/web/scripts/vercel-ignore-build.mjs'
+      - 'apps/web/scripts/**'
+      - 'apps/web/config/**'
+      - 'apps/web/performance/**'
+      - 'apps/web/fixtures/performance-backlog/**'
+      - 'apps/web/fixtures/typecheck-benchmark/**'
       - 'apps/web/vercel.json'
       - 'apps/web/package.json'
       - 'apps/web/package-lock.json'
       - 'apps/web/bun.lock'
       - 'apps/web/tsconfig.json'
       - 'apps/web/eslint.config.mjs'
+      - 'apps/web/playwright.config.ts'
+      - 'apps/web/playwright.release.config.ts'
       - 'backend/bin/apply_tzuyang_address_evidence_ledger.mjs'
       - 'backend/bin/build_tzuyang_address_evidence_ledger.mjs'
       - 'backend/bin/build_tzuyang_case_review_pack.mjs'
@@ -68,115 +81,342 @@ on:
       - 'backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger.test.mjs'
       - 'backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger-cli-fixture.mjs'
   schedule:
-    # Weekly freshness/admin regression guard: Mondays 03:17 KST (Sundays 18:17 UTC).
     - cron: '17 18 * * 0'
   workflow_dispatch:
-
-permissions:
-  contents: read
 
 concurrency:
   group: web-admin-ci-${{ github.ref }}
   cancel-in-progress: true
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
-  admin-address-consistency:
-    name: Admin address consistency regression
+  dependency-modernization-proof:
+    name: Dependency modernization clean-install proof
     runs-on: ubuntu-latest
-    timeout-minutes: 25
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_DB: tzudong_ci
-          POSTGRES_USER: postgres
-          POSTGRES_HOST_AUTH_METHOD: trust
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: '24'
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: '1.2.16'
+      - name: Create independent clean workspaces
+        run: |
+          set -euo pipefail
+          proof_root="$RUNNER_TEMP/dependency-modernization-proof"
+          mkdir -p "$proof_root"
+          cp -a "$GITHUB_WORKSPACE/." "$proof_root/npm"
+          cp -a "$GITHUB_WORKSPACE/." "$proof_root/bun"
+          test ! -e "$proof_root/npm/apps/web/node_modules"
+          test ! -e "$proof_root/bun/apps/web/node_modules"
+      - name: Pin authoritative Node and npm
+        run: |
+          set -euo pipefail
+          npm install --global npm@11.6.2
+          case "$(node --version)" in v24.*) ;; *) exit 1 ;; esac
+          test "$(npm --version)" = "11.6.2"
+      - name: Authoritative npm clean install, Node production probes, and browser behavior
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/dependency-modernization-proof/npm/apps/web"
+          node_bin="$(command -v node)"
+          npm_bin="$(command -v npm)"
+          test "${node_bin#/}" != "$node_bin"
+          test "${npm_bin#/}" != "$npm_bin"
+          (
+            cd "$root"
+            npm ci
+            sha256sum package-lock.json bun.lock > dependency-modernization-lock-hashes-npm.txt
+            TZUDONG_DEPENDENCY_PROOF_ROOT="$root" TZUDONG_NODE24_EXECUTABLE="$node_bin" TZUDONG_NPM_11_EXECUTABLE="$npm_bin" npm run test:dependency-modernization
+            npm run build
+            npx playwright install --with-deps chromium
+            PLAYWRIGHT_WEB_SERVER_COMMAND="npm run start:playwright" npm run test:dependency-modernization:browser
+          )
+      - name: Supplemental Bun clean install and Node production probes
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/dependency-modernization-proof/bun/apps/web"
+          node_bin="$(command -v node)"
+          npm_bin="$(command -v npm)"
+          test "$(bun --version)" = "1.2.16"
+          (
+            cd "$root"
+            bun install --frozen-lockfile
+            sha256sum package-lock.json bun.lock > dependency-modernization-lock-hashes-bun.txt
+            TZUDONG_DEPENDENCY_PROOF_ROOT="$root" TZUDONG_NODE24_EXECUTABLE="$node_bin" TZUDONG_NPM_11_EXECUTABLE="$npm_bin" bun run test:dependency-modernization
+          )
+      - name: Upload clean-install lock evidence
+        if: always()
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
+        with:
+          name: dependency-modernization-lock-evidence-${{ github.run_id }}
+          path: ${{ runner.temp }}/dependency-modernization-proof/**/dependency-modernization-lock-hashes-*.txt
+          if-no-files-found: error
+          retention-days: 90
+  ubuntu-npm-authority:
+    name: Ubuntu npm authority
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
     defaults:
       run:
         working-directory: apps/web
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # actions/checkout@v6
-
-      - name: Set up Node.js
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # actions/setup-node@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
           node-version: '24'
           cache: npm
           cache-dependency-path: apps/web/package-lock.json
-
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
           bun-version: '1.2.16'
+      - name: Pin npm authority
+        run: npm install --global npm@11.6.2 && test "$(npm --version)" = "11.6.2"
+      - run: npm ci
+      - run: npm run typecheck:verify
+      - run: npm run typecheck:native
+      - run: npm run typecheck:compat
+      - run: npm run typecheck:parity
+      - id: benchmark
+        continue-on-error: true
+        run: |
+          tree="$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD^{tree})"
+          npm run bench:typecheck -- --profile ubuntu-npm --release-id "$tree" --output "$RUNNER_TEMP/ts7-release/$tree/ubuntu-npm/report.json"
+      - id: report
+        continue-on-error: true
+        run: |
+          tree="$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD^{tree})"
+          REPORT="$RUNNER_TEMP/ts7-release/$tree/ubuntu-npm/report.json" TREE="$tree" node -e 'const fs=require("node:fs");const r=JSON.parse(fs.readFileSync(process.env.REPORT,"utf8"));if(r.releaseId!==process.env.TREE||r.candidate?.tree!==process.env.TREE||r.candidate?.profile!=="ubuntu-npm"||r.candidate?.platform!=="linux-x64"||r.candidate?.installer!=="npm"||r.acceptance?.passed!==true)throw new Error("invalid benchmark report");'
+      - name: Upload npm benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
+        with:
+          name: ts7-benchmark-ubuntu-npm-${{ github.run_id }}
+          path: ${{ runner.temp }}/ts7-release
+          if-no-files-found: error
+          retention-days: 90
+      - name: Fail closed on benchmark evidence
+        if: always()
+        run: test "${{ steps.benchmark.outcome }}" = success -a "${{ steps.report.outcome }}" = success
+      - run: npm run lint
+      - run: npm run test:unit
+      - run: npm run build
 
-      - name: Install dependencies
-        run: npm ci
+  ubuntu-bun-compatibility:
+    name: Ubuntu Bun 1.2.16 compatibility
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: web-bun/apps/web
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          path: web-bun
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: '24'
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: '1.2.16'
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck:verify
+      - run: bun run typecheck:native
+      - run: bun run typecheck:compat
+      - run: bun run typecheck:parity
+      - id: benchmark
+        continue-on-error: true
+        run: |
+          tree="$(git -C "$GITHUB_WORKSPACE/web-bun" rev-parse HEAD^{tree})"
+          bun run bench:typecheck -- --profile ubuntu-bun --release-id "$tree" --output "$RUNNER_TEMP/ts7-release/$tree/ubuntu-bun/report.json"
+      - id: report
+        continue-on-error: true
+        run: |
+          tree="$(git -C "$GITHUB_WORKSPACE/web-bun" rev-parse HEAD^{tree})"
+          REPORT="$RUNNER_TEMP/ts7-release/$tree/ubuntu-bun/report.json" TREE="$tree" node -e 'const fs=require("node:fs");const r=JSON.parse(fs.readFileSync(process.env.REPORT,"utf8"));if(r.releaseId!==process.env.TREE||r.candidate?.tree!==process.env.TREE||r.candidate?.profile!=="ubuntu-bun"||r.candidate?.platform!=="linux-x64"||r.candidate?.installer!=="bun"||r.acceptance?.passed!==true)throw new Error("invalid benchmark report");'
+      - name: Upload Bun benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
+        with:
+          name: ts7-benchmark-ubuntu-bun-${{ github.run_id }}
+          path: ${{ runner.temp }}/ts7-release
+          if-no-files-found: error
+          retention-days: 90
+      - name: Fail closed on benchmark evidence
+        if: always()
+        run: test "${{ steps.benchmark.outcome }}" = success -a "${{ steps.report.outcome }}" = success
+      - run: bun test tests-unit/cross-platform-web-tooling-source.test.ts tests-unit/typescript-toolchain-source.test.ts tests-unit/typecheck-benchmark-source.test.ts tests-unit/typecheck-benchmark-fixtures.test.ts tests-unit/performance-backlog-governance.test.ts tests-unit/auth-release-smoke-source.test.ts tests-unit/release-visual-privacy-source.test.ts tests-unit/release-visual-runner-source.test.ts tests-unit/release-workflow-governance-source.test.ts
 
-      - name: Install backend dependencies
-        run: cd ../.. && npm ci --prefix backend
+  windows-npm-tooling:
+    name: Windows npm tooling
+    runs-on: windows-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: web-npm/apps/web
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          path: web-npm
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: web-npm/apps/web/package-lock.json
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: '1.2.16'
+      - name: Pin npm authority
+        run: |
+          npm install --global npm@11.6.2
+          if ($LASTEXITCODE -ne 0 -or (npm --version) -ne '11.6.2') { exit 1 }
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck:verify
+      - run: npm run typecheck:native
+      - run: npm run typecheck:compat
+      - run: npm run typecheck:parity
+      - id: benchmark
+        continue-on-error: true
+        run: |
+          $root = Join-Path $env:GITHUB_WORKSPACE 'web-npm'
+          $tree = git -C $root rev-parse 'HEAD^{tree}'
+          npm run bench:typecheck -- --profile windows-npm --release-id $tree --output (Join-Path $env:RUNNER_TEMP "ts7-release\$tree\windows-npm\report.json")
+      - id: report
+        continue-on-error: true
+        run: |
+          $root = Join-Path $env:GITHUB_WORKSPACE 'web-npm'
+          $tree = git -C $root rev-parse 'HEAD^{tree}'
+          $env:REPORT = Join-Path $env:RUNNER_TEMP "ts7-release\$tree\windows-npm\report.json"
+          $env:TREE = $tree
+          node -e 'const fs=require("node:fs");const r=JSON.parse(fs.readFileSync(process.env.REPORT,"utf8"));if(r.releaseId!==process.env.TREE||r.candidate?.tree!==process.env.TREE||r.candidate?.profile!=="windows-npm"||r.candidate?.platform!=="win32-x64"||r.candidate?.installer!=="npm"||r.acceptance?.passed!==true)throw new Error("invalid benchmark report");'
+      - name: Upload npm benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
+        with:
+          name: ts7-benchmark-windows-npm-${{ github.run_id }}
+          path: ${{ runner.temp }}/ts7-release
+          if-no-files-found: error
+          retention-days: 90
+      - name: Fail closed on benchmark evidence
+        if: always()
+        run: if ('${{ steps.benchmark.outcome }}' -ne 'success' -or '${{ steps.report.outcome }}' -ne 'success') { exit 1 }
+      - run: bun test tests-unit/cross-platform-web-tooling-source.test.ts tests-unit/typescript-toolchain-source.test.ts tests-unit/typecheck-benchmark-source.test.ts tests-unit/typecheck-benchmark-fixtures.test.ts tests-unit/performance-backlog-governance.test.ts tests-unit/auth-release-smoke-source.test.ts tests-unit/release-visual-privacy-source.test.ts tests-unit/release-visual-runner-source.test.ts tests-unit/release-workflow-governance-source.test.ts
 
-      - name: Lint changed admin address surfaces
-        run: >
-          npx eslint
-          lib/admin-address-consistency.ts
-          app/admin/evaluations/page.tsx
-          components/admin/EvaluationDetailView.tsx
-          components/admin/EvaluationTableNew.tsx
-          tests-unit/admin-address-consistency.test.ts
-          tests-unit/admin-evaluation-address-filter-source.test.ts
-          tests-unit/admin-restaurant-refresh-history-source.test.ts
-          tests-unit/admin-sidebar-order.test.ts
-          scripts/restaurant-refresh-cron.mjs
-          scripts/apply-supabase-migration.mjs
-          tests-unit/restaurant-refresh-cron.test.ts
-          tests-unit/supabase-migration-apply-source.test.ts
-          --max-warnings=0
-
-      - name: Typecheck web app
-        run: npx tsc --noEmit --pretty false
-
-      - name: Run backend address ledger regression tests
-        run: >
-          cd ../.. &&
-          node --test
-          backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger.test.mjs
-          backend/restaurant-evaluation/scripts/tests/tzuyang-case-review-pack.test.mjs
-          backend/restaurant-evaluation/scripts/tests/tzuyang-operator-review-package.test.mjs
-
-
-      - name: Run backend address ledger CLI fixture chain
-        run: >
-          cd ../.. &&
-          TZUYANG_LEDGER_CI_FIXTURE=1
-          SUPABASE_DB_HOST=localhost
-          SUPABASE_DB_PORT=5432
-          SUPABASE_DB_NAME=tzudong_ci
-          SUPABASE_DB_USER=postgres
-          SUPABASE_DB_PASSWORD=${{ github.run_id }}
-          SUPABASE_DB_SSL=disable
-          node backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger-cli-fixture.mjs
-
-      - name: Run admin address regression tests
-        run: >
-          bun test
-          tests-unit/admin-address-consistency.test.ts
-          tests-unit/admin-evaluation-address-filter-source.test.ts
-          tests-unit/admin-restaurant-refresh-history-source.test.ts
-          tests-unit/admin-sidebar-order.test.ts
-          tests-unit/restaurant-refresh-cron.test.ts
-          tests-unit/supabase-migration-apply-source.test.ts
-          tests-unit/mobile-desktop-parity-source.test.ts
-          tests-unit/web-quality-performance-source.test.ts
-          tests-unit/vercel-ignore-build.test.ts
+  windows-bun-compatibility:
+    name: Windows Bun 1.2.16 compatibility
+    runs-on: windows-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: web-bun/apps/web
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          path: web-bun
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: '24'
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: '1.2.16'
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck:verify
+      - run: bun run typecheck:native
+      - run: bun run typecheck:compat
+      - run: bun run typecheck:parity
+      - id: benchmark
+        continue-on-error: true
+        run: |
+          $root = Join-Path $env:GITHUB_WORKSPACE 'web-bun'
+          $tree = git -C $root rev-parse 'HEAD^{tree}'
+          bun run bench:typecheck -- --profile windows-bun --release-id $tree --output (Join-Path $env:RUNNER_TEMP "ts7-release\$tree\windows-bun\report.json")
+      - id: report
+        continue-on-error: true
+        run: |
+          $root = Join-Path $env:GITHUB_WORKSPACE 'web-bun'
+          $tree = git -C $root rev-parse 'HEAD^{tree}'
+          $env:REPORT = Join-Path $env:RUNNER_TEMP "ts7-release\$tree\windows-bun\report.json"
+          $env:TREE = $tree
+          node -e 'const fs=require("node:fs");const r=JSON.parse(fs.readFileSync(process.env.REPORT,"utf8"));if(r.releaseId!==process.env.TREE||r.candidate?.tree!==process.env.TREE||r.candidate?.profile!=="windows-bun"||r.candidate?.platform!=="win32-x64"||r.candidate?.installer!=="bun"||r.acceptance?.passed!==true)throw new Error("invalid benchmark report");'
+      - name: Upload Bun benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
+        with:
+          name: ts7-benchmark-windows-bun-${{ github.run_id }}
+          path: ${{ runner.temp }}/ts7-release
+          if-no-files-found: error
+          retention-days: 90
+      - name: Fail closed on benchmark evidence
+        if: always()
+        run: if ('${{ steps.benchmark.outcome }}' -ne 'success' -or '${{ steps.report.outcome }}' -ne 'success') { exit 1 }
+      - run: bun test tests-unit/cross-platform-web-tooling-source.test.ts tests-unit/typescript-toolchain-source.test.ts tests-unit/typecheck-benchmark-source.test.ts tests-unit/typecheck-benchmark-fixtures.test.ts tests-unit/performance-backlog-governance.test.ts tests-unit/auth-release-smoke-source.test.ts tests-unit/release-visual-privacy-source.test.ts tests-unit/release-visual-runner-source.test.ts tests-unit/release-workflow-governance-source.test.ts
+  admin-address-consistency:
+    name: Admin address consistency regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres@sha256:be01cf82fc7dbba824acf0a82e150b4b360f3ff93c6631d7844af431e841a95c
+        env:
+          POSTGRES_DB: tzudong_ci
+          POSTGRES_USER: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: '1.2.16'
+      - name: Pin npm authority
+        run: npm install --global npm@11.6.2 && test "$(npm --version)" = "11.6.2"
+      - run: npm ci
+      - run: cd ../.. && npm ci --prefix backend
+      - run: npx eslint lib/admin-address-consistency.ts app/admin/evaluations/page.tsx components/admin/EvaluationDetailView.tsx components/admin/EvaluationTableNew.tsx tests-unit/admin-address-consistency.test.ts tests-unit/admin-evaluation-address-filter-source.test.ts tests-unit/admin-restaurant-refresh-history-source.test.ts tests-unit/admin-sidebar-order.test.ts scripts/restaurant-refresh-cron.mjs scripts/apply-supabase-migration.mjs tests-unit/restaurant-refresh-cron.test.ts tests-unit/supabase-migration-apply-source.test.ts --max-warnings=0
+      - run: npx tsc --noEmit --pretty false
+      - run: cd ../.. && node --test backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger.test.mjs backend/restaurant-evaluation/scripts/tests/tzuyang-case-review-pack.test.mjs backend/restaurant-evaluation/scripts/tests/tzuyang-operator-review-package.test.mjs
+      - run: cd ../.. && TZUYANG_LEDGER_CI_FIXTURE=1 SUPABASE_DB_HOST=localhost SUPABASE_DB_PORT=5432 SUPABASE_DB_NAME=tzudong_ci SUPABASE_DB_USER=postgres SUPABASE_DB_PASSWORD=${{ github.run_id }} SUPABASE_DB_SSL=disable node backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger-cli-fixture.mjs
+      - run: bun test tests-unit/admin-address-consistency.test.ts tests-unit/admin-evaluation-address-filter-source.test.ts tests-unit/admin-restaurant-refresh-history-source.test.ts tests-unit/admin-sidebar-order.test.ts tests-unit/restaurant-refresh-cron.test.ts tests-unit/supabase-migration-apply-source.test.ts tests-unit/mobile-desktop-parity-source.test.ts tests-unit/web-quality-performance-source.test.ts tests-unit/vercel-ignore-build.test.ts

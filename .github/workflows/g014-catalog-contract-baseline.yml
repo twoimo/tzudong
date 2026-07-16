@@ -1,0 +1,126 @@
+name: G014 catalog contract baseline
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/g014-catalog-contract-baseline.yml'
+      - 'backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh'
+      - 'backend/supabase/volumes/db/**'
+      - 'backend/supabase/migrations/**'
+      - 'backend/supabase/baselines/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    if: >-
+      github.event_name != 'workflow_dispatch' ||
+      (github.repository == 'twoimo/tzudong' &&
+       github.ref == 'refs/heads/release/ts7-performance-019f4809-recovery')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out the exact event commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Verify detached checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          ! git symbolic-ref -q HEAD
+
+      - name: Run G026 and reconstruction unit tests
+        run: >-
+          python -m unittest
+          backend.supabase.tests.test_reconstruction_source_archive
+          backend.supabase.tests.test_g024_source_reconstruction
+          backend.supabase.tests.test_compare_g024_clean_replays
+          backend.supabase.tests.test_g026_reconstruction_bundle
+
+      - name: Check generator shell syntax
+        shell: bash
+        run: bash -n backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh
+      - name: Generate first clean source-only catalog replay
+        shell: bash
+        run: >-
+          bash backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh
+          --output-dir "$RUNNER_TEMP/g024-replay-a"
+
+      - name: Generate second clean source-only catalog replay
+        shell: bash
+        run: >-
+          bash backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh
+          --output-dir "$RUNNER_TEMP/g024-replay-b"
+
+      - name: Compare clean source-only catalog replays
+        shell: bash
+        run: >-
+          python backend/supabase/scripts/compare_g024_clean_replays.py
+          --left "$RUNNER_TEMP/g024-replay-a"
+          --right "$RUNNER_TEMP/g024-replay-b"
+          --output "$RUNNER_TEMP/g024-dual-clean-replay.json"
+
+      - name: Upload dual clean replay evidence
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
+        with:
+          name: g024-dual-clean-replay-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/g024-replay-a
+            ${{ runner.temp }}/g024-replay-b
+            ${{ runner.temp }}/g024-dual-clean-replay.json
+          if-no-files-found: error
+          retention-days: 14
+  hosted-migration-ledger:
+    if: github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out the exact event commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: '3.11'
+
+      - name: Install pinned PostgreSQL driver
+        run: python -m pip install 'psycopg[binary]==3.2.10'
+
+      - name: Run hosted migration-ledger tests
+        run: >-
+          python -m unittest
+          backend.supabase.tests.test_read_hosted_migration_ledger
+          backend.supabase.tests.test_historical_migration_inventory
+
+      - name: Read hosted migration ledger
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: >-
+          python backend/supabase/scripts/read_hosted_migration_ledger.py
+          --output artifacts/hosted-migration-ledger.json
+
+      - name: Validate sanitized artifact
+        run: >-
+          python backend/supabase/scripts/read_hosted_migration_ledger.py
+          --validate-artifact artifacts/hosted-migration-ledger.json
+
+      - name: Upload hosted migration-ledger artifact
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
+        with:
+          name: hosted-migration-ledger-${{ github.sha }}
+          path: artifacts/hosted-migration-ledger.json
+          if-no-files-found: error
+          retention-days: 14

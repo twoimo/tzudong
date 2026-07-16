@@ -273,6 +273,11 @@ function HomeMapContainerComponent({
     const lastMapInteractionCollapseAtRef = useRef(0);
 
     // [PERFORMANCE] 렌더링에 필요한 상태만 useState로 관리
+    const [viewportHeight, setViewportHeight] = useState(() => (
+        typeof window !== 'undefined'
+            ? (window.visualViewport?.height ?? window.innerHeight)
+            : 800
+    ));
     const [sheetHeight, setSheetHeight] = useState(INITIAL_HEIGHT);
     const [isDragging, setIsDragging] = useState(false);
     const [sheetSnapTransition, setSheetSnapTransition] = useState<SheetSnapTransition>({
@@ -535,7 +540,8 @@ function HomeMapContainerComponent({
             if (throttleTimer !== null) return;
 
             throttleTimer = requestAnimationFrame(() => {
-            viewportHeightRef.current = viewport.height;
+                viewportHeightRef.current = viewport.height;
+                setViewportHeight(viewport.height);
                 // 드래그 중이 아닐 때만 상태 업데이트 (리렌더링 최소화)
                 if (!isDraggingRef.current) {
                     const currentMaxHeight = getCurrentMaxHeight(viewport.height);
@@ -1176,7 +1182,9 @@ function HomeMapContainerComponent({
         panelRestaurant,
         selectedRestaurant,
     ]);
-    swipeNavigationRef.current = handleSwipeToRestaurant;
+    useEffect(() => {
+        swipeNavigationRef.current = handleSwipeToRestaurant;
+    }, [handleSwipeToRestaurant]);
     useEffect(() => {
         if (!isMobileOrTablet || !isPanelOpen || !panelRestaurant) return;
 
@@ -1472,7 +1480,8 @@ function HomeMapContainerComponent({
     const shouldExposeDetailPanelToMap = isMobileOrTablet
         ? isPanelOpen
         : (renderDesktopDetailPanel && isPanelOpen);
-    const isSheetAtFullHeight = sheetHeight >= getCurrentMaxHeight() - SHEET_HALF_OPEN_TOLERANCE;
+    const renderMaxSheetHeight = ((viewportHeight - HEADER_OFFSET) / viewportHeight) * 100;
+    const isSheetAtFullHeight = sheetHeight >= renderMaxSheetHeight - SHEET_HALF_OPEN_TOLERANCE;
     const shouldReserveDesktopSidePanel =
         desktopMapLayout === 'panel-aware' &&
         isDesktop &&
@@ -1492,14 +1501,14 @@ function HomeMapContainerComponent({
 
     return (
         <div
-            className="relative h-full w-full transition-[margin,width] duration-300 ease-out motion-reduce:transition-none"
+            className="relative h-full min-h-0 min-w-0 w-full overflow-hidden transition-[margin,width] duration-300 ease-out motion-reduce:transition-none"
             data-home-map-reserved-left-panel={shouldReserveDesktopLeftPanel ? "true" : "false"}
             data-home-map-reserved-right-panel={shouldReserveDesktopRightPanel ? "true" : "false"}
             data-home-map-panel-side={desktopPanelSide}
             data-layout-primitives="viewport-shell overlay-stack cluster"
             role="region"
             aria-label="쯔동여지도 홈 지도 화면"
-            data-scroll-owner="home-viewport"
+            data-scroll-owner="map-canvas-none"
             style={desktopMapLayoutStyle}
         >
             {mapMode === 'domestic' ? (
@@ -1577,7 +1586,7 @@ function HomeMapContainerComponent({
                                     overflow: 'visible',
                                 }}
                                 data-layout-primitives="list-detail frame stack"
-                                data-scroll-owner="visible-marker-list"
+                                data-scroll-owner="home-desktop-detail-panel"
                             >
                                 {/* 접기 버튼 */}
                                 <button
@@ -1616,14 +1625,15 @@ function HomeMapContainerComponent({
                                     'fixed bottom-0 left-0 right-0 z-[80] pointer-events-auto',
                                     'bg-background shadow-xl',
                                     isSheetAtFullHeight ? 'rounded-none' : 'rounded-t-2xl',
-                                    'overflow-hidden flex flex-col',
+                                    'min-h-0 min-w-0 overflow-hidden flex flex-col',
                                     isDragging ? '' : 'transition-[height,border-radius]',
                                     'pb-[env(safe-area-inset-bottom)]'
                                 )}
                                 data-sheet-state={isSheetAtFullHeight ? 'full' : 'partial'}
-                                data-scroll-owner="home-bottom-sheet"
+                                data-layout-primitives="list-detail frame stack"
+                                data-scroll-owner="home-mobile-detail-sheet"
                                 style={{
-                                    [`${SHEET_HEIGHT_CSS_VAR}`]: `${viewportHeightRef.current * sheetHeight / 100}px`,
+                                    [`${SHEET_HEIGHT_CSS_VAR}`]: `${viewportHeight * sheetHeight / 100}px`,
                                     height: `var(${SHEET_HEIGHT_CSS_VAR})`,
                                     maxHeight: '100%',
                                     willChange: isDragging ? 'height' : undefined,
@@ -1659,15 +1669,13 @@ function HomeMapContainerComponent({
                                 {/* 상세 패널 콘텐츠 */}
                                 <div
                                     ref={contentRef}
-                                    className="flex-1 overflow-hidden"
+                                    className="min-h-0 flex-1 overflow-hidden"
                                     style={{
                                         touchAction: isDragging
                                             ? 'none'
                                             : (sheetHeight <= PEEK_SHEET_HEIGHT + SHEET_HALF_OPEN_TOLERANCE ? 'none' : 'pan-y'),
                                         overflowY: isDragging ? 'hidden' : undefined,
                                     }}
-                                    data-layout-primitives="list-detail frame stack"
-                                    data-scroll-owner="visible-marker-list"
                                     onTouchStart={handleContentTouchStart}
                                     onTouchMove={handleContentTouchMove}
                                     onTouchEnd={handleContentTouchEnd}

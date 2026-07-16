@@ -1,5 +1,6 @@
 import fs from 'fs';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { logSafeError } from '../../utils/privacy-log.mjs';
 
 function resolveThinkingLevel(...candidates) {
     const allowed = new Set(['MINIMAL', 'LOW', 'MEDIUM', 'HIGH']);
@@ -34,17 +35,17 @@ async function main() {
     console.log("DEBUG: JS Script Started");
     const args = process.argv.slice(2);
     if (args.length < 2) {
-        console.error('Usage: node gemini_api_request.js <prompt_file> <output_file>');
+        console.error('GEMINI_API_REQUEST_ARGUMENTS_INVALID code=ARGUMENTS_INVALID');
         process.exit(1);
     }
 
     const promptFile = args[0];
     const outputFile = args[1];
-    console.log(`DEBUG: PromptFile=${promptFile}, OutputFile=${outputFile}`);
+    console.log('DEBUG: Request files accepted');
     const apiKeys = buildApiKeyPool();
 
     if (apiKeys.length === 0) {
-        console.error('Error: GEMINI_API_KEY / GEMINI_API_FALLBACK_KEYS environment variable not set.');
+        console.error('GEMINI_API_REQUEST_CONFIGURATION_MISSING code=API_KEY_CONFIGURATION_MISSING');
         process.exit(1);
     }
 
@@ -81,9 +82,9 @@ async function main() {
             } catch (error) {
                 const msg = error.message || '';
                 lastError = error;
-                console.error(`Gemini API Error (key ${keyIndex + 1}/${apiKeys.length}): ${msg}`);
+                logSafeError(error, line => console.error(`GEMINI_API_REQUEST_ATTEMPT_FAILED attempt=${keyIndex + 1}/${apiKeys.length} ${line.trim()}`));
                 if ((msg.includes('429') || msg.includes('QUOTA_ERROR') || msg.includes('RESOURCE_EXHAUSTED')) && keyIndex < apiKeys.length - 1) {
-                    console.error('[키 로테이션] 현재 API 키 할당량 초과. 다음 키로 전환합니다.');
+                    console.error('GEMINI_API_REQUEST_QUOTA_ROTATION code=GEMINI_QUOTA_EXHAUSTED');
                     continue;
                 }
                 break;
@@ -93,7 +94,7 @@ async function main() {
         if (lastError) {
             const msg = lastError.message || '';
             if (msg.includes('429') || msg.includes('QUOTA_ERROR') || msg.includes('RESOURCE_EXHAUSTED')) {
-                console.error('[치명적 오류] API 할당량(Quota) 초과. 스크립트를 즉시 종료합니다.');
+                console.error('GEMINI_API_REQUEST_QUOTA_EXHAUSTED code=GEMINI_QUOTA_EXHAUSTED');
                 process.exit(42);
             }
             throw lastError;
@@ -102,9 +103,9 @@ async function main() {
         process.exit(1);
 
     } catch (error) {
-        console.error(`Gemini API Error: ${error.message}`);
+        logSafeError(error, line => console.error(`GEMINI_API_REQUEST_FAILED ${line.trim()}`));
         if (error.message.includes('429') || error.message.includes('QUOTA_ERROR') || error.message.includes('RESOURCE_EXHAUSTED')) {
-            console.error('[치명적 오류] API 할당량(Quota) 초과. 스크립트를 즉시 종료합니다.');
+            console.error('GEMINI_API_REQUEST_QUOTA_EXHAUSTED code=GEMINI_QUOTA_EXHAUSTED');
             process.exit(42);
         }
         process.exit(1);
