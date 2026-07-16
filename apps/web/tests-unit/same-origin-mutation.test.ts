@@ -64,6 +64,26 @@ describe('same-origin mutation authorization', () => {
       'sec-fetch-site': 'cross-site',
     }, internalUrl), productionEnv)).toBe(false);
   });
+  test('allows only exact cookie-free internal capability routes through the CSRF layer', () => {
+    const capability = 'c'.repeat(32);
+    expect(isTrustedSameOriginMutation(mutation({
+      'x-account-deletion-worker-capability': capability,
+    }, 'https://www.tzudong.app/api/internal/account-deletion'), productionEnv)).toBe(true);
+    expect(isTrustedSameOriginMutation(mutation({
+      'x-privacy-retention-capability': capability,
+    }, 'https://www.tzudong.app/api/internal/privacy-retention'), productionEnv)).toBe(true);
+    expect(isTrustedSameOriginMutation(mutation({
+      'x-account-deletion-worker-capability': capability,
+    }, 'https://www.tzudong.app/api/internal/other'), productionEnv)).toBe(false);
+    expect(isTrustedSameOriginMutation(mutation({
+      cookie: 'browser=session',
+      'x-account-deletion-worker-capability': capability,
+    }, 'https://www.tzudong.app/api/internal/account-deletion'), productionEnv)).toBe(false);
+    expect(isTrustedSameOriginMutation(mutation({
+      origin: 'https://attacker.example',
+      'x-account-deletion-worker-capability': capability,
+    }, 'https://www.tzudong.app/api/internal/account-deletion'), productionEnv)).toBe(false);
+  });
 
   test('allows only cookie-free Bearer credentials through this CSRF layer', () => {
     const internalUrl = 'https://www.tzudong.app/api/internal/privacy-retention';
