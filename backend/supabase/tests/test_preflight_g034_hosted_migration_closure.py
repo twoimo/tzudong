@@ -89,9 +89,23 @@ class G034HostedPreflightTests(unittest.TestCase):
 
     def test_manifest_is_exact_selected_closure_and_later_gate(self):
         data = module.load_manifest(module.MANIFEST)
-        self.assertEqual(27, len(data["migrations"]))
+        self.assertEqual(28, len(data["migrations"]))
         self.assertEqual("20260627080000", data["migrations"][0]["version"])
         self.assertEqual("20260713002400", data["migrations"][-1]["version"])
+        marketing = data["migrations"][-3]
+        self.assertEqual(
+            {
+                "version": "20260713002200",
+                "name": "g014_marketing_state_machine",
+                "path": "backend/supabase/migrations/20260713002200_g014_marketing_state_machine.sql",
+                "sha256": "a041f88d781ef50bfdf59feee2af3f09bc02fc64714fe335861ed5e7d99694a3",
+            },
+            marketing,
+        )
+        self.assertEqual("20260713002100", data["migrations"][-4]["version"])
+        self.assertEqual("20260713002300", data["migrations"][-2]["version"])
+        self.assertEqual(module.EXPECTED_EXCLUDED_VERSIONS, tuple(data["excludedVersions"]))
+        self.assertNotIn("20260713002200", data["excludedVersions"])
         self.assertEqual(module.EXPECTED_MANIFEST_SHA256, module.hashlib.sha256(module.MANIFEST.read_bytes()).hexdigest())
 
     def test_manifest_rejects_canonical_path_and_semantic_drift(self):
