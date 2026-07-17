@@ -13,6 +13,17 @@ def _pairs(pairs):
   if k in result: raise RecoveryError("duplicate JSON object key")
   result[k]=v
  return result
+def _canonical_ledger_pairs(value):
+ try: raw=tuple(value)
+ except TypeError as exc: raise RecoveryError("invalid ledger pairs") from exc
+ if any(not isinstance(pair,(list,tuple)) or len(pair)!=2 or not all(isinstance(item,str) and item for item in pair) for pair in raw): raise RecoveryError("invalid ledger pairs")
+ return tuple((pair[0],pair[1]) for pair in raw)
+def _ledger_evidence_equal(expected,observed):
+ try: return _canonical_ledger_pairs(expected)==_canonical_ledger_pairs(observed)
+ except RecoveryError: return False
+def _require_fingerprint(value):
+ if not isinstance(value,str) or not HEX.fullmatch(value): raise RecoveryError("capture evidence mismatch")
+ return value
 def canonical_bytes(value): return json.dumps(value,sort_keys=True,separators=(",",":"),ensure_ascii=True).encode("ascii")
 def digest(value): return hashlib.sha256(canonical_bytes(value)).hexdigest()
 def receipt(mode,status,evidence,prior=None):
@@ -157,9 +168,11 @@ def _query_conn(conn,sql,params=None):
  except Exception as exc: raise RecoveryError("database query unavailable") from exc
 def _fingerprints(conn):
  rows=_query_conn(conn,"SELECT version, name FROM supabase_migrations.schema_migrations ORDER BY version, name")
- pairs=[(str(v),str(n)) for v,n in rows]; raw=json.dumps(pairs,separators=(",",":"))
- catalog=_query_conn(conn,"SELECT n.nspname,c.relname,c.relkind FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=ANY(%s) ORDER BY 1,2",(list(DUMP_SCHEMAS+MANAGED_METADATA_SCHEMAS),))
- return {"ledger_pairs":pairs,"ledger_sha256":hashlib.sha256(raw.encode()).hexdigest(),"ledger_count":len(pairs),"catalog_sha256":hashlib.sha256(json.dumps(catalog,default=str,separators=(",",":")).encode()).hexdigest()}
+ pairs=_canonical_ledger_pairs(rows); raw=json.dumps(pairs,separators=(",",":"))
+ restorable_catalog=_query_conn(conn,"SELECT n.nspname,c.relname,c.relkind FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=ANY(%s) ORDER BY 1,2",(list(DUMP_SCHEMAS),))
+ managed_catalog=_query_conn(conn,"SELECT n.nspname,c.relname,c.relkind FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=ANY(%s) ORDER BY 1,2",(list(MANAGED_METADATA_SCHEMAS),))
+ managed_schemas=tuple(str(row[0]) for row in _query_conn(conn,"SELECT nspname FROM pg_namespace WHERE nspname=ANY(%s) ORDER BY 1",(list(MANAGED_METADATA_SCHEMAS),)))
+ return {"ledger_pairs":pairs,"ledger_sha256":hashlib.sha256(raw.encode()).hexdigest(),"ledger_count":len(pairs),"restorable_catalog_sha256":hashlib.sha256(json.dumps(restorable_catalog,default=str,separators=(",",":")).encode()).hexdigest(),"managed_catalog_sha256":hashlib.sha256(json.dumps(managed_catalog,default=str,separators=(",",":")).encode()).hexdigest(),"managed_metadata_schemas_present":managed_schemas}
 def _repository_commit(root):
  try:
   value=subprocess.run(["git","-C",str(root),"rev-parse","HEAD"],check=True,capture_output=True,text=True).stdout.strip()
@@ -240,9 +253,15 @@ def run_restore_verify(args,manifest):
   conn=_connect("g035-local",env)
   try: observed=_fingerprints(conn)
   finally: conn.rollback(); conn.close()
- for key in ("ledger_pairs","ledger_sha256","ledger_count","catalog_sha256"):
-  if observed[key]!=capture["evidence"].get(key): raise RecoveryError("restore evidence mismatch")
- return receipt("restore-verify","restored",{**observed,**_auth_placeholder_evidence()},[capture["receipt_sha256"]])
+ expected=capture["evidence"]
+ if not _ledger_evidence_equal(expected.get("ledger_pairs"),observed["ledger_pairs"]): raise RecoveryError("restore evidence mismatch")
+ for key in ("ledger_sha256","ledger_count","restorable_catalog_sha256"):
+  if expected.get(key)!=observed.get(key): raise RecoveryError("restore evidence mismatch")
+ hosted_managed_hash=_require_fingerprint(expected.get("managed_catalog_sha256"))
+ expected_managed=tuple(MANAGED_METADATA_SCHEMAS)
+ local_managed=observed.get("managed_metadata_schemas_present")
+ if not isinstance(local_managed,(list,tuple)) or tuple(local_managed)!=expected_managed: raise RecoveryError("managed metadata structure mismatch")
+ return receipt("restore-verify","restored",{**observed,"hosted_managed_catalog_sha256":hosted_managed_hash,"managed_metadata_coherence":"managed schemas structurally present; metadata catalogs are not restored or compared",**_auth_placeholder_evidence()},[capture["receipt_sha256"]])
 def _validate_auth_user_reference_columns(conn):
  for schema,table,column in AUTH_USER_REFERENCE_COLUMNS:
   rows=_query_conn(conn,"SELECT namespace.nspname, class.relname, attribute.attname, type.typname, type_namespace.nspname FROM pg_catalog.pg_attribute AS attribute JOIN pg_catalog.pg_class AS class ON class.oid = attribute.attrelid JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = class.relnamespace JOIN pg_catalog.pg_type AS type ON type.oid = attribute.atttypid JOIN pg_catalog.pg_namespace AS type_namespace ON type_namespace.oid = type.typnamespace WHERE namespace.nspname = %s AND class.relname = %s AND attribute.attname = %s AND class.relkind IN ('r','p') AND attribute.attnum > 0 AND NOT attribute.attisdropped",(schema,table,column))
