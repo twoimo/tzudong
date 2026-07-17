@@ -1,0 +1,7 @@
+# Fully resolved for Linux CPython 3.12.
+psycopg==3.2.6 \
+    --hash=sha256:f3ff5488525890abb0566c429146add66b329e20d6d4835662b920cbbf90ac58
+typing-extensions==4.15.0 \
+    --hash=sha256:f0fa19c6845758ab08074a0cfa8b7aecb71c999ca73d62883bc25cc018c4e548
+tzdata==2026.3 ; sys_platform == "win32" \
+    --hash=sha256:dc096730c87af6cab1b171c9d532be840741ff5d459015e7f6947bd7d7e54931
