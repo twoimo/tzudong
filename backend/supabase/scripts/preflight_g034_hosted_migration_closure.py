@@ -11,7 +11,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 MANIFEST = ROOT / ".github/g034-hosted-migration-closure.v1.json"
-EXPECTED_MANIFEST_SHA256 = "1a925f381158e827a4a1624747063edbe5e54f2e2c8c4f875f26636a2443866f"
+EXPECTED_MANIFEST_SHA256 = "1f568404418009d191c27a0d8e525306b98b9e1472f4056d1f347907c500a8e1"
 TOP_KEYS = {"schemaVersion", "ledgerTerminalVersion", "closureTerminalVersion", "requiredLaterPromotionGate", "migrations", "excludedVersions", "cloneBackupRecoveryRequired"}
 ENTRY_KEYS = {"version", "name", "path", "sha256"}
 HASH = re.compile(r"[0-9a-f]{64}\Z")
@@ -88,9 +88,10 @@ def load_manifest(path):
         return result
 
     raw = path.read_bytes()
-    if hashlib.sha256(raw).hexdigest() != EXPECTED_MANIFEST_SHA256:
+    canonical_raw = raw.replace(b"\r\n", b"\n")
+    if b"\r" in canonical_raw or hashlib.sha256(canonical_raw).hexdigest() != EXPECTED_MANIFEST_SHA256:
         raise ValueError("manifest-lock-mismatch")
-    data = json.loads(raw, object_pairs_hook=no_duplicates)
+    data = json.loads(canonical_raw, object_pairs_hook=no_duplicates)
     if not isinstance(data, dict) or set(data) != TOP_KEYS:
         raise ValueError("manifest-schema")
     if any(data.get(key) != value for key, value in EXPECTED_SEMANTICS.items()):
