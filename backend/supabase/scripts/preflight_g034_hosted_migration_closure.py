@@ -11,7 +11,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 MANIFEST = ROOT / ".github/g034-hosted-migration-closure.v1.json"
-EXPECTED_MANIFEST_SHA256 = "f80e82633c46f5ba7128fe4f30ed084dadfd826f436b0d35e1c6d62f841175f2"
+EXPECTED_MANIFEST_SHA256 = "1a925f381158e827a4a1624747063edbe5e54f2e2c8c4f875f26636a2443866f"
 TOP_KEYS = {"schemaVersion", "ledgerTerminalVersion", "closureTerminalVersion", "requiredLaterPromotionGate", "migrations", "excludedVersions", "cloneBackupRecoveryRequired"}
 ENTRY_KEYS = {"version", "name", "path", "sha256"}
 HASH = re.compile(r"[0-9a-f]{64}\Z")
@@ -23,7 +23,7 @@ EXPECTED_SEMANTICS = {
     "requiredLaterPromotionGate": "20260713002500_g014_catalog_contract.sql",
     "cloneBackupRecoveryRequired": True,
 }
-EXPECTED_EXCLUDED_VERSIONS = ("20260531105250", "20260612075100", "20260627150000", "20260702000200", "20260707000700", "20260713000400", "20260713002200", "20260713002500", "20260713002600", "20260713002700")
+EXPECTED_EXCLUDED_VERSIONS = ("20260531105250", "20260612075100", "20260627150000", "20260702000200", "20260707000700", "20260713000400", "20260713002500", "20260713002600", "20260713002700")
 CATALOG_RELATIONS = (
     ("public.restaurants", "public", "restaurants"),
     ("public.restaurants_backup", "public", "restaurants_backup"),
@@ -108,7 +108,7 @@ def load_manifest(path):
 
 def validate_sources(manifest, report):
     entries = manifest["migrations"]
-    if len(entries) != 27:
+    if len(entries) != 28:
         fail(report, "manifest-closure-count")
     previous_version = None
     source_hashes = []

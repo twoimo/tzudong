@@ -6,9 +6,9 @@ from pathlib import Path
 from typing import Any
 
 MANIFEST_RELATIVE_PATH = ".github/g034-hosted-migration-closure.v1.json"
-MANIFEST_SHA256 = "f80e82633c46f5ba7128fe4f30ed084dadfd826f436b0d35e1c6d62f841175f2"
+MANIFEST_SHA256 = "1a925f381158e827a4a1624747063edbe5e54f2e2c8c4f875f26636a2443866f"
 SELF_COMMIT_VERSIONS = ("20260712000400", "20260713002400")
-FORBIDDEN_VERSIONS = frozenset({"20260531105250", "20260612075100", "20260627150000", "20260702000200", "20260707000700", "20260713000400", "20260713002200", "20260713002500", "20260713002600", "20260713002700"})
+FORBIDDEN_VERSIONS = frozenset({"20260531105250", "20260612075100", "20260627150000", "20260702000200", "20260707000700", "20260713000400", "20260713002500", "20260713002600", "20260713002700"})
 APPLICATION_SCHEMAS = ("public", "shortener_private", "account_deletion_private", "privacy_retention")
 MANAGED_METADATA_SCHEMAS = ("auth", "storage")
 # Immutable identities from the authoritative 12-row G034 hosted readback; this
@@ -58,7 +58,7 @@ def load_manifest(root: Path) -> Manifest:
     try: data = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=_no_duplicate_object)
     except (OSError, json.JSONDecodeError) as exc: raise ContractError("manifest is unreadable") from exc
     raw, excluded = data.get("migrations"), data.get("excludedVersions")
-    if not isinstance(data, dict) or data.get("schemaVersion") != 1 or not isinstance(raw, list) or len(raw) != 27 or not isinstance(excluded, list): raise ContractError("manifest inventory mismatch")
+    if not isinstance(data, dict) or data.get("schemaVersion") != 1 or not isinstance(raw, list) or len(raw) != 28 or not isinstance(excluded, list): raise ContractError("manifest inventory mismatch")
     entries=[]; seen=set(); prior=""
     for item in raw:
         if not isinstance(item, dict) or set(item) != {"version","name","path","sha256"}: raise ContractError("manifest migration fields mismatch")

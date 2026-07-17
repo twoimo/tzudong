@@ -15,7 +15,7 @@ class ContractTests(unittest.TestCase):
   manifest=contract.validate_sources(ROOT)
   expected=(("20251219","db_performance_optimization"),("20260118","create_ocr_logs"),("20260425","allow_ocr_logs_user_insert"),("20260506065538","optimize_auth_user_state_indexes"),("20260506085634","optimize_app_query_indexes"),("20260509000100","drop_server_costs"),("20260509000200","drop_admin_ai_settings"),("20260523093000","create_restaurant_popular_rank_snapshots"),("20260525143908","create_youtube_kpi_snapshots"),("20260526083932","add_youtube_channel_growth_snapshot_deltas"),("20260531084217","harden_public_api_grants_and_rpcs"),("20260531084516","tighten_public_table_data_api_grants"))
   reconstructed=(("20260124","create_document_embeddings_bge"),("20260124","create_restaurants"),("20260124","fix_approved_name_sync"),("20260124","update_embeddings_constraint"),("20260131","fix_search_rpc"),("20260213","create_announcements_table_and_seed"),("20260214","fix_approve_edit_backup_stage"),("20260214","fix_restaurant_rpcs_and_search"),("20260214","fix_submission_item_target_to_backup"),("20260514","admin_user_management_audit"),("20260531084217","harden_public_api_grants_and_rpcs"),("20260531084516","tighten_public_table_data_api_grants"))
-  self.assertEqual(27,len(manifest.migrations)); self.assertEqual(expected,contract.BASELINE_PAIRS)
+  self.assertEqual(28,len(manifest.migrations)); self.assertEqual(expected,contract.BASELINE_PAIRS)
   self.assertTrue(contract.ledger_prefix(manifest,expected))
   self.assertTrue(contract.ledger_prefix(manifest,[list(pair) for pair in expected]))
   mutated=list(expected); mutated[0]=("20260124","db_performance_optimization")
@@ -573,6 +573,72 @@ class ControllerTests(unittest.TestCase):
    with patch.object(recovery,"_require_prior",return_value={"receipt_sha256":"x"}),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",side_effect=query),patch.object(recovery,"_ledger_assert",side_effect=ledger),patch.object(recovery,"_require_restore_baseline",side_effect=lambda unused: events.append("baseline")),patch.object(recovery,"_apply_vector_extension_relocation_hook",side_effect=vector_hook),patch.object(recovery,"run",side_effect=lambda *unused,**kwargs: events.append("psql")):
     recovery.apply_manifest(args,manifest)
   self.assertLess(events.index("lock"),events.index("baseline")); self.assertLess(events.index("baseline"),events.index("ledger-0")); self.assertLess(events.index("ledger-0"),events.index("vector")); self.assertLess(events.index("vector"),events.index("psql"))
+ def test_cross_schema_owner_hook_is_exact_version_bound_and_fail_closed(self):
+  expected=("public.account_deletion_require_service_role()","public.account_deletion_is_active_admin(uuid)","public.account_deletion_write_audit(public.account_deletion_requests,text,text)","public.preview_account_deletion(uuid,uuid,timestamptz)","public.begin_account_deletion_apply(uuid,uuid,uuid,text,text,text,timestamptz)","public.apply_account_deletion_database_cleanup(uuid,uuid)","public.list_account_deletion_storage_objects(uuid,uuid)","public.finalize_account_deletion_storage(uuid,uuid,boolean)","public.finalize_account_deletion_auth(uuid,uuid,boolean)","public.fail_account_deletion(uuid,uuid,text)","privacy_retention.require_service_role()","privacy_retention.write_run_audit(privacy_retention.privacy_retention_runs,text,text)")
+  self.assertEqual(expected,recovery.CROSS_SCHEMA_OWNER_FUNCTIONS)
+  class Conn:
+   def __init__(self): self.commits=0
+   def commit(self): self.commits+=1
+  conn=Conn()
+  self.assertEqual(0,recovery._apply_cross_schema_owner_hook(conn,"20260713002001"))
+  queries=[]
+  def query(unused,sql,params=None):
+   queries.append((sql,params))
+   if sql==recovery.CROSS_SCHEMA_OWNER_RESOLVE_SQL: return [(1,)]
+   if sql==recovery.CROSS_SCHEMA_OWNER_VERIFY_SQL: return [("postgres",)]
+   return []
+  with patch.object(recovery,"_query_conn",side_effect=query):
+   self.assertEqual(12,recovery._apply_cross_schema_owner_hook(conn,"20260713002000"))
+  self.assertEqual(1,conn.commits)
+  alters=[sql for sql,params in queries if sql.startswith("ALTER FUNCTION ")]
+  self.assertEqual([f"ALTER FUNCTION {signature} OWNER TO postgres" for signature in expected],alters)
+  with patch.object(recovery,"_query_conn",return_value=[]),self.assertRaisesRegex(recovery.RecoveryError,"precondition"):
+   recovery._apply_cross_schema_owner_hook(conn,"20260713002000")
+  with patch.object(recovery,"_query_conn",side_effect=[[(1,)],[],[("supabase_admin",)]]),self.assertRaisesRegex(recovery.RecoveryError,"postcondition"):
+   recovery._apply_cross_schema_owner_hook(conn,"20260713002000")
+ def test_obsolete_notification_overload_hook_is_exact_and_fail_closed(self):
+  self.assertEqual("public.create_user_notification(uuid,public.notification_type,text,text,jsonb)",recovery.OBSOLETE_NOTIFICATION_OVERLOAD)
+  self.assertEqual("public.create_user_notification(uuid,text,text,text,jsonb)",recovery.CANONICAL_NOTIFICATION_FUNCTION)
+  class Conn:
+   def __init__(self): self.commits=0
+   def commit(self): self.commits+=1
+  conn=Conn(); queries=[]
+  calls=0
+  def query(unused,sql,params=None):
+   nonlocal calls
+   queries.append((sql,params))
+   if sql==recovery.CROSS_SCHEMA_OWNER_RESOLVE_SQL:
+    calls+=1; return [(1,)] if calls in (1,2,4) else []
+   return []
+  with patch.object(recovery,"_query_conn",side_effect=query):
+   self.assertEqual(1,recovery._apply_obsolete_notification_overload_hook(conn,"20260713002000"))
+  self.assertEqual(1,conn.commits)
+  self.assertEqual([f"DROP FUNCTION {recovery.OBSOLETE_NOTIFICATION_OVERLOAD}"],[sql for sql,params in queries if sql.startswith("DROP FUNCTION ")])
+  with patch.object(recovery,"_query_conn",return_value=[]),self.assertRaisesRegex(recovery.RecoveryError,"precondition"):
+   recovery._apply_obsolete_notification_overload_hook(conn,"20260713002000")
+  with patch.object(recovery,"_query_conn",side_effect=[[(1,)],[(1,)],[],[],[]]),self.assertRaisesRegex(recovery.RecoveryError,"postcondition"):
+   recovery._apply_obsolete_notification_overload_hook(conn,"20260713002000")
+ def test_public_function_owner_hook_is_public_only_and_fail_closed(self):
+  self.assertEqual("20260713002000",recovery.PUBLIC_FUNCTION_OWNERS_HOOK_VERSION)
+  self.assertIn("namespace.nspname='public'",recovery.PUBLIC_FUNCTION_OWNERS_SQL)
+  self.assertIn("procedure.oid::regprocedure::text",recovery.PUBLIC_FUNCTION_OWNERS_SQL)
+  class Conn:
+   def __init__(self): self.commits=0
+   def commit(self): self.commits+=1
+  conn=Conn(); initial=[("public.alpha(integer)","supabase_admin"),("public.beta()","postgres"),("public.g013()","privacy_workflow_owner")]; calls=[]
+  def query(unused,sql,params=None):
+   calls.append((sql,params))
+   if sql==recovery.PUBLIC_FUNCTION_OWNERS_SQL: return initial if sum(1 for item in calls if item[0]==sql)==1 else [("public.alpha(integer)","postgres"),("public.beta()","postgres"),("public.g013()","privacy_workflow_owner")]
+   return []
+  with patch.object(recovery,"_query_conn",side_effect=query):
+   self.assertEqual(("public.alpha(integer)",),recovery._apply_public_function_owners_hook(conn,"20260713002000"))
+  self.assertEqual(1,conn.commits)
+  self.assertEqual(["ALTER FUNCTION public.alpha(integer) OWNER TO postgres"],[sql for sql,params in calls if sql.startswith("ALTER FUNCTION ")])
+  self.assertEqual((),recovery._apply_public_function_owners_hook(conn,"20260713002001"))
+  with patch.object(recovery,"_query_conn",return_value=[("public.alpha()","authenticated")]),self.assertRaisesRegex(recovery.RecoveryError,"precondition"):
+   recovery._apply_public_function_owners_hook(conn,"20260713002000")
+  with patch.object(recovery,"_query_conn",side_effect=[[("public.alpha()","supabase_admin")],[],[("public.alpha()","supabase_admin")]]),self.assertRaisesRegex(recovery.RecoveryError,"postcondition"):
+   recovery._apply_public_function_owners_hook(conn,"20260713002000")
  def test_clone_receipt_records_only_short_url_deleted_count_and_hook_digest(self):
   manifest=contract.load_manifest(ROOT); entry=next(item for item in manifest.migrations if item.version=="20260713000100")
   manifest=contract.Manifest((entry,),frozenset(),manifest.ledger_terminal_version,manifest.closure_terminal_version)
@@ -581,13 +647,40 @@ class ControllerTests(unittest.TestCase):
    def close(self): pass
   with tempfile.TemporaryDirectory() as raw:
    args=Namespace(service="g035-local",restore_receipt="unused",service_file=str(self.service(raw)),psql="psql")
-   with patch.object(recovery,"_require_prior",return_value={"receipt_sha256":"x"}),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",return_value=[]),patch.object(recovery,"_ledger_assert"),patch.object(recovery,"_require_restore_baseline"),patch.object(recovery,"_apply_short_urls_duplicate_target_url_hook",return_value=4),patch.object(recovery,"_fingerprints",return_value=fingerprints()),patch.object(recovery,"run"):
+   with patch.object(recovery,"_require_prior",return_value={"receipt_sha256":"x"}),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",return_value=[]),patch.object(recovery,"_ledger_assert"),patch.object(recovery,"_require_restore_baseline"),patch.object(recovery,"_apply_short_urls_duplicate_target_url_hook",return_value=4),patch.object(recovery,"_apply_obsolete_notification_overload_hook",return_value=0),patch.object(recovery,"_apply_public_function_owners_hook",return_value=()),patch.object(recovery,"_apply_cross_schema_owner_hook",return_value=0),patch.object(recovery,"_fingerprints",return_value=fingerprints()),patch.object(recovery,"run"):
     result=recovery.apply_manifest(args,manifest)
   self.assertEqual(4,result["evidence"]["compatibility_hook_deleted_row_count"])
-  self.assertEqual(recovery.digest((recovery.COMPATIBILITY_HOOKS,recovery.VECTOR_EXTENSION_RELOCATION_HOOK_VERSION,recovery.VECTOR_EXTENSION_RELOCATION_HOOK,recovery.SHORT_URLS_DUPLICATE_TARGET_URL_HOOK_VERSION,recovery.SHORT_URLS_DUPLICATE_TARGET_URL_HOOK)),result["evidence"]["compatibility_hook_sha256"])
+  self.assertEqual(recovery.digest((recovery.COMPATIBILITY_HOOKS,recovery.VECTOR_EXTENSION_RELOCATION_HOOK_VERSION,recovery.VECTOR_EXTENSION_RELOCATION_HOOK,recovery.OBSOLETE_NOTIFICATION_OVERLOAD_HOOK_VERSION,recovery.OBSOLETE_NOTIFICATION_OVERLOAD,recovery.CANONICAL_NOTIFICATION_FUNCTION,recovery.PUBLIC_FUNCTION_OWNERS_HOOK_VERSION,recovery.PUBLIC_FUNCTION_OWNERS_SQL,recovery.CROSS_SCHEMA_OWNER_HOOK_VERSION,recovery.CROSS_SCHEMA_OWNER_FUNCTIONS,recovery.SHORT_URLS_DUPLICATE_TARGET_URL_HOOK_VERSION,recovery.SHORT_URLS_DUPLICATE_TARGET_URL_HOOK)),result["evidence"]["compatibility_hook_sha256"])
+  self.assertEqual(0,result["evidence"]["compatibility_hook_owner_function_count"])
+  self.assertEqual(0,result["evidence"]["compatibility_hook_obsolete_function_count"])
+  self.assertEqual(0,result["evidence"]["compatibility_hook_public_function_count"])
+  self.assertEqual(recovery.digest(()),result["evidence"]["compatibility_hook_public_function_sha256"])
   self.assertNotIn("compatibility_hook_count",result["evidence"])
  def test_main_rejects_without_diagnostics(self):
   output=io.StringIO()
   with patch.object(recovery,"validate_sources",side_effect=recovery.ContractError("secret")),contextlib.redirect_stdout(output): self.assertEqual(2,recovery.main(["validate"]))
   self.assertEqual("policy_rejected",json.loads(output.getvalue())["evidence"]["reason"]); self.assertNotIn("secret",output.getvalue())
+class ManifestDependencyTests(unittest.TestCase):
+ def test_marketing_state_machine_is_hashed_and_required_in_dependency_order(self):
+  data=json.loads((ROOT/contract.MANIFEST_RELATIVE_PATH).read_text(encoding="utf8"))
+  migrations=data["migrations"]
+  marketing=next(entry for entry in migrations if entry["version"]=="20260713002200")
+  self.assertEqual({"version":"20260713002200","name":"g014_marketing_state_machine","path":"backend/supabase/migrations/20260713002200_g014_marketing_state_machine.sql","sha256":"a041f88d781ef50bfdf59feee2af3f09bc02fc64714fe335861ed5e7d99694a3"},marketing)
+  self.assertEqual(28,len(migrations))
+  self.assertEqual(["20260713002100","20260713002200","20260713002300"],[entry["version"] for entry in migrations[-4:-1]])
+  self.assertEqual(contract.FORBIDDEN_VERSIONS,frozenset(data["excludedVersions"]))
+  self.assertNotIn("20260713002200",data["excludedVersions"])
+ def test_manifest_rejects_marketing_omission_reexclusion_and_reordering(self):
+  original=json.loads((ROOT/contract.MANIFEST_RELATIVE_PATH).read_text(encoding="utf8"))
+  cases=[]
+  omitted=json.loads(json.dumps(original)); omitted["migrations"]=[entry for entry in omitted["migrations"] if entry["version"]!="20260713002200"]; cases.append(omitted)
+  reexcluded=json.loads(json.dumps(original)); reexcluded["excludedVersions"].append("20260713002200"); cases.append(reexcluded)
+  reordered=json.loads(json.dumps(original)); index=next(i for i,entry in enumerate(reordered["migrations"]) if entry["version"]=="20260713002200"); reordered["migrations"][index],reordered["migrations"][index+1]=reordered["migrations"][index+1],reordered["migrations"][index]; cases.append(reordered)
+  with tempfile.TemporaryDirectory() as raw:
+   root=Path(raw); manifest_path=root/contract.MANIFEST_RELATIVE_PATH; manifest_path.parent.mkdir()
+   for data in cases:
+    with self.subTest(data=data):
+     manifest_path.write_text(json.dumps(data,separators=(",",":")),encoding="utf8")
+     with patch.object(contract,"MANIFEST_SHA256",contract.sha256_file(manifest_path)),self.assertRaises(contract.ContractError):
+      contract.load_manifest(root)
 if __name__=="__main__": unittest.main()
