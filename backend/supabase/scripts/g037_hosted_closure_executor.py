@@ -8,7 +8,7 @@ from __future__ import annotations
 import argparse, json, os, re, subprocess, sys, time
 from pathlib import Path
 from g037_hosted_closure_contract import BASELINE_PAIRS, MANIFEST_SHA256, MODES, SELF_WRAPPING, ContractError, canonical_bytes, digest, no_duplicate_object, repository_root, validate_sources
-from preflight_g034_hosted_migration_closure import TRACKED_APPROVAL_FUNCTIONS, semantic_fingerprint
+from preflight_g034_hosted_migration_closure import approval_body_contract, approval_catalog_contract
 
 SCHEMA="g037-hosted-closure-receipt-v3"; ENV=re.compile(r"^[A-Z_][A-Z0-9_]{0,127}$"); COMMIT=re.compile(r"^[a-f0-9]{40}$")
 class ClosureError(RuntimeError): pass
@@ -35,9 +35,9 @@ def retirement_gate(cur):
     table=bool(q(cur,"SELECT pg_catalog.to_regclass('public.restaurants_backup') IS NULL")[0][0])
     scans=("SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname NOT IN ('pg_catalog','information_schema') AND CASE WHEN p.prokind IN ('f','p') THEN pg_catalog.pg_get_functiondef(p.oid) ~* '(^|[^[:alnum:]_])restaurants_backup([^[:alnum:]_]|$)' ELSE false END)","SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_views v WHERE v.schemaname NOT IN ('pg_catalog','information_schema') AND v.definition ~* '(^|[^[:alnum:]_])restaurants_backup([^[:alnum:]_]|$)')","SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_matviews v WHERE v.schemaname NOT IN ('pg_catalog','information_schema') AND v.definition ~* '(^|[^[:alnum:]_])restaurants_backup([^[:alnum:]_]|$)')","SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_trigger t WHERE NOT t.tgisinternal AND pg_catalog.pg_get_triggerdef(t.oid) ~* '(^|[^[:alnum:]_])restaurants_backup([^[:alnum:]_]|$)')","SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_rewrite r WHERE r.rulename <> '_RETURN' AND pg_catalog.pg_get_ruledef(r.oid) ~* '(^|[^[:alnum:]_])restaurants_backup([^[:alnum:]_]|$)')","SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_constraint c WHERE pg_catalog.pg_get_constraintdef(c.oid) ~* '(^|[^[:alnum:]_])restaurants_backup([^[:alnum:]_]|$)')")
     if not table or any(bool(q(cur,s)[0][0]) for s in scans): raise ClosureError("source-bound retirement gate failed")
-    for lookup,namespace,name,oids,expected in TRACKED_APPROVAL_FUNCTIONS:
-        rows=q(cur,"SELECT pg_catalog.pg_get_functiondef(p.oid) FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace WHERE p.oid=pg_catalog.to_regprocedure(%s) AND n.nspname=%s AND p.proname=%s AND p.proargtypes=%s::pg_catalog.oidvector",(lookup,namespace,name,oids))
-        if len(rows)!=1 or "restaurants_backup" in rows[0][0].lower() or semantic_fingerprint(rows[0][0])!=expected: raise ClosureError("source-bound retirement definition drift")
+    contract=approval_body_contract()
+    results=approval_catalog_contract(cur,contract)
+    if set(results)!=set(contract) or not all(results.values()): raise ClosureError("source-bound retirement approval contract drift")
 def catalog(cur, manifest, *, terminal=False):
     cur.execute("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY")
     rows=ledger(cur)

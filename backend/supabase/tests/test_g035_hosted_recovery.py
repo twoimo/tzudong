@@ -539,7 +539,7 @@ class ControllerTests(unittest.TestCase):
   with tempfile.TemporaryDirectory() as raw:
    args=Namespace(service="g035-local",restore_receipt="unused",service_file=str(self.service(raw)),psql="psql")
    prior={"receipt_sha256":"x","evidence":{"ledger_pairs":[list(pair) for pair in full],"ledger_sha256":recovery._ledger_sha256(full),"ledger_count":len(full)}}
-   with patch.object(recovery,"_require_prior",return_value=prior),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",return_value=[]),patch.object(recovery,"_fingerprints",return_value=fingerprints(pairs=full)),patch.object(recovery,"_ledger_assert"),patch.object(recovery,"run") as run:
+   with patch.object(recovery,"_require_prior",return_value=prior),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",return_value=[]),patch.object(recovery,"_fingerprints",return_value=fingerprints(pairs=full)),patch.object(recovery,"_ledger_assert"),patch.object(recovery,"_approval_catalog_evidence",return_value=recovery._approval_contract_descriptor()),patch.object(recovery,"run") as run:
     result=recovery.apply_manifest(args,manifest)
   self.assertEqual(1,run.call_count)
   self.assertIn("g035_hosted_clone_runtime.sql",str(run.call_args.args[0]))
@@ -559,7 +559,7 @@ class ControllerTests(unittest.TestCase):
    def prior(unused,mode):
     if mode=="restore-verify": return {"receipt_sha256":"restore"}
     return {"receipt_sha256":"verify","prior_receipt_sha256":["apply"],"evidence":{"apply_receipt_sha256":"apply","restore_receipt_sha256":"restore"}}
-   with patch.object(recovery,"_require_prior",side_effect=prior),patch.object(recovery,"_verify_remediation_state"),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",return_value=[]),patch.object(recovery,"_fingerprints",return_value=fingerprints(pairs=full)),patch.object(recovery,"_ledger_assert"),patch.object(recovery,"_require_restore_initial_ledger",return_value="baseline"),patch.object(recovery,"_initial_ledger_state",return_value="baseline"),patch.object(recovery,"sha256_file",side_effect=lambda source: next(entry.sha256 for entry in manifest.migrations if source.name==Path(entry.path).name)),patch.object(recovery,"run"):
+   with patch.object(recovery,"_require_prior",side_effect=prior),patch.object(recovery,"_verify_remediation_state"),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",return_value=[]),patch.object(recovery,"_fingerprints",return_value=fingerprints(pairs=full)),patch.object(recovery,"_ledger_assert"),patch.object(recovery,"_require_restore_initial_ledger",return_value="baseline"),patch.object(recovery,"_initial_ledger_state",return_value="baseline"),patch.object(recovery,"sha256_file",side_effect=lambda source: next(entry.sha256 for entry in manifest.migrations if source.name==Path(entry.path).name)),patch.object(recovery,"_approval_catalog_evidence",return_value=recovery._approval_contract_descriptor()),patch.object(recovery,"run"):
     result=recovery.apply_manifest(args,manifest)
   self.assertEqual("baseline",result["evidence"]["initial_ledger_state"])
   self.assertEqual("transformed_local_clone_not_exact_restore",result["evidence"]["clone_state"])
@@ -617,15 +617,30 @@ class ControllerTests(unittest.TestCase):
   class Conn:
    def rollback(self): pass
    def close(self): pass
-  evidence={"clone_state":"transformed_local_clone_not_exact_restore","hosted_mutations":0,"baseline_pairs_sha256":contract.BASELINE_SHA256,**{key:observed[key] for key in ("ledger_sha256","ledger_count","restorable_catalog_sha256","managed_catalog_sha256","managed_metadata_schemas_present")}}
+  approval=recovery._approval_contract_descriptor()
+  evidence={"clone_state":"transformed_local_clone_not_exact_restore","hosted_mutations":0,"baseline_pairs_sha256":contract.BASELINE_SHA256,**approval,**{key:observed[key] for key in ("ledger_sha256","ledger_count","restorable_catalog_sha256","managed_catalog_sha256","managed_metadata_schemas_present")}}
   applied={"receipt_sha256":"clone","prior_receipt_sha256":["restore"],"evidence":evidence}
-  with patch.object(recovery,"_copy_local_service",return_value=Path("service")),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_require_prior",return_value=applied),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_query_conn",return_value=[]),patch.object(recovery,"_fingerprints",return_value=observed),patch.object(recovery,"run") as run:
+  with patch.object(recovery,"_copy_local_service",return_value=Path("service")),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_require_prior",return_value=applied),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_query_conn",return_value=[]),patch.object(recovery,"_fingerprints",return_value=observed),patch.object(recovery,"_approval_catalog_evidence",return_value=approval),patch.object(recovery,"run") as run:
    result=recovery.run_postflight(args,manifest)
   self.assertEqual("validated",result["status"]); self.assertIn("g035_hosted_clone_runtime.sql",str(run.call_args.args[0]))
-  for key in ("ledger_sha256","ledger_count","restorable_catalog_sha256","managed_catalog_sha256","managed_metadata_schemas_present"):
+  for key in ("ledger_sha256","ledger_count","restorable_catalog_sha256","managed_catalog_sha256","managed_metadata_schemas_present","approval_contract_sha256","approval_contract_identities","approval_contract_valid"):
    mutated={**evidence,key:("unexpected" if key!="ledger_count" else evidence[key]+1)}
-   with self.subTest(key=key),patch.object(recovery,"_copy_local_service",return_value=Path("service")),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_require_prior",return_value={**applied,"evidence":mutated}),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_query_conn",return_value=[]),patch.object(recovery,"_fingerprints",return_value=observed),patch.object(recovery,"run"):
+   with self.subTest(key=key),patch.object(recovery,"_copy_local_service",return_value=Path("service")),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_require_prior",return_value={**applied,"evidence":mutated}),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_query_conn",return_value=[]),patch.object(recovery,"_fingerprints",return_value=observed),patch.object(recovery,"_approval_catalog_evidence",return_value=approval),patch.object(recovery,"run"):
     with self.assertRaisesRegex(recovery.RecoveryError,"clone receipt evidence mismatch"): recovery.run_postflight(args,manifest)
+ def test_approval_catalog_contract_rejects_missing_body_security_search_path_and_output_shape_drift(self):
+  contract_value={"public.approve_submission_item(uuid,uuid,jsonb)":{"body_hash":"a"*64}}
+  class Conn:
+   def cursor(self): return contextlib.nullcontext(object())
+  mutations={
+   "missing":{},
+   "body":{next(iter(contract_value)):False},
+   "security":{next(iter(contract_value)):False},
+   "search_path":{next(iter(contract_value)):False},
+   "output_shape":{"unexpected":True},
+  }
+  for drift,results in mutations.items():
+   with self.subTest(drift=drift),patch.object(recovery.g034_preflight,"approval_body_contract",return_value=contract_value),patch.object(recovery.g034_preflight,"approval_catalog_contract",return_value=results),self.assertRaisesRegex(recovery.RecoveryError,"approval contract validation failed"):
+    recovery._approval_catalog_evidence(Conn())
  def test_self_commit_post_execution_failures_are_ambiguous(self):
   text=(SCRIPTS/"g035_hosted_recovery.py").read_text(encoding="utf8")
   protected='run([psql,"service=g035-local","--set","ON_ERROR_STOP=1","--file",str(source)],env=env)\n       _query_conn(conn,"INSERT INTO supabase_migrations.schema_migrations'
