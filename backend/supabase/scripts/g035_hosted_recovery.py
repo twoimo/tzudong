@@ -6,6 +6,9 @@ from pathlib import Path
 from typing import Any, Sequence
 from g035_hosted_recovery_contract import APPLICATION_SCHEMAS, BASELINE_PAIRS, BASELINE_SHA256, FORBIDDEN_VERSIONS, MANAGED_METADATA_SCHEMAS, MANIFEST_SHA256, SELF_COMMIT_VERSIONS, ContractError, Manifest, ledger_prefix, repository_root, sha256_file, validate_sources
 TIMEOUT_SECONDS=900; RECEIPT_SCHEMA="g035-local-recovery-receipt-v4"; HEX=re.compile(r"^[a-f0-9]{64}$"); AGE_RECIPIENT=re.compile(r"^age1[ac-hj-np-z02-9]{58}$"); ID=re.compile(r"^[A-Za-z0-9._:-]{1,128}$"); SNAPSHOT=re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"); LOCAL_SERVICE="g035-local"; LOCAL_DBNAME="g035_local"; LOCAL_HOSTS={"localhost","127.0.0.1","::1"}; SERVICE_KEYS={"host","port","dbname","application_name","sslmode","user","password","connect_timeout"}; RECOVERY_CONTROL_SCHEMAS=("supabase_migrations",); DUMP_SCHEMAS=APPLICATION_SCHEMAS+RECOVERY_CONTROL_SCHEMAS+MANAGED_METADATA_SCHEMAS; MANAGED_TABLE_DATA_EXCLUSIONS=tuple(f"--exclude-table-data={schema}.*" for schema in MANAGED_METADATA_SCHEMAS); RECOVERY_EXTENSIONS=(("pg_trgm","extensions"),("uuid-ossp","extensions"),("btree_gin","extensions"),("vector","public"),("pgcrypto","extensions")); COMPATIBILITY_HOOKS={"20260627080000":("DROP POLICY IF EXISTS documents_select_own ON public.documents;","DROP POLICY IF EXISTS documents_insert_own ON public.documents;","DROP POLICY IF EXISTS documents_update_own ON public.documents;","DROP POLICY IF EXISTS documents_delete_own ON public.documents;")}; VECTOR_EXTENSION_RELOCATION_HOOK_VERSION="20260627080000"; VECTOR_EXTENSION_RELOCATION_HOOK=("SELECT namespace.nspname FROM pg_catalog.pg_extension AS extension JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid=extension.extnamespace WHERE extension.extname='vector'","ALTER EXTENSION vector SET SCHEMA extensions","SELECT namespace.nspname FROM pg_catalog.pg_extension AS extension JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid=extension.extnamespace WHERE extension.extname='vector'","SELECT 1 FROM pg_catalog.pg_extension AS extension JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid=extension.extnamespace WHERE extension.extname='vector' AND namespace.nspname='public'"); SHORT_URLS_DUPLICATE_TARGET_URL_HOOK_VERSION="20260713000100"; SHORT_URLS_DUPLICATE_TARGET_URL_HOOK=("SELECT 1 FROM public.short_urls WHERE code IS NULL OR target_url IS NULL LIMIT 1","SELECT 1 FROM public.short_urls GROUP BY code HAVING count(*) > 1 LIMIT 1","WITH ranked AS (SELECT id, row_number() OVER (PARTITION BY target_url ORDER BY created_at NULLS LAST, id) AS row_number FROM public.short_urls), deleted AS (DELETE FROM public.short_urls USING ranked WHERE public.short_urls.id=ranked.id AND ranked.row_number>1 RETURNING public.short_urls.id) SELECT count(*) FROM deleted","SELECT 1 FROM public.short_urls WHERE code IS NULL OR target_url IS NULL LIMIT 1","SELECT 1 FROM public.short_urls GROUP BY code HAVING count(*) > 1 LIMIT 1","SELECT 1 FROM public.short_urls GROUP BY target_url HAVING count(*) > 1 LIMIT 1"); AUTH_USER_REFERENCE_COLUMNS=(("public","ad_banners","created_by"),("public","admin_restaurant_map_overlays","created_by_admin_id"),("public","admin_restaurant_map_overlays","updated_by_admin_id"),("public","admin_user_preferences","user_id"),("public","announcements","created_by"),("public","documents","user_id"),("public","notifications","user_id"),("public","ocr_logs","user_id"),("public","profiles","user_id"),("public","restaurant_requests","user_id"),("public","restaurant_submissions","resolved_by_admin_id"),("public","restaurant_submissions","user_id"),("public","review_likes","user_id"),("public","reviews","edited_by_admin_id"),("public","reviews","user_id"),("public","search_logs","user_id"),("public","user_account_status","user_id"),("public","user_bookmarks","user_id"),("public","user_roles","user_id"),("public","user_stats","user_id"))
+CROSS_SCHEMA_OWNER_HOOK_VERSION="20260713002000"; CROSS_SCHEMA_OWNER_FUNCTIONS=("public.account_deletion_require_service_role()","public.account_deletion_is_active_admin(uuid)","public.account_deletion_write_audit(public.account_deletion_requests,text,text)","public.preview_account_deletion(uuid,uuid,timestamptz)","public.begin_account_deletion_apply(uuid,uuid,uuid,text,text,text,timestamptz)","public.apply_account_deletion_database_cleanup(uuid,uuid)","public.list_account_deletion_storage_objects(uuid,uuid)","public.finalize_account_deletion_storage(uuid,uuid,boolean)","public.finalize_account_deletion_auth(uuid,uuid,boolean)","public.fail_account_deletion(uuid,uuid,text)","privacy_retention.require_service_role()","privacy_retention.write_run_audit(privacy_retention.privacy_retention_runs,text,text)"); CROSS_SCHEMA_OWNER_RESOLVE_SQL="SELECT procedure.oid FROM pg_catalog.pg_proc AS procedure WHERE procedure.oid=pg_catalog.to_regprocedure(%s)"; CROSS_SCHEMA_OWNER_VERIFY_SQL="SELECT role.rolname FROM pg_catalog.pg_proc AS procedure JOIN pg_catalog.pg_roles AS role ON role.oid=procedure.proowner WHERE procedure.oid=pg_catalog.to_regprocedure(%s)"
+OBSOLETE_NOTIFICATION_OVERLOAD_HOOK_VERSION="20260713002000"; OBSOLETE_NOTIFICATION_OVERLOAD="public.create_user_notification(uuid,public.notification_type,text,text,jsonb)"; CANONICAL_NOTIFICATION_FUNCTION="public.create_user_notification(uuid,text,text,text,jsonb)"
+PUBLIC_FUNCTION_OWNERS_HOOK_VERSION="20260713002000"; PUBLIC_FUNCTION_OWNERS_SQL="SELECT procedure.oid::regprocedure::text, role.rolname FROM pg_catalog.pg_proc AS procedure JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid=procedure.pronamespace JOIN pg_catalog.pg_roles AS role ON role.oid=procedure.proowner WHERE namespace.nspname='public' ORDER BY procedure.oid"; PUBLIC_FUNCTION_OWNERS_ALLOWED=frozenset(("supabase_admin","postgres","privacy_workflow_owner")); PUBLIC_FUNCTION_OWNERS_POSTCONDITION=frozenset(("postgres","privacy_workflow_owner"))
 class RecoveryError(RuntimeError): pass
 def _pairs(pairs):
  result={}
@@ -285,6 +288,31 @@ def _apply_vector_extension_relocation_hook(conn,version):
  _query_conn(conn,VECTOR_EXTENSION_RELOCATION_HOOK[1])
  if _query_conn(conn,VECTOR_EXTENSION_RELOCATION_HOOK[2])!=[("extensions",)] or _query_conn(conn,VECTOR_EXTENSION_RELOCATION_HOOK[3]): raise RecoveryError("vector compatibility postcondition failed")
  conn.commit()
+def _apply_obsolete_notification_overload_hook(conn,version):
+ if version!=OBSOLETE_NOTIFICATION_OVERLOAD_HOOK_VERSION: return 0
+ if len(_query_conn(conn,CROSS_SCHEMA_OWNER_RESOLVE_SQL,(OBSOLETE_NOTIFICATION_OVERLOAD,)))!=1 or len(_query_conn(conn,CROSS_SCHEMA_OWNER_RESOLVE_SQL,(CANONICAL_NOTIFICATION_FUNCTION,)))!=1: raise RecoveryError("notification overload compatibility precondition failed")
+ _query_conn(conn,f"DROP FUNCTION {OBSOLETE_NOTIFICATION_OVERLOAD}")
+ if _query_conn(conn,CROSS_SCHEMA_OWNER_RESOLVE_SQL,(OBSOLETE_NOTIFICATION_OVERLOAD,)) or len(_query_conn(conn,CROSS_SCHEMA_OWNER_RESOLVE_SQL,(CANONICAL_NOTIFICATION_FUNCTION,)))!=1: raise RecoveryError("notification overload compatibility postcondition failed")
+ conn.commit()
+ return 1
+def _apply_public_function_owners_hook(conn,version):
+ if version!=PUBLIC_FUNCTION_OWNERS_HOOK_VERSION: return ()
+ functions=_query_conn(conn,PUBLIC_FUNCTION_OWNERS_SQL)
+ if any(not isinstance(signature,str) or owner not in PUBLIC_FUNCTION_OWNERS_ALLOWED for signature,owner in functions): raise RecoveryError("public function owner compatibility precondition failed")
+ changed=tuple(signature for signature,owner in functions if owner=="supabase_admin")
+ for signature in changed: _query_conn(conn,f"ALTER FUNCTION {signature} OWNER TO postgres")
+ verified=_query_conn(conn,PUBLIC_FUNCTION_OWNERS_SQL)
+ if tuple(signature for signature,owner in verified)!=tuple(signature for signature,owner in functions) or any(owner not in PUBLIC_FUNCTION_OWNERS_POSTCONDITION for signature,owner in verified): raise RecoveryError("public function owner compatibility postcondition failed")
+ conn.commit()
+ return changed
+def _apply_cross_schema_owner_hook(conn,version):
+ if version!=CROSS_SCHEMA_OWNER_HOOK_VERSION: return 0
+ for signature in CROSS_SCHEMA_OWNER_FUNCTIONS:
+  if len(_query_conn(conn,CROSS_SCHEMA_OWNER_RESOLVE_SQL,(signature,)))!=1: raise RecoveryError("cross-schema owner compatibility precondition failed")
+  _query_conn(conn,f"ALTER FUNCTION {signature} OWNER TO postgres")
+  if _query_conn(conn,CROSS_SCHEMA_OWNER_VERIFY_SQL,(signature,))!=[("postgres",)]: raise RecoveryError("cross-schema owner compatibility postcondition failed")
+ conn.commit()
+ return len(CROSS_SCHEMA_OWNER_FUNCTIONS)
 def _apply_short_urls_duplicate_target_url_hook(conn,version):
  if version!=SHORT_URLS_DUPLICATE_TARGET_URL_HOOK_VERSION: return 0
  if _query_conn(conn,SHORT_URLS_DUPLICATE_TARGET_URL_HOOK[0]) or _query_conn(conn,SHORT_URLS_DUPLICATE_TARGET_URL_HOOK[1]): raise RecoveryError("short_urls compatibility precondition failed")
@@ -296,7 +324,7 @@ def _apply_short_urls_duplicate_target_url_hook(conn,version):
 def apply_manifest(args,manifest):
  require_local(args.service); prior=_require_prior(args.restore_receipt,"restore-verify"); psql=command_exists(args.psql)
  with tempfile.TemporaryDirectory(prefix="g035-clone-") as raw:
-  service=_copy_local_service(Path(raw),Path(args.service_file),"g035-local"); env=safe_environment(service); conn=_connect("g035-local",env); self_commit_attempted=False; compatibility_hook_statements=[]; compatibility_hook_deleted_row_count=0
+  service=_copy_local_service(Path(raw),Path(args.service_file),"g035-local"); env=safe_environment(service); conn=_connect("g035-local",env); self_commit_attempted=False; compatibility_hook_statements=[]; compatibility_hook_deleted_row_count=0; compatibility_hook_owner_function_count=0; compatibility_hook_obsolete_function_count=0; compatibility_hook_public_function_signatures=()
   try:
    _query_conn(conn,"SELECT pg_advisory_lock(35035)")
    _require_restore_baseline(prior)
@@ -307,6 +335,9 @@ def apply_manifest(args,manifest):
     hook=_compatibility_hook(entry.version)
     compatibility_hook_deleted_row_count+=_apply_short_urls_duplicate_target_url_hook(conn,entry.version)
     _apply_vector_extension_relocation_hook(conn,entry.version)
+    compatibility_hook_obsolete_function_count+=_apply_obsolete_notification_overload_hook(conn,entry.version)
+    compatibility_hook_public_function_signatures=_apply_public_function_owners_hook(conn,entry.version)
+    compatibility_hook_owner_function_count+=_apply_cross_schema_owner_hook(conn,entry.version)
     if entry.version in SELF_COMMIT_VERSIONS:
      try:
       self_commit_attempted=True
@@ -337,7 +368,7 @@ def apply_manifest(args,manifest):
     if self_commit_attempted: raise RecoveryError("self_commit_ambiguous") from exc
     raise
    finally: conn.close()
- return receipt("clone-apply","applied",{"baseline_pairs_sha256":BASELINE_SHA256,"compatibility_hook_deleted_row_count":compatibility_hook_deleted_row_count,"compatibility_hook_sha256":digest((COMPATIBILITY_HOOKS,VECTOR_EXTENSION_RELOCATION_HOOK_VERSION,VECTOR_EXTENSION_RELOCATION_HOOK,SHORT_URLS_DUPLICATE_TARGET_URL_HOOK_VERSION,SHORT_URLS_DUPLICATE_TARGET_URL_HOOK)),**{k:v for k,v in observed.items() if k!="ledger_pairs"}},[prior["receipt_sha256"]])
+ return receipt("clone-apply","applied",{"baseline_pairs_sha256":BASELINE_SHA256,"compatibility_hook_deleted_row_count":compatibility_hook_deleted_row_count,"compatibility_hook_owner_function_count":compatibility_hook_owner_function_count,"compatibility_hook_obsolete_function_count":compatibility_hook_obsolete_function_count,"compatibility_hook_public_function_count":len(compatibility_hook_public_function_signatures),"compatibility_hook_public_function_sha256":digest(compatibility_hook_public_function_signatures),"compatibility_hook_sha256":digest((COMPATIBILITY_HOOKS,VECTOR_EXTENSION_RELOCATION_HOOK_VERSION,VECTOR_EXTENSION_RELOCATION_HOOK,OBSOLETE_NOTIFICATION_OVERLOAD_HOOK_VERSION,OBSOLETE_NOTIFICATION_OVERLOAD,CANONICAL_NOTIFICATION_FUNCTION,PUBLIC_FUNCTION_OWNERS_HOOK_VERSION,PUBLIC_FUNCTION_OWNERS_SQL,CROSS_SCHEMA_OWNER_HOOK_VERSION,CROSS_SCHEMA_OWNER_FUNCTIONS,SHORT_URLS_DUPLICATE_TARGET_URL_HOOK_VERSION,SHORT_URLS_DUPLICATE_TARGET_URL_HOOK)),**{k:v for k,v in observed.items() if k!="ledger_pairs"}},[prior["receipt_sha256"]])
 def run_postflight(args,manifest):
  require_local(args.service); applied=_require_prior(args.clone_receipt,"clone-apply")
  with tempfile.TemporaryDirectory(prefix="g035-postflight-") as raw:
