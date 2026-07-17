@@ -11,6 +11,9 @@ SELF_COMMIT_VERSIONS = ("20260712000400", "20260713002400")
 FORBIDDEN_VERSIONS = frozenset({"20260531105250", "20260612075100", "20260627150000", "20260702000200", "20260707000700", "20260713000400", "20260713002500", "20260713002600", "20260713002700"})
 APPLICATION_SCHEMAS = ("public", "shortener_private", "account_deletion_private", "privacy_retention")
 MANAGED_METADATA_SCHEMAS = ("auth", "storage")
+REMEDIATION_AUTHORIZATION_SCHEMA = "g035-short-url-remediation-authorization-v1"
+REMEDIATION_PUBLIC_KEY_PEM = "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAYQJXKk15hE2e0uXtDTnVV2zyMs1xSrT2rK90a5qYdAE=\n-----END PUBLIC KEY-----\n"
+REMEDIATION_PUBLIC_KEY_SHA256 = "459308554256047bb7ea6095bdfbe08f353d438a824cb112273c7c9c94074eec"
 # Immutable identities from the authoritative 12-row G034 hosted readback; this
 # records observed ledger state, not proof of any historical application event.
 BASELINE_PAIRS = (

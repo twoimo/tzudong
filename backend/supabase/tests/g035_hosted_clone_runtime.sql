@@ -11,6 +11,7 @@ DO $g035_clone_contract$
 DECLARE
   target oid;
   public_execute boolean;
+  remediation_violation boolean := false;
 BEGIN
   -- Approval RPC must have its exact identity signature and no public/client grant.
   target := pg_catalog.to_regprocedure(
@@ -148,6 +149,37 @@ BEGIN
   ) OR pg_catalog.has_table_privilege('service_role',
        'privacy_retention.tzuyang_address_evidence_admin_approval_receipts', 'INSERT,UPDATE,DELETE') THEN
     RAISE EXCEPTION 'G035 clone approval receipt fail-closed relation contract failed';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_catalog.pg_constraint AS constraint_row
+     WHERE constraint_row.conrelid = 'public.short_urls'::regclass
+       AND constraint_row.contype = 'u'
+       AND pg_catalog.pg_get_constraintdef(constraint_row.oid) = 'UNIQUE (target_url)'
+  ) OR EXISTS (SELECT 1 FROM public.short_urls GROUP BY target_url HAVING count(*) > 1) THEN
+    RAISE EXCEPTION 'G035 short-url target uniqueness contract failed';
+  END IF;
+  IF pg_catalog.to_regclass('g035_recovery_control.short_url_duplicate_quarantine') IS NOT NULL THEN
+    EXECUTE 'SELECT EXISTS (SELECT 1 FROM public.short_urls AS active JOIN g035_recovery_control.short_url_duplicate_quarantine AS quarantined ON quarantined.id = active.id)' INTO remediation_violation;
+    IF remediation_violation THEN
+      RAISE EXCEPTION 'G035 remediation active/quarantine overlap';
+    END IF;
+  END IF;
+  IF EXISTS (
+    SELECT 1
+      FROM pg_catalog.pg_namespace AS namespace_row
+      CROSS JOIN LATERAL pg_catalog.aclexplode(COALESCE(namespace_row.nspacl, pg_catalog.acldefault('n', namespace_row.nspowner))) AS privilege_row
+     WHERE namespace_row.nspname = 'g035_recovery_control'
+       AND privilege_row.grantee IN (0, (SELECT oid FROM pg_catalog.pg_roles WHERE rolname = 'anon'), (SELECT oid FROM pg_catalog.pg_roles WHERE rolname = 'authenticated'), (SELECT oid FROM pg_catalog.pg_roles WHERE rolname = 'service_role'))
+  ) OR EXISTS (
+    SELECT 1
+      FROM pg_catalog.pg_class AS relation_row
+      JOIN pg_catalog.pg_namespace AS namespace_row ON namespace_row.oid = relation_row.relnamespace
+      CROSS JOIN LATERAL pg_catalog.aclexplode(COALESCE(relation_row.relacl, pg_catalog.acldefault('r', relation_row.relowner))) AS privilege_row
+     WHERE namespace_row.nspname = 'g035_recovery_control'
+       AND relation_row.relkind IN ('r','S')
+       AND privilege_row.grantee IN (0, (SELECT oid FROM pg_catalog.pg_roles WHERE rolname = 'anon'), (SELECT oid FROM pg_catalog.pg_roles WHERE rolname = 'authenticated'), (SELECT oid FROM pg_catalog.pg_roles WHERE rolname = 'service_role'))
+  ) THEN
+    RAISE EXCEPTION 'G035 remediation quarantine grant contract failed';
   END IF;
 END;
 $g035_clone_contract$;
