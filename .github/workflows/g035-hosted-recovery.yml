@@ -1,0 +1,57 @@
+name: G035 Local Recovery Rehearsal
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Local rehearsal operation
+        required: true
+        default: validate
+        type: choice
+        options: [validate, capture, restore-verify, clone-apply, local-postflight]
+      evidence_receipt_path:
+        description: Absolute local path outside the workspace
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: g035-local-recovery
+  cancel-in-progress: false
+jobs:
+  rehearsal:
+    runs-on: [self-hosted, g035-recovery-local]
+    timeout-minutes: 120
+    env:
+      REQUESTED_MODE: ${{ inputs.mode }}
+      EVIDENCE_RECEIPT_PATH: ${{ inputs.evidence_receipt_path }}
+      G035_PG_SERVICE_FILE: ${{ vars.G035_LOCAL_PG_SERVICE_FILE }}
+      G035_ENCRYPTED_DESTINATION_PATH: ${{ vars.G035_ENCRYPTED_DESTINATION_PATH }}
+      G035_PUBLIC_RECIPIENT: ${{ vars.G035_PUBLIC_RECIPIENT }}
+      G035_ENCRYPT_COMMAND: ${{ vars.G035_ENCRYPT_COMMAND }}
+      G035_DECRYPT_COMMAND: ${{ vars.G035_DECRYPT_COMMAND }}
+      G035_G034_ARTIFACT: ${{ vars.G035_G034_ARTIFACT }}
+      G035_DUMP_PATH: ${{ vars.G035_DUMP_PATH }}
+      G035_CAPTURE_RECEIPT_PATH: ${{ vars.G035_CAPTURE_RECEIPT_PATH }}
+      G035_RESTORE_RECEIPT_PATH: ${{ vars.G035_RESTORE_RECEIPT_PATH }}
+      G035_CLONE_RECEIPT_PATH: ${{ vars.G035_CLONE_RECEIPT_PATH }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with: {fetch-depth: 1, persist-credentials: false}
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with: {python-version: '3.12'}
+      - name: Install hash-locked local driver
+        run: python -m pip install --require-hashes -r backend/supabase/scripts/g034-preflight-requirements.txt
+      - name: Run local-only rehearsal
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -r "$G035_PG_SERVICE_FILE"
+          test -d "$(dirname "$EVIDENCE_RECEIPT_PATH")"
+          case "$(realpath "$(dirname "$EVIDENCE_RECEIPT_PATH")")" in "$(realpath "$GITHUB_WORKSPACE")"*) exit 1;; esac
+          case "$REQUESTED_MODE" in
+            validate) python backend/supabase/scripts/g035_hosted_recovery.py validate > "$EVIDENCE_RECEIPT_PATH" ;;
+            capture) python backend/supabase/scripts/g035_hosted_recovery.py capture --destination "$G035_ENCRYPTED_DESTINATION_PATH" --service-file "$G035_PG_SERVICE_FILE" --recipient "$G035_PUBLIC_RECIPIENT" --g034-artifact "$G035_G034_ARTIFACT" --encrypt-command "$G035_ENCRYPT_COMMAND" > "$EVIDENCE_RECEIPT_PATH" ;;
+            restore-verify) python backend/supabase/scripts/g035_hosted_recovery.py restore-verify --dump "$G035_DUMP_PATH" --capture-receipt "$G035_CAPTURE_RECEIPT_PATH" --service-file "$G035_PG_SERVICE_FILE" --destination-service g035-local --decrypt-command "$G035_DECRYPT_COMMAND" > "$EVIDENCE_RECEIPT_PATH" ;;
+            clone-apply) python backend/supabase/scripts/g035_hosted_recovery.py clone-apply --service g035-local --service-file "$G035_PG_SERVICE_FILE" --restore-receipt "$G035_RESTORE_RECEIPT_PATH" > "$EVIDENCE_RECEIPT_PATH" ;;
+            local-postflight) python backend/supabase/scripts/g035_hosted_recovery.py local-postflight --service g035-local --service-file "$G035_PG_SERVICE_FILE" --clone-receipt "$G035_CLONE_RECEIPT_PATH" > "$EVIDENCE_RECEIPT_PATH" ;;
+          esac
