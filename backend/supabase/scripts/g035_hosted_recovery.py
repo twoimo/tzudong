@@ -275,12 +275,16 @@ def _auth_placeholder_evidence():
 def _ledger_assert(conn,manifest,count):
  actual=_fingerprints(conn)["ledger_pairs"]
  if any(v in FORBIDDEN_VERSIONS for v,_ in actual) or not ledger_prefix(manifest,actual) or len(actual)!=len(BASELINE_PAIRS)+count: raise RecoveryError("ledger prefix mismatch")
+def _require_restore_baseline(prior):
+ evidence=prior.get("evidence")
+ if not isinstance(evidence,dict) or evidence.get("ledger_sha256")!=BASELINE_SHA256 or evidence.get("ledger_count")!=len(BASELINE_PAIRS) or not _ledger_evidence_equal(evidence.get("ledger_pairs"),BASELINE_PAIRS): raise RecoveryError("restore receipt ledger mismatch")
 def apply_manifest(args,manifest):
  require_local(args.service); prior=_require_prior(args.restore_receipt,"restore-verify"); psql=command_exists(args.psql)
  with tempfile.TemporaryDirectory(prefix="g035-clone-") as raw:
   service=_copy_local_service(Path(raw),Path(args.service_file),"g035-local"); env=safe_environment(service); conn=_connect("g035-local",env); self_commit_attempted=False
   try:
    _query_conn(conn,"SELECT pg_advisory_lock(35035)")
+   _require_restore_baseline(prior)
    _ledger_assert(conn,manifest,0)
    for index,entry in enumerate(manifest.migrations):
     _ledger_assert(conn,manifest,index); source=repository_root(Path(__file__).resolve())/entry.path
