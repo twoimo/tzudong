@@ -12,7 +12,7 @@ Stop when a capture readiness artifact, receipt, commit, or live fingerprint dif
 
 Keep the encryption private key, offline Ed25519 signing key, and recovery service definitions offline under separate restricted custody. Never place a private key, signing operation, raw URL, quarantine row, or service credential in a repository, ticket, chat, shell history, CI variable, artifact store, or this runbook. The workflow consumes only restrictive local files. The remediation verifier uses the authorization public key pinned in source; the private signing key remains offline.
 
-Capture ciphertext only to an operator-controlled local encrypted volume. Restore verification and every remediation/clone/postflight operation use only the local/self-hosted `g035-local` service. A clone is a verification environment, not a production substitute.
+Capture ciphertext only to an operator-controlled local encrypted volume. Capture accepts only the source-pinned approved age recipient; restore requires the capture receipt recipient fingerprint to match that pin, without recording private identity material. Restore verification and every remediation/clone/postflight operation use only the local/self-hosted `g035-local` service with numeric `127.0.0.1` or `::1`, never hostnames or sockets. A clone is a verification environment, not a production substitute.
 
 ## Safe command sequence
 
@@ -37,10 +37,11 @@ openssl pkeyutl -sign -rawin -inkey <offline-ed25519-private-key-path> -in <cano
 python backend/supabase/scripts/g035_hosted_recovery.py short-url-remediation-apply --service g035-local --service-file <restricted-local-service-file> --restore-receipt <restore-verify-receipt.json> --inspect-receipt <short-url-remediation-inspect-receipt.json> --authorization <canonical-authorization.json> --authorization-signature <canonical-authorization.json.sig> > <short-url-remediation-apply-receipt.json>
 python backend/supabase/scripts/g035_hosted_recovery.py short-url-remediation-verify --service g035-local --service-file <restricted-local-service-file> --apply-receipt <short-url-remediation-apply-receipt.json> > <short-url-remediation-verify-receipt.json>
 python backend/supabase/scripts/g035_hosted_recovery.py clone-apply --service g035-local --service-file <restricted-local-service-file> --restore-receipt <restore-verify-receipt.json> --short-url-remediation-receipt <short-url-remediation-verify-receipt.json> --psql <psql-command> > <clone-apply-receipt.json>
-python backend/supabase/scripts/g035_hosted_recovery.py local-postflight --service g035-local --service-file <restricted-local-service-file> --clone-receipt <clone-apply-receipt.json> > <local-postflight-receipt.json>
+python backend/supabase/scripts/g035_hosted_recovery.py local-postflight --service g035-local --service-file <restricted-local-service-file> --clone-receipt <clone-apply-receipt.json> --psql <psql-command> > <local-postflight-receipt.json>
 ```
 
 The remediation quarantine is lossless local evidence: it retains deleted duplicate rows locally while no raw URLs or rows leave that quarantine. After clone application, the local state is `transformed_local_clone_not_exact_restore`; the exact restore receipt remains the prior truth. Production remains absent.
+A repeat of `short-url-remediation-apply` is permitted only with the identical signed binding and batch after committed state; it performs no delete and rejects partial control state, drift, ACL changes, overlap, or a different batch. Postflight independently re-runs the rollback-only clone runtime SQL and compares its catalog and ledger fingerprints to the clone receipt.
 
 ## Data limits and cleanup
 

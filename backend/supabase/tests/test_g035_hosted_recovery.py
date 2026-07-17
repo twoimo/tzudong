@@ -48,7 +48,7 @@ class ContractTests(unittest.TestCase):
    "short-url-remediation-apply":'python backend/supabase/scripts/g035_hosted_recovery.py short-url-remediation-apply --service g035-local --service-file "$G035_LOCAL_PG_SERVICE_FILE" --restore-receipt "$G035_RESTORE_RECEIPT_PATH" --inspect-receipt "$G035_SHORT_URL_REMEDIATION_INSPECT_RECEIPT_PATH" --authorization "$G035_REMEDIATION_AUTHORIZATION_PATH" --authorization-signature "$G035_REMEDIATION_AUTHORIZATION_SIGNATURE_PATH" > "$EVIDENCE_RECEIPT_PATH"',
    "short-url-remediation-verify":'python backend/supabase/scripts/g035_hosted_recovery.py short-url-remediation-verify --service g035-local --service-file "$G035_LOCAL_PG_SERVICE_FILE" --apply-receipt "$G035_SHORT_URL_REMEDIATION_APPLY_RECEIPT_PATH" > "$EVIDENCE_RECEIPT_PATH"',
    "clone-apply":'python backend/supabase/scripts/g035_hosted_recovery.py clone-apply --service g035-local --service-file "$G035_LOCAL_PG_SERVICE_FILE" --restore-receipt "$G035_RESTORE_RECEIPT_PATH" --short-url-remediation-receipt "$G035_SHORT_URL_REMEDIATION_VERIFY_RECEIPT_PATH" > "$EVIDENCE_RECEIPT_PATH"',
-   "local-postflight":'python backend/supabase/scripts/g035_hosted_recovery.py local-postflight --service g035-local --service-file "$G035_LOCAL_PG_SERVICE_FILE" --clone-receipt "$G035_CLONE_RECEIPT_PATH" > "$EVIDENCE_RECEIPT_PATH"',
+   "local-postflight":'python backend/supabase/scripts/g035_hosted_recovery.py local-postflight --service g035-local --service-file "$G035_LOCAL_PG_SERVICE_FILE" --clone-receipt "$G035_CLONE_RECEIPT_PATH" --psql psql > "$EVIDENCE_RECEIPT_PATH"',
   }
   self.assertEqual(set(choices),set(commands))
   for mode,command in commands.items():
@@ -81,6 +81,7 @@ class ControllerTests(unittest.TestCase):
   return {"managed_metadata_schema_scope":list(contract.MANAGED_METADATA_SCHEMAS),"managed_table_data_exclusions":["--exclude-table-data=auth.*","--exclude-table-data=storage.*"]}
  def test_local_destination_service_rejects_rerouting_and_ambiguous_inputs(self):
   cases=(
+   "host=localhost",
    "host=prod.example.com",
    "host=10.0.0.1",
    "host=192.168.1.10",
@@ -98,7 +99,7 @@ class ControllerTests(unittest.TestCase):
     with self.assertRaises(recovery.RecoveryError): recovery._copy_local_service(Path(raw),service,"g035-local")
  def test_local_destination_service_accepts_loopback_and_socket_exact_bytes(self):
   with tempfile.TemporaryDirectory() as raw,patch.object(recovery,"_restrictive",return_value=True):
-   for host in ("localhost","127.0.0.1","::1","/var/run/postgresql"):
+   for host in ("127.0.0.1","::1"):
     body=f"[g035-local]\nhost={host}\nport=5432\ndbname=g035_local\napplication_name=g035-local-run-1\nsslmode=disable\n"
     service=self.service(raw,body=body)
     copied=recovery._copy_local_service(Path(raw),service,"g035-local")
@@ -254,7 +255,7 @@ class ControllerTests(unittest.TestCase):
   conn=Conn(); manifest=contract.load_manifest(ROOT); observed=fingerprints()
   with tempfile.TemporaryDirectory() as raw:
    dest=Path(raw)/"out"; dest.mkdir(); artifact=Path(raw)/"ok.json"; artifact.write_text(json.dumps(self.artifact(manifest,{"ledger_sha256":"1"*64,"catalog_sha256":"2"*64})),encoding="utf8")
-   recipient="age1"+"q"*58
+   recipient="age19ae5mjee5z9djp8fvvecpr8ll2xdap3k9n2yucyhdy8xy5ujhywsl5zek2"
    args=Namespace(destination=str(dest),service_file=str(self.service(raw,"g035")),recipient=recipient,g034_artifact=str(artifact),pg_dump="pg_dump",encrypt_command="age")
    def dump(*values):
     self.assertNotIn("ROLLBACK",conn.events); self.assertEqual(recipient,values[2]); (dest/"g035-dump.enc").write_bytes(b"x"); return []
@@ -307,10 +308,10 @@ class ControllerTests(unittest.TestCase):
   class Conn:
    def cursor(self): return Cursor()
   self.assertEqual([],recovery._query_conn(Conn(),"BEGIN"))
- def test_capture_rejects_invalid_age_recipients(self):
+ def test_capture_rejects_invalid_or_unapproved_age_recipients_before_commands(self):
   with tempfile.TemporaryDirectory() as raw:
    dest=Path(raw)/"out"; dest.mkdir()
-   for recipient in ("a"*64,"AGE1"+"q"*58,"age1"+"q"*57,"age1"+"q"*58+" ","age1"+"q"*57+"b","age1"+"q"*58+"--recipient=x"):
+   for recipient in ("a"*64,"AGE1"+"q"*58,"age1"+"q"*57,"age1"+"q"*58+" ","age1"+"q"*57+"b","age1"+"q"*58+"--recipient=x","age1"+"q"*58):
     args=Namespace(destination=str(dest),service_file="unused",recipient=recipient,g034_artifact="unused",pg_dump="pg_dump",encrypt_command="age")
     with self.assertRaisesRegex(recovery.RecoveryError,"invalid encryption recipient"),patch.object(recovery,"command_exists") as commands:
      recovery.run_capture(args,None)
@@ -336,7 +337,7 @@ class ControllerTests(unittest.TestCase):
    dump=Path(raw)/"dump.enc"; dump.write_bytes(b"ciphertext")
    identity=Path(raw)/"offline-identity"; identity.write_bytes(b"test-key-material"); identity.chmod(0o600)
    args=Namespace(destination_service="g035-local",capture_receipt="capture",dump=str(dump),identity_file=str(identity),decrypt_command="age",pg_restore="pg_restore",service_file=str(self.service(raw)))
-   capture={"receipt_sha256":"capture-receipt","evidence":{"dump_sha256":hashlib.sha256(b"ciphertext").hexdigest(),"extension_scope":[{"name":"pg_trgm","schema":"extensions"},{"name":"uuid-ossp","schema":"extensions"},{"name":"btree_gin","schema":"extensions"},{"name":"vector","schema":"public"},{"name":"pgcrypto","schema":"extensions"}],**self.managed_capture_scope(),**observed}}
+   capture={"receipt_sha256":"capture-receipt","evidence":{"recipient_fingerprint":contract.APPROVED_AGE_RECIPIENT_SHA256,"dump_sha256":hashlib.sha256(b"ciphertext").hexdigest(),"extension_scope":[{"name":"pg_trgm","schema":"extensions"},{"name":"uuid-ossp","schema":"extensions"},{"name":"btree_gin","schema":"extensions"},{"name":"vector","schema":"public"},{"name":"pgcrypto","schema":"extensions"}],**self.managed_capture_scope(),**observed}}
    def execute(argv,**unused):
     if argv[0]=="age": Path(argv[5]).write_bytes(b"plain")
    with patch.object(recovery,"_require_prior",return_value=capture),patch.object(recovery,"command_exists",side_effect=lambda command:command),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"run",side_effect=execute) as execute,patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",return_value=[]),patch.object(recovery,"_create_auth_user_placeholders"),patch.object(recovery,"_fingerprints",return_value=observed):
@@ -350,10 +351,10 @@ class ControllerTests(unittest.TestCase):
   self.assertNotIn("hosted_managed_catalog_sha256",result["evidence"])
   self.assertEqual("managed schema DDL restored with hosted catalog parity; managed table data excluded",result["evidence"]["managed_metadata_coherence"])
  def test_auth_placeholder_contract_is_exact_bounded_and_never_contains_managed_data(self):
-  expected=(("public","ad_banners","created_by"),("public","admin_restaurant_map_overlays","created_by_admin_id"),("public","admin_restaurant_map_overlays","updated_by_admin_id"),("public","admin_user_preferences","user_id"),("public","announcements","created_by"),("public","documents","user_id"),("public","notifications","user_id"),("public","ocr_logs","user_id"),("public","profiles","user_id"),("public","restaurant_requests","user_id"),("public","restaurant_submissions","resolved_by_admin_id"),("public","restaurant_submissions","user_id"),("public","review_likes","user_id"),("public","reviews","edited_by_admin_id"),("public","reviews","user_id"),("public","search_logs","user_id"),("public","user_account_status","user_id"),("public","user_bookmarks","user_id"),("public","user_roles","user_id"),("public","user_stats","user_id"))
+  expected=(("public","ad_banners","created_by"),("public","admin_restaurant_map_overlays","created_by_admin_id"),("public","admin_restaurant_map_overlays","updated_by_admin_id"),("public","admin_user_preferences","user_id"),("public","announcements","created_by"),("public","documents","user_id"),("public","notifications","user_id"),("public","ocr_logs","user_id"),("public","profiles","user_id"),("public","restaurant_requests","user_id"),("public","restaurant_submissions","resolved_by_admin_id"),("public","restaurant_submissions","user_id"),("public","review_likes","user_id"),("public","reviews","edited_by_admin_id"),("public","reviews","user_id"),("public","search_logs","user_id"),("public","user_account_status","user_id"),("public","user_roles","user_id"),("public","user_stats","user_id"))
   self.assertEqual(expected,recovery.AUTH_USER_REFERENCE_COLUMNS)
   evidence=recovery._auth_placeholder_evidence()
-  self.assertEqual({"auth_placeholder_mapping_count":20,"auth_placeholder_mapping_sha256":recovery.digest(expected)},evidence)
+  self.assertEqual({"auth_placeholder_mapping_count":19,"auth_placeholder_mapping_sha256":recovery.digest(expected)},evidence)
   self.assertNotIn("auth.users",json.dumps(evidence)); self.assertNotIn("email",json.dumps(evidence)); self.assertNotIn("token",json.dumps(evidence))
  def test_auth_placeholders_deduplicate_source_ids_and_require_empty_fenced_target(self):
   calls=[]
@@ -364,7 +365,7 @@ class ControllerTests(unittest.TestCase):
    return []
   with patch.object(recovery,"_query_conn",side_effect=query):
    recovery._create_auth_user_placeholders(object())
-  self.assertEqual(22,len(calls))
+  self.assertEqual(21,len(calls))
   empty_check=calls[-2][0]; insert=calls[-1][0]
   self.assertEqual("SELECT NOT EXISTS (SELECT 1 FROM auth.users)",empty_check)
   self.assertIn("INSERT INTO auth.users (id)",insert); self.assertIn("SELECT DISTINCT id",insert); self.assertIn(" UNION ALL ",insert)
@@ -399,7 +400,7 @@ class ControllerTests(unittest.TestCase):
    identity=Path(raw)/"identity"; identity.write_bytes(b"test-key-material"); identity.chmod(0o600)
    connections=[]
    args=Namespace(destination_service="g035-local",capture_receipt="capture",dump=str(dump),identity_file=str(identity),decrypt_command="age",pg_restore="pg_restore",service_file=str(self.service(raw)))
-   capture={"receipt_sha256":"capture-receipt","evidence":{"dump_sha256":hashlib.sha256(b"ciphertext").hexdigest(),"extension_scope":[{"name":name,"schema":schema} for name,schema in recovery.RECOVERY_EXTENSIONS],**self.managed_capture_scope(),**observed}}
+   capture={"receipt_sha256":"capture-receipt","evidence":{"recipient_fingerprint":contract.APPROVED_AGE_RECIPIENT_SHA256,"dump_sha256":hashlib.sha256(b"ciphertext").hexdigest(),"extension_scope":[{"name":name,"schema":schema} for name,schema in recovery.RECOVERY_EXTENSIONS],**self.managed_capture_scope(),**observed}}
    for failing_section in (None,"pre-data","data","post-data"):
     events=[]
     def execute(argv,**unused):
@@ -432,7 +433,7 @@ class ControllerTests(unittest.TestCase):
    dump=Path(raw)/"dump.enc"; dump.write_bytes(b"ciphertext")
    identity=Path(raw)/"identity"; identity.write_bytes(b"test-key-material"); identity.chmod(0o600)
    args=Namespace(destination_service="g035-local",capture_receipt="capture",dump=str(dump),identity_file=str(identity),decrypt_command="age",pg_restore="pg_restore",service_file=str(self.service(raw)))
-   capture={"receipt_sha256":"capture-receipt","evidence":{"dump_sha256":hashlib.sha256(b"ciphertext").hexdigest(),"extension_scope":[{"name":"pg_trgm","schema":"extensions"},{"name":"uuid-ossp","schema":"extensions"},{"name":"btree_gin","schema":"extensions"},{"name":"vector","schema":"public"},{"name":"pgcrypto","schema":"extensions"}],**self.managed_capture_scope(),**{**observed,"ledger_pairs":[("20260101000000","mutated")]}}}
+   capture={"receipt_sha256":"capture-receipt","evidence":{"recipient_fingerprint":contract.APPROVED_AGE_RECIPIENT_SHA256,"dump_sha256":hashlib.sha256(b"ciphertext").hexdigest(),"extension_scope":[{"name":"pg_trgm","schema":"extensions"},{"name":"uuid-ossp","schema":"extensions"},{"name":"btree_gin","schema":"extensions"},{"name":"vector","schema":"public"},{"name":"pgcrypto","schema":"extensions"}],**self.managed_capture_scope(),**{**observed,"ledger_pairs":[("20260101000000","mutated")]}}}
    def execute(argv,**unused):
     if argv[0]=="age": Path(argv[5]).write_bytes(b"plain")
    with patch.object(recovery,"_require_prior",return_value=capture),patch.object(recovery,"command_exists",side_effect=lambda command:command),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"run",side_effect=execute),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",return_value=[]),patch.object(recovery,"_create_auth_user_placeholders"),patch.object(recovery,"_fingerprints",return_value=observed),self.assertRaisesRegex(recovery.RecoveryError,"restore evidence mismatch"):
@@ -441,6 +442,12 @@ class ControllerTests(unittest.TestCase):
   pairs=(("20260101000000","actual"),)
   self.assertTrue(recovery._ledger_evidence_equal([list(pair) for pair in pairs],pairs))
   self.assertFalse(recovery._ledger_evidence_equal([["20260101000000",1]],pairs))
+ def test_managed_metadata_schemas_normalize_json_lists_but_reject_order_or_value_mutation(self):
+  expected=list(contract.MANAGED_METADATA_SCHEMAS)
+  observed=tuple(contract.MANAGED_METADATA_SCHEMAS)
+  self.assertTrue(recovery._managed_metadata_schemas_equal(expected,observed))
+  self.assertFalse(recovery._managed_metadata_schemas_equal(list(reversed(expected)),observed))
+  self.assertFalse(recovery._managed_metadata_schemas_equal([*expected[:-1],"unexpected"],observed))
  def test_fingerprints_split_restorable_and_managed_catalog_scopes(self):
   calls=[]
   def query(conn,sql,params=None):
@@ -460,7 +467,7 @@ class ControllerTests(unittest.TestCase):
    dump=Path(raw)/"dump.enc"; dump.write_bytes(b"ciphertext")
    identity=Path(raw)/"identity"; identity.write_bytes(b"test-key-material"); identity.chmod(0o600)
    args=Namespace(destination_service="g035-local",capture_receipt="capture",dump=str(dump),identity_file=str(identity),decrypt_command="age",pg_restore="pg_restore",service_file=str(self.service(raw)))
-   capture={"receipt_sha256":"capture-receipt","evidence":{"dump_sha256":hashlib.sha256(b"ciphertext").hexdigest(),"extension_scope":[]}}
+   capture={"receipt_sha256":"capture-receipt","evidence":{"recipient_fingerprint":contract.APPROVED_AGE_RECIPIENT_SHA256,"dump_sha256":hashlib.sha256(b"ciphertext").hexdigest(),"extension_scope":[]}}
    with patch.object(recovery,"_require_prior",return_value=capture),patch.object(recovery,"_connect") as connect,patch.object(recovery,"run") as run,self.assertRaisesRegex(recovery.RecoveryError,"managed metadata scope"):
     recovery.run_restore_verify(args,None)
   connect.assert_not_called(); run.assert_not_called()
@@ -470,7 +477,7 @@ class ControllerTests(unittest.TestCase):
    args=Namespace(destination_service="g035-local",capture_receipt="capture",dump=str(Path(raw)/"missing.enc"),identity_file=str(identity),decrypt_command="age",pg_restore="pg_restore",service_file=str(self.service(raw)))
    extension_scope=[{"name":name,"schema":schema} for name,schema in recovery.RECOVERY_EXTENSIONS]
    for exclusions in (None,["--exclude-table-data=auth.*"],["--exclude-table-data=storage.*","--exclude-table-data=auth.*"],["--exclude-table-data=auth.*","--exclude-table-data=storage.tables"]):
-    evidence={"extension_scope":extension_scope,"managed_metadata_schema_scope":["auth","storage"]}
+    evidence={"recipient_fingerprint":contract.APPROVED_AGE_RECIPIENT_SHA256,"extension_scope":extension_scope,"managed_metadata_schema_scope":["auth","storage"]}
     if exclusions is not None: evidence["managed_table_data_exclusions"]=exclusions
     capture={"receipt_sha256":"capture-receipt","evidence":evidence}
     with patch.object(recovery,"_require_prior",return_value=capture),patch.object(recovery,"_connect") as connect,patch.object(recovery,"run") as run,self.assertRaisesRegex(recovery.RecoveryError,"managed metadata scope"):
@@ -494,7 +501,7 @@ class ControllerTests(unittest.TestCase):
    dump=Path(raw)/"dump.enc"; dump.write_bytes(b"ciphertext")
    identity=Path(raw)/"identity"; identity.write_bytes(b"test-key-material"); identity.chmod(0o600)
    args=Namespace(destination_service="g035-local",capture_receipt="capture",dump=str(dump),identity_file=str(identity),decrypt_command="age",pg_restore="pg_restore",service_file=str(self.service(raw)))
-   capture={"receipt_sha256":"capture-receipt","evidence":{"dump_sha256":hashlib.sha256(b"ciphertext").hexdigest(),"extension_scope":[{"name":"pg_trgm","schema":"extensions"},{"name":"uuid-ossp","schema":"extensions"},{"name":"btree_gin","schema":"extensions"},{"name":"vector","schema":"public"},{"name":"pgcrypto","schema":"extensions"}],**self.managed_capture_scope(),**observed}}
+   capture={"receipt_sha256":"capture-receipt","evidence":{"recipient_fingerprint":contract.APPROVED_AGE_RECIPIENT_SHA256,"dump_sha256":hashlib.sha256(b"ciphertext").hexdigest(),"extension_scope":[{"name":"pg_trgm","schema":"extensions"},{"name":"uuid-ossp","schema":"extensions"},{"name":"btree_gin","schema":"extensions"},{"name":"vector","schema":"public"},{"name":"pgcrypto","schema":"extensions"}],**self.managed_capture_scope(),**observed}}
    def execute(argv,**unused):
     events.append(argv[0])
     if argv[0]=="age": Path(argv[5]).write_bytes(b"plain")
