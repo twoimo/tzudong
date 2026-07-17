@@ -7,6 +7,8 @@ SCRIPTS=Path(__file__).parents[1]/"scripts"; sys.path.insert(0,str(SCRIPTS))
 import g035_hosted_recovery_contract as contract
 spec=importlib.util.spec_from_file_location("recovery",SCRIPTS/"g035_hosted_recovery.py"); recovery=importlib.util.module_from_spec(spec); spec.loader.exec_module(recovery)
 ROOT=Path(__file__).parents[3]
+def fingerprints(*,pairs=(),ledger_sha256="1"*64,restorable_catalog_sha256="2"*64,managed_catalog_sha256="3"*64,managed_schemas=contract.MANAGED_METADATA_SCHEMAS):
+ return {"ledger_pairs":pairs,"ledger_sha256":ledger_sha256,"ledger_count":len(pairs),"restorable_catalog_sha256":restorable_catalog_sha256,"managed_catalog_sha256":managed_catalog_sha256,"managed_metadata_schemas_present":managed_schemas}
 
 class ContractTests(unittest.TestCase):
  def test_manifest_and_immutable_pair_baseline(self):
@@ -189,9 +191,9 @@ class ControllerTests(unittest.TestCase):
    def fetchall(self): return [("snapshot",)]
    def rollback(self): self.events.append("ROLLBACK")
    def close(self): self.events.append("CLOSE")
-  conn=Conn(); manifest=contract.load_manifest(ROOT); observed={"ledger_pairs":[],"ledger_sha256":"1"*64,"ledger_count":0,"catalog_sha256":"2"*64}
+  conn=Conn(); manifest=contract.load_manifest(ROOT); observed=fingerprints()
   with tempfile.TemporaryDirectory() as raw:
-   dest=Path(raw)/"out"; dest.mkdir(); artifact=Path(raw)/"ok.json"; artifact.write_text(json.dumps(self.artifact(manifest,observed)),encoding="utf8")
+   dest=Path(raw)/"out"; dest.mkdir(); artifact=Path(raw)/"ok.json"; artifact.write_text(json.dumps(self.artifact(manifest,{"ledger_sha256":"1"*64,"catalog_sha256":"2"*64})),encoding="utf8")
    recipient="age1"+"q"*58
    args=Namespace(destination=str(dest),service_file=str(self.service(raw,"g035")),recipient=recipient,g034_artifact=str(artifact),pg_dump="pg_dump",encrypt_command="age")
    def dump(*values):
@@ -205,6 +207,7 @@ class ControllerTests(unittest.TestCase):
   self.assertEqual(["supabase_migrations"],result["evidence"]["recovery_control_schema_scope"])
   self.assertEqual([{"name":"pg_trgm","schema":"extensions"},{"name":"uuid-ossp","schema":"extensions"},{"name":"btree_gin","schema":"extensions"},{"name":"vector","schema":"extensions"},{"name":"pgcrypto","schema":"extensions"}],result["evidence"]["extension_scope"])
   self.assertEqual(observed["ledger_pairs"],result["evidence"]["ledger_pairs"])
+  self.assertEqual(observed["managed_catalog_sha256"],result["evidence"]["managed_catalog_sha256"])
  def test_connect_binds_servicefile_without_global_environment_mutation(self):
   import types
   with tempfile.TemporaryDirectory() as raw:
@@ -265,12 +268,12 @@ class ControllerTests(unittest.TestCase):
   class Conn:
    def rollback(self): pass
    def close(self): pass
-  observed={"ledger_pairs":[],"ledger_sha256":"1"*64,"ledger_count":0,"catalog_sha256":"2"*64}
+  observed=fingerprints(managed_catalog_sha256="4"*64)
   with tempfile.TemporaryDirectory() as raw:
    dump=Path(raw)/"dump.enc"; dump.write_bytes(b"ciphertext")
    identity=Path(raw)/"offline-identity"; identity.write_bytes(b"test-key-material"); identity.chmod(0o600)
    args=Namespace(destination_service="g035-local",capture_receipt="capture",dump=str(dump),identity_file=str(identity),decrypt_command="age",pg_restore="pg_restore",service_file=str(self.service(raw)))
-   capture={"receipt_sha256":"capture-receipt","evidence":{"dump_sha256":hashlib.sha256(b"ciphertext").hexdigest(),"extension_scope":[{"name":"pg_trgm","schema":"extensions"},{"name":"uuid-ossp","schema":"extensions"},{"name":"btree_gin","schema":"extensions"},{"name":"vector","schema":"extensions"},{"name":"pgcrypto","schema":"extensions"}],**observed}}
+   capture={"receipt_sha256":"capture-receipt","evidence":{"dump_sha256":hashlib.sha256(b"ciphertext").hexdigest(),"extension_scope":[{"name":"pg_trgm","schema":"extensions"},{"name":"uuid-ossp","schema":"extensions"},{"name":"btree_gin","schema":"extensions"},{"name":"vector","schema":"extensions"},{"name":"pgcrypto","schema":"extensions"}],**{**observed,"managed_catalog_sha256":"3"*64}}}
    def execute(argv,**unused):
     if argv[0]=="age": Path(argv[5]).write_bytes(b"plain")
    with patch.object(recovery,"_require_prior",return_value=capture),patch.object(recovery,"command_exists",side_effect=lambda command:command),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"run",side_effect=execute) as execute,patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",return_value=[]),patch.object(recovery,"_create_auth_user_placeholders"),patch.object(recovery,"_fingerprints",return_value=observed):
@@ -280,6 +283,9 @@ class ControllerTests(unittest.TestCase):
   self.assertNotIn(str(identity),json.dumps(result))
   self.assertNotIn("test-key-material",json.dumps(result))
   self.assertFalse(Path(decrypt_argv[5]).exists())
+  self.assertEqual("3"*64,result["evidence"]["hosted_managed_catalog_sha256"])
+  self.assertEqual("4"*64,result["evidence"]["managed_catalog_sha256"])
+  self.assertNotIn("catalog_sha256",result["evidence"])
  def test_auth_placeholder_contract_is_exact_bounded_and_never_contains_managed_data(self):
   expected=(("public","ad_banners","created_by"),("public","admin_restaurant_map_overlays","created_by_admin_id"),("public","admin_restaurant_map_overlays","updated_by_admin_id"),("public","admin_user_preferences","user_id"),("public","announcements","created_by"),("public","documents","user_id"),("public","notifications","user_id"),("public","ocr_logs","user_id"),("public","profiles","user_id"),("public","restaurant_requests","user_id"),("public","restaurant_submissions","resolved_by_admin_id"),("public","restaurant_submissions","user_id"),("public","review_likes","user_id"),("public","reviews","edited_by_admin_id"),("public","reviews","user_id"),("public","search_logs","user_id"),("public","user_account_status","user_id"),("public","user_bookmarks","user_id"),("public","user_roles","user_id"),("public","user_stats","user_id"))
   self.assertEqual(expected,recovery.AUTH_USER_REFERENCE_COLUMNS)
@@ -310,7 +316,7 @@ class ControllerTests(unittest.TestCase):
   class Conn:
    def rollback(self): pass
    def close(self): pass
-  observed={"ledger_pairs":[],"ledger_sha256":"1"*64,"ledger_count":0,"catalog_sha256":"2"*64}
+  observed=fingerprints()
   with tempfile.TemporaryDirectory() as raw:
    dump=Path(raw)/"dump.enc"; dump.write_bytes(b"ciphertext")
    identity=Path(raw)/"identity"; identity.write_bytes(b"test-key-material"); identity.chmod(0o600)
@@ -340,7 +346,7 @@ class ControllerTests(unittest.TestCase):
   class Conn:
    def rollback(self): pass
    def close(self): pass
-  observed={"ledger_pairs":[("20260101000000","actual")],"ledger_sha256":"1"*64,"ledger_count":1,"catalog_sha256":"2"*64}
+  observed=fingerprints(pairs=(("20260101000000","actual"),))
   with tempfile.TemporaryDirectory() as raw:
    dump=Path(raw)/"dump.enc"; dump.write_bytes(b"ciphertext")
    identity=Path(raw)/"identity"; identity.write_bytes(b"test-key-material"); identity.chmod(0o600)
@@ -350,6 +356,24 @@ class ControllerTests(unittest.TestCase):
     if argv[0]=="age": Path(argv[5]).write_bytes(b"plain")
    with patch.object(recovery,"_require_prior",return_value=capture),patch.object(recovery,"command_exists",side_effect=lambda command:command),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"run",side_effect=execute),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",return_value=[]),patch.object(recovery,"_create_auth_user_placeholders"),patch.object(recovery,"_fingerprints",return_value=observed),self.assertRaisesRegex(recovery.RecoveryError,"restore evidence mismatch"):
     recovery.run_restore_verify(args,None)
+ def test_ledger_pairs_normalize_json_lists_but_reject_type_mutation(self):
+  pairs=(("20260101000000","actual"),)
+  self.assertTrue(recovery._ledger_evidence_equal([list(pair) for pair in pairs],pairs))
+  self.assertFalse(recovery._ledger_evidence_equal([["20260101000000",1]],pairs))
+ def test_fingerprints_split_restorable_and_managed_catalog_scopes(self):
+  calls=[]
+  def query(conn,sql,params=None):
+   calls.append((sql,params))
+   if "schema_migrations" in sql: return [("20260101000000","actual")]
+   if "pg_namespace" in sql: return [("auth",),("storage",)]
+   return [("public","restaurants","r")]
+  with patch.object(recovery,"_query_conn",side_effect=query):
+   actual=recovery._fingerprints(object())
+  self.assertEqual((("20260101000000","actual"),),actual["ledger_pairs"])
+  self.assertIn("restorable_catalog_sha256",actual); self.assertIn("managed_catalog_sha256",actual)
+  self.assertNotIn("catalog_sha256",actual)
+  self.assertEqual(list(recovery.DUMP_SCHEMAS),calls[1][1][0])
+  self.assertEqual(list(contract.MANAGED_METADATA_SCHEMAS),calls[2][1][0])
  def test_restore_rejects_missing_or_mutated_extension_scope_before_local_reset(self):
   with tempfile.TemporaryDirectory() as raw:
    dump=Path(raw)/"dump.enc"; dump.write_bytes(b"ciphertext")
@@ -364,7 +388,7 @@ class ControllerTests(unittest.TestCase):
   class Conn:
    def rollback(self): events.append("rollback")
    def close(self): events.append("close")
-  observed={"ledger_pairs":[],"ledger_sha256":"1"*64,"ledger_count":0,"catalog_sha256":"2"*64}
+  observed=fingerprints()
   with tempfile.TemporaryDirectory() as raw:
    dump=Path(raw)/"dump.enc"; dump.write_bytes(b"ciphertext")
    identity=Path(raw)/"identity"; identity.write_bytes(b"test-key-material"); identity.chmod(0o600)
