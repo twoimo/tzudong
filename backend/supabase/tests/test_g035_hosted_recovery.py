@@ -179,7 +179,7 @@ class ControllerTests(unittest.TestCase):
   with tempfile.TemporaryDirectory() as raw,patch.object(recovery.subprocess,"Popen",side_effect=(Process(),Process())) as popen:
    argv=recovery._dump_to_encrypted("pg_dump","age","age1"+"q"*58,"snapshot",{},Path(raw))
   self.assertEqual(["pg_dump","--format=custom","--snapshot=snapshot","--blobs",*[f"--schema={schema}" for schema in [*contract.APPLICATION_SCHEMAS,"supabase_migrations","auth","storage"]],"--exclude-table-data=auth.*","--exclude-table-data=storage.*","--extension=pg_trgm","--extension=uuid-ossp","--extension=btree_gin","--extension=vector","--extension=pgcrypto","--dbname=service=g035"],argv)
-  self.assertEqual((("pg_trgm","extensions"),("uuid-ossp","extensions"),("btree_gin","extensions"),("vector","extensions"),("pgcrypto","extensions")),recovery.RECOVERY_EXTENSIONS)
+  self.assertEqual((("pg_trgm","extensions"),("uuid-ossp","extensions"),("btree_gin","extensions"),("vector","public"),("pgcrypto","extensions")),recovery.RECOVERY_EXTENSIONS)
   self.assertEqual(("auth","storage"),contract.MANAGED_METADATA_SCHEMAS)
   self.assertEqual(("--exclude-table-data=auth.*","--exclude-table-data=storage.*"),recovery.MANAGED_TABLE_DATA_EXCLUSIONS)
   self.assertEqual(argv,popen.call_args_list[1].args[0])
@@ -214,7 +214,7 @@ class ControllerTests(unittest.TestCase):
   self.assertLess(conn.events.index("SELECT pg_export_snapshot()"),conn.events.index("ROLLBACK"))
   self.assertEqual(list(contract.APPLICATION_SCHEMAS),result["evidence"]["schema_scope"])
   self.assertEqual(["supabase_migrations"],result["evidence"]["recovery_control_schema_scope"])
-  self.assertEqual([{"name":"pg_trgm","schema":"extensions"},{"name":"uuid-ossp","schema":"extensions"},{"name":"btree_gin","schema":"extensions"},{"name":"vector","schema":"extensions"},{"name":"pgcrypto","schema":"extensions"}],result["evidence"]["extension_scope"])
+  self.assertEqual([{"name":"pg_trgm","schema":"extensions"},{"name":"uuid-ossp","schema":"extensions"},{"name":"btree_gin","schema":"extensions"},{"name":"vector","schema":"public"},{"name":"pgcrypto","schema":"extensions"}],result["evidence"]["extension_scope"])
   self.assertEqual(["auth","storage"],result["evidence"]["managed_metadata_schema_scope"])
   self.assertEqual(["--exclude-table-data=auth.*","--exclude-table-data=storage.*"],result["evidence"]["managed_table_data_exclusions"])
   self.assertEqual(observed["ledger_pairs"],result["evidence"]["ledger_pairs"])
@@ -284,7 +284,7 @@ class ControllerTests(unittest.TestCase):
    dump=Path(raw)/"dump.enc"; dump.write_bytes(b"ciphertext")
    identity=Path(raw)/"offline-identity"; identity.write_bytes(b"test-key-material"); identity.chmod(0o600)
    args=Namespace(destination_service="g035-local",capture_receipt="capture",dump=str(dump),identity_file=str(identity),decrypt_command="age",pg_restore="pg_restore",service_file=str(self.service(raw)))
-   capture={"receipt_sha256":"capture-receipt","evidence":{"dump_sha256":hashlib.sha256(b"ciphertext").hexdigest(),"extension_scope":[{"name":"pg_trgm","schema":"extensions"},{"name":"uuid-ossp","schema":"extensions"},{"name":"btree_gin","schema":"extensions"},{"name":"vector","schema":"extensions"},{"name":"pgcrypto","schema":"extensions"}],**self.managed_capture_scope(),**observed}}
+   capture={"receipt_sha256":"capture-receipt","evidence":{"dump_sha256":hashlib.sha256(b"ciphertext").hexdigest(),"extension_scope":[{"name":"pg_trgm","schema":"extensions"},{"name":"uuid-ossp","schema":"extensions"},{"name":"btree_gin","schema":"extensions"},{"name":"vector","schema":"public"},{"name":"pgcrypto","schema":"extensions"}],**self.managed_capture_scope(),**observed}}
    def execute(argv,**unused):
     if argv[0]=="age": Path(argv[5]).write_bytes(b"plain")
    with patch.object(recovery,"_require_prior",return_value=capture),patch.object(recovery,"command_exists",side_effect=lambda command:command),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"run",side_effect=execute) as execute,patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",return_value=[]),patch.object(recovery,"_create_auth_user_placeholders"),patch.object(recovery,"_fingerprints",return_value=observed):
@@ -303,26 +303,38 @@ class ControllerTests(unittest.TestCase):
   evidence=recovery._auth_placeholder_evidence()
   self.assertEqual({"auth_placeholder_mapping_count":20,"auth_placeholder_mapping_sha256":recovery.digest(expected)},evidence)
   self.assertNotIn("auth.users",json.dumps(evidence)); self.assertNotIn("email",json.dumps(evidence)); self.assertNotIn("token",json.dumps(evidence))
- def test_auth_placeholders_validate_every_mapping_and_fail_closed_on_drift(self):
+ def test_auth_placeholders_deduplicate_source_ids_and_require_empty_fenced_target(self):
   calls=[]
   def query(conn,sql,params=None):
    calls.append((sql,params))
    if "pg_catalog.pg_attribute" in sql: return [(*params,"uuid","pg_catalog")]
+   if sql=="SELECT NOT EXISTS (SELECT 1 FROM auth.users)": return [(True,)]
    return []
   with patch.object(recovery,"_query_conn",side_effect=query):
    recovery._create_auth_user_placeholders(object())
-  self.assertEqual(21,len(calls))
-  insert=calls[-1][0]
-  self.assertIn("INSERT INTO auth.users (id)",insert); self.assertIn("SELECT DISTINCT id",insert); self.assertIn("ON CONFLICT (id) DO NOTHING",insert)
-  self.assertNotIn("email",insert); self.assertNotIn("token",insert); self.assertNotIn("metadata",insert)
+  self.assertEqual(22,len(calls))
+  empty_check=calls[-2][0]; insert=calls[-1][0]
+  self.assertEqual("SELECT NOT EXISTS (SELECT 1 FROM auth.users)",empty_check)
+  self.assertIn("INSERT INTO auth.users (id)",insert); self.assertIn("SELECT DISTINCT id",insert); self.assertIn(" UNION ALL ",insert)
+  self.assertNotIn("ON CONFLICT",insert); self.assertNotIn("email",insert); self.assertNotIn("token",insert); self.assertNotIn("metadata",insert)
   def missing(conn,sql,params=None):
-   return [] if params==recovery.AUTH_USER_REFERENCE_COLUMNS[-1] else [(*params,"uuid","pg_catalog")]
+   if "pg_catalog.pg_attribute" in sql: return [] if params==recovery.AUTH_USER_REFERENCE_COLUMNS[-1] else [(*params,"uuid","pg_catalog")]
+   raise AssertionError("empty check must follow all mapping checks")
   def drifted(conn,sql,params=None):
    return [(*params,"text","pg_catalog")]
   with patch.object(recovery,"_query_conn",side_effect=missing),self.assertRaisesRegex(recovery.RecoveryError,"mapping drift"):
    recovery._create_auth_user_placeholders(object())
   with patch.object(recovery,"_query_conn",side_effect=drifted),self.assertRaisesRegex(recovery.RecoveryError,"mapping drift"):
    recovery._create_auth_user_placeholders(object())
+  collision_calls=[]
+  def nonempty(conn,sql,params=None):
+   collision_calls.append(sql)
+   if "pg_catalog.pg_attribute" in sql: return [(*params,"uuid","pg_catalog")]
+   if sql=="SELECT NOT EXISTS (SELECT 1 FROM auth.users)": return [(False,)]
+   raise AssertionError("must not insert into a nonempty auth.users target")
+  with patch.object(recovery,"_query_conn",side_effect=nonempty),self.assertRaisesRegex(recovery.RecoveryError,"target is not empty"):
+   recovery._create_auth_user_placeholders(object())
+  self.assertNotIn("INSERT INTO auth.users",collision_calls)
  def test_restore_uses_fenced_pre_data_placeholder_post_data_phases_and_fails_each_phase(self):
   class Conn:
    def rollback(self): pass
@@ -362,7 +374,7 @@ class ControllerTests(unittest.TestCase):
    dump=Path(raw)/"dump.enc"; dump.write_bytes(b"ciphertext")
    identity=Path(raw)/"identity"; identity.write_bytes(b"test-key-material"); identity.chmod(0o600)
    args=Namespace(destination_service="g035-local",capture_receipt="capture",dump=str(dump),identity_file=str(identity),decrypt_command="age",pg_restore="pg_restore",service_file=str(self.service(raw)))
-   capture={"receipt_sha256":"capture-receipt","evidence":{"dump_sha256":hashlib.sha256(b"ciphertext").hexdigest(),"extension_scope":[{"name":"pg_trgm","schema":"extensions"},{"name":"uuid-ossp","schema":"extensions"},{"name":"btree_gin","schema":"extensions"},{"name":"vector","schema":"extensions"},{"name":"pgcrypto","schema":"extensions"}],**self.managed_capture_scope(),**{**observed,"ledger_pairs":[("20260101000000","mutated")]}}}
+   capture={"receipt_sha256":"capture-receipt","evidence":{"dump_sha256":hashlib.sha256(b"ciphertext").hexdigest(),"extension_scope":[{"name":"pg_trgm","schema":"extensions"},{"name":"uuid-ossp","schema":"extensions"},{"name":"btree_gin","schema":"extensions"},{"name":"vector","schema":"public"},{"name":"pgcrypto","schema":"extensions"}],**self.managed_capture_scope(),**{**observed,"ledger_pairs":[("20260101000000","mutated")]}}}
    def execute(argv,**unused):
     if argv[0]=="age": Path(argv[5]).write_bytes(b"plain")
    with patch.object(recovery,"_require_prior",return_value=capture),patch.object(recovery,"command_exists",side_effect=lambda command:command),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"run",side_effect=execute),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",return_value=[]),patch.object(recovery,"_create_auth_user_placeholders"),patch.object(recovery,"_fingerprints",return_value=observed),self.assertRaisesRegex(recovery.RecoveryError,"restore evidence mismatch"):
@@ -423,7 +435,7 @@ class ControllerTests(unittest.TestCase):
    dump=Path(raw)/"dump.enc"; dump.write_bytes(b"ciphertext")
    identity=Path(raw)/"identity"; identity.write_bytes(b"test-key-material"); identity.chmod(0o600)
    args=Namespace(destination_service="g035-local",capture_receipt="capture",dump=str(dump),identity_file=str(identity),decrypt_command="age",pg_restore="pg_restore",service_file=str(self.service(raw)))
-   capture={"receipt_sha256":"capture-receipt","evidence":{"dump_sha256":hashlib.sha256(b"ciphertext").hexdigest(),"extension_scope":[{"name":"pg_trgm","schema":"extensions"},{"name":"uuid-ossp","schema":"extensions"},{"name":"btree_gin","schema":"extensions"},{"name":"vector","schema":"extensions"},{"name":"pgcrypto","schema":"extensions"}],**self.managed_capture_scope(),**observed}}
+   capture={"receipt_sha256":"capture-receipt","evidence":{"dump_sha256":hashlib.sha256(b"ciphertext").hexdigest(),"extension_scope":[{"name":"pg_trgm","schema":"extensions"},{"name":"uuid-ossp","schema":"extensions"},{"name":"btree_gin","schema":"extensions"},{"name":"vector","schema":"public"},{"name":"pgcrypto","schema":"extensions"}],**self.managed_capture_scope(),**observed}}
    def execute(argv,**unused):
     events.append(argv[0])
     if argv[0]=="age": Path(argv[5]).write_bytes(b"plain")
@@ -500,22 +512,80 @@ class ControllerTests(unittest.TestCase):
    def execute(argv,**unused):
     scripts.append(Path(argv[-1]).read_text(encoding="utf8")); events.append("psql"); raise recovery.RecoveryError("external command failed")
    def baseline(unused): events.append("baseline")
-   with patch.object(recovery,"_require_prior",return_value={"receipt_sha256":"x"}),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",side_effect=query),patch.object(recovery,"_ledger_assert",side_effect=ledger),patch.object(recovery,"_require_restore_baseline",side_effect=baseline),patch.object(recovery,"run",side_effect=execute),self.assertRaisesRegex(recovery.RecoveryError,"external command failed"):
+   with patch.object(recovery,"_require_prior",return_value={"receipt_sha256":"x"}),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",side_effect=query),patch.object(recovery,"_ledger_assert",side_effect=ledger),patch.object(recovery,"_require_restore_baseline",side_effect=baseline),patch.object(recovery,"_apply_vector_extension_relocation_hook"),patch.object(recovery,"run",side_effect=execute),self.assertRaisesRegex(recovery.RecoveryError,"external command failed"):
     recovery.apply_manifest(args,manifest)
   self.assertLess(events.index("lock"),events.index("baseline")); self.assertLess(events.index("baseline"),events.index("ledger-0")); self.assertLess(events.index("ledger-0"),events.index("psql"))
   self.assertEqual("BEGIN;\n"+"\n".join(recovery._compatibility_hook(entry.version))+"\n",scripts[0][:scripts[0].index("\\i ")])
- def test_clone_receipt_records_deterministic_compatibility_hook_evidence(self):
+ def test_short_urls_duplicate_target_url_hook_is_version_bound_and_fail_closed(self):
+  class Conn:
+   def __init__(self): self.commits=0
+   def commit(self): self.commits+=1
+  conn=Conn()
+  self.assertEqual(0,recovery._apply_short_urls_duplicate_target_url_hook(conn,"20260713000101"))
+  self.assertEqual(0,conn.commits)
+  with patch.object(recovery,"_query_conn",side_effect=[[(1,)]]),self.assertRaisesRegex(recovery.RecoveryError,"precondition"):
+   recovery._apply_short_urls_duplicate_target_url_hook(conn,"20260713000100")
+  with patch.object(recovery,"_query_conn",side_effect=[[],[],[(4,)],[],[],[]]):
+   self.assertEqual(4,recovery._apply_short_urls_duplicate_target_url_hook(conn,"20260713000100"))
+  self.assertEqual(1,conn.commits)
+  with patch.object(recovery,"_query_conn",side_effect=[[],[],[(4,)],[],[],[(1,)]]),self.assertRaisesRegex(recovery.RecoveryError,"postcondition"):
+   recovery._apply_short_urls_duplicate_target_url_hook(conn,"20260713000100")
+ def test_short_urls_hook_cannot_run_before_local_ledger_fence(self):
+  manifest=contract.load_manifest(ROOT); entry=next(item for item in manifest.migrations if item.version=="20260713000100")
+  manifest=contract.Manifest((entry,),frozenset(),manifest.ledger_terminal_version,manifest.closure_terminal_version)
+  class Conn:
+   def commit(self): pass
+   def close(self): pass
+  with tempfile.TemporaryDirectory() as raw:
+   args=Namespace(service="g035-local",restore_receipt="unused",service_file=str(self.service(raw)),psql="psql"); events=[]
+   def query(unused,sql,params=None): events.append("lock" if "pg_advisory_lock" in sql else "unlock" if "pg_advisory_unlock" in sql else "query"); return []
+   def ledger(unused,unused_manifest,count): events.append(f"ledger-{count}")
+   def hook(unused,version):
+    self.assertEqual("20260713000100",version); self.assertIn("ledger-0",events); events.append("hook"); return 0
+   with patch.object(recovery,"_require_prior",return_value={"receipt_sha256":"x"}),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",side_effect=query),patch.object(recovery,"_ledger_assert",side_effect=ledger),patch.object(recovery,"_require_restore_baseline",side_effect=lambda unused: events.append("baseline")),patch.object(recovery,"_apply_short_urls_duplicate_target_url_hook",side_effect=hook),patch.object(recovery,"_fingerprints",return_value=fingerprints()),patch.object(recovery,"run",side_effect=lambda *unused,**kwargs: events.append("psql")):
+    recovery.apply_manifest(args,manifest)
+  self.assertLess(events.index("lock"),events.index("baseline")); self.assertLess(events.index("baseline"),events.index("ledger-0")); self.assertLess(events.index("ledger-0"),events.index("hook")); self.assertLess(events.index("hook"),events.index("psql"))
+ def test_vector_extension_relocation_hook_is_version_bound_and_fail_closed(self):
+  class Conn:
+   def __init__(self): self.commits=0
+   def commit(self): self.commits+=1
+  conn=Conn()
+  self.assertIsNone(recovery._apply_vector_extension_relocation_hook(conn,"20260627080001"))
+  with patch.object(recovery,"_query_conn",side_effect=[[("public",)],[],[("extensions",)],[]]):
+   recovery._apply_vector_extension_relocation_hook(conn,"20260627080000")
+  self.assertEqual(1,conn.commits)
+  with patch.object(recovery,"_query_conn",return_value=[("extensions",)]),self.assertRaisesRegex(recovery.RecoveryError,"precondition"):
+   recovery._apply_vector_extension_relocation_hook(conn,"20260627080000")
+  with patch.object(recovery,"_query_conn",side_effect=[[("public",)],[],[("public",)]]),self.assertRaisesRegex(recovery.RecoveryError,"postcondition"):
+   recovery._apply_vector_extension_relocation_hook(conn,"20260627080000")
+ def test_vector_extension_hook_is_after_ledger_fence_before_policy_psql(self):
   manifest=contract.load_manifest(ROOT); entry=next(item for item in manifest.migrations if item.version=="20260627080000")
   manifest=contract.Manifest((entry,),frozenset(),manifest.ledger_terminal_version,manifest.closure_terminal_version)
   class Conn:
    def commit(self): pass
    def close(self): pass
   with tempfile.TemporaryDirectory() as raw:
+   args=Namespace(service="g035-local",restore_receipt="unused",service_file=str(self.service(raw)),psql="psql"); events=[]
+   def query(unused,sql,params=None): events.append("lock" if "pg_advisory_lock" in sql else "unlock" if "pg_advisory_unlock" in sql else "query"); return []
+   def ledger(unused,unused_manifest,count): events.append(f"ledger-{count}")
+   def vector_hook(unused,version):
+    self.assertEqual("20260627080000",version); self.assertIn("ledger-0",events); events.append("vector"); return None
+   with patch.object(recovery,"_require_prior",return_value={"receipt_sha256":"x"}),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",side_effect=query),patch.object(recovery,"_ledger_assert",side_effect=ledger),patch.object(recovery,"_require_restore_baseline",side_effect=lambda unused: events.append("baseline")),patch.object(recovery,"_apply_vector_extension_relocation_hook",side_effect=vector_hook),patch.object(recovery,"run",side_effect=lambda *unused,**kwargs: events.append("psql")):
+    recovery.apply_manifest(args,manifest)
+  self.assertLess(events.index("lock"),events.index("baseline")); self.assertLess(events.index("baseline"),events.index("ledger-0")); self.assertLess(events.index("ledger-0"),events.index("vector")); self.assertLess(events.index("vector"),events.index("psql"))
+ def test_clone_receipt_records_only_short_url_deleted_count_and_hook_digest(self):
+  manifest=contract.load_manifest(ROOT); entry=next(item for item in manifest.migrations if item.version=="20260713000100")
+  manifest=contract.Manifest((entry,),frozenset(),manifest.ledger_terminal_version,manifest.closure_terminal_version)
+  class Conn:
+   def commit(self): pass
+   def close(self): pass
+  with tempfile.TemporaryDirectory() as raw:
    args=Namespace(service="g035-local",restore_receipt="unused",service_file=str(self.service(raw)),psql="psql")
-   with patch.object(recovery,"_require_prior",return_value={"receipt_sha256":"x"}),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",return_value=[]),patch.object(recovery,"_ledger_assert"),patch.object(recovery,"_require_restore_baseline"),patch.object(recovery,"_fingerprints",return_value=fingerprints()),patch.object(recovery,"run"):
+   with patch.object(recovery,"_require_prior",return_value={"receipt_sha256":"x"}),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",return_value=[]),patch.object(recovery,"_ledger_assert"),patch.object(recovery,"_require_restore_baseline"),patch.object(recovery,"_apply_short_urls_duplicate_target_url_hook",return_value=4),patch.object(recovery,"_fingerprints",return_value=fingerprints()),patch.object(recovery,"run"):
     result=recovery.apply_manifest(args,manifest)
-  self.assertEqual(4,result["evidence"]["compatibility_hook_count"])
-  self.assertEqual(recovery.digest(recovery._compatibility_hook(entry.version)),result["evidence"]["compatibility_hook_sha256"])
+  self.assertEqual(4,result["evidence"]["compatibility_hook_deleted_row_count"])
+  self.assertEqual(recovery.digest((recovery.COMPATIBILITY_HOOKS,recovery.VECTOR_EXTENSION_RELOCATION_HOOK_VERSION,recovery.VECTOR_EXTENSION_RELOCATION_HOOK,recovery.SHORT_URLS_DUPLICATE_TARGET_URL_HOOK_VERSION,recovery.SHORT_URLS_DUPLICATE_TARGET_URL_HOOK)),result["evidence"]["compatibility_hook_sha256"])
+  self.assertNotIn("compatibility_hook_count",result["evidence"])
  def test_main_rejects_without_diagnostics(self):
   output=io.StringIO()
   with patch.object(recovery,"validate_sources",side_effect=recovery.ContractError("secret")),contextlib.redirect_stdout(output): self.assertEqual(2,recovery.main(["validate"]))
