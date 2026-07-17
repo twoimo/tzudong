@@ -5,7 +5,7 @@ import argparse, csv, hashlib, json, os, re, shutil, subprocess, tempfile
 from pathlib import Path
 from typing import Any, Sequence
 from g035_hosted_recovery_contract import APPLICATION_SCHEMAS, BASELINE_PAIRS, BASELINE_SHA256, FORBIDDEN_VERSIONS, MANAGED_METADATA_SCHEMAS, MANIFEST_SHA256, SELF_COMMIT_VERSIONS, ContractError, Manifest, ledger_prefix, repository_root, sha256_file, validate_sources
-TIMEOUT_SECONDS=900; RECEIPT_SCHEMA="g035-local-recovery-receipt-v3"; HEX=re.compile(r"^[a-f0-9]{64}$"); AGE_RECIPIENT=re.compile(r"^age1[ac-hj-np-z02-9]{58}$"); ID=re.compile(r"^[A-Za-z0-9._:-]{1,128}$"); SNAPSHOT=re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"); LOCAL_SERVICE="g035-local"; LOCAL_DBNAME="g035_local"; LOCAL_HOSTS={"localhost","127.0.0.1","::1"}; SERVICE_KEYS={"host","port","dbname","application_name","sslmode","user","password","connect_timeout"}; RECOVERY_CONTROL_SCHEMAS=("supabase_migrations",); DUMP_SCHEMAS=APPLICATION_SCHEMAS+RECOVERY_CONTROL_SCHEMAS; RECOVERY_EXTENSIONS=(("pg_trgm","extensions"),("uuid-ossp","extensions"),("btree_gin","extensions"),("vector","extensions"),("pgcrypto","extensions"))
+TIMEOUT_SECONDS=900; RECEIPT_SCHEMA="g035-local-recovery-receipt-v3"; HEX=re.compile(r"^[a-f0-9]{64}$"); AGE_RECIPIENT=re.compile(r"^age1[ac-hj-np-z02-9]{58}$"); ID=re.compile(r"^[A-Za-z0-9._:-]{1,128}$"); SNAPSHOT=re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"); LOCAL_SERVICE="g035-local"; LOCAL_DBNAME="g035_local"; LOCAL_HOSTS={"localhost","127.0.0.1","::1"}; SERVICE_KEYS={"host","port","dbname","application_name","sslmode","user","password","connect_timeout"}; RECOVERY_CONTROL_SCHEMAS=("supabase_migrations",); DUMP_SCHEMAS=APPLICATION_SCHEMAS+RECOVERY_CONTROL_SCHEMAS; RECOVERY_EXTENSIONS=(("pg_trgm","extensions"),("uuid-ossp","extensions"),("btree_gin","extensions"),("vector","extensions"),("pgcrypto","extensions")); AUTH_USER_REFERENCE_COLUMNS=(("public","ad_banners","created_by"),("public","admin_restaurant_map_overlays","created_by_admin_id"),("public","admin_restaurant_map_overlays","updated_by_admin_id"),("public","admin_user_preferences","user_id"),("public","announcements","created_by"),("public","documents","user_id"),("public","notifications","user_id"),("public","ocr_logs","user_id"),("public","profiles","user_id"),("public","restaurant_requests","user_id"),("public","restaurant_submissions","resolved_by_admin_id"),("public","restaurant_submissions","user_id"),("public","review_likes","user_id"),("public","reviews","edited_by_admin_id"),("public","reviews","user_id"),("public","search_logs","user_id"),("public","user_account_status","user_id"),("public","user_bookmarks","user_id"),("public","user_roles","user_id"),("public","user_stats","user_id"))
 class RecoveryError(RuntimeError): pass
 def _pairs(pairs):
  result={}
@@ -231,13 +231,28 @@ def run_restore_verify(args,manifest):
   conn=_connect("g035-local",env)
   try: _query_conn(conn,"DROP SCHEMA public CASCADE")
   finally: conn.rollback(); conn.close()
-  run([restore,"--dbname=service=g035-local",str(plain)],env=env)
+  run([restore,"--section=pre-data","--dbname=service=g035-local",str(plain)],env=env)
+  run([restore,"--section=data","--dbname=service=g035-local",str(plain)],env=env)
+  conn=_connect("g035-local",env)
+  try: _create_auth_user_placeholders(conn)
+  finally: conn.rollback(); conn.close()
+  run([restore,"--section=post-data","--dbname=service=g035-local",str(plain)],env=env)
   conn=_connect("g035-local",env)
   try: observed=_fingerprints(conn)
   finally: conn.rollback(); conn.close()
  for key in ("ledger_pairs","ledger_sha256","ledger_count","catalog_sha256"):
   if observed[key]!=capture["evidence"].get(key): raise RecoveryError("restore evidence mismatch")
- return receipt("restore-verify","restored",observed,[capture["receipt_sha256"]])
+ return receipt("restore-verify","restored",{**observed,**_auth_placeholder_evidence()},[capture["receipt_sha256"]])
+def _validate_auth_user_reference_columns(conn):
+ for schema,table,column in AUTH_USER_REFERENCE_COLUMNS:
+  rows=_query_conn(conn,"SELECT namespace.nspname, class.relname, attribute.attname, type.typname, type_namespace.nspname FROM pg_catalog.pg_attribute AS attribute JOIN pg_catalog.pg_class AS class ON class.oid = attribute.attrelid JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = class.relnamespace JOIN pg_catalog.pg_type AS type ON type.oid = attribute.atttypid JOIN pg_catalog.pg_namespace AS type_namespace ON type_namespace.oid = type.typnamespace WHERE namespace.nspname = %s AND class.relname = %s AND attribute.attname = %s AND class.relkind IN ('r','p') AND attribute.attnum > 0 AND NOT attribute.attisdropped",(schema,table,column))
+  if rows!=[(schema,table,column,"uuid","pg_catalog")]: raise RecoveryError("auth placeholder mapping drift")
+def _create_auth_user_placeholders(conn):
+ _validate_auth_user_reference_columns(conn)
+ references=" UNION ".join(f"SELECT {table}.{column} AS id FROM {schema}.{table} WHERE {table}.{column} IS NOT NULL" for schema,table,column in AUTH_USER_REFERENCE_COLUMNS)
+ _query_conn(conn,f"INSERT INTO auth.users (id) SELECT DISTINCT id FROM ({references}) AS auth_user_references ON CONFLICT (id) DO NOTHING")
+def _auth_placeholder_evidence():
+ return {"auth_placeholder_mapping_count":len(AUTH_USER_REFERENCE_COLUMNS),"auth_placeholder_mapping_sha256":digest(AUTH_USER_REFERENCE_COLUMNS)}
 def _ledger_assert(conn,manifest,count):
  actual=_fingerprints(conn)["ledger_pairs"]
  if any(v in FORBIDDEN_VERSIONS for v,_ in actual) or not ledger_prefix(manifest,actual) or len(actual)!=len(BASELINE_PAIRS)+count: raise RecoveryError("ledger prefix mismatch")
