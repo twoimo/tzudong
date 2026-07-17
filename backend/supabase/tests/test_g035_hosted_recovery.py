@@ -13,8 +13,11 @@ def fingerprints(*,pairs=(),ledger_sha256="1"*64,restorable_catalog_sha256="2"*6
 class ContractTests(unittest.TestCase):
  def test_manifest_and_immutable_pair_baseline(self):
   manifest=contract.validate_sources(ROOT)
-  self.assertEqual(27,len(manifest.migrations)); self.assertEqual(12,len(contract.BASELINE_PAIRS))
-  self.assertTrue(contract.ledger_prefix(manifest,list(contract.BASELINE_PAIRS)))
+  expected=(("20251219","db_performance_optimization"),("20260118","create_ocr_logs"),("20260425","allow_ocr_logs_user_insert"),("20260506065538","optimize_auth_user_state_indexes"),("20260506085634","optimize_app_query_indexes"),("20260509000100","drop_server_costs"),("20260509000200","drop_admin_ai_settings"),("20260523093000","create_restaurant_popular_rank_snapshots"),("20260525143908","create_youtube_kpi_snapshots"),("20260526083932","add_youtube_channel_growth_snapshot_deltas"),("20260531084217","harden_public_api_grants_and_rpcs"),("20260531084516","tighten_public_table_data_api_grants"))
+  reconstructed=(("20260124","create_document_embeddings_bge"),("20260124","create_restaurants"),("20260124","fix_approved_name_sync"),("20260124","update_embeddings_constraint"),("20260131","fix_search_rpc"),("20260213","create_announcements_table_and_seed"),("20260214","fix_approve_edit_backup_stage"),("20260214","fix_restaurant_rpcs_and_search"),("20260214","fix_submission_item_target_to_backup"),("20260514","admin_user_management_audit"),("20260531084217","harden_public_api_grants_and_rpcs"),("20260531084516","tighten_public_table_data_api_grants"))
+  self.assertEqual(27,len(manifest.migrations)); self.assertEqual(expected,contract.BASELINE_PAIRS)
+  self.assertTrue(contract.ledger_prefix(manifest,list(expected)))
+  self.assertFalse(contract.ledger_prefix(manifest,list(reconstructed)))
   self.assertFalse(contract.ledger_prefix(manifest,[("20260531084516","caller_supplied")]))
 
 class ControllerTests(unittest.TestCase):
@@ -420,12 +423,18 @@ class ControllerTests(unittest.TestCase):
   text=(SCRIPTS/"g035_hosted_recovery.py").read_text(encoding="utf8")
   self.assertIn('run([psql,"service=g035-local","--set","ON_ERROR_STOP=1","--file",str(runtime)],env=env)',text)
   self.assertNotIn('runtime_script.write_text',text)
- def test_clone_requires_the_exact_baseline_before_applying_migrations(self):
+ def test_clone_requires_the_restore_receipt_digest_and_exact_baseline_before_applying_migrations(self):
   text=(SCRIPTS/"g035_hosted_recovery.py").read_text(encoding="utf8")
   lock=text.index('_query_conn(conn,"SELECT pg_advisory_lock(35035)")')
+  receipt=text.index("_require_restore_baseline(prior)",lock)
   baseline=text.index("_ledger_assert(conn,manifest,0)",lock)
   apply=text.index("for index,entry in enumerate(manifest.migrations):",lock)
-  self.assertLess(lock,baseline); self.assertLess(baseline,apply)
+  self.assertLess(lock,receipt); self.assertLess(receipt,baseline); self.assertLess(baseline,apply)
+ def test_restore_receipt_requires_authoritative_baseline_digest_and_pairs(self):
+  prior={"evidence":{"ledger_pairs":[list(pair) for pair in contract.BASELINE_PAIRS],"ledger_sha256":contract.BASELINE_SHA256,"ledger_count":len(contract.BASELINE_PAIRS)}}
+  recovery._require_restore_baseline(prior)
+  prior["evidence"]["ledger_pairs"][0][0]="20260124"
+  with self.assertRaisesRegex(recovery.RecoveryError,"restore receipt ledger mismatch"): recovery._require_restore_baseline(prior)
  def test_self_commit_post_execution_failures_are_ambiguous(self):
   text=(SCRIPTS/"g035_hosted_recovery.py").read_text(encoding="utf8")
   protected='run([psql,"service=g035-local","--set","ON_ERROR_STOP=1","--file",str(source)],env=env)\n      _query_conn(conn,"INSERT INTO supabase_migrations.schema_migrations'
@@ -448,7 +457,7 @@ class ControllerTests(unittest.TestCase):
      return []
     def ledger(connection,unused,count):
      if failure=="readback" and count==1: raise RuntimeError("readback")
-    with patch.object(recovery,"_require_prior",return_value={"receipt_sha256":"x"}),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_connect",return_value=conn),patch.object(recovery,"run"),patch.object(recovery,"_query_conn",side_effect=query),patch.object(recovery,"_ledger_assert",side_effect=ledger),self.assertRaisesRegex(recovery.RecoveryError,"self_commit_ambiguous"):
+    with patch.object(recovery,"_require_prior",return_value={"receipt_sha256":"x"}),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_connect",return_value=conn),patch.object(recovery,"run"),patch.object(recovery,"_query_conn",side_effect=query),patch.object(recovery,"_ledger_assert",side_effect=ledger),patch.object(recovery,"_require_restore_baseline"),self.assertRaisesRegex(recovery.RecoveryError,"self_commit_ambiguous"):
      recovery.apply_manifest(args,manifest)
  def test_main_rejects_without_diagnostics(self):
   output=io.StringIO()
