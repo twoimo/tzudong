@@ -21,10 +21,10 @@ Run from the recovery checkout after an operator supplies restricted files throu
 ```text
 python backend/supabase/scripts/preflight_g034_hosted_migration_closure.py --artifact <local-preflight-artifact>
 python backend/supabase/scripts/g035_hosted_recovery.py validate
-python backend/supabase/scripts/g035_hosted_recovery.py capture …
-python backend/supabase/scripts/g035_hosted_recovery.py restore-verify … --destination-service g035-local
-python backend/supabase/scripts/g035_hosted_recovery.py clone-apply …
-python backend/supabase/scripts/g035_hosted_recovery.py local-postflight …
+python backend/supabase/scripts/g035_hosted_recovery.py capture --destination <encrypted-capture-file> --service-file <restricted-hosted-service-file> --recipient <encryption-recipient> --g034-artifact <local-preflight-artifact> --pg-dump <pg-dump-command> --encrypt-command <encrypt-command> > <capture-receipt.json>
+python backend/supabase/scripts/g035_hosted_recovery.py restore-verify --dump <encrypted-capture-file> --capture-receipt <capture-receipt.json> --service-file <restricted-local-service-file> --destination-service g035-local --identity-file <restricted-identity-file> --decrypt-command <decrypt-command> --pg-restore <pg-restore-command> > <restore-verify-receipt.json>
+python backend/supabase/scripts/g035_hosted_recovery.py clone-apply --service g035-local --service-file <restricted-local-service-file> --restore-receipt <restore-verify-receipt.json> --psql <psql-command> > <clone-apply-receipt.json>
+python backend/supabase/scripts/g035_hosted_recovery.py local-postflight --service g035-local --service-file <restricted-local-service-file> --clone-receipt <clone-apply-receipt.json> > <local-postflight-receipt.json>
 ```
 
 ## Data limits and cleanup
