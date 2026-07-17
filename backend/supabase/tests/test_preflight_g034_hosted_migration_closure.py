@@ -106,7 +106,8 @@ class G034HostedPreflightTests(unittest.TestCase):
         self.assertEqual("20260713002300", data["migrations"][-2]["version"])
         self.assertEqual(module.EXPECTED_EXCLUDED_VERSIONS, tuple(data["excludedVersions"]))
         self.assertNotIn("20260713002200", data["excludedVersions"])
-        self.assertEqual(module.EXPECTED_MANIFEST_SHA256, module.hashlib.sha256(module.MANIFEST.read_bytes()).hexdigest())
+        manifest_bytes = module.MANIFEST.read_bytes().replace(b"\r\n", b"\n")
+        self.assertEqual(module.EXPECTED_MANIFEST_SHA256, module.hashlib.sha256(manifest_bytes).hexdigest())
 
     def test_manifest_rejects_canonical_path_and_semantic_drift(self):
         data = json.loads(module.MANIFEST.read_text(encoding="utf-8"))

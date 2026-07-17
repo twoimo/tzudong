@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 MANIFEST_RELATIVE_PATH = ".github/g034-hosted-migration-closure.v1.json"
-MANIFEST_SHA256 = "1a925f381158e827a4a1624747063edbe5e54f2e2c8c4f875f26636a2443866f"
+MANIFEST_SHA256 = "1f568404418009d191c27a0d8e525306b98b9e1472f4056d1f347907c500a8e1"
 SELF_COMMIT_VERSIONS = ("20260712000400", "20260713002400")
 FORBIDDEN_VERSIONS = frozenset({"20260531105250", "20260612075100", "20260627150000", "20260702000200", "20260707000700", "20260713000400", "20260713002500", "20260713002600", "20260713002700"})
 APPLICATION_SCHEMAS = ("public", "shortener_private", "account_deletion_private", "privacy_retention")
@@ -54,8 +54,11 @@ def repository_root(start: Path) -> Path:
 def load_manifest(root: Path) -> Manifest:
     path = root / MANIFEST_RELATIVE_PATH
     if path.is_symlink() or not path.is_file(): raise ContractError("manifest must be a regular file")
-    if sha256_file(path) != MANIFEST_SHA256: raise ContractError("manifest hash mismatch")
-    try: data = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=_no_duplicate_object)
+    try:
+        raw_bytes = path.read_bytes()
+        canonical_bytes = raw_bytes.replace(b"\r\n", b"\n")
+        if b"\r" in canonical_bytes or hashlib.sha256(canonical_bytes).hexdigest() != MANIFEST_SHA256: raise ContractError("manifest hash mismatch")
+        data = json.loads(canonical_bytes, object_pairs_hook=_no_duplicate_object)
     except (OSError, json.JSONDecodeError) as exc: raise ContractError("manifest is unreadable") from exc
     raw, excluded = data.get("migrations"), data.get("excludedVersions")
     if not isinstance(data, dict) or data.get("schemaVersion") != 1 or not isinstance(raw, list) or len(raw) != 28 or not isinstance(excluded, list): raise ContractError("manifest inventory mismatch")
