@@ -22,6 +22,11 @@ const DEV_ADMIN_BYPASS_API_PREFIXES = [
     '/api/admin/youtube-thumbnail-generator',
     '/api/admin/storyboard',
 ]
+const INTERNAL_CAPABILITY_PROXY_PATHS = new Set([
+    '/api/internal/account-deletion',
+    '/api/internal/privacy-retention',
+])
+
 
 
 
@@ -151,6 +156,25 @@ async function isDevAdminThumbnailBypassRequest(request: NextRequest) {
     })
     return validation.ok
 }
+function isInternalCapabilityProxyPath(request: NextRequest) {
+    return INTERNAL_CAPABILITY_PROXY_PATHS.has(request.nextUrl.pathname.replace(/\/+$/, '') || '/')
+}
+
+function isInternalCapabilityProxyRequest(request: NextRequest) {
+    return request.method.toUpperCase() === 'POST' && isInternalCapabilityProxyPath(request)
+}
+
+function isTrustedProxyMutation(request: NextRequest) {
+    if (!isInternalCapabilityProxyPath(request) || request.method.toUpperCase() === 'POST') {
+        return isTrustedSameOriginMutation(request)
+    }
+
+    const headers = new Headers(request.headers)
+    headers.delete('x-account-deletion-worker-capability')
+    headers.delete('x-privacy-retention-capability')
+    return isTrustedSameOriginMutation(new Request(request.url, { method: request.method, headers }))
+}
+
 
 async function shouldSkipSession(request: NextRequest) {
     const { pathname } = request.nextUrl
@@ -259,7 +283,7 @@ function applyContentSecurityPolicy(response: NextResponse, policy: string) {
 export async function proxy(request: NextRequest) {
     const { policy, requestHeaders } = buildCspRequestHeaders(request)
 
-    if (!isTrustedSameOriginMutation(request)) {
+    if (!isInternalCapabilityProxyRequest(request) && !isTrustedProxyMutation(request)) {
         return applyContentSecurityPolicy(
             NextResponse.json(
                 { error: 'Forbidden' },

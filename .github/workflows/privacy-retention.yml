@@ -33,7 +33,7 @@ jobs:
     env:
       NODE_ENV: production
       PRIVACY_RETENTION_SCHEDULED_RUN: 'true'
-      PRIVACY_RETENTION_ENDPOINT: https://www.tzudong.app/api/internal/privacy-retention
+      PRIVACY_RETENTION_ENDPOINT: https://internal.tzudong.app/api/internal/privacy-retention
       PRIVACY_RETENTION_CLASS_CODES: ${{ vars.PRIVACY_RETENTION_CLASS_CODES }}
     steps:
       - name: Checkout repository
