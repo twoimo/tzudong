@@ -538,6 +538,24 @@ class ControllerTests(unittest.TestCase):
   self.assertEqual("full",result["evidence"]["initial_ledger_state"])
   self.assertEqual(0,result["evidence"]["migrations_applied_in_invocation"])
   self.assertEqual(len(manifest.migrations),result["evidence"]["migrations_already_present"])
+  self.assertEqual("transformed_local_clone_not_exact_restore",result["evidence"]["clone_state"])
+  self.assertEqual(0,result["evidence"]["hosted_mutations"])
+ def test_clone_baseline_receipt_is_explicitly_local_only(self):
+  manifest=contract.load_manifest(ROOT); full=recovery._manifest_ledger_pairs(manifest)
+  class Conn:
+   def commit(self): pass
+   def rollback(self): pass
+   def close(self): pass
+  with tempfile.TemporaryDirectory() as raw:
+   args=Namespace(service="g035-local",restore_receipt="unused",short_url_remediation_receipt="remediation",service_file=str(self.service(raw)),psql="psql")
+   def prior(unused,mode):
+    if mode=="restore-verify": return {"receipt_sha256":"restore"}
+    return {"receipt_sha256":"verify","prior_receipt_sha256":["apply"],"evidence":{"apply_receipt_sha256":"apply","restore_receipt_sha256":"restore"}}
+   with patch.object(recovery,"_require_prior",side_effect=prior),patch.object(recovery,"_verify_remediation_state"),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",return_value=[]),patch.object(recovery,"_fingerprints",return_value=fingerprints(pairs=full)),patch.object(recovery,"_ledger_assert"),patch.object(recovery,"_require_restore_initial_ledger",return_value="baseline"),patch.object(recovery,"_initial_ledger_state",return_value="baseline"),patch.object(recovery,"sha256_file",side_effect=lambda source: next(entry.sha256 for entry in manifest.migrations if source.name==Path(entry.path).name)),patch.object(recovery,"run"):
+    result=recovery.apply_manifest(args,manifest)
+  self.assertEqual("baseline",result["evidence"]["initial_ledger_state"])
+  self.assertEqual("transformed_local_clone_not_exact_restore",result["evidence"]["clone_state"])
+  self.assertEqual(0,result["evidence"]["hosted_mutations"])
  def test_clone_initial_ledger_rejects_partial_mutated_and_extra_states(self):
   manifest=contract.load_manifest(ROOT); full=recovery._manifest_ledger_pairs(manifest)
   cases=(full[:-1],full+(("99999999","extra"),),full[:12]+(("20260627080000","wrong_name"),)+full[13:],full[:12]+(("20260713002500","forbidden"),)+full[13:])
@@ -583,9 +601,13 @@ class ControllerTests(unittest.TestCase):
  def test_compatibility_sql_is_version_bound_and_migration_atomic(self):
   sql=recovery._compatibility_sql("20260627080000")
   self.assertEqual(recovery._compatibility_hook("20260627080000"),sql[:4])
-  self.assertIn("ALTER EXTENSION vector SET SCHEMA extensions",sql)
+  self.assertIn("ALTER EXTENSION vector SET SCHEMA extensions;",sql)
+  script="\n".join(sql)+"\nDO $$ BEGIN NULL; END $$;"
+  self.assertIn("ALTER EXTENSION vector SET SCHEMA extensions;\nDO $$",script)
+  self.assertTrue(all(statement.endswith(";") and not statement[:-1].endswith(";") for statement in sql))
   owner_sql=recovery._compatibility_sql("20260713002000")
-  self.assertIn(f"DROP FUNCTION {recovery.OBSOLETE_NOTIFICATION_OVERLOAD}",owner_sql)
+  self.assertIn(f"DROP FUNCTION {recovery.OBSOLETE_NOTIFICATION_OVERLOAD};",owner_sql)
+  self.assertTrue(all(statement.endswith(";") and not statement[:-1].endswith(";") for statement in owner_sql))
   self.assertTrue(any("ALTER FUNCTION" in statement for statement in owner_sql))
   self.assertEqual((),recovery._compatibility_sql("not-a-migration"))
   source=(SCRIPTS/"g035_hosted_recovery.py").read_text(encoding="utf8")
@@ -636,6 +658,25 @@ class ControllerTests(unittest.TestCase):
   binding[0]=(*binding[0][:2],"0"*64,*binding[0][3:])
   with patch.object(recovery,"_query_conn",side_effect=query),patch.object(recovery,"_durable_descriptors",return_value=descriptors),patch.object(recovery,"_short_url_snapshot",return_value=state),patch.object(recovery,"_quarantine_catalog",return_value="5"*64),patch.object(recovery,"_quarantine_acl_valid",return_value=True),self.assertRaisesRegex(recovery.RecoveryError,"durable"):
    recovery._verify_remediation_state(object(),evidence)
+ def test_quarantine_acl_inspection_rejects_public_and_role_exposure(self):
+  cases=(
+   ("schema_public","pg_namespace AS namespace CROSS JOIN",),
+   ("table_role","pg_class AS class",),
+   ("default_public","pg_default_acl",),
+  )
+  for _,marker in cases:
+   queries=[]
+   def query(conn,sql,params=None):
+    queries.append(sql)
+    return [(marker not in sql,)]
+   with self.subTest(marker=marker),patch.object(recovery,"_query_conn",side_effect=query):
+    self.assertFalse(recovery._quarantine_acl_valid(object()))
+   self.assertEqual(3,len(queries))
+   self.assertTrue(all("has_schema_privilege" not in sql and "has_table_privilege" not in sql for sql in queries))
+   self.assertTrue(all("acl.grantee=0" in sql for sql in queries))
+   self.assertTrue(all("role.rolname IN ('anon','authenticated','service_role')" in sql for sql in queries))
+  with patch.object(recovery,"_query_conn",return_value=[(True,)]):
+   self.assertTrue(recovery._quarantine_acl_valid(object()))
  def test_durable_quarantine_source_contract_persists_pre_and_post_binding(self):
   source=(SCRIPTS/"g035_hosted_recovery.py").read_text(encoding="utf8")
   for column in ("restore_receipt_sha256","inspection_receipt_sha256","authorization_sha256","manifest_sha256","repository_commit","selection_spec_sha256","short_urls_catalog_sha256","duplicate_group_count","victim_count","pre_rowset_sha256","victim_descriptors_sha256","quarantine_catalog_sha256","quarantined_ids_sha256","deleted_ids_sha256","survivor_rowset_sha256"):
@@ -645,7 +686,11 @@ class ControllerTests(unittest.TestCase):
   self.assertIn("source_row_sha256<>encode(digest(source_row_jsonb::text,'sha256'),'hex')",source)
   self.assertIn("digest(source_row_jsonb->>'target_url','sha256')",source)
   self.assertIn("information_schema.columns WHERE table_schema='g035_recovery_control'",source)
-  self.assertIn("has_table_privilege",source)
+  self.assertNotIn("has_table_privilege",source)
+  self.assertNotIn("has_schema_privilege",source)
+  self.assertIn("pg_catalog.aclexplode",source)
+  self.assertIn("coalesce(namespace.nspacl,pg_catalog.acldefault('n',namespace.nspowner))",source)
+  self.assertIn("coalesce(class.relacl,pg_catalog.acldefault('r',class.relowner))",source)
  def test_main_rejects_without_diagnostics(self):
   output=io.StringIO()
   with patch.object(recovery,"validate_sources",side_effect=recovery.ContractError("secret")),contextlib.redirect_stdout(output): self.assertEqual(2,recovery.main(["validate"]))
