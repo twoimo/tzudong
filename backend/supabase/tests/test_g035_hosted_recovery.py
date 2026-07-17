@@ -141,6 +141,20 @@ class ControllerTests(unittest.TestCase):
   with tempfile.TemporaryDirectory() as raw:
    path=Path(raw)/"artifact.json"; encoded=json.dumps(data); path.write_text(encoded[:-1]+',"extra":true}',encoding="utf8")
    with patch.object(recovery,"_repository_commit",return_value="a"*40),self.assertRaisesRegex(recovery.RecoveryError,"readiness"): recovery._g034_adapter(path,ROOT,manifest,observed)
+ def test_g034_live_fingerprints_match_preflight_canonical_algorithms(self):
+  terminal="20260531084516"
+  with tempfile.TemporaryDirectory() as raw:
+   artifact=Path(raw)/"artifact.json"; artifact.write_text(json.dumps({"ledgerExpectedTerminal":terminal}),encoding="utf8")
+   def query(conn,sql,params=None):
+    if "schema_migrations" in sql: return [(terminal,)]
+    if "pg_class" in sql or "pg_proc" in sql: return [(True,)]
+    if "pg_locks" in sql: return [(0,)]
+    if "pg_roles" in sql: return [(3,)]
+    raise AssertionError(sql)
+   with patch.object(recovery,"_query_conn",side_effect=query):
+    actual=recovery._g034_live_fingerprints(object(),artifact)
+  prerequisites={"ledgerTerminalMatches":True,"publicRestaurants":True,"publicRestaurantsBackup":True,"storageObjects":True,"publicApproveSubmissionItem":True,"publicApproveEditSubmissionItem":True,"noWaitingLocks":True,"requiredRolesPresent":True}
+  self.assertEqual({"ledger_sha256":recovery.digest([terminal]),"catalog_sha256":recovery.digest(prerequisites)},actual)
  def test_commit_is_git_rev_parse_output_not_git_head_hash(self):
   completed=subprocess.CompletedProcess([],0,"b"*40+"\n","")
   with patch.object(recovery.subprocess,"run",return_value=completed) as run:
@@ -153,6 +167,8 @@ class ControllerTests(unittest.TestCase):
    def __enter__(self): return self
    def __exit__(self,*x): pass
    def execute(self,sql,params=None): self.events.append(sql)
+   @property
+   def description(self): return None if self.events[-1].startswith("BEGIN") else ("rowset",)
    def fetchall(self): return [("snapshot",)]
    def rollback(self): self.events.append("ROLLBACK")
    def close(self): self.events.append("CLOSE")
@@ -163,11 +179,48 @@ class ControllerTests(unittest.TestCase):
    args=Namespace(destination=str(dest),service_file=str(self.service(raw,"g035")),recipient=recipient,g034_artifact=str(artifact),pg_dump="pg_dump",encrypt_command="age")
    def dump(*values):
     self.assertNotIn("ROLLBACK",conn.events); self.assertEqual(recipient,values[2]); (dest/"g035-dump.enc").write_bytes(b"x"); return []
-   with patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"command_exists",side_effect=lambda x:x),patch.object(recovery,"_connect",return_value=conn),patch.object(recovery,"_fingerprints",return_value=observed),patch.object(recovery,"_repository_commit",return_value="a"*40),patch.object(recovery,"_dump_to_encrypted",side_effect=dump):
+   with patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"command_exists",side_effect=lambda x:x),patch.object(recovery,"_connect",return_value=conn),patch.object(recovery,"_fingerprints",return_value=observed),patch.object(recovery,"_g034_live_fingerprints",return_value={"ledger_sha256":"1"*64,"catalog_sha256":"2"*64}),patch.object(recovery,"_repository_commit",return_value="a"*40),patch.object(recovery,"_dump_to_encrypted",side_effect=dump):
     result=recovery.run_capture(args,manifest)
   self.assertEqual(hashlib.sha256(recipient.encode("utf-8")).hexdigest(),result["evidence"]["recipient_fingerprint"])
   self.assertNotIn(recipient,json.dumps(result))
   self.assertLess(conn.events.index("SELECT pg_export_snapshot()"),conn.events.index("ROLLBACK"))
+ def test_connect_binds_servicefile_without_global_environment_mutation(self):
+  import types
+  with tempfile.TemporaryDirectory() as raw:
+   servicefile=Path(raw)/"pg_service.conf"
+   servicefile.write_text("[g035]\nhost=remote.example\nport=5432\ndbname=source\nuser=operator\npassword=private\nsslmode=require\n",encoding="utf8")
+   env={"PGSERVICEFILE":str(servicefile)}
+   connect=lambda **kwargs: kwargs
+   with patch.dict(recovery.os.environ,{"PGSERVICEFILE":"original"},clear=False),patch.dict(sys.modules,{"psycopg":types.SimpleNamespace(connect=connect)}):
+    self.assertEqual({"host":"remote.example","port":"5432","dbname":"source","user":"operator","password":"private","sslmode":"require","autocommit":True},recovery._connect("g035",env))
+    self.assertEqual("original",recovery.os.environ["PGSERVICEFILE"])
+   servicefile.write_text("[g035]\nhost=remote.example\nservice=other\n",encoding="utf8")
+   with patch.dict(sys.modules,{"psycopg":types.SimpleNamespace(connect=connect)}),self.assertRaisesRegex(recovery.RecoveryError,"invalid service file"):
+    recovery._connect("g035",env)
+   servicefile.write_text("[g035]\nhost=one\nhost=two\n",encoding="utf8")
+   with patch.dict(sys.modules,{"psycopg":types.SimpleNamespace(connect=connect)}),self.assertRaisesRegex(recovery.RecoveryError,"invalid service file"):
+    recovery._connect("g035",env)
+  with self.assertRaisesRegex(recovery.RecoveryError,"database connection unavailable"):
+   recovery._connect("g035",{})
+ def test_query_errors_are_bounded(self):
+  class Cursor:
+   def __enter__(self): return self
+   def __exit__(self,*unused): pass
+   def execute(self,*unused): raise RuntimeError("private database failure")
+  class Conn:
+   def cursor(self): return Cursor()
+  with self.assertRaisesRegex(recovery.RecoveryError,"database query unavailable"):
+   recovery._query_conn(Conn(),"SELECT secret")
+ def test_query_without_rowset_returns_empty_list(self):
+  class Cursor:
+   description=None
+   def __enter__(self): return self
+   def __exit__(self,*unused): pass
+   def execute(self,*unused): pass
+   def fetchall(self): raise AssertionError("fetchall called without rowset")
+  class Conn:
+   def cursor(self): return Cursor()
+  self.assertEqual([],recovery._query_conn(Conn(),"BEGIN"))
  def test_capture_rejects_invalid_age_recipients(self):
   with tempfile.TemporaryDirectory() as raw:
    dest=Path(raw)/"out"; dest.mkdir()
