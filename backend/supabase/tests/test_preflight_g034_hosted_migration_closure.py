@@ -1,4 +1,5 @@
 import importlib.util
+import inspect
 import json
 import os
 import sys
@@ -39,7 +40,7 @@ class FakeCursor:
         self.sql = []
         self.fail_on = fail_on
         self.catalog_issue = catalog_issue
-        self.definition = definition or self.tracked_definition("approve_submission_item")
+        self.definition = definition
         self.closed = False
         self.last_sql = ""
 
@@ -47,7 +48,18 @@ class FakeCursor:
     def tracked_definition(name):
         text = module.TRACKED_APPROVAL_SOURCE.read_text(encoding="utf-8")
         start = text.index(f"create or replace function public.{name}")
-        return text[start:text.index("$$;", start) + 3]
+        body = module.extract_dollar_quoted_body(text[start:text.index("$$;", start) + 3])
+        return (
+            f"CREATE OR REPLACE FUNCTION public.{name}(uuid, uuid, jsonb)\n"
+            "RETURNS record\nLANGUAGE plpgsql\nSECURITY DEFINER\n"
+            "SET search_path TO 'public'\nAS $function$\n"
+            f"{body}\n$function$;"
+        )
+
+    @staticmethod
+    def catalog_attributes(name):
+        argnames = next(item[4] for item in module.TRACKED_APPROVAL_FUNCTIONS if item[2] == name)
+        return module.APPROVAL_CATALOG_ATTRIBUTES + (argnames,)
 
     def execute(self, sql, params=None):
         self.sql.append((sql, params))
@@ -56,19 +68,42 @@ class FakeCursor:
             raise RuntimeError("database diagnostic containing a secret")
 
     def fetchall(self):
-        return [("20260531084516",)]
+        if "schema_migrations" in self.last_sql:
+            return [("20260531084516",)]
+        if "pg_get_functiondef(procedure.oid)" in self.last_sql:
+            name = "approve_edit_submission_item" if "approve_edit_submission_item" in self.sql[-1][1][0] else "approve_submission_item"
+            definition = self.definition or self.tracked_definition(name)
+            attributes = list(self.catalog_attributes(name))
+            if self.catalog_issue == "wrong-definition":
+                definition = definition.replace("public.restaurants", "public.restaurants_backup", 1)
+            if self.catalog_issue == "body-mutation":
+                definition = definition.replace("v_is_admin boolean", "v_is_admin integer", 1)
+            if self.catalog_issue == "malformed-body":
+                definition = definition.replace("$function$;", "$other$;", 1)
+            attribute_index = {
+                "wrong-prokind": 0,
+                "wrong-language": 1,
+                "wrong-prosecdef": 2,
+                "wrong-proconfig": 3,
+                "wrong-proretset": 4,
+                "wrong-prorettype": 5,
+                "wrong-proallargtypes": 6,
+                "wrong-proargmodes": 7,
+                "wrong-proargnames": 8,
+            }.get(self.catalog_issue)
+            if attribute_index is not None:
+                attributes[attribute_index] = {
+                    0: "p", 1: "sql", 2: False, 3: ("search_path=private",), 4: False,
+                    5: 25, 6: (2950,), 7: ("i",), 8: ("wrong",),
+                }[attribute_index]
+            return [(definition, *attributes)]
+        raise AssertionError(self.last_sql)
 
     def fetchone(self):
         if "to_regclass('public.restaurants_backup')" in self.last_sql:
             return (self.catalog_issue != "live-table",)
         if "restaurants_backup" in self.last_sql:
             return (self.catalog_issue in {"function-dependency", "view-dependency", "trigger-dependency", "rule-dependency", "fk-dependency"},)
-        if "pg_get_functiondef(procedure.oid)" in self.last_sql and self.sql[-1][1]:
-            name = "approve_edit_submission_item" if "approve_edit_submission_item" in self.sql[-1][1][0] else "approve_submission_item"
-            definition = self.definition if name == "approve_submission_item" else self.tracked_definition(name)
-            if self.catalog_issue == "wrong-definition":
-                definition = definition.replace("public.restaurants", "public.restaurants_backup", 1)
-            return (definition,)
         if "pg_catalog.pg_class AS class" in self.last_sql:
             return (self.catalog_issue not in {"missing", "wrong-schema", "wrong-name", "wrong-relkind", "decoy"},)
         if "pg_locks" in self.last_sql:
@@ -213,7 +248,7 @@ class G034HostedPreflightTests(unittest.TestCase):
         self.assertTrue(any("class.relkind = 'r'" in sql for sql in catalog_sql))
         self.assertTrue(all("procedure.proargtypes = %s::pg_catalog.oidvector" in sql for sql, _ in procedure_checks))
         self.assertEqual(["2950 2950 3802"] * len(procedure_checks), [params[3] for _, params in procedure_checks])
-        self.assertTrue(all("procedure.prokind = 'f'" in sql for sql, _ in procedure_checks))
+        self.assertTrue(all("procedure.prokind" in sql for sql, _ in procedure_checks))
         self.assertTrue(any("to_regclass('public.restaurants_backup') IS NULL" in sql for sql, _ in cursor.sql))
         self.assertTrue(all("restaurants_backup" not in str(params) for sql, params in cursor.sql if params))
     def test_retirement_function_scan_excludes_unsupported_prokinds_and_blocks_references(self):
@@ -249,10 +284,66 @@ class G034HostedPreflightTests(unittest.TestCase):
                 self.assertFalse(report["prerequisites"]["publicApproveSubmissionItem"])
                 self.assertIn("catalog-prerequisite", report["blockers"])
 
-    def test_exact_final_april_definitions_pass_semantic_contract(self):
-        report, _, _ = self.run_catalog(FakeCursor())
-        self.assertTrue(report["prerequisites"]["publicApproveSubmissionItem"])
-        self.assertTrue(report["prerequisites"]["publicApproveEditSubmissionItem"])
+    def test_source_derived_body_vectors_and_rendered_header_variants_pass(self):
+        contract = module.approval_body_contract()
+        self.assertEqual(
+            "02420dbf7782d8991a2f43999c723283b9fdde2754f1dd38834474a81017b8a1",
+            contract["public.approve_submission_item(uuid,uuid,jsonb)"]["body_hash"],
+        )
+        self.assertEqual(
+            "a88dccb8f26370629ca6dd0b84a8e7681393c16c4e687d709bd3d6bfc8aa6b68",
+            contract["public.approve_edit_submission_item(uuid,uuid,jsonb)"]["body_hash"],
+        )
+        definition = FakeCursor.tracked_definition("approve_submission_item")
+        self.assertEqual(
+            contract["public.approve_submission_item(uuid,uuid,jsonb)"]["body_hash"],
+            module.body_fingerprint(module.extract_dollar_quoted_body(definition)),
+        )
+
+    def test_dollar_quoted_body_rejects_malformed_or_mismatched_delimiters(self):
+        for definition in ("AS $$ body $tag$", "AS $tag$ body $$", "AS $$ body $$ AS $$"):
+            with self.subTest(definition=definition):
+                with self.assertRaises(ValueError):
+                    module.extract_dollar_quoted_body(definition)
+
+    def test_source_contract_rejects_authenticated_malformed_declaration(self):
+        source = module.TRACKED_APPROVAL_SOURCE.read_bytes()
+        start = source.index(b"create or replace function public.approve_submission_item")
+        source = source[:start] + source[start:].replace(b"as $$", b"as $broken$", 1)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "source.sql"
+            path.write_bytes(source)
+            with patch.object(module, "TRACKED_APPROVAL_SOURCE_SHA256", module.hashlib.sha256(source).hexdigest()):
+                with self.assertRaises(ValueError):
+                    module.approval_body_contract(path)
+    def test_source_contract_rejects_authenticated_duplicate_declaration(self):
+        source = module.TRACKED_APPROVAL_SOURCE.read_bytes()
+        start = source.index(b"create or replace function public.approve_submission_item")
+        duplicate = source + b"\r\n" + source[start:source.index(b"$$;", start) + 3]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "source.sql"
+            path.write_bytes(duplicate)
+            with patch.object(module, "TRACKED_APPROVAL_SOURCE_SHA256", module.hashlib.sha256(duplicate).hexdigest()):
+                with self.assertRaisesRegex(ValueError, "tracked-approval-declaration"):
+                    module.approval_body_contract(path)
+
+    def test_catalog_contract_rejects_body_and_every_attribute_drift(self):
+        issues = (
+            "body-mutation", "malformed-body", "wrong-prokind", "wrong-language", "wrong-prosecdef",
+            "wrong-proconfig", "wrong-proretset", "wrong-prorettype", "wrong-proallargtypes",
+            "wrong-proargmodes", "wrong-proargnames",
+        )
+        for issue in issues:
+            with self.subTest(issue=issue):
+                report, _, _ = self.run_catalog(FakeCursor(catalog_issue=issue))
+                self.assertFalse(report["prerequisites"]["publicApproveSubmissionItem"])
+                self.assertIn("catalog-prerequisite", report["blockers"])
+
+    def test_shared_approval_catalog_contract_api_signature(self):
+        self.assertEqual(
+            {"cursor", "contract"},
+            set(inspect.signature(module.approval_catalog_contract).parameters),
+        )
 
     def test_validate_only_retains_unconditional_clone_backup_blocker(self):
         with tempfile.TemporaryDirectory() as directory:
