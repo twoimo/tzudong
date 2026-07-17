@@ -5,7 +5,7 @@ import argparse, csv, hashlib, json, os, re, shutil, subprocess, tempfile
 from pathlib import Path
 from typing import Any, Sequence
 from g035_hosted_recovery_contract import APPLICATION_SCHEMAS, BASELINE_PAIRS, BASELINE_SHA256, FORBIDDEN_VERSIONS, MANAGED_METADATA_SCHEMAS, MANIFEST_SHA256, SELF_COMMIT_VERSIONS, ContractError, Manifest, ledger_prefix, repository_root, sha256_file, validate_sources
-TIMEOUT_SECONDS=900; RECEIPT_SCHEMA="g035-local-recovery-receipt-v4"; HEX=re.compile(r"^[a-f0-9]{64}$"); AGE_RECIPIENT=re.compile(r"^age1[ac-hj-np-z02-9]{58}$"); ID=re.compile(r"^[A-Za-z0-9._:-]{1,128}$"); SNAPSHOT=re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"); LOCAL_SERVICE="g035-local"; LOCAL_DBNAME="g035_local"; LOCAL_HOSTS={"localhost","127.0.0.1","::1"}; SERVICE_KEYS={"host","port","dbname","application_name","sslmode","user","password","connect_timeout"}; RECOVERY_CONTROL_SCHEMAS=("supabase_migrations",); DUMP_SCHEMAS=APPLICATION_SCHEMAS+RECOVERY_CONTROL_SCHEMAS+MANAGED_METADATA_SCHEMAS; MANAGED_TABLE_DATA_EXCLUSIONS=tuple(f"--exclude-table-data={schema}.*" for schema in MANAGED_METADATA_SCHEMAS); RECOVERY_EXTENSIONS=(("pg_trgm","extensions"),("uuid-ossp","extensions"),("btree_gin","extensions"),("vector","extensions"),("pgcrypto","extensions")); COMPATIBILITY_HOOKS={"20260627080000":("DROP POLICY IF EXISTS documents_select_own ON public.documents;","DROP POLICY IF EXISTS documents_insert_own ON public.documents;","DROP POLICY IF EXISTS documents_update_own ON public.documents;","DROP POLICY IF EXISTS documents_delete_own ON public.documents;")}; AUTH_USER_REFERENCE_COLUMNS=(("public","ad_banners","created_by"),("public","admin_restaurant_map_overlays","created_by_admin_id"),("public","admin_restaurant_map_overlays","updated_by_admin_id"),("public","admin_user_preferences","user_id"),("public","announcements","created_by"),("public","documents","user_id"),("public","notifications","user_id"),("public","ocr_logs","user_id"),("public","profiles","user_id"),("public","restaurant_requests","user_id"),("public","restaurant_submissions","resolved_by_admin_id"),("public","restaurant_submissions","user_id"),("public","review_likes","user_id"),("public","reviews","edited_by_admin_id"),("public","reviews","user_id"),("public","search_logs","user_id"),("public","user_account_status","user_id"),("public","user_bookmarks","user_id"),("public","user_roles","user_id"),("public","user_stats","user_id"))
+TIMEOUT_SECONDS=900; RECEIPT_SCHEMA="g035-local-recovery-receipt-v4"; HEX=re.compile(r"^[a-f0-9]{64}$"); AGE_RECIPIENT=re.compile(r"^age1[ac-hj-np-z02-9]{58}$"); ID=re.compile(r"^[A-Za-z0-9._:-]{1,128}$"); SNAPSHOT=re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"); LOCAL_SERVICE="g035-local"; LOCAL_DBNAME="g035_local"; LOCAL_HOSTS={"localhost","127.0.0.1","::1"}; SERVICE_KEYS={"host","port","dbname","application_name","sslmode","user","password","connect_timeout"}; RECOVERY_CONTROL_SCHEMAS=("supabase_migrations",); DUMP_SCHEMAS=APPLICATION_SCHEMAS+RECOVERY_CONTROL_SCHEMAS+MANAGED_METADATA_SCHEMAS; MANAGED_TABLE_DATA_EXCLUSIONS=tuple(f"--exclude-table-data={schema}.*" for schema in MANAGED_METADATA_SCHEMAS); RECOVERY_EXTENSIONS=(("pg_trgm","extensions"),("uuid-ossp","extensions"),("btree_gin","extensions"),("vector","public"),("pgcrypto","extensions")); COMPATIBILITY_HOOKS={"20260627080000":("DROP POLICY IF EXISTS documents_select_own ON public.documents;","DROP POLICY IF EXISTS documents_insert_own ON public.documents;","DROP POLICY IF EXISTS documents_update_own ON public.documents;","DROP POLICY IF EXISTS documents_delete_own ON public.documents;")}; VECTOR_EXTENSION_RELOCATION_HOOK_VERSION="20260627080000"; VECTOR_EXTENSION_RELOCATION_HOOK=("SELECT namespace.nspname FROM pg_catalog.pg_extension AS extension JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid=extension.extnamespace WHERE extension.extname='vector'","ALTER EXTENSION vector SET SCHEMA extensions","SELECT namespace.nspname FROM pg_catalog.pg_extension AS extension JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid=extension.extnamespace WHERE extension.extname='vector'","SELECT 1 FROM pg_catalog.pg_extension AS extension JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid=extension.extnamespace WHERE extension.extname='vector' AND namespace.nspname='public'"); SHORT_URLS_DUPLICATE_TARGET_URL_HOOK_VERSION="20260713000100"; SHORT_URLS_DUPLICATE_TARGET_URL_HOOK=("SELECT 1 FROM public.short_urls WHERE code IS NULL OR target_url IS NULL LIMIT 1","SELECT 1 FROM public.short_urls GROUP BY code HAVING count(*) > 1 LIMIT 1","WITH ranked AS (SELECT id, row_number() OVER (PARTITION BY target_url ORDER BY created_at NULLS LAST, id) AS row_number FROM public.short_urls), deleted AS (DELETE FROM public.short_urls USING ranked WHERE public.short_urls.id=ranked.id AND ranked.row_number>1 RETURNING public.short_urls.id) SELECT count(*) FROM deleted","SELECT 1 FROM public.short_urls WHERE code IS NULL OR target_url IS NULL LIMIT 1","SELECT 1 FROM public.short_urls GROUP BY code HAVING count(*) > 1 LIMIT 1","SELECT 1 FROM public.short_urls GROUP BY target_url HAVING count(*) > 1 LIMIT 1"); AUTH_USER_REFERENCE_COLUMNS=(("public","ad_banners","created_by"),("public","admin_restaurant_map_overlays","created_by_admin_id"),("public","admin_restaurant_map_overlays","updated_by_admin_id"),("public","admin_user_preferences","user_id"),("public","announcements","created_by"),("public","documents","user_id"),("public","notifications","user_id"),("public","ocr_logs","user_id"),("public","profiles","user_id"),("public","restaurant_requests","user_id"),("public","restaurant_submissions","resolved_by_admin_id"),("public","restaurant_submissions","user_id"),("public","review_likes","user_id"),("public","reviews","edited_by_admin_id"),("public","reviews","user_id"),("public","search_logs","user_id"),("public","user_account_status","user_id"),("public","user_bookmarks","user_id"),("public","user_roles","user_id"),("public","user_stats","user_id"))
 class RecoveryError(RuntimeError): pass
 def _pairs(pairs):
  result={}
@@ -266,8 +266,9 @@ def _validate_auth_user_reference_columns(conn):
   if rows!=[(schema,table,column,"uuid","pg_catalog")]: raise RecoveryError("auth placeholder mapping drift")
 def _create_auth_user_placeholders(conn):
  _validate_auth_user_reference_columns(conn)
- references=" UNION ".join(f"SELECT {table}.{column} AS id FROM {schema}.{table} WHERE {table}.{column} IS NOT NULL" for schema,table,column in AUTH_USER_REFERENCE_COLUMNS)
- _query_conn(conn,f"INSERT INTO auth.users (id) SELECT DISTINCT id FROM ({references}) AS auth_user_references ON CONFLICT (id) DO NOTHING")
+ if _query_conn(conn,"SELECT NOT EXISTS (SELECT 1 FROM auth.users)")!=[(True,)]: raise RecoveryError("auth placeholder target is not empty")
+ references=" UNION ALL ".join(f"SELECT {table}.{column} AS id FROM {schema}.{table} WHERE {table}.{column} IS NOT NULL" for schema,table,column in AUTH_USER_REFERENCE_COLUMNS)
+ _query_conn(conn,f"INSERT INTO auth.users (id) SELECT DISTINCT id FROM ({references}) AS auth_user_references")
 def _auth_placeholder_evidence():
  return {"auth_placeholder_mapping_count":len(AUTH_USER_REFERENCE_COLUMNS),"auth_placeholder_mapping_sha256":digest(AUTH_USER_REFERENCE_COLUMNS)}
 def _ledger_assert(conn,manifest,count):
@@ -278,10 +279,24 @@ def _require_restore_baseline(prior):
  if not isinstance(evidence,dict) or evidence.get("ledger_sha256")!=BASELINE_SHA256 or evidence.get("ledger_count")!=len(BASELINE_PAIRS) or not _ledger_evidence_equal(evidence.get("ledger_pairs"),BASELINE_PAIRS): raise RecoveryError("restore receipt ledger mismatch")
 def _compatibility_hook(version):
  return COMPATIBILITY_HOOKS.get(version,())
+def _apply_vector_extension_relocation_hook(conn,version):
+ if version!=VECTOR_EXTENSION_RELOCATION_HOOK_VERSION: return
+ if _query_conn(conn,VECTOR_EXTENSION_RELOCATION_HOOK[0])!=[("public",)]: raise RecoveryError("vector compatibility precondition failed")
+ _query_conn(conn,VECTOR_EXTENSION_RELOCATION_HOOK[1])
+ if _query_conn(conn,VECTOR_EXTENSION_RELOCATION_HOOK[2])!=[("extensions",)] or _query_conn(conn,VECTOR_EXTENSION_RELOCATION_HOOK[3]): raise RecoveryError("vector compatibility postcondition failed")
+ conn.commit()
+def _apply_short_urls_duplicate_target_url_hook(conn,version):
+ if version!=SHORT_URLS_DUPLICATE_TARGET_URL_HOOK_VERSION: return 0
+ if _query_conn(conn,SHORT_URLS_DUPLICATE_TARGET_URL_HOOK[0]) or _query_conn(conn,SHORT_URLS_DUPLICATE_TARGET_URL_HOOK[1]): raise RecoveryError("short_urls compatibility precondition failed")
+ rows=_query_conn(conn,SHORT_URLS_DUPLICATE_TARGET_URL_HOOK[2])
+ if len(rows)!=1 or not isinstance(rows[0][0],int) or rows[0][0]<0: raise RecoveryError("short_urls compatibility delete result invalid")
+ if _query_conn(conn,SHORT_URLS_DUPLICATE_TARGET_URL_HOOK[3]) or _query_conn(conn,SHORT_URLS_DUPLICATE_TARGET_URL_HOOK[4]) or _query_conn(conn,SHORT_URLS_DUPLICATE_TARGET_URL_HOOK[5]): raise RecoveryError("short_urls compatibility postcondition failed")
+ conn.commit()
+ return rows[0][0]
 def apply_manifest(args,manifest):
  require_local(args.service); prior=_require_prior(args.restore_receipt,"restore-verify"); psql=command_exists(args.psql)
  with tempfile.TemporaryDirectory(prefix="g035-clone-") as raw:
-  service=_copy_local_service(Path(raw),Path(args.service_file),"g035-local"); env=safe_environment(service); conn=_connect("g035-local",env); self_commit_attempted=False; compatibility_hook_statements=[]
+  service=_copy_local_service(Path(raw),Path(args.service_file),"g035-local"); env=safe_environment(service); conn=_connect("g035-local",env); self_commit_attempted=False; compatibility_hook_statements=[]; compatibility_hook_deleted_row_count=0
   try:
    _query_conn(conn,"SELECT pg_advisory_lock(35035)")
    _require_restore_baseline(prior)
@@ -290,6 +305,8 @@ def apply_manifest(args,manifest):
     _ledger_assert(conn,manifest,index); source=repository_root(Path(__file__).resolve())/entry.path
     if sha256_file(source)!=entry.sha256: raise RecoveryError("migration source hash mismatch")
     hook=_compatibility_hook(entry.version)
+    compatibility_hook_deleted_row_count+=_apply_short_urls_duplicate_target_url_hook(conn,entry.version)
+    _apply_vector_extension_relocation_hook(conn,entry.version)
     if entry.version in SELF_COMMIT_VERSIONS:
      try:
       self_commit_attempted=True
@@ -320,7 +337,7 @@ def apply_manifest(args,manifest):
     if self_commit_attempted: raise RecoveryError("self_commit_ambiguous") from exc
     raise
    finally: conn.close()
- return receipt("clone-apply","applied",{"baseline_pairs_sha256":BASELINE_SHA256,"compatibility_hook_count":len(compatibility_hook_statements),"compatibility_hook_sha256":digest(tuple(compatibility_hook_statements)),**{k:v for k,v in observed.items() if k!="ledger_pairs"}},[prior["receipt_sha256"]])
+ return receipt("clone-apply","applied",{"baseline_pairs_sha256":BASELINE_SHA256,"compatibility_hook_deleted_row_count":compatibility_hook_deleted_row_count,"compatibility_hook_sha256":digest((COMPATIBILITY_HOOKS,VECTOR_EXTENSION_RELOCATION_HOOK_VERSION,VECTOR_EXTENSION_RELOCATION_HOOK,SHORT_URLS_DUPLICATE_TARGET_URL_HOOK_VERSION,SHORT_URLS_DUPLICATE_TARGET_URL_HOOK)),**{k:v for k,v in observed.items() if k!="ledger_pairs"}},[prior["receipt_sha256"]])
 def run_postflight(args,manifest):
  require_local(args.service); applied=_require_prior(args.clone_receipt,"clone-apply")
  with tempfile.TemporaryDirectory(prefix="g035-postflight-") as raw:
