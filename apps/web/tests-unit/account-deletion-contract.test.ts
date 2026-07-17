@@ -688,4 +688,35 @@ describe('G014 durable account deletion contract', () => {
     expect(deleteHandler).not.toContain('console.');
     expect(deleteHandler).not.toContain('auth.admin.deleteUser');
   });
+  test('permits the Node fetch CORS marker but blocks browser and near-miss fetch metadata before the worker capability gate', async () => {
+    const before = process.env.ACCOUNT_DELETION_WORKER_CAPABILITY;
+    process.env.ACCOUNT_DELETION_WORKER_CAPABILITY = 'x'.repeat(32);
+    try {
+      const { POST: workerPost } = await import('../app/api/internal/account-deletion/route.ts?node-fetch-capability-gate');
+      const request = (headers: HeadersInit) => new NextRequest('http://internal.test/api/internal/account-deletion', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-account-deletion-worker-capability': 'x'.repeat(32),
+          ...headers,
+        },
+        body: '{"phase":"session"}',
+      });
+
+      expect((await workerPost(request({ 'sec-fetch-mode': 'cors' }))).status).toBe(400);
+      expect((await workerPost(request({ 'x-account-deletion-worker-capability': 'y'.repeat(32), 'sec-fetch-mode': 'cors' }))).status).toBe(401);
+      for (const headers of [
+        { cookie: 'session=browser', 'sec-fetch-mode': 'cors' },
+        { 'sec-fetch-mode': 'navigate' },
+        { 'sec-fetch-site': 'same-origin', 'sec-fetch-mode': 'cors' },
+        { 'sec-fetch-dest': 'empty', 'sec-fetch-mode': 'cors' },
+        { 'sec-fetch-user': '?1', 'sec-fetch-mode': 'cors' },
+      ]) {
+        expect((await workerPost(request(headers))).status).toBe(401);
+      }
+    } finally {
+      if (before === undefined) delete process.env.ACCOUNT_DELETION_WORKER_CAPABILITY;
+      else process.env.ACCOUNT_DELETION_WORKER_CAPABILITY = before;
+    }
+  });
 });

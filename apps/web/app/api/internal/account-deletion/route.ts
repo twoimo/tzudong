@@ -210,7 +210,9 @@ function present(request: NextRequest, header: string): boolean {
   return (request.headers.get(header)?.trim().length ?? 0) !== 0;
 }
 function serverOnlyRequest(request: NextRequest): boolean {
-  return !['cookie', 'authorization', 'origin', 'referer', 'sec-fetch-site', 'sec-fetch-mode', 'sec-fetch-dest', 'sec-fetch-user'].some((header) => present(request, header));
+  const fetchMode = request.headers.get('sec-fetch-mode');
+  return !['cookie', 'authorization', 'origin', 'referer', 'sec-fetch-site', 'sec-fetch-dest', 'sec-fetch-user'].some((header) => present(request, header))
+    && (fetchMode === null || fetchMode === 'cors');
 }
 function validWorkerCapability(request: NextRequest): boolean {
   const expected = process.env.ACCOUNT_DELETION_WORKER_CAPABILITY;
