@@ -60,6 +60,40 @@ class ControllerTests(unittest.TestCase):
     recovery._copy_local_service(Path(raw),service,"g035-local")
    with patch.object(Path,"is_symlink",return_value=True),self.assertRaises(recovery.RecoveryError):
     recovery._copy_local_service(Path(raw),service,"g035-local")
+ def test_windows_dacl_accepts_only_current_user_system_and_administrators(self):
+  payload={"current_sid":"S-1-5-21-100","aces":[{"sid":"S-1-5-21-100","type":"Allow","inherited":False},{"sid":"S-1-5-18","type":"Allow","inherited":False},{"sid":"S-1-5-32-544","type":"Allow","inherited":True}]}
+  with tempfile.TemporaryDirectory() as raw:
+   service=self.service(raw)
+   completed=subprocess.CompletedProcess([],0,json.dumps(payload),"")
+   with patch.object(recovery.os,"name","nt"),patch.object(recovery.subprocess,"run",return_value=completed) as acl_run,patch.object(recovery,"run") as dump_run:
+    self.assertTrue(recovery._restrictive(service))
+   dump_run.assert_not_called()
+   argv=acl_run.call_args.args[0]
+   self.assertEqual(["powershell.exe","-NoLogo","-NoProfile","-NonInteractive","-ExecutionPolicy","Bypass","-Command"],argv[:7])
+   self.assertEqual(recovery._WINDOWS_ACL_SCRIPT,argv[7]); self.assertEqual(str(service),argv[8])
+ def test_windows_dacl_rejects_broad_inherited_and_unparseable_acls(self):
+  accepted={"current_sid":"S-1-5-21-100","aces":[{"sid":"S-1-5-21-100","type":"Allow","inherited":False}]}
+  rejected=(
+   {**accepted,"aces":accepted["aces"]+[{"sid":"S-1-1-0","type":"Allow","inherited":False}]},
+   {**accepted,"aces":accepted["aces"]+[{"sid":"S-1-5-32-545","type":"Allow","inherited":True}]},
+   {**accepted,"aces":accepted["aces"]+[{"sid":"S-1-5-11","type":"Allow","inherited":True}]},
+   "{not JSON",
+   {"current_sid":"S-1-5-21-100","aces":[]},
+  )
+  with tempfile.TemporaryDirectory() as raw:
+   service=self.service(raw)
+   for payload in rejected:
+    stdout=payload if isinstance(payload,str) else json.dumps(payload)
+    with patch.object(recovery.os,"name","nt"),patch.object(recovery.subprocess,"run",return_value=subprocess.CompletedProcess([],0,stdout,"")),patch.object(recovery,"run") as dump_run:
+     self.assertFalse(recovery._restrictive(service))
+    dump_run.assert_not_called()
+ def test_windows_dacl_has_no_posix_mode_fallback(self):
+  class File:
+   def is_symlink(self): return False
+   def is_file(self): return True
+   def stat(self): raise AssertionError("mode fallback")
+  with patch.object(recovery.os,"name","nt"),patch.object(recovery.subprocess,"run",side_effect=OSError()):
+   self.assertFalse(recovery._restrictive(File()))
  def artifact(self,manifest,observed,**changes):
   data={"artifactVersion":2,"blockers":["clone-required","clone-backup-recovery-required"],"catalogChecked":True,"catalogFingerprint":observed["catalog_sha256"],"cloneApplyRisks":1,"cloneBackupRecoveryRequired":True,"hostedLedgerFingerprint":observed["ledger_sha256"],"manifestHash":contract.MANIFEST_SHA256,"preflightReceiptId":None,"prerequisites":{},"repositoryCommit":"a"*40,"requiredLaterPromotionGate":"20260713002500_g014_catalog_contract.sql","safeToApply":False,"sourceFingerprint":recovery._source_fingerprint(manifest),"sourceValid":True,"schemaVersion":1,"ledgerExpectedTerminal":"20260531084516","closureTerminalVersion":"20260713002400"}
   data.update(changes); data["preflightReceiptId"]=recovery._preflight_receipt(data); return data
