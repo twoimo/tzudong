@@ -6,6 +6,7 @@ import json
 import os
 import re
 import sys
+import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -32,6 +33,45 @@ CATALOG_PROCEDURES = (
     ("public.approve_submission_item(uuid,uuid,jsonb)", "public", "approve_submission_item", "2950 2950 3802"),
     ("public.approve_edit_submission_item(uuid,uuid,jsonb)", "public", "approve_edit_submission_item", "2950 2950 3802"),
 )
+PREREQUISITE_NAMES = (
+    "ledgerTerminalMatches",
+    "noWaitingLocks",
+    "publicApproveEditSubmissionItem",
+    "publicApproveSubmissionItem",
+    "publicRestaurants",
+    "publicRestaurantsBackup",
+    "requiredRolesPresent",
+    "storageObjects",
+)
+
+def fingerprint(value):
+    return hashlib.sha256(
+        json.dumps(value, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+
+
+def repository_commit():
+    try:
+        value = subprocess.run(
+            ["git", "-C", str(ROOT), "rev-parse", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+    except Exception:
+        return None
+    return value if re.fullmatch(r"[0-9a-f]{40}", value) else None
+
+
+def refresh_receipt(report):
+    evidence = {
+        "catalogFingerprint": report["catalogFingerprint"],
+        "hostedLedgerFingerprint": report["hostedLedgerFingerprint"],
+        "manifestHash": report["manifestHash"],
+        "repositoryCommit": report["repositoryCommit"],
+        "sourceFingerprint": report["sourceFingerprint"],
+    }
+    report["preflightReceiptId"] = fingerprint(evidence)
 
 
 def fail(report, code):
@@ -71,6 +111,7 @@ def validate_sources(manifest, report):
     if len(entries) != 27:
         fail(report, "manifest-closure-count")
     previous_version = None
+    source_hashes = []
     for entry in entries:
         version, name, relative, digest = (entry[key] for key in ("version", "name", "path", "sha256"))
         if not re.fullmatch(r"20\d{12}", version) or not re.fullmatch(r"[a-z0-9_]+", name) or not HASH.fullmatch(digest):
@@ -87,11 +128,12 @@ def validate_sources(manifest, report):
             fail(report, "missing-source")
             continue
         actual = hashlib.sha256(source.read_bytes()).hexdigest()
-        report["sourceHashes"].append(actual)
+        source_hashes.append(actual)
         if actual != digest:
             fail(report, "source-hash-mismatch")
         if RISK.search(source.read_text(encoding="utf-8")):
             report["cloneApplyRisks"] += 1
+    report["sourceFingerprint"] = fingerprint(source_hashes)
     report["schemaVersion"] = manifest["schemaVersion"]
     report["ledgerExpectedTerminal"] = manifest["ledgerTerminalVersion"]
     report["closureTerminalVersion"] = manifest["closureTerminalVersion"]
@@ -114,11 +156,14 @@ def catalog_preflight(report):
         cursor.execute("SET LOCAL idle_in_transaction_session_timeout = '5000ms'")
         cursor.execute("SELECT version FROM supabase_migrations.schema_migrations ORDER BY version")
         ledger = [str(row[0]) for row in cursor.fetchall()]
-        report["ledgerTerminal"] = ledger[-1] if ledger else None
-        report["ledgerCount"] = len(ledger)
-        if report["ledgerTerminal"] != report["ledgerExpectedTerminal"] or any(version > report["ledgerExpectedTerminal"] for version in ledger):
+        report["hostedLedgerFingerprint"] = fingerprint(ledger)
+        report["prerequisites"]["ledgerTerminalMatches"] = (
+            bool(ledger)
+            and ledger[-1] == report["ledgerExpectedTerminal"]
+            and not any(version > report["ledgerExpectedTerminal"] for version in ledger)
+        )
+        if not report["prerequisites"]["ledgerTerminalMatches"]:
             fail(report, "ledger-terminal")
-        relation_results = []
         for lookup, namespace, name in CATALOG_RELATIONS:
             cursor.execute(
                 "SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_class AS class "
@@ -127,9 +172,12 @@ def catalog_preflight(report):
                 "AND namespace.nspname = %s AND class.relname = %s AND class.relkind = 'r')",
                 (lookup, namespace, name),
             )
-            relation_results.append(bool(cursor.fetchone()[0]))
-        report["relations"] = sum(relation_results)
-        procedure_results = []
+            prerequisite = {
+                "public.restaurants": "publicRestaurants",
+                "public.restaurants_backup": "publicRestaurantsBackup",
+                "storage.objects": "storageObjects",
+            }[lookup]
+            report["prerequisites"][prerequisite] = bool(cursor.fetchone()[0])
         for lookup, namespace, name, input_type_oids in CATALOG_PROCEDURES:
             cursor.execute(
                 "SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_proc AS procedure "
@@ -140,13 +188,17 @@ def catalog_preflight(report):
                 "AND procedure.prokind = 'f')",
                 (lookup, namespace, name, input_type_oids),
             )
-            procedure_results.append(bool(cursor.fetchone()[0]))
-        report["targetRpcs"] = sum(procedure_results)
+            prerequisite = {
+                "public.approve_submission_item(uuid,uuid,jsonb)": "publicApproveSubmissionItem",
+                "public.approve_edit_submission_item(uuid,uuid,jsonb)": "publicApproveEditSubmissionItem",
+            }[lookup]
+            report["prerequisites"][prerequisite] = bool(cursor.fetchone()[0])
         cursor.execute("SELECT count(*) FROM pg_catalog.pg_locks WHERE NOT granted")
-        report["lockConflictCount"] = int(cursor.fetchone()[0])
+        report["prerequisites"]["noWaitingLocks"] = int(cursor.fetchone()[0]) == 0
         cursor.execute("SELECT count(*) FROM pg_catalog.pg_roles WHERE rolname = ANY(%s)", (["postgres", "service_role", "authenticated"],))
-        report["requiredRoleCount"] = int(cursor.fetchone()[0])
-        if report["relations"] != len(CATALOG_RELATIONS) or report["targetRpcs"] != len(CATALOG_PROCEDURES) or report["requiredRoleCount"] != 3 or report["lockConflictCount"]:
+        report["prerequisites"]["requiredRolesPresent"] = int(cursor.fetchone()[0]) == 3
+        report["catalogFingerprint"] = fingerprint(report["prerequisites"])
+        if not all(report["prerequisites"].values()):
             fail(report, "catalog-prerequisite")
     except Exception:
         fail(report, "catalog-read-failed")
@@ -172,7 +224,23 @@ def main(argv=None):
     parser.add_argument("--validate-only", action="store_true")
     parser.add_argument("--artifact", type=Path, default=Path("g034-hosted-preflight.json"))
     args = parser.parse_args(argv)
-    report = {"artifactVersion": 1, "sourceValid": False, "catalogChecked": False, "ledgerTerminal": None, "ledgerCount": 0, "sourceHashes": [], "cloneApplyRisks": 0, "relations": 0, "targetRpcs": 0, "requiredRoleCount": 0, "lockConflictCount": 0, "requiredLaterPromotionGate": None, "cloneBackupRecoveryRequired": None, "safeToApply": False, "blockers": []}
+    report = {
+        "artifactVersion": 2,
+        "blockers": [],
+        "catalogChecked": False,
+        "catalogFingerprint": None,
+        "cloneApplyRisks": 0,
+        "cloneBackupRecoveryRequired": None,
+        "hostedLedgerFingerprint": None,
+        "manifestHash": None,
+        "preflightReceiptId": None,
+        "prerequisites": {name: False for name in PREREQUISITE_NAMES},
+        "repositoryCommit": repository_commit(),
+        "requiredLaterPromotionGate": None,
+        "safeToApply": False,
+        "sourceFingerprint": None,
+        "sourceValid": False,
+    }
     try:
         manifest = load_manifest(MANIFEST)
         validate_sources(manifest, report)
@@ -188,6 +256,7 @@ def main(argv=None):
     if report["cloneApplyRisks"]:
         fail(report, "clone-required")
     report["blockers"] = sorted(set(report["blockers"] + ["clone-backup-recovery-required"]))
+    refresh_receipt(report)
     args.artifact.write_text(json.dumps(report, sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8")
     if args.validate_only:
         return 0 if report["sourceValid"] else 1
