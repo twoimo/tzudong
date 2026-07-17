@@ -23,6 +23,57 @@ class ContractTests(unittest.TestCase):
   self.assertFalse(contract.ledger_prefix(manifest,list(reconstructed)))
   self.assertFalse(contract.ledger_prefix(manifest,[("20260531084516","caller_supplied")]))
 
+ def test_hosted_workflow_uses_exact_local_only_cli_contract(self):
+  workflow=(ROOT/".github/workflows/g035-hosted-recovery.yml").read_text(encoding="utf8")
+  choices=next(action.choices for action in recovery.parser()._actions if getattr(action,"dest",None)=="mode")
+  required={
+   mode:{action.dest for action in subparser._actions if action.required}
+   for mode,subparser in choices.items()
+  }
+  self.assertEqual({
+   "validate":set(),
+   "capture":{"destination","service_file","recipient","g034_artifact","encrypt_command"},
+   "restore-verify":{"dump","capture_receipt","service_file","destination_service","identity_file","decrypt_command"},
+   "short-url-remediation-inspect":{"service","service_file","restore_receipt"},
+   "short-url-remediation-apply":{"service","service_file","restore_receipt","inspect_receipt","authorization","authorization_signature"},
+   "short-url-remediation-verify":{"service","service_file","apply_receipt"},
+   "clone-apply":{"service","service_file","restore_receipt"},
+   "local-postflight":{"service","service_file","clone_receipt"},
+  },required)
+  commands={
+   "validate":'python backend/supabase/scripts/g035_hosted_recovery.py validate > "$EVIDENCE_RECEIPT_PATH"',
+   "capture":'python backend/supabase/scripts/g035_hosted_recovery.py capture --destination "$G035_ENCRYPTED_DESTINATION_PATH" --service-file "$G035_HOSTED_PG_SERVICE_FILE" --recipient "$G035_PUBLIC_RECIPIENT" --g034-artifact "$G035_G034_ARTIFACT" --encrypt-command "$G035_ENCRYPT_COMMAND" > "$EVIDENCE_RECEIPT_PATH"',
+   "restore-verify":'python backend/supabase/scripts/g035_hosted_recovery.py restore-verify --dump "$G035_DUMP_PATH" --capture-receipt "$G035_CAPTURE_RECEIPT_PATH" --service-file "$G035_LOCAL_PG_SERVICE_FILE" --destination-service g035-local --identity-file "$G035_OFFLINE_IDENTITY_FILE" --decrypt-command "$G035_DECRYPT_COMMAND" > "$EVIDENCE_RECEIPT_PATH"',
+   "short-url-remediation-inspect":'python backend/supabase/scripts/g035_hosted_recovery.py short-url-remediation-inspect --service g035-local --service-file "$G035_LOCAL_PG_SERVICE_FILE" --restore-receipt "$G035_RESTORE_RECEIPT_PATH" > "$EVIDENCE_RECEIPT_PATH"',
+   "short-url-remediation-apply":'python backend/supabase/scripts/g035_hosted_recovery.py short-url-remediation-apply --service g035-local --service-file "$G035_LOCAL_PG_SERVICE_FILE" --restore-receipt "$G035_RESTORE_RECEIPT_PATH" --inspect-receipt "$G035_SHORT_URL_REMEDIATION_INSPECT_RECEIPT_PATH" --authorization "$G035_REMEDIATION_AUTHORIZATION_PATH" --authorization-signature "$G035_REMEDIATION_AUTHORIZATION_SIGNATURE_PATH" > "$EVIDENCE_RECEIPT_PATH"',
+   "short-url-remediation-verify":'python backend/supabase/scripts/g035_hosted_recovery.py short-url-remediation-verify --service g035-local --service-file "$G035_LOCAL_PG_SERVICE_FILE" --apply-receipt "$G035_SHORT_URL_REMEDIATION_APPLY_RECEIPT_PATH" > "$EVIDENCE_RECEIPT_PATH"',
+   "clone-apply":'python backend/supabase/scripts/g035_hosted_recovery.py clone-apply --service g035-local --service-file "$G035_LOCAL_PG_SERVICE_FILE" --restore-receipt "$G035_RESTORE_RECEIPT_PATH" --short-url-remediation-receipt "$G035_SHORT_URL_REMEDIATION_VERIFY_RECEIPT_PATH" > "$EVIDENCE_RECEIPT_PATH"',
+   "local-postflight":'python backend/supabase/scripts/g035_hosted_recovery.py local-postflight --service g035-local --service-file "$G035_LOCAL_PG_SERVICE_FILE" --clone-receipt "$G035_CLONE_RECEIPT_PATH" > "$EVIDENCE_RECEIPT_PATH"',
+  }
+  self.assertEqual(set(choices),set(commands))
+  for mode,command in commands.items():
+   self.assertIn(command,workflow)
+   for destination in required[mode]:
+    action=next(action for action in choices[mode]._actions if action.dest==destination)
+    self.assertIn(action.option_strings[0],command)
+  self.assertIn("options: [validate, capture, restore-verify, short-url-remediation-inspect, short-url-remediation-apply, short-url-remediation-verify, clone-apply, local-postflight]",workflow)
+  for variable in ("G035_HOSTED_PG_SERVICE_FILE","G035_LOCAL_PG_SERVICE_FILE","G035_OFFLINE_IDENTITY_FILE","G035_REMEDIATION_AUTHORIZATION_PATH","G035_REMEDIATION_AUTHORIZATION_SIGNATURE_PATH","G035_SHORT_URL_REMEDIATION_INSPECT_RECEIPT_PATH","G035_SHORT_URL_REMEDIATION_APPLY_RECEIPT_PATH","G035_SHORT_URL_REMEDIATION_VERIFY_RECEIPT_PATH"):
+   self.assertIn(f'{variable}: ${{{{ vars.{variable} }}}}',workflow)
+  self.assertIn('capture) test -r "$G035_HOSTED_PG_SERVICE_FILE";',workflow)
+  for mode in ("restore-verify","short-url-remediation-inspect","short-url-remediation-apply","short-url-remediation-verify","clone-apply","local-postflight"):
+   self.assertIn(f'{mode}) test -r "$G035_LOCAL_PG_SERVICE_FILE";',workflow)
+  self.assertEqual(1,workflow.count("--identity-file"))
+  self.assertLess(workflow.index('case "$EVIDENCE_RECEIPT_PATH" in'),workflow.index('receipt_parent="$(dirname -- "$EVIDENCE_RECEIPT_PATH")"'))
+  self.assertIn('/*|[A-Za-z]:/*|[A-Za-z]:\\\\*) ;;',workflow)
+  self.assertIn('case "$canonical_receipt_parent/" in "$canonical_workspace/"*) exit 1;; esac',workflow)
+  self.assertIn('test ! -e "$EVIDENCE_RECEIPT_PATH"',workflow)
+  self.assertIn('test ! -L "$EVIDENCE_RECEIPT_PATH"',workflow)
+  self.assertIn("set -C",workflow)
+  self.assertIn("REMEDIATION_PUBLIC_KEY_PEM",recovery.__dict__)
+  self.assertNotIn("hosted-apply",workflow)
+  self.assertNotIn("${{ secrets.",workflow)
+  self.assertNotIn("PRIVATE_KEY",workflow)
+  self.assertNotIn("AGE-SECRET-KEY",workflow)
 class ControllerTests(unittest.TestCase):
  def service(self,directory,section="g035-local",body=None):
   path=Path(directory)/"service.conf"; path.write_text(body or f"[{section}]\nhost=127.0.0.1\nport=5432\ndbname=g035_local\napplication_name=g035-local-rehearsal\nsslmode=disable\n",encoding="utf8"); path.chmod(0o600); return path
@@ -277,6 +328,7 @@ class ControllerTests(unittest.TestCase):
     recovery._require_restrictive_regular_file(identity,"identity file")
  def test_restore_verify_uses_identity_without_receipting_or_disclosing_it(self):
   class Conn:
+   def commit(self): pass
    def rollback(self): pass
    def close(self): pass
   observed=fingerprints(managed_catalog_sha256="4"*64)
@@ -337,12 +389,15 @@ class ControllerTests(unittest.TestCase):
   self.assertNotIn("INSERT INTO auth.users",collision_calls)
  def test_restore_uses_fenced_pre_data_placeholder_post_data_phases_and_fails_each_phase(self):
   class Conn:
+   def __init__(self): self.commits=0
+   def commit(self): self.commits+=1
    def rollback(self): pass
    def close(self): pass
   observed=fingerprints()
   with tempfile.TemporaryDirectory() as raw:
    dump=Path(raw)/"dump.enc"; dump.write_bytes(b"ciphertext")
    identity=Path(raw)/"identity"; identity.write_bytes(b"test-key-material"); identity.chmod(0o600)
+   connections=[]
    args=Namespace(destination_service="g035-local",capture_receipt="capture",dump=str(dump),identity_file=str(identity),decrypt_command="age",pg_restore="pg_restore",service_file=str(self.service(raw)))
    capture={"receipt_sha256":"capture-receipt","evidence":{"dump_sha256":hashlib.sha256(b"ciphertext").hexdigest(),"extension_scope":[{"name":name,"schema":schema} for name,schema in recovery.RECOVERY_EXTENSIONS],**self.managed_capture_scope(),**observed}}
    for failing_section in (None,"pre-data","data","post-data"):
@@ -356,17 +411,20 @@ class ControllerTests(unittest.TestCase):
     def query(conn,sql,params=None):
      if sql.startswith("DROP SCHEMA "): events.append(sql)
      return []
-    with patch.object(recovery,"_copy_local_service",side_effect=lambda *unused: events.append("fence") or Path(raw)/"service.conf"),patch.object(recovery,"_require_prior",return_value=capture),patch.object(recovery,"command_exists",side_effect=lambda command:command),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"run",side_effect=execute),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",side_effect=query),patch.object(recovery,"_create_auth_user_placeholders",side_effect=lambda conn: events.append("placeholders")),patch.object(recovery,"_fingerprints",return_value=observed):
+    with patch.object(recovery,"_copy_local_service",side_effect=lambda *unused: events.append("fence") or Path(raw)/"service.conf"),patch.object(recovery,"_require_prior",return_value=capture),patch.object(recovery,"command_exists",side_effect=lambda command:command),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"run",side_effect=execute),patch.object(recovery,"_connect",side_effect=lambda *unused: connections.append(Conn()) or connections[-1]),patch.object(recovery,"_query_conn",side_effect=query),patch.object(recovery,"_create_auth_user_placeholders",side_effect=lambda conn: events.append("placeholders")),patch.object(recovery,"_fingerprints",return_value=observed):
      if failing_section:
       with self.assertRaisesRegex(recovery.RecoveryError,"external command failed"): recovery.run_restore_verify(args,None)
      else:
       recovery.run_restore_verify(args,None)
-    if failing_section=="pre-data": expected=["fence","DROP SCHEMA public CASCADE","DROP SCHEMA auth CASCADE","DROP SCHEMA storage CASCADE","pre-data"]
-    elif failing_section=="data": expected=["fence","DROP SCHEMA public CASCADE","DROP SCHEMA auth CASCADE","DROP SCHEMA storage CASCADE","pre-data","data"]
-    else: expected=["fence","DROP SCHEMA public CASCADE","DROP SCHEMA auth CASCADE","DROP SCHEMA storage CASCADE","pre-data","data","placeholders","post-data"]
+    reset=["fence","DROP SCHEMA IF EXISTS g035_recovery_control CASCADE","DROP SCHEMA IF EXISTS public CASCADE","DROP SCHEMA IF EXISTS auth CASCADE","DROP SCHEMA IF EXISTS storage CASCADE"]
+    if failing_section=="pre-data": expected=reset+["pre-data"]
+    elif failing_section=="data": expected=reset+["pre-data","data"]
+    else: expected=reset+["pre-data","data","placeholders","post-data"]
     self.assertEqual(expected,events)
+    self.assertGreaterEqual(sum(conn.commits for conn in connections),1)
  def test_restore_rejects_ledger_pair_mutation(self):
   class Conn:
+   def commit(self): pass
    def rollback(self): pass
    def close(self): pass
   observed=fingerprints(pairs=(("20260101000000","actual"),))
@@ -421,6 +479,7 @@ class ControllerTests(unittest.TestCase):
  def test_restore_fences_local_destination_before_public_reset_and_restore_errors_are_fatal(self):
   events=[]
   class Conn:
+   def commit(self): events.append("commit")
    def rollback(self): events.append("rollback")
    def close(self): events.append("close")
   observed=fingerprints()
@@ -442,10 +501,10 @@ class ControllerTests(unittest.TestCase):
     else: raise recovery.RecoveryError("external command failed")
    with patch.object(recovery,"_copy_local_service",side_effect=lambda *unused: events.append("fence") or Path(raw)/"service.conf"),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",side_effect=lambda conn,sql: events.append(sql) or []),patch.object(recovery,"_require_prior",return_value=capture),patch.object(recovery,"command_exists",side_effect=lambda command:command),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"run",side_effect=execute),self.assertRaisesRegex(recovery.RecoveryError,"external command failed"):
     recovery.run_restore_verify(args,None)
-  self.assertLess(events.index("fence"),events.index("DROP SCHEMA public CASCADE"))
-  self.assertLess(events.index("DROP SCHEMA public CASCADE"),events.index("DROP SCHEMA auth CASCADE"))
-  self.assertLess(events.index("DROP SCHEMA auth CASCADE"),events.index("DROP SCHEMA storage CASCADE"))
-  self.assertLess(events.index("DROP SCHEMA storage CASCADE"),events.index("pg_restore"))
+  self.assertLess(events.index("fence"),events.index("DROP SCHEMA IF EXISTS public CASCADE"))
+  self.assertLess(events.index("DROP SCHEMA IF EXISTS public CASCADE"),events.index("DROP SCHEMA IF EXISTS auth CASCADE"))
+  self.assertLess(events.index("DROP SCHEMA IF EXISTS auth CASCADE"),events.index("DROP SCHEMA IF EXISTS storage CASCADE"))
+  self.assertLess(events.index("DROP SCHEMA IF EXISTS storage CASCADE"),events.index("pg_restore"))
  def test_decrypt_failures_are_bounded_policy_rejections(self):
   output=io.StringIO()
   argv=["restore-verify","--dump","dump","--capture-receipt","capture","--service-file","service","--destination-service","g035-local","--identity-file","identity","--decrypt-command","age"]
@@ -506,8 +565,9 @@ class ControllerTests(unittest.TestCase):
     self.commits+=1
     if self.fail=="commit" and self.commits==1: raise RuntimeError("commit")
    def close(self): pass
+   def rollback(self): pass
   with tempfile.TemporaryDirectory() as raw:
-   args=Namespace(service="g035-local",restore_receipt="unused",service_file=str(self.service(raw)),psql="psql")
+   args=Namespace(service="g035-local",restore_receipt="unused",short_url_remediation_receipt="remediation",service_file=str(self.service(raw)),psql="psql")
    for failure in ("insert","commit","readback"):
     conn=Conn(failure)
     def query(connection,sql,params=None):
@@ -515,171 +575,77 @@ class ControllerTests(unittest.TestCase):
      return []
     def ledger(connection,unused,count):
      if failure=="readback" and count==1: raise RuntimeError("readback")
-    with patch.object(recovery,"_require_prior",return_value={"receipt_sha256":"x"}),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_connect",return_value=conn),patch.object(recovery,"run"),patch.object(recovery,"_query_conn",side_effect=query),patch.object(recovery,"_ledger_assert",side_effect=ledger),patch.object(recovery,"_require_restore_initial_ledger",return_value="baseline"),patch.object(recovery,"_initial_ledger_state",return_value="baseline"),self.assertRaisesRegex(recovery.RecoveryError,"self_commit_ambiguous"):
+    def prior(unused,mode):
+     if mode=="restore-verify": return {"receipt_sha256":"restore"}
+     return {"receipt_sha256":"verify","prior_receipt_sha256":["apply"],"evidence":{"apply_receipt_sha256":"apply","restore_receipt_sha256":"restore"}}
+    with patch.object(recovery,"_require_prior",side_effect=prior),patch.object(recovery,"_verify_remediation_state"),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_connect",return_value=conn),patch.object(recovery,"run"),patch.object(recovery,"_query_conn",side_effect=query),patch.object(recovery,"_ledger_assert",side_effect=ledger),patch.object(recovery,"_require_restore_initial_ledger",return_value="baseline"),patch.object(recovery,"_initial_ledger_state",return_value="baseline"),self.assertRaisesRegex(recovery.RecoveryError,"self_commit_ambiguous"):
      recovery.apply_manifest(args,manifest)
- def test_documents_policy_compatibility_hook_is_exact_and_version_bound(self):
-  expected=("DROP POLICY IF EXISTS documents_select_own ON public.documents;","DROP POLICY IF EXISTS documents_insert_own ON public.documents;","DROP POLICY IF EXISTS documents_update_own ON public.documents;","DROP POLICY IF EXISTS documents_delete_own ON public.documents;")
-  self.assertEqual(expected,recovery._compatibility_hook("20260627080000"))
-  self.assertEqual((),recovery._compatibility_hook("20260627080001"))
- def test_documents_policy_hook_is_fenced_before_psql_and_failures_are_fatal(self):
-  manifest=contract.load_manifest(ROOT); entry=next(item for item in manifest.migrations if item.version=="20260627080000")
-  manifest=contract.Manifest((entry,),frozenset(),manifest.ledger_terminal_version,manifest.closure_terminal_version)
-  class Conn:
-   def commit(self): pass
-   def close(self): pass
-  with tempfile.TemporaryDirectory() as raw:
-   args=Namespace(service="g035-local",restore_receipt="unused",service_file=str(self.service(raw)),psql="psql")
-   events=[]; scripts=[]
-   def query(unused,sql,params=None):
-    events.append("lock" if "pg_advisory_lock" in sql else "unlock" if "pg_advisory_unlock" in sql else "query"); return []
-   def ledger(unused,unused_manifest,count): events.append(f"ledger-{count}")
-   def execute(argv,**unused):
-    scripts.append(Path(argv[-1]).read_text(encoding="utf8")); events.append("psql"); raise recovery.RecoveryError("external command failed")
-   def baseline(unused): events.append("baseline")
-   with patch.object(recovery,"_require_prior",return_value={"receipt_sha256":"x"}),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",side_effect=query),patch.object(recovery,"_ledger_assert",side_effect=ledger),patch.object(recovery,"_require_restore_initial_ledger",side_effect=lambda *unused: events.append("baseline") or "baseline"),patch.object(recovery,"_initial_ledger_state",return_value="baseline"),patch.object(recovery,"_apply_vector_extension_relocation_hook"),patch.object(recovery,"run",side_effect=execute),self.assertRaisesRegex(recovery.RecoveryError,"external command failed"):
-    recovery.apply_manifest(args,manifest)
-  self.assertLess(events.index("lock"),events.index("baseline")); self.assertLess(events.index("baseline"),events.index("ledger-0")); self.assertLess(events.index("ledger-0"),events.index("psql"))
-  self.assertEqual("BEGIN;\n"+"\n".join(recovery._compatibility_hook(entry.version))+"\n",scripts[0][:scripts[0].index("\\i ")])
- def test_short_urls_duplicate_target_url_hook_is_version_bound_and_fail_closed(self):
-  class Conn:
-   def __init__(self): self.commits=0
-   def commit(self): self.commits+=1
-  conn=Conn()
-  self.assertEqual(0,recovery._apply_short_urls_duplicate_target_url_hook(conn,"20260713000101"))
-  self.assertEqual(0,conn.commits)
-  with patch.object(recovery,"_query_conn",side_effect=[[(1,)]]),self.assertRaisesRegex(recovery.RecoveryError,"precondition"):
-   recovery._apply_short_urls_duplicate_target_url_hook(conn,"20260713000100")
-  with patch.object(recovery,"_query_conn",side_effect=[[],[],[(4,)],[],[],[]]):
-   self.assertEqual(4,recovery._apply_short_urls_duplicate_target_url_hook(conn,"20260713000100"))
-  self.assertEqual(1,conn.commits)
-  with patch.object(recovery,"_query_conn",side_effect=[[],[],[(4,)],[],[],[(1,)]]),self.assertRaisesRegex(recovery.RecoveryError,"postcondition"):
-   recovery._apply_short_urls_duplicate_target_url_hook(conn,"20260713000100")
- def test_short_urls_hook_cannot_run_before_local_ledger_fence(self):
-  manifest=contract.load_manifest(ROOT); entry=next(item for item in manifest.migrations if item.version=="20260713000100")
-  manifest=contract.Manifest((entry,),frozenset(),manifest.ledger_terminal_version,manifest.closure_terminal_version)
-  class Conn:
-   def commit(self): pass
-   def close(self): pass
-  with tempfile.TemporaryDirectory() as raw:
-   args=Namespace(service="g035-local",restore_receipt="unused",service_file=str(self.service(raw)),psql="psql"); events=[]
-   def query(unused,sql,params=None): events.append("lock" if "pg_advisory_lock" in sql else "unlock" if "pg_advisory_unlock" in sql else "query"); return []
-   def ledger(unused,unused_manifest,count): events.append(f"ledger-{count}")
-   def hook(unused,version):
-    self.assertEqual("20260713000100",version); self.assertIn("ledger-0",events); events.append("hook"); return 0
-   with patch.object(recovery,"_require_prior",return_value={"receipt_sha256":"x"}),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",side_effect=query),patch.object(recovery,"_ledger_assert",side_effect=ledger),patch.object(recovery,"_require_restore_initial_ledger",side_effect=lambda *unused: events.append("baseline") or "baseline"),patch.object(recovery,"_initial_ledger_state",return_value="baseline"),patch.object(recovery,"_apply_short_urls_duplicate_target_url_hook",side_effect=hook),patch.object(recovery,"_fingerprints",return_value=fingerprints()),patch.object(recovery,"run",side_effect=lambda *unused,**kwargs: events.append("psql")):
-    recovery.apply_manifest(args,manifest)
-  self.assertLess(events.index("lock"),events.index("baseline")); self.assertLess(events.index("baseline"),events.index("ledger-0")); self.assertLess(events.index("ledger-0"),events.index("hook")); self.assertLess(events.index("hook"),events.index("psql"))
- def test_vector_extension_relocation_hook_is_version_bound_and_fail_closed(self):
-  class Conn:
-   def __init__(self): self.commits=0
-   def commit(self): self.commits+=1
-  conn=Conn()
-  self.assertIsNone(recovery._apply_vector_extension_relocation_hook(conn,"20260627080001"))
-  with patch.object(recovery,"_query_conn",side_effect=[[("public",)],[],[("extensions",)],[]]):
-   recovery._apply_vector_extension_relocation_hook(conn,"20260627080000")
-  self.assertEqual(1,conn.commits)
-  with patch.object(recovery,"_query_conn",return_value=[("extensions",)]),self.assertRaisesRegex(recovery.RecoveryError,"precondition"):
-   recovery._apply_vector_extension_relocation_hook(conn,"20260627080000")
-  with patch.object(recovery,"_query_conn",side_effect=[[("public",)],[],[("public",)]]),self.assertRaisesRegex(recovery.RecoveryError,"postcondition"):
-   recovery._apply_vector_extension_relocation_hook(conn,"20260627080000")
- def test_vector_extension_hook_is_after_ledger_fence_before_policy_psql(self):
-  manifest=contract.load_manifest(ROOT); entry=next(item for item in manifest.migrations if item.version=="20260627080000")
-  manifest=contract.Manifest((entry,),frozenset(),manifest.ledger_terminal_version,manifest.closure_terminal_version)
-  class Conn:
-   def commit(self): pass
-   def close(self): pass
-  with tempfile.TemporaryDirectory() as raw:
-   args=Namespace(service="g035-local",restore_receipt="unused",service_file=str(self.service(raw)),psql="psql"); events=[]
-   def query(unused,sql,params=None): events.append("lock" if "pg_advisory_lock" in sql else "unlock" if "pg_advisory_unlock" in sql else "query"); return []
-   def ledger(unused,unused_manifest,count): events.append(f"ledger-{count}")
-   def vector_hook(unused,version):
-    self.assertEqual("20260627080000",version); self.assertIn("ledger-0",events); events.append("vector"); return None
-   with patch.object(recovery,"_require_prior",return_value={"receipt_sha256":"x"}),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",side_effect=query),patch.object(recovery,"_ledger_assert",side_effect=ledger),patch.object(recovery,"_require_restore_initial_ledger",side_effect=lambda *unused: events.append("baseline") or "baseline"),patch.object(recovery,"_initial_ledger_state",return_value="baseline"),patch.object(recovery,"_apply_vector_extension_relocation_hook",side_effect=vector_hook),patch.object(recovery,"run",side_effect=lambda *unused,**kwargs: events.append("psql")):
-    recovery.apply_manifest(args,manifest)
-  self.assertLess(events.index("lock"),events.index("baseline")); self.assertLess(events.index("baseline"),events.index("ledger-0")); self.assertLess(events.index("ledger-0"),events.index("vector")); self.assertLess(events.index("vector"),events.index("psql"))
- def test_cross_schema_owner_hook_is_exact_version_bound_and_fail_closed(self):
-  expected=("public.account_deletion_require_service_role()","public.account_deletion_is_active_admin(uuid)","public.account_deletion_write_audit(public.account_deletion_requests,text,text)","public.preview_account_deletion(uuid,uuid,timestamptz)","public.begin_account_deletion_apply(uuid,uuid,uuid,text,text,text,timestamptz)","public.apply_account_deletion_database_cleanup(uuid,uuid)","public.list_account_deletion_storage_objects(uuid,uuid)","public.finalize_account_deletion_storage(uuid,uuid,boolean)","public.finalize_account_deletion_auth(uuid,uuid,boolean)","public.fail_account_deletion(uuid,uuid,text)","privacy_retention.require_service_role()","privacy_retention.write_run_audit(privacy_retention.privacy_retention_runs,text,text)")
-  self.assertEqual(expected,recovery.CROSS_SCHEMA_OWNER_FUNCTIONS)
-  class Conn:
-   def __init__(self): self.commits=0
-   def commit(self): self.commits+=1
-  conn=Conn()
-  self.assertEqual(0,recovery._apply_cross_schema_owner_hook(conn,"20260713002001"))
-  queries=[]
-  def query(unused,sql,params=None):
-   queries.append((sql,params))
-   if sql==recovery.CROSS_SCHEMA_OWNER_RESOLVE_SQL: return [(1,)]
-   if sql==recovery.CROSS_SCHEMA_OWNER_VERIFY_SQL: return [("postgres",)]
-   return []
-  with patch.object(recovery,"_query_conn",side_effect=query):
-   self.assertEqual(12,recovery._apply_cross_schema_owner_hook(conn,"20260713002000"))
-  self.assertEqual(1,conn.commits)
-  alters=[sql for sql,params in queries if sql.startswith("ALTER FUNCTION ")]
-  self.assertEqual([f"ALTER FUNCTION {signature} OWNER TO postgres" for signature in expected],alters)
-  with patch.object(recovery,"_query_conn",return_value=[]),self.assertRaisesRegex(recovery.RecoveryError,"precondition"):
-   recovery._apply_cross_schema_owner_hook(conn,"20260713002000")
-  with patch.object(recovery,"_query_conn",side_effect=[[(1,)],[],[("supabase_admin",)]]),self.assertRaisesRegex(recovery.RecoveryError,"postcondition"):
-   recovery._apply_cross_schema_owner_hook(conn,"20260713002000")
- def test_obsolete_notification_overload_hook_is_exact_and_fail_closed(self):
-  self.assertEqual("public.create_user_notification(uuid,public.notification_type,text,text,jsonb)",recovery.OBSOLETE_NOTIFICATION_OVERLOAD)
-  self.assertEqual("public.create_user_notification(uuid,text,text,text,jsonb)",recovery.CANONICAL_NOTIFICATION_FUNCTION)
-  class Conn:
-   def __init__(self): self.commits=0
-   def commit(self): self.commits+=1
-  conn=Conn(); queries=[]
-  calls=0
-  def query(unused,sql,params=None):
-   nonlocal calls
-   queries.append((sql,params))
-   if sql==recovery.CROSS_SCHEMA_OWNER_RESOLVE_SQL:
-    calls+=1; return [(1,)] if calls in (1,2,4) else []
-   return []
-  with patch.object(recovery,"_query_conn",side_effect=query):
-   self.assertEqual(1,recovery._apply_obsolete_notification_overload_hook(conn,"20260713002000"))
-  self.assertEqual(1,conn.commits)
-  self.assertEqual([f"DROP FUNCTION {recovery.OBSOLETE_NOTIFICATION_OVERLOAD}"],[sql for sql,params in queries if sql.startswith("DROP FUNCTION ")])
-  with patch.object(recovery,"_query_conn",return_value=[]),self.assertRaisesRegex(recovery.RecoveryError,"precondition"):
-   recovery._apply_obsolete_notification_overload_hook(conn,"20260713002000")
-  with patch.object(recovery,"_query_conn",side_effect=[[(1,)],[(1,)],[],[],[]]),self.assertRaisesRegex(recovery.RecoveryError,"postcondition"):
-   recovery._apply_obsolete_notification_overload_hook(conn,"20260713002000")
- def test_public_function_owner_hook_is_public_only_and_fail_closed(self):
-  self.assertEqual("20260713002000",recovery.PUBLIC_FUNCTION_OWNERS_HOOK_VERSION)
-  self.assertIn("namespace.nspname='public'",recovery.PUBLIC_FUNCTION_OWNERS_SQL)
-  self.assertIn("procedure.oid::regprocedure::text",recovery.PUBLIC_FUNCTION_OWNERS_SQL)
-  class Conn:
-   def __init__(self): self.commits=0
-   def commit(self): self.commits+=1
-  conn=Conn(); initial=[("public.alpha(integer)","supabase_admin"),("public.beta()","postgres"),("public.g013()","privacy_workflow_owner")]; calls=[]
-  def query(unused,sql,params=None):
-   calls.append((sql,params))
-   if sql==recovery.PUBLIC_FUNCTION_OWNERS_SQL: return initial if sum(1 for item in calls if item[0]==sql)==1 else [("public.alpha(integer)","postgres"),("public.beta()","postgres"),("public.g013()","privacy_workflow_owner")]
-   return []
-  with patch.object(recovery,"_query_conn",side_effect=query):
-   self.assertEqual(("public.alpha(integer)",),recovery._apply_public_function_owners_hook(conn,"20260713002000"))
-  self.assertEqual(1,conn.commits)
-  self.assertEqual(["ALTER FUNCTION public.alpha(integer) OWNER TO postgres"],[sql for sql,params in calls if sql.startswith("ALTER FUNCTION ")])
-  self.assertEqual((),recovery._apply_public_function_owners_hook(conn,"20260713002001"))
-  with patch.object(recovery,"_query_conn",return_value=[("public.alpha()","authenticated")]),self.assertRaisesRegex(recovery.RecoveryError,"precondition"):
-   recovery._apply_public_function_owners_hook(conn,"20260713002000")
-  with patch.object(recovery,"_query_conn",side_effect=[[("public.alpha()","supabase_admin")],[],[("public.alpha()","supabase_admin")]]),self.assertRaisesRegex(recovery.RecoveryError,"postcondition"):
-   recovery._apply_public_function_owners_hook(conn,"20260713002000")
- def test_clone_receipt_records_only_short_url_deleted_count_and_hook_digest(self):
-  manifest=contract.load_manifest(ROOT); entry=next(item for item in manifest.migrations if item.version=="20260713000100")
-  manifest=contract.Manifest((entry,),frozenset(),manifest.ledger_terminal_version,manifest.closure_terminal_version)
-  class Conn:
-   def commit(self): pass
-   def close(self): pass
-  with tempfile.TemporaryDirectory() as raw:
-   args=Namespace(service="g035-local",restore_receipt="unused",service_file=str(self.service(raw)),psql="psql")
-   with patch.object(recovery,"_require_prior",return_value={"receipt_sha256":"x"}),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",return_value=[]),patch.object(recovery,"_ledger_assert"),patch.object(recovery,"_require_restore_initial_ledger",return_value="baseline"),patch.object(recovery,"_initial_ledger_state",return_value="baseline"),patch.object(recovery,"_apply_short_urls_duplicate_target_url_hook",return_value=4),patch.object(recovery,"_apply_obsolete_notification_overload_hook",return_value=0),patch.object(recovery,"_apply_public_function_owners_hook",return_value=()),patch.object(recovery,"_apply_cross_schema_owner_hook",return_value=0),patch.object(recovery,"_fingerprints",return_value=fingerprints()),patch.object(recovery,"run"):
-    result=recovery.apply_manifest(args,manifest)
-  self.assertEqual(4,result["evidence"]["compatibility_hook_deleted_row_count"])
-  self.assertEqual(recovery.digest((recovery.COMPATIBILITY_HOOKS,recovery.VECTOR_EXTENSION_RELOCATION_HOOK_VERSION,recovery.VECTOR_EXTENSION_RELOCATION_HOOK,recovery.OBSOLETE_NOTIFICATION_OVERLOAD_HOOK_VERSION,recovery.OBSOLETE_NOTIFICATION_OVERLOAD,recovery.CANONICAL_NOTIFICATION_FUNCTION,recovery.PUBLIC_FUNCTION_OWNERS_HOOK_VERSION,recovery.PUBLIC_FUNCTION_OWNERS_SQL,recovery.CROSS_SCHEMA_OWNER_HOOK_VERSION,recovery.CROSS_SCHEMA_OWNER_FUNCTIONS,recovery.SHORT_URLS_DUPLICATE_TARGET_URL_HOOK_VERSION,recovery.SHORT_URLS_DUPLICATE_TARGET_URL_HOOK)),result["evidence"]["compatibility_hook_sha256"])
-  self.assertEqual(0,result["evidence"]["compatibility_hook_owner_function_count"])
-  self.assertEqual(0,result["evidence"]["compatibility_hook_obsolete_function_count"])
-  self.assertEqual(0,result["evidence"]["compatibility_hook_public_function_count"])
-  self.assertEqual(recovery.digest(()),result["evidence"]["compatibility_hook_public_function_sha256"])
-  self.assertNotIn("compatibility_hook_count",result["evidence"])
+ def test_compatibility_sql_is_version_bound_and_migration_atomic(self):
+  sql=recovery._compatibility_sql("20260627080000")
+  self.assertEqual(recovery._compatibility_hook("20260627080000"),sql[:4])
+  self.assertIn("ALTER EXTENSION vector SET SCHEMA extensions",sql)
+  owner_sql=recovery._compatibility_sql("20260713002000")
+  self.assertIn(f"DROP FUNCTION {recovery.OBSOLETE_NOTIFICATION_OVERLOAD}",owner_sql)
+  self.assertTrue(any("ALTER FUNCTION" in statement for statement in owner_sql))
+  self.assertEqual((),recovery._compatibility_sql("not-a-migration"))
+  source=(SCRIPTS/"g035_hosted_recovery.py").read_text(encoding="utf8")
+  self.assertIn('script.write_text(f"BEGIN;\\n{chr(10).join(hook)}\\n\\\\i {source.as_posix()}\\nINSERT INTO supabase_migrations.schema_migrations',source)
+  self.assertNotIn("_apply_short_urls_duplicate_target_url_hook",source)
+ def test_remediation_contract_is_lossless_and_receipts_are_non_sensitive(self):
+  source=(SCRIPTS/"g035_hosted_recovery.py").read_text(encoding="utf8")
+  self.assertEqual(tuple(recovery.SHORT_URLS_CATALOG),recovery.SHORT_URLS_CATALOG)
+  self.assertIn("character_maximum_length",source)
+  self.assertIn("column_default",source)
+  self.assertIn("is_generated",source)
+  self.assertIn("REFERENCES g035_recovery_control.short_url_duplicate_quarantine_batches",source)
+  self.assertIn("UNIQUE (batch_id,id)",source)
+  self.assertIn("quarantined_ids_sha256",source)
+  self.assertIn("deleted_ids_sha256",source)
+  self.assertNotIn("target_url\":target_url",source)
+ def test_clone_gate_requires_verified_remediation_only_for_baseline(self):
+  text=(SCRIPTS/"g035_hosted_recovery.py").read_text(encoding="utf8")
+  self.assertIn('verified=_require_prior(args.short_url_remediation_receipt,"short-url-remediation-verify")',text)
+  self.assertIn('if initial_state=="baseline":',text)
+  self.assertNotIn("hosted-apply",text)
+ def test_runtime_quarantine_check_handles_absent_control_schema(self):
+  runtime=(Path(__file__).with_name("g035_hosted_clone_runtime.sql")).read_text(encoding="utf8")
+  self.assertIn("to_regclass('g035_recovery_control.short_url_duplicate_quarantine')",runtime)
+  self.assertIn("EXECUTE 'SELECT EXISTS",runtime)
+  self.assertIn("UNIQUE (target_url)",runtime)
+ def test_durable_quarantine_batch_binding_and_tamper_detection(self):
+  batch="11111111-1111-1111-1111-111111111111"
+  descriptors=[{"source_id":"22222222-2222-2222-2222-222222222222","keeper_id":"33333333-3333-3333-3333-333333333333","target_url_sha256":"a"*64,"rank":2,"source_row_sha256":"b"*64}]
+  evidence={"local_only":True,"batch_id":batch,"restore_receipt_sha256":"c"*64,"inspection_receipt_sha256":"d"*64,"authorization_sha256":"e"*64,"manifest_sha256":"f"*64,"repository_commit":"1"*40,"selection_spec_sha256":"2"*64,"short_urls_catalog_sha256":"3"*64,"duplicate_group_count":1,"quarantined_row_count":1,"pre_short_urls_rowset_sha256":"4"*64,"victim_descriptors_sha256":recovery.digest(descriptors),"quarantine_catalog_sha256":"5"*64,"quarantined_ids_sha256":recovery._id_digest([descriptors[0]["source_id"]]),"deleted_ids_sha256":recovery._id_digest([descriptors[0]["source_id"]]),"survivor_short_urls_rowset_sha256":"6"*64}
+  binding=[tuple(evidence[key] for key in ("restore_receipt_sha256","inspection_receipt_sha256","authorization_sha256","manifest_sha256","repository_commit","selection_spec_sha256","short_urls_catalog_sha256","duplicate_group_count","quarantined_row_count","pre_short_urls_rowset_sha256","victim_descriptors_sha256","quarantine_catalog_sha256","quarantined_ids_sha256","deleted_ids_sha256","survivor_short_urls_rowset_sha256"))]
+  state={"duplicate_victim_count":0,"pre_short_urls_rowset_sha256":"6"*64}
+  def query(conn,sql,params=None):
+   if "short_url_duplicate_quarantine_batches WHERE" in sql: return binding
+   if "SELECT EXISTS" in sql: return [(False,)]
+   raise AssertionError(sql)
+  with patch.object(recovery,"_query_conn",side_effect=query),patch.object(recovery,"_durable_descriptors",return_value=descriptors),patch.object(recovery,"_short_url_snapshot",return_value=state),patch.object(recovery,"_quarantine_catalog",return_value="5"*64),patch.object(recovery,"_quarantine_acl_valid",return_value=True):
+   self.assertEqual((batch,1,state),recovery._verify_remediation_state(object(),evidence))
+   for altered in (
+    [{**descriptors[0],"rank":3}],
+    [{**descriptors[0],"keeper_id":"44444444-4444-4444-4444-444444444444"}],
+    [{**descriptors[0],"target_url_sha256":"c"*64}],
+   ):
+    with patch.object(recovery,"_durable_descriptors",return_value=altered),self.assertRaisesRegex(recovery.RecoveryError,"durable"):
+     recovery._verify_remediation_state(object(),evidence)
+   with patch.object(recovery,"_quarantine_catalog",return_value="7"*64),self.assertRaisesRegex(recovery.RecoveryError,"durable"):
+    recovery._verify_remediation_state(object(),evidence)
+  binding[0]=(*binding[0][:2],"0"*64,*binding[0][3:])
+  with patch.object(recovery,"_query_conn",side_effect=query),patch.object(recovery,"_durable_descriptors",return_value=descriptors),patch.object(recovery,"_short_url_snapshot",return_value=state),patch.object(recovery,"_quarantine_catalog",return_value="5"*64),patch.object(recovery,"_quarantine_acl_valid",return_value=True),self.assertRaisesRegex(recovery.RecoveryError,"durable"):
+   recovery._verify_remediation_state(object(),evidence)
+ def test_durable_quarantine_source_contract_persists_pre_and_post_binding(self):
+  source=(SCRIPTS/"g035_hosted_recovery.py").read_text(encoding="utf8")
+  for column in ("restore_receipt_sha256","inspection_receipt_sha256","authorization_sha256","manifest_sha256","repository_commit","selection_spec_sha256","short_urls_catalog_sha256","duplicate_group_count","victim_count","pre_rowset_sha256","victim_descriptors_sha256","quarantine_catalog_sha256","quarantined_ids_sha256","deleted_ids_sha256","survivor_rowset_sha256"):
+   self.assertIn(column,source)
+  self.assertIn("INSERT INTO g035_recovery_control.short_url_duplicate_quarantine_batches (batch_id,",source)
+  self.assertIn("UPDATE g035_recovery_control.short_url_duplicate_quarantine_batches SET quarantined_ids_sha256",source)
+  self.assertIn("source_row_sha256<>encode(digest(source_row_jsonb::text,'sha256'),'hex')",source)
+  self.assertIn("digest(source_row_jsonb->>'target_url','sha256')",source)
+  self.assertIn("information_schema.columns WHERE table_schema='g035_recovery_control'",source)
+  self.assertIn("has_table_privilege",source)
  def test_main_rejects_without_diagnostics(self):
   output=io.StringIO()
   with patch.object(recovery,"validate_sources",side_effect=recovery.ContractError("secret")),contextlib.redirect_stdout(output): self.assertEqual(2,recovery.main(["validate"]))
