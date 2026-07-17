@@ -342,6 +342,7 @@ describe('privacy retention production schedule', () => {
   });
 
   test('fails closed outside the exact production endpoint and capability contract', () => {
+    const exactEndpoint = 'https://internal.tzudong.app/api/internal/privacy-retention';
     const valid = {
       NODE_ENV: 'production',
       PRIVACY_RETENTION_SCHEDULED_RUN: 'true',
@@ -349,13 +350,21 @@ describe('privacy retention production schedule', () => {
       PRIVACY_RETENTION_INTERNAL_CAPABILITY: 'x'.repeat(32),
       PRIVACY_RETENTION_CLASS_CODES: 'privacy_identity_audit,privacy_incident_audit',
     };
+    expect(PRIVACY_RETENTION_ENDPOINT).toBe(exactEndpoint);
     expect(parseScheduleConfig(valid)).toEqual({
-      endpoint: PRIVACY_RETENTION_ENDPOINT,
+      endpoint: exactEndpoint,
       capability: 'x'.repeat(32),
       classCodes: ['privacy_identity_audit', 'privacy_incident_audit'],
     });
     expect(() => parseScheduleConfig({ ...valid, NODE_ENV: 'test' })).toThrow('privacy_retention_schedule_not_production');
-    expect(() => parseScheduleConfig({ ...valid, PRIVACY_RETENTION_ENDPOINT: 'https://example.com/' })).toThrow('privacy_retention_schedule_not_production');
+    for (const endpoint of [
+      'http://internal.tzudong.app/api/internal/privacy-retention',
+      'https://www.tzudong.app/api/internal/privacy-retention',
+      'https://internal.tzudong.app/api/internal/privacy-retention/',
+      'https://internal.tzudong.app/api/internal/privacy-retention/preview',
+    ]) {
+      expect(() => parseScheduleConfig({ ...valid, PRIVACY_RETENTION_ENDPOINT: endpoint })).toThrow('privacy_retention_schedule_not_production');
+    }
     expect(() => parseScheduleConfig({ ...valid, PRIVACY_RETENTION_INTERNAL_CAPABILITY: 'short' })).toThrow('privacy_retention_schedule_capability_invalid');
   });
 
@@ -364,12 +373,17 @@ describe('privacy retention production schedule', () => {
     const script = readFileSync(resolve(ROOT, 'scripts/run-privacy-retention-schedule.mjs'), 'utf8');
     const runner = readFileSync(resolve(ROOT, 'lib/privacy/retention-runner.ts'), 'utf8');
     const route = readFileSync(resolve(ROOT, 'app/api/internal/privacy-retention/route.ts'), 'utf8');
+    const exactEndpoint = 'https://internal.tzudong.app/api/internal/privacy-retention';
     expect(workflow).toContain('schedule:');
     expect(workflow).toContain('workflow_dispatch:');
     expect(workflow).not.toContain('pull_request:');
     expect(workflow).not.toContain('push:');
     expect(workflow).toContain('contents: read');
     expect(workflow).not.toContain('SUPABASE_SERVICE_ROLE');
+    expect(workflow).toContain(`PRIVACY_RETENTION_ENDPOINT: ${exactEndpoint}`);
+    expect(workflow).not.toContain('https://www.tzudong.app/api/internal/privacy-retention');
+    expect(script).toContain(`PRIVACY_RETENTION_ENDPOINT = '${exactEndpoint}'`);
+    expect(script).not.toContain('https://www.tzudong.app/api/internal/privacy-retention');
     expect(script).toContain("redirect: 'error'");
     expect(script).toContain("credentials: 'omit'");
     expect(script).toContain("referrerPolicy: 'no-referrer'");

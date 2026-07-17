@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 
 import { privacySafeCliLog } from './privacy-safe-cli-log.mjs';
 
-export const PRIVACY_RETENTION_ENDPOINT = 'https://www.tzudong.app/api/internal/privacy-retention';
+export const PRIVACY_RETENTION_ENDPOINT = 'https://internal.tzudong.app/api/internal/privacy-retention';
 export const PRIVACY_RETENTION_BATCH_SIZE = 100;
 export const PRIVACY_RETENTION_REQUEST_TIMEOUT_MS = 15_000;
 
