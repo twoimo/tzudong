@@ -66,7 +66,13 @@ class FakeConnection:
 
 class G034HostedPreflightTests(unittest.TestCase):
     def report(self):
-        return {"blockers": [], "ledgerExpectedTerminal": "20260531084516"}
+        return {
+            "blockers": [],
+            "catalogFingerprint": None,
+            "hostedLedgerFingerprint": None,
+            "ledgerExpectedTerminal": "20260531084516",
+            "prerequisites": {name: False for name in module.PREREQUISITE_NAMES},
+        }
 
     def run_catalog(self, cursor):
         connection = FakeConnection(cursor)
@@ -111,6 +117,27 @@ class G034HostedPreflightTests(unittest.TestCase):
         self.assertEqual(0, connection.commits)
         self.assertTrue(connection.closed)
 
+    def test_catalog_artifact_uses_exact_named_prerequisites_and_fingerprints(self):
+        report, _, _ = self.run_catalog(FakeCursor())
+        expected = {
+            "ledgerTerminalMatches": True,
+            "noWaitingLocks": True,
+            "publicApproveEditSubmissionItem": True,
+            "publicApproveSubmissionItem": True,
+            "publicRestaurants": True,
+            "publicRestaurantsBackup": True,
+            "requiredRolesPresent": True,
+            "storageObjects": True,
+        }
+        self.assertEqual(expected, report["prerequisites"])
+        self.assertEqual(module.fingerprint(["20260531084516"]), report["hostedLedgerFingerprint"])
+        self.assertEqual(module.fingerprint(expected), report["catalogFingerprint"])
+        self.assertNotIn("relations", report)
+        self.assertNotIn("ledgerCount", report)
+        self.assertNotIn("lockConflictCount", report)
+        self.assertNotIn("requiredRoleCount", report)
+        self.assertNotIn("targetRpcs", report)
+
     def test_exception_rolls_back_without_leaking_driver_error(self):
         report, connection, cursor = self.run_catalog(FakeCursor(fail_on="schema_migrations"))
         self.assertIn("catalog-read-failed", report["blockers"])
@@ -150,6 +177,32 @@ class G034HostedPreflightTests(unittest.TestCase):
         self.assertTrue(report["cloneBackupRecoveryRequired"])
         self.assertIn("clone-backup-recovery-required", report["blockers"])
 
+    def test_validate_only_receipt_is_deterministic_and_redacted(self):
+        with tempfile.TemporaryDirectory() as directory:
+            first = Path(directory) / "first.json"
+            second = Path(directory) / "second.json"
+            self.assertEqual(0, module.main(["--validate-only", "--artifact", str(first)]))
+            self.assertEqual(0, module.main(["--validate-only", "--artifact", str(second)]))
+            first_report = json.loads(first.read_text(encoding="utf-8"))
+            second_report = json.loads(second.read_text(encoding="utf-8"))
+        self.assertEqual(first_report["preflightReceiptId"], second_report["preflightReceiptId"])
+        self.assertRegex(first_report["preflightReceiptId"], r"^[0-9a-f]{64}$")
+        self.assertEqual(
+            module.fingerprint(
+                {
+                    "catalogFingerprint": None,
+                    "hostedLedgerFingerprint": None,
+                    "manifestHash": first_report["manifestHash"],
+                    "repositoryCommit": first_report["repositoryCommit"],
+                    "sourceFingerprint": first_report["sourceFingerprint"],
+                }
+            ),
+            first_report["preflightReceiptId"],
+        )
+        artifact = json.dumps(first_report)
+        self.assertNotIn("postgresql://", artifact)
+        self.assertNotIn("database diagnostic", artifact)
+        self.assertNotIn("sourceHashes", first_report)
 
 if __name__ == "__main__":
     unittest.main()
