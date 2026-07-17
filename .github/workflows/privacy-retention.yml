@@ -67,23 +67,50 @@ jobs:
           } from './scripts/run-privacy-retention-schedule.mjs';
 
           const MAX_RESPONSE_BYTES = 16 * 1024;
-          const fail = () => {
-            throw new Error('PRIVACY_RETENTION_DRY_RUN_RESPONSE_INVALID');
+          const DRY_RUN_DIAGNOSTIC_CODES = new Set([
+            'config_invalid',
+            'http_401',
+            'http_403',
+            'http_4xx',
+            'http_5xx',
+            'http_other',
+            'redirected',
+            'response_url_invalid',
+            'content_type_invalid',
+            'response_content_length_invalid',
+            'response_body_invalid',
+            'response_json_invalid',
+            'response_shape_invalid',
+            'transport_error',
+          ]);
+          const fail = (reason) => {
+            throw new Error(reason);
+          };
+          const responseDiagnostic = (response, endpoint) => {
+            if (response.redirected === true) return 'redirected';
+            if (response.url !== endpoint) return 'response_url_invalid';
+            if (response.status === 401) return 'http_401';
+            if (response.status === 403) return 'http_403';
+            if (response.status >= 500) return 'http_5xx';
+            if (response.status >= 400) return 'http_4xx';
+            if (response.status !== 200) return 'http_other';
+            if (!response.headers.get('content-type')?.toLowerCase().startsWith('application/json')) return 'content_type_invalid';
+            return null;
           };
           const readBoundedJson = async (response) => {
             const contentLength = response.headers.get('content-length');
-            if (contentLength !== null && (!/^\d+$/.test(contentLength) || Number(contentLength) > MAX_RESPONSE_BYTES)) fail();
+            if (contentLength !== null && (!/^\d+$/.test(contentLength) || Number(contentLength) > MAX_RESPONSE_BYTES)) fail('response_content_length_invalid');
             const reader = response.body?.getReader?.();
-            if (!reader) fail();
+            if (!reader) fail('response_body_invalid');
             const chunks = [];
             let size = 0;
             try {
               while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
-                if (!(value instanceof Uint8Array)) fail();
+                if (!(value instanceof Uint8Array)) fail('response_body_invalid');
                 size += value.byteLength;
-                if (size > MAX_RESPONSE_BYTES) fail();
+                if (size > MAX_RESPONSE_BYTES) fail('response_body_invalid');
                 chunks.push(value);
               }
             } finally {
@@ -92,7 +119,7 @@ jobs:
             try {
               return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks, size)));
             } catch {
-              fail();
+              fail('response_json_invalid');
             }
           };
 
@@ -118,12 +145,8 @@ jobs:
                   batchSize: PRIVACY_RETENTION_BATCH_SIZE,
                 }),
               });
-              if (
-                response.status !== 200
-                || response.redirected === true
-                || response.url !== config.endpoint
-                || !response.headers.get('content-type')?.toLowerCase().startsWith('application/json')
-              ) fail();
+              const diagnostic = responseDiagnostic(response, config.endpoint);
+              if (diagnostic) fail(diagnostic);
               const value = await readBoundedJson(response);
               const summary = value?.preview?.summary;
               if (
@@ -132,7 +155,7 @@ jobs:
                 || summary?.cutoff !== cutoff
                 || ![summary?.eligible, summary?.held, summary?.scanned].every((count) => Number.isSafeInteger(count) && count >= 0)
                 || summary.scanned !== summary.eligible + summary.held
-              ) fail();
+              ) fail('response_shape_invalid');
               console.log(JSON.stringify({
                 classCode,
                 status: 'previewed',
@@ -141,8 +164,9 @@ jobs:
                 scanned: summary.scanned,
               }));
             }
-          } catch {
-            console.error('PRIVACY_RETENTION_DRY_RUN_FAILED');
+          } catch (error) {
+            const diagnostic = DRY_RUN_DIAGNOSTIC_CODES.has(error?.message) ? error.message : 'transport_error';
+            console.error(`PRIVACY_RETENTION_DRY_RUN_FAILED diagnostic=${diagnostic}`);
             process.exitCode = 1;
           }
           NODE
