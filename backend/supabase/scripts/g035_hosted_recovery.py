@@ -5,7 +5,7 @@ import argparse, csv, hashlib, json, os, re, shutil, subprocess, tempfile
 from pathlib import Path
 from typing import Any, Sequence
 from g035_hosted_recovery_contract import APPLICATION_SCHEMAS, BASELINE_PAIRS, BASELINE_SHA256, FORBIDDEN_VERSIONS, MANAGED_METADATA_SCHEMAS, MANIFEST_SHA256, SELF_COMMIT_VERSIONS, ContractError, Manifest, ledger_prefix, repository_root, sha256_file, validate_sources
-TIMEOUT_SECONDS=900; RECEIPT_SCHEMA="g035-local-recovery-receipt-v3"; HEX=re.compile(r"^[a-f0-9]{64}$"); AGE_RECIPIENT=re.compile(r"^age1[ac-hj-np-z02-9]{58}$"); ID=re.compile(r"^[A-Za-z0-9._:-]{1,128}$"); LOCAL_SERVICE="g035-local"; LOCAL_DBNAME="g035_local"; LOCAL_HOSTS={"localhost","127.0.0.1","::1"}; SERVICE_KEYS={"host","port","dbname","application_name","sslmode","user","password","connect_timeout"}
+TIMEOUT_SECONDS=900; RECEIPT_SCHEMA="g035-local-recovery-receipt-v3"; HEX=re.compile(r"^[a-f0-9]{64}$"); AGE_RECIPIENT=re.compile(r"^age1[ac-hj-np-z02-9]{58}$"); ID=re.compile(r"^[A-Za-z0-9._:-]{1,128}$"); LOCAL_SERVICE="g035-local"; LOCAL_DBNAME="g035_local"; LOCAL_HOSTS={"localhost","127.0.0.1","::1"}; SERVICE_KEYS={"host","port","dbname","application_name","sslmode","user","password","connect_timeout"}; RECOVERY_CONTROL_SCHEMAS=("supabase_migrations",); DUMP_SCHEMAS=APPLICATION_SCHEMAS+RECOVERY_CONTROL_SCHEMAS
 class RecoveryError(RuntimeError): pass
 def _pairs(pairs):
  result={}
@@ -99,6 +99,8 @@ def _restrictive(path):
   if os.name=="nt": return _windows_dacl_restrictive(path)
   return not bool(path.stat().st_mode & 0o077)
  except OSError:return False
+def _require_restrictive_regular_file(path, label):
+ if path.is_symlink() or not path.is_file() or not _restrictive(path): raise RecoveryError(f"{label} must be restrictive regular file")
 def _parse_service_entries(source,section):
  try:
   raw=source.read_bytes(); text=raw.decode("utf8")
@@ -156,7 +158,7 @@ def _query_conn(conn,sql,params=None):
 def _fingerprints(conn):
  rows=_query_conn(conn,"SELECT version, name FROM supabase_migrations.schema_migrations ORDER BY version, name")
  pairs=[(str(v),str(n)) for v,n in rows]; raw=json.dumps(pairs,separators=(",",":"))
- catalog=_query_conn(conn,"SELECT n.nspname,c.relname,c.relkind FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=ANY(%s) ORDER BY 1,2",(list(APPLICATION_SCHEMAS+MANAGED_METADATA_SCHEMAS),))
+ catalog=_query_conn(conn,"SELECT n.nspname,c.relname,c.relkind FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=ANY(%s) ORDER BY 1,2",(list(DUMP_SCHEMAS+MANAGED_METADATA_SCHEMAS),))
  return {"ledger_pairs":pairs,"ledger_sha256":hashlib.sha256(raw.encode()).hexdigest(),"ledger_count":len(pairs),"catalog_sha256":hashlib.sha256(json.dumps(catalog,default=str,separators=(",",":")).encode()).hexdigest()}
 def _repository_commit(root):
  try:
@@ -196,7 +198,7 @@ def _g034_adapter(path, root, manifest, observed):
   raise RecoveryError("g034 capture readiness is not satisfied")
  return {"g034_preflight_receipt_id":data["preflightReceiptId"],"commit_sha256":data["repositoryCommit"],"catalog_sha256":data["catalogFingerprint"],"ledger_sha256":data["hostedLedgerFingerprint"],"source_sha256":data["sourceFingerprint"],"capture_readiness_sha256":digest({"artifact_sha256":sha256_file(Path(path)),"preflight_receipt_id":data["preflightReceiptId"],"live_catalog_sha256":observed["catalog_sha256"],"live_ledger_sha256":observed["ledger_sha256"]})}
 def _dump_to_encrypted(pg_dump,encryptor,recipient,snapshot,env,destination):
- output=destination/"g035-dump.enc"; argv=[pg_dump,"service=g035","--format=custom","--snapshot="+snapshot,"--blobs",*["--schema="+schema for schema in APPLICATION_SCHEMAS]]
+ output=destination/"g035-dump.enc"; argv=[pg_dump,"service=g035","--format=custom","--snapshot="+snapshot,"--blobs",*["--schema="+schema for schema in DUMP_SCHEMAS]]
  try:
   with output.open("xb") as sink:
    crypt=subprocess.Popen([encryptor,"--recipient",recipient],stdin=subprocess.PIPE,stdout=sink,stderr=subprocess.PIPE,env=safe_environment(Path("."),crypto=True)); dump=subprocess.Popen(argv,stdin=subprocess.DEVNULL,stdout=crypt.stdin,stderr=subprocess.PIPE,env=env); crypt.stdin.close()
@@ -215,20 +217,21 @@ def run_capture(args,manifest):
    _query_conn(conn,"BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY"); snapshot=_query_conn(conn,"SELECT pg_export_snapshot()")[0][0]
    observed=_fingerprints(conn); readiness=_g034_adapter(args.g034_artifact,root,manifest,_g034_live_fingerprints(conn,args.g034_artifact)); argv=_dump_to_encrypted(pg_dump,encryptor,args.recipient,snapshot,env,destination)
   finally: conn.rollback(); conn.close()
- evidence={**readiness,"recipient_fingerprint":hashlib.sha256(args.recipient.encode("utf-8")).hexdigest(),"dump_sha256":sha256_file(destination/"g035-dump.enc"),"dump_bytes":(destination/"g035-dump.enc").stat().st_size,"schema_scope":list(APPLICATION_SCHEMAS),"managed_metadata_schemas":list(MANAGED_METADATA_SCHEMAS),"managed_metadata_coherence":"metadata fingerprints only; not dumped or restored","snapshot_consumer_argv":argv,**{k:v for k,v in observed.items() if k!="ledger_pairs"}}
+ evidence={**readiness,"recipient_fingerprint":hashlib.sha256(args.recipient.encode("utf-8")).hexdigest(),"dump_sha256":sha256_file(destination/"g035-dump.enc"),"dump_bytes":(destination/"g035-dump.enc").stat().st_size,"schema_scope":list(APPLICATION_SCHEMAS),"recovery_control_schema_scope":list(RECOVERY_CONTROL_SCHEMAS),"managed_metadata_schemas":list(MANAGED_METADATA_SCHEMAS),"managed_metadata_coherence":"metadata fingerprints only; not dumped or restored","snapshot_consumer_argv":argv,**observed}
  return receipt("capture","captured",evidence)
 def run_restore_verify(args,manifest):
- require_local(args.destination_service); capture=_require_prior(args.capture_receipt,"capture"); dump=Path(args.dump)
+ require_local(args.destination_service); capture=_require_prior(args.capture_receipt,"capture"); dump=Path(args.dump); identity=Path(args.identity_file)
  if dump.is_symlink() or not dump.is_file() or sha256_file(dump)!=capture["evidence"].get("dump_sha256"): raise RecoveryError("ciphertext input mismatch")
+ _require_restrictive_regular_file(identity,"identity file")
  decryptor,restore=command_exists(args.decrypt_command),command_exists(args.pg_restore)
  with tempfile.TemporaryDirectory(prefix="g035-restore-") as raw:
-  service=_copy_local_service(Path(raw),Path(args.service_file),"g035-local"); env=safe_environment(service); plain=Path(raw)/"database.pgdump"; run([decryptor,"--output",str(plain),str(dump)],env=safe_environment(service,crypto=True)); run([restore,"--dbname=service=g035-local",str(plain)],env=env)
+  service=_copy_local_service(Path(raw),Path(args.service_file),"g035-local"); env=safe_environment(service); plain=Path(raw)/"database.pgdump"; run([decryptor,"--decrypt","--identity",str(identity),"--output",str(plain),str(dump)],env=safe_environment(service,crypto=True)); run([restore,"--dbname=service=g035-local",str(plain)],env=env)
   conn=_connect("g035-local",env)
   try: observed=_fingerprints(conn)
   finally: conn.rollback(); conn.close()
- for key in ("ledger_sha256","ledger_count","catalog_sha256"):
+ for key in ("ledger_pairs","ledger_sha256","ledger_count","catalog_sha256"):
   if observed[key]!=capture["evidence"].get(key): raise RecoveryError("restore evidence mismatch")
- return receipt("restore-verify","restored",{k:v for k,v in observed.items() if k!="ledger_pairs"},[capture["receipt_sha256"]])
+ return receipt("restore-verify","restored",observed,[capture["receipt_sha256"]])
 def _ledger_assert(conn,manifest,count):
  actual=_fingerprints(conn)["ledger_pairs"]
  if any(v in FORBIDDEN_VERSIONS for v,_ in actual) or not ledger_prefix(manifest,actual) or len(actual)!=len(BASELINE_PAIRS)+count: raise RecoveryError("ledger prefix mismatch")
@@ -238,6 +241,7 @@ def apply_manifest(args,manifest):
   service=_copy_local_service(Path(raw),Path(args.service_file),"g035-local"); env=safe_environment(service); conn=_connect("g035-local",env); self_commit_attempted=False
   try:
    _query_conn(conn,"SELECT pg_advisory_lock(35035)")
+   _ledger_assert(conn,manifest,0)
    for index,entry in enumerate(manifest.migrations):
     _ledger_assert(conn,manifest,index); source=repository_root(Path(__file__).resolve())/entry.path
     if sha256_file(source)!=entry.sha256: raise RecoveryError("migration source hash mismatch")
@@ -279,7 +283,7 @@ def run_postflight(args,manifest):
 def parser():
  p=argparse.ArgumentParser(); sub=p.add_subparsers(dest="mode",required=True); sub.add_parser("validate")
  c=sub.add_parser("capture"); c.add_argument("--destination",required=True); c.add_argument("--service-file",required=True); c.add_argument("--recipient",required=True); c.add_argument("--g034-artifact",required=True); c.add_argument("--pg-dump",default="pg_dump"); c.add_argument("--encrypt-command",required=True)
- r=sub.add_parser("restore-verify"); r.add_argument("--dump",required=True); r.add_argument("--capture-receipt",required=True); r.add_argument("--service-file",required=True); r.add_argument("--destination-service",required=True); r.add_argument("--decrypt-command",required=True); r.add_argument("--pg-restore",default="pg_restore")
+ r=sub.add_parser("restore-verify"); r.add_argument("--dump",required=True); r.add_argument("--capture-receipt",required=True); r.add_argument("--service-file",required=True); r.add_argument("--destination-service",required=True); r.add_argument("--identity-file",required=True); r.add_argument("--decrypt-command",required=True); r.add_argument("--pg-restore",default="pg_restore")
  a=sub.add_parser("clone-apply"); a.add_argument("--service",required=True); a.add_argument("--service-file",required=True); a.add_argument("--restore-receipt",required=True); a.add_argument("--psql",default="psql")
  q=sub.add_parser("local-postflight"); q.add_argument("--service",required=True); q.add_argument("--service-file",required=True); q.add_argument("--clone-receipt",required=True)
  return p
