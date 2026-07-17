@@ -5,23 +5,49 @@ import sys
 import tempfile
 import types
 import unittest
+import re
+
+import yaml
 from pathlib import Path
 from unittest.mock import patch
 
 SCRIPT = Path(__file__).parents[1] / "scripts" / "preflight_g034_hosted_migration_closure.py"
+ROOT = Path(__file__).parents[3]
+WORKFLOW = ROOT / ".github" / "workflows" / "g034-hosted-migration-preflight.yml"
+CHECKOUT = "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
+MUTATION_WORDS = re.compile(r"\b(?:apply|execute|rehearse|prepare)\b", re.IGNORECASE)
+PRIVATE_KEY = re.compile(r"(?:BEGIN [A-Z ]*PRIVATE KEY|PRIVATE_KEY)", re.IGNORECASE)
+
+
+def workflow_values(value):
+    if isinstance(value, dict):
+        for item in value.values():
+            yield from workflow_values(item)
+    elif isinstance(value, list):
+        for item in value:
+            yield from workflow_values(item)
+    elif isinstance(value, str):
+        yield value
+
 spec = importlib.util.spec_from_file_location("g034_preflight", SCRIPT)
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 
 
 class FakeCursor:
-    def __init__(self, fail_on=None, catalog_issue=None, named_arguments=False):
+    def __init__(self, fail_on=None, catalog_issue=None, definition=None):
         self.sql = []
         self.fail_on = fail_on
         self.catalog_issue = catalog_issue
-        self.named_arguments = named_arguments
+        self.definition = definition or self.tracked_definition("approve_submission_item")
         self.closed = False
         self.last_sql = ""
+
+    @staticmethod
+    def tracked_definition(name):
+        text = module.TRACKED_APPROVAL_SOURCE.read_text(encoding="utf-8")
+        start = text.index(f"create or replace function public.{name}")
+        return text[start:text.index("$$;", start) + 3]
 
     def execute(self, sql, params=None):
         self.sql.append((sql, params))
@@ -33,12 +59,18 @@ class FakeCursor:
         return [("20260531084516",)]
 
     def fetchone(self):
+        if "to_regclass('public.restaurants_backup')" in self.last_sql:
+            return (self.catalog_issue != "live-table",)
+        if "restaurants_backup" in self.last_sql:
+            return (self.catalog_issue in {"function-dependency", "view-dependency", "trigger-dependency", "rule-dependency", "fk-dependency"},)
+        if "pg_get_functiondef(procedure.oid)" in self.last_sql and self.sql[-1][1]:
+            name = "approve_edit_submission_item" if "approve_edit_submission_item" in self.sql[-1][1][0] else "approve_submission_item"
+            definition = self.definition if name == "approve_submission_item" else self.tracked_definition(name)
+            if self.catalog_issue == "wrong-definition":
+                definition = definition.replace("public.restaurants", "public.restaurants_backup", 1)
+            return (definition,)
         if "pg_catalog.pg_class AS class" in self.last_sql:
             return (self.catalog_issue not in {"missing", "wrong-schema", "wrong-name", "wrong-relkind", "decoy"},)
-        if "pg_catalog.pg_proc AS procedure" in self.last_sql:
-            if self.named_arguments and "pg_get_function_identity_arguments" in self.last_sql:
-                return (False,)
-            return (self.catalog_issue not in {"missing", "wrong-schema", "wrong-name", "wrong-input-types", "wrong-prokind", "decoy"},)
         if "pg_locks" in self.last_sql:
             return (0,)
         if "pg_roles" in self.last_sql:
@@ -169,27 +201,43 @@ class G034HostedPreflightTests(unittest.TestCase):
         self.assertEqual("ROLLBACK", cursor.sql[-1][0])
         self.assertEqual(0, connection.commits)
 
-    def test_catalog_identity_is_oid_based_and_ignores_display_forms(self):
-        report, _, cursor = self.run_catalog(FakeCursor(named_arguments=True))
+    def test_catalog_identity_and_retirement_queries_are_oid_based(self):
+        report, _, cursor = self.run_catalog(FakeCursor())
         self.assertEqual([], report["blockers"])
         catalog_sql = [sql for sql, _ in cursor.sql if "to_reg" in sql]
         procedure_checks = [(sql, params) for sql, params in cursor.sql if "to_regprocedure" in sql]
         self.assertTrue(catalog_sql)
         self.assertTrue(all("::text" not in sql for sql in catalog_sql))
         self.assertTrue(all("pg_namespace" in sql for sql in catalog_sql))
-        self.assertTrue(all(params[0].startswith(("public.", "storage.")) for sql, params in cursor.sql if "to_regclass" in sql))
         self.assertTrue(all("(" in params[0] for _, params in procedure_checks))
         self.assertTrue(any("class.relkind = 'r'" in sql for sql in catalog_sql))
-        self.assertTrue(all("pg_get_function_identity_arguments" not in sql for sql, _ in procedure_checks))
         self.assertTrue(all("procedure.proargtypes = %s::pg_catalog.oidvector" in sql for sql, _ in procedure_checks))
         self.assertEqual(["2950 2950 3802"] * len(procedure_checks), [params[3] for _, params in procedure_checks])
         self.assertTrue(all("procedure.prokind = 'f'" in sql for sql, _ in procedure_checks))
+        self.assertTrue(any("to_regclass('public.restaurants_backup') IS NULL" in sql for sql, _ in cursor.sql))
+        self.assertTrue(all("restaurants_backup" not in str(params) for sql, params in cursor.sql if params))
 
-    def test_catalog_identity_decoys_fail_closed(self):
-        for issue in ("missing", "wrong-schema", "wrong-name", "wrong-relkind", "wrong-input-types", "wrong-prokind", "decoy"):
+    def test_retirement_gate_rejects_live_table_and_each_hidden_dependency_kind(self):
+        for issue in ("live-table", "function-dependency", "view-dependency", "trigger-dependency", "rule-dependency", "fk-dependency"):
             with self.subTest(issue=issue):
                 report, _, _ = self.run_catalog(FakeCursor(catalog_issue=issue))
+                self.assertFalse(report["prerequisites"]["publicRestaurantsBackup"])
                 self.assertIn("catalog-prerequisite", report["blockers"])
+
+    def test_retirement_gate_rejects_stale_february_and_wrong_tracked_definitions(self):
+        stale = FakeCursor.tracked_definition("approve_submission_item").replace(
+            "public.restaurants", "public.restaurants_backup", 1
+        )
+        for cursor in (FakeCursor(definition=stale), FakeCursor(catalog_issue="wrong-definition")):
+            with self.subTest(cursor=cursor.catalog_issue):
+                report, _, _ = self.run_catalog(cursor)
+                self.assertFalse(report["prerequisites"]["publicApproveSubmissionItem"])
+                self.assertIn("catalog-prerequisite", report["blockers"])
+
+    def test_exact_final_april_definitions_pass_semantic_contract(self):
+        report, _, _ = self.run_catalog(FakeCursor())
+        self.assertTrue(report["prerequisites"]["publicApproveSubmissionItem"])
+        self.assertTrue(report["prerequisites"]["publicApproveEditSubmissionItem"])
 
     def test_validate_only_retains_unconditional_clone_backup_blocker(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -227,6 +275,70 @@ class G034HostedPreflightTests(unittest.TestCase):
         self.assertNotIn("postgresql://", artifact)
         self.assertNotIn("database diagnostic", artifact)
         self.assertNotIn("sourceHashes", first_report)
+
+class G034HostedPreflightWorkflowTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        with WORKFLOW.open(encoding="utf8") as source:
+            cls.workflow = yaml.safe_load(source)
+        cls.job = cls.workflow["jobs"]["preflight"]
+
+    def test_dispatch_and_read_only_job_graph_are_exact(self):
+        self.assertEqual(
+            {
+                "commit_sha": {
+                    "description": "Exact main commit SHA to preflight",
+                    "required": True,
+                    "type": "string",
+                }
+            },
+            self.workflow[True]["workflow_dispatch"]["inputs"],
+        )
+        self.assertEqual({"contents": "read"}, self.workflow["permissions"])
+        self.assertEqual({"preflight"}, set(self.workflow["jobs"]))
+        self.assertEqual("production-database", self.job["environment"])
+        self.assertEqual({"contents": "read"}, self.job["permissions"])
+        self.assertIn("github.ref == 'refs/heads/main'", self.job["if"])
+        self.assertIn("github.sha == inputs.commit_sha", self.job["if"])
+
+    def test_checkout_is_exact_sha_detached_without_persisted_credentials(self):
+        checkout = next(step for step in self.job["steps"] if step.get("uses") == CHECKOUT)
+        self.assertEqual(
+            {
+                "ref": "${{ inputs.commit_sha }}",
+                "fetch-depth": 1,
+                "persist-credentials": False,
+            },
+            checkout["with"],
+        )
+        self.assertEqual(
+            1,
+            sum(step.get("uses") == CHECKOUT for step in self.job["steps"]),
+        )
+
+    def test_source_validation_precedes_only_read_only_credentialed_preflight(self):
+        steps = self.job["steps"]
+        focused = next(index for index, step in enumerate(steps) if step.get("name") == "Focused source tests")
+        validate = next(index for index, step in enumerate(steps) if step.get("name") == "Validate bound source closure")
+        credentialed = next(index for index, step in enumerate(steps) if step.get("name") == "Run bounded read-only catalog retirement preflight")
+        self.assertLess(focused, validate)
+        self.assertLess(validate, credentialed)
+        self.assertEqual(
+            {"SUPABASE_DB_URL": "${{ secrets.SUPABASE_DB_URL }}"},
+            steps[credentialed]["env"],
+        )
+        self.assertEqual(
+            "python backend/supabase/scripts/preflight_g034_hosted_migration_closure.py --artifact g034-hosted-preflight.json",
+            steps[credentialed]["run"],
+        )
+
+    def test_actions_graph_has_no_private_key_or_mutation_path(self):
+        serialized = "\n".join(workflow_values(self.workflow))
+        self.assertNotRegex(serialized, PRIVATE_KEY)
+        self.assertNotRegex(serialized, MUTATION_WORDS)
+        self.assertNotIn("--apply", serialized)
+        self.assertNotIn("apply-controller", serialized)
+        self.assertNotIn("g037_production_controller.py", serialized)
 
 if __name__ == "__main__":
     unittest.main()
