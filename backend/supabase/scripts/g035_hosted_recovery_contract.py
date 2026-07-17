@@ -14,6 +14,7 @@ MANAGED_METADATA_SCHEMAS = ("auth", "storage")
 REMEDIATION_AUTHORIZATION_SCHEMA = "g035-short-url-remediation-authorization-v1"
 REMEDIATION_PUBLIC_KEY_PEM = "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAYQJXKk15hE2e0uXtDTnVV2zyMs1xSrT2rK90a5qYdAE=\n-----END PUBLIC KEY-----\n"
 REMEDIATION_PUBLIC_KEY_SHA256 = "459308554256047bb7ea6095bdfbe08f353d438a824cb112273c7c9c94074eec"
+APPROVED_AGE_RECIPIENT_SHA256 = "7b06467823df06c5bcf25ad868c25a10cf08f9c7aa16dc41b42e004b8d92eae4"
 # Immutable identities from the authoritative 12-row G034 hosted readback; this
 # records observed ledger state, not proof of any historical application event.
 BASELINE_PAIRS = (
