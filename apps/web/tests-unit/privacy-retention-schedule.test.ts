@@ -386,5 +386,13 @@ describe('privacy retention production schedule', () => {
     expect(route).toContain("'adapterVersion', 'sourceMappingVersion'");
     expect(route).toContain('adapterVersion: body.adapterVersion');
     expect(route).toContain('sourceMappingVersion: body.sourceMappingVersion');
-  });
+    expect(workflow).toContain("if (response.status === 401) return 'http_401';");
+    expect(workflow).toContain("if (response.status === 403) return 'http_403';");
+    expect(workflow).toContain("if (response.status >= 500) return 'http_5xx';");
+    expect(workflow).toContain("return 'content_type_invalid';");
+    expect(workflow).toContain(") fail('response_shape_invalid');");
+    expect(workflow).toContain('PRIVACY_RETENTION_DRY_RUN_FAILED diagnostic=${diagnostic}');
+    expect(workflow).not.toContain('response.text()');
+    expect(workflow).not.toContain('console.error(error');
+    });
 });
