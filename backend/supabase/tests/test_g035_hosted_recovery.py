@@ -460,8 +460,8 @@ class ControllerTests(unittest.TestCase):
  def test_clone_requires_the_restore_receipt_digest_and_exact_baseline_before_applying_migrations(self):
   text=(SCRIPTS/"g035_hosted_recovery.py").read_text(encoding="utf8")
   lock=text.index('_query_conn(conn,"SELECT pg_advisory_lock(35035)")')
-  receipt=text.index("_require_restore_baseline(prior)",lock)
-  baseline=text.index("_ledger_assert(conn,manifest,0)",lock)
+  receipt=text.index("_require_restore_initial_ledger(prior,manifest)",lock)
+  baseline=text.index('_initial_ledger_state(conn,manifest)',lock)
   apply=text.index("for index,entry in enumerate(manifest.migrations):",lock)
   self.assertLess(lock,receipt); self.assertLess(receipt,baseline); self.assertLess(baseline,apply)
  def test_restore_receipt_requires_authoritative_baseline_digest_and_pairs(self):
@@ -469,9 +469,38 @@ class ControllerTests(unittest.TestCase):
   recovery._require_restore_baseline(prior)
   prior["evidence"]["ledger_pairs"][0][0]="20260124"
   with self.assertRaisesRegex(recovery.RecoveryError,"restore receipt ledger mismatch"): recovery._require_restore_baseline(prior)
+ def test_clone_accepts_exact_full_closure_without_reapplying_sql(self):
+  manifest=contract.load_manifest(ROOT); full=recovery._manifest_ledger_pairs(manifest)
+  class Conn:
+   def commit(self): pass
+   def close(self): pass
+  with tempfile.TemporaryDirectory() as raw:
+   args=Namespace(service="g035-local",restore_receipt="unused",service_file=str(self.service(raw)),psql="psql")
+   prior={"receipt_sha256":"x","evidence":{"ledger_pairs":[list(pair) for pair in full],"ledger_sha256":recovery._ledger_sha256(full),"ledger_count":len(full)}}
+   with patch.object(recovery,"_require_prior",return_value=prior),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",return_value=[]),patch.object(recovery,"_fingerprints",return_value=fingerprints(pairs=full)),patch.object(recovery,"_ledger_assert"),patch.object(recovery,"run") as run:
+    result=recovery.apply_manifest(args,manifest)
+  self.assertEqual(1,run.call_count)
+  self.assertIn("g035_hosted_clone_runtime.sql",str(run.call_args.args[0]))
+  self.assertEqual("full",result["evidence"]["initial_ledger_state"])
+  self.assertEqual(0,result["evidence"]["migrations_applied_in_invocation"])
+  self.assertEqual(len(manifest.migrations),result["evidence"]["migrations_already_present"])
+ def test_clone_initial_ledger_rejects_partial_mutated_and_extra_states(self):
+  manifest=contract.load_manifest(ROOT); full=recovery._manifest_ledger_pairs(manifest)
+  cases=(full[:-1],full+(("99999999","extra"),),full[:12]+(("20260627080000","wrong_name"),)+full[13:],full[:12]+(("20260713002500","forbidden"),)+full[13:])
+  for pairs in cases:
+   with self.subTest(pairs=pairs),patch.object(recovery,"_fingerprints",return_value=fingerprints(pairs=pairs)),self.assertRaisesRegex(recovery.RecoveryError,"initial state"):
+    recovery._initial_ledger_state(object(),manifest)
+ def test_restore_receipt_accepts_only_exact_baseline_or_full_closure(self):
+  manifest=contract.load_manifest(ROOT); full=recovery._manifest_ledger_pairs(manifest)
+  for state,pairs in (("baseline",contract.BASELINE_PAIRS),("full",full)):
+   prior={"evidence":{"ledger_pairs":[list(pair) for pair in pairs],"ledger_sha256":recovery._ledger_sha256(pairs),"ledger_count":len(pairs)}}
+   self.assertEqual(state,recovery._require_restore_initial_ledger(prior,manifest))
+  partial=full[:-1]
+  prior={"evidence":{"ledger_pairs":[list(pair) for pair in partial],"ledger_sha256":recovery._ledger_sha256(partial),"ledger_count":len(partial)}}
+  with self.assertRaisesRegex(recovery.RecoveryError,"restore receipt ledger mismatch"): recovery._require_restore_initial_ledger(prior,manifest)
  def test_self_commit_post_execution_failures_are_ambiguous(self):
   text=(SCRIPTS/"g035_hosted_recovery.py").read_text(encoding="utf8")
-  protected='run([psql,"service=g035-local","--set","ON_ERROR_STOP=1","--file",str(source)],env=env)\n      _query_conn(conn,"INSERT INTO supabase_migrations.schema_migrations'
+  protected='run([psql,"service=g035-local","--set","ON_ERROR_STOP=1","--file",str(source)],env=env)\n       _query_conn(conn,"INSERT INTO supabase_migrations.schema_migrations'
   self.assertIn(protected,text); self.assertIn('except Exception as exc: raise RecoveryError("self_commit_ambiguous")',text)
  def test_self_commit_insert_commit_and_readback_failures_are_ambiguous(self):
   manifest=contract.load_manifest(ROOT); self_entry=next(entry for entry in manifest.migrations if entry.version in contract.SELF_COMMIT_VERSIONS)
@@ -491,7 +520,7 @@ class ControllerTests(unittest.TestCase):
      return []
     def ledger(connection,unused,count):
      if failure=="readback" and count==1: raise RuntimeError("readback")
-    with patch.object(recovery,"_require_prior",return_value={"receipt_sha256":"x"}),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_connect",return_value=conn),patch.object(recovery,"run"),patch.object(recovery,"_query_conn",side_effect=query),patch.object(recovery,"_ledger_assert",side_effect=ledger),patch.object(recovery,"_require_restore_baseline"),self.assertRaisesRegex(recovery.RecoveryError,"self_commit_ambiguous"):
+    with patch.object(recovery,"_require_prior",return_value={"receipt_sha256":"x"}),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_connect",return_value=conn),patch.object(recovery,"run"),patch.object(recovery,"_query_conn",side_effect=query),patch.object(recovery,"_ledger_assert",side_effect=ledger),patch.object(recovery,"_require_restore_initial_ledger",return_value="baseline"),patch.object(recovery,"_initial_ledger_state",return_value="baseline"),self.assertRaisesRegex(recovery.RecoveryError,"self_commit_ambiguous"):
      recovery.apply_manifest(args,manifest)
  def test_documents_policy_compatibility_hook_is_exact_and_version_bound(self):
   expected=("DROP POLICY IF EXISTS documents_select_own ON public.documents;","DROP POLICY IF EXISTS documents_insert_own ON public.documents;","DROP POLICY IF EXISTS documents_update_own ON public.documents;","DROP POLICY IF EXISTS documents_delete_own ON public.documents;")
@@ -512,7 +541,7 @@ class ControllerTests(unittest.TestCase):
    def execute(argv,**unused):
     scripts.append(Path(argv[-1]).read_text(encoding="utf8")); events.append("psql"); raise recovery.RecoveryError("external command failed")
    def baseline(unused): events.append("baseline")
-   with patch.object(recovery,"_require_prior",return_value={"receipt_sha256":"x"}),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",side_effect=query),patch.object(recovery,"_ledger_assert",side_effect=ledger),patch.object(recovery,"_require_restore_baseline",side_effect=baseline),patch.object(recovery,"_apply_vector_extension_relocation_hook"),patch.object(recovery,"run",side_effect=execute),self.assertRaisesRegex(recovery.RecoveryError,"external command failed"):
+   with patch.object(recovery,"_require_prior",return_value={"receipt_sha256":"x"}),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",side_effect=query),patch.object(recovery,"_ledger_assert",side_effect=ledger),patch.object(recovery,"_require_restore_initial_ledger",side_effect=lambda *unused: events.append("baseline") or "baseline"),patch.object(recovery,"_initial_ledger_state",return_value="baseline"),patch.object(recovery,"_apply_vector_extension_relocation_hook"),patch.object(recovery,"run",side_effect=execute),self.assertRaisesRegex(recovery.RecoveryError,"external command failed"):
     recovery.apply_manifest(args,manifest)
   self.assertLess(events.index("lock"),events.index("baseline")); self.assertLess(events.index("baseline"),events.index("ledger-0")); self.assertLess(events.index("ledger-0"),events.index("psql"))
   self.assertEqual("BEGIN;\n"+"\n".join(recovery._compatibility_hook(entry.version))+"\n",scripts[0][:scripts[0].index("\\i ")])
@@ -542,7 +571,7 @@ class ControllerTests(unittest.TestCase):
    def ledger(unused,unused_manifest,count): events.append(f"ledger-{count}")
    def hook(unused,version):
     self.assertEqual("20260713000100",version); self.assertIn("ledger-0",events); events.append("hook"); return 0
-   with patch.object(recovery,"_require_prior",return_value={"receipt_sha256":"x"}),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",side_effect=query),patch.object(recovery,"_ledger_assert",side_effect=ledger),patch.object(recovery,"_require_restore_baseline",side_effect=lambda unused: events.append("baseline")),patch.object(recovery,"_apply_short_urls_duplicate_target_url_hook",side_effect=hook),patch.object(recovery,"_fingerprints",return_value=fingerprints()),patch.object(recovery,"run",side_effect=lambda *unused,**kwargs: events.append("psql")):
+   with patch.object(recovery,"_require_prior",return_value={"receipt_sha256":"x"}),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",side_effect=query),patch.object(recovery,"_ledger_assert",side_effect=ledger),patch.object(recovery,"_require_restore_initial_ledger",side_effect=lambda *unused: events.append("baseline") or "baseline"),patch.object(recovery,"_initial_ledger_state",return_value="baseline"),patch.object(recovery,"_apply_short_urls_duplicate_target_url_hook",side_effect=hook),patch.object(recovery,"_fingerprints",return_value=fingerprints()),patch.object(recovery,"run",side_effect=lambda *unused,**kwargs: events.append("psql")):
     recovery.apply_manifest(args,manifest)
   self.assertLess(events.index("lock"),events.index("baseline")); self.assertLess(events.index("baseline"),events.index("ledger-0")); self.assertLess(events.index("ledger-0"),events.index("hook")); self.assertLess(events.index("hook"),events.index("psql"))
  def test_vector_extension_relocation_hook_is_version_bound_and_fail_closed(self):
@@ -570,7 +599,7 @@ class ControllerTests(unittest.TestCase):
    def ledger(unused,unused_manifest,count): events.append(f"ledger-{count}")
    def vector_hook(unused,version):
     self.assertEqual("20260627080000",version); self.assertIn("ledger-0",events); events.append("vector"); return None
-   with patch.object(recovery,"_require_prior",return_value={"receipt_sha256":"x"}),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",side_effect=query),patch.object(recovery,"_ledger_assert",side_effect=ledger),patch.object(recovery,"_require_restore_baseline",side_effect=lambda unused: events.append("baseline")),patch.object(recovery,"_apply_vector_extension_relocation_hook",side_effect=vector_hook),patch.object(recovery,"run",side_effect=lambda *unused,**kwargs: events.append("psql")):
+   with patch.object(recovery,"_require_prior",return_value={"receipt_sha256":"x"}),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",side_effect=query),patch.object(recovery,"_ledger_assert",side_effect=ledger),patch.object(recovery,"_require_restore_initial_ledger",side_effect=lambda *unused: events.append("baseline") or "baseline"),patch.object(recovery,"_initial_ledger_state",return_value="baseline"),patch.object(recovery,"_apply_vector_extension_relocation_hook",side_effect=vector_hook),patch.object(recovery,"run",side_effect=lambda *unused,**kwargs: events.append("psql")):
     recovery.apply_manifest(args,manifest)
   self.assertLess(events.index("lock"),events.index("baseline")); self.assertLess(events.index("baseline"),events.index("ledger-0")); self.assertLess(events.index("ledger-0"),events.index("vector")); self.assertLess(events.index("vector"),events.index("psql"))
  def test_cross_schema_owner_hook_is_exact_version_bound_and_fail_closed(self):
@@ -647,7 +676,7 @@ class ControllerTests(unittest.TestCase):
    def close(self): pass
   with tempfile.TemporaryDirectory() as raw:
    args=Namespace(service="g035-local",restore_receipt="unused",service_file=str(self.service(raw)),psql="psql")
-   with patch.object(recovery,"_require_prior",return_value={"receipt_sha256":"x"}),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",return_value=[]),patch.object(recovery,"_ledger_assert"),patch.object(recovery,"_require_restore_baseline"),patch.object(recovery,"_apply_short_urls_duplicate_target_url_hook",return_value=4),patch.object(recovery,"_apply_obsolete_notification_overload_hook",return_value=0),patch.object(recovery,"_apply_public_function_owners_hook",return_value=()),patch.object(recovery,"_apply_cross_schema_owner_hook",return_value=0),patch.object(recovery,"_fingerprints",return_value=fingerprints()),patch.object(recovery,"run"):
+   with patch.object(recovery,"_require_prior",return_value={"receipt_sha256":"x"}),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",return_value=[]),patch.object(recovery,"_ledger_assert"),patch.object(recovery,"_require_restore_initial_ledger",return_value="baseline"),patch.object(recovery,"_initial_ledger_state",return_value="baseline"),patch.object(recovery,"_apply_short_urls_duplicate_target_url_hook",return_value=4),patch.object(recovery,"_apply_obsolete_notification_overload_hook",return_value=0),patch.object(recovery,"_apply_public_function_owners_hook",return_value=()),patch.object(recovery,"_apply_cross_schema_owner_hook",return_value=0),patch.object(recovery,"_fingerprints",return_value=fingerprints()),patch.object(recovery,"run"):
     result=recovery.apply_manifest(args,manifest)
   self.assertEqual(4,result["evidence"]["compatibility_hook_deleted_row_count"])
   self.assertEqual(recovery.digest((recovery.COMPATIBILITY_HOOKS,recovery.VECTOR_EXTENSION_RELOCATION_HOOK_VERSION,recovery.VECTOR_EXTENSION_RELOCATION_HOOK,recovery.OBSOLETE_NOTIFICATION_OVERLOAD_HOOK_VERSION,recovery.OBSOLETE_NOTIFICATION_OVERLOAD,recovery.CANONICAL_NOTIFICATION_FUNCTION,recovery.PUBLIC_FUNCTION_OWNERS_HOOK_VERSION,recovery.PUBLIC_FUNCTION_OWNERS_SQL,recovery.CROSS_SCHEMA_OWNER_HOOK_VERSION,recovery.CROSS_SCHEMA_OWNER_FUNCTIONS,recovery.SHORT_URLS_DUPLICATE_TARGET_URL_HOOK_VERSION,recovery.SHORT_URLS_DUPLICATE_TARGET_URL_HOOK)),result["evidence"]["compatibility_hook_sha256"])

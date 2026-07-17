@@ -274,9 +274,26 @@ def _create_auth_user_placeholders(conn):
  _query_conn(conn,f"INSERT INTO auth.users (id) SELECT DISTINCT id FROM ({references}) AS auth_user_references")
 def _auth_placeholder_evidence():
  return {"auth_placeholder_mapping_count":len(AUTH_USER_REFERENCE_COLUMNS),"auth_placeholder_mapping_sha256":digest(AUTH_USER_REFERENCE_COLUMNS)}
+def _ledger_sha256(pairs):
+ raw=json.dumps(_canonical_ledger_pairs(pairs),separators=(",",":"))
+ return hashlib.sha256(raw.encode()).hexdigest()
+def _manifest_ledger_pairs(manifest):
+ return BASELINE_PAIRS+tuple((entry.version,entry.name) for entry in manifest.migrations)
 def _ledger_assert(conn,manifest,count):
  actual=_fingerprints(conn)["ledger_pairs"]
  if any(v in FORBIDDEN_VERSIONS for v,_ in actual) or not ledger_prefix(manifest,actual) or len(actual)!=len(BASELINE_PAIRS)+count: raise RecoveryError("ledger prefix mismatch")
+def _initial_ledger_state(conn,manifest):
+ actual=_fingerprints(conn)["ledger_pairs"]; full=_manifest_ledger_pairs(manifest)
+ if any(v in FORBIDDEN_VERSIONS for v,_ in actual): raise RecoveryError("ledger initial state mismatch")
+ if actual==BASELINE_PAIRS: return "baseline"
+ if actual==full: return "full"
+ raise RecoveryError("ledger initial state mismatch")
+def _require_restore_initial_ledger(prior,manifest):
+ evidence=prior.get("evidence")
+ if not isinstance(evidence,dict): raise RecoveryError("restore receipt ledger mismatch")
+ for state,pairs in (("baseline",BASELINE_PAIRS),("full",_manifest_ledger_pairs(manifest))):
+  if evidence.get("ledger_sha256")==_ledger_sha256(pairs) and evidence.get("ledger_count")==len(pairs) and _ledger_evidence_equal(evidence.get("ledger_pairs"),pairs): return state
+ raise RecoveryError("restore receipt ledger mismatch")
 def _require_restore_baseline(prior):
  evidence=prior.get("evidence")
  if not isinstance(evidence,dict) or evidence.get("ledger_sha256")!=BASELINE_SHA256 or evidence.get("ledger_count")!=len(BASELINE_PAIRS) or not _ledger_evidence_equal(evidence.get("ledger_pairs"),BASELINE_PAIRS): raise RecoveryError("restore receipt ledger mismatch")
@@ -327,34 +344,40 @@ def apply_manifest(args,manifest):
   service=_copy_local_service(Path(raw),Path(args.service_file),"g035-local"); env=safe_environment(service); conn=_connect("g035-local",env); self_commit_attempted=False; compatibility_hook_statements=[]; compatibility_hook_deleted_row_count=0; compatibility_hook_owner_function_count=0; compatibility_hook_obsolete_function_count=0; compatibility_hook_public_function_signatures=()
   try:
    _query_conn(conn,"SELECT pg_advisory_lock(35035)")
-   _require_restore_baseline(prior)
-   _ledger_assert(conn,manifest,0)
-   for index,entry in enumerate(manifest.migrations):
-    _ledger_assert(conn,manifest,index); source=repository_root(Path(__file__).resolve())/entry.path
-    if sha256_file(source)!=entry.sha256: raise RecoveryError("migration source hash mismatch")
-    hook=_compatibility_hook(entry.version)
-    compatibility_hook_deleted_row_count+=_apply_short_urls_duplicate_target_url_hook(conn,entry.version)
-    _apply_vector_extension_relocation_hook(conn,entry.version)
-    compatibility_hook_obsolete_function_count+=_apply_obsolete_notification_overload_hook(conn,entry.version)
-    compatibility_hook_public_function_signatures=_apply_public_function_owners_hook(conn,entry.version)
-    compatibility_hook_owner_function_count+=_apply_cross_schema_owner_hook(conn,entry.version)
-    if entry.version in SELF_COMMIT_VERSIONS:
-     try:
-      self_commit_attempted=True
-      if hook:
-       script=Path(raw)/f"{entry.version}.sql"; script.write_text(f"{chr(10).join(hook)}\n\\i {source.as_posix()}\n",encoding="utf8")
-       run([psql,"service=g035-local","--set","ON_ERROR_STOP=1","--file",str(script)],env=env)
-      else: run([psql,"service=g035-local","--set","ON_ERROR_STOP=1","--file",str(source)],env=env)
-      _query_conn(conn,"INSERT INTO supabase_migrations.schema_migrations(version,name) VALUES (%s,%s)",(entry.version,entry.name)); conn.commit()
+   receipt_initial_state=_require_restore_initial_ledger(prior,manifest)
+   initial_state=_initial_ledger_state(conn,manifest)
+   if initial_state!=receipt_initial_state: raise RecoveryError("restore receipt ledger mismatch")
+   if initial_state=="baseline":
+    for index,entry in enumerate(manifest.migrations):
+     _ledger_assert(conn,manifest,index); source=repository_root(Path(__file__).resolve())/entry.path
+     if sha256_file(source)!=entry.sha256: raise RecoveryError("migration source hash mismatch")
+     hook=_compatibility_hook(entry.version)
+     compatibility_hook_deleted_row_count+=_apply_short_urls_duplicate_target_url_hook(conn,entry.version)
+     _apply_vector_extension_relocation_hook(conn,entry.version)
+     compatibility_hook_obsolete_function_count+=_apply_obsolete_notification_overload_hook(conn,entry.version)
+     compatibility_hook_public_function_signatures=_apply_public_function_owners_hook(conn,entry.version)
+     compatibility_hook_owner_function_count+=_apply_cross_schema_owner_hook(conn,entry.version)
+     if entry.version in SELF_COMMIT_VERSIONS:
+      try:
+       self_commit_attempted=True
+       if hook:
+        script=Path(raw)/f"{entry.version}.sql"; script.write_text(f"{chr(10).join(hook)}\n\\i {source.as_posix()}\n",encoding="utf8")
+        run([psql,"service=g035-local","--set","ON_ERROR_STOP=1","--file",str(script)],env=env)
+       else: run([psql,"service=g035-local","--set","ON_ERROR_STOP=1","--file",str(source)],env=env)
+       _query_conn(conn,"INSERT INTO supabase_migrations.schema_migrations(version,name) VALUES (%s,%s)",(entry.version,entry.name)); conn.commit()
+       compatibility_hook_statements.extend(hook)
+       _ledger_assert(conn,manifest,index+1)
+      except Exception as exc: raise RecoveryError("self_commit_ambiguous") from exc
+     else:
+      script=Path(raw)/f"{entry.version}.sql"
+      script.write_text(f"BEGIN;\n{chr(10).join(hook)}\n\\i {source.as_posix()}\nINSERT INTO supabase_migrations.schema_migrations(version,name) VALUES ('{entry.version}','{entry.name}');\nCOMMIT;\n",encoding="utf8")
+      run([psql,"service=g035-local","--set","ON_ERROR_STOP=1","--file",str(script)],env=env)
       compatibility_hook_statements.extend(hook)
       _ledger_assert(conn,manifest,index+1)
-     except Exception as exc: raise RecoveryError("self_commit_ambiguous") from exc
-    else:
-     script=Path(raw)/f"{entry.version}.sql"
-     script.write_text(f"BEGIN;\n{chr(10).join(hook)}\n\\i {source.as_posix()}\nINSERT INTO supabase_migrations.schema_migrations(version,name) VALUES ('{entry.version}','{entry.name}');\nCOMMIT;\n",encoding="utf8")
-     run([psql,"service=g035-local","--set","ON_ERROR_STOP=1","--file",str(script)],env=env)
-     compatibility_hook_statements.extend(hook)
-     _ledger_assert(conn,manifest,index+1)
+   else:
+    for entry in manifest.migrations:
+     source=repository_root(Path(__file__).resolve())/entry.path
+     if sha256_file(source)!=entry.sha256: raise RecoveryError("migration source hash mismatch")
    _ledger_assert(conn,manifest,len(manifest.migrations)); runtime=repository_root(Path(__file__).resolve())/"backend/supabase/tests/g035_hosted_clone_runtime.sql"
    run([psql,"service=g035-local","--set","ON_ERROR_STOP=1","--file",str(runtime)],env=env)
    observed=_fingerprints(conn)
@@ -368,7 +391,7 @@ def apply_manifest(args,manifest):
     if self_commit_attempted: raise RecoveryError("self_commit_ambiguous") from exc
     raise
    finally: conn.close()
- return receipt("clone-apply","applied",{"baseline_pairs_sha256":BASELINE_SHA256,"compatibility_hook_deleted_row_count":compatibility_hook_deleted_row_count,"compatibility_hook_owner_function_count":compatibility_hook_owner_function_count,"compatibility_hook_obsolete_function_count":compatibility_hook_obsolete_function_count,"compatibility_hook_public_function_count":len(compatibility_hook_public_function_signatures),"compatibility_hook_public_function_sha256":digest(compatibility_hook_public_function_signatures),"compatibility_hook_sha256":digest((COMPATIBILITY_HOOKS,VECTOR_EXTENSION_RELOCATION_HOOK_VERSION,VECTOR_EXTENSION_RELOCATION_HOOK,OBSOLETE_NOTIFICATION_OVERLOAD_HOOK_VERSION,OBSOLETE_NOTIFICATION_OVERLOAD,CANONICAL_NOTIFICATION_FUNCTION,PUBLIC_FUNCTION_OWNERS_HOOK_VERSION,PUBLIC_FUNCTION_OWNERS_SQL,CROSS_SCHEMA_OWNER_HOOK_VERSION,CROSS_SCHEMA_OWNER_FUNCTIONS,SHORT_URLS_DUPLICATE_TARGET_URL_HOOK_VERSION,SHORT_URLS_DUPLICATE_TARGET_URL_HOOK)),**{k:v for k,v in observed.items() if k!="ledger_pairs"}},[prior["receipt_sha256"]])
+ return receipt("clone-apply","applied",{"baseline_pairs_sha256":BASELINE_SHA256,"initial_ledger_state":initial_state,"migrations_applied_in_invocation":len(manifest.migrations) if initial_state=="baseline" else 0,"migrations_already_present":len(manifest.migrations) if initial_state=="full" else 0,"compatibility_hook_deleted_row_count":compatibility_hook_deleted_row_count,"compatibility_hook_owner_function_count":compatibility_hook_owner_function_count,"compatibility_hook_obsolete_function_count":compatibility_hook_obsolete_function_count,"compatibility_hook_public_function_count":len(compatibility_hook_public_function_signatures),"compatibility_hook_public_function_sha256":digest(compatibility_hook_public_function_signatures),"compatibility_hook_sha256":digest((COMPATIBILITY_HOOKS,VECTOR_EXTENSION_RELOCATION_HOOK_VERSION,VECTOR_EXTENSION_RELOCATION_HOOK,OBSOLETE_NOTIFICATION_OVERLOAD_HOOK_VERSION,OBSOLETE_NOTIFICATION_OVERLOAD,CANONICAL_NOTIFICATION_FUNCTION,PUBLIC_FUNCTION_OWNERS_HOOK_VERSION,PUBLIC_FUNCTION_OWNERS_SQL,CROSS_SCHEMA_OWNER_HOOK_VERSION,CROSS_SCHEMA_OWNER_FUNCTIONS,SHORT_URLS_DUPLICATE_TARGET_URL_HOOK_VERSION,SHORT_URLS_DUPLICATE_TARGET_URL_HOOK)),**{k:v for k,v in observed.items() if k!="ledger_pairs"}},[prior["receipt_sha256"]])
 def run_postflight(args,manifest):
  require_local(args.service); applied=_require_prior(args.clone_receipt,"clone-apply")
  with tempfile.TemporaryDirectory(prefix="g035-postflight-") as raw:
