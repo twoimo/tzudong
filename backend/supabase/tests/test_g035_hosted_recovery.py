@@ -273,13 +273,69 @@ class ControllerTests(unittest.TestCase):
    capture={"receipt_sha256":"capture-receipt","evidence":{"dump_sha256":hashlib.sha256(b"ciphertext").hexdigest(),"extension_scope":[{"name":"pg_trgm","schema":"extensions"},{"name":"uuid-ossp","schema":"extensions"},{"name":"btree_gin","schema":"extensions"},{"name":"vector","schema":"extensions"},{"name":"pgcrypto","schema":"extensions"}],**observed}}
    def execute(argv,**unused):
     if argv[0]=="age": Path(argv[5]).write_bytes(b"plain")
-   with patch.object(recovery,"_require_prior",return_value=capture),patch.object(recovery,"command_exists",side_effect=lambda command:command),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"run",side_effect=execute) as execute,patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",return_value=[]),patch.object(recovery,"_fingerprints",return_value=observed):
+   with patch.object(recovery,"_require_prior",return_value=capture),patch.object(recovery,"command_exists",side_effect=lambda command:command),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"run",side_effect=execute) as execute,patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",return_value=[]),patch.object(recovery,"_create_auth_user_placeholders"),patch.object(recovery,"_fingerprints",return_value=observed):
     result=recovery.run_restore_verify(args,None)
   decrypt_argv=execute.call_args_list[0].args[0]
   self.assertEqual(["age","--decrypt","--identity",str(identity),"--output",decrypt_argv[5],str(dump)],decrypt_argv)
   self.assertNotIn(str(identity),json.dumps(result))
   self.assertNotIn("test-key-material",json.dumps(result))
   self.assertFalse(Path(decrypt_argv[5]).exists())
+ def test_auth_placeholder_contract_is_exact_bounded_and_never_contains_managed_data(self):
+  expected=(("public","ad_banners","created_by"),("public","admin_restaurant_map_overlays","created_by_admin_id"),("public","admin_restaurant_map_overlays","updated_by_admin_id"),("public","admin_user_preferences","user_id"),("public","announcements","created_by"),("public","documents","user_id"),("public","notifications","user_id"),("public","ocr_logs","user_id"),("public","profiles","user_id"),("public","restaurant_requests","user_id"),("public","restaurant_submissions","resolved_by_admin_id"),("public","restaurant_submissions","user_id"),("public","review_likes","user_id"),("public","reviews","edited_by_admin_id"),("public","reviews","user_id"),("public","search_logs","user_id"),("public","user_account_status","user_id"),("public","user_bookmarks","user_id"),("public","user_roles","user_id"),("public","user_stats","user_id"))
+  self.assertEqual(expected,recovery.AUTH_USER_REFERENCE_COLUMNS)
+  evidence=recovery._auth_placeholder_evidence()
+  self.assertEqual({"auth_placeholder_mapping_count":20,"auth_placeholder_mapping_sha256":recovery.digest(expected)},evidence)
+  self.assertNotIn("auth.users",json.dumps(evidence)); self.assertNotIn("email",json.dumps(evidence)); self.assertNotIn("token",json.dumps(evidence))
+ def test_auth_placeholders_validate_every_mapping_and_fail_closed_on_drift(self):
+  calls=[]
+  def query(conn,sql,params=None):
+   calls.append((sql,params))
+   if "pg_catalog.pg_attribute" in sql: return [(*params,"uuid","pg_catalog")]
+   return []
+  with patch.object(recovery,"_query_conn",side_effect=query):
+   recovery._create_auth_user_placeholders(object())
+  self.assertEqual(21,len(calls))
+  insert=calls[-1][0]
+  self.assertIn("INSERT INTO auth.users (id)",insert); self.assertIn("SELECT DISTINCT id",insert); self.assertIn("ON CONFLICT (id) DO NOTHING",insert)
+  self.assertNotIn("email",insert); self.assertNotIn("token",insert); self.assertNotIn("metadata",insert)
+  def missing(conn,sql,params=None):
+   return [] if params==recovery.AUTH_USER_REFERENCE_COLUMNS[-1] else [(*params,"uuid","pg_catalog")]
+  def drifted(conn,sql,params=None):
+   return [(*params,"text","pg_catalog")]
+  with patch.object(recovery,"_query_conn",side_effect=missing),self.assertRaisesRegex(recovery.RecoveryError,"mapping drift"):
+   recovery._create_auth_user_placeholders(object())
+  with patch.object(recovery,"_query_conn",side_effect=drifted),self.assertRaisesRegex(recovery.RecoveryError,"mapping drift"):
+   recovery._create_auth_user_placeholders(object())
+ def test_restore_uses_fenced_pre_data_placeholder_post_data_phases_and_fails_each_phase(self):
+  class Conn:
+   def rollback(self): pass
+   def close(self): pass
+  observed={"ledger_pairs":[],"ledger_sha256":"1"*64,"ledger_count":0,"catalog_sha256":"2"*64}
+  with tempfile.TemporaryDirectory() as raw:
+   dump=Path(raw)/"dump.enc"; dump.write_bytes(b"ciphertext")
+   identity=Path(raw)/"identity"; identity.write_bytes(b"test-key-material"); identity.chmod(0o600)
+   args=Namespace(destination_service="g035-local",capture_receipt="capture",dump=str(dump),identity_file=str(identity),decrypt_command="age",pg_restore="pg_restore",service_file=str(self.service(raw)))
+   capture={"receipt_sha256":"capture-receipt","evidence":{"dump_sha256":hashlib.sha256(b"ciphertext").hexdigest(),"extension_scope":[{"name":name,"schema":schema} for name,schema in recovery.RECOVERY_EXTENSIONS],**observed}}
+   for failing_section in (None,"pre-data","data","post-data"):
+    events=[]
+    def execute(argv,**unused):
+     if argv[0]=="age": Path(argv[5]).write_bytes(b"plain")
+     else:
+      section=argv[1].removeprefix("--section=")
+      events.append(section)
+      if section==failing_section: raise recovery.RecoveryError("external command failed")
+    def query(conn,sql,params=None):
+     if sql=="DROP SCHEMA public CASCADE": events.append("reset")
+     return []
+    with patch.object(recovery,"_copy_local_service",side_effect=lambda *unused: events.append("fence") or Path(raw)/"service.conf"),patch.object(recovery,"_require_prior",return_value=capture),patch.object(recovery,"command_exists",side_effect=lambda command:command),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"run",side_effect=execute),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",side_effect=query),patch.object(recovery,"_create_auth_user_placeholders",side_effect=lambda conn: events.append("placeholders")),patch.object(recovery,"_fingerprints",return_value=observed):
+     if failing_section:
+      with self.assertRaisesRegex(recovery.RecoveryError,"external command failed"): recovery.run_restore_verify(args,None)
+     else:
+      recovery.run_restore_verify(args,None)
+    if failing_section=="pre-data": expected=["fence","reset","pre-data"]
+    elif failing_section=="data": expected=["fence","reset","pre-data","data"]
+    else: expected=["fence","reset","pre-data","data","placeholders","post-data"]
+    self.assertEqual(expected,events)
  def test_restore_rejects_ledger_pair_mutation(self):
   class Conn:
    def rollback(self): pass
@@ -292,7 +348,7 @@ class ControllerTests(unittest.TestCase):
    capture={"receipt_sha256":"capture-receipt","evidence":{"dump_sha256":hashlib.sha256(b"ciphertext").hexdigest(),"extension_scope":[{"name":"pg_trgm","schema":"extensions"},{"name":"uuid-ossp","schema":"extensions"},{"name":"btree_gin","schema":"extensions"},{"name":"vector","schema":"extensions"},{"name":"pgcrypto","schema":"extensions"}],**{**observed,"ledger_pairs":[("20260101000000","mutated")]}}}
    def execute(argv,**unused):
     if argv[0]=="age": Path(argv[5]).write_bytes(b"plain")
-   with patch.object(recovery,"_require_prior",return_value=capture),patch.object(recovery,"command_exists",side_effect=lambda command:command),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"run",side_effect=execute),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",return_value=[]),patch.object(recovery,"_fingerprints",return_value=observed),self.assertRaisesRegex(recovery.RecoveryError,"restore evidence mismatch"):
+   with patch.object(recovery,"_require_prior",return_value=capture),patch.object(recovery,"command_exists",side_effect=lambda command:command),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"run",side_effect=execute),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",return_value=[]),patch.object(recovery,"_create_auth_user_placeholders"),patch.object(recovery,"_fingerprints",return_value=observed),self.assertRaisesRegex(recovery.RecoveryError,"restore evidence mismatch"):
     recovery.run_restore_verify(args,None)
  def test_restore_rejects_missing_or_mutated_extension_scope_before_local_reset(self):
   with tempfile.TemporaryDirectory() as raw:
