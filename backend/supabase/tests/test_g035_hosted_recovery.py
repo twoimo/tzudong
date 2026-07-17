@@ -351,12 +351,12 @@ class ControllerTests(unittest.TestCase):
   self.assertNotIn("hosted_managed_catalog_sha256",result["evidence"])
   self.assertEqual("managed schema DDL restored with hosted catalog parity; managed table data excluded",result["evidence"]["managed_metadata_coherence"])
  def test_auth_placeholder_contract_is_exact_bounded_and_never_contains_managed_data(self):
-  expected=(("public","ad_banners","created_by"),("public","admin_restaurant_map_overlays","created_by_admin_id"),("public","admin_restaurant_map_overlays","updated_by_admin_id"),("public","admin_user_preferences","user_id"),("public","announcements","created_by"),("public","documents","user_id"),("public","notifications","user_id"),("public","ocr_logs","user_id"),("public","profiles","user_id"),("public","restaurant_requests","user_id"),("public","restaurant_submissions","resolved_by_admin_id"),("public","restaurant_submissions","user_id"),("public","review_likes","user_id"),("public","reviews","edited_by_admin_id"),("public","reviews","user_id"),("public","search_logs","user_id"),("public","user_account_status","user_id"),("public","user_roles","user_id"),("public","user_stats","user_id"))
+  expected=(("public","ad_banners","created_by"),("public","admin_restaurant_map_overlays","created_by_admin_id"),("public","admin_restaurant_map_overlays","updated_by_admin_id"),("public","admin_user_preferences","user_id"),("public","announcements","created_by"),("public","documents","user_id"),("public","notifications","user_id"),("public","ocr_logs","user_id"),("public","profiles","user_id"),("public","restaurant_requests","user_id"),("public","restaurant_submissions","resolved_by_admin_id"),("public","restaurant_submissions","user_id"),("public","review_likes","user_id"),("public","reviews","edited_by_admin_id"),("public","reviews","user_id"),("public","search_logs","user_id"),("public","user_account_status","user_id"),("public","user_bookmarks","user_id"),("public","user_roles","user_id"),("public","user_stats","user_id"))
   self.assertEqual(expected,recovery.AUTH_USER_REFERENCE_COLUMNS)
   evidence=recovery._auth_placeholder_evidence()
-  self.assertEqual({"auth_placeholder_mapping_count":19,"auth_placeholder_mapping_sha256":recovery.digest(expected)},evidence)
+  self.assertEqual({"auth_placeholder_mapping_count":20,"auth_placeholder_mapping_sha256":"b8c180d2ddae2aa409e76889015220cbe18504af42fcd2abeb3f28bcf6ffd266"},evidence)
   self.assertNotIn("auth.users",json.dumps(evidence)); self.assertNotIn("email",json.dumps(evidence)); self.assertNotIn("token",json.dumps(evidence))
- def test_auth_placeholders_deduplicate_source_ids_and_require_empty_fenced_target(self):
+ def test_auth_placeholders_deduplicate_source_ids_and_include_bookmark_only_users_before_post_data(self):
   calls=[]
   def query(conn,sql,params=None):
    calls.append((sql,params))
@@ -365,11 +365,12 @@ class ControllerTests(unittest.TestCase):
    return []
   with patch.object(recovery,"_query_conn",side_effect=query):
    recovery._create_auth_user_placeholders(object())
-  self.assertEqual(21,len(calls))
+  self.assertEqual(22,len(calls))
   empty_check=calls[-2][0]; insert=calls[-1][0]
   self.assertEqual("SELECT NOT EXISTS (SELECT 1 FROM auth.users)",empty_check)
   self.assertIn("INSERT INTO auth.users (id)",insert); self.assertIn("SELECT DISTINCT id",insert); self.assertIn(" UNION ALL ",insert)
   self.assertNotIn("ON CONFLICT",insert); self.assertNotIn("email",insert); self.assertNotIn("token",insert); self.assertNotIn("metadata",insert)
+  self.assertIn("SELECT user_bookmarks.user_id AS id FROM public.user_bookmarks WHERE user_bookmarks.user_id IS NOT NULL",insert)
   def missing(conn,sql,params=None):
    if "pg_catalog.pg_attribute" in sql: return [] if params==recovery.AUTH_USER_REFERENCE_COLUMNS[-1] else [(*params,"uuid","pg_catalog")]
    raise AssertionError("empty check must follow all mapping checks")
@@ -577,6 +578,54 @@ class ControllerTests(unittest.TestCase):
   partial=full[:-1]
   prior={"evidence":{"ledger_pairs":[list(pair) for pair in partial],"ledger_sha256":recovery._ledger_sha256(partial),"ledger_count":len(partial)}}
   with self.assertRaisesRegex(recovery.RecoveryError,"restore receipt ledger mismatch"): recovery._require_restore_initial_ledger(prior,manifest)
+ def test_committed_same_batch_retry_returns_before_mutations_with_stable_receipt(self):
+  class Conn:
+   def __init__(self): self.commits=0
+   def commit(self): self.commits+=1
+   def rollback(self): raise AssertionError("committed recovery must not roll back")
+   def close(self): pass
+  args=Namespace(service="g035-local",restore_receipt="restore",inspect_receipt="inspect",authorization="authorization",authorization_signature="signature",service_file="unused")
+  auth={"batch_id":"11111111-1111-1111-1111-111111111111","repository_commit":"a"*40,"selection_spec_sha256":"b"*64,"short_urls_catalog_sha256":"c"*64,"duplicate_group_count":1,"duplicate_victim_count":1,"pre_short_urls_rowset_sha256":"d"*64,"victim_descriptors_sha256":"e"*64}
+  restored={"receipt_sha256":"restore"}; inspected={"receipt_sha256":"inspect"}; recovered={"local_only":True,"batch_id":auth["batch_id"],"quarantined_row_count":1}
+  queries=[]; conn=Conn()
+  def query(connection,sql,params=None):
+   queries.append(sql)
+   if sql.startswith("BEGIN") or sql.startswith("LOCK TABLE"): return []
+   raise AssertionError(f"retry mutated or inspected state: {sql}")
+  with patch.object(recovery,"_copy_local_service",return_value=Path("service")),patch.object(recovery,"_connect",return_value=conn),patch.object(recovery,"_require_prior",side_effect=lambda unused,mode: restored if mode=="restore-verify" else inspected),patch.object(recovery,"_authorization",return_value=auth),patch.object(recovery,"_query_conn",side_effect=query),patch.object(recovery,"_recovered_apply_evidence",return_value=recovered):
+   first=recovery.run_short_url_apply(args,None)
+   second=recovery.run_short_url_apply(args,None)
+  self.assertEqual(first,second); self.assertEqual(2,conn.commits)
+  self.assertEqual(["BEGIN ISOLATION LEVEL SERIALIZABLE","LOCK TABLE public.short_urls IN SHARE ROW EXCLUSIVE MODE"]*2,queries)
+  self.assertEqual([restored["receipt_sha256"],inspected["receipt_sha256"]],first["prior_receipt_sha256"])
+ def test_recovered_control_state_rejects_partial_or_tampered_binding(self):
+  auth={"batch_id":"11111111-1111-1111-1111-111111111111","repository_commit":"a"*40,"selection_spec_sha256":"b"*64,"short_urls_catalog_sha256":"c"*64,"duplicate_group_count":1,"duplicate_victim_count":1,"pre_short_urls_rowset_sha256":"d"*64,"victim_descriptors_sha256":"e"*64}
+  restored={"receipt_sha256":"f"*64}; inspected={"receipt_sha256":"1"*64}
+  with patch.object(recovery,"_query_conn",return_value=[("schema",None,"table")]),self.assertRaisesRegex(recovery.RecoveryError,"partial"):
+   recovery._recovered_apply_evidence(object(),auth,restored,inspected)
+  catalog="2"*64
+  expected=(restored["receipt_sha256"],inspected["receipt_sha256"],recovery.digest(auth),contract.MANIFEST_SHA256,auth["repository_commit"],auth["selection_spec_sha256"],auth["short_urls_catalog_sha256"],1,1,auth["pre_short_urls_rowset_sha256"],auth["victim_descriptors_sha256"],catalog)
+  def query(conn,sql,params=None):
+   if "to_regnamespace" in sql: return [("schema","batches","quarantine")]
+   if "WHERE batch_id=%s" in sql: return [(*expected[:2],"0"*64,*expected[3:],"3"*64,"4"*64,"5"*64)]
+   raise AssertionError(sql)
+  with patch.object(recovery,"_query_conn",side_effect=query),patch.object(recovery,"_quarantine_catalog",return_value=catalog),self.assertRaisesRegex(recovery.RecoveryError,"binding"):
+   recovery._recovered_apply_evidence(object(),auth,restored,inspected)
+ def test_postflight_executes_runtime_accepts_schema_list_and_rejects_each_receipt_mutation(self):
+  manifest=contract.load_manifest(ROOT); pairs=recovery._manifest_ledger_pairs(manifest); observed=fingerprints(pairs=pairs,managed_schemas=list(contract.MANAGED_METADATA_SCHEMAS))
+  args=Namespace(service="g035-local",clone_receipt="clone",service_file="unused",psql="psql")
+  class Conn:
+   def rollback(self): pass
+   def close(self): pass
+  evidence={"clone_state":"transformed_local_clone_not_exact_restore","hosted_mutations":0,"baseline_pairs_sha256":contract.BASELINE_SHA256,**{key:observed[key] for key in ("ledger_sha256","ledger_count","restorable_catalog_sha256","managed_catalog_sha256","managed_metadata_schemas_present")}}
+  applied={"receipt_sha256":"clone","prior_receipt_sha256":["restore"],"evidence":evidence}
+  with patch.object(recovery,"_copy_local_service",return_value=Path("service")),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_require_prior",return_value=applied),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_query_conn",return_value=[]),patch.object(recovery,"_fingerprints",return_value=observed),patch.object(recovery,"run") as run:
+   result=recovery.run_postflight(args,manifest)
+  self.assertEqual("validated",result["status"]); self.assertIn("g035_hosted_clone_runtime.sql",str(run.call_args.args[0]))
+  for key in ("ledger_sha256","ledger_count","restorable_catalog_sha256","managed_catalog_sha256","managed_metadata_schemas_present"):
+   mutated={**evidence,key:("unexpected" if key!="ledger_count" else evidence[key]+1)}
+   with self.subTest(key=key),patch.object(recovery,"_copy_local_service",return_value=Path("service")),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_require_prior",return_value={**applied,"evidence":mutated}),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_query_conn",return_value=[]),patch.object(recovery,"_fingerprints",return_value=observed),patch.object(recovery,"run"):
+    with self.assertRaisesRegex(recovery.RecoveryError,"clone receipt evidence mismatch"): recovery.run_postflight(args,manifest)
  def test_self_commit_post_execution_failures_are_ambiguous(self):
   text=(SCRIPTS/"g035_hosted_recovery.py").read_text(encoding="utf8")
   protected='run([psql,"service=g035-local","--set","ON_ERROR_STOP=1","--file",str(source)],env=env)\n       _query_conn(conn,"INSERT INTO supabase_migrations.schema_migrations'
