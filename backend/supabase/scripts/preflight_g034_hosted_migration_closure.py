@@ -27,9 +27,51 @@ EXPECTED_EXCLUDED_VERSIONS = ("20260531105250", "20260612075100", "2026062715000
 TRACKED_APPROVAL_SOURCE = ROOT / "backend/supabase/migrations/20260417_harden_submission_identity_duplicate_checks.sql"
 TRACKED_APPROVAL_SOURCE_SHA256 = "d3a0068674d985cb0ba52b8f3d2d0d909bc0f684ce159f9642ff25105dfc7789"
 TRACKED_APPROVAL_FUNCTIONS = (
-    ("public.approve_submission_item(uuid,uuid,jsonb)", "public", "approve_submission_item", "2950 2950 3802", "c223fadd74e35f44d0e654ad980e6111129d5810b36d7c932efdbe20b06a4ba6"),
-    ("public.approve_edit_submission_item(uuid,uuid,jsonb)", "public", "approve_edit_submission_item", "2950 2950 3802", "7209c1ba8c33a732d3fd8a4ea9e9e4dab43c1f112af2d59b2220a824f6d7cb8d"),
+    (
+        "public.approve_submission_item(uuid,uuid,jsonb)",
+        "public",
+        "approve_submission_item",
+        "2950 2950 3802",
+        (
+            "p_item_id",
+            "p_admin_user_id",
+            "p_restaurant_data",
+            "success",
+            "message",
+            "created_restaurant_id",
+        ),
+        "f11100ddf81a000dbdcc69d31d93e680d0a3e7e65b7a963f6f82a0c409dfc63b",
+    ),
+    (
+        "public.approve_edit_submission_item(uuid,uuid,jsonb)",
+        "public",
+        "approve_edit_submission_item",
+        "2950 2950 3802",
+        (
+            "p_item_id",
+            "p_admin_user_id",
+            "p_updated_data",
+            "success",
+            "message",
+            "restaurant_id",
+        ),
+        "fd1de9a09b4427b84c3d76cf4c894e5593e9d805eb275f8c32721d6963eb5ad4",
+    ),
 )
+APPROVAL_CATALOG_ATTRIBUTES = (
+    "f",
+    "plpgsql",
+    True,
+    ("search_path=public",),
+    True,
+    2249,
+    (2950, 2950, 3802, 16, 25, 2950),
+    ("i", "i", "i", "t", "t", "t"),
+)
+CREATE_FUNCTION = re.compile(
+    r"(?im)^\s*create\s+or\s+replace\s+function\s+public\s*\.\s*([a-z_][a-z0-9_]*)\s*\("
+)
+DOLLAR_DELIMITER = re.compile(r"\$(?:[A-Za-z_][A-Za-z0-9_]*)?\$")
 CATALOG_RELATIONS = (
     ("public.restaurants", "public", "restaurants"),
     ("storage.objects", "storage", "objects"),
@@ -49,31 +91,66 @@ def fingerprint(value):
     return hashlib.sha256(
         json.dumps(value, sort_keys=True, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
-def semantic_fingerprint(definition):
-    normalized = re.sub(r"\$[A-Za-z_]*\$", "$$", definition.lower())
-    normalized = re.sub(r"\s+", " ", normalized).strip()
-    normalized = re.sub(r"\s*([(),;])\s*", r"\1", normalized)
+def body_fingerprint(body):
+    normalized = re.sub(r"\s+", " ", body.lower()).strip()
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
+
+def extract_dollar_quoted_body(definition):
+    delimiters = DOLLAR_DELIMITER.findall(definition)
+    if len(delimiters) != 2 or delimiters[0] != delimiters[1]:
+        raise ValueError("malformed-dollar-quoted-body")
+    opener = re.search(r"(?is)\bas\s+" + re.escape(delimiters[0]), definition)
+    if opener is None:
+        raise ValueError("missing-dollar-quoted-body")
+    body_start = opener.end()
+    body_end = definition.find(delimiters[0], body_start)
+    if body_end < body_start:
+        raise ValueError("mismatched-dollar-delimiter")
+    return definition[body_start:body_end]
+
+
+def approval_body_contract(source_path=TRACKED_APPROVAL_SOURCE):
+    source = source_path.read_bytes()
+    if hashlib.sha256(source).hexdigest() != TRACKED_APPROVAL_SOURCE_SHA256:
+        raise ValueError("tracked-approval-source-hash")
+    text = source.decode("utf-8")
+    declarations = list(CREATE_FUNCTION.finditer(text))
+    contract = {}
+    for lookup, namespace, name, input_type_oids, argnames, expected_fragment_hash in TRACKED_APPROVAL_FUNCTIONS:
+        matches = [match for match in declarations if match.group(1) == name]
+        if len(matches) != 1:
+            raise ValueError("tracked-approval-declaration")
+        start = matches[0].start()
+        following = [match.start() for match in declarations if match.start() > start]
+        declaration = text[start:min(following, default=len(text))]
+        opening = re.search(r"(?is)\bas\s+(\$(?:[A-Za-z_][A-Za-z0-9_]*)?\$)", declaration)
+        if opening is None:
+            raise ValueError("missing-dollar-quoted-body")
+        delimiter = opening.group(1)
+        body_end = declaration.find(delimiter, opening.end())
+        if body_end < opening.end() or not declaration[body_end + len(delimiter):].startswith(";"):
+            raise ValueError("malformed-dollar-quoted-body")
+        fragment = declaration[:body_end + len(delimiter) + 1]
+        if DOLLAR_DELIMITER.findall(fragment) != [delimiter, delimiter]:
+            raise ValueError("malformed-dollar-quoted-body")
+        if hashlib.sha256(fragment.encode("utf-8")).hexdigest() != expected_fragment_hash:
+            raise ValueError("tracked-approval-source-fragment")
+        contract[lookup] = {
+            "namespace": namespace,
+            "name": name,
+            "input_type_oids": input_type_oids,
+            "argnames": argnames,
+            "body_hash": body_fingerprint(extract_dollar_quoted_body(fragment)),
+        }
+    return contract
 
 
 def tracked_approval_source_valid():
     try:
-        source = TRACKED_APPROVAL_SOURCE.read_bytes()
-    except OSError:
+        approval_body_contract()
+    except (OSError, UnicodeDecodeError, ValueError):
         return False
-    if hashlib.sha256(source).hexdigest() != TRACKED_APPROVAL_SOURCE_SHA256:
-        return False
-    text = source.decode("utf-8")
-    marker = "$$;"
-    for _, _, name, _, expected_hash in TRACKED_APPROVAL_FUNCTIONS:
-        prefix = f"create or replace function public.{name}"
-        try:
-            start = text.index(prefix)
-            end = text.index(marker, start) + len(marker)
-        except ValueError:
-            return False
-        if semantic_fingerprint(text[start:end]) != expected_hash:
-            return False
     return True
 
 
@@ -192,6 +269,50 @@ def validate_sources(manifest, report):
     if not tracked_approval_source_valid():
         fail(report, "tracked-approval-source-invalid")
     report["sourceValid"] = not report["blockers"]
+def approval_catalog_contract(cursor, contract=None):
+    contract = approval_body_contract() if contract is None else contract
+    results = {}
+    for lookup, expected in contract.items():
+        cursor.execute(
+            "SELECT pg_catalog.pg_get_functiondef(procedure.oid), procedure.prokind, language.lanname, "
+            "procedure.prosecdef, procedure.proconfig, procedure.proretset, procedure.prorettype, "
+            "procedure.proallargtypes, procedure.proargmodes, procedure.proargnames "
+            "FROM pg_catalog.pg_proc AS procedure "
+            "JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = procedure.pronamespace "
+            "JOIN pg_catalog.pg_language AS language ON language.oid = procedure.prolang "
+            "WHERE procedure.oid = pg_catalog.to_regprocedure(%s) "
+            "AND namespace.nspname = %s AND procedure.proname = %s "
+            "AND procedure.proargtypes = %s::pg_catalog.oidvector",
+            (lookup, expected["namespace"], expected["name"], expected["input_type_oids"]),
+        )
+        rows = cursor.fetchall()
+        if len(rows) != 1:
+            results[lookup] = False
+            continue
+        definition, prokind, language, prosecdef, proconfig, proretset, prorettype, allargtypes, argmodes, argnames = rows[0]
+        try:
+            body_matches = body_fingerprint(extract_dollar_quoted_body(definition)) == expected["body_hash"]
+        except ValueError:
+            body_matches = False
+        results[lookup] = (
+            not contains_restaurants_backup(definition)
+            and body_matches
+            and (
+                prokind,
+                language,
+                prosecdef,
+                tuple(proconfig or ()),
+                proretset,
+                prorettype,
+                tuple(allargtypes or ()),
+                tuple(argmodes or ()),
+                tuple(argnames or ()),
+            )
+            == APPROVAL_CATALOG_ATTRIBUTES + (expected["argnames"],)
+        )
+    return results
+
+
 
 
 def catalog_preflight(report):
@@ -229,26 +350,13 @@ def catalog_preflight(report):
                 "storage.objects": "storageObjects",
             }[lookup]
             report["prerequisites"][prerequisite] = bool(cursor.fetchone()[0])
-        for lookup, namespace, name, input_type_oids, expected_hash in TRACKED_APPROVAL_FUNCTIONS:
-            cursor.execute(
-                "SELECT pg_catalog.pg_get_functiondef(procedure.oid) FROM pg_catalog.pg_proc AS procedure "
-                "JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = procedure.pronamespace "
-                "WHERE procedure.oid = pg_catalog.to_regprocedure(%s) "
-                "AND namespace.nspname = %s AND procedure.proname = %s "
-                "AND procedure.proargtypes = %s::pg_catalog.oidvector "
-                "AND procedure.prokind = 'f'",
-                (lookup, namespace, name, input_type_oids),
-            )
-            definition = cursor.fetchone()
+        approval_results = approval_catalog_contract(cursor)
+        for lookup, valid in approval_results.items():
             prerequisite = {
                 "public.approve_submission_item(uuid,uuid,jsonb)": "publicApproveSubmissionItem",
                 "public.approve_edit_submission_item(uuid,uuid,jsonb)": "publicApproveEditSubmissionItem",
             }[lookup]
-            report["prerequisites"][prerequisite] = (
-                definition is not None
-                and not contains_restaurants_backup(definition[0])
-                and semantic_fingerprint(definition[0]) == expected_hash
-            )
+            report["prerequisites"][prerequisite] = valid
         cursor.execute(
             "SELECT pg_catalog.to_regclass('public.restaurants_backup') IS NULL "
             "AND EXISTS (SELECT 1 FROM pg_catalog.pg_namespace AS namespace WHERE namespace.nspname = 'public')"
