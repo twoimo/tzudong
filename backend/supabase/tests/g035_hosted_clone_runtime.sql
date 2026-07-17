@@ -10,13 +10,24 @@ SET LOCAL idle_in_transaction_session_timeout = '5000ms';
 DO $g035_clone_contract$
 DECLARE
   target oid;
+  public_execute boolean;
 BEGIN
   -- Approval RPC must have its exact identity signature and no public/client grant.
   target := pg_catalog.to_regprocedure(
     'public.consume_tzuyang_address_evidence_admin_approval(uuid,text,text,uuid,text,text,text,timestamp with time zone,timestamp with time zone)'
   );
+  SELECT EXISTS (
+    SELECT 1
+      FROM pg_catalog.pg_proc AS procedure_row
+      CROSS JOIN LATERAL pg_catalog.aclexplode(
+        COALESCE(procedure_row.proacl, pg_catalog.acldefault('f', procedure_row.proowner))
+      ) AS privilege_row
+     WHERE procedure_row.oid = target
+       AND privilege_row.grantee = 0
+       AND privilege_row.privilege_type = 'EXECUTE'
+  ) INTO public_execute;
   IF target IS NULL
-     OR pg_catalog.has_function_privilege('PUBLIC', target, 'EXECUTE')
+     OR public_execute
      OR pg_catalog.has_function_privilege('anon', target, 'EXECUTE')
      OR pg_catalog.has_function_privilege('authenticated', target, 'EXECUTE')
      OR NOT pg_catalog.has_function_privilege('service_role', target, 'EXECUTE') THEN
@@ -25,8 +36,18 @@ BEGIN
 
   -- G010 privacy onboarding and consent APIs retain their deliberately narrow grants.
   target := pg_catalog.to_regprocedure('public.submit_privacy_consent(text,text,text,uuid,text,text,uuid,text,uuid)');
+  SELECT EXISTS (
+    SELECT 1
+      FROM pg_catalog.pg_proc AS procedure_row
+      CROSS JOIN LATERAL pg_catalog.aclexplode(
+        COALESCE(procedure_row.proacl, pg_catalog.acldefault('f', procedure_row.proowner))
+      ) AS privilege_row
+     WHERE procedure_row.oid = target
+       AND privilege_row.grantee = 0
+       AND privilege_row.privilege_type = 'EXECUTE'
+  ) INTO public_execute;
   IF target IS NULL
-     OR pg_catalog.has_function_privilege('PUBLIC', target, 'EXECUTE')
+     OR public_execute
      OR pg_catalog.has_function_privilege('anon', target, 'EXECUTE')
      OR NOT pg_catalog.has_function_privilege('authenticated', target, 'EXECUTE')
      OR pg_catalog.has_function_privilege('service_role', target, 'EXECUTE') THEN
@@ -34,8 +55,18 @@ BEGIN
   END IF;
 
   target := pg_catalog.to_regprocedure('public.confirm_privacy_onboarding(uuid,text,uuid,text,uuid)');
+  SELECT EXISTS (
+    SELECT 1
+      FROM pg_catalog.pg_proc AS procedure_row
+      CROSS JOIN LATERAL pg_catalog.aclexplode(
+        COALESCE(procedure_row.proacl, pg_catalog.acldefault('f', procedure_row.proowner))
+      ) AS privilege_row
+     WHERE procedure_row.oid = target
+       AND privilege_row.grantee = 0
+       AND privilege_row.privilege_type = 'EXECUTE'
+  ) INTO public_execute;
   IF target IS NULL
-     OR pg_catalog.has_function_privilege('PUBLIC', target, 'EXECUTE')
+     OR public_execute
      OR pg_catalog.has_function_privilege('anon', target, 'EXECUTE')
      OR pg_catalog.has_function_privilege('authenticated', target, 'EXECUTE')
      OR NOT pg_catalog.has_function_privilege('service_role', target, 'EXECUTE') THEN
@@ -44,8 +75,18 @@ BEGIN
 
   -- G013 short-url allocation is privileged only; no direct public/client execution.
   target := pg_catalog.to_regprocedure('public.allocate_short_url(text,uuid,uuid,text,text[])');
+  SELECT EXISTS (
+    SELECT 1
+      FROM pg_catalog.pg_proc AS procedure_row
+      CROSS JOIN LATERAL pg_catalog.aclexplode(
+        COALESCE(procedure_row.proacl, pg_catalog.acldefault('f', procedure_row.proowner))
+      ) AS privilege_row
+     WHERE procedure_row.oid = target
+       AND privilege_row.grantee = 0
+       AND privilege_row.privilege_type = 'EXECUTE'
+  ) INTO public_execute;
   IF target IS NULL
-     OR pg_catalog.has_function_privilege('PUBLIC', target, 'EXECUTE')
+     OR public_execute
      OR pg_catalog.has_function_privilege('anon', target, 'EXECUTE')
      OR pg_catalog.has_function_privilege('authenticated', target, 'EXECUTE')
      OR NOT pg_catalog.has_function_privilege('service_role', target, 'EXECUTE') THEN
@@ -54,8 +95,18 @@ BEGIN
 
   -- G014 apply is service-only and the approval activation RPC is separated.
   target := pg_catalog.to_regprocedure('public.apply_privacy_retention_run(uuid,text,text,integer)');
+  SELECT EXISTS (
+    SELECT 1
+      FROM pg_catalog.pg_proc AS procedure_row
+      CROSS JOIN LATERAL pg_catalog.aclexplode(
+        COALESCE(procedure_row.proacl, pg_catalog.acldefault('f', procedure_row.proowner))
+      ) AS privilege_row
+     WHERE procedure_row.oid = target
+       AND privilege_row.grantee = 0
+       AND privilege_row.privilege_type = 'EXECUTE'
+  ) INTO public_execute;
   IF target IS NULL
-     OR pg_catalog.has_function_privilege('PUBLIC', target, 'EXECUTE')
+     OR public_execute
      OR pg_catalog.has_function_privilege('anon', target, 'EXECUTE')
      OR pg_catalog.has_function_privilege('authenticated', target, 'EXECUTE')
      OR NOT pg_catalog.has_function_privilege('service_role', target, 'EXECUTE') THEN
@@ -63,8 +114,18 @@ BEGIN
   END IF;
 
   target := pg_catalog.to_regprocedure('public.activate_privacy_retention_adapter(text,text,text,text,text,text,interval,text,text,text)');
+  SELECT EXISTS (
+    SELECT 1
+      FROM pg_catalog.pg_proc AS procedure_row
+      CROSS JOIN LATERAL pg_catalog.aclexplode(
+        COALESCE(procedure_row.proacl, pg_catalog.acldefault('f', procedure_row.proowner))
+      ) AS privilege_row
+     WHERE procedure_row.oid = target
+       AND privilege_row.grantee = 0
+       AND privilege_row.privilege_type = 'EXECUTE'
+  ) INTO public_execute;
   IF target IS NULL
-     OR pg_catalog.has_function_privilege('PUBLIC', target, 'EXECUTE')
+     OR public_execute
      OR pg_catalog.has_function_privilege('anon', target, 'EXECUTE')
      OR pg_catalog.has_function_privilege('authenticated', target, 'EXECUTE')
      OR pg_catalog.has_function_privilege('service_role', target, 'EXECUTE')
