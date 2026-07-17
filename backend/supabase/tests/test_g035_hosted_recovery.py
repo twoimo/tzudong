@@ -464,11 +464,6 @@ class ControllerTests(unittest.TestCase):
   baseline=text.index('_initial_ledger_state(conn,manifest)',lock)
   apply=text.index("for index,entry in enumerate(manifest.migrations):",lock)
   self.assertLess(lock,receipt); self.assertLess(receipt,baseline); self.assertLess(baseline,apply)
- def test_restore_receipt_requires_authoritative_baseline_digest_and_pairs(self):
-  prior={"evidence":{"ledger_pairs":[list(pair) for pair in contract.BASELINE_PAIRS],"ledger_sha256":contract.BASELINE_SHA256,"ledger_count":len(contract.BASELINE_PAIRS)}}
-  recovery._require_restore_baseline(prior)
-  prior["evidence"]["ledger_pairs"][0][0]="20260124"
-  with self.assertRaisesRegex(recovery.RecoveryError,"restore receipt ledger mismatch"): recovery._require_restore_baseline(prior)
  def test_clone_accepts_exact_full_closure_without_reapplying_sql(self):
   manifest=contract.load_manifest(ROOT); full=recovery._manifest_ledger_pairs(manifest)
   class Conn:

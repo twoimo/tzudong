@@ -45,9 +45,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          umask 077
           test -r "$G035_PG_SERVICE_FILE"
-          test -d "$(dirname "$EVIDENCE_RECEIPT_PATH")"
-          case "$(realpath "$(dirname "$EVIDENCE_RECEIPT_PATH")")" in "$(realpath "$GITHUB_WORKSPACE")"*) exit 1;; esac
+          receipt_parent="$(dirname -- "$EVIDENCE_RECEIPT_PATH")"
+          test -d "$receipt_parent"
+          canonical_receipt_parent="$(realpath -e -- "$receipt_parent")"
+          canonical_workspace="$(realpath -e -- "$GITHUB_WORKSPACE")"
+          case "$canonical_receipt_parent/" in "$canonical_workspace/"*) exit 1;; esac
+          test ! -e "$EVIDENCE_RECEIPT_PATH"
+          test ! -L "$EVIDENCE_RECEIPT_PATH"
+          set -C
           case "$REQUESTED_MODE" in
             validate) python backend/supabase/scripts/g035_hosted_recovery.py validate > "$EVIDENCE_RECEIPT_PATH" ;;
             capture) python backend/supabase/scripts/g035_hosted_recovery.py capture --destination "$G035_ENCRYPTED_DESTINATION_PATH" --service-file "$G035_PG_SERVICE_FILE" --recipient "$G035_PUBLIC_RECIPIENT" --g034-artifact "$G035_G034_ARTIFACT" --encrypt-command "$G035_ENCRYPT_COMMAND" > "$EVIDENCE_RECEIPT_PATH" ;;

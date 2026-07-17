@@ -108,6 +108,15 @@ class G034HostedPreflightTests(unittest.TestCase):
         self.assertNotIn("20260713002200", data["excludedVersions"])
         manifest_bytes = module.MANIFEST.read_bytes().replace(b"\r\n", b"\n")
         self.assertEqual(module.EXPECTED_MANIFEST_SHA256, module.hashlib.sha256(manifest_bytes).hexdigest())
+    def test_manifest_accepts_crlf_but_rejects_bare_carriage_returns(self):
+        canonical = module.MANIFEST.read_bytes().replace(b"\r\n", b"\n")
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "manifest.json"
+            path.write_bytes(canonical.replace(b"\n", b"\r\n"))
+            self.assertEqual(module.load_manifest(module.MANIFEST), module.load_manifest(path))
+            path.write_bytes(canonical.replace(b"\n", b"\r", 1))
+            with self.assertRaisesRegex(ValueError, "manifest-lock-mismatch"):
+                module.load_manifest(path)
 
     def test_manifest_rejects_canonical_path_and_semantic_drift(self):
         data = json.loads(module.MANIFEST.read_text(encoding="utf-8"))
