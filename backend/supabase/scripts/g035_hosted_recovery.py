@@ -42,8 +42,31 @@ def safe_environment(service_file,*,crypto=False):
  env={k:os.environ[k] for k in ("PATH","SYSTEMROOT","WINDIR","HOME","USERPROFILE","TEMP","TMP") if k in os.environ}
  if not crypto: env["PGSERVICEFILE"]=str(service_file)
  return env
+_WINDOWS_ACL_SCRIPT="""$ErrorActionPreference='Stop'
+$item=Get-Item -LiteralPath $args[0] -Force
+if(-not ($item -is [System.IO.FileInfo]) -or ($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint)){throw 'invalid file'}
+$acl=Get-Acl -LiteralPath $args[0]
+$rules=$acl.GetAccessRules($true,$true,[System.Security.Principal.SecurityIdentifier])
+[pscustomobject]@{current_sid=[System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value;aces=@($rules|ForEach-Object{[pscustomobject]@{sid=$_.IdentityReference.Value;type=$_.AccessControlType.ToString();inherited=[bool]$_.IsInherited}})}|ConvertTo-Json -Compress -Depth 3"""
+_WINDOWS_ALLOWED_SIDS={"S-1-5-18","S-1-5-32-544"}
+def _windows_dacl_restrictive(path):
+ """Windows ACL inspection has no POSIX mode-bit fallback."""
+ try:
+  completed=subprocess.run(["powershell.exe","-NoLogo","-NoProfile","-NonInteractive","-ExecutionPolicy","Bypass","-Command",_WINDOWS_ACL_SCRIPT,str(path)],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,encoding="utf-8",timeout=10,check=True)
+  data=json.loads(completed.stdout,object_pairs_hook=_pairs)
+  current=data["current_sid"]; aces=data["aces"]
+  if set(data)!={"current_sid","aces"} or not isinstance(current,str) or not current or not isinstance(aces,list) or not aces: return False
+  allowed=_WINDOWS_ALLOWED_SIDS|{current}
+  for ace in aces:
+   if not isinstance(ace,dict) or set(ace)!={"sid","type","inherited"} or not isinstance(ace["sid"],str) or not ace["sid"] or ace["type"] not in {"Allow","Deny"} or not isinstance(ace["inherited"],bool): return False
+   if ace["type"]=="Allow" and ace["sid"] not in allowed: return False
+  return True
+ except (OSError,subprocess.TimeoutExpired,subprocess.CalledProcessError,json.JSONDecodeError,RecoveryError,KeyError,TypeError): return False
 def _restrictive(path):
- try:return not bool(path.stat().st_mode & 0o077)
+ try:
+  if path.is_symlink() or not path.is_file(): return False
+  if os.name=="nt": return _windows_dacl_restrictive(path)
+  return not bool(path.stat().st_mode & 0o077)
  except OSError:return False
 def _parse_local_service(source,section):
  try:
