@@ -76,5 +76,13 @@ def validate_sources(root: Path) -> Manifest:
         if path.is_symlink() or not path.is_file() or path.resolve().parent != migration_dir or sha256_file(path)!=entry.sha256: raise ContractError("migration source hash mismatch")
     return manifest
 def ledger_prefix(manifest: Manifest, applied: list[tuple[str,str]]) -> bool:
-    expected=list(BASELINE_PAIRS)+[(m.version,m.name) for m in manifest.migrations]
-    return applied == expected[:len(applied)] and len(applied) >= len(BASELINE_PAIRS)
+    if not isinstance(applied, (list, tuple)) or any(
+        not isinstance(pair, (list, tuple))
+        or len(pair) != 2
+        or not all(isinstance(value, str) and value for value in pair)
+        for pair in applied
+    ):
+        return False
+    actual = tuple((pair[0], pair[1]) for pair in applied)
+    expected = BASELINE_PAIRS + tuple((migration.version, migration.name) for migration in manifest.migrations)
+    return actual == expected[:len(actual)] and len(actual) >= len(BASELINE_PAIRS)
