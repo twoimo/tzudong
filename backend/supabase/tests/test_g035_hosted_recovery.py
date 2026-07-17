@@ -1,4 +1,4 @@
-import contextlib, importlib.util, io, json, subprocess, sys, tempfile, unittest
+import contextlib, hashlib, importlib.util, io, json, subprocess, sys, tempfile, unittest
 from argparse import Namespace
 from pathlib import Path
 from unittest.mock import patch
@@ -60,33 +60,51 @@ class ControllerTests(unittest.TestCase):
     recovery._copy_local_service(Path(raw),service,"g035-local")
    with patch.object(Path,"is_symlink",return_value=True),self.assertRaises(recovery.RecoveryError):
     recovery._copy_local_service(Path(raw),service,"g035-local")
- def test_windows_dacl_accepts_only_current_user_system_and_administrators(self):
-  payload={"current_sid":"S-1-5-21-100","aces":[{"sid":"S-1-5-21-100","type":"Allow","inherited":False},{"sid":"S-1-5-18","type":"Allow","inherited":False},{"sid":"S-1-5-32-544","type":"Allow","inherited":True}]}
+ def test_windows_dacl_uses_native_tools_without_powershell_modules(self):
+  sddl="D:PAI(A;;FA;;;BA)(A;;FA;;;SY)(A;;FA;;;S-1-5-21-100)"
   with tempfile.TemporaryDirectory() as raw:
    service=self.service(raw)
-   completed=subprocess.CompletedProcess([],0,json.dumps(payload),"")
-   with patch.object(recovery.os,"name","nt"),patch.object(recovery.subprocess,"run",return_value=completed) as acl_run,patch.object(recovery,"run") as dump_run:
-    self.assertTrue(recovery._restrictive(service))
-   dump_run.assert_not_called()
-   argv=acl_run.call_args.args[0]
-   self.assertEqual(["powershell.exe","-NoLogo","-NoProfile","-NonInteractive","-ExecutionPolicy","Bypass","-Command"],argv[:7])
-   self.assertEqual(recovery._WINDOWS_ACL_SCRIPT,argv[7]); self.assertEqual(str(service),argv[8])
- def test_windows_dacl_rejects_broad_inherited_and_unparseable_acls(self):
-  accepted={"current_sid":"S-1-5-21-100","aces":[{"sid":"S-1-5-21-100","type":"Allow","inherited":False}]}
+   responses=[
+    subprocess.CompletedProcess([],0,'"DOMAIN\\\\user","S-1-5-21-100"\r\n',""),
+    subprocess.CompletedProcess([],0,"",""),
+   ]
+   with patch.object(recovery.subprocess,"run",side_effect=responses) as acl_run,patch.object(recovery,"_windows_saved_sddl",return_value=sddl):
+    self.assertTrue(recovery._windows_dacl_restrictive(service))
+  self.assertEqual(["whoami","/user","/fo","csv","/nh"],acl_run.call_args_list[0].args[0])
+  argv=acl_run.call_args_list[1].args[0]
+  self.assertEqual(["icacls",str(service),"/save"],argv[:3])
+  self.assertEqual("/c",argv[-1])
+  self.assertFalse(Path(argv[3]).exists())
+  self.assertNotIn("powershell.exe",str(acl_run.call_args_list))
+ def test_windows_saved_sddl_accepts_bomless_utf16le_and_rejects_malformed_bytes(self):
+  with tempfile.TemporaryDirectory() as raw:
+   export=Path(raw)/"acl.txt"
+   export.write_bytes("service.conf D:PAI(A;;FA;;;BA)(A;;FA;;;SY)(A;;FA;;;S-1-5-21-100)\r\n".encode("utf-16-le"))
+   self.assertEqual("D:PAI(A;;FA;;;BA)(A;;FA;;;SY)(A;;FA;;;S-1-5-21-100)",recovery._windows_saved_sddl(export))
+   export.write_bytes(b"\xff\xfeD\x00:\x00\x00")
+   self.assertIsNone(recovery._windows_saved_sddl(export))
+ def test_windows_dacl_rejects_broad_inherited_unknown_malformed_and_failures(self):
   rejected=(
-   {**accepted,"aces":accepted["aces"]+[{"sid":"S-1-1-0","type":"Allow","inherited":False}]},
-   {**accepted,"aces":accepted["aces"]+[{"sid":"S-1-5-32-545","type":"Allow","inherited":True}]},
-   {**accepted,"aces":accepted["aces"]+[{"sid":"S-1-5-11","type":"Allow","inherited":True}]},
-   "{not JSON",
-   {"current_sid":"S-1-5-21-100","aces":[]},
+   "D:PAI(A;;FA;;;S-1-1-0)(A;;FA;;;S-1-5-21-100)",
+   "D:PAI(A;ID;FA;;;S-1-5-21-100)",
+   "D:PAI(A;;FA;;;S-1-5-32-545)(A;;FA;;;S-1-5-21-100)",
+   "D:PAI(D;;FA;;;S-1-5-21-100)",
+   "D:PAI(A;;FA;;;S-1-5-21-100",
   )
   with tempfile.TemporaryDirectory() as raw:
    service=self.service(raw)
-   for payload in rejected:
-    stdout=payload if isinstance(payload,str) else json.dumps(payload)
-    with patch.object(recovery.os,"name","nt"),patch.object(recovery.subprocess,"run",return_value=subprocess.CompletedProcess([],0,stdout,"")),patch.object(recovery,"run") as dump_run:
-     self.assertFalse(recovery._restrictive(service))
-    dump_run.assert_not_called()
+   for sddl in rejected:
+    responses=[
+     subprocess.CompletedProcess([],0,'"DOMAIN\\\\user","S-1-5-21-100"\r\n',""),
+     subprocess.CompletedProcess([],0,"",""),
+    ]
+    with patch.object(recovery.subprocess,"run",side_effect=responses),patch.object(recovery,"_windows_saved_sddl",return_value=sddl):
+     self.assertFalse(recovery._windows_dacl_restrictive(service))
+   with patch.object(recovery.subprocess,"run",side_effect=[
+    subprocess.CompletedProcess([],0,'"DOMAIN\\\\user","S-1-5-21-100"\r\n',""),
+    subprocess.CalledProcessError(1,["icacls"]),
+   ]):
+    self.assertFalse(recovery._windows_dacl_restrictive(service))
  def test_windows_dacl_has_no_posix_mode_fallback(self):
   class File:
    def is_symlink(self): return False
@@ -141,10 +159,23 @@ class ControllerTests(unittest.TestCase):
   conn=Conn(); manifest=contract.load_manifest(ROOT); observed={"ledger_pairs":[],"ledger_sha256":"1"*64,"ledger_count":0,"catalog_sha256":"2"*64}
   with tempfile.TemporaryDirectory() as raw:
    dest=Path(raw)/"out"; dest.mkdir(); artifact=Path(raw)/"ok.json"; artifact.write_text(json.dumps(self.artifact(manifest,observed)),encoding="utf8")
-   args=Namespace(destination=str(dest),service_file=str(self.service(raw,"g035")),recipient="a"*64,g034_artifact=str(artifact),pg_dump="pg_dump",encrypt_command="age")
-   def dump(*values): self.assertNotIn("ROLLBACK",conn.events); (dest/"g035-dump.enc").write_bytes(b"x"); return []
-   with patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"command_exists",side_effect=lambda x:x),patch.object(recovery,"_connect",return_value=conn),patch.object(recovery,"_fingerprints",return_value=observed),patch.object(recovery,"_repository_commit",return_value="a"*40),patch.object(recovery,"_dump_to_encrypted",side_effect=dump): recovery.run_capture(args,manifest)
+   recipient="age1"+"q"*58
+   args=Namespace(destination=str(dest),service_file=str(self.service(raw,"g035")),recipient=recipient,g034_artifact=str(artifact),pg_dump="pg_dump",encrypt_command="age")
+   def dump(*values):
+    self.assertNotIn("ROLLBACK",conn.events); self.assertEqual(recipient,values[2]); (dest/"g035-dump.enc").write_bytes(b"x"); return []
+   with patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"command_exists",side_effect=lambda x:x),patch.object(recovery,"_connect",return_value=conn),patch.object(recovery,"_fingerprints",return_value=observed),patch.object(recovery,"_repository_commit",return_value="a"*40),patch.object(recovery,"_dump_to_encrypted",side_effect=dump):
+    result=recovery.run_capture(args,manifest)
+  self.assertEqual(hashlib.sha256(recipient.encode("utf-8")).hexdigest(),result["evidence"]["recipient_fingerprint"])
+  self.assertNotIn(recipient,json.dumps(result))
   self.assertLess(conn.events.index("SELECT pg_export_snapshot()"),conn.events.index("ROLLBACK"))
+ def test_capture_rejects_invalid_age_recipients(self):
+  with tempfile.TemporaryDirectory() as raw:
+   dest=Path(raw)/"out"; dest.mkdir()
+   for recipient in ("a"*64,"AGE1"+"q"*58,"age1"+"q"*57,"age1"+"q"*58+" ","age1"+"q"*57+"b","age1"+"q"*58+"--recipient=x"):
+    args=Namespace(destination=str(dest),service_file="unused",recipient=recipient,g034_artifact="unused",pg_dump="pg_dump",encrypt_command="age")
+    with self.assertRaisesRegex(recovery.RecoveryError,"invalid encryption recipient"),patch.object(recovery,"command_exists") as commands:
+     recovery.run_capture(args,None)
+    commands.assert_not_called()
  def test_runtime_sql_is_executed_directly_without_outer_write_transaction(self):
   text=(SCRIPTS/"g035_hosted_recovery.py").read_text(encoding="utf8")
   self.assertIn('run([psql,"service=g035-local","--set","ON_ERROR_STOP=1","--file",str(runtime)],env=env)',text)
