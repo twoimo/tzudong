@@ -160,6 +160,19 @@ class ControllerTests(unittest.TestCase):
   with patch.object(recovery.subprocess,"run",return_value=completed) as run:
    self.assertEqual("b"*40,recovery._repository_commit(ROOT))
   self.assertEqual(["git","-C",str(ROOT),"rev-parse","HEAD"],run.call_args.args[0])
+ def test_dump_argv_includes_only_application_and_recovery_control_schemas(self):
+  class Pipe:
+   def close(self): pass
+  class Process:
+   stdin=Pipe()
+   def wait(self,*unused): return 0
+  with tempfile.TemporaryDirectory() as raw,patch.object(recovery.subprocess,"Popen",side_effect=(Process(),Process())) as popen:
+   argv=recovery._dump_to_encrypted("pg_dump","age","age1"+"q"*58,"snapshot",{},Path(raw))
+  schemas=[value.removeprefix("--schema=") for value in argv if value.startswith("--schema=")]
+  self.assertEqual([*contract.APPLICATION_SCHEMAS,"supabase_migrations"],schemas)
+  self.assertEqual(1,schemas.count("supabase_migrations"))
+  self.assertNotIn("auth",schemas); self.assertNotIn("storage",schemas)
+  self.assertEqual(argv,popen.call_args_list[1].args[0])
  def test_capture_binds_readiness_inside_snapshot_connection(self):
   class Conn:
    def __init__(self): self.events=[]
@@ -184,6 +197,9 @@ class ControllerTests(unittest.TestCase):
   self.assertEqual(hashlib.sha256(recipient.encode("utf-8")).hexdigest(),result["evidence"]["recipient_fingerprint"])
   self.assertNotIn(recipient,json.dumps(result))
   self.assertLess(conn.events.index("SELECT pg_export_snapshot()"),conn.events.index("ROLLBACK"))
+  self.assertEqual(list(contract.APPLICATION_SCHEMAS),result["evidence"]["schema_scope"])
+  self.assertEqual(["supabase_migrations"],result["evidence"]["recovery_control_schema_scope"])
+  self.assertEqual(observed["ledger_pairs"],result["evidence"]["ledger_pairs"])
  def test_connect_binds_servicefile_without_global_environment_mutation(self):
   import types
   with tempfile.TemporaryDirectory() as raw:
@@ -229,10 +245,67 @@ class ControllerTests(unittest.TestCase):
     with self.assertRaisesRegex(recovery.RecoveryError,"invalid encryption recipient"),patch.object(recovery,"command_exists") as commands:
      recovery.run_capture(args,None)
     commands.assert_not_called()
+ def test_restore_verify_requires_identity_file_argument(self):
+  with contextlib.redirect_stderr(io.StringIO()),self.assertRaises(SystemExit):
+   recovery.parser().parse_args(["restore-verify","--dump","dump","--capture-receipt","capture","--service-file","service","--destination-service","g035-local","--decrypt-command","age"])
+ def test_identity_file_requires_restrictive_regular_nonsymlink_file(self):
+  with tempfile.TemporaryDirectory() as raw:
+   identity=Path(raw)/"identity"; identity.write_bytes(b"test-key-material"); identity.chmod(0o600)
+   with patch.object(recovery,"_restrictive",return_value=True): recovery._require_restrictive_regular_file(identity,"identity file")
+   with patch.object(recovery,"_restrictive",return_value=False),self.assertRaisesRegex(recovery.RecoveryError,"identity file"):
+    recovery._require_restrictive_regular_file(identity,"identity file")
+   with patch.object(Path,"is_symlink",return_value=True),self.assertRaisesRegex(recovery.RecoveryError,"identity file"):
+    recovery._require_restrictive_regular_file(identity,"identity file")
+ def test_restore_verify_uses_identity_without_receipting_or_disclosing_it(self):
+  class Conn:
+   def rollback(self): pass
+   def close(self): pass
+  observed={"ledger_pairs":[],"ledger_sha256":"1"*64,"ledger_count":0,"catalog_sha256":"2"*64}
+  with tempfile.TemporaryDirectory() as raw:
+   dump=Path(raw)/"dump.enc"; dump.write_bytes(b"ciphertext")
+   identity=Path(raw)/"offline-identity"; identity.write_bytes(b"test-key-material"); identity.chmod(0o600)
+   args=Namespace(destination_service="g035-local",capture_receipt="capture",dump=str(dump),identity_file=str(identity),decrypt_command="age",pg_restore="pg_restore",service_file=str(self.service(raw)))
+   capture={"receipt_sha256":"capture-receipt","evidence":{"dump_sha256":hashlib.sha256(b"ciphertext").hexdigest(),**observed}}
+   def execute(argv,**unused):
+    if argv[0]=="age": Path(argv[5]).write_bytes(b"plain")
+   with patch.object(recovery,"_require_prior",return_value=capture),patch.object(recovery,"command_exists",side_effect=lambda command:command),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"run",side_effect=execute) as execute,patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_fingerprints",return_value=observed):
+    result=recovery.run_restore_verify(args,None)
+  decrypt_argv=execute.call_args_list[0].args[0]
+  self.assertEqual(["age","--decrypt","--identity",str(identity),"--output",decrypt_argv[5],str(dump)],decrypt_argv)
+  self.assertNotIn(str(identity),json.dumps(result))
+  self.assertNotIn("test-key-material",json.dumps(result))
+  self.assertFalse(Path(decrypt_argv[5]).exists())
+ def test_restore_rejects_ledger_pair_mutation(self):
+  class Conn:
+   def rollback(self): pass
+   def close(self): pass
+  observed={"ledger_pairs":[("20260101000000","actual")],"ledger_sha256":"1"*64,"ledger_count":1,"catalog_sha256":"2"*64}
+  with tempfile.TemporaryDirectory() as raw:
+   dump=Path(raw)/"dump.enc"; dump.write_bytes(b"ciphertext")
+   identity=Path(raw)/"identity"; identity.write_bytes(b"test-key-material"); identity.chmod(0o600)
+   args=Namespace(destination_service="g035-local",capture_receipt="capture",dump=str(dump),identity_file=str(identity),decrypt_command="age",pg_restore="pg_restore",service_file=str(self.service(raw)))
+   capture={"receipt_sha256":"capture-receipt","evidence":{"dump_sha256":hashlib.sha256(b"ciphertext").hexdigest(),**{**observed,"ledger_pairs":[("20260101000000","mutated")]}}}
+   def execute(argv,**unused):
+    if argv[0]=="age": Path(argv[5]).write_bytes(b"plain")
+   with patch.object(recovery,"_require_prior",return_value=capture),patch.object(recovery,"command_exists",side_effect=lambda command:command),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"run",side_effect=execute),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_fingerprints",return_value=observed),self.assertRaisesRegex(recovery.RecoveryError,"restore evidence mismatch"):
+    recovery.run_restore_verify(args,None)
+ def test_decrypt_failures_are_bounded_policy_rejections(self):
+  output=io.StringIO()
+  argv=["restore-verify","--dump","dump","--capture-receipt","capture","--service-file","service","--destination-service","g035-local","--identity-file","identity","--decrypt-command","age"]
+  with patch.object(recovery,"validate_sources",return_value=object()),patch.object(recovery,"run_restore_verify",side_effect=recovery.RecoveryError("decrypt failed")),contextlib.redirect_stdout(output):
+   self.assertEqual(2,recovery.main(argv))
+  self.assertEqual("policy_rejected",json.loads(output.getvalue())["evidence"]["reason"])
+  self.assertNotIn("decrypt failed",output.getvalue())
  def test_runtime_sql_is_executed_directly_without_outer_write_transaction(self):
   text=(SCRIPTS/"g035_hosted_recovery.py").read_text(encoding="utf8")
   self.assertIn('run([psql,"service=g035-local","--set","ON_ERROR_STOP=1","--file",str(runtime)],env=env)',text)
   self.assertNotIn('runtime_script.write_text',text)
+ def test_clone_requires_the_exact_baseline_before_applying_migrations(self):
+  text=(SCRIPTS/"g035_hosted_recovery.py").read_text(encoding="utf8")
+  lock=text.index('_query_conn(conn,"SELECT pg_advisory_lock(35035)")')
+  baseline=text.index("_ledger_assert(conn,manifest,0)",lock)
+  apply=text.index("for index,entry in enumerate(manifest.migrations):",lock)
+  self.assertLess(lock,baseline); self.assertLess(baseline,apply)
  def test_self_commit_post_execution_failures_are_ambiguous(self):
   text=(SCRIPTS/"g035_hosted_recovery.py").read_text(encoding="utf8")
   protected='run([psql,"service=g035-local","--set","ON_ERROR_STOP=1","--file",str(source)],env=env)\n      _query_conn(conn,"INSERT INTO supabase_migrations.schema_migrations'
