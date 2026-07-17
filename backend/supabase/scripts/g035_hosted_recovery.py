@@ -99,7 +99,7 @@ def _restrictive(path):
   if os.name=="nt": return _windows_dacl_restrictive(path)
   return not bool(path.stat().st_mode & 0o077)
  except OSError:return False
-def _parse_local_service(source,section):
+def _parse_service_entries(source,section):
  try:
   raw=source.read_bytes(); text=raw.decode("utf8")
  except (OSError,UnicodeDecodeError) as exc: raise RecoveryError("service file unreadable") from exc
@@ -116,7 +116,11 @@ def _parse_local_service(source,section):
   key,value=(part.strip() for part in line.split("=",1))
   if not key or key in entries or key not in SERVICE_KEYS or not value or "://" in value or value.startswith(("postgres:","postgresql:")): raise RecoveryError("invalid service file")
   entries[key]=value
- if headers != 1 or section != LOCAL_SERVICE or set(entries).difference(SERVICE_KEYS): raise RecoveryError("invalid service file")
+ if headers != 1 or not entries: raise RecoveryError("invalid service file")
+ return raw,entries
+def _parse_local_service(source,section):
+ raw,entries=_parse_service_entries(source,section)
+ if section != LOCAL_SERVICE: raise RecoveryError("invalid service file")
  required={"host","port","dbname","application_name","sslmode"}
  if not required.issubset(entries) or entries["dbname"]!=LOCAL_DBNAME or LOCAL_SERVICE not in entries["application_name"] or entries["sslmode"]!="disable": raise RecoveryError("invalid local destination")
  host=entries["host"]
@@ -138,11 +142,17 @@ def require_local(service):
 def _connect(service, env):
  try:
   import psycopg
-  return psycopg.connect(f"service={service}", autocommit=False)
- except Exception as exc: raise RecoveryError("local database connection unavailable") from exc
+  servicefile=env.get("PGSERVICEFILE")
+  if not servicefile: raise RecoveryError("database connection unavailable")
+  _,entries=_parse_service_entries(Path(servicefile),service)
+  return psycopg.connect(**entries,autocommit=True)
+ except RecoveryError: raise
+ except Exception as exc: raise RecoveryError("database connection unavailable") from exc
 def _query_conn(conn,sql,params=None):
- with conn.cursor() as cur:
-  cur.execute(sql,params); return cur.fetchall()
+ try:
+  with conn.cursor() as cur:
+   cur.execute(sql,params); return cur.fetchall() if cur.description is not None else []
+ except Exception as exc: raise RecoveryError("database query unavailable") from exc
 def _fingerprints(conn):
  rows=_query_conn(conn,"SELECT version, name FROM supabase_migrations.schema_migrations ORDER BY version, name")
  pairs=[(str(v),str(n)) for v,n in rows]; raw=json.dumps(pairs,separators=(",",":"))
@@ -158,6 +168,23 @@ def _preflight_receipt(data):
  return digest({key:data[key] for key in ("catalogFingerprint","hostedLedgerFingerprint","manifestHash","repositoryCommit","sourceFingerprint")})
 def _source_fingerprint(manifest):
  return digest([entry.sha256 for entry in manifest.migrations])
+def _g034_live_fingerprints(conn,artifact):
+ try:
+  data=json.loads(Path(artifact).read_text(encoding="utf8"),object_pairs_hook=_pairs)
+  terminal=data["ledgerExpectedTerminal"]
+  if not isinstance(terminal,str) or not re.fullmatch(r"20\d{12}",terminal): raise RecoveryError("g034 artifact unreadable")
+ except (OSError,json.JSONDecodeError,RecoveryError,KeyError,TypeError) as exc: raise RecoveryError("g034 artifact unreadable") from exc
+ ledger=[str(row[0]) for row in _query_conn(conn,"SELECT version FROM supabase_migrations.schema_migrations ORDER BY version")]
+ prerequisites={"ledgerTerminalMatches":bool(ledger) and ledger[-1]==terminal and not any(version>terminal for version in ledger)}
+ relations=(("public.restaurants","public","restaurants","publicRestaurants"),("public.restaurants_backup","public","restaurants_backup","publicRestaurantsBackup"),("storage.objects","storage","objects","storageObjects"))
+ for lookup,namespace,name,key in relations:
+  prerequisites[key]=bool(_query_conn(conn,"SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_class AS class JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = class.relnamespace WHERE class.oid = pg_catalog.to_regclass(%s) AND namespace.nspname = %s AND class.relname = %s AND class.relkind = 'r')",(lookup,namespace,name))[0][0])
+ procedures=(("public.approve_submission_item(uuid,uuid,jsonb)","public","approve_submission_item","2950 2950 3802","publicApproveSubmissionItem"),("public.approve_edit_submission_item(uuid,uuid,jsonb)","public","approve_edit_submission_item","2950 2950 3802","publicApproveEditSubmissionItem"))
+ for lookup,namespace,name,input_type_oids,key in procedures:
+  prerequisites[key]=bool(_query_conn(conn,"SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_proc AS procedure JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = procedure.pronamespace WHERE procedure.oid = pg_catalog.to_regprocedure(%s) AND namespace.nspname = %s AND procedure.proname = %s AND procedure.proargtypes = %s::pg_catalog.oidvector AND procedure.prokind = 'f')",(lookup,namespace,name,input_type_oids))[0][0])
+ prerequisites["noWaitingLocks"]=int(_query_conn(conn,"SELECT count(*) FROM pg_catalog.pg_locks WHERE NOT granted")[0][0])==0
+ prerequisites["requiredRolesPresent"]=int(_query_conn(conn,"SELECT count(*) FROM pg_catalog.pg_roles WHERE rolname = ANY(%s)",(["postgres","service_role","authenticated"],))[0][0])==3
+ return {"ledger_sha256":digest(ledger),"catalog_sha256":digest(prerequisites)}
 def _g034_adapter(path, root, manifest, observed):
  try:
   data=json.loads(Path(path).read_text(encoding="utf8"),object_pairs_hook=_pairs)
@@ -165,7 +192,7 @@ def _g034_adapter(path, root, manifest, observed):
  required={"artifactVersion","blockers","catalogChecked","catalogFingerprint","cloneApplyRisks","cloneBackupRecoveryRequired","hostedLedgerFingerprint","manifestHash","preflightReceiptId","prerequisites","repositoryCommit","requiredLaterPromotionGate","safeToApply","sourceFingerprint","sourceValid","schemaVersion","ledgerExpectedTerminal","closureTerminalVersion"}
  allowed={"clone-required","clone-backup-recovery-required","catalog-prerequisite"}
  fatal_prefixes=("manifest","database-url","catalog-read","catalog-rollback")
- if not isinstance(data,dict) or set(data)!=required or data["artifactVersion"]!=2 or not isinstance(data["blockers"],list) or len(data["blockers"])!=len(set(data["blockers"])) or any(not isinstance(code,str) for code in data["blockers"]) or not set(data["blockers"]).issubset(allowed) or any(code.startswith(fatal_prefixes) for code in data["blockers"]) or data["manifestHash"]!=MANIFEST_SHA256 or data["repositoryCommit"]!=_repository_commit(root) or data["sourceFingerprint"]!=_source_fingerprint(manifest) or not data["sourceValid"] or not data["catalogChecked"] or data["safeToApply"] is not False or data["preflightReceiptId"]!=_preflight_receipt(data) or data["hostedLedgerFingerprint"]!=observed["ledger_sha256"] or data["catalogFingerprint"]!=observed["catalog_sha256"]:
+ if not isinstance(data,dict) or set(data)!=required or data["artifactVersion"]!=2 or data["ledgerExpectedTerminal"]!=manifest.ledger_terminal_version or not isinstance(data["blockers"],list) or len(data["blockers"])!=len(set(data["blockers"])) or any(not isinstance(code,str) for code in data["blockers"]) or not set(data["blockers"]).issubset(allowed) or any(code.startswith(fatal_prefixes) for code in data["blockers"]) or data["manifestHash"]!=MANIFEST_SHA256 or data["repositoryCommit"]!=_repository_commit(root) or data["sourceFingerprint"]!=_source_fingerprint(manifest) or not data["sourceValid"] or not data["catalogChecked"] or data["safeToApply"] is not False or data["preflightReceiptId"]!=_preflight_receipt(data) or data["hostedLedgerFingerprint"]!=observed["ledger_sha256"] or data["catalogFingerprint"]!=observed["catalog_sha256"]:
   raise RecoveryError("g034 capture readiness is not satisfied")
  return {"g034_preflight_receipt_id":data["preflightReceiptId"],"commit_sha256":data["repositoryCommit"],"catalog_sha256":data["catalogFingerprint"],"ledger_sha256":data["hostedLedgerFingerprint"],"source_sha256":data["sourceFingerprint"],"capture_readiness_sha256":digest({"artifact_sha256":sha256_file(Path(path)),"preflight_receipt_id":data["preflightReceiptId"],"live_catalog_sha256":observed["catalog_sha256"],"live_ledger_sha256":observed["ledger_sha256"]})}
 def _dump_to_encrypted(pg_dump,encryptor,recipient,snapshot,env,destination):
@@ -186,7 +213,7 @@ def run_capture(args,manifest):
   service=_copy_service(Path(raw),Path(args.service_file),"g035"); env=safe_environment(service); conn=_connect("g035",env)
   try:
    _query_conn(conn,"BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY"); snapshot=_query_conn(conn,"SELECT pg_export_snapshot()")[0][0]
-   observed=_fingerprints(conn); readiness=_g034_adapter(args.g034_artifact,root,manifest,observed); argv=_dump_to_encrypted(pg_dump,encryptor,args.recipient,snapshot,env,destination)
+   observed=_fingerprints(conn); readiness=_g034_adapter(args.g034_artifact,root,manifest,_g034_live_fingerprints(conn,args.g034_artifact)); argv=_dump_to_encrypted(pg_dump,encryptor,args.recipient,snapshot,env,destination)
   finally: conn.rollback(); conn.close()
  evidence={**readiness,"recipient_fingerprint":hashlib.sha256(args.recipient.encode("utf-8")).hexdigest(),"dump_sha256":sha256_file(destination/"g035-dump.enc"),"dump_bytes":(destination/"g035-dump.enc").stat().st_size,"schema_scope":list(APPLICATION_SCHEMAS),"managed_metadata_schemas":list(MANAGED_METADATA_SCHEMAS),"managed_metadata_coherence":"metadata fingerprints only; not dumped or restored","snapshot_consumer_argv":argv,**{k:v for k,v in observed.items() if k!="ledger_pairs"}}
  return receipt("capture","captured",evidence)
