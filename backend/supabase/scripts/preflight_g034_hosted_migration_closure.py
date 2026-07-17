@@ -24,14 +24,15 @@ EXPECTED_SEMANTICS = {
     "cloneBackupRecoveryRequired": True,
 }
 EXPECTED_EXCLUDED_VERSIONS = ("20260531105250", "20260612075100", "20260627150000", "20260702000200", "20260707000700", "20260713000400", "20260713002500", "20260713002600", "20260713002700")
+TRACKED_APPROVAL_SOURCE = ROOT / "backend/supabase/migrations/20260417_harden_submission_identity_duplicate_checks.sql"
+TRACKED_APPROVAL_SOURCE_SHA256 = "d3a0068674d985cb0ba52b8f3d2d0d909bc0f684ce159f9642ff25105dfc7789"
+TRACKED_APPROVAL_FUNCTIONS = (
+    ("public.approve_submission_item(uuid,uuid,jsonb)", "public", "approve_submission_item", "2950 2950 3802", "c223fadd74e35f44d0e654ad980e6111129d5810b36d7c932efdbe20b06a4ba6"),
+    ("public.approve_edit_submission_item(uuid,uuid,jsonb)", "public", "approve_edit_submission_item", "2950 2950 3802", "7209c1ba8c33a732d3fd8a4ea9e9e4dab43c1f112af2d59b2220a824f6d7cb8d"),
+)
 CATALOG_RELATIONS = (
     ("public.restaurants", "public", "restaurants"),
-    ("public.restaurants_backup", "public", "restaurants_backup"),
     ("storage.objects", "storage", "objects"),
-)
-CATALOG_PROCEDURES = (
-    ("public.approve_submission_item(uuid,uuid,jsonb)", "public", "approve_submission_item", "2950 2950 3802"),
-    ("public.approve_edit_submission_item(uuid,uuid,jsonb)", "public", "approve_edit_submission_item", "2950 2950 3802"),
 )
 PREREQUISITE_NAMES = (
     "ledgerTerminalMatches",
@@ -48,6 +49,52 @@ def fingerprint(value):
     return hashlib.sha256(
         json.dumps(value, sort_keys=True, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
+def semantic_fingerprint(definition):
+    normalized = re.sub(r"\$[A-Za-z_]*\$", "$$", definition.lower())
+    normalized = re.sub(r"\s+", " ", normalized).strip()
+    normalized = re.sub(r"\s*([(),;])\s*", r"\1", normalized)
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
+
+def tracked_approval_source_valid():
+    try:
+        source = TRACKED_APPROVAL_SOURCE.read_bytes()
+    except OSError:
+        return False
+    if hashlib.sha256(source).hexdigest() != TRACKED_APPROVAL_SOURCE_SHA256:
+        return False
+    text = source.decode("utf-8")
+    marker = "$$;"
+    for _, _, name, _, expected_hash in TRACKED_APPROVAL_FUNCTIONS:
+        prefix = f"create or replace function public.{name}"
+        try:
+            start = text.index(prefix)
+            end = text.index(marker, start) + len(marker)
+        except ValueError:
+            return False
+        if semantic_fingerprint(text[start:end]) != expected_hash:
+            return False
+    return True
+
+
+def contains_restaurants_backup(definition):
+    return bool(re.search(r"(?i)(?:public\s*\.\s*)?restaurants_backup\b", definition))
+
+
+def catalog_retirement_dependency_exists(cursor):
+    checks = (
+        "SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_proc AS procedure JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = procedure.pronamespace WHERE namespace.nspname NOT IN ('pg_catalog', 'information_schema') AND namespace.nspname NOT LIKE 'pg_toast%%' AND pg_catalog.pg_get_functiondef(procedure.oid) ~* '(^|[^[:alnum:]_])restaurants_backup([^[:alnum:]_]|$)')",
+        "SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_views AS view WHERE view.schemaname NOT IN ('pg_catalog', 'information_schema') AND view.schemaname NOT LIKE 'pg_toast%%' AND view.definition ~* '(^|[^[:alnum:]_])restaurants_backup([^[:alnum:]_]|$)')",
+        "SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_matviews AS view WHERE view.schemaname NOT IN ('pg_catalog', 'information_schema') AND view.schemaname NOT LIKE 'pg_toast%%' AND view.definition ~* '(^|[^[:alnum:]_])restaurants_backup([^[:alnum:]_]|$)')",
+        "SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_trigger AS trigger JOIN pg_catalog.pg_class AS class ON class.oid = trigger.tgrelid JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = class.relnamespace WHERE NOT trigger.tgisinternal AND namespace.nspname NOT IN ('pg_catalog', 'information_schema') AND namespace.nspname NOT LIKE 'pg_toast%%' AND pg_catalog.pg_get_triggerdef(trigger.oid) ~* '(^|[^[:alnum:]_])restaurants_backup([^[:alnum:]_]|$)')",
+        "SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_rewrite AS rule JOIN pg_catalog.pg_class AS class ON class.oid = rule.ev_class JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = class.relnamespace WHERE rule.rulename <> '_RETURN' AND namespace.nspname NOT IN ('pg_catalog', 'information_schema') AND namespace.nspname NOT LIKE 'pg_toast%%' AND pg_catalog.pg_get_ruledef(rule.oid) ~* '(^|[^[:alnum:]_])restaurants_backup([^[:alnum:]_]|$)')",
+        "SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_constraint AS constraint JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = constraint.connamespace WHERE namespace.nspname NOT IN ('pg_catalog', 'information_schema') AND namespace.nspname NOT LIKE 'pg_toast%%' AND pg_catalog.pg_get_constraintdef(constraint.oid) ~* '(^|[^[:alnum:]_])restaurants_backup([^[:alnum:]_]|$)')",
+    )
+    for query in checks:
+        cursor.execute(query)
+        if bool(cursor.fetchone()[0]):
+            return True
+    return False
 
 
 def repository_commit():
@@ -134,12 +181,16 @@ def validate_sources(manifest, report):
             fail(report, "source-hash-mismatch")
         if RISK.search(source.read_text(encoding="utf-8")):
             report["cloneApplyRisks"] += 1
-    report["sourceFingerprint"] = fingerprint(source_hashes)
+    report["sourceFingerprint"] = fingerprint(
+        {"closureMigrationHashes": source_hashes, "trackedApprovalSourceHash": TRACKED_APPROVAL_SOURCE_SHA256}
+    )
     report["schemaVersion"] = manifest["schemaVersion"]
     report["ledgerExpectedTerminal"] = manifest["ledgerTerminalVersion"]
     report["closureTerminalVersion"] = manifest["closureTerminalVersion"]
     report["requiredLaterPromotionGate"] = manifest["requiredLaterPromotionGate"]
     report["cloneBackupRecoveryRequired"] = manifest["cloneBackupRecoveryRequired"]
+    if not tracked_approval_source_valid():
+        fail(report, "tracked-approval-source-invalid")
     report["sourceValid"] = not report["blockers"]
 
 
@@ -175,25 +226,37 @@ def catalog_preflight(report):
             )
             prerequisite = {
                 "public.restaurants": "publicRestaurants",
-                "public.restaurants_backup": "publicRestaurantsBackup",
                 "storage.objects": "storageObjects",
             }[lookup]
             report["prerequisites"][prerequisite] = bool(cursor.fetchone()[0])
-        for lookup, namespace, name, input_type_oids in CATALOG_PROCEDURES:
+        for lookup, namespace, name, input_type_oids, expected_hash in TRACKED_APPROVAL_FUNCTIONS:
             cursor.execute(
-                "SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_proc AS procedure "
+                "SELECT pg_catalog.pg_get_functiondef(procedure.oid) FROM pg_catalog.pg_proc AS procedure "
                 "JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = procedure.pronamespace "
                 "WHERE procedure.oid = pg_catalog.to_regprocedure(%s) "
                 "AND namespace.nspname = %s AND procedure.proname = %s "
                 "AND procedure.proargtypes = %s::pg_catalog.oidvector "
-                "AND procedure.prokind = 'f')",
+                "AND procedure.prokind = 'f'",
                 (lookup, namespace, name, input_type_oids),
             )
+            definition = cursor.fetchone()
             prerequisite = {
                 "public.approve_submission_item(uuid,uuid,jsonb)": "publicApproveSubmissionItem",
                 "public.approve_edit_submission_item(uuid,uuid,jsonb)": "publicApproveEditSubmissionItem",
             }[lookup]
-            report["prerequisites"][prerequisite] = bool(cursor.fetchone()[0])
+            report["prerequisites"][prerequisite] = (
+                definition is not None
+                and not contains_restaurants_backup(definition[0])
+                and semantic_fingerprint(definition[0]) == expected_hash
+            )
+        cursor.execute(
+            "SELECT pg_catalog.to_regclass('public.restaurants_backup') IS NULL "
+            "AND EXISTS (SELECT 1 FROM pg_catalog.pg_namespace AS namespace WHERE namespace.nspname = 'public')"
+        )
+        table_absent = bool(cursor.fetchone()[0])
+        report["prerequisites"]["publicRestaurantsBackup"] = (
+            table_absent and not catalog_retirement_dependency_exists(cursor)
+        )
         cursor.execute("SELECT count(*) FROM pg_catalog.pg_locks WHERE NOT granted")
         report["prerequisites"]["noWaitingLocks"] = int(cursor.fetchone()[0]) == 0
         cursor.execute("SELECT count(*) FROM pg_catalog.pg_roles WHERE rolname = ANY(%s)", (["postgres", "service_role", "authenticated"],))
