@@ -5,6 +5,7 @@ import argparse, csv, hashlib, ipaddress, json, os, re, shutil, subprocess, temp
 from pathlib import Path
 from typing import Any, Sequence
 from g035_hosted_recovery_contract import APPLICATION_SCHEMAS, APPROVED_AGE_RECIPIENT_SHA256, BASELINE_PAIRS, BASELINE_SHA256, FORBIDDEN_VERSIONS, MANAGED_METADATA_SCHEMAS, MANIFEST_SHA256, REMEDIATION_AUTHORIZATION_SCHEMA, REMEDIATION_PUBLIC_KEY_PEM, REMEDIATION_PUBLIC_KEY_SHA256, SELF_COMMIT_VERSIONS, ContractError, Manifest, ledger_prefix, repository_root, sha256_file, validate_sources
+import preflight_g034_hosted_migration_closure as g034_preflight
 TIMEOUT_SECONDS=900; RECEIPT_SCHEMA="g035-local-recovery-receipt-v4"; HEX=re.compile(r"^[a-f0-9]{64}$"); AGE_RECIPIENT=re.compile(r"^age1[ac-hj-np-z02-9]{58}$"); SNAPSHOT=re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"); LOCAL_SERVICE="g035-local"; LOCAL_DBNAME="g035_local"; LOCAL_HOSTS=frozenset({"127.0.0.1","::1"}); SERVICE_KEYS={"host","port","dbname","application_name","sslmode","user","password","connect_timeout"}; RECOVERY_CONTROL_SCHEMAS=("supabase_migrations",); DUMP_SCHEMAS=APPLICATION_SCHEMAS+RECOVERY_CONTROL_SCHEMAS+MANAGED_METADATA_SCHEMAS; MANAGED_TABLE_DATA_EXCLUSIONS=tuple(f"--exclude-table-data={schema}.*" for schema in MANAGED_METADATA_SCHEMAS); RECOVERY_EXTENSIONS=(("pg_trgm","extensions"),("uuid-ossp","extensions"),("btree_gin","extensions"),("vector","public"),("pgcrypto","extensions")); COMPATIBILITY_HOOKS={"20260627080000":("DROP POLICY IF EXISTS documents_select_own ON public.documents;","DROP POLICY IF EXISTS documents_insert_own ON public.documents;","DROP POLICY IF EXISTS documents_update_own ON public.documents;","DROP POLICY IF EXISTS documents_delete_own ON public.documents;")}; VECTOR_EXTENSION_RELOCATION_HOOK_VERSION="20260627080000"; VECTOR_EXTENSION_RELOCATION_HOOK=("SELECT namespace.nspname FROM pg_catalog.pg_extension AS extension JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid=extension.extnamespace WHERE extension.extname='vector'","ALTER EXTENSION vector SET SCHEMA extensions","SELECT namespace.nspname FROM pg_catalog.pg_extension AS extension JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid=extension.extnamespace WHERE extension.extname='vector'","SELECT 1 FROM pg_catalog.pg_extension AS extension JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid=extension.extnamespace WHERE extension.extname='vector' AND namespace.nspname='public'"); LOCAL_REMEDIATION_SCHEMA="g035_recovery_control"; SHORT_URL_SELECTION_SPEC="row_number() over (partition by target_url order by created_at nulls last, id)"; AUTH_USER_REFERENCE_COLUMNS=(("public","ad_banners","created_by"),("public","admin_restaurant_map_overlays","created_by_admin_id"),("public","admin_restaurant_map_overlays","updated_by_admin_id"),("public","admin_user_preferences","user_id"),("public","announcements","created_by"),("public","documents","user_id"),("public","notifications","user_id"),("public","ocr_logs","user_id"),("public","profiles","user_id"),("public","restaurant_requests","user_id"),("public","restaurant_submissions","resolved_by_admin_id"),("public","restaurant_submissions","user_id"),("public","review_likes","user_id"),("public","reviews","edited_by_admin_id"),("public","reviews","user_id"),("public","search_logs","user_id"),("public","user_account_status","user_id"),("public","user_bookmarks","user_id"),("public","user_roles","user_id"),("public","user_stats","user_id"))
 SHORT_URLS_CATALOG=(
  {"name":"id","type":"uuid","nullable":"NO","position":1,"character_maximum_length":None,"column_default":"uuid_generate_v4()","is_generated":"NEVER","is_identity":"NO","identity_generation":None},
@@ -37,6 +38,18 @@ def _managed_metadata_schemas_equal(expected,observed):
  return all(isinstance(schema,str) for schema in (*expected,*observed)) and tuple(expected)==tuple(observed)
 def canonical_bytes(value): return json.dumps(value,sort_keys=True,separators=(",",":"),ensure_ascii=True).encode("ascii")
 def digest(value): return hashlib.sha256(canonical_bytes(value)).hexdigest()
+def _approval_contract_descriptor(contract=None):
+ contract=g034_preflight.approval_body_contract() if contract is None else contract
+ if not isinstance(contract,dict) or not contract or any(not isinstance(identity,str) or not isinstance(expected,dict) for identity,expected in contract.items()): raise RecoveryError("approval contract source invalid")
+ return {"approval_contract_sha256":digest(contract),"approval_contract_identities":list(contract),"approval_contract_valid":True}
+def _approval_catalog_evidence(conn,contract=None):
+ try:
+  contract=g034_preflight.approval_body_contract() if contract is None else contract
+  descriptor=_approval_contract_descriptor(contract)
+  with conn.cursor() as cursor: results=g034_preflight.approval_catalog_contract(cursor,contract)
+ except Exception as exc: raise RecoveryError("approval contract validation failed") from exc
+ if not isinstance(results,dict) or tuple(results)!=tuple(contract) or any(value is not True for value in results.values()): raise RecoveryError("approval contract validation failed")
+ return descriptor
 def receipt(mode,status,evidence,prior=None):
  item={"schema":RECEIPT_SCHEMA,"mode":mode,"status":status,"manifest_sha256":MANIFEST_SHA256,"prior_receipt_sha256":prior or [],"evidence":evidence}; item["receipt_sha256"]=digest(item); return item
 def emit(value): print(canonical_bytes(value).decode("ascii"))
@@ -494,6 +507,7 @@ def apply_manifest(args,manifest):
      source=repository_root(Path(__file__).resolve())/entry.path
      if sha256_file(source)!=entry.sha256: raise RecoveryError("migration source hash mismatch")
    _ledger_assert(conn,manifest,len(manifest.migrations)); runtime=repository_root(Path(__file__).resolve())/"backend/supabase/tests/g035_hosted_clone_runtime.sql"
+   approval_evidence=_approval_catalog_evidence(conn)
    run([psql,"service=g035-local","--set","ON_ERROR_STOP=1","--file",str(runtime)],env=env)
    observed=_fingerprints(conn)
   except Exception as exc:
@@ -506,16 +520,16 @@ def apply_manifest(args,manifest):
     if self_commit_attempted: raise RecoveryError("self_commit_ambiguous") from exc
     raise
    finally: conn.close()
- return receipt("clone-apply","applied",{"clone_state":"transformed_local_clone_not_exact_restore","hosted_mutations":0,"baseline_pairs_sha256":BASELINE_SHA256,"initial_ledger_state":initial_state,"migrations_applied_in_invocation":len(manifest.migrations) if initial_state=="baseline" else 0,"migrations_already_present":len(manifest.migrations) if initial_state=="full" else 0,"short_url_remediation_verify_receipt_sha256":verified["receipt_sha256"] if initial_state=="baseline" else None,"compatibility_hook_owner_function_count":compatibility_hook_owner_function_count,"compatibility_hook_obsolete_function_count":compatibility_hook_obsolete_function_count,"compatibility_hook_public_function_count":len(compatibility_hook_public_function_signatures),"compatibility_hook_public_function_sha256":digest(compatibility_hook_public_function_signatures),"compatibility_hook_sha256":digest((COMPATIBILITY_HOOKS,VECTOR_EXTENSION_RELOCATION_HOOK_VERSION,VECTOR_EXTENSION_RELOCATION_HOOK,OBSOLETE_NOTIFICATION_OVERLOAD_HOOK_VERSION,OBSOLETE_NOTIFICATION_OVERLOAD,CANONICAL_NOTIFICATION_FUNCTION,PUBLIC_FUNCTION_OWNERS_HOOK_VERSION,PUBLIC_FUNCTION_OWNERS_SQL,CROSS_SCHEMA_OWNER_HOOK_VERSION,CROSS_SCHEMA_OWNER_FUNCTIONS)),**{k:v for k,v in observed.items() if k!="ledger_pairs"}},[prior["receipt_sha256"]])
+ return receipt("clone-apply","applied",{"clone_state":"transformed_local_clone_not_exact_restore","hosted_mutations":0,"baseline_pairs_sha256":BASELINE_SHA256,"initial_ledger_state":initial_state,"migrations_applied_in_invocation":len(manifest.migrations) if initial_state=="baseline" else 0,"migrations_already_present":len(manifest.migrations) if initial_state=="full" else 0,"short_url_remediation_verify_receipt_sha256":verified["receipt_sha256"] if initial_state=="baseline" else None,"compatibility_hook_owner_function_count":compatibility_hook_owner_function_count,"compatibility_hook_obsolete_function_count":compatibility_hook_obsolete_function_count,"compatibility_hook_public_function_count":len(compatibility_hook_public_function_signatures),"compatibility_hook_public_function_sha256":digest(compatibility_hook_public_function_signatures),"compatibility_hook_sha256":digest((COMPATIBILITY_HOOKS,VECTOR_EXTENSION_RELOCATION_HOOK_VERSION,VECTOR_EXTENSION_RELOCATION_HOOK,OBSOLETE_NOTIFICATION_OVERLOAD_HOOK_VERSION,OBSOLETE_NOTIFICATION_OVERLOAD,CANONICAL_NOTIFICATION_FUNCTION,PUBLIC_FUNCTION_OWNERS_HOOK_VERSION,PUBLIC_FUNCTION_OWNERS_SQL,CROSS_SCHEMA_OWNER_HOOK_VERSION,CROSS_SCHEMA_OWNER_FUNCTIONS)),**approval_evidence,**{k:v for k,v in observed.items() if k!="ledger_pairs"}},[prior["receipt_sha256"]])
 def run_postflight(args,manifest):
- require_local(args.service); applied=_require_prior(args.clone_receipt,"clone-apply"); evidence=applied.get("evidence")
- required={"clone_state":"transformed_local_clone_not_exact_restore","hosted_mutations":0,"baseline_pairs_sha256":BASELINE_SHA256}
+ require_local(args.service); applied=_require_prior(args.clone_receipt,"clone-apply"); evidence=applied.get("evidence"); approval_descriptor=_approval_contract_descriptor()
+ required={"clone_state":"transformed_local_clone_not_exact_restore","hosted_mutations":0,"baseline_pairs_sha256":BASELINE_SHA256,**approval_descriptor}
  if not isinstance(evidence,dict) or any(evidence.get(key)!=value for key,value in required.items()) or len(applied.get("prior_receipt_sha256",()))!=1: raise RecoveryError("clone receipt evidence mismatch")
  psql=command_exists(args.psql)
  with tempfile.TemporaryDirectory(prefix="g035-postflight-") as raw:
   service=_copy_local_service(Path(raw),Path(args.service_file),"g035-local"); env=safe_environment(service); conn=_connect("g035-local",env)
   try:
-   _query_conn(conn,"BEGIN READ ONLY"); observed=_fingerprints(conn)
+   _query_conn(conn,"BEGIN READ ONLY"); observed=_fingerprints(conn); approval_evidence=_approval_catalog_evidence(conn)
    runtime=repository_root(Path(__file__).resolve())/"backend/supabase/tests/g035_hosted_clone_runtime.sql"
    run([psql,"service=g035-local","--set","ON_ERROR_STOP=1","--file",str(runtime)],env=env)
   finally: conn.rollback(); conn.close()
@@ -523,7 +537,7 @@ def run_postflight(args,manifest):
  for key in ("ledger_sha256","ledger_count","restorable_catalog_sha256","managed_catalog_sha256"):
   if evidence.get(key)!=observed.get(key): raise RecoveryError("clone receipt evidence mismatch")
  if not _managed_metadata_schemas_equal(evidence.get("managed_metadata_schemas_present"),observed.get("managed_metadata_schemas_present")): raise RecoveryError("clone receipt evidence mismatch")
- return receipt("local-postflight","validated",{k:v for k,v in observed.items() if k!="ledger_pairs"},[applied["receipt_sha256"]])
+ return receipt("local-postflight","validated",{**approval_evidence,**{k:v for k,v in observed.items() if k!="ledger_pairs"}},[applied["receipt_sha256"]])
 def parser():
  p=argparse.ArgumentParser(); sub=p.add_subparsers(dest="mode",required=True); sub.add_parser("validate")
  c=sub.add_parser("capture"); c.add_argument("--destination",required=True); c.add_argument("--service-file",required=True); c.add_argument("--recipient",required=True); c.add_argument("--g034-artifact",required=True); c.add_argument("--pg-dump",default="pg_dump"); c.add_argument("--encrypt-command",required=True)

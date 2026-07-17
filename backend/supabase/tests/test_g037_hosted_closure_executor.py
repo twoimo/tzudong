@@ -1,12 +1,13 @@
 """G037 fail-closed controller contracts; no hosted connection is created here."""
 from __future__ import annotations
-import json, subprocess, sys, tempfile, time, unittest
+import hashlib, json, re, subprocess, sys, tempfile, time, unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).parents[1]/"scripts"))
 import g037_hosted_closure_contract as c
 import g037_hosted_closure_executor as e
+import preflight_g034_hosted_migration_closure as g034
 
 class G037ExecutorTests(unittest.TestCase):
  def test_duplicate_keys_and_pinned_manifest(self):
@@ -18,6 +19,39 @@ class G037ExecutorTests(unittest.TestCase):
  def test_only_exact_self_wrappers_are_normalized(self):
   self.assertEqual(e.source_sql.__name__,"source_sql")
   self.assertEqual(e.SELF_WRAPPING,("20260712000400","20260713002400"))
+ def test_terminal_readback_uses_g034_pinned_prosrc_contract(self):
+  sql_path=Path(__file__).with_name("g037_hosted_terminal_readback.sql")
+  sql=sql_path.read_text(encoding="utf-8")
+  values=re.findall(r"\(\s*'(public\.approve_(?:edit_)?submission_item\(uuid,uuid,jsonb\))'\s*,\s*'([0-9a-f]{64})'\s*,\s*ARRAY\[([^\]]+)\]::text\[\]\s*\)",sql,re.S)
+  parsed={signature:{"body_hash":body_hash,"argnames":tuple(re.findall(r"'([^']+)'",argnames))} for signature,body_hash,argnames in values}
+  expected=g034.approval_body_contract()
+  self.assertEqual(parsed,{"public.approve_submission_item(uuid,uuid,jsonb)":{"body_hash":expected["public.approve_submission_item(uuid,uuid,jsonb)"]["body_hash"],"argnames":expected["public.approve_submission_item(uuid,uuid,jsonb)"]["argnames"]},"public.approve_edit_submission_item(uuid,uuid,jsonb)":{"body_hash":expected["public.approve_edit_submission_item(uuid,uuid,jsonb)"]["body_hash"],"argnames":expected["public.approve_edit_submission_item(uuid,uuid,jsonb)"]["argnames"]}})
+  catalog_match=re.search(r"\) = \(\s*'([^']+)'::\"char\",\s*'([^']+)'::name,\s*(true|false),\s*ARRAY\[([^\]]*)\]::text\[\],\s*(true|false),\s*(\d+)::oid,\s*ARRAY\[([^\]]*)\]::oid\[\],\s*ARRAY\[([^\]]*)\]::\"char\"\[\],\s*argnames\s*\)",sql,re.S)
+  self.assertIsNotNone(catalog_match)
+  prokind,language,prosecdef,proconfig,proretset,prorettype,allargtypes,argmodes=catalog_match.groups()
+  parsed_attributes=(prokind,language,prosecdef=="true",tuple(re.findall(r"'([^']+)'",proconfig)),proretset=="true",int(prorettype),tuple(int(value) for value in allargtypes.split(",") if value.strip()),tuple(re.findall(r"'([^']+)'",argmodes)))
+  self.assertEqual(parsed_attributes,g034.APPROVAL_CATALOG_ATTRIBUTES)
+  self.assertIn("procedure.prosrc",sql)
+  self.assertIn("pg_catalog.btrim(pg_catalog.regexp_replace(pg_catalog.lower(prosrc), '\\s+', ' ', 'g'))",sql)
+  self.assertNotIn("pg_get_functiondef(procedure.oid)",sql)
+  self.assertNotIn("regexp_match(",sql)
+ def test_terminal_readback_source_and_sql_literal_drift_are_rejected(self):
+  sql_path=Path(__file__).with_name("g037_hosted_terminal_readback.sql")
+  sql=sql_path.read_text(encoding="utf-8")
+  expected=g034.approval_body_contract()
+  signature="public.approve_submission_item(uuid,uuid,jsonb)"
+  self.assertIn(expected[signature]["body_hash"],sql)
+  self.assertNotIn(expected[signature]["body_hash"],sql.replace(expected[signature]["body_hash"],"0"*64,1))
+  mutated_sql=sql.replace("'p_item_id'","'p_forged_item_id'",1)
+  value_pattern=r"\(\s*'(public\.approve_(?:edit_)?submission_item\(uuid,uuid,jsonb\))'\s*,\s*'([0-9a-f]{64})'\s*,\s*ARRAY\[([^\]]+)\]::text\[\]\s*\)"
+  self.assertNotEqual(re.findall(value_pattern,sql,re.S),re.findall(value_pattern,mutated_sql,re.S))
+  with tempfile.TemporaryDirectory() as raw:
+   source_path=Path(raw)/"approval.sql"
+   source=g034.TRACKED_APPROVAL_SOURCE.read_text(encoding="utf-8")
+   source_path.write_text(source.replace("p_item_id uuid","p_forged_item_id uuid",1),encoding="utf-8")
+   with patch.object(g034,"TRACKED_APPROVAL_SOURCE_SHA256",hashlib.sha256(source_path.read_bytes()).hexdigest()):
+    with self.assertRaisesRegex(ValueError,"tracked-approval-source-fragment"):
+     g034.approval_body_contract(source_path)
  def test_receipts_have_no_raw_sensitive_values(self):
   value=e.receipt("validate","denied",{"sql":"select secret","database_url":"postgres://x","subject":"person","commit_sha256":"a"*40})
   text=json.dumps(value); self.assertEqual(value["schema"],"g037-hosted-closure-receipt-v3"); self.assertNotIn("select secret",text); self.assertNotIn("postgres",text); self.assertNotIn("person",text)
@@ -36,7 +70,7 @@ class G037ExecutorTests(unittest.TestCase):
    def fetchall(self):
     if "to_regclass" in self.sql: return [(self.table_absent,)]
     return [(self.referenced,)]
-  with patch.object(e,"TRACKED_APPROVAL_FUNCTIONS",()):
+  with patch.object(e,"approval_body_contract",return_value={}),patch.object(e,"approval_catalog_contract",return_value={}):
    e.retirement_gate(Cursor())
    with self.assertRaisesRegex(e.ClosureError,"retirement gate failed"): e.retirement_gate(Cursor(table_absent=False))
    with self.assertRaisesRegex(e.ClosureError,"retirement gate failed"): e.retirement_gate(Cursor(referenced=True))
@@ -51,10 +85,40 @@ class G037ExecutorTests(unittest.TestCase):
     if "to_regclass" in self.sql: return [(True,)]
     return [(self.referenced and "pg_get_functiondef" in self.sql,)]
   for kind in ("function","procedure"):
-   with self.subTest(kind=kind),patch.object(e,"TRACKED_APPROVAL_FUNCTIONS",()):
+   with patch.object(e,"approval_body_contract",return_value={}),patch.object(e,"approval_catalog_contract",return_value={}):
     with self.assertRaisesRegex(e.ClosureError,"retirement gate failed"): e.retirement_gate(Cursor(referenced=True))
-  with patch.object(e,"TRACKED_APPROVAL_FUNCTIONS",()):
+  with patch.object(e,"approval_body_contract",return_value={}),patch.object(e,"approval_catalog_contract",return_value={}):
    e.retirement_gate(Cursor())
+ def test_source_authenticated_approval_drift_rejects_baseline_and_terminal(self):
+  class Cursor:
+   description=object()
+   def __init__(self,rows,issue):
+    self.rows=rows; self.issue=issue; self.sql=""
+   def execute(self,sql,params=()): self.sql=sql
+   def fetchall(self):
+    if "schema_migrations" in self.sql: return self.rows
+    if "to_regclass" in self.sql: return [(True,)]
+    if "procedure.proallargtypes" not in self.sql: return [(False,)]
+    expected=next(iter(contract.values()))
+    body=g034.extract_dollar_quoted_body(g034.TRACKED_APPROVAL_SOURCE.read_text(encoding="utf-8").split("create or replace function public.approve_submission_item",1)[1].split("$$;",1)[0]+"$$")
+    definition=f"CREATE OR REPLACE FUNCTION public.approve_submission_item(uuid, uuid, jsonb) AS $function${body}$function$;"
+    attributes=list(g034.APPROVAL_CATALOG_ATTRIBUTES+(expected["argnames"],))
+    if self.issue=="body": definition=definition.replace("v_is_admin boolean","v_is_admin integer",1)
+    else: attributes[{"prokind":0,"language":1,"prosecdef":2,"proconfig":3,"proretset":4,"prorettype":5,"proallargtypes":6,"proargmodes":7,"proargnames":8}[self.issue]]={"prokind":"p","language":"sql","prosecdef":False,"proconfig":("search_path=private",),"proretset":False,"prorettype":25,"proallargtypes":(2950,),"proargmodes":("i",),"proargnames":("wrong",)}[self.issue]
+    return [(definition,*attributes)]
+  manifest=c.load_manifest(Path(__file__).parents[3])
+  vectors={item.version:(f"vector-{item.version}",) for item in manifest.migrations}
+  baseline=tuple((version,name,("baseline",)) for version,name in c.BASELINE_PAIRS)
+  terminal=baseline+tuple((item.version,item.name,vectors[item.version]) for item in manifest.migrations)
+  contract={"public.approve_submission_item(uuid,uuid,jsonb)":g034.approval_body_contract()["public.approve_submission_item(uuid,uuid,jsonb)"]}
+  drifts=("body","prokind","language","prosecdef","proconfig","proretset","prorettype","proallargtypes","proargmodes","proargnames")
+  for drift in drifts:
+   for phase,rows in (("baseline",baseline),("terminal",terminal)):
+    cursor=Cursor(rows,drift)
+    with self.subTest(drift=drift,phase=phase),patch.object(e,"approval_body_contract",return_value=contract):
+     with self.assertRaisesRegex(e.ClosureError,"approval contract drift"):
+      if phase=="baseline": e.catalog(cursor,manifest,terminal=False)
+      else: e._terminal_assert(cursor,manifest,vectors)
  def test_parser_port_emits_pinned_upstream_identity_for_real_vectors(self):
   parser=Path(__file__).parents[1]/"scripts/g037_supabase_statement_vector.mjs"
   root=Path(__file__).parents[3]; manifest=c.load_manifest(root)
