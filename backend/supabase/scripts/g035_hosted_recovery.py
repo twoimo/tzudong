@@ -5,7 +5,7 @@ import argparse, csv, hashlib, json, os, re, shutil, subprocess, tempfile
 from pathlib import Path
 from typing import Any, Sequence
 from g035_hosted_recovery_contract import APPLICATION_SCHEMAS, BASELINE_PAIRS, BASELINE_SHA256, FORBIDDEN_VERSIONS, MANAGED_METADATA_SCHEMAS, MANIFEST_SHA256, SELF_COMMIT_VERSIONS, ContractError, Manifest, ledger_prefix, repository_root, sha256_file, validate_sources
-TIMEOUT_SECONDS=900; RECEIPT_SCHEMA="g035-local-recovery-receipt-v3"; HEX=re.compile(r"^[a-f0-9]{64}$"); AGE_RECIPIENT=re.compile(r"^age1[ac-hj-np-z02-9]{58}$"); ID=re.compile(r"^[A-Za-z0-9._:-]{1,128}$"); LOCAL_SERVICE="g035-local"; LOCAL_DBNAME="g035_local"; LOCAL_HOSTS={"localhost","127.0.0.1","::1"}; SERVICE_KEYS={"host","port","dbname","application_name","sslmode","user","password","connect_timeout"}; RECOVERY_CONTROL_SCHEMAS=("supabase_migrations",); DUMP_SCHEMAS=APPLICATION_SCHEMAS+RECOVERY_CONTROL_SCHEMAS
+TIMEOUT_SECONDS=900; RECEIPT_SCHEMA="g035-local-recovery-receipt-v3"; HEX=re.compile(r"^[a-f0-9]{64}$"); AGE_RECIPIENT=re.compile(r"^age1[ac-hj-np-z02-9]{58}$"); ID=re.compile(r"^[A-Za-z0-9._:-]{1,128}$"); SNAPSHOT=re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"); LOCAL_SERVICE="g035-local"; LOCAL_DBNAME="g035_local"; LOCAL_HOSTS={"localhost","127.0.0.1","::1"}; SERVICE_KEYS={"host","port","dbname","application_name","sslmode","user","password","connect_timeout"}; RECOVERY_CONTROL_SCHEMAS=("supabase_migrations",); DUMP_SCHEMAS=APPLICATION_SCHEMAS+RECOVERY_CONTROL_SCHEMAS; RECOVERY_EXTENSIONS=(("vector","extensions"),("pgcrypto","extensions"))
 class RecoveryError(RuntimeError): pass
 def _pairs(pairs):
  result={}
@@ -198,7 +198,8 @@ def _g034_adapter(path, root, manifest, observed):
   raise RecoveryError("g034 capture readiness is not satisfied")
  return {"g034_preflight_receipt_id":data["preflightReceiptId"],"commit_sha256":data["repositoryCommit"],"catalog_sha256":data["catalogFingerprint"],"ledger_sha256":data["hostedLedgerFingerprint"],"source_sha256":data["sourceFingerprint"],"capture_readiness_sha256":digest({"artifact_sha256":sha256_file(Path(path)),"preflight_receipt_id":data["preflightReceiptId"],"live_catalog_sha256":observed["catalog_sha256"],"live_ledger_sha256":observed["ledger_sha256"]})}
 def _dump_to_encrypted(pg_dump,encryptor,recipient,snapshot,env,destination):
- output=destination/"g035-dump.enc"; argv=[pg_dump,"service=g035","--format=custom","--snapshot="+snapshot,"--blobs",*["--schema="+schema for schema in DUMP_SCHEMAS]]
+ if not isinstance(snapshot,str) or not SNAPSHOT.fullmatch(snapshot): raise RecoveryError("invalid snapshot")
+ output=destination/"g035-dump.enc"; argv=[pg_dump,"--format=custom","--snapshot="+snapshot,"--blobs",*["--schema="+schema for schema in DUMP_SCHEMAS],*["--extension="+name for name,_ in RECOVERY_EXTENSIONS],"--dbname=service=g035"]
  try:
   with output.open("xb") as sink:
    crypt=subprocess.Popen([encryptor,"--recipient",recipient],stdin=subprocess.PIPE,stdout=sink,stderr=subprocess.PIPE,env=safe_environment(Path("."),crypto=True)); dump=subprocess.Popen(argv,stdin=subprocess.DEVNULL,stdout=crypt.stdin,stderr=subprocess.PIPE,env=env); crypt.stdin.close()
@@ -217,15 +218,20 @@ def run_capture(args,manifest):
    _query_conn(conn,"BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY"); snapshot=_query_conn(conn,"SELECT pg_export_snapshot()")[0][0]
    observed=_fingerprints(conn); readiness=_g034_adapter(args.g034_artifact,root,manifest,_g034_live_fingerprints(conn,args.g034_artifact)); argv=_dump_to_encrypted(pg_dump,encryptor,args.recipient,snapshot,env,destination)
   finally: conn.rollback(); conn.close()
- evidence={**readiness,"recipient_fingerprint":hashlib.sha256(args.recipient.encode("utf-8")).hexdigest(),"dump_sha256":sha256_file(destination/"g035-dump.enc"),"dump_bytes":(destination/"g035-dump.enc").stat().st_size,"schema_scope":list(APPLICATION_SCHEMAS),"recovery_control_schema_scope":list(RECOVERY_CONTROL_SCHEMAS),"managed_metadata_schemas":list(MANAGED_METADATA_SCHEMAS),"managed_metadata_coherence":"metadata fingerprints only; not dumped or restored","snapshot_consumer_argv":argv,**observed}
+ evidence={**readiness,"recipient_fingerprint":hashlib.sha256(args.recipient.encode("utf-8")).hexdigest(),"dump_sha256":sha256_file(destination/"g035-dump.enc"),"dump_bytes":(destination/"g035-dump.enc").stat().st_size,"schema_scope":list(APPLICATION_SCHEMAS),"recovery_control_schema_scope":list(RECOVERY_CONTROL_SCHEMAS),"extension_scope":[{"name":name,"schema":schema} for name,schema in RECOVERY_EXTENSIONS],"managed_metadata_schemas":list(MANAGED_METADATA_SCHEMAS),"managed_metadata_coherence":"metadata fingerprints only; not dumped or restored","snapshot_consumer_argv":argv,**observed}
  return receipt("capture","captured",evidence)
 def run_restore_verify(args,manifest):
  require_local(args.destination_service); capture=_require_prior(args.capture_receipt,"capture"); dump=Path(args.dump); identity=Path(args.identity_file)
+ if capture["evidence"].get("extension_scope")!=[{"name":name,"schema":schema} for name,schema in RECOVERY_EXTENSIONS]: raise RecoveryError("capture extension scope mismatch")
  if dump.is_symlink() or not dump.is_file() or sha256_file(dump)!=capture["evidence"].get("dump_sha256"): raise RecoveryError("ciphertext input mismatch")
  _require_restrictive_regular_file(identity,"identity file")
  decryptor,restore=command_exists(args.decrypt_command),command_exists(args.pg_restore)
  with tempfile.TemporaryDirectory(prefix="g035-restore-") as raw:
-  service=_copy_local_service(Path(raw),Path(args.service_file),"g035-local"); env=safe_environment(service); plain=Path(raw)/"database.pgdump"; run([decryptor,"--decrypt","--identity",str(identity),"--output",str(plain),str(dump)],env=safe_environment(service,crypto=True)); run([restore,"--dbname=service=g035-local",str(plain)],env=env)
+  service=_copy_local_service(Path(raw),Path(args.service_file),"g035-local"); env=safe_environment(service); plain=Path(raw)/"database.pgdump"; run([decryptor,"--decrypt","--identity",str(identity),"--output",str(plain),str(dump)],env=safe_environment(service,crypto=True))
+  conn=_connect("g035-local",env)
+  try: _query_conn(conn,"DROP SCHEMA public CASCADE")
+  finally: conn.rollback(); conn.close()
+  run([restore,"--dbname=service=g035-local",str(plain)],env=env)
   conn=_connect("g035-local",env)
   try: observed=_fingerprints(conn)
   finally: conn.rollback(); conn.close()
