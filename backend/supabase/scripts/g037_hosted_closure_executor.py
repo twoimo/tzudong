@@ -180,17 +180,19 @@ def run(args):
     if args.mode=="validate": return receipt(args.mode,"valid",base)
     conn=connection(args.db_env)
     try:
+        cur=conn.cursor()
         if args.mode=="runtime-probe":
-            probe=runtime_probe(conn.cursor()); conn.rollback()
+            probe=runtime_probe(cur)
             return receipt(args.mode,"authorization-denied",{**base,"runtime_authorization_denied":probe})
-        rows,cat=catalog(conn,manifest,terminal=args.mode in {"readback","reconciliation-readback"}); base.update(catalog_sha256=cat,ledger_sha256=digest(rows),ledger_count=len(rows),retirement_gate="passed")
+        rows,cat=catalog(cur,manifest,terminal=args.mode in {"readback","reconciliation-readback"}); base.update(catalog_sha256=cat,ledger_sha256=digest(rows),ledger_count=len(rows),retirement_gate="passed")
         if args.mode in {"readback","reconciliation-readback"}:
-            terminal=terminal_readback_assert(conn.cursor(),root,manifest)
+            terminal=terminal_readback_assert(cur,root,manifest)
             base.update(catalog_sha256=terminal["catalog_root"],acl_sha256=terminal["acl_root"],ledger_sha256=terminal["ledger_root"])
-        conn.rollback()
         if args.mode in {"preflight","readback","reconciliation-readback"}: return receipt(args.mode,"ready" if args.mode=="preflight" else "readback",base)
         raise ClosureError("unsupported non-controller mode")
-    finally: conn.close()
+    finally:
+        conn.rollback()
+        conn.close()
 def main(argv=None):
     p=argparse.ArgumentParser(); p.add_argument("mode",choices=sorted(MODES)); p.add_argument("--db-env",default="SUPABASE_DB_URL")
     a=p.parse_args(argv)
