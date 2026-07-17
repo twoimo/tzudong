@@ -5,7 +5,7 @@ import argparse, csv, hashlib, json, os, re, shutil, subprocess, tempfile
 from pathlib import Path
 from typing import Any, Sequence
 from g035_hosted_recovery_contract import APPLICATION_SCHEMAS, BASELINE_PAIRS, BASELINE_SHA256, FORBIDDEN_VERSIONS, MANAGED_METADATA_SCHEMAS, MANIFEST_SHA256, SELF_COMMIT_VERSIONS, ContractError, Manifest, ledger_prefix, repository_root, sha256_file, validate_sources
-TIMEOUT_SECONDS=900; RECEIPT_SCHEMA="g035-local-recovery-receipt-v3"; HEX=re.compile(r"^[a-f0-9]{64}$"); AGE_RECIPIENT=re.compile(r"^age1[ac-hj-np-z02-9]{58}$"); ID=re.compile(r"^[A-Za-z0-9._:-]{1,128}$"); SNAPSHOT=re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"); LOCAL_SERVICE="g035-local"; LOCAL_DBNAME="g035_local"; LOCAL_HOSTS={"localhost","127.0.0.1","::1"}; SERVICE_KEYS={"host","port","dbname","application_name","sslmode","user","password","connect_timeout"}; RECOVERY_CONTROL_SCHEMAS=("supabase_migrations",); DUMP_SCHEMAS=APPLICATION_SCHEMAS+RECOVERY_CONTROL_SCHEMAS; RECOVERY_EXTENSIONS=(("pg_trgm","extensions"),("uuid-ossp","extensions"),("btree_gin","extensions"),("vector","extensions"),("pgcrypto","extensions")); AUTH_USER_REFERENCE_COLUMNS=(("public","ad_banners","created_by"),("public","admin_restaurant_map_overlays","created_by_admin_id"),("public","admin_restaurant_map_overlays","updated_by_admin_id"),("public","admin_user_preferences","user_id"),("public","announcements","created_by"),("public","documents","user_id"),("public","notifications","user_id"),("public","ocr_logs","user_id"),("public","profiles","user_id"),("public","restaurant_requests","user_id"),("public","restaurant_submissions","resolved_by_admin_id"),("public","restaurant_submissions","user_id"),("public","review_likes","user_id"),("public","reviews","edited_by_admin_id"),("public","reviews","user_id"),("public","search_logs","user_id"),("public","user_account_status","user_id"),("public","user_bookmarks","user_id"),("public","user_roles","user_id"),("public","user_stats","user_id"))
+TIMEOUT_SECONDS=900; RECEIPT_SCHEMA="g035-local-recovery-receipt-v4"; HEX=re.compile(r"^[a-f0-9]{64}$"); AGE_RECIPIENT=re.compile(r"^age1[ac-hj-np-z02-9]{58}$"); ID=re.compile(r"^[A-Za-z0-9._:-]{1,128}$"); SNAPSHOT=re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"); LOCAL_SERVICE="g035-local"; LOCAL_DBNAME="g035_local"; LOCAL_HOSTS={"localhost","127.0.0.1","::1"}; SERVICE_KEYS={"host","port","dbname","application_name","sslmode","user","password","connect_timeout"}; RECOVERY_CONTROL_SCHEMAS=("supabase_migrations",); DUMP_SCHEMAS=APPLICATION_SCHEMAS+RECOVERY_CONTROL_SCHEMAS+MANAGED_METADATA_SCHEMAS; MANAGED_TABLE_DATA_EXCLUSIONS=tuple(f"--exclude-table-data={schema}.*" for schema in MANAGED_METADATA_SCHEMAS); RECOVERY_EXTENSIONS=(("pg_trgm","extensions"),("uuid-ossp","extensions"),("btree_gin","extensions"),("vector","extensions"),("pgcrypto","extensions")); COMPATIBILITY_HOOKS={"20260627080000":("DROP POLICY IF EXISTS documents_select_own ON public.documents;","DROP POLICY IF EXISTS documents_insert_own ON public.documents;","DROP POLICY IF EXISTS documents_update_own ON public.documents;","DROP POLICY IF EXISTS documents_delete_own ON public.documents;")}; AUTH_USER_REFERENCE_COLUMNS=(("public","ad_banners","created_by"),("public","admin_restaurant_map_overlays","created_by_admin_id"),("public","admin_restaurant_map_overlays","updated_by_admin_id"),("public","admin_user_preferences","user_id"),("public","announcements","created_by"),("public","documents","user_id"),("public","notifications","user_id"),("public","ocr_logs","user_id"),("public","profiles","user_id"),("public","restaurant_requests","user_id"),("public","restaurant_submissions","resolved_by_admin_id"),("public","restaurant_submissions","user_id"),("public","review_likes","user_id"),("public","reviews","edited_by_admin_id"),("public","reviews","user_id"),("public","search_logs","user_id"),("public","user_account_status","user_id"),("public","user_bookmarks","user_id"),("public","user_roles","user_id"),("public","user_stats","user_id"))
 class RecoveryError(RuntimeError): pass
 def _pairs(pairs):
  result={}
@@ -212,7 +212,7 @@ def _g034_adapter(path, root, manifest, observed):
  return {"g034_preflight_receipt_id":data["preflightReceiptId"],"commit_sha256":data["repositoryCommit"],"catalog_sha256":data["catalogFingerprint"],"ledger_sha256":data["hostedLedgerFingerprint"],"source_sha256":data["sourceFingerprint"],"capture_readiness_sha256":digest({"artifact_sha256":sha256_file(Path(path)),"preflight_receipt_id":data["preflightReceiptId"],"live_catalog_sha256":observed["catalog_sha256"],"live_ledger_sha256":observed["ledger_sha256"]})}
 def _dump_to_encrypted(pg_dump,encryptor,recipient,snapshot,env,destination):
  if not isinstance(snapshot,str) or not SNAPSHOT.fullmatch(snapshot): raise RecoveryError("invalid snapshot")
- output=destination/"g035-dump.enc"; argv=[pg_dump,"--format=custom","--snapshot="+snapshot,"--blobs",*["--schema="+schema for schema in DUMP_SCHEMAS],*["--extension="+name for name,_ in RECOVERY_EXTENSIONS],"--dbname=service=g035"]
+ output=destination/"g035-dump.enc"; argv=[pg_dump,"--format=custom","--snapshot="+snapshot,"--blobs",*["--schema="+schema for schema in DUMP_SCHEMAS],*MANAGED_TABLE_DATA_EXCLUSIONS,*["--extension="+name for name,_ in RECOVERY_EXTENSIONS],"--dbname=service=g035"]
  try:
   with output.open("xb") as sink:
    crypt=subprocess.Popen([encryptor,"--recipient",recipient],stdin=subprocess.PIPE,stdout=sink,stderr=subprocess.PIPE,env=safe_environment(Path("."),crypto=True)); dump=subprocess.Popen(argv,stdin=subprocess.DEVNULL,stdout=crypt.stdin,stderr=subprocess.PIPE,env=env); crypt.stdin.close()
@@ -231,18 +231,19 @@ def run_capture(args,manifest):
    _query_conn(conn,"BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY"); snapshot=_query_conn(conn,"SELECT pg_export_snapshot()")[0][0]
    observed=_fingerprints(conn); readiness=_g034_adapter(args.g034_artifact,root,manifest,_g034_live_fingerprints(conn,args.g034_artifact)); argv=_dump_to_encrypted(pg_dump,encryptor,args.recipient,snapshot,env,destination)
   finally: conn.rollback(); conn.close()
- evidence={**readiness,"recipient_fingerprint":hashlib.sha256(args.recipient.encode("utf-8")).hexdigest(),"dump_sha256":sha256_file(destination/"g035-dump.enc"),"dump_bytes":(destination/"g035-dump.enc").stat().st_size,"schema_scope":list(APPLICATION_SCHEMAS),"recovery_control_schema_scope":list(RECOVERY_CONTROL_SCHEMAS),"extension_scope":[{"name":name,"schema":schema} for name,schema in RECOVERY_EXTENSIONS],"managed_metadata_schemas":list(MANAGED_METADATA_SCHEMAS),"managed_metadata_coherence":"metadata fingerprints only; not dumped or restored","snapshot_consumer_argv":argv,**observed}
+ evidence={**readiness,"recipient_fingerprint":hashlib.sha256(args.recipient.encode("utf-8")).hexdigest(),"dump_sha256":sha256_file(destination/"g035-dump.enc"),"dump_bytes":(destination/"g035-dump.enc").stat().st_size,"schema_scope":list(APPLICATION_SCHEMAS),"recovery_control_schema_scope":list(RECOVERY_CONTROL_SCHEMAS),"extension_scope":[{"name":name,"schema":schema} for name,schema in RECOVERY_EXTENSIONS],"managed_metadata_schema_scope":list(MANAGED_METADATA_SCHEMAS),"managed_table_data_exclusions":list(MANAGED_TABLE_DATA_EXCLUSIONS),"snapshot_consumer_argv":argv,**observed}
  return receipt("capture","captured",evidence)
 def run_restore_verify(args,manifest):
  require_local(args.destination_service); capture=_require_prior(args.capture_receipt,"capture"); dump=Path(args.dump); identity=Path(args.identity_file)
- if capture["evidence"].get("extension_scope")!=[{"name":name,"schema":schema} for name,schema in RECOVERY_EXTENSIONS]: raise RecoveryError("capture extension scope mismatch")
+ if capture["evidence"].get("extension_scope")!=[{"name":name,"schema":schema} for name,schema in RECOVERY_EXTENSIONS] or capture["evidence"].get("managed_metadata_schema_scope")!=list(MANAGED_METADATA_SCHEMAS) or capture["evidence"].get("managed_table_data_exclusions")!=list(MANAGED_TABLE_DATA_EXCLUSIONS): raise RecoveryError("capture managed metadata scope mismatch")
  if dump.is_symlink() or not dump.is_file() or sha256_file(dump)!=capture["evidence"].get("dump_sha256"): raise RecoveryError("ciphertext input mismatch")
  _require_restrictive_regular_file(identity,"identity file")
  decryptor,restore=command_exists(args.decrypt_command),command_exists(args.pg_restore)
  with tempfile.TemporaryDirectory(prefix="g035-restore-") as raw:
   service=_copy_local_service(Path(raw),Path(args.service_file),"g035-local"); env=safe_environment(service); plain=Path(raw)/"database.pgdump"; run([decryptor,"--decrypt","--identity",str(identity),"--output",str(plain),str(dump)],env=safe_environment(service,crypto=True))
   conn=_connect("g035-local",env)
-  try: _query_conn(conn,"DROP SCHEMA public CASCADE")
+  try:
+   for schema in ("public","auth","storage"): _query_conn(conn,f"DROP SCHEMA {schema} CASCADE")
   finally: conn.rollback(); conn.close()
   run([restore,"--section=pre-data","--dbname=service=g035-local",str(plain)],env=env)
   run([restore,"--section=data","--dbname=service=g035-local",str(plain)],env=env)
@@ -255,13 +256,10 @@ def run_restore_verify(args,manifest):
   finally: conn.rollback(); conn.close()
  expected=capture["evidence"]
  if not _ledger_evidence_equal(expected.get("ledger_pairs"),observed["ledger_pairs"]): raise RecoveryError("restore evidence mismatch")
- for key in ("ledger_sha256","ledger_count","restorable_catalog_sha256"):
+ for key in ("ledger_sha256","ledger_count","restorable_catalog_sha256","managed_catalog_sha256"):
   if expected.get(key)!=observed.get(key): raise RecoveryError("restore evidence mismatch")
- hosted_managed_hash=_require_fingerprint(expected.get("managed_catalog_sha256"))
- expected_managed=tuple(MANAGED_METADATA_SCHEMAS)
- local_managed=observed.get("managed_metadata_schemas_present")
- if not isinstance(local_managed,(list,tuple)) or tuple(local_managed)!=expected_managed: raise RecoveryError("managed metadata structure mismatch")
- return receipt("restore-verify","restored",{**observed,"hosted_managed_catalog_sha256":hosted_managed_hash,"managed_metadata_coherence":"managed schemas structurally present; metadata catalogs are not restored or compared",**_auth_placeholder_evidence()},[capture["receipt_sha256"]])
+ if tuple(observed.get("managed_metadata_schemas_present",()))!=tuple(MANAGED_METADATA_SCHEMAS): raise RecoveryError("managed metadata structure mismatch")
+ return receipt("restore-verify","restored",{**observed,"managed_metadata_coherence":"managed schema DDL restored with hosted catalog parity; managed table data excluded",**_auth_placeholder_evidence()},[capture["receipt_sha256"]])
 def _validate_auth_user_reference_columns(conn):
  for schema,table,column in AUTH_USER_REFERENCE_COLUMNS:
   rows=_query_conn(conn,"SELECT namespace.nspname, class.relname, attribute.attname, type.typname, type_namespace.nspname FROM pg_catalog.pg_attribute AS attribute JOIN pg_catalog.pg_class AS class ON class.oid = attribute.attrelid JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = class.relnamespace JOIN pg_catalog.pg_type AS type ON type.oid = attribute.atttypid JOIN pg_catalog.pg_namespace AS type_namespace ON type_namespace.oid = type.typnamespace WHERE namespace.nspname = %s AND class.relname = %s AND attribute.attname = %s AND class.relkind IN ('r','p') AND attribute.attnum > 0 AND NOT attribute.attisdropped",(schema,table,column))
@@ -278,10 +276,12 @@ def _ledger_assert(conn,manifest,count):
 def _require_restore_baseline(prior):
  evidence=prior.get("evidence")
  if not isinstance(evidence,dict) or evidence.get("ledger_sha256")!=BASELINE_SHA256 or evidence.get("ledger_count")!=len(BASELINE_PAIRS) or not _ledger_evidence_equal(evidence.get("ledger_pairs"),BASELINE_PAIRS): raise RecoveryError("restore receipt ledger mismatch")
+def _compatibility_hook(version):
+ return COMPATIBILITY_HOOKS.get(version,())
 def apply_manifest(args,manifest):
  require_local(args.service); prior=_require_prior(args.restore_receipt,"restore-verify"); psql=command_exists(args.psql)
  with tempfile.TemporaryDirectory(prefix="g035-clone-") as raw:
-  service=_copy_local_service(Path(raw),Path(args.service_file),"g035-local"); env=safe_environment(service); conn=_connect("g035-local",env); self_commit_attempted=False
+  service=_copy_local_service(Path(raw),Path(args.service_file),"g035-local"); env=safe_environment(service); conn=_connect("g035-local",env); self_commit_attempted=False; compatibility_hook_statements=[]
   try:
    _query_conn(conn,"SELECT pg_advisory_lock(35035)")
    _require_restore_baseline(prior)
@@ -289,17 +289,23 @@ def apply_manifest(args,manifest):
    for index,entry in enumerate(manifest.migrations):
     _ledger_assert(conn,manifest,index); source=repository_root(Path(__file__).resolve())/entry.path
     if sha256_file(source)!=entry.sha256: raise RecoveryError("migration source hash mismatch")
+    hook=_compatibility_hook(entry.version)
     if entry.version in SELF_COMMIT_VERSIONS:
      try:
       self_commit_attempted=True
-      run([psql,"service=g035-local","--set","ON_ERROR_STOP=1","--file",str(source)],env=env)
+      if hook:
+       script=Path(raw)/f"{entry.version}.sql"; script.write_text(f"{chr(10).join(hook)}\n\\i {source.as_posix()}\n",encoding="utf8")
+       run([psql,"service=g035-local","--set","ON_ERROR_STOP=1","--file",str(script)],env=env)
+      else: run([psql,"service=g035-local","--set","ON_ERROR_STOP=1","--file",str(source)],env=env)
       _query_conn(conn,"INSERT INTO supabase_migrations.schema_migrations(version,name) VALUES (%s,%s)",(entry.version,entry.name)); conn.commit()
+      compatibility_hook_statements.extend(hook)
       _ledger_assert(conn,manifest,index+1)
      except Exception as exc: raise RecoveryError("self_commit_ambiguous") from exc
     else:
      script=Path(raw)/f"{entry.version}.sql"
-     script.write_text(f"BEGIN;\n\\i {source.as_posix()}\nINSERT INTO supabase_migrations.schema_migrations(version,name) VALUES ('{entry.version}','{entry.name}');\nCOMMIT;\n",encoding="utf8")
+     script.write_text(f"BEGIN;\n{chr(10).join(hook)}\n\\i {source.as_posix()}\nINSERT INTO supabase_migrations.schema_migrations(version,name) VALUES ('{entry.version}','{entry.name}');\nCOMMIT;\n",encoding="utf8")
      run([psql,"service=g035-local","--set","ON_ERROR_STOP=1","--file",str(script)],env=env)
+     compatibility_hook_statements.extend(hook)
      _ledger_assert(conn,manifest,index+1)
    _ledger_assert(conn,manifest,len(manifest.migrations)); runtime=repository_root(Path(__file__).resolve())/"backend/supabase/tests/g035_hosted_clone_runtime.sql"
    run([psql,"service=g035-local","--set","ON_ERROR_STOP=1","--file",str(runtime)],env=env)
@@ -314,7 +320,7 @@ def apply_manifest(args,manifest):
     if self_commit_attempted: raise RecoveryError("self_commit_ambiguous") from exc
     raise
    finally: conn.close()
- return receipt("clone-apply","applied",{"baseline_pairs_sha256":BASELINE_SHA256,**{k:v for k,v in observed.items() if k!="ledger_pairs"}},[prior["receipt_sha256"]])
+ return receipt("clone-apply","applied",{"baseline_pairs_sha256":BASELINE_SHA256,"compatibility_hook_count":len(compatibility_hook_statements),"compatibility_hook_sha256":digest(tuple(compatibility_hook_statements)),**{k:v for k,v in observed.items() if k!="ledger_pairs"}},[prior["receipt_sha256"]])
 def run_postflight(args,manifest):
  require_local(args.service); applied=_require_prior(args.clone_receipt,"clone-apply")
  with tempfile.TemporaryDirectory(prefix="g035-postflight-") as raw:
