@@ -1,11 +1,19 @@
 #!/usr/bin/env python3
 """Fail-closed, local-only encrypted backup/restore/clone rehearsal."""
 from __future__ import annotations
-import argparse, csv, hashlib, json, os, re, shutil, subprocess, tempfile
+import argparse, csv, hashlib, json, os, re, shutil, subprocess, tempfile, uuid
 from pathlib import Path
 from typing import Any, Sequence
-from g035_hosted_recovery_contract import APPLICATION_SCHEMAS, BASELINE_PAIRS, BASELINE_SHA256, FORBIDDEN_VERSIONS, MANAGED_METADATA_SCHEMAS, MANIFEST_SHA256, SELF_COMMIT_VERSIONS, ContractError, Manifest, ledger_prefix, repository_root, sha256_file, validate_sources
-TIMEOUT_SECONDS=900; RECEIPT_SCHEMA="g035-local-recovery-receipt-v4"; HEX=re.compile(r"^[a-f0-9]{64}$"); AGE_RECIPIENT=re.compile(r"^age1[ac-hj-np-z02-9]{58}$"); SNAPSHOT=re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"); LOCAL_SERVICE="g035-local"; LOCAL_DBNAME="g035_local"; LOCAL_HOSTS={"localhost","127.0.0.1","::1"}; SERVICE_KEYS={"host","port","dbname","application_name","sslmode","user","password","connect_timeout"}; RECOVERY_CONTROL_SCHEMAS=("supabase_migrations",); DUMP_SCHEMAS=APPLICATION_SCHEMAS+RECOVERY_CONTROL_SCHEMAS+MANAGED_METADATA_SCHEMAS; MANAGED_TABLE_DATA_EXCLUSIONS=tuple(f"--exclude-table-data={schema}.*" for schema in MANAGED_METADATA_SCHEMAS); RECOVERY_EXTENSIONS=(("pg_trgm","extensions"),("uuid-ossp","extensions"),("btree_gin","extensions"),("vector","public"),("pgcrypto","extensions")); COMPATIBILITY_HOOKS={"20260627080000":("DROP POLICY IF EXISTS documents_select_own ON public.documents;","DROP POLICY IF EXISTS documents_insert_own ON public.documents;","DROP POLICY IF EXISTS documents_update_own ON public.documents;","DROP POLICY IF EXISTS documents_delete_own ON public.documents;")}; VECTOR_EXTENSION_RELOCATION_HOOK_VERSION="20260627080000"; VECTOR_EXTENSION_RELOCATION_HOOK=("SELECT namespace.nspname FROM pg_catalog.pg_extension AS extension JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid=extension.extnamespace WHERE extension.extname='vector'","ALTER EXTENSION vector SET SCHEMA extensions","SELECT namespace.nspname FROM pg_catalog.pg_extension AS extension JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid=extension.extnamespace WHERE extension.extname='vector'","SELECT 1 FROM pg_catalog.pg_extension AS extension JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid=extension.extnamespace WHERE extension.extname='vector' AND namespace.nspname='public'"); SHORT_URLS_DUPLICATE_TARGET_URL_HOOK_VERSION="20260713000100"; SHORT_URLS_DUPLICATE_TARGET_URL_HOOK=("SELECT 1 FROM public.short_urls WHERE code IS NULL OR target_url IS NULL LIMIT 1","SELECT 1 FROM public.short_urls GROUP BY code HAVING count(*) > 1 LIMIT 1","WITH ranked AS (SELECT id, row_number() OVER (PARTITION BY target_url ORDER BY created_at NULLS LAST, id) AS row_number FROM public.short_urls), deleted AS (DELETE FROM public.short_urls USING ranked WHERE public.short_urls.id=ranked.id AND ranked.row_number>1 RETURNING public.short_urls.id) SELECT count(*) FROM deleted","SELECT 1 FROM public.short_urls WHERE code IS NULL OR target_url IS NULL LIMIT 1","SELECT 1 FROM public.short_urls GROUP BY code HAVING count(*) > 1 LIMIT 1","SELECT 1 FROM public.short_urls GROUP BY target_url HAVING count(*) > 1 LIMIT 1"); AUTH_USER_REFERENCE_COLUMNS=(("public","ad_banners","created_by"),("public","admin_restaurant_map_overlays","created_by_admin_id"),("public","admin_restaurant_map_overlays","updated_by_admin_id"),("public","admin_user_preferences","user_id"),("public","announcements","created_by"),("public","documents","user_id"),("public","notifications","user_id"),("public","ocr_logs","user_id"),("public","profiles","user_id"),("public","restaurant_requests","user_id"),("public","restaurant_submissions","resolved_by_admin_id"),("public","restaurant_submissions","user_id"),("public","review_likes","user_id"),("public","reviews","edited_by_admin_id"),("public","reviews","user_id"),("public","search_logs","user_id"),("public","user_account_status","user_id"),("public","user_bookmarks","user_id"),("public","user_roles","user_id"),("public","user_stats","user_id"))
+from g035_hosted_recovery_contract import APPLICATION_SCHEMAS, BASELINE_PAIRS, BASELINE_SHA256, FORBIDDEN_VERSIONS, MANAGED_METADATA_SCHEMAS, MANIFEST_SHA256, REMEDIATION_AUTHORIZATION_SCHEMA, REMEDIATION_PUBLIC_KEY_PEM, REMEDIATION_PUBLIC_KEY_SHA256, SELF_COMMIT_VERSIONS, ContractError, Manifest, ledger_prefix, repository_root, sha256_file, validate_sources
+TIMEOUT_SECONDS=900; RECEIPT_SCHEMA="g035-local-recovery-receipt-v4"; HEX=re.compile(r"^[a-f0-9]{64}$"); AGE_RECIPIENT=re.compile(r"^age1[ac-hj-np-z02-9]{58}$"); SNAPSHOT=re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"); LOCAL_SERVICE="g035-local"; LOCAL_DBNAME="g035_local"; LOCAL_HOSTS={"localhost","127.0.0.1","::1"}; SERVICE_KEYS={"host","port","dbname","application_name","sslmode","user","password","connect_timeout"}; RECOVERY_CONTROL_SCHEMAS=("supabase_migrations",); DUMP_SCHEMAS=APPLICATION_SCHEMAS+RECOVERY_CONTROL_SCHEMAS+MANAGED_METADATA_SCHEMAS; MANAGED_TABLE_DATA_EXCLUSIONS=tuple(f"--exclude-table-data={schema}.*" for schema in MANAGED_METADATA_SCHEMAS); RECOVERY_EXTENSIONS=(("pg_trgm","extensions"),("uuid-ossp","extensions"),("btree_gin","extensions"),("vector","public"),("pgcrypto","extensions")); COMPATIBILITY_HOOKS={"20260627080000":("DROP POLICY IF EXISTS documents_select_own ON public.documents;","DROP POLICY IF EXISTS documents_insert_own ON public.documents;","DROP POLICY IF EXISTS documents_update_own ON public.documents;","DROP POLICY IF EXISTS documents_delete_own ON public.documents;")}; VECTOR_EXTENSION_RELOCATION_HOOK_VERSION="20260627080000"; VECTOR_EXTENSION_RELOCATION_HOOK=("SELECT namespace.nspname FROM pg_catalog.pg_extension AS extension JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid=extension.extnamespace WHERE extension.extname='vector'","ALTER EXTENSION vector SET SCHEMA extensions","SELECT namespace.nspname FROM pg_catalog.pg_extension AS extension JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid=extension.extnamespace WHERE extension.extname='vector'","SELECT 1 FROM pg_catalog.pg_extension AS extension JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid=extension.extnamespace WHERE extension.extname='vector' AND namespace.nspname='public'"); LOCAL_REMEDIATION_SCHEMA="g035_recovery_control"; SHORT_URL_SELECTION_SPEC="row_number() over (partition by target_url order by created_at nulls last, id)"; AUTH_USER_REFERENCE_COLUMNS=(("public","ad_banners","created_by"),("public","admin_restaurant_map_overlays","created_by_admin_id"),("public","admin_restaurant_map_overlays","updated_by_admin_id"),("public","admin_user_preferences","user_id"),("public","announcements","created_by"),("public","documents","user_id"),("public","notifications","user_id"),("public","ocr_logs","user_id"),("public","profiles","user_id"),("public","restaurant_requests","user_id"),("public","restaurant_submissions","resolved_by_admin_id"),("public","restaurant_submissions","user_id"),("public","review_likes","user_id"),("public","reviews","edited_by_admin_id"),("public","reviews","user_id"),("public","search_logs","user_id"),("public","user_account_status","user_id"),("public","user_bookmarks","user_id"),("public","user_roles","user_id"),("public","user_stats","user_id"))
+SHORT_URLS_CATALOG=(
+ {"name":"id","type":"uuid","nullable":"NO","position":1,"character_maximum_length":None,"column_default":"extensions.uuid_generate_v4()","is_generated":"NEVER","is_identity":"NO","identity_generation":None},
+ {"name":"code","type":"character varying","nullable":"YES","position":2,"character_maximum_length":10,"column_default":None,"is_generated":"NEVER","is_identity":"NO","identity_generation":None},
+ {"name":"target_url","type":"text","nullable":"YES","position":3,"character_maximum_length":None,"column_default":None,"is_generated":"NEVER","is_identity":"NO","identity_generation":None},
+ {"name":"restaurant_id","type":"uuid","nullable":"YES","position":4,"character_maximum_length":None,"column_default":None,"is_generated":"NEVER","is_identity":"NO","identity_generation":None},
+ {"name":"restaurant_name","type":"text","nullable":"YES","position":5,"character_maximum_length":None,"column_default":None,"is_generated":"NEVER","is_identity":"NO","identity_generation":None},
+ {"name":"created_at","type":"timestamp with time zone","nullable":"YES","position":6,"character_maximum_length":None,"column_default":"now()","is_generated":"NEVER","is_identity":"NO","identity_generation":None},
+)
 CROSS_SCHEMA_OWNER_HOOK_VERSION="20260713002000"; CROSS_SCHEMA_OWNER_FUNCTIONS=("public.account_deletion_require_service_role()","public.account_deletion_is_active_admin(uuid)","public.account_deletion_write_audit(public.account_deletion_requests,text,text)","public.preview_account_deletion(uuid,uuid,timestamptz)","public.begin_account_deletion_apply(uuid,uuid,uuid,text,text,text,timestamptz)","public.apply_account_deletion_database_cleanup(uuid,uuid)","public.list_account_deletion_storage_objects(uuid,uuid)","public.finalize_account_deletion_storage(uuid,uuid,boolean)","public.finalize_account_deletion_auth(uuid,uuid,boolean)","public.fail_account_deletion(uuid,uuid,text)","privacy_retention.require_service_role()","privacy_retention.write_run_audit(privacy_retention.privacy_retention_runs,text,text)"); CROSS_SCHEMA_OWNER_RESOLVE_SQL="SELECT procedure.oid FROM pg_catalog.pg_proc AS procedure WHERE procedure.oid=pg_catalog.to_regprocedure(%s)"; CROSS_SCHEMA_OWNER_VERIFY_SQL="SELECT role.rolname FROM pg_catalog.pg_proc AS procedure JOIN pg_catalog.pg_roles AS role ON role.oid=procedure.proowner WHERE procedure.oid=pg_catalog.to_regprocedure(%s)"
 OBSOLETE_NOTIFICATION_OVERLOAD_HOOK_VERSION="20260713002000"; OBSOLETE_NOTIFICATION_OVERLOAD="public.create_user_notification(uuid,public.notification_type,text,text,jsonb)"; CANONICAL_NOTIFICATION_FUNCTION="public.create_user_notification(uuid,text,text,text,jsonb)"
 PUBLIC_FUNCTION_OWNERS_HOOK_VERSION="20260713002000"; PUBLIC_FUNCTION_OWNERS_SQL="SELECT procedure.oid::regprocedure::text, role.rolname FROM pg_catalog.pg_proc AS procedure JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid=procedure.pronamespace JOIN pg_catalog.pg_roles AS role ON role.oid=procedure.proowner WHERE namespace.nspname='public' ORDER BY procedure.oid"; PUBLIC_FUNCTION_OWNERS_ALLOWED=frozenset(("supabase_admin","postgres","privacy_workflow_owner")); PUBLIC_FUNCTION_OWNERS_POSTCONDITION=frozenset(("postgres","privacy_workflow_owner"))
@@ -243,13 +251,21 @@ def run_restore_verify(args,manifest):
   service=_copy_local_service(Path(raw),Path(args.service_file),"g035-local"); env=safe_environment(service); plain=Path(raw)/"database.pgdump"; run([decryptor,"--decrypt","--identity",str(identity),"--output",str(plain),str(dump)],env=safe_environment(service,crypto=True))
   conn=_connect("g035-local",env)
   try:
-   for schema in ("public","auth","storage"): _query_conn(conn,f"DROP SCHEMA {schema} CASCADE")
-  finally: conn.rollback(); conn.close()
+   for schema in (LOCAL_REMEDIATION_SCHEMA,"public","auth","storage"): _query_conn(conn,f"DROP SCHEMA IF EXISTS {schema} CASCADE")
+   conn.commit()
+  except Exception:
+   conn.rollback()
+   raise
+  finally: conn.close()
   run([restore,"--section=pre-data","--dbname=service=g035-local",str(plain)],env=env)
   run([restore,"--section=data","--dbname=service=g035-local",str(plain)],env=env)
   conn=_connect("g035-local",env)
-  try: _create_auth_user_placeholders(conn)
-  finally: conn.rollback(); conn.close()
+  try:
+   _create_auth_user_placeholders(conn); conn.commit()
+  except Exception:
+   conn.rollback()
+   raise
+  finally: conn.close()
   run([restore,"--section=post-data","--dbname=service=g035-local",str(plain)],env=env)
   conn=_connect("g035-local",env)
   try: observed=_fingerprints(conn)
@@ -293,64 +309,141 @@ def _require_restore_initial_ledger(prior,manifest):
  raise RecoveryError("restore receipt ledger mismatch")
 def _compatibility_hook(version):
  return COMPATIBILITY_HOOKS.get(version,())
-def _apply_vector_extension_relocation_hook(conn,version):
- if version!=VECTOR_EXTENSION_RELOCATION_HOOK_VERSION: return
- if _query_conn(conn,VECTOR_EXTENSION_RELOCATION_HOOK[0])!=[("public",)]: raise RecoveryError("vector compatibility precondition failed")
- _query_conn(conn,VECTOR_EXTENSION_RELOCATION_HOOK[1])
- if _query_conn(conn,VECTOR_EXTENSION_RELOCATION_HOOK[2])!=[("extensions",)] or _query_conn(conn,VECTOR_EXTENSION_RELOCATION_HOOK[3]): raise RecoveryError("vector compatibility postcondition failed")
- conn.commit()
-def _apply_obsolete_notification_overload_hook(conn,version):
- if version!=OBSOLETE_NOTIFICATION_OVERLOAD_HOOK_VERSION: return 0
- if len(_query_conn(conn,CROSS_SCHEMA_OWNER_RESOLVE_SQL,(OBSOLETE_NOTIFICATION_OVERLOAD,)))!=1 or len(_query_conn(conn,CROSS_SCHEMA_OWNER_RESOLVE_SQL,(CANONICAL_NOTIFICATION_FUNCTION,)))!=1: raise RecoveryError("notification overload compatibility precondition failed")
- _query_conn(conn,f"DROP FUNCTION {OBSOLETE_NOTIFICATION_OVERLOAD}")
- if _query_conn(conn,CROSS_SCHEMA_OWNER_RESOLVE_SQL,(OBSOLETE_NOTIFICATION_OVERLOAD,)) or len(_query_conn(conn,CROSS_SCHEMA_OWNER_RESOLVE_SQL,(CANONICAL_NOTIFICATION_FUNCTION,)))!=1: raise RecoveryError("notification overload compatibility postcondition failed")
- conn.commit()
- return 1
-def _apply_public_function_owners_hook(conn,version):
- if version!=PUBLIC_FUNCTION_OWNERS_HOOK_VERSION: return ()
- functions=_query_conn(conn,PUBLIC_FUNCTION_OWNERS_SQL)
- if any(not isinstance(signature,str) or owner not in PUBLIC_FUNCTION_OWNERS_ALLOWED for signature,owner in functions): raise RecoveryError("public function owner compatibility precondition failed")
- changed=tuple(signature for signature,owner in functions if owner=="supabase_admin")
- for signature in changed: _query_conn(conn,f"ALTER FUNCTION {signature} OWNER TO postgres")
- verified=_query_conn(conn,PUBLIC_FUNCTION_OWNERS_SQL)
- if tuple(signature for signature,owner in verified)!=tuple(signature for signature,owner in functions) or any(owner not in PUBLIC_FUNCTION_OWNERS_POSTCONDITION for signature,owner in verified): raise RecoveryError("public function owner compatibility postcondition failed")
- conn.commit()
- return changed
-def _apply_cross_schema_owner_hook(conn,version):
- if version!=CROSS_SCHEMA_OWNER_HOOK_VERSION: return 0
- for signature in CROSS_SCHEMA_OWNER_FUNCTIONS:
-  if len(_query_conn(conn,CROSS_SCHEMA_OWNER_RESOLVE_SQL,(signature,)))!=1: raise RecoveryError("cross-schema owner compatibility precondition failed")
-  _query_conn(conn,f"ALTER FUNCTION {signature} OWNER TO postgres")
-  if _query_conn(conn,CROSS_SCHEMA_OWNER_VERIFY_SQL,(signature,))!=[("postgres",)]: raise RecoveryError("cross-schema owner compatibility postcondition failed")
- conn.commit()
- return len(CROSS_SCHEMA_OWNER_FUNCTIONS)
-def _apply_short_urls_duplicate_target_url_hook(conn,version):
- if version!=SHORT_URLS_DUPLICATE_TARGET_URL_HOOK_VERSION: return 0
- if _query_conn(conn,SHORT_URLS_DUPLICATE_TARGET_URL_HOOK[0]) or _query_conn(conn,SHORT_URLS_DUPLICATE_TARGET_URL_HOOK[1]): raise RecoveryError("short_urls compatibility precondition failed")
- rows=_query_conn(conn,SHORT_URLS_DUPLICATE_TARGET_URL_HOOK[2])
- if len(rows)!=1 or not isinstance(rows[0][0],int) or rows[0][0]<0: raise RecoveryError("short_urls compatibility delete result invalid")
- if _query_conn(conn,SHORT_URLS_DUPLICATE_TARGET_URL_HOOK[3]) or _query_conn(conn,SHORT_URLS_DUPLICATE_TARGET_URL_HOOK[4]) or _query_conn(conn,SHORT_URLS_DUPLICATE_TARGET_URL_HOOK[5]): raise RecoveryError("short_urls compatibility postcondition failed")
- conn.commit()
- return rows[0][0]
+def _compatibility_sql(version):
+ statements=list(_compatibility_hook(version))
+ if version==VECTOR_EXTENSION_RELOCATION_HOOK_VERSION: statements.extend(("DO $$ BEGIN IF (SELECT n.nspname FROM pg_catalog.pg_extension e JOIN pg_catalog.pg_namespace n ON n.oid=e.extnamespace WHERE e.extname='vector') <> 'public' THEN RAISE EXCEPTION 'vector compatibility precondition failed'; END IF; END $$;","ALTER EXTENSION vector SET SCHEMA extensions","DO $$ BEGIN IF (SELECT n.nspname FROM pg_catalog.pg_extension e JOIN pg_catalog.pg_namespace n ON n.oid=e.extnamespace WHERE e.extname='vector') <> 'extensions' THEN RAISE EXCEPTION 'vector compatibility postcondition failed'; END IF; END $$;"))
+ if version==OBSOLETE_NOTIFICATION_OVERLOAD_HOOK_VERSION: statements.extend((f"DO $$ BEGIN IF pg_catalog.to_regprocedure('{OBSOLETE_NOTIFICATION_OVERLOAD}') IS NULL OR pg_catalog.to_regprocedure('{CANONICAL_NOTIFICATION_FUNCTION}') IS NULL THEN RAISE EXCEPTION 'notification overload compatibility precondition failed'; END IF; END $$;",f"DROP FUNCTION {OBSOLETE_NOTIFICATION_OVERLOAD}",f"DO $$ BEGIN IF pg_catalog.to_regprocedure('{OBSOLETE_NOTIFICATION_OVERLOAD}') IS NOT NULL OR pg_catalog.to_regprocedure('{CANONICAL_NOTIFICATION_FUNCTION}') IS NULL THEN RAISE EXCEPTION 'notification overload compatibility postcondition failed'; END IF; END $$;"))
+ if version==PUBLIC_FUNCTION_OWNERS_HOOK_VERSION: statements.append("DO $$ DECLARE function_row record; BEGIN IF EXISTS (SELECT 1 FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace JOIN pg_catalog.pg_roles r ON r.oid=p.proowner WHERE n.nspname='public' AND r.rolname NOT IN ('supabase_admin','postgres','privacy_workflow_owner')) THEN RAISE EXCEPTION 'public function owner compatibility precondition failed'; END IF; FOR function_row IN SELECT p.oid::regprocedure signature FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace JOIN pg_catalog.pg_roles r ON r.oid=p.proowner WHERE n.nspname='public' AND r.rolname='supabase_admin' LOOP EXECUTE format('ALTER FUNCTION %s OWNER TO postgres',function_row.signature); END LOOP; IF EXISTS (SELECT 1 FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace JOIN pg_catalog.pg_roles r ON r.oid=p.proowner WHERE n.nspname='public' AND r.rolname NOT IN ('postgres','privacy_workflow_owner')) THEN RAISE EXCEPTION 'public function owner compatibility postcondition failed'; END IF; END $$;")
+ if version==CROSS_SCHEMA_OWNER_HOOK_VERSION:
+  for signature in CROSS_SCHEMA_OWNER_FUNCTIONS: statements.append(f"DO $$ BEGIN IF pg_catalog.to_regprocedure('{signature}') IS NULL THEN RAISE EXCEPTION 'cross-schema owner compatibility precondition failed'; END IF; ALTER FUNCTION {signature} OWNER TO postgres; IF (SELECT r.rolname FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_roles r ON r.oid=p.proowner WHERE p.oid=pg_catalog.to_regprocedure('{signature}')) <> 'postgres' THEN RAISE EXCEPTION 'cross-schema owner compatibility postcondition failed'; END IF; END $$;")
+ return tuple(statements)
+def _short_url_snapshot(conn):
+ catalog=_query_conn(conn,"SELECT COALESCE(json_agg(json_build_object('name',column_name,'type',data_type,'nullable',is_nullable,'position',ordinal_position,'character_maximum_length',character_maximum_length,'column_default',column_default,'is_generated',is_generated,'is_identity',is_identity,'identity_generation',identity_generation) ORDER BY ordinal_position),'[]')::text FROM information_schema.columns WHERE table_schema='public' AND table_name='short_urls'")[0][0]
+ rows=_query_conn(conn,"SELECT COALESCE(json_agg(to_jsonb(s) ORDER BY s.id),'[]')::text FROM public.short_urls s")[0][0]
+ victims=_query_conn(conn,"WITH r AS (SELECT id,target_url,first_value(id) OVER (PARTITION BY target_url ORDER BY created_at NULLS LAST,id) keeper_id,row_number() OVER (PARTITION BY target_url ORDER BY created_at NULLS LAST,id) rank,to_jsonb(short_urls) row_json FROM public.short_urls) SELECT COALESCE(json_agg(json_build_object('source_id',id::text,'keeper_id',keeper_id::text,'target_url_sha256',encode(digest(target_url,'sha256'),'hex'),'rank',rank,'source_row_sha256',encode(digest(row_json::text,'sha256'),'hex')) ORDER BY id),'[]')::text FROM r WHERE rank>1")[0][0]
+ if _query_conn(conn,"SELECT EXISTS (SELECT 1 FROM public.short_urls WHERE code IS NULL OR target_url IS NULL) OR EXISTS (SELECT 1 FROM public.short_urls GROUP BY code HAVING count(*)>1)")[0][0]: raise RecoveryError("short_urls inspection precondition failed")
+ catalog_value=json.loads(catalog)
+ if catalog_value!=list(SHORT_URLS_CATALOG): raise RecoveryError("short_urls catalog drift")
+ descriptors=json.loads(victims); return {"selection_spec_sha256":digest(SHORT_URL_SELECTION_SPEC),"short_urls_catalog_sha256":digest(catalog_value),"pre_short_urls_rowset_sha256":digest(json.loads(rows)),"duplicate_group_count":len({item["keeper_id"] for item in descriptors}),"duplicate_victim_count":len(descriptors),"duplicate_victims_sha256":digest(descriptors),"victim_descriptors_sha256":digest(descriptors),"_victims":descriptors}
+def run_short_url_inspect(args,manifest):
+ require_local(args.service); restored=_require_prior(args.restore_receipt,"restore-verify")
+ with tempfile.TemporaryDirectory(prefix="g035-inspect-") as raw:
+  service=_copy_local_service(Path(raw),Path(args.service_file),"g035-local"); conn=_connect("g035-local",safe_environment(service))
+  try: _query_conn(conn,"BEGIN READ ONLY"); evidence=_short_url_snapshot(conn)
+  finally: conn.rollback(); conn.close()
+ return receipt("short-url-remediation-inspect","validated",{k:v for k,v in evidence.items() if not k.startswith("_")},[restored["receipt_sha256"]])
+def _id_digest(values): return digest(sorted(values))
+def _canonical_uuid(value):
+ try:
+  parsed=uuid.UUID(value)
+ except (ValueError,TypeError,AttributeError) as exc: raise RecoveryError("authorization batch invalid") from exc
+ if not isinstance(value,str) or str(parsed)!=value: raise RecoveryError("authorization batch invalid")
+ return value
+def _authorization_digest_fields(auth):
+ hex_fields=("inspection_receipt_sha256","restore_receipt_sha256","capture_receipt_sha256","manifest_sha256","selection_spec_sha256","short_urls_catalog_sha256","pre_short_urls_rowset_sha256","duplicate_victims_sha256","victim_descriptors_sha256")
+ if any(not isinstance(auth.get(key),str) or not HEX.fullmatch(auth[key]) for key in hex_fields): raise RecoveryError("authorization digest invalid")
+ if not isinstance(auth.get("repository_commit"),str) or not re.fullmatch(r"[0-9a-f]{40,64}",auth["repository_commit"]): raise RecoveryError("authorization repository invalid")
+ for key in ("duplicate_group_count","duplicate_victim_count"):
+  if not isinstance(auth.get(key),int) or isinstance(auth[key],bool) or auth[key] < 0: raise RecoveryError("authorization count invalid")
+ _canonical_uuid(auth.get("batch_id"))
+def _authorization(args,inspection,restored):
+ path=Path(args.authorization); signature=Path(args.authorization_signature); _require_restrictive_regular_file(path,"authorization file"); _require_restrictive_regular_file(signature,"authorization signature")
+ try:
+  raw=path.read_bytes(); auth=json.loads(raw.decode("utf8"),object_pairs_hook=_no_duplicate_object)
+ except (OSError,UnicodeDecodeError,json.JSONDecodeError,ContractError): raise RecoveryError("authorization JSON invalid")
+ if raw!=canonical_bytes(auth): raise RecoveryError("authorization JSON noncanonical")
+ required={"schema","inspection_receipt_sha256","restore_receipt_sha256","capture_receipt_sha256","manifest_sha256","repository_commit","selection_spec_sha256","short_urls_catalog_sha256","pre_short_urls_rowset_sha256","duplicate_group_count","duplicate_victim_count","duplicate_victims_sha256","victim_descriptors_sha256","batch_id"}
+ if set(auth)!=required or auth.get("schema")!=REMEDIATION_AUTHORIZATION_SCHEMA: raise RecoveryError("authorization schema invalid")
+ _authorization_digest_fields(auth)
+ capture=restored.get("prior_receipt_sha256",[])
+ expected={"inspection_receipt_sha256":inspection["receipt_sha256"],"restore_receipt_sha256":restored["receipt_sha256"],"capture_receipt_sha256":capture[0] if len(capture)==1 else None,"manifest_sha256":MANIFEST_SHA256,"repository_commit":_repository_commit(repository_root(Path(__file__).resolve()))}
+ if any(auth.get(key)!=value for key,value in expected.items()): raise RecoveryError("authorization binding invalid")
+ for key in ("selection_spec_sha256","short_urls_catalog_sha256","pre_short_urls_rowset_sha256","duplicate_group_count","duplicate_victim_count","duplicate_victims_sha256","victim_descriptors_sha256"):
+  if auth[key]!=inspection["evidence"][key]: raise RecoveryError("authorization inspection invalid")
+ key=Path(tempfile.mkstemp(prefix="g035-key-")[1])
+ try:
+  key.write_text(REMEDIATION_PUBLIC_KEY_PEM,encoding="ascii")
+  if hashlib.sha256(key.read_bytes()).hexdigest()!=REMEDIATION_PUBLIC_KEY_SHA256: raise RecoveryError("pinned key mismatch")
+  run(["openssl","pkeyutl","-verify","-pubin","-inkey",str(key),"-rawin","-in",str(path),"-sigfile",str(signature)],env=safe_environment(Path("."),crypto=True))
+ finally: key.unlink(missing_ok=True)
+ return auth
+def _quarantine_catalog_expected():
+ metadata=(("batch_id","uuid"),("duplicate_rank","bigint"),("keeper_id","uuid"),("source_row_jsonb","jsonb"),("source_row_sha256","text"))
+ return [*SHORT_URLS_CATALOG,*({"name":name,"type":kind,"nullable":"NO","position":len(SHORT_URLS_CATALOG)+index,"character_maximum_length":None,"column_default":None,"is_generated":"NEVER","is_identity":"NO","identity_generation":None} for index,(name,kind) in enumerate(metadata,1))]
+def _quarantine_catalog(conn):
+ raw=_query_conn(conn,"SELECT COALESCE(json_agg(json_build_object('name',column_name,'type',data_type,'nullable',is_nullable,'position',ordinal_position,'character_maximum_length',character_maximum_length,'column_default',column_default,'is_generated',is_generated,'is_identity',is_identity,'identity_generation',identity_generation) ORDER BY ordinal_position),'[]')::text FROM information_schema.columns WHERE table_schema='g035_recovery_control' AND table_name='short_url_duplicate_quarantine'")[0][0]
+ catalog=json.loads(raw)
+ if catalog!=_quarantine_catalog_expected(): raise RecoveryError("quarantine catalog drift")
+ return digest(catalog)
+def _durable_descriptors(conn,batch):
+ raw=_query_conn(conn,"SELECT COALESCE(json_agg(json_build_object('source_id',id::text,'keeper_id',keeper_id::text,'target_url_sha256',encode(digest(source_row_jsonb->>'target_url','sha256'),'hex'),'rank',duplicate_rank,'source_row_sha256',source_row_sha256) ORDER BY id),'[]')::text FROM g035_recovery_control.short_url_duplicate_quarantine WHERE batch_id=%s",(batch,))[0][0]
+ descriptors=json.loads(raw)
+ bad=_query_conn(conn,"SELECT count(*) FROM g035_recovery_control.short_url_duplicate_quarantine WHERE batch_id=%s AND source_row_sha256<>encode(digest(source_row_jsonb::text,'sha256'),'hex')",(batch,))[0][0]
+ if bad: raise RecoveryError("quarantine row hash drift")
+ return descriptors
+def _quarantine_acl_valid(conn):
+ roles=("PUBLIC","anon","authenticated","service_role")
+ schema=_query_conn(conn,"SELECT NOT EXISTS (SELECT 1 FROM (VALUES ('PUBLIC'),('anon'),('authenticated'),('service_role')) AS r(role) WHERE has_schema_privilege(r.role,'g035_recovery_control','USAGE') OR has_schema_privilege(r.role,'g035_recovery_control','CREATE'))")[0][0]
+ table=_query_conn(conn,"SELECT NOT EXISTS (SELECT 1 FROM (VALUES ('PUBLIC'),('anon'),('authenticated'),('service_role')) AS r(role) WHERE has_table_privilege(r.role,'g035_recovery_control.short_url_duplicate_quarantine','SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER') OR has_table_privilege(r.role,'g035_recovery_control.short_url_duplicate_quarantine_batches','SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER'))")[0][0]
+ defaults=_query_conn(conn,"SELECT NOT EXISTS (SELECT 1 FROM pg_catalog.pg_default_acl AS d JOIN pg_catalog.pg_namespace AS n ON n.oid=d.defaclnamespace WHERE n.nspname='g035_recovery_control' AND d.defaclobjtype IN ('r','S') AND array_to_string(d.defaclacl,',') ~ '(PUBLIC|anon|authenticated|service_role)')")[0][0]
+ return bool(schema and table and defaults)
+def _batch_values(auth,restored,inspected,state,catalog):
+ return (auth["batch_id"],restored["receipt_sha256"],inspected["receipt_sha256"],digest(auth),MANIFEST_SHA256,auth["repository_commit"],state["selection_spec_sha256"],state["short_urls_catalog_sha256"],state["duplicate_group_count"],state["duplicate_victim_count"],state["pre_short_urls_rowset_sha256"],state["victim_descriptors_sha256"],catalog)
+def run_short_url_apply(args,manifest):
+ require_local(args.service); restored=_require_prior(args.restore_receipt,"restore-verify"); inspected=_require_prior(args.inspect_receipt,"short-url-remediation-inspect"); auth=_authorization(args,inspected,restored)
+ with tempfile.TemporaryDirectory(prefix="g035-remediate-") as raw:
+  service=_copy_local_service(Path(raw),Path(args.service_file),"g035-local"); conn=_connect("g035-local",safe_environment(service))
+  try:
+   _query_conn(conn,"BEGIN ISOLATION LEVEL SERIALIZABLE"); _query_conn(conn,"LOCK TABLE public.short_urls IN SHARE ROW EXCLUSIVE MODE"); state=_short_url_snapshot(conn)
+   if any(state[k]!=inspected["evidence"][k] for k in inspected["evidence"]): raise RecoveryError("inspection stale")
+   _query_conn(conn,"CREATE SCHEMA g035_recovery_control"); _query_conn(conn,"CREATE TABLE g035_recovery_control.short_url_duplicate_quarantine_batches (batch_id uuid PRIMARY KEY, restore_receipt_sha256 text NOT NULL, inspection_receipt_sha256 text NOT NULL, authorization_sha256 text NOT NULL, manifest_sha256 text NOT NULL, repository_commit text NOT NULL, selection_spec_sha256 text NOT NULL, short_urls_catalog_sha256 text NOT NULL, duplicate_group_count bigint NOT NULL, victim_count bigint NOT NULL, pre_rowset_sha256 text NOT NULL, victim_descriptors_sha256 text NOT NULL, quarantine_catalog_sha256 text NOT NULL, quarantined_ids_sha256 text, deleted_ids_sha256 text, survivor_rowset_sha256 text)"); _query_conn(conn,"CREATE TABLE g035_recovery_control.short_url_duplicate_quarantine (LIKE public.short_urls INCLUDING DEFAULTS INCLUDING GENERATED INCLUDING IDENTITY INCLUDING STORAGE, batch_id uuid NOT NULL REFERENCES g035_recovery_control.short_url_duplicate_quarantine_batches(batch_id), duplicate_rank bigint NOT NULL, keeper_id uuid NOT NULL, source_row_jsonb jsonb NOT NULL, source_row_sha256 text NOT NULL, UNIQUE (batch_id,id))"); _query_conn(conn,"REVOKE ALL ON SCHEMA g035_recovery_control FROM PUBLIC, anon, authenticated, service_role"); _query_conn(conn,"REVOKE ALL ON ALL TABLES IN SCHEMA g035_recovery_control FROM PUBLIC, anon, authenticated, service_role"); _query_conn(conn,"REVOKE ALL ON ALL SEQUENCES IN SCHEMA g035_recovery_control FROM PUBLIC, anon, authenticated, service_role"); _query_conn(conn,"ALTER DEFAULT PRIVILEGES IN SCHEMA g035_recovery_control REVOKE ALL ON TABLES FROM PUBLIC, anon, authenticated, service_role"); _query_conn(conn,"ALTER DEFAULT PRIVILEGES IN SCHEMA g035_recovery_control REVOKE ALL ON SEQUENCES FROM PUBLIC, anon, authenticated, service_role")
+   catalog=_quarantine_catalog(conn)
+   _query_conn(conn,"INSERT INTO g035_recovery_control.short_url_duplicate_quarantine_batches (batch_id,restore_receipt_sha256,inspection_receipt_sha256,authorization_sha256,manifest_sha256,repository_commit,selection_spec_sha256,short_urls_catalog_sha256,duplicate_group_count,victim_count,pre_rowset_sha256,victim_descriptors_sha256,quarantine_catalog_sha256) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",_batch_values(auth,restored,inspected,state,catalog))
+   for victim in state["_victims"]: _query_conn(conn,"INSERT INTO g035_recovery_control.short_url_duplicate_quarantine SELECT s.*, %s::uuid,%s,%s::uuid,to_jsonb(s),encode(digest(to_jsonb(s)::text,'sha256'),'hex') FROM public.short_urls s WHERE s.id=%s::uuid",(auth["batch_id"],victim["rank"],victim["keeper_id"],victim["source_id"]))
+   descriptors=_durable_descriptors(conn,auth["batch_id"]); quarantine_ids=[item["source_id"] for item in descriptors]; expected_ids=[victim["source_id"] for victim in state["_victims"]]
+   if descriptors!=state["_victims"] or digest(descriptors)!=inspected["evidence"]["victim_descriptors_sha256"] or quarantine_ids!=expected_ids or not _quarantine_acl_valid(conn): raise RecoveryError("quarantine incomplete")
+   deleted=_query_conn(conn,"DELETE FROM public.short_urls s USING g035_recovery_control.short_url_duplicate_quarantine q WHERE q.batch_id=%s AND q.id=s.id RETURNING s.id::text",(auth["batch_id"],)); deleted_ids=sorted(row[0] for row in deleted); survivor=_short_url_snapshot(conn)
+   if deleted_ids!=expected_ids or survivor["duplicate_victim_count"] or survivor["pre_short_urls_rowset_sha256"]==state["pre_short_urls_rowset_sha256"]: raise RecoveryError("remediation postcondition failed")
+   _query_conn(conn,"UPDATE g035_recovery_control.short_url_duplicate_quarantine_batches SET quarantined_ids_sha256=%s,deleted_ids_sha256=%s,survivor_rowset_sha256=%s WHERE batch_id=%s",(_id_digest(quarantine_ids),_id_digest(deleted_ids),survivor["pre_short_urls_rowset_sha256"],auth["batch_id"]))
+   conn.commit()
+  except Exception: conn.rollback(); raise
+  finally: conn.close()
+ return receipt("short-url-remediation-apply","applied",{"local_only":True,"batch_id":auth["batch_id"],"restore_receipt_sha256":restored["receipt_sha256"],"inspection_receipt_sha256":inspected["receipt_sha256"],"authorization_sha256":digest(auth),"manifest_sha256":MANIFEST_SHA256,"repository_commit":auth["repository_commit"],"short_urls_catalog_sha256":state["short_urls_catalog_sha256"],"selection_spec_sha256":state["selection_spec_sha256"],"duplicate_group_count":state["duplicate_group_count"],"quarantined_row_count":len(quarantine_ids),"quarantined_row_sha256":digest(descriptors),"quarantined_ids_sha256":_id_digest(quarantine_ids),"deleted_ids_sha256":_id_digest(deleted_ids),"victim_descriptors_sha256":state["victim_descriptors_sha256"],"pre_short_urls_rowset_sha256":state["pre_short_urls_rowset_sha256"],"survivor_short_urls_rowset_sha256":survivor["pre_short_urls_rowset_sha256"],"quarantine_catalog_sha256":catalog},[restored["receipt_sha256"],inspected["receipt_sha256"]])
+def _verify_remediation_state(conn,evidence):
+ batch=evidence.get("batch_id")
+ if evidence.get("local_only") is not True or not isinstance(batch,str): raise RecoveryError("remediation verification invalid")
+ binding=_query_conn(conn,"SELECT restore_receipt_sha256,inspection_receipt_sha256,authorization_sha256,manifest_sha256,repository_commit,selection_spec_sha256,short_urls_catalog_sha256,duplicate_group_count,victim_count,pre_rowset_sha256,victim_descriptors_sha256,quarantine_catalog_sha256,quarantined_ids_sha256,deleted_ids_sha256,survivor_rowset_sha256 FROM g035_recovery_control.short_url_duplicate_quarantine_batches WHERE batch_id=%s",(batch,))
+ descriptors=_durable_descriptors(conn,batch); ids=[item["source_id"] for item in descriptors]; state=_short_url_snapshot(conn); catalog=_quarantine_catalog(conn)
+ overlap=_query_conn(conn,"SELECT EXISTS (SELECT 1 FROM public.short_urls s JOIN g035_recovery_control.short_url_duplicate_quarantine q ON q.id=s.id WHERE q.batch_id=%s)",(batch,))[0][0]
+ expected=tuple(evidence.get(key) for key in ("restore_receipt_sha256","inspection_receipt_sha256","authorization_sha256","manifest_sha256","repository_commit","selection_spec_sha256","short_urls_catalog_sha256","duplicate_group_count","quarantined_row_count","pre_short_urls_rowset_sha256","victim_descriptors_sha256","quarantine_catalog_sha256","quarantined_ids_sha256","deleted_ids_sha256","survivor_short_urls_rowset_sha256"))
+ if len(binding)!=1 or binding[0]!=expected or digest(descriptors)!=evidence.get("victim_descriptors_sha256") or _id_digest(ids)!=evidence.get("quarantined_ids_sha256") or evidence.get("quarantined_ids_sha256")!=evidence.get("deleted_ids_sha256") or catalog!=evidence.get("quarantine_catalog_sha256") or not _quarantine_acl_valid(conn) or overlap or state["duplicate_victim_count"] or state["pre_short_urls_rowset_sha256"]!=evidence.get("survivor_short_urls_rowset_sha256"): raise RecoveryError("durable remediation verification failed")
+ return batch,len(descriptors),state
+def run_short_url_verify(args,manifest):
+ require_local(args.service); applied=_require_prior(args.apply_receipt,"short-url-remediation-apply")
+ with tempfile.TemporaryDirectory(prefix="g035-verify-") as raw:
+  service=_copy_local_service(Path(raw),Path(args.service_file),"g035-local"); conn=_connect("g035-local",safe_environment(service))
+  try:
+   _query_conn(conn,"BEGIN READ ONLY"); batch,count,state=_verify_remediation_state(conn,applied["evidence"])
+  finally: conn.rollback(); conn.close()
+ return receipt("short-url-remediation-verify","validated",{**applied["evidence"],"apply_receipt_sha256":applied["receipt_sha256"],"batch_id":batch,"quarantined_row_count":count,"survivor_short_urls_rowset_sha256":state["pre_short_urls_rowset_sha256"]},[applied["receipt_sha256"]])
 def apply_manifest(args,manifest):
  require_local(args.service); prior=_require_prior(args.restore_receipt,"restore-verify"); psql=command_exists(args.psql)
  with tempfile.TemporaryDirectory(prefix="g035-clone-") as raw:
-  service=_copy_local_service(Path(raw),Path(args.service_file),"g035-local"); env=safe_environment(service); conn=_connect("g035-local",env); self_commit_attempted=False; compatibility_hook_statements=[]; compatibility_hook_deleted_row_count=0; compatibility_hook_owner_function_count=0; compatibility_hook_obsolete_function_count=0; compatibility_hook_public_function_signatures=()
+  service=_copy_local_service(Path(raw),Path(args.service_file),"g035-local"); env=safe_environment(service); conn=_connect("g035-local",env); self_commit_attempted=False; compatibility_hook_statements=[]; compatibility_hook_owner_function_count=0; compatibility_hook_obsolete_function_count=0; compatibility_hook_public_function_signatures=()
   try:
    _query_conn(conn,"SELECT pg_advisory_lock(35035)")
    receipt_initial_state=_require_restore_initial_ledger(prior,manifest)
    initial_state=_initial_ledger_state(conn,manifest)
    if initial_state!=receipt_initial_state: raise RecoveryError("restore receipt ledger mismatch")
    if initial_state=="baseline":
+    verified=_require_prior(args.short_url_remediation_receipt,"short-url-remediation-verify")
+    if verified.get("prior_receipt_sha256")!=[verified["evidence"].get("apply_receipt_sha256")] or verified["evidence"].get("restore_receipt_sha256")!=prior["receipt_sha256"]: raise RecoveryError("remediation verification chain invalid")
+    _query_conn(conn,"BEGIN READ ONLY"); _verify_remediation_state(conn,verified["evidence"]); conn.rollback()
+   if initial_state=="baseline":
     for index,entry in enumerate(manifest.migrations):
      _ledger_assert(conn,manifest,index); source=repository_root(Path(__file__).resolve())/entry.path
      if sha256_file(source)!=entry.sha256: raise RecoveryError("migration source hash mismatch")
-     hook=_compatibility_hook(entry.version)
-     compatibility_hook_deleted_row_count+=_apply_short_urls_duplicate_target_url_hook(conn,entry.version)
-     _apply_vector_extension_relocation_hook(conn,entry.version)
-     compatibility_hook_obsolete_function_count+=_apply_obsolete_notification_overload_hook(conn,entry.version)
-     compatibility_hook_public_function_signatures=_apply_public_function_owners_hook(conn,entry.version)
-     compatibility_hook_owner_function_count+=_apply_cross_schema_owner_hook(conn,entry.version)
+     hook=_compatibility_sql(entry.version)
      if entry.version in SELF_COMMIT_VERSIONS:
       try:
        self_commit_attempted=True
@@ -385,7 +478,7 @@ def apply_manifest(args,manifest):
     if self_commit_attempted: raise RecoveryError("self_commit_ambiguous") from exc
     raise
    finally: conn.close()
- return receipt("clone-apply","applied",{"baseline_pairs_sha256":BASELINE_SHA256,"initial_ledger_state":initial_state,"migrations_applied_in_invocation":len(manifest.migrations) if initial_state=="baseline" else 0,"migrations_already_present":len(manifest.migrations) if initial_state=="full" else 0,"compatibility_hook_deleted_row_count":compatibility_hook_deleted_row_count,"compatibility_hook_owner_function_count":compatibility_hook_owner_function_count,"compatibility_hook_obsolete_function_count":compatibility_hook_obsolete_function_count,"compatibility_hook_public_function_count":len(compatibility_hook_public_function_signatures),"compatibility_hook_public_function_sha256":digest(compatibility_hook_public_function_signatures),"compatibility_hook_sha256":digest((COMPATIBILITY_HOOKS,VECTOR_EXTENSION_RELOCATION_HOOK_VERSION,VECTOR_EXTENSION_RELOCATION_HOOK,OBSOLETE_NOTIFICATION_OVERLOAD_HOOK_VERSION,OBSOLETE_NOTIFICATION_OVERLOAD,CANONICAL_NOTIFICATION_FUNCTION,PUBLIC_FUNCTION_OWNERS_HOOK_VERSION,PUBLIC_FUNCTION_OWNERS_SQL,CROSS_SCHEMA_OWNER_HOOK_VERSION,CROSS_SCHEMA_OWNER_FUNCTIONS,SHORT_URLS_DUPLICATE_TARGET_URL_HOOK_VERSION,SHORT_URLS_DUPLICATE_TARGET_URL_HOOK)),**{k:v for k,v in observed.items() if k!="ledger_pairs"}},[prior["receipt_sha256"]])
+ return receipt("clone-apply","applied",{"baseline_pairs_sha256":BASELINE_SHA256,"initial_ledger_state":initial_state,"migrations_applied_in_invocation":len(manifest.migrations) if initial_state=="baseline" else 0,"migrations_already_present":len(manifest.migrations) if initial_state=="full" else 0,"short_url_remediation_verify_receipt_sha256":verified["receipt_sha256"] if initial_state=="baseline" else None,"compatibility_hook_owner_function_count":compatibility_hook_owner_function_count,"compatibility_hook_obsolete_function_count":compatibility_hook_obsolete_function_count,"compatibility_hook_public_function_count":len(compatibility_hook_public_function_signatures),"compatibility_hook_public_function_sha256":digest(compatibility_hook_public_function_signatures),"compatibility_hook_sha256":digest((COMPATIBILITY_HOOKS,VECTOR_EXTENSION_RELOCATION_HOOK_VERSION,VECTOR_EXTENSION_RELOCATION_HOOK,OBSOLETE_NOTIFICATION_OVERLOAD_HOOK_VERSION,OBSOLETE_NOTIFICATION_OVERLOAD,CANONICAL_NOTIFICATION_FUNCTION,PUBLIC_FUNCTION_OWNERS_HOOK_VERSION,PUBLIC_FUNCTION_OWNERS_SQL,CROSS_SCHEMA_OWNER_HOOK_VERSION,CROSS_SCHEMA_OWNER_FUNCTIONS)),**{k:v for k,v in observed.items() if k!="ledger_pairs"}},[prior["receipt_sha256"]])
 def run_postflight(args,manifest):
  require_local(args.service); applied=_require_prior(args.clone_receipt,"clone-apply")
  with tempfile.TemporaryDirectory(prefix="g035-postflight-") as raw:
@@ -399,12 +492,15 @@ def parser():
  p=argparse.ArgumentParser(); sub=p.add_subparsers(dest="mode",required=True); sub.add_parser("validate")
  c=sub.add_parser("capture"); c.add_argument("--destination",required=True); c.add_argument("--service-file",required=True); c.add_argument("--recipient",required=True); c.add_argument("--g034-artifact",required=True); c.add_argument("--pg-dump",default="pg_dump"); c.add_argument("--encrypt-command",required=True)
  r=sub.add_parser("restore-verify"); r.add_argument("--dump",required=True); r.add_argument("--capture-receipt",required=True); r.add_argument("--service-file",required=True); r.add_argument("--destination-service",required=True); r.add_argument("--identity-file",required=True); r.add_argument("--decrypt-command",required=True); r.add_argument("--pg-restore",default="pg_restore")
- a=sub.add_parser("clone-apply"); a.add_argument("--service",required=True); a.add_argument("--service-file",required=True); a.add_argument("--restore-receipt",required=True); a.add_argument("--psql",default="psql")
+ i=sub.add_parser("short-url-remediation-inspect"); i.add_argument("--service",required=True); i.add_argument("--service-file",required=True); i.add_argument("--restore-receipt",required=True)
+ a=sub.add_parser("short-url-remediation-apply"); a.add_argument("--service",required=True); a.add_argument("--service-file",required=True); a.add_argument("--restore-receipt",required=True); a.add_argument("--inspect-receipt",required=True); a.add_argument("--authorization",required=True); a.add_argument("--authorization-signature",required=True)
+ v=sub.add_parser("short-url-remediation-verify"); v.add_argument("--service",required=True); v.add_argument("--service-file",required=True); v.add_argument("--apply-receipt",required=True)
+ a=sub.add_parser("clone-apply"); a.add_argument("--service",required=True); a.add_argument("--service-file",required=True); a.add_argument("--restore-receipt",required=True); a.add_argument("--short-url-remediation-receipt"); a.add_argument("--psql",default="psql")
  q=sub.add_parser("local-postflight"); q.add_argument("--service",required=True); q.add_argument("--service-file",required=True); q.add_argument("--clone-receipt",required=True)
  return p
 def main(argv=None):
  args=parser().parse_args(argv)
  try:
-  manifest=validate_sources(repository_root(Path(__file__).resolve())); result=receipt("validate","valid",{"manifest_sha256":MANIFEST_SHA256,"baseline_pairs_sha256":BASELINE_SHA256}) if args.mode=="validate" else {"capture":run_capture,"restore-verify":run_restore_verify,"clone-apply":apply_manifest,"local-postflight":run_postflight}[args.mode](args,manifest); emit(result); return 0
+  manifest=validate_sources(repository_root(Path(__file__).resolve())); result=receipt("validate","valid",{"manifest_sha256":MANIFEST_SHA256,"baseline_pairs_sha256":BASELINE_SHA256}) if args.mode=="validate" else {"capture":run_capture,"restore-verify":run_restore_verify,"short-url-remediation-inspect":run_short_url_inspect,"short-url-remediation-apply":run_short_url_apply,"short-url-remediation-verify":run_short_url_verify,"clone-apply":apply_manifest,"local-postflight":run_postflight}[args.mode](args,manifest); emit(result); return 0
  except (ContractError,RecoveryError): emit(receipt(args.mode,"rejected",{"reason":"policy_rejected"})); return 2
 if __name__=="__main__": raise SystemExit(main())
