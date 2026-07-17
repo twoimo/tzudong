@@ -216,6 +216,21 @@ class G034HostedPreflightTests(unittest.TestCase):
         self.assertTrue(all("procedure.prokind = 'f'" in sql for sql, _ in procedure_checks))
         self.assertTrue(any("to_regclass('public.restaurants_backup') IS NULL" in sql for sql, _ in cursor.sql))
         self.assertTrue(all("restaurants_backup" not in str(params) for sql, params in cursor.sql if params))
+    def test_retirement_function_scan_excludes_unsupported_prokinds_and_blocks_references(self):
+        class Cursor:
+            def __init__(self, referenced=False):
+                self.referenced = referenced
+                self.last_sql = ""
+            def execute(self, sql):
+                self.last_sql = sql
+                if "pg_get_functiondef" in sql and "CASE WHEN procedure.prokind IN ('f', 'p') THEN pg_catalog.pg_get_functiondef(procedure.oid)" not in sql:
+                    raise RuntimeError("WrongObjectType")
+            def fetchone(self):
+                return (self.referenced and "pg_get_functiondef" in self.last_sql,)
+        self.assertFalse(module.catalog_retirement_dependency_exists(Cursor()))
+        for kind in ("function", "procedure"):
+            with self.subTest(kind=kind):
+                self.assertTrue(module.catalog_retirement_dependency_exists(Cursor(referenced=True)))
 
     def test_retirement_gate_rejects_live_table_and_each_hidden_dependency_kind(self):
         for issue in ("live-table", "function-dependency", "view-dependency", "trigger-dependency", "rule-dependency", "fk-dependency"):

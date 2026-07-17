@@ -40,6 +40,21 @@ class G037ExecutorTests(unittest.TestCase):
    e.retirement_gate(Cursor())
    with self.assertRaisesRegex(e.ClosureError,"retirement gate failed"): e.retirement_gate(Cursor(table_absent=False))
    with self.assertRaisesRegex(e.ClosureError,"retirement gate failed"): e.retirement_gate(Cursor(referenced=True))
+ def test_retirement_gate_scans_only_executable_functions_and_procedures(self):
+  class Cursor:
+   description=object()
+   def __init__(self,referenced=False): self.referenced=referenced; self.sql=""
+   def execute(self,sql,params=()):
+    self.sql=sql
+    if "pg_get_functiondef" in sql and "CASE WHEN p.prokind IN ('f','p') THEN pg_catalog.pg_get_functiondef(p.oid)" not in sql: raise RuntimeError("WrongObjectType")
+   def fetchall(self):
+    if "to_regclass" in self.sql: return [(True,)]
+    return [(self.referenced and "pg_get_functiondef" in self.sql,)]
+  for kind in ("function","procedure"):
+   with self.subTest(kind=kind),patch.object(e,"TRACKED_APPROVAL_FUNCTIONS",()):
+    with self.assertRaisesRegex(e.ClosureError,"retirement gate failed"): e.retirement_gate(Cursor(referenced=True))
+  with patch.object(e,"TRACKED_APPROVAL_FUNCTIONS",()):
+   e.retirement_gate(Cursor())
  def test_parser_port_emits_pinned_upstream_identity_for_real_vectors(self):
   parser=Path(__file__).parents[1]/"scripts/g037_supabase_statement_vector.mjs"
   root=Path(__file__).parents[3]; manifest=c.load_manifest(root)
