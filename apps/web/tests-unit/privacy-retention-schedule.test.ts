@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { NextRequest } from 'next/server';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -409,4 +410,38 @@ describe('privacy retention production schedule', () => {
     expect(workflow).not.toContain('response.text()');
     expect(workflow).not.toContain('console.error(error');
     });
+  test('permits Node fetch CORS metadata through capability comparison and rejects browser and near-miss fetch metadata', async () => {
+    const before = process.env.PRIVACY_RETENTION_INTERNAL_CAPABILITY;
+    process.env.PRIVACY_RETENTION_INTERNAL_CAPABILITY = 'x'.repeat(32);
+    try {
+      const { POST } = await import('../app/api/internal/privacy-retention/route.ts?node-fetch-capability-gate');
+      const request = (headers: HeadersInit) => new NextRequest('http://internal.test/api/internal/privacy-retention', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-privacy-retention-capability': 'x'.repeat(32),
+          ...headers,
+        },
+        body: '{}',
+      });
+
+      expect((await POST(request({ 'sec-fetch-mode': 'cors' }))).status).toBe(400);
+      expect((await POST(request({
+        'x-privacy-retention-capability': 'y'.repeat(32),
+        'sec-fetch-mode': 'cors',
+      }))).status).toBe(401);
+      for (const headers of [
+        { cookie: 'session=browser', 'sec-fetch-mode': 'cors' },
+        { 'sec-fetch-mode': 'navigate' },
+        { 'sec-fetch-site': 'same-origin', 'sec-fetch-mode': 'cors' },
+        { 'sec-fetch-dest': 'empty', 'sec-fetch-mode': 'cors' },
+        { 'sec-fetch-user': '?1', 'sec-fetch-mode': 'cors' },
+      ]) {
+        expect((await POST(request(headers))).status).toBe(401);
+      }
+    } finally {
+      if (before === undefined) delete process.env.PRIVACY_RETENTION_INTERNAL_CAPABILITY;
+      else process.env.PRIVACY_RETENTION_INTERNAL_CAPABILITY = before;
+    }
+  });
 });

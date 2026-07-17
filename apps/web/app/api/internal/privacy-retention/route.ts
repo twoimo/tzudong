@@ -69,14 +69,18 @@ const hasValidRetentionCapability = (candidate: string | null, expected: string 
   return timingSafeEqual(digest(candidate), digest(expected));
 };
 
-const isBrowserOrSessionRequest = (request: NextRequest): boolean => Boolean(
-  request.headers.get('authorization')
-  || request.headers.get('cookie')
-  || request.headers.get('origin')
-  || request.headers.get('referer')
-  || request.headers.get('sec-fetch-site')
-  || request.headers.get('sec-fetch-mode'),
-);
+const isBrowserOrSessionRequest = (request: NextRequest): boolean => {
+  const fetchMode = request.headers.get('sec-fetch-mode');
+  return Boolean(
+    request.headers.get('authorization')
+    || request.headers.get('cookie')
+    || request.headers.get('origin')
+    || request.headers.get('referer')
+    || request.headers.get('sec-fetch-site')
+    || request.headers.get('sec-fetch-dest')
+    || request.headers.get('sec-fetch-user'),
+  ) || (fetchMode !== null && fetchMode !== 'cors');
+};
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
