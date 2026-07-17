@@ -104,6 +104,40 @@ class G037ExecutorTests(unittest.TestCase):
   lock_cursor=Cursor(())
   e._lock_under_controller(lock_cursor)
   self.assertEqual([sql for sql,_ in lock_cursor.calls],["SET LOCAL statement_timeout = '60s'","SET LOCAL lock_timeout = '10s'","SET LOCAL idle_in_transaction_session_timeout = '60s'","SELECT pg_advisory_xact_lock(37037)"])
+ def test_run_uses_one_cursor_for_read_only_catalog_and_readback(self):
+  class Cursor:
+   description=object()
+   def __init__(self): self.calls=[]
+   def execute(self,sql,params=()): self.calls.append((sql,params))
+   def fetchall(self):
+    sql=self.calls[-1][0]
+    return [(12345,)] if "to_regprocedure" in sql else [(True,)]
+  class Connection:
+   def __init__(self): self.cursor_value=Cursor(); self.events=[]
+   def cursor(self): self.events.append("cursor"); return self.cursor_value
+   def rollback(self): self.events.append("rollback")
+   def close(self): self.events.append("close")
+  def catalog(cur,manifest,*,terminal):
+   self.assertIs(cur,connections[len(catalog_calls)].cursor_value); catalog_calls.append(terminal)
+   return (("baseline","migration",()),),"c"*64
+  def terminal(cur,root,manifest):
+   self.assertIs(cur,connections[1].cursor_value)
+   return {"catalog_root":"d"*64,"acl_root":"a"*64,"ledger_root":"l"*64}
+  connections=[Connection(),Connection()]
+  catalog_calls=[]
+  with patch.object(e,"connection",side_effect=connections),patch.object(e,"catalog",side_effect=catalog),patch.object(e,"terminal_readback_assert",side_effect=terminal):
+   preflight=e.run(SimpleNamespace(mode="preflight",db_env="TEST_DB"))
+   readback=e.run(SimpleNamespace(mode="readback",db_env="TEST_DB"))
+  self.assertEqual(preflight["status"],"ready")
+  self.assertEqual(readback["status"],"readback")
+  self.assertEqual(catalog_calls,[False,True])
+  for conn in connections: self.assertEqual(conn.events,["cursor","rollback","close"])
+  runtime=Connection()
+  with patch.object(e,"connection",return_value=runtime):
+   probe=e.run(SimpleNamespace(mode="runtime-probe",db_env="TEST_DB"))
+  self.assertEqual(probe["status"],"authorization-denied")
+  self.assertEqual(runtime.events,["cursor","rollback","close"])
+  self.assertEqual([sql for sql,_ in runtime.cursor_value.calls],["BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY","SELECT pg_catalog.to_regprocedure(%s)","SELECT NOT has_function_privilege(current_user, pg_catalog.to_regprocedure(%s), 'EXECUTE')"])
  def test_runtime_probe_resolves_terminal_eight_argument_mutator(self):
   class Cursor:
    description=object()
