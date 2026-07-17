@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Fail-closed, local-only encrypted backup/restore/clone rehearsal."""
 from __future__ import annotations
-import argparse, hashlib, json, os, re, shutil, subprocess, tempfile
+import argparse, csv, hashlib, json, os, re, shutil, subprocess, tempfile
 from pathlib import Path
 from typing import Any, Sequence
 from g035_hosted_recovery_contract import APPLICATION_SCHEMAS, BASELINE_PAIRS, BASELINE_SHA256, FORBIDDEN_VERSIONS, MANAGED_METADATA_SCHEMAS, MANIFEST_SHA256, SELF_COMMIT_VERSIONS, ContractError, Manifest, ledger_prefix, repository_root, sha256_file, validate_sources
-TIMEOUT_SECONDS=900; RECEIPT_SCHEMA="g035-local-recovery-receipt-v3"; HEX=re.compile(r"^[a-f0-9]{64}$"); ID=re.compile(r"^[A-Za-z0-9._:-]{1,128}$"); LOCAL_SERVICE="g035-local"; LOCAL_DBNAME="g035_local"; LOCAL_HOSTS={"localhost","127.0.0.1","::1"}; SERVICE_KEYS={"host","port","dbname","application_name","sslmode","user","password","connect_timeout"}
+TIMEOUT_SECONDS=900; RECEIPT_SCHEMA="g035-local-recovery-receipt-v3"; HEX=re.compile(r"^[a-f0-9]{64}$"); AGE_RECIPIENT=re.compile(r"^age1[ac-hj-np-z02-9]{58}$"); ID=re.compile(r"^[A-Za-z0-9._:-]{1,128}$"); LOCAL_SERVICE="g035-local"; LOCAL_DBNAME="g035_local"; LOCAL_HOSTS={"localhost","127.0.0.1","::1"}; SERVICE_KEYS={"host","port","dbname","application_name","sslmode","user","password","connect_timeout"}
 class RecoveryError(RuntimeError): pass
 def _pairs(pairs):
  result={}
@@ -42,26 +42,57 @@ def safe_environment(service_file,*,crypto=False):
  env={k:os.environ[k] for k in ("PATH","SYSTEMROOT","WINDIR","HOME","USERPROFILE","TEMP","TMP") if k in os.environ}
  if not crypto: env["PGSERVICEFILE"]=str(service_file)
  return env
-_WINDOWS_ACL_SCRIPT="""$ErrorActionPreference='Stop'
-$item=Get-Item -LiteralPath $args[0] -Force
-if(-not ($item -is [System.IO.FileInfo]) -or ($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint)){throw 'invalid file'}
-$acl=Get-Acl -LiteralPath $args[0]
-$rules=$acl.GetAccessRules($true,$true,[System.Security.Principal.SecurityIdentifier])
-[pscustomobject]@{current_sid=[System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value;aces=@($rules|ForEach-Object{[pscustomobject]@{sid=$_.IdentityReference.Value;type=$_.AccessControlType.ToString();inherited=[bool]$_.IsInherited}})}|ConvertTo-Json -Compress -Depth 3"""
 _WINDOWS_ALLOWED_SIDS={"S-1-5-18","S-1-5-32-544"}
+_WINDOWS_SID=re.compile(r"^S-\d+(?:-\d+)+$",re.IGNORECASE)
+def _windows_current_sid():
+ try:
+  completed=subprocess.run(["whoami","/user","/fo","csv","/nh"],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,encoding="utf-8",timeout=10,check=True)
+  rows=list(csv.reader(completed.stdout.splitlines(),strict=True))
+  if len(rows)!=1 or len(rows[0])!=2 or not _WINDOWS_SID.fullmatch(rows[0][1]): return None
+  return rows[0][1].upper()
+ except (OSError,subprocess.TimeoutExpired,subprocess.CalledProcessError,csv.Error): return None
+def _windows_saved_sddl(export):
+ try:
+  raw=Path(export).read_bytes()
+  if raw.startswith(b"\xff\xfe"): text=raw[2:].decode("utf-16-le")
+  elif raw.startswith(b"\xfe\xff"): return None
+  elif len(raw)%2==0 and raw[1::2].count(0)*4>=len(raw) and raw[::2].count(0)*8<len(raw): text=raw.decode("utf-16-le")
+  else: text=raw.decode("utf-8")
+  if "\x00" in text: return None
+  lines=text.splitlines()
+ except (OSError,UnicodeDecodeError): return None
+ values=[]
+ for line in lines:
+  match=re.search(r"(?:^|\s)(D:[^\r\n]+)$",line)
+  if match: values.append(match.group(1))
+ return values[0] if len(values)==1 else None
 def _windows_dacl_restrictive(path):
  """Windows ACL inspection has no POSIX mode-bit fallback."""
+ if path.is_symlink() or not path.is_file(): return False
+ current=_windows_current_sid()
+ if not current: return False
  try:
-  completed=subprocess.run(["powershell.exe","-NoLogo","-NoProfile","-NonInteractive","-ExecutionPolicy","Bypass","-Command",_WINDOWS_ACL_SCRIPT,str(path)],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,encoding="utf-8",timeout=10,check=True)
-  data=json.loads(completed.stdout,object_pairs_hook=_pairs)
-  current=data["current_sid"]; aces=data["aces"]
-  if set(data)!={"current_sid","aces"} or not isinstance(current,str) or not current or not isinstance(aces,list) or not aces: return False
-  allowed=_WINDOWS_ALLOWED_SIDS|{current}
+  with tempfile.TemporaryDirectory(prefix="g035-acl-") as raw:
+   export=Path(raw)/"acl.txt"
+   completed=subprocess.run(["icacls",str(path),"/save",str(export),"/c"],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,encoding="utf-8",timeout=10,check=True)
+   sddl=_windows_saved_sddl(export)
+  if completed.returncode or not sddl or not sddl.startswith("D:"): return False
+  dacl=sddl[2:]
+  controls=re.match(r"(?:(?:P|AR|AI))*(?=\()",dacl)
+  if not controls: return False
+  aces_text=dacl[controls.end():]
+  aces=re.findall(r"\(([^()]*)\)",aces_text)
+  if not aces or "".join(f"({ace})" for ace in aces)!=aces_text: return False
+  allowed={current,"SY","BA",*_WINDOWS_ALLOWED_SIDS}
+  found_current=False
   for ace in aces:
-   if not isinstance(ace,dict) or set(ace)!={"sid","type","inherited"} or not isinstance(ace["sid"],str) or not ace["sid"] or ace["type"] not in {"Allow","Deny"} or not isinstance(ace["inherited"],bool): return False
-   if ace["type"]=="Allow" and ace["sid"] not in allowed: return False
-  return True
- except (OSError,subprocess.TimeoutExpired,subprocess.CalledProcessError,json.JSONDecodeError,RecoveryError,KeyError,TypeError): return False
+   fields=ace.split(";")
+   if len(fields)!=6 or fields[0]!="A" or fields[1] or not fields[2] or fields[3] or fields[4]: return False
+   sid=fields[5].upper()
+   if sid not in allowed: return False
+   found_current |= sid==current
+  return found_current
+ except (OSError,subprocess.TimeoutExpired,subprocess.CalledProcessError): return False
 def _restrictive(path):
  try:
   if path.is_symlink() or not path.is_file(): return False
@@ -149,7 +180,7 @@ def _dump_to_encrypted(pg_dump,encryptor,recipient,snapshot,env,destination):
 def run_capture(args,manifest):
  destination=Path(args.destination).resolve(); root=repository_root(Path(__file__).resolve())
  if not destination.is_dir() or root==destination or root in destination.parents: raise RecoveryError("destination must be an existing directory outside repository")
- if not HEX.fullmatch(args.recipient): raise RecoveryError("invalid encryption recipient fingerprint")
+ if not AGE_RECIPIENT.fullmatch(args.recipient): raise RecoveryError("invalid encryption recipient")
  readiness=None; pg_dump=command_exists(args.pg_dump); encryptor=command_exists(args.encrypt_command)
  with tempfile.TemporaryDirectory(prefix="g035-",dir=str(destination)) as raw:
   service=_copy_service(Path(raw),Path(args.service_file),"g035"); env=safe_environment(service); conn=_connect("g035",env)
@@ -157,7 +188,7 @@ def run_capture(args,manifest):
    _query_conn(conn,"BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY"); snapshot=_query_conn(conn,"SELECT pg_export_snapshot()")[0][0]
    observed=_fingerprints(conn); readiness=_g034_adapter(args.g034_artifact,root,manifest,observed); argv=_dump_to_encrypted(pg_dump,encryptor,args.recipient,snapshot,env,destination)
   finally: conn.rollback(); conn.close()
- evidence={**readiness,"recipient_fingerprint":args.recipient,"dump_sha256":sha256_file(destination/"g035-dump.enc"),"dump_bytes":(destination/"g035-dump.enc").stat().st_size,"schema_scope":list(APPLICATION_SCHEMAS),"managed_metadata_schemas":list(MANAGED_METADATA_SCHEMAS),"managed_metadata_coherence":"metadata fingerprints only; not dumped or restored","snapshot_consumer_argv":argv,**{k:v for k,v in observed.items() if k!="ledger_pairs"}}
+ evidence={**readiness,"recipient_fingerprint":hashlib.sha256(args.recipient.encode("utf-8")).hexdigest(),"dump_sha256":sha256_file(destination/"g035-dump.enc"),"dump_bytes":(destination/"g035-dump.enc").stat().st_size,"schema_scope":list(APPLICATION_SCHEMAS),"managed_metadata_schemas":list(MANAGED_METADATA_SCHEMAS),"managed_metadata_coherence":"metadata fingerprints only; not dumped or restored","snapshot_consumer_argv":argv,**{k:v for k,v in observed.items() if k!="ledger_pairs"}}
  return receipt("capture","captured",evidence)
 def run_restore_verify(args,manifest):
  require_local(args.destination_service); capture=_require_prior(args.capture_receipt,"capture"); dump=Path(args.dump)
