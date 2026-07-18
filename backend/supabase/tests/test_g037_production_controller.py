@@ -10,6 +10,10 @@ MODULE=SCRIPTS/"g037_production_controller.py"
 spec=importlib.util.spec_from_file_location("g037_controller",MODULE); controller=importlib.util.module_from_spec(spec); assert spec.loader; spec.loader.exec_module(controller)
 ORIGIN="https://abcdefghijklmnopqrst.supabase.co"
 SERVICE={"host":"db.abcdefghijklmnopqrst.supabase.co","port":"5432","dbname":"postgres","user":"postgres","sslmode":"verify-full","sslrootcert":"ca"}
+def remediation_evidence():
+ value={"schema":"g037-short-url-remediation-evidence-v1","authorization_id":"11111111-1111-4111-8111-111111111111","policy":"exact-baseline-to-terminal-ledger-single-commit-v1","execution_authorization_sha256":"a"*64,"execution_authorization_signature_sha256":"b"*64,"legacy_repository_commit":"0"*40,"legacy_authorization_sha256":"c"*64,"legacy_authorization_signature_sha256":"d"*64,"legacy_capture_receipt_sha256":"e"*64,"legacy_restore_receipt_sha256":"f"*64,"legacy_inspection_receipt_sha256":"1"*64,"recovery_receipt_sha256":"2"*64,"capture_short_urls_rowset_sha256":"9"*64,"pre_short_urls_rowset_sha256":"9"*64,"survivor_short_urls_rowset_sha256":"3"*64,"deleted_count":1,"duplicate_group_count_before":1,"duplicate_group_count_after":0}; value["remediation_sha256"]=controller.digest(value); return value
+def capture_roots():
+ return {"auth_storage_catalog_root":"1"*64,"auth_storage_metadata_root":"2"*64,"storage_blob_root":"3"*64,"short_urls_catalog_root":"8"*64,"short_urls_rowset_root":"9"*64,"short_urls_victim_descriptors_root":"a"*64,"short_urls_row_count":2,"duplicate_group_count":1,"duplicate_victim_count":1,"recipient_fingerprint":"4"*64,"logical_ciphertext_sha256":"5"*64,"blob_ciphertext_sha256":"6"*64,"object_count":0,"total_bytes":0,"recovery_receipt_sha256":"7"*64}
 class ControllerTests(unittest.TestCase):
  def _restrictive_directory(self,directory):
   path=Path(directory)
@@ -20,6 +24,23 @@ class ControllerTests(unittest.TestCase):
   else: path.chmod(0o700)
   self.assertTrue(controller.recovery.restrictive(path,directory=True))
   return path
+ def setUp(self):
+  self.verify=patch.object(controller,"_verify_remediation",return_value=(object(),{})).start()
+  patch.object(controller.remediation_authorization,"authorize_exact_baseline",side_effect=lambda authority,baseline: authority).start()
+  self.addCleanup(patch.stopall)
+ def test_verify_remediation_extracts_frozen_legacy_chain_attributes(self):
+  patch.stopall()
+  vector=(("selection_spec_sha256","1"*64),("short_urls_catalog_sha256","2"*64),("pre_short_urls_rowset_sha256","3"*64),("duplicate_group_count",1),("duplicate_victim_count",1),("duplicate_victims_sha256","4"*64),("victim_descriptors_sha256","5"*64),("batch_id","11111111-1111-4111-8111-111111111111"))
+  chain=controller.remediation_authorization.VerifiedLegacyRemediationChain("a"*64,"b"*64,"c"*64,"d"*40,"e"*64,"f"*64,vector)
+  args=SimpleNamespace(origin=ORIGIN,freeze_id="freeze-0001",legacy_capture_receipt="capture",legacy_restore_receipt="restore",legacy_inspection_receipt="inspection",legacy_authorization="legacy",legacy_authorization_signature="legacy.sig",execution_authorization="execution",execution_authorization_signature="execution.sig")
+  assertion={"expires_at":2000}; captured={}
+  def authenticate(*_,expected_bindings,**__):
+   captured.update(expected_bindings); return object()
+  with patch.object(controller.remediation_authorization,"verify_legacy_remediation_chain",return_value=chain),patch.object(controller.remediation_authorization,"authenticate_execution_authorization_document",side_effect=authenticate),patch.object(controller.freeze,"_root_source",return_value=(Path("."),"9"*40,"7"*64,"8"*64)):
+   envelope,expected=controller._verify_remediation(args,assertion,"6"*64,controller.digest(assertion))
+  self.assertIsNotNone(envelope)
+  self.assertEqual({key:captured[key] for key in ("legacy_capture_receipt_sha256","legacy_restore_receipt_sha256","legacy_inspection_receipt_sha256","legacy_repository_commit","legacy_authorization_sha256","legacy_authorization_signature_sha256")},{"legacy_capture_receipt_sha256":"a"*64,"legacy_restore_receipt_sha256":"b"*64,"legacy_inspection_receipt_sha256":"c"*64,"legacy_repository_commit":"d"*40,"legacy_authorization_sha256":"e"*64,"legacy_authorization_signature_sha256":"f"*64})
+  self.assertEqual(captured["legacy_vector"],dict(vector))
  def test_validate_has_no_database_connection(self):
   args=SimpleNamespace(origin="https://abcdefghijklmnopqrst.supabase.co",freeze_id="freeze-0001",operator_assertion="assertion",controller_signing_key="key",recovery_signing_key="recovery",recipient_file="recipient",recipient_allowlist_file="allow",service_file="service",service_name="g037",pgpass_file="pgpass",destination="dest",recovery_receipt="recovery-receipt",prepared_receipt="prepared",final_receipt="final",outcome_receipt="outcome")
   assertion={"relation_root":"a"*64,"acl_root":"b"*64,"expires_at":int(time.time())+60}
@@ -28,7 +49,7 @@ class ControllerTests(unittest.TestCase):
   sources.assert_called_once()
  def test_validate_parser_and_runtime_are_secret_free(self):
   common=["--origin",ORIGIN,"--freeze-id","freeze-0001","--controller-signing-key","key","--service-file","service","--pgpass-file","pgpass","--destination","dest","--recovery-receipt","recovery-receipt","--prepared-receipt","prepared","--final-receipt","final","--outcome-receipt","outcome","--recipient-file","recipient","--recipient-allowlist-file","allow"]
-  assertion=["--operator-assertion","assertion","--recovery-signing-key","recovery",*sum((["--evidence-"+channel.replace("_","-"),channel] for channel in controller.RESIDUAL_CHANNELS),[])]
+  assertion=["--operator-assertion","assertion","--recovery-signing-key","recovery","--legacy-capture-receipt","capture","--legacy-restore-receipt","restore","--legacy-inspection-receipt","inspection","--legacy-authorization","legacy","--legacy-authorization-signature","legacy.sig","--execution-authorization","execution","--execution-authorization-signature","execution.sig",*sum((["--evidence-"+channel.replace("_","-"),channel] for channel in controller.RESIDUAL_CHANNELS),[])]
   validate_args=controller.parser().parse_args(["validate",*common,*assertion])
   self.assertFalse(hasattr(validate_args,"secret_env")); self.assertFalse(hasattr(validate_args,"secret_file"))
   for mode in ("execute","rehearse"):
@@ -96,8 +117,8 @@ class ControllerTests(unittest.TestCase):
  def test_prepared_binding_requires_digest_before_claim(self):
   args=SimpleNamespace(freeze_id="freeze-0001")
   terminal={"catalog_root":"c"*64,"acl_root":"a"*64,"ledger_root":"l"*64,"terminal_spec":"t"*64}
-  capture={"auth_storage_catalog_root":"a"*64,"auth_storage_metadata_root":"b"*64,"storage_blob_root":"c"*64,"recipient_fingerprint":"d"*64,"logical_ciphertext_sha256":"e"*64,"blob_ciphertext_sha256":"f"*64,"object_count":0,"total_bytes":0,"recovery_receipt_sha256":"0"*64}
-  prepared={"schema":controller.freeze.SCHEMA,"status":"prepared-not-committed","freeze_id":"freeze-0001","origin":"https://x","commit":"h"*40,"manifest_sha256":controller.freeze.MANIFEST_SHA256,"source_root":"s"*64,"terminal_spec":"t"*64,"before_relation_root":"r"*64,"before_acl_root":"a"*64,"held_lock_root":"l"*64,"capture_roots":capture,"terminal":terminal}
+  capture=capture_roots()
+  prepared={"schema":controller.freeze.SCHEMA,"status":"prepared-not-committed","freeze_id":"freeze-0001","origin":"https://x","commit":"h"*40,"manifest_sha256":controller.freeze.MANIFEST_SHA256,"source_root":"s"*64,"terminal_spec":"t"*64,"before_relation_root":"r"*64,"before_acl_root":"a"*64,"held_lock_root":"l"*64,"capture_roots":capture,"remediation_evidence":remediation_evidence(),"terminal":terminal}
   prepared["receipt_sha256"]=controller.digest(prepared)
   with patch.object(controller.freeze,"_root_source",return_value=(Path("."),"h"*40,"s"*64,"t"*64)):
    self.assertEqual(controller._prepared_binding(prepared,args,"https://x",Path("."),object()),capture)
@@ -144,7 +165,7 @@ class ControllerTests(unittest.TestCase):
     self.assertEqual(kwargs["assertion"],{"signature":"signed"})
     self.assertEqual(kwargs["precommit_receipt_writer"](prepared),prepared["receipt_sha256"])
     kwargs["final_receipt_writer"](receipt); return {"result":"unused"}
-   with patch.object(controller,"validate"),patch.object(controller.recovery,"origin",return_value=ORIGIN),patch.object(controller,"validate_sources",return_value=object()),patch.object(controller,"_signed_assertion",return_value=({"signature":"signed"},{})),patch.object(controller.recovery,"recipient_from_files",return_value=("recipient","f"*64)),patch.object(controller.recovery,"service",return_value=SERVICE),patch.object(controller.recovery,"read_secret_reference",return_value="secret"),patch.object(controller,"_connect",return_value=SimpleNamespace(close=lambda:None)),patch.object(controller.freeze,"_inv",return_value=inventory),patch.object(controller.freeze,"_root_source",return_value=(Path("."),"h"*40,"s"*64,"t"*64)),patch.object(controller.freeze,"run",side_effect=run),patch.object(controller,"_write_signed",side_effect=lambda *values:writes.append(values[2]) or "ignored"),patch.object(controller,"_terminal_roots") as roots:
+   with patch.object(controller,"validate"),patch.object(controller.recovery,"origin",return_value=ORIGIN),patch.object(controller,"validate_sources",return_value=object()),patch.object(controller,"_read_validated_assertion",return_value=({"signature":"signed"},controller.digest({}))),patch.object(controller.recovery,"recipient_from_files",return_value=("recipient","f"*64)),patch.object(controller.recovery,"service",return_value=SERVICE),patch.object(controller.recovery,"read_secret_reference",return_value="secret"),patch.object(controller,"_connect",return_value=SimpleNamespace(close=lambda:None)),patch.object(controller.freeze,"_inv",return_value=inventory),patch.object(controller.freeze,"_root_source",return_value=(Path("."),"h"*40,"s"*64,"t"*64)),patch.object(controller.freeze,"run",side_effect=run),patch.object(controller,"_write_signed",side_effect=lambda *values:writes.append(values[2]) or "ignored"),patch.object(controller,"_terminal_roots") as roots:
     controller.execute(args)
    self.assertEqual(writes[-1]["status"],status); roots.assert_not_called()
  def test_committed_final_requires_actual_postcommit_roots(self):
@@ -188,9 +209,10 @@ class ControllerTests(unittest.TestCase):
     if commit_error: raise RuntimeError("lost acknowledgement")
    def rollback(s): events.append("rollback")
    def close(s): events.append("connection-close")
-  capture={"auth_storage_catalog_root":"1"*64,"auth_storage_metadata_root":"2"*64,"storage_blob_root":"3"*64,"recipient_fingerprint":"4"*64,"logical_ciphertext_sha256":"5"*64,"blob_ciphertext_sha256":"6"*64,"object_count":0,"total_bytes":0,"recovery_receipt_sha256":"7"*64}
+  capture=capture_roots()
   writes=[]
-  patches=[patch.object(controller,"validate"),patch.object(controller.recovery,"origin",return_value=ORIGIN),patch.object(controller,"validate_sources",return_value=object()),patch.object(controller,"_signed_assertion",return_value=({"expires_at":int(time.time())+60,"signature":"signed"},{"expires_at":int(time.time())+60})),patch.object(controller.recovery,"recipient_from_files",return_value=("recipient","f"*64)),patch.object(controller.recovery,"service",return_value=SERVICE),patch.object(controller.recovery,"read_secret_reference",return_value="secret"),patch.object(controller.recovery,"openssl_sign",return_value=b"signature"),patch.object(controller,"_connect",return_value=Conn()),patch.object(controller.freeze,"_inv",return_value=inventory),patch.object(controller.freeze,"_locks",side_effect=lambda cur,relations,seconds: events.append("locks") or "l"*64),patch.object(controller.freeze,"_root_source",return_value=(Path("."),"h"*40,"s"*64,"t"*64)),patch.object(controller.freeze,"validate_operator_assertion"),patch.object(controller.freeze,"_verify_active",side_effect=lambda value,expected:value),patch.object(controller.recovery,"capture_cursor",side_effect=lambda *a,**k: events.append("capture") or capture),patch.object(controller.closure,"rehearse_cursor",side_effect=lambda *a,**k: events.append("rehearse")),patch.object(controller.closure,"apply_cursor",side_effect=lambda *a,**k: events.append("apply")),patch.object(controller.closure,"observed_terminal_roots",side_effect=lambda *a,**k: events.append("observe") or ({**terminal,"catalog_root":"d"*64} if drift and events.count("observe")>1 else terminal)),patch.object(controller,"_write_signed",side_effect=lambda *v:writes.append(v[2]) or (v[2]["receipt_sha256"] if v[2].get("status")=="prepared-not-committed" else controller.digest(v[2])))]
+  patches=[patch.object(controller,"validate"),patch.object(controller,"_remediation_binding",return_value={"authorization":{},"authorization_sha256":"a"*64,"authorization_signature_sha256":"b"*64,"capture_evidence":{}}),patch.object(controller.recovery,"origin",return_value=ORIGIN),patch.object(controller,"validate_sources",return_value=object()),patch.object(controller,"_signed_assertion",return_value=({"expires_at":int(time.time())+60,"signature":"signed"},{"expires_at":int(time.time())+60})),patch.object(controller.recovery,"recipient_from_files",return_value=("recipient","f"*64)),patch.object(controller.recovery,"service",return_value=SERVICE),patch.object(controller.recovery,"read_secret_reference",return_value="secret"),patch.object(controller.recovery,"openssl_sign",return_value=b"signature"),patch.object(controller,"_connect",return_value=Conn()),patch.object(controller.freeze,"_inv",return_value=inventory),patch.object(controller.freeze,"_locks",side_effect=lambda cur,relations,seconds: events.append("locks") or "l"*64),patch.object(controller.freeze,"_root_source",return_value=(Path("."),"h"*40,"s"*64,"t"*64)),patch.object(controller.freeze,"validate_operator_assertion"),patch.object(controller.freeze,"_verify_active",side_effect=lambda value,expected:value),patch.object(controller.recovery,"capture_cursor",side_effect=lambda *a,**k: events.append("capture") or capture),patch.object(controller.closure,"rehearse_cursor",side_effect=lambda *a,**k: events.append("rehearse") or remediation_evidence()),patch.object(controller.closure,"apply_cursor",side_effect=lambda *a,**k: events.append("apply") or remediation_evidence()),patch.object(controller.closure,"observed_terminal_roots",side_effect=lambda *a,**k: events.append("observe") or ({**terminal,"catalog_root":"d"*64} if drift and events.count("observe")>1 else terminal)),patch.object(controller,"_write_signed",side_effect=lambda *v:writes.append(v[2]) or (v[2]["receipt_sha256"] if v[2].get("status")=="prepared-not-committed" else controller.digest(v[2])))]
+  patches.append(patch.object(controller,"_read_validated_assertion",return_value=({"expires_at":int(time.time())+60,"signature":"signed"},controller.digest({"expires_at":int(time.time())+60}))))
   return args,events,writes,patches
  def test_execute_runs_real_freeze_state_machine_in_order(self):
   args,events,writes,patches=self._execute_fixture()
@@ -217,14 +239,14 @@ class ControllerTests(unittest.TestCase):
   self.assertEqual(events.count("commit"),1); self.assertEqual(events.count("apply"),1)
   self.assertEqual([x["status"] for x in writes],["prepared-not-committed","diagnostic","committed-unfinalized"])
  def _prepared(self):
-  terminal=self._terminal(); capture={"auth_storage_catalog_root":"1"*64,"auth_storage_metadata_root":"2"*64,"storage_blob_root":"3"*64,"recipient_fingerprint":"4"*64,"logical_ciphertext_sha256":"5"*64,"blob_ciphertext_sha256":"6"*64,"object_count":0,"total_bytes":0,"recovery_receipt_sha256":"7"*64}
-  value={"schema":controller.freeze.SCHEMA,"status":"prepared-not-committed","freeze_id":"freeze-0001","origin":ORIGIN,"commit":"h"*40,"manifest_sha256":controller.freeze.MANIFEST_SHA256,"source_root":"s"*64,"terminal_spec":"t"*64,"before_relation_root":"r"*64,"before_acl_root":"a"*64,"held_lock_root":"l"*64,"capture_roots":capture,"terminal":terminal}; value["receipt_sha256"]=controller.digest(value); return value
+  terminal=self._terminal(); capture=capture_roots()
+  value={"schema":controller.freeze.SCHEMA,"status":"prepared-not-committed","freeze_id":"freeze-0001","origin":ORIGIN,"commit":"h"*40,"manifest_sha256":controller.freeze.MANIFEST_SHA256,"source_root":"s"*64,"terminal_spec":"t"*64,"before_relation_root":"r"*64,"before_acl_root":"a"*64,"held_lock_root":"l"*64,"capture_roots":capture,"remediation_evidence":remediation_evidence(),"terminal":terminal}; value["receipt_sha256"]=controller.digest(value); return value
  def _reconcile_patches(self,args,prepared,observed=None,writes=None):
   capture=prepared["capture_roots"]
   if not isinstance(capture,dict):
    return [patch.object(controller.recovery,"origin",return_value=ORIGIN),patch.object(controller.recovery,"service",return_value=SERVICE),patch.object(controller,"validate_sources",return_value=object()),patch.object(controller,"_assert_controller_key"),patch.object(controller,"_outside_fresh"),patch.object(controller,"_signed",return_value=prepared)]
   members=[]
-  receipt={"evidence":{"logical_ciphertext_sha256":capture["logical_ciphertext_sha256"],"blob_ciphertext_sha256":capture["blob_ciphertext_sha256"],"recipient_fingerprint":capture["recipient_fingerprint"],"catalog_sha256":capture["auth_storage_catalog_root"],"metadata_sha256":capture["auth_storage_metadata_root"],"members":members,"object_count":capture["object_count"],"total_bytes":capture["total_bytes"]}}
+  receipt={"evidence":{"logical_ciphertext_sha256":capture["logical_ciphertext_sha256"],"blob_ciphertext_sha256":capture["blob_ciphertext_sha256"],"recipient_fingerprint":capture["recipient_fingerprint"],"catalog_sha256":capture["auth_storage_catalog_root"],"metadata_sha256":capture["auth_storage_metadata_root"],"short_urls_catalog_sha256":capture["short_urls_catalog_root"],"short_urls_rowset_sha256":capture["short_urls_rowset_root"],"victim_descriptors_sha256":capture["short_urls_victim_descriptors_root"],"short_urls_row_count":capture["short_urls_row_count"],"duplicate_group_count":capture["duplicate_group_count"],"duplicate_victim_count":capture["duplicate_victim_count"],"members":members,"object_count":capture["object_count"],"total_bytes":capture["total_bytes"]}}
   if capture["recovery_receipt_sha256"]=="7"*64:
    capture["storage_blob_root"]=controller.digest(members)
    capture["recovery_receipt_sha256"]=controller.digest(receipt)
@@ -291,7 +313,7 @@ class ControllerTests(unittest.TestCase):
  def _rehearse_fixture(self, *, malformed_capture=False, baseline_drift=False):
   args=self._execute_args(); args.rehearsal_receipt="rehearsal"; args.rehearsal_outcome_receipt="rehearsal-outcome"
   events=[]; writes=[]; inventory=self._inventory(); terminal=self._terminal(); calls={"inventory":0}
-  capture={"auth_storage_catalog_root":"1"*64,"auth_storage_metadata_root":"2"*64,"storage_blob_root":"3"*64,"recipient_fingerprint":"4"*64,"logical_ciphertext_sha256":"5"*64,"blob_ciphertext_sha256":"6"*64,"object_count":0,"total_bytes":0,"recovery_receipt_sha256":"7"*64}
+  capture=capture_roots()
   if malformed_capture: capture.pop("storage_blob_root")
   class Cursor:
    def execute(s,sql,params=()): events.append(sql)
@@ -310,7 +332,8 @@ class ControllerTests(unittest.TestCase):
    value=values[2]; writes.append(value)
    events.append("rehearsal-receipt" if values[3]=="rehearsal receipt" else "rehearsal-outcome")
    return value["receipt_sha256"]
-  patches=[patch.object(controller,"validate"),patch.object(controller.recovery,"origin",return_value=ORIGIN),patch.object(controller,"validate_sources",return_value=object()),patch.object(controller,"_outside_fresh",side_effect=lambda path,label:Path(path)),patch.object(controller,"_signed_assertion",return_value=({"expires_at":int(time.time())+60,"signature":"signed"},{"expires_at":int(time.time())+60})),patch.object(controller.recovery,"recipient_from_files",return_value=("recipient","f"*64)),patch.object(controller.recovery,"service",return_value=SERVICE),patch.object(controller.recovery,"read_secret_reference",return_value="secret"),patch.object(controller.recovery,"openssl_sign",return_value=b"signature"),patch.object(controller,"_connect",return_value=Conn()),patch.object(controller.freeze,"_inv",side_effect=inv),patch.object(controller.freeze,"_locks",side_effect=lambda cur,relations,seconds: events.append("locks") or "l"*64),patch.object(controller.freeze,"_root_source",return_value=(Path("."),"h"*40,"s"*64,"t"*64)),patch.object(controller.freeze,"validate_operator_assertion"),patch.object(controller.freeze,"_verify_active",side_effect=lambda value,expected:value),patch.object(controller.recovery,"capture_cursor",side_effect=lambda *a,**k: events.append("capture") or capture),patch.object(controller.closure,"rehearse_cursor",side_effect=lambda *a,**k: events.append("rehearse")),patch.object(controller.closure,"apply_cursor",side_effect=lambda *a,**k: events.append("apply")),patch.object(controller.closure,"observed_terminal_roots",side_effect=lambda *a,**k: events.append("terminal") or terminal),patch.object(controller,"_write_signed",side_effect=write)]
+  patches=[patch.object(controller,"validate"),patch.object(controller,"_remediation_binding",return_value={"authorization":{},"authorization_sha256":"a"*64,"authorization_signature_sha256":"b"*64,"capture_evidence":{}}),patch.object(controller.recovery,"origin",return_value=ORIGIN),patch.object(controller,"validate_sources",return_value=object()),patch.object(controller,"_outside_fresh",side_effect=lambda path,label:Path(path)),patch.object(controller,"_signed_assertion",return_value=({"expires_at":int(time.time())+60,"signature":"signed"},{"expires_at":int(time.time())+60})),patch.object(controller.recovery,"recipient_from_files",return_value=("recipient","f"*64)),patch.object(controller.recovery,"service",return_value=SERVICE),patch.object(controller.recovery,"read_secret_reference",return_value="secret"),patch.object(controller.recovery,"openssl_sign",return_value=b"signature"),patch.object(controller,"_connect",return_value=Conn()),patch.object(controller.freeze,"_inv",side_effect=inv),patch.object(controller.freeze,"_locks",side_effect=lambda cur,relations,seconds: events.append("locks") or "l"*64),patch.object(controller.freeze,"_root_source",return_value=(Path("."),"h"*40,"s"*64,"t"*64)),patch.object(controller.freeze,"validate_operator_assertion"),patch.object(controller.freeze,"_verify_active",side_effect=lambda value,expected:value),patch.object(controller.recovery,"capture_cursor",side_effect=lambda *a,**k: events.append("capture") or capture),patch.object(controller.closure,"rehearse_cursor",side_effect=lambda *a,**k: events.append("rehearse") or remediation_evidence()),patch.object(controller.closure,"apply_cursor",side_effect=lambda *a,**k: events.append("apply") or remediation_evidence()),patch.object(controller.closure,"observed_terminal_roots",side_effect=lambda *a,**k: events.append("terminal") or terminal),patch.object(controller,"_write_signed",side_effect=write)]
+  patches.append(patch.object(controller,"_read_validated_assertion",return_value=({"expires_at":int(time.time())+60,"signature":"signed"},controller.digest({"expires_at":int(time.time())+60}))))
   return args,events,writes,patches
  def test_rehearse_runs_full_state_machine_and_rolls_back_before_readback(self):
   args,events,writes,patches=self._rehearse_fixture()
@@ -339,6 +362,25 @@ class ControllerTests(unittest.TestCase):
   self.assertEqual(events.count("commit"),0); self.assertEqual(events.count("apply"),1); self.assertGreaterEqual(events.count("rollback"),2)
   self.assertEqual(events.count("capture"),1); self.assertEqual(events.count("rehearse"),1); self.assertEqual(events.count("locks"),1)
   self.assertEqual([value["status"] for value in writes],["terminal-observed-before-rollback"]); self.assertNotIn("rehearsal-outcome",events)
+ def test_destructive_reread_rejects_replaced_assertion_expiry_or_binding_before_connect_or_capture(self):
+  for mode in ("execute","rehearse"):
+   for drift in ("operator assertion expired","operator assertion binding drift"):
+    args=self._execute_args()
+    if mode=="rehearse":
+     args.rehearsal_receipt="rehearsal"; args.rehearsal_outcome_receipt="rehearsal-outcome"
+    events=[]
+    def validated(*_,**__):
+     events.append("validate")
+    def signed(*_,**__):
+     events.append("reread")
+     return ({"expires_at":int(time.time())-1,"replacement":drift},{})
+    def reject(assertion,*_,**__):
+     events.append("assertion-validated")
+     self.assertEqual(assertion["replacement"],drift)
+     raise controller.ControllerError(drift)
+    with self.subTest(mode=mode,drift=drift),patch.object(controller,"validate",side_effect=validated),patch.object(controller,"_validated_binding",return_value=(ORIGIN,SERVICE)),patch.object(controller,"validate_sources",return_value=object()),patch.object(controller,"_outside_fresh"),patch.object(controller,"_private"),patch.object(controller,"_signed_assertion",side_effect=signed),patch.object(controller,"_validate_assertion",side_effect=reject),patch.object(controller,"_connect",side_effect=lambda *_:events.append("connect")),patch.object(controller.recovery,"capture_cursor",side_effect=lambda *_:events.append("capture")),patch.object(controller.closure,"apply_cursor",side_effect=lambda *_:events.append("apply")):
+     with self.assertRaisesRegex(controller.ControllerError,drift): getattr(controller,mode)(args)
+    self.assertEqual(events,["validate","reread","assertion-validated"])
  def test_project_binding_accepts_only_exact_direct_and_pooler_forms(self):
   args=SimpleNamespace(service_file="service",service_name="g037")
   for entries in (

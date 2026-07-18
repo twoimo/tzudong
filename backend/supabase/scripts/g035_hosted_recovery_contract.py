@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib, json, re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable, Mapping
 
 MANIFEST_RELATIVE_PATH = ".github/g034-hosted-migration-closure.v1.json"
 MANIFEST_SHA256 = "1f568404418009d191c27a0d8e525306b98b9e1472f4056d1f347907c500a8e1"
@@ -93,3 +93,77 @@ def ledger_prefix(manifest: Manifest, applied: list[tuple[str,str]]) -> bool:
     actual = tuple((pair[0], pair[1]) for pair in applied)
     expected = BASELINE_PAIRS + tuple((migration.version, migration.name) for migration in manifest.migrations)
     return actual == expected[:len(actual)] and len(actual) >= len(BASELINE_PAIRS)
+SHORT_URL_SELECTION_SPEC = "row_number() over (partition by target_url order by created_at nulls last, id)"
+SHORT_URLS_CATALOG = (
+    {"name":"id","type":"uuid","nullable":"NO","position":1,"character_maximum_length":None,"column_default":"uuid_generate_v4()","is_generated":"NEVER","is_identity":"NO","identity_generation":None},
+    {"name":"code","type":"character varying","nullable":"NO","position":2,"character_maximum_length":10,"column_default":None,"is_generated":"NEVER","is_identity":"NO","identity_generation":None},
+    {"name":"target_url","type":"text","nullable":"NO","position":3,"character_maximum_length":None,"column_default":None,"is_generated":"NEVER","is_identity":"NO","identity_generation":None},
+    {"name":"restaurant_id","type":"uuid","nullable":"YES","position":4,"character_maximum_length":None,"column_default":None,"is_generated":"NEVER","is_identity":"NO","identity_generation":None},
+    {"name":"restaurant_name","type":"text","nullable":"YES","position":5,"character_maximum_length":None,"column_default":None,"is_generated":"NEVER","is_identity":"NO","identity_generation":None},
+    {"name":"created_at","type":"timestamp with time zone","nullable":"YES","position":6,"character_maximum_length":None,"column_default":"now()","is_generated":"NEVER","is_identity":"NO","identity_generation":None},
+)
+_HEX = re.compile(r"^[a-f0-9]{64}$")
+_COMMIT = re.compile(r"^[0-9a-f]{40,64}$")
+_AUTHORIZATION_FIELDS = frozenset(("schema","inspection_receipt_sha256","restore_receipt_sha256","capture_receipt_sha256","manifest_sha256","repository_commit","selection_spec_sha256","short_urls_catalog_sha256","pre_short_urls_rowset_sha256","duplicate_group_count","duplicate_victim_count","duplicate_victims_sha256","victim_descriptors_sha256","batch_id"))
+_AUTHORIZATION_DIGEST_FIELDS = ("inspection_receipt_sha256","restore_receipt_sha256","capture_receipt_sha256","manifest_sha256","selection_spec_sha256","short_urls_catalog_sha256","pre_short_urls_rowset_sha256","duplicate_victims_sha256","victim_descriptors_sha256")
+class _FrozenDict(dict):
+    def _immutable(self, *args: Any, **kwargs: Any) -> None:
+        raise TypeError("verified authorization is immutable")
+    __setitem__ = __delitem__ = clear = pop = popitem = setdefault = update = _immutable
+
+def canonical_json_bytes(value: Any) -> bytes:
+    try:
+        return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True, allow_nan=False).encode("ascii")
+    except (TypeError, ValueError) as exc:
+        raise ContractError("JSON value is not canonicalizable") from exc
+
+def canonical_sha256(value: Any) -> str:
+    return hashlib.sha256(canonical_json_bytes(value)).hexdigest()
+
+def _reject_constant(_: str) -> None:
+    raise ContractError("authorization JSON contains invalid constant")
+
+def _canonical_uuid(value: Any) -> str:
+    import uuid
+    try:
+        parsed = uuid.UUID(value)
+    except (ValueError, TypeError, AttributeError) as exc:
+        raise ContractError("authorization batch invalid") from exc
+    if not isinstance(value, str) or str(parsed) != value:
+        raise ContractError("authorization batch invalid")
+    return value
+
+def verify_short_url_remediation_authorization(authorization_path: Path, signature_path: Path, *, require_custody: Callable[[Path, str], None], verify_detached: Callable[[bytes, Path, str], None], expected_bindings: Mapping[str, Any], inspection_evidence: Mapping[str, Any]) -> Mapping[str, Any]:
+    """Validate exact signed authorization bytes without exposing signature material."""
+    authorization_path, signature_path = Path(authorization_path), Path(signature_path)
+    require_custody(authorization_path, "authorization file")
+    require_custody(signature_path, "authorization signature")
+    try:
+        raw = authorization_path.read_bytes()
+        authorization = json.loads(raw.decode("utf-8"), object_pairs_hook=_no_duplicate_object, parse_constant=_reject_constant)
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError, ContractError) as exc:
+        raise ContractError("authorization JSON invalid") from exc
+    if not isinstance(authorization, dict) or raw != canonical_json_bytes(authorization):
+        raise ContractError("authorization JSON noncanonical")
+    if set(authorization) != _AUTHORIZATION_FIELDS or authorization.get("schema") != REMEDIATION_AUTHORIZATION_SCHEMA:
+        raise ContractError("authorization schema invalid")
+    if any(not isinstance(authorization.get(key), str) or not _HEX.fullmatch(authorization[key]) for key in _AUTHORIZATION_DIGEST_FIELDS):
+        raise ContractError("authorization digest invalid")
+    if not isinstance(authorization.get("repository_commit"), str) or not _COMMIT.fullmatch(authorization["repository_commit"]):
+        raise ContractError("authorization repository invalid")
+    for key in ("duplicate_group_count", "duplicate_victim_count"):
+        if not isinstance(authorization.get(key), int) or isinstance(authorization[key], bool) or authorization[key] < 0:
+            raise ContractError("authorization count invalid")
+    _canonical_uuid(authorization.get("batch_id"))
+    if any(authorization.get(key) != value for key, value in expected_bindings.items()):
+        raise ContractError("authorization binding invalid")
+    evidence_fields = ("selection_spec_sha256","short_urls_catalog_sha256","pre_short_urls_rowset_sha256","duplicate_group_count","duplicate_victim_count","duplicate_victims_sha256","victim_descriptors_sha256")
+    if any(authorization[key] != inspection_evidence.get(key) for key in evidence_fields):
+        raise ContractError("authorization inspection invalid")
+    if hashlib.sha256(REMEDIATION_PUBLIC_KEY_PEM.encode("ascii")).hexdigest() != REMEDIATION_PUBLIC_KEY_SHA256:
+        raise ContractError("pinned key mismatch")
+    verify_detached(raw, signature_path, REMEDIATION_PUBLIC_KEY_PEM)
+    return _FrozenDict(authorization)
+def is_verified_short_url_remediation_authorization(value: Any) -> bool:
+    """Return whether value is the immutable result of authorization verification."""
+    return isinstance(value, _FrozenDict) and value.get("schema") == REMEDIATION_AUTHORIZATION_SCHEMA
