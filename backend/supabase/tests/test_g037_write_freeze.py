@@ -6,12 +6,14 @@ from unittest.mock import patch
 MODULE=Path(__file__).parents[1]/"scripts"/"g037_write_freeze.py"; sys.path.insert(0,str(MODULE.parent))
 spec=importlib.util.spec_from_file_location("freeze",MODULE); freeze=importlib.util.module_from_spec(spec); assert spec.loader; sys.modules[spec.name]=freeze; spec.loader.exec_module(freeze)
 class Cursor:
- def __init__(self): self.sql=[]
- def execute(self,s,p=()): self.sql.append((s,p))
+ def __init__(self,fail_lock=None): self.sql=[]; self.fail_lock=fail_lock
+ def execute(self,s,p=()):
+  self.sql.append((s,p))
+  if self.fail_lock and self.fail_lock in s: raise RuntimeError("lock denied")
  def fetchall(self): return []
  def close(self): pass
 class Conn:
- def __init__(self,commit_error=False,rollback_error=False): self.c=Cursor(); self.commits=0; self.rollbacks=0; self.commit_error=commit_error; self.rollback_error=rollback_error
+ def __init__(self,commit_error=False,rollback_error=False,fail_lock=None): self.c=Cursor(fail_lock); self.commits=0; self.rollbacks=0; self.commit_error=commit_error; self.rollback_error=rollback_error
  def cursor(self): return self.c
  def commit(self):
   self.commits+=1
@@ -20,7 +22,16 @@ class Conn:
   self.rollbacks+=1
   if self.rollback_error: raise RuntimeError("rollback transport failure")
 def inv(acl="a"):
- rs=tuple(freeze.Relation(s,n,o,"r","owner") for s,n,o in (("auth","users",1),("public","x",2),("storage","objects",3),("shortener_private","limits",4)))
+ rs=tuple(freeze.Relation(s,n,o,"r",owner) for s,n,o,owner in (
+  ("auth","schema_migrations",1,"supabase_auth_admin"),
+  ("auth","users",2,"owner"),
+  ("public","x",3,"owner"),
+  ("storage","buckets_vectors",4,"supabase_storage_admin"),
+  ("storage","migrations",5,"supabase_storage_admin"),
+  ("storage","objects",6,"owner"),
+  ("storage","vector_indexes",7,"supabase_storage_admin"),
+  ("shortener_private","limits",8,"owner"),
+ ))
  return freeze.Inventory(("auth","public","storage","shortener_private"),rs,freeze.digest([r.key for r in rs]),acl*64)
 def terminal(_,spec): return {"catalog_root":"c"*64,"acl_root":"a"*64,"ledger_root":"l"*64,"terminal_spec":spec}
 def capture():
@@ -39,6 +50,32 @@ def patches(inventory):
  return (patch.object(freeze,"_root_source",return_value=(Path("."),"a"*40,"s"*64,"t"*64)),patch.object(freeze,"validate_operator_assertion"),patch.object(freeze,"_inv",return_value=inventory),patch.object(freeze,"_locks",return_value="l"*64),patch.object(freeze,"_verify_active",side_effect=lambda v,e:{**v,"signature":"ok"}))
 def precommit(receipt): return receipt["receipt_sha256"]
 class FenceTests(unittest.TestCase):
+ def test_exact_provider_managed_exclusions_are_inventory_only(self):
+  c=Conn(); i=inv()
+  with patch.object(freeze,"_inv",return_value=i): self.assertEqual(freeze.preflight(c),i)
+  locks=[sql for sql,_ in c.c.sql if sql.startswith("LOCK TABLE")]
+  self.assertTrue(any('"public"."x"' in sql for sql in locks))
+  self.assertFalse(any(name in sql for name in ('"schema_migrations"','"buckets_vectors"','"migrations"','"vector_indexes"') for sql in locks))
+  self.assertEqual(i.relation_root,freeze.digest([r.key for r in i.relations]))
+  self.assertEqual({(r.schema,r.name,r.owner) for r in i.relations if (r.schema,r.name,r.owner) in freeze.PROVIDER_MANAGED_LOCK_EXCLUSIONS},freeze.PROVIDER_MANAGED_LOCK_EXCLUSIONS)
+  class HeldCursor(Cursor):
+   def fetchall(self):
+    if "FROM pg_locks l" in self.sql[-1][0]: return [(r.schema,r.name,r.oid) for r in freeze._lockable_relations(i.relations)]
+    if "count(*) FROM pg_locks" in self.sql[-1][0]: return [(0,)]
+    return []
+  held=HeldCursor()
+  self.assertEqual(freeze._locks(held,i.relations,60),freeze.digest([(r.schema,r.name,r.oid) for r in freeze._lockable_relations(i.relations)]))
+  self.assertFalse(any(name in sql for name in ('"schema_migrations"','"buckets_vectors"','"migrations"','"vector_indexes"') for sql,_ in held.sql if sql.startswith("LOCK TABLE")))
+ def test_owner_drift_in_provider_managed_exclusion_rejects(self):
+  i=inv(); relations=tuple(freeze.Relation(r.schema,r.name,r.oid,r.kind,"wrong-owner") if r.name=="migrations" else r for r in i.relations)
+  drifted=freeze.Inventory(i.schemas,relations,freeze.digest([r.key for r in relations]),i.acl_root)
+  with patch.object(freeze,"_inv",return_value=drifted),self.assertRaisesRegex(freeze.FreezeError,"provider-managed lock exclusion inventory drift"):
+   freeze.preflight(Conn())
+ def test_extra_un_lockable_relation_rejects(self):
+  i=inv(); extra=freeze.Relation("public","un_lockable",99,"r","owner")
+  expanded=freeze.Inventory(i.schemas,i.relations+(extra,),freeze.digest([r.key for r in i.relations+(extra,)]),i.acl_root)
+  with patch.object(freeze,"_inv",return_value=expanded),self.assertRaisesRegex(freeze.FreezeError,"all non-provider-managed reachable relations must be lockable"):
+   freeze.preflight(Conn(fail_lock='"un_lockable"'))
  def test_preflight_uses_ordinary_rolled_back_transaction(self):
   c=Conn(); i=inv()
   with patch.object(freeze,"_inv",return_value=i): self.assertEqual(freeze.preflight(c),i)
