@@ -308,6 +308,34 @@ class G037ExecutorTests(unittest.TestCase):
    ("SELECT pg_catalog.set_config('statement_timeout', %s, true)",("5000ms",)),
    ("SELECT 'value % required'",),
   ])
+ def test_statement_timeout_is_capped_without_shortening_a_near_expiry_deadline(self):
+  class Cursor:
+   def __init__(self): self.calls=[]
+   def execute(self,*args): self.calls.append(args)
+  high_remaining=Cursor()
+  low_remaining=Cursor()
+  with patch.object(e.time,"time",return_value=100.0),patch.object(e.time,"monotonic",return_value=10.0):
+   e._execute_before_deadline(high_remaining,"SELECT 1",deadline=(220.0,130.0))
+   e._execute_before_deadline(low_remaining,"SELECT 1",deadline=(105.0,15.0))
+  self.assertEqual(high_remaining.calls[0],("SELECT pg_catalog.set_config('statement_timeout', %s, true)",("60000ms",)))
+  self.assertEqual(low_remaining.calls[0],("SELECT pg_catalog.set_config('statement_timeout', %s, true)",("5000ms",)))
+ def test_immutable_statement_failure_diagnostic_is_sanitized_and_bounded(self):
+  raw_sql="SELECT 'raw migration SQL must not leak'"
+  secret_parameter="untrusted-parameter-must-not-leak"
+  class Cursor:
+   description=None
+   def execute(self,sql,params=()):
+    if sql==raw_sql: raise RuntimeError(f"database rejected {raw_sql} params=({secret_parameter!r},)")
+  item=SimpleNamespace(version="20260718009999",name="hostile")
+  expected_hash=hashlib.sha256(raw_sql.encode("utf-8")).hexdigest()
+  with patch.object(e,"remediate_short_url_duplicates",return_value={}),patch.object(e,"_admission_assert"),patch.object(e,"validate_managed_role_coverage"),patch.object(e,"_assert_role_flags"),patch.object(e,"_assert_memberships"),patch.object(e,"_terminal_assert"):
+   with self.assertRaises(e.ClosureError) as raised:
+    e._execute_closure(Cursor(),Path("."),SimpleNamespace(migrations=(item,)),{},plan=((item,("SELECT 1",raw_sql),("SELECT 1",raw_sql),("SELECT 1",raw_sql)),),deadline=int(time.time())+60)
+  diagnostic=str(raised.exception)
+  self.assertEqual(diagnostic,f"immutable migration statement failed: version={item.version}, ordinal=2, sha256={expected_hash}")
+  self.assertIsNone(raised.exception.__cause__)
+  self.assertNotIn(raw_sql,diagnostic)
+  self.assertNotIn(secret_parameter,diagnostic)
  def test_run_uses_one_cursor_for_read_only_catalog_and_readback(self):
   class Cursor:
    description=object()
