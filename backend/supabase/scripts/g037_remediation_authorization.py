@@ -182,7 +182,7 @@ def _write_fresh_restrictive(path,data,root):
    from g035_hosted_recovery import _windows_current_sid
    sid=_windows_current_sid()
    if not sid: raise ContractError("Windows identity unavailable")
-   subprocess.run(["icacls",str(path),"/inheritance:r","/grant:r",sid+":(R,W)","/c"],check=True,timeout=10)
+   subprocess.run(["icacls",str(path),"/inheritance:r","/grant:r","*"+sid+":(R,W)","/c"],check=True,timeout=10)
   else: os.fchmod(fd,0o600)
   _same_output_file(fd,path)
   restrictive_regular_file(path,"output",Path(root).resolve())
