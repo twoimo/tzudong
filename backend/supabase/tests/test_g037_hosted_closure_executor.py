@@ -148,12 +148,66 @@ class G037ExecutorTests(unittest.TestCase):
    self.assertEqual(e.source_sql(fixture_root,self_item),b"\nSELECT 1;\n")
    (fixture_root/self_item.path).write_bytes(b"BEGIN;\nCOMMIT;\nSELECT 1;\nCOMMIT;\n")
    with self.assertRaisesRegex(e.ClosureError,"self-wrapper drift"): e.source_sql(fixture_root,self_item)
+ def test_documents_policy_compatibility_is_exact_and_deterministic(self):
+  target=SimpleNamespace(version="20260627080000")
+  class Cursor:
+   description=object()
+   def __init__(self,rows): self.rows=rows; self.calls=[]
+   def execute(self,sql,params=()): self.calls.append((sql,params))
+   def fetchall(self): return self.rows
+  empty=Cursor(())
+  e._prepare_documents_policy_compatibility(empty,target)
+  self.assertEqual(empty.calls[0][1],([row[0] for row in e._DOCUMENTS_POLICY_CONTRACT],))
+  self.assertEqual(len(empty.calls),1)
+  exact=Cursor(e._DOCUMENTS_POLICY_CONTRACT)
+  e._prepare_documents_policy_compatibility(exact,target)
+  self.assertEqual(
+   [sql for sql,_ in exact.calls[1:]],
+   ['DROP POLICY "documents_delete_own" ON public.documents',
+    'DROP POLICY "documents_insert_own" ON public.documents',
+    'DROP POLICY "documents_select_own" ON public.documents',
+    'DROP POLICY "documents_update_own" ON public.documents'],
+  )
+  self.assertIn("p.polpermissive",exact.calls[0][0])
+  self.assertIn("pg_catalog.pg_roles",exact.calls[0][0])
+  for rows in (
+   e._DOCUMENTS_POLICY_CONTRACT[:-1],
+   e._DOCUMENTS_POLICY_CONTRACT+(e._DOCUMENTS_POLICY_CONTRACT[0],),
+   e._DOCUMENTS_POLICY_CONTRACT[:1]+(("documents_insert_own","INSERT",("PUBLIC",),True,None,"(auth.uid() = other_id)"),)+e._DOCUMENTS_POLICY_CONTRACT[2:],
+   e._DOCUMENTS_POLICY_CONTRACT[:1]+(("documents_insert_own","INSERT",("authenticated",),True,None,"(auth.uid() = user_id)"),)+e._DOCUMENTS_POLICY_CONTRACT[2:],
+   e._DOCUMENTS_POLICY_CONTRACT[:1]+(("documents_insert_own","INSERT",("PUBLIC",),False,None,"(auth.uid() = user_id)"),)+e._DOCUMENTS_POLICY_CONTRACT[2:],
+  ):
+   cursor=Cursor(rows)
+   with self.subTest(rows=rows),self.assertRaisesRegex(e.ClosureError,"compatibility contract drift"):
+    e._prepare_documents_policy_compatibility(cursor,target)
+   self.assertEqual(len(cursor.calls),1)
+  unrelated=Cursor(e._DOCUMENTS_POLICY_CONTRACT)
+  e._prepare_documents_policy_compatibility(unrelated,SimpleNamespace(version="20260627080001"))
+  self.assertEqual(unrelated.calls,[])
+ def test_documents_policy_compatibility_precedes_immutable_vector_and_preserves_ledger(self):
+  class Cursor:
+   description=object()
+   def __init__(self): self.calls=[]
+   def execute(self,sql,params=()): self.calls.append((sql,params))
+   def fetchall(self): return e._DOCUMENTS_POLICY_CONTRACT
+  root=Path(__file__).parents[3]
+  item=next(migration for migration in c.load_manifest(root).migrations if migration.version=="20260627080000")
+  recreated=tuple(f"CREATE POLICY {name}" for name,*_ in e._DOCUMENTS_POLICY_CONTRACT)
+  cursor=Cursor()
+  with patch.object(e,"source_sql"),patch.object(e,"vectors",return_value=(recreated,recreated)),patch.object(e,"_terminal_assert") as terminal:
+   e._execute_closure(cursor,root,SimpleNamespace(migrations=(item,)))
+  sql=[statement for statement,_ in cursor.calls]
+  last_drop=sql.index('DROP POLICY "documents_update_own" ON public.documents')
+  self.assertTrue(all(sql.index(statement)>last_drop for statement in recreated))
+  insert=next(params for statement,params in cursor.calls if statement.startswith("INSERT INTO supabase_migrations.schema_migrations"))
+  self.assertEqual(insert,(item.version,item.name,list(recreated)))
+  terminal.assert_called_once_with(cursor,unittest.mock.ANY,{item.version:recreated})
  def test_execute_closure_records_real_vectors_with_fake_cursor(self):
   class Cursor:
    def __init__(self): self.calls=[]
    def execute(self,sql,params=()): self.calls.append((sql,params))
   root=Path(__file__).parents[3]; loaded=c.load_manifest(root)
-  ordinary=next(item for item in loaded.migrations if item.version not in c.SELF_WRAPPING)
+  ordinary=next(item for item in loaded.migrations if item.version not in c.SELF_WRAPPING and item.version!=e._DOCUMENTS_POLICY_COMPATIBILITY_VERSION)
   wrapped=next(item for item in loaded.migrations if item.version in c.SELF_WRAPPING)
   manifest=SimpleNamespace(migrations=(ordinary,wrapped)); cursor=Cursor()
   with patch.object(e,"_terminal_assert") as terminal:
