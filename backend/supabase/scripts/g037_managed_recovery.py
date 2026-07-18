@@ -191,7 +191,7 @@ def _active_capability(capability, expected, deadline):
   if not openssl_verify(command("openssl"),public_key,canonical(payload),base64.b64decode(signature,validate=True)):
    raise RecoveryError("freeze capability signature invalid")
  finally:
-  public_key.unlink(missing_ok=True)
+  _cleanup_temporary_files(public_key)
  if payload!=expected or payload["schema"]!="g037-write-freeze-v3" or payload["state"]!="active-provisional" or payload["scope"]!=EXPECTED_FREEZE_SCOPE or payload["controller_public_key_sha256"]!=CONTROLLER_PUBLIC_KEY_SHA256:
   raise RecoveryError("freeze capability binding drift")
  if any(not isinstance(payload[k],str) or not HEX.fullmatch(payload[k]) for k in ("manifest_sha256","source_root","terminal_spec","relation_root","acl_root","held_lock_root")) or not FREEZE_ID.fullmatch(payload["freeze_id"]) or not isinstance(payload["not_before_unix"],int) or not isinstance(payload["not_after_unix"],int):
@@ -287,24 +287,52 @@ def download_archive(base,secret,catalog,age,recipient,output,deadline):
   if crypt and crypt.stdin and not crypt.stdin.closed: crypt.stdin.close()
   _reap(crypt)
  return commitments
-def openssl_sign(openssl,key,payload):
- try: return subprocess.run([openssl,"pkeyutl","-sign","-rawin","-inkey",str(key)],input=payload,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=TIMEOUT,check=True).stdout
- except Exception as exc: raise RecoveryError("Ed25519 signing failed") from exc
-def openssl_verify(openssl,key,payload,signature):
- signature_path=None
+def _temporary_bytes(payload,prefix):
+ fd,path=tempfile.mkstemp(prefix=prefix)
  try:
-  fd,signature_path=tempfile.mkstemp(prefix="g037-signature-")
-  with os.fdopen(fd,"wb") as signature_file: signature_file.write(signature)
-  subprocess.run([openssl,"pkeyutl","-verify","-rawin","-pubin","-inkey",str(key),"-sigfile",signature_path],input=payload,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=TIMEOUT,check=True)
+  if os.name=="nt":
+   sid=_windows_current_sid()
+   if not sid: raise RecoveryError("current Windows SID unavailable")
+   subprocess.run(["icacls",path,"/inheritance:r","/grant:r","*"+sid+":F"],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,timeout=10,check=True)
+   if not _windows_dacl_restrictive(path): raise RecoveryError("temporary file ACL is not owner-restricted")
+  else:
+   os.chmod(path,0o600)
+   if Path(path).stat().st_mode&0o777!=0o600 or not restrictive(path): raise RecoveryError("temporary file mode is not owner-restricted")
+  with os.fdopen(fd,"wb") as f:
+   f.write(payload); f.flush(); os.fsync(f.fileno())
+  return path
+ except Exception:
+  try: os.close(fd)
+  except OSError: pass
+  Path(path).unlink(missing_ok=True)
+  raise
+def _cleanup_temporary_files(*paths):
+ failure=None
+ for path in paths:
+  if path:
+   try: Path(path).unlink(missing_ok=True)
+   except OSError as exc: failure=exc
+ if failure: raise RecoveryError("temporary file cleanup failed") from failure
+def openssl_sign(openssl,key,payload):
+ payload_path=None
+ try:
+  payload_path=_temporary_bytes(payload,"g037-payload-")
+  return subprocess.run([openssl,"pkeyutl","-sign","-rawin","-inkey",str(key),"-in",payload_path],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=TIMEOUT,check=True).stdout
+ except Exception as exc: raise RecoveryError("Ed25519 signing failed") from exc
+ finally:
+  _cleanup_temporary_files(payload_path)
+def openssl_verify(openssl,key,payload,signature):
+ payload_path=signature_path=None
+ try:
+  payload_path=_temporary_bytes(payload,"g037-payload-")
+  signature_path=_temporary_bytes(signature,"g037-signature-")
+  subprocess.run([openssl,"pkeyutl","-verify","-rawin","-pubin","-inkey",str(key),"-in",payload_path,"-sigfile",signature_path],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=TIMEOUT,check=True)
   return True
  except Exception: return False
  finally:
-  if signature_path: Path(signature_path).unlink(missing_ok=True)
+  _cleanup_temporary_files(payload_path,signature_path)
 def _source_public_key(material):
- fd,path=tempfile.mkstemp(prefix="g037-pinned-public-",suffix=".pem")
- with os.fdopen(fd,"wb") as f: f.write(material)
- if os.name!="nt": os.chmod(path,0o600)
- return Path(path)
+ return Path(_temporary_bytes(material,"g037-pinned-public-"))
 def signed_json(path,material,label):
  require_file(path,label); public_key=_source_public_key(material)
  try:
@@ -313,7 +341,8 @@ def signed_json(path,material,label):
   return data
  except RecoveryError: raise
  except Exception as exc: raise RecoveryError(label+" unreadable") from exc
- finally: public_key.unlink(missing_ok=True)
+ finally:
+  _cleanup_temporary_files(public_key)
 def freeze_evidence(data):
  return {"receipt":data,"sha256":digest(data)}
 def validate_preserved_freeze(evidence):
@@ -325,7 +354,8 @@ def validate_preserved_freeze(evidence):
  public_key=_source_public_key(CONTROLLER_PUBLIC_KEY)
  try:
   if not openssl_verify(command("openssl"),public_key,canonical(payload),signature): raise RecoveryError("freeze evidence signature invalid")
- finally: public_key.unlink(missing_ok=True)
+ finally:
+  _cleanup_temporary_files(public_key)
  if payload["schema"]!="g037-write-freeze-v3" or payload["state"]!="active-provisional" or payload["scope"]!=EXPECTED_FREEZE_SCOPE or payload["controller_public_key_sha256"]!=CONTROLLER_PUBLIC_KEY_SHA256 or not FREEZE_ID.fullmatch(payload["freeze_id"]) or any(not isinstance(payload[k],str) or not HEX.fullmatch(payload[k]) for k in ("manifest_sha256","source_root","terminal_spec","relation_root","acl_root","held_lock_root")) or not all(isinstance(payload[k],int) for k in ("not_before_unix","not_after_unix")) or not all(isinstance(evidence.get(k),int) for k in ("freeze_started_unix","freeze_finished_unix")) or evidence["freeze_started_unix"] < payload["not_before_unix"] or evidence["freeze_finished_unix"] > payload["not_after_unix"]: raise RecoveryError("freeze evidence validity invalid")
  return data
 def write_receipt(path,data):
