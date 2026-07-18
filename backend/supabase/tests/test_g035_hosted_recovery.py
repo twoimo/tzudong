@@ -74,6 +74,34 @@ class ContractTests(unittest.TestCase):
   self.assertNotIn("${{ secrets.",workflow)
   self.assertNotIn("PRIVATE_KEY",workflow)
   self.assertNotIn("AGE-SECRET-KEY",workflow)
+ def test_short_url_authorization_contract_rejects_tampering_and_noncanonical_inputs(self):
+  hashes={key:"a"*64 for key in ("inspection_receipt_sha256","restore_receipt_sha256","capture_receipt_sha256","manifest_sha256","selection_spec_sha256","short_urls_catalog_sha256","pre_short_urls_rowset_sha256","duplicate_victims_sha256","victim_descriptors_sha256")}
+  auth={"schema":contract.REMEDIATION_AUTHORIZATION_SCHEMA,**hashes,"repository_commit":"b"*40,"duplicate_group_count":1,"duplicate_victim_count":1,"batch_id":"11111111-1111-1111-1111-111111111111"}
+  evidence={key:auth[key] for key in ("selection_spec_sha256","short_urls_catalog_sha256","pre_short_urls_rowset_sha256","duplicate_group_count","duplicate_victim_count","duplicate_victims_sha256","victim_descriptors_sha256")}
+  def custody(path,label):
+   if not path.is_file(): raise contract.ContractError(f"{label} missing")
+  def verify(raw,path,pem):
+   if path.read_bytes()!=b"valid": raise contract.ContractError("signature invalid")
+  with tempfile.TemporaryDirectory() as raw:
+   path=Path(raw)/"authorization.json"; signature=Path(raw)/"authorization.sig"; signature.write_bytes(b"valid")
+   path.write_bytes(contract.canonical_json_bytes(auth))
+   verified=contract.verify_short_url_remediation_authorization(path,signature,require_custody=custody,verify_detached=verify,expected_bindings={key:auth[key] for key in ("inspection_receipt_sha256","restore_receipt_sha256","capture_receipt_sha256","manifest_sha256","repository_commit")},inspection_evidence=evidence)
+   self.assertEqual(auth["batch_id"],verified["batch_id"])
+   with self.assertRaises(TypeError): verified["batch_id"]="changed"
+   cases=(
+    b'{}',
+    contract.canonical_json_bytes({**auth,"unexpected":True}),
+    b'{"schema":"g035-short-url-remediation-authorization-v1","schema":"g035-short-url-remediation-authorization-v1"}',
+    contract.canonical_json_bytes(auth)+b"\n",
+   )
+   for payload in cases:
+    path.write_bytes(payload)
+    with self.assertRaises(contract.ContractError): contract.verify_short_url_remediation_authorization(path,signature,require_custody=custody,verify_detached=verify,expected_bindings={},inspection_evidence=evidence)
+   path.write_bytes(contract.canonical_json_bytes({**auth,"manifest_sha256":"c"*64}))
+   with self.assertRaisesRegex(contract.ContractError,"binding"): contract.verify_short_url_remediation_authorization(path,signature,require_custody=custody,verify_detached=verify,expected_bindings={"manifest_sha256":"a"*64},inspection_evidence=evidence)
+   signature.write_bytes(b"tampered")
+   path.write_bytes(contract.canonical_json_bytes(auth))
+   with self.assertRaisesRegex(contract.ContractError,"signature"): contract.verify_short_url_remediation_authorization(path,signature,require_custody=custody,verify_detached=verify,expected_bindings={},inspection_evidence=evidence)
 class ControllerTests(unittest.TestCase):
  def service(self,directory,section="g035-local",body=None):
   path=Path(directory)/"service.conf"; path.write_text(body or f"[{section}]\nhost=127.0.0.1\nport=5432\ndbname=g035_local\napplication_name=g035-local-rehearsal\nsslmode=disable\n",encoding="utf8"); path.chmod(0o600); return path
@@ -174,6 +202,76 @@ class ControllerTests(unittest.TestCase):
    def stat(self): raise AssertionError("mode fallback")
   with patch.object(recovery.os,"name","nt"),patch.object(recovery.subprocess,"run",side_effect=OSError()):
    self.assertFalse(recovery._restrictive(File()))
+ def test_secure_temporary_file_is_mode_600_before_content_on_posix(self):
+  if recovery.os.name=="nt": self.skipTest("POSIX-only mode assertion")
+  fd,path=recovery._secure_temporary_file("g035-test-",b"exact")
+  try:
+   self.assertEqual(0o600,path.stat().st_mode&0o777)
+   self.assertTrue(recovery._same_file_identity(fd,path))
+   self.assertEqual(b"exact",path.read_bytes())
+  finally:
+   recovery._close_temporary_file(fd,path)
+  self.assertFalse(path.exists())
+ def test_secure_temporary_file_applies_windows_acl_before_content(self):
+  with tempfile.TemporaryDirectory() as raw:
+   candidate=Path(raw)/"temporary"
+   fd=recovery.os.open(candidate,recovery.os.O_CREAT|recovery.os.O_EXCL|recovery.os.O_RDWR,0o600)
+   seen=[]
+   def restrict(path):
+    seen.append(path.read_bytes())
+   with patch.object(recovery.tempfile,"mkstemp",return_value=(fd,str(candidate))),patch.object(recovery.os,"name","nt"),patch.object(recovery,"_windows_restrict_temporary_file",side_effect=restrict),patch.object(recovery,"_restrictive",return_value=True):
+    actual_fd,path=recovery._secure_temporary_file("unused",b"exact")
+   try:
+    self.assertEqual([b""],seen)
+    self.assertEqual(b"exact",path.read_bytes())
+   finally:
+    recovery._close_temporary_file(actual_fd,path)
+ def test_secure_temporary_file_acl_failure_cleans_empty_file(self):
+  with tempfile.TemporaryDirectory() as raw:
+   candidate=Path(raw)/"temporary"
+   fd=recovery.os.open(candidate,recovery.os.O_CREAT|recovery.os.O_EXCL|recovery.os.O_RDWR,0o600)
+   with patch.object(recovery.tempfile,"mkstemp",return_value=(fd,str(candidate))),patch.object(recovery.os,"name","nt"),patch.object(recovery,"_windows_restrict_temporary_file",side_effect=recovery.RecoveryError("ACL")):
+    with self.assertRaisesRegex(recovery.RecoveryError,"ACL"): recovery._secure_temporary_file("unused",b"exact")
+   self.assertFalse(candidate.exists())
+ def test_posix_custodied_argument_cannot_be_replaced(self):
+  if recovery.os.name=="nt": self.skipTest("POSIX descriptor custody assertion")
+  fd,path=recovery._secure_temporary_file("g035-test-",b"exact")
+  try:
+   argument=recovery._custodied_argument(fd,path)
+   self.assertFalse(path.exists())
+   path.write_bytes(b"substituted")
+   self.assertEqual(b"exact",Path(argument).read_bytes())
+  finally:
+   recovery._close_temporary_file(fd,path)
+  self.assertTrue(path.exists())
+ def test_detached_verification_passes_pinned_key_and_exact_payload_from_custodied_descriptors(self):
+  with tempfile.TemporaryDirectory() as raw:
+   signature=Path(raw)/"authorization.sig"; signature.write_bytes(b"signature"); signature.chmod(0o600)
+   args=Namespace(authorization=str(Path(raw)/"authorization.json"),authorization_signature=str(signature))
+   inspection={"receipt_sha256":"inspect","evidence":{}}; restored={"receipt_sha256":"restore","prior_receipt_sha256":["capture"]}
+   def verify_contract(path,signature_path,**kwargs):
+    kwargs["verify_detached"](b"exact payload",signature_path,contract.REMEDIATION_PUBLIC_KEY_PEM)
+    return {}
+   def openssl(argv,**kwargs):
+    self.assertEqual(contract.REMEDIATION_PUBLIC_KEY_PEM.encode("ascii"),Path(argv[argv.index("-inkey")+1]).read_bytes())
+    self.assertEqual(b"exact payload",Path(argv[argv.index("-in")+1]).read_bytes())
+    self.assertEqual(b"signature",Path(argv[argv.index("-sigfile")+1]).read_bytes())
+    if recovery.os.name=="posix": self.assertEqual(3,len(kwargs["pass_fds"]))
+    else: self.assertEqual((),kwargs["pass_fds"])
+   with patch.object(recovery,"_repository_commit",return_value="a"*40),patch.object(recovery,"verify_short_url_remediation_authorization",side_effect=verify_contract),patch.object(recovery,"run",side_effect=openssl),patch.object(recovery,"_restrictive",return_value=True):
+    recovery._authorization(args,inspection,restored)
+ def test_run_passes_custodied_descriptor_to_posix_child(self):
+  if recovery.os.name!="posix" or not Path("/proc/self/fd").is_dir(): self.skipTest("POSIX procfs descriptor passing required")
+  fd,path=recovery._secure_temporary_file("g035-test-",b"exact")
+  try:
+   argument=recovery._custodied_argument(fd,path)
+   completed=recovery.run([sys.executable,"-c",f"import sys; print(open({argument!r},'rb').read().decode())"],env={},pass_fds=(fd,))
+   self.assertEqual(b"exact\n",completed.stdout)
+  finally:
+   recovery._close_temporary_file(fd,path)
+ def test_run_rejects_descriptor_passing_outside_posix(self):
+  with patch.object(recovery.os,"name","nt"),self.assertRaisesRegex(recovery.RecoveryError,"descriptor passing unavailable"):
+   recovery.run(["unused"],env={},pass_fds=(1,))
  def artifact(self,manifest,observed,**changes):
   data={"artifactVersion":2,"blockers":["clone-required","clone-backup-recovery-required"],"catalogChecked":True,"catalogFingerprint":observed["catalog_sha256"],"cloneApplyRisks":1,"cloneBackupRecoveryRequired":True,"hostedLedgerFingerprint":observed["ledger_sha256"],"manifestHash":contract.MANIFEST_SHA256,"preflightReceiptId":None,"prerequisites":{},"repositoryCommit":"a"*40,"requiredLaterPromotionGate":"20260713002500_g014_catalog_contract.sql","safeToApply":False,"sourceFingerprint":recovery._source_fingerprint(manifest),"sourceValid":True,"schemaVersion":1,"ledgerExpectedTerminal":"20260531084516","closureTerminalVersion":"20260713002400"}
   data.update(changes); data["preflightReceiptId"]=recovery._preflight_receipt(data); return data
