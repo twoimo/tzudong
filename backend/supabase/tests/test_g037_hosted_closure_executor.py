@@ -8,6 +8,7 @@ sys.path.insert(0,str(Path(__file__).parents[1]/"scripts"))
 import g037_hosted_closure_contract as c
 import g037_hosted_closure_executor as e
 import g037_write_freeze as f
+import g037_production_controller as controller
 import g035_hosted_recovery as g035
 import preflight_g034_hosted_migration_closure as g034
 
@@ -231,7 +232,7 @@ class G037ExecutorTests(unittest.TestCase):
   manifest=c.load_manifest(Path(__file__).parents[3])
   vectors={item.version:(f"vector-{item.version}",) for item in manifest.migrations}
   rows=tuple((version,name,("baseline",)) for version,name in c.BASELINE_PAIRS)+tuple((item.version,item.name,vectors[item.version]) for item in manifest.migrations)
-  with patch.object(e,"retirement_gate"):
+  with patch.object(e,"retirement_gate"),patch.object(e,"_managed_role_catalog_assert"),patch.object(e,"_g014_public_rpc_acl_assert"):
    e._terminal_assert(Cursor(rows),manifest,vectors)
    with self.assertRaisesRegex(e.ClosureError,"terminal ledger mismatch"): e._terminal_assert(Cursor(rows[:-1]),manifest,vectors)
    drifted=rows[:-1]+((rows[-1][0],rows[-1][1],("drift",)),)
@@ -453,4 +454,61 @@ class G037ExecutorTests(unittest.TestCase):
   auth={**before,"pre_short_urls_rowset_sha256":before["short_urls_rowset_sha256"],"legacy_vector":{key:before["short_urls_rowset_sha256"] if key=="pre_short_urls_rowset_sha256" else before[key] for key in ("selection_spec_sha256","short_urls_catalog_sha256","pre_short_urls_rowset_sha256","duplicate_group_count","duplicate_victim_count","duplicate_victims_sha256","victim_descriptors_sha256")}}
   with patch.object(e,"_short_url_binding",return_value=(auth,before)),patch.object(e,"_short_url_snapshot",return_value=before),patch.object(e,"q",return_value=[]):
    with self.assertRaisesRegex(e.ClosureError,"returning mismatch"): e.remediate_short_url_duplicates(object(),{})
+ def test_managed_role_transforms_are_exact_and_execution_only(self):
+  root=Path(__file__).parents[3]; manifest=c.load_manifest(root)
+  selected=[item for item in manifest.migrations if item.version in c.ROLE_TRANSFORMS]
+  self.assertEqual({item.version for item in selected},set(c.ROLE_TRANSFORMS))
+  for item in selected:
+   original,_=e.vectors(root,item); execution,inner=e.transformed_vectors(root,item)
+   self.assertNotEqual(original,execution)
+   self.assertEqual(e.digest(execution),c.ROLE_TRANSFORMS[item.version]["transformed_vector_sha256"])
+   self.assertTrue(all(not re.search(r"(?is)\b(?:create|alter)\s+role\b|\bset\s+role\b",statement) for statement in inner))
+ def test_terminal_spec_is_shared_by_freeze_controller_and_executor(self):
+  root=Path(__file__).parents[3]; manifest=c.load_manifest(root)
+  _,head,source_root,freeze_spec=f._root_source()
+  self.assertEqual(freeze_spec,c.terminal_spec(manifest))
+  self.assertEqual(e._source_binding(root,manifest),(head,source_root,freeze_spec))
+  args=SimpleNamespace(origin="https://abcdefghijklmnopqrst.supabase.co",freeze_id="freeze-0001")
+  with patch.object(controller.freeze,"_root_source",return_value=(root,head,source_root,freeze_spec)):
+   self.assertEqual(controller._execution_bindings(args,{"expires_at":0}, "f"*64,"a"*64)["terminal_spec"],freeze_spec)
+
+ def test_transform_pins_precede_cursor_execution_and_ledger_original_vectors(self):
+  root=Path(__file__).parents[3]; manifest=c.load_manifest(root)
+  class Cursor:
+   def __init__(self): self.calls=[]
+   def execute(self,*args): self.calls.append(args)
+  for item in (migration for migration in manifest.migrations if migration.version in c.ROLE_TRANSFORMS):
+   cursor=Cursor()
+   with self.subTest(version=item.version),patch.object(e,"validate_managed_role_coverage",return_value={item.version:item}),patch.object(e,"source_sql"),patch.object(e,"transformed_vectors",side_effect=e.ClosureError("managed role transform source drift")),patch.object(e,"remediate_short_url_duplicates") as remediate:
+    with self.assertRaisesRegex(e.ClosureError,"source drift"):
+     e._execute_closure(cursor,root,SimpleNamespace(migrations=(item,)),{})
+    self.assertEqual(cursor.calls,[])
+    remediate.assert_not_called()
+   cursor=Cursor()
+   with self.subTest(ledger=item.version),patch.object(e,"validate_managed_role_coverage",return_value={item.version:item}),patch.object(e,"remediate_short_url_duplicates",return_value={}),patch.object(e,"_terminal_assert"):
+    e._execute_closure(cursor,root,SimpleNamespace(migrations=(item,)),{})
+   original,_=e.vectors(root,item); execution,inner=e.transformed_vectors(root,item)
+   self.assertNotEqual(original,execution)
+   self.assertEqual([call[0] for call in cursor.calls[:-1]],list(inner))
+   self.assertEqual(cursor.calls[-1][1],(item.version,item.name,list(original)))
+
+ def test_managed_role_and_g014_acl_assertions_reject_drift(self):
+  class Cursor:
+   description=object()
+   def __init__(self,rows): self.rows=iter(rows)
+   def execute(self,sql,params=()): pass
+   def fetchall(self): return next(self.rows)
+  valid=(False,False,False,False,False,False,False,True,True)
+  expected=(("privacy_retention","privacy_workflow_owner","tzuyang_address_evidence_admin_approval_receipts","privacy_workflow_owner",True,True,"privacy_retention.reject_tzuyang_address_evidence_admin_approval_receipt_mutation()","privacy_workflow_owner",False,"search_path="),("privacy_retention","privacy_workflow_owner","tzuyang_address_evidence_admin_approval_receipts","privacy_workflow_owner",True,True,"public.consume_tzuyang_address_evidence_admin_approval(uuid,text,text,uuid,text,text,text,timestamp with time zone,timestamp with time zone)","privacy_workflow_owner",True,"search_path="))
+  for row in ((),(True,False,False,False,False,False,False,True,True),(False,False,False,False,False,False,False,False,True),(False,False,False,False,False,False,False,True,False)):
+   with self.subTest(role=row),self.assertRaisesRegex(e.ClosureError,"managed role catalog"):
+    e._managed_role_catalog_assert(Cursor(([] if not row else [row],expected)))
+  e._managed_role_catalog_assert(Cursor(([valid],expected)))
+  for index,value in ((3,"postgres"),(4,False),(7,"postgres")):
+   drifted=list(expected); row=list(drifted[0 if index in (3,4) else 1]); row[index]=value; drifted[0 if index in (3,4) else 1]=tuple(row)
+   with self.subTest(g013_catalog=index),self.assertRaisesRegex(e.ClosureError,"managed ownership"):
+    e._managed_role_catalog_assert(Cursor(([valid],tuple(drifted))))
+  for acl in ((False,True),(True,False)):
+   with self.subTest(acl=acl),self.assertRaisesRegex(e.ClosureError,"G014 public RPC ACL"):
+    e._g014_public_rpc_acl_assert(Cursor(([acl],)))
 if __name__=="__main__": unittest.main()

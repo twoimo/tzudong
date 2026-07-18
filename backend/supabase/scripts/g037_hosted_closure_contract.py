@@ -22,6 +22,37 @@ BASELINE_PAIRS = (
     ("20260525143908","create_youtube_kpi_snapshots"),("20260526083932","add_youtube_channel_growth_snapshot_deltas"),
     ("20260531084217","harden_public_api_grants_and_rpcs"),("20260531084516","tighten_public_table_data_api_grants"),
 )
+ROLE_VALIDATION_BLOCK = b"""DO $role$
+DECLARE
+  v_role record;
+BEGIN
+  SELECT role_row.oid, role_row.rolsuper, role_row.rolinherit, role_row.rolcreaterole,
+         role_row.rolcreatedb, role_row.rolreplication, role_row.rolbypassrls, role_row.rolcanlogin
+    INTO v_role FROM pg_catalog.pg_roles AS role_row
+   WHERE role_row.rolname = 'privacy_workflow_owner';
+  IF NOT FOUND OR v_role.rolsuper OR v_role.rolinherit OR v_role.rolcreaterole
+     OR v_role.rolcreatedb OR v_role.rolreplication OR v_role.rolbypassrls OR v_role.rolcanlogin
+     OR EXISTS (SELECT 1 FROM pg_catalog.pg_auth_members AS membership
+                WHERE membership.member = v_role.oid OR membership.roleid = v_role.oid) THEN
+    RAISE EXCEPTION 'privacy_workflow_owner role contract is incompatible';
+  END IF;
+END;
+$role$;"""
+ROLE_VALIDATION_BLOCK_SHA256 = "6cdad411220dc353b4ce1e12dcfd1ee75e3c3d9a612fc0fe23e78455cce165f2"
+ROLE_TRANSFORMS = {
+    "20260713000450": {
+        "source_sha256": "f5d513aba329b3b1a6e12a76d8947f43c247257a379500d7ed5a45486f1c364a",
+        "block_sha256": "ae10ec3a522a2dad1397dc1cb6b1623acdb8b745e7e52d82bb461725170d2a4b",
+        "transformed_source_sha256": "7a985021891930d26b155f8d19362d69cadbd1898b6037832d6da9b9f34a7d7d",
+        "transformed_vector_sha256": "a69daaaa4e91f37c632128dc7f3f6af84460bcf2e8ee9f136bdee8b465cea818",
+    },
+    "20260713002000": {
+        "source_sha256": "094c4ae71ae6c85f0792f72f5941dd8d723104d59af057a3cf6b5667d4740f7e",
+        "block_sha256": "722c208dcc6b50ae1eae9bca8386f3da6a843fdfeb42ec599b4357eded687e84",
+        "transformed_source_sha256": "fb90166cc715becd344bfa065bf31a05c8c09ba6cb22d7714013473dcd6f59f8",
+        "transformed_vector_sha256": "f54a761666a75b3746f3f4161470b4452173ba700d58436d5db8f78d073e3f43",
+    },
+}
 _VERSION = re.compile(r"^[0-9]{14}$"); _SHA = re.compile(r"^[a-f0-9]{64}$")
 class ContractError(ValueError): pass
 
@@ -79,6 +110,16 @@ def expected_ledger(manifest: Manifest) -> tuple[tuple[str,str],...]:
     return tuple((item.version,item.name) for item in manifest.migrations)
 def validate_ledger(manifest: Manifest, observed: Any) -> None:
     if not isinstance(observed,(list,tuple)) or tuple(tuple(x) for x in observed)!=expected_ledger(manifest): raise ContractError("ledger mismatch")
+def terminal_spec(manifest: Manifest) -> str:
+    """Return the single immutable authorization identity for G037 terminal state."""
+    return digest({
+        "manifest": MANIFEST_SHA256,
+        "migrations": [(item.version, item.sha256) for item in manifest.migrations],
+        "managed_role_transforms": {
+            version: ROLE_TRANSFORMS[version] for version in sorted(ROLE_TRANSFORMS)
+        },
+        "g014_terminal": "20260713002400",
+    })
 _FREEZE_ID = re.compile(r"^[a-z0-9][a-z0-9-]{7,127}$")
 _COMMIT = re.compile(r"^[a-f0-9]{40}$")
 _FREEZE_ASSERTION_SCHEMA = "g037-write-freeze-assertion-v1"
