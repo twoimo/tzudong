@@ -23,6 +23,33 @@ PROVIDER_MANAGED_LOCK_EXCLUSIONS=frozenset((
  ("storage","migrations","supabase_storage_admin"),
  ("storage","vector_indexes","supabase_storage_admin"),
 ))
+PROVIDER_MANAGED_ACL_ALLOWLIST=frozenset((
+ ("auth","audit_log_entries","supabase_auth_admin"),
+ ("auth","custom_oauth_providers","supabase_auth_admin"),
+ ("auth","flow_state","supabase_auth_admin"),
+ ("auth","identities","supabase_auth_admin"),
+ ("auth","instances","supabase_auth_admin"),
+ ("auth","mfa_amr_claims","supabase_auth_admin"),
+ ("auth","mfa_challenges","supabase_auth_admin"),
+ ("auth","mfa_factors","supabase_auth_admin"),
+ ("auth","oauth_authorizations","supabase_auth_admin"),
+ ("auth","oauth_client_states","supabase_auth_admin"),
+ ("auth","oauth_clients","supabase_auth_admin"),
+ ("auth","oauth_consents","supabase_auth_admin"),
+ ("auth","one_time_tokens","supabase_auth_admin"),
+ ("auth","refresh_tokens","supabase_auth_admin"),
+ ("auth","saml_providers","supabase_auth_admin"),
+ ("auth","saml_relay_states","supabase_auth_admin"),
+ ("auth","schema_migrations","supabase_auth_admin"),
+ ("auth","sessions","supabase_auth_admin"),
+ ("auth","sso_domains","supabase_auth_admin"),
+ ("auth","sso_providers","supabase_auth_admin"),
+ ("auth","users","supabase_auth_admin"),
+ ("auth","webauthn_challenges","supabase_auth_admin"),
+ ("auth","webauthn_credentials","supabase_auth_admin"),
+ ("storage","buckets","supabase_storage_admin"),
+ ("storage","objects","supabase_storage_admin"),
+))
 CONTROLLER_PUBLIC_KEY_PEM="-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAqaHsCrD74lzv7J3zcfsjchTndvHTWTj1dWeDjwXK+G8=\n-----END PUBLIC KEY-----\n"
 CONTROLLER_PUBLIC_KEY_SHA256=hashlib.sha256(CONTROLLER_PUBLIC_KEY_PEM.encode()).hexdigest()
 class FreezeError(RuntimeError): pass
@@ -55,22 +82,119 @@ def _unique(rows,what):
  if len(rows)!=len(set(rows)): raise FreezeError("duplicate %s inventory"%what)
  return tuple(sorted(rows))
 _TABLE_PRIVILEGES=frozenset(("SELECT","INSERT","UPDATE","DELETE","TRUNCATE","REFERENCES","TRIGGER","MAINTAIN"))
+_PUBLIC_READ=("SELECT",)
+_PUBLIC_INSERT_READ=("INSERT","SELECT")
+_PUBLIC_INSERT_READ_UPDATE=("INSERT","SELECT","UPDATE")
+_PUBLIC_WRITE=("DELETE","INSERT","SELECT","UPDATE")
+# Frozen from g037-public-acl-evidence-v1; never derive this from pg_catalog.
+PUBLIC_ORDINARY_ACL_DECLARATION={
+ "ad_banners":{"anon":_PUBLIC_READ,"authenticated":_PUBLIC_WRITE,"service_role":_TABLE_PRIVILEGES},
+ "admin_audit_events":{"authenticated":_PUBLIC_READ,"service_role":_TABLE_PRIVILEGES},
+ "admin_restaurant_map_overlays":{"service_role":_TABLE_PRIVILEGES},
+ "admin_user_preferences":{"authenticated":_PUBLIC_INSERT_READ_UPDATE,"service_role":_TABLE_PRIVILEGES},
+ "admin_workflow_runs":{"authenticated":_PUBLIC_READ,"service_role":_TABLE_PRIVILEGES},
+ "admin_workflow_signals":{"authenticated":_PUBLIC_READ,"service_role":_TABLE_PRIVILEGES},
+ "admin_workflow_steps":{"authenticated":_PUBLIC_READ,"service_role":_TABLE_PRIVILEGES},
+ "announcements":{"anon":_PUBLIC_READ,"authenticated":_PUBLIC_WRITE,"service_role":_TABLE_PRIVILEGES},
+ "document_embeddings":{"service_role":_TABLE_PRIVILEGES},
+ "documents":{"authenticated":_PUBLIC_WRITE,"service_role":_TABLE_PRIVILEGES},
+ "notifications":{"authenticated":_PUBLIC_WRITE,"service_role":_TABLE_PRIVILEGES},
+ "ocr_logs":{"authenticated":_PUBLIC_INSERT_READ,"service_role":_TABLE_PRIVILEGES},
+ "profiles":{"anon":_PUBLIC_READ,"authenticated":_PUBLIC_INSERT_READ_UPDATE,"service_role":_TABLE_PRIVILEGES},
+ "restaurant_popular_rank_snapshots":{"anon":_PUBLIC_READ,"authenticated":_PUBLIC_READ,"service_role":_TABLE_PRIVILEGES},
+ "restaurant_refresh_candidates":{"authenticated":_PUBLIC_INSERT_READ_UPDATE,"service_role":_TABLE_PRIVILEGES},
+ "restaurant_refresh_runs":{"authenticated":_PUBLIC_INSERT_READ_UPDATE,"service_role":_TABLE_PRIVILEGES},
+ "restaurant_request_review_audit":{"authenticated":_PUBLIC_READ,"service_role":_TABLE_PRIVILEGES},
+ "restaurant_requests":{"authenticated":_PUBLIC_INSERT_READ_UPDATE,"service_role":_TABLE_PRIVILEGES},
+ "restaurant_submission_items":{"authenticated":_PUBLIC_WRITE,"service_role":_TABLE_PRIVILEGES},
+ "restaurant_submissions":{"authenticated":_PUBLIC_WRITE,"service_role":_TABLE_PRIVILEGES},
+ "restaurants":{"anon":_PUBLIC_READ,"authenticated":("SELECT","UPDATE"),"service_role":_TABLE_PRIVILEGES},
+ "restaurants_duplicate":{"service_role":_TABLE_PRIVILEGES},
+ "review_likes":{"anon":_PUBLIC_READ,"authenticated":("DELETE","INSERT","SELECT"),"service_role":_TABLE_PRIVILEGES},
+ "reviews":{"anon":_PUBLIC_READ,"authenticated":_PUBLIC_WRITE,"service_role":_TABLE_PRIVILEGES},
+ "search_logs":{"anon":("INSERT",),"authenticated":_PUBLIC_INSERT_READ,"service_role":_TABLE_PRIVILEGES},
+ "short_urls":{"anon":_PUBLIC_READ,"authenticated":_PUBLIC_READ,"service_role":_TABLE_PRIVILEGES},
+ "transcript_embeddings_bge":{"anon":_PUBLIC_READ,"authenticated":_PUBLIC_READ,"service_role":_TABLE_PRIVILEGES},
+ "user_account_status":{"authenticated":_PUBLIC_READ,"service_role":_TABLE_PRIVILEGES},
+ "user_bookmarks":{"anon":_PUBLIC_READ,"authenticated":("DELETE","INSERT","SELECT"),"service_role":_TABLE_PRIVILEGES},
+ "user_roles":{"authenticated":_PUBLIC_READ,"service_role":_TABLE_PRIVILEGES},
+ "user_stats":{"anon":_PUBLIC_READ,"authenticated":_PUBLIC_READ,"service_role":_TABLE_PRIVILEGES},
+ "video_frame_captions":{"anon":_PUBLIC_READ,"authenticated":_PUBLIC_READ,"service_role":_TABLE_PRIVILEGES},
+ "videos":{"anon":_PUBLIC_READ,"authenticated":_PUBLIC_READ,"service_role":_TABLE_PRIVILEGES},
+ "youtube_channel_kpi_snapshots":{"service_role":_TABLE_PRIVILEGES},
+ "youtube_video_kpi_snapshots":{"service_role":_TABLE_PRIVILEGES},
+}
+PUBLIC_ORDINARY_ACL_ALLOWLIST=frozenset(
+ ("public",relation,"postgres",grantee,privilege)
+ for relation,grantees in PUBLIC_ORDINARY_ACL_DECLARATION.items()
+ for grantee,privileges in grantees.items()
+ for privilege in privileges
+)
+PROVIDER_STORAGE_CLIENT_ACL_ALLOWLIST=frozenset(
+ ("storage",name,"supabase_storage_admin",privilege)
+ for name,privileges in (
+  ("buckets",_TABLE_PRIVILEGES),
+  ("buckets_analytics",_TABLE_PRIVILEGES),
+  ("objects",_TABLE_PRIVILEGES),
+  ("buckets_vectors",frozenset(("SELECT",))),
+  ("s3_multipart_uploads",frozenset(("SELECT",))),
+  ("s3_multipart_uploads_parts",frozenset(("SELECT",))),
+  ("vector_indexes",frozenset(("SELECT",))),
+ ) for privilege in privileges
+)
+PROVIDER_GRANT_OPTION_ACL_ALLOWLIST=frozenset(
+ (schema,name,owner,"postgres",privilege,True)
+ for schema,name,owner in PROVIDER_MANAGED_ACL_ALLOWLIST
+ for privilege in (frozenset(("SELECT",)) if schema=="auth" else _TABLE_PRIVILEGES)
+)
+PROVIDER_AUTH_NON_GRANTABLE_ACL_ALLOWLIST=frozenset(
+ ("auth",name,owner)
+ for schema,name,owner in PROVIDER_MANAGED_ACL_ALLOWLIST if schema=="auth"
+)
+PROVIDER_STORAGE_SERVICE_ACL_ALLOWLIST=frozenset(
+ ("storage",name,"supabase_storage_admin",privilege)
+ for name,privileges in (
+  ("buckets",_TABLE_PRIVILEGES),
+  ("buckets_analytics",_TABLE_PRIVILEGES),
+  ("objects",_TABLE_PRIVILEGES),
+  ("buckets_vectors",frozenset(("SELECT",))),
+  ("s3_multipart_uploads",_TABLE_PRIVILEGES),
+  ("s3_multipart_uploads_parts",_TABLE_PRIVILEGES),
+  ("vector_indexes",frozenset(("SELECT",))),
+ ) for privilege in privileges
+)
 def validate_table_acl_rows(rows, relations, *, terminal=False):
  """Reject unsafe ordinary-relation ACLs before their roots become authority."""
- owners={(r.schema,r.name) if terminal else (r.schema,r.oid):r.owner for r in relations}
- if len(owners)!=len(relations): raise FreezeError("relation inventory malformed")
+ relation_by_acl_key={(r.schema,r.name) if terminal else (r.schema,r.oid):r for r in relations}
+ if len(relation_by_acl_key)!=len(relations): raise FreezeError("relation inventory malformed")
  for row in rows:
-  if len(row)!=6: raise FreezeError("relation acl row malformed")
+  if len(row)!=6: raise FreezeError("relation ACL row malformed")
   schema=str(row[0]); relation=row[1]; grantor=row[2]; grantee=row[3]; privilege=row[4]; grantable=row[5]
-  owner=owners.get((schema,str(relation)) if terminal else (schema,relation))
-  if owner is None: raise FreezeError("relation ACL relation missing")
+  relation_record=relation_by_acl_key.get((schema,str(relation)) if terminal else (schema,relation))
+  if relation_record is None: raise FreezeError("relation ACL relation missing")
+  owner=relation_record.owner
   if not isinstance(grantor,str) or not isinstance(grantee,str) or not isinstance(privilege,str) or type(grantable) is not bool:
-   raise FreezeError("relation acl row malformed")
-  if grantee=="PUBLIC": raise FreezeError("PUBLIC relation ACL is forbidden")
-  if privilege not in _TABLE_PRIVILEGES: raise FreezeError("relation ACL privilege is forbidden")
-  if grantable and (grantor!=owner or grantee!=owner): raise FreezeError("grantable relation ACL is forbidden")
-  if grantee in {"anon","authenticated"} and schema!="public":
-   raise FreezeError("non-public relation ACL is forbidden")
+   raise FreezeError("relation ACL row malformed")
+  if grantee=="PUBLIC" or privilege not in _TABLE_PRIVILEGES:
+   raise FreezeError("relation ACL is forbidden")
+  provider_key=(relation_record.schema,relation_record.name,owner)
+  if grantor==owner and grantee==owner:
+   continue
+  if (relation_record.schema,relation_record.name,owner,grantee,privilege,grantable) in PROVIDER_GRANT_OPTION_ACL_ALLOWLIST and grantor==owner:
+   continue
+  if ((relation_record.schema,relation_record.name,owner,privilege) in PROVIDER_STORAGE_CLIENT_ACL_ALLOWLIST
+      and grantor==owner and grantee in {"anon","authenticated"} and not grantable):
+   continue
+  if ((relation_record.schema,relation_record.name,owner,grantee,privilege) in PUBLIC_ORDINARY_ACL_ALLOWLIST
+      and grantor==owner and not grantable):
+   continue
+  if (provider_key in PROVIDER_AUTH_NON_GRANTABLE_ACL_ALLOWLIST and grantor==owner
+      and grantee in {"postgres","dashboard_user"} and not grantable):
+   continue
+  if ((relation_record.schema,relation_record.name,owner,privilege) in PROVIDER_STORAGE_SERVICE_ACL_ALLOWLIST
+      and grantor==owner and grantee=="service_role" and not grantable):
+   continue
+  raise FreezeError("relation ACL is forbidden")
  return rows
 def _lockable_relations(relations):
  excluded=tuple(r for r in relations if (r.schema,r.name,r.owner) in PROVIDER_MANAGED_LOCK_EXCLUSIONS)
@@ -85,7 +209,7 @@ def _inv(conn):
   rs=_unique(_rows(c,"SELECT n.nspname,c.relname,c.oid,c.relkind,pg_get_userbyid(c.relowner) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=ANY(%s) AND c.relkind IN ('r','p') ORDER BY 1,2,3",(list(schemas),)),"relation")
   relations=tuple(Relation(str(a),str(b),int(o),str(k),str(owner)) for a,b,o,k,owner in rs)
   if not relations: raise FreezeError("empty reachable relation inventory")
-  acl=validate_table_acl_rows(_unique(_rows(c,"SELECT n.nspname,c.oid,COALESCE(grantor.rolname,'PUBLIC'),COALESCE(grantee.rolname,'PUBLIC'),x.privilege_type,x.is_grantable FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace CROSS JOIN LATERAL aclexplode(COALESCE(c.relacl,acldefault('r',c.relowner))) x LEFT JOIN pg_roles grantor ON grantor.oid=x.grantor LEFT JOIN pg_roles grantee ON grantee.oid=x.grantee WHERE n.nspname=ANY(%s) ORDER BY 1,2,3,4,5,6",(list(schemas),)),"acl"),relations)
+  acl=validate_table_acl_rows(_unique(_rows(c,"SELECT n.nspname,c.oid,COALESCE(grantor.rolname,'PUBLIC'),COALESCE(grantee.rolname,'PUBLIC'),x.privilege_type,x.is_grantable FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace CROSS JOIN LATERAL aclexplode(COALESCE(c.relacl,acldefault('r',c.relowner))) x LEFT JOIN pg_roles grantor ON grantor.oid=x.grantor LEFT JOIN pg_roles grantee ON grantee.oid=x.grantee WHERE n.nspname=ANY(%s) AND c.relkind IN ('r','p') ORDER BY 1,2,3,4,5,6",(list(schemas),)),"acl"),relations)
   return Inventory(schemas,relations,digest([r.key for r in relations]),digest(acl))
  finally: c.close()
 def preflight(conn):
