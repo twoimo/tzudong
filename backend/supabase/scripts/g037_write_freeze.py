@@ -175,7 +175,6 @@ def rehearse(conn, *, origin, freeze_id, expected, assertion, callback, provisio
   if (current.schemas!=expected.schemas or current.relations!=expected.relations or current.relation_root!=expected.relation_root or current.acl_root!=expected.acl_root): raise FreezeError("post-lock inventory drift")
   payload={"schema":SCHEMA,"state":"active-provisional","freeze_id":freeze_id,"origin":origin,"commit":head,"manifest_sha256":MANIFEST_SHA256,"source_root":source_root,"terminal_spec":terminal_spec,"scope":{"schemas":list(REACHABLE_SCHEMAS),"ordinary_relations":"all"},"relation_root":expected.relation_root,"acl_root":expected.acl_root,"held_lock_root":lock_root,"not_before_unix":now,"not_after_unix":expires,"controller_public_key_sha256":CONTROLLER_PUBLIC_KEY_SHA256}
   signed=_verify_active(provisional_writer(payload),set(payload))
-  c.execute("SAVEPOINT g037_rehearsal")
   captures=callback(c,signed); validate_capture_roots(captures); stage="capture-validated"
   terminal=terminal_assert(c,terminal_spec)
   if (not isinstance(terminal,dict) or set(terminal)!={"catalog_root","acl_root","ledger_root","terminal_spec"} or terminal["terminal_spec"]!=terminal_spec or any(not isinstance(terminal[k],str) or len(terminal[k])!=64 for k in ("catalog_root","acl_root","ledger_root"))): raise FreezeError("immutable terminal assertion missing")
