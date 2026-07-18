@@ -8,6 +8,9 @@ from __future__ import annotations
 import argparse, json, os, re, subprocess, sys, time
 from pathlib import Path
 from g037_hosted_closure_contract import BASELINE_PAIRS, MANIFEST_SHA256, MODES, SELF_WRAPPING, ContractError, canonical_bytes, digest, no_duplicate_object, repository_root, validate_sources
+from g035_hosted_recovery_contract import SHORT_URL_SELECTION_SPEC, SHORT_URLS_CATALOG, canonical_sha256
+from g037_write_freeze import CONTROLLER_PUBLIC_KEY_SHA256, VerifiedControllerCapability, VerifiedRecoveryCapture, validate_table_acl_rows
+from g037_remediation_authorization import ExecutionAuthorizationEnvelope, authorize_exact_baseline, POLICY
 from preflight_g034_hosted_migration_closure import approval_body_contract, approval_catalog_contract
 
 SCHEMA="g037-hosted-closure-receipt-v3"; ENV=re.compile(r"^[A-Z_][A-Z0-9_]{0,127}$"); COMMIT=re.compile(r"^[a-f0-9]{40}$")
@@ -126,15 +129,20 @@ def validate_controller_capability(capability, *, root, manifest, freeze_id, rel
     """Bind the controller-verified capability to this immutable source tree."""
     head, source_root, terminal_spec = _source_binding(root, manifest)
     required={"schema","state","freeze_id","origin","commit","manifest_sha256","source_root","terminal_spec","scope","relation_root","acl_root","held_lock_root","not_before_unix","not_after_unix","controller_public_key_sha256","signature"}
-    if (not isinstance(capability, dict) or set(capability) != required
+    if (not (type(capability) is VerifiedControllerCapability) or set(capability) != required
         or capability["schema"] != "g037-write-freeze-v3" or capability["state"] != "active-provisional"
         or capability["freeze_id"] != freeze_id or capability["commit"] != head
         or capability["manifest_sha256"] != MANIFEST_SHA256 or capability["source_root"] != source_root
         or capability["terminal_spec"] != terminal_spec or capability["relation_root"] != relation_root
         or capability["acl_root"] != acl_root or capability["not_after_unix"] != deadline
+        or not isinstance(capability["origin"],str) or not capability["origin"]
+        or capability["scope"] != {"schemas":["public","auth","storage","shortener_private","ocr_private","provider_budget_private","privacy_retention"],"ordinary_relations":"all"}
+        or not isinstance(capability["held_lock_root"],str) or not _HEX64.fullmatch(capability["held_lock_root"])
+        or capability["controller_public_key_sha256"] != CONTROLLER_PUBLIC_KEY_SHA256
         or not isinstance(capability["signature"], str) or not capability["signature"]):
         raise ClosureError("controller capability binding mismatch")
-    if not isinstance(capability["not_before_unix"], int) or deadline <= int(time.time()):
+    if (not isinstance(capability["not_before_unix"], int) or isinstance(capability["not_before_unix"],bool)
+        or capability["not_before_unix"]>deadline or deadline <= int(time.time())):
         raise ClosureError("controller capability expired")
     return terminal_spec
 def _lock_under_controller(cur):
@@ -158,7 +166,12 @@ def _terminal_assert(cur, manifest, expected_vectors):
 def _stable_projection_roots(cur):
     schemas=("public","auth","storage","shortener_private","ocr_private","provider_budget_private","privacy_retention")
     catalog_rows=tuple(tuple(map(str,row)) for row in q(cur,"SELECT n.nspname,c.relname,c.relkind,pg_get_userbyid(c.relowner) FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=ANY(%s) AND c.relkind IN ('r','p') ORDER BY 1,2,3,4",(list(schemas),)))
-    acl_rows=tuple(tuple(map(str,row)) for row in q(cur,"SELECT n.nspname,c.relname,COALESCE(grantor.rolname,'PUBLIC'),COALESCE(grantee.rolname,'PUBLIC'),x.privilege_type,x.is_grantable FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace CROSS JOIN LATERAL aclexplode(COALESCE(c.relacl,acldefault('r',c.relowner))) x LEFT JOIN pg_catalog.pg_roles grantor ON grantor.oid=x.grantor LEFT JOIN pg_catalog.pg_roles grantee ON grantee.oid=x.grantee WHERE n.nspname=ANY(%s) ORDER BY 1,2,3,4,5,6",(list(schemas),)))
+    raw_acl_rows=tuple(q(cur,"SELECT n.nspname,c.relname,COALESCE(grantor.rolname,'PUBLIC'),COALESCE(grantee.rolname,'PUBLIC'),x.privilege_type,x.is_grantable FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace CROSS JOIN LATERAL aclexplode(COALESCE(c.relacl,acldefault('r',c.relowner))) x LEFT JOIN pg_catalog.pg_roles grantor ON grantor.oid=x.grantor LEFT JOIN pg_catalog.pg_roles grantee ON grantee.oid=x.grantee WHERE n.nspname=ANY(%s) ORDER BY 1,2,3,4,5,6",(list(schemas),)))
+    try:
+        validate_table_acl_rows(raw_acl_rows,terminal=True)
+    except Exception as exc:
+        raise ClosureError("terminal relation ACL safety policy failed") from exc
+    acl_rows=tuple(tuple(map(str,row)) for row in raw_acl_rows)
     if not catalog_rows or catalog_rows!=tuple(sorted(catalog_rows)) or len(catalog_rows)!=len(set(catalog_rows)):
         raise ClosureError("terminal catalog projection noncanonical")
     if acl_rows!=tuple(sorted(acl_rows)) or len(acl_rows)!=len(set(acl_rows)):
@@ -174,7 +187,79 @@ def observed_terminal_roots(cur, root, manifest):
     return {"catalog_root":catalog_root,"acl_root":acl_root,"ledger_root":digest(rows),"terminal_spec":_source_binding(root,manifest)[2]}
 def terminal_readback_assert(cur, root, manifest):
     return observed_terminal_roots(cur,root,manifest)
-def _execute_closure(cur, root, manifest):
+_SHORT_URL_REMEDIATION_EVIDENCE_SCHEMA="g037-short-url-remediation-evidence-v1"
+_SHORT_URL_BINDING_FIELDS=frozenset(("envelope","expected_bindings","execution_authorization_sha256","execution_authorization_signature_sha256","legacy_repository_commit","legacy_authorization_sha256","legacy_authorization_signature_sha256","legacy_capture_receipt_sha256","legacy_restore_receipt_sha256","legacy_inspection_receipt_sha256","recovery_receipt_sha256","capture_evidence"))
+_SHORT_URL_CAPTURE_FIELDS=frozenset(("selection_spec_sha256","short_urls_catalog_sha256","short_urls_rowset_sha256","short_urls_row_count","duplicate_group_count","duplicate_victim_count","victim_descriptor_count","duplicate_victims_sha256","victim_descriptors_sha256"))
+_HEX64=re.compile(r"^[a-f0-9]{64}$")
+
+def _short_url_json(value):
+    if isinstance(value,str):
+        try: return json.loads(value)
+        except json.JSONDecodeError as exc: raise ClosureError("short_urls query JSON invalid") from exc
+    return value
+
+def _short_url_snapshot(cur):
+    catalog=_short_url_json(q(cur,"SELECT COALESCE(json_agg(json_build_object('name',column_name,'type',data_type,'nullable',is_nullable,'position',ordinal_position,'character_maximum_length',character_maximum_length,'column_default',column_default,'is_generated',is_generated,'is_identity',is_identity,'identity_generation',identity_generation) ORDER BY ordinal_position),'[]') FROM information_schema.columns WHERE table_schema='public' AND table_name='short_urls'")[0][0])
+    rows=_short_url_json(q(cur,"SELECT COALESCE(json_agg(to_jsonb(s) ORDER BY s.id),'[]') FROM public.short_urls s")[0][0])
+    descriptors=_short_url_json(q(cur,"WITH ranked AS (SELECT id,target_url,first_value(id) OVER (PARTITION BY target_url ORDER BY created_at NULLS LAST,id) keeper_id,row_number() OVER (PARTITION BY target_url ORDER BY created_at NULLS LAST,id) rank,to_jsonb(short_urls) row_json FROM public.short_urls) SELECT COALESCE(json_agg(json_build_object('source_id',id::text,'keeper_id',keeper_id::text,'target_url_sha256',encode(digest(target_url,'sha256'),'hex'),'rank',rank,'source_row_sha256',encode(digest(row_json::text,'sha256'),'hex')) ORDER BY id),'[]') FROM ranked WHERE rank>1")[0][0])
+    invalid=q(cur,"SELECT EXISTS (SELECT 1 FROM public.short_urls WHERE code IS NULL OR target_url IS NULL) OR EXISTS (SELECT 1 FROM public.short_urls GROUP BY code HAVING count(*)>1)")[0][0]
+    if invalid or catalog != list(SHORT_URLS_CATALOG) or not isinstance(rows,list) or not isinstance(descriptors,list):
+        raise ClosureError("short_urls current capture invalid")
+    return {"selection_spec_sha256":canonical_sha256(SHORT_URL_SELECTION_SPEC),"short_urls_catalog_sha256":canonical_sha256(catalog),"short_urls_rowset_sha256":canonical_sha256(rows),"short_urls_row_count":len(rows),"duplicate_group_count":len({item.get("keeper_id") for item in descriptors}),"duplicate_victim_count":len(descriptors),"victim_descriptor_count":len(descriptors),"duplicate_victims_sha256":canonical_sha256(descriptors),"victim_descriptors_sha256":canonical_sha256(descriptors),"_rows":rows,"_victims":descriptors}
+
+def _short_url_binding(binding, *, baseline_is_exact):
+    if not isinstance(binding,dict) or set(binding)!=_SHORT_URL_BINDING_FIELDS:
+        raise ClosureError("short_urls remediation binding invalid")
+    envelope=binding["envelope"]; capture=binding["capture_evidence"]
+    if not isinstance(envelope,ExecutionAuthorizationEnvelope) or not isinstance(binding["expected_bindings"],dict):
+        raise ClosureError("execution authorization envelope invalid")
+    try:
+        authorization=authorize_exact_baseline(envelope,expected_bindings=binding["expected_bindings"],now=int(time.time()),baseline_is_exact=baseline_is_exact)
+    except ContractError as exc:
+        raise ClosureError("execution authorization invalid") from exc
+    for key in _SHORT_URL_BINDING_FIELDS-{"envelope","expected_bindings","capture_evidence"}:
+        if not isinstance(binding[key],str) or not _HEX64.fullmatch(binding[key]):
+            raise ClosureError("short_urls authorization provenance invalid")
+    if authorization["policy"] != POLICY or authorization["legacy_repository_commit"] != binding["legacy_repository_commit"] or any(binding[key]!=authorization[key] for key in ("legacy_authorization_sha256","legacy_authorization_signature_sha256","legacy_capture_receipt_sha256","legacy_restore_receipt_sha256","legacy_inspection_receipt_sha256")):
+        raise ClosureError("execution authorization provenance drift")
+    if not (type(capture) is VerifiedRecoveryCapture) or set(capture)!=_SHORT_URL_CAPTURE_FIELDS:
+        raise ClosureError("short_urls capture binding invalid")
+    if any(not isinstance(capture[key],str) or not _HEX64.fullmatch(capture[key]) for key in ("selection_spec_sha256","short_urls_catalog_sha256","short_urls_rowset_sha256","duplicate_victims_sha256","victim_descriptors_sha256")):
+        raise ClosureError("short_urls capture hashes invalid")
+    if any(not isinstance(capture[key],int) or isinstance(capture[key],bool) or capture[key]<0 for key in ("short_urls_row_count","duplicate_group_count","duplicate_victim_count","victim_descriptor_count")):
+        raise ClosureError("short_urls capture counts invalid")
+    vector=authorization["legacy_vector"]
+    if any(vector[key] != capture["short_urls_rowset_sha256" if key=="pre_short_urls_rowset_sha256" else key] for key in ("selection_spec_sha256","short_urls_catalog_sha256","pre_short_urls_rowset_sha256","duplicate_group_count","duplicate_victim_count","duplicate_victims_sha256","victim_descriptors_sha256")):
+        raise ClosureError("execution authorization capture drift")
+    if capture["duplicate_victim_count"] != capture["victim_descriptor_count"] or capture["duplicate_victims_sha256"] != capture["victim_descriptors_sha256"]:
+        raise ClosureError("short_urls capture invalid")
+    return authorization,capture
+
+def remediate_short_url_duplicates(cur, binding):
+    """Fail closed before mutation; return only bounded, receipt-safe remediation evidence."""
+    authorization,capture=_short_url_binding(binding,baseline_is_exact=lambda: tuple((version,name) for version,name,_ in ledger(cur))==BASELINE_PAIRS)
+    before=_short_url_snapshot(cur)
+    expected={key:capture[key] for key in _SHORT_URL_CAPTURE_FIELDS}
+    if any(before[key] != expected[key] for key in expected):
+        raise ClosureError("short_urls current capture drift")
+    if any(authorization["legacy_vector"][key] != before["short_urls_rowset_sha256" if key=="pre_short_urls_rowset_sha256" else key] for key in ("selection_spec_sha256","short_urls_catalog_sha256","pre_short_urls_rowset_sha256","duplicate_group_count","duplicate_victim_count","duplicate_victims_sha256","victim_descriptors_sha256")):
+        raise ClosureError("short_urls authorization current drift")
+    victims=before["_victims"]; victim_ids=[item.get("source_id") for item in victims]
+    if len(victim_ids)!=len(set(victim_ids)) or any(not isinstance(value,str) or not re.fullmatch(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",value) for value in victim_ids):
+        raise ClosureError("short_urls victim selection invalid")
+    if victim_ids:
+        deleted=[str(row[0]) for row in q(cur,"DELETE FROM public.short_urls WHERE id = ANY(%s::uuid[]) RETURNING id::text",(victim_ids,))]
+        if set(deleted)!=set(victim_ids) or len(deleted)!=len(victim_ids):
+            raise ClosureError("short_urls delete returning mismatch")
+    after=_short_url_snapshot(cur)
+    survivor=[row for row in before["_rows"] if row.get("id") not in set(victim_ids)]
+    if after["_rows"] != survivor or after["duplicate_group_count"] or after["duplicate_victim_count"]:
+        raise ClosureError("short_urls remediation postcondition failed")
+    evidence={"schema":_SHORT_URL_REMEDIATION_EVIDENCE_SCHEMA,"authorization_id":authorization["authorization_id"],"policy":authorization["policy"],"execution_authorization_sha256":binding["execution_authorization_sha256"],"execution_authorization_signature_sha256":binding["execution_authorization_signature_sha256"],"legacy_repository_commit":binding["legacy_repository_commit"],"legacy_authorization_sha256":binding["legacy_authorization_sha256"],"legacy_authorization_signature_sha256":binding["legacy_authorization_signature_sha256"],"legacy_capture_receipt_sha256":binding["legacy_capture_receipt_sha256"],"legacy_restore_receipt_sha256":binding["legacy_restore_receipt_sha256"],"legacy_inspection_receipt_sha256":binding["legacy_inspection_receipt_sha256"],"recovery_receipt_sha256":binding["recovery_receipt_sha256"],"capture_short_urls_rowset_sha256":capture["short_urls_rowset_sha256"],"pre_short_urls_rowset_sha256":before["short_urls_rowset_sha256"],"survivor_short_urls_rowset_sha256":after["short_urls_rowset_sha256"],"deleted_count":len(victim_ids),"duplicate_group_count_before":before["duplicate_group_count"],"duplicate_group_count_after":after["duplicate_group_count"]}
+    return {**evidence,"remediation_sha256":canonical_sha256(evidence)}
+
+def _execute_closure(cur, root, manifest, remediation):
+    remediation_evidence=remediate_short_url_duplicates(cur,remediation)
     expected_vectors={}
     for item in manifest.migrations:
         source_sql(root,item)
@@ -184,14 +269,15 @@ def _execute_closure(cur, root, manifest):
         cur.execute("INSERT INTO supabase_migrations.schema_migrations(version,name,statements) VALUES (%s,%s,%s)",(item.version,item.name,list(full)))
         expected_vectors[item.version]=full
     _terminal_assert(cur,manifest,expected_vectors)
-def rehearse_cursor(cur, capability, *, root, manifest, freeze_id, relation_root, acl_root, deadline):
+    return remediation_evidence
+def rehearse_cursor(cur, capability, *, root, manifest, freeze_id, relation_root, acl_root, deadline, remediation):
     """Execute and roll back exact vectors using only the controller cursor."""
     validate_controller_capability(capability, root=root, manifest=manifest, freeze_id=freeze_id, relation_root=relation_root, acl_root=acl_root, deadline=deadline)
     cur.execute("SAVEPOINT g037_rehearsal")
     try:
         _lock_under_controller(cur)
         if tuple((version,name) for version,name,_ in ledger(cur)) != BASELINE_PAIRS: raise ClosureError("rehearsal baseline mismatch")
-        _execute_closure(cur,root,manifest)
+        remediation_evidence=_execute_closure(cur,root,manifest,remediation)
     except Exception as exc:
         try:
             cur.execute("ROLLBACK TO SAVEPOINT g037_rehearsal")
@@ -200,14 +286,15 @@ def rehearse_cursor(cur, capability, *, root, manifest, freeze_id, relation_root
         raise ClosureError("rehearsal failed") from exc
     cur.execute("ROLLBACK TO SAVEPOINT g037_rehearsal")
     cur.execute("RELEASE SAVEPOINT g037_rehearsal")
-def apply_cursor(cur, capability, *, root, manifest, freeze_id, relation_root, acl_root, deadline):
+    return remediation_evidence
+def apply_cursor(cur, capability, *, root, manifest, freeze_id, relation_root, acl_root, deadline, remediation):
     """Apply exact vectors once using only the controller cursor; never retry."""
     validate_controller_capability(capability, root=root, manifest=manifest, freeze_id=freeze_id, relation_root=relation_root, acl_root=acl_root, deadline=deadline)
     _lock_under_controller(cur)
     if tuple((version,name) for version,name,_ in ledger(cur)) != BASELINE_PAIRS:
         raise ClosureError("commit ambiguity: readback only; retry forbidden")
     try:
-        _execute_closure(cur,root,manifest)
+        return _execute_closure(cur,root,manifest,remediation)
     except ClosureError:
         raise
     except Exception as exc:

@@ -1,20 +1,14 @@
 #!/usr/bin/env python3
 """Fail-closed, local-only encrypted backup/restore/clone rehearsal."""
 from __future__ import annotations
-import argparse, csv, hashlib, ipaddress, json, os, re, shutil, subprocess, tempfile, uuid
+import argparse, csv, hashlib, ipaddress, json, os, re, shutil, stat, subprocess, tempfile, uuid
 from pathlib import Path
 from typing import Any, Sequence
-from g035_hosted_recovery_contract import APPLICATION_SCHEMAS, APPROVED_AGE_RECIPIENT_SHA256, BASELINE_PAIRS, BASELINE_SHA256, FORBIDDEN_VERSIONS, MANAGED_METADATA_SCHEMAS, MANIFEST_SHA256, REMEDIATION_AUTHORIZATION_SCHEMA, REMEDIATION_PUBLIC_KEY_PEM, REMEDIATION_PUBLIC_KEY_SHA256, SELF_COMMIT_VERSIONS, ContractError, Manifest, ledger_prefix, repository_root, sha256_file, validate_sources
+from g035_hosted_recovery_contract import APPLICATION_SCHEMAS, APPROVED_AGE_RECIPIENT_SHA256, BASELINE_PAIRS, BASELINE_SHA256, FORBIDDEN_VERSIONS, MANAGED_METADATA_SCHEMAS, MANIFEST_SHA256, REMEDIATION_AUTHORIZATION_SCHEMA, REMEDIATION_PUBLIC_KEY_PEM, REMEDIATION_PUBLIC_KEY_SHA256, SELF_COMMIT_VERSIONS, SHORT_URL_SELECTION_SPEC as CONTRACT_SHORT_URL_SELECTION_SPEC, SHORT_URLS_CATALOG as CONTRACT_SHORT_URLS_CATALOG, ContractError, Manifest, canonical_json_bytes, canonical_sha256, ledger_prefix, repository_root, sha256_file, validate_sources, verify_short_url_remediation_authorization
 import preflight_g034_hosted_migration_closure as g034_preflight
 TIMEOUT_SECONDS=900; RECEIPT_SCHEMA="g035-local-recovery-receipt-v4"; HEX=re.compile(r"^[a-f0-9]{64}$"); AGE_RECIPIENT=re.compile(r"^age1[ac-hj-np-z02-9]{58}$"); SNAPSHOT=re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"); LOCAL_SERVICE="g035-local"; LOCAL_DBNAME="g035_local"; LOCAL_HOSTS=frozenset({"127.0.0.1","::1"}); SERVICE_KEYS={"host","port","dbname","application_name","sslmode","user","password","connect_timeout"}; RECOVERY_CONTROL_SCHEMAS=("supabase_migrations",); DUMP_SCHEMAS=APPLICATION_SCHEMAS+RECOVERY_CONTROL_SCHEMAS+MANAGED_METADATA_SCHEMAS; MANAGED_TABLE_DATA_EXCLUSIONS=tuple(f"--exclude-table-data={schema}.*" for schema in MANAGED_METADATA_SCHEMAS); RECOVERY_EXTENSIONS=(("pg_trgm","extensions"),("uuid-ossp","extensions"),("btree_gin","extensions"),("vector","public"),("pgcrypto","extensions")); COMPATIBILITY_HOOKS={"20260627080000":("DROP POLICY IF EXISTS documents_select_own ON public.documents;","DROP POLICY IF EXISTS documents_insert_own ON public.documents;","DROP POLICY IF EXISTS documents_update_own ON public.documents;","DROP POLICY IF EXISTS documents_delete_own ON public.documents;")}; VECTOR_EXTENSION_RELOCATION_HOOK_VERSION="20260627080000"; VECTOR_EXTENSION_RELOCATION_HOOK=("SELECT namespace.nspname FROM pg_catalog.pg_extension AS extension JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid=extension.extnamespace WHERE extension.extname='vector'","ALTER EXTENSION vector SET SCHEMA extensions","SELECT namespace.nspname FROM pg_catalog.pg_extension AS extension JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid=extension.extnamespace WHERE extension.extname='vector'","SELECT 1 FROM pg_catalog.pg_extension AS extension JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid=extension.extnamespace WHERE extension.extname='vector' AND namespace.nspname='public'"); LOCAL_REMEDIATION_SCHEMA="g035_recovery_control"; SHORT_URL_SELECTION_SPEC="row_number() over (partition by target_url order by created_at nulls last, id)"; AUTH_USER_REFERENCE_COLUMNS=(("public","ad_banners","created_by"),("public","admin_restaurant_map_overlays","created_by_admin_id"),("public","admin_restaurant_map_overlays","updated_by_admin_id"),("public","admin_user_preferences","user_id"),("public","announcements","created_by"),("public","documents","user_id"),("public","notifications","user_id"),("public","ocr_logs","user_id"),("public","profiles","user_id"),("public","restaurant_requests","user_id"),("public","restaurant_submissions","resolved_by_admin_id"),("public","restaurant_submissions","user_id"),("public","review_likes","user_id"),("public","reviews","edited_by_admin_id"),("public","reviews","user_id"),("public","search_logs","user_id"),("public","user_account_status","user_id"),("public","user_bookmarks","user_id"),("public","user_roles","user_id"),("public","user_stats","user_id"))
-SHORT_URLS_CATALOG=(
- {"name":"id","type":"uuid","nullable":"NO","position":1,"character_maximum_length":None,"column_default":"uuid_generate_v4()","is_generated":"NEVER","is_identity":"NO","identity_generation":None},
- {"name":"code","type":"character varying","nullable":"NO","position":2,"character_maximum_length":10,"column_default":None,"is_generated":"NEVER","is_identity":"NO","identity_generation":None},
- {"name":"target_url","type":"text","nullable":"NO","position":3,"character_maximum_length":None,"column_default":None,"is_generated":"NEVER","is_identity":"NO","identity_generation":None},
- {"name":"restaurant_id","type":"uuid","nullable":"YES","position":4,"character_maximum_length":None,"column_default":None,"is_generated":"NEVER","is_identity":"NO","identity_generation":None},
- {"name":"restaurant_name","type":"text","nullable":"YES","position":5,"character_maximum_length":None,"column_default":None,"is_generated":"NEVER","is_identity":"NO","identity_generation":None},
- {"name":"created_at","type":"timestamp with time zone","nullable":"YES","position":6,"character_maximum_length":None,"column_default":"now()","is_generated":"NEVER","is_identity":"NO","identity_generation":None},
-)
+SHORT_URLS_CATALOG=CONTRACT_SHORT_URLS_CATALOG
+SHORT_URL_SELECTION_SPEC=CONTRACT_SHORT_URL_SELECTION_SPEC
 CROSS_SCHEMA_OWNER_HOOK_VERSION="20260713002000"; CROSS_SCHEMA_OWNER_FUNCTIONS=("public.account_deletion_require_service_role()","public.account_deletion_is_active_admin(uuid)","public.account_deletion_write_audit(public.account_deletion_requests,text,text)","public.preview_account_deletion(uuid,uuid,timestamptz)","public.begin_account_deletion_apply(uuid,uuid,uuid,text,text,text,timestamptz)","public.apply_account_deletion_database_cleanup(uuid,uuid)","public.list_account_deletion_storage_objects(uuid,uuid)","public.finalize_account_deletion_storage(uuid,uuid,boolean)","public.finalize_account_deletion_auth(uuid,uuid,boolean)","public.fail_account_deletion(uuid,uuid,text)","privacy_retention.require_service_role()","privacy_retention.write_run_audit(privacy_retention.privacy_retention_runs,text,text)"); CROSS_SCHEMA_OWNER_RESOLVE_SQL="SELECT procedure.oid FROM pg_catalog.pg_proc AS procedure WHERE procedure.oid=pg_catalog.to_regprocedure(%s)"; CROSS_SCHEMA_OWNER_VERIFY_SQL="SELECT role.rolname FROM pg_catalog.pg_proc AS procedure JOIN pg_catalog.pg_roles AS role ON role.oid=procedure.proowner WHERE procedure.oid=pg_catalog.to_regprocedure(%s)"
 OBSOLETE_NOTIFICATION_OVERLOAD_HOOK_VERSION="20260713002000"; OBSOLETE_NOTIFICATION_OVERLOAD="public.create_user_notification(uuid,public.notification_type,text,text,jsonb)"; CANONICAL_NOTIFICATION_FUNCTION="public.create_user_notification(uuid,text,text,text,jsonb)"
 PUBLIC_FUNCTION_OWNERS_HOOK_VERSION="20260713002000"; PUBLIC_FUNCTION_OWNERS_SQL="SELECT procedure.oid::regprocedure::text, role.rolname FROM pg_catalog.pg_proc AS procedure JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid=procedure.pronamespace JOIN pg_catalog.pg_roles AS role ON role.oid=procedure.proowner WHERE namespace.nspname='public' ORDER BY procedure.oid"; PUBLIC_FUNCTION_OWNERS_ALLOWED=frozenset(("supabase_admin","postgres","privacy_workflow_owner")); PUBLIC_FUNCTION_OWNERS_POSTCONDITION=frozenset(("postgres","privacy_workflow_owner"))
@@ -36,8 +30,8 @@ def _ledger_evidence_equal(expected,observed):
 def _managed_metadata_schemas_equal(expected,observed):
  if not isinstance(expected,(list,tuple)) or not isinstance(observed,(list,tuple)): return False
  return all(isinstance(schema,str) for schema in (*expected,*observed)) and tuple(expected)==tuple(observed)
-def canonical_bytes(value): return json.dumps(value,sort_keys=True,separators=(",",":"),ensure_ascii=True).encode("ascii")
-def digest(value): return hashlib.sha256(canonical_bytes(value)).hexdigest()
+def canonical_bytes(value): return canonical_json_bytes(value)
+def digest(value): return canonical_sha256(value)
 def _approval_contract_descriptor(contract=None):
  contract=g034_preflight.approval_body_contract() if contract is None else contract
  if not isinstance(contract,dict) or not contract or any(not isinstance(identity,str) or not isinstance(expected,dict) for identity,expected in contract.items()): raise RecoveryError("approval contract source invalid")
@@ -66,8 +60,13 @@ def _require_prior(path,mode):
  item=read_json_receipt(Path(path))
  if item.get("mode")!=mode or item.get("status") not in {"valid","captured","restored","applied","validated"}: raise RecoveryError("prior receipt transition invalid")
  return item
-def run(argv,*,env,timeout=TIMEOUT_SECONDS,stdin=subprocess.DEVNULL):
- try:return subprocess.run(list(argv),stdin=stdin,stdout=subprocess.PIPE,stderr=subprocess.PIPE,env=env,timeout=timeout,check=True)
+def run(argv,*,env,timeout=TIMEOUT_SECONDS,stdin=subprocess.DEVNULL,pass_fds=()):
+ pass_fds=tuple(pass_fds)
+ if pass_fds and os.name!="posix": raise RecoveryError("descriptor passing unavailable")
+ try:
+  kwargs={"stdin":stdin,"stdout":subprocess.PIPE,"stderr":subprocess.PIPE,"env":env,"timeout":timeout,"check":True}
+  if pass_fds: kwargs["pass_fds"]=pass_fds
+  return subprocess.run(list(argv),**kwargs)
  except (OSError,subprocess.TimeoutExpired,subprocess.CalledProcessError) as exc: raise RecoveryError("external command failed") from exc
 def command_exists(name):
  found=shutil.which(name)
@@ -357,40 +356,89 @@ def run_short_url_inspect(args,manifest):
   finally: conn.rollback(); conn.close()
  return receipt("short-url-remediation-inspect","validated",{k:v for k,v in evidence.items() if not k.startswith("_")},[restored["receipt_sha256"]])
 def _id_digest(values): return digest(sorted(values))
-def _canonical_uuid(value):
+def _windows_restrict_temporary_file(path):
  try:
-  parsed=uuid.UUID(value)
- except (ValueError,TypeError,AttributeError) as exc: raise RecoveryError("authorization batch invalid") from exc
- if not isinstance(value,str) or str(parsed)!=value: raise RecoveryError("authorization batch invalid")
- return value
-def _authorization_digest_fields(auth):
- hex_fields=("inspection_receipt_sha256","restore_receipt_sha256","capture_receipt_sha256","manifest_sha256","selection_spec_sha256","short_urls_catalog_sha256","pre_short_urls_rowset_sha256","duplicate_victims_sha256","victim_descriptors_sha256")
- if any(not isinstance(auth.get(key),str) or not HEX.fullmatch(auth[key]) for key in hex_fields): raise RecoveryError("authorization digest invalid")
- if not isinstance(auth.get("repository_commit"),str) or not re.fullmatch(r"[0-9a-f]{40,64}",auth["repository_commit"]): raise RecoveryError("authorization repository invalid")
- for key in ("duplicate_group_count","duplicate_victim_count"):
-  if not isinstance(auth.get(key),int) or isinstance(auth[key],bool) or auth[key] < 0: raise RecoveryError("authorization count invalid")
- _canonical_uuid(auth.get("batch_id"))
+  current=_windows_current_sid()
+  if not current: raise RecoveryError("temporary file ACL unavailable")
+  subprocess.run(["icacls",str(path),"/inheritance:r","/grant:r",f"*{current}:(F)","*S-1-5-18:(F)","*S-1-5-32-544:(F)"],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,encoding="utf-8",timeout=10,check=True)
+  if not _windows_dacl_restrictive(path): raise RecoveryError("temporary file ACL unavailable")
+ except (OSError,subprocess.TimeoutExpired,subprocess.CalledProcessError) as exc: raise RecoveryError("temporary file ACL unavailable") from exc
+def _same_file_identity(fd,path):
+ try:
+  descriptor=os.fstat(fd); entry=path.lstat(); target=path.stat()
+  return stat.S_ISREG(descriptor.st_mode) and stat.S_ISREG(entry.st_mode) and not stat.S_ISLNK(entry.st_mode) and (descriptor.st_dev,descriptor.st_ino)==(target.st_dev,target.st_ino)
+ except OSError: return False
+def _require_temporary_file_identity(fd,path):
+ if not _same_file_identity(fd,path) or not _restrictive(path): raise RecoveryError("temporary file custody lost")
+def _secure_temporary_file(prefix,contents):
+ fd,name=tempfile.mkstemp(prefix=prefix)
+ path=Path(name)
+ try:
+  if os.name=="nt": _windows_restrict_temporary_file(path)
+  else: os.fchmod(fd,0o600)
+  _require_temporary_file_identity(fd,path)
+  offset=0
+  while offset<len(contents): offset+=os.write(fd,contents[offset:])
+  os.fsync(fd)
+  _require_temporary_file_identity(fd,path)
+  return fd,path
+ except Exception:
+  _close_temporary_file(fd,path)
+  raise
+def _open_custodied_input(path,label):
+ _require_restrictive_regular_file(path,label)
+ try:
+  fd=os.open(path,os.O_RDONLY|getattr(os,"O_NOFOLLOW",0))
+ except OSError as exc: raise RecoveryError(f"{label} unreadable") from exc
+ try:
+  if not _same_file_identity(fd,path) or not _restrictive(path): raise RecoveryError(f"{label} custody lost")
+  return fd
+ except Exception:
+  os.close(fd); raise
+def _close_temporary_file(fd,path):
+ try:
+  same=_same_file_identity(fd,path)
+  if os.name=="nt":
+   os.close(fd)
+   if same: path.unlink(missing_ok=True)
+  else:
+   if same: path.unlink(missing_ok=True)
+   os.close(fd)
+ except OSError: pass
+def _custodied_argument(fd,path):
+ _require_temporary_file_identity(fd,path)
+ if os.name=="nt": return str(path)
+ if os.name!="posix" or not Path("/proc/self/fd").is_dir(): raise RecoveryError("descriptor custody unavailable")
+ path.unlink()
+ return f"/proc/self/fd/{fd}"
+def _custodied_input_argument(fd,path):
+ if os.name=="nt":
+  if not _same_file_identity(fd,path) or not _restrictive(path): raise RecoveryError("authorization signature custody lost")
+  return str(path)
+ if os.name!="posix" or not Path("/proc/self/fd").is_dir(): raise RecoveryError("descriptor custody unavailable")
+ return f"/proc/self/fd/{fd}"
 def _authorization(args,inspection,restored):
- path=Path(args.authorization); signature=Path(args.authorization_signature); _require_restrictive_regular_file(path,"authorization file"); _require_restrictive_regular_file(signature,"authorization signature")
- try:
-  raw=path.read_bytes(); auth=json.loads(raw.decode("utf8"),object_pairs_hook=_pairs)
- except (OSError,UnicodeDecodeError,json.JSONDecodeError,RecoveryError): raise RecoveryError("authorization JSON invalid")
- if raw!=canonical_bytes(auth): raise RecoveryError("authorization JSON noncanonical")
- required={"schema","inspection_receipt_sha256","restore_receipt_sha256","capture_receipt_sha256","manifest_sha256","repository_commit","selection_spec_sha256","short_urls_catalog_sha256","pre_short_urls_rowset_sha256","duplicate_group_count","duplicate_victim_count","duplicate_victims_sha256","victim_descriptors_sha256","batch_id"}
- if set(auth)!=required or auth.get("schema")!=REMEDIATION_AUTHORIZATION_SCHEMA: raise RecoveryError("authorization schema invalid")
- _authorization_digest_fields(auth)
+ path=Path(args.authorization); signature=Path(args.authorization_signature)
  capture=restored.get("prior_receipt_sha256",[])
  expected={"inspection_receipt_sha256":inspection["receipt_sha256"],"restore_receipt_sha256":restored["receipt_sha256"],"capture_receipt_sha256":capture[0] if len(capture)==1 else None,"manifest_sha256":MANIFEST_SHA256,"repository_commit":_repository_commit(repository_root(Path(__file__).resolve()))}
- if any(auth.get(key)!=value for key,value in expected.items()): raise RecoveryError("authorization binding invalid")
- for key in ("selection_spec_sha256","short_urls_catalog_sha256","pre_short_urls_rowset_sha256","duplicate_group_count","duplicate_victim_count","duplicate_victims_sha256","victim_descriptors_sha256"):
-  if auth[key]!=inspection["evidence"][key]: raise RecoveryError("authorization inspection invalid")
- fd,key_name=tempfile.mkstemp(prefix="g035-key-"); os.close(fd); key=Path(key_name)
+ def verify_detached(raw, signature_path, public_key_pem):
+  key_fd,key=_secure_temporary_file("g035-key-",public_key_pem.encode("ascii"))
+  raw_fd,exact=_secure_temporary_file("g035-authorization-",raw)
+  signature_fd=None
+  try:
+   signature_fd=_open_custodied_input(signature_path,"authorization signature")
+   key_argument=_custodied_argument(key_fd,key); raw_argument=_custodied_argument(raw_fd,exact); signature_argument=_custodied_input_argument(signature_fd,signature_path)
+   run(["openssl","pkeyutl","-verify","-pubin","-inkey",key_argument,"-rawin","-in",raw_argument,"-sigfile",signature_argument],env=safe_environment(Path("."),crypto=True),pass_fds=(key_fd,raw_fd,signature_fd) if os.name=="posix" else ())
+   if os.name=="nt":
+    _require_temporary_file_identity(key_fd,key); _require_temporary_file_identity(raw_fd,exact)
+    if not _same_file_identity(signature_fd,signature_path) or not _restrictive(signature_path): raise RecoveryError("authorization signature custody lost")
+  finally:
+   if signature_fd is not None: os.close(signature_fd)
+   _close_temporary_file(key_fd,key); _close_temporary_file(raw_fd,exact)
  try:
-  key.write_bytes(REMEDIATION_PUBLIC_KEY_PEM.encode("ascii"))
-  if hashlib.sha256(key.read_bytes()).hexdigest()!=REMEDIATION_PUBLIC_KEY_SHA256: raise RecoveryError("pinned key mismatch")
-  run(["openssl","pkeyutl","-verify","-pubin","-inkey",str(key),"-rawin","-in",str(path),"-sigfile",str(signature)],env=safe_environment(Path("."),crypto=True))
- finally: key.unlink(missing_ok=True)
- return auth
+  return verify_short_url_remediation_authorization(path,signature,require_custody=_require_restrictive_regular_file,verify_detached=verify_detached,expected_bindings=expected,inspection_evidence=inspection["evidence"])
+ except ContractError as exc:
+  raise RecoveryError(str(exc)) from exc
 def _quarantine_catalog_expected():
  metadata=(("batch_id","uuid"),("duplicate_rank","bigint"),("keeper_id","uuid"),("source_row_jsonb","jsonb"),("source_row_sha256","text"))
  return [*SHORT_URLS_CATALOG,*({"name":name,"type":kind,"nullable":"NO","position":len(SHORT_URLS_CATALOG)+index,"character_maximum_length":None,"column_default":None,"is_generated":"NEVER","is_identity":"NO","identity_generation":None} for index,(name,kind) in enumerate(metadata,1))]

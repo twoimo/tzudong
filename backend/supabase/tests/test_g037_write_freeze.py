@@ -35,21 +35,48 @@ def inv(acl="a"):
  return freeze.Inventory(("auth","public","storage","shortener_private"),rs,freeze.digest([r.key for r in rs]),acl*64)
 def terminal(_,spec): return {"catalog_root":"c"*64,"acl_root":"a"*64,"ledger_root":"l"*64,"terminal_spec":spec}
 def capture():
- return {
-  "auth_storage_catalog_root":"1"*64,
-  "auth_storage_metadata_root":"2"*64,
-  "storage_blob_root":"3"*64,
-  "recipient_fingerprint":"4"*64,
-  "logical_ciphertext_sha256":"5"*64,
-  "blob_ciphertext_sha256":"6"*64,
-  "recovery_receipt_sha256":"7"*64,
-  "object_count":2,
-  "total_bytes":1024,
- }
+ roots={"auth_storage_catalog_root":"1"*64,"auth_storage_metadata_root":"2"*64,"storage_blob_root":"3"*64,"short_urls_catalog_root":"8"*64,"short_urls_rowset_root":"9"*64,"short_urls_victim_descriptors_root":"a"*64,"short_urls_row_count":2,"duplicate_group_count":1,"duplicate_victim_count":1,"recipient_fingerprint":"4"*64,"logical_ciphertext_sha256":"5"*64,"blob_ciphertext_sha256":"6"*64,"recovery_receipt_sha256":"7"*64,"object_count":2,"total_bytes":1024}
+ evidence={"schema":"g037-short-url-remediation-evidence-v1","authorization_id":"11111111-1111-4111-8111-111111111111","policy":"exact-baseline-to-terminal-ledger-single-commit-v1","execution_authorization_sha256":"b"*64,"execution_authorization_signature_sha256":"c"*64,"legacy_repository_commit":"0"*40,"legacy_authorization_sha256":"d"*64,"legacy_authorization_signature_sha256":"e"*64,"legacy_capture_receipt_sha256":"f"*64,"legacy_restore_receipt_sha256":"1"*64,"legacy_inspection_receipt_sha256":"2"*64,"recovery_receipt_sha256":"7"*64,"capture_short_urls_rowset_sha256":"9"*64,"pre_short_urls_rowset_sha256":"9"*64,"survivor_short_urls_rowset_sha256":"d"*64,"deleted_count":1,"duplicate_group_count_before":1,"duplicate_group_count_after":0}
+ evidence["remediation_sha256"]=freeze.digest(evidence)
+ return {"capture_roots":roots,"remediation_evidence":evidence}
 def patches(inventory):
- return (patch.object(freeze,"_root_source",return_value=(Path("."),"a"*40,"s"*64,"t"*64)),patch.object(freeze,"validate_operator_assertion"),patch.object(freeze,"_inv",return_value=inventory),patch.object(freeze,"_locks",return_value="l"*64),patch.object(freeze,"_verify_active",side_effect=lambda v,e:{**v,"signature":"ok"}))
+ return (patch.object(freeze,"_root_source",return_value=(Path("."),"a"*40,"s"*64,"t"*64)),patch.object(freeze,"validate_operator_assertion"),patch.object(freeze,"_inv",return_value=inventory),patch.object(freeze,"_locks",return_value="l"*64),patch.object(freeze,"_verify_active",side_effect=lambda v,e:freeze._verified_controller_capability({**v,"signature":"ok"})))
 def precommit(receipt): return receipt["receipt_sha256"]
 class FenceTests(unittest.TestCase):
+ def test_verified_handoffs_are_immutable_and_reject_direct_construction(self):
+  capability={"schema":freeze.SCHEMA,"state":"active-provisional","freeze_id":"freeze-0001","origin":"https://x","commit":"a"*40,"manifest_sha256":freeze.MANIFEST_SHA256,"source_root":"s"*64,"terminal_spec":"t"*64,"scope":{"schemas":list(freeze.REACHABLE_SCHEMAS),"ordinary_relations":"all"},"relation_root":"r"*64,"acl_root":"l"*64,"held_lock_root":"h"*64,"not_before_unix":1,"not_after_unix":2,"controller_public_key_sha256":freeze.CONTROLLER_PUBLIC_KEY_SHA256,"signature":"AA=="}
+  with self.assertRaises(TypeError): freeze.VerifiedControllerCapability(capability)
+  branded=freeze._verified_controller_capability(capability)
+  with self.assertRaises(TypeError): branded["origin"]="https://attacker"
+  with self.assertRaises(TypeError): freeze.VerifiedRecoveryCapture({})
+  capture_evidence={"selection_spec_sha256":"1"*64,"short_urls_catalog_sha256":"2"*64,"short_urls_rowset_sha256":"3"*64,"short_urls_row_count":2,"duplicate_group_count":1,"duplicate_victim_count":1,"victim_descriptor_count":1,"duplicate_victims_sha256":"4"*64,"victim_descriptors_sha256":"4"*64}
+  branded_capture=freeze.verified_recovery_capture(capture_evidence)
+  with self.assertRaises(TypeError): branded_capture["short_urls_row_count"]=0
+ def test_relation_acl_policy_rejects_unsafe_rows_before_freeze_callback(self):
+  accepted=(("public",3,"owner","SELECT",False),("auth",1,"supabase_auth_admin","MAINTAIN",False),("public",3,"authenticated","SELECT",False))
+  self.assertEqual(freeze.validate_table_acl_rows(accepted),accepted)
+  for unsafe in (
+   ("public",3,"PUBLIC","SELECT",False),
+   ("public",3,"PUBLIC","ALL",False),
+   ("public",3,"owner","SELECT",True),
+   ("shortener_private",8,"authenticated","SELECT",False),
+   ("public",3,"owner","UNKNOWN",False),
+   ("public",3,"PUBLIC","MAINTAIN",False),
+   ("public",3,"owner","MAINTAIN",True),
+  ):
+   with self.subTest(unsafe=unsafe),self.assertRaisesRegex(freeze.FreezeError,"relation ACL"):
+    freeze.validate_table_acl_rows((unsafe,))
+  callback=[]
+  def unsafe_inventory(_):
+   freeze.validate_table_acl_rows((("public",3,"PUBLIC","SELECT",False),))
+  i=inv()
+  with patch.object(freeze,"_root_source",return_value=(Path("."),"a"*40,"s"*64,"t"*64)),patch.object(freeze,"validate_operator_assertion"),patch.object(freeze,"_inv",side_effect=unsafe_inventory):
+   with self.assertRaises(freeze.FreezeError):
+    freeze.run(Conn(),origin="https://x",freeze_id="freeze-0001",expected=i,assertion={"expires_at":9999999999},callback=lambda *_:callback.append(True),provisional_writer=lambda p:p,precommit_receipt_writer=precommit,final_receipt_writer=lambda _:None,terminal_assert=terminal)
+  self.assertEqual(callback,[])
+ def test_active_verifier_rejects_signature_lookalike(self):
+  payload={"schema":freeze.SCHEMA,"state":"active-provisional","freeze_id":"freeze-0001","origin":"https://x","commit":"a"*40,"manifest_sha256":freeze.MANIFEST_SHA256,"source_root":"s"*64,"terminal_spec":"t"*64,"scope":{"schemas":list(freeze.REACHABLE_SCHEMAS),"ordinary_relations":"all"},"relation_root":"r"*64,"acl_root":"l"*64,"held_lock_root":"a"*64,"not_before_unix":1,"not_after_unix":2,"controller_public_key_sha256":freeze.CONTROLLER_PUBLIC_KEY_SHA256}
+  with self.assertRaisesRegex(freeze.FreezeError,"signature invalid"): freeze._verify_active({**payload,"signature":"AA=="},set(payload))
  def test_exact_provider_managed_exclusions_are_inventory_only(self):
   c=Conn(); i=inv()
   with patch.object(freeze,"_inv",return_value=i): self.assertEqual(freeze.preflight(c),i)
@@ -173,5 +200,25 @@ class FenceTests(unittest.TestCase):
   self.assertIs(raised.exception.original_error,original); self.assertIsInstance(raised.exception.rollback_error,RuntimeError); self.assertIsNone(raised.exception.__cause__)
   self.assertEqual(c.commits,0); self.assertGreaterEqual(c.rollbacks,1); self.assertEqual(len(outcomes),1)
   self.assertEqual(outcomes[0]["status"],"rollback-failed"); self.assertEqual(outcomes[0]["rollback_state"],"ambiguous")
-  self.assertEqual(outcomes[0]["failure_stage"],"begin"); self.assertNotIn("secret",str(outcomes[0]))
+  self.assertEqual(outcomes[0]["failure_stage"],"callback-running"); self.assertNotIn("secret",str(outcomes[0]))
+ def test_rehearse_direct_rollback_and_outcome_receipt_failure_are_composite(self):
+  c=Conn(rollback_error=True); i=inv(); ps=patches(i); outcomes=[]; writer_error=RuntimeError("outcome receipt secret")
+  def outcome_writer(outcome):
+   outcomes.append(outcome)
+   raise writer_error
+  with ps[0],ps[1],ps[2],ps[3],ps[4],self.assertRaises(freeze.RehearsalRollbackReceiptError) as raised:
+   freeze.rehearse(c,origin="https://x",freeze_id="freeze-0001",expected=i,assertion={"expires_at":9999999999},callback=lambda *_:capture(),provisional_writer=lambda p:p,rehearsal_receipt_writer=lambda r:r["receipt_sha256"],outcome_receipt_writer=outcome_writer,terminal_assert=terminal,baseline_assert=lambda:{})
+  self.assertIsInstance(raised.exception.original_error,freeze.FreezeError); self.assertIsInstance(raised.exception.rollback_error,RuntimeError); self.assertIs(raised.exception.outcome_receipt_error,writer_error)
+  self.assertEqual(str(raised.exception),"rollback-failed-outcome-receipt-failed"); self.assertNotIn("secret",str(raised.exception)); self.assertIsNone(raised.exception.__cause__)
+  self.assertEqual(len(outcomes),1); self.assertEqual(outcomes[0]["status"],"rollback-failed"); self.assertEqual(outcomes[0]["failure_stage"],"rehearsal-receipt-persisted")
+ def test_rehearse_outer_rollback_and_outcome_receipt_failure_are_composite(self):
+  c=Conn(rollback_error=True); i=inv(); ps=patches(i); outcomes=[]; original=RuntimeError("callback secret"); writer_error=RuntimeError("outcome receipt secret")
+  def outcome_writer(outcome):
+   outcomes.append(outcome)
+   raise writer_error
+  with ps[0],ps[1],ps[2],ps[3],ps[4],self.assertRaises(freeze.RehearsalRollbackReceiptError) as raised:
+   freeze.rehearse(c,origin="https://x",freeze_id="freeze-0001",expected=i,assertion={"expires_at":9999999999},callback=lambda *_:(_ for _ in ()).throw(original),provisional_writer=lambda p:p,rehearsal_receipt_writer=lambda r:r["receipt_sha256"],outcome_receipt_writer=outcome_writer,terminal_assert=terminal,baseline_assert=lambda:{})
+  self.assertIs(raised.exception.original_error,original); self.assertIsInstance(raised.exception.rollback_error,RuntimeError); self.assertIs(raised.exception.outcome_receipt_error,writer_error)
+  self.assertEqual(str(raised.exception),"rollback-failed-outcome-receipt-failed"); self.assertNotIn("secret",str(raised.exception)); self.assertIsNone(raised.exception.__cause__)
+  self.assertEqual(len(outcomes),1); self.assertEqual(outcomes[0]["status"],"rollback-failed"); self.assertEqual(outcomes[0]["failure_stage"],"callback-running")
 if __name__=="__main__": unittest.main()

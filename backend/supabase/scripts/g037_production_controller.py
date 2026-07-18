@@ -8,23 +8,25 @@ from pathlib import Path
 import g037_hosted_closure_executor as closure
 import g037_managed_recovery as recovery
 import g037_write_freeze as freeze
+from g035_hosted_recovery_contract import ContractError
 from g037_hosted_closure_contract import AUTHORIZATION_PUBLIC_KEY_PEM, canonical_bytes, digest, no_duplicate_object, repository_root, validate_operator_assertion, validate_sources
+import g037_remediation_authorization as remediation_authorization
 
 SCHEMA="g037-production-controller-v1"
 RESIDUAL_CHANNELS=("no_owner_write","no_dashboard_write","no_provider_write","no_out_of_band_write","producer_stop")
 class ControllerError(RuntimeError): pass
-FINAL_RECEIPT_FIELDS=frozenset(("schema","status","commit","manifest_sha256","source_root","terminal_spec","freeze_id","origin","controller_public_key_sha256","prepared_receipt_sha256","recovery_receipt_sha256","recipient_fingerprint","logical_ciphertext_sha256","blob_ciphertext_sha256","auth_storage_catalog_root","auth_storage_metadata_root","storage_blob_root","object_count","total_bytes","observed_catalog_root","observed_acl_root","observed_ledger_root"))
-OUTCOME_RECEIPT_FIELDS=frozenset(("schema","status","freeze_id","origin","commit","manifest_sha256","source_root","terminal_spec","prepared_receipt_sha256","recovery_receipt_sha256","final_receipt_sha256"))
-DIAGNOSTIC_FINAL_FIELDS=frozenset(("schema","status","outcome","freeze_receipt_sha256","prepared_receipt_sha256","recovery_receipt_sha256","freeze_id","origin","commit","manifest_sha256","source_root","terminal_spec"))
+FINAL_RECEIPT_FIELDS=frozenset(("schema","status","commit","manifest_sha256","source_root","terminal_spec","freeze_id","origin","controller_public_key_sha256","prepared_receipt_sha256","recovery_receipt_sha256","recipient_fingerprint","logical_ciphertext_sha256","blob_ciphertext_sha256","auth_storage_catalog_root","auth_storage_metadata_root","storage_blob_root","object_count","total_bytes","short_urls_catalog_root","short_urls_rowset_root","short_urls_victim_descriptors_root","short_urls_row_count","duplicate_group_count","duplicate_victim_count","authorization_id","policy","execution_authorization_sha256","execution_authorization_signature_sha256","legacy_repository_commit","legacy_authorization_sha256","legacy_authorization_signature_sha256","legacy_capture_receipt_sha256","legacy_restore_receipt_sha256","legacy_inspection_receipt_sha256","remediation_sha256","observed_catalog_root","observed_acl_root","observed_ledger_root"))
+OUTCOME_RECEIPT_FIELDS=frozenset(("schema","status","freeze_id","origin","commit","manifest_sha256","source_root","terminal_spec","prepared_receipt_sha256","recovery_receipt_sha256","authorization_id","policy","execution_authorization_sha256","execution_authorization_signature_sha256","legacy_repository_commit","legacy_authorization_sha256","legacy_authorization_signature_sha256","legacy_capture_receipt_sha256","legacy_restore_receipt_sha256","legacy_inspection_receipt_sha256","remediation_sha256","final_receipt_sha256"))
+DIAGNOSTIC_FINAL_FIELDS=frozenset(("schema","status","outcome","freeze_receipt_sha256","prepared_receipt_sha256","recovery_receipt_sha256","freeze_id","origin","commit","manifest_sha256","source_root","terminal_spec","authorization_id","policy","execution_authorization_sha256","execution_authorization_signature_sha256","legacy_repository_commit","legacy_authorization_sha256","legacy_authorization_signature_sha256","legacy_capture_receipt_sha256","legacy_restore_receipt_sha256","legacy_inspection_receipt_sha256","remediation_sha256"))
 def _final_receipt(status, prepared, observed):
  capture=_prepared_binding(prepared,SimpleNamespace(freeze_id=prepared["freeze_id"]),prepared["origin"],Path("."),None)
  if not isinstance(observed,dict) or set(observed)!={"catalog_root","acl_root","ledger_root","terminal_spec"} or observed["terminal_spec"]!=prepared["terminal_spec"]: raise ControllerError("observed terminal roots invalid")
- value={"schema":SCHEMA,"status":status,"commit":prepared["commit"],"manifest_sha256":prepared["manifest_sha256"],"source_root":prepared["source_root"],"terminal_spec":prepared["terminal_spec"],"freeze_id":prepared["freeze_id"],"origin":prepared["origin"],"controller_public_key_sha256":freeze.CONTROLLER_PUBLIC_KEY_SHA256,"prepared_receipt_sha256":prepared["receipt_sha256"],"recovery_receipt_sha256":capture["recovery_receipt_sha256"],"recipient_fingerprint":capture["recipient_fingerprint"],"logical_ciphertext_sha256":capture["logical_ciphertext_sha256"],"blob_ciphertext_sha256":capture["blob_ciphertext_sha256"],"auth_storage_catalog_root":capture["auth_storage_catalog_root"],"auth_storage_metadata_root":capture["auth_storage_metadata_root"],"storage_blob_root":capture["storage_blob_root"],"object_count":capture["object_count"],"total_bytes":capture["total_bytes"],"observed_catalog_root":observed["catalog_root"],"observed_acl_root":observed["acl_root"],"observed_ledger_root":observed["ledger_root"]}
+ value={"schema":SCHEMA,"status":status,"commit":prepared["commit"],"manifest_sha256":prepared["manifest_sha256"],"source_root":prepared["source_root"],"terminal_spec":prepared["terminal_spec"],"freeze_id":prepared["freeze_id"],"origin":prepared["origin"],"controller_public_key_sha256":freeze.CONTROLLER_PUBLIC_KEY_SHA256,"prepared_receipt_sha256":prepared["receipt_sha256"],"recovery_receipt_sha256":capture["recovery_receipt_sha256"],"recipient_fingerprint":capture["recipient_fingerprint"],"logical_ciphertext_sha256":capture["logical_ciphertext_sha256"],"blob_ciphertext_sha256":capture["blob_ciphertext_sha256"],"auth_storage_catalog_root":capture["auth_storage_catalog_root"],"auth_storage_metadata_root":capture["auth_storage_metadata_root"],"storage_blob_root":capture["storage_blob_root"],"object_count":capture["object_count"],"total_bytes":capture["total_bytes"],"short_urls_catalog_root":capture["short_urls_catalog_root"],"short_urls_rowset_root":capture["short_urls_rowset_root"],"short_urls_victim_descriptors_root":capture["short_urls_victim_descriptors_root"],"short_urls_row_count":capture["short_urls_row_count"],"duplicate_group_count":capture["duplicate_group_count"],"duplicate_victim_count":capture["duplicate_victim_count"],**{key:prepared["remediation_evidence"][key] for key in ("authorization_id","policy","execution_authorization_sha256","execution_authorization_signature_sha256","legacy_repository_commit","legacy_authorization_sha256","legacy_authorization_signature_sha256","legacy_capture_receipt_sha256","legacy_restore_receipt_sha256","legacy_inspection_receipt_sha256","remediation_sha256")},"observed_catalog_root":observed["catalog_root"],"observed_acl_root":observed["acl_root"],"observed_ledger_root":observed["ledger_root"]}
  if set(value)!=FINAL_RECEIPT_FIELDS: raise ControllerError("final receipt fields invalid")
  return value
 def _outcome_receipt(status, prepared, final_receipt_sha256):
  capture=_prepared_binding(prepared,SimpleNamespace(freeze_id=prepared["freeze_id"]),prepared["origin"],Path("."),None)
- value={"schema":SCHEMA,"status":status,"freeze_id":prepared["freeze_id"],"origin":prepared["origin"],"commit":prepared["commit"],"manifest_sha256":prepared["manifest_sha256"],"source_root":prepared["source_root"],"terminal_spec":prepared["terminal_spec"],"prepared_receipt_sha256":prepared["receipt_sha256"],"recovery_receipt_sha256":capture["recovery_receipt_sha256"],"final_receipt_sha256":final_receipt_sha256}
+ value={"schema":SCHEMA,"status":status,"freeze_id":prepared["freeze_id"],"origin":prepared["origin"],"commit":prepared["commit"],"manifest_sha256":prepared["manifest_sha256"],"source_root":prepared["source_root"],"terminal_spec":prepared["terminal_spec"],"prepared_receipt_sha256":prepared["receipt_sha256"],"recovery_receipt_sha256":capture["recovery_receipt_sha256"],**{key:prepared["remediation_evidence"][key] for key in ("authorization_id","policy","execution_authorization_sha256","execution_authorization_signature_sha256","legacy_repository_commit","legacy_authorization_sha256","legacy_authorization_signature_sha256","legacy_capture_receipt_sha256","legacy_restore_receipt_sha256","legacy_inspection_receipt_sha256","remediation_sha256")},"final_receipt_sha256":final_receipt_sha256}
  if set(value)!=OUTCOME_RECEIPT_FIELDS: raise ControllerError("outcome receipt fields invalid")
  return value
 def _safe_status(exc):
@@ -59,6 +61,52 @@ def _outside(path,label,*,fresh):
  recovery.require_dir(path.parent,label+" destination")
  if fresh and (path.exists() or path.is_symlink()): raise ControllerError(label+" must be fresh")
  return path
+def _remediation_custody(path,label):
+ path=Path(path).resolve(); root=repository_root(Path(__file__).resolve())
+ if root in path.parents or path==root or path.is_symlink() or not recovery.restrictive(path): raise ControllerError(label+" must be a restrictive regular file outside repository")
+ recovery.require_file(path,label)
+ return path
+
+def _execution_bindings(args, assertion, recipient_fingerprint, assertion_sha256):
+ _,head,source_root,terminal_spec=freeze._root_source()
+ return {
+  "purpose":remediation_authorization.PURPOSE,"policy":remediation_authorization.POLICY,
+  "origin":recovery.origin(args.origin),"project":_project_ref(recovery.origin(args.origin)),
+  "current_commit":head,"manifest_sha256":freeze.MANIFEST_SHA256,"source_root":source_root,
+  "terminal_spec":terminal_spec,"freeze_id":args.freeze_id,
+  "operator_assertion_sha256":assertion_sha256,
+  "operator_assertion_expires_at":assertion["expires_at"],
+  "recipient_fingerprint":recipient_fingerprint,
+  "recovery_public_key_fingerprint":recovery.RECOVERY_PUBLIC_KEY_SHA256,
+  "capture_scope_sha256":digest({"schemas":["auth","storage","public.short_urls"],"selection_spec":recovery.SHORT_URL_SELECTION_SPEC}),
+  "baseline_ledger_state":"exact-g037-baseline",
+  "legacy_capture_receipt_sha256":None,"legacy_restore_receipt_sha256":None,
+  "legacy_inspection_receipt_sha256":None,"legacy_repository_commit":None,"legacy_authorization_sha256":None,
+  "legacy_authorization_signature_sha256":None,"legacy_vector":None,
+ }
+
+def _verify_remediation(args, assertion, recipient_fingerprint, assertion_sha256):
+ try:
+  chain=remediation_authorization.verify_legacy_remediation_chain(
+   args.legacy_capture_receipt,args.legacy_restore_receipt,args.legacy_inspection_receipt,
+   args.legacy_authorization,args.legacy_authorization_signature,
+   require_custody=_remediation_custody)
+  expected=_execution_bindings(args,assertion,recipient_fingerprint,assertion_sha256)
+  expected.update({"legacy_capture_receipt_sha256":chain.capture_receipt_sha256,"legacy_restore_receipt_sha256":chain.restore_receipt_sha256,"legacy_inspection_receipt_sha256":chain.inspection_receipt_sha256,"legacy_repository_commit":chain.legacy_repository_commit,"legacy_authorization_sha256":chain.legacy_authorization_sha256,"legacy_authorization_signature_sha256":chain.legacy_authorization_signature_sha256,"legacy_vector":dict(chain.legacy_vector)})
+  envelope=remediation_authorization.authenticate_execution_authorization_document(
+   args.execution_authorization,args.execution_authorization_signature,
+   require_custody=_remediation_custody,expected_bindings=expected)
+ except ContractError as exc: raise ControllerError(str(exc)) from exc
+ return envelope,expected
+
+def _remediation_binding(envelope,expected_bindings,capture,args):
+ receipt=recovery.load_receipt(args.recovery_receipt)
+ if capture.get("recovery_receipt_sha256")!=digest(receipt): raise ControllerError("fresh recovery receipt binding invalid")
+ source=receipt.get("evidence")
+ required={"short_urls_catalog_sha256","short_urls_rowset_sha256","victim_descriptors_sha256","short_urls_row_count","duplicate_group_count","duplicate_victim_count","selection_spec_sha256","duplicate_victims_sha256"}
+ if not isinstance(source,dict) or not required <= set(source): raise ControllerError("fresh recovery evidence missing")
+ evidence={"selection_spec_sha256":source["selection_spec_sha256"],"short_urls_catalog_sha256":source["short_urls_catalog_sha256"],"short_urls_rowset_sha256":source["short_urls_rowset_sha256"],"short_urls_row_count":source["short_urls_row_count"],"duplicate_group_count":source["duplicate_group_count"],"duplicate_victim_count":source["duplicate_victim_count"],"victim_descriptor_count":source["duplicate_victim_count"],"duplicate_victims_sha256":source["duplicate_victims_sha256"],"victim_descriptors_sha256":source["victim_descriptors_sha256"]}
+ return {"envelope":envelope,"expected_bindings":expected_bindings,"execution_authorization_sha256":recovery.file_hash(args.execution_authorization),"execution_authorization_signature_sha256":recovery.file_hash(args.execution_authorization_signature),"legacy_repository_commit":expected_bindings["legacy_repository_commit"],"legacy_authorization_sha256":expected_bindings["legacy_authorization_sha256"],"legacy_authorization_signature_sha256":expected_bindings["legacy_authorization_signature_sha256"],"legacy_capture_receipt_sha256":expected_bindings["legacy_capture_receipt_sha256"],"legacy_restore_receipt_sha256":expected_bindings["legacy_restore_receipt_sha256"],"legacy_inspection_receipt_sha256":expected_bindings["legacy_inspection_receipt_sha256"],"recovery_receipt_sha256":capture["recovery_receipt_sha256"],"capture_evidence":freeze.verified_recovery_capture(evidence)}
 def _outside_fresh(path,label): return _outside(path,label,fresh=True)
 def _write_signed(path,key,value,label,public_key=freeze.CONTROLLER_PUBLIC_KEY_PEM):
  path=_outside_fresh(path,label); unsigned=dict(value)
@@ -115,11 +163,18 @@ def _validate_assertion(assertion,args,root):
  if assertion.get("expires_at",0)-assertion.get("issued_at",0)>900: raise ControllerError("operator assertion expiry exceeds prepare maximum")
  _validate_residual_evidence(args,assertion)
  return assertion
+def _read_validated_assertion(args,root):
+ _private(args.operator_assertion,"operator assertion")
+ assertion,_=_signed_assertion(args.operator_assertion,"operator assertion")
+ _validate_assertion(assertion,args,root)
+ return assertion,digest(assertion)
 def validate(args, *, require_fresh_outputs=False):
  base,entries=_validated_binding(args); root=repository_root(Path(__file__).resolve()); validate_sources(root)
- _private(args.operator_assertion,"operator assertion"); assertion,_=_signed_assertion(args.operator_assertion,"operator assertion"); _validate_assertion(assertion,args,root)
+ assertion,assertion_sha256=_read_validated_assertion(args,root)
  _assert_controller_key(args.controller_signing_key); _assert_key(args.recovery_signing_key,recovery.RECOVERY_PUBLIC_KEY,"recovery signing key")
- recipient,fp=recovery.recipient_from_files(args.recipient_file,args.recipient_allowlist_file); recovery.pgpass(args.pgpass_file,entries)
+ recipient,fp=recovery.recipient_from_files(args.recipient_file,args.recipient_allowlist_file)
+ _verify_remediation(args,assertion,fp,assertion_sha256)
+ recovery.pgpass(args.pgpass_file,entries)
  recovery.safe_destination(args.destination)
  for path,label in ((args.recovery_receipt,"recovery receipt"),(args.prepared_receipt,"prepared receipt"),(args.final_receipt,"final receipt"),(args.outcome_receipt,"outcome receipt")): _outside(path,label,fresh=require_fresh_outputs)
  if hasattr(args,"secret_env") or hasattr(args,"secret_file"):
@@ -181,7 +236,7 @@ def prepare(args):
  return {"schema":SCHEMA,"mode":"prepare","status":"prepared","assertion_sha256":assertion_hash,"expires_at":assertion["expires_at"],"relation_root":inventory.relation_root,"acl_root":inventory.acl_root}
 def execute(args):
  validate(args,require_fresh_outputs=True); base,entries=_validated_binding(args); root=repository_root(Path(__file__).resolve()); manifest=validate_sources(root)
- assertion,_=_signed_assertion(args.operator_assertion,"operator assertion"); recipient,fp=recovery.recipient_from_files(args.recipient_file,args.recipient_allowlist_file); secret=recovery.read_secret_reference(args.secret_env,args.secret_file)
+ assertion,assertion_sha256=_read_validated_assertion(args,root); recipient,fp=recovery.recipient_from_files(args.recipient_file,args.recipient_allowlist_file); secret=recovery.read_secret_reference(args.secret_env,args.secret_file); envelope,execution_bindings=_verify_remediation(args,assertion,fp,assertion_sha256)
  conn=_connect(entries,args); expected=freeze._inv(conn)
  try:
   final_status={"value":None}; prepared_value={"value":None}; final_hash={"value":None}; freeze_receipt={"value":None}
@@ -191,9 +246,11 @@ def execute(args):
    root_source,head,source_root,terminal_spec=freeze._root_source()
    expected_binding={"schema":freeze.SCHEMA,"state":"active-provisional","freeze_id":args.freeze_id,"origin":base,"commit":head,"manifest_sha256":freeze.MANIFEST_SHA256,"source_root":source_root,"terminal_spec":terminal_spec,"scope":recovery.EXPECTED_FREEZE_SCOPE,"relation_root":expected.relation_root,"acl_root":expected.acl_root,"held_lock_root":capability.get("held_lock_root"),"not_before_unix":capability.get("not_before_unix"),"not_after_unix":capability.get("not_after_unix"),"controller_public_key_sha256":freeze.CONTROLLER_PUBLIC_KEY_SHA256}
    captured=recovery.capture_cursor(cur,base=base,secret=secret,recipient=recipient,recipient_fingerprint=fp,service_file=args.service_file,pgpass_file=args.pgpass_file,service_name=args.service_name,destination=args.destination,age_command=args.age_command,pg_dump_command=args.pg_dump,deadline=_deadline(capability),freeze_capability=capability,expected_binding=expected_binding,recovery_signing_key=args.recovery_signing_key,recovery_receipt=args.recovery_receipt)
-   closure.rehearse_cursor(cur,capability,root=root,manifest=manifest,freeze_id=args.freeze_id,relation_root=expected.relation_root,acl_root=expected.acl_root,deadline=capability["not_after_unix"])
-   closure.apply_cursor(cur,capability,root=root,manifest=manifest,freeze_id=args.freeze_id,relation_root=expected.relation_root,acl_root=expected.acl_root,deadline=capability["not_after_unix"])
-   return captured
+   remediation=_remediation_binding(envelope,execution_bindings,captured,args)
+   rehearsed=closure.rehearse_cursor(cur,capability,root=root,manifest=manifest,freeze_id=args.freeze_id,relation_root=expected.relation_root,acl_root=expected.acl_root,deadline=capability["not_after_unix"],remediation=remediation)
+   applied=closure.apply_cursor(cur,capability,root=root,manifest=manifest,freeze_id=args.freeze_id,relation_root=expected.relation_root,acl_root=expected.acl_root,deadline=capability["not_after_unix"],remediation=remediation)
+   if rehearsed!=applied: raise ControllerError("short_urls remediation rehearsal/apply drift")
+   return {"capture_roots":captured,"remediation_evidence":applied}
   def terminal(cur,spec):
    observed=closure.observed_terminal_roots(cur,root,manifest)
    if observed.get("terminal_spec")!=spec: raise ControllerError("terminal specification drift")
@@ -205,7 +262,7 @@ def execute(args):
   def diagnostic(receipt,status):
    prepared=prepared_value["value"]
    if prepared is None: return None
-   value={"schema":SCHEMA,"status":"diagnostic","outcome":status,"freeze_receipt_sha256":receipt["receipt_sha256"],"prepared_receipt_sha256":prepared["receipt_sha256"],"recovery_receipt_sha256":prepared["capture_roots"]["recovery_receipt_sha256"],"freeze_id":prepared["freeze_id"],"origin":prepared["origin"],"commit":prepared["commit"],"manifest_sha256":prepared["manifest_sha256"],"source_root":prepared["source_root"],"terminal_spec":prepared["terminal_spec"]}
+   value={"schema":SCHEMA,"status":"diagnostic","outcome":status,"freeze_receipt_sha256":receipt["receipt_sha256"],"prepared_receipt_sha256":prepared["receipt_sha256"],"recovery_receipt_sha256":prepared["capture_roots"]["recovery_receipt_sha256"],"freeze_id":prepared["freeze_id"],"origin":prepared["origin"],"commit":prepared["commit"],"manifest_sha256":prepared["manifest_sha256"],"source_root":prepared["source_root"],"terminal_spec":prepared["terminal_spec"],**{key:prepared["remediation_evidence"][key] for key in ("authorization_id","policy","execution_authorization_sha256","execution_authorization_signature_sha256","legacy_repository_commit","legacy_authorization_sha256","legacy_authorization_signature_sha256","legacy_capture_receipt_sha256","legacy_restore_receipt_sha256","legacy_inspection_receipt_sha256","remediation_sha256")}}
    if set(value)!=DIAGNOSTIC_FINAL_FIELDS: raise ControllerError("diagnostic receipt fields invalid")
    return _write_signed(args.final_receipt,args.controller_signing_key,value,"diagnostic outcome receipt")
   def final(receipt):
@@ -234,14 +291,14 @@ def execute(args):
 def _prepared_binding(prepared,args,base,root,manifest):
  root_source,head,source_root,terminal_spec=freeze._root_source()
  unsigned=dict(prepared); claimed=unsigned.pop("receipt_sha256",None)
- required={"schema","status","freeze_id","origin","commit","manifest_sha256","source_root","terminal_spec","before_relation_root","before_acl_root","held_lock_root","capture_roots","terminal","receipt_sha256"}
+ required={"schema","status","freeze_id","origin","commit","manifest_sha256","source_root","terminal_spec","before_relation_root","before_acl_root","held_lock_root","capture_roots","remediation_evidence","terminal","receipt_sha256"}
  if set(prepared)!=required or claimed!=digest(unsigned) or prepared["schema"]!=freeze.SCHEMA or prepared["status"]!="prepared-not-committed" or prepared["freeze_id"]!=args.freeze_id or prepared["origin"]!=base or prepared["commit"]!=head or prepared["source_root"]!=source_root or prepared["terminal_spec"]!=terminal_spec or prepared["manifest_sha256"]!=freeze.MANIFEST_SHA256: raise ControllerError("prepared receipt binding invalid")
  terminal=prepared["terminal"]
  if not isinstance(terminal,dict) or set(terminal)!={"catalog_root","acl_root","ledger_root","terminal_spec"} or terminal["terminal_spec"]!=terminal_spec or any(not isinstance(terminal[k],str) or len(terminal[k])!=64 for k in ("catalog_root","acl_root","ledger_root")): raise ControllerError("prepared terminal roots invalid")
  capture=prepared["capture_roots"]
- expected={"auth_storage_catalog_root","auth_storage_metadata_root","storage_blob_root","recipient_fingerprint","logical_ciphertext_sha256","blob_ciphertext_sha256","object_count","total_bytes","recovery_receipt_sha256"}
- if not isinstance(capture,dict) or set(capture)!=expected: raise ControllerError("prepared capture roots invalid")
- if any(not isinstance(capture[k],str) or len(capture[k])!=64 or any(c not in "0123456789abcdef" for c in capture[k]) for k in expected-{"object_count","total_bytes"}) or any(not isinstance(capture[k],int) or isinstance(capture[k],bool) or capture[k]<0 for k in ("object_count","total_bytes")): raise ControllerError("prepared capture values invalid")
+ if not isinstance(capture,dict): raise ControllerError("prepared capture roots invalid")
+ try: freeze.validate_capture_roots(capture); freeze.validate_remediation_evidence(prepared["remediation_evidence"])
+ except freeze.FreezeError as exc: raise ControllerError("prepared remediation binding invalid") from exc
  return capture
 def _baseline_roots(conn):
  cur=conn.cursor()
@@ -259,7 +316,7 @@ def rehearse(args):
  """Full local cursor rehearsal. freeze.rehearse has no commit path."""
  validate(args,require_fresh_outputs=True); base,entries=_validated_binding(args); root=repository_root(Path(__file__).resolve()); manifest=validate_sources(root)
  _outside_fresh(args.rehearsal_receipt,"rehearsal receipt"); _outside_fresh(args.rehearsal_outcome_receipt,"rehearsal outcome receipt")
- assertion,_=_signed_assertion(args.operator_assertion,"operator assertion"); recipient,fp=recovery.recipient_from_files(args.recipient_file,args.recipient_allowlist_file); secret=recovery.read_secret_reference(args.secret_env,args.secret_file)
+ assertion,assertion_sha256=_read_validated_assertion(args,root); recipient,fp=recovery.recipient_from_files(args.recipient_file,args.recipient_allowlist_file); secret=recovery.read_secret_reference(args.secret_env,args.secret_file); envelope,execution_bindings=_verify_remediation(args,assertion,fp,assertion_sha256)
  conn=_connect(entries,args); expected=freeze._inv(conn)
  try:
   def provisional(payload):
@@ -268,9 +325,11 @@ def rehearse(args):
    root_source,head,source_root,terminal_spec=freeze._root_source()
    binding={"schema":freeze.SCHEMA,"state":"active-provisional","freeze_id":args.freeze_id,"origin":base,"commit":head,"manifest_sha256":freeze.MANIFEST_SHA256,"source_root":source_root,"terminal_spec":terminal_spec,"scope":recovery.EXPECTED_FREEZE_SCOPE,"relation_root":expected.relation_root,"acl_root":expected.acl_root,"held_lock_root":capability.get("held_lock_root"),"not_before_unix":capability.get("not_before_unix"),"not_after_unix":capability.get("not_after_unix"),"controller_public_key_sha256":freeze.CONTROLLER_PUBLIC_KEY_SHA256}
    captured=recovery.capture_cursor(cur,base=base,secret=secret,recipient=recipient,recipient_fingerprint=fp,service_file=args.service_file,pgpass_file=args.pgpass_file,service_name=args.service_name,destination=args.destination,age_command=args.age_command,pg_dump_command=args.pg_dump,deadline=_deadline(capability),freeze_capability=capability,expected_binding=binding,recovery_signing_key=args.recovery_signing_key,recovery_receipt=args.recovery_receipt)
-   closure.rehearse_cursor(cur,capability,root=root,manifest=manifest,freeze_id=args.freeze_id,relation_root=expected.relation_root,acl_root=expected.acl_root,deadline=capability["not_after_unix"])
-   closure.apply_cursor(cur,capability,root=root,manifest=manifest,freeze_id=args.freeze_id,relation_root=expected.relation_root,acl_root=expected.acl_root,deadline=capability["not_after_unix"])
-   return captured
+   remediation=_remediation_binding(envelope,execution_bindings,captured,args)
+   rehearsed=closure.rehearse_cursor(cur,capability,root=root,manifest=manifest,freeze_id=args.freeze_id,relation_root=expected.relation_root,acl_root=expected.acl_root,deadline=capability["not_after_unix"],remediation=remediation)
+   applied=closure.apply_cursor(cur,capability,root=root,manifest=manifest,freeze_id=args.freeze_id,relation_root=expected.relation_root,acl_root=expected.acl_root,deadline=capability["not_after_unix"],remediation=remediation)
+   if rehearsed!=applied: raise ControllerError("short_urls remediation rehearsal/apply drift")
+   return {"capture_roots":captured,"remediation_evidence":applied}
   def terminal(cur,spec):
    observed=closure.observed_terminal_roots(cur,root,manifest)
    if observed.get("terminal_spec")!=spec: raise ControllerError("terminal specification drift")
@@ -287,7 +346,7 @@ def reconcile(args):
  recovery_receipt=recovery.load_receipt(args.recovery_receipt)
  if capture["recovery_receipt_sha256"]!=digest(recovery_receipt): raise ControllerError("recovery receipt binding invalid")
  evidence=recovery_receipt.get("evidence")
- if not isinstance(evidence,dict) or capture["logical_ciphertext_sha256"]!=evidence.get("logical_ciphertext_sha256") or capture["blob_ciphertext_sha256"]!=evidence.get("blob_ciphertext_sha256") or capture["recipient_fingerprint"]!=evidence.get("recipient_fingerprint") or capture["auth_storage_catalog_root"]!=evidence.get("catalog_sha256") or capture["auth_storage_metadata_root"]!=evidence.get("metadata_sha256") or capture["storage_blob_root"]!=digest(evidence.get("members")) or capture["object_count"]!=evidence.get("object_count") or capture["total_bytes"]!=evidence.get("total_bytes"): raise ControllerError("recovery capture binding invalid")
+ if not isinstance(evidence,dict) or capture["logical_ciphertext_sha256"]!=evidence.get("logical_ciphertext_sha256") or capture["blob_ciphertext_sha256"]!=evidence.get("blob_ciphertext_sha256") or capture["recipient_fingerprint"]!=evidence.get("recipient_fingerprint") or capture["auth_storage_catalog_root"]!=evidence.get("catalog_sha256") or capture["auth_storage_metadata_root"]!=evidence.get("metadata_sha256") or capture["storage_blob_root"]!=digest(evidence.get("members")) or capture["object_count"]!=evidence.get("object_count") or capture["total_bytes"]!=evidence.get("total_bytes") or capture["short_urls_catalog_root"]!=evidence.get("short_urls_catalog_sha256") or capture["short_urls_rowset_root"]!=evidence.get("short_urls_rowset_sha256") or capture["short_urls_victim_descriptors_root"]!=evidence.get("victim_descriptors_sha256") or capture["short_urls_row_count"]!=evidence.get("short_urls_row_count") or capture["duplicate_group_count"]!=evidence.get("duplicate_group_count") or capture["duplicate_victim_count"]!=evidence.get("duplicate_victim_count"): raise ControllerError("recovery capture binding invalid")
  recovery.verify(type("RecoveryVerifyArgs",(),{"destination":args.destination,"recipient_file":args.recipient_file,"recipient_allowlist_file":args.recipient_allowlist_file,"identity_file":args.identity_file,"receipt":args.recovery_receipt,"logical_archive":args.logical_archive,"blob_archive":args.blob_archive,"age_command":args.age_command,"pg_restore":args.pg_restore})())
  recovery.pgpass(args.pgpass_file,entries); conn=_connect(entries,args,readonly=True)
  try: observed=_terminal_roots(conn,root,manifest)
@@ -306,7 +365,9 @@ def parser():
   for channel in RESIDUAL_CHANNELS: x.add_argument("--evidence-"+channel.replace("_","-"),dest="evidence_"+channel,required=True)
  for name in ("validate","execute","rehearse","reconcile"):
   x=sub.add_parser(name); common(x)
-  if name in ("validate","execute","rehearse"): assertion_inputs(x)
+  if name in ("validate","execute","rehearse"):
+   assertion_inputs(x)
+   for option in ("legacy-capture-receipt","legacy-restore-receipt","legacy-inspection-receipt","legacy-authorization","legacy-authorization-signature","execution-authorization","execution-authorization-signature"): x.add_argument("--"+option,required=True)
   if name in ("execute","rehearse"): x.add_argument("--secret-env"); x.add_argument("--secret-file"); x.add_argument("--age-command",default="age"); x.add_argument("--pg-dump",default="pg_dump")
   if name=="rehearse": x.add_argument("--rehearsal-receipt",required=True); x.add_argument("--rehearsal-outcome-receipt",required=True)
   if name=="reconcile": x.add_argument("--logical-archive",required=True); x.add_argument("--blob-archive",required=True); x.add_argument("--identity-file",required=True); x.add_argument("--age-command",default="age"); x.add_argument("--pg-restore",default="pg_restore")
