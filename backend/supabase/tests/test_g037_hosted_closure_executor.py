@@ -376,6 +376,25 @@ class G037ExecutorTests(unittest.TestCase):
     e._stable_projection_roots(Cursor((catalog,(unsafe,))))
   with self.assertRaisesRegex(e.ClosureError,"catalog projection noncanonical"):
    e._stable_projection_roots(Cursor(((catalog[0],catalog[0]),raw_acl)))
+ def test_terminal_acl_projection_uses_the_ordinary_relation_inventory_boundary(self):
+  catalog=(("public","restaurants","r","owner"),)
+  ordinary_acl=(("public","restaurants","owner","owner","SELECT",True),)
+  nonordinary_acl=("public","restaurants_view","owner","PUBLIC","SELECT",True)
+  class Cursor:
+   description=object()
+   def __init__(self): self.calls=[]
+   def execute(self,sql,params=()): self.calls.append(sql)
+   def fetchall(self):
+    if len(self.calls)==1: return catalog
+    return ordinary_acl if "c.relkind IN ('r','p')" in self.calls[-1] else ordinary_acl+(nonordinary_acl,)
+  self.assertEqual(e._stable_projection_roots(Cursor()),(e.digest(catalog),e.digest(tuple(tuple(map(str,row)) for row in ordinary_acl))))
+  source=Path(e.__file__).read_text(encoding="utf-8")
+  catalog_sql=re.search(r'catalog_rows=.*?"(SELECT .*?)",\(list\(schemas\),\)\)',source)
+  acl_sql=re.search(r'raw_acl_rows=.*?"(SELECT .*?)",\(list\(schemas\),\)\)',source)
+  self.assertIsNotNone(catalog_sql)
+  self.assertIsNotNone(acl_sql)
+  self.assertIn("c.relkind IN ('r','p')",catalog_sql.group(1))
+  self.assertIn("c.relkind IN ('r','p')",acl_sql.group(1))
  def test_observed_terminal_roots_are_not_source_placeholders(self):
   rows=(("2025","x",("observed vector",)),)
   with patch.object(e,"_terminal_assert",return_value=rows),patch.object(e,"_stable_projection_roots",return_value=("c"*64,"a"*64)),patch.object(e,"_source_binding",return_value=("h"*40,"s"*64,"t"*64)):
