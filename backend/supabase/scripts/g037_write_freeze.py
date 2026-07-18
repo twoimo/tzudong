@@ -17,6 +17,12 @@ from g037_hosted_closure_contract import AUTHORIZATION_PUBLIC_KEY_PEM, MANIFEST_
 SCHEMA="g037-write-freeze-v3"
 REACHABLE_SCHEMAS=("public","auth","storage","shortener_private","ocr_private","provider_budget_private","privacy_retention")
 CREATED_BY_SELECTED=frozenset(REACHABLE_SCHEMAS[3:])
+PROVIDER_MANAGED_LOCK_EXCLUSIONS=frozenset((
+ ("auth","schema_migrations","supabase_auth_admin"),
+ ("storage","buckets_vectors","supabase_storage_admin"),
+ ("storage","migrations","supabase_storage_admin"),
+ ("storage","vector_indexes","supabase_storage_admin"),
+))
 CONTROLLER_PUBLIC_KEY_PEM="-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAqaHsCrD74lzv7J3zcfsjchTndvHTWTj1dWeDjwXK+G8=\n-----END PUBLIC KEY-----\n"
 CONTROLLER_PUBLIC_KEY_SHA256=hashlib.sha256(CONTROLLER_PUBLIC_KEY_PEM.encode()).hexdigest()
 class FreezeError(RuntimeError): pass
@@ -40,6 +46,11 @@ def _ident(x):
 def _unique(rows,what):
  if len(rows)!=len(set(rows)): raise FreezeError("duplicate %s inventory"%what)
  return tuple(sorted(rows))
+def _lockable_relations(relations):
+ excluded=tuple(r for r in relations if (r.schema,r.name,r.owner) in PROVIDER_MANAGED_LOCK_EXCLUSIONS)
+ if len(excluded)!=len(PROVIDER_MANAGED_LOCK_EXCLUSIONS) or { (r.schema,r.name,r.owner) for r in excluded }!=PROVIDER_MANAGED_LOCK_EXCLUSIONS:
+  raise FreezeError("provider-managed lock exclusion inventory drift")
+ return tuple(r for r in relations if r not in excluded)
 def _inv(conn):
  c=conn.cursor()
  try:
@@ -53,13 +64,13 @@ def _inv(conn):
  finally: c.close()
 def preflight(conn):
  """Probe locks inside an ordinary transaction and always roll it back."""
- answer=_inv(conn); c=conn.cursor()
+ answer=_inv(conn); lockable=_lockable_relations(answer.relations); c=conn.cursor()
  try:
   c.execute("BEGIN")
-  for r in answer.relations: c.execute("LOCK TABLE %s.%s IN SHARE ROW EXCLUSIVE MODE NOWAIT"%(_ident(r.schema),_ident(r.name)))
+  for r in lockable: c.execute("LOCK TABLE %s.%s IN SHARE ROW EXCLUSIVE MODE NOWAIT"%(_ident(r.schema),_ident(r.name)))
   conn.rollback(); return answer
  except Exception as e:
-  conn.rollback(); raise FreezeError("all reachable relations must be lockable") from e
+  conn.rollback(); raise FreezeError("all non-provider-managed reachable relations must be lockable") from e
  finally: c.close()
 def _root_source():
  root=repository_root(Path(__file__).resolve()); manifest=validate_sources(root)
@@ -72,9 +83,10 @@ def _root_source():
  return root,commit,source_root,terminal_spec
 def _locks(c,rs,seconds):
  for key in ("statement_timeout","lock_timeout","idle_in_transaction_session_timeout"): c.execute("SET LOCAL %s=%%s"%key,("%ds"%seconds,))
- for r in rs: c.execute("LOCK TABLE %s.%s IN SHARE ROW EXCLUSIVE MODE"%(_ident(r.schema),_ident(r.name)))
+ lockable=_lockable_relations(rs)
+ for r in lockable: c.execute("LOCK TABLE %s.%s IN SHARE ROW EXCLUSIVE MODE"%(_ident(r.schema),_ident(r.name)))
  held=_rows(c,"SELECT n.nspname,c.relname,c.oid FROM pg_locks l JOIN pg_class c ON c.oid=l.relation JOIN pg_namespace n ON n.oid=c.relnamespace WHERE l.pid=pg_backend_pid() AND l.granted AND l.mode='ShareRowExclusiveLock' ORDER BY 1,2,3")
- expected=tuple((r.schema,r.name,r.oid) for r in rs)
+ expected=tuple((r.schema,r.name,r.oid) for r in lockable)
  if held!=expected or _rows(c,"SELECT count(*) FROM pg_locks WHERE NOT granted")[0][0]!=0: raise FreezeError("held lock set drift")
  return digest(held)
 def _verify_active(value, expected):
