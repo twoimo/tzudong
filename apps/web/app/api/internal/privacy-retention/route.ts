@@ -580,10 +580,6 @@ export async function POST(request: NextRequest) {
       return json({ ok: true, preview });
     }
 
-    const provider = privateProvider();
-    if (!provider) {
-      throw new PrivacyRetentionRunnerError('privacy_retention_provider_unavailable');
-    }
     const receipt = await withRuntimeLimit(applyRetentionRun(client, {
       operationId: body.operationId,
       previewHash: body.previewHash,
@@ -592,13 +588,23 @@ export async function POST(request: NextRequest) {
       adapterVersion: body.adapterVersion,
       sourceMappingVersion: body.sourceMappingVersion,
       batchSize: body.batchSize ?? MAX_PRIVACY_RETENTION_BATCH_SIZE,
-    }, { provider }));
+    }, { providerFactory: privateProvider }));
     return json({ ok: true, receipt });
   } catch (error) {
     const code = safeError(error);
     const status = code === 'privacy_retention_timeout'
       ? 504
-      : code === 'privacy_retention_request_too_large' ? 413 : 400;
+      : code === 'privacy_retention_provider_unavailable' || code === 'privacy_retention_operation_failed'
+        ? 503
+        : code === 'privacy_retention_request_too_large'
+          ? 413
+          : code === 'privacy_retention_request_invalid'
+            || code === 'privacy_retention_batch_invalid'
+            || code === 'privacy_retention_class_invalid'
+            || code === 'privacy_retention_cutoff_invalid'
+            || code === 'privacy_retention_confirmation_invalid'
+              ? 400
+              : 500;
     return json({ ok: false, error: code }, { status });
   }
 }

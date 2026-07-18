@@ -288,7 +288,16 @@ describe('public API security source contracts', () => {
     expect(accountDeleteSource).not.toContain('auth.admin.deleteUser');
     expect(accountDeleteSource).toContain("rpc('begin_account_deletion_apply_with_reauth'");
     expect(accountDeleteSource).not.toContain('consume_account_deletion_reauth_proof');
-    expect(accountDeleteSource).toContain('ownerStatusFromRow(row, {');
+    expect(accountDeleteSource).toContain('const cleanupResult = await supabaseAdmin.rpc(\'apply_account_deletion_database_cleanup\'');
+    expect(accountDeleteSource).toContain('const readbackResult = await supabase.rpc(\'read_current_account_deletion_status\'');
+    expect(accountDeleteSource).toContain('isAccountDeletionDatabaseCleanupRow(cleanup, body)');
+    expect(accountDeleteSource).toContain('!readback.db_readback_passed');
+    expect(accountDeleteSource).toContain('const replayReadbackResult = await supabase.rpc(\'read_current_account_deletion_status\'');
+    expect(accountDeleteSource).toContain('const idempotencyKeyBinding = idempotencyKeyBindingSha256(body.idempotencyKey);');
+    expect(accountDeleteSource).toContain('row.idempotency_key_binding_sha256 !== idempotencyKeyBinding');
+    expect(accountDeleteSource).toContain('replayReadback.db_readback_passed === true');
+    expect(accountDeleteSource).toContain('replayReadback.storage_readback_passed === false');
+    expect(accountDeleteSource).not.toContain('storage.from(');
     expect(accountDeleteSource).toContain("rpc('preview_account_deletion'");
     expect(accountDeleteSource).toContain("hasOnlyKeys(value, ['targetUserId'])");
     expect(accountDeleteSource).toContain('p_reauthenticated_at: user.last_sign_in_at');

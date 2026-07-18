@@ -90,6 +90,19 @@ const applyProgress = {
   ...binding,
   errorCode: null,
 };
+const providerPendingReceipt = {
+  ...applyProgress,
+  readback: {
+    passed: false,
+    checks: {
+      expectedCountMatched: true,
+      databaseSourceAbsent: true,
+      storageProviderAbsent: false,
+      noActiveHoldMutated: true,
+    },
+  },
+  errorCode: 'privacy_retention_readback_incomplete',
+};
 
 const passedReceipt = {
   operationId: fixedRunId,
@@ -426,6 +439,129 @@ describe('privacy retention runner', () => {
     expect(JSON.stringify(receipt)).toContain(fixedAdapterVersion);
     expect(JSON.stringify(receipt)).toContain(fixedSourceMappingVersion);
   });
+  test('runs database-only work without constructing a provider and returns its durable receipt', async () => {
+    const calls: string[] = [];
+    let providerFactoryCalls = 0;
+    let providerMethodCalls = 0;
+    const receipt = await applyRetentionRun({
+      rpc: async (name) => {
+        calls.push(name);
+        switch (name) {
+          case 'confirm_privacy_retention_run': return response(confirmation);
+          case 'apply_privacy_retention_run': return response(applyProgress);
+          case 'finalize_privacy_retention_run': return response(passedReceipt);
+          default: throw new Error(`unexpected RPC ${name}`);
+        }
+      },
+    }, applyInput, {
+      providerFactory: () => {
+        providerFactoryCalls += 1;
+        return {
+          verifierRef: fixedProviderRef,
+          deleteExactVersion: async () => { providerMethodCalls += 1; },
+          verifyAbsent: async () => {
+            providerMethodCalls += 1;
+            return providerProof;
+          },
+        };
+      },
+    });
+
+    expect(calls).toEqual([
+      'confirm_privacy_retention_run',
+      'apply_privacy_retention_run',
+      'finalize_privacy_retention_run',
+    ]);
+    expect(providerFactoryCalls).toBe(0);
+    expect(providerMethodCalls).toBe(0);
+    expect(receipt).toEqual({
+      operationId: fixedRunId,
+      status: 'applied',
+      adapterVersion: fixedAdapterVersion,
+      sourceMappingVersion: fixedSourceMappingVersion,
+      readback: passedReceipt.readback,
+      auditId: fixedAuditId,
+      errorCode: null,
+    });
+  });
+
+  test('fails closed without provider configuration when durable readback requires external evidence', async () => {
+    const calls: string[] = [];
+    let providerFactoryCalls = 0;
+    await expect(applyRetentionRun({
+      rpc: async (name) => {
+        calls.push(name);
+        if (name === 'confirm_privacy_retention_run') return response(confirmation);
+        if (name === 'apply_privacy_retention_run') return response(applyProgress);
+        if (name === 'finalize_privacy_retention_run') return response(providerPendingReceipt);
+        throw new Error(`unexpected RPC ${name}`);
+      },
+    }, applyInput, {
+      providerFactory: () => {
+        providerFactoryCalls += 1;
+        return null;
+      },
+    })).rejects.toMatchObject({ code: 'privacy_retention_provider_unavailable' });
+
+    expect(calls).toEqual([
+      'confirm_privacy_retention_run',
+      'apply_privacy_retention_run',
+      'finalize_privacy_retention_run',
+    ]);
+    expect(providerFactoryCalls).toBe(1);
+  });
+  test('rejects an invalid provider before any provider egress', async () => {
+    let deletes = 0;
+    let verifications = 0;
+    const provider: PrivacyRetentionProvider = {
+      verifierRef: 'invalid',
+      deleteExactVersion: async () => { deletes += 1; },
+      verifyAbsent: async () => {
+        verifications += 1;
+        return providerProof;
+      },
+    };
+    await expect(applyRetentionRun({
+      rpc: async (name) => {
+        if (name === 'confirm_privacy_retention_run') return response(confirmation);
+        if (name === 'apply_privacy_retention_run') return response(applyProgress);
+        if (name === 'finalize_privacy_retention_run') return response(providerPendingReceipt);
+        throw new Error(`unexpected RPC ${name}`);
+      },
+    }, applyInput, { provider })).rejects.toMatchObject({ code: 'privacy_retention_provider_invalid' });
+
+    expect(deletes).toBe(0);
+    expect(verifications).toBe(0);
+  });
+
+  test('rejects malformed external work before any provider egress', async () => {
+    let deletes = 0;
+    let verifications = 0;
+    const provider: PrivacyRetentionProvider = {
+      verifierRef: fixedProviderRef,
+      deleteExactVersion: async () => { deletes += 1; },
+      verifyAbsent: async () => {
+        verifications += 1;
+        return providerProof;
+      },
+    };
+    await expect(applyRetentionRun({
+      rpc: async (name) => {
+        switch (name) {
+          case 'confirm_privacy_retention_run': return response(confirmation);
+          case 'apply_privacy_retention_run': return response(applyProgress);
+          case 'finalize_privacy_retention_run': return response(providerPendingReceipt);
+          case 'get_privacy_retention_provider_reconciliation_work': return response([{ malformed: true }]);
+          default: throw new Error(`unexpected RPC ${name}`);
+        }
+      },
+    }, { ...applyInput, batchSize: 1 }, { provider })).rejects.toMatchObject({
+      code: 'privacy_retention_provider_reconciliation_invalid',
+    });
+
+    expect(deletes).toBe(0);
+    expect(verifications).toBe(0);
+  });
 
   test('does not leak provider diagnostics or accept PII-shaped receipt extensions', async () => {
     const rpcErrorClient: PrivacyRetentionRpcClient = {
@@ -453,6 +589,7 @@ describe('privacy retention runner', () => {
     const deletes: unknown[] = [];
     const verifications: unknown[] = [];
     const submittedReceipts: unknown[] = [];
+    let finalizations = 0;
     const provider: PrivacyRetentionProvider = {
       verifierRef: fixedProviderRef,
       deleteExactVersion: async (input) => { deletes.push(input); },
@@ -473,7 +610,9 @@ describe('privacy retention runner', () => {
           case 'record_privacy_retention_storage_provider_receipts':
             submittedReceipts.push(args.p_receipts);
             return response(providerReceiptResult);
-          case 'finalize_privacy_retention_run': return response(passedReceipt);
+          case 'finalize_privacy_retention_run':
+            finalizations += 1;
+            return response(finalizations === 1 ? providerPendingReceipt : passedReceipt);
           default: throw new Error(`unexpected RPC ${name}`);
         }
       },
@@ -484,6 +623,7 @@ describe('privacy retention runner', () => {
     expect(calls).toEqual([
       'confirm_privacy_retention_run',
       'apply_privacy_retention_run',
+      'finalize_privacy_retention_run',
       'get_privacy_retention_provider_reconciliation_work',
       'claim_privacy_retention_storage_items',
       'resolve_privacy_retention_provider_effect',
@@ -568,6 +708,7 @@ describe('privacy retention runner', () => {
       },
       errorCode: 'privacy_retention_readback_incomplete',
     };
+    let finalizations = 0;
     const provider: PrivacyRetentionProvider = {
       verifierRef: fixedProviderRef,
       deleteExactVersion: async (input) => {
@@ -585,7 +726,9 @@ describe('privacy retention runner', () => {
           case 'claim_privacy_retention_storage_items': return response([providerClaim]);
           case 'resolve_privacy_retention_provider_effect': return response(providerResolution);
           case 'record_privacy_retention_storage_provider_receipts': return response(providerReceiptResult);
-          case 'finalize_privacy_retention_run': return response(heldReceipt);
+          case 'finalize_privacy_retention_run':
+            finalizations += 1;
+            return response(finalizations === 1 ? providerPendingReceipt : heldReceipt);
           default: throw new Error(`unexpected RPC ${name}`);
         }
       },
@@ -612,6 +755,7 @@ describe('privacy retention runner', () => {
       },
       verifyAbsent: async () => providerProof,
     };
+    let firstFinalizations = 0;
     const firstClient: PrivacyRetentionRpcClient = {
       rpc: async (name) => {
         switch (name) {
@@ -620,7 +764,9 @@ describe('privacy retention runner', () => {
           case 'get_privacy_retention_provider_reconciliation_work': return response([]);
           case 'claim_privacy_retention_storage_items': return response([providerClaim]);
           case 'resolve_privacy_retention_provider_effect': return response(providerResolution);
-          case 'finalize_privacy_retention_run': return response(partialReceipt);
+          case 'finalize_privacy_retention_run':
+            firstFinalizations += 1;
+            return response(firstFinalizations === 1 ? providerPendingReceipt : partialReceipt);
           default: throw new Error(`unexpected RPC ${name}`);
         }
       },
@@ -629,6 +775,7 @@ describe('privacy retention runner', () => {
     expect(deletes).toHaveLength(1);
 
     const secondCalls: string[] = [];
+    let secondFinalizations = 0;
     const secondClient: PrivacyRetentionRpcClient = {
       rpc: async (name) => {
         secondCalls.push(name);
@@ -637,7 +784,9 @@ describe('privacy retention runner', () => {
           case 'get_privacy_retention_provider_reconciliation_work':
             return response([providerReconciliationWork]);
           case 'record_privacy_retention_storage_provider_receipts': return response(providerReceiptResult);
-          case 'finalize_privacy_retention_run': return response(passedReceipt);
+          case 'finalize_privacy_retention_run':
+            secondFinalizations += 1;
+            return response(secondFinalizations === 1 ? providerPendingReceipt : passedReceipt);
           default: throw new Error(`unexpected RPC ${name}`);
         }
       },
@@ -647,6 +796,7 @@ describe('privacy retention runner', () => {
       .resolves.toMatchObject({ status: 'applied' });
     expect(secondCalls).toEqual([
       'confirm_privacy_retention_run',
+      'finalize_privacy_retention_run',
       'get_privacy_retention_provider_reconciliation_work',
       'record_privacy_retention_storage_provider_receipts',
       'finalize_privacy_retention_run',
@@ -676,6 +826,10 @@ describe('privacy retention internal route contract', () => {
     expect(route).not.toContain('supabase.storage');
     expect(runner).not.toContain('PrivacyRetentionStorage');
     expect(runner).not.toContain('ack_privacy_retention_storage_items');
+    expect(route).toContain("code === 'privacy_retention_provider_unavailable' || code === 'privacy_retention_operation_failed'");
+    expect(route).toContain("code === 'privacy_retention_timeout'");
+    expect(route).toContain("code === 'privacy_retention_confirmation_invalid'");
+    expect(route).toContain(': 500;');
     expect(route).toContain('PRIVACY_RETENTION_PROVIDER_DELETE_URL');
     expect(route).toContain('PRIVACY_RETENTION_PROVIDER_VERIFIER_URL');
     expect(route).toContain('PRIVACY_RETENTION_PROVIDER_DELETE_CAPABILITY');
@@ -683,7 +837,7 @@ describe('privacy retention internal route contract', () => {
     expect(route).toContain('PRIVACY_RETENTION_PROVIDER_VERIFIER_REF');
     expect(route).toContain('MAX_PROVIDER_RESPONSE_BYTES = 1024');
     expect(route).toContain('readBoundedProviderResponse');
-    expect(route).toContain('}, { provider })');
+    expect(route).toContain('}, { providerFactory: privateProvider })');
     expect(runner).toContain('claim_privacy_retention_storage_items');
     expect(runner).toContain('resolve_privacy_retention_provider_effect');
     expect(runner).toContain('get_privacy_retention_provider_reconciliation_work');
