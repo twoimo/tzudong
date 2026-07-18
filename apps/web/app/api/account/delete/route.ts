@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -161,6 +162,37 @@ const hasEmptyGetBody = (request: NextRequest) => {
 
 const asSingleRow = (value: unknown): RpcRow | null =>
   Array.isArray(value) && value.length === 1 && isRecord(value[0]) ? value[0] : null;
+const ACCOUNT_DELETION_DATABASE_CLEANUP_ROW_KEYS = [
+  'request_id',
+  'status',
+  'reason_code',
+  'db_readback_passed',
+  'session_readback_passed',
+  'source_manifest_hash',
+] as const;
+const isAccountDeletionDatabaseCleanupRow = (
+  value: unknown,
+  request: AccountDeletionApplyRequest,
+): value is RpcRow => {
+  if (
+    !isRecord(value)
+    || Object.keys(value).length !== ACCOUNT_DELETION_DATABASE_CLEANUP_ROW_KEYS.length
+    || !hasOnlyKeys(value, ACCOUNT_DELETION_DATABASE_CLEANUP_ROW_KEYS)
+  ) {
+    return false;
+  }
+
+  return value.request_id === request.requestId
+    && value.status === 'applying'
+    && value.reason_code === 'DB_READBACK_PASSED'
+    && value.db_readback_passed === true
+    && value.session_readback_passed === false
+    && value.source_manifest_hash === request.sourceManifestHash;
+};
+const idempotencyKeyBindingSha256 = (idempotencyKey: string) =>
+  createHash('sha256')
+    .update(`g038-account-deletion-idempotency-binding:v1\n${idempotencyKey}`, 'utf8')
+    .digest('hex');
 
 const asSafeCount = (value: unknown): number | null =>
   typeof value === 'number'
@@ -320,7 +352,12 @@ const OWNER_ACCOUNT_DELETION_STATUS_ROW_KEYS = [
   'storage_receipt_refs',
   'auth_receipt_ref',
   'source_manifest_hash',
+  'idempotency_key_binding_sha256',
 ] as const;
+const OWNER_ACCOUNT_DELETION_STATUS_ROW_KEYS_WITHOUT_IDEMPOTENCY_BINDING =
+  OWNER_ACCOUNT_DELETION_STATUS_ROW_KEYS.filter(
+    (key) => key !== 'idempotency_key_binding_sha256',
+  );
 type AccountDeletionOwnerStatus =
   | Readonly<{
     status: 'applied';
@@ -336,10 +373,20 @@ type AccountDeletionOwnerStatus =
 const ownerStatusFromRow = (
   row: RpcRow,
   query: AccountDeletionStatusQuery,
+  idempotencyKeyBinding: string | null,
 ): AccountDeletionOwnerStatus | null => {
   if (
-    Object.keys(row).length !== OWNER_ACCOUNT_DELETION_STATUS_ROW_KEYS.length
-    || !hasOnlyKeys(row, OWNER_ACCOUNT_DELETION_STATUS_ROW_KEYS)
+    Object.keys(row).length !== (
+      idempotencyKeyBinding === null && !Object.hasOwn(row, 'idempotency_key_binding_sha256')
+        ? OWNER_ACCOUNT_DELETION_STATUS_ROW_KEYS_WITHOUT_IDEMPOTENCY_BINDING.length
+        : OWNER_ACCOUNT_DELETION_STATUS_ROW_KEYS.length
+    )
+    || !hasOnlyKeys(
+      row,
+      idempotencyKeyBinding === null && !Object.hasOwn(row, 'idempotency_key_binding_sha256')
+        ? OWNER_ACCOUNT_DELETION_STATUS_ROW_KEYS_WITHOUT_IDEMPOTENCY_BINDING
+        : OWNER_ACCOUNT_DELETION_STATUS_ROW_KEYS,
+    )
     || row.request_id !== query.requestId
     || row.source_manifest_hash !== query.sourceManifestHash
     || !countsFromRow(row)
@@ -349,6 +396,11 @@ const ownerStatusFromRow = (
     || typeof row.storage_readback_passed !== 'boolean'
     || typeof row.session_readback_passed !== 'boolean'
     || typeof row.auth_readback_passed !== 'boolean'
+    || (idempotencyKeyBinding !== null && (
+      typeof row.idempotency_key_binding_sha256 !== 'string'
+      || !/^[0-9a-f]{64}$/.test(row.idempotency_key_binding_sha256)
+      || row.idempotency_key_binding_sha256 !== idempotencyKeyBinding
+    ))
   ) {
     return null;
   }
@@ -512,6 +564,55 @@ const deleteAccount = async (request: NextRequest) => {
     }
 
     const supabase = createBearerClient(bearerToken);
+    const statusQuery = {
+      requestId: body.requestId,
+      previewHash: body.previewHash,
+      sourceManifestHash: body.sourceManifestHash,
+    };
+    const idempotencyKeyBinding = idempotencyKeyBindingSha256(body.idempotencyKey);
+    const replayReadbackResult = await supabase.rpc('read_current_account_deletion_status', {
+      p_request_id: body.requestId,
+      p_preview_hash: body.previewHash,
+      p_source_manifest_hash: body.sourceManifestHash,
+    });
+    if (replayReadbackResult.error) return serverFailureResponse();
+
+    const replayReadback = asSingleRow(replayReadbackResult.data);
+    if (!replayReadback && (!Array.isArray(replayReadbackResult.data) || replayReadbackResult.data.length !== 0)) {
+      return serverFailureResponse();
+    }
+
+    if (replayReadback) {
+      const replayStatus = ownerStatusFromRow(
+        replayReadback,
+        statusQuery,
+        idempotencyKeyBinding,
+      );
+      if (!replayStatus) return serverFailureResponse();
+
+      if (
+        replayStatus.status === 'in_progress'
+        && replayReadback.reason_code === 'DB_READBACK_PASSED'
+        && replayReadback.db_readback_passed === true
+        && replayReadback.storage_readback_passed === false
+        && replayReadback.session_readback_passed === false
+        && replayReadback.auth_readback_passed === false
+      ) {
+        return noStoreJson({ status: 'accepted', begin: replayStatus }, { status: 202 });
+      }
+
+      if (
+        replayReadback.db_readback_passed
+        || replayReadback.storage_readback_passed
+        || replayReadback.session_readback_passed
+        || replayReadback.auth_readback_passed
+        || replayStatus.status !== 'in_progress'
+        || replayReadback.reason_code !== 'APPLY_STARTED'
+      ) {
+        return serverFailureResponse();
+      }
+    }
+
     const result = await supabase.rpc('begin_account_deletion_apply_with_reauth', {
       p_proof_id: body.proofId,
       p_actor_user_id: user.id,
@@ -522,22 +623,41 @@ const deleteAccount = async (request: NextRequest) => {
       p_idempotency_key: body.idempotencyKey,
       p_source_manifest_hash: body.sourceManifestHash,
     });
-    const row = asSingleRow(result.data);
+    const begin = asSingleRow(result.data);
     if (result.error) {
       const reasonCode = rpcFailureReasonCode(result.error);
       return reasonCode ? failureResponse(reasonCode) : serverFailureResponse();
     }
-    if (!row) return serverFailureResponse();
-    if (row.reason_code !== 'APPLY_STARTED') {
-      return failureResponse(row.reason_code);
+    if (!begin || begin.reason_code !== 'APPLY_STARTED') return serverFailureResponse();
+
+    const beginStatus = ownerStatusFromRow(begin, statusQuery, null);
+    if (!beginStatus || beginStatus.status !== 'in_progress') return serverFailureResponse();
+
+    const cleanupResult = await supabaseAdmin.rpc('apply_account_deletion_database_cleanup', {
+      p_actor_user_id: user.id,
+      p_target_user_id: body.userId,
+      p_request_id: body.requestId,
+      p_preview_hash: body.previewHash,
+      p_idempotency_key: body.idempotencyKey,
+      p_source_manifest_hash: body.sourceManifestHash,
+    });
+    const cleanup = asSingleRow(cleanupResult.data);
+    if (cleanupResult.error || !isAccountDeletionDatabaseCleanupRow(cleanup, body)) {
+      return serverFailureResponse();
     }
 
-    const status = ownerStatusFromRow(row, {
-      requestId: body.requestId,
-      previewHash: body.previewHash,
-      sourceManifestHash: body.sourceManifestHash,
+    const readbackResult = await supabase.rpc('read_current_account_deletion_status', {
+      p_request_id: body.requestId,
+      p_preview_hash: body.previewHash,
+      p_source_manifest_hash: body.sourceManifestHash,
     });
-    if (!status || status.status !== 'in_progress') return serverFailureResponse();
+    const readback = asSingleRow(readbackResult.data);
+    if (readbackResult.error || !readback) return serverFailureResponse();
+
+    const status = ownerStatusFromRow(readback, statusQuery, idempotencyKeyBinding);
+    if (!status || status.status !== 'in_progress' || !readback.db_readback_passed) {
+      return serverFailureResponse();
+    }
 
     return noStoreJson({ status: 'accepted', begin: status }, { status: 202 });
   } catch {
@@ -567,7 +687,7 @@ export async function GET(request: NextRequest) {
   const row = asSingleRow(result.data);
   if (result.error || !row) return failureResponse('PREVIEW_NOT_FOUND', 404);
 
-  const status = ownerStatusFromRow(row, query);
+  const status = ownerStatusFromRow(row, query, null);
   if (!status) return serverFailureResponse();
 
   if (status.status === 'applied') {

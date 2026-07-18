@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from 'bun:test';
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { NextRequest } from 'next/server';
@@ -175,6 +176,10 @@ const validApplyRequest = () => ({
   idempotencyKey: 'deletion-key-0001',
   sourceManifestHash: ACCOUNT_DELETION_MANIFEST_HASH,
 });
+const idempotencyKeyBinding = (key = validApplyRequest().idempotencyKey) =>
+  createHash('sha256')
+    .update(`g038-account-deletion-idempotency-binding:v1\n${key}`, 'utf8')
+    .digest('hex');
 
 const counts = {
   delete: 1,
@@ -238,6 +243,7 @@ const appliedRow = (
   storage_receipt_refs: storageReceiptRefs(receiptRefCount),
   auth_receipt_ref: AUTH_RECEIPT_REF,
   source_manifest_hash: sourceManifestHash,
+  idempotency_key_binding_sha256: idempotencyKeyBinding(),
 });
 
 const applyingRow = (overrides: Record<string, unknown> = {}) => ({
@@ -252,6 +258,7 @@ const applyingRow = (overrides: Record<string, unknown> = {}) => ({
   storage_receipt_refs: null,
   auth_receipt_ref: null,
   source_manifest_hash: ACCOUNT_DELETION_MANIFEST_HASH,
+  idempotency_key_binding_sha256: idempotencyKeyBinding(),
   ...overrides,
 });
 
@@ -376,25 +383,50 @@ describe('G014 durable account deletion contract', () => {
     expect(api).toContain('hasOnlyKeys(value, [');
     expect(api).toContain('Object.keys(value).length !== 7');
     expect(deleteHandler).not.toContain('consume_account_deletion_reauth_proof');
-    expect(deleteHandler).toContain('ownerStatusFromRow(row, {');
+    expect(deleteHandler).toContain('const cleanupResult = await supabaseAdmin.rpc(\'apply_account_deletion_database_cleanup\'');
+    expect(deleteHandler).toContain('const readbackResult = await supabase.rpc(\'read_current_account_deletion_status\'');
+    expect(deleteHandler).toContain('!readback.db_readback_passed');
     expect(deleteHandler).not.toContain('getAuthenticatedActor');
     expect(deleteHandler).not.toContain('reauthProofUnavailableResponse');
   });
-  test('starts apply with the verified bearer client and never service role RPC', async () => {
+  test('hands off begin to exact-bound database cleanup, then returns only the owner db readback', async () => {
     resetAccountDeletionRouteSpies();
+    let statusReadbacks = 0;
     rpcResult = (name, args) => {
-      expect(name).toBe('begin_account_deletion_apply_with_reauth');
-      expect(args).toEqual({
-        p_proof_id: validApplyRequest().proofId,
-        p_actor_user_id: ACCOUNT_DELETION_OWNER_ID,
-        p_target_user_id: ACCOUNT_DELETION_OWNER_ID,
-        p_request_id: ACCOUNT_DELETION_OWNER_ID,
-        p_preview_hash: ACCOUNT_DELETION_PREVIEW_HASH,
-        p_confirmation_text: ACCOUNT_DELETION_CONFIRMATION_TEXT,
-        p_idempotency_key: 'deletion-key-0001',
-        p_source_manifest_hash: ACCOUNT_DELETION_MANIFEST_HASH,
-      });
-      return { data: [applyingRow()], error: null };
+      if (name === 'begin_account_deletion_apply_with_reauth') {
+        expect(args).toEqual({
+          p_proof_id: validApplyRequest().proofId,
+          p_actor_user_id: ACCOUNT_DELETION_OWNER_ID,
+          p_target_user_id: ACCOUNT_DELETION_OWNER_ID,
+          p_request_id: ACCOUNT_DELETION_OWNER_ID,
+          p_preview_hash: ACCOUNT_DELETION_PREVIEW_HASH,
+          p_confirmation_text: ACCOUNT_DELETION_CONFIRMATION_TEXT,
+          p_idempotency_key: 'deletion-key-0001',
+          p_source_manifest_hash: ACCOUNT_DELETION_MANIFEST_HASH,
+        });
+        return { data: [applyingRow()], error: null };
+      }
+      if (name === 'apply_account_deletion_database_cleanup') {
+        expect(args).toEqual({
+          p_actor_user_id: ACCOUNT_DELETION_OWNER_ID,
+          p_target_user_id: ACCOUNT_DELETION_OWNER_ID,
+          p_request_id: ACCOUNT_DELETION_OWNER_ID,
+          p_preview_hash: ACCOUNT_DELETION_PREVIEW_HASH,
+          p_idempotency_key: 'deletion-key-0001',
+          p_source_manifest_hash: ACCOUNT_DELETION_MANIFEST_HASH,
+        });
+        return { data: [databaseRow()], error: null };
+      }
+      if (name === 'read_current_account_deletion_status') {
+        statusReadbacks += 1;
+        return statusReadbacks === 1
+          ? { data: [], error: null }
+          : { data: [applyingRow({
+            reason_code: 'DB_READBACK_PASSED',
+            db_readback_passed: true,
+          })], error: null };
+      }
+      throw new Error(`unexpected RPC ${name}`);
     };
 
     const response = await accountDeletionDelete(
@@ -404,14 +436,130 @@ describe('G014 durable account deletion contract', () => {
     expect(response.status).toBe(202);
     expect(await response.json()).toEqual({
       status: 'accepted',
-      begin: { status: 'in_progress', reasonCode: 'APPLY_STARTED', counts },
+      begin: { status: 'in_progress', reasonCode: 'DB_READBACK_PASSED', counts },
     });
     expect(bearerClientOptions).toEqual({
       auth: { persistSession: false, autoRefreshToken: false },
       global: { headers: { Authorization: 'Bearer test-bearer-token' } },
     });
-    expect(rpcCalls).toHaveLength(1);
-    expect(serviceRoleRpcCalls).toBe(0);
+    expect(rpcCalls.map(({ name }) => name)).toEqual([
+      'read_current_account_deletion_status',
+      'begin_account_deletion_apply_with_reauth',
+      'apply_account_deletion_database_cleanup',
+      'read_current_account_deletion_status',
+    ]);
+    expect(serviceRoleRpcCalls).toBe(1);
+  });
+  test('resumes only a same-key database-cleanup replay without consuming another proof', async () => {
+    resetAccountDeletionRouteSpies();
+    rpcResult = (name) => {
+      expect(name).toBe('read_current_account_deletion_status');
+      return { data: [applyingRow({
+        reason_code: 'DB_READBACK_PASSED',
+        db_readback_passed: true,
+      })], error: null };
+    };
+
+    const response = await accountDeletionDelete(
+      accountDeletionRequest('DELETE', JSON.stringify(validApplyRequest())),
+    );
+
+    expect(response.status).toBe(202);
+    expect(rpcCalls.map(({ name }) => name)).toEqual(['read_current_account_deletion_status']);
+  });
+  test('fails closed for different-key, later-phase, or malformed progressed replay readback', async () => {
+    for (const replayRow of [
+      applyingRow({
+        reason_code: 'DB_READBACK_PASSED',
+        db_readback_passed: true,
+        idempotency_key_binding_sha256: idempotencyKeyBinding('different-key-0001'),
+      }),
+      applyingRow({
+        reason_code: 'DB_READBACK_PASSED',
+        db_readback_passed: true,
+        session_readback_passed: true,
+      }),
+      { ...applyingRow({ reason_code: 'DB_READBACK_PASSED', db_readback_passed: true }), unexpected: true },
+    ]) {
+      resetAccountDeletionRouteSpies();
+      rpcResult = (name) => {
+        expect(name).toBe('read_current_account_deletion_status');
+        return { data: [replayRow], error: null };
+      };
+
+      const response = await accountDeletionDelete(
+        accountDeletionRequest('DELETE', JSON.stringify(validApplyRequest())),
+      );
+
+      expect(response.status).toBe(500);
+      expect(rpcCalls.map(({ name }) => name)).toEqual(['read_current_account_deletion_status']);
+    }
+  });
+  test('does not accept deletion when database cleanup fails or returns a malformed receipt', async () => {
+    for (const cleanupResult of [
+      { data: null, error: { message: 'raw database error' } },
+      { data: [{ ...databaseRow(), db_readback_passed: false }], error: null },
+    ]) {
+      resetAccountDeletionRouteSpies();
+      rpcResult = (name) => {
+        if (name === 'read_current_account_deletion_status') return { data: [], error: null };
+        if (name === 'begin_account_deletion_apply_with_reauth') {
+          return { data: [applyingRow()], error: null };
+        }
+        if (name === 'apply_account_deletion_database_cleanup') return cleanupResult;
+        throw new Error(`unexpected RPC ${name}`);
+      };
+
+      const response = await accountDeletionDelete(
+        accountDeletionRequest('DELETE', JSON.stringify(validApplyRequest())),
+      );
+
+      expect(response.status).toBe(500);
+      expect(await response.json()).toEqual({
+        error: '계정 데이터 또는 세션 정리를 확인하지 못했습니다. 계정 삭제가 완료되지 않았습니다.',
+        reasonCode: 'DB_OR_SESSION_CLEANUP_FAILED',
+      });
+      expect(rpcCalls.map(({ name }) => name)).toEqual([
+        'read_current_account_deletion_status',
+        'begin_account_deletion_apply_with_reauth',
+        'apply_account_deletion_database_cleanup',
+      ]);
+    }
+  });
+  test('does not accept deletion before the final owner readback proves database cleanup', async () => {
+    resetAccountDeletionRouteSpies();
+    let statusReadbacks = 0;
+    rpcResult = (name) => {
+      if (name === 'begin_account_deletion_apply_with_reauth') {
+        return { data: [applyingRow()], error: null };
+      }
+      if (name === 'apply_account_deletion_database_cleanup') {
+        return { data: [databaseRow()], error: null };
+      }
+      if (name === 'read_current_account_deletion_status') {
+        statusReadbacks += 1;
+        return statusReadbacks === 1
+          ? { data: [], error: null }
+          : { data: [applyingRow({ reason_code: 'DB_READBACK_PASSED' })], error: null };
+      }
+      throw new Error(`unexpected RPC ${name}`);
+    };
+
+    const response = await accountDeletionDelete(
+      accountDeletionRequest('DELETE', JSON.stringify(validApplyRequest())),
+    );
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({
+      error: '계정 데이터 또는 세션 정리를 확인하지 못했습니다. 계정 삭제가 완료되지 않았습니다.',
+      reasonCode: 'DB_OR_SESSION_CLEANUP_FAILED',
+    });
+    expect(rpcCalls.map(({ name }) => name)).toEqual([
+      'read_current_account_deletion_status',
+      'begin_account_deletion_apply_with_reauth',
+      'apply_account_deletion_database_cleanup',
+      'read_current_account_deletion_status',
+    ]);
   });
   test('accepts a self-only service-role preview with bearer-bound identity', async () => {
     resetAccountDeletionRouteSpies();

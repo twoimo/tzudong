@@ -78,6 +78,7 @@ export type PrivacyRetentionProvider = Readonly<{
 
 export type PrivacyRetentionRunnerDependencies = Readonly<{
   provider?: PrivacyRetentionProvider;
+  providerFactory?: () => PrivacyRetentionProvider | null;
 }>;
 
 type JsonRecord = Record<string, unknown>;
@@ -674,6 +675,12 @@ const finalReceipt = async (
   p_preview_hash: input.previewHash,
   p_idempotency_key: input.idempotencyKey,
 }), binding, 'final');
+const requiresProviderEvidence = (receipt: PrivacyRetentionReceipt): boolean =>
+  receipt.status === 'partial'
+  && receipt.readback.checks.expectedCountMatched
+  && receipt.readback.checks.databaseSourceAbsent
+  && !receipt.readback.checks.storageProviderAbsent
+  && receipt.readback.checks.noActiveHoldMutated;
 
 export const previewRetentionRun = async (
   client: PrivacyRetentionRpcClient,
@@ -722,7 +729,6 @@ export const applyRetentionRun = async (
     p_confirmation_text: input.confirmationText,
     p_idempotency_key: input.idempotencyKey,
   }), expectedBinding);
-
   if (confirmation.status === 'confirmed' || confirmation.status === 'partial' || confirmation.status === 'held') {
     parseReceipt(await callRpc(client, 'apply_privacy_retention_run', {
       p_run_id: input.operationId,
@@ -731,9 +737,14 @@ export const applyRetentionRun = async (
       p_max_duration_ms: MAX_PRIVACY_RETENTION_RUNTIME_MS,
     }), expectedBinding, 'apply');
   }
-  if (dependencies.provider && confirmation.status !== 'failed') {
-    await runProviderLifecycle(client, input, expectedBinding, dependencies.provider);
-  }
 
+  const initialReceipt = await finalReceipt(client, input, expectedBinding);
+  if (!requiresProviderEvidence(initialReceipt)) return initialReceipt;
+
+  const provider = dependencies.provider ?? dependencies.providerFactory?.();
+  if (!provider) {
+    throw new PrivacyRetentionRunnerError('privacy_retention_provider_unavailable');
+  }
+  await runProviderLifecycle(client, input, expectedBinding, provider);
   return finalReceipt(client, input, expectedBinding);
 };
