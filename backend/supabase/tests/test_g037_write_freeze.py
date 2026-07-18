@@ -66,6 +66,14 @@ class FenceTests(unittest.TestCase):
   held=HeldCursor()
   self.assertEqual(freeze._locks(held,i.relations,60),freeze.digest([(r.schema,r.name,r.oid) for r in freeze._lockable_relations(i.relations)]))
   self.assertFalse(any(name in sql for name in ('"schema_migrations"','"buckets_vectors"','"migrations"','"vector_indexes"') for sql,_ in held.sql if sql.startswith("LOCK TABLE")))
+  self.assertEqual(held.sql[:3],[("SET LOCAL statement_timeout = '60s'",()),("SET LOCAL lock_timeout = '60s'",()),("SET LOCAL idle_in_transaction_session_timeout = '60s'",())])
+ def test_lock_timeout_rejects_invalid_values_before_sql(self):
+  for seconds in (True,False,0,901,"60","1; SELECT pg_sleep(1)"):
+   with self.subTest(seconds=seconds):
+    c=Cursor()
+    with self.assertRaisesRegex(freeze.FreezeError,"lock timeout seconds must be between 1 and 900"):
+     freeze._locks(c,(),seconds)
+    self.assertEqual(c.sql,[])
  def test_owner_drift_in_provider_managed_exclusion_rejects(self):
   i=inv(); relations=tuple(freeze.Relation(r.schema,r.name,r.oid,r.kind,"wrong-owner") if r.name=="migrations" else r for r in i.relations)
   drifted=freeze.Inventory(i.schemas,relations,freeze.digest([r.key for r in relations]),i.acl_root)
