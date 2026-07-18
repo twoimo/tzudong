@@ -588,7 +588,7 @@ def _assert_capability_not_expired(deadline):
     _remaining_deadline_ms(deadline)
 def _execute_before_deadline(cur, sql, params=(), *, deadline):
     remaining_ms = _remaining_deadline_ms(deadline)
-    cur.execute("SELECT pg_catalog.set_config('statement_timeout', %s, true)", (f"{remaining_ms}ms",))
+    cur.execute("SELECT pg_catalog.set_config('statement_timeout', %s, true)", (f"{min(remaining_ms, 60000)}ms",))
     _remaining_deadline_ms(deadline)
     cur.execute(sql) if not params else cur.execute(sql, params)
 def _q_before_deadline(cur, sql, params=(), *, deadline):
@@ -758,8 +758,12 @@ def _execute_closure(cur, root, manifest, remediation, *, plan, deadline):
     expected_vectors={}; policy_evidence=[]
     for item, original_full, _transformed_full, inner in plan:
         policy_evidence.append(_prepare_documents_policy_compatibility(cur,item,deadline=deadline))
-        for statement in inner:
-            _execute_before_deadline(cur,statement,deadline=deadline)
+        for ordinal, statement in enumerate(inner, start=1):
+            try:
+                _execute_before_deadline(cur,statement,deadline=deadline)
+            except Exception:
+                statement_sha256=hashlib.sha256(statement.encode("utf-8")).hexdigest()
+                raise ClosureError(f"immutable migration statement failed: version={item.version}, ordinal={ordinal}, sha256={statement_sha256}") from None
         _execute_before_deadline(cur,"INSERT INTO supabase_migrations.schema_migrations(version,name,statements) VALUES (%s,%s,%s)",(item.version,item.name,list(original_full)),deadline=deadline)
         expected_vectors[item.version]=original_full
     _assert_role_flags(cur)
