@@ -21,11 +21,27 @@ class ControllerTests(unittest.TestCase):
   self.assertTrue(controller.recovery.restrictive(path,directory=True))
   return path
  def test_validate_has_no_database_connection(self):
-  args=SimpleNamespace(origin="https://abcdefghijklmnopqrst.supabase.co",freeze_id="freeze-0001",operator_assertion="assertion",controller_signing_key="key",recovery_signing_key="recovery",recipient_file="recipient",recipient_allowlist_file="allow",service_file="service",service_name="g037",pgpass_file="pgpass",destination="dest",recovery_receipt="recovery-receipt",prepared_receipt="prepared",final_receipt="final",outcome_receipt="outcome",secret_env="REFERENCE",secret_file=None)
+  args=SimpleNamespace(origin="https://abcdefghijklmnopqrst.supabase.co",freeze_id="freeze-0001",operator_assertion="assertion",controller_signing_key="key",recovery_signing_key="recovery",recipient_file="recipient",recipient_allowlist_file="allow",service_file="service",service_name="g037",pgpass_file="pgpass",destination="dest",recovery_receipt="recovery-receipt",prepared_receipt="prepared",final_receipt="final",outcome_receipt="outcome")
   assertion={"relation_root":"a"*64,"acl_root":"b"*64,"expires_at":int(time.time())+60}
   with patch.object(controller,"_private"),patch.object(controller,"_assert_controller_key"),patch.object(controller,"_assert_key"),patch.object(controller,"_signed_assertion",return_value=({**assertion,"signature":"signature"},assertion)),patch.object(controller,"_validate_assertion"),patch.object(controller.recovery,"recipient_from_files",return_value=("age1"+"a"*58,"f"*64)),patch.object(controller.recovery,"service",return_value=SERVICE),patch.object(controller.recovery,"pgpass"),patch.object(controller.recovery,"safe_destination"),patch.object(controller,"_outside"),patch.object(controller,"validate_sources") as sources:
    self.assertEqual(controller.validate(args)["status"],"valid")
   sources.assert_called_once()
+ def test_validate_parser_and_runtime_are_secret_free(self):
+  common=["--origin",ORIGIN,"--freeze-id","freeze-0001","--controller-signing-key","key","--service-file","service","--pgpass-file","pgpass","--destination","dest","--recovery-receipt","recovery-receipt","--prepared-receipt","prepared","--final-receipt","final","--outcome-receipt","outcome","--recipient-file","recipient","--recipient-allowlist-file","allow"]
+  assertion=["--operator-assertion","assertion","--recovery-signing-key","recovery",*sum((["--evidence-"+channel.replace("_","-"),channel] for channel in controller.RESIDUAL_CHANNELS),[])]
+  validate_args=controller.parser().parse_args(["validate",*common,*assertion])
+  self.assertFalse(hasattr(validate_args,"secret_env")); self.assertFalse(hasattr(validate_args,"secret_file"))
+  for mode in ("execute","rehearse"):
+   execution_args=controller.parser().parse_args([mode,*common,*assertion,*(["--rehearsal-receipt","rehearsal","--rehearsal-outcome-receipt","rehearsal-outcome"] if mode=="rehearse" else [])])
+   self.assertTrue(hasattr(execution_args,"secret_env")); self.assertTrue(hasattr(execution_args,"secret_file"))
+ def test_execute_and_rehearse_require_exactly_one_secret_reference(self):
+  base={"origin":ORIGIN,"freeze_id":"freeze-0001","operator_assertion":"assertion","controller_signing_key":"key","recovery_signing_key":"recovery","recipient_file":"recipient","recipient_allowlist_file":"allow","service_file":"service","service_name":"g037","pgpass_file":"pgpass","destination":"dest","recovery_receipt":"recovery-receipt","prepared_receipt":"prepared","final_receipt":"final","outcome_receipt":"outcome","age_command":"age","pg_dump":"pg_dump","rehearsal_receipt":"rehearsal","rehearsal_outcome_receipt":"rehearsal-outcome"}
+  assertion={"relation_root":"a"*64,"acl_root":"b"*64,"expires_at":int(time.time())+60}
+  for mode in ("execute","rehearse"):
+   for secret_env,secret_file in ((None,None),("reference","file")):
+    args=SimpleNamespace(**base,secret_env=secret_env,secret_file=secret_file)
+    with self.subTest(mode=mode,secret_env=secret_env,secret_file=secret_file),patch.object(controller,"_private"),patch.object(controller,"_assert_controller_key"),patch.object(controller,"_assert_key"),patch.object(controller,"_signed_assertion",return_value=({**assertion,"signature":"signature"},assertion)),patch.object(controller,"_validate_assertion"),patch.object(controller.recovery,"recipient_from_files",return_value=("age1"+"a"*58,"f"*64)),patch.object(controller.recovery,"service",return_value=SERVICE),patch.object(controller.recovery,"pgpass"),patch.object(controller.recovery,"require_file"),patch.object(controller.recovery,"safe_destination"),patch.object(controller,"_outside"),patch.object(controller,"validate_sources"):
+     with self.assertRaisesRegex(controller.ControllerError,"supply exactly one secret reference"): getattr(controller,mode)(args)
  def test_signed_assertion_preserves_authenticated_envelope_and_rejects_mismatches(self):
   with tempfile.TemporaryDirectory() as directory:
    path=Path(directory)/"assertion.json"
