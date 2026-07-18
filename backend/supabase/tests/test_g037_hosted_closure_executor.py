@@ -7,6 +7,8 @@ from pathlib import Path
 sys.path.insert(0,str(Path(__file__).parents[1]/"scripts"))
 import g037_hosted_closure_contract as c
 import g037_hosted_closure_executor as e
+import g037_write_freeze as f
+import g035_hosted_recovery as g035
 import preflight_g034_hosted_migration_closure as g034
 
 class G037ExecutorTests(unittest.TestCase):
@@ -194,8 +196,8 @@ class G037ExecutorTests(unittest.TestCase):
   item=next(migration for migration in c.load_manifest(root).migrations if migration.version=="20260627080000")
   recreated=tuple(f"CREATE POLICY {name}" for name,*_ in e._DOCUMENTS_POLICY_CONTRACT)
   cursor=Cursor()
-  with patch.object(e,"source_sql"),patch.object(e,"vectors",return_value=(recreated,recreated)),patch.object(e,"_terminal_assert") as terminal:
-   e._execute_closure(cursor,root,SimpleNamespace(migrations=(item,)))
+  with patch.object(e,"remediate_short_url_duplicates",return_value={}),patch.object(e,"source_sql"),patch.object(e,"vectors",return_value=(recreated,recreated)),patch.object(e,"_terminal_assert") as terminal:
+   e._execute_closure(cursor,root,SimpleNamespace(migrations=(item,)),{})
   sql=[statement for statement,_ in cursor.calls]
   last_drop=sql.index('DROP POLICY "documents_update_own" ON public.documents')
   self.assertTrue(all(sql.index(statement)>last_drop for statement in recreated))
@@ -210,8 +212,8 @@ class G037ExecutorTests(unittest.TestCase):
   ordinary=next(item for item in loaded.migrations if item.version not in c.SELF_WRAPPING and item.version!=e._DOCUMENTS_POLICY_COMPATIBILITY_VERSION)
   wrapped=next(item for item in loaded.migrations if item.version in c.SELF_WRAPPING)
   manifest=SimpleNamespace(migrations=(ordinary,wrapped)); cursor=Cursor()
-  with patch.object(e,"_terminal_assert") as terminal:
-   e._execute_closure(cursor,root,manifest)
+  with patch.object(e,"remediate_short_url_duplicates",return_value={}),patch.object(e,"_terminal_assert") as terminal:
+   e._execute_closure(cursor,root,manifest,{})
   inserts=[params for sql,params in cursor.calls if sql.startswith("INSERT INTO supabase_migrations.schema_migrations")]
   self.assertEqual(len(inserts),2)
   for item,params in zip(manifest.migrations,inserts):
@@ -293,8 +295,8 @@ class G037ExecutorTests(unittest.TestCase):
    def execute(self,sql,params=()): self.events.append(sql)
   cursor=Cursor(); baseline=tuple((version,name,()) for version,name in c.BASELINE_PAIRS)
   with patch.object(e,"validate_controller_capability"),patch.object(e,"ledger",return_value=baseline),patch.object(e,"_execute_closure",side_effect=lambda cur,*_:cur.events.append("execute")) as execute:
-   e.rehearse_cursor(cursor,{},root=Path("."),manifest=SimpleNamespace(),freeze_id="f",relation_root="r",acl_root="a",deadline=int(time.time())+60)
-   e.apply_cursor(cursor,{},root=Path("."),manifest=SimpleNamespace(),freeze_id="f",relation_root="r",acl_root="a",deadline=int(time.time())+60)
+   e.rehearse_cursor(cursor,{},root=Path("."),manifest=SimpleNamespace(),freeze_id="f",relation_root="r",acl_root="a",deadline=int(time.time())+60,remediation={})
+   e.apply_cursor(cursor,{},root=Path("."),manifest=SimpleNamespace(),freeze_id="f",relation_root="r",acl_root="a",deadline=int(time.time())+60,remediation={})
   self.assertEqual(execute.call_count,2)
   self.assertLess(cursor.events.index("ROLLBACK TO SAVEPOINT g037_rehearsal"),cursor.events.index("execute",cursor.events.index("ROLLBACK TO SAVEPOINT g037_rehearsal")+1))
   self.assertNotIn("BEGIN",cursor.events)
@@ -306,26 +308,73 @@ class G037ExecutorTests(unittest.TestCase):
   nonbaseline=(("unexpected","migration",()),)
   with patch.object(e,"validate_controller_capability"),patch.object(e,"ledger",return_value=nonbaseline),patch.object(e,"_execute_closure") as execute:
    with self.assertRaisesRegex(e.ClosureError,"retry forbidden"):
-    e.apply_cursor(Cursor(),{},root=Path("."),manifest=SimpleNamespace(),freeze_id="f",relation_root="r",acl_root="a",deadline=int(time.time())+60)
+    e.apply_cursor(Cursor(),{},root=Path("."),manifest=SimpleNamespace(),freeze_id="f",relation_root="r",acl_root="a",deadline=int(time.time())+60,remediation={})
   execute.assert_not_called()
  def test_capability_binds_exact_immutable_source_and_inventory(self):
   now=int(time.time()); manifest=SimpleNamespace(migrations=())
-  cap={"schema":"g037-write-freeze-v3","state":"active-provisional","freeze_id":"freeze-0001","origin":"https://x","commit":"a"*40,"manifest_sha256":c.MANIFEST_SHA256,"source_root":"s"*64,"terminal_spec":"t"*64,"scope":{},"relation_root":"r"*64,"acl_root":"l"*64,"held_lock_root":"h"*64,"not_before_unix":now,"not_after_unix":now+60,"controller_public_key_sha256":"key","signature":"signed"}
+  plain={"schema":"g037-write-freeze-v3","state":"active-provisional","freeze_id":"freeze-0001","origin":"https://x","commit":"a"*40,"manifest_sha256":c.MANIFEST_SHA256,"source_root":"s"*64,"terminal_spec":"t"*64,"scope":{"schemas":list(f.REACHABLE_SCHEMAS),"ordinary_relations":"all"},"relation_root":"r"*64,"acl_root":"l"*64,"held_lock_root":"a"*64,"not_before_unix":now,"not_after_unix":now+60,"controller_public_key_sha256":f.CONTROLLER_PUBLIC_KEY_SHA256,"signature":"signed"}
   with patch.object(e,"_source_binding",return_value=("a"*40,"s"*64,"t"*64)):
+   with self.assertRaisesRegex(e.ClosureError,"binding mismatch"): e.validate_controller_capability(plain,root=Path("."),manifest=manifest,freeze_id="freeze-0001",relation_root="r"*64,acl_root="l"*64,deadline=now+60)
+   cap=f._verified_controller_capability(plain)
    self.assertEqual(e.validate_controller_capability(cap,root=Path("."),manifest=manifest,freeze_id="freeze-0001",relation_root="r"*64,acl_root="l"*64,deadline=now+60),"t"*64)
-   cap["source_root"]="x"*64
-   with self.assertRaisesRegex(e.ClosureError,"binding mismatch"): e.validate_controller_capability(cap,root=Path("."),manifest=manifest,freeze_id="freeze-0001",relation_root="r"*64,acl_root="l"*64,deadline=now+60)
+   for field,value in (("scope",{}),("origin",""),("held_lock_root","z"*64),("relation_root","x"*64),("acl_root","y"*64)):
+    forged={**plain,field:value}
+    with self.assertRaisesRegex(e.ClosureError,"binding mismatch"): e.validate_controller_capability(f._verified_controller_capability(forged),root=Path("."),manifest=manifest,freeze_id="freeze-0001",relation_root="r"*64,acl_root="l"*64,deadline=now+60)
+  class HostileCapability(f.VerifiedControllerCapability): pass
+  hostile=object.__new__(HostileCapability); object.__setattr__(hostile,"_values",dict(plain))
+  class Cursor:
+   def __init__(self): self.calls=[]
+   def execute(self,*args): self.calls.append(args)
+  cursor=Cursor()
+  with patch.object(e,"_source_binding",return_value=("a"*40,"s"*64,"t"*64)),self.assertRaisesRegex(e.ClosureError,"binding mismatch"):
+   e.apply_cursor(cursor,hostile,root=Path("."),manifest=manifest,freeze_id="freeze-0001",relation_root="r"*64,acl_root="l"*64,deadline=now+60,remediation={})
+  self.assertEqual(cursor.calls,[])
+ def test_cross_module_short_url_canonicalization_is_byte_identical(self):
+  rows=[{"id":"11111111-1111-1111-1111-111111111111","code":"keep","target_url":"https://example.test/a","created_at":None},{"id":"22222222-2222-2222-2222-222222222222","code":"duplicate","target_url":"https://example.test/a","created_at":"2026-07-18T00:00:00+00:00"}]
+  descriptors=[{"source_id":rows[1]["id"],"keeper_id":rows[0]["id"],"target_url_sha256":g035.canonical_sha256(rows[0]["target_url"]),"rank":2,"source_row_sha256":g035.canonical_sha256(rows[1])}]
+  values=(rows,list(g035.SHORT_URLS_CATALOG),descriptors,[])
+  for value in values:
+   self.assertEqual(g035.canonical_sha256(value),f.digest(value))
+   self.assertEqual(f.digest(value),e.canonical_sha256(value))
+  capture={"selection_spec_sha256":e.canonical_sha256(g035.SHORT_URL_SELECTION_SPEC),"short_urls_catalog_sha256":e.canonical_sha256(list(g035.SHORT_URLS_CATALOG)),"short_urls_rowset_sha256":e.canonical_sha256(rows),"short_urls_row_count":2,"duplicate_group_count":1,"duplicate_victim_count":1,"victim_descriptor_count":1,"duplicate_victims_sha256":e.canonical_sha256(descriptors),"victim_descriptors_sha256":e.canonical_sha256(descriptors)}
+  self.assertEqual(dict(f.verified_recovery_capture(capture)),capture)
+ def test_plain_capture_is_rejected_before_remediation(self):
+  capture={"selection_spec_sha256":"1"*64,"short_urls_catalog_sha256":"2"*64,"short_urls_rowset_sha256":"3"*64,"short_urls_row_count":0,"duplicate_group_count":0,"duplicate_victim_count":0,"victim_descriptor_count":0,"duplicate_victims_sha256":"4"*64,"victim_descriptors_sha256":"4"*64}
+  binding={"authorization":{},"execution_authorization_sha256":"a"*64,"execution_authorization_signature_sha256":"b"*64,"legacy_authorization_sha256":"c"*64,"legacy_authorization_signature_sha256":"d"*64,"legacy_capture_receipt_sha256":"e"*64,"legacy_restore_receipt_sha256":"f"*64,"legacy_inspection_receipt_sha256":"1"*64,"recovery_receipt_sha256":"2"*64,"capture_evidence":capture}
+  with self.assertRaisesRegex(e.ClosureError,"short_urls remediation binding invalid"): e._short_url_binding(binding,baseline_is_exact=lambda: True)
+ def test_hostile_capture_subclass_is_rejected_before_authorized_remediation(self):
+  capture={"selection_spec_sha256":"1"*64,"short_urls_catalog_sha256":"2"*64,"short_urls_rowset_sha256":"3"*64,"short_urls_row_count":0,"duplicate_group_count":0,"duplicate_victim_count":0,"victim_descriptor_count":0,"duplicate_victims_sha256":"4"*64,"victim_descriptors_sha256":"4"*64}
+  class HostileCapture(f.VerifiedRecoveryCapture): pass
+  hostile=object.__new__(HostileCapture); object.__setattr__(hostile,"_values",capture)
+  binding={key:"a"*64 for key in e._SHORT_URL_BINDING_FIELDS-{"envelope","expected_bindings","capture_evidence"}}
+  binding.update(envelope={},expected_bindings={},capture_evidence=hostile)
+  authorization={"policy":e.POLICY,"legacy_repository_commit":binding["legacy_repository_commit"],**{key:binding[key] for key in ("legacy_authorization_sha256","legacy_authorization_signature_sha256","legacy_capture_receipt_sha256","legacy_restore_receipt_sha256","legacy_inspection_receipt_sha256")}}
+  with patch.object(e,"ExecutionAuthorizationEnvelope",dict),patch.object(e,"authorize_exact_baseline",return_value=authorization) as authorize:
+   with self.assertRaisesRegex(e.ClosureError,"capture binding invalid"):
+    e._short_url_binding(binding,baseline_is_exact=lambda: (_ for _ in ()).throw(AssertionError("callback invoked")))
+  authorize.assert_called_once()
  def test_stable_terminal_projection_accepts_canonical_catalog_rows_and_rejects_drift(self):
-  catalog=(("public","restaurants","r","owner"),); acl=(("public","restaurants","owner","PUBLIC","SELECT","False"),)
+  catalog=(("public","restaurants","r","owner"),); raw_acl=(("auth","users","supabase_auth_admin","supabase_auth_admin","MAINTAIN",False),("public","restaurants","owner","owner","SELECT",False)); acl=tuple(tuple(map(str,row)) for row in raw_acl)
   class Cursor:
    description=object()
    def __init__(self,rows): self.rows=iter(rows)
    def execute(self,sql,params=()): pass
    def fetchall(self): return next(self.rows)
-  accepted=e._stable_projection_roots(Cursor((catalog,acl)))
+  accepted=e._stable_projection_roots(Cursor((catalog,raw_acl)))
   self.assertEqual(accepted,(e.digest(catalog),e.digest(acl)))
+  for unsafe in (
+   ("public","restaurants","owner","PUBLIC","SELECT",False),
+   ("public","restaurants","owner","PUBLIC","ALL",False),
+   ("public","restaurants","owner","owner","SELECT",True),
+   ("shortener_private","limits","owner","authenticated","SELECT",False),
+   ("public","restaurants","owner","owner","UNKNOWN",False),
+   ("public","restaurants","owner","PUBLIC","MAINTAIN",False),
+   ("public","restaurants","owner","owner","MAINTAIN",True),
+  ):
+   with self.subTest(unsafe=unsafe),self.assertRaisesRegex(e.ClosureError,"ACL safety policy"):
+    e._stable_projection_roots(Cursor((catalog,(unsafe,))))
   with self.assertRaisesRegex(e.ClosureError,"catalog projection noncanonical"):
-   e._stable_projection_roots(Cursor(((catalog[0],catalog[0]),acl)))
+   e._stable_projection_roots(Cursor(((catalog[0],catalog[0]),raw_acl)))
  def test_observed_terminal_roots_are_not_source_placeholders(self):
   rows=(("2025","x",("observed vector",)),)
   with patch.object(e,"_terminal_assert",return_value=rows),patch.object(e,"_stable_projection_roots",return_value=("c"*64,"a"*64)),patch.object(e,"_source_binding",return_value=("h"*40,"s"*64,"t"*64)):
@@ -335,4 +384,33 @@ class G037ExecutorTests(unittest.TestCase):
   before={"catalog_root":"c"*64,"acl_root":"a"*64,"ledger_root":"l"*64}
   after={**before,"acl_root":"b"*64}
   self.assertNotEqual(before,after)
+ def test_short_url_remediation_deletes_only_derived_victims_and_proves_survivors(self):
+  keeper="11111111-1111-1111-1111-111111111111"; victim="22222222-2222-2222-2222-222222222222"
+  rows=[{"id":keeper,"code":"keep"},{"id":victim,"code":"victim"}]
+  descriptor={"source_id":victim,"keeper_id":keeper,"target_url_sha256":"a"*64,"rank":2,"source_row_sha256":"b"*64}
+  pre={"selection_spec_sha256":"s"*64,"short_urls_catalog_sha256":"c"*64,"short_urls_rowset_sha256":"r"*64,"short_urls_row_count":2,"duplicate_group_count":1,"duplicate_victim_count":1,"victim_descriptor_count":1,"duplicate_victims_sha256":"d"*64,"victim_descriptors_sha256":"d"*64,"_rows":rows,"_victims":[descriptor]}
+  post={**pre,"short_urls_rowset_sha256":"p"*64,"short_urls_row_count":1,"duplicate_group_count":0,"duplicate_victim_count":0,"victim_descriptor_count":0,"duplicate_victims_sha256":e.canonical_sha256([]),"victim_descriptors_sha256":e.canonical_sha256([]),"_rows":[rows[0]],"_victims":[]}
+  queries=[]
+  def query(_,sql,params=()):
+   queries.append((sql,params)); return [(victim,)]
+  auth={**pre,"authorization_id":"11111111-1111-4111-8111-111111111111","policy":"exact-baseline-to-terminal-ledger-single-commit-v1","legacy_vector":{key:pre["short_urls_rowset_sha256"] if key=="pre_short_urls_rowset_sha256" else pre[key] for key in ("selection_spec_sha256","short_urls_catalog_sha256","pre_short_urls_rowset_sha256","duplicate_group_count","duplicate_victim_count","duplicate_victims_sha256","victim_descriptors_sha256")}}
+  with patch.object(e,"_short_url_binding",return_value=(auth,pre)),patch.object(e,"_short_url_snapshot",side_effect=(pre,post)),patch.object(e,"q",side_effect=query):
+   result=e.remediate_short_url_duplicates(object(),{"execution_authorization_sha256":"f"*64,"execution_authorization_signature_sha256":"e"*64,"legacy_repository_commit":"0"*40,"legacy_authorization_sha256":"d"*64,"legacy_authorization_signature_sha256":"c"*64,"legacy_capture_receipt_sha256":"b"*64,"legacy_restore_receipt_sha256":"a"*64,"legacy_inspection_receipt_sha256":"1"*64,"recovery_receipt_sha256":"2"*64})
+  self.assertEqual(result["deleted_count"],1)
+  self.assertEqual(queries[0][1],([victim],))
+  self.assertIn("WHERE id = ANY(%s::uuid[])",queries[0][0])
+  self.assertIn("RETURNING id::text",queries[0][0])
+  self.assertNotIn("target_url",queries[0][0])
+ def test_short_url_remediation_rejects_capture_drift_before_delete_and_wrong_returning(self):
+  base={"selection_spec_sha256":"s"*64,"short_urls_catalog_sha256":"c"*64,"short_urls_rowset_sha256":"r"*64,"short_urls_row_count":0,"duplicate_group_count":0,"duplicate_victim_count":0,"victim_descriptor_count":0,"duplicate_victims_sha256":e.canonical_sha256([]),"victim_descriptors_sha256":e.canonical_sha256([]),"_rows":[],"_victims":[]}
+  drift={**base,"short_urls_row_count":1}
+  auth={**base,"pre_short_urls_rowset_sha256":base["short_urls_rowset_sha256"],"legacy_vector":{key:base["short_urls_rowset_sha256"] if key=="pre_short_urls_rowset_sha256" else base[key] for key in ("selection_spec_sha256","short_urls_catalog_sha256","pre_short_urls_rowset_sha256","duplicate_group_count","duplicate_victim_count","duplicate_victims_sha256","victim_descriptors_sha256")}}
+  with patch.object(e,"_short_url_binding",return_value=(auth,base)),patch.object(e,"_short_url_snapshot",return_value=drift),patch.object(e,"q") as query:
+   with self.assertRaisesRegex(e.ClosureError,"capture drift"): e.remediate_short_url_duplicates(object(),{})
+  query.assert_not_called()
+  victim="22222222-2222-2222-2222-222222222222"; descriptor={"source_id":victim}
+  before={**base,"short_urls_row_count":1,"duplicate_group_count":1,"duplicate_victim_count":1,"victim_descriptor_count":1,"duplicate_victims_sha256":"d"*64,"victim_descriptors_sha256":"d"*64,"_rows":[{"id":victim}],"_victims":[descriptor]}
+  auth={**before,"pre_short_urls_rowset_sha256":before["short_urls_rowset_sha256"],"legacy_vector":{key:before["short_urls_rowset_sha256"] if key=="pre_short_urls_rowset_sha256" else before[key] for key in ("selection_spec_sha256","short_urls_catalog_sha256","pre_short_urls_rowset_sha256","duplicate_group_count","duplicate_victim_count","duplicate_victims_sha256","victim_descriptors_sha256")}}
+  with patch.object(e,"_short_url_binding",return_value=(auth,before)),patch.object(e,"_short_url_snapshot",return_value=before),patch.object(e,"q",return_value=[]):
+   with self.assertRaisesRegex(e.ClosureError,"returning mismatch"): e.remediate_short_url_duplicates(object(),{})
 if __name__=="__main__": unittest.main()

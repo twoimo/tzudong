@@ -1,9 +1,12 @@
 """Parsed job-graph contracts for the G037 hosted closure workflow."""
+import contextlib
 import importlib.util
-import inspect
+import io
+import json
 import re
 import sys
 from pathlib import Path
+import types
 import unittest
 
 import yaml
@@ -153,6 +156,12 @@ class G037HostedClosureWorkflowTests(unittest.TestCase):
         self.assertGreaterEqual(self.requirements.count("--hash=sha256:"), 5)
 
     def test_read_only_workflow_argv_matches_imported_executor_parser_contract(self):
+        remediation = types.ModuleType("g037_remediation_authorization")
+        remediation.ExecutionAuthorizationEnvelope = dict
+        remediation.authorize_exact_baseline = lambda *args, **kwargs: None
+        remediation.POLICY = "test-policy"
+        previous_remediation = sys.modules.get("g037_remediation_authorization")
+        sys.modules["g037_remediation_authorization"] = remediation
         sys.path.insert(0, str(SCRIPTS))
         try:
             spec = importlib.util.spec_from_file_location("g037_executor", SCRIPTS / "g037_hosted_closure_executor.py")
@@ -160,14 +169,26 @@ class G037HostedClosureWorkflowTests(unittest.TestCase):
             spec.loader.exec_module(module)
         finally:
             sys.path.pop(0)
-        parser_source = inspect.getsource(module.main)
-        self.assertIn('p.add_argument("mode",choices=sorted(MODES))', parser_source)
+            if previous_remediation is None:
+                del sys.modules["g037_remediation_authorization"]
+            else:
+                sys.modules["g037_remediation_authorization"] = previous_remediation
+
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            self.assertEqual(0, module.main(["validate"]))
         self.assertEqual(
             {"validate", "preflight", "readback", "runtime-probe", "reconciliation-readback"},
             module.MODES,
         )
+        self.assertEqual("validate", json.loads(output.getvalue())["mode"])
 
-    def test_runbook_records_local_only_execution_and_freeze_continuity(self):
+        with contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit) as rejected:
+                module.main(["execute"])
+        self.assertEqual(2, rejected.exception.code)
+
+    def test_runbook_records_local_only_execution_and_preexisting_freeze_continuity(self):
         for required in (
             "local-only",
             "g037_production_controller.py execute",
@@ -186,8 +207,63 @@ class G037HostedClosureWorkflowTests(unittest.TestCase):
             "post-readback",
         ):
             self.assertIn(required, self.runbook)
+        numbered_steps = re.findall(r"(?m)^\d+\.\s+.*$", self.runbook)
+        for step in numbered_steps:
+            for mutation in re.finditer(
+                r"\b(?:set(?: or change)?|change|update|configure)\b.*\b(?:G037_WRITE_FREEZE|GitHub (?:repository|environment) variables?)\b",
+                step,
+            ):
+                self.assertRegex(step[: mutation.start()], r"(?:do|must)\s+not\s+$")
+        for required in (
+            "already active",
+            "independently verify",
+            "An absent or mismatched freeze state blocks execution",
+            "must not set or change `G037_WRITE_FREEZE` or any GitHub repository or environment variable",
+        ):
+            self.assertIn(required, self.runbook)
+        for required in (
+            "Validate is database-free: it verifies local source, artifacts, and contracts only",
+            "no validate receipt proves the live baseline",
+            "Exact live baseline inventory and ACL roots are first enforced by `rehearse` under held locks",
+            "rechecked by `execute` after it reacquires those locks",
+        ):
+            self.assertIn(required, self.runbook)
         self.assertNotIn("unfreeze", self.runbook.lower())
 
 
+    def test_runbook_binds_local_remediation_authority_before_execution(self):
+        sequence = (
+            "g037_production_controller.py prepare",
+            "legacy G035 capture, restore, and inspection receipts and the legacy signed authorization",
+            "g037_remediation_authorization.py build-template",
+            "Sign those exact template bytes offline",
+            "`validate`, `rehearse`, and `execute` require the same seven legacy/execution files",
+            "g037_production_controller.py validate",
+            "g037_production_controller.py rehearse",
+            "g037_production_controller.py execute",
+        )
+        positions = [self.runbook.index(item) for item in sequence]
+        self.assertEqual(positions, sorted(positions))
+        for required in (
+            "g037-production-remediation-authorization-v1",
+            "g037-production-short-url-remediation",
+            "exact-baseline-to-terminal-ledger-single-commit-v1",
+            "exact current origin, project, commit, source-root, terminal-spec, freeze ID, relation root, ACL root",
+            "signed operator assertion, recipient fingerprint, recovery public-key fingerprint, capture-scope commitment, fresh UUID, and bounded expiry",
+            "writes only a fresh canonical unsigned template outside the repository, accepts no private key",
+            "g037-remediation-execution-signing-key.pem",
+            "source-pinned public key",
+            "historical G035 capture hash is provenance only; it never equals or stands in for the fresh randomized G037 capture receipt",
+            "captures fresh encrypted Auth, Storage, and `public.short_urls`",
+            "simulates the duplicate delete and migrations; rolls back; and proves the baseline",
+            "A successful exact baseline-to-terminal ledger transition consumes the authority",
+            "bounded, unexpired manual retry and never an automatic retry",
+            "No GitHub Actions job may apply or execute this mutation",
+        ):
+            self.assertIn(required, self.runbook)
+        self.assertIn(
+            "Never place this private key, private-key input, raw template bytes, or signed bytes in the repository, controller, GitHub Actions",
+            self.runbook,
+        )
 if __name__ == "__main__":
     unittest.main()

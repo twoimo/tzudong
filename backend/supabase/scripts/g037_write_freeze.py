@@ -10,9 +10,9 @@ those residual channels.
 """
 from __future__ import annotations
 import base64, hashlib, subprocess, time
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
 from g037_hosted_closure_contract import AUTHORIZATION_PUBLIC_KEY_PEM, MANIFEST_SHA256, canonical_bytes, digest, repository_root, validate_operator_assertion, validate_sources
 SCHEMA="g037-write-freeze-v3"
 REACHABLE_SCHEMAS=("public","auth","storage","shortener_private","ocr_private","provider_budget_private","privacy_retention")
@@ -34,6 +34,11 @@ class RehearsalRollbackError(FreezeError):
   super().__init__("rollback-failed")
   self.original_error=original_error
   self.rollback_error=rollback_error
+class RehearsalRollbackReceiptError(RehearsalRollbackError):
+ def __init__(self, original_error, rollback_error, outcome_receipt_error):
+  super().__init__(original_error,rollback_error)
+  self.args=("rollback-failed-outcome-receipt-failed",)
+  self.outcome_receipt_error=outcome_receipt_error
 @dataclass(frozen=True)
 class Relation:
  schema:str; name:str; oid:int; kind:str; owner:str
@@ -49,6 +54,20 @@ def _ident(x):
 def _unique(rows,what):
  if len(rows)!=len(set(rows)): raise FreezeError("duplicate %s inventory"%what)
  return tuple(sorted(rows))
+_TABLE_PRIVILEGES=frozenset(("SELECT","INSERT","UPDATE","DELETE","TRUNCATE","REFERENCES","TRIGGER","MAINTAIN"))
+def validate_table_acl_rows(rows, *, terminal=False):
+ """Reject unsafe ordinary-relation ACLs before their roots become authority."""
+ for row in rows:
+  if len(row)!=(6 if terminal else 5): raise FreezeError("relation acl row malformed")
+  schema=str(row[0]); grantee=row[3] if terminal else row[2]; privilege=row[4] if terminal else row[3]; grantable=row[5] if terminal else row[4]
+  if not isinstance(grantee,str) or not isinstance(privilege,str) or type(grantable) is not bool:
+   raise FreezeError("relation acl row malformed")
+  if grantee=="PUBLIC": raise FreezeError("PUBLIC relation ACL is forbidden")
+  if privilege not in _TABLE_PRIVILEGES: raise FreezeError("relation ACL privilege is forbidden")
+  if grantable: raise FreezeError("grantable relation ACL is forbidden")
+  if grantee in {"anon","authenticated"} and schema!="public":
+   raise FreezeError("non-public relation ACL is forbidden")
+ return rows
 def _lockable_relations(relations):
  excluded=tuple(r for r in relations if (r.schema,r.name,r.owner) in PROVIDER_MANAGED_LOCK_EXCLUSIONS)
  if len(excluded)!=len(PROVIDER_MANAGED_LOCK_EXCLUSIONS) or { (r.schema,r.name,r.owner) for r in excluded }!=PROVIDER_MANAGED_LOCK_EXCLUSIONS:
@@ -62,7 +81,7 @@ def _inv(conn):
   rs=_unique(_rows(c,"SELECT n.nspname,c.relname,c.oid,c.relkind,pg_get_userbyid(c.relowner) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=ANY(%s) AND c.relkind IN ('r','p') ORDER BY 1,2,3",(list(schemas),)),"relation")
   relations=tuple(Relation(str(a),str(b),int(o),str(k),str(owner)) for a,b,o,k,owner in rs)
   if not relations: raise FreezeError("empty reachable relation inventory")
-  acl=_unique(_rows(c,"SELECT n.nspname,c.oid,COALESCE(g.rolname,'PUBLIC'),x.privilege_type,x.is_grantable FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace CROSS JOIN LATERAL aclexplode(COALESCE(c.relacl,acldefault('r',c.relowner))) x LEFT JOIN pg_roles g ON g.oid=x.grantee WHERE n.nspname=ANY(%s) ORDER BY 1,2,3,4,5",(list(schemas),)),"acl")
+  acl=validate_table_acl_rows(_unique(_rows(c,"SELECT n.nspname,c.oid,COALESCE(g.rolname,'PUBLIC'),x.privilege_type,x.is_grantable FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace CROSS JOIN LATERAL aclexplode(COALESCE(c.relacl,acldefault('r',c.relowner))) x LEFT JOIN pg_roles g ON g.oid=x.grantee WHERE n.nspname=ANY(%s) ORDER BY 1,2,3,4,5",(list(schemas),)),"acl"))
   return Inventory(schemas,relations,digest([r.key for r in relations]),digest(acl))
  finally: c.close()
 def preflight(conn):
@@ -95,28 +114,73 @@ def _locks(c,rs,seconds):
  expected=tuple((r.schema,r.name,r.oid) for r in lockable)
  if held!=expected or _rows(c,"SELECT count(*) FROM pg_locks WHERE NOT granted")[0][0]!=0: raise FreezeError("held lock set drift")
  return digest(held)
+_CAPABILITY_TOKEN=object()
+_CAPTURE_TOKEN=object()
+class _VerifiedMapping(Mapping):
+ __slots__=("_values",)
+ def __init__(self, values, token):
+  if token not in (_CAPABILITY_TOKEN,_CAPTURE_TOKEN): raise TypeError("verified handoff construction is internal")
+  self._values=dict(values)
+ def __getitem__(self,key): return self._values[key]
+ def __iter__(self): return iter(self._values)
+ def __len__(self): return len(self._values)
+ def __reduce__(self): raise TypeError("verified handoff serialization is forbidden")
+class VerifiedControllerCapability(_VerifiedMapping):
+ __slots__=()
+ def __init__(self, values, token=None):
+  if token is not _CAPABILITY_TOKEN: raise TypeError("controller capability must be verifier-produced")
+  super().__init__(values,token)
+class VerifiedRecoveryCapture(_VerifiedMapping):
+ __slots__=()
+ def __init__(self, values, token=None):
+  if token is not _CAPTURE_TOKEN: raise TypeError("recovery capture must be verifier-produced")
+  super().__init__(values,token)
+def _verified_controller_capability(value): return VerifiedControllerCapability(value,_CAPABILITY_TOKEN)
+def verified_recovery_capture(value):
+ """Brand already-authenticated exact recovery evidence for executor handoff."""
+ if not isinstance(value,dict) or set(value)!=_SHORT_URL_CAPTURE_FIELDS: raise FreezeError("recovery capture fields invalid")
+ if (any(not isinstance(value[key],str) or len(value[key])!=64 or any(ch not in "0123456789abcdef" for ch in value[key]) for key in ("selection_spec_sha256","short_urls_catalog_sha256","short_urls_rowset_sha256","duplicate_victims_sha256","victim_descriptors_sha256"))
+     or any(not isinstance(value[key],int) or isinstance(value[key],bool) or value[key]<0 for key in ("short_urls_row_count","duplicate_group_count","duplicate_victim_count","victim_descriptor_count"))
+     or value["duplicate_victim_count"]!=value["victim_descriptor_count"] or value["duplicate_victims_sha256"]!=value["victim_descriptors_sha256"]):
+  raise FreezeError("recovery capture evidence invalid")
+ return VerifiedRecoveryCapture(value,_CAPTURE_TOKEN)
 def _verify_active(value, expected):
  if not isinstance(value,dict) or set(value)!={*expected,"signature"} or value.get("controller_public_key_sha256")!=CONTROLLER_PUBLIC_KEY_SHA256: raise FreezeError("active capability fields mismatch")
  signature=value["signature"]; payload={k:v for k,v in value.items() if k!="signature"}
+ if (value.get("schema")!=SCHEMA or value.get("state")!="active-provisional"
+     or not isinstance(value.get("origin"),str) or not value["origin"]
+     or value.get("scope")!={"schemas":list(REACHABLE_SCHEMAS),"ordinary_relations":"all"}
+     or any(not isinstance(value.get(key),str) or len(value[key])!=64 for key in ("source_root","terminal_spec","relation_root","acl_root","held_lock_root"))
+     or any(not isinstance(value.get(key),int) or isinstance(value[key],bool) for key in ("not_before_unix","not_after_unix"))
+     or value["not_before_unix"]>value["not_after_unix"]): raise FreezeError("active capability binding invalid")
  if not isinstance(signature,str): raise FreezeError("active capability signature missing")
  try:
   from cryptography.hazmat.primitives.serialization import load_pem_public_key
   load_pem_public_key(CONTROLLER_PUBLIC_KEY_PEM.encode()).verify(base64.b64decode(signature,validate=True),canonical_bytes(payload))
  except Exception as e: raise FreezeError("active capability signature invalid") from e
- return value
-CAPTURE_ROOT_KEYS=frozenset(("auth_storage_catalog_root","auth_storage_metadata_root","storage_blob_root","recipient_fingerprint","logical_ciphertext_sha256","blob_ciphertext_sha256","recovery_receipt_sha256","object_count","total_bytes"))
+ return _verified_controller_capability(value)
+CAPTURE_ROOT_KEYS=frozenset(("auth_storage_catalog_root","auth_storage_metadata_root","storage_blob_root","short_urls_catalog_root","short_urls_rowset_root","short_urls_victim_descriptors_root","short_urls_row_count","duplicate_group_count","duplicate_victim_count","recipient_fingerprint","logical_ciphertext_sha256","blob_ciphertext_sha256","recovery_receipt_sha256","object_count","total_bytes"))
 def validate_capture_roots(value):
  if not isinstance(value,dict) or set(value)!=CAPTURE_ROOT_KEYS: raise FreezeError("capture roots fields invalid")
- if any(not isinstance(value[k],str) or len(value[k])!=64 or any(c not in "0123456789abcdef" for c in value[k]) for k in CAPTURE_ROOT_KEYS-{"object_count","total_bytes"}): raise FreezeError("capture roots hash invalid")
- if any(not isinstance(value[k],int) or isinstance(value[k],bool) or value[k]<0 or value[k]>(2**34) for k in ("object_count","total_bytes")): raise FreezeError("capture roots size invalid")
+ if any(not isinstance(value[k],str) or len(value[k])!=64 or any(c not in "0123456789abcdef" for c in value[k]) for k in CAPTURE_ROOT_KEYS-{"object_count","total_bytes","short_urls_row_count","duplicate_group_count","duplicate_victim_count"}): raise FreezeError("capture roots hash invalid")
+ if any(not isinstance(value[k],int) or isinstance(value[k],bool) or value[k]<0 or value[k]>(2**34) for k in ("object_count","total_bytes","short_urls_row_count","duplicate_group_count","duplicate_victim_count")): raise FreezeError("capture roots size invalid")
  return value
+REMEDIATION_EVIDENCE_KEYS=frozenset(("schema","authorization_id","policy","execution_authorization_sha256","execution_authorization_signature_sha256","legacy_repository_commit","legacy_authorization_sha256","legacy_authorization_signature_sha256","legacy_capture_receipt_sha256","legacy_restore_receipt_sha256","legacy_inspection_receipt_sha256","recovery_receipt_sha256","capture_short_urls_rowset_sha256","pre_short_urls_rowset_sha256","survivor_short_urls_rowset_sha256","deleted_count","duplicate_group_count_before","duplicate_group_count_after","remediation_sha256"))
+def validate_remediation_evidence(value):
+ if not isinstance(value,dict) or set(value)!=REMEDIATION_EVIDENCE_KEYS or value.get("schema")!="g037-short-url-remediation-evidence-v1" or value.get("policy")!="exact-baseline-to-terminal-ledger-single-commit-v1" or not isinstance(value.get("authorization_id"),str): raise FreezeError("remediation evidence fields invalid")
+ hashes=("execution_authorization_sha256","execution_authorization_signature_sha256","legacy_authorization_sha256","legacy_authorization_signature_sha256","legacy_capture_receipt_sha256","legacy_restore_receipt_sha256","legacy_inspection_receipt_sha256","recovery_receipt_sha256","capture_short_urls_rowset_sha256","pre_short_urls_rowset_sha256","survivor_short_urls_rowset_sha256","remediation_sha256")
+ if (not isinstance(value.get("legacy_repository_commit"),str) or len(value["legacy_repository_commit"])!=40 or any(ch not in "0123456789abcdef" for ch in value["legacy_repository_commit"]) or any(not isinstance(value[key],str) or len(value[key])!=64 or any(ch not in "0123456789abcdef" for ch in value[key]) for key in hashes) or any(not isinstance(value[key],int) or isinstance(value[key],bool) or value[key]<0 for key in ("deleted_count","duplicate_group_count_before","duplicate_group_count_after")) or value["duplicate_group_count_after"]!=0): raise FreezeError("remediation evidence invalid")
+ unsigned=dict(value); claimed=unsigned.pop("remediation_sha256")
+ if digest(unsigned)!=claimed: raise FreezeError("remediation evidence digest invalid")
+ return value
+_SHORT_URL_CAPTURE_FIELDS=frozenset(("selection_spec_sha256","short_urls_catalog_sha256","short_urls_rowset_sha256","short_urls_row_count","duplicate_group_count","duplicate_victim_count","victim_descriptor_count","duplicate_victims_sha256","victim_descriptors_sha256"))
 def run(conn, *, origin, freeze_id, expected, assertion, callback, provisional_writer,
         precommit_receipt_writer, final_receipt_writer, terminal_assert):
  root,head,source_root,terminal_spec=_root_source()
  validate_operator_assertion(assertion,freeze_id=freeze_id,origin=origin,relation_root=expected.relation_root,acl_root=expected.acl_root,commit=head,source_root=source_root,terminal_spec=terminal_spec)
  now=int(time.time()); expires=assertion["expires_at"]; seconds=expires-now
  if seconds<=0: raise FreezeError("assertion window expired")
- c=conn.cursor(); status="failed-rolled-back"; lock_root=""; captures={}; terminal={}; commit_started=False; precommit_hash=""
+ c=conn.cursor(); status="failed-rolled-back"; lock_root=""; captures={}; remediation={}; terminal={}; commit_started=False; precommit_hash=""
  try:
   c.execute("BEGIN"); current=_inv(conn)
   if (current.schemas!=expected.schemas or current.relations!=expected.relations
@@ -131,13 +195,14 @@ def run(conn, *, origin, freeze_id, expected, assertion, callback, provisional_w
   signed=_verify_active(provisional_writer(payload),set(payload))
   c.execute("SAVEPOINT g037_closure")
   try:
-   output=callback(c,signed); captures=output if isinstance(output,dict) else {}
-   validate_capture_roots(captures)
+   output=callback(c,signed)
+   if not isinstance(output,dict) or set(output)!={"capture_roots","remediation_evidence"}: raise FreezeError("callback remediation output invalid")
+   captures=output["capture_roots"]; remediation=output["remediation_evidence"]; validate_capture_roots(captures); validate_remediation_evidence(remediation)
    terminal=terminal_assert(c,terminal_spec)
    if (not isinstance(terminal,dict) or set(terminal)!={"catalog_root","acl_root","ledger_root","terminal_spec"}
        or terminal["terminal_spec"]!=terminal_spec or any(not isinstance(terminal[k],str) or len(terminal[k])!=64 for k in ("catalog_root","acl_root","ledger_root"))):
     raise FreezeError("immutable terminal assertion missing")
-   intent={"schema":SCHEMA,"status":"prepared-not-committed","freeze_id":freeze_id,"origin":origin,"commit":head,"manifest_sha256":MANIFEST_SHA256,"source_root":source_root,"terminal_spec":terminal_spec,"before_relation_root":expected.relation_root,"before_acl_root":expected.acl_root,"held_lock_root":lock_root,"capture_roots":captures,"terminal":terminal}
+   intent={"schema":SCHEMA,"status":"prepared-not-committed","freeze_id":freeze_id,"origin":origin,"commit":head,"manifest_sha256":MANIFEST_SHA256,"source_root":source_root,"terminal_spec":terminal_spec,"before_relation_root":expected.relation_root,"before_acl_root":expected.acl_root,"held_lock_root":lock_root,"capture_roots":captures,"remediation_evidence":remediation,"terminal":terminal}
    intent["receipt_sha256"]=digest(intent)
    precommit_hash=precommit_receipt_writer(intent)
    if precommit_hash != intent["receipt_sha256"]: raise FreezeError("precommit receipt persistence failed")
@@ -152,7 +217,7 @@ def run(conn, *, origin, freeze_id, expected, assertion, callback, provisional_w
    try: conn.rollback()
    except Exception: status="rollback-failed"
  finally: c.close()
- receipt={"schema":SCHEMA,"status":status,"freeze_id":freeze_id,"origin":origin,"commit":head,"manifest_sha256":MANIFEST_SHA256,"source_root":source_root,"terminal_spec":terminal_spec,"before_relation_root":expected.relation_root,"before_acl_root":expected.acl_root,"held_lock_root":lock_root,"capture_roots":captures,"terminal":terminal,"precommit_receipt_sha256":precommit_hash,"residual_channels":"sequence-owner-superuser-dashboard-provider-credential-holder-attested-not-fenced"}; receipt["receipt_sha256"]=digest(receipt)
+ receipt={"schema":SCHEMA,"status":status,"freeze_id":freeze_id,"origin":origin,"commit":head,"manifest_sha256":MANIFEST_SHA256,"source_root":source_root,"terminal_spec":terminal_spec,"before_relation_root":expected.relation_root,"before_acl_root":expected.acl_root,"held_lock_root":lock_root,"capture_roots":captures,"remediation_evidence":remediation,"terminal":terminal,"precommit_receipt_sha256":precommit_hash,"residual_channels":"sequence-owner-superuser-dashboard-provider-credential-holder-attested-not-fenced"}; receipt["receipt_sha256"]=digest(receipt)
  try: final_receipt_writer(receipt)
  except Exception as e:
   if status=="committed": raise FreezeError("committed-unfinalized") from e
@@ -166,7 +231,7 @@ def rehearse(conn, *, origin, freeze_id, expected, assertion, callback, provisio
  validate_operator_assertion(assertion,freeze_id=freeze_id,origin=origin,relation_root=expected.relation_root,acl_root=expected.acl_root,commit=head,source_root=source_root,terminal_spec=terminal_spec)
  now=int(time.time()); expires=assertion["expires_at"]; seconds=expires-now
  if seconds<=0: raise FreezeError("assertion window expired")
- c=conn.cursor(); lock_root=""; captures={}; terminal={}; receipt=None; stage="begin"
+ c=conn.cursor(); lock_root=""; captures={}; remediation={}; terminal={}; receipt=None; stage="begin"
  try:
   c.execute("BEGIN"); current=_inv(conn)
   if (current.schemas!=expected.schemas or current.relations!=expected.relations or current.relation_root!=expected.relation_root or current.acl_root!=expected.acl_root): raise FreezeError("inventory drift")
@@ -175,11 +240,14 @@ def rehearse(conn, *, origin, freeze_id, expected, assertion, callback, provisio
   if (current.schemas!=expected.schemas or current.relations!=expected.relations or current.relation_root!=expected.relation_root or current.acl_root!=expected.acl_root): raise FreezeError("post-lock inventory drift")
   payload={"schema":SCHEMA,"state":"active-provisional","freeze_id":freeze_id,"origin":origin,"commit":head,"manifest_sha256":MANIFEST_SHA256,"source_root":source_root,"terminal_spec":terminal_spec,"scope":{"schemas":list(REACHABLE_SCHEMAS),"ordinary_relations":"all"},"relation_root":expected.relation_root,"acl_root":expected.acl_root,"held_lock_root":lock_root,"not_before_unix":now,"not_after_unix":expires,"controller_public_key_sha256":CONTROLLER_PUBLIC_KEY_SHA256}
   signed=_verify_active(provisional_writer(payload),set(payload))
-  captures=callback(c,signed); validate_capture_roots(captures); stage="capture-validated"
+  stage="callback-running"
+  output=callback(c,signed)
+  if not isinstance(output,dict) or set(output)!={"capture_roots","remediation_evidence"}: raise FreezeError("callback remediation output invalid")
+  captures=output["capture_roots"]; remediation=output["remediation_evidence"]; validate_capture_roots(captures); validate_remediation_evidence(remediation); stage="capture-validated"
   terminal=terminal_assert(c,terminal_spec)
   if (not isinstance(terminal,dict) or set(terminal)!={"catalog_root","acl_root","ledger_root","terminal_spec"} or terminal["terminal_spec"]!=terminal_spec or any(not isinstance(terminal[k],str) or len(terminal[k])!=64 for k in ("catalog_root","acl_root","ledger_root"))): raise FreezeError("immutable terminal assertion missing")
   stage="terminal-observed"
-  receipt={"schema":"g037-rehearsal-v1","status":"terminal-observed-before-rollback","freeze_id":freeze_id,"origin":origin,"commit":head,"manifest_sha256":MANIFEST_SHA256,"source_root":source_root,"terminal_spec":terminal_spec,"before_relation_root":expected.relation_root,"before_acl_root":expected.acl_root,"held_lock_root":lock_root,"capture_roots":captures,"terminal":terminal}
+  receipt={"schema":"g037-rehearsal-v1","status":"terminal-observed-before-rollback","freeze_id":freeze_id,"origin":origin,"commit":head,"manifest_sha256":MANIFEST_SHA256,"source_root":source_root,"terminal_spec":terminal_spec,"before_relation_root":expected.relation_root,"before_acl_root":expected.acl_root,"held_lock_root":lock_root,"capture_roots":captures,"remediation_evidence":remediation,"terminal":terminal}
   receipt["receipt_sha256"]=digest(receipt)
   if rehearsal_receipt_writer(receipt)!=receipt["receipt_sha256"]: raise FreezeError("rehearsal receipt persistence failed")
   stage="rehearsal-receipt-persisted"
@@ -188,7 +256,8 @@ def rehearse(conn, *, origin, freeze_id, expected, assertion, callback, provisio
    outcome={"schema":"g037-rehearsal-v1","status":"rollback-failed","freeze_id":freeze_id,"origin":origin,"commit":head,"manifest_sha256":MANIFEST_SHA256,"source_root":source_root,"terminal_spec":terminal_spec,"rehearsal_receipt_sha256":receipt["receipt_sha256"],"failure_stage":stage,"rollback_state":"ambiguous"}
    outcome["receipt_sha256"]=digest(outcome)
    try: outcome_receipt_writer(outcome)
-   except Exception: pass
+   except Exception as outcome_receipt_error:
+    raise RehearsalRollbackReceiptError(FreezeError("rollback required"),rollback_error,outcome_receipt_error) from None
    raise RehearsalRollbackError(FreezeError("rollback required"),rollback_error) from None
   stage="rolled-back"
   baseline=baseline_assert()
@@ -205,7 +274,8 @@ def rehearse(conn, *, origin, freeze_id, expected, assertion, callback, provisio
    outcome={"schema":"g037-rehearsal-v1","status":"rollback-failed","freeze_id":freeze_id,"origin":origin,"commit":head,"manifest_sha256":MANIFEST_SHA256,"source_root":source_root,"terminal_spec":terminal_spec,"rehearsal_receipt_sha256":receipt["receipt_sha256"] if receipt else "","failure_stage":stage,"rollback_state":"ambiguous"}
    outcome["receipt_sha256"]=digest(outcome)
    try: outcome_receipt_writer(outcome)
-   except Exception: pass
+   except Exception as outcome_receipt_error:
+    raise RehearsalRollbackReceiptError(original_error,rollback_error,outcome_receipt_error) from None
    raise RehearsalRollbackError(original_error,rollback_error) from None
   raise
  finally: c.close()
