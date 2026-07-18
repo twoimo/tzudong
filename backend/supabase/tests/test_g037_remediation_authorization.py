@@ -197,9 +197,9 @@ class G037AuthorityTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "output"; real_open = c.os.open; real_write = c.os.write
             def tracked_open(*args): events.append("open"); return real_open(*args)
-            with patch.object(c.os, "name", "nt"), patch.object(c, "_windows_restrictive_directory", return_value=True), patch("g035_hosted_recovery._windows_current_sid", return_value="S-1-5-21"), patch.object(c.subprocess, "run", side_effect=lambda *a, **k: events.append("icacls")), patch.object(c, "restrictive_regular_file", side_effect=lambda *a: events.append("validate")), patch.object(c.os, "open", side_effect=tracked_open), patch.object(c.os, "write", side_effect=lambda fd, data: (events.append("write") or real_write(fd, data))):
+            with patch.object(c.os, "name", "nt"), patch.object(c, "_windows_restrictive_directory", return_value=True), patch("g035_hosted_recovery._windows_current_sid", return_value="S-1-5-21"), patch.object(c.subprocess, "run", side_effect=lambda *a, **k: events.append(("icacls", a[0]))), patch.object(c, "restrictive_regular_file", side_effect=lambda *a: events.append("validate")), patch.object(c.os, "open", side_effect=tracked_open), patch.object(c.os, "write", side_effect=lambda fd, data: (events.append("write") or real_write(fd, data))):
                 c._write_fresh_restrictive(path, b"x", Path(directory) / "repository")
-            self.assertLess(events.index("icacls"), events.index("write"))
+            self.assertEqual(events[1][0], "icacls"); self.assertIn("*S-1-5-21:(R,W)", events[1][1]); self.assertLess(1, events.index("write"))
         for failing in ("write", "fsync"):
             with self.subTest(failing=failing), tempfile.TemporaryDirectory() as directory:
                 path = Path(directory) / "output"
@@ -209,6 +209,11 @@ class G037AuthorityTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "output"
             with patch.object(c.os, "name", "nt"), patch.object(c, "_windows_restrictive_directory", return_value=True), patch("g035_hosted_recovery._windows_current_sid", return_value="S-1-5-21"), patch.object(c.subprocess, "run"), patch.object(c, "restrictive_regular_file"), patch.object(c.os, "read", side_effect=OSError()), self.assertRaises(OSError):
+                c._write_fresh_restrictive(path, b"x", Path(directory) / "repository")
+            self.assertFalse(path.exists())
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "output"
+            with patch.object(c.os, "name", "nt"), patch.object(c, "_windows_restrictive_directory", return_value=True), patch("g035_hosted_recovery._windows_current_sid", return_value="S-1-5-21"), patch.object(c.subprocess, "run", side_effect=OSError()), self.assertRaises(OSError):
                 c._write_fresh_restrictive(path, b"x", Path(directory) / "repository")
             self.assertFalse(path.exists())
     def test_output_replacement_symlink_and_hardlink_races_fail_closed(self):
