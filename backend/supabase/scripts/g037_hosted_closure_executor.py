@@ -12,6 +12,42 @@ from preflight_g034_hosted_migration_closure import approval_body_contract, appr
 
 SCHEMA="g037-hosted-closure-receipt-v3"; ENV=re.compile(r"^[A-Z_][A-Z0-9_]{0,127}$"); COMMIT=re.compile(r"^[a-f0-9]{40}$")
 class ClosureError(RuntimeError): pass
+_DOCUMENTS_POLICY_COMPATIBILITY_VERSION="20260627080000"
+_DOCUMENTS_POLICY_CONTRACT=(
+    ("documents_delete_own","DELETE",("PUBLIC",),True,"(auth.uid() = user_id)",None),
+    ("documents_insert_own","INSERT",("PUBLIC",),True,None,"(auth.uid() = user_id)"),
+    ("documents_select_own","SELECT",("PUBLIC",),True,"(auth.uid() = user_id)",None),
+    ("documents_update_own","UPDATE",("PUBLIC",),True,"(auth.uid() = user_id)","(auth.uid() = user_id)"),
+)
+def _prepare_documents_policy_compatibility(cur,item):
+    """Remove only the exact unledgered policies that this immutable migration creates."""
+    if item.version != _DOCUMENTS_POLICY_COMPATIBILITY_VERSION:
+        return
+    rows=tuple(
+        (str(name),str(command),tuple(map(str,roles)),bool(permissive),qual,with_check)
+        for name,command,roles,permissive,qual,with_check in q(cur,"""
+            SELECT p.polname,
+                   CASE p.polcmd WHEN 'r' THEN 'SELECT' WHEN 'a' THEN 'INSERT'
+                                 WHEN 'w' THEN 'UPDATE' WHEN 'd' THEN 'DELETE' END,
+                   ARRAY(SELECT COALESCE(role.rolname,'PUBLIC')
+                         FROM unnest(p.polroles) AS policy_role(oid)
+                         LEFT JOIN pg_catalog.pg_roles AS role ON role.oid=policy_role.oid
+                         ORDER BY 1),
+                   p.polpermissive,
+                   pg_catalog.pg_get_expr(p.polqual,p.polrelid),
+                   pg_catalog.pg_get_expr(p.polwithcheck,p.polrelid)
+            FROM pg_catalog.pg_policy AS p
+            WHERE p.polrelid='public.documents'::regclass
+              AND p.polname=ANY(%s)
+            ORDER BY p.polname
+        """,(list(name for name,*_ in _DOCUMENTS_POLICY_CONTRACT),))
+    )
+    if not rows:
+        return
+    if rows != _DOCUMENTS_POLICY_CONTRACT:
+        raise ClosureError("documents policy compatibility contract drift")
+    for name,*_ in _DOCUMENTS_POLICY_CONTRACT:
+        cur.execute(f'DROP POLICY "{name}" ON public.documents')
 def emit(x): print(canonical_bytes(x).decode("ascii"))
 def receipt(mode,status,evidence):
     # Deliberately whitelist receipt fields instead of attempting to redact arbitrary data.
@@ -143,6 +179,7 @@ def _execute_closure(cur, root, manifest):
     for item in manifest.migrations:
         source_sql(root,item)
         full,inner=vectors(root,item)
+        _prepare_documents_policy_compatibility(cur,item)
         for statement in inner: cur.execute(statement)
         cur.execute("INSERT INTO supabase_migrations.schema_migrations(version,name,statements) VALUES (%s,%s,%s)",(item.version,item.name,list(full)))
         expected_vectors[item.version]=full
