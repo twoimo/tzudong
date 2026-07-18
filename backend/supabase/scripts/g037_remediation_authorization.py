@@ -34,6 +34,14 @@ def _read(path,label):
  except (OSError,UnicodeDecodeError,json.JSONDecodeError,ContractError) as exc: raise ContractError(label+" JSON invalid") from exc
  if not isinstance(value,dict) or raw!=canonical_json_bytes(value): raise ContractError(label+" JSON noncanonical")
  return raw,value
+def _read_operator_assertion(path):
+ try: raw=Path(path).read_bytes()
+ except OSError as exc: raise ContractError("operator assertion JSON invalid") from exc
+ if not raw.endswith(b"\n") or raw[:-1].endswith(b"\r"): raise ContractError("operator assertion JSON noncanonical")
+ try: value=json.loads(raw[:-1].decode("utf8"),object_pairs_hook=_pairs,parse_constant=_constant)
+ except (UnicodeDecodeError,json.JSONDecodeError,ContractError) as exc: raise ContractError("operator assertion JSON invalid") from exc
+ if not isinstance(value,dict) or raw!=canonical_json_bytes(value)+b"\n": raise ContractError("operator assertion JSON noncanonical")
+ return value
 def _verify(raw,signature,pem):
  try:
   from cryptography.hazmat.primitives.serialization import load_pem_public_key
@@ -132,8 +140,10 @@ def _windows_restrictive_directory(path):
    sddl=_windows_saved_sddl(export)
   if completed.returncode or not sddl or not sddl.startswith("D:"): return False
   dacl=sddl[2:]; controls=re.match(r"(?:(?:P|AR|AI))*(?=\()",dacl)
-  if not controls or "AI" in controls.group(0): return False
-  aces_text=dacl[controls.end():]; aces=re.findall(r"\(([^()]*)\)",aces_text)
+  if not controls or "P" not in controls.group(0): return False
+  aces_text,*suffix=dacl[controls.end():].split("S:",1)
+  if suffix and suffix[0]!="PAINO_ACCESS_CONTROL": return False
+  aces=re.findall(r"\(([^()]*)\)",aces_text)
   if not aces or "".join(f"({ace})" for ace in aces)!=aces_text: return False
   allowed={current.upper(),"SY","BA",*_WINDOWS_ALLOWED_SIDS}; found_current=False
   for ace in aces:
@@ -204,8 +214,8 @@ def main(argv=None):
  b.add_argument("--issued-at",required=True,type=int); b.add_argument("--expires-at",required=True,type=int); a=p.parse_args(argv)
  root=Path(__file__).resolve().parents[3]; custody=lambda x,label: restrictive_regular_file(x,label,root)
  chain=verify_legacy_remediation_chain(a.capture_receipt,a.restore_receipt,a.inspection_receipt,a.legacy_authorization,a.legacy_signature,require_custody=custody)
- custody(a.operator_assertion,"operator assertion"); raw,assertion=_read(a.operator_assertion,"operator assertion")
+ custody(a.operator_assertion,"operator assertion"); assertion=_read_operator_assertion(a.operator_assertion)
  validate_operator_assertion(assertion,freeze_id=a.freeze_id,origin=a.origin,relation_root=a.relation_root,acl_root=a.acl_root,commit=a.current_commit,source_root=a.source_root,terminal_spec=a.terminal_spec)
- value=build_execution_authorization_template(chain,origin=a.origin,project=a.project,current_commit=a.current_commit,manifest_sha256=MANIFEST_SHA256,source_root=a.source_root,terminal_spec=a.terminal_spec,freeze_id=a.freeze_id,operator_assertion_sha256=hashlib.sha256(raw).hexdigest(),operator_assertion_expires_at=assertion["expires_at"],recipient_fingerprint=a.recipient_fingerprint,recovery_public_key_fingerprint=a.recovery_public_key_fingerprint,capture_scope_sha256=a.capture_scope_sha256,authorization_id=a.authorization_id,issued_at=a.issued_at,expires_at=a.expires_at)
+ value=build_execution_authorization_template(chain,origin=a.origin,project=a.project,current_commit=a.current_commit,manifest_sha256=MANIFEST_SHA256,source_root=a.source_root,terminal_spec=a.terminal_spec,freeze_id=a.freeze_id,operator_assertion_sha256=canonical_sha256(assertion),operator_assertion_expires_at=assertion["expires_at"],recipient_fingerprint=a.recipient_fingerprint,recovery_public_key_fingerprint=a.recovery_public_key_fingerprint,capture_scope_sha256=a.capture_scope_sha256,authorization_id=a.authorization_id,issued_at=a.issued_at,expires_at=a.expires_at)
  _write_fresh_restrictive(a.output,canonical_json_bytes(value),root); return 0
 if __name__=="__main__": main()
