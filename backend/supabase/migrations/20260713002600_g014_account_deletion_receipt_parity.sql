@@ -135,7 +135,8 @@ RETURNS TABLE (
   auth_readback_passed boolean,
   storage_receipt_refs jsonb,
   auth_receipt_ref text,
-  source_manifest_hash text
+  source_manifest_hash text,
+  idempotency_key_binding_sha256 text
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -184,7 +185,14 @@ BEGIN
       AND request_row.auth_receipt_ref ~ '^[A-Za-z0-9._:-]{8,256}$'
       THEN request_row.auth_receipt_ref
       ELSE NULL END,
-    request_row.source_manifest_hash
+    request_row.source_manifest_hash,
+    CASE WHEN request_row.idempotency_key IS NOT NULL THEN pg_catalog.encode(
+      extensions.digest(
+        'g038-account-deletion-idempotency-binding:v1' || pg_catalog.chr(10) || request_row.idempotency_key,
+        'sha256'
+      ),
+      'hex'
+    ) ELSE NULL END
   FROM public.account_deletion_requests AS request_row
   WHERE request_row.id = p_request_id
     AND request_row.actor_user_id = v_owner_id
