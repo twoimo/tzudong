@@ -122,8 +122,9 @@ def validate(args, *, require_fresh_outputs=False):
  recipient,fp=recovery.recipient_from_files(args.recipient_file,args.recipient_allowlist_file); recovery.pgpass(args.pgpass_file,entries)
  recovery.safe_destination(args.destination)
  for path,label in ((args.recovery_receipt,"recovery receipt"),(args.prepared_receipt,"prepared receipt"),(args.final_receipt,"final receipt"),(args.outcome_receipt,"outcome receipt")): _outside(path,label,fresh=require_fresh_outputs)
- if getattr(args,"secret_file",None): recovery.require_file(args.secret_file,"secret file")
- if bool(getattr(args,"secret_env",None))==bool(getattr(args,"secret_file",None)): raise ControllerError("supply exactly one secret reference")
+ if hasattr(args,"secret_env") or hasattr(args,"secret_file"):
+  if getattr(args,"secret_file",None): recovery.require_file(args.secret_file,"secret file")
+  if bool(getattr(args,"secret_env",None))==bool(getattr(args,"secret_file",None)): raise ControllerError("supply exactly one secret reference")
  return {"schema":SCHEMA,"mode":"validate","status":"valid","origin":base,"recipient_fingerprint":fp}
 def _project_ref(origin):
  if not isinstance(origin,str):
