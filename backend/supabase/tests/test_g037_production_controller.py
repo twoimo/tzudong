@@ -210,7 +210,7 @@ class ControllerTests(unittest.TestCase):
    def execute(s,sql,*_): s.calls.append(sql); s.last=sql
    def fetchall(s):
     if "aclexplode" in s.last: return []
-    if "pg_class c JOIN" in s.last: return [("public","items",1,"r","owner")]
+    if "pg_class c JOIN" in s.last: return [("public","items",1,"r","owner"),("auth","schema_migrations",2,"r","supabase_auth_admin"),("storage","buckets_vectors",3,"r","supabase_storage_admin"),("storage","migrations",4,"r","supabase_storage_admin"),("storage","vector_indexes",5,"r","supabase_storage_admin")]
     if "SELECT nspname FROM pg_namespace" in s.last: return [("public",),("auth",),("storage",)]
     return []
    def close(s): pass
