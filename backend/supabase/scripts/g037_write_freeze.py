@@ -13,7 +13,7 @@ import base64, hashlib, subprocess, time
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from g037_hosted_closure_contract import AUTHORIZATION_PUBLIC_KEY_PEM, MANIFEST_SHA256, canonical_bytes, digest, repository_root, validate_operator_assertion, validate_sources
+from g037_hosted_closure_contract import AUTHORIZATION_PUBLIC_KEY_PEM, MANIFEST_SHA256, canonical_bytes, digest, repository_root, terminal_spec as build_terminal_spec, validate_operator_assertion, validate_sources
 SCHEMA="g037-write-freeze-v3"
 REACHABLE_SCHEMAS=("public","auth","storage","shortener_private","ocr_private","provider_budget_private","privacy_retention")
 CREATED_BY_SELECTED=frozenset(REACHABLE_SCHEMAS[3:])
@@ -228,8 +228,7 @@ def _root_source():
  except Exception as e: raise FreezeError("checked-out HEAD unavailable") from e
  if len(commit)!=40 or any(c not in "0123456789abcdef" for c in commit): raise FreezeError("checked-out HEAD invalid")
  source_root=digest([(m.path,m.sha256) for m in manifest.migrations])
- # Immutable source declaration: the selected G014 terminal migration vectors and manifest hashes.
- terminal_spec=digest({"manifest":MANIFEST_SHA256,"migrations":[(m.version,m.sha256) for m in manifest.migrations],"g014_terminal":"20260713002400"})
+ terminal_spec=build_terminal_spec(manifest)
  return root,commit,source_root,terminal_spec
 def _locks(c,rs,seconds):
  if (not isinstance(seconds,int) or isinstance(seconds,bool)
