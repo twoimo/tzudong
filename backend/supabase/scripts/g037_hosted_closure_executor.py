@@ -61,7 +61,7 @@ def connection(env_name):
     if not ENV.fullmatch(env_name) or not os.environ.get(env_name): raise ClosureError("database credential environment unavailable")
     try:
         import psycopg
-        return psycopg.connect(os.environ[env_name], autocommit=False)
+        return psycopg.connect(os.environ[env_name], autocommit=False, connect_timeout=10)
     except Exception as exc: raise ClosureError("database connection unavailable") from exc
 def q(cur,sql,params=()): cur.execute(sql,params); return cur.fetchall() if cur.description else []
 def ledger(cur): return tuple((str(a),str(b),tuple(c)) for a,b,c in q(cur,"SELECT version,name,statements FROM supabase_migrations.schema_migrations ORDER BY version,name"))
