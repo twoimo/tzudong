@@ -222,6 +222,17 @@ class G037AuthorityTests(unittest.TestCase):
                 with patch.object(c.os, "name", "nt"), patch.object(c, "_windows_restrictive_directory", return_value=True), patch("g035_hosted_recovery._windows_current_sid", return_value="S-1-5-21"), patch.object(c.subprocess, "run", side_effect=fail_on_call), self.assertRaises(OSError):
                     c._write_fresh_restrictive(path, b"x", Path(directory) / "repository")
                 self.assertFalse(path.exists())
+    def test_windows_binary_output_round_trips_hostile_bytes(self):
+        payload = b"\x00\x01\x0a\x0d\x1a\x7f\x80\xff\x0a\x0d"
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "output"
+            with patch.object(c.os, "name", "nt"), patch.object(c, "_windows_restrictive_directory", return_value=True), patch("g035_hosted_recovery._windows_current_sid", return_value="S-1-5-21"), patch.object(c.subprocess, "run"), patch.object(c, "restrictive_regular_file"):
+                c._write_fresh_restrictive(path, payload, Path(directory) / "repository")
+            self.assertEqual(path.read_bytes(), payload)
+
+    def test_windows_output_open_flags_include_binary_mode(self):
+        source = Path(c.__file__).read_text(encoding="utf8")
+        self.assertIn('os.O_RDWR|os.O_CREAT|os.O_EXCL|getattr(os,"O_BINARY",0)', source)
     def test_output_replacement_symlink_and_hardlink_races_fail_closed(self):
         if os.name == "nt": self.skipTest("POSIX race fixtures")
         with tempfile.TemporaryDirectory() as directory:
