@@ -590,7 +590,7 @@ def _execute_before_deadline(cur, sql, params=(), *, deadline):
     remaining_ms = _remaining_deadline_ms(deadline)
     cur.execute("SELECT pg_catalog.set_config('statement_timeout', %s, true)", (f"{remaining_ms}ms",))
     _remaining_deadline_ms(deadline)
-    cur.execute(sql, params)
+    cur.execute(sql) if not params else cur.execute(sql, params)
 def _q_before_deadline(cur, sql, params=(), *, deadline):
     _execute_before_deadline(cur, sql, params, deadline=deadline)
     return cur.fetchall() if cur.description else []
