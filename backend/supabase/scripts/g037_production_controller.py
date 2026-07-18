@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Local-only G037 controller; the freeze owns the only mutation transaction."""
 from __future__ import annotations
-import argparse, base64, os, re, tempfile, time
+import argparse, base64, os, re, time
 from types import SimpleNamespace
 from pathlib import Path
 
@@ -48,22 +48,20 @@ def _outside_fresh(path,label): return _outside(path,label,fresh=True)
 def _write_signed(path,key,value,label,public_key=freeze.CONTROLLER_PUBLIC_KEY_PEM):
  path=_outside_fresh(path,label); unsigned=dict(value)
  data=dict(unsigned); data["signature"]=base64.b64encode(recovery.openssl_sign(recovery.command("openssl"),key,canonical_bytes(unsigned))).decode("ascii")
- fd,tmp=tempfile.mkstemp(prefix=".g037-",dir=path.parent)
- temp=Path(tmp)
+ temp=Path(recovery._temporary_bytes(canonical_bytes(data)+b"\n",".g037-",directory=path.parent))
  try:
-  if os.name!="nt": os.chmod(temp,0o600)
-  with os.fdopen(fd,"w",encoding="ascii",closefd=True) as f:
-   f.write(canonical_bytes(data).decode("ascii")+"\n"); f.flush(); os.fsync(f.fileno())
   try: os.link(temp,path)
   except FileExistsError as exc: raise ControllerError(label+" must be fresh") from exc
   if os.name!="nt":
    directory=os.open(path.parent,os.O_RDONLY)
    try: os.fsync(directory)
    finally: os.close(directory)
- finally: temp.unlink(missing_ok=True)
- # signed_json returns the unsigned payload; authenticate exactly what was persisted.
- if _signed(path,public_key,label)!=unsigned: raise ControllerError(label+" readback invalid")
- return digest(unsigned)
+  recovery.require_file(path,label)
+  # signed_json returns the unsigned payload; authenticate exactly what was persisted.
+  if _signed(path,public_key,label)!=unsigned: raise ControllerError(label+" readback invalid")
+  return digest(unsigned)
+ finally:
+  recovery._cleanup_temporary_files(temp)
 def _deadline(capability): return float(capability["not_after_unix"])
 def _terminal_roots(conn, root, manifest):
  cur=conn.cursor()

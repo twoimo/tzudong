@@ -11,6 +11,15 @@ spec=importlib.util.spec_from_file_location("g037_controller",MODULE); controlle
 ORIGIN="https://abcdefghijklmnopqrst.supabase.co"
 SERVICE={"host":"db.abcdefghijklmnopqrst.supabase.co","port":"5432","dbname":"postgres","user":"postgres","sslmode":"verify-full","sslrootcert":"ca"}
 class ControllerTests(unittest.TestCase):
+ def _restrictive_directory(self,directory):
+  path=Path(directory)
+  if os.name=="nt":
+   sid=controller.recovery._windows_current_sid(); self.assertIsNotNone(sid)
+   controller.recovery.subprocess.run(["icacls",str(path),"/reset"],stdin=controller.recovery.subprocess.DEVNULL,stdout=controller.recovery.subprocess.PIPE,stderr=controller.recovery.subprocess.PIPE,text=True,timeout=10,check=True)
+   controller.recovery.subprocess.run(["icacls",str(path),"/inheritance:r","/remove:g","SYSTEM","Administrators","OWNER RIGHTS","/grant:r","*"+sid+":F","SYSTEM:F","Administrators:F"],stdin=controller.recovery.subprocess.DEVNULL,stdout=controller.recovery.subprocess.PIPE,stderr=controller.recovery.subprocess.PIPE,text=True,timeout=10,check=True)
+  else: path.chmod(0o700)
+  self.assertTrue(controller.recovery.restrictive(path,directory=True))
+  return path
  def test_validate_has_no_database_connection(self):
   args=SimpleNamespace(origin="https://abcdefghijklmnopqrst.supabase.co",freeze_id="freeze-0001",operator_assertion="assertion",controller_signing_key="key",recovery_signing_key="recovery",recipient_file="recipient",recipient_allowlist_file="allow",service_file="service",service_name="g037",pgpass_file="pgpass",destination="dest",recovery_receipt="recovery-receipt",prepared_receipt="prepared",final_receipt="final",outcome_receipt="outcome",secret_env="REFERENCE",secret_file=None)
   assertion={"relation_root":"a"*64,"acl_root":"b"*64,"expires_at":int(time.time())+60}
@@ -325,4 +334,49 @@ class ControllerTests(unittest.TestCase):
     else:
      with self.assertRaises(controller.ControllerError): getattr(controller,mode)(args)
    self.assertEqual(events,[])
+ def test_write_signed_publishes_restrictive_hardlink_and_reads_back(self):
+  with tempfile.TemporaryDirectory() as directory:
+   path=self._restrictive_directory(directory)/"operator-assertion.json"; value={"receipt":"value"}; seen=[]
+   def signed(receipt,*_):
+    seen.append(Path(receipt))
+    self.assertTrue(controller.recovery.restrictive(receipt))
+    return value
+   with patch.object(controller,"_outside_fresh",side_effect=lambda candidate,_:Path(candidate)),patch.object(controller.recovery,"openssl_sign",return_value=b"signature"),patch.object(controller,"_signed",side_effect=signed):
+    self.assertEqual(controller._write_signed(path,"key",value,"operator assertion",b"public"),controller.digest(value))
+   self.assertEqual(seen,[path])
+   self.assertTrue(controller.recovery.restrictive(path))
+   self.assertEqual(path.read_text(encoding="ascii").endswith("\n"),True)
+ def test_write_signed_cleans_restrictive_temp_when_link_fails(self):
+  with tempfile.TemporaryDirectory() as directory:
+   path=self._restrictive_directory(directory)/"operator-assertion.json"; temporary=[]
+   original=controller.recovery._temporary_bytes
+   def create(*args,**kwargs):
+    result=Path(original(*args,**kwargs)); temporary.append(result); return result
+   with patch.object(controller,"_outside_fresh",side_effect=lambda candidate,_:Path(candidate)),patch.object(controller.recovery,"openssl_sign",return_value=b"signature"),patch.object(controller.recovery,"_temporary_bytes",side_effect=create),patch.object(controller.os,"link",side_effect=FileExistsError()):
+    with self.assertRaises(controller.ControllerError): controller._write_signed(path,"key",{"receipt":"value"},"operator assertion",b"public")
+   self.assertFalse(path.exists())
+   self.assertTrue(temporary and not temporary[0].exists())
+ def test_write_signed_cleans_restrictive_temp_after_readback_failure(self):
+  with tempfile.TemporaryDirectory() as directory:
+   path=self._restrictive_directory(directory)/"operator-assertion.json"; temporary=[]
+   original=controller.recovery._temporary_bytes
+   def create(*args,**kwargs):
+    result=Path(original(*args,**kwargs)); temporary.append(result); return result
+   with patch.object(controller,"_outside_fresh",side_effect=lambda candidate,_:Path(candidate)),patch.object(controller.recovery,"openssl_sign",return_value=b"signature"),patch.object(controller.recovery,"_temporary_bytes",side_effect=create),patch.object(controller,"_signed",side_effect=controller.ControllerError("readback failed")):
+    with self.assertRaises(controller.ControllerError): controller._write_signed(path,"key",{"receipt":"value"},"operator assertion",b"public")
+   self.assertTrue(controller.recovery.restrictive(path))
+   self.assertTrue(temporary and not temporary[0].exists())
+ def test_write_signed_fails_closed_when_cleanup_fails_after_authenticated_publication(self):
+  with tempfile.TemporaryDirectory() as directory:
+   path=self._restrictive_directory(directory)/"operator-assertion.json"; value={"receipt":"value"}; temporary=[]; seen=[]
+   original=controller.recovery._temporary_bytes
+   def create(*args,**kwargs):
+    result=Path(original(*args,**kwargs)); temporary.append(result); return result
+   def signed(receipt,*_):
+    seen.append(Path(receipt)); self.assertTrue(controller.recovery.restrictive(receipt)); return value
+   with patch.object(controller,"_outside_fresh",side_effect=lambda candidate,_:Path(candidate)),patch.object(controller.recovery,"openssl_sign",return_value=b"signature"),patch.object(controller.recovery,"_temporary_bytes",side_effect=create),patch.object(controller,"_signed",side_effect=signed),patch.object(controller.recovery,"_cleanup_temporary_files",side_effect=controller.recovery.RecoveryError("temporary file cleanup failed")):
+    with self.assertRaises(controller.recovery.RecoveryError): controller._write_signed(path,"key",value,"operator assertion",b"public")
+   self.assertEqual(seen,[path]); self.assertTrue(path.exists()); self.assertTrue(controller.recovery.restrictive(path))
+   self.assertTrue(temporary and temporary[0].exists())
+   temporary[0].unlink()
 if __name__=="__main__": unittest.main()

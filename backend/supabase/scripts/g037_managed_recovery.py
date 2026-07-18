@@ -287,13 +287,17 @@ def download_archive(base,secret,catalog,age,recipient,output,deadline):
   if crypt and crypt.stdin and not crypt.stdin.closed: crypt.stdin.close()
   _reap(crypt)
  return commitments
-def _temporary_bytes(payload,prefix):
- fd,path=tempfile.mkstemp(prefix=prefix)
+def _temporary_bytes(payload,prefix,directory=None):
+ if directory is not None:
+  directory=Path(directory)
+  require_dir(directory,"temporary file directory")
+ fd,path=tempfile.mkstemp(prefix=prefix,dir=directory)
  try:
   if os.name=="nt":
    sid=_windows_current_sid()
    if not sid: raise RecoveryError("current Windows SID unavailable")
-   subprocess.run(["icacls",path,"/inheritance:r","/grant:r","*"+sid+":F"],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,timeout=10,check=True)
+   subprocess.run(["icacls",path,"/reset"],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,timeout=10,check=True)
+   subprocess.run(["icacls",path,"/inheritance:r","/remove:g","SYSTEM","Administrators","OWNER RIGHTS","/grant:r","*"+sid+":F","SYSTEM:F","Administrators:F"],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,timeout=10,check=True)
    if not _windows_dacl_restrictive(path): raise RecoveryError("temporary file ACL is not owner-restricted")
   else:
    os.chmod(path,0o600)
