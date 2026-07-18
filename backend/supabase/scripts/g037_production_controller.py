@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """Local-only G037 controller; the freeze owns the only mutation transaction."""
 from __future__ import annotations
-import argparse, base64, os, re, time
+import argparse, base64, json, os, re, time
 from types import SimpleNamespace
 from pathlib import Path
 
 import g037_hosted_closure_executor as closure
 import g037_managed_recovery as recovery
 import g037_write_freeze as freeze
-from g037_hosted_closure_contract import AUTHORIZATION_PUBLIC_KEY_PEM, canonical_bytes, digest, repository_root, validate_operator_assertion, validate_sources
+from g037_hosted_closure_contract import AUTHORIZATION_PUBLIC_KEY_PEM, canonical_bytes, digest, no_duplicate_object, repository_root, validate_operator_assertion, validate_sources
 
 SCHEMA="g037-production-controller-v1"
 RESIDUAL_CHANNELS=("no_owner_write","no_dashboard_write","no_provider_write","no_out_of_band_write","producer_stop")
@@ -31,6 +31,21 @@ def _safe_status(exc):
  return str(exc) if isinstance(exc,(ControllerError,freeze.FreezeError)) and str(exc) in {"failed-rolled-back","rollback-failed","commit-ambiguous","committed-unfinalized"} else "failed-rolled-back"
 
 def _signed(path, public, label): return recovery.signed_json(path, public.encode() if isinstance(public,str) else public, label)
+def _signed_assertion(path, label):
+ raw_path=Path(path)
+ try:
+  persisted=raw_path.read_bytes()
+  envelope=json.loads(persisted.decode("ascii"),object_pairs_hook=no_duplicate_object)
+ except Exception as exc: raise ControllerError(label+" unreadable") from exc
+ if not isinstance(envelope,dict) or "signature" not in envelope: raise ControllerError(label+" signature absent")
+ authenticated=_signed(path,AUTHORIZATION_PUBLIC_KEY_PEM,label)
+ try:
+  if raw_path.read_bytes()!=persisted: raise ControllerError(label+" changed during authentication")
+ except ControllerError: raise
+ except Exception as exc: raise ControllerError(label+" unreadable") from exc
+ unsigned=dict(envelope); unsigned.pop("signature")
+ if unsigned!=authenticated: raise ControllerError(label+" authenticated projection mismatch")
+ return envelope,unsigned
 def _private(path,label): recovery.require_file(path,label)
 def _assert_key(path, public, label):
  _private(path,label)
@@ -102,7 +117,7 @@ def _validate_assertion(assertion,args,root):
  return assertion
 def validate(args, *, require_fresh_outputs=False):
  base,entries=_validated_binding(args); root=repository_root(Path(__file__).resolve()); validate_sources(root)
- _private(args.operator_assertion,"operator assertion"); assertion=_signed(args.operator_assertion,AUTHORIZATION_PUBLIC_KEY_PEM,"operator assertion"); _validate_assertion(assertion,args,root)
+ _private(args.operator_assertion,"operator assertion"); assertion,_=_signed_assertion(args.operator_assertion,"operator assertion"); _validate_assertion(assertion,args,root)
  _assert_controller_key(args.controller_signing_key); _assert_key(args.recovery_signing_key,recovery.RECOVERY_PUBLIC_KEY,"recovery signing key")
  recipient,fp=recovery.recipient_from_files(args.recipient_file,args.recipient_allowlist_file); recovery.pgpass(args.pgpass_file,entries)
  recovery.safe_destination(args.destination)
@@ -160,12 +175,12 @@ def prepare(args):
  assertion={"schema":"g037-write-freeze-assertion-v1","freeze_id":args.freeze_id,"origin":base,"commit":head,"manifest_sha256":freeze.MANIFEST_SHA256,"relation_root":inventory.relation_root,"acl_root":inventory.acl_root,"source_root":source_root,"terminal_spec":terminal_spec,"issued_at":issued,"expires_at":issued+seconds,"attestations":attestations}
  assertion_hash=_write_signed(args.operator_assertion,args.authorization_signing_key,assertion,"operator assertion",AUTHORIZATION_PUBLIC_KEY_PEM)
  # Validate the authenticated persisted bytes against the exact inventory and source bindings.
- persisted=_signed(args.operator_assertion,AUTHORIZATION_PUBLIC_KEY_PEM,"operator assertion")
+ persisted,_=_signed_assertion(args.operator_assertion,"operator assertion")
  validate_operator_assertion(persisted,freeze_id=args.freeze_id,origin=base,relation_root=inventory.relation_root,acl_root=inventory.acl_root,commit=head,source_root=source_root,terminal_spec=terminal_spec)
  return {"schema":SCHEMA,"mode":"prepare","status":"prepared","assertion_sha256":assertion_hash,"expires_at":assertion["expires_at"],"relation_root":inventory.relation_root,"acl_root":inventory.acl_root}
 def execute(args):
  validate(args,require_fresh_outputs=True); base,entries=_validated_binding(args); root=repository_root(Path(__file__).resolve()); manifest=validate_sources(root)
- assertion=_signed(args.operator_assertion,AUTHORIZATION_PUBLIC_KEY_PEM,"operator assertion"); recipient,fp=recovery.recipient_from_files(args.recipient_file,args.recipient_allowlist_file); secret=recovery.read_secret_reference(args.secret_env,args.secret_file)
+ assertion,_=_signed_assertion(args.operator_assertion,"operator assertion"); recipient,fp=recovery.recipient_from_files(args.recipient_file,args.recipient_allowlist_file); secret=recovery.read_secret_reference(args.secret_env,args.secret_file)
  conn=_connect(entries,args); expected=freeze._inv(conn)
  try:
   final_status={"value":None}; prepared_value={"value":None}; final_hash={"value":None}; freeze_receipt={"value":None}
@@ -243,7 +258,7 @@ def rehearse(args):
  """Full local cursor rehearsal. freeze.rehearse has no commit path."""
  validate(args,require_fresh_outputs=True); base,entries=_validated_binding(args); root=repository_root(Path(__file__).resolve()); manifest=validate_sources(root)
  _outside_fresh(args.rehearsal_receipt,"rehearsal receipt"); _outside_fresh(args.rehearsal_outcome_receipt,"rehearsal outcome receipt")
- assertion=_signed(args.operator_assertion,AUTHORIZATION_PUBLIC_KEY_PEM,"operator assertion"); recipient,fp=recovery.recipient_from_files(args.recipient_file,args.recipient_allowlist_file); secret=recovery.read_secret_reference(args.secret_env,args.secret_file)
+ assertion,_=_signed_assertion(args.operator_assertion,"operator assertion"); recipient,fp=recovery.recipient_from_files(args.recipient_file,args.recipient_allowlist_file); secret=recovery.read_secret_reference(args.secret_env,args.secret_file)
  conn=_connect(entries,args); expected=freeze._inv(conn)
  try:
   def provisional(payload):
