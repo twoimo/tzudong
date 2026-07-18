@@ -2337,6 +2337,7 @@ interface DatabaseSource {
                     storage_receipt_refs: Json | null
                     auth_receipt_ref: string | null
                     source_manifest_hash: string
+                    idempotency_key_binding_sha256: string | null
                 }[]
             }
             fail_account_deletion: {
