@@ -347,12 +347,32 @@ class G037ExecutorTests(unittest.TestCase):
   class HostileCapture(f.VerifiedRecoveryCapture): pass
   hostile=object.__new__(HostileCapture); object.__setattr__(hostile,"_values",capture)
   binding={key:"a"*64 for key in e._SHORT_URL_BINDING_FIELDS-{"envelope","expected_bindings","capture_evidence"}}
-  binding.update(envelope={},expected_bindings={},capture_evidence=hostile)
+  binding.update(envelope={},expected_bindings={},capture_evidence=hostile,legacy_repository_commit="a"*40)
   authorization={"policy":e.POLICY,"legacy_repository_commit":binding["legacy_repository_commit"],**{key:binding[key] for key in ("legacy_authorization_sha256","legacy_authorization_signature_sha256","legacy_capture_receipt_sha256","legacy_restore_receipt_sha256","legacy_inspection_receipt_sha256")}}
   with patch.object(e,"ExecutionAuthorizationEnvelope",dict),patch.object(e,"authorize_exact_baseline",return_value=authorization) as authorize:
    with self.assertRaisesRegex(e.ClosureError,"capture binding invalid"):
     e._short_url_binding(binding,baseline_is_exact=lambda: (_ for _ in ()).throw(AssertionError("callback invoked")))
   authorize.assert_called_once()
+ def test_short_url_binding_requires_canonical_legacy_commit_and_sha256_provenance(self):
+  capture={"selection_spec_sha256":"1"*64,"short_urls_catalog_sha256":"2"*64,"short_urls_rowset_sha256":"3"*64,"short_urls_row_count":0,"duplicate_group_count":0,"duplicate_victim_count":0,"victim_descriptor_count":0,"duplicate_victims_sha256":"4"*64,"victim_descriptors_sha256":"4"*64}
+  capture=f.verified_recovery_capture(capture)
+  def binding(commit):
+   value={key:"a"*64 for key in e._SHORT_URL_BINDING_FIELDS-{"envelope","expected_bindings","capture_evidence","legacy_repository_commit"}}
+   value.update(envelope={},expected_bindings={},capture_evidence=capture,legacy_repository_commit=commit)
+   return value
+  def authorization(value):
+   return {"policy":e.POLICY,"legacy_repository_commit":value["legacy_repository_commit"],"legacy_vector":{"selection_spec_sha256":capture["selection_spec_sha256"],"short_urls_catalog_sha256":capture["short_urls_catalog_sha256"],"pre_short_urls_rowset_sha256":capture["short_urls_rowset_sha256"],"duplicate_group_count":capture["duplicate_group_count"],"duplicate_victim_count":capture["duplicate_victim_count"],"duplicate_victims_sha256":capture["duplicate_victims_sha256"],"victim_descriptors_sha256":capture["victim_descriptors_sha256"]},**{key:value[key] for key in ("legacy_authorization_sha256","legacy_authorization_signature_sha256","legacy_capture_receipt_sha256","legacy_restore_receipt_sha256","legacy_inspection_receipt_sha256")}}
+  valid=binding("0123456789abcdef0123456789abcdef01234567")
+  with patch.object(e,"ExecutionAuthorizationEnvelope",dict),patch.object(e,"authorize_exact_baseline",return_value=authorization(valid)):
+   self.assertEqual(e._short_url_binding(valid,baseline_is_exact=lambda: True)[1],capture)
+  for commit in ("A"*40,"a"*39,"a"*41,"g"*40):
+   with self.subTest(commit=commit):
+    invalid=binding(commit)
+    with patch.object(e,"ExecutionAuthorizationEnvelope",dict),patch.object(e,"authorize_exact_baseline",return_value=authorization(invalid)):
+     with self.assertRaisesRegex(e.ClosureError,"provenance invalid"): e._short_url_binding(invalid,baseline_is_exact=lambda: True)
+  invalid_sha=binding("0123456789abcdef0123456789abcdef01234567"); invalid_sha["execution_authorization_sha256"]="a"*63
+  with patch.object(e,"ExecutionAuthorizationEnvelope",dict),patch.object(e,"authorize_exact_baseline",return_value=authorization(invalid_sha)):
+   with self.assertRaisesRegex(e.ClosureError,"provenance invalid"): e._short_url_binding(invalid_sha,baseline_is_exact=lambda: True)
  def test_stable_terminal_projection_accepts_canonical_catalog_rows_and_rejects_drift(self):
   catalog=(("auth","users","r","supabase_auth_admin"),("public","restaurants","r","owner")); raw_acl=(("auth","users","supabase_auth_admin","supabase_auth_admin","MAINTAIN",False),("public","restaurants","owner","owner","SELECT",True)); acl=tuple(tuple(map(str,row)) for row in raw_acl)
   class Cursor:
