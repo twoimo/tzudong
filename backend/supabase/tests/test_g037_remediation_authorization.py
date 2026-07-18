@@ -263,7 +263,7 @@ class G037AuthorityTests(unittest.TestCase):
             self.assertGreaterEqual(events.count("identity"), 5)
             self.assertLess(events.index("acl"), events.index("write"))
     def test_windows_directory_acl_custody_allows_only_explicit_restrictive_parent(self):
-        valid = "D:P(A;;FA;;;S-1-5-21)(A;;FA;;;SY)(A;;FA;;;BA)"
+        valid = "D:PAI(A;;FA;;;S-1-5-21)S:PAINO_ACCESS_CONTROL"
         broad = "D:AI(A;;FA;;;S-1-5-21)"
         with tempfile.TemporaryDirectory() as directory:
             parent = Path(directory) / "parent"; parent.mkdir(); path = parent / "output"
@@ -276,6 +276,13 @@ class G037AuthorityTests(unittest.TestCase):
                 with self.assertRaises(c.ContractError): c._write_fresh_restrictive(path, b"payload", Path(directory) / "repository")
             self.assertFalse(path.exists())
             self.assertEqual(run.call_count, 1)
+    def test_windows_directory_acl_rejects_inherited_ace_and_extra_sid(self):
+        cases = ("D:PAI(A;ID;FA;;;S-1-5-21)", "D:PAI(A;;FA;;;S-1-5-21)(A;;FA;;;S-1-5-32-545)", "D:PAI(A;;FA;;;S-1-5-21)S:PAI(A;;FA;;;SY)", "D:PAI(A;;FA;;;S-1-5-21)S:PAINO_ACCESS_CONTROLX")
+        with tempfile.TemporaryDirectory() as directory:
+            parent = Path(directory) / "parent"; parent.mkdir()
+            for sddl in cases:
+                with self.subTest(sddl=sddl), patch("g035_hosted_recovery._windows_current_sid", return_value="S-1-5-21"), patch("g035_hosted_recovery._windows_saved_sddl", return_value=sddl), patch.object(c.subprocess, "run", return_value=SimpleNamespace(returncode=0)):
+                    self.assertFalse(c._windows_restrictive_directory(parent))
 
     def test_cli_has_no_private_key_or_secret_argument(self):
         source = Path(c.__file__).read_text(encoding="utf8")
@@ -293,12 +300,23 @@ class G037AuthorityTests(unittest.TestCase):
             assertion["attestations"] = {name: {"status": True, "evidence_sha256": self.digest("9"), "observed_at": now}
                                          for name in ("no_owner_write", "no_dashboard_write", "no_provider_write", "no_out_of_band_write", "producer_stop")}
             assertion["signature"] = base64.b64encode(self.key.sign(closure.canonical_bytes(assertion))).decode()
-            assertion_path = Path(directory) / "assertion"; assertion_path.write_bytes(c.canonical_json_bytes(assertion))
+            assertion_path = Path(directory) / "assertion"; assertion_path.write_bytes(closure.canonical_bytes(assertion) + b"\n")
             for path in (*paths, assertion_path): os.chmod(path, 0o600)
             output = Path(directory) / "output"
             args = ["build-template", "--capture-receipt", str(paths[0]), "--restore-receipt", str(paths[1]), "--inspection-receipt", str(paths[2]), "--legacy-authorization", str(paths[3]), "--legacy-signature", str(paths[4]), "--operator-assertion", str(assertion_path), "--output", str(output), "--origin", origin, "--project", "abcdefghijklmnopqrst", "--current-commit", "f" * 40, "--source-root", self.digest("1"), "--terminal-spec", self.digest("2"), "--freeze-id", "freeze-0001", "--relation-root", self.digest("7"), "--acl-root", self.digest("8"), "--recipient-fingerprint", self.digest("4"), "--recovery-public-key-fingerprint", self.digest("5"), "--capture-scope-sha256", self.digest("6"), "--authorization-id", "11111111-1111-4111-8111-111111111111", "--issued-at", str(now), "--expires-at", str(now + 100)]
             self.assertEqual(c.main(args), 0)
-            self.assertEqual(json.loads(output.read_text())["current_commit"], "f" * 40)
+            self.assertEqual(json.loads(output.read_text())["current_commit"], "f" * 40); self.assertEqual(json.loads(output.read_text())["operator_assertion_sha256"], closure.digest(assertion))
+    def test_operator_assertion_reader_accepts_exact_controller_bytes_only(self):
+        assertion = {"schema": "test", "signature": "test"}
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "assertion"
+            exact = closure.canonical_bytes(assertion) + b"\n"
+            path.write_bytes(exact)
+            self.assertEqual(c._read_operator_assertion(path), assertion)
+            for raw in (exact[:-1], exact.replace(b"\n", b"\r\n"), exact + b"\n", exact + b" ", b'{"schema":"test","schema":"test","signature":"test"}\n'):
+                with self.subTest(raw=raw):
+                    path.write_bytes(raw)
+                    with self.assertRaises(c.ContractError): c._read_operator_assertion(path)
     def test_baseline_callback_is_required(self):
         with tempfile.TemporaryDirectory() as directory:
             auth, sig, value = self.envelope(directory)
