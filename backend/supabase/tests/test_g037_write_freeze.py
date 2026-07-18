@@ -28,9 +28,13 @@ def inv(acl="a"):
   ("public","x",3,"owner"),
   ("storage","buckets_vectors",4,"supabase_storage_admin"),
   ("storage","migrations",5,"supabase_storage_admin"),
-  ("storage","objects",6,"owner"),
+  ("storage","objects",6,"supabase_storage_admin"),
   ("storage","vector_indexes",7,"supabase_storage_admin"),
+  ("storage","buckets",9,"supabase_storage_admin"),
   ("shortener_private","limits",8,"owner"),
+  ("storage","buckets_analytics",10,"supabase_storage_admin"),
+  ("storage","s3_multipart_uploads",11,"supabase_storage_admin"),
+  ("storage","s3_multipart_uploads_parts",12,"supabase_storage_admin"),
  ))
  return freeze.Inventory(("auth","public","storage","shortener_private"),rs,freeze.digest([r.key for r in rs]),acl*64)
 def terminal(_,spec): return {"catalog_root":"c"*64,"acl_root":"a"*64,"ledger_root":"l"*64,"terminal_spec":spec}
@@ -52,9 +56,218 @@ class FenceTests(unittest.TestCase):
   capture_evidence={"selection_spec_sha256":"1"*64,"short_urls_catalog_sha256":"2"*64,"short_urls_rowset_sha256":"3"*64,"short_urls_row_count":2,"duplicate_group_count":1,"duplicate_victim_count":1,"victim_descriptor_count":1,"duplicate_victims_sha256":"4"*64,"victim_descriptors_sha256":"4"*64}
   branded_capture=freeze.verified_recovery_capture(capture_evidence)
   with self.assertRaises(TypeError): branded_capture["short_urls_row_count"]=0
+ def test_provider_managed_acl_allowlist_is_exact(self):
+  self.assertEqual(freeze.PROVIDER_MANAGED_ACL_ALLOWLIST,frozenset((
+   ("auth","audit_log_entries","supabase_auth_admin"),
+   ("auth","custom_oauth_providers","supabase_auth_admin"),
+   ("auth","flow_state","supabase_auth_admin"),
+   ("auth","identities","supabase_auth_admin"),
+   ("auth","instances","supabase_auth_admin"),
+   ("auth","mfa_amr_claims","supabase_auth_admin"),
+   ("auth","mfa_challenges","supabase_auth_admin"),
+   ("auth","mfa_factors","supabase_auth_admin"),
+   ("auth","oauth_authorizations","supabase_auth_admin"),
+   ("auth","oauth_client_states","supabase_auth_admin"),
+   ("auth","oauth_clients","supabase_auth_admin"),
+   ("auth","oauth_consents","supabase_auth_admin"),
+   ("auth","one_time_tokens","supabase_auth_admin"),
+   ("auth","refresh_tokens","supabase_auth_admin"),
+   ("auth","saml_providers","supabase_auth_admin"),
+   ("auth","saml_relay_states","supabase_auth_admin"),
+   ("auth","schema_migrations","supabase_auth_admin"),
+   ("auth","sessions","supabase_auth_admin"),
+   ("auth","sso_domains","supabase_auth_admin"),
+   ("auth","sso_providers","supabase_auth_admin"),
+   ("auth","users","supabase_auth_admin"),
+   ("auth","webauthn_challenges","supabase_auth_admin"),
+   ("auth","webauthn_credentials","supabase_auth_admin"),
+   ("storage","buckets","supabase_storage_admin"),
+   ("storage","objects","supabase_storage_admin"),
+  )))
+ def test_acl_inventory_uses_same_ordinary_relation_kinds_as_catalog(self):
+  queries=[]
+  schemas=tuple((schema,) for schema in freeze.REACHABLE_SCHEMAS)
+  relations=(
+   ("auth","schema_migrations",1,"r","supabase_auth_admin"),
+   ("storage","buckets_vectors",2,"r","supabase_storage_admin"),
+   ("storage","migrations",3,"r","supabase_storage_admin"),
+   ("storage","vector_indexes",4,"r","supabase_storage_admin"),
+   ("public","table_row",5,"r","owner"),
+   ("public","partition_row",6,"p","owner"),
+  )
+  acl=(("public",5,"owner","owner","SELECT",False),("public",6,"owner","owner","SELECT",False))
+  def rows(_,sql,params=()):
+   queries.append(sql)
+   if "pg_get_userbyid" in sql: return relations
+   if "aclexplode" in sql: return acl
+   return schemas
+  with patch.object(freeze,"_rows",side_effect=rows):
+   inventory=freeze._inv(Conn())
+  acl_query=next(sql for sql in queries if "aclexplode" in sql)
+  self.assertIn("c.relkind IN ('r','p')",acl_query)
+  self.assertEqual({relation.kind for relation in inventory.relations},{"r","p"})
+  self.assertEqual(inventory.acl_root,freeze.digest(tuple(sorted(acl))))
+ def test_public_ordinary_acl_allowlist_is_exact_and_fail_closed(self):
+  all_privileges=freeze._TABLE_PRIVILEGES
+  expected_projection={
+   "ad_banners":{"anon":("SELECT",),"authenticated":("DELETE","INSERT","SELECT","UPDATE"),"service_role":all_privileges},
+   "admin_audit_events":{"authenticated":("SELECT",),"service_role":all_privileges},
+   "admin_restaurant_map_overlays":{"service_role":all_privileges},
+   "admin_user_preferences":{"authenticated":("INSERT","SELECT","UPDATE"),"service_role":all_privileges},
+   "admin_workflow_runs":{"authenticated":("SELECT",),"service_role":all_privileges},
+   "admin_workflow_signals":{"authenticated":("SELECT",),"service_role":all_privileges},
+   "admin_workflow_steps":{"authenticated":("SELECT",),"service_role":all_privileges},
+   "announcements":{"anon":("SELECT",),"authenticated":("DELETE","INSERT","SELECT","UPDATE"),"service_role":all_privileges},
+   "document_embeddings":{"service_role":all_privileges},"documents":{"authenticated":("DELETE","INSERT","SELECT","UPDATE"),"service_role":all_privileges},
+   "notifications":{"authenticated":("DELETE","INSERT","SELECT","UPDATE"),"service_role":all_privileges},"ocr_logs":{"authenticated":("INSERT","SELECT"),"service_role":all_privileges},
+   "profiles":{"anon":("SELECT",),"authenticated":("INSERT","SELECT","UPDATE"),"service_role":all_privileges},
+   "restaurant_popular_rank_snapshots":{"anon":("SELECT",),"authenticated":("SELECT",),"service_role":all_privileges},
+   "restaurant_refresh_candidates":{"authenticated":("INSERT","SELECT","UPDATE"),"service_role":all_privileges},
+   "restaurant_refresh_runs":{"authenticated":("INSERT","SELECT","UPDATE"),"service_role":all_privileges},
+   "restaurant_request_review_audit":{"authenticated":("SELECT",),"service_role":all_privileges},
+   "restaurant_requests":{"authenticated":("INSERT","SELECT","UPDATE"),"service_role":all_privileges},
+   "restaurant_submission_items":{"authenticated":("DELETE","INSERT","SELECT","UPDATE"),"service_role":all_privileges},
+   "restaurant_submissions":{"authenticated":("DELETE","INSERT","SELECT","UPDATE"),"service_role":all_privileges},
+   "restaurants":{"anon":("SELECT",),"authenticated":("SELECT","UPDATE"),"service_role":all_privileges},
+   "restaurants_duplicate":{"service_role":all_privileges},"review_likes":{"anon":("SELECT",),"authenticated":("DELETE","INSERT","SELECT"),"service_role":all_privileges},
+   "reviews":{"anon":("SELECT",),"authenticated":("DELETE","INSERT","SELECT","UPDATE"),"service_role":all_privileges},
+   "search_logs":{"anon":("INSERT",),"authenticated":("INSERT","SELECT"),"service_role":all_privileges},
+   "short_urls":{"anon":("SELECT",),"authenticated":("SELECT",),"service_role":all_privileges},
+   "transcript_embeddings_bge":{"anon":("SELECT",),"authenticated":("SELECT",),"service_role":all_privileges},
+   "user_account_status":{"authenticated":("SELECT",),"service_role":all_privileges},
+   "user_bookmarks":{"anon":("SELECT",),"authenticated":("DELETE","INSERT","SELECT"),"service_role":all_privileges},
+   "user_roles":{"authenticated":("SELECT",),"service_role":all_privileges},"user_stats":{"anon":("SELECT",),"authenticated":("SELECT",),"service_role":all_privileges},
+   "video_frame_captions":{"anon":("SELECT",),"authenticated":("SELECT",),"service_role":all_privileges},
+   "videos":{"anon":("SELECT",),"authenticated":("SELECT",),"service_role":all_privileges},
+   "youtube_channel_kpi_snapshots":{"service_role":all_privileges},"youtube_video_kpi_snapshots":{"service_role":all_privileges},
+  }
+  self.assertEqual(freeze.PUBLIC_ORDINARY_ACL_DECLARATION,expected_projection)
+  expected=frozenset(
+   ("public",relation,"postgres",grantee,privilege)
+   for relation,grantees in expected_projection.items()
+   for grantee,privileges in grantees.items() for privilege in privileges
+  )
+  self.assertEqual(freeze.PUBLIC_ORDINARY_ACL_ALLOWLIST,expected)
+  self.assertEqual(len(expected),362)
+  relations=tuple(freeze.Relation("public",name,index,"r","postgres")
+                  for index,name in enumerate(expected_projection,1))
+  oids={relation.name:relation.oid for relation in relations}
+  rows=tuple(("public",oids[name],"postgres",grantee,privilege,False)
+             for _,name,_,grantee,privilege in expected)
+  self.assertEqual(freeze.validate_table_acl_rows(rows,relations),rows)
+  for unsafe in (
+   ("public",999,"postgres","anon","SELECT",False),
+   ("public",oids["restaurants"],"postgres","authenticated","DELETE",False),
+   ("public",oids["restaurants"],"postgres","arbitrary_role","SELECT",False),
+   ("public",oids["restaurants"],"other","authenticated","SELECT",False),
+   ("public",oids["restaurants"],"postgres","authenticated","SELECT",True),
+  ):
+   with self.subTest(unsafe=unsafe),self.assertRaisesRegex(freeze.FreezeError,"relation ACL"):
+    freeze.validate_table_acl_rows((unsafe,),relations+(freeze.Relation("public","unlisted",999,"r","postgres"),))
+  wrong_owner=(freeze.Relation("public","restaurants",oids["restaurants"],"r","other"),)
+  with self.assertRaisesRegex(freeze.FreezeError,"relation ACL"):
+   freeze.validate_table_acl_rows((("public",oids["restaurants"],"other","authenticated","SELECT",False),),wrong_owner)
+ def test_provider_storage_client_acl_allowlist_is_exact_and_fail_closed(self):
+  expected={
+   "buckets":freeze._TABLE_PRIVILEGES,
+   "buckets_analytics":freeze._TABLE_PRIVILEGES,
+   "objects":freeze._TABLE_PRIVILEGES,
+   "buckets_vectors":frozenset(("SELECT",)),
+   "s3_multipart_uploads":frozenset(("SELECT",)),
+   "s3_multipart_uploads_parts":frozenset(("SELECT",)),
+   "vector_indexes":frozenset(("SELECT",)),
+  }
+  self.assertEqual(freeze.PROVIDER_STORAGE_CLIENT_ACL_ALLOWLIST,frozenset(
+   ("storage",name,"supabase_storage_admin",privilege)
+   for name,privileges in expected.items() for privilege in privileges
+  ))
+  relations=(freeze.Relation("auth","schema_migrations",1,"r","supabase_auth_admin"),)+tuple(
+   freeze.Relation("storage",name,index,"r","supabase_storage_admin")
+   for index,name in enumerate(expected,1))
+  rows=tuple(("storage",index,"supabase_storage_admin",grantee,privilege,False)
+             for index,(name,privileges) in enumerate(expected.items(),1)
+             for grantee in ("anon","authenticated") for privilege in privileges)
+  self.assertEqual(freeze.validate_table_acl_rows(rows,relations),rows)
+  by_name={relation.name:relation.oid for relation in relations}
+  for unsafe in (
+   ("storage",by_name["buckets_vectors"],"supabase_storage_admin","anon","UPDATE",False),
+   ("storage",by_name["buckets"],"supabase_storage_admin","anon","SELECT",True),
+   ("storage",by_name["buckets"],"other","anon","SELECT",False),
+   ("auth",1,"supabase_auth_admin","anon","SELECT",False),
+  ):
+   with self.subTest(unsafe=unsafe),self.assertRaisesRegex(freeze.FreezeError,"relation ACL"):
+    freeze.validate_table_acl_rows((unsafe,),relations)
+  extra=relations+(freeze.Relation("storage","unlisted",99,"r","supabase_storage_admin"),)
+  with self.assertRaisesRegex(freeze.FreezeError,"relation ACL"):
+   freeze.validate_table_acl_rows((("storage",99,"supabase_storage_admin","anon","SELECT",False),),extra)
+ def test_provider_storage_service_acl_allowlist_is_exact_and_non_grantable(self):
+  expected=frozenset((
+   ("storage","buckets","supabase_storage_admin","SELECT"),
+   ("storage","buckets","supabase_storage_admin","INSERT"),
+   ("storage","buckets","supabase_storage_admin","UPDATE"),
+   ("storage","buckets","supabase_storage_admin","DELETE"),
+   ("storage","buckets","supabase_storage_admin","TRUNCATE"),
+   ("storage","buckets","supabase_storage_admin","REFERENCES"),
+   ("storage","buckets","supabase_storage_admin","TRIGGER"),
+   ("storage","buckets","supabase_storage_admin","MAINTAIN"),
+   ("storage","buckets_analytics","supabase_storage_admin","SELECT"),
+   ("storage","buckets_analytics","supabase_storage_admin","INSERT"),
+   ("storage","buckets_analytics","supabase_storage_admin","UPDATE"),
+   ("storage","buckets_analytics","supabase_storage_admin","DELETE"),
+   ("storage","buckets_analytics","supabase_storage_admin","TRUNCATE"),
+   ("storage","buckets_analytics","supabase_storage_admin","REFERENCES"),
+   ("storage","buckets_analytics","supabase_storage_admin","TRIGGER"),
+   ("storage","buckets_analytics","supabase_storage_admin","MAINTAIN"),
+   ("storage","objects","supabase_storage_admin","SELECT"),
+   ("storage","objects","supabase_storage_admin","INSERT"),
+   ("storage","objects","supabase_storage_admin","UPDATE"),
+   ("storage","objects","supabase_storage_admin","DELETE"),
+   ("storage","objects","supabase_storage_admin","TRUNCATE"),
+   ("storage","objects","supabase_storage_admin","REFERENCES"),
+   ("storage","objects","supabase_storage_admin","TRIGGER"),
+   ("storage","objects","supabase_storage_admin","MAINTAIN"),
+   ("storage","buckets_vectors","supabase_storage_admin","SELECT"),
+   ("storage","s3_multipart_uploads","supabase_storage_admin","SELECT"),
+   ("storage","s3_multipart_uploads","supabase_storage_admin","INSERT"),
+   ("storage","s3_multipart_uploads","supabase_storage_admin","UPDATE"),
+   ("storage","s3_multipart_uploads","supabase_storage_admin","DELETE"),
+   ("storage","s3_multipart_uploads","supabase_storage_admin","TRUNCATE"),
+   ("storage","s3_multipart_uploads","supabase_storage_admin","REFERENCES"),
+   ("storage","s3_multipart_uploads","supabase_storage_admin","TRIGGER"),
+   ("storage","s3_multipart_uploads","supabase_storage_admin","MAINTAIN"),
+   ("storage","s3_multipart_uploads_parts","supabase_storage_admin","SELECT"),
+   ("storage","s3_multipart_uploads_parts","supabase_storage_admin","INSERT"),
+   ("storage","s3_multipart_uploads_parts","supabase_storage_admin","UPDATE"),
+   ("storage","s3_multipart_uploads_parts","supabase_storage_admin","DELETE"),
+   ("storage","s3_multipart_uploads_parts","supabase_storage_admin","TRUNCATE"),
+   ("storage","s3_multipart_uploads_parts","supabase_storage_admin","REFERENCES"),
+   ("storage","s3_multipart_uploads_parts","supabase_storage_admin","TRIGGER"),
+   ("storage","s3_multipart_uploads_parts","supabase_storage_admin","MAINTAIN"),
+   ("storage","vector_indexes","supabase_storage_admin","SELECT"),
+  ))
+  self.assertEqual(freeze.PROVIDER_STORAGE_SERVICE_ACL_ALLOWLIST,expected)
+  names=tuple(sorted({name for _,name,_,_ in expected}))
+  relations=tuple(freeze.Relation("storage",name,index,"r","supabase_storage_admin")
+                  for index,name in enumerate(names,1))
+  by_name={relation.name:relation.oid for relation in relations}
+  rows=tuple(("storage",by_name[name],owner,"service_role",privilege,False)
+             for _,name,owner,privilege in expected)
+  self.assertEqual(freeze.validate_table_acl_rows(rows,relations),rows)
+  for unsafe in (
+   ("storage",by_name["buckets_vectors"],"supabase_storage_admin","service_role","UPDATE",False),
+   ("storage",by_name["vector_indexes"],"supabase_storage_admin","service_role","UPDATE",False),
+   ("storage",by_name["buckets"],"supabase_storage_admin","service_role","SELECT",True),
+  ):
+   with self.subTest(unsafe=unsafe),self.assertRaisesRegex(freeze.FreezeError,"relation ACL"):
+    freeze.validate_table_acl_rows((unsafe,),relations)
+  public_relation=(freeze.Relation("public","application_table",99,"r","application_owner"),)
+  for grantee in ("anon","authenticated","service_role"):
+   unsafe=("public",99,"application_owner",grantee,"SELECT",False)
+   with self.subTest(unsafe=unsafe),self.assertRaisesRegex(freeze.FreezeError,"relation ACL"):
+    freeze.validate_table_acl_rows((unsafe,),public_relation)
  def test_relation_acl_policy_rejects_unsafe_rows_before_freeze_callback(self):
   i=inv()
-  accepted=(("public",3,"owner","owner","SELECT",True),("auth",1,"supabase_auth_admin","supabase_auth_admin","MAINTAIN",False),("public",3,"owner","authenticated","SELECT",False))
+  accepted=(("public",3,"owner","owner","SELECT",True),("auth",1,"supabase_auth_admin","supabase_auth_admin","MAINTAIN",False),("auth",1,"supabase_auth_admin","postgres","SELECT",True),("storage",9,"supabase_storage_admin","postgres","UPDATE",True),("storage",6,"supabase_storage_admin","postgres","INSERT",True))
   self.assertEqual(freeze.validate_table_acl_rows(accepted,i.relations),accepted)
   for unsafe in (
    ("public",3,"owner","other","SELECT",True),
@@ -65,9 +278,17 @@ class FenceTests(unittest.TestCase):
    ("public",3,"owner","owner","UNKNOWN",False),
    ("shortener_private",8,"owner","authenticated","SELECT",False),
    ("public",999,"owner","owner","SELECT",False),
+   ("public",3,"owner","postgres","SELECT",True),
+   ("auth",2,"owner","postgres","SELECT",True),
+   ("auth",1,"owner","postgres","SELECT",True),
+   ("auth",1,"supabase_auth_admin","service_role","SELECT",True),
+   ("storage",7,"supabase_storage_admin","postgres","SELECT",True),
   ):
    with self.subTest(unsafe=unsafe),self.assertRaisesRegex(freeze.FreezeError,"relation ACL"):
     freeze.validate_table_acl_rows((unsafe,),i.relations)
+  wrong_owner=tuple(freeze.Relation(r.schema,r.name,r.oid,r.kind,"other" if r.schema=="auth" and r.name=="schema_migrations" else r.owner) for r in i.relations)
+  with self.assertRaisesRegex(freeze.FreezeError,"relation ACL"):
+   freeze.validate_table_acl_rows((("auth",1,"other","postgres","SELECT",True),),wrong_owner)
   callback=[]
   def unsafe_inventory(_):
    freeze.validate_table_acl_rows((("public",3,"owner","PUBLIC","SELECT",False),),i.relations)
@@ -75,6 +296,37 @@ class FenceTests(unittest.TestCase):
    with self.assertRaises(freeze.FreezeError):
     freeze.run(Conn(),origin="https://x",freeze_id="freeze-0001",expected=i,assertion={"expires_at":9999999999},callback=lambda *_:callback.append(True),provisional_writer=lambda p:p,precommit_receipt_writer=precommit,final_receipt_writer=lambda _:None,terminal_assert=terminal)
   self.assertEqual(callback,[])
+ def test_relation_acl_policy_is_closed_world_by_role_and_provider_relation(self):
+  relations=(
+   freeze.Relation("public","restaurants",1,"r","postgres"),
+   freeze.Relation("auth","oauth_clients",2,"r","supabase_auth_admin"),
+   freeze.Relation("storage","s3_multipart_uploads",3,"r","supabase_storage_admin"),
+   freeze.Relation("storage","unlisted",4,"r","supabase_storage_admin"),
+   freeze.Relation("shortener_private","limits",5,"r","owner"),
+  )
+  accepted=(
+   ("public",1,"postgres","service_role","SELECT",False),
+   ("auth",2,"supabase_auth_admin","dashboard_user","UPDATE",False),
+   ("storage",3,"supabase_storage_admin","service_role","DELETE",False),
+   ("storage",3,"supabase_storage_admin","authenticated","SELECT",False),
+  )
+  self.assertEqual(freeze.validate_table_acl_rows(accepted,relations),accepted)
+  for unsafe in (
+   ("public",1,"postgres","arbitrary_role","SELECT",False),
+   ("public",1,"other","authenticated","SELECT",False),
+   ("shortener_private",5,"owner","authenticated","SELECT",False),
+   ("auth",2,"supabase_auth_admin","arbitrary_role","SELECT",False),
+   ("auth",2,"other","dashboard_user","SELECT",False),
+   ("auth",2,"supabase_auth_admin","dashboard_user","SELECT",True),
+   ("auth",2,"supabase_auth_admin","dashboard_user","UNKNOWN",False),
+   ("storage",4,"supabase_storage_admin","service_role","SELECT",False),
+   ("storage",3,"other","service_role","SELECT",False),
+   ("storage",3,"supabase_storage_admin","service_role","SELECT",True),
+   ("storage",3,"supabase_storage_admin","service_role","UNKNOWN",False),
+   ("storage",3,"supabase_storage_admin","authenticated","SELECT",True),
+  ):
+   with self.subTest(unsafe=unsafe),self.assertRaisesRegex(freeze.FreezeError,"relation ACL"):
+    freeze.validate_table_acl_rows((unsafe,),relations)
  def test_active_verifier_rejects_signature_lookalike(self):
   payload={"schema":freeze.SCHEMA,"state":"active-provisional","freeze_id":"freeze-0001","origin":"https://x","commit":"a"*40,"manifest_sha256":freeze.MANIFEST_SHA256,"source_root":"s"*64,"terminal_spec":"t"*64,"scope":{"schemas":list(freeze.REACHABLE_SCHEMAS),"ordinary_relations":"all"},"relation_root":"r"*64,"acl_root":"l"*64,"held_lock_root":"a"*64,"not_before_unix":1,"not_after_unix":2,"controller_public_key_sha256":freeze.CONTROLLER_PUBLIC_KEY_SHA256}
   with self.assertRaisesRegex(freeze.FreezeError,"signature invalid"): freeze._verify_active({**payload,"signature":"AA=="},set(payload))
