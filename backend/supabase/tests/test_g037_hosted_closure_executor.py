@@ -121,7 +121,8 @@ class G037ExecutorTests(unittest.TestCase):
    with self.assertRaisesRegex(e.ClosureError,"retirement gate failed"): e.retirement_gate(Cursor(referenced=True))
  def test_connection_is_bounded_and_credential_name_only(self):
   source=Path(e.__file__).read_text(encoding="utf-8")
-  self.assertIn("psycopg.connect(os.environ[env_name], autocommit=False, connect_timeout=10)",source)
+  self.assertIn("connect_timeout=10",source)
+  self.assertIn('options="-c statement_timeout=30000 -c lock_timeout=10000 -c idle_in_transaction_session_timeout=30000"',source)
   self.assertNotIn("psycopg.connect(os.environ[env_name], autocommit=False)",source)
  def test_retirement_gate_scans_only_executable_functions_and_procedures(self):
   class Cursor:
