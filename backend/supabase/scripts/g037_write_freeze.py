@@ -55,16 +55,20 @@ def _unique(rows,what):
  if len(rows)!=len(set(rows)): raise FreezeError("duplicate %s inventory"%what)
  return tuple(sorted(rows))
 _TABLE_PRIVILEGES=frozenset(("SELECT","INSERT","UPDATE","DELETE","TRUNCATE","REFERENCES","TRIGGER","MAINTAIN"))
-def validate_table_acl_rows(rows, *, terminal=False):
+def validate_table_acl_rows(rows, relations, *, terminal=False):
  """Reject unsafe ordinary-relation ACLs before their roots become authority."""
+ owners={(r.schema,r.name) if terminal else (r.schema,r.oid):r.owner for r in relations}
+ if len(owners)!=len(relations): raise FreezeError("relation inventory malformed")
  for row in rows:
-  if len(row)!=(6 if terminal else 5): raise FreezeError("relation acl row malformed")
-  schema=str(row[0]); grantee=row[3] if terminal else row[2]; privilege=row[4] if terminal else row[3]; grantable=row[5] if terminal else row[4]
-  if not isinstance(grantee,str) or not isinstance(privilege,str) or type(grantable) is not bool:
+  if len(row)!=6: raise FreezeError("relation acl row malformed")
+  schema=str(row[0]); relation=row[1]; grantor=row[2]; grantee=row[3]; privilege=row[4]; grantable=row[5]
+  owner=owners.get((schema,str(relation)) if terminal else (schema,relation))
+  if owner is None: raise FreezeError("relation ACL relation missing")
+  if not isinstance(grantor,str) or not isinstance(grantee,str) or not isinstance(privilege,str) or type(grantable) is not bool:
    raise FreezeError("relation acl row malformed")
   if grantee=="PUBLIC": raise FreezeError("PUBLIC relation ACL is forbidden")
   if privilege not in _TABLE_PRIVILEGES: raise FreezeError("relation ACL privilege is forbidden")
-  if grantable: raise FreezeError("grantable relation ACL is forbidden")
+  if grantable and (grantor!=owner or grantee!=owner): raise FreezeError("grantable relation ACL is forbidden")
   if grantee in {"anon","authenticated"} and schema!="public":
    raise FreezeError("non-public relation ACL is forbidden")
  return rows
@@ -81,7 +85,7 @@ def _inv(conn):
   rs=_unique(_rows(c,"SELECT n.nspname,c.relname,c.oid,c.relkind,pg_get_userbyid(c.relowner) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=ANY(%s) AND c.relkind IN ('r','p') ORDER BY 1,2,3",(list(schemas),)),"relation")
   relations=tuple(Relation(str(a),str(b),int(o),str(k),str(owner)) for a,b,o,k,owner in rs)
   if not relations: raise FreezeError("empty reachable relation inventory")
-  acl=validate_table_acl_rows(_unique(_rows(c,"SELECT n.nspname,c.oid,COALESCE(g.rolname,'PUBLIC'),x.privilege_type,x.is_grantable FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace CROSS JOIN LATERAL aclexplode(COALESCE(c.relacl,acldefault('r',c.relowner))) x LEFT JOIN pg_roles g ON g.oid=x.grantee WHERE n.nspname=ANY(%s) ORDER BY 1,2,3,4,5",(list(schemas),)),"acl"))
+  acl=validate_table_acl_rows(_unique(_rows(c,"SELECT n.nspname,c.oid,COALESCE(grantor.rolname,'PUBLIC'),COALESCE(grantee.rolname,'PUBLIC'),x.privilege_type,x.is_grantable FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace CROSS JOIN LATERAL aclexplode(COALESCE(c.relacl,acldefault('r',c.relowner))) x LEFT JOIN pg_roles grantor ON grantor.oid=x.grantor LEFT JOIN pg_roles grantee ON grantee.oid=x.grantee WHERE n.nspname=ANY(%s) ORDER BY 1,2,3,4,5,6",(list(schemas),)),"acl"),relations)
   return Inventory(schemas,relations,digest([r.key for r in relations]),digest(acl))
  finally: c.close()
 def preflight(conn):

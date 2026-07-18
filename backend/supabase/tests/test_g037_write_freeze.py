@@ -53,23 +53,24 @@ class FenceTests(unittest.TestCase):
   branded_capture=freeze.verified_recovery_capture(capture_evidence)
   with self.assertRaises(TypeError): branded_capture["short_urls_row_count"]=0
  def test_relation_acl_policy_rejects_unsafe_rows_before_freeze_callback(self):
-  accepted=(("public",3,"owner","SELECT",False),("auth",1,"supabase_auth_admin","MAINTAIN",False),("public",3,"authenticated","SELECT",False))
-  self.assertEqual(freeze.validate_table_acl_rows(accepted),accepted)
+  i=inv()
+  accepted=(("public",3,"owner","owner","SELECT",True),("auth",1,"supabase_auth_admin","supabase_auth_admin","MAINTAIN",False),("public",3,"owner","authenticated","SELECT",False))
+  self.assertEqual(freeze.validate_table_acl_rows(accepted,i.relations),accepted)
   for unsafe in (
-   ("public",3,"PUBLIC","SELECT",False),
-   ("public",3,"PUBLIC","ALL",False),
-   ("public",3,"owner","SELECT",True),
-   ("shortener_private",8,"authenticated","SELECT",False),
-   ("public",3,"owner","UNKNOWN",False),
-   ("public",3,"PUBLIC","MAINTAIN",False),
-   ("public",3,"owner","MAINTAIN",True),
+   ("public",3,"owner","other","SELECT",True),
+   ("public",3,"other","owner","SELECT",True),
+   ("public",3,"owner","PUBLIC","SELECT",False),
+   ("public",3,"owner","PUBLIC","SELECT",True),
+   ("public",3,"owner","service_role","SELECT",True),
+   ("public",3,"owner","owner","UNKNOWN",False),
+   ("shortener_private",8,"owner","authenticated","SELECT",False),
+   ("public",999,"owner","owner","SELECT",False),
   ):
    with self.subTest(unsafe=unsafe),self.assertRaisesRegex(freeze.FreezeError,"relation ACL"):
-    freeze.validate_table_acl_rows((unsafe,))
+    freeze.validate_table_acl_rows((unsafe,),i.relations)
   callback=[]
   def unsafe_inventory(_):
-   freeze.validate_table_acl_rows((("public",3,"PUBLIC","SELECT",False),))
-  i=inv()
+   freeze.validate_table_acl_rows((("public",3,"owner","PUBLIC","SELECT",False),),i.relations)
   with patch.object(freeze,"_root_source",return_value=(Path("."),"a"*40,"s"*64,"t"*64)),patch.object(freeze,"validate_operator_assertion"),patch.object(freeze,"_inv",side_effect=unsafe_inventory):
    with self.assertRaises(freeze.FreezeError):
     freeze.run(Conn(),origin="https://x",freeze_id="freeze-0001",expected=i,assertion={"expires_at":9999999999},callback=lambda *_:callback.append(True),provisional_writer=lambda p:p,precommit_receipt_writer=precommit,final_receipt_writer=lambda _:None,terminal_assert=terminal)

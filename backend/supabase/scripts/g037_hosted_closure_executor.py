@@ -9,7 +9,7 @@ import argparse, json, os, re, subprocess, sys, time
 from pathlib import Path
 from g037_hosted_closure_contract import BASELINE_PAIRS, MANIFEST_SHA256, MODES, SELF_WRAPPING, ContractError, canonical_bytes, digest, no_duplicate_object, repository_root, validate_sources
 from g035_hosted_recovery_contract import SHORT_URL_SELECTION_SPEC, SHORT_URLS_CATALOG, canonical_sha256
-from g037_write_freeze import CONTROLLER_PUBLIC_KEY_SHA256, VerifiedControllerCapability, VerifiedRecoveryCapture, validate_table_acl_rows
+from g037_write_freeze import CONTROLLER_PUBLIC_KEY_SHA256, Relation, VerifiedControllerCapability, VerifiedRecoveryCapture, validate_table_acl_rows
 from g037_remediation_authorization import ExecutionAuthorizationEnvelope, authorize_exact_baseline, POLICY
 from preflight_g034_hosted_migration_closure import approval_body_contract, approval_catalog_contract
 
@@ -167,13 +167,14 @@ def _stable_projection_roots(cur):
     schemas=("public","auth","storage","shortener_private","ocr_private","provider_budget_private","privacy_retention")
     catalog_rows=tuple(tuple(map(str,row)) for row in q(cur,"SELECT n.nspname,c.relname,c.relkind,pg_get_userbyid(c.relowner) FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=ANY(%s) AND c.relkind IN ('r','p') ORDER BY 1,2,3,4",(list(schemas),)))
     raw_acl_rows=tuple(q(cur,"SELECT n.nspname,c.relname,COALESCE(grantor.rolname,'PUBLIC'),COALESCE(grantee.rolname,'PUBLIC'),x.privilege_type,x.is_grantable FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace CROSS JOIN LATERAL aclexplode(COALESCE(c.relacl,acldefault('r',c.relowner))) x LEFT JOIN pg_catalog.pg_roles grantor ON grantor.oid=x.grantor LEFT JOIN pg_catalog.pg_roles grantee ON grantee.oid=x.grantee WHERE n.nspname=ANY(%s) ORDER BY 1,2,3,4,5,6",(list(schemas),)))
+    if not catalog_rows or catalog_rows!=tuple(sorted(catalog_rows)) or len(catalog_rows)!=len(set(catalog_rows)):
+        raise ClosureError("terminal catalog projection noncanonical")
+    relations=tuple(Relation(schema,name,index,"",owner) for index,(schema,name,_,owner) in enumerate(catalog_rows))
     try:
-        validate_table_acl_rows(raw_acl_rows,terminal=True)
+        validate_table_acl_rows(raw_acl_rows,relations,terminal=True)
     except Exception as exc:
         raise ClosureError("terminal relation ACL safety policy failed") from exc
     acl_rows=tuple(tuple(map(str,row)) for row in raw_acl_rows)
-    if not catalog_rows or catalog_rows!=tuple(sorted(catalog_rows)) or len(catalog_rows)!=len(set(catalog_rows)):
-        raise ClosureError("terminal catalog projection noncanonical")
     if acl_rows!=tuple(sorted(acl_rows)) or len(acl_rows)!=len(set(acl_rows)):
         raise ClosureError("terminal acl projection noncanonical")
     return digest(catalog_rows),digest(acl_rows)
