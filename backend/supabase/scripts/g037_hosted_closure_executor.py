@@ -5,9 +5,9 @@ Credentials are obtained only by environment *name*.  Receipts contain only
 hashes/counts/booleans; SQL, DSNs and operator identity never leave process memory.
 """
 from __future__ import annotations
-import argparse, json, os, re, subprocess, sys, time
+import argparse, hashlib, json, os, re, subprocess, sys, tempfile, time
 from pathlib import Path
-from g037_hosted_closure_contract import BASELINE_PAIRS, MANIFEST_SHA256, MODES, SELF_WRAPPING, ContractError, canonical_bytes, digest, no_duplicate_object, repository_root, validate_sources
+from g037_hosted_closure_contract import BASELINE_PAIRS, MANIFEST_SHA256, MODES, ROLE_TRANSFORMS, ROLE_VALIDATION_BLOCK, ROLE_VALIDATION_BLOCK_SHA256, SELF_WRAPPING, ContractError, canonical_bytes, digest, no_duplicate_object, repository_root, terminal_spec, validate_sources
 from g035_hosted_recovery_contract import SHORT_URL_SELECTION_SPEC, SHORT_URLS_CATALOG, canonical_sha256
 from g037_write_freeze import CONTROLLER_PUBLIC_KEY_SHA256, Relation, VerifiedControllerCapability, VerifiedRecoveryCapture, validate_table_acl_rows
 from g037_remediation_authorization import ExecutionAuthorizationEnvelope, authorize_exact_baseline, POLICY
@@ -104,14 +104,26 @@ def source_sql(root,item):
     m=re.fullmatch(_WRAPPER_PREAMBLE+rb"BEGIN\s*;(.*?)COMMIT\s*;\s*",raw,re.S|re.I)
     if not m or re.search(rb"(?im)^\s*(begin|commit|rollback)\s*;",m.group(1)): raise ClosureError("self-wrapper drift")
     return m.group(1)
-def vectors(root,item):
-    tool=root/"backend/supabase/scripts/g037_supabase_statement_vector.mjs"; source=root/item.path
-    result=subprocess.run(["node",str(tool),"--source",str(source),"--version",item.version,"--sha256",item.sha256,"--size",str(source.stat().st_size)],capture_output=True,text=True,timeout=60)
+def vectors(root,item, *, raw=None, source_sha256=None):
+    tool=root/"backend/supabase/scripts/g037_supabase_statement_vector.mjs"
+    temporary = None
+    if raw is None:
+        source=root/item.path
+        source_sha256=item.sha256
+    else:
+        temporary=tempfile.NamedTemporaryFile(prefix=f"{item.version}_managed_role_", suffix=".sql", delete=False)
+        temporary.write(raw); temporary.close()
+        source=Path(temporary.name)
+    try:
+        result=subprocess.run(["node",str(tool),"--source",str(source),"--version",item.version,"--sha256",source_sha256,"--size",str(source.stat().st_size)],capture_output=True,text=True,timeout=60)
+        source_size=source.stat().st_size
+    finally:
+        if temporary is not None: Path(temporary.name).unlink(missing_ok=True)
     if result.returncode: raise ClosureError("official parser unavailable")
     try: data=json.loads(result.stdout,object_pairs_hook=no_duplicate_object)
     except Exception as exc: raise ClosureError("parser vector invalid") from exc
     upstream={"commit":"6d4c19870ed213ba7f682f117d0345c8a40bfa94","version":"v2.109.1","token":{"path":"apps/cli-go/pkg/parser/token.go","blob":"db008434246be335b9f7abaf0cb66a99a2b40378"},"state":{"path":"apps/cli-go/pkg/parser/state.go","blob":"47775390d1731c0ad29e10b20fb2fe16c8cfcadb"}}
-    if set(data)!={"schema","upstream","version","source_sha256","source_size","statements"} or data["schema"]!="g037-supabase-statement-vector-v1" or data["upstream"]!=upstream or data["version"]!=item.version or data["source_sha256"]!=item.sha256 or data["source_size"]!=source.stat().st_size or not isinstance(data["statements"],list) or not data["statements"] or any(not isinstance(x,str) or not x.strip() for x in data["statements"]): raise ClosureError("parser vector mismatch")
+    if set(data)!={"schema","upstream","version","source_sha256","source_size","statements"} or data["schema"]!="g037-supabase-statement-vector-v1" or data["upstream"]!=upstream or data["version"]!=item.version or data["source_sha256"]!=source_sha256 or data["source_size"]!=source_size or not isinstance(data["statements"],list) or not data["statements"] or any(not isinstance(x,str) or not x.strip() for x in data["statements"]): raise ClosureError("parser vector mismatch")
     full=tuple(data["statements"])
     controls=lambda statement: bool(re.match(r"(?is)^\s*(begin|commit|rollback)\b",statement))
     if item.version not in SELF_WRAPPING:
@@ -119,11 +131,115 @@ def vectors(root,item):
         return full,full
     if len(full)<3 or not re.fullmatch(_WRAPPER_PREAMBLE.decode("ascii")+r"begin\s*",full[0],re.S|re.I) or not re.fullmatch(r"(?is)\s*commit\s*",full[-1]) or any(controls(statement) for statement in full[1:-1]): raise ClosureError("self-wrapper vector drift")
     return full,full[1:-1]
+def transformed_vectors(root, item):
+    spec=ROLE_TRANSFORMS.get(item.version)
+    if spec is None:
+        return vectors(root,item)
+    raw=(root/item.path).read_bytes()
+    blocks=list(re.finditer(rb"DO\s+\$role\$.*?\$role\$;",raw,re.S))
+    if (item.sha256 != spec["source_sha256"] or hashlib.sha256(raw).hexdigest()!=spec["source_sha256"]
+        or len(blocks)!=1 or hashlib.sha256(blocks[0].group()).hexdigest()!=spec["block_sha256"]
+        or hashlib.sha256(ROLE_VALIDATION_BLOCK).hexdigest()!=ROLE_VALIDATION_BLOCK_SHA256):
+        raise ClosureError("managed role transform source drift")
+    transformed=raw[:blocks[0].start()]+ROLE_VALIDATION_BLOCK+raw[blocks[0].end():]
+    if hashlib.sha256(transformed).hexdigest()!=spec["transformed_source_sha256"]:
+        raise ClosureError("managed role transform digest drift")
+    full,inner=vectors(root,item,raw=transformed,source_sha256=spec["transformed_source_sha256"])
+    if not spec["transformed_vector_sha256"] or digest(full)!=spec["transformed_vector_sha256"]:
+        raise ClosureError("managed role transform vector drift")
+    forbidden=re.compile(r"(?is)\b(?:create|alter)\s+role\b|\bset\s+role\b")
+    if any(forbidden.search(statement) for statement in inner):
+        raise ClosureError("managed role transform execution privilege drift")
+    return full,inner
+def validate_managed_role_coverage(manifest):
+    selected={item.version for item in manifest.migrations if item.version in ROLE_TRANSFORMS}
+    if selected and selected != set(ROLE_TRANSFORMS):
+        raise ClosureError("managed role transform coverage drift")
+    return {item.version: item for item in manifest.migrations if item.version in ROLE_TRANSFORMS}
+def _managed_role_catalog_assert(cur):
+    rows=q(cur,"""
+        SELECT r.rolsuper,r.rolinherit,r.rolcreaterole,r.rolcreatedb,r.rolreplication,
+               r.rolbypassrls,r.rolcanlogin,
+               NOT EXISTS (SELECT 1 FROM pg_catalog.pg_auth_members m WHERE m.member=r.oid),
+               NOT EXISTS (SELECT 1 FROM pg_catalog.pg_auth_members m WHERE m.roleid=r.oid)
+          FROM pg_catalog.pg_roles r WHERE r.rolname='privacy_workflow_owner'
+    """)
+    if rows != [(False,False,False,False,False,False,False,True,True)]:
+        raise ClosureError("managed role catalog contract drift")
+    objects=q(cur,"""
+        SELECT n.nspname,pg_catalog.pg_get_userbyid(n.nspowner),
+               c.relname,pg_catalog.pg_get_userbyid(c.relowner),c.relrowsecurity,c.relforcerowsecurity,
+               p.oid::regprocedure::text,pg_catalog.pg_get_userbyid(p.proowner),p.prosecdef,
+               COALESCE(array_to_string(p.proconfig,','),'')
+          FROM pg_catalog.pg_namespace n
+          LEFT JOIN pg_catalog.pg_class c ON c.relnamespace=n.oid
+            AND c.relname='tzuyang_address_evidence_admin_approval_receipts'
+          LEFT JOIN pg_catalog.pg_proc p ON p.oid IN (
+            'privacy_retention.reject_tzuyang_address_evidence_admin_approval_receipt_mutation()'::regprocedure,
+            'public.consume_tzuyang_address_evidence_admin_approval(uuid,text,text,uuid,text,text,text,timestamp with time zone,timestamp with time zone)'::regprocedure)
+         WHERE n.nspname='privacy_retention'
+         ORDER BY p.oid::regprocedure::text
+    """)
+    expected=(
+        ("privacy_retention","privacy_workflow_owner","tzuyang_address_evidence_admin_approval_receipts","privacy_workflow_owner",True,True,"privacy_retention.reject_tzuyang_address_evidence_admin_approval_receipt_mutation()","privacy_workflow_owner",False,"search_path="),
+        ("privacy_retention","privacy_workflow_owner","tzuyang_address_evidence_admin_approval_receipts","privacy_workflow_owner",True,True,"public.consume_tzuyang_address_evidence_admin_approval(uuid,text,text,uuid,text,text,text,timestamp with time zone,timestamp with time zone)","privacy_workflow_owner",True,"search_path="),
+    )
+    if tuple(tuple(row) for row in objects) != expected:
+        raise ClosureError("managed ownership catalog contract drift")
+def _g014_public_rpc_acl_assert(cur):
+    """Reassert G014's persisted allowlist against effective public RPC privileges."""
+    rows=q(cur,"""
+        SELECT
+          NOT EXISTS (
+            SELECT 1
+            FROM pg_catalog.pg_proc AS procedure
+            JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid=procedure.pronamespace
+            CROSS JOIN (VALUES ('anon'::name),('authenticated'::name),('service_role'::name)) AS role_matrix(grantee)
+            WHERE namespace.nspname='public'
+              AND pg_catalog.has_function_privilege(role_matrix.grantee,procedure.oid,'EXECUTE')
+                IS DISTINCT FROM EXISTS (
+                  SELECT 1
+                  FROM privacy_retention.g014_public_rpc_allowlist AS allowed
+                  WHERE allowed.function_schema=namespace.nspname
+                    AND allowed.function_name=procedure.proname
+                    AND allowed.identity_arguments=procedure.proargtypes::text
+                    AND allowed.grantee=role_matrix.grantee
+                )
+          )
+          AND NOT EXISTS (
+            SELECT 1
+            FROM pg_catalog.pg_proc AS procedure
+            JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid=procedure.pronamespace
+            CROSS JOIN LATERAL pg_catalog.aclexplode(
+              COALESCE(procedure.proacl,pg_catalog.acldefault('f',procedure.proowner))
+            ) AS acl
+            WHERE namespace.nspname='public'
+              AND acl.grantee=0
+              AND acl.privilege_type='EXECUTE'
+          ),
+          pg_catalog.has_function_privilege(
+            'service_role',
+            'public.consume_tzuyang_address_evidence_admin_approval(uuid,text,text,uuid,text,text,text,timestamp with time zone,timestamp with time zone)'::regprocedure,
+            'EXECUTE'
+          )
+          AND NOT pg_catalog.has_function_privilege(
+            'anon',
+            'public.consume_tzuyang_address_evidence_admin_approval(uuid,text,text,uuid,text,text,text,timestamp with time zone,timestamp with time zone)'::regprocedure,
+            'EXECUTE'
+          )
+          AND NOT pg_catalog.has_function_privilege(
+            'authenticated',
+            'public.consume_tzuyang_address_evidence_admin_approval(uuid,text,text,uuid,text,text,text,timestamp with time zone,timestamp with time zone)'::regprocedure,
+            'EXECUTE'
+          )
+    """)
+    if rows != [(True,True)]:
+        raise ClosureError("G014 public RPC ACL contract drift")
 def _source_binding(root, manifest):
     return (
         root_commit(root),
         digest([(item.path, item.sha256) for item in manifest.migrations]),
-        digest({"manifest": MANIFEST_SHA256, "migrations": [(item.version, item.sha256) for item in manifest.migrations], "g014_terminal": "20260713002400"}),
+        terminal_spec(manifest),
     )
 def validate_controller_capability(capability, *, root, manifest, freeze_id, relation_root, acl_root, deadline):
     """Bind the controller-verified capability to this immutable source tree."""
@@ -162,6 +278,8 @@ def _terminal_assert(cur, manifest, expected_vectors):
     if set(actual)!=set(version for version,_ in expected) or any(actual.get(version)!=statements for version,statements in expected_vectors.items()):
         raise ClosureError("terminal vector mismatch")
     retirement_gate(cur)
+    _managed_role_catalog_assert(cur)
+    _g014_public_rpc_acl_assert(cur)
     return rows
 def _stable_projection_roots(cur):
     schemas=("public","auth","storage","shortener_private","ocr_private","provider_budget_private","privacy_retention")
@@ -262,15 +380,20 @@ def remediate_short_url_duplicates(cur, binding):
     return {**evidence,"remediation_sha256":canonical_sha256(evidence)}
 
 def _execute_closure(cur, root, manifest, remediation):
+    transformed=validate_managed_role_coverage(manifest)
+    for item in transformed.values():
+        source_sql(root,item)
+        transformed_vectors(root,item)
     remediation_evidence=remediate_short_url_duplicates(cur,remediation)
     expected_vectors={}
     for item in manifest.migrations:
         source_sql(root,item)
-        full,inner=vectors(root,item)
+        original_full,_=vectors(root,item)
+        _,inner=transformed_vectors(root,item)
         _prepare_documents_policy_compatibility(cur,item)
         for statement in inner: cur.execute(statement)
-        cur.execute("INSERT INTO supabase_migrations.schema_migrations(version,name,statements) VALUES (%s,%s,%s)",(item.version,item.name,list(full)))
-        expected_vectors[item.version]=full
+        cur.execute("INSERT INTO supabase_migrations.schema_migrations(version,name,statements) VALUES (%s,%s,%s)",(item.version,item.name,list(original_full)))
+        expected_vectors[item.version]=original_full
     _terminal_assert(cur,manifest,expected_vectors)
     return remediation_evidence
 def rehearse_cursor(cur, capability, *, root, manifest, freeze_id, relation_root, acl_root, deadline, remediation):

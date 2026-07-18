@@ -9,7 +9,7 @@ import g037_hosted_closure_executor as closure
 import g037_managed_recovery as recovery
 import g037_write_freeze as freeze
 from g035_hosted_recovery_contract import ContractError
-from g037_hosted_closure_contract import AUTHORIZATION_PUBLIC_KEY_PEM, canonical_bytes, digest, no_duplicate_object, repository_root, validate_operator_assertion, validate_sources
+from g037_hosted_closure_contract import AUTHORIZATION_PUBLIC_KEY_PEM, canonical_bytes, digest, no_duplicate_object, repository_root, terminal_spec as build_terminal_spec, validate_operator_assertion, validate_sources
 import g037_remediation_authorization as remediation_authorization
 
 SCHEMA="g037-production-controller-v1"
@@ -68,7 +68,8 @@ def _remediation_custody(path,label):
  return path
 
 def _execution_bindings(args, assertion, recipient_fingerprint, assertion_sha256):
- _,head,source_root,terminal_spec=freeze._root_source()
+ _,head,source_root,_=freeze._root_source()
+ terminal_spec=build_terminal_spec(validate_sources(repository_root(Path(__file__).resolve())))
  return {
   "purpose":remediation_authorization.PURPOSE,"policy":remediation_authorization.POLICY,
   "origin":recovery.origin(args.origin),"project":_project_ref(recovery.origin(args.origin)),
