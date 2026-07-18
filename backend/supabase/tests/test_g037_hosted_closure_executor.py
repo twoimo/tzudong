@@ -297,6 +297,17 @@ class G037ExecutorTests(unittest.TestCase):
    ("SELECT pg_catalog.set_config('statement_timeout', %s, true)",(f"{remaining_ms}ms",)),
    ("SELECT pg_catalog.pg_advisory_xact_lock(37037)",()),
   ])
+ def test_raw_migration_percent_is_not_parsed_as_a_driver_placeholder(self):
+  class Cursor:
+   def __init__(self): self.calls=[]
+   def execute(self,*args): self.calls.append(args)
+  cursor=Cursor()
+  with patch.object(e.time,"time",return_value=100.0),patch.object(e.time,"monotonic",return_value=10.0):
+   e._execute_before_deadline(cursor,"SELECT 'value % required'",deadline=(105.0,15.0))
+  self.assertEqual(cursor.calls,[
+   ("SELECT pg_catalog.set_config('statement_timeout', %s, true)",("5000ms",)),
+   ("SELECT 'value % required'",),
+  ])
  def test_run_uses_one_cursor_for_read_only_catalog_and_readback(self):
   class Cursor:
    description=object()
