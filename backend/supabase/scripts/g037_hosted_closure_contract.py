@@ -22,37 +22,393 @@ BASELINE_PAIRS = (
     ("20260525143908","create_youtube_kpi_snapshots"),("20260526083932","add_youtube_channel_growth_snapshot_deltas"),
     ("20260531084217","harden_public_api_grants_and_rpcs"),("20260531084516","tighten_public_table_data_api_grants"),
 )
-ROLE_VALIDATION_BLOCK = b"""DO $role$
+# PostgreSQL 17 hosted CREATEROLE protocol.  Every source mutation is an
+# ordered, source-pinned byte replacement; the ledger retains original vectors.
+MANAGED_ROLES = (
+    "privacy_workflow_owner",
+    "privacy_retention_operator_approver",
+    "privacy_retention_legal_approver",
+    "privacy_retention_activation_operator",
+)
+ROLE_FLAGS = (False, False, False, False, False, False, False)
+# role, member, grantor, admin_option, inherit_option, set_option
+TRANSIENT_MANAGED_ROWS = (
+    ("privacy_workflow_owner", "postgres", "postgres", False, True, True),
+    ("privacy_workflow_owner", "postgres", "supabase_admin", True, False, False),
+    ("privacy_retention_operator_approver", "postgres", "supabase_admin", True, False, False),
+    ("privacy_retention_legal_approver", "postgres", "supabase_admin", True, False, False),
+    ("privacy_retention_activation_operator", "postgres", "supabase_admin", True, False, False),
+)
+TERMINAL_MANAGED_ROWS = TRANSIENT_MANAGED_ROWS[1:]
+# The only admissible hosted policy prestate besides absence.
+DOCUMENTS_POLICY_COMPATIBILITY_VERSION = "20260627080000"
+DOCUMENTS_POLICY_COMPATIBILITY_PRESTATE = (
+    ("documents_delete_own", "DELETE", ("PUBLIC",), True, "(auth.uid() = user_id)", None),
+    ("documents_insert_own", "INSERT", ("PUBLIC",), True, None, "(auth.uid() = user_id)"),
+    ("documents_select_own", "SELECT", ("PUBLIC",), True, "(auth.uid() = user_id)", None),
+    ("documents_update_own", "UPDATE", ("PUBLIC",), True, "(auth.uid() = user_id)", "(auth.uid() = user_id)"),
+)
+ROLE_PROTOCOL_VERSION = "g037-pg17-createrole-splice-v3"
+
+_WORKFLOW_OWNER_SQL = b"""DO $g037_workflow_owner$
 DECLARE
-  v_role record;
+  v_expected boolean;
 BEGIN
-  SELECT role_row.oid, role_row.rolsuper, role_row.rolinherit, role_row.rolcreaterole,
-         role_row.rolcreatedb, role_row.rolreplication, role_row.rolbypassrls, role_row.rolcanlogin
-    INTO v_role FROM pg_catalog.pg_roles AS role_row
-   WHERE role_row.rolname = 'privacy_workflow_owner';
-  IF NOT FOUND OR v_role.rolsuper OR v_role.rolinherit OR v_role.rolcreaterole
-     OR v_role.rolcreatedb OR v_role.rolreplication OR v_role.rolbypassrls OR v_role.rolcanlogin
-     OR EXISTS (SELECT 1 FROM pg_catalog.pg_auth_members AS membership
-                WHERE membership.member = v_role.oid OR membership.roleid = v_role.oid) THEN
-    RAISE EXCEPTION 'privacy_workflow_owner role contract is incompatible';
+  IF EXISTS (SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = 'privacy_workflow_owner') THEN
+    RAISE EXCEPTION 'privacy_workflow_owner must be absent before G037 create';
+  END IF;
+  CREATE ROLE privacy_workflow_owner NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN NOREPLICATION NOBYPASSRLS;
+  SELECT NOT EXISTS (
+           (SELECT roleid::regrole::text, member::regrole::text, grantor::regrole::text, admin_option, inherit_option, set_option
+              FROM pg_catalog.pg_auth_members
+             WHERE roleid='privacy_workflow_owner'::regrole OR member='privacy_workflow_owner'::regrole)
+           EXCEPT ALL
+           (VALUES ('privacy_workflow_owner','postgres','supabase_admin',true,false,false))
+         )
+     AND NOT EXISTS (
+           (VALUES ('privacy_workflow_owner','postgres','supabase_admin',true,false,false))
+           EXCEPT ALL
+           (SELECT roleid::regrole::text, member::regrole::text, grantor::regrole::text, admin_option, inherit_option, set_option
+              FROM pg_catalog.pg_auth_members
+             WHERE roleid='privacy_workflow_owner'::regrole OR member='privacy_workflow_owner'::regrole)
+         )
+     AND (SELECT pg_catalog.count(*) FROM pg_catalog.pg_auth_members WHERE roleid='privacy_workflow_owner'::regrole OR member='privacy_workflow_owner'::regrole)=1
+    INTO v_expected;
+  IF NOT v_expected THEN RAISE EXCEPTION 'automatic workflow-owner membership drift'; END IF;
+  GRANT privacy_workflow_owner TO postgres WITH ADMIN FALSE, INHERIT TRUE, SET TRUE GRANTED BY postgres;
+  IF (SELECT pg_catalog.count(*) FROM pg_catalog.pg_auth_members WHERE roleid='privacy_workflow_owner'::regrole OR member='privacy_workflow_owner'::regrole) <> 2
+     OR EXISTS ((SELECT roleid::regrole::text, member::regrole::text, grantor::regrole::text, admin_option, inherit_option, set_option FROM pg_catalog.pg_auth_members WHERE roleid='privacy_workflow_owner'::regrole OR member='privacy_workflow_owner'::regrole)
+               EXCEPT ALL
+               (VALUES ('privacy_workflow_owner','postgres','postgres',false,true,true),('privacy_workflow_owner','postgres','supabase_admin',true,false,false)))
+     OR EXISTS ((VALUES ('privacy_workflow_owner','postgres','postgres',false,true,true),('privacy_workflow_owner','postgres','supabase_admin',true,false,false))
+               EXCEPT ALL
+               (SELECT roleid::regrole::text, member::regrole::text, grantor::regrole::text, admin_option, inherit_option, set_option FROM pg_catalog.pg_auth_members WHERE roleid='privacy_workflow_owner'::regrole OR member='privacy_workflow_owner'::regrole))
+     OR NOT EXISTS (SELECT 1 FROM pg_catalog.pg_roles WHERE rolname='privacy_workflow_owner' AND NOT rolsuper AND NOT rolinherit AND NOT rolcreaterole AND NOT rolcreatedb AND NOT rolreplication AND NOT rolbypassrls AND NOT rolcanlogin) THEN
+    RAISE EXCEPTION 'workflow-owner self-grant contract drift';
   END IF;
 END;
-$role$;"""
-ROLE_VALIDATION_BLOCK_SHA256 = "6cdad411220dc353b4ce1e12dcfd1ee75e3c3d9a612fc0fe23e78455cce165f2"
-ROLE_TRANSFORMS = {
-    "20260713000450": {
-        "source_sha256": "f5d513aba329b3b1a6e12a76d8947f43c247257a379500d7ed5a45486f1c364a",
-        "block_sha256": "ae10ec3a522a2dad1397dc1cb6b1623acdb8b745e7e52d82bb461725170d2a4b",
-        "transformed_source_sha256": "7a985021891930d26b155f8d19362d69cadbd1898b6037832d6da9b9f34a7d7d",
-        "transformed_vector_sha256": "a69daaaa4e91f37c632128dc7f3f6af84460bcf2e8ee9f136bdee8b465cea818",
-    },
-    "20260713002000": {
-        "source_sha256": "094c4ae71ae6c85f0792f72f5941dd8d723104d59af057a3cf6b5667d4740f7e",
-        "block_sha256": "722c208dcc6b50ae1eae9bca8386f3da6a843fdfeb42ec599b4357eded687e84",
-        "transformed_source_sha256": "fb90166cc715becd344bfa065bf31a05c8c09ba6cb22d7714013473dcd6f59f8",
-        "transformed_vector_sha256": "f54a761666a75b3746f3f4161470b4452173ba700d58436d5db8f78d073e3f43",
-    },
-}
+$g037_workflow_owner$;"""
+
+_RETENTION_ROLES_SQL = b"""DO $g037_retention_roles$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = ANY (ARRAY['privacy_retention_operator_approver'::name,'privacy_retention_legal_approver'::name,'privacy_retention_activation_operator'::name])) THEN
+    RAISE EXCEPTION 'G014 retention roles must all be absent before create';
+  END IF;
+  CREATE ROLE privacy_retention_operator_approver NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN NOREPLICATION NOBYPASSRLS;
+  CREATE ROLE privacy_retention_legal_approver NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN NOREPLICATION NOBYPASSRLS;
+  CREATE ROLE privacy_retention_activation_operator NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN NOREPLICATION NOBYPASSRLS;
+  IF (SELECT pg_catalog.count(*) FROM pg_catalog.pg_auth_members m JOIN pg_catalog.pg_roles r ON r.oid=m.roleid WHERE r.rolname = ANY (ARRAY['privacy_retention_operator_approver','privacy_retention_legal_approver','privacy_retention_activation_operator']) OR m.member IN (SELECT oid FROM pg_catalog.pg_roles WHERE rolname = ANY (ARRAY['privacy_retention_operator_approver','privacy_retention_legal_approver','privacy_retention_activation_operator']))) <> 3
+     OR EXISTS (SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = ANY (ARRAY['privacy_retention_operator_approver','privacy_retention_legal_approver','privacy_retention_activation_operator']) AND (rolsuper OR rolinherit OR rolcreaterole OR rolcreatedb OR rolreplication OR rolbypassrls OR rolcanlogin))
+     OR EXISTS ((SELECT roleid::regrole::text, member::regrole::text, grantor::regrole::text, admin_option, inherit_option, set_option FROM pg_catalog.pg_auth_members WHERE roleid IN (SELECT oid FROM pg_catalog.pg_roles WHERE rolname = ANY (ARRAY['privacy_retention_operator_approver','privacy_retention_legal_approver','privacy_retention_activation_operator'])) OR member IN (SELECT oid FROM pg_catalog.pg_roles WHERE rolname = ANY (ARRAY['privacy_retention_operator_approver','privacy_retention_legal_approver','privacy_retention_activation_operator'])))
+               EXCEPT ALL
+               (VALUES ('privacy_retention_operator_approver','postgres','supabase_admin',true,false,false),('privacy_retention_legal_approver','postgres','supabase_admin',true,false,false),('privacy_retention_activation_operator','postgres','supabase_admin',true,false,false)))
+     OR EXISTS ((VALUES ('privacy_retention_operator_approver','postgres','supabase_admin',true,false,false),('privacy_retention_legal_approver','postgres','supabase_admin',true,false,false),('privacy_retention_activation_operator','postgres','supabase_admin',true,false,false))
+               EXCEPT ALL
+               (SELECT roleid::regrole::text, member::regrole::text, grantor::regrole::text, admin_option, inherit_option, set_option FROM pg_catalog.pg_auth_members WHERE roleid IN (SELECT oid FROM pg_catalog.pg_roles WHERE rolname = ANY (ARRAY['privacy_retention_operator_approver','privacy_retention_legal_approver','privacy_retention_activation_operator'])) OR member IN (SELECT oid FROM pg_catalog.pg_roles WHERE rolname = ANY (ARRAY['privacy_retention_operator_approver','privacy_retention_legal_approver','privacy_retention_activation_operator'])))) THEN
+    RAISE EXCEPTION 'retention approval role contract drift';
+  END IF;
+END;
+$g037_retention_roles$;"""
+
+_ROLE_02000_SQL = b"""DO $g037_inflight_owner$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_catalog.pg_roles WHERE rolname='privacy_workflow_owner' AND NOT rolsuper AND NOT rolinherit AND NOT rolcreaterole AND NOT rolcreatedb AND NOT rolreplication AND NOT rolbypassrls AND NOT rolcanlogin)
+     OR (SELECT pg_catalog.count(*) FROM pg_catalog.pg_auth_members WHERE roleid='privacy_workflow_owner'::regrole OR member='privacy_workflow_owner'::regrole) <> 2
+     OR EXISTS ((SELECT roleid::regrole::text,member::regrole::text,grantor::regrole::text,admin_option,inherit_option,set_option FROM pg_catalog.pg_auth_members WHERE roleid='privacy_workflow_owner'::regrole OR member='privacy_workflow_owner'::regrole) EXCEPT ALL (VALUES ('privacy_workflow_owner','postgres','postgres',false,true,true),('privacy_workflow_owner','postgres','supabase_admin',true,false,false)))
+     OR EXISTS ((VALUES ('privacy_workflow_owner','postgres','postgres',false,true,true),('privacy_workflow_owner','postgres','supabase_admin',true,false,false)) EXCEPT ALL (SELECT roleid::regrole::text,member::regrole::text,grantor::regrole::text,admin_option,inherit_option,set_option FROM pg_catalog.pg_auth_members WHERE roleid='privacy_workflow_owner'::regrole OR member='privacy_workflow_owner'::regrole)) THEN
+    RAISE EXCEPTION 'workflow-owner in-flight contract drift';
+  END IF;
+END;
+$g037_inflight_owner$;"""
+_SCHEMA_OWNER_ASSERTION_SQL = b"""DO $g037_schema$
+BEGIN
+  IF (SELECT pg_catalog.pg_get_userbyid(nspowner) FROM pg_catalog.pg_namespace WHERE nspname='privacy_retention') IS DISTINCT FROM 'privacy_workflow_owner' THEN
+    RAISE EXCEPTION 'privacy_retention schema owner drift';
+  END IF;
+END;
+$g037_schema$;"""
+_TERMINAL_WORKFLOW_ASSERTION_SQL = b"""CREATE OR REPLACE FUNCTION privacy_retention.assert_g014_workflow_owner_contract()
+RETURNS void
+LANGUAGE plpgsql
+SET search_path = ''
+AS $function$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_catalog.pg_roles WHERE rolname='privacy_workflow_owner' AND NOT rolsuper AND NOT rolinherit AND NOT rolcreaterole AND NOT rolcreatedb AND NOT rolreplication AND NOT rolbypassrls AND NOT rolcanlogin)
+     OR (SELECT pg_catalog.count(*) FROM pg_catalog.pg_auth_members WHERE roleid='privacy_workflow_owner'::regrole OR member='privacy_workflow_owner'::regrole) <> 1
+     OR EXISTS ((SELECT roleid::regrole::text,member::regrole::text,grantor::regrole::text,admin_option,inherit_option,set_option FROM pg_catalog.pg_auth_members WHERE roleid='privacy_workflow_owner'::regrole OR member='privacy_workflow_owner'::regrole) EXCEPT ALL (VALUES ('privacy_workflow_owner','postgres','supabase_admin',true,false,false)))
+     OR EXISTS ((VALUES ('privacy_workflow_owner','postgres','supabase_admin',true,false,false)) EXCEPT ALL (SELECT roleid::regrole::text,member::regrole::text,grantor::regrole::text,admin_option,inherit_option,set_option FROM pg_catalog.pg_auth_members WHERE roleid='privacy_workflow_owner'::regrole OR member='privacy_workflow_owner'::regrole)) THEN
+    RAISE EXCEPTION 'workflow-owner terminal contract drift';
+  END IF;
+END;
+$function$;"""
+_INFLIGHT_WORKFLOW_ASSERTION_SQL = b"""  IF NOT EXISTS (SELECT 1 FROM pg_catalog.pg_roles WHERE rolname='privacy_workflow_owner' AND NOT rolsuper AND NOT rolinherit AND NOT rolcreaterole AND NOT rolcreatedb AND NOT rolreplication AND NOT rolbypassrls AND NOT rolcanlogin)
+     OR (SELECT pg_catalog.count(*) FROM pg_catalog.pg_auth_members WHERE roleid='privacy_workflow_owner'::regrole OR member='privacy_workflow_owner'::regrole) <> 2
+     OR EXISTS ((SELECT roleid::regrole::text,member::regrole::text,grantor::regrole::text,admin_option,inherit_option,set_option FROM pg_catalog.pg_auth_members WHERE roleid='privacy_workflow_owner'::regrole OR member='privacy_workflow_owner'::regrole) EXCEPT ALL (VALUES ('privacy_workflow_owner','postgres','postgres',false,true,true),('privacy_workflow_owner','postgres','supabase_admin',true,false,false)))
+     OR EXISTS ((VALUES ('privacy_workflow_owner','postgres','postgres',false,true,true),('privacy_workflow_owner','postgres','supabase_admin',true,false,false)) EXCEPT ALL (SELECT roleid::regrole::text,member::regrole::text,grantor::regrole::text,admin_option,inherit_option,set_option FROM pg_catalog.pg_auth_members WHERE roleid='privacy_workflow_owner'::regrole OR member='privacy_workflow_owner'::regrole)) THEN
+    RAISE EXCEPTION 'workflow-owner in-flight contract drift';
+  END IF;"""
+
+# Immutable source-pinned literal records for the executor preflight verifier.
+ROLE_SPLICES = (
+    {"label": '00450-role', "version": '20260713000450', "old": b"DO $role$\nDECLARE\n  v_role record;\nBEGIN\n  SELECT role_row.oid,\n         role_row.rolsuper,\n         role_row.rolinherit,\n         role_row.rolcreaterole,\n         role_row.rolcreatedb,\n         role_row.rolreplication,\n         role_row.rolbypassrls,\n         role_row.rolcanlogin\n    INTO v_role\n    FROM pg_catalog.pg_roles AS role_row\n   WHERE role_row.rolname = 'privacy_workflow_owner';\n\n  IF NOT FOUND THEN\n    EXECUTE 'CREATE ROLE privacy_workflow_owner NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN NOREPLICATION NOBYPASSRLS';\n  ELSIF v_role.rolsuper\n     OR v_role.rolinherit\n     OR v_role.rolcreaterole\n     OR v_role.rolcreatedb\n     OR v_role.rolreplication\n     OR v_role.rolbypassrls\n     OR v_role.rolcanlogin\n     OR EXISTS (\n       SELECT 1\n         FROM pg_catalog.pg_auth_members AS membership\n        WHERE membership.member = v_role.oid\n           OR membership.roleid = v_role.oid\n     ) THEN\n    RAISE EXCEPTION 'privacy_workflow_owner role attributes are incompatible';\n  END IF;\n\n  EXECUTE 'ALTER ROLE privacy_workflow_owner NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN NOREPLICATION NOBYPASSRLS';\nEND;\n$role$;", "new": _WORKFLOW_OWNER_SQL, "start": 177, "end": 1331, "old_sha256": 'ae10ec3a522a2dad1397dc1cb6b1623acdb8b745e7e52d82bb461725170d2a4b', "new_sha256": 'cddcd72a7f3f81073feaa20fd8d50c21327af9b0485022a276213f3f687d0673'},
+    {"label": '00450-schema', "version": '20260713000450', "old": b'CREATE SCHEMA IF NOT EXISTS privacy_retention;', "new": b'CREATE SCHEMA privacy_retention AUTHORIZATION privacy_workflow_owner;', "start": 1333, "end": 1379, "old_sha256": '1bd3d4ad35ada6c9299b292f44c84742ffebc6d9aa3c2247e6688321d12fee36', "new_sha256": '2f33f20a8154667786b8c8915fe3c0f0fa8da429c58825712ac85938ba6e4023'},
+    {"label": '02000-role', "version": '20260713002000', "old": b"DO $role$\nDECLARE\n  v_role record;\nBEGIN\n  SELECT role_row.oid,\n         role_row.rolsuper,\n         role_row.rolinherit,\n         role_row.rolcreaterole,\n         role_row.rolcreatedb,\n         role_row.rolreplication,\n         role_row.rolbypassrls,\n         role_row.rolcanlogin\n  INTO v_role\n  FROM pg_catalog.pg_roles AS role_row\n  WHERE role_row.rolname = 'privacy_workflow_owner';\n\n  IF NOT FOUND THEN\n    EXECUTE 'CREATE ROLE privacy_workflow_owner NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN NOREPLICATION NOBYPASSRLS';\n  ELSE\n    IF v_role.rolsuper\n       OR v_role.rolinherit\n       OR v_role.rolcreaterole\n       OR v_role.rolcreatedb\n       OR v_role.rolreplication\n       OR v_role.rolbypassrls\n       OR v_role.rolcanlogin THEN\n      RAISE EXCEPTION 'privacy_workflow_owner role attributes are incompatible';\n    END IF;\n\n    IF EXISTS (\n      SELECT 1\n      FROM pg_catalog.pg_auth_members AS membership\n      WHERE membership.member = v_role.oid\n         OR membership.roleid = v_role.oid\n    ) THEN\n      RAISE EXCEPTION 'privacy_workflow_owner has unexpected role membership or effective access';\n    END IF;\n  END IF;\n\n  EXECUTE 'ALTER ROLE privacy_workflow_owner NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN NOREPLICATION NOBYPASSRLS';\nEND;\n$role$;", "new": _ROLE_02000_SQL, "start": 204, "end": 1492, "old_sha256": '722c208dcc6b50ae1eae9bca8386f3da6a843fdfeb42ec599b4357eded687e84', "new_sha256": '0df33b8a8cc87673d3d6c3bcbcc0eab6c17c967a44f33b416eede8e929068df5'},
+    {"label": '02000-schema-pair', "version": '20260713002000', "old": b'CREATE SCHEMA IF NOT EXISTS privacy_retention;\nALTER SCHEMA privacy_retention OWNER TO privacy_workflow_owner;', "new": _SCHEMA_OWNER_ASSERTION_SQL, "start": 1494, "end": 1604, "old_sha256": '5dec71c0bb6729698a174817afe9326871dcc97bc1d0531f0a37074463901765', "new_sha256": 'ec74d291a3093a661d1856c0ef6472f57ca705f4f09612c4784f4fc46bea7844'},
+    {"label": '02000-full-assertion-definition', "version": '20260713002000', "old": b"CREATE OR REPLACE FUNCTION privacy_retention.assert_g014_workflow_owner_contract()\nRETURNS void\nLANGUAGE plpgsql\nSET search_path = ''\nAS $function$\nDECLARE\n  v_role record;\nBEGIN\n  SELECT role_row.oid,\n         role_row.rolsuper,\n         role_row.rolinherit,\n         role_row.rolcreaterole,\n         role_row.rolcreatedb,\n         role_row.rolreplication,\n         role_row.rolbypassrls,\n         role_row.rolcanlogin\n  INTO v_role\n  FROM pg_catalog.pg_roles AS role_row\n  WHERE role_row.rolname = 'privacy_workflow_owner';\n\n  IF NOT FOUND THEN\n    RAISE EXCEPTION 'privacy_workflow_owner is missing';\n  END IF;\n  IF v_role.rolsuper\n     OR v_role.rolinherit\n     OR v_role.rolcreaterole\n     OR v_role.rolcreatedb\n     OR v_role.rolreplication\n     OR v_role.rolbypassrls\n     OR v_role.rolcanlogin THEN\n    RAISE EXCEPTION 'privacy_workflow_owner role attributes are incompatible';\n  END IF;\n  IF EXISTS (\n    SELECT 1\n    FROM pg_catalog.pg_auth_members AS membership\n    WHERE membership.member = v_role.oid\n       OR membership.roleid = v_role.oid\n  ) THEN\n    RAISE EXCEPTION 'privacy_workflow_owner has unexpected role membership or effective access';\n  END IF;\nEND;\n$function$;", "new": _TERMINAL_WORKFLOW_ASSERTION_SQL, "start": 4192, "end": 5379, "old_sha256": '50c4da47bb3f57203ca7bb95ab6d644833c12a98f8f5f84d87a4c50414c3bf9a', "new_sha256": 'ee3641f846a2459db7dcbf6391249ba9223c15172e3da1dab7b432facf1f8003'},
+    {"label": '02000-in-flight-invocation', "version": '20260713002000', "old": b'  PERFORM privacy_retention.assert_g014_workflow_owner_contract();', "new": _INFLIGHT_WORKFLOW_ASSERTION_SQL, "start": 91365, "end": 91431, "old_sha256": '087e6706906fc0c0059fa68ddf0ae11ee1c235bfb2cba9ebd846dad441c21ea9', "new_sha256": '1ff662f7dbb0daf1c5a8f58430a3ae6657857766dcc7a4abe6b13a06c8138902'},
+    {"label": '02400-role-block', "version": '20260713002400', "old": b"DO $g014_retention_approval_roles$\nDECLARE\n  v_role name;\nBEGIN\n  FOREACH v_role IN ARRAY ARRAY[\n    'privacy_retention_operator_approver'::name,\n    'privacy_retention_legal_approver'::name,\n    'privacy_retention_activation_operator'::name\n  ] LOOP\n    IF NOT EXISTS (SELECT 1 FROM pg_catalog.pg_roles AS role_row WHERE role_row.rolname = v_role) THEN\n      EXECUTE pg_catalog.format(\n        'CREATE ROLE %I NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN NOREPLICATION NOBYPASSRLS',\n        v_role\n      );\n    ELSIF EXISTS (\n      SELECT 1\n      FROM pg_catalog.pg_roles AS role_row\n      WHERE role_row.rolname = v_role\n        AND (role_row.rolsuper OR role_row.rolreplication OR role_row.rolbypassrls)\n    ) THEN\n      RAISE EXCEPTION 'G014 retention approval role % has a privileged immutable attribute', v_role;\n    END IF;\n    EXECUTE pg_catalog.format(\n      'ALTER ROLE %I NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN',\n      v_role\n    );\n  END LOOP;\n\n  IF pg_catalog.pg_has_role('service_role', 'privacy_retention_operator_approver', 'member')\n     OR pg_catalog.pg_has_role('service_role', 'privacy_retention_legal_approver', 'member')\n     OR pg_catalog.pg_has_role('service_role', 'privacy_retention_activation_operator', 'member') THEN\n    RAISE EXCEPTION 'service_role cannot hold a G014 retention approval capability';\n  END IF;\nEND;\n$g014_retention_approval_roles$;", "new": _RETENTION_ROLES_SQL, "start": 10317, "end": 11707, "old_sha256": '93afc29f3cf6dc761318c940b86bacd62e66a359e439dd68317c48579610042c', "new_sha256": '46c5fc6281d033cca7988609ebcce8ab4ca625b4609abb4d993adf091b10ae87'},
+)
+ROLE_SPLICE_GROUPS = (
+    {"version": '20260713000450', "source_sha256": 'f5d513aba329b3b1a6e12a76d8947f43c247257a379500d7ed5a45486f1c364a', "transformed_source_sha256": '5b59ade5e8a2b50fc3ebbeadf5b9318666b4e7ebc0eeb6c921154b38555b2b0d', "original_vector_sha256": '24d10cdb1f74b3eaeee84f107f72ef92fccbfa080e6d872a52519cd1e3d108fe', "transformed_vector_sha256": '4472be023ae645bef51b5870c1bd1fc623764d721a3f2741b449d51df97326c8'},
+    {"version": '20260713002000', "source_sha256": '094c4ae71ae6c85f0792f72f5941dd8d723104d59af057a3cf6b5667d4740f7e', "transformed_source_sha256": 'e5042cd05c945a054c362858e1fe3e8530697fb3a28d07ade7126659f65339ea', "original_vector_sha256": 'f4634ab7071a61c24251cf235ea6dee03ba85fbbd4d5d7dac0b135c728881c64', "transformed_vector_sha256": '2e50291e81377831ce8fabb23b2057ca99e3cc013f932df233bff1f7abad2963'},
+    {"version": '20260713002400', "source_sha256": '3b89edc7ffe96a770d1f537267546c6229c823fc3c2d9b4c036ff008ca7c0b94', "transformed_source_sha256": '8853afd6407705128b0ad7c163a8e40eac7f98700a8f21f8c1a68db36315c7e4', "original_vector_sha256": 'dc72dca4154077e2e1c69ea9f85ca5a0e0d105af121daf1cca5f0253dcd162ad', "transformed_vector_sha256": '59759732c2a5bd9138ebd1f9b5445e87afadcd2eaf7ce0847385b728360b063b'},
+)
+ROLE_PROTOCOL_EPILOGUE = b"""DO $g037_epilogue$
+BEGIN
+  IF EXISTS (
+       (SELECT roleid::regrole::text,member::regrole::text,grantor::regrole::text,admin_option,inherit_option,set_option
+          FROM pg_catalog.pg_auth_members
+         WHERE roleid IN (SELECT oid FROM pg_catalog.pg_roles WHERE rolname = ANY (ARRAY['privacy_workflow_owner','privacy_retention_operator_approver','privacy_retention_legal_approver','privacy_retention_activation_operator']))
+            OR member IN (SELECT oid FROM pg_catalog.pg_roles WHERE rolname = ANY (ARRAY['privacy_workflow_owner','privacy_retention_operator_approver','privacy_retention_legal_approver','privacy_retention_activation_operator']))
+       )
+       EXCEPT ALL
+       (VALUES
+         ('privacy_workflow_owner','postgres','postgres',false,true,true),
+         ('privacy_workflow_owner','postgres','supabase_admin',true,false,false),
+         ('privacy_retention_operator_approver','postgres','supabase_admin',true,false,false),
+         ('privacy_retention_legal_approver','postgres','supabase_admin',true,false,false),
+         ('privacy_retention_activation_operator','postgres','supabase_admin',true,false,false)
+       )
+     )
+     OR EXISTS (
+       (VALUES
+         ('privacy_workflow_owner','postgres','postgres',false,true,true),
+         ('privacy_workflow_owner','postgres','supabase_admin',true,false,false),
+         ('privacy_retention_operator_approver','postgres','supabase_admin',true,false,false),
+         ('privacy_retention_legal_approver','postgres','supabase_admin',true,false,false),
+         ('privacy_retention_activation_operator','postgres','supabase_admin',true,false,false)
+       )
+       EXCEPT ALL
+       (SELECT roleid::regrole::text,member::regrole::text,grantor::regrole::text,admin_option,inherit_option,set_option
+          FROM pg_catalog.pg_auth_members
+         WHERE roleid IN (SELECT oid FROM pg_catalog.pg_roles WHERE rolname = ANY (ARRAY['privacy_workflow_owner','privacy_retention_operator_approver','privacy_retention_legal_approver','privacy_retention_activation_operator']))
+            OR member IN (SELECT oid FROM pg_catalog.pg_roles WHERE rolname = ANY (ARRAY['privacy_workflow_owner','privacy_retention_operator_approver','privacy_retention_legal_approver','privacy_retention_activation_operator']))
+       )
+     ) THEN
+    RAISE EXCEPTION 'transient managed-role membership drift';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace JOIN pg_catalog.pg_language l ON l.oid=p.prolang WHERE p.oid='privacy_retention.assert_g014_workflow_owner_contract()'::pg_catalog.regprocedure AND n.nspname='privacy_retention' AND pg_catalog.pg_get_userbyid(p.proowner)='privacy_workflow_owner' AND l.lanname='plpgsql' AND NOT p.prosecdef AND p.proconfig IS NOT DISTINCT FROM ARRAY['search_path='] AND pg_catalog.encode(extensions.digest(pg_catalog.convert_to(p.prosrc,'UTF8'),'sha256'),'hex')='b499ac7899020cd1d2473b746ad6138ebe1074a963c7e508a90e71ac08937b32') THEN
+    RAISE EXCEPTION 'workflow-owner terminal assertion catalog drift';
+  END IF;
+  REVOKE privacy_workflow_owner FROM postgres GRANTED BY postgres RESTRICT;
+  IF EXISTS (
+       (SELECT roleid::regrole::text,member::regrole::text,grantor::regrole::text,admin_option,inherit_option,set_option
+          FROM pg_catalog.pg_auth_members
+         WHERE roleid IN (SELECT oid FROM pg_catalog.pg_roles WHERE rolname = ANY (ARRAY['privacy_workflow_owner','privacy_retention_operator_approver','privacy_retention_legal_approver','privacy_retention_activation_operator']))
+            OR member IN (SELECT oid FROM pg_catalog.pg_roles WHERE rolname = ANY (ARRAY['privacy_workflow_owner','privacy_retention_operator_approver','privacy_retention_legal_approver','privacy_retention_activation_operator']))
+       )
+       EXCEPT ALL
+       (VALUES
+         ('privacy_workflow_owner','postgres','supabase_admin',true,false,false),
+         ('privacy_retention_operator_approver','postgres','supabase_admin',true,false,false),
+         ('privacy_retention_legal_approver','postgres','supabase_admin',true,false,false),
+         ('privacy_retention_activation_operator','postgres','supabase_admin',true,false,false)
+       )
+     )
+     OR EXISTS (
+       (VALUES
+         ('privacy_workflow_owner','postgres','supabase_admin',true,false,false),
+         ('privacy_retention_operator_approver','postgres','supabase_admin',true,false,false),
+         ('privacy_retention_legal_approver','postgres','supabase_admin',true,false,false),
+         ('privacy_retention_activation_operator','postgres','supabase_admin',true,false,false)
+       )
+       EXCEPT ALL
+       (SELECT roleid::regrole::text,member::regrole::text,grantor::regrole::text,admin_option,inherit_option,set_option
+          FROM pg_catalog.pg_auth_members
+         WHERE roleid IN (SELECT oid FROM pg_catalog.pg_roles WHERE rolname = ANY (ARRAY['privacy_workflow_owner','privacy_retention_operator_approver','privacy_retention_legal_approver','privacy_retention_activation_operator']))
+            OR member IN (SELECT oid FROM pg_catalog.pg_roles WHERE rolname = ANY (ARRAY['privacy_workflow_owner','privacy_retention_operator_approver','privacy_retention_legal_approver','privacy_retention_activation_operator']))
+       )
+     ) THEN
+    RAISE EXCEPTION 'terminal managed-role membership drift';
+  END IF;
+END;
+$g037_epilogue$;"""
+ROLE_PROTOCOL_EPILOGUE_SHA256 = "cc43e04360972601117ec81bc3c360d4dee8b8b37a2c2f56d134412ae29cf06d"
+ROLE_PROTOCOL_EPILOGUE_VECTOR_SHA256 = "de6d0bb6dec2bc4a897d31c7b00032c20b5557123b60b9abeddd205625dd0b69"
+
+# The terminal allowlist is a deterministic composition of literal immutable
+# source fragments.  It is deliberately not a snapshot of hosted state.
+G014_RPC_ALLOWLIST_VERSION = "20260713002400"
+G014_RPC_ALLOWLIST_FRAGMENTS = (
+    ("20260713002000", "base", 22620, 30545, "cdcb24d308f8ebe8c3b7ab37e483fe2e9faf846d2814181aa52ee71ca9d13352"),
+    ("20260713002100", "add", 71537, 72885, "3de6a2e37df45a6f0197d021e8c852c58540d8fc934e3119b60777e64744409f"),
+    ("20260713002200", "add", 111451, 112094, "458c06ea8666b3184cc005da6a1220c36736bdade6652114c9d27f50a4899c5d"),
+    ("20260713002300", "replace-account", 155888, 157982, "15930f6e2350b9114ac7690d575d5b2199b71721ea4aca4cc623303bbf1b9010"),
+    ("20260713002300", "replace-external", 223520, 225247, "43958cd0c1019c9bd068ed2b999973fb88e8a31acad1fac1e9eaae5235c3d59a"),
+    ("20260713002300", "add-claim", 300106, 300657, "15d968016ccd9220aefe0185aa6de46a7953cb4d5d9e8fa4ca34acf178c38b4d"),
+    ("20260713002300", "add-status", 305066, 305638, "c1d2e32caca9df1e5428ddd492b8d0b3a43451c6e8e17de4b2a8662241ecf718"),
+    ("20260713002400", "replace-retention", 151492, 153625, "0f9d37d62dd7b66a719894f4f8c2482c2213411dbadf491cdddaf6f4a1727a08"),
+)
+G014_RPC_ALLOWLIST_SOURCES = (
+    ("20260713002000", "backend/supabase/migrations/20260713002000_g014_public_api_private_boundary.sql", "094c4ae71ae6c85f0792f72f5941dd8d723104d59af057a3cf6b5667d4740f7e"),
+    ("20260713002100", "backend/supabase/migrations/20260713002100_g014_privacy_workflows.sql", "0a06618bf56e426f3bfa671aa42b94195fa52fb50ccc6e3a4986f2c718336848"),
+    ("20260713002200", "backend/supabase/migrations/20260713002200_g014_marketing_state_machine.sql", "a041f88d781ef50bfdf59feee2af3f09bc02fc64714fe335861ed5e7d99694a3"),
+    ("20260713002300", "backend/supabase/migrations/20260713002300_g014_account_deletion_state_machine.sql", "6705f42b16cc3c9e5d25d5f9afebffc4be377c442aa0b90b737e22b333d0b36d"),
+    ("20260713002400", "backend/supabase/migrations/20260713002400_g014_retention_adapters_receipts.sql", "3b89edc7ffe96a770d1f537267546c6229c823fc3c2d9b4c036ff008ca7c0b94"),
+)
+BASELINE_RPC_MATRIX = (
+    ('public.approve_submission_item(uuid,uuid,jsonb)', 'authenticated'),
+    ('public.approve_submission_item(uuid,uuid,jsonb)', 'service_role'),
+    ('public.approve_edit_submission_item(uuid,uuid,jsonb)', 'authenticated'),
+    ('public.approve_edit_submission_item(uuid,uuid,jsonb)', 'service_role'),
+    ('public.merge_restaurant_records_for_admin_review(uuid,uuid,uuid,timestamptz,text,jsonb,text,text)', 'authenticated'),
+    ('public.merge_restaurant_records_for_admin_review(uuid,uuid,uuid,timestamptz,text,jsonb,text,text)', 'service_role'),
+    ('public.make_user_admin(text)', 'service_role'),
+    ('public.batch_insert_restaurants_from_jsonl(jsonb[])', 'service_role'),
+    ('public.insert_restaurant_from_jsonl(jsonb)', 'service_role'),
+    ('public.refresh_materialized_views()', 'service_role'),
+    ('public.cleanup_old_notifications(integer)', 'service_role'),
+    ('public.approve_restaurant(uuid,uuid)', 'service_role'),
+    ('public.reject_restaurant(uuid,uuid,text)', 'service_role'),
+    ('public.approve_restaurant_submission(uuid,uuid)', 'service_role'),
+    ('public.reject_restaurant_submission(uuid,uuid,text)', 'service_role'),
+    ('public.approve_new_restaurant_submission(uuid,uuid,jsonb)', 'service_role'),
+    ('public.approve_edit_restaurant_submission(uuid,uuid,uuid[])', 'service_role'),
+    ('public.reject_submission(uuid,uuid,text)', 'service_role'),
+    ('public.reject_submission_item(uuid,uuid,text)', 'service_role'),
+    ('public.apply_admin_user_db_mutation(uuid,uuid,text,text,jsonb,jsonb,uuid,jsonb,text,text,text,text,text)', 'service_role'),
+    ('public.match_storyboard_documents_hybrid(uuid,extensions.vector,jsonb,double precision,integer,integer,jsonb)', 'authenticated'),
+    ('public.match_storyboard_documents_hybrid(uuid,extensions.vector,jsonb,double precision,integer,integer,jsonb)', 'service_role'),
+    ('public.match_storyboard_documents_hybrid_v2(uuid,extensions.vector,jsonb,double precision,integer,integer,jsonb)', 'authenticated'),
+    ('public.match_storyboard_documents_hybrid_v2(uuid,extensions.vector,jsonb,double precision,integer,integer,jsonb)', 'service_role'),
+    ('public.review_restaurant_request(uuid,uuid,text,text,text)', 'service_role'),
+    ('public.delete_pending_restaurant_submission(uuid,uuid,text)', 'service_role'),
+    ('public.submit_restaurant_submission(uuid,text,text,text,text,text,text[],text,text)', 'service_role'),
+    ('public.apply_restaurant_admin_destructive_action(uuid,text,text,uuid[],uuid,jsonb)', 'service_role'),
+    ('public.apply_admin_restaurant_map_overlay_action(uuid,text,uuid,text,text,text,timestamptz,timestamptz,jsonb,text,text,text,uuid,text,jsonb)', 'service_role'),
+    ('public.claim_admin_trend_job_request(text,interval)', 'service_role'),
+    ('public.complete_admin_trend_job_request(uuid,text,uuid,jsonb)', 'service_role'),
+    ('public.fail_admin_trend_job_request(uuid,text,text,jsonb)', 'service_role'),
+    ('public.review_admin_restaurant_map_overlay_proposal(uuid,uuid,text,text,text,uuid,text,text,jsonb)', 'service_role'),
+    ('public.approve_admin_restaurant_map_overlay_proposal(uuid,uuid,text,text,text,text,jsonb,text,text,uuid,text,jsonb)', 'service_role'),
+    ('public.preflight_release_auth_session_family(uuid,uuid,uuid,text,bigint)', 'service_role'),
+    ('public.revoke_release_auth_session_family(uuid,uuid,uuid,text)', 'service_role'),
+    ('public.read_release_auth_revocation(uuid,uuid,uuid)', 'service_role'),
+    ('public.read_release_auth_revocation_by_operation(uuid)', 'anon'),
+    ('public.read_release_auth_revocation_by_operation(uuid)', 'authenticated'),
+    ('public.get_current_auth_session_id()', 'authenticated'),
+    ('public.is_current_auth_session_active()', 'authenticated'),
+    ('public.get_current_privacy_policy_version()', 'authenticated'),
+    ('public.get_current_privacy_policy_version()', 'service_role'),
+    ('public.create_privacy_onboarding_challenge(text,uuid,text,jsonb,text,timestamptz)', 'service_role'),
+    ('public.confirm_privacy_onboarding(uuid,text,uuid,text,uuid)', 'service_role'),
+    ('public.submit_privacy_consent(text,text,text,uuid,text,text,uuid,text,uuid)', 'authenticated'),
+    ('public.record_privacy_guardian_verification(uuid,uuid,text,text,text,timestamptz,timestamptz)', 'service_role'),
+    ('public.read_privacy_guardian_status(uuid)', 'service_role'),
+    ('public.create_user_notification(uuid,text,text,text,jsonb)', 'authenticated'),
+    ('public.mark_notification_read(uuid)', 'authenticated'),
+    ('public.mark_all_notifications_read()', 'authenticated'),
+    ('public.delete_notification(uuid)', 'authenticated'),
+    ('public.evaluate_notification_marketing_permission(uuid,text,timestamptz,text)', 'service_role'),
+    ('public.marketing_campaign_receipt(uuid)', 'service_role'),
+    ('public.preview_marketing_campaign(uuid,text,uuid[],text,text,jsonb,text,timestamptz)', 'service_role'),
+    ('public.prepare_marketing_campaign_batch(uuid,uuid,text,text,integer,text)', 'service_role'),
+    ('public.fail_marketing_campaign_batch(uuid,uuid,uuid,text,text)', 'service_role'),
+    ('public.finalize_marketing_campaign_batch(uuid,uuid,uuid,text,uuid[])', 'service_role'),
+    ('public.preview_account_deletion(uuid,uuid,timestamptz)', 'service_role'),
+    ('public.begin_account_deletion_apply(uuid,uuid,uuid,text,text,text,timestamptz)', 'service_role'),
+    ('public.apply_account_deletion_database_cleanup(uuid,uuid)', 'service_role'),
+    ('public.list_account_deletion_storage_objects(uuid,uuid)', 'service_role'),
+    ('public.finalize_account_deletion_storage(uuid,uuid,boolean)', 'service_role'),
+    ('public.finalize_account_deletion_auth(uuid,uuid,boolean)', 'service_role'),
+    ('public.fail_account_deletion(uuid,uuid,text)', 'service_role'),
+    ('public.preview_privacy_retention_run(text,timestamptz,integer,integer)', 'service_role'),
+    ('public.confirm_privacy_retention_run(uuid,text,text,text)', 'service_role'),
+    ('public.apply_privacy_retention_run(uuid,text,text,integer)', 'service_role'),
+    ('public.claim_privacy_retention_storage_items(uuid,text,text,integer)', 'service_role'),
+    ('public.ack_privacy_retention_storage_items(uuid,text,text,uuid[],boolean)', 'service_role'),
+    ('public.finalize_privacy_retention_run(uuid,text,text)', 'service_role'),
+    ('public.preview_privacy_incident_transition(uuid,uuid,public.privacy_incident_status,timestamptz,text,jsonb,uuid)', 'service_role'),
+    ('public.apply_privacy_incident_transition(uuid,uuid,uuid,public.privacy_incident_status,timestamptz,text,text,text,jsonb,uuid,text)', 'service_role'),
+    ('public.record_privacy_incident_detection(uuid,uuid,text,timestamptz,text,uuid)', 'service_role'),
+    ('public.ocr_log_metadata_is_safe(jsonb)', 'service_role'),
+    ('public.allocate_short_url(text,uuid,uuid,text,text[])', 'service_role'),
+    ('public.get_ocr_daily_quota_status()', 'authenticated'),
+    ('public.reserve_ocr_daily_quota(uuid)', 'authenticated'),
+    ('public.reserve_admin_provider_budget(uuid,text,uuid)', 'service_role'),
+    ('public.consume_tzuyang_address_evidence_admin_approval(uuid,text,text,uuid,text,text,text,timestamptz,timestamptz)', 'service_role'),
+)
+BASELINE_RPC_MATRIX_SHA256 = "71129fbe994390a711ee262b7bf7ad3ed523afe4db8be563bc401d8c21111f22"
+_ACCOUNT_INITIAL_NAMES = frozenset((
+    "preview_account_deletion", "begin_account_deletion_apply",
+    "apply_account_deletion_database_cleanup", "claim_account_deletion_external_phase",
+    "list_account_deletion_storage_objects", "get_account_deletion_storage_work_items",
+    "finalize_account_deletion_storage", "finalize_account_deletion_auth",
+    "fail_account_deletion", "fail_account_deletion_external_phase",
+    "publish_account_deletion_policy", "activate_account_deletion_policy",
+))
+_RETENTION_REPLACED_NAMES = frozenset((
+    "activate_privacy_retention_adapter", "preview_privacy_retention_run",
+    "confirm_privacy_retention_run", "apply_privacy_retention_run",
+    "claim_privacy_retention_storage_items",
+    "resolve_privacy_retention_provider_effect",
+    "get_privacy_retention_provider_reconciliation_work",
+    "ack_privacy_retention_storage_items", "finalize_privacy_retention_run",
+))
+_RPC_ADDITIONS = (
+    ("public.append_privacy_audit_event(text,uuid,uuid,uuid,uuid,text,text,jsonb,jsonb)", "service_role"),
+    ("public.publish_privacy_policy_version(text,text,text,timestamptz,uuid,text,text)", "service_role"),
+    ("public.transition_privacy_onboarding_challenge(uuid,text,text,uuid,text)", "service_role"),
+    ("public.submit_guardian_privacy_consent(text,text,text,uuid,text,uuid,text,uuid)", "service_role"),
+    ("public.hold_privacy_onboarding_compensation(uuid,uuid,text,text)", "service_role"),
+    ("public.get_current_privacy_eligibility()", "authenticated"),
+    ("public.get_privacy_eligibility_for_user(uuid)", "service_role"),
+    ("public.claim_marketing_campaign_dispatch(uuid,uuid,uuid,text,text,text)", "service_role"),
+    ("public.fail_marketing_campaign_provider_attempt(uuid,uuid,uuid,text,uuid,uuid,text,text,text,text)", "service_role"),
+    ("public.finalize_marketing_campaign_batch(uuid,uuid,uuid,text,uuid,uuid,text,text,text,uuid[],text)", "service_role"),
+    ("public.create_admin_transactional_notification(uuid,uuid,text,text,text,jsonb)", "service_role"),
+    ("public.create_review_like_notification(uuid,uuid,uuid)", "service_role"),
+    ("public.preview_account_deletion(uuid,uuid,timestamptz)", "service_role"),
+    ("public.begin_account_deletion_apply(uuid,uuid,uuid,text,text,text,timestamptz,text)", "service_role"),
+    ("public.apply_account_deletion_database_cleanup(uuid,uuid,uuid,text,text,text)", "service_role"),
+    ("public.fail_account_deletion(uuid,uuid,uuid,text,text,text,text)", "service_role"),
+    ("public.publish_account_deletion_policy(text,interval,interval,text,jsonb,text,text)", "service_role"),
+    ("public.activate_account_deletion_policy(text,text)", "service_role"),
+    ("public.claim_account_deletion_external_job(uuid,uuid,uuid,text,text,text,text,uuid)", "service_role"),
+    ("public.prepare_account_deletion_external_egress(uuid,uuid,uuid,text,text,text,text,uuid)", "service_role"),
+    ("public.read_account_deletion_external_job(uuid,uuid,uuid,text,text,text,text,uuid)", "service_role"),
+    ("public.run_account_deletion_session_family_cleanup(uuid,uuid,uuid,text,text,text,uuid)", "service_role"),
+    ("public.get_account_deletion_storage_work(uuid,uuid,uuid,text,text,text,uuid)", "service_role"),
+    ("public.record_account_deletion_external_provider_proof(uuid,uuid,uuid,text,text,text,text,uuid,text,text,text,text)", "service_role"),
+    ("public.reconcile_account_deletion_storage_job(uuid,uuid,uuid,text,text,text,uuid)", "service_role"),
+    ("public.reconcile_account_deletion_auth_job(uuid,uuid,uuid,text,text,text,uuid)", "service_role"),
+    ("public.claim_next_account_deletion_external_job()", "service_role"),
+    ("public.read_current_account_deletion_status(uuid,text,text)", "authenticated"),
+    ("public.preview_privacy_retention_run(text,timestamptz,integer,integer)", "service_role"),
+    ("public.confirm_privacy_retention_run(uuid,text,text,text)", "service_role"),
+    ("public.apply_privacy_retention_run(uuid,text,text,integer)", "service_role"),
+    ("public.claim_privacy_retention_storage_items(uuid,text,text,integer)", "service_role"),
+    ("public.resolve_privacy_retention_provider_effect(uuid,text,text,uuid,uuid,text,text,text,text,text,text)", "service_role"),
+    ("public.get_privacy_retention_provider_reconciliation_work(uuid,text,text,text,integer)", "service_role"),
+    ("public.record_privacy_retention_storage_provider_receipts(uuid,text,text,jsonb)", "service_role"),
+    ("public.fail_privacy_retention_storage_claims(uuid,text,text,uuid[],text)", "service_role"),
+    ("public.finalize_privacy_retention_run(uuid,text,text)", "service_role"),
+)
+def _rpc_name(row: tuple[str, str]) -> str:
+    return row[0].split("(", 1)[0].rsplit(".", 1)[1]
+def _without_names(rows: tuple[tuple[str, str], ...], names: frozenset[str]) -> tuple[tuple[str, str], ...]:
+    return tuple(row for row in rows if _rpc_name(row) not in names)
+STATIC_RPC_MATRIX = (
+    _without_names(BASELINE_RPC_MATRIX, _ACCOUNT_INITIAL_NAMES | _RETENTION_REPLACED_NAMES)
+    + _RPC_ADDITIONS
+)
+STATIC_RPC_MATRIX_SHA256 = "fb55b1f0b36236578c7a3c337eb5032094d1fc7c741fa000dde9e2d2eee55e3c"
+CHECKPOINT_IDS = (
+    "prelude-admission", "plan-prevalidated", "role-self-grant",
+    "g013-vector-ledger", "g014-boundary-vector-ledger",
+    "g014-retention-vector-ledger", "epilogue-transient-readback",
+    "epilogue-revoke", "terminal-readback",
+)
 _VERSION = re.compile(r"^[0-9]{14}$"); _SHA = re.compile(r"^[a-f0-9]{64}$")
 class ContractError(ValueError): pass
 
@@ -112,13 +468,40 @@ def validate_ledger(manifest: Manifest, observed: Any) -> None:
     if not isinstance(observed,(list,tuple)) or tuple(tuple(x) for x in observed)!=expected_ledger(manifest): raise ContractError("ledger mismatch")
 def terminal_spec(manifest: Manifest) -> str:
     """Return the single immutable authorization identity for G037 terminal state."""
+    if not ROLE_SPLICES or not STATIC_RPC_MATRIX:
+        raise ContractError("terminal specification requires complete pinned role splices and RPC matrix")
     return digest({
         "manifest": MANIFEST_SHA256,
         "migrations": [(item.version, item.sha256) for item in manifest.migrations],
-        "managed_role_transforms": {
-            version: ROLE_TRANSFORMS[version] for version in sorted(ROLE_TRANSFORMS)
-        },
+        "managed_role_splices": tuple(
+            (record["label"], record["version"], record["start"], record["end"],
+             record["old_sha256"], record["new_sha256"])
+            for record in ROLE_SPLICES
+        ),
+        "managed_role_splice_groups": tuple(
+            (group["version"], group["source_sha256"], group["transformed_source_sha256"],
+             group["original_vector_sha256"], group["transformed_vector_sha256"])
+            for group in ROLE_SPLICE_GROUPS
+        ),
         "g014_terminal": "20260713002400",
+        "role_protocol": {
+            "version": ROLE_PROTOCOL_VERSION,
+            "roles": MANAGED_ROLES,
+            "flags": ROLE_FLAGS,
+            "transient_rows": TRANSIENT_MANAGED_ROWS,
+            "terminal_rows": TERMINAL_MANAGED_ROWS,
+            "epilogue_sha256": ROLE_PROTOCOL_EPILOGUE_SHA256,
+            "documents_policy_compatibility": {
+                "version": DOCUMENTS_POLICY_COMPATIBILITY_VERSION,
+                "exact_prestate": DOCUMENTS_POLICY_COMPATIBILITY_PRESTATE,
+            },
+            "rpc_allowlist_version": G014_RPC_ALLOWLIST_VERSION,
+            "rpc_allowlist_sources": G014_RPC_ALLOWLIST_SOURCES,
+            "rpc_allowlist_fragments": G014_RPC_ALLOWLIST_FRAGMENTS,
+            "rpc_matrix_sha256": STATIC_RPC_MATRIX_SHA256,
+            "rpc_matrix": STATIC_RPC_MATRIX,
+            "checkpoints": CHECKPOINT_IDS,
+        },
     })
 _FREEZE_ID = re.compile(r"^[a-z0-9][a-z0-9-]{7,127}$")
 _COMMIT = re.compile(r"^[a-f0-9]{40}$")
