@@ -175,7 +175,7 @@ def _write_fresh_restrictive(path,data,root):
  if path.exists() or path.is_symlink(): raise ContractError("output must be fresh and outside repository")
  fd=None; identity=None
  try:
-  fd=os.open(path,os.O_RDWR|os.O_CREAT|os.O_EXCL,0o600)
+  fd=os.open(path,os.O_RDWR|os.O_CREAT|os.O_EXCL|getattr(os,"O_BINARY",0),0o600)
   created=os.fstat(fd); identity=(created.st_dev,created.st_ino)
   _same_output_file(fd,path)
   if os.name=="nt":
