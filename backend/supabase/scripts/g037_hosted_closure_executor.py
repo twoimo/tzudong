@@ -218,9 +218,11 @@ def _short_url_binding(binding, *, baseline_is_exact):
         authorization=authorize_exact_baseline(envelope,expected_bindings=binding["expected_bindings"],now=int(time.time()),baseline_is_exact=baseline_is_exact)
     except ContractError as exc:
         raise ClosureError("execution authorization invalid") from exc
-    for key in _SHORT_URL_BINDING_FIELDS-{"envelope","expected_bindings","capture_evidence"}:
+    for key in _SHORT_URL_BINDING_FIELDS-{"envelope","expected_bindings","capture_evidence","legacy_repository_commit"}:
         if not isinstance(binding[key],str) or not _HEX64.fullmatch(binding[key]):
             raise ClosureError("short_urls authorization provenance invalid")
+    if not isinstance(binding["legacy_repository_commit"],str) or not COMMIT.fullmatch(binding["legacy_repository_commit"]):
+        raise ClosureError("short_urls authorization provenance invalid")
     if authorization["policy"] != POLICY or authorization["legacy_repository_commit"] != binding["legacy_repository_commit"] or any(binding[key]!=authorization[key] for key in ("legacy_authorization_sha256","legacy_authorization_signature_sha256","legacy_capture_receipt_sha256","legacy_restore_receipt_sha256","legacy_inspection_receipt_sha256")):
         raise ClosureError("execution authorization provenance drift")
     if not (type(capture) is VerifiedRecoveryCapture) or set(capture)!=_SHORT_URL_CAPTURE_FIELDS:
