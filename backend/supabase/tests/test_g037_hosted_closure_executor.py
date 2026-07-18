@@ -28,14 +28,19 @@ class G037ExecutorTests(unittest.TestCase):
   values=re.findall(r"\(\s*'(public\.approve_(?:edit_)?submission_item\(uuid,uuid,jsonb\))'\s*,\s*'([0-9a-f]{64})'\s*,\s*ARRAY\[([^\]]+)\]::text\[\]\s*\)",sql,re.S)
   parsed={signature:{"body_hash":body_hash,"argnames":tuple(re.findall(r"'([^']+)'",argnames))} for signature,body_hash,argnames in values}
   expected=g034.approval_body_contract()
-  self.assertEqual(parsed,{"public.approve_submission_item(uuid,uuid,jsonb)":{"body_hash":expected["public.approve_submission_item(uuid,uuid,jsonb)"]["body_hash"],"argnames":expected["public.approve_submission_item(uuid,uuid,jsonb)"]["argnames"]},"public.approve_edit_submission_item(uuid,uuid,jsonb)":{"body_hash":expected["public.approve_edit_submission_item(uuid,uuid,jsonb)"]["body_hash"],"argnames":expected["public.approve_edit_submission_item(uuid,uuid,jsonb)"]["argnames"]}})
+  self.assertEqual(set(parsed),set(expected))
+  for signature,entry in parsed.items():
+   source=g034.TRACKED_APPROVAL_SOURCE.read_text(encoding="utf-8")
+   name=expected[signature]["name"]
+   declaration=source.split(f"create or replace function public.{name}",1)[1].split("$$;",1)[0]+"$$"
+   self.assertEqual(entry,{"body_hash":hashlib.sha256(g034.extract_dollar_quoted_body(declaration).encode("utf-8")).hexdigest(),"argnames":expected[signature]["argnames"]})
   catalog_match=re.search(r"\) = \(\s*'([^']+)'::\"char\",\s*'([^']+)'::name,\s*(true|false),\s*ARRAY\[([^\]]*)\]::text\[\],\s*(true|false),\s*(\d+)::oid,\s*ARRAY\[([^\]]*)\]::oid\[\],\s*ARRAY\[([^\]]*)\]::\"char\"\[\],\s*argnames\s*\)",sql,re.S)
   self.assertIsNotNone(catalog_match)
   prokind,language,prosecdef,proconfig,proretset,prorettype,allargtypes,argmodes=catalog_match.groups()
   parsed_attributes=(prokind,language,prosecdef=="true",tuple(re.findall(r"'([^']+)'",proconfig)),proretset=="true",int(prorettype),tuple(int(value) for value in allargtypes.split(",") if value.strip()),tuple(re.findall(r"'([^']+)'",argmodes)))
   self.assertEqual(parsed_attributes,g034.APPROVAL_CATALOG_ATTRIBUTES)
   self.assertIn("procedure.prosrc",sql)
-  self.assertIn("pg_catalog.btrim(pg_catalog.regexp_replace(pg_catalog.lower(prosrc), '\\s+', ' ', 'g'))",sql)
+  self.assertIn("pg_catalog.convert_to(prosrc, 'UTF8')",sql)
   self.assertNotIn("pg_get_functiondef(procedure.oid)",sql)
   self.assertNotIn("regexp_match(",sql)
  def test_terminal_readback_source_and_sql_literal_drift_are_rejected(self):
@@ -43,18 +48,55 @@ class G037ExecutorTests(unittest.TestCase):
   sql=sql_path.read_text(encoding="utf-8")
   expected=g034.approval_body_contract()
   signature="public.approve_submission_item(uuid,uuid,jsonb)"
-  self.assertIn(expected[signature]["body_hash"],sql)
-  self.assertNotIn(expected[signature]["body_hash"],sql.replace(expected[signature]["body_hash"],"0"*64,1))
+  source=g034.TRACKED_APPROVAL_SOURCE.read_text(encoding="utf-8")
+  exact_hash=hashlib.sha256(g034.extract_dollar_quoted_body(source.split("create or replace function public.approve_submission_item",1)[1].split("$$;",1)[0]+"$$").encode("utf-8")).hexdigest()
+  self.assertIn(exact_hash,sql)
+  self.assertNotIn(exact_hash,sql.replace(exact_hash,"0"*64,1))
+  body=g034.extract_dollar_quoted_body(source.split("create or replace function public.approve_submission_item",1)[1].split("$$;",1)[0]+"$$")
+  literal="v_is_admin"
+  self.assertIn(literal,body)
+  mutated_body=body.replace(literal,"v_is_ADMIN",1)
+  self.assertNotEqual(body.encode("utf-8"),mutated_body.encode("utf-8"))
+  self.assertNotEqual(hashlib.sha256(body.encode("utf-8")).hexdigest(),hashlib.sha256(mutated_body.encode("utf-8")).hexdigest())
+  self.assertNotEqual(hashlib.sha256(body.encode("utf-8")).hexdigest(),hashlib.sha256(body.replace("\n","\n ",1).encode("utf-8")).hexdigest())
   mutated_sql=sql.replace("'p_item_id'","'p_forged_item_id'",1)
   value_pattern=r"\(\s*'(public\.approve_(?:edit_)?submission_item\(uuid,uuid,jsonb\))'\s*,\s*'([0-9a-f]{64})'\s*,\s*ARRAY\[([^\]]+)\]::text\[\]\s*\)"
   self.assertNotEqual(re.findall(value_pattern,sql,re.S),re.findall(value_pattern,mutated_sql,re.S))
   with tempfile.TemporaryDirectory() as raw:
    source_path=Path(raw)/"approval.sql"
-   source=g034.TRACKED_APPROVAL_SOURCE.read_text(encoding="utf-8")
-   source_path.write_text(source.replace("p_item_id uuid","p_forged_item_id uuid",1),encoding="utf-8")
+   source=g034.TRACKED_APPROVAL_SOURCE.read_bytes()
+   source_path.write_bytes(source.replace(b"p_item_id uuid",b"p_forged_item_id uuid",1))
    with patch.object(g034,"TRACKED_APPROVAL_SOURCE_SHA256",hashlib.sha256(source_path.read_bytes()).hexdigest()):
     with self.assertRaisesRegex(ValueError,"tracked-approval-source-fragment"):
      g034.approval_body_contract(source_path)
+ def test_pg17_role_protocol_is_explicit_and_terminal_bound(self):
+  self.assertEqual(c.MANAGED_ROLES,(
+   "privacy_workflow_owner","privacy_retention_operator_approver",
+   "privacy_retention_legal_approver","privacy_retention_activation_operator"))
+  self.assertEqual(len(c.TRANSIENT_MANAGED_ROWS),5)
+  self.assertEqual(len(c.TERMINAL_MANAGED_ROWS),4)
+  self.assertEqual(c.TRANSIENT_MANAGED_ROWS[0],
+   ("privacy_workflow_owner","postgres","postgres",False,True,True))
+  self.assertNotEqual(c.terminal_spec(c.load_manifest(Path(__file__).parents[3])),
+   c.digest({"manifest":c.MANIFEST_SHA256}))
+  self.assertEqual(hashlib.sha256(c.ROLE_PROTOCOL_EPILOGUE).hexdigest(),
+   c.ROLE_PROTOCOL_EPILOGUE_SHA256)
+
+ def test_terminal_readback_is_catalog_only_for_role_and_rpc_contracts(self):
+  sql=Path(__file__).with_name("g037_hosted_terminal_readback.sql").read_text(encoding="utf-8")
+  self.assertIn("EXCEPT ALL",sql)
+  self.assertIn("postgres_member_without_usage_or_set",sql)
+  self.assertIn("static_public_rpc_acl_matches",sql)
+  self.assertNotIn("g014_public_rpc_allowlist",sql)
+
+ def test_precompute_happens_before_cursor_admission_and_remediation(self):
+  source=Path(e.__file__).read_text(encoding="utf-8")
+  for name in ("rehearse_cursor","apply_cursor"):
+   body=source[source.index(f"def {name}"):source.index("\ndef ",source.index(f"def {name}")+1)]
+   self.assertLess(body.index("_precompute_execution_plan"),body.index("_lock_under_controller"))
+  body=source[source.index("def _execute_closure"):source.index("def rehearse_cursor")]
+  self.assertIn("_assert_memberships(cur, TRANSIENT_MANAGED_ROWS)",body)
+  self.assertIn("_assert_memberships(cur, TERMINAL_MANAGED_ROWS)",body)
  def test_receipts_have_no_raw_sensitive_values(self):
   value=e.receipt("validate","denied",{"sql":"select secret","database_url":"postgres://x","subject":"person","commit_sha256":"a"*40})
   text=json.dumps(value); self.assertEqual(value["schema"],"g037-hosted-closure-receipt-v3"); self.assertNotIn("select secret",text); self.assertNotIn("postgres",text); self.assertNotIn("person",text)
@@ -87,9 +129,8 @@ class G037ExecutorTests(unittest.TestCase):
    def fetchall(self):
     if "to_regclass" in self.sql: return [(True,)]
     return [(self.referenced and "pg_get_functiondef" in self.sql,)]
-  for kind in ("function","procedure"):
-   with patch.object(e,"approval_body_contract",return_value={}),patch.object(e,"approval_catalog_contract",return_value={}):
-    with self.assertRaisesRegex(e.ClosureError,"retirement gate failed"): e.retirement_gate(Cursor(referenced=True))
+  with patch.object(e,"approval_body_contract",return_value={}),patch.object(e,"approval_catalog_contract",return_value={}):
+   with self.assertRaisesRegex(e.ClosureError,"retirement gate failed"): e.retirement_gate(Cursor(referenced=True))
   with patch.object(e,"approval_body_contract",return_value={}),patch.object(e,"approval_catalog_contract",return_value={}):
    e.retirement_gate(Cursor())
  def test_source_authenticated_approval_drift_rejects_baseline_and_terminal(self):
@@ -159,13 +200,13 @@ class G037ExecutorTests(unittest.TestCase):
    def execute(self,sql,params=()): self.calls.append((sql,params))
    def fetchall(self): return self.rows
   empty=Cursor(())
-  e._prepare_documents_policy_compatibility(empty,target)
+  e._prepare_documents_policy_compatibility(empty,target,deadline=int(time.time())+60)
   self.assertEqual(empty.calls[0][1],([row[0] for row in e._DOCUMENTS_POLICY_CONTRACT],))
   self.assertEqual(len(empty.calls),1)
   exact=Cursor(e._DOCUMENTS_POLICY_CONTRACT)
-  e._prepare_documents_policy_compatibility(exact,target)
+  e._prepare_documents_policy_compatibility(exact,target,deadline=int(time.time())+60)
   self.assertEqual(
-   [sql for sql,_ in exact.calls[1:]],
+   [sql for sql,_ in exact.calls[1:] if sql.startswith('DROP POLICY')],
    ['DROP POLICY "documents_delete_own" ON public.documents',
     'DROP POLICY "documents_insert_own" ON public.documents',
     'DROP POLICY "documents_select_own" ON public.documents',
@@ -182,10 +223,10 @@ class G037ExecutorTests(unittest.TestCase):
   ):
    cursor=Cursor(rows)
    with self.subTest(rows=rows),self.assertRaisesRegex(e.ClosureError,"compatibility contract drift"):
-    e._prepare_documents_policy_compatibility(cursor,target)
+    e._prepare_documents_policy_compatibility(cursor,target,deadline=int(time.time())+60)
    self.assertEqual(len(cursor.calls),1)
   unrelated=Cursor(e._DOCUMENTS_POLICY_CONTRACT)
-  e._prepare_documents_policy_compatibility(unrelated,SimpleNamespace(version="20260627080001"))
+  e._prepare_documents_policy_compatibility(unrelated,SimpleNamespace(version="20260627080001"),deadline=int(time.time())+60)
   self.assertEqual(unrelated.calls,[])
  def test_documents_policy_compatibility_precedes_immutable_vector_and_preserves_ledger(self):
   class Cursor:
@@ -197,14 +238,14 @@ class G037ExecutorTests(unittest.TestCase):
   item=next(migration for migration in c.load_manifest(root).migrations if migration.version=="20260627080000")
   recreated=tuple(f"CREATE POLICY {name}" for name,*_ in e._DOCUMENTS_POLICY_CONTRACT)
   cursor=Cursor()
-  with patch.object(e,"remediate_short_url_duplicates",return_value={}),patch.object(e,"source_sql"),patch.object(e,"vectors",return_value=(recreated,recreated)),patch.object(e,"_terminal_assert") as terminal:
-   e._execute_closure(cursor,root,SimpleNamespace(migrations=(item,)),{})
+  with patch.object(e,"remediate_short_url_duplicates",return_value={}),patch.object(e,"_admission_assert"),patch.object(e,"validate_managed_role_coverage"),patch.object(e,"_assert_role_flags"),patch.object(e,"_assert_memberships"),patch.object(e,"_terminal_assert") as terminal:
+   e._execute_closure(cursor,root,SimpleNamespace(migrations=(item,)),{},plan=((item,recreated,recreated,recreated),),deadline=int(time.time())+60)
   sql=[statement for statement,_ in cursor.calls]
   last_drop=sql.index('DROP POLICY "documents_update_own" ON public.documents')
   self.assertTrue(all(sql.index(statement)>last_drop for statement in recreated))
   insert=next(params for statement,params in cursor.calls if statement.startswith("INSERT INTO supabase_migrations.schema_migrations"))
   self.assertEqual(insert,(item.version,item.name,list(recreated)))
-  terminal.assert_called_once_with(cursor,unittest.mock.ANY,{item.version:recreated})
+  terminal.assert_called_once_with(cursor,unittest.mock.ANY,{item.version:recreated},deadline=unittest.mock.ANY)
  def test_execute_closure_records_real_vectors_with_fake_cursor(self):
   class Cursor:
    def __init__(self): self.calls=[]
@@ -213,8 +254,9 @@ class G037ExecutorTests(unittest.TestCase):
   ordinary=next(item for item in loaded.migrations if item.version not in c.SELF_WRAPPING and item.version!=e._DOCUMENTS_POLICY_COMPATIBILITY_VERSION)
   wrapped=next(item for item in loaded.migrations if item.version in c.SELF_WRAPPING)
   manifest=SimpleNamespace(migrations=(ordinary,wrapped)); cursor=Cursor()
-  with patch.object(e,"remediate_short_url_duplicates",return_value={}),patch.object(e,"_terminal_assert") as terminal:
-   e._execute_closure(cursor,root,manifest,{})
+  plan=tuple((item,*e.vectors(root,item),e.vectors(root,item)[1]) for item in manifest.migrations)
+  with patch.object(e,"remediate_short_url_duplicates",return_value={}),patch.object(e,"_admission_assert"),patch.object(e,"validate_managed_role_coverage"),patch.object(e,"_assert_role_flags"),patch.object(e,"_assert_memberships"),patch.object(e,"_terminal_assert") as terminal:
+   e._execute_closure(cursor,root,manifest,{},plan=plan,deadline=int(time.time())+60)
   inserts=[params for sql,params in cursor.calls if sql.startswith("INSERT INTO supabase_migrations.schema_migrations")]
   self.assertEqual(len(inserts),2)
   for item,params in zip(manifest.migrations,inserts):
@@ -232,14 +274,24 @@ class G037ExecutorTests(unittest.TestCase):
   manifest=c.load_manifest(Path(__file__).parents[3])
   vectors={item.version:(f"vector-{item.version}",) for item in manifest.migrations}
   rows=tuple((version,name,("baseline",)) for version,name in c.BASELINE_PAIRS)+tuple((item.version,item.name,vectors[item.version]) for item in manifest.migrations)
-  with patch.object(e,"retirement_gate"),patch.object(e,"_managed_role_catalog_assert"),patch.object(e,"_g014_public_rpc_acl_assert"):
+  with patch.object(e,"retirement_gate"),patch.object(e,"_assert_role_flags"),patch.object(e,"_assert_memberships"),patch.object(e,"_managed_role_catalog_assert"),patch.object(e,"_g014_public_rpc_acl_assert"):
    e._terminal_assert(Cursor(rows),manifest,vectors)
    with self.assertRaisesRegex(e.ClosureError,"terminal ledger mismatch"): e._terminal_assert(Cursor(rows[:-1]),manifest,vectors)
    drifted=rows[:-1]+((rows[-1][0],rows[-1][1],("drift",)),)
    with self.assertRaisesRegex(e.ClosureError,"terminal vector mismatch"): e._terminal_assert(Cursor(drifted),manifest,vectors)
   lock_cursor=Cursor(())
-  e._lock_under_controller(lock_cursor)
-  self.assertEqual([sql for sql,_ in lock_cursor.calls],["SET LOCAL statement_timeout = '60s'","SET LOCAL lock_timeout = '10s'","SET LOCAL idle_in_transaction_session_timeout = '60s'","SELECT pg_advisory_xact_lock(37037)"])
+  deadline=(105,15)
+  remaining_ms=4500
+  with patch.object(e.time,"time",return_value=100.5),patch.object(e.time,"monotonic",return_value=10.5):
+   e._lock_under_controller(lock_cursor,deadline=deadline)
+  self.assertEqual(lock_cursor.calls,[
+   ("SELECT pg_catalog.set_config('statement_timeout', %s, true)",(f"{remaining_ms}ms",)),
+   ("SELECT pg_catalog.set_config('lock_timeout', %s, true)",(f"{remaining_ms}ms",)),
+   ("SELECT pg_catalog.set_config('statement_timeout', %s, true)",(f"{remaining_ms}ms",)),
+   ("SELECT pg_catalog.set_config('idle_in_transaction_session_timeout', %s, true)",(f"{remaining_ms}ms",)),
+   ("SELECT pg_catalog.set_config('statement_timeout', %s, true)",(f"{remaining_ms}ms",)),
+   ("SELECT pg_catalog.pg_advisory_xact_lock(37037)",()),
+  ])
  def test_run_uses_one_cursor_for_read_only_catalog_and_readback(self):
   class Cursor:
    description=object()
@@ -273,7 +325,7 @@ class G037ExecutorTests(unittest.TestCase):
    probe=e.run(SimpleNamespace(mode="runtime-probe",db_env="TEST_DB"))
   self.assertEqual(probe["status"],"authorization-denied")
   self.assertEqual(runtime.events,["cursor","rollback","close"])
-  self.assertEqual([sql for sql,_ in runtime.cursor_value.calls],["BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY","SELECT pg_catalog.to_regprocedure(%s)","SELECT NOT has_function_privilege(current_user, pg_catalog.to_regprocedure(%s), 'EXECUTE')"])
+  self.assertEqual([sql for sql,_ in runtime.cursor_value.calls],["BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY","SELECT pg_catalog.to_regprocedure(%s)","SELECT NOT pg_catalog.has_function_privilege(current_user, pg_catalog.to_regprocedure(%s), 'EXECUTE')"])
  def test_runtime_probe_resolves_terminal_eight_argument_mutator(self):
   class Cursor:
    description=object()
@@ -295,7 +347,7 @@ class G037ExecutorTests(unittest.TestCase):
    def __init__(self): self.events=[]
    def execute(self,sql,params=()): self.events.append(sql)
   cursor=Cursor(); baseline=tuple((version,name,()) for version,name in c.BASELINE_PAIRS)
-  with patch.object(e,"validate_controller_capability"),patch.object(e,"ledger",return_value=baseline),patch.object(e,"_execute_closure",side_effect=lambda cur,*_:cur.events.append("execute")) as execute:
+  with patch.object(e,"validate_controller_capability"),patch.object(e,"_precompute_execution_plan",return_value=((),())),patch.object(e,"ledger",return_value=baseline),patch.object(e,"_execute_closure",side_effect=lambda cur,*_,**__:cur.events.append("execute")) as execute:
    e.rehearse_cursor(cursor,{},root=Path("."),manifest=SimpleNamespace(),freeze_id="f",relation_root="r",acl_root="a",deadline=int(time.time())+60,remediation={})
    e.apply_cursor(cursor,{},root=Path("."),manifest=SimpleNamespace(),freeze_id="f",relation_root="r",acl_root="a",deadline=int(time.time())+60,remediation={})
   self.assertEqual(execute.call_count,2)
@@ -307,10 +359,72 @@ class G037ExecutorTests(unittest.TestCase):
   class Cursor:
    def execute(self,*_): pass
   nonbaseline=(("unexpected","migration",()),)
-  with patch.object(e,"validate_controller_capability"),patch.object(e,"ledger",return_value=nonbaseline),patch.object(e,"_execute_closure") as execute:
+  with patch.object(e,"validate_controller_capability"),patch.object(e,"_precompute_execution_plan",return_value=((),())),patch.object(e,"ledger",return_value=nonbaseline),patch.object(e,"_execute_closure") as execute:
    with self.assertRaisesRegex(e.ClosureError,"retry forbidden"):
     e.apply_cursor(Cursor(),{},root=Path("."),manifest=SimpleNamespace(),freeze_id="f",relation_root="r",acl_root="a",deadline=int(time.time())+60,remediation={})
   execute.assert_not_called()
+ def test_expiry_is_rechecked_after_precompute_and_before_mutation(self):
+  class Cursor:
+   def __init__(self): self.calls=[]
+   def execute(self,sql,params=()): self.calls.append((sql,params))
+  cursor=Cursor(); baseline=tuple((version,name,()) for version,name in c.BASELINE_PAIRS)
+  with patch.object(e,"validate_controller_capability"),patch.object(e,"_precompute_execution_plan",return_value=((),())),patch.object(e,"ledger",return_value=baseline),patch.object(e,"_execute_closure") as execute,patch.object(e.time,"time",side_effect=(100,100,100,102)):
+   with self.assertRaisesRegex(e.ClosureError,"expired"):
+    e.apply_cursor(cursor,{},root=Path("."),manifest=SimpleNamespace(),freeze_id="f",relation_root="r",acl_root="a",deadline=101,remediation={})
+  execute.assert_not_called()
+  with patch.object(e,"_admission_assert"),patch.object(e,"remediate_short_url_duplicates") as remediate,patch.object(e,"validate_managed_role_coverage"),patch.object(e.time,"time",return_value=102):
+   with self.assertRaisesRegex(e.ClosureError,"expired"):
+    e._execute_closure(Cursor(),Path("."),SimpleNamespace(migrations=()),{},plan=(),deadline=101)
+  remediate.assert_not_called()
+ def test_apply_rejects_expiry_at_final_commit_handoff(self):
+  class Cursor:
+   def execute(self,*_): pass
+  baseline=tuple((version,name,()) for version,name in c.BASELINE_PAIRS)
+  with patch.object(e,"validate_controller_capability"),patch.object(e,"_precompute_execution_plan",return_value=((),())),patch.object(e,"_lock_under_controller"),patch.object(e,"ledger",return_value=baseline),patch.object(e,"_execute_closure",return_value={}) as execute,patch.object(e,"_assert_capability_not_expired",side_effect=(None,None,e.ClosureError("controller capability expired"))):
+   with self.assertRaisesRegex(e.ClosureError,"expired"):
+    e.apply_cursor(Cursor(),{},root=Path("."),manifest=SimpleNamespace(),freeze_id="f",relation_root="r",acl_root="a",deadline=int(time.time())+60,remediation={})
+  execute.assert_called_once()
+ def test_terminal_readback_rechecks_deadline_after_queries(self):
+  manifest=SimpleNamespace(migrations=())
+  with patch.object(e,"_terminal_assert",return_value=()),patch.object(e,"_stable_projection_roots",return_value=("catalog","acl")),patch.object(e,"_source_binding",return_value=("commit","source","terminal")),patch.object(e,"_assert_capability_not_expired",side_effect=(None,e.ClosureError("controller capability expired"))):
+   with self.assertRaisesRegex(e.ClosureError,"expired"):
+    e.observed_terminal_roots(object(),Path("."),manifest,deadline=1)
+ def test_rehearsal_rolls_back_after_expiry_and_rejects_rollback_failure(self):
+  class Cursor:
+   def __init__(self,fail_rollback=False): self.events=[]; self.fail_rollback=fail_rollback
+   def execute(self,sql,params=()):
+    self.events.append(sql)
+    if self.fail_rollback and sql.startswith("ROLLBACK TO SAVEPOINT"):
+     raise RuntimeError("rollback failed")
+  baseline=tuple((version,name,()) for version,name in c.BASELINE_PAIRS)
+  with patch.object(e,"validate_controller_capability"),patch.object(e,"_precompute_execution_plan",return_value=((),())),patch.object(e,"_lock_under_controller"),patch.object(e,"ledger",return_value=baseline),patch.object(e,"_execute_closure",side_effect=e.ClosureError("controller capability expired")):
+   cursor=Cursor()
+   with self.assertRaisesRegex(e.ClosureError,"rehearsal failed"):
+    e.rehearse_cursor(cursor,{},root=Path("."),manifest=SimpleNamespace(),freeze_id="f",relation_root="r",acl_root="a",deadline=int(time.time())+60,remediation={})
+   self.assertIn("ROLLBACK TO SAVEPOINT g037_rehearsal",cursor.events)
+   self.assertIn("RELEASE SAVEPOINT g037_rehearsal",cursor.events)
+   failed=Cursor(True)
+   with self.assertRaisesRegex(e.ClosureError,"rollback rehearsal failed"):
+    e.rehearse_cursor(failed,{},root=Path("."),manifest=SimpleNamespace(),freeze_id="f",relation_root="r",acl_root="a",deadline=int(time.time())+60,remediation={})
+   self.assertNotIn("RELEASE SAVEPOINT g037_rehearsal",failed.events)
+ def test_catalog_helpers_and_function_identity_are_search_path_stable(self):
+  executor=Path(e.__file__).read_text(encoding="utf-8")
+  contract=Path(c.__file__).read_text(encoding="utf-8")
+  terminal=Path(__file__).with_name("g037_hosted_terminal_readback.sql").read_text(encoding="utf-8")
+  for source in (executor,terminal):
+   self.assertIn("pg_catalog.pg_get_function_identity_arguments",source)
+   self.assertNotIn("::regprocedure::text",source)
+  self.assertNotIn("SELECT NOT has_function_privilege(",executor)
+  self.assertNotIn("extensions.digest(p.prosrc",executor)
+  self.assertNotIn("pg_catalog.lower(prosrc)",terminal)
+  for helper in ("pg_catalog.pg_get_userbyid","pg_catalog.aclexplode","pg_catalog.acldefault","pg_catalog.array_to_string"):
+   self.assertIn(helper,executor)
+  self.assertIn("pg_catalog.aclexplode",terminal)
+  sql_sources=executor+contract+terminal
+  for helper in ("pg_catalog.count(","pg_catalog.bool_and(","pg_catalog.json_agg(","pg_catalog.json_build_object(","pg_catalog.to_jsonb(","pg_catalog.first_value(","pg_catalog.row_number(","pg_catalog.encode(","pg_catalog.unnest(","extensions.digest("):
+   self.assertIn(helper,sql_sources)
+  for unqualified in ("SELECT count(","(SELECT count(","COALESCE(bool_and(", ",json_agg(", ",json_build_object(", ",to_jsonb(", ",first_value(", ",row_number(", ",encode(digest("," FROM unnest("):
+   self.assertNotIn(unqualified,sql_sources)
  def test_capability_binds_exact_immutable_source_and_inventory(self):
   now=int(time.time()); manifest=SimpleNamespace(migrations=())
   plain={"schema":"g037-write-freeze-v3","state":"active-provisional","freeze_id":"freeze-0001","origin":"https://x","commit":"a"*40,"manifest_sha256":c.MANIFEST_SHA256,"source_root":"s"*64,"terminal_spec":"t"*64,"scope":{"schemas":list(f.REACHABLE_SCHEMAS),"ordinary_relations":"all"},"relation_root":"r"*64,"acl_root":"l"*64,"held_lock_root":"a"*64,"not_before_unix":now,"not_after_unix":now+60,"controller_public_key_sha256":f.CONTROLLER_PUBLIC_KEY_SHA256,"signature":"signed"}
@@ -432,11 +546,11 @@ class G037ExecutorTests(unittest.TestCase):
   pre={"selection_spec_sha256":"s"*64,"short_urls_catalog_sha256":"c"*64,"short_urls_rowset_sha256":"r"*64,"short_urls_row_count":2,"duplicate_group_count":1,"duplicate_victim_count":1,"victim_descriptor_count":1,"duplicate_victims_sha256":"d"*64,"victim_descriptors_sha256":"d"*64,"_rows":rows,"_victims":[descriptor]}
   post={**pre,"short_urls_rowset_sha256":"p"*64,"short_urls_row_count":1,"duplicate_group_count":0,"duplicate_victim_count":0,"victim_descriptor_count":0,"duplicate_victims_sha256":e.canonical_sha256([]),"victim_descriptors_sha256":e.canonical_sha256([]),"_rows":[rows[0]],"_victims":[]}
   queries=[]
-  def query(_,sql,params=()):
+  def query(_,sql,params=(),*,deadline):
    queries.append((sql,params)); return [(victim,)]
   auth={**pre,"authorization_id":"11111111-1111-4111-8111-111111111111","policy":"exact-baseline-to-terminal-ledger-single-commit-v1","legacy_vector":{key:pre["short_urls_rowset_sha256"] if key=="pre_short_urls_rowset_sha256" else pre[key] for key in ("selection_spec_sha256","short_urls_catalog_sha256","pre_short_urls_rowset_sha256","duplicate_group_count","duplicate_victim_count","duplicate_victims_sha256","victim_descriptors_sha256")}}
-  with patch.object(e,"_short_url_binding",return_value=(auth,pre)),patch.object(e,"_short_url_snapshot",side_effect=(pre,post)),patch.object(e,"q",side_effect=query):
-   result=e.remediate_short_url_duplicates(object(),{"execution_authorization_sha256":"f"*64,"execution_authorization_signature_sha256":"e"*64,"legacy_repository_commit":"0"*40,"legacy_authorization_sha256":"d"*64,"legacy_authorization_signature_sha256":"c"*64,"legacy_capture_receipt_sha256":"b"*64,"legacy_restore_receipt_sha256":"a"*64,"legacy_inspection_receipt_sha256":"1"*64,"recovery_receipt_sha256":"2"*64})
+  with patch.object(e,"_short_url_binding",return_value=(auth,pre)),patch.object(e,"_short_url_snapshot",side_effect=(pre,post)),patch.object(e,"_q_before_deadline",side_effect=query):
+   result=e.remediate_short_url_duplicates(object(),{"execution_authorization_sha256":"f"*64,"execution_authorization_signature_sha256":"e"*64,"legacy_repository_commit":"0"*40,"legacy_authorization_sha256":"d"*64,"legacy_authorization_signature_sha256":"c"*64,"legacy_capture_receipt_sha256":"b"*64,"legacy_restore_receipt_sha256":"a"*64,"legacy_inspection_receipt_sha256":"1"*64,"recovery_receipt_sha256":"2"*64},deadline=int(time.time())+60)
   self.assertEqual(result["deleted_count"],1)
   self.assertEqual(queries[0][1],([victim],))
   self.assertIn("WHERE id = ANY(%s::uuid[])",queries[0][0])
@@ -447,22 +561,34 @@ class G037ExecutorTests(unittest.TestCase):
   drift={**base,"short_urls_row_count":1}
   auth={**base,"pre_short_urls_rowset_sha256":base["short_urls_rowset_sha256"],"legacy_vector":{key:base["short_urls_rowset_sha256"] if key=="pre_short_urls_rowset_sha256" else base[key] for key in ("selection_spec_sha256","short_urls_catalog_sha256","pre_short_urls_rowset_sha256","duplicate_group_count","duplicate_victim_count","duplicate_victims_sha256","victim_descriptors_sha256")}}
   with patch.object(e,"_short_url_binding",return_value=(auth,base)),patch.object(e,"_short_url_snapshot",return_value=drift),patch.object(e,"q") as query:
-   with self.assertRaisesRegex(e.ClosureError,"capture drift"): e.remediate_short_url_duplicates(object(),{})
+   with self.assertRaisesRegex(e.ClosureError,"capture drift"): e.remediate_short_url_duplicates(object(),{},deadline=int(time.time())+60)
   query.assert_not_called()
   victim="22222222-2222-2222-2222-222222222222"; descriptor={"source_id":victim}
   before={**base,"short_urls_row_count":1,"duplicate_group_count":1,"duplicate_victim_count":1,"victim_descriptor_count":1,"duplicate_victims_sha256":"d"*64,"victim_descriptors_sha256":"d"*64,"_rows":[{"id":victim}],"_victims":[descriptor]}
   auth={**before,"pre_short_urls_rowset_sha256":before["short_urls_rowset_sha256"],"legacy_vector":{key:before["short_urls_rowset_sha256"] if key=="pre_short_urls_rowset_sha256" else before[key] for key in ("selection_spec_sha256","short_urls_catalog_sha256","pre_short_urls_rowset_sha256","duplicate_group_count","duplicate_victim_count","duplicate_victims_sha256","victim_descriptors_sha256")}}
-  with patch.object(e,"_short_url_binding",return_value=(auth,before)),patch.object(e,"_short_url_snapshot",return_value=before),patch.object(e,"q",return_value=[]):
-   with self.assertRaisesRegex(e.ClosureError,"returning mismatch"): e.remediate_short_url_duplicates(object(),{})
- def test_managed_role_transforms_are_exact_and_execution_only(self):
+  with patch.object(e,"_short_url_binding",return_value=(auth,before)),patch.object(e,"_short_url_snapshot",return_value=before),patch.object(e,"_q_before_deadline",return_value=[]):
+   with self.assertRaisesRegex(e.ClosureError,"returning mismatch"): e.remediate_short_url_duplicates(object(),{},deadline=int(time.time())+60)
+ def test_managed_role_splices_are_ordered_literal_and_nonoverlapping(self):
   root=Path(__file__).parents[3]; manifest=c.load_manifest(root)
-  selected=[item for item in manifest.migrations if item.version in c.ROLE_TRANSFORMS]
-  self.assertEqual({item.version for item in selected},set(c.ROLE_TRANSFORMS))
-  for item in selected:
-   original,_=e.vectors(root,item); execution,inner=e.transformed_vectors(root,item)
-   self.assertNotEqual(original,execution)
-   self.assertEqual(e.digest(execution),c.ROLE_TRANSFORMS[item.version]["transformed_vector_sha256"])
-   self.assertTrue(all(not re.search(r"(?is)\b(?:create|alter)\s+role\b|\bset\s+role\b",statement) for statement in inner))
+  splices=e._splice_specs(root,manifest)
+  self.assertEqual(tuple(item["version"] for item in splices),("20260713000450","20260713002000","20260713002400"))
+  self.assertEqual(len(c.ROLE_SPLICES),7)
+  self.assertEqual(tuple(record["label"] for record in c.ROLE_SPLICES),e._ROLE_SPLICE_LABELS)
+  for item in splices:
+   self.assertEqual(hashlib.sha256(item["raw"]).hexdigest(),item["group"]["source_sha256"])
+   self.assertEqual(hashlib.sha256(item["transformed"]).hexdigest(),item["group"]["transformed_source_sha256"])
+   previous=0
+   for record in item["records"]:
+    self.assertGreaterEqual(record["start"],previous)
+    self.assertEqual(item["raw"][record["start"]:record["end"]],record["old"])
+    previous=record["end"]
+ def test_full_precompute_matches_all_pinned_splice_vectors(self):
+  root=Path(__file__).parents[3]; manifest=c.load_manifest(root)
+  plan,splices=e._precompute_execution_plan(root,manifest)
+  self.assertEqual(len(plan),28)
+  self.assertEqual(tuple((entry["version"],entry["group"]["original_vector_sha256"],entry["group"]["transformed_vector_sha256"]) for entry in splices),tuple((group["version"],group["original_vector_sha256"],group["transformed_vector_sha256"]) for group in c.ROLE_SPLICE_GROUPS))
+  vectors={item.version:(e.digest(original),e.digest(transformed)) for item,original,transformed,_ in plan}
+  self.assertEqual(tuple((group["version"],*vectors[group["version"]]) for group in c.ROLE_SPLICE_GROUPS),tuple((group["version"],group["original_vector_sha256"],group["transformed_vector_sha256"]) for group in c.ROLE_SPLICE_GROUPS))
  def test_terminal_spec_is_shared_by_freeze_controller_and_executor(self):
   root=Path(__file__).parents[3]; manifest=c.load_manifest(root)
   _,head,source_root,freeze_spec=f._root_source()
@@ -472,25 +598,48 @@ class G037ExecutorTests(unittest.TestCase):
   with patch.object(controller.freeze,"_root_source",return_value=(root,head,source_root,freeze_spec)):
    self.assertEqual(controller._execution_bindings(args,{"expires_at":0}, "f"*64,"a"*64)["terminal_spec"],freeze_spec)
 
- def test_transform_pins_precede_cursor_execution_and_ledger_original_vectors(self):
-  root=Path(__file__).parents[3]; manifest=c.load_manifest(root)
+ def test_plan_prevalidation_precedes_every_cursor_operation(self):
   class Cursor:
    def __init__(self): self.calls=[]
    def execute(self,*args): self.calls.append(args)
-  for item in (migration for migration in manifest.migrations if migration.version in c.ROLE_TRANSFORMS):
+  root=Path(__file__).parents[3]; manifest=c.load_manifest(root)
+  for invoke in (e.rehearse_cursor,e.apply_cursor):
    cursor=Cursor()
-   with self.subTest(version=item.version),patch.object(e,"validate_managed_role_coverage",return_value={item.version:item}),patch.object(e,"source_sql"),patch.object(e,"transformed_vectors",side_effect=e.ClosureError("managed role transform source drift")),patch.object(e,"remediate_short_url_duplicates") as remediate:
-    with self.assertRaisesRegex(e.ClosureError,"source drift"):
-     e._execute_closure(cursor,root,SimpleNamespace(migrations=(item,)),{})
-    self.assertEqual(cursor.calls,[])
-    remediate.assert_not_called()
-   cursor=Cursor()
-   with self.subTest(ledger=item.version),patch.object(e,"validate_managed_role_coverage",return_value={item.version:item}),patch.object(e,"remediate_short_url_duplicates",return_value={}),patch.object(e,"_terminal_assert"):
-    e._execute_closure(cursor,root,SimpleNamespace(migrations=(item,)),{})
-   original,_=e.vectors(root,item); execution,inner=e.transformed_vectors(root,item)
-   self.assertNotEqual(original,execution)
-   self.assertEqual([call[0] for call in cursor.calls[:-1]],list(inner))
-   self.assertEqual(cursor.calls[-1][1],(item.version,item.name,list(original)))
+   with self.subTest(invoke=invoke.__name__),patch.object(e,"validate_controller_capability"),patch.object(e,"_precompute_execution_plan",side_effect=e.ClosureError("late malformed splice")),patch.object(e,"_execute_closure") as execute:
+    with self.assertRaisesRegex(e.ClosureError,"late malformed splice"):
+     invoke(cursor,{},root=root,manifest=manifest,freeze_id="f",relation_root="r",acl_root="a",deadline=int(time.time())+60,remediation={})
+   self.assertEqual(cursor.calls,[])
+   execute.assert_not_called()
+ def test_admission_requires_each_exact_hosted_dimension(self):
+  expected=(True,True,True,True,False,True,True,1,10,True,0,True)
+  class Cursor:
+   description=object()
+   def __init__(self,row): self.row=row
+   def execute(self,*args): pass
+   def fetchall(self): return [self.row]
+  for index in range(len(expected)):
+   drifted=list(expected); drifted[index]=not drifted[index] if isinstance(drifted[index],bool) else drifted[index]+1
+   with self.subTest(index=index),patch.object(e,"ledger",return_value=tuple((version,name,()) for version,name in c.BASELINE_PAIRS)):
+    with self.assertRaisesRegex(e.ClosureError,"admission drift"):
+     e._admission_assert(Cursor(tuple(drifted)))
+ def test_epilogue_is_exact_symmetric_and_pinned(self):
+  sql=c.ROLE_PROTOCOL_EPILOGUE.decode("ascii")
+  self.assertEqual(sql.count("EXCEPT ALL"),4)
+  self.assertNotIn("count(*)",sql)
+  self.assertNotIn("pg_has_role",sql)
+  self.assertNotIn("PERFORM privacy_retention.assert_g014_workflow_owner_contract()",sql)
+  self.assertIn("pg_catalog.pg_proc",sql)
+  self.assertIn("REVOKE privacy_workflow_owner FROM postgres GRANTED BY postgres RESTRICT",sql)
+  self.assertEqual(hashlib.sha256(c.ROLE_PROTOCOL_EPILOGUE).hexdigest(),c.ROLE_PROTOCOL_EPILOGUE_SHA256)
+  for altered in (
+   c.ROLE_PROTOCOL_EPILOGUE.replace(b"false,true,true",b"true,true,true",1),
+   c.ROLE_PROTOCOL_EPILOGUE.replace(b"privacy_workflow_owner','postgres','postgres",b"postgres','privacy_workflow_owner','postgres",1),
+   c.ROLE_PROTOCOL_EPILOGUE.replace(b"privacy_workflow_owner','postgres','postgres',false,true,true),\n         ('privacy_workflow_owner",b"privacy_workflow_owner','postgres','supabase_admin',true,false,false),\n         ('privacy_workflow_owner",1),
+  ):
+   self.assertNotEqual(hashlib.sha256(altered).hexdigest(),c.ROLE_PROTOCOL_EPILOGUE_SHA256)
+  with patch.object(e,"_source_bound_rpc_matrix",return_value=c.STATIC_RPC_MATRIX),patch.object(e,"_splice_specs",return_value=()),patch.object(e,"vectors",return_value=(("epilogue",),("epilogue",))),patch.object(e,"ROLE_PROTOCOL_EPILOGUE_VECTOR_SHA256","0"*64):
+   with self.assertRaisesRegex(e.ClosureError,"vector drift"):
+    e._precompute_execution_plan(Path("."),SimpleNamespace(migrations=()))
 
  def test_managed_role_and_g014_acl_assertions_reject_drift(self):
   class Cursor:
@@ -498,17 +647,169 @@ class G037ExecutorTests(unittest.TestCase):
    def __init__(self,rows): self.rows=iter(rows)
    def execute(self,sql,params=()): pass
    def fetchall(self): return next(self.rows)
-  valid=(False,False,False,False,False,False,False,True,True)
-  expected=(("privacy_retention","privacy_workflow_owner","tzuyang_address_evidence_admin_approval_receipts","privacy_workflow_owner",True,True,"privacy_retention.reject_tzuyang_address_evidence_admin_approval_receipt_mutation()","privacy_workflow_owner",False,"search_path="),("privacy_retention","privacy_workflow_owner","tzuyang_address_evidence_admin_approval_receipts","privacy_workflow_owner",True,True,"public.consume_tzuyang_address_evidence_admin_approval(uuid,text,text,uuid,text,text,text,timestamp with time zone,timestamp with time zone)","privacy_workflow_owner",True,"search_path="))
-  for row in ((),(True,False,False,False,False,False,False,True,True),(False,False,False,False,False,False,False,False,True),(False,False,False,False,False,False,False,True,False)):
-   with self.subTest(role=row),self.assertRaisesRegex(e.ClosureError,"managed role catalog"):
-    e._managed_role_catalog_assert(Cursor(([] if not row else [row],expected)))
-  e._managed_role_catalog_assert(Cursor(([valid],expected)))
+  role_rows=tuple((name,False,False,False,False,False,False,False) for name in sorted(c.MANAGED_ROLES))
+  membership_rows=tuple(sorted(c.TERMINAL_MANAGED_ROWS))
+  expected=(
+   ("privacy_retention","privacy_workflow_owner","tzuyang_address_evidence_admin_approval_receipts","privacy_workflow_owner",True,True,"privacy_retention.reject_tzuyang_address_evidence_admin_approval_receipt_mutation()","privacy_workflow_owner",False,"search_path="),
+   ("privacy_retention","privacy_workflow_owner","tzuyang_address_evidence_admin_approval_receipts","privacy_workflow_owner",True,True,"public.consume_tzuyang_address_evidence_admin_approval(uuid,text,text,uuid,text,text,text,timestamp with time zone,timestamp with time zone)","privacy_workflow_owner",True,"search_path="))
+  with self.assertRaisesRegex(e.ClosureError,"managed role flag contract drift"):
+   e._managed_role_catalog_assert(Cursor((role_rows[:-1],membership_rows,expected)))
+  with self.assertRaisesRegex(e.ClosureError,"managed role membership contract drift"):
+   e._managed_role_catalog_assert(Cursor((role_rows,(),expected)))
+  e._managed_role_catalog_assert(Cursor((role_rows,membership_rows,expected)))
+  e._assert_memberships(Cursor((tuple(sorted(c.TRANSIENT_MANAGED_ROWS)),)),c.TRANSIENT_MANAGED_ROWS)
+  for rows in (role_rows[:-1],role_rows+(("privacy_retention_extra",False,False,False,False,False,False,False),),role_rows[:-1]+(("privacy_retention_operator_approver",True,False,False,False,False,False,False),)):
+   with self.subTest(role_rows=rows),self.assertRaisesRegex(e.ClosureError,"managed role flag contract drift"):
+    e._assert_role_flags(Cursor((rows,)))
+  for rows in (membership_rows[:-1],tuple(sorted(membership_rows+(("external_role","privacy_retention_operator_approver","postgres",False,True,True),))),membership_rows[:-1]+(("privacy_retention_operator_approver","postgres","supabase_admin",False,False,False),)):
+   with self.subTest(membership_rows=rows),self.assertRaisesRegex(e.ClosureError,"managed role membership contract drift"):
+    e._assert_memberships(Cursor((rows,)),c.TERMINAL_MANAGED_ROWS)
   for index,value in ((3,"postgres"),(4,False),(7,"postgres")):
    drifted=list(expected); row=list(drifted[0 if index in (3,4) else 1]); row[index]=value; drifted[0 if index in (3,4) else 1]=tuple(row)
-   with self.subTest(g013_catalog=index),self.assertRaisesRegex(e.ClosureError,"managed ownership"):
-    e._managed_role_catalog_assert(Cursor(([valid],tuple(drifted))))
-  for acl in ((False,True),(True,False)):
-   with self.subTest(acl=acl),self.assertRaisesRegex(e.ClosureError,"G014 public RPC ACL"):
-    e._g014_public_rpc_acl_assert(Cursor(([acl],)))
+   with self.subTest(g013_catalog=index),self.assertRaisesRegex(e.ClosureError,"managed ownership catalog contract drift"):
+    e._managed_role_catalog_assert(Cursor((role_rows,membership_rows,tuple(drifted))))
+
+ def test_g014_static_matrix_is_exact_and_fail_closed(self):
+  self.assertEqual(len(c.STATIC_RPC_MATRIX),104)
+  self.assertEqual(len({signature for signature,_ in c.STATIC_RPC_MATRIX}),97)
+  self.assertEqual({role:sum(grantee==role for _,grantee in c.STATIC_RPC_MATRIX) for role in ("anon","authenticated","service_role")},{"anon":1,"authenticated":18,"service_role":85})
+  self.assertEqual(c.STATIC_RPC_MATRIX_SHA256,"fb55b1f0b36236578c7a3c337eb5032094d1fc7c741fa000dde9e2d2eee55e3c")
+  self.assertEqual(c.STATIC_RPC_MATRIX_SHA256,c.digest(c.STATIC_RPC_MATRIX))
+  class Cursor:
+   description=object()
+   def __init__(self,rows): self.rows=iter(rows)
+   def execute(self,sql,params=()): self.sql=sql
+   def fetchall(self): return next(self.rows)
+  clean=((),tuple(sorted(c.STATIC_RPC_MATRIX)),(),(),())
+  e._g014_public_rpc_acl_assert(Cursor(clean))
+  mutations=(
+   ((('public.missing()',),),tuple(sorted(c.STATIC_RPC_MATRIX)),(),(),(),"missing source signature"),
+   ((),tuple(sorted(c.STATIC_RPC_MATRIX))[:-1],(),(),(),"ACL contract drift"),
+   ((),tuple(sorted(c.STATIC_RPC_MATRIX))+(("public.extra()","service_role"),),(),(),(),"ACL contract drift"),
+   ((),(("public.wrong()","service_role"),),(),(),(),"ACL contract drift"),
+   ((),tuple(sorted(c.STATIC_RPC_MATRIX)),(("public.any()",),),(),(),"PUBLIC ACL drift"),
+   ((),tuple(sorted(c.STATIC_RPC_MATRIX)),(),(("public.unlisted()","anon"),),(),"unlisted API ACL drift"),
+   ((),tuple(sorted(c.STATIC_RPC_MATRIX)),(),(),(("public.approve_submission_item(text)",),),"unexpected overload drift"),
+  )
+  for missing,actual,public_acl,unlisted,overloads,error in mutations:
+   with self.subTest(error=error),self.assertRaisesRegex(e.ClosureError,error):
+    e._g014_public_rpc_acl_assert(Cursor((missing,actual,public_acl,unlisted,overloads)))
+
+ def test_g014_source_contract_is_pinned_in_terminal_spec_and_sql(self):
+  root=Path(__file__).parents[3]; manifest=c.load_manifest(root)
+  spec=c.terminal_spec(manifest)
+  self.assertEqual(c.G014_RPC_ALLOWLIST_VERSION,"20260713002400")
+  self.assertEqual(len(c.G014_RPC_ALLOWLIST_FRAGMENTS),8)
+  self.assertEqual(len(c.STATIC_RPC_MATRIX),104)
+  self.assertEqual(len({signature for signature,_ in c.STATIC_RPC_MATRIX}),97)
+  self.assertEqual(tuple(sum(grantee==role for _,grantee in c.STATIC_RPC_MATRIX) for role in ("anon","authenticated","service_role")),(1,18,85))
+  self.assertNotIn(("public.begin_account_deletion_apply(uuid,uuid,uuid,text,text,text,timestamptz)","service_role"),c.STATIC_RPC_MATRIX)
+  self.assertIn(("public.begin_account_deletion_apply(uuid,uuid,uuid,text,text,text,timestamptz,text)","service_role"),c.STATIC_RPC_MATRIX)
+  self.assertNotEqual(spec,c.digest({"manifest":c.MANIFEST_SHA256}))
+  with patch.object(c,"STATIC_RPC_MATRIX_SHA256","0"*64):
+   self.assertNotEqual(spec,c.terminal_spec(manifest))
+  with patch.object(c,"G014_RPC_ALLOWLIST_FRAGMENTS",()):
+   self.assertNotEqual(spec,c.terminal_spec(manifest))
+  sql=Path(__file__).with_name("g037_hosted_terminal_readback.sql").read_text(encoding="utf-8")
+  for token in ("02000","02400",c.STATIC_RPC_MATRIX_SHA256,"EXCEPT ALL","to_regprocedure","no_unlisted_public_api_execute","no_unexpected_allowlisted_name_overloads"):
+   self.assertIn(token,sql)
+  self.assertEqual(tuple(sorted(self._terminal_rpc_matrix(sql))),tuple(sorted(c.STATIC_RPC_MATRIX)))
+  first="    ('public.approve_submission_item(uuid,uuid,jsonb)', 'authenticated'::name),"
+  extra="    ('public.extra()', 'service_role'::name),"
+  reordered=sql.replace(first,"__FIRST__",1).replace("    ('public.approve_submission_item(uuid,uuid,jsonb)', 'service_role'::name),",first,1).replace("__FIRST__","    ('public.approve_submission_item(uuid,uuid,jsonb)', 'service_role'::name),",1)
+  for mutated in (sql.replace(first,"",1),sql.replace(first,first+"\n"+extra,1),reordered):
+   self.assertNotEqual(self._terminal_rpc_matrix(mutated),c.STATIC_RPC_MATRIX)
+
+ def _terminal_rpc_matrix(self, sql):
+  match=re.search(r"WITH expected_rpc\(source_signature,grantee\) AS \(\s*VALUES\s*(.*?)\n\), resolved_rpc",sql,re.S)
+  self.assertIsNotNone(match)
+  rows=re.findall(r"^\s*\('([^']+)', '(anon|authenticated|service_role)'::name\)(?:,)?$",match.group(1),re.M)
+  self.assertEqual(len(rows),len(re.findall(r"^\s*\(",match.group(1),re.M)))
+  return tuple(rows)
+
+ def test_source_bound_rpc_matrix_rejects_source_and_constant_drift(self):
+  root=Path(__file__).parents[3]; manifest=c.load_manifest(root)
+  self.assertEqual(e._source_bound_rpc_matrix(root,manifest),c.STATIC_RPC_MATRIX)
+  for version,_,start,end,fragment_sha256 in c.G014_RPC_ALLOWLIST_FRAGMENTS:
+   item=next(item for item in manifest.migrations if item.version==version)
+   source=(root/item.path).read_bytes()
+   self.assertEqual(hashlib.sha256(source[start:end]).hexdigest(),fragment_sha256)
+  with patch.object(e,"G014_RPC_ALLOWLIST_FRAGMENTS",()):
+   with self.assertRaisesRegex(e.ClosureError,"binding drift"): e._source_bound_rpc_matrix(root,manifest)
+  with patch.object(e,"STATIC_RPC_MATRIX",c.STATIC_RPC_MATRIX[:-1]):
+   with self.assertRaisesRegex(e.ClosureError,"composition drift"): e._source_bound_rpc_matrix(root,manifest)
+  with patch.object(e,"STATIC_RPC_MATRIX_SHA256","0"*64):
+   with self.assertRaisesRegex(e.ClosureError,"digest drift"): e._source_bound_rpc_matrix(root,manifest)
+
+ def test_unpinned_managed_role_membership_grammar_rejects_only_membership_statements(self):
+  for statement in (
+   "GRANT privacy_workflow_owner TO postgres",
+   "REVOKE privacy_workflow_owner FROM postgres",
+   "GRANT ROLE privacy_retention_operator_approver TO postgres",
+   "REVOKE ROLE privacy_retention_legal_approver FROM postgres",
+   "GRANT ordinary_role, \"privacy_retention_activation_operator\" TO postgres, ordinary_member GRANTED BY postgres",
+   "REVOKE ADMIN OPTION FOR ordinary_role, privacy_retention_operator_approver FROM postgres CASCADE",
+   "REVOKE INHERIT OPTION FOR ordinary_role FROM \"privacy_retention_legal_approver\" RESTRICT",
+   "REVOKE SET OPTION FOR ordinary_role FROM privacy_workflow_owner",
+   'GRANT "on" TO privacy_workflow_owner',
+   'REVOKE privacy_workflow_owner FROM "granted"',
+   'GRANT privacy_workflow_owner TO "cascade"',
+   'REVOKE privacy_workflow_owner FROM "restrict"',
+   r'''GRANT ordinary_role TO U&"ordinary\005fmember" UESCAPE '\' GRANTED BY privacy_workflow_owner''',
+   r'''REVOKE ordinary_role FROM U&"ordinary\005fmember" UESCAPE '\' GRANTED BY privacy_workflow_owner''',
+   r'''GRANT U&"ordinary\005frole" UESCAPE '\' TO ordinary_member GRANTED BY privacy_workflow_owner''',
+   r'''GRANT SELECT ON U&"ordinary\005fobject" UESCAPE '\' TO authenticated''',
+  ):
+   self.assertTrue(e._is_unpinned_managed_role_membership(statement))
+  for statement in (
+   "GRANT SELECT ON public.privacy_workflow_owner TO authenticated",
+   "REVOKE EXECUTE ON FUNCTION public.privacy_workflow_owner() FROM authenticated",
+   "GRANT USAGE ON SCHEMA privacy_retention TO \"privacy_workflow_owner\"",
+   "REVOKE SELECT ON TABLE public.privacy_retention_operator_approver FROM authenticated",
+   "GRANT SELECT ON public.privacy_workflow_owner_archive TO authenticated",
+   "REVOKE EXECUTE ON FUNCTION public.privacy_workflow_owner_archive() FROM authenticated",
+   "GRANT ordinary_role TO ordinary_member GRANTED BY privacy_workflow_owner",
+   'GRANT SELECT ON "on" TO privacy_workflow_owner',
+  ):
+   self.assertFalse(e._is_unpinned_managed_role_membership(statement))
+
+ def test_unpinned_managed_role_ddl_does_not_confuse_role_columns(self):
+  for statement in (
+   "CREATE ROLE privacy_workflow_owner",
+   "ALTER ROLE privacy_retention_operator_approver NOLOGIN",
+   "SET ROLE privacy_retention_activation_operator",
+   "DROP ROLE privacy_retention_legal_approver",
+   "ALTER USER privacy_retention_activation_operator NOLOGIN",
+   "SET LOCAL ROLE privacy_workflow_owner",
+   "SET SESSION ROLE privacy_workflow_owner",
+   "CREATE USER ordinary_user",
+   "DROP USER IF EXISTS ordinary_user",
+   "DROP ROLE IF EXISTS ordinary_role",
+   "CREATE GROUP ordinary_group",
+   "ALTER GROUP ordinary_group ADD USER ordinary_user",
+   "ALTER GROUP ordinary_group DROP USER ordinary_user",
+   "DROP GROUP IF EXISTS ordinary_group",
+   'CREATE USER U&"privacy\\005fworkflow\\005fowner"',
+   'ALTER ROLE U&"privacy\\005fworkflow\\005fowner" NOLOGIN',
+  ):
+   self.assertTrue(e._is_unpinned_managed_role_ddl(statement))
+  for statement in (
+   "GRANT ordinary_role TO ordinary_member",
+   "REVOKE ordinary_role FROM ordinary_member",
+   "GRANT ROLE ordinary_role TO ordinary_member",
+  ):
+   self.assertTrue(e._is_unpinned_managed_role_membership(statement))
+  for statement in (
+   "UPDATE public.profiles SET role = EXCLUDED.role",
+   "ALTER TABLE public.profiles ALTER COLUMN role SET DEFAULT 'user'",
+   "SET search_path = public",
+  ):
+   self.assertFalse(e._is_unpinned_managed_role_ddl(statement))
+
+ def test_epilogue_uses_extension_qualified_digest_for_prepare_contract(self):
+  sql=c.ROLE_PROTOCOL_EPILOGUE.decode("ascii")
+  self.assertIn("extensions.digest(pg_catalog.convert_to(p.prosrc,'UTF8'),'sha256')",sql)
+  self.assertNotIn("extensions.digest(p.prosrc,'sha256')",sql)
+  self.assertEqual(hashlib.sha256(c.ROLE_PROTOCOL_EPILOGUE).hexdigest(),c.ROLE_PROTOCOL_EPILOGUE_SHA256)
+
 if __name__=="__main__": unittest.main()
