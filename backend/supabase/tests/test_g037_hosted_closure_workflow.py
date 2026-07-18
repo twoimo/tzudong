@@ -120,6 +120,7 @@ class G037HostedClosureWorkflowTests(unittest.TestCase):
             controller["env"],
         )
         self.assertEqual(
+            "timeout --signal=TERM --kill-after=5s 120s "
             "python backend/supabase/scripts/g037_hosted_closure_executor.py "
             '"$REQUESTED_MODE" --db-env SUPABASE_DB_URL > '
             '"$RUNNER_TEMP/g037-receipts/${REQUESTED_MODE}-${GITHUB_SHA}.json"\n',
