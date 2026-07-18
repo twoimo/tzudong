@@ -26,6 +26,9 @@ PROVIDER_MANAGED_LOCK_EXCLUSIONS=frozenset((
 CONTROLLER_PUBLIC_KEY_PEM="-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAqaHsCrD74lzv7J3zcfsjchTndvHTWTj1dWeDjwXK+G8=\n-----END PUBLIC KEY-----\n"
 CONTROLLER_PUBLIC_KEY_SHA256=hashlib.sha256(CONTROLLER_PUBLIC_KEY_PEM.encode()).hexdigest()
 class FreezeError(RuntimeError): pass
+_LOCK_TIMEOUT_SETTINGS=("statement_timeout","lock_timeout","idle_in_transaction_session_timeout")
+_LOCK_TIMEOUT_MIN_SECONDS=1
+_LOCK_TIMEOUT_MAX_SECONDS=900
 class RehearsalRollbackError(FreezeError):
  def __init__(self, original_error, rollback_error):
   super().__init__("rollback-failed")
@@ -82,7 +85,10 @@ def _root_source():
  terminal_spec=digest({"manifest":MANIFEST_SHA256,"migrations":[(m.version,m.sha256) for m in manifest.migrations],"g014_terminal":"20260713002400"})
  return root,commit,source_root,terminal_spec
 def _locks(c,rs,seconds):
- for key in ("statement_timeout","lock_timeout","idle_in_transaction_session_timeout"): c.execute("SET LOCAL %s=%%s"%key,("%ds"%seconds,))
+ if (not isinstance(seconds,int) or isinstance(seconds,bool)
+     or not _LOCK_TIMEOUT_MIN_SECONDS<=seconds<=_LOCK_TIMEOUT_MAX_SECONDS):
+  raise FreezeError("lock timeout seconds must be between 1 and 900")
+ for key in _LOCK_TIMEOUT_SETTINGS: c.execute("SET LOCAL %s = '%ds'"%(key,seconds))
  lockable=_lockable_relations(rs)
  for r in lockable: c.execute("LOCK TABLE %s.%s IN SHARE ROW EXCLUSIVE MODE"%(_ident(r.schema),_ident(r.name)))
  held=_rows(c,"SELECT n.nspname,c.relname,c.oid FROM pg_locks l JOIN pg_class c ON c.oid=l.relation JOIN pg_namespace n ON n.oid=c.relnamespace WHERE l.pid=pg_backend_pid() AND l.granted AND l.mode='ShareRowExclusiveLock' ORDER BY 1,2,3")
