@@ -13,7 +13,7 @@ from g037_hosted_closure_contract import validate_operator_assertion
 SCHEMA="g037-production-remediation-authorization-v1"; PURPOSE="g037-production-short-url-remediation"; POLICY="exact-baseline-to-terminal-ledger-single-commit-v1"
 PUBLIC_KEY_PEM="-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAcAr1HLPmfrOZ3QHpiVKx4si0avV2+lWBihhJd3M6+gk=\n-----END PUBLIC KEY-----\n"; PUBLIC_KEY_SHA256="ab606e5585b18b2ca3e0e2d7528d0f6d5dbda113e0b01a48390d365ca5b78186"
 RECEIPT_SCHEMA="g035-local-recovery-receipt-v4"; _HEX=re.compile(r"^[a-f0-9]{64}$"); _COMMIT=re.compile(r"^[a-f0-9]{40}$"); _FREEZE=re.compile(r"^[a-z0-9][a-z0-9-]{7,127}$")
-_VECTOR=("selection_spec_sha256","short_urls_catalog_sha256","pre_short_urls_rowset_sha256","duplicate_group_count","duplicate_victim_count","duplicate_victims_sha256","victim_descriptors_sha256","batch_id")
+_INSPECTION_VECTOR=("selection_spec_sha256","short_urls_catalog_sha256","pre_short_urls_rowset_sha256","duplicate_group_count","duplicate_victim_count","duplicate_victims_sha256","victim_descriptors_sha256"); _AUTHORIZATION_VECTOR=(*_INSPECTION_VECTOR,"batch_id")
 _FIELDS=frozenset(("schema","purpose","policy","authorization_id","issued_at","expires_at","origin","project","current_commit","legacy_repository_commit","manifest_sha256","source_root","terminal_spec","freeze_id","operator_assertion_sha256","operator_assertion_expires_at","recipient_fingerprint","recovery_public_key_fingerprint","capture_scope_sha256","baseline_ledger_state","legacy_capture_receipt_sha256","legacy_restore_receipt_sha256","legacy_inspection_receipt_sha256","legacy_authorization_sha256","legacy_authorization_signature_sha256","legacy_vector")); _BINDINGS=frozenset(_FIELDS-{"schema","authorization_id","issued_at","expires_at"})
 @dataclass(frozen=True)
 class ExecutionAuthorizationEnvelope:
@@ -48,7 +48,7 @@ def _uuid(v):
 def _origin(origin,project):
  if not isinstance(project,str) or not re.fullmatch(r"[a-z0-9]{20}",project) or origin!=f"https://{project}.supabase.co" or urlsplit(origin).hostname!=project+".supabase.co": raise ContractError("origin/project invalid")
 def _vector(v):
- if not isinstance(v,dict) or set(v)!=set(_VECTOR): raise ContractError("legacy vector fields invalid")
+ if not isinstance(v,dict) or set(v)!=set(_AUTHORIZATION_VECTOR): raise ContractError("legacy vector fields invalid")
  for k in ("selection_spec_sha256","short_urls_catalog_sha256","pre_short_urls_rowset_sha256","duplicate_victims_sha256","victim_descriptors_sha256"): _hex(v.get(k),k)
  if any(not isinstance(v.get(k),int) or isinstance(v[k],bool) or v[k]<0 for k in ("duplicate_group_count","duplicate_victim_count")): raise ContractError("legacy vector counts invalid")
  _uuid(v["batch_id"])
@@ -81,9 +81,10 @@ def verify_legacy_remediation_chain(capture_receipt,restore_receipt,inspection_r
  try: auth=verify_short_url_remediation_authorization(auth_path,sig_path,require_custody=require_custody,verify_detached=verify,expected_bindings=expected,inspection_evidence=inspection["evidence"])
  except Exception as exc: raise ContractError("legacy authorization invalid") from exc
  if auth_path.read_bytes()!=auth_raw or sig_path.read_bytes()!=sig_raw: raise ContractError("legacy custody changed")
- vector={k:auth[k] for k in _VECTOR}; _vector(vector)
- if any(vector[k]!=inspection["evidence"].get(k) for k in _VECTOR) or not _COMMIT.fullmatch(auth.get("repository_commit","")): raise ContractError("legacy vector or commit drift")
- return VerifiedLegacyRemediationChain(capture["receipt_sha256"],restore["receipt_sha256"],inspection["receipt_sha256"],auth["repository_commit"],hashlib.sha256(auth_raw).hexdigest(),hashlib.sha256(sig_raw).hexdigest(),tuple((k,vector[k]) for k in _VECTOR))
+ if set(inspection["evidence"])!=set(_INSPECTION_VECTOR): raise ContractError("legacy inspection vector fields invalid")
+ vector={k:auth[k] for k in _AUTHORIZATION_VECTOR}; _vector(vector)
+ if any(vector[k]!=inspection["evidence"][k] for k in _INSPECTION_VECTOR) or not _COMMIT.fullmatch(auth.get("repository_commit","")): raise ContractError("legacy vector or commit drift")
+ return VerifiedLegacyRemediationChain(capture["receipt_sha256"],restore["receipt_sha256"],inspection["receipt_sha256"],auth["repository_commit"],hashlib.sha256(auth_raw).hexdigest(),hashlib.sha256(sig_raw).hexdigest(),tuple((k,vector[k]) for k in _AUTHORIZATION_VECTOR))
 def build_execution_authorization_template(chain,*,origin,project,current_commit,manifest_sha256,source_root,terminal_spec,freeze_id,operator_assertion_sha256,operator_assertion_expires_at,recipient_fingerprint,recovery_public_key_fingerprint,capture_scope_sha256,authorization_id,issued_at,expires_at):
  if not isinstance(chain,VerifiedLegacyRemediationChain): raise ContractError("legacy chain invalid")
  vector=dict(chain.legacy_vector)
