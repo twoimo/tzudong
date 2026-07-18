@@ -5,7 +5,8 @@ Capture is controller-only through ``capture_cursor``; this CLI only verifies
 the resulting signed recovery evidence.
 """
 from __future__ import annotations
-import argparse, base64, csv, hashlib, json, os, re, shutil, subprocess, tarfile, tempfile, time
+import argparse, base64, csv, hashlib, json, os, re, secrets, shutil, subprocess, tarfile, tempfile, time
+from contextlib import contextmanager
 from pathlib import Path, PurePosixPath
 from urllib.error import HTTPError
 from urllib.parse import quote, urlparse
@@ -37,7 +38,12 @@ def file_hash(path):
   for b in iter(lambda:f.read(CHUNK),b""): h.update(b)
  return h.hexdigest()
 def fsync_file(path):
- with Path(path).open("rb") as f: os.fsync(f.fileno())
+ require_file(path,"durability output")
+ flags=os.O_WRONLY
+ if hasattr(os,"O_BINARY"): flags|=os.O_BINARY
+ fd=os.open(path,flags)
+ try: os.fsync(fd)
+ finally: os.close(fd)
 def _windows_current_sid():
  try:
   out=subprocess.run(["whoami","/user","/fo","csv","/nh"],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,timeout=10,check=True).stdout
@@ -95,6 +101,42 @@ def require_file(path,label):
  if not restrictive(path): raise RecoveryError(label+" must be a restrictive regular file")
 def require_dir(path,label):
  if not restrictive(path,directory=True): raise RecoveryError(label+" must be an owner-restricted directory")
+def _harden_restrictive_file(path):
+ p=Path(path)
+ if os.name=="nt":
+  sid=_windows_current_sid()
+  if not sid: raise RecoveryError("current Windows SID unavailable")
+  subprocess.run(["icacls",str(p),"/reset"],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,timeout=10,check=True)
+  subprocess.run(["icacls",str(p),"/inheritance:r","/remove:g","SYSTEM","Administrators","OWNER RIGHTS","/grant:r","*"+sid+":F","SYSTEM:F","Administrators:F"],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,timeout=10,check=True)
+  if not _windows_dacl_restrictive(p): raise RecoveryError("output file ACL is not owner-restricted")
+ else:
+  os.chmod(p,0o600)
+  if p.stat().st_mode&0o777!=0o600 or not restrictive(p): raise RecoveryError("output file mode is not owner-restricted")
+@contextmanager
+def restrictive_output(path,label="output"):
+ path=Path(path); require_dir(path.parent,"output directory")
+ flags=os.O_WRONLY|os.O_CREAT|os.O_EXCL
+ if hasattr(os,"O_BINARY"): flags|=os.O_BINARY
+ fd=None; created=False
+ try:
+  fd=os.open(path,flags,0o600); created=True
+  _harden_restrictive_file(path)
+  with os.fdopen(fd,"wb",closefd=True) as output:
+   fd=None
+   yield output
+  require_file(path,label)
+ except Exception:
+  if fd is not None:
+   try: os.close(fd)
+   except OSError: pass
+  if created: path.unlink(missing_ok=True)
+  raise
+def _fresh_temp_path(directory,prefix):
+ directory=Path(directory)
+ for _ in range(128):
+  path=directory/(prefix+secrets.token_hex(16))
+  if not path.exists() and not path.is_symlink(): return path
+ raise RecoveryError("fresh temporary output unavailable")
 def command(name):
  found=shutil.which(name)
  if not found: raise RecoveryError("required command unavailable")
@@ -251,7 +293,7 @@ def _reap(process):
 def encrypted_dump(pg_dump,age,recipient,snapshot,service_file,pgpass_file,service_name,output,deadline):
  crypt=proc=None
  try:
-  with output.open("xb") as sink:
+  with restrictive_output(output,"logical ciphertext") as sink:
    crypt=subprocess.Popen([age,"--recipient",recipient],stdin=subprocess.PIPE,stdout=sink,stderr=subprocess.PIPE)
    proc=subprocess.Popen([pg_dump,"--format=custom","--snapshot="+snapshot,"--schema=auth","--schema=storage","--dbname=service="+service_name],stdin=subprocess.DEVNULL,stdout=crypt.stdin,stderr=subprocess.PIPE,env=no_secret_env(service_file,pgpass_file))
    crypt.stdin.close()
@@ -265,7 +307,7 @@ def download_archive(base,secret,catalog,age,recipient,output,deadline):
  if sum(x[3] for x in catalog)>MAX_TOTAL_BYTES: raise RecoveryError("total size ceiling exceeded")
  commitments=[]; opener=build_opener(_NoRedirect()); crypt=None
  try:
-  with output.open("xb") as sink:
+  with restrictive_output(output,"blob ciphertext") as sink:
    crypt=subprocess.Popen([age,"--recipient",recipient],stdin=subprocess.PIPE,stdout=sink,stderr=subprocess.PIPE)
    with tarfile.open(fileobj=crypt.stdin,mode="w|") as archive:
     for bucket,name,version,expected in catalog:
@@ -365,17 +407,24 @@ def validate_preserved_freeze(evidence):
 def write_receipt(path,data):
  path=Path(path)
  if path.exists() or path.is_symlink(): raise RecoveryError("receipt must be fresh")
- fd,name=tempfile.mkstemp(prefix=".g037-receipt-",dir=path.parent); temp=Path(name)
+ temp=_fresh_temp_path(path.parent,".g037-receipt-"); published=False
  try:
-  if os.name!="nt": os.chmod(temp,0o600)
-  with os.fdopen(fd,"w",encoding="ascii",closefd=True) as f:
-   f.write(canonical(data).decode()+"\n"); f.flush(); os.fsync(f.fileno())
+  with restrictive_output(temp,"receipt temporary") as f:
+   payload=canonical(data)+b"\n"
+   f.write(payload); f.flush(); os.fsync(f.fileno())
+  require_file(temp,"receipt temporary")
   try: os.link(temp,path)
   except FileExistsError as exc: raise RecoveryError("receipt must be fresh") from exc
+  published=True
+  require_file(path,"receipt")
+  if path.read_bytes()!=payload: raise RecoveryError("persisted receipt readback mismatch")
   if os.name!="nt":
    directory=os.open(path.parent,os.O_RDONLY)
    try: os.fsync(directory)
    finally: os.close(directory)
+ except Exception:
+  if published: path.unlink(missing_ok=True)
+  raise
  finally:
   temp.unlink(missing_ok=True)
 def repo_commit():

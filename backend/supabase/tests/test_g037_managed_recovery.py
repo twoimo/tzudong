@@ -193,7 +193,7 @@ class G037ManagedRecoveryTests(unittest.TestCase):
   with self.assertRaises(g037.RecoveryError): g037._temporary_bytes(b"receipt","g037-test-",directory=link)
  def test_authenticated_route_is_used_without_version_claim(self):
   archive=self.root/"blobs.age"; opener=Opener(Response(b"abc")); catalog=[("bucket","folder/object","current-version",3)]
-  with patch.object(g037,"build_opener",return_value=opener), patch.object(g037.subprocess,"Popen",return_value=Crypt()):
+  with patch.object(g037,"require_dir"),patch.object(g037,"_windows_current_sid",return_value="S-1-5-21-100"),patch.object(g037,"_windows_dacl_restrictive",return_value=True),patch.object(g037.subprocess,"run"),patch.object(g037,"build_opener",return_value=opener), patch.object(g037.subprocess,"Popen",return_value=Crypt()):
    members=g037.download_archive("https://abcdefghijklmnopqrst.supabase.co","token",catalog,"age","age1"+"a"*58,archive,time.time()+10)
   url=opener.requests[0][0].full_url
   self.assertEqual(url,"https://abcdefghijklmnopqrst.supabase.co/storage/v1/object/authenticated/bucket/folder/object")
@@ -303,4 +303,46 @@ class G037ManagedRecoveryTests(unittest.TestCase):
   self.assertEqual(result["auth_storage_catalog_root"],g037.digest([("bucket","name","v1",3)]))
   self.assertIn("SELECT pg_export_snapshot()",cursor.calls)
   self.assertFalse(any(call.startswith("BEGIN") for call in cursor.calls))
+ def test_restrictive_output_hardens_before_ciphertext_write(self):
+  directory=self.root/"outputs"; directory.mkdir()
+  if os.name!="nt": directory.chmod(0o700)
+  output=directory/"ciphertext.age"; events=[]
+  original_harden=g037._harden_restrictive_file
+  def harden(path):
+   original_harden(path); events.append("harden")
+  with patch.object(g037,"require_dir"),patch.object(g037,"_harden_restrictive_file",side_effect=harden):
+   with g037.restrictive_output(output,"ciphertext") as sink:
+    self.assertEqual(events,["harden"]); self.assertTrue(g037.restrictive(output)); sink.write(b"ciphertext")
+  self.assertTrue(g037.restrictive(output)); self.assertEqual(output.read_bytes(),b"ciphertext")
+ def test_restrictive_output_hardening_failure_removes_empty_file_before_write(self):
+  directory=self.root/"outputs"; directory.mkdir()
+  if os.name!="nt": directory.chmod(0o700)
+  output=directory/"ciphertext.age"; observed=[]
+  def fail(path):
+   observed.append(path.read_bytes()); raise g037.RecoveryError("ACL failure")
+  with patch.object(g037,"require_dir"),patch.object(g037,"_harden_restrictive_file",side_effect=fail):
+   with self.assertRaises(g037.RecoveryError):
+    with g037.restrictive_output(output,"ciphertext") as sink: sink.write(b"ciphertext")
+  self.assertEqual(observed,[b""]); self.assertFalse(output.exists())
+ def test_fsync_file_uses_write_capable_handle_after_custody_check(self):
+  output=private(self.root/"ciphertext.age",b"ciphertext"); events=[]
+  with patch.object(g037,"require_file",side_effect=lambda path,label: events.append(("custody",label))),patch.object(g037.os,"open",return_value=41) as open_file,patch.object(g037.os,"fsync",side_effect=lambda fd: events.append(("fsync",fd))),patch.object(g037.os,"close",side_effect=lambda fd: events.append(("close",fd))):
+   g037.fsync_file(output)
+  self.assertEqual(events,[("custody","durability output"),("fsync",41),("close",41)])
+  self.assertTrue(open_file.call_args.args[1]&os.O_WRONLY)
+ def test_write_receipt_collision_preserves_existing_file(self):
+  directory=self.root/"receipts"; directory.mkdir(); directory.chmod(0o700)
+  receipt=private(directory/"receipt.json",b"existing")
+  with patch.object(g037,"require_dir"):
+   with self.assertRaises(g037.RecoveryError): g037.write_receipt(receipt,{"schema":"fixture"})
+  self.assertEqual(receipt.read_bytes(),b"existing")
+ def test_write_receipt_readback_failure_removes_published_receipt_and_temp(self):
+  directory=self.root/"receipts"; directory.mkdir(); directory.chmod(0o700); receipt=directory/"receipt.json"
+  original_read_bytes=Path.read_bytes
+  def bad_read(path):
+   if path==receipt: return b"tampered"
+   return original_read_bytes(path)
+  with patch.object(g037,"require_dir"),patch.object(Path,"read_bytes",new=bad_read):
+   with self.assertRaises(g037.RecoveryError): g037.write_receipt(receipt,{"schema":"fixture"})
+  self.assertFalse(receipt.exists()); self.assertEqual(list(directory.iterdir()),[])
 if __name__=="__main__": unittest.main()
