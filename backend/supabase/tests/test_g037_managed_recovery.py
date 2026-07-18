@@ -97,6 +97,72 @@ class G037ManagedRecoveryTests(unittest.TestCase):
   self.assertFalse(restrictive(f"D:PAI(A;;FA;;;{sid})(A;;FA;;;WD)"))
   self.assertFalse(restrictive("D:PAI(A;;FA;;;SY)"))
   self.assertFalse(restrictive(f"D:PAI(A;;FA;;;{sid})trailing"))
+ def test_temporary_bytes_hardens_windows_acl_before_writing_payload(self):
+  fd,path=tempfile.mkstemp(dir=self.root); path=Path(path); events=[]; original_fdopen=os.fdopen
+  class ObservingFile:
+   def __init__(s,file): s.file=file
+   def __enter__(s): return s
+   def __exit__(s,*args): s.file.close()
+   def write(s,data):
+    events.append("write"); self.assertEqual(events,["harden","verify","write"]); return s.file.write(data)
+   def flush(s): return s.file.flush()
+   def fileno(s): return s.file.fileno()
+  def fdopen(*args,**kwargs): return ObservingFile(original_fdopen(*args,**kwargs))
+  def harden(argv,**kwargs):
+   events.append("harden")
+   self.assertEqual(argv,["icacls",str(path),"/inheritance:r","/grant:r","*S-1-5-21-100:F"])
+   return type("Result",(),{})()
+  try:
+   with patch.object(g037.os,"name","nt"),patch.object(g037.tempfile,"mkstemp",return_value=(fd,str(path))),patch.object(g037,"_windows_current_sid",return_value="S-1-5-21-100"),patch.object(g037.subprocess,"run",side_effect=harden),patch.object(g037,"_windows_dacl_restrictive",side_effect=lambda _: events.append("verify") or True),patch.object(g037.os,"fdopen",side_effect=fdopen):
+    self.assertEqual(g037._temporary_bytes(b"receipt","g037-test-"),str(path))
+   self.assertEqual(path.read_bytes(),b"receipt")
+  finally:
+   path.unlink(missing_ok=True)
+ def test_temporary_bytes_acl_failure_closes_and_unlinks_before_write(self):
+  fd,path=tempfile.mkstemp(dir=self.root); path=Path(path)
+  try:
+   with patch.object(g037.os,"name","nt"),patch.object(g037.tempfile,"mkstemp",return_value=(fd,str(path))),patch.object(g037,"_windows_current_sid",return_value="S-1-5-21-100"),patch.object(g037.subprocess,"run",side_effect=g037.subprocess.CalledProcessError(1,["icacls"])):
+    with self.assertRaises(g037.subprocess.CalledProcessError): g037._temporary_bytes(b"receipt","g037-test-")
+   self.assertFalse(path.exists())
+   with self.assertRaises(OSError): os.fstat(fd)
+  finally:
+   path.unlink(missing_ok=True)
+ def test_source_public_key_hardens_windows_acl_before_writing_material(self):
+  fd,path=tempfile.mkstemp(dir=self.root); path=Path(path); events=[]; original_fdopen=os.fdopen
+  class ObservingFile:
+   def __init__(s,file): s.file=file
+   def __enter__(s): return s
+   def __exit__(s,*args): s.file.close()
+   def write(s,data):
+    events.append("write"); self.assertEqual(events,["harden","verify","write"]); self.assertEqual(data,g037.RECOVERY_PUBLIC_KEY); return s.file.write(data)
+   def flush(s): return s.file.flush()
+   def fileno(s): return s.file.fileno()
+  def fdopen(*args,**kwargs): return ObservingFile(original_fdopen(*args,**kwargs))
+  def harden(argv,**kwargs):
+   events.append("harden")
+   self.assertEqual(argv,["icacls",str(path),"/inheritance:r","/grant:r","*S-1-5-21-100:F"])
+   return type("Result",(),{})()
+  try:
+   with patch.object(g037.os,"name","nt"),patch.object(g037.tempfile,"mkstemp",return_value=(fd,str(path))),patch.object(g037,"_windows_current_sid",return_value="S-1-5-21-100"),patch.object(g037.subprocess,"run",side_effect=harden),patch.object(g037,"_windows_dacl_restrictive",side_effect=lambda _: events.append("verify") or True),patch.object(g037.os,"fdopen",side_effect=fdopen):
+    public_key=g037._source_public_key(g037.RECOVERY_PUBLIC_KEY)
+   self.assertEqual(public_key,path); self.assertEqual(path.read_bytes(),g037.RECOVERY_PUBLIC_KEY)
+  finally:
+   path.unlink(missing_ok=True)
+ def test_source_public_key_acl_failure_removes_path_before_writing_material(self):
+  fd,path=tempfile.mkstemp(dir=self.root); path=Path(path)
+  try:
+   with patch.object(g037.os,"name","nt"),patch.object(g037.tempfile,"mkstemp",return_value=(fd,str(path))),patch.object(g037,"_windows_current_sid",return_value="S-1-5-21-100"),patch.object(g037.subprocess,"run",side_effect=g037.subprocess.CalledProcessError(1,["icacls"])):
+    with self.assertRaises(g037.subprocess.CalledProcessError): g037._source_public_key(g037.RECOVERY_PUBLIC_KEY)
+   self.assertFalse(path.exists())
+   with self.assertRaises(OSError): os.fstat(fd)
+  finally:
+   path.unlink(missing_ok=True)
+ def test_temporary_bytes_is_restrictive(self):
+  path=Path(g037._temporary_bytes(b"receipt","g037-test-"))
+  try:
+   self.assertTrue(g037.restrictive(path)); self.assertEqual(path.read_bytes(),b"receipt")
+  finally:
+   path.unlink(missing_ok=True)
  def test_authenticated_route_is_used_without_version_claim(self):
   archive=self.root/"blobs.age"; opener=Opener(Response(b"abc")); catalog=[("bucket","folder/object","current-version",3)]
   with patch.object(g037,"build_opener",return_value=opener), patch.object(g037.subprocess,"Popen",return_value=Crypt()):
@@ -104,6 +170,42 @@ class G037ManagedRecoveryTests(unittest.TestCase):
   url=opener.requests[0][0].full_url
   self.assertEqual(url,"https://abcdefghijklmnopqrst.supabase.co/storage/v1/object/authenticated/bucket/folder/object")
   self.assertNotIn("version=",url); self.assertEqual(members[0]["size"],3)
+ def test_openssl_sign_uses_fsynced_payload_file_without_stdin_or_residue(self):
+  seen=[]
+  def run(argv,**kwargs):
+   if argv[0]=="icacls": return type("Result",(),{})()
+   payload_path=Path(argv[argv.index("-in")+1]); seen.append(payload_path)
+   self.assertEqual(payload_path.read_bytes(),b"receipt")
+   if os.name!="nt": self.assertEqual(payload_path.stat().st_mode&0o777,0o600)
+   self.assertNotIn("input",kwargs); self.assertIs(kwargs["stdin"],g037.subprocess.DEVNULL)
+   self.assertEqual(kwargs["timeout"],g037.TIMEOUT); self.assertTrue(kwargs["check"])
+   return type("Result",(),{"stdout":b"signature"})()
+  with patch.object(g037,"_windows_current_sid",return_value="S-1-5-21-100"),patch.object(g037,"_windows_dacl_restrictive",return_value=True),patch.object(g037.subprocess,"run",side_effect=run):
+   self.assertEqual(g037.openssl_sign("openssl",self.root/"key",b"receipt"),b"signature")
+  self.assertEqual(len(seen),1); self.assertFalse(seen[0].exists())
+ def test_openssl_verify_uses_payload_and_signature_files_and_cleans_on_error(self):
+  seen=[]
+  def run(argv,**kwargs):
+   if argv[0]=="icacls": return type("Result",(),{})()
+   payload_path=Path(argv[argv.index("-in")+1]); signature_path=Path(argv[argv.index("-sigfile")+1]); seen.extend((payload_path,signature_path))
+   self.assertEqual(payload_path.read_bytes(),b"receipt"); self.assertEqual(signature_path.read_bytes(),b"signature")
+   self.assertNotIn("input",kwargs); self.assertIs(kwargs["stdin"],g037.subprocess.DEVNULL)
+   raise g037.subprocess.CalledProcessError(1,argv)
+  with patch.object(g037,"_windows_current_sid",return_value="S-1-5-21-100"),patch.object(g037,"_windows_dacl_restrictive",return_value=True),patch.object(g037.subprocess,"run",side_effect=run):
+   self.assertFalse(g037.openssl_verify("openssl",self.root/"public",b"receipt",b"signature"))
+  self.assertEqual(len(seen),2); self.assertTrue(all(not path.exists() for path in seen))
+ def test_openssl_verify_attempts_signature_cleanup_after_payload_cleanup_failure(self):
+  payload=private(self.root/"payload",b"receipt"); signature=private(self.root/"signature",b"signature"); seen=[]; original_unlink=Path.unlink
+  def unlink(path,*,missing_ok=False):
+   seen.append(path)
+   if path==payload: raise OSError("payload cleanup failed")
+   return original_unlink(path,missing_ok=missing_ok)
+  try:
+   with patch.object(g037,"_temporary_bytes",side_effect=[str(payload),str(signature)]),patch.object(g037.subprocess,"run",return_value=type("Result",(),{})()),patch.object(Path,"unlink",new=unlink):
+    with self.assertRaises(g037.RecoveryError): g037.openssl_verify("openssl",self.root/"public",b"receipt",b"signature")
+   self.assertEqual(seen,[payload,signature]); self.assertFalse(signature.exists())
+  finally:
+   original_unlink(payload,missing_ok=True)
  def test_deadline_and_total_preflight_fail_before_opening_network(self):
   with self.assertRaises(g037.RecoveryError): g037.deadline_remaining(time.time()-1)
   catalog=[("b","n","v",g037.MAX_TOTAL_BYTES+1)]
