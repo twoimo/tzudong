@@ -50,7 +50,9 @@ class G037AuthorityTests(unittest.TestCase):
         return {"selection_spec_sha256": self.digest("1"), "short_urls_catalog_sha256": self.digest("2"),
                 "pre_short_urls_rowset_sha256": self.digest("3"), "duplicate_group_count": 1,
                 "duplicate_victim_count": 1, "duplicate_victims_sha256": self.digest("4"),
-                "victim_descriptors_sha256": self.digest("5"), "batch_id": "11111111-1111-4111-8111-111111111111"}
+                "victim_descriptors_sha256": self.digest("5")}
+    def authorization_vector(self):
+        return {**self.evidence(), "batch_id": "11111111-1111-4111-8111-111111111111"}
 
     def files(self, directory, mutate=None):
         capture = self.receipt("capture", "captured", [])
@@ -58,7 +60,7 @@ class G037AuthorityTests(unittest.TestCase):
         inspection = self.receipt("short-url-remediation-inspect", "validated", [restore["receipt_sha256"]])
         auth = {"schema": g035.REMEDIATION_AUTHORIZATION_SCHEMA, "capture_receipt_sha256": capture["receipt_sha256"],
                 "restore_receipt_sha256": restore["receipt_sha256"], "inspection_receipt_sha256": inspection["receipt_sha256"],
-                "manifest_sha256": c.MANIFEST_SHA256, "repository_commit": "e" * 40, **self.evidence()}
+                "manifest_sha256": c.MANIFEST_SHA256, "repository_commit": "e" * 40, **self.authorization_vector()}
         if mutate: mutate(capture, restore, inspection, auth)
         paths = []
         for name, value in (("capture", capture), ("restore", restore), ("inspection", inspection), ("legacy", auth)):
@@ -71,7 +73,7 @@ class G037AuthorityTests(unittest.TestCase):
         return c.verify_legacy_remediation_chain(*self.files(directory), require_custody=self.custody)
 
     def value(self, chain=None):
-        chain = chain or c.VerifiedLegacyRemediationChain(self.digest("a"), self.digest("b"), self.digest("c"), "e" * 40, self.digest("d"), self.digest("e"), tuple(self.evidence().items()))
+        chain = chain or c.VerifiedLegacyRemediationChain(self.digest("a"), self.digest("b"), self.digest("c"), "e" * 40, self.digest("d"), self.digest("e"), tuple(self.authorization_vector().items()))
         return c.build_execution_authorization_template(chain, origin="https://abcdefghijklmnopqrst.supabase.co", project="abcdefghijklmnopqrst", current_commit="f" * 40, manifest_sha256=c.MANIFEST_SHA256, source_root=self.digest("1"), terminal_spec=self.digest("2"), freeze_id="freeze-0001", operator_assertion_sha256=self.digest("3"), operator_assertion_expires_at=self.now + 1000, recipient_fingerprint=self.digest("4"), recovery_public_key_fingerprint=self.digest("5"), capture_scope_sha256=self.digest("6"), authorization_id="11111111-1111-4111-8111-111111111111", issued_at=self.now, expires_at=self.now + 100)
 
     def bindings(self, value): return {key: value[key] for key in c._BINDINGS}
@@ -82,7 +84,7 @@ class G037AuthorityTests(unittest.TestCase):
 
     def test_real_signed_full_authority_flow(self):
         with tempfile.TemporaryDirectory() as directory:
-            chain = self.chain(directory); self.assertEqual(chain.legacy_repository_commit, "e" * 40)
+            chain = self.chain(directory); self.assertEqual(chain.legacy_repository_commit, "e" * 40); self.assertEqual(dict(chain.legacy_vector)["batch_id"], "11111111-1111-4111-8111-111111111111")
             auth, sig, value = self.envelope(directory, self.value(chain))
             result = c.verify_execution_authorization(auth, sig, require_custody=self.custody, expected_bindings=self.bindings(value), now=self.now + 1, baseline_is_exact=lambda: True)
             self.assertEqual(result["current_commit"], "f" * 40); self.assertEqual(result["legacy_repository_commit"], "e" * 40)
@@ -107,14 +109,32 @@ class G037AuthorityTests(unittest.TestCase):
     def chain_with(self, directory, mutate):
         return c.verify_legacy_remediation_chain(*self.files(directory, mutate), require_custody=self.custody)
 
-    def test_legacy_authorization_binding_vector_and_signature_drift_rejected(self):
-        for key, replacement in [("manifest_sha256", self.digest("0")), ("repository_commit", "z" * 40), ("duplicate_group_count", 2), ("batch_id", "22222222-2222-4222-8222-222222222222")]:
+    def test_legacy_authorization_batch_id_signature_and_commit_drift_rejected(self):
+        for key, replacement in [("manifest_sha256", self.digest("0")), ("repository_commit", "z" * 40)]:
             with self.subTest(key=key), tempfile.TemporaryDirectory() as directory:
                 def mutate(capture, restore, inspection, auth): auth[key] = replacement
+                with self.assertRaises(c.ContractError): self.chain_with(directory, mutate)
+        for key, replacement in [("missing", None), ("invalid", "not-uuid")]:
+            with self.subTest(key=key), tempfile.TemporaryDirectory() as directory:
+                def mutate(capture, restore, inspection, auth):
+                    if key == "missing": del auth["batch_id"]
+                    else: auth["batch_id"] = replacement
                 with self.assertRaises(c.ContractError): self.chain_with(directory, mutate)
         with tempfile.TemporaryDirectory() as directory:
             paths = self.files(directory); paths[-1].write_bytes(b"substituted")
             with self.assertRaises(c.ContractError): c.verify_legacy_remediation_chain(*paths, require_custody=self.custody)
+
+    def test_legacy_inspection_requires_exact_seven_field_schema_and_auth_match(self):
+        for key, replacement in [("selection_spec_sha256", self.digest("0")), ("short_urls_catalog_sha256", self.digest("0")), ("pre_short_urls_rowset_sha256", self.digest("0")), ("duplicate_group_count", 2), ("duplicate_victim_count", 2), ("duplicate_victims_sha256", self.digest("0")), ("victim_descriptors_sha256", self.digest("0"))]:
+            with self.subTest(key=key), tempfile.TemporaryDirectory() as directory:
+                def mutate(capture, restore, inspection, auth): auth[key] = replacement
+                with self.assertRaises(c.ContractError): self.chain_with(directory, mutate)
+        with tempfile.TemporaryDirectory() as directory:
+            def mutate(capture, restore, inspection, auth):
+                inspection["evidence"]["batch_id"] = auth["batch_id"]
+                inspection["receipt_sha256"] = c.canonical_sha256({k: v for k, v in inspection.items() if k != "receipt_sha256"})
+                auth["inspection_receipt_sha256"] = inspection["receipt_sha256"]
+            with self.assertRaises(c.ContractError): self.chain_with(directory, mutate)
 
     def test_legacy_path_replacement_during_verification_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
