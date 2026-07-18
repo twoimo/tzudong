@@ -43,6 +43,27 @@ def _windows_current_sid():
   out=subprocess.run(["whoami","/user","/fo","csv","/nh"],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,timeout=10,check=True).stdout
   rows=list(csv.reader(out.splitlines(),strict=True)); return rows[0][1].upper() if len(rows)==1 and len(rows[0])==2 and re.fullmatch(r"S-\d+(?:-\d+)+",rows[0][1],re.I) else None
  except Exception: return None
+def _windows_saved_sddl(export, expected_path):
+ try:
+  expected_basename=Path(expected_path).name
+  if not expected_basename or expected_basename in (".","..") or "\r" in expected_basename or "\n" in expected_basename or "\x00" in expected_basename: return None
+  raw=Path(export).read_bytes()
+  if raw.startswith(b"\xfe\xff"): return None
+  if raw.startswith(b"\xff\xfe"):
+   candidates=[raw[2:].decode("utf-16-le")]
+  else:
+   candidates=[]
+   for encoding in ("utf-8","utf-16-le"):
+    try: candidates.append(raw.decode(encoding))
+    except UnicodeDecodeError: pass
+ except (OSError,UnicodeDecodeError): return None
+ values=[]
+ prefix=expected_basename+"\r\n"
+ for text in candidates:
+  if not text.startswith(prefix) or not text.endswith("\r\n"): continue
+  dacl=text[len(prefix):-2]
+  if dacl.startswith("D:") and dacl and "\r" not in dacl and "\n" not in dacl and "\x00" not in dacl: values.append(dacl)
+ return values[0] if len(values)==1 else None
 def _windows_dacl_restrictive(path):
  p=Path(path)
  if p.is_symlink() or not (p.is_file() or p.is_dir()): return False
@@ -51,16 +72,18 @@ def _windows_dacl_restrictive(path):
  try:
   with tempfile.TemporaryDirectory(prefix="g037-acl-") as d:
    saved=Path(d)/"acl.txt"; subprocess.run(["icacls",str(p),"/save",str(saved),"/c"],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,timeout=10,check=True)
-   raw=saved.read_bytes(); text=(raw[2:].decode("utf-16-le") if raw.startswith(b"\xff\xfe") else raw.decode("utf-8")); found=re.findall(r"(?:^|\s)(D:[^\r\n]+)",text)
-  if len(found)!=1: return False
-  dacl=found[0][2:]; controls=re.match(r"(?:(?:P|AR|AI))*(?=\()",dacl)
+   sddl=_windows_saved_sddl(saved,p)
+  if not sddl or not sddl.startswith("D:"): return False
+  dacl=sddl[2:]; controls=re.match(r"(?:(?:P|AR|AI))*(?=\()",dacl)
   if not controls: return False
-  aces=re.findall(r"\(([^()]*)\)",dacl[controls.end():]); allowed={sid,"SY","BA","S-1-5-18","S-1-5-32-544"}; current=False
+  aces_text=dacl[controls.end():]; aces=re.findall(r"\(([^()]*)\)",aces_text)
+  if not aces or "".join(f"({ace})" for ace in aces)!=aces_text: return False
+  allowed={sid,"SY","BA","S-1-5-18","S-1-5-32-544"}; current=False
   for ace in aces:
    f=ace.split(";")
    if len(f)!=6 or f[0]!="A" or f[1] or not f[2] or f[3] or f[4] or f[5].upper() not in allowed: return False
    current |= f[5].upper()==sid
-  return bool(aces) and current
+  return current
  except Exception: return False
 def restrictive(path, *, directory=False):
  try:
