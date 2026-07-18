@@ -354,7 +354,7 @@ class G037ExecutorTests(unittest.TestCase):
     e._short_url_binding(binding,baseline_is_exact=lambda: (_ for _ in ()).throw(AssertionError("callback invoked")))
   authorize.assert_called_once()
  def test_stable_terminal_projection_accepts_canonical_catalog_rows_and_rejects_drift(self):
-  catalog=(("public","restaurants","r","owner"),); raw_acl=(("auth","users","supabase_auth_admin","supabase_auth_admin","MAINTAIN",False),("public","restaurants","owner","owner","SELECT",False)); acl=tuple(tuple(map(str,row)) for row in raw_acl)
+  catalog=(("auth","users","r","supabase_auth_admin"),("public","restaurants","r","owner")); raw_acl=(("auth","users","supabase_auth_admin","supabase_auth_admin","MAINTAIN",False),("public","restaurants","owner","owner","SELECT",True)); acl=tuple(tuple(map(str,row)) for row in raw_acl)
   class Cursor:
    description=object()
    def __init__(self,rows): self.rows=iter(rows)
@@ -363,13 +363,14 @@ class G037ExecutorTests(unittest.TestCase):
   accepted=e._stable_projection_roots(Cursor((catalog,raw_acl)))
   self.assertEqual(accepted,(e.digest(catalog),e.digest(acl)))
   for unsafe in (
+   ("public","restaurants","owner","other","SELECT",True),
+   ("public","restaurants","other","owner","SELECT",True),
    ("public","restaurants","owner","PUBLIC","SELECT",False),
-   ("public","restaurants","owner","PUBLIC","ALL",False),
-   ("public","restaurants","owner","owner","SELECT",True),
-   ("shortener_private","limits","owner","authenticated","SELECT",False),
+   ("public","restaurants","owner","PUBLIC","SELECT",True),
+   ("public","restaurants","owner","service_role","SELECT",True),
    ("public","restaurants","owner","owner","UNKNOWN",False),
-   ("public","restaurants","owner","PUBLIC","MAINTAIN",False),
-   ("public","restaurants","owner","owner","MAINTAIN",True),
+   ("shortener_private","limits","owner","authenticated","SELECT",False),
+   ("public","missing","owner","owner","SELECT",False),
   ):
    with self.subTest(unsafe=unsafe),self.assertRaisesRegex(e.ClosureError,"ACL safety policy"):
     e._stable_projection_roots(Cursor((catalog,(unsafe,))))
