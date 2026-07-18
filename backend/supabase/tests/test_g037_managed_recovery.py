@@ -104,13 +104,13 @@ class G037ManagedRecoveryTests(unittest.TestCase):
    def __enter__(s): return s
    def __exit__(s,*args): s.file.close()
    def write(s,data):
-    events.append("write"); self.assertEqual(events,["harden","verify","write"]); return s.file.write(data)
+    events.append("write"); self.assertEqual(events,["harden","harden","verify","write"]); return s.file.write(data)
    def flush(s): return s.file.flush()
    def fileno(s): return s.file.fileno()
   def fdopen(*args,**kwargs): return ObservingFile(original_fdopen(*args,**kwargs))
   def harden(argv,**kwargs):
    events.append("harden")
-   self.assertEqual(argv,["icacls",str(path),"/inheritance:r","/grant:r","*S-1-5-21-100:F"])
+   self.assertIn(argv,(["icacls",str(path),"/reset"],["icacls",str(path),"/inheritance:r","/remove:g","SYSTEM","Administrators","OWNER RIGHTS","/grant:r","*S-1-5-21-100:F","SYSTEM:F","Administrators:F"]))
    return type("Result",(),{})()
   try:
    with patch.object(g037.os,"name","nt"),patch.object(g037.tempfile,"mkstemp",return_value=(fd,str(path))),patch.object(g037,"_windows_current_sid",return_value="S-1-5-21-100"),patch.object(g037.subprocess,"run",side_effect=harden),patch.object(g037,"_windows_dacl_restrictive",side_effect=lambda _: events.append("verify") or True),patch.object(g037.os,"fdopen",side_effect=fdopen):
@@ -134,13 +134,13 @@ class G037ManagedRecoveryTests(unittest.TestCase):
    def __enter__(s): return s
    def __exit__(s,*args): s.file.close()
    def write(s,data):
-    events.append("write"); self.assertEqual(events,["harden","verify","write"]); self.assertEqual(data,g037.RECOVERY_PUBLIC_KEY); return s.file.write(data)
+    events.append("write"); self.assertEqual(events,["harden","harden","verify","write"]); self.assertEqual(data,g037.RECOVERY_PUBLIC_KEY); return s.file.write(data)
    def flush(s): return s.file.flush()
    def fileno(s): return s.file.fileno()
   def fdopen(*args,**kwargs): return ObservingFile(original_fdopen(*args,**kwargs))
   def harden(argv,**kwargs):
    events.append("harden")
-   self.assertEqual(argv,["icacls",str(path),"/inheritance:r","/grant:r","*S-1-5-21-100:F"])
+   self.assertIn(argv,(["icacls",str(path),"/reset"],["icacls",str(path),"/inheritance:r","/remove:g","SYSTEM","Administrators","OWNER RIGHTS","/grant:r","*S-1-5-21-100:F","SYSTEM:F","Administrators:F"]))
    return type("Result",(),{})()
   try:
    with patch.object(g037.os,"name","nt"),patch.object(g037.tempfile,"mkstemp",return_value=(fd,str(path))),patch.object(g037,"_windows_current_sid",return_value="S-1-5-21-100"),patch.object(g037.subprocess,"run",side_effect=harden),patch.object(g037,"_windows_dacl_restrictive",side_effect=lambda _: events.append("verify") or True),patch.object(g037.os,"fdopen",side_effect=fdopen):
@@ -163,6 +163,34 @@ class G037ManagedRecoveryTests(unittest.TestCase):
    self.assertTrue(g037.restrictive(path)); self.assertEqual(path.read_bytes(),b"receipt")
   finally:
    path.unlink(missing_ok=True)
+ def test_temporary_bytes_uses_supplied_existing_directory(self):
+  directory=self.root/"receipts"; directory.mkdir()
+  if os.name=="nt":
+   sid=g037._windows_current_sid(); self.assertIsNotNone(sid)
+   g037.subprocess.run(["icacls",str(directory),"/reset"],stdin=g037.subprocess.DEVNULL,stdout=g037.subprocess.PIPE,stderr=g037.subprocess.PIPE,text=True,timeout=10,check=True)
+   g037.subprocess.run(["icacls",str(directory),"/inheritance:r","/remove:g","SYSTEM","Administrators","OWNER RIGHTS","/grant:r","*"+sid+":F","SYSTEM:F","Administrators:F"],stdin=g037.subprocess.DEVNULL,stdout=g037.subprocess.PIPE,stderr=g037.subprocess.PIPE,text=True,timeout=10,check=True)
+  else: directory.chmod(0o700)
+  self.assertTrue(g037.restrictive(directory,directory=True))
+  path=Path(g037._temporary_bytes(b"receipt","g037-test-",directory=directory))
+  try:
+   self.assertEqual(path.parent,directory)
+   self.assertTrue(g037.restrictive(path))
+   self.assertEqual(path.read_bytes(),b"receipt")
+  finally:
+   path.unlink(missing_ok=True)
+ def test_temporary_bytes_rejects_permissive_supplied_directory(self):
+  directory=self.root/"permissive"; directory.mkdir()
+  if os.name=="nt":
+   with patch.object(g037,"_windows_dacl_restrictive",return_value=False):
+    with self.assertRaises(g037.RecoveryError): g037._temporary_bytes(b"receipt","g037-test-",directory=directory)
+  else:
+   directory.chmod(0o755)
+   with self.assertRaises(g037.RecoveryError): g037._temporary_bytes(b"receipt","g037-test-",directory=directory)
+ def test_temporary_bytes_rejects_symlink_supplied_directory(self):
+  if os.name=="nt": self.skipTest("symlink creation requires platform-specific privileges")
+  directory=self.root/"receipts"; directory.mkdir(); directory.chmod(0o700)
+  link=self.root/"receipts-link"; link.symlink_to(directory,target_is_directory=True)
+  with self.assertRaises(g037.RecoveryError): g037._temporary_bytes(b"receipt","g037-test-",directory=link)
  def test_authenticated_route_is_used_without_version_claim(self):
   archive=self.root/"blobs.age"; opener=Opener(Response(b"abc")); catalog=[("bucket","folder/object","current-version",3)]
   with patch.object(g037,"build_opener",return_value=opener), patch.object(g037.subprocess,"Popen",return_value=Crypt()):
