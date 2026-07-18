@@ -129,12 +129,18 @@ class FenceTests(unittest.TestCase):
   with self.assertRaisesRegex(Exception,"signature invalid"): freeze.validate_operator_assertion(tampered,freeze_id="freeze-0001",origin="https://x",relation_root="r"*64,acl_root="l"*64,commit="a"*40,source_root="s"*64,terminal_spec="t"*64,now=now)
  def test_rehearse_runs_terminal_then_rolls_back_and_never_commits(self):
   c=Conn(); i=inv(); ps=patches(i); events=[]
-  def callback(*_): events.append("apply"); return capture()
+  def callback(cursor,*_):
+   self.assertFalse(any(sql.startswith("SAVEPOINT") for sql,_ in cursor.sql))
+   cursor.execute("SELECT pg_export_snapshot()")
+   events.append("apply")
+   return capture()
   def observed(*_): events.append("terminal"); return terminal(*_)
   with ps[0],ps[1],ps[2],ps[3],ps[4]:
    outcome=freeze.rehearse(c,origin="https://x",freeze_id="freeze-0001",expected=i,assertion={"expires_at":9999999999},callback=callback,provisional_writer=lambda p:p,rehearsal_receipt_writer=lambda r:r["receipt_sha256"],outcome_receipt_writer=lambda r:r["receipt_sha256"],terminal_assert=observed,baseline_assert=lambda:events.append("baseline") or {"relation_root":i.relation_root,"acl_root":i.acl_root})
   self.assertEqual(outcome["status"],"rehearsed-rolled-back"); self.assertEqual(c.commits,0)
-  self.assertLess(events.index("apply"),events.index("terminal")); self.assertLess(events.index("terminal"),events.index("baseline")); self.assertGreater(c.rollbacks,0)
+  self.assertLess(events.index("apply"),events.index("terminal")); self.assertLess(events.index("terminal"),events.index("baseline")); self.assertEqual(c.rollbacks,1)
+  self.assertTrue(any(sql=="SELECT pg_export_snapshot()" for sql,_ in c.c.sql))
+  self.assertFalse(any(sql.startswith("SAVEPOINT") for sql,_ in c.c.sql))
  def test_rehearse_rejects_malformed_capture_before_rollback_receipt(self):
   c=Conn(); i=inv(); ps=patches(i); receipts=[]
   with ps[0],ps[1],ps[2],ps[3],ps[4],self.assertRaises(freeze.FreezeError):
@@ -145,6 +151,20 @@ class FenceTests(unittest.TestCase):
   with ps[0],ps[1],ps[2],ps[3],ps[4],self.assertRaisesRegex(RuntimeError,"callback failure"):
    freeze.rehearse(c,origin="https://x",freeze_id="freeze-0001",expected=i,assertion={"expires_at":9999999999},callback=lambda *_:(_ for _ in ()).throw(RuntimeError("callback failure")),provisional_writer=lambda p:p,rehearsal_receipt_writer=lambda r:r["receipt_sha256"],outcome_receipt_writer=outcomes.append,terminal_assert=terminal,baseline_assert=lambda:{})
   self.assertEqual(c.commits,0); self.assertEqual(c.rollbacks,1); self.assertEqual(outcomes,[])
+ def test_rehearse_terminal_failure_rolls_back_outer_transaction_without_commit(self):
+  c=Conn(); i=inv(); ps=patches(i)
+  with ps[0],ps[1],ps[2],ps[3],ps[4],self.assertRaisesRegex(RuntimeError,"terminal failure"):
+   freeze.rehearse(c,origin="https://x",freeze_id="freeze-0001",expected=i,assertion={"expires_at":9999999999},callback=lambda *_:capture(),provisional_writer=lambda p:p,rehearsal_receipt_writer=lambda r:r["receipt_sha256"],outcome_receipt_writer=lambda r:r["receipt_sha256"],terminal_assert=lambda *_:(_ for _ in ()).throw(RuntimeError("terminal failure")),baseline_assert=lambda:{})
+  self.assertEqual(c.commits,0); self.assertEqual(c.rollbacks,1)
+ def test_rehearse_receipt_failures_follow_outer_rollback_without_commit(self):
+  for receipt_name in ("rehearsal","outcome"):
+   with self.subTest(receipt_name=receipt_name):
+    c=Conn(); i=inv(); ps=patches(i)
+    rehearsal_writer=(lambda _:(_ for _ in ()).throw(RuntimeError("rehearsal receipt failure"))) if receipt_name=="rehearsal" else lambda r:r["receipt_sha256"]
+    outcome_writer=(lambda _:(_ for _ in ()).throw(RuntimeError("outcome receipt failure"))) if receipt_name=="outcome" else lambda r:r["receipt_sha256"]
+    with ps[0],ps[1],ps[2],ps[3],ps[4],self.assertRaisesRegex(RuntimeError,"receipt failure"):
+     freeze.rehearse(c,origin="https://x",freeze_id="freeze-0001",expected=i,assertion={"expires_at":9999999999},callback=lambda *_:capture(),provisional_writer=lambda p:p,rehearsal_receipt_writer=rehearsal_writer,outcome_receipt_writer=outcome_writer,terminal_assert=terminal,baseline_assert=lambda:{"relation_root":i.relation_root,"acl_root":i.acl_root})
+    self.assertEqual(c.commits,0); self.assertGreaterEqual(c.rollbacks,1)
  def test_rehearse_rollback_failure_is_ambiguous_and_preserves_original_failure(self):
   c=Conn(rollback_error=True); i=inv(); ps=patches(i); outcomes=[]
   original=RuntimeError("callback failure includes secret")
