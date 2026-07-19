@@ -48,9 +48,10 @@ class FakeCursor:
 class FakeConnection:
     def __init__(self):
         self.cursor_value = FakeCursor()
+        self.rollback_count = 0
         self.info = type("Info", (), {"host": "127.0.0.1", "port": 55401})()
     def cursor(self): return self.cursor_value
-    def rollback(self): pass
+    def rollback(self): self.rollback_count += 1
     def close(self): pass
 
 
@@ -111,6 +112,30 @@ class CloneRehearsalTests(unittest.TestCase):
             with patch.object(rehearsal, "_restore_lineage", return_value={}), patch.object(rehearsal, "_docker_clone_proof", return_value=proof), patch.object(rehearsal, "_live_identity", return_value=live), patch.object(rehearsal, "_custody_bytes", return_value=b"{}"), patch.object(rehearsal, "_verify_lineage_attestation", return_value={"lineage_attestation_sha256": "c" * 64, "lineage_signature_sha256": "d" * 64}):
                 with self.assertRaises(rehearsal.RehearsalError):
                     rehearsal._assert_observation_binding(binding, verified_port=55401, container="clone-a-container", docker="docker", conn=connection, repository_root=root)
+    def test_observation_closes_identity_probe_transactions_before_explicit_snapshots(self):
+        connection = FakeConnection()
+        writes = {}
+        with patch.object(rehearsal, "_binding", return_value={}), \
+                patch.object(rehearsal, "_source"), \
+                patch.object(rehearsal, "validate_sources", return_value=Manifest()), \
+                patch.object(rehearsal, "vectors", return_value=((), ("SELECT 1",))), \
+                patch.object(rehearsal, "_connect_service", return_value=(connection, {"port": 55401})), \
+                patch.object(rehearsal, "_assert_observation_binding"), \
+                patch.object(rehearsal, "_observation", side_effect=lambda binding, state, *values: {"state": state}), \
+                patch.object(rehearsal, "_write", side_effect=lambda path, value: writes.setdefault(str(path), value)):
+            rehearsal.observe_reference(
+                repository_root=".",
+                binding_path="binding.json",
+                service_file="service.conf",
+                service_name="g035-local",
+                source_commit="a" * 40,
+                absent_output="absent.json",
+                full_output="full.json",
+                container="clone",
+            )
+        self.assertGreaterEqual(connection.rollback_count, 4)
+        self.assertEqual(writes["absent.json"]["state"], "absent")
+        self.assertEqual(writes["full.json"]["state"], "full")
     def test_service_custody_rejects_repository_file_replacement_and_effective_peer_mismatch(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw); service = self.service(root)
