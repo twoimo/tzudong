@@ -18,7 +18,8 @@ def reference(**changes):
         schema=g.RECEIPT_SCHEMA, base_commit=g.SOURCE_COMMIT, final_commit="b" * 40,
         runtime_source_root="c" * 64, manifest_sha256=g.MANIFEST_SHA256,
         migration_source_sha256=g.MIGRATION_SOURCE_SHA256, pg_identity=g.PG_IDENTITY,
-        probe_text_sha256=g.PROBE_TEXT_SHA256, absent_catalog_sha256=H,
+        probe_text_sha256=g.PROBE_TEXT_SHA256, derivation_mode=evidence.DERIVATION_MODE,
+        reverse_vector_sha256=evidence.REVERSE_VECTOR_SHA256, absent_catalog_sha256=H,
         full_catalog_sha256="d" * 64, full_data_sha256="e" * 64,
         ledger_prefix_sha256=H, target_fingerprint="f" * 64,
         observation_nonce="n" * 16, issued_at_unix=1, expires_at_unix=2,
@@ -71,6 +72,40 @@ class Tests(unittest.TestCase):
             "d.defaclobjtype::text",
         ):
             self.assertIn(internal_char, g.CATALOG_PROBE)
+        self.assertIn(
+            "coalesce(has_schema_privilege('anon',to_regnamespace('privacy_retention'),'USAGE'),false)",
+            g.CATALOG_PROBE,
+        )
+    def test_catalog_probe_normalizes_effective_acls(self):
+        probe = g.CATALOG_PROBE
+        for raw_acl, object_kind, owner in (
+            ("n.nspacl", "n", "n.nspowner"),
+            ("c.relacl", "r", "c.relowner"),
+            ("p.proacl", "f", "p.proowner"),
+        ):
+            self.assertIn(
+                f"aclexplode(coalesce({raw_acl},acldefault('{object_kind}',{owner}))) AS acl",
+                probe,
+            )
+            self.assertNotIn(f"{raw_acl}::text", probe)
+        self.assertEqual(
+            probe.count(
+                "string_agg(acl.grantor::text||chr(30)||acl.grantee::text||chr(30)||"
+                "acl.privilege_type||chr(30)||acl.is_grantable::text,chr(29) "
+                "ORDER BY acl.grantor,acl.grantee,acl.privilege_type,acl.is_grantable)"
+            ),
+            3,
+        )
+        self.assertIn("coalesce(d.defaclacl::text,'')", probe)
+
+    def test_catalog_probe_preserves_public_and_non_owner_acl_rows(self):
+        canonical_acl_row = (
+            "acl.grantor::text||chr(30)||acl.grantee::text||chr(30)||"
+            "acl.privilege_type||chr(30)||acl.is_grantable::text"
+        )
+        self.assertEqual(g.CATALOG_PROBE.count(canonical_acl_row), 3)
+        self.assertNotIn("WHERE acl.grantee", g.CATALOG_PROBE)
+        self.assertNotIn("WHERE acl.grantor", g.CATALOG_PROBE)
     def test_unapplied_real_artifact_and_nonce_replay(self):
         consumed = set()
         consume = lambda nonce: nonce not in consumed and not consumed.add(nonce)
@@ -128,7 +163,7 @@ class Tests(unittest.TestCase):
     def test_exact_immutable_types(self):
         class Derived(evidence.VerifiedReference): pass
         with self.assertRaises(g.Denial): g.classify_locked_cursor(Cursor(), Derived(**reference().__dict__), consume_nonce=lambda _: True)
-        observation = g.PrefixObservation("UNAPPLIED", "f" * 64, "b" * 40, "c" * 64, "3" * 64, "n" * 16, H, H, None, "4" * 64)
+        observation = g.PrefixObservation("UNAPPLIED", "f" * 64, "b" * 40, "c" * 64, "3" * 64, evidence.DERIVATION_MODE, evidence.REVERSE_VECTOR_SHA256, "n" * 16, H, H, None, "4" * 64)
         with self.assertRaises(Exception): observation.status = "FULL_ESCAPED"
 
 if __name__ == "__main__": unittest.main()

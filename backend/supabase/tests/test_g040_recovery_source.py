@@ -160,6 +160,8 @@ class G040RecoverySourceTests(unittest.TestCase):
         self.assertIn(self.vector, source.recovery_source_inventory(self.root))
         self.assertTrue(set(self.fragments).issubset(source.recovery_source_inventory(self.root)))
         self.assertIn(self.g035_runtime, source.recovery_source_inventory(self.root))
+        self.assertIn("backend/supabase/scripts/g040_reverse_00400.py", source.recovery_source_inventory(self.root))
+        self.assertIn("backend/supabase/scripts/g040_reverse_00400.py", source._RUNTIME_FILES)
         runtime = self.root / self.g035_runtime
         runtime.write_bytes(runtime.read_bytes() + b"drift\n")
         self.denied()

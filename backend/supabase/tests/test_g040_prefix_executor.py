@@ -13,7 +13,7 @@ from g037_hosted_closure_contract import BASELINE_PAIRS, Manifest, Migration
 from g040_prefix_recovery import Denial, PrefixObservation
 from g040_recovery_authorization import AttemptStarted, VerifiedAuthorization
 from g040_recovery_source import SourceBinding
-from g040_reference_evidence import VerifiedReference
+from g040_reference_evidence import DERIVATION_MODE, REVERSE_VECTOR_SHA256, SCHEMA as REFERENCE_SCHEMA, VerifiedReference
 
 H = "a" * 64
 COMMIT = "b" * 40
@@ -91,7 +91,7 @@ def compiled(m):
 def artifacts(branch="UNAPPLIED"):
     source = SourceBinding(final_commit=COMMIT, runtime_source_root=H)
     reference = VerifiedReference(
-        schema="g040-prefix-reference-v1",
+        schema=REFERENCE_SCHEMA,
         base_commit=COMMIT,
         final_commit=COMMIT,
         runtime_source_root=H,
@@ -100,6 +100,8 @@ def artifacts(branch="UNAPPLIED"):
         pg_identity="PostgreSQL 17.6",
         probe_text_sha256=H,
         absent_catalog_sha256=H,
+        derivation_mode=DERIVATION_MODE,
+        reverse_vector_sha256=REVERSE_VECTOR_SHA256,
         full_catalog_sha256=H,
         full_data_sha256=H,
         ledger_prefix_sha256=H,
@@ -145,6 +147,8 @@ def artifacts(branch="UNAPPLIED"):
         final_commit=source.final_commit,
         runtime_source_root=source.runtime_source_root,
         reference_receipt_sha256=reference.receipt_sha256,
+        derivation_mode=reference.derivation_mode,
+        reverse_vector_sha256=reference.reverse_vector_sha256,
         observation_nonce=reference.observation_nonce,
         ledger_prefix_sha256=reference.ledger_prefix_sha256,
         catalog_sha256=reference.absent_catalog_sha256 if branch == "UNAPPLIED" else reference.full_catalog_sha256,

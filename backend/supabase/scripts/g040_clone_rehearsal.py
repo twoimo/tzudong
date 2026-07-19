@@ -26,6 +26,7 @@ from g037_hosted_closure_contract import validate_sources
 from g037_hosted_closure_executor import vectors
 from g040_prefix_recovery import CATALOG_PROBE, DATA_PROBE, begin_read_only_snapshot
 from g040_recovery_source import SourceBinding, verify_recovery_source
+from g040_reverse_00400 import DERIVATION_MODE, REVERSE_VECTOR, REVERSE_VECTOR_SHA256
 from g040_reference_evidence import (
     PUBLIC_KEY_PEM as REFERENCE_PUBLIC_KEY_PEM,
     PUBLIC_KEY_SHA256 as REFERENCE_PUBLIC_KEY_SHA256,
@@ -40,6 +41,10 @@ _SAFE = re.compile(r"^[A-Za-z0-9_-]{16,128}$")
 _IMAGE = "supabase/postgres:17.6.1.147"
 _LABEL = "com.tzudong.g040.rehearsal"
 _MAX_ARTIFACT = 1_048_576
+_REFERENCE_CUSTODY_QUERY = (
+    "SELECT session_user AS session_user, current_user AS current_user, "
+    "current_database() AS database_name"
+)
 _LINEAGE_PUBLIC_KEY_PEM = b"""-----BEGIN PUBLIC KEY-----
 MCowBQYDK2VwAyEAqQPGXBPVi3se+xn9DUdVgXHeAgG82FSeWByugLeMqaQ=
 -----END PUBLIC KEY-----
@@ -427,7 +432,13 @@ def _binding(path: str | Path, repository_root: str | Path) -> Mapping[str, Any]
 
 def _observation(binding: Mapping[str, Any], state: str, catalog: str, ledger: str, data: str | None = None) -> dict[str, Any]:
     keys = ("clone_identity", "clone_nonce", "live_identity_sha256", "container_id_sha256", "image_id_sha256", "image_digest_sha256", "endpoint_sha256", "g035_restore_receipt_sha256", "g035_capture_receipt_sha256", "restored_archive_sha256", "capture_receipt_bytes_sha256", "restore_receipt_bytes_sha256", "archive_bytes", "g035_manifest_sha256", "source_sha256", "lineage_attestation_path", "lineage_signature_path", "lineage_attestation_sha256", "lineage_signature_sha256")
-    result = {key: binding[key] for key in keys} | {"state": state, "ledger_prefix_sha256": ledger, "catalog_sha256": catalog}
+    result = {key: binding[key] for key in keys} | {
+        "state": state,
+        "ledger_prefix_sha256": ledger,
+        "catalog_sha256": catalog,
+        "derivation_mode": DERIVATION_MODE,
+        "reverse_vector_sha256": REVERSE_VECTOR_SHA256,
+    }
     if data is not None:
         result["data_sha256"] = data
     return result
@@ -494,11 +505,20 @@ def _assert_observation_binding(binding: Mapping[str, Any], *, verified_port: in
     if any(binding[key] != hashes[key] for key in hashes):
         _fail("observation_binding")
 
+def _assert_reference_custody(cursor: Any, *, current_user: str) -> None:
+    row = _query_one(cursor, _REFERENCE_CUSTODY_QUERY)
+    if (
+        row.get("session_user") != "supabase_admin"
+        or row.get("current_user") != current_user
+        or row.get("database_name") != "g035_local"
+    ):
+        _fail("reference_custody")
+
 
 def observe_reference(*, repository_root: str | Path, binding_path: str | Path, service_file: str | Path,
                       service_name: str, source_commit: str, absent_output: str | Path, full_output: str | Path,
                       container: str, docker: str = "docker") -> None:
-    """Run the exact source-pinned 00400 vector under rollback, then re-prove absence."""
+    """Derive absent/full references from one restored full clone, then roll it back."""
     binding = _binding(binding_path, repository_root)
     root = Path(repository_root).resolve()
     _source(root, source_commit)
@@ -511,37 +531,73 @@ def observe_reference(*, repository_root: str | Path, binding_path: str | Path, 
     cur = None
     try:
         cur = conn.cursor()
-        _assert_observation_binding(binding, verified_port=service["port"], container=container, docker=docker, conn=conn, repository_root=repository_root)
+        _assert_observation_binding(binding, verified_port=service["port"], container=container, docker=docker, conn=conn, repository_root=root)
         conn.rollback()
         begin_read_only_snapshot(cur)
-        absent = _query_one(cur, CATALOG_PROBE)
+        initial_full = _query_one(cur, CATALOG_PROBE)
+        initial_data = _query_one(cur, DATA_PROBE)
         cur.execute("ROLLBACK")
-        _valid_probe(absent, full=False)
-        if absent.get("ledger_count") != 28 or absent.get("v00400_count") != 0:
-            _fail("partial_state")
-        _assert_observation_binding(binding, verified_port=service["port"], container=container, docker=docker, conn=conn, repository_root=repository_root)
+        _valid_probe(initial_full, full=True)
+        _valid_data(initial_data)
+        initial_ledger = initial_full["ledger_sha256"]
+        initial_catalog = initial_full["catalog_sha256"]
+        initial_data_root = initial_data["data_shape_sha256"]
+
+        _assert_observation_binding(binding, verified_port=service["port"], container=container, docker=docker, conn=conn, repository_root=root)
         conn.rollback()
         cur.execute("BEGIN")
+        cur.execute("SET LOCAL statement_timeout = '10000ms'")
+        cur.execute("SET LOCAL lock_timeout = '5000ms'")
+        _assert_reference_custody(cur, current_user="supabase_admin")
+        cur.execute("GRANT CREATE ON DATABASE g035_local TO postgres")
+        cur.execute("GRANT CREATE ON SCHEMA public TO postgres")
+        cur.execute("SET LOCAL ROLE postgres")
+        _assert_reference_custody(cur, current_user="postgres")
+        cur.execute('SET LOCAL search_path = "$user", public, auth, extensions')
         cur.execute("LOCK TABLE supabase_migrations.schema_migrations IN ACCESS EXCLUSIVE MODE")
+        for table in (
+            "privacy_retention.privacy_retention_classes",
+            "privacy_retention.privacy_retention_class_sources",
+            "privacy_retention.privacy_legal_holds",
+            "privacy_retention.privacy_retention_work_items",
+            "privacy_retention.privacy_retained_records",
+            "privacy_retention.privacy_retention_runs",
+            "privacy_retention.privacy_retention_run_items",
+        ):
+            cur.execute(f"LOCK TABLE {table} IN ACCESS EXCLUSIVE MODE")
+        locked_full = _query_one(cur, CATALOG_PROBE)
+        locked_data = _query_one(cur, DATA_PROBE)
+        _valid_probe(locked_full, full=True)
+        _valid_data(locked_data)
+        if (locked_full["ledger_sha256"], locked_full["catalog_sha256"], locked_data["data_shape_sha256"]) != (initial_ledger, initial_catalog, initial_data_root):
+            _fail("initial_drift")
+        for statement in REVERSE_VECTOR:
+            cur.execute(statement)
+        absent = _query_one(cur, CATALOG_PROBE)
+        _valid_probe(absent, full=False)
+        if absent["ledger_sha256"] != initial_ledger:
+            _fail("ledger_drift")
         for statement in executable:
             cur.execute(statement)
-        full = _query_one(cur, CATALOG_PROBE)
-        data = _query_one(cur, DATA_PROBE)
+        recreated_full = _query_one(cur, CATALOG_PROBE)
+        recreated_data = _query_one(cur, DATA_PROBE)
+        _valid_probe(recreated_full, full=True)
+        _valid_data(recreated_data)
+        if (recreated_full["ledger_sha256"], recreated_full["catalog_sha256"], recreated_data["data_shape_sha256"]) != (initial_ledger, initial_catalog, initial_data_root):
+            _fail("forward_drift")
         cur.execute("ROLLBACK")
-        _valid_probe(full, full=True)
-        _valid_data(data)
-        if full.get("ledger_count") != 28 or full.get("v00400_count") != 0 or full["ledger_sha256"] != absent["ledger_sha256"]:
-            _fail("partial_state")
-        _assert_observation_binding(binding, verified_port=service["port"], container=container, docker=docker, conn=conn, repository_root=repository_root)
+        _assert_observation_binding(binding, verified_port=service["port"], container=container, docker=docker, conn=conn, repository_root=root)
         conn.rollback()
         begin_read_only_snapshot(cur)
-        after = _query_one(cur, CATALOG_PROBE)
+        final_full = _query_one(cur, CATALOG_PROBE)
+        final_data = _query_one(cur, DATA_PROBE)
         cur.execute("ROLLBACK")
-        _valid_probe(after, full=False)
-        if after.get("v00400_count") != 0 or after["catalog_sha256"] != absent["catalog_sha256"] or after["ledger_sha256"] != absent["ledger_sha256"]:
+        _valid_probe(final_full, full=True)
+        _valid_data(final_data)
+        if (final_full["ledger_sha256"], final_full["catalog_sha256"], final_data["data_shape_sha256"]) != (initial_ledger, initial_catalog, initial_data_root):
             _fail("rollback_invariant")
         _write(absent_output, _observation(binding, "absent", absent["catalog_sha256"], absent["ledger_sha256"]))
-        _write(full_output, _observation(binding, "full", full["catalog_sha256"], full["ledger_sha256"], data["data_shape_sha256"]))
+        _write(full_output, _observation(binding, "full", recreated_full["catalog_sha256"], recreated_full["ledger_sha256"], recreated_data["data_shape_sha256"]))
     except RehearsalError:
         raise
     except Exception:

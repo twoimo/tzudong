@@ -27,6 +27,7 @@ DOMAIN = b"g040-recovery-source-root-v1\x00"
 _RUNTIME_FILES = (
     "backend/supabase/scripts/g040_prefix_recovery.py",
     "backend/supabase/scripts/g040_recovery_authorization.py",
+    "backend/supabase/scripts/g040_reverse_00400.py",
     "backend/supabase/scripts/g040_recovery_source.py",
     "backend/supabase/scripts/g040_reference_evidence.py",
     "backend/supabase/scripts/g040_production_controller.py",

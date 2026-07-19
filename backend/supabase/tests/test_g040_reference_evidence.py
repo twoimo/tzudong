@@ -15,7 +15,7 @@ from g040_recovery_source import SourceBinding
 class ReferenceTests(unittest.TestCase):
     def clones(self):
         def pair(identity, nonce, receipt, live, container):
-            shared = {"clone_identity": identity, "clone_nonce": nonce, "live_identity_sha256": live, "container_id_sha256": container, "image_id_sha256": "5" * 64, "image_digest_sha256": "6" * 64, "endpoint_sha256": "0" * 64, "g035_restore_receipt_sha256": receipt, "g035_capture_receipt_sha256": "7" * 64, "restored_archive_sha256": "8" * 64, "capture_receipt_bytes_sha256": "9" * 64, "restore_receipt_bytes_sha256": "a" * 64, "lineage_attestation_sha256": identity, "lineage_signature_sha256": receipt, "ledger_prefix_sha256": "d" * 64}
+            shared = {"clone_identity": identity, "clone_nonce": nonce, "live_identity_sha256": live, "container_id_sha256": container, "image_id_sha256": "5" * 64, "image_digest_sha256": "6" * 64, "endpoint_sha256": "0" * 64, "g035_restore_receipt_sha256": receipt, "g035_capture_receipt_sha256": "7" * 64, "restored_archive_sha256": "8" * 64, "capture_receipt_bytes_sha256": "9" * 64, "restore_receipt_bytes_sha256": "a" * 64, "lineage_attestation_sha256": identity, "lineage_signature_sha256": receipt, "ledger_prefix_sha256": "d" * 64, "derivation_mode": evidence.DERIVATION_MODE, "reverse_vector_sha256": evidence.REVERSE_VECTOR_SHA256}
             return MappingProxyType({**shared, "state": "absent", "catalog_sha256": "a" * 64}), MappingProxyType({**shared, "state": "full", "catalog_sha256": "b" * 64, "data_sha256": "c" * 64})
         return evidence.build_clone_run(*pair("9" * 64, "clone-first-nonce", "e" * 64, "1" * 64, "3" * 64)), evidence.build_clone_run(*pair("a" * 64, "clone-second-nonce", "f" * 64, "2" * 64, "4" * 64))
 
@@ -33,6 +33,33 @@ class ReferenceTests(unittest.TestCase):
         reused["g035_restore_receipt_sha256"] = first["g035_restore_receipt_sha256"]
         with self.assertRaises(evidence.ReferenceEvidenceError):
             evidence.compare_clone_runs(first, reused)
+    def test_rejects_v1_and_invalid_derivation_artifacts(self):
+        first, second = self.clones()
+        for changes in (
+            {"schema": "g040-prefix-reference-v1"},
+            {"derivation_mode": "wrong"},
+            {"reverse_vector_sha256": "0" * 64},
+        ):
+            with self.subTest(changes=changes), self.assertRaises(evidence.ReferenceEvidenceError):
+                evidence.validate_reference_body({**dict(self.body()), **changes})
+        body = dict(self.body())
+        del body["derivation_mode"]
+        with self.assertRaises(evidence.ReferenceEvidenceError):
+            evidence.validate_reference_body(body)
+        for field, value in (("derivation_mode", "wrong"), ("reverse_vector_sha256", "0" * 64)):
+            with self.subTest(field=field), self.assertRaises(evidence.ReferenceEvidenceError):
+                evidence.compare_clone_runs(first, {**dict(second), field: value})
+    def test_build_clone_run_rejects_missing_or_equal_catalog_roots(self):
+        absent = MappingProxyType({"clone_identity": "9" * 64, "clone_nonce": "clone-artifact-nonce", "live_identity_sha256": "1" * 64, "container_id_sha256": "2" * 64, "image_id_sha256": "3" * 64, "image_digest_sha256": "4" * 64, "endpoint_sha256": "5" * 64, "g035_restore_receipt_sha256": "6" * 64, "g035_capture_receipt_sha256": "7" * 64, "restored_archive_sha256": "8" * 64, "capture_receipt_bytes_sha256": "9" * 64, "restore_receipt_bytes_sha256": "a" * 64, "lineage_attestation_sha256": "b" * 64, "lineage_signature_sha256": "c" * 64, "ledger_prefix_sha256": "d" * 64, "derivation_mode": evidence.DERIVATION_MODE, "reverse_vector_sha256": evidence.REVERSE_VECTOR_SHA256, "state": "absent", "catalog_sha256": "e" * 64})
+        full = MappingProxyType({**dict(absent), "state": "full", "catalog_sha256": "f" * 64, "data_sha256": "0" * 64})
+        with self.assertRaises(evidence.ReferenceEvidenceError):
+            evidence.build_clone_run(absent, MappingProxyType({**dict(full), "catalog_sha256": absent["catalog_sha256"]}))
+        for field, value in (("derivation_mode", None), ("derivation_mode", "wrong"), ("reverse_vector_sha256", "0" * 64)):
+            with self.subTest(field=field, value=value), self.assertRaises(evidence.ReferenceEvidenceError):
+                evidence.build_clone_run(
+                    MappingProxyType({key: item for key, item in dict(absent).items() if key != field} if value is None else {**dict(absent), field: value}),
+                    MappingProxyType({key: item for key, item in dict(full).items() if key != field} if value is None else {**dict(full), field: value}),
+                )
     def test_build_reference_body_uses_clone_run_mapping_items(self):
         first, second = self.clones()
         body = evidence.build_reference_body(
