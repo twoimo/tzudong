@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import os
 import sys
 import tempfile
 import unittest
@@ -115,13 +116,19 @@ class G040ProductionControllerTests(unittest.TestCase):
                 controller._signed_document(controller.authority.canonical_json_bytes(forged) + b"\n", "aggregate-custody")
 
     def test_receipt_signing_uses_only_receipt_private_key(self):
-        public = controller._RECEIPT_PUBLIC_KEY_PEM.encode("ascii")
-        completed = [type("Result", (), {"stdout": public})(), type("Result", (), {"stdout": b"signature"})()]
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+        from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption, PrivateFormat, PublicFormat
+        private = Ed25519PrivateKey.generate()
+        private_pem = private.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption())
+        public = private.public_key().public_bytes(Encoding.PEM, PublicFormat.SubjectPublicKeyInfo)
+        fd = os.open(os.devnull, os.O_RDONLY)
         with patch.object(controller.authority, "restrictive_regular_file", return_value=controller._RECEIPT_SIGNING_KEY) as restrictive, \
-                patch.object(controller.subprocess, "run", side_effect=completed) as run:
-            self.assertEqual(controller._sign_receipt(b"receipt"), b"signature")
+                patch.object(controller.authority, "_open_custody", return_value=(fd, private_pem)), \
+                patch.object(controller, "_RECEIPT_PUBLIC_KEY_PEM", public.decode("ascii")), \
+                patch.object(controller, "_RECEIPT_PUBLIC_KEY_SHA256", hashlib.sha256(public).hexdigest()):
+            signature = controller._sign_receipt(b"receipt")
+        private.public_key().verify(signature, b"receipt")
         self.assertEqual(restrictive.call_args.args, (controller._RECEIPT_SIGNING_KEY, "recovery receipt signing key"))
-        self.assertEqual(run.call_args_list[1].args[0][4], str(controller._RECEIPT_SIGNING_KEY))
 
     def test_nonce_store_is_directory_backed_and_replay_safe(self):
         with tempfile.TemporaryDirectory() as root, tempfile.TemporaryDirectory() as outside:
