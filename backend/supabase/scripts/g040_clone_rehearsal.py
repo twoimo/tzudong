@@ -616,15 +616,15 @@ def _reference_signer(private_key: str | Path, *, repository_root: str | Path | 
             root = Path(repository_root).resolve()
             if key_path == root or root in key_path.parents:
                 _fail("reference_signing_key")
-        key = crypto.require_file(key_path, "reference signing key")
+        crypto.require_file(key_path, "reference signing key")
         public = subprocess.run(
-            [crypto.command("openssl"), "pkey", "-in", str(key), "-pubout"],
+            [crypto.command("openssl"), "pkey", "-in", str(key_path), "-pubout"],
             stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
             timeout=crypto.TIMEOUT, check=True,
         ).stdout
         if _sha(public) != REFERENCE_PUBLIC_KEY_SHA256:
             _fail("reference_signing_key")
-        return lambda payload: crypto.openssl_sign(crypto.command("openssl"), key, payload)
+        return lambda payload: crypto.openssl_sign(crypto.command("openssl"), key_path, payload)
     except RehearsalError:
         raise
     except Exception:

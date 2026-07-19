@@ -86,6 +86,38 @@ class CloneRehearsalTests(unittest.TestCase):
         path = root / "service.conf"
         path.write_text(f"[g035-local]\nhost={host}\nport=55401\ndbname={db}\nsslmode=disable\napplication_name=g035-local-clone\npassword=never-print\n")
         return path
+    def test_reference_signer_uses_resolved_key_after_none_validator_and_rejects_wrong_public_key(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            repository_root = root / "repository"
+            repository_root.mkdir()
+            key_path = root / "keys" / "reference.key"
+            key_path.parent.mkdir()
+            key_path.write_bytes(b"not-read-by-mocked-openssl")
+            supplied_path = key_path.parent / ".." / "keys" / "reference.key"
+            resolved_path = key_path.resolve()
+
+            def derive_public(command, **kwargs):
+                self.assertEqual(command, ["openssl", "pkey", "-in", str(resolved_path), "-pubout"])
+                return types.SimpleNamespace(stdout=rehearsal.REFERENCE_PUBLIC_KEY_PEM.encode("ascii"))
+
+            with patch.object(rehearsal.crypto, "require_file", return_value=None) as require_file, \
+                    patch.object(rehearsal.crypto, "command", return_value="openssl"), \
+                    patch.object(rehearsal.subprocess, "run", side_effect=derive_public), \
+                    patch.object(rehearsal.crypto, "openssl_sign", return_value=b"signature") as openssl_sign:
+                signer = rehearsal._reference_signer(supplied_path, repository_root=repository_root)
+                self.assertEqual(signer(b"payload"), b"signature")
+            require_file.assert_called_once_with(resolved_path, "reference signing key")
+            openssl_sign.assert_called_once_with("openssl", resolved_path, b"payload")
+
+            with patch.object(rehearsal.crypto, "require_file", return_value=None), \
+                    patch.object(rehearsal.crypto, "command", return_value="openssl"), \
+                    patch.object(rehearsal.subprocess, "run", return_value=types.SimpleNamespace(stdout=b"wrong-public-key")), \
+                    patch.object(rehearsal.crypto, "openssl_sign") as openssl_sign:
+                with self.assertRaisesRegex(rehearsal.RehearsalError, "reference_signing_key"):
+                    rehearsal._reference_signer(supplied_path, repository_root=repository_root)
+            openssl_sign.assert_not_called()
+
     def test_live_identity_uses_a_real_cursor(self):
         connection = FakeConnection()
         identity = rehearsal._live_identity(connection)
