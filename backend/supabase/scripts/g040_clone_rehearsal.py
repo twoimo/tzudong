@@ -512,6 +512,7 @@ def observe_reference(*, repository_root: str | Path, binding_path: str | Path, 
     try:
         cur = conn.cursor()
         _assert_observation_binding(binding, verified_port=service["port"], container=container, docker=docker, conn=conn, repository_root=repository_root)
+        conn.rollback()
         begin_read_only_snapshot(cur)
         absent = _query_one(cur, CATALOG_PROBE)
         cur.execute("ROLLBACK")
@@ -519,6 +520,7 @@ def observe_reference(*, repository_root: str | Path, binding_path: str | Path, 
         if absent.get("ledger_count") != 28 or absent.get("v00400_count") != 0:
             _fail("partial_state")
         _assert_observation_binding(binding, verified_port=service["port"], container=container, docker=docker, conn=conn, repository_root=repository_root)
+        conn.rollback()
         cur.execute("BEGIN")
         cur.execute("LOCK TABLE supabase_migrations.schema_migrations IN ACCESS EXCLUSIVE MODE")
         for statement in executable:
@@ -531,6 +533,7 @@ def observe_reference(*, repository_root: str | Path, binding_path: str | Path, 
         if full.get("ledger_count") != 28 or full.get("v00400_count") != 0 or full["ledger_sha256"] != absent["ledger_sha256"]:
             _fail("partial_state")
         _assert_observation_binding(binding, verified_port=service["port"], container=container, docker=docker, conn=conn, repository_root=repository_root)
+        conn.rollback()
         begin_read_only_snapshot(cur)
         after = _query_one(cur, CATALOG_PROBE)
         cur.execute("ROLLBACK")
