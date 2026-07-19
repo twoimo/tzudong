@@ -123,7 +123,7 @@ def _classify_probes(cursor: Any, reference: Any, *, transaction_read_only: str,
     absent = catalog["schema_exists"] is False and all(catalog[key] == 0 for key in ("expected_table_count", "schema_table_count", "schema_index_count", "schema_other_relation_count", "schema_trigger_count")) and catalog["catalog_sha256"] == reference.absent_catalog_sha256
     if absent:
         return "UNAPPLIED", catalog["ledger_sha256"], catalog["catalog_sha256"], None
-    full = catalog["schema_exists"] is True and catalog["expected_table_count"] == 7 and catalog["schema_table_count"] == 7 and catalog["schema_index_count"] == 14 and catalog["column_count"] == 78 and catalog["schema_other_relation_count"] == 0 and catalog["touched_function_count"] == 14 and catalog["schema_trigger_count"] == 7 and catalog["rls_table_count"] == 7 and catalog["policy_count"] == 0 and catalog["acl_contract_ok"] is True and catalog["catalog_sha256"] == reference.full_catalog_sha256
+    full = catalog["schema_exists"] is True and catalog["expected_table_count"] == 7 and catalog["schema_table_count"] == 7 and catalog["schema_index_count"] == 14 and catalog["column_count"] == 102 and catalog["schema_other_relation_count"] == 0 and catalog["touched_function_count"] == 14 and catalog["schema_trigger_count"] == 7 and catalog["rls_table_count"] == 7 and catalog["policy_count"] == 0 and catalog["acl_contract_ok"] is True and catalog["catalog_sha256"] == reference.full_catalog_sha256
     if not full:
         raise Denial("partial_or_ambiguous")
     return "FULL_ESCAPED", catalog["ledger_sha256"], catalog["catalog_sha256"], probe_full_data_root(cursor, reference, statement_executor=statement_executor)
