@@ -158,6 +158,17 @@ class G040ProductionControllerTests(unittest.TestCase):
         expected = "f" * 64
         with self.assertRaisesRegex(controller.ControllerError, "live_target") as raised: controller._require_live_target(cursor, expected)
         self.assertNotIn("system", str(raised.exception)); self.assertEqual(len(cursor.calls), 1)
+    def test_live_target_uses_valid_control_system_composite_field_and_exact_identity_hash(self):
+        cursor = Cursor()
+        self.assertEqual(
+            controller._live_target(cursor),
+            hashlib.sha256(b'["system","42","170006"]').hexdigest(),
+        )
+        self.assertEqual(
+            cursor.calls,
+            ["SELECT (pg_catalog.pg_control_system()).system_identifier::text AS system_identifier, (SELECT oid::text FROM pg_catalog.pg_database WHERE datname = current_database()) AS database_oid, current_setting('server_version_num') AS server_version_num"],
+        )
+        self.assertNotIn("pg_control_system().system_identifier", cursor.calls[0])
 
     def test_service_file_replacement_closes_connection_before_denial(self):
         args = Namespace(repository_root="/checkout", database_url=None, dsn=None, service_file="/service", service_name="locked")
