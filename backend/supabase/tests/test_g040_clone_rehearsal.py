@@ -124,14 +124,21 @@ class CloneRehearsalTests(unittest.TestCase):
         psycopg = types.ModuleType("psycopg")
         rows = types.ModuleType("psycopg.rows"); rows.dict_row = object()
         psycopg.rows = rows
+        seen = []
         for after, connection in (
             ((service_path, raw, (1, 2)), Connection("127.0.0.1", 55401)),
             ((service_path, raw, (1, 1)), Connection("127.0.0.2", 55401)),
         ):
-            psycopg.connect = lambda **_: connection
-            with patch.dict(sys.modules, {"psycopg": psycopg, "psycopg.rows": rows}), patch.object(rehearsal, "_service_custody", side_effect=[(service_path, raw, (1, 1)), after]):
+            def connect(**kwargs):
+                seen.append((dict(kwargs), rehearsal.os.environ.get("PGSERVICEFILE")))
+                return connection
+            psycopg.connect = connect
+            with patch.dict(sys.modules, {"psycopg": psycopg, "psycopg.rows": rows}), patch.object(rehearsal, "_service_custody", side_effect=[(service_path, raw, (1, 1)), after]), patch.dict(rehearsal.os.environ, {"PGSERVICEFILE": "original-service-file"}):
                 with self.assertRaises(rehearsal.RehearsalError):
                     rehearsal._connect_service(service_path, "g035-local", readonly=True, repository_root=Path("C:/repository"))
+                self.assertEqual(rehearsal.os.environ["PGSERVICEFILE"], "original-service-file")
+        self.assertTrue(seen)
+        self.assertTrue(all("servicefile" not in kwargs and service == str(service_path) for kwargs, service in seen))
     def test_lineage_attestation_rejects_wrong_key_expiry_self_hash_forgery_and_binding_drift(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw); repo = root / "repo"; repo.mkdir()
