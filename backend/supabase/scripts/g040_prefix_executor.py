@@ -6,12 +6,12 @@ import hashlib
 import math
 import time
 from dataclasses import dataclass
+from typing import Any, Mapping
 from pathlib import Path
-from typing import Any
 
 from g037_hosted_closure_contract import BASELINE_PAIRS, Manifest, canonical_bytes, terminal_spec, validate_sources
 from g037_hosted_closure_executor import ClosureError, terminal_readback_assert, vectors
-from g040_prefix_recovery import Denial, PrefixObservation, TABLES, classify_mutation_cursor, probe_full_data_root
+from g040_prefix_recovery import Denial, PrefixObservation, SOURCE_COMMIT, TABLES, classify_mutation_cursor, probe_full_data_root
 from g040_recovery_authorization import AttemptStarted, VerifiedAuthorization
 from g040_recovery_source import SourceBinding
 from g040_reference_evidence import VerifiedReference
@@ -67,7 +67,62 @@ class RecoveryExecutionPlan:
     compiled: tuple[tuple[Any, tuple[str, ...], tuple[str, ...]], ...]
     terminal_spec_root: str
 
+@dataclass(frozen=True)
+class _CloneAdmission:
+    """Exact-type verifier result, deliberately not a caller supplied marker."""
+    clone_identity: str
+    clone_nonce: str
+    target_fingerprint: str
+    live_identity_sha256: str
+    port: int
 
+
+@dataclass(frozen=True)
+class VerifiedCloneCapability:
+    """Local-only clone admission bound to an observed PostgreSQL identity."""
+    _admission: _CloneAdmission
+    clone_identity: str
+    clone_nonce: str
+    target_fingerprint: str
+
+    @classmethod
+    def _admit(cls, *, clone_identity: str, clone_nonce: str, target_fingerprint: str,
+               live_identity_sha256: str, port: int) -> "VerifiedCloneCapability":
+        if (not isinstance(clone_nonce, str) or type(port) is not int or not 1 <= port <= 65535
+                or any(type(value) is not str or len(value) != 64
+                       for value in (clone_identity, target_fingerprint, live_identity_sha256))):
+            _deny("clone_capability")
+        admission = _CloneAdmission(clone_identity, clone_nonce, target_fingerprint,
+                                    live_identity_sha256, port)
+        return cls(admission, clone_identity, clone_nonce, target_fingerprint)
+
+
+def admit_verified_clone(*, clone_identity: str, clone_nonce: str, target_fingerprint: str,
+                         live_identity_sha256: str, port: int) -> VerifiedCloneCapability:
+    """Create a capability only after the caller's clone verifier has checked custody."""
+    return VerifiedCloneCapability._admit(
+        clone_identity=clone_identity, clone_nonce=clone_nonce,
+        target_fingerprint=target_fingerprint, live_identity_sha256=live_identity_sha256,
+        port=port,
+    )
+
+@dataclass(frozen=True)
+class RehearsalExecutionPlan:
+    repository_root: Path
+    manifest: Manifest
+    source: SourceBinding
+    reference: VerifiedReference
+    observation: PrefixObservation
+    branch: str
+    compiled: tuple[tuple[Any, tuple[str, ...], tuple[str, ...]], ...]
+    terminal_spec_root: str
+
+@dataclass(frozen=True)
+class _LocalExecutionAuthorization:
+    target_data_root: str
+    target_catalog_root: str = ""
+    target_ledger_root: str = ""
+    authorization_sha256: str = ""
 @dataclass(frozen=True)
 class ExecutorEvidence:
     branch: str
@@ -200,15 +255,21 @@ def _validate_artifacts(repository_root: Any, manifest: Any, source: Any, refere
             or tuple((item.version, item.name) for item in migrations[17:]) != _SUFFIX
             or len(BASELINE_PAIRS) + len(migrations) != _TERMINAL_ROWS):
         _deny("manifest_contract")
-    if (source.final_commit != reference.final_commit or source.runtime_source_root != reference.runtime_source_root
+    if (reference.base_commit != SOURCE_COMMIT
+            or authorization.base_commit != SOURCE_COMMIT
+            or source.final_commit != reference.final_commit
+            or source.runtime_source_root != reference.runtime_source_root
             or observation.status not in ("UNAPPLIED", "FULL_ESCAPED")
             or observation.target_fingerprint != reference.target_fingerprint
-            or observation.final_commit != source.final_commit or observation.runtime_source_root != source.runtime_source_root
+            or observation.final_commit != source.final_commit
+            or observation.runtime_source_root != source.runtime_source_root
             or observation.reference_receipt_sha256 != reference.receipt_sha256
             or observation.observation_nonce != reference.observation_nonce):
         _deny("artifact_binding")
     if (authorization.final_recovery_commit != source.final_commit
             or authorization.runtime_source_root != source.runtime_source_root
+            or authorization.manifest_root != reference.manifest_sha256
+            or authorization.source_root != reference.migration_source_sha256
             or authorization.target_fingerprint != reference.target_fingerprint
             or authorization.terminal_root != spec
             or authorization.prefix_state_receipt_sha256 != observation.classification_sha256
@@ -229,6 +290,70 @@ def build_execution_plan(repository_root: Path, manifest: Manifest, *, source: S
     root, spec = _validate_artifacts(repository_root, manifest, source, reference, observation, authorization)
     compiled = _compiled(root, manifest)
     return RecoveryExecutionPlan(root, manifest, source, reference, observation, authorization, observation.status, compiled, spec)
+def compile_branch_plan(repository_root: Path, manifest: Manifest, *, source: SourceBinding,
+                        reference: VerifiedReference, observation: PrefixObservation) -> RehearsalExecutionPlan:
+    """Compile a local replay plan without accepting production authority."""
+    if (type(source) is not SourceBinding or type(reference) is not VerifiedReference
+            or type(observation) is not PrefixObservation
+            or reference.base_commit != SOURCE_COMMIT
+            or observation.status not in ("UNAPPLIED", "FULL_ESCAPED")
+            or validate_sources(repository_root) != manifest
+            or source.final_commit != reference.final_commit
+            or source.runtime_source_root != reference.runtime_source_root
+            or observation.final_commit != source.final_commit
+            or observation.runtime_source_root != source.runtime_source_root
+            or observation.target_fingerprint != reference.target_fingerprint
+            or observation.reference_receipt_sha256 != reference.receipt_sha256):
+        _deny("artifact_binding")
+    return RehearsalExecutionPlan(repository_root, manifest, source, reference, observation,
+                                  observation.status, _compiled(repository_root, manifest),
+                                  terminal_spec(manifest))
+
+
+def _validated_local_clone_identity(cursor: Any, capability: VerifiedCloneCapability) -> None:
+    admission = capability._admission
+    if (type(admission) is not _CloneAdmission
+            or (capability.clone_identity, capability.clone_nonce, capability.target_fingerprint)
+            != (admission.clone_identity, admission.clone_nonce, admission.target_fingerprint)):
+        _deny("clone_capability")
+    info = getattr(getattr(cursor, "connection", None), "info", None)
+    if getattr(info, "host", None) != "127.0.0.1" or getattr(info, "port", None) != admission.port:
+        _deny("clone_capability")
+    try:
+        cursor.execute(
+            "SELECT (pg_control_system()).system_identifier::text AS system_identifier, "
+            "(SELECT oid::text FROM pg_database WHERE datname=current_database()) AS database_oid, "
+            "current_database() AS database_name, current_setting('server_version') AS server_version, "
+            "current_setting('server_version_num')::integer AS server_version_num"
+        )
+        row = cursor.fetchone()
+    except Exception:
+        _deny("clone_capability")
+    required = {"system_identifier", "database_oid", "database_name", "server_version", "server_version_num"}
+    if (not isinstance(row, Mapping) or set(row) != required or row["database_name"] != "g035_local"
+            or row["server_version"] != "17.6" or row["server_version_num"] != 170006
+            or not all(type(row[key]) is str and row[key] for key in required - {"server_version_num"})):
+        _deny("clone_capability")
+    encoded = __import__("json").dumps(dict(row), sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii")
+    if hashlib.sha256(encoded).hexdigest() != admission.live_identity_sha256:
+        _deny("clone_capability")
+
+
+def apply_rehearsal_locked_cursor(cursor: Any, *, plan: RehearsalExecutionPlan,
+                                  verified_clone_capability: VerifiedCloneCapability,
+                                  deadline_monotonic: float) -> ExecutorEvidence:
+    """Replay on an admitted local clone through the same locked mutation core."""
+    if (type(plan) is not RehearsalExecutionPlan
+            or type(verified_clone_capability) is not VerifiedCloneCapability
+            or verified_clone_capability.target_fingerprint != plan.reference.target_fingerprint):
+        _deny("clone_capability")
+    _validated_local_clone_identity(cursor, verified_clone_capability)
+    local_plan = RecoveryExecutionPlan(
+        plan.repository_root, plan.manifest, plan.source, plan.reference, plan.observation,
+        _LocalExecutionAuthorization(plan.reference.full_data_sha256), plan.branch,
+        plan.compiled, plan.terminal_spec_root)
+    return apply_locked_cursor(cursor, plan=local_plan, attempt=None,
+                               deadline_monotonic=deadline_monotonic)
 
 
 def _insert(cursor: Any, item: Any, full: tuple[str, ...], *, deadline_monotonic: float) -> None:
@@ -252,10 +377,15 @@ def _validate_attempt(plan: RecoveryExecutionPlan, attempt: Any) -> AttemptStart
     return attempt
 
 
-def apply_locked_cursor(cursor: Any, *, plan: RecoveryExecutionPlan, attempt: AttemptStarted, deadline_monotonic: float) -> ExecutorEvidence:
-    """Apply an already-verified plan in a caller-owned transaction without transaction control."""
+def apply_locked_cursor(cursor: Any, *, plan: RecoveryExecutionPlan, attempt: AttemptStarted | None,
+                        deadline_monotonic: float) -> ExecutorEvidence:
+    """Apply an admitted production or local plan in a caller-owned transaction."""
     preflight_deadline(deadline_monotonic)
-    attempt = _validate_attempt(plan, attempt)
+    if attempt is None:
+        if type(plan.authorization) is not _LocalExecutionAuthorization:
+            _deny("attempt_type")
+    else:
+        attempt = _validate_attempt(plan, attempt)
     timed_cursor = _DeadlineCursor(cursor, deadline_monotonic)
     _execute(cursor, "SELECT current_setting('transaction_read_only', true)", deadline_monotonic=deadline_monotonic)
     try:
@@ -313,9 +443,15 @@ def apply_locked_cursor(cursor: Any, *, plan: RecoveryExecutionPlan, attempt: At
     except Exception:
         _deny("terminal_mismatch")
     required = {"catalog_root", "acl_root", "ledger_root", "terminal_spec"}
-    if (type(terminal) is not dict or set(terminal) != required or terminal["terminal_spec"] != plan.terminal_spec_root
-            or terminal["catalog_root"] != plan.authorization.target_catalog_root
-            or terminal["ledger_root"] != plan.authorization.target_ledger_root):
+    if (type(terminal) is not dict or set(terminal) != required
+            or (attempt is None and terminal["terminal_spec"] != plan.terminal_spec_root)
+            or (attempt is not None and (
+                terminal["catalog_root"] != plan.authorization.target_catalog_root
+                or terminal["acl_root"] != plan.authorization.target_acl_root
+                or terminal["ledger_root"] != plan.authorization.target_ledger_root
+                or data_root != plan.authorization.target_data_root
+                or terminal["terminal_spec"] != plan.authorization.terminal_root
+            ))):
         _deny("terminal_mismatch")
     payload = {
         "branch": plan.branch, "target_fingerprint": plan.reference.target_fingerprint,
@@ -323,7 +459,7 @@ def apply_locked_cursor(cursor: Any, *, plan: RecoveryExecutionPlan, attempt: At
         "reference_receipt_sha256": plan.reference.receipt_sha256,
         "classification_sha256": plan.observation.classification_sha256,
         "authorization_sha256": plan.authorization.authorization_sha256,
-        "attempt_receipt_sha256": attempt.receipt_sha256, "applied_statement_count": applied,
+        "attempt_receipt_sha256": "" if attempt is None else attempt.receipt_sha256, "applied_statement_count": applied,
         "terminal_rows": _TERMINAL_ROWS, "terminal_catalog_root": terminal["catalog_root"],
         "terminal_acl_root": terminal["acl_root"], "terminal_ledger_root": terminal["ledger_root"],
         "terminal_spec_root": terminal["terminal_spec"], "terminal_data_root": data_root,
@@ -331,4 +467,7 @@ def apply_locked_cursor(cursor: Any, *, plan: RecoveryExecutionPlan, attempt: At
     return ExecutorEvidence(**payload, evidence_sha256=hashlib.sha256(canonical_bytes(payload)).hexdigest())
 
 
-__all__ = ["ExecutionDenial", "ExecutorEvidence", "RecoveryExecutionPlan", "apply_locked_cursor", "build_execution_plan", "preflight_deadline"]
+__all__ = ["ExecutionDenial", "ExecutorEvidence", "RecoveryExecutionPlan",
+           "RehearsalExecutionPlan", "VerifiedCloneCapability", "admit_verified_clone",
+           "apply_locked_cursor", "apply_rehearsal_locked_cursor", "build_execution_plan",
+           "compile_branch_plan", "preflight_deadline"]

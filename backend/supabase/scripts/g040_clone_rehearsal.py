@@ -12,6 +12,7 @@ import hashlib
 import json
 import os
 import re
+import stat
 import subprocess
 import sys
 import time
@@ -22,14 +23,22 @@ from typing import Any, Mapping
 import g037_managed_recovery as crypto
 import g035_hosted_recovery as g035
 import g040_production_controller as controller
-from g037_hosted_closure_contract import validate_sources
+from g037_hosted_closure_contract import terminal_spec, validate_operator_assertion, validate_sources
+import g040_prefix_recovery as prefix
 from g037_hosted_closure_executor import vectors
-from g040_prefix_recovery import CATALOG_PROBE, DATA_PROBE, begin_read_only_snapshot
+import g040_prefix_executor as executor
+from g040_prefix_executor import (
+    VerifiedCloneCapability,
+    admit_verified_clone,
+    apply_rehearsal_locked_cursor,
+    compile_branch_plan,
+)
+from g040_prefix_recovery import CATALOG_PROBE, DATA_PROBE, begin_read_only_snapshot, validate_full_data_root
 from g040_recovery_source import SourceBinding, verify_recovery_source
+from g040_reverse_00400 import DERIVATION_MODE, REVERSE_VECTOR, REVERSE_VECTOR_SHA256
 from g040_reference_evidence import (
     PUBLIC_KEY_PEM as REFERENCE_PUBLIC_KEY_PEM,
     PUBLIC_KEY_SHA256 as REFERENCE_PUBLIC_KEY_SHA256,
-    build_clone_run,
     build_reference_body,
     sign_reference,
     verify_reference,
@@ -38,8 +47,18 @@ from g040_reference_evidence import (
 _HEX = re.compile(r"^[0-9a-f]{64}$")
 _SAFE = re.compile(r"^[A-Za-z0-9_-]{16,128}$")
 _IMAGE = "supabase/postgres:17.6.1.147"
+_IMAGE_DIGEST = "supabase/postgres@sha256:ac581882596ed0e46937ea6dd53a627d09f53e005d7264c2082a7ff7b62eaaca"
+_IMAGE_ID = "sha256:ac581882596ed0e46937ea6dd53a627d09f53e005d7264c2082a7ff7b62eaaca"
 _LABEL = "com.tzudong.g040.rehearsal"
+_RUN_LABEL = "com.tzudong.g040.run"
+_SLOT_LABEL = "com.tzudong.g040.slot"
+_G040_LABELS = frozenset({_LABEL, _RUN_LABEL, _SLOT_LABEL})
+_ARCHIVE_CHUNK = 64 * 1024
 _MAX_ARTIFACT = 1_048_576
+_REFERENCE_CUSTODY_QUERY = (
+    "SELECT session_user AS session_user, current_user AS current_user, "
+    "current_database() AS database_name"
+)
 _LINEAGE_PUBLIC_KEY_PEM = b"""-----BEGIN PUBLIC KEY-----
 MCowBQYDK2VwAyEAqQPGXBPVi3se+xn9DUdVgXHeAgG82FSeWByugLeMqaQ=
 -----END PUBLIC KEY-----
@@ -89,6 +108,7 @@ def _load(path: str | Path) -> Mapping[str, Any]:
 
 def _write(path: str | Path, value: Mapping[str, Any]) -> None:
     target = Path(path)
+    temporary: Path | None = None
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
         if target.exists() or target.is_symlink():
@@ -96,15 +116,28 @@ def _write(path: str | Path, value: Mapping[str, Any]) -> None:
         data = _canonical(dict(value))
         if len(data) > _MAX_ARTIFACT:
             _fail("artifact_bounds")
-        fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        temporary = target.parent / f".{target.name}.{os.getpid()}.{time.time_ns()}.tmp"
+        fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         with os.fdopen(fd, "wb") as out:
             out.write(data)
             out.flush()
             os.fsync(out.fileno())
+        try:
+            os.link(temporary, target)
+        except FileExistsError:
+            _fail("output_exists")
+        os.unlink(temporary)
+        temporary = None
     except RehearsalError:
         raise
     except Exception:
         _fail("artifact_write")
+    finally:
+        if temporary is not None:
+            try:
+                temporary.unlink()
+            except FileNotFoundError:
+                pass
 
 
 def _sha(value: bytes) -> str:
@@ -155,10 +188,11 @@ def _parse_local_service(raw: bytes, service_name: str) -> Mapping[str, Any]:
             if not key or key in values:
                 _fail("service_file")
             values[key] = value
-    required = {"host", "port", "dbname", "application_name", "sslmode", "password"}
+    required = {"host", "port", "dbname", "user", "application_name", "sslmode", "password"}
     if (set(values) != required or values["host"] != "127.0.0.1" or not values["port"].isdigit()
             or not 1 <= int(values["port"]) <= 65535 or values["dbname"] != "g035_local"
-            or values["sslmode"] != "disable" or "g035-local" not in values["application_name"]):
+            or values["user"] != "supabase_admin" or values["sslmode"] != "disable"
+            or "g035-local" not in values["application_name"]):
         _fail("nonlocal_service")
     if any("//" in values[key] for key in ("host", "dbname", "application_name")):
         _fail("service_file")
@@ -194,6 +228,11 @@ def _connect_service(service_file: str | Path, service_name: str, *, readonly: b
     try:
         import psycopg
         from psycopg.rows import dict_row
+        identity_variables = (
+            "PGSERVICE", "PGUSER", "PGPASSWORD", "PGPASSFILE", "PGDATABASE",
+            "PGHOST", "PGHOSTADDR", "PGPORT", "PGOPTIONS",
+        )
+        prior_environment = {key: os.environ.pop(key, None) for key in identity_variables}
         prior_service_file = os.environ.get("PGSERVICEFILE")
         os.environ["PGSERVICEFILE"] = str(path)
         try:
@@ -205,6 +244,9 @@ def _connect_service(service_file: str | Path, service_name: str, *, readonly: b
                 os.environ.pop("PGSERVICEFILE", None)
             else:
                 os.environ["PGSERVICEFILE"] = prior_service_file
+            for key, value in prior_environment.items():
+                if value is not None:
+                    os.environ[key] = value
         after_path, after, after_identity = _service_custody(path, root)
         if after_path != path or after != before or after_identity != identity:
             _fail("service_replaced")
@@ -278,7 +320,11 @@ def preflight(*, service_file: str | Path, service_name: str, image: str, image_
 
 
 def _live_identity(conn: Any) -> Mapping[str, Any]:
-    row = _query_one(conn, "SELECT (pg_control_system()).system_identifier::text AS system_identifier, (SELECT oid::text FROM pg_database WHERE datname=current_database()) AS database_oid, current_database() AS database_name, current_setting('server_version') AS server_version, current_setting('server_version_num')::integer AS server_version_num")
+    cursor = conn.cursor()
+    try:
+        row = _query_one(cursor, "SELECT (pg_control_system()).system_identifier::text AS system_identifier, (SELECT oid::text FROM pg_database WHERE datname=current_database()) AS database_oid, current_database() AS database_name, current_setting('server_version') AS server_version, current_setting('server_version_num')::integer AS server_version_num")
+    finally:
+        cursor.close()
     required = {"system_identifier", "database_oid", "database_name", "server_version", "server_version_num"}
     if (set(row) != required or row["server_version"] != "17.6" or row["server_version_num"] != 170006
             or not all(type(row[key]) is str and row[key] for key in required - {"server_version_num"})):
@@ -293,35 +339,98 @@ def _docker_clone_proof(container: str, service_port: int, docker: str = "docker
         item = json.loads(subprocess.run([docker, "inspect", "--type", "container", container], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=20, check=True).stdout.decode("utf-8"))
         if type(item) is not list or len(item) != 1 or type(item[0]) is not dict:
             _fail("docker_identity")
-        item = item[0]; config, settings = item.get("Config"), item.get("NetworkSettings")
+        item = item[0]; config, settings, host = item.get("Config"), item.get("NetworkSettings"), item.get("HostConfig")
         labels = config.get("Labels") if type(config) is dict else None
         networks = settings.get("Networks") if type(settings) is dict else None
         ports = settings.get("Ports") if type(settings) is dict else None
         binding = ports.get("5432/tcp") if type(ports) is dict and set(ports) == {"5432/tcp"} else None
         container_id, image_id = item.get("Id"), item.get("Image")
-        if (type(labels) is not dict or labels.get(_LABEL) != "true" or config.get("Image") != _IMAGE
-                or item.get("HostConfig", {}).get("NetworkMode") == "host" or type(networks) is not dict or not networks
+        g040_labels = {key: value for key, value in labels.items() if key.startswith("com.tzudong.g040.")} if type(labels) is dict else {}
+        if (type(labels) is not dict or set(g040_labels) != _G040_LABELS or labels.get(_LABEL) != "true"
+                or not _SAFE.fullmatch(labels.get(_RUN_LABEL, "")) or not _SAFE.fullmatch(labels.get(_SLOT_LABEL, ""))
+                or config.get("Image") != _IMAGE or config.get("ExposedPorts") != {"5432/tcp": {}}
+                or type(host) is not dict or host.get("NetworkMode") in {"host", "bridge", "default"}
+                or host.get("Privileged") is not False or host.get("Binds") not in (None, []) or item.get("Mounts") not in (None, [])
+                or host.get("Mounts") not in (None, []) or host.get("CapAdd") not in (None, [])
+                or host.get("CapDrop") not in (None, []) or host.get("PortBindings") != {"5432/tcp": [{"HostIp": "127.0.0.1", "HostPort": str(service_port)}]}
+                or type(networks) is not dict or len(networks) != 1
                 or type(binding) is not list or len(binding) != 1 or type(binding[0]) is not dict
                 or binding[0].get("HostIp") != "127.0.0.1" or binding[0].get("HostPort") != str(service_port)
                 or type(container_id) is not str or not re.fullmatch(r"[0-9a-f]{64}", container_id)
-                or type(image_id) is not str or not re.fullmatch(r"sha256:[0-9a-f]{64}", image_id)
-                or any(not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}", name) or any(word in name.lower() for word in ("tunnel", "remote", "proxy")) for name in networks)):
+                or image_id != _IMAGE_ID):
+            _fail("docker_endpoint")
+        network_name, network_attachment = next(iter(networks.items()))
+        network_id = network_attachment.get("NetworkID") if type(network_attachment) is dict else None
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}", network_name or "") or not isinstance(network_id, str):
+            _fail("docker_endpoint")
+        network = json.loads(subprocess.run([docker, "network", "inspect", network_id], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=20, check=True).stdout.decode("utf-8"))
+        if type(network) is not list or len(network) != 1 or type(network[0]) is not dict:
+            _fail("docker_identity")
+        network = network[0]
+        network_labels, attached = network.get("Labels"), network.get("Containers")
+        if (network.get("Id") != network_id or network.get("Internal") is not True or network.get("Attachable") is not False
+                or type(network_labels) is not dict or {key: value for key, value in network_labels.items() if key.startswith("com.tzudong.g040.")} != g040_labels
+                or type(attached) is not dict or set(attached) != {container_id}):
             _fail("docker_endpoint")
         image = json.loads(subprocess.run([docker, "image", "inspect", image_id], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=20, check=True).stdout.decode("utf-8"))
-        digests = image[0].get("RepoDigests") if type(image) is list and len(image) == 1 and type(image[0]) is dict else None
-        if type(digests) is not list or len(digests) != 1 or not isinstance(digests[0], str) or not re.fullmatch(r"supabase/postgres@sha256:[0-9a-f]{64}", digests[0]):
+        if (type(image) is not list or len(image) != 1 or type(image[0]) is not dict
+                or image[0].get("Id") != _IMAGE_ID or image[0].get("RepoDigests") != [_IMAGE_DIGEST]):
             _fail("docker_identity")
-        return MappingProxyType({"container_id_sha256": _sha(container_id.encode()), "image_id_sha256": _sha(image_id.encode()), "image_digest_sha256": _sha(digests[0].encode()), "endpoint_sha256": _sha(_canonical({"host": "127.0.0.1", "port": service_port}))})
+        return MappingProxyType({"container_id_sha256": _sha(container_id.encode()), "image_id_sha256": _sha(image_id.encode()), "image_digest_sha256": _sha(_IMAGE_DIGEST.encode()), "endpoint_sha256": _sha(_canonical({"host": "127.0.0.1", "port": service_port}))})
     except RehearsalError:
         raise
     except Exception:
         _fail("docker_identity")
 
 
-def _restore_lineage(*, capture_path: str | Path, restore_path: str | Path, encrypted_dump: str | Path, repository_root: str | Path) -> Mapping[str, Any]:
+def _archive_digest(path: str | Path, repository_root: str | Path) -> tuple[str, int, tuple[int, int]]:
+    fd: int | None = None
+    try:
+        archive = controller.authority.restrictive_regular_file(path, "encrypted archive", repository_root)
+        fd = os.open(archive, os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0))
+        before, opened = archive.stat(follow_symlinks=False), os.fstat(fd)
+        identity = (opened.st_dev, opened.st_ino)
+        if (not stat.S_ISREG(opened.st_mode) or (before.st_dev, before.st_ino) != identity
+                or before.st_size != opened.st_size):
+            _fail("lineage_custody")
+        digest, count = hashlib.sha256(), 0
+        while chunk := os.read(fd, _ARCHIVE_CHUNK):
+            digest.update(chunk)
+            count += len(chunk)
+        after_opened, after_path = os.fstat(fd), archive.stat(follow_symlinks=False)
+        if (count != opened.st_size or (after_opened.st_dev, after_opened.st_ino) != identity
+                or after_opened.st_size != opened.st_size or (after_path.st_dev, after_path.st_ino) != identity
+                or after_path.st_size != opened.st_size):
+            _fail("lineage_replacement")
+        return digest.hexdigest(), count, identity
+    except RehearsalError:
+        raise
+    except Exception:
+        _fail("lineage_custody")
+    finally:
+        if fd is not None:
+            try:
+                os.close(fd)
+            except Exception:
+                pass
+
+def _assert_archive_identity(path: str | Path, repository_root: str | Path, expected: tuple[str, int, tuple[int, int]]) -> None:
+    try:
+        archive = controller.authority.restrictive_regular_file(path, "encrypted archive", repository_root)
+        info = archive.stat(follow_symlinks=False)
+        if (info.st_dev, info.st_ino) != expected[2] or info.st_size != expected[1]:
+            _fail("lineage_replacement")
+    except RehearsalError:
+        raise
+    except Exception:
+        _fail("lineage_custody")
+
+
+
+def _restore_lineage(*, capture_path: str | Path, restore_path: str | Path, encrypted_dump: str | Path, repository_root: str | Path, archive: tuple[str, int, tuple[int, int]] | None = None) -> Mapping[str, Any]:
     capture_raw = _custody_bytes(capture_path, repository_root)
     restore_raw = _custody_bytes(restore_path, repository_root)
-    dump_raw = _custody_bytes(encrypted_dump, repository_root)
+    dump_sha, dump_bytes, _ = archive if archive is not None else _archive_digest(encrypted_dump, repository_root)
     capture, restore = _load_bytes(capture_raw), _load_bytes(restore_raw)
     capture_unsigned, restore_unsigned = dict(capture), dict(restore)
     capture_receipt, restore_receipt = capture_unsigned.pop("receipt_sha256", None), restore_unsigned.pop("receipt_sha256", None)
@@ -336,11 +445,11 @@ def _restore_lineage(*, capture_path: str | Path, restore_path: str | Path, encr
             or capture_receipt != _sha(_canonical(capture_unsigned)) or restore_receipt != _sha(_canonical(restore_unsigned))
             or restore.get("prior_receipt_sha256") != [capture_receipt] or capture.get("prior_receipt_sha256") != []
             or type(capture_evidence) is not dict or type(restore_evidence) is not dict
-            or capture_evidence.get("dump_sha256") != _sha(dump_raw) or capture_evidence.get("dump_bytes") != len(dump_raw)
+            or capture_evidence.get("dump_sha256") != dump_sha or capture_evidence.get("dump_bytes") != dump_bytes
             or not _HEX.fullmatch(capture_evidence.get("source_sha256", ""))
             or any(capture_evidence.get(key) != restore_evidence.get(key) for key in ledger)):
         _fail("restore_lineage")
-    return MappingProxyType({"g035_restore_receipt_sha256": restore_receipt, "g035_capture_receipt_sha256": capture_receipt, "restored_archive_sha256": _sha(dump_raw), "capture_receipt_bytes_sha256": _sha(capture_raw), "restore_receipt_bytes_sha256": _sha(restore_raw), "archive_bytes": len(dump_raw), "g035_manifest_sha256": capture["manifest_sha256"], "source_sha256": capture_evidence["source_sha256"]})
+    return MappingProxyType({"g035_restore_receipt_sha256": restore_receipt, "g035_capture_receipt_sha256": capture_receipt, "restored_archive_sha256": dump_sha, "capture_receipt_bytes_sha256": _sha(capture_raw), "restore_receipt_bytes_sha256": _sha(restore_raw), "archive_bytes": dump_bytes, "g035_manifest_sha256": capture["manifest_sha256"], "source_sha256": capture_evidence["source_sha256"]})
 
 
 def _verify_lineage_attestation(*, attestation: str | Path, signature: str | Path, expected: Mapping[str, Any], repository_root: str | Path, now_unix: int) -> Mapping[str, str]:
@@ -372,8 +481,9 @@ def bind_restore(*, clone_nonce: str, capture_receipt: str | Path, restore_recei
     if not _SAFE.fullmatch(clone_nonce or ""):
         _fail("clone_binding")
     root = Path(repository_root).resolve()
-    lineage = _restore_lineage(capture_path=capture_receipt, restore_path=restore_receipt, encrypted_dump=encrypted_dump, repository_root=root)
-    before = tuple(_hash_file(path) for path in (capture_receipt, restore_receipt, encrypted_dump))
+    archive = _archive_digest(encrypted_dump, root)
+    lineage = _restore_lineage(capture_path=capture_receipt, restore_path=restore_receipt, encrypted_dump=encrypted_dump, repository_root=root, archive=archive)
+    before = tuple(_hash_file(path) for path in (capture_receipt, restore_receipt))
     conn, service = _connect_service(service_file, service_name, readonly=True, repository_root=root)
     try:
         live = _live_identity(conn)
@@ -386,8 +496,9 @@ def bind_restore(*, clone_nonce: str, capture_receipt: str | Path, restore_recei
     attested = _load_bytes(_custody_bytes(attestation_path, root))
     expected = {"schema": _LINEAGE_SCHEMA, "clone_nonce": clone_nonce, "issued_at_unix": attested.get("issued_at_unix"), "expires_at_unix": attested.get("expires_at_unix"), "lineage_public_key_sha256": _LINEAGE_PUBLIC_KEY_SHA256, **dict(lineage), "live_identity_sha256": _sha(_canonical(dict(live))), **dict(proof)}
     attestation_hashes = _verify_lineage_attestation(attestation=attestation_path, signature=signature_path, expected=expected, repository_root=root, now_unix=now)
-    if before != tuple(_hash_file(path) for path in (capture_receipt, restore_receipt, encrypted_dump)):
+    if before != tuple(_hash_file(path) for path in (capture_receipt, restore_receipt)):
         _fail("lineage_replacement")
+    _assert_archive_identity(encrypted_dump, root, archive)
     live_sha = _sha(_canonical(dict(live)))
     clone_identity = _sha(_canonical({"live_identity_sha256": live_sha, **dict(proof)}))
     body = {"schema": "g040-clone-restore-binding-v4", "clone_identity": clone_identity, "clone_nonce": clone_nonce, "live_identity_sha256": live_sha, "capture_receipt_path": str(Path(capture_receipt).resolve()), "restore_receipt_path": str(Path(restore_receipt).resolve()), "encrypted_dump_path": str(Path(encrypted_dump).resolve()), "lineage_attestation_path": str(attestation_path), "lineage_signature_path": str(signature_path), **dict(proof), **dict(lineage), **dict(attestation_hashes)}
@@ -418,12 +529,18 @@ def _binding(path: str | Path, repository_root: str | Path) -> Mapping[str, Any]
             controller._outside(value[key], root)
     except Exception:
         _fail("clone_binding")
-    return MappingProxyType(value)
+    return MappingProxyType({**dict(value), "binding_receipt_sha256": _sha(raw)})
 
 
 def _observation(binding: Mapping[str, Any], state: str, catalog: str, ledger: str, data: str | None = None) -> dict[str, Any]:
     keys = ("clone_identity", "clone_nonce", "live_identity_sha256", "container_id_sha256", "image_id_sha256", "image_digest_sha256", "endpoint_sha256", "g035_restore_receipt_sha256", "g035_capture_receipt_sha256", "restored_archive_sha256", "capture_receipt_bytes_sha256", "restore_receipt_bytes_sha256", "archive_bytes", "g035_manifest_sha256", "source_sha256", "lineage_attestation_path", "lineage_signature_path", "lineage_attestation_sha256", "lineage_signature_sha256")
-    result = {key: binding[key] for key in keys} | {"state": state, "ledger_prefix_sha256": ledger, "catalog_sha256": catalog}
+    result = {key: binding[key] for key in keys} | {
+        "state": state,
+        "ledger_prefix_sha256": ledger,
+        "catalog_sha256": catalog,
+        "derivation_mode": DERIVATION_MODE,
+        "reverse_vector_sha256": REVERSE_VECTOR_SHA256,
+    }
     if data is not None:
         result["data_sha256"] = data
     return result
@@ -449,7 +566,7 @@ def _valid_probe(row: Mapping[str, Any], *, full: bool) -> None:
             or row["server_version_num"] != 170006):
         _fail("probe_result")
     expected = (
-        (True, 7, 7, 14, 78, 0, 14, 7, 7, 0, True)
+        (True, 7, 7, 14, 102, 0, 14, 7, 7, 0, True)
         if full else
         (False, 0, 0, 0, 0, 0, 0, 0, 0, 0, True)
     )
@@ -490,14 +607,25 @@ def _assert_observation_binding(binding: Mapping[str, Any], *, verified_port: in
     if any(binding[key] != hashes[key] for key in hashes):
         _fail("observation_binding")
 
+def _assert_reference_custody(cursor: Any, *, current_user: str) -> None:
+    row = _query_one(cursor, _REFERENCE_CUSTODY_QUERY)
+    if (
+        row.get("session_user") != "supabase_admin"
+        or row.get("current_user") != current_user
+        or row.get("database_name") != "g035_local"
+    ):
+        _fail("reference_custody")
+
 
 def observe_reference(*, repository_root: str | Path, binding_path: str | Path, service_file: str | Path,
-                      service_name: str, source_commit: str, absent_output: str | Path, full_output: str | Path,
+                      service_name: str, source_commit: str, target_fingerprint: str, output: str | Path,
                       container: str, docker: str = "docker") -> None:
-    """Run the exact source-pinned 00400 vector under rollback, then re-prove absence."""
+    """Emit one signed rollback observation after all four clone states validate."""
     binding = _binding(binding_path, repository_root)
     root = Path(repository_root).resolve()
-    _source(root, source_commit)
+    source = _source(root, source_commit)
+    if not _HEX.fullmatch(target_fingerprint):
+        _fail("reference_input")
     manifest = validate_sources(root)
     item = manifest.migrations[16]
     if (item.version, item.name) != ("20260712000400", "g010_retention_separation"):
@@ -507,34 +635,102 @@ def observe_reference(*, repository_root: str | Path, binding_path: str | Path, 
     cur = None
     try:
         cur = conn.cursor()
-        _assert_observation_binding(binding, verified_port=service["port"], container=container, docker=docker, conn=conn, repository_root=repository_root)
+        _assert_observation_binding(binding, verified_port=service["port"], container=container, docker=docker, conn=conn, repository_root=root)
+        conn.rollback()
         begin_read_only_snapshot(cur)
-        absent = _query_one(cur, CATALOG_PROBE)
+        initial_full = _query_one(cur, CATALOG_PROBE)
+        initial_data = _query_one(cur, DATA_PROBE)
         cur.execute("ROLLBACK")
-        _valid_probe(absent, full=False)
-        if absent.get("ledger_count") != 28 or absent.get("v00400_count") != 0:
-            _fail("partial_state")
-        _assert_observation_binding(binding, verified_port=service["port"], container=container, docker=docker, conn=conn, repository_root=repository_root)
+        _valid_probe(initial_full, full=True)
+        _valid_data(initial_data)
+        validate_full_data_root(dict(initial_data), initial_data["data_shape_sha256"])
+        initial_ledger = initial_full["ledger_sha256"]
+        initial_catalog = initial_full["catalog_sha256"]
+        initial_data_root = initial_data["data_shape_sha256"]
+
+        _assert_observation_binding(binding, verified_port=service["port"], container=container, docker=docker, conn=conn, repository_root=root)
+        conn.rollback()
         cur.execute("BEGIN")
+        cur.execute("SET LOCAL statement_timeout = '10000ms'")
+        cur.execute("SET LOCAL lock_timeout = '5000ms'")
+        _assert_reference_custody(cur, current_user="supabase_admin")
+        cur.execute("GRANT CREATE ON DATABASE g035_local TO postgres")
+        cur.execute("GRANT CREATE ON SCHEMA public TO postgres")
+        cur.execute("SET LOCAL ROLE postgres")
+        _assert_reference_custody(cur, current_user="postgres")
+        cur.execute('SET LOCAL search_path = "$user", public, auth, extensions')
         cur.execute("LOCK TABLE supabase_migrations.schema_migrations IN ACCESS EXCLUSIVE MODE")
+        for table in (
+            "privacy_retention.privacy_retention_classes",
+            "privacy_retention.privacy_retention_class_sources",
+            "privacy_retention.privacy_legal_holds",
+            "privacy_retention.privacy_retention_work_items",
+            "privacy_retention.privacy_retained_records",
+            "privacy_retention.privacy_retention_runs",
+            "privacy_retention.privacy_retention_run_items",
+        ):
+            cur.execute(f"LOCK TABLE {table} IN ACCESS EXCLUSIVE MODE")
+        locked_full = _query_one(cur, CATALOG_PROBE)
+        locked_data = _query_one(cur, DATA_PROBE)
+        _valid_probe(locked_full, full=True)
+        _valid_data(locked_data)
+        validate_full_data_root(dict(locked_data), locked_data["data_shape_sha256"])
+        if (locked_full["ledger_sha256"], locked_full["catalog_sha256"], locked_data["data_shape_sha256"]) != (initial_ledger, initial_catalog, initial_data_root):
+            _fail("initial_drift")
+        for statement in REVERSE_VECTOR:
+            cur.execute(statement)
+        absent = _query_one(cur, CATALOG_PROBE)
+        _valid_probe(absent, full=False)
+        if absent["ledger_sha256"] != initial_ledger:
+            _fail("ledger_drift")
         for statement in executable:
             cur.execute(statement)
-        full = _query_one(cur, CATALOG_PROBE)
-        data = _query_one(cur, DATA_PROBE)
+        recreated_full = _query_one(cur, CATALOG_PROBE)
+        recreated_data = _query_one(cur, DATA_PROBE)
+        _valid_probe(recreated_full, full=True)
+        _valid_data(recreated_data)
+        validate_full_data_root(dict(recreated_data), recreated_data["data_shape_sha256"])
+        if (recreated_full["ledger_sha256"], recreated_full["catalog_sha256"], recreated_data["data_shape_sha256"]) != (initial_ledger, initial_catalog, initial_data_root):
+            _fail("forward_drift")
         cur.execute("ROLLBACK")
-        _valid_probe(full, full=True)
-        _valid_data(data)
-        if full.get("ledger_count") != 28 or full.get("v00400_count") != 0 or full["ledger_sha256"] != absent["ledger_sha256"]:
-            _fail("partial_state")
-        _assert_observation_binding(binding, verified_port=service["port"], container=container, docker=docker, conn=conn, repository_root=repository_root)
+        _assert_observation_binding(binding, verified_port=service["port"], container=container, docker=docker, conn=conn, repository_root=root)
+        conn.rollback()
         begin_read_only_snapshot(cur)
-        after = _query_one(cur, CATALOG_PROBE)
+        final_full = _query_one(cur, CATALOG_PROBE)
+        final_data = _query_one(cur, DATA_PROBE)
         cur.execute("ROLLBACK")
-        _valid_probe(after, full=False)
-        if after.get("v00400_count") != 0 or after["catalog_sha256"] != absent["catalog_sha256"] or after["ledger_sha256"] != absent["ledger_sha256"]:
+        _valid_probe(final_full, full=True)
+        _valid_data(final_data)
+        validate_full_data_root(dict(final_data), final_data["data_shape_sha256"])
+        if (final_full["ledger_sha256"], final_full["catalog_sha256"], final_data["data_shape_sha256"]) != (initial_ledger, initial_catalog, initial_data_root):
             _fail("rollback_invariant")
-        _write(absent_output, _observation(binding, "absent", absent["catalog_sha256"], absent["ledger_sha256"]))
-        _write(full_output, _observation(binding, "full", full["catalog_sha256"], full["ledger_sha256"], data["data_shape_sha256"]))
+        body = {
+            "schema": "g040-clone-observation-v1",
+            "issued_at": int(time.time()),
+            "expires_at": int(time.time()) + 900,
+            "final_recovery_commit": source.final_commit,
+            "runtime_source_root": source.runtime_source_root,
+            "manifest_sha256": prefix.MANIFEST_SHA256,
+            "migration_source_sha256": prefix.MIGRATION_SOURCE_SHA256,
+            "probe_text_sha256": prefix.PROBE_TEXT_SHA256,
+            "target_fingerprint": target_fingerprint,
+            "binding_receipt_sha256": binding["binding_receipt_sha256"],
+            **{key: binding[key] for key in ("clone_identity", "clone_nonce", "live_identity_sha256", "container_id_sha256", "image_id_sha256", "image_digest_sha256", "endpoint_sha256", "g035_restore_receipt_sha256", "g035_capture_receipt_sha256", "restored_archive_sha256", "capture_receipt_bytes_sha256", "restore_receipt_bytes_sha256", "lineage_attestation_sha256", "lineage_signature_sha256")},
+            "derivation_mode": DERIVATION_MODE,
+            "reverse_vector_sha256": REVERSE_VECTOR_SHA256,
+            "initial_full_ledger_sha256": initial_ledger,
+            "initial_full_catalog_sha256": initial_catalog,
+            "initial_full_data_sha256": initial_data_root,
+            "absent_ledger_sha256": absent["ledger_sha256"],
+            "absent_catalog_sha256": absent["catalog_sha256"],
+            "recreated_full_ledger_sha256": recreated_full["ledger_sha256"],
+            "recreated_full_catalog_sha256": recreated_full["catalog_sha256"],
+            "recreated_full_data_sha256": recreated_data["data_shape_sha256"],
+            "post_rollback_ledger_sha256": final_full["ledger_sha256"],
+            "post_rollback_catalog_sha256": final_full["catalog_sha256"],
+            "post_rollback_data_sha256": final_data["data_shape_sha256"],
+        }
+        controller._write_signed(controller._outside(output, root, fresh=True), {"schema": controller.SCHEMA, "kind": "local-clone-observation", "body": body})
     except RehearsalError:
         raise
     except Exception:
@@ -553,48 +749,200 @@ def _reference_signer(private_key: str | Path, *, repository_root: str | Path | 
             root = Path(repository_root).resolve()
             if key_path == root or root in key_path.parents:
                 _fail("reference_signing_key")
-        key = crypto.require_file(key_path, "reference signing key")
+        crypto.require_file(key_path, "reference signing key")
         public = subprocess.run(
-            [crypto.command("openssl"), "pkey", "-in", str(key), "-pubout"],
+            [crypto.command("openssl"), "pkey", "-in", str(key_path), "-pubout"],
             stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
             timeout=crypto.TIMEOUT, check=True,
         ).stdout
         if _sha(public) != REFERENCE_PUBLIC_KEY_SHA256:
             _fail("reference_signing_key")
-        return lambda payload: crypto.openssl_sign(crypto.command("openssl"), key, payload)
+        return lambda payload: crypto.openssl_sign(crypto.command("openssl"), key_path, payload)
     except RehearsalError:
         raise
     except Exception:
         _fail("reference_signing_key")
 
 
+def _aggregate_signed(path: str | Path, kind: str, root: Path) -> tuple[Mapping[str, Any], str]:
+    try:
+        raw = controller._stable_bytes(controller._outside(path, root))
+        return MappingProxyType(controller._signed_document(raw, kind)), _sha(raw)
+    except Exception:
+        _fail("aggregate_custody")
+
+def _aggregate_freeze(args: argparse.Namespace, source: SourceBinding, root: Path, now: int) -> tuple[str, str, int, str, int]:
+    raw = controller._stable_bytes(controller._outside(args.freeze_assertion, root))
+    try:
+        assertion = json.loads(raw.decode("ascii"), object_pairs_hook=_pairs)
+        if raw != _canonical(assertion) + b"\n" or assertion.get("freeze_id") == "40b54cf8-e59f-4eb3-a37c-88e3bf983442":
+            _fail("aggregate_custody")
+        validate_operator_assertion(assertion, freeze_id=assertion["freeze_id"], origin=assertion["origin"],
+            relation_root=assertion["relation_root"], acl_root=assertion["acl_root"], commit=source.final_commit,
+            source_root=source.runtime_source_root, terminal_spec=terminal_spec(validate_sources(root)), now=now)
+        files = args.freeze_evidence
+        channels = ("no_owner_write", "no_dashboard_write", "no_provider_write", "no_out_of_band_write", "producer_stop")
+        if type(files) is not list or len(files) != 5:
+            _fail("aggregate_custody")
+        digests = {_sha(controller._stable_bytes(controller._outside(path, root))) for path in files}
+        if len(digests) != 5 or digests != {assertion["attestations"][channel]["evidence_sha256"] for channel in channels}:
+            _fail("aggregate_custody")
+        evidence_started = max(assertion["issued_at"],
+                               *(assertion["attestations"][channel]["observed_at"] for channel in channels))
+        return (_sha(raw),
+                _sha(_canonical({"g040-freeze-inventory-v1": {"relation_root": assertion["relation_root"], "acl_root": assertion["acl_root"]}})),
+                assertion["expires_at"], assertion["acl_root"], evidence_started)
+    except Exception:
+        _fail("aggregate_custody")
+
 def build_aggregate_custody(args: argparse.Namespace) -> Mapping[str, Any]:
-    """Write the controller's exact receipt-signed aggregate-custody document."""
     source = _source(args.repository_root, args.source_commit)
+    root = Path(args.repository_root).resolve()
     reference = controller._reference(_controller_args(args), source)
+    now = int(time.time())
+    hosted, hosted_sha = _aggregate_signed(args.hosted_observation, "prefix-observation", root)
+    hosted_required = {
+        "status", "target_fingerprint", "final_commit", "runtime_source_root",
+        "reference_receipt_sha256", "derivation_mode", "reverse_vector_sha256",
+        "observation_nonce", "ledger_prefix_sha256", "catalog_sha256", "data_sha256",
+        "classification_sha256", "issued_at", "expires_at",
+    }
+    hosted_payload = {key: hosted[key] for key in hosted_required - {"classification_sha256"}} if set(hosted) == hosted_required else {}
+    expected_hosted = {
+        "UNAPPLIED": (reference.ledger_prefix_sha256, reference.absent_catalog_sha256, None),
+        "FULL_ESCAPED": (reference.ledger_prefix_sha256, reference.full_catalog_sha256, reference.full_data_sha256),
+    }
+    if (set(hosted) != hosted_required or hosted.get("status") not in expected_hosted
+            or hosted.get("final_commit") != source.final_commit
+            or hosted.get("runtime_source_root") != source.runtime_source_root
+            or hosted.get("reference_receipt_sha256") != reference.receipt_sha256
+            or hosted.get("target_fingerprint") != reference.target_fingerprint
+            or hosted.get("derivation_mode") != reference.derivation_mode
+            or hosted.get("reverse_vector_sha256") != reference.reverse_vector_sha256
+            or type(hosted.get("observation_nonce")) is not str or not _SAFE.fullmatch(hosted["observation_nonce"])
+            or hosted["observation_nonce"] != reference.observation_nonce
+            or type(hosted.get("issued_at")) is not int or type(hosted.get("expires_at")) is not int
+            or hosted["issued_at"] < 0 or hosted["expires_at"] <= hosted["issued_at"]
+            or hosted["issued_at"] < reference.issued_at_unix
+            or not hosted["issued_at"] <= now < hosted["expires_at"]
+            or hosted["expires_at"] - hosted["issued_at"] > 900
+            or any(type(hosted[key]) is not str or not _HEX.fullmatch(hosted[key]) for key in (
+                "target_fingerprint", "reference_receipt_sha256", "reverse_vector_sha256",
+                "ledger_prefix_sha256", "catalog_sha256", "classification_sha256"))
+            or (hosted["data_sha256"] is not None and (type(hosted["data_sha256"]) is not str or not _HEX.fullmatch(hosted["data_sha256"])))
+            or (hosted["ledger_prefix_sha256"], hosted["catalog_sha256"], hosted["data_sha256"]) != expected_hosted[hosted["status"]]
+            or hosted["classification_sha256"] != _sha(prefix.canonical_bytes(hosted_payload))):
+        _fail("aggregate_custody")
+    freeze_root, inventory_root, freeze_expires_at, target_acl_root, freeze_started = _aggregate_freeze(args, source, root, now)
+    backup, backup_sha = _aggregate_signed(args.production_backup, "g040-production-backup-v1", root)
+    capture_raw = controller._stable_bytes(controller._outside(args.g035_capture, root))
+    archive_sha, archive_bytes, _ = _archive_digest(args.g035_archive, root)
+    try:
+        capture = _load_bytes(capture_raw)
+        unsigned = dict(capture); capture_receipt = unsigned.pop("receipt_sha256")
+        if (capture.get("schema") != g035.RECEIPT_SCHEMA or capture.get("mode") != "capture" or capture.get("status") != "captured"
+                or capture_receipt != _sha(_canonical(unsigned)) or capture["evidence"]["dump_sha256"] != archive_sha
+                or capture["evidence"]["dump_bytes"] != archive_bytes or backup["capture_receipt_sha256"] != _sha(capture_raw)
+                or backup["g035_receipt_sha256"] != capture_receipt or backup["archive_sha256"] != archive_sha
+                or backup["archive_bytes"] != archive_bytes):
+            _fail("aggregate_custody")
+        required_backup = {"issued_at","expires_at","freeze_expires_at","target_acl_root","final_recovery_commit","runtime_source_root","reference_receipt_sha256","target_fingerprint","hosted_observation_receipt_sha256","hosted_observation_classification_sha256","freeze_root","inventory_root","capture_receipt_sha256","g035_receipt_sha256","archive_sha256","archive_bytes","g035_manifest_sha256","g035_source_sha256"}
+        if (set(backup) != required_backup
+                or type(backup["issued_at"]) is not int or type(backup["expires_at"]) is not int
+                or type(backup["freeze_expires_at"]) is not int or type(backup["archive_bytes"]) is not int
+                or backup["issued_at"] < 0 or backup["expires_at"] <= backup["issued_at"]
+                or not backup["issued_at"] <= now < backup["expires_at"]
+                or backup["expires_at"] - backup["issued_at"] > 900
+                or backup["issued_at"] < max(hosted["issued_at"], freeze_started)
+                or backup["expires_at"] > freeze_expires_at or backup["expires_at"] > hosted["expires_at"]
+                or backup["final_recovery_commit"] != source.final_commit or backup["runtime_source_root"] != source.runtime_source_root or backup["reference_receipt_sha256"] != reference.receipt_sha256 or backup["target_fingerprint"] != reference.target_fingerprint or backup["hosted_observation_receipt_sha256"] != hosted_sha or backup["hosted_observation_classification_sha256"] != hosted["classification_sha256"] or backup["freeze_root"] != freeze_root or backup["inventory_root"] != inventory_root or backup["freeze_expires_at"] != freeze_expires_at or backup["target_acl_root"] != target_acl_root or backup["g035_manifest_sha256"] != g035.MANIFEST_SHA256 or backup["g035_source_sha256"] != g035._source_fingerprint(g035.validate_sources(root))):
+            _fail("aggregate_custody")
+    except Exception:
+        _fail("aggregate_custody")
+    rehearsal, rehearsal_sha = _aggregate_signed(args.clone_rehearsal, "clone-rehearsal", root)
+    replays = [_aggregate_signed(path, "local-branch-replay", root)
+               for path in (args.first_replay, args.second_replay)]
+    try:
+        rehearsal_required = {
+            "schema", "issued_at", "expires_at", "final_recovery_commit", "runtime_source_root",
+            "reference_receipt_sha256", "hosted_observation_receipt_sha256", "target_fingerprint",
+            "full_replay_receipt_sha256", "unapplied_replay_receipt_sha256",
+            "full_clone_identity", "unapplied_clone_identity", "terminal_rows",
+            "terminal_ledger_root", "terminal_catalog_root", "terminal_acl_root",
+            "terminal_data_root", "terminal_spec_root",
+        }
+        if (set(rehearsal) != rehearsal_required
+                or rehearsal["schema"] != "g040-clone-rehearsal-v1"
+                or type(rehearsal["issued_at"]) is not int or type(rehearsal["expires_at"]) is not int
+                or rehearsal["issued_at"] < max(hosted["issued_at"], reference.issued_at_unix)
+                or not rehearsal["issued_at"] <= now <= rehearsal["expires_at"]
+                or rehearsal["expires_at"] - rehearsal["issued_at"] > 900
+                or any(rehearsal[key] != value for key, value in {
+                    "final_recovery_commit": source.final_commit,
+                    "runtime_source_root": source.runtime_source_root,
+                    "reference_receipt_sha256": reference.receipt_sha256,
+                    "hosted_observation_receipt_sha256": hosted_sha,
+                    "target_fingerprint": reference.target_fingerprint,
+                }.items())
+                or type(rehearsal["terminal_rows"]) is not list
+                or any(type(rehearsal[key]) is not str or not _HEX.fullmatch(rehearsal[key]) for key in (
+                    "full_replay_receipt_sha256", "unapplied_replay_receipt_sha256",
+                    "full_clone_identity", "unapplied_clone_identity", "terminal_ledger_root",
+                    "terminal_catalog_root", "terminal_acl_root", "terminal_data_root",
+                    "terminal_spec_root"))):
+            _fail("aggregate_custody")
+        validated = []
+        for replay, _ in replays:
+            branch = replay.get("selected_branch")
+            validated.append(_validated_replay(
+                replay, source=source, reference=reference,
+                hosted=SimpleNamespace(status=hosted["status"]),
+                hosted_receipt=hosted_sha, now=now))
+        if (any(replay[key] != value for replay in validated for key, value in {
+            "reference_receipt_sha256": reference.receipt_sha256,
+            "target_fingerprint": reference.target_fingerprint,
+        }.items())
+                or any(replay["issued_at"] < reference.issued_at_unix for replay in validated)
+                or any(replay["issued_at"] < hosted["issued_at"]
+                       or replay["hosted_observation_receipt_sha256"] != hosted_sha
+                       for replay in validated if replay["selected_branch"] == "UNAPPLIED")):
+            _fail("aggregate_custody")
+        by_branch = {replay["selected_branch"]: (replay, receipt)
+                     for replay, (_, receipt) in zip(validated, replays)}
+        if (set(by_branch) != {"FULL_ESCAPED", "UNAPPLIED"}
+                or rehearsal["full_replay_receipt_sha256"] != by_branch["FULL_ESCAPED"][1]
+                or rehearsal["unapplied_replay_receipt_sha256"] != by_branch["UNAPPLIED"][1]
+                or rehearsal["full_clone_identity"] != by_branch["FULL_ESCAPED"][0]["clone_identity"]
+                or rehearsal["unapplied_clone_identity"] != by_branch["UNAPPLIED"][0]["clone_identity"]
+                or rehearsal["issued_at"] < max(replay["issued_at"] for replay in validated)):
+            _fail("aggregate_custody")
+        full, unapplied = by_branch["FULL_ESCAPED"][0], by_branch["UNAPPLIED"][0]
+        if ((full["starting_ledger_root"], full["starting_catalog_root"], full["starting_data_root"])
+                    != (reference.ledger_prefix_sha256, reference.full_catalog_sha256,
+                        reference.full_data_sha256)
+                or (unapplied["starting_ledger_root"], unapplied["starting_catalog_root"],
+                    unapplied["starting_data_root"])
+                    != (reference.ledger_prefix_sha256, reference.absent_catalog_sha256, None)
+                or any(full[key] != unapplied[key] for key in (
+                    "terminal_rows", "terminal_ledger_root", "terminal_catalog_root",
+                    "terminal_acl_root", "terminal_data_root", "terminal_spec_root"))
+                or any(rehearsal[key] != full[key] for key in (
+                    "terminal_rows", "terminal_ledger_root", "terminal_catalog_root",
+                    "terminal_acl_root", "terminal_data_root", "terminal_spec_root"))
+                or full["terminal_acl_root"] != target_acl_root):
+            _fail("aggregate_custody")
+        terminal = full
+    except Exception:
+        _fail("aggregate_custody")
     if type(args.valid_seconds) is not int or not 1 <= args.valid_seconds <= 900:
         _fail("aggregate_custody")
-    issued = int(time.time())
-    hashes = (
-        "freeze_root", "backup_receipt_sha256", "capture_receipt_sha256",
-        "clone_rehearsal_receipt_sha256", "inventory_root", "target_ledger_root",
-        "target_catalog_root", "target_data_root",
-    )
-    values = {key: getattr(args, key) for key in hashes}
-    if any(type(value) is not str or not _HEX.fullmatch(value) for value in values.values()):
+    expires_at = min(now + args.valid_seconds, freeze_expires_at, backup["expires_at"], *(replay["expires_at"] for replay, _ in replays), rehearsal["expires_at"], hosted["expires_at"])
+    if expires_at <= now or now < max(reference.issued_at_unix, freeze_started, hosted["issued_at"],
+                                      backup["issued_at"], rehearsal["issued_at"],
+                                      *(replay["issued_at"] for replay, _ in replays)):
         _fail("aggregate_custody")
-    body = {
-        "issued_at": issued,
-        "expires_at": issued + args.valid_seconds,
-        "final_recovery_commit": source.final_commit,
-        "runtime_source_root": source.runtime_source_root,
-        "reference_receipt_sha256": reference.receipt_sha256,
-        "target_fingerprint": reference.target_fingerprint,
-        **values,
-    }
-    root = Path(args.repository_root).resolve()
-    path = controller._outside(args.output, root, fresh=True)
-    receipt = controller._write_signed(path, {"schema": controller.SCHEMA, "kind": "aggregate-custody", "body": body})
+    body = {"issued_at": now, "expires_at": expires_at, "final_recovery_commit": source.final_commit, "runtime_source_root": source.runtime_source_root, "reference_receipt_sha256": reference.receipt_sha256, "target_fingerprint": reference.target_fingerprint, "freeze_root": freeze_root, "freeze_expires_at": freeze_expires_at, "target_acl_root": target_acl_root, "inventory_root": inventory_root, "backup_receipt_sha256": backup_sha, "capture_receipt_sha256": _sha(capture_raw), "archive_sha256": archive_sha, "archive_bytes": archive_bytes, "clone_rehearsal_receipt_sha256": rehearsal_sha, "target_ledger_root": terminal["terminal_ledger_root"], "target_catalog_root": terminal["terminal_catalog_root"], "target_data_root": terminal["terminal_data_root"]}
+    receipt = controller._write_signed(controller._outside(args.output, root, fresh=True), {"schema": controller.SCHEMA, "kind": "aggregate-custody", "body": body})
     return MappingProxyType({"schema": controller.SCHEMA, "receipt_sha256": receipt})
 
 def verify_aggregate_custody(args: argparse.Namespace) -> Mapping[str, Any]:
@@ -604,32 +952,26 @@ def verify_aggregate_custody(args: argparse.Namespace) -> Mapping[str, Any]:
     return MappingProxyType({"schema": controller.SCHEMA, "target_fingerprint": verified.target_fingerprint})
 
 
-def _revalidate_observation_lineage(observation: Mapping[str, Any], repository_root: str | Path) -> Mapping[str, Any]:
-    root = Path(repository_root).resolve()
-    required = {"clone_nonce", "live_identity_sha256", "container_id_sha256", "image_id_sha256", "image_digest_sha256", "endpoint_sha256", "g035_restore_receipt_sha256", "g035_capture_receipt_sha256", "restored_archive_sha256", "capture_receipt_bytes_sha256", "restore_receipt_bytes_sha256", "archive_bytes", "g035_manifest_sha256", "source_sha256", "lineage_attestation_path", "lineage_signature_path", "lineage_attestation_sha256", "lineage_signature_sha256"}
-    if not required <= set(observation):
+def _verified_observation(path: str | Path, *, source: SourceBinding, target_fingerprint: str, repository_root: str | Path, now: int) -> Mapping[str, Any]:
+    try:
+        raw = controller._stable_bytes(controller._outside(path, Path(repository_root).resolve()))
+        value = controller._signed_document(raw, "local-clone-observation")
+    except Exception:
         _fail("reference_input")
-    attested = _load_bytes(_custody_bytes(observation["lineage_attestation_path"], root))
-    expected = {"schema": _LINEAGE_SCHEMA, "clone_nonce": observation["clone_nonce"], "issued_at_unix": attested.get("issued_at_unix"), "expires_at_unix": attested.get("expires_at_unix"), "lineage_public_key_sha256": _LINEAGE_PUBLIC_KEY_SHA256, **{key: observation[key] for key in ("g035_restore_receipt_sha256", "g035_capture_receipt_sha256", "restored_archive_sha256", "capture_receipt_bytes_sha256", "restore_receipt_bytes_sha256", "archive_bytes", "g035_manifest_sha256", "source_sha256", "live_identity_sha256", "container_id_sha256", "image_id_sha256", "image_digest_sha256", "endpoint_sha256")}}
-    hashes = _verify_lineage_attestation(attestation=observation["lineage_attestation_path"], signature=observation["lineage_signature_path"], expected=expected, repository_root=root, now_unix=int(time.time()))
-    if any(observation[key] != hashes[key] for key in hashes):
+    hashes = ("runtime_source_root", "manifest_sha256", "migration_source_sha256", "probe_text_sha256", "target_fingerprint", "binding_receipt_sha256", "clone_identity", "live_identity_sha256", "container_id_sha256", "image_id_sha256", "image_digest_sha256", "endpoint_sha256", "g035_restore_receipt_sha256", "g035_capture_receipt_sha256", "restored_archive_sha256", "capture_receipt_bytes_sha256", "restore_receipt_bytes_sha256", "lineage_attestation_sha256", "lineage_signature_sha256", "initial_full_ledger_sha256", "initial_full_catalog_sha256", "initial_full_data_sha256", "absent_ledger_sha256", "absent_catalog_sha256", "recreated_full_ledger_sha256", "recreated_full_catalog_sha256", "recreated_full_data_sha256", "post_rollback_ledger_sha256", "post_rollback_catalog_sha256", "post_rollback_data_sha256", "reverse_vector_sha256")
+    required = set(hashes) | {"schema", "issued_at", "expires_at", "final_recovery_commit", "clone_nonce", "derivation_mode"}
+    if (set(value) != required or value["schema"] != "g040-clone-observation-v1" or value["final_recovery_commit"] != source.final_commit or value["runtime_source_root"] != source.runtime_source_root or value["manifest_sha256"] != prefix.MANIFEST_SHA256 or value["migration_source_sha256"] != prefix.MIGRATION_SOURCE_SHA256 or value["probe_text_sha256"] != prefix.PROBE_TEXT_SHA256 or value["target_fingerprint"] != target_fingerprint or type(value["issued_at"]) is not int or type(value["expires_at"]) is not int or value["expires_at"] - value["issued_at"] > 900 or not value["issued_at"] <= now <= value["expires_at"] or not _SAFE.fullmatch(value["clone_nonce"]) or value["derivation_mode"] != DERIVATION_MODE or value["reverse_vector_sha256"] != REVERSE_VECTOR_SHA256 or any(type(value[key]) is not str or not _HEX.fullmatch(value[key]) for key in hashes) or value["clone_identity"] != _sha(_canonical({key: value[key] for key in ("live_identity_sha256", "container_id_sha256", "image_id_sha256", "image_digest_sha256", "endpoint_sha256")})) or (value["initial_full_ledger_sha256"], value["initial_full_catalog_sha256"], value["initial_full_data_sha256"]) != (value["recreated_full_ledger_sha256"], value["recreated_full_catalog_sha256"], value["recreated_full_data_sha256"]) or (value["initial_full_ledger_sha256"], value["initial_full_catalog_sha256"], value["initial_full_data_sha256"]) != (value["post_rollback_ledger_sha256"], value["post_rollback_catalog_sha256"], value["post_rollback_data_sha256"]) or value["absent_ledger_sha256"] != value["initial_full_ledger_sha256"] or value["absent_catalog_sha256"] == value["initial_full_catalog_sha256"]):
         _fail("reference_input")
-    return MappingProxyType({key: observation[key] for key in ("clone_identity", "clone_nonce", "live_identity_sha256", "container_id_sha256", "image_id_sha256", "image_digest_sha256", "endpoint_sha256", "g035_restore_receipt_sha256", "g035_capture_receipt_sha256", "restored_archive_sha256", "capture_receipt_bytes_sha256", "restore_receipt_bytes_sha256", "lineage_attestation_sha256", "lineage_signature_sha256", "state", "ledger_prefix_sha256", "catalog_sha256", "data_sha256") if key in observation})
-def build_reference(*, source: SourceBinding, target_fingerprint: str, nonce: str, first_absent: str | Path,
-                    first_full: str | Path, second_absent: str | Path, second_full: str | Path,
-                    private_key: str | Path, output: str | Path, repository_root: str | Path | None = None, now: int | None = None, valid_seconds: int = 600) -> None:
+    proof = {key: value[key] for key in ("clone_identity", "clone_nonce", "live_identity_sha256", "container_id_sha256", "image_id_sha256", "image_digest_sha256", "endpoint_sha256", "g035_restore_receipt_sha256", "g035_capture_receipt_sha256", "restored_archive_sha256", "capture_receipt_bytes_sha256", "restore_receipt_bytes_sha256", "lineage_attestation_sha256", "lineage_signature_sha256")}
+    return MappingProxyType({**proof, "binding_receipt_sha256": value["binding_receipt_sha256"], "observation_receipt_sha256": _sha(raw), "absent_catalog_sha256": value["absent_catalog_sha256"], "full_catalog_sha256": value["initial_full_catalog_sha256"], "full_data_sha256": value["initial_full_data_sha256"], "ledger_prefix_sha256": value["initial_full_ledger_sha256"], "derivation_mode": value["derivation_mode"], "reverse_vector_sha256": value["reverse_vector_sha256"]})
+
+def build_reference(*, source: SourceBinding, target_fingerprint: str, nonce: str, first_observation: str | Path, second_observation: str | Path, private_key: str | Path, output: str | Path, repository_root: str | Path | None = None, now: int | None = None, valid_seconds: int = 600) -> None:
     if type(valid_seconds) is not int or not 1 <= valid_seconds <= 900 or not _HEX.fullmatch(target_fingerprint or "") or not _SAFE.fullmatch(nonce or "") or repository_root is None:
         _fail("reference_input")
-    first = build_clone_run(_revalidate_observation_lineage(_load(first_absent), repository_root), _revalidate_observation_lineage(_load(first_full), repository_root))
-    second = build_clone_run(_revalidate_observation_lineage(_load(second_absent), repository_root), _revalidate_observation_lineage(_load(second_full), repository_root))
-    if (first["clone_identity"] == second["clone_identity"] or first["clone_nonce"] == second["clone_nonce"]
-            or first["g035_restore_receipt_sha256"] == second["g035_restore_receipt_sha256"]):
-        _fail("clone_binding")
     issued = int(time.time()) if now is None else now
-    body = build_reference_body(final_commit=source.final_commit, runtime_source_root=source.runtime_source_root,
-                                target_fingerprint=target_fingerprint, observation_nonce=nonce,
-                                issued_at_unix=issued, expires_at_unix=issued + valid_seconds,
-                                first_clone=first, second_clone=second)
+    first = _verified_observation(first_observation, source=source, target_fingerprint=target_fingerprint, repository_root=repository_root, now=issued)
+    second = _verified_observation(second_observation, source=source, target_fingerprint=target_fingerprint, repository_root=repository_root, now=issued)
+    body = build_reference_body(final_commit=source.final_commit, runtime_source_root=source.runtime_source_root, target_fingerprint=target_fingerprint, observation_nonce=nonce, issued_at_unix=issued, expires_at_unix=issued + valid_seconds, first_clone=first, second_clone=second)
     signed = sign_reference(body, _reference_signer(private_key, repository_root=repository_root))
     raw = _canonical(dict(signed))
     verify_reference(raw, now_unix=issued, expected_source=source, expected_target_fingerprint=target_fingerprint)
@@ -638,7 +980,7 @@ def build_reference(*, source: SourceBinding, target_fingerprint: str, nonce: st
 
 def _source(root: str | Path, commit: str) -> SourceBinding:
     try:
-        return verify_recovery_source(Path(root).resolve(), commit)
+        return verify_recovery_source(Path(root).resolve(), commit, production=True)
     except Exception:
         _fail("source_drift")
 
@@ -660,64 +1002,373 @@ def _selected_observation(args: argparse.Namespace) -> tuple[Any, str]:
     return observation, receipt
 
 
-
-def prepare_branch(args: argparse.Namespace) -> Mapping[str, Any]:
-    parse_local_service(args.service_file, args.service_name)
-    if args.selected_branch not in {"UNAPPLIED", "FULL_ESCAPED"}:
-        _fail("branch_state")
-    _, receipt = _selected_observation(args)
-    controller_args = _controller_args(args)
-    controller_args.observation_receipt_sha256 = receipt
-    result = controller.prepare(controller_args)
-    return {"schema": "g040-clone-prepare-v1", "selected_branch": args.selected_branch, "bindings_sha256": result["bindings_sha256"]}
+def _expected_prefix(reference: Any, status: str, ledger: str, catalog: str,
+                     data: str | None) -> Any:
+    return prefix._observation(reference, status, ledger, catalog, data)
 
 
-def apply_branch(args: argparse.Namespace) -> Mapping[str, Any]:
-    parse_local_service(args.service_file, args.service_name)
-    if args.selected_branch not in {"UNAPPLIED", "FULL_ESCAPED"}:
-        _fail("branch_state")
-    _, receipt = _selected_observation(args)
-    controller_args = _controller_args(args)
-    controller_args.observation_receipt_sha256 = receipt
-    result = controller.execute(controller_args)
-    return {"schema": "g040-clone-apply-v1", "selected_branch": args.selected_branch,
-            "prepared_receipt_sha256": result["prepared_receipt_sha256"], "final_receipt_sha256": result["final_receipt_sha256"]}
-
-
-def terminal_readback(args: argparse.Namespace) -> Mapping[str, Any]:
-    parse_local_service(args.service_file, args.service_name)
-    source = _source(args.repository_root, args.source_commit)
-    controller_args = _controller_args(args)
-    reference = controller._reference(controller_args, source)
-    observation, receipt = controller._load_observation(controller_args, source, reference)
-    custody = controller._custody(controller_args, source, reference)
-    manifest = validate_sources(Path(args.repository_root).resolve())
-    bindings = controller._bindings(source, reference, observation, custody, manifest, receipt)
-    authorization = controller._authorization(controller_args, bindings)
-    terminal = controller._final_readback(controller_args, source, reference, manifest, authorization)
-    if args.selected_branch != observation.status:
-        _fail("branch_state")
-    return {
-        "schema": "g040-clone-terminal-v1",
-        "selected_branch": observation.status,
-        "terminal_rows": terminal["terminal_rows"],
-        "ledger_sha256": terminal["ledger_root"],
-        "catalog_sha256": terminal["catalog_root"],
-        "acl_sha256": terminal["acl_root"],
-        "data_sha256": terminal["data_root"],
-        "terminal_spec_root": terminal["terminal_spec_root"],
+def _verified_preparation(path: str | Path, *, source: SourceBinding, reference: Any,
+                          hosted_receipt: str, binding: Mapping[str, Any],
+                          clone: Mapping[str, Any], repository_root: Path,
+                          now: int) -> Mapping[str, Any]:
+    try:
+        raw = controller._stable_bytes(controller._outside(path, repository_root))
+        value = controller._signed_document(raw, "local-state-preparation")
+    except Exception:
+        _fail("preparation_receipt")
+    required = {
+        "schema", "issued_at", "expires_at", "final_recovery_commit",
+        "runtime_source_root", "reference_receipt_sha256",
+        "hosted_observation_receipt_sha256", "clone_binding_receipt_sha256",
+        "clone_observation_receipt_sha256", "clone_identity", "clone_nonce",
+        "reverse_vector_sha256", "starting_ledger_root", "starting_catalog_root",
+        "starting_data_root", "resulting_ledger_root", "resulting_catalog_root",
+        "resulting_data_root",
     }
+    hashes = required - {"schema", "issued_at", "expires_at", "final_recovery_commit",
+                         "clone_nonce"}
+    if (set(value) != required or value["schema"] != "g040-local-state-preparation-v1"
+            or type(value["issued_at"]) is not int or type(value["expires_at"]) is not int
+            or not value["issued_at"] <= now <= value["expires_at"]
+            or value["expires_at"] - value["issued_at"] > 900
+            or value["final_recovery_commit"] != source.final_commit
+            or value["runtime_source_root"] != source.runtime_source_root
+            or any(type(value[key]) is not str or not _HEX.fullmatch(value[key])
+                   for key in hashes)
+            or value["reference_receipt_sha256"] != reference.receipt_sha256
+            or value["hosted_observation_receipt_sha256"] != hosted_receipt
+            or value["clone_binding_receipt_sha256"] != binding["binding_receipt_sha256"]
+            or value["clone_observation_receipt_sha256"] != clone["observation_receipt_sha256"]
+            or value["clone_identity"] != binding["clone_identity"]
+            or value["clone_nonce"] != binding["clone_nonce"]
+            or value["reverse_vector_sha256"] != REVERSE_VECTOR_SHA256
+            or (value["starting_ledger_root"], value["starting_catalog_root"],
+                value["starting_data_root"]) != (reference.ledger_prefix_sha256,
+                                                  reference.full_catalog_sha256,
+                                                  reference.full_data_sha256)
+            or (value["resulting_ledger_root"], value["resulting_catalog_root"],
+                value["resulting_data_root"]) != (reference.ledger_prefix_sha256,
+                                                   reference.absent_catalog_sha256,
+                                                   controller._ABSENT_DATA_ROOT)):
+        _fail("preparation_receipt")
+    return MappingProxyType({**value, "preparation_receipt_sha256": _sha(raw)})
 
 
-def compare_terminal(first: Mapping[str, Any], second: Mapping[str, Any]) -> Mapping[str, Any]:
-    required = {"schema", "selected_branch", "terminal_rows", "ledger_sha256", "catalog_sha256", "acl_sha256", "data_sha256", "terminal_spec_root"}
-    if set(first) != required or set(second) != required or first["schema"] != "g040-clone-terminal-v1" or second["schema"] != "g040-clone-terminal-v1" or first["selected_branch"] not in {"UNAPPLIED", "FULL_ESCAPED"} or first["selected_branch"] != second["selected_branch"]:
-        _fail("terminal_receipt")
-    if first["terminal_rows"] != 40 or second["terminal_rows"] != 40:
-        _fail("terminal_rows")
-    if any(type(first[key]) is not str or not _HEX.fullmatch(first[key]) or first[key] != second[key] for key in required - {"schema", "selected_branch", "terminal_rows"}):
-        _fail("terminal_mismatch")
-    return MappingProxyType(dict(first))
+def prepare_local_state(args: argparse.Namespace) -> Mapping[str, Any]:
+    """Atomically restore one admitted local FULL clone to signed exact UNAPPLIED."""
+    root = Path(args.repository_root).resolve()
+    source = _source(root, args.source_commit)
+    reference = controller._reference(_controller_args(args), source)
+    hosted, hosted_receipt = controller._load_observation(_controller_args(args), source, reference)
+    if hosted.status != "FULL_ESCAPED":
+        _fail("branch_state")
+    clone = _verified_observation(args.clone_observation, source=source,
+                                  target_fingerprint=reference.target_fingerprint,
+                                  repository_root=root, now=int(time.time()))
+    binding = _binding(args.binding, root)
+    if (binding["binding_receipt_sha256"] != clone["binding_receipt_sha256"]
+            or binding["clone_identity"] != clone["clone_identity"]
+            or binding["clone_nonce"] != clone["clone_nonce"]
+            or (clone["ledger_prefix_sha256"], clone["full_catalog_sha256"],
+                clone["full_data_sha256"]) != (reference.ledger_prefix_sha256,
+                                                reference.full_catalog_sha256,
+                                                reference.full_data_sha256)
+            or (hosted.ledger_prefix_sha256, hosted.catalog_sha256, hosted.data_sha256)
+            != (reference.ledger_prefix_sha256, reference.full_catalog_sha256,
+                reference.full_data_sha256)):
+        _fail("preparation_binding")
+    conn, service = _connect_service(args.service_file, args.service_name, readonly=False,
+                                     repository_root=root)
+    cur = None
+    try:
+        cur = controller._G037TupleFetchallCursor(conn.cursor())
+        _assert_observation_binding(binding, verified_port=service["port"],
+                                    container=args.container, docker=args.docker, conn=conn,
+                                    repository_root=root)
+        cur.execute("BEGIN")
+        for sql in executor._LOCK_SQL + executor._DATA_LOCK_SQL:
+            cur.execute(sql)
+        full = _expected_prefix(reference, "FULL_ESCAPED", reference.ledger_prefix_sha256,
+                                reference.full_catalog_sha256, reference.full_data_sha256)
+        if prefix.classify_mutation_cursor(cur, reference, expected_prior=full) != full:
+            _fail("preparation_state")
+        for statement in REVERSE_VECTOR:
+            cur.execute(statement)
+        absent = _expected_prefix(reference, "UNAPPLIED", reference.ledger_prefix_sha256,
+                                  reference.absent_catalog_sha256, None)
+        if prefix.classify_mutation_cursor(cur, reference, expected_prior=absent) != absent:
+            _fail("preparation_state")
+        conn.commit()
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        _fail("preparation_failed")
+    finally:
+        if cur:
+            cur.close()
+        try:
+            conn.close()
+        except Exception:
+            pass
+    issued = int(time.time())
+    body = {
+        "schema": "g040-local-state-preparation-v1", "issued_at": issued,
+        "expires_at": issued + 600, "final_recovery_commit": source.final_commit,
+        "runtime_source_root": source.runtime_source_root,
+        "reference_receipt_sha256": reference.receipt_sha256,
+        "hosted_observation_receipt_sha256": hosted_receipt,
+        "clone_binding_receipt_sha256": binding["binding_receipt_sha256"],
+        "clone_observation_receipt_sha256": clone["observation_receipt_sha256"],
+        "clone_identity": binding["clone_identity"], "clone_nonce": binding["clone_nonce"],
+        "reverse_vector_sha256": REVERSE_VECTOR_SHA256,
+        "starting_ledger_root": reference.ledger_prefix_sha256,
+        "starting_catalog_root": reference.full_catalog_sha256,
+        "starting_data_root": reference.full_data_sha256,
+        "resulting_ledger_root": reference.ledger_prefix_sha256,
+        "resulting_catalog_root": reference.absent_catalog_sha256,
+        "resulting_data_root": controller._ABSENT_DATA_ROOT,
+    }
+    receipt = controller._write_signed(controller._outside(args.output, root, fresh=True),
+                                        {"schema": controller.SCHEMA,
+                                         "kind": "local-state-preparation", "body": body})
+    return MappingProxyType({"schema": body["schema"], "receipt_sha256": receipt})
+
+
+def replay_branch(args: argparse.Namespace) -> Mapping[str, Any]:
+    """Commit one branch on an admitted local clone and sign its terminal receipt."""
+    root = Path(args.repository_root).resolve()
+    source = _source(root, args.source_commit)
+    reference = controller._reference(_controller_args(args), source)
+    hosted, hosted_receipt = controller._load_observation(_controller_args(args), source, reference)
+    if args.selected_branch == "FULL_ESCAPED":
+        if getattr(args, "preparation", None):
+            _fail("preparation_forbidden")
+    elif args.selected_branch == "UNAPPLIED":
+        if hosted.status == "UNAPPLIED":
+            if getattr(args, "preparation", None):
+                _fail("preparation_forbidden")
+        elif hosted.status != "FULL_ESCAPED" or not getattr(args, "preparation", None):
+            _fail("preparation_required")
+    else:
+        _fail("branch_state")
+    clone_observation = _verified_observation(
+        args.clone_observation, source=source, target_fingerprint=reference.target_fingerprint,
+        repository_root=root, now=int(time.time()))
+    binding = _binding(args.binding, root)
+    if (binding["binding_receipt_sha256"] != clone_observation["binding_receipt_sha256"]
+            or binding["clone_identity"] != clone_observation["clone_identity"]
+            or binding["clone_nonce"] != clone_observation["clone_nonce"]):
+        _fail("replay_binding")
+    preparation_receipt = None
+    preparation_expires_at = None
+    if args.selected_branch == "FULL_ESCAPED":
+        if (clone_observation["ledger_prefix_sha256"],
+                clone_observation["full_catalog_sha256"],
+                clone_observation["full_data_sha256"]) != (
+                    reference.ledger_prefix_sha256, reference.full_catalog_sha256,
+                    reference.full_data_sha256):
+            _fail("replay_binding")
+        local_observation = _expected_prefix(
+            reference, "FULL_ESCAPED", reference.ledger_prefix_sha256,
+            reference.full_catalog_sha256, reference.full_data_sha256,
+        )
+    elif hosted.status == "FULL_ESCAPED":
+        preparation = _verified_preparation(
+            args.preparation, source=source, reference=reference, hosted_receipt=hosted_receipt,
+            binding=binding, clone=clone_observation, repository_root=root, now=int(time.time()),
+        )
+        preparation_receipt = preparation["preparation_receipt_sha256"]
+        preparation_expires_at = preparation["expires_at"]
+        local_observation = _expected_prefix(
+            reference, "UNAPPLIED", reference.ledger_prefix_sha256,
+            reference.absent_catalog_sha256, None,
+        )
+    else:
+        local_observation = hosted
+    manifest = validate_sources(root)
+    conn, service = _connect_service(args.service_file, args.service_name, readonly=False,
+                                     repository_root=root)
+    cur = None
+    try:
+        cur = controller._G037TupleFetchallCursor(conn.cursor())
+        _assert_observation_binding(binding, verified_port=service["port"],
+                                    container=args.container, docker=args.docker, conn=conn,
+                                    repository_root=root)
+        capability = admit_verified_clone(
+            clone_identity=binding["clone_identity"], clone_nonce=binding["clone_nonce"],
+            target_fingerprint=reference.target_fingerprint,
+            live_identity_sha256=binding["live_identity_sha256"], port=service["port"])
+        plan = compile_branch_plan(root, manifest, source=source, reference=reference,
+                                   observation=local_observation)
+        cur.execute("BEGIN")
+        evidence = apply_rehearsal_locked_cursor(
+            cur, plan=plan, verified_clone_capability=capability,
+            deadline_monotonic=time.monotonic() + 30)
+        conn.commit()
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        _fail("replay_failed")
+    finally:
+        if cur:
+            cur.close()
+        try:
+            conn.close()
+        except Exception:
+            pass
+    issued = int(time.time())
+    body = {
+        "schema": "g040-local-branch-replay-v1", "issued_at": issued,
+        "expires_at": min(issued + 900, reference.expires_at_unix,
+                          *(value for value in (preparation_expires_at,) if value is not None)),
+        "final_recovery_commit": source.final_commit,
+        "runtime_source_root": source.runtime_source_root,
+        "reference_receipt_sha256": reference.receipt_sha256,
+        "hosted_observation_receipt_sha256": hosted_receipt,
+        "target_fingerprint": reference.target_fingerprint,
+        "prefix_classification": local_observation.status, "selected_branch": args.selected_branch,
+        "clone_binding_receipt_sha256": binding["binding_receipt_sha256"],
+        "clone_observation_receipt_sha256": clone_observation["observation_receipt_sha256"],
+        "clone_identity": binding["clone_identity"], "clone_nonce": binding["clone_nonce"],
+        "live_identity_sha256": binding["live_identity_sha256"],
+        "container_id_sha256": binding["container_id_sha256"],
+        "endpoint_sha256": binding["endpoint_sha256"],
+        "starting_ledger_root": local_observation.ledger_prefix_sha256,
+        "starting_catalog_root": local_observation.catalog_sha256,
+        "starting_data_root": local_observation.data_sha256,
+        "terminal_rows": evidence.terminal_rows,
+        "terminal_ledger_root": evidence.terminal_ledger_root,
+        "terminal_catalog_root": evidence.terminal_catalog_root,
+        "terminal_acl_root": evidence.terminal_acl_root,
+        "terminal_data_root": evidence.terminal_data_root,
+        "terminal_spec_root": evidence.terminal_spec_root,
+        "executor_evidence_sha256": evidence.evidence_sha256,
+        **({"unapplied_provenance": "prepared-from-full-escaped",
+            "preparation_receipt_sha256": preparation_receipt}
+           if preparation_receipt is not None else
+           ({"unapplied_provenance": "native-hosted-unapplied"}
+            if args.selected_branch == "UNAPPLIED" else {})),
+    }
+    receipt = controller._write_signed(controller._outside(args.output, root, fresh=True),
+                                        {"schema": controller.SCHEMA,
+                                         "kind": "local-branch-replay", "body": body})
+    return MappingProxyType({"schema": body["schema"], "receipt_sha256": receipt})
+
+
+def _validated_replay(body: Mapping[str, Any], *, source: SourceBinding, reference: Any,
+                      hosted: Any, hosted_receipt: str, now: int) -> Mapping[str, Any]:
+    required = {
+        "schema", "issued_at", "expires_at", "final_recovery_commit", "runtime_source_root",
+        "reference_receipt_sha256", "hosted_observation_receipt_sha256", "target_fingerprint",
+        "prefix_classification", "selected_branch", "clone_binding_receipt_sha256",
+        "clone_observation_receipt_sha256", "clone_identity", "clone_nonce",
+        "live_identity_sha256", "container_id_sha256", "endpoint_sha256",
+        "starting_ledger_root", "starting_catalog_root", "starting_data_root",
+        "terminal_rows", "terminal_ledger_root", "terminal_catalog_root",
+        "terminal_acl_root", "terminal_data_root", "terminal_spec_root",
+        "executor_evidence_sha256",
+    }
+    branch = body.get("selected_branch")
+    provenance = body.get("unapplied_provenance")
+    if branch == "UNAPPLIED":
+        required.add("unapplied_provenance")
+        if provenance == "prepared-from-full-escaped":
+            required.add("preparation_receipt_sha256")
+    hashes = required - {
+        "schema", "issued_at", "expires_at", "final_recovery_commit", "runtime_source_root",
+        "prefix_classification", "selected_branch", "clone_nonce", "starting_data_root",
+        "terminal_rows", "unapplied_provenance",
+    }
+    absent_roots = (reference.ledger_prefix_sha256, reference.absent_catalog_sha256, None)
+    full_roots = (reference.ledger_prefix_sha256, reference.full_catalog_sha256,
+                  reference.full_data_sha256)
+    starting_roots = (body.get("starting_ledger_root"), body.get("starting_catalog_root"),
+                      body.get("starting_data_root"))
+    if (set(body) != required or body["schema"] != "g040-local-branch-replay-v1"
+            or type(body["issued_at"]) is not int or type(body["expires_at"]) is not int
+            or not body["issued_at"] <= now <= body["expires_at"]
+            or body["expires_at"] - body["issued_at"] > 900
+            or body["final_recovery_commit"] != source.final_commit
+            or body["runtime_source_root"] != source.runtime_source_root
+            or body["reference_receipt_sha256"] != reference.receipt_sha256
+            or body["target_fingerprint"] != reference.target_fingerprint
+            or body["hosted_observation_receipt_sha256"] != hosted_receipt
+            or not _SAFE.fullmatch(body["clone_nonce"])
+            or any(type(body[key]) is not str or not _HEX.fullmatch(body[key]) for key in hashes)
+            or type(body["terminal_rows"]) is not list
+            or branch not in {"FULL_ESCAPED", "UNAPPLIED"}
+            or body["prefix_classification"] != branch
+            or (branch == "FULL_ESCAPED" and (
+                provenance is not None or "preparation_receipt_sha256" in body
+                or starting_roots != full_roots))
+            or (branch == "UNAPPLIED" and (
+                provenance not in {"native-hosted-unapplied", "prepared-from-full-escaped"}
+                or starting_roots != absent_roots
+                or (provenance == "native-hosted-unapplied" and (
+                    "preparation_receipt_sha256" in body or hosted.status != "UNAPPLIED"))
+                or (provenance == "prepared-from-full-escaped" and (
+                    "preparation_receipt_sha256" not in body or hosted.status != "FULL_ESCAPED"))))):
+        _fail("replay_comparison")
+        _fail("replay_comparison")
+    return body
+
+
+def compare_replays(args: argparse.Namespace) -> Mapping[str, Any]:
+    root = Path(args.repository_root).resolve()
+    source = _source(root, args.source_commit)
+    controller_args = _controller_args(SimpleNamespace(**vars(args), observation=args.hosted_observation))
+    reference = controller._reference(controller_args, source)
+    hosted, hosted_receipt = controller._load_observation(controller_args, source, reference)
+    issued = int(time.time())
+    receipts = []
+    try:
+        for path in (args.first_replay, args.second_replay):
+            raw = controller._stable_bytes(controller._outside(path, root))
+            replay = controller._signed_document(raw, "local-branch-replay")
+            body = _validated_replay(
+                replay, source=source, reference=reference, hosted=hosted,
+                hosted_receipt=hosted_receipt, now=issued)
+            receipts.append((body, _sha(raw)))
+    except Exception:
+        _fail("replay_comparison")
+    first, second = receipts[0][0], receipts[1][0]
+    lineage = ("final_recovery_commit", "runtime_source_root", "reference_receipt_sha256",
+               "target_fingerprint")
+    terminal_roots = ("terminal_ledger_root", "terminal_catalog_root", "terminal_acl_root",
+                      "terminal_data_root", "terminal_spec_root")
+    signed_terminal_tuple = ("terminal_rows", *terminal_roots)
+    distinct_clone_fields = ("clone_identity", "clone_nonce", "live_identity_sha256",
+                             "container_id_sha256", "endpoint_sha256",
+                             "clone_binding_receipt_sha256", "clone_observation_receipt_sha256")
+    if (receipts[0][1] == receipts[1][1]
+            or {first["selected_branch"], second["selected_branch"]} != {"FULL_ESCAPED", "UNAPPLIED"}
+            or any(first[key] != second[key] for key in lineage + signed_terminal_tuple)
+            or any(first[key] == second[key] for key in distinct_clone_fields)):
+        _fail("replay_comparison")
+    expires_at = min(issued + 900, first["expires_at"], second["expires_at"])
+    if expires_at <= issued:
+        _fail("replay_comparison")
+    full = first if first["selected_branch"] == "FULL_ESCAPED" else second
+    unapplied = second if full is first else first
+    body = {
+        "schema": "g040-clone-rehearsal-v1", "issued_at": issued, "expires_at": expires_at,
+        "final_recovery_commit": source.final_commit, "runtime_source_root": source.runtime_source_root,
+        "reference_receipt_sha256": first["reference_receipt_sha256"],
+        "hosted_observation_receipt_sha256": unapplied["hosted_observation_receipt_sha256"],
+        "target_fingerprint": first["target_fingerprint"],
+        "full_replay_receipt_sha256": receipts[0][1] if full is first else receipts[1][1],
+        "unapplied_replay_receipt_sha256": receipts[0][1] if unapplied is first else receipts[1][1],
+        "full_clone_identity": full["clone_identity"],
+        "unapplied_clone_identity": unapplied["clone_identity"],
+        **{key: first[key] for key in signed_terminal_tuple},
+    }
+    receipt = controller._write_signed(controller._outside(args.output, root, fresh=True),
+                                       {"schema": controller.SCHEMA, "kind": "clone-rehearsal", "body": body})
+    return MappingProxyType({"schema": body["schema"], "receipt_sha256": receipt})
 
 
 def index_artifacts(artifact_dir: str | Path, allowlist: list[str], output: str | Path) -> None:
@@ -760,14 +1411,14 @@ def _parser() -> argparse.ArgumentParser:
     common = argparse.ArgumentParser(add_help=False); common.add_argument("--service-file", required=True); common.add_argument("--service-name", default="g035-local")
     p = sub.add_parser("preflight", parents=[common]); p.add_argument("--image", required=True); p.add_argument("--image-metadata", required=True); p.add_argument("--output", required=True)
     p = sub.add_parser("bind-restore", parents=[common]); p.add_argument("--clone-nonce", required=True); p.add_argument("--capture-receipt", required=True); p.add_argument("--restore-receipt", required=True); p.add_argument("--encrypted-dump", required=True); p.add_argument("--lineage-attestation", required=True); p.add_argument("--lineage-signature", required=True); p.add_argument("--repository-root", required=True); p.add_argument("--container", required=True); p.add_argument("--docker", default="docker"); p.add_argument("--output", required=True)
-    p = sub.add_parser("observe-reference", parents=[common]); p.add_argument("--repository-root", required=True); p.add_argument("--source-commit", required=True); p.add_argument("--binding", required=True); p.add_argument("--container", required=True); p.add_argument("--docker", default="docker"); p.add_argument("--absent-output", required=True); p.add_argument("--full-output", required=True)
-    p = sub.add_parser("build-reference"); p.add_argument("--repository-root", required=True); p.add_argument("--source-commit", required=True); p.add_argument("--target-fingerprint", required=True); p.add_argument("--nonce", required=True); p.add_argument("--first-absent", required=True); p.add_argument("--first-full", required=True); p.add_argument("--second-absent", required=True); p.add_argument("--second-full", required=True); p.add_argument("--private-key", required=True); p.add_argument("--valid-seconds", type=int, default=600); p.add_argument("--output", required=True)
-    for name in ("prepare-branch", "apply-branch", "terminal-readback"):
-        p = sub.add_parser(name, parents=[common]); p.add_argument("--repository-root", required=True); p.add_argument("--source-commit", required=True); p.add_argument("--target-fingerprint", required=True); p.add_argument("--reference", required=True); p.add_argument("--observation", required=True); p.add_argument("--observation-receipt-sha256", required=True); p.add_argument("--custody", required=True); p.add_argument("--authorization", required=True); p.add_argument("--authorization-signature", required=True); p.add_argument("--selected-branch", choices=("UNAPPLIED", "FULL_ESCAPED")); p.add_argument("--journal-dir"); p.add_argument("--authority-template"); p.add_argument("--prepared-receipt"); p.add_argument("--final-receipt"); p.add_argument("--output")
-    p = sub.add_parser("aggregate-custody"); p.add_argument("--repository-root", required=True); p.add_argument("--source-commit", required=True); p.add_argument("--target-fingerprint", required=True); p.add_argument("--reference", required=True); p.add_argument("--freeze-root", required=True); p.add_argument("--backup-receipt-sha256", required=True); p.add_argument("--capture-receipt-sha256", required=True); p.add_argument("--clone-rehearsal-receipt-sha256", required=True); p.add_argument("--inventory-root", required=True); p.add_argument("--target-ledger-root", required=True); p.add_argument("--target-catalog-root", required=True); p.add_argument("--target-data-root", required=True); p.add_argument("--valid-seconds", type=int, default=600); p.add_argument("--output", required=True)
-    p = sub.add_parser("verify-aggregate-custody"); p.add_argument("--repository-root", required=True); p.add_argument("--source-commit", required=True); p.add_argument("--target-fingerprint", required=True); p.add_argument("--reference", required=True); p.add_argument("--custody", required=True); p.add_argument("--custody-receipt-sha256")
+    p = sub.add_parser("observe-reference", parents=[common]); p.add_argument("--repository-root", required=True); p.add_argument("--source-commit", required=True); p.add_argument("--target-fingerprint", required=True); p.add_argument("--binding", required=True); p.add_argument("--container", required=True); p.add_argument("--docker", default="docker"); p.add_argument("--output", required=True)
+    p = sub.add_parser("build-reference"); p.add_argument("--repository-root", required=True); p.add_argument("--source-commit", required=True); p.add_argument("--target-fingerprint", required=True); p.add_argument("--nonce", required=True); p.add_argument("--first-observation", required=True); p.add_argument("--second-observation", required=True); p.add_argument("--private-key", required=True); p.add_argument("--valid-seconds", type=int, default=600); p.add_argument("--output", required=True)
+    p = sub.add_parser("prepare-local-state", parents=[common]); p.add_argument("--repository-root", required=True); p.add_argument("--source-commit", required=True); p.add_argument("--target-fingerprint", required=True); p.add_argument("--reference", required=True); p.add_argument("--observation", required=True); p.add_argument("--binding", required=True); p.add_argument("--clone-observation", required=True); p.add_argument("--container", required=True); p.add_argument("--docker", default="docker"); p.add_argument("--output", required=True)
+    p = sub.add_parser("replay-branch", parents=[common]); p.add_argument("--repository-root", required=True); p.add_argument("--source-commit", required=True); p.add_argument("--target-fingerprint", required=True); p.add_argument("--reference", required=True); p.add_argument("--observation", required=True); p.add_argument("--binding", required=True); p.add_argument("--clone-observation", required=True); p.add_argument("--container", required=True); p.add_argument("--docker", default="docker"); p.add_argument("--selected-branch", choices=("UNAPPLIED", "FULL_ESCAPED"), required=True); p.add_argument("--preparation"); p.add_argument("--output", required=True)
+    p = sub.add_parser("compare-replays"); p.add_argument("--repository-root", required=True); p.add_argument("--source-commit", required=True); p.add_argument("--target-fingerprint", required=True); p.add_argument("--reference", required=True); p.add_argument("--hosted-observation", required=True); p.add_argument("--first-replay", required=True); p.add_argument("--second-replay", required=True); p.add_argument("--output", required=True)
+    p = sub.add_parser("aggregate-custody"); p.add_argument("--repository-root", required=True); p.add_argument("--source-commit", required=True); p.add_argument("--target-fingerprint", required=True); p.add_argument("--reference", required=True); p.add_argument("--hosted-observation", required=True); p.add_argument("--freeze-assertion", required=True); p.add_argument("--freeze-evidence", action="append", required=True); p.add_argument("--production-backup", required=True); p.add_argument("--g035-capture", required=True); p.add_argument("--g035-archive", required=True); p.add_argument("--clone-rehearsal", required=True); p.add_argument("--first-replay", required=True); p.add_argument("--second-replay", required=True); p.add_argument("--valid-seconds", type=int, default=600); p.add_argument("--output", required=True)
+    p = sub.add_parser("verify-aggregate-custody"); p.add_argument("--repository-root", required=True); p.add_argument("--source-commit", required=True); p.add_argument("--target-fingerprint", required=True); p.add_argument("--reference", required=True); p.add_argument("--custody", required=True)
     p = sub.add_parser("index"); p.add_argument("--artifact-dir", required=True); p.add_argument("--file", action="append", required=True); p.add_argument("--output", required=True)
-    p = sub.add_parser("compare-terminal"); p.add_argument("--first", required=True); p.add_argument("--second", required=True); p.add_argument("--output", required=True)
     p = sub.add_parser("cleanup"); p.add_argument("--run-id", required=True); p.add_argument("--docker", default="docker")
     return parser
 
@@ -778,22 +1429,21 @@ def main(argv: list[str] | None = None) -> int:
         if args.mode == "preflight":
             result = preflight(service_file=args.service_file, service_name=args.service_name, image=args.image, image_metadata=args.image_metadata); _write(args.output, result)
         elif args.mode == "bind-restore":
-            result = bind_restore(clone_nonce=args.clone_nonce, capture_receipt=args.capture_receipt, restore_receipt=args.restore_receipt, encrypted_dump=args.encrypted_dump, lineage_attestation=args.lineage_attestation, lineage_signature=args.lineage_signature, repository_root=args.repository_root, service_file=args.service_file, service_name=args.service_name, container=args.container, docker=args.docker, output=args.output)
+            result = dict(bind_restore(clone_nonce=args.clone_nonce, capture_receipt=args.capture_receipt, restore_receipt=args.restore_receipt, encrypted_dump=args.encrypted_dump, lineage_attestation=args.lineage_attestation, lineage_signature=args.lineage_signature, repository_root=args.repository_root, service_file=args.service_file, service_name=args.service_name, container=args.container, docker=args.docker, output=args.output))
         elif args.mode == "observe-reference":
-            observe_reference(repository_root=args.repository_root, source_commit=args.source_commit, binding_path=args.binding, service_file=args.service_file, service_name=args.service_name, container=args.container, docker=args.docker, absent_output=args.absent_output, full_output=args.full_output); result = {"status": "observed"}
+            observe_reference(repository_root=args.repository_root, source_commit=args.source_commit, target_fingerprint=args.target_fingerprint, binding_path=args.binding, service_file=args.service_file, service_name=args.service_name, container=args.container, docker=args.docker, output=args.output); result = {"status": "observed"}
         elif args.mode == "build-reference":
-            build_reference(source=_source(args.repository_root, args.source_commit), target_fingerprint=args.target_fingerprint, nonce=args.nonce, first_absent=args.first_absent, first_full=args.first_full, second_absent=args.second_absent, second_full=args.second_full, private_key=args.private_key, valid_seconds=args.valid_seconds, output=args.output, repository_root=args.repository_root); result = {"status": "reference_built"}
-        elif args.mode == "prepare-branch": result = prepare_branch(args)
-        elif args.mode == "apply-branch": result = apply_branch(args)
-        elif args.mode == "terminal-readback":
-            if not args.output:
-                _fail("terminal_output")
-            result = terminal_readback(args); _write(args.output, result)
+            build_reference(source=_source(args.repository_root, args.source_commit), target_fingerprint=args.target_fingerprint, nonce=args.nonce, first_observation=args.first_observation, second_observation=args.second_observation, private_key=args.private_key, valid_seconds=args.valid_seconds, output=args.output, repository_root=args.repository_root); result = {"status": "reference_built"}
+        elif args.mode == "prepare-local-state":
+            result = dict(prepare_local_state(args))
+        elif args.mode == "replay-branch":
+            result = dict(replay_branch(args))
+        elif args.mode == "compare-replays":
+            result = dict(compare_replays(args))
         elif args.mode == "aggregate-custody":
             result = build_aggregate_custody(args)
         elif args.mode == "verify-aggregate-custody":
             result = dict(verify_aggregate_custody(args))
-        elif args.mode == "compare-terminal": result = dict(compare_terminal(_load(args.first), _load(args.second))); _write(args.output, result)
         elif args.mode == "index": index_artifacts(args.artifact_dir, args.file, args.output); result = {"status": "indexed"}
         else: result = cleanup(args.run_id, args.docker)
         print(json.dumps(result, sort_keys=True, separators=(",", ":")))

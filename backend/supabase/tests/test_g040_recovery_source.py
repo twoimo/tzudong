@@ -1,16 +1,47 @@
 from __future__ import annotations
 
 import json
+import importlib.util
+import marshal
 import os
 import stat
 import subprocess
 import sys
 import tempfile
 import unittest
+from types import SimpleNamespace
+from unittest.mock import patch
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import g040_recovery_source as source
+
+EXPECTED_RUNTIME_FILES = (
+    "backend/supabase/scripts/g040_prefix_recovery.py",
+    "backend/supabase/scripts/g040_recovery_authorization.py",
+    "backend/supabase/scripts/g040_reverse_00400.py",
+    "backend/supabase/scripts/g040_recovery_source.py",
+    "backend/supabase/scripts/g040_isolated_bootstrap.py",
+    "backend/supabase/scripts/g040_reference_evidence.py",
+    "backend/supabase/scripts/g040_production_controller.py",
+    "backend/supabase/scripts/g040_clone_rehearsal.py",
+    "backend/supabase/scripts/g040_prefix_executor.py",
+    "backend/supabase/scripts/g037_hosted_closure_contract.py",
+    "backend/supabase/scripts/g037_hosted_closure_executor.py",
+    "backend/supabase/scripts/g037_write_freeze.py",
+    "backend/supabase/scripts/g037_managed_recovery.py",
+    "backend/supabase/scripts/g037_production_controller.py",
+    "backend/supabase/scripts/g037_remediation_authorization.py",
+    "backend/supabase/scripts/g037_supabase_statement_vector.mjs",
+    "backend/supabase/scripts/g037-parser-oracle/go.mod",
+    "backend/supabase/scripts/g037-parser-oracle/go.sum",
+    "backend/supabase/scripts/g037-parser-oracle/main.go",
+    "backend/supabase/scripts/g035_hosted_recovery.py",
+    "backend/supabase/scripts/g035_hosted_recovery_contract.py",
+    "backend/supabase/scripts/preflight_g034_hosted_migration_closure.py",
+    ".github/g034-hosted-migration-closure.v1.json",
+    ".github/workflows/g040-prefix-recovery.yml",
+)
 
 
 class G040RecoverySourceTests(unittest.TestCase):
@@ -38,14 +69,28 @@ class G040RecoverySourceTests(unittest.TestCase):
             path = self.root / relative
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(content)
-        for relative in source._RUNTIME_FILES:
-            if relative == source.MANIFEST_PATH:
+        for relative in EXPECTED_RUNTIME_FILES:
+            if relative == ".github/g034-hosted-migration-closure.v1.json":
                 continue
             path = self.root / relative
             if not path.exists():
                 path.parent.mkdir(parents=True, exist_ok=True)
-                path.write_bytes(b"runtime binding\n")
-        manifest = self.root / source.MANIFEST_PATH
+                if relative in (
+                    "backend/supabase/scripts/g040_isolated_bootstrap.py",
+                    "backend/supabase/scripts/g040_recovery_source.py",
+                ):
+                    source_path = Path(__file__).resolve().parents[1] / "scripts" / Path(relative).name
+                    path.write_bytes(source_path.read_bytes())
+                elif relative == "backend/supabase/scripts/g035_hosted_recovery.py":
+                    path.write_bytes(
+                        b"import sys\n"
+                        b"sys.modules['g040_recovery_source'].assert_isolated_bootstrap()\n"
+                        b"if '--benign-test-mode' not in sys.argv: raise SystemExit(3)\n"
+                        b"print('g035-bootstrap-ok')\n"
+                    )
+                else:
+                    path.write_bytes(b"runtime binding\n")
+        manifest = self.root / ".github/g034-hosted-migration-closure.v1.json"
         manifest.parent.mkdir(parents=True, exist_ok=True)
         manifest.write_bytes(json.dumps({
             "schemaVersion": 1,
@@ -65,13 +110,13 @@ class G040RecoverySourceTests(unittest.TestCase):
         self.git("commit", "-qm", "source")
         self.commit = self.git("rev-parse", "HEAD").strip()
         self.git("checkout", "--detach", "-q")
-        self.inventory = tuple(sorted(set((*source._RUNTIME_FILES, *self.fragments))))
+        self.inventory = tuple(sorted(set((*EXPECTED_RUNTIME_FILES, *self.fragments))))
 
     def tearDown(self):
         self.temp.cleanup()
 
     def git(self, *args):
-        return subprocess.run(["git", "-C", str(self.root), *args], check=True, capture_output=True, text=True).stdout
+        return subprocess.run(["git", "-c", "core.autocrlf=false", "-C", str(self.root), *args], check=True, capture_output=True, text=True).stdout
 
     def verify(self, **kwargs):
         return source.verify_recovery_source(self.root, self.commit, **kwargs)
@@ -87,6 +132,88 @@ class G040RecoverySourceTests(unittest.TestCase):
         self.assertEqual(first.final_commit, self.commit)
         self.assertRegex(first.runtime_source_root, r"^[0-9a-f]{64}$")
         self.assertNotIn(str(self.root), repr(first))
+    def test_production_requires_trusted_in_process_bootstrap_capability(self):
+        with patch.object(source, "_bootstrap_capability", None):
+            self.denied(production=True)
+            with patch.object(source.sys, "flags", SimpleNamespace(isolated=1, safe_path=True)):
+                with self.assertRaises(source.RecoverySourceError):
+                    source._production_bootstrap()
+    def test_entrypoint_assertion_rejects_non_capability_tokens(self):
+        for token in (None, True, False, "trusted", "a" * 64):
+            with patch.object(source, "_bootstrap_capability", token):
+                with self.assertRaisesRegex(source.RecoverySourceError, "^protected recovery source verification failed$"):
+                    source.assert_isolated_bootstrap()
+        with patch.object(source, "_bootstrap_capability", source._CAPABILITY):
+            source.assert_isolated_bootstrap()
+    def test_isolated_stdin_bootstrap_executes_verified_fixture(self):
+        bootstrap = subprocess.run(
+            ["git", "-C", str(self.root), "show", f"{self.commit}:backend/supabase/scripts/g040_isolated_bootstrap.py"],
+            check=True,
+            capture_output=True,
+        ).stdout
+        result = subprocess.run(
+            [
+                sys.executable, "-I", "-", "--repository-root", str(self.root),
+                "--authorized-final-commit", self.commit,
+                "--entrypoint", "backend/supabase/scripts/g040_recovery_source.py",
+            ],
+            input=bootstrap,
+            capture_output=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr.decode("utf-8", "replace"))
+    def test_isolated_stdin_bootstrap_loads_g035_benign_entrypoint(self):
+        bootstrap = subprocess.run(
+            ["git", "-C", str(self.root), "show", f"{self.commit}:backend/supabase/scripts/g040_isolated_bootstrap.py"],
+            check=True,
+            capture_output=True,
+        ).stdout
+        result = subprocess.run(
+            [
+                sys.executable, "-I", "-", "--repository-root", str(self.root),
+                "--authorized-final-commit", self.commit,
+                "--entrypoint", "backend/supabase/scripts/g035_hosted_recovery.py",
+                "--", "--benign-test-mode",
+            ],
+            input=bootstrap,
+            capture_output=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr.decode("utf-8", "replace"))
+        self.assertEqual(result.stdout.decode("utf-8", "replace").strip(), "g035-bootstrap-ok")
+
+    def test_isolated_stdin_bootstrap_rejects_ignored_pyc_before_entrypoint(self):
+        (self.root / "json.pyc").write_bytes(b"malicious")
+        (self.root / ".git" / "info" / "exclude").write_text("json.pyc\n")
+        bootstrap = subprocess.run(
+            ["git", "-C", str(self.root), "show", f"{self.commit}:backend/supabase/scripts/g040_isolated_bootstrap.py"],
+            check=True,
+            capture_output=True,
+        ).stdout
+        result = subprocess.run(
+            [
+                sys.executable, "-I", "-", "--repository-root", str(self.root),
+                "--authorized-final-commit", self.commit,
+                "--entrypoint", "backend/supabase/scripts/g040_recovery_source.py",
+            ],
+            input=bootstrap,
+            capture_output=True,
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(result.stderr.decode("utf-8", "replace").strip(), "protected recovery source verification failed")
+
+    def test_ignored_sourceless_shadow_is_rejected_before_payload_execution(self):
+        marker = self.root / "payload-executed"
+        shadow = self.root / "json.pyc"
+        shadow.write_bytes(
+            importlib.util.MAGIC_NUMBER
+            + b"\0" * 12
+            + marshal.dumps(compile(f"open({str(marker)!r}, 'w').write('executed')", "json.py", "exec"))
+        )
+        (self.root / ".git" / "info" / "exclude").write_text("json.pyc\n")
+        self.assertEqual(self.git("status", "--porcelain", "--ignored", "--", "json.pyc").strip(), "!! json.pyc")
+        with patch.object(source, "_production_bootstrap") as bootstrap:
+            self.denied(production=True)
+        bootstrap.assert_called_once_with()
+        self.assertFalse(marker.exists())
 
     def test_dirty_staged_and_untracked_inventory_shadow_are_denied(self):
         vector = self.root / self.vector
@@ -112,16 +239,23 @@ class G040RecoverySourceTests(unittest.TestCase):
             (self.root / fragment).write_bytes(b"changed fragment\n")
             self.denied()
             self.git("checkout", "--", fragment)
-        self.assertRegex(baseline, r"^[0-9a-f]{64}$")
+        self.assertEqual(self.verify().runtime_source_root, baseline)
     def test_reference_evidence_byte_and_mode_changes_are_rejected(self):
         baseline = self.verify().runtime_source_root
         reference = self.root / self.reference
         reference.write_bytes(b"changed reference evidence\n")
         self.denied()
         self.git("checkout", "--", self.reference)
-        reference.chmod(reference.stat().st_mode | stat.S_IXUSR)
+        self.assertEqual(self.verify().runtime_source_root, baseline)
+
+    def test_dirty_g035_runtime_and_unrelated_import_shadow_are_denied(self):
+        runtime = self.root / self.g035_runtime
+        runtime.write_bytes(b"changed g035 runtime\n")
         self.denied()
-        self.assertRegex(baseline, r"^[0-9a-f]{64}$")
+        self.git("checkout", "--", self.g035_runtime)
+        shadow = self.root / "g040_recovery_source.py"
+        shadow.write_bytes(b"import shadow\n")
+        self.denied()
 
     def test_symlink_path_traversal_missing_and_exact_inventory_are_denied(self):
         vector = self.root / self.vector
@@ -156,25 +290,42 @@ class G040RecoverySourceTests(unittest.TestCase):
         self.git("checkout", "-q", "-B", "attached")
         self.denied()
 
-    def test_inventory_validation_and_domain_separation(self):
-        self.assertIn(self.vector, source.recovery_source_inventory(self.root))
-        self.assertTrue(set(self.fragments).issubset(source.recovery_source_inventory(self.root)))
-        self.assertIn(self.g035_runtime, source.recovery_source_inventory(self.root))
-        runtime = self.root / self.g035_runtime
-        runtime.write_bytes(runtime.read_bytes() + b"drift\n")
-        self.denied()
-        with self.assertRaises(source.RecoverySourceError):
-            source._relative_path("/runtime.py")
+    def test_literal_inventory_is_exact_and_all_entries_are_required(self):
+        baseline = self.verify()
+        self.assertEqual(source.recovery_source_inventory(self.root), self.inventory)
+        self.assertIn(self.vector, self.inventory)
+        self.assertIn(self.g035_runtime, self.inventory)
+        self.assertIn("backend/supabase/scripts/g040_reverse_00400.py", self.inventory)
+
+        for relative in self.inventory:
+            with self.subTest(required_path=relative):
+                path = self.root / relative
+                path.unlink()
+                self.denied()
+                self.git("checkout", "--", relative)
+
+                original = path.read_bytes()
+                path.write_bytes(original + b"mutation\n")
+                self.denied()
+                self.git("checkout", "--", relative)
+
+        self.assertEqual(source.recovery_source_inventory(self.root), self.inventory)
+        self.assertEqual(self.verify(), baseline)
         entries = (("a", "100644", "00" * 32),)
         self.assertNotEqual(source._canonical_root(entries), source._canonical_root((("a", "100755", "00" * 32),)))
         self.assertNotEqual(source._canonical_root(entries), source._canonical_root((("b", "100644", "00" * 32),)))
 
-    def test_any_path_scoped_status_output_is_denied(self):
+    def test_any_unscoped_status_output_is_denied(self):
         def status_output(argv, **kwargs):
-            return subprocess.CompletedProcess(argv, 0, b"R  unexpected\x00", b"")
+            self.assertNotIn("--", argv[6:])
+            return subprocess.CompletedProcess(argv, 0, b"?? shadow.py\x00", b"")
 
         with self.assertRaises(source.RecoverySourceError):
-            source._no_inventory_shadow(self.root, self.inventory, status_output)
+            source._no_worktree_shadow(self.root, status_output)
+
+    def test_unrelated_untracked_import_shadow_is_denied(self):
+        (self.root / "g035_hosted_recovery_contract.py").write_text("shadow\n")
+        self.denied()
 
     def test_malicious_git_output_and_provider_failure_are_sanitized(self):
         class Result:
@@ -196,7 +347,7 @@ class G040RecoverySourceTests(unittest.TestCase):
         self.assertIsNone(caught.exception.__context__)
 
     def test_manifest_inventory_rejects_duplicate_keys_and_structural_drift(self):
-        manifest = self.root / source.MANIFEST_PATH
+        manifest = self.root / ".github/g034-hosted-migration-closure.v1.json"
         manifest.parent.mkdir(parents=True, exist_ok=True)
         payload = {
             "schemaVersion": 1,
@@ -215,7 +366,7 @@ class G040RecoverySourceTests(unittest.TestCase):
         canonical = json.dumps(payload, separators=(",", ":")).encode("ascii")
         manifest.write_bytes(canonical)
         inventory = source.recovery_source_inventory(self.root)
-        self.assertEqual(inventory, tuple(sorted(set((*source._RUNTIME_FILES, *self.fragments)))))
+        self.assertEqual(inventory, self.inventory)
         manifest.write_bytes(canonical + b"\n")
         self.assertEqual(source.recovery_source_inventory(self.root), inventory)
         manifest.write_bytes(canonical + b"\n\n")

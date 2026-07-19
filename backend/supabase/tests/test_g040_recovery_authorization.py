@@ -20,9 +20,9 @@ def authority(now: int = 1000):
     value = {key: "a" * 64 for key in g040._ROOT_FIELDS | g040._RECEIPT_FIELDS | {"target_fingerprint"}}
     value.update(schema=g040.SCHEMA, purpose=g040.PURPOSE, policy=g040.POLICY,
         authorization_id="123e4567-e89b-42d3-a456-426614174000", attempt_id="123e4567-e89b-42d3-a456-426614174001",
-        issued_at=now, expires_at=now + 900, final_recovery_commit="b" * 40,
-        base_commit="92894e41cddb57767c9764d1694992bc0ad9d922", prefix_classification="UNAPPLIED",
-        selected_branch="execute-00400-then-suffix")
+        issued_at=now, expires_at=now + 900, freeze_expires_at=now + 900, archive_bytes=0,
+        final_recovery_commit="b" * 40, base_commit="92894e41cddb57767c9764d1694992bc0ad9d922",
+        prefix_classification="UNAPPLIED", selected_branch="execute-00400-then-suffix")
     return value
 
 def bindings(value): return {key: value[key] for key in g040._BINDINGS}
@@ -45,13 +45,47 @@ class AuthorizationTests(unittest.TestCase):
         self.assertEqual(result.bindings_sha256, g040.canonical_sha256(bindings(value)))
         class Derived(g040.VerifiedAuthorization): pass
         copied = {field.name: getattr(result, field.name) for field in __import__("dataclasses").fields(result)}
-        with tempfile.TemporaryDirectory() as root, tempfile.TemporaryDirectory() as journal:
-            os.chmod(journal, 0o700)
+        with tempfile.TemporaryDirectory() as root:
             with self.assertRaises(g040.AuthorizationError):
-                g040.consume_one_shot_attempt(journal, repository_root=root, authorization=Derived(**copied), callback=lambda _: None, now=1)
+                g040.consume_one_shot_attempt(repository_root=root, authorization=Derived(**copied), callback=lambda _: None, now=1)
         for key in g040._BINDINGS:
             changed = dict(value); changed[key] = "c" * 64 if key != "selected_branch" else "wrong"
             with self.assertRaises(g040.AuthorizationError): g040._validate(value, bindings(changed), 1000)
+    def test_new_authorization_fields_are_exact_and_individually_enforced(self):
+        cases = (
+            ("freeze_expires_at", "not-an-integer", 900),
+            ("target_acl_root", "not-a-sha256", "c" * 64),
+            ("backup_receipt_sha256", "not-a-sha256", "c" * 64),
+            ("capture_receipt_sha256", "not-a-sha256", "c" * 64),
+            ("archive_sha256", "not-a-sha256", "c" * 64),
+            ("archive_bytes", "not-an-integer", 1),
+        )
+        for field, malformed, mismatched in cases:
+            with self.subTest(field=field, condition="present_in_exact_schema"):
+                self.assertIn(field, g040._FIELDS)
+                self.assertIn(field, g040._BINDINGS)
+                self.assertIn(field, g040.VerifiedAuthorization.__dataclass_fields__)
+            with self.subTest(field=field, condition="absent"):
+                value = authority(); value.pop(field)
+                with self.assertRaises(g040.AuthorizationError):
+                    g040._validate(value, bindings(authority()), 1000)
+            with self.subTest(field=field, condition="malformed"):
+                value = authority(); value[field] = malformed
+                with self.assertRaises(g040.AuthorizationError):
+                    g040._validate(value, bindings(value), 1000)
+            with self.subTest(field=field, condition="binding_mismatch"):
+                value = authority(); expected = bindings(value); expected[field] = mismatched
+                with self.assertRaises(g040.AuthorizationError):
+                    g040._validate(value, expected, 1000)
+
+    def test_authorization_and_freeze_expiry_boundaries_are_denied(self):
+        value = authority()
+        with self.assertRaises(g040.AuthorizationError):
+            g040._validate(dict(value, expires_at=1000), bindings(value), 1000)
+        value = authority(now=0)
+        value["freeze_expires_at"] = 800
+        with self.assertRaises(g040.AuthorizationError):
+            g040._validate(value, bindings(value), 800)
 
     def test_stale_cross_branch_duplicate_and_sanitized_errors(self):
         value = authority()
@@ -156,26 +190,33 @@ class AuthorizationTests(unittest.TestCase):
 
 class JournalTests(unittest.TestCase):
     def test_marker_precedes_callback_and_returns_exact_evidence(self):
-        with tempfile.TemporaryDirectory() as root, tempfile.TemporaryDirectory() as journal:
-            os.chmod(journal, 0o700); seen = []
+        with tempfile.TemporaryDirectory() as root, tempfile.TemporaryDirectory() as journal, tempfile.TemporaryDirectory() as alternate:
+            os.chmod(journal, 0o700); os.chmod(alternate, 0o700); seen = []
             def callback(attempt):
                 self.assertIs(type(attempt), g040.AttemptStarted)
                 seen.append(any(Path(journal).iterdir())); return {"sequenced": True}
             with ExitStack() as stack:
                 permissive_windows_custody(stack)
-                attempt, evidence = g040.consume_one_shot_attempt(journal, repository_root=root, authorization=verified(), callback=callback, now=1)
+                stack.enter_context(patch.object(g040, "CANONICAL_JOURNAL_DIRECTORY", Path(journal)))
+                attempt, evidence = g040.consume_one_shot_attempt(repository_root=root, authorization=verified(), callback=callback, now=1)
                 self.assertTrue(seen[0]); self.assertEqual(evidence, {"sequenced": True})
                 self.assertEqual(attempt.receipt_sha256, g040.canonical_sha256({key: getattr(attempt, key) for key in attempt.__dataclass_fields__ if key != "receipt_sha256"}))
-                with self.assertRaises(g040.AuthorizationError): g040.consume_one_shot_attempt(journal, repository_root=root, authorization=verified(), callback=lambda _: None, now=2)
+                with self.assertRaises(TypeError):
+                    g040.consume_one_shot_attempt(alternate, repository_root=root, authorization=verified(), callback=lambda _: None, now=2)
+                self.assertEqual(tuple(Path(alternate).iterdir()), ())
+                with self.assertRaises(g040.AuthorizationError):
+                    g040.consume_one_shot_attempt(repository_root=root, authorization=verified(), callback=lambda _: None, now=2)
 
     def test_callback_failure_retains_marker(self):
         with tempfile.TemporaryDirectory() as root, tempfile.TemporaryDirectory() as journal:
             os.chmod(journal, 0o700)
             with ExitStack() as stack:
                 permissive_windows_custody(stack)
+                stack.enter_context(patch.object(g040, "CANONICAL_JOURNAL_DIRECTORY", Path(journal)))
                 with self.assertRaises(RuntimeError):
-                    g040.consume_one_shot_attempt(journal, repository_root=root, authorization=verified(), callback=lambda _: (_ for _ in ()).throw(RuntimeError("failure")), now=1)
+                    g040.consume_one_shot_attempt(repository_root=root, authorization=verified(), callback=lambda _: (_ for _ in ()).throw(RuntimeError("failure")), now=1)
                 self.assertEqual(len(tuple(Path(journal).iterdir())), 1)
-                with self.assertRaises(g040.AuthorizationError): g040.consume_one_shot_attempt(journal, repository_root=root, authorization=verified(), callback=lambda _: None, now=2)
+                with self.assertRaises(g040.AuthorizationError):
+                    g040.consume_one_shot_attempt(repository_root=root, authorization=verified(), callback=lambda _: None, now=2)
 
 if __name__ == "__main__": unittest.main()
