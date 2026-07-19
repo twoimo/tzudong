@@ -68,6 +68,11 @@ class CloneRehearsalTests(unittest.TestCase):
         path = root / "service.conf"
         path.write_text(f"[g035-local]\nhost={host}\nport=55401\ndbname={db}\nsslmode=disable\napplication_name=g035-local-clone\npassword=never-print\n")
         return path
+    def test_live_identity_uses_a_real_cursor(self):
+        connection = FakeConnection()
+        identity = rehearsal._live_identity(connection)
+        self.assertEqual(identity["server_version_num"], 170006)
+        self.assertIn("pg_control_system", connection.cursor_value.last)
 
     def test_service_schema_exact_image_and_secret_safe_cli(self):
         with tempfile.TemporaryDirectory() as raw:
