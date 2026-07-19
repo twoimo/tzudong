@@ -9,7 +9,7 @@ import unittest
 from argparse import Namespace
 from contextlib import redirect_stderr
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import g040_production_controller as controller
@@ -181,15 +181,67 @@ class G040ProductionControllerTests(unittest.TestCase):
         native = Cursor(rows=[{"version": "00400", "name": "migration", "statements": ["SELECT 1"]}])
         native.description = tuple(type("Column", (), {"name": name})() for name in ("version", "name", "statements"))
         self.assertEqual(controller._G037TupleFetchallCursor(native).fetchall(), [("00400", "migration", ["SELECT 1"])])
-    def test_connection_sets_psycopg_dict_row_factory(self):
-        args = Namespace(repository_root="/checkout", database_url=None, dsn=None, service_file="/service", service_name="locked")
+    def test_connection_sets_service_file_only_during_successful_connect(self):
+        args = Namespace(repository_root="/checkout", database_url=None, dsn=None, service_file="/supplied-service", service_name="locked")
         connection = object()
-        connect = Mock(return_value=connection)
         dict_row = object()
-        psycopg = type("P", (), {"rows": type("Rows", (), {"dict_row": dict_row})(), "connect": connect})()
-        with patch.object(controller.authority, "restrictive_regular_file", return_value=Path("/service")), patch.object(controller, "_stable_bytes", return_value=b"stable"), patch.dict(sys.modules, {"psycopg": psycopg}):
+        def connect(**kwargs):
+            self.assertEqual(os.environ["PGSERVICEFILE"], str(Path("/validated-service").resolve()))
+            self.assertEqual(kwargs, {
+                "service": "locked",
+                "autocommit": False,
+                "connect_timeout": 20,
+                "options": "-c default_transaction_read_only=on",
+                "row_factory": dict_row,
+            })
+            return connection
+        psycopg = type("P", (), {"rows": type("Rows", (), {"dict_row": dict_row})(), "connect": staticmethod(connect)})()
+        with patch.dict(os.environ, {}, clear=True), \
+                patch.object(controller.authority, "restrictive_regular_file", return_value=Path("/validated-service")), \
+                patch.object(controller, "_stable_bytes", return_value=b"stable"), \
+                patch.dict(sys.modules, {"psycopg": psycopg}):
             self.assertIs(controller._connect_service(args, readonly=True), connection)
-        self.assertIs(connect.call_args.kwargs["row_factory"], dict_row)
+            self.assertNotIn("PGSERVICEFILE", os.environ)
+    def test_connection_restores_prior_service_file_after_success(self):
+        args = Namespace(repository_root="/checkout", database_url=None, dsn=None, service_file="/supplied-service", service_name="locked")
+        def connect(**_):
+            self.assertEqual(os.environ["PGSERVICEFILE"], str(Path("/validated-service").resolve()))
+            return object()
+        psycopg = type("P", (), {"rows": type("Rows", (), {"dict_row": object()})(), "connect": staticmethod(connect)})()
+        with patch.dict(os.environ, {"PGSERVICEFILE": "/prior-service"}, clear=True), \
+                patch.object(controller.authority, "restrictive_regular_file", return_value=Path("/validated-service")), \
+                patch.object(controller, "_stable_bytes", return_value=b"stable"), \
+                patch.dict(sys.modules, {"psycopg": psycopg}):
+            controller._connect_service(args, readonly=False)
+            self.assertEqual(os.environ["PGSERVICEFILE"], "/prior-service")
+    def test_connection_failure_restores_absent_service_file_without_leaking_path(self):
+        args = Namespace(repository_root="/checkout", database_url=None, dsn=None, service_file="/secret-service", service_name="locked")
+        def connect(**_):
+            self.assertEqual(os.environ["PGSERVICEFILE"], str(Path("/validated-secret-service").resolve()))
+            raise RuntimeError("password=/do-not-leak")
+        psycopg = type("P", (), {"rows": type("Rows", (), {"dict_row": object()})(), "connect": staticmethod(connect)})()
+        with patch.dict(os.environ, {}, clear=True), \
+                patch.object(controller.authority, "restrictive_regular_file", return_value=Path("/validated-secret-service")), \
+                patch.object(controller, "_stable_bytes", return_value=b"stable"), \
+                patch.dict(sys.modules, {"psycopg": psycopg}):
+            with self.assertRaisesRegex(controller.ControllerError, "^connection_unavailable$") as raised:
+                controller._connect_service(args, readonly=True)
+            self.assertNotIn("PGSERVICEFILE", os.environ)
+        self.assertNotIn("/secret-service", str(raised.exception))
+        self.assertNotIn("password", str(raised.exception))
+    def test_connection_failure_restores_prior_service_file(self):
+        args = Namespace(repository_root="/checkout", database_url=None, dsn=None, service_file="/supplied-service", service_name="locked")
+        psycopg = type("P", (), {
+            "rows": type("Rows", (), {"dict_row": object()})(),
+            "connect": staticmethod(lambda **_: (_ for _ in ()).throw(RuntimeError("connect failed"))),
+        })()
+        with patch.dict(os.environ, {"PGSERVICEFILE": "/prior-service"}, clear=True), \
+                patch.object(controller.authority, "restrictive_regular_file", return_value=Path("/validated-service")), \
+                patch.object(controller, "_stable_bytes", return_value=b"stable"), \
+                patch.dict(sys.modules, {"psycopg": psycopg}):
+            with self.assertRaisesRegex(controller.ControllerError, "^connection_unavailable$"):
+                controller._connect_service(args, readonly=True)
+            self.assertEqual(os.environ["PGSERVICEFILE"], "/prior-service")
     def test_final_readback_passes_g037_a_utc_deadline_under_a_monotonic_statement_budget(self):
         source = type("Source", (), {"final_commit": "b" * 40, "runtime_source_root": "c" * 64})()
         reference = object()

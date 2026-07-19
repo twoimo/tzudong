@@ -134,11 +134,21 @@ def _connect_service(args: Any, *, readonly: bool) -> Any:
     if getattr(args, "database_url", None) is not None or getattr(args, "dsn", None) is not None: _deny("raw_connection_string_forbidden")
     service_file, service_name = getattr(args, "service_file", None), getattr(args, "service_name", None)
     if not isinstance(service_name, str) or not service_name: _deny("restrictive_service_required")
-    before = _stable_bytes(authority.restrictive_regular_file(service_file, "service file", root))
+    service_path = authority.restrictive_regular_file(service_file, "service file", root).resolve()
+    before = _stable_bytes(service_path)
     try:
         import psycopg
-        conn = psycopg.connect(service=service_name, servicefile=str(service_file), autocommit=False, connect_timeout=20, options="-c default_transaction_read_only=on" if readonly else None, row_factory=psycopg.rows.dict_row)
-        if hashlib.sha256(before).digest() != hashlib.sha256(_stable_bytes(Path(service_file))).digest():
+        had_service_file = "PGSERVICEFILE" in os.environ
+        prior_service_file = os.environ.get("PGSERVICEFILE")
+        try:
+            os.environ["PGSERVICEFILE"] = str(service_path)
+            conn = psycopg.connect(service=service_name, autocommit=False, connect_timeout=20, options="-c default_transaction_read_only=on" if readonly else None, row_factory=psycopg.rows.dict_row)
+        finally:
+            if had_service_file:
+                os.environ["PGSERVICEFILE"] = prior_service_file
+            else:
+                os.environ.pop("PGSERVICEFILE", None)
+        if hashlib.sha256(before).digest() != hashlib.sha256(_stable_bytes(service_path)).digest():
             try: conn.close()
             finally: _deny("service_replaced")
         return conn
