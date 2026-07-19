@@ -199,6 +199,83 @@ class CloneRehearsalTests(unittest.TestCase):
         self.assertTrue(all(statement.startswith("DROP ") and statement.endswith(" RESTRICT") for statement in rehearsal.REVERSE_VECTOR))
         self.assertTrue(all("CASCADE" not in statement and "IF EXISTS" not in statement for statement in rehearsal.REVERSE_VECTOR))
         self.assertEqual(rehearsal.REVERSE_VECTOR_SHA256, reverse._vector_sha256())
+    def test_reference_revalidation_preserves_exact_v2_derivation_fields(self):
+        observation = {
+            "clone_nonce": "clone-lineage-nonce",
+            "live_identity_sha256": "0" * 64,
+            "container_id_sha256": "1" * 64,
+            "image_id_sha256": "2" * 64,
+            "image_digest_sha256": "3" * 64,
+            "endpoint_sha256": "4" * 64,
+            "g035_restore_receipt_sha256": "5" * 64,
+            "g035_capture_receipt_sha256": "6" * 64,
+            "restored_archive_sha256": "7" * 64,
+            "capture_receipt_bytes_sha256": "8" * 64,
+            "restore_receipt_bytes_sha256": "9" * 64,
+            "archive_bytes": "a" * 64,
+            "g035_manifest_sha256": "b" * 64,
+            "source_sha256": "c" * 64,
+            "lineage_attestation_path": "attestation",
+            "lineage_signature_path": "signature",
+            "lineage_attestation_sha256": "d" * 64,
+            "lineage_signature_sha256": "e" * 64,
+            "derivation_mode": rehearsal.DERIVATION_MODE,
+            "reverse_vector_sha256": rehearsal.REVERSE_VECTOR_SHA256,
+        }
+        hashes = {
+            "lineage_attestation_sha256": observation["lineage_attestation_sha256"],
+            "lineage_signature_sha256": observation["lineage_signature_sha256"],
+        }
+        with patch.object(rehearsal, "_custody_bytes", return_value=b"{}"), \
+                patch.object(rehearsal, "_load_bytes", return_value={"issued_at_unix": 1, "expires_at_unix": 2}), \
+                patch.object(rehearsal, "_verify_lineage_attestation", return_value=hashes):
+            projected = rehearsal._revalidate_observation_lineage(observation, ".")
+        self.assertEqual(projected["derivation_mode"], rehearsal.DERIVATION_MODE)
+        self.assertEqual(projected["reverse_vector_sha256"], rehearsal.REVERSE_VECTOR_SHA256)
+
+    def test_build_reference_rejects_missing_or_wrong_v2_derivation_before_signing(self):
+        observation = {
+            "clone_nonce": "clone-lineage-nonce",
+            "live_identity_sha256": "0" * 64,
+            "container_id_sha256": "1" * 64,
+            "image_id_sha256": "2" * 64,
+            "image_digest_sha256": "3" * 64,
+            "endpoint_sha256": "4" * 64,
+            "g035_restore_receipt_sha256": "5" * 64,
+            "g035_capture_receipt_sha256": "6" * 64,
+            "restored_archive_sha256": "7" * 64,
+            "capture_receipt_bytes_sha256": "8" * 64,
+            "restore_receipt_bytes_sha256": "9" * 64,
+            "archive_bytes": "a" * 64,
+            "g035_manifest_sha256": "b" * 64,
+            "source_sha256": "c" * 64,
+            "lineage_attestation_path": "attestation",
+            "lineage_signature_path": "signature",
+            "lineage_attestation_sha256": "d" * 64,
+            "lineage_signature_sha256": "e" * 64,
+        }
+        for invalid in (
+            observation,
+            {**observation, "derivation_mode": "wrong-derivation-mode", "reverse_vector_sha256": rehearsal.REVERSE_VECTOR_SHA256},
+            {**observation, "derivation_mode": rehearsal.DERIVATION_MODE, "reverse_vector_sha256": "f" * 64},
+        ):
+            with self.subTest(invalid=invalid):
+                with patch.object(rehearsal, "_load", return_value=invalid), \
+                        patch.object(rehearsal, "sign_reference") as sign_reference:
+                    with self.assertRaisesRegex(rehearsal.RehearsalError, "reference_input"):
+                        rehearsal.build_reference(
+                            source=types.SimpleNamespace(final_commit="a" * 40, runtime_source_root="0" * 64),
+                            target_fingerprint="f" * 64,
+                            nonce="reference-nonce-01",
+                            first_absent="first-absent",
+                            first_full="first-full",
+                            second_absent="second-absent",
+                            second_full="second-full",
+                            private_key="private-key",
+                            output="reference.json",
+                            repository_root=".",
+                        )
+                    sign_reference.assert_not_called()
     def test_service_custody_rejects_repository_file_replacement_and_effective_peer_mismatch(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw); service = self.service(root)
