@@ -1,6 +1,6 @@
 """G037 fail-closed controller contracts; no hosted connection is created here."""
 from __future__ import annotations
-import hashlib, json, re, subprocess, sys, tempfile, time, unittest
+import hashlib, json, re, subprocess, sys, tempfile, time, traceback, unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 from pathlib import Path
@@ -197,6 +197,42 @@ class G037ExecutorTests(unittest.TestCase):
    self.assertEqual(e.source_sql(fixture_root,self_item),b"\nSELECT 1;\n")
    (fixture_root/self_item.path).write_bytes(b"BEGIN;\nCOMMIT;\nSELECT 1;\nCOMMIT;\n")
    with self.assertRaisesRegex(e.ClosureError,"self-wrapper drift"): e.source_sql(fixture_root,self_item)
+ def test_executable_plan_rejects_every_transaction_control_form_after_wrapper_stripping(self):
+  root=Path(__file__).parents[3]; ordinary=next(item for item in c.load_manifest(root).migrations if item.version not in c.SELF_WRAPPING)
+  wrapped=c.Migration(c.SELF_WRAPPING[0],"fixture","fixture.sql","0"*64)
+  def parser_result(item,statements,source_size):
+   return SimpleNamespace(returncode=0,stdout=json.dumps({"schema":"g037-supabase-statement-vector-v1","upstream":{"commit":"6d4c19870ed213ba7f682f117d0345c8a40bfa94","version":"v2.109.1","token":{"path":"apps/cli-go/pkg/parser/token.go","blob":"db008434246be335b9f7abaf0cb66a99a2b40378"},"state":{"path":"apps/cli-go/pkg/parser/state.go","blob":"47775390d1731c0ad29e10b20fb2fe16c8cfcadb"}},"version":item.version,"source_sha256":item.sha256,"source_size":source_size,"statements":statements}))
+  controls=(
+   "ABORT","BEGIN","COMMIT","END","END WORK","END TRANSACTION",
+   "PREPARE TRANSACTION rehearsal","ROLLBACK","SAVEPOINT rehearsal",
+   "RELEASE SAVEPOINT rehearsal","START TRANSACTION",
+  )
+  def adversarial_forms(control):
+   return (
+    f"/* parser comment */ {control};",
+    f"/* outer /* nested */ comment */ {control};",
+    control.replace(" ", " /* inter-keyword comment */ ") + ";",
+    f"-- bare CR comment\r{control};",
+    f"-- CRLF comment\r\n{control};",
+   )
+  for control in controls:
+   for statement in adversarial_forms(control):
+    with self.subTest(control=statement),patch.object(e.subprocess,"run",return_value=parser_result(ordinary,(statement,"SELECT 1;"),(root/ordinary.path).stat().st_size)):
+     with self.assertRaisesRegex(e.ClosureError,"transaction-control drift"): e.vectors(root,ordinary)
+  for statement in ("SELECT 'BEGIN';","SELECT $$START TRANSACTION$$;","SELECT (SAVEPOINT rehearsal);"):
+   with self.subTest(non_control=statement):
+    self.assertFalse(e._has_executable_plan_transaction_control(statement))
+  with tempfile.TemporaryDirectory() as raw:
+   fixture_root=Path(raw); (fixture_root/wrapped.path).write_text("fixture",encoding="utf-8")
+   for control in controls:
+    for statement in adversarial_forms(control):
+     with self.subTest(wrapper_control=statement),patch.object(e.subprocess,"run",return_value=parser_result(wrapped,("BEGIN;",statement,"COMMIT;"),7)):
+      with self.assertRaisesRegex(e.ClosureError,"self-wrapper vector drift"): e.vectors(fixture_root,wrapped)
+  for control in controls:
+   for statement in adversarial_forms(control):
+    with self.subTest(transformed_control=statement),patch.object(e,"_source_bound_rpc_matrix",return_value=c.STATIC_RPC_MATRIX),patch.object(e,"_splice_specs",return_value=()),patch.object(e,"source_sql"),patch.object(e,"vectors",side_effect=[(("epilogue",),("epilogue",)),(("source",),("source",))]),patch.object(e,"transformed_vectors",return_value=(("source",),(statement,))),patch.object(e,"ROLE_PROTOCOL_EPILOGUE_VECTOR_SHA256",e.digest(("epilogue",))):
+     with self.assertRaisesRegex(e.ClosureError,"executable plan transaction-control drift"):
+      e._precompute_execution_plan(root,SimpleNamespace(migrations=(ordinary,)))
  def test_documents_policy_compatibility_is_exact_and_deterministic(self):
   target=SimpleNamespace(version="20260627080000")
   class Cursor:
@@ -270,6 +306,33 @@ class G037ExecutorTests(unittest.TestCase):
    self.assertEqual([sql for sql,_ in cursor.calls].count("BEGIN"),0)
    self.assertTrue(inner)
   terminal.assert_called_once()
+ def test_unspliced_and_spliced_self_wrappers_execute_inner_vectors_and_ledger_original_full_vectors(self):
+  class Cursor:
+   def __init__(self): self.calls=[]
+   def execute(self,sql,params=()): self.calls.append((sql,params))
+  root=Path(__file__).parents[3]; loaded=c.load_manifest(root)
+  unspliced=next(item for item in loaded.migrations if item.version in c.SELF_WRAPPING and item.version not in e._ROLE_SPLICE_VERSIONS)
+  spliced=next(item for item in loaded.migrations if item.version in c.SELF_WRAPPING and item.version in e._ROLE_SPLICE_VERSIONS)
+  splices=e._splice_specs(root,loaded); plan=[]
+  for item in (unspliced,spliced):
+   original_full,original_inner=e.vectors(root,item)
+   transformed_full,transformed_inner=e.transformed_vectors(root,item,splices=splices,original_full=original_full,original_inner=original_inner)
+   plan.append((item,original_full,transformed_full,transformed_inner))
+  cursor=Cursor()
+  with patch.object(e,"remediate_short_url_duplicates",return_value={}),patch.object(e,"_admission_assert"),patch.object(e,"validate_managed_role_coverage"),patch.object(e,"_assert_role_flags"),patch.object(e,"_assert_memberships"),patch.object(e,"_terminal_assert"):
+   e._execute_closure(cursor,root,SimpleNamespace(migrations=(unspliced,spliced)),{},plan=tuple(plan),deadline=int(time.time())+60)
+  expected_inner=[statement for _,_,_,inner in plan for statement in inner]
+  executed=[sql for sql,_ in cursor.calls]
+  self.assertEqual([sql for sql in executed if sql in expected_inner],expected_inner)
+  for _,full,_,inner in plan:
+   self.assertNotIn(full[0],executed)
+   self.assertNotIn(full[-1],executed)
+  inserts=[params for sql,params in cursor.calls if sql.startswith("INSERT INTO supabase_migrations.schema_migrations")]
+  self.assertEqual(inserts,[(item.version,item.name,list(full)) for item,full,_,_ in plan])
+  self.assertEqual([params[2] for params in inserts],[list(full) for _,full,_,_ in plan])
+  self.assertEqual(plan[0][2:],(plan[0][1],plan[0][1][1:-1]))
+  self.assertNotEqual(plan[1][2],plan[1][1])
+  self.assertEqual(plan[1][3],e.vectors(root,spliced,raw=next(entry["transformed"] for entry in splices if entry["version"]==spliced.version),source_sha256=next(entry["group"]["transformed_source_sha256"] for entry in splices if entry["version"]==spliced.version))[1])
  def test_transaction_and_vector_ledger_contract_accepts_exact_rows_and_rejects_drift(self):
   class Cursor:
    description=object()
@@ -413,7 +476,7 @@ class G037ExecutorTests(unittest.TestCase):
    def execute(self,sql,params=()): self.calls.append((sql,params))
   cursor=Cursor(); baseline=tuple((version,name,()) for version,name in c.BASELINE_PAIRS)
   with patch.object(e,"validate_controller_capability"),patch.object(e,"_precompute_execution_plan",return_value=((),())),patch.object(e,"ledger",return_value=baseline),patch.object(e,"_execute_closure") as execute,patch.object(e.time,"time",side_effect=(100,100,100,102)):
-   with self.assertRaisesRegex(e.ClosureError,"expired"):
+   with self.assertRaisesRegex(e.ClosureError,"commit ambiguity: readback only; retry forbidden"):
     e.apply_cursor(cursor,{},root=Path("."),manifest=SimpleNamespace(),freeze_id="f",relation_root="r",acl_root="a",deadline=101,remediation={})
   execute.assert_not_called()
   with patch.object(e,"_admission_assert"),patch.object(e,"remediate_short_url_duplicates") as remediate,patch.object(e,"validate_managed_role_coverage"),patch.object(e.time,"time",return_value=102):
@@ -425,9 +488,30 @@ class G037ExecutorTests(unittest.TestCase):
    def execute(self,*_): pass
   baseline=tuple((version,name,()) for version,name in c.BASELINE_PAIRS)
   with patch.object(e,"validate_controller_capability"),patch.object(e,"_precompute_execution_plan",return_value=((),())),patch.object(e,"_lock_under_controller"),patch.object(e,"ledger",return_value=baseline),patch.object(e,"_execute_closure",return_value={}) as execute,patch.object(e,"_assert_capability_not_expired",side_effect=(None,None,e.ClosureError("controller capability expired"))):
-   with self.assertRaisesRegex(e.ClosureError,"expired"):
+   with self.assertRaisesRegex(e.ClosureError,"commit ambiguity: readback only; retry forbidden"):
     e.apply_cursor(Cursor(),{},root=Path("."),manifest=SimpleNamespace(),freeze_id="f",relation_root="r",acl_root="a",deadline=int(time.time())+60,remediation={})
   execute.assert_called_once()
+ def test_apply_provider_failures_are_bounded_after_admission(self):
+  class Cursor:
+   def execute(self,*_): pass
+  baseline=tuple((version,name,()) for version,name in c.BASELINE_PAIRS)
+  for stage in ("lock","baseline","closure","handoff"):
+   marker=f"provider secret {stage}: SELECT private_value"
+   with self.subTest(stage=stage),patch.object(e,"validate_controller_capability"),patch.object(e,"_precompute_execution_plan",return_value=((),())),patch.object(e,"_lock_under_controller") as lock,patch.object(e,"ledger",return_value=baseline) as read_ledger,patch.object(e,"_execute_closure",return_value={}) as execute,patch.object(e,"_assert_capability_not_expired") as assert_deadline:
+    if stage == "lock":
+     lock.side_effect=RuntimeError(marker)
+    elif stage == "baseline":
+     read_ledger.side_effect=RuntimeError(marker)
+    elif stage == "closure":
+     execute.side_effect=RuntimeError(marker)
+    else:
+     assert_deadline.side_effect=(None,None,e.ClosureError(marker))
+    with self.assertRaisesRegex(e.ClosureError,"commit ambiguity: readback only; retry forbidden") as raised:
+     e.apply_cursor(Cursor(),{},root=Path("."),manifest=SimpleNamespace(),freeze_id="f",relation_root="r",acl_root="a",deadline=int(time.time())+60,remediation={})
+    self.assertNotIn(marker,str(raised.exception))
+    self.assertIsNone(raised.exception.__cause__)
+    self.assertIsNone(raised.exception.__context__)
+    self.assertNotIn(marker,"".join(traceback.format_exception(raised.exception)))
  def test_terminal_readback_rechecks_deadline_after_queries(self):
   manifest=SimpleNamespace(migrations=())
   with patch.object(e,"_terminal_assert",return_value=()),patch.object(e,"_stable_projection_roots",return_value=("catalog","acl")),patch.object(e,"_source_binding",return_value=("commit","source","terminal")),patch.object(e,"_assert_capability_not_expired",side_effect=(None,e.ClosureError("controller capability expired"))):
@@ -441,16 +525,45 @@ class G037ExecutorTests(unittest.TestCase):
     if self.fail_rollback and sql.startswith("ROLLBACK TO SAVEPOINT"):
      raise RuntimeError("rollback failed")
   baseline=tuple((version,name,()) for version,name in c.BASELINE_PAIRS)
-  with patch.object(e,"validate_controller_capability"),patch.object(e,"_precompute_execution_plan",return_value=((),())),patch.object(e,"_lock_under_controller"),patch.object(e,"ledger",return_value=baseline),patch.object(e,"_execute_closure",side_effect=e.ClosureError("controller capability expired")):
+  execution=RuntimeError("provider error: SELECT secret")
+  with patch.object(e,"validate_controller_capability"),patch.object(e,"_precompute_execution_plan",return_value=((),())),patch.object(e,"_lock_under_controller"),patch.object(e,"ledger",return_value=baseline),patch.object(e,"_execute_closure",side_effect=execution):
    cursor=Cursor()
-   with self.assertRaisesRegex(e.ClosureError,"rehearsal failed"):
+   with self.assertRaisesRegex(e.ClosureError,"rehearsal execution failed") as raised:
     e.rehearse_cursor(cursor,{},root=Path("."),manifest=SimpleNamespace(),freeze_id="f",relation_root="r",acl_root="a",deadline=int(time.time())+60,remediation={})
    self.assertIn("ROLLBACK TO SAVEPOINT g037_rehearsal",cursor.events)
    self.assertIn("RELEASE SAVEPOINT g037_rehearsal",cursor.events)
+   self.assertIsNone(raised.exception.__cause__)
+   self.assertIsNone(raised.exception.__context__)
+   self.assertNotIn("provider error", "".join(traceback.format_exception(raised.exception)))
+   self.assertNotIn("SELECT secret", "".join(traceback.format_exception(raised.exception)))
    failed=Cursor(True)
-   with self.assertRaisesRegex(e.ClosureError,"rollback rehearsal failed"):
+   with self.assertRaisesRegex(e.ClosureError,"rehearsal rollback cleanup failed") as rollback_raised:
     e.rehearse_cursor(failed,{},root=Path("."),manifest=SimpleNamespace(),freeze_id="f",relation_root="r",acl_root="a",deadline=int(time.time())+60,remediation={})
+   self.assertNotIn("provider error",str(rollback_raised.exception))
+   self.assertNotIn("SELECT secret",str(rollback_raised.exception))
+   self.assertIsNone(rollback_raised.exception.__cause__)
+   self.assertIsNone(rollback_raised.exception.__context__)
+   self.assertNotIn("provider error", "".join(traceback.format_exception(rollback_raised.exception)))
+   self.assertNotIn("SELECT secret", "".join(traceback.format_exception(rollback_raised.exception)))
    self.assertNotIn("RELEASE SAVEPOINT g037_rehearsal",failed.events)
+ def test_rehearsal_savepoint_provider_failure_is_bounded(self):
+  marker="provider secret: SAVEPOINT g037_rehearsal"
+  class Cursor:
+   def __init__(self): self.events=[]
+   def execute(self,sql,params=()):
+    self.events.append(sql)
+    if sql == "SAVEPOINT g037_rehearsal":
+     raise RuntimeError(marker)
+  cursor=Cursor()
+  with patch.object(e,"validate_controller_capability"),patch.object(e,"_precompute_execution_plan",return_value=((),())):
+   with self.assertRaisesRegex(e.ClosureError,"rehearsal execution failed") as raised:
+    e.rehearse_cursor(cursor,{},root=Path("."),manifest=SimpleNamespace(),freeze_id="f",relation_root="r",acl_root="a",deadline=int(time.time())+60,remediation={})
+  self.assertNotIn(marker,str(raised.exception))
+  self.assertIsNone(raised.exception.__cause__)
+  self.assertIsNone(raised.exception.__context__)
+  self.assertNotIn(marker,"".join(traceback.format_exception(raised.exception)))
+  self.assertNotIn("ROLLBACK TO SAVEPOINT g037_rehearsal",cursor.events)
+  self.assertNotIn("RELEASE SAVEPOINT g037_rehearsal",cursor.events)
  def test_catalog_helpers_and_function_identity_are_search_path_stable(self):
   executor=Path(e.__file__).read_text(encoding="utf-8")
   contract=Path(c.__file__).read_text(encoding="utf-8")
@@ -803,6 +916,8 @@ class G037ExecutorTests(unittest.TestCase):
    r'''REVOKE ordinary_role FROM U&"ordinary\005fmember" UESCAPE '\' GRANTED BY privacy_workflow_owner''',
    r'''GRANT U&"ordinary\005frole" UESCAPE '\' TO ordinary_member GRANTED BY privacy_workflow_owner''',
    r'''GRANT SELECT ON U&"ordinary\005fobject" UESCAPE '\' TO authenticated''',
+   "-- bare CR comment\rGRANT privacy_workflow_owner TO postgres",
+   "-- CRLF comment\r\nREVOKE privacy_workflow_owner FROM postgres",
   ):
    self.assertTrue(e._is_unpinned_managed_role_membership(statement))
   for statement in (
@@ -833,8 +948,15 @@ class G037ExecutorTests(unittest.TestCase):
    "ALTER GROUP ordinary_group ADD USER ordinary_user",
    "ALTER GROUP ordinary_group DROP USER ordinary_user",
    "DROP GROUP IF EXISTS ordinary_group",
+   "ALTER /* nested /* comment */ comment */ GROUP \"privacy_workflow_owner\" ADD /* gap */ USER ordinary_user",
+   "ALTER GROUP /* gap */ privacy_retention_operator_approver DROP USER ordinary_user",
+   "DROP /* gap */ USER \"privacy_retention_legal_approver\"",
+   "ALTER GROUP ordinary_group ADD USER privacy_retention_activation_operator",
    'CREATE USER U&"privacy\\005fworkflow\\005fowner"',
    'ALTER ROLE U&"privacy\\005fworkflow\\005fowner" NOLOGIN',
+   "-- bare CR comment\rALTER GROUP privacy_workflow_owner ADD USER ordinary_user",
+   "-- CRLF comment\r\nALTER GROUP privacy_workflow_owner DROP USER ordinary_user",
+   "-- bare CR comment\rDROP USER privacy_retention_legal_approver",
   ):
    self.assertTrue(e._is_unpinned_managed_role_ddl(statement))
   for statement in (
