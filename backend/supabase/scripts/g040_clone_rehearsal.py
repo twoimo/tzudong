@@ -278,7 +278,11 @@ def preflight(*, service_file: str | Path, service_name: str, image: str, image_
 
 
 def _live_identity(conn: Any) -> Mapping[str, Any]:
-    row = _query_one(conn, "SELECT (pg_control_system()).system_identifier::text AS system_identifier, (SELECT oid::text FROM pg_database WHERE datname=current_database()) AS database_oid, current_database() AS database_name, current_setting('server_version') AS server_version, current_setting('server_version_num')::integer AS server_version_num")
+    cursor = conn.cursor()
+    try:
+        row = _query_one(cursor, "SELECT (pg_control_system()).system_identifier::text AS system_identifier, (SELECT oid::text FROM pg_database WHERE datname=current_database()) AS database_oid, current_database() AS database_name, current_setting('server_version') AS server_version, current_setting('server_version_num')::integer AS server_version_num")
+    finally:
+        cursor.close()
     required = {"system_identifier", "database_oid", "database_name", "server_version", "server_version_num"}
     if (set(row) != required or row["server_version"] != "17.6" or row["server_version_num"] != 170006
             or not all(type(row[key]) is str and row[key] for key in required - {"server_version_num"})):
