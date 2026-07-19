@@ -453,7 +453,7 @@ def _valid_probe(row: Mapping[str, Any], *, full: bool) -> None:
             or row["server_version_num"] != 170006):
         _fail("probe_result")
     expected = (
-        (True, 7, 7, 14, 78, 0, 14, 7, 7, 0, True)
+        (True, 7, 7, 14, 102, 0, 14, 7, 7, 0, True)
         if full else
         (False, 0, 0, 0, 0, 0, 0, 0, 0, 0, True)
     )

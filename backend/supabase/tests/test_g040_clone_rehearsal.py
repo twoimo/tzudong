@@ -36,7 +36,7 @@ class FakeCursor:
             "ledger_count": 28, "v00400_count": 0, "ledger_prefix_shape_ok": True,
             "ledger_sha256": "b" * 64, "schema_exists": full,
             "expected_table_count": 7 if full else 0, "schema_table_count": 7 if full else 0,
-            "schema_index_count": 14 if full else 0, "column_count": 78 if full else 0,
+            "schema_index_count": 14 if full else 0, "column_count": 102 if full else 0,
             "schema_other_relation_count": 0, "touched_function_count": 14 if full else 0,
             "schema_trigger_count": 7 if full else 0, "rls_table_count": 7 if full else 0,
             "policy_count": 0, "acl_contract_ok": True, "exact_pg": True,

@@ -98,7 +98,7 @@ class Tests(unittest.TestCase):
             g.classify_mutation_cursor(Cursor({"transaction_read_only":"on"}, catalog()), ref, expected_prior=prior)
 
     def test_full_partial_and_sanitized_failures(self):
-        full = catalog(schema_exists=True, expected_table_count=7, schema_table_count=7, schema_index_count=14, column_count=78, touched_function_count=14, schema_trigger_count=7, rls_table_count=7, catalog_sha256="d" * 64)
+        full = catalog(schema_exists=True, expected_table_count=7, schema_table_count=7, schema_index_count=14, column_count=102, touched_function_count=14, schema_trigger_count=7, rls_table_count=7, catalog_sha256="d" * 64)
         result = g.classify_locked_cursor(Cursor({"transaction_read_only":"on"}, full, data()), reference(), consume_nonce=lambda _: True)
         self.assertEqual(result.status, "FULL_ESCAPED")
         with self.assertRaises(g.Denial) as denial:
