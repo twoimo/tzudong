@@ -50,6 +50,16 @@ def data(**changes):
     row.update(changes); return row
 
 class Tests(unittest.TestCase):
+    def test_ledger_probe_uses_explicit_row_delimiter(self):
+        self.assertIn(
+            "string_agg(version||chr(30)||name||chr(30)||coalesce(array_to_string(statements,chr(31),'∅'),''),chr(29) ORDER BY version,name)",
+            g.CATALOG_PROBE,
+        )
+        self.assertIn(
+            "string_agg(code||chr(30)||status",
+            g.DATA_PROBE,
+        )
+        self.assertIn(",chr(29) ORDER BY code)", g.DATA_PROBE)
     def test_unapplied_real_artifact_and_nonce_replay(self):
         consumed = set()
         consume = lambda nonce: nonce not in consumed and not consumed.add(nonce)
