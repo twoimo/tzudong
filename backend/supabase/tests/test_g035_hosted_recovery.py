@@ -16,6 +16,7 @@ class ContractTests(unittest.TestCase):
   expected=(("20251219","db_performance_optimization"),("20260118","create_ocr_logs"),("20260425","allow_ocr_logs_user_insert"),("20260506065538","optimize_auth_user_state_indexes"),("20260506085634","optimize_app_query_indexes"),("20260509000100","drop_server_costs"),("20260509000200","drop_admin_ai_settings"),("20260523093000","create_restaurant_popular_rank_snapshots"),("20260525143908","create_youtube_kpi_snapshots"),("20260526083932","add_youtube_channel_growth_snapshot_deltas"),("20260531084217","harden_public_api_grants_and_rpcs"),("20260531084516","tighten_public_table_data_api_grants"))
   reconstructed=(("20260124","create_document_embeddings_bge"),("20260124","create_restaurants"),("20260124","fix_approved_name_sync"),("20260124","update_embeddings_constraint"),("20260131","fix_search_rpc"),("20260213","create_announcements_table_and_seed"),("20260214","fix_approve_edit_backup_stage"),("20260214","fix_restaurant_rpcs_and_search"),("20260214","fix_submission_item_target_to_backup"),("20260514","admin_user_management_audit"),("20260531084217","harden_public_api_grants_and_rpcs"),("20260531084516","tighten_public_table_data_api_grants"))
   self.assertEqual(28,len(manifest.migrations)); self.assertEqual(expected,contract.BASELINE_PAIRS)
+  self.assertGreaterEqual(recovery.CAPTURE_TIMEOUT_SECONDS,3600)
   self.assertTrue(contract.ledger_prefix(manifest,expected))
   self.assertTrue(contract.ledger_prefix(manifest,[list(pair) for pair in expected]))
   mutated=list(expected); mutated[0]=("20260124","db_performance_optimization")
@@ -286,13 +287,16 @@ class ControllerTests(unittest.TestCase):
  def test_exact_current_receipt_and_live_fingerprints_are_required(self):
   manifest=contract.load_manifest(ROOT); observed={"ledger_sha256":"1"*64,"catalog_sha256":"2"*64}; data=self.artifact(manifest,observed)
   result=self.adapter(data,observed); self.assertIn("capture_readiness_sha256",result)
+  self.assertEqual(data["sourceFingerprint"],recovery.digest({"closureMigrationHashes":[entry.sha256 for entry in manifest.migrations],"trackedApprovalSourceHash":recovery.g034_preflight.TRACKED_APPROVAL_SOURCE_SHA256}))
   for change in ({"preflightReceiptId":"0"*64},{"repositoryCommit":"b"*40},{"hostedLedgerFingerprint":"3"*64},{"catalogFingerprint":"4"*64}):
    forged=self.artifact(manifest,observed,**change)
    if "preflightReceiptId" in change: forged["preflightReceiptId"]=change["preflightReceiptId"]
    with self.assertRaisesRegex(recovery.RecoveryError,"readiness"): self.adapter(forged,observed)
- def test_only_remediation_blockers_are_allowed_and_fatal_blockers_rejected(self):
+ def test_only_recovery_blockers_are_allowed_and_fatal_blockers_rejected(self):
   manifest=contract.load_manifest(ROOT); observed={"ledger_sha256":"1"*64,"catalog_sha256":"2"*64}
-  allowed=self.artifact(manifest,observed,blockers=["catalog-prerequisite"]); self.adapter(allowed,observed)
+  for blockers in (["catalog-prerequisite"], ["ledger-terminal"], ["ledger-terminal","clone-required","clone-backup-recovery-required"]):
+   with self.subTest(blockers=blockers):
+    self.adapter(self.artifact(manifest,observed,blockers=blockers),observed)
   for code in ("manifest-invalid","database-url-missing","catalog-read-failed","catalog-rollback-failed","other"):
    bad=self.artifact(manifest,observed,blockers=[code])
    with self.assertRaisesRegex(recovery.RecoveryError,"readiness"): self.adapter(bad,observed)
@@ -307,6 +311,7 @@ class ControllerTests(unittest.TestCase):
    artifact=Path(raw)/"artifact.json"; artifact.write_text(json.dumps({"ledgerExpectedTerminal":terminal}),encoding="utf8")
    def query(conn,sql,params=None):
     if "schema_migrations" in sql: return [(terminal,)]
+    if "to_regclass('public.restaurants_backup')" in sql: return [(True,)]
     if "pg_class" in sql or "pg_proc" in sql: return [(True,)]
     if "pg_locks" in sql: return [(0,)]
     if "pg_roles" in sql: return [(3,)]
