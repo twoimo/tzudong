@@ -76,8 +76,17 @@ class Tests(unittest.TestCase):
             "coalesce(has_schema_privilege('anon',to_regnamespace('privacy_retention'),'USAGE'),false)",
             g.CATALOG_PROBE,
         )
-    def test_catalog_probe_normalizes_effective_acls(self):
+    def test_catalog_probe_canonicalizes_effective_acl_role_identities(self):
         probe = g.CATALOG_PROBE
+        acl_render = (
+            "pg_get_userbyid(acl.grantor)||chr(30)||CASE WHEN acl.grantee=0 THEN 'PUBLIC' "
+            "ELSE pg_get_userbyid(acl.grantee) END||chr(30)||acl.privilege_type||chr(30)||"
+            "acl.is_grantable::text"
+        )
+        acl_order = (
+            "ORDER BY pg_get_userbyid(acl.grantor),CASE WHEN acl.grantee=0 THEN 'PUBLIC' "
+            "ELSE pg_get_userbyid(acl.grantee) END,acl.privilege_type,acl.is_grantable"
+        )
         for raw_acl, object_kind, owner in (
             ("n.nspacl", "n", "n.nspowner"),
             ("c.relacl", "r", "c.relowner"),
@@ -88,24 +97,14 @@ class Tests(unittest.TestCase):
                 probe,
             )
             self.assertNotIn(f"{raw_acl}::text", probe)
-        self.assertEqual(
-            probe.count(
-                "string_agg(acl.grantor::text||chr(30)||acl.grantee::text||chr(30)||"
-                "acl.privilege_type||chr(30)||acl.is_grantable::text,chr(29) "
-                "ORDER BY acl.grantor,acl.grantee,acl.privilege_type,acl.is_grantable)"
-            ),
-            3,
-        )
+        self.assertEqual(probe.count(acl_render), 3)
+        self.assertEqual(probe.count(acl_order), 3)
+        self.assertNotIn("acl.grantor::text", probe)
+        self.assertNotIn("acl.grantee::text", probe)
+        self.assertNotIn("ORDER BY acl.grantor,acl.grantee", probe)
+        self.assertNotIn("WHERE acl.grantee", probe)
+        self.assertNotIn("WHERE acl.grantor", probe)
         self.assertIn("coalesce(d.defaclacl::text,'')", probe)
-
-    def test_catalog_probe_preserves_public_and_non_owner_acl_rows(self):
-        canonical_acl_row = (
-            "acl.grantor::text||chr(30)||acl.grantee::text||chr(30)||"
-            "acl.privilege_type||chr(30)||acl.is_grantable::text"
-        )
-        self.assertEqual(g.CATALOG_PROBE.count(canonical_acl_row), 3)
-        self.assertNotIn("WHERE acl.grantee", g.CATALOG_PROBE)
-        self.assertNotIn("WHERE acl.grantor", g.CATALOG_PROBE)
     def test_unapplied_real_artifact_and_nonce_replay(self):
         consumed = set()
         consume = lambda nonce: nonce not in consumed and not consumed.add(nonce)

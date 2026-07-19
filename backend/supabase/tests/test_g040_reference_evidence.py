@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import base64
 import os
 import sys
@@ -10,6 +11,7 @@ from types import MappingProxyType
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import g037_managed_recovery as crypto
 import g040_reference_evidence as evidence
+import g040_prefix_recovery as classifier
 from g040_recovery_source import SourceBinding
 
 class ReferenceTests(unittest.TestCase):
@@ -82,6 +84,14 @@ class ReferenceTests(unittest.TestCase):
         with self.assertRaises(evidence.ReferenceEvidenceError): evidence.load_reference(b'{"schema":"x","schema":"y"}')
         with self.assertRaises(evidence.ReferenceEvidenceError): self.body(expires=1001)
         self.assertIs(type(self.body()), MappingProxyType)
+    def test_probe_text_pin_matches_the_final_canonical_acl_probe(self):
+        expected = "bcac01a9b5e4bd5a27287f6486082cabeeb3e46d05912a2abd13820f01d89a5c"
+        self.assertEqual(
+            hashlib.sha256((classifier.CATALOG_PROBE + "\n" + classifier.DATA_PROBE).encode()).hexdigest(),
+            expected,
+        )
+        self.assertEqual(classifier.PROBE_TEXT_SHA256, expected)
+        self.assertEqual(evidence._PROBE_TEXT_SHA256, expected)
 
     def test_external_fixed_key_vector_binds_source_target_and_freshness(self):
         key = os.environ.get("G040_OPENSSL_SIGNING_KEY")
