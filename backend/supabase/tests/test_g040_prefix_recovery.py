@@ -60,6 +60,17 @@ class Tests(unittest.TestCase):
             g.DATA_PROBE,
         )
         self.assertIn(",chr(29) ORDER BY code)", g.DATA_PROBE)
+        for internal_char in (
+            "c.relkind::text",
+            "a.attidentity::text",
+            "a.attgenerated::text",
+            "x.contype::text",
+            "p.provolatile::text",
+            "p.proparallel::text",
+            "t.tgenabled::text",
+            "d.defaclobjtype::text",
+        ):
+            self.assertIn(internal_char, g.CATALOG_PROBE)
     def test_unapplied_real_artifact_and_nonce_replay(self):
         consumed = set()
         consume = lambda nonce: nonce not in consumed and not consumed.add(nonce)
