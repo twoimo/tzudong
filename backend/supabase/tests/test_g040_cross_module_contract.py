@@ -12,14 +12,17 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import g040_production_controller as controller
+from g040_reference_evidence import DERIVATION_MODE, REVERSE_VECTOR_SHA256
 
 H = "a" * 64
 
 
 def obs(status="UNAPPLIED", data=None):
     value = dict(status=status, target_fingerprint=H, final_commit="b" * 40, runtime_source_root="c" * 64,
-        reference_receipt_sha256="d" * 64, observation_nonce="nonce_0123456789", ledger_prefix_sha256="e" * 64,
-        catalog_sha256="f" * 64, data_sha256=data, classification_sha256="0" * 64)
+        reference_receipt_sha256="d" * 64, derivation_mode=DERIVATION_MODE,
+        reverse_vector_sha256=REVERSE_VECTOR_SHA256, observation_nonce="nonce_0123456789",
+        ledger_prefix_sha256="e" * 64, catalog_sha256="f" * 64, data_sha256=data,
+        classification_sha256="0" * 64)
     value["classification_sha256"] = controller._hash({k: v for k, v in value.items() if k != "classification_sha256"})
     return controller.prefix.PrefixObservation(**value)
 

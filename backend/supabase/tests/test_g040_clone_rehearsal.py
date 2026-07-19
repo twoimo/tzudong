@@ -11,22 +11,39 @@ import types
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import g040_clone_rehearsal as rehearsal
+import g040_reverse_00400 as reverse
 
 
 class FakeCursor:
     def __init__(self):
-        self.full = False
+        self.full = True
         self.rollbacks = 0
         self.last = ""
         self.statements = []
+        self.session_user = "supabase_admin"
+        self.current_user = "supabase_admin"
+        self.database_name = "g035_local"
+        self.role_switch_user = "postgres"
     def execute(self, sql, *params):
         self.last = sql
         self.statements.append(sql)
         if sql == "SELECT 1":
             self.full = True
+        if sql.startswith("DROP SCHEMA privacy_retention"):
+            self.full = False
+        if sql == "SET LOCAL ROLE postgres":
+            self.current_user = self.role_switch_user
         if sql == "ROLLBACK":
-            self.full = False; self.rollbacks += 1
+            self.full = True
+            self.current_user = self.session_user
+            self.rollbacks += 1
     def fetchone(self):
+        if self.last == rehearsal._REFERENCE_CUSTODY_QUERY:
+            return {
+                "session_user": self.session_user,
+                "current_user": self.current_user,
+                "database_name": self.database_name,
+            }
         if "pg_control_system" in self.last:
             return {"system_identifier": "74234234234", "database_oid": "16384", "database_name": "g035_local", "server_version": "17.6", "server_version_num": 170006}
         if self.last == rehearsal.DATA_PROBE:
@@ -112,7 +129,7 @@ class CloneRehearsalTests(unittest.TestCase):
             with patch.object(rehearsal, "_restore_lineage", return_value={}), patch.object(rehearsal, "_docker_clone_proof", return_value=proof), patch.object(rehearsal, "_live_identity", return_value=live), patch.object(rehearsal, "_custody_bytes", return_value=b"{}"), patch.object(rehearsal, "_verify_lineage_attestation", return_value={"lineage_attestation_sha256": "c" * 64, "lineage_signature_sha256": "d" * 64}):
                 with self.assertRaises(rehearsal.RehearsalError):
                     rehearsal._assert_observation_binding(binding, verified_port=55401, container="clone-a-container", docker="docker", conn=connection, repository_root=root)
-    def test_observation_closes_identity_probe_transactions_before_explicit_snapshots(self):
+    def test_observation_derives_absent_then_recreates_and_rolls_back_to_full(self):
         connection = FakeConnection()
         writes = {}
         with patch.object(rehearsal, "_binding", return_value={}), \
@@ -136,6 +153,52 @@ class CloneRehearsalTests(unittest.TestCase):
         self.assertGreaterEqual(connection.rollback_count, 4)
         self.assertEqual(writes["absent.json"]["state"], "absent")
         self.assertEqual(writes["full.json"]["state"], "full")
+        statements = connection.cursor_value.statements
+        self.assertLess(statements.index(rehearsal._REFERENCE_CUSTODY_QUERY), statements.index("GRANT CREATE ON DATABASE g035_local TO postgres"))
+        self.assertLess(statements.index("GRANT CREATE ON DATABASE g035_local TO postgres"), statements.index("GRANT CREATE ON SCHEMA public TO postgres"))
+        self.assertLess(statements.index("GRANT CREATE ON SCHEMA public TO postgres"), statements.index("SET LOCAL ROLE postgres"))
+        custody_queries = [index for index, statement in enumerate(statements) if statement == rehearsal._REFERENCE_CUSTODY_QUERY]
+        self.assertEqual(len(custody_queries), 2)
+        self.assertLess(statements.index("SET LOCAL ROLE postgres"), custody_queries[1])
+        mutation_search_path = statements.index(
+            'SET LOCAL search_path = "$user", public, auth, extensions',
+            statements.index("SET LOCAL ROLE postgres"),
+        )
+        self.assertLess(custody_queries[1], mutation_search_path)
+        self.assertLess(statements.index("SET LOCAL ROLE postgres"), mutation_search_path)
+        self.assertLess(mutation_search_path, statements.index(rehearsal.REVERSE_VECTOR[0]))
+        read_only_search_paths = [
+            index for index, statement in enumerate(statements)
+            if statement == "SET LOCAL search_path = pg_catalog"
+        ]
+        self.assertEqual(len(read_only_search_paths), 2)
+        self.assertTrue(all(index < statements.index("SET LOCAL ROLE postgres") or index > statements.index("SELECT 1") for index in read_only_search_paths))
+        self.assertLess(statements.index(rehearsal.REVERSE_VECTOR[0]), statements.index("SELECT 1"))
+        self.assertEqual(connection.cursor_value.full, True)
+        self.assertNotIn("COMMIT", statements)
+    def test_reference_custody_rejects_wrong_pregrant_identity_and_postswitch_role(self):
+        cases = (
+            ("session", {"session_user": "postgres"}),
+            ("current_role", {"current_user": "postgres"}),
+            ("database", {"database_name": "postgres"}),
+            ("post_switch_role", {"role_switch_user": "supabase_admin"}),
+        )
+        for name, values in cases:
+            with self.subTest(name=name):
+                cursor = FakeCursor()
+                for key, value in values.items():
+                    setattr(cursor, key, value)
+                expected_current_user = "postgres" if name == "post_switch_role" else "supabase_admin"
+                if name == "post_switch_role":
+                    cursor.execute("SET LOCAL ROLE postgres")
+                with self.assertRaisesRegex(rehearsal.RehearsalError, "reference_custody"):
+                    rehearsal._assert_reference_custody(cursor, current_user=expected_current_user)
+    def test_reverse_vector_is_literal_restrict_only_and_domain_hashed(self):
+        self.assertEqual(type(rehearsal.REVERSE_VECTOR), tuple)
+        self.assertEqual(rehearsal.DERIVATION_MODE, reverse.DERIVATION_MODE)
+        self.assertTrue(all(statement.startswith("DROP ") and statement.endswith(" RESTRICT") for statement in rehearsal.REVERSE_VECTOR))
+        self.assertTrue(all("CASCADE" not in statement and "IF EXISTS" not in statement for statement in rehearsal.REVERSE_VECTOR))
+        self.assertEqual(rehearsal.REVERSE_VECTOR_SHA256, reverse._vector_sha256())
     def test_service_custody_rejects_repository_file_replacement_and_effective_peer_mismatch(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw); service = self.service(root)
@@ -220,6 +283,7 @@ class CloneRehearsalTests(unittest.TestCase):
                         rehearsal._docker_clone_proof("clone-a-container", 55401)
     def test_probe_rows_use_exact_prefix_schema_and_fail_closed(self):
         cursor = FakeCursor()
+        cursor.full = False
         absent = cursor.fetchone()
         rehearsal._valid_probe(absent, full=False)
         cursor.full = True
