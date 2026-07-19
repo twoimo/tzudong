@@ -96,6 +96,17 @@ def runtime_probe(cur):
     denied=bool(q(cur,"SELECT NOT pg_catalog.has_function_privilege(current_user, pg_catalog.to_regprocedure(%s), 'EXECUTE')",(signature,))[0][0])
     if not denied: raise ClosureError("runtime probe authorization unexpectedly granted")
     return denied
+def _line_comment_end(statement, offset):
+    """Return the offset after a PostgreSQL line comment's CR, LF, or CRLF."""
+    newline = offset + 2
+    length = len(statement)
+    while newline < length and statement[newline] not in "\r\n":
+        newline += 1
+    if newline == length:
+        return length
+    if statement[newline] == "\r" and newline + 1 < length and statement[newline + 1] == "\n":
+        return newline + 2
+    return newline + 1
 _WRAPPER_PREAMBLE=rb"(?:\s|--[^\r\n]*(?:\r\n|\n|\r|$)|/\*.*?\*/)*"
 def _top_level_sql_tokens(statement, *, limit=3):
     """Lex only enough unquoted, depth-zero words to classify a statement."""
@@ -107,15 +118,7 @@ def _top_level_sql_tokens(statement, *, limit=3):
         if char.isspace():
             offset += 1
         elif statement.startswith("--", offset):
-            newline = offset + 2
-            while newline < length and statement[newline] not in "\r\n":
-                newline += 1
-            if newline == length:
-                offset = length
-            elif statement[newline] == "\r" and newline + 1 < length and statement[newline + 1] == "\n":
-                offset = newline + 2
-            else:
-                offset = newline + 1
+            offset = _line_comment_end(statement, offset)
         elif statement.startswith("/*", offset):
             comment_depth = 1
             offset += 2
@@ -403,8 +406,7 @@ def _managed_role_tokens(statement):
     offset = 0
     while offset < len(statement):
         if statement.startswith("--", offset):
-            newline = statement.find("\n", offset + 2)
-            offset = len(statement) if newline < 0 else newline + 1
+            offset = _line_comment_end(statement, offset)
         elif statement.startswith("/*", offset):
             comment_depth = 1
             offset += 2
@@ -882,11 +884,13 @@ def rehearse_cursor(cur, capability, *, root, manifest, freeze_id, relation_root
     validate_controller_capability(capability, root=root, manifest=manifest, freeze_id=freeze_id, relation_root=relation_root, acl_root=acl_root, deadline=deadline)
     plan, _splices = _precompute_execution_plan(root, manifest)
     deadline=_deadline_state(deadline)
-    _execute_before_deadline(cur,"SAVEPOINT g037_rehearsal",deadline=deadline)
     remediation_evidence = None
+    savepoint_created = False
     execution_failed = False
     rollback_failed = False
     try:
+        _execute_before_deadline(cur,"SAVEPOINT g037_rehearsal",deadline=deadline)
+        savepoint_created = True
         _lock_under_controller(cur, deadline=deadline)
         if tuple((version,name) for version,name,_ in ledger(cur)) != BASELINE_PAIRS: raise ClosureError("rehearsal baseline mismatch")
         _assert_capability_not_expired(deadline)
@@ -894,11 +898,12 @@ def rehearse_cursor(cur, capability, *, root, manifest, freeze_id, relation_root
     except Exception:
         execution_failed = True
     finally:
-        try:
-            cur.execute("ROLLBACK TO SAVEPOINT g037_rehearsal")
-            cur.execute("RELEASE SAVEPOINT g037_rehearsal")
-        except Exception:
-            rollback_failed = True
+        if savepoint_created:
+            try:
+                cur.execute("ROLLBACK TO SAVEPOINT g037_rehearsal")
+                cur.execute("RELEASE SAVEPOINT g037_rehearsal")
+            except Exception:
+                rollback_failed = True
     if rollback_failed:
         raise ClosureError("rehearsal rollback cleanup failed") from None
     if execution_failed:

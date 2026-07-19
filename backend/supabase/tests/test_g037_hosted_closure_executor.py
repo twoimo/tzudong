@@ -546,6 +546,24 @@ class G037ExecutorTests(unittest.TestCase):
    self.assertNotIn("provider error", "".join(traceback.format_exception(rollback_raised.exception)))
    self.assertNotIn("SELECT secret", "".join(traceback.format_exception(rollback_raised.exception)))
    self.assertNotIn("RELEASE SAVEPOINT g037_rehearsal",failed.events)
+ def test_rehearsal_savepoint_provider_failure_is_bounded(self):
+  marker="provider secret: SAVEPOINT g037_rehearsal"
+  class Cursor:
+   def __init__(self): self.events=[]
+   def execute(self,sql,params=()):
+    self.events.append(sql)
+    if sql == "SAVEPOINT g037_rehearsal":
+     raise RuntimeError(marker)
+  cursor=Cursor()
+  with patch.object(e,"validate_controller_capability"),patch.object(e,"_precompute_execution_plan",return_value=((),())):
+   with self.assertRaisesRegex(e.ClosureError,"rehearsal execution failed") as raised:
+    e.rehearse_cursor(cursor,{},root=Path("."),manifest=SimpleNamespace(),freeze_id="f",relation_root="r",acl_root="a",deadline=int(time.time())+60,remediation={})
+  self.assertNotIn(marker,str(raised.exception))
+  self.assertIsNone(raised.exception.__cause__)
+  self.assertIsNone(raised.exception.__context__)
+  self.assertNotIn(marker,"".join(traceback.format_exception(raised.exception)))
+  self.assertNotIn("ROLLBACK TO SAVEPOINT g037_rehearsal",cursor.events)
+  self.assertNotIn("RELEASE SAVEPOINT g037_rehearsal",cursor.events)
  def test_catalog_helpers_and_function_identity_are_search_path_stable(self):
   executor=Path(e.__file__).read_text(encoding="utf-8")
   contract=Path(c.__file__).read_text(encoding="utf-8")
@@ -898,6 +916,8 @@ class G037ExecutorTests(unittest.TestCase):
    r'''REVOKE ordinary_role FROM U&"ordinary\005fmember" UESCAPE '\' GRANTED BY privacy_workflow_owner''',
    r'''GRANT U&"ordinary\005frole" UESCAPE '\' TO ordinary_member GRANTED BY privacy_workflow_owner''',
    r'''GRANT SELECT ON U&"ordinary\005fobject" UESCAPE '\' TO authenticated''',
+   "-- bare CR comment\rGRANT privacy_workflow_owner TO postgres",
+   "-- CRLF comment\r\nREVOKE privacy_workflow_owner FROM postgres",
   ):
    self.assertTrue(e._is_unpinned_managed_role_membership(statement))
   for statement in (
@@ -934,6 +954,9 @@ class G037ExecutorTests(unittest.TestCase):
    "ALTER GROUP ordinary_group ADD USER privacy_retention_activation_operator",
    'CREATE USER U&"privacy\\005fworkflow\\005fowner"',
    'ALTER ROLE U&"privacy\\005fworkflow\\005fowner" NOLOGIN',
+   "-- bare CR comment\rALTER GROUP privacy_workflow_owner ADD USER ordinary_user",
+   "-- CRLF comment\r\nALTER GROUP privacy_workflow_owner DROP USER ordinary_user",
+   "-- bare CR comment\rDROP USER privacy_retention_legal_approver",
   ):
    self.assertTrue(e._is_unpinned_managed_role_ddl(statement))
   for statement in (
