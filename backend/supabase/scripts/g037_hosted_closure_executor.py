@@ -96,14 +96,106 @@ def runtime_probe(cur):
     denied=bool(q(cur,"SELECT NOT pg_catalog.has_function_privilege(current_user, pg_catalog.to_regprocedure(%s), 'EXECUTE')",(signature,))[0][0])
     if not denied: raise ClosureError("runtime probe authorization unexpectedly granted")
     return denied
+def _line_comment_end(statement, offset):
+    """Return the offset after a PostgreSQL line comment's CR, LF, or CRLF."""
+    newline = offset + 2
+    length = len(statement)
+    while newline < length and statement[newline] not in "\r\n":
+        newline += 1
+    if newline == length:
+        return length
+    if statement[newline] == "\r" and newline + 1 < length and statement[newline + 1] == "\n":
+        return newline + 2
+    return newline + 1
 _WRAPPER_PREAMBLE=rb"(?:\s|--[^\r\n]*(?:\r\n|\n|\r|$)|/\*.*?\*/)*"
+def _top_level_sql_tokens(statement, *, limit=3):
+    """Lex only enough unquoted, depth-zero words to classify a statement."""
+    tokens = []
+    offset = depth = 0
+    length = len(statement)
+    while offset < length and len(tokens) < limit:
+        char = statement[offset]
+        if char.isspace():
+            offset += 1
+        elif statement.startswith("--", offset):
+            offset = _line_comment_end(statement, offset)
+        elif statement.startswith("/*", offset):
+            comment_depth = 1
+            offset += 2
+            while offset < length and comment_depth:
+                if statement.startswith("/*", offset):
+                    comment_depth += 1; offset += 2
+                elif statement.startswith("*/", offset):
+                    comment_depth -= 1; offset += 2
+                else:
+                    offset += 1
+            if comment_depth:
+                return ()
+        elif char == "'":
+            offset += 1
+            while offset < length:
+                if statement[offset] == "'":
+                    if offset + 1 < length and statement[offset + 1] == "'":
+                        offset += 2
+                    else:
+                        offset += 1
+                        break
+                else:
+                    offset += 1
+        elif char == '"':
+            offset += 1
+            while offset < length:
+                if statement[offset] == '"':
+                    if offset + 1 < length and statement[offset + 1] == '"':
+                        offset += 2
+                    else:
+                        offset += 1
+                        break
+                else:
+                    offset += 1
+        elif char == "$":
+            end = offset + 1
+            while end < length and (statement[end].isalnum() or statement[end] == "_"):
+                end += 1
+            if end >= length or statement[end] != "$":
+                offset += 1
+                continue
+            delimiter = statement[offset:end + 1]
+            close = statement.find(delimiter, end + 1)
+            if close < 0:
+                return ()
+            offset = close + len(delimiter)
+        elif char == "(":
+            depth += 1; offset += 1
+        elif char == ")":
+            depth = max(0, depth - 1); offset += 1
+        elif char.isalpha() or char == "_":
+            end = offset + 1
+            while end < length and (statement[end].isalnum() or statement[end] in "_$"):
+                end += 1
+            if not depth:
+                tokens.append(statement[offset:end].lower())
+            offset = end
+        else:
+            offset += 1
+    return tuple(tokens)
+def _has_executable_plan_transaction_control(statement):
+    tokens = _top_level_sql_tokens(statement)
+    return (
+        bool(tokens)
+        and tokens[0] in {"abort", "begin", "commit", "end", "rollback", "savepoint", "release"}
+        or len(tokens) >= 2
+        and tokens[:2] in {("prepare", "transaction"), ("start", "transaction")}
+    )
 def source_sql(root,item):
     raw=(root/item.path).read_bytes() # validate_sources has already raw-hash checked it.
     if item.version not in SELF_WRAPPING:
-        if re.search(rb"(?im)^\s*(begin|commit|rollback)\s*;",raw): raise ClosureError("transaction-control drift")
+        if _has_executable_plan_transaction_control(raw.decode("utf-8")):
+            raise ClosureError("transaction-control drift")
         return raw
     m=re.fullmatch(_WRAPPER_PREAMBLE+rb"BEGIN\s*;(.*?)COMMIT\s*;\s*",raw,re.S|re.I)
-    if not m or re.search(rb"(?im)^\s*(begin|commit|rollback)\s*;",m.group(1)): raise ClosureError("self-wrapper drift")
+    if not m or _has_executable_plan_transaction_control(m.group(1).decode("utf-8")):
+        raise ClosureError("self-wrapper drift")
     return m.group(1)
 def vectors(root,item, *, raw=None, source_sha256=None):
     tool=root/"backend/supabase/scripts/g037_supabase_statement_vector.mjs"
@@ -126,11 +218,15 @@ def vectors(root,item, *, raw=None, source_sha256=None):
     upstream={"commit":"6d4c19870ed213ba7f682f117d0345c8a40bfa94","version":"v2.109.1","token":{"path":"apps/cli-go/pkg/parser/token.go","blob":"db008434246be335b9f7abaf0cb66a99a2b40378"},"state":{"path":"apps/cli-go/pkg/parser/state.go","blob":"47775390d1731c0ad29e10b20fb2fe16c8cfcadb"}}
     if set(data)!={"schema","upstream","version","source_sha256","source_size","statements"} or data["schema"]!="g037-supabase-statement-vector-v1" or data["upstream"]!=upstream or data["version"]!=item.version or data["source_sha256"]!=source_sha256 or data["source_size"]!=source_size or not isinstance(data["statements"],list) or not data["statements"] or any(not isinstance(x,str) or not x.strip() for x in data["statements"]): raise ClosureError("parser vector mismatch")
     full=tuple(data["statements"])
-    controls=lambda statement: bool(re.match(r"(?is)^\s*(begin|commit|rollback)\b",statement))
     if item.version not in SELF_WRAPPING:
-        if any(controls(statement) for statement in full): raise ClosureError("ordinary migration transaction-control drift")
+        if any(_has_executable_plan_transaction_control(statement) for statement in full):
+            raise ClosureError("ordinary migration transaction-control drift")
         return full,full
-    if len(full)<3 or not re.fullmatch(_WRAPPER_PREAMBLE.decode("ascii")+r"begin\s*",full[0],re.S|re.I) or not re.fullmatch(r"(?is)\s*commit\s*",full[-1]) or any(controls(statement) for statement in full[1:-1]): raise ClosureError("self-wrapper vector drift")
+    if (len(full)<3
+            or not re.fullmatch(_WRAPPER_PREAMBLE.decode("ascii")+r"begin\s*",full[0],re.S|re.I)
+            or not re.fullmatch(r"(?is)\s*commit\s*",full[-1])
+            or any(_has_executable_plan_transaction_control(statement) for statement in full[1:-1])):
+        raise ClosureError("self-wrapper vector drift")
     return full,full[1:-1]
 _ROLE_SPLICE_LABELS = (
     "00450-role", "00450-schema", "02000-role", "02000-schema-pair",
@@ -310,13 +406,19 @@ def _managed_role_tokens(statement):
     offset = 0
     while offset < len(statement):
         if statement.startswith("--", offset):
-            newline = statement.find("\n", offset + 2)
-            offset = len(statement) if newline < 0 else newline + 1
+            offset = _line_comment_end(statement, offset)
         elif statement.startswith("/*", offset):
-            end = statement.find("*/", offset + 2)
-            if end < 0:
+            comment_depth = 1
+            offset += 2
+            while offset < len(statement) and comment_depth:
+                if statement.startswith("/*", offset):
+                    comment_depth += 1; offset += 2
+                elif statement.startswith("*/", offset):
+                    comment_depth -= 1; offset += 2
+                else:
+                    offset += 1
+            if comment_depth:
                 return ()
-            offset = end + 2
         elif statement[offset] == "'":
             offset += 1
             while offset < len(statement):
@@ -378,10 +480,10 @@ def _is_unpinned_managed_role_membership(statement):
             granted_by = True
             break
     return any(_is_managed_role(token) for token in (*tokens[1:direction_index], *member_tokens)) or not granted_by
-def transformed_vectors(root, item, *, splices, original_full):
+def transformed_vectors(root, item, *, splices, original_full, original_inner):
     entry = next((entry for entry in splices if entry["version"] == item.version), None)
     if entry is None:
-        return original_full, original_full
+        return original_full, original_inner
     group = entry["group"]
     if digest(original_full) != group["original_vector_sha256"]:
         raise ClosureError("managed role original vector drift")
@@ -739,8 +841,13 @@ def _precompute_execution_plan(root, manifest):
     plan = []; splice_versions = {entry["version"] for entry in splices}
     for item in manifest.migrations:
         source_sql(root, item)
-        original_full, _ = vectors(root, item)
-        transformed_full, transformed_inner = transformed_vectors(root, item, splices=splices, original_full=original_full)
+        original_full, original_inner = vectors(root, item)
+        transformed_full, transformed_inner = transformed_vectors(
+            root, item, splices=splices, original_full=original_full,
+            original_inner=original_inner,
+        )
+        if any(_has_executable_plan_transaction_control(statement) for statement in transformed_inner):
+            raise ClosureError("executable plan transaction-control drift")
         if item.version not in splice_versions:
             if transformed_full != original_full:
                 raise ClosureError("unapproved transformed vector")
@@ -777,24 +884,30 @@ def rehearse_cursor(cur, capability, *, root, manifest, freeze_id, relation_root
     validate_controller_capability(capability, root=root, manifest=manifest, freeze_id=freeze_id, relation_root=relation_root, acl_root=acl_root, deadline=deadline)
     plan, _splices = _precompute_execution_plan(root, manifest)
     deadline=_deadline_state(deadline)
-    _execute_before_deadline(cur,"SAVEPOINT g037_rehearsal",deadline=deadline)
     remediation_evidence = None
-    failure = None
+    savepoint_created = False
+    execution_failed = False
+    rollback_failed = False
     try:
+        _execute_before_deadline(cur,"SAVEPOINT g037_rehearsal",deadline=deadline)
+        savepoint_created = True
         _lock_under_controller(cur, deadline=deadline)
         if tuple((version,name) for version,name,_ in ledger(cur)) != BASELINE_PAIRS: raise ClosureError("rehearsal baseline mismatch")
         _assert_capability_not_expired(deadline)
         remediation_evidence=_execute_closure(cur,root,manifest,remediation,plan=plan,deadline=deadline)
-    except Exception as exc:
-        failure = exc
+    except Exception:
+        execution_failed = True
     finally:
-        try:
-            cur.execute("ROLLBACK TO SAVEPOINT g037_rehearsal")
-            cur.execute("RELEASE SAVEPOINT g037_rehearsal")
-        except Exception as rollback_exc:
-            raise ClosureError("rollback rehearsal failed") from rollback_exc
-    if failure is not None:
-        raise ClosureError("rehearsal failed") from failure
+        if savepoint_created:
+            try:
+                cur.execute("ROLLBACK TO SAVEPOINT g037_rehearsal")
+                cur.execute("RELEASE SAVEPOINT g037_rehearsal")
+            except Exception:
+                rollback_failed = True
+    if rollback_failed:
+        raise ClosureError("rehearsal rollback cleanup failed") from None
+    if execution_failed:
+        raise ClosureError("rehearsal execution failed") from None
     _assert_capability_not_expired(deadline)
     return remediation_evidence
 def apply_cursor(cur, capability, *, root, manifest, freeze_id, relation_root, acl_root, deadline, remediation):
@@ -803,18 +916,20 @@ def apply_cursor(cur, capability, *, root, manifest, freeze_id, relation_root, a
     plan, _splices = _precompute_execution_plan(root, manifest)
     deadline=_deadline_state(deadline)
     _assert_capability_not_expired(deadline)
-    _lock_under_controller(cur, deadline=deadline)
-    if tuple((version,name) for version,name,_ in ledger(cur)) != BASELINE_PAIRS:
-        raise ClosureError("commit ambiguity: readback only; retry forbidden")
-    _assert_capability_not_expired(deadline)
+    failure = False
+    evidence = None
     try:
+        _lock_under_controller(cur, deadline=deadline)
+        if tuple((version,name) for version,name,_ in ledger(cur)) != BASELINE_PAIRS:
+            raise ClosureError("commit ambiguity: readback only; retry forbidden")
+        _assert_capability_not_expired(deadline)
         evidence=_execute_closure(cur,root,manifest,remediation,plan=plan,deadline=deadline)
         _assert_capability_not_expired(deadline)
-        return evidence
-    except ClosureError:
-        raise
-    except Exception as exc:
-        raise ClosureError("commit ambiguous: readback only; retry forbidden") from exc
+    except Exception:
+        failure = True
+    if failure:
+        raise ClosureError("commit ambiguity: readback only; retry forbidden") from None
+    return evidence
 def run(args):
     root=repository_root(Path(__file__).resolve()); manifest=validate_sources(root); base={"commit_sha256":root_commit(root),"source_sha256":digest([x.sha256 for x in manifest.migrations]),"migration_count":28}
     if args.mode=="validate": return receipt(args.mode,"valid",base)
