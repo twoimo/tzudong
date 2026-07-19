@@ -201,7 +201,7 @@ def _write_signed(path: Path, value: Mapping[str, Any]) -> str:
     unsigned = authority.canonical_json_bytes(dict(value))
     signature = _sign_receipt(unsigned)
     raw = authority.canonical_json_bytes({**dict(value), "signature_b64": base64.b64encode(signature).decode("ascii")}) + b"\n"
-    fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY | getattr(os, "O_BINARY", 0), 0o600)
     try:
         authority._write_all(fd, raw); os.fsync(fd)
     finally: os.close(fd)

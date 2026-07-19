@@ -129,6 +129,19 @@ class G040ProductionControllerTests(unittest.TestCase):
             signature = controller._sign_receipt(b"receipt")
         private.public_key().verify(signature, b"receipt")
         self.assertEqual(restrictive.call_args.args, (controller._RECEIPT_SIGNING_KEY, "recovery receipt signing key"))
+    def test_signed_receipt_writer_preserves_canonical_lf_bytes(self):
+        value = {"schema": controller.SCHEMA, "kind": "aggregate-custody", "body": {"receipt": "bound"}}
+        with tempfile.TemporaryDirectory() as raw, \
+                patch.object(controller, "_sign_receipt", return_value=b"s" * 64), \
+                patch.object(controller.authority, "_fsync_directory"):
+            output = Path(raw) / "receipt.json"
+            receipt_sha256 = controller._write_signed(output, value)
+            expected = controller.authority.canonical_json_bytes({
+                **value,
+                "signature_b64": controller.base64.b64encode(b"s" * 64).decode("ascii"),
+            }) + b"\n"
+            self.assertEqual(output.read_bytes(), expected)
+            self.assertEqual(receipt_sha256, hashlib.sha256(expected).hexdigest())
 
     def test_nonce_store_is_directory_backed_and_replay_safe(self):
         with tempfile.TemporaryDirectory() as root, tempfile.TemporaryDirectory() as outside:
