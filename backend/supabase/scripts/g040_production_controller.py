@@ -253,7 +253,7 @@ def _authorization(args: Any, bindings: dict[str, Any]) -> authority.VerifiedAut
 
 def _live_target(cursor: Any) -> str:
     try:
-        cursor.execute("SELECT pg_catalog.pg_control_system().system_identifier::text AS system_identifier, (SELECT oid::text FROM pg_catalog.pg_database WHERE datname = current_database()) AS database_oid, current_setting('server_version_num') AS server_version_num")
+        cursor.execute("SELECT (pg_catalog.pg_control_system()).system_identifier::text AS system_identifier, (SELECT oid::text FROM pg_catalog.pg_database WHERE datname = current_database()) AS database_oid, current_setting('server_version_num') AS server_version_num")
         row = cursor.fetchone()
         if type(row) is not dict or set(row) != {"system_identifier", "database_oid", "server_version_num"}:
             _deny("live_target")
