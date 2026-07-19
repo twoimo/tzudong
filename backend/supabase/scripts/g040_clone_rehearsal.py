@@ -194,9 +194,17 @@ def _connect_service(service_file: str | Path, service_name: str, *, readonly: b
     try:
         import psycopg
         from psycopg.rows import dict_row
-        conn = psycopg.connect(service=service_name, servicefile=str(path), autocommit=False,
-                               connect_timeout=20, row_factory=dict_row,
-                               options="-c default_transaction_read_only=on" if readonly else None)
+        prior_service_file = os.environ.get("PGSERVICEFILE")
+        os.environ["PGSERVICEFILE"] = str(path)
+        try:
+            conn = psycopg.connect(service=service_name, autocommit=False,
+                                   connect_timeout=20, row_factory=dict_row,
+                                   options="-c default_transaction_read_only=on" if readonly else None)
+        finally:
+            if prior_service_file is None:
+                os.environ.pop("PGSERVICEFILE", None)
+            else:
+                os.environ["PGSERVICEFILE"] = prior_service_file
         after_path, after, after_identity = _service_custody(path, root)
         if after_path != path or after != before or after_identity != identity:
             _fail("service_replaced")
