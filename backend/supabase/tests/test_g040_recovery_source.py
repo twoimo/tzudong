@@ -24,6 +24,7 @@ class G040RecoverySourceTests(unittest.TestCase):
         (self.root / "nested").mkdir()
         (self.root / "nested" / "adapter.py").write_bytes(b"adapter\n")
         self.vector = "backend/supabase/scripts/g037_supabase_statement_vector.mjs"
+        self.reference = "backend/supabase/scripts/g040_reference_evidence.py"
         self.fragments = (
             "backend/supabase/migrations/20260713002000_g014_public_api_private_boundary.sql",
             "backend/supabase/migrations/20260713002100_g014_privacy_workflows.sql",
@@ -82,8 +83,8 @@ class G040RecoverySourceTests(unittest.TestCase):
         first = self.verify()
         second = self.verify()
         self.assertEqual(first, second)
-        self.assertEqual(first["commit"], self.commit)
-        self.assertRegex(first["recovery_source_root"], r"^[0-9a-f]{64}$")
+        self.assertEqual(first.final_commit, self.commit)
+        self.assertRegex(first.runtime_source_root, r"^[0-9a-f]{64}$")
         self.assertNotIn(str(self.root), repr(first))
 
     def test_dirty_staged_and_untracked_inventory_shadow_are_denied(self):
@@ -102,7 +103,7 @@ class G040RecoverySourceTests(unittest.TestCase):
         self.git("checkout", "--", self.vector)
 
     def test_statement_vector_and_allowlist_fragment_changes_are_rejected(self):
-        baseline = self.verify()["recovery_source_root"]
+        baseline = self.verify().runtime_source_root
         (self.root / self.vector).write_bytes(b"changed vector\n")
         self.denied()
         self.git("checkout", "--", self.vector)
@@ -110,6 +111,15 @@ class G040RecoverySourceTests(unittest.TestCase):
             (self.root / fragment).write_bytes(b"changed fragment\n")
             self.denied()
             self.git("checkout", "--", fragment)
+        self.assertRegex(baseline, r"^[0-9a-f]{64}$")
+    def test_reference_evidence_byte_and_mode_changes_are_rejected(self):
+        baseline = self.verify().runtime_source_root
+        reference = self.root / self.reference
+        reference.write_bytes(b"changed reference evidence\n")
+        self.denied()
+        self.git("checkout", "--", self.reference)
+        reference.chmod(reference.stat().st_mode | stat.S_IXUSR)
+        self.denied()
         self.assertRegex(baseline, r"^[0-9a-f]{64}$")
 
     def test_symlink_path_traversal_missing_and_exact_inventory_are_denied(self):

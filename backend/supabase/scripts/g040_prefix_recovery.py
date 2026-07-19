@@ -42,77 +42,34 @@ DATA_PROBE = """WITH c AS (SELECT count(*)::bigint classes_count,count(*) FILTER
 PROBE_TEXT_SHA256 = hashlib.sha256((CATALOG_PROBE + "\n" + DATA_PROBE).encode()).hexdigest()
 
 class Denial(RuntimeError):
-    """Typed fail-closed denial with no provider/database detail."""
-    def __init__(self, code: str): self.code = code; super().__init__(code)
+    def __init__(self, code: str):
+        self.code = code
+        super().__init__(code)
 
 @dataclass(frozen=True)
-class Classification:
+class PrefixObservation:
     status: str
-    evidence: Mapping[str, Any]
+    target_fingerprint: str
+    final_commit: str
+    runtime_source_root: str
+    reference_receipt_sha256: str
+    observation_nonce: str
+    ledger_prefix_sha256: str
+    catalog_sha256: str
+    data_sha256: str | None
+    classification_sha256: str
 
 def canonical_bytes(value: Any) -> bytes:
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii")
-
-def _safe_bool(v: Any) -> bool: return type(v) is bool and v
-
-def _hex(v: Any) -> bool: return isinstance(v, str) and bool(_HEX.fullmatch(v))
-
-def load_receipt(raw: bytes | str) -> Mapping[str, Any]:
     try:
-        text = raw.decode("utf-8") if isinstance(raw, bytes) else raw
-        if not isinstance(text, str):
-            raise ValueError
-        def unique(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
-            result: dict[str, Any] = {}
-            for key, value in pairs:
-                if key in result:
-                    raise ValueError("duplicate")
-                result[key] = value
-            return result
-        value = json.loads(text, object_pairs_hook=unique)
+        return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True, allow_nan=False).encode("ascii")
     except Exception:
-        raise Denial("receipt_encoding") from None
-    if not isinstance(value, Mapping):
-        raise Denial("receipt_fields")
-    return value
+        raise Denial("serialization_input") from None
 
-def _validate_receipt(receipt: Mapping[str, Any], verify: Callable[[bytes, Mapping[str, Any]], bool], *, final_commit: str, runtime_source_root: str) -> None:
-    fields = {"schema", "base_commit", "final_commit", "runtime_source_root", "manifest_sha256", "migration_source_sha256", "pg_identity", "probe_text_sha256", "absent_catalog_sha256", "full_catalog_sha256", "full_data_sha256", "ledger_prefix_sha256", "target_fingerprint", "observation_nonce", "signature"}
-    if not isinstance(receipt, Mapping) or set(receipt) != fields:
-        raise Denial("receipt_fields")
-    for key in fields - {"schema", "pg_identity", "target_fingerprint", "observation_nonce", "signature", "base_commit", "final_commit", "runtime_source_root"}:
-        if not _hex(receipt[key]):
-            raise Denial("receipt_hash")
-    if (not isinstance(receipt["base_commit"], str) or not _COMMIT.fullmatch(receipt["base_commit"])
-            or not isinstance(receipt["final_commit"], str) or not _COMMIT.fullmatch(receipt["final_commit"])
-            or not _hex(receipt["runtime_source_root"])):
-        raise Denial("receipt_hash")
-    if (receipt["schema"] != RECEIPT_SCHEMA or receipt["base_commit"] != SOURCE_COMMIT
-            or receipt["final_commit"] != final_commit or receipt["runtime_source_root"] != runtime_source_root
-            or receipt["manifest_sha256"] != MANIFEST_SHA256
-            or receipt["migration_source_sha256"] != MIGRATION_SOURCE_SHA256
-            or receipt["pg_identity"] != PG_IDENTITY or receipt["probe_text_sha256"] != PROBE_TEXT_SHA256
-            or not isinstance(receipt["target_fingerprint"], str) or not receipt["target_fingerprint"]
-            or not isinstance(receipt["signature"], Mapping)
-            or not isinstance(receipt["observation_nonce"], str) or not _NONCE.fullmatch(receipt["observation_nonce"])):
-        raise Denial("receipt_binding")
-    body = {key: receipt[key] for key in fields - {"signature"}}
-    try:
-        ok = verify(canonical_bytes(body), receipt["signature"])
-    except Exception:
-        raise Denial("receipt_verification") from None
-    if ok is not True:
-        raise Denial("receipt_verification")
+def _hex(value: Any) -> bool:
+    return type(value) is str and bool(_HEX.fullmatch(value))
 
 def begin_read_only_snapshot(cursor: Any) -> None:
-    """Diagnostic-only transaction setup; locked integrations must not call this."""
-    for statement in (
-        "BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY",
-        "SET LOCAL statement_timeout = '10s'",
-        "SET LOCAL lock_timeout = '1s'",
-        "SET LOCAL idle_in_transaction_session_timeout = '15s'",
-        "SET LOCAL search_path = pg_catalog",
-    ):
+    for statement in ("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY", "SET LOCAL statement_timeout = '10s'", "SET LOCAL lock_timeout = '1s'", "SET LOCAL idle_in_transaction_session_timeout = '15s'", "SET LOCAL search_path = pg_catalog"):
         try:
             cursor.execute(statement)
         except Exception:
@@ -124,57 +81,69 @@ def _row(cursor: Any, sql: str) -> Mapping[str, Any]:
         row = cursor.fetchone()
     except Exception:
         raise Denial("probe_error") from None
-    if not isinstance(row, Mapping):
+    if type(row) is not dict:
         raise Denial("probe_shape")
     return row
 
-def _evidence(row: Mapping[str, Any]) -> dict[str, Any]:
-    return {key: value for key, value in row.items()
-            if type(value) is bool or (type(value) is int) or _hex(value)}
+def _reference(value: Any) -> Any:
+    from g040_reference_evidence import VerifiedReference
+    if type(value) is not VerifiedReference:
+        raise Denial("reference_type")
+    return value
 
-def classify_locked_cursor(cursor: Any, receipt: Mapping[str, Any], verify_receipt: Callable[[bytes, Mapping[str, Any]], bool], *, observation_nonce: str, target_fingerprint: str, final_commit: str, runtime_source_root: str, consume_nonce: Callable[[str], bool]) -> Classification:
-    """Classify a caller-owned locked read-only transaction without transaction SQL."""
-    if not isinstance(final_commit, str) or not _COMMIT.fullmatch(final_commit) or not _hex(runtime_source_root):
-        raise Denial("source_binding")
-    _validate_receipt(receipt, verify_receipt, final_commit=final_commit, runtime_source_root=runtime_source_root)
-    if observation_nonce != receipt["observation_nonce"] or not isinstance(observation_nonce, str):
-        raise Denial("nonce_binding")
-    try:
-        fresh = consume_nonce(observation_nonce)
-    except Exception:
-        raise Denial("nonce_validation") from None
-    if fresh is not True:
-        raise Denial("nonce_stale")
-    if not isinstance(target_fingerprint, str) or not target_fingerprint or target_fingerprint != receipt["target_fingerprint"]:
-        raise Denial("target_binding")
-    state = _row(cursor, "SELECT current_setting('transaction_read_only', true) AS transaction_read_only")
-    if set(state) != {"transaction_read_only"} or state["transaction_read_only"] != "on":
-        raise Denial("not_read_only")
+def _classify_probes(cursor: Any, reference: Any, *, transaction_read_only: str) -> tuple[str, str, str, str | None]:
+    if _row(cursor, "SELECT current_setting('transaction_read_only', true) AS transaction_read_only") != {"transaction_read_only": transaction_read_only}:
+        raise Denial("not_read_only" if transaction_read_only == "on" else "not_read_write")
     catalog = _row(cursor, CATALOG_PROBE)
     required = {"ledger_count", "v00400_count", "ledger_prefix_shape_ok", "ledger_sha256", "schema_exists", "expected_table_count", "schema_table_count", "schema_index_count", "column_count", "schema_other_relation_count", "touched_function_count", "schema_trigger_count", "rls_table_count", "policy_count", "acl_contract_ok", "exact_pg", "server_version_num", "catalog_sha256"}
-    if set(catalog) != required:
+    counts = required - {"ledger_prefix_shape_ok", "ledger_sha256", "schema_exists", "acl_contract_ok", "exact_pg", "catalog_sha256"}
+    if set(catalog) != required or any(type(catalog[key]) is not int for key in counts) or any(type(catalog[key]) is not bool for key in {"ledger_prefix_shape_ok", "schema_exists", "acl_contract_ok", "exact_pg"}) or not _hex(catalog["ledger_sha256"]) or not _hex(catalog["catalog_sha256"]):
         raise Denial("catalog_shape")
-    counts = ("ledger_count", "v00400_count", "expected_table_count", "schema_table_count", "schema_index_count", "column_count", "schema_other_relation_count", "touched_function_count", "schema_trigger_count", "rls_table_count", "policy_count", "server_version_num")
-    if (any(type(catalog[key]) is not int for key in counts) or not _hex(catalog["ledger_sha256"]) or not _hex(catalog["catalog_sha256"]) or type(catalog["schema_exists"]) is not bool or type(catalog["acl_contract_ok"]) is not bool or type(catalog["exact_pg"]) is not bool):
-        raise Denial("catalog_shape")
-    if not (_safe_bool(catalog["ledger_prefix_shape_ok"]) and catalog["ledger_count"] == 28 and catalog["v00400_count"] == 0 and catalog["ledger_sha256"] == receipt["ledger_prefix_sha256"]):
+    if not (catalog["ledger_prefix_shape_ok"] is True and catalog["ledger_count"] == 28 and catalog["v00400_count"] == 0 and catalog["ledger_sha256"] == reference.ledger_prefix_sha256):
         raise Denial("ledger_conflict")
-    # The absent catalog root includes the pre-existing public 00100 resolver, body and ACL.
-    absent = (not catalog["schema_exists"] and catalog["expected_table_count"] == 0 and catalog["schema_table_count"] == 0 and catalog["schema_index_count"] == 0 and catalog["schema_other_relation_count"] == 0 and catalog["schema_trigger_count"] == 0 and catalog["catalog_sha256"] == receipt["absent_catalog_sha256"])
+    absent = catalog["schema_exists"] is False and all(catalog[key] == 0 for key in ("expected_table_count", "schema_table_count", "schema_index_count", "schema_other_relation_count", "schema_trigger_count")) and catalog["catalog_sha256"] == reference.absent_catalog_sha256
     if absent:
-        return Classification("UNAPPLIED", MappingProxyType(_evidence(catalog)))
-    full = (catalog["schema_exists"] is True and catalog["expected_table_count"] == 7 and catalog["schema_table_count"] == 7 and catalog["schema_index_count"] == 14 and catalog["column_count"] == 78 and catalog["schema_other_relation_count"] == 0 and catalog["touched_function_count"] == 14 and catalog["schema_trigger_count"] == 7 and catalog["rls_table_count"] == 7 and catalog["policy_count"] == 0 and catalog["acl_contract_ok"] is True and catalog["exact_pg"] is True and catalog["server_version_num"] == 170006 and catalog["catalog_sha256"] == receipt["full_catalog_sha256"])
+        return "UNAPPLIED", catalog["ledger_sha256"], catalog["catalog_sha256"], None
+    full = catalog["schema_exists"] is True and catalog["expected_table_count"] == 7 and catalog["schema_table_count"] == 7 and catalog["schema_index_count"] == 14 and catalog["column_count"] == 78 and catalog["schema_other_relation_count"] == 0 and catalog["touched_function_count"] == 14 and catalog["schema_trigger_count"] == 7 and catalog["rls_table_count"] == 7 and catalog["policy_count"] == 0 and catalog["acl_contract_ok"] is True and catalog["exact_pg"] is True and catalog["server_version_num"] == 170006 and catalog["catalog_sha256"] == reference.full_catalog_sha256
     if not full:
         raise Denial("partial_or_ambiguous")
     data = _row(cursor, DATA_PROBE)
     required_data = {"classes_count", "exact_seed_count", "seed_rows_exact", "class_source_count", "legal_hold_count", "work_item_count", "retained_record_count", "run_count", "run_item_count", "runtime_tables_empty", "seed_projection_sha256", "data_shape_sha256"}
-    if set(data) != required_data or any(type(data[key]) is not int for key in required_data - {"seed_rows_exact", "runtime_tables_empty", "seed_projection_sha256", "data_shape_sha256"}):
+    count_data = required_data - {"seed_rows_exact", "runtime_tables_empty", "seed_projection_sha256", "data_shape_sha256"}
+    if set(data) != required_data or any(type(data[key]) is not int for key in count_data) or type(data["seed_rows_exact"]) is not bool or type(data["runtime_tables_empty"]) is not bool or not _hex(data["seed_projection_sha256"]) or not _hex(data["data_shape_sha256"]):
         raise Denial("data_shape")
-    if not (_safe_bool(data["seed_rows_exact"]) and _safe_bool(data["runtime_tables_empty"]) and data["classes_count"] == 10 and data["exact_seed_count"] == 10 and all(data[key] == 0 for key in ("class_source_count", "legal_hold_count", "work_item_count", "retained_record_count", "run_count", "run_item_count")) and _hex(data["seed_projection_sha256"]) and _hex(data["data_shape_sha256"]) and data["data_shape_sha256"] == receipt["full_data_sha256"]):
+    if not (data["seed_rows_exact"] is True and data["runtime_tables_empty"] is True and data["classes_count"] == 10 and data["exact_seed_count"] == 10 and all(data[key] == 0 for key in ("class_source_count", "legal_hold_count", "work_item_count", "retained_record_count", "run_count", "run_item_count")) and data["data_shape_sha256"] == reference.full_data_sha256):
         raise Denial("partial_or_ambiguous")
-    return Classification("FULL_ESCAPED", MappingProxyType({**_evidence(catalog), **_evidence(data)}))
+    return "FULL_ESCAPED", catalog["ledger_sha256"], catalog["catalog_sha256"], data["data_shape_sha256"]
 
-def serialize(result: Classification) -> bytes:
-    if type(result) is not Classification or type(result.evidence) is not MappingProxyType:
+def _observation(reference: Any, status: str, ledger: str, catalog: str, data: str | None) -> PrefixObservation:
+    payload = {"status": status, "target_fingerprint": reference.target_fingerprint, "final_commit": reference.final_commit, "runtime_source_root": reference.runtime_source_root, "reference_receipt_sha256": reference.receipt_sha256, "observation_nonce": reference.observation_nonce, "ledger_prefix_sha256": ledger, "catalog_sha256": catalog, "data_sha256": data}
+    return PrefixObservation(**payload, classification_sha256=hashlib.sha256(canonical_bytes(payload)).hexdigest())
+
+def classify_locked_cursor(cursor: Any, reference: Any, *, consume_nonce: Callable[[str], bool]) -> PrefixObservation:
+    reference = _reference(reference)
+    if not callable(consume_nonce):
+        raise Denial("nonce_validation")
+    try:
+        fresh = consume_nonce(reference.observation_nonce)
+    except Exception:
+        raise Denial("nonce_validation") from None
+    if fresh is not True:
+        raise Denial("nonce_stale")
+    return _observation(reference, *_classify_probes(cursor, reference, transaction_read_only="on"))
+
+def classify_mutation_cursor(cursor: Any, reference: Any, *, expected_prior: PrefixObservation) -> PrefixObservation:
+    reference = _reference(reference)
+    if type(expected_prior) is not PrefixObservation or expected_prior.status not in ("UNAPPLIED", "FULL_ESCAPED"):
+        raise Denial("expected_prior")
+    if (expected_prior.target_fingerprint != reference.target_fingerprint or expected_prior.final_commit != reference.final_commit or expected_prior.runtime_source_root != reference.runtime_source_root or expected_prior.reference_receipt_sha256 != reference.receipt_sha256 or expected_prior.observation_nonce != reference.observation_nonce):
+        raise Denial("prior_binding")
+    observed = _observation(reference, *_classify_probes(cursor, reference, transaction_read_only="off"))
+    if observed != expected_prior:
+        raise Denial("branch_mismatch")
+    return observed
+
+def serialize(result: PrefixObservation) -> bytes:
+    if type(result) is not PrefixObservation:
         raise Denial("serialization_input")
-    return canonical_bytes({"status": result.status, "evidence": _evidence(result.evidence)})
+    return canonical_bytes(result.__dict__)

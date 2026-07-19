@@ -13,6 +13,7 @@ import re
 import stat
 import subprocess
 from pathlib import Path, PurePosixPath
+from dataclasses import dataclass
 from typing import Callable, Sequence
 
 
@@ -27,6 +28,7 @@ _RUNTIME_FILES = (
     "backend/supabase/scripts/g040_prefix_recovery.py",
     "backend/supabase/scripts/g040_recovery_authorization.py",
     "backend/supabase/scripts/g040_recovery_source.py",
+    "backend/supabase/scripts/g040_reference_evidence.py",
     "backend/supabase/scripts/g040_production_controller.py",
     "backend/supabase/scripts/g040_prefix_executor.py",
     "backend/supabase/scripts/g037_hosted_closure_contract.py",
@@ -61,6 +63,11 @@ _MANIFEST_KEYS = (
     "cloneBackupRecoveryRequired",
 )
 
+
+@dataclass(frozen=True)
+class SourceBinding:
+    final_commit: str
+    runtime_source_root: str
 
 def _fail() -> None:
     raise RecoverySourceError("protected recovery source verification failed") from None
@@ -233,18 +240,18 @@ def _canonical_root(entries: Sequence[tuple[str, str, str]]) -> str:
     return digest.hexdigest()
 
 
-def verify_recovery_source(repository_root: Path | str, expected_commit: str, *, runner: Callable[..., subprocess.CompletedProcess[bytes]] = subprocess.run) -> dict[str, str]:
-    """Verify an exact detached commit and return only safe source-binding facts."""
+def verify_recovery_source(repository_root: Path | str, authorized_final_commit: str, *, runner: Callable[..., subprocess.CompletedProcess[bytes]] = subprocess.run) -> SourceBinding:
+    """Verify an exact detached commit and return its canonical source binding."""
     root = Path(repository_root)
-    if not isinstance(expected_commit, str) or not COMMIT_RE.fullmatch(expected_commit):
+    if type(authorized_final_commit) is not str or not COMMIT_RE.fullmatch(authorized_final_commit):
         _fail()
     selected = recovery_source_inventory(root)
     head = _head(root, runner)
-    if head != expected_commit:
+    if head != authorized_final_commit:
         _fail()
     _no_inventory_shadow(root, selected, runner)
     entries = tuple(_verify_path(root, path, runner) for path in selected)
-    return {"commit": head, "recovery_source_root": _canonical_root(entries)}
+    return SourceBinding(final_commit=head, runtime_source_root=_canonical_root(entries))
 
 
-__all__ = ["RecoverySourceError", "recovery_source_inventory", "verify_recovery_source"]
+__all__ = ["RecoverySourceError", "SourceBinding", "recovery_source_inventory", "verify_recovery_source"]
