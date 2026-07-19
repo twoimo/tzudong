@@ -25,6 +25,7 @@ class G040RecoverySourceTests(unittest.TestCase):
         (self.root / "nested" / "adapter.py").write_bytes(b"adapter\n")
         self.vector = "backend/supabase/scripts/g037_supabase_statement_vector.mjs"
         self.reference = "backend/supabase/scripts/g040_reference_evidence.py"
+        self.g035_runtime = "backend/supabase/scripts/g035_hosted_recovery.py"
         self.fragments = (
             "backend/supabase/migrations/20260713002000_g014_public_api_private_boundary.sql",
             "backend/supabase/migrations/20260713002100_g014_privacy_workflows.sql",
@@ -158,6 +159,10 @@ class G040RecoverySourceTests(unittest.TestCase):
     def test_inventory_validation_and_domain_separation(self):
         self.assertIn(self.vector, source.recovery_source_inventory(self.root))
         self.assertTrue(set(self.fragments).issubset(source.recovery_source_inventory(self.root)))
+        self.assertIn(self.g035_runtime, source.recovery_source_inventory(self.root))
+        runtime = self.root / self.g035_runtime
+        runtime.write_bytes(runtime.read_bytes() + b"drift\n")
+        self.denied()
         with self.assertRaises(source.RecoverySourceError):
             source._relative_path("/runtime.py")
         entries = (("a", "100644", "00" * 32),)

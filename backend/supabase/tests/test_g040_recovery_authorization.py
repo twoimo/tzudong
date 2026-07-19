@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from contextlib import ExitStack
+import ctypes
 import hashlib
 import importlib.util
 import os
@@ -84,13 +85,74 @@ class AuthorizationTests(unittest.TestCase):
                     g040.reverify_destructive_stage(envelope, expected_bindings=bindings(value), now=1000)
         self.assertIs(type(result), g040.VerifiedAuthorization)
 
-    def test_windows_acl_rejects_unknown_and_inherited_write(self):
-        with patch.object(g040.subprocess, "run") as run:
-            run.side_effect = [type("R", (), {"stdout": "owner: OWNER\\ME\n"})(), type("R", (), {"stdout": "OWNER\\ME:(F)\nEVIL:(F)\n"})()]
-            self.assertFalse(g040._windows_restrictive(Path("x")))
-        with patch.object(g040.subprocess, "run") as run:
-            run.side_effect = [type("R", (), {"stdout": "owner: OWNER\\ME\n"})(), type("R", (), {"stdout": "OWNER\\ME:(I)(W)\n"})()]
-            self.assertFalse(g040._windows_restrictive(Path("x")))
+    def test_windows_acl_uses_stable_sids_and_rejects_unsafe_aces(self):
+        class Kernel32:
+            def __init__(self): self.freed = []
+            def LocalFree(self, value): self.freed.append(value.value); return None
+
+        class Advapi32:
+            def __init__(self, aces, status=0):
+                self.aces, self.status = aces, status
+                self.buffers = []
+            def GetNamedSecurityInfoW(self, path, kind, flags, owner, group, dacl, sacl, descriptor):
+                ctypes.cast(owner, ctypes.POINTER(ctypes.c_void_p)).contents.value = 0x1111
+                ctypes.cast(dacl, ctypes.POINTER(ctypes.c_void_p)).contents.value = 0x2222
+                ctypes.cast(descriptor, ctypes.POINTER(ctypes.c_void_p)).contents.value = 0x3333
+                return self.status
+            def CreateWellKnownSid(self, sid_type, domain, buffer, size):
+                ctypes.cast(buffer, ctypes.POINTER(ctypes.c_ubyte)).contents.value = 2 if sid_type == g040._WIN_LOCAL_SYSTEM_SID else 3
+                return 1
+            def GetAclInformation(self, dacl, info, size, info_class):
+                ctypes.cast(info, ctypes.POINTER(g040._AclSizeInformation)).contents.ace_count = len(self.aces)
+                return 1
+            def GetAce(self, dacl, index, ace):
+                ctypes.cast(ace, ctypes.POINTER(ctypes.c_void_p)).contents.value = ctypes.addressof(self.aces[index])
+                return 1
+            def EqualSid(self, left, right):
+                left_value = left.value if hasattr(left, "value") else ctypes.cast(left, ctypes.c_void_p).value
+                right_value = right.value if hasattr(right, "value") else ctypes.cast(right, ctypes.c_void_p).value
+                if left_value == 0x1111:
+                    return ctypes.c_ubyte.from_address(right_value).value == 1
+                return ctypes.c_ubyte.from_address(left_value).value == ctypes.c_ubyte.from_address(right_value).value
+
+        def ace(sid, mask=0x001F01FF, flags=0):
+            value = ctypes.create_string_buffer(16)
+            header = g040._AceHeader.from_buffer(value)
+            header.ace_type, header.ace_flags, header.ace_size = g040._ACCESS_ALLOWED_ACE_TYPE, flags, 16
+            ctypes.c_uint32.from_buffer(value, 4).value = mask
+            ctypes.c_ubyte.from_buffer(value, 8).value = sid
+            return value
+
+        cases = (
+            ("localized_owner_name_is_irrelevant", [ace(1), ace(2), ace(3)], 0, True),
+            ("broad_sid_is_denied", [ace(1), ace(4)], 0, False),
+            ("inherited_write_is_denied", [ace(1, flags=g040._INHERITED_ACE)], 0, False),
+            ("api_failure_is_denied", [ace(1)], 5, False),
+        )
+        for name, aces, status, expected in cases:
+            with self.subTest(name=name):
+                kernel32, advapi32 = Kernel32(), Advapi32(aces, status)
+                with patch.object(g040, "_windows_api", return_value=(kernel32, advapi32)):
+                    self.assertIs(g040._windows_restrictive(Path(r"C:\한글\authority")), expected)
+                self.assertEqual(kernel32.freed, [0x3333])
+
+    def test_windows_flush_preserves_x64_handle_and_closes_on_failure(self):
+        class Kernel32:
+            def __init__(self, flush): self.flush, self.closed = flush, []
+            def CreateFileW(self, *args): return 0x1_0000_0001
+            def FlushFileBuffers(self, handle): return self.flush
+            def CloseHandle(self, handle): self.closed.append(handle); return 1
+
+        for flush, raises in ((1, False), (0, True)):
+            with self.subTest(flush=flush):
+                kernel32 = Kernel32(flush)
+                with patch.object(g040.os, "name", "nt"), patch.object(g040, "_windows_api", return_value=(kernel32, object())):
+                    if raises:
+                        with self.assertRaises(g040.AuthorizationError):
+                            g040._fsync_directory(Path(r"C:\journal"))
+                    else:
+                        g040._fsync_directory(Path(r"C:\journal"))
+                self.assertEqual(kernel32.closed, [0x1_0000_0001])
 
 class JournalTests(unittest.TestCase):
     def test_marker_precedes_callback_and_returns_exact_evidence(self):

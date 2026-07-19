@@ -1,0 +1,32 @@
+# G040 prefix recovery runbook
+
+## GitHub Actions boundary
+
+`g040-prefix-recovery.yml` is a zero-cost, read-only source-validation workflow. It is dispatch-only from the exact detached SHA of protected `main`, has read-only repository permission, and exposes only `validate`. It invokes `g040_recovery_source.verify_recovery_source` for that exact source and emits a bounded canonical receipt containing only schema, status, and the runtime source-root hash. The receipt contains no raw refs, URLs, DSNs, credentials, keys, signatures, SQL, rows, migration vectors, or authority material.
+
+GitHub Actions must never run `diagnose`, `readback`, `prepare`, or `execute`, import a production mutation credential, authority private key, restrictive service file, raw DSN, encrypted capture, authorization, or signature, use a service container, paid runner, paid service, hosted mutation, or production rehearsal. `diagnose` and `readback` require local restrictive service and custody artifacts, so they remain local-only alongside `prepare` and `execute`. The workflow does not establish live database state or authorize any recovery action.
+
+## Local operator-only recovery
+
+`diagnose`, `readback`, `prepare`, and `execute` are local operator-only modes outside GitHub. Start from the exact protected-main source checkout; a branch, detached copy with an unverified commit, or changed working tree blocks the operation. Maintain the active human write freeze under external custody. The old freeze and old authority must never be reused.
+
+Before any commit-capable action, create a fresh encrypted capture under restricted local custody and complete two independent free local PostgreSQL 17.6 clone rehearsals. Each rehearsal must start from the fresh capture, use separate local clone environments, verify the exact protected-main source and target bindings, and preserve only sanitized receipt hashes outside the repository. A clone rehearsal is evidence only and is never a hosted or production rehearsal.
+
+Run local `validate`, then local `diagnose` with a restrictive read-only service configuration. `FULL_ESCAPED` is an expected classification: it selects the adoption vector rather than replaying the already-escaped 00400 work. Any partial or ambiguous classification blocks; do not infer success from a timeout, disconnect, incomplete receipt, or partial result.
+
+After the two independent rehearsals, create fresh one-shot authorization under offline restrictive custody, binding the exact source, fresh capture, freeze, target, observed prefix classification, and selected vector. Sign only the exact canonical authorization bytes with the offline authority. Do not put private keys, raw authorization bytes, signatures, service configuration, raw DSNs, or credentials in the checkout, GitHub, logs, artifacts, arguments, caches, tickets, or chat. Old authority must never be reused.
+Controller receipts are a separate online evidence boundary, never destructive authorization. Prefix-observation, aggregate-custody, prepared-intent, final, outcome, and readback receipts use only the fixed controller-receipt public verifier and the restrictive local `~/.g040-recovery/receipt-signing-key.pem` private path. The offline authorization public key is reserved strictly for verification of destructive authorization; its private key must never be available to, configured for, or accessed by the controller. Never reuse, substitute, derive, or conflate either keypair.
+
+## Offline clone-lineage attestation
+
+A G035 capture/restore receipt is self-hashed inventory only; it cannot promote itself into clone lineage. Before `bind-restore`, an external offline custodian must attest the exact canonical G040 lineage document and provide its detached signature from restrictive custody outside this checkout. The runner accepts the document and signature only from outside-repository paths and verifies them only with the fixed clone-lineage public key (`de810d6b46b4032803f0a28d8febf9f574738df86ff3dd0a90e703c680018c28`).
+
+The canonical document binds the stable capture and restore receipt bytes, encrypted archive bytes and size, G035 source and manifest hashes, clone nonce, connected local PostgreSQL identity, Docker container/image/loopback endpoint proof, and a fresh lifetime of at most 900 seconds. `bind-restore` independently reconstructs every field, requires byte-for-byte canonical equality and fixed-key verification, and hashes the input artifacts before and after verification to reject replacement. The controller-signed clone binding retains restrictive external attestation and signature paths as well as their hashes; before every observation and promotion it reopens those stable files and revalidates canonical bytes, exact expected body, fixed clone-lineage public-key signature, freshness, hashes, and replacement checks. A controller receipt cannot promote forged lineage hashes or substitute lineage files.
+
+This clone-lineage key is neither the offline destructive-authorization key nor the online controller receipt key. The controller runtime never receives the clone-lineage private key, its path, or a signing command; failed, expired, malformed, substituted, or wrong-key attestations block the bind.
+The service file is a restrictive regular file outside the repository. Before and after every clone connection, the runner reopens it through custody, compares its bytes and file identity, and rejects replacement. The effective libpq peer must report exactly `127.0.0.1` and the parsed service port; that port must also exactly match the Docker loopback proof. Repository-resident, permissive, replaced, or mismatched-peer service files block the rehearsal.
+Only the local controller may run `prepare` and then `execute`. The authorized recovery is one transaction/one commit: it must lock, revalidate bindings, perform the selected vector, write the ledger state, and commit once. A rollback or uncertain outcome blocks automatic retry and requires fresh operator review, capture, rehearsal, and one-shot authorization.
+
+## Fixed post-commit readback
+
+Immediately after the single commit, run the fixed local `readback` from the same exact protected-main source and retain the sanitized final receipt under restricted custody. Readback must confirm the committed terminal ledger, catalog, data, and authorization bindings. GitHub source validation cannot replace the required fixed local post-commit readback.

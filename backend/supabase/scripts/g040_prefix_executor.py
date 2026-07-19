@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import math
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -10,7 +11,7 @@ from typing import Any
 
 from g037_hosted_closure_contract import BASELINE_PAIRS, Manifest, canonical_bytes, terminal_spec, validate_sources
 from g037_hosted_closure_executor import ClosureError, terminal_readback_assert, vectors
-from g040_prefix_recovery import Denial, PrefixObservation, classify_mutation_cursor
+from g040_prefix_recovery import Denial, PrefixObservation, TABLES, classify_mutation_cursor, probe_full_data_root
 from g040_recovery_authorization import AttemptStarted, VerifiedAuthorization
 from g040_recovery_source import SourceBinding
 from g040_reference_evidence import VerifiedReference
@@ -18,6 +19,8 @@ from g040_reference_evidence import VerifiedReference
 _PREFIX_COUNT = 28
 _TERMINAL_ROWS = 40
 _V00400 = ("20260712000400", "g010_retention_separation")
+_MAX_STATEMENT_TIMEOUT_MILLISECONDS = 2_147_483_647
+_STATEMENT_TIMEOUT_SQL = "SELECT pg_catalog.set_config('statement_timeout', %s, true)"
 _SUFFIX = (
     ("20260712000500", "g010_incident_workflow"),
     ("20260712000600", "g010_ocr_log_minimization"),
@@ -34,6 +37,9 @@ _SUFFIX = (
 _LOCK_SQL = (
     "SELECT pg_catalog.pg_advisory_xact_lock(6040, 400)",
     "LOCK TABLE supabase_migrations.schema_migrations IN ACCESS EXCLUSIVE MODE",
+)
+_DATA_LOCK_SQL = tuple(
+    f"LOCK TABLE privacy_retention.{table} IN SHARE ROW EXCLUSIVE MODE" for table in TABLES
 )
 
 
@@ -78,6 +84,7 @@ class ExecutorEvidence:
     terminal_acl_root: str
     terminal_ledger_root: str
     terminal_spec_root: str
+    terminal_data_root: str
     evidence_sha256: str
 
 
@@ -85,14 +92,54 @@ def _deny(code: str) -> None:
     raise Denial(code)
 
 
-def _deadline(deadline_monotonic: Any) -> None:
-    if type(deadline_monotonic) not in (int, float) or time.monotonic() >= deadline_monotonic:
+def preflight_deadline(deadline_monotonic: Any) -> None:
+    if (type(deadline_monotonic) not in (int, float)
+            or (type(deadline_monotonic) is float and not math.isfinite(deadline_monotonic))
+            or time.monotonic() >= deadline_monotonic):
         _deny("deadline")
 
 
-def _execute(cursor: Any, sql: str, params: tuple[Any, ...] = (), *, version: str | None = None, ordinal: int | None = None) -> None:
+def _deadline(deadline_monotonic: Any) -> None:
+    preflight_deadline(deadline_monotonic)
+
+
+def _remaining_milliseconds(deadline_monotonic: float) -> str:
+    _deadline(deadline_monotonic)
+    remaining = int((deadline_monotonic - time.monotonic()) * 1000)
+    if remaining <= 1:
+        _deny("deadline")
+    timeout_milliseconds = min(remaining - 1, _MAX_STATEMENT_TIMEOUT_MILLISECONDS)
+    if timeout_milliseconds <= 0:
+        _deny("deadline")
+    return str(timeout_milliseconds)
+
+
+class _DeadlineCursor:
+    """Cursor adapter which refreshes a fail-closed timeout for every nested statement."""
+
+    def __init__(self, cursor: Any, deadline_monotonic: float):
+        self._cursor = cursor
+        self._deadline_monotonic = deadline_monotonic
+
+    def execute(self, sql: str, params: tuple[Any, ...] = ()) -> None:
+        _execute(
+            self._cursor,
+            sql,
+            params,
+            deadline_monotonic=self._deadline_monotonic,
+        )
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._cursor, name)
+
+
+def _execute(cursor: Any, sql: str, params: tuple[Any, ...] = (), *, deadline_monotonic: float | None = None, version: str | None = None, ordinal: int | None = None) -> None:
     try:
+        if deadline_monotonic is not None:
+            cursor.execute(_STATEMENT_TIMEOUT_SQL, (_remaining_milliseconds(deadline_monotonic),))
         cursor.execute(sql, params)
+    except Denial:
+        raise
     except Exception:
         if version is not None and ordinal is not None:
             raise ExecutionDenial(version=version, ordinal=ordinal, statement=sql) from None
@@ -104,6 +151,8 @@ def _ledger(cursor: Any) -> tuple[tuple[str, str, tuple[str, ...]], ...]:
         cursor.execute("SELECT version,name,statements FROM supabase_migrations.schema_migrations ORDER BY version,name")
         rows = cursor.fetchall()
         result = tuple((str(version), str(name), tuple(statements)) for version, name, statements in rows)
+    except Denial:
+        raise
     except Exception:
         _deny("ledger_read")
     if any(not version or not name or any(type(statement) is not str or not statement.strip() for statement in statements) for version, name, statements in result):
@@ -182,8 +231,8 @@ def build_execution_plan(repository_root: Path, manifest: Manifest, *, source: S
     return RecoveryExecutionPlan(root, manifest, source, reference, observation, authorization, observation.status, compiled, spec)
 
 
-def _insert(cursor: Any, item: Any, full: tuple[str, ...]) -> None:
-    _execute(cursor, "INSERT INTO supabase_migrations.schema_migrations(version,name,statements) VALUES (%s,%s,%s)", (item.version, item.name, list(full)))
+def _insert(cursor: Any, item: Any, full: tuple[str, ...], *, deadline_monotonic: float) -> None:
+    _execute(cursor, "INSERT INTO supabase_migrations.schema_migrations(version,name,statements) VALUES (%s,%s,%s)", (item.version, item.name, list(full)), deadline_monotonic=deadline_monotonic)
 
 
 def _validate_attempt(plan: RecoveryExecutionPlan, attempt: Any) -> AttemptStarted:
@@ -205,9 +254,10 @@ def _validate_attempt(plan: RecoveryExecutionPlan, attempt: Any) -> AttemptStart
 
 def apply_locked_cursor(cursor: Any, *, plan: RecoveryExecutionPlan, attempt: AttemptStarted, deadline_monotonic: float) -> ExecutorEvidence:
     """Apply an already-verified plan in a caller-owned transaction without transaction control."""
+    preflight_deadline(deadline_monotonic)
     attempt = _validate_attempt(plan, attempt)
-    _deadline(deadline_monotonic)
-    _execute(cursor, "SELECT current_setting('transaction_read_only', true)")
+    timed_cursor = _DeadlineCursor(cursor, deadline_monotonic)
+    _execute(cursor, "SELECT current_setting('transaction_read_only', true)", deadline_monotonic=deadline_monotonic)
     try:
         state = cursor.fetchone()
     except Exception:
@@ -215,12 +265,19 @@ def apply_locked_cursor(cursor: Any, *, plan: RecoveryExecutionPlan, attempt: At
     if state not in (("off",), {"transaction_read_only": "off"}):
         _deny("not_read_write")
     for sql in _LOCK_SQL:
-        _execute(cursor, sql)
-    _deadline(deadline_monotonic)
-    locked = classify_mutation_cursor(cursor, plan.reference, expected_prior=plan.observation)
+        _execute(cursor, sql, deadline_monotonic=deadline_monotonic)
+    if plan.branch == "FULL_ESCAPED":
+        for sql in _DATA_LOCK_SQL:
+            _execute(cursor, sql, deadline_monotonic=deadline_monotonic)
+    locked = classify_mutation_cursor(
+        timed_cursor,
+        plan.reference,
+        expected_prior=plan.observation,
+        statement_executor=timed_cursor.execute,
+    )
     if type(locked) is not PrefixObservation or locked != plan.observation or locked.status != plan.branch:
         _deny("branch_mismatch")
-    rows = _ledger(cursor)
+    rows = _ledger(timed_cursor)
     expected_prefix = BASELINE_PAIRS + tuple((item.version, item.name) for item, _, _ in plan.compiled[:16])
     expected_vectors = tuple((item.version, item.name, full) for item, full, _ in plan.compiled[:16])
     if (len(rows) != _PREFIX_COUNT or tuple((version, name) for version, name, _ in rows) != expected_prefix
@@ -231,19 +288,28 @@ def apply_locked_cursor(cursor: Any, *, plan: RecoveryExecutionPlan, attempt: At
     applied = 0
     if plan.branch == "UNAPPLIED":
         for ordinal, statement in enumerate(v00400[2], start=1):
-            _deadline(deadline_monotonic)
-            _execute(cursor, statement, version=v00400[0].version, ordinal=ordinal)
+            _execute(cursor, statement, deadline_monotonic=deadline_monotonic, version=v00400[0].version, ordinal=ordinal)
             applied += 1
-    _insert(cursor, v00400[0], v00400[1])
+        for sql in _DATA_LOCK_SQL:
+            _execute(cursor, sql, deadline_monotonic=deadline_monotonic)
+    data_root = probe_full_data_root(
+        timed_cursor,
+        plan.reference,
+        statement_executor=timed_cursor.execute,
+    )
+    if data_root != plan.authorization.target_data_root:
+        _deny("terminal_data_mismatch")
+    _insert(cursor, v00400[0], v00400[1], deadline_monotonic=deadline_monotonic)
     for item, full, executable in plan.compiled[17:]:
         for ordinal, statement in enumerate(executable, start=1):
-            _deadline(deadline_monotonic)
-            _execute(cursor, statement, version=item.version, ordinal=ordinal)
+            _execute(cursor, statement, deadline_monotonic=deadline_monotonic, version=item.version, ordinal=ordinal)
             applied += 1
-        _insert(cursor, item, full)
+        _insert(cursor, item, full, deadline_monotonic=deadline_monotonic)
     _deadline(deadline_monotonic)
     try:
-        terminal = terminal_readback_assert(cursor, plan.repository_root, plan.manifest, deadline=deadline_monotonic)
+        terminal = terminal_readback_assert(timed_cursor, plan.repository_root, plan.manifest)
+    except Denial:
+        raise
     except Exception:
         _deny("terminal_mismatch")
     required = {"catalog_root", "acl_root", "ledger_root", "terminal_spec"}
@@ -260,9 +326,9 @@ def apply_locked_cursor(cursor: Any, *, plan: RecoveryExecutionPlan, attempt: At
         "attempt_receipt_sha256": attempt.receipt_sha256, "applied_statement_count": applied,
         "terminal_rows": _TERMINAL_ROWS, "terminal_catalog_root": terminal["catalog_root"],
         "terminal_acl_root": terminal["acl_root"], "terminal_ledger_root": terminal["ledger_root"],
-        "terminal_spec_root": terminal["terminal_spec"],
+        "terminal_spec_root": terminal["terminal_spec"], "terminal_data_root": data_root,
     }
     return ExecutorEvidence(**payload, evidence_sha256=hashlib.sha256(canonical_bytes(payload)).hexdigest())
 
 
-__all__ = ["ExecutionDenial", "ExecutorEvidence", "RecoveryExecutionPlan", "apply_locked_cursor", "build_execution_plan"]
+__all__ = ["ExecutionDenial", "ExecutorEvidence", "RecoveryExecutionPlan", "apply_locked_cursor", "build_execution_plan", "preflight_deadline"]

@@ -28,7 +28,7 @@ _PROBE_TEXT_SHA256 = "ad29dbb017133b9af05f0ec9a9d278e1001ce0308f467f57d34ea1ef19
 _HEX = re.compile(r"^[0-9a-f]{64}$")
 _COMMIT = re.compile(r"^[0-9a-f]{40}$")
 _NONCE = re.compile(r"^[A-Za-z0-9_-]{16,128}$")
-_BODY_FIELDS = ("schema", "base_commit", "final_commit", "runtime_source_root", "manifest_sha256", "migration_source_sha256", "pg_identity", "probe_text_sha256", "absent_catalog_sha256", "full_catalog_sha256", "full_data_sha256", "ledger_prefix_sha256", "target_fingerprint", "observation_nonce", "issued_at_unix", "expires_at_unix", "first_clone_identity", "first_clone_nonce", "first_restore_receipt_sha256", "second_clone_identity", "second_clone_nonce", "second_restore_receipt_sha256", "reference_public_key_sha256")
+_BODY_FIELDS = ("schema", "base_commit", "final_commit", "runtime_source_root", "manifest_sha256", "migration_source_sha256", "pg_identity", "probe_text_sha256", "absent_catalog_sha256", "full_catalog_sha256", "full_data_sha256", "ledger_prefix_sha256", "target_fingerprint", "observation_nonce", "issued_at_unix", "expires_at_unix", "first_clone_identity", "first_clone_nonce", "first_live_identity_sha256", "first_container_id_sha256", "first_image_id_sha256", "first_image_digest_sha256", "first_endpoint_sha256", "first_g035_restore_receipt_sha256", "first_capture_receipt_sha256", "first_restored_archive_sha256", "first_capture_receipt_bytes_sha256", "first_restore_receipt_bytes_sha256", "first_lineage_attestation_sha256", "first_lineage_signature_sha256", "second_clone_identity", "second_clone_nonce", "second_live_identity_sha256", "second_container_id_sha256", "second_image_id_sha256", "second_image_digest_sha256", "second_endpoint_sha256", "second_g035_restore_receipt_sha256", "second_capture_receipt_sha256", "second_restored_archive_sha256", "second_capture_receipt_bytes_sha256", "second_restore_receipt_bytes_sha256", "second_lineage_attestation_sha256", "second_lineage_signature_sha256", "reference_public_key_sha256")
 
 class ReferenceEvidenceError(RuntimeError):
     pass
@@ -66,8 +66,8 @@ class VerifiedReference:
     manifest_sha256: str; migration_source_sha256: str; pg_identity: str; probe_text_sha256: str
     absent_catalog_sha256: str; full_catalog_sha256: str; full_data_sha256: str; ledger_prefix_sha256: str
     target_fingerprint: str; observation_nonce: str; issued_at_unix: int; expires_at_unix: int
-    first_clone_identity: str; first_clone_nonce: str; first_restore_receipt_sha256: str
-    second_clone_identity: str; second_clone_nonce: str; second_restore_receipt_sha256: str
+    first_clone_identity: str; first_clone_nonce: str; first_live_identity_sha256: str; first_container_id_sha256: str; first_image_id_sha256: str; first_image_digest_sha256: str; first_endpoint_sha256: str; first_g035_restore_receipt_sha256: str; first_capture_receipt_sha256: str; first_restored_archive_sha256: str; first_capture_receipt_bytes_sha256: str; first_restore_receipt_bytes_sha256: str; first_lineage_attestation_sha256: str; first_lineage_signature_sha256: str
+    second_clone_identity: str; second_clone_nonce: str; second_live_identity_sha256: str; second_container_id_sha256: str; second_image_id_sha256: str; second_image_digest_sha256: str; second_endpoint_sha256: str; second_g035_restore_receipt_sha256: str; second_capture_receipt_sha256: str; second_restored_archive_sha256: str; second_capture_receipt_bytes_sha256: str; second_restore_receipt_bytes_sha256: str; second_lineage_attestation_sha256: str; second_lineage_signature_sha256: str
     reference_public_key_sha256: str; signature_b64: str; receipt_sha256: str
 
 def _body_dict(value: VerifiedReference | Mapping[str, Any]) -> dict[str, Any]:
@@ -80,46 +80,45 @@ def _body_dict(value: VerifiedReference | Mapping[str, Any]) -> dict[str, Any]:
     return dict(value)
 
 def validate_reference_body(body: Mapping[str, Any]) -> MappingProxyType:
-    _assert_constants()
-    value = _body_dict(body)
-    if (value["schema"] != SCHEMA or value["base_commit"] != BASE_COMMIT or value["manifest_sha256"] != _MANIFEST_SHA256 or value["migration_source_sha256"] != _MIGRATION_SOURCE_SHA256 or value["pg_identity"] != PG_IDENTITY or value["probe_text_sha256"] != _PROBE_TEXT_SHA256 or value["reference_public_key_sha256"] != PUBLIC_KEY_SHA256 or type(value["final_commit"]) is not str or not _COMMIT.fullmatch(value["final_commit"]) or not all(_sha(value[key]) for key in ("runtime_source_root", "absent_catalog_sha256", "full_catalog_sha256", "full_data_sha256", "ledger_prefix_sha256", "target_fingerprint", "first_restore_receipt_sha256", "second_restore_receipt_sha256")) or not all(_nonce(value[key]) for key in ("observation_nonce", "first_clone_identity", "first_clone_nonce", "second_clone_identity", "second_clone_nonce")) or type(value["issued_at_unix"]) is not int or type(value["expires_at_unix"]) is not int or value["issued_at_unix"] < 0 or value["expires_at_unix"] <= value["issued_at_unix"] or value["expires_at_unix"] - value["issued_at_unix"] > 900):
+    _assert_constants(); value = _body_dict(body)
+    hashes = ("runtime_source_root", "absent_catalog_sha256", "full_catalog_sha256", "full_data_sha256", "ledger_prefix_sha256", "target_fingerprint", "first_live_identity_sha256", "first_container_id_sha256", "first_image_id_sha256", "first_image_digest_sha256", "first_endpoint_sha256", "first_g035_restore_receipt_sha256", "first_capture_receipt_sha256", "first_restored_archive_sha256", "first_capture_receipt_bytes_sha256", "first_restore_receipt_bytes_sha256", "first_lineage_attestation_sha256", "first_lineage_signature_sha256", "second_live_identity_sha256", "second_container_id_sha256", "second_image_id_sha256", "second_image_digest_sha256", "second_endpoint_sha256", "second_g035_restore_receipt_sha256", "second_capture_receipt_sha256", "second_restored_archive_sha256", "second_capture_receipt_bytes_sha256", "second_restore_receipt_bytes_sha256", "second_lineage_attestation_sha256", "second_lineage_signature_sha256")
+    if (value["schema"] != SCHEMA or value["base_commit"] != BASE_COMMIT or value["manifest_sha256"] != _MANIFEST_SHA256 or value["migration_source_sha256"] != _MIGRATION_SOURCE_SHA256 or value["pg_identity"] != PG_IDENTITY or value["probe_text_sha256"] != _PROBE_TEXT_SHA256 or value["reference_public_key_sha256"] != PUBLIC_KEY_SHA256 or type(value["final_commit"]) is not str or not _COMMIT.fullmatch(value["final_commit"]) or not all(_sha(value[key]) for key in hashes) or not all(_nonce(value[key]) for key in ("observation_nonce", "first_clone_nonce", "second_clone_nonce")) or not all(_sha(value[key]) for key in ("first_clone_identity", "second_clone_identity")) or type(value["issued_at_unix"]) is not int or type(value["expires_at_unix"]) is not int or value["issued_at_unix"] < 0 or value["expires_at_unix"] <= value["issued_at_unix"] or value["expires_at_unix"] - value["issued_at_unix"] > 900):
         _fail()
-    if len({value["first_clone_identity"], value["second_clone_identity"]}) != 2 or len({value["first_clone_nonce"], value["second_clone_nonce"]}) != 2 or len({value["first_restore_receipt_sha256"], value["second_restore_receipt_sha256"]}) != 2:
+    if len({value["first_clone_identity"], value["second_clone_identity"]}) != 2 or len({value["first_clone_nonce"], value["second_clone_nonce"]}) != 2 or len({value["first_live_identity_sha256"], value["second_live_identity_sha256"]}) != 2 or len({value["first_container_id_sha256"], value["second_container_id_sha256"]}) != 2 or len({value["first_g035_restore_receipt_sha256"], value["second_g035_restore_receipt_sha256"]}) != 2 or len({value["first_lineage_attestation_sha256"], value["second_lineage_attestation_sha256"]}) != 2 or len({value["first_lineage_signature_sha256"], value["second_lineage_signature_sha256"]}) != 2:
         _fail()
     return MappingProxyType(value)
+
 
 def load_reference(raw: bytes | str) -> MappingProxyType:
     try:
         text = raw.decode("ascii") if type(raw) is bytes else raw
-        if type(text) is not str:
-            _fail()
+        if type(text) is not str: _fail()
         value = json.loads(text, object_pairs_hook=_pairs)
-        if type(value) is not dict or canonical_bytes(value) != text.encode("ascii"):
-            _fail()
-    except ReferenceEvidenceError:
-        raise
-    except Exception:
-        _fail()
+        if type(value) is not dict or canonical_bytes(value) != text.encode("ascii"): _fail()
+    except ReferenceEvidenceError: raise
+    except Exception: _fail()
     return MappingProxyType(value)
 
+
 def build_clone_run(absent: Mapping[str, Any], full: Mapping[str, Any]) -> MappingProxyType:
-    required = {"clone_identity", "clone_nonce", "restore_receipt_sha256", "state", "ledger_prefix_sha256", "catalog_sha256"}
-    if type(absent) is not MappingProxyType or type(full) is not MappingProxyType or set(absent) != required or set(full) != required | {"data_sha256"} or absent["state"] != "absent" or full["state"] != "full": _fail()
-    for key in ("clone_identity", "clone_nonce", "restore_receipt_sha256", "ledger_prefix_sha256"):
-        if absent[key] != full[key]: _fail()
-    result = {"clone_identity": absent["clone_identity"], "clone_nonce": absent["clone_nonce"], "restore_receipt_sha256": absent["restore_receipt_sha256"], "absent_catalog_sha256": absent["catalog_sha256"], "full_catalog_sha256": full["catalog_sha256"], "full_data_sha256": full["data_sha256"], "ledger_prefix_sha256": absent["ledger_prefix_sha256"]}
-    if not _nonce(result["clone_identity"]) or not _nonce(result["clone_nonce"]) or any(not _sha(result[key]) for key in result if key not in {"clone_identity", "clone_nonce"}): _fail()
+    proof = {"clone_identity", "clone_nonce", "live_identity_sha256", "container_id_sha256", "image_id_sha256", "image_digest_sha256", "endpoint_sha256", "g035_restore_receipt_sha256", "g035_capture_receipt_sha256", "restored_archive_sha256", "capture_receipt_bytes_sha256", "restore_receipt_bytes_sha256", "lineage_attestation_sha256", "lineage_signature_sha256"}
+    required = proof | {"state", "ledger_prefix_sha256", "catalog_sha256"}
+    if type(absent) is not MappingProxyType or type(full) is not MappingProxyType or set(absent) != required or set(full) != required | {"data_sha256"} or absent["state"] != "absent" or full["state"] != "full" or any(absent[key] != full[key] for key in proof | {"ledger_prefix_sha256"}): _fail()
+    result = {key: absent[key] for key in proof} | {"absent_catalog_sha256": absent["catalog_sha256"], "full_catalog_sha256": full["catalog_sha256"], "full_data_sha256": full["data_sha256"], "ledger_prefix_sha256": absent["ledger_prefix_sha256"]}
+    if not _nonce(result["clone_nonce"]) or any(not _sha(result[key]) for key in result if key != "clone_nonce"): _fail()
     return MappingProxyType(result)
 
+
 def compare_clone_runs(first: Mapping[str, Any], second: Mapping[str, Any]) -> MappingProxyType:
-    fields = {"clone_identity", "clone_nonce", "restore_receipt_sha256", "absent_catalog_sha256", "full_catalog_sha256", "full_data_sha256", "ledger_prefix_sha256"}
-    if type(first) not in (dict, MappingProxyType) or type(second) not in (dict, MappingProxyType) or set(first) != fields or set(second) != fields: _fail()
-    if any(first[key] == second[key] for key in ("clone_identity", "clone_nonce", "restore_receipt_sha256")) or any(first[key] != second[key] for key in fields - {"clone_identity", "clone_nonce", "restore_receipt_sha256"}): _fail()
-    return MappingProxyType({key: first[key] for key in fields - {"clone_identity", "clone_nonce", "restore_receipt_sha256"}})
+    fields = {"clone_identity", "clone_nonce", "live_identity_sha256", "container_id_sha256", "image_id_sha256", "image_digest_sha256", "endpoint_sha256", "g035_restore_receipt_sha256", "g035_capture_receipt_sha256", "restored_archive_sha256", "capture_receipt_bytes_sha256", "restore_receipt_bytes_sha256", "lineage_attestation_sha256", "lineage_signature_sha256", "absent_catalog_sha256", "full_catalog_sha256", "full_data_sha256", "ledger_prefix_sha256"}
+    distinct = {"clone_identity", "clone_nonce", "g035_restore_receipt_sha256", "live_identity_sha256", "container_id_sha256", "lineage_attestation_sha256", "lineage_signature_sha256"}
+    if type(first) not in (dict, MappingProxyType) or type(second) not in (dict, MappingProxyType) or set(first) != fields or set(second) != fields or any(first[key] == second[key] for key in distinct) or any(first[key] != second[key] for key in fields - distinct): _fail()
+    return MappingProxyType({key: first[key] for key in ("absent_catalog_sha256", "full_catalog_sha256", "full_data_sha256", "ledger_prefix_sha256")})
+
 
 def build_reference_body(*, final_commit: str, runtime_source_root: str, target_fingerprint: str, observation_nonce: str, issued_at_unix: int, expires_at_unix: int, first_clone: Mapping[str, Any], second_clone: Mapping[str, Any]) -> MappingProxyType:
     roots = compare_clone_runs(first_clone, second_clone)
-    body = {"schema": SCHEMA, "base_commit": BASE_COMMIT, "final_commit": final_commit, "runtime_source_root": runtime_source_root, "manifest_sha256": _MANIFEST_SHA256, "migration_source_sha256": _MIGRATION_SOURCE_SHA256, "pg_identity": PG_IDENTITY, "probe_text_sha256": _PROBE_TEXT_SHA256, "absent_catalog_sha256": roots["absent_catalog_sha256"], "full_catalog_sha256": roots["full_catalog_sha256"], "full_data_sha256": roots["full_data_sha256"], "ledger_prefix_sha256": roots["ledger_prefix_sha256"], "target_fingerprint": target_fingerprint, "observation_nonce": observation_nonce, "issued_at_unix": issued_at_unix, "expires_at_unix": expires_at_unix, "first_clone_identity": first_clone["clone_identity"], "first_clone_nonce": first_clone["clone_nonce"], "first_restore_receipt_sha256": first_clone["restore_receipt_sha256"], "second_clone_identity": second_clone["clone_identity"], "second_clone_nonce": second_clone["clone_nonce"], "second_restore_receipt_sha256": second_clone["restore_receipt_sha256"], "reference_public_key_sha256": PUBLIC_KEY_SHA256}
+    body = {"schema": SCHEMA, "base_commit": BASE_COMMIT, "final_commit": final_commit, "runtime_source_root": runtime_source_root, "manifest_sha256": _MANIFEST_SHA256, "migration_source_sha256": _MIGRATION_SOURCE_SHA256, "pg_identity": PG_IDENTITY, "probe_text_sha256": _PROBE_TEXT_SHA256, **dict(roots), "target_fingerprint": target_fingerprint, "observation_nonce": observation_nonce, "issued_at_unix": issued_at_unix, "expires_at_unix": expires_at_unix, **{f"first_{key.removeprefix('g035_')}": first_clone[key] for key in ("clone_identity", "clone_nonce", "live_identity_sha256", "container_id_sha256", "image_id_sha256", "image_digest_sha256", "endpoint_sha256", "g035_capture_receipt_sha256", "restored_archive_sha256", "capture_receipt_bytes_sha256", "restore_receipt_bytes_sha256", "lineage_attestation_sha256", "lineage_signature_sha256")}, "first_g035_restore_receipt_sha256": first_clone["g035_restore_receipt_sha256"], **{f"second_{key.removeprefix('g035_')}": second_clone[key] for key in ("clone_identity", "clone_nonce", "live_identity_sha256", "container_id_sha256", "image_id_sha256", "image_digest_sha256", "endpoint_sha256", "g035_capture_receipt_sha256", "restored_archive_sha256", "capture_receipt_bytes_sha256", "restore_receipt_bytes_sha256", "lineage_attestation_sha256", "lineage_signature_sha256")}, "second_g035_restore_receipt_sha256": second_clone["g035_restore_receipt_sha256"], "reference_public_key_sha256": PUBLIC_KEY_SHA256}
     return validate_reference_body(body)
 
 def sign_reference(body: Mapping[str, Any], signer: Callable[[bytes], bytes]) -> MappingProxyType:

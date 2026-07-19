@@ -75,10 +75,15 @@ def begin_read_only_snapshot(cursor: Any) -> None:
         except Exception:
             raise Denial("snapshot_setup") from None
 
-def _row(cursor: Any, sql: str) -> Mapping[str, Any]:
+def _row(cursor: Any, sql: str, *, statement_executor: Callable[[str], None] | None = None) -> Mapping[str, Any]:
     try:
-        cursor.execute(sql)
+        if statement_executor is None:
+            cursor.execute(sql)
+        else:
+            statement_executor(sql)
         row = cursor.fetchone()
+    except Denial:
+        raise
     except Exception:
         raise Denial("probe_error") from None
     if type(row) is not dict:
@@ -91,54 +96,65 @@ def _reference(value: Any) -> Any:
         raise Denial("reference_type")
     return value
 
-def _classify_probes(cursor: Any, reference: Any, *, transaction_read_only: str) -> tuple[str, str, str, str | None]:
-    if _row(cursor, "SELECT current_setting('transaction_read_only', true) AS transaction_read_only") != {"transaction_read_only": transaction_read_only}:
-        raise Denial("not_read_only" if transaction_read_only == "on" else "not_read_write")
-    catalog = _row(cursor, CATALOG_PROBE)
-    required = {"ledger_count", "v00400_count", "ledger_prefix_shape_ok", "ledger_sha256", "schema_exists", "expected_table_count", "schema_table_count", "schema_index_count", "column_count", "schema_other_relation_count", "touched_function_count", "schema_trigger_count", "rls_table_count", "policy_count", "acl_contract_ok", "exact_pg", "server_version_num", "catalog_sha256"}
-    counts = required - {"ledger_prefix_shape_ok", "ledger_sha256", "schema_exists", "acl_contract_ok", "exact_pg", "catalog_sha256"}
-    if set(catalog) != required or any(type(catalog[key]) is not int for key in counts) or any(type(catalog[key]) is not bool for key in {"ledger_prefix_shape_ok", "schema_exists", "acl_contract_ok", "exact_pg"}) or not _hex(catalog["ledger_sha256"]) or not _hex(catalog["catalog_sha256"]):
-        raise Denial("catalog_shape")
-    if not (catalog["ledger_prefix_shape_ok"] is True and catalog["ledger_count"] == 28 and catalog["v00400_count"] == 0 and catalog["ledger_sha256"] == reference.ledger_prefix_sha256):
-        raise Denial("ledger_conflict")
-    absent = catalog["schema_exists"] is False and all(catalog[key] == 0 for key in ("expected_table_count", "schema_table_count", "schema_index_count", "schema_other_relation_count", "schema_trigger_count")) and catalog["catalog_sha256"] == reference.absent_catalog_sha256
-    if absent:
-        return "UNAPPLIED", catalog["ledger_sha256"], catalog["catalog_sha256"], None
-    full = catalog["schema_exists"] is True and catalog["expected_table_count"] == 7 and catalog["schema_table_count"] == 7 and catalog["schema_index_count"] == 14 and catalog["column_count"] == 78 and catalog["schema_other_relation_count"] == 0 and catalog["touched_function_count"] == 14 and catalog["schema_trigger_count"] == 7 and catalog["rls_table_count"] == 7 and catalog["policy_count"] == 0 and catalog["acl_contract_ok"] is True and catalog["exact_pg"] is True and catalog["server_version_num"] == 170006 and catalog["catalog_sha256"] == reference.full_catalog_sha256
-    if not full:
-        raise Denial("partial_or_ambiguous")
-    data = _row(cursor, DATA_PROBE)
+def probe_full_data_root(cursor: Any, reference: Any, *, statement_executor: Callable[[str], None] | None = None) -> str:
+    """Run the single source-pinned terminal data probe and validate its full root."""
+    reference = _reference(reference)
+    data = _row(cursor, DATA_PROBE, statement_executor=statement_executor)
     required_data = {"classes_count", "exact_seed_count", "seed_rows_exact", "class_source_count", "legal_hold_count", "work_item_count", "retained_record_count", "run_count", "run_item_count", "runtime_tables_empty", "seed_projection_sha256", "data_shape_sha256"}
     count_data = required_data - {"seed_rows_exact", "runtime_tables_empty", "seed_projection_sha256", "data_shape_sha256"}
     if set(data) != required_data or any(type(data[key]) is not int for key in count_data) or type(data["seed_rows_exact"]) is not bool or type(data["runtime_tables_empty"]) is not bool or not _hex(data["seed_projection_sha256"]) or not _hex(data["data_shape_sha256"]):
         raise Denial("data_shape")
     if not (data["seed_rows_exact"] is True and data["runtime_tables_empty"] is True and data["classes_count"] == 10 and data["exact_seed_count"] == 10 and all(data[key] == 0 for key in ("class_source_count", "legal_hold_count", "work_item_count", "retained_record_count", "run_count", "run_item_count")) and data["data_shape_sha256"] == reference.full_data_sha256):
         raise Denial("partial_or_ambiguous")
-    return "FULL_ESCAPED", catalog["ledger_sha256"], catalog["catalog_sha256"], data["data_shape_sha256"]
+    return data["data_shape_sha256"]
+
+def _classify_probes(cursor: Any, reference: Any, *, transaction_read_only: str, statement_executor: Callable[[str], None] | None = None) -> tuple[str, str, str, str | None]:
+    if _row(cursor, "SELECT current_setting('transaction_read_only', true) AS transaction_read_only", statement_executor=statement_executor) != {"transaction_read_only": transaction_read_only}:
+        raise Denial("not_read_only" if transaction_read_only == "on" else "not_read_write")
+    catalog = _row(cursor, CATALOG_PROBE, statement_executor=statement_executor)
+    required = {"ledger_count", "v00400_count", "ledger_prefix_shape_ok", "ledger_sha256", "schema_exists", "expected_table_count", "schema_table_count", "schema_index_count", "column_count", "schema_other_relation_count", "touched_function_count", "schema_trigger_count", "rls_table_count", "policy_count", "acl_contract_ok", "exact_pg", "server_version_num", "catalog_sha256"}
+    counts = required - {"ledger_prefix_shape_ok", "ledger_sha256", "schema_exists", "acl_contract_ok", "exact_pg", "catalog_sha256"}
+    if set(catalog) != required or any(type(catalog[key]) is not int for key in counts) or any(type(catalog[key]) is not bool for key in {"ledger_prefix_shape_ok", "schema_exists", "acl_contract_ok", "exact_pg"}) or not _hex(catalog["ledger_sha256"]) or not _hex(catalog["catalog_sha256"]):
+        raise Denial("catalog_shape")
+    if not (catalog["ledger_prefix_shape_ok"] is True and catalog["ledger_count"] == 28 and catalog["v00400_count"] == 0 and catalog["ledger_sha256"] == reference.ledger_prefix_sha256):
+        raise Denial("ledger_conflict")
+    if catalog["exact_pg"] is not True or catalog["server_version_num"] != 170006:
+        raise Denial("postgres_version")
+    absent = catalog["schema_exists"] is False and all(catalog[key] == 0 for key in ("expected_table_count", "schema_table_count", "schema_index_count", "schema_other_relation_count", "schema_trigger_count")) and catalog["catalog_sha256"] == reference.absent_catalog_sha256
+    if absent:
+        return "UNAPPLIED", catalog["ledger_sha256"], catalog["catalog_sha256"], None
+    full = catalog["schema_exists"] is True and catalog["expected_table_count"] == 7 and catalog["schema_table_count"] == 7 and catalog["schema_index_count"] == 14 and catalog["column_count"] == 78 and catalog["schema_other_relation_count"] == 0 and catalog["touched_function_count"] == 14 and catalog["schema_trigger_count"] == 7 and catalog["rls_table_count"] == 7 and catalog["policy_count"] == 0 and catalog["acl_contract_ok"] is True and catalog["catalog_sha256"] == reference.full_catalog_sha256
+    if not full:
+        raise Denial("partial_or_ambiguous")
+    return "FULL_ESCAPED", catalog["ledger_sha256"], catalog["catalog_sha256"], probe_full_data_root(cursor, reference, statement_executor=statement_executor)
 
 def _observation(reference: Any, status: str, ledger: str, catalog: str, data: str | None) -> PrefixObservation:
     payload = {"status": status, "target_fingerprint": reference.target_fingerprint, "final_commit": reference.final_commit, "runtime_source_root": reference.runtime_source_root, "reference_receipt_sha256": reference.receipt_sha256, "observation_nonce": reference.observation_nonce, "ledger_prefix_sha256": ledger, "catalog_sha256": catalog, "data_sha256": data}
     return PrefixObservation(**payload, classification_sha256=hashlib.sha256(canonical_bytes(payload)).hexdigest())
 
-def classify_locked_cursor(cursor: Any, reference: Any, *, consume_nonce: Callable[[str], bool]) -> PrefixObservation:
+def classify_locked_cursor(cursor: Any, reference: Any, *, consume_nonce: Callable[[str], bool], statement_executor: Callable[[str], None] | None = None) -> PrefixObservation:
     reference = _reference(reference)
     if not callable(consume_nonce):
         raise Denial("nonce_validation")
+    if statement_executor is not None and not callable(statement_executor):
+        raise Denial("statement_executor")
     try:
         fresh = consume_nonce(reference.observation_nonce)
     except Exception:
         raise Denial("nonce_validation") from None
     if fresh is not True:
         raise Denial("nonce_stale")
-    return _observation(reference, *_classify_probes(cursor, reference, transaction_read_only="on"))
+    return _observation(reference, *_classify_probes(cursor, reference, transaction_read_only="on", statement_executor=statement_executor))
 
-def classify_mutation_cursor(cursor: Any, reference: Any, *, expected_prior: PrefixObservation) -> PrefixObservation:
+def classify_mutation_cursor(cursor: Any, reference: Any, *, expected_prior: PrefixObservation, statement_executor: Callable[[str], None] | None = None) -> PrefixObservation:
     reference = _reference(reference)
     if type(expected_prior) is not PrefixObservation or expected_prior.status not in ("UNAPPLIED", "FULL_ESCAPED"):
         raise Denial("expected_prior")
+    if statement_executor is not None and not callable(statement_executor):
+        raise Denial("statement_executor")
     if (expected_prior.target_fingerprint != reference.target_fingerprint or expected_prior.final_commit != reference.final_commit or expected_prior.runtime_source_root != reference.runtime_source_root or expected_prior.reference_receipt_sha256 != reference.receipt_sha256 or expected_prior.observation_nonce != reference.observation_nonce):
         raise Denial("prior_binding")
-    observed = _observation(reference, *_classify_probes(cursor, reference, transaction_read_only="off"))
+    observed = _observation(reference, *_classify_probes(cursor, reference, transaction_read_only="off", statement_executor=statement_executor))
     if observed != expected_prior:
         raise Denial("branch_mismatch")
     return observed
