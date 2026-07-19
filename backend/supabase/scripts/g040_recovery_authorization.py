@@ -22,6 +22,7 @@ MCowBQYDK2VwAyEAgy8M88hrM04SdOcI3H/fNre+IFZ08tSl7KOQWkQH9K0=
 """
 PUBLIC_KEY_SHA256 = "6232368a02ebacafc21d4b99f6c9b8af07a716dd0dba2addd5e36a2d6cae5878"
 JOURNAL_SCHEMA = "g040-recovery-attempt-started-v1"
+CANONICAL_JOURNAL_DIRECTORY = Path.home() / ".g040-recovery" / "attempt-journal"
 _HEX = re.compile(r"^[a-f0-9]{64}$")
 _COMMIT = re.compile(r"^[a-f0-9]{40}$")
 _UUID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
@@ -31,12 +32,13 @@ _FIELDS = frozenset((
     "terminal_root", "prefix_root", "suffix_root", "projection_root", "probe_root",
     "prefix_state_receipt_sha256", "observation_receipt_sha256", "prefix_classification", "target_fingerprint", "selected_branch",
     "backup_receipt_sha256", "capture_receipt_sha256", "clone_rehearsal_receipt_sha256",
+    "freeze_expires_at", "target_acl_root", "archive_sha256", "archive_bytes",
     "freeze_root", "inventory_root", "starting_ledger_root", "target_ledger_root",
     "starting_catalog_root", "target_catalog_root", "starting_data_root", "target_data_root",
 ))
 _BINDINGS = frozenset(_FIELDS - {"schema", "purpose", "policy", "authorization_id", "attempt_id", "issued_at", "expires_at"})
-_ROOT_FIELDS = frozenset(("runtime_source_root", "manifest_root", "source_root", "terminal_root", "prefix_root", "suffix_root", "projection_root", "probe_root", "freeze_root", "inventory_root", "starting_ledger_root", "target_ledger_root", "starting_catalog_root", "target_catalog_root", "starting_data_root", "target_data_root"))
-_RECEIPT_FIELDS = frozenset(("prefix_state_receipt_sha256", "observation_receipt_sha256", "backup_receipt_sha256", "capture_receipt_sha256", "clone_rehearsal_receipt_sha256"))
+_ROOT_FIELDS = frozenset(("runtime_source_root", "manifest_root", "source_root", "terminal_root", "prefix_root", "suffix_root", "projection_root", "probe_root", "freeze_root", "inventory_root", "target_acl_root", "starting_ledger_root", "target_ledger_root", "starting_catalog_root", "target_catalog_root", "starting_data_root", "target_data_root"))
+_RECEIPT_FIELDS = frozenset(("prefix_state_receipt_sha256", "observation_receipt_sha256", "backup_receipt_sha256", "capture_receipt_sha256", "clone_rehearsal_receipt_sha256", "archive_sha256"))
 _CLASSIFICATION_BRANCHES = {"UNAPPLIED": "execute-00400-then-suffix", "FULL_ESCAPED": "adopt-00400-vector-then-suffix"}
 
 class AuthorizationError(ValueError):
@@ -106,9 +108,12 @@ def _validate(value: Any, expected_bindings: Mapping[str, Any], now: int, *, req
         _fail("invalid authorization")
     if type(value["prefix_classification"]) is not str or type(value["selected_branch"]) is not str or _CLASSIFICATION_BRANCHES.get(value["prefix_classification"]) != value["selected_branch"]:
         _fail("invalid authorization")
-    if type(value["issued_at"]) is not int or type(value["expires_at"]) is not int or value["expires_at"] <= value["issued_at"] or value["expires_at"] - value["issued_at"] > 900:
+    if (type(value["issued_at"]) is not int or type(value["expires_at"]) is not int
+            or type(value["freeze_expires_at"]) is not int or type(value["archive_bytes"]) is not int
+            or value["archive_bytes"] < 0 or value["freeze_expires_at"] <= value["issued_at"]
+            or value["expires_at"] <= value["issued_at"] or value["expires_at"] - value["issued_at"] > 900):
         _fail("invalid authorization")
-    if require_fresh and (value["issued_at"] > now + 30 or value["expires_at"] <= now):
+    if require_fresh and (value["issued_at"] > now + 30 or value["expires_at"] <= now or value["freeze_expires_at"] <= now):
         _fail("invalid authorization")
     if any(value[key] != expected_bindings[key] for key in _BINDINGS):
         _fail("invalid authorization")
@@ -152,6 +157,7 @@ class VerifiedAuthorization:
     terminal_root: str; prefix_root: str; suffix_root: str; projection_root: str; probe_root: str
     prefix_state_receipt_sha256: str; observation_receipt_sha256: str; prefix_classification: str; target_fingerprint: str; selected_branch: str
     backup_receipt_sha256: str; capture_receipt_sha256: str; clone_rehearsal_receipt_sha256: str
+    freeze_expires_at: int; target_acl_root: str; archive_sha256: str; archive_bytes: int
     freeze_root: str; inventory_root: str; starting_ledger_root: str; target_ledger_root: str
     starting_catalog_root: str; target_catalog_root: str; starting_data_root: str; target_data_root: str
     authorization_sha256: str; signature_sha256: str; bindings_sha256: str
@@ -424,9 +430,22 @@ def _write_all(fd: int, data: bytes) -> None:
             _fail("journal write failure")
         offset += written
 
-def consume_one_shot_attempt(journal_dir: str | Path, *, repository_root: str | Path, authorization: VerifiedAuthorization, callback: Callable[[AttemptStarted], Any], now: int | None = None) -> tuple[AttemptStarted, Any]:
+def canonical_journal_parent(repository_root: str | Path) -> Path:
+    directory = CANONICAL_JOURNAL_DIRECTORY
+    try:
+        directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+        if os.name != "nt":
+            os.chmod(directory, 0o700)
+        _parent_restrictive(directory)
+    except AuthorizationError:
+        raise
+    except Exception:
+        _fail("journal custody failure")
+    return _journal_parent(directory, Path(repository_root))
+
+def consume_one_shot_attempt(*, repository_root: str | Path, authorization: VerifiedAuthorization, callback: Callable[[AttemptStarted], Any], now: int | None = None) -> tuple[AttemptStarted, Any]:
     if type(authorization) is not VerifiedAuthorization or not callable(callback): _fail("invalid authorization")
-    parent = _journal_parent(Path(journal_dir), Path(repository_root))
+    parent = canonical_journal_parent(repository_root)
     marker = parent / f"{authorization.authorization_id}-{authorization.attempt_id}.json"
     body = {"schema": JOURNAL_SCHEMA, "event": "attempt-started", "authorization_id": authorization.authorization_id, "attempt_id": authorization.attempt_id, "at": int(time.time()) if now is None else now, "target_fingerprint": authorization.target_fingerprint, "runtime_source_root": authorization.runtime_source_root, "prefix_state_receipt_sha256": authorization.prefix_state_receipt_sha256, "observation_receipt_sha256": authorization.observation_receipt_sha256, "prefix_classification": authorization.prefix_classification, "selected_branch": authorization.selected_branch, "authorization_sha256": authorization.authorization_sha256, "signature_sha256": authorization.signature_sha256, "bindings_sha256": authorization.bindings_sha256}
     body["receipt_sha256"] = canonical_sha256(body)

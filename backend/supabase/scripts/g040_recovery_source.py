@@ -12,8 +12,9 @@ import os
 import re
 import stat
 import subprocess
-from pathlib import Path, PurePosixPath
+import sys
 from dataclasses import dataclass
+from pathlib import Path, PurePosixPath
 from typing import Callable, Sequence
 
 
@@ -27,7 +28,9 @@ DOMAIN = b"g040-recovery-source-root-v1\x00"
 _RUNTIME_FILES = (
     "backend/supabase/scripts/g040_prefix_recovery.py",
     "backend/supabase/scripts/g040_recovery_authorization.py",
+    "backend/supabase/scripts/g040_reverse_00400.py",
     "backend/supabase/scripts/g040_recovery_source.py",
+    "backend/supabase/scripts/g040_isolated_bootstrap.py",
     "backend/supabase/scripts/g040_reference_evidence.py",
     "backend/supabase/scripts/g040_production_controller.py",
     "backend/supabase/scripts/g040_clone_rehearsal.py",
@@ -46,6 +49,7 @@ _RUNTIME_FILES = (
     "backend/supabase/scripts/g035_hosted_recovery_contract.py",
     "backend/supabase/scripts/preflight_g034_hosted_migration_closure.py",
     MANIFEST_PATH,
+    ".github/workflows/g040-prefix-recovery.yml",
 )
 _G014_ALLOWLIST_SOURCE_FILES = (
     "backend/supabase/migrations/20260713002000_g014_public_api_private_boundary.sql",
@@ -71,6 +75,31 @@ class SourceBinding:
     final_commit: str
     runtime_source_root: str
 
+_CAPABILITY = object()
+_bootstrap_capability: object | None = None
+_bootstrap_root: Path | None = None
+_bootstrap_commit: str | None = None
+_bootstrap_source_root: str | None = None
+
+
+def _establish_isolated_bootstrap(root: Path, commit: str, source_root: str) -> None:
+    """Accept the non-forgeable in-process proof established by the trusted bootstrap."""
+    global _bootstrap_capability, _bootstrap_root, _bootstrap_commit, _bootstrap_source_root
+    if (
+        _bootstrap_capability is not None
+        or not isinstance(root, Path)
+        or not COMMIT_RE.fullmatch(commit)
+        or not re.fullmatch(r"[0-9a-f]{64}", source_root)
+    ):
+        _fail()
+    _bootstrap_capability = _CAPABILITY
+    _bootstrap_root = root
+    _bootstrap_commit = commit
+    _bootstrap_source_root = source_root
+def assert_isolated_bootstrap() -> None:
+    """Require the opaque bootstrap capability without accepting caller tokens."""
+    if _bootstrap_capability is not _CAPABILITY:
+        _fail()
 def _fail() -> None:
     raise RecoverySourceError("protected recovery source verification failed") from None
 
@@ -224,8 +253,66 @@ def _verify_path(root: Path, path: str, runner: Callable[..., subprocess.Complet
     if not valid:
         _fail()
     return path, mode, hashlib.sha256(committed).hexdigest()
-def _no_inventory_shadow(root: Path, paths: Sequence[str], runner: Callable[..., subprocess.CompletedProcess[bytes]]) -> None:
-    output = _git(root, ("status", "--porcelain=v1", "-z", "--untracked-files=all", "--", *paths), runner)
+def _production_bootstrap() -> None:
+    flags = sys.flags
+    if (
+        getattr(flags, "isolated", 0) != 1
+        or not getattr(flags, "safe_path", False)
+        or _bootstrap_capability is not _CAPABILITY
+    ):
+        _fail()
+
+
+def _tracked_path(root: Path, path: Path, runner: Callable[..., subprocess.CompletedProcess[bytes]]) -> bool:
+    try:
+        relative = path.relative_to(root).as_posix()
+    except ValueError:
+        _fail()
+    result: object | None = None
+    try:
+        result = runner(
+            ["git", "-C", os.fspath(root), "ls-files", "--error-unmatch", "--", relative],
+            capture_output=True,
+            check=False,
+        )
+    except Exception:
+        _fail()
+    return isinstance(result, subprocess.CompletedProcess) and result.returncode == 0
+
+
+def _no_importable_shadow(root: Path, runner: Callable[..., subprocess.CompletedProcess[bytes]]) -> None:
+    """Reject untracked import candidates in the only checkout import roots."""
+    script_root = root / "backend" / "supabase" / "scripts"
+    trusted = {
+        root / Path(*PurePosixPath(path).parts)
+        for path in _RUNTIME_FILES
+        if path.endswith(".py")
+    }
+    for import_root in (root, script_root):
+        try:
+            entries = tuple(import_root.iterdir())
+        except OSError:
+            _fail()
+        for entry in entries:
+            try:
+                info = entry.lstat()
+            except OSError:
+                _fail()
+            if stat.S_ISLNK(info.st_mode):
+                _fail()
+            is_module = entry.suffix in (".py", ".pyc")
+            is_package = entry.is_dir() and any(
+                (entry / initializer).is_file()
+                for initializer in ("__init__.py", "__init__.pyc")
+            )
+            if (is_module or is_package) and not _tracked_path(root, entry, runner):
+                _fail()
+
+
+def _no_worktree_shadow(root: Path, runner: Callable[..., subprocess.CompletedProcess[bytes]]) -> None:
+    # The recovery runtime is executed from this checkout.  A path-scoped status
+    # check cannot prove that an unrelated module cannot shadow an import.
+    output = _git(root, ("status", "--porcelain=v1", "-z", "--untracked-files=all"), runner)
     if output:
         _fail()
 
@@ -243,18 +330,34 @@ def _canonical_root(entries: Sequence[tuple[str, str, str]]) -> str:
     return digest.hexdigest()
 
 
-def verify_recovery_source(repository_root: Path | str, authorized_final_commit: str, *, runner: Callable[..., subprocess.CompletedProcess[bytes]] = subprocess.run) -> SourceBinding:
+def verify_recovery_source(
+    repository_root: Path | str,
+    authorized_final_commit: str,
+    *,
+    production: bool = False,
+    runner: Callable[..., subprocess.CompletedProcess[bytes]] = subprocess.run,
+) -> SourceBinding:
     """Verify an exact detached commit and return its canonical source binding."""
     root = Path(repository_root)
     if type(authorized_final_commit) is not str or not COMMIT_RE.fullmatch(authorized_final_commit):
         _fail()
+    if production:
+        _production_bootstrap()
+        _no_importable_shadow(root, runner)
     selected = recovery_source_inventory(root)
     head = _head(root, runner)
     if head != authorized_final_commit:
         _fail()
-    _no_inventory_shadow(root, selected, runner)
+    _no_worktree_shadow(root, runner)
     entries = tuple(_verify_path(root, path, runner) for path in selected)
-    return SourceBinding(final_commit=head, runtime_source_root=_canonical_root(entries))
+    source_root = _canonical_root(entries)
+    if production and (
+        _bootstrap_root != root
+        or _bootstrap_commit != head
+        or _bootstrap_source_root != source_root
+    ):
+        _fail()
+    return SourceBinding(final_commit=head, runtime_source_root=source_root)
 
 
-__all__ = ["RecoverySourceError", "SourceBinding", "recovery_source_inventory", "verify_recovery_source"]
+__all__ = ["RecoverySourceError", "SourceBinding", "assert_isolated_bootstrap", "recovery_source_inventory", "verify_recovery_source"]

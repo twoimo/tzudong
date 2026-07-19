@@ -1,9 +1,11 @@
-import contextlib, hashlib, importlib.util, io, json, subprocess, sys, tempfile, unittest
+import contextlib, hashlib, importlib.util, io, json, os, subprocess, sys, tempfile, threading, time, unittest
 from argparse import Namespace
 from pathlib import Path
 from unittest.mock import patch
 
 SCRIPTS=Path(__file__).parents[1]/"scripts"; sys.path.insert(0,str(SCRIPTS))
+import g040_recovery_source as recovery_source
+recovery_source._establish_isolated_bootstrap(Path(__file__).parents[3],"a"*40,"b"*64)
 import g035_hosted_recovery_contract as contract
 spec=importlib.util.spec_from_file_location("recovery",SCRIPTS/"g035_hosted_recovery.py"); recovery=importlib.util.module_from_spec(spec); spec.loader.exec_module(recovery)
 ROOT=Path(__file__).parents[3]
@@ -11,6 +13,15 @@ def fingerprints(*,pairs=(),ledger_sha256="1"*64,restorable_catalog_sha256="2"*6
  return {"ledger_pairs":pairs,"ledger_sha256":ledger_sha256,"ledger_count":len(pairs),"restorable_catalog_sha256":restorable_catalog_sha256,"managed_catalog_sha256":managed_catalog_sha256,"managed_metadata_schemas_present":managed_schemas}
 
 class ContractTests(unittest.TestCase):
+ def test_direct_isolated_entrypoint_rejects_before_checkout_local_shadow(self):
+  with tempfile.TemporaryDirectory() as raw:
+   root=Path(raw); entry=root/"g035_hosted_recovery.py"; marker=root/"shadow-executed"
+   entry.write_bytes((SCRIPTS/"g035_hosted_recovery.py").read_bytes())
+   (root/"g035_hosted_recovery_contract.py").write_text(f"open({str(marker)!r},'w').write('executed')",encoding="utf8")
+   result=subprocess.run([sys.executable,"-I",str(entry),"validate"],capture_output=True,text=True)
+   self.assertNotEqual(result.returncode,0)
+   self.assertEqual(result.stderr.strip(),"protected recovery source verification failed")
+   self.assertFalse(marker.exists())
  def test_manifest_and_immutable_pair_baseline(self):
   manifest=contract.validate_sources(ROOT)
   expected=(("20251219","db_performance_optimization"),("20260118","create_ocr_logs"),("20260425","allow_ocr_logs_user_insert"),("20260506065538","optimize_auth_user_state_indexes"),("20260506085634","optimize_app_query_indexes"),("20260509000100","drop_server_costs"),("20260509000200","drop_admin_ai_settings"),("20260523093000","create_restaurant_popular_rank_snapshots"),("20260525143908","create_youtube_kpi_snapshots"),("20260526083932","add_youtube_channel_growth_snapshot_deltas"),("20260531084217","harden_public_api_grants_and_rpcs"),("20260531084516","tighten_public_table_data_api_grants"))
@@ -34,6 +45,7 @@ class ContractTests(unittest.TestCase):
   self.assertEqual({
    "validate":set(),
    "capture":{"destination","service_file","recipient","g034_artifact","encrypt_command"},
+   "production-capture":{"destination","capture_receipt","service_file","recipient","g034_artifact","encrypt_command"},
    "restore-verify":{"dump","capture_receipt","service_file","destination_service","identity_file","decrypt_command"},
    "short-url-remediation-inspect":{"service","service_file","restore_receipt"},
    "short-url-remediation-apply":{"service","service_file","restore_receipt","inspect_receipt","authorization","authorization_signature"},
@@ -51,7 +63,7 @@ class ContractTests(unittest.TestCase):
    "clone-apply":'python backend/supabase/scripts/g035_hosted_recovery.py clone-apply --service g035-local --service-file "$G035_LOCAL_PG_SERVICE_FILE" --restore-receipt "$G035_RESTORE_RECEIPT_PATH" --short-url-remediation-receipt "$G035_SHORT_URL_REMEDIATION_VERIFY_RECEIPT_PATH" > "$EVIDENCE_RECEIPT_PATH"',
    "local-postflight":'python backend/supabase/scripts/g035_hosted_recovery.py local-postflight --service g035-local --service-file "$G035_LOCAL_PG_SERVICE_FILE" --clone-receipt "$G035_CLONE_RECEIPT_PATH" --psql psql > "$EVIDENCE_RECEIPT_PATH"',
   }
-  self.assertEqual(set(choices),set(commands))
+  self.assertEqual(set(choices),set(commands)|{"production-capture"})
   for mode,command in commands.items():
    self.assertIn(command,workflow)
    for destination in required[mode]:
@@ -103,7 +115,20 @@ class ContractTests(unittest.TestCase):
    signature.write_bytes(b"tampered")
    path.write_bytes(contract.canonical_json_bytes(auth))
    with self.assertRaisesRegex(contract.ContractError,"signature"): contract.verify_short_url_remediation_authorization(path,signature,require_custody=custody,verify_detached=verify,expected_bindings={},inspection_evidence=evidence)
+ def test_source_binding_rejects_missing_or_substituted_lineage(self):
+  expected={"repository_commit":"a"*40,"runtime_source_root":"b"*64}
+  with patch.object(recovery,"_recovery_source_binding",return_value=expected):
+   self.assertEqual(expected,recovery._require_recovery_source_binding(expected,ROOT))
+   with self.assertRaisesRegex(recovery.RecoveryError,"missing"):
+    recovery._require_recovery_source_binding({},ROOT)
+   with self.assertRaisesRegex(recovery.RecoveryError,"mismatch"):
+    recovery._require_recovery_source_binding({**expected,"runtime_source_root":"c"*64},ROOT)
 class ControllerTests(unittest.TestCase):
+ def setUp(self):
+  self.source_binding=patch.object(recovery,"_require_recovery_source_binding",return_value={"repository_commit":"a"*40,"runtime_source_root":"b"*64})
+  self.source_binding.start()
+ def tearDown(self):
+  self.source_binding.stop()
  def service(self,directory,section="g035-local",body=None):
   path=Path(directory)/"service.conf"; path.write_text(body or f"[{section}]\nhost=127.0.0.1\nport=5432\ndbname=g035_local\napplication_name=g035-local-rehearsal\nsslmode=disable\n",encoding="utf8"); path.chmod(0o600); return path
  def managed_capture_scope(self):
@@ -203,6 +228,13 @@ class ControllerTests(unittest.TestCase):
    def stat(self): raise AssertionError("mode fallback")
   with patch.object(recovery.os,"name","nt"),patch.object(recovery.subprocess,"run",side_effect=OSError()):
    self.assertFalse(recovery._restrictive(File()))
+ def test_restrictive_directory_requires_real_directory_custody(self):
+  if recovery.os.name=="nt": self.skipTest("POSIX mode custody assertion")
+  with tempfile.TemporaryDirectory() as raw:
+   directory=Path(raw)/"custody"; directory.mkdir(); directory.chmod(0o700)
+   self.assertTrue(recovery._restrictive_directory(directory))
+   directory.chmod(0o755)
+   self.assertFalse(recovery._restrictive_directory(directory))
  def test_secure_temporary_file_is_mode_600_before_content_on_posix(self):
   if recovery.os.name=="nt": self.skipTest("POSIX-only mode assertion")
   fd,path=recovery._secure_temporary_file("g035-test-",b"exact")
@@ -279,11 +311,24 @@ class ControllerTests(unittest.TestCase):
  def adapter(self,data,observed):
   with tempfile.TemporaryDirectory() as raw:
    path=Path(raw)/"artifact.json"; path.write_text(json.dumps(data),encoding="utf8")
-   with patch.object(recovery,"_repository_commit",return_value="a"*40): return recovery._g034_adapter(path,ROOT,contract.load_manifest(ROOT),observed)
+   return recovery._g034_adapter(path,ROOT,contract.load_manifest(ROOT),observed,{"repository_commit":"a"*40,"runtime_source_root":"b"*64})
  def test_parser_has_only_local_modes_and_no_mutation_authorization(self):
   text=(SCRIPTS/"g035_hosted_recovery.py").read_text(encoding="utf8")
   self.assertNotIn("hosted-apply",text); self.assertNotIn("pg_dumpall",text)
   for mode in ("validate","capture","restore-verify","clone-apply","local-postflight"): self.assertIn(mode,text)
+ def test_public_production_capture_validates_sources_runs_capture_and_returns_verified_canonical_receipt(self):
+  captured={"schema":recovery.RECEIPT_SCHEMA,"mode":"capture","status":"captured","evidence":{"dump_sha256":"a"*64,"dump_bytes":7}}
+  captured["receipt_sha256"]=recovery.digest({key:value for key,value in captured.items() if key!="receipt_sha256"})
+  with tempfile.TemporaryDirectory() as raw:
+   receipt=Path(raw)/"capture.json"; manifest=object()
+   argv=["production-capture","--destination",raw,"--capture-receipt",str(receipt),"--service-file","/custody/service.conf","--recipient","age1"+"q"*58,"--g034-artifact","/custody/g034.json","--encrypt-command","age"]
+   stream=io.StringIO()
+   with patch.object(recovery,"validate_sources",return_value=manifest) as validate,patch.object(recovery,"run_capture",return_value=captured) as run_capture,patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_restrictive_directory",return_value=True),patch.object(recovery,"_windows_restrict_temporary_file"),patch.object(recovery,"_unlink_owned_output",side_effect=lambda fd,path,identity:path.unlink(missing_ok=True)),contextlib.redirect_stdout(stream):
+    self.assertEqual(0,recovery.main(argv))
+   validate.assert_called_once_with(recovery.repository_root(Path(recovery.__file__).resolve()))
+   run_capture.assert_called_once()
+   self.assertEqual(recovery.canonical_bytes(captured),receipt.read_bytes())
+   self.assertEqual(captured,json.loads(stream.getvalue()))
  def test_exact_current_receipt_and_live_fingerprints_are_required(self):
   manifest=contract.load_manifest(ROOT); observed={"ledger_sha256":"1"*64,"catalog_sha256":"2"*64}; data=self.artifact(manifest,observed)
   result=self.adapter(data,observed); self.assertIn("capture_readiness_sha256",result)
@@ -331,13 +376,281 @@ class ControllerTests(unittest.TestCase):
   class Process:
    stdin=Pipe()
    def wait(self,*unused): return 0
-  with tempfile.TemporaryDirectory() as raw,patch.object(recovery.subprocess,"Popen",side_effect=(Process(),Process())) as popen:
-   argv=recovery._dump_to_encrypted("pg_dump","age","age1"+"q"*58,"snapshot",{},Path(raw))
+  with tempfile.TemporaryDirectory() as raw,patch.object(recovery.subprocess,"Popen",side_effect=(Process(),Process())) as popen,patch.object(recovery,"_windows_restrict_temporary_file"),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_unlink_owned_output",side_effect=lambda fd,path,identity:path.unlink(missing_ok=True)):
+   argv=recovery._dump_to_encrypted("pg_dump","age","age1"+"q"*58,"snapshot",{},Path(raw))[0]
   self.assertEqual(["pg_dump","--format=custom","--snapshot=snapshot","--blobs",*[f"--schema={schema}" for schema in [*contract.APPLICATION_SCHEMAS,"supabase_migrations","auth","storage"]],"--exclude-table-data=auth.*","--exclude-table-data=storage.*","--extension=pg_trgm","--extension=uuid-ossp","--extension=btree_gin","--extension=vector","--extension=pgcrypto","--dbname=service=g035"],argv)
   self.assertEqual((("pg_trgm","extensions"),("uuid-ossp","extensions"),("btree_gin","extensions"),("vector","public"),("pgcrypto","extensions")),recovery.RECOVERY_EXTENSIONS)
   self.assertEqual(("auth","storage"),contract.MANAGED_METADATA_SCHEMAS)
   self.assertEqual(("--exclude-table-data=auth.*","--exclude-table-data=storage.*"),recovery.MANAGED_TABLE_DATA_EXCLUSIONS)
   self.assertEqual(argv,popen.call_args_list[1].args[0])
+ def test_windows_publication_is_no_replace_verified_and_cleanup_safe(self):
+  def publish(label,*,existing=None,substitute=False,cleanup=True):
+   with tempfile.TemporaryDirectory() as raw:
+    parent=Path(raw); temporary=parent/"temporary"; target=parent/"final"; fd=os.open(temporary,os.O_CREAT|os.O_EXCL|os.O_RDWR,0o600); os.write(fd,b"exact"); identity=(os.fstat(fd).st_dev,os.fstat(fd).st_ino)
+    if existing is not None: target.write_bytes(existing)
+    def link(source,final):
+     if final.exists(): raise recovery.RecoveryError("Windows no-replace publication failed")
+     os.link(temporary,final)
+     if substitute: final.unlink(); final.write_bytes(b"substituted")
+    def reopen(path,expected,digest_value,size,unused_label):
+     candidate=os.open(path,os.O_RDONLY)
+     if (os.fstat(candidate).st_dev,os.fstat(candidate).st_ino)!=expected: os.close(candidate); raise recovery.RecoveryError("publication invalid")
+     return candidate
+    removals=[]
+    def remove(path,expected):
+     removals.append(path)
+     if not cleanup and len(removals)==1: return False
+     if not recovery._same_path_identity(path,expected): return False
+     path.unlink()
+     return True
+    try:
+     with patch.object(recovery.os,"name","nt"),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_windows_link_no_replace",side_effect=link),patch.object(recovery,"_windows_reopen_verified_output",side_effect=reopen),patch.object(recovery,"_windows_remove_exact",side_effect=remove):
+      with self.assertRaises(recovery.RecoveryError) if existing is not None or substitute or not cleanup else contextlib.nullcontext():
+       result=recovery._publish_owned_output(fd,temporary,target,identity,label)
+       fd=result[3]
+     return target.exists(),target.read_bytes() if target.exists() else None
+    finally:
+     try: os.close(fd)
+     except OSError: pass
+  for label in ("encrypted archive","capture receipt"):
+   exists,contents=publish(label)
+   self.assertTrue(exists); self.assertEqual(b"exact",contents)
+  self.assertEqual((True,b"existing"),publish("encrypted archive",existing=b"existing"))
+  self.assertEqual((True,b"substituted"),publish("capture receipt",substitute=True))
+  self.assertEqual((False,None),publish("encrypted archive",cleanup=False))
+ def test_windows_reopen_declares_typed_delete_sharing(self):
+  source=(SCRIPTS/"g035_hosted_recovery.py").read_text(encoding="utf8")
+  self.assertIn("create_file.argtypes=(ctypes.c_wchar_p,ctypes.c_ulong,ctypes.c_ulong,ctypes.c_void_p,ctypes.c_ulong,ctypes.c_ulong,ctypes.c_void_p)",source)
+  self.assertIn("create_file.restype=ctypes.c_void_p",source)
+  self.assertIn("create_file(str(path),0x80000000,0x00000007,None,3,0x00200000,None)",source)
+  self.assertIn("handle=create_file(str(path),0x80010080,0x00000007,None,3,0x00200000,None)",source)
+  self.assertIn("extended=DispositionInfoEx(0x00000013)",source)
+  self.assertIn("disposition(handle,21,ctypes.byref(extended),ctypes.sizeof(extended))",source)
+ def test_windows_handle_delete_simulation_preserves_replacement(self):
+  with tempfile.TemporaryDirectory() as raw:
+   target=Path(raw)/"target"; original=Path(raw)/"original"; original.write_bytes(b"original"); os.link(original,target)
+   fd=os.open(original,os.O_RDONLY); identity=(os.fstat(fd).st_dev,os.fstat(fd).st_ino)
+   def replace_then_mark(unused):
+    target.unlink(); target.write_bytes(b"replacement"); return True
+   with patch.object(recovery,"_windows_open_delete_handle",return_value=fd),patch.object(recovery,"_windows_handle_is_regular_nonreparse",return_value=True),patch.object(recovery,"_same_file_identity",return_value=True),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_windows_mark_handle_delete_pending",side_effect=replace_then_mark):
+    self.assertTrue(recovery._windows_remove_exact(target,identity))
+   self.assertEqual(b"replacement",target.read_bytes())
+ @unittest.skipUnless(os.name=="nt","native Windows handle semantics required")
+ def test_windows_handle_delete_replacement_race_preserves_replacement(self):
+  with tempfile.TemporaryDirectory() as raw:
+   target=Path(raw)/"target"; target.write_bytes(b"original"); identity=(target.stat().st_dev,target.stat().st_ino); mark=recovery._windows_mark_handle_delete_pending
+   def replace_then_mark(fd):
+    target.unlink(); target.write_bytes(b"replacement"); return mark(fd)
+   with patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_windows_mark_handle_delete_pending",side_effect=replace_then_mark):
+    recovery._windows_remove_exact(target,identity)
+   self.assertEqual(b"replacement",target.read_bytes())
+ @unittest.skipUnless(os.name=="nt","native Windows handle semantics required")
+ def test_windows_reopen_allows_sibling_hard_link_deletion_while_held(self):
+  with tempfile.TemporaryDirectory() as raw:
+   temporary=Path(raw)/"temporary"; target=Path(raw)/"target"
+   fd=os.open(temporary,os.O_CREAT|os.O_EXCL|os.O_RDWR,0o600)
+   try:
+    os.write(fd,b"exact"); identity=(os.fstat(fd).st_dev,os.fstat(fd).st_ino); os.link(temporary,target); os.close(fd); fd=None
+    with patch.object(recovery,"_restrictive",return_value=True):
+     reopened=recovery._windows_reopen_verified_output(target,identity,hashlib.sha256(b"exact").hexdigest(),5,"test")
+    try:
+     temporary.unlink()
+     self.assertEqual(b"exact",target.read_bytes())
+    finally: os.close(reopened)
+   finally:
+    if fd is not None: os.close(fd)
+ def test_owned_outputs_ignore_umask_and_preserve_preexisting_archive(self):
+  if recovery.os.name=="nt": self.skipTest("POSIX mode assertion")
+  with tempfile.TemporaryDirectory() as raw:
+   destination=Path(raw); output=destination/"g035-dump.enc"; output.write_bytes(b"existing")
+   with patch.object(recovery.subprocess,"Popen") as popen,self.assertRaisesRegex(recovery.RecoveryError,"database capture failed"):
+    recovery._dump_to_encrypted("pg_dump","age","age1"+"q"*58,"snapshot",{},destination)
+   self.assertEqual(b"existing",output.read_bytes()); popen.assert_not_called()
+   old=os.umask(0o777)
+   try:
+    fd,identity=recovery._owned_output(destination/"new.enc","test")
+   finally: os.umask(old)
+   try: self.assertEqual(0o600,os.fstat(fd).st_mode&0o777)
+   finally: recovery._unlink_owned_output(fd,destination/"new.enc",identity); os.close(fd)
+ def test_archive_cleanup_preserves_replacement_and_reaps_stderr_failure(self):
+  if recovery.os.name=="nt": self.skipTest("replacement inode assertion requires POSIX unlink semantics")
+  class Pipe:
+   def close(self): pass
+  class Process:
+   def __init__(self,code): self.stdin=Pipe(); self.returncode=code; self.communicated=False; self.terminated=False; self.waited=0
+   def communicate(self): self.communicated=True; return b"",b"x"*10000
+   def poll(self): return None
+   def terminate(self): self.terminated=True
+   def wait(self,timeout=None): self.waited+=1; return self.returncode
+  with tempfile.TemporaryDirectory() as raw:
+   destination=Path(raw); crypt,dump=Process(0),Process(1)
+   def replace(*unused):
+    output=destination/"g035-dump.enc"; output.unlink(); output.write_bytes(b"replacement")
+    raise recovery.RecoveryError("failed")
+   with patch.object(recovery.subprocess,"Popen",side_effect=(crypt,dump)),patch.object(recovery,"_drain_pipeline",side_effect=replace),self.assertRaisesRegex(recovery.RecoveryError,"database capture failed"):
+    recovery._dump_to_encrypted("pg_dump","age","age1"+"q"*58,"snapshot",{},destination)
+   self.assertEqual(b"replacement",(destination/"g035-dump.enc").read_bytes())
+   self.assertTrue(crypt.terminated); self.assertTrue(dump.terminated); self.assertGreater(crypt.waited,0); self.assertGreater(dump.waited,0)
+ def test_pipeline_drains_saturated_stderr_before_reaping_failure(self):
+  class Pipe:
+   def close(self): pass
+  class Process:
+   def __init__(self,code): self.stdin=Pipe(); self.stderr=io.BytesIO(b"x"*10000); self.returncode=code; self.communicated=False; self.terminated=False; self.waited=0
+   def communicate(self): self.communicated=True; raise AssertionError("stderr must be drained incrementally")
+   def poll(self): return None
+   def terminate(self): self.terminated=True
+   def wait(self,timeout=None): self.waited+=1; return self.returncode
+  with tempfile.TemporaryDirectory() as raw:
+   crypt,dump=Process(0),Process(1)
+   with patch.object(recovery.subprocess,"Popen",side_effect=(crypt,dump)),patch.object(recovery,"_windows_restrict_temporary_file"),patch.object(recovery,"_restrictive",return_value=True),self.assertRaisesRegex(recovery.RecoveryError,"database capture failed"):
+    recovery._dump_to_encrypted("pg_dump","age","age1"+"q"*58,"snapshot",{},Path(raw))
+   self.assertFalse(crypt.communicated); self.assertFalse(dump.communicated); self.assertEqual(b"",crypt.stderr.read()); self.assertEqual(b"",dump.stderr.read())
+   self.assertTrue(crypt.terminated); self.assertTrue(dump.terminated)
+   self.assertGreater(crypt.waited,0); self.assertGreater(dump.waited,0)
+ def test_pipeline_concurrently_drains_blocking_stderr_and_reaps_success(self):
+  class Pipe:
+   def __init__(self,ready,peer): self.ready=ready; self.peer=peer; self.payload=b"x"*10000
+   def read(self,size):
+    self.ready.set()
+    if not self.peer.wait(2): raise AssertionError("stderr streams were not drained concurrently")
+    result,self.payload=self.payload,b""
+    return result
+   def close(self): pass
+  class Process:
+   def __init__(self,code,ready,peer): self.stdin=Pipe(threading.Event(),threading.Event()); self.stderr=Pipe(ready,peer); self.returncode=code; self.terminated=False; self.waited=0
+   def poll(self): return None
+   def terminate(self): self.terminated=True
+   def wait(self,timeout=None): self.waited+=1; return self.returncode
+  first,second=threading.Event(),threading.Event(); crypt,dump=Process(0,first,second),Process(0,second,first)
+  def popen(argv,**kwargs):
+   if argv[0]=="age": kwargs["stdout"].write(b"complete"); return crypt
+   return dump
+  with tempfile.TemporaryDirectory() as raw,patch.object(recovery.subprocess,"Popen",side_effect=popen),patch.object(recovery,"_windows_restrict_temporary_file"),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_unlink_owned_output",side_effect=lambda fd,path,identity:path.unlink(missing_ok=True)):
+   recovery._dump_to_encrypted("pg_dump","age","age1"+"q"*58,"snapshot",{},Path(raw))
+   self.assertEqual(b"complete",(Path(raw)/"g035-dump.enc").read_bytes())
+  for process in (crypt,dump):
+   self.assertTrue(process.stderr.ready.is_set()); self.assertFalse(process.terminated); self.assertGreater(process.waited,0)
+ def test_archive_is_fsynced_before_atomic_no_clobber_publication(self):
+  class Pipe:
+   def read(self,size): return b""
+   def close(self): pass
+  class Process:
+   def __init__(self): self.stdin=Pipe(); self.stderr=Pipe(); self.returncode=0
+   def poll(self): return 0
+   def wait(self,timeout=None): return 0
+  with tempfile.TemporaryDirectory() as raw:
+   destination=Path(raw); crypt,dump=Process(),Process(); original_fsync=os.fsync; original_link=os.link; observed=[]
+   def fsync(fd):
+    temporary=next(destination.glob(".g035-dump.enc.*.tmp"),None)
+    if temporary is not None and os.fstat(fd).st_ino==temporary.stat().st_ino:
+     observed.append(temporary.read_bytes()); self.assertFalse((destination/"g035-dump.enc").exists())
+     if recovery.os.name!="nt": self.assertEqual(0o600,temporary.stat().st_mode&0o777)
+    return original_fsync(fd)
+   def link(temporary,target,**kwargs):
+    self.assertEqual([b"complete"],observed); self.assertFalse(target.exists())
+    return original_link(temporary,target,**kwargs)
+   def popen(argv,**kwargs):
+    if argv[0]=="age": kwargs["stdout"].write(b"complete"); return crypt
+    return dump
+   with patch.object(recovery.subprocess,"Popen",side_effect=popen),patch.object(recovery.os,"fsync",side_effect=fsync),patch.object(recovery.os,"link",side_effect=link),patch.object(recovery,"_windows_restrict_temporary_file"),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_unlink_owned_output",side_effect=lambda fd,path,identity:path.unlink(missing_ok=True)):
+    recovery._dump_to_encrypted("pg_dump","age","age1"+"q"*58,"snapshot",{},destination)
+   self.assertEqual(b"complete",(destination/"g035-dump.enc").read_bytes())
+ def test_archive_atomic_no_clobber_preserves_racing_existing_final(self):
+  class Pipe:
+   def read(self,size): return b""
+   def close(self): pass
+  class Process:
+   def __init__(self): self.stdin=Pipe(); self.stderr=Pipe(); self.returncode=0; self.terminated=False; self.waited=0
+   def poll(self): return None
+   def terminate(self): self.terminated=True
+   def wait(self,timeout=None): self.waited+=1; return self.returncode
+  with tempfile.TemporaryDirectory() as raw:
+   destination=Path(raw); crypt,dump=Process(),Process(); original_link=os.link
+   def link(temporary,target,**kwargs):
+    target.write_bytes(b"existing")
+    if recovery.os.name=="nt": raise recovery.RecoveryError("Windows no-replace publication failed")
+    return original_link(temporary,target,**kwargs)
+   def popen(argv,**kwargs):
+    if argv[0]=="age": kwargs["stdout"].write(b"complete"); return crypt
+    return dump
+   publisher=patch.object(recovery if recovery.os.name=="nt" else recovery.os,"_windows_link_no_replace" if recovery.os.name=="nt" else "link",side_effect=link)
+   with patch.object(recovery.subprocess,"Popen",side_effect=popen),publisher,patch.object(recovery,"_windows_restrict_temporary_file"),patch.object(recovery,"_restrictive",return_value=True),self.assertRaisesRegex(recovery.RecoveryError,"database capture failed"):
+    recovery._dump_to_encrypted("pg_dump","age","age1"+"q"*58,"snapshot",{},destination)
+   self.assertEqual(b"existing",(destination/"g035-dump.enc").read_bytes())
+   self.assertTrue(crypt.terminated); self.assertTrue(dump.terminated); self.assertGreater(crypt.waited,0); self.assertGreater(dump.waited,0)
+ def test_pipeline_timeout_reaps_both_children(self):
+  class Process:
+   def __init__(self): self.release=threading.Event(); self.terminated=False; self.waited=0; self.returncode=0
+   def communicate(self): self.release.wait(); return b"",b""
+   def poll(self): return None
+   def terminate(self): self.terminated=True; self.release.set()
+   def wait(self,timeout=None): self.waited+=1; return 0
+  processes=(Process(),Process())
+  with self.assertRaisesRegex(recovery.RecoveryError,"database capture failed"):
+   recovery._drain_pipeline(processes,time.monotonic()-1)
+  for process in processes: self.assertTrue(process.terminated); self.assertGreater(process.waited,0)
+ def test_capture_receipt_is_fsynced_before_atomic_no_clobber_publication(self):
+  captured={"schema":recovery.RECEIPT_SCHEMA,"mode":"capture","status":"captured","evidence":{}}
+  captured["receipt_sha256"]=recovery.digest({key:value for key,value in captured.items() if key!="receipt_sha256"})
+  with tempfile.TemporaryDirectory() as raw:
+   target=Path(raw)/"capture.json"; args=Namespace(capture_receipt=str(target)); payload=recovery.canonical_bytes(captured); original_fsync=os.fsync; original_link=os.link; observed=[]
+   def fsync(fd):
+    temporary=next(Path(raw).glob(".capture.json.*.tmp"),None)
+    if temporary is not None and os.fstat(fd).st_ino==temporary.stat().st_ino:
+     observed.append(temporary.read_bytes()); self.assertFalse(target.exists())
+     if recovery.os.name!="nt": self.assertEqual(0o600,temporary.stat().st_mode&0o777)
+    return original_fsync(fd)
+   def link(temporary,final,**kwargs):
+    self.assertEqual([payload],observed); self.assertFalse(final.exists())
+    return original_link(temporary,final,**kwargs)
+   with patch.object(recovery,"run_capture",return_value=captured),patch.object(recovery,"repository_root",return_value=Path("C:/repository")),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_restrictive_directory",return_value=True),patch.object(recovery,"_windows_restrict_temporary_file"),patch.object(recovery.os,"fsync",side_effect=fsync),patch.object(recovery.os,"link",side_effect=link),patch.object(recovery,"_unlink_owned_output",side_effect=lambda fd,path,identity:path.unlink(missing_ok=True)):
+    self.assertEqual(captured,recovery.capture_to_custody(args,object()))
+   self.assertEqual(payload,target.read_bytes())
+ def test_capture_receipt_cleanup_preserves_replacement(self):
+  if recovery.os.name=="nt": self.skipTest("replacement inode assertion requires POSIX unlink semantics")
+  captured={"schema":recovery.RECEIPT_SCHEMA,"mode":"capture","status":"captured","evidence":{}}
+  captured["receipt_sha256"]=recovery.digest({key:value for key,value in captured.items() if key!="receipt_sha256"})
+  with tempfile.TemporaryDirectory() as raw:
+   target=Path(raw)/"capture.json"; args=Namespace(capture_receipt=str(target))
+   def replace(path):
+    target.unlink(); target.write_bytes(b"replacement")
+    raise recovery.RecoveryError("durability")
+   with patch.object(recovery,"run_capture",return_value=captured),patch.object(recovery,"repository_root",return_value=Path("C:/repository")),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_fsync_parent",side_effect=replace),self.assertRaisesRegex(recovery.RecoveryError,"capture receipt persistence invalid"):
+    recovery.capture_to_custody(args,object())
+   self.assertEqual(b"replacement",target.read_bytes())
+ def test_capture_receipt_failure_rolls_back_matching_archive_and_receipt(self):
+  with tempfile.TemporaryDirectory() as raw:
+   destination=Path(raw)/"archive"; destination.mkdir(); archive=destination/"g035-dump.enc"; archive.write_bytes(b"captured")
+   identity=(archive.stat().st_dev,archive.stat().st_ino)
+   captured={"schema":recovery.RECEIPT_SCHEMA,"mode":"capture","status":"captured","evidence":{"dump_identity":{"device":identity[0],"inode":identity[1]}}}
+   captured["receipt_sha256"]=recovery.digest({key:value for key,value in captured.items() if key!="receipt_sha256"})
+   target=Path(raw)/"capture.json"; args=Namespace(capture_receipt=str(target),destination=str(destination))
+   with patch.object(recovery,"run_capture",return_value=captured),patch.object(recovery,"repository_root",return_value=Path("C:/repository")),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_restrictive_directory",return_value=True),patch.object(recovery,"_publish_owned_output",side_effect=recovery.RecoveryError("publication")):
+    with self.assertRaisesRegex(recovery.RecoveryError,"capture receipt persistence invalid"): recovery.capture_to_custody(args,object())
+   self.assertFalse(archive.exists()); self.assertFalse(target.exists())
+ def test_capture_receipt_failure_preserves_substituted_archive(self):
+  with tempfile.TemporaryDirectory() as raw:
+   destination=Path(raw)/"archive"; destination.mkdir(); archive=destination/"g035-dump.enc"; archive.write_bytes(b"captured")
+   identity=(archive.stat().st_dev,archive.stat().st_ino)
+   captured={"schema":recovery.RECEIPT_SCHEMA,"mode":"capture","status":"captured","evidence":{"dump_identity":{"device":identity[0],"inode":identity[1]}}}
+   captured["receipt_sha256"]=recovery.digest({key:value for key,value in captured.items() if key!="receipt_sha256"})
+   target=Path(raw)/"capture.json"; args=Namespace(capture_receipt=str(target),destination=str(destination))
+   def substitute(*unused):
+    archive.unlink(); archive.write_bytes(b"substituted")
+    raise recovery.RecoveryError("publication")
+   with patch.object(recovery,"run_capture",return_value=captured),patch.object(recovery,"repository_root",return_value=Path("C:/repository")),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_restrictive_directory",return_value=True),patch.object(recovery,"_publish_owned_output",side_effect=substitute):
+    with self.assertRaisesRegex(recovery.RecoveryError,"capture receipt persistence invalid"): recovery.capture_to_custody(args,object())
+   self.assertEqual(b"substituted",archive.read_bytes()); self.assertFalse(target.exists())
+ def test_capture_receipt_verification_failure_rolls_back_archive_and_receipt(self):
+  with tempfile.TemporaryDirectory() as raw:
+   destination=Path(raw)/"archive"; destination.mkdir(); archive=destination/"g035-dump.enc"; archive.write_bytes(b"captured")
+   identity=(archive.stat().st_dev,archive.stat().st_ino)
+   captured={"schema":recovery.RECEIPT_SCHEMA,"mode":"capture","status":"captured","evidence":{"dump_identity":{"device":identity[0],"inode":identity[1]}}}
+   captured["receipt_sha256"]=recovery.digest({key:value for key,value in captured.items() if key!="receipt_sha256"})
+   target=Path(raw)/"capture.json"; args=Namespace(capture_receipt=str(target),destination=str(destination))
+   with patch.object(recovery,"run_capture",return_value=captured),patch.object(recovery,"repository_root",return_value=Path("C:/repository")),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_restrictive_directory",return_value=True),patch.object(recovery.json,"loads",side_effect=ValueError("verification")):
+    with self.assertRaisesRegex(recovery.RecoveryError,"capture receipt persistence invalid"): recovery.capture_to_custody(args,object())
+   self.assertFalse(archive.exists()); self.assertFalse(target.exists())
  def test_dump_rejects_snapshot_option_injection(self):
   with tempfile.TemporaryDirectory() as raw,patch.object(recovery.subprocess,"Popen") as popen:
    with self.assertRaisesRegex(recovery.RecoveryError,"invalid snapshot"):
@@ -361,10 +674,11 @@ class ControllerTests(unittest.TestCase):
    recipient="age19ae5mjee5z9djp8fvvecpr8ll2xdap3k9n2yucyhdy8xy5ujhywsl5zek2"
    args=Namespace(destination=str(dest),service_file=str(self.service(raw,"g035")),recipient=recipient,g034_artifact=str(artifact),pg_dump="pg_dump",encrypt_command="age")
    def dump(*values):
-    self.assertNotIn("ROLLBACK",conn.events); self.assertEqual(recipient,values[2]); (dest/"g035-dump.enc").write_bytes(b"x"); return []
-   with patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"command_exists",side_effect=lambda x:x),patch.object(recovery,"_connect",return_value=conn),patch.object(recovery,"_fingerprints",return_value=observed),patch.object(recovery,"_g034_live_fingerprints",return_value={"ledger_sha256":"1"*64,"catalog_sha256":"2"*64}),patch.object(recovery,"_repository_commit",return_value="a"*40),patch.object(recovery,"_dump_to_encrypted",side_effect=dump):
+    self.assertNotIn("ROLLBACK",conn.events); self.assertEqual(recipient,values[2]); output=dest/"g035-dump.enc"; output.write_bytes(b"x"); info=output.stat(); return [],hashlib.sha256(b"x").hexdigest(),1,(info.st_dev,info.st_ino)
+   with patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_restrictive_directory",return_value=True),patch.object(recovery,"command_exists",side_effect=lambda x:x),patch.object(recovery,"_connect",return_value=conn),patch.object(recovery,"_fingerprints",return_value=observed),patch.object(recovery,"_target_fingerprint",return_value="f"*64) as target,patch.object(recovery,"_g034_live_fingerprints",return_value={"ledger_sha256":"1"*64,"catalog_sha256":"2"*64}),patch.object(recovery,"_recovery_source_binding",return_value={"repository_commit":"a"*40,"runtime_source_root":"b"*64}),patch.object(recovery,"_dump_to_encrypted",side_effect=dump):
     result=recovery.run_capture(args,manifest)
   self.assertEqual(hashlib.sha256(recipient.encode("utf-8")).hexdigest(),result["evidence"]["recipient_fingerprint"])
+  self.assertEqual("f"*64,result["evidence"]["target_fingerprint"]); target.assert_called_once_with(conn)
   self.assertNotIn(recipient,json.dumps(result))
   self.assertLess(conn.events.index("SELECT pg_export_snapshot()"),conn.events.index("ROLLBACK"))
   self.assertEqual(list(contract.APPLICATION_SCHEMAS),result["evidence"]["schema_scope"])
