@@ -256,13 +256,18 @@ class G034HostedPreflightTests(unittest.TestCase):
             def __init__(self, referenced=False):
                 self.referenced = referenced
                 self.last_sql = ""
+                self.executed = []
             def execute(self, sql):
                 self.last_sql = sql
+                self.executed.append(sql)
                 if "pg_get_functiondef" in sql and "CASE WHEN procedure.prokind IN ('f', 'p') THEN pg_catalog.pg_get_functiondef(procedure.oid)" not in sql:
                     raise RuntimeError("WrongObjectType")
             def fetchone(self):
                 return (self.referenced and "pg_get_functiondef" in self.last_sql,)
-        self.assertFalse(module.catalog_retirement_dependency_exists(Cursor()))
+        cursor = Cursor()
+        self.assertFalse(module.catalog_retirement_dependency_exists(cursor))
+        self.assertTrue(any("pg_constraint AS catalog_constraint" in sql for sql in cursor.executed))
+        self.assertTrue(all("pg_constraint AS constraint" not in sql for sql in cursor.executed))
         for kind in ("function", "procedure"):
             with self.subTest(kind=kind):
                 self.assertTrue(module.catalog_retirement_dependency_exists(Cursor(referenced=True)))
