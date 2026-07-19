@@ -220,19 +220,27 @@ def _verify_receipt(payload: bytes, signature: bytes) -> None:
 
 def _sign_receipt(payload: bytes) -> bytes:
     # This online key signs receipts only; destructive authorization remains offline.
+    fd: int | None = None
     try:
-        key = authority.restrictive_regular_file(_RECEIPT_SIGNING_KEY, "recovery receipt signing key")
-        public = subprocess.run(
-            ["openssl", "pkey", "-in", str(key), "-pubout"],
-            stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, check=True,
-        ).stdout
+        key_path = authority.restrictive_regular_file(_RECEIPT_SIGNING_KEY, "recovery receipt signing key")
+        fd, raw = authority._open_custody(key_path)
+        from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat, load_pem_private_key
+        private = load_pem_private_key(raw, password=None)
+        public = private.public_key().public_bytes(Encoding.PEM, PublicFormat.SubjectPublicKeyInfo)
         if public != _RECEIPT_PUBLIC_KEY_PEM.encode("ascii") or hashlib.sha256(public).hexdigest() != _RECEIPT_PUBLIC_KEY_SHA256:
             _deny("receipt_signing")
-        return subprocess.run(["openssl", "pkeyutl", "-sign", "-inkey", str(key), "-rawin"], input=payload, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, check=True).stdout
+        signature = private.sign(payload)
+        if type(signature) is not bytes or len(signature) != 64:
+            _deny("receipt_signing")
+        return signature
     except ControllerError:
         raise
     except Exception:
         _deny("receipt_signing")
+    finally:
+        if fd is not None:
+            try: os.close(fd)
+            except Exception: pass
 
 def _bindings(source: SourceBinding, reference: VerifiedReference, observation: prefix.PrefixObservation, custody: RecoveryCustody, manifest: Any, observation_receipt_sha256: str) -> dict[str, Any]:
     suffix = tuple((item.version, item.name, item.sha256) for item in manifest.migrations[17:])
