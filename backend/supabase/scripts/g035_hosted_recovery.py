@@ -1,7 +1,16 @@
 #!/usr/bin/env python3
 """Fail-closed, local-only encrypted backup/restore/clone rehearsal."""
 from __future__ import annotations
-import argparse, csv, hashlib, ipaddress, json, os, re, shutil, stat, subprocess, tempfile, uuid
+import sys
+
+if __name__ == "__main__":
+ try:
+  _recovery_source=sys.modules["g040_recovery_source"]
+  _recovery_source.assert_isolated_bootstrap()
+ except Exception:
+  raise SystemExit("protected recovery source verification failed") from None
+
+import argparse, csv, hashlib, ipaddress, json, os, re, shutil, stat, subprocess, tempfile, threading, time, uuid
 from pathlib import Path
 from typing import Any, Sequence
 from g035_hosted_recovery_contract import APPLICATION_SCHEMAS, APPROVED_AGE_RECIPIENT_SHA256, BASELINE_PAIRS, BASELINE_SHA256, FORBIDDEN_VERSIONS, MANAGED_METADATA_SCHEMAS, MANIFEST_SHA256, REMEDIATION_AUTHORIZATION_SCHEMA, REMEDIATION_PUBLIC_KEY_PEM, REMEDIATION_PUBLIC_KEY_SHA256, SELF_COMMIT_VERSIONS, SHORT_URL_SELECTION_SPEC as CONTRACT_SHORT_URL_SELECTION_SPEC, SHORT_URLS_CATALOG as CONTRACT_SHORT_URLS_CATALOG, ContractError, Manifest, canonical_json_bytes, canonical_sha256, ledger_prefix, repository_root, sha256_file, validate_sources, verify_short_url_remediation_authorization
@@ -100,9 +109,9 @@ def _windows_saved_sddl(export):
   match=re.search(r"(?:^|\s)(D:[^\r\n]+)$",line)
   if match: values.append(match.group(1))
  return values[0] if len(values)==1 else None
-def _windows_dacl_restrictive(path):
+def _windows_dacl_restrictive(path, *, directory=False):
  """Windows ACL inspection has no POSIX mode-bit fallback."""
- if path.is_symlink() or not path.is_file(): return False
+ if path.is_symlink() or (not path.is_dir() if directory else not path.is_file()): return False
  current=_windows_current_sid()
  if not current: return False
  try:
@@ -133,6 +142,14 @@ def _restrictive(path):
   if os.name=="nt": return _windows_dacl_restrictive(path)
   return not bool(path.stat().st_mode & 0o077)
  except OSError:return False
+def _restrictive_directory(path):
+ try:
+  if path.is_symlink() or not path.is_dir(): return False
+  if os.name=="nt": return _windows_dacl_restrictive(path,directory=True)
+  return not bool(path.stat().st_mode & 0o077)
+ except OSError:return False
+def _require_restrictive_directory(path,label):
+ if not _restrictive_directory(path): raise RecoveryError(f"{label} must be restrictive directory")
 def _require_restrictive_regular_file(path, label):
  if path.is_symlink() or not path.is_file() or not _restrictive(path): raise RecoveryError(f"{label} must be restrictive regular file")
 def _parse_service_entries(source,section):
@@ -198,6 +215,10 @@ def _fingerprints(conn):
  managed_catalog=_query_conn(conn,"SELECT n.nspname,c.relname,c.relkind FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=ANY(%s) ORDER BY 1,2",(list(MANAGED_METADATA_SCHEMAS),))
  managed_schemas=tuple(str(row[0]) for row in _query_conn(conn,"SELECT nspname FROM pg_namespace WHERE nspname=ANY(%s) ORDER BY 1",(list(MANAGED_METADATA_SCHEMAS),)))
  return {"ledger_pairs":pairs,"ledger_sha256":hashlib.sha256(raw.encode()).hexdigest(),"ledger_count":len(pairs),"restorable_catalog_sha256":hashlib.sha256(json.dumps(restorable_catalog,default=str,separators=(",",":")).encode()).hexdigest(),"managed_catalog_sha256":hashlib.sha256(json.dumps(managed_catalog,default=str,separators=(",",":")).encode()).hexdigest(),"managed_metadata_schemas_present":managed_schemas}
+def _target_fingerprint(conn):
+ rows=_query_conn(conn,"SELECT (pg_catalog.pg_control_system()).system_identifier::text,(SELECT oid::text FROM pg_catalog.pg_database WHERE datname=current_database()),current_setting('server_version_num')")
+ if len(rows)!=1 or len(rows[0])!=3 or any(not isinstance(value,str) for value in rows[0]): raise RecoveryError("target fingerprint unavailable")
+ return hashlib.sha256(json.dumps(list(rows[0]),separators=(",",":")).encode("ascii")).hexdigest()
 def _repository_commit(root):
  try:
   value=subprocess.run(["git","-C",str(root),"rev-parse","HEAD"],check=True,capture_output=True,text=True).stdout.strip()
@@ -208,6 +229,28 @@ def _preflight_receipt(data):
  return digest({key:data[key] for key in ("catalogFingerprint","hostedLedgerFingerprint","manifestHash","repositoryCommit","sourceFingerprint")})
 def _source_fingerprint(manifest):
  return digest({"closureMigrationHashes":[entry.sha256 for entry in manifest.migrations],"trackedApprovalSourceHash":g034_preflight.TRACKED_APPROVAL_SOURCE_SHA256})
+def _recovery_source_binding(root, authorized_final_commit):
+ try:
+  from g040_recovery_source import RecoverySourceError, verify_recovery_source
+  binding=verify_recovery_source(root,authorized_final_commit,production=True)
+ except Exception as exc: raise RecoveryError("recovery source verification failed") from exc
+ if binding.final_commit!=authorized_final_commit or not HEX.fullmatch(binding.runtime_source_root): raise RecoveryError("recovery source verification failed")
+ return {"repository_commit":binding.final_commit,"runtime_source_root":binding.runtime_source_root}
+def _require_recovery_source_binding(evidence,root):
+ if not isinstance(evidence,dict) or set(("repository_commit","runtime_source_root"))-set(evidence): raise RecoveryError("recovery source binding missing")
+ binding=_recovery_source_binding(root,evidence["repository_commit"])
+ if binding["runtime_source_root"]!=evidence["runtime_source_root"]: raise RecoveryError("recovery source binding mismatch")
+ return binding
+def _g034_artifact(path,manifest):
+ try:
+  data=json.loads(Path(path).read_text(encoding="utf8"),object_pairs_hook=_pairs)
+ except (OSError,json.JSONDecodeError,RecoveryError) as exc: raise RecoveryError("g034 artifact unreadable") from exc
+ required={"artifactVersion","blockers","catalogChecked","catalogFingerprint","cloneApplyRisks","cloneBackupRecoveryRequired","hostedLedgerFingerprint","manifestHash","preflightReceiptId","prerequisites","repositoryCommit","requiredLaterPromotionGate","safeToApply","sourceFingerprint","sourceValid","schemaVersion","ledgerExpectedTerminal","closureTerminalVersion"}
+ allowed={"clone-required","clone-backup-recovery-required","catalog-prerequisite","ledger-terminal"}
+ fatal_prefixes=("manifest","database-url","catalog-read","catalog-rollback")
+ if not isinstance(data,dict) or set(data)!=required or data["artifactVersion"]!=2 or data["ledgerExpectedTerminal"]!=manifest.ledger_terminal_version or not isinstance(data["blockers"],list) or len(data["blockers"])!=len(set(data["blockers"])) or any(not isinstance(code,str) for code in data["blockers"]) or not set(data["blockers"]).issubset(allowed) or any(code.startswith(fatal_prefixes) for code in data["blockers"]) or data["manifestHash"]!=MANIFEST_SHA256 or not re.fullmatch(r"[0-9a-f]{40}",data["repositoryCommit"]) or data["sourceFingerprint"]!=_source_fingerprint(manifest) or not data["sourceValid"] or not data["catalogChecked"] or data["safeToApply"] is not False or data["preflightReceiptId"]!=_preflight_receipt(data):
+  raise RecoveryError("g034 capture readiness is not satisfied")
+ return data
 def _g034_live_fingerprints(conn,artifact):
  try:
   data=json.loads(Path(artifact).read_text(encoding="utf8"),object_pairs_hook=_pairs)
@@ -226,41 +269,319 @@ def _g034_live_fingerprints(conn,artifact):
  prerequisites["noWaitingLocks"]=int(_query_conn(conn,"SELECT count(*) FROM pg_catalog.pg_locks WHERE NOT granted")[0][0])==0
  prerequisites["requiredRolesPresent"]=int(_query_conn(conn,"SELECT count(*) FROM pg_catalog.pg_roles WHERE rolname = ANY(%s)",(["postgres","service_role","authenticated"],))[0][0])==3
  return {"ledger_sha256":digest(ledger),"catalog_sha256":digest(prerequisites)}
-def _g034_adapter(path, root, manifest, observed):
- try:
-  data=json.loads(Path(path).read_text(encoding="utf8"),object_pairs_hook=_pairs)
- except (OSError,json.JSONDecodeError,RecoveryError) as exc: raise RecoveryError("g034 artifact unreadable") from exc
- required={"artifactVersion","blockers","catalogChecked","catalogFingerprint","cloneApplyRisks","cloneBackupRecoveryRequired","hostedLedgerFingerprint","manifestHash","preflightReceiptId","prerequisites","repositoryCommit","requiredLaterPromotionGate","safeToApply","sourceFingerprint","sourceValid","schemaVersion","ledgerExpectedTerminal","closureTerminalVersion"}
- allowed={"clone-required","clone-backup-recovery-required","catalog-prerequisite","ledger-terminal"}
- fatal_prefixes=("manifest","database-url","catalog-read","catalog-rollback")
- if not isinstance(data,dict) or set(data)!=required or data["artifactVersion"]!=2 or data["ledgerExpectedTerminal"]!=manifest.ledger_terminal_version or not isinstance(data["blockers"],list) or len(data["blockers"])!=len(set(data["blockers"])) or any(not isinstance(code,str) for code in data["blockers"]) or not set(data["blockers"]).issubset(allowed) or any(code.startswith(fatal_prefixes) for code in data["blockers"]) or data["manifestHash"]!=MANIFEST_SHA256 or data["repositoryCommit"]!=_repository_commit(root) or data["sourceFingerprint"]!=_source_fingerprint(manifest) or not data["sourceValid"] or not data["catalogChecked"] or data["safeToApply"] is not False or data["preflightReceiptId"]!=_preflight_receipt(data) or data["hostedLedgerFingerprint"]!=observed["ledger_sha256"] or data["catalogFingerprint"]!=observed["catalog_sha256"]:
+def _g034_adapter(path, root, manifest, observed, source_binding=None):
+ data=_g034_artifact(path,manifest)
+ source_binding={"repository_commit":data["repositoryCommit"],"runtime_source_root":"0"*64} if source_binding is None else source_binding
+ if source_binding["repository_commit"]!=data["repositoryCommit"] or data["hostedLedgerFingerprint"]!=observed["ledger_sha256"] or data["catalogFingerprint"]!=observed["catalog_sha256"]:
   raise RecoveryError("g034 capture readiness is not satisfied")
- return {"g034_preflight_receipt_id":data["preflightReceiptId"],"commit_sha256":data["repositoryCommit"],"catalog_sha256":data["catalogFingerprint"],"ledger_sha256":data["hostedLedgerFingerprint"],"source_sha256":data["sourceFingerprint"],"capture_readiness_sha256":digest({"artifact_sha256":sha256_file(Path(path)),"preflight_receipt_id":data["preflightReceiptId"],"live_catalog_sha256":observed["catalog_sha256"],"live_ledger_sha256":observed["ledger_sha256"]})}
+ return {"g034_preflight_receipt_id":data["preflightReceiptId"],**source_binding,"catalog_sha256":data["catalogFingerprint"],"ledger_sha256":data["hostedLedgerFingerprint"],"source_sha256":data["sourceFingerprint"],"capture_readiness_sha256":digest({"artifact_sha256":sha256_file(Path(path)),"preflight_receipt_id":data["preflightReceiptId"],"live_catalog_sha256":observed["catalog_sha256"],"live_ledger_sha256":observed["ledger_sha256"]})}
+def _owned_output(path,label):
+ flags=os.O_RDWR|os.O_CREAT|os.O_EXCL|getattr(os,"O_NOFOLLOW",0)
+ fd=None; identity=None
+ try:
+  fd=os.open(path,flags,0o600)
+  identity=os.fstat(fd)
+  if os.name=="nt": _windows_restrict_temporary_file(path)
+  else: os.fchmod(fd,0o600)
+  if not stat.S_ISREG(identity.st_mode) or not _same_file_identity(fd,path) or not _restrictive(path) or (os.name!="nt" and identity.st_mode&0o777!=0o600): raise RecoveryError(f"{label} custody invalid")
+  return fd,(identity.st_dev,identity.st_ino)
+ except Exception as exc:
+  if fd is not None:
+   if identity is not None: _unlink_owned_output(fd,path,(identity.st_dev,identity.st_ino))
+   try: os.close(fd)
+   except OSError: pass
+  if isinstance(exc,RecoveryError): raise
+  raise RecoveryError(f"{label} custody invalid") from exc
+def _unlink_owned_output(fd,path,identity):
+ try:
+  descriptor=os.fstat(fd); entry=path.lstat()
+  if stat.S_ISREG(entry.st_mode) and not stat.S_ISLNK(entry.st_mode) and (descriptor.st_dev,descriptor.st_ino)==identity==(entry.st_dev,entry.st_ino): path.unlink()
+ except OSError: pass
+def _owned_temporary_output(target,label):
+ if target.exists() or target.is_symlink(): raise RecoveryError(f"{label} already exists")
+ temporary=target.with_name(f".{target.name}.{uuid.uuid4().hex}.tmp")
+ fd,identity=_owned_output(temporary,label)
+ return fd,temporary,identity
+def _descriptor_digest(fd,path,identity,label):
+ if not _same_file_identity(fd,path) or not _restrictive(path): raise RecoveryError(f"{label} custody lost")
+ before=os.fstat(fd)
+ try:
+  os.lseek(fd,0,os.SEEK_SET)
+  hasher=hashlib.sha256()
+  while True:
+   chunk=os.read(fd,1024*1024)
+   if not chunk: break
+   hasher.update(chunk)
+ finally:
+  os.lseek(fd,0,os.SEEK_SET)
+ after=os.fstat(fd)
+ if before.st_size!=after.st_size or (after.st_dev,after.st_ino)!=identity or not _same_file_identity(fd,path): raise RecoveryError(f"{label} custody lost")
+ return hasher.hexdigest(),after.st_size
+def _windows_link_no_replace(fd,target):
+ if os.name!="nt": raise RecoveryError("Windows publication unavailable")
+ try:
+  import ctypes, msvcrt
+  kernel32=ctypes.WinDLL("kernel32",use_last_error=True)
+  handle=msvcrt.get_osfhandle(fd); length=kernel32.GetFinalPathNameByHandleW(handle,None,0,0)
+  if not length: raise ctypes.WinError(ctypes.get_last_error())
+  source=ctypes.create_unicode_buffer(length+1)
+  if not kernel32.GetFinalPathNameByHandleW(handle,source,len(source),0): raise ctypes.WinError(ctypes.get_last_error())
+  if not kernel32.CreateHardLinkW(str(target),source.value,None): raise ctypes.WinError(ctypes.get_last_error())
+ except OSError as exc: raise RecoveryError("Windows no-replace publication failed") from exc
+def _windows_reopen_verified_output(path,identity,digest_value,size,label):
+ try:
+  import ctypes, msvcrt
+  kernel32=ctypes.WinDLL("kernel32",use_last_error=True)
+  create_file=kernel32.CreateFileW
+  create_file.argtypes=(ctypes.c_wchar_p,ctypes.c_ulong,ctypes.c_ulong,ctypes.c_void_p,ctypes.c_ulong,ctypes.c_ulong,ctypes.c_void_p)
+  create_file.restype=ctypes.c_void_p
+  handle=create_file(str(path),0x80000000,0x00000007,None,3,0x00200000,None)
+  if handle in (None,ctypes.c_void_p(-1).value): raise ctypes.WinError(ctypes.get_last_error())
+  fd=msvcrt.open_osfhandle(handle,os.O_RDONLY)
+ except OSError as exc: raise RecoveryError(f"{label} publication invalid") from exc
+ try:
+  if not _same_file_identity(fd,path) or os.fstat(fd).st_size!=size or not _restrictive(path): raise RecoveryError(f"{label} publication invalid")
+  observed,observed_size=_descriptor_digest(fd,path,identity,label)
+  if observed!=digest_value or observed_size!=size: raise RecoveryError(f"{label} publication invalid")
+  return fd
+ except Exception:
+  os.close(fd); raise
+def _windows_open_delete_handle(path):
+ try:
+  import ctypes, msvcrt
+  kernel32=ctypes.WinDLL("kernel32",use_last_error=True); create_file=kernel32.CreateFileW
+  create_file.argtypes=(ctypes.c_wchar_p,ctypes.c_ulong,ctypes.c_ulong,ctypes.c_void_p,ctypes.c_ulong,ctypes.c_ulong,ctypes.c_void_p)
+  create_file.restype=ctypes.c_void_p
+  handle=create_file(str(path),0x80010080,0x00000007,None,3,0x00200000,None)
+  if handle in (None,ctypes.c_void_p(-1).value): raise ctypes.WinError(ctypes.get_last_error())
+  try: return msvcrt.open_osfhandle(handle,os.O_RDONLY)
+  except OSError:
+   kernel32.CloseHandle(ctypes.c_void_p(handle)); raise
+ except OSError: return None
+def _windows_handle_is_regular_nonreparse(fd):
+ try:
+  import ctypes, msvcrt
+  class AttributeTag(ctypes.Structure): _fields_=(("attributes",ctypes.c_ulong),("tag",ctypes.c_ulong))
+  kernel32=ctypes.WinDLL("kernel32",use_last_error=True); information=kernel32.GetFileInformationByHandleEx
+  information.argtypes=(ctypes.c_void_p,ctypes.c_int,ctypes.c_void_p,ctypes.c_ulong); information.restype=ctypes.c_int
+  attributes=AttributeTag()
+  if not information(msvcrt.get_osfhandle(fd),9,ctypes.byref(attributes),ctypes.sizeof(attributes)): return False
+  return stat.S_ISREG(os.fstat(fd).st_mode) and not bool(attributes.attributes&0x00000400)
+ except OSError: return False
+def _windows_mark_handle_delete_pending(fd):
+ try:
+  import ctypes, msvcrt
+  class DispositionInfoEx(ctypes.Structure): _fields_=(("flags",ctypes.c_ulong),)
+  class DispositionInfo(ctypes.Structure): _fields_=(("delete_file",ctypes.c_byte),)
+  kernel32=ctypes.WinDLL("kernel32",use_last_error=True); disposition=kernel32.SetFileInformationByHandle
+  disposition.argtypes=(ctypes.c_void_p,ctypes.c_int,ctypes.c_void_p,ctypes.c_ulong); disposition.restype=ctypes.c_int
+  handle=msvcrt.get_osfhandle(fd); extended=DispositionInfoEx(0x00000013)
+  if disposition(handle,21,ctypes.byref(extended),ctypes.sizeof(extended)): return True
+  if ctypes.get_last_error() not in {1,50,87,120}: return False
+  legacy=DispositionInfo(1)
+  return bool(disposition(handle,4,ctypes.byref(legacy),ctypes.sizeof(legacy)))
+ except OSError: return False
+def _windows_remove_exact(path,identity):
+ fd=_windows_open_delete_handle(path)
+ if fd is None: return False
+ try:
+  descriptor=os.fstat(fd)
+  if not _windows_handle_is_regular_nonreparse(fd) or (descriptor.st_dev,descriptor.st_ino)!=identity or not _same_file_identity(fd,path) or not _restrictive(path): return False
+  return _windows_mark_handle_delete_pending(fd)
+ except OSError: return False
+ finally:
+  try: os.close(fd)
+  except OSError: pass
+def _publish_owned_output(fd,temporary,target,identity,label):
+ digest_value,size=_descriptor_digest(fd,temporary,identity,label)
+ published=False
+ if os.name=="nt":
+  source_closed=False; final_fd=None
+  try:
+   _windows_link_no_replace(fd,target); published=True
+   if not _same_file_identity(fd,target) or os.fstat(fd).st_size!=size or not _restrictive(target): raise RecoveryError(f"{label} publication invalid")
+   os.close(fd); source_closed=True
+   final_fd=_windows_reopen_verified_output(target,identity,digest_value,size,label)
+   if not _windows_remove_exact(temporary,identity): raise RecoveryError(f"{label} temporary cleanup failed")
+   return digest_value,size,identity,final_fd
+  except Exception as exc:
+   if final_fd is not None:
+    try: os.close(final_fd)
+    except OSError: pass
+   if not source_closed:
+    try: os.close(fd)
+    except OSError: pass
+   if published: _windows_remove_exact(target,identity)
+   _windows_remove_exact(temporary,identity)
+   if isinstance(exc,RecoveryError): raise
+   raise RecoveryError(f"{label} publication failed") from exc
+ try:
+  os.link(temporary,target,follow_symlinks=False)
+  published=True
+  final=os.stat(target)
+  if (final.st_dev,final.st_ino)!=identity or not _same_file_identity(fd,target) or final.st_size!=size or not _restrictive(target): raise RecoveryError(f"{label} publication invalid")
+  final_digest,final_size=_descriptor_digest(fd,target,identity,label)
+  if final_digest!=digest_value or final_size!=size: raise RecoveryError(f"{label} publication invalid")
+  _fsync_parent(target)
+  _unlink_owned_output(fd,temporary,identity)
+  if temporary.exists() or temporary.is_symlink(): raise RecoveryError(f"{label} temporary cleanup failed")
+  _fsync_parent(target)
+ except Exception as exc:
+  if published: _unlink_owned_output(fd,target,identity)
+  _unlink_owned_output(fd,temporary,identity)
+  if isinstance(exc,RecoveryError): raise
+  raise RecoveryError(f"{label} publication failed") from exc
+ return digest_value,size,identity,fd
+def _fsync_parent(path):
+ if os.name=="nt": return
+ try:
+  flags=os.O_RDONLY|getattr(os,"O_DIRECTORY",0)
+  fd=os.open(path.parent,flags)
+  try: os.fsync(fd)
+  finally: os.close(fd)
+ except OSError as exc: raise RecoveryError("artifact parent durability failed") from exc
+def _bounded_diagnostic(value):
+ if not isinstance(value,(bytes,bytearray)): return ""
+ return bytes(value[:4096]).decode("utf-8","replace").replace("\x00"," ").replace("\r"," ").replace("\n"," ")[:4096]
+def _reap_processes(processes):
+ for process in processes:
+  try:
+   if process.poll() is None: process.terminate()
+  except (AttributeError,OSError): pass
+ for process in processes:
+  try: process.wait(timeout=5)
+  except TypeError: process.wait()
+  except (AttributeError,subprocess.TimeoutExpired):
+   try: process.kill()
+   except (AttributeError,OSError): pass
+ for process in processes:
+  try: process.wait(timeout=5)
+  except TypeError: process.wait()
+  except (AttributeError,OSError,subprocess.TimeoutExpired): pass
+def _drain_pipeline(processes,deadline):
+ results=[None]*len(processes); failures=[]
+ def drain(index,process):
+  try:
+   stream=getattr(process,"stderr",None)
+   if stream is None:
+    results[index]=process.communicate() if hasattr(process,"communicate") else (b"",b"") if process.wait()==0 else (b"",b"")
+    return
+   captured=bytearray()
+   while True:
+    chunk=stream.read(8192)
+    if not chunk: break
+    captured.extend(chunk[:max(0,4096-len(captured))])
+   process.wait()
+   results[index]=(b"",bytes(captured))
+  except Exception as exc: failures.append(exc)
+ threads=[threading.Thread(target=drain,args=(index,process),daemon=True) for index,process in enumerate(processes)]
+ for thread in threads: thread.start()
+ for thread in threads: thread.join(max(0,deadline-time.monotonic()))
+ if any(thread.is_alive() for thread in threads):
+  _reap_processes(processes)
+  for thread in threads: thread.join(5)
+  raise RecoveryError("database capture failed")
+ if failures: raise RecoveryError("database capture failed") from failures[0]
+ diagnostics=tuple(_bounded_diagnostic(result[1] if result else b"") for result in results)
+ if any(getattr(process,"returncode",0) not in (0,None) for process in processes): raise RecoveryError("database capture failed")
+ return diagnostics
 def _dump_to_encrypted(pg_dump,encryptor,recipient,snapshot,env,destination):
  if not isinstance(snapshot,str) or not SNAPSHOT.fullmatch(snapshot): raise RecoveryError("invalid snapshot")
  output=destination/"g035-dump.enc"; argv=[pg_dump,"--format=custom","--snapshot="+snapshot,"--blobs",*["--schema="+schema for schema in DUMP_SCHEMAS],*MANAGED_TABLE_DATA_EXCLUSIONS,*["--extension="+name for name,_ in RECOVERY_EXTENSIONS],"--dbname=service=g035"]
+ fd=None; temporary=None; identity=None; processes=[]
  try:
-  with output.open("xb") as sink:
-   crypt=subprocess.Popen([encryptor,"--recipient",recipient],stdin=subprocess.PIPE,stdout=sink,stderr=subprocess.PIPE,env=safe_environment(Path("."),crypto=True)); dump=subprocess.Popen(argv,stdin=subprocess.DEVNULL,stdout=crypt.stdin,stderr=subprocess.PIPE,env=env); crypt.stdin.close()
-   if dump.wait(CAPTURE_TIMEOUT_SECONDS) or crypt.wait(CAPTURE_TIMEOUT_SECONDS): raise RecoveryError("database capture failed")
- except (OSError,subprocess.TimeoutExpired,RecoveryError) as exc:
-  output.unlink(missing_ok=True); raise RecoveryError("database capture failed") from exc
- return argv
+  fd,temporary,identity=_owned_temporary_output(output,"encrypted archive")
+  with os.fdopen(fd,"wb",closefd=False) as sink:
+   crypt=subprocess.Popen([encryptor,"--recipient",recipient],stdin=subprocess.PIPE,stdout=sink,stderr=subprocess.PIPE,env=safe_environment(Path("."),crypto=True)); processes.append(crypt)
+   dump=subprocess.Popen(argv,stdin=subprocess.DEVNULL,stdout=crypt.stdin,stderr=subprocess.PIPE,env=env); processes.append(dump); crypt.stdin.close()
+   _drain_pipeline(processes,time.monotonic()+CAPTURE_TIMEOUT_SECONDS)
+   sink.flush(); os.fsync(fd)
+  dump_sha256,dump_bytes,identity,fd=_publish_owned_output(fd,temporary,output,identity,"encrypted archive")
+  if not _same_file_identity(fd,output): raise RecoveryError("encrypted archive custody lost")
+ except Exception as exc:
+  _reap_processes(processes)
+  if fd is not None and temporary is not None: _unlink_owned_output(fd,temporary,identity)
+  if fd is not None: _unlink_owned_output(fd,output,identity)
+  raise RecoveryError("database capture failed") from exc
+ finally:
+  if fd is not None:
+   try: os.close(fd)
+   except OSError: pass
+ return argv,dump_sha256,dump_bytes,identity
+def _same_path_identity(path,identity):
+ try:
+  entry=path.lstat()
+  return stat.S_ISREG(entry.st_mode) and not stat.S_ISLNK(entry.st_mode) and (entry.st_dev,entry.st_ino)==identity
+ except OSError: return False
 def run_capture(args,manifest):
  destination=Path(args.destination).resolve(); root=repository_root(Path(__file__).resolve())
  if not destination.is_dir() or root==destination or root in destination.parents: raise RecoveryError("destination must be an existing directory outside repository")
  if not AGE_RECIPIENT.fullmatch(args.recipient) or hashlib.sha256(args.recipient.encode("utf-8")).hexdigest()!=APPROVED_AGE_RECIPIENT_SHA256: raise RecoveryError("invalid encryption recipient")
+ artifact=_g034_artifact(args.g034_artifact,manifest)
+ source_binding=_recovery_source_binding(root,artifact["repositoryCommit"])
+ _require_restrictive_directory(destination,"archive parent")
+ if hasattr(args,"capture_receipt"):
+  receipt_parent=Path(args.capture_receipt).resolve().parent
+  if receipt_parent==root or root in receipt_parent.parents: raise RecoveryError("capture receipt custody invalid")
+  _require_restrictive_directory(receipt_parent,"receipt parent")
  readiness=None; pg_dump=command_exists(args.pg_dump); encryptor=command_exists(args.encrypt_command)
  with tempfile.TemporaryDirectory(prefix="g035-",dir=str(destination)) as raw:
   service=_copy_service(Path(raw),Path(args.service_file),"g035"); env=safe_environment(service); conn=_connect("g035",env)
   try:
    _query_conn(conn,"BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY"); snapshot=_query_conn(conn,"SELECT pg_export_snapshot()")[0][0]
-   observed=_fingerprints(conn); readiness=_g034_adapter(args.g034_artifact,root,manifest,_g034_live_fingerprints(conn,args.g034_artifact)); argv=_dump_to_encrypted(pg_dump,encryptor,args.recipient,snapshot,env,destination)
+   observed={**_fingerprints(conn),"target_fingerprint":_target_fingerprint(conn)}; readiness=_g034_adapter(args.g034_artifact,root,manifest,_g034_live_fingerprints(conn,args.g034_artifact),source_binding); argv,dump_sha256,dump_bytes,dump_identity=_dump_to_encrypted(pg_dump,encryptor,args.recipient,snapshot,env,destination)
   finally: conn.rollback(); conn.close()
- evidence={**readiness,"recipient_fingerprint":hashlib.sha256(args.recipient.encode("utf-8")).hexdigest(),"dump_sha256":sha256_file(destination/"g035-dump.enc"),"dump_bytes":(destination/"g035-dump.enc").stat().st_size,"schema_scope":list(APPLICATION_SCHEMAS),"recovery_control_schema_scope":list(RECOVERY_CONTROL_SCHEMAS),"extension_scope":[{"name":name,"schema":schema} for name,schema in RECOVERY_EXTENSIONS],"managed_metadata_schema_scope":list(MANAGED_METADATA_SCHEMAS),"managed_table_data_exclusions":list(MANAGED_TABLE_DATA_EXCLUSIONS),"snapshot_consumer_argv":argv,**observed}
+ dump=destination/"g035-dump.enc"
+ if not _same_path_identity(dump,dump_identity) or sha256_file(dump)!=dump_sha256 or dump.stat().st_size!=dump_bytes: raise RecoveryError("encrypted archive custody lost")
+ evidence={**readiness,"recipient_fingerprint":hashlib.sha256(args.recipient.encode("utf-8")).hexdigest(),"dump_sha256":dump_sha256,"dump_bytes":dump_bytes,"dump_identity":{"device":dump_identity[0],"inode":dump_identity[1]},"schema_scope":list(APPLICATION_SCHEMAS),"recovery_control_schema_scope":list(RECOVERY_CONTROL_SCHEMAS),"extension_scope":[{"name":name,"schema":schema} for name,schema in RECOVERY_EXTENSIONS],"managed_metadata_schema_scope":list(MANAGED_METADATA_SCHEMAS),"managed_table_data_exclusions":list(MANAGED_TABLE_DATA_EXCLUSIONS),"snapshot_consumer_argv":argv,**observed}
  return receipt("capture","captured",evidence)
+def _captured_archive_identity(result):
+ try:
+  evidence=result["evidence"]; recorded=evidence["dump_identity"]
+  identity=(recorded["device"],recorded["inode"])
+  if not all(isinstance(value,int) and not isinstance(value,bool) for value in identity): raise TypeError()
+  return identity
+ except (KeyError,TypeError):
+  raise RecoveryError("capture archive evidence invalid")
+def _rollback_captured_archive(args,result):
+ try:
+  archive=Path(getattr(args,"destination","")).resolve()/"g035-dump.enc"; identity=_captured_archive_identity(result)
+  if os.name=="nt": return _windows_remove_exact(archive,identity)
+  fd=os.open(archive,os.O_RDONLY|getattr(os,"O_NOFOLLOW",0))
+  try:
+   _unlink_owned_output(fd,archive,identity)
+   return not _same_path_identity(archive,identity)
+  finally: os.close(fd)
+ except (OSError,RecoveryError): return False
+def capture_to_custody(args, manifest):
+ """Capture through the current implementation and publish its exact receipt once."""
+ target=Path(args.capture_receipt).resolve(); root=repository_root(Path(__file__).resolve())
+ if target.exists() or target.is_symlink() or target.parent==root or root in target.parent.parents: raise RecoveryError("capture receipt custody invalid")
+ _require_restrictive_directory(target.parent,"receipt parent")
+ result=run_capture(args,manifest)
+ raw=canonical_bytes(result)
+ fd=None; temporary=None; identity=None
+ try:
+  fd,temporary,identity=_owned_temporary_output(target,"capture receipt")
+  offset=0
+  while offset<len(raw): offset+=os.write(fd,raw[offset:])
+  os.fsync(fd)
+  stored_digest,stored_size,_,fd=_publish_owned_output(fd,temporary,target,identity,"capture receipt")
+  if stored_size!=len(raw) or stored_digest!=hashlib.sha256(raw).hexdigest() or result["receipt_sha256"]!=digest({key:value for key,value in result.items() if key!="receipt_sha256"}) or json.loads(target.read_text(encoding="utf-8"),object_pairs_hook=_pairs)!=result:
+   raise RecoveryError("capture receipt persistence invalid")
+ except Exception as exc:
+  if fd is not None:
+   _unlink_owned_output(fd,target,identity)
+   if temporary is not None: _unlink_owned_output(fd,temporary,identity)
+  _rollback_captured_archive(args,result)
+  raise RecoveryError("capture receipt persistence invalid") from exc
+ finally:
+  if fd is not None:
+   try: os.close(fd)
+   except OSError: pass
+ return result
 def run_restore_verify(args,manifest):
- require_local(args.destination_service); capture=_require_prior(args.capture_receipt,"capture"); dump=Path(args.dump); identity=Path(args.identity_file)
+ require_local(args.destination_service); capture=_require_prior(args.capture_receipt,"capture"); source_binding=_require_recovery_source_binding(capture["evidence"],repository_root(Path(__file__).resolve())); dump=Path(args.dump); identity=Path(args.identity_file)
  if capture["evidence"].get("recipient_fingerprint")!=APPROVED_AGE_RECIPIENT_SHA256: raise RecoveryError("capture recipient binding mismatch")
  if capture["evidence"].get("extension_scope")!=[{"name":name,"schema":schema} for name,schema in RECOVERY_EXTENSIONS] or capture["evidence"].get("managed_metadata_schema_scope")!=list(MANAGED_METADATA_SCHEMAS) or capture["evidence"].get("managed_table_data_exclusions")!=list(MANAGED_TABLE_DATA_EXCLUSIONS): raise RecoveryError("capture managed metadata scope mismatch")
  if dump.is_symlink() or not dump.is_file() or sha256_file(dump)!=capture["evidence"].get("dump_sha256"): raise RecoveryError("ciphertext input mismatch")
@@ -294,7 +615,7 @@ def run_restore_verify(args,manifest):
  for key in ("ledger_sha256","ledger_count","restorable_catalog_sha256","managed_catalog_sha256"):
   if expected.get(key)!=observed.get(key): raise RecoveryError("restore evidence mismatch")
  if tuple(observed.get("managed_metadata_schemas_present",()))!=tuple(MANAGED_METADATA_SCHEMAS): raise RecoveryError("managed metadata structure mismatch")
- return receipt("restore-verify","restored",{**observed,"managed_metadata_coherence":"managed schema DDL restored with hosted catalog parity; managed table data excluded",**_auth_placeholder_evidence()},[capture["receipt_sha256"]])
+ return receipt("restore-verify","restored",{**source_binding,**observed,"managed_metadata_coherence":"managed schema DDL restored with hosted catalog parity; managed table data excluded",**_auth_placeholder_evidence()},[capture["receipt_sha256"]])
 def _validate_auth_user_reference_columns(conn):
  for schema,table,column in AUTH_USER_REFERENCE_COLUMNS:
   rows=_query_conn(conn,"SELECT namespace.nspname, class.relname, attribute.attname, type.typname, type_namespace.nspname FROM pg_catalog.pg_attribute AS attribute JOIN pg_catalog.pg_class AS class ON class.oid = attribute.attrelid JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = class.relnamespace JOIN pg_catalog.pg_type AS type ON type.oid = attribute.atttypid JOIN pg_catalog.pg_namespace AS type_namespace ON type_namespace.oid = type.typnamespace WHERE namespace.nspname = %s AND class.relname = %s AND attribute.attname = %s AND class.relkind IN ('r','p') AND attribute.attnum > 0 AND NOT attribute.attisdropped",(schema,table,column))
@@ -350,12 +671,12 @@ def _short_url_snapshot(conn):
  if catalog_value!=list(SHORT_URLS_CATALOG): raise RecoveryError("short_urls catalog drift")
  descriptors=json.loads(victims); return {"selection_spec_sha256":digest(SHORT_URL_SELECTION_SPEC),"short_urls_catalog_sha256":digest(catalog_value),"pre_short_urls_rowset_sha256":digest(json.loads(rows)),"duplicate_group_count":len({item["keeper_id"] for item in descriptors}),"duplicate_victim_count":len(descriptors),"duplicate_victims_sha256":digest(descriptors),"victim_descriptors_sha256":digest(descriptors),"_victims":descriptors}
 def run_short_url_inspect(args,manifest):
- require_local(args.service); restored=_require_prior(args.restore_receipt,"restore-verify")
+ require_local(args.service); restored=_require_prior(args.restore_receipt,"restore-verify"); source_binding=_require_recovery_source_binding(restored["evidence"],repository_root(Path(__file__).resolve()))
  with tempfile.TemporaryDirectory(prefix="g035-inspect-") as raw:
   service=_copy_local_service(Path(raw),Path(args.service_file),"g035-local"); conn=_connect("g035-local",safe_environment(service))
   try: _query_conn(conn,"BEGIN READ ONLY"); evidence=_short_url_snapshot(conn)
   finally: conn.rollback(); conn.close()
- return receipt("short-url-remediation-inspect","validated",{k:v for k,v in evidence.items() if not k.startswith("_")},[restored["receipt_sha256"]])
+ return receipt("short-url-remediation-inspect","validated",{**source_binding,**{k:v for k,v in evidence.items() if not k.startswith("_")}},[restored["receipt_sha256"]])
 def _id_digest(values): return digest(sorted(values))
 def _windows_restrict_temporary_file(path):
  try:
@@ -421,7 +742,7 @@ def _custodied_input_argument(fd,path):
 def _authorization(args,inspection,restored):
  path=Path(args.authorization); signature=Path(args.authorization_signature)
  capture=restored.get("prior_receipt_sha256",[])
- expected={"inspection_receipt_sha256":inspection["receipt_sha256"],"restore_receipt_sha256":restored["receipt_sha256"],"capture_receipt_sha256":capture[0] if len(capture)==1 else None,"manifest_sha256":MANIFEST_SHA256,"repository_commit":_repository_commit(repository_root(Path(__file__).resolve()))}
+ expected={"inspection_receipt_sha256":inspection["receipt_sha256"],"restore_receipt_sha256":restored["receipt_sha256"],"capture_receipt_sha256":capture[0] if len(capture)==1 else None,"manifest_sha256":MANIFEST_SHA256,"repository_commit":restored.get("evidence",{}).get("repository_commit",_repository_commit(repository_root(Path(__file__).resolve())))}
  def verify_detached(raw, signature_path, public_key_pem):
   key_fd,key=_secure_temporary_file("g035-key-",public_key_pem.encode("ascii"))
   raw_fd,exact=_secure_temporary_file("g035-authorization-",raw)
@@ -476,16 +797,16 @@ def _recovered_apply_evidence(conn,auth,restored,inspected):
 def _batch_values(auth,restored,inspected,state,catalog):
  return (auth["batch_id"],restored["receipt_sha256"],inspected["receipt_sha256"],digest(auth),MANIFEST_SHA256,auth["repository_commit"],state["selection_spec_sha256"],state["short_urls_catalog_sha256"],state["duplicate_group_count"],state["duplicate_victim_count"],state["pre_short_urls_rowset_sha256"],state["victim_descriptors_sha256"],catalog)
 def run_short_url_apply(args,manifest):
- require_local(args.service); restored=_require_prior(args.restore_receipt,"restore-verify"); inspected=_require_prior(args.inspect_receipt,"short-url-remediation-inspect"); auth=_authorization(args,inspected,restored)
+ require_local(args.service); restored=_require_prior(args.restore_receipt,"restore-verify"); inspected=_require_prior(args.inspect_receipt,"short-url-remediation-inspect"); source_binding=_require_recovery_source_binding(restored.get("evidence"),repository_root(Path(__file__).resolve())); auth=_authorization(args,inspected,restored)
  with tempfile.TemporaryDirectory(prefix="g035-remediate-") as raw:
   service=_copy_local_service(Path(raw),Path(args.service_file),"g035-local"); conn=_connect("g035-local",safe_environment(service))
   try:
    _query_conn(conn,"BEGIN ISOLATION LEVEL SERIALIZABLE"); _query_conn(conn,"LOCK TABLE public.short_urls IN SHARE ROW EXCLUSIVE MODE"); recovered=_recovered_apply_evidence(conn,auth,restored,inspected)
    if recovered is not None:
     conn.commit()
-    return receipt("short-url-remediation-apply","applied",recovered,[restored["receipt_sha256"],inspected["receipt_sha256"]])
+    return receipt("short-url-remediation-apply","applied",{**source_binding,**recovered},[restored["receipt_sha256"],inspected["receipt_sha256"]])
    state=_short_url_snapshot(conn)
-   if any(state[k]!=inspected["evidence"][k] for k in inspected["evidence"]): raise RecoveryError("inspection stale")
+   if any(state[k]!=inspected["evidence"][k] for k in state if k!="_victims"): raise RecoveryError("inspection stale")
    _query_conn(conn,"CREATE SCHEMA g035_recovery_control"); _query_conn(conn,"CREATE TABLE g035_recovery_control.short_url_duplicate_quarantine_batches (batch_id uuid PRIMARY KEY, restore_receipt_sha256 text NOT NULL, inspection_receipt_sha256 text NOT NULL, authorization_sha256 text NOT NULL, manifest_sha256 text NOT NULL, repository_commit text NOT NULL, selection_spec_sha256 text NOT NULL, short_urls_catalog_sha256 text NOT NULL, duplicate_group_count bigint NOT NULL, victim_count bigint NOT NULL, pre_rowset_sha256 text NOT NULL, victim_descriptors_sha256 text NOT NULL, quarantine_catalog_sha256 text NOT NULL, quarantined_ids_sha256 text, deleted_ids_sha256 text, survivor_rowset_sha256 text)"); _query_conn(conn,"CREATE TABLE g035_recovery_control.short_url_duplicate_quarantine (LIKE public.short_urls INCLUDING DEFAULTS INCLUDING GENERATED INCLUDING IDENTITY INCLUDING STORAGE, batch_id uuid NOT NULL REFERENCES g035_recovery_control.short_url_duplicate_quarantine_batches(batch_id), duplicate_rank bigint NOT NULL, keeper_id uuid NOT NULL, source_row_jsonb jsonb NOT NULL, source_row_sha256 text NOT NULL, UNIQUE (batch_id,id))"); _query_conn(conn,"REVOKE ALL ON SCHEMA g035_recovery_control FROM PUBLIC, anon, authenticated, service_role"); _query_conn(conn,"REVOKE ALL ON ALL TABLES IN SCHEMA g035_recovery_control FROM PUBLIC, anon, authenticated, service_role"); _query_conn(conn,"REVOKE ALL ON ALL SEQUENCES IN SCHEMA g035_recovery_control FROM PUBLIC, anon, authenticated, service_role"); _query_conn(conn,"ALTER DEFAULT PRIVILEGES IN SCHEMA g035_recovery_control REVOKE ALL ON TABLES FROM PUBLIC, anon, authenticated, service_role"); _query_conn(conn,"ALTER DEFAULT PRIVILEGES IN SCHEMA g035_recovery_control REVOKE ALL ON SEQUENCES FROM PUBLIC, anon, authenticated, service_role")
    catalog=_quarantine_catalog(conn)
    _query_conn(conn,"INSERT INTO g035_recovery_control.short_url_duplicate_quarantine_batches (batch_id,restore_receipt_sha256,inspection_receipt_sha256,authorization_sha256,manifest_sha256,repository_commit,selection_spec_sha256,short_urls_catalog_sha256,duplicate_group_count,victim_count,pre_rowset_sha256,victim_descriptors_sha256,quarantine_catalog_sha256) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",_batch_values(auth,restored,inspected,state,catalog))
@@ -498,7 +819,7 @@ def run_short_url_apply(args,manifest):
    conn.commit()
   except Exception: conn.rollback(); raise
   finally: conn.close()
- return receipt("short-url-remediation-apply","applied",{"local_only":True,"batch_id":auth["batch_id"],"restore_receipt_sha256":restored["receipt_sha256"],"inspection_receipt_sha256":inspected["receipt_sha256"],"authorization_sha256":digest(auth),"manifest_sha256":MANIFEST_SHA256,"repository_commit":auth["repository_commit"],"short_urls_catalog_sha256":state["short_urls_catalog_sha256"],"selection_spec_sha256":state["selection_spec_sha256"],"duplicate_group_count":state["duplicate_group_count"],"quarantined_row_count":len(quarantine_ids),"quarantined_row_sha256":digest(descriptors),"quarantined_ids_sha256":_id_digest(quarantine_ids),"deleted_ids_sha256":_id_digest(deleted_ids),"victim_descriptors_sha256":state["victim_descriptors_sha256"],"pre_short_urls_rowset_sha256":state["pre_short_urls_rowset_sha256"],"survivor_short_urls_rowset_sha256":survivor["pre_short_urls_rowset_sha256"],"quarantine_catalog_sha256":catalog},[restored["receipt_sha256"],inspected["receipt_sha256"]])
+ return receipt("short-url-remediation-apply","applied",{**source_binding,"local_only":True,"batch_id":auth["batch_id"],"restore_receipt_sha256":restored["receipt_sha256"],"inspection_receipt_sha256":inspected["receipt_sha256"],"authorization_sha256":digest(auth),"manifest_sha256":MANIFEST_SHA256,"repository_commit":auth["repository_commit"],"short_urls_catalog_sha256":state["short_urls_catalog_sha256"],"selection_spec_sha256":state["selection_spec_sha256"],"duplicate_group_count":state["duplicate_group_count"],"quarantined_row_count":len(quarantine_ids),"quarantined_row_sha256":digest(descriptors),"quarantined_ids_sha256":_id_digest(quarantine_ids),"deleted_ids_sha256":_id_digest(deleted_ids),"victim_descriptors_sha256":state["victim_descriptors_sha256"],"pre_short_urls_rowset_sha256":state["pre_short_urls_rowset_sha256"],"survivor_short_urls_rowset_sha256":survivor["pre_short_urls_rowset_sha256"],"quarantine_catalog_sha256":catalog},[restored["receipt_sha256"],inspected["receipt_sha256"]])
 def _verify_remediation_state(conn,evidence):
  batch=evidence.get("batch_id")
  if evidence.get("local_only") is not True or not isinstance(batch,str): raise RecoveryError("remediation verification invalid")
@@ -509,7 +830,7 @@ def _verify_remediation_state(conn,evidence):
  if len(binding)!=1 or binding[0]!=expected or digest(descriptors)!=evidence.get("victim_descriptors_sha256") or _id_digest(ids)!=evidence.get("quarantined_ids_sha256") or evidence.get("quarantined_ids_sha256")!=evidence.get("deleted_ids_sha256") or catalog!=evidence.get("quarantine_catalog_sha256") or not _quarantine_acl_valid(conn) or overlap or state["duplicate_victim_count"] or state["pre_short_urls_rowset_sha256"]!=evidence.get("survivor_short_urls_rowset_sha256"): raise RecoveryError("durable remediation verification failed")
  return batch,len(descriptors),state
 def run_short_url_verify(args,manifest):
- require_local(args.service); applied=_require_prior(args.apply_receipt,"short-url-remediation-apply")
+ require_local(args.service); applied=_require_prior(args.apply_receipt,"short-url-remediation-apply"); _require_recovery_source_binding(applied["evidence"],repository_root(Path(__file__).resolve()))
  with tempfile.TemporaryDirectory(prefix="g035-verify-") as raw:
   service=_copy_local_service(Path(raw),Path(args.service_file),"g035-local"); conn=_connect("g035-local",safe_environment(service))
   try:
@@ -517,7 +838,7 @@ def run_short_url_verify(args,manifest):
   finally: conn.rollback(); conn.close()
  return receipt("short-url-remediation-verify","validated",{**applied["evidence"],"apply_receipt_sha256":applied["receipt_sha256"],"batch_id":batch,"quarantined_row_count":count,"survivor_short_urls_rowset_sha256":state["pre_short_urls_rowset_sha256"]},[applied["receipt_sha256"]])
 def apply_manifest(args,manifest):
- require_local(args.service); prior=_require_prior(args.restore_receipt,"restore-verify"); psql=command_exists(args.psql)
+ require_local(args.service); prior=_require_prior(args.restore_receipt,"restore-verify"); source_binding=_require_recovery_source_binding(prior.get("evidence"),repository_root(Path(__file__).resolve())); psql=command_exists(args.psql)
  with tempfile.TemporaryDirectory(prefix="g035-clone-") as raw:
   service=_copy_local_service(Path(raw),Path(args.service_file),"g035-local"); env=safe_environment(service); conn=_connect("g035-local",env); self_commit_attempted=False; compatibility_hook_statements=[]; compatibility_hook_owner_function_count=0; compatibility_hook_obsolete_function_count=0; compatibility_hook_public_function_signatures=()
   try:
@@ -569,9 +890,9 @@ def apply_manifest(args,manifest):
     if self_commit_attempted: raise RecoveryError("self_commit_ambiguous") from exc
     raise
    finally: conn.close()
- return receipt("clone-apply","applied",{"clone_state":"transformed_local_clone_not_exact_restore","hosted_mutations":0,"baseline_pairs_sha256":BASELINE_SHA256,"initial_ledger_state":initial_state,"migrations_applied_in_invocation":len(manifest.migrations) if initial_state=="baseline" else 0,"migrations_already_present":len(manifest.migrations) if initial_state=="full" else 0,"short_url_remediation_verify_receipt_sha256":verified["receipt_sha256"] if initial_state=="baseline" else None,"compatibility_hook_owner_function_count":compatibility_hook_owner_function_count,"compatibility_hook_obsolete_function_count":compatibility_hook_obsolete_function_count,"compatibility_hook_public_function_count":len(compatibility_hook_public_function_signatures),"compatibility_hook_public_function_sha256":digest(compatibility_hook_public_function_signatures),"compatibility_hook_sha256":digest((COMPATIBILITY_HOOKS,VECTOR_EXTENSION_RELOCATION_HOOK_VERSION,VECTOR_EXTENSION_RELOCATION_HOOK,OBSOLETE_NOTIFICATION_OVERLOAD_HOOK_VERSION,OBSOLETE_NOTIFICATION_OVERLOAD,CANONICAL_NOTIFICATION_FUNCTION,PUBLIC_FUNCTION_OWNERS_HOOK_VERSION,PUBLIC_FUNCTION_OWNERS_SQL,CROSS_SCHEMA_OWNER_HOOK_VERSION,CROSS_SCHEMA_OWNER_FUNCTIONS)),**approval_evidence,**{k:v for k,v in observed.items() if k!="ledger_pairs"}},[prior["receipt_sha256"]])
+ return receipt("clone-apply","applied",{**source_binding,"clone_state":"transformed_local_clone_not_exact_restore","hosted_mutations":0,"baseline_pairs_sha256":BASELINE_SHA256,"initial_ledger_state":initial_state,"migrations_applied_in_invocation":len(manifest.migrations) if initial_state=="baseline" else 0,"migrations_already_present":len(manifest.migrations) if initial_state=="full" else 0,"short_url_remediation_verify_receipt_sha256":verified["receipt_sha256"] if initial_state=="baseline" else None,"compatibility_hook_owner_function_count":compatibility_hook_owner_function_count,"compatibility_hook_obsolete_function_count":compatibility_hook_obsolete_function_count,"compatibility_hook_public_function_count":len(compatibility_hook_public_function_signatures),"compatibility_hook_public_function_sha256":digest(compatibility_hook_public_function_signatures),"compatibility_hook_sha256":digest((COMPATIBILITY_HOOKS,VECTOR_EXTENSION_RELOCATION_HOOK_VERSION,VECTOR_EXTENSION_RELOCATION_HOOK,OBSOLETE_NOTIFICATION_OVERLOAD_HOOK_VERSION,OBSOLETE_NOTIFICATION_OVERLOAD,CANONICAL_NOTIFICATION_FUNCTION,PUBLIC_FUNCTION_OWNERS_HOOK_VERSION,PUBLIC_FUNCTION_OWNERS_SQL,CROSS_SCHEMA_OWNER_HOOK_VERSION,CROSS_SCHEMA_OWNER_FUNCTIONS)),**approval_evidence,**{k:v for k,v in observed.items() if k!="ledger_pairs"}},[prior["receipt_sha256"]])
 def run_postflight(args,manifest):
- require_local(args.service); applied=_require_prior(args.clone_receipt,"clone-apply"); evidence=applied.get("evidence"); approval_descriptor=_approval_contract_descriptor()
+ require_local(args.service); applied=_require_prior(args.clone_receipt,"clone-apply"); source_binding=_require_recovery_source_binding(applied["evidence"],repository_root(Path(__file__).resolve())); evidence=applied.get("evidence"); approval_descriptor=_approval_contract_descriptor()
  required={"clone_state":"transformed_local_clone_not_exact_restore","hosted_mutations":0,"baseline_pairs_sha256":BASELINE_SHA256,**approval_descriptor}
  if not isinstance(evidence,dict) or any(evidence.get(key)!=value for key,value in required.items()) or len(applied.get("prior_receipt_sha256",()))!=1: raise RecoveryError("clone receipt evidence mismatch")
  psql=command_exists(args.psql)
@@ -586,10 +907,11 @@ def run_postflight(args,manifest):
  for key in ("ledger_sha256","ledger_count","restorable_catalog_sha256","managed_catalog_sha256"):
   if evidence.get(key)!=observed.get(key): raise RecoveryError("clone receipt evidence mismatch")
  if not _managed_metadata_schemas_equal(evidence.get("managed_metadata_schemas_present"),observed.get("managed_metadata_schemas_present")): raise RecoveryError("clone receipt evidence mismatch")
- return receipt("local-postflight","validated",{**approval_evidence,**{k:v for k,v in observed.items() if k!="ledger_pairs"}},[applied["receipt_sha256"]])
+ return receipt("local-postflight","validated",{**source_binding,**approval_evidence,**{k:v for k,v in observed.items() if k!="ledger_pairs"}},[applied["receipt_sha256"]])
 def parser():
  p=argparse.ArgumentParser(); sub=p.add_subparsers(dest="mode",required=True); sub.add_parser("validate")
  c=sub.add_parser("capture"); c.add_argument("--destination",required=True); c.add_argument("--service-file",required=True); c.add_argument("--recipient",required=True); c.add_argument("--g034-artifact",required=True); c.add_argument("--pg-dump",default="pg_dump"); c.add_argument("--encrypt-command",required=True)
+ pc=sub.add_parser("production-capture"); pc.add_argument("--destination",required=True); pc.add_argument("--capture-receipt",required=True); pc.add_argument("--service-file",required=True); pc.add_argument("--recipient",required=True); pc.add_argument("--g034-artifact",required=True); pc.add_argument("--pg-dump",default="pg_dump"); pc.add_argument("--encrypt-command",required=True)
  r=sub.add_parser("restore-verify"); r.add_argument("--dump",required=True); r.add_argument("--capture-receipt",required=True); r.add_argument("--service-file",required=True); r.add_argument("--destination-service",required=True); r.add_argument("--identity-file",required=True); r.add_argument("--decrypt-command",required=True); r.add_argument("--pg-restore",default="pg_restore")
  i=sub.add_parser("short-url-remediation-inspect"); i.add_argument("--service",required=True); i.add_argument("--service-file",required=True); i.add_argument("--restore-receipt",required=True)
  a=sub.add_parser("short-url-remediation-apply"); a.add_argument("--service",required=True); a.add_argument("--service-file",required=True); a.add_argument("--restore-receipt",required=True); a.add_argument("--inspect-receipt",required=True); a.add_argument("--authorization",required=True); a.add_argument("--authorization-signature",required=True)
@@ -600,6 +922,6 @@ def parser():
 def main(argv=None):
  args=parser().parse_args(argv)
  try:
-  manifest=validate_sources(repository_root(Path(__file__).resolve())); result=receipt("validate","valid",{"manifest_sha256":MANIFEST_SHA256,"baseline_pairs_sha256":BASELINE_SHA256}) if args.mode=="validate" else {"capture":run_capture,"restore-verify":run_restore_verify,"short-url-remediation-inspect":run_short_url_inspect,"short-url-remediation-apply":run_short_url_apply,"short-url-remediation-verify":run_short_url_verify,"clone-apply":apply_manifest,"local-postflight":run_postflight}[args.mode](args,manifest); emit(result); return 0
+  manifest=validate_sources(repository_root(Path(__file__).resolve())); result=receipt("validate","valid",{"manifest_sha256":MANIFEST_SHA256,"baseline_pairs_sha256":BASELINE_SHA256}) if args.mode=="validate" else {"capture":run_capture,"production-capture":capture_to_custody,"restore-verify":run_restore_verify,"short-url-remediation-inspect":run_short_url_inspect,"short-url-remediation-apply":run_short_url_apply,"short-url-remediation-verify":run_short_url_verify,"clone-apply":apply_manifest,"local-postflight":run_postflight}[args.mode](args,manifest); emit(result); return 0
  except (ContractError,RecoveryError): emit(receipt(args.mode,"rejected",{"reason":"policy_rejected"})); return 2
 if __name__=="__main__": raise SystemExit(main())
