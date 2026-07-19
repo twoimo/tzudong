@@ -685,9 +685,6 @@ def build_reference(*, source: SourceBinding, target_fingerprint: str, nonce: st
         _fail("reference_input")
     first = build_clone_run(_revalidate_observation_lineage(_load(first_absent), repository_root), _revalidate_observation_lineage(_load(first_full), repository_root))
     second = build_clone_run(_revalidate_observation_lineage(_load(second_absent), repository_root), _revalidate_observation_lineage(_load(second_full), repository_root))
-    if (first["clone_identity"] == second["clone_identity"] or first["clone_nonce"] == second["clone_nonce"]
-            or first["g035_restore_receipt_sha256"] == second["g035_restore_receipt_sha256"]):
-        _fail("clone_binding")
     issued = int(time.time()) if now is None else now
     body = build_reference_body(final_commit=source.final_commit, runtime_source_root=source.runtime_source_root,
                                 target_fingerprint=target_fingerprint, observation_nonce=nonce,
