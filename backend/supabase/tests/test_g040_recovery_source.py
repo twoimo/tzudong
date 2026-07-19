@@ -212,9 +212,15 @@ class G040RecoverySourceTests(unittest.TestCase):
             "excludedVersions": ["20260713002500"],
             "cloneBackupRecoveryRequired": True,
         }
-        manifest.write_bytes(json.dumps(payload, separators=(",", ":")).encode("ascii"))
+        canonical = json.dumps(payload, separators=(",", ":")).encode("ascii")
+        manifest.write_bytes(canonical)
         inventory = source.recovery_source_inventory(self.root)
         self.assertEqual(inventory, tuple(sorted(set((*source._RUNTIME_FILES, *self.fragments)))))
+        manifest.write_bytes(canonical + b"\n")
+        self.assertEqual(source.recovery_source_inventory(self.root), inventory)
+        manifest.write_bytes(canonical + b"\n\n")
+        with self.assertRaises(source.RecoverySourceError):
+            source.recovery_source_inventory(self.root)
         manifest.write_text('{"schemaVersion":1,"schemaVersion":1}')
         with self.assertRaises(source.RecoverySourceError):
             source.recovery_source_inventory(self.root)
