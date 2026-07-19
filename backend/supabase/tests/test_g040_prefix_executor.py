@@ -51,6 +51,23 @@ class Cursor:
     def fetchall(self):
         return self.ledger_rows
 
+class FakeClock:
+    def __init__(self):
+        self.now = 0.0
+
+    def monotonic(self):
+        return self.now
+
+
+class ExpiringCursor(Cursor):
+    def __init__(self, clock):
+        super().__init__()
+        self.clock = clock
+
+    def execute(self, sql, params=()):
+        super().execute(sql, params)
+        if sql != executor._STATEMENT_TIMEOUT_SQL:
+            self.clock.now = 1.0
 
 def manifest():
     prefix = tuple(Migration(f"20260711{i:06d}", f"m{i}", f"m{i}.sql", f"{i:064x}") for i in range(16))
@@ -92,10 +109,32 @@ def artifacts(branch="UNAPPLIED"):
         expires_at_unix=2,
         first_clone_identity="1" * 16,
         first_clone_nonce="2" * 16,
-        first_restore_receipt_sha256=H,
+        first_live_identity_sha256="1" * 64,
+        first_container_id_sha256="2" * 64,
+        first_image_id_sha256="3" * 64,
+        first_image_digest_sha256="4" * 64,
+        first_endpoint_sha256="5" * 64,
+        first_g035_restore_receipt_sha256="6" * 64,
+        first_capture_receipt_sha256="7" * 64,
+        first_restored_archive_sha256="8" * 64,
+        first_capture_receipt_bytes_sha256="9" * 64,
+        first_restore_receipt_bytes_sha256="a" * 64,
+        first_lineage_attestation_sha256="b" * 64,
+        first_lineage_signature_sha256="c" * 64,
         second_clone_identity="3" * 16,
         second_clone_nonce="4" * 16,
-        second_restore_receipt_sha256=H,
+        second_live_identity_sha256="8" * 64,
+        second_container_id_sha256="9" * 64,
+        second_image_id_sha256="3" * 64,
+        second_image_digest_sha256="4" * 64,
+        second_endpoint_sha256="b" * 64,
+        second_g035_restore_receipt_sha256="c" * 64,
+        second_capture_receipt_sha256="7" * 64,
+        second_restored_archive_sha256="8" * 64,
+        second_capture_receipt_bytes_sha256="d" * 64,
+        second_restore_receipt_bytes_sha256="e" * 64,
+        second_lineage_attestation_sha256="f" * 64,
+        second_lineage_signature_sha256="0" * 64,
         reference_public_key_sha256=H,
         signature_b64="sig",
         receipt_sha256="d" * 64,
@@ -132,6 +171,7 @@ def artifacts(branch="UNAPPLIED"):
         projection_root=H,
         probe_root=H,
         prefix_state_receipt_sha256=observation.classification_sha256,
+        observation_receipt_sha256="9" * 64,
         prefix_classification=observation.status,
         target_fingerprint=reference.target_fingerprint,
         selected_branch=selected,
@@ -159,6 +199,7 @@ def artifacts(branch="UNAPPLIED"):
         target_fingerprint=authorization.target_fingerprint,
         runtime_source_root=authorization.runtime_source_root,
         prefix_state_receipt_sha256=authorization.prefix_state_receipt_sha256,
+        observation_receipt_sha256=authorization.observation_receipt_sha256,
         prefix_classification=authorization.prefix_classification,
         selected_branch=authorization.selected_branch,
         authorization_sha256=authorization.authorization_sha256,
@@ -177,11 +218,44 @@ class ExecutorTests(unittest.TestCase):
         cursor = cursor or Cursor()
         cursor.ledger_rows = [(version, name, (f"base-{index}",)) for index, (version, name) in enumerate(BASELINE_PAIRS)] + [(item.version, item.name, full) for item, full, _ in vectors[:16]]
         terminal = terminal or {"catalog_root": authorization.target_catalog_root, "acl_root": H, "ledger_root": authorization.target_ledger_root, "terminal_spec": SPEC}
-        with patch.object(executor, "validate_sources", return_value=m), patch.object(executor, "terminal_spec", return_value=SPEC), patch.object(executor, "_compiled", return_value=vectors), patch.object(executor, "classify_mutation_cursor", return_value=locked or observation) as classify, patch.object(executor, "terminal_readback_assert", return_value=terminal):
+        with patch.object(executor, "validate_sources", return_value=m), patch.object(executor, "terminal_spec", return_value=SPEC), patch.object(executor, "_compiled", return_value=vectors), patch.object(executor, "classify_mutation_cursor", return_value=locked or observation) as classify, patch.object(executor, "probe_full_data_root", return_value=authorization.target_data_root), patch.object(executor, "terminal_readback_assert", return_value=terminal):
             plan = executor.build_execution_plan(ROOT, m, source=source, reference=reference, observation=observation, authorization=authorization)
             result = executor.apply_locked_cursor(cursor, plan=plan, attempt=attempt, deadline_monotonic=time.monotonic() + 60)
         return result, cursor, vectors, classify
 
+    def test_timeout_refresh_uses_parameterized_set_config_with_bounded_decimal_milliseconds(self):
+        clock = FakeClock()
+        cursor = Cursor()
+        with patch.object(executor.time, "monotonic", clock.monotonic):
+            executor._execute(cursor, "target-statement", deadline_monotonic=1.0)
+            self.assertEqual(
+                cursor.calls,
+                [
+                    (executor._STATEMENT_TIMEOUT_SQL, ("999",)),
+                    ("target-statement", ()),
+                ],
+            )
+            self.assertEqual(
+                executor._remaining_milliseconds(executor._MAX_STATEMENT_TIMEOUT_MILLISECONDS + 2.0),
+                str(executor._MAX_STATEMENT_TIMEOUT_MILLISECONDS),
+            )
+
+    def test_deadline_cursor_refreshes_timeout_before_every_nested_statement(self):
+        clock = FakeClock()
+        cursor = Cursor()
+        timed = executor._DeadlineCursor(cursor, 1.0)
+        with patch.object(executor.time, "monotonic", clock.monotonic):
+            timed.execute("nested-first")
+            timed.execute("nested-second", ("parameter",))
+        self.assertEqual(
+            cursor.calls,
+            [
+                (executor._STATEMENT_TIMEOUT_SQL, ("999",)),
+                ("nested-first", ()),
+                (executor._STATEMENT_TIMEOUT_SQL, ("999",)),
+                ("nested-second", ("parameter",)),
+            ],
+        )
     def test_unapplied_executes_stripped_00400_once_then_ledgers_full_vector(self):
         result, cursor, vectors, _ = self.invoke()
         sql = [call[0] for call in cursor.calls]
@@ -204,18 +278,35 @@ class ExecutorTests(unittest.TestCase):
     def test_locks_precede_reclassification_and_executor_never_controls_transaction(self):
         cursor = Cursor()
         seen = []
-        source, reference, observation, authorization, attempt = artifacts()
+        source, reference, observation, authorization, attempt = artifacts("FULL_ESCAPED")
         m = manifest(); vectors = compiled(m)
         cursor.ledger_rows = [(version, name, (f"base-{index}",)) for index, (version, name) in enumerate(BASELINE_PAIRS)] + [(item.version, item.name, full) for item, full, _ in vectors[:16]]
         def locked(*_args, **_kwargs):
             seen.extend(sql for sql, _ in cursor.calls)
             return observation
-        with patch.object(executor, "validate_sources", return_value=m), patch.object(executor, "terminal_spec", return_value=SPEC), patch.object(executor, "_compiled", return_value=vectors), patch.object(executor, "classify_mutation_cursor", side_effect=locked), patch.object(executor, "terminal_readback_assert", return_value={"catalog_root": authorization.target_catalog_root, "acl_root": H, "ledger_root": authorization.target_ledger_root, "terminal_spec": SPEC}):
+        with patch.object(executor, "validate_sources", return_value=m), patch.object(executor, "terminal_spec", return_value=SPEC), patch.object(executor, "_compiled", return_value=vectors), patch.object(executor, "classify_mutation_cursor", side_effect=locked), patch.object(executor, "probe_full_data_root", return_value=authorization.target_data_root), patch.object(executor, "terminal_readback_assert", return_value={"catalog_root": authorization.target_catalog_root, "acl_root": H, "ledger_root": authorization.target_ledger_root, "terminal_spec": SPEC}):
             plan = executor.build_execution_plan(ROOT, m, source=source, reference=reference, observation=observation, authorization=authorization)
             executor.apply_locked_cursor(cursor, plan=plan, attempt=attempt, deadline_monotonic=time.monotonic() + 60)
-        self.assertEqual(seen[-2:], list(executor._LOCK_SQL))
+        lock_calls = [
+            sql
+            for sql in seen
+            if sql in executor._LOCK_SQL or sql in executor._DATA_LOCK_SQL
+        ]
+        self.assertEqual(lock_calls, list(executor._LOCK_SQL + executor._DATA_LOCK_SQL))
         self.assertFalse(any(sql.upper().startswith(("BEGIN", "COMMIT", "ROLLBACK", "SAVEPOINT")) for sql, _ in cursor.calls))
 
+    def test_data_root_mismatch_denies_before_marker_insert(self):
+        source, reference, observation, authorization, attempt = artifacts()
+        m = manifest()
+        vectors = compiled(m)
+        cursor = Cursor()
+        cursor.ledger_rows = [(version, name, (f"base-{index}",)) for index, (version, name) in enumerate(BASELINE_PAIRS)] + [(item.version, item.name, full) for item, full, _ in vectors[:16]]
+        with patch.object(executor, "validate_sources", return_value=m), patch.object(executor, "terminal_spec", return_value=SPEC), patch.object(executor, "_compiled", return_value=vectors), patch.object(executor, "classify_mutation_cursor", return_value=observation), patch.object(executor, "probe_full_data_root", return_value="9" * 64):
+            plan = executor.build_execution_plan(ROOT, m, source=source, reference=reference, observation=observation, authorization=authorization)
+            with self.assertRaises(Denial) as error:
+                executor.apply_locked_cursor(cursor, plan=plan, attempt=attempt, deadline_monotonic=time.monotonic() + 60)
+        self.assertEqual(error.exception.code, "terminal_data_mismatch")
+        self.assertFalse(any(sql.startswith("INSERT INTO") for sql, _ in cursor.calls))
     def test_plan_rejects_noncanonical_types_and_drift_before_cursor_or_marker(self):
         m = manifest(); source, reference, observation, authorization, _ = artifacts()
         with patch.object(executor, "validate_sources", return_value=m), patch.object(executor, "terminal_spec", return_value=SPEC), patch.object(executor, "_compiled") as compile_vectors:
@@ -237,6 +328,36 @@ class ExecutorTests(unittest.TestCase):
         self.assertEqual(error.exception.code, "ledger_conflict")
         self.assertFalse(any(sql.upper().startswith(("COMMIT", "ROLLBACK", "SAVEPOINT")) for sql, _ in cursor.calls))
 
+    def test_nested_classification_statement_deadline_stops_before_next_sql(self):
+        clock = FakeClock()
+        cursor = ExpiringCursor(clock)
+        timed = executor._DeadlineCursor(cursor, 1.0)
+        with patch.object(executor.time, "monotonic", clock.monotonic):
+            timed.execute("classification-first")
+            with self.assertRaisesRegex(Denial, "deadline"):
+                timed.execute("classification-second")
+        self.assertEqual(
+            cursor.calls,
+            [
+                (executor._STATEMENT_TIMEOUT_SQL, ("999",)),
+                ("classification-first", ()),
+            ],
+        )
+
+    def test_terminal_readback_adapter_stops_before_next_sql(self):
+        clock = FakeClock()
+        cursor = ExpiringCursor(clock)
+        timed = executor._DeadlineCursor(cursor, 1.0)
+
+        def terminal_readback(cursor):
+            cursor.execute("terminal-first")
+            cursor.execute("terminal-second")
+
+        with patch.object(executor.time, "monotonic", clock.monotonic):
+            with self.assertRaisesRegex(Denial, "deadline"):
+                terminal_readback(timed)
+        self.assertIn("terminal-first", [sql for sql, _ in cursor.calls])
+        self.assertNotIn("terminal-second", [sql for sql, _ in cursor.calls])
     def test_expired_deadline_and_attempt_reuse_are_denied(self):
         source, reference, observation, authorization, attempt = artifacts(); m = manifest(); vectors = compiled(m)
         with patch.object(executor, "validate_sources", return_value=m), patch.object(executor, "terminal_spec", return_value=SPEC), patch.object(executor, "_compiled", return_value=vectors):

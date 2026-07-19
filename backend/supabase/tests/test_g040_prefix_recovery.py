@@ -14,7 +14,31 @@ class Cursor:
     def fetchone(self): return self.rows.pop(0)
 
 def reference(**changes):
-    value = evidence.VerifiedReference(schema=g.RECEIPT_SCHEMA, base_commit=g.SOURCE_COMMIT, final_commit="b" * 40, runtime_source_root="c" * 64, manifest_sha256=g.MANIFEST_SHA256, migration_source_sha256=g.MIGRATION_SOURCE_SHA256, pg_identity=g.PG_IDENTITY, probe_text_sha256=g.PROBE_TEXT_SHA256, absent_catalog_sha256=H, full_catalog_sha256="d" * 64, full_data_sha256="e" * 64, ledger_prefix_sha256=H, target_fingerprint="f" * 64, observation_nonce="n" * 16, issued_at_unix=1, expires_at_unix=2, first_clone_identity="first-clone-identity", first_clone_nonce="first-clone-nonce", first_restore_receipt_sha256="1" * 64, second_clone_identity="second-clone-ident", second_clone_nonce="second-clone-nonce", second_restore_receipt_sha256="2" * 64, reference_public_key_sha256=evidence.PUBLIC_KEY_SHA256, signature_b64="AA==", receipt_sha256="3" * 64)
+    value = evidence.VerifiedReference(
+        schema=g.RECEIPT_SCHEMA, base_commit=g.SOURCE_COMMIT, final_commit="b" * 40,
+        runtime_source_root="c" * 64, manifest_sha256=g.MANIFEST_SHA256,
+        migration_source_sha256=g.MIGRATION_SOURCE_SHA256, pg_identity=g.PG_IDENTITY,
+        probe_text_sha256=g.PROBE_TEXT_SHA256, absent_catalog_sha256=H,
+        full_catalog_sha256="d" * 64, full_data_sha256="e" * 64,
+        ledger_prefix_sha256=H, target_fingerprint="f" * 64,
+        observation_nonce="n" * 16, issued_at_unix=1, expires_at_unix=2,
+        first_clone_identity="1" * 64, first_clone_nonce="first-clone-nonce",
+        first_live_identity_sha256="2" * 64, first_container_id_sha256="3" * 64,
+        first_image_id_sha256="4" * 64, first_image_digest_sha256="5" * 64,
+        first_endpoint_sha256="6" * 64, first_g035_restore_receipt_sha256="7" * 64,
+        first_capture_receipt_sha256="8" * 64, first_restored_archive_sha256="9" * 64,
+        first_capture_receipt_bytes_sha256="0" * 64, first_restore_receipt_bytes_sha256="1" * 64,
+        first_lineage_attestation_sha256="2" * 64, first_lineage_signature_sha256="3" * 64,
+        second_clone_identity="a" * 64, second_clone_nonce="second-clone-nonce",
+        second_live_identity_sha256="b" * 64, second_container_id_sha256="c" * 64,
+        second_image_id_sha256="4" * 64, second_image_digest_sha256="5" * 64,
+        second_endpoint_sha256="d" * 64, second_g035_restore_receipt_sha256="e" * 64,
+        second_capture_receipt_sha256="8" * 64, second_restored_archive_sha256="9" * 64,
+        second_capture_receipt_bytes_sha256="2" * 64, second_restore_receipt_bytes_sha256="3" * 64,
+        second_lineage_attestation_sha256="4" * 64, second_lineage_signature_sha256="5" * 64,
+        reference_public_key_sha256=evidence.PUBLIC_KEY_SHA256,
+        signature_b64="AA==", receipt_sha256="3" * 64,
+    )
     return evidence.VerifiedReference(**{**value.__dict__, **changes})
 
 def catalog(**changes):
@@ -34,6 +58,14 @@ class Tests(unittest.TestCase):
         with self.assertRaises(g.Denial) as denial:
             g.classify_locked_cursor(Cursor(), reference(), consume_nonce=consume)
         self.assertEqual(denial.exception.code, "nonce_stale")
+    def test_tuple_probe_rows_are_rejected_but_exact_dict_rows_are_accepted(self):
+        with self.assertRaisesRegex(g.Denial, "probe_shape"):
+            g._row(Cursor(("on",)), "SELECT 1")
+        self.assertEqual(g._row(Cursor({"transaction_read_only": "on"}), "SELECT 1"), {"transaction_read_only": "on"})
+    def test_unapplied_denies_wrong_postgres_version(self):
+        for changes in ({"exact_pg": False, "server_version_num": 170006}, {"exact_pg": True, "server_version_num": 170005}):
+            with self.subTest(changes=changes), self.assertRaisesRegex(g.Denial, "postgres_version"):
+                g.classify_locked_cursor(Cursor({"transaction_read_only": "on"}, catalog(**changes)), reference(), consume_nonce=lambda _: True)
 
     def test_mutation_requires_exact_prior_and_read_write(self):
         ref = reference()
@@ -53,6 +85,25 @@ class Tests(unittest.TestCase):
         self.assertEqual(denial.exception.code, "partial_or_ambiguous")
         self.assertNotIn("postgres", str(denial.exception).lower())
 
+    def test_classification_uses_the_supplied_deadline_statement_adapter(self):
+        executed = []
+
+        def statement_executor(sql):
+            executed.append(sql)
+            if len(executed) == 2:
+                raise g.Denial("deadline")
+
+        with self.assertRaisesRegex(g.Denial, "deadline"):
+            g.classify_locked_cursor(
+                Cursor({"transaction_read_only": "on"}, catalog()),
+                reference(),
+                consume_nonce=lambda _: True,
+                statement_executor=statement_executor,
+            )
+        self.assertEqual(executed, [
+            "SELECT current_setting('transaction_read_only', true) AS transaction_read_only",
+            g.CATALOG_PROBE,
+        ])
     def test_exact_immutable_types(self):
         class Derived(evidence.VerifiedReference): pass
         with self.assertRaises(g.Denial): g.classify_locked_cursor(Cursor(), Derived(**reference().__dict__), consume_nonce=lambda _: True)
