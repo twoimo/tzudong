@@ -782,7 +782,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.mode == "preflight":
             result = preflight(service_file=args.service_file, service_name=args.service_name, image=args.image, image_metadata=args.image_metadata); _write(args.output, result)
         elif args.mode == "bind-restore":
-            result = bind_restore(clone_nonce=args.clone_nonce, capture_receipt=args.capture_receipt, restore_receipt=args.restore_receipt, encrypted_dump=args.encrypted_dump, lineage_attestation=args.lineage_attestation, lineage_signature=args.lineage_signature, repository_root=args.repository_root, service_file=args.service_file, service_name=args.service_name, container=args.container, docker=args.docker, output=args.output)
+            result = dict(bind_restore(clone_nonce=args.clone_nonce, capture_receipt=args.capture_receipt, restore_receipt=args.restore_receipt, encrypted_dump=args.encrypted_dump, lineage_attestation=args.lineage_attestation, lineage_signature=args.lineage_signature, repository_root=args.repository_root, service_file=args.service_file, service_name=args.service_name, container=args.container, docker=args.docker, output=args.output))
         elif args.mode == "observe-reference":
             observe_reference(repository_root=args.repository_root, source_commit=args.source_commit, binding_path=args.binding, service_file=args.service_file, service_name=args.service_name, container=args.container, docker=args.docker, absent_output=args.absent_output, full_output=args.full_output); result = {"status": "observed"}
         elif args.mode == "build-reference":

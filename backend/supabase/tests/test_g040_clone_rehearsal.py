@@ -298,6 +298,25 @@ class CloneRehearsalTests(unittest.TestCase):
                 "inventory_root", "target_ledger_root", "target_catalog_root", "target_data_root",
             })
 
+    def test_bind_restore_cli_serializes_immutable_receipt(self):
+        receipt = types.MappingProxyType({
+            "schema": "g040-clone-restore-binding-v4",
+            "binding_receipt_sha256": "a" * 64,
+        })
+        with patch.object(rehearsal, "bind_restore", return_value=receipt):
+            self.assertEqual(rehearsal.main([
+                "bind-restore",
+                "--service-file", "service.conf",
+                "--clone-nonce", "nonce",
+                "--capture-receipt", "capture.json",
+                "--restore-receipt", "restore.json",
+                "--encrypted-dump", "dump.enc",
+                "--lineage-attestation", "lineage.json",
+                "--lineage-signature", "lineage.sig",
+                "--repository-root", ".",
+                "--container", "clone",
+                "--output", "binding.json",
+            ]), 0)
     def test_terminal_and_aggregate_cli_paths_use_operational_receipts(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
