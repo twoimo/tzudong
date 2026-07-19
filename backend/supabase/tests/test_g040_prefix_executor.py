@@ -4,6 +4,7 @@ from __future__ import annotations
 import sys
 import time
 import unittest
+from dataclasses import FrozenInstanceError, replace
 from pathlib import Path
 from unittest.mock import patch
 
@@ -17,8 +18,12 @@ from g040_reference_evidence import DERIVATION_MODE, REVERSE_VECTOR_SHA256, SCHE
 
 H = "a" * 64
 COMMIT = "b" * 40
+BASE_COMMIT = executor.SOURCE_COMMIT
 ROOT = Path("C:/pinned")
 SPEC = "c" * 64
+RUNTIME_SOURCE_ROOT = "d" * 64
+MANIFEST_ROOT = "e" * 64
+MIGRATION_SOURCE_ROOT = "f" * 64
 SUFFIX = (
     ("20260712000500", "g010_incident_workflow"),
     ("20260712000600", "g010_ocr_log_minimization"),
@@ -32,21 +37,41 @@ SUFFIX = (
     ("20260713002300", "g014_account_deletion_state_machine"),
     ("20260713002400", "g014_retention_adapters_receipts"),
 )
+READ_WRITE_SQL = "SELECT current_setting('transaction_read_only', true)"
+STATEMENT_TIMEOUT_SQL = "SELECT pg_catalog.set_config('statement_timeout', %s, true)"
+LOCK_ORDER = (
+    "SELECT pg_catalog.pg_advisory_xact_lock(6040, 400)",
+    "LOCK TABLE supabase_migrations.schema_migrations IN ACCESS EXCLUSIVE MODE",
+)
+DATA_LOCK_ORDER = (
+    "LOCK TABLE privacy_retention.privacy_retention_classes IN SHARE ROW EXCLUSIVE MODE",
+    "LOCK TABLE privacy_retention.privacy_retention_class_sources IN SHARE ROW EXCLUSIVE MODE",
+    "LOCK TABLE privacy_retention.privacy_legal_holds IN SHARE ROW EXCLUSIVE MODE",
+    "LOCK TABLE privacy_retention.privacy_retention_work_items IN SHARE ROW EXCLUSIVE MODE",
+    "LOCK TABLE privacy_retention.privacy_retained_records IN SHARE ROW EXCLUSIVE MODE",
+    "LOCK TABLE privacy_retention.privacy_retention_runs IN SHARE ROW EXCLUSIVE MODE",
+    "LOCK TABLE privacy_retention.privacy_retention_run_items IN SHARE ROW EXCLUSIVE MODE",
+)
+LEDGER_SQL = "SELECT version,name,statements FROM supabase_migrations.schema_migrations ORDER BY version,name"
+LEDGER_INSERT_SQL = "INSERT INTO supabase_migrations.schema_migrations(version,name,statements) VALUES (%s,%s,%s)"
+
 
 
 class Cursor:
-    def __init__(self, *, fail_at=None):
+    def __init__(self, *, fail_at=None, fail_sql=None, transaction_state=("off",)):
         self.calls = []
         self.ledger_rows = []
         self.fail_at = fail_at
+        self.fail_sql = fail_sql
+        self.transaction_state = transaction_state
 
     def execute(self, sql, params=()):
         self.calls.append((sql, params))
-        if self.fail_at == len(self.calls):
+        if self.fail_at == len(self.calls) or sql == self.fail_sql:
             raise RuntimeError("provider target=secret")
 
     def fetchone(self):
-        return ("off",)
+        return self.transaction_state
 
     def fetchall(self):
         return self.ledger_rows
@@ -66,7 +91,7 @@ class ExpiringCursor(Cursor):
 
     def execute(self, sql, params=()):
         super().execute(sql, params)
-        if sql != executor._STATEMENT_TIMEOUT_SQL:
+        if sql != STATEMENT_TIMEOUT_SQL:
             self.clock.now = 1.0
 
 def manifest():
@@ -89,14 +114,14 @@ def compiled(m):
 
 
 def artifacts(branch="UNAPPLIED"):
-    source = SourceBinding(final_commit=COMMIT, runtime_source_root=H)
+    source = SourceBinding(final_commit=COMMIT, runtime_source_root=RUNTIME_SOURCE_ROOT)
     reference = VerifiedReference(
         schema=REFERENCE_SCHEMA,
-        base_commit=COMMIT,
+        base_commit=BASE_COMMIT,
         final_commit=COMMIT,
-        runtime_source_root=H,
-        manifest_sha256=H,
-        migration_source_sha256=H,
+        runtime_source_root=RUNTIME_SOURCE_ROOT,
+        manifest_sha256=MANIFEST_ROOT,
+        migration_source_sha256=MIGRATION_SOURCE_ROOT,
         pg_identity="PostgreSQL 17.6",
         probe_text_sha256=H,
         absent_catalog_sha256=H,
@@ -123,6 +148,8 @@ def artifacts(branch="UNAPPLIED"):
         first_restore_receipt_bytes_sha256="a" * 64,
         first_lineage_attestation_sha256="b" * 64,
         first_lineage_signature_sha256="c" * 64,
+        first_binding_receipt_sha256="1111111111111111111111111111111111111111111111111111111111111111",
+        first_observation_receipt_sha256="2222222222222222222222222222222222222222222222222222222222222222",
         second_clone_identity="3" * 16,
         second_clone_nonce="4" * 16,
         second_live_identity_sha256="8" * 64,
@@ -137,6 +164,8 @@ def artifacts(branch="UNAPPLIED"):
         second_restore_receipt_bytes_sha256="e" * 64,
         second_lineage_attestation_sha256="f" * 64,
         second_lineage_signature_sha256="0" * 64,
+        second_binding_receipt_sha256="3333333333333333333333333333333333333333333333333333333333333333",
+        second_observation_receipt_sha256="4444444444444444444444444444444444444444444444444444444444444444",
         reference_public_key_sha256=H,
         signature_b64="sig",
         receipt_sha256="d" * 64,
@@ -165,10 +194,10 @@ def artifacts(branch="UNAPPLIED"):
         issued_at=1,
         expires_at=2,
         final_recovery_commit=source.final_commit,
-        base_commit=COMMIT,
+        base_commit=BASE_COMMIT,
         runtime_source_root=source.runtime_source_root,
-        manifest_root=H,
-        source_root=H,
+        manifest_root=MANIFEST_ROOT,
+        source_root=MIGRATION_SOURCE_ROOT,
         terminal_root=SPEC,
         prefix_root=H,
         suffix_root=H,
@@ -184,6 +213,10 @@ def artifacts(branch="UNAPPLIED"):
         clone_rehearsal_receipt_sha256=H,
         freeze_root=H,
         inventory_root=H,
+        freeze_expires_at=2,
+        target_acl_root=H,
+        archive_sha256=H,
+        archive_bytes=1,
         starting_ledger_root=H,
         target_ledger_root="f" * 64,
         starting_catalog_root="1" * 64,
@@ -226,6 +259,13 @@ class ExecutorTests(unittest.TestCase):
             plan = executor.build_execution_plan(ROOT, m, source=source, reference=reference, observation=observation, authorization=authorization)
             result = executor.apply_locked_cursor(cursor, plan=plan, attempt=attempt, deadline_monotonic=time.monotonic() + 60)
         return result, cursor, vectors, classify
+    def build_plan(self, branch="UNAPPLIED"):
+        m = manifest()
+        source, reference, observation, authorization, attempt = artifacts(branch)
+        vectors = compiled(m)
+        with patch.object(executor, "validate_sources", return_value=m), patch.object(executor, "terminal_spec", return_value=SPEC), patch.object(executor, "_compiled", return_value=vectors):
+            plan = executor.build_execution_plan(ROOT, m, source=source, reference=reference, observation=observation, authorization=authorization)
+        return plan, attempt, observation, authorization, vectors
 
     def test_timeout_refresh_uses_parameterized_set_config_with_bounded_decimal_milliseconds(self):
         clock = FakeClock()
@@ -235,13 +275,13 @@ class ExecutorTests(unittest.TestCase):
             self.assertEqual(
                 cursor.calls,
                 [
-                    (executor._STATEMENT_TIMEOUT_SQL, ("999",)),
+                    (STATEMENT_TIMEOUT_SQL, ("999",)),
                     ("target-statement", ()),
                 ],
             )
             self.assertEqual(
-                executor._remaining_milliseconds(executor._MAX_STATEMENT_TIMEOUT_MILLISECONDS + 2.0),
-                str(executor._MAX_STATEMENT_TIMEOUT_MILLISECONDS),
+                executor._remaining_milliseconds(2147483649.0),
+                "2147483647",
             )
 
     def test_deadline_cursor_refreshes_timeout_before_every_nested_statement(self):
@@ -254,49 +294,57 @@ class ExecutorTests(unittest.TestCase):
         self.assertEqual(
             cursor.calls,
             [
-                (executor._STATEMENT_TIMEOUT_SQL, ("999",)),
+                (STATEMENT_TIMEOUT_SQL, ("999",)),
                 ("nested-first", ()),
-                (executor._STATEMENT_TIMEOUT_SQL, ("999",)),
+                (STATEMENT_TIMEOUT_SQL, ("999",)),
                 ("nested-second", ("parameter",)),
             ],
         )
-    def test_unapplied_executes_stripped_00400_once_then_ledgers_full_vector(self):
+    def assert_complete_execution_order(self, branch, cursor, vectors):
+        calls = [call for call in cursor.calls if call[0] != STATEMENT_TIMEOUT_SQL]
+        expected_sql = [READ_WRITE_SQL, *LOCK_ORDER]
+        if branch == "FULL_ESCAPED":
+            expected_sql.extend(DATA_LOCK_ORDER)
+        expected_sql.append(LEDGER_SQL)
+        if branch == "UNAPPLIED":
+            expected_sql.extend(vectors[16][2])
+            expected_sql.extend(DATA_LOCK_ORDER)
+        expected_sql.append(LEDGER_INSERT_SQL)
+        for _, _, executable in vectors[17:]:
+            expected_sql.extend(executable)
+            expected_sql.append(LEDGER_INSERT_SQL)
+        self.assertEqual([sql for sql, _ in calls], expected_sql)
+
+        inserts = [params for sql, params in calls if sql == LEDGER_INSERT_SQL]
+        expected_rows = [(item.version, item.name, list(full)) for item, full, _ in vectors[16:]]
+        self.assertEqual(inserts, expected_rows)
+
+    def test_unapplied_executes_stripped_00400_then_ledgers_matching_full_vectors(self):
         result, cursor, vectors, _ = self.invoke()
-        sql = [call[0] for call in cursor.calls]
-        self.assertEqual(sql.count("00400-inner"), 1)
-        inserts = [call for call in cursor.calls if call[0].startswith("INSERT INTO")]
-        self.assertEqual(inserts[0][1][2], list(vectors[16][1]))
-        self.assertEqual([params[0] for _, params in inserts], [item.version for item, _, _ in vectors[16:]])
+        self.assert_complete_execution_order("UNAPPLIED", cursor, vectors)
         self.assertEqual(result.terminal_rows, 40)
         self.assertEqual(result.applied_statement_count, sum(len(executable) for _, _, executable in vectors[16:]))
-        with self.assertRaises(Exception):
+        with self.assertRaises(FrozenInstanceError):
             result.branch = "FULL_ESCAPED"
 
-    def test_full_escaped_executes_zero_00400_sql_and_ledgers_full_vector(self):
-        _, cursor, vectors, _ = self.invoke("FULL_ESCAPED")
-        sql = [call[0] for call in cursor.calls]
-        self.assertNotIn("00400-inner", sql)
-        self.assertFalse(any(statement in vectors[16][1] for statement in sql))
-        self.assertEqual([params[0] for sql, params in cursor.calls if sql.startswith("INSERT INTO")], [item.version for item, _, _ in vectors[16:]])
+    def test_full_escaped_ledgers_matching_full_vectors_without_00400_sql(self):
+        result, cursor, vectors, _ = self.invoke("FULL_ESCAPED")
+        self.assert_complete_execution_order("FULL_ESCAPED", cursor, vectors)
+        self.assertEqual(result.applied_statement_count, sum(len(executable) for _, _, executable in vectors[17:]))
 
-    def test_locks_precede_reclassification_and_executor_never_controls_transaction(self):
+    def test_exact_locks_precede_reclassification_and_executor_never_controls_transaction(self):
         cursor = Cursor()
         seen = []
         source, reference, observation, authorization, attempt = artifacts("FULL_ESCAPED")
         m = manifest(); vectors = compiled(m)
         cursor.ledger_rows = [(version, name, (f"base-{index}",)) for index, (version, name) in enumerate(BASELINE_PAIRS)] + [(item.version, item.name, full) for item, full, _ in vectors[:16]]
         def locked(*_args, **_kwargs):
-            seen.extend(sql for sql, _ in cursor.calls)
+            seen.extend(sql for sql, _ in cursor.calls if sql != STATEMENT_TIMEOUT_SQL)
             return observation
         with patch.object(executor, "validate_sources", return_value=m), patch.object(executor, "terminal_spec", return_value=SPEC), patch.object(executor, "_compiled", return_value=vectors), patch.object(executor, "classify_mutation_cursor", side_effect=locked), patch.object(executor, "probe_full_data_root", return_value=authorization.target_data_root), patch.object(executor, "terminal_readback_assert", return_value={"catalog_root": authorization.target_catalog_root, "acl_root": H, "ledger_root": authorization.target_ledger_root, "terminal_spec": SPEC}):
             plan = executor.build_execution_plan(ROOT, m, source=source, reference=reference, observation=observation, authorization=authorization)
             executor.apply_locked_cursor(cursor, plan=plan, attempt=attempt, deadline_monotonic=time.monotonic() + 60)
-        lock_calls = [
-            sql
-            for sql in seen
-            if sql in executor._LOCK_SQL or sql in executor._DATA_LOCK_SQL
-        ]
-        self.assertEqual(lock_calls, list(executor._LOCK_SQL + executor._DATA_LOCK_SQL))
+        self.assertEqual(seen, [READ_WRITE_SQL, *LOCK_ORDER, *DATA_LOCK_ORDER])
         self.assertFalse(any(sql.upper().startswith(("BEGIN", "COMMIT", "ROLLBACK", "SAVEPOINT")) for sql, _ in cursor.calls))
 
     def test_data_root_mismatch_denies_before_marker_insert(self):
@@ -311,6 +359,110 @@ class ExecutorTests(unittest.TestCase):
                 executor.apply_locked_cursor(cursor, plan=plan, attempt=attempt, deadline_monotonic=time.monotonic() + 60)
         self.assertEqual(error.exception.code, "terminal_data_mismatch")
         self.assertFalse(any(sql.startswith("INSERT INTO") for sql, _ in cursor.calls))
+    def test_branch_mismatch_stops_after_exact_locks_before_ledger_or_insert(self):
+        plan, attempt, observation, _, _ = self.build_plan()
+        cursor = Cursor()
+        locked = PrefixObservation(**{**observation.__dict__, "status": "FULL_ESCAPED"})
+        with patch.object(executor, "classify_mutation_cursor", return_value=locked):
+            with self.assertRaises(Denial) as error:
+                executor.apply_locked_cursor(cursor, plan=plan, attempt=attempt, deadline_monotonic=time.monotonic() + 60)
+        self.assertEqual(error.exception.code, "branch_mismatch")
+        self.assertEqual([sql for sql, _ in cursor.calls if sql != STATEMENT_TIMEOUT_SQL], [READ_WRITE_SQL, *LOCK_ORDER])
+        self.assertFalse(any(sql == LEDGER_INSERT_SQL for sql, _ in cursor.calls))
+
+    def test_read_only_transaction_stops_before_locks_or_insert(self):
+        plan, attempt, _, _, _ = self.build_plan()
+        cursor = Cursor(transaction_state=("on",))
+        with self.assertRaises(Denial) as error:
+            executor.apply_locked_cursor(cursor, plan=plan, attempt=attempt, deadline_monotonic=time.monotonic() + 60)
+        self.assertEqual(error.exception.code, "not_read_write")
+        self.assertEqual([sql for sql, _ in cursor.calls if sql != STATEMENT_TIMEOUT_SQL], [READ_WRITE_SQL])
+        self.assertFalse(any(sql == LEDGER_INSERT_SQL for sql, _ in cursor.calls))
+
+    def test_terminal_shape_rejects_nonexact_readback_fields_after_all_ledgers(self):
+        plan, attempt, observation, authorization, vectors = self.build_plan()
+        terminal = {
+            "catalog_root": authorization.target_catalog_root,
+            "acl_root": H,
+            "ledger_root": authorization.target_ledger_root,
+        }
+        cursor = Cursor()
+        cursor.ledger_rows = [(version, name, (f"base-{index}",)) for index, (version, name) in enumerate(BASELINE_PAIRS)] + [(item.version, item.name, full) for item, full, _ in vectors[:16]]
+        with patch.object(executor, "classify_mutation_cursor", return_value=observation), patch.object(executor, "probe_full_data_root", return_value=authorization.target_data_root), patch.object(executor, "terminal_readback_assert", return_value=terminal):
+            with self.assertRaises(Denial) as error:
+                executor.apply_locked_cursor(cursor, plan=plan, attempt=attempt, deadline_monotonic=time.monotonic() + 60)
+        self.assertEqual(error.exception.code, "terminal_mismatch")
+        self.assertEqual([params for sql, params in cursor.calls if sql == LEDGER_INSERT_SQL], [(item.version, item.name, list(full)) for item, full, _ in vectors[16:]])
+
+    def test_each_terminal_root_and_spec_mismatch_is_denied_after_all_ledgers(self):
+        plan, attempt, observation, authorization, vectors = self.build_plan()
+        expected_terminal = {
+            "catalog_root": authorization.target_catalog_root,
+            "acl_root": H,
+            "ledger_root": authorization.target_ledger_root,
+            "terminal_spec": SPEC,
+        }
+        for field, value in (
+            ("catalog_root", "9" * 64),
+            ("acl_root", "9" * 64),
+            ("ledger_root", "9" * 64),
+            ("terminal_spec", "9" * 64),
+        ):
+            with self.subTest(field=field):
+                cursor = Cursor()
+                cursor.ledger_rows = [(version, name, (f"base-{index}",)) for index, (version, name) in enumerate(BASELINE_PAIRS)] + [(item.version, item.name, full) for item, full, _ in vectors[:16]]
+                terminal = {**expected_terminal, field: value}
+                with patch.object(executor, "classify_mutation_cursor", return_value=observation), patch.object(executor, "probe_full_data_root", return_value=authorization.target_data_root), patch.object(executor, "terminal_readback_assert", return_value=terminal):
+                    with self.assertRaises(Denial) as error:
+                        executor.apply_locked_cursor(cursor, plan=plan, attempt=attempt, deadline_monotonic=time.monotonic() + 60)
+                self.assertEqual(error.exception.code, "terminal_mismatch")
+                self.assertEqual([params for sql, params in cursor.calls if sql == LEDGER_INSERT_SQL], [(item.version, item.name, list(full)) for item, full, _ in vectors[16:]])
+
+    def test_provider_failure_is_sanitized_and_stops_before_marker_or_later_sql(self):
+        plan, attempt, observation, authorization, vectors = self.build_plan()
+        cursor = Cursor(fail_sql="00400-inner")
+        cursor.ledger_rows = [(version, name, (f"base-{index}",)) for index, (version, name) in enumerate(BASELINE_PAIRS)] + [(item.version, item.name, full) for item, full, _ in vectors[:16]]
+        with patch.object(executor, "classify_mutation_cursor", return_value=observation), patch.object(executor, "probe_full_data_root", return_value=authorization.target_data_root):
+            with self.assertRaises(executor.ExecutionDenial) as error:
+                executor.apply_locked_cursor(cursor, plan=plan, attempt=attempt, deadline_monotonic=time.monotonic() + 60)
+        self.assertEqual(error.exception.code, "execution_failed")
+        self.assertEqual(error.exception.evidence["version"], "20260712000400")
+        self.assertEqual(error.exception.evidence["ordinal"], 1)
+        self.assertNotIn("secret", str(error.exception))
+        self.assertEqual(cursor.calls[-1][0], "00400-inner")
+        self.assertFalse(any(sql == LEDGER_INSERT_SQL for sql, _ in cursor.calls))
+    def test_source_pin_drift_is_denied_before_compilation_or_cursor_mutation(self):
+        m = manifest()
+        source, reference, observation, authorization, _ = artifacts()
+        mutations = (
+            ("reference_final_commit", source, replace(reference, final_commit="9" * 40), observation, authorization),
+            ("reference_base_commit", source, replace(reference, base_commit="9" * 40), observation, authorization),
+            ("observation_final_commit", source, reference, replace(observation, final_commit="9" * 40), authorization),
+            ("authorization_final_commit", source, reference, observation, replace(authorization, final_recovery_commit="9" * 40)),
+            ("authorization_base_commit", source, reference, observation, replace(authorization, base_commit="9" * 40)),
+            ("reference_runtime_source_root", source, replace(reference, runtime_source_root="9" * 64), observation, authorization),
+            ("observation_runtime_source_root", source, reference, replace(observation, runtime_source_root="9" * 64), authorization),
+            ("authorization_runtime_source_root", source, reference, observation, replace(authorization, runtime_source_root="9" * 64)),
+            ("reference_manifest_root", source, replace(reference, manifest_sha256="9" * 64), observation, authorization),
+            ("reference_migration_source_root", source, replace(reference, migration_source_sha256="9" * 64), observation, authorization),
+            ("authorization_manifest_root", source, reference, observation, replace(authorization, manifest_root="9" * 64)),
+            ("authorization_migration_source_root", source, reference, observation, replace(authorization, source_root="9" * 64)),
+            ("authorization_terminal_source_spec", source, reference, observation, replace(authorization, terminal_root="9" * 64)),
+        )
+        for name, candidate_source, candidate_reference, candidate_observation, candidate_authorization in mutations:
+            with self.subTest(name=name), patch.object(executor, "validate_sources", return_value=m), patch.object(executor, "terminal_spec", return_value=SPEC), patch.object(executor, "_compiled") as compile_vectors:
+                cursor = Cursor()
+                with self.assertRaises(Denial):
+                    executor.build_execution_plan(
+                        ROOT,
+                        m,
+                        source=candidate_source,
+                        reference=candidate_reference,
+                        observation=candidate_observation,
+                        authorization=candidate_authorization,
+                    )
+                self.assertFalse(compile_vectors.called)
+                self.assertEqual(cursor.calls, [])
     def test_plan_rejects_noncanonical_types_and_drift_before_cursor_or_marker(self):
         m = manifest(); source, reference, observation, authorization, _ = artifacts()
         with patch.object(executor, "validate_sources", return_value=m), patch.object(executor, "terminal_spec", return_value=SPEC), patch.object(executor, "_compiled") as compile_vectors:
@@ -343,7 +495,7 @@ class ExecutorTests(unittest.TestCase):
         self.assertEqual(
             cursor.calls,
             [
-                (executor._STATEMENT_TIMEOUT_SQL, ("999",)),
+                (STATEMENT_TIMEOUT_SQL, ("999",)),
                 ("classification-first", ()),
             ],
         )

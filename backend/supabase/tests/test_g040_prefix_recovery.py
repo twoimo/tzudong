@@ -2,11 +2,13 @@
 from __future__ import annotations
 import sys
 import unittest
+from dataclasses import FrozenInstanceError
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parents[1] / "scripts"))
 import g040_prefix_recovery as g
 import g040_reference_evidence as evidence
 H = "a" * 64
+SEED_PROJECTION_SHA256 = "0d38938f2e5c9ff0b0f3351fd1356fd3a9bc0d6aadf586d672020025cda807f8"
 
 class Cursor:
     def __init__(self, *rows): self.rows = list(rows); self.sql = []
@@ -30,6 +32,8 @@ def reference(**changes):
         first_capture_receipt_sha256="8" * 64, first_restored_archive_sha256="9" * 64,
         first_capture_receipt_bytes_sha256="0" * 64, first_restore_receipt_bytes_sha256="1" * 64,
         first_lineage_attestation_sha256="2" * 64, first_lineage_signature_sha256="3" * 64,
+        first_binding_receipt_sha256="6666666666666666666666666666666666666666666666666666666666666666",
+        first_observation_receipt_sha256="7777777777777777777777777777777777777777777777777777777777777777",
         second_clone_identity="a" * 64, second_clone_nonce="second-clone-nonce",
         second_live_identity_sha256="b" * 64, second_container_id_sha256="c" * 64,
         second_image_id_sha256="4" * 64, second_image_digest_sha256="5" * 64,
@@ -37,6 +41,8 @@ def reference(**changes):
         second_capture_receipt_sha256="8" * 64, second_restored_archive_sha256="9" * 64,
         second_capture_receipt_bytes_sha256="2" * 64, second_restore_receipt_bytes_sha256="3" * 64,
         second_lineage_attestation_sha256="4" * 64, second_lineage_signature_sha256="5" * 64,
+        second_binding_receipt_sha256="8888888888888888888888888888888888888888888888888888888888888888",
+        second_observation_receipt_sha256="9999999999999999999999999999999999999999999999999999999999999999",
         reference_public_key_sha256=evidence.PUBLIC_KEY_SHA256,
         signature_b64="AA==", receipt_sha256="3" * 64,
     )
@@ -45,9 +51,22 @@ def reference(**changes):
 def catalog(**changes):
     row = {"ledger_count":28,"v00400_count":0,"ledger_prefix_shape_ok":True,"ledger_sha256":H,"schema_exists":False,"expected_table_count":0,"schema_table_count":0,"schema_index_count":0,"column_count":0,"schema_other_relation_count":0,"touched_function_count":0,"schema_trigger_count":0,"rls_table_count":0,"policy_count":0,"acl_contract_ok":True,"exact_pg":True,"server_version_num":170006,"catalog_sha256":H}
     row.update(changes); return row
+def full_catalog(**changes):
+    return catalog(
+        schema_exists=True,
+        expected_table_count=7,
+        schema_table_count=7,
+        schema_index_count=14,
+        column_count=102,
+        touched_function_count=14,
+        schema_trigger_count=7,
+        rls_table_count=7,
+        catalog_sha256="d" * 64,
+        **changes,
+    )
 
 def data(**changes):
-    row = {"classes_count":10,"exact_seed_count":10,"seed_rows_exact":True,"class_source_count":0,"legal_hold_count":0,"work_item_count":0,"retained_record_count":0,"run_count":0,"run_item_count":0,"runtime_tables_empty":True,"seed_projection_sha256":H,"data_shape_sha256":"e" * 64}
+    row = {"classes_count":10,"exact_seed_count":10,"seed_rows_exact":True,"class_source_count":0,"legal_hold_count":0,"work_item_count":0,"retained_record_count":0,"run_count":0,"run_item_count":0,"runtime_tables_empty":True,"seed_projection_sha256":SEED_PROJECTION_SHA256,"data_shape_sha256":"e" * 64}
     row.update(changes); return row
 
 class Tests(unittest.TestCase):
@@ -105,6 +124,28 @@ class Tests(unittest.TestCase):
         self.assertNotIn("WHERE acl.grantee", probe)
         self.assertNotIn("WHERE acl.grantor", probe)
         self.assertIn("coalesce(d.defaclacl::text,'')", probe)
+    def test_source_probe_uses_only_explicit_noncolliding_acl_and_row_delimiters(self):
+        probe = g.CATALOG_PROBE
+        self.assertIn("chr(29) ORDER BY", probe)
+        self.assertIn("chr(30)", probe)
+        self.assertIn("chr(31)", probe)
+        self.assertNotIn("array_to_string(statements,',')", probe)
+        self.assertIn("has_schema_privilege('anon',to_regnamespace('privacy_retention'),'USAGE')", probe)
+        self.assertIn("aclexplode(coalesce(n.nspacl,acldefault('n',n.nspowner)))", probe)
+        self.assertIn("aclexplode(coalesce(c.relacl,acldefault('r',c.relowner)))", probe)
+        self.assertIn("aclexplode(coalesce(p.proacl,acldefault('f',p.proowner)))", probe)
+
+    def test_fail_closed_denials_use_exact_denial_type_and_bounded_codes(self):
+        for row, expected in (
+            (catalog(exact_pg=False), "postgres_version"),
+            (catalog(schema_exists=True), "partial_or_ambiguous"),
+        ):
+            with self.subTest(expected=expected):
+                with self.assertRaises(g.Denial) as raised:
+                    g.classify_locked_cursor(Cursor({"transaction_read_only": "on"}, row), reference(), consume_nonce=lambda _: True)
+                self.assertEqual(type(raised.exception), g.Denial)
+                self.assertEqual(raised.exception.code, expected)
+                self.assertEqual(str(raised.exception), expected)
     def test_unapplied_real_artifact_and_nonce_replay(self):
         consumed = set()
         consume = lambda nonce: nonce not in consumed and not consumed.add(nonce)
@@ -139,6 +180,38 @@ class Tests(unittest.TestCase):
             g.classify_locked_cursor(Cursor({"transaction_read_only":"on"}, catalog(schema_exists=True)), reference(), consume_nonce=lambda _: True)
         self.assertEqual(denial.exception.code, "partial_or_ambiguous")
         self.assertNotIn("postgres", str(denial.exception).lower())
+    def test_full_data_probe_rejects_each_ambiguous_or_mismatched_field(self):
+        cases = (
+            ("classes_count", {"classes_count": 9}, "partial_or_ambiguous"),
+            ("exact_seed_count", {"exact_seed_count": 9}, "partial_or_ambiguous"),
+            ("seed_rows_exact", {"seed_rows_exact": False}, "partial_or_ambiguous"),
+            ("runtime_tables_empty", {"runtime_tables_empty": False}, "partial_or_ambiguous"),
+            ("class_source_count", {"class_source_count": 1}, "partial_or_ambiguous"),
+            ("legal_hold_count", {"legal_hold_count": 1}, "partial_or_ambiguous"),
+            ("work_item_count", {"work_item_count": 1}, "partial_or_ambiguous"),
+            ("retained_record_count", {"retained_record_count": 1}, "partial_or_ambiguous"),
+            ("run_count", {"run_count": 1}, "partial_or_ambiguous"),
+            ("run_item_count", {"run_item_count": 1}, "partial_or_ambiguous"),
+            ("data_shape_sha256", {"data_shape_sha256": "0" * 64}, "partial_or_ambiguous"),
+            ("seed_projection_sha256", {"seed_projection_sha256": "0" * 64}, "partial_or_ambiguous"),
+            ("seed_projection_syntax", {"seed_projection_sha256": "z" * 64}, "data_shape"),
+        )
+        for field, changes, expected in cases:
+            with self.subTest(field=field):
+                cursor = Cursor({"transaction_read_only": "on"}, full_catalog(), data(**changes))
+                with self.assertRaises(g.Denial) as raised:
+                    g.classify_locked_cursor(cursor, reference(), consume_nonce=lambda _: True)
+                self.assertEqual(type(raised.exception), g.Denial)
+                self.assertEqual(raised.exception.code, expected)
+                self.assertEqual(str(raised.exception), expected)
+                self.assertEqual(
+                    cursor.sql,
+                    [
+                        "SELECT current_setting('transaction_read_only', true) AS transaction_read_only",
+                        g.CATALOG_PROBE,
+                        g.DATA_PROBE,
+                    ],
+                )
 
     def test_classification_uses_the_supplied_deadline_statement_adapter(self):
         executed = []
@@ -163,6 +236,6 @@ class Tests(unittest.TestCase):
         class Derived(evidence.VerifiedReference): pass
         with self.assertRaises(g.Denial): g.classify_locked_cursor(Cursor(), Derived(**reference().__dict__), consume_nonce=lambda _: True)
         observation = g.PrefixObservation("UNAPPLIED", "f" * 64, "b" * 40, "c" * 64, "3" * 64, evidence.DERIVATION_MODE, evidence.REVERSE_VECTOR_SHA256, "n" * 16, H, H, None, "4" * 64)
-        with self.assertRaises(Exception): observation.status = "FULL_ESCAPED"
+        with self.assertRaises(FrozenInstanceError): observation.status = "FULL_ESCAPED"
 
 if __name__ == "__main__": unittest.main()

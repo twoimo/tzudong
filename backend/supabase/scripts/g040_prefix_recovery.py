@@ -17,10 +17,11 @@ SOURCE_COMMIT = "92894e41cddb57767c9764d1694992bc0ad9d922"
 MANIFEST_SHA256 = "1f568404418009d191c27a0d8e525306b98b9e1472f4056d1f347907c500a8e1"
 MIGRATION_SOURCE_SHA256 = "e1881677d58017e7075b063190814a11ad0c77de9bf0c360f9bfe10eb484ec68"
 PG_IDENTITY = "PostgreSQL 17.6"
-RECEIPT_SCHEMA = "g040-prefix-reference-v2"
+RECEIPT_SCHEMA = "g040-prefix-reference-v3"
 _HEX = re.compile(r"^[0-9a-f]{64}$")
 _COMMIT = re.compile(r"^[0-9a-f]{40}$")
 _NONCE = re.compile(r"^[A-Za-z0-9_-]{16,128}$")
+_SEED_PROJECTION_SHA256 = "0d38938f2e5c9ff0b0f3351fd1356fd3a9bc0d6aadf586d672020025cda807f8"
 
 # These are the exact object names in the source-pinned migration.  Keeping these
 # projections here, rather than accepting caller-provided names, prevents a receipt
@@ -71,11 +72,15 @@ def _hex(value: Any) -> bool:
     return type(value) is str and bool(_HEX.fullmatch(value))
 
 def begin_read_only_snapshot(cursor: Any) -> None:
-    for statement in ("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY", "SET LOCAL statement_timeout = '10s'", "SET LOCAL lock_timeout = '1s'", "SET LOCAL idle_in_transaction_session_timeout = '15s'", "SET LOCAL search_path = pg_catalog"):
-        try:
-            cursor.execute(statement)
-        except Exception:
-            raise Denial("snapshot_setup") from None
+    """Assert the controller-established snapshot before any recovery probe."""
+    try:
+        cursor.execute("SELECT current_setting('transaction_read_only', true) AS transaction_read_only, current_setting('transaction_isolation', true) AS transaction_isolation")
+        if cursor.fetchone() != {"transaction_read_only": "on", "transaction_isolation": "repeatable read"}:
+            raise Denial("snapshot_setup")
+    except Denial:
+        raise
+    except Exception:
+        raise Denial("snapshot_setup") from None
 
 def _row(cursor: Any, sql: str, *, statement_executor: Callable[[str], None] | None = None) -> Mapping[str, Any]:
     try:
@@ -98,17 +103,34 @@ def _reference(value: Any) -> Any:
         raise Denial("reference_type")
     return value
 
+_FULL_DATA_FIELDS = frozenset(("classes_count", "exact_seed_count", "seed_rows_exact", "class_source_count", "legal_hold_count", "work_item_count", "retained_record_count", "run_count", "run_item_count", "runtime_tables_empty", "seed_projection_sha256", "data_shape_sha256"))
+_RUNTIME_DATA_COUNTS = ("class_source_count", "legal_hold_count", "work_item_count", "retained_record_count", "run_count", "run_item_count")
+
+def validate_full_data_root(data: Any, expected_data_root: Any) -> str:
+    """Validate the complete source-pinned terminal data probe against its root."""
+    count_fields = _FULL_DATA_FIELDS - {"seed_rows_exact", "runtime_tables_empty", "seed_projection_sha256", "data_shape_sha256"}
+    if (type(data) is not dict or set(data) != _FULL_DATA_FIELDS
+            or any(type(data[key]) is not int for key in count_fields)
+            or type(data["seed_rows_exact"]) is not bool
+            or type(data["runtime_tables_empty"]) is not bool
+            or not _hex(data["seed_projection_sha256"])
+            or not _hex(data["data_shape_sha256"])
+            or not _hex(expected_data_root)):
+        raise Denial("data_shape")
+    if not (data["classes_count"] == 10
+            and data["exact_seed_count"] == 10
+            and data["seed_rows_exact"] is True
+            and data["runtime_tables_empty"] is True
+            and data["seed_projection_sha256"] == _SEED_PROJECTION_SHA256
+            and all(data[key] == 0 for key in _RUNTIME_DATA_COUNTS)
+            and data["data_shape_sha256"] == expected_data_root):
+        raise Denial("partial_or_ambiguous")
+    return data["data_shape_sha256"]
+
 def probe_full_data_root(cursor: Any, reference: Any, *, statement_executor: Callable[[str], None] | None = None) -> str:
     """Run the single source-pinned terminal data probe and validate its full root."""
     reference = _reference(reference)
-    data = _row(cursor, DATA_PROBE, statement_executor=statement_executor)
-    required_data = {"classes_count", "exact_seed_count", "seed_rows_exact", "class_source_count", "legal_hold_count", "work_item_count", "retained_record_count", "run_count", "run_item_count", "runtime_tables_empty", "seed_projection_sha256", "data_shape_sha256"}
-    count_data = required_data - {"seed_rows_exact", "runtime_tables_empty", "seed_projection_sha256", "data_shape_sha256"}
-    if set(data) != required_data or any(type(data[key]) is not int for key in count_data) or type(data["seed_rows_exact"]) is not bool or type(data["runtime_tables_empty"]) is not bool or not _hex(data["seed_projection_sha256"]) or not _hex(data["data_shape_sha256"]):
-        raise Denial("data_shape")
-    if not (data["seed_rows_exact"] is True and data["runtime_tables_empty"] is True and data["classes_count"] == 10 and data["exact_seed_count"] == 10 and all(data[key] == 0 for key in ("class_source_count", "legal_hold_count", "work_item_count", "retained_record_count", "run_count", "run_item_count")) and data["data_shape_sha256"] == reference.full_data_sha256):
-        raise Denial("partial_or_ambiguous")
-    return data["data_shape_sha256"]
+    return validate_full_data_root(_row(cursor, DATA_PROBE, statement_executor=statement_executor), reference.full_data_sha256)
 
 def _classify_probes(cursor: Any, reference: Any, *, transaction_read_only: str, statement_executor: Callable[[str], None] | None = None) -> tuple[str, str, str, str | None]:
     if _row(cursor, "SELECT current_setting('transaction_read_only', true) AS transaction_read_only", statement_executor=statement_executor) != {"transaction_read_only": transaction_read_only}:
