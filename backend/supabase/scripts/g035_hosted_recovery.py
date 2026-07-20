@@ -457,7 +457,7 @@ def _publish_restore_receipt(args,result):
   while offset<len(raw): offset+=os.write(fd,raw[offset:])
   os.fsync(fd)
   stored_digest,stored_size,_,fd=_publish_owned_output(fd,temporary,target,identity,"restore receipt")
-  if stored_size!=len(raw) or stored_digest!=hashlib.sha256(raw).hexdigest() or json.loads(target.read_text(encoding="utf-8"),object_pairs_hook=_pairs)!=result: raise RecoveryError("restore receipt persistence invalid")
+  if stored_size!=len(raw) or stored_digest!=hashlib.sha256(raw).hexdigest() or canonical_bytes(json.loads(target.read_text(encoding="utf-8"),object_pairs_hook=_pairs))!=raw: raise RecoveryError("restore receipt persistence invalid")
  except Exception as exc:
   if fd is not None:
    _unlink_owned_output(fd,target,identity)
@@ -743,7 +743,7 @@ def capture_to_custody(args, manifest):
   while offset<len(raw): offset+=os.write(fd,raw[offset:])
   os.fsync(fd)
   stored_digest,stored_size,_,fd=_publish_owned_output(fd,temporary,target,identity,"capture receipt")
-  if stored_size!=len(raw) or stored_digest!=hashlib.sha256(raw).hexdigest() or result["receipt_sha256"]!=digest({key:value for key,value in result.items() if key!="receipt_sha256"}) or json.loads(target.read_text(encoding="utf-8"),object_pairs_hook=_pairs)!=result:
+  if stored_size!=len(raw) or stored_digest!=hashlib.sha256(raw).hexdigest() or result["receipt_sha256"]!=digest({key:value for key,value in result.items() if key!="receipt_sha256"}) or canonical_bytes(json.loads(target.read_text(encoding="utf-8"),object_pairs_hook=_pairs))!=raw:
    raise RecoveryError("capture receipt persistence invalid")
  except Exception as exc:
   if fd is not None:
