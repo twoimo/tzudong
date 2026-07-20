@@ -7,7 +7,7 @@ on:
         required: true
         default: validate
         type: choice
-        options: [validate, capture, restore-verify, short-url-remediation-inspect, short-url-remediation-apply, short-url-remediation-verify, clone-apply, local-postflight]
+        options: [validate, capture, short-url-remediation-inspect, short-url-remediation-apply, short-url-remediation-verify, clone-apply, local-postflight]
       evidence_receipt_path:
         description: Absolute local path outside the workspace
         required: true
@@ -29,16 +29,12 @@ jobs:
       G035_ENCRYPTED_DESTINATION_PATH: ${{ vars.G035_ENCRYPTED_DESTINATION_PATH }}
       G035_PUBLIC_RECIPIENT: ${{ vars.G035_PUBLIC_RECIPIENT }}
       G035_ENCRYPT_COMMAND: ${{ vars.G035_ENCRYPT_COMMAND }}
-      G035_DECRYPT_COMMAND: ${{ vars.G035_DECRYPT_COMMAND }}
       G035_G034_ARTIFACT: ${{ vars.G035_G034_ARTIFACT }}
-      G035_DUMP_PATH: ${{ vars.G035_DUMP_PATH }}
-      G035_CAPTURE_RECEIPT_PATH: ${{ vars.G035_CAPTURE_RECEIPT_PATH }}
       G035_RESTORE_RECEIPT_PATH: ${{ vars.G035_RESTORE_RECEIPT_PATH }}
       G035_SHORT_URL_REMEDIATION_INSPECT_RECEIPT_PATH: ${{ vars.G035_SHORT_URL_REMEDIATION_INSPECT_RECEIPT_PATH }}
       G035_SHORT_URL_REMEDIATION_APPLY_RECEIPT_PATH: ${{ vars.G035_SHORT_URL_REMEDIATION_APPLY_RECEIPT_PATH }}
       G035_SHORT_URL_REMEDIATION_VERIFY_RECEIPT_PATH: ${{ vars.G035_SHORT_URL_REMEDIATION_VERIFY_RECEIPT_PATH }}
       G035_CLONE_RECEIPT_PATH: ${{ vars.G035_CLONE_RECEIPT_PATH }}
-      G035_OFFLINE_IDENTITY_FILE: ${{ vars.G035_OFFLINE_IDENTITY_FILE }}
       G035_REMEDIATION_AUTHORIZATION_PATH: ${{ vars.G035_REMEDIATION_AUTHORIZATION_PATH }}
       G035_REMEDIATION_AUTHORIZATION_SIGNATURE_PATH: ${{ vars.G035_REMEDIATION_AUTHORIZATION_SIGNATURE_PATH }}
     steps:
@@ -53,6 +49,16 @@ jobs:
         run: |
           set -euo pipefail
           umask 077
+          source_commit="$(git rev-parse HEAD)"
+          [[ "$source_commit" =~ ^[0-9a-f]{40}$ ]]
+          bootstrap='backend/supabase/scripts/g040_isolated_bootstrap.py'
+          entrypoint='backend/supabase/scripts/g035_hosted_recovery.py'
+          run_g035() {
+            git show "$source_commit:$bootstrap" | python -I - \
+              --repository-root "$GITHUB_WORKSPACE" \
+              --authorized-final-commit "$source_commit" \
+              --entrypoint "$entrypoint" -- "$@"
+          }
           case "$EVIDENCE_RECEIPT_PATH" in
             /*|[A-Za-z]:/*|[A-Za-z]:\\*) ;;
             *) exit 1 ;;
@@ -66,12 +72,11 @@ jobs:
           test ! -L "$EVIDENCE_RECEIPT_PATH"
           set -C
           case "$REQUESTED_MODE" in
-            validate) python backend/supabase/scripts/g035_hosted_recovery.py validate > "$EVIDENCE_RECEIPT_PATH" ;;
-            capture) test -r "$G035_HOSTED_PG_SERVICE_FILE"; python backend/supabase/scripts/g035_hosted_recovery.py capture --destination "$G035_ENCRYPTED_DESTINATION_PATH" --service-file "$G035_HOSTED_PG_SERVICE_FILE" --recipient "$G035_PUBLIC_RECIPIENT" --g034-artifact "$G035_G034_ARTIFACT" --encrypt-command "$G035_ENCRYPT_COMMAND" > "$EVIDENCE_RECEIPT_PATH" ;;
-            restore-verify) test -r "$G035_LOCAL_PG_SERVICE_FILE"; test -r "$G035_OFFLINE_IDENTITY_FILE"; python backend/supabase/scripts/g035_hosted_recovery.py restore-verify --dump "$G035_DUMP_PATH" --capture-receipt "$G035_CAPTURE_RECEIPT_PATH" --service-file "$G035_LOCAL_PG_SERVICE_FILE" --destination-service g035-local --identity-file "$G035_OFFLINE_IDENTITY_FILE" --decrypt-command "$G035_DECRYPT_COMMAND" > "$EVIDENCE_RECEIPT_PATH" ;;
-            short-url-remediation-inspect) test -r "$G035_LOCAL_PG_SERVICE_FILE"; test -r "$G035_RESTORE_RECEIPT_PATH"; python backend/supabase/scripts/g035_hosted_recovery.py short-url-remediation-inspect --service g035-local --service-file "$G035_LOCAL_PG_SERVICE_FILE" --restore-receipt "$G035_RESTORE_RECEIPT_PATH" > "$EVIDENCE_RECEIPT_PATH" ;;
-            short-url-remediation-apply) test -r "$G035_LOCAL_PG_SERVICE_FILE"; test -r "$G035_RESTORE_RECEIPT_PATH"; test -r "$G035_SHORT_URL_REMEDIATION_INSPECT_RECEIPT_PATH"; test -r "$G035_REMEDIATION_AUTHORIZATION_PATH"; test -r "$G035_REMEDIATION_AUTHORIZATION_SIGNATURE_PATH"; python backend/supabase/scripts/g035_hosted_recovery.py short-url-remediation-apply --service g035-local --service-file "$G035_LOCAL_PG_SERVICE_FILE" --restore-receipt "$G035_RESTORE_RECEIPT_PATH" --inspect-receipt "$G035_SHORT_URL_REMEDIATION_INSPECT_RECEIPT_PATH" --authorization "$G035_REMEDIATION_AUTHORIZATION_PATH" --authorization-signature "$G035_REMEDIATION_AUTHORIZATION_SIGNATURE_PATH" > "$EVIDENCE_RECEIPT_PATH" ;;
-            short-url-remediation-verify) test -r "$G035_LOCAL_PG_SERVICE_FILE"; test -r "$G035_SHORT_URL_REMEDIATION_APPLY_RECEIPT_PATH"; python backend/supabase/scripts/g035_hosted_recovery.py short-url-remediation-verify --service g035-local --service-file "$G035_LOCAL_PG_SERVICE_FILE" --apply-receipt "$G035_SHORT_URL_REMEDIATION_APPLY_RECEIPT_PATH" > "$EVIDENCE_RECEIPT_PATH" ;;
-            clone-apply) test -r "$G035_LOCAL_PG_SERVICE_FILE"; test -r "$G035_RESTORE_RECEIPT_PATH"; test -r "$G035_SHORT_URL_REMEDIATION_VERIFY_RECEIPT_PATH"; python backend/supabase/scripts/g035_hosted_recovery.py clone-apply --service g035-local --service-file "$G035_LOCAL_PG_SERVICE_FILE" --restore-receipt "$G035_RESTORE_RECEIPT_PATH" --short-url-remediation-receipt "$G035_SHORT_URL_REMEDIATION_VERIFY_RECEIPT_PATH" > "$EVIDENCE_RECEIPT_PATH" ;;
-            local-postflight) test -r "$G035_LOCAL_PG_SERVICE_FILE"; test -r "$G035_CLONE_RECEIPT_PATH"; python backend/supabase/scripts/g035_hosted_recovery.py local-postflight --service g035-local --service-file "$G035_LOCAL_PG_SERVICE_FILE" --clone-receipt "$G035_CLONE_RECEIPT_PATH" --psql psql > "$EVIDENCE_RECEIPT_PATH" ;;
+            validate) run_g035 validate > "$EVIDENCE_RECEIPT_PATH" ;;
+            capture) test -r "$G035_HOSTED_PG_SERVICE_FILE"; run_g035 capture --destination "$G035_ENCRYPTED_DESTINATION_PATH" --service-file "$G035_HOSTED_PG_SERVICE_FILE" --recipient "$G035_PUBLIC_RECIPIENT" --g034-artifact "$G035_G034_ARTIFACT" --encrypt-command "$G035_ENCRYPT_COMMAND" > "$EVIDENCE_RECEIPT_PATH" ;;
+            short-url-remediation-inspect) test -r "$G035_LOCAL_PG_SERVICE_FILE"; test -r "$G035_RESTORE_RECEIPT_PATH"; run_g035 short-url-remediation-inspect --service g035-local --service-file "$G035_LOCAL_PG_SERVICE_FILE" --restore-receipt "$G035_RESTORE_RECEIPT_PATH" > "$EVIDENCE_RECEIPT_PATH" ;;
+            short-url-remediation-apply) test -r "$G035_LOCAL_PG_SERVICE_FILE"; test -r "$G035_RESTORE_RECEIPT_PATH"; test -r "$G035_SHORT_URL_REMEDIATION_INSPECT_RECEIPT_PATH"; test -r "$G035_REMEDIATION_AUTHORIZATION_PATH"; test -r "$G035_REMEDIATION_AUTHORIZATION_SIGNATURE_PATH"; run_g035 short-url-remediation-apply --service g035-local --service-file "$G035_LOCAL_PG_SERVICE_FILE" --restore-receipt "$G035_RESTORE_RECEIPT_PATH" --inspect-receipt "$G035_SHORT_URL_REMEDIATION_INSPECT_RECEIPT_PATH" --authorization "$G035_REMEDIATION_AUTHORIZATION_PATH" --authorization-signature "$G035_REMEDIATION_AUTHORIZATION_SIGNATURE_PATH" > "$EVIDENCE_RECEIPT_PATH" ;;
+            short-url-remediation-verify) test -r "$G035_LOCAL_PG_SERVICE_FILE"; test -r "$G035_SHORT_URL_REMEDIATION_APPLY_RECEIPT_PATH"; run_g035 short-url-remediation-verify --service g035-local --service-file "$G035_LOCAL_PG_SERVICE_FILE" --apply-receipt "$G035_SHORT_URL_REMEDIATION_APPLY_RECEIPT_PATH" > "$EVIDENCE_RECEIPT_PATH" ;;
+            clone-apply) test -r "$G035_LOCAL_PG_SERVICE_FILE"; test -r "$G035_RESTORE_RECEIPT_PATH"; test -r "$G035_SHORT_URL_REMEDIATION_VERIFY_RECEIPT_PATH"; run_g035 clone-apply --service g035-local --service-file "$G035_LOCAL_PG_SERVICE_FILE" --restore-receipt "$G035_RESTORE_RECEIPT_PATH" --short-url-remediation-receipt "$G035_SHORT_URL_REMEDIATION_VERIFY_RECEIPT_PATH" > "$EVIDENCE_RECEIPT_PATH" ;;
+            local-postflight) test -r "$G035_LOCAL_PG_SERVICE_FILE"; test -r "$G035_CLONE_RECEIPT_PATH"; run_g035 local-postflight --service g035-local --service-file "$G035_LOCAL_PG_SERVICE_FILE" --clone-receipt "$G035_CLONE_RECEIPT_PATH" --psql psql > "$EVIDENCE_RECEIPT_PATH" ;;
           esac
