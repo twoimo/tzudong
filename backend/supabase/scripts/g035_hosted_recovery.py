@@ -10,7 +10,7 @@ if __name__ == "__main__":
  except Exception:
   raise SystemExit("protected recovery source verification failed") from None
 
-import argparse, csv, hashlib, ipaddress, json, os, re, shutil, stat, subprocess, tempfile, threading, time, uuid
+import argparse, contextlib, csv, hashlib, ipaddress, json, os, re, shutil, stat, subprocess, tempfile, threading, time, uuid
 from pathlib import Path
 from typing import Any, Sequence
 from g035_hosted_recovery_contract import APPLICATION_SCHEMAS, APPROVED_AGE_RECIPIENT_SHA256, BASELINE_PAIRS, BASELINE_SHA256, FORBIDDEN_VERSIONS, MANAGED_METADATA_SCHEMAS, MANIFEST_SHA256, REMEDIATION_AUTHORIZATION_SCHEMA, REMEDIATION_PUBLIC_KEY_PEM, REMEDIATION_PUBLIC_KEY_SHA256, SELF_COMMIT_VERSIONS, SHORT_URL_SELECTION_SPEC as CONTRACT_SHORT_URL_SELECTION_SPEC, SHORT_URLS_CATALOG as CONTRACT_SHORT_URLS_CATALOG, ContractError, Manifest, canonical_json_bytes, canonical_sha256, ledger_prefix, repository_root, sha256_file, validate_sources, verify_short_url_remediation_authorization
@@ -56,18 +56,39 @@ def _approval_catalog_evidence(conn,contract=None):
 def receipt(mode,status,evidence,prior=None):
  item={"schema":RECEIPT_SCHEMA,"mode":mode,"status":status,"manifest_sha256":MANIFEST_SHA256,"prior_receipt_sha256":prior or [],"evidence":evidence}; item["receipt_sha256"]=digest(item); return item
 def emit(value): print(canonical_bytes(value).decode("ascii"))
+def _receipt_contract(data):
+ expected={"schema","mode","status","manifest_sha256","prior_receipt_sha256","evidence","receipt_sha256"}
+ modes={"capture":"captured","restore-verify":"restored","short-url-remediation-inspect":"validated","short-url-remediation-apply":"applied","short-url-remediation-verify":"validated","clone-apply":"applied","local-postflight":"validated"}
+ if type(data) is not dict or set(data)!=expected or data.get("schema")!=RECEIPT_SCHEMA or data.get("mode") not in modes or data.get("status")!=modes[data["mode"]] or type(data.get("evidence")) is not dict: raise RecoveryError("receipt binding invalid")
+ prior=data.get("prior_receipt_sha256")
+ if type(prior) is not list or any(type(value) is not str or not HEX.fullmatch(value) for value in prior): raise RecoveryError("receipt binding invalid")
+ if len(prior)!={"capture":0,"restore-verify":1,"short-url-remediation-inspect":1,"short-url-remediation-apply":2,"short-url-remediation-verify":1,"clone-apply":1,"local-postflight":1}[data["mode"]]: raise RecoveryError("receipt binding invalid")
+ return data
 def read_json_receipt(path):
+ path=Path(path); fd=None
  try:
-  if path.is_symlink() or not path.is_file(): raise OSError()
-  data=json.loads(path.read_text(encoding="utf-8"),object_pairs_hook=_pairs)
- except (OSError,json.JSONDecodeError,RecoveryError) as exc: raise RecoveryError("receipt unreadable") from exc
- copy=dict(data); got=copy.pop("receipt_sha256",None)
- if not isinstance(data,dict) or data.get("schema")!=RECEIPT_SCHEMA or not isinstance(got,str) or not HEX.fullmatch(got) or got!=digest(copy): raise RecoveryError("receipt binding invalid")
- if data.get("manifest_sha256")!=MANIFEST_SHA256: raise RecoveryError("receipt binding invalid")
+  _require_restrictive_regular_file(path,"receipt")
+  fd=os.open(path,os.O_RDONLY|getattr(os,"O_NOFOLLOW",0))
+  if not _same_file_identity(fd,path) or not _restrictive(path): raise RecoveryError("receipt custody lost")
+  chunks=[]
+  while True:
+   chunk=os.read(fd,1024*1024)
+   if not chunk: break
+   chunks.append(chunk)
+  raw=b"".join(chunks)
+  if not _same_file_identity(fd,path) or not _restrictive(path): raise RecoveryError("receipt custody lost")
+  data=json.loads(raw.decode("utf-8"),object_pairs_hook=_pairs)
+  _receipt_contract(data)
+  if canonical_bytes(data)!=raw: raise RecoveryError("receipt binding invalid")
+  copy=dict(data); got=copy.pop("receipt_sha256")
+ except (OSError,UnicodeDecodeError,json.JSONDecodeError,RecoveryError,TypeError,ValueError) as exc: raise RecoveryError("receipt unreadable") from exc
+ finally:
+  if fd is not None: os.close(fd)
+ if not isinstance(got,str) or not HEX.fullmatch(got) or got!=digest(copy) or data["manifest_sha256"]!=MANIFEST_SHA256: raise RecoveryError("receipt binding invalid")
  return data
 def _require_prior(path,mode):
  item=read_json_receipt(Path(path))
- if item.get("mode")!=mode or item.get("status") not in {"valid","captured","restored","applied","validated"}: raise RecoveryError("prior receipt transition invalid")
+ if item["mode"]!=mode: raise RecoveryError("prior receipt transition invalid")
  return item
 def run(argv,*,env,timeout=TIMEOUT_SECONDS,stdin=subprocess.DEVNULL,pass_fds=()):
  pass_fds=tuple(pass_fds)
@@ -87,55 +108,65 @@ def safe_environment(service_file,*,crypto=False):
  return env
 _WINDOWS_ALLOWED_SIDS={"S-1-5-18","S-1-5-32-544"}
 _WINDOWS_SID=re.compile(r"^S-\d+(?:-\d+)+$",re.IGNORECASE)
+_WINDOWS_LOGON_SID=re.compile(r"^S-1-5-5-\d+-\d+$",re.IGNORECASE)
 def _windows_current_sid():
  try:
-  completed=subprocess.run(["whoami","/user","/fo","csv","/nh"],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,encoding="utf-8",timeout=10,check=True)
-  rows=list(csv.reader(completed.stdout.splitlines(),strict=True))
-  if len(rows)!=1 or len(rows[0])!=2 or not _WINDOWS_SID.fullmatch(rows[0][1]): return None
-  return rows[0][1].upper()
- except (OSError,subprocess.TimeoutExpired,subprocess.CalledProcessError,csv.Error): return None
-def _windows_saved_sddl(export):
+  import ctypes
+  from ctypes import wintypes
+  token=wintypes.HANDLE(); kernel32=ctypes.WinDLL("kernel32",use_last_error=True); advapi32=ctypes.WinDLL("advapi32",use_last_error=True)
+  kernel32.GetCurrentProcess.restype=wintypes.HANDLE; kernel32.CloseHandle.argtypes=(wintypes.HANDLE,)
+  advapi32.OpenProcessToken.argtypes=(wintypes.HANDLE,wintypes.DWORD,ctypes.POINTER(wintypes.HANDLE)); advapi32.OpenProcessToken.restype=wintypes.BOOL
+  advapi32.GetTokenInformation.argtypes=(wintypes.HANDLE,wintypes.DWORD,ctypes.c_void_p,wintypes.DWORD,ctypes.POINTER(wintypes.DWORD)); advapi32.GetTokenInformation.restype=wintypes.BOOL
+  advapi32.ConvertSidToStringSidW.argtypes=(ctypes.c_void_p,ctypes.POINTER(wintypes.LPWSTR)); advapi32.ConvertSidToStringSidW.restype=wintypes.BOOL
+  if not advapi32.OpenProcessToken(kernel32.GetCurrentProcess(),8,ctypes.byref(token)): return None
+  try:
+   size=wintypes.DWORD()
+   advapi32.GetTokenInformation(token,1,None,0,ctypes.byref(size))
+   if not size.value: return None
+   data=ctypes.create_string_buffer(size.value)
+   if not advapi32.GetTokenInformation(token,1,data,size,ctypes.byref(size)): return None
+   sid=ctypes.cast(data,ctypes.POINTER(ctypes.c_void_p)).contents.value; text=wintypes.LPWSTR()
+   if not sid or not advapi32.ConvertSidToStringSidW(ctypes.c_void_p(sid),ctypes.byref(text)): return None
+   try: return text.value.upper() if _WINDOWS_SID.fullmatch(text.value) else None
+   finally: kernel32.LocalFree(text)
+  finally: kernel32.CloseHandle(token)
+ except (AttributeError,OSError,ValueError): return None
+def _windows_logon_sids():
+ return ()
+def _windows_security_metadata(path):
  try:
-  raw=Path(export).read_bytes()
-  if raw.startswith(b"\xff\xfe"): text=raw[2:].decode("utf-16-le")
-  elif raw.startswith(b"\xfe\xff"): return None
-  elif len(raw)%2==0 and raw[1::2].count(0)*4>=len(raw) and raw[::2].count(0)*8<len(raw): text=raw.decode("utf-16-le")
-  else: text=raw.decode("utf-8")
-  if "\x00" in text: return None
-  lines=text.splitlines()
- except (OSError,UnicodeDecodeError): return None
- values=[]
- for line in lines:
-  match=re.search(r"(?:^|\s)(D:[^\r\n]+)$",line)
-  if match: values.append(match.group(1))
- return values[0] if len(values)==1 else None
+  import ctypes
+  from ctypes import wintypes
+  advapi32=ctypes.WinDLL("advapi32",use_last_error=True); kernel32=ctypes.WinDLL("kernel32",use_last_error=True)
+  owner=ctypes.c_void_p(); descriptor=ctypes.c_void_p(); owner_text=wintypes.LPWSTR()
+  result=advapi32.GetNamedSecurityInfoW(str(path),1,5,ctypes.byref(owner),None,None,None,ctypes.byref(descriptor))
+  if result or not owner.value or not descriptor.value or not advapi32.ConvertSidToStringSidW(owner,ctypes.byref(owner_text)): return None
+  control=wintypes.WORD(); revision=wintypes.DWORD()
+  if not advapi32.GetSecurityDescriptorControl(descriptor,ctypes.byref(control),ctypes.byref(revision)): return None
+  return owner_text.value.upper(),bool(control.value&0x1000)
+ except (AttributeError,OSError,ValueError): return None
+ finally:
+  try:
+   if owner_text: kernel32.LocalFree(owner_text)
+   if descriptor.value: kernel32.LocalFree(descriptor)
+  except (NameError,AttributeError,OSError,TypeError,ValueError): pass
 def _windows_dacl_restrictive(path, *, directory=False):
- """Windows ACL inspection has no POSIX mode-bit fallback."""
+ """Inspect owner and protected DACL with typed WinAPI; never parse tool output."""
  if path.is_symlink() or (not path.is_dir() if directory else not path.is_file()): return False
- current=_windows_current_sid()
- if not current: return False
+ current=_windows_current_sid(); metadata=_windows_security_metadata(path)
+ if not (current and metadata and metadata[1] and metadata[0] in {current,*_WINDOWS_ALLOWED_SIDS}): return False
  try:
-  with tempfile.TemporaryDirectory(prefix="g035-acl-") as raw:
-   export=Path(raw)/"acl.txt"
-   completed=subprocess.run(["icacls",str(path),"/save",str(export),"/c"],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,encoding="utf-8",timeout=10,check=True)
-   sddl=_windows_saved_sddl(export)
-  if completed.returncode or not sddl or not sddl.startswith("D:"): return False
-  dacl=sddl[2:]
-  controls=re.match(r"(?:(?:P|AR|AI))*(?=\()",dacl)
-  if not controls: return False
-  aces_text=dacl[controls.end():]
-  aces=re.findall(r"\(([^()]*)\)",aces_text)
-  if not aces or "".join(f"({ace})" for ace in aces)!=aces_text: return False
-  allowed={current,"SY","BA",*_WINDOWS_ALLOWED_SIDS}
-  found_current=False
-  for ace in aces:
-   fields=ace.split(";")
-   if len(fields)!=6 or fields[0]!="A" or fields[1] or not fields[2] or fields[3] or fields[4]: return False
-   sid=fields[5].upper()
-   if sid not in allowed: return False
-   found_current |= sid==current
-  return found_current
- except (OSError,subprocess.TimeoutExpired,subprocess.CalledProcessError): return False
+  import ctypes
+  from ctypes import wintypes
+  advapi32=ctypes.WinDLL("advapi32",use_last_error=True); kernel32=ctypes.WinDLL("kernel32",use_last_error=True); descriptor=ctypes.c_void_p(); text=wintypes.LPWSTR(); size=wintypes.DWORD()
+  if advapi32.GetNamedSecurityInfoW(str(path),1,4,None,None,None,None,ctypes.byref(descriptor)) or not descriptor.value: return False
+  try:
+   if not advapi32.ConvertSecurityDescriptorToStringSecurityDescriptorW(descriptor,1,4,ctypes.byref(text),ctypes.byref(size)) or not text.value: return False
+   return text.value.upper()==_windows_protected_sddl(directory=directory).upper()
+  finally:
+   if text: kernel32.LocalFree(text)
+   kernel32.LocalFree(descriptor)
+ except (AttributeError,OSError,ValueError): return False
 def _restrictive(path):
  try:
   if path.is_symlink() or not path.is_file(): return False
@@ -187,11 +218,36 @@ def _copy_service(tempdir,source,section):
  try: raw=source.read_bytes()
  except OSError as exc: raise RecoveryError("service file unreadable") from exc
  if b"\x00" in raw: raise RecoveryError("invalid service file")
- target=tempdir/"pg_service.conf"; target.write_bytes(raw); target.chmod(0o600); return target
+ target=Path(tempdir)/"pg_service.conf"; fd=None; identity=None
+ try:
+  fd,identity=_owned_output(target,"service file")
+  offset=0
+  while offset<len(raw): offset+=os.write(fd,raw[offset:])
+  os.fsync(fd)
+  if not _same_file_identity(fd,target) or not _restrictive(target): raise RecoveryError("service file custody invalid")
+  return target
+ except Exception as exc:
+  if fd is not None: _unlink_owned_output(fd,target,identity)
+  if isinstance(exc,RecoveryError): raise
+  raise RecoveryError("service file custody invalid") from exc
+ finally:
+  if fd is not None: os.close(fd)
 def _copy_local_service(tempdir,source,section):
  if source.is_symlink() or not source.is_file() or not _restrictive(source): raise RecoveryError("service file must be restrictive regular file")
- raw=_parse_local_service(source,section)
- target=tempdir/"pg_service.conf"; target.write_bytes(raw); target.chmod(0o600); return target
+ raw=_parse_local_service(source,section); target=Path(tempdir)/"pg_service.conf"; fd=None; identity=None
+ try:
+  fd,identity=_owned_output(target,"service file")
+  offset=0
+  while offset<len(raw): offset+=os.write(fd,raw[offset:])
+  os.fsync(fd)
+  if not _same_file_identity(fd,target) or not _restrictive(target): raise RecoveryError("service file custody invalid")
+  return target
+ except Exception as exc:
+  if fd is not None: _unlink_owned_output(fd,target,identity)
+  if isinstance(exc,RecoveryError): raise
+  raise RecoveryError("service file custody invalid") from exc
+ finally:
+  if fd is not None: os.close(fd)
 def require_local(service):
  if service != LOCAL_SERVICE: raise RecoveryError("operation is limited to g035-local")
 def _connect(service, env):
@@ -276,7 +332,7 @@ def _g034_adapter(path, root, manifest, observed, source_binding=None):
   raise RecoveryError("g034 capture readiness is not satisfied")
  return {"g034_preflight_receipt_id":data["preflightReceiptId"],**source_binding,"catalog_sha256":data["catalogFingerprint"],"ledger_sha256":data["hostedLedgerFingerprint"],"source_sha256":data["sourceFingerprint"],"capture_readiness_sha256":digest({"artifact_sha256":sha256_file(Path(path)),"preflight_receipt_id":data["preflightReceiptId"],"live_catalog_sha256":observed["catalog_sha256"],"live_ledger_sha256":observed["ledger_sha256"]})}
 def _owned_output(path,label):
- flags=os.O_RDWR|os.O_CREAT|os.O_EXCL|getattr(os,"O_NOFOLLOW",0)
+ flags=os.O_RDWR|os.O_CREAT|os.O_EXCL|getattr(os,"O_NOFOLLOW",0)|getattr(os,"O_BINARY",0)
  fd=None; identity=None
  try:
   fd=os.open(path,flags,0o600)
@@ -292,6 +348,126 @@ def _owned_output(path,label):
    except OSError: pass
   if isinstance(exc,RecoveryError): raise
   raise RecoveryError(f"{label} custody invalid") from exc
+def _parse_inherited_channel(value,label):
+ if not isinstance(value,str) or not re.fullmatch(r"(?:[3-9]|[1-9][0-9]+)",value): raise RecoveryError(f"invalid {label}")
+ try: channel=int(value,10)
+ except ValueError: raise RecoveryError(f"invalid {label}") from None
+ if channel>2**31-1: raise RecoveryError(f"invalid {label}")
+ return channel
+def _owned_identity_stream(args):
+ if os.name=="posix":
+  if getattr(args,"identity_handle",None) is not None or getattr(args,"identity_fd",None) is None: raise RecoveryError("identity channel invalid")
+  fd=_parse_inherited_channel(args.identity_fd,"identity fd"); duplicate=None
+  try:
+   import fcntl
+   flags=fcntl.fcntl(fd,fcntl.F_GETFL)
+   if not stat.S_ISFIFO(os.fstat(fd).st_mode) or flags&os.O_ACCMODE!=os.O_RDONLY: raise RecoveryError("identity channel invalid")
+   duplicate=os.dup(fd); os.set_inheritable(duplicate,False); os.close(fd); fd=-1
+   stream=os.fdopen(duplicate,"rb",closefd=True); duplicate=None
+   return stream
+  except RecoveryError:
+   if duplicate is not None:
+    try: os.close(duplicate)
+    except OSError: pass
+   if fd>=0:
+    try: os.close(fd)
+    except OSError: pass
+   raise
+  except (OSError,ImportError) as exc:
+   if duplicate is not None:
+    try: os.close(duplicate)
+    except OSError: pass
+   if fd>=0:
+    try: os.close(fd)
+    except OSError: pass
+   raise RecoveryError("identity channel invalid") from exc
+ if os.name=="nt":
+  if getattr(args,"identity_fd",None) is not None or getattr(args,"identity_handle",None) is None: raise RecoveryError("identity channel invalid")
+  handle=_parse_inherited_channel(args.identity_handle,"identity handle"); duplicate=None; fd=None; original_valid=False
+  try:
+   import ctypes, msvcrt
+   from ctypes import wintypes
+   kernel32=ctypes.WinDLL("kernel32",use_last_error=True)
+   kernel32.GetHandleInformation.argtypes=(wintypes.HANDLE,ctypes.POINTER(wintypes.DWORD)); kernel32.GetHandleInformation.restype=wintypes.BOOL
+   kernel32.GetFileType.argtypes=(wintypes.HANDLE,); kernel32.GetFileType.restype=wintypes.DWORD
+   kernel32.PeekNamedPipe.argtypes=(wintypes.HANDLE,ctypes.c_void_p,wintypes.DWORD,ctypes.c_void_p,ctypes.POINTER(wintypes.DWORD),ctypes.c_void_p); kernel32.PeekNamedPipe.restype=wintypes.BOOL
+   kernel32.GetCurrentProcess.argtypes=(); kernel32.GetCurrentProcess.restype=wintypes.HANDLE
+   kernel32.DuplicateHandle.argtypes=(wintypes.HANDLE,wintypes.HANDLE,wintypes.HANDLE,ctypes.POINTER(wintypes.HANDLE),wintypes.DWORD,wintypes.BOOL,wintypes.DWORD); kernel32.DuplicateHandle.restype=wintypes.BOOL
+   kernel32.CloseHandle.argtypes=(wintypes.HANDLE,); kernel32.CloseHandle.restype=wintypes.BOOL
+   source=wintypes.HANDLE(handle); flags=wintypes.DWORD(); available=wintypes.DWORD()
+   if not kernel32.GetHandleInformation(source,ctypes.byref(flags)): raise RecoveryError("identity channel invalid")
+   original_valid=True
+   if not flags.value&1: raise RecoveryError("identity channel invalid")
+   if kernel32.GetFileType(source)!=3 or not kernel32.PeekNamedPipe(source,None,0,None,ctypes.byref(available),None): raise RecoveryError("identity channel invalid")
+   current=kernel32.GetCurrentProcess(); duplicate=wintypes.HANDLE()
+   if not kernel32.DuplicateHandle(current,source,current,ctypes.byref(duplicate),0,False,2): raise ctypes.WinError(ctypes.get_last_error())
+   if not kernel32.CloseHandle(source): raise ctypes.WinError(ctypes.get_last_error())
+   original_valid=False
+   raw_handle=duplicate.value
+   fd=msvcrt.open_osfhandle(raw_handle,os.O_RDONLY|getattr(os,"O_BINARY",0)); duplicate=None
+   stream=os.fdopen(fd,"rb",closefd=True); fd=None
+   return stream
+  except RecoveryError:
+   if fd is not None:
+    try: os.close(fd)
+    except OSError: pass
+   elif duplicate is not None:
+    try: kernel32.CloseHandle(duplicate)
+    except Exception: pass
+   if original_valid:
+    try: kernel32.CloseHandle(wintypes.HANDLE(handle))
+    except Exception: pass
+   raise
+  except (OSError,ImportError,ValueError) as exc:
+   if fd is not None:
+    try: os.close(fd)
+    except OSError: pass
+   elif duplicate is not None:
+    try: kernel32.CloseHandle(duplicate)
+    except Exception: pass
+   if original_valid:
+    try: kernel32.CloseHandle(wintypes.HANDLE(handle))
+    except Exception: pass
+   raise RecoveryError("identity channel invalid") from exc
+ raise RecoveryError("identity channel unavailable")
+def _path_has_link_or_junction(path):
+ current=Path(path.anchor)
+ for part in path.parts[1:]:
+  current=current/part
+  try:
+   if current.is_symlink() or (hasattr(current,"is_junction") and current.is_junction()): return True
+  except OSError: return True
+ return False
+def _restore_receipt_target(args):
+ requested=Path(args.restore_receipt)
+ root=repository_root(Path(__file__).resolve()).resolve(strict=True)
+ if not requested.is_absolute() or requested.name in {"",".",".."} or ".." in requested.parts or requested.exists() or requested.is_symlink() or _path_has_link_or_junction(requested.parent): raise RecoveryError("restore receipt custody invalid")
+ try: parent=requested.parent.resolve(strict=True)
+ except OSError as exc: raise RecoveryError("restore receipt custody invalid") from exc
+ target=parent/requested.name
+ if target.exists() or target.is_symlink() or target.parent==root or root in target.parent.parents: raise RecoveryError("restore receipt custody invalid")
+ _require_restrictive_directory(parent,"receipt parent")
+ return target
+def _publish_restore_receipt(args,result):
+ target=_restore_receipt_target(args)
+ raw=canonical_bytes(result); fd=None; temporary=None; identity=None
+ try:
+  fd,temporary,identity=_owned_temporary_output(target,"restore receipt")
+  offset=0
+  while offset<len(raw): offset+=os.write(fd,raw[offset:])
+  os.fsync(fd)
+  stored_digest,stored_size,_,fd=_publish_owned_output(fd,temporary,target,identity,"restore receipt")
+  if stored_size!=len(raw) or stored_digest!=hashlib.sha256(raw).hexdigest() or json.loads(target.read_text(encoding="utf-8"),object_pairs_hook=_pairs)!=result: raise RecoveryError("restore receipt persistence invalid")
+ except Exception as exc:
+  if fd is not None:
+   _unlink_owned_output(fd,target,identity)
+   if temporary is not None: _unlink_owned_output(fd,temporary,identity)
+  raise RecoveryError("restore receipt persistence invalid") from exc
+ finally:
+  if fd is not None:
+   try: os.close(fd)
+   except OSError: pass
+ return result
 def _unlink_owned_output(fd,path,identity):
  try:
   descriptor=os.fstat(fd); entry=path.lstat()
@@ -581,35 +757,49 @@ def capture_to_custody(args, manifest):
    except OSError: pass
  return result
 def run_restore_verify(args,manifest):
- require_local(args.destination_service); capture=_require_prior(args.capture_receipt,"capture"); source_binding=_require_recovery_source_binding(capture["evidence"],repository_root(Path(__file__).resolve())); dump=Path(args.dump); identity=Path(args.identity_file)
+ require_local(args.destination_service); capture=_require_prior(args.capture_receipt,"capture"); source_binding=_require_recovery_source_binding(capture["evidence"],repository_root(Path(__file__).resolve())); dump=Path(args.dump)
  if capture["evidence"].get("recipient_fingerprint")!=APPROVED_AGE_RECIPIENT_SHA256: raise RecoveryError("capture recipient binding mismatch")
  if capture["evidence"].get("extension_scope")!=[{"name":name,"schema":schema} for name,schema in RECOVERY_EXTENSIONS] or capture["evidence"].get("managed_metadata_schema_scope")!=list(MANAGED_METADATA_SCHEMAS) or capture["evidence"].get("managed_table_data_exclusions")!=list(MANAGED_TABLE_DATA_EXCLUSIONS): raise RecoveryError("capture managed metadata scope mismatch")
  if dump.is_symlink() or not dump.is_file() or sha256_file(dump)!=capture["evidence"].get("dump_sha256"): raise RecoveryError("ciphertext input mismatch")
- _require_restrictive_regular_file(identity,"identity file")
  decryptor,restore=command_exists(args.decrypt_command),command_exists(args.pg_restore)
- with tempfile.TemporaryDirectory(prefix="g035-restore-") as raw:
-  service=_copy_local_service(Path(raw),Path(args.service_file),"g035-local"); env=safe_environment(service); plain=Path(raw)/"database.pgdump"; run([decryptor,"--decrypt","--identity",str(identity),"--output",str(plain),str(dump)],env=safe_environment(service,crypto=True))
-  conn=_connect("g035-local",env)
+ with _owned_identity_stream(args) as identity_stream, _restricted_restore_directory() as workspace:
+  service=_copy_local_service(workspace,Path(args.service_file),"g035-local"); env=safe_environment(service); plain=workspace/"database.pgdump"; plain_fd=None; plain_identity=None
   try:
-   for schema in (LOCAL_REMEDIATION_SCHEMA,"public","auth","storage"): _query_conn(conn,f"DROP SCHEMA IF EXISTS {schema} CASCADE")
-   conn.commit()
-  except Exception:
-   conn.rollback()
-   raise
-  finally: conn.close()
-  run([restore,"--section=pre-data","--dbname=service=g035-local",str(plain)],env=env)
-  run([restore,"--section=data","--dbname=service=g035-local",str(plain)],env=env)
-  conn=_connect("g035-local",env)
-  try:
-   _create_auth_user_placeholders(conn); conn.commit()
-  except Exception:
-   conn.rollback()
-   raise
-  finally: conn.close()
-  run([restore,"--section=post-data","--dbname=service=g035-local",str(plain)],env=env)
-  conn=_connect("g035-local",env)
-  try: observed=_fingerprints(conn)
-  finally: conn.rollback(); conn.close()
+   plain_fd,plain_identity=_owned_output(plain,"plaintext restore")
+   with os.fdopen(os.dup(plain_fd),"wb",closefd=True) as plain_stream:
+    try: subprocess.run([decryptor,"--decrypt","--identity","-",str(dump)],env=safe_environment(service,crypto=True),stdin=identity_stream,stdout=plain_stream,stderr=subprocess.PIPE,timeout=TIMEOUT_SECONDS,check=True)
+    except (OSError,subprocess.TimeoutExpired,subprocess.CalledProcessError) as exc: raise RecoveryError("external command failed") from exc
+   os.fsync(plain_fd)
+   _require_temporary_file_identity(plain_fd,plain)
+   conn=_connect("g035-local",env)
+   try:
+    for schema in (LOCAL_REMEDIATION_SCHEMA,"public","auth","storage"): _query_conn(conn,f"DROP SCHEMA IF EXISTS {schema} CASCADE")
+    conn.commit()
+   except Exception:
+    conn.rollback()
+    raise
+   finally: conn.close()
+   _require_temporary_file_identity(plain_fd,plain)
+   run([restore,"--section=pre-data","--dbname=service=g035-local",str(plain)],env=env)
+   _require_temporary_file_identity(plain_fd,plain)
+   run([restore,"--section=data","--dbname=service=g035-local",str(plain)],env=env)
+   conn=_connect("g035-local",env)
+   try:
+    _create_auth_user_placeholders(conn); conn.commit()
+   except Exception:
+    conn.rollback()
+    raise
+   finally: conn.close()
+   _require_temporary_file_identity(plain_fd,plain)
+   run([restore,"--section=post-data","--dbname=service=g035-local",str(plain)],env=env)
+   _require_temporary_file_identity(plain_fd,plain)
+   conn=_connect("g035-local",env)
+   try: observed=_fingerprints(conn)
+   finally: conn.rollback(); conn.close()
+  finally:
+   if plain_fd is not None:
+    _unlink_owned_output(plain_fd,plain,plain_identity)
+    os.close(plain_fd)
  expected=capture["evidence"]
  if not _ledger_evidence_equal(expected.get("ledger_pairs"),observed["ledger_pairs"]): raise RecoveryError("restore evidence mismatch")
  for key in ("ledger_sha256","ledger_count","restorable_catalog_sha256","managed_catalog_sha256"):
@@ -678,13 +868,75 @@ def run_short_url_inspect(args,manifest):
   finally: conn.rollback(); conn.close()
  return receipt("short-url-remediation-inspect","validated",{**source_binding,**{k:v for k,v in evidence.items() if not k.startswith("_")}},[restored["receipt_sha256"]])
 def _id_digest(values): return digest(sorted(values))
-def _windows_restrict_temporary_file(path):
+def _windows_protected_sddl(*,directory):
+ current=_windows_current_sid()
+ if not current: raise RecoveryError("temporary ACL unavailable")
+ return f"D:P(A;{'OICI' if directory else ''};FA;;;{current})(A;{'OICI' if directory else ''};FA;;;SY)(A;{'OICI' if directory else ''};FA;;;BA)"
+def _windows_create_restricted_directory(path):
  try:
-  current=_windows_current_sid()
-  if not current: raise RecoveryError("temporary file ACL unavailable")
-  subprocess.run(["icacls",str(path),"/inheritance:r","/grant:r",f"*{current}:(F)","*S-1-5-18:(F)","*S-1-5-32-544:(F)"],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,encoding="utf-8",timeout=10,check=True)
-  if not _windows_dacl_restrictive(path): raise RecoveryError("temporary file ACL unavailable")
- except (OSError,subprocess.TimeoutExpired,subprocess.CalledProcessError) as exc: raise RecoveryError("temporary file ACL unavailable") from exc
+  import ctypes
+  from ctypes import wintypes
+  class SECURITY_ATTRIBUTES(ctypes.Structure): _fields_=(("nLength",wintypes.DWORD),("lpSecurityDescriptor",ctypes.c_void_p),("bInheritHandle",wintypes.BOOL))
+  kernel32=ctypes.WinDLL("kernel32",use_last_error=True); advapi32=ctypes.WinDLL("advapi32",use_last_error=True); descriptor=ctypes.c_void_p()
+  if not advapi32.ConvertStringSecurityDescriptorToSecurityDescriptorW(_windows_protected_sddl(directory=True),1,ctypes.byref(descriptor),None): raise ctypes.WinError(ctypes.get_last_error())
+  try:
+   attributes=SECURITY_ATTRIBUTES(ctypes.sizeof(SECURITY_ATTRIBUTES),descriptor,False)
+   if not kernel32.CreateDirectoryW(str(path),ctypes.byref(attributes)):
+    error=ctypes.get_last_error()
+    if error==183: return False
+    raise ctypes.WinError(error)
+  finally: kernel32.LocalFree(descriptor)
+  if not _windows_dacl_restrictive(path,directory=True): raise RecoveryError("temporary ACL unavailable")
+  return True
+ except (AttributeError,OSError,ValueError) as exc: raise RecoveryError("temporary ACL unavailable") from exc
+def _directory_identity(path):
+ try:
+  entry=path.lstat(); target=path.stat()
+  if path.is_symlink() or not stat.S_ISDIR(entry.st_mode) or (entry.st_dev,entry.st_ino)!=(target.st_dev,target.st_ino): raise RecoveryError("restore directory custody invalid")
+  return entry.st_dev,entry.st_ino
+ except OSError as exc: raise RecoveryError("restore directory custody invalid") from exc
+def _same_directory_identity(path,identity):
+ try: return _directory_identity(path)==identity
+ except RecoveryError: return False
+def _windows_set_protected_dacl(path, *, directory):
+ try:
+  import ctypes
+  sddl=_windows_protected_sddl(directory=directory)
+  advapi32=ctypes.WinDLL("advapi32",use_last_error=True); kernel32=ctypes.WinDLL("kernel32",use_last_error=True); descriptor=ctypes.c_void_p()
+  if not advapi32.ConvertStringSecurityDescriptorToSecurityDescriptorW(sddl,1,ctypes.byref(descriptor),None): raise ctypes.WinError(ctypes.get_last_error())
+  try:
+   if not advapi32.SetFileSecurityW(str(path),0x80000004,descriptor): raise ctypes.WinError(ctypes.get_last_error())
+  finally: kernel32.LocalFree(descriptor)
+  if not _windows_dacl_restrictive(path,directory=directory): raise RecoveryError("temporary ACL unavailable")
+ except (AttributeError,OSError,ValueError) as exc: raise RecoveryError("temporary ACL unavailable") from exc
+def _windows_restrict_temporary_file(path):
+ _windows_set_protected_dacl(path,directory=False)
+def _windows_restrict_temporary_directory(path):
+ _windows_set_protected_dacl(path,directory=True)
+@contextlib.contextmanager
+def _restricted_restore_directory():
+ parent=Path.home().resolve(strict=True); identity=None
+ if os.name=="nt":
+  base=parent/".g035-recovery"
+  created=_windows_create_restricted_directory(base)
+  if not created: _require_restrictive_directory(base,"restore workspace parent")
+  _require_restrictive_directory(base,"restore workspace parent")
+  parent=base
+  for _ in range(32):
+   path=parent/f"g035-restore-{uuid.uuid4().hex}"
+   if _windows_create_restricted_directory(path): break
+  else: raise RecoveryError("restore directory custody invalid")
+ else:
+  path=Path(tempfile.mkdtemp(prefix="g035-restore-",dir=parent)); path.chmod(0o700)
+ try:
+  identity=_directory_identity(path)
+  if not _restrictive_directory(path): raise RecoveryError("restore directory custody invalid")
+  yield path
+ finally:
+  try:
+   if identity is None or not _same_directory_identity(path,identity): raise RecoveryError("restore directory cleanup failed")
+   shutil.rmtree(path)
+  except OSError as exc: raise RecoveryError("restore directory cleanup failed") from exc
 def _same_file_identity(fd,path):
  try:
   descriptor=os.fstat(fd); entry=path.lstat(); target=path.stat()
@@ -912,7 +1164,7 @@ def parser():
  p=argparse.ArgumentParser(); sub=p.add_subparsers(dest="mode",required=True); sub.add_parser("validate")
  c=sub.add_parser("capture"); c.add_argument("--destination",required=True); c.add_argument("--service-file",required=True); c.add_argument("--recipient",required=True); c.add_argument("--g034-artifact",required=True); c.add_argument("--pg-dump",default="pg_dump"); c.add_argument("--encrypt-command",required=True)
  pc=sub.add_parser("production-capture"); pc.add_argument("--destination",required=True); pc.add_argument("--capture-receipt",required=True); pc.add_argument("--service-file",required=True); pc.add_argument("--recipient",required=True); pc.add_argument("--g034-artifact",required=True); pc.add_argument("--pg-dump",default="pg_dump"); pc.add_argument("--encrypt-command",required=True)
- r=sub.add_parser("restore-verify"); r.add_argument("--dump",required=True); r.add_argument("--capture-receipt",required=True); r.add_argument("--service-file",required=True); r.add_argument("--destination-service",required=True); r.add_argument("--identity-file",required=True); r.add_argument("--decrypt-command",required=True); r.add_argument("--pg-restore",default="pg_restore")
+ r=sub.add_parser("restore-verify"); r.add_argument("--dump",required=True); r.add_argument("--capture-receipt",required=True); r.add_argument("--restore-receipt",required=True); r.add_argument("--service-file",required=True); r.add_argument("--destination-service",required=True); identity=r.add_mutually_exclusive_group(required=True); identity.add_argument("--identity-fd"); identity.add_argument("--identity-handle"); r.add_argument("--decrypt-command",required=True); r.add_argument("--pg-restore",default="pg_restore")
  i=sub.add_parser("short-url-remediation-inspect"); i.add_argument("--service",required=True); i.add_argument("--service-file",required=True); i.add_argument("--restore-receipt",required=True)
  a=sub.add_parser("short-url-remediation-apply"); a.add_argument("--service",required=True); a.add_argument("--service-file",required=True); a.add_argument("--restore-receipt",required=True); a.add_argument("--inspect-receipt",required=True); a.add_argument("--authorization",required=True); a.add_argument("--authorization-signature",required=True)
  v=sub.add_parser("short-url-remediation-verify"); v.add_argument("--service",required=True); v.add_argument("--service-file",required=True); v.add_argument("--apply-receipt",required=True)
@@ -922,6 +1174,11 @@ def parser():
 def main(argv=None):
  args=parser().parse_args(argv)
  try:
-  manifest=validate_sources(repository_root(Path(__file__).resolve())); result=receipt("validate","valid",{"manifest_sha256":MANIFEST_SHA256,"baseline_pairs_sha256":BASELINE_SHA256}) if args.mode=="validate" else {"capture":run_capture,"production-capture":capture_to_custody,"restore-verify":run_restore_verify,"short-url-remediation-inspect":run_short_url_inspect,"short-url-remediation-apply":run_short_url_apply,"short-url-remediation-verify":run_short_url_verify,"clone-apply":apply_manifest,"local-postflight":run_postflight}[args.mode](args,manifest); emit(result); return 0
- except (ContractError,RecoveryError): emit(receipt(args.mode,"rejected",{"reason":"policy_rejected"})); return 2
+  manifest=validate_sources(repository_root(Path(__file__).resolve()))
+  if args.mode=="validate": result=receipt("validate","valid",{"manifest_sha256":MANIFEST_SHA256,"baseline_pairs_sha256":BASELINE_SHA256}); emit(result); return 0
+  if args.mode=="restore-verify": _restore_receipt_target(args); _publish_restore_receipt(args,run_restore_verify(args,manifest)); return 0
+  result={"capture":run_capture,"production-capture":capture_to_custody,"short-url-remediation-inspect":run_short_url_inspect,"short-url-remediation-apply":run_short_url_apply,"short-url-remediation-verify":run_short_url_verify,"clone-apply":apply_manifest,"local-postflight":run_postflight}[args.mode](args,manifest); emit(result); return 0
+ except (ContractError,RecoveryError):
+  if args.mode!="restore-verify": emit(receipt(args.mode,"rejected",{"reason":"policy_rejected"}))
+  return 2
 if __name__=="__main__": raise SystemExit(main())
