@@ -351,18 +351,23 @@ class ControllerTests(unittest.TestCase):
   self.assertNotIn("hosted-apply",text); self.assertNotIn("pg_dumpall",text)
   for mode in ("validate","capture","restore-verify","clone-apply","local-postflight"): self.assertIn(mode,text)
  def test_public_production_capture_validates_sources_runs_capture_and_returns_verified_canonical_receipt(self):
-  captured={"schema":recovery.RECEIPT_SCHEMA,"mode":"capture","status":"captured","evidence":{"dump_sha256":"a"*64,"dump_bytes":7}}
-  captured["receipt_sha256"]=recovery.digest({key:value for key,value in captured.items() if key!="receipt_sha256"})
+  captured=recovery.receipt("capture","captured",{"dump_sha256":"a"*64,"dump_bytes":7})
   with tempfile.TemporaryDirectory() as raw:
    receipt=Path(raw)/"capture.json"; manifest=object()
    argv=["production-capture","--destination",raw,"--capture-receipt",str(receipt),"--service-file","/custody/service.conf","--recipient","age1"+"q"*58,"--g034-artifact","/custody/g034.json","--encrypt-command","age"]
-   stream=io.StringIO()
-   with patch.object(recovery,"validate_sources",return_value=manifest) as validate,patch.object(recovery,"run_capture",return_value=captured) as run_capture,patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_restrictive_directory",return_value=True),patch.object(recovery,"_windows_restrict_temporary_file"),patch.object(recovery,"_unlink_owned_output",side_effect=lambda fd,path,identity:path.unlink(missing_ok=True)),contextlib.redirect_stdout(stream):
+   stream=io.BytesIO()
+   with patch.object(recovery,"validate_sources",return_value=manifest) as validate,patch.object(recovery,"run_capture",return_value=captured) as run_capture,patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_restrictive_directory",return_value=True),patch.object(recovery,"_windows_restrict_temporary_file"),patch.object(recovery,"_unlink_owned_output",side_effect=lambda fd,path,identity:path.unlink(missing_ok=True)),patch.object(recovery.sys,"stdout",type("Stdout",(),{"buffer":stream})()):
     self.assertEqual(0,recovery.main(argv))
+    self.assertEqual(captured,recovery.read_json_receipt(receipt))
+    self.assertEqual(b"}",stream.getvalue()[-1:])
+    tampered=stream.getvalue().replace(b'"dump_sha256":"'+b"a"*64,b'"dump_sha256":"'+b"b"*64,1)
+    self.assertNotEqual(stream.getvalue(),tampered)
+    for payload in (stream.getvalue()+b"\n",tampered):
+     receipt.write_bytes(payload)
+     with self.assertRaises(recovery.RecoveryError): recovery.read_json_receipt(receipt)
    validate.assert_called_once_with(recovery.repository_root(Path(recovery.__file__).resolve()))
    run_capture.assert_called_once()
-   self.assertEqual(recovery.canonical_bytes(captured),receipt.read_bytes())
-   self.assertEqual(captured,json.loads(stream.getvalue()))
+   self.assertEqual(recovery.canonical_bytes(captured),stream.getvalue())
  def test_exact_current_receipt_and_live_fingerprints_are_required(self):
   manifest=contract.load_manifest(ROOT); observed={"ledger_sha256":"1"*64,"catalog_sha256":"2"*64}; data=self.artifact(manifest,observed)
   result=self.adapter(data,observed); self.assertIn("capture_readiness_sha256",result)
@@ -1283,9 +1288,9 @@ class ControllerTests(unittest.TestCase):
   self.assertIn("coalesce(namespace.nspacl,pg_catalog.acldefault('n',namespace.nspowner))",source)
   self.assertIn("coalesce(class.relacl,pg_catalog.acldefault('r',class.relowner))",source)
  def test_main_rejects_without_diagnostics(self):
-  output=io.StringIO()
-  with patch.object(recovery,"validate_sources",side_effect=recovery.ContractError("secret")),contextlib.redirect_stdout(output): self.assertEqual(2,recovery.main(["validate"]))
-  self.assertEqual("policy_rejected",json.loads(output.getvalue())["evidence"]["reason"]); self.assertNotIn("secret",output.getvalue())
+  output=io.BytesIO()
+  with patch.object(recovery,"validate_sources",side_effect=recovery.ContractError("secret")),patch.object(recovery.sys,"stdout",type("Stdout",(),{"buffer":output})()): self.assertEqual(2,recovery.main(["validate"]))
+  self.assertEqual("policy_rejected",json.loads(output.getvalue())["evidence"]["reason"]); self.assertNotIn(b"secret",output.getvalue())
 class ManifestDependencyTests(unittest.TestCase):
  def test_marketing_state_machine_is_hashed_and_required_in_dependency_order(self):
   data=json.loads((ROOT/contract.MANIFEST_RELATIVE_PATH).read_text(encoding="utf8"))
