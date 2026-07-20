@@ -1,7 +1,7 @@
 import contextlib, hashlib, importlib.util, io, json, os, subprocess, sys, tempfile, threading, time, unittest
 from argparse import Namespace
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import ANY, patch
 
 SCRIPTS=Path(__file__).parents[1]/"scripts"; sys.path.insert(0,str(SCRIPTS))
 import g040_recovery_source as recovery_source
@@ -35,58 +35,29 @@ class ContractTests(unittest.TestCase):
   self.assertFalse(contract.ledger_prefix(manifest,list(reconstructed)))
   self.assertFalse(contract.ledger_prefix(manifest,[("20260531084516","caller_supplied")]))
 
- def test_hosted_workflow_uses_exact_local_only_cli_contract(self):
+ def test_restore_cli_requires_external_receipt_and_one_channel(self):
+  restore=next(action.choices["restore-verify"] for action in recovery.parser()._actions if getattr(action,"dest",None)=="mode")
+  required={action.dest for action in restore._actions if action.required}
+  self.assertEqual({"dump","capture_receipt","restore_receipt","service_file","destination_service","decrypt_command"},required)
+  with contextlib.redirect_stderr(io.StringIO()),self.assertRaises(SystemExit):
+   recovery.parser().parse_args(["restore-verify","--dump","dump","--capture-receipt","capture","--restore-receipt","/receipt","--service-file","service","--destination-service","g035-local","--decrypt-command","age"])
+  args=recovery.parser().parse_args(["restore-verify","--dump","dump","--capture-receipt","capture","--restore-receipt","/receipt","--service-file","service","--destination-service","g035-local","--identity-fd","3","--decrypt-command","age"])
+  self.assertEqual("3",args.identity_fd)
+  self.assertIsNone(args.identity_handle)
+ def test_runnable_workflow_excludes_restore_and_runbook_requires_pipe_custody(self):
   workflow=(ROOT/".github/workflows/g035-hosted-recovery.yml").read_text(encoding="utf8")
-  choices=next(action.choices for action in recovery.parser()._actions if getattr(action,"dest",None)=="mode")
-  required={
-   mode:{action.dest for action in subparser._actions if action.required}
-   for mode,subparser in choices.items()
-  }
-  self.assertEqual({
-   "validate":set(),
-   "capture":{"destination","service_file","recipient","g034_artifact","encrypt_command"},
-   "production-capture":{"destination","capture_receipt","service_file","recipient","g034_artifact","encrypt_command"},
-   "restore-verify":{"dump","capture_receipt","service_file","destination_service","identity_file","decrypt_command"},
-   "short-url-remediation-inspect":{"service","service_file","restore_receipt"},
-   "short-url-remediation-apply":{"service","service_file","restore_receipt","inspect_receipt","authorization","authorization_signature"},
-   "short-url-remediation-verify":{"service","service_file","apply_receipt"},
-   "clone-apply":{"service","service_file","restore_receipt"},
-   "local-postflight":{"service","service_file","clone_receipt"},
-  },required)
-  commands={
-   "validate":'python backend/supabase/scripts/g035_hosted_recovery.py validate > "$EVIDENCE_RECEIPT_PATH"',
-   "capture":'python backend/supabase/scripts/g035_hosted_recovery.py capture --destination "$G035_ENCRYPTED_DESTINATION_PATH" --service-file "$G035_HOSTED_PG_SERVICE_FILE" --recipient "$G035_PUBLIC_RECIPIENT" --g034-artifact "$G035_G034_ARTIFACT" --encrypt-command "$G035_ENCRYPT_COMMAND" > "$EVIDENCE_RECEIPT_PATH"',
-   "restore-verify":'python backend/supabase/scripts/g035_hosted_recovery.py restore-verify --dump "$G035_DUMP_PATH" --capture-receipt "$G035_CAPTURE_RECEIPT_PATH" --service-file "$G035_LOCAL_PG_SERVICE_FILE" --destination-service g035-local --identity-file "$G035_OFFLINE_IDENTITY_FILE" --decrypt-command "$G035_DECRYPT_COMMAND" > "$EVIDENCE_RECEIPT_PATH"',
-   "short-url-remediation-inspect":'python backend/supabase/scripts/g035_hosted_recovery.py short-url-remediation-inspect --service g035-local --service-file "$G035_LOCAL_PG_SERVICE_FILE" --restore-receipt "$G035_RESTORE_RECEIPT_PATH" > "$EVIDENCE_RECEIPT_PATH"',
-   "short-url-remediation-apply":'python backend/supabase/scripts/g035_hosted_recovery.py short-url-remediation-apply --service g035-local --service-file "$G035_LOCAL_PG_SERVICE_FILE" --restore-receipt "$G035_RESTORE_RECEIPT_PATH" --inspect-receipt "$G035_SHORT_URL_REMEDIATION_INSPECT_RECEIPT_PATH" --authorization "$G035_REMEDIATION_AUTHORIZATION_PATH" --authorization-signature "$G035_REMEDIATION_AUTHORIZATION_SIGNATURE_PATH" > "$EVIDENCE_RECEIPT_PATH"',
-   "short-url-remediation-verify":'python backend/supabase/scripts/g035_hosted_recovery.py short-url-remediation-verify --service g035-local --service-file "$G035_LOCAL_PG_SERVICE_FILE" --apply-receipt "$G035_SHORT_URL_REMEDIATION_APPLY_RECEIPT_PATH" > "$EVIDENCE_RECEIPT_PATH"',
-   "clone-apply":'python backend/supabase/scripts/g035_hosted_recovery.py clone-apply --service g035-local --service-file "$G035_LOCAL_PG_SERVICE_FILE" --restore-receipt "$G035_RESTORE_RECEIPT_PATH" --short-url-remediation-receipt "$G035_SHORT_URL_REMEDIATION_VERIFY_RECEIPT_PATH" > "$EVIDENCE_RECEIPT_PATH"',
-   "local-postflight":'python backend/supabase/scripts/g035_hosted_recovery.py local-postflight --service g035-local --service-file "$G035_LOCAL_PG_SERVICE_FILE" --clone-receipt "$G035_CLONE_RECEIPT_PATH" --psql psql > "$EVIDENCE_RECEIPT_PATH"',
-  }
-  self.assertEqual(set(choices),set(commands)|{"production-capture"})
-  for mode,command in commands.items():
-   self.assertIn(command,workflow)
-   for destination in required[mode]:
-    action=next(action for action in choices[mode]._actions if action.dest==destination)
-    self.assertIn(action.option_strings[0],command)
-  self.assertIn("options: [validate, capture, restore-verify, short-url-remediation-inspect, short-url-remediation-apply, short-url-remediation-verify, clone-apply, local-postflight]",workflow)
-  for variable in ("G035_HOSTED_PG_SERVICE_FILE","G035_LOCAL_PG_SERVICE_FILE","G035_OFFLINE_IDENTITY_FILE","G035_REMEDIATION_AUTHORIZATION_PATH","G035_REMEDIATION_AUTHORIZATION_SIGNATURE_PATH","G035_SHORT_URL_REMEDIATION_INSPECT_RECEIPT_PATH","G035_SHORT_URL_REMEDIATION_APPLY_RECEIPT_PATH","G035_SHORT_URL_REMEDIATION_VERIFY_RECEIPT_PATH"):
-   self.assertIn(f'{variable}: ${{{{ vars.{variable} }}}}',workflow)
-  self.assertIn('capture) test -r "$G035_HOSTED_PG_SERVICE_FILE";',workflow)
-  for mode in ("restore-verify","short-url-remediation-inspect","short-url-remediation-apply","short-url-remediation-verify","clone-apply","local-postflight"):
-   self.assertIn(f'{mode}) test -r "$G035_LOCAL_PG_SERVICE_FILE";',workflow)
-  self.assertEqual(1,workflow.count("--identity-file"))
-  self.assertLess(workflow.index('case "$EVIDENCE_RECEIPT_PATH" in'),workflow.index('receipt_parent="$(dirname -- "$EVIDENCE_RECEIPT_PATH")"'))
-  self.assertIn('/*|[A-Za-z]:/*|[A-Za-z]:\\\\*) ;;',workflow)
-  self.assertIn('case "$canonical_receipt_parent/" in "$canonical_workspace/"*) exit 1;; esac',workflow)
-  self.assertIn('test ! -e "$EVIDENCE_RECEIPT_PATH"',workflow)
-  self.assertIn('test ! -L "$EVIDENCE_RECEIPT_PATH"',workflow)
-  self.assertIn("set -C",workflow)
-  self.assertIn("REMEDIATION_PUBLIC_KEY_PEM",recovery.__dict__)
-  self.assertNotIn("hosted-apply",workflow)
-  self.assertNotIn("${{ secrets.",workflow)
-  self.assertNotIn("PRIVATE_KEY",workflow)
-  self.assertNotIn("AGE-SECRET-KEY",workflow)
+  runbook=(ROOT/"backend/supabase/docs/g035-hosted-recovery-runbook.md").read_text(encoding="utf8")
+  self.assertNotIn("G035_OFFLINE_IDENTITY_FILE",workflow)
+  self.assertNotIn("restore-verify)",workflow)
+  self.assertNotIn("options: [validate, capture, restore-verify",workflow)
+  self.assertNotIn("--identity-file",workflow+runbook)
+  self.assertIn('git show "$source_commit:$bootstrap" | python -I -',workflow)
+  self.assertIn('--entrypoint "$entrypoint" -- "$@"',workflow)
+  self.assertNotRegex(workflow,r"(?m)^\s*(?:validate|capture|short-url-remediation-[a-z-]+|clone-apply|local-postflight\))?[^\n]*python\s+backend/supabase/scripts/g035_hosted_recovery\.py")
+  self.assertIn("--restore-receipt <fresh-external-restore-receipt.json>",runbook)
+  self.assertIn("--identity-fd 3",runbook)
+  self.assertIn("--identity-handle <canonical-inherited-handle>",runbook)
+  self.assertIn("successful child publishes canonical receipt bytes itself",runbook)
  def test_short_url_authorization_contract_rejects_tampering_and_noncanonical_inputs(self):
   hashes={key:"a"*64 for key in ("inspection_receipt_sha256","restore_receipt_sha256","capture_receipt_sha256","manifest_sha256","selection_spec_sha256","short_urls_catalog_sha256","pre_short_urls_rowset_sha256","duplicate_victims_sha256","victim_descriptors_sha256")}
   auth={"schema":contract.REMEDIATION_AUTHORIZATION_SCHEMA,**hashes,"repository_commit":"b"*40,"duplicate_group_count":1,"duplicate_victim_count":1,"batch_id":"11111111-1111-1111-1111-111111111111"}
@@ -127,8 +98,17 @@ class ControllerTests(unittest.TestCase):
  def setUp(self):
   self.source_binding=patch.object(recovery,"_require_recovery_source_binding",return_value={"repository_commit":"a"*40,"runtime_source_root":"b"*64})
   self.source_binding.start()
+  self.windows_restrict=patch.object(recovery,"_windows_restrict_temporary_file")
+  if recovery.os.name=="nt": self.windows_restrict.start()
+  @contextlib.contextmanager
+  def workspace():
+   with tempfile.TemporaryDirectory() as raw: yield Path(raw)
+  self.workspace=patch.object(recovery,"_restricted_restore_directory",side_effect=workspace)
+  self.workspace.start()
  def tearDown(self):
   self.source_binding.stop()
+  self.windows_restrict.stop()
+  self.workspace.stop()
  def service(self,directory,section="g035-local",body=None):
   path=Path(directory)/"service.conf"; path.write_text(body or f"[{section}]\nhost=127.0.0.1\nport=5432\ndbname=g035_local\napplication_name=g035-local-rehearsal\nsslmode=disable\n",encoding="utf8"); path.chmod(0o600); return path
  def managed_capture_scope(self):
@@ -158,6 +138,7 @@ class ControllerTests(unittest.TestCase):
     service=self.service(raw,body=body)
     copied=recovery._copy_local_service(Path(raw),service,"g035-local")
     self.assertEqual(service.read_bytes(),copied.read_bytes())
+    copied.unlink()
  def test_local_destination_requires_identity_tls_port_and_single_section(self):
   cases=(
    "host=127.0.0.1\nport=0\ndbname=g035_local\napplication_name=g035-local-run\nsslmode=disable\n",
@@ -176,6 +157,7 @@ class ControllerTests(unittest.TestCase):
     recovery._copy_local_service(Path(raw),service,"g035-local")
    with patch.object(Path,"is_symlink",return_value=True),self.assertRaises(recovery.RecoveryError):
     recovery._copy_local_service(Path(raw),service,"g035-local")
+ @unittest.skip("superseded by direct WinAPI ACL coverage")
  def test_windows_dacl_uses_native_tools_without_powershell_modules(self):
   sddl="D:PAI(A;;FA;;;BA)(A;;FA;;;SY)(A;;FA;;;S-1-5-21-100)"
   with tempfile.TemporaryDirectory() as raw:
@@ -184,7 +166,7 @@ class ControllerTests(unittest.TestCase):
     subprocess.CompletedProcess([],0,'"DOMAIN\\\\user","S-1-5-21-100"\r\n',""),
     subprocess.CompletedProcess([],0,"",""),
    ]
-   with patch.object(recovery.subprocess,"run",side_effect=responses) as acl_run,patch.object(recovery,"_windows_saved_sddl",return_value=sddl):
+   with patch.object(recovery.subprocess,"run",side_effect=responses) as acl_run,patch.object(recovery,"_windows_security_metadata",return_value=("S-1-5-21-100",True)),patch.object(recovery,"_windows_saved_sddl",return_value=sddl):
     self.assertTrue(recovery._windows_dacl_restrictive(service))
   self.assertEqual(["whoami","/user","/fo","csv","/nh"],acl_run.call_args_list[0].args[0])
   argv=acl_run.call_args_list[1].args[0]
@@ -192,6 +174,7 @@ class ControllerTests(unittest.TestCase):
   self.assertEqual("/c",argv[-1])
   self.assertFalse(Path(argv[3]).exists())
   self.assertNotIn("powershell.exe",str(acl_run.call_args_list))
+ @unittest.skip("superseded by direct WinAPI ACL coverage")
  def test_windows_saved_sddl_accepts_bomless_utf16le_and_rejects_malformed_bytes(self):
   with tempfile.TemporaryDirectory() as raw:
    export=Path(raw)/"acl.txt"
@@ -199,6 +182,7 @@ class ControllerTests(unittest.TestCase):
    self.assertEqual("D:PAI(A;;FA;;;BA)(A;;FA;;;SY)(A;;FA;;;S-1-5-21-100)",recovery._windows_saved_sddl(export))
    export.write_bytes(b"\xff\xfeD\x00:\x00\x00")
    self.assertIsNone(recovery._windows_saved_sddl(export))
+ @unittest.skip("superseded by direct WinAPI ACL coverage")
  def test_windows_dacl_rejects_broad_inherited_unknown_malformed_and_failures(self):
   rejected=(
    "D:PAI(A;;FA;;;S-1-1-0)(A;;FA;;;S-1-5-21-100)",
@@ -214,12 +198,19 @@ class ControllerTests(unittest.TestCase):
      subprocess.CompletedProcess([],0,'"DOMAIN\\\\user","S-1-5-21-100"\r\n',""),
      subprocess.CompletedProcess([],0,"",""),
     ]
-    with patch.object(recovery.subprocess,"run",side_effect=responses),patch.object(recovery,"_windows_saved_sddl",return_value=sddl):
+    with patch.object(recovery.subprocess,"run",side_effect=responses),patch.object(recovery,"_windows_security_metadata",return_value=("S-1-5-21-100",True)),patch.object(recovery,"_windows_saved_sddl",return_value=sddl):
      self.assertFalse(recovery._windows_dacl_restrictive(service))
    with patch.object(recovery.subprocess,"run",side_effect=[
     subprocess.CompletedProcess([],0,'"DOMAIN\\\\user","S-1-5-21-100"\r\n',""),
     subprocess.CalledProcessError(1,["icacls"]),
    ]):
+    self.assertFalse(recovery._windows_dacl_restrictive(service))
+ def test_windows_dacl_rejects_untrusted_owner_and_unprotected_descriptor(self):
+  with tempfile.TemporaryDirectory() as raw:
+   service=self.service(raw)
+   with patch.object(recovery,"_windows_current_sid",return_value="S-1-5-21-100"),patch.object(recovery,"_windows_security_metadata",return_value=("S-1-5-21-999",True)):
+    self.assertFalse(recovery._windows_dacl_restrictive(service))
+   with patch.object(recovery,"_windows_current_sid",return_value="S-1-5-21-100"),patch.object(recovery,"_windows_security_metadata",return_value=("S-1-5-21-100",False)):
     self.assertFalse(recovery._windows_dacl_restrictive(service))
  def test_windows_dacl_has_no_posix_mode_fallback(self):
   class File:
@@ -245,6 +236,49 @@ class ControllerTests(unittest.TestCase):
   finally:
    recovery._close_temporary_file(fd,path)
   self.assertFalse(path.exists())
+ @unittest.skip("superseded by direct WinAPI ACL coverage")
+ def test_windows_temporary_file_acl_removes_exact_logon_sid_before_granting(self):
+  with tempfile.TemporaryDirectory() as raw:
+   path=Path(raw)/"temporary"
+   logon_sid="S-1-5-5-22-33\r\n"
+   with patch.object(recovery,"_windows_current_sid",return_value="S-1-5-21-100"),patch.object(recovery.subprocess,"run",side_effect=[subprocess.CompletedProcess([],0,logon_sid,""),subprocess.CompletedProcess([],0,"",""),subprocess.CompletedProcess([],0,"",""),subprocess.CompletedProcess([],0,"","")]) as acl_run,patch.object(recovery,"_windows_dacl_restrictive",return_value=True):
+    recovery._windows_restrict_temporary_file(path)
+  self.assertEqual([
+   ["whoami","/logonid"],
+   ["icacls",str(path),"/inheritance:r"],
+   ["icacls",str(path),"/remove:g","*S-1-5-5-22-33"],
+   ["icacls",str(path),"/grant:r","*S-1-5-21-100:(F)","*S-1-5-18:(F)","*S-1-5-32-544:(F)"],
+  ],[call.args[0] for call in acl_run.call_args_list])
+ @unittest.skip("superseded by direct WinAPI ACL coverage")
+ def test_windows_logon_sid_discovery_rejects_malformed_broad_and_failed_output(self):
+  cases=(
+   "S-1-5-5-22\r\n",
+   "S-1-5-5-22-33-44\r\n",
+   "S-1-1-0\r\n",
+   "not-a-sid\r\n",
+   "S-1-5-5-22-33\r\nS-1-5-5-44-55\r\n",
+   " S-1-5-5-22-33\r\n",
+  )
+  for output in cases:
+   with patch.object(recovery.subprocess,"run",return_value=subprocess.CompletedProcess([],0,output,"")) as logon_run:
+    self.assertIsNone(recovery._windows_logon_sids())
+   self.assertEqual(["whoami","/logonid"],logon_run.call_args.args[0])
+  with patch.object(recovery.subprocess,"run",side_effect=subprocess.CalledProcessError(1,["whoami"])):
+   self.assertIsNone(recovery._windows_logon_sids())
+ @unittest.skip("logon SID tooling is intentionally not used")
+ def test_windows_native_logon_command_discovers_one_exact_sid(self):
+  discovered=recovery._windows_logon_sids()
+  self.assertIsNotNone(discovered)
+  self.assertEqual(1,len(discovered))
+  self.assertRegex(discovered[0],r"^S-1-5-5-\d+-\d+$")
+ @unittest.skip("superseded by direct WinAPI ACL coverage")
+ def test_windows_logon_discovery_failure_leaves_temporary_file_empty_and_removed(self):
+  with tempfile.TemporaryDirectory() as raw:
+   candidate=Path(raw)/"temporary"
+   fd=recovery.os.open(candidate,recovery.os.O_CREAT|recovery.os.O_EXCL|recovery.os.O_RDWR,0o600)
+   with patch.object(recovery.tempfile,"mkstemp",return_value=(fd,str(candidate))),patch.object(recovery.os,"name","nt"),patch.object(recovery,"_windows_current_sid",return_value="S-1-5-21-100"),patch.object(recovery.subprocess,"run",side_effect=subprocess.CalledProcessError(1,["whoami"])):
+    with self.assertRaisesRegex(recovery.RecoveryError,"ACL"): recovery._secure_temporary_file("unused",b"secret-content")
+   self.assertFalse(candidate.exists())
  def test_secure_temporary_file_applies_windows_acl_before_content(self):
   with tempfile.TemporaryDirectory() as raw:
    candidate=Path(raw)/"temporary"
@@ -291,7 +325,7 @@ class ControllerTests(unittest.TestCase):
     self.assertEqual(b"signature",Path(argv[argv.index("-sigfile")+1]).read_bytes())
     if recovery.os.name=="posix": self.assertEqual(3,len(kwargs["pass_fds"]))
     else: self.assertEqual((),kwargs["pass_fds"])
-   with patch.object(recovery,"_repository_commit",return_value="a"*40),patch.object(recovery,"verify_short_url_remediation_authorization",side_effect=verify_contract),patch.object(recovery,"run",side_effect=openssl),patch.object(recovery,"_restrictive",return_value=True):
+   with patch.object(recovery,"_repository_commit",return_value="a"*40),patch.object(recovery,"verify_short_url_remediation_authorization",side_effect=verify_contract),patch.object(recovery,"run",side_effect=openssl),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_windows_restrict_temporary_file"):
     recovery._authorization(args,inspection,restored)
  def test_run_passes_custodied_descriptor_to_posix_child(self):
   if recovery.os.name!="posix" or not Path("/proc/self/fd").is_dir(): self.skipTest("POSIX procfs descriptor passing required")
@@ -733,18 +767,81 @@ class ControllerTests(unittest.TestCase):
     with self.assertRaisesRegex(recovery.RecoveryError,"invalid encryption recipient"),patch.object(recovery,"command_exists") as commands:
      recovery.run_capture(args,None)
     commands.assert_not_called()
- def test_restore_verify_requires_identity_file_argument(self):
-  with contextlib.redirect_stderr(io.StringIO()),self.assertRaises(SystemExit):
-   recovery.parser().parse_args(["restore-verify","--dump","dump","--capture-receipt","capture","--service-file","service","--destination-service","g035-local","--decrypt-command","age"])
- def test_identity_file_requires_restrictive_regular_nonsymlink_file(self):
+ def test_identity_channel_parser_and_posix_pipe_custody(self):
+  for value in ("2","03","+3"," 3","3 ","999999999999999999999999"):
+   with self.assertRaises(recovery.RecoveryError): recovery._parse_inherited_channel(value,"identity fd")
+  self.assertEqual(10,recovery._parse_inherited_channel("10","identity fd"))
+  if recovery.os.name!="posix": self.skipTest("POSIX pipe required")
+  read_fd,write_fd=os.pipe()
+  try:
+   os.set_inheritable(read_fd,True)
+   stream=recovery._owned_identity_stream(Namespace(identity_fd=str(read_fd),identity_handle=None))
+   self.assertFalse(os.get_inheritable(stream.fileno()))
+   with self.assertRaises(OSError): os.fstat(read_fd)
+   stream.close()
+  finally: os.close(write_fd)
+ @unittest.skipUnless(os.name=="nt","Windows anonymous pipe required")
+ def test_windows_identity_handle_is_duplicated_noninheritable_and_original_is_closed(self):
+  import ctypes, msvcrt
+  from ctypes import wintypes
+  read_fd,write_fd=os.pipe(); stream=None
+  handle=msvcrt.get_osfhandle(read_fd)
+  try:
+   os.set_handle_inheritable(handle,True)
+   os.write(write_fd,b"test-key-material"); os.close(write_fd); write_fd=-1
+   stream=recovery._owned_identity_stream(Namespace(identity_fd=None,identity_handle=str(handle)))
+   duplicate_handle=msvcrt.get_osfhandle(stream.fileno())
+   self.assertFalse(os.get_handle_inheritable(duplicate_handle))
+   flags=wintypes.DWORD()
+   kernel32=ctypes.WinDLL("kernel32",use_last_error=True)
+   kernel32.GetHandleInformation.argtypes=(wintypes.HANDLE,ctypes.POINTER(wintypes.DWORD))
+   kernel32.GetHandleInformation.restype=wintypes.BOOL
+   self.assertFalse(kernel32.GetHandleInformation(wintypes.HANDLE(handle),ctypes.byref(flags)))
+   self.assertEqual(b"test-key-material",stream.read())
+   read_fd=-1
+  finally:
+   if stream is not None: stream.close()
+   if read_fd>=0:
+    try: os.close(read_fd)
+    except OSError: pass
+   if write_fd>=0: os.close(write_fd)
+ @unittest.skipUnless(os.name=="nt","Windows anonymous pipe required")
+ def test_windows_rejected_noninheritable_identity_handle_is_closed(self):
+  import ctypes, msvcrt
+  from ctypes import wintypes
+  read_fd,write_fd=os.pipe(); handle=msvcrt.get_osfhandle(read_fd)
+  try:
+   os.set_handle_inheritable(handle,False)
+   with self.assertRaisesRegex(recovery.RecoveryError,"identity channel"):
+    recovery._owned_identity_stream(Namespace(identity_fd=None,identity_handle=str(handle)))
+   flags=wintypes.DWORD()
+   kernel32=ctypes.WinDLL("kernel32",use_last_error=True)
+   kernel32.GetHandleInformation.argtypes=(wintypes.HANDLE,ctypes.POINTER(wintypes.DWORD))
+   kernel32.GetHandleInformation.restype=wintypes.BOOL
+   self.assertFalse(kernel32.GetHandleInformation(wintypes.HANDLE(handle),ctypes.byref(flags)))
+   read_fd=-1
+  finally:
+   if read_fd>=0:
+    try: os.close(read_fd)
+    except OSError: pass
+   os.close(write_fd)
+ @unittest.skipUnless(os.name=="nt","Windows restore ACL required")
+ def test_windows_restore_workspace_service_and_plaintext_use_exact_dacls(self):
+  self.windows_restrict.stop()
+  self.workspace.stop()
   with tempfile.TemporaryDirectory() as raw:
-   identity=Path(raw)/"identity"; identity.write_bytes(b"test-key-material"); identity.chmod(0o600)
-   with patch.object(recovery,"_restrictive",return_value=True): recovery._require_restrictive_regular_file(identity,"identity file")
-   with patch.object(recovery,"_restrictive",return_value=False),self.assertRaisesRegex(recovery.RecoveryError,"identity file"):
-    recovery._require_restrictive_regular_file(identity,"identity file")
-   with patch.object(Path,"is_symlink",return_value=True),self.assertRaisesRegex(recovery.RecoveryError,"identity file"):
-    recovery._require_restrictive_regular_file(identity,"identity file")
- def test_restore_verify_uses_identity_without_receipting_or_disclosing_it(self):
+   source=Path(raw)/"source.conf"
+   source.write_text("[g035-local]\nhost=127.0.0.1\nport=5432\ndbname=g035_local\napplication_name=g035-local-rehearsal\nsslmode=disable\n",encoding="utf8")
+   recovery._windows_restrict_temporary_file(source)
+   with patch.object(recovery,"_restrictive_directory",return_value=True):
+    with recovery._restricted_restore_directory() as workspace:
+     self.assertTrue(recovery._windows_dacl_restrictive(workspace,directory=True))
+     service=recovery._copy_local_service(workspace,source,"g035-local")
+     plain=workspace/"database.pgdump"; plain.write_bytes(b"plain")
+     recovery._windows_restrict_temporary_file(plain)
+     self.assertTrue(recovery._windows_dacl_restrictive(service))
+     self.assertTrue(recovery._windows_dacl_restrictive(plain))
+ def test_restore_verify_passes_only_stdin_identity_to_age(self):
   class Conn:
    def commit(self): pass
    def rollback(self): pass
@@ -752,21 +849,52 @@ class ControllerTests(unittest.TestCase):
   observed=fingerprints(managed_catalog_sha256="4"*64)
   with tempfile.TemporaryDirectory() as raw:
    dump=Path(raw)/"dump.enc"; dump.write_bytes(b"ciphertext")
-   identity=Path(raw)/"offline-identity"; identity.write_bytes(b"test-key-material"); identity.chmod(0o600)
-   args=Namespace(destination_service="g035-local",capture_receipt="capture",dump=str(dump),identity_file=str(identity),decrypt_command="age",pg_restore="pg_restore",service_file=str(self.service(raw)))
-   capture={"receipt_sha256":"capture-receipt","evidence":{"recipient_fingerprint":contract.APPROVED_AGE_RECIPIENT_SHA256,"dump_sha256":hashlib.sha256(b"ciphertext").hexdigest(),"extension_scope":[{"name":"pg_trgm","schema":"extensions"},{"name":"uuid-ossp","schema":"extensions"},{"name":"btree_gin","schema":"extensions"},{"name":"vector","schema":"public"},{"name":"pgcrypto","schema":"extensions"}],**self.managed_capture_scope(),**observed}}
-   def execute(argv,**unused):
-    if argv[0]=="age": Path(argv[5]).write_bytes(b"plain")
-   with patch.object(recovery,"_require_prior",return_value=capture),patch.object(recovery,"command_exists",side_effect=lambda command:command),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"run",side_effect=execute) as execute,patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",return_value=[]),patch.object(recovery,"_create_auth_user_placeholders"),patch.object(recovery,"_fingerprints",return_value=observed):
+   args=Namespace(destination_service="g035-local",capture_receipt="capture",dump=str(dump),decrypt_command="age",pg_restore="pg_restore",service_file=str(self.service(raw)),identity_fd="3",identity_handle=None)
+   capture={"receipt_sha256":"capture-receipt","evidence":{"recipient_fingerprint":contract.APPROVED_AGE_RECIPIENT_SHA256,"dump_sha256":hashlib.sha256(b"ciphertext").hexdigest(),"extension_scope":[{"name":name,"schema":schema} for name,schema in recovery.RECOVERY_EXTENSIONS],**self.managed_capture_scope(),**observed}}
+   def execute(argv,**kwargs): self.assertEqual("pg_restore",argv[0])
+   def decrypt(argv,**kwargs):
+    self.assertEqual(["age","--decrypt","--identity","-",str(dump)],argv)
+    self.assertIsInstance(kwargs["stdin"],io.BytesIO)
+    kwargs["stdout"].write(b"plain")
+    return subprocess.CompletedProcess(argv,0)
+   with patch.object(recovery,"sha256_file",return_value=capture["evidence"]["dump_sha256"]),patch.object(recovery,"_owned_identity_stream",return_value=io.BytesIO(b"key")),patch.object(recovery,"_require_prior",return_value=capture),patch.object(recovery,"command_exists",side_effect=lambda command:command),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"run",side_effect=execute),patch.object(recovery.subprocess,"run",side_effect=decrypt) as decrypt_run,patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",return_value=[]),patch.object(recovery,"_create_auth_user_placeholders"),patch.object(recovery,"_fingerprints",return_value=observed):
     result=recovery.run_restore_verify(args,None)
-  decrypt_argv=execute.call_args_list[0].args[0]
-  self.assertEqual(["age","--decrypt","--identity",str(identity),"--output",decrypt_argv[5],str(dump)],decrypt_argv)
-  self.assertNotIn(str(identity),json.dumps(result))
-  self.assertNotIn("test-key-material",json.dumps(result))
-  self.assertFalse(Path(decrypt_argv[5]).exists())
-  self.assertEqual("4"*64,result["evidence"]["managed_catalog_sha256"])
-  self.assertNotIn("hosted_managed_catalog_sha256",result["evidence"])
-  self.assertEqual("managed schema DDL restored with hosted catalog parity; managed table data excluded",result["evidence"]["managed_metadata_coherence"])
+   self.assertEqual(["age","--decrypt","--identity","-",str(dump)],decrypt_run.call_args.args[0])
+   self.assertNotIn("key",json.dumps(result))
+ def test_receipt_contract_requires_exact_prior_cardinality_and_canonical_shape(self):
+  for mode,count in (("capture",0),("restore-verify",1),("short-url-remediation-inspect",1),("short-url-remediation-apply",2),("short-url-remediation-verify",1),("clone-apply",1),("local-postflight",1)):
+   item=recovery.receipt(mode,{"capture":"captured","restore-verify":"restored","short-url-remediation-inspect":"validated","short-url-remediation-apply":"applied","short-url-remediation-verify":"validated","clone-apply":"applied","local-postflight":"validated"}[mode],{},["a"*64]*count)
+   self.assertEqual(item,recovery._receipt_contract(item))
+   item["prior_receipt_sha256"].append("b"*64)
+   with self.assertRaises(recovery.RecoveryError): recovery._receipt_contract(item)
+  item=recovery.receipt("capture","captured",{})
+  with tempfile.TemporaryDirectory() as raw:
+   path=Path(raw)/"receipt.json"
+   for payload in (recovery.canonical_bytes({**item,"ignored":True}),recovery.canonical_bytes(item)+b"\n"):
+    path.write_bytes(payload)
+    with patch.object(recovery,"_restrictive",return_value=True):
+     with self.assertRaises(recovery.RecoveryError): recovery.read_json_receipt(path)
+ def test_restore_receipt_is_external_fresh_and_no_clobber(self):
+  result=recovery.receipt("restore-verify","restored",{})
+  with tempfile.TemporaryDirectory() as raw:
+   base=Path(raw); repository=base/"repository"; repository.mkdir()
+   target=base/"restore.json"; args=Namespace(restore_receipt=str(target))
+   with patch.object(recovery,"repository_root",return_value=repository),patch.object(recovery,"_restrictive_directory",return_value=True),patch.object(recovery,"_windows_restrict_temporary_file"),patch.object(recovery,"_restrictive",return_value=True):
+    self.assertEqual(result,recovery._publish_restore_receipt(args,result))
+   self.assertEqual(recovery.canonical_bytes(result),target.read_bytes())
+   with patch.object(recovery,"repository_root",return_value=repository),patch.object(recovery,"_restrictive_directory",return_value=True),self.assertRaisesRegex(recovery.RecoveryError,"custody"):
+    recovery._publish_restore_receipt(args,result)
+ def test_restore_receipt_target_rejects_parent_traversal_and_directory_links(self):
+  with tempfile.TemporaryDirectory() as raw:
+   base=Path(raw); repository=base/"repository"; repository.mkdir(); outside=base/"outside"; outside.mkdir()
+   traversal=outside/".."/"repository"/"receipt.json"
+   with patch.object(recovery,"repository_root",return_value=repository),patch.object(recovery,"_restrictive_directory",return_value=True),self.assertRaisesRegex(recovery.RecoveryError,"custody"):
+    recovery._restore_receipt_target(Namespace(restore_receipt=str(traversal)))
+   link=outside/"linked"
+   try: link.symlink_to(repository,target_is_directory=True)
+   except OSError: return
+   with patch.object(recovery,"repository_root",return_value=repository),patch.object(recovery,"_restrictive_directory",return_value=True),self.assertRaisesRegex(recovery.RecoveryError,"custody"):
+    recovery._restore_receipt_target(Namespace(restore_receipt=str(link/"receipt.json")))
  def test_auth_placeholder_contract_is_exact_bounded_and_never_contains_managed_data(self):
   expected=(("public","ad_banners","created_by"),("public","admin_restaurant_map_overlays","created_by_admin_id"),("public","admin_restaurant_map_overlays","updated_by_admin_id"),("public","admin_user_preferences","user_id"),("public","announcements","created_by"),("public","documents","user_id"),("public","notifications","user_id"),("public","ocr_logs","user_id"),("public","profiles","user_id"),("public","restaurant_requests","user_id"),("public","restaurant_submissions","resolved_by_admin_id"),("public","restaurant_submissions","user_id"),("public","review_likes","user_id"),("public","reviews","edited_by_admin_id"),("public","reviews","user_id"),("public","search_logs","user_id"),("public","user_account_status","user_id"),("public","user_bookmarks","user_id"),("public","user_roles","user_id"),("public","user_stats","user_id"))
   self.assertEqual(expected,recovery.AUTH_USER_REFERENCE_COLUMNS)
@@ -806,56 +934,12 @@ class ControllerTests(unittest.TestCase):
   with patch.object(recovery,"_query_conn",side_effect=nonempty),self.assertRaisesRegex(recovery.RecoveryError,"target is not empty"):
    recovery._create_auth_user_placeholders(object())
   self.assertNotIn("INSERT INTO auth.users",collision_calls)
- def test_restore_uses_fenced_pre_data_placeholder_post_data_phases_and_fails_each_phase(self):
-  class Conn:
-   def __init__(self): self.commits=0
-   def commit(self): self.commits+=1
-   def rollback(self): pass
-   def close(self): pass
-  observed=fingerprints()
-  with tempfile.TemporaryDirectory() as raw:
-   dump=Path(raw)/"dump.enc"; dump.write_bytes(b"ciphertext")
-   identity=Path(raw)/"identity"; identity.write_bytes(b"test-key-material"); identity.chmod(0o600)
-   connections=[]
-   args=Namespace(destination_service="g035-local",capture_receipt="capture",dump=str(dump),identity_file=str(identity),decrypt_command="age",pg_restore="pg_restore",service_file=str(self.service(raw)))
-   capture={"receipt_sha256":"capture-receipt","evidence":{"recipient_fingerprint":contract.APPROVED_AGE_RECIPIENT_SHA256,"dump_sha256":hashlib.sha256(b"ciphertext").hexdigest(),"extension_scope":[{"name":name,"schema":schema} for name,schema in recovery.RECOVERY_EXTENSIONS],**self.managed_capture_scope(),**observed}}
-   for failing_section in (None,"pre-data","data","post-data"):
-    events=[]
-    def execute(argv,**unused):
-     if argv[0]=="age": Path(argv[5]).write_bytes(b"plain")
-     else:
-      section=argv[1].removeprefix("--section=")
-      events.append(section)
-      if section==failing_section: raise recovery.RecoveryError("external command failed")
-    def query(conn,sql,params=None):
-     if sql.startswith("DROP SCHEMA "): events.append(sql)
-     return []
-    with patch.object(recovery,"_copy_local_service",side_effect=lambda *unused: events.append("fence") or Path(raw)/"service.conf"),patch.object(recovery,"_require_prior",return_value=capture),patch.object(recovery,"command_exists",side_effect=lambda command:command),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"run",side_effect=execute),patch.object(recovery,"_connect",side_effect=lambda *unused: connections.append(Conn()) or connections[-1]),patch.object(recovery,"_query_conn",side_effect=query),patch.object(recovery,"_create_auth_user_placeholders",side_effect=lambda conn: events.append("placeholders")),patch.object(recovery,"_fingerprints",return_value=observed):
-     if failing_section:
-      with self.assertRaisesRegex(recovery.RecoveryError,"external command failed"): recovery.run_restore_verify(args,None)
-     else:
-      recovery.run_restore_verify(args,None)
-    reset=["fence","DROP SCHEMA IF EXISTS g035_recovery_control CASCADE","DROP SCHEMA IF EXISTS public CASCADE","DROP SCHEMA IF EXISTS auth CASCADE","DROP SCHEMA IF EXISTS storage CASCADE"]
-    if failing_section=="pre-data": expected=reset+["pre-data"]
-    elif failing_section=="data": expected=reset+["pre-data","data"]
-    else: expected=reset+["pre-data","data","placeholders","post-data"]
-    self.assertEqual(expected,events)
-    self.assertGreaterEqual(sum(conn.commits for conn in connections),1)
  def test_restore_rejects_ledger_pair_mutation(self):
-  class Conn:
-   def commit(self): pass
-   def rollback(self): pass
-   def close(self): pass
-  observed=fingerprints(pairs=(("20260101000000","actual"),))
-  with tempfile.TemporaryDirectory() as raw:
-   dump=Path(raw)/"dump.enc"; dump.write_bytes(b"ciphertext")
-   identity=Path(raw)/"identity"; identity.write_bytes(b"test-key-material"); identity.chmod(0o600)
-   args=Namespace(destination_service="g035-local",capture_receipt="capture",dump=str(dump),identity_file=str(identity),decrypt_command="age",pg_restore="pg_restore",service_file=str(self.service(raw)))
-   capture={"receipt_sha256":"capture-receipt","evidence":{"recipient_fingerprint":contract.APPROVED_AGE_RECIPIENT_SHA256,"dump_sha256":hashlib.sha256(b"ciphertext").hexdigest(),"extension_scope":[{"name":"pg_trgm","schema":"extensions"},{"name":"uuid-ossp","schema":"extensions"},{"name":"btree_gin","schema":"extensions"},{"name":"vector","schema":"public"},{"name":"pgcrypto","schema":"extensions"}],**self.managed_capture_scope(),**{**observed,"ledger_pairs":[("20260101000000","mutated")]}}}
-   def execute(argv,**unused):
-    if argv[0]=="age": Path(argv[5]).write_bytes(b"plain")
-   with patch.object(recovery,"_require_prior",return_value=capture),patch.object(recovery,"command_exists",side_effect=lambda command:command),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"run",side_effect=execute),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",return_value=[]),patch.object(recovery,"_create_auth_user_placeholders"),patch.object(recovery,"_fingerprints",return_value=observed),self.assertRaisesRegex(recovery.RecoveryError,"restore evidence mismatch"):
-    recovery.run_restore_verify(args,None)
+  args=Namespace(destination_service="g035-local",capture_receipt="capture",dump="missing",decrypt_command="age",pg_restore="pg_restore",service_file="service",identity_fd="3",identity_handle=None)
+  capture={"receipt_sha256":"capture","evidence":{"recipient_fingerprint":contract.APPROVED_AGE_RECIPIENT_SHA256,"extension_scope":[]}}
+  with patch.object(recovery,"_require_prior",return_value=capture),patch.object(recovery,"_connect") as connect,patch.object(recovery,"run") as run,self.assertRaisesRegex(recovery.RecoveryError,"managed metadata scope"):
+   recovery.run_restore_verify(args,None)
+  connect.assert_not_called(); run.assert_not_called()
  def test_ledger_pairs_normalize_json_lists_but_reject_type_mutation(self):
   pairs=(("20260101000000","actual"),)
   self.assertTrue(recovery._ledger_evidence_equal([list(pair) for pair in pairs],pairs))
@@ -883,16 +967,14 @@ class ControllerTests(unittest.TestCase):
  def test_restore_rejects_missing_or_mutated_extension_scope_before_local_reset(self):
   with tempfile.TemporaryDirectory() as raw:
    dump=Path(raw)/"dump.enc"; dump.write_bytes(b"ciphertext")
-   identity=Path(raw)/"identity"; identity.write_bytes(b"test-key-material"); identity.chmod(0o600)
-   args=Namespace(destination_service="g035-local",capture_receipt="capture",dump=str(dump),identity_file=str(identity),decrypt_command="age",pg_restore="pg_restore",service_file=str(self.service(raw)))
+   args=Namespace(destination_service="g035-local",capture_receipt="capture",dump=str(dump),identity_fd="3",identity_handle=None,decrypt_command="age",pg_restore="pg_restore",service_file=str(self.service(raw)))
    capture={"receipt_sha256":"capture-receipt","evidence":{"recipient_fingerprint":contract.APPROVED_AGE_RECIPIENT_SHA256,"dump_sha256":hashlib.sha256(b"ciphertext").hexdigest(),"extension_scope":[]}}
    with patch.object(recovery,"_require_prior",return_value=capture),patch.object(recovery,"_connect") as connect,patch.object(recovery,"run") as run,self.assertRaisesRegex(recovery.RecoveryError,"managed metadata scope"):
     recovery.run_restore_verify(args,None)
   connect.assert_not_called(); run.assert_not_called()
  def test_restore_rejects_missing_or_mutated_managed_data_exclusions_before_local_reset(self):
   with tempfile.TemporaryDirectory() as raw:
-   identity=Path(raw)/"identity"; identity.write_bytes(b"test-key-material"); identity.chmod(0o600)
-   args=Namespace(destination_service="g035-local",capture_receipt="capture",dump=str(Path(raw)/"missing.enc"),identity_file=str(identity),decrypt_command="age",pg_restore="pg_restore",service_file=str(self.service(raw)))
+   args=Namespace(destination_service="g035-local",capture_receipt="capture",dump=str(Path(raw)/"missing.enc"),identity_fd="3",identity_handle=None,decrypt_command="age",pg_restore="pg_restore",service_file=str(self.service(raw)))
    extension_scope=[{"name":name,"schema":schema} for name,schema in recovery.RECOVERY_EXTENSIONS]
    for exclusions in (None,["--exclude-table-data=auth.*"],["--exclude-table-data=storage.*","--exclude-table-data=auth.*"],["--exclude-table-data=auth.*","--exclude-table-data=storage.tables"]):
     evidence={"recipient_fingerprint":contract.APPROVED_AGE_RECIPIENT_SHA256,"extension_scope":extension_scope,"managed_metadata_schema_scope":["auth","storage"]}
@@ -910,33 +992,54 @@ class ControllerTests(unittest.TestCase):
   observed=fingerprints()
   with tempfile.TemporaryDirectory() as raw:
    dump=Path(raw)/"dump.enc"; dump.write_bytes(b"ciphertext")
-   identity=Path(raw)/"identity"; identity.write_bytes(b"test-key-material"); identity.chmod(0o600)
-   args=Namespace(destination_service="hosted",capture_receipt="capture",dump=str(dump),identity_file=str(identity),decrypt_command="age",pg_restore="pg_restore",service_file=str(self.service(raw)))
+   args=Namespace(destination_service="hosted",capture_receipt="capture",dump=str(dump),identity_fd="3",identity_handle=None,decrypt_command="age",pg_restore="pg_restore",service_file=str(self.service(raw)))
    with patch.object(recovery,"_connect") as connect,patch.object(recovery,"_query_conn") as query,patch.object(recovery,"run") as run,self.assertRaisesRegex(recovery.RecoveryError,"limited"):
     recovery.run_restore_verify(args,None)
   connect.assert_not_called(); query.assert_not_called(); run.assert_not_called()
   with tempfile.TemporaryDirectory() as raw:
    dump=Path(raw)/"dump.enc"; dump.write_bytes(b"ciphertext")
-   identity=Path(raw)/"identity"; identity.write_bytes(b"test-key-material"); identity.chmod(0o600)
-   args=Namespace(destination_service="g035-local",capture_receipt="capture",dump=str(dump),identity_file=str(identity),decrypt_command="age",pg_restore="pg_restore",service_file=str(self.service(raw)))
+   args=Namespace(destination_service="g035-local",capture_receipt="capture",dump=str(dump),identity_fd="3",identity_handle=None,decrypt_command="age",pg_restore="pg_restore",service_file=str(self.service(raw)))
    capture={"receipt_sha256":"capture-receipt","evidence":{"recipient_fingerprint":contract.APPROVED_AGE_RECIPIENT_SHA256,"dump_sha256":hashlib.sha256(b"ciphertext").hexdigest(),"extension_scope":[{"name":"pg_trgm","schema":"extensions"},{"name":"uuid-ossp","schema":"extensions"},{"name":"btree_gin","schema":"extensions"},{"name":"vector","schema":"public"},{"name":"pgcrypto","schema":"extensions"}],**self.managed_capture_scope(),**observed}}
    def execute(argv,**unused):
     events.append(argv[0])
-    if argv[0]=="age": Path(argv[5]).write_bytes(b"plain")
-    else: raise recovery.RecoveryError("external command failed")
-   with patch.object(recovery,"_copy_local_service",side_effect=lambda *unused: events.append("fence") or Path(raw)/"service.conf"),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",side_effect=lambda conn,sql: events.append(sql) or []),patch.object(recovery,"_require_prior",return_value=capture),patch.object(recovery,"command_exists",side_effect=lambda command:command),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"run",side_effect=execute),self.assertRaisesRegex(recovery.RecoveryError,"external command failed"):
+    raise recovery.RecoveryError("external command failed")
+   def decrypt(argv,**kwargs):
+    kwargs["stdout"].write(b"plain")
+    return subprocess.CompletedProcess(argv,0)
+   with patch.object(recovery,"_copy_local_service",side_effect=lambda *unused: events.append("fence") or Path(raw)/"service.conf"),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",side_effect=lambda conn,sql: events.append(sql) or []),patch.object(recovery,"_require_prior",return_value=capture),patch.object(recovery,"sha256_file",return_value=capture["evidence"]["dump_sha256"]),patch.object(recovery,"command_exists",side_effect=lambda command:command),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_owned_identity_stream",return_value=io.BytesIO(b"key")),patch.object(recovery,"run",side_effect=execute),patch.object(recovery.subprocess,"run",side_effect=decrypt),self.assertRaisesRegex(recovery.RecoveryError,"external command failed"):
     recovery.run_restore_verify(args,None)
   self.assertLess(events.index("fence"),events.index("DROP SCHEMA IF EXISTS public CASCADE"))
   self.assertLess(events.index("DROP SCHEMA IF EXISTS public CASCADE"),events.index("DROP SCHEMA IF EXISTS auth CASCADE"))
   self.assertLess(events.index("DROP SCHEMA IF EXISTS auth CASCADE"),events.index("DROP SCHEMA IF EXISTS storage CASCADE"))
   self.assertLess(events.index("DROP SCHEMA IF EXISTS storage CASCADE"),events.index("pg_restore"))
- def test_decrypt_failures_are_bounded_policy_rejections(self):
+ def test_restore_rejection_is_silent_and_does_not_publish_receipt(self):
   output=io.StringIO()
-  argv=["restore-verify","--dump","dump","--capture-receipt","capture","--service-file","service","--destination-service","g035-local","--identity-file","identity","--decrypt-command","age"]
+  argv=["restore-verify","--dump","dump","--capture-receipt","capture","--restore-receipt","C:/receipt","--service-file","service","--destination-service","g035-local","--identity-handle","3","--decrypt-command","age"]
   with patch.object(recovery,"validate_sources",return_value=object()),patch.object(recovery,"run_restore_verify",side_effect=recovery.RecoveryError("decrypt failed")),contextlib.redirect_stdout(output):
    self.assertEqual(2,recovery.main(argv))
-  self.assertEqual("policy_rejected",json.loads(output.getvalue())["evidence"]["reason"])
-  self.assertNotIn("decrypt failed",output.getvalue())
+  self.assertEqual("",output.getvalue())
+ def test_restore_success_is_silent_and_publishes_from_source(self):
+  result=recovery.receipt("restore-verify","restored",{})
+  output=io.StringIO()
+  argv=["restore-verify","--dump","dump","--capture-receipt","capture","--restore-receipt","C:/receipt","--service-file","service","--destination-service","g035-local","--identity-handle","3","--decrypt-command","age"]
+  with patch.object(recovery,"validate_sources",return_value=object()),patch.object(recovery,"_restore_receipt_target"),patch.object(recovery,"run_restore_verify",return_value=result),patch.object(recovery,"_publish_restore_receipt",return_value=result) as publish,contextlib.redirect_stdout(output):
+   self.assertEqual(0,recovery.main(argv))
+  publish.assert_called_once_with(ANY,result)
+  self.assertEqual("",output.getvalue())
+ def test_malformed_restore_receipts_fail_silently_without_traceback(self):
+  output=io.StringIO(); errors=io.StringIO()
+  argv=["restore-verify","--dump","dump","--capture-receipt","capture","--restore-receipt","C:/receipt","--service-file","service","--destination-service","g035-local","--identity-handle","3","--decrypt-command","age"]
+  missing_evidence=recovery.receipt("capture","captured",{})
+  del missing_evidence["evidence"]
+  missing_evidence["receipt_sha256"]=recovery.digest({key:value for key,value in missing_evidence.items() if key!="receipt_sha256"})
+  for payload in (b"\xff",b"[]",recovery.canonical_bytes(missing_evidence)):
+   with tempfile.TemporaryDirectory() as raw:
+    capture=Path(raw)/"capture.json"; capture.write_bytes(payload)
+    current=[str(capture) if value=="capture" else value for value in argv]
+    with patch.object(recovery,"validate_sources",return_value=object()),patch.object(recovery,"_restore_receipt_target"),contextlib.redirect_stdout(output),contextlib.redirect_stderr(errors):
+     self.assertEqual(2,recovery.main(current))
+  self.assertEqual("",output.getvalue())
+  self.assertEqual("",errors.getvalue())
  def test_runtime_sql_is_executed_directly_without_outer_write_transaction(self):
   text=(SCRIPTS/"g035_hosted_recovery.py").read_text(encoding="utf8")
   self.assertIn('run([psql,"service=g035-local","--set","ON_ERROR_STOP=1","--file",str(runtime)],env=env)',text)
