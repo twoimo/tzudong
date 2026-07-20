@@ -214,6 +214,59 @@ class CloneRehearsalTests(unittest.TestCase):
             admitted = rehearsal.admit_image("supabase/postgres:17.6.1.147", {"server_version_num": 170006, "extensions": ["pg_trgm", "uuid-ossp", "btree_gin", "vector", "pgcrypto"], "roles": ["postgres", "supabase_admin"]})
             self.assertTrue(admitted["extensions_admitted"])
             with self.assertRaises(rehearsal.RehearsalError): rehearsal.admit_image("postgres:17.6", {"server_version_num": 170006, "extensions": [], "roles": []})
+    def test_preflight_aliases_version_for_dict_rows(self):
+        version_query = "SELECT current_setting('server_version_num')::integer AS server_version_num"
+
+        class DictCursor:
+            def __init__(self):
+                self.last = ""
+                self.statements = []
+
+            def execute(self, sql):
+                self.last = sql
+                self.statements.append(sql)
+
+            def fetchone(self):
+                if self.last == version_query:
+                    return {"server_version_num": 170006}
+                return {"current_setting": 170006}
+
+            def fetchall(self):
+                if self.last == "SELECT extname FROM pg_extension":
+                    return [{"extname": name} for name in ("pg_trgm", "uuid-ossp", "btree_gin", "vector", "pgcrypto")]
+                if self.last == "SELECT rolname FROM pg_roles":
+                    return [{"rolname": name} for name in ("postgres", "supabase_admin")]
+                raise AssertionError("unexpected preflight query")
+
+            def close(self):
+                pass
+
+        class DictConnection:
+            def __init__(self):
+                self.cursor_value = DictCursor()
+
+            def cursor(self):
+                return self.cursor_value
+
+            def rollback(self):
+                pass
+
+            def close(self):
+                pass
+
+        with tempfile.TemporaryDirectory() as raw:
+            metadata = Path(raw) / "image.json"
+            metadata.write_bytes(json.dumps({"image": "supabase/postgres:17.6.1.147"}, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii"))
+            connection = DictConnection()
+            with patch.object(rehearsal, "_connect_service", return_value=(connection, {})):
+                result = rehearsal.preflight(
+                    service_file=Path(raw) / "service.conf",
+                    service_name="g035-local",
+                    image="supabase/postgres:17.6.1.147",
+                    image_metadata=metadata,
+                )
+        self.assertEqual(result["server_version_num"], 170006)
+        self.assertEqual(connection.cursor_value.statements[0], version_query)
 
     def test_observation_rechecks_exact_endpoint_binding(self):
         with tempfile.TemporaryDirectory() as raw:

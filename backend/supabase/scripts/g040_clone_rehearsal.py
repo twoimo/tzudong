@@ -300,7 +300,7 @@ def preflight(*, service_file: str | Path, service_name: str, image: str, image_
     cur = None
     try:
         cur = conn.cursor()
-        cur.execute("SELECT current_setting('server_version_num')::integer")
+        cur.execute("SELECT current_setting('server_version_num')::integer AS server_version_num")
         row = cur.fetchone()
         version = row[0] if isinstance(row, tuple) else row.get("server_version_num")
         cur.execute("SELECT extname FROM pg_extension")
