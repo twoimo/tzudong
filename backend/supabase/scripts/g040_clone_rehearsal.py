@@ -596,7 +596,7 @@ def bind_restore(*, clone_nonce: str, capture_receipt: str | Path, restore_recei
     body = {"schema": "g040-clone-restore-binding-v4", "clone_identity": clone_identity, "clone_nonce": clone_nonce, "live_identity_sha256": live_sha, "capture_receipt_path": str(Path(capture_receipt).resolve()), "restore_receipt_path": str(Path(restore_receipt).resolve()), "encrypted_dump_path": str(Path(encrypted_dump).resolve()), "lineage_attestation_path": str(attestation_path), "lineage_signature_path": str(signature_path), **dict(proof), **dict(lineage), **dict(attestation_hashes)}
     try:
         path = controller._outside(output, root, fresh=True)
-        receipt = controller._write_signed(path, {"schema": controller.SCHEMA, "kind": "local-clone-binding", "body": body})
+        receipt = controller._write_signed(path, {"schema": controller.SCHEMA, "kind": "local-clone-binding", "body": body}, repository_root=root)
     except Exception:
         _fail("clone_binding")
     return MappingProxyType({**body, "binding_receipt_sha256": receipt})
@@ -822,7 +822,7 @@ def observe_reference(*, repository_root: str | Path, binding_path: str | Path, 
             "post_rollback_catalog_sha256": final_full["catalog_sha256"],
             "post_rollback_data_sha256": final_data["data_shape_sha256"],
         }
-        controller._write_signed(controller._outside(output, root, fresh=True), {"schema": controller.SCHEMA, "kind": "local-clone-observation", "body": body})
+        controller._write_signed(controller._outside(output, root, fresh=True), {"schema": controller.SCHEMA, "kind": "local-clone-observation", "body": body}, repository_root=root)
     except RehearsalError:
         raise
     except Exception:
@@ -1014,7 +1014,7 @@ def build_aggregate_custody(args: argparse.Namespace) -> Mapping[str, Any]:
                                       *(replay["issued_at"] for replay, _ in replays)):
         _fail("aggregate_custody")
     body = {"issued_at": now, "expires_at": expires_at, "final_recovery_commit": source.final_commit, "runtime_source_root": source.runtime_source_root, "reference_receipt_sha256": reference.receipt_sha256, "target_fingerprint": reference.target_fingerprint, "freeze_root": freeze_root, "freeze_expires_at": freeze_expires_at, "target_acl_root": target_acl_root, "inventory_root": inventory_root, "backup_receipt_sha256": backup_sha, "capture_receipt_sha256": _sha(capture_raw), "archive_sha256": archive_sha, "archive_bytes": archive_bytes, "clone_rehearsal_receipt_sha256": rehearsal_sha, "target_ledger_root": terminal["terminal_ledger_root"], "target_catalog_root": terminal["terminal_catalog_root"], "target_data_root": terminal["terminal_data_root"]}
-    receipt = controller._write_signed(controller._outside(args.output, root, fresh=True), {"schema": controller.SCHEMA, "kind": "aggregate-custody", "body": body})
+    receipt = controller._write_signed(controller._outside(args.output, root, fresh=True), {"schema": controller.SCHEMA, "kind": "aggregate-custody", "body": body}, repository_root=root)
     return MappingProxyType({"schema": controller.SCHEMA, "receipt_sha256": receipt})
 
 def verify_aggregate_custody(args: argparse.Namespace) -> Mapping[str, Any]:
@@ -1212,7 +1212,8 @@ def prepare_local_state(args: argparse.Namespace) -> Mapping[str, Any]:
     }
     receipt = controller._write_signed(controller._outside(args.output, root, fresh=True),
                                         {"schema": controller.SCHEMA,
-                                         "kind": "local-state-preparation", "body": body})
+                                         "kind": "local-state-preparation", "body": body},
+                                        repository_root=root)
     return MappingProxyType({"schema": body["schema"], "receipt_sha256": receipt})
 
 
@@ -1335,7 +1336,8 @@ def replay_branch(args: argparse.Namespace) -> Mapping[str, Any]:
     }
     receipt = controller._write_signed(controller._outside(args.output, root, fresh=True),
                                         {"schema": controller.SCHEMA,
-                                         "kind": "local-branch-replay", "body": body})
+                                         "kind": "local-branch-replay", "body": body},
+                                        repository_root=root)
     return MappingProxyType({"schema": body["schema"], "receipt_sha256": receipt})
 
 
@@ -1447,7 +1449,8 @@ def compare_replays(args: argparse.Namespace) -> Mapping[str, Any]:
         **{key: first[key] for key in signed_terminal_tuple},
     }
     receipt = controller._write_signed(controller._outside(args.output, root, fresh=True),
-                                       {"schema": controller.SCHEMA, "kind": "clone-rehearsal", "body": body})
+                                       {"schema": controller.SCHEMA, "kind": "clone-rehearsal", "body": body},
+                                       repository_root=root)
     return MappingProxyType({"schema": body["schema"], "receipt_sha256": receipt})
 
 

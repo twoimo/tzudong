@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import hashlib
 import json
 import os
@@ -110,6 +111,22 @@ class CloneRehearsalTests(unittest.TestCase):
         self.assertIn("build-reference-request", help_text)
         self.assertIn("finalize-reference", help_text)
         self.assertIn("build-lineage-request", help_text)
+    def test_clone_runner_signed_writes_pass_resolved_repository_root(self):
+        source = Path(rehearsal.__file__).read_text(encoding="utf-8")
+        calls = [
+            node for node in ast.walk(ast.parse(source))
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "_write_signed"
+            and isinstance(node.func.value, ast.Name)
+            and node.func.value.id == "controller"
+        ]
+        self.assertEqual(len(calls), 6)
+        for call in calls:
+            keywords = {keyword.arg: keyword.value for keyword in call.keywords}
+            self.assertEqual(set(keywords), {"repository_root"})
+            self.assertIsInstance(keywords["repository_root"], ast.Name)
+            self.assertEqual(keywords["repository_root"].id, "root")
 
     def test_live_identity_uses_a_real_cursor(self):
         connection = FakeConnection()
@@ -179,7 +196,7 @@ class CloneRehearsalTests(unittest.TestCase):
             self.assertEqual(Path(kwargs["repository_root"]).resolve(), Path(".").resolve())
             self.assertIs(kwargs["conn"], connection)
 
-        def write_signed(path, document):
+        def write_signed(path, document, *, repository_root):
             self.assertEqual(probe_states, [True, True, False, True, True])
             self.assertEqual(data_validations, ["d" * 64] * 4)
             self.assertEqual(binding_checks, [(55401, "clone")] * 3)
@@ -187,6 +204,7 @@ class CloneRehearsalTests(unittest.TestCase):
             self.assertEqual(document["kind"], "local-clone-observation")
             self.assertEqual(document["body"]["target_fingerprint"], "c" * 64)
             self.assertEqual(document["body"]["binding_receipt_sha256"], "a" * 64)
+            self.assertEqual(Path(repository_root).resolve(), Path(".").resolve())
             writes[str(path)] = document
             return rehearsal._sha(rehearsal._canonical(document))
 
@@ -654,7 +672,7 @@ class CloneRehearsalTests(unittest.TestCase):
                 patch.object(rehearsal, "compile_branch_plan", return_value=object()), \
                 patch.object(rehearsal, "apply_rehearsal_locked_cursor", side_effect=apply), \
                 patch.object(rehearsal.controller, "_outside", side_effect=lambda path, root, fresh: Path(path)), \
-                patch.object(rehearsal.controller, "_write_signed", side_effect=lambda path, document: written.setdefault("document", document) and "e" * 64), \
+                patch.object(rehearsal.controller, "_write_signed", side_effect=lambda path, document, *, repository_root: written.setdefault("document", document) and "e" * 64), \
                 patch.object(rehearsal.time, "time", return_value=100), \
                 patch.object(rehearsal.time, "monotonic", return_value=10):
             result = rehearsal.replay_branch(args)
@@ -736,7 +754,7 @@ class CloneRehearsalTests(unittest.TestCase):
                 patch.object(rehearsal, "compile_branch_plan", return_value=object()) as compile_plan, \
                 patch.object(rehearsal, "apply_rehearsal_locked_cursor", return_value=evidence), \
                 patch.object(rehearsal.controller, "_outside", side_effect=lambda path, root, fresh: Path(path)), \
-                patch.object(rehearsal.controller, "_write_signed", side_effect=lambda path, document: written.setdefault("document", document) and "f" * 64), \
+                patch.object(rehearsal.controller, "_write_signed", side_effect=lambda path, document, *, repository_root: written.setdefault("document", document) and "f" * 64), \
                 patch.object(rehearsal.time, "time", return_value=100), \
                 patch.object(rehearsal.time, "monotonic", return_value=10):
             self.assertEqual(rehearsal.replay_branch(args)["receipt_sha256"], "f" * 64)
@@ -1223,7 +1241,7 @@ class CloneRehearsalTests(unittest.TestCase):
                     patch.object(rehearsal.controller, "_stable_bytes", return_value=capture_raw), \
                     patch.object(rehearsal, "_archive_digest", return_value=(backup["archive_sha256"], backup["archive_bytes"], (1, 1))), \
                     patch.object(rehearsal.time, "time", return_value=150), \
-                    patch.object(rehearsal.controller, "_write_signed", side_effect=lambda path, document: writes.append(document) or "f" * 64):
+                    patch.object(rehearsal.controller, "_write_signed", side_effect=lambda path, document, *, repository_root: writes.append(document) or "f" * 64):
                 result = rehearsal.build_aggregate_custody(args)
             return result, writes
 
