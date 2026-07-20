@@ -624,7 +624,7 @@ class ControllerTests(unittest.TestCase):
    recovery._drain_pipeline(processes,time.monotonic()-1)
   for process in processes: self.assertTrue(process.terminated); self.assertGreater(process.waited,0)
  def test_capture_receipt_is_fsynced_before_atomic_no_clobber_publication(self):
-  captured={"schema":recovery.RECEIPT_SCHEMA,"mode":"capture","status":"captured","evidence":{}}
+  captured={"schema":recovery.RECEIPT_SCHEMA,"mode":"capture","status":"captured","evidence":{"ledger_pairs":(("1","baseline"),)}}
   captured["receipt_sha256"]=recovery.digest({key:value for key,value in captured.items() if key!="receipt_sha256"})
   with tempfile.TemporaryDirectory() as raw:
    target=Path(raw)/"capture.json"; args=Namespace(capture_receipt=str(target)); payload=recovery.canonical_bytes(captured); original_fsync=os.fsync; original_link=os.link; observed=[]
@@ -875,7 +875,7 @@ class ControllerTests(unittest.TestCase):
     with patch.object(recovery,"_restrictive",return_value=True):
      with self.assertRaises(recovery.RecoveryError): recovery.read_json_receipt(path)
  def test_restore_receipt_is_external_fresh_and_no_clobber(self):
-  result=recovery.receipt("restore-verify","restored",{})
+  result=recovery.receipt("restore-verify","restored",{"ledger_pairs":(("1","baseline"),)},["a"*64])
   with tempfile.TemporaryDirectory() as raw:
    base=Path(raw); repository=base/"repository"; repository.mkdir()
    target=base/"restore.json"; args=Namespace(restore_receipt=str(target))
