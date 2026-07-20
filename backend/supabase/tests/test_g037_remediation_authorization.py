@@ -322,7 +322,7 @@ class G037AuthorityTests(unittest.TestCase):
             assertion["attestations"] = {name: {"status": True, "evidence_sha256": self.digest("9"), "observed_at": now}
                                          for name in ("no_owner_write", "no_dashboard_write", "no_provider_write", "no_out_of_band_write", "producer_stop")}
             assertion["signature"] = base64.b64encode(self.key.sign(closure.canonical_bytes(assertion))).decode()
-            assertion_path = Path(directory) / "assertion"; assertion_path.write_bytes(closure.canonical_bytes(assertion) + b"\n")
+            assertion_path = Path(directory) / "assertion"; assertion_path.write_bytes(closure.canonical_bytes(assertion))
             for path in (*paths, assertion_path): os.chmod(path, 0o600)
             output = Path(directory) / "output"
             args = ["build-template", "--capture-receipt", str(paths[0]), "--restore-receipt", str(paths[1]), "--inspection-receipt", str(paths[2]), "--legacy-authorization", str(paths[3]), "--legacy-signature", str(paths[4]), "--operator-assertion", str(assertion_path), "--output", str(output), "--origin", origin, "--project", "abcdefghijklmnopqrst", "--current-commit", "f" * 40, "--source-root", self.digest("1"), "--terminal-spec", self.digest("2"), "--freeze-id", "freeze-0001", "--relation-root", self.digest("7"), "--acl-root", self.digest("8"), "--recipient-fingerprint", self.digest("4"), "--recovery-public-key-fingerprint", self.digest("5"), "--capture-scope-sha256", self.digest("6"), "--authorization-id", "11111111-1111-4111-8111-111111111111", "--issued-at", str(now), "--expires-at", str(now + 100)]
@@ -332,10 +332,10 @@ class G037AuthorityTests(unittest.TestCase):
         assertion = {"schema": "test", "signature": "test"}
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "assertion"
-            exact = closure.canonical_bytes(assertion) + b"\n"
+            exact = closure.canonical_bytes(assertion)
             path.write_bytes(exact)
             self.assertEqual(c._read_operator_assertion(path), assertion)
-            for raw in (exact[:-1], exact.replace(b"\n", b"\r\n"), exact + b"\n", exact + b" ", b'{"schema":"test","schema":"test","signature":"test"}\n'):
+            for raw in (exact + b"\n", exact + b"\r\n", exact + b" ", b'{"schema":"test","schema":"test","signature":"test"}'):
                 with self.subTest(raw=raw):
                     path.write_bytes(raw)
                     with self.assertRaises(c.ContractError): c._read_operator_assertion(path)

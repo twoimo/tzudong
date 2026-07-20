@@ -66,6 +66,15 @@ class RecoveryExecutionPlan:
     branch: str
     compiled: tuple[tuple[Any, tuple[str, ...], tuple[str, ...]], ...]
     terminal_spec_root: str
+@dataclass(frozen=True)
+class SourceValidationPlan:
+    repository_root: Path
+    manifest: Manifest
+    source: SourceBinding
+    compiled: tuple[tuple[Any, tuple[str, ...], tuple[str, ...]], ...]
+    terminal_spec_root: str
+    migration_count: int
+    terminal_rows: int
 
 @dataclass(frozen=True)
 class _CloneAdmission:
@@ -234,18 +243,15 @@ def _compiled(root: Path, manifest: Manifest) -> tuple[tuple[Any, tuple[str, ...
     return tuple(result)
 
 
-def _validate_artifacts(repository_root: Any, manifest: Any, source: Any, reference: Any, observation: Any, authorization: Any) -> tuple[Path, str]:
-    if not isinstance(repository_root, Path) or type(manifest) is not Manifest:
+def _validate_source_artifacts(repository_root: Any, manifest: Any, source: Any) -> tuple[Path, str]:
+    if not isinstance(repository_root, Path) or type(manifest) is not Manifest or type(source) is not SourceBinding:
         _deny("plan_type")
     try:
         resolved_root = repository_root.resolve(strict=False)
     except OSError:
         _deny("plan_type")
-    if (not resolved_root.is_absolute() or resolved_root != repository_root
-            or repository_root.is_symlink()):
+    if not resolved_root.is_absolute() or resolved_root != repository_root or repository_root.is_symlink():
         _deny("plan_type")
-    if type(source) is not SourceBinding or type(reference) is not VerifiedReference or type(observation) is not PrefixObservation or type(authorization) is not VerifiedAuthorization:
-        _deny("artifact_type")
     if validate_sources(repository_root) != manifest:
         _deny("source_binding")
     spec = terminal_spec(manifest)
@@ -255,6 +261,12 @@ def _validate_artifacts(repository_root: Any, manifest: Any, source: Any, refere
             or tuple((item.version, item.name) for item in migrations[17:]) != _SUFFIX
             or len(BASELINE_PAIRS) + len(migrations) != _TERMINAL_ROWS):
         _deny("manifest_contract")
+    return repository_root, spec
+
+def _validate_artifacts(repository_root: Any, manifest: Any, source: Any, reference: Any, observation: Any, authorization: Any) -> tuple[Path, str]:
+    root, spec = _validate_source_artifacts(repository_root, manifest, source)
+    if type(reference) is not VerifiedReference or type(observation) is not PrefixObservation or type(authorization) is not VerifiedAuthorization:
+        _deny("artifact_type")
     if (reference.base_commit != SOURCE_COMMIT
             or authorization.base_commit != SOURCE_COMMIT
             or source.final_commit != reference.final_commit
@@ -282,7 +294,12 @@ def _validate_artifacts(repository_root: Any, manifest: Any, source: Any, refere
           or observation.catalog_sha256 != reference.full_catalog_sha256
           or observation.data_sha256 != reference.full_data_sha256):
         _deny("observation_binding")
-    return repository_root, spec
+    return root, spec
+
+def build_source_validation_plan(repository_root: Path, manifest: Manifest, *, source: SourceBinding) -> SourceValidationPlan:
+    root, spec = _validate_source_artifacts(repository_root, manifest, source)
+    compiled = _compiled(root, manifest)
+    return SourceValidationPlan(root, manifest, source, compiled, spec, len(manifest.migrations), _TERMINAL_ROWS)
 
 
 def build_execution_plan(repository_root: Path, manifest: Manifest, *, source: SourceBinding, reference: VerifiedReference, observation: PrefixObservation, authorization: VerifiedAuthorization) -> RecoveryExecutionPlan:
@@ -293,11 +310,10 @@ def build_execution_plan(repository_root: Path, manifest: Manifest, *, source: S
 def compile_branch_plan(repository_root: Path, manifest: Manifest, *, source: SourceBinding,
                         reference: VerifiedReference, observation: PrefixObservation) -> RehearsalExecutionPlan:
     """Compile a local replay plan without accepting production authority."""
-    if (type(source) is not SourceBinding or type(reference) is not VerifiedReference
-            or type(observation) is not PrefixObservation
+    root, spec = _validate_source_artifacts(repository_root, manifest, source)
+    if (type(reference) is not VerifiedReference or type(observation) is not PrefixObservation
             or reference.base_commit != SOURCE_COMMIT
             or observation.status not in ("UNAPPLIED", "FULL_ESCAPED")
-            or validate_sources(repository_root) != manifest
             or source.final_commit != reference.final_commit
             or source.runtime_source_root != reference.runtime_source_root
             or observation.final_commit != source.final_commit
@@ -305,9 +321,8 @@ def compile_branch_plan(repository_root: Path, manifest: Manifest, *, source: So
             or observation.target_fingerprint != reference.target_fingerprint
             or observation.reference_receipt_sha256 != reference.receipt_sha256):
         _deny("artifact_binding")
-    return RehearsalExecutionPlan(repository_root, manifest, source, reference, observation,
-                                  observation.status, _compiled(repository_root, manifest),
-                                  terminal_spec(manifest))
+    return RehearsalExecutionPlan(root, manifest, source, reference, observation,
+                                  observation.status, _compiled(root, manifest), spec)
 
 
 def _validated_local_clone_identity(cursor: Any, capability: VerifiedCloneCapability) -> None:
@@ -468,6 +483,7 @@ def apply_locked_cursor(cursor: Any, *, plan: RecoveryExecutionPlan, attempt: At
 
 
 __all__ = ["ExecutionDenial", "ExecutorEvidence", "RecoveryExecutionPlan",
-           "RehearsalExecutionPlan", "VerifiedCloneCapability", "admit_verified_clone",
-           "apply_locked_cursor", "apply_rehearsal_locked_cursor", "build_execution_plan",
-           "compile_branch_plan", "preflight_deadline"]
+           "RehearsalExecutionPlan", "SourceValidationPlan", "VerifiedCloneCapability",
+           "admit_verified_clone", "apply_locked_cursor", "apply_rehearsal_locked_cursor",
+           "build_execution_plan", "build_source_validation_plan", "compile_branch_plan",
+           "preflight_deadline"]

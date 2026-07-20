@@ -218,7 +218,7 @@ class G040PrefixRecoveryWorkflowTests(unittest.TestCase):
         for required in (
             "exposes only `validate`",
             "`diagnose` and `readback` require local restrictive service and custody artifacts",
-            "`diagnose`, `readback`, `prepare`, and `execute` are local operator-only modes outside GitHub",
+            "`diagnose`, `readback`, G037 `prepare`, G037 `finalize`, G037 `validate`, and `execute` are local operator-only modes outside GitHub",
             "two independent free local PostgreSQL 17.6 clone rehearsals",
             "fresh encrypted capture",
             "one-shot authorization",

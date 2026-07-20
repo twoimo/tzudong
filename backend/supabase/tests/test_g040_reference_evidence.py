@@ -104,7 +104,7 @@ class ReferenceTests(unittest.TestCase):
     def test_raw_canonical_verification_wrong_key_and_bounded_errors(self):
         private, public, source = self.signing_context()
         with patch.object(evidence, "PUBLIC_KEY_PEM", public), patch.object(evidence, "PUBLIC_KEY_SHA256", hashlib.sha256(public.encode("ascii")).hexdigest()):
-            signed = evidence.sign_reference(self.body(), private.sign)
+            signed = self.signed(self.body(), private)
             raw = evidence.canonical_bytes(dict(signed))
             verified = evidence.verify_reference(raw, now_unix=150, expected_source=source, expected_target_fingerprint="3" * 64)
             self.assertIs(type(verified), evidence.VerifiedReference)

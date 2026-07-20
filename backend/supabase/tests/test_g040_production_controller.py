@@ -48,10 +48,73 @@ def observation(status="UNAPPLIED", data=None):
 
 class G040ProductionControllerTests(unittest.TestCase):
     def test_public_surface_has_only_fixed_file_contract_modes(self):
-        self.assertEqual(controller.MODES, frozenset(("validate", "diagnose", "prepare", "execute", "readback", "production-backup")))
+        self.assertEqual(controller.MODES, frozenset(("validate-source", "validate", "diagnose", "prepare", "execute", "readback", "production-backup")))
         stream = io.StringIO()
         with redirect_stderr(stream), self.assertRaises(SystemExit): controller.main(["rehearse"])
         self.assertNotIn("postgres://", stream.getvalue())
+    def test_validate_source_isolated_to_source_contract_and_receipt(self):
+        source = type("Source", (), {"final_commit": "b" * 40, "runtime_source_root": "c" * 64})()
+        args = Namespace(repository_root="/checkout", source_commit=source.final_commit, source_receipt="/source-receipt")
+        plan = object()
+        body = {"validation_sha256": H}
+        with patch.object(controller, "_source", return_value=source) as load_source, \
+                patch.object(controller, "validate_sources", return_value=object()) as validate_sources, \
+                patch.object(controller, "build_source_validation_plan", return_value=plan) as build, \
+                patch.object(controller, "_source_validation_body", return_value=body), \
+                patch.object(controller, "_outside", return_value=Path("/source-receipt")) as outside, \
+                patch.object(controller, "_write_signed", return_value="d" * 64) as write:
+            result = controller.validate_source(args)
+        self.assertEqual(dict(result), {"schema": controller.SCHEMA, "mode": "validate-source", "status": "source-valid",
+                                        "source_commit": source.final_commit, "runtime_source_root": source.runtime_source_root,
+                                        "source_validation_sha256": H, "source_receipt_sha256": "d" * 64})
+        load_source.assert_called_once_with(args)
+        validate_sources.assert_called_once_with(Path("/checkout").resolve())
+        build.assert_called_once_with(Path("/checkout").resolve(), validate_sources.return_value, source=source)
+        outside.assert_called_once_with("/source-receipt", Path("/checkout").resolve(), fresh=True)
+        self.assertEqual(write.call_args.args, (Path("/source-receipt"), {"schema": controller.SCHEMA, "kind": "source-validation-v1", "body": body}))
+
+    def test_validate_source_parser_rejects_reference_and_target_options_without_dispatch(self):
+        base = ["validate-source", "--repository-root", "/checkout", "--source-commit", "a" * 40, "--source-receipt", "/receipt"]
+        for option in ("--reference", "--target-fingerprint", "--authorization", "--database-url"):
+            secret = "source-mode-secret"
+            stream = io.StringIO()
+            with self.subTest(option=option), redirect_stderr(stream), self.assertRaises(SystemExit):
+                controller.main([*base, option, secret])
+            self.assertNotIn(secret, stream.getvalue())
+
+    def test_proof_receipt_is_fresh_and_contains_only_bound_terminal_evidence(self):
+        source = type("Source", (), {"final_commit": "b" * 40, "runtime_source_root": "c" * 64})()
+        reference = type("Reference", (), {"receipt_sha256": "d" * 64})()
+        authorization = type("Authorization", (), {"target_fingerprint": H, "authorization_sha256": "e" * 64})()
+        migration = lambda version, name, sha256: type("Migration", (), {"version": version, "name": name, "sha256": sha256})()
+        manifest = type("Manifest", (), {"migrations": (
+            migration("20260713002300", "g014_account_deletion_state_machine", "1" * 64),
+            migration("20260712000400", "g010_retention_separation", "2" * 64),
+            migration("20260713002400", "g014_retention_adapters_receipts", "3" * 64),
+        )})()
+        readback = {"readback_sha256": "4" * 64, "terminal_rows": 40, "catalog_root": "5" * 64,
+                    "acl_root": "6" * 64, "ledger_root": "7" * 64, "data_root": "8" * 64, "terminal_spec_root": "9" * 64}
+        args = Namespace(repository_root="/checkout", proof_receipt="/proof")
+        with patch.object(controller, "_outside", return_value=Path("/proof")) as outside, \
+                patch.object(controller, "_write_signed", return_value="f" * 64) as write, \
+                patch.object(controller.time, "time", return_value=100):
+            receipt = controller._write_proof(args, source, reference, manifest, authorization, readback)
+        self.assertEqual(receipt, "f" * 64)
+        outside.assert_called_once_with("/proof", Path("/checkout").resolve(), fresh=True)
+        signed = write.call_args.args[1]
+        self.assertEqual(write.call_args.args[0], Path("/proof"))
+        self.assertEqual(set(signed), {"schema", "kind", "body"})
+        self.assertEqual(signed["kind"], "account-deletion-privacy-retention-proof-v1")
+        body = signed["body"]
+        self.assertEqual(set(body), {"schema", "issued_at", "target_fingerprint", "final_recovery_commit",
+                                     "runtime_source_root", "reference_receipt_sha256", "authorization_sha256",
+                                     "terminal_readback_sha256", "terminal_rows", "terminal_catalog_root",
+                                     "terminal_acl_root", "terminal_ledger_root", "terminal_data_root",
+                                     "terminal_spec_root", "privacy_retention", "account_deletion", "proof_sha256"})
+        self.assertEqual(body["proof_sha256"], controller._hash({key: value for key, value in body.items() if key != "proof_sha256"}))
+        self.assertEqual(body["terminal_readback_sha256"], readback["readback_sha256"])
+        self.assertEqual(body["privacy_retention"]["data_root"], readback["data_root"])
+        self.assertEqual(body["account_deletion"]["migration"]["source_sha256"], "1" * 64)
     def test_public_cli_rejects_injection_before_dispatch_without_echoing_values(self):
         base = [
             "validate", "--repository-root", "/checkout", "--source-commit", "a" * 40,
@@ -154,16 +217,16 @@ class G040ProductionControllerTests(unittest.TestCase):
                 patch.object(controller.authority, "_open_custody", return_value=(fd, private_pem)), \
                 patch.object(controller, "_RECEIPT_PUBLIC_KEY_PEM", public.decode("ascii")), \
                 patch.object(controller, "_RECEIPT_PUBLIC_KEY_SHA256", hashlib.sha256(public).hexdigest()):
-            signature = controller._sign_receipt(b"receipt")
+            signature = controller._sign_receipt(b"receipt", Path("/checkout"))
         private.public_key().verify(signature, b"receipt")
-        self.assertEqual(restrictive.call_args.args, (controller._RECEIPT_SIGNING_KEY, "recovery receipt signing key"))
+        self.assertEqual(restrictive.call_args.args, (controller._RECEIPT_SIGNING_KEY, "recovery receipt signing key", Path("/checkout")))
     def test_signed_receipt_writer_preserves_canonical_lf_bytes(self):
         value = {"schema": controller.SCHEMA, "kind": "aggregate-custody", "body": {"receipt": "bound"}}
         with tempfile.TemporaryDirectory() as raw, \
                 patch.object(controller, "_sign_receipt", return_value=b"s" * 64), \
                 patch.object(controller.authority, "_fsync_directory"):
             output = Path(raw) / "receipt.json"
-            receipt_sha256 = controller._write_signed(output, value)
+            receipt_sha256 = controller._write_signed(output, value, repository_root=Path(raw))
             expected = controller.authority.canonical_json_bytes({
                 **value,
                 "signature_b64": controller.base64.b64encode(b"s" * 64).decode("ascii"),
@@ -346,7 +409,7 @@ class G040ProductionControllerTests(unittest.TestCase):
                 patch.object(controller.prefix, "probe_full_data_root", return_value=H), \
                 patch.object(controller.time, "monotonic", return_value=100), \
                 patch.object(controller.time, "time", return_value=200):
-            controller._final_readback(args, source, reference, object(), authorization)
+            controller._terminal_readback(args, source, reference, object(), authorization)
         self.assertEqual(native.calls, ["SET LOCAL statement_timeout = '30000ms'", "SELECT terminal"])
     def test_final_readback_denial_closes_cursor_and_connection(self):
         source = type("Source", (), {"final_commit": "b" * 40, "runtime_source_root": "c" * 64})()
@@ -358,7 +421,7 @@ class G040ProductionControllerTests(unittest.TestCase):
                 patch.object(controller.prefix, "begin_read_only_snapshot"), \
                 patch.object(controller, "_require_live_target", side_effect=controller.ControllerError("live_target")):
             with self.assertRaisesRegex(controller.ControllerError, "^live_target$"):
-                controller._final_readback(Namespace(repository_root="/checkout"), source, object(), object(), authorization)
+                controller._terminal_readback(Namespace(repository_root="/checkout"), source, object(), object(), authorization)
         self.assertTrue(native.closed)
         self.assertTrue(conn.rolled_back)
         self.assertTrue(conn.closed)
@@ -399,7 +462,7 @@ class G040ProductionControllerTests(unittest.TestCase):
             if Path(path) == output_path:
                 self.assertTrue(fresh)
             return Path(path)
-        def stable(path):
+        def stable(path, _root):
             if path.name == "capture.json":
                 return capture_raw
             raise AssertionError(path)
@@ -513,9 +576,9 @@ class G040ProductionControllerTests(unittest.TestCase):
             "issued_at": 99, "expires_at": 200,
             "attestations": {channel: {"evidence_sha256": hashlib.sha256(raw).hexdigest()} for channel, raw in zip(channels, values)},
         }
-        raw = controller.authority.canonical_json_bytes(assertion) + b"\n"
+        raw = controller.authority.canonical_json_bytes(assertion)
         args = Namespace(repository_root="/checkout", freeze_assertion="/custody/freeze", freeze_evidence=evidence)
-        def stable(path):
+        def stable(path, _root):
             return raw if path.name == "freeze" else values[channels.index(path.name)]
         with patch.object(controller, "_outside", side_effect=lambda value, *_args, **_kwargs: Path(value)), \
                 patch.object(controller, "_stable_bytes", side_effect=stable), \
@@ -532,10 +595,10 @@ class G040ProductionControllerTests(unittest.TestCase):
             ("current-freeze", None, evidence[:-1]),
         ):
             changed = dict(assertion, freeze_id=retired)
-            changed_raw = controller.authority.canonical_json_bytes(changed) + b"\n"
+            changed_raw = controller.authority.canonical_json_bytes(changed)
             changed_args = Namespace(repository_root="/checkout", freeze_assertion="/custody/freeze", freeze_evidence=residual)
             with patch.object(controller, "_outside", side_effect=lambda value, *_args, **_kwargs: Path(value)), \
-                    patch.object(controller, "_stable_bytes", side_effect=lambda path: changed_raw if path.name == "freeze" else values[channels.index(path.name)]), \
+                patch.object(controller, "_stable_bytes", side_effect=lambda path, _root: changed_raw if path.name == "freeze" else values[channels.index(path.name)]), \
                     patch.object(controller, "validate_operator_assertion", side_effect=assertion_error), \
                     patch.object(controller.time, "time", return_value=100):
                 with self.assertRaisesRegex(controller.ControllerError, "^backup_freeze$"):

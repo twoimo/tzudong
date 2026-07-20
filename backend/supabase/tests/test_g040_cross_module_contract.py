@@ -13,6 +13,8 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import g035_hosted_recovery as recovery
+import g037_production_controller as g037_controller
+import g037_remediation_authorization as remediation
 import g040_clone_rehearsal as rehearsal
 import g040_production_controller as controller
 import g040_recovery_source as source
@@ -60,6 +62,7 @@ class G040CrossModuleContractTests(unittest.TestCase):
             backup_receipt_sha256=H, capture_receipt_sha256=H, archive_sha256=H, archive_bytes=1,
             clone_rehearsal_receipt_sha256=H, inventory_root=H, target_ledger_root=H,
             target_catalog_root=H, target_data_root=H,
+            expires_at=2,
         )
         migrations = tuple(SimpleNamespace(version=str(i), name="m", sha256=H) for i in range(20))
         manifest = SimpleNamespace(migrations=migrations)
@@ -105,6 +108,55 @@ class G040CrossModuleContractTests(unittest.TestCase):
         self.assertIn("python3 -I", runbook)
         self.assertIn('git show "$AUTHORIZED_COMMIT":backend/supabase/scripts/g040_isolated_bootstrap.py | python3 -I -', runbook)
 
+    def test_controller_authorization_calls_are_path_only_and_root_bounded(self):
+        path = Path(controller.__file__)
+        tree = ast.parse(path.read_text("utf-8"))
+        expected = {
+            "authenticate_recovery_authorization": (
+                ["args.authorization", "args.authorization_signature"],
+                ("repository_root", "_root(args)"),
+            ),
+            "authenticate_outcome_authorization": (
+                ["args.authorization", "args.authorization_signature"],
+                ("repository_root", "_root(args)"),
+            ),
+        }
+        for function_name, (arguments, required_keyword) in expected.items():
+            calls = [
+                node for node in ast.walk(tree)
+                if isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr == function_name
+            ]
+            self.assertEqual(len(calls), 1)
+            self.assertEqual([ast.unparse(argument) for argument in calls[0].args], arguments)
+            self.assertIn(required_keyword, [
+                (keyword.arg, ast.unparse(keyword.value)) for keyword in calls[0].keywords
+            ])
+
+    def test_authorization_loader_passes_only_authorization_paths_with_repository_root(self):
+        args = Namespace(repository_root="/checkout", authorization="/authority", authorization_signature="/signature")
+        bindings = {"bound": H}
+        envelope, verified = object(), object()
+        with patch.object(controller.authority, "authenticate_recovery_authorization", return_value=envelope) as authenticate, \
+                patch.object(controller.authority, "reverify_destructive_stage", return_value=verified) as reverify:
+            self.assertIs(controller._authorization(args, bindings), verified)
+        authenticate.assert_called_once_with("/authority", "/signature", expected_bindings=bindings,
+                                            repository_root=Path("/checkout").resolve())
+        reverify.assert_called_once_with(envelope, expected_bindings=bindings)
+    def test_execute_and_readback_link_fresh_proof_receipts_into_final_receipts(self):
+        tree = ast.parse(Path(controller.__file__).read_text("utf-8"))
+        functions = {node.name: node for node in tree.body if isinstance(node, ast.FunctionDef)}
+        for name in ("execute", "readback"):
+            calls = [
+                node for node in ast.walk(functions[name])
+                if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "_write_proof"
+            ]
+            self.assertEqual(len(calls), 1)
+            self.assertEqual([ast.unparse(argument) for argument in calls[0].args], [
+                "args", "source", "reference", "manifest", "verified", "readback" if name == "execute" else "value",
+            ])
+        self.assertEqual(Path(controller.__file__).read_text("utf-8").count('"proof_receipt_sha256": proof_hash'), 4)
     def test_prepare_writes_flat_exact_authority_template(self):
         source = SimpleNamespace(final_commit="b" * 40, runtime_source_root=digest("runtime-source-root"))
         reference = SimpleNamespace(base_commit="d" * 40, manifest_sha256=digest("manifest-root"), migration_source_sha256=digest("migration-source-root"),
@@ -117,35 +169,81 @@ class G040CrossModuleContractTests(unittest.TestCase):
             clone_rehearsal_receipt_sha256=digest("custody-rehearsal"),
             inventory_root=digest("custody-inventory"), target_ledger_root=digest("custody-ledger"),
             target_catalog_root=digest("custody-catalog"), target_data_root=digest("custody-data"),
+            expires_at=3,
         )
         manifest = SimpleNamespace(migrations=tuple(SimpleNamespace(version=str(i), name="m", sha256=digest(f"migration-{i}")) for i in range(20)))
         observation = obs()
-        with tempfile.TemporaryDirectory() as root:
-            path = Path(root) / "authority.json"; args = Namespace(repository_root=root, authority_template=path)
+        with tempfile.TemporaryDirectory() as root, tempfile.TemporaryDirectory() as outside:
+            path = Path(outside) / "authority.json"; args = Namespace(repository_root=root, authority_template=path)
             with patch.object(controller, "_source", return_value=source), patch.object(controller, "_reference", return_value=reference), patch.object(controller, "_load_observation", return_value=(observation, digest("observation-receipt"))), patch.object(controller, "_custody", return_value=custody), patch.object(controller, "validate_sources", return_value=manifest), patch.object(controller, "_outside", return_value=path), patch.object(controller.authority, "_fsync_directory") as fsync:
                 result = controller.prepare(args)
             self.assertEqual(fsync.call_count, 2)
-            template = json.loads(path.read_text("ascii"))
+            prepared_bindings = json.loads(path.read_text("ascii"))
+            with patch.object(controller.authority, "_windows_restrictive", return_value=True):
+                admitted_bindings = controller.authority._bindings_from_path(path, root)
         bindings = controller._bindings(source, reference, observation, custody, manifest, digest("observation-receipt"))
-        expected = {
-            "schema": controller.authority.SCHEMA,
-            "purpose": controller.authority.PURPOSE,
-            "policy": controller.authority.POLICY,
-            "authorization_id": "<authorization_id>",
-            "attempt_id": "<attempt_id>",
-            "issued_at": "<issued_at>",
-            "expires_at": "<expires_at>",
-            **bindings,
-        }
         self.assertEqual(result["status"], "prepared")
-        self.assertEqual(template, expected)
-        self.assertEqual({key: template[key] for key in controller.authority._BINDINGS}, bindings)
-        self.assertEqual(set(template), set(controller.authority._FIELDS))
-        self.assertEqual(template["prefix_classification"], "UNAPPLIED")
+        self.assertEqual(prepared_bindings, bindings)
+        self.assertEqual(admitted_bindings, bindings)
+        self.assertEqual(set(prepared_bindings), set(controller.authority._BINDINGS))
+        self.assertEqual(prepared_bindings["prefix_classification"], "UNAPPLIED")
+
+    def test_finalized_assertion_bytes_cross_g037_builder_and_g040_freeze_exactly(self):
+        channels = ("no_owner_write", "no_dashboard_write", "no_provider_write", "no_out_of_band_write", "producer_stop")
+        evidence = {channel: f"{channel}-evidence".encode("ascii") for channel in channels}
+        request = {
+            "schema": "g037-write-freeze-assertion-v1",
+            "freeze_id": "freeze-0001",
+            "origin": "https://abcdefghijklmnopqrst.supabase.co",
+            "commit": "b" * 40,
+            "manifest_sha256": "1" * 64,
+            "relation_root": "2" * 64,
+            "acl_root": "3" * 64,
+            "source_root": "c" * 64,
+            "terminal_spec": "4" * 64,
+            "issued_at": 100,
+            "expires_at": 200,
+            "attestations": {channel: {"status": True, "evidence_sha256": __import__("hashlib").sha256(evidence[channel]).hexdigest(), "observed_at": 100} for channel in channels},
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            finalized = root / "finalized.json"
+            def temporary(data, *_args, **_kwargs):
+                path = root / "temporary"
+                path.write_bytes(data)
+                return path
+            with patch.object(g037_controller, "_outside_fresh", side_effect=lambda path, _label: Path(path)), \
+                    patch.object(g037_controller, "_fsync_directory"), \
+                    patch.object(g037_controller, "_signed", return_value=request), \
+                    patch.object(g037_controller.recovery, "_temporary_bytes", side_effect=temporary), \
+                    patch.object(g037_controller.recovery, "_cleanup_temporary_files", side_effect=lambda path: Path(path).unlink(missing_ok=True)):
+                g037_controller._write_finalized_assertion(finalized, request, b"signature")
+            raw = finalized.read_bytes()
+            self.assertEqual(remediation._read_operator_assertion(finalized), {**request, "signature": __import__("base64").b64encode(b"signature").decode("ascii")})
+            args = Namespace(repository_root=directory, freeze_assertion=finalized, freeze_evidence=[root / channel for channel in channels])
+            source_binding = SimpleNamespace(final_commit="b" * 40, runtime_source_root="c" * 64)
+            def stable(path, _repository_root):
+                candidate = Path(path)
+                return raw if candidate == finalized else evidence[candidate.name]
+            with patch.object(controller, "_outside", side_effect=lambda path, *_args, **_kwargs: Path(path)), \
+                    patch.object(controller, "_stable_bytes", side_effect=stable), \
+                    patch.object(controller, "validate_operator_assertion"), \
+                    patch.object(controller, "terminal_spec", return_value="4" * 64), \
+                    patch.object(controller.time, "time", return_value=100):
+                freeze_root, _, _, _ = controller._backup_freeze(args, source_binding, object())
+            self.assertEqual(freeze_root, __import__("hashlib").sha256(raw).hexdigest())
+            for suffix in (b"\n", b"\r\n", b" "):
+                finalized.write_bytes(raw + suffix)
+                with self.assertRaises(remediation.ContractError):
+                    remediation._read_operator_assertion(finalized)
+                with patch.object(controller, "_outside", side_effect=lambda path, *_args, **_kwargs: Path(path)), \
+                        patch.object(controller, "_stable_bytes", side_effect=lambda path, _root: finalized.read_bytes() if Path(path) == finalized else evidence[Path(path).name]):
+                    with self.assertRaises(controller.ControllerError):
+                        controller._backup_freeze(args, source_binding, object())
 
     def test_expired_authority_is_denied_by_custody_revalidation_before_one_shot_marker(self):
         source = SimpleNamespace(final_commit="b" * 40, runtime_source_root="c" * 64)
-        reference = SimpleNamespace(receipt_sha256=H, target_fingerprint=H)
+        reference = SimpleNamespace(receipt_sha256=H, target_fingerprint=H, expires_at_unix=1)
         verified = SimpleNamespace(
             target_fingerprint=H,
             expires_at=0,
@@ -162,8 +260,8 @@ class G040CrossModuleContractTests(unittest.TestCase):
         cursor = SimpleNamespace(execute=lambda sql: statements.append(sql), close=lambda: None)
         connection = SimpleNamespace(cursor=lambda: cursor, close=lambda: None, rollback=lambda: None, commit=lambda: None)
         args = Namespace(repository_root="/checkout", prepared_receipt="/prepared", final_receipt="/final")
-        with patch.object(controller, "_source", return_value=source), patch.object(controller, "_reference", return_value=reference), patch.object(controller, "_load_observation", return_value=(obs(), H)), patch.object(controller, "_custody", return_value=SimpleNamespace(freeze_expires_at=1)), patch.object(controller, "validate_sources", return_value=object()), patch.object(controller, "_bindings", return_value={}), patch.object(controller, "_authorization", return_value=verified), patch.object(controller, "build_execution_plan", return_value=plan), patch.object(controller, "_outside", side_effect=[Path("/prepared"), Path("/final")]), patch.object(controller, "_connect_service", return_value=connection), patch.object(controller, "_require_live_target"), patch.object(controller, "_write_signed", return_value=H) as write_signed, patch.object(controller.authority, "consume_one_shot_attempt") as consume:
-            with self.assertRaisesRegex(controller.ControllerError, "backup_freeze"): controller.execute(args)
+        with patch.object(controller, "_source", return_value=source), patch.object(controller, "_reference", return_value=reference), patch.object(controller, "_load_observation", return_value=(obs(), H)), patch.object(controller, "_custody", return_value=SimpleNamespace(expires_at=1, freeze_expires_at=1)), patch.object(controller, "validate_sources", return_value=object()), patch.object(controller, "_bindings", return_value={}), patch.object(controller, "_authorization", return_value=verified), patch.object(controller, "build_execution_plan", return_value=plan), patch.object(controller, "_outside", side_effect=[Path("/prepared"), Path("/final")]), patch.object(controller, "_connect_service", return_value=connection), patch.object(controller, "_require_live_target"), patch.object(controller, "_write_signed", return_value=H) as write_signed, patch.object(controller.authority, "consume_one_shot_attempt") as consume:
+            with self.assertRaisesRegex(controller.ControllerError, "authority_expired"): controller.execute(args)
         write_signed.assert_not_called()
         consume.assert_not_called()
         self.assertNotIn("BEGIN", statements)
@@ -241,7 +339,7 @@ class G040CrossModuleContractTests(unittest.TestCase):
                 patch.object(controller.prefix, "probe_full_data_root", return_value=H) as validate_data, \
                 patch.object(controller.time, "monotonic", return_value=100), \
                 patch.object(controller.time, "time", return_value=200):
-            controller._outcome_readback(args, source, reference, object(), authorization)
+            controller._terminal_readback(args, source, reference, object(), authorization)
         validate_data.assert_called_once()
         self.assertIs(validate_data.call_args.args[1], reference)
         self.assertEqual(calls, [

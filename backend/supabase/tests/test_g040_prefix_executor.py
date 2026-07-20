@@ -167,7 +167,6 @@ def artifacts(branch="UNAPPLIED"):
         second_binding_receipt_sha256="3333333333333333333333333333333333333333333333333333333333333333",
         second_observation_receipt_sha256="4444444444444444444444444444444444444444444444444444444444444444",
         reference_public_key_sha256=H,
-        signature_b64="sig",
         receipt_sha256="d" * 64,
     )
     observation = PrefixObservation(

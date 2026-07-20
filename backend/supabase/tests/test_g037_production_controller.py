@@ -11,7 +11,7 @@ spec=importlib.util.spec_from_file_location("g037_controller",MODULE); controlle
 ORIGIN="https://abcdefghijklmnopqrst.supabase.co"
 SERVICE={"host":"db.abcdefghijklmnopqrst.supabase.co","port":"5432","dbname":"postgres","user":"postgres","sslmode":"verify-full","sslrootcert":"ca"}
 def remediation_evidence():
- value={"schema":"g037-short-url-remediation-evidence-v1","authorization_id":"11111111-1111-4111-8111-111111111111","policy":"exact-baseline-to-terminal-ledger-single-commit-v1","execution_authorization_sha256":"a"*64,"execution_authorization_signature_sha256":"b"*64,"legacy_repository_commit":"0"*40,"legacy_authorization_sha256":"c"*64,"legacy_authorization_signature_sha256":"d"*64,"legacy_capture_receipt_sha256":"e"*64,"legacy_restore_receipt_sha256":"f"*64,"legacy_inspection_receipt_sha256":"1"*64,"recovery_receipt_sha256":"2"*64,"capture_short_urls_rowset_sha256":"9"*64,"pre_short_urls_rowset_sha256":"9"*64,"survivor_short_urls_rowset_sha256":"3"*64,"deleted_count":1,"duplicate_group_count_before":1,"duplicate_group_count_after":0}; value["remediation_sha256"]=controller.digest(value); return value
+ value={"schema":"g037-short-url-remediation-evidence-v1","authorization_id":"11111111-1111-4111-8111-111111111111","policy":"exact-baseline-to-terminal-ledger-single-commit-v1","execution_authorization_sha256":"a"*64,"execution_authorization_signature_sha256":"b"*64,"attempt_marker_sha256":"a"*64,"legacy_repository_commit":"0"*40,"legacy_authorization_sha256":"c"*64,"legacy_authorization_signature_sha256":"d"*64,"legacy_capture_receipt_sha256":"e"*64,"legacy_restore_receipt_sha256":"f"*64,"legacy_inspection_receipt_sha256":"1"*64,"recovery_receipt_sha256":"2"*64,"capture_short_urls_rowset_sha256":"9"*64,"pre_short_urls_rowset_sha256":"9"*64,"survivor_short_urls_rowset_sha256":"3"*64,"deleted_count":1,"duplicate_group_count_before":1,"duplicate_group_count_after":0}; value["remediation_sha256"]=controller.digest(value); return value
 def capture_roots():
  return {"auth_storage_catalog_root":"1"*64,"auth_storage_metadata_root":"2"*64,"storage_blob_root":"3"*64,"short_urls_catalog_root":"8"*64,"short_urls_rowset_root":"9"*64,"short_urls_victim_descriptors_root":"a"*64,"short_urls_row_count":2,"duplicate_group_count":1,"duplicate_victim_count":1,"recipient_fingerprint":"4"*64,"logical_ciphertext_sha256":"5"*64,"blob_ciphertext_sha256":"6"*64,"object_count":0,"total_bytes":0,"recovery_receipt_sha256":"7"*64}
 class ControllerTests(unittest.TestCase):
@@ -20,6 +20,7 @@ class ControllerTests(unittest.TestCase):
   if os.name=="nt":
    sid=controller.recovery._windows_current_sid(); self.assertIsNotNone(sid)
    controller.recovery.subprocess.run(["icacls",str(path),"/reset"],stdin=controller.recovery.subprocess.DEVNULL,stdout=controller.recovery.subprocess.PIPE,stderr=controller.recovery.subprocess.PIPE,text=True,timeout=10,check=True)
+   controller.recovery.subprocess.run(["icacls",str(path),"/setowner","*"+sid],stdin=controller.recovery.subprocess.DEVNULL,stdout=controller.recovery.subprocess.PIPE,stderr=controller.recovery.subprocess.PIPE,text=True,timeout=10,check=True)
    controller.recovery.subprocess.run(["icacls",str(path),"/inheritance:r","/remove:g","SYSTEM","Administrators","OWNER RIGHTS","/grant:r","*"+sid+":F","SYSTEM:F","Administrators:F"],stdin=controller.recovery.subprocess.DEVNULL,stdout=controller.recovery.subprocess.PIPE,stderr=controller.recovery.subprocess.PIPE,text=True,timeout=10,check=True)
   else: path.chmod(0o700)
   self.assertTrue(controller.recovery.restrictive(path,directory=True))
@@ -27,6 +28,7 @@ class ControllerTests(unittest.TestCase):
  def setUp(self):
   self.verify=patch.object(controller,"_verify_remediation",return_value=(object(),{})).start()
   patch.object(controller.remediation_authorization,"authorize_exact_baseline",side_effect=lambda authority,baseline: authority).start()
+  patch.object(controller,"_attempt_marker",return_value="a"*64).start()
   self.addCleanup(patch.stopall)
  def test_verify_remediation_extracts_frozen_legacy_chain_attributes(self):
   patch.stopall()
@@ -48,13 +50,14 @@ class ControllerTests(unittest.TestCase):
    self.assertEqual(controller.validate(args)["status"],"valid")
   sources.assert_called_once()
  def test_validate_parser_and_runtime_are_secret_free(self):
-  common=["--origin",ORIGIN,"--freeze-id","freeze-0001","--controller-signing-key","key","--service-file","service","--pgpass-file","pgpass","--destination","dest","--recovery-receipt","recovery-receipt","--prepared-receipt","prepared","--final-receipt","final","--outcome-receipt","outcome","--recipient-file","recipient","--recipient-allowlist-file","allow"]
-  assertion=["--operator-assertion","assertion","--recovery-signing-key","recovery","--legacy-capture-receipt","capture","--legacy-restore-receipt","restore","--legacy-inspection-receipt","inspection","--legacy-authorization","legacy","--legacy-authorization-signature","legacy.sig","--execution-authorization","execution","--execution-authorization-signature","execution.sig",*sum((["--evidence-"+channel.replace("_","-"),channel] for channel in controller.RESIDUAL_CHANNELS),[])]
+  common=["--origin",ORIGIN,"--freeze-id","freeze-0001","--service-file","service","--pgpass-file","pgpass","--destination","dest","--recovery-receipt","recovery-receipt","--prepared-receipt","prepared","--final-receipt","final","--outcome-receipt","outcome","--recipient-file","recipient","--recipient-allowlist-file","allow"]
+  assertion=["--operator-assertion","assertion","--legacy-capture-receipt","capture","--legacy-restore-receipt","restore","--legacy-inspection-receipt","inspection","--legacy-authorization","legacy","--legacy-authorization-signature","legacy.sig","--execution-authorization","execution","--execution-authorization-signature","execution.sig",*sum((["--evidence-"+channel.replace("_","-"),channel] for channel in controller.RESIDUAL_CHANNELS),[])]
   validate_args=controller.parser().parse_args(["validate",*common,*assertion])
   self.assertFalse(hasattr(validate_args,"secret_env")); self.assertFalse(hasattr(validate_args,"secret_file"))
   for mode in ("execute","rehearse"):
    execution_args=controller.parser().parse_args([mode,*common,*assertion,*(["--rehearsal-receipt","rehearsal","--rehearsal-outcome-receipt","rehearsal-outcome"] if mode=="rehearse" else [])])
    self.assertTrue(hasattr(execution_args,"secret_env")); self.assertTrue(hasattr(execution_args,"secret_file"))
+  self.assertNotIn("--attempt-marker",Path(controller.__file__).read_text("utf-8"))
  def test_execute_and_rehearse_require_exactly_one_secret_reference(self):
   base={"origin":ORIGIN,"freeze_id":"freeze-0001","operator_assertion":"assertion","controller_signing_key":"key","recovery_signing_key":"recovery","recipient_file":"recipient","recipient_allowlist_file":"allow","service_file":"service","service_name":"g037","pgpass_file":"pgpass","destination":"dest","recovery_receipt":"recovery-receipt","prepared_receipt":"prepared","final_receipt":"final","outcome_receipt":"outcome","age_command":"age","pg_dump":"pg_dump","rehearsal_receipt":"rehearsal","rehearsal_outcome_receipt":"rehearsal-outcome"}
   assertion={"relation_root":"a"*64,"acl_root":"b"*64,"expires_at":int(time.time())+60}
@@ -63,11 +66,59 @@ class ControllerTests(unittest.TestCase):
     args=SimpleNamespace(**base,secret_env=secret_env,secret_file=secret_file)
     with self.subTest(mode=mode,secret_env=secret_env,secret_file=secret_file),patch.object(controller,"_private"),patch.object(controller,"_assert_controller_key"),patch.object(controller,"_assert_key"),patch.object(controller,"_signed_assertion",return_value=({**assertion,"signature":"signature"},assertion)),patch.object(controller,"_validate_assertion"),patch.object(controller.recovery,"recipient_from_files",return_value=("age1"+"a"*58,"f"*64)),patch.object(controller.recovery,"service",return_value=SERVICE),patch.object(controller.recovery,"pgpass"),patch.object(controller.recovery,"require_file"),patch.object(controller.recovery,"safe_destination"),patch.object(controller,"_outside"),patch.object(controller,"validate_sources"):
      with self.assertRaisesRegex(controller.ControllerError,"supply exactly one secret reference"): getattr(controller,mode)(args)
+ def test_attempt_journal_is_canonical_authorization_bound_and_one_shot(self):
+  patch.stopall()
+  with tempfile.TemporaryDirectory() as directory:
+   journal=Path(directory)/"attempts"; journal.mkdir()
+   raw=controller.canonical_bytes({"authorization_id":"11111111-1111-4111-8111-111111111111"})
+   envelope=controller.remediation_authorization.ExecutionAuthorizationEnvelope(raw,b"detached-signature")
+   args=SimpleNamespace(freeze_id="freeze-0001",attempt_marker="caller-selected-path-is-ignored")
+   def write_marker(path,value,label):
+    if Path(path).exists(): raise controller.ControllerError(label+" must be fresh")
+    Path(path).write_bytes(controller.canonical_bytes(value))
+    return controller.digest(value)
+   with patch.object(controller,"_attempt_journal_directory",return_value=journal),patch.object(controller,"_write_unsigned",side_effect=write_marker):
+    first=controller._attempt_marker(args,ORIGIN,envelope)
+    with self.assertRaisesRegex(controller.ControllerError,"must be fresh"):
+     controller._attempt_marker(SimpleNamespace(freeze_id="freeze-0001",attempt_marker="different-path"),ORIGIN,envelope)
+   marker=json.loads(next(journal.iterdir()).read_text("ascii"))
+   self.assertEqual(len(list(journal.iterdir())),1)
+   self.assertNotIn("operator_assertion_sha256",marker)
+   self.assertEqual(first,controller.digest(marker))
+ def test_attempt_journal_path_is_fixed_by_platform(self):
+  with patch.object(controller.recovery,"require_dir") as require_dir,patch.object(controller.os,"name","posix"):
+   self.assertEqual(str(controller._attempt_journal_directory()),"/var/lib/tzudong-recovery/g037-attempts")
+  self.assertEqual(str(require_dir.call_args.args[0]),"/var/lib/tzudong-recovery/g037-attempts")
+  self.assertEqual(require_dir.call_args.args[1],"attempt journal")
+  with patch.object(controller.recovery,"require_dir") as require_dir,patch.object(controller.os,"name","nt"):
+   self.assertEqual(str(controller._attempt_journal_directory()),"C:\\ProgramData\\TzudongRecovery\\g037-attempts")
+  self.assertEqual(str(require_dir.call_args.args[0]),"C:\\ProgramData\\TzudongRecovery\\g037-attempts")
+  self.assertEqual(require_dir.call_args.args[1],"attempt journal")
+ def test_remediation_binding_uses_authenticated_envelope_bytes_after_path_replacement(self):
+  envelope=controller.remediation_authorization.ExecutionAuthorizationEnvelope(b'{"authenticated":"authorization"}',b"authenticated-signature")
+  capture={**capture_roots(),"recovery_receipt_sha256":"7"*64}
+  source={"short_urls_catalog_sha256":"1"*64,"short_urls_rowset_sha256":"2"*64,"victim_descriptors_sha256":"3"*64,"short_urls_row_count":2,"duplicate_group_count":1,"duplicate_victim_count":1,"selection_spec_sha256":"4"*64,"duplicate_victims_sha256":"3"*64}
+  receipt={"evidence":source}; capture["recovery_receipt_sha256"]=controller.digest(receipt)
+  expected={"legacy_repository_commit":"0"*40,"legacy_authorization_sha256":"5"*64,"legacy_authorization_signature_sha256":"6"*64,"legacy_capture_receipt_sha256":"7"*64,"legacy_restore_receipt_sha256":"8"*64,"legacy_inspection_receipt_sha256":"9"*64}
+  args=SimpleNamespace(recovery_receipt="receipt",execution_authorization="replaced",execution_authorization_signature="replaced.sig")
+  with patch.object(controller.recovery,"load_receipt",return_value=receipt),patch.object(controller.recovery,"file_hash",side_effect=AssertionError("mutable CLI path reopened")):
+   binding=controller._remediation_binding(envelope,expected,capture,args,"a"*64)
+  self.assertEqual(binding["execution_authorization_sha256"],hashlib.sha256(envelope.raw).hexdigest())
+  self.assertEqual(binding["execution_authorization_signature_sha256"],hashlib.sha256(envelope.signature).hexdigest())
+ def test_attempt_marker_rejects_semantic_and_digest_mutation(self):
+  marker={"schema":"g037-execution-attempt-v1","authorization_id":"11111111-1111-4111-8111-111111111111","execution_authorization_sha256":"a"*64,"execution_authorization_signature_sha256":"b"*64,"freeze_id":"freeze-0001","origin":ORIGIN,"issued_at":int(time.time())}
+  prepared={"freeze_id":"freeze-0001","origin":ORIGIN,"remediation_evidence":{"authorization_id":marker["authorization_id"],"execution_authorization_sha256":"a"*64,"execution_authorization_signature_sha256":"b"*64,"attempt_marker_sha256":controller.digest(marker)}}
+  with patch.object(controller,"_attempt_path",return_value=Path("marker")),patch.object(controller,"_outside",return_value=Path("marker")),patch.object(controller,"_held_custody",return_value=(Path("marker"),(1,1),controller.canonical_bytes(marker))):
+   self.assertEqual(controller._read_attempt_marker(SimpleNamespace(),prepared),prepared["remediation_evidence"]["attempt_marker_sha256"])
+  mutated={**marker,"issued_at":True}
+  with patch.object(controller,"_attempt_path",return_value=Path("marker")),patch.object(controller,"_outside",return_value=Path("marker")),patch.object(controller,"_held_custody",return_value=(Path("marker"),(1,1),controller.canonical_bytes(mutated))):
+   with self.assertRaises(controller.ControllerError): controller._read_attempt_marker(SimpleNamespace(),prepared)
  def test_signed_assertion_preserves_authenticated_envelope_and_rejects_mismatches(self):
   with tempfile.TemporaryDirectory() as directory:
    path=Path(directory)/"assertion.json"
    private=Path(directory)/"private.pem"; public=Path(directory)/"public.pem"
    subprocess.run(["openssl","genpkey","-algorithm","Ed25519","-out",str(private)],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,check=True)
+   controller.recovery._harden_restrictive_file(private)
    public.write_bytes(subprocess.run(["openssl","pkey","-in",str(private),"-pubout"],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,check=True).stdout)
    payload={"field":"value"}
    signature=base64.b64encode(controller.recovery.openssl_sign("openssl",private,controller.canonical_bytes(payload))).decode("ascii")
@@ -87,17 +138,22 @@ class ControllerTests(unittest.TestCase):
  def test_residual_evidence_requires_exact_restrictive_artifacts(self,_):
   with tempfile.TemporaryDirectory() as directory:
    root=Path(directory)
-   args=SimpleNamespace()
-   attestations={}
+   args=SimpleNamespace(freeze_id="freeze-0001")
+   attestations={}; observed_at=int(time.time())
    for channel in controller.RESIDUAL_CHANNELS:
-    artifact=root/(channel+".json"); artifact.write_bytes(channel.encode()); artifact.chmod(0o600)
+    evidence={"schema":"g037-residual-freeze-evidence-v1","channel":channel,"freeze_id":"freeze-0001","status":True,"observed_at":observed_at}
+    if channel=="producer_stop": evidence["producers"]=list(controller.PRODUCER_STOP_JOBS)
+    artifact=root/(channel+".json"); artifact.write_text(json.dumps(evidence),encoding="utf-8"); artifact.chmod(0o600)
     setattr(args,"evidence_"+channel,str(artifact))
-    attestations[channel]={"evidence_sha256":hashlib.sha256(channel.encode()).hexdigest()}
+    attestations[channel]={"status":True,"evidence_sha256":hashlib.sha256(artifact.read_bytes()).hexdigest(),"observed_at":observed_at}
    assertion={"attestations":attestations}
    controller._validate_residual_evidence(args,assertion)
+   producer_path=root/"producer_stop.json"; producer=json.loads(producer_path.read_text("utf-8")); producer["producers"][0]["job"]="retain"; producer_path.write_text(json.dumps(producer),encoding="utf-8")
+   with self.assertRaises(controller.ControllerError): controller._residual_attestations(args,observed_at)
+   producer["producers"]=list(controller.PRODUCER_STOP_JOBS); producer_path.write_text(json.dumps(producer),encoding="utf-8")
    attestations["no_owner_write"]["evidence_sha256"]="0"*64
    with self.assertRaises(controller.ControllerError): controller._validate_residual_evidence(args,assertion)
-   attestations["no_owner_write"]["evidence_sha256"]=hashlib.sha256(b"no_owner_write").hexdigest()
+   attestations["no_owner_write"]["evidence_sha256"]=hashlib.sha256((root/"no_owner_write.json").read_bytes()).hexdigest()
    missing=root/"missing"; setattr(args,"evidence_no_owner_write",str(missing))
    with self.assertRaises(controller.ControllerError): controller._validate_residual_evidence(args,assertion)
    setattr(args,"evidence_no_owner_write",str(root/"no_owner_write.json"))
@@ -108,6 +164,18 @@ class ControllerTests(unittest.TestCase):
    setattr(args,"evidence_producer_stop",getattr(args,"evidence_no_owner_write"))
    with self.assertRaises(controller.ControllerError): controller._validate_residual_evidence(args,assertion)
   # No database or secret reader is part of the structural evidence validation.
+ def test_residual_evidence_rejects_false_or_stale_attestations(self):
+  with tempfile.TemporaryDirectory() as directory:
+   root=Path(directory); args=SimpleNamespace()
+   for channel in controller.RESIDUAL_CHANNELS:
+    path=root/(channel+".json"); path.write_text(json.dumps({"status":True,"observed_at":int(time.time())-901}),encoding="utf-8"); setattr(args,"evidence_"+channel,str(path))
+   with patch.object(controller.recovery,"restrictive",return_value=True):
+    with self.assertRaisesRegex(controller.ControllerError,"freshness"): controller._residual_attestations(args,int(time.time()))
+   (root/(controller.RESIDUAL_CHANNELS[0]+".json")).write_text(json.dumps({"status":False,"observed_at":int(time.time())}),encoding="utf-8")
+   for channel in controller.RESIDUAL_CHANNELS[1:]:
+    (root/(channel+".json")).write_text(json.dumps({"status":True,"observed_at":int(time.time())}),encoding="utf-8")
+   with patch.object(controller.recovery,"restrictive",return_value=True):
+    with self.assertRaisesRegex(controller.ControllerError,"status"): controller._residual_attestations(args,int(time.time()))
  def test_main_never_echoes_secret_reference(self):
   out=io.StringIO()
   with contextlib.redirect_stdout(out),contextlib.redirect_stderr(io.StringIO()):
@@ -151,8 +219,9 @@ class ControllerTests(unittest.TestCase):
  def test_deadline_uses_capability_expiry(self):
   self.assertEqual(controller._deadline({"not_after_unix":123}),123.0)
  def test_private_key_mismatch_is_rejected(self):
-  with patch.object(controller.recovery,"require_file"),patch.object(controller.recovery,"command",return_value="openssl"),patch.object(controller.recovery.subprocess,"run",return_value=SimpleNamespace(stdout=b"wrong")):
+  with patch.object(controller.recovery,"private_key_public",return_value=b"wrong"),patch.object(controller.recovery.subprocess,"run") as run:
    with self.assertRaises(controller.ControllerError): controller._assert_key("key",b"pinned","key")
+  run.assert_not_called()
  def test_diagnostic_outcomes_are_persisted_without_postcommit_readback(self):
   args=SimpleNamespace(origin="https://x",freeze_id="freeze-0001",operator_assertion="assertion",controller_signing_key="key",recovery_signing_key="recovery",recipient_file="recipient",recipient_allowlist_file="allow",service_file="service",service_name="g037",pgpass_file="pgpass",destination="dest",recovery_receipt="recovery-receipt",prepared_receipt="prepared",final_receipt="final",outcome_receipt="outcome",secret_env="REFERENCE",secret_file=None,age_command="age",pg_dump="pg_dump")
   inventory=SimpleNamespace(relation_root="r"*64,acl_root="a"*64)
@@ -251,7 +320,7 @@ class ControllerTests(unittest.TestCase):
    capture["storage_blob_root"]=controller.digest(members)
    capture["recovery_receipt_sha256"]=controller.digest(receipt)
    unsigned=dict(prepared); unsigned.pop("receipt_sha256"); prepared["receipt_sha256"]=controller.digest(unsigned)
-  return [patch.object(controller.recovery,"origin",return_value=ORIGIN),patch.object(controller,"validate_sources",return_value=object()),patch.object(controller,"_assert_controller_key"),patch.object(controller,"_outside_fresh"),patch.object(controller,"_signed",return_value=prepared),patch.object(controller,"_write_signed",side_effect=lambda *v:(writes.append(v[2]) if writes is not None else None) or controller.digest(v[2])),patch.object(controller.recovery,"load_receipt",return_value=receipt),patch.object(controller.recovery,"verify"),patch.object(controller.recovery,"service",return_value=SERVICE),patch.object(controller.recovery,"pgpass"),patch.object(controller,"_connect",return_value=SimpleNamespace(cursor=lambda:SimpleNamespace(execute=lambda sql:None,close=lambda:None),rollback=lambda:None,close=lambda:None)),patch.object(controller.freeze,"_root_source",return_value=(Path("."),"h"*40,"s"*64,"t"*64)),patch.object(controller.closure,"observed_terminal_roots",return_value=observed or prepared["terminal"])]
+  return [patch.object(controller.recovery,"origin",return_value=ORIGIN),patch.object(controller,"validate_sources",return_value=object()),patch.object(controller,"_assert_controller_key"),patch.object(controller,"_outside_fresh"),patch.object(controller,"_signed",return_value=prepared),patch.object(controller,"_read_attempt_marker",return_value="a"*64),patch.object(controller,"_write_signed",side_effect=lambda *v:(writes.append(v[2]) if writes is not None else None) or controller.digest(v[2])),patch.object(controller.recovery,"load_receipt",return_value=receipt),patch.object(controller.recovery,"verify"),patch.object(controller.recovery,"service",return_value=SERVICE),patch.object(controller.recovery,"pgpass"),patch.object(controller,"_connect",return_value=SimpleNamespace(cursor=lambda:SimpleNamespace(execute=lambda sql:None,close=lambda:None),rollback=lambda:None,close=lambda:None)),patch.object(controller.freeze,"_root_source",return_value=(Path("."),"h"*40,"s"*64,"t"*64)),patch.object(controller.closure,"observed_terminal_roots",return_value=observed or prepared["terminal"])]
  def test_reconcile_is_read_only_and_never_calls_mutators(self):
   args=self._execute_args(); args.identity_file="identity"; args.logical_archive="logical"; args.blob_archive="blob"; args.pg_restore="pg_restore"; prepared=self._prepared(); writes=[]; patches=self._reconcile_patches(args,prepared,writes=writes)
   with contextlib.ExitStack() as stack:
@@ -261,10 +330,14 @@ class ControllerTests(unittest.TestCase):
   self.assertEqual([x["status"] for x in writes],["reconciled","reconciled"])
  def test_reconcile_rejects_each_binding_or_terminal_drift(self):
   args=self._execute_args(); args.identity_file="identity"; args.logical_archive="logical"; args.blob_archive="blob"; args.pg_restore="pg_restore"
-  for field in ("source_root","commit","freeze_id","capture_roots","recovery","terminal"):
+  for field in ("source_root","commit","freeze_id","capture_roots","recovery","terminal","attempt_marker"):
    prepared=self._prepared()
    if field=="recovery": prepared["capture_roots"]["recovery_receipt_sha256"]="0"*64
    elif field=="terminal": observed={**prepared["terminal"],"catalog_root":"0"*64}
+   elif field=="attempt_marker":
+    prepared["remediation_evidence"]["attempt_marker_sha256"]="b"*64
+    unsigned=dict(prepared["remediation_evidence"]); unsigned.pop("remediation_sha256"); prepared["remediation_evidence"]["remediation_sha256"]=controller.digest(unsigned)
+    unsigned=dict(prepared); unsigned.pop("receipt_sha256"); prepared["receipt_sha256"]=controller.digest(unsigned); observed=None
    else: prepared[field]="0"*64 if field!="freeze_id" else "freeze-0002"; observed=None
    writes=[]; patches=self._reconcile_patches(args,prepared,observed,writes)
    with self.subTest(field=field),contextlib.ExitStack() as stack:
@@ -289,27 +362,47 @@ class ControllerTests(unittest.TestCase):
    def commit(s): s.commits+=1
    def close(s): s.closed=True
   with tempfile.TemporaryDirectory() as directory:
-   root=Path(directory); args=SimpleNamespace(origin="https://abcdefghijklmnopqrst.supabase.co",freeze_id="freeze-0001",authorization_signing_key="key",operator_assertion=str(root/"assertion"),service_file="service",service_name="g037",pgpass_file="pgpass",expiry_seconds=600)
+   root=Path(directory); args=SimpleNamespace(origin="https://abcdefghijklmnopqrst.supabase.co",freeze_id="freeze-0001",operator_assertion_request=str(root/"assertion-request"),service_file="service",service_name="g037",pgpass_file="pgpass",expiry_seconds=600)
    for channel in controller.RESIDUAL_CHANNELS:
-    path=root/(channel+".json"); path.write_text(channel); path.chmod(0o600); setattr(args,"evidence_"+channel,str(path))
+    evidence={"schema":"g037-residual-freeze-evidence-v1","channel":channel,"freeze_id":"freeze-0001","status":True,"observed_at":int(time.time())}
+    if channel=="producer_stop": evidence["producers"]=list(controller.PRODUCER_STOP_JOBS)
+    path=root/(channel+".json"); path.write_text(json.dumps(evidence),encoding="utf-8"); path.chmod(0o600); setattr(args,"evidence_"+channel,str(path))
    conn=Conn(); written={}
-   def write(_,__,value,*___): written.update(value); return controller.digest(value)
-   with patch.object(controller,"_assert_key"),patch.object(controller.recovery,"service",return_value=SERVICE),patch.object(controller.recovery,"pgpass"),patch.object(controller,"_connect",return_value=conn),patch.object(controller,"_write_signed",side_effect=write),patch.object(controller,"_signed_assertion",side_effect=lambda *_:({**written,"signature":"signature"},dict(written))),patch.object(controller,"validate_operator_assertion"),patch.object(controller,"validate_sources"),patch.object(controller.freeze,"_root_source",return_value=(Path("."),"h"*40,"s"*64,"t"*64)),patch.object(controller.recovery,"restrictive",return_value=True):
+   def write(_,value,*__): written.update(value); return controller.digest(value)
+   with patch.object(controller.recovery,"service",return_value=SERVICE),patch.object(controller.recovery,"pgpass"),patch.object(controller,"_connect",return_value=conn),patch.object(controller,"_write_unsigned",side_effect=write),patch.object(controller,"_outside_fresh"),patch.object(controller,"validate_operator_assertion"),patch.object(controller,"validate_sources"),patch.object(controller.freeze,"_root_source",return_value=(Path("."),"h"*40,"s"*64,"t"*64)),patch.object(controller.recovery,"restrictive",return_value=True):
     result=controller.prepare(args)
   self.assertEqual(result["status"],"prepared"); self.assertEqual(conn.commits,0); self.assertEqual(conn.rollbacks,1)
   self.assertIn("BEGIN",conn.cursors[1].calls); self.assertTrue(any("LOCK TABLE" in call for call in conn.cursors[1].calls))
   self.assertEqual(written["relation_root"],result["relation_root"])
- def test_prepare_rejects_key_mismatch_and_overlong_expiry(self):
-  args=SimpleNamespace(origin="https://abcdefghijklmnopqrst.supabase.co",freeze_id="freeze-0001",authorization_signing_key="key",operator_assertion="assertion",service_file="service",service_name="g037",pgpass_file="pgpass",expiry_seconds=901)
-  with patch.object(controller,"_assert_key") as key,patch.object(controller.recovery,"service",return_value=SERVICE),patch.object(controller.recovery,"pgpass"):
+ def test_prepare_rejects_overlong_expiry_without_signing_surface(self):
+  args=SimpleNamespace(origin="https://abcdefghijklmnopqrst.supabase.co",freeze_id="freeze-0001",operator_assertion_request="request",service_file="service",service_name="g037",pgpass_file="pgpass",expiry_seconds=901)
+  with patch.object(controller.recovery,"service",return_value=SERVICE),patch.object(controller.recovery,"pgpass"):
    with self.assertRaises(controller.ControllerError): controller.prepare(args)
-  key.assert_called_once()
- def test_prepare_help_and_output_do_not_expose_paths(self):
-  self.assertIn("prepare",controller.parser().format_help())
+ def test_prepare_and_finalize_parser_have_no_authorization_private_key_surface(self):
+  parser=controller.parser()
+  self.assertIn("prepare",parser.format_help()); self.assertIn("finalize",parser.format_help())
+  prepare=parser.parse_args(["prepare","--origin",ORIGIN,"--freeze-id","freeze-0001","--operator-assertion-request","request","--service-file","service","--pgpass-file","pgpass",*sum((["--evidence-"+channel.replace("_","-"),channel] for channel in controller.RESIDUAL_CHANNELS),[])])
+  self.assertFalse(hasattr(prepare,"authorization_signing_key"))
+  finalize=parser.parse_args(["finalize","--origin",ORIGIN,"--freeze-id","freeze-0001","--operator-assertion-request","request","--operator-assertion-signature","request.sig","--operator-assertion","assertion",*sum((["--evidence-"+channel.replace("_","-"),channel] for channel in controller.RESIDUAL_CHANNELS),[])])
+  self.assertFalse(hasattr(finalize,"authorization_signing_key"))
+  with self.assertRaises(SystemExit):
+   parser.parse_args(["prepare","--origin",ORIGIN,"--freeze-id","freeze-0001","--authorization-signing-key","key"])
   out=io.StringIO()
-  with patch.object(controller,"prepare",return_value={"schema":controller.SCHEMA,"mode":"prepare","status":"prepared","assertion_sha256":"a"*64,"expires_at":1,"relation_root":"r"*64,"acl_root":"c"*64,"private_path":"/secret"}),contextlib.redirect_stdout(out):
-   self.assertEqual(controller.main(["prepare","--origin","https://abcdefghijklmnopqrst.supabase.co","--freeze-id","freeze-0001","--authorization-signing-key","key","--operator-assertion","assertion","--service-file","service","--pgpass-file","pgpass",*sum((["--evidence-"+channel.replace("_","-"),channel] for channel in controller.RESIDUAL_CHANNELS),[])]),0)
+  with patch.object(controller,"prepare",return_value={"schema":controller.SCHEMA,"mode":"prepare","status":"prepared","assertion_request_sha256":"a"*64,"expires_at":1,"relation_root":"r"*64,"acl_root":"c"*64,"private_path":"/secret"}),contextlib.redirect_stdout(out):
+   self.assertEqual(controller.main(["prepare","--origin",ORIGIN,"--freeze-id","freeze-0001","--operator-assertion-request","request","--service-file","service","--pgpass-file","pgpass",*sum((["--evidence-"+channel.replace("_","-"),channel] for channel in controller.RESIDUAL_CHANNELS),[])]),2)
   self.assertNotIn("/secret",out.getvalue())
+ def test_finalize_requires_canonical_request_fixed_key_signature_and_fresh_output(self):
+  with tempfile.TemporaryDirectory() as directory:
+   root=Path(directory); request={"schema":"g037-write-freeze-assertion-v1","freeze_id":"freeze-0001","origin":ORIGIN,"commit":"h"*40,"manifest_sha256":controller.freeze.MANIFEST_SHA256,"relation_root":"r"*64,"acl_root":"a"*64,"source_root":"s"*64,"terminal_spec":"t"*64,"issued_at":1,"expires_at":2,"attestations":{}}
+   request_path=root/"request"; signature_path=root/"signature"; request_path.write_bytes(controller.canonical_bytes(request)); signature_path.write_bytes(b"signature")
+   args=SimpleNamespace(origin=ORIGIN,freeze_id="freeze-0001",operator_assertion_request=str(request_path),operator_assertion_signature=str(signature_path),operator_assertion=str(root/"assertion"))
+   finalized_sha256=controller.digest({**request,"signature":base64.b64encode(b"signature").decode("ascii")})
+   with patch.object(controller,"_remediation_custody",side_effect=[request_path,signature_path]),patch.object(controller.recovery,"openssl_verify",return_value=True) as verify,patch.object(controller,"_validate_assertion"),patch.object(controller,"_write_finalized_assertion",return_value=finalized_sha256) as write:
+    result=controller.finalize(args)
+   self.assertEqual(result["status"],"finalized"); self.assertEqual(result["assertion_sha256"],finalized_sha256); self.assertNotEqual(result["assertion_sha256"],controller.digest(request)); verify.assert_called_once_with(controller.recovery.command("openssl"),controller.AUTHORIZATION_PUBLIC_KEY_PEM,controller.canonical_bytes(request),b"signature"); write.assert_called_once_with(str(root/"assertion"),request,b"signature")
+   with patch.object(controller,"_remediation_custody",side_effect=[request_path,signature_path]),patch.object(controller.recovery,"openssl_verify",return_value=False),patch.object(controller,"_validate_assertion"),patch.object(controller,"_write_finalized_assertion") as write:
+    with self.assertRaisesRegex(controller.ControllerError,"signature invalid"): controller.finalize(args)
+   write.assert_not_called()
  def _rehearse_fixture(self, *, malformed_capture=False, baseline_drift=False):
   args=self._execute_args(); args.rehearsal_receipt="rehearsal"; args.rehearsal_outcome_receipt="rehearsal-outcome"
   events=[]; writes=[]; inventory=self._inventory(); terminal=self._terminal(); calls={"inventory":0}
