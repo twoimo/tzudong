@@ -151,7 +151,8 @@ def _hash_file(path: str | Path) -> str:
         _fail("artifact_read")
 def _custody_bytes(path: str | Path, root: str | Path) -> bytes:
     try:
-        return controller._stable_bytes(controller._outside(path, Path(root).resolve()))
+        resolved_root = Path(root).resolve()
+        return controller._stable_bytes(controller._outside(path, resolved_root), resolved_root)
     except Exception:
         _fail("lineage_custody")
 
@@ -212,7 +213,7 @@ def parse_local_service(path: str | Path, service_name: str = "g035-local") -> M
 def _service_custody(path: str | Path, repository_root: str | Path) -> tuple[Path, bytes, tuple[int, int]]:
     try:
         candidate = controller.authority.restrictive_regular_file(path, "service file", repository_root)
-        raw = controller._stable_bytes(candidate)
+        raw = controller._stable_bytes(candidate, Path(repository_root).resolve())
         info = candidate.stat(follow_symlinks=False)
         return candidate, raw, (info.st_dev, info.st_ino)
     except Exception:
@@ -332,7 +333,41 @@ def _live_identity(conn: Any) -> Mapping[str, Any]:
     return MappingProxyType(dict(row))
 
 
-def _docker_clone_proof(container: str, service_port: int, docker: str = "docker") -> Mapping[str, Any]:
+_INTERNAL_IDENTITY_QUERY = (
+    "SELECT (pg_control_system()).system_identifier::text, "
+    "(SELECT oid::text FROM pg_database WHERE datname=current_database()), "
+    "current_database(), current_setting('server_version'), "
+    "current_setting('server_version_num')::integer"
+)
+
+
+def _internal_exec_identity(container: str, docker: str) -> Mapping[str, Any]:
+    result = subprocess.run(
+        [docker, "exec", container, "/usr/bin/env", "-i", "PATH=/usr/bin:/bin", "/usr/bin/psql",
+         "-X", "--host", "/var/run/postgresql", "--port", "5432",
+         "--username", "supabase_admin", "--dbname", "g035_local",
+         "-A", "-t", "-F", "\x1f", "-c", _INTERNAL_IDENTITY_QUERY],
+        stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+        timeout=20, check=True,
+    )
+    raw = result.stdout
+    if (not isinstance(raw, bytes) or not raw.endswith(b"\n") or raw.count(b"\n") != 1
+            or b"\r" in raw):
+        _fail("docker_identity")
+    try:
+        fields = raw[:-1].decode("ascii").split("\x1f")
+    except UnicodeDecodeError:
+        _fail("docker_identity")
+    keys = ("system_identifier", "database_oid", "database_name", "server_version", "server_version_num")
+    if (len(fields) != len(keys) or any(not value or any(ord(char) < 32 or ord(char) > 126 for char in value)
+                                        for value in fields)
+            or not fields[-1].isdigit()):
+        _fail("docker_identity")
+    return MappingProxyType({**dict(zip(keys[:-1], fields[:-1])), "server_version_num": int(fields[-1])})
+
+
+def _docker_clone_proof(container: str, service_port: int, live_identity: Mapping[str, Any] | None = None,
+                        docker: str = "docker") -> Mapping[str, Any]:
     if not _SAFE.fullmatch(container or "") or type(service_port) is not int or not 1 <= service_port <= 65535:
         _fail("docker_identity")
     try:
@@ -343,21 +378,25 @@ def _docker_clone_proof(container: str, service_port: int, docker: str = "docker
         labels = config.get("Labels") if type(config) is dict else None
         networks = settings.get("Networks") if type(settings) is dict else None
         ports = settings.get("Ports") if type(settings) is dict else None
-        binding = ports.get("5432/tcp") if type(ports) is dict and set(ports) == {"5432/tcp"} else None
         container_id, image_id = item.get("Id"), item.get("Image")
         g040_labels = {key: value for key, value in labels.items() if key.startswith("com.tzudong.g040.")} if type(labels) is dict else {}
-        if (type(labels) is not dict or set(g040_labels) != _G040_LABELS or labels.get(_LABEL) != "true"
-                or not _SAFE.fullmatch(labels.get(_RUN_LABEL, "")) or not _SAFE.fullmatch(labels.get(_SLOT_LABEL, ""))
-                or config.get("Image") != _IMAGE or config.get("ExposedPorts") != {"5432/tcp": {}}
-                or type(host) is not dict or host.get("NetworkMode") in {"host", "bridge", "default"}
-                or host.get("Privileged") is not False or host.get("Binds") not in (None, []) or item.get("Mounts") not in (None, [])
-                or host.get("Mounts") not in (None, []) or host.get("CapAdd") not in (None, [])
-                or host.get("CapDrop") not in (None, []) or host.get("PortBindings") != {"5432/tcp": [{"HostIp": "127.0.0.1", "HostPort": str(service_port)}]}
-                or type(networks) is not dict or len(networks) != 1
-                or type(binding) is not list or len(binding) != 1 or type(binding[0]) is not dict
-                or binding[0].get("HostIp") != "127.0.0.1" or binding[0].get("HostPort") != str(service_port)
-                or type(container_id) is not str or not re.fullmatch(r"[0-9a-f]{64}", container_id)
-                or image_id != _IMAGE_ID):
+        common_invalid = (
+            type(labels) is not dict or set(g040_labels) != _G040_LABELS or labels.get(_LABEL) != "true"
+            or not _SAFE.fullmatch(labels.get(_RUN_LABEL, "")) or not _SAFE.fullmatch(labels.get(_SLOT_LABEL, ""))
+            or config.get("Image") != _IMAGE or config.get("ExposedPorts") != {"5432/tcp": {}}
+            or type(host) is not dict or host.get("NetworkMode") in {"host", "bridge", "default"}
+            or host.get("Privileged") is not False or host.get("Binds") not in (None, []) or item.get("Mounts") not in (None, [])
+            or host.get("Mounts") not in (None, []) or host.get("CapAdd") not in (None, [])
+            or host.get("CapDrop") not in (None, []) or type(networks) is not dict or len(networks) != 1
+            or type(container_id) is not str or not re.fullmatch(r"[0-9a-f]{64}", container_id)
+            or image_id != _IMAGE_ID
+        )
+        published = (
+            host.get("PortBindings") == {"5432/tcp": [{"HostIp": "127.0.0.1", "HostPort": str(service_port)}]}
+            and ports == {"5432/tcp": [{"HostIp": "127.0.0.1", "HostPort": str(service_port)}]}
+        )
+        internal = host.get("PortBindings") in (None, {}) and ports == {"5432/tcp": None}
+        if common_invalid or not (published or internal):
             _fail("docker_endpoint")
         network_name, network_attachment = next(iter(networks.items()))
         network_id = network_attachment.get("NetworkID") if type(network_attachment) is dict else None
@@ -376,7 +415,29 @@ def _docker_clone_proof(container: str, service_port: int, docker: str = "docker
         if (type(image) is not list or len(image) != 1 or type(image[0]) is not dict
                 or image[0].get("Id") != _IMAGE_ID or image[0].get("RepoDigests") != [_IMAGE_DIGEST]):
             _fail("docker_identity")
-        return MappingProxyType({"container_id_sha256": _sha(container_id.encode()), "image_id_sha256": _sha(image_id.encode()), "image_digest_sha256": _sha(_IMAGE_DIGEST.encode()), "endpoint_sha256": _sha(_canonical({"host": "127.0.0.1", "port": service_port}))})
+        container_hash = _sha(container_id.encode())
+        if internal:
+            if live_identity is None or _internal_exec_identity(container_id, docker) != dict(live_identity):
+                _fail("docker_identity")
+            rechecked_item = json.loads(subprocess.run(
+                [docker, "inspect", "--type", "container", container_id],
+                stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                timeout=20, check=True,
+            ).stdout.decode("utf-8"))
+            rechecked_network = json.loads(subprocess.run(
+                [docker, "network", "inspect", network_id],
+                stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                timeout=20, check=True,
+            ).stdout.decode("utf-8"))
+            if rechecked_item != [item] or rechecked_network != [network]:
+                _fail("docker_identity")
+            endpoint = _sha(_canonical({
+                "domain": "internal-docker-exec-proxy-v1", "host": "127.0.0.1",
+                "port": service_port, "container_id_sha256": container_hash,
+            }))
+        else:
+            endpoint = _sha(_canonical({"host": "127.0.0.1", "port": service_port}))
+        return MappingProxyType({"container_id_sha256": container_hash, "image_id_sha256": _sha(image_id.encode()), "image_digest_sha256": _sha(_IMAGE_DIGEST.encode()), "endpoint_sha256": endpoint})
     except RehearsalError:
         raise
     except Exception:
@@ -472,7 +533,7 @@ def build_clone_lineage_request(*, clone_nonce: str, capture_receipt: str | Path
     issued = int(time.time()) if now_unix is None else now_unix
     if type(issued) is not int:
         _fail("lineage_attestation")
-    proof = _docker_clone_proof(container, service["port"], docker)
+    proof = _docker_clone_proof(container, service["port"], live, docker)
     body = {"schema": _LINEAGE_SCHEMA, "clone_nonce": clone_nonce,
             "issued_at_unix": issued, "expires_at_unix": issued + valid_seconds,
             "lineage_public_key_sha256": _LINEAGE_PUBLIC_KEY_SHA256,
@@ -521,7 +582,7 @@ def bind_restore(*, clone_nonce: str, capture_receipt: str | Path, restore_recei
     finally:
         try: conn.rollback(); conn.close()
         except Exception: pass
-    proof, now = _docker_clone_proof(container, service["port"], docker), int(time.time()) if now_unix is None else now_unix
+    proof, now = _docker_clone_proof(container, service["port"], live, docker), int(time.time()) if now_unix is None else now_unix
     attestation_path = controller._outside(lineage_attestation, root)
     signature_path = controller._outside(lineage_signature, root)
     attested = _load_bytes(_custody_bytes(attestation_path, root))
@@ -544,7 +605,7 @@ def bind_restore(*, clone_nonce: str, capture_receipt: str | Path, restore_recei
 def _binding(path: str | Path, repository_root: str | Path) -> Mapping[str, Any]:
     root = Path(repository_root).resolve()
     try:
-        raw = controller._stable_bytes(controller._outside(path, root))
+        raw = controller._stable_bytes(controller._outside(path, root), root)
         value = controller._signed_document(raw, "local-clone-binding")
     except Exception:
         _fail("clone_binding")
@@ -627,8 +688,8 @@ def _assert_observation_binding(binding: Mapping[str, Any], *, verified_port: in
     info = conn.info
     if info.host != "127.0.0.1" or info.port != verified_port:
         _fail("service_endpoint")
-    proof = _docker_clone_proof(container, verified_port, docker)
     live = _live_identity(conn)
+    proof = _docker_clone_proof(container, verified_port, live, docker)
     live_sha = _sha(_canonical(dict(live)))
     if any(binding[key] != proof[key] for key in proof) or binding["live_identity_sha256"] != live_sha:
         _fail("observation_binding")
@@ -777,13 +838,13 @@ def observe_reference(*, repository_root: str | Path, binding_path: str | Path, 
 
 def _aggregate_signed(path: str | Path, kind: str, root: Path) -> tuple[Mapping[str, Any], str]:
     try:
-        raw = controller._stable_bytes(controller._outside(path, root))
+        raw = controller._stable_bytes(controller._outside(path, root), root)
         return MappingProxyType(controller._signed_document(raw, kind)), _sha(raw)
     except Exception:
         _fail("aggregate_custody")
 
 def _aggregate_freeze(args: argparse.Namespace, source: SourceBinding, root: Path, now: int) -> tuple[str, str, int, str, int]:
-    raw = controller._stable_bytes(controller._outside(args.freeze_assertion, root))
+    raw = controller._stable_bytes(controller._outside(args.freeze_assertion, root), root)
     try:
         assertion = json.loads(raw.decode("ascii"), object_pairs_hook=_pairs)
         if raw != _canonical(assertion) + b"\n" or assertion.get("freeze_id") == "40b54cf8-e59f-4eb3-a37c-88e3bf983442":
@@ -795,7 +856,7 @@ def _aggregate_freeze(args: argparse.Namespace, source: SourceBinding, root: Pat
         channels = ("no_owner_write", "no_dashboard_write", "no_provider_write", "no_out_of_band_write", "producer_stop")
         if type(files) is not list or len(files) != 5:
             _fail("aggregate_custody")
-        digests = {_sha(controller._stable_bytes(controller._outside(path, root))) for path in files}
+        digests = {_sha(controller._stable_bytes(controller._outside(path, root), root)) for path in files}
         if len(digests) != 5 or digests != {assertion["attestations"][channel]["evidence_sha256"] for channel in channels}:
             _fail("aggregate_custody")
         evidence_started = max(assertion["issued_at"],
@@ -846,7 +907,7 @@ def build_aggregate_custody(args: argparse.Namespace) -> Mapping[str, Any]:
         _fail("aggregate_custody")
     freeze_root, inventory_root, freeze_expires_at, target_acl_root, freeze_started = _aggregate_freeze(args, source, root, now)
     backup, backup_sha = _aggregate_signed(args.production_backup, "g040-production-backup-v1", root)
-    capture_raw = controller._stable_bytes(controller._outside(args.g035_capture, root))
+    capture_raw = controller._stable_bytes(controller._outside(args.g035_capture, root), root)
     archive_sha, archive_bytes, _ = _archive_digest(args.g035_archive, root)
     try:
         capture = _load_bytes(capture_raw)
@@ -965,7 +1026,8 @@ def verify_aggregate_custody(args: argparse.Namespace) -> Mapping[str, Any]:
 
 def _verified_observation(path: str | Path, *, source: SourceBinding, target_fingerprint: str, repository_root: str | Path, now: int) -> Mapping[str, Any]:
     try:
-        raw = controller._stable_bytes(controller._outside(path, Path(repository_root).resolve()))
+        resolved_root = Path(repository_root).resolve()
+        raw = controller._stable_bytes(controller._outside(path, resolved_root), resolved_root)
         value = controller._signed_document(raw, "local-clone-observation")
     except Exception:
         _fail("reference_input")
@@ -1030,7 +1092,7 @@ def _verified_preparation(path: str | Path, *, source: SourceBinding, reference:
                           clone: Mapping[str, Any], repository_root: Path,
                           now: int) -> Mapping[str, Any]:
     try:
-        raw = controller._stable_bytes(controller._outside(path, repository_root))
+        raw = controller._stable_bytes(controller._outside(path, repository_root), repository_root)
         value = controller._signed_document(raw, "local-state-preparation")
     except Exception:
         _fail("preparation_receipt")
@@ -1345,7 +1407,7 @@ def compare_replays(args: argparse.Namespace) -> Mapping[str, Any]:
     receipts = []
     try:
         for path in (args.first_replay, args.second_replay):
-            raw = controller._stable_bytes(controller._outside(path, root))
+            raw = controller._stable_bytes(controller._outside(path, root), root)
             replay = controller._signed_document(raw, "local-branch-replay")
             body = _validated_replay(
                 replay, source=source, reference=reference, hosted=hosted,
