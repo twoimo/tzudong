@@ -13,6 +13,9 @@ import yaml
 ROOT = Path(__file__).parents[3]
 WORKFLOW_PATH = ROOT / ".github" / "workflows" / "g040-prefix-recovery.yml"
 RUNBOOK_PATH = ROOT / "backend" / "supabase" / "docs" / "g040-prefix-recovery-runbook.md"
+CONTROLLER_PATH = ROOT / "backend" / "supabase" / "scripts" / "g040_production_controller.py"
+G035_WORKFLOW_PATH = ROOT / ".github" / "workflows" / "g035-hosted-recovery.yml"
+G035_RUNBOOK_PATH = ROOT / "backend" / "supabase" / "docs" / "g035-hosted-recovery-runbook.md"
 CHECKOUT = "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
 UPLOAD = "actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08"
 FORBIDDEN_TEXT = re.compile(
@@ -71,7 +74,13 @@ class G040PrefixRecoveryWorkflowTests(unittest.TestCase):
         with WORKFLOW_PATH.open(encoding="utf8") as source:
             cls.workflow = yaml.safe_load(source)
         cls.runbook = RUNBOOK_PATH.read_text(encoding="utf8")
+        with G035_WORKFLOW_PATH.open(encoding="utf8") as source:
+            cls.g035_workflow = yaml.safe_load(source)
+        cls.g035_workflow_source = G035_WORKFLOW_PATH.read_text(encoding="utf8")
+        cls.g035_runbook = G035_RUNBOOK_PATH.read_text(encoding="utf8")
         cls.program = receipt_program(cls.workflow)
+        cls.controller_source = CONTROLLER_PATH.read_text(encoding="utf8")
+        cls.controller = ast.parse(cls.controller_source)
 
     def test_dispatch_exposes_only_source_validate(self):
         dispatch = self.workflow[True]["workflow_dispatch"]
@@ -214,24 +223,176 @@ class G040PrefixRecoveryWorkflowTests(unittest.TestCase):
             tuple(value.value for value in keywords["separators"].elts),
         )
 
-    def test_runbook_keeps_all_operational_modes_local_and_requires_rehearsal(self):
-        for required in (
-            "exposes only `validate`",
-            "`diagnose` and `readback` require local restrictive service and custody artifacts",
-            "`diagnose`, `readback`, G037 `prepare`, G037 `finalize`, G037 `validate`, and `execute` are local operator-only modes outside GitHub",
-            "two independent free local PostgreSQL 17.6 clone rehearsals",
-            "fresh encrypted capture",
-            "one-shot authorization",
-            "old freeze and old authority must never be reused",
-            "`FULL_ESCAPED` is an expected classification",
-            "Any partial or ambiguous classification blocks",
-            "one transaction/one commit",
-            "fixed local `readback`",
-            "zero-cost",
-        ):
-            self.assertIn(required, self.runbook)
-        self.assertIn("verify_recovery_source", self.runbook)
-        self.assertIn("schema, status, and the runtime source-root hash", self.runbook)
+    def test_runbook_documents_the_exact_g040_pre_execute_sequence(self):
+        stages = re.findall(
+            r'--entrypoint "\$(?:CONTROLLER|AUTHORITY)" -- ([a-z-]+)',
+            self.runbook,
+        )
+        self.assertEqual(
+            [
+                "validate-source",
+                "diagnose",
+                "production-backup",
+                "prepare",
+                "build-request",
+                "verify",
+                "execute",
+                "readback",
+            ],
+            stages,
+        )
+        self.assertRegex(
+            self.runbook,
+            re.compile(
+                r"--entrypoint backend/supabase/scripts/g037_production_controller\.py -- prepare \\\n"
+                r".*?--service-file '<SERVICE_FILE>' --service-name g040-production --pgpass-file '<PGPASS_FILE>'",
+                re.DOTALL,
+            ),
+        )
+        verify_index = stages.index("verify")
+        self.assertEqual(["verify", "execute"], stages[verify_index : verify_index + 2])
+        self.assertIn(
+            "G040 authority `verify` is the no-database pre-execute authority gate.",
+            self.runbook,
+        )
+        self.assertIn(
+            "reopens and revalidates the exact finalized G037 assertion, all five evidence files, and every G040 custody and authorization input before mutation",
+            self.runbook,
+        )
+
+    def test_execute_revalidates_g040_custody_before_its_only_mutation_call(self):
+        functions = {
+            node.name: node
+            for node in self.controller.body
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        }
+        execute_calls = [
+            node
+            for node in ast.walk(functions["execute"])
+            if isinstance(node, ast.Call)
+        ]
+        authorization = next(
+            node
+            for node in execute_calls
+            if isinstance(node.func, ast.Name) and node.func.id == "_authorization"
+        )
+        revalidation = next(
+            node
+            for node in execute_calls
+            if isinstance(node.func, ast.Name)
+            and node.func.id == "_revalidate_production_custody"
+        )
+        mutation = next(
+            node
+            for node in execute_calls
+            if isinstance(node.func, ast.Attribute)
+            and isinstance(node.func.value, ast.Name)
+            and node.func.value.id == "authority"
+            and node.func.attr == "consume_one_shot_attempt"
+        )
+        self.assertLess(authorization.lineno, revalidation.lineno)
+        self.assertLess(revalidation.lineno, mutation.lineno)
+
+        freeze_calls = [
+            node
+            for node in ast.walk(functions["_backup_freeze"])
+            if isinstance(node, ast.Call)
+        ]
+        self.assertTrue(
+            any(
+                isinstance(node.func, ast.Name)
+                and node.func.id == "validate_operator_assertion"
+                for node in freeze_calls
+            )
+        )
+        self.assertTrue(
+            any(
+                isinstance(node.func, ast.Name)
+                and node.func.id == "_stable_bytes"
+                for node in freeze_calls
+            )
+        )
+        self.assertTrue(
+            any(
+                isinstance(node, ast.Compare)
+                and isinstance(node.left, ast.Call)
+                and isinstance(node.left.func, ast.Name)
+                and node.left.func.id == "len"
+                and len(node.left.args) == 1
+                and isinstance(node.left.args[0], ast.Attribute)
+                and isinstance(node.left.args[0].value, ast.Name)
+                and node.left.args[0].value.id == "args"
+                and node.left.args[0].attr == "freeze_evidence"
+                and any(
+                    isinstance(comparator, ast.Constant)
+                    and comparator.value == 5
+                    for comparator in node.comparators
+                )
+                for node in ast.walk(functions["_backup_freeze"])
+            )
+        )
+
+    def test_source_contract_keeps_g037_validation_outside_g040_authority(self):
+        self.assertNotRegex(
+            self.runbook,
+            r"--entrypoint backend/supabase/scripts/g037_production_controller\.py -- validate\b",
+        )
+        self.assertNotIn("G037 controller `validate`", self.runbook)
+        self.assertNotIn("full G037 `validate`", self.runbook)
+        self.assertNotIn("g037_production_controller", self.controller_source)
+    def test_g035_restore_custody_uses_exact_bootstrap_and_closes_pipe_writer(self):
+        dispatch = self.g035_workflow[True]["workflow_dispatch"]
+        expected_modes = [
+            "validate",
+            "capture",
+            "short-url-remediation-inspect",
+            "short-url-remediation-apply",
+            "short-url-remediation-verify",
+            "clone-apply",
+            "local-postflight",
+        ]
+        self.assertEqual(expected_modes, dispatch["inputs"]["mode"]["options"])
+        invocations = re.findall(r"\brun_g035\s+([a-z-]+)\b", self.g035_workflow_source)
+        self.assertEqual(expected_modes, invocations)
+        self.assertNotIn("G035_OFFLINE_IDENTITY_FILE", self.g035_workflow_source)
+        self.assertNotIn("G035_DECRYPT_COMMAND", self.g035_workflow_source)
+        self.assertNotIn("restore-verify)", self.g035_workflow_source)
+        workflow_surface = "\n".join(str(value) for value in scalar_values(self.g035_workflow))
+        self.assertNotRegex(workflow_surface, r"(?i)restore-verify|identity[-_ ]?(?:file|path|handle|fd)|decrypt|private[-_ ]?key|--inkey|fallback|compatibility")
+        self.assertNotRegex(
+            self.g035_workflow_source,
+            r"(?m)^\s*(?!git show\b)[^\n]*python(?:3(?:\.\d+)?)?\s+[^\n]*g035_hosted_recovery\.py\b",
+        )
+        self.assertIn('git show "$source_commit:$bootstrap" | python -I -', self.g035_workflow_source)
+        self.assertIn('--authorized-final-commit "$source_commit"', self.g035_workflow_source)
+        self.assertIn('--entrypoint "$entrypoint" -- "$@"', self.g035_workflow_source)
+        for runbook in (self.g035_runbook, self.runbook):
+            lines = runbook.splitlines()
+            indexes = [index for index, line in enumerate(lines) if "restore-verify" in line]
+            self.assertEqual(1, len(indexes))
+            start = indexes[0]
+            while start and lines[start - 1].rstrip().endswith("\\"):
+                start -= 1
+            end = indexes[0]
+            while lines[end].rstrip().endswith("\\"):
+                end += 1
+            command = "\n".join(lines[start : end + 1])
+            self.assertTrue(command.startswith('git show "$AUTHORIZED_COMMIT:$BOOTSTRAP" | <approved-selective-inheritance-custodian>'))
+            self.assertIn("--close-writer-after-write -- python3 -I -", command)
+            self.assertIn('--repository-root "$PWD" --authorized-final-commit "$AUTHORIZED_COMMIT"', command)
+            self.assertIn('--entrypoint "$RESTORE_ENTRYPOINT" -- restore-verify', command)
+            self.assertEqual(2, command.count("--identity-fd 3"))
+            self.assertIn("--restore-receipt", command)
+            self.assertNotRegex(command, r"(?:^|\s)>(?:\s|$)")
+            self.assertNotRegex(command, r"--identity-(?:file|path)\b|--private-key\b|--key-reference\b|--inkey\b")
+            self.assertNotRegex(command, r"(?i)\b(?:fallback|compatibility)\b|retain(?:s|ed)?\s+(?:the\s+)?(?:pipe\s+)?writer|leave(?:s|ing)?\s+(?:the\s+)?(?:pipe\s+)?writer\s+open")
+            self.assertIn("--identity-handle <canonical-inherited-handle>", runbook)
+            self.assertNotRegex(
+                runbook,
+                r"(?m)^\s*(?:<[^>]+>\s+--\s+)?(?:[^\s]+\s+)*python(?:3(?:\.\d+)?)?\s+[^\n]*g035_hosted_recovery\.py\s+restore-verify\b",
+            )
+            self.assertNotRegex(runbook, r"(?i)signer/key-reference path|--inkey\b|<[^>]*(?:private|key)[^>]*path[^>]*>")
+        self.assertNotIn("--inkey", self.g035_runbook)
 
 
 if __name__ == "__main__":
