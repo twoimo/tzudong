@@ -55,7 +55,7 @@ def _approval_catalog_evidence(conn,contract=None):
  return descriptor
 def receipt(mode,status,evidence,prior=None):
  item={"schema":RECEIPT_SCHEMA,"mode":mode,"status":status,"manifest_sha256":MANIFEST_SHA256,"prior_receipt_sha256":prior or [],"evidence":evidence}; item["receipt_sha256"]=digest(item); return item
-def emit(value): print(canonical_bytes(value).decode("ascii"))
+def emit(value): sys.stdout.buffer.write(canonical_bytes(value))
 def _receipt_contract(data):
  expected={"schema","mode","status","manifest_sha256","prior_receipt_sha256","evidence","receipt_sha256"}
  modes={"capture":"captured","restore-verify":"restored","short-url-remediation-inspect":"validated","short-url-remediation-apply":"applied","short-url-remediation-verify":"validated","clone-apply":"applied","local-postflight":"validated"}
