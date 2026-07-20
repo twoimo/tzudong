@@ -11,6 +11,7 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import g040_reference_evidence as evidence
 import g040_prefix_recovery as classifier
+import g040_production_controller as controller
 from g040_recovery_source import SourceBinding
 
 
@@ -93,6 +94,35 @@ class ReferenceTests(unittest.TestCase):
             evidence.load_reference("{}\n")
         self.assertEqual(hashlib.sha256((classifier.CATALOG_PROBE + "\n" + classifier.DATA_PROBE).encode()).hexdigest(), evidence._PROBE_TEXT_SHA256)
 
+    def test_finalize_reference_passes_resolved_root_to_both_custody_reads(self):
+        _, _, source = self.signing_context()
+        root = Path("reference-repository-root").resolve()
+        request = Path("outside-reference-request.json")
+        signature = Path("outside-reference-signature.bin")
+        body_raw = evidence.canonical_bytes(dict(self.body()))
+        detached = b"detached-signature"
+        reads = []
+
+        def stable(path, repository_root):
+            reads.append((Path(path), repository_root))
+            return body_raw if Path(path) == request else detached
+
+        with patch.object(controller, "_outside", side_effect=lambda path, repository_root: Path(path)), \
+                patch.object(controller, "_stable_bytes", side_effect=stable), \
+                patch.object(evidence, "verify_reference", return_value=object()) as verify, \
+                patch.object(evidence, "_write_request") as write:
+            receipt = evidence.finalize_reference(
+                source=source, target_fingerprint="3" * 64,
+                request=request, signature=signature, output=Path("outside-final.json"),
+                repository_root=root, now_unix=150,
+            )
+
+        self.assertEqual(reads, [(request, root), (signature, root)])
+        verify.assert_called_once()
+        write.assert_called_once()
+        self.assertEqual(receipt["reference_receipt_sha256"], hashlib.sha256(
+            evidence.canonical_bytes({**dict(self.body()), "signature_b64": base64.b64encode(detached).decode("ascii")})
+        ).hexdigest())
     def test_validly_signed_identity_and_reused_receipt_negatives(self):
         private, public, source = self.signing_context()
         with patch.object(evidence, "PUBLIC_KEY_PEM", public), patch.object(evidence, "PUBLIC_KEY_SHA256", hashlib.sha256(public.encode("ascii")).hexdigest()):
