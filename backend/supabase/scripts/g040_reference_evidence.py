@@ -206,7 +206,8 @@ def _custody_bytes(path: str | Path, repository_root: str | Path) -> bytes:
     try:
         # Import lazily: the controller imports this module to verify final evidence.
         import g040_production_controller as controller
-        return controller._stable_bytes(controller._outside(path, Path(repository_root).resolve()))
+        root = Path(repository_root).resolve()
+        return controller._stable_bytes(controller._outside(path, root), root)
     except Exception:
         _fail()
 
