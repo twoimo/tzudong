@@ -17,7 +17,7 @@ import g040_prefix_recovery as classifier
 from g040_reverse_00400 import DERIVATION_MODE, REVERSE_VECTOR_SHA256
 from g040_recovery_source import SourceBinding
 
-SCHEMA = "g040-prefix-reference-v3"
+SCHEMA = "g040-prefix-reference-v4"
 BASE_COMMIT = "92894e41cddb57767c9764d1694992bc0ad9d922"
 PG_IDENTITY = "PostgreSQL 17.6"
 PUBLIC_KEY_PEM = """-----BEGIN PUBLIC KEY-----
@@ -46,7 +46,9 @@ _CLONE_HASH_FIELDS = (
     "lineage_signature_sha256", "binding_receipt_sha256",
     "observation_receipt_sha256", "absent_catalog_sha256",
     "full_catalog_sha256", "full_data_sha256", "ledger_prefix_sha256",
-    "reverse_vector_sha256",
+    "source_plan_sha256", "terminal_ledger_root", "terminal_catalog_root",
+    "terminal_acl_root", "terminal_data_root", "terminal_spec_root",
+    "terminal_tuple_sha256", "reverse_vector_sha256",
 )
 _CLONE_FIELDS = (
     "clone_identity", "clone_nonce", *_IDENTITY_COMPONENT_FIELDS,
@@ -56,7 +58,10 @@ _CLONE_FIELDS = (
     "lineage_signature_sha256", "binding_receipt_sha256",
     "observation_receipt_sha256", "absent_catalog_sha256",
     "full_catalog_sha256", "full_data_sha256", "ledger_prefix_sha256",
-    "derivation_mode", "reverse_vector_sha256",
+    "derivation_mode", "source_plan_sha256", "terminal_rows",
+    "terminal_ledger_root", "terminal_catalog_root", "terminal_acl_root",
+    "terminal_data_root", "terminal_spec_root", "terminal_tuple_sha256",
+    "reverse_vector_sha256",
 )
 _CLONE_DISTINCT_FIELDS = (
     "clone_identity", "clone_nonce", "live_identity_sha256",
@@ -76,10 +81,12 @@ _BODY_FIELDS = (
     "manifest_sha256", "migration_source_sha256", "pg_identity",
     "probe_text_sha256", "derivation_mode", "reverse_vector_sha256",
     "absent_catalog_sha256", "full_catalog_sha256", "full_data_sha256",
-    "ledger_prefix_sha256", "target_fingerprint", "observation_nonce",
-    "issued_at_unix", "expires_at_unix",
-    *(_body_clone_field("first", key) for key in _CLONE_FIELDS if key not in {"derivation_mode", "reverse_vector_sha256", "absent_catalog_sha256", "full_catalog_sha256", "full_data_sha256", "ledger_prefix_sha256"}),
-    *(_body_clone_field("second", key) for key in _CLONE_FIELDS if key not in {"derivation_mode", "reverse_vector_sha256", "absent_catalog_sha256", "full_catalog_sha256", "full_data_sha256", "ledger_prefix_sha256"}),
+    "ledger_prefix_sha256", "source_plan_sha256", "terminal_rows",
+    "terminal_ledger_root", "terminal_catalog_root", "terminal_acl_root",
+    "terminal_data_root", "terminal_spec_root", "terminal_tuple_sha256",
+    "target_fingerprint", "observation_nonce", "issued_at_unix", "expires_at_unix",
+    *(_body_clone_field("first", key) for key in _CLONE_FIELDS if key not in {"derivation_mode", "reverse_vector_sha256", "absent_catalog_sha256", "full_catalog_sha256", "full_data_sha256", "ledger_prefix_sha256", "source_plan_sha256", "terminal_rows", "terminal_ledger_root", "terminal_catalog_root", "terminal_acl_root", "terminal_data_root", "terminal_spec_root", "terminal_tuple_sha256"}),
+    *(_body_clone_field("second", key) for key in _CLONE_FIELDS if key not in {"derivation_mode", "reverse_vector_sha256", "absent_catalog_sha256", "full_catalog_sha256", "full_data_sha256", "ledger_prefix_sha256", "source_plan_sha256", "terminal_rows", "terminal_ledger_root", "terminal_catalog_root", "terminal_acl_root", "terminal_data_root", "terminal_spec_root", "terminal_tuple_sha256"}),
     "reference_public_key_sha256",
 )
 
@@ -126,6 +133,7 @@ class VerifiedReference:
     schema: str; base_commit: str; final_commit: str; runtime_source_root: str
     manifest_sha256: str; migration_source_sha256: str; pg_identity: str; probe_text_sha256: str; derivation_mode: str; reverse_vector_sha256: str
     absent_catalog_sha256: str; full_catalog_sha256: str; full_data_sha256: str; ledger_prefix_sha256: str
+    source_plan_sha256: str; terminal_rows: int; terminal_ledger_root: str; terminal_catalog_root: str; terminal_acl_root: str; terminal_data_root: str; terminal_spec_root: str; terminal_tuple_sha256: str
     target_fingerprint: str; observation_nonce: str; issued_at_unix: int; expires_at_unix: int
     first_clone_identity: str; first_clone_nonce: str; first_live_identity_sha256: str; first_container_id_sha256: str; first_image_id_sha256: str; first_image_digest_sha256: str; first_endpoint_sha256: str; first_g035_restore_receipt_sha256: str; first_capture_receipt_sha256: str; first_restored_archive_sha256: str; first_capture_receipt_bytes_sha256: str; first_restore_receipt_bytes_sha256: str; first_lineage_attestation_sha256: str; first_lineage_signature_sha256: str; first_binding_receipt_sha256: str; first_observation_receipt_sha256: str
     second_clone_identity: str; second_clone_nonce: str; second_live_identity_sha256: str; second_container_id_sha256: str; second_image_id_sha256: str; second_image_digest_sha256: str; second_endpoint_sha256: str; second_g035_restore_receipt_sha256: str; second_capture_receipt_sha256: str; second_restored_archive_sha256: str; second_capture_receipt_bytes_sha256: str; second_restore_receipt_bytes_sha256: str; second_lineage_attestation_sha256: str; second_lineage_signature_sha256: str; second_binding_receipt_sha256: str; second_observation_receipt_sha256: str
@@ -150,9 +158,16 @@ def _validate_clone(value: Mapping[str, Any]) -> MappingProxyType:
     clone = dict(value)
     if (not all(_sha(clone[key]) for key in _CLONE_HASH_FIELDS)
             or not _nonce(clone["clone_nonce"])
+            or type(clone["terminal_rows"]) is not int or clone["terminal_rows"] < 1
             or clone["derivation_mode"] != DERIVATION_MODE
             or clone["reverse_vector_sha256"] != REVERSE_VECTOR_SHA256
             or clone["absent_catalog_sha256"] == clone["full_catalog_sha256"]
+            or clone["terminal_data_root"] != clone["full_data_sha256"]
+            or clone["terminal_tuple_sha256"] != hashlib.sha256(canonical_bytes({
+                "terminal_rows": clone["terminal_rows"], "ledger": clone["terminal_ledger_root"],
+                "catalog": clone["terminal_catalog_root"], "acl": clone["terminal_acl_root"],
+                "data": clone["terminal_data_root"], "terminal_spec": clone["terminal_spec_root"],
+            })).hexdigest()
             or clone["clone_identity"] != _clone_identity(clone)):
         _fail()
     return MappingProxyType(clone)
@@ -166,17 +181,25 @@ def compare_clone_runs(first: Mapping[str, Any], second: Mapping[str, Any]) -> M
     return MappingProxyType({key: first_clone[key] for key in (
         "derivation_mode", "reverse_vector_sha256", "absent_catalog_sha256",
         "full_catalog_sha256", "full_data_sha256", "ledger_prefix_sha256",
+        "source_plan_sha256", "terminal_rows", "terminal_ledger_root",
+        "terminal_catalog_root", "terminal_acl_root", "terminal_data_root",
+        "terminal_spec_root", "terminal_tuple_sha256",
     )})
 
 
 def validate_reference_body(body: Mapping[str, Any]) -> MappingProxyType:
     _assert_constants()
     value = _body_dict(body)
-    hashes = ("runtime_source_root", "absent_catalog_sha256", "full_catalog_sha256", "full_data_sha256", "ledger_prefix_sha256", "target_fingerprint")
-    if (value["schema"] != SCHEMA or value["base_commit"] != BASE_COMMIT or value["manifest_sha256"] != _MANIFEST_SHA256 or value["migration_source_sha256"] != _MIGRATION_SOURCE_SHA256 or value["pg_identity"] != PG_IDENTITY or value["probe_text_sha256"] != _PROBE_TEXT_SHA256 or value["derivation_mode"] != DERIVATION_MODE or value["reverse_vector_sha256"] != REVERSE_VECTOR_SHA256 or value["reference_public_key_sha256"] != PUBLIC_KEY_SHA256 or type(value["final_commit"]) is not str or not _COMMIT.fullmatch(value["final_commit"]) or not all(_sha(value[key]) for key in hashes) or not _nonce(value["observation_nonce"]) or type(value["issued_at_unix"]) is not int or type(value["expires_at_unix"]) is not int or value["issued_at_unix"] < 0 or value["expires_at_unix"] <= value["issued_at_unix"] or value["expires_at_unix"] - value["issued_at_unix"] > 900):
+    hashes = ("runtime_source_root", "absent_catalog_sha256", "full_catalog_sha256", "full_data_sha256", "ledger_prefix_sha256", "source_plan_sha256", "terminal_ledger_root", "terminal_catalog_root", "terminal_acl_root", "terminal_data_root", "terminal_spec_root", "terminal_tuple_sha256", "target_fingerprint")
+    if (value["schema"] != SCHEMA or value["base_commit"] != BASE_COMMIT or value["manifest_sha256"] != _MANIFEST_SHA256 or value["migration_source_sha256"] != _MIGRATION_SOURCE_SHA256 or value["pg_identity"] != PG_IDENTITY or value["probe_text_sha256"] != _PROBE_TEXT_SHA256 or value["derivation_mode"] != DERIVATION_MODE or value["reverse_vector_sha256"] != REVERSE_VECTOR_SHA256 or value["reference_public_key_sha256"] != PUBLIC_KEY_SHA256 or type(value["terminal_rows"]) is not int or value["terminal_rows"] < 1 or type(value["final_commit"]) is not str or not _COMMIT.fullmatch(value["final_commit"]) or not all(_sha(value[key]) for key in hashes) or not _nonce(value["observation_nonce"]) or type(value["issued_at_unix"]) is not int or type(value["expires_at_unix"]) is not int or value["issued_at_unix"] < 0 or value["expires_at_unix"] <= value["issued_at_unix"] or value["expires_at_unix"] - value["issued_at_unix"] > 900):
         _fail()
-    first = {key: value[_body_clone_field("first", key)] for key in _CLONE_FIELDS if key not in {"derivation_mode", "reverse_vector_sha256", "absent_catalog_sha256", "full_catalog_sha256", "full_data_sha256", "ledger_prefix_sha256"}} | {key: value[key] for key in ("derivation_mode", "reverse_vector_sha256", "absent_catalog_sha256", "full_catalog_sha256", "full_data_sha256", "ledger_prefix_sha256")}
-    second = {key: value[_body_clone_field("second", key)] for key in _CLONE_FIELDS if key not in {"derivation_mode", "reverse_vector_sha256", "absent_catalog_sha256", "full_catalog_sha256", "full_data_sha256", "ledger_prefix_sha256"}} | {key: value[key] for key in ("derivation_mode", "reverse_vector_sha256", "absent_catalog_sha256", "full_catalog_sha256", "full_data_sha256", "ledger_prefix_sha256")}
+    shared = {"derivation_mode", "reverse_vector_sha256", "absent_catalog_sha256",
+              "full_catalog_sha256", "full_data_sha256", "ledger_prefix_sha256",
+              "source_plan_sha256", "terminal_rows", "terminal_ledger_root",
+              "terminal_catalog_root", "terminal_acl_root", "terminal_data_root",
+              "terminal_spec_root", "terminal_tuple_sha256"}
+    first = {key: value[_body_clone_field("first", key)] for key in _CLONE_FIELDS if key not in shared} | {key: value[key] for key in shared}
+    second = {key: value[_body_clone_field("second", key)] for key in _CLONE_FIELDS if key not in shared} | {key: value[key] for key in shared}
     compare_clone_runs(first, second)
     return MappingProxyType(value)
 
@@ -198,7 +221,7 @@ def load_reference(raw: bytes | str) -> MappingProxyType:
 
 def build_reference_body(*, final_commit: str, runtime_source_root: str, target_fingerprint: str, observation_nonce: str, issued_at_unix: int, expires_at_unix: int, first_clone: Mapping[str, Any], second_clone: Mapping[str, Any]) -> MappingProxyType:
     roots = compare_clone_runs(first_clone, second_clone)
-    body = {"schema": SCHEMA, "base_commit": BASE_COMMIT, "final_commit": final_commit, "runtime_source_root": runtime_source_root, "manifest_sha256": _MANIFEST_SHA256, "migration_source_sha256": _MIGRATION_SOURCE_SHA256, "pg_identity": PG_IDENTITY, "probe_text_sha256": _PROBE_TEXT_SHA256, **dict(roots), "target_fingerprint": target_fingerprint, "observation_nonce": observation_nonce, "issued_at_unix": issued_at_unix, "expires_at_unix": expires_at_unix, **{_body_clone_field("first", key): first_clone[key] for key in _CLONE_FIELDS if key not in {"derivation_mode", "reverse_vector_sha256", "absent_catalog_sha256", "full_catalog_sha256", "full_data_sha256", "ledger_prefix_sha256"}}, **{_body_clone_field("second", key): second_clone[key] for key in _CLONE_FIELDS if key not in {"derivation_mode", "reverse_vector_sha256", "absent_catalog_sha256", "full_catalog_sha256", "full_data_sha256", "ledger_prefix_sha256"}}, "reference_public_key_sha256": PUBLIC_KEY_SHA256}
+    body = {"schema": SCHEMA, "base_commit": BASE_COMMIT, "final_commit": final_commit, "runtime_source_root": runtime_source_root, "manifest_sha256": _MANIFEST_SHA256, "migration_source_sha256": _MIGRATION_SOURCE_SHA256, "pg_identity": PG_IDENTITY, "probe_text_sha256": _PROBE_TEXT_SHA256, **dict(roots), "target_fingerprint": target_fingerprint, "observation_nonce": observation_nonce, "issued_at_unix": issued_at_unix, "expires_at_unix": expires_at_unix, **{_body_clone_field("first", key): first_clone[key] for key in _CLONE_FIELDS if key not in {"derivation_mode", "reverse_vector_sha256", "absent_catalog_sha256", "full_catalog_sha256", "full_data_sha256", "ledger_prefix_sha256", "source_plan_sha256", "terminal_rows", "terminal_ledger_root", "terminal_catalog_root", "terminal_acl_root", "terminal_data_root", "terminal_spec_root", "terminal_tuple_sha256"}}, **{_body_clone_field("second", key): second_clone[key] for key in _CLONE_FIELDS if key not in {"derivation_mode", "reverse_vector_sha256", "absent_catalog_sha256", "full_catalog_sha256", "full_data_sha256", "ledger_prefix_sha256", "source_plan_sha256", "terminal_rows", "terminal_ledger_root", "terminal_catalog_root", "terminal_acl_root", "terminal_data_root", "terminal_spec_root", "terminal_tuple_sha256"}}, "reference_public_key_sha256": PUBLIC_KEY_SHA256}
     return validate_reference_body(body)
 
 
