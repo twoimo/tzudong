@@ -4,31 +4,146 @@
 
 `g040-prefix-recovery.yml` is a zero-cost, read-only source-validation workflow. It is dispatch-only from the exact detached SHA of protected `main`, has read-only repository permission, and exposes only `validate`. It invokes `g040_recovery_source.verify_recovery_source` for that exact source and emits a bounded canonical receipt containing only schema, status, and the runtime source-root hash. The receipt contains no raw refs, URLs, DSNs, credentials, keys, signatures, SQL, rows, migration vectors, or authority material.
 
-GitHub Actions must never run `diagnose`, `readback`, `prepare`, or `execute`, import a production mutation credential, authority private key, restrictive service file, raw DSN, encrypted capture, authorization, or signature, use a service container, paid runner, paid service, hosted mutation, or production rehearsal. `diagnose` and `readback` require local restrictive service and custody artifacts, so they remain local-only alongside `prepare` and `execute`. The workflow does not establish live database state or authorize any recovery action.
+GitHub Actions must never run `diagnose`, `readback`, `prepare`, `finalize`, or `execute`, import a production mutation credential, authority private key, restrictive service file, raw DSN, encrypted capture, authorization, or signature, use a service container, paid runner, paid service, hosted mutation, or production rehearsal. `diagnose` and `readback` require local restrictive service and custody artifacts, so they remain local-only alongside `prepare`, `finalize`, and `execute`. The workflow does not establish live database state or authorize any recovery action.
 
 ## Local operator-only recovery
 
-`diagnose`, `readback`, `prepare`, and `execute` are local operator-only modes outside GitHub. Start from the exact protected-main source checkout; a branch, detached copy with an unverified commit, or changed working tree blocks the operation. Maintain the active human write freeze under external custody. The old freeze and old authority must never be reused.
+`diagnose`, `readback`, G037 `prepare`, G037 `finalize`, G037 `validate`, and `execute` are local operator-only modes outside GitHub. Start from the exact protected-main source checkout; a branch, detached copy with an unverified commit, or changed working tree blocks the operation. An external custodian, not this repository, must activate and continuously maintain the producer stop for the entire attempt. No repository command activates that stop; old freeze and old authority must never be reused.
 
 Before any commit-capable action, create a fresh encrypted capture under restricted local custody and complete two independent free local PostgreSQL 17.6 clone rehearsals. Each rehearsal must start from the fresh capture, use separate local clone environments, verify the exact protected-main source and target bindings, and preserve only sanitized receipt hashes outside the repository. A clone rehearsal is evidence only and is never a hosted or production rehearsal.
 
 `observe-reference` is clone-only and rollback-only: in one local transaction it verifies the strict `supabase_admin` session/database custody, grants local `CREATE` custody to restored-object owner `postgres`, switches locally to that role, proves FULL → exact source-controlled reverse 00400 → ABSENT → pinned forward 00400 → recreated FULL, then rolls back and proves the original FULL state. It never commits. The reverse 00400 vector is prohibited in hosted production and must never be used against a hosted database.
 
-Run local `validate`, then local `diagnose` with a restrictive read-only service configuration. `FULL_ESCAPED` is an expected classification: it selects the adoption vector rather than replaying the already-escaped 00400 work. Any partial or ambiguous classification blocks; do not infer success from a timeout, disconnect, incomplete receipt, or partial result.
+**Validation phases.** Run source-only G040 `validate-source` through the isolated bootstrap before any live operation; its receipt is not database, producer-stop, lineage, or authorization proof. G037 controller `validate` is a separate read-only input/custody check that opens no database. It runs only after a fresh finalized assertion and destructive authorization exist. One-shot `execute` rereads the assertion and revalidates live inventory and transaction-scoped locks.
 
-After the two independent rehearsals, create fresh one-shot authorization under offline restrictive custody, binding the exact source, fresh capture, freeze, target, observed prefix classification, and selected vector. Sign only the exact canonical authorization bytes with the offline authorization key. Do not put private keys, raw authorization bytes, signatures, service configuration, raw DSNs, or credentials in the checkout, GitHub, logs, artifacts, arguments, caches, tickets, or chat. Old authority must never be reused.
+**External producer stop and evidence.** There is no `g037_write_freeze.py freeze` command. Before G037 `prepare`, an external custodian must activate and keep active the producer stop, assign a fresh attempt-unique `freeze_id`, and create five distinct restrictive regular-file evidence artifacts outside the checkout. Pass them as `--evidence-producer-stop`, `--evidence-no-owner-write`, `--evidence-no-dashboard-write`, `--evidence-no-provider-write`, and `--evidence-no-out-of-band-write`. Each status must be true, each exact SHA-256 must match the signed assertion, and each observation must be at most 900 seconds old. Missing, permissive, symlinked, aliased, stale, or hash-mismatched artifacts block. `producer_stop` must identify the account-deletion `dispatch` and privacy-retention `retain` jobs, prove their repository/environment freeze guard was active before environment/secrets admission, and prove neither was in flight at observation.
 
-There are four non-interchangeable keypairs: offline clone-lineage attestation signs clone lineage only; offline reference-signing signs combined clone reference evidence only; offline destructive-authorization signs destructive authorization only; and the controller receipt key signs controller receipts only. Each verifier accepts only its fixed corresponding public key. No private key, signing path, signing command, raw document, or signature crosses into another boundary or appears in the checkout, command line, logs, CI, or retained receipt index.
-## Required local ceremony
+**Prepare, offline sign, finalize, authorization ordering.** `prepare` is a rolled-back lockability preflight, not an external freeze or maintained table lock. It writes the exact canonical unsigned operator-assertion request to a fresh restrictive outside-checkout path. The offline authorization custodian verifies the request schema, digest, identifiers, evidence, and expiry, signs those exact bytes with the fixed authorization-domain key outside the repository, and returns only a detached signature file under restrictive custody. `finalize` fixed-key verifies the exact canonical request, detached signature, custody, freshness, and current evidence before writing the final signed assertion. It has no private-key argument.
 
-Perform this order from the verified clean protected-main checkout, with every custody **path argument** supplied as a restrictive path outside the checkout. This path rule does not permit raw secret bytes in an argument, environment variable, or repository file; secret bytes remain only in the restrictive external file opened by the relevant custody boundary. Before every recovery entrypoint, set `AUTHORIZED_COMMIT` to the exact protected detached SHA and invoke the source-authenticated bootstrap: `git show "$AUTHORIZED_COMMIT":backend/supabase/scripts/g040_isolated_bootstrap.py | python3 -I - --repository-root "$PWD" --authorized-final-commit "$AUTHORIZED_COMMIT" --entrypoint backend/supabase/scripts/g040_production_controller.py -- validate`. Do not invoke a checkout-local recovery script directly: the bootstrap verifies detached HEAD, global cleanliness, the finite git-object inventory (including itself), bytes, modes, source root, and ignored/excluded import shadows before adding the checkout script root to `sys.path`. Environment variables cannot establish its in-process capability.
-1. Run the source-authenticated bootstrap form above for `validate` and record its sanitized receipt hash.
-2. Activate the write freeze only through the same form with `--entrypoint backend/supabase/scripts/g037_write_freeze.py -- freeze` in its production-freeze mode and retain its external receipt. Then run `g035_hosted_recovery.py production-capture` only through the same form with `--entrypoint backend/supabase/scripts/g035_hosted_recovery.py -- production-capture` (never legacy `capture`) and restrictive outside-checkout `--destination`, `--capture-receipt`, and `--service-file` paths. Record only `receipt_sha256`, `dump_sha256`, `dump_bytes`, and source-root hashes; never record raw paths or secrets.
-3. On any capture, receipt-publication, or verifier failure, identity-safe cleanup of the failed capture outputs completes before clone A starts. Do not reuse a survivor, receipt, freeze, or authorization from a failed attempt.
-4. For clone A and clone B, independently restore that capture into a separately labelled local PostgreSQL 17.6 loopback-only clone, run `bind-restore`, then run `observe-reference`. Each clone yields one signed combined observation binding its ABSENT and recreated FULL projections, for two distinct combined observation receipts in total. Retain only sanitized receipt hashes and destroy the labelled clone resources with the exact label-scoped cleanup operation.
-5. Build the signed reference from the two combined clone observations using the offline **reference-signing** key, then locally verify its raw canonical bytes against the pinned reference public key. The reference recomputes each clone identity from the exact live identity, container ID, image ID, image digest, and endpoint tuple. It rejects reuse of either clone identity, nonce, live/container/endpoint identity, lineage attestation/signature, binding receipt, or observation receipt; stable capture, restore, image, catalog, data, ledger, and derivation evidence must match across clones.
-6. Run local `diagnose`, bind aggregate custody, and create one fresh offline destructive authorization. Verify its separate public key before `prepare`; run `execute` once only after all bindings and the active freeze still match.
-7. Run fixed local `readback`, compare the independently produced terminal `readback_sha256` values and their canonical terminal projections, and retain only sanitized hashes under restrictive custody. Do not compare whole signed envelopes: envelope metadata and signatures are not interchangeable terminal-state evidence.
+```sh
+# All placeholders are absolute restrictive paths outside the checkout.
+AUTHORIZED_COMMIT='<EXACT_40_HEX_PROTECTED_MAIN_SHA>'
+git show "$AUTHORIZED_COMMIT":backend/supabase/scripts/g040_isolated_bootstrap.py | python3 -I - \
+  --repository-root "$PWD" --authorized-final-commit "$AUTHORIZED_COMMIT" \
+  --entrypoint backend/supabase/scripts/g037_production_controller.py -- prepare \
+  --origin '<EXACT_HTTPS_SUPABASE_ORIGIN>' --freeze-id '<FRESH_FREEZE_ID>' \
+  --operator-assertion-request '<FRESH_UNSIGNED_REQUEST>' \
+  --service-file '<SERVICE_FILE>' --pgpass-file '<PGPASS_FILE>' --expiry-seconds 600 \
+  --evidence-producer-stop '<PRODUCER_STOP>' --evidence-no-owner-write '<NO_OWNER_WRITE>' \
+  --evidence-no-dashboard-write '<NO_DASHBOARD_WRITE>' --evidence-no-provider-write '<NO_PROVIDER_WRITE>' \
+  --evidence-no-out-of-band-write '<NO_OUT_OF_BAND_WRITE>'
+
+# Offline signing occurs outside repository tooling. Then:
+git show "$AUTHORIZED_COMMIT":backend/supabase/scripts/g040_isolated_bootstrap.py | python3 -I - \
+  --repository-root "$PWD" --authorized-final-commit "$AUTHORIZED_COMMIT" \
+  --entrypoint backend/supabase/scripts/g037_production_controller.py -- finalize \
+  --origin '<EXACT_HTTPS_SUPABASE_ORIGIN>' --freeze-id '<FRESH_FREEZE_ID>' \
+  --operator-assertion-request '<FRESH_UNSIGNED_REQUEST>' \
+  --operator-assertion-signature '<DETACHED_SIGNATURE>' --operator-assertion '<FRESH_FINAL_ASSERTION>' \
+  --evidence-producer-stop '<PRODUCER_STOP>' --evidence-no-owner-write '<NO_OWNER_WRITE>' \
+  --evidence-no-dashboard-write '<NO_DASHBOARD_WRITE>' --evidence-no-provider-write '<NO_PROVIDER_WRITE>' \
+  --evidence-no-out-of-band-write '<NO_OUT_OF_BAND_WRITE>'
+```
+
+After finalization, construct destructive authorization from the exact final assertion hash and its source, target, capture, classification/vector, lineage/reference, relation-root, and ACL-root bindings. Offline-sign and fixed-key verify that canonical authorization, run full G037 `validate`, then permit one `execute` only while the assertion and evidence remain fresh. The transaction-scoped table fence exists only within `execute`; it is acquired and rechecked there. Keep the external producer stop active through capture, both clone rehearsals, execution, cleanup, and review.
+
+The G040 artifact handoff is exact: controller `prepare` writes the canonical bindings-only object accepted directly by `g040_recovery_authorization.py --bindings`; operators do not extract, add, or rename fields. Before building authority, an administrator must pre-provision the owner-restricted one-shot journal at `C:\ProgramData\TzudongRecovery\g040-attempt-journal` on Windows or `/var/lib/tzudong-recovery/g040-attempt-journal` on POSIX. The controller never creates or chmods this directory and never derives it from `HOME`.
+
+Run the complete local sequence through the isolated exact-commit bootstrap. Every output placeholder below is a fresh absolute restrictive path outside the checkout; every input is the exact prior-stage artifact. UUIDs are fresh attempt-specific values. The G037 finalized freeze assertion is passed byte-for-byte without adding a newline.
+
+```sh
+BOOTSTRAP='backend/supabase/scripts/g040_isolated_bootstrap.py'
+CONTROLLER='backend/supabase/scripts/g040_production_controller.py'
+AUTHORITY='backend/supabase/scripts/g040_recovery_authorization.py'
+
+git show "$AUTHORIZED_COMMIT:$BOOTSTRAP" | python3 -I - \
+  --repository-root "$PWD" --authorized-final-commit "$AUTHORIZED_COMMIT" \
+  --entrypoint "$CONTROLLER" -- validate-source \
+  --repository-root "$PWD" --source-commit "$AUTHORIZED_COMMIT" --source-receipt "$SOURCE_RECEIPT"
+
+git show "$AUTHORIZED_COMMIT:$BOOTSTRAP" | python3 -I - \
+  --repository-root "$PWD" --authorized-final-commit "$AUTHORIZED_COMMIT" \
+  --entrypoint "$CONTROLLER" -- diagnose \
+  --repository-root "$PWD" --source-commit "$AUTHORIZED_COMMIT" \
+  --target-fingerprint "$TARGET_FINGERPRINT" --reference "$REFERENCE" \
+  --service-file "$SERVICE_FILE" --service-name g040-production \
+  --nonce-dir "$NONCE_DIR" --observation-receipt "$OBSERVATION"
+
+git show "$AUTHORIZED_COMMIT:$BOOTSTRAP" | python3 -I - \
+  --repository-root "$PWD" --authorized-final-commit "$AUTHORIZED_COMMIT" \
+  --entrypoint "$CONTROLLER" -- production-backup \
+  --repository-root "$PWD" --source-commit "$AUTHORIZED_COMMIT" \
+  --target-fingerprint "$TARGET_FINGERPRINT" --reference "$REFERENCE" \
+  --observation "$OBSERVATION" --destination "$BACKUP_DIRECTORY" \
+  --capture-receipt "$CAPTURE_RECEIPT" --service-file "$SERVICE_FILE" \
+  --recipient "$AGE_RECIPIENT" --g034-artifact "$G034_ARTIFACT" \
+  --encrypt-command "$AGE_BINARY" --freeze-assertion "$FINAL_FREEZE_ASSERTION" \
+  --freeze-evidence "$PRODUCER_STOP" --freeze-evidence "$NO_OWNER_WRITE" \
+  --freeze-evidence "$NO_DASHBOARD_WRITE" --freeze-evidence "$NO_PROVIDER_WRITE" \
+  --freeze-evidence "$NO_OUT_OF_BAND_WRITE" --output "$PRODUCTION_BACKUP"
+
+git show "$AUTHORIZED_COMMIT:$BOOTSTRAP" | python3 -I - \
+  --repository-root "$PWD" --authorized-final-commit "$AUTHORIZED_COMMIT" \
+  --entrypoint "$CONTROLLER" -- prepare \
+  --repository-root "$PWD" --source-commit "$AUTHORIZED_COMMIT" \
+  --target-fingerprint "$TARGET_FINGERPRINT" --reference "$REFERENCE" \
+  --observation "$OBSERVATION" --custody "$AGGREGATE_CUSTODY" \
+  --authority-template "$AUTHORITY_BINDINGS"
+
+git show "$AUTHORIZED_COMMIT:$BOOTSTRAP" | python3 -I - \
+  --repository-root "$PWD" --authorized-final-commit "$AUTHORIZED_COMMIT" \
+  --entrypoint "$AUTHORITY" -- build-request \
+  --repository-root "$PWD" --bindings "$AUTHORITY_BINDINGS" \
+  --authorization-id "$AUTHORIZATION_ID" --attempt-id "$ATTEMPT_ID" \
+  --valid-seconds 600 --output "$AUTHORIZATION_REQUEST"
+```
+
+The offline authorization custodian verifies the exact request bytes, target/source/freeze/capture/rehearsal/terminal bindings, journal identifiers, and expiry; signs those exact bytes with the fixed G040 destructive-authorization key; and returns only `$AUTHORIZATION_SIGNATURE` under restrictive custody. The runtime receives no private key or signing command. Fixed-key verification must succeed before execute:
+
+```sh
+git show "$AUTHORIZED_COMMIT:$BOOTSTRAP" | python3 -I - \
+  --repository-root "$PWD" --authorized-final-commit "$AUTHORIZED_COMMIT" \
+  --entrypoint "$AUTHORITY" -- verify \
+  --repository-root "$PWD" --bindings "$AUTHORITY_BINDINGS" \
+  --authorization "$AUTHORIZATION_REQUEST" --signature "$AUTHORIZATION_SIGNATURE"
+
+git show "$AUTHORIZED_COMMIT:$BOOTSTRAP" | python3 -I - \
+  --repository-root "$PWD" --authorized-final-commit "$AUTHORIZED_COMMIT" \
+  --entrypoint "$CONTROLLER" -- execute \
+  --repository-root "$PWD" --source-commit "$AUTHORIZED_COMMIT" \
+  --target-fingerprint "$TARGET_FINGERPRINT" --reference "$REFERENCE" \
+  --service-file "$SERVICE_FILE" --service-name g040-production \
+  --observation "$OBSERVATION" --custody "$AGGREGATE_CUSTODY" \
+  --authorization "$AUTHORIZATION_REQUEST" --authorization-signature "$AUTHORIZATION_SIGNATURE" \
+  --prepared-receipt "$PREPARED_RECEIPT" --final-receipt "$FINAL_RECEIPT" \
+  --proof-receipt "$PROOF_RECEIPT" --backup-receipt "$PRODUCTION_BACKUP" \
+  --capture-receipt "$CAPTURE_RECEIPT" --archive "$ENCRYPTED_ARCHIVE" \
+  --freeze-assertion "$FINAL_FREEZE_ASSERTION" \
+  --freeze-evidence "$PRODUCER_STOP" --freeze-evidence "$NO_OWNER_WRITE" \
+  --freeze-evidence "$NO_DASHBOARD_WRITE" --freeze-evidence "$NO_PROVIDER_WRITE" \
+  --freeze-evidence "$NO_OUT_OF_BAND_WRITE"
+```
+
+A nonzero execute result, timeout, disconnect, rollback failure, missing final receipt, or `commit_ambiguous_readback_only` is never retried. Preserve the producer stop, journal marker, authorization, prepared receipt, archive, capture, observation, reference, and custody artifacts unchanged. Use only historical non-mutating readback with fresh proof/final destinations to resolve the committed state:
+
+```sh
+git show "$AUTHORIZED_COMMIT:$BOOTSTRAP" | python3 -I - \
+  --repository-root "$PWD" --authorized-final-commit "$AUTHORIZED_COMMIT" \
+  --entrypoint "$CONTROLLER" -- readback \
+  --repository-root "$PWD" --source-commit "$AUTHORIZED_COMMIT" \
+  --target-fingerprint "$TARGET_FINGERPRINT" --reference "$REFERENCE" \
+  --service-file "$SERVICE_FILE" --service-name g040-production \
+  --observation "$OBSERVATION" --custody "$AGGREGATE_CUSTODY" \
+  --authorization "$AUTHORIZATION_REQUEST" --authorization-signature "$AUTHORIZATION_SIGNATURE" \
+  --prepared-receipt "$PREPARED_RECEIPT" --final-receipt "$READBACK_FINAL_RECEIPT" \
+  --proof-receipt "$READBACK_PROOF_RECEIPT"
+```
+
+Readback is historical evidence only: it cannot authorize mutation, recreate a missing marker, or consume a second attempt. Retain the fixed journal marker and external producer stop until the signed terminal readback and proof receipts have been independently verified.
+
+**Custody and failed attempts.** Every service, pgpass, recipient, allowlist, evidence, receipt, archive/destination, assertion request, assertion, authorization, detached signature, and signer/key-reference path is absolute, restrictive, and outside the checkout. Inputs are stable regular files; published outputs are fresh and collision-free. No raw secret, key, authorization, signature, or private-key path/bytes appears in argv, environment, checkout, logs, artifacts, caches, tickets, or chat. On any capture, publication, or verification failure, preserve the producer stop, identity-safely clean failed outputs, and invalidate the failed `freeze_id`, evidence, request, assertion, capture, and authorization. Begin a fresh attempt with fresh evidence; do not restart writers merely to mint a new freeze. On rollback failure, commit ambiguity, or committed-unfinalized state, do not retry execution; preserve the stop for reconciliation/manual review.
+
+**Hosted classification and execution.** After source/reference validation, local `diagnose` accepts only exact `UNAPPLIED` or `FULL_ESCAPED`; `FULL_ESCAPED` is an expected classification and selects adoption rather than replaying escaped 00400 work. Any partial or ambiguous classification blocks. After fresh rehearsal, custody, assertion, authorization, and freeze revalidation, the authorized recovery remains one transaction/one commit. A timeout, disconnect, rollback failure, or uncertain outcome is never automatic success and must not be retried.
 
 ## Offline clone-lineage attestation
 
@@ -38,7 +153,7 @@ The canonical document binds the stable capture and restore receipt bytes, encry
 
 This clone-lineage key is neither the offline destructive-authorization key nor the online controller receipt key. The controller runtime never receives the clone-lineage private key, its path, or a signing command; failed, expired, malformed, substituted, or wrong-key attestations block the bind.
 The service file is a restrictive regular file outside the repository. Before and after every clone connection, the runner reopens it through custody, compares its bytes and file identity, and rejects replacement. The effective libpq peer must report exactly `127.0.0.1` and the parsed service port; that port must also exactly match the Docker loopback proof. Repository-resident, permissive, replaced, or mismatched-peer service files block the rehearsal.
-Only the local controller may run `prepare` and then `execute`. The authorized recovery is one transaction/one commit: it must lock, revalidate bindings, perform the selected vector, write the ledger state, and commit once. A rollback or uncertain outcome blocks automatic retry and requires fresh operator review, capture, rehearsal, and one-shot authorization.
+`prepare` only proves lockability in a transaction that is rolled back and writes an unsigned bounded assertion request; it neither activates nor maintains the external producer stop or table locks. Only `execute` holds the table fence, revalidates inventory, performs the selected vector, writes the ledger state, and commits once. A rollback or uncertain outcome blocks automatic retry and requires fresh operator review, capture, rehearsal, request/finalization, and one-shot authorization.
 
 ## Fixed post-commit readback
 

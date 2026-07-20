@@ -40,13 +40,23 @@ def inv(acl="a"):
 def terminal(_,spec): return {"catalog_root":"c"*64,"acl_root":"a"*64,"ledger_root":"l"*64,"terminal_spec":spec}
 def capture():
  roots={"auth_storage_catalog_root":"1"*64,"auth_storage_metadata_root":"2"*64,"storage_blob_root":"3"*64,"short_urls_catalog_root":"8"*64,"short_urls_rowset_root":"9"*64,"short_urls_victim_descriptors_root":"a"*64,"short_urls_row_count":2,"duplicate_group_count":1,"duplicate_victim_count":1,"recipient_fingerprint":"4"*64,"logical_ciphertext_sha256":"5"*64,"blob_ciphertext_sha256":"6"*64,"recovery_receipt_sha256":"7"*64,"object_count":2,"total_bytes":1024}
- evidence={"schema":"g037-short-url-remediation-evidence-v1","authorization_id":"11111111-1111-4111-8111-111111111111","policy":"exact-baseline-to-terminal-ledger-single-commit-v1","execution_authorization_sha256":"b"*64,"execution_authorization_signature_sha256":"c"*64,"legacy_repository_commit":"0"*40,"legacy_authorization_sha256":"d"*64,"legacy_authorization_signature_sha256":"e"*64,"legacy_capture_receipt_sha256":"f"*64,"legacy_restore_receipt_sha256":"1"*64,"legacy_inspection_receipt_sha256":"2"*64,"recovery_receipt_sha256":"7"*64,"capture_short_urls_rowset_sha256":"9"*64,"pre_short_urls_rowset_sha256":"9"*64,"survivor_short_urls_rowset_sha256":"d"*64,"deleted_count":1,"duplicate_group_count_before":1,"duplicate_group_count_after":0}
+ evidence={"schema":"g037-short-url-remediation-evidence-v1","authorization_id":"11111111-1111-4111-8111-111111111111","policy":"exact-baseline-to-terminal-ledger-single-commit-v1","execution_authorization_sha256":"b"*64,"execution_authorization_signature_sha256":"c"*64,"attempt_marker_sha256":"a"*64,"legacy_repository_commit":"0"*40,"legacy_authorization_sha256":"d"*64,"legacy_authorization_signature_sha256":"e"*64,"legacy_capture_receipt_sha256":"f"*64,"legacy_restore_receipt_sha256":"1"*64,"legacy_inspection_receipt_sha256":"2"*64,"recovery_receipt_sha256":"7"*64,"capture_short_urls_rowset_sha256":"9"*64,"pre_short_urls_rowset_sha256":"9"*64,"survivor_short_urls_rowset_sha256":"d"*64,"deleted_count":1,"duplicate_group_count_before":1,"duplicate_group_count_after":0}
  evidence["remediation_sha256"]=freeze.digest(evidence)
  return {"capture_roots":roots,"remediation_evidence":evidence}
 def patches(inventory):
  return (patch.object(freeze,"_root_source",return_value=(Path("."),"a"*40,"s"*64,"t"*64)),patch.object(freeze,"validate_operator_assertion"),patch.object(freeze,"_inv",return_value=inventory),patch.object(freeze,"_locks",return_value="l"*64),patch.object(freeze,"_verify_active",side_effect=lambda v,e:freeze._verified_controller_capability({**v,"signature":"ok"})))
 def precommit(receipt): return receipt["receipt_sha256"]
 class FenceTests(unittest.TestCase):
+ def test_remediation_evidence_requires_marker_digest_and_rehashing(self):
+  evidence=capture()["remediation_evidence"]
+  freeze.validate_remediation_evidence(evidence)
+  missing=dict(evidence); missing.pop("attempt_marker_sha256"); missing["remediation_sha256"]=freeze.digest({key:value for key,value in missing.items() if key!="remediation_sha256"})
+  with self.assertRaises(freeze.FreezeError): freeze.validate_remediation_evidence(missing)
+  mutated={**evidence,"attempt_marker_sha256":"b"*64}
+  with self.assertRaises(freeze.FreezeError): freeze.validate_remediation_evidence(mutated)
+  extra={**evidence,"unexpected":"value"}
+  extra["remediation_sha256"]=freeze.digest({key:value for key,value in extra.items() if key!="remediation_sha256"})
+  with self.assertRaises(freeze.FreezeError): freeze.validate_remediation_evidence(extra)
  def test_verified_handoffs_are_immutable_and_reject_direct_construction(self):
   capability={"schema":freeze.SCHEMA,"state":"active-provisional","freeze_id":"freeze-0001","origin":"https://x","commit":"a"*40,"manifest_sha256":freeze.MANIFEST_SHA256,"source_root":"s"*64,"terminal_spec":"t"*64,"scope":{"schemas":list(freeze.REACHABLE_SCHEMAS),"ordinary_relations":"all"},"relation_root":"r"*64,"acl_root":"l"*64,"held_lock_root":"h"*64,"not_before_unix":1,"not_after_unix":2,"controller_public_key_sha256":freeze.CONTROLLER_PUBLIC_KEY_SHA256,"signature":"AA=="}
   with self.assertRaises(TypeError): freeze.VerifiedControllerCapability(capability)

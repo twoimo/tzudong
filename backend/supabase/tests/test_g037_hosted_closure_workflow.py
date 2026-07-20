@@ -223,10 +223,10 @@ class G037HostedClosureWorkflowTests(unittest.TestCase):
         ):
             self.assertIn(required, self.runbook)
         for required in (
-            "Validate is database-free: it verifies local source, artifacts, and contracts only",
-            "no validate receipt proves the live baseline",
-            "Exact live baseline inventory and ACL roots are first enforced by `rehearse` under held locks",
-            "rechecked by `execute` after it reacquires those locks",
+            "Validate is database-free and rejects custody, expiry, source, freeze, and evidence mismatches",
+            "Run local-only `g037_production_controller.py rehearse`",
+            "Run local-only `g037_production_controller.py execute`",
+            "exclusively created and directory-synced before secret admission or database connection",
         ):
             self.assertIn(required, self.runbook)
         self.assertNotIn("unfreeze", self.runbook.lower())
@@ -235,9 +235,10 @@ class G037HostedClosureWorkflowTests(unittest.TestCase):
     def test_runbook_binds_local_remediation_authority_before_execution(self):
         sequence = (
             "g037_production_controller.py prepare",
+            "Review the exact request bytes offline",
+            "Run `finalize` through the same bootstrap",
             "legacy G035 capture, restore, and inspection receipts and the legacy signed authorization",
-            "g037_remediation_authorization.py build-template",
-            "Sign those exact template bytes offline",
+            "Build and sign the G037 remediation template offline",
             "`validate`, `rehearse`, and `execute` require the same seven legacy/execution files",
             "g037_production_controller.py validate",
             "g037_production_controller.py rehearse",
@@ -246,24 +247,19 @@ class G037HostedClosureWorkflowTests(unittest.TestCase):
         positions = [self.runbook.index(item) for item in sequence]
         self.assertEqual(positions, sorted(positions))
         for required in (
-            "g037-production-remediation-authorization-v1",
-            "g037-production-short-url-remediation",
-            "exact-baseline-to-terminal-ledger-single-commit-v1",
-            "exact current origin, project, commit, source-root, terminal-spec, freeze ID, relation root, ACL root",
-            "signed operator assertion, recipient fingerprint, recovery public-key fingerprint, capture-scope commitment, fresh UUID, and bounded expiry",
-            "writes only a fresh canonical unsigned template outside the repository, accepts no private key",
-            "g037-remediation-execution-signing-key.pem",
-            "source-pinned public key",
-            "historical G035 capture hash is provenance only; it never equals or stands in for the fresh randomized G037 capture receipt",
-            "captures fresh encrypted Auth, Storage, and `public.short_urls`",
-            "simulates the duplicate delete and migrations; rolls back; and proves the baseline",
-            "A successful exact baseline-to-terminal ledger transition consumes the authority",
-            "bounded, unexpired manual retry and never an automatic retry",
-            "No GitHub Actions job may apply or execute this mutation",
+            "fresh canonical **unsigned** assertion request",
+            "create a detached signature with the fixed authorization public-key counterpart",
+            "holds both files by descriptor",
+            "Never supply any private signing-key path on the controller command line",
+            "same seven legacy/execution files",
+            "only valid marker location from the authenticated authorization ID and authorization hash",
+            "retained on commit, rollback, ambiguity, and every failure",
+            "After **any** attempt, including rollback",
+            "No GitHub Actions job may execute this mutation",
         ):
             self.assertIn(required, self.runbook)
         self.assertIn(
-            "Never place this private key, private-key input, raw template bytes, or signed bytes in the repository, controller, GitHub Actions",
+            "Backup material, provider exports, credentials, raw URLs, row data, keys, and secrets never go to GitHub repositories, Actions artifacts, caches, logs, arguments, releases, or issues",
             self.runbook,
         )
 if __name__ == "__main__":

@@ -44,7 +44,7 @@ def reference(**changes):
         second_binding_receipt_sha256="8888888888888888888888888888888888888888888888888888888888888888",
         second_observation_receipt_sha256="9999999999999999999999999999999999999999999999999999999999999999",
         reference_public_key_sha256=evidence.PUBLIC_KEY_SHA256,
-        signature_b64="AA==", receipt_sha256="3" * 64,
+        receipt_sha256="3" * 64,
     )
     return evidence.VerifiedReference(**{**value.__dict__, **changes})
 

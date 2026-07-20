@@ -103,37 +103,13 @@ class CloneRehearsalTests(unittest.TestCase):
         path = root / "service.conf"
         path.write_text(f"[g035-local]\nhost={host}\nport=55401\ndbname={db}\nuser=supabase_admin\nsslmode=disable\napplication_name=g035-local-clone\npassword=never-print\n")
         return path
-    def test_reference_signer_uses_resolved_key_after_none_validator_and_rejects_wrong_public_key(self):
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            repository_root = root / "repository"
-            repository_root.mkdir()
-            key_path = root / "keys" / "reference.key"
-            key_path.parent.mkdir()
-            key_path.write_bytes(b"not-read-by-mocked-openssl")
-            supplied_path = key_path.parent / ".." / "keys" / "reference.key"
-            resolved_path = key_path.resolve()
-
-            def derive_public(command, **kwargs):
-                self.assertEqual(command, ["openssl", "pkey", "-in", str(resolved_path), "-pubout"])
-                return types.SimpleNamespace(stdout=rehearsal.REFERENCE_PUBLIC_KEY_PEM.encode("ascii"))
-
-            with patch.object(rehearsal.crypto, "require_file", return_value=None) as require_file, \
-                    patch.object(rehearsal.crypto, "command", return_value="openssl"), \
-                    patch.object(rehearsal.subprocess, "run", side_effect=derive_public), \
-                    patch.object(rehearsal.crypto, "openssl_sign", return_value=b"signature") as openssl_sign:
-                signer = rehearsal._reference_signer(supplied_path, repository_root=repository_root)
-                self.assertEqual(signer(b"payload"), b"signature")
-            require_file.assert_called_once_with(resolved_path, "reference signing key")
-            openssl_sign.assert_called_once_with("openssl", resolved_path, b"payload")
-
-            with patch.object(rehearsal.crypto, "require_file", return_value=None), \
-                    patch.object(rehearsal.crypto, "command", return_value="openssl"), \
-                    patch.object(rehearsal.subprocess, "run", return_value=types.SimpleNamespace(stdout=b"wrong-public-key")), \
-                    patch.object(rehearsal.crypto, "openssl_sign") as openssl_sign:
-                with self.assertRaisesRegex(rehearsal.RehearsalError, "reference_signing_key"):
-                    rehearsal._reference_signer(supplied_path, repository_root=repository_root)
-            openssl_sign.assert_not_called()
+    def test_parser_excludes_online_signing_surfaces(self):
+        parser = rehearsal._parser()
+        help_text = parser.format_help()
+        self.assertNotIn("--private-key", help_text)
+        self.assertIn("build-reference-request", help_text)
+        self.assertIn("finalize-reference", help_text)
+        self.assertIn("build-lineage-request", help_text)
 
     def test_live_identity_uses_a_real_cursor(self):
         connection = FakeConnection()
@@ -291,116 +267,18 @@ class CloneRehearsalTests(unittest.TestCase):
         self.assertTrue(all(statement.startswith("DROP ") and statement.endswith(" RESTRICT") for statement in rehearsal.REVERSE_VECTOR))
         self.assertTrue(all("CASCADE" not in statement and "IF EXISTS" not in statement for statement in rehearsal.REVERSE_VECTOR))
         self.assertEqual(rehearsal.REVERSE_VECTOR_SHA256, reverse._vector_sha256())
-    def test_reference_v3_uses_signed_observations_and_rejects_tampered_receipts(self):
-        source = rehearsal.SourceBinding("a" * 40, "0" * 64)
-        target, now = "f" * 64, 150
-
-        def observation(marker, nonce):
-            shared = {
-                "schema": "g040-clone-observation-v1",
-                "issued_at": 100,
-                "expires_at": 200,
-                "final_recovery_commit": source.final_commit,
-                "runtime_source_root": source.runtime_source_root,
-                "manifest_sha256": rehearsal.prefix.MANIFEST_SHA256,
-                "migration_source_sha256": rehearsal.prefix.MIGRATION_SOURCE_SHA256,
-                "probe_text_sha256": rehearsal.prefix.PROBE_TEXT_SHA256,
-                "target_fingerprint": target,
-                "binding_receipt_sha256": marker * 64,
-                "clone_nonce": nonce,
-                "image_id_sha256": "1" * 64,
-                "image_digest_sha256": "2" * 64,
-                "g035_restore_receipt_sha256": "3" * 64,
-                "g035_capture_receipt_sha256": "4" * 64,
-                "restored_archive_sha256": "5" * 64,
-                "capture_receipt_bytes_sha256": "6" * 64,
-                "restore_receipt_bytes_sha256": "7" * 64,
-                "derivation_mode": rehearsal.DERIVATION_MODE,
-                "reverse_vector_sha256": rehearsal.REVERSE_VECTOR_SHA256,
-                "initial_full_ledger_sha256": "8" * 64,
-                "initial_full_catalog_sha256": "9" * 64,
-                "initial_full_data_sha256": "a" * 64,
-                "absent_ledger_sha256": "8" * 64,
-                "absent_catalog_sha256": "b" * 64,
-                "recreated_full_ledger_sha256": "8" * 64,
-                "recreated_full_catalog_sha256": "9" * 64,
-                "recreated_full_data_sha256": "a" * 64,
-                "post_rollback_ledger_sha256": "8" * 64,
-                "post_rollback_catalog_sha256": "9" * 64,
-                "post_rollback_data_sha256": "a" * 64,
-            }
-            proof = {
-                "live_identity_sha256": marker * 64,
-                "container_id_sha256": marker * 64,
-                "endpoint_sha256": marker * 64,
-                "lineage_attestation_sha256": marker * 64,
-                "lineage_signature_sha256": marker * 64,
-            }
-            shared.update(proof)
-            shared["clone_identity"] = rehearsal._sha(rehearsal._canonical({
-                key: shared[key]
-                for key in ("live_identity_sha256", "container_id_sha256", "image_id_sha256", "image_digest_sha256", "endpoint_sha256")
-            }))
-            return shared
-
-        def signed_receipt(body):
-            unsigned = {"schema": rehearsal.controller.SCHEMA, "kind": "local-clone-observation", "body": body}
-            signature = rehearsal._sha(rehearsal._canonical(unsigned))
-            return rehearsal._canonical({**unsigned, "signature_b64": signature}) + b"\n"
-
-        receipts = {
-            "first.json": signed_receipt(observation("c", "first-observation-nonce")),
-            "second.json": signed_receipt(observation("d", "second-observation-nonce")),
-        }
-
-        def verified_document(raw, kind):
-            value = json.loads(raw.decode("ascii"))
-            unsigned = {key: value[key] for key in ("schema", "kind", "body")}
-            if (kind != "local-clone-observation" or value.get("signature_b64") != rehearsal._sha(rehearsal._canonical(unsigned))):
-                raise rehearsal.controller.ControllerError("receipt_invalid")
-            return value["body"]
-
-        written = {}
-        with patch.object(rehearsal.controller, "_outside", side_effect=lambda path, root: Path(path)), \
-                patch.object(rehearsal.controller, "_stable_bytes", side_effect=lambda path: receipts[str(path)]), \
-                patch.object(rehearsal.controller, "_signed_document", side_effect=verified_document), \
-                patch.object(rehearsal, "_reference_signer", return_value=lambda payload: b"deterministic-reference-signature"), \
-                patch.object(rehearsal, "verify_reference", return_value=object()) as verify, \
-                patch.object(rehearsal, "_write", side_effect=lambda path, value: written.setdefault(str(path), value)):
-            rehearsal.build_reference(
-                source=source,
-                target_fingerprint=target,
-                nonce="reference-observation-nonce",
-                first_observation="first.json",
-                second_observation="second.json",
-                private_key="unused-test-key",
-                output="reference.json",
-                repository_root=".",
-                now=now,
-            )
-        self.assertEqual(written["reference.json"]["schema"], "g040-prefix-reference-v3")
-        self.assertEqual(written["reference.json"]["first_observation_receipt_sha256"], rehearsal._sha(receipts["first.json"]))
-        self.assertEqual(written["reference.json"]["second_observation_receipt_sha256"], rehearsal._sha(receipts["second.json"]))
-        verify.assert_called_once()
-
-        receipts["second.json"] = receipts["second.json"].replace(b'"signature_b64":"', b'"signature_b64":"tampered-', 1)
-        with patch.object(rehearsal.controller, "_outside", side_effect=lambda path, root: Path(path)), \
-                patch.object(rehearsal.controller, "_stable_bytes", side_effect=lambda path: receipts[str(path)]), \
-                patch.object(rehearsal.controller, "_signed_document", side_effect=verified_document), \
-                patch.object(rehearsal, "_reference_signer") as signer:
-            with self.assertRaisesRegex(rehearsal.RehearsalError, "reference_input"):
-                rehearsal.build_reference(
-                    source=source,
-                    target_fingerprint=target,
-                    nonce="reference-observation-nonce",
-                    first_observation="first.json",
-                    second_observation="second.json",
-                    private_key="unused-test-key",
-                    output="reference.json",
-                    repository_root=".",
-                    now=now,
-                )
-        signer.assert_not_called()
+    def test_reference_request_cli_uses_detached_finalization_only(self):
+        parser = rehearsal._parser()
+        with self.assertRaises(SystemExit):
+            parser.parse_args(["build-reference", "--private-key", "key"])
+        request = parser.parse_args([
+            "build-reference-request", "--repository-root", "root",
+            "--source-commit", "a" * 40, "--target-fingerprint", "b" * 64,
+            "--nonce", "reference-observation-nonce", "--first-observation", "one",
+            "--second-observation", "two", "--output", "request",
+        ])
+        self.assertEqual(request.mode, "build-reference-request")
+        self.assertFalse(hasattr(request, "private_key"))
     def test_service_custody_rejects_repository_file_replacement_and_effective_peer_mismatch(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw); service = self.service(root)

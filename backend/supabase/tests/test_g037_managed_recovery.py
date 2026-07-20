@@ -9,8 +9,9 @@ SCRIPTS=Path(__file__).parents[1]/"scripts"; sys.path.insert(0,str(SCRIPTS))
 MODULE=SCRIPTS/"g037_managed_recovery.py"
 spec=importlib.util.spec_from_file_location("g037",MODULE); g037=importlib.util.module_from_spec(spec); assert spec.loader; spec.loader.exec_module(g037)
 import g037_write_freeze as freeze
+import g040_recovery_authorization as g040
 def private(path,content=b"x"):
- path.write_bytes(content if isinstance(content,bytes) else content.encode()); path.chmod(0o600); return path
+ path.write_bytes(content if isinstance(content,bytes) else content.encode()); path.chmod(0o600); g037._harden_restrictive_file(path); return path
 class Response(io.BytesIO):
  status=200
  def __init__(self,payload): super().__init__(payload); self.headers={"Content-Length":str(len(payload))}
@@ -23,7 +24,10 @@ class Opener:
  def __init__(self,response): self.response=response; self.requests=[]
  def open(self,request,timeout): self.requests.append((request,timeout)); return self.response
 class G037ManagedRecoveryTests(unittest.TestCase):
- def setUp(self): self.temp=tempfile.TemporaryDirectory(); self.root=Path(self.temp.name)
+ def setUp(self):
+  self.temp=tempfile.TemporaryDirectory(); self.root=Path(self.temp.name)
+  if os.name=="nt":
+   validator=patch.object(g040,"_windows_restrictive",return_value=True); validator.start(); self.addCleanup(validator.stop)
  def tearDown(self): self.temp.cleanup()
  def test_duplicate_keys_are_rejected(self):
   with self.assertRaises(g037.RecoveryError): json.loads('{"x":1,"x":2}',object_pairs_hook=g037._pairs)
@@ -50,56 +54,20 @@ class G037ManagedRecoveryTests(unittest.TestCase):
   p=self.root/"open"; p.write_text("x"); p.chmod(0o644)
   if os.name!="nt":
    with self.assertRaises(g037.RecoveryError): g037.require_file(p,"input")
- def test_windows_saved_sddl_strictly_decodes_icacls_exports(self):
-  sid="S-1-5-21-100"
-  dacl=f"D:PAI(A;;FA;;;{sid})"
-  export=self.root/"acl.txt"
-  target=self.root/"service.conf"
-  record=f"{target.name}\r\n{dacl}\r\n"
-  for raw in (
-   record.encode("utf-16-le"),
-   b"\xff\xfe"+record.encode("utf-16-le"),
-   record.encode("utf-8"),
-  ):
-   export.write_bytes(raw)
-   self.assertEqual(dacl,g037._windows_saved_sddl(export,target))
-  for raw in (
-   b"\xfe\xff"+record.encode("utf-16-be"),
-   b"\xff\xfeD\x00:\x00\x00",
-   f"{target.name}\r\n{dacl}\x00\r\n".encode("utf-8"),
-   record.encode("utf-8")+b"\x00",
-   b"ABCD"+record.encode("utf-16-le"),
-   b"AB"+record.encode("utf-16-le"),
-   b"\xff\xfeABCD"+record.encode("utf-16-le"),
-   b"\xc3\xa9"+record.encode("utf-16-le"),
-   record.encode("utf-16-le")+b"x",
-   f"one\r\n{dacl}\r\ntwo\r\n{dacl}\r\n".encode("utf-8"),
-   f"other.conf\r\n{dacl}\r\n".encode("utf-8"),
-   f"{target.name}\r\n{dacl}\r\nsuffix".encode("utf-8"),
-   b"service.conf owner-only",
-  ):
-   export.write_bytes(raw)
-   self.assertIsNone(g037._windows_saved_sddl(export,target))
- def test_windows_saved_sddl_accepts_unicode_icacls_record_only_for_target_basename(self):
-  sid="S-1-5-21-100"; dacl=f"D:PAI(A;;FA;;;{sid})"
-  target=self.root/"한글-서비스.conf"; export=self.root/"acl.txt"
-  record=f"{target.name}\r\n{dacl}\r\n"
-  for raw in (record.encode("utf-16-le"),b"\xff\xfe"+record.encode("utf-16-le"),record.encode("utf-8")):
-   export.write_bytes(raw)
-   self.assertEqual(dacl,g037._windows_saved_sddl(export,target))
-  export.write_bytes(f"다른.conf\r\n{dacl}\r\n".encode("utf-16-le"))
-  self.assertIsNone(g037._windows_saved_sddl(export,target))
-  export.write_bytes(b"\x80\x00"+record.encode("utf-16-le"))
-  self.assertIsNone(g037._windows_saved_sddl(export,target))
- def test_windows_dacl_allows_only_owner_system_and_administrators(self):
-  sid="S-1-5-21-100"; service=self.root/"service.conf"; service.write_text("x")
-  def restrictive(sddl):
-   with patch.object(g037,"_windows_current_sid",return_value=sid),patch.object(g037.subprocess,"run"),patch.object(g037,"_windows_saved_sddl",return_value=sddl):
-    return g037._windows_dacl_restrictive(service)
-  self.assertTrue(restrictive(f"D:PAI(A;;FA;;;{sid})"))
-  self.assertFalse(restrictive(f"D:PAI(A;;FA;;;{sid})(A;;FA;;;WD)"))
-  self.assertFalse(restrictive("D:PAI(A;;FA;;;SY)"))
-  self.assertFalse(restrictive(f"D:PAI(A;;FA;;;{sid})trailing"))
+ def test_windows_dacl_admission_uses_in_process_validator_and_fails_closed(self):
+  private_key=self.root/"production-private-key.pem"; private_key.write_bytes(b"key")
+  source=Path(g037.__file__).read_text(encoding="utf8")
+  admission=source[source.index("def _windows_dacl_restrictive"):source.index("def restrictive")]
+  self.assertNotIn("subprocess",admission); self.assertNotIn("icacls",admission)
+  with patch.object(g040,"_windows_restrictive",return_value=True) as validator,patch.object(g037.subprocess,"run") as run:
+   self.assertTrue(g037._windows_dacl_restrictive(private_key))
+  validator.assert_called_once_with(private_key); run.assert_not_called()
+  with patch.object(g040,"_windows_restrictive",return_value=False),patch.object(g037.subprocess,"run") as run:
+   self.assertFalse(g037._windows_dacl_restrictive(private_key))
+  run.assert_not_called()
+  with patch.object(g040,"_windows_restrictive",side_effect=OSError("validator failure")),patch.object(g037.subprocess,"run") as run:
+   self.assertFalse(g037._windows_dacl_restrictive(private_key))
+  run.assert_not_called()
  def test_temporary_input_is_unlinked_and_descriptor_backed_on_posix(self):
   if os.name=="nt": self.skipTest("POSIX descriptor custody")
   with g037._held_temporary_bytes(b"receipt","g037-test-",directory=self.root) as held:
@@ -161,14 +129,11 @@ class G037ManagedRecoveryTests(unittest.TestCase):
    raise g037.subprocess.CalledProcessError(1,argv)
   with patch.object(g037.subprocess,"run",side_effect=run):
    self.assertFalse(g037.openssl_verify("openssl",self.root/"public",b"receipt",b"signature"))
- def test_openssl_sign_subprocess_failure_cleans_held_input(self):
-  paths=[]
-  def run(argv,**kwargs):
-   paths.append(argv[argv.index("-in")+1])
-   raise g037.subprocess.CalledProcessError(1,argv)
-  with patch.object(g037.subprocess,"run",side_effect=run):
-   with self.assertRaises(g037.RecoveryError): g037.openssl_sign("openssl",self.root/"key",b"receipt")
-  if os.name!="nt": self.assertFalse(Path(os.readlink(paths[0])).exists())
+ def test_openssl_sign_never_passes_private_key_path_to_subprocess(self):
+  key=private(self.root/"key",b"not-a-private-key")
+  with patch.object(g037,"restrictive",return_value=True),patch.object(g037.subprocess,"run") as run:
+   with self.assertRaises(g037.RecoveryError): g037.openssl_sign("openssl",key,b"receipt")
+  run.assert_not_called()
  def test_openssl_real_ed25519_smoke(self):
   openssl=g037.command("openssl"); key=self.root/"key.pem"
   subprocess.run([openssl,"genpkey","-algorithm","ED25519","-out",str(key)],check=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
@@ -178,6 +143,13 @@ class G037ManagedRecoveryTests(unittest.TestCase):
   private(public,public.read_bytes())
   signature=g037.openssl_sign(openssl,key,b"receipt")
   self.assertTrue(g037.openssl_verify(openssl,public,b"receipt",signature))
+ def test_capture_key_admission_never_exposes_private_path_to_subprocess(self):
+  key=self.root/"capture-signing-key.pem"
+  subprocess.run([g037.command("openssl"),"genpkey","-algorithm","ED25519","-out",str(key)],check=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+  private(key,key.read_bytes()); public=g037.private_key_public(key)
+  with patch.object(g037,"RECOVERY_PUBLIC_KEY",public),patch.object(g037,"restrictive",return_value=True),patch.object(g037.subprocess,"run") as run:
+   self.assertTrue(g037.signing_key_matches_source(key))
+  run.assert_not_called()
  def test_deadline_and_total_preflight_fail_before_opening_network(self):
   with self.assertRaises(g037.RecoveryError): g037.deadline_remaining(time.time()-1)
   catalog=[("b","n","v",g037.MAX_TOTAL_BYTES+1)]
@@ -214,7 +186,8 @@ class G037ManagedRecoveryTests(unittest.TestCase):
    self.assertEqual(g037.signed_json(receipt,g037.RECOVERY_PUBLIC_KEY,"receipt"),payload)
  def test_identity_is_required_restrictive_before_decrypt(self):
   identity=self.root/"identity"; identity.write_text("secret"); identity.chmod(0o644)
-  with self.assertRaises(g037.RecoveryError): g037.require_file(identity,"age identity")
+  with patch.object(g037,"_windows_dacl_restrictive",return_value=False):
+   with self.assertRaises(g037.RecoveryError): g037.require_file(identity,"age identity")
  def test_preserved_freeze_proof_is_reauthenticated_and_time_bound(self):
   base="https://abcdefghijklmnopqrst.supabase.co"; now=int(time.time())
   signed={"schema":"g037-write-freeze-v3","state":"active-provisional","freeze_id":"freeze-0001","origin":"https://abcdefghijklmnopqrst.supabase.co","commit":"a"*40,"manifest_sha256":"b"*64,"source_root":"c"*64,"terminal_spec":"d"*64,"scope":g037.EXPECTED_FREEZE_SCOPE,"relation_root":"e"*64,"acl_root":"f"*64,"held_lock_root":"0"*64,"controller_public_key_sha256":g037.CONTROLLER_PUBLIC_KEY_SHA256,"not_before_unix":now-10,"not_after_unix":now+10,"signature":"c2ln"}
@@ -226,6 +199,7 @@ class G037ManagedRecoveryTests(unittest.TestCase):
  def test_active_capability_snapshots_real_verified_controller_mapping(self):
   private_key=self.root/"controller-private.pem"; public_key=self.root/"controller-public.pem"
   subprocess.run(["openssl","genpkey","-algorithm","Ed25519","-out",str(private_key)],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,check=True)
+  g037._harden_restrictive_file(private_key)
   public_key.write_bytes(subprocess.run(["openssl","pkey","-in",str(private_key),"-pubout"],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,check=True).stdout)
   public=public_key.read_bytes(); public_sha256=hashlib.sha256(public).hexdigest(); now=int(time.time())
   binding={"schema":"g037-write-freeze-v3","state":"active-provisional","freeze_id":"freeze-0001","origin":"https://abcdefghijklmnopqrst.supabase.co","commit":"a"*40,"manifest_sha256":"b"*64,"source_root":"c"*64,"terminal_spec":"d"*64,"scope":g037.EXPECTED_FREEZE_SCOPE,"relation_root":"e"*64,"acl_root":"f"*64,"held_lock_root":"0"*64,"not_before_unix":now-1,"not_after_unix":now+30,"controller_public_key_sha256":public_sha256}
