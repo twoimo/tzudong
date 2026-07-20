@@ -415,6 +415,106 @@ class CloneRehearsalTests(unittest.TestCase):
             with self.subTest(name=name), self.assertRaisesRegex(rehearsal.RehearsalError, "docker_"):
                 proof_for(candidate, candidate_network, candidate_image)
 
+    def test_internal_docker_exec_proof_binds_live_identity_and_rejects_drift(self):
+        container_id = "a" * 64
+        image_id = rehearsal._IMAGE_ID
+        labels = {
+            rehearsal._LABEL: "true",
+            rehearsal._RUN_LABEL: "clone-run-000000",
+            rehearsal._SLOT_LABEL: "clone-slot-00000",
+        }
+        live = {
+            "system_identifier": "74234234234", "database_oid": "16384",
+            "database_name": "g035_local", "server_version": "17.6",
+            "server_version_num": 170006,
+        }
+        container = {
+            "Id": container_id, "Image": image_id,
+            "Config": {"Image": rehearsal._IMAGE, "ExposedPorts": {"5432/tcp": {}}, "Labels": labels},
+            "HostConfig": {"NetworkMode": "g040-rehearsal", "Privileged": False, "Binds": [],
+                           "Mounts": [], "CapAdd": [], "CapDrop": [], "PortBindings": {}},
+            "Mounts": [],
+            "NetworkSettings": {"Networks": {"g040-rehearsal": {"NetworkID": "network-identity"}},
+                                "Ports": {"5432/tcp": None}},
+        }
+        network = {"Id": "network-identity", "Internal": True, "Attachable": False,
+                   "Labels": labels, "Containers": {container_id: {}}}
+        image = {"Id": image_id, "RepoDigests": [rehearsal._IMAGE_DIGEST]}
+        record = b"74234234234\x1f16384\x1fg035_local\x1f17.6\x1f170006\n"
+
+        def proof_for(candidate=container, candidate_network=network, candidate_image=image, probe=record,
+                      recheck_container=None, recheck_network=None):
+            commands = []
+
+            network_inspections = 0
+
+            def docker_run(command, **kwargs):
+                nonlocal network_inspections
+                commands.append(command)
+                if command[1:4] == ["inspect", "--type", "container"]:
+                    value = recheck_container if command[-1] == container_id and recheck_container is not None else candidate
+                    raw = json.dumps([value]).encode()
+                elif command[1:3] == ["network", "inspect"]:
+                    network_inspections += 1
+                    value = recheck_network if network_inspections > 1 and recheck_network is not None else candidate_network
+                    raw = json.dumps([value]).encode()
+                elif command[1:3] == ["image", "inspect"]:
+                    raw = json.dumps([candidate_image]).encode()
+                elif command[1:2] == ["exec"]:
+                    self.assertEqual(command, ["docker", "exec", container_id, "/usr/bin/env", "-i", "PATH=/usr/bin:/bin", "/usr/bin/psql", "-X", "--host", "/var/run/postgresql", "--port", "5432", "--username", "supabase_admin", "--dbname", "g035_local", "-A", "-t", "-F", "\x1f", "-c", rehearsal._INTERNAL_IDENTITY_QUERY])
+                    raw = probe
+                else:
+                    self.fail(f"unexpected Docker command: {command}")
+                return subprocess.CompletedProcess(command, 0, raw)
+
+            with patch.object(rehearsal.subprocess, "run", side_effect=docker_run):
+                proof = rehearsal._docker_clone_proof("clone-a-container", 55401, live)
+            return proof, commands
+
+        proof, commands = proof_for()
+        self.assertEqual(proof["endpoint_sha256"], rehearsal._sha(rehearsal._canonical({
+            "domain": "internal-docker-exec-proxy-v1", "host": "127.0.0.1",
+            "port": 55401, "container_id_sha256": rehearsal._sha(container_id.encode()),
+        })))
+        self.assertEqual(len([command for command in commands if command[1:2] == ["exec"]]), 1)
+        hostile_environment = {**container, "Config": {**container["Config"], "Env": [
+            "PGHOST=attacker.invalid", "PGPORT=6543", "PGSERVICE=attacker",
+            "PGDATABASE=wrong", "PGUSER=wrong", "PGOPTIONS=-csearch_path=wrong",
+        ]}}
+        hostile_proof, _ = proof_for(hostile_environment)
+        self.assertEqual(hostile_proof, proof)
+
+        cases = (
+            ("missing_member", container, {**network, "Containers": {}}, image, record),
+            ("extra_member", container, {**network, "Containers": {container_id: {}, "foreign": {}}}, image, record),
+            ("target_port_publication", {**container, "HostConfig": {**container["HostConfig"], "PortBindings": {"5432/tcp": [{"HostIp": "127.0.0.1", "HostPort": "55401"}]}}}, network, image, record),
+            ("malformed_probe", container, network, image, b"bad\nextra\n"),
+            ("mismatched_probe", container, network, image, b"wrong\x1f16384\x1fg035_local\x1f17.6\x1f170006\n"),
+            ("mismatched_database_oid", container, network, image, b"74234234234\x1f99999\x1fg035_local\x1f17.6\x1f170006\n"),
+            ("mismatched_database_name", container, network, image, b"74234234234\x1f16384\x1fwrong\x1f17.6\x1f170006\n"),
+            ("mismatched_server_version", container, network, image, b"74234234234\x1f16384\x1fg035_local\x1f17.5\x1f170006\n"),
+            ("mismatched_server_version_num", container, network, image, b"74234234234\x1f16384\x1fg035_local\x1f17.6\x1f170005\n"),
+            ("carriage_return_probe", container, network, image, b"74234234234\x1f16384\x1fg035_local\x1f17.6\x1f170006\r\n"),
+            ("empty_field_probe", container, network, image, b"74234234234\x1f\x1fg035_local\x1f17.6\x1f170006\n"),
+            ("non_ascii_probe", container, network, image, b"74234234234\x1f16384\x1fg035_local\x1f17.6\x1f17000\xff\n"),
+            ("nonnumeric_version_probe", container, network, image, b"74234234234\x1f16384\x1fg035_local\x1f17.6\x1fseventeen\n"),
+            ("wrong_field_count_probe", container, network, image, b"74234234234\x1f16384\x1fg035_local\x1f17.6\n"),
+            ("wrong_image", {**container, "Image": "sha256:" + "b" * 64}, network, image, record),
+            ("wrong_labels", {**container, "Config": {**container["Config"], "Labels": {**labels, rehearsal._LABEL: "false"}}}, network, image, record),
+            ("privileged", {**container, "HostConfig": {**container["HostConfig"], "Privileged": True}}, network, image, record),
+        )
+        for name, candidate, candidate_network, candidate_image, probe in cases:
+            with self.subTest(name=name), self.assertRaisesRegex(rehearsal.RehearsalError, "docker_"):
+                proof_for(candidate, candidate_network, candidate_image, probe)
+        with self.assertRaisesRegex(rehearsal.RehearsalError, "docker_identity"):
+            proof_for(recheck_container={**container, "Image": "sha256:" + "b" * 64})
+        with self.assertRaisesRegex(rehearsal.RehearsalError, "docker_identity"):
+            proof_for(recheck_network={**network, "Containers": {}})
+        published = {**container,
+                     "HostConfig": {**container["HostConfig"], "PortBindings": {"5432/tcp": [{"HostIp": "127.0.0.1", "HostPort": "55401"}]}},
+                     "NetworkSettings": {**container["NetworkSettings"], "Ports": {"5432/tcp": [{"HostIp": "127.0.0.1", "HostPort": "55401"}]}}}
+        _, commands = proof_for(published)
+        self.assertFalse(any(command[1:2] == ["exec"] for command in commands))
     def test_archive_digest_streams_once_in_bounded_chunks_and_denies_custody_drift(self):
         payload = b"archive-block-" * (64 * 1024)
         with tempfile.TemporaryDirectory() as raw:
@@ -677,7 +777,7 @@ class CloneRehearsalTests(unittest.TestCase):
                 patch.object(rehearsal.controller, "_reference", return_value=reference), \
                 patch.object(rehearsal.controller, "_load_observation", return_value=(hosted, "e" * 64)), \
                 patch.object(rehearsal.controller, "_outside", side_effect=lambda path, root, fresh=False: Path(path)), \
-                patch.object(rehearsal.controller, "_stable_bytes", side_effect=lambda path: rehearsal._canonical(documents[str(path)])), \
+                patch.object(rehearsal.controller, "_stable_bytes", side_effect=lambda path, *_: rehearsal._canonical(documents[str(path)])), \
                 patch.object(rehearsal.controller, "_signed_document", side_effect=lambda raw, kind: raw_documents[raw]), \
                 patch.object(rehearsal.controller, "_write_signed", return_value="f" * 64), \
                 patch.object(rehearsal.time, "time", return_value=100):
@@ -809,7 +909,7 @@ class CloneRehearsalTests(unittest.TestCase):
                     with patch.object(rehearsal, "_source", return_value=source), \
                             patch.object(rehearsal.controller, "_reference", return_value=reference), \
                             patch.object(rehearsal.controller, "_outside", return_value=preparation_path), \
-                            patch.object(rehearsal.controller, "_stable_bytes", side_effect=lambda _: preparation_path.read_bytes()), \
+                            patch.object(rehearsal.controller, "_stable_bytes", side_effect=lambda path, *_: preparation_path.read_bytes()), \
                             patch.object(rehearsal.controller, "_load_observation", return_value=(hosted, "5" * 64)), \
                             patch.object(rehearsal, "_verified_observation", return_value=clone), \
                             patch.object(rehearsal, "_binding", return_value=binding), \
@@ -901,7 +1001,7 @@ class CloneRehearsalTests(unittest.TestCase):
             hosted = types.SimpleNamespace(status=status)
             with patch.object(rehearsal, "_source", return_value=source), \
                     patch.object(rehearsal.controller, "_outside", side_effect=lambda path, root, fresh=False: Path(path)), \
-                    patch.object(rehearsal.controller, "_stable_bytes", side_effect=lambda path: rehearsal._canonical(documents[str(path)])), \
+                    patch.object(rehearsal.controller, "_stable_bytes", side_effect=lambda path, *_: rehearsal._canonical(documents[str(path)])), \
                     patch.object(rehearsal.controller, "_signed_document", side_effect=lambda raw, kind: by_raw[raw]), \
                     patch.object(rehearsal.controller, "_reference", return_value=reference), \
                     patch.object(rehearsal.controller, "_load_observation", return_value=(hosted, "d" * 64)), \
@@ -1004,7 +1104,7 @@ class CloneRehearsalTests(unittest.TestCase):
                     patch.object(rehearsal.controller, "_RECEIPT_PUBLIC_KEY_SHA256",
                                  hashlib.sha256(public).hexdigest()), \
                     patch.object(rehearsal.controller, "_outside", side_effect=lambda path, root: Path(path)), \
-                    patch.object(rehearsal.controller, "_stable_bytes", side_effect=lambda path: Path(path).read_bytes()):
+                    patch.object(rehearsal.controller, "_stable_bytes", side_effect=lambda path, *_: Path(path).read_bytes()):
                 for name, kind in artifacts:
                     with self.subTest(artifact=name):
                         path = Path(artifacts_raw) / f"{name}.json"
