@@ -59,47 +59,10 @@ def _windows_current_sid():
   out=subprocess.run(["whoami","/user","/fo","csv","/nh"],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,timeout=10,check=True).stdout
   rows=list(csv.reader(out.splitlines(),strict=True)); return rows[0][1].upper() if len(rows)==1 and len(rows[0])==2 and re.fullmatch(r"S-\d+(?:-\d+)+",rows[0][1],re.I) else None
  except Exception: return None
-def _windows_saved_sddl(export, expected_path):
- try:
-  expected_basename=Path(expected_path).name
-  if not expected_basename or expected_basename in (".","..") or "\r" in expected_basename or "\n" in expected_basename or "\x00" in expected_basename: return None
-  raw=Path(export).read_bytes()
-  if raw.startswith(b"\xfe\xff"): return None
-  if raw.startswith(b"\xff\xfe"):
-   candidates=[raw[2:].decode("utf-16-le")]
-  else:
-   candidates=[]
-   for encoding in ("utf-8","utf-16-le"):
-    try: candidates.append(raw.decode(encoding))
-    except UnicodeDecodeError: pass
- except (OSError,UnicodeDecodeError): return None
- values=[]
- prefix=expected_basename+"\r\n"
- for text in candidates:
-  if not text.startswith(prefix) or not text.endswith("\r\n"): continue
-  dacl=text[len(prefix):-2]
-  if dacl.startswith("D:") and dacl and "\r" not in dacl and "\n" not in dacl and "\x00" not in dacl: values.append(dacl)
- return values[0] if len(values)==1 else None
 def _windows_dacl_restrictive(path):
- p=Path(path)
- if p.is_symlink() or not (p.is_file() or p.is_dir()): return False
- sid=_windows_current_sid()
- if not sid: return False
  try:
-  with tempfile.TemporaryDirectory(prefix="g037-acl-") as d:
-   saved=Path(d)/"acl.txt"; subprocess.run(["icacls",str(p),"/save",str(saved),"/c"],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,timeout=10,check=True)
-   sddl=_windows_saved_sddl(saved,p)
-  if not sddl or not sddl.startswith("D:"): return False
-  dacl=sddl[2:]; controls=re.match(r"(?:(?:P|AR|AI))*(?=\()",dacl)
-  if not controls: return False
-  aces_text=dacl[controls.end():]; aces=re.findall(r"\(([^()]*)\)",aces_text)
-  if not aces or "".join(f"({ace})" for ace in aces)!=aces_text: return False
-  allowed={sid,"SY","BA","S-1-5-18","S-1-5-32-544"}; current=False
-  for ace in aces:
-   f=ace.split(";")
-   if len(f)!=6 or f[0]!="A" or f[1] or not f[2] or f[3] or f[4] or f[5].upper() not in allowed: return False
-   current |= f[5].upper()==sid
-  return current
+  from g040_recovery_authorization import _windows_restrictive
+  return bool(_windows_restrictive(Path(path)))
  except Exception: return False
 def restrictive(path, *, directory=False):
  try:
@@ -116,6 +79,7 @@ def _harden_restrictive_file(path):
  if os.name=="nt":
   sid=_windows_current_sid()
   if not sid: raise RecoveryError("current Windows SID unavailable")
+  subprocess.run(["icacls",str(p),"/setowner","*"+sid],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,timeout=10,check=True)
   subprocess.run(["icacls",str(p),"/reset"],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,timeout=10,check=True)
   subprocess.run(["icacls",str(p),"/inheritance:r","/remove:g","SYSTEM","Administrators","OWNER RIGHTS","/grant:r","*"+sid+":F","SYSTEM:F","Administrators:F"],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,timeout=10,check=True)
   if not _windows_dacl_restrictive(p): raise RecoveryError("output file ACL is not owner-restricted")
@@ -453,12 +417,55 @@ def _cleanup_temporary_files(*paths):
    try: Path(path).unlink(missing_ok=True)
    except OSError as exc: failure=exc
  if failure: raise RecoveryError("temporary file cleanup failed") from failure
-def openssl_sign(openssl,key,payload):
+def _held_private_key(path):
+ path=Path(path)
+ if path.is_symlink(): raise RecoveryError("signing key custody invalid")
+ path=path.resolve(); require_file(path,"signing key")
+ if not restrictive(path): raise RecoveryError("signing key custody invalid")
+ flags=os.O_RDONLY | getattr(os,"O_BINARY",0)
+ if hasattr(os,"O_NOFOLLOW"): flags|=os.O_NOFOLLOW
+ descriptor=None
  try:
-  with _held_temporary_bytes(payload,"g037-payload-") as payload_file:
-   result=subprocess.run([openssl,"pkeyutl","-sign","-rawin","-inkey",str(key),"-in",payload_file.child_path()],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=TIMEOUT,check=True,**payload_file.subprocess_kwargs())
-   payload_file.validate()
-   return result.stdout
+  descriptor=os.open(path,flags)
+  initial=os.fstat(descriptor)
+  current=path.lstat()
+  if not stat.S_ISREG(initial.st_mode) or stat.S_ISLNK(current.st_mode) or (initial.st_dev,initial.st_ino)!=(current.st_dev,current.st_ino): raise RecoveryError("signing key custody invalid")
+  chunks=[]; total=0
+  while True:
+   part=os.read(descriptor,65536)
+   if not part: break
+   total+=len(part)
+   if total>65536: raise RecoveryError("signing key custody invalid")
+   chunks.append(part)
+  final=os.fstat(descriptor); current=path.lstat()
+  if (final.st_dev,final.st_ino)!=(initial.st_dev,initial.st_ino) or (current.st_dev,current.st_ino)!=(initial.st_dev,initial.st_ino) or not restrictive(path): raise RecoveryError("signing key custody invalid")
+  material=b"".join(chunks)
+  if not material: raise RecoveryError("signing key custody invalid")
+  return material
+ except RecoveryError: raise
+ except Exception as exc: raise RecoveryError("signing key custody invalid") from exc
+ finally:
+  if descriptor is not None:
+   try: os.close(descriptor)
+   except OSError: pass
+def private_key_public(key):
+ try:
+  from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+  from cryptography.hazmat.primitives.serialization import Encoding,PublicFormat,load_pem_private_key
+  private=load_pem_private_key(_held_private_key(key),password=None)
+  if not isinstance(private,Ed25519PrivateKey): raise RecoveryError("signing key type invalid")
+  return private.public_key().public_bytes(Encoding.PEM,PublicFormat.SubjectPublicKeyInfo)
+ except RecoveryError: raise
+ except Exception as exc: raise RecoveryError("signing key unreadable") from exc
+def openssl_sign(openssl,key,payload):
+ del openssl
+ try:
+  from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+  from cryptography.hazmat.primitives.serialization import load_pem_private_key
+  private=load_pem_private_key(_held_private_key(key),password=None)
+  if not isinstance(private,Ed25519PrivateKey): raise RecoveryError("signing key type invalid")
+  return private.sign(payload)
+ except RecoveryError: raise
  except Exception as exc: raise RecoveryError("Ed25519 signing failed") from exc
 def openssl_verify(openssl,key,payload,signature):
  try:
@@ -525,9 +532,7 @@ def repo_commit():
  try: return subprocess.run(["git","-C",str(Path(__file__).resolve().parents[3]),"rev-parse","HEAD"],capture_output=True,text=True,timeout=20,check=True).stdout.strip()
  except Exception as exc: raise RecoveryError("source commit unavailable") from exc
 def signing_key_matches_source(key):
- try:
-  public=subprocess.run([command("openssl"),"pkey","-in",str(key),"-pubout"],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=TIMEOUT,check=True).stdout
-  return public==RECOVERY_PUBLIC_KEY
+ try: return private_key_public(key)==RECOVERY_PUBLIC_KEY
  except Exception: return False
 def validate_evidence(evidence):
  required={"repository_commit","recipient_fingerprint","freeze","freeze_started_unix","freeze_finished_unix","catalog_sha256","catalog_count","members","object_count","total_bytes","logical_ciphertext_sha256","blob_ciphertext_sha256","metadata_sha256","pg_export_snapshot_sha256","selection_spec_sha256","short_urls_catalog_sha256","short_urls_rowset_sha256","short_urls_row_count","duplicate_group_count","duplicate_victim_count","victim_descriptor_count","duplicate_victims_sha256","victim_descriptors_sha256"}

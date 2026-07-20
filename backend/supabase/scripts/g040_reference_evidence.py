@@ -5,10 +5,12 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import os
 import re
 from dataclasses import dataclass
+from pathlib import Path
 from types import MappingProxyType
-from typing import Any, Callable, Mapping
+from typing import Any, Mapping
 
 import g037_managed_recovery as _crypto
 import g040_prefix_recovery as classifier
@@ -127,7 +129,7 @@ class VerifiedReference:
     target_fingerprint: str; observation_nonce: str; issued_at_unix: int; expires_at_unix: int
     first_clone_identity: str; first_clone_nonce: str; first_live_identity_sha256: str; first_container_id_sha256: str; first_image_id_sha256: str; first_image_digest_sha256: str; first_endpoint_sha256: str; first_g035_restore_receipt_sha256: str; first_capture_receipt_sha256: str; first_restored_archive_sha256: str; first_capture_receipt_bytes_sha256: str; first_restore_receipt_bytes_sha256: str; first_lineage_attestation_sha256: str; first_lineage_signature_sha256: str; first_binding_receipt_sha256: str; first_observation_receipt_sha256: str
     second_clone_identity: str; second_clone_nonce: str; second_live_identity_sha256: str; second_container_id_sha256: str; second_image_id_sha256: str; second_image_digest_sha256: str; second_endpoint_sha256: str; second_g035_restore_receipt_sha256: str; second_capture_receipt_sha256: str; second_restored_archive_sha256: str; second_capture_receipt_bytes_sha256: str; second_restore_receipt_bytes_sha256: str; second_lineage_attestation_sha256: str; second_lineage_signature_sha256: str; second_binding_receipt_sha256: str; second_observation_receipt_sha256: str
-    reference_public_key_sha256: str; signature_b64: str; receipt_sha256: str
+    reference_public_key_sha256: str; receipt_sha256: str
 
 
 def _body_dict(value: VerifiedReference | Mapping[str, Any]) -> dict[str, Any]:
@@ -200,18 +202,90 @@ def build_reference_body(*, final_commit: str, runtime_source_root: str, target_
     return validate_reference_body(body)
 
 
-def sign_reference(body: Mapping[str, Any], signer: Callable[[bytes], bytes]) -> MappingProxyType:
-    if not callable(signer):
-        _fail()
-    unsigned = validate_reference_body(body)
+def _custody_bytes(path: str | Path, repository_root: str | Path) -> bytes:
     try:
-        signature = signer(canonical_bytes(dict(unsigned)))
+        # Import lazily: the controller imports this module to verify final evidence.
+        import g040_production_controller as controller
+        return controller._stable_bytes(controller._outside(path, Path(repository_root).resolve()))
     except Exception:
         _fail()
-    if type(signature) is not bytes or not signature:
-        _fail()
-    return MappingProxyType({**dict(unsigned), "signature_b64": base64.b64encode(signature).decode("ascii")})
 
+
+def _write_request(path: str | Path, value: Mapping[str, Any], repository_root: str | Path) -> None:
+    try:
+        import g040_production_controller as controller
+        target = controller._outside(path, Path(repository_root).resolve(), fresh=True)
+        data = canonical_bytes(dict(value))
+        fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(fd, "wb") as output:
+            output.write(data)
+            output.flush()
+            os.fsync(output.fileno())
+    except ReferenceEvidenceError:
+        raise
+    except Exception:
+        _fail()
+
+
+def build_reference_request(*, source: SourceBinding, target_fingerprint: str, nonce: str,
+                            first_observation: str | Path, second_observation: str | Path,
+                            output: str | Path, repository_root: str | Path,
+                            now_unix: int | None = None, valid_seconds: int = 600) -> Mapping[str, Any]:
+    if (type(source) is not SourceBinding or type(valid_seconds) is not int
+            or not 1 <= valid_seconds <= 900 or not _sha(target_fingerprint) or not _nonce(nonce)):
+        _fail()
+    issued = int(__import__("time").time()) if now_unix is None else now_unix
+    if type(issued) is not int:
+        _fail()
+    try:
+        # This parser is intentionally shared with the observation producer so request
+        # generation validates both controller-signed observations before writing.
+        from g040_clone_rehearsal import _verified_observation
+        first = _verified_observation(first_observation, source=source,
+                                      target_fingerprint=target_fingerprint,
+                                      repository_root=repository_root, now=issued)
+        second = _verified_observation(second_observation, source=source,
+                                       target_fingerprint=target_fingerprint,
+                                       repository_root=repository_root, now=issued)
+    except ReferenceEvidenceError:
+        raise
+    except Exception:
+        _fail()
+    body = build_reference_body(final_commit=source.final_commit,
+                                runtime_source_root=source.runtime_source_root,
+                                target_fingerprint=target_fingerprint,
+                                observation_nonce=nonce, issued_at_unix=issued,
+                                expires_at_unix=issued + valid_seconds,
+                                first_clone=first, second_clone=second)
+    _write_request(output, body, repository_root)
+    return MappingProxyType({"schema": SCHEMA,
+                             "reference_request_sha256": hashlib.sha256(canonical_bytes(dict(body))).hexdigest(),
+                             "expires_at_unix": body["expires_at_unix"]})
+
+
+def finalize_reference(*, source: SourceBinding, target_fingerprint: str,
+                       request: str | Path, signature: str | Path, output: str | Path,
+                       repository_root: str | Path, now_unix: int | None = None) -> Mapping[str, str]:
+    if type(source) is not SourceBinding or not _sha(target_fingerprint):
+        _fail()
+    now = int(__import__("time").time()) if now_unix is None else now_unix
+    if type(now) is not int:
+        _fail()
+    raw, detached = _custody_bytes(request, repository_root), _custody_bytes(signature, repository_root)
+    body = load_reference(raw)
+    if set(body) != set(_BODY_FIELDS):
+        _fail()
+    body = validate_reference_body(body)
+    try:
+        signed = {**dict(body), "signature_b64": base64.b64encode(detached).decode("ascii")}
+    except Exception:
+        _fail()
+    final_raw = canonical_bytes(signed)
+    verify_reference(final_raw, now_unix=now, expected_source=source,
+                     expected_target_fingerprint=target_fingerprint)
+    _write_request(output, signed, repository_root)
+    return MappingProxyType({"schema": SCHEMA,
+                             "reference_receipt_sha256": hashlib.sha256(final_raw).hexdigest()})
 
 def verify_reference(raw: bytes | str, *, now_unix: int, expected_source: SourceBinding, expected_target_fingerprint: str) -> VerifiedReference:
     _assert_constants()
@@ -232,7 +306,7 @@ def verify_reference(raw: bytes | str, *, now_unix: int, expected_source: Source
         _fail()
     if valid is not True:
         _fail()
-    return VerifiedReference(**dict(body), signature_b64=value["signature_b64"], receipt_sha256=hashlib.sha256(canonical_bytes(dict(value))).hexdigest())
+    return VerifiedReference(**dict(body), receipt_sha256=hashlib.sha256(canonical_bytes(dict(value))).hexdigest())
 
 
-__all__ = ["ReferenceEvidenceError", "VerifiedReference", "PUBLIC_KEY_PEM", "PUBLIC_KEY_SHA256", "SCHEMA", "DERIVATION_MODE", "REVERSE_VECTOR_SHA256", "compare_clone_runs", "build_reference_body", "sign_reference", "verify_reference", "load_reference", "canonical_bytes"]
+__all__ = ["ReferenceEvidenceError", "VerifiedReference", "PUBLIC_KEY_PEM", "PUBLIC_KEY_SHA256", "SCHEMA", "DERIVATION_MODE", "REVERSE_VECTOR_SHA256", "compare_clone_runs", "build_reference_body", "build_reference_request", "finalize_reference", "verify_reference", "load_reference", "canonical_bytes"]

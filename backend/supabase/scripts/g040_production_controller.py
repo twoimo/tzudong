@@ -25,13 +25,13 @@ import g040_prefix_recovery as prefix
 import g040_recovery_authorization as authority
 from g037_hosted_closure_contract import terminal_spec, validate_operator_assertion, validate_sources
 from g037_hosted_closure_executor import terminal_readback_assert
-from g040_prefix_executor import ExecutorEvidence, apply_locked_cursor, build_execution_plan
+from g040_prefix_executor import ExecutorEvidence, SourceValidationPlan, apply_locked_cursor, build_execution_plan, build_source_validation_plan
 from g040_recovery_source import RecoverySourceError, SourceBinding, verify_recovery_source
 from g040_reference_evidence import VerifiedReference, load_reference, verify_reference
 import g035_hosted_recovery as g035
 
 SCHEMA = "g040-production-controller-v2"
-MODES = frozenset(("validate", "diagnose", "prepare", "execute", "readback", "production-backup"))
+MODES = frozenset(("validate-source", "validate", "diagnose", "prepare", "execute", "readback", "production-backup"))
 _HEX = frozenset("0123456789abcdef")
 _RECEIPT_SIGNING_KEY = Path.home() / ".g040-recovery" / "receipt-signing-key.pem"
 _RECEIPT_PUBLIC_KEY_PEM = """-----BEGIN PUBLIC KEY-----
@@ -70,7 +70,7 @@ def _source(args: Any) -> SourceBinding:
 def _reference(args: Any, source: SourceBinding, *, historical: bool = False) -> VerifiedReference:
     target = _hex(getattr(args, "target_fingerprint", None))
     try:
-        raw = _stable_bytes(_outside(args.reference, _root(args)))
+        raw = _stable_bytes(_outside(args.reference, _root(args)), _root(args))
         now = int(time.time())
         if historical:
             now = load_reference(raw)["issued_at_unix"]
@@ -93,9 +93,10 @@ class RecoveryCustody:
     target_ledger_root: str
     target_catalog_root: str
     target_data_root: str
+    expires_at: int
 
 def _custody(args: Any, source: SourceBinding, reference: VerifiedReference, *, require_fresh: bool = True) -> RecoveryCustody:
-    raw = _stable_bytes(_outside(args.custody, _root(args)))
+    raw = _stable_bytes(_outside(args.custody, _root(args)), _root(args))
     try:
         value = _signed_document(raw, "aggregate-custody")
         required = set(RecoveryCustody.__annotations__) | {"issued_at", "expires_at", "final_recovery_commit", "runtime_source_root", "reference_receipt_sha256"}
@@ -107,7 +108,7 @@ def _custody(args: Any, source: SourceBinding, reference: VerifiedReference, *, 
                 or value["final_recovery_commit"] != source.final_commit or value["runtime_source_root"] != source.runtime_source_root
                 or value["reference_receipt_sha256"] != reference.receipt_sha256 or value["target_fingerprint"] != reference.target_fingerprint):
             _deny("custody_binding")
-        custody = RecoveryCustody(**{key: value[key] if key in {"freeze_expires_at", "archive_bytes"} else _hex(value[key]) for key in RecoveryCustody.__annotations__})
+        custody = RecoveryCustody(**{key: value[key] if key in {"freeze_expires_at", "archive_bytes", "expires_at"} else _hex(value[key]) for key in RecoveryCustody.__annotations__})
         return custody
     except ControllerError:
         raise
@@ -133,9 +134,9 @@ def _nonce_store(args: Any, root: Path):
         except Exception: _deny("nonce_write")
     return consume
 
-def _stable_bytes(path: Path) -> bytes:
+def _stable_bytes(path: Path, repository_root: Path) -> bytes:
     try:
-        fd, raw = authority._open_custody(path)
+        fd, raw = authority._open_custody(path, repository_root)
         try:
             return raw
         finally:
@@ -183,7 +184,7 @@ def _connect_service(args: Any, *, readonly: bool) -> Any:
     service_file, service_name = getattr(args, "service_file", None), getattr(args, "service_name", None)
     if not isinstance(service_name, str) or not service_name: _deny("restrictive_service_required")
     service_path = authority.restrictive_regular_file(service_file, "service file", root).resolve()
-    before = _stable_bytes(service_path)
+    before = _stable_bytes(service_path, root)
     try:
         import psycopg
         had_service_file = "PGSERVICEFILE" in os.environ
@@ -196,7 +197,7 @@ def _connect_service(args: Any, *, readonly: bool) -> Any:
                 os.environ["PGSERVICEFILE"] = prior_service_file
             else:
                 os.environ.pop("PGSERVICEFILE", None)
-        if hashlib.sha256(before).digest() != hashlib.sha256(_stable_bytes(service_path)).digest():
+        if hashlib.sha256(before).digest() != hashlib.sha256(_stable_bytes(service_path, root)).digest():
             try: conn.close()
             finally: _deny("service_replaced")
         return conn
@@ -259,7 +260,7 @@ def _observation_receipt(args: Any, root: Path, observation: prefix.PrefixObserv
         _deny("observation_expired")
     path = _outside(args.observation_receipt, root, fresh=True)
     body = {**asdict(observation), "issued_at": issued_at, "expires_at": expires_at}
-    return _write_signed(path, {"schema": SCHEMA, "kind": "prefix-observation", "body": body})
+    return _write_signed(path, {"schema": SCHEMA, "kind": "prefix-observation", "body": body}, repository_root=root)
 def _temporary_identity(fd: int, path: Path) -> bool:
     try:
         opened, named = os.fstat(fd), path.lstat()
@@ -315,9 +316,9 @@ def _publish_restrictive(path: Path, raw: bytes) -> None:
             except Exception:
                 pass
 
-def _write_signed(path: Path, value: Mapping[str, Any]) -> str:
+def _write_signed(path: Path, value: Mapping[str, Any], *, repository_root: Path) -> str:
     unsigned = authority.canonical_json_bytes(dict(value))
-    signature = _sign_receipt(unsigned)
+    signature = _sign_receipt(unsigned, repository_root)
     raw = authority.canonical_json_bytes({**dict(value), "signature_b64": base64.b64encode(signature).decode("ascii")}) + b"\n"
     _publish_restrictive(path, raw)
     return hashlib.sha256(raw).hexdigest()
@@ -332,12 +333,12 @@ def _verify_receipt(payload: bytes, signature: bytes) -> None:
     except Exception:
         _deny("receipt_invalid")
 
-def _sign_receipt(payload: bytes) -> bytes:
+def _sign_receipt(payload: bytes, repository_root: Path) -> bytes:
     # This online key signs receipts only; destructive authorization remains offline.
     fd: int | None = None
     try:
-        key_path = authority.restrictive_regular_file(_RECEIPT_SIGNING_KEY, "recovery receipt signing key")
-        fd, raw = authority._open_custody(key_path)
+        key_path = authority.restrictive_regular_file(_RECEIPT_SIGNING_KEY, "recovery receipt signing key", repository_root)
+        fd, raw = authority._open_custody(key_path, repository_root)
         from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat, load_pem_private_key
         private = load_pem_private_key(raw, password=None)
         public = private.public_key().public_bytes(Encoding.PEM, PublicFormat.SubjectPublicKeyInfo)
@@ -361,7 +362,7 @@ def _bindings(source: SourceBinding, reference: VerifiedReference, observation: 
     return {"final_recovery_commit": source.final_commit, "base_commit": reference.base_commit, "runtime_source_root": source.runtime_source_root, "manifest_root": reference.manifest_sha256, "source_root": reference.migration_source_sha256, "terminal_root": terminal_spec(manifest), "prefix_root": reference.ledger_prefix_sha256, "suffix_root": _hash(suffix), "projection_root": reference.full_catalog_sha256, "probe_root": reference.probe_text_sha256, "prefix_state_receipt_sha256": observation.classification_sha256, "observation_receipt_sha256": observation_receipt_sha256, "prefix_classification": observation.status, "target_fingerprint": reference.target_fingerprint, "selected_branch": {"UNAPPLIED": "execute-00400-then-suffix", "FULL_ESCAPED": "adopt-00400-vector-then-suffix"}.get(observation.status), "backup_receipt_sha256": custody.backup_receipt_sha256, "capture_receipt_sha256": custody.capture_receipt_sha256, "clone_rehearsal_receipt_sha256": custody.clone_rehearsal_receipt_sha256, "freeze_expires_at": custody.freeze_expires_at, "target_acl_root": custody.target_acl_root, "archive_sha256": custody.archive_sha256, "archive_bytes": custody.archive_bytes, "freeze_root": custody.freeze_root, "inventory_root": custody.inventory_root, "starting_ledger_root": observation.ledger_prefix_sha256, "target_ledger_root": custody.target_ledger_root, "starting_catalog_root": observation.catalog_sha256, "target_catalog_root": custody.target_catalog_root, "starting_data_root": observation.data_sha256 if observation.status == "FULL_ESCAPED" else _ABSENT_DATA_ROOT, "target_data_root": custody.target_data_root}
 def _authorization(args: Any, bindings: dict[str, Any]) -> authority.VerifiedAuthorization:
     try:
-        envelope = authority.authenticate_recovery_authorization(args.authorization, args.authorization_signature, expected_bindings=bindings)
+        envelope = authority.authenticate_recovery_authorization(args.authorization, args.authorization_signature, expected_bindings=bindings, repository_root=_root(args))
         return authority.reverify_destructive_stage(envelope, expected_bindings=bindings)
     except Exception: _deny("authority_verification")
 _ATTEMPT_MARKER_FIELDS = frozenset(("schema", "event", "authorization_id", "attempt_id", "at", "target_fingerprint", "runtime_source_root", "prefix_state_receipt_sha256", "observation_receipt_sha256", "prefix_classification", "selected_branch", "authorization_sha256", "signature_sha256", "bindings_sha256", "receipt_sha256"))
@@ -441,17 +442,52 @@ def _diagnose(args: Any, source: SourceBinding, reference: VerifiedReference) ->
 def validate(args: Any) -> Mapping[str, Any]:
     source = _source(args); reference = _reference(args, source)
     return MappingProxyType({"schema": SCHEMA, "mode": "validate", "status": "valid", "source_commit": source.final_commit, "reference_receipt_sha256": reference.receipt_sha256})
+def _source_validation_body(plan: Any) -> dict[str, Any]:
+    if (type(plan) is not SourceValidationPlan or type(plan.migration_count) is not int
+            or type(plan.terminal_rows) is not int or plan.migration_count != 28
+            or plan.terminal_rows != 40):
+        _deny("source_validation")
+    suffix = tuple((item.version, item.name, item.sha256) for item in plan.manifest.migrations[17:])
+    body = {"schema": "g040-source-validation-v1", "issued_at": int(time.time()),
+            "final_recovery_commit": plan.source.final_commit,
+            "base_commit": prefix.SOURCE_COMMIT,
+            "runtime_source_root": plan.source.runtime_source_root,
+            "manifest_root": prefix.MANIFEST_SHA256,
+            "migration_source_root": prefix.MIGRATION_SOURCE_SHA256,
+            "terminal_root": plan.terminal_spec_root,
+            "catalog_probe_sha256": prefix.PROBE_TEXT_SHA256,
+            "data_probe_sha256": prefix.DATA_PROBE_SHA256,
+            "suffix_root": _hash(suffix), "migration_count": plan.migration_count,
+            "terminal_rows": plan.terminal_rows}
+    if (set(body) != {"schema", "issued_at", "final_recovery_commit", "base_commit",
+                     "runtime_source_root", "manifest_root", "migration_source_root",
+                     "terminal_root", "catalog_probe_sha256", "data_probe_sha256",
+                     "suffix_root", "migration_count", "terminal_rows"}
+            or type(body["issued_at"]) is not int or any(type(body[key]) is not str for key in body if key not in ("issued_at", "migration_count", "terminal_rows"))):
+        _deny("source_validation")
+    return {**body, "validation_sha256": _hash(body)}
+
+def validate_source(args: Any) -> Mapping[str, Any]:
+    source = _source(args)
+    plan = build_source_validation_plan(_root(args), validate_sources(_root(args)), source=source)
+    body = _source_validation_body(plan)
+    receipt = _write_signed(_outside(args.source_receipt, _root(args), fresh=True),
+                            {"schema": SCHEMA, "kind": "source-validation-v1", "body": body}, repository_root=_root(args))
+    return MappingProxyType({"schema": SCHEMA, "mode": "validate-source", "status": "source-valid",
+                             "source_commit": source.final_commit,
+                             "runtime_source_root": source.runtime_source_root,
+                             "source_validation_sha256": body["validation_sha256"],
+                             "source_receipt_sha256": receipt})
 def diagnose(args: Any) -> Mapping[str, Any]:
     source = _source(args); reference = _reference(args, source); observation, receipt = _diagnose(args, source, reference)
     return MappingProxyType({"schema": SCHEMA, "mode": "diagnose", "status": observation.status, "observation_receipt_sha256": receipt})
 def prepare(args: Any) -> Mapping[str, Any]:
     source = _source(args); reference = _reference(args, source); observation, receipt = _load_observation(args, source, reference); custody = _custody(args, source, reference); manifest = validate_sources(_root(args)); bindings = _bindings(source, reference, observation, custody, manifest, receipt)
-    template = {"schema": authority.SCHEMA, "purpose": authority.PURPOSE, "policy": authority.POLICY, "authorization_id": "<authorization_id>", "attempt_id": "<attempt_id>", "issued_at": "<issued_at>", "expires_at": "<expires_at>", **bindings}
     path = _outside(args.authority_template, _root(args), fresh=True)
-    _publish_restrictive(path, authority.canonical_json_bytes(template) + b"\n")
+    _publish_restrictive(path, authority.canonical_json_bytes(bindings))
     return MappingProxyType({"schema": SCHEMA, "mode": "prepare", "status": "prepared", "bindings_sha256": _hash(bindings)})
 def _load_observation(args: Any, source: SourceBinding, reference: VerifiedReference, *, require_fresh: bool = True) -> tuple[prefix.PrefixObservation, str]:
-    raw = _stable_bytes(_outside(args.observation, _root(args)))
+    raw = _stable_bytes(_outside(args.observation, _root(args)), _root(args))
     receipt = hashlib.sha256(raw).hexdigest()
     fields = frozenset(prefix.PrefixObservation.__annotations__)
     try:
@@ -475,15 +511,15 @@ def _load_observation(args: Any, source: SourceBinding, reference: VerifiedRefer
     if observed.final_commit != source.final_commit or observed.runtime_source_root != source.runtime_source_root or observed.reference_receipt_sha256 != reference.receipt_sha256:
         _deny("observation_binding")
     return observed, receipt
-def _backup_freeze(args: Any, source: SourceBinding, manifest: Any) -> tuple[str, str]:
+def _backup_freeze(args: Any, source: SourceBinding, manifest: Any) -> tuple[str, str, int, str]:
     try:
-        raw = _stable_bytes(_outside(args.freeze_assertion, _root(args)))
+        raw = _stable_bytes(_outside(args.freeze_assertion, _root(args)), _root(args))
         value = json.loads(raw.decode("ascii"), object_pairs_hook=authority._pairs, parse_constant=authority._constant)
         channels = ("no_owner_write", "no_dashboard_write", "no_provider_write", "no_out_of_band_write", "producer_stop")
-        if raw != authority.canonical_json_bytes(value) + b"\n" or value.get("freeze_id") == "40b54cf8-e59f-4eb3-a37c-88e3bf983442" or type(args.freeze_evidence) is not list or len(args.freeze_evidence) != 5:
+        if raw != authority.canonical_json_bytes(value) or value.get("freeze_id") == "40b54cf8-e59f-4eb3-a37c-88e3bf983442" or type(args.freeze_evidence) is not list or len(args.freeze_evidence) != 5:
             _deny("backup_freeze")
         validate_operator_assertion(value, freeze_id=value["freeze_id"], origin=value["origin"], relation_root=value["relation_root"], acl_root=value["acl_root"], commit=source.final_commit, source_root=source.runtime_source_root, terminal_spec=terminal_spec(manifest), now=int(time.time()))
-        observed = {hashlib.sha256(_stable_bytes(_outside(path, _root(args)))).hexdigest() for path in args.freeze_evidence}
+        observed = {hashlib.sha256(_stable_bytes(_outside(path, _root(args)), _root(args))).hexdigest() for path in args.freeze_evidence}
         if len(observed) != 5 or observed != {value["attestations"][channel]["evidence_sha256"] for channel in channels}:
             _deny("backup_freeze")
         return hashlib.sha256(raw).hexdigest(), _hash({"g040-freeze-inventory-v1": {"relation_root": value["relation_root"], "acl_root": value["acl_root"]}}), value["expires_at"], value["acl_root"]
@@ -501,7 +537,7 @@ def production_backup(args: Any) -> Mapping[str, Any]:
     try:
         capture_args = argparse.Namespace(destination=args.destination, capture_receipt=args.capture_receipt, service_file=args.service_file, recipient=args.recipient, g034_artifact=args.g034_artifact, pg_dump=args.pg_dump, encrypt_command=args.encrypt_command)
         captured = g035.capture_to_custody(capture_args, manifest)
-        capture_raw = _stable_bytes(_outside(args.capture_receipt, _root(args)))
+        capture_raw = _stable_bytes(_outside(args.capture_receipt, _root(args)), _root(args))
         archive_sha256, archive_bytes = _archive_digest(
             _outside(args.destination, _root(args)) / "g035-dump.enc",
             _root(args),
@@ -517,14 +553,14 @@ def production_backup(args: Any) -> Mapping[str, Any]:
         if expires <= issued:
             _deny("backup_freeze")
         body = {"issued_at": issued, "expires_at": expires, "freeze_expires_at": freeze_expires_at, "target_acl_root": target_acl_root, "final_recovery_commit": source.final_commit, "runtime_source_root": source.runtime_source_root, "reference_receipt_sha256": reference.receipt_sha256, "target_fingerprint": reference.target_fingerprint, "hosted_observation_receipt_sha256": observation_sha256, "hosted_observation_classification_sha256": observation.classification_sha256, "freeze_root": freeze_root, "inventory_root": inventory_root, "capture_receipt_sha256": hashlib.sha256(capture_raw).hexdigest(), "g035_receipt_sha256": captured["receipt_sha256"], "archive_sha256": archive_sha256, "archive_bytes": archive_bytes, "g035_manifest_sha256": captured["manifest_sha256"], "g035_source_sha256": evidence["source_sha256"]}
-        receipt = _write_signed(_outside(args.output, _root(args), fresh=True), {"schema": SCHEMA, "kind": "g040-production-backup-v1", "body": body})
+        receipt = _write_signed(_outside(args.output, _root(args), fresh=True), {"schema": SCHEMA, "kind": "g040-production-backup-v1", "body": body}, repository_root=_root(args))
         return MappingProxyType({"schema": SCHEMA, "mode": "production-backup", "status": "captured", "receipt_sha256": receipt})
     except ControllerError:
         raise
     except Exception:
         _deny("backup_capture")
 
-def _final_readback(args: Any, source: SourceBinding, reference: VerifiedReference, manifest: Any, authorization: authority.VerifiedAuthorization) -> dict[str, Any]:
+def _terminal_readback(args: Any, source: SourceBinding, reference: VerifiedReference, manifest: Any, authorization: authority.VerifiedAuthorization) -> dict[str, Any]:
     deadline_monotonic, deadline_utc = _readback_deadlines(); conn = _connect_service(args, readonly=True); cur = None
     try:
         native = _G037TupleFetchallCursor(conn.cursor()); _begin_controller_transaction(native, readonly=True); cur = _DeadlineBoundG037Cursor(native, deadline_monotonic); _require_live_target(cur, authorization.target_fingerprint); terminal = terminal_readback_assert(cur, _root(args), manifest, deadline=deadline_utc)
@@ -538,55 +574,61 @@ def _final_readback(args: Any, source: SourceBinding, reference: VerifiedReferen
         try: conn.rollback(); conn.close()
         except Exception: pass
 
-def _outcome_readback(args: Any, source: SourceBinding, reference: VerifiedReference, manifest: Any, authorization: authority.VerifiedAuthorization) -> dict[str, Any]:
-    deadline_monotonic, deadline_utc = _readback_deadlines(); conn = _connect_service(args, readonly=True); cur = None
-    try:
-        native = _G037TupleFetchallCursor(conn.cursor()); _begin_controller_transaction(native, readonly=True); cur = _DeadlineBoundG037Cursor(native, deadline_monotonic); _require_live_target(cur, authorization.target_fingerprint)
-        terminal = terminal_readback_assert(cur, _root(args), manifest, deadline=deadline_utc)
-        data_root = prefix.probe_full_data_root(cur, reference)
-        if type(terminal) is not dict or set(terminal) != {"catalog_root", "acl_root", "ledger_root", "terminal_spec"} or terminal["catalog_root"] != authorization.target_catalog_root or terminal["acl_root"] != authorization.target_acl_root or terminal["ledger_root"] != authorization.target_ledger_root or terminal["terminal_spec"] != authorization.terminal_root or data_root != authorization.target_data_root:
-            _deny("terminal_readback")
-        value = {"target_fingerprint": authorization.target_fingerprint, "final_commit": source.final_commit, "runtime_source_root": source.runtime_source_root, "terminal_rows": 40, "catalog_root": terminal["catalog_root"], "acl_root": terminal["acl_root"], "ledger_root": terminal["ledger_root"], "data_root": data_root, "terminal_spec_root": terminal["terminal_spec"]}
-        return {**value, "readback_sha256": _hash(value)}
-    except ControllerError: raise
-    except Exception: _deny("terminal_readback")
-    finally:
-        if cur: cur.close()
-        try: conn.rollback(); conn.close()
-        except Exception: pass
-def _revalidate_production_custody(args: Any, source: SourceBinding, manifest: Any, custody: RecoveryCustody, verified: authority.VerifiedAuthorization) -> None:
+def _write_proof(args: Any, source: SourceBinding, reference: VerifiedReference, manifest: Any, authorization: authority.VerifiedAuthorization, readback: Mapping[str, Any]) -> str:
+    migrations = {(item.version, item.name): item for item in manifest.migrations}
+    try: deletion, separation, adapters = (migrations[("20260713002300", "g014_account_deletion_state_machine")], migrations[("20260712000400", "g010_retention_separation")], migrations[("20260713002400", "g014_retention_adapters_receipts")])
+    except Exception: _deny("proof_binding")
+    body = {"schema": "account-deletion-privacy-retention-proof-v1", "issued_at": int(time.time()), "target_fingerprint": authorization.target_fingerprint, "final_recovery_commit": source.final_commit, "runtime_source_root": source.runtime_source_root, "reference_receipt_sha256": reference.receipt_sha256, "authorization_sha256": authorization.authorization_sha256, "terminal_readback_sha256": readback["readback_sha256"], "terminal_rows": readback["terminal_rows"], "terminal_catalog_root": readback["catalog_root"], "terminal_acl_root": readback["acl_root"], "terminal_ledger_root": readback["ledger_root"], "terminal_data_root": readback["data_root"], "terminal_spec_root": readback["terminal_spec_root"], "privacy_retention": {"coverage": "fixed-terminal-data-and-source-pinned-terminal-closure-v1", "separation_migration": {"version": separation.version, "name": separation.name, "source_sha256": separation.sha256}, "adapters_migration": {"version": adapters.version, "name": adapters.name, "source_sha256": adapters.sha256}, "data_probe_sha256": prefix.DATA_PROBE_SHA256, "seed_projection_sha256": prefix.SEED_PROJECTION_SHA256, "data_root": readback["data_root"]}, "account_deletion": {"coverage": "disabled-audit-seed-and-source-pinned-terminal-closure-v1", "migration": {"version": deletion.version, "name": deletion.name, "source_sha256": deletion.sha256}, "audit_seed_code": "privacy_account_deletion_audit", "data_probe_sha256": prefix.DATA_PROBE_SHA256, "data_root": readback["data_root"]}}
+    body["proof_sha256"] = _hash(body)
+    return _write_signed(_outside(args.proof_receipt, _root(args), fresh=True), {"schema": SCHEMA, "kind": "account-deletion-privacy-retention-proof-v1", "body": body}, repository_root=_root(args))
+def _revalidate_production_custody(args: Any, source: SourceBinding, manifest: Any, custody: RecoveryCustody, verified: authority.VerifiedAuthorization) -> int:
     now = int(time.time())
     if min(custody.freeze_expires_at, verified.freeze_expires_at, verified.expires_at) <= now:
         _deny("backup_freeze")
     freeze_root, inventory_root, freeze_expires_at, target_acl_root = _backup_freeze(args, source, manifest)
     if (freeze_root != custody.freeze_root or inventory_root != custody.inventory_root or freeze_expires_at != custody.freeze_expires_at or target_acl_root != custody.target_acl_root):
         _deny("backup_freeze")
-    backup_raw = _stable_bytes(_outside(args.backup_receipt, _root(args)))
+    backup_raw = _stable_bytes(_outside(args.backup_receipt, _root(args)), _root(args))
     if hashlib.sha256(backup_raw).hexdigest() != custody.backup_receipt_sha256:
         _deny("backup_capture")
     backup = _signed_document(backup_raw, "g040-production-backup-v1")
     required = {"issued_at", "expires_at", "freeze_expires_at", "target_acl_root", "final_recovery_commit", "runtime_source_root", "reference_receipt_sha256", "target_fingerprint", "hosted_observation_receipt_sha256", "hosted_observation_classification_sha256", "freeze_root", "inventory_root", "capture_receipt_sha256", "g035_receipt_sha256", "archive_sha256", "archive_bytes", "g035_manifest_sha256", "g035_source_sha256"}
     if (set(backup) != required or backup["expires_at"] <= now or any(backup[key] != getattr(custody, key) for key in ("freeze_expires_at", "target_acl_root", "freeze_root", "inventory_root", "capture_receipt_sha256", "archive_sha256", "archive_bytes")) or backup["final_recovery_commit"] != source.final_commit or backup["target_fingerprint"] != verified.target_fingerprint):
         _deny("backup_capture")
-    capture_raw = _stable_bytes(_outside(args.capture_receipt, _root(args)))
+    capture_raw = _stable_bytes(_outside(args.capture_receipt, _root(args)), _root(args))
     if hashlib.sha256(capture_raw).hexdigest() != custody.capture_receipt_sha256:
         _deny("backup_capture")
     capture = g035.read_json_receipt(_outside(args.capture_receipt, _root(args)))
     archive_sha256, archive_bytes = _archive_digest(_outside(args.archive, _root(args)), _root(args))
     if (capture.get("mode") != "capture" or capture.get("status") != "captured" or capture.get("receipt_sha256") != backup["g035_receipt_sha256"] or capture.get("evidence", {}).get("target_fingerprint") != verified.target_fingerprint or archive_sha256 != custody.archive_sha256 or archive_bytes != custody.archive_bytes or capture.get("evidence", {}).get("dump_sha256") != archive_sha256 or capture.get("evidence", {}).get("dump_bytes") != archive_bytes):
         _deny("backup_capture")
+    return backup["expires_at"]
+
+def _execution_deadline(reference: VerifiedReference, custody: RecoveryCustody, verified: authority.VerifiedAuthorization) -> float:
+    expiries = (reference.expires_at_unix, custody.expires_at, custody.freeze_expires_at,
+                verified.expires_at, verified.freeze_expires_at)
+    now_wall, now_monotonic = time.time(), time.monotonic()
+    if any(type(expiry) is not int for expiry in expiries) or min(expiries) <= now_wall:
+        _deny("authority_expired")
+    return now_monotonic + (min(expiries) - now_wall)
 
 def execute(args: Any) -> Mapping[str, Any]:
     source = _source(args); reference = _reference(args, source); observation, receipt = _load_observation(args, source, reference); custody = _custody(args, source, reference); manifest = validate_sources(_root(args)); bindings = _bindings(source, reference, observation, custody, manifest, receipt); verified = _authorization(args, bindings); plan = build_execution_plan(_root(args), manifest, source=source, reference=reference, observation=observation, authorization=verified)
-    prepared_path = _outside(args.prepared_receipt, _root(args), fresh=True); final_path = _outside(args.final_receipt, _root(args), fresh=True); deadline = time.monotonic()+30; conn = _connect_service(args, readonly=False); cur = None; committed = False; commit_attempted = False
+    prepared_path = _outside(args.prepared_receipt, _root(args), fresh=True); final_path = _outside(args.final_receipt, _root(args), fresh=True); deadline = _execution_deadline(reference, custody, verified); conn = _connect_service(args, readonly=False); cur = None; committed = False; commit_attempted = False
     try:
-        cur = _G037TupleFetchallCursor(conn.cursor()); _revalidate_production_custody(args, source, manifest, custody, verified); _begin_controller_transaction(cur, readonly=False); _require_live_target(cur, verified.target_fingerprint)
-        prepared_hash = _write_signed(prepared_path, {"schema": SCHEMA, "kind": "prepared-intent", "body": {"source_commit": source.final_commit, "target_fingerprint": verified.target_fingerprint, "reference_receipt_sha256": reference.receipt_sha256, "classification_sha256": observation.classification_sha256, "observation_receipt_sha256": receipt, "authorization_sha256": verified.authorization_sha256, "expected_roots": {"ledger": verified.target_ledger_root, "catalog": verified.target_catalog_root, "acl": verified.target_acl_root, "data": verified.target_data_root, "terminal": verified.terminal_root}, "plan_sha256": _hash({"branch": plan.branch, "terminal_spec_root": plan.terminal_spec_root, "reference_receipt_sha256": plan.reference.receipt_sha256, "authorization_sha256": plan.authorization.authorization_sha256})}})
-        if time.monotonic() >= deadline or min(verified.expires_at, verified.freeze_expires_at) <= int(time.time()):
+        cur = _G037TupleFetchallCursor(conn.cursor()); backup_expires_at = _revalidate_production_custody(args, source, manifest, custody, verified); deadline = min(deadline, time.monotonic() + (backup_expires_at - time.time())); _begin_controller_transaction(cur, readonly=False); _require_live_target(cur, verified.target_fingerprint)
+        prepared_hash = _write_signed(prepared_path, {"schema": SCHEMA, "kind": "prepared-intent", "body": {"source_commit": source.final_commit, "target_fingerprint": verified.target_fingerprint, "reference_receipt_sha256": reference.receipt_sha256, "classification_sha256": observation.classification_sha256, "observation_receipt_sha256": receipt, "authorization_sha256": verified.authorization_sha256, "expected_roots": {"ledger": verified.target_ledger_root, "catalog": verified.target_catalog_root, "acl": verified.target_acl_root, "data": verified.target_data_root, "terminal": verified.terminal_root}, "plan_sha256": _hash({"branch": plan.branch, "terminal_spec_root": plan.terminal_spec_root, "reference_receipt_sha256": plan.reference.receipt_sha256, "authorization_sha256": plan.authorization.authorization_sha256})}}, repository_root=_root(args))
+        if time.monotonic() >= deadline or min(verified.expires_at, verified.freeze_expires_at, custody.expires_at, custody.freeze_expires_at, reference.expires_at_unix, backup_expires_at) <= time.time():
             _deny("authority_expired")
         attempt, evidence = authority.consume_one_shot_attempt(repository_root=_root(args), authorization=verified, callback=lambda attempt: apply_locked_cursor(cur, plan=plan, attempt=attempt, deadline_monotonic=deadline))
+        if time.monotonic() >= deadline or min(verified.expires_at, verified.freeze_expires_at, custody.expires_at, custody.freeze_expires_at, reference.expires_at_unix, backup_expires_at) <= time.time():
+            _deny("authority_expired")
         commit_attempted = True; conn.commit(); committed = True
-    except ControllerError: raise
+    except ControllerError:
+        if not committed:
+            try: conn.rollback()
+            except Exception: pass
+        raise
     except Exception:
         if committed or commit_attempted: _deny("commit_ambiguous_readback_only")
         try: conn.rollback()
@@ -597,25 +639,26 @@ def execute(args: Any) -> Mapping[str, Any]:
         try: conn.close()
         except Exception: pass
     try:
-        readback = _final_readback(args, source, reference, manifest, verified)
-        final_hash = _write_signed(final_path, {"schema": SCHEMA, "kind": "final", "body": {"source_commit": source.final_commit, "target_fingerprint": reference.target_fingerprint, "reference_receipt_sha256": reference.receipt_sha256, "classification_sha256": observation.classification_sha256, "observation_receipt_sha256": receipt, "authorization_sha256": verified.authorization_sha256, "attempt_receipt_sha256": attempt.receipt_sha256, "executor_evidence_sha256": evidence.evidence_sha256, "prepared_receipt_sha256": prepared_hash, **readback}})
+        readback = _terminal_readback(args, source, reference, manifest, verified)
+        proof_hash = _write_proof(args, source, reference, manifest, verified, readback)
+        final_hash = _write_signed(final_path, {"schema": SCHEMA, "kind": "final", "body": {"source_commit": source.final_commit, "target_fingerprint": reference.target_fingerprint, "reference_receipt_sha256": reference.receipt_sha256, "classification_sha256": observation.classification_sha256, "observation_receipt_sha256": receipt, "authorization_sha256": verified.authorization_sha256, "attempt_receipt_sha256": attempt.receipt_sha256, "executor_evidence_sha256": evidence.evidence_sha256, "prepared_receipt_sha256": prepared_hash, "proof_receipt_sha256": proof_hash, **readback}}, repository_root=_root(args))
     except Exception:
         _deny("commit_ambiguous_readback_only")
-    return MappingProxyType({"schema": SCHEMA, "mode": "execute", "status": "committed", "prepared_receipt_sha256": prepared_hash, "final_receipt_sha256": final_hash})
+    return MappingProxyType({"schema": SCHEMA, "mode": "execute", "status": "committed", "prepared_receipt_sha256": prepared_hash, "proof_receipt_sha256": proof_hash, "final_receipt_sha256": final_hash})
 def readback(args: Any) -> Mapping[str, Any]:
     source = _source(args)
     try:
-        envelope = authority.authenticate_recovery_authorization(args.authorization, args.authorization_signature, expected_bindings=None, require_fresh=False)
+        envelope = authority.authenticate_outcome_authorization(args.authorization, args.authorization_signature, repository_root=_root(args))
         verified = authority.verify_outcome_authorization(envelope)
         reference = _reference(args, source, historical=True); observation, receipt = _load_observation(args, source, reference, require_fresh=False)
         custody = _custody(args, source, reference, require_fresh=False); manifest = validate_sources(_root(args)); bindings = _bindings(source, reference, observation, custody, manifest, receipt)
         if any(getattr(verified, key) != value for key, value in bindings.items()):
             _deny("outcome_anchor")
         plan = build_execution_plan(_root(args), manifest, source=source, reference=reference, observation=observation, authorization=verified)
-        prepared_raw = _stable_bytes(_outside(args.prepared_receipt, _root(args)))
+        prepared_raw = _stable_bytes(_outside(args.prepared_receipt, _root(args)), _root(args))
         prepared = _signed_document(prepared_raw, "prepared-intent")
         parent = authority.canonical_journal_parent(_root(args))
-        marker_data = _require_attempt_marker(authority._decode(_stable_bytes(parent / f"{verified.authorization_id}-{verified.attempt_id}.json")), verified)
+        marker_data = _require_attempt_marker(authority._decode(_stable_bytes(parent / f"{verified.authorization_id}-{verified.attempt_id}.json", _root(args))), verified)
         roots = {"ledger": verified.target_ledger_root, "catalog": verified.target_catalog_root, "acl": verified.target_acl_root, "data": verified.target_data_root, "terminal": verified.terminal_root}
         required = {"source_commit", "target_fingerprint", "reference_receipt_sha256", "classification_sha256", "observation_receipt_sha256", "authorization_sha256", "expected_roots", "plan_sha256"}
         if (set(prepared) != required or prepared["source_commit"] != source.final_commit
@@ -631,24 +674,37 @@ def readback(args: Any) -> Mapping[str, Any]:
         raise
     except Exception:
         _deny("outcome_anchor")
-    value = _outcome_readback(args, source, reference, manifest, verified)
+    value = _terminal_readback(args, source, reference, manifest, verified)
+    proof_hash = _write_proof(args, source, reference, manifest, verified, value)
     final_path = _outside(args.final_receipt, _root(args), fresh=True)
-    final_hash = _write_signed(final_path, {"schema": SCHEMA, "kind": "outcome", "body": {"source_commit": source.final_commit, "target_fingerprint": verified.target_fingerprint, "authorization_sha256": verified.authorization_sha256, "prepared_receipt_sha256": hashlib.sha256(prepared_raw).hexdigest(), "attempt_receipt_sha256": marker_data["receipt_sha256"], **value}})
-    return MappingProxyType({"schema": SCHEMA, "mode": "readback", "status": "terminal", "final_readback_sha256": value["readback_sha256"], "final_receipt_sha256": final_hash})
+    final_hash = _write_signed(final_path, {"schema": SCHEMA, "kind": "outcome", "body": {"source_commit": source.final_commit, "target_fingerprint": verified.target_fingerprint, "authorization_sha256": verified.authorization_sha256, "prepared_receipt_sha256": hashlib.sha256(prepared_raw).hexdigest(), "attempt_receipt_sha256": marker_data["receipt_sha256"], "proof_receipt_sha256": proof_hash, **value}}, repository_root=_root(args))
+    return MappingProxyType({"schema": SCHEMA, "mode": "readback", "status": "terminal", "final_readback_sha256": value["readback_sha256"], "proof_receipt_sha256": proof_hash, "final_receipt_sha256": final_hash})
 
-_HANDLERS = MappingProxyType({
-    "validate": validate,
-    "diagnose": diagnose,
-    "prepare": prepare,
-    "execute": execute,
-    "readback": readback,
-    "production-backup": production_backup,
+_HANDLERS = MappingProxyType({"validate-source": validate_source, "validate": validate, "diagnose": diagnose, "prepare": prepare, "execute": execute, "readback": readback, "production-backup": production_backup})
+_MODE_OPTIONS = MappingProxyType({
+    "validate-source": ("repository-root", "source-commit", "source-receipt"),
+    "validate": ("repository-root", "source-commit", "target-fingerprint", "reference"),
+    "diagnose": ("repository-root", "source-commit", "target-fingerprint", "reference", "service-file", "service-name", "nonce-dir", "observation-receipt"),
+    "prepare": ("repository-root", "source-commit", "target-fingerprint", "reference", "observation", "custody", "authority-template"),
+    "execute": ("repository-root", "source-commit", "target-fingerprint", "reference", "service-file", "service-name", "observation", "custody", "authorization", "authorization-signature", "prepared-receipt", "final-receipt", "proof-receipt", "backup-receipt", "capture-receipt", "archive", "freeze-assertion", "freeze-evidence"),
+    "readback": ("repository-root", "source-commit", "target-fingerprint", "reference", "service-file", "service-name", "observation", "custody", "authorization", "authorization-signature", "prepared-receipt", "final-receipt", "proof-receipt"),
+    "production-backup": ("repository-root", "source-commit", "target-fingerprint", "reference", "observation", "destination", "capture-receipt", "service-file", "recipient", "g034-artifact", "encrypt-command", "freeze-assertion", "freeze-evidence", "output"),
 })
-
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="g040-production-controller"); parser.add_argument("mode", choices=sorted(MODES)); parser.add_argument("--repository-root", required=True); parser.add_argument("--source-commit", required=True); parser.add_argument("--target-fingerprint", required=True); parser.add_argument("--reference", required=True); parser.add_argument("--service-file"); parser.add_argument("--service-name"); parser.add_argument("--nonce-dir"); parser.add_argument("--observation-receipt"); parser.add_argument("--observation"); parser.add_argument("--custody"); parser.add_argument("--authority-template"); parser.add_argument("--authorization"); parser.add_argument("--authorization-signature"); parser.add_argument("--prepared-receipt"); parser.add_argument("--final-receipt"); parser.add_argument("--destination"); parser.add_argument("--capture-receipt"); parser.add_argument("--backup-receipt"); parser.add_argument("--archive"); parser.add_argument("--recipient"); parser.add_argument("--g034-artifact"); parser.add_argument("--pg-dump", default="pg_dump"); parser.add_argument("--encrypt-command"); parser.add_argument("--freeze-assertion"); parser.add_argument("--freeze-evidence", action="append"); parser.add_argument("--output")
+    argv = sys.argv[1:] if argv is None else argv
+    if not argv or argv[0] not in MODES:
+        argparse.ArgumentParser(prog="g040-production-controller").error("invalid_arguments")
+    mode = argv[0]; parser = argparse.ArgumentParser(prog="g040-production-controller", add_help=False)
+    parser.add_argument("mode", choices=(mode,))
+    for option in _MODE_OPTIONS[mode]:
+        parser.add_argument(f"--{option}", required=option != "freeze-evidence", action="append" if option == "freeze-evidence" else None)
     args, unknown = parser.parse_known_args(argv)
-    if unknown:
+    if mode == "production-backup":
+        args.pg_dump = "pg_dump"
+    if any(sum(token == f"--{option}" or token.startswith(f"--{option}=") for token in argv[1:]) != 1
+           for option in _MODE_OPTIONS[mode] if option != "freeze-evidence"):
+        parser.error("invalid_arguments")
+    if unknown or (hasattr(args, "freeze_evidence") and (type(args.freeze_evidence) is not list or len(args.freeze_evidence) != 5)):
         parser.error("invalid_arguments")
     try: print(json.dumps(dict(_HANDLERS[args.mode](args)), sort_keys=True)); return 0
     except ControllerError as exc: print(json.dumps({"schema": SCHEMA, "status": str(exc)})); return 2

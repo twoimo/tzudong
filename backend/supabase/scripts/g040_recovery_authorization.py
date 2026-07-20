@@ -2,6 +2,7 @@
 """G040's fixed-key authorization and durable one-shot authority boundary."""
 from __future__ import annotations
 
+import argparse
 import ctypes
 import hashlib
 import json
@@ -22,7 +23,7 @@ MCowBQYDK2VwAyEAgy8M88hrM04SdOcI3H/fNre+IFZ08tSl7KOQWkQH9K0=
 """
 PUBLIC_KEY_SHA256 = "6232368a02ebacafc21d4b99f6c9b8af07a716dd0dba2addd5e36a2d6cae5878"
 JOURNAL_SCHEMA = "g040-recovery-attempt-started-v1"
-CANONICAL_JOURNAL_DIRECTORY = Path.home() / ".g040-recovery" / "attempt-journal"
+CANONICAL_JOURNAL_DIRECTORY = Path("C:/ProgramData/TzudongRecovery/g040-attempt-journal") if os.name == "nt" else Path("/var/lib/tzudong-recovery/g040-attempt-journal")
 _HEX = re.compile(r"^[a-f0-9]{64}$")
 _COMMIT = re.compile(r"^[a-f0-9]{40}$")
 _UUID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
@@ -143,12 +144,14 @@ def verify_outcome_authorization(envelope: AuthorizationEnvelope, *, now: int | 
             finally:
                 object.__setattr__(envelope, field, -1)
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, repr=False)
 class AuthorizationEnvelope:
-    raw: bytes
-    signature: bytes
-    authorization_fd: int | None = None
-    signature_fd: int | None = None
+    authorization_fd: int
+    signature_fd: int
+    authorization_size: int
+    signature_size: int
+    authorization_sha256: str
+    signature_sha256: str
 
 @dataclass(frozen=True)
 class VerifiedAuthorization:
@@ -292,14 +295,14 @@ def restrictive_regular_file(path: str | Path, label: str = "authorization", rep
     except Exception:
         _fail("custody failure")
 
-def _open_custody(path: Path) -> tuple[int, bytes]:
+def _open_custody(path: str | Path, repository_root: str | Path) -> tuple[int, bytes]:
     fd: int | None = None
     try:
-        restrictive_regular_file(path)
+        candidate = restrictive_regular_file(path, repository_root=repository_root)
         flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
-        fd = os.open(path, flags)
-        restrictive_regular_file(path)
-        before = os.stat(path, follow_symlinks=False); opened = os.fstat(fd)
+        fd = os.open(candidate, flags)
+        restrictive_regular_file(candidate, repository_root=repository_root)
+        before = os.stat(candidate, follow_symlinks=False); opened = os.fstat(fd)
         if not stat.S_ISREG(opened.st_mode) or (before.st_dev, before.st_ino) != (opened.st_dev, opened.st_ino): _fail("custody failure")
         if os.name != "nt" and opened.st_mode & 0o077: _fail("custody failure")
         raw = os.read(fd, opened.st_size + 1)
@@ -315,17 +318,51 @@ def _open_custody(path: Path) -> tuple[int, bytes]:
         return fd, raw
     raise AuthorizationError("custody failure")
 
+def _write_external_request(output: str | Path, data: bytes, repository_root: str | Path) -> None:
+    fd: int | None = None
+    try:
+        candidate = Path(output)
+        _parent_restrictive(candidate)
+        root = Path(repository_root).resolve(strict=True)
+        resolved_parent = candidate.parent.resolve(strict=True)
+        if resolved_parent == root or root in resolved_parent.parents: _fail("custody failure")
+        fd = os.open(candidate, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0), 0o600)
+        if os.name != "nt": os.fchmod(fd, 0o600)
+        _write_all(fd, data); os.fsync(fd)
+        if os.name == "nt" and not _windows_restrictive(candidate): _fail("custody failure")
+    except AuthorizationError:
+        raise
+    except Exception:
+        _fail("request write failure")
+    finally:
+        if fd is not None:
+            try: os.close(fd)
+            except Exception: pass
 
-def authenticate_recovery_authorization(authorization: bytes | str | Path, signature: bytes | str | Path, *, expected_bindings: dict[str, Any] | None, now: int | None = None, require_fresh: bool = True) -> AuthorizationEnvelope:
+def build_authorization_request(*, authorization_id: str, attempt_id: str, expected_bindings: Mapping[str, Any], output: str | Path, repository_root: str | Path, now_unix: int | None = None, valid_seconds: int = 600) -> Mapping[str, Any]:
+    now = int(time.time()) if now_unix is None else now_unix
+    if type(expected_bindings) is not dict or set(expected_bindings) != _BINDINGS or type(valid_seconds) is not int or not 1 <= valid_seconds <= 900:
+        _fail("invalid authorization")
+    value = dict(schema=SCHEMA, purpose=PURPOSE, policy=POLICY, authorization_id=authorization_id, attempt_id=attempt_id, issued_at=now, expires_at=now + valid_seconds, **expected_bindings)
+    freeze_expires_at = value.get("freeze_expires_at")
+    if type(freeze_expires_at) is not int:
+        _fail("invalid authorization")
+    value["expires_at"] = min(value["expires_at"], freeze_expires_at)
+    _validate(value, dict(expected_bindings), now, require_fresh=False)
+    data = canonical_json_bytes(value)
+    _write_external_request(output, data, repository_root)
+    return {"schema": SCHEMA, "authorization_sha256": hashlib.sha256(data).hexdigest(), "bindings_sha256": canonical_sha256(expected_bindings), "expires_at": value["expires_at"]}
+
+def _authenticate_path_only(authorization: str | Path, signature: str | Path, *, repository_root: str | Path) -> tuple[AuthorizationEnvelope, dict[str, Any]]:
     auth_fd: int | None = None; sig_fd: int | None = None
     try:
-        if type(authorization) is bytes: raw = bytes(authorization)
-        else: auth_fd, raw = _open_custody(Path(authorization))
-        if type(signature) is bytes: sig = bytes(signature)
-        else: sig_fd, sig = _open_custody(Path(signature))
+        if not isinstance(authorization, (str, Path)) or not isinstance(signature, (str, Path)):
+            _fail("invalid authorization")
+        auth_fd, raw = _open_custody(authorization, repository_root)
+        sig_fd, sig = _open_custody(signature, repository_root)
         value = _decode(raw); _verify(raw, sig)
-        if expected_bindings is not None:
-            _validate(value, expected_bindings, int(time.time()) if now is None else now, require_fresh=require_fresh)
+        envelope = AuthorizationEnvelope(auth_fd, sig_fd, len(raw), len(sig), hashlib.sha256(raw).hexdigest(), hashlib.sha256(sig).hexdigest())
+        return envelope, value
     except AuthorizationError:
         for fd in (auth_fd, sig_fd):
             if fd is not None: os.close(fd)
@@ -335,23 +372,50 @@ def authenticate_recovery_authorization(authorization: bytes | str | Path, signa
             if fd is not None:
                 try: os.close(fd)
                 except Exception: pass
-    else:
-        return AuthorizationEnvelope(raw, sig, auth_fd, sig_fd)
     raise AuthorizationError("invalid authorization")
+
+def authenticate_recovery_authorization(authorization: str | Path, signature: str | Path, *, expected_bindings: dict[str, Any], repository_root: str | Path, now: int | None = None, require_fresh: bool = True) -> AuthorizationEnvelope:
+    if type(expected_bindings) is not dict:
+        _fail("invalid authorization")
+    envelope, value = _authenticate_path_only(authorization, signature, repository_root=repository_root)
+    try:
+        _validate(value, expected_bindings, int(time.time()) if now is None else now, require_fresh=require_fresh)
+        return envelope
+    except Exception:
+        for field in ("authorization_fd", "signature_fd"):
+            fd = getattr(envelope, field)
+            if type(fd) is int and fd >= 0: os.close(fd)
+            object.__setattr__(envelope, field, -1)
+        raise
+
+def authenticate_outcome_authorization(authorization: str | Path, signature: str | Path, *, repository_root: str | Path, now: int | None = None) -> AuthorizationEnvelope:
+    """Admit historical outcome evidence from held descriptors without caller bindings."""
+    envelope, value = _authenticate_path_only(authorization, signature, repository_root=repository_root)
+    try:
+        immutable = {key: value[key] for key in _BINDINGS} if type(value) is dict and set(value) == _FIELDS else None
+        _validate(value, immutable, int(time.time()) if now is None else now, require_fresh=False)
+        return envelope
+    except Exception:
+        for field in ("authorization_fd", "signature_fd"):
+            fd = getattr(envelope, field)
+            if type(fd) is int and fd >= 0: os.close(fd)
+            object.__setattr__(envelope, field, -1)
+        raise
+
+
 
 def _reread(envelope: AuthorizationEnvelope) -> tuple[bytes, bytes]:
     try:
-        def current(fd: int | None, saved: bytes) -> bytes:
-            if fd is None: return saved
-            size = os.fstat(fd).st_size
+        def current(fd: int, size: int, digest: str) -> bytes:
+            if type(fd) is not int or fd < 0 or os.fstat(fd).st_size != size: _fail("source verification failed")
             if hasattr(os, "pread"):
                 raw = os.pread(fd, size + 1, 0)
             else:
                 os.lseek(fd, 0, os.SEEK_SET)
                 raw = os.read(fd, size + 1)
-            if len(raw) != size or raw != saved: _fail("source verification failed")
+            if len(raw) != size or hashlib.sha256(raw).hexdigest() != digest: _fail("source verification failed")
             return raw
-        result = current(envelope.authorization_fd, envelope.raw), current(envelope.signature_fd, envelope.signature)
+        result = current(envelope.authorization_fd, envelope.authorization_size, envelope.authorization_sha256), current(envelope.signature_fd, envelope.signature_size, envelope.signature_sha256)
     except AuthorizationError:
         raise
     except Exception:
@@ -361,7 +425,7 @@ def _reread(envelope: AuthorizationEnvelope) -> tuple[bytes, bytes]:
     return result
 
 def reverify_destructive_stage(envelope: AuthorizationEnvelope, *, expected_bindings: dict[str, Any], now: int | None = None) -> VerifiedAuthorization:
-    if type(envelope) is not AuthorizationEnvelope or type(envelope.raw) is not bytes or type(envelope.signature) is not bytes:
+    if type(envelope) is not AuthorizationEnvelope:
         _fail("invalid authorization")
     try:
         raw, sig = _reread(envelope); value = _decode(raw); _verify(raw, sig); _validate(value, expected_bindings, int(time.time()) if now is None else now)
@@ -431,17 +495,12 @@ def _write_all(fd: int, data: bytes) -> None:
         offset += written
 
 def canonical_journal_parent(repository_root: str | Path) -> Path:
-    directory = CANONICAL_JOURNAL_DIRECTORY
     try:
-        directory.mkdir(mode=0o700, parents=True, exist_ok=True)
-        if os.name != "nt":
-            os.chmod(directory, 0o700)
-        _parent_restrictive(directory)
+        return _journal_parent(CANONICAL_JOURNAL_DIRECTORY, Path(repository_root))
     except AuthorizationError:
         raise
     except Exception:
         _fail("journal custody failure")
-    return _journal_parent(directory, Path(repository_root))
 
 def consume_one_shot_attempt(*, repository_root: str | Path, authorization: VerifiedAuthorization, callback: Callable[[AttemptStarted], Any], now: int | None = None) -> tuple[AttemptStarted, Any]:
     if type(authorization) is not VerifiedAuthorization or not callable(callback): _fail("invalid authorization")
@@ -463,3 +522,52 @@ def consume_one_shot_attempt(*, repository_root: str | Path, authorization: Veri
         except Exception: pass
     _fsync_directory(parent)
     return attempt, callback(attempt)
+def _bindings_from_path(path: str | Path, repository_root: str | Path) -> dict[str, Any]:
+    fd: int | None = None
+    try:
+        fd, raw = _open_custody(path, repository_root)
+        value = _decode(raw)
+        if type(value) is not dict or set(value) != _BINDINGS:
+            _fail("invalid authorization")
+        return value
+    finally:
+        if fd is not None:
+            try: os.close(fd)
+            except Exception: pass
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Build or verify G040 recovery authorization.")
+    commands = parser.add_subparsers(dest="command", required=True)
+    request = commands.add_parser("build-request")
+    request.add_argument("--repository-root", required=True)
+    request.add_argument("--bindings", required=True)
+    request.add_argument("--authorization-id", required=True)
+    request.add_argument("--attempt-id", required=True)
+    request.add_argument("--valid-seconds", type=int, default=600)
+    request.add_argument("--output", required=True)
+    verify = commands.add_parser("verify")
+    verify.add_argument("--repository-root", required=True)
+    verify.add_argument("--bindings", required=True)
+    verify.add_argument("--authorization", required=True)
+    verify.add_argument("--signature", required=True)
+    return parser
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    bindings = _bindings_from_path(args.bindings, args.repository_root)
+    if args.command == "build-request":
+        result = build_authorization_request(
+            authorization_id=args.authorization_id, attempt_id=args.attempt_id, expected_bindings=bindings,
+            output=args.output, repository_root=args.repository_root, valid_seconds=args.valid_seconds)
+    else:
+        envelope = authenticate_recovery_authorization(
+            args.authorization, args.signature, expected_bindings=bindings, repository_root=args.repository_root)
+        verified = reverify_destructive_stage(envelope, expected_bindings=bindings)
+        result = {"schema": verified.schema, "authorization_sha256": verified.authorization_sha256,
+                  "signature_sha256": verified.signature_sha256, "bindings_sha256": verified.bindings_sha256,
+                  "expires_at": verified.expires_at}
+    print(canonical_json_bytes(result).decode("ascii"))
+    return 0
+
+if __name__ == "__main__":
+    raise SystemExit(main())

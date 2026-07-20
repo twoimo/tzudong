@@ -39,8 +39,8 @@ from g040_reverse_00400 import DERIVATION_MODE, REVERSE_VECTOR, REVERSE_VECTOR_S
 from g040_reference_evidence import (
     PUBLIC_KEY_PEM as REFERENCE_PUBLIC_KEY_PEM,
     PUBLIC_KEY_SHA256 as REFERENCE_PUBLIC_KEY_SHA256,
-    build_reference_body,
-    sign_reference,
+    build_reference_request,
+    finalize_reference,
     verify_reference,
 )
 
@@ -450,6 +450,37 @@ def _restore_lineage(*, capture_path: str | Path, restore_path: str | Path, encr
             or any(capture_evidence.get(key) != restore_evidence.get(key) for key in ledger)):
         _fail("restore_lineage")
     return MappingProxyType({"g035_restore_receipt_sha256": restore_receipt, "g035_capture_receipt_sha256": capture_receipt, "restored_archive_sha256": dump_sha, "capture_receipt_bytes_sha256": _sha(capture_raw), "restore_receipt_bytes_sha256": _sha(restore_raw), "archive_bytes": dump_bytes, "g035_manifest_sha256": capture["manifest_sha256"], "source_sha256": capture_evidence["source_sha256"]})
+def build_clone_lineage_request(*, clone_nonce: str, capture_receipt: str | Path,
+                                restore_receipt: str | Path, encrypted_dump: str | Path,
+                                repository_root: str | Path, service_file: str | Path,
+                                service_name: str = "g035-local", container: str = "",
+                                docker: str = "docker", output: str | Path,
+                                now_unix: int | None = None,
+                                valid_seconds: int = 600) -> Mapping[str, Any]:
+    if not _SAFE.fullmatch(clone_nonce or "") or type(valid_seconds) is not int or not 1 <= valid_seconds <= 900:
+        _fail("lineage_attestation")
+    root = Path(repository_root).resolve()
+    archive = _archive_digest(encrypted_dump, root)
+    lineage = _restore_lineage(capture_path=capture_receipt, restore_path=restore_receipt,
+                               encrypted_dump=encrypted_dump, repository_root=root, archive=archive)
+    conn, service = _connect_service(service_file, service_name, readonly=True, repository_root=root)
+    try:
+        live = _live_identity(conn)
+    finally:
+        try: conn.rollback(); conn.close()
+        except Exception: pass
+    issued = int(time.time()) if now_unix is None else now_unix
+    if type(issued) is not int:
+        _fail("lineage_attestation")
+    proof = _docker_clone_proof(container, service["port"], docker)
+    body = {"schema": _LINEAGE_SCHEMA, "clone_nonce": clone_nonce,
+            "issued_at_unix": issued, "expires_at_unix": issued + valid_seconds,
+            "lineage_public_key_sha256": _LINEAGE_PUBLIC_KEY_SHA256,
+            **dict(lineage), "live_identity_sha256": _sha(_canonical(dict(live))), **dict(proof)}
+    _write(controller._outside(output, root, fresh=True), body)
+    return MappingProxyType({"schema": _LINEAGE_SCHEMA,
+                             "lineage_attestation_sha256": _sha(_canonical(body)),
+                             "expires_at_unix": body["expires_at_unix"]})
 
 
 def _verify_lineage_attestation(*, attestation: str | Path, signature: str | Path, expected: Mapping[str, Any], repository_root: str | Path, now_unix: int) -> Mapping[str, str]:
@@ -742,26 +773,6 @@ def observe_reference(*, repository_root: str | Path, binding_path: str | Path, 
             conn.rollback(); conn.close()
         except Exception:
             pass
-def _reference_signer(private_key: str | Path, *, repository_root: str | Path | None = None) -> Any:
-    try:
-        key_path = Path(private_key).resolve()
-        if repository_root is not None:
-            root = Path(repository_root).resolve()
-            if key_path == root or root in key_path.parents:
-                _fail("reference_signing_key")
-        crypto.require_file(key_path, "reference signing key")
-        public = subprocess.run(
-            [crypto.command("openssl"), "pkey", "-in", str(key_path), "-pubout"],
-            stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-            timeout=crypto.TIMEOUT, check=True,
-        ).stdout
-        if _sha(public) != REFERENCE_PUBLIC_KEY_SHA256:
-            _fail("reference_signing_key")
-        return lambda payload: crypto.openssl_sign(crypto.command("openssl"), key_path, payload)
-    except RehearsalError:
-        raise
-    except Exception:
-        _fail("reference_signing_key")
 
 
 def _aggregate_signed(path: str | Path, kind: str, root: Path) -> tuple[Mapping[str, Any], str]:
@@ -965,17 +976,24 @@ def _verified_observation(path: str | Path, *, source: SourceBinding, target_fin
     proof = {key: value[key] for key in ("clone_identity", "clone_nonce", "live_identity_sha256", "container_id_sha256", "image_id_sha256", "image_digest_sha256", "endpoint_sha256", "g035_restore_receipt_sha256", "g035_capture_receipt_sha256", "restored_archive_sha256", "capture_receipt_bytes_sha256", "restore_receipt_bytes_sha256", "lineage_attestation_sha256", "lineage_signature_sha256")}
     return MappingProxyType({**proof, "binding_receipt_sha256": value["binding_receipt_sha256"], "observation_receipt_sha256": _sha(raw), "absent_catalog_sha256": value["absent_catalog_sha256"], "full_catalog_sha256": value["initial_full_catalog_sha256"], "full_data_sha256": value["initial_full_data_sha256"], "ledger_prefix_sha256": value["initial_full_ledger_sha256"], "derivation_mode": value["derivation_mode"], "reverse_vector_sha256": value["reverse_vector_sha256"]})
 
-def build_reference(*, source: SourceBinding, target_fingerprint: str, nonce: str, first_observation: str | Path, second_observation: str | Path, private_key: str | Path, output: str | Path, repository_root: str | Path | None = None, now: int | None = None, valid_seconds: int = 600) -> None:
-    if type(valid_seconds) is not int or not 1 <= valid_seconds <= 900 or not _HEX.fullmatch(target_fingerprint or "") or not _SAFE.fullmatch(nonce or "") or repository_root is None:
-        _fail("reference_input")
-    issued = int(time.time()) if now is None else now
-    first = _verified_observation(first_observation, source=source, target_fingerprint=target_fingerprint, repository_root=repository_root, now=issued)
-    second = _verified_observation(second_observation, source=source, target_fingerprint=target_fingerprint, repository_root=repository_root, now=issued)
-    body = build_reference_body(final_commit=source.final_commit, runtime_source_root=source.runtime_source_root, target_fingerprint=target_fingerprint, observation_nonce=nonce, issued_at_unix=issued, expires_at_unix=issued + valid_seconds, first_clone=first, second_clone=second)
-    signed = sign_reference(body, _reference_signer(private_key, repository_root=repository_root))
-    raw = _canonical(dict(signed))
-    verify_reference(raw, now_unix=issued, expected_source=source, expected_target_fingerprint=target_fingerprint)
-    _write(output, signed)
+def build_reference_request_file(*, source: SourceBinding, target_fingerprint: str,
+                                 nonce: str, first_observation: str | Path,
+                                 second_observation: str | Path, output: str | Path,
+                                 repository_root: str | Path, now: int | None = None,
+                                 valid_seconds: int = 600) -> Mapping[str, Any]:
+    return build_reference_request(source=source, target_fingerprint=target_fingerprint,
+                                   nonce=nonce, first_observation=first_observation,
+                                   second_observation=second_observation, output=output,
+                                   repository_root=repository_root, now_unix=now,
+                                   valid_seconds=valid_seconds)
+
+
+def finalize_reference_file(*, source: SourceBinding, target_fingerprint: str,
+                            request: str | Path, signature: str | Path, output: str | Path,
+                            repository_root: str | Path, now: int | None = None) -> Mapping[str, str]:
+    return finalize_reference(source=source, target_fingerprint=target_fingerprint,
+                              request=request, signature=signature, output=output,
+                              repository_root=repository_root, now_unix=now)
 
 
 def _source(root: str | Path, commit: str) -> SourceBinding:
@@ -1412,7 +1430,9 @@ def _parser() -> argparse.ArgumentParser:
     p = sub.add_parser("preflight", parents=[common]); p.add_argument("--image", required=True); p.add_argument("--image-metadata", required=True); p.add_argument("--output", required=True)
     p = sub.add_parser("bind-restore", parents=[common]); p.add_argument("--clone-nonce", required=True); p.add_argument("--capture-receipt", required=True); p.add_argument("--restore-receipt", required=True); p.add_argument("--encrypted-dump", required=True); p.add_argument("--lineage-attestation", required=True); p.add_argument("--lineage-signature", required=True); p.add_argument("--repository-root", required=True); p.add_argument("--container", required=True); p.add_argument("--docker", default="docker"); p.add_argument("--output", required=True)
     p = sub.add_parser("observe-reference", parents=[common]); p.add_argument("--repository-root", required=True); p.add_argument("--source-commit", required=True); p.add_argument("--target-fingerprint", required=True); p.add_argument("--binding", required=True); p.add_argument("--container", required=True); p.add_argument("--docker", default="docker"); p.add_argument("--output", required=True)
-    p = sub.add_parser("build-reference"); p.add_argument("--repository-root", required=True); p.add_argument("--source-commit", required=True); p.add_argument("--target-fingerprint", required=True); p.add_argument("--nonce", required=True); p.add_argument("--first-observation", required=True); p.add_argument("--second-observation", required=True); p.add_argument("--private-key", required=True); p.add_argument("--valid-seconds", type=int, default=600); p.add_argument("--output", required=True)
+    p = sub.add_parser("build-reference-request"); p.add_argument("--repository-root", required=True); p.add_argument("--source-commit", required=True); p.add_argument("--target-fingerprint", required=True); p.add_argument("--nonce", required=True); p.add_argument("--first-observation", required=True); p.add_argument("--second-observation", required=True); p.add_argument("--valid-seconds", type=int, default=600); p.add_argument("--output", required=True)
+    p = sub.add_parser("finalize-reference"); p.add_argument("--repository-root", required=True); p.add_argument("--source-commit", required=True); p.add_argument("--target-fingerprint", required=True); p.add_argument("--request", required=True); p.add_argument("--signature", required=True); p.add_argument("--output", required=True)
+    p = sub.add_parser("build-lineage-request", parents=[common]); p.add_argument("--repository-root", required=True); p.add_argument("--clone-nonce", required=True); p.add_argument("--capture-receipt", required=True); p.add_argument("--restore-receipt", required=True); p.add_argument("--encrypted-dump", required=True); p.add_argument("--container", required=True); p.add_argument("--docker", default="docker"); p.add_argument("--valid-seconds", type=int, default=600); p.add_argument("--output", required=True)
     p = sub.add_parser("prepare-local-state", parents=[common]); p.add_argument("--repository-root", required=True); p.add_argument("--source-commit", required=True); p.add_argument("--target-fingerprint", required=True); p.add_argument("--reference", required=True); p.add_argument("--observation", required=True); p.add_argument("--binding", required=True); p.add_argument("--clone-observation", required=True); p.add_argument("--container", required=True); p.add_argument("--docker", default="docker"); p.add_argument("--output", required=True)
     p = sub.add_parser("replay-branch", parents=[common]); p.add_argument("--repository-root", required=True); p.add_argument("--source-commit", required=True); p.add_argument("--target-fingerprint", required=True); p.add_argument("--reference", required=True); p.add_argument("--observation", required=True); p.add_argument("--binding", required=True); p.add_argument("--clone-observation", required=True); p.add_argument("--container", required=True); p.add_argument("--docker", default="docker"); p.add_argument("--selected-branch", choices=("UNAPPLIED", "FULL_ESCAPED"), required=True); p.add_argument("--preparation"); p.add_argument("--output", required=True)
     p = sub.add_parser("compare-replays"); p.add_argument("--repository-root", required=True); p.add_argument("--source-commit", required=True); p.add_argument("--target-fingerprint", required=True); p.add_argument("--reference", required=True); p.add_argument("--hosted-observation", required=True); p.add_argument("--first-replay", required=True); p.add_argument("--second-replay", required=True); p.add_argument("--output", required=True)
@@ -1432,8 +1452,12 @@ def main(argv: list[str] | None = None) -> int:
             result = dict(bind_restore(clone_nonce=args.clone_nonce, capture_receipt=args.capture_receipt, restore_receipt=args.restore_receipt, encrypted_dump=args.encrypted_dump, lineage_attestation=args.lineage_attestation, lineage_signature=args.lineage_signature, repository_root=args.repository_root, service_file=args.service_file, service_name=args.service_name, container=args.container, docker=args.docker, output=args.output))
         elif args.mode == "observe-reference":
             observe_reference(repository_root=args.repository_root, source_commit=args.source_commit, target_fingerprint=args.target_fingerprint, binding_path=args.binding, service_file=args.service_file, service_name=args.service_name, container=args.container, docker=args.docker, output=args.output); result = {"status": "observed"}
-        elif args.mode == "build-reference":
-            build_reference(source=_source(args.repository_root, args.source_commit), target_fingerprint=args.target_fingerprint, nonce=args.nonce, first_observation=args.first_observation, second_observation=args.second_observation, private_key=args.private_key, valid_seconds=args.valid_seconds, output=args.output, repository_root=args.repository_root); result = {"status": "reference_built"}
+        elif args.mode == "build-reference-request":
+            result = dict(build_reference_request_file(source=_source(args.repository_root, args.source_commit), target_fingerprint=args.target_fingerprint, nonce=args.nonce, first_observation=args.first_observation, second_observation=args.second_observation, valid_seconds=args.valid_seconds, output=args.output, repository_root=args.repository_root))
+        elif args.mode == "finalize-reference":
+            result = dict(finalize_reference_file(source=_source(args.repository_root, args.source_commit), target_fingerprint=args.target_fingerprint, request=args.request, signature=args.signature, output=args.output, repository_root=args.repository_root))
+        elif args.mode == "build-lineage-request":
+            result = dict(build_clone_lineage_request(clone_nonce=args.clone_nonce, capture_receipt=args.capture_receipt, restore_receipt=args.restore_receipt, encrypted_dump=args.encrypted_dump, repository_root=args.repository_root, service_file=args.service_file, service_name=args.service_name, container=args.container, docker=args.docker, valid_seconds=args.valid_seconds, output=args.output))
         elif args.mode == "prepare-local-state":
             result = dict(prepare_local_state(args))
         elif args.mode == "replay-branch":
