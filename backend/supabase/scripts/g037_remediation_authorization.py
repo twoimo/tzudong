@@ -35,12 +35,7 @@ def _read(path,label):
  if not isinstance(value,dict) or raw!=canonical_json_bytes(value): raise ContractError(label+" JSON noncanonical")
  return raw,value
 def _read_operator_assertion(path):
- try: raw=Path(path).read_bytes()
- except OSError as exc: raise ContractError("operator assertion JSON invalid") from exc
- if not raw.endswith(b"\n") or raw[:-1].endswith(b"\r"): raise ContractError("operator assertion JSON noncanonical")
- try: value=json.loads(raw[:-1].decode("utf8"),object_pairs_hook=_pairs,parse_constant=_constant)
- except (UnicodeDecodeError,json.JSONDecodeError,ContractError) as exc: raise ContractError("operator assertion JSON invalid") from exc
- if not isinstance(value,dict) or raw!=canonical_json_bytes(value)+b"\n": raise ContractError("operator assertion JSON noncanonical")
+ raw,value=_read(path,"operator assertion")
  return value
 def _verify(raw,signature,pem):
  try:
