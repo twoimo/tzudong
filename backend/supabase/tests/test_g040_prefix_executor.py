@@ -1,11 +1,14 @@
 """Offline contract tests for the canonical G040 locked cursor executor."""
 from __future__ import annotations
 
+import hashlib
+import json
 import sys
 import time
 import unittest
 from dataclasses import FrozenInstanceError, replace
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).parents[1] / "scripts"))
@@ -76,6 +79,43 @@ class Cursor:
     def fetchall(self):
         return self.ledger_rows
 
+class DerivationCursor(Cursor):
+    def __init__(self):
+        super().__init__()
+        self.fetchone_values = [
+            ("off",),
+            {"data_shape_sha256": H},
+            {"data_shape_sha256": H},
+        ]
+
+    def fetchone(self):
+        return self.fetchone_values.pop(0)
+class CloneConnection:
+    def __init__(self, cursor, port=55401):
+        self._cursor = cursor
+        self.info = SimpleNamespace(host="127.0.0.1", port=port)
+        self.rollbacks = 0
+        cursor.connection = self
+
+    def cursor(self):
+        return self._cursor
+
+    def rollback(self):
+        self.rollbacks += 1
+
+
+class CloneDerivationCursor(DerivationCursor):
+    def __init__(self, identity):
+        super().__init__()
+        self.fetchone_values = [
+            identity,
+            ("off",),
+            {"data_shape_sha256": H},
+            {"data_shape_sha256": H},
+        ]
+        self.connection = None
+
+
 class FakeClock:
     def __init__(self):
         self.now = 0.0
@@ -130,6 +170,14 @@ def artifacts(branch="UNAPPLIED"):
         full_catalog_sha256=H,
         full_data_sha256=H,
         ledger_prefix_sha256=H,
+        source_plan_sha256=H,
+        terminal_rows=40,
+        terminal_ledger_root="f" * 64,
+        terminal_catalog_root="2" * 64,
+        terminal_acl_root=H,
+        terminal_data_root=H,
+        terminal_spec_root=SPEC,
+        terminal_tuple_sha256="31941a389270217652fc7c20ca8e504d8e10cc11540954da226212b28916b846",
         target_fingerprint=H,
         observation_nonce="n" * 16,
         issued_at_unix=1,
@@ -526,5 +574,148 @@ class ExecutorTests(unittest.TestCase):
         self.assertEqual(error.exception.code, "attempt_binding")
 
 
+    def _clone_capability(self):
+        identity = {
+            "system_identifier": "system",
+            "database_oid": "1",
+            "database_name": "g035_local",
+            "server_version": "17.6",
+            "server_version_num": 170006,
+        }
+        encoded = json.dumps(identity, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii")
+        capability = executor._admit_verified_clone(
+            clone_identity=H, clone_nonce="nonce", target_fingerprint=H,
+            live_identity_sha256=hashlib.sha256(encoded).hexdigest(), port=55401,
+        )
+        return identity, capability
+
+    def test_production_rejects_none_and_subclassed_attempt_or_plan_before_cursor_mutation(self):
+        plan, attempt, _, _, _ = self.build_plan()
+        class AttemptSubclass(AttemptStarted):
+            pass
+        class PlanSubclass(executor.RecoveryExecutionPlan):
+            pass
+        for candidate_plan, candidate_attempt in (
+                (plan, None),
+                (plan, AttemptSubclass(**attempt.__dict__)),
+                (PlanSubclass(**plan.__dict__), attempt)):
+            with self.subTest(attempt=type(candidate_attempt).__name__):
+                cursor = Cursor()
+                with self.assertRaises(Denial) as error:
+                    executor.apply_locked_cursor(
+                        cursor, plan=candidate_plan, attempt=candidate_attempt,
+                        deadline_monotonic=time.monotonic() + 60,
+                    )
+                self.assertEqual(error.exception.code, "attempt_type")
+                self.assertEqual(cursor.calls, [])
+
+    def test_clone_authority_is_private_and_raw_or_subclassed_capabilities_are_denied(self):
+        self.assertFalse(
+            {"VerifiedCloneCapability", "admit_verified_clone",
+             "apply_rehearsal_locked_cursor", "derive_clone_terminal_expectation"}
+            & set(executor.__all__))
+        self.assertFalse(any(
+            hasattr(executor, name)
+            for name in ("VerifiedCloneCapability", "admit_verified_clone",
+                         "apply_rehearsal_locked_cursor",
+                         "derive_clone_terminal_expectation")))
+        identity, capability = self._clone_capability()
+        forged = executor._VerifiedCloneCapability(
+            capability._admission, capability.clone_identity, capability.clone_nonce,
+            capability.target_fingerprint)
+        class CapabilitySubclass(executor._VerifiedCloneCapability):
+            pass
+        for candidate in (forged, CapabilitySubclass(**capability.__dict__)):
+            with self.subTest(candidate=type(candidate).__name__):
+                with self.assertRaises(Denial) as error:
+                    executor._validated_local_clone_identity(Cursor(), candidate)
+                self.assertEqual(error.exception.code, "clone_capability")
+
+    def test_rehearsal_never_enters_production_apply_path(self):
+        m = manifest()
+        source, reference, observation, _, _ = artifacts()
+        vectors = compiled(m)
+        identity, capability = self._clone_capability()
+        cursor = Cursor()
+        cursor.connection = SimpleNamespace(info=SimpleNamespace(host="127.0.0.1", port=55401))
+        with patch.object(executor, "validate_sources", return_value=m), \
+                patch.object(executor, "terminal_spec", return_value=SPEC), \
+                patch.object(executor, "_compiled", return_value=vectors), \
+                patch.object(executor, "_validated_local_clone_identity"), \
+                patch.object(executor, "_apply_mutation_locked_cursor", return_value=object()) as core, \
+                patch.object(executor, "apply_locked_cursor", side_effect=AssertionError("production path")):
+            plan = executor.compile_branch_plan(ROOT, m, source=source, reference=reference,
+                                               observation=observation)
+            executor._apply_rehearsal_locked_cursor(
+                cursor, plan=plan, verified_clone_capability=capability,
+                deadline_monotonic=time.monotonic() + 60,
+            )
+        self.assertTrue(core.called)
+
+    def test_clone_derivation_begins_verifies_and_always_rolls_back(self):
+        m = manifest()
+        source, _, _, authorization, _ = artifacts()
+        vectors = compiled(m)
+        identity, capability = self._clone_capability()
+        cursor = CloneDerivationCursor(identity)
+        connection = CloneConnection(cursor)
+        cursor.ledger_rows = (
+            [(version, name, (f"base-{index}",)) for index, (version, name) in enumerate(BASELINE_PAIRS)]
+            + [(item.version, item.name, full) for item, full, _ in vectors[:16]]
+        )
+        terminal = {
+            "catalog_root": authorization.target_catalog_root, "acl_root": H,
+            "ledger_root": authorization.target_ledger_root, "terminal_spec": SPEC,
+        }
+        with patch.object(executor, "validate_sources", return_value=m), \
+                patch.object(executor, "terminal_spec", return_value=SPEC), \
+                patch.object(executor, "_compiled", return_value=vectors), \
+                patch.object(executor, "validate_full_data_root", return_value=H), \
+                patch.object(executor, "terminal_readback_assert", return_value=terminal):
+            plan = executor.build_source_validation_plan(ROOT, m, source=source)
+            result = executor._derive_clone_terminal_expectation(
+                connection, source_plan=plan, verified_clone_capability=capability,
+                branch="UNAPPLIED", expected_full_data_root=H,
+                deadline_monotonic=time.monotonic() + 60,
+            )
+        self.assertEqual(result.terminal_data_root, H)
+        self.assertEqual(connection.rollbacks, 1)
+        self.assertEqual([sql for sql, _ in cursor.calls if sql != STATEMENT_TIMEOUT_SQL][0], "BEGIN")
+        self.assertIn(executor.DATA_PROBE, [sql for sql, _ in cursor.calls])
+
+    def test_clone_derivation_rejects_cursor_and_forged_capability_and_rolls_back_on_failure(self):
+        m = manifest()
+        source, _, _, authorization, _ = artifacts()
+        vectors = compiled(m)
+        identity, capability = self._clone_capability()
+        cursor = CloneDerivationCursor(identity)
+        connection = CloneConnection(cursor)
+        cursor.ledger_rows = (
+            [(version, name, (f"base-{index}",)) for index, (version, name) in enumerate(BASELINE_PAIRS)]
+            + [(item.version, item.name, full) for item, full, _ in vectors[:16]]
+        )
+        with self.assertRaises(Denial):
+            executor._derive_clone_terminal_expectation(
+                cursor, source_plan=object(), verified_clone_capability=capability,
+                branch="UNAPPLIED", expected_full_data_root=H,
+                deadline_monotonic=time.monotonic() + 60,
+            )
+        forged = executor._VerifiedCloneCapability(
+            capability._admission, capability.clone_identity, capability.clone_nonce,
+            capability.target_fingerprint,
+        )
+        with patch.object(executor, "validate_sources", return_value=m), \
+                patch.object(executor, "terminal_spec", return_value=SPEC), \
+                patch.object(executor, "_compiled", return_value=vectors):
+            plan = executor.build_source_validation_plan(ROOT, m, source=source)
+            with self.assertRaises(Denial) as error:
+                executor._derive_clone_terminal_expectation(
+                    connection, source_plan=plan, verified_clone_capability=forged,
+                    branch="UNAPPLIED", expected_full_data_root=H,
+                    deadline_monotonic=time.monotonic() + 60,
+                )
+        self.assertEqual(error.exception.code, "clone_capability")
+        self.assertEqual(connection.rollbacks, 1)
+        self.assertEqual([sql for sql, _ in cursor.calls if sql != STATEMENT_TIMEOUT_SQL][0], "BEGIN")
 if __name__ == "__main__":
     unittest.main()

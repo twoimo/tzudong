@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import hashlib
 import json
 import os
@@ -110,6 +111,22 @@ class CloneRehearsalTests(unittest.TestCase):
         self.assertIn("build-reference-request", help_text)
         self.assertIn("finalize-reference", help_text)
         self.assertIn("build-lineage-request", help_text)
+    def test_clone_runner_signed_writes_pass_resolved_repository_root(self):
+        source = Path(rehearsal.__file__).read_text(encoding="utf-8")
+        calls = [
+            node for node in ast.walk(ast.parse(source))
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "_write_signed"
+            and isinstance(node.func.value, ast.Name)
+            and node.func.value.id == "controller"
+        ]
+        self.assertGreater(len(calls), 0)
+        for call in calls:
+            keywords = {keyword.arg: keyword.value for keyword in call.keywords}
+            self.assertEqual(set(keywords), {"repository_root"})
+            self.assertIsInstance(keywords["repository_root"], ast.Name)
+            self.assertEqual(keywords["repository_root"].id, "root")
 
     def test_live_identity_uses_a_real_cursor(self):
         connection = FakeConnection()
@@ -117,6 +134,71 @@ class CloneRehearsalTests(unittest.TestCase):
         self.assertEqual(identity["server_version_num"], 170006)
         self.assertIn("pg_control_system", connection.cursor_value.last)
 
+    def test_read_only_classifier_and_replay_recovery_accept_only_terminal_state(self):
+        reference = types.SimpleNamespace()
+        start = {"ledger": "a" * 64, "catalog": "b" * 64, "data": "c" * 64}
+        terminal = {"terminal_rows": 40, "ledger": "d" * 64, "catalog": "e" * 64,
+                    "acl": "f" * 64, "data": "0" * 64, "terminal_spec": "1" * 64}
+        cursor = FakeCursor()
+        with patch.object(rehearsal, "_query_one", side_effect=[
+                {"transaction_read_only": "on"},
+                {"ledger_sha256": terminal["ledger"], "catalog_sha256": terminal["catalog"]},
+        ]), patch.object(rehearsal, "_valid_probe") as valid:
+            self.assertEqual(
+                rehearsal._classify_read_only_state(
+                    cursor, reference, start=start, terminal=terminal),
+                "TERMINAL")
+        valid.assert_called_once_with(
+            {"ledger_sha256": terminal["ledger"], "catalog_sha256": terminal["catalog"]},
+            full=False)
+        connection = FakeConnection()
+        binding = {"binding_receipt_sha256": "a" * 64}
+        args = types.SimpleNamespace(
+            service_file="service.conf", service_name="g035-local", container="clone",
+            docker="docker")
+        with patch.object(rehearsal, "_connect_service", return_value=(connection, {"port": 55401})) as connect, \
+                patch.object(rehearsal, "_assert_observation_binding"), \
+                patch.object(rehearsal, "begin_read_only_snapshot"), \
+                patch.object(rehearsal, "_classify_read_only_state", return_value="TERMINAL"):
+            recovered = rehearsal._replay_readback(args, Path("."), binding, reference,
+                                                    Manifest(), start, terminal)
+        self.assertEqual(recovered["terminal_readback_sha256"],
+                         rehearsal._sha(rehearsal._canonical(terminal)))
+        self.assertEqual(connection.cursor_value.statements, [
+            "BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY", "ROLLBACK"])
+        self.assertEqual(connection.commit_count, 0)
+        self.assertTrue(connect.call_args.kwargs["readonly"])
+    def test_read_only_snapshot_opener_rolls_back_before_explicit_repeatable_read(self):
+        connection = FakeConnection()
+        cursor = connection.cursor_value
+        with patch.object(rehearsal, "begin_read_only_snapshot") as snapshot:
+            rehearsal._open_read_only_snapshot(connection, cursor)
+        self.assertEqual(connection.rollback_count, 1)
+        self.assertEqual(cursor.statements, [
+            "BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY"])
+        snapshot.assert_called_once_with(cursor)
+
+    def test_read_only_classifier_reaches_start_and_rejects_partial_state(self):
+        reference = types.SimpleNamespace()
+        start = {"ledger": "a" * 64, "catalog": "b" * 64, "data": "c" * 64}
+        terminal = {"terminal_rows": 40, "ledger": "d" * 64, "catalog": "e" * 64,
+                    "acl": "f" * 64, "data": "0" * 64, "terminal_spec": "1" * 64}
+        cursor = FakeCursor()
+        with patch.object(rehearsal, "_query_one", side_effect=[
+                {"transaction_read_only": "on"},
+                {"ledger_sha256": start["ledger"], "catalog_sha256": start["catalog"]},
+        ]), patch.object(rehearsal, "probe_full_data_root", return_value=start["data"]), \
+                patch.object(rehearsal, "terminal_readback_assert") as terminal_assert:
+            self.assertEqual(rehearsal._classify_read_only_state(
+                cursor, reference, start=start, terminal=terminal, manifest=Manifest()), "START")
+        terminal_assert.assert_not_called()
+        with patch.object(rehearsal, "_query_one", side_effect=[
+                {"transaction_read_only": "on"},
+                {"ledger_sha256": start["ledger"], "catalog_sha256": terminal["catalog"]},
+        ]), patch.object(rehearsal, "terminal_readback_assert") as terminal_assert:
+            self.assertEqual(rehearsal._classify_read_only_state(
+                cursor, reference, start=start, terminal=terminal, manifest=Manifest()), "AMBIGUOUS")
+        terminal_assert.assert_called_once()
     def test_service_schema_exact_image_and_secret_safe_cli(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw); service = self.service(root)
@@ -179,7 +261,7 @@ class CloneRehearsalTests(unittest.TestCase):
             self.assertEqual(Path(kwargs["repository_root"]).resolve(), Path(".").resolve())
             self.assertIs(kwargs["conn"], connection)
 
-        def write_signed(path, document):
+        def write_signed(path, document, *, repository_root):
             self.assertEqual(probe_states, [True, True, False, True, True])
             self.assertEqual(data_validations, ["d" * 64] * 4)
             self.assertEqual(binding_checks, [(55401, "clone")] * 3)
@@ -187,12 +269,21 @@ class CloneRehearsalTests(unittest.TestCase):
             self.assertEqual(document["kind"], "local-clone-observation")
             self.assertEqual(document["body"]["target_fingerprint"], "c" * 64)
             self.assertEqual(document["body"]["binding_receipt_sha256"], "a" * 64)
+            self.assertEqual(Path(repository_root).resolve(), Path(".").resolve())
             writes[str(path)] = document
             return rehearsal._sha(rehearsal._canonical(document))
 
+        terminal = types.SimpleNamespace(
+            plan_sha256="e" * 64, terminal_rows=rehearsal.executor._TERMINAL_ROWS,
+            terminal_ledger_root="f" * 64, terminal_catalog_root="1" * 64,
+            terminal_acl_root="2" * 64, terminal_data_root="d" * 64,
+            terminal_spec_root="3" * 64,
+        )
         with patch.object(rehearsal, "_binding", return_value=binding), \
                 patch.object(rehearsal, "_source", return_value=types.SimpleNamespace(final_commit="a" * 40, runtime_source_root="b" * 64)), \
                 patch.object(rehearsal, "validate_sources", return_value=Manifest()), \
+                patch.object(rehearsal, "build_source_validation_plan", return_value=object()), \
+                patch.object(rehearsal, "_derive_clone_terminal_expectation", side_effect=lambda connection, **_: (setattr(connection.cursor_value, "full", True) or terminal)), \
                 patch.object(rehearsal, "vectors", return_value=((), ("SELECT 1",))), \
                 patch.object(rehearsal, "_connect_service", return_value=(connection, {"port": 55401})), \
                 patch.object(rehearsal, "_assert_observation_binding", side_effect=checked_binding), \
@@ -213,32 +304,18 @@ class CloneRehearsalTests(unittest.TestCase):
             )
         self.assertEqual(len(writes), 1)
         statements = connection.cursor_value.statements
-        self.assertLess(statements.index(rehearsal._REFERENCE_CUSTODY_QUERY), statements.index("GRANT CREATE ON DATABASE g035_local TO postgres"))
-        self.assertLess(statements.index("GRANT CREATE ON DATABASE g035_local TO postgres"), statements.index("GRANT CREATE ON SCHEMA public TO postgres"))
-        self.assertLess(statements.index("GRANT CREATE ON SCHEMA public TO postgres"), statements.index("SET LOCAL ROLE postgres"))
-        custody_queries = [index for index, statement in enumerate(statements) if statement == rehearsal._REFERENCE_CUSTODY_QUERY]
-        self.assertEqual(len(custody_queries), 2)
-        self.assertLess(statements.index("SET LOCAL ROLE postgres"), custody_queries[1])
-        mutation_search_path = statements.index(
-            'SET LOCAL search_path = "$user", public, auth, extensions',
-            statements.index("SET LOCAL ROLE postgres"),
-        )
-        self.assertLess(custody_queries[1], mutation_search_path)
-        self.assertLess(statements.index("SET LOCAL ROLE postgres"), mutation_search_path)
-        self.assertLess(mutation_search_path, statements.index(rehearsal.REVERSE_VECTOR[0]))
+        self.assertNotIn("GRANT CREATE ON DATABASE g035_local TO postgres", statements)
+        self.assertNotIn("GRANT CREATE ON SCHEMA public TO postgres", statements)
+        self.assertNotIn("SET LOCAL ROLE postgres", statements)
+        self.assertIn(rehearsal.REVERSE_VECTOR[0], statements)
         snapshot_queries = [
             index for index, statement in enumerate(statements)
             if statement == _READ_ONLY_SNAPSHOT_QUERY
         ]
         self.assertEqual(len(snapshot_queries), 2)
-        self.assertTrue(all(
-            index < statements.index("SET LOCAL ROLE postgres")
-            or index > statements.index("SELECT 1")
-            for index in snapshot_queries
-        ))
         self.assertLess(snapshot_queries[0], statements.index(rehearsal.CATALOG_PROBE))
         self.assertLess(snapshot_queries[1], statements.index(rehearsal.CATALOG_PROBE, snapshot_queries[1]))
-        self.assertLess(statements.index(rehearsal.REVERSE_VECTOR[0]), statements.index("SELECT 1"))
+        self.assertNotIn("COMMIT", statements)
         self.assertEqual(connection.cursor_value.snapshot_rows, [
             {"transaction_read_only": "on", "transaction_isolation": "repeatable read"},
         ] * 2)
@@ -603,6 +680,14 @@ class CloneRehearsalTests(unittest.TestCase):
             ledger_prefix_sha256="e" * 64, full_catalog_sha256="f" * 64,
             full_data_sha256="0" * 64, absent_catalog_sha256="a" * 64,
             expires_at_unix=200,
+            source_plan_sha256="b" * 64, terminal_rows=40,
+            terminal_ledger_root="6" * 64, terminal_catalog_root="7" * 64,
+            terminal_acl_root="8" * 64, terminal_data_root="0" * 64,
+            terminal_spec_root="a" * 64,
+            terminal_tuple_sha256=rehearsal._sha(rehearsal._canonical({
+                "terminal_rows": 40, "terminal_ledger_root": "6" * 64,
+                "terminal_catalog_root": "7" * 64, "terminal_acl_root": "8" * 64,
+                "terminal_data_root": "0" * 64, "terminal_spec_root": "a" * 64})),
         )
         hosted = types.SimpleNamespace(
             status="FULL_ESCAPED", ledger_prefix_sha256="e" * 64,
@@ -616,7 +701,7 @@ class CloneRehearsalTests(unittest.TestCase):
         evidence = types.SimpleNamespace(
             terminal_rows=40, terminal_ledger_root="6" * 64,
             terminal_catalog_root="7" * 64, terminal_acl_root="8" * 64,
-            terminal_data_root="9" * 64, terminal_spec_root="a" * 64,
+            terminal_data_root="0" * 64, terminal_spec_root="a" * 64,
             evidence_sha256="b" * 64,
         )
         args = rehearsal.SimpleNamespace(
@@ -625,13 +710,14 @@ class CloneRehearsalTests(unittest.TestCase):
             observation="hosted.json", binding="binding.json",
             clone_observation="clone.json", service_file="service.conf",
             service_name="g035-local", container="clone-local-container",
-            docker="docker", selected_branch="UNAPPLIED", preparation="preparation.json", output="replay.json",
+            docker="docker", selected_branch="UNAPPLIED", preparation="preparation.json",
+            intent_output="replay.intent", output="replay.json",
         )
         connection = FakeConnection()
         written, admitted = {}, []
 
         def apply(cursor, *, plan, verified_clone_capability, deadline_monotonic):
-            self.assertIs(type(verified_clone_capability), rehearsal.VerifiedCloneCapability)
+            self.assertIs(type(verified_clone_capability), rehearsal.executor._VerifiedCloneCapability)
             self.assertEqual(
                 (verified_clone_capability.clone_identity, verified_clone_capability.clone_nonce,
                  verified_clone_capability.target_fingerprint),
@@ -651,10 +737,14 @@ class CloneRehearsalTests(unittest.TestCase):
                 patch.object(rehearsal, "validate_sources", return_value=Manifest()), \
                 patch.object(rehearsal, "_connect_service", return_value=(connection, {"port": 55401})), \
                 patch.object(rehearsal, "_assert_observation_binding") as binding_check, \
-                patch.object(rehearsal, "compile_branch_plan", return_value=object()), \
-                patch.object(rehearsal, "apply_rehearsal_locked_cursor", side_effect=apply), \
-                patch.object(rehearsal.controller, "_outside", side_effect=lambda path, root, fresh: Path(path)), \
-                patch.object(rehearsal.controller, "_write_signed", side_effect=lambda path, document: written.setdefault("document", document) and "e" * 64), \
+                patch.object(rehearsal, "compile_branch_plan", return_value=types.SimpleNamespace(terminal_spec_root="a" * 64)), \
+                patch.object(rehearsal, "_apply_rehearsal_locked_cursor", side_effect=apply), \
+                patch.object(rehearsal, "_replay_readback", return_value={
+                    "terminal_rows": 40, "ledger": "6" * 64, "catalog": "7" * 64,
+                    "acl": "8" * 64, "data": "0" * 64, "terminal_spec": "a" * 64,
+                    "terminal_readback_sha256": "b" * 64}), \
+                patch.object(rehearsal.controller, "_outside", side_effect=lambda path, root, fresh=False: Path(path)), \
+                patch.object(rehearsal.controller, "_write_signed", side_effect=lambda path, document, *, repository_root: written.update(document=document) or "e" * 64), \
                 patch.object(rehearsal.time, "time", return_value=100), \
                 patch.object(rehearsal.time, "monotonic", return_value=10):
             result = rehearsal.replay_branch(args)
@@ -671,13 +761,14 @@ class CloneRehearsalTests(unittest.TestCase):
             {key: body[key] for key in (
                 "terminal_rows", "terminal_ledger_root", "terminal_catalog_root",
                 "terminal_acl_root", "terminal_data_root", "terminal_spec_root",
-                "executor_evidence_sha256",
+                "replay_intent_receipt_sha256", "terminal_readback_sha256",
             )},
             {
                 "terminal_rows": 40, "terminal_ledger_root": "6" * 64,
                 "terminal_catalog_root": "7" * 64, "terminal_acl_root": "8" * 64,
-                "terminal_data_root": "9" * 64, "terminal_spec_root": "a" * 64,
-                "executor_evidence_sha256": "b" * 64,
+                "terminal_data_root": "0" * 64, "terminal_spec_root": "a" * 64,
+                "replay_intent_receipt_sha256": "e" * 64,
+                "terminal_readback_sha256": "b" * 64,
             },
         )
         self.assertEqual(body["unapplied_provenance"], "prepared-from-full-escaped")
@@ -690,6 +781,14 @@ class CloneRehearsalTests(unittest.TestCase):
             ledger_prefix_sha256="e" * 64, full_catalog_sha256="f" * 64,
             full_data_sha256="0" * 64, absent_catalog_sha256="1" * 64,
             expires_at_unix=200,
+            source_plan_sha256="b" * 64, terminal_rows=40,
+            terminal_ledger_root="8" * 64, terminal_catalog_root="9" * 64,
+            terminal_acl_root="a" * 64, terminal_data_root="0" * 64,
+            terminal_spec_root="c" * 64,
+            terminal_tuple_sha256=rehearsal._sha(rehearsal._canonical({
+                "terminal_rows": 40, "terminal_ledger_root": "8" * 64,
+                "terminal_catalog_root": "9" * 64, "terminal_acl_root": "a" * 64,
+                "terminal_data_root": "0" * 64, "terminal_spec_root": "c" * 64})),
         )
         hosted = types.SimpleNamespace(
             status="UNAPPLIED", ledger_prefix_sha256=reference.ledger_prefix_sha256,
@@ -705,16 +804,17 @@ class CloneRehearsalTests(unittest.TestCase):
             "observation_receipt_sha256": "7" * 64,
         }
         evidence = types.SimpleNamespace(
-            terminal_rows=[], terminal_ledger_root="8" * 64,
+            terminal_rows=40, terminal_ledger_root="8" * 64,
             terminal_catalog_root="9" * 64, terminal_acl_root="a" * 64,
-            terminal_data_root="b" * 64, terminal_spec_root="c" * 64,
+            terminal_data_root="0" * 64, terminal_spec_root="c" * 64,
             evidence_sha256="d" * 64,
         )
         args = rehearsal.SimpleNamespace(
             repository_root=".", source_commit=source.final_commit, reference="reference.json",
             observation="hosted.json", binding="binding.json", clone_observation="clone.json",
             service_file="service.conf", service_name="g035-local", container="clone",
-            docker="docker", selected_branch="FULL_ESCAPED", preparation=None, output="replay.json",
+            docker="docker", selected_branch="FULL_ESCAPED", preparation=None,
+            intent_output="replay.intent", output="replay.json",
         )
         connection, written = FakeConnection(), {}
 
@@ -732,11 +832,15 @@ class CloneRehearsalTests(unittest.TestCase):
                 patch.object(rehearsal, "validate_sources", return_value=Manifest()), \
                 patch.object(rehearsal, "_connect_service", return_value=(connection, {"port": 55401})), \
                 patch.object(rehearsal, "_assert_observation_binding"), \
-                patch.object(rehearsal, "admit_verified_clone", return_value=object()), \
-                patch.object(rehearsal, "compile_branch_plan", return_value=object()) as compile_plan, \
-                patch.object(rehearsal, "apply_rehearsal_locked_cursor", return_value=evidence), \
-                patch.object(rehearsal.controller, "_outside", side_effect=lambda path, root, fresh: Path(path)), \
-                patch.object(rehearsal.controller, "_write_signed", side_effect=lambda path, document: written.setdefault("document", document) and "f" * 64), \
+                patch.object(rehearsal, "_admit_custody_verified_clone", return_value=object()), \
+                patch.object(rehearsal, "compile_branch_plan", return_value=types.SimpleNamespace(terminal_spec_root="c" * 64)) as compile_plan, \
+                patch.object(rehearsal, "_apply_rehearsal_locked_cursor", return_value=evidence), \
+                patch.object(rehearsal, "_replay_readback", return_value={
+                    "terminal_rows": 40, "ledger": "8" * 64, "catalog": "9" * 64,
+                    "acl": "a" * 64, "data": "0" * 64, "terminal_spec": "c" * 64,
+                    "terminal_readback_sha256": rehearsal._sha(rehearsal._canonical({"terminal_rows": 40, "ledger": "8" * 64, "catalog": "9" * 64, "acl": "a" * 64, "data": "0" * 64, "terminal_spec": "c" * 64}))}), \
+                patch.object(rehearsal.controller, "_outside", side_effect=lambda path, root, fresh=False: Path(path)), \
+                patch.object(rehearsal.controller, "_write_signed", side_effect=lambda path, document, *, repository_root: written.update(document=document) or "f" * 64), \
                 patch.object(rehearsal.time, "time", return_value=100), \
                 patch.object(rehearsal.time, "monotonic", return_value=10):
             self.assertEqual(rehearsal.replay_branch(args)["receipt_sha256"], "f" * 64)
@@ -751,7 +855,8 @@ class CloneRehearsalTests(unittest.TestCase):
         body = written["document"]["body"]
         self.assertEqual(body["hosted_observation_receipt_sha256"], "e" * 64)
         self.assertEqual(
-            (body["starting_ledger_root"], body["starting_catalog_root"], body["starting_data_root"]),
+            (body["starting_roots"]["ledger"], body["starting_roots"]["catalog"],
+             body["starting_roots"]["data"]),
             (reference.ledger_prefix_sha256, reference.full_catalog_sha256,
              reference.full_data_sha256),
         )
@@ -762,23 +867,69 @@ class CloneRehearsalTests(unittest.TestCase):
             "clone_identity": "a" * 64, "clone_nonce": "native-clone-nonce",
             "live_identity_sha256": "b" * 64, "container_id_sha256": "c" * 64,
             "endpoint_sha256": "d" * 64,
-            "starting_ledger_root": reference.ledger_prefix_sha256,
-            "starting_catalog_root": reference.absent_catalog_sha256,
-            "starting_data_root": None, "unapplied_provenance": "native-hosted-unapplied",
+            "starting_roots": {"ledger": reference.ledger_prefix_sha256,
+                               "catalog": reference.absent_catalog_sha256, "data": None},
+            "unapplied_provenance": "native-hosted-unapplied",
         }
-        documents = {"full.json": body, "unapplied.json": native}
+        documents = {
+            path: {**document, "intent_body_sha256": rehearsal._intent_body_sha256({
+                **{key: value for key, value in document.items() if key not in {
+                    "replay_intent_receipt_sha256", "terminal_readback_sha256"}},
+                "schema": "g040-local-branch-replay-intent-v2",
+            })}
+            for path, document in {"full.json": body, "unapplied.json": native}.items()
+        }
+        replay_plan = lambda branch: types.SimpleNamespace(
+            branch=branch, terminal_spec_root=reference.terminal_spec_root, compiled=())
+        documents = {
+            path: {**document, "replay_plan_sha256": rehearsal._replay_plan_sha256(
+                replay_plan(document["selected_branch"]), reference.source_plan_sha256)}
+            for path, document in documents.items()
+        }
+        documents = {
+            path: {**document, "intent_body_sha256": rehearsal._intent_body_sha256({
+                **{key: value for key, value in document.items() if key not in {
+                    "replay_intent_receipt_sha256", "terminal_readback_sha256"}},
+                "schema": "g040-local-branch-replay-intent-v2",
+            })}
+            for path, document in documents.items()
+        }
         raw_documents = {rehearsal._canonical(value): value for value in documents.values()}
         compare_args = rehearsal.SimpleNamespace(
             repository_root=".", source_commit=source.final_commit, reference="reference.json",
             hosted_observation="hosted.json", first_replay="full.json",
             second_replay="unapplied.json", output="comparison.json",
         )
+        self.assertEqual(
+            rehearsal._validated_replay(
+                documents["full.json"], source=source, reference=reference, hosted=hosted,
+                hosted_receipt="e" * 64, now=100),
+            documents["full.json"],
+        )
+        with patch.object(rehearsal, "validate_sources", return_value=Manifest()), \
+                patch.object(rehearsal, "_expected_prefix",
+                             side_effect=lambda reference, status, *_, **__: types.SimpleNamespace(status=status)), \
+                patch.object(rehearsal, "compile_branch_plan",
+                             side_effect=lambda _root, _manifest, *, source, reference, observation:
+                             replay_plan(observation.status)):
+            self.assertEqual(
+                rehearsal._validated_replay(
+                    documents["full.json"], source=source, reference=reference, hosted=hosted,
+                    hosted_receipt="e" * 64, now=100, repository_root=Path(".")),
+                documents["full.json"],
+            )
         with patch.object(rehearsal, "_source", return_value=source), \
                 patch.object(rehearsal.controller, "_reference", return_value=reference), \
                 patch.object(rehearsal.controller, "_load_observation", return_value=(hosted, "e" * 64)), \
                 patch.object(rehearsal.controller, "_outside", side_effect=lambda path, root, fresh=False: Path(path)), \
                 patch.object(rehearsal.controller, "_stable_bytes", side_effect=lambda path, *_: rehearsal._canonical(documents[str(path)])), \
                 patch.object(rehearsal.controller, "_signed_document", side_effect=lambda raw, kind: raw_documents[raw]), \
+                patch.object(rehearsal, "validate_sources", return_value=Manifest()), \
+                patch.object(rehearsal, "_expected_prefix",
+                             side_effect=lambda reference, status, *_, **__: types.SimpleNamespace(status=status)), \
+                patch.object(rehearsal, "compile_branch_plan",
+                             side_effect=lambda _root, _manifest, *, source, reference, observation:
+                             replay_plan(observation.status)), \
                 patch.object(rehearsal.controller, "_write_signed", return_value="f" * 64), \
                 patch.object(rehearsal.time, "time", return_value=100):
             self.assertEqual(rehearsal.compare_replays(compare_args)["receipt_sha256"], "f" * 64)
@@ -812,8 +963,13 @@ class CloneRehearsalTests(unittest.TestCase):
             "binding_receipt_sha256": "2" * 64,
             "clone_identity": "3" * 64,
             "clone_nonce": "clone-preparation-nonce",
+            "live_identity_sha256": "5" * 64,
+            "container_id_sha256": "6" * 64,
+            "endpoint_sha256": "7" * 64,
         }
-        clone = {**binding, "observation_receipt_sha256": "4" * 64}
+        clone = {**binding, "observation_receipt_sha256": "4" * 64,
+                 "live_identity_sha256": "5" * 64, "container_id_sha256": "6" * 64,
+                 "endpoint_sha256": "7" * 64}
         args = rehearsal.SimpleNamespace(
             repository_root=None, source_commit=source.final_commit, reference="reference.json",
             observation="hosted.json", binding="binding.json", clone_observation="clone.json",
@@ -825,7 +981,7 @@ class CloneRehearsalTests(unittest.TestCase):
 
         def preparation(**changes):
             body = {
-                "schema": "g040-local-state-preparation-v1", "issued_at": 100,
+                "schema": "g040-local-state-preparation-v3", "issued_at": 100,
                 "expires_at": 200, "final_recovery_commit": source.final_commit,
                 "runtime_source_root": source.runtime_source_root,
                 "reference_receipt_sha256": reference.receipt_sha256,
@@ -840,6 +996,18 @@ class CloneRehearsalTests(unittest.TestCase):
                 "resulting_ledger_root": reference.ledger_prefix_sha256,
                 "resulting_catalog_root": reference.absent_catalog_sha256,
                 "resulting_data_root": rehearsal.controller._ABSENT_DATA_ROOT,
+                "preparation_intent_receipt_sha256": "6" * 64,
+                "preparation_intent_body_sha256": "7" * 64,
+                "terminal_readback_sha256": rehearsal._sha(rehearsal._canonical({
+                    "state": "UNAPPLIED", "ledger": reference.ledger_prefix_sha256,
+                    "catalog": reference.absent_catalog_sha256,
+                    "data": rehearsal.controller._ABSENT_DATA_ROOT,
+                })),
+                "target_fingerprint": reference.target_fingerprint,
+                "live_identity_sha256": clone["live_identity_sha256"],
+                "container_id_sha256": clone["container_id_sha256"],
+                "endpoint_sha256": clone["endpoint_sha256"],
+                "intent_body_sha256": "7" * 64,
             }
             body.update(changes)
             unsigned = {"schema": rehearsal.controller.SCHEMA, "kind": "local-state-preparation", "body": body}
@@ -887,7 +1055,7 @@ class CloneRehearsalTests(unittest.TestCase):
                     patch.object(rehearsal.controller, "_RECEIPT_PUBLIC_KEY_SHA256", rehearsal.hashlib.sha256(public).hexdigest()):
                 self.assertEqual(
                     rehearsal.controller._signed_document(valid_raw, "local-state-preparation")["schema"],
-                    "g040-local-state-preparation-v1",
+                    "g040-local-state-preparation-v3",
                 )
                 verified = rehearsal._verified_preparation(
                     valid_path, source=source, reference=reference, hosted_receipt="5" * 64,
@@ -948,7 +1116,7 @@ class CloneRehearsalTests(unittest.TestCase):
                 patch.object(rehearsal, "_connect_service", return_value=(connection, {"port": 55401})), \
                 patch.object(rehearsal, "_assert_observation_binding"), \
                 patch.object(rehearsal, "compile_branch_plan", return_value=object()), \
-                patch.object(rehearsal, "apply_rehearsal_locked_cursor", side_effect=RuntimeError("fail")), \
+                patch.object(rehearsal, "_apply_rehearsal_locked_cursor", side_effect=RuntimeError("fail")), \
                 patch.object(rehearsal.controller, "_write_signed") as write:
             with self.assertRaisesRegex(rehearsal.RehearsalError, "replay_failed"):
                 rehearsal.replay_branch(args)
@@ -958,30 +1126,36 @@ class CloneRehearsalTests(unittest.TestCase):
 
     def test_compare_replays_requires_one_full_one_unapplied_and_distinct_clones(self):
         source = rehearsal.SourceBinding("a" * 40, "b" * 64)
+        terminal = {"terminal_rows": 40, "ledger": "f" * 64, "catalog": "0" * 64,
+                    "acl": "1" * 64, "data": "d" * 64, "terminal_spec": "3" * 64}
         common = {
-            "schema": "g040-local-branch-replay-v1", "issued_at": 100, "expires_at": 200,
+            "schema": "g040-local-branch-replay-v3", "issued_at": 100, "expires_at": 200,
             "final_recovery_commit": source.final_commit, "runtime_source_root": source.runtime_source_root,
             "reference_receipt_sha256": "c" * 64, "hosted_observation_receipt_sha256": "d" * 64,
-            "target_fingerprint": "e" * 64, "terminal_rows": [],
+            "target_fingerprint": "e" * 64, "terminal_rows": 40,
             "terminal_ledger_root": "f" * 64, "terminal_catalog_root": "0" * 64,
-            "terminal_acl_root": "1" * 64, "terminal_data_root": "2" * 64,
-            "terminal_spec_root": "3" * 64, "executor_evidence_sha256": "4" * 64,
+            "terminal_acl_root": "1" * 64, "terminal_data_root": "d" * 64,
+            "terminal_spec_root": "3" * 64, "source_plan_sha256": "4" * 64,
+            "replay_plan_sha256": "5" * 64,
+            "terminal_tuple_sha256": rehearsal._sha(rehearsal._canonical(terminal)),
+            "intent_body_sha256": "0" * 64, "replay_intent_receipt_sha256": "6" * 64,
+            "terminal_readback_sha256": rehearsal._sha(rehearsal._canonical(terminal)),
         }
         full = {
             **common, "prefix_classification": "FULL_ESCAPED", "selected_branch": "FULL_ESCAPED",
             "clone_binding_receipt_sha256": "5" * 64, "clone_observation_receipt_sha256": "6" * 64,
             "clone_identity": "7" * 64, "clone_nonce": "first-clone-nonce",
             "live_identity_sha256": "8" * 64, "container_id_sha256": "9" * 64,
-            "endpoint_sha256": "a" * 64, "starting_ledger_root": "b" * 64,
-            "starting_catalog_root": "c" * 64, "starting_data_root": "d" * 64,
+            "endpoint_sha256": "a" * 64,
+            "starting_roots": {"ledger": "b" * 64, "catalog": "c" * 64, "data": "d" * 64},
         }
         unapplied = {
             **common, "prefix_classification": "UNAPPLIED", "selected_branch": "UNAPPLIED",
             "clone_binding_receipt_sha256": "e" * 64, "clone_observation_receipt_sha256": "f" * 64,
             "clone_identity": "0" * 64, "clone_nonce": "second-clone-nonce",
             "live_identity_sha256": "1" * 64, "container_id_sha256": "2" * 64,
-            "endpoint_sha256": "3" * 64, "starting_ledger_root": "b" * 64,
-            "starting_catalog_root": "4" * 64, "starting_data_root": None,
+            "endpoint_sha256": "3" * 64,
+            "starting_roots": {"ledger": "b" * 64, "catalog": "4" * 64, "data": None},
             "unapplied_provenance": "prepared-from-full-escaped",
             "preparation_receipt_sha256": "5" * 64,
         }
@@ -992,12 +1166,32 @@ class CloneRehearsalTests(unittest.TestCase):
 
         def compare(second, status="FULL_ESCAPED"):
             documents = {"first.json": full, "second.json": second}
-            by_raw = {rehearsal._canonical(value): value for value in documents.values()}
             reference = types.SimpleNamespace(
                 receipt_sha256="c" * 64, target_fingerprint="e" * 64,
                 ledger_prefix_sha256="b" * 64, absent_catalog_sha256="4" * 64,
                 full_catalog_sha256="c" * 64, full_data_sha256="d" * 64,
+                terminal_rows=40, terminal_ledger_root="f" * 64,
+                terminal_catalog_root="0" * 64, terminal_acl_root="1" * 64,
+                terminal_data_root="d" * 64, terminal_spec_root="3" * 64,
+                terminal_tuple_sha256=rehearsal._sha(rehearsal._canonical(terminal)),
+                source_plan_sha256="4" * 64,
             )
+            replay_plan = lambda branch: types.SimpleNamespace(
+                branch=branch, terminal_spec_root=reference.terminal_spec_root, compiled=())
+            documents = {
+                path: {**document, "replay_plan_sha256": rehearsal._replay_plan_sha256(
+                    replay_plan(document["selected_branch"]), reference.source_plan_sha256)}
+                for path, document in documents.items()
+            }
+            documents = {
+                path: {**document, "intent_body_sha256": rehearsal._intent_body_sha256({
+                    **{key: value for key, value in document.items() if key not in {
+                        "replay_intent_receipt_sha256", "terminal_readback_sha256"}},
+                    "schema": "g040-local-branch-replay-intent-v2",
+                })}
+                for path, document in documents.items()
+            }
+            by_raw = {rehearsal._canonical(value): value for value in documents.values()}
             hosted = types.SimpleNamespace(status=status)
             with patch.object(rehearsal, "_source", return_value=source), \
                     patch.object(rehearsal.controller, "_outside", side_effect=lambda path, root, fresh=False: Path(path)), \
@@ -1005,6 +1199,12 @@ class CloneRehearsalTests(unittest.TestCase):
                     patch.object(rehearsal.controller, "_signed_document", side_effect=lambda raw, kind: by_raw[raw]), \
                     patch.object(rehearsal.controller, "_reference", return_value=reference), \
                     patch.object(rehearsal.controller, "_load_observation", return_value=(hosted, "d" * 64)), \
+                    patch.object(rehearsal, "validate_sources", return_value=Manifest()), \
+                    patch.object(rehearsal, "_expected_prefix",
+                                 side_effect=lambda reference, status, *_, **__: types.SimpleNamespace(status=status)), \
+                    patch.object(rehearsal, "compile_branch_plan",
+                                 side_effect=lambda _root, _manifest, *, source, reference, observation:
+                                 replay_plan(observation.status)), \
                     patch.object(rehearsal.controller, "_write_signed", return_value="c" * 64), \
                     patch.object(rehearsal.time, "time", return_value=150):
                 return rehearsal.compare_replays(args)
@@ -1021,10 +1221,20 @@ class CloneRehearsalTests(unittest.TestCase):
             key: value for key, value in unapplied.items() if key != "preparation_receipt_sha256"
         }
         native["unapplied_provenance"] = "native-hosted-unapplied"
+        native["intent_body_sha256"] = rehearsal._intent_body_sha256({
+            **{key: value for key, value in native.items() if key not in {
+                "replay_intent_receipt_sha256", "terminal_readback_sha256"}},
+            "schema": "g040-local-branch-replay-intent-v2",
+        })
         native_reference = types.SimpleNamespace(
             receipt_sha256="c" * 64, target_fingerprint="e" * 64,
             ledger_prefix_sha256="b" * 64, absent_catalog_sha256="4" * 64,
             full_catalog_sha256="c" * 64, full_data_sha256="d" * 64,
+            terminal_rows=40, terminal_ledger_root="f" * 64,
+            terminal_catalog_root="0" * 64, terminal_acl_root="1" * 64,
+            terminal_data_root="d" * 64, terminal_spec_root="3" * 64,
+            source_plan_sha256="4" * 64,
+            terminal_tuple_sha256=rehearsal._sha(rehearsal._canonical(terminal)),
         )
         native_hosted = types.SimpleNamespace(status="UNAPPLIED")
         self.assertEqual(
@@ -1132,6 +1342,14 @@ class CloneRehearsalTests(unittest.TestCase):
             full_catalog_sha256="4" * 64, full_data_sha256="5" * 64,
             derivation_mode=rehearsal.DERIVATION_MODE, reverse_vector_sha256="3" * 64,
             observation_nonce="hosted-observation-nonce", issued_at_unix=100,
+            terminal_rows=40, terminal_ledger_root="d" * 64,
+            terminal_catalog_root="e" * 64, terminal_acl_root="8" * 64,
+            terminal_data_root="5" * 64, terminal_spec_root="0" * 64,
+            source_plan_sha256="1" * 64,
+            terminal_tuple_sha256=rehearsal._sha(rehearsal._canonical({
+                "terminal_rows": 40, "ledger": "d" * 64, "catalog": "e" * 64,
+                "acl": "8" * 64, "data": "5" * 64, "terminal_spec": "0" * 64,
+            })),
         )
         hosted = {
             "status": "FULL_ESCAPED", "target_fingerprint": reference.target_fingerprint,
@@ -1158,30 +1376,35 @@ class CloneRehearsalTests(unittest.TestCase):
             "archive_bytes": 9, "g035_manifest_sha256": rehearsal.g035.MANIFEST_SHA256,
             "g035_source_sha256": g035_source_sha256,
         }
+        terminal = {"terminal_rows": 40, "ledger": "d" * 64, "catalog": "e" * 64,
+                    "acl": backup["target_acl_root"], "data": "5" * 64, "terminal_spec": "0" * 64}
         replay_common = {
-            "schema": "g040-local-branch-replay-v1", "issued_at": 100, "expires_at": 180,
+            "schema": "g040-local-branch-replay-v3", "issued_at": 100, "expires_at": 180,
             "final_recovery_commit": source.final_commit, "runtime_source_root": source.runtime_source_root,
             "reference_receipt_sha256": reference.receipt_sha256, "hosted_observation_receipt_sha256": "e" * 64,
-            "target_fingerprint": reference.target_fingerprint, "terminal_rows": [],
+            "target_fingerprint": reference.target_fingerprint, "terminal_rows": 40,
             "terminal_ledger_root": "d" * 64, "terminal_catalog_root": "e" * 64,
-            "terminal_acl_root": backup["target_acl_root"], "terminal_data_root": "f" * 64,
-            "terminal_spec_root": "0" * 64, "executor_evidence_sha256": "1" * 64,
+            "terminal_acl_root": backup["target_acl_root"], "terminal_data_root": "5" * 64,
+            "terminal_spec_root": "0" * 64, "source_plan_sha256": "1" * 64,
+            "replay_plan_sha256": "2" * 64, "terminal_tuple_sha256": reference.terminal_tuple_sha256,
+            "intent_body_sha256": "3" * 64, "replay_intent_receipt_sha256": "4" * 64,
+            "terminal_readback_sha256": rehearsal._sha(rehearsal._canonical(terminal)),
         }
         full = {
             **replay_common, "prefix_classification": "FULL_ESCAPED", "selected_branch": "FULL_ESCAPED",
             "clone_binding_receipt_sha256": "2" * 64, "clone_observation_receipt_sha256": "3" * 64,
             "clone_identity": "4" * 64, "clone_nonce": "full-clone-nonce",
             "live_identity_sha256": "5" * 64, "container_id_sha256": "6" * 64,
-            "endpoint_sha256": "7" * 64, "starting_ledger_root": hosted["ledger_prefix_sha256"],
-            "starting_catalog_root": hosted["catalog_sha256"], "starting_data_root": hosted["data_sha256"],
+            "endpoint_sha256": "7" * 64,
+            "starting_roots": {"ledger": hosted["ledger_prefix_sha256"], "catalog": hosted["catalog_sha256"], "data": hosted["data_sha256"]},
         }
         unapplied = {
             **replay_common, "prefix_classification": "UNAPPLIED", "selected_branch": "UNAPPLIED",
             "clone_binding_receipt_sha256": "8" * 64, "clone_observation_receipt_sha256": "9" * 64,
             "clone_identity": "a" * 64, "clone_nonce": "unapplied-clone-nonce",
             "live_identity_sha256": "b" * 64, "container_id_sha256": "c" * 64,
-            "endpoint_sha256": "d" * 64, "starting_ledger_root": reference.ledger_prefix_sha256,
-            "starting_catalog_root": reference.absent_catalog_sha256, "starting_data_root": None,
+            "endpoint_sha256": "d" * 64,
+            "starting_roots": {"ledger": reference.ledger_prefix_sha256, "catalog": reference.absent_catalog_sha256, "data": None},
             "unapplied_provenance": "prepared-from-full-escaped",
             "preparation_receipt_sha256": "e" * 64,
         }
@@ -1209,6 +1432,23 @@ class CloneRehearsalTests(unittest.TestCase):
         capture_raw = rehearsal._canonical(capture)
         backup["capture_receipt_sha256"] = rehearsal._sha(capture_raw)
         backup["g035_receipt_sha256"] = capture["receipt_sha256"]
+        def sealed_replay(document):
+            return {
+                **document,
+                "intent_body_sha256": rehearsal._intent_body_sha256({
+                    **{key: value for key, value in document.items() if key not in {
+                        "replay_intent_receipt_sha256", "terminal_readback_sha256"}},
+                    "schema": "g040-local-branch-replay-intent-v2",
+                }),
+            }
+        replay_plan = lambda branch: types.SimpleNamespace(
+            branch=branch, terminal_spec_root=reference.terminal_spec_root, compiled=())
+        full["replay_plan_sha256"] = rehearsal._replay_plan_sha256(
+            replay_plan("FULL_ESCAPED"), reference.source_plan_sha256)
+        unapplied["replay_plan_sha256"] = rehearsal._replay_plan_sha256(
+            replay_plan("UNAPPLIED"), reference.source_plan_sha256)
+        full = sealed_replay(full)
+        unapplied = sealed_replay(unapplied)
         signed = {"hosted.json": (hosted, "e" * 64), "backup.json": (backup, "f" * 64),
                   "rehearsal.json": (rehearsal_body, "0" * 64), "first.json": (full, "1" * 64),
                   "second.json": (unapplied, "2" * 64)}
@@ -1222,8 +1462,14 @@ class CloneRehearsalTests(unittest.TestCase):
                     patch.object(rehearsal.controller, "_outside", side_effect=lambda path, root, fresh=False: Path(path)), \
                     patch.object(rehearsal.controller, "_stable_bytes", return_value=capture_raw), \
                     patch.object(rehearsal, "_archive_digest", return_value=(backup["archive_sha256"], backup["archive_bytes"], (1, 1))), \
+                    patch.object(rehearsal, "validate_sources", return_value=Manifest()), \
+                    patch.object(rehearsal, "_expected_prefix",
+                                 side_effect=lambda reference, status, *_, **__: types.SimpleNamespace(status=status)), \
+                    patch.object(rehearsal, "compile_branch_plan",
+                                 side_effect=lambda _root, _manifest, *, source, reference, observation:
+                                 replay_plan(observation.status)), \
                     patch.object(rehearsal.time, "time", return_value=150), \
-                    patch.object(rehearsal.controller, "_write_signed", side_effect=lambda path, document: writes.append(document) or "f" * 64):
+                    patch.object(rehearsal.controller, "_write_signed", side_effect=lambda path, document, *, repository_root: writes.append(document) or "f" * 64):
                 result = rehearsal.build_aggregate_custody(args)
             return result, writes
 
@@ -1258,6 +1504,8 @@ class CloneRehearsalTests(unittest.TestCase):
             if key != "preparation_receipt_sha256"
         }
         native_unapplied["unapplied_provenance"] = "native-hosted-unapplied"
+        native_full = sealed_replay(native_full)
+        native_unapplied = sealed_replay(native_unapplied)
         native_rehearsal = {
             **rehearsal_body, "full_replay_receipt_sha256": "3" * 64,
             "unapplied_replay_receipt_sha256": "4" * 64,
@@ -1496,5 +1744,156 @@ class CloneRehearsalTests(unittest.TestCase):
                 self.assertEqual(calls, [["docker", "ps", "-aq", "--filter", "label=com.tzudong.g040.rehearsal=true", "--filter", "label=com.tzudong.g040.run=clone-run-000000"]])
 
 
+class PreparationRecoveryTests(unittest.TestCase):
+    def _recover(self, classifier_state):
+        source = rehearsal.SourceBinding("a" * 40, "b" * 64)
+        reference = types.SimpleNamespace(
+            receipt_sha256="c" * 64, target_fingerprint="d" * 64,
+            ledger_prefix_sha256="e" * 64, full_catalog_sha256="f" * 64,
+            full_data_sha256="0" * 64, absent_catalog_sha256="1" * 64,
+        )
+        hosted = types.SimpleNamespace(issued_at=100, expires_at=200)
+        binding = {
+            "binding_receipt_sha256": "2" * 64, "clone_identity": "3" * 64,
+            "clone_nonce": "preparation-recovery-nonce", "live_identity_sha256": "4" * 64,
+            "container_id_sha256": "5" * 64, "endpoint_sha256": "6" * 64,
+        }
+        clone = {"observation_receipt_sha256": "7" * 64}
+        intent = {
+            "schema": "g040-local-state-preparation-intent-v2", "issued_at": 150,
+            "expires_at": 180, "final_recovery_commit": source.final_commit,
+            "runtime_source_root": source.runtime_source_root,
+            "target_fingerprint": reference.target_fingerprint,
+            "reference_receipt_sha256": reference.receipt_sha256,
+            "hosted_observation_receipt_sha256": "8" * 64,
+            "clone_binding_receipt_sha256": binding["binding_receipt_sha256"],
+            "clone_observation_receipt_sha256": clone["observation_receipt_sha256"],
+            **{key: binding[key] for key in (
+                "clone_identity", "clone_nonce", "live_identity_sha256",
+                "container_id_sha256", "endpoint_sha256")},
+            "reverse_vector_sha256": rehearsal.REVERSE_VECTOR_SHA256,
+            "starting_roots": {
+                "ledger": reference.ledger_prefix_sha256, "catalog": reference.full_catalog_sha256,
+                "data": reference.full_data_sha256,
+            },
+            "expected_terminal": {
+                "state": "UNAPPLIED", "ledger": reference.ledger_prefix_sha256,
+                "catalog": reference.absent_catalog_sha256, "data": rehearsal.controller._ABSENT_DATA_ROOT,
+            },
+        }
+        intent["intent_body_sha256"] = rehearsal._intent_body_sha256(intent)
+        args = types.SimpleNamespace(
+            repository_root=".", source_commit=source.final_commit, binding="binding",
+            intent="intent", clone_observation="clone", output="output",
+        )
+        readback = {"classifier_state": classifier_state}
+        if classifier_state == "TERMINAL":
+            value = {
+                "state": "UNAPPLIED", "ledger": reference.ledger_prefix_sha256,
+                "catalog": reference.absent_catalog_sha256, "data": rehearsal.controller._ABSENT_DATA_ROOT,
+            }
+            readback.update(value, terminal_readback_sha256=rehearsal._sha(rehearsal._canonical(value)))
+        with patch.object(rehearsal, "_source", return_value=source), \
+                patch.object(rehearsal.controller, "_reference", return_value=reference), \
+                patch.object(rehearsal.controller, "_load_observation", return_value=(hosted, "8" * 64)), \
+                patch.object(rehearsal, "_binding", return_value=binding), \
+                patch.object(rehearsal, "_signed_intent", return_value=(intent, "9" * 64)), \
+                patch.object(rehearsal, "_verified_observation", return_value=clone), \
+                patch.object(rehearsal, "_historical_anchor_valid") as historical, \
+                patch.object(rehearsal, "_preparation_readback", return_value=readback) as readback_call, \
+                patch.object(rehearsal, "_publish_or_verify_terminal", return_value="a" * 64) as publish:
+            result = rehearsal.recover_local_state(args)
+        return result, historical, readback_call, publish
+
+    def test_recover_local_state_publishes_terminal_with_intent_time_lineage(self):
+        result, historical, readback, publish = self._recover("TERMINAL")
+        self.assertEqual(result["receipt_sha256"], "a" * 64)
+        historical.assert_called_once()
+        self.assertEqual(readback.call_args.kwargs["lineage_now"], 150)
+        publish.assert_called_once()
+
+    def test_recover_local_state_maps_only_exact_start_to_not_committed(self):
+        with self.assertRaisesRegex(rehearsal.RehearsalError, "preparation_not_committed"):
+            self._recover("START")
+
+    def test_recover_local_state_denies_partial_and_failed_probe_as_ambiguous(self):
+        for state in ("AMBIGUOUS", "FAILED_PROBE"):
+            with self.subTest(state=state):
+                with self.assertRaisesRegex(rehearsal.RehearsalError, "preparation_recovery_ambiguous"):
+                    self._recover(state)
+
+    def test_preparation_readback_returns_ambiguous_for_probe_failure_and_preserves_lineage_denial(self):
+        args = types.SimpleNamespace(service_file="service.conf", service_name="g035-local",
+                                     container="clone", docker="docker")
+        reference = types.SimpleNamespace(
+            ledger_prefix_sha256="a" * 64, full_catalog_sha256="b" * 64,
+            full_data_sha256="c" * 64, absent_catalog_sha256="d" * 64,
+        )
+        with patch.object(rehearsal, "_connect_service", side_effect=RuntimeError("probe failed")):
+            self.assertEqual(
+                rehearsal._preparation_readback(args, Path("."), {}, reference)["classifier_state"],
+                "AMBIGUOUS",
+            )
+        with patch.object(rehearsal, "_connect_service", side_effect=rehearsal.RehearsalError("lineage_denial")):
+            with self.assertRaisesRegex(rehearsal.RehearsalError, "lineage_denial"):
+                rehearsal._preparation_readback(args, Path("."), {}, reference)
+
+class ReplayTerminalContractTests(unittest.TestCase):
+    def _body(self):
+        source = rehearsal.SourceBinding("a" * 40, "b" * 64)
+        terminal = {"terminal_rows": rehearsal.executor._TERMINAL_ROWS, "ledger": "2" * 64,
+                    "catalog": "3" * 64, "acl": "4" * 64, "data": "0" * 64,
+                    "terminal_spec": "5" * 64}
+        reference = types.SimpleNamespace(
+            receipt_sha256="c" * 64, target_fingerprint="d" * 64,
+            ledger_prefix_sha256="e" * 64, full_catalog_sha256="f" * 64,
+            full_data_sha256="0" * 64, absent_catalog_sha256="1" * 64,
+            terminal_rows=terminal["terminal_rows"], terminal_ledger_root=terminal["ledger"],
+            terminal_catalog_root=terminal["catalog"], terminal_acl_root=terminal["acl"],
+            terminal_data_root=terminal["data"], terminal_spec_root=terminal["terminal_spec"],
+            terminal_tuple_sha256=rehearsal._sha(rehearsal._canonical(terminal)),
+        )
+        body = {
+            "schema": "g040-local-branch-replay-v3", "issued_at": 100, "expires_at": 200,
+            "final_recovery_commit": source.final_commit, "runtime_source_root": source.runtime_source_root,
+            "target_fingerprint": reference.target_fingerprint, "reference_receipt_sha256": reference.receipt_sha256,
+            "hosted_observation_receipt_sha256": "6" * 64, "clone_binding_receipt_sha256": "7" * 64,
+            "clone_observation_receipt_sha256": "8" * 64, "clone_identity": "9" * 64,
+            "clone_nonce": "terminal-contract-nonce", "live_identity_sha256": "a" * 64,
+            "container_id_sha256": "b" * 64, "endpoint_sha256": "c" * 64,
+            "prefix_classification": "FULL_ESCAPED", "selected_branch": "FULL_ESCAPED",
+            "starting_roots": {"ledger": "e" * 64, "catalog": "f" * 64, "data": "0" * 64},
+            "source_plan_sha256": "d" * 64, "replay_plan_sha256": "e" * 64,
+            "terminal_tuple_sha256": reference.terminal_tuple_sha256,
+            "replay_intent_receipt_sha256": "f" * 64,
+            "terminal_readback_sha256": rehearsal._sha(rehearsal._canonical(terminal)),
+            "terminal_rows": terminal["terminal_rows"], "terminal_ledger_root": terminal["ledger"],
+            "terminal_catalog_root": terminal["catalog"], "terminal_acl_root": terminal["acl"],
+            "terminal_data_root": terminal["data"], "terminal_spec_root": terminal["terminal_spec"],
+        }
+        body["intent_body_sha256"] = rehearsal._intent_body_sha256({
+            **{key: value for key, value in body.items() if key not in {
+                "replay_intent_receipt_sha256", "terminal_readback_sha256"}},
+            "schema": "g040-local-branch-replay-intent-v2",
+        })
+        return body, source, reference
+
+    def _reject(self, mutation):
+        body, source, reference = self._body()
+        with self.assertRaisesRegex(rehearsal.RehearsalError, "replay_comparison"):
+            rehearsal._validated_replay({**body, **mutation}, source=source, reference=reference,
+                hosted=types.SimpleNamespace(status="FULL_ESCAPED"), hosted_receipt="6" * 64, now=150)
+
+    def test_rejects_list_terminal_rows(self): self._reject({"terminal_rows": []})
+    def test_rejects_terminal_row_drift(self): self._reject({"terminal_rows": 39})
+    def test_rejects_terminal_data_drift(self): self._reject({"terminal_data_root": "f" * 64})
+    def test_rejects_terminal_spec_drift(self): self._reject({"terminal_spec_root": "f" * 64})
+    def test_rejects_readback_hash_drift(self): self._reject({"terminal_readback_sha256": "f" * 64})
+    def test_rejects_mutation_evidence_in_intent(self):
+        self._reject({"expected_terminal": {"ledger": "f" * 64}})
+    def test_rejects_start_root_extra_key(self):
+        body, *_ = self._body(); body["starting_roots"]["acl"] = "f" * 64
+        self._reject({"starting_roots": body["starting_roots"]})
+    def test_rejects_v1_terminal_receipt(self): self._reject({"schema": "g040-local-branch-replay-v1"})
 if __name__ == "__main__":
     unittest.main()
