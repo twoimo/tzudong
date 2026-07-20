@@ -37,9 +37,21 @@ class ReferenceTests(unittest.TestCase):
             "full_catalog_sha256": "b" * 64,
             "full_data_sha256": "c" * 64,
             "ledger_prefix_sha256": "d" * 64,
+            "source_plan_sha256": "e" * 64,
+            "terminal_rows": 42,
+            "terminal_ledger_root": "f" * 64,
+            "terminal_catalog_root": "1" * 64,
+            "terminal_acl_root": "2" * 64,
+            "terminal_data_root": "c" * 64,
+            "terminal_spec_root": "3" * 64,
             "derivation_mode": evidence.DERIVATION_MODE,
             "reverse_vector_sha256": evidence.REVERSE_VECTOR_SHA256,
         }
+        clone["terminal_tuple_sha256"] = hashlib.sha256(evidence.canonical_bytes({
+            "terminal_rows": clone["terminal_rows"], "ledger": clone["terminal_ledger_root"],
+            "catalog": clone["terminal_catalog_root"], "acl": clone["terminal_acl_root"],
+            "data": clone["terminal_data_root"], "terminal_spec": clone["terminal_spec_root"],
+        })).hexdigest()
         clone["clone_identity"] = hashlib.sha256(evidence.canonical_bytes({key: clone[key] for key in evidence._IDENTITY_COMPONENT_FIELDS})).hexdigest()
         return MappingProxyType(clone)
 

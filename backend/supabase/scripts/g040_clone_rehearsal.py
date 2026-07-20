@@ -28,13 +28,15 @@ import g040_prefix_recovery as prefix
 from g037_hosted_closure_executor import vectors
 import g040_prefix_executor as executor
 from g040_prefix_executor import (
-    VerifiedCloneCapability,
-    admit_verified_clone,
-    apply_rehearsal_locked_cursor,
+    _admit_verified_clone,
+    _apply_rehearsal_locked_cursor,
+    _derive_clone_terminal_expectation,
+    build_source_validation_plan,
     compile_branch_plan,
 )
-from g040_prefix_recovery import CATALOG_PROBE, DATA_PROBE, begin_read_only_snapshot, validate_full_data_root
+from g040_prefix_recovery import CATALOG_PROBE, DATA_PROBE, begin_read_only_snapshot, probe_full_data_root, validate_full_data_root
 from g040_recovery_source import SourceBinding, verify_recovery_source
+from g037_hosted_closure_executor import terminal_readback_assert
 from g040_reverse_00400 import DERIVATION_MODE, REVERSE_VECTOR, REVERSE_VECTOR_SHA256
 from g040_reference_evidence import (
     PUBLIC_KEY_PEM as REFERENCE_PUBLIC_KEY_PEM,
@@ -680,7 +682,7 @@ def _valid_data(row: Mapping[str, Any]) -> None:
         _fail("probe_result")
 
 
-def _assert_observation_binding(binding: Mapping[str, Any], *, verified_port: int, container: str, docker: str, conn: Any, repository_root: str | Path) -> None:
+def _assert_observation_binding(binding: Mapping[str, Any], *, verified_port: int, container: str, docker: str, conn: Any, repository_root: str | Path, now_unix: int | None = None) -> None:
     root = Path(repository_root).resolve()
     lineage = _restore_lineage(capture_path=binding["capture_receipt_path"], restore_path=binding["restore_receipt_path"], encrypted_dump=binding["encrypted_dump_path"], repository_root=root)
     if any(binding[key] != lineage[key] for key in lineage):
@@ -695,9 +697,20 @@ def _assert_observation_binding(binding: Mapping[str, Any], *, verified_port: in
         _fail("observation_binding")
     attested = _load_bytes(_custody_bytes(binding["lineage_attestation_path"], root))
     expected = {"schema": _LINEAGE_SCHEMA, "clone_nonce": binding["clone_nonce"], "issued_at_unix": attested.get("issued_at_unix"), "expires_at_unix": attested.get("expires_at_unix"), "lineage_public_key_sha256": _LINEAGE_PUBLIC_KEY_SHA256, **dict(lineage), "live_identity_sha256": live_sha, **dict(proof)}
-    hashes = _verify_lineage_attestation(attestation=binding["lineage_attestation_path"], signature=binding["lineage_signature_path"], expected=expected, repository_root=root, now_unix=int(time.time()))
+    hashes = _verify_lineage_attestation(attestation=binding["lineage_attestation_path"], signature=binding["lineage_signature_path"], expected=expected, repository_root=root, now_unix=int(time.time()) if now_unix is None else now_unix)
     if any(binding[key] != hashes[key] for key in hashes):
         _fail("observation_binding")
+    rechecked_lineage = _restore_lineage(
+        capture_path=binding["capture_receipt_path"], restore_path=binding["restore_receipt_path"],
+        encrypted_dump=binding["encrypted_dump_path"], repository_root=root)
+    if dict(rechecked_lineage) != dict(lineage):
+        _fail("observation_binding")
+
+def _open_read_only_snapshot(conn: Any, cur: Any) -> None:
+    """Start the only accepted readback transaction after custody queries."""
+    conn.rollback()
+    cur.execute("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
+    begin_read_only_snapshot(cur)
 
 def _assert_reference_custody(cursor: Any, *, current_user: str) -> None:
     row = _query_one(cursor, _REFERENCE_CUSTODY_QUERY)
@@ -707,6 +720,15 @@ def _assert_reference_custody(cursor: Any, *, current_user: str) -> None:
         or row.get("database_name") != "g035_local"
     ):
         _fail("reference_custody")
+
+
+def _admit_custody_verified_clone(binding: Mapping[str, Any], *, verified_port: int,
+                                  target_fingerprint: str) -> Any:
+    """Mint internal clone authority only after the orchestrator verifies custody."""
+    return _admit_verified_clone(
+        clone_identity=binding["clone_identity"], clone_nonce=binding["clone_nonce"],
+        target_fingerprint=target_fingerprint,
+        live_identity_sha256=binding["live_identity_sha256"], port=verified_port)
 
 
 def observe_reference(*, repository_root: str | Path, binding_path: str | Path, service_file: str | Path,
@@ -719,6 +741,7 @@ def observe_reference(*, repository_root: str | Path, binding_path: str | Path, 
     if not _HEX.fullmatch(target_fingerprint):
         _fail("reference_input")
     manifest = validate_sources(root)
+    source_plan = build_source_validation_plan(root, manifest, source=source)
     item = manifest.migrations[16]
     if (item.version, item.name) != ("20260712000400", "g010_retention_separation"):
         _fail("source_drift")
@@ -728,8 +751,7 @@ def observe_reference(*, repository_root: str | Path, binding_path: str | Path, 
     try:
         cur = conn.cursor()
         _assert_observation_binding(binding, verified_port=service["port"], container=container, docker=docker, conn=conn, repository_root=root)
-        conn.rollback()
-        begin_read_only_snapshot(cur)
+        _open_read_only_snapshot(conn, cur)
         initial_full = _query_one(cur, CATALOG_PROBE)
         initial_data = _query_one(cur, DATA_PROBE)
         cur.execute("ROLLBACK")
@@ -741,27 +763,12 @@ def observe_reference(*, repository_root: str | Path, binding_path: str | Path, 
         initial_data_root = initial_data["data_shape_sha256"]
 
         _assert_observation_binding(binding, verified_port=service["port"], container=container, docker=docker, conn=conn, repository_root=root)
+        capability = _admit_custody_verified_clone(
+            binding, verified_port=service["port"], target_fingerprint=target_fingerprint)
         conn.rollback()
         cur.execute("BEGIN")
         cur.execute("SET LOCAL statement_timeout = '10000ms'")
         cur.execute("SET LOCAL lock_timeout = '5000ms'")
-        _assert_reference_custody(cur, current_user="supabase_admin")
-        cur.execute("GRANT CREATE ON DATABASE g035_local TO postgres")
-        cur.execute("GRANT CREATE ON SCHEMA public TO postgres")
-        cur.execute("SET LOCAL ROLE postgres")
-        _assert_reference_custody(cur, current_user="postgres")
-        cur.execute('SET LOCAL search_path = "$user", public, auth, extensions')
-        cur.execute("LOCK TABLE supabase_migrations.schema_migrations IN ACCESS EXCLUSIVE MODE")
-        for table in (
-            "privacy_retention.privacy_retention_classes",
-            "privacy_retention.privacy_retention_class_sources",
-            "privacy_retention.privacy_legal_holds",
-            "privacy_retention.privacy_retention_work_items",
-            "privacy_retention.privacy_retained_records",
-            "privacy_retention.privacy_retention_runs",
-            "privacy_retention.privacy_retention_run_items",
-        ):
-            cur.execute(f"LOCK TABLE {table} IN ACCESS EXCLUSIVE MODE")
         locked_full = _query_one(cur, CATALOG_PROBE)
         locked_data = _query_one(cur, DATA_PROBE)
         _valid_probe(locked_full, full=True)
@@ -775,8 +782,11 @@ def observe_reference(*, repository_root: str | Path, binding_path: str | Path, 
         _valid_probe(absent, full=False)
         if absent["ledger_sha256"] != initial_ledger:
             _fail("ledger_drift")
-        for statement in executable:
-            cur.execute(statement)
+        terminal = _derive_clone_terminal_expectation(
+            conn, source_plan=source_plan, verified_clone_capability=capability,
+            branch="UNAPPLIED", expected_full_data_root=initial_data_root,
+            deadline_monotonic=time.monotonic() + 10,
+        )
         recreated_full = _query_one(cur, CATALOG_PROBE)
         recreated_data = _query_one(cur, DATA_PROBE)
         _valid_probe(recreated_full, full=True)
@@ -786,8 +796,7 @@ def observe_reference(*, repository_root: str | Path, binding_path: str | Path, 
             _fail("forward_drift")
         cur.execute("ROLLBACK")
         _assert_observation_binding(binding, verified_port=service["port"], container=container, docker=docker, conn=conn, repository_root=root)
-        conn.rollback()
-        begin_read_only_snapshot(cur)
+        _open_read_only_snapshot(conn, cur)
         final_full = _query_one(cur, CATALOG_PROBE)
         final_data = _query_one(cur, DATA_PROBE)
         cur.execute("ROLLBACK")
@@ -796,10 +805,11 @@ def observe_reference(*, repository_root: str | Path, binding_path: str | Path, 
         validate_full_data_root(dict(final_data), final_data["data_shape_sha256"])
         if (final_full["ledger_sha256"], final_full["catalog_sha256"], final_data["data_shape_sha256"]) != (initial_ledger, initial_catalog, initial_data_root):
             _fail("rollback_invariant")
+        issued_at = int(time.time())
         body = {
-            "schema": "g040-clone-observation-v1",
-            "issued_at": int(time.time()),
-            "expires_at": int(time.time()) + 900,
+            "schema": "g040-clone-observation-v2",
+            "issued_at": issued_at,
+            "expires_at": issued_at + 900,
             "final_recovery_commit": source.final_commit,
             "runtime_source_root": source.runtime_source_root,
             "manifest_sha256": prefix.MANIFEST_SHA256,
@@ -821,6 +831,21 @@ def observe_reference(*, repository_root: str | Path, binding_path: str | Path, 
             "post_rollback_ledger_sha256": final_full["ledger_sha256"],
             "post_rollback_catalog_sha256": final_full["catalog_sha256"],
             "post_rollback_data_sha256": final_data["data_shape_sha256"],
+            "source_plan_sha256": terminal.plan_sha256,
+            "terminal_rows": terminal.terminal_rows,
+            "terminal_ledger_root": terminal.terminal_ledger_root,
+            "terminal_catalog_root": terminal.terminal_catalog_root,
+            "terminal_acl_root": terminal.terminal_acl_root,
+            "terminal_data_root": terminal.terminal_data_root,
+            "terminal_spec_root": terminal.terminal_spec_root,
+            "terminal_tuple_sha256": _sha(_canonical({
+                "terminal_rows": terminal.terminal_rows,
+                "ledger": terminal.terminal_ledger_root,
+                "catalog": terminal.terminal_catalog_root,
+                "acl": terminal.terminal_acl_root,
+                "data": terminal.terminal_data_root,
+                "terminal_spec": terminal.terminal_spec_root,
+            })),
         }
         controller._write_signed(controller._outside(output, root, fresh=True), {"schema": controller.SCHEMA, "kind": "local-clone-observation", "body": body}, repository_root=root)
     except RehearsalError:
@@ -956,7 +981,8 @@ def build_aggregate_custody(args: argparse.Namespace) -> Mapping[str, Any]:
                     "hosted_observation_receipt_sha256": hosted_sha,
                     "target_fingerprint": reference.target_fingerprint,
                 }.items())
-                or type(rehearsal["terminal_rows"]) is not list
+                or type(rehearsal["terminal_rows"]) is not int
+                or rehearsal["terminal_rows"] != executor._TERMINAL_ROWS
                 or any(type(rehearsal[key]) is not str or not _HEX.fullmatch(rehearsal[key]) for key in (
                     "full_replay_receipt_sha256", "unapplied_replay_receipt_sha256",
                     "full_clone_identity", "unapplied_clone_identity", "terminal_ledger_root",
@@ -969,7 +995,7 @@ def build_aggregate_custody(args: argparse.Namespace) -> Mapping[str, Any]:
             validated.append(_validated_replay(
                 replay, source=source, reference=reference,
                 hosted=SimpleNamespace(status=hosted["status"]),
-                hosted_receipt=hosted_sha, now=now))
+                hosted_receipt=hosted_sha, now=now, repository_root=root))
         if (any(replay[key] != value for replay in validated for key, value in {
             "reference_receipt_sha256": reference.receipt_sha256,
             "target_fingerprint": reference.target_fingerprint,
@@ -989,11 +1015,12 @@ def build_aggregate_custody(args: argparse.Namespace) -> Mapping[str, Any]:
                 or rehearsal["issued_at"] < max(replay["issued_at"] for replay in validated)):
             _fail("aggregate_custody")
         full, unapplied = by_branch["FULL_ESCAPED"][0], by_branch["UNAPPLIED"][0]
-        if ((full["starting_ledger_root"], full["starting_catalog_root"], full["starting_data_root"])
+        if ((full["starting_roots"]["ledger"], full["starting_roots"]["catalog"],
+             full["starting_roots"]["data"])
                     != (reference.ledger_prefix_sha256, reference.full_catalog_sha256,
                         reference.full_data_sha256)
-                or (unapplied["starting_ledger_root"], unapplied["starting_catalog_root"],
-                    unapplied["starting_data_root"])
+                or (unapplied["starting_roots"]["ledger"], unapplied["starting_roots"]["catalog"],
+                    unapplied["starting_roots"]["data"])
                     != (reference.ledger_prefix_sha256, reference.absent_catalog_sha256, None)
                 or any(full[key] != unapplied[key] for key in (
                     "terminal_rows", "terminal_ledger_root", "terminal_catalog_root",
@@ -1031,12 +1058,12 @@ def _verified_observation(path: str | Path, *, source: SourceBinding, target_fin
         value = controller._signed_document(raw, "local-clone-observation")
     except Exception:
         _fail("reference_input")
-    hashes = ("runtime_source_root", "manifest_sha256", "migration_source_sha256", "probe_text_sha256", "target_fingerprint", "binding_receipt_sha256", "clone_identity", "live_identity_sha256", "container_id_sha256", "image_id_sha256", "image_digest_sha256", "endpoint_sha256", "g035_restore_receipt_sha256", "g035_capture_receipt_sha256", "restored_archive_sha256", "capture_receipt_bytes_sha256", "restore_receipt_bytes_sha256", "lineage_attestation_sha256", "lineage_signature_sha256", "initial_full_ledger_sha256", "initial_full_catalog_sha256", "initial_full_data_sha256", "absent_ledger_sha256", "absent_catalog_sha256", "recreated_full_ledger_sha256", "recreated_full_catalog_sha256", "recreated_full_data_sha256", "post_rollback_ledger_sha256", "post_rollback_catalog_sha256", "post_rollback_data_sha256", "reverse_vector_sha256")
-    required = set(hashes) | {"schema", "issued_at", "expires_at", "final_recovery_commit", "clone_nonce", "derivation_mode"}
-    if (set(value) != required or value["schema"] != "g040-clone-observation-v1" or value["final_recovery_commit"] != source.final_commit or value["runtime_source_root"] != source.runtime_source_root or value["manifest_sha256"] != prefix.MANIFEST_SHA256 or value["migration_source_sha256"] != prefix.MIGRATION_SOURCE_SHA256 or value["probe_text_sha256"] != prefix.PROBE_TEXT_SHA256 or value["target_fingerprint"] != target_fingerprint or type(value["issued_at"]) is not int or type(value["expires_at"]) is not int or value["expires_at"] - value["issued_at"] > 900 or not value["issued_at"] <= now <= value["expires_at"] or not _SAFE.fullmatch(value["clone_nonce"]) or value["derivation_mode"] != DERIVATION_MODE or value["reverse_vector_sha256"] != REVERSE_VECTOR_SHA256 or any(type(value[key]) is not str or not _HEX.fullmatch(value[key]) for key in hashes) or value["clone_identity"] != _sha(_canonical({key: value[key] for key in ("live_identity_sha256", "container_id_sha256", "image_id_sha256", "image_digest_sha256", "endpoint_sha256")})) or (value["initial_full_ledger_sha256"], value["initial_full_catalog_sha256"], value["initial_full_data_sha256"]) != (value["recreated_full_ledger_sha256"], value["recreated_full_catalog_sha256"], value["recreated_full_data_sha256"]) or (value["initial_full_ledger_sha256"], value["initial_full_catalog_sha256"], value["initial_full_data_sha256"]) != (value["post_rollback_ledger_sha256"], value["post_rollback_catalog_sha256"], value["post_rollback_data_sha256"]) or value["absent_ledger_sha256"] != value["initial_full_ledger_sha256"] or value["absent_catalog_sha256"] == value["initial_full_catalog_sha256"]):
+    hashes = ("runtime_source_root", "manifest_sha256", "migration_source_sha256", "probe_text_sha256", "target_fingerprint", "binding_receipt_sha256", "clone_identity", "live_identity_sha256", "container_id_sha256", "image_id_sha256", "image_digest_sha256", "endpoint_sha256", "g035_restore_receipt_sha256", "g035_capture_receipt_sha256", "restored_archive_sha256", "capture_receipt_bytes_sha256", "restore_receipt_bytes_sha256", "lineage_attestation_sha256", "lineage_signature_sha256", "initial_full_ledger_sha256", "initial_full_catalog_sha256", "initial_full_data_sha256", "absent_ledger_sha256", "absent_catalog_sha256", "recreated_full_ledger_sha256", "recreated_full_catalog_sha256", "recreated_full_data_sha256", "post_rollback_ledger_sha256", "post_rollback_catalog_sha256", "post_rollback_data_sha256", "source_plan_sha256", "terminal_ledger_root", "terminal_catalog_root", "terminal_acl_root", "terminal_data_root", "terminal_spec_root", "terminal_tuple_sha256", "reverse_vector_sha256")
+    required = set(hashes) | {"schema", "issued_at", "expires_at", "final_recovery_commit", "clone_nonce", "derivation_mode", "terminal_rows"}
+    if (set(value) != required or value["schema"] != "g040-clone-observation-v2" or value["final_recovery_commit"] != source.final_commit or value["runtime_source_root"] != source.runtime_source_root or value["manifest_sha256"] != prefix.MANIFEST_SHA256 or value["migration_source_sha256"] != prefix.MIGRATION_SOURCE_SHA256 or value["probe_text_sha256"] != prefix.PROBE_TEXT_SHA256 or value["target_fingerprint"] != target_fingerprint or type(value["issued_at"]) is not int or type(value["expires_at"]) is not int or value["expires_at"] - value["issued_at"] > 900 or not value["issued_at"] <= now <= value["expires_at"] or not _SAFE.fullmatch(value["clone_nonce"]) or type(value["terminal_rows"]) is not int or value["terminal_rows"] != executor._TERMINAL_ROWS or value["derivation_mode"] != DERIVATION_MODE or value["reverse_vector_sha256"] != REVERSE_VECTOR_SHA256 or any(type(value[key]) is not str or not _HEX.fullmatch(value[key]) for key in hashes) or value["terminal_data_root"] != value["initial_full_data_sha256"] or value["terminal_tuple_sha256"] != _sha(_canonical({"terminal_rows": value["terminal_rows"], "ledger": value["terminal_ledger_root"], "catalog": value["terminal_catalog_root"], "acl": value["terminal_acl_root"], "data": value["terminal_data_root"], "terminal_spec": value["terminal_spec_root"]})) or value["clone_identity"] != _sha(_canonical({key: value[key] for key in ("live_identity_sha256", "container_id_sha256", "image_id_sha256", "image_digest_sha256", "endpoint_sha256")})) or (value["initial_full_ledger_sha256"], value["initial_full_catalog_sha256"], value["initial_full_data_sha256"]) != (value["recreated_full_ledger_sha256"], value["recreated_full_catalog_sha256"], value["recreated_full_data_sha256"]) or (value["initial_full_ledger_sha256"], value["initial_full_catalog_sha256"], value["initial_full_data_sha256"]) != (value["post_rollback_ledger_sha256"], value["post_rollback_catalog_sha256"], value["post_rollback_data_sha256"]) or value["absent_ledger_sha256"] != value["initial_full_ledger_sha256"] or value["absent_catalog_sha256"] == value["initial_full_catalog_sha256"]):
         _fail("reference_input")
     proof = {key: value[key] for key in ("clone_identity", "clone_nonce", "live_identity_sha256", "container_id_sha256", "image_id_sha256", "image_digest_sha256", "endpoint_sha256", "g035_restore_receipt_sha256", "g035_capture_receipt_sha256", "restored_archive_sha256", "capture_receipt_bytes_sha256", "restore_receipt_bytes_sha256", "lineage_attestation_sha256", "lineage_signature_sha256")}
-    return MappingProxyType({**proof, "binding_receipt_sha256": value["binding_receipt_sha256"], "observation_receipt_sha256": _sha(raw), "absent_catalog_sha256": value["absent_catalog_sha256"], "full_catalog_sha256": value["initial_full_catalog_sha256"], "full_data_sha256": value["initial_full_data_sha256"], "ledger_prefix_sha256": value["initial_full_ledger_sha256"], "derivation_mode": value["derivation_mode"], "reverse_vector_sha256": value["reverse_vector_sha256"]})
+    return MappingProxyType({**proof, "binding_receipt_sha256": value["binding_receipt_sha256"], "observation_receipt_sha256": _sha(raw), "issued_at": value["issued_at"], "expires_at": value["expires_at"], "absent_catalog_sha256": value["absent_catalog_sha256"], "full_catalog_sha256": value["initial_full_catalog_sha256"], "full_data_sha256": value["initial_full_data_sha256"], "ledger_prefix_sha256": value["initial_full_ledger_sha256"], "derivation_mode": value["derivation_mode"], **{key: value[key] for key in ("source_plan_sha256", "terminal_rows", "terminal_ledger_root", "terminal_catalog_root", "terminal_acl_root", "terminal_data_root", "terminal_spec_root", "terminal_tuple_sha256", "reverse_vector_sha256")}})
 
 def build_reference_request_file(*, source: SourceBinding, target_fingerprint: str,
                                  nonce: str, first_observation: str | Path,
@@ -1085,6 +1112,179 @@ def _selected_observation(args: argparse.Namespace) -> tuple[Any, str]:
 def _expected_prefix(reference: Any, status: str, ledger: str, catalog: str,
                      data: str | None) -> Any:
     return prefix._observation(reference, status, ledger, catalog, data)
+def _terminal_tuple(reference: Any) -> dict[str, Any]:
+    """The v4 reference terminal state is the only terminal authority."""
+    return {
+        "terminal_rows": reference.terminal_rows,
+        "terminal_ledger_root": reference.terminal_ledger_root,
+        "terminal_catalog_root": reference.terminal_catalog_root,
+        "terminal_acl_root": reference.terminal_acl_root,
+        "terminal_data_root": reference.terminal_data_root,
+        "terminal_spec_root": reference.terminal_spec_root,
+        "terminal_tuple_sha256": reference.terminal_tuple_sha256,
+    }
+
+
+def _intent_body_sha256(body: Mapping[str, Any]) -> str:
+    return _sha(_canonical({key: value for key, value in body.items()
+                            if key != "intent_body_sha256"}))
+
+
+def _replay_plan_sha256(plan: Any, source_plan_sha256: str) -> str:
+    return _sha(_canonical({
+        "source_plan_sha256": source_plan_sha256,
+        "branch": getattr(plan, "branch", None),
+        "terminal_spec_root": getattr(plan, "terminal_spec_root", None),
+        "compiled": [(item.version, item.name, full, executable)
+                     for item, full, executable in getattr(plan, "compiled", ())],
+    }))
+
+
+def _verify_intent_interval(intent: Mapping[str, Any]) -> None:
+    if (type(intent.get("issued_at")) is not int
+            or type(intent.get("expires_at")) is not int
+            or intent["expires_at"] <= intent["issued_at"]
+            or intent["expires_at"] - intent["issued_at"] > 900):
+        _fail("intent_receipt")
+def _write_intent(path: str | Path, root: Path, kind: str, body: Mapping[str, Any]) -> str:
+    return controller._write_signed(controller._outside(path, root, fresh=True),
+                                    {"schema": controller.SCHEMA, "kind": kind, "body": dict(body)},
+                                    repository_root=root)
+
+
+def _signed_intent(path: str | Path, root: Path, kind: str) -> tuple[Mapping[str, Any], str]:
+    try:
+        raw = controller._stable_bytes(controller._outside(path, root), root)
+        return MappingProxyType(controller._signed_document(raw, kind)), _sha(raw)
+    except Exception:
+        _fail("intent_receipt")
+
+
+def _historical_anchor_valid(intent: Mapping[str, Any], reference: Any,
+                             hosted: Any, clone: Mapping[str, Any]) -> None:
+    _verify_intent_interval(intent)
+    issued = intent["issued_at"]
+    if (not reference.issued_at_unix <= issued < reference.expires_at_unix
+            or not hosted.issued_at <= issued < hosted.expires_at
+            or not clone["issued_at"] <= issued < clone["expires_at"]):
+        _fail("intent_receipt")
+
+
+def _preparation_terminal_body(intent: Mapping[str, Any], intent_sha: str,
+                               readback: Mapping[str, Any]) -> Mapping[str, Any]:
+    body = {
+        "schema": "g040-local-state-preparation-v3",
+        "issued_at": intent["issued_at"], "expires_at": intent["expires_at"],
+        "final_recovery_commit": intent["final_recovery_commit"],
+        "runtime_source_root": intent["runtime_source_root"],
+        "reference_receipt_sha256": intent["reference_receipt_sha256"],
+        "hosted_observation_receipt_sha256": intent["hosted_observation_receipt_sha256"],
+        "clone_binding_receipt_sha256": intent["clone_binding_receipt_sha256"],
+        "clone_observation_receipt_sha256": intent["clone_observation_receipt_sha256"],
+        "clone_identity": intent["clone_identity"], "clone_nonce": intent["clone_nonce"],
+        "reverse_vector_sha256": intent["reverse_vector_sha256"],
+        "starting_ledger_root": intent["starting_roots"]["ledger"],
+        "starting_catalog_root": intent["starting_roots"]["catalog"],
+        "starting_data_root": intent["starting_roots"]["data"],
+        "resulting_ledger_root": readback["ledger"],
+        "resulting_catalog_root": readback["catalog"],
+        "resulting_data_root": readback["data"],
+        "preparation_intent_receipt_sha256": intent_sha,
+        "preparation_intent_body_sha256": _intent_body_sha256(intent),
+        "terminal_readback_sha256": readback["terminal_readback_sha256"],
+        "target_fingerprint": intent["target_fingerprint"],
+        "live_identity_sha256": intent["live_identity_sha256"],
+        "container_id_sha256": intent["container_id_sha256"],
+        "endpoint_sha256": intent["endpoint_sha256"],
+        "intent_body_sha256": intent["intent_body_sha256"],
+    }
+    return MappingProxyType(body)
+
+
+def _publish_or_verify_terminal(path: str | Path, root: Path, kind: str,
+                                body: Mapping[str, Any]) -> str:
+    output = controller._outside(path, root)
+    try:
+        if output.exists():
+            raw = controller._stable_bytes(output, root)
+            if controller._signed_document(raw, kind) != body:
+                _fail("terminal_receipt_conflict")
+            return _sha(raw)
+    except RehearsalError:
+        raise
+    except Exception:
+        _fail("terminal_receipt_conflict")
+    return controller._write_signed(controller._outside(path, root, fresh=True),
+                                    {"schema": controller.SCHEMA, "kind": kind, "body": dict(body)},
+                                    repository_root=root)
+def _classify_read_only_state(cur: Any, reference: Any, *, start: Mapping[str, Any],
+                              terminal: Mapping[str, Any], manifest: Any | None = None) -> str:
+    """Classify one fresh read-only snapshot without mutation-only probes."""
+    try:
+        if _query_one(cur, "SELECT current_setting('transaction_read_only', true) AS transaction_read_only") != {"transaction_read_only": "on"}:
+            return "AMBIGUOUS"
+        catalog = _query_one(cur, CATALOG_PROBE)
+        start_catalog = (catalog.get("ledger_sha256"), catalog.get("catalog_sha256"))
+        if start_catalog == (start["ledger"], start["catalog"]):
+            if start["data"] is None or probe_full_data_root(cur, reference) == start["data"]:
+                return "START"
+            return "AMBIGUOUS"
+        if manifest is None:
+            if start_catalog == (terminal["ledger"], terminal["catalog"]):
+                _valid_probe(catalog, full=False)
+                return "TERMINAL"
+            return "AMBIGUOUS"
+        terminal_readback = terminal_readback_assert(cur, Path(__file__).resolve().parents[3], manifest)
+        data_root = probe_full_data_root(cur, reference)
+        observed_terminal = {
+            "terminal_rows": executor._TERMINAL_ROWS, "ledger": terminal_readback["ledger_root"],
+            "catalog": terminal_readback["catalog_root"], "acl": terminal_readback["acl_root"],
+            "data": data_root, "terminal_spec": terminal_readback["terminal_spec"],
+        }
+        if observed_terminal == dict(terminal):
+            return "TERMINAL"
+    except Exception:
+        pass
+    return "AMBIGUOUS"
+
+
+def _preparation_readback(args: argparse.Namespace, root: Path, binding: Mapping[str, Any],
+                          reference: Any, *, lineage_now: int | None = None) -> Mapping[str, Any]:
+    """Classify one fresh read-only preparation snapshot without mutation capability."""
+    conn = cur = None
+    try:
+        conn, service = _connect_service(args.service_file, args.service_name, readonly=True,
+                                         repository_root=root)
+        cur = controller._G037TupleFetchallCursor(conn.cursor())
+        _assert_observation_binding(binding, verified_port=service["port"], container=args.container,
+                                    docker=args.docker, conn=conn, repository_root=root,
+                                    now_unix=lineage_now)
+        _open_read_only_snapshot(conn, cur)
+        start = {"ledger": reference.ledger_prefix_sha256, "catalog": reference.full_catalog_sha256,
+                 "data": reference.full_data_sha256}
+        terminal = {"ledger": reference.ledger_prefix_sha256, "catalog": reference.absent_catalog_sha256,
+                    "data": controller._ABSENT_DATA_ROOT}
+        state = _classify_read_only_state(cur, reference, start=start, terminal=terminal)
+        cur.execute("ROLLBACK")
+        if state == "TERMINAL":
+            value = {"state": "UNAPPLIED", **terminal}
+            return MappingProxyType({
+                "classifier_state": state, **value,
+                "terminal_readback_sha256": _sha(_canonical(value)),
+            })
+        return MappingProxyType({"classifier_state": state})
+    except RehearsalError:
+        raise
+    except Exception:
+        return MappingProxyType({"classifier_state": "AMBIGUOUS"})
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            try:
+                conn.rollback(); conn.close()
+            except Exception:
+                pass
 
 
 def _verified_preparation(path: str | Path, *, source: SourceBinding, reference: Any,
@@ -1103,11 +1303,14 @@ def _verified_preparation(path: str | Path, *, source: SourceBinding, reference:
         "clone_observation_receipt_sha256", "clone_identity", "clone_nonce",
         "reverse_vector_sha256", "starting_ledger_root", "starting_catalog_root",
         "starting_data_root", "resulting_ledger_root", "resulting_catalog_root",
-        "resulting_data_root",
+        "resulting_data_root", "preparation_intent_receipt_sha256",
+        "preparation_intent_body_sha256", "terminal_readback_sha256",
+        "target_fingerprint", "live_identity_sha256", "container_id_sha256",
+        "endpoint_sha256", "intent_body_sha256",
     }
     hashes = required - {"schema", "issued_at", "expires_at", "final_recovery_commit",
                          "clone_nonce"}
-    if (set(value) != required or value["schema"] != "g040-local-state-preparation-v1"
+    if (set(value) != required or value["schema"] != "g040-local-state-preparation-v3"
             or type(value["issued_at"]) is not int or type(value["expires_at"]) is not int
             or not value["issued_at"] <= now <= value["expires_at"]
             or value["expires_at"] - value["issued_at"] > 900
@@ -1122,6 +1325,9 @@ def _verified_preparation(path: str | Path, *, source: SourceBinding, reference:
             or value["clone_identity"] != binding["clone_identity"]
             or value["clone_nonce"] != binding["clone_nonce"]
             or value["reverse_vector_sha256"] != REVERSE_VECTOR_SHA256
+            or value["target_fingerprint"] != reference.target_fingerprint
+            or any(value[key] != binding[key] for key in (
+                "live_identity_sha256", "container_id_sha256", "endpoint_sha256"))
             or (value["starting_ledger_root"], value["starting_catalog_root"],
                 value["starting_data_root"]) != (reference.ledger_prefix_sha256,
                                                   reference.full_catalog_sha256,
@@ -1129,7 +1335,11 @@ def _verified_preparation(path: str | Path, *, source: SourceBinding, reference:
             or (value["resulting_ledger_root"], value["resulting_catalog_root"],
                 value["resulting_data_root"]) != (reference.ledger_prefix_sha256,
                                                    reference.absent_catalog_sha256,
-                                                   controller._ABSENT_DATA_ROOT)):
+                                                   controller._ABSENT_DATA_ROOT)
+            or value["preparation_intent_body_sha256"] != value["intent_body_sha256"]
+            or value["terminal_readback_sha256"] != _sha(_canonical({
+                "state": "UNAPPLIED", "ledger": value["resulting_ledger_root"],
+                "catalog": value["resulting_catalog_root"], "data": value["resulting_data_root"]}))):
         _fail("preparation_receipt")
     return MappingProxyType({**value, "preparation_receipt_sha256": _sha(raw)})
 
@@ -1160,6 +1370,7 @@ def prepare_local_state(args: argparse.Namespace) -> Mapping[str, Any]:
     conn, service = _connect_service(args.service_file, args.service_name, readonly=False,
                                      repository_root=root)
     cur = None
+    commit_attempted = False
     try:
         cur = controller._G037TupleFetchallCursor(conn.cursor())
         _assert_observation_binding(binding, verified_port=service["port"],
@@ -1172,19 +1383,44 @@ def prepare_local_state(args: argparse.Namespace) -> Mapping[str, Any]:
                                 reference.full_catalog_sha256, reference.full_data_sha256)
         if prefix.classify_mutation_cursor(cur, reference, expected_prior=full) != full:
             _fail("preparation_state")
+        issued = int(time.time())
+        intent = {
+            "schema": "g040-local-state-preparation-intent-v2", "issued_at": issued,
+            "expires_at": min(issued + 900, reference.expires_at_unix),
+            "final_recovery_commit": source.final_commit, "runtime_source_root": source.runtime_source_root,
+            "target_fingerprint": reference.target_fingerprint,
+            "reference_receipt_sha256": reference.receipt_sha256,
+            "hosted_observation_receipt_sha256": hosted_receipt,
+            "clone_binding_receipt_sha256": binding["binding_receipt_sha256"],
+            "clone_observation_receipt_sha256": clone["observation_receipt_sha256"],
+            "clone_identity": binding["clone_identity"], "clone_nonce": binding["clone_nonce"],
+            "live_identity_sha256": binding["live_identity_sha256"],
+            "container_id_sha256": binding["container_id_sha256"],
+            "endpoint_sha256": binding["endpoint_sha256"], "reverse_vector_sha256": REVERSE_VECTOR_SHA256,
+            "starting_roots": {"ledger": reference.ledger_prefix_sha256,
+                               "catalog": reference.full_catalog_sha256, "data": reference.full_data_sha256},
+            "expected_terminal": {"state": "UNAPPLIED", "ledger": reference.ledger_prefix_sha256,
+                                  "catalog": reference.absent_catalog_sha256,
+                                  "data": controller._ABSENT_DATA_ROOT},
+        }
+        intent["intent_body_sha256"] = _intent_body_sha256(intent)
+        if intent["expires_at"] <= issued:
+            _fail("intent_expired")
+        intent_receipt = _write_intent(args.intent_output, root, "local-state-preparation-intent", intent)
         for statement in REVERSE_VECTOR:
             cur.execute(statement)
         absent = _expected_prefix(reference, "UNAPPLIED", reference.ledger_prefix_sha256,
                                   reference.absent_catalog_sha256, None)
         if prefix.classify_mutation_cursor(cur, reference, expected_prior=absent) != absent:
             _fail("preparation_state")
+        commit_attempted = True
         conn.commit()
     except Exception:
         try:
             conn.rollback()
         except Exception:
             pass
-        _fail("preparation_failed")
+        _fail("preparation_commit_ambiguous_readback_only" if commit_attempted else "preparation_failed")
     finally:
         if cur:
             cur.close()
@@ -1192,31 +1428,243 @@ def prepare_local_state(args: argparse.Namespace) -> Mapping[str, Any]:
             conn.close()
         except Exception:
             pass
-    issued = int(time.time())
-    body = {
-        "schema": "g040-local-state-preparation-v1", "issued_at": issued,
-        "expires_at": issued + 600, "final_recovery_commit": source.final_commit,
-        "runtime_source_root": source.runtime_source_root,
-        "reference_receipt_sha256": reference.receipt_sha256,
-        "hosted_observation_receipt_sha256": hosted_receipt,
-        "clone_binding_receipt_sha256": binding["binding_receipt_sha256"],
-        "clone_observation_receipt_sha256": clone["observation_receipt_sha256"],
-        "clone_identity": binding["clone_identity"], "clone_nonce": binding["clone_nonce"],
-        "reverse_vector_sha256": REVERSE_VECTOR_SHA256,
-        "starting_ledger_root": reference.ledger_prefix_sha256,
-        "starting_catalog_root": reference.full_catalog_sha256,
-        "starting_data_root": reference.full_data_sha256,
-        "resulting_ledger_root": reference.ledger_prefix_sha256,
-        "resulting_catalog_root": reference.absent_catalog_sha256,
-        "resulting_data_root": controller._ABSENT_DATA_ROOT,
-    }
-    receipt = controller._write_signed(controller._outside(args.output, root, fresh=True),
-                                        {"schema": controller.SCHEMA,
-                                         "kind": "local-state-preparation", "body": body},
-                                        repository_root=root)
+    readback = _preparation_readback(args, root, binding, reference)
+    if readback["classifier_state"] != "TERMINAL":
+        _fail("preparation_commit_ambiguous_readback_only")
+    body = _preparation_terminal_body(intent, intent_receipt, readback)
+    try:
+        receipt = _publish_or_verify_terminal(args.output, root, "local-state-preparation", body)
+    except Exception:
+        _fail("preparation_commit_ambiguous_readback_only")
     return MappingProxyType({"schema": body["schema"], "receipt_sha256": receipt})
 
 
+def recover_local_state(args: argparse.Namespace) -> Mapping[str, Any]:
+    """Read-only terminal receipt recovery; this path has no mutation capability."""
+    root = Path(args.repository_root).resolve()
+    source = _source(root, args.source_commit)
+    reference = controller._reference(_controller_args(args), source, historical=True)
+    hosted, hosted_receipt = controller._load_observation(
+        _controller_args(args), source, reference, require_fresh=False)
+    binding = _binding(args.binding, root)
+    intent, intent_sha = _signed_intent(args.intent, root, "local-state-preparation-intent")
+    clone = _verified_observation(args.clone_observation, source=source,
+                                  target_fingerprint=reference.target_fingerprint,
+                                  repository_root=root, now=intent.get("issued_at", -1))
+    required = {"schema", "issued_at", "expires_at", "final_recovery_commit", "runtime_source_root",
+                "target_fingerprint", "reference_receipt_sha256", "hosted_observation_receipt_sha256",
+                "clone_binding_receipt_sha256", "clone_observation_receipt_sha256", "clone_identity",
+                "clone_nonce", "live_identity_sha256", "container_id_sha256", "endpoint_sha256",
+                "reverse_vector_sha256", "starting_roots", "expected_terminal", "intent_body_sha256"}
+    if (set(intent) != required or intent["schema"] != "g040-local-state-preparation-intent-v2"
+            or intent["final_recovery_commit"] != source.final_commit
+            or intent["runtime_source_root"] != source.runtime_source_root
+            or intent["target_fingerprint"] != reference.target_fingerprint
+            or intent["reference_receipt_sha256"] != reference.receipt_sha256
+            or intent["hosted_observation_receipt_sha256"] != hosted_receipt
+            or intent["clone_binding_receipt_sha256"] != binding["binding_receipt_sha256"]
+            or intent["clone_observation_receipt_sha256"] != clone["observation_receipt_sha256"]
+            or intent["clone_identity"] != binding["clone_identity"]
+            or intent["clone_nonce"] != binding["clone_nonce"]
+            or any(intent[key] != binding[key] for key in (
+                "live_identity_sha256", "container_id_sha256", "endpoint_sha256"))
+            or type(intent["starting_roots"]) is not dict
+            or intent["starting_roots"] != {"ledger": reference.ledger_prefix_sha256,
+                                             "catalog": reference.full_catalog_sha256,
+                                             "data": reference.full_data_sha256}
+            or type(intent["expected_terminal"]) is not dict
+            or intent["expected_terminal"] != {"state": "UNAPPLIED",
+                                                "ledger": reference.ledger_prefix_sha256,
+                                                "catalog": reference.absent_catalog_sha256,
+                                                "data": controller._ABSENT_DATA_ROOT}
+            or intent["reverse_vector_sha256"] != REVERSE_VECTOR_SHA256
+            or intent["intent_body_sha256"] != _intent_body_sha256(intent)):
+        _fail("intent_receipt")
+    _historical_anchor_valid(intent, reference, hosted, clone)
+    readback = _preparation_readback(args, root, binding, reference, lineage_now=intent["issued_at"])
+    if readback["classifier_state"] == "START":
+        _fail("preparation_not_committed")
+    if readback["classifier_state"] != "TERMINAL":
+        _fail("preparation_recovery_ambiguous")
+    body = _preparation_terminal_body(intent, intent_sha, readback)
+    try:
+        receipt = _publish_or_verify_terminal(args.output, root, "local-state-preparation", body)
+    except Exception:
+        _fail("preparation_recovery_ambiguous")
+    return MappingProxyType({"schema": body["schema"], "receipt_sha256": receipt})
+
+
+def _replay_readback(args: argparse.Namespace, root: Path, binding: Mapping[str, Any],
+                     reference: Any, manifest: Any, start: Mapping[str, Any],
+                     expected: Mapping[str, Any], *, lineage_now: int | None = None) -> Mapping[str, Any]:
+    """Read terminal roots from a newly opened, read-only clone connection."""
+    conn, service = _connect_service(args.service_file, args.service_name, readonly=True,
+                                     repository_root=root)
+    cur = None
+    try:
+        cur = controller._G037TupleFetchallCursor(conn.cursor())
+        _assert_observation_binding(binding, verified_port=service["port"], container=args.container,
+                                    docker=args.docker, conn=conn, repository_root=root,
+                                    now_unix=lineage_now)
+        _open_read_only_snapshot(conn, cur)
+        state = _classify_read_only_state(cur, reference, start=start, terminal=expected,
+                                          manifest=manifest)
+        cur.execute("ROLLBACK")
+        if state != "TERMINAL":
+            _fail("replay_recovery_ambiguous")
+        value = dict(expected)
+        return MappingProxyType({**value, "terminal_readback_sha256": _sha(_canonical(value))})
+    except RehearsalError:
+        raise
+    except Exception:
+        _fail("replay_recovery_ambiguous")
+    finally:
+        if cur:
+            cur.close()
+        try:
+            conn.rollback()
+            conn.close()
+        except Exception:
+            pass
+
+
+def _replay_terminal_body(intent: Mapping[str, Any], intent_sha: str,
+                           readback: Mapping[str, Any]) -> Mapping[str, Any]:
+    body = dict(intent)
+    body.update({
+        "schema": "g040-local-branch-replay-v3",
+        "replay_intent_receipt_sha256": intent_sha,
+        "terminal_readback_sha256": readback["terminal_readback_sha256"],
+        "terminal_rows": readback["terminal_rows"],
+        "terminal_ledger_root": readback["ledger"],
+        "terminal_catalog_root": readback["catalog"],
+        "terminal_acl_root": readback["acl"],
+        "terminal_data_root": readback["data"],
+        "terminal_spec_root": readback["terminal_spec"],
+    })
+    body["terminal_tuple_sha256"] = intent["terminal_tuple_sha256"]
+    return MappingProxyType(body)
+
+def recover_branch(args: argparse.Namespace) -> Mapping[str, Any]:
+    """Read-only replay recovery. This path never obtains mutation capability."""
+    root = Path(args.repository_root).resolve()
+    source = _source(root, args.source_commit)
+    reference = controller._reference(_controller_args(args), source, historical=True)
+    hosted, hosted_receipt = controller._load_observation(
+        _controller_args(args), source, reference, require_fresh=False)
+    binding = _binding(args.binding, root)
+    intent, intent_sha = _signed_intent(args.intent, root, "local-branch-replay-intent")
+    clone = _verified_observation(args.clone_observation, source=source,
+                                  target_fingerprint=reference.target_fingerprint,
+                                  repository_root=root, now=intent.get("issued_at", -1))
+    required = {
+        "schema", "issued_at", "expires_at", "final_recovery_commit", "runtime_source_root",
+        "target_fingerprint", "reference_receipt_sha256", "hosted_observation_receipt_sha256",
+        "clone_binding_receipt_sha256", "clone_observation_receipt_sha256", "clone_identity",
+        "clone_nonce", "live_identity_sha256", "container_id_sha256", "endpoint_sha256",
+        "prefix_classification", "selected_branch", "starting_roots", "source_plan_sha256",
+        "replay_plan_sha256", "intent_body_sha256", "terminal_tuple_sha256", "terminal_rows",
+        "terminal_ledger_root", "terminal_catalog_root", "terminal_acl_root",
+        "terminal_data_root", "terminal_spec_root",
+    }
+    branch = intent.get("selected_branch")
+    if branch == "UNAPPLIED":
+        required.add("unapplied_provenance")
+        if intent.get("unapplied_provenance") == "prepared-from-full-escaped":
+            required.add("preparation_receipt_sha256")
+    hashes = required - {"schema", "issued_at", "expires_at", "final_recovery_commit",
+                         "runtime_source_root", "clone_nonce", "prefix_classification",
+                         "selected_branch", "starting_roots", "terminal_rows",
+                         "unapplied_provenance"}
+    full = {"ledger": reference.ledger_prefix_sha256, "catalog": reference.full_catalog_sha256,
+            "data": reference.full_data_sha256}
+    absent = {"ledger": reference.ledger_prefix_sha256, "catalog": reference.absent_catalog_sha256,
+              "data": None}
+    expected_terminal = {
+        "terminal_rows": reference.terminal_rows, "ledger": reference.terminal_ledger_root,
+        "catalog": reference.terminal_catalog_root, "acl": reference.terminal_acl_root,
+        "data": reference.terminal_data_root, "terminal_spec": reference.terminal_spec_root,
+    }
+    if (set(intent) != required or intent.get("schema") != "g040-local-branch-replay-intent-v2"
+            or any(type(intent.get(key)) is not int for key in ("issued_at", "expires_at"))
+            or any(type(intent[key]) is not str or not _HEX.fullmatch(intent[key]) for key in hashes)
+            or not _SAFE.fullmatch(intent.get("clone_nonce", ""))
+            or intent["final_recovery_commit"] != source.final_commit
+            or intent["runtime_source_root"] != source.runtime_source_root
+            or intent["target_fingerprint"] != reference.target_fingerprint
+            or intent["reference_receipt_sha256"] != reference.receipt_sha256
+            or intent["hosted_observation_receipt_sha256"] != hosted_receipt
+            or any(intent[key] != binding[key] for key in (
+                "clone_identity", "clone_nonce", "live_identity_sha256",
+                "container_id_sha256", "endpoint_sha256"))
+            or intent["clone_binding_receipt_sha256"] != binding["binding_receipt_sha256"]
+            or intent["clone_observation_receipt_sha256"] != clone["observation_receipt_sha256"]
+            or type(intent["starting_roots"]) is not dict
+            or set(intent["starting_roots"]) != {"ledger", "catalog", "data"}
+            or branch not in {"FULL_ESCAPED", "UNAPPLIED"}
+            or intent["prefix_classification"] != branch
+            or (branch == "FULL_ESCAPED" and (
+                "unapplied_provenance" in intent or "preparation_receipt_sha256" in intent
+                or intent["starting_roots"] != full))
+            or (branch == "UNAPPLIED" and (
+                intent.get("unapplied_provenance") not in {
+                    "native-hosted-unapplied", "prepared-from-full-escaped"}
+                or intent["starting_roots"] != absent
+                or (intent["unapplied_provenance"] == "native-hosted-unapplied"
+                    and hosted.status != "UNAPPLIED")
+                or (intent["unapplied_provenance"] == "prepared-from-full-escaped"
+                    and hosted.status != "FULL_ESCAPED")))
+            or intent["source_plan_sha256"] != reference.source_plan_sha256
+            or any(intent[key] != value for key, value in _terminal_tuple(reference).items())
+            or intent["intent_body_sha256"] != _intent_body_sha256(intent)):
+        _fail("intent_receipt")
+    _historical_anchor_valid(intent, reference, hosted, clone)
+    if intent.get("unapplied_provenance") == "prepared-from-full-escaped":
+        preparation = _verified_preparation(
+            args.preparation, source=source, reference=reference, hosted_receipt=hosted_receipt,
+            binding=binding, clone=clone, repository_root=root, now=intent["issued_at"])
+        if preparation["preparation_receipt_sha256"] != intent["preparation_receipt_sha256"]:
+            _fail("intent_receipt")
+    manifest = validate_sources(root)
+    recompiled = compile_branch_plan(
+        root, manifest, source=source, reference=reference,
+        observation=_expected_prefix(reference, branch, **intent["starting_roots"]))
+    if _replay_plan_sha256(recompiled, reference.source_plan_sha256) != intent["replay_plan_sha256"]:
+        _fail("intent_receipt")
+    try:
+        readback = _replay_readback(args, root, binding, reference, manifest, intent["starting_roots"], expected_terminal,
+                                    lineage_now=intent["issued_at"])
+    except Exception:
+        conn, service = _connect_service(args.service_file, args.service_name, readonly=True,
+                                         repository_root=root)
+        cur = None
+        try:
+            cur = controller._G037TupleFetchallCursor(conn.cursor())
+            _assert_observation_binding(binding, verified_port=service["port"], container=args.container,
+                                        docker=args.docker, conn=conn, repository_root=root,
+                                        now_unix=intent["issued_at"])
+            _open_read_only_snapshot(conn, cur)
+            observed = _classify_read_only_state(
+                cur, reference, start=intent["starting_roots"], terminal=expected_terminal,
+                manifest=validate_sources(root))
+            cur.execute("ROLLBACK")
+            if observed == "START":
+                _fail("replay_not_committed")
+        except RehearsalError:
+            raise
+        except Exception:
+            pass
+        finally:
+            if cur:
+                cur.close()
+            try:
+                conn.rollback(); conn.close()
+            except Exception:
+                pass
+        _fail("replay_recovery_ambiguous")
+    body = _replay_terminal_body(intent, intent_sha, readback)
+    receipt = _publish_or_verify_terminal(args.output, root, "local-branch-replay", body)
+    return MappingProxyType({"schema": body["schema"], "receipt_sha256": receipt})
 def replay_branch(args: argparse.Namespace) -> Mapping[str, Any]:
     """Commit one branch on an admitted local clone and sign its terminal receipt."""
     root = Path(args.repository_root).resolve()
@@ -1272,28 +1720,73 @@ def replay_branch(args: argparse.Namespace) -> Mapping[str, Any]:
     conn, service = _connect_service(args.service_file, args.service_name, readonly=False,
                                      repository_root=root)
     cur = None
+    commit_attempted = False
     try:
         cur = controller._G037TupleFetchallCursor(conn.cursor())
         _assert_observation_binding(binding, verified_port=service["port"],
                                     container=args.container, docker=args.docker, conn=conn,
                                     repository_root=root)
-        capability = admit_verified_clone(
-            clone_identity=binding["clone_identity"], clone_nonce=binding["clone_nonce"],
-            target_fingerprint=reference.target_fingerprint,
-            live_identity_sha256=binding["live_identity_sha256"], port=service["port"])
+        capability = _admit_custody_verified_clone(
+            binding, verified_port=service["port"],
+            target_fingerprint=reference.target_fingerprint)
         plan = compile_branch_plan(root, manifest, source=source, reference=reference,
                                    observation=local_observation)
         cur.execute("BEGIN")
-        evidence = apply_rehearsal_locked_cursor(
+        if type(plan) is executor.RehearsalExecutionPlan:
+            for sql in executor._LOCK_SQL + (executor._DATA_LOCK_SQL if plan.branch == "FULL_ESCAPED" else ()):
+                cur.execute(sql)
+            if prefix.classify_mutation_cursor(cur, reference, expected_prior=local_observation) != local_observation:
+                _fail("replay_state")
+        issued = int(time.time())
+        terminal = _terminal_tuple(reference)
+        intent = {
+            "schema": "g040-local-branch-replay-intent-v2", "issued_at": issued,
+            "expires_at": min(issued + 900, reference.expires_at_unix,
+                              *(value for value in (preparation_expires_at,) if value is not None)),
+            "final_recovery_commit": source.final_commit, "runtime_source_root": source.runtime_source_root,
+            "target_fingerprint": reference.target_fingerprint,
+            "reference_receipt_sha256": reference.receipt_sha256,
+            "hosted_observation_receipt_sha256": hosted_receipt,
+            "clone_binding_receipt_sha256": binding["binding_receipt_sha256"],
+            "clone_observation_receipt_sha256": clone_observation["observation_receipt_sha256"],
+            "clone_identity": binding["clone_identity"], "clone_nonce": binding["clone_nonce"],
+            "live_identity_sha256": binding["live_identity_sha256"],
+            "container_id_sha256": binding["container_id_sha256"], "endpoint_sha256": binding["endpoint_sha256"],
+            "prefix_classification": local_observation.status, "selected_branch": args.selected_branch,
+            "starting_roots": {"ledger": local_observation.ledger_prefix_sha256,
+                               "catalog": local_observation.catalog_sha256, "data": local_observation.data_sha256},
+            "source_plan_sha256": reference.source_plan_sha256,
+            "replay_plan_sha256": _replay_plan_sha256(plan, reference.source_plan_sha256),
+            **terminal,
+            **({"unapplied_provenance": "prepared-from-full-escaped",
+                "preparation_receipt_sha256": preparation_receipt}
+               if preparation_receipt is not None else
+               ({"unapplied_provenance": "native-hosted-unapplied"}
+                if args.selected_branch == "UNAPPLIED" else {})),
+        }
+        intent["intent_body_sha256"] = _intent_body_sha256(intent)
+        if intent["expires_at"] <= issued:
+            _fail("intent_expired")
+        intent_receipt = _write_intent(getattr(args, "intent_output", f"{args.output}.intent"),
+                                       root, "local-branch-replay-intent", intent)
+        evidence = _apply_rehearsal_locked_cursor(
             cur, plan=plan, verified_clone_capability=capability,
             deadline_monotonic=time.monotonic() + 30)
+        if (evidence.terminal_rows != intent["terminal_rows"]
+                or evidence.terminal_ledger_root != intent["terminal_ledger_root"]
+                or evidence.terminal_catalog_root != intent["terminal_catalog_root"]
+                or evidence.terminal_acl_root != intent["terminal_acl_root"]
+                or evidence.terminal_data_root != intent["terminal_data_root"]
+                or evidence.terminal_spec_root != intent["terminal_spec_root"]):
+            _fail("replay_terminal_evidence")
+        commit_attempted = True
         conn.commit()
     except Exception:
         try:
             conn.rollback()
         except Exception:
             pass
-        _fail("replay_failed")
+        _fail("replay_commit_ambiguous_readback_only" if commit_attempted else "replay_failed")
     finally:
         if cur:
             cur.close()
@@ -1301,58 +1794,43 @@ def replay_branch(args: argparse.Namespace) -> Mapping[str, Any]:
             conn.close()
         except Exception:
             pass
-    issued = int(time.time())
-    body = {
-        "schema": "g040-local-branch-replay-v1", "issued_at": issued,
-        "expires_at": min(issued + 900, reference.expires_at_unix,
-                          *(value for value in (preparation_expires_at,) if value is not None)),
-        "final_recovery_commit": source.final_commit,
-        "runtime_source_root": source.runtime_source_root,
-        "reference_receipt_sha256": reference.receipt_sha256,
-        "hosted_observation_receipt_sha256": hosted_receipt,
-        "target_fingerprint": reference.target_fingerprint,
-        "prefix_classification": local_observation.status, "selected_branch": args.selected_branch,
-        "clone_binding_receipt_sha256": binding["binding_receipt_sha256"],
-        "clone_observation_receipt_sha256": clone_observation["observation_receipt_sha256"],
-        "clone_identity": binding["clone_identity"], "clone_nonce": binding["clone_nonce"],
-        "live_identity_sha256": binding["live_identity_sha256"],
-        "container_id_sha256": binding["container_id_sha256"],
-        "endpoint_sha256": binding["endpoint_sha256"],
-        "starting_ledger_root": local_observation.ledger_prefix_sha256,
-        "starting_catalog_root": local_observation.catalog_sha256,
-        "starting_data_root": local_observation.data_sha256,
-        "terminal_rows": evidence.terminal_rows,
-        "terminal_ledger_root": evidence.terminal_ledger_root,
-        "terminal_catalog_root": evidence.terminal_catalog_root,
-        "terminal_acl_root": evidence.terminal_acl_root,
-        "terminal_data_root": evidence.terminal_data_root,
-        "terminal_spec_root": evidence.terminal_spec_root,
-        "executor_evidence_sha256": evidence.evidence_sha256,
-        **({"unapplied_provenance": "prepared-from-full-escaped",
-            "preparation_receipt_sha256": preparation_receipt}
-           if preparation_receipt is not None else
-           ({"unapplied_provenance": "native-hosted-unapplied"}
-            if args.selected_branch == "UNAPPLIED" else {})),
+    expected_terminal = {
+        "terminal_rows": intent["terminal_rows"],
+        "ledger": intent["terminal_ledger_root"],
+        "catalog": intent["terminal_catalog_root"],
+        "acl": intent["terminal_acl_root"],
+        "data": intent["terminal_data_root"],
+        "terminal_spec": intent["terminal_spec_root"],
     }
-    receipt = controller._write_signed(controller._outside(args.output, root, fresh=True),
-                                        {"schema": controller.SCHEMA,
-                                         "kind": "local-branch-replay", "body": body},
-                                        repository_root=root)
+    if any(getattr(evidence, field) != expected_terminal[key] for field, key in (
+            ("terminal_rows", "terminal_rows"), ("terminal_ledger_root", "ledger"),
+            ("terminal_catalog_root", "catalog"), ("terminal_acl_root", "acl"),
+            ("terminal_data_root", "data"), ("terminal_spec_root", "terminal_spec"))):
+        _fail("replay_commit_ambiguous_readback_only")
+    try:
+        readback = _replay_readback(args, root, binding, reference, manifest, intent["starting_roots"], expected_terminal)
+    except Exception:
+        _fail("replay_commit_ambiguous_readback_only")
+    body = _replay_terminal_body(intent, intent_receipt, readback)
+    try:
+        receipt = _publish_or_verify_terminal(args.output, root, "local-branch-replay", body)
+    except Exception:
+        _fail("replay_commit_ambiguous_readback_only")
     return MappingProxyType({"schema": body["schema"], "receipt_sha256": receipt})
 
 
 def _validated_replay(body: Mapping[str, Any], *, source: SourceBinding, reference: Any,
-                      hosted: Any, hosted_receipt: str, now: int) -> Mapping[str, Any]:
+                      hosted: Any, hosted_receipt: str, now: int, repository_root: Path | None = None) -> Mapping[str, Any]:
     required = {
         "schema", "issued_at", "expires_at", "final_recovery_commit", "runtime_source_root",
-        "reference_receipt_sha256", "hosted_observation_receipt_sha256", "target_fingerprint",
-        "prefix_classification", "selected_branch", "clone_binding_receipt_sha256",
-        "clone_observation_receipt_sha256", "clone_identity", "clone_nonce",
-        "live_identity_sha256", "container_id_sha256", "endpoint_sha256",
-        "starting_ledger_root", "starting_catalog_root", "starting_data_root",
-        "terminal_rows", "terminal_ledger_root", "terminal_catalog_root",
-        "terminal_acl_root", "terminal_data_root", "terminal_spec_root",
-        "executor_evidence_sha256",
+        "target_fingerprint", "reference_receipt_sha256", "hosted_observation_receipt_sha256",
+        "clone_binding_receipt_sha256", "clone_observation_receipt_sha256", "clone_identity",
+        "clone_nonce", "live_identity_sha256", "container_id_sha256", "endpoint_sha256",
+        "prefix_classification", "selected_branch", "starting_roots", "source_plan_sha256",
+        "replay_plan_sha256", "intent_body_sha256", "terminal_tuple_sha256",
+        "replay_intent_receipt_sha256", "terminal_readback_sha256", "terminal_rows",
+        "terminal_ledger_root", "terminal_catalog_root", "terminal_acl_root",
+        "terminal_data_root", "terminal_spec_root",
     }
     branch = body.get("selected_branch")
     provenance = body.get("unapplied_provenance")
@@ -1360,42 +1838,52 @@ def _validated_replay(body: Mapping[str, Any], *, source: SourceBinding, referen
         required.add("unapplied_provenance")
         if provenance == "prepared-from-full-escaped":
             required.add("preparation_receipt_sha256")
-    hashes = required - {
-        "schema", "issued_at", "expires_at", "final_recovery_commit", "runtime_source_root",
-        "prefix_classification", "selected_branch", "clone_nonce", "starting_data_root",
-        "terminal_rows", "unapplied_provenance",
+    hashes = required - {"schema", "issued_at", "expires_at", "final_recovery_commit",
+                         "runtime_source_root", "prefix_classification", "selected_branch",
+                         "clone_nonce", "starting_roots", "terminal_rows", "unapplied_provenance"}
+    absent = {"ledger": reference.ledger_prefix_sha256, "catalog": reference.absent_catalog_sha256, "data": None}
+    full = {"ledger": reference.ledger_prefix_sha256, "catalog": reference.full_catalog_sha256, "data": reference.full_data_sha256}
+    terminal_readback = {"terminal_rows": body.get("terminal_rows"), "ledger": body.get("terminal_ledger_root"),
+                         "catalog": body.get("terminal_catalog_root"), "acl": body.get("terminal_acl_root"),
+                         "data": body.get("terminal_data_root"), "terminal_spec": body.get("terminal_spec_root")}
+    terminal = _terminal_tuple(reference)
+    intent_body = {
+        **{key: value for key, value in body.items() if key not in {
+            "replay_intent_receipt_sha256", "terminal_readback_sha256"}},
+        "schema": "g040-local-branch-replay-intent-v2",
     }
-    absent_roots = (reference.ledger_prefix_sha256, reference.absent_catalog_sha256, None)
-    full_roots = (reference.ledger_prefix_sha256, reference.full_catalog_sha256,
-                  reference.full_data_sha256)
-    starting_roots = (body.get("starting_ledger_root"), body.get("starting_catalog_root"),
-                      body.get("starting_data_root"))
-    if (set(body) != required or body["schema"] != "g040-local-branch-replay-v1"
-            or type(body["issued_at"]) is not int or type(body["expires_at"]) is not int
+    if (set(body) != required or body.get("schema") != "g040-local-branch-replay-v3"
+            or type(body.get("issued_at")) is not int or type(body.get("expires_at")) is not int
             or not body["issued_at"] <= now <= body["expires_at"]
             or body["expires_at"] - body["issued_at"] > 900
             or body["final_recovery_commit"] != source.final_commit
             or body["runtime_source_root"] != source.runtime_source_root
-            or body["reference_receipt_sha256"] != reference.receipt_sha256
             or body["target_fingerprint"] != reference.target_fingerprint
+            or body["reference_receipt_sha256"] != reference.receipt_sha256
             or body["hosted_observation_receipt_sha256"] != hosted_receipt
             or not _SAFE.fullmatch(body["clone_nonce"])
             or any(type(body[key]) is not str or not _HEX.fullmatch(body[key]) for key in hashes)
-            or type(body["terminal_rows"]) is not list
+            or type(body["terminal_rows"]) is not int
+            or any(body[key] != value for key, value in terminal.items())
+            or body["terminal_tuple_sha256"] != reference.terminal_tuple_sha256
+            or body["terminal_readback_sha256"] != _sha(_canonical(terminal_readback))
+            or body["intent_body_sha256"] != _intent_body_sha256(intent_body)
+            or body["source_plan_sha256"] != reference.source_plan_sha256
+            or (type(body["starting_roots"]) is not dict or set(body["starting_roots"]) != {"ledger", "catalog", "data"})
             or branch not in {"FULL_ESCAPED", "UNAPPLIED"}
             or body["prefix_classification"] != branch
-            or (branch == "FULL_ESCAPED" and (
-                provenance is not None or "preparation_receipt_sha256" in body
-                or starting_roots != full_roots))
-            or (branch == "UNAPPLIED" and (
-                provenance not in {"native-hosted-unapplied", "prepared-from-full-escaped"}
-                or starting_roots != absent_roots
-                or (provenance == "native-hosted-unapplied" and (
-                    "preparation_receipt_sha256" in body or hosted.status != "UNAPPLIED"))
-                or (provenance == "prepared-from-full-escaped" and (
-                    "preparation_receipt_sha256" not in body or hosted.status != "FULL_ESCAPED"))))):
+            or (branch == "FULL_ESCAPED" and (provenance is not None or "preparation_receipt_sha256" in body or body["starting_roots"] != full))
+            or (branch == "UNAPPLIED" and (provenance not in {"native-hosted-unapplied", "prepared-from-full-escaped"}
+                or body["starting_roots"] != absent
+                or (provenance == "native-hosted-unapplied" and ("preparation_receipt_sha256" in body or hosted.status != "UNAPPLIED"))
+                or (provenance == "prepared-from-full-escaped" and ("preparation_receipt_sha256" not in body or hosted.status != "FULL_ESCAPED"))))):
         _fail("replay_comparison")
-        _fail("replay_comparison")
+    if repository_root is not None:
+        recompiled = compile_branch_plan(
+            repository_root, validate_sources(repository_root), source=source, reference=reference,
+            observation=_expected_prefix(reference, branch, **body["starting_roots"]))
+        if body["replay_plan_sha256"] != _replay_plan_sha256(recompiled, reference.source_plan_sha256):
+            _fail("replay_comparison")
     return body
 
 
@@ -1413,7 +1901,7 @@ def compare_replays(args: argparse.Namespace) -> Mapping[str, Any]:
             replay = controller._signed_document(raw, "local-branch-replay")
             body = _validated_replay(
                 replay, source=source, reference=reference, hosted=hosted,
-                hosted_receipt=hosted_receipt, now=issued)
+                hosted_receipt=hosted_receipt, now=issued, repository_root=root)
             receipts.append((body, _sha(raw)))
     except Exception:
         _fail("replay_comparison")
@@ -1498,8 +1986,10 @@ def _parser() -> argparse.ArgumentParser:
     p = sub.add_parser("build-reference-request"); p.add_argument("--repository-root", required=True); p.add_argument("--source-commit", required=True); p.add_argument("--target-fingerprint", required=True); p.add_argument("--nonce", required=True); p.add_argument("--first-observation", required=True); p.add_argument("--second-observation", required=True); p.add_argument("--valid-seconds", type=int, default=600); p.add_argument("--output", required=True)
     p = sub.add_parser("finalize-reference"); p.add_argument("--repository-root", required=True); p.add_argument("--source-commit", required=True); p.add_argument("--target-fingerprint", required=True); p.add_argument("--request", required=True); p.add_argument("--signature", required=True); p.add_argument("--output", required=True)
     p = sub.add_parser("build-lineage-request", parents=[common]); p.add_argument("--repository-root", required=True); p.add_argument("--clone-nonce", required=True); p.add_argument("--capture-receipt", required=True); p.add_argument("--restore-receipt", required=True); p.add_argument("--encrypted-dump", required=True); p.add_argument("--container", required=True); p.add_argument("--docker", default="docker"); p.add_argument("--valid-seconds", type=int, default=600); p.add_argument("--output", required=True)
-    p = sub.add_parser("prepare-local-state", parents=[common]); p.add_argument("--repository-root", required=True); p.add_argument("--source-commit", required=True); p.add_argument("--target-fingerprint", required=True); p.add_argument("--reference", required=True); p.add_argument("--observation", required=True); p.add_argument("--binding", required=True); p.add_argument("--clone-observation", required=True); p.add_argument("--container", required=True); p.add_argument("--docker", default="docker"); p.add_argument("--output", required=True)
-    p = sub.add_parser("replay-branch", parents=[common]); p.add_argument("--repository-root", required=True); p.add_argument("--source-commit", required=True); p.add_argument("--target-fingerprint", required=True); p.add_argument("--reference", required=True); p.add_argument("--observation", required=True); p.add_argument("--binding", required=True); p.add_argument("--clone-observation", required=True); p.add_argument("--container", required=True); p.add_argument("--docker", default="docker"); p.add_argument("--selected-branch", choices=("UNAPPLIED", "FULL_ESCAPED"), required=True); p.add_argument("--preparation"); p.add_argument("--output", required=True)
+    p = sub.add_parser("prepare-local-state", parents=[common]); p.add_argument("--repository-root", required=True); p.add_argument("--source-commit", required=True); p.add_argument("--target-fingerprint", required=True); p.add_argument("--reference", required=True); p.add_argument("--observation", required=True); p.add_argument("--binding", required=True); p.add_argument("--clone-observation", required=True); p.add_argument("--container", required=True); p.add_argument("--docker", default="docker"); p.add_argument("--intent-output", required=True); p.add_argument("--output", required=True)
+    p = sub.add_parser("replay-branch", parents=[common]); p.add_argument("--repository-root", required=True); p.add_argument("--source-commit", required=True); p.add_argument("--target-fingerprint", required=True); p.add_argument("--reference", required=True); p.add_argument("--observation", required=True); p.add_argument("--binding", required=True); p.add_argument("--clone-observation", required=True); p.add_argument("--container", required=True); p.add_argument("--docker", default="docker"); p.add_argument("--selected-branch", choices=("UNAPPLIED", "FULL_ESCAPED"), required=True); p.add_argument("--preparation"); p.add_argument("--intent-output", required=True); p.add_argument("--output", required=True)
+    p = sub.add_parser("recover-local-state", parents=[common]); p.add_argument("--repository-root", required=True); p.add_argument("--source-commit", required=True); p.add_argument("--target-fingerprint", required=True); p.add_argument("--reference", required=True); p.add_argument("--observation", required=True); p.add_argument("--binding", required=True); p.add_argument("--clone-observation", required=True); p.add_argument("--container", required=True); p.add_argument("--docker", default="docker"); p.add_argument("--intent", required=True); p.add_argument("--output", required=True)
+    p = sub.add_parser("recover-branch", parents=[common]); p.add_argument("--repository-root", required=True); p.add_argument("--source-commit", required=True); p.add_argument("--target-fingerprint", required=True); p.add_argument("--reference", required=True); p.add_argument("--observation", required=True); p.add_argument("--binding", required=True); p.add_argument("--clone-observation", required=True); p.add_argument("--container", required=True); p.add_argument("--docker", default="docker"); p.add_argument("--preparation"); p.add_argument("--intent", required=True); p.add_argument("--output", required=True)
     p = sub.add_parser("compare-replays"); p.add_argument("--repository-root", required=True); p.add_argument("--source-commit", required=True); p.add_argument("--target-fingerprint", required=True); p.add_argument("--reference", required=True); p.add_argument("--hosted-observation", required=True); p.add_argument("--first-replay", required=True); p.add_argument("--second-replay", required=True); p.add_argument("--output", required=True)
     p = sub.add_parser("aggregate-custody"); p.add_argument("--repository-root", required=True); p.add_argument("--source-commit", required=True); p.add_argument("--target-fingerprint", required=True); p.add_argument("--reference", required=True); p.add_argument("--hosted-observation", required=True); p.add_argument("--freeze-assertion", required=True); p.add_argument("--freeze-evidence", action="append", required=True); p.add_argument("--production-backup", required=True); p.add_argument("--g035-capture", required=True); p.add_argument("--g035-archive", required=True); p.add_argument("--clone-rehearsal", required=True); p.add_argument("--first-replay", required=True); p.add_argument("--second-replay", required=True); p.add_argument("--valid-seconds", type=int, default=600); p.add_argument("--output", required=True)
     p = sub.add_parser("verify-aggregate-custody"); p.add_argument("--repository-root", required=True); p.add_argument("--source-commit", required=True); p.add_argument("--target-fingerprint", required=True); p.add_argument("--reference", required=True); p.add_argument("--custody", required=True)
@@ -1527,6 +2017,10 @@ def main(argv: list[str] | None = None) -> int:
             result = dict(prepare_local_state(args))
         elif args.mode == "replay-branch":
             result = dict(replay_branch(args))
+        elif args.mode == "recover-local-state":
+            result = dict(recover_local_state(args))
+        elif args.mode == "recover-branch":
+            result = dict(recover_branch(args))
         elif args.mode == "compare-replays":
             result = dict(compare_replays(args))
         elif args.mode == "aggregate-custody":

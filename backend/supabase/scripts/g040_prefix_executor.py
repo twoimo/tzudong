@@ -11,7 +11,7 @@ from pathlib import Path
 
 from g037_hosted_closure_contract import BASELINE_PAIRS, Manifest, canonical_bytes, terminal_spec, validate_sources
 from g037_hosted_closure_executor import ClosureError, terminal_readback_assert, vectors
-from g040_prefix_recovery import Denial, PrefixObservation, SOURCE_COMMIT, TABLES, classify_mutation_cursor, probe_full_data_root
+from g040_prefix_recovery import DATA_PROBE, Denial, PrefixObservation, SOURCE_COMMIT, TABLES, classify_mutation_cursor, probe_full_data_root, validate_full_data_root
 from g040_recovery_authorization import AttemptStarted, VerifiedAuthorization
 from g040_recovery_source import SourceBinding
 from g040_reference_evidence import VerifiedReference
@@ -41,6 +41,7 @@ _LOCK_SQL = (
 _DATA_LOCK_SQL = tuple(
     f"LOCK TABLE privacy_retention.{table} IN SHARE ROW EXCLUSIVE MODE" for table in TABLES
 )
+_CLONE_CAPABILITIES: dict[int, Any] = {}
 
 
 class ExecutionDenial(Denial):
@@ -75,6 +76,15 @@ class SourceValidationPlan:
     terminal_spec_root: str
     migration_count: int
     terminal_rows: int
+@dataclass(frozen=True)
+class DerivedTerminalExpectation:
+    terminal_rows: int
+    terminal_ledger_root: str
+    terminal_catalog_root: str
+    terminal_acl_root: str
+    terminal_data_root: str
+    terminal_spec_root: str
+    plan_sha256: str
 
 @dataclass(frozen=True)
 class _CloneAdmission:
@@ -87,7 +97,7 @@ class _CloneAdmission:
 
 
 @dataclass(frozen=True)
-class VerifiedCloneCapability:
+class _VerifiedCloneCapability:
     """Local-only clone admission bound to an observed PostgreSQL identity."""
     _admission: _CloneAdmission
     clone_identity: str
@@ -96,20 +106,22 @@ class VerifiedCloneCapability:
 
     @classmethod
     def _admit(cls, *, clone_identity: str, clone_nonce: str, target_fingerprint: str,
-               live_identity_sha256: str, port: int) -> "VerifiedCloneCapability":
+               live_identity_sha256: str, port: int) -> "_VerifiedCloneCapability":
         if (not isinstance(clone_nonce, str) or type(port) is not int or not 1 <= port <= 65535
                 or any(type(value) is not str or len(value) != 64
                        for value in (clone_identity, target_fingerprint, live_identity_sha256))):
             _deny("clone_capability")
         admission = _CloneAdmission(clone_identity, clone_nonce, target_fingerprint,
                                     live_identity_sha256, port)
-        return cls(admission, clone_identity, clone_nonce, target_fingerprint)
+        capability = cls(admission, clone_identity, clone_nonce, target_fingerprint)
+        _CLONE_CAPABILITIES[id(capability)] = capability
+        return capability
 
 
-def admit_verified_clone(*, clone_identity: str, clone_nonce: str, target_fingerprint: str,
-                         live_identity_sha256: str, port: int) -> VerifiedCloneCapability:
-    """Create a capability only after the caller's clone verifier has checked custody."""
-    return VerifiedCloneCapability._admit(
+def _admit_verified_clone(*, clone_identity: str, clone_nonce: str, target_fingerprint: str,
+                          live_identity_sha256: str, port: int) -> _VerifiedCloneCapability:
+    """Mint an internal clone capability after custody verification."""
+    return _VerifiedCloneCapability._admit(
         clone_identity=clone_identity, clone_nonce=clone_nonce,
         target_fingerprint=target_fingerprint, live_identity_sha256=live_identity_sha256,
         port=port,
@@ -126,12 +138,6 @@ class RehearsalExecutionPlan:
     compiled: tuple[tuple[Any, tuple[str, ...], tuple[str, ...]], ...]
     terminal_spec_root: str
 
-@dataclass(frozen=True)
-class _LocalExecutionAuthorization:
-    target_data_root: str
-    target_catalog_root: str = ""
-    target_ledger_root: str = ""
-    authorization_sha256: str = ""
 @dataclass(frozen=True)
 class ExecutorEvidence:
     branch: str
@@ -325,9 +331,10 @@ def compile_branch_plan(repository_root: Path, manifest: Manifest, *, source: So
                                   observation.status, _compiled(root, manifest), spec)
 
 
-def _validated_local_clone_identity(cursor: Any, capability: VerifiedCloneCapability) -> None:
+def _validated_local_clone_identity(cursor: Any, capability: _VerifiedCloneCapability) -> None:
     admission = capability._admission
-    if (type(admission) is not _CloneAdmission
+    if (_CLONE_CAPABILITIES.get(id(capability)) is not capability
+            or type(admission) is not _CloneAdmission
             or (capability.clone_identity, capability.clone_nonce, capability.target_fingerprint)
             != (admission.clone_identity, admission.clone_nonce, admission.target_fingerprint)):
         _deny("clone_capability")
@@ -354,21 +361,23 @@ def _validated_local_clone_identity(cursor: Any, capability: VerifiedCloneCapabi
         _deny("clone_capability")
 
 
-def apply_rehearsal_locked_cursor(cursor: Any, *, plan: RehearsalExecutionPlan,
-                                  verified_clone_capability: VerifiedCloneCapability,
-                                  deadline_monotonic: float) -> ExecutorEvidence:
-    """Replay on an admitted local clone through the same locked mutation core."""
+def _apply_rehearsal_locked_cursor(cursor: Any, *, plan: RehearsalExecutionPlan,
+                                   verified_clone_capability: _VerifiedCloneCapability,
+                                   deadline_monotonic: float) -> ExecutorEvidence:
+    """Replay only after fresh local-clone admission."""
     if (type(plan) is not RehearsalExecutionPlan
-            or type(verified_clone_capability) is not VerifiedCloneCapability
+            or type(verified_clone_capability) is not _VerifiedCloneCapability
             or verified_clone_capability.target_fingerprint != plan.reference.target_fingerprint):
         _deny("clone_capability")
     _validated_local_clone_identity(cursor, verified_clone_capability)
-    local_plan = RecoveryExecutionPlan(
-        plan.repository_root, plan.manifest, plan.source, plan.reference, plan.observation,
-        _LocalExecutionAuthorization(plan.reference.full_data_sha256), plan.branch,
-        plan.compiled, plan.terminal_spec_root)
-    return apply_locked_cursor(cursor, plan=local_plan, attempt=None,
-                               deadline_monotonic=deadline_monotonic)
+    return _apply_mutation_locked_cursor(
+        cursor, plan=plan, expected_data_root=plan.reference.full_data_sha256,
+        authorization_sha256="", attempt_receipt_sha256="",
+        expected_catalog_root=plan.reference.terminal_catalog_root,
+        expected_acl_root=plan.reference.terminal_acl_root,
+        expected_ledger_root=plan.reference.terminal_ledger_root,
+        deadline_monotonic=deadline_monotonic,
+    )
 
 
 def _insert(cursor: Any, item: Any, full: tuple[str, ...], *, deadline_monotonic: float) -> None:
@@ -392,17 +401,183 @@ def _validate_attempt(plan: RecoveryExecutionPlan, attempt: Any) -> AttemptStart
     return attempt
 
 
-def apply_locked_cursor(cursor: Any, *, plan: RecoveryExecutionPlan, attempt: AttemptStarted | None,
-                        deadline_monotonic: float) -> ExecutorEvidence:
-    """Apply an admitted production or local plan in a caller-owned transaction."""
-    preflight_deadline(deadline_monotonic)
-    if attempt is None:
-        if type(plan.authorization) is not _LocalExecutionAuthorization:
-            _deny("attempt_type")
-    else:
-        attempt = _validate_attempt(plan, attempt)
+def _assert_prefix_ledger(cursor: Any, compiled: tuple[tuple[Any, tuple[str, ...], tuple[str, ...]], ...]) -> None:
+    rows = _ledger(cursor)
+    expected_prefix = BASELINE_PAIRS + tuple((item.version, item.name) for item, _, _ in compiled[:16])
+    expected_vectors = tuple((item.version, item.name, full) for item, full, _ in compiled[:16])
+    if (len(rows) != _PREFIX_COUNT or tuple((version, name) for version, name, _ in rows) != expected_prefix
+            or rows[len(BASELINE_PAIRS):] != expected_vectors
+            or any(version == _V00400[0] for version, _, _ in rows)):
+        _deny("ledger_conflict")
+
+
+def _source_full_data_root(cursor: Any, expected_data_root: str, *, deadline_monotonic: float) -> str:
+    _execute(cursor, DATA_PROBE, deadline_monotonic=deadline_monotonic)
+    try:
+        data = cursor.fetchone()
+    except Exception:
+        _deny("probe_error")
+    return validate_full_data_root(data, expected_data_root)
+
+
+def _terminal_mutation_core(cursor: Any, *, compiled: tuple[tuple[Any, tuple[str, ...], tuple[str, ...]], ...],
+                            branch: str, data_root_reader: Any, expected_data_root: str,
+                            deadline_monotonic: float) -> tuple[int, str]:
+    v00400 = compiled[16]
+    applied = 0
+    if branch == "FULL_ESCAPED":
+        data_root = data_root_reader()
+        if data_root != expected_data_root:
+            _deny("terminal_data_mismatch")
+    if branch == "UNAPPLIED":
+        for ordinal, statement in enumerate(v00400[2], start=1):
+            _execute(cursor, statement, deadline_monotonic=deadline_monotonic,
+                     version=v00400[0].version, ordinal=ordinal)
+            applied += 1
+        for sql in _DATA_LOCK_SQL:
+            _execute(cursor, sql, deadline_monotonic=deadline_monotonic)
+        data_root = data_root_reader()
+        if data_root != expected_data_root:
+            _deny("terminal_data_mismatch")
+    _insert(cursor, v00400[0], v00400[1], deadline_monotonic=deadline_monotonic)
+    for item, full, executable in compiled[17:]:
+        for ordinal, statement in enumerate(executable, start=1):
+            _execute(cursor, statement, deadline_monotonic=deadline_monotonic,
+                     version=item.version, ordinal=ordinal)
+            applied += 1
+        _insert(cursor, item, full, deadline_monotonic=deadline_monotonic)
+    data_root = data_root_reader()
+    if data_root != expected_data_root:
+        _deny("terminal_data_mismatch")
+    _deadline(deadline_monotonic)
+    return applied, data_root
+
+
+def _terminal_readback(cursor: Any, *, repository_root: Path, manifest: Manifest,
+                       terminal_spec_root: str) -> dict[str, str]:
+    try:
+        terminal = terminal_readback_assert(cursor, repository_root, manifest)
+    except Denial:
+        raise
+    except Exception:
+        _deny("terminal_mismatch")
+    required = {"catalog_root", "acl_root", "ledger_root", "terminal_spec"}
+    if (type(terminal) is not dict or set(terminal) != required
+            or terminal["terminal_spec"] != terminal_spec_root):
+        _deny("terminal_mismatch")
+    return terminal
+
+
+def _validate_source_plan(plan: Any) -> SourceValidationPlan:
+    if type(plan) is not SourceValidationPlan:
+        _deny("plan_type")
+    root, spec = _validate_source_artifacts(plan.repository_root, plan.manifest, plan.source)
+    compiled = _compiled(root, plan.manifest)
+    if (plan.repository_root != root or plan.compiled != compiled
+            or plan.terminal_spec_root != spec
+            or plan.migration_count != len(plan.manifest.migrations)
+            or plan.terminal_rows != _TERMINAL_ROWS):
+        _deny("plan_binding")
+    return plan
+
+
+def _derivation_plan_sha256(plan: SourceValidationPlan, *, branch: str,
+                            expected_full_data_root: str) -> str:
+    payload = {
+        "branch": branch,
+        "compiled": tuple({
+            "version": item.version, "name": item.name, "path": item.path,
+            "sha256": item.sha256, "full": full, "executable": executable,
+        } for item, full, executable in plan.compiled),
+        "expected_full_data_root": expected_full_data_root,
+        "source": {
+            "final_commit": plan.source.final_commit,
+            "runtime_source_root": plan.source.runtime_source_root,
+        },
+        "terminal_rows": plan.terminal_rows,
+        "terminal_spec_root": plan.terminal_spec_root,
+    }
+    return hashlib.sha256(canonical_bytes(payload)).hexdigest()
+
+
+def _derive_terminal_locked_cursor(cursor: Any, *, plan: SourceValidationPlan, branch: str,
+                                   expected_full_data_root: str,
+                                   deadline_monotonic: float) -> DerivedTerminalExpectation:
+    plan = _validate_source_plan(plan)
+    if branch not in ("UNAPPLIED", "FULL_ESCAPED"):
+        _deny("branch")
+    if (type(expected_full_data_root) is not str or len(expected_full_data_root) != 64
+            or any(character not in "0123456789abcdef" for character in expected_full_data_root)):
+        _deny("data_root")
     timed_cursor = _DeadlineCursor(cursor, deadline_monotonic)
-    _execute(cursor, "SELECT current_setting('transaction_read_only', true)", deadline_monotonic=deadline_monotonic)
+    _execute(cursor, "SELECT current_setting('transaction_read_only', true)",
+             deadline_monotonic=deadline_monotonic)
+    try:
+        state = cursor.fetchone()
+    except Exception:
+        _deny("transaction_state")
+    if state not in (("off",), {"transaction_read_only": "off"}):
+        _deny("not_read_write")
+    for sql in _LOCK_SQL:
+        _execute(cursor, sql, deadline_monotonic=deadline_monotonic)
+    if branch == "FULL_ESCAPED":
+        for sql in _DATA_LOCK_SQL:
+            _execute(cursor, sql, deadline_monotonic=deadline_monotonic)
+    _assert_prefix_ledger(timed_cursor, plan.compiled)
+    _, data_root = _terminal_mutation_core(
+        cursor, compiled=plan.compiled, branch=branch,
+        data_root_reader=lambda: _source_full_data_root(
+            timed_cursor, expected_full_data_root, deadline_monotonic=deadline_monotonic),
+        expected_data_root=expected_full_data_root, deadline_monotonic=deadline_monotonic,
+    )
+    terminal = _terminal_readback(timed_cursor, repository_root=plan.repository_root,
+                                  manifest=plan.manifest,
+                                  terminal_spec_root=plan.terminal_spec_root)
+    return DerivedTerminalExpectation(
+        terminal_rows=plan.terminal_rows, terminal_ledger_root=terminal["ledger_root"],
+        terminal_catalog_root=terminal["catalog_root"], terminal_acl_root=terminal["acl_root"],
+        terminal_data_root=data_root, terminal_spec_root=terminal["terminal_spec"],
+        plan_sha256=_derivation_plan_sha256(
+            plan, branch=branch, expected_full_data_root=expected_full_data_root),
+    )
+
+
+def _derive_clone_terminal_expectation(connection: Any, *, source_plan: SourceValidationPlan,
+                                       verified_clone_capability: _VerifiedCloneCapability,
+                                       branch: str, expected_full_data_root: str,
+                                       deadline_monotonic: float) -> DerivedTerminalExpectation:
+    """Derive clone terminal roots in a transaction this boundary always rolls back."""
+    preflight_deadline(deadline_monotonic)
+    if (type(source_plan) is not SourceValidationPlan
+            or type(verified_clone_capability) is not _VerifiedCloneCapability
+            or not callable(getattr(connection, "cursor", None))
+            or not callable(getattr(connection, "rollback", None))):
+        _deny("clone_capability")
+    cursor = None
+    try:
+        cursor = connection.cursor()
+        if getattr(cursor, "connection", None) is not connection:
+            _deny("clone_capability")
+        _execute(cursor, "BEGIN", deadline_monotonic=deadline_monotonic)
+        _validated_local_clone_identity(cursor, verified_clone_capability)
+        return _derive_terminal_locked_cursor(
+            cursor, plan=source_plan, branch=branch,
+            expected_full_data_root=expected_full_data_root,
+            deadline_monotonic=deadline_monotonic,
+        )
+    finally:
+        connection.rollback()
+
+
+def _apply_mutation_locked_cursor(cursor: Any, *, plan: RecoveryExecutionPlan | RehearsalExecutionPlan,
+                                  expected_data_root: str, authorization_sha256: str,
+                                  attempt_receipt_sha256: str, expected_catalog_root: str,
+                                  expected_acl_root: str, expected_ledger_root: str,
+                                  deadline_monotonic: float) -> ExecutorEvidence:
+    """Shared locked mutation path; admission belongs to its production or clone caller."""
+    timed_cursor = _DeadlineCursor(cursor, deadline_monotonic)
+    _execute(cursor, "SELECT current_setting('transaction_read_only', true)",
+             deadline_monotonic=deadline_monotonic)
     try:
         state = cursor.fetchone()
     except Exception:
@@ -415,75 +590,59 @@ def apply_locked_cursor(cursor: Any, *, plan: RecoveryExecutionPlan, attempt: At
         for sql in _DATA_LOCK_SQL:
             _execute(cursor, sql, deadline_monotonic=deadline_monotonic)
     locked = classify_mutation_cursor(
-        timed_cursor,
-        plan.reference,
-        expected_prior=plan.observation,
+        timed_cursor, plan.reference, expected_prior=plan.observation,
         statement_executor=timed_cursor.execute,
     )
     if type(locked) is not PrefixObservation or locked != plan.observation or locked.status != plan.branch:
         _deny("branch_mismatch")
-    rows = _ledger(timed_cursor)
-    expected_prefix = BASELINE_PAIRS + tuple((item.version, item.name) for item, _, _ in plan.compiled[:16])
-    expected_vectors = tuple((item.version, item.name, full) for item, full, _ in plan.compiled[:16])
-    if (len(rows) != _PREFIX_COUNT or tuple((version, name) for version, name, _ in rows) != expected_prefix
-            or rows[len(BASELINE_PAIRS):] != expected_vectors
-            or any(version == _V00400[0] for version, _, _ in rows)):
-        _deny("ledger_conflict")
-    v00400 = plan.compiled[16]
-    applied = 0
-    if plan.branch == "UNAPPLIED":
-        for ordinal, statement in enumerate(v00400[2], start=1):
-            _execute(cursor, statement, deadline_monotonic=deadline_monotonic, version=v00400[0].version, ordinal=ordinal)
-            applied += 1
-        for sql in _DATA_LOCK_SQL:
-            _execute(cursor, sql, deadline_monotonic=deadline_monotonic)
-    data_root = probe_full_data_root(
-        timed_cursor,
-        plan.reference,
-        statement_executor=timed_cursor.execute,
+    _assert_prefix_ledger(timed_cursor, plan.compiled)
+    applied, data_root = _terminal_mutation_core(
+        cursor, compiled=plan.compiled, branch=plan.branch,
+        data_root_reader=lambda: probe_full_data_root(
+            timed_cursor, plan.reference, statement_executor=timed_cursor.execute),
+        expected_data_root=expected_data_root, deadline_monotonic=deadline_monotonic,
     )
-    if data_root != plan.authorization.target_data_root:
-        _deny("terminal_data_mismatch")
-    _insert(cursor, v00400[0], v00400[1], deadline_monotonic=deadline_monotonic)
-    for item, full, executable in plan.compiled[17:]:
-        for ordinal, statement in enumerate(executable, start=1):
-            _execute(cursor, statement, deadline_monotonic=deadline_monotonic, version=item.version, ordinal=ordinal)
-            applied += 1
-        _insert(cursor, item, full, deadline_monotonic=deadline_monotonic)
-    _deadline(deadline_monotonic)
-    try:
-        terminal = terminal_readback_assert(timed_cursor, plan.repository_root, plan.manifest)
-    except Denial:
-        raise
-    except Exception:
-        _deny("terminal_mismatch")
-    required = {"catalog_root", "acl_root", "ledger_root", "terminal_spec"}
-    if (type(terminal) is not dict or set(terminal) != required
-            or (attempt is None and terminal["terminal_spec"] != plan.terminal_spec_root)
-            or (attempt is not None and (
-                terminal["catalog_root"] != plan.authorization.target_catalog_root
-                or terminal["acl_root"] != plan.authorization.target_acl_root
-                or terminal["ledger_root"] != plan.authorization.target_ledger_root
-                or data_root != plan.authorization.target_data_root
-                or terminal["terminal_spec"] != plan.authorization.terminal_root
-            ))):
+    terminal = _terminal_readback(timed_cursor, repository_root=plan.repository_root,
+                                  manifest=plan.manifest,
+                                  terminal_spec_root=plan.terminal_spec_root)
+    if (terminal["catalog_root"] != expected_catalog_root
+            or terminal["acl_root"] != expected_acl_root
+            or terminal["ledger_root"] != expected_ledger_root
+            or data_root != expected_data_root
+            or terminal["terminal_spec"] != plan.terminal_spec_root):
         _deny("terminal_mismatch")
     payload = {
         "branch": plan.branch, "target_fingerprint": plan.reference.target_fingerprint,
         "source_commit": plan.source.final_commit, "source_root": plan.source.runtime_source_root,
         "reference_receipt_sha256": plan.reference.receipt_sha256,
         "classification_sha256": plan.observation.classification_sha256,
-        "authorization_sha256": plan.authorization.authorization_sha256,
-        "attempt_receipt_sha256": "" if attempt is None else attempt.receipt_sha256, "applied_statement_count": applied,
-        "terminal_rows": _TERMINAL_ROWS, "terminal_catalog_root": terminal["catalog_root"],
+        "authorization_sha256": authorization_sha256,
+        "attempt_receipt_sha256": attempt_receipt_sha256,
+        "applied_statement_count": applied, "terminal_rows": _TERMINAL_ROWS,
+        "terminal_catalog_root": terminal["catalog_root"],
         "terminal_acl_root": terminal["acl_root"], "terminal_ledger_root": terminal["ledger_root"],
         "terminal_spec_root": terminal["terminal_spec"], "terminal_data_root": data_root,
     }
     return ExecutorEvidence(**payload, evidence_sha256=hashlib.sha256(canonical_bytes(payload)).hexdigest())
 
 
-__all__ = ["ExecutionDenial", "ExecutorEvidence", "RecoveryExecutionPlan",
-           "RehearsalExecutionPlan", "SourceValidationPlan", "VerifiedCloneCapability",
-           "admit_verified_clone", "apply_locked_cursor", "apply_rehearsal_locked_cursor",
-           "build_execution_plan", "build_source_validation_plan", "compile_branch_plan",
-           "preflight_deadline"]
+def apply_locked_cursor(cursor: Any, *, plan: RecoveryExecutionPlan, attempt: AttemptStarted,
+                        deadline_monotonic: float) -> ExecutorEvidence:
+    """Apply a production plan after exact one-shot attempt authorization."""
+    preflight_deadline(deadline_monotonic)
+    attempt = _validate_attempt(plan, attempt)
+    return _apply_mutation_locked_cursor(
+        cursor, plan=plan, expected_data_root=plan.authorization.target_data_root,
+        authorization_sha256=plan.authorization.authorization_sha256,
+        attempt_receipt_sha256=attempt.receipt_sha256,
+        expected_catalog_root=plan.authorization.target_catalog_root,
+        expected_acl_root=plan.authorization.target_acl_root,
+        expected_ledger_root=plan.authorization.target_ledger_root,
+        deadline_monotonic=deadline_monotonic,
+    )
+
+
+__all__ = ["DerivedTerminalExpectation", "ExecutionDenial", "ExecutorEvidence",
+           "RecoveryExecutionPlan", "RehearsalExecutionPlan", "SourceValidationPlan",
+           "apply_locked_cursor", "build_execution_plan", "build_source_validation_plan",
+           "compile_branch_plan", "preflight_deadline"]
