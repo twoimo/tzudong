@@ -218,6 +218,20 @@ class Tests(unittest.TestCase):
                     ],
                 )
 
+    def test_terminal_data_probe_binds_all_twelve_source_seed_rows(self):
+        terminal = data(
+            classes_count=12,
+            exact_seed_count=12,
+            seed_projection_sha256=g.TERMINAL_SEED_PROJECTION_SHA256,
+            data_shape_sha256=g.TERMINAL_DATA_SHA256,
+        )
+        self.assertEqual(g.validate_terminal_data_root(terminal), g.TERMINAL_DATA_SHA256)
+        self.assertIn("'notifications_operational'", g.TERMINAL_DATA_PROBE)
+        self.assertIn("'privacy_retention_run_audit'", g.TERMINAL_DATA_PROBE)
+        self.assertIn("(c.classes_count=12 AND c.exact_seed_count=12)", g.TERMINAL_DATA_PROBE)
+        with self.assertRaisesRegex(g.Denial, "partial_or_ambiguous"):
+            g.validate_terminal_data_root({**terminal, "classes_count": 10})
+
     def test_classification_uses_the_supplied_deadline_statement_adapter(self):
         executed = []
 

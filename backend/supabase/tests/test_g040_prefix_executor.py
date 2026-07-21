@@ -175,9 +175,9 @@ def artifacts(branch="UNAPPLIED"):
         terminal_ledger_root="f" * 64,
         terminal_catalog_root="2" * 64,
         terminal_acl_root=H,
-        terminal_data_root=H,
+        terminal_data_root="4" * 64,
         terminal_spec_root=SPEC,
-        terminal_tuple_sha256="31941a389270217652fc7c20ca8e504d8e10cc11540954da226212b28916b846",
+        terminal_tuple_sha256="dc5e91b742cef4647870e263c1defa5a63d482810102584e47a665bc123fdcac",
         target_fingerprint=H,
         observation_nonce="n" * 16,
         issued_at_unix=1,
@@ -302,7 +302,7 @@ class ExecutorTests(unittest.TestCase):
         cursor = cursor or Cursor()
         cursor.ledger_rows = [(version, name, (f"base-{index}",)) for index, (version, name) in enumerate(BASELINE_PAIRS)] + [(item.version, item.name, full) for item, full, _ in vectors[:16]]
         terminal = terminal or {"catalog_root": authorization.target_catalog_root, "acl_root": H, "ledger_root": authorization.target_ledger_root, "terminal_spec": SPEC}
-        with patch.object(executor, "validate_sources", return_value=m), patch.object(executor, "terminal_spec", return_value=SPEC), patch.object(executor, "_compiled", return_value=vectors), patch.object(executor, "classify_mutation_cursor", return_value=locked or observation) as classify, patch.object(executor, "probe_full_data_root", return_value=authorization.target_data_root), patch.object(executor, "terminal_readback_assert", return_value=terminal):
+        with patch.object(executor, "validate_sources", return_value=m), patch.object(executor, "terminal_spec", return_value=SPEC), patch.object(executor, "_compiled", return_value=vectors), patch.object(executor, "classify_mutation_cursor", return_value=locked or observation) as classify, patch.object(executor, "probe_full_data_root", return_value=reference.full_data_sha256), patch.object(executor, "_source_full_data_root", return_value=authorization.target_data_root), patch.object(executor, "terminal_readback_assert", return_value=terminal):
             plan = executor.build_execution_plan(ROOT, m, source=source, reference=reference, observation=observation, authorization=authorization)
             result = executor.apply_locked_cursor(cursor, plan=plan, attempt=attempt, deadline_monotonic=time.monotonic() + 60)
         return result, cursor, vectors, classify
@@ -410,7 +410,7 @@ class ExecutorTests(unittest.TestCase):
         def locked(*_args, **_kwargs):
             seen.extend(sql for sql, _ in cursor.calls if sql != STATEMENT_TIMEOUT_SQL)
             return observation
-        with patch.object(executor, "validate_sources", return_value=m), patch.object(executor, "terminal_spec", return_value=SPEC), patch.object(executor, "_compiled", return_value=vectors), patch.object(executor, "classify_mutation_cursor", side_effect=locked), patch.object(executor, "probe_full_data_root", return_value=authorization.target_data_root), patch.object(executor, "terminal_readback_assert", return_value={"catalog_root": authorization.target_catalog_root, "acl_root": H, "ledger_root": authorization.target_ledger_root, "terminal_spec": SPEC}):
+        with patch.object(executor, "validate_sources", return_value=m), patch.object(executor, "terminal_spec", return_value=SPEC), patch.object(executor, "_compiled", return_value=vectors), patch.object(executor, "classify_mutation_cursor", side_effect=locked), patch.object(executor, "probe_full_data_root", return_value=reference.full_data_sha256), patch.object(executor, "_source_full_data_root", return_value=authorization.target_data_root), patch.object(executor, "terminal_readback_assert", return_value={"catalog_root": authorization.target_catalog_root, "acl_root": H, "ledger_root": authorization.target_ledger_root, "terminal_spec": SPEC}):
             plan = executor.build_execution_plan(ROOT, m, source=source, reference=reference, observation=observation, authorization=authorization)
             executor.apply_locked_cursor(cursor, plan=plan, attempt=attempt, deadline_monotonic=time.monotonic() + 60)
         self.assertEqual(seen, [READ_WRITE_SQL, *LOCK_ORDER, *DATA_LOCK_ORDER])
@@ -485,6 +485,45 @@ class ExecutorTests(unittest.TestCase):
             with self.assertRaises(Denial) as error:
                 executor._ledger(cursor)
             self.assertEqual(error.exception.code, "ledger_read")
+    def test_terminal_tuple_adapter_uses_description_order_and_omits_empty_params(self):
+        class Column:
+            def __init__(self, name):
+                self.name = name
+
+        class DictCursor:
+            description = (Column("version"), Column("name"))
+
+            def __init__(self):
+                self.calls = []
+
+            def execute(self, *args):
+                self.calls.append(args)
+
+            def fetchall(self):
+                return [{"name": "privacy", "version": "1"}]
+
+            def fetchone(self):
+                return {"name": "privacy", "version": "1"}
+
+        cursor = DictCursor()
+        adapter = executor._TupleRowCursor(cursor)
+        adapter.execute("SELECT '100%'")
+        self.assertEqual(cursor.calls, [("SELECT '100%'",)])
+        self.assertEqual(adapter.fetchall(), [("1", "privacy")])
+        self.assertEqual(adapter.fetchone(), ("1", "privacy"))
+
+    def test_terminal_tuple_adapter_rejects_mapping_subclasses(self):
+        class HostileRow(dict):
+            pass
+
+        class DictCursor:
+            description = (("version",),)
+
+            def fetchone(self):
+                return HostileRow(version="1")
+
+        with self.assertRaisesRegex(Denial, "terminal_row_shape"):
+            executor._TupleRowCursor(DictCursor()).fetchone()
 
     def test_terminal_shape_rejects_nonexact_readback_fields_after_all_ledgers(self):
         plan, attempt, observation, authorization, vectors = self.build_plan()
@@ -495,7 +534,7 @@ class ExecutorTests(unittest.TestCase):
         }
         cursor = Cursor()
         cursor.ledger_rows = [(version, name, (f"base-{index}",)) for index, (version, name) in enumerate(BASELINE_PAIRS)] + [(item.version, item.name, full) for item, full, _ in vectors[:16]]
-        with patch.object(executor, "classify_mutation_cursor", return_value=observation), patch.object(executor, "probe_full_data_root", return_value=authorization.target_data_root), patch.object(executor, "terminal_readback_assert", return_value=terminal):
+        with patch.object(executor, "classify_mutation_cursor", return_value=observation), patch.object(executor, "probe_full_data_root", return_value=plan.reference.full_data_sha256), patch.object(executor, "_source_full_data_root", return_value=authorization.target_data_root), patch.object(executor, "terminal_readback_assert", return_value=terminal):
             with self.assertRaises(Denial) as error:
                 executor.apply_locked_cursor(cursor, plan=plan, attempt=attempt, deadline_monotonic=time.monotonic() + 60)
         self.assertEqual(error.exception.code, "terminal_mismatch")
@@ -519,7 +558,7 @@ class ExecutorTests(unittest.TestCase):
                 cursor = Cursor()
                 cursor.ledger_rows = [(version, name, (f"base-{index}",)) for index, (version, name) in enumerate(BASELINE_PAIRS)] + [(item.version, item.name, full) for item, full, _ in vectors[:16]]
                 terminal = {**expected_terminal, field: value}
-                with patch.object(executor, "classify_mutation_cursor", return_value=observation), patch.object(executor, "probe_full_data_root", return_value=authorization.target_data_root), patch.object(executor, "terminal_readback_assert", return_value=terminal):
+                with patch.object(executor, "classify_mutation_cursor", return_value=observation), patch.object(executor, "probe_full_data_root", return_value=plan.reference.full_data_sha256), patch.object(executor, "_source_full_data_root", return_value=authorization.target_data_root), patch.object(executor, "terminal_readback_assert", return_value=terminal):
                     with self.assertRaises(Denial) as error:
                         executor.apply_locked_cursor(cursor, plan=plan, attempt=attempt, deadline_monotonic=time.monotonic() + 60)
                 self.assertEqual(error.exception.code, "terminal_mismatch")
@@ -529,7 +568,7 @@ class ExecutorTests(unittest.TestCase):
         plan, attempt, observation, authorization, vectors = self.build_plan()
         cursor = Cursor(fail_sql="00400-inner")
         cursor.ledger_rows = [(version, name, (f"base-{index}",)) for index, (version, name) in enumerate(BASELINE_PAIRS)] + [(item.version, item.name, full) for item, full, _ in vectors[:16]]
-        with patch.object(executor, "classify_mutation_cursor", return_value=observation), patch.object(executor, "probe_full_data_root", return_value=authorization.target_data_root):
+        with patch.object(executor, "classify_mutation_cursor", return_value=observation), patch.object(executor, "probe_full_data_root", return_value=plan.reference.full_data_sha256), patch.object(executor, "_source_full_data_root", return_value=authorization.target_data_root):
             with self.assertRaises(executor.ExecutionDenial) as error:
                 executor.apply_locked_cursor(cursor, plan=plan, attempt=attempt, deadline_monotonic=time.monotonic() + 60)
         self.assertEqual(error.exception.code, "execution_failed")
@@ -730,18 +769,20 @@ class ExecutorTests(unittest.TestCase):
         with patch.object(executor, "validate_sources", return_value=m), \
                 patch.object(executor, "terminal_spec", return_value=SPEC), \
                 patch.object(executor, "_compiled", return_value=vectors), \
+                patch.object(executor, "validate_terminal_data_root", return_value=H), \
                 patch.object(executor, "validate_full_data_root", return_value=H), \
                 patch.object(executor, "terminal_readback_assert", return_value=terminal):
             plan = executor.build_source_validation_plan(ROOT, m, source=source)
             result = executor._derive_clone_terminal_expectation(
                 connection, source_plan=plan, verified_clone_capability=capability,
-                branch="UNAPPLIED", expected_full_data_root=H,
+                branch="UNAPPLIED", expected_initial_data_root=H,
+                expected_terminal_data_root=H,
                 deadline_monotonic=time.monotonic() + 60,
             )
         self.assertEqual(result.terminal_data_root, H)
         self.assertEqual(connection.rollbacks, 1)
         self.assertEqual([sql for sql, _ in cursor.calls if sql != STATEMENT_TIMEOUT_SQL][0], "BEGIN")
-        self.assertIn(executor.DATA_PROBE, [sql for sql, _ in cursor.calls])
+        self.assertIn(executor.TERMINAL_DATA_PROBE, [sql for sql, _ in cursor.calls])
 
     def test_clone_derivation_rejects_cursor_and_forged_capability_and_rolls_back_on_failure(self):
         m = manifest()
@@ -757,7 +798,8 @@ class ExecutorTests(unittest.TestCase):
         with self.assertRaises(Denial):
             executor._derive_clone_terminal_expectation(
                 cursor, source_plan=object(), verified_clone_capability=capability,
-                branch="UNAPPLIED", expected_full_data_root=H,
+                branch="UNAPPLIED", expected_initial_data_root=H,
+                expected_terminal_data_root=H,
                 deadline_monotonic=time.monotonic() + 60,
             )
         forged = executor._VerifiedCloneCapability(
@@ -771,7 +813,8 @@ class ExecutorTests(unittest.TestCase):
             with self.assertRaises(Denial) as error:
                 executor._derive_clone_terminal_expectation(
                     connection, source_plan=plan, verified_clone_capability=forged,
-                    branch="UNAPPLIED", expected_full_data_root=H,
+                    branch="UNAPPLIED", expected_initial_data_root=H,
+                    expected_terminal_data_root=H,
                     deadline_monotonic=time.monotonic() + 60,
                 )
         self.assertEqual(error.exception.code, "clone_capability")
