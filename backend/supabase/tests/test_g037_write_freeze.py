@@ -177,6 +177,24 @@ class FenceTests(unittest.TestCase):
   wrong_owner=(freeze.Relation("public","restaurants",oids["restaurants"],"r","other"),)
   with self.assertRaisesRegex(freeze.FreezeError,"relation ACL"):
    freeze.validate_table_acl_rows((("public",oids["restaurants"],"other","authenticated","SELECT",False),),wrong_owner)
+ def test_g014_terminal_acl_declaration_is_exact_and_phase_bound(self):
+  allowlist=freeze.G014_TERMINAL_ORDINARY_ACL_ALLOWLIST
+  self.assertEqual(len(allowlist),228)
+  relation_keys=sorted({(schema,name,owner) for schema,name,owner,_,_,_ in allowlist})
+  relations=tuple(freeze.Relation(schema,name,index,"r",owner)
+                  for index,(schema,name,owner) in enumerate(relation_keys,1))
+  rows=tuple(sorted(allowlist))
+  self.assertEqual(freeze.validate_table_acl_rows(rows,relations,terminal=True),rows)
+  sample=rows[0]
+  unsafe=(
+   (*sample[:3],"PUBLIC",sample[4],False),
+   (*sample[:5],True),
+  )
+  for row in unsafe:
+   with self.subTest(row=row),self.assertRaisesRegex(freeze.FreezeError,"relation ACL"):
+    freeze.validate_table_acl_rows((row,),relations,terminal=True)
+  with self.assertRaisesRegex(freeze.FreezeError,"relation ACL"):
+   freeze.validate_table_acl_rows((sample,),relations,terminal=False)
  def test_provider_storage_client_acl_allowlist_is_exact_and_fail_closed(self):
   expected={
    "buckets":freeze._TABLE_PRIVILEGES,

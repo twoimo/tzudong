@@ -42,7 +42,7 @@ class ReferenceTests(unittest.TestCase):
             "terminal_ledger_root": "f" * 64,
             "terminal_catalog_root": "1" * 64,
             "terminal_acl_root": "2" * 64,
-            "terminal_data_root": "c" * 64,
+            "terminal_data_root": classifier.TERMINAL_DATA_SHA256,
             "terminal_spec_root": "3" * 64,
             "derivation_mode": evidence.DERIVATION_MODE,
             "reverse_vector_sha256": evidence.REVERSE_VECTOR_SHA256,
@@ -104,7 +104,7 @@ class ReferenceTests(unittest.TestCase):
             evidence.load_reference(b'{"schema":"x","schema":"y"}')
         with self.assertRaises(evidence.ReferenceEvidenceError):
             evidence.load_reference("{}\n")
-        self.assertEqual(hashlib.sha256((classifier.CATALOG_PROBE + "\n" + classifier.DATA_PROBE).encode()).hexdigest(), evidence._PROBE_TEXT_SHA256)
+        self.assertEqual(hashlib.sha256((classifier.CATALOG_PROBE + "\n" + classifier.DATA_PROBE + "\n" + classifier.TERMINAL_DATA_PROBE).encode()).hexdigest(), evidence._PROBE_TEXT_SHA256)
 
     def test_finalize_reference_passes_resolved_root_to_both_custody_reads(self):
         _, _, source = self.signing_context()
