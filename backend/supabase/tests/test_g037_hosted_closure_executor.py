@@ -665,6 +665,8 @@ class G037ExecutorTests(unittest.TestCase):
    def fetchall(self): return next(self.rows)
   accepted=e._stable_projection_roots(Cursor((catalog,raw_acl)))
   self.assertEqual(accepted,(e.digest(catalog),e.digest(acl)))
+  reversed_result=e._stable_projection_roots(Cursor((tuple(reversed(catalog)),tuple(reversed(raw_acl)))))
+  self.assertEqual(reversed_result,accepted)
   for unsafe in (
    ("public","restaurants","owner","other","SELECT",True),
    ("public","restaurants","other","owner","SELECT",True),
@@ -679,6 +681,8 @@ class G037ExecutorTests(unittest.TestCase):
     e._stable_projection_roots(Cursor((catalog,(unsafe,))))
   with self.assertRaisesRegex(e.ClosureError,"catalog projection noncanonical"):
    e._stable_projection_roots(Cursor(((catalog[0],catalog[0]),raw_acl)))
+  with self.assertRaisesRegex(e.ClosureError,"acl projection noncanonical"):
+   e._stable_projection_roots(Cursor((catalog,(raw_acl[0],raw_acl[0]))))
  def test_terminal_acl_projection_uses_the_ordinary_relation_inventory_boundary(self):
   catalog=(("public","restaurants","r","owner"),)
   ordinary_acl=(("public","restaurants","owner","owner","SELECT",True),)
@@ -692,7 +696,7 @@ class G037ExecutorTests(unittest.TestCase):
     return ordinary_acl if "c.relkind IN ('r','p')" in self.calls[-1] else ordinary_acl+(nonordinary_acl,)
   self.assertEqual(e._stable_projection_roots(Cursor()),(e.digest(catalog),e.digest(tuple(tuple(map(str,row)) for row in ordinary_acl))))
   source=Path(e.__file__).read_text(encoding="utf-8")
-  catalog_sql=re.search(r'catalog_rows=.*?"(SELECT .*?)",\(list\(schemas\),\)\)',source)
+  catalog_sql=re.search(r'raw_catalog_rows=.*?"(SELECT .*?)",\(list\(schemas\),\)\)',source)
   acl_sql=re.search(r'raw_acl_rows=.*?"(SELECT .*?)",\(list\(schemas\),\)\)',source)
   self.assertIsNotNone(catalog_sql)
   self.assertIsNotNone(acl_sql)
@@ -750,6 +754,33 @@ class G037ExecutorTests(unittest.TestCase):
     self.assertGreaterEqual(record["start"],previous)
     self.assertEqual(item["raw"][record["start"]:record["end"]],record["old"])
     previous=record["end"]
+ def test_managed_role_creation_requires_explicit_pg17_membership_grants(self):
+  workflow=c._WORKFLOW_OWNER_SQL.decode("ascii")
+  retention=c._RETENTION_ROLES_SQL.decode("ascii")
+  self.assertIn("unexpected workflow-owner membership after create",workflow)
+  self.assertIn("GRANT privacy_workflow_owner TO postgres WITH ADMIN TRUE, INHERIT FALSE, SET FALSE GRANTED BY supabase_admin",workflow)
+  self.assertNotIn("automatic workflow-owner membership drift",workflow)
+  for role in ("privacy_retention_operator_approver","privacy_retention_legal_approver","privacy_retention_activation_operator"):
+   self.assertIn(f"GRANT {role} TO postgres WITH ADMIN TRUE, INHERIT FALSE, SET FALSE GRANTED BY supabase_admin",retention)
+  self.assertIn("unexpected retention role membership after create",retention)
+  schema=c._WORKFLOW_SCHEMA_SQL.decode("ascii")
+  self.assertIn("to_regnamespace('privacy_retention') IS NULL",schema)
+  self.assertIn("NOT IN ('postgres','supabase_admin')",schema)
+  self.assertIn("ALTER SCHEMA privacy_retention OWNER TO privacy_workflow_owner",schema)
+  epilogue=c.ROLE_PROTOCOL_EPILOGUE.decode("ascii")
+  self.assertIn("ARRAY['search_path=\"\"']",epilogue)
+  self.assertIn("538264bd59607f4b2dcd1c4f4600f63a7961f4d9c761c975319e3a7804b56399",epilogue)
+  executor_source=Path(e.__file__).read_text(encoding="utf-8")
+  self.assertIn("role_row.rolname AS role_name",executor_source)
+  self.assertIn("member_row.rolname AS member_name",executor_source)
+  self.assertIn("grantor_row.rolname AS grantor_name",executor_source)
+  self.assertIn("pg_catalog.pg_get_userbyid(n.nspowner) AS namespace_owner",executor_source)
+  self.assertIn("pg_catalog.pg_get_userbyid(c.relowner) AS relation_owner",executor_source)
+  self.assertIn("pg_catalog.pg_get_userbyid(p.proowner) AS function_owner",executor_source)
+  self.assertIn("pn.nspname || '.' || p.proname",executor_source)
+  self.assertIn("pg_catalog.replace(pg_catalog.oidvectortypes(p.proargtypes), ', ', ',')",executor_source)
+  self.assertIn("LEFT JOIN pg_catalog.pg_namespace pn ON pn.oid=p.pronamespace",executor_source)
+  self.assertIn("'search_path=\"\"'",executor_source)
  def test_full_precompute_matches_all_pinned_splice_vectors(self):
   root=Path(__file__).parents[3]; manifest=c.load_manifest(root)
   plan,splices=e._precompute_execution_plan(root,manifest)
@@ -818,8 +849,8 @@ class G037ExecutorTests(unittest.TestCase):
   role_rows=tuple((name,False,False,False,False,False,False,False) for name in sorted(c.MANAGED_ROLES))
   membership_rows=tuple(sorted(c.TERMINAL_MANAGED_ROWS))
   expected=(
-   ("privacy_retention","privacy_workflow_owner","tzuyang_address_evidence_admin_approval_receipts","privacy_workflow_owner",True,True,"privacy_retention.reject_tzuyang_address_evidence_admin_approval_receipt_mutation()","privacy_workflow_owner",False,"search_path="),
-   ("privacy_retention","privacy_workflow_owner","tzuyang_address_evidence_admin_approval_receipts","privacy_workflow_owner",True,True,"public.consume_tzuyang_address_evidence_admin_approval(uuid,text,text,uuid,text,text,text,timestamp with time zone,timestamp with time zone)","privacy_workflow_owner",True,"search_path="))
+   ("privacy_retention","privacy_workflow_owner","tzuyang_address_evidence_admin_approval_receipts","privacy_workflow_owner",True,True,"public.consume_tzuyang_address_evidence_admin_approval(uuid,text,text,uuid,text,text,text,timestamp with time zone,timestamp with time zone)","privacy_workflow_owner",True,'search_path=""'),
+   ("privacy_retention","privacy_workflow_owner","tzuyang_address_evidence_admin_approval_receipts","privacy_workflow_owner",True,True,"privacy_retention.reject_tzuyang_address_evidence_admin_approval_receipt_mutation()","privacy_workflow_owner",False,'search_path=""'))
   with self.assertRaisesRegex(e.ClosureError,"managed role flag contract drift"):
    e._managed_role_catalog_assert(Cursor((role_rows[:-1],membership_rows,expected)))
   with self.assertRaisesRegex(e.ClosureError,"managed role membership contract drift"):
@@ -850,11 +881,13 @@ class G037ExecutorTests(unittest.TestCase):
    def fetchall(self): return next(self.rows)
   clean=((),tuple(sorted(c.STATIC_RPC_MATRIX)),(),(),())
   e._g014_public_rpc_acl_assert(Cursor(clean))
+  e._g014_public_rpc_acl_assert(Cursor(((),tuple(reversed(clean[1])),(),(),())))
   mutations=(
    ((('public.missing()',),),tuple(sorted(c.STATIC_RPC_MATRIX)),(),(),(),"missing source signature"),
    ((),tuple(sorted(c.STATIC_RPC_MATRIX))[:-1],(),(),(),"ACL contract drift"),
    ((),tuple(sorted(c.STATIC_RPC_MATRIX))+(("public.extra()","service_role"),),(),(),(),"ACL contract drift"),
    ((),(("public.wrong()","service_role"),),(),(),(),"ACL contract drift"),
+   ((),tuple(sorted(c.STATIC_RPC_MATRIX))[:-1]+(tuple(sorted(c.STATIC_RPC_MATRIX))[0],),(),(),(),"ACL contract drift"),
    ((),tuple(sorted(c.STATIC_RPC_MATRIX)),(("public.any()",),),(),(),"PUBLIC ACL drift"),
    ((),tuple(sorted(c.STATIC_RPC_MATRIX)),(),(("public.unlisted()","anon"),),(),"unlisted API ACL drift"),
    ((),tuple(sorted(c.STATIC_RPC_MATRIX)),(),(),(("public.approve_submission_item(text)",),),"unexpected overload drift"),

@@ -502,7 +502,9 @@ def validate_managed_role_coverage(manifest):
     return {item.version: item for item in manifest.migrations if item.version in selected}
 def _managed_rows(cur):
     rows=q(cur,"""
-        SELECT role_row.rolname, member_row.rolname, grantor_row.rolname,
+        SELECT role_row.rolname AS role_name,
+               member_row.rolname AS member_name,
+               grantor_row.rolname AS grantor_name,
                membership.admin_option, membership.inherit_option, membership.set_option
           FROM pg_catalog.pg_auth_members AS membership
           JOIN pg_catalog.pg_roles AS role_row ON role_row.oid=membership.roleid
@@ -553,24 +555,30 @@ def _managed_role_catalog_assert(cur):
     _assert_role_flags(cur)
     _assert_memberships(cur, TERMINAL_MANAGED_ROWS)
     objects=q(cur,"""
-        SELECT n.nspname,pg_catalog.pg_get_userbyid(n.nspowner),
-               c.relname,pg_catalog.pg_get_userbyid(c.relowner),c.relrowsecurity,c.relforcerowsecurity,
-               n.nspname || '.' || p.proname || '(' ||
-                 pg_catalog.pg_get_function_identity_arguments(p.oid) || ')',
-               pg_catalog.pg_get_userbyid(p.proowner),p.prosecdef,
-               COALESCE(pg_catalog.array_to_string(p.proconfig,','),'')
+        SELECT n.nspname AS namespace_name,
+               pg_catalog.pg_get_userbyid(n.nspowner) AS namespace_owner,
+               c.relname AS relation_name,
+               pg_catalog.pg_get_userbyid(c.relowner) AS relation_owner,
+               c.relrowsecurity AS relation_rls,
+               c.relforcerowsecurity AS relation_force_rls,
+               pn.nspname || '.' || p.proname || '(' ||
+                 pg_catalog.replace(pg_catalog.oidvectortypes(p.proargtypes), ', ', ',') || ')' AS function_identity,
+               pg_catalog.pg_get_userbyid(p.proowner) AS function_owner,
+               p.prosecdef AS function_security_definer,
+               COALESCE(pg_catalog.array_to_string(p.proconfig,','),'') AS function_config
           FROM pg_catalog.pg_namespace n
           LEFT JOIN pg_catalog.pg_class c ON c.relnamespace=n.oid
             AND c.relname='tzuyang_address_evidence_admin_approval_receipts'
           LEFT JOIN pg_catalog.pg_proc p ON p.oid IN (
             'privacy_retention.reject_tzuyang_address_evidence_admin_approval_receipt_mutation()'::regprocedure,
             'public.consume_tzuyang_address_evidence_admin_approval(uuid,text,text,uuid,text,text,text,timestamp with time zone,timestamp with time zone)'::regprocedure)
+          LEFT JOIN pg_catalog.pg_namespace pn ON pn.oid=p.pronamespace
          WHERE n.nspname='privacy_retention'
          ORDER BY n.nspname,p.proname,pg_catalog.pg_get_function_identity_arguments(p.oid)
     """)
     expected=(
-        ("privacy_retention","privacy_workflow_owner","tzuyang_address_evidence_admin_approval_receipts","privacy_workflow_owner",True,True,"privacy_retention.reject_tzuyang_address_evidence_admin_approval_receipt_mutation()","privacy_workflow_owner",False,"search_path="),
-        ("privacy_retention","privacy_workflow_owner","tzuyang_address_evidence_admin_approval_receipts","privacy_workflow_owner",True,True,"public.consume_tzuyang_address_evidence_admin_approval(uuid,text,text,uuid,text,text,text,timestamp with time zone,timestamp with time zone)","privacy_workflow_owner",True,"search_path="),
+        ("privacy_retention","privacy_workflow_owner","tzuyang_address_evidence_admin_approval_receipts","privacy_workflow_owner",True,True,"public.consume_tzuyang_address_evidence_admin_approval(uuid,text,text,uuid,text,text,text,timestamp with time zone,timestamp with time zone)","privacy_workflow_owner",True,'search_path=""'),
+        ("privacy_retention","privacy_workflow_owner","tzuyang_address_evidence_admin_approval_receipts","privacy_workflow_owner",True,True,"privacy_retention.reject_tzuyang_address_evidence_admin_approval_receipt_mutation()","privacy_workflow_owner",False,'search_path=""'),
     )
     if tuple(tuple(row) for row in objects) != expected:
         raise ClosureError("managed ownership catalog contract drift")
@@ -602,7 +610,9 @@ def _g014_public_rpc_acl_assert(cur):
          WHERE pg_catalog.has_function_privilege(resolved.grantee,resolved.procedure_oid,'EXECUTE')
          ORDER BY 1,2
     """)
-    if tuple(tuple(row) for row in actual) != expected_matrix:
+    actual_matrix = tuple(tuple(row) for row in actual)
+    if (len(actual_matrix) != len(expected_matrix)
+            or frozenset(actual_matrix) != frozenset(expected_matrix)):
         raise ClosureError("G014 public RPC ACL contract drift")
     public_acl = q(cur, """
         SELECT namespace.nspname || '.' || procedure.proname || '(' ||
@@ -726,18 +736,19 @@ def _terminal_assert(cur, manifest, expected_vectors, *, deadline=None):
     return rows
 def _stable_projection_roots(cur):
     schemas=("public","auth","storage","shortener_private","ocr_private","provider_budget_private","privacy_retention")
-    catalog_rows=tuple(tuple(map(str,row)) for row in q(cur,"SELECT n.nspname,c.relname,c.relkind,pg_catalog.pg_get_userbyid(c.relowner) FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=ANY(%s) AND c.relkind IN ('r','p') ORDER BY 1,2,3,4",(list(schemas),)))
-    raw_acl_rows=tuple(q(cur,"SELECT n.nspname,c.relname,COALESCE(grantor.rolname,'PUBLIC'),COALESCE(grantee.rolname,'PUBLIC'),x.privilege_type,x.is_grantable FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace CROSS JOIN LATERAL pg_catalog.aclexplode(COALESCE(c.relacl,pg_catalog.acldefault('r',c.relowner))) x LEFT JOIN pg_catalog.pg_roles grantor ON grantor.oid=x.grantor LEFT JOIN pg_catalog.pg_roles grantee ON grantee.oid=x.grantee WHERE n.nspname=ANY(%s) AND c.relkind IN ('r','p') ORDER BY 1,2,3,4,5,6",(list(schemas),)))
-    if not catalog_rows or catalog_rows!=tuple(sorted(catalog_rows)) or len(catalog_rows)!=len(set(catalog_rows)):
+    raw_catalog_rows=tuple(tuple(map(str,row)) for row in q(cur,"SELECT n.nspname AS schema_name,c.relname AS relation_name,c.relkind AS relation_kind,pg_catalog.pg_get_userbyid(c.relowner) AS relation_owner FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=ANY(%s) AND c.relkind IN ('r','p') ORDER BY 1,2,3,4",(list(schemas),)))
+    if not raw_catalog_rows or len(raw_catalog_rows)!=len(set(raw_catalog_rows)):
         raise ClosureError("terminal catalog projection noncanonical")
+    catalog_rows=tuple(sorted(raw_catalog_rows))
+    raw_acl_rows=tuple(q(cur,"SELECT n.nspname AS schema_name,c.relname AS relation_name,COALESCE(grantor.rolname,'PUBLIC') AS grantor_name,COALESCE(grantee.rolname,'PUBLIC') AS grantee_name,x.privilege_type AS privilege_type,x.is_grantable AS is_grantable FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace CROSS JOIN LATERAL pg_catalog.aclexplode(COALESCE(c.relacl,pg_catalog.acldefault('r',c.relowner))) x LEFT JOIN pg_catalog.pg_roles grantor ON grantor.oid=x.grantor LEFT JOIN pg_catalog.pg_roles grantee ON grantee.oid=x.grantee WHERE n.nspname=ANY(%s) AND c.relkind IN ('r','p') ORDER BY 1,2,3,4,5,6",(list(schemas),)))
+    if len(raw_acl_rows)!=len(set(raw_acl_rows)):
+        raise ClosureError("terminal acl projection noncanonical")
     relations=tuple(Relation(schema,name,index,"",owner) for index,(schema,name,_,owner) in enumerate(catalog_rows))
     try:
         validate_table_acl_rows(raw_acl_rows,relations,terminal=True)
     except Exception as exc:
         raise ClosureError("terminal relation ACL safety policy failed") from exc
-    acl_rows=tuple(tuple(map(str,row)) for row in raw_acl_rows)
-    if acl_rows!=tuple(sorted(acl_rows)) or len(acl_rows)!=len(set(acl_rows)):
-        raise ClosureError("terminal acl projection noncanonical")
+    acl_rows=tuple(sorted(tuple(map(str,row)) for row in raw_acl_rows))
     return digest(catalog_rows),digest(acl_rows)
 def observed_terminal_roots(cur, root, manifest, *, deadline=None):
     """Read only terminal/reconciliation observation; never owns a transaction."""

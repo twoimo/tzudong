@@ -58,6 +58,15 @@ BEGIN
     RAISE EXCEPTION 'privacy_workflow_owner must be absent before G037 create';
   END IF;
   CREATE ROLE privacy_workflow_owner NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN NOREPLICATION NOBYPASSRLS;
+  IF EXISTS (
+       SELECT 1
+       FROM pg_catalog.pg_auth_members
+       WHERE roleid='privacy_workflow_owner'::regrole
+          OR member='privacy_workflow_owner'::regrole
+     ) THEN
+    RAISE EXCEPTION 'unexpected workflow-owner membership after create';
+  END IF;
+  GRANT privacy_workflow_owner TO postgres WITH ADMIN TRUE, INHERIT FALSE, SET FALSE GRANTED BY supabase_admin;
   SELECT NOT EXISTS (
            (SELECT roleid::regrole::text, member::regrole::text, grantor::regrole::text, admin_option, inherit_option, set_option
               FROM pg_catalog.pg_auth_members
@@ -74,7 +83,7 @@ BEGIN
          )
      AND (SELECT pg_catalog.count(*) FROM pg_catalog.pg_auth_members WHERE roleid='privacy_workflow_owner'::regrole OR member='privacy_workflow_owner'::regrole)=1
     INTO v_expected;
-  IF NOT v_expected THEN RAISE EXCEPTION 'automatic workflow-owner membership drift'; END IF;
+  IF NOT v_expected THEN RAISE EXCEPTION 'explicit workflow-owner membership drift'; END IF;
   GRANT privacy_workflow_owner TO postgres WITH ADMIN FALSE, INHERIT TRUE, SET TRUE GRANTED BY postgres;
   IF (SELECT pg_catalog.count(*) FROM pg_catalog.pg_auth_members WHERE roleid='privacy_workflow_owner'::regrole OR member='privacy_workflow_owner'::regrole) <> 2
      OR EXISTS ((SELECT roleid::regrole::text, member::regrole::text, grantor::regrole::text, admin_option, inherit_option, set_option FROM pg_catalog.pg_auth_members WHERE roleid='privacy_workflow_owner'::regrole OR member='privacy_workflow_owner'::regrole)
@@ -88,6 +97,22 @@ BEGIN
   END IF;
 END;
 $g037_workflow_owner$;"""
+_WORKFLOW_SCHEMA_SQL = b"""DO $g037_workflow_schema$
+BEGIN
+  IF pg_catalog.to_regnamespace('privacy_retention') IS NULL
+     OR (SELECT pg_catalog.pg_get_userbyid(nspowner)
+         FROM pg_catalog.pg_namespace
+         WHERE nspname='privacy_retention') NOT IN ('postgres','supabase_admin') THEN
+    RAISE EXCEPTION 'privacy_retention schema creation precondition drift';
+  END IF;
+  ALTER SCHEMA privacy_retention OWNER TO privacy_workflow_owner;
+  IF (SELECT pg_catalog.pg_get_userbyid(nspowner)
+      FROM pg_catalog.pg_namespace
+      WHERE nspname='privacy_retention') IS DISTINCT FROM 'privacy_workflow_owner' THEN
+    RAISE EXCEPTION 'privacy_retention schema owner postcondition drift';
+  END IF;
+END;
+$g037_workflow_schema$;"""
 
 _RETENTION_ROLES_SQL = b"""DO $g037_retention_roles$
 BEGIN
@@ -97,6 +122,23 @@ BEGIN
   CREATE ROLE privacy_retention_operator_approver NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN NOREPLICATION NOBYPASSRLS;
   CREATE ROLE privacy_retention_legal_approver NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN NOREPLICATION NOBYPASSRLS;
   CREATE ROLE privacy_retention_activation_operator NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN NOREPLICATION NOBYPASSRLS;
+  IF EXISTS (
+       SELECT 1
+       FROM pg_catalog.pg_auth_members AS membership
+       WHERE membership.roleid IN (
+               SELECT oid FROM pg_catalog.pg_roles
+               WHERE rolname = ANY (ARRAY['privacy_retention_operator_approver','privacy_retention_legal_approver','privacy_retention_activation_operator'])
+             )
+          OR membership.member IN (
+               SELECT oid FROM pg_catalog.pg_roles
+               WHERE rolname = ANY (ARRAY['privacy_retention_operator_approver','privacy_retention_legal_approver','privacy_retention_activation_operator'])
+             )
+     ) THEN
+    RAISE EXCEPTION 'unexpected retention role membership after create';
+  END IF;
+  GRANT privacy_retention_operator_approver TO postgres WITH ADMIN TRUE, INHERIT FALSE, SET FALSE GRANTED BY supabase_admin;
+  GRANT privacy_retention_legal_approver TO postgres WITH ADMIN TRUE, INHERIT FALSE, SET FALSE GRANTED BY supabase_admin;
+  GRANT privacy_retention_activation_operator TO postgres WITH ADMIN TRUE, INHERIT FALSE, SET FALSE GRANTED BY supabase_admin;
   IF (SELECT pg_catalog.count(*) FROM pg_catalog.pg_auth_members m JOIN pg_catalog.pg_roles r ON r.oid=m.roleid WHERE r.rolname = ANY (ARRAY['privacy_retention_operator_approver','privacy_retention_legal_approver','privacy_retention_activation_operator']) OR m.member IN (SELECT oid FROM pg_catalog.pg_roles WHERE rolname = ANY (ARRAY['privacy_retention_operator_approver','privacy_retention_legal_approver','privacy_retention_activation_operator']))) <> 3
      OR EXISTS (SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = ANY (ARRAY['privacy_retention_operator_approver','privacy_retention_legal_approver','privacy_retention_activation_operator']) AND (rolsuper OR rolinherit OR rolcreaterole OR rolcreatedb OR rolreplication OR rolbypassrls OR rolcanlogin))
      OR EXISTS ((SELECT roleid::regrole::text, member::regrole::text, grantor::regrole::text, admin_option, inherit_option, set_option FROM pg_catalog.pg_auth_members WHERE roleid IN (SELECT oid FROM pg_catalog.pg_roles WHERE rolname = ANY (ARRAY['privacy_retention_operator_approver','privacy_retention_legal_approver','privacy_retention_activation_operator'])) OR member IN (SELECT oid FROM pg_catalog.pg_roles WHERE rolname = ANY (ARRAY['privacy_retention_operator_approver','privacy_retention_legal_approver','privacy_retention_activation_operator'])))
@@ -150,18 +192,18 @@ _INFLIGHT_WORKFLOW_ASSERTION_SQL = b"""  IF NOT EXISTS (SELECT 1 FROM pg_catalog
 
 # Immutable source-pinned literal records for the executor preflight verifier.
 ROLE_SPLICES = (
-    {"label": '00450-role', "version": '20260713000450', "old": b"DO $role$\nDECLARE\n  v_role record;\nBEGIN\n  SELECT role_row.oid,\n         role_row.rolsuper,\n         role_row.rolinherit,\n         role_row.rolcreaterole,\n         role_row.rolcreatedb,\n         role_row.rolreplication,\n         role_row.rolbypassrls,\n         role_row.rolcanlogin\n    INTO v_role\n    FROM pg_catalog.pg_roles AS role_row\n   WHERE role_row.rolname = 'privacy_workflow_owner';\n\n  IF NOT FOUND THEN\n    EXECUTE 'CREATE ROLE privacy_workflow_owner NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN NOREPLICATION NOBYPASSRLS';\n  ELSIF v_role.rolsuper\n     OR v_role.rolinherit\n     OR v_role.rolcreaterole\n     OR v_role.rolcreatedb\n     OR v_role.rolreplication\n     OR v_role.rolbypassrls\n     OR v_role.rolcanlogin\n     OR EXISTS (\n       SELECT 1\n         FROM pg_catalog.pg_auth_members AS membership\n        WHERE membership.member = v_role.oid\n           OR membership.roleid = v_role.oid\n     ) THEN\n    RAISE EXCEPTION 'privacy_workflow_owner role attributes are incompatible';\n  END IF;\n\n  EXECUTE 'ALTER ROLE privacy_workflow_owner NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN NOREPLICATION NOBYPASSRLS';\nEND;\n$role$;", "new": _WORKFLOW_OWNER_SQL, "start": 177, "end": 1331, "old_sha256": 'ae10ec3a522a2dad1397dc1cb6b1623acdb8b745e7e52d82bb461725170d2a4b', "new_sha256": 'cddcd72a7f3f81073feaa20fd8d50c21327af9b0485022a276213f3f687d0673'},
-    {"label": '00450-schema', "version": '20260713000450', "old": b'CREATE SCHEMA IF NOT EXISTS privacy_retention;', "new": b'CREATE SCHEMA privacy_retention AUTHORIZATION privacy_workflow_owner;', "start": 1333, "end": 1379, "old_sha256": '1bd3d4ad35ada6c9299b292f44c84742ffebc6d9aa3c2247e6688321d12fee36', "new_sha256": '2f33f20a8154667786b8c8915fe3c0f0fa8da429c58825712ac85938ba6e4023'},
+    {"label": '00450-role', "version": '20260713000450', "old": b"DO $role$\nDECLARE\n  v_role record;\nBEGIN\n  SELECT role_row.oid,\n         role_row.rolsuper,\n         role_row.rolinherit,\n         role_row.rolcreaterole,\n         role_row.rolcreatedb,\n         role_row.rolreplication,\n         role_row.rolbypassrls,\n         role_row.rolcanlogin\n    INTO v_role\n    FROM pg_catalog.pg_roles AS role_row\n   WHERE role_row.rolname = 'privacy_workflow_owner';\n\n  IF NOT FOUND THEN\n    EXECUTE 'CREATE ROLE privacy_workflow_owner NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN NOREPLICATION NOBYPASSRLS';\n  ELSIF v_role.rolsuper\n     OR v_role.rolinherit\n     OR v_role.rolcreaterole\n     OR v_role.rolcreatedb\n     OR v_role.rolreplication\n     OR v_role.rolbypassrls\n     OR v_role.rolcanlogin\n     OR EXISTS (\n       SELECT 1\n         FROM pg_catalog.pg_auth_members AS membership\n        WHERE membership.member = v_role.oid\n           OR membership.roleid = v_role.oid\n     ) THEN\n    RAISE EXCEPTION 'privacy_workflow_owner role attributes are incompatible';\n  END IF;\n\n  EXECUTE 'ALTER ROLE privacy_workflow_owner NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN NOREPLICATION NOBYPASSRLS';\nEND;\n$role$;", "new": _WORKFLOW_OWNER_SQL, "start": 177, "end": 1331, "old_sha256": 'ae10ec3a522a2dad1397dc1cb6b1623acdb8b745e7e52d82bb461725170d2a4b', "new_sha256": 'bdfe749400255c55187350011d1a2487e2f19bc1813a4313e95f290ef0073c51'},
+    {"label": '00450-schema', "version": '20260713000450', "old": b'CREATE SCHEMA IF NOT EXISTS privacy_retention;', "new": _WORKFLOW_SCHEMA_SQL, "start": 1333, "end": 1379, "old_sha256": '1bd3d4ad35ada6c9299b292f44c84742ffebc6d9aa3c2247e6688321d12fee36', "new_sha256": 'd2629d0fc094b7b75170525e30bb5b345ae48f56339a595f5b503792330ec762'},
     {"label": '02000-role', "version": '20260713002000', "old": b"DO $role$\nDECLARE\n  v_role record;\nBEGIN\n  SELECT role_row.oid,\n         role_row.rolsuper,\n         role_row.rolinherit,\n         role_row.rolcreaterole,\n         role_row.rolcreatedb,\n         role_row.rolreplication,\n         role_row.rolbypassrls,\n         role_row.rolcanlogin\n  INTO v_role\n  FROM pg_catalog.pg_roles AS role_row\n  WHERE role_row.rolname = 'privacy_workflow_owner';\n\n  IF NOT FOUND THEN\n    EXECUTE 'CREATE ROLE privacy_workflow_owner NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN NOREPLICATION NOBYPASSRLS';\n  ELSE\n    IF v_role.rolsuper\n       OR v_role.rolinherit\n       OR v_role.rolcreaterole\n       OR v_role.rolcreatedb\n       OR v_role.rolreplication\n       OR v_role.rolbypassrls\n       OR v_role.rolcanlogin THEN\n      RAISE EXCEPTION 'privacy_workflow_owner role attributes are incompatible';\n    END IF;\n\n    IF EXISTS (\n      SELECT 1\n      FROM pg_catalog.pg_auth_members AS membership\n      WHERE membership.member = v_role.oid\n         OR membership.roleid = v_role.oid\n    ) THEN\n      RAISE EXCEPTION 'privacy_workflow_owner has unexpected role membership or effective access';\n    END IF;\n  END IF;\n\n  EXECUTE 'ALTER ROLE privacy_workflow_owner NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN NOREPLICATION NOBYPASSRLS';\nEND;\n$role$;", "new": _ROLE_02000_SQL, "start": 204, "end": 1492, "old_sha256": '722c208dcc6b50ae1eae9bca8386f3da6a843fdfeb42ec599b4357eded687e84', "new_sha256": '0df33b8a8cc87673d3d6c3bcbcc0eab6c17c967a44f33b416eede8e929068df5'},
     {"label": '02000-schema-pair', "version": '20260713002000', "old": b'CREATE SCHEMA IF NOT EXISTS privacy_retention;\nALTER SCHEMA privacy_retention OWNER TO privacy_workflow_owner;', "new": _SCHEMA_OWNER_ASSERTION_SQL, "start": 1494, "end": 1604, "old_sha256": '5dec71c0bb6729698a174817afe9326871dcc97bc1d0531f0a37074463901765', "new_sha256": 'ec74d291a3093a661d1856c0ef6472f57ca705f4f09612c4784f4fc46bea7844'},
     {"label": '02000-full-assertion-definition', "version": '20260713002000', "old": b"CREATE OR REPLACE FUNCTION privacy_retention.assert_g014_workflow_owner_contract()\nRETURNS void\nLANGUAGE plpgsql\nSET search_path = ''\nAS $function$\nDECLARE\n  v_role record;\nBEGIN\n  SELECT role_row.oid,\n         role_row.rolsuper,\n         role_row.rolinherit,\n         role_row.rolcreaterole,\n         role_row.rolcreatedb,\n         role_row.rolreplication,\n         role_row.rolbypassrls,\n         role_row.rolcanlogin\n  INTO v_role\n  FROM pg_catalog.pg_roles AS role_row\n  WHERE role_row.rolname = 'privacy_workflow_owner';\n\n  IF NOT FOUND THEN\n    RAISE EXCEPTION 'privacy_workflow_owner is missing';\n  END IF;\n  IF v_role.rolsuper\n     OR v_role.rolinherit\n     OR v_role.rolcreaterole\n     OR v_role.rolcreatedb\n     OR v_role.rolreplication\n     OR v_role.rolbypassrls\n     OR v_role.rolcanlogin THEN\n    RAISE EXCEPTION 'privacy_workflow_owner role attributes are incompatible';\n  END IF;\n  IF EXISTS (\n    SELECT 1\n    FROM pg_catalog.pg_auth_members AS membership\n    WHERE membership.member = v_role.oid\n       OR membership.roleid = v_role.oid\n  ) THEN\n    RAISE EXCEPTION 'privacy_workflow_owner has unexpected role membership or effective access';\n  END IF;\nEND;\n$function$;", "new": _TERMINAL_WORKFLOW_ASSERTION_SQL, "start": 4192, "end": 5379, "old_sha256": '50c4da47bb3f57203ca7bb95ab6d644833c12a98f8f5f84d87a4c50414c3bf9a', "new_sha256": 'ee3641f846a2459db7dcbf6391249ba9223c15172e3da1dab7b432facf1f8003'},
     {"label": '02000-in-flight-invocation', "version": '20260713002000', "old": b'  PERFORM privacy_retention.assert_g014_workflow_owner_contract();', "new": _INFLIGHT_WORKFLOW_ASSERTION_SQL, "start": 91365, "end": 91431, "old_sha256": '087e6706906fc0c0059fa68ddf0ae11ee1c235bfb2cba9ebd846dad441c21ea9', "new_sha256": '1ff662f7dbb0daf1c5a8f58430a3ae6657857766dcc7a4abe6b13a06c8138902'},
-    {"label": '02400-role-block', "version": '20260713002400', "old": b"DO $g014_retention_approval_roles$\nDECLARE\n  v_role name;\nBEGIN\n  FOREACH v_role IN ARRAY ARRAY[\n    'privacy_retention_operator_approver'::name,\n    'privacy_retention_legal_approver'::name,\n    'privacy_retention_activation_operator'::name\n  ] LOOP\n    IF NOT EXISTS (SELECT 1 FROM pg_catalog.pg_roles AS role_row WHERE role_row.rolname = v_role) THEN\n      EXECUTE pg_catalog.format(\n        'CREATE ROLE %I NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN NOREPLICATION NOBYPASSRLS',\n        v_role\n      );\n    ELSIF EXISTS (\n      SELECT 1\n      FROM pg_catalog.pg_roles AS role_row\n      WHERE role_row.rolname = v_role\n        AND (role_row.rolsuper OR role_row.rolreplication OR role_row.rolbypassrls)\n    ) THEN\n      RAISE EXCEPTION 'G014 retention approval role % has a privileged immutable attribute', v_role;\n    END IF;\n    EXECUTE pg_catalog.format(\n      'ALTER ROLE %I NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN',\n      v_role\n    );\n  END LOOP;\n\n  IF pg_catalog.pg_has_role('service_role', 'privacy_retention_operator_approver', 'member')\n     OR pg_catalog.pg_has_role('service_role', 'privacy_retention_legal_approver', 'member')\n     OR pg_catalog.pg_has_role('service_role', 'privacy_retention_activation_operator', 'member') THEN\n    RAISE EXCEPTION 'service_role cannot hold a G014 retention approval capability';\n  END IF;\nEND;\n$g014_retention_approval_roles$;", "new": _RETENTION_ROLES_SQL, "start": 10317, "end": 11707, "old_sha256": '93afc29f3cf6dc761318c940b86bacd62e66a359e439dd68317c48579610042c', "new_sha256": '46c5fc6281d033cca7988609ebcce8ab4ca625b4609abb4d993adf091b10ae87'},
+    {"label": '02400-role-block', "version": '20260713002400', "old": b"DO $g014_retention_approval_roles$\nDECLARE\n  v_role name;\nBEGIN\n  FOREACH v_role IN ARRAY ARRAY[\n    'privacy_retention_operator_approver'::name,\n    'privacy_retention_legal_approver'::name,\n    'privacy_retention_activation_operator'::name\n  ] LOOP\n    IF NOT EXISTS (SELECT 1 FROM pg_catalog.pg_roles AS role_row WHERE role_row.rolname = v_role) THEN\n      EXECUTE pg_catalog.format(\n        'CREATE ROLE %I NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN NOREPLICATION NOBYPASSRLS',\n        v_role\n      );\n    ELSIF EXISTS (\n      SELECT 1\n      FROM pg_catalog.pg_roles AS role_row\n      WHERE role_row.rolname = v_role\n        AND (role_row.rolsuper OR role_row.rolreplication OR role_row.rolbypassrls)\n    ) THEN\n      RAISE EXCEPTION 'G014 retention approval role % has a privileged immutable attribute', v_role;\n    END IF;\n    EXECUTE pg_catalog.format(\n      'ALTER ROLE %I NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN',\n      v_role\n    );\n  END LOOP;\n\n  IF pg_catalog.pg_has_role('service_role', 'privacy_retention_operator_approver', 'member')\n     OR pg_catalog.pg_has_role('service_role', 'privacy_retention_legal_approver', 'member')\n     OR pg_catalog.pg_has_role('service_role', 'privacy_retention_activation_operator', 'member') THEN\n    RAISE EXCEPTION 'service_role cannot hold a G014 retention approval capability';\n  END IF;\nEND;\n$g014_retention_approval_roles$;", "new": _RETENTION_ROLES_SQL, "start": 10317, "end": 11707, "old_sha256": '93afc29f3cf6dc761318c940b86bacd62e66a359e439dd68317c48579610042c', "new_sha256": '1c052c803d43e2d2f34517915537740f9c8a5ab364487ac9f8f51f3569e042e3'},
 )
 ROLE_SPLICE_GROUPS = (
-    {"version": '20260713000450', "source_sha256": 'f5d513aba329b3b1a6e12a76d8947f43c247257a379500d7ed5a45486f1c364a', "transformed_source_sha256": '5b59ade5e8a2b50fc3ebbeadf5b9318666b4e7ebc0eeb6c921154b38555b2b0d', "original_vector_sha256": '24d10cdb1f74b3eaeee84f107f72ef92fccbfa080e6d872a52519cd1e3d108fe', "transformed_vector_sha256": '4472be023ae645bef51b5870c1bd1fc623764d721a3f2741b449d51df97326c8'},
+    {"version": '20260713000450', "source_sha256": 'f5d513aba329b3b1a6e12a76d8947f43c247257a379500d7ed5a45486f1c364a', "transformed_source_sha256": '51685f9ce9d26ba9df18591380d31a41012339ec8d5e8c28509f29f3ba8e9887', "original_vector_sha256": '24d10cdb1f74b3eaeee84f107f72ef92fccbfa080e6d872a52519cd1e3d108fe', "transformed_vector_sha256": '297b062c4a0c6037905afc3bc230b0a3995cccb23e88903ba642fd8ace2238ca'},
     {"version": '20260713002000', "source_sha256": '094c4ae71ae6c85f0792f72f5941dd8d723104d59af057a3cf6b5667d4740f7e', "transformed_source_sha256": 'e5042cd05c945a054c362858e1fe3e8530697fb3a28d07ade7126659f65339ea', "original_vector_sha256": 'f4634ab7071a61c24251cf235ea6dee03ba85fbbd4d5d7dac0b135c728881c64', "transformed_vector_sha256": '2e50291e81377831ce8fabb23b2057ca99e3cc013f932df233bff1f7abad2963'},
-    {"version": '20260713002400', "source_sha256": '3b89edc7ffe96a770d1f537267546c6229c823fc3c2d9b4c036ff008ca7c0b94', "transformed_source_sha256": '8853afd6407705128b0ad7c163a8e40eac7f98700a8f21f8c1a68db36315c7e4', "original_vector_sha256": 'dc72dca4154077e2e1c69ea9f85ca5a0e0d105af121daf1cca5f0253dcd162ad', "transformed_vector_sha256": '59759732c2a5bd9138ebd1f9b5445e87afadcd2eaf7ce0847385b728360b063b'},
+    {"version": '20260713002400', "source_sha256": '3b89edc7ffe96a770d1f537267546c6229c823fc3c2d9b4c036ff008ca7c0b94', "transformed_source_sha256": '9a6df9bc00c2aec53dbbddf7bbd77e71f7c90fa32a2afe1a078305ef117bcaf8', "original_vector_sha256": 'dc72dca4154077e2e1c69ea9f85ca5a0e0d105af121daf1cca5f0253dcd162ad', "transformed_vector_sha256": 'c390ee9e1dcf8ae3556ef2b198c83a7a5b3877ee1b18fd3b31b788719549765c'},
 )
 ROLE_PROTOCOL_EPILOGUE = b"""DO $g037_epilogue$
 BEGIN
@@ -197,7 +239,7 @@ BEGIN
      ) THEN
     RAISE EXCEPTION 'transient managed-role membership drift';
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace JOIN pg_catalog.pg_language l ON l.oid=p.prolang WHERE p.oid='privacy_retention.assert_g014_workflow_owner_contract()'::pg_catalog.regprocedure AND n.nspname='privacy_retention' AND pg_catalog.pg_get_userbyid(p.proowner)='privacy_workflow_owner' AND l.lanname='plpgsql' AND NOT p.prosecdef AND p.proconfig IS NOT DISTINCT FROM ARRAY['search_path='] AND pg_catalog.encode(extensions.digest(pg_catalog.convert_to(p.prosrc,'UTF8'),'sha256'),'hex')='b499ac7899020cd1d2473b746ad6138ebe1074a963c7e508a90e71ac08937b32') THEN
+  IF NOT EXISTS (SELECT 1 FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace JOIN pg_catalog.pg_language l ON l.oid=p.prolang WHERE p.oid='privacy_retention.assert_g014_workflow_owner_contract()'::pg_catalog.regprocedure AND n.nspname='privacy_retention' AND pg_catalog.pg_get_userbyid(p.proowner)='privacy_workflow_owner' AND l.lanname='plpgsql' AND NOT p.prosecdef AND p.proconfig IS NOT DISTINCT FROM ARRAY['search_path=""'] AND pg_catalog.encode(extensions.digest(pg_catalog.convert_to(p.prosrc,'UTF8'),'sha256'),'hex')='538264bd59607f4b2dcd1c4f4600f63a7961f4d9c761c975319e3a7804b56399') THEN
     RAISE EXCEPTION 'workflow-owner terminal assertion catalog drift';
   END IF;
   REVOKE privacy_workflow_owner FROM postgres GRANTED BY postgres RESTRICT;
@@ -233,8 +275,8 @@ BEGIN
   END IF;
 END;
 $g037_epilogue$;"""
-ROLE_PROTOCOL_EPILOGUE_SHA256 = "cc43e04360972601117ec81bc3c360d4dee8b8b37a2c2f56d134412ae29cf06d"
-ROLE_PROTOCOL_EPILOGUE_VECTOR_SHA256 = "de6d0bb6dec2bc4a897d31c7b00032c20b5557123b60b9abeddd205625dd0b69"
+ROLE_PROTOCOL_EPILOGUE_SHA256 = "498505246f63b4130afeb089cb7b77532c23e31edf16c09ca1a4393479cc55b8"
+ROLE_PROTOCOL_EPILOGUE_VECTOR_SHA256 = "e35114d17655152d87ecbe0a40b10162b9868a12df8cf67c8a0b3e759c27a3fd"
 
 # The terminal allowlist is a deterministic composition of literal immutable
 # source fragments.  It is deliberately not a snapshot of hosted state.
