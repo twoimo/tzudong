@@ -785,7 +785,7 @@ def observe_reference(*, repository_root: str | Path, binding_path: str | Path, 
         terminal = _derive_clone_terminal_expectation(
             conn, source_plan=source_plan, verified_clone_capability=capability,
             branch="UNAPPLIED", expected_full_data_root=initial_data_root,
-            deadline_monotonic=time.monotonic() + 10,
+            deadline_monotonic=time.monotonic() + 30,
         )
         recreated_full = _query_one(cur, CATALOG_PROBE)
         recreated_data = _query_one(cur, DATA_PROBE)
