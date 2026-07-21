@@ -231,6 +231,13 @@ class Tests(unittest.TestCase):
         self.assertIn("(c.classes_count=12 AND c.exact_seed_count=12)", g.TERMINAL_DATA_PROBE)
         with self.assertRaisesRegex(g.Denial, "partial_or_ambiguous"):
             g.validate_terminal_data_root({**terminal, "classes_count": 10})
+        terminal_reference = reference(terminal_data_root=g.TERMINAL_DATA_SHA256)
+        cursor = Cursor(terminal)
+        self.assertEqual(
+            g.probe_terminal_data_root(cursor, terminal_reference),
+            g.TERMINAL_DATA_SHA256,
+        )
+        self.assertEqual(cursor.sql, [g.TERMINAL_DATA_PROBE])
 
     def test_classification_uses_the_supplied_deadline_statement_adapter(self):
         executed = []
