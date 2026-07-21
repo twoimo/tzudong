@@ -326,6 +326,11 @@ class CloneRehearsalTests(unittest.TestCase):
             writes[str(path)] = document
             return rehearsal._sha(rehearsal._canonical(document))
 
+        def derive_terminal(connection, **kwargs):
+            self.assertEqual(kwargs["deadline_monotonic"], 130)
+            connection.cursor_value.full = True
+            return terminal
+
         terminal = types.SimpleNamespace(
             plan_sha256="e" * 64, terminal_rows=rehearsal.executor._TERMINAL_ROWS,
             terminal_ledger_root="f" * 64, terminal_catalog_root="1" * 64,
@@ -335,8 +340,9 @@ class CloneRehearsalTests(unittest.TestCase):
         with patch.object(rehearsal, "_binding", return_value=binding), \
                 patch.object(rehearsal, "_source", return_value=types.SimpleNamespace(final_commit="a" * 40, runtime_source_root="b" * 64)), \
                 patch.object(rehearsal, "validate_sources", return_value=Manifest()), \
+                patch.object(rehearsal.time, "monotonic", return_value=100), \
                 patch.object(rehearsal, "build_source_validation_plan", return_value=object()), \
-                patch.object(rehearsal, "_derive_clone_terminal_expectation", side_effect=lambda connection, **_: (setattr(connection.cursor_value, "full", True) or terminal)), \
+                patch.object(rehearsal, "_derive_clone_terminal_expectation", side_effect=derive_terminal), \
                 patch.object(rehearsal, "vectors", return_value=((), ("SELECT 1",))), \
                 patch.object(rehearsal, "_connect_service", return_value=(connection, {"port": 55401})), \
                 patch.object(rehearsal, "_assert_observation_binding", side_effect=checked_binding), \
