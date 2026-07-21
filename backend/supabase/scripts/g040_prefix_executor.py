@@ -207,7 +207,10 @@ def _execute(cursor: Any, sql: str, params: tuple[Any, ...] = (), *, deadline_mo
     try:
         if deadline_monotonic is not None:
             cursor.execute(_STATEMENT_TIMEOUT_SQL, (_remaining_milliseconds(deadline_monotonic),))
-        cursor.execute(sql, params)
+        if params:
+            cursor.execute(sql, params)
+        else:
+            cursor.execute(sql)
     except Denial:
         raise
     except Exception:

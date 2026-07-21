@@ -330,6 +330,19 @@ class ExecutorTests(unittest.TestCase):
                 executor._remaining_milliseconds(2147483649.0),
                 "2147483647",
             )
+    def test_empty_params_do_not_activate_psycopg_percent_placeholder_parsing(self):
+        class StrictCursor:
+            def __init__(self):
+                self.calls = []
+
+            def execute(self, *args):
+                if len(args) == 2 and args[1] == () and "%" in args[0]:
+                    raise ValueError("empty params activated placeholder parsing")
+                self.calls.append(args)
+
+        cursor = StrictCursor()
+        executor._execute(cursor, "SELECT '100%'")
+        self.assertEqual(cursor.calls, [("SELECT '100%'",)])
 
     def test_deadline_cursor_refreshes_timeout_before_every_nested_statement(self):
         clock = FakeClock()
