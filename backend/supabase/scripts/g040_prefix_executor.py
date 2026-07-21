@@ -11,6 +11,7 @@ from pathlib import Path
 
 from g037_hosted_closure_contract import BASELINE_PAIRS, Manifest, canonical_bytes, terminal_spec, validate_sources
 from g037_hosted_closure_executor import ClosureError, terminal_readback_assert, vectors
+from g035_hosted_recovery import _compatibility_sql
 from g040_prefix_recovery import DATA_PROBE, Denial, PrefixObservation, SOURCE_COMMIT, TABLES, classify_mutation_cursor, probe_full_data_root, validate_full_data_root
 from g040_recovery_authorization import AttemptStarted, VerifiedAuthorization
 from g040_recovery_source import SourceBinding
@@ -251,13 +252,14 @@ def _compiled(root: Path, manifest: Manifest) -> tuple[tuple[Any, tuple[str, ...
     try:
         for item in manifest.migrations:
             full, executable = vectors(root, item)
+            compatibility = _compatibility_sql(item.version)
             if not full or not executable:
                 _deny("vector_empty")
             if item.version in seen_versions or full in seen_vectors:
                 _deny("vector_duplicate")
             seen_versions.add(item.version)
             seen_vectors.add(full)
-            result.append((item, full, executable))
+            result.append((item, full, (*compatibility, *executable)))
     except (ClosureError, OSError, ValueError):
         _deny("vector_compile")
     return tuple(result)
