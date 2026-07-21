@@ -34,7 +34,7 @@ from g040_prefix_executor import (
     build_source_validation_plan,
     compile_branch_plan,
 )
-from g040_prefix_recovery import CATALOG_PROBE, DATA_PROBE, begin_read_only_snapshot, probe_full_data_root, validate_full_data_root
+from g040_prefix_recovery import CATALOG_PROBE, DATA_PROBE, begin_read_only_snapshot, probe_full_data_root, probe_terminal_data_root, validate_full_data_root
 from g040_recovery_source import SourceBinding, verify_recovery_source
 from g037_hosted_closure_executor import terminal_readback_assert
 from g040_reverse_00400 import DERIVATION_MODE, REVERSE_VECTOR, REVERSE_VECTOR_SHA256
@@ -1276,7 +1276,7 @@ def _classify_read_only_state(cur: Any, reference: Any, *, start: Mapping[str, A
                 return "TERMINAL"
             return "AMBIGUOUS"
         terminal_readback = terminal_readback_assert(cur, Path(__file__).resolve().parents[3], manifest)
-        data_root = probe_full_data_root(cur, reference)
+        data_root = probe_terminal_data_root(cur, reference)
         observed_terminal = {
             "terminal_rows": executor._TERMINAL_ROWS, "ledger": terminal_readback["ledger_root"],
             "catalog": terminal_readback["catalog_root"], "acl": terminal_readback["acl_root"],

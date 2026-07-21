@@ -200,6 +200,20 @@ class CloneRehearsalTests(unittest.TestCase):
             self.assertEqual(rehearsal._classify_read_only_state(
                 cursor, reference, start=start, terminal=terminal, manifest=Manifest()), "AMBIGUOUS")
         terminal_assert.assert_called_once()
+        with patch.object(rehearsal, "_query_one", side_effect=[
+                {"transaction_read_only": "on"},
+                {"ledger_sha256": terminal["ledger"], "catalog_sha256": terminal["catalog"]},
+        ]), patch.object(rehearsal, "terminal_readback_assert", return_value={
+                "ledger_root": terminal["ledger"],
+                "catalog_root": terminal["catalog"],
+                "acl_root": terminal["acl"],
+                "terminal_spec": terminal["terminal_spec"],
+        }), patch.object(rehearsal, "probe_terminal_data_root", return_value=terminal["data"]) as terminal_data, \
+                patch.object(rehearsal, "probe_full_data_root") as full_data:
+            self.assertEqual(rehearsal._classify_read_only_state(
+                cursor, reference, start=start, terminal=terminal, manifest=Manifest()), "TERMINAL")
+        terminal_data.assert_called_once_with(cursor, reference)
+        full_data.assert_not_called()
     def test_service_schema_exact_image_and_secret_safe_cli(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw); service = self.service(root)

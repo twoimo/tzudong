@@ -168,6 +168,13 @@ def probe_full_data_root(cursor: Any, reference: Any, *, statement_executor: Cal
     """Run the single source-pinned terminal data probe and validate its full root."""
     reference = _reference(reference)
     return validate_full_data_root(_row(cursor, DATA_PROBE, statement_executor=statement_executor), reference.full_data_sha256)
+def probe_terminal_data_root(cursor: Any, reference: Any, *, statement_executor: Callable[[str], None] | None = None) -> str:
+    """Run the source-pinned post-migration data probe and validate its terminal root."""
+    reference = _reference(reference)
+    return validate_terminal_data_root(
+        _row(cursor, TERMINAL_DATA_PROBE, statement_executor=statement_executor),
+        reference.terminal_data_root,
+    )
 
 def _classify_probes(cursor: Any, reference: Any, *, transaction_read_only: str, statement_executor: Callable[[str], None] | None = None) -> tuple[str, str, str, str | None]:
     if _row(cursor, "SELECT current_setting('transaction_read_only', true) AS transaction_read_only", statement_executor=statement_executor) != {"transaction_read_only": transaction_read_only}:
