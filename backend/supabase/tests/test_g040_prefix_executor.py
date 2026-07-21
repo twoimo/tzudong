@@ -330,6 +330,15 @@ class ExecutorTests(unittest.TestCase):
                 executor._remaining_milliseconds(2147483649.0),
                 "2147483647",
             )
+    def test_compiled_plan_prepends_source_compatibility_hooks(self):
+        migration_manifest = manifest()
+        with patch.object(executor, "vectors", side_effect=lambda unused_root, item: ((item.version,), (f"migration-{item.version}",))), \
+                patch.object(executor, "_compatibility_sql", side_effect=lambda version: (f"hook-{version}",)):
+            compiled = executor._compiled(ROOT, migration_manifest)
+        self.assertEqual(len(compiled), len(migration_manifest.migrations))
+        for item, full, executable in compiled:
+            self.assertEqual(full, (item.version,))
+            self.assertEqual(executable, (f"hook-{item.version}", f"migration-{item.version}"))
     def test_empty_params_do_not_activate_psycopg_percent_placeholder_parsing(self):
         class StrictCursor:
             def __init__(self):
