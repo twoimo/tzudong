@@ -56,7 +56,7 @@ async function main() {
             .replace('{FULL_TRANSCRIPT}', fullTranscriptText);
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        const modelName = process.env.CURRENT_MODEL || 'gemini-3.5-flash';
+        const modelName = process.env.CURRENT_MODEL || 'gemini-3.6-flash';
         const thinkingLevel = resolveThinkingLevel(
             process.env.GEMINI_FINAL_MERGE_THINKING_LEVEL,
             process.env.GEMINI_THINKING_LEVEL,

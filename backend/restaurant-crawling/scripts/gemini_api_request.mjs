@@ -117,7 +117,7 @@ async function main() {
         const genAI = new GoogleGenerativeAI(apiKey);
         
         // 환경변수 CURRENT_MODEL 우선, 없으면 기본 모델 사용
-        const modelName = process.env.CURRENT_MODEL || 'gemini-3.5-flash';
+        const modelName = process.env.CURRENT_MODEL || 'gemini-3.6-flash';
         const thinkingLevel = resolveThinkingLevel(process.env.GEMINI_THINKING_LEVEL, 'MEDIUM');
         console.log('DEBUG: Configuring Gemini model.');
         const model = genAI.getGenerativeModel({
