@@ -220,7 +220,18 @@ def _ledger(cursor: Any) -> tuple[tuple[str, str, tuple[str, ...]], ...]:
     try:
         cursor.execute("SELECT version,name,statements FROM supabase_migrations.schema_migrations ORDER BY version,name")
         rows = cursor.fetchall()
-        result = tuple((str(version), str(name), tuple(statements)) for version, name, statements in rows)
+        decoded = []
+        for row in rows:
+            if type(row) is dict:
+                if set(row) != {"version", "name", "statements"}:
+                    _deny("ledger_read")
+                version, name, statements = row["version"], row["name"], row["statements"]
+            elif type(row) in (tuple, list) and len(row) == 3:
+                version, name, statements = row
+            else:
+                _deny("ledger_read")
+            decoded.append((str(version), str(name), tuple(statements)))
+        result = tuple(decoded)
     except Denial:
         raise
     except Exception:
