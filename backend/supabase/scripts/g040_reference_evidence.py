@@ -27,7 +27,7 @@ MCowBQYDK2VwAyEAPRPfHnLQG7bOEwO3QWARN4UAf+/VEoeIcnZGq7IKJ2M=
 PUBLIC_KEY_SHA256 = "c649dd63e8e5b3d0ced61295f4e30ec304a90d1a766e926a4079320658fcea7a"
 _MANIFEST_SHA256 = "1f568404418009d191c27a0d8e525306b98b9e1472f4056d1f347907c500a8e1"
 _MIGRATION_SOURCE_SHA256 = "e1881677d58017e7075b063190814a11ad0c77de9bf0c360f9bfe10eb484ec68"
-_PROBE_TEXT_SHA256 = "bcac01a9b5e4bd5a27287f6486082cabeeb3e46d05912a2abd13820f01d89a5c"
+_PROBE_TEXT_SHA256 = "47d49669f8b5f35d99f918fd9dab3e68d15621a5d30f087dd352adace245f99f"
 _DERIVATION_MODE = "restored-full_reverse-00400_forward-00400_rollback-full-v1"
 _REVERSE_VECTOR_SHA256 = "ee39e90bf6a92ed6c1e1de6d909e93d0d2da0f99df823247a5d138cc4e6b047a"
 _HEX = re.compile(r"^[0-9a-f]{64}$")
@@ -162,7 +162,7 @@ def _validate_clone(value: Mapping[str, Any]) -> MappingProxyType:
             or clone["derivation_mode"] != DERIVATION_MODE
             or clone["reverse_vector_sha256"] != REVERSE_VECTOR_SHA256
             or clone["absent_catalog_sha256"] == clone["full_catalog_sha256"]
-            or clone["terminal_data_root"] != clone["full_data_sha256"]
+            or clone["terminal_data_root"] != classifier.TERMINAL_DATA_SHA256
             or clone["terminal_tuple_sha256"] != hashlib.sha256(canonical_bytes({
                 "terminal_rows": clone["terminal_rows"], "ledger": clone["terminal_ledger_root"],
                 "catalog": clone["terminal_catalog_root"], "acl": clone["terminal_acl_root"],

@@ -304,6 +304,15 @@ class G034HostedPreflightTests(unittest.TestCase):
             contract["public.approve_submission_item(uuid,uuid,jsonb)"]["body_hash"],
             module.body_fingerprint(module.extract_dollar_quoted_body(definition)),
         )
+        statements = module.approval_source_statements()
+        self.assertEqual(len(statements), 2)
+        self.assertTrue(all("restaurants_backup" not in statement for statement in statements))
+        self.assertIn("approve_submission_item", statements[0])
+        self.assertIn("approve_edit_submission_item", statements[1])
+        self.assertEqual(
+            [module.hashlib.sha256(statement.encode("utf-8")).hexdigest() for statement in statements],
+            [item[-1] for item in module.TRACKED_APPROVAL_FUNCTIONS],
+        )
 
     def test_dollar_quoted_body_rejects_malformed_or_mismatched_delimiters(self):
         for definition in ("AS $$ body $tag$", "AS $tag$ body $$", "AS $$ body $$ AS $$"):
@@ -345,9 +354,18 @@ class G034HostedPreflightTests(unittest.TestCase):
                 self.assertIn("catalog-prerequisite", report["blockers"])
 
     def test_shared_approval_catalog_contract_api_signature(self):
+        signature = inspect.signature(module.approval_catalog_contract)
         self.assertEqual(
-            {"cursor", "contract"},
-            set(inspect.signature(module.approval_catalog_contract).parameters),
+            {"cursor", "contract", "expected_proconfig"},
+            set(signature.parameters),
+        )
+        self.assertEqual(
+            module.APPROVAL_CATALOG_ATTRIBUTES[3],
+            signature.parameters["expected_proconfig"].default,
+        )
+        self.assertEqual(
+            inspect.Parameter.KEYWORD_ONLY,
+            signature.parameters["expected_proconfig"].kind,
         )
 
     def test_validate_only_retains_unconditional_clone_backup_blocker(self):
