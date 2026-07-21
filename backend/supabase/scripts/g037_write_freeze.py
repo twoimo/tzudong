@@ -130,6 +130,78 @@ PUBLIC_ORDINARY_ACL_ALLOWLIST=frozenset(
  for grantee,privileges in grantees.items()
  for privilege in privileges
 )
+# Frozen from the source-pinned G014 terminal vectors.  This declaration is
+# intentionally exact: adding a grantee, relation, privilege, or grant option
+# requires a reviewed source-contract change.
+_G014_WORKFLOW_FULL_PUBLIC_RELATIONS=(
+ "account_deletion_data_classes","account_deletion_policies",
+ "account_deletion_request_items","account_deletion_requests",
+ "admin_audit_events","marketing_campaign_batches",
+ "user_account_status","user_roles",
+)
+_G014_WORKFLOW_DELETE_READ_PUBLIC_RELATIONS=(
+ "admin_user_preferences","documents","marketing_campaign_recipients",
+ "notifications","ocr_logs","restaurant_requests",
+ "restaurant_submission_items","restaurant_submissions","review_likes",
+ "reviews","user_bookmarks","user_stats",
+)
+_G014_WORKFLOW_READ_UPDATE_PUBLIC_RELATIONS=("marketing_campaign_operations","profiles")
+_G014_SERVICE_FULL_PUBLIC_RELATIONS=(
+ "admin_restaurant_map_overlay_audit_events",
+ "admin_restaurant_map_overlay_proposal_review_events",
+ "admin_restaurant_map_overlay_proposals","admin_trend_job_requests",
+ "admin_trend_signal_observations","admin_trend_signal_runs",
+ "restaurant_admin_destructive_audit_events",
+)
+_G014_INCIDENT_PUBLIC_RELATIONS=(
+ "privacy_incident_actions","privacy_incident_notices",
+ "privacy_incident_transition_previews","privacy_incidents",
+)
+G014_TERMINAL_ORDINARY_ACL_ALLOWLIST=frozenset((
+ *(
+  ("public",name,"postgres","privacy_workflow_owner",privilege,False)
+  for name in _G014_WORKFLOW_FULL_PUBLIC_RELATIONS for privilege in _TABLE_PRIVILEGES
+ ),
+ *(
+  ("public",name,"postgres","privacy_workflow_owner",privilege,False)
+  for name in _G014_WORKFLOW_DELETE_READ_PUBLIC_RELATIONS
+  for privilege in ("DELETE","SELECT")
+ ),
+ *(
+  ("public",name,"postgres","privacy_workflow_owner",privilege,False)
+  for name in _G014_WORKFLOW_READ_UPDATE_PUBLIC_RELATIONS
+  for privilege in ("SELECT","UPDATE")
+ ),
+ ("public","restaurants","postgres","privacy_workflow_owner","SELECT",False),
+ *(
+  ("public",name,"postgres","service_role",privilege,False)
+  for name in _G014_SERVICE_FULL_PUBLIC_RELATIONS for privilege in _TABLE_PRIVILEGES
+ ),
+ *(
+  ("public",name,"supabase_admin",grantee,privilege,False)
+  for name in _G014_INCIDENT_PUBLIC_RELATIONS
+  for grantee,privileges in (
+   ("postgres",_TABLE_PRIVILEGES),
+   ("privacy_workflow_owner",_TABLE_PRIVILEGES),
+   ("service_role",("SELECT",)),
+  )
+  for privilege in privileges
+ ),
+ *(
+  ("public",name,"postgres","service_role","SELECT",False)
+  for name in ("marketing_campaign_batches","marketing_campaign_operations","marketing_campaign_recipients")
+ ),
+ ("auth","identities","supabase_auth_admin","privacy_workflow_owner","SELECT",False),
+ *(
+  ("auth",name,"supabase_auth_admin","privacy_workflow_owner",privilege,False)
+  for name in ("refresh_tokens","sessions") for privilege in ("DELETE","SELECT")
+ ),
+ *(
+  ("privacy_retention","retention_adapter_approvals","privacy_workflow_owner",grantee,"INSERT",False)
+  for grantee in ("privacy_retention_legal_approver","privacy_retention_operator_approver")
+ ),
+ ("storage","objects","supabase_storage_admin","privacy_workflow_owner","SELECT",False),
+))
 PROVIDER_STORAGE_CLIENT_ACL_ALLOWLIST=frozenset(
  ("storage",name,"supabase_storage_admin",privilege)
  for name,privileges in (
@@ -187,6 +259,10 @@ def validate_table_acl_rows(rows, relations, *, terminal=False):
    continue
   if ((relation_record.schema,relation_record.name,owner,grantee,privilege) in PUBLIC_ORDINARY_ACL_ALLOWLIST
       and grantor==owner and not grantable):
+   continue
+  if (terminal and grantor==owner
+      and (relation_record.schema,relation_record.name,owner,grantee,privilege,grantable)
+      in G014_TERMINAL_ORDINARY_ACL_ALLOWLIST):
    continue
   if (provider_key in PROVIDER_AUTH_NON_GRANTABLE_ACL_ALLOWLIST and grantor==owner
       and grantee in {"postgres","dashboard_user"} and not grantable):
