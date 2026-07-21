@@ -269,6 +269,40 @@ class CloneRehearsalTests(unittest.TestCase):
         self.assertEqual(result["server_version_num"], 170006)
         self.assertEqual(connection.cursor_value.statements[0], version_query)
 
+    def test_verified_observation_window_preserves_signed_bounds(self):
+        projection = {"observation_receipt_sha256": rehearsal._sha(b"signed")}
+        with patch.object(rehearsal, "_verified_observation", return_value=projection), \
+                patch.object(rehearsal.controller, "_outside", return_value=Path("observation")), \
+                patch.object(rehearsal.controller, "_stable_bytes", return_value=b"signed"), \
+                patch.object(rehearsal.controller, "_signed_document", return_value={
+                    "issued_at": 100,
+                    "expires_at": 200,
+                }):
+            observed, issued_at, expires_at = rehearsal._verified_observation_window(
+                "observation",
+                source=types.SimpleNamespace(),
+                target_fingerprint="a" * 64,
+                repository_root=".",
+                now=150,
+            )
+        self.assertIs(observed, projection)
+        self.assertEqual((issued_at, expires_at), (100, 200))
+
+        with patch.object(rehearsal, "_verified_observation", return_value=projection), \
+                patch.object(rehearsal.controller, "_outside", return_value=Path("observation")), \
+                patch.object(rehearsal.controller, "_stable_bytes", return_value=b"replaced"), \
+                patch.object(rehearsal.controller, "_signed_document", return_value={
+                    "issued_at": 100,
+                    "expires_at": 200,
+                }):
+            with self.assertRaisesRegex(rehearsal.RehearsalError, "reference_input"):
+                rehearsal._verified_observation_window(
+                    "observation",
+                    source=types.SimpleNamespace(),
+                    target_fingerprint="a" * 64,
+                    repository_root=".",
+                    now=150,
+                )
     def test_observation_rechecks_exact_endpoint_binding(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw); service = self.service(root); connection = FakeConnection()
@@ -1863,7 +1897,7 @@ class PreparationRecoveryTests(unittest.TestCase):
                 patch.object(rehearsal.controller, "_load_observation", return_value=(hosted, "8" * 64)), \
                 patch.object(rehearsal, "_binding", return_value=binding), \
                 patch.object(rehearsal, "_signed_intent", return_value=(intent, "9" * 64)), \
-                patch.object(rehearsal, "_verified_observation", return_value=clone), \
+                patch.object(rehearsal, "_verified_observation_window", return_value=(clone, 100, 200)), \
                 patch.object(rehearsal, "_historical_anchor_valid") as historical, \
                 patch.object(rehearsal, "_preparation_readback", return_value=readback) as readback_call, \
                 patch.object(rehearsal, "_publish_or_verify_terminal", return_value="a" * 64) as publish:
