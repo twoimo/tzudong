@@ -327,7 +327,7 @@ class CloneRehearsalTests(unittest.TestCase):
             return rehearsal._sha(rehearsal._canonical(document))
 
         def derive_terminal(connection, **kwargs):
-            self.assertEqual(kwargs["deadline_monotonic"], 130)
+            self.assertEqual(kwargs["deadline_monotonic"], 100 + rehearsal._LOCAL_MUTATION_TIMEOUT_SECONDS)
             connection.cursor_value.full = True
             return terminal
 
