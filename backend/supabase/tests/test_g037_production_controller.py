@@ -388,8 +388,8 @@ class ControllerTests(unittest.TestCase):
   with self.assertRaises(SystemExit):
    parser.parse_args(["prepare","--origin",ORIGIN,"--freeze-id","freeze-0001","--authorization-signing-key","key"])
   out=io.StringIO()
-  with patch.object(controller,"prepare",return_value={"schema":controller.SCHEMA,"mode":"prepare","status":"prepared","assertion_request_sha256":"a"*64,"expires_at":1,"relation_root":"r"*64,"acl_root":"c"*64,"private_path":"/secret"}),contextlib.redirect_stdout(out):
-   self.assertEqual(controller.main(["prepare","--origin",ORIGIN,"--freeze-id","freeze-0001","--operator-assertion-request","request","--service-file","service","--pgpass-file","pgpass",*sum((["--evidence-"+channel.replace("_","-"),channel] for channel in controller.RESIDUAL_CHANNELS),[])]),2)
+  with patch.object(controller,"prepare",return_value={"schema":controller.SCHEMA,"mode":"prepare","status":"prepared","assertion_request_sha256":"a"*64,"expires_at":1,"relation_root":"r"*64,"acl_root":"c"*64,"private_path":"/secret"}),patch("g040_recovery_source.assert_isolated_bootstrap"),contextlib.redirect_stdout(out):
+   self.assertEqual(controller.main(["prepare","--origin",ORIGIN,"--freeze-id","freeze-0001","--operator-assertion-request","request","--service-file","service","--pgpass-file","pgpass",*sum((["--evidence-"+channel.replace("_","-"),channel] for channel in controller.RESIDUAL_CHANNELS),[])]),0)
   self.assertNotIn("/secret",out.getvalue())
  def test_finalize_requires_canonical_request_fixed_key_signature_and_fresh_output(self):
   with tempfile.TemporaryDirectory() as directory:
