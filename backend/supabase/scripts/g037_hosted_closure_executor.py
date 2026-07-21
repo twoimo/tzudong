@@ -70,13 +70,17 @@ def connection(env_name):
     except Exception as exc: raise ClosureError("database connection unavailable") from exc
 def q(cur,sql,params=()): cur.execute(sql,params); return cur.fetchall() if cur.description else []
 def ledger(cur): return tuple((str(a),str(b),tuple(c)) for a,b,c in q(cur,"SELECT version,name,statements FROM supabase_migrations.schema_migrations ORDER BY version,name"))
-def retirement_gate(cur):
+def retirement_gate(cur, *, terminal=False):
     # Source-bound gate: table is retired AND no executable/catalog definition references it.
     table=bool(q(cur,"SELECT pg_catalog.to_regclass('public.restaurants_backup') IS NULL")[0][0])
     scans=("SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname NOT IN ('pg_catalog','information_schema') AND CASE WHEN p.prokind IN ('f','p') THEN pg_catalog.pg_get_functiondef(p.oid) ~* '(^|[^[:alnum:]_])restaurants_backup([^[:alnum:]_]|$)' ELSE false END)","SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_views v WHERE v.schemaname NOT IN ('pg_catalog','information_schema') AND v.definition ~* '(^|[^[:alnum:]_])restaurants_backup([^[:alnum:]_]|$)')","SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_matviews v WHERE v.schemaname NOT IN ('pg_catalog','information_schema') AND v.definition ~* '(^|[^[:alnum:]_])restaurants_backup([^[:alnum:]_]|$)')","SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_trigger t WHERE NOT t.tgisinternal AND pg_catalog.pg_get_triggerdef(t.oid) ~* '(^|[^[:alnum:]_])restaurants_backup([^[:alnum:]_]|$)')","SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_rewrite r WHERE r.rulename <> '_RETURN' AND pg_catalog.pg_get_ruledef(r.oid) ~* '(^|[^[:alnum:]_])restaurants_backup([^[:alnum:]_]|$)')","SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_constraint c WHERE pg_catalog.pg_get_constraintdef(c.oid) ~* '(^|[^[:alnum:]_])restaurants_backup([^[:alnum:]_]|$)')")
     if not table or any(bool(q(cur,s)[0][0]) for s in scans): raise ClosureError("source-bound retirement gate failed")
     contract=approval_body_contract()
-    results=approval_catalog_contract(cur,contract)
+    results=approval_catalog_contract(
+        cur,
+        contract,
+        expected_proconfig=('search_path=""',) if terminal else ('search_path=public',),
+    )
     if set(results)!=set(contract) or not all(results.values()): raise ClosureError("source-bound retirement approval contract drift")
 def catalog(cur, manifest, *, terminal=False):
     cur.execute("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY")
@@ -84,7 +88,7 @@ def catalog(cur, manifest, *, terminal=False):
     expected_pairs=BASELINE_PAIRS+tuple((x.version,x.name) for x in manifest.migrations)
     pairs=tuple((version,name) for version,name,_ in rows)
     if pairs != (expected_pairs if terminal else BASELINE_PAIRS): raise ClosureError("ledger state does not match requested mode")
-    retirement_gate(cur)
+    retirement_gate(cur, terminal=terminal)
     locks=q(cur,"SELECT pg_catalog.count(*) FROM pg_catalog.pg_locks WHERE NOT granted")[0][0]
     if int(locks): raise ClosureError("waiting locks present")
     return rows,digest({"ledger":rows,"retirement":"passed"})
@@ -714,7 +718,7 @@ def _terminal_assert(cur, manifest, expected_vectors, *, deadline=None):
     actual={version:statements for version,_,statements in rows}
     if set(actual)!=set(version for version,_ in expected) or any(actual.get(version)!=statements for version,statements in expected_vectors.items()):
         raise ClosureError("terminal vector mismatch")
-    retirement_gate(cur)
+    retirement_gate(cur, terminal=True)
     _managed_role_catalog_assert(cur)
     _g014_public_rpc_acl_assert(cur)
     if deadline is not None:

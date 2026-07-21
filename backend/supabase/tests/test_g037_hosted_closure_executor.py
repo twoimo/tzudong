@@ -119,6 +119,17 @@ class G037ExecutorTests(unittest.TestCase):
    e.retirement_gate(Cursor())
    with self.assertRaisesRegex(e.ClosureError,"retirement gate failed"): e.retirement_gate(Cursor(table_absent=False))
    with self.assertRaisesRegex(e.ClosureError,"retirement gate failed"): e.retirement_gate(Cursor(referenced=True))
+ def test_retirement_gate_uses_phase_specific_source_bound_search_path(self):
+  cursor=type("Cursor",(),{
+   "description":object(),
+   "execute":lambda self,sql,params=(): setattr(self,"sql",sql),
+   "fetchall":lambda self: [(True,)] if "to_regclass" in self.sql else [(False,)],
+  })()
+  with patch.object(e,"approval_body_contract",return_value={"signature":{}}),patch.object(e,"approval_catalog_contract",return_value={"signature":True}) as approval:
+   e.retirement_gate(cursor)
+   self.assertEqual(approval.call_args.kwargs["expected_proconfig"],("search_path=public",))
+   e.retirement_gate(cursor,terminal=True)
+   self.assertEqual(approval.call_args.kwargs["expected_proconfig"],('search_path=""',))
  def test_connection_is_bounded_and_credential_name_only(self):
   source=Path(e.__file__).read_text(encoding="utf-8")
   self.assertIn("connect_timeout=10",source)
