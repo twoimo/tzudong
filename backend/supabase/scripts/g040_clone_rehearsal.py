@@ -1066,6 +1066,38 @@ def _verified_observation(path: str | Path, *, source: SourceBinding, target_fin
         _fail("reference_input")
     proof = {key: value[key] for key in ("clone_identity", "clone_nonce", "live_identity_sha256", "container_id_sha256", "image_id_sha256", "image_digest_sha256", "endpoint_sha256", "g035_restore_receipt_sha256", "g035_capture_receipt_sha256", "restored_archive_sha256", "capture_receipt_bytes_sha256", "restore_receipt_bytes_sha256", "lineage_attestation_sha256", "lineage_signature_sha256")}
     return MappingProxyType({**proof, "binding_receipt_sha256": value["binding_receipt_sha256"], "observation_receipt_sha256": _sha(raw), "absent_catalog_sha256": value["absent_catalog_sha256"], "full_catalog_sha256": value["initial_full_catalog_sha256"], "full_data_sha256": value["initial_full_data_sha256"], "ledger_prefix_sha256": value["initial_full_ledger_sha256"], "derivation_mode": value["derivation_mode"], **{key: value[key] for key in ("source_plan_sha256", "terminal_rows", "terminal_ledger_root", "terminal_catalog_root", "terminal_acl_root", "terminal_data_root", "terminal_spec_root", "terminal_tuple_sha256", "reverse_vector_sha256")}})
+def _verified_observation_window(
+    path: str | Path,
+    *,
+    source: SourceBinding,
+    target_fingerprint: str,
+    repository_root: str | Path,
+    now: int,
+) -> tuple[Mapping[str, Any], int, int]:
+    projection = _verified_observation(
+        path,
+        source=source,
+        target_fingerprint=target_fingerprint,
+        repository_root=repository_root,
+        now=now,
+    )
+    try:
+        root = Path(repository_root).resolve()
+        raw = controller._stable_bytes(controller._outside(path, root), root)
+        value = controller._signed_document(raw, "local-clone-observation")
+        if (
+            _sha(raw) != projection["observation_receipt_sha256"]
+            or type(value["issued_at"]) is not int
+            or type(value["expires_at"]) is not int
+        ):
+            _fail("reference_input")
+        return projection, value["issued_at"], value["expires_at"]
+    except RehearsalError:
+        raise
+    except Exception:
+        _fail("reference_input")
+
+
 
 def build_reference_request_file(*, source: SourceBinding, target_fingerprint: str,
                                  nonce: str, first_observation: str | Path,
@@ -1162,13 +1194,20 @@ def _signed_intent(path: str | Path, root: Path, kind: str) -> tuple[Mapping[str
         _fail("intent_receipt")
 
 
-def _historical_anchor_valid(intent: Mapping[str, Any], reference: Any,
-                             hosted: Any, clone: Mapping[str, Any]) -> None:
+def _historical_anchor_valid(
+    intent: Mapping[str, Any],
+    reference: Any,
+    hosted: Any,
+    clone: Mapping[str, Any],
+    *,
+    clone_issued_at: int,
+    clone_expires_at: int,
+) -> None:
     _verify_intent_interval(intent)
     issued = intent["issued_at"]
     if (not reference.issued_at_unix <= issued < reference.expires_at_unix
             or not hosted.issued_at <= issued < hosted.expires_at
-            or not clone["issued_at"] <= issued < clone["expires_at"]):
+            or not clone_issued_at <= issued < clone_expires_at):
         _fail("intent_receipt")
 
 
@@ -1451,9 +1490,10 @@ def recover_local_state(args: argparse.Namespace) -> Mapping[str, Any]:
     hosted, hosted_receipt = hosted_window
     binding = _binding(args.binding, root)
     intent, intent_sha = _signed_intent(args.intent, root, "local-state-preparation-intent")
-    clone = _verified_observation(args.clone_observation, source=source,
-                                  target_fingerprint=reference.target_fingerprint,
-                                  repository_root=root, now=intent.get("issued_at", -1))
+    clone, clone_issued_at, clone_expires_at = _verified_observation_window(
+        args.clone_observation, source=source,
+        target_fingerprint=reference.target_fingerprint,
+        repository_root=root, now=intent.get("issued_at", -1))
     required = {"schema", "issued_at", "expires_at", "final_recovery_commit", "runtime_source_root",
                 "target_fingerprint", "reference_receipt_sha256", "hosted_observation_receipt_sha256",
                 "clone_binding_receipt_sha256", "clone_observation_receipt_sha256", "clone_identity",
@@ -1483,7 +1523,14 @@ def recover_local_state(args: argparse.Namespace) -> Mapping[str, Any]:
             or intent["reverse_vector_sha256"] != REVERSE_VECTOR_SHA256
             or intent["intent_body_sha256"] != _intent_body_sha256(intent)):
         _fail("intent_receipt")
-    _historical_anchor_valid(intent, reference, hosted_window, clone)
+    _historical_anchor_valid(
+        intent,
+        reference,
+        hosted_window,
+        clone,
+        clone_issued_at=clone_issued_at,
+        clone_expires_at=clone_expires_at,
+    )
     readback = _preparation_readback(args, root, binding, reference, lineage_now=intent["issued_at"])
     if readback["classifier_state"] == "START":
         _fail("preparation_not_committed")
@@ -1558,9 +1605,10 @@ def recover_branch(args: argparse.Namespace) -> Mapping[str, Any]:
     hosted, hosted_receipt = hosted_window
     binding = _binding(args.binding, root)
     intent, intent_sha = _signed_intent(args.intent, root, "local-branch-replay-intent")
-    clone = _verified_observation(args.clone_observation, source=source,
-                                  target_fingerprint=reference.target_fingerprint,
-                                  repository_root=root, now=intent.get("issued_at", -1))
+    clone, clone_issued_at, clone_expires_at = _verified_observation_window(
+        args.clone_observation, source=source,
+        target_fingerprint=reference.target_fingerprint,
+        repository_root=root, now=intent.get("issued_at", -1))
     required = {
         "schema", "issued_at", "expires_at", "final_recovery_commit", "runtime_source_root",
         "target_fingerprint", "reference_receipt_sha256", "hosted_observation_receipt_sha256",
@@ -1622,7 +1670,14 @@ def recover_branch(args: argparse.Namespace) -> Mapping[str, Any]:
             or any(intent[key] != value for key, value in _terminal_tuple(reference).items())
             or intent["intent_body_sha256"] != _intent_body_sha256(intent)):
         _fail("intent_receipt")
-    _historical_anchor_valid(intent, reference, hosted_window, clone)
+    _historical_anchor_valid(
+        intent,
+        reference,
+        hosted_window,
+        clone,
+        clone_issued_at=clone_issued_at,
+        clone_expires_at=clone_expires_at,
+    )
     if intent.get("unapplied_provenance") == "prepared-from-full-escaped":
         preparation = _verified_preparation(
             args.preparation, source=source, reference=reference, hosted_receipt=hosted_receipt,
