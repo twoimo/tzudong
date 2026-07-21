@@ -7,7 +7,7 @@ import {
   type ReceiptOcrResult,
 } from '@/lib/ocr/types';
 
-export const GEMINI_OCR_FALLBACK_MODEL = 'gemini-3.5-flash';
+export const GEMINI_OCR_FALLBACK_MODEL = 'gemini-3.6-flash';
 export const GEMINI_OCR_DEFAULT_THINKING_LEVEL = 'MEDIUM';
 export type GeminiOcrThinkingLevel = 'LOW' | 'MEDIUM' | 'HIGH';
 

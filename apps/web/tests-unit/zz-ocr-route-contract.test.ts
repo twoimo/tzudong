@@ -26,10 +26,10 @@ describe('OCR extract route privacy and normalization contract', () => {
   test('stores only bounded count/status metadata and excludes raw receipt/provider/credential payloads', () => {
     const envelope = buildReceiptOcrEnvelope({
       provider: 'gemini',
-      model: 'gemini-3.5-flash',
+      model: 'gemini-3.6-flash',
       attempts: [
         { model: 'bad-gemini', ok: false, elapsedMs: 10, error: 'provider_request_failed' },
-        { model: 'gemini-3.5-flash', ok: true, elapsedMs: 50 },
+        { model: 'gemini-3.6-flash', ok: true, elapsedMs: 50 },
       ],
       data: {
         store_name: '천안초밥 시시린',
@@ -55,7 +55,7 @@ describe('OCR extract route privacy and normalization contract', () => {
       compressedSize: 900,
       savings: '10%',
       provider: 'gemini',
-      model: 'gemini-3.5-flash',
+      model: 'gemini-3.6-flash',
       promptVersion: 'receipt-extraction-v2',
       preprocessVersion: 'receipt-image-1600w-q90-original-first-v3',
       routingMode: 'automatic',

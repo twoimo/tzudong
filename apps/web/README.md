@@ -40,9 +40,9 @@ NEXT_NAVER_CLIENT_SECRET=your_naver_client_secret
 
 # Receipt OCR (Gemini-only)
 GEMINI_API_KEY=your_gemini_api_key
-# Optional: comma-separated model failover list. If unset, GEMINI_OCR_DEFAULT_MODEL or gemini-3.5-flash is used.
-GEMINI_OCR_MODEL=gemini-3.5-flash
-GEMINI_OCR_DEFAULT_MODEL=gemini-3.5-flash
+# Optional: comma-separated model failover list. If unset, GEMINI_OCR_DEFAULT_MODEL or gemini-3.6-flash is used.
+GEMINI_OCR_MODEL=gemini-3.6-flash
+GEMINI_OCR_DEFAULT_MODEL=gemini-3.6-flash
 # Optional: LOW, MEDIUM, or HIGH. Defaults to MEDIUM; overrides GEMINI_THINKING_LEVEL for receipt OCR only.
 GEMINI_OCR_THINKING_LEVEL=MEDIUM
 

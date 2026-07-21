@@ -5,7 +5,7 @@ import { dirname } from 'node:path';
 import { safeErrorName } from '../utils/privacy-log.mjs';
 
 function parseArgs(argv) {
-  const args = { output: '', model: process.env.CURRENT_MODEL || process.env.PRIMARY_MODEL || 'gemini-3.5-flash', requireApiAvailable: false, checkedAt: '' };
+  const args = { output: '', model: process.env.CURRENT_MODEL || process.env.PRIMARY_MODEL || 'gemini-3.6-flash', requireApiAvailable: false, checkedAt: '' };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === '--output') args.output = argv[++i] || '';

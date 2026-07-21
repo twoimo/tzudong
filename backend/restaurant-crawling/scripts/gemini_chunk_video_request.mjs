@@ -218,7 +218,7 @@ async function main() {
         process.exit(1);
     }
 
-    const modelName = process.env.CURRENT_MODEL || 'gemini-3.5-flash';
+    const modelName = process.env.CURRENT_MODEL || 'gemini-3.6-flash';
     console.log('GEMINI_CHUNK_REQUEST_STARTED');
 
     const promptText = fs.readFileSync(promptFile, 'utf8');
