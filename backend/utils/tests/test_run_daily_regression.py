@@ -539,7 +539,7 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertNotIn("AGY_SETTINGS_JSON: ${{ secrets.AGY_SETTINGS_JSON }}", daily_workflow)
         self.assertNotIn("AGY_CREDENTIAL_B64: ${{ secrets.AGY_CREDENTIAL_B64 }}", daily_workflow)
 
-    def test_gemini_defaults_prefer_35_flash_with_3_flash_preview_fallback(self) -> None:
+    def test_gemini_defaults_prefer_36_flash_with_3_flash_preview_fallback(self) -> None:
         config = (REPO_ROOT / "backend" / "config" / "channels.yaml").read_text(encoding="utf-8")
         crawling_script = (
             REPO_ROOT / "backend" / "restaurant-crawling" / "scripts" / "08-chunk-multimodal-crawling.sh"
@@ -557,9 +557,9 @@ class GDriveUploadContractTests(unittest.TestCase):
             encoding="utf-8"
         )
 
-        self.assertIn('- "gemini-3.5-flash"', config)
+        self.assertIn('- "gemini-3.6-flash"', config)
         self.assertIn('- "gemini-3-flash-preview"', config)
-        self.assertIn('PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3.5-flash}"', crawling_script)
+        self.assertIn('PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3.6-flash}"', crawling_script)
         self.assertIn('FALLBACK_MODEL="${FALLBACK_MODEL:-gemini-3-flash-preview}"', crawling_script)
         self.assertIn('GEMINI_THINKING_LEVEL="${GEMINI_THINKING_LEVEL:-MEDIUM}"', crawling_script)
         self.assertIn('GEMINI_CHUNK_THINKING_LEVEL="${GEMINI_CHUNK_THINKING_LEVEL:-$GEMINI_THINKING_LEVEL}"', crawling_script)
@@ -568,10 +568,10 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertIn("'HIGH'", final_merge)
         self.assertIn("process.env.GEMINI_MAP_THINKING_LEVEL", map_crawling)
         self.assertIn("'HIGH'", map_crawling)
-        self.assertIn('PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3.5-flash}"', laaj_script)
+        self.assertIn('PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3.6-flash}"', laaj_script)
         self.assertIn('FALLBACK_MODEL="${LAAJ_FALLBACK_MODEL:-gemini-3-flash-preview}"', laaj_script)
         self.assertIn('LAAJ_THINKING_LEVEL="${LAAJ_THINKING_LEVEL:-HIGH}"', laaj_script)
-        self.assertIn("process.env.CURRENT_MODEL || process.env.PRIMARY_MODEL || 'gemini-3.5-flash'", runtime_preflight)
+        self.assertIn("process.env.CURRENT_MODEL || process.env.PRIMARY_MODEL || 'gemini-3.6-flash'", runtime_preflight)
         self.assertIn("process.env.GEMINI_PREFLIGHT_THINKING_LEVEL", runtime_preflight)
         self.assertIn("'MEDIUM'", runtime_preflight)
 

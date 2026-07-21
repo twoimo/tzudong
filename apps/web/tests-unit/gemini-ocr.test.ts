@@ -10,11 +10,11 @@ import {
 } from '@/lib/ocr/gemini';
 
 describe('gemini receipt ocr helper', () => {
-  test('defaults to gemini-3.5-flash as the authoritative OCR baseline', () => {
-    expect(GEMINI_OCR_FALLBACK_MODEL).toBe('gemini-3.5-flash');
-    expect(getGeminiOcrDefaultModel({} as NodeJS.ProcessEnv)).toBe('gemini-3.5-flash');
+  test('defaults to gemini-3.6-flash as the authoritative OCR baseline', () => {
+    expect(GEMINI_OCR_FALLBACK_MODEL).toBe('gemini-3.6-flash');
+    expect(getGeminiOcrDefaultModel({} as NodeJS.ProcessEnv)).toBe('gemini-3.6-flash');
     expect(getGeminiOcrDefaultModel({ GEMINI_OCR_DEFAULT_MODEL: 'gemini-env-default' } as NodeJS.ProcessEnv)).toBe('gemini-env-default');
-    expect(getGeminiOcrModels({} as NodeJS.ProcessEnv)).toEqual(['gemini-3.5-flash']);
+    expect(getGeminiOcrModels({} as NodeJS.ProcessEnv)).toEqual(['gemini-3.6-flash']);
     expect(getGeminiOcrModels({ GEMINI_OCR_DEFAULT_MODEL: 'gemini-env-default' } as NodeJS.ProcessEnv)).toEqual(['gemini-env-default']);
     expect(getGeminiOcrModels({ GEMINI_OCR_MODEL: ' a, b ,, c ' } as NodeJS.ProcessEnv)).toEqual(['a', 'b', 'c']);
   });
@@ -49,15 +49,15 @@ describe('gemini receipt ocr helper', () => {
       imageBase64: 'abc123',
       mimeType: 'image/jpeg',
       prompt: 'read',
-      env: { GEMINI_OCR_MODEL: 'gemini-3.5-flash' } as NodeJS.ProcessEnv,
+      env: { GEMINI_OCR_MODEL: 'gemini-3.6-flash' } as NodeJS.ProcessEnv,
       generateContentImpl: async ({ model, thinkingLevel }) => {
         seenModels.push(`${model}:${thinkingLevel}`);
         return '{"store_name":"데일리픽스 강남본점","date":"2026-04-25","time":"12:30","total_amount":"11,500원","items":[{"name":"아메리카노","price":"4,500"}],"confidence":0.94}';
       },
     });
 
-    expect(seenModels).toEqual(['gemini-3.5-flash:MEDIUM']);
-    expect(result.model).toBe('gemini-3.5-flash');
+    expect(seenModels).toEqual(['gemini-3.6-flash:MEDIUM']);
+    expect(result.model).toBe('gemini-3.6-flash');
     expect(result.data).toMatchObject({
       store_name: '데일리픽스 강남본점',
       date: '2026-04-25',
