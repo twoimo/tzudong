@@ -330,15 +330,20 @@ class ExecutorTests(unittest.TestCase):
                 executor._remaining_milliseconds(2147483649.0),
                 "2147483647",
             )
-    def test_compiled_plan_prepends_source_compatibility_hooks(self):
+    def test_compiled_plan_prepends_compatibility_to_canonical_transformed_vectors(self):
         migration_manifest = manifest()
-        with patch.object(executor, "vectors", side_effect=lambda unused_root, item: ((item.version,), (f"migration-{item.version}",))), \
+        canonical = tuple(
+            (item, (item.version,), (f"transformed-full-{item.version}",), (f"transformed-{item.version}",))
+            for item in migration_manifest.migrations
+        )
+        with patch.object(executor, "_precompute_execution_plan", return_value=(canonical, object())) as canonical_plan, \
                 patch.object(executor, "_compatibility_sql", side_effect=lambda version: (f"hook-{version}",)):
             compiled = executor._compiled(ROOT, migration_manifest)
+        canonical_plan.assert_called_once_with(ROOT, migration_manifest)
         self.assertEqual(len(compiled), len(migration_manifest.migrations))
         for item, full, executable in compiled:
             self.assertEqual(full, (item.version,))
-            self.assertEqual(executable, (f"hook-{item.version}", f"migration-{item.version}"))
+            self.assertEqual(executable, (f"hook-{item.version}", f"transformed-{item.version}"))
     def test_empty_params_do_not_activate_psycopg_percent_placeholder_parsing(self):
         class StrictCursor:
             def __init__(self):
@@ -382,6 +387,7 @@ class ExecutorTests(unittest.TestCase):
         for _, _, executable in vectors[17:]:
             expected_sql.extend(executable)
             expected_sql.append(LEDGER_INSERT_SQL)
+        expected_sql.append(executor.ROLE_PROTOCOL_EPILOGUE.decode("ascii"))
         self.assertEqual([sql for sql, _ in calls], expected_sql)
 
         inserts = [params for sql, params in calls if sql == LEDGER_INSERT_SQL]
@@ -392,14 +398,14 @@ class ExecutorTests(unittest.TestCase):
         result, cursor, vectors, _ = self.invoke()
         self.assert_complete_execution_order("UNAPPLIED", cursor, vectors)
         self.assertEqual(result.terminal_rows, 40)
-        self.assertEqual(result.applied_statement_count, sum(len(executable) for _, _, executable in vectors[16:]))
+        self.assertEqual(result.applied_statement_count, sum(len(executable) for _, _, executable in vectors[16:]) + 1)
         with self.assertRaises(FrozenInstanceError):
             result.branch = "FULL_ESCAPED"
 
     def test_full_escaped_ledgers_matching_full_vectors_without_00400_sql(self):
         result, cursor, vectors, _ = self.invoke("FULL_ESCAPED")
         self.assert_complete_execution_order("FULL_ESCAPED", cursor, vectors)
-        self.assertEqual(result.applied_statement_count, sum(len(executable) for _, _, executable in vectors[17:]))
+        self.assertEqual(result.applied_statement_count, sum(len(executable) for _, _, executable in vectors[17:]) + 1)
 
     def test_exact_locks_precede_reclassification_and_executor_never_controls_transaction(self):
         cursor = Cursor()

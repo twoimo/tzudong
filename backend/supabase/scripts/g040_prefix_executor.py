@@ -9,8 +9,8 @@ from dataclasses import dataclass
 from typing import Any, Mapping
 from pathlib import Path
 
-from g037_hosted_closure_contract import BASELINE_PAIRS, Manifest, canonical_bytes, terminal_spec, validate_sources
-from g037_hosted_closure_executor import ClosureError, terminal_readback_assert, vectors
+from g037_hosted_closure_contract import BASELINE_PAIRS, ROLE_PROTOCOL_EPILOGUE, Manifest, canonical_bytes, terminal_spec, validate_sources
+from g037_hosted_closure_executor import ClosureError, _precompute_execution_plan, terminal_readback_assert
 from g035_hosted_recovery import _compatibility_sql
 from g040_prefix_recovery import DATA_PROBE, Denial, PrefixObservation, SOURCE_COMMIT, TABLES, TERMINAL_DATA_PROBE, classify_mutation_cursor, probe_full_data_root, validate_full_data_root, validate_terminal_data_root
 from g040_recovery_authorization import AttemptStarted, VerifiedAuthorization
@@ -284,16 +284,16 @@ def _compiled(root: Path, manifest: Manifest) -> tuple[tuple[Any, tuple[str, ...
     seen_versions: set[str] = set()
     seen_vectors: set[tuple[str, ...]] = set()
     try:
-        for item in manifest.migrations:
-            full, executable = vectors(root, item)
+        canonical_plan, _ = _precompute_execution_plan(root, manifest)
+        for item, original_full, _transformed_full, transformed_inner in canonical_plan:
             compatibility = _compatibility_sql(item.version)
-            if not full or not executable:
+            if not original_full or not transformed_inner:
                 _deny("vector_empty")
-            if item.version in seen_versions or full in seen_vectors:
+            if item.version in seen_versions or original_full in seen_vectors:
                 _deny("vector_duplicate")
             seen_versions.add(item.version)
-            seen_vectors.add(full)
-            result.append((item, full, (*compatibility, *executable)))
+            seen_vectors.add(original_full)
+            result.append((item, original_full, (*compatibility, *transformed_inner)))
     except (ClosureError, OSError, ValueError):
         _deny("vector_compile")
     return tuple(result)
@@ -505,6 +505,14 @@ def _terminal_mutation_core(cursor: Any, *, compiled: tuple[tuple[Any, tuple[str
                      version=item.version, ordinal=ordinal)
             applied += 1
         _insert(cursor, item, full, deadline_monotonic=deadline_monotonic)
+    _execute(
+        cursor,
+        ROLE_PROTOCOL_EPILOGUE.decode("ascii"),
+        deadline_monotonic=deadline_monotonic,
+        version="20260718003700",
+        ordinal=1,
+    )
+    applied += 1
     data_root = terminal_data_root_reader()
     if data_root != expected_terminal_data_root:
         _deny("terminal_data_mismatch")
