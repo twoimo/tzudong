@@ -57,6 +57,7 @@ _SLOT_LABEL = "com.tzudong.g040.slot"
 _G040_LABELS = frozenset({_LABEL, _RUN_LABEL, _SLOT_LABEL})
 _ARCHIVE_CHUNK = 64 * 1024
 _MAX_ARTIFACT = 1_048_576
+_LOCAL_MUTATION_TIMEOUT_SECONDS = 300
 _REFERENCE_CUSTODY_QUERY = (
     "SELECT session_user AS session_user, current_user AS current_user, "
     "current_database() AS database_name"
@@ -785,7 +786,7 @@ def observe_reference(*, repository_root: str | Path, binding_path: str | Path, 
         terminal = _derive_clone_terminal_expectation(
             conn, source_plan=source_plan, verified_clone_capability=capability,
             branch="UNAPPLIED", expected_full_data_root=initial_data_root,
-            deadline_monotonic=time.monotonic() + 30,
+            deadline_monotonic=time.monotonic() + _LOCAL_MUTATION_TIMEOUT_SECONDS,
         )
         recreated_full = _query_one(cur, CATALOG_PROBE)
         recreated_data = _query_one(cur, DATA_PROBE)
@@ -1771,7 +1772,7 @@ def replay_branch(args: argparse.Namespace) -> Mapping[str, Any]:
                                        root, "local-branch-replay-intent", intent)
         evidence = _apply_rehearsal_locked_cursor(
             cur, plan=plan, verified_clone_capability=capability,
-            deadline_monotonic=time.monotonic() + 30)
+            deadline_monotonic=time.monotonic() + _LOCAL_MUTATION_TIMEOUT_SECONDS)
         if (evidence.terminal_rows != intent["terminal_rows"]
                 or evidence.terminal_ledger_root != intent["terminal_ledger_root"]
                 or evidence.terminal_catalog_root != intent["terminal_catalog_root"]
