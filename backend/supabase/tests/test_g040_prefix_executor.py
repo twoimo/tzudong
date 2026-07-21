@@ -40,7 +40,7 @@ SUFFIX = (
     ("20260713002300", "g014_account_deletion_state_machine"),
     ("20260713002400", "g014_retention_adapters_receipts"),
 )
-READ_WRITE_SQL = "SELECT current_setting('transaction_read_only', true)"
+READ_WRITE_SQL = "SELECT current_setting('transaction_read_only', true) AS transaction_read_only"
 STATEMENT_TIMEOUT_SQL = "SELECT pg_catalog.set_config('statement_timeout', %s, true)"
 LOCK_ORDER = (
     "SELECT pg_catalog.pg_advisory_xact_lock(6040, 400)",
@@ -109,7 +109,7 @@ class CloneDerivationCursor(DerivationCursor):
         super().__init__()
         self.fetchone_values = [
             identity,
-            ("off",),
+            {"transaction_read_only": "off"},
             {"data_shape_sha256": H},
             {"data_shape_sha256": H},
         ]
@@ -425,6 +425,20 @@ class ExecutorTests(unittest.TestCase):
         self.assertEqual(error.exception.code, "not_read_write")
         self.assertEqual([sql for sql, _ in cursor.calls if sql != STATEMENT_TIMEOUT_SQL], [READ_WRITE_SQL])
         self.assertFalse(any(sql == LEDGER_INSERT_SQL for sql, _ in cursor.calls))
+    def test_dict_row_transaction_state_requires_aliased_key(self):
+        result, _, _, _ = self.invoke(cursor=Cursor(transaction_state={"transaction_read_only": "off"}))
+        self.assertEqual(result.terminal_rows, 40)
+
+        plan, attempt, _, _, _ = self.build_plan()
+        cursor = Cursor(transaction_state={"current_setting": "off"})
+        with self.assertRaises(Denial) as error:
+            executor.apply_locked_cursor(cursor, plan=plan, attempt=attempt,
+                                         deadline_monotonic=time.monotonic() + 60)
+        self.assertEqual(error.exception.code, "not_read_write")
+        self.assertEqual(
+            [sql for sql, _ in cursor.calls if sql != STATEMENT_TIMEOUT_SQL],
+            [READ_WRITE_SQL],
+        )
 
     def test_terminal_shape_rejects_nonexact_readback_fields_after_all_ledgers(self):
         plan, attempt, observation, authorization, vectors = self.build_plan()

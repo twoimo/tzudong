@@ -510,7 +510,7 @@ def _derive_terminal_locked_cursor(cursor: Any, *, plan: SourceValidationPlan, b
             or any(character not in "0123456789abcdef" for character in expected_full_data_root)):
         _deny("data_root")
     timed_cursor = _DeadlineCursor(cursor, deadline_monotonic)
-    _execute(cursor, "SELECT current_setting('transaction_read_only', true)",
+    _execute(cursor, "SELECT current_setting('transaction_read_only', true) AS transaction_read_only",
              deadline_monotonic=deadline_monotonic)
     try:
         state = cursor.fetchone()
@@ -576,7 +576,7 @@ def _apply_mutation_locked_cursor(cursor: Any, *, plan: RecoveryExecutionPlan | 
                                   deadline_monotonic: float) -> ExecutorEvidence:
     """Shared locked mutation path; admission belongs to its production or clone caller."""
     timed_cursor = _DeadlineCursor(cursor, deadline_monotonic)
-    _execute(cursor, "SELECT current_setting('transaction_read_only', true)",
+    _execute(cursor, "SELECT current_setting('transaction_read_only', true) AS transaction_read_only",
              deadline_monotonic=deadline_monotonic)
     try:
         state = cursor.fetchone()
