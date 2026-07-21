@@ -345,9 +345,13 @@ class G040ProductionControllerTests(unittest.TestCase):
                 patch.object(controller, "_stable_bytes", return_value=b"signed"), \
                 patch.object(controller, "_signed_document", side_effect=[observation_body, custody_body]), \
                 patch.object(controller.time, "time", return_value=300):
-            loaded, _ = controller._load_observation(args, source, reference, require_fresh=False)
+            window = controller._load_observation(args, source, reference, require_fresh=False)
+            loaded, _ = window
             custody = controller._custody(args, source, reference, require_fresh=False)
         self.assertEqual(loaded, observed)
+        self.assertEqual(window.issued_at, 100)
+        self.assertEqual(window.expires_at, 200)
+        self.assertEqual(window.status, observed.status)
         self.assertIsInstance(custody, controller.RecoveryCustody)
     def test_connection_restores_prior_service_file_after_success(self):
         args = Namespace(repository_root="/checkout", database_url=None, dsn=None, service_file="/supplied-service", service_name="locked")

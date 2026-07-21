@@ -79,6 +79,20 @@ def _reference(args: Any, source: SourceBinding, *, historical: bool = False) ->
 
 
 @dataclass(frozen=True)
+class LoadedObservation:
+    observation: prefix.PrefixObservation
+    receipt_sha256: str
+    issued_at: int
+    expires_at: int
+
+    def __iter__(self):
+        return iter((self.observation, self.receipt_sha256))
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self.observation, name)
+
+
+@dataclass(frozen=True)
 class RecoveryCustody:
     target_fingerprint: str
     freeze_root: str
@@ -486,7 +500,7 @@ def prepare(args: Any) -> Mapping[str, Any]:
     path = _outside(args.authority_template, _root(args), fresh=True)
     _publish_restrictive(path, authority.canonical_json_bytes(bindings))
     return MappingProxyType({"schema": SCHEMA, "mode": "prepare", "status": "prepared", "bindings_sha256": _hash(bindings)})
-def _load_observation(args: Any, source: SourceBinding, reference: VerifiedReference, *, require_fresh: bool = True) -> tuple[prefix.PrefixObservation, str]:
+def _load_observation(args: Any, source: SourceBinding, reference: VerifiedReference, *, require_fresh: bool = True) -> LoadedObservation:
     raw = _stable_bytes(_outside(args.observation, _root(args)), _root(args))
     receipt = hashlib.sha256(raw).hexdigest()
     fields = frozenset(prefix.PrefixObservation.__annotations__)
@@ -510,7 +524,7 @@ def _load_observation(args: Any, source: SourceBinding, reference: VerifiedRefer
         _deny("observation_invalid")
     if observed.final_commit != source.final_commit or observed.runtime_source_root != source.runtime_source_root or observed.reference_receipt_sha256 != reference.receipt_sha256:
         _deny("observation_binding")
-    return observed, receipt
+    return LoadedObservation(observed, receipt, data["issued_at"], data["expires_at"])
 def _backup_freeze(args: Any, source: SourceBinding, manifest: Any) -> tuple[str, str, int, str]:
     try:
         raw = _stable_bytes(_outside(args.freeze_assertion, _root(args)), _root(args))

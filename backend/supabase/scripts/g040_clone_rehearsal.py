@@ -1446,8 +1446,9 @@ def recover_local_state(args: argparse.Namespace) -> Mapping[str, Any]:
     root = Path(args.repository_root).resolve()
     source = _source(root, args.source_commit)
     reference = controller._reference(_controller_args(args), source, historical=True)
-    hosted, hosted_receipt = controller._load_observation(
+    hosted_window = controller._load_observation(
         _controller_args(args), source, reference, require_fresh=False)
+    hosted, hosted_receipt = hosted_window
     binding = _binding(args.binding, root)
     intent, intent_sha = _signed_intent(args.intent, root, "local-state-preparation-intent")
     clone = _verified_observation(args.clone_observation, source=source,
@@ -1482,7 +1483,7 @@ def recover_local_state(args: argparse.Namespace) -> Mapping[str, Any]:
             or intent["reverse_vector_sha256"] != REVERSE_VECTOR_SHA256
             or intent["intent_body_sha256"] != _intent_body_sha256(intent)):
         _fail("intent_receipt")
-    _historical_anchor_valid(intent, reference, hosted, clone)
+    _historical_anchor_valid(intent, reference, hosted_window, clone)
     readback = _preparation_readback(args, root, binding, reference, lineage_now=intent["issued_at"])
     if readback["classifier_state"] == "START":
         _fail("preparation_not_committed")
@@ -1552,8 +1553,9 @@ def recover_branch(args: argparse.Namespace) -> Mapping[str, Any]:
     root = Path(args.repository_root).resolve()
     source = _source(root, args.source_commit)
     reference = controller._reference(_controller_args(args), source, historical=True)
-    hosted, hosted_receipt = controller._load_observation(
+    hosted_window = controller._load_observation(
         _controller_args(args), source, reference, require_fresh=False)
+    hosted, hosted_receipt = hosted_window
     binding = _binding(args.binding, root)
     intent, intent_sha = _signed_intent(args.intent, root, "local-branch-replay-intent")
     clone = _verified_observation(args.clone_observation, source=source,
@@ -1620,7 +1622,7 @@ def recover_branch(args: argparse.Namespace) -> Mapping[str, Any]:
             or any(intent[key] != value for key, value in _terminal_tuple(reference).items())
             or intent["intent_body_sha256"] != _intent_body_sha256(intent)):
         _fail("intent_receipt")
-    _historical_anchor_valid(intent, reference, hosted, clone)
+    _historical_anchor_valid(intent, reference, hosted_window, clone)
     if intent.get("unapplied_provenance") == "prepared-from-full-escaped":
         preparation = _verified_preparation(
             args.preparation, source=source, reference=reference, hosted_receipt=hosted_receipt,
