@@ -862,10 +862,23 @@ class ControllerTests(unittest.TestCase):
     self.assertIsInstance(kwargs["stdin"],io.BytesIO)
     kwargs["stdout"].write(b"plain")
     return subprocess.CompletedProcess(argv,0)
-   with patch.object(recovery,"sha256_file",return_value=capture["evidence"]["dump_sha256"]),patch.object(recovery,"_owned_identity_stream",return_value=io.BytesIO(b"key")),patch.object(recovery,"_require_prior",return_value=capture),patch.object(recovery,"command_exists",side_effect=lambda command:command),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"run",side_effect=execute),patch.object(recovery.subprocess,"run",side_effect=decrypt) as decrypt_run,patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",return_value=[]),patch.object(recovery,"_create_auth_user_placeholders"),patch.object(recovery,"_fingerprints",return_value=observed):
+   with patch.object(recovery,"sha256_file",return_value=capture["evidence"]["dump_sha256"]),patch.object(recovery,"_owned_identity_stream",return_value=io.BytesIO(b"key")),patch.object(recovery,"_require_prior",return_value=capture),patch.object(recovery,"command_exists",side_effect=lambda command:command),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"run",side_effect=execute),patch.object(recovery.subprocess,"run",side_effect=decrypt) as decrypt_run,patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",return_value=[]),patch.object(recovery,"_create_auth_user_placeholders"),patch.object(recovery,"_normalize_restored_vector_extension",return_value="extensions"),patch.object(recovery,"_fingerprints",return_value=observed):
     result=recovery.run_restore_verify(args,None)
    self.assertEqual(["age","--decrypt","--identity","-",str(dump)],decrypt_run.call_args.args[0])
    self.assertNotIn("key",json.dumps(result))
+ def test_restore_normalizes_vector_extension_to_source_terminal_schema(self):
+  queries=[]
+  def query(unused,sql):
+   queries.append(sql)
+   if len(queries)==1: return [("public",)]
+   if sql.startswith("ALTER EXTENSION"): return []
+   return [("extensions",)]
+  with patch.object(recovery,"_query_conn",side_effect=query):
+   self.assertEqual(recovery._normalize_restored_vector_extension(object()),"extensions")
+  self.assertTrue(any(sql.startswith("ALTER EXTENSION vector SET SCHEMA extensions") for sql in queries))
+ def test_restore_rejects_unknown_vector_extension_layout(self):
+  with patch.object(recovery,"_query_conn",return_value=[("unexpected",)]),self.assertRaisesRegex(recovery.RecoveryError,"vector extension layout"):
+   recovery._normalize_restored_vector_extension(object())
  def test_receipt_contract_requires_exact_prior_cardinality_and_canonical_shape(self):
   for mode,count in (("capture",0),("restore-verify",1),("short-url-remediation-inspect",1),("short-url-remediation-apply",2),("short-url-remediation-verify",1),("clone-apply",1),("local-postflight",1)):
    item=recovery.receipt(mode,{"capture":"captured","restore-verify":"restored","short-url-remediation-inspect":"validated","short-url-remediation-apply":"applied","short-url-remediation-verify":"validated","clone-apply":"applied","local-postflight":"validated"}[mode],{},["a"*64]*count)
