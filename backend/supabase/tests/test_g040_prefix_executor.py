@@ -439,6 +439,30 @@ class ExecutorTests(unittest.TestCase):
             [sql for sql, _ in cursor.calls if sql != STATEMENT_TIMEOUT_SQL],
             [READ_WRITE_SQL],
         )
+    def test_ledger_accepts_exact_aliased_dict_rows(self):
+        cursor = Cursor()
+        cursor.ledger_rows = [
+            {"version": "20260712000100", "name": "privacy", "statements": ["SELECT 1"]},
+        ]
+        self.assertEqual(
+            executor._ledger(cursor),
+            (("20260712000100", "privacy", ("SELECT 1",)),),
+        )
+
+    def test_ledger_rejects_wrong_or_hostile_mapping_shapes(self):
+        class HostileRow(dict):
+            pass
+
+        for row in (
+            {"version": "1", "name": "privacy", "statements": ["SELECT 1"], "extra": "x"},
+            {"current_setting": "off"},
+            HostileRow(version="1", name="privacy", statements=["SELECT 1"]),
+        ):
+            cursor = Cursor()
+            cursor.ledger_rows = [row]
+            with self.assertRaises(Denial) as error:
+                executor._ledger(cursor)
+            self.assertEqual(error.exception.code, "ledger_read")
 
     def test_terminal_shape_rejects_nonexact_readback_fields_after_all_ledgers(self):
         plan, attempt, observation, authorization, vectors = self.build_plan()
