@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import hashlib
+import inspect
 import json
 import os
 import subprocess
@@ -362,6 +363,11 @@ class CloneRehearsalTests(unittest.TestCase):
                 container="clone",
             )
         self.assertEqual(len(writes), 1)
+        projection_source = inspect.getsource(rehearsal._verified_observation).split(
+            "return MappingProxyType", 1
+        )[1]
+        self.assertNotIn('"issued_at":', projection_source)
+        self.assertNotIn('"expires_at":', projection_source)
         statements = connection.cursor_value.statements
         self.assertNotIn("GRANT CREATE ON DATABASE g035_local TO postgres", statements)
         self.assertNotIn("GRANT CREATE ON SCHEMA public TO postgres", statements)
