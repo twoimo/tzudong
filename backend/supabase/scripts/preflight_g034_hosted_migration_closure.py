@@ -110,14 +110,15 @@ def extract_dollar_quoted_body(definition):
     return definition[body_start:body_end]
 
 
-def approval_body_contract(source_path=TRACKED_APPROVAL_SOURCE):
+def _approval_fragments(source_path=TRACKED_APPROVAL_SOURCE):
     source = source_path.read_bytes()
     if hashlib.sha256(source).hexdigest() != TRACKED_APPROVAL_SOURCE_SHA256:
         raise ValueError("tracked-approval-source-hash")
     text = source.decode("utf-8")
     declarations = list(CREATE_FUNCTION.finditer(text))
-    contract = {}
-    for lookup, namespace, name, input_type_oids, argnames, expected_fragment_hash in TRACKED_APPROVAL_FUNCTIONS:
+    fragments = []
+    for item in TRACKED_APPROVAL_FUNCTIONS:
+        lookup, namespace, name, input_type_oids, argnames, expected_fragment_hash = item
         matches = [match for match in declarations if match.group(1) == name]
         if len(matches) != 1:
             raise ValueError("tracked-approval-declaration")
@@ -136,6 +137,18 @@ def approval_body_contract(source_path=TRACKED_APPROVAL_SOURCE):
             raise ValueError("malformed-dollar-quoted-body")
         if hashlib.sha256(fragment.encode("utf-8")).hexdigest() != expected_fragment_hash:
             raise ValueError("tracked-approval-source-fragment")
+        fragments.append((item, fragment))
+    return tuple(fragments)
+
+
+def approval_source_statements(source_path=TRACKED_APPROVAL_SOURCE):
+    return tuple(fragment for _, fragment in _approval_fragments(source_path))
+
+
+def approval_body_contract(source_path=TRACKED_APPROVAL_SOURCE):
+    contract = {}
+    for item, fragment in _approval_fragments(source_path):
+        lookup, namespace, name, input_type_oids, argnames, _ = item
         contract[lookup] = {
             "namespace": namespace,
             "name": name,
@@ -269,8 +282,10 @@ def validate_sources(manifest, report):
     if not tracked_approval_source_valid():
         fail(report, "tracked-approval-source-invalid")
     report["sourceValid"] = not report["blockers"]
-def approval_catalog_contract(cursor, contract=None):
+def approval_catalog_contract(cursor, contract=None, *, expected_proconfig=APPROVAL_CATALOG_ATTRIBUTES[3]):
     contract = approval_body_contract() if contract is None else contract
+    if type(expected_proconfig) is not tuple or any(type(value) is not str for value in expected_proconfig):
+        raise ValueError("approval-proconfig-contract")
     results = {}
     for lookup, expected in contract.items():
         cursor.execute(
@@ -308,7 +323,7 @@ def approval_catalog_contract(cursor, contract=None):
                 tuple(argmodes or ()),
                 tuple(argnames or ()),
             )
-            == APPROVAL_CATALOG_ATTRIBUTES + (expected["argnames"],)
+            == APPROVAL_CATALOG_ATTRIBUTES[:3] + (expected_proconfig,) + APPROVAL_CATALOG_ATTRIBUTES[4:] + (expected["argnames"],)
         )
     return results
 

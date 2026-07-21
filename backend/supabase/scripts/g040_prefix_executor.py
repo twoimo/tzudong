@@ -9,10 +9,10 @@ from dataclasses import dataclass
 from typing import Any, Mapping
 from pathlib import Path
 
-from g037_hosted_closure_contract import BASELINE_PAIRS, Manifest, canonical_bytes, terminal_spec, validate_sources
-from g037_hosted_closure_executor import ClosureError, terminal_readback_assert, vectors
+from g037_hosted_closure_contract import BASELINE_PAIRS, ROLE_PROTOCOL_EPILOGUE, Manifest, canonical_bytes, terminal_spec, validate_sources
+from g037_hosted_closure_executor import ClosureError, _precompute_execution_plan, terminal_readback_assert
 from g035_hosted_recovery import _compatibility_sql
-from g040_prefix_recovery import DATA_PROBE, Denial, PrefixObservation, SOURCE_COMMIT, TABLES, classify_mutation_cursor, probe_full_data_root, validate_full_data_root
+from g040_prefix_recovery import DATA_PROBE, Denial, PrefixObservation, SOURCE_COMMIT, TABLES, TERMINAL_DATA_PROBE, classify_mutation_cursor, probe_full_data_root, validate_full_data_root, validate_terminal_data_root
 from g040_recovery_authorization import AttemptStarted, VerifiedAuthorization
 from g040_recovery_source import SourceBinding
 from g040_reference_evidence import VerifiedReference
@@ -202,6 +202,40 @@ class _DeadlineCursor:
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._cursor, name)
+class _TupleRowCursor:
+    """Present exact ordered tuples to the legacy terminal contract."""
+
+    def __init__(self, cursor: Any):
+        self._cursor = cursor
+
+    def execute(self, sql: str, params: tuple[Any, ...] = ()) -> Any:
+        return self._cursor.execute(sql, params) if params else self._cursor.execute(sql)
+
+    def _row(self, row: Any) -> tuple[Any, ...]:
+        if type(row) is tuple:
+            return row
+        if type(row) is list:
+            return tuple(row)
+        if type(row) is not dict:
+            _deny("terminal_row_shape")
+        description = self._cursor.description
+        if not description:
+            _deny("terminal_row_shape")
+        names = tuple(column.name if hasattr(column, "name") else column[0] for column in description)
+        if len(names) != len(set(names)) or set(row) != set(names):
+            _deny("terminal_row_shape")
+        return tuple(row[name] for name in names)
+
+    def fetchall(self) -> list[tuple[Any, ...]]:
+        return [self._row(row) for row in self._cursor.fetchall()]
+
+    def fetchone(self) -> tuple[Any, ...] | None:
+        row = self._cursor.fetchone()
+        return None if row is None else self._row(row)
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._cursor, name)
+
 
 
 def _execute(cursor: Any, sql: str, params: tuple[Any, ...] = (), *, deadline_monotonic: float | None = None, version: str | None = None, ordinal: int | None = None) -> None:
@@ -250,16 +284,16 @@ def _compiled(root: Path, manifest: Manifest) -> tuple[tuple[Any, tuple[str, ...
     seen_versions: set[str] = set()
     seen_vectors: set[tuple[str, ...]] = set()
     try:
-        for item in manifest.migrations:
-            full, executable = vectors(root, item)
+        canonical_plan, _ = _precompute_execution_plan(root, manifest)
+        for item, original_full, _transformed_full, transformed_inner in canonical_plan:
             compatibility = _compatibility_sql(item.version)
-            if not full or not executable:
+            if not original_full or not transformed_inner:
                 _deny("vector_empty")
-            if item.version in seen_versions or full in seen_vectors:
+            if item.version in seen_versions or original_full in seen_vectors:
                 _deny("vector_duplicate")
             seen_versions.add(item.version)
-            seen_vectors.add(full)
-            result.append((item, full, (*compatibility, *executable)))
+            seen_vectors.add(original_full)
+            result.append((item, original_full, (*compatibility, *transformed_inner)))
     except (ClosureError, OSError, ValueError):
         _deny("vector_compile")
     return tuple(result)
@@ -387,7 +421,7 @@ def _apply_rehearsal_locked_cursor(cursor: Any, *, plan: RehearsalExecutionPlan,
         _deny("clone_capability")
     _validated_local_clone_identity(cursor, verified_clone_capability)
     return _apply_mutation_locked_cursor(
-        cursor, plan=plan, expected_data_root=plan.reference.full_data_sha256,
+        cursor, plan=plan, expected_data_root=plan.reference.terminal_data_root,
         authorization_sha256="", attempt_receipt_sha256="",
         expected_catalog_root=plan.reference.terminal_catalog_root,
         expected_acl_root=plan.reference.terminal_acl_root,
@@ -426,8 +460,7 @@ def _assert_prefix_ledger(cursor: Any, compiled: tuple[tuple[Any, tuple[str, ...
             or any(version == _V00400[0] for version, _, _ in rows)):
         _deny("ledger_conflict")
 
-
-def _source_full_data_root(cursor: Any, expected_data_root: str, *, deadline_monotonic: float) -> str:
+def _source_initial_data_root(cursor: Any, expected_data_root: str, *, deadline_monotonic: float) -> str:
     _execute(cursor, DATA_PROBE, deadline_monotonic=deadline_monotonic)
     try:
         data = cursor.fetchone()
@@ -436,14 +469,24 @@ def _source_full_data_root(cursor: Any, expected_data_root: str, *, deadline_mon
     return validate_full_data_root(data, expected_data_root)
 
 
+def _source_full_data_root(cursor: Any, expected_data_root: str, *, deadline_monotonic: float) -> str:
+    _execute(cursor, TERMINAL_DATA_PROBE, deadline_monotonic=deadline_monotonic)
+    try:
+        data = cursor.fetchone()
+    except Exception:
+        _deny("probe_error")
+    return validate_terminal_data_root(data, expected_data_root)
+
+
 def _terminal_mutation_core(cursor: Any, *, compiled: tuple[tuple[Any, tuple[str, ...], tuple[str, ...]], ...],
-                            branch: str, data_root_reader: Any, expected_data_root: str,
+                            branch: str, initial_data_root_reader: Any, terminal_data_root_reader: Any,
+                            expected_initial_data_root: str, expected_terminal_data_root: str,
                             deadline_monotonic: float) -> tuple[int, str]:
     v00400 = compiled[16]
     applied = 0
     if branch == "FULL_ESCAPED":
-        data_root = data_root_reader()
-        if data_root != expected_data_root:
+        data_root = initial_data_root_reader()
+        if data_root != expected_initial_data_root:
             _deny("terminal_data_mismatch")
     if branch == "UNAPPLIED":
         for ordinal, statement in enumerate(v00400[2], start=1):
@@ -452,8 +495,8 @@ def _terminal_mutation_core(cursor: Any, *, compiled: tuple[tuple[Any, tuple[str
             applied += 1
         for sql in _DATA_LOCK_SQL:
             _execute(cursor, sql, deadline_monotonic=deadline_monotonic)
-        data_root = data_root_reader()
-        if data_root != expected_data_root:
+        data_root = initial_data_root_reader()
+        if data_root != expected_initial_data_root:
             _deny("terminal_data_mismatch")
     _insert(cursor, v00400[0], v00400[1], deadline_monotonic=deadline_monotonic)
     for item, full, executable in compiled[17:]:
@@ -462,8 +505,16 @@ def _terminal_mutation_core(cursor: Any, *, compiled: tuple[tuple[Any, tuple[str
                      version=item.version, ordinal=ordinal)
             applied += 1
         _insert(cursor, item, full, deadline_monotonic=deadline_monotonic)
-    data_root = data_root_reader()
-    if data_root != expected_data_root:
+    _execute(
+        cursor,
+        ROLE_PROTOCOL_EPILOGUE.decode("ascii"),
+        deadline_monotonic=deadline_monotonic,
+        version="20260718003700",
+        ordinal=1,
+    )
+    applied += 1
+    data_root = terminal_data_root_reader()
+    if data_root != expected_terminal_data_root:
         _deny("terminal_data_mismatch")
     _deadline(deadline_monotonic)
     return applied, data_root
@@ -472,7 +523,7 @@ def _terminal_mutation_core(cursor: Any, *, compiled: tuple[tuple[Any, tuple[str
 def _terminal_readback(cursor: Any, *, repository_root: Path, manifest: Manifest,
                        terminal_spec_root: str) -> dict[str, str]:
     try:
-        terminal = terminal_readback_assert(cursor, repository_root, manifest)
+        terminal = terminal_readback_assert(_TupleRowCursor(cursor), repository_root, manifest)
     except Denial:
         raise
     except Exception:
@@ -498,14 +549,15 @@ def _validate_source_plan(plan: Any) -> SourceValidationPlan:
 
 
 def _derivation_plan_sha256(plan: SourceValidationPlan, *, branch: str,
-                            expected_full_data_root: str) -> str:
+                            expected_initial_data_root: str, expected_terminal_data_root: str) -> str:
     payload = {
         "branch": branch,
         "compiled": tuple({
             "version": item.version, "name": item.name, "path": item.path,
             "sha256": item.sha256, "full": full, "executable": executable,
         } for item, full, executable in plan.compiled),
-        "expected_full_data_root": expected_full_data_root,
+        "expected_initial_data_root": expected_initial_data_root,
+        "expected_terminal_data_root": expected_terminal_data_root,
         "source": {
             "final_commit": plan.source.final_commit,
             "runtime_source_root": plan.source.runtime_source_root,
@@ -517,13 +569,14 @@ def _derivation_plan_sha256(plan: SourceValidationPlan, *, branch: str,
 
 
 def _derive_terminal_locked_cursor(cursor: Any, *, plan: SourceValidationPlan, branch: str,
-                                   expected_full_data_root: str,
+                                   expected_initial_data_root: str, expected_terminal_data_root: str,
                                    deadline_monotonic: float) -> DerivedTerminalExpectation:
     plan = _validate_source_plan(plan)
     if branch not in ("UNAPPLIED", "FULL_ESCAPED"):
         _deny("branch")
-    if (type(expected_full_data_root) is not str or len(expected_full_data_root) != 64
-            or any(character not in "0123456789abcdef" for character in expected_full_data_root)):
+    if any(type(root) is not str or len(root) != 64
+           or any(character not in "0123456789abcdef" for character in root)
+           for root in (expected_initial_data_root, expected_terminal_data_root)):
         _deny("data_root")
     timed_cursor = _DeadlineCursor(cursor, deadline_monotonic)
     _execute(cursor, "SELECT current_setting('transaction_read_only', true) AS transaction_read_only",
@@ -542,9 +595,13 @@ def _derive_terminal_locked_cursor(cursor: Any, *, plan: SourceValidationPlan, b
     _assert_prefix_ledger(timed_cursor, plan.compiled)
     _, data_root = _terminal_mutation_core(
         cursor, compiled=plan.compiled, branch=branch,
-        data_root_reader=lambda: _source_full_data_root(
-            timed_cursor, expected_full_data_root, deadline_monotonic=deadline_monotonic),
-        expected_data_root=expected_full_data_root, deadline_monotonic=deadline_monotonic,
+        initial_data_root_reader=lambda: _source_initial_data_root(
+            timed_cursor, expected_initial_data_root, deadline_monotonic=deadline_monotonic),
+        terminal_data_root_reader=lambda: _source_full_data_root(
+            timed_cursor, expected_terminal_data_root, deadline_monotonic=deadline_monotonic),
+        expected_initial_data_root=expected_initial_data_root,
+        expected_terminal_data_root=expected_terminal_data_root,
+        deadline_monotonic=deadline_monotonic,
     )
     terminal = _terminal_readback(timed_cursor, repository_root=plan.repository_root,
                                   manifest=plan.manifest,
@@ -554,13 +611,15 @@ def _derive_terminal_locked_cursor(cursor: Any, *, plan: SourceValidationPlan, b
         terminal_catalog_root=terminal["catalog_root"], terminal_acl_root=terminal["acl_root"],
         terminal_data_root=data_root, terminal_spec_root=terminal["terminal_spec"],
         plan_sha256=_derivation_plan_sha256(
-            plan, branch=branch, expected_full_data_root=expected_full_data_root),
+            plan, branch=branch, expected_initial_data_root=expected_initial_data_root,
+            expected_terminal_data_root=expected_terminal_data_root),
     )
 
 
 def _derive_clone_terminal_expectation(connection: Any, *, source_plan: SourceValidationPlan,
                                        verified_clone_capability: _VerifiedCloneCapability,
-                                       branch: str, expected_full_data_root: str,
+                                       branch: str, expected_initial_data_root: str,
+                                       expected_terminal_data_root: str,
                                        deadline_monotonic: float) -> DerivedTerminalExpectation:
     """Derive clone terminal roots in a transaction this boundary always rolls back."""
     preflight_deadline(deadline_monotonic)
@@ -578,7 +637,8 @@ def _derive_clone_terminal_expectation(connection: Any, *, source_plan: SourceVa
         _validated_local_clone_identity(cursor, verified_clone_capability)
         return _derive_terminal_locked_cursor(
             cursor, plan=source_plan, branch=branch,
-            expected_full_data_root=expected_full_data_root,
+            expected_initial_data_root=expected_initial_data_root,
+            expected_terminal_data_root=expected_terminal_data_root,
             deadline_monotonic=deadline_monotonic,
         )
     finally:
@@ -614,9 +674,13 @@ def _apply_mutation_locked_cursor(cursor: Any, *, plan: RecoveryExecutionPlan | 
     _assert_prefix_ledger(timed_cursor, plan.compiled)
     applied, data_root = _terminal_mutation_core(
         cursor, compiled=plan.compiled, branch=plan.branch,
-        data_root_reader=lambda: probe_full_data_root(
+        initial_data_root_reader=lambda: probe_full_data_root(
             timed_cursor, plan.reference, statement_executor=timed_cursor.execute),
-        expected_data_root=expected_data_root, deadline_monotonic=deadline_monotonic,
+        terminal_data_root_reader=lambda: _source_full_data_root(
+            timed_cursor, expected_data_root, deadline_monotonic=deadline_monotonic),
+        expected_initial_data_root=plan.reference.full_data_sha256,
+        expected_terminal_data_root=expected_data_root,
+        deadline_monotonic=deadline_monotonic,
     )
     terminal = _terminal_readback(timed_cursor, repository_root=plan.repository_root,
                                   manifest=plan.manifest,
