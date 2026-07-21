@@ -756,6 +756,13 @@ def capture_to_custody(args, manifest):
    try: os.close(fd)
    except OSError: pass
  return result
+def _normalize_restored_vector_extension(conn):
+ rows=_query_conn(conn,"SELECT namespace.nspname FROM pg_catalog.pg_extension AS extension JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid=extension.extnamespace WHERE extension.extname='vector'")
+ if rows==[("public",)]:
+  _query_conn(conn,"ALTER EXTENSION vector SET SCHEMA extensions")
+  rows=_query_conn(conn,"SELECT namespace.nspname FROM pg_catalog.pg_extension AS extension JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid=extension.extnamespace WHERE extension.extname='vector'")
+ if rows!=[("extensions",)]: raise RecoveryError("restored vector extension layout mismatch")
+ return "extensions"
 def run_restore_verify(args,manifest):
  require_local(args.destination_service); capture=_require_prior(args.capture_receipt,"capture"); source_binding=_require_recovery_source_binding(capture["evidence"],repository_root(Path(__file__).resolve())); dump=Path(args.dump)
  if capture["evidence"].get("recipient_fingerprint")!=APPROVED_AGE_RECIPIENT_SHA256: raise RecoveryError("capture recipient binding mismatch")
@@ -792,10 +799,17 @@ def run_restore_verify(args,manifest):
    finally: conn.close()
    _require_temporary_file_identity(plain_fd,plain)
    run([restore,"--section=post-data","--dbname=service=g035-local",str(plain)],env=env)
+   restored_vector_schema=None
    _require_temporary_file_identity(plain_fd,plain)
    conn=_connect("g035-local",env)
-   try: observed=_fingerprints(conn)
-   finally: conn.rollback(); conn.close()
+   try:
+    restored_vector_schema=_normalize_restored_vector_extension(conn)
+    conn.commit()
+    observed=_fingerprints(conn)
+   except Exception:
+    conn.rollback()
+    raise
+   finally: conn.close()
   finally:
    if plain_fd is not None:
     _unlink_owned_output(plain_fd,plain,plain_identity)
@@ -805,7 +819,7 @@ def run_restore_verify(args,manifest):
  for key in ("ledger_sha256","ledger_count","restorable_catalog_sha256","managed_catalog_sha256"):
   if expected.get(key)!=observed.get(key): raise RecoveryError("restore evidence mismatch")
  if tuple(observed.get("managed_metadata_schemas_present",()))!=tuple(MANAGED_METADATA_SCHEMAS): raise RecoveryError("managed metadata structure mismatch")
- return receipt("restore-verify","restored",{**source_binding,**observed,"managed_metadata_coherence":"managed schema DDL restored with hosted catalog parity; managed table data excluded",**_auth_placeholder_evidence()},[capture["receipt_sha256"]])
+ return receipt("restore-verify","restored",{**source_binding,**observed,"restored_vector_schema":restored_vector_schema,"restore_compatibility_hook_sha256":digest((VECTOR_EXTENSION_RELOCATION_HOOK_VERSION,VECTOR_EXTENSION_RELOCATION_HOOK)),"managed_metadata_coherence":"managed schema DDL restored with hosted catalog parity; managed table data excluded",**_auth_placeholder_evidence()},[capture["receipt_sha256"]])
 def _validate_auth_user_reference_columns(conn):
  for schema,table,column in AUTH_USER_REFERENCE_COLUMNS:
   rows=_query_conn(conn,"SELECT namespace.nspname, class.relname, attribute.attname, type.typname, type_namespace.nspname FROM pg_catalog.pg_attribute AS attribute JOIN pg_catalog.pg_class AS class ON class.oid = attribute.attrelid JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = class.relnamespace JOIN pg_catalog.pg_type AS type ON type.oid = attribute.atttypid JOIN pg_catalog.pg_namespace AS type_namespace ON type_namespace.oid = type.typnamespace WHERE namespace.nspname = %s AND class.relname = %s AND attribute.attname = %s AND class.relkind IN ('r','p') AND attribute.attnum > 0 AND NOT attribute.attisdropped",(schema,table,column))
