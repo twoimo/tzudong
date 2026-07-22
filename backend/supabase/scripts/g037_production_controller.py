@@ -338,7 +338,8 @@ def finalize(args):
  try: request=json.loads(request_bytes.decode("ascii"),object_pairs_hook=no_duplicate_object)
  except Exception as exc: raise ControllerError("operator assertion request unreadable") from exc
  if request_path==signature_path or request_identity==signature_identity or not isinstance(request,dict) or "signature" in request or canonical_bytes(request)!=request_bytes: raise ControllerError("operator assertion request is not canonical")
- if not recovery.openssl_verify(recovery.command("openssl"),AUTHORIZATION_PUBLIC_KEY_PEM,request_bytes,signature): raise ControllerError("operator assertion signature invalid")
+ with recovery._source_public_key(AUTHORIZATION_PUBLIC_KEY_PEM.encode("ascii")) as public_key:
+  if not recovery.openssl_verify(recovery.command("openssl"),public_key,request_bytes,signature): raise ControllerError("operator assertion signature invalid")
  _validate_assertion(request,args,root)
  assertion_hash=_write_finalized_assertion(args.operator_assertion,request,signature)
  return {"schema":SCHEMA,"mode":"finalize","status":"finalized","assertion_sha256":assertion_hash,"expires_at":request["expires_at"],"relation_root":request["relation_root"],"acl_root":request["acl_root"]}
