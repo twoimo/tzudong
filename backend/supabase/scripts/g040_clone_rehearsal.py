@@ -415,8 +415,9 @@ def _docker_clone_proof(container: str, service_port: int, live_identity: Mappin
                 or type(attached) is not dict or set(attached) != {container_id}):
             _fail("docker_endpoint")
         image = json.loads(subprocess.run([docker, "image", "inspect", image_id], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=20, check=True).stdout.decode("utf-8"))
+        accepted_repo_digests = ([_IMAGE_DIGEST], [f"docker.io/{_IMAGE_DIGEST}"])
         if (type(image) is not list or len(image) != 1 or type(image[0]) is not dict
-                or image[0].get("Id") != _IMAGE_ID or image[0].get("RepoDigests") != [_IMAGE_DIGEST]):
+                or image[0].get("Id") != _IMAGE_ID or image[0].get("RepoDigests") not in accepted_repo_digests):
             _fail("docker_identity")
         container_hash = _sha(container_id.encode())
         if internal:
