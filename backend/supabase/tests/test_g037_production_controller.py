@@ -369,8 +369,9 @@ class ControllerTests(unittest.TestCase):
     path=root/(channel+".json"); path.write_text(json.dumps(evidence),encoding="utf-8"); path.chmod(0o600); setattr(args,"evidence_"+channel,str(path))
    conn=Conn(); written={}
    def write(_,value,*__): written.update(value); return controller.digest(value)
-   with patch.object(controller.recovery,"service",return_value=SERVICE),patch.object(controller.recovery,"pgpass"),patch.object(controller,"_connect",return_value=conn),patch.object(controller,"_write_unsigned",side_effect=write),patch.object(controller,"_outside_fresh"),patch.object(controller,"validate_operator_assertion"),patch.object(controller,"validate_sources"),patch.object(controller.freeze,"_root_source",return_value=(Path("."),"h"*40,"s"*64,"t"*64)),patch.object(controller.recovery,"restrictive",return_value=True):
+   with patch.object(controller.recovery,"service",return_value=SERVICE),patch.object(controller.recovery,"pgpass"),patch.object(controller,"_connect",return_value=conn),patch.object(controller,"_write_unsigned",side_effect=write),patch.object(controller,"_outside_fresh"),patch.object(controller,"validate_operator_assertion_request") as validate_request,patch.object(controller,"validate_sources"),patch.object(controller.freeze,"_root_source",return_value=(Path("."),"h"*40,"s"*64,"t"*64)),patch.object(controller.recovery,"restrictive",return_value=True):
     result=controller.prepare(args)
+  validate_request.assert_called_once()
   self.assertEqual(result["status"],"prepared"); self.assertEqual(conn.commits,0); self.assertEqual(conn.rollbacks,1)
   self.assertIn("BEGIN",conn.cursors[1].calls); self.assertTrue(any("LOCK TABLE" in call for call in conn.cursors[1].calls))
   self.assertEqual(written["relation_root"],result["relation_root"])

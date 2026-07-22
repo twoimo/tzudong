@@ -9,7 +9,7 @@ import g037_hosted_closure_executor as closure
 import g037_managed_recovery as recovery
 import g037_write_freeze as freeze
 from g035_hosted_recovery_contract import ContractError
-from g037_hosted_closure_contract import AUTHORIZATION_PUBLIC_KEY_PEM, canonical_bytes, digest, no_duplicate_object, repository_root, terminal_spec as build_terminal_spec, validate_operator_assertion, validate_sources
+from g037_hosted_closure_contract import AUTHORIZATION_PUBLIC_KEY_PEM, canonical_bytes, digest, no_duplicate_object, repository_root, terminal_spec as build_terminal_spec, validate_operator_assertion, validate_operator_assertion_request, validate_sources
 import g037_remediation_authorization as remediation_authorization
 
 SCHEMA="g037-production-controller-v1"
@@ -329,7 +329,7 @@ def prepare(args):
  _,head,source_root,terminal_spec=freeze._root_source()
  assertion={"schema":"g037-write-freeze-assertion-v1","freeze_id":args.freeze_id,"origin":base,"commit":head,"manifest_sha256":freeze.MANIFEST_SHA256,"relation_root":inventory.relation_root,"acl_root":inventory.acl_root,"source_root":source_root,"terminal_spec":terminal_spec,"issued_at":issued,"expires_at":issued+seconds,"attestations":attestations}
  assertion_hash=_write_unsigned(args.operator_assertion_request,assertion,"operator assertion request")
- validate_operator_assertion(assertion,freeze_id=args.freeze_id,origin=base,relation_root=inventory.relation_root,acl_root=inventory.acl_root,commit=head,source_root=source_root,terminal_spec=terminal_spec)
+ validate_operator_assertion_request(assertion,freeze_id=args.freeze_id,origin=base,relation_root=inventory.relation_root,acl_root=inventory.acl_root,commit=head,source_root=source_root,terminal_spec=terminal_spec)
  return {"schema":SCHEMA,"mode":"prepare","status":"prepared","assertion_request_sha256":assertion_hash,"expires_at":assertion["expires_at"],"relation_root":inventory.relation_root,"acl_root":inventory.acl_root}
 def finalize(args):
  root=repository_root(Path(__file__).resolve())
