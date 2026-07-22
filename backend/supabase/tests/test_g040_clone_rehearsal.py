@@ -2023,5 +2023,12 @@ class ReplayTerminalContractTests(unittest.TestCase):
         body, *_ = self._body(); body["starting_roots"]["acl"] = "f" * 64
         self._reject({"starting_roots": body["starting_roots"]})
     def test_rejects_v1_terminal_receipt(self): self._reject({"schema": "g040-local-branch-replay-v1"})
+class PreparationLockScopeTests(unittest.TestCase):
+    def test_full_escaped_reverse_does_not_lock_not_yet_created_terminal_relations(self):
+        source = inspect.getsource(rehearsal.prepare_local_state)
+        self.assertIn("for sql in executor._LOCK_SQL:", source)
+        self.assertNotIn("executor._LOCK_SQL + executor._DATA_LOCK_SQL", source)
+
+
 if __name__ == "__main__":
     unittest.main()
