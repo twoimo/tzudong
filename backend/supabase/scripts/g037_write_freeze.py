@@ -50,7 +50,7 @@ PROVIDER_MANAGED_ACL_ALLOWLIST=frozenset((
  ("storage","buckets","supabase_storage_admin"),
  ("storage","objects","supabase_storage_admin"),
 ))
-CONTROLLER_PUBLIC_KEY_PEM="-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAqaHsCrD74lzv7J3zcfsjchTndvHTWTj1dWeDjwXK+G8=\n-----END PUBLIC KEY-----\n"
+CONTROLLER_PUBLIC_KEY_PEM="-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAjfChFynM3Sge82VAJnjDZctsKJQErCdvg7OmTYkJf1c=\n-----END PUBLIC KEY-----\n"
 CONTROLLER_PUBLIC_KEY_SHA256=hashlib.sha256(CONTROLLER_PUBLIC_KEY_PEM.encode()).hexdigest()
 class FreezeError(RuntimeError): pass
 _LOCK_TIMEOUT_SETTINGS=("statement_timeout","lock_timeout","idle_in_transaction_session_timeout")
