@@ -907,7 +907,11 @@ def build_aggregate_custody(args: argparse.Namespace) -> Mapping[str, Any]:
         "observation_nonce", "ledger_prefix_sha256", "catalog_sha256", "data_sha256",
         "classification_sha256", "issued_at", "expires_at",
     }
-    hosted_payload = {key: hosted[key] for key in hosted_required - {"classification_sha256"}} if set(hosted) == hosted_required else {}
+    hosted_payload = {
+        key: hosted[key]
+        for key in prefix.PrefixObservation.__annotations__
+        if key != "classification_sha256"
+    } if set(hosted) == hosted_required else {}
     expected_hosted = {
         "UNAPPLIED": (reference.ledger_prefix_sha256, reference.absent_catalog_sha256, None),
         "FULL_ESCAPED": (reference.ledger_prefix_sha256, reference.full_catalog_sha256, reference.full_data_sha256),
