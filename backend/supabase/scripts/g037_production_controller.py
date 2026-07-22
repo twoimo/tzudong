@@ -254,15 +254,21 @@ def _validate_residual_evidence(args,assertion):
  for channel, evidence in expected.items():
   actual=attestations.get(channel,{})
   if actual.get("status") is not True or actual.get("evidence_sha256")!=evidence["evidence_sha256"] or actual.get("observed_at")!=evidence["observed_at"]: raise ControllerError("residual evidence binding mismatch")
-def _validate_assertion(assertion,args,root):
+def _validate_assertion_with(assertion,args,validator):
  head=freeze._root_source()[1]; source_root=freeze._root_source()[2]; terminal=freeze._root_source()[3]
  relation=assertion.get("relation_root"); acl=assertion.get("acl_root")
  if not isinstance(relation,str) or not isinstance(acl,str): raise ControllerError("operator assertion inventory roots missing")
- validate_operator_assertion(assertion,freeze_id=args.freeze_id,origin=recovery.origin(args.origin),relation_root=relation,acl_root=acl,commit=head,source_root=source_root,terminal_spec=terminal)
+ validator(assertion,freeze_id=args.freeze_id,origin=recovery.origin(args.origin),relation_root=relation,acl_root=acl,commit=head,source_root=source_root,terminal_spec=terminal)
  if assertion.get("expires_at",0)<=int(time.time()): raise ControllerError("operator assertion expired")
  if assertion.get("expires_at",0)-assertion.get("issued_at",0)>900: raise ControllerError("operator assertion expiry exceeds prepare maximum")
  _validate_residual_evidence(args,assertion)
  return assertion
+def _validate_assertion_request(assertion,args,root):
+ del root
+ return _validate_assertion_with(assertion,args,validate_operator_assertion_request)
+def _validate_assertion(assertion,args,root):
+ del root
+ return _validate_assertion_with(assertion,args,validate_operator_assertion)
 def _read_validated_assertion(args,root):
  _private(args.operator_assertion,"operator assertion")
  assertion,_=_signed_assertion(args.operator_assertion,"operator assertion")
@@ -340,7 +346,7 @@ def finalize(args):
  if request_path==signature_path or request_identity==signature_identity or not isinstance(request,dict) or "signature" in request or canonical_bytes(request)!=request_bytes: raise ControllerError("operator assertion request is not canonical")
  with recovery._source_public_key(AUTHORIZATION_PUBLIC_KEY_PEM.encode("ascii")) as public_key:
   if not recovery.openssl_verify(recovery.command("openssl"),public_key,request_bytes,signature): raise ControllerError("operator assertion signature invalid")
- _validate_assertion(request,args,root)
+ _validate_assertion_request(request,args,root)
  assertion_hash=_write_finalized_assertion(args.operator_assertion,request,signature)
  return {"schema":SCHEMA,"mode":"finalize","status":"finalized","assertion_sha256":assertion_hash,"expires_at":request["expires_at"],"relation_root":request["relation_root"],"acl_root":request["acl_root"]}
 def execute(args):
