@@ -366,9 +366,12 @@ class _TemporaryInput:
  def child_path(self):
   self.validate()
   if os.name=="nt": return str(self.path)
-  proc_path=f"/proc/self/fd/{self.fd}"
-  if not Path(proc_path).exists(): raise RecoveryError("descriptor-backed temporary input unavailable")
-  return proc_path
+  for descriptor_root in ("/proc/self/fd","/dev/fd"):
+   descriptor_path=f"{descriptor_root}/{self.fd}"
+   if Path(descriptor_path).exists():
+    os.lseek(self.fd,0,os.SEEK_SET)
+    return descriptor_path
+  raise RecoveryError("descriptor-backed temporary input unavailable")
  def subprocess_kwargs(self):
   return {"pass_fds":(self.fd,)} if os.name!="nt" else {}
  def close(self):
