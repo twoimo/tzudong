@@ -1523,12 +1523,12 @@ class CloneRehearsalTests(unittest.TestCase):
             derivation_mode=rehearsal.DERIVATION_MODE, reverse_vector_sha256="3" * 64,
             observation_nonce="hosted-observation-nonce", issued_at_unix=100,
             terminal_rows=40, terminal_ledger_root="d" * 64,
-            terminal_catalog_root="e" * 64, terminal_acl_root="8" * 64,
+            terminal_catalog_root="e" * 64, terminal_acl_root="6" * 64,
             terminal_data_root="5" * 64, terminal_spec_root="0" * 64,
             source_plan_sha256="1" * 64,
             terminal_tuple_sha256=rehearsal._sha(rehearsal._canonical({
                 "terminal_rows": 40, "ledger": "d" * 64, "catalog": "e" * 64,
-                "acl": "8" * 64, "data": "5" * 64, "terminal_spec": "0" * 64,
+                "acl": "6" * 64, "data": "5" * 64, "terminal_spec": "0" * 64,
             })),
         )
         hosted = {
@@ -1561,14 +1561,14 @@ class CloneRehearsalTests(unittest.TestCase):
             "g035_source_sha256": g035_source_sha256,
         }
         terminal = {"terminal_rows": 40, "ledger": "d" * 64, "catalog": "e" * 64,
-                    "acl": backup["target_acl_root"], "data": "5" * 64, "terminal_spec": "0" * 64}
+                    "acl": "6" * 64, "data": "5" * 64, "terminal_spec": "0" * 64}
         replay_common = {
             "schema": "g040-local-branch-replay-v3", "issued_at": 100, "expires_at": 180,
             "final_recovery_commit": source.final_commit, "runtime_source_root": source.runtime_source_root,
             "reference_receipt_sha256": reference.receipt_sha256, "hosted_observation_receipt_sha256": "e" * 64,
             "target_fingerprint": reference.target_fingerprint, "terminal_rows": 40,
             "terminal_ledger_root": "d" * 64, "terminal_catalog_root": "e" * 64,
-            "terminal_acl_root": backup["target_acl_root"], "terminal_data_root": "5" * 64,
+            "terminal_acl_root": terminal["acl"], "terminal_data_root": "5" * 64,
             "terminal_spec_root": "0" * 64, "source_plan_sha256": "1" * 64,
             "replay_plan_sha256": "2" * 64, "terminal_tuple_sha256": reference.terminal_tuple_sha256,
             "intent_body_sha256": "3" * 64, "replay_intent_receipt_sha256": "4" * 64,
@@ -1666,7 +1666,8 @@ class CloneRehearsalTests(unittest.TestCase):
                 "issued_at": 150, "expires_at": 170,
                 "final_recovery_commit": source.final_commit, "runtime_source_root": source.runtime_source_root,
                 "reference_receipt_sha256": reference.receipt_sha256, "target_fingerprint": reference.target_fingerprint,
-                "freeze_root": "7" * 64, "freeze_expires_at": 190, "target_acl_root": "8" * 64,
+                "freeze_root": "7" * 64, "freeze_expires_at": 190,
+                "starting_acl_root": backup["target_acl_root"], "target_acl_root": terminal["acl"],
                 "inventory_root": "9" * 64, "backup_receipt_sha256": "f" * 64,
                 "capture_receipt_sha256": rehearsal._sha(capture_raw), "archive_sha256": backup["archive_sha256"],
                 "archive_bytes": backup["archive_bytes"], "clone_rehearsal_receipt_sha256": "0" * 64,
