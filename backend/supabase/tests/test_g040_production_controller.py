@@ -438,7 +438,7 @@ class G040ProductionControllerTests(unittest.TestCase):
         self.assertEqual(native.calls, [])
     def test_production_backup_captures_current_g035_receipt_and_archive_before_signing(self):
         source = type("Source", (), {"final_commit": "b" * 40, "runtime_source_root": "c" * 64})()
-        reference = type("Reference", (), {"receipt_sha256": "d" * 64, "target_fingerprint": H})()
+        reference = type("Reference", (), {"receipt_sha256": "d" * 64, "target_fingerprint": H, "expires_at_unix": 150})()
         observed = observation()
         manifest = object()
         capture_path, archive_path, output_path = Path("/custody/capture.json"), Path("/custody/g035-dump.enc"), Path("/custody/backup.json")
@@ -472,7 +472,7 @@ class G040ProductionControllerTests(unittest.TestCase):
             raise AssertionError(path)
         with patch.object(controller, "_source", return_value=source), \
                 patch.object(controller, "_reference", return_value=reference), \
-                patch.object(controller, "_load_observation", return_value=(observed, "1" * 64)), \
+                patch.object(controller, "_load_observation", return_value=controller.LoadedObservation(observed, "1" * 64, 90, 160)), \
                 patch.object(controller, "validate_sources", return_value=manifest) as validate, \
                 patch.object(controller, "_backup_freeze", return_value=("2" * 64, "3" * 64, 200, "4" * 64)) as freeze, \
                 patch.object(controller.g035, "capture_to_custody", return_value=captured) as capture, \
@@ -497,6 +497,7 @@ class G040ProductionControllerTests(unittest.TestCase):
         self.assertEqual(signed["body"]["capture_receipt_sha256"], hashlib.sha256(capture_raw).hexdigest())
         self.assertEqual(signed["body"]["archive_sha256"], hashlib.sha256(archive_raw).hexdigest())
         self.assertEqual(signed["body"]["archive_bytes"], len(archive_raw))
+        self.assertEqual(signed["body"]["expires_at"], 150)
     def test_archive_digest_streams_large_archive_in_64_kib_chunks(self):
         payload = (b"x" * (64 * 1024 * 2)) + b"tail"
         with tempfile.TemporaryDirectory() as raw:
@@ -545,7 +546,7 @@ class G040ProductionControllerTests(unittest.TestCase):
 
     def test_production_backup_rejects_stale_or_mismatched_capture_artifacts_without_leaking_values(self):
         source = type("Source", (), {"final_commit": "b" * 40, "runtime_source_root": "c" * 64})()
-        reference = type("Reference", (), {"receipt_sha256": "d" * 64, "target_fingerprint": H})()
+        reference = type("Reference", (), {"receipt_sha256": "d" * 64, "target_fingerprint": H, "expires_at_unix": 150})()
         args = Namespace(repository_root="/checkout", destination="/custody", capture_receipt="/custody/capture.json", service_file="/custody/service", recipient="secret-recipient", g034_artifact="/custody/g034", pg_dump="pg_dump", encrypt_command="age", freeze_assertion="/custody/freeze", freeze_evidence=[], output="/custody/output")
         invalid = {"manifest_sha256": H, "evidence": {"source_sha256": H, "dump_sha256": H, "dump_bytes": 1}, "receipt_sha256": H}
         mismatched = {"manifest_sha256": H, "evidence": {"source_sha256": H, "dump_sha256": hashlib.sha256(b"original").hexdigest(), "dump_bytes": len(b"original")}}
@@ -558,7 +559,7 @@ class G040ProductionControllerTests(unittest.TestCase):
             with self.subTest(capture_raw=capture_raw), \
                     patch.object(controller, "_source", return_value=source), \
                     patch.object(controller, "_reference", return_value=reference), \
-                    patch.object(controller, "_load_observation", return_value=(observation(), H)), \
+                    patch.object(controller, "_load_observation", return_value=controller.LoadedObservation(observation(), H, 90, 160)), \
                     patch.object(controller, "validate_sources", return_value=object()), \
                     patch.object(controller, "_backup_freeze", return_value=(H, H, 200, H)), \
                     patch.object(controller.g035, "capture_to_custody", return_value=captured), \
