@@ -548,18 +548,18 @@ def terminal_spec(manifest: Manifest) -> str:
 _FREEZE_ID = re.compile(r"^[a-z0-9][a-z0-9-]{7,127}$")
 _COMMIT = re.compile(r"^[a-f0-9]{40}$")
 _FREEZE_ASSERTION_SCHEMA = "g037-write-freeze-assertion-v1"
-_FREEZE_REQUIRED = frozenset((
+_FREEZE_REQUEST_REQUIRED = frozenset((
     "schema", "freeze_id", "origin", "commit", "manifest_sha256",
     "relation_root", "acl_root", "source_root", "terminal_spec", "issued_at", "expires_at", "attestations",
-    "signature",
 ))
-def validate_operator_assertion(
+_FREEZE_REQUIRED = _FREEZE_REQUEST_REQUIRED | {"signature"}
+def validate_operator_assertion_request(
     value: Any, *, freeze_id: str, origin: str, relation_root: str, acl_root: str,
     commit: str | None = None, source_root: str | None = None, terminal_spec: str | None = None, now: int | None = None,
 ) -> None:
-    """Verify the source-pinned finite operator attestation for residual channels."""
-    if not isinstance(value,dict) or set(value)!=_FREEZE_REQUIRED:
-        raise ContractError("freeze assertion fields mismatch")
+    """Verify the canonical unsigned operator request before offline signing."""
+    if not isinstance(value,dict) or set(value)!=_FREEZE_REQUEST_REQUIRED:
+        raise ContractError("freeze assertion request fields mismatch")
     if (not _FREEZE_ID.fullmatch(freeze_id) or value["schema"]!=_FREEZE_ASSERTION_SCHEMA
         or value["freeze_id"]!=freeze_id or value["origin"]!=origin
         or not _COMMIT.fullmatch(value["commit"]) or value["manifest_sha256"]!=MANIFEST_SHA256
@@ -585,9 +585,17 @@ def validate_operator_assertion(
             or evidence["observed_at"]>point+30 or evidence["observed_at"]<point-900
             or evidence["observed_at"]<issued or evidence["observed_at"]>expires):
             raise ContractError("residual attestation invalid")
+def validate_operator_assertion(
+    value: Any, *, freeze_id: str, origin: str, relation_root: str, acl_root: str,
+    commit: str | None = None, source_root: str | None = None, terminal_spec: str | None = None, now: int | None = None,
+) -> None:
+    """Verify the signed source-pinned operator attestation."""
+    if not isinstance(value,dict) or set(value)!=_FREEZE_REQUIRED:
+        raise ContractError("freeze assertion fields mismatch")
+    payload={k:v for k,v in value.items() if k!="signature"}
+    validate_operator_assertion_request(payload,freeze_id=freeze_id,origin=origin,relation_root=relation_root,acl_root=acl_root,commit=commit,source_root=source_root,terminal_spec=terminal_spec,now=now)
     signature=value["signature"]
     if not isinstance(signature,str): raise ContractError("freeze assertion signature absent")
-    payload={k:v for k,v in value.items() if k!="signature"}
     try:
         from cryptography.hazmat.primitives.serialization import load_pem_public_key
         load_pem_public_key(AUTHORIZATION_PUBLIC_KEY_PEM.encode()).verify(
