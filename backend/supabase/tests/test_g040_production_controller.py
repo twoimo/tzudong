@@ -167,7 +167,7 @@ class G040ProductionControllerTests(unittest.TestCase):
     def test_fixed_receipt_public_key_hash_is_exact(self):
         self.assertEqual(
             hashlib.sha256(controller._RECEIPT_PUBLIC_KEY_PEM.encode("ascii")).hexdigest(),
-            "94f70fa95b361dd51e765d6e597d2e13149e3489124198df6adcce931149735a",
+            "cd576d9c8558c067e987193394627abbbfc37e75df8183039a13efaea3f8c498",
         )
     def test_receipts_use_distinct_fixed_verifier_and_reject_wrong_key(self):
         from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey

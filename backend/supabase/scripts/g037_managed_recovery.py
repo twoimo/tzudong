@@ -17,8 +17,8 @@ SCHEMA="g037-managed-recovery-receipt-v3"; MAX_OBJECT_BYTES=2**31; MAX_TOTAL_BYT
 AGE=re.compile(r"^age1[ac-hj-np-z02-9]{58}$"); HEX=re.compile(r"^[a-f0-9]{64}$"); PROJECT=re.compile(r"^[a-z0-9]{20}\.supabase\.co$"); FREEZE_ID=re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$")
 # Offline controller/recovery public keys are immutable source policy.  Their
 # corresponding private keys are separately controlled and never CLI inputs.
-CONTROLLER_PUBLIC_KEY=b"-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAjfChFynM3Sge82VAJnjDZctsKJQErCdvg7OmTYkJf1c=\n-----END PUBLIC KEY-----\n"
-RECOVERY_PUBLIC_KEY=b"-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAIVMtc6KUFJ1dSNDEBl3nfy6qatPq/UTJW/KYNCijXdQ=\n-----END PUBLIC KEY-----\n"
+CONTROLLER_PUBLIC_KEY=b"-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAo4UI52OeuOIAtNilBOmsGuMovYT3mEMgZK3fdAdmrD0=\n-----END PUBLIC KEY-----\n"
+RECOVERY_PUBLIC_KEY=b"-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEA0m5El0MmK8Qq+dp5irz9BNE2LI8ub/GJE7MGE4FfH2Q=\n-----END PUBLIC KEY-----\n"
 CONTROLLER_PUBLIC_KEY_SHA256=hashlib.sha256(CONTROLLER_PUBLIC_KEY).hexdigest(); RECOVERY_PUBLIC_KEY_SHA256=hashlib.sha256(RECOVERY_PUBLIC_KEY).hexdigest()
 EXPECTED_FREEZE_SCOPE={"schemas":["public","auth","storage","shortener_private","ocr_private","provider_budget_private","privacy_retention"],"ordinary_relations":"all"}
 AUTH_TABLE_DATA=("audit_log_entries","flow_state","identities","instances","mfa_amr_claims","mfa_challenges","mfa_factors","one_time_tokens","refresh_tokens","saml_providers","saml_relay_states","schema_migrations","sessions","users")
