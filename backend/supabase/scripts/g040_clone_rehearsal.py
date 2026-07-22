@@ -1419,7 +1419,7 @@ def prepare_local_state(args: argparse.Namespace) -> Mapping[str, Any]:
                                     container=args.container, docker=args.docker, conn=conn,
                                     repository_root=root)
         cur.execute("BEGIN")
-        for sql in executor._LOCK_SQL + executor._DATA_LOCK_SQL:
+        for sql in executor._LOCK_SQL:
             cur.execute(sql)
         full = _expected_prefix(reference, "FULL_ESCAPED", reference.ledger_prefix_sha256,
                                 reference.full_catalog_sha256, reference.full_data_sha256)
