@@ -592,7 +592,17 @@ class G040ProductionControllerTests(unittest.TestCase):
         self.assertEqual(freeze_root, hashlib.sha256(raw).hexdigest())
         self.assertEqual(inventory_root, controller._hash({"g040-freeze-inventory-v1": {"relation_root": H, "acl_root": "b" * 64}}))
         self.assertEqual((freeze_expires_at, target_acl_root), (200, "b" * 64))
-        validate.assert_called_once()
+        validate.assert_called_once_with(
+            assertion,
+            freeze_id="current-freeze",
+            origin="operator",
+            relation_root=H,
+            acl_root="b" * 64,
+            commit="b" * 40,
+            source_root=controller.g037_digest([]),
+            terminal_spec=controller.terminal_spec(manifest),
+            now=100,
+        )
         for retired, assertion_error, residual in (
             ("40b54cf8-e59f-4eb3-a37c-88e3bf983442", None, evidence),
             ("current-freeze", ValueError("expired"), evidence),
