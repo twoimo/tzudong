@@ -392,6 +392,13 @@ class ControllerTests(unittest.TestCase):
   with patch.object(controller,"prepare",return_value={"schema":controller.SCHEMA,"mode":"prepare","status":"prepared","assertion_request_sha256":"a"*64,"expires_at":1,"relation_root":"r"*64,"acl_root":"c"*64,"private_path":"/secret"}),patch("g040_recovery_source.assert_isolated_bootstrap"),contextlib.redirect_stdout(out):
    self.assertEqual(controller.main(["prepare","--origin",ORIGIN,"--freeze-id","freeze-0001","--operator-assertion-request","request","--service-file","service","--pgpass-file","pgpass",*sum((["--evidence-"+channel.replace("_","-"),channel] for channel in controller.RESIDUAL_CHANNELS),[])]),0)
   self.assertNotIn("/secret",out.getvalue())
+ def test_unsigned_assertion_accepts_fresh_preparation_evidence_only(self):
+  now=int(time.time()); channels=("producer_stop","no_owner_write","no_dashboard_write","no_provider_write","no_out_of_band_write")
+  request={"schema":"g037-write-freeze-assertion-v1","freeze_id":"freeze-0001","origin":ORIGIN,"commit":"a"*40,"manifest_sha256":controller.freeze.MANIFEST_SHA256,"relation_root":"r"*64,"acl_root":"a"*64,"source_root":"s"*64,"terminal_spec":"t"*64,"issued_at":now,"expires_at":now+60,"attestations":{channel:{"status":True,"evidence_sha256":"e"*64,"observed_at":now-1} for channel in channels}}
+  controller.validate_operator_assertion_request(request,freeze_id="freeze-0001",origin=ORIGIN,relation_root="r"*64,acl_root="a"*64,commit="a"*40,source_root="s"*64,terminal_spec="t"*64,now=now)
+  request["attestations"]["producer_stop"]["observed_at"]=now+1
+  with self.assertRaisesRegex(Exception,"residual attestation invalid"):
+   controller.validate_operator_assertion_request(request,freeze_id="freeze-0001",origin=ORIGIN,relation_root="r"*64,acl_root="a"*64,commit="a"*40,source_root="s"*64,terminal_spec="t"*64,now=now)
  def test_finalize_requires_canonical_request_fixed_key_signature_and_fresh_output(self):
   with tempfile.TemporaryDirectory() as directory:
    root=Path(directory); request={"schema":"g037-write-freeze-assertion-v1","freeze_id":"freeze-0001","origin":ORIGIN,"commit":"h"*40,"manifest_sha256":controller.freeze.MANIFEST_SHA256,"relation_root":"r"*64,"acl_root":"a"*64,"source_root":"s"*64,"terminal_spec":"t"*64,"issued_at":1,"expires_at":2,"attestations":{}}
