@@ -12,9 +12,9 @@ FORBIDDEN_VERSIONS = frozenset({"20260531105250", "20260612075100", "20260627150
 APPLICATION_SCHEMAS = ("public", "shortener_private", "account_deletion_private", "privacy_retention")
 MANAGED_METADATA_SCHEMAS = ("auth", "storage")
 REMEDIATION_AUTHORIZATION_SCHEMA = "g035-short-url-remediation-authorization-v1"
-REMEDIATION_PUBLIC_KEY_PEM = "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAYQJXKk15hE2e0uXtDTnVV2zyMs1xSrT2rK90a5qYdAE=\n-----END PUBLIC KEY-----\n"
-REMEDIATION_PUBLIC_KEY_SHA256 = "459308554256047bb7ea6095bdfbe08f353d438a824cb112273c7c9c94074eec"
-APPROVED_AGE_RECIPIENT_SHA256 = "7b06467823df06c5bcf25ad868c25a10cf08f9c7aa16dc41b42e004b8d92eae4"
+REMEDIATION_PUBLIC_KEY_PEM = "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEA1aTLvmOtTWC1LZTYK8ocOBGlhWnC6k8a/ePCKSFdWPI=\n-----END PUBLIC KEY-----\n"
+REMEDIATION_PUBLIC_KEY_SHA256 = "2906df37baa27b43351e96af3c4e59ae64108fd0d1a2222c6cf9f40119de0677"
+APPROVED_AGE_RECIPIENT_SHA256 = "4aea6d0986d6b674f50832b2536db6196dbfd9e93a0f3f2c667b988282b43ee4"
 # Immutable identities from the authoritative 12-row G034 hosted readback; this
 # records observed ledger state, not proof of any historical application event.
 BASELINE_PAIRS = (
