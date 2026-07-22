@@ -667,6 +667,16 @@ class CloneRehearsalTests(unittest.TestCase):
             "port": 55401, "container_id_sha256": rehearsal._sha(container_id.encode()),
         })))
         self.assertEqual(len([command for command in commands if command[1:2] == ["exec"]]), 1)
+        docker_29_container = {
+            **container,
+            "NetworkSettings": {
+                **container["NetworkSettings"],
+                "Ports": {"5432/tcp": []},
+            },
+        }
+        docker_29_proof, docker_29_commands = proof_for(docker_29_container)
+        self.assertEqual(docker_29_proof, proof)
+        self.assertEqual(len([command for command in docker_29_commands if command[1:2] == ["exec"]]), 1)
         hostile_environment = {**container, "Config": {**container["Config"], "Env": [
             "PGHOST=attacker.invalid", "PGPORT=6543", "PGSERVICE=attacker",
             "PGDATABASE=wrong", "PGUSER=wrong", "PGOPTIONS=-csearch_path=wrong",
