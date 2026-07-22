@@ -74,6 +74,8 @@ class G037ManagedRecoveryTests(unittest.TestCase):
    self.assertFalse(Path(held.path).exists())
    self.assertEqual(Path(held.child_path()).read_bytes(),b"receipt")
    self.assertIn(held.fd,held.subprocess_kwargs()["pass_fds"])
+   with patch.object(Path,"exists",side_effect=[False,True]):
+    self.assertEqual(held.child_path(),f"/dev/fd/{held.fd}")
  def test_temporary_input_write_failure_closes_and_unlinks(self):
   fd,path=tempfile.mkstemp(dir=self.root); path=Path(path)
   with patch.object(g037.tempfile,"mkstemp",return_value=(fd,str(path))),patch.object(g037.os,"write",side_effect=OSError("write failed")):
