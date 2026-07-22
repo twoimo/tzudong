@@ -97,6 +97,7 @@ class RecoveryCustody:
     target_fingerprint: str
     freeze_root: str
     freeze_expires_at: int
+    starting_acl_root: str
     target_acl_root: str
     backup_receipt_sha256: str
     capture_receipt_sha256: str
@@ -602,15 +603,19 @@ def _revalidate_production_custody(args: Any, source: SourceBinding, manifest: A
     now = int(time.time())
     if min(custody.freeze_expires_at, verified.freeze_expires_at, verified.expires_at) <= now:
         _deny("backup_freeze")
-    freeze_root, inventory_root, freeze_expires_at, target_acl_root = _backup_freeze(args, source, manifest)
-    if (freeze_root != custody.freeze_root or inventory_root != custody.inventory_root or freeze_expires_at != custody.freeze_expires_at or target_acl_root != custody.target_acl_root):
+    freeze_root, inventory_root, freeze_expires_at, starting_acl_root = _backup_freeze(args, source, manifest)
+    if (freeze_root != custody.freeze_root or inventory_root != custody.inventory_root
+            or freeze_expires_at != custody.freeze_expires_at or starting_acl_root != custody.starting_acl_root):
         _deny("backup_freeze")
     backup_raw = _stable_bytes(_outside(args.backup_receipt, _root(args)), _root(args))
     if hashlib.sha256(backup_raw).hexdigest() != custody.backup_receipt_sha256:
         _deny("backup_capture")
     backup = _signed_document(backup_raw, "g040-production-backup-v1")
     required = {"issued_at", "expires_at", "freeze_expires_at", "target_acl_root", "final_recovery_commit", "runtime_source_root", "reference_receipt_sha256", "target_fingerprint", "hosted_observation_receipt_sha256", "hosted_observation_classification_sha256", "freeze_root", "inventory_root", "capture_receipt_sha256", "g035_receipt_sha256", "archive_sha256", "archive_bytes", "g035_manifest_sha256", "g035_source_sha256"}
-    if (set(backup) != required or backup["expires_at"] <= now or any(backup[key] != getattr(custody, key) for key in ("freeze_expires_at", "target_acl_root", "freeze_root", "inventory_root", "capture_receipt_sha256", "archive_sha256", "archive_bytes")) or backup["final_recovery_commit"] != source.final_commit or backup["target_fingerprint"] != verified.target_fingerprint):
+    if (set(backup) != required or backup["expires_at"] <= now
+            or any(backup[key] != getattr(custody, key) for key in ("freeze_expires_at", "freeze_root", "inventory_root", "capture_receipt_sha256", "archive_sha256", "archive_bytes"))
+            or backup["target_acl_root"] != custody.starting_acl_root
+            or backup["final_recovery_commit"] != source.final_commit or backup["target_fingerprint"] != verified.target_fingerprint):
         _deny("backup_capture")
     capture_raw = _stable_bytes(_outside(args.capture_receipt, _root(args)), _root(args))
     if hashlib.sha256(capture_raw).hexdigest() != custody.capture_receipt_sha256:
