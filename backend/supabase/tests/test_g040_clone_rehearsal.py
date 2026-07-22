@@ -667,6 +667,11 @@ class CloneRehearsalTests(unittest.TestCase):
             "port": 55401, "container_id_sha256": rehearsal._sha(container_id.encode()),
         })))
         self.assertEqual(len([command for command in commands if command[1:2] == ["exec"]]), 1)
+        docker_hub_proof, docker_hub_commands = proof_for(
+            candidate_image={**image, "RepoDigests": [f"docker.io/{rehearsal._IMAGE_DIGEST}"]},
+        )
+        self.assertEqual(docker_hub_proof, proof)
+        self.assertEqual(len([command for command in docker_hub_commands if command[1:3] == ["image", "inspect"]]), 1)
         docker_29_container = {
             **container,
             "NetworkSettings": {
