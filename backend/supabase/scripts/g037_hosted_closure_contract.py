@@ -12,8 +12,8 @@ SELF_WRAPPING = ("20260712000400", "20260713002400")
 FORBIDDEN_VERSIONS = frozenset(("20260531105250", "20260612075100", "20260627150000", "20260702000200", "20260707000700", "20260713000400", "20260713002500", "20260713002600", "20260713002700"))
 # A public key is intentionally embedded; no private material is accepted by this contract.
 AUTHORIZATION_SCHEMA = "g037-hosted-closure-authorization-v1"
-AUTHORIZATION_PUBLIC_KEY_PEM = "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAqwIzn9/bbws3I/A32biOWOFn55z+Ofs/mg884d7Yczc=\n-----END PUBLIC KEY-----\n"
-AUTHORIZATION_PUBLIC_KEY_SHA256 = hashlib.sha256(AUTHORIZATION_PUBLIC_KEY_PEM.encode()).hexdigest()
+AUTHORIZATION_PUBLIC_KEY_PEM = "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAZccE77vdHuSmTLuFobhH+JR3KQEWpf9x1z+BuVFSzpI=\n-----END PUBLIC KEY-----\n"
+AUTHORIZATION_PUBLIC_KEY_SHA256 = "a9fd31ab443aea51d0f71ec63603c4cd46cdcc343b6b50df48f47902cbf95491"
 BASELINE_PAIRS = (
     ("20251219","db_performance_optimization"),("20260118","create_ocr_logs"),
     ("20260425","allow_ocr_logs_user_insert"),("20260506065538","optimize_auth_user_state_indexes"),

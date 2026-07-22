@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import ast
+import hashlib
 import json
 import sys
 import tempfile
@@ -18,6 +19,7 @@ import g037_remediation_authorization as remediation
 import g040_clone_rehearsal as rehearsal
 import g040_production_controller as controller
 import g040_recovery_source as source
+import g040_reference_evidence as reference
 from g040_reference_evidence import DERIVATION_MODE, REVERSE_VECTOR_SHA256
 
 H = "a" * 64
@@ -53,6 +55,63 @@ def full_data(**overrides):
 
 
 class G040CrossModuleContractTests(unittest.TestCase):
+    def test_rotated_public_authorities_are_exact_separate_and_replace_old_authorities(self):
+        expected = {
+            "lineage": (
+                rehearsal._LINEAGE_PUBLIC_KEY_PEM,
+                rehearsal._LINEAGE_PUBLIC_KEY_SHA256,
+                b"-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEA9+Hl2Dl/8N0kF+5xZzrVD2w73nbKXwrXgAXfvc4nMGU=\n-----END PUBLIC KEY-----\n",
+                "681348768bca7585d5736946f9dd29e601e13f260c401ff57ba442fac0e82efc",
+                Path(rehearsal.__file__),
+            ),
+            "reference": (
+                reference.PUBLIC_KEY_PEM.encode("ascii"),
+                reference.PUBLIC_KEY_SHA256,
+                b"-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAJlf2GafefzZWuV3sLbEOp7sapI6kEkUX+JlVcfeFS2E=\n-----END PUBLIC KEY-----\n",
+                "fb7b717a7d2dffe7dc038cbf8203936d93408e5efc63d26f29854f33a9f84e86",
+                Path(reference.__file__),
+            ),
+            "receipt": (
+                controller._RECEIPT_PUBLIC_KEY_PEM.encode("ascii"),
+                controller._RECEIPT_PUBLIC_KEY_SHA256,
+                b"-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEA/zrWSA2h9sKfuVsBWJllBsxjX9hjo6Jk+WWqHr84f2k=\n-----END PUBLIC KEY-----\n",
+                "cd576d9c8558c067e987193394627abbbfc37e75df8183039a13efaea3f8c498",
+                Path(controller.__file__),
+            ),
+            "authorization": (
+                controller.authority.PUBLIC_KEY_PEM.encode("ascii"),
+                controller.authority.PUBLIC_KEY_SHA256,
+                b"-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEArK56yn4dIqU4FLDhM9MI0DF74eOqn9hudQwCjRXTFyE=\n-----END PUBLIC KEY-----\n",
+                "fa64b88229d78aab026975c7b6173d1d12f830e064e30535b8a95e1dcf2a16a6",
+                Path(controller.authority.__file__),
+            ),
+        }
+        public_keys = []
+        source_by_domain = {}
+        for domain, (public_pem, declared_sha, exact_pem, exact_sha, source_path) in expected.items():
+            with self.subTest(domain=domain):
+                self.assertEqual(public_pem, exact_pem)
+                self.assertEqual(declared_sha, exact_sha)
+                self.assertEqual(hashlib.sha256(public_pem).hexdigest(), declared_sha)
+            public_keys.append(public_pem)
+            source_by_domain[domain] = source_path.read_text("utf-8")
+        self.assertEqual(len(set(public_keys)), len(expected))
+        for domain, source_text in source_by_domain.items():
+            for other_domain, (_, _, public_pem, _, _) in expected.items():
+                with self.subTest(domain=domain, authority=other_domain):
+                    self.assertEqual(public_pem.decode("ascii") in source_text, domain == other_domain)
+        all_sources = "\n".join(source_by_domain.values())
+        for old_authority in (
+            "MCowBQYDK2VwAyEAp7jYvzpsexvK1XXTUJZ12yCNsKCbzssvEIphrDdQ21c=",
+            "cc947f1c4b5156aad992c38ffefee6faaa10423d08e0a47666893f575fdf3d99",
+            "MCowBQYDK2VwAyEA54foEGua92giu6cGugNkH98l21oMx+QygWYThaJHsDY=",
+            "ff3730db273de5c6b30a6aef684db0e196d877e883dd51503793d7d7efb0b2b9",
+            "MCowBQYDK2VwAyEAc22+PiN+MZGTH2hHfmIi9l4YOTEMQsDM1v3s/sYZIIc=",
+            "94f70fa95b361dd51e765d6e597d2e13149e3489124198df6adcce931149735a",
+            "MCowBQYDK2VwAyEAdycNc1ZqVFTUU65fIvc/mDNdBOaKnzfmZGZnrPogcBI=",
+            "7a6c3cf95528e10d48d88f378189173309c2e3f9d238adce47df9dbb9640a359",
+        ):
+            self.assertNotIn(old_authority, all_sources)
     def test_bindings_preserve_absent_sentinel_and_full_escaped_data_exactly(self):
         source = SimpleNamespace(final_commit="b" * 40, runtime_source_root="c" * 64)
         reference = SimpleNamespace(base_commit="d" * 40, manifest_sha256=H, migration_source_sha256=H,

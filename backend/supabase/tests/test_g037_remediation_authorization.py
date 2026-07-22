@@ -364,5 +364,33 @@ class G037AuthorityTests(unittest.TestCase):
             with self.assertRaises(c.ContractError): c.authorize_exact_baseline(env, expected_bindings=altered, now=self.now, baseline_is_exact=lambda: True)
 
 
+class G037RotatedAuthorityFixtureTests(unittest.TestCase):
+    operator_pem = "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAZccE77vdHuSmTLuFobhH+JR3KQEWpf9x1z+BuVFSzpI=\n-----END PUBLIC KEY-----\n"
+    operator_sha256 = "a9fd31ab443aea51d0f71ec63603c4cd46cdcc343b6b50df48f47902cbf95491"
+    execution_pem = "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAAGquC2wytyVU4OEh4Xa3Ks8curo/xWybEkkgJu1GP+w=\n-----END PUBLIC KEY-----\n"
+    execution_sha256 = "2ad4754cca38c52eb5daa592a879c7018cde3d716b2290f43bfe5796ac061150"
+
+    def test_rotated_public_manifest_fixtures_are_exact_and_domain_separated(self):
+        self.assertEqual(closure.AUTHORIZATION_PUBLIC_KEY_PEM, self.operator_pem)
+        self.assertEqual(closure.AUTHORIZATION_PUBLIC_KEY_SHA256, self.operator_sha256)
+        self.assertEqual(c.PUBLIC_KEY_PEM, self.execution_pem)
+        self.assertEqual(c.PUBLIC_KEY_SHA256, self.execution_sha256)
+        self.assertEqual(hashlib.sha256(self.operator_pem.encode()).hexdigest(), self.operator_sha256)
+        self.assertEqual(hashlib.sha256(self.execution_pem.encode()).hexdigest(), self.execution_sha256)
+        self.assertNotEqual(closure.AUTHORIZATION_PUBLIC_KEY_PEM, c.PUBLIC_KEY_PEM)
+        self.assertNotEqual(closure.AUTHORIZATION_PUBLIC_KEY_SHA256, c.PUBLIC_KEY_SHA256)
+
+    def test_signature_from_superseded_authority_is_rejected_by_both_domains(self):
+        from cryptography.exceptions import InvalidSignature
+        from cryptography.hazmat.primitives.serialization import load_pem_public_key
+
+        superseded_authority = Ed25519PrivateKey.generate()
+        payload = b"superseded-g037-authority"
+        signature = superseded_authority.sign(payload)
+        with self.assertRaises(c.ContractError):
+            c._verify(payload, signature, c.PUBLIC_KEY_PEM)
+        with self.assertRaises(InvalidSignature):
+            load_pem_public_key(closure.AUTHORIZATION_PUBLIC_KEY_PEM.encode()).verify(signature, payload)
+
 if __name__ == "__main__":
     unittest.main()
