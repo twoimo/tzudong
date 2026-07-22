@@ -9,6 +9,7 @@ recovery_source._establish_isolated_bootstrap(Path(__file__).parents[3],"a"*40,"
 import g035_hosted_recovery_contract as contract
 spec=importlib.util.spec_from_file_location("recovery",SCRIPTS/"g035_hosted_recovery.py"); recovery=importlib.util.module_from_spec(spec); spec.loader.exec_module(recovery)
 ROOT=Path(__file__).parents[3]
+OLD_REMEDIATION_PUBLIC_KEY_PEM="-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEA1aTLvmOtTWC1LZTYK8ocOBGlhWnC6k8a/ePCKSFdWPI=\n-----END PUBLIC KEY-----\n"
 def fingerprints(*,pairs=(),ledger_sha256="1"*64,restorable_catalog_sha256="2"*64,managed_catalog_sha256="3"*64,managed_schemas=contract.MANAGED_METADATA_SCHEMAS):
  return {"ledger_pairs":pairs,"ledger_sha256":ledger_sha256,"ledger_count":len(pairs),"restorable_catalog_sha256":restorable_catalog_sha256,"managed_catalog_sha256":managed_catalog_sha256,"managed_metadata_schemas_present":managed_schemas}
 
@@ -58,6 +59,11 @@ class ContractTests(unittest.TestCase):
   self.assertIn("--identity-fd 3",runbook)
   self.assertIn("--identity-handle <canonical-inherited-handle>",runbook)
   self.assertIn("successful child publishes canonical receipt bytes itself",runbook)
+ def test_rotated_custody_pins_new_authority_and_rejects_old_authority(self):
+  self.assertEqual("e338e9dbfd309838b16980d62fe72a71c526e329506285f4c5811d725d941213",contract.REMEDIATION_PUBLIC_KEY_SHA256)
+  self.assertEqual(contract.REMEDIATION_PUBLIC_KEY_SHA256,hashlib.sha256(contract.REMEDIATION_PUBLIC_KEY_PEM.encode("ascii")).hexdigest())
+  self.assertEqual("c529b89f584d1d02f2543887e31cf85515b74cbd5a93cffd58efd93e6245ed7f",contract.APPROVED_AGE_RECIPIENT_SHA256)
+  self.assertNotEqual(OLD_REMEDIATION_PUBLIC_KEY_PEM,contract.REMEDIATION_PUBLIC_KEY_PEM)
  def test_short_url_authorization_contract_rejects_tampering_and_noncanonical_inputs(self):
   hashes={key:"a"*64 for key in ("inspection_receipt_sha256","restore_receipt_sha256","capture_receipt_sha256","manifest_sha256","selection_spec_sha256","short_urls_catalog_sha256","pre_short_urls_rowset_sha256","duplicate_victims_sha256","victim_descriptors_sha256")}
   auth={"schema":contract.REMEDIATION_AUTHORIZATION_SCHEMA,**hashes,"repository_commit":"b"*40,"duplicate_group_count":1,"duplicate_victim_count":1,"batch_id":"11111111-1111-1111-1111-111111111111"}
@@ -71,6 +77,9 @@ class ContractTests(unittest.TestCase):
    path.write_bytes(contract.canonical_json_bytes(auth))
    verified=contract.verify_short_url_remediation_authorization(path,signature,require_custody=custody,verify_detached=verify,expected_bindings={key:auth[key] for key in ("inspection_receipt_sha256","restore_receipt_sha256","capture_receipt_sha256","manifest_sha256","repository_commit")},inspection_evidence=evidence)
    self.assertEqual(auth["batch_id"],verified["batch_id"])
+   with patch.object(contract,"REMEDIATION_PUBLIC_KEY_PEM",OLD_REMEDIATION_PUBLIC_KEY_PEM):
+    with self.assertRaisesRegex(contract.ContractError,"pinned key mismatch"):
+     contract.verify_short_url_remediation_authorization(path,signature,require_custody=custody,verify_detached=verify,expected_bindings={key:auth[key] for key in ("inspection_receipt_sha256","restore_receipt_sha256","capture_receipt_sha256","manifest_sha256","repository_commit")},inspection_evidence=evidence)
    with self.assertRaises(TypeError): verified["batch_id"]="changed"
    cases=(
     b'{}',
@@ -722,7 +731,7 @@ class ControllerTests(unittest.TestCase):
   conn=Conn(); manifest=contract.load_manifest(ROOT); observed=fingerprints()
   with tempfile.TemporaryDirectory() as raw:
    dest=Path(raw)/"out"; dest.mkdir(); artifact=Path(raw)/"ok.json"; artifact.write_text(json.dumps(self.artifact(manifest,{"ledger_sha256":"1"*64,"catalog_sha256":"2"*64})),encoding="utf8")
-   recipient="age1zd26rg0r25ld74839sv22hkf3sv6uhkw2thrw58gx4ehzwcx6czqfftvv5"
+   recipient="age1643wr4n3598yu8px5fc6qjpq753rh2j4qk3ar4ree23fz9ke4eqqc9xgmw"
    args=Namespace(destination=str(dest),service_file=str(self.service(raw,"g035")),recipient=recipient,g034_artifact=str(artifact),pg_dump="pg_dump",encrypt_command="age")
    def dump(*values):
     self.assertNotIn("ROLLBACK",conn.events); self.assertEqual(recipient,values[2]); output=dest/"g035-dump.enc"; output.write_bytes(b"x"); info=output.stat(); return [],hashlib.sha256(b"x").hexdigest(),1,(info.st_dev,info.st_ino)

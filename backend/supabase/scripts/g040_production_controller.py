@@ -35,10 +35,10 @@ MODES = frozenset(("validate-source", "validate", "diagnose", "prepare", "execut
 _HEX = frozenset("0123456789abcdef")
 _RECEIPT_SIGNING_KEY = Path.home() / ".g040-recovery" / "receipt-signing-key.pem"
 _RECEIPT_PUBLIC_KEY_PEM = """-----BEGIN PUBLIC KEY-----
-MCowBQYDK2VwAyEAc22+PiN+MZGTH2hHfmIi9l4YOTEMQsDM1v3s/sYZIIc=
+MCowBQYDK2VwAyEA/zrWSA2h9sKfuVsBWJllBsxjX9hjo6Jk+WWqHr84f2k=
 -----END PUBLIC KEY-----
 """
-_RECEIPT_PUBLIC_KEY_SHA256 = "94f70fa95b361dd51e765d6e597d2e13149e3489124198df6adcce931149735a"
+_RECEIPT_PUBLIC_KEY_SHA256 = "cd576d9c8558c067e987193394627abbbfc37e75df8183039a13efaea3f8c498"
 _ABSENT_DATA_ROOT = hashlib.sha256(b"g040-prefix-observation:no-data-root").hexdigest()
 
 class ControllerError(RuntimeError): pass

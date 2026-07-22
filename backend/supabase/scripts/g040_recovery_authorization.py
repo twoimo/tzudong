@@ -18,10 +18,10 @@ SCHEMA = "g040-prefix-recovery-authorization-v1"
 PURPOSE = "g040-prefix-recovery"
 POLICY = "g040-exact-source-pinned-one-shot-v1"
 PUBLIC_KEY_PEM = """-----BEGIN PUBLIC KEY-----
-MCowBQYDK2VwAyEAdycNc1ZqVFTUU65fIvc/mDNdBOaKnzfmZGZnrPogcBI=
+MCowBQYDK2VwAyEArK56yn4dIqU4FLDhM9MI0DF74eOqn9hudQwCjRXTFyE=
 -----END PUBLIC KEY-----
 """
-PUBLIC_KEY_SHA256 = "7a6c3cf95528e10d48d88f378189173309c2e3f9d238adce47df9dbb9640a359"
+PUBLIC_KEY_SHA256 = "fa64b88229d78aab026975c7b6173d1d12f830e064e30535b8a95e1dcf2a16a6"
 JOURNAL_SCHEMA = "g040-recovery-attempt-started-v1"
 CANONICAL_JOURNAL_DIRECTORY = Path("C:/ProgramData/TzudongRecovery/g040-attempt-journal") if os.name == "nt" else Path("/var/lib/tzudong-recovery/g040-attempt-journal")
 _HEX = re.compile(r"^[a-f0-9]{64}$")
