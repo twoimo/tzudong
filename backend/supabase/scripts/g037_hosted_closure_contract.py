@@ -583,7 +583,7 @@ def validate_operator_assertion_request(
             or evidence["status"] is not True or not isinstance(evidence["observed_at"],int)
             or isinstance(evidence["observed_at"],bool) or not _SHA.fullmatch(evidence["evidence_sha256"])
             or evidence["observed_at"]>point+30 or evidence["observed_at"]<point-900
-            or evidence["observed_at"]<issued or evidence["observed_at"]>expires):
+            or evidence["observed_at"]>issued):
             raise ContractError("residual attestation invalid")
 def validate_operator_assertion(
     value: Any, *, freeze_id: str, origin: str, relation_root: str, acl_root: str,
