@@ -1462,6 +1462,58 @@ class CloneRehearsalTests(unittest.TestCase):
                         path.write_bytes(rehearsal.controller.authority.canonical_json_bytes(wrong_kind) + b"\n")
                         with self.assertRaisesRegex(rehearsal.RehearsalError, "aggregate_custody"):
                             rehearsal._aggregate_signed(path, kind, root)
+    def test_aggregate_freeze_accepts_canonical_g037_bytes_and_uses_migration_source_root(self):
+        channels = ("no_owner_write", "no_dashboard_write", "no_provider_write", "no_out_of_band_write", "producer_stop")
+        evidence = [f"/custody/{channel}.json" for channel in channels]
+        evidence_bytes = {path: f"evidence-{index}".encode() for index, path in enumerate(evidence)}
+        assertion = {
+            "freeze_id": "current-freeze",
+            "origin": "https://example.supabase.co",
+            "relation_root": "a" * 64,
+            "acl_root": "b" * 64,
+            "issued_at": 100,
+            "expires_at": 200,
+            "attestations": {
+                channel: {"observed_at": 100, "evidence_sha256": rehearsal._sha(evidence_bytes[path])}
+                for channel, path in zip(channels, evidence)
+            },
+        }
+        raw = rehearsal._canonical(assertion)
+        args = types.SimpleNamespace(freeze_assertion="/custody/freeze.json", freeze_evidence=evidence)
+        source = rehearsal.SourceBinding("c" * 40, "d" * 64)
+        manifest = types.SimpleNamespace(migrations=())
+        values = {"/custody/freeze.json": raw, **evidence_bytes}
+
+        with patch.object(rehearsal.controller, "_outside", side_effect=lambda path, _root: Path(path)), \
+                patch.object(rehearsal.controller, "_stable_bytes", side_effect=lambda path, _root: values[str(path)]), \
+                patch.object(rehearsal, "validate_sources", return_value=manifest), \
+                patch.object(rehearsal, "terminal_spec", return_value="e" * 64), \
+                patch.object(rehearsal, "validate_operator_assertion") as validate:
+            result = rehearsal._aggregate_freeze(args, source, Path("/checkout"), 150)
+
+        self.assertEqual(result, (
+            rehearsal._sha(raw),
+            rehearsal._sha(rehearsal._canonical({
+                "g040-freeze-inventory-v1": {
+                    "relation_root": assertion["relation_root"],
+                    "acl_root": assertion["acl_root"],
+                },
+            })),
+            200,
+            "b" * 64,
+            100,
+        ))
+        validate.assert_called_once_with(
+            assertion,
+            freeze_id="current-freeze",
+            origin="https://example.supabase.co",
+            relation_root="a" * 64,
+            acl_root="b" * 64,
+            commit="c" * 40,
+            source_root=rehearsal.g037_digest([]),
+            terminal_spec="e" * 64,
+            now=150,
+        )
     def test_aggregate_custody_derives_roots_from_verified_artifacts_and_denies_bad_evidence(self):
         source = rehearsal.SourceBinding("a" * 40, "b" * 64)
         reference = types.SimpleNamespace(
