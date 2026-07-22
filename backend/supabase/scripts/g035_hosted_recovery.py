@@ -339,6 +339,7 @@ def _owned_output(path,label):
   identity=os.fstat(fd)
   if os.name=="nt": _windows_restrict_temporary_file(path)
   else: os.fchmod(fd,0o600)
+  identity=os.fstat(fd)
   if not stat.S_ISREG(identity.st_mode) or not _same_file_identity(fd,path) or not _restrictive(path) or (os.name!="nt" and identity.st_mode&0o777!=0o600): raise RecoveryError(f"{label} custody invalid")
   return fd,(identity.st_dev,identity.st_ino)
  except Exception as exc:
@@ -994,18 +995,25 @@ def _close_temporary_file(fd,path):
    if same: path.unlink(missing_ok=True)
    os.close(fd)
  except OSError: pass
+def _descriptor_custody_argument(fd):
+ if os.name!="posix": raise RecoveryError("descriptor custody unavailable")
+ for root in ("/proc/self/fd","/dev/fd"):
+  candidate=f"{root}/{fd}"
+  if Path(candidate).exists():
+   os.lseek(fd,0,os.SEEK_SET)
+   return candidate
+ raise RecoveryError("descriptor custody unavailable")
 def _custodied_argument(fd,path):
  _require_temporary_file_identity(fd,path)
  if os.name=="nt": return str(path)
- if os.name!="posix" or not Path("/proc/self/fd").is_dir(): raise RecoveryError("descriptor custody unavailable")
+ argument=_descriptor_custody_argument(fd)
  path.unlink()
- return f"/proc/self/fd/{fd}"
+ return argument
 def _custodied_input_argument(fd,path):
  if os.name=="nt":
   if not _same_file_identity(fd,path) or not _restrictive(path): raise RecoveryError("authorization signature custody lost")
   return str(path)
- if os.name!="posix" or not Path("/proc/self/fd").is_dir(): raise RecoveryError("descriptor custody unavailable")
- return f"/proc/self/fd/{fd}"
+ return _descriptor_custody_argument(fd)
 def _authorization(args,inspection,restored):
  path=Path(args.authorization); signature=Path(args.authorization_signature)
  capture=restored.get("prior_receipt_sha256",[])

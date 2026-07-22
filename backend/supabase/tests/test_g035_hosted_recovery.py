@@ -280,6 +280,7 @@ class ControllerTests(unittest.TestCase):
     with self.assertRaisesRegex(recovery.RecoveryError,"ACL"): recovery._secure_temporary_file("unused",b"secret-content")
    self.assertFalse(candidate.exists())
  def test_secure_temporary_file_applies_windows_acl_before_content(self):
+  if sys.platform!="win32": self.skipTest("Windows ACL ordering assertion")
   with tempfile.TemporaryDirectory() as raw:
    candidate=Path(raw)/"temporary"
    fd=recovery.os.open(candidate,recovery.os.O_CREAT|recovery.os.O_EXCL|recovery.os.O_RDWR,0o600)
@@ -294,6 +295,7 @@ class ControllerTests(unittest.TestCase):
    finally:
     recovery._close_temporary_file(actual_fd,path)
  def test_secure_temporary_file_acl_failure_cleans_empty_file(self):
+  if sys.platform!="win32": self.skipTest("Windows ACL cleanup assertion")
   with tempfile.TemporaryDirectory() as raw:
    candidate=Path(raw)/"temporary"
    fd=recovery.os.open(candidate,recovery.os.O_CREAT|recovery.os.O_EXCL|recovery.os.O_RDWR,0o600)
@@ -311,6 +313,16 @@ class ControllerTests(unittest.TestCase):
   finally:
    recovery._close_temporary_file(fd,path)
   self.assertTrue(path.exists())
+ def test_posix_custodied_argument_falls_back_to_dev_fd(self):
+  if recovery.os.name=="nt": self.skipTest("POSIX descriptor custody assertion")
+  fd,path=recovery._secure_temporary_file("g035-test-",b"exact")
+  try:
+   with patch.object(Path,"exists",side_effect=[False,True]):
+    argument=recovery._custodied_argument(fd,path)
+   self.assertEqual(argument,f"/dev/fd/{fd}")
+   self.assertEqual(Path(argument).read_bytes(),b"exact")
+  finally:
+   recovery._close_temporary_file(fd,path)
  def test_detached_verification_passes_pinned_key_and_exact_payload_from_custodied_descriptors(self):
   with tempfile.TemporaryDirectory() as raw:
    signature=Path(raw)/"authorization.sig"; signature.write_bytes(b"signature"); signature.chmod(0o600)
@@ -524,7 +536,7 @@ class ControllerTests(unittest.TestCase):
   with tempfile.TemporaryDirectory() as raw:
    destination=Path(raw); crypt,dump=Process(0),Process(1)
    def replace(*unused):
-    output=destination/"g035-dump.enc"; output.unlink(); output.write_bytes(b"replacement")
+    output=destination/"g035-dump.enc"; output.unlink(missing_ok=True); output.write_bytes(b"replacement")
     raise recovery.RecoveryError("failed")
    with patch.object(recovery.subprocess,"Popen",side_effect=(crypt,dump)),patch.object(recovery,"_drain_pipeline",side_effect=replace),self.assertRaisesRegex(recovery.RecoveryError,"database capture failed"):
     recovery._dump_to_encrypted("pg_dump","age","age1"+"q"*58,"snapshot",{},destination)
@@ -895,7 +907,7 @@ class ControllerTests(unittest.TestCase):
  def test_restore_receipt_is_external_fresh_and_no_clobber(self):
   result=recovery.receipt("restore-verify","restored",{"ledger_pairs":(("1","baseline"),)},["a"*64])
   with tempfile.TemporaryDirectory() as raw:
-   base=Path(raw); repository=base/"repository"; repository.mkdir()
+   base=Path(raw).resolve(); repository=base/"repository"; repository.mkdir()
    target=base/"restore.json"; args=Namespace(restore_receipt=str(target))
    with patch.object(recovery,"repository_root",return_value=repository),patch.object(recovery,"_restrictive_directory",return_value=True),patch.object(recovery,"_windows_restrict_temporary_file"),patch.object(recovery,"_restrictive",return_value=True):
     self.assertEqual(result,recovery._publish_restore_receipt(args,result))

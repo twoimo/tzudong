@@ -5,6 +5,7 @@ import hashlib
 import json
 import sys
 import time
+import os
 import unittest
 from dataclasses import FrozenInstanceError, replace
 from pathlib import Path
@@ -22,7 +23,7 @@ from g040_reference_evidence import DERIVATION_MODE, REVERSE_VECTOR_SHA256, SCHE
 H = "a" * 64
 COMMIT = "b" * 40
 BASE_COMMIT = executor.SOURCE_COMMIT
-ROOT = Path("C:/pinned")
+ROOT = Path("C:/pinned") if os.name == "nt" else Path("/pinned")
 SPEC = "c" * 64
 RUNTIME_SOURCE_ROOT = "d" * 64
 MANIFEST_ROOT = "e" * 64
