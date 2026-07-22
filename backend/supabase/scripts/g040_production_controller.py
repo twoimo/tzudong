@@ -546,7 +546,9 @@ def _backup_freeze(args: Any, source: SourceBinding, manifest: Any) -> tuple[str
 def production_backup(args: Any) -> Mapping[str, Any]:
     """Capture a fresh G035 dump and immediately bind it to current G040 lineage."""
     source = _source(args); reference = _reference(args, source)
-    observation, observation_sha256 = _load_observation(args, source, reference)
+    loaded_observation = _load_observation(args, source, reference)
+    observation = loaded_observation.observation
+    observation_sha256 = loaded_observation.receipt_sha256
     manifest = validate_sources(_root(args))
     freeze_root, inventory_root, freeze_expires_at, target_acl_root = _backup_freeze(args, source, manifest)
     try:
@@ -564,7 +566,7 @@ def production_backup(args: Any) -> Mapping[str, Any]:
         if evidence.get("dump_sha256") != archive_sha256 or evidence.get("dump_bytes") != archive_bytes:
             _deny("backup_capture")
         issued = int(time.time())
-        expires = min(issued + 900, freeze_expires_at)
+        expires = min(issued + 900, freeze_expires_at, loaded_observation.expires_at, reference.expires_at_unix)
         if expires <= issued:
             _deny("backup_freeze")
         body = {"issued_at": issued, "expires_at": expires, "freeze_expires_at": freeze_expires_at, "target_acl_root": target_acl_root, "final_recovery_commit": source.final_commit, "runtime_source_root": source.runtime_source_root, "reference_receipt_sha256": reference.receipt_sha256, "target_fingerprint": reference.target_fingerprint, "hosted_observation_receipt_sha256": observation_sha256, "hosted_observation_classification_sha256": observation.classification_sha256, "freeze_root": freeze_root, "inventory_root": inventory_root, "capture_receipt_sha256": hashlib.sha256(capture_raw).hexdigest(), "g035_receipt_sha256": captured["receipt_sha256"], "archive_sha256": archive_sha256, "archive_bytes": archive_bytes, "g035_manifest_sha256": captured["manifest_sha256"], "g035_source_sha256": evidence["source_sha256"]}
