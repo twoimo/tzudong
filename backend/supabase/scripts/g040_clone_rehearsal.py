@@ -398,7 +398,7 @@ def _docker_clone_proof(container: str, service_port: int, live_identity: Mappin
             host.get("PortBindings") == {"5432/tcp": [{"HostIp": "127.0.0.1", "HostPort": str(service_port)}]}
             and ports == {"5432/tcp": [{"HostIp": "127.0.0.1", "HostPort": str(service_port)}]}
         )
-        internal = host.get("PortBindings") in (None, {}) and ports == {"5432/tcp": None}
+        internal = host.get("PortBindings") in (None, {}) and ports in ({"5432/tcp": None}, {"5432/tcp": []})
         if common_invalid or not (published or internal):
             _fail("docker_endpoint")
         network_name, network_attachment = next(iter(networks.items()))
