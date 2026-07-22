@@ -23,7 +23,7 @@ from typing import Any, Mapping
 import g037_managed_recovery as crypto
 import g035_hosted_recovery as g035
 import g040_production_controller as controller
-from g037_hosted_closure_contract import terminal_spec, validate_operator_assertion, validate_sources
+from g037_hosted_closure_contract import digest as g037_digest, terminal_spec, validate_operator_assertion, validate_sources
 import g040_prefix_recovery as prefix
 from g037_hosted_closure_executor import vectors
 import g040_prefix_executor as executor
@@ -875,11 +875,13 @@ def _aggregate_freeze(args: argparse.Namespace, source: SourceBinding, root: Pat
     raw = controller._stable_bytes(controller._outside(args.freeze_assertion, root), root)
     try:
         assertion = json.loads(raw.decode("ascii"), object_pairs_hook=_pairs)
-        if raw != _canonical(assertion) + b"\n" or assertion.get("freeze_id") == "40b54cf8-e59f-4eb3-a37c-88e3bf983442":
+        if raw != _canonical(assertion) or assertion.get("freeze_id") == "40b54cf8-e59f-4eb3-a37c-88e3bf983442":
             _fail("aggregate_custody")
+        manifest = validate_sources(root)
+        freeze_source_root = g037_digest([(migration.path, migration.sha256) for migration in manifest.migrations])
         validate_operator_assertion(assertion, freeze_id=assertion["freeze_id"], origin=assertion["origin"],
             relation_root=assertion["relation_root"], acl_root=assertion["acl_root"], commit=source.final_commit,
-            source_root=source.runtime_source_root, terminal_spec=terminal_spec(validate_sources(root)), now=now)
+            source_root=freeze_source_root, terminal_spec=terminal_spec(manifest), now=now)
         files = args.freeze_evidence
         channels = ("no_owner_write", "no_dashboard_write", "no_provider_write", "no_out_of_band_write", "producer_stop")
         if type(files) is not list or len(files) != 5:
