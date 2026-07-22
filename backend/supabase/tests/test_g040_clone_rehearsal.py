@@ -1489,7 +1489,11 @@ class CloneRehearsalTests(unittest.TestCase):
             "issued_at": 100, "expires_at": 200,
         }
         hosted["classification_sha256"] = hashlib.sha256(json.dumps(
-            {key: value for key, value in hosted.items() if key != "classification_sha256"},
+            {
+                key: hosted[key]
+                for key in rehearsal.prefix.PrefixObservation.__annotations__
+                if key != "classification_sha256"
+            },
             sort_keys=True, separators=(",", ":"), ensure_ascii=True, allow_nan=False,
         ).encode("ascii")).hexdigest()
         g035_source_sha256 = rehearsal.g035._source_fingerprint(
@@ -1623,9 +1627,11 @@ class CloneRehearsalTests(unittest.TestCase):
             **hosted, "status": "UNAPPLIED",
             "catalog_sha256": reference.absent_catalog_sha256, "data_sha256": None,
         }
-        native_hosted["classification_sha256"] = rehearsal._sha(rehearsal.prefix.canonical_bytes(
-            {key: value for key, value in native_hosted.items()
-             if key != "classification_sha256"}))
+        native_hosted["classification_sha256"] = rehearsal._sha(rehearsal.prefix.canonical_bytes({
+            key: native_hosted[key]
+            for key in rehearsal.prefix.PrefixObservation.__annotations__
+            if key != "classification_sha256"
+        }))
         native_full = {**full, "hosted_observation_receipt_sha256": "e" * 64}
         native_unapplied = {
             key: value for key, value in unapplied.items()
@@ -1663,7 +1669,8 @@ class CloneRehearsalTests(unittest.TestCase):
             backdated_hosted = {**hosted, "issued_at": reference.issued_at_unix - 1}
             backdated_hosted["classification_sha256"] = rehearsal._sha(
                 rehearsal.prefix.canonical_bytes({
-                    key: value for key, value in backdated_hosted.items()
+                    key: backdated_hosted[key]
+                    for key in rehearsal.prefix.PrefixObservation.__annotations__
                     if key != "classification_sha256"
                 })
             )
