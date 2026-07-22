@@ -722,7 +722,7 @@ class ControllerTests(unittest.TestCase):
   conn=Conn(); manifest=contract.load_manifest(ROOT); observed=fingerprints()
   with tempfile.TemporaryDirectory() as raw:
    dest=Path(raw)/"out"; dest.mkdir(); artifact=Path(raw)/"ok.json"; artifact.write_text(json.dumps(self.artifact(manifest,{"ledger_sha256":"1"*64,"catalog_sha256":"2"*64})),encoding="utf8")
-   recipient="age19ae5mjee5z9djp8fvvecpr8ll2xdap3k9n2yucyhdy8xy5ujhywsl5zek2"
+   recipient="age1zd26rg0r25ld74839sv22hkf3sv6uhkw2thrw58gx4ehzwcx6czqfftvv5"
    args=Namespace(destination=str(dest),service_file=str(self.service(raw,"g035")),recipient=recipient,g034_artifact=str(artifact),pg_dump="pg_dump",encrypt_command="age")
    def dump(*values):
     self.assertNotIn("ROLLBACK",conn.events); self.assertEqual(recipient,values[2]); output=dest/"g035-dump.enc"; output.write_bytes(b"x"); info=output.stat(); return [],hashlib.sha256(b"x").hexdigest(),1,(info.st_dev,info.st_ino)
