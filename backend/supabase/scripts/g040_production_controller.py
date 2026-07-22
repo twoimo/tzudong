@@ -23,7 +23,7 @@ from typing import Any, Mapping
 
 import g040_prefix_recovery as prefix
 import g040_recovery_authorization as authority
-from g037_hosted_closure_contract import terminal_spec, validate_operator_assertion, validate_sources
+from g037_hosted_closure_contract import digest as g037_digest, terminal_spec, validate_operator_assertion, validate_sources
 from g037_hosted_closure_executor import terminal_readback_assert
 from g040_prefix_executor import ExecutorEvidence, SourceValidationPlan, apply_locked_cursor, build_execution_plan, build_source_validation_plan
 from g040_recovery_source import RecoverySourceError, SourceBinding, verify_recovery_source
@@ -532,7 +532,8 @@ def _backup_freeze(args: Any, source: SourceBinding, manifest: Any) -> tuple[str
         channels = ("no_owner_write", "no_dashboard_write", "no_provider_write", "no_out_of_band_write", "producer_stop")
         if raw != authority.canonical_json_bytes(value) or value.get("freeze_id") == "40b54cf8-e59f-4eb3-a37c-88e3bf983442" or type(args.freeze_evidence) is not list or len(args.freeze_evidence) != 5:
             _deny("backup_freeze")
-        validate_operator_assertion(value, freeze_id=value["freeze_id"], origin=value["origin"], relation_root=value["relation_root"], acl_root=value["acl_root"], commit=source.final_commit, source_root=source.runtime_source_root, terminal_spec=terminal_spec(manifest), now=int(time.time()))
+        freeze_source_root = g037_digest([(migration.path, migration.sha256) for migration in manifest.migrations])
+        validate_operator_assertion(value, freeze_id=value["freeze_id"], origin=value["origin"], relation_root=value["relation_root"], acl_root=value["acl_root"], commit=source.final_commit, source_root=freeze_source_root, terminal_spec=terminal_spec(manifest), now=int(time.time()))
         observed = {hashlib.sha256(_stable_bytes(_outside(path, _root(args)), _root(args))).hexdigest() for path in args.freeze_evidence}
         if len(observed) != 5 or observed != {value["attestations"][channel]["evidence_sha256"] for channel in channels}:
             _deny("backup_freeze")
