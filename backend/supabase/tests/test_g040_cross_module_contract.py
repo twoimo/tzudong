@@ -117,7 +117,7 @@ class G040CrossModuleContractTests(unittest.TestCase):
         reference = SimpleNamespace(base_commit="d" * 40, manifest_sha256=H, migration_source_sha256=H,
             ledger_prefix_sha256=H, full_catalog_sha256=H, probe_text_sha256=H, target_fingerprint=H)
         custody = controller.RecoveryCustody(
-            target_fingerprint=H, freeze_root=H, freeze_expires_at=1, target_acl_root=H,
+            target_fingerprint=H, freeze_root=H, freeze_expires_at=1, starting_acl_root=H, target_acl_root=H,
             backup_receipt_sha256=H, capture_receipt_sha256=H, archive_sha256=H, archive_bytes=1,
             clone_rehearsal_receipt_sha256=H, inventory_root=H, target_ledger_root=H,
             target_catalog_root=H, target_data_root=H,
@@ -222,7 +222,7 @@ class G040CrossModuleContractTests(unittest.TestCase):
             ledger_prefix_sha256=digest("prefix-root"), full_catalog_sha256=digest("projection-root"), probe_text_sha256=digest("probe-root"), target_fingerprint=digest("target-fingerprint"))
         custody = controller.RecoveryCustody(
             target_fingerprint=digest("custody-target"), freeze_root=digest("custody-freeze"),
-            freeze_expires_at=2, target_acl_root=digest("custody-acl"),
+            freeze_expires_at=2, starting_acl_root=digest("custody-starting-acl"), target_acl_root=digest("custody-acl"),
             backup_receipt_sha256=digest("custody-backup"), capture_receipt_sha256=digest("custody-capture"),
             archive_sha256=digest("custody-archive"), archive_bytes=1,
             clone_rehearsal_receipt_sha256=digest("custody-rehearsal"),
@@ -281,6 +281,7 @@ class G040CrossModuleContractTests(unittest.TestCase):
             self.assertEqual(remediation._read_operator_assertion(finalized), {**request, "signature": __import__("base64").b64encode(b"signature").decode("ascii")})
             args = Namespace(repository_root=directory, freeze_assertion=finalized, freeze_evidence=[root / channel for channel in channels])
             source_binding = SimpleNamespace(final_commit="b" * 40, runtime_source_root="c" * 64)
+            manifest = SimpleNamespace(migrations=())
             def stable(path, _repository_root):
                 candidate = Path(path)
                 return raw if candidate == finalized else evidence[candidate.name]
@@ -289,7 +290,7 @@ class G040CrossModuleContractTests(unittest.TestCase):
                     patch.object(controller, "validate_operator_assertion"), \
                     patch.object(controller, "terminal_spec", return_value="4" * 64), \
                     patch.object(controller.time, "time", return_value=100):
-                freeze_root, _, _, _ = controller._backup_freeze(args, source_binding, object())
+                freeze_root, _, _, _ = controller._backup_freeze(args, source_binding, manifest)
             self.assertEqual(freeze_root, __import__("hashlib").sha256(raw).hexdigest())
             for suffix in (b"\n", b"\r\n", b" "):
                 finalized.write_bytes(raw + suffix)
@@ -298,7 +299,7 @@ class G040CrossModuleContractTests(unittest.TestCase):
                 with patch.object(controller, "_outside", side_effect=lambda path, *_args, **_kwargs: Path(path)), \
                         patch.object(controller, "_stable_bytes", side_effect=lambda path, _root: finalized.read_bytes() if Path(path) == finalized else evidence[Path(path).name]):
                     with self.assertRaises(controller.ControllerError):
-                        controller._backup_freeze(args, source_binding, object())
+                        controller._backup_freeze(args, source_binding, manifest)
 
     def test_expired_authority_is_denied_by_custody_revalidation_before_one_shot_marker(self):
         source = SimpleNamespace(final_commit="b" * 40, runtime_source_root="c" * 64)

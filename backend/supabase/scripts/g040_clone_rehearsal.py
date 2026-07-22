@@ -1036,8 +1036,7 @@ def build_aggregate_custody(args: argparse.Namespace) -> Mapping[str, Any]:
                     "terminal_acl_root", "terminal_data_root", "terminal_spec_root"))
                 or any(rehearsal[key] != full[key] for key in (
                     "terminal_rows", "terminal_ledger_root", "terminal_catalog_root",
-                    "terminal_acl_root", "terminal_data_root", "terminal_spec_root"))
-                or full["terminal_acl_root"] != target_acl_root):
+                    "terminal_acl_root", "terminal_data_root", "terminal_spec_root"))):
             _fail("aggregate_custody")
         terminal = full
     except Exception:
@@ -1049,7 +1048,7 @@ def build_aggregate_custody(args: argparse.Namespace) -> Mapping[str, Any]:
                                       backup["issued_at"], rehearsal["issued_at"],
                                       *(replay["issued_at"] for replay, _ in replays)):
         _fail("aggregate_custody")
-    body = {"issued_at": now, "expires_at": expires_at, "final_recovery_commit": source.final_commit, "runtime_source_root": source.runtime_source_root, "reference_receipt_sha256": reference.receipt_sha256, "target_fingerprint": reference.target_fingerprint, "freeze_root": freeze_root, "freeze_expires_at": freeze_expires_at, "target_acl_root": target_acl_root, "inventory_root": inventory_root, "backup_receipt_sha256": backup_sha, "capture_receipt_sha256": _sha(capture_raw), "archive_sha256": archive_sha, "archive_bytes": archive_bytes, "clone_rehearsal_receipt_sha256": rehearsal_sha, "target_ledger_root": terminal["terminal_ledger_root"], "target_catalog_root": terminal["terminal_catalog_root"], "target_data_root": terminal["terminal_data_root"]}
+    body = {"issued_at": now, "expires_at": expires_at, "final_recovery_commit": source.final_commit, "runtime_source_root": source.runtime_source_root, "reference_receipt_sha256": reference.receipt_sha256, "target_fingerprint": reference.target_fingerprint, "freeze_root": freeze_root, "freeze_expires_at": freeze_expires_at, "starting_acl_root": target_acl_root, "target_acl_root": terminal["terminal_acl_root"], "inventory_root": inventory_root, "backup_receipt_sha256": backup_sha, "capture_receipt_sha256": _sha(capture_raw), "archive_sha256": archive_sha, "archive_bytes": archive_bytes, "clone_rehearsal_receipt_sha256": rehearsal_sha, "target_ledger_root": terminal["terminal_ledger_root"], "target_catalog_root": terminal["terminal_catalog_root"], "target_data_root": terminal["terminal_data_root"]}
     receipt = controller._write_signed(controller._outside(args.output, root, fresh=True), {"schema": controller.SCHEMA, "kind": "aggregate-custody", "body": body}, repository_root=root)
     return MappingProxyType({"schema": controller.SCHEMA, "receipt_sha256": receipt})
 
