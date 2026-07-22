@@ -121,14 +121,31 @@ class FenceTests(unittest.TestCase):
   all_privileges=freeze._TABLE_PRIVILEGES
   expected_projection={
    "ad_banners":{"anon":("SELECT",),"authenticated":("DELETE","INSERT","SELECT","UPDATE"),"service_role":all_privileges},
+   "account_deletion_data_classes":{"service_role":all_privileges},
+   "account_deletion_policies":{"service_role":all_privileges},
+   "account_deletion_request_items":{"service_role":all_privileges},
+   "account_deletion_requests":{"service_role":all_privileges},
    "admin_audit_events":{"authenticated":("SELECT",),"service_role":all_privileges},
+   "admin_restaurant_map_overlay_audit_events":{"service_role":all_privileges},
+   "admin_restaurant_map_overlay_proposal_review_events":{"service_role":all_privileges},
+   "admin_restaurant_map_overlay_proposals":{"service_role":all_privileges},
    "admin_restaurant_map_overlays":{"service_role":all_privileges},
    "admin_user_preferences":{"authenticated":("INSERT","SELECT","UPDATE"),"service_role":all_privileges},
+   "admin_trend_job_requests":{"service_role":all_privileges},
+   "admin_trend_signal_observations":{"service_role":all_privileges},
+   "admin_trend_signal_runs":{"service_role":all_privileges},
    "admin_workflow_runs":{"authenticated":("SELECT",),"service_role":all_privileges},
    "admin_workflow_signals":{"authenticated":("SELECT",),"service_role":all_privileges},
    "admin_workflow_steps":{"authenticated":("SELECT",),"service_role":all_privileges},
    "announcements":{"anon":("SELECT",),"authenticated":("DELETE","INSERT","SELECT","UPDATE"),"service_role":all_privileges},
    "document_embeddings":{"service_role":all_privileges},"documents":{"authenticated":("DELETE","INSERT","SELECT","UPDATE"),"service_role":all_privileges},
+   "marketing_campaign_batches":{"service_role":all_privileges},
+   "marketing_campaign_operations":{"service_role":all_privileges},
+   "marketing_campaign_recipients":{"service_role":all_privileges},
+   "privacy_age_profiles":{"authenticated":("SELECT",)},
+   "privacy_audit_events":{"service_role":all_privileges},
+   "privacy_onboarding_challenges":{"service_role":all_privileges},
+   "privacy_policy_versions":{"service_role":all_privileges},
    "notifications":{"authenticated":("DELETE","INSERT","SELECT","UPDATE"),"service_role":all_privileges},"ocr_logs":{"authenticated":("INSERT","SELECT"),"service_role":all_privileges},
    "profiles":{"anon":("SELECT",),"authenticated":("INSERT","SELECT","UPDATE"),"service_role":all_privileges},
    "restaurant_popular_rank_snapshots":{"anon":("SELECT",),"authenticated":("SELECT",),"service_role":all_privileges},
@@ -136,6 +153,7 @@ class FenceTests(unittest.TestCase):
    "restaurant_refresh_runs":{"authenticated":("INSERT","SELECT","UPDATE"),"service_role":all_privileges},
    "restaurant_request_review_audit":{"authenticated":("SELECT",),"service_role":all_privileges},
    "restaurant_requests":{"authenticated":("INSERT","SELECT","UPDATE"),"service_role":all_privileges},
+   "restaurant_admin_destructive_audit_events":{"service_role":all_privileges},
    "restaurant_submission_items":{"authenticated":("DELETE","INSERT","SELECT","UPDATE"),"service_role":all_privileges},
    "restaurant_submissions":{"authenticated":("DELETE","INSERT","SELECT","UPDATE"),"service_role":all_privileges},
    "restaurants":{"anon":("SELECT",),"authenticated":("SELECT","UPDATE"),"service_role":all_privileges},
@@ -158,7 +176,7 @@ class FenceTests(unittest.TestCase):
    for grantee,privileges in grantees.items() for privilege in privileges
   )
   self.assertEqual(freeze.PUBLIC_ORDINARY_ACL_ALLOWLIST,expected)
-  self.assertEqual(len(expected),362)
+  self.assertEqual(len(expected),499)
   relations=tuple(freeze.Relation("public",name,index,"r","postgres")
                   for index,name in enumerate(expected_projection,1))
   oids={relation.name:relation.oid for relation in relations}
