@@ -441,14 +441,14 @@ class FenceTests(unittest.TestCase):
    freeze.run(c,origin="https://x",freeze_id="freeze-0001",expected=i,assertion={"expires_at":9999999999},callback=lambda *_:capture(),provisional_writer=lambda p:p,precommit_receipt_writer=precommit,final_receipt_writer=lambda _:None,terminal_assert=terminal)
  def test_residual_evidence_requires_exact_fresh_hashed_objects(self):
   now=int(time.time()); channels=("producer_stop","no_owner_write","no_dashboard_write","no_provider_write","no_out_of_band_write")
-  value={"schema":"g037-write-freeze-assertion-v1","freeze_id":"freeze-0001","origin":"https://x","commit":"a"*40,"manifest_sha256":freeze.MANIFEST_SHA256,"relation_root":"r"*64,"acl_root":"l"*64,"source_root":"s"*64,"terminal_spec":"t"*64,"issued_at":now-1,"expires_at":now+60,"attestations":{x:{"status":True,"evidence_sha256":"e"*64,"observed_at":now} for x in channels},"signature":"AA=="}
+  value={"schema":"g037-write-freeze-assertion-v1","freeze_id":"freeze-0001","origin":"https://x","commit":"a"*40,"manifest_sha256":freeze.MANIFEST_SHA256,"relation_root":"r"*64,"acl_root":"l"*64,"source_root":"s"*64,"terminal_spec":"t"*64,"issued_at":now-1,"expires_at":now+60,"attestations":{x:{"status":True,"evidence_sha256":"e"*64,"observed_at":now-1} for x in channels},"signature":"AA=="}
   value["attestations"]["producer_stop"]["status"]=False
   with self.assertRaisesRegex(Exception,"residual"): freeze.validate_operator_assertion(value,freeze_id="freeze-0001",origin="https://x",relation_root="r"*64,acl_root="l"*64,commit="a"*40,source_root="s"*64,terminal_spec="t"*64,now=now)
   value["attestations"]["producer_stop"]={"status":True,"evidence_sha256":"e"*64,"observed_at":now-901}
   with self.assertRaisesRegex(Exception,"residual"): freeze.validate_operator_assertion(value,freeze_id="freeze-0001",origin="https://x",relation_root="r"*64,acl_root="l"*64,now=now)
  def test_operator_assertion_rejects_missing_extra_and_tampered_signature(self):
   now=int(time.time()); channels=("producer_stop","no_owner_write","no_dashboard_write","no_provider_write","no_out_of_band_write")
-  value={"schema":"g037-write-freeze-assertion-v1","freeze_id":"freeze-0001","origin":"https://x","commit":"a"*40,"manifest_sha256":freeze.MANIFEST_SHA256,"relation_root":"r"*64,"acl_root":"l"*64,"source_root":"s"*64,"terminal_spec":"t"*64,"issued_at":now-1,"expires_at":now+60,"attestations":{x:{"status":True,"evidence_sha256":"e"*64,"observed_at":now} for x in channels},"signature":"AA=="}
+  value={"schema":"g037-write-freeze-assertion-v1","freeze_id":"freeze-0001","origin":"https://x","commit":"a"*40,"manifest_sha256":freeze.MANIFEST_SHA256,"relation_root":"r"*64,"acl_root":"l"*64,"source_root":"s"*64,"terminal_spec":"t"*64,"issued_at":now-1,"expires_at":now+60,"attestations":{x:{"status":True,"evidence_sha256":"e"*64,"observed_at":now-1} for x in channels},"signature":"AA=="}
   for invalid in ({k:v for k,v in value.items() if k!="signature"},{**value,"extra":True}):
    with self.assertRaisesRegex(Exception,"fields mismatch"): freeze.validate_operator_assertion(invalid,freeze_id="freeze-0001",origin="https://x",relation_root="r"*64,acl_root="l"*64,commit="a"*40,source_root="s"*64,terminal_spec="t"*64,now=now)
   tampered={**value,"signature":"AQ=="}
