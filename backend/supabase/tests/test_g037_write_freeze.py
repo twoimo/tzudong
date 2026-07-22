@@ -47,6 +47,14 @@ def patches(inventory):
  return (patch.object(freeze,"_root_source",return_value=(Path("."),"a"*40,"s"*64,"t"*64)),patch.object(freeze,"validate_operator_assertion"),patch.object(freeze,"_inv",return_value=inventory),patch.object(freeze,"_locks",return_value="l"*64),patch.object(freeze,"_verify_active",side_effect=lambda v,e:freeze._verified_controller_capability({**v,"signature":"ok"})))
 def precommit(receipt): return receipt["receipt_sha256"]
 class FenceTests(unittest.TestCase):
+ def test_controller_key_matches_rotated_manifest_and_rejects_old_pin(self):
+  expected="-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAo4UI52OeuOIAtNilBOmsGuMovYT3mEMgZK3fdAdmrD0=\n-----END PUBLIC KEY-----\n"
+  self.assertEqual(freeze.CONTROLLER_PUBLIC_KEY_PEM,expected)
+  self.assertEqual(freeze.CONTROLLER_PUBLIC_KEY_SHA256,"8e2ba3d30d3cc7b39bdd8940a6ef8a4cab150272e0e266af7c3201a4fc075b78")
+  self.assertEqual(freeze.CONTROLLER_PUBLIC_KEY_SHA256,freeze.hashlib.sha256(expected.encode()).hexdigest())
+  old_sha256="1b1455b5506799739b259e9c9f74b86c99014506c9b42ec5329f668d0ba4319f"
+  payload={"schema":freeze.SCHEMA,"state":"active-provisional","freeze_id":"freeze-0001","origin":"https://x","commit":"a"*40,"manifest_sha256":freeze.MANIFEST_SHA256,"source_root":"s"*64,"terminal_spec":"t"*64,"scope":{"schemas":list(freeze.REACHABLE_SCHEMAS),"ordinary_relations":"all"},"relation_root":"r"*64,"acl_root":"l"*64,"held_lock_root":"h"*64,"not_before_unix":1,"not_after_unix":2,"controller_public_key_sha256":old_sha256}
+  with self.assertRaisesRegex(freeze.FreezeError,"fields mismatch"): freeze._verify_active({**payload,"signature":"AA=="},set(payload))
  def test_remediation_evidence_requires_marker_digest_and_rehashing(self):
   evidence=capture()["remediation_evidence"]
   freeze.validate_remediation_evidence(evidence)

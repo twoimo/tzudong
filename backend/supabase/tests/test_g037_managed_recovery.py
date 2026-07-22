@@ -29,6 +29,19 @@ class G037ManagedRecoveryTests(unittest.TestCase):
   if os.name=="nt":
    validator=patch.object(g040,"_windows_restrictive",return_value=True); validator.start(); self.addCleanup(validator.stop)
  def tearDown(self): self.temp.cleanup()
+ def test_public_keys_match_rotated_manifest_and_reject_old_recovery_pin(self):
+  controller=b"-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAo4UI52OeuOIAtNilBOmsGuMovYT3mEMgZK3fdAdmrD0=\n-----END PUBLIC KEY-----\n"
+  recovery=b"-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEA0m5El0MmK8Qq+dp5irz9BNE2LI8ub/GJE7MGE4FfH2Q=\n-----END PUBLIC KEY-----\n"
+  self.assertEqual(g037.CONTROLLER_PUBLIC_KEY,controller)
+  self.assertEqual(g037.RECOVERY_PUBLIC_KEY,recovery)
+  self.assertEqual(g037.CONTROLLER_PUBLIC_KEY_SHA256,"8e2ba3d30d3cc7b39bdd8940a6ef8a4cab150272e0e266af7c3201a4fc075b78")
+  self.assertEqual(g037.RECOVERY_PUBLIC_KEY_SHA256,"ea1c7d995e8307455a58aef67bb206d5acf7d888104f0bda536e4948690a3d03")
+  self.assertEqual(g037.CONTROLLER_PUBLIC_KEY_SHA256,hashlib.sha256(controller).hexdigest())
+  self.assertEqual(g037.RECOVERY_PUBLIC_KEY_SHA256,hashlib.sha256(recovery).hexdigest())
+  self.assertNotEqual(g037.CONTROLLER_PUBLIC_KEY_SHA256,g037.RECOVERY_PUBLIC_KEY_SHA256)
+  old_receipt=private(self.root/"old-recovery-receipt",json.dumps({"schema":g037.SCHEMA,"mode":"capture","status":"captured","receipt_public_key_sha256":"709e842dd4551c901afb1368902a923ef94407875219060126119e21bb7f20a6","signature":"c2ln"}))
+  with patch.object(g037,"restrictive",return_value=True),patch.object(g037,"openssl_verify",return_value=True):
+   with self.assertRaisesRegex(g037.RecoveryError,"receipt invalid"): g037.load_receipt(old_receipt)
  def test_duplicate_keys_are_rejected(self):
   with self.assertRaises(g037.RecoveryError): json.loads('{"x":1,"x":2}',object_pairs_hook=g037._pairs)
  def test_only_canonical_project_origin_is_accepted(self):
