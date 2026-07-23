@@ -29,10 +29,9 @@ class FakeCursor:
         self.rollbacks = 0
         self.last = ""
         self.statements = []
-        self.session_user = "supabase_admin"
-        self.current_user = "supabase_admin"
+        self.session_user = "postgres"
+        self.current_user = "postgres"
         self.database_name = "g035_local"
-        self.role_switch_user = "postgres"
         self.snapshot_rows = []
     def execute(self, sql, *params):
         self.last = sql
@@ -41,8 +40,6 @@ class FakeCursor:
             self.full = True
         if sql.startswith("DROP SCHEMA privacy_retention"):
             self.full = False
-        if sql == "SET LOCAL ROLE postgres":
-            self.current_user = self.role_switch_user
         if sql == "ROLLBACK":
             self.full = True
             self.current_user = self.session_user
@@ -101,9 +98,9 @@ class Manifest:
 
 
 class CloneRehearsalTests(unittest.TestCase):
-    def service(self, root: Path, *, host="127.0.0.1", db="g035_local") -> Path:
+    def service(self, root: Path, *, host="127.0.0.1", db="g035_local", user="postgres") -> Path:
         path = root / "service.conf"
-        path.write_text(f"[g035-local]\nhost={host}\nport=55401\ndbname={db}\nuser=supabase_admin\nsslmode=disable\napplication_name=g035-local-clone\npassword=never-print\n")
+        path.write_text(f"[g035-local]\nhost={host}\nport=55401\ndbname={db}\nuser={user}\nsslmode=disable\napplication_name=g035-local-clone\npassword=never-print\n")
         return path
     def test_parser_excludes_online_signing_surfaces(self):
         parser = rehearsal._parser()
@@ -220,8 +217,9 @@ class CloneRehearsalTests(unittest.TestCase):
             self.assertEqual(rehearsal.parse_local_service(service)["port"], 55401)
             with self.assertRaises(rehearsal.RehearsalError): rehearsal.parse_local_service(self.service(root, host="localhost"))
             with self.assertRaises(rehearsal.RehearsalError): rehearsal.parse_local_service(self.service(root, db="postgres"))
+            with self.assertRaises(rehearsal.RehearsalError): rehearsal.parse_local_service(self.service(root, user="supabase_admin"))
             (root / "unknown.conf").write_text(
-                "[g035-local]\nhost=127.0.0.1\nhostaddr=127.0.0.1\nport=55401\ndbname=g035_local\nuser=supabase_admin\n"
+                "[g035-local]\nhost=127.0.0.1\nhostaddr=127.0.0.1\nport=55401\ndbname=g035_local\nuser=postgres\n"
                 "sslmode=disable\napplication_name=g035-local-clone\npassword=never-print\n"
             )
             with self.assertRaises(rehearsal.RehearsalError):
@@ -434,23 +432,19 @@ class CloneRehearsalTests(unittest.TestCase):
         ] * 2)
         self.assertEqual(connection.cursor_value.full, True)
         self.assertNotIn("COMMIT", statements)
-    def test_reference_custody_rejects_wrong_pregrant_identity_and_postswitch_role(self):
+    def test_reference_custody_requires_direct_postgres_session(self):
         cases = (
-            ("session", {"session_user": "postgres"}),
-            ("current_role", {"current_user": "postgres"}),
+            ("session", {"session_user": "supabase_admin"}),
+            ("current_role", {"current_user": "supabase_admin"}),
             ("database", {"database_name": "postgres"}),
-            ("post_switch_role", {"role_switch_user": "supabase_admin"}),
         )
         for name, values in cases:
             with self.subTest(name=name):
                 cursor = FakeCursor()
                 for key, value in values.items():
                     setattr(cursor, key, value)
-                expected_current_user = "postgres" if name == "post_switch_role" else "supabase_admin"
-                if name == "post_switch_role":
-                    cursor.execute("SET LOCAL ROLE postgres")
                 with self.assertRaisesRegex(rehearsal.RehearsalError, "reference_custody"):
-                    rehearsal._assert_reference_custody(cursor, current_user=expected_current_user)
+                    rehearsal._assert_reference_custody(cursor, current_user="postgres")
     def test_reverse_vector_is_literal_restrict_only_and_domain_hashed(self):
         self.assertEqual(type(rehearsal.REVERSE_VECTOR), tuple)
         self.assertEqual(rehearsal.DERIVATION_MODE, reverse.DERIVATION_MODE)
@@ -483,7 +477,7 @@ class CloneRehearsalTests(unittest.TestCase):
                 self.closed = True
 
         service_path = Path("C:/outside/service.conf")
-        raw = b"[g035-local]\nhost=127.0.0.1\nport=55401\ndbname=g035_local\nuser=supabase_admin\nsslmode=disable\napplication_name=g035-local-clone\npassword=never-print\n"
+        raw = b"[g035-local]\nhost=127.0.0.1\nport=55401\ndbname=g035_local\nuser=postgres\nsslmode=disable\napplication_name=g035-local-clone\npassword=never-print\n"
         psycopg = types.ModuleType("psycopg")
         rows = types.ModuleType("psycopg.rows"); rows.dict_row = object()
         psycopg.rows = rows
