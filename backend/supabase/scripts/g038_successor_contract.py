@@ -133,7 +133,7 @@ PARSER_SPEC = {
     "schema": "g037-supabase-statement-vector-v1",
     "stateBlob": "47775390d1731c0ad29e10b20fb2fe16c8cfcadb",
     "statePath": "apps/cli-go/pkg/parser/state.go",
-    "tokenBlob": "db008434246be335b9f7abaf0cb66a99a2b40378",
+    "tokenBlob": "db008434246be335b9f7abaf0cb66a99a2b40378",  # ggignore: pinned public Git blob identity
     "tokenPath": "apps/cli-go/pkg/parser/token.go",
     "upstreamCommit": "6d4c19870ed213ba7f682f117d0345c8a40bfa94",
     "upstreamVersion": "v2.109.1",
