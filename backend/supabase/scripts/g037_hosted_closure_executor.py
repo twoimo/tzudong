@@ -582,13 +582,26 @@ def _managed_role_catalog_assert(cur):
     )
     if tuple(tuple(row) for row in objects) != expected:
         raise ClosureError("managed ownership catalog contract drift")
-def _g014_public_rpc_acl_assert(cur):
+def _g014_public_rpc_acl_assert(cur, expected_matrix=STATIC_RPC_MATRIX):
     """Catalog-only G014 ACL check against the source-pinned static matrix."""
+    if (
+        type(expected_matrix) is not tuple
+        or len(expected_matrix) != len(STATIC_RPC_MATRIX)
+        or any(
+            type(row) is not tuple
+            or len(row) != 2
+            or type(row[0]) is not str
+            or type(row[1]) is not str
+            for row in expected_matrix
+        )
+        or len(set(expected_matrix)) != len(expected_matrix)
+    ):
+        raise ClosureError("G014 public RPC expected matrix is noncanonical")
     expected_values = "VALUES\n" + ",\n".join(
         "(" + repr(signature) + "," + repr(grantee) + ")"
-        for signature, grantee in STATIC_RPC_MATRIX
+        for signature, grantee in expected_matrix
     )
-    expected_matrix = tuple(sorted(STATIC_RPC_MATRIX))
+    expected_matrix = tuple(sorted(expected_matrix))
     missing = q(cur, """
         WITH expected(source_signature,grantee) AS (""" + expected_values + """),
         resolved AS (
@@ -715,7 +728,7 @@ def _lock_under_controller(cur, *, deadline):
     _execute_before_deadline(cur, "SELECT pg_catalog.set_config('lock_timeout', %s, true)", (f"{min(remaining_ms, 10000)}ms",), deadline=deadline)
     _execute_before_deadline(cur, "SELECT pg_catalog.set_config('idle_in_transaction_session_timeout', %s, true)", (f"{remaining_ms}ms",), deadline=deadline)
     _execute_before_deadline(cur, "SELECT pg_catalog.pg_advisory_xact_lock(37037)", deadline=deadline)
-def _terminal_assert(cur, manifest, expected_vectors, *, deadline=None):
+def _terminal_assert(cur, manifest, expected_vectors, *, deadline=None, runtime_rpc_matrix=STATIC_RPC_MATRIX):
     if deadline is not None:
         _assert_capability_not_expired(deadline)
     rows=ledger(cur)
@@ -730,7 +743,7 @@ def _terminal_assert(cur, manifest, expected_vectors, *, deadline=None):
         raise ClosureError("terminal vector mismatch")
     retirement_gate(cur, terminal=True)
     _managed_role_catalog_assert(cur)
-    _g014_public_rpc_acl_assert(cur)
+    _g014_public_rpc_acl_assert(cur, runtime_rpc_matrix)
     if deadline is not None:
         _assert_capability_not_expired(deadline)
     return rows
@@ -750,20 +763,22 @@ def _stable_projection_roots(cur):
         raise ClosureError("terminal relation ACL safety policy failed") from exc
     acl_rows=tuple(sorted(tuple(map(str,row)) for row in raw_acl_rows))
     return digest(catalog_rows),digest(acl_rows)
-def observed_terminal_roots(cur, root, manifest, *, deadline=None):
+def observed_terminal_roots(cur, root, manifest, *, deadline=None, runtime_rpc_matrix=STATIC_RPC_MATRIX):
     """Read only terminal/reconciliation observation; never owns a transaction."""
     if deadline is not None:
         _assert_capability_not_expired(deadline)
     expected={}
     for item in manifest.migrations:
         full,_=vectors(root,item); expected[item.version]=full
-    rows=_terminal_assert(cur,manifest,expected,deadline=deadline)
+    rows=_terminal_assert(cur,manifest,expected,deadline=deadline,runtime_rpc_matrix=runtime_rpc_matrix)
     catalog_root,acl_root=_stable_projection_roots(cur)
     if deadline is not None:
         _assert_capability_not_expired(deadline)
     return {"catalog_root":catalog_root,"acl_root":acl_root,"ledger_root":digest(rows),"terminal_spec":_source_binding(root,manifest)[2]}
-def terminal_readback_assert(cur, root, manifest, *, deadline=None):
-    return observed_terminal_roots(cur,root,manifest,deadline=deadline)
+def terminal_readback_assert(cur, root, manifest, *, deadline=None, runtime_rpc_matrix=STATIC_RPC_MATRIX):
+    return observed_terminal_roots(
+        cur, root, manifest, deadline=deadline, runtime_rpc_matrix=runtime_rpc_matrix
+    )
 _SHORT_URL_REMEDIATION_EVIDENCE_SCHEMA="g037-short-url-remediation-evidence-v1"
 _SHORT_URL_BINDING_FIELDS=frozenset(("envelope","expected_bindings","execution_authorization_sha256","execution_authorization_signature_sha256","attempt_marker_sha256","legacy_repository_commit","legacy_authorization_sha256","legacy_authorization_signature_sha256","legacy_capture_receipt_sha256","legacy_restore_receipt_sha256","legacy_inspection_receipt_sha256","recovery_receipt_sha256","capture_evidence"))
 _SHORT_URL_CAPTURE_FIELDS=frozenset(("selection_spec_sha256","short_urls_catalog_sha256","short_urls_rowset_sha256","short_urls_row_count","duplicate_group_count","duplicate_victim_count","victim_descriptor_count","duplicate_victims_sha256","victim_descriptors_sha256"))
