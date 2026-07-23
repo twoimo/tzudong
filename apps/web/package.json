@@ -98,7 +98,7 @@
     "input-otp": "^1.4.2",
     "lucide-react": "^1.24.0",
     "maplibre-gl": "^5.24.0",
-    "next": "^16.2.10",
+    "next": "16.2.11",
     "openai": "^6.46.0",
     "react": "^19.2.7",
     "react-day-picker": "^10.0.1",
@@ -142,6 +142,7 @@
   },
   "overrides": {
     "baseline-browser-mapping": "2.10.43",
-    "postcss": "$postcss"
+    "postcss": "$postcss",
+    "sharp": "$sharp"
   }
 }
