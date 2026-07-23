@@ -430,7 +430,10 @@ def main(argv: list[str] | None = None) -> None:
     sys.meta_path.insert(0, importer)
     source = importlib.import_module("g038_successor_source")
     source._establish_isolated_bootstrap(root, args.authorized_final_commit, source_root)
-    if args.entrypoint == "backend/supabase/scripts/g038_local_clone_adapter.py":
+    if args.entrypoint in {
+        "backend/supabase/scripts/g038_production_controller.py",
+        "backend/supabase/scripts/g038_local_clone_adapter.py",
+    }:
         recovery_source = importlib.import_module("g040_recovery_source")
         recovery_binding = recovery_source.verify_recovery_source(
             root, args.authorized_final_commit, production=False,
