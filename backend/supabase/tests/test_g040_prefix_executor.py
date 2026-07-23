@@ -350,20 +350,35 @@ class ExecutorTests(unittest.TestCase):
             self.assertEqual(executable, (f"hook-{item.version}", f"transformed-{item.version}"))
 
     def test_provider_vector_schema_transform_is_exact_and_fail_closed(self):
-        source_02000 = ("before extensions.vector middle extensions.vector after", "extensions.vector extensions.vector")
+        source_02000 = (
+            "before extensions.vector middle extensions.vector after",
+            "extensions.vector extensions.vector " + executor._PROVIDER_OWNER_PREDICATE,
+        )
         source_02400 = ("extensions.vector", "extensions.vector extensions.vector", "extensions.vector")
         self.assertEqual(
             executor._provider_vector_schema_sql("20260713002000", source_02000),
-            tuple(statement.replace("extensions.vector", "public.vector") for statement in source_02000),
+            tuple(
+                statement.replace("extensions.vector", "public.vector").replace(
+                    executor._PROVIDER_OWNER_PREDICATE,
+                    executor._PROVIDER_OWNER_REPLACEMENT,
+                )
+                for statement in source_02000
+            ),
         )
+        transformed_owner = executor._provider_vector_schema_sql("20260713002000", source_02000)[1]
+        self.assertIn("dependency.deptype = 'e'", transformed_owner)
+        self.assertIn("extension.extname = 'vector'", transformed_owner)
+        self.assertIn("extension_namespace.nspname = 'public'", transformed_owner)
+        self.assertIn("pg_get_userbyid(extension.extowner) = 'supabase_admin'", transformed_owner)
         self.assertEqual(
             executor._provider_vector_schema_sql("20260713002400", source_02400),
             tuple(statement.replace("extensions.vector", "public.vector") for statement in source_02400),
         )
         for version, statements in (
-            ("20260713002000", ("extensions.vector",)),
+            ("20260713002000", ("extensions.vector " * 4,)),
             ("20260713002400", ("public.vector",)),
             ("20260713002300", ("extensions.vector",)),
+            ("20260713002300", (executor._PROVIDER_OWNER_PREDICATE,)),
         ):
             with self.subTest(version=version):
                 with self.assertRaisesRegex(Denial, "vector_compile"):
