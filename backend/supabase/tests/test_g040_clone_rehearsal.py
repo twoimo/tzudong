@@ -715,6 +715,15 @@ class CloneRehearsalTests(unittest.TestCase):
             proof_for(recheck_container={**container, "Image": "sha256:" + "b" * 64})
         with self.assertRaisesRegex(rehearsal.RehearsalError, "docker_identity"):
             proof_for(recheck_network={**network, "Containers": {}})
+        health_drift = {
+            **container,
+            "State": {
+                "Status": "running",
+                "Health": {"Status": "healthy", "Log": [{"End": "later"}]},
+            },
+        }
+        health_drift_proof, _ = proof_for(recheck_container=health_drift)
+        self.assertEqual(health_drift_proof, proof)
         published = {**container,
                      "HostConfig": {**container["HostConfig"], "PortBindings": {"5432/tcp": [{"HostIp": "127.0.0.1", "HostPort": "55401"}]}},
                      "NetworkSettings": {**container["NetworkSettings"], "Ports": {"5432/tcp": [{"HostIp": "127.0.0.1", "HostPort": "55401"}]}}}
