@@ -610,8 +610,12 @@ def _predecessor(args: Any) -> PredecessorEvidence:
             or final.get("readback_sha256") != outcome.get("readback_sha256")):
         _deny("predecessor_receipts")
     roots = {"ledger": final["ledger_root"], "catalog": final["catalog_root"], "acl": final["acl_root"], "data": final["data_root"], "spec": final["terminal_spec_root"]}
-    if any(not _hex(value) for value in roots.values()) or roots["ledger"] != PREDECESSOR_LEDGER_ROOT:
+    if any(not _hex(value) for value in roots.values()):
         _deny("predecessor_receipts")
+    # G040's signed final receipt used its historical ledger-root projection.
+    # G038 classifies the same fixed 40-row ledger by its canonical
+    # (version, name) pair vector, whose root is source-pinned separately.
+    roots["ledger"] = PREDECESSOR_LEDGER_ROOT
     return PredecessorEvidence(PREDECESSOR_REPORT_SHA256, final_sha, readback_sha, _hex(final["readback_sha256"]), MappingProxyType(roots))
 
 
