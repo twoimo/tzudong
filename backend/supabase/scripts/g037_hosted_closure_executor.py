@@ -582,7 +582,34 @@ def _managed_role_catalog_assert(cur):
     )
     if tuple(tuple(row) for row in objects) != expected:
         raise ClosureError("managed ownership catalog contract drift")
-def _g014_public_rpc_acl_assert(cur, expected_matrix=STATIC_RPC_MATRIX):
+_G040_PROVIDER_VECTOR_MEMBER_FILTER = """
+           AND NOT (
+             pg_catalog.pg_get_userbyid(procedure.proowner) = 'supabase_admin'
+             AND EXISTS (
+               SELECT 1
+               FROM pg_catalog.pg_depend AS dependency
+               JOIN pg_catalog.pg_extension AS extension
+                 ON extension.oid = dependency.refobjid
+               JOIN pg_catalog.pg_namespace AS extension_namespace
+                 ON extension_namespace.oid = extension.extnamespace
+               WHERE dependency.classid = 'pg_catalog.pg_proc'::pg_catalog.regclass
+                 AND dependency.objid = procedure.oid
+                 AND dependency.refclassid = 'pg_catalog.pg_extension'::pg_catalog.regclass
+                 AND dependency.deptype = 'e'
+                 AND extension.extname = 'vector'
+                 AND extension_namespace.nspname = 'public'
+                 AND pg_catalog.pg_get_userbyid(extension.extowner) = 'supabase_admin'
+             )
+           )
+"""
+
+
+def _g014_public_rpc_acl_assert(
+    cur,
+    expected_matrix=STATIC_RPC_MATRIX,
+    *,
+    allow_provider_vector_extension_members=False,
+):
     """Catalog-only G014 ACL check against the source-pinned static matrix."""
     if (
         type(expected_matrix) is not tuple
@@ -597,6 +624,13 @@ def _g014_public_rpc_acl_assert(cur, expected_matrix=STATIC_RPC_MATRIX):
         or len(set(expected_matrix)) != len(expected_matrix)
     ):
         raise ClosureError("G014 public RPC expected matrix is noncanonical")
+    if type(allow_provider_vector_extension_members) is not bool:
+        raise ClosureError("G014 provider extension policy is noncanonical")
+    provider_filter = (
+        _G040_PROVIDER_VECTOR_MEMBER_FILTER
+        if allow_provider_vector_extension_members
+        else ""
+    )
     expected_values = "VALUES\n" + ",\n".join(
         "(" + repr(signature) + "," + repr(grantee) + ")"
         for signature, grantee in expected_matrix
@@ -636,6 +670,7 @@ def _g014_public_rpc_acl_assert(cur, expected_matrix=STATIC_RPC_MATRIX):
             COALESCE(procedure.proacl,pg_catalog.acldefault('f',procedure.proowner))
           ) acl
          WHERE namespace.nspname='public' AND acl.grantee=0 AND acl.privilege_type='EXECUTE'
+    """ + provider_filter + """
          ORDER BY 1
     """)
     if public_acl:
@@ -655,6 +690,7 @@ def _g014_public_rpc_acl_assert(cur, expected_matrix=STATIC_RPC_MATRIX):
          WHERE namespace.nspname='public'
            AND pg_catalog.has_function_privilege(api_roles.grantee,procedure.oid,'EXECUTE')
            AND resolved.procedure_oid IS NULL
+    """ + provider_filter + """
          ORDER BY 1,2
     """)
     if unlisted:
@@ -728,7 +764,7 @@ def _lock_under_controller(cur, *, deadline):
     _execute_before_deadline(cur, "SELECT pg_catalog.set_config('lock_timeout', %s, true)", (f"{min(remaining_ms, 10000)}ms",), deadline=deadline)
     _execute_before_deadline(cur, "SELECT pg_catalog.set_config('idle_in_transaction_session_timeout', %s, true)", (f"{remaining_ms}ms",), deadline=deadline)
     _execute_before_deadline(cur, "SELECT pg_catalog.pg_advisory_xact_lock(37037)", deadline=deadline)
-def _terminal_assert(cur, manifest, expected_vectors, *, deadline=None, runtime_rpc_matrix=STATIC_RPC_MATRIX):
+def _terminal_assert(cur, manifest, expected_vectors, *, deadline=None, runtime_rpc_matrix=STATIC_RPC_MATRIX, allow_provider_vector_extension_members=False):
     if deadline is not None:
         _assert_capability_not_expired(deadline)
     rows=ledger(cur)
@@ -743,7 +779,11 @@ def _terminal_assert(cur, manifest, expected_vectors, *, deadline=None, runtime_
         raise ClosureError("terminal vector mismatch")
     retirement_gate(cur, terminal=True)
     _managed_role_catalog_assert(cur)
-    _g014_public_rpc_acl_assert(cur, runtime_rpc_matrix)
+    _g014_public_rpc_acl_assert(
+        cur,
+        runtime_rpc_matrix,
+        allow_provider_vector_extension_members=allow_provider_vector_extension_members,
+    )
     if deadline is not None:
         _assert_capability_not_expired(deadline)
     return rows
@@ -763,21 +803,26 @@ def _stable_projection_roots(cur):
         raise ClosureError("terminal relation ACL safety policy failed") from exc
     acl_rows=tuple(sorted(tuple(map(str,row)) for row in raw_acl_rows))
     return digest(catalog_rows),digest(acl_rows)
-def observed_terminal_roots(cur, root, manifest, *, deadline=None, runtime_rpc_matrix=STATIC_RPC_MATRIX):
+def observed_terminal_roots(cur, root, manifest, *, deadline=None, runtime_rpc_matrix=STATIC_RPC_MATRIX, allow_provider_vector_extension_members=False):
     """Read only terminal/reconciliation observation; never owns a transaction."""
     if deadline is not None:
         _assert_capability_not_expired(deadline)
     expected={}
     for item in manifest.migrations:
         full,_=vectors(root,item); expected[item.version]=full
-    rows=_terminal_assert(cur,manifest,expected,deadline=deadline,runtime_rpc_matrix=runtime_rpc_matrix)
+    rows=_terminal_assert(cur,manifest,expected,deadline=deadline,runtime_rpc_matrix=runtime_rpc_matrix,allow_provider_vector_extension_members=allow_provider_vector_extension_members)
     catalog_root,acl_root=_stable_projection_roots(cur)
     if deadline is not None:
         _assert_capability_not_expired(deadline)
     return {"catalog_root":catalog_root,"acl_root":acl_root,"ledger_root":digest(rows),"terminal_spec":_source_binding(root,manifest)[2]}
-def terminal_readback_assert(cur, root, manifest, *, deadline=None, runtime_rpc_matrix=STATIC_RPC_MATRIX):
+def terminal_readback_assert(cur, root, manifest, *, deadline=None, runtime_rpc_matrix=STATIC_RPC_MATRIX, allow_provider_vector_extension_members=False):
     return observed_terminal_roots(
-        cur, root, manifest, deadline=deadline, runtime_rpc_matrix=runtime_rpc_matrix
+        cur,
+        root,
+        manifest,
+        deadline=deadline,
+        runtime_rpc_matrix=runtime_rpc_matrix,
+        allow_provider_vector_extension_members=allow_provider_vector_extension_members,
     )
 _SHORT_URL_REMEDIATION_EVIDENCE_SCHEMA="g037-short-url-remediation-evidence-v1"
 _SHORT_URL_BINDING_FIELDS=frozenset(("envelope","expected_bindings","execution_authorization_sha256","execution_authorization_signature_sha256","attempt_marker_sha256","legacy_repository_commit","legacy_authorization_sha256","legacy_authorization_signature_sha256","legacy_capture_receipt_sha256","legacy_restore_receipt_sha256","legacy_inspection_receipt_sha256","recovery_receipt_sha256","capture_evidence"))
