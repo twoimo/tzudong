@@ -318,10 +318,16 @@ def _g034_live_fingerprints(conn,artifact):
  relations=(("public.restaurants","public","restaurants","publicRestaurants"),("storage.objects","storage","objects","storageObjects"))
  for lookup,namespace,name,key in relations:
   prerequisites[key]=bool(_query_conn(conn,"SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_class AS class JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = class.relnamespace WHERE class.oid = pg_catalog.to_regclass(%s) AND namespace.nspname = %s AND class.relname = %s AND class.relkind = 'r')",(lookup,namespace,name))[0][0])
- prerequisites["publicRestaurantsBackup"]=bool(_query_conn(conn,"SELECT pg_catalog.to_regclass('public.restaurants_backup') IS NULL AND EXISTS (SELECT 1 FROM pg_catalog.pg_namespace AS namespace WHERE namespace.nspname = 'public')")[0][0])
- procedures=(("public.approve_submission_item(uuid,uuid,jsonb)","public","approve_submission_item","2950 2950 3802","publicApproveSubmissionItem"),("public.approve_edit_submission_item(uuid,uuid,jsonb)","public","approve_edit_submission_item","2950 2950 3802","publicApproveEditSubmissionItem"))
- for lookup,namespace,name,input_type_oids,key in procedures:
-  prerequisites[key]=bool(_query_conn(conn,"SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_proc AS procedure JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = procedure.pronamespace WHERE procedure.oid = pg_catalog.to_regprocedure(%s) AND namespace.nspname = %s AND procedure.proname = %s AND procedure.proargtypes = %s::pg_catalog.oidvector AND procedure.prokind = 'f')",(lookup,namespace,name,input_type_oids))[0][0])
+ cursor=None
+ try:
+  cursor=conn.cursor()
+  approvals=g034_preflight.approval_catalog_contract(cursor)
+  prerequisites["publicApproveSubmissionItem"]=approvals["public.approve_submission_item(uuid,uuid,jsonb)"]
+  prerequisites["publicApproveEditSubmissionItem"]=approvals["public.approve_edit_submission_item(uuid,uuid,jsonb)"]
+  table_absent=bool(_query_conn(conn,"SELECT pg_catalog.to_regclass('public.restaurants_backup') IS NULL AND EXISTS (SELECT 1 FROM pg_catalog.pg_namespace AS namespace WHERE namespace.nspname = 'public')")[0][0])
+  prerequisites["publicRestaurantsBackup"]=table_absent and not g034_preflight.catalog_retirement_dependency_exists(cursor)
+ finally:
+  if cursor is not None: cursor.close()
  prerequisites["noWaitingLocks"]=int(_query_conn(conn,"SELECT count(*) FROM pg_catalog.pg_locks WHERE NOT granted")[0][0])==0
  prerequisites["requiredRolesPresent"]=int(_query_conn(conn,"SELECT count(*) FROM pg_catalog.pg_roles WHERE rolname = ANY(%s)",(["postgres","service_role","authenticated"],))[0][0])==3
  return {"ledger_sha256":digest(ledger),"catalog_sha256":digest(prerequisites)}
