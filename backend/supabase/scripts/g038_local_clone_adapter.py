@@ -491,7 +491,7 @@ class LocalCloneOps:
 SELECT pg_catalog.json_build_object(
   'database', current_database(),
   'memberships', (
-    SELECT pg_catalog.coalesce(
+    SELECT COALESCE(
       pg_catalog.json_agg(pg_catalog.json_build_array(
         roleid::regrole::text,member::regrole::text,grantor::regrole::text,
         admin_option,inherit_option,set_option)
@@ -505,7 +505,7 @@ SELECT pg_catalog.json_build_object(
                        WHERE rolname = ANY (ARRAY[{names}]::name[]))
   ),
   'roles', (
-    SELECT pg_catalog.coalesce(
+    SELECT COALESCE(
       pg_catalog.json_agg(pg_catalog.json_build_array(
         rolname,rolsuper,rolinherit,rolcreaterole,rolcreatedb,rolreplication,
         rolbypassrls,rolcanlogin) ORDER BY rolname),
