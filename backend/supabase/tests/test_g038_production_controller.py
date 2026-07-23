@@ -107,7 +107,7 @@ class ControllerTests(unittest.TestCase):
         }
         report_raw = controller.canonical_json_bytes(report)
         roots = {
-            "ledger_root": controller.PREDECESSOR_LEDGER_ROOT,
+            "ledger_root": "0" * 64,
             "catalog_root": "1" * 64,
             "acl_root": "2" * 64,
             "data_root": "3" * 64,
@@ -134,6 +134,7 @@ class ControllerTests(unittest.TestCase):
             evidence = controller._predecessor(args)
         self.assertEqual(controller.PREDECESSOR_ROWS, 40)
         self.assertEqual(controller.PREDECESSOR_LEDGER_ROOT, evidence.roots["ledger"])
+        self.assertNotEqual(roots["ledger_root"], evidence.roots["ledger"])
         self.assertEqual(hashlib.sha256(final_raw).hexdigest(), evidence.final_receipt_sha256)
         self.assertEqual(hashlib.sha256(readback_raw).hexdigest(), evidence.readback_receipt_sha256)
 
