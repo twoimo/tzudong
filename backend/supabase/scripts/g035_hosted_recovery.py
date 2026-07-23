@@ -16,6 +16,7 @@ from typing import Any, Sequence
 from g035_hosted_recovery_contract import APPLICATION_SCHEMAS, APPROVED_AGE_RECIPIENT_SHA256, BASELINE_PAIRS, BASELINE_SHA256, FORBIDDEN_VERSIONS, MANAGED_METADATA_SCHEMAS, MANIFEST_SHA256, REMEDIATION_AUTHORIZATION_SCHEMA, REMEDIATION_PUBLIC_KEY_PEM, REMEDIATION_PUBLIC_KEY_SHA256, SELF_COMMIT_VERSIONS, SHORT_URL_SELECTION_SPEC as CONTRACT_SHORT_URL_SELECTION_SPEC, SHORT_URLS_CATALOG as CONTRACT_SHORT_URLS_CATALOG, ContractError, Manifest, canonical_json_bytes, canonical_sha256, ledger_prefix, repository_root, sha256_file, validate_sources, verify_short_url_remediation_authorization
 import preflight_g034_hosted_migration_closure as g034_preflight
 TIMEOUT_SECONDS=900; CAPTURE_TIMEOUT_SECONDS=3600; RECEIPT_SCHEMA="g035-local-recovery-receipt-v4"; HEX=re.compile(r"^[a-f0-9]{64}$"); AGE_RECIPIENT=re.compile(r"^age1[ac-hj-np-z02-9]{58}$"); SNAPSHOT=re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"); HOSTED_SERVICE="g035"; LOCAL_SERVICE="g035-local"; LOCAL_DBNAME="g035_local"; LOCAL_HOSTS=frozenset({"127.0.0.1","::1"}); SERVICE_KEYS={"host","port","dbname","application_name","sslmode","sslrootcert","user","password","connect_timeout"}; RECOVERY_CONTROL_SCHEMAS=("supabase_migrations",); DUMP_SCHEMAS=APPLICATION_SCHEMAS+RECOVERY_CONTROL_SCHEMAS+MANAGED_METADATA_SCHEMAS; MANAGED_TABLE_DATA_EXCLUSIONS=tuple(f"--exclude-table-data={schema}.*" for schema in MANAGED_METADATA_SCHEMAS); RECOVERY_EXTENSIONS=(("pg_trgm","extensions"),("uuid-ossp","extensions"),("btree_gin","extensions"),("vector","public"),("pgcrypto","extensions")); COMPATIBILITY_HOOKS={"20260627080000":("DROP POLICY IF EXISTS documents_select_own ON public.documents;","DROP POLICY IF EXISTS documents_insert_own ON public.documents;","DROP POLICY IF EXISTS documents_update_own ON public.documents;","DROP POLICY IF EXISTS documents_delete_own ON public.documents;")}; VECTOR_EXTENSION_RELOCATION_HOOK_VERSION="20260627080000"; VECTOR_EXTENSION_RELOCATION_HOOK=("SELECT namespace.nspname FROM pg_catalog.pg_extension AS extension JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid=extension.extnamespace WHERE extension.extname='vector'","ALTER EXTENSION vector SET SCHEMA extensions","SELECT namespace.nspname FROM pg_catalog.pg_extension AS extension JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid=extension.extnamespace WHERE extension.extname='vector'","SELECT 1 FROM pg_catalog.pg_extension AS extension JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid=extension.extnamespace WHERE extension.extname='vector' AND namespace.nspname='public'"); LOCAL_REMEDIATION_SCHEMA="g035_recovery_control"; SHORT_URL_SELECTION_SPEC="row_number() over (partition by target_url order by created_at nulls last, id)"; AUTH_USER_REFERENCE_COLUMNS=(("public","ad_banners","created_by"),("public","admin_restaurant_map_overlays","created_by_admin_id"),("public","admin_restaurant_map_overlays","updated_by_admin_id"),("public","admin_user_preferences","user_id"),("public","announcements","created_by"),("public","documents","user_id"),("public","notifications","user_id"),("public","ocr_logs","user_id"),("public","profiles","user_id"),("public","restaurant_requests","user_id"),("public","restaurant_submissions","resolved_by_admin_id"),("public","restaurant_submissions","user_id"),("public","review_likes","user_id"),("public","reviews","edited_by_admin_id"),("public","reviews","user_id"),("public","search_logs","user_id"),("public","user_account_status","user_id"),("public","user_bookmarks","user_id"),("public","user_roles","user_id"),("public","user_stats","user_id"))
+HOSTED_CA_SHA256="700723581420dd1ac98fd7e9ac529f0ef210eadcaf87fc868a3ad7d114c2f3b7"; HOSTED_CA_SIZE=1367
 SHORT_URLS_CATALOG=CONTRACT_SHORT_URLS_CATALOG
 SHORT_URL_SELECTION_SPEC=CONTRACT_SHORT_URL_SELECTION_SPEC
 CROSS_SCHEMA_OWNER_HOOK_VERSION="20260713002000"; CROSS_SCHEMA_OWNER_FUNCTIONS=("public.account_deletion_require_service_role()","public.account_deletion_is_active_admin(uuid)","public.account_deletion_write_audit(public.account_deletion_requests,text,text)","public.preview_account_deletion(uuid,uuid,timestamptz)","public.begin_account_deletion_apply(uuid,uuid,uuid,text,text,text,timestamptz)","public.apply_account_deletion_database_cleanup(uuid,uuid)","public.list_account_deletion_storage_objects(uuid,uuid)","public.finalize_account_deletion_storage(uuid,uuid,boolean)","public.finalize_account_deletion_auth(uuid,uuid,boolean)","public.fail_account_deletion(uuid,uuid,text)","privacy_retention.require_service_role()","privacy_retention.write_run_audit(privacy_retention.privacy_retention_runs,text,text)"); CROSS_SCHEMA_OWNER_RESOLVE_SQL="SELECT procedure.oid FROM pg_catalog.pg_proc AS procedure WHERE procedure.oid=pg_catalog.to_regprocedure(%s)"; CROSS_SCHEMA_OWNER_VERIFY_SQL="SELECT role.rolname FROM pg_catalog.pg_proc AS procedure JOIN pg_catalog.pg_roles AS role ON role.oid=procedure.proowner WHERE procedure.oid=pg_catalog.to_regprocedure(%s)"
@@ -202,9 +203,37 @@ def _parse_service_entries(source,section):
   entries[key]=value
  if headers != 1 or not entries: raise RecoveryError("invalid service file")
  return raw,entries
+def _hosted_ca_identity(info):
+ return (info.st_dev,info.st_ino,info.st_size)
+def _verify_hosted_sslrootcert(value):
+ path=Path(value)
+ if value=="system" or not path.is_absolute(): raise RecoveryError("invalid hosted sslrootcert")
+ try:
+  resolved=path.resolve(strict=True); root=repository_root(Path(__file__).resolve()).resolve(strict=True)
+  if resolved==root or root in resolved.parents: raise RecoveryError("hosted sslrootcert must be external")
+  if not hasattr(os,"getuid") or not hasattr(os,"O_NOFOLLOW"): raise RecoveryError("hosted sslrootcert custody unsupported")
+  before=os.lstat(path)
+  if stat.S_ISLNK(before.st_mode) or not stat.S_ISREG(before.st_mode) or before.st_uid!=os.getuid() or stat.S_IMODE(before.st_mode)!=0o600 or before.st_size!=HOSTED_CA_SIZE: raise RecoveryError("invalid hosted sslrootcert custody")
+  fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|getattr(os,"O_BINARY",0))
+  try:
+   opened=os.fstat(fd)
+   if _hosted_ca_identity(before)!=_hosted_ca_identity(opened) or not stat.S_ISREG(opened.st_mode) or opened.st_uid!=os.getuid() or stat.S_IMODE(opened.st_mode)!=0o600: raise RecoveryError("hosted sslrootcert changed")
+   hasher=hashlib.sha256(); size=0
+   while True:
+    chunk=os.read(fd,65536)
+    if not chunk: break
+    size+=len(chunk); hasher.update(chunk)
+   after_fd=os.fstat(fd); after_path=os.lstat(path); after_resolved=path.resolve(strict=True)
+   if after_resolved!=resolved or _hosted_ca_identity(opened)!=_hosted_ca_identity(after_fd) or _hosted_ca_identity(opened)!=_hosted_ca_identity(after_path) or not stat.S_ISREG(after_fd.st_mode) or not stat.S_ISREG(after_path.st_mode) or after_fd.st_uid!=os.getuid() or after_path.st_uid!=os.getuid() or stat.S_IMODE(after_fd.st_mode)!=0o600 or stat.S_IMODE(after_path.st_mode)!=0o600: raise RecoveryError("hosted sslrootcert changed")
+   if size!=HOSTED_CA_SIZE or hasher.hexdigest()!=HOSTED_CA_SHA256: raise RecoveryError("hosted sslrootcert pin mismatch")
+  finally: os.close(fd)
+ except RecoveryError: raise
+ except (OSError,ValueError) as exc: raise RecoveryError("invalid hosted sslrootcert") from exc
+ return value
 def _parse_hosted_service(source,section):
  raw,entries=_parse_service_entries(source,section)
- if section != HOSTED_SERVICE or entries.get("sslmode")!="verify-full" or entries.get("sslrootcert")!="system": raise RecoveryError("invalid hosted source")
+ if section != HOSTED_SERVICE or entries.get("sslmode")!="verify-full" or "sslrootcert" not in entries: raise RecoveryError("invalid hosted source")
+ _verify_hosted_sslrootcert(entries["sslrootcert"])
  return raw,entries
 def _parse_local_service(source,section):
  raw,entries=_parse_service_entries(source,section)
