@@ -211,6 +211,18 @@ class FenceTests(unittest.TestCase):
                   for index,(schema,name,owner) in enumerate(relation_keys,1))
   rows=tuple(sorted(allowlist))
   self.assertEqual(freeze.validate_table_acl_rows(rows,relations,terminal=True),rows)
+  overrides=freeze.G014_TERMINAL_GRANTOR_OVERRIDE_ACL_ALLOWLIST
+  self.assertEqual(len(overrides),4)
+  override_rows=tuple((schema,name,grantor,grantee,privilege,grantable)
+                      for schema,name,_owner,grantor,grantee,privilege,grantable in sorted(overrides))
+  self.assertEqual(freeze.validate_table_acl_rows(override_rows,relations,terminal=True),override_rows)
+  for schema,name,_owner,_grantor,grantee,privilege,grantable in sorted(overrides):
+   unsafe=(schema,name,"service_role",grantee,privilege,grantable)
+   with self.subTest(unsafe=unsafe),self.assertRaisesRegex(freeze.FreezeError,"relation ACL"):
+    freeze.validate_table_acl_rows((unsafe,),relations,terminal=True)
+  identity=next(row for row in override_rows if row[:2]==("auth","identities"))
+  with self.assertRaisesRegex(freeze.FreezeError,"relation ACL"):
+   freeze.validate_table_acl_rows(((*identity[:4],"DELETE",False),),relations,terminal=True)
   sample=rows[0]
   unsafe=(
    (*sample[:3],"PUBLIC",sample[4],False),
