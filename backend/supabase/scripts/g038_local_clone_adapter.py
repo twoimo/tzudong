@@ -48,6 +48,26 @@ SERVICE = "g035-local"
 DATABASE = "g035_local"
 _FINAL_POSTGRES_COMM = ".postgres-wrapp\n"
 ROLE_PROTOCOL_DESCRIPTOR_ROOT = "e6dd631c38cbcf5b048cd7b6c8a3c251fe5ca7097ab3a8e34079655af66dc0e3"
+RESTORE_OWNER_ROLES = (
+    "supabase_admin",
+    "supabase_auth_admin",
+    "supabase_storage_admin",
+    "privacy_workflow_owner",
+)
+RESTORE_TRANSIENT_MEMBERSHIP_ROWS = tuple(sorted((
+    ("supabase_admin", "postgres", "supabase_admin", False, True, True),
+    ("supabase_auth_admin", "postgres", "supabase_admin", False, True, True),
+    ("supabase_storage_admin", "postgres", "supabase_admin", False, True, True),
+    *TRANSIENT_MANAGED_ROWS[:2],
+)))
+RESTORE_TERMINAL_MEMBERSHIP_ROWS = tuple(sorted(TRANSIENT_MANAGED_ROWS[:2]))
+RESTORE_TRANSIENT_SCHEMA_ACL = (
+    ("postgres", "postgres", "CREATE", False),
+    ("postgres", "postgres", "USAGE", False),
+    ("postgres", "supabase_admin", "CREATE", False),
+    ("postgres", "supabase_admin", "USAGE", False),
+)
+RESTORE_TERMINAL_SCHEMA_ACL = RESTORE_TRANSIENT_SCHEMA_ACL[:2]
 _TOOL_CUSTODY = {
     "docker": ("eade1c3a5dda47534dc776f2f534c99cc94cfcf9ce07c4bf09e98258d13e7d7a", ("--version",), "Docker version 29.6.2, build dfc4efb1e2"),
     "git": ("179301dcb41ea78accc3fa0048a7e6f6710d891945a751a34addd622020c1818", ("--version",), "git version 2.50.1 (Apple Git-155)"),
@@ -534,6 +554,169 @@ BEGIN
 END;
 $g038_restored_owner$;
 """)
+    @staticmethod
+    def _validate_restore_authority_catalog(
+        raw: str,
+        expected_memberships: Sequence[tuple[str, str, str, bool, bool, bool]],
+        expected_schema_acl: Sequence[tuple[str, str, str, bool]], *,
+        database: str,
+    ) -> None:
+        try:
+            value = json.loads(raw)
+            if (
+                type(value) is not dict
+                or set(value) != {
+                    "database", "extensions", "memberships", "owner_roles",
+                    "server_version_num", "session_user", "user",
+                }
+                or value["database"] != database
+                or type(value["server_version_num"]) is not int
+                or value["server_version_num"] // 10000 != 17
+                or value["session_user"] != "postgres"
+                or value["user"] != "postgres"
+                or value["owner_roles"] != sorted(RESTORE_OWNER_ROLES)
+                or value["memberships"] != [
+                    list(row) for row in sorted(expected_memberships)
+                ]
+                or value["extensions"] != {
+                    "acl": [list(row) for row in expected_schema_acl],
+                    "name": "extensions",
+                    "owner": "postgres",
+                }
+            ):
+                _fail("restore_authority")
+        except LocalCloneError:
+            raise
+        except Exception:
+            _fail("restore_authority")
+
+    def _assert_restore_authority(
+        self, clone: Mapping[str, Any],
+        expected_memberships: Sequence[tuple[str, str, str, bool, bool, bool]],
+        expected_schema_acl: Sequence[tuple[str, str, str, bool]], *,
+        database: str,
+    ) -> None:
+        names = ",".join(repr(name) for name in RESTORE_OWNER_ROLES)
+        raw = self._role_psql(clone, user="postgres", database=database, sql=f"""
+SELECT pg_catalog.json_build_object(
+  'database', current_database(),
+  'extensions', pg_catalog.json_build_object(
+    'acl', (
+      SELECT COALESCE(pg_catalog.json_agg(pg_catalog.json_build_array(
+        grantor::regrole::text,
+        CASE WHEN grantee=0 THEN 'PUBLIC' ELSE grantee::regrole::text END,
+        privilege_type,is_grantable)
+        ORDER BY grantor::regrole::text,
+                 CASE WHEN grantee=0 THEN 'PUBLIC' ELSE grantee::regrole::text END,
+                 privilege_type,is_grantable), '[]'::json)
+        FROM pg_catalog.pg_namespace AS namespace,
+             LATERAL pg_catalog.aclexplode(COALESCE(
+               namespace.nspacl,
+               pg_catalog.acldefault('n', namespace.nspowner))) AS acl
+       WHERE namespace.nspname='extensions'
+    ),
+    'name', 'extensions',
+    'owner', (
+      SELECT pg_catalog.pg_get_userbyid(nspowner)
+        FROM pg_catalog.pg_namespace
+       WHERE nspname='extensions'
+    )
+  ),
+  'memberships', (
+    SELECT COALESCE(pg_catalog.json_agg(pg_catalog.json_build_array(
+      roleid::regrole::text,member::regrole::text,grantor::regrole::text,
+      admin_option,inherit_option,set_option)
+      ORDER BY roleid::regrole::text,member::regrole::text,
+               grantor::regrole::text,admin_option,inherit_option,set_option),
+      '[]'::json)
+      FROM pg_catalog.pg_auth_members
+     WHERE member='postgres'::regrole
+       AND roleid IN (SELECT oid FROM pg_catalog.pg_roles
+                       WHERE rolname = ANY (ARRAY[{names}]::name[]))
+  ),
+  'owner_roles', (
+    SELECT COALESCE(pg_catalog.json_agg(rolname ORDER BY rolname), '[]'::json)
+      FROM pg_catalog.pg_roles
+     WHERE rolname = ANY (ARRAY[{names}]::name[])
+  ),
+  'server_version_num', current_setting('server_version_num')::integer,
+  'session_user', session_user,
+  'user', current_user
+)::text;
+""")
+        self._validate_restore_authority_catalog(
+            raw, expected_memberships, expected_schema_acl, database=database,
+        )
+
+    def bootstrap_restore_authority(self, clone: Mapping[str, Any]) -> None:
+        if (
+            RESTORE_OWNER_ROLES != (
+                "supabase_admin",
+                "supabase_auth_admin",
+                "supabase_storage_admin",
+                "privacy_workflow_owner",
+            )
+            or g035.DUMP_SCHEMAS != (
+                "public", "shortener_private", "account_deletion_private",
+                "privacy_retention", "supabase_migrations", "auth", "storage",
+            )
+            or g035.RECOVERY_EXTENSIONS != (
+                ("pg_trgm", "extensions"),
+                ("uuid-ossp", "extensions"),
+                ("btree_gin", "extensions"),
+                ("vector", "public"),
+                ("pgcrypto", "extensions"),
+            )
+        ):
+            _fail("restore_authority")
+        role_names = ",".join(repr(name) for name in RESTORE_OWNER_ROLES[:3])
+        self._role_psql(clone, user="supabase_admin", database="postgres", sql=f"""
+BEGIN;
+DO $g038_restore_role_preflight$
+BEGIN
+  IF current_setting('server_version_num')::integer / 10000 <> 17
+     OR current_user <> 'supabase_admin' OR session_user <> 'supabase_admin'
+     OR (SELECT pg_catalog.count(*) FROM pg_catalog.pg_roles
+          WHERE rolname = ANY (ARRAY[{role_names}]::name[])) <> 3
+     OR EXISTS (
+          SELECT 1 FROM pg_catalog.pg_auth_members
+           WHERE member='postgres'::regrole
+             AND roleid IN (SELECT oid FROM pg_catalog.pg_roles
+                             WHERE rolname = ANY (ARRAY[{role_names}]::name[]))
+     )
+     OR pg_catalog.to_regnamespace('extensions') IS NOT NULL THEN
+    RAISE EXCEPTION 'restore authority precondition drift';
+  END IF;
+END;
+$g038_restore_role_preflight$;
+GRANT supabase_admin, supabase_auth_admin, supabase_storage_admin TO postgres
+  WITH ADMIN FALSE, INHERIT TRUE, SET TRUE GRANTED BY supabase_admin;
+COMMIT;
+""")
+        self._role_psql(clone, user="postgres", database="postgres", sql="""
+BEGIN;
+CREATE SCHEMA extensions AUTHORIZATION postgres;
+GRANT USAGE, CREATE ON SCHEMA extensions TO supabase_admin GRANTED BY postgres;
+COMMIT;
+""")
+        self._assert_restore_authority(
+            clone, RESTORE_TRANSIENT_MEMBERSHIP_ROWS,
+            RESTORE_TRANSIENT_SCHEMA_ACL, database="postgres",
+        )
+
+    def terminalize_restore_authority(self, clone: Mapping[str, Any]) -> None:
+        self._role_psql(clone, user="supabase_admin", database=DATABASE, sql="""
+REVOKE supabase_admin, supabase_auth_admin, supabase_storage_admin
+  FROM postgres GRANTED BY supabase_admin;
+""")
+        self._role_psql(clone, user="postgres", database=DATABASE, sql="""
+REVOKE USAGE, CREATE ON SCHEMA extensions
+  FROM supabase_admin GRANTED BY postgres;
+""")
+        self._assert_restore_authority(
+            clone, RESTORE_TERMINAL_MEMBERSHIP_ROWS,
+            RESTORE_TERMINAL_SCHEMA_ACL, database=DATABASE,
+        )
 
     def bootstrap_role_protocol(self, clone: Mapping[str, Any]) -> None:
         if (
@@ -1015,8 +1198,10 @@ def run(inputs: Inputs, *, ops_factory: Callable[[Inputs, str], LocalCloneOps] =
             ops.wait_ready(clone)
             service = ops.service_file(clone)
             ops.bootstrap_role_protocol(clone)
+            ops.bootstrap_restore_authority(clone)
             restore_path = inputs.run_root / f"restore-{slot}.json"
             restored = ops.restore(clone, service, inputs.identity_channels[slot - 1], restore_path, manifest)
+            ops.terminalize_restore_authority(clone)
             ops.terminalize_role_protocol(clone)
             ops.assert_clone_custody(clone)
             clone["restore"] = restored
