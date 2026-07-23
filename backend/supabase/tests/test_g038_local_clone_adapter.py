@@ -1,0 +1,580 @@
+from __future__ import annotations
+
+import base64
+import hashlib
+import json
+import os
+import stat
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+import g038_local_clone_adapter as adapter
+
+
+def completed(stdout: str = "", returncode: int = 0):
+    return subprocess.CompletedProcess([], returncode, stdout, "")
+
+
+def minimum_cli(tmp_path: Path) -> list[str]:
+    return [
+        "--source-root", str(tmp_path), "--run-root", str(tmp_path),
+        "--source-receipt", str(tmp_path / "source-receipt"),
+        "--source-attestation-bundle", str(tmp_path / "source-bundle"),
+        "--gh-path", str(tmp_path / "gh"),
+        "--archive", str(tmp_path / "archive"), "--capture-receipt", str(tmp_path / "capture"),
+        "--backup-receipt", str(tmp_path / "backup"), "--predecessor-report", str(tmp_path / "predecessor"),
+        "--predecessor-final-receipt", str(tmp_path / "predecessor-final"),
+        "--predecessor-readback-receipt", str(tmp_path / "predecessor-readback"),
+        "--freeze-receipt", str(tmp_path / "freeze"), "--output", str(tmp_path / "output"),
+        "--identity-fd-1", "3", "--identity-fd-2", "4", "--clone-signing-key-fd", "5",
+        "--deadline-epoch", str(time.time() + 60), "--docker", "docker", "--git", "git",
+        "--age", "age", "--pg-restore", "pg_restore",
+    ]
+
+
+@pytest.mark.parametrize("forbidden", [
+    "--dsn", "--host", "--port", "--service", "--image", "--migration-root",
+    "--repository-root", "--docker-context",
+])
+def test_cli_has_no_authority_or_topology_overrides(tmp_path, forbidden):
+    with pytest.raises(SystemExit):
+        adapter.parser().parse_args(minimum_cli(tmp_path) + [forbidden, "attacker-value"])
+
+
+def test_cli_requires_separate_identity_and_signing_channels(tmp_path):
+    argv = minimum_cli(tmp_path)
+    parsed = adapter.parser().parse_args(argv)
+    assert parsed.identity_fd_1 == "3"
+    assert parsed.identity_fd_2 == "4"
+    assert parsed.clone_signing_key_fd == "5"
+    assert parsed.source_receipt == str(tmp_path / "source-receipt")
+    assert parsed.source_attestation_bundle == str(tmp_path / "source-bundle")
+    assert parsed.gh_path == str(tmp_path / "gh")
+    with pytest.raises(SystemExit):
+        adapter.parser().parse_args(argv + ["--identity-handle-1", "9"])
+
+
+def test_direct_full_cli_is_denied_before_input_or_docker_access(tmp_path):
+    result = subprocess.run(
+        [sys.executable, adapter.__file__, *minimum_cli(tmp_path)],
+        cwd="/", capture_output=True, text=True, check=False,
+        env={**os.environ, "DOCKER_HOST": "tcp://attacker.invalid:2375"},
+    )
+    assert result.returncode == 1
+
+
+def test_protected_cli_dispatches_validated_inputs(monkeypatch, tmp_path):
+    validated = object()
+    observed = []
+    monkeypatch.setattr(
+        adapter.g038_successor_source, "assert_isolated_bootstrap", lambda: None,
+    )
+    monkeypatch.setattr(adapter, "_inputs", lambda args: validated)
+    monkeypatch.setattr(adapter, "run", lambda inputs: observed.append(inputs))
+    assert adapter.main(minimum_cli(tmp_path)) == 0
+    assert observed == [validated]
+
+
+def test_protected_cli_sanitizes_adapter_failure(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        adapter.g038_successor_source, "assert_isolated_bootstrap", lambda: None,
+    )
+    monkeypatch.setattr(
+        adapter,
+        "_inputs",
+        lambda args: (_ for _ in ()).throw(adapter.LocalCloneError("private")),
+    )
+    assert adapter.main(minimum_cli(tmp_path)) == 1
+
+
+
+class AdmissionOps:
+    def __init__(self, inputs, nonce):
+        self.events = []
+        self.inputs = inputs
+        self.run_nonce = nonce
+
+    def assert_local_docker(self):
+        self.events.append("docker")
+        raise adapter.LocalCloneError("stop")
+
+    def cleanup(self):
+        self.events.append("cleanup")
+
+    def survivors(self):
+        self.events.append("survivors")
+        return ()
+
+def _attestation(receipt: Path, receipt_sha: str, commit: str) -> list[dict]:
+    certificate = {
+        "issuer": "https://token.actions.githubusercontent.com",
+        "subjectAlternativeName": (
+            "https://github.com/twoimo/tzudong/.github/workflows/"
+            "g038-account-deletion-successor.yml@refs/heads/main"
+        ),
+        "sourceRepositoryURI": "https://github.com/twoimo/tzudong",
+        "sourceRepositoryDigest": commit,
+        "sourceRepositoryRef": "refs/heads/main",
+        "runnerEnvironment": "github-hosted",
+    }
+    statement = {
+        "_type": "https://in-toto.io/Statement/v1",
+        "subject": [{"name": receipt.name, "digest": {"sha256": receipt_sha}}],
+        "predicateType": "https://slsa.dev/provenance/v1",
+        "predicate": {},
+    }
+    return [{
+        "attestation": {"bundle": "opaque"},
+        "verificationResult": {
+            "signature": {"certificate": certificate},
+            "verifiedTimestamps": [{"type": "rekor"}],
+            "statement": statement,
+        },
+    }]
+
+
+def _authenticated_backup_material(monkeypatch, tmp_path):
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+    from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+    from g038_successor_source import SourceBinding
+
+    tmp_path.chmod(0o700)
+    repository = tmp_path / "repository"
+    repository.mkdir(mode=0o700)
+    commit = "b" * 40
+    source = SourceBinding(commit, "1" * 64)
+    manifest = type("Manifest", (), {
+        "statement_vector_root": "4" * 64,
+        "terminal_spec_root": "5" * 64,
+    })()
+    manifest_root, migration_root = "2" * 64, "3" * 64
+    monkeypatch.setattr(
+        adapter.production, "_manifest_roots",
+        lambda root, value: (manifest_root, migration_root),
+    )
+
+    receipt_body = {
+        "schema": adapter.production._SOURCE_RECEIPT_SCHEMA,
+        "status": "source-valid",
+        "source_commit": commit,
+        "runtime_source_root": source.runtime_source_root,
+        "manifest_root": manifest_root,
+        "source_root": migration_root,
+        "vector_root": manifest.statement_vector_root,
+        "terminal_spec_root": manifest.terminal_spec_root,
+        "selected_versions": list(adapter.production.SELECTED_VERSIONS),
+        "repository": adapter.production._SOURCE_REPOSITORY,
+        "ref": adapter.production._SOURCE_REF,
+        "workflow": adapter.production._SOURCE_WORKFLOW,
+        "run_id": 101,
+        "run_attempt": 1,
+        "artifact_name": adapter.production._SOURCE_ARTIFACT,
+        "issued_at": int(time.time()),
+    }
+    receipt_body["receipt_sha256"] = adapter.production.canonical_sha256(
+        receipt_body,
+    )
+    source_receipt = tmp_path / "source-receipt"
+    source_receipt.write_bytes(
+        adapter.production.canonical_json_bytes(receipt_body) + b"\n",
+    )
+    source_receipt.chmod(0o600)
+    source_receipt_sha = hashlib.sha256(source_receipt.read_bytes()).hexdigest()
+
+    bundle = tmp_path / "source-bundle"
+    bundle.write_bytes(b"exact attestation bundle")
+    bundle.chmod(0o600)
+    gh = tmp_path / "gh"
+    gh.write_bytes(b"pinned gh executable")
+    gh.chmod(0o700)
+    monkeypatch.setattr(
+        adapter.production, "_GH_SHA256",
+        hashlib.sha256(gh.read_bytes()).hexdigest(),
+    )
+    attestation = _attestation(source_receipt, source_receipt_sha, commit)
+    monkeypatch.setattr(
+        adapter.production, "_run_gh",
+        lambda command: (
+            adapter.production._GH_VERSION_OUTPUT.encode("ascii")
+            if command[1:] == ["version"]
+            else json.dumps(attestation).encode("utf-8")
+        ),
+    )
+    evidence = adapter.production._load_source_receipt(
+        type("Args", (), {
+            "repository_root": str(repository),
+            "source_receipt": str(source_receipt),
+            "source_attestation_bundle": str(bundle),
+            "gh_path": str(gh),
+        })(),
+        source,
+        manifest,
+    )
+
+    private = Ed25519PrivateKey.generate()
+    public = private.public_key().public_bytes(
+        Encoding.PEM, PublicFormat.SubjectPublicKeyInfo,
+    )
+    monkeypatch.setattr(
+        adapter.production, "_RECEIPT_PUBLIC_KEY_PEM", public.decode("ascii"),
+    )
+    monkeypatch.setattr(
+        adapter.production, "_RECEIPT_PUBLIC_KEY_SHA256",
+        hashlib.sha256(public).hexdigest(),
+    )
+    now = int(time.time())
+    freeze = type("Freeze", (), {
+        "root": "6" * 64,
+        "inventory_root": "7" * 64,
+        "expires_at": now + 600,
+    })()
+    body = {
+        "schema": adapter.production._BACKUP_SCHEMA,
+        "source_commit": source.final_commit,
+        "runtime_source_root": source.runtime_source_root,
+        "source_validation_receipt_sha256": evidence.binding_sha256,
+        "source_attestation_bundle_sha256": evidence.bundle_sha256,
+        "verified_source_provenance_sha256": evidence.provenance_sha256,
+        "target_fingerprint": adapter.production.TARGET_FINGERPRINT,
+        "observation_receipt_sha256": "8" * 64,
+        "freeze_root": freeze.root,
+        "inventory_root": freeze.inventory_root,
+        "freeze_expires_at": freeze.expires_at,
+        "capture_receipt_sha256": "9" * 64,
+        "g035_receipt_sha256": "a" * 64,
+        "archive_sha256": "c" * 64,
+        "archive_bytes": 4096,
+        "issued_at": now,
+        "expires_at": now + 600,
+    }
+    body["receipt_sha256"] = adapter.production.canonical_sha256(body)
+    unsigned = adapter.production.canonical_json_bytes({
+        "schema": adapter.production.SCHEMA,
+        "kind": "production-backup",
+        "body": body,
+    })
+    backup = tmp_path / "backup"
+    backup.write_bytes(adapter.production.canonical_json_bytes({
+        "schema": adapter.production.SCHEMA,
+        "kind": "production-backup",
+        "body": body,
+        "signature_b64": base64.b64encode(private.sign(unsigned)).decode("ascii"),
+    }) + b"\n")
+    backup.chmod(0o600)
+    capture = tmp_path / "capture"
+    capture.write_bytes(b"capture")
+    capture.chmod(0o600)
+    archive = tmp_path / "archive"
+    archive.write_bytes(b"archive")
+    archive.chmod(0o600)
+    inputs = type("Inputs", (), {
+        "source_root": repository,
+        "source_receipt": source_receipt,
+        "source_attestation_bundle": bundle,
+        "gh_path": gh,
+        "backup": backup,
+        "capture": capture,
+        "archive": archive,
+    })()
+    return inputs, source, manifest, freeze, evidence, body, private
+
+
+def test_backup_admission_calls_real_controller_with_authenticated_source_evidence(
+    monkeypatch, tmp_path,
+):
+    from unittest.mock import create_autospec
+
+    inputs, source, manifest, freeze, expected_evidence, body, _ = (
+        _authenticated_backup_material(monkeypatch, tmp_path)
+    )
+    real_source_loader = adapter.production._load_source_receipt
+    real_backup_loader = adapter.production._load_backup
+    source_loader = create_autospec(
+        real_source_loader, side_effect=real_source_loader,
+    )
+    backup_loader = create_autospec(
+        real_backup_loader, side_effect=real_backup_loader,
+    )
+    monkeypatch.setattr(adapter.production, "_load_source_receipt", source_loader)
+    monkeypatch.setattr(adapter.production, "_load_backup", backup_loader)
+    monkeypatch.setattr(
+        adapter.production, "_revalidate_backup_artifacts",
+        lambda args, admitted: None,
+    )
+
+    admitted, backup_sha, evidence = adapter._admit_backup(
+        inputs, source, manifest, freeze,
+    )
+
+    assert admitted == body
+    assert backup_sha == hashlib.sha256(inputs.backup.read_bytes()).hexdigest()
+    assert type(evidence) is adapter.production.SourceEvidence
+    assert evidence == expected_evidence
+    source_loader.assert_called_once()
+    backup_loader.assert_called_once()
+    call = backup_loader.call_args
+    assert call.args[1:] == (source, evidence, "8" * 64, freeze)
+    assert call.kwargs == {}
+
+
+@pytest.mark.parametrize("field", [
+    "source_validation_receipt_sha256",
+    "source_attestation_bundle_sha256",
+    "verified_source_provenance_sha256",
+])
+def test_forged_backup_source_evidence_is_rejected_before_clone(
+    monkeypatch, tmp_path, field,
+):
+    inputs, source, manifest, freeze, _, _, private = (
+        _authenticated_backup_material(monkeypatch, tmp_path)
+    )
+    value = json.loads(inputs.backup.read_text("ascii"))
+    value["body"][field] = "f" * 64
+    unsigned_body = {
+        key: item for key, item in value["body"].items()
+        if key != "receipt_sha256"
+    }
+    value["body"]["receipt_sha256"] = adapter.production.canonical_sha256(
+        unsigned_body,
+    )
+    unsigned = adapter.production.canonical_json_bytes({
+        "schema": adapter.production.SCHEMA,
+        "kind": "production-backup",
+        "body": value["body"],
+    })
+    value["signature_b64"] = base64.b64encode(private.sign(unsigned)).decode(
+        "ascii",
+    )
+    inputs.backup.write_bytes(
+        adapter.production.canonical_json_bytes(value) + b"\n",
+    )
+    with pytest.raises(adapter.production.ControllerError, match="backup_invalid"):
+        adapter._admit_backup(inputs, source, manifest, freeze)
+
+
+@pytest.mark.parametrize("replacement", ["missing-receipt", "receipt", "bundle", "gh"])
+def test_replaced_source_custody_is_rejected_before_clone(
+    monkeypatch, tmp_path, replacement,
+):
+    inputs, source, manifest, freeze, _, _, _ = (
+        _authenticated_backup_material(monkeypatch, tmp_path)
+    )
+    path = {
+        "missing-receipt": inputs.source_receipt,
+        "receipt": inputs.source_receipt,
+        "bundle": inputs.source_attestation_bundle,
+        "gh": inputs.gh_path,
+    }[replacement]
+    if replacement == "missing-receipt":
+        path.unlink()
+    else:
+        path.write_bytes(b"cross-run replacement")
+        if replacement != "gh":
+            path.chmod(0o600)
+    with pytest.raises(adapter.production.ControllerError):
+        adapter._admit_backup(inputs, source, manifest, freeze)
+
+
+
+def test_run_verifies_exact_production_source_before_docker(monkeypatch, tmp_path):
+    descriptors = tuple(os.open(os.devnull, os.O_RDONLY) for _ in range(3))
+    paths = tuple(tmp_path / name for name in (
+        "source-receipt", "source-bundle", "gh", "archive", "capture",
+        "backup", "predecessor", "predecessor-final", "predecessor-readback",
+        "freeze", "output",
+    ))
+    for path in paths[:-1]:
+        path.write_bytes(b"x")
+    inputs = adapter.Inputs(
+        tmp_path, tmp_path, *paths[:-1], paths[-1],
+        descriptors[:2], descriptors[2], time.monotonic() + 60,
+        "/usr/bin/git", "/usr/bin/git", "/usr/bin/git", "/usr/bin/git",
+    )
+    events = []
+    holder = {}
+
+    def factory(value, nonce):
+        holder["ops"] = AdmissionOps(value, nonce)
+        return holder["ops"]
+
+    monkeypatch.setattr(
+        adapter.g038_successor_source,
+        "assert_isolated_bootstrap",
+        lambda: events.append("capability"),
+    )
+    monkeypatch.setattr(
+        adapter.subprocess,
+        "run",
+        lambda *args, **kwargs: completed("a" * 40 + "\n"),
+    )
+
+    def verify(root, commit, **kwargs):
+        events.append(("verify", root, commit, kwargs["production"]))
+        return object()
+
+    monkeypatch.setattr(adapter.g038_successor_source, "verify_successor_source", verify)
+    with pytest.raises(adapter.LocalCloneError, match="stop"):
+        adapter.run(inputs, ops_factory=factory)
+    assert events == [
+        "capability", ("verify", tmp_path, "a" * 40, True),
+    ]
+    assert holder["ops"].events[0] == "docker"
+
+
+def test_source_denial_has_no_docker_effect_and_removes_ephemeral_paths(monkeypatch, tmp_path):
+    descriptors = tuple(os.open(os.devnull, os.O_RDONLY) for _ in range(3))
+    artifacts = tuple(tmp_path / name for name in (
+        "source-receipt", "source-bundle", "gh", "archive", "capture",
+        "backup", "predecessor", "predecessor-final", "predecessor-readback",
+        "freeze",
+    ))
+    for path in artifacts:
+        path.write_bytes(b"x")
+    for name in ("service-1", "service-2", "restore-1.json", "restore-2.json"):
+        (tmp_path / name).write_bytes(b"private")
+    inputs = adapter.Inputs(
+        tmp_path, tmp_path, *artifacts, tmp_path / "output",
+        descriptors[:2], descriptors[2], time.monotonic() + 60,
+        "/usr/bin/git", "/usr/bin/git", "/usr/bin/git", "/usr/bin/git",
+    )
+    holder = {}
+
+    def factory(value, nonce):
+        holder["ops"] = AdmissionOps(value, nonce)
+        return holder["ops"]
+
+    monkeypatch.setattr(
+        adapter.g038_successor_source,
+        "assert_isolated_bootstrap",
+        lambda: (_ for _ in ()).throw(adapter.LocalCloneError("source")),
+    )
+    with pytest.raises(adapter.LocalCloneError, match="source"):
+        adapter.run(inputs, ops_factory=factory)
+    assert holder["ops"].events == []
+    assert not any((tmp_path / name).exists() for name in (
+        "service-1", "service-2", "restore-1.json", "restore-2.json",
+    ))
+    for descriptor in descriptors:
+        with pytest.raises(OSError):
+            os.fstat(descriptor)
+
+
+def test_strict_cleanup_continues_after_failures_and_overrides_original(tmp_path):
+    descriptors = tuple(os.open(os.devnull, os.O_RDONLY) for _ in range(3))
+    inputs = type("Inputs", (), {
+        "run_root": tmp_path,
+        "identity_channels": descriptors[:2],
+        "signing_channel": descriptors[2],
+    })()
+    (tmp_path / "service-1").mkdir()
+    for name in ("service-2", "restore-1.json", "restore-2.json"):
+        (tmp_path / name).write_bytes(b"private")
+
+    class FailingOps:
+        def __init__(self):
+            self.calls = []
+
+        def cleanup(self):
+            self.calls.append("cleanup")
+            raise RuntimeError("uncertain")
+
+        def survivors(self):
+            self.calls.append("survivors")
+            return ()
+
+    ops = FailingOps()
+    cleanup = adapter._StrictCleanup(inputs, ops)
+    cleanup.admit_external_cleanup()
+    with pytest.raises(adapter.LocalCloneError, match="cleanup_survivors"):
+        cleanup.run()
+    assert ops.calls == ["cleanup", "survivors"]
+    assert not any((tmp_path / name).exists() for name in (
+        "service-2", "restore-1.json", "restore-2.json",
+    ))
+    for descriptor in descriptors:
+        with pytest.raises(OSError):
+            os.fstat(descriptor)
+
+class DockerProbe(adapter.LocalCloneOps):
+    def __init__(self, endpoint: str):
+        self.endpoint = endpoint
+        self.inputs = type("I", (), {"docker": "docker", "deadline_monotonic": time.monotonic() + 60})()
+        self.run_nonce = "a" * 32
+
+    def command(self, argv, *, check=True):
+        if argv[1:3] == ("context", "show"):
+            return completed("default\n")
+        if argv[1:3] == ("context", "inspect"):
+            return completed(json.dumps([{"Endpoints": {"docker": {"Host": self.endpoint}}}]))
+        if argv[1:3] == ("version", "--format"):
+            return completed('{"Version":"29.6.2","Os":"linux","Arch":"arm64"}\n')
+        if argv[1:3] == ("image", "inspect"):
+            return completed(json.dumps([{"Id": adapter.IMAGE_ID, "RepoDigests": [adapter.IMAGE_DIGEST]}]))
+        raise AssertionError(argv)
+
+
+def test_remote_docker_endpoint_is_rejected():
+    with pytest.raises(adapter.LocalCloneError, match="remote_docker"):
+        DockerProbe("tcp://127.0.0.1:2375").assert_local_docker()
+    DockerProbe("unix:///var/run/docker.sock").assert_local_docker()
+
+
+def test_external_artifact_custody_rejects_group_access_and_repo_location(tmp_path):
+    tmp_path = tmp_path.resolve()
+    repository = tmp_path / "repo"
+    repository.mkdir(mode=0o700)
+    outside = tmp_path / "outside"
+    outside.write_bytes(b"x")
+    outside.chmod(0o640)
+    with pytest.raises(adapter.LocalCloneError, match="input_custody"):
+        adapter._external_file(str(outside), repository=repository)
+    outside.chmod(0o600)
+    assert adapter._external_file(str(outside), repository=repository) == outside
+    inside = repository / "artifact"
+    inside.write_bytes(b"x")
+    inside.chmod(0o600)
+    with pytest.raises(adapter.LocalCloneError, match="input_location"):
+        adapter._external_file(str(inside), repository=repository)
+
+
+def test_duplicate_or_closed_channels_fail_closed():
+    read_fd, write_fd = os.pipe()
+    try:
+        assert adapter._fd(str(read_fd)) == read_fd
+        with pytest.raises(adapter.LocalCloneError, match="channel"):
+            adapter._fd("-1")
+    finally:
+        os.close(read_fd)
+        os.close(write_fd)
+
+
+def test_signing_key_must_match_clone_public_key():
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+    from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption, PrivateFormat
+    key = Ed25519PrivateKey.generate()
+    raw = key.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption())
+    read_fd, write_fd = os.pipe()
+    try:
+        os.write(write_fd, raw)
+        os.close(write_fd)
+        write_fd = -1
+        with pytest.raises(adapter.LocalCloneError, match="signing_key"):
+            adapter._load_signer(read_fd)
+    finally:
+        try:
+            os.close(read_fd)
+        except OSError:
+            pass
+        if write_fd >= 0:
+            os.close(write_fd)
+
+
+def test_deadline_is_absolute_and_expired_deadline_is_denied():
+    with pytest.raises(adapter.LocalCloneError, match="deadline"):
+        adapter._deadline(time.time() - 1)
+    assert adapter._deadline(time.time() + 5) > time.monotonic()
