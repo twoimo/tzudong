@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from typing import Any, Mapping
 from pathlib import Path
 
-from g037_hosted_closure_contract import BASELINE_PAIRS, ROLE_PROTOCOL_EPILOGUE, Manifest, canonical_bytes, terminal_spec, validate_sources
+from g037_hosted_closure_contract import BASELINE_PAIRS, ROLE_PROTOCOL_EPILOGUE, STATIC_RPC_MATRIX, Manifest, canonical_bytes, terminal_spec, validate_sources
 from g037_hosted_closure_executor import ClosureError, _precompute_execution_plan, terminal_readback_assert
 from g035_hosted_recovery import _compatibility_sql
 from g040_prefix_recovery import DATA_PROBE, Denial, PrefixObservation, SOURCE_COMMIT, TABLES, TERMINAL_DATA_IDENTITY_PROBE, TERMINAL_DATA_PROBE, TERMINAL_DATA_PROJECTION, classify_mutation_cursor, probe_full_data_root, validate_full_data_root, validate_terminal_data_probe_identity, validate_terminal_data_root
@@ -112,6 +112,36 @@ _PROVIDER_PUBLIC_ACL_REPLACEMENT = f"""WHERE namespace.nspname = 'public'
       )
       AND acl.grantee = 0
       AND acl.privilege_type = 'EXECUTE'"""
+_G040_VECTOR_RPC_SIGNATURES = (
+    "public.match_storyboard_documents_hybrid(uuid,extensions.vector,jsonb,double precision,integer,integer,jsonb)",
+    "public.match_storyboard_documents_hybrid_v2(uuid,extensions.vector,jsonb,double precision,integer,integer,jsonb)",
+)
+
+
+def g040_runtime_rpc_matrix() -> tuple[tuple[str, str], ...]:
+    """Return the exact runtime ACL matrix after the source-pinned vector-schema transform."""
+    transformed = tuple(
+        (
+            signature.replace("(uuid,extensions.vector,", "(uuid,public.vector,", 1)
+            if signature in _G040_VECTOR_RPC_SIGNATURES
+            else signature,
+            grantee,
+        )
+        for signature, grantee in STATIC_RPC_MATRIX
+    )
+    changed = tuple(
+        (before, after)
+        for before, after in zip(STATIC_RPC_MATRIX, transformed, strict=True)
+        if before != after
+    )
+    if (
+        len(changed) != 4
+        or {before[0] for before, _ in changed} != set(_G040_VECTOR_RPC_SIGNATURES)
+        or any(after[0].count("public.vector") != 1 for _, after in changed)
+        or len(transformed) != len(set(transformed))
+    ):
+        _deny("runtime_rpc_matrix")
+    return transformed
 
 
 _CLONE_CAPABILITIES: dict[int, Any] = {}
@@ -640,7 +670,12 @@ def _terminal_mutation_core(cursor: Any, *, compiled: tuple[tuple[Any, tuple[str
 def _terminal_readback(cursor: Any, *, repository_root: Path, manifest: Manifest,
                        terminal_spec_root: str) -> dict[str, str]:
     try:
-        terminal = terminal_readback_assert(_TupleRowCursor(cursor), repository_root, manifest)
+        terminal = terminal_readback_assert(
+            _TupleRowCursor(cursor),
+            repository_root,
+            manifest,
+            runtime_rpc_matrix=g040_runtime_rpc_matrix(),
+        )
     except Denial:
         raise
     except Exception:

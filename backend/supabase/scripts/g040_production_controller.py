@@ -25,7 +25,7 @@ import g040_prefix_recovery as prefix
 import g040_recovery_authorization as authority
 from g037_hosted_closure_contract import digest as g037_digest, terminal_spec, validate_operator_assertion, validate_sources
 from g037_hosted_closure_executor import terminal_readback_assert
-from g040_prefix_executor import ExecutionDenial, ExecutorEvidence, SourceValidationPlan, apply_locked_cursor, build_execution_plan, build_source_validation_plan
+from g040_prefix_executor import ExecutionDenial, ExecutorEvidence, SourceValidationPlan, apply_locked_cursor, build_execution_plan, build_source_validation_plan, g040_runtime_rpc_matrix
 from g040_recovery_source import RecoverySourceError, SourceBinding, verify_recovery_source
 from g040_reference_evidence import VerifiedReference, load_reference, verify_reference
 import g035_hosted_recovery as g035
@@ -581,7 +581,7 @@ def production_backup(args: Any) -> Mapping[str, Any]:
 def _terminal_readback(args: Any, source: SourceBinding, reference: VerifiedReference, manifest: Any, authorization: authority.VerifiedAuthorization) -> dict[str, Any]:
     deadline_monotonic, deadline_utc = _readback_deadlines(); conn = _connect_service(args, readonly=True); cur = None
     try:
-        native = _G037TupleFetchallCursor(conn.cursor()); _begin_controller_transaction(native, readonly=True); cur = _DeadlineBoundG037Cursor(native, deadline_monotonic); _require_live_target(cur, authorization.target_fingerprint); terminal = terminal_readback_assert(cur, _root(args), manifest, deadline=deadline_utc)
+        native = _G037TupleFetchallCursor(conn.cursor()); _begin_controller_transaction(native, readonly=True); cur = _DeadlineBoundG037Cursor(native, deadline_monotonic); _require_live_target(cur, authorization.target_fingerprint); terminal = terminal_readback_assert(cur, _root(args), manifest, deadline=deadline_utc, runtime_rpc_matrix=g040_runtime_rpc_matrix())
         data_root = prefix.probe_terminal_data_root(cur, reference)
         if type(terminal) is not dict or set(terminal) != {"catalog_root", "acl_root", "ledger_root", "terminal_spec"} or terminal["catalog_root"] != authorization.target_catalog_root or terminal["acl_root"] != authorization.target_acl_root or terminal["ledger_root"] != authorization.target_ledger_root or terminal["terminal_spec"] != authorization.terminal_root or data_root != authorization.target_data_root: _deny("terminal_readback")
         value = {"target_fingerprint": authorization.target_fingerprint, "final_commit": source.final_commit, "runtime_source_root": source.runtime_source_root, "terminal_rows": 40, "catalog_root": terminal["catalog_root"], "acl_root": terminal["acl_root"], "ledger_root": terminal["ledger_root"], "data_root": data_root, "terminal_spec_root": terminal["terminal_spec"]}; return {**value, "readback_sha256": _hash(value)}

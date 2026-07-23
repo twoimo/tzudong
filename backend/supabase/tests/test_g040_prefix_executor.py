@@ -403,6 +403,35 @@ class ExecutorTests(unittest.TestCase):
             with self.subTest(version=version):
                 with self.assertRaisesRegex(Denial, "vector_compile"):
                     executor._provider_vector_schema_sql(version, statements)
+    def test_runtime_rpc_matrix_tracks_exact_vector_schema_transform(self):
+        runtime = executor.g040_runtime_rpc_matrix()
+        self.assertEqual(len(runtime), len(executor.STATIC_RPC_MATRIX))
+        changed = tuple(
+            (source, target)
+            for source, target in zip(executor.STATIC_RPC_MATRIX, runtime, strict=True)
+            if source != target
+        )
+        self.assertEqual(len(changed), 4)
+        self.assertEqual(
+            {source[0] for source, _ in changed},
+            set(executor._G040_VECTOR_RPC_SIGNATURES),
+        )
+        for source, target in changed:
+            self.assertEqual(source[1], target[1])
+            self.assertEqual(
+                target[0],
+                source[0].replace(
+                    "(uuid,extensions.vector,",
+                    "(uuid,public.vector,",
+                    1,
+                ),
+            )
+        self.assertFalse(
+            any(
+                signature in executor._G040_VECTOR_RPC_SIGNATURES
+                for signature, _ in runtime
+            )
+        )
     def test_empty_params_do_not_activate_psycopg_percent_placeholder_parsing(self):
         class StrictCursor:
             def __init__(self):
