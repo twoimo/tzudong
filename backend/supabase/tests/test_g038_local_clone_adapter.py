@@ -957,6 +957,8 @@ def test_role_bootstrap_is_source_pinned_explicit_and_keeps_sql_off_argv():
     assert "02500" not in admin_sql and "G026" not in admin_sql
     assert "GRANTED BY postgres" in self_sql
     assert "json_build_object" in assertion_sql
+    assert "pg_catalog.coalesce" not in assertion_sql
+    assert assertion_sql.count("SELECT COALESCE(") == 2
     assert all(sql not in argv for argv, sql in calls)
     assert all("password" not in " ".join(argv).lower() for argv, _ in calls)
 
