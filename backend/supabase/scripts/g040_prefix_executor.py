@@ -72,6 +72,30 @@ _PROVIDER_VECTOR_SCHEMA_OCCURRENCES = {
     "20260713002000": 4,
     "20260713002400": 4,
 }
+_PROVIDER_OWNER_PREDICATE_VERSION = "20260713002000"
+_PROVIDER_OWNER_PREDICATE = "pg_catalog.pg_get_userbyid(procedure.proowner) NOT IN ('postgres', 'privacy_workflow_owner')"
+_PROVIDER_OWNER_REPLACEMENT = """NOT (
+        pg_catalog.pg_get_userbyid(procedure.proowner) IN ('postgres', 'privacy_workflow_owner')
+        OR (
+          pg_catalog.pg_get_userbyid(procedure.proowner) = 'supabase_admin'
+          AND EXISTS (
+            SELECT 1
+            FROM pg_catalog.pg_depend AS dependency
+            JOIN pg_catalog.pg_extension AS extension
+              ON extension.oid = dependency.refobjid
+            JOIN pg_catalog.pg_namespace AS extension_namespace
+              ON extension_namespace.oid = extension.extnamespace
+            WHERE dependency.classid = 'pg_catalog.pg_proc'::pg_catalog.regclass
+              AND dependency.objid = procedure.oid
+              AND dependency.refclassid = 'pg_catalog.pg_extension'::pg_catalog.regclass
+              AND dependency.deptype = 'e'
+              AND extension.extname = 'vector'
+              AND extension_namespace.nspname = 'public'
+              AND pg_catalog.pg_get_userbyid(extension.extowner) = 'supabase_admin'
+          )
+        )
+      )"""
+
 
 _CLONE_CAPABILITIES: dict[int, Any] = {}
 
@@ -311,14 +335,20 @@ def _ledger(cursor: Any) -> tuple[tuple[str, str, tuple[str, ...]], ...]:
 
 def _provider_vector_schema_sql(version: str, statements: tuple[str, ...]) -> tuple[str, ...]:
     expected = _PROVIDER_VECTOR_SCHEMA_OCCURRENCES.get(version, 0)
-    observed = sum(statement.count("extensions.vector") for statement in statements)
-    if observed != expected:
+    vector_occurrences = sum(statement.count("extensions.vector") for statement in statements)
+    owner_occurrences = sum(statement.count(_PROVIDER_OWNER_PREDICATE) for statement in statements)
+    expected_owner_occurrences = 1 if version == _PROVIDER_OWNER_PREDICATE_VERSION else 0
+    if vector_occurrences != expected or owner_occurrences != expected_owner_occurrences:
         _deny("vector_compile")
     transformed = tuple(
-        statement.replace("extensions.vector", "public.vector")
+        statement.replace("extensions.vector", "public.vector").replace(
+            _PROVIDER_OWNER_PREDICATE,
+            _PROVIDER_OWNER_REPLACEMENT,
+        )
         for statement in statements
     )
-    if any("extensions.vector" in statement for statement in transformed):
+    if (any("extensions.vector" in statement for statement in transformed)
+            or any(_PROVIDER_OWNER_PREDICATE in statement for statement in transformed)):
         _deny("vector_compile")
     return transformed
 
