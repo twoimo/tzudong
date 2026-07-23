@@ -52,6 +52,24 @@ class G040ProductionControllerTests(unittest.TestCase):
         stream = io.StringIO()
         with redirect_stderr(stream), self.assertRaises(SystemExit): controller.main(["rehearse"])
         self.assertNotIn("postgres://", stream.getvalue())
+    def test_execution_denials_expose_only_bounded_source_identity(self):
+        statement = "LOCK TABLE supabase_migrations.schema_migrations IN ACCESS EXCLUSIVE MODE"
+        denial = controller.ExecutionDenial(version="secret-version", ordinal=2, statement=statement)
+        expected = f"execution_statement_2_{hashlib.sha256(statement.encode()).hexdigest()}"
+        self.assertEqual(controller._bounded_execution_denial(denial), expected)
+        self.assertNotIn("secret-version", expected)
+        self.assertEqual(
+            controller._bounded_execution_denial(controller.prefix.Denial("branch_mismatch")),
+            "executor_branch_mismatch",
+        )
+        self.assertEqual(
+            controller._bounded_execution_denial(controller.prefix.Denial("provider_secret")),
+            "execute_failed",
+        )
+        self.assertEqual(
+            controller._bounded_execution_denial(type("HostileDenial", (controller.prefix.Denial,), {})("leak")),
+            "execute_failed",
+        )
     def test_validate_source_isolated_to_source_contract_and_receipt(self):
         source = type("Source", (), {"final_commit": "b" * 40, "runtime_source_root": "c" * 64})()
         args = Namespace(repository_root="/checkout", source_commit=source.final_commit, source_receipt="/source-receipt")
