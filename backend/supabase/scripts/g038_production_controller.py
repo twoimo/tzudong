@@ -72,6 +72,8 @@ _GH_SHA256 = "02d2d4a85241c6a8c0b77ebb1ec76fc723caf7fb128e00915b306b968847cba1"
 _GH_VERSION_OUTPUT = "gh version 2.96.0 (2026-07-02)\nhttps://github.com/cli/cli/releases/tag/v2.96.0\n"
 _PG_DUMP_SHA256 = "aa71717b27a8eddaab4efee4bca9b529c68b051947421ae71caa592757f5b22d"
 _PG_DUMP_VERSION_OUTPUT = "pg_dump (PostgreSQL) 17.10 (Homebrew)\n"
+_AGE_SHA256 = "f52e5ee772e1c0e3c6be5bf837b469a40346df3515db9a1b41230376fdff6a76"
+_AGE_VERSION_OUTPUT = "v1.3.1\n"
 _TOOL_MAX_OUTPUT = 4096
 _ATTESTATION_MAX_OUTPUT = 1024 * 1024
 _SOURCE_RECEIPT_MAX_AGE = 24 * 60 * 60
@@ -387,6 +389,46 @@ def _pinned_pg_dump(args: Any, root: Path) -> Path:
         _deny("backup_tool")
     except Exception:
         _deny("backup_tool")
+
+
+def _run_age_version(path: Path) -> bytes:
+    try:
+        completed = subprocess.run(
+            [os.fspath(path), "--version"],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env={"LANG": "C", "LC_ALL": "C", "NO_COLOR": "1"},
+            shell=False,
+            timeout=10,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        _deny("backup_encryptor")
+    if (completed.returncode != 0 or len(completed.stdout) > _TOOL_MAX_OUTPUT
+            or len(completed.stderr) > _TOOL_MAX_OUTPUT or completed.stderr):
+        _deny("backup_encryptor")
+    return completed.stdout
+
+
+def _pinned_encryptor(args: Any, root: Path) -> Path:
+    try:
+        requested = Path(args.encrypt_executable)
+        if not requested.is_absolute():
+            _deny("backup_encryptor")
+        path = _outside(requested, root)
+        named = path.lstat()
+        if (not stat.S_ISREG(named.st_mode) or stat.S_ISLNK(named.st_mode)
+                or named.st_uid != os.getuid() or stat.S_IMODE(named.st_mode) != 0o700
+                or not os.access(path, os.X_OK)
+                or hashlib.sha256(_stable_bytes(path, root)).hexdigest() != _AGE_SHA256
+                or _run_age_version(path) != _AGE_VERSION_OUTPUT.encode("ascii")):
+            _deny("backup_encryptor")
+        return path
+    except ControllerError:
+        _deny("backup_encryptor")
+    except Exception:
+        _deny("backup_encryptor")
 
 
 def _certificate_value(certificate: Mapping[str, Any], *names: str) -> Any:
@@ -744,6 +786,20 @@ def _freeze(args: Any, source: SourceBinding, manifest: Any, predecessor: Predec
         _deny("freeze_invalid")
 
 
+def _require_freeze_continuity(captured: VerifiedFreeze, current: VerifiedFreeze) -> None:
+    if type(captured) is not VerifiedFreeze or type(current) is not VerifiedFreeze:
+        _deny("freeze_continuity")
+    text_fields = (
+        "source_commit", "runtime_source_root", "target_fingerprint",
+        "inventory_root", "root",
+    )
+    integer_fields = ("issued_at", "expires_at")
+    if (any(type(getattr(value, field)) is not str for value in (captured, current) for field in text_fields)
+            or any(type(getattr(value, field)) is not int for value in (captured, current) for field in integer_fields)
+            or any(getattr(captured, field) != getattr(current, field) for field in (*text_fields, *integer_fields))):
+        _deny("freeze_continuity")
+
+
 def validate_source(args: Any) -> Mapping[str, Any]:
     root = _root(args)
     source = _source(args)
@@ -836,6 +892,7 @@ def production_backup(args: Any) -> Mapping[str, Any]:
         _deny("backup_archive")
     capture_receipt_path = _outside(args.capture_receipt, root, fresh=True)
     pg_dump = _pinned_pg_dump(args, root)
+    encryptor = _pinned_encryptor(args, root)
     source = _source(args); predecessor = _predecessor(args); successor_manifest = validate_sources(root)
     source_evidence = _load_source_receipt(args, source, successor_manifest)
     observation, observation_sha = _load_observation(args, source, source_evidence)
@@ -844,7 +901,8 @@ def production_backup(args: Any) -> Mapping[str, Any]:
     try:
         g040_manifest = validate_g040_sources(_root(args))
         capture_args = argparse.Namespace(destination=destination, capture_receipt=capture_receipt_path, service_file=args.service_file,
-            recipient=args.recipient, g034_artifact=args.g034_artifact, pg_dump=os.fspath(pg_dump), encrypt_command=args.encrypt_command)
+            recipient=args.recipient, g034_artifact=args.g034_artifact, pg_dump=os.fspath(pg_dump),
+            encrypt_command=os.fspath(encryptor))
         captured = g035.capture_to_custody(capture_args, g040_manifest)
         capture_raw = _stable_bytes(capture_receipt_path, root)
         archive_sha, archive_bytes = _archive_digest(archive_path, root)
@@ -853,7 +911,7 @@ def production_backup(args: Any) -> Mapping[str, Any]:
                 or evidence.get("target_fingerprint") != TARGET_FINGERPRINT or evidence.get("dump_sha256") != archive_sha or evidence.get("dump_bytes") != archive_bytes):
             _deny("backup_capture")
         current_freeze = _freeze(args, source, successor_manifest, predecessor)
-        require_continuity(freeze, current_freeze)
+        _require_freeze_continuity(freeze, current_freeze)
         issued = int(time.time()); expires = min(issued + 900, freeze.expires_at, observation.expires_at)
         if expires <= issued: _deny("backup_stale")
         body = {"schema": _BACKUP_SCHEMA, "source_commit": source.final_commit, "runtime_source_root": source.runtime_source_root,
@@ -936,12 +994,15 @@ def _load_clone(args: Any, source: SourceBinding, manifest: Any, predecessor: Pr
         "starting_acl_root": predecessor.roots["acl"], "starting_data_root": predecessor.roots["data"],
         "selected_versions": list(SELECTED_VERSIONS),
     }
+    binding_root_fields = ("tool_identity_root", "docker_daemon_root")
+    target_fields = ("target_ledger_root", "target_catalog_root", "target_acl_root", "target_data_root")
+    try:
+        receipt_roots = {key: _hex(body.get(key)) for key in (*binding_root_fields, *target_fields)}
+    except ControllerError:
+        _deny("clone_invalid")
+    expected = {**trusted, **{key: receipt_roots[key] for key in binding_root_fields}}
     if any(body.get(key) != item for key, item in trusted.items()):
         _deny("clone_invalid")
-    target_fields = ("target_ledger_root", "target_catalog_root", "target_acl_root", "target_data_root")
-    if any(not _hex(body.get(key)) for key in target_fields):
-        _deny("clone_invalid")
-    expected = {**trusted, **{key: body[key] for key in target_fields}}
     try:
         verified = clone_rehearsal.verify_dual_clone_receipt(path, expected=expected)
     except clone_rehearsal.CloneRehearsalError:
@@ -1336,7 +1397,7 @@ _MATERIAL = (*_COMMON_PREDECESSOR, "observation", "freeze-assertion", "backup-re
 _MODE_OPTIONS = MappingProxyType({
     "validate-source": ("repository-root", "source-commit", "source-receipt"),
     "observe": ("repository-root", "source-commit", *_SOURCE_AUTHENTICATION, *_COMMON_PREDECESSOR, "service-file", "service-name", "observation-receipt"),
-    "production-backup": ("repository-root", "source-commit", *_SOURCE_AUTHENTICATION, *_COMMON_PREDECESSOR, "observation", "freeze-assertion", "destination", "capture-receipt", "archive", "service-file", "recipient", "g034-artifact", "pg-dump", "encrypt-command", "output"),
+    "production-backup": ("repository-root", "source-commit", *_SOURCE_AUTHENTICATION, *_COMMON_PREDECESSOR, "observation", "freeze-assertion", "destination", "capture-receipt", "archive", "service-file", "recipient", "g034-artifact", "pg-dump", "encrypt-executable", "output"),
     "prepare": ("repository-root", "source-commit", *_SOURCE_AUTHENTICATION, *_MATERIAL, "authority-template"),
     "execute": ("repository-root", "source-commit", *_SOURCE_AUTHENTICATION, *_MATERIAL, "service-file", "service-name", "authorization", "authorization-signature", "freeze-monitor-socket", "precommit-checkpoint-receipt", "postcommit-checkpoint-receipt", "prepared-receipt", "final-receipt"),
     "readback": ("repository-root", "source-commit", *_SOURCE_AUTHENTICATION, "service-file", "service-name", "authorization", "authorization-signature", "freeze-monitor-socket", "continuity-parent-receipt", "historical-checkpoint-receipt", "prepared-receipt", "final-receipt"),

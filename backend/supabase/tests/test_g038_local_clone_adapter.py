@@ -578,3 +578,78 @@ def test_deadline_is_absolute_and_expired_deadline_is_denied():
     with pytest.raises(adapter.LocalCloneError, match="deadline"):
         adapter._deadline(time.time() - 1)
     assert adapter._deadline(time.time() + 5) > time.monotonic()
+
+
+def test_rehearsal_connection_is_autocommit_and_isolation_is_verified_before_queries():
+    events = []
+
+    class Ops(adapter.LocalCloneOps):
+        def connect(self, service, *, autocommit=False):
+            events.append(("connect", service, autocommit))
+            return object()
+
+    class Cursor:
+        def execute(self, statement, parameters=None):
+            events.append(("execute", statement, parameters))
+
+        def fetchone(self):
+            events.append(("fetchone",))
+            return ("repeatable read",)
+
+    ops = object.__new__(Ops)
+    service = Path("/private/service")
+    assert ops.rehearsal_connection(service) is not None
+    cursor = Cursor()
+    ops.begin_rehearsal_transaction(cursor)
+    cursor.execute("SELECT observation")
+
+    assert events == [
+        ("connect", service, True),
+        ("execute", "BEGIN ISOLATION LEVEL REPEATABLE READ", None),
+        ("execute", "SHOW transaction_isolation", None),
+        ("fetchone",),
+        ("execute", "SELECT observation", None),
+    ]
+
+
+def test_isolation_mismatch_is_denied_before_mutation():
+    events = []
+
+    class Cursor:
+        def execute(self, statement, parameters=None):
+            events.append(statement)
+
+        def fetchone(self):
+            return ("read committed",)
+
+    with pytest.raises(adapter.LocalCloneError, match="transaction_isolation"):
+        adapter.LocalCloneOps.begin_rehearsal_transaction(object(), Cursor())
+
+    assert events == [
+        "BEGIN ISOLATION LEVEL REPEATABLE READ",
+        "SHOW transaction_isolation",
+    ]
+
+
+def test_generated_service_file_has_exact_g035_application_name_and_is_admitted(tmp_path):
+    ops = object.__new__(adapter.LocalCloneOps)
+    ops.inputs = type("Inputs", (), {"docker": "docker", "run_root": tmp_path})()
+    commands = []
+    ops.command = lambda argv: commands.append(tuple(argv)) or completed()
+
+    service = ops.service_file({"slot": 1, "container": "clone-1", "port": 55401})
+    expected = (
+        b"[g035-local]\n"
+        b"host=127.0.0.1\n"
+        b"port=55401\n"
+        b"dbname=g035_local\n"
+        b"user=postgres\n"
+        b"application_name=g035-local\n"
+        b"sslmode=disable\n"
+    )
+
+    assert service.read_bytes() == expected
+    assert adapter.g035._parse_local_service(service, adapter.SERVICE) == expected
+    assert commands == [
+        ("docker", "exec", "clone-1", "createdb", "-U", "postgres", "g035_local"),
+    ]

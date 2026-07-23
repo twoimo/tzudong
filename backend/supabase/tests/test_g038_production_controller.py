@@ -10,6 +10,7 @@ import sys
 import tempfile
 import unittest
 from argparse import Namespace
+from dataclasses import replace
 from contextlib import ExitStack, redirect_stderr
 from pathlib import Path
 from unittest.mock import Mock, call, patch
@@ -740,6 +741,129 @@ class ControllerTests(unittest.TestCase):
                     self.assertRaisesRegex(controller.ControllerError, "source_attestation"):
                 controller._pinned_gh(args, checkout)
 
+    def test_freeze_continuity_requires_exact_typed_capture_binding(self):
+        freeze = controller.VerifiedFreeze(
+            freeze_id="freeze-1",
+            source_commit="b" * 40,
+            runtime_source_root="1" * 64,
+            manifest_root="2" * 64,
+            predecessor_report_sha256="3" * 64,
+            target_fingerprint="4" * 64,
+            starting_roots={key: str(index) * 64 for index, key in enumerate(
+                ("ledger", "catalog", "acl", "data", "spec"), start=1)},
+            relation_root="5" * 64,
+            acl_root="6" * 64,
+            inventory_root="7" * 64,
+            issued_at=1000,
+            expires_at=2000,
+            root="8" * 64,
+        )
+        controller._require_freeze_continuity(freeze, freeze)
+        mismatches = {
+            "source_commit": "c" * 40,
+            "runtime_source_root": "9" * 64,
+            "target_fingerprint": "a" * 64,
+            "inventory_root": "b" * 64,
+            "root": "c" * 64,
+            "issued_at": 1001,
+            "expires_at": 2001,
+        }
+        for field, value in mismatches.items():
+            with self.subTest(field=field), self.assertRaisesRegex(
+                    controller.ControllerError, "freeze_continuity"):
+                controller._require_freeze_continuity(freeze, replace(freeze, **{field: value}))
+        with self.assertRaisesRegex(controller.ControllerError, "freeze_continuity"):
+            controller._require_freeze_continuity(freeze, object())
+
+    def test_dual_clone_verifier_receives_only_its_original_binding_schema(self):
+        raw = b"signed clone receipt\n"
+        source = type("S", (), {
+            "final_commit": "b" * 40,
+            "runtime_source_root": "1" * 64,
+        })()
+        manifest = object()
+        predecessor = controller.PredecessorEvidence(
+            "2" * 64, "3" * 64, "4" * 64, "5" * 64,
+            {key: str(index) * 64 for index, key in enumerate(
+                ("ledger", "catalog", "acl", "data", "spec"), start=1)},
+        )
+        freeze = controller.VerifiedFreeze(
+            freeze_id="freeze-1", source_commit=source.final_commit,
+            runtime_source_root=source.runtime_source_root, manifest_root="6" * 64,
+            predecessor_report_sha256=predecessor.report_sha256,
+            target_fingerprint=controller.TARGET_FINGERPRINT,
+            starting_roots=predecessor.roots, relation_root="7" * 64,
+            acl_root="8" * 64, inventory_root="9" * 64,
+            issued_at=1000, expires_at=2000, root="a" * 64,
+        )
+        backup = {
+            "capture_receipt_sha256": "b" * 64,
+            "archive_sha256": "c" * 64,
+            "archive_bytes": 123,
+        }
+        body = {
+            "source_commit": source.final_commit,
+            "runtime_source_root": source.runtime_source_root,
+            "source_root": "d" * 64,
+            "manifest_root": "e" * 64,
+            "vector_root": controller.STATEMENT_VECTOR_ROOT,
+            "terminal_spec_root": controller.TERMINAL_SPEC_ROOT,
+            "exclusions_root": controller.EXCLUDED_ROOT,
+            "inventory_root": freeze.inventory_root,
+            "target_fingerprint": controller.TARGET_FINGERPRINT,
+            "tool_identity_root": "f" * 64,
+            "docker_daemon_root": "0" * 64,
+            "predecessor_report_sha256": predecessor.report_sha256,
+            "predecessor_outcome_sha256": predecessor.final_receipt_sha256,
+            "predecessor_readback_sha256": predecessor.readback_receipt_sha256,
+            "backup_receipt_sha256": "1" * 64,
+            "capture_receipt_sha256": backup["capture_receipt_sha256"],
+            "archive_sha256": backup["archive_sha256"],
+            "archive_bytes": backup["archive_bytes"],
+            "freeze_root": freeze.root,
+            "freeze_expires_at": freeze.expires_at,
+            "starting_ledger_root": predecessor.roots["ledger"],
+            "starting_catalog_root": predecessor.roots["catalog"],
+            "starting_acl_root": predecessor.roots["acl"],
+            "starting_data_root": predecessor.roots["data"],
+            "selected_versions": list(controller.SELECTED_VERSIONS),
+            "target_ledger_root": "1" * 64,
+            "target_catalog_root": "2" * 64,
+            "target_acl_root": "3" * 64,
+            "target_data_root": "4" * 64,
+        }
+        expected_fields = {
+            "source_commit", "runtime_source_root", "source_root", "manifest_root",
+            "vector_root", "terminal_spec_root", "exclusions_root", "inventory_root",
+            "target_fingerprint", "tool_identity_root", "docker_daemon_root",
+            "predecessor_report_sha256", "predecessor_outcome_sha256",
+            "predecessor_readback_sha256", "backup_receipt_sha256",
+            "capture_receipt_sha256", "archive_sha256", "archive_bytes",
+            "freeze_root", "freeze_expires_at", "starting_ledger_root",
+            "starting_catalog_root", "starting_acl_root", "starting_data_root",
+            "selected_versions",
+        }
+        verifier = Mock(return_value={"receipt_sha256": hashlib.sha256(raw).hexdigest()})
+        with patch.object(controller, "_root", return_value=Path("/checkout")), \
+                patch.object(controller, "_outside", return_value=Path("/clone")), \
+                patch.object(controller, "_stable_bytes", return_value=raw), \
+                patch.object(controller, "_signed_document", return_value=body), \
+                patch.object(controller, "_manifest_roots", return_value=("e" * 64, "d" * 64)), \
+                patch.object(controller.clone_rehearsal, "verify_dual_clone_receipt", verifier):
+            clone, receipt_sha = controller._load_clone(
+                Namespace(dual_clone_receipt="/clone"), source, manifest, predecessor,
+                freeze, "1" * 64, backup,
+            )
+        expected = verifier.call_args.kwargs["expected"]
+        self.assertEqual(set(expected), expected_fields)
+        self.assertEqual(controller.clone_rehearsal._validate_bindings(expected, now=1100), expected)
+        self.assertEqual(expected["tool_identity_root"], body["tool_identity_root"])
+        self.assertEqual(expected["docker_daemon_root"], body["docker_daemon_root"])
+        self.assertTrue(set(body) - set(expected) >= {
+            "target_ledger_root", "target_catalog_root", "target_acl_root", "target_data_root"})
+        self.assertEqual(clone["after_roots"]["ledger"], body["target_ledger_root"])
+        self.assertEqual(receipt_sha, hashlib.sha256(raw).hexdigest())
+
     def test_pinned_pg_dump_rejects_missing_replacement_mode_and_version(self):
         with tempfile.TemporaryDirectory() as raw:
             parent = Path(raw)
@@ -775,6 +899,76 @@ class ControllerTests(unittest.TestCase):
             with self.assertRaisesRegex(controller.ControllerError, "backup_tool"):
                 controller._pinned_pg_dump(Namespace(pg_dump="pg_dump"), checkout)
 
+    def test_pinned_age_rejects_missing_replacement_mode_version_and_relative_path(self):
+        self.assertEqual(controller._AGE_SHA256, "f52e5ee772e1c0e3c6be5bf837b469a40346df3515db9a1b41230376fdff6a76")
+        self.assertEqual(controller._AGE_VERSION_OUTPUT, "v1.3.1\n")
+        with tempfile.TemporaryDirectory() as raw:
+            parent = Path(raw)
+            parent.chmod(0o700)
+            checkout = parent / "checkout"
+            checkout.mkdir(mode=0o700)
+            executable = parent / "age"
+            args = Namespace(encrypt_executable=executable)
+            with self.assertRaisesRegex(controller.ControllerError, "backup_encryptor"):
+                controller._pinned_encryptor(args, checkout)
+            symlink_target = parent / "age-real"
+            symlink_target.write_bytes(b"trusted age")
+            symlink_target.chmod(0o700)
+            executable.symlink_to(symlink_target)
+            with self.assertRaisesRegex(controller.ControllerError, "backup_encryptor"):
+                controller._pinned_encryptor(args, checkout)
+            executable.unlink()
+            executable.write_bytes(b"trusted age")
+            executable.chmod(0o700)
+            digest = hashlib.sha256(executable.read_bytes()).hexdigest()
+            with patch.object(controller, "_AGE_SHA256", digest), \
+                    patch.object(controller, "_run_age_version",
+                                 return_value=controller._AGE_VERSION_OUTPUT.encode("ascii")):
+                self.assertEqual(controller._pinned_encryptor(args, checkout), executable)
+            executable.chmod(0o755)
+            with patch.object(controller, "_AGE_SHA256", digest), \
+                    self.assertRaisesRegex(controller.ControllerError, "backup_encryptor"):
+                controller._pinned_encryptor(args, checkout)
+            executable.chmod(0o700)
+            executable.write_bytes(b"replacement")
+            with patch.object(controller, "_AGE_SHA256", digest), \
+                    self.assertRaisesRegex(controller.ControllerError, "backup_encryptor"):
+                controller._pinned_encryptor(args, checkout)
+            executable.write_bytes(b"trusted age")
+            with patch.object(controller, "_AGE_SHA256", digest), \
+                    patch.object(controller, "_run_age_version", return_value=b"v1.3.2\n"), \
+                    self.assertRaisesRegex(controller.ControllerError, "backup_encryptor"):
+                controller._pinned_encryptor(args, checkout)
+            with self.assertRaisesRegex(controller.ControllerError, "backup_encryptor"):
+                controller._pinned_encryptor(Namespace(encrypt_executable="age"), checkout)
+
+    def test_untrusted_encryptor_denies_before_source_or_capture_access(self):
+        with tempfile.TemporaryDirectory() as raw:
+            parent = Path(raw)
+            parent.chmod(0o700)
+            checkout = parent / "checkout"
+            checkout.mkdir(mode=0o700)
+            custody = parent / "custody"
+            custody.mkdir(mode=0o700)
+            destination = custody / "destination"
+            destination.mkdir(mode=0o700)
+            args = Namespace(
+                repository_root=checkout,
+                output=custody / "backup.json",
+                destination=destination,
+                archive=destination / "g035-dump.enc",
+                capture_receipt=custody / "capture.json",
+                pg_dump=custody / "pg_dump",
+                encrypt_executable=custody / "missing-age",
+            )
+            with patch.object(controller, "_pinned_pg_dump", return_value=Path(args.pg_dump)), \
+                    patch.object(controller, "_source") as source, \
+                    patch.object(controller.g035, "capture_to_custody") as capture, \
+                    self.assertRaisesRegex(controller.ControllerError, "backup_encryptor"):
+                controller.production_backup(args)
+            source.assert_not_called()
+            capture.assert_not_called()
+
     def test_backup_preflights_output_archive_and_tool_before_capture(self):
         with tempfile.TemporaryDirectory() as raw:
             parent = Path(raw)
@@ -792,6 +986,7 @@ class ControllerTests(unittest.TestCase):
                 "archive": destination / "g035-dump.enc",
                 "capture_receipt": custody / "capture.json",
                 "pg_dump": custody / "pg_dump",
+                "encrypt_executable": custody / "age",
             }
             with patch.object(controller, "_source") as source, \
                     patch.object(controller.g035, "capture_to_custody") as capture:
@@ -832,5 +1027,7 @@ class ControllerTests(unittest.TestCase):
         self.assertIn("continuity-parent-receipt", readback)
         self.assertIn("historical-checkpoint-receipt", readback)
         self.assertIn("pg-dump", controller._MODE_OPTIONS["production-backup"])
+        self.assertIn("encrypt-executable", controller._MODE_OPTIONS["production-backup"])
+        self.assertNotIn("encrypt-command", controller._MODE_OPTIONS["production-backup"])
 
 if __name__ == "__main__": unittest.main()
