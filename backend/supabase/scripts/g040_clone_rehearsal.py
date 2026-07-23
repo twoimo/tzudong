@@ -60,7 +60,9 @@ _MAX_ARTIFACT = 1_048_576
 _LOCAL_MUTATION_TIMEOUT_SECONDS = 300
 _REFERENCE_CUSTODY_QUERY = (
     "SELECT session_user AS session_user, current_user AS current_user, "
-    "current_database() AS database_name"
+    "current_database() AS database_name, "
+    "(SELECT rolsuper FROM pg_catalog.pg_roles WHERE rolname=current_user) AS current_role_superuser, "
+    "(SELECT rolcreaterole FROM pg_catalog.pg_roles WHERE rolname=current_user) AS current_role_create_role"
 )
 _LINEAGE_PUBLIC_KEY_PEM = b"""-----BEGIN PUBLIC KEY-----
 MCowBQYDK2VwAyEA9+Hl2Dl/8N0kF+5xZzrVD2w73nbKXwrXgAXfvc4nMGU=
@@ -725,6 +727,8 @@ def _assert_reference_custody(cursor: Any, *, current_user: str) -> None:
         row.get("session_user") != "postgres"
         or row.get("current_user") != current_user
         or row.get("database_name") != "g035_local"
+        or row.get("current_role_superuser") is not False
+        or row.get("current_role_create_role") is not True
     ):
         _fail("reference_custody")
 

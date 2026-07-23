@@ -32,6 +32,8 @@ class FakeCursor:
         self.session_user = "postgres"
         self.current_user = "postgres"
         self.database_name = "g035_local"
+        self.current_role_superuser = False
+        self.current_role_create_role = True
         self.snapshot_rows = []
     def execute(self, sql, *params):
         self.last = sql
@@ -50,6 +52,8 @@ class FakeCursor:
                 "session_user": self.session_user,
                 "current_user": self.current_user,
                 "database_name": self.database_name,
+                "current_role_superuser": self.current_role_superuser,
+                "current_role_create_role": self.current_role_create_role,
             }
         if self.last == _READ_ONLY_SNAPSHOT_QUERY:
             row = {
@@ -437,6 +441,8 @@ class CloneRehearsalTests(unittest.TestCase):
             ("session", {"session_user": "supabase_admin"}),
             ("current_role", {"current_user": "supabase_admin"}),
             ("database", {"database_name": "postgres"}),
+            ("superuser", {"current_role_superuser": True}),
+            ("missing_create_role", {"current_role_create_role": False}),
         )
         for name, values in cases:
             with self.subTest(name=name):
