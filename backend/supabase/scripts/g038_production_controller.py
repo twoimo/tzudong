@@ -57,7 +57,7 @@ MCowBQYDK2VwAyEA/zrWSA2h9sKfuVsBWJllBsxjX9hjo6Jk+WWqHr84f2k=
 -----END PUBLIC KEY-----
 """
 _G040_PUBLIC_KEY_SHA256 = "cd576d9c8558c067e987193394627abbbfc37e75df8183039a13efaea3f8c498"
-_PREDECESSOR_SCHEMA = "g040-successor-predecessor-report-v1"
+_PREDECESSOR_SCHEMA = "g047-hosted-recovery-completion-v1"
 _OBSERVATION_SCHEMA = "g038-hosted-observation-v1"
 _BACKUP_SCHEMA = "g038-production-backup-v1"
 _PREPARED_SCHEMA = "g038-prepared-intent-v1"
@@ -574,18 +574,31 @@ def _predecessor(args: Any) -> PredecessorEvidence:
     report_raw = _stable_bytes(_outside(args.predecessor_report, root), root)
     if hashlib.sha256(report_raw).hexdigest() != PREDECESSOR_REPORT_SHA256:
         _deny("predecessor_report")
-    report = _decode(report_raw, newline=True)
-    required = {"schema", "exact_main_commit", "target_fingerprint", "execute_status", "postcommit_status", "terminal_rows", "freeze_active", "active_writers", "final_receipt_sha256", "readback_receipt_sha256"}
+    report = _decode(report_raw)
+    required = {
+        "schema", "exact_main_commit", "target_fingerprint", "execute",
+        "postcommit_readback", "dual_clone", "precommit_gates",
+        "producer_stop_retained", "source_receipt_sha256",
+        "evidence_index_sha256", "github", "clone_cleanup", "tests",
+    }
+    execute = report.get("execute")
+    postcommit = report.get("postcommit_readback")
+    dual_clone = report.get("dual_clone")
+    gates = report.get("precommit_gates")
     if (set(report) != required or report["schema"] != _PREDECESSOR_SCHEMA
-            or report["exact_main_commit"] != PREDECESSOR_COMMIT or report["target_fingerprint"] != TARGET_FINGERPRINT
-            or report["execute_status"] != "committed" or report["postcommit_status"] != "terminal"
-            or report["terminal_rows"] != PREDECESSOR_ROWS or report["freeze_active"] is not True
-            or type(report["active_writers"]) is not int or report["active_writers"] != 0):
+            or report["exact_main_commit"] != PREDECESSOR_COMMIT
+            or report["target_fingerprint"] != TARGET_FINGERPRINT
+            or type(execute) is not dict or execute.get("status") != "committed"
+            or type(postcommit) is not dict or postcommit.get("status") != "terminal"
+            or type(dual_clone) is not dict or dual_clone.get("terminal_rows") != PREDECESSOR_ROWS
+            or type(gates) is not dict or gates.get("freeze_active") is not True
+            or gates.get("active_writer_runs") != 0
+            or report["producer_stop_retained"] is not True):
         _deny("predecessor_report")
     final_raw = _stable_bytes(_outside(args.predecessor_final_receipt, root), root)
     readback_raw = _stable_bytes(_outside(args.predecessor_readback_receipt, root), root)
     final_sha, readback_sha = hashlib.sha256(final_raw).hexdigest(), hashlib.sha256(readback_raw).hexdigest()
-    if final_sha != report["final_receipt_sha256"] or readback_sha != report["readback_receipt_sha256"]:
+    if final_sha != execute.get("final_receipt_sha256") or readback_sha != postcommit.get("final_receipt_sha256"):
         _deny("predecessor_receipts")
     final = _g040_envelope(final_raw, "final")
     outcome = _g040_envelope(readback_raw, "outcome")
