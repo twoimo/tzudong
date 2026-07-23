@@ -353,32 +353,52 @@ class ExecutorTests(unittest.TestCase):
         source_02000 = (
             "before extensions.vector middle extensions.vector after",
             "extensions.vector extensions.vector " + executor._PROVIDER_OWNER_PREDICATE,
+            executor._PROVIDER_EFFECTIVE_ACL_PREDICATE,
+            executor._PROVIDER_PUBLIC_ACL_PREDICATE,
         )
         source_02400 = ("extensions.vector", "extensions.vector extensions.vector", "extensions.vector")
         self.assertEqual(
             executor._provider_vector_schema_sql("20260713002000", source_02000),
             tuple(
-                statement.replace("extensions.vector", "public.vector").replace(
+                statement.replace("extensions.vector", "public.vector")
+                .replace(
                     executor._PROVIDER_OWNER_PREDICATE,
                     executor._PROVIDER_OWNER_REPLACEMENT,
+                )
+                .replace(
+                    executor._PROVIDER_EFFECTIVE_ACL_PREDICATE,
+                    executor._PROVIDER_EFFECTIVE_ACL_REPLACEMENT,
+                )
+                .replace(
+                    executor._PROVIDER_PUBLIC_ACL_PREDICATE,
+                    executor._PROVIDER_PUBLIC_ACL_REPLACEMENT,
                 )
                 for statement in source_02000
             ),
         )
-        transformed_owner = executor._provider_vector_schema_sql("20260713002000", source_02000)[1]
+        transformed = executor._provider_vector_schema_sql("20260713002000", source_02000)
+        transformed_owner = transformed[1]
         self.assertIn("dependency.deptype = 'e'", transformed_owner)
         self.assertIn("extension.extname = 'vector'", transformed_owner)
         self.assertIn("extension_namespace.nspname = 'public'", transformed_owner)
         self.assertIn("pg_get_userbyid(extension.extowner) = 'supabase_admin'", transformed_owner)
+        for acl_statement in transformed[2:]:
+            self.assertIn("AND NOT (", acl_statement)
+            self.assertIn(executor._PROVIDER_VECTOR_EXTENSION_MEMBER, acl_statement)
         self.assertEqual(
             executor._provider_vector_schema_sql("20260713002400", source_02400),
             tuple(statement.replace("extensions.vector", "public.vector") for statement in source_02400),
         )
         for version, statements in (
-            ("20260713002000", ("extensions.vector " * 4,)),
+            ("20260713002000", (
+                "extensions.vector " * 4,
+                executor._PROVIDER_OWNER_PREDICATE,
+                executor._PROVIDER_EFFECTIVE_ACL_PREDICATE,
+            )),
             ("20260713002400", ("public.vector",)),
             ("20260713002300", ("extensions.vector",)),
             ("20260713002300", (executor._PROVIDER_OWNER_PREDICATE,)),
+            ("20260713002300", (executor._PROVIDER_EFFECTIVE_ACL_PREDICATE,)),
         ):
             with self.subTest(version=version):
                 with self.assertRaisesRegex(Denial, "vector_compile"):
