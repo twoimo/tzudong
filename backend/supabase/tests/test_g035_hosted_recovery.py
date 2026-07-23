@@ -10,6 +10,30 @@ import g035_hosted_recovery_contract as contract
 spec=importlib.util.spec_from_file_location("recovery",SCRIPTS/"g035_hosted_recovery.py"); recovery=importlib.util.module_from_spec(spec); spec.loader.exec_module(recovery)
 ROOT=Path(__file__).parents[3]
 OLD_REMEDIATION_PUBLIC_KEY_PEM="-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEA1aTLvmOtTWC1LZTYK8ocOBGlhWnC6k8a/ePCKSFdWPI=\n-----END PUBLIC KEY-----\n"
+PINNED_SUPABASE_CA=b"""-----BEGIN CERTIFICATE-----
+MIIDxDCCAqygAwIBAgIUbLxMod62P2ktCiAkxnKJwtE9VPYwDQYJKoZIhvcNAQEL
+BQAwazELMAkGA1UEBhMCVVMxEDAOBgNVBAgMB0RlbHdhcmUxEzARBgNVBAcMCk5l
+dyBDYXN0bGUxFTATBgNVBAoMDFN1cGFiYXNlIEluYzEeMBwGA1UEAwwVU3VwYWJh
+c2UgUm9vdCAyMDIxIENBMB4XDTIxMDQyODEwNTY1M1oXDTMxMDQyNjEwNTY1M1ow
+azELMAkGA1UEBhMCVVMxEDAOBgNVBAgMB0RlbHdhcmUxEzARBgNVBAcMCk5ldyBD
+YXN0bGUxFTATBgNVBAoMDFN1cGFiYXNlIEluYzEeMBwGA1UEAwwVU3VwYWJhc2Ug
+Um9vdCAyMDIxIENBMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqQXW
+QyHOB+qR2GJobCq/CBmQ40G0oDmCC3mzVnn8sv4XNeWtE5XcEL0uVih7Jo4Dkx1Q
+DmGHBH1zDfgs2qXiLb6xpw/CKQPypZW1JssOTMIfQppNQ87K75Ya0p25Y3ePS2t2
+GtvHxNjUV6kjOZjEn2yWEcBdpOVCUYBVFBNMB4YBHkNRDa/+S4uywAoaTWnCJLUi
+cvTlHmMw6xSQQn1UfRQHk50DMCEJ7Cy1RxrZJrkXXRP3LqQL2ijJ6F4yMfh+Gyb4
+O4XajoVj/+R4GwywKYrrS8PrSNtwxr5StlQO8zIQUSMiq26wM8mgELFlS/32Uclt
+NaQ1xBRizkzpZct9DwIDAQABo2AwXjALBgNVHQ8EBAMCAQYwHQYDVR0OBBYEFKjX
+uXY32CztkhImng4yJNUtaUYsMB8GA1UdIwQYMBaAFKjXuXY32CztkhImng4yJNUt
+aUYsMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEBAB8spzNn+4VU
+tVxbdMaX+39Z50sc7uATmus16jmmHjhIHz+l/9GlJ5KqAMOx26mPZgfzG7oneL2b
+VW+WgYUkTT3XEPFWnTp2RJwQao8/tYPXWEJDc0WVQHrpmnWOFKU/d3MqBgBm5y+6
+jB81TU/RG2rVerPDWP+1MMcNNy0491CTL5XQZ7JfDJJ9CCmXSdtTl4uUQnSuv/Qx
+Cea13BX2ZgJc7Au30vihLhub52De4P/4gonKsNHYdbWjg7OWKwNv/zitGDVDB9Y2
+CMTyZKG3XEu5Ghl1LEnI3QmEKsqaCLv12BnVjbkSeZsMnevJPs1Ye6TjjJwdik5P
+o/bKiIz+Fq8=
+-----END CERTIFICATE-----
+"""
 def fingerprints(*,pairs=(),ledger_sha256="1"*64,restorable_catalog_sha256="2"*64,managed_catalog_sha256="3"*64,managed_schemas=contract.MANAGED_METADATA_SCHEMAS):
  return {"ledger_pairs":pairs,"ledger_sha256":ledger_sha256,"ledger_count":len(pairs),"restorable_catalog_sha256":restorable_catalog_sha256,"managed_catalog_sha256":managed_catalog_sha256,"managed_metadata_schemas_present":managed_schemas}
 
@@ -120,39 +144,68 @@ class ControllerTests(unittest.TestCase):
   self.workspace.stop()
  def service(self,directory,section="g035-local",body=None):
   path=Path(directory)/"service.conf"; path.write_text(body or f"[{section}]\nhost=127.0.0.1\nport=5432\ndbname=g035_local\napplication_name=g035-local-rehearsal\nsslmode=disable\n",encoding="utf8"); path.chmod(0o600); return path
- def hosted_service_body(self):
-  return "[g035]\nhost=remote.example\nport=5432\ndbname=source\nuser=operator\nconnect_timeout=10\napplication_name=g035-capture\nsslmode=verify-full\nsslrootcert=system\n"
+ def hosted_service_body(self,sslrootcert="/external/supabase-ca.pem"):
+  return f"[g035]\nhost=remote.example\nport=5432\ndbname=source\nuser=operator\nconnect_timeout=10\napplication_name=g035-capture\nsslmode=verify-full\nsslrootcert={sslrootcert}\n"
  def managed_capture_scope(self):
   return {"managed_metadata_schema_scope":list(contract.MANAGED_METADATA_SCHEMAS),"managed_table_data_exclusions":["--exclude-table-data=auth.*","--exclude-table-data=storage.*"]}
- def test_hosted_capture_service_accepts_only_system_roots_with_verify_full(self):
-  with tempfile.TemporaryDirectory() as raw,patch.object(recovery,"_restrictive",return_value=True):
-   service=self.service(raw,"g035",self.hosted_service_body())
+ def test_hosted_capture_service_accepts_only_pinned_external_ca_with_verify_full(self):
+  self.assertEqual(1367,len(PINNED_SUPABASE_CA))
+  self.assertEqual("700723581420dd1ac98fd7e9ac529f0ef210eadcaf87fc868a3ad7d114c2f3b7",hashlib.sha256(PINNED_SUPABASE_CA).hexdigest())
+  self.assertEqual(hashlib.sha256(PINNED_SUPABASE_CA).hexdigest(),recovery.HOSTED_CA_SHA256)
+  with tempfile.TemporaryDirectory() as raw:
+   ca=Path(raw)/"supabase-ca.pem"; ca.write_bytes(PINNED_SUPABASE_CA); ca.chmod(0o600)
+   service=self.service(raw,"g035",self.hosted_service_body(ca))
    source,entries=recovery._parse_hosted_service(service,"g035")
    self.assertEqual(service.read_bytes(),source)
    self.assertEqual("verify-full",entries["sslmode"])
-   self.assertEqual("system",entries["sslrootcert"])
+   self.assertEqual(str(ca),entries["sslrootcert"])
    copied=recovery._copy_service(Path(raw),service,"g035")
    self.assertEqual(service.read_bytes(),copied.read_bytes())
- def test_hosted_capture_service_rejects_missing_weaker_and_hostile_roots(self):
+ def test_hosted_capture_service_rejects_missing_weaker_and_unpinned_roots(self):
   base="[g035]\nhost=remote.example\nport=5432\ndbname=source\nuser=operator\nconnect_timeout=10\napplication_name=g035-capture\n"
   cases=(
    base+"sslmode=verify-full\n",
    base+"sslrootcert=system\n",
-   base+"sslmode=require\nsslrootcert=system\n",
+   base+"sslmode=require\nsslrootcert=/tmp/supabase-ca.pem\n",
+   base+"sslmode=verify-full\nsslrootcert=system\n",
    base+"sslmode=verify-full\nsslrootcert=SYSTEM\n",
    base+"sslmode=verify-full\nsslrootcert=/etc/ssl/cert.pem\n",
+   base+"sslmode=verify-full\nsslrootcert=ca.pem\n",
    base+"sslmode=verify-full\nsslrootcert=~/ca.pem\n",
    base+"sslmode=verify-full\nsslrootcert=$PGSSLROOTCERT\n",
    base+"sslmode=verify-full\nsslrootcert=${PGSSLROOTCERT}\n",
    base+"sslmode=verify-full\nsslrootcert=%PGSSLROOTCERT%\n",
-   base+"sslmode=verify-full\nsslrootcert=system\nsslrootcert=system\n",
-   base+"sslmode=verify-full\nsslrootcert=system\nsslcert=system\n",
+   base+"sslmode=verify-full\nsslrootcert=/tmp/ca.pem\nsslrootcert=/tmp/ca.pem\n",
+   base+"sslmode=verify-full\nsslrootcert=/tmp/ca.pem\nsslcert=/tmp/client.pem\n",
   )
   with tempfile.TemporaryDirectory() as raw,patch.object(recovery,"_restrictive",return_value=True):
    for body in cases:
     service=self.service(raw,"g035",body)
     with self.subTest(body=body),self.assertRaises(recovery.RecoveryError):
      recovery._copy_service(Path(raw),service,"g035")
+ def test_hosted_ca_rejects_symlink_wrong_hash_size_mode_owner_and_replacement(self):
+  with tempfile.TemporaryDirectory() as raw:
+   directory=Path(raw); ca=directory/"supabase-ca.pem"; ca.write_bytes(PINNED_SUPABASE_CA); ca.chmod(0o600)
+   symlink=directory/"linked-ca.pem"; symlink.symlink_to(ca)
+   with self.assertRaises(recovery.RecoveryError): recovery._verify_hosted_sslrootcert(str(symlink))
+   ca.write_bytes(b"x"*recovery.HOSTED_CA_SIZE); ca.chmod(0o600)
+   with self.assertRaisesRegex(recovery.RecoveryError,"pin mismatch"): recovery._verify_hosted_sslrootcert(str(ca))
+   ca.write_bytes(b"x"); ca.chmod(0o600)
+   with self.assertRaisesRegex(recovery.RecoveryError,"custody"): recovery._verify_hosted_sslrootcert(str(ca))
+   ca.write_bytes(PINNED_SUPABASE_CA); ca.chmod(0o644)
+   with self.assertRaisesRegex(recovery.RecoveryError,"custody"): recovery._verify_hosted_sslrootcert(str(ca))
+   ca.chmod(0o600)
+   with patch.object(recovery.os,"getuid",return_value=ca.stat().st_uid+1),self.assertRaisesRegex(recovery.RecoveryError,"custody"):
+    recovery._verify_hosted_sslrootcert(str(ca))
+   info=ca.stat(); changed=list(info); changed[1]+=1
+   with patch.object(recovery.os,"fstat",side_effect=(info,os.stat_result(changed))),self.assertRaisesRegex(recovery.RecoveryError,"changed"):
+    recovery._verify_hosted_sslrootcert(str(ca))
+ def test_hosted_ca_rejects_missing_and_repository_paths(self):
+  with tempfile.TemporaryDirectory() as raw:
+   with self.assertRaises(recovery.RecoveryError): recovery._verify_hosted_sslrootcert(str(Path(raw)/"missing.pem"))
+  with tempfile.TemporaryDirectory(dir=ROOT) as raw:
+   ca=Path(raw)/"supabase-ca.pem"; ca.write_bytes(PINNED_SUPABASE_CA); ca.chmod(0o600)
+   with self.assertRaisesRegex(recovery.RecoveryError,"external"): recovery._verify_hosted_sslrootcert(str(ca))
  def test_local_destination_service_rejects_rerouting_and_ambiguous_inputs(self):
   cases=(
    "host=localhost",
@@ -769,8 +822,9 @@ class ControllerTests(unittest.TestCase):
   conn=Conn(); manifest=contract.load_manifest(ROOT); observed=fingerprints()
   with tempfile.TemporaryDirectory() as raw:
    dest=Path(raw)/"out"; dest.mkdir(); artifact=Path(raw)/"ok.json"; artifact.write_text(json.dumps(self.artifact(manifest,{"ledger_sha256":"1"*64,"catalog_sha256":"2"*64})),encoding="utf8")
+   ca=Path(raw)/"supabase-ca.pem"; ca.write_bytes(PINNED_SUPABASE_CA); ca.chmod(0o600)
    recipient="age1643wr4n3598yu8px5fc6qjpq753rh2j4qk3ar4ree23fz9ke4eqqc9xgmw"
-   args=Namespace(destination=str(dest),service_file=str(self.service(raw,"g035",self.hosted_service_body())),recipient=recipient,g034_artifact=str(artifact),pg_dump="pg_dump",encrypt_command="age")
+   args=Namespace(destination=str(dest),service_file=str(self.service(raw,"g035",self.hosted_service_body(ca))),recipient=recipient,g034_artifact=str(artifact),pg_dump="pg_dump",encrypt_command="age")
    def dump(*values):
     self.assertNotIn("ROLLBACK",conn.events); self.assertEqual(recipient,values[2]); output=dest/"g035-dump.enc"; output.write_bytes(b"x"); info=output.stat(); return [],hashlib.sha256(b"x").hexdigest(),1,(info.st_dev,info.st_ino)
    with patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_restrictive_directory",return_value=True),patch.object(recovery,"command_exists",side_effect=lambda x:x),patch.object(recovery,"_connect",return_value=conn),patch.object(recovery,"_fingerprints",return_value=observed),patch.object(recovery,"_target_fingerprint",return_value="f"*64) as target,patch.object(recovery,"_g034_live_fingerprints",return_value={"ledger_sha256":"1"*64,"catalog_sha256":"2"*64}),patch.object(recovery,"_recovery_source_binding",return_value={"repository_commit":"a"*40,"runtime_source_root":"b"*64}),patch.object(recovery,"_dump_to_encrypted",side_effect=dump):
@@ -789,12 +843,16 @@ class ControllerTests(unittest.TestCase):
  def test_connect_binds_servicefile_without_global_environment_mutation(self):
   import types
   with tempfile.TemporaryDirectory() as raw:
-   servicefile=Path(raw)/"pg_service.conf"
-   servicefile.write_text(self.hosted_service_body(),encoding="utf8")
+   directory=Path(raw)
+   ca=directory/"supabase-ca.pem"
+   ca.write_bytes(PINNED_SUPABASE_CA)
+   ca.chmod(0o600)
+   servicefile=directory/"pg_service.conf"
+   servicefile.write_text(self.hosted_service_body(ca),encoding="utf8")
    env={"PGSERVICEFILE":str(servicefile)}
    connect=lambda **kwargs: kwargs
    with patch.dict(recovery.os.environ,{"PGSERVICEFILE":"original"},clear=False),patch.dict(sys.modules,{"psycopg":types.SimpleNamespace(connect=connect)}):
-    self.assertEqual({"host":"remote.example","port":"5432","dbname":"source","user":"operator","connect_timeout":"10","application_name":"g035-capture","sslmode":"verify-full","sslrootcert":"system","autocommit":True},recovery._connect("g035",env))
+    self.assertEqual({"host":"remote.example","port":"5432","dbname":"source","user":"operator","connect_timeout":"10","application_name":"g035-capture","sslmode":"verify-full","sslrootcert":str(ca),"autocommit":True},recovery._connect("g035",env))
     self.assertEqual("original",recovery.os.environ["PGSERVICEFILE"])
    servicefile.write_text("[g035]\nhost=remote.example\nservice=other\n",encoding="utf8")
    with patch.dict(sys.modules,{"psycopg":types.SimpleNamespace(connect=connect)}),self.assertRaisesRegex(recovery.RecoveryError,"invalid service file"):
