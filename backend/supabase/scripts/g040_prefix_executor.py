@@ -653,18 +653,18 @@ def _apply_mutation_locked_cursor(cursor: Any, *, plan: RecoveryExecutionPlan | 
     """Shared locked mutation path; admission belongs to its production or clone caller."""
     timed_cursor = _DeadlineCursor(cursor, deadline_monotonic)
     _execute(cursor, "SELECT current_setting('transaction_read_only', true) AS transaction_read_only",
-             deadline_monotonic=deadline_monotonic)
+             deadline_monotonic=deadline_monotonic, version="g040-runtime", ordinal=0)
     try:
         state = cursor.fetchone()
     except Exception:
         _deny("transaction_state")
     if state not in (("off",), {"transaction_read_only": "off"}):
         _deny("not_read_write")
-    for sql in _LOCK_SQL:
-        _execute(cursor, sql, deadline_monotonic=deadline_monotonic)
+    for ordinal, sql in enumerate(_LOCK_SQL, 1):
+        _execute(cursor, sql, deadline_monotonic=deadline_monotonic, version="g040-lock", ordinal=ordinal)
     if plan.branch == "FULL_ESCAPED":
-        for sql in _DATA_LOCK_SQL:
-            _execute(cursor, sql, deadline_monotonic=deadline_monotonic)
+        for ordinal, sql in enumerate(_DATA_LOCK_SQL, 1):
+            _execute(cursor, sql, deadline_monotonic=deadline_monotonic, version="g040-data-lock", ordinal=ordinal)
     locked = classify_mutation_cursor(
         timed_cursor, plan.reference, expected_prior=plan.observation,
         statement_executor=timed_cursor.execute,

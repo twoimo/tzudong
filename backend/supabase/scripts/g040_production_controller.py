@@ -25,7 +25,7 @@ import g040_prefix_recovery as prefix
 import g040_recovery_authorization as authority
 from g037_hosted_closure_contract import digest as g037_digest, terminal_spec, validate_operator_assertion, validate_sources
 from g037_hosted_closure_executor import terminal_readback_assert
-from g040_prefix_executor import ExecutorEvidence, SourceValidationPlan, apply_locked_cursor, build_execution_plan, build_source_validation_plan
+from g040_prefix_executor import ExecutionDenial, ExecutorEvidence, SourceValidationPlan, apply_locked_cursor, build_execution_plan, build_source_validation_plan
 from g040_recovery_source import RecoverySourceError, SourceBinding, verify_recovery_source
 from g040_reference_evidence import VerifiedReference, load_reference, verify_reference
 import g035_hosted_recovery as g035
@@ -634,6 +634,32 @@ def _execution_deadline(reference: VerifiedReference, custody: RecoveryCustody, 
         _deny("authority_expired")
     return now_monotonic + (min(expiries) - now_wall)
 
+_BOUNDED_EXECUTOR_DENIALS = frozenset((
+    "artifact_binding", "artifact_type", "attempt_binding", "attempt_type",
+    "authorization_binding", "branch", "branch_mismatch", "catalog_shape",
+    "clone_capability", "data_root", "data_shape", "deadline", "expected_prior",
+    "execution_failed", "ledger_conflict", "ledger_read", "ledger_shape",
+    "manifest_contract", "nonce_stale", "nonce_validation", "not_read_write",
+    "observation_binding", "partial_or_ambiguous", "plan_binding", "plan_type",
+    "postgres_version", "prior_binding", "probe_error", "probe_shape",
+    "reference_type", "serialization_input", "snapshot_setup", "source_binding",
+    "statement_executor", "terminal_data_mismatch", "terminal_mismatch",
+    "terminal_row_shape", "transaction_state", "vector_compile",
+    "vector_duplicate", "vector_empty",
+))
+
+def _bounded_execution_denial(exc: BaseException) -> str:
+    if type(exc) is ExecutionDenial:
+        evidence = exc.evidence
+        if (type(evidence) is dict and set(evidence) == {"version", "ordinal", "statement_sha256"}
+                and type(evidence["ordinal"]) is int and 0 <= evidence["ordinal"] <= 10_000
+                and type(evidence["statement_sha256"]) is str and len(evidence["statement_sha256"]) == 64
+                and all(character in _HEX for character in evidence["statement_sha256"])):
+            return f"execution_statement_{evidence['ordinal']}_{evidence['statement_sha256']}"
+    if type(exc) is prefix.Denial and exc.code in _BOUNDED_EXECUTOR_DENIALS:
+        return f"executor_{exc.code}"
+    return "execute_failed"
+
 def execute(args: Any) -> Mapping[str, Any]:
     source = _source(args); reference = _reference(args, source); observation, receipt = _load_observation(args, source, reference); custody = _custody(args, source, reference); manifest = validate_sources(_root(args)); bindings = _bindings(source, reference, observation, custody, manifest, receipt); verified = _authorization(args, bindings); plan = build_execution_plan(_root(args), manifest, source=source, reference=reference, observation=observation, authorization=verified)
     prepared_path = _outside(args.prepared_receipt, _root(args), fresh=True); final_path = _outside(args.final_receipt, _root(args), fresh=True); deadline = _execution_deadline(reference, custody, verified); conn = _connect_service(args, readonly=False); cur = None; committed = False; commit_attempted = False
@@ -651,6 +677,11 @@ def execute(args: Any) -> Mapping[str, Any]:
             try: conn.rollback()
             except Exception: pass
         raise
+    except prefix.Denial as exc:
+        if not committed:
+            try: conn.rollback()
+            except Exception: pass
+        _deny(_bounded_execution_denial(exc))
     except Exception:
         if committed or commit_attempted: _deny("commit_ambiguous_readback_only")
         try: conn.rollback()
