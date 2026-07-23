@@ -337,9 +337,14 @@ class LocalCloneOps:
         network = f"g038-{self.run_nonce}-{slot}-net"
         container = f"g038-{self.run_nonce}-{slot}-db"
         labels = ("--label", f"{RUN_LABEL}={self.run_nonce}", "--label", f"{CLONE_LABEL}={slot}")
-        self.command((self.inputs.docker, "network", "create", "--internal", *labels, network))
+        network_options = (
+            "--driver", "bridge",
+            "--opt", "com.docker.network.bridge.enable_ip_masquerade=false",
+            "--opt", "com.docker.network.bridge.enable_icc=false",
+        )
+        self.command((self.inputs.docker, "network", "create", *network_options, *labels, network))
         self.command((self.inputs.docker, "run", "-d", "--name", container, "--network", network,
-                      "-p", "127.0.0.1::5432", *labels, "--cap-drop=ALL",
+                      "-p", "127.0.0.1::5432", "--user", "postgres", *labels, "--cap-drop=ALL",
                       "--security-opt=no-new-privileges", "-e", "POSTGRES_HOST_AUTH_METHOD=trust", IMAGE))
         container_value = json.loads(self.command((self.inputs.docker, "inspect", container)).stdout)[0]
         network_value = json.loads(self.command((self.inputs.docker, "network", "inspect", network)).stdout)[0]
@@ -348,18 +353,30 @@ class LocalCloneOps:
         expected_labels = {RUN_LABEL: self.run_nonce, CLONE_LABEL: str(slot)}
         labels_ok = all(config.get("Labels", {}).get(key) == value for key, value in expected_labels.items())
         network_labels_ok = all(network_value.get("Labels", {}).get(key) == value for key, value in expected_labels.items())
-        if (container_value.get("Image") != IMAGE_ID or config.get("Image") != IMAGE or not labels_ok
+        expected_network_options = {
+            "com.docker.network.bridge.enable_ip_masquerade": "false",
+            "com.docker.network.bridge.enable_icc": "false",
+        }
+        requested_bindings = host.get("PortBindings", {}).get("5432/tcp", [])
+        assigned_bindings = container_value.get("NetworkSettings", {}).get("Ports", {}).get("5432/tcp", [])
+        if (container_value.get("Image") != IMAGE_ID or config.get("Image") != IMAGE
+                or config.get("User") != "postgres" or not labels_ok
                 or host.get("Privileged") is not False or host.get("Binds") not in (None, [])
                 or host.get("Mounts") not in (None, []) or host.get("CapAdd") not in (None, [])
                 or host.get("CapDrop") != ["ALL"] or container_value.get("Mounts") != []
                 or host.get("SecurityOpt") != ["no-new-privileges"]
-                or network_value.get("Internal") is not True or network_value.get("Attachable") is not False
-                or not network_labels_ok):
+                or network_value.get("Driver") != "bridge" or network_value.get("Internal") is not False
+                or network_value.get("Attachable") is not False
+                or network_value.get("Options") != expected_network_options or not network_labels_ok
+                or requested_bindings != [{"HostIp": "127.0.0.1", "HostPort": ""}]):
             _fail("custody_drift")
-        bindings = host.get("PortBindings", {}).get("5432/tcp", [])
-        if len(bindings) != 1 or bindings[0].get("HostIp") != "127.0.0.1" or not str(bindings[0].get("HostPort", "")).isdigit():
+        if (type(assigned_bindings) is not list or len(assigned_bindings) != 1
+                or assigned_bindings[0].get("HostIp") != "127.0.0.1"
+                or not str(assigned_bindings[0].get("HostPort", "")).isdigit()
+                or int(assigned_bindings[0]["HostPort"]) <= 0):
             _fail("endpoint_custody")
-        return {"slot": slot, "network": network, "container": container, "port": int(bindings[0]["HostPort"]),
+        return {"slot": slot, "network": network, "container": container,
+                "port": int(assigned_bindings[0]["HostPort"]),
                 "container_inspect": container_value, "network_inspect": network_value}
 
     def assert_clone_custody(self, clone: Mapping[str, Any]) -> None:
