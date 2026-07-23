@@ -1,5 +1,6 @@
 import { describe, expect, mock, test } from 'bun:test';
 import type { NextRequest } from 'next/server';
+import * as actualRetrieval from '../lib/admin/youtube-thumbnail-generator/retrieval';
 
 const nonReadyAnyCap = {
   providerId: 'anycap' as const,
@@ -102,6 +103,7 @@ describe('thumbnail AnyCap gpt-image-2 readiness gate', () => {
       },
     }));
     mock.module('@/lib/admin/youtube-thumbnail-generator/retrieval', () => ({
+      ...actualRetrieval,
       resolveThumbnailRetrievalReferences: async () => {
         retrievalCalls += 1;
         throw new Error('retrieval should not run when readiness blocks');
