@@ -155,6 +155,8 @@ class Retention:
         self.counts = (0, 0, 0)
         self.readback = {key: True for key in proof.RETENTION_READBACK_KEYS}
         self.calls = []
+        self.confirmation_changes = {}
+        self.confirmation = None
 
     def preview_bound(self, class_code, cutoff, operation_binding_sha256, *, deadline_unix):
         self.calls.append(("preview", class_code, cutoff, operation_binding_sha256, deadline_unix))
@@ -169,10 +171,31 @@ class Retention:
 
     def confirm_bound(self, preview, *, deadline_unix):
         self.calls.append(("confirm", preview.operation_id, deadline_unix))
-        return proof.RetentionConfirmation(preview.operation_binding_sha256, "confirmed")
+        values = {
+            "operation_id": preview.operation_id,
+            "preview_hash": preview.preview_hash,
+            "operation_binding_sha256": preview.operation_binding_sha256,
+            "status": "confirmed",
+            "confirmed_at": NOW,
+            "expires_at": NOW + 120,
+            "replayed": False,
+        }
+        confirmation_binding_override = self.confirmation_changes.get("confirmation_binding_sha256")
+        values.update({
+            key: value
+            for key, value in self.confirmation_changes.items()
+            if key != "confirmation_binding_sha256"
+        })
+        self.confirmation = proof.RetentionConfirmation(
+            confirmation_binding_sha256=confirmation_binding_override or canonical_hash(values),
+            **values,
+        )
+        return self.confirmation
 
-    def finalize_bound(self, preview, *, deadline_unix):
-        self.calls.append(("finalize", preview.operation_id, deadline_unix))
+    def finalize_bound(self, preview, confirmation, *, deadline_unix):
+        if confirmation is not self.confirmation:
+            raise RuntimeError("exact confirmation required")
+        self.calls.append(("finalize", preview.operation_id, confirmation, deadline_unix))
         return proof.RetentionFinalReceipt(
             preview.operation_binding_sha256, "APPLIED", "APPLIED", self.readback, AUDIT_ID,
         )
@@ -318,6 +341,62 @@ class G038RuntimeProofTests(unittest.TestCase):
                 retention.counts = counts
                 self.assert_denied("RETENTION_PREVIEW_NOT_EMPTY", retention=retention)
                 self.assertEqual([call[0] for call in retention.calls], ["preview"])
+
+    def test_retention_exact_confirmation_is_required_for_finalization(self):
+        retention = Retention()
+        self.execute(retention=retention)
+        finalization = retention.calls[-1]
+        self.assertEqual(finalization[0], "finalize")
+        self.assertIs(finalization[2], retention.confirmation)
+
+        preview = retention.preview_bound(
+            CLASS_CODE,
+            retention.binding.retention_cutoff,
+            retention.binding.retention_operation_binding_sha256,
+            deadline_unix=NOW + 300,
+        )
+        with self.assertRaises(TypeError):
+            retention.finalize_bound(preview, deadline_unix=NOW + 300)
+        with self.assertRaises(RuntimeError):
+            retention.finalize_bound(
+                preview,
+                replace(retention.confirmation, preview_hash="other-preview-hash"),
+                deadline_unix=NOW + 300,
+            )
+
+    def test_retention_confirmation_must_match_exact_preview(self):
+        retention = Retention()
+        retention.confirmation_changes = {"preview_hash": "other-preview-hash"}
+        self.assert_denied("RETENTION_CONFIRMATION_INVALID", retention=retention)
+        self.assertEqual([call[0] for call in retention.calls], ["preview", "confirm"])
+
+    def test_retention_confirmation_must_match_exact_operation(self):
+        retention = Retention()
+        retention.confirmation_changes = {"operation_id": "other-operation-id"}
+        self.assert_denied("RETENTION_CONFIRMATION_INVALID", retention=retention)
+        self.assertEqual([call[0] for call in retention.calls], ["preview", "confirm"])
+
+        retention = Retention()
+        retention.confirmation_changes = {"operation_binding_sha256": "6" * 64}
+        self.assert_denied("RETENTION_CONFIRMATION_INVALID", retention=retention)
+        self.assertEqual([call[0] for call in retention.calls], ["preview", "confirm"])
+
+        retention = Retention()
+        retention.confirmation_changes = {"confirmation_binding_sha256": "6" * 64}
+        self.assert_denied("RETENTION_CONFIRMATION_INVALID", retention=retention)
+        self.assertEqual([call[0] for call in retention.calls], ["preview", "confirm"])
+
+    def test_retention_stale_or_replayed_confirmation_is_denied(self):
+        for changes in (
+            {"confirmed_at": NOW - 1},
+            {"expires_at": NOW},
+            {"replayed": True},
+        ):
+            retention = Retention()
+            retention.confirmation_changes = changes
+            with self.subTest(changes=changes):
+                self.assert_denied("RETENTION_CONFIRMATION_INVALID", retention=retention)
+                self.assertEqual([call[0] for call in retention.calls], ["preview", "confirm"])
 
     def test_same_key_replay_must_succeed(self):
         deletion = Deletion()

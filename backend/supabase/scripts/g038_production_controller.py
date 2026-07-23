@@ -70,6 +70,9 @@ _SOURCE_ARTIFACT = "g038-account-deletion-successor-source-receipt"
 _SOURCE_SIGNER_WORKFLOW = "github.com/twoimo/tzudong/.github/workflows/g038-account-deletion-successor.yml"
 _GH_SHA256 = "02d2d4a85241c6a8c0b77ebb1ec76fc723caf7fb128e00915b306b968847cba1"
 _GH_VERSION_OUTPUT = "gh version 2.96.0 (2026-07-02)\nhttps://github.com/cli/cli/releases/tag/v2.96.0\n"
+_PG_DUMP_SHA256 = "aa71717b27a8eddaab4efee4bca9b529c68b051947421ae71caa592757f5b22d"
+_PG_DUMP_VERSION_OUTPUT = "pg_dump (PostgreSQL) 17.10 (Homebrew)\n"
+_TOOL_MAX_OUTPUT = 4096
 _ATTESTATION_MAX_OUTPUT = 1024 * 1024
 _SOURCE_RECEIPT_MAX_AGE = 24 * 60 * 60
 _HEX = frozenset("0123456789abcdef")
@@ -346,6 +349,46 @@ def _pinned_gh(args: Any, root: Path) -> Path:
     return path
 
 
+def _run_pg_dump_version(path: Path) -> bytes:
+    try:
+        completed = subprocess.run(
+            [os.fspath(path), "--version"],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env={"LANG": "C", "LC_ALL": "C", "NO_COLOR": "1"},
+            shell=False,
+            timeout=10,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        _deny("backup_tool")
+    if (completed.returncode != 0 or len(completed.stdout) > _TOOL_MAX_OUTPUT
+            or len(completed.stderr) > _TOOL_MAX_OUTPUT or completed.stderr):
+        _deny("backup_tool")
+    return completed.stdout
+
+
+def _pinned_pg_dump(args: Any, root: Path) -> Path:
+    try:
+        requested = Path(args.pg_dump)
+        if not requested.is_absolute():
+            _deny("backup_tool")
+        path = _outside(requested, root)
+        named = path.lstat()
+        if (not stat.S_ISREG(named.st_mode) or stat.S_ISLNK(named.st_mode)
+                or named.st_uid != os.getuid() or stat.S_IMODE(named.st_mode) != 0o700
+                or not os.access(path, os.X_OK)
+                or hashlib.sha256(_stable_bytes(path, root)).hexdigest() != _PG_DUMP_SHA256
+                or _run_pg_dump_version(path) != _PG_DUMP_VERSION_OUTPUT.encode("ascii")):
+            _deny("backup_tool")
+        return path
+    except ControllerError:
+        _deny("backup_tool")
+    except Exception:
+        _deny("backup_tool")
+
+
 def _certificate_value(certificate: Mapping[str, Any], *names: str) -> Any:
     wanted = {name.casefold() for name in names}
     pending: list[Any] = [certificate]
@@ -425,7 +468,8 @@ def _verify_source_attestation(args: Any, root: Path, receipt: Path, receipt_sha
     return SourceEvidence(receipt_sha256, bundle_sha, provenance_sha, binding_sha)
 
 
-def _load_source_receipt(args: Any, source: SourceBinding, manifest: Any) -> SourceEvidence:
+def _load_source_receipt(args: Any, source: SourceBinding, manifest: Any, *,
+                         require_fresh: bool = True) -> SourceEvidence:
     root = _root(args)
     receipt_path = _outside(args.source_receipt, root)
     raw = _stable_bytes(receipt_path, root)
@@ -454,7 +498,8 @@ def _load_source_receipt(args: Any, source: SourceBinding, manifest: Any) -> Sou
             or type(body.get("run_id")) is not int or body["run_id"] <= 0
             or type(body.get("run_attempt")) is not int or body["run_attempt"] <= 0
             or type(body.get("issued_at")) is not int or body["issued_at"] <= 0
-            or body["issued_at"] > now + 30 or now - body["issued_at"] > _SOURCE_RECEIPT_MAX_AGE
+            or body["issued_at"] > now + 30
+            or (require_fresh and now - body["issued_at"] > _SOURCE_RECEIPT_MAX_AGE)
             or body.get("receipt_sha256") != canonical_sha256(unsigned)):
         _deny("source_receipt_invalid")
     receipt_sha = hashlib.sha256(raw).hexdigest()
@@ -783,18 +828,26 @@ def _archive_digest(path: Path, root: Path) -> tuple[str, int]:
 
 
 def production_backup(args: Any) -> Mapping[str, Any]:
-    source = _source(args); predecessor = _predecessor(args); successor_manifest = validate_sources(_root(args))
+    root = _root(args)
+    output_path = _outside(args.output, root, fresh=True)
+    destination = _outside(args.destination, root, directory=True).resolve(strict=True)
+    archive_path = _outside(args.archive, root, fresh=True)
+    if archive_path.resolve(strict=False) != destination / "g035-dump.enc":
+        _deny("backup_archive")
+    capture_receipt_path = _outside(args.capture_receipt, root, fresh=True)
+    pg_dump = _pinned_pg_dump(args, root)
+    source = _source(args); predecessor = _predecessor(args); successor_manifest = validate_sources(root)
     source_evidence = _load_source_receipt(args, source, successor_manifest)
     observation, observation_sha = _load_observation(args, source, source_evidence)
     if observation.status != EXACT_40 or observation.ledger_root != predecessor.roots["ledger"]: _deny("observation_invalid")
     freeze = _freeze(args, source, successor_manifest, predecessor)
     try:
         g040_manifest = validate_g040_sources(_root(args))
-        capture_args = argparse.Namespace(destination=args.destination, capture_receipt=args.capture_receipt, service_file=args.service_file,
-            recipient=args.recipient, g034_artifact=args.g034_artifact, pg_dump="pg_dump", encrypt_command=args.encrypt_command)
+        capture_args = argparse.Namespace(destination=destination, capture_receipt=capture_receipt_path, service_file=args.service_file,
+            recipient=args.recipient, g034_artifact=args.g034_artifact, pg_dump=os.fspath(pg_dump), encrypt_command=args.encrypt_command)
         captured = g035.capture_to_custody(capture_args, g040_manifest)
-        capture_raw = _stable_bytes(_outside(args.capture_receipt, _root(args)), _root(args))
-        archive_sha, archive_bytes = _archive_digest(_outside(args.archive, _root(args)), _root(args))
+        capture_raw = _stable_bytes(capture_receipt_path, root)
+        archive_sha, archive_bytes = _archive_digest(archive_path, root)
         evidence = captured["evidence"]
         if (capture_raw != g035.canonical_bytes(captured) or captured["receipt_sha256"] != g035.digest({key: item for key, item in captured.items() if key != "receipt_sha256"})
                 or evidence.get("target_fingerprint") != TARGET_FINGERPRINT or evidence.get("dump_sha256") != archive_sha or evidence.get("dump_bytes") != archive_bytes):
@@ -812,7 +865,7 @@ def production_backup(args: Any) -> Mapping[str, Any]:
             "capture_receipt_sha256": hashlib.sha256(capture_raw).hexdigest(), "g035_receipt_sha256": captured["receipt_sha256"],
             "archive_sha256": archive_sha, "archive_bytes": archive_bytes, "issued_at": issued, "expires_at": expires}
         body["receipt_sha256"] = canonical_sha256(body)
-        receipt = _write_signed(_outside(args.output, _root(args), fresh=True), "production-backup", body, repository_root=_root(args))
+        receipt = _write_signed(output_path, "production-backup", body, repository_root=root)
         return MappingProxyType({"schema": SCHEMA, "mode": "production-backup", "status": "captured", "receipt_sha256": receipt})
     except ControllerError:
         raise
@@ -1204,7 +1257,7 @@ def _load_prepared(args: Any, source: SourceBinding, source_evidence: SourceEvid
 
 
 def readback(args: Any) -> Mapping[str, Any]:
-    source = _source(args); manifest = validate_sources(_root(args)); source_evidence = _load_source_receipt(args, source, manifest); verified = _authorization(args, {}, historical=True)
+    source = _source(args); manifest = validate_sources(_root(args)); source_evidence = _load_source_receipt(args, source, manifest, require_fresh=False); verified = _authorization(args, {}, historical=True)
     final_path = _outside(args.final_receipt, _root(args), fresh=True)
     try:
         historical_path = preflight_checkpoint_path(
@@ -1283,7 +1336,7 @@ _MATERIAL = (*_COMMON_PREDECESSOR, "observation", "freeze-assertion", "backup-re
 _MODE_OPTIONS = MappingProxyType({
     "validate-source": ("repository-root", "source-commit", "source-receipt"),
     "observe": ("repository-root", "source-commit", *_SOURCE_AUTHENTICATION, *_COMMON_PREDECESSOR, "service-file", "service-name", "observation-receipt"),
-    "production-backup": ("repository-root", "source-commit", *_SOURCE_AUTHENTICATION, *_COMMON_PREDECESSOR, "observation", "freeze-assertion", "destination", "capture-receipt", "archive", "service-file", "recipient", "g034-artifact", "encrypt-command", "output"),
+    "production-backup": ("repository-root", "source-commit", *_SOURCE_AUTHENTICATION, *_COMMON_PREDECESSOR, "observation", "freeze-assertion", "destination", "capture-receipt", "archive", "service-file", "recipient", "g034-artifact", "pg-dump", "encrypt-command", "output"),
     "prepare": ("repository-root", "source-commit", *_SOURCE_AUTHENTICATION, *_MATERIAL, "authority-template"),
     "execute": ("repository-root", "source-commit", *_SOURCE_AUTHENTICATION, *_MATERIAL, "service-file", "service-name", "authorization", "authorization-signature", "freeze-monitor-socket", "precommit-checkpoint-receipt", "postcommit-checkpoint-receipt", "prepared-receipt", "final-receipt"),
     "readback": ("repository-root", "source-commit", *_SOURCE_AUTHENTICATION, "service-file", "service-name", "authorization", "authorization-signature", "freeze-monitor-socket", "continuity-parent-receipt", "historical-checkpoint-receipt", "prepared-receipt", "final-receipt"),
