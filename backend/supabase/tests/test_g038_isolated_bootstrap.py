@@ -11,7 +11,7 @@ import tempfile
 import types
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 ROOT = Path(__file__).parents[3]
 MANIFEST = ROOT / ".github" / "g038-account-deletion-successor.v1.json"
@@ -259,6 +259,48 @@ class IsolationTests(unittest.TestCase):
                 "--run-root", "/private/run",
             ],
         )
+
+    def test_production_controller_establishes_g040_capture_source_binding(self):
+        root = Path("/exact-main-root")
+        entrypoint = "backend/supabase/scripts/g038_production_controller.py"
+        source_establish = Mock()
+        recovery_verify = Mock(
+            return_value=types.SimpleNamespace(runtime_source_root="b" * 64),
+        )
+        recovery_establish = Mock()
+        source = types.SimpleNamespace(_establish_isolated_bootstrap=source_establish)
+        recovery = types.SimpleNamespace(
+            verify_recovery_source=recovery_verify,
+            _establish_isolated_bootstrap=recovery_establish,
+        )
+
+        with (
+            patch.object(
+                bootstrap,
+                "verify",
+                return_value=(b"", "a" * 64, {}, frozenset()),
+            ),
+            patch.object(
+                bootstrap.importlib,
+                "import_module",
+                side_effect=(source, recovery),
+            ),
+            patch.object(bootstrap, "load", return_value=types.ModuleType("__main__")),
+            patch.object(bootstrap.sys, "path", list(bootstrap.sys.path)),
+            patch.object(bootstrap.sys, "meta_path", list(bootstrap.sys.meta_path)),
+            patch.object(bootstrap.sys, "argv", list(bootstrap.sys.argv)),
+        ):
+            bootstrap.main([
+                "--repository-root", os.fspath(root),
+                "--authorized-final-commit", "c" * 40,
+                "--entrypoint", entrypoint,
+                "validate-source",
+                "--source-receipt", "/private/receipt.json",
+            ])
+
+        source_establish.assert_called_once_with(root, "c" * 40, "a" * 64)
+        recovery_verify.assert_called_once_with(root, "c" * 40, production=False)
+        recovery_establish.assert_called_once_with(root, "c" * 40, "b" * 64)
 
     def test_repeated_or_misplaced_separator_fails_closed(self):
         hostile = (
