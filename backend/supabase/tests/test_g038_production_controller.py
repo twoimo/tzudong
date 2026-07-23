@@ -81,6 +81,62 @@ class ControllerTests(unittest.TestCase):
             with self.assertRaisesRegex(controller.ControllerError, "predecessor_report"): controller._predecessor(args)
         decode.assert_not_called()
 
+    def test_exact_historical_predecessor_report_shape_is_admitted(self):
+        final_raw = b"final-receipt"
+        readback_raw = b"readback-receipt"
+        report = {
+            "schema": controller._PREDECESSOR_SCHEMA,
+            "exact_main_commit": controller.PREDECESSOR_COMMIT,
+            "target_fingerprint": controller.TARGET_FINGERPRINT,
+            "execute": {
+                "status": "committed",
+                "final_receipt_sha256": hashlib.sha256(final_raw).hexdigest(),
+            },
+            "postcommit_readback": {
+                "status": "terminal",
+                "final_receipt_sha256": hashlib.sha256(readback_raw).hexdigest(),
+            },
+            "dual_clone": {"terminal_rows": controller.PREDECESSOR_ROWS},
+            "precommit_gates": {"freeze_active": True, "active_writer_runs": 0},
+            "producer_stop_retained": True,
+            "source_receipt_sha256": H,
+            "evidence_index_sha256": H,
+            "github": {},
+            "clone_cleanup": {},
+            "tests": {},
+        }
+        report_raw = controller.canonical_json_bytes(report)
+        roots = {
+            "ledger_root": controller.PREDECESSOR_LEDGER_ROOT,
+            "catalog_root": "1" * 64,
+            "acl_root": "2" * 64,
+            "data_root": "3" * 64,
+            "terminal_spec_root": "4" * 64,
+        }
+        final = {
+            **roots,
+            "terminal_rows": controller.PREDECESSOR_ROWS,
+            "target_fingerprint": controller.TARGET_FINGERPRINT,
+            "source_commit": controller.PREDECESSOR_COMMIT,
+            "readback_sha256": "5" * 64,
+        }
+        args = Namespace(
+            repository_root="/checkout",
+            predecessor_report="/report",
+            predecessor_final_receipt="/final",
+            predecessor_readback_receipt="/readback",
+        )
+        with patch.object(controller, "_root", return_value=Path("/checkout")), \
+                patch.object(controller, "_outside", side_effect=lambda value, _root: Path(value)), \
+                patch.object(controller, "PREDECESSOR_REPORT_SHA256", hashlib.sha256(report_raw).hexdigest()), \
+                patch.object(controller, "_stable_bytes", side_effect=(report_raw, final_raw, readback_raw)), \
+                patch.object(controller, "_g040_envelope", side_effect=(final, dict(final))):
+            evidence = controller._predecessor(args)
+        self.assertEqual(controller.PREDECESSOR_ROWS, 40)
+        self.assertEqual(controller.PREDECESSOR_LEDGER_ROOT, evidence.roots["ledger"])
+        self.assertEqual(hashlib.sha256(final_raw).hexdigest(), evidence.final_receipt_sha256)
+        self.assertEqual(hashlib.sha256(readback_raw).hexdigest(), evidence.readback_receipt_sha256)
+
     def test_fixed_g040_and_g038_receipt_keys_are_distinct_and_pinned(self):
         self.assertEqual(hashlib.sha256(controller._G040_PUBLIC_KEY_PEM.encode("ascii")).hexdigest(), controller._G040_PUBLIC_KEY_SHA256)
         self.assertEqual(hashlib.sha256(controller._RECEIPT_PUBLIC_KEY_PEM.encode("ascii")).hexdigest(), controller._RECEIPT_PUBLIC_KEY_SHA256)
