@@ -104,7 +104,7 @@ class ReferenceTests(unittest.TestCase):
             evidence.load_reference(b'{"schema":"x","schema":"y"}')
         with self.assertRaises(evidence.ReferenceEvidenceError):
             evidence.load_reference("{}\n")
-        self.assertEqual(hashlib.sha256((classifier.CATALOG_PROBE + "\n" + classifier.DATA_PROBE + "\n" + classifier.TERMINAL_DATA_PROBE).encode()).hexdigest(), evidence._PROBE_TEXT_SHA256)
+        self.assertEqual(hashlib.sha256((classifier.CATALOG_PROBE + "\n" + classifier.DATA_PROBE + "\n" + classifier.TERMINAL_DATA_PROJECTION + "\n" + classifier.TERMINAL_DATA_IDENTITY_PROBE + "\n" + classifier.TERMINAL_DATA_PROBE).encode()).hexdigest(), evidence._PROBE_TEXT_SHA256)
 
     def test_finalize_reference_passes_resolved_root_to_both_custody_reads(self):
         _, _, source = self.signing_context()
