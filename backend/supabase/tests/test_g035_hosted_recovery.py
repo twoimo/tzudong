@@ -1,7 +1,7 @@
 import contextlib, hashlib, importlib.util, io, json, os, subprocess, sys, tempfile, threading, time, unittest
 from argparse import Namespace
 from pathlib import Path
-from unittest.mock import ANY, patch
+from unittest.mock import ANY, Mock, patch
 
 SCRIPTS=Path(__file__).parents[1]/"scripts"; sys.path.insert(0,str(SCRIPTS))
 import g040_recovery_source as recovery_source
@@ -411,20 +411,26 @@ class ControllerTests(unittest.TestCase):
    path=Path(raw)/"artifact.json"; encoded=json.dumps(data); path.write_text(encoded[:-1]+',"extra":true}',encoding="utf8")
    with patch.object(recovery,"_repository_commit",return_value="a"*40),self.assertRaisesRegex(recovery.RecoveryError,"readiness"): recovery._g034_adapter(path,ROOT,manifest,observed)
  def test_g034_live_fingerprints_match_preflight_canonical_algorithms(self):
-  terminal="20260531084516"
+  terminal="20260531084516"; cursor=Mock(); conn=Mock(); conn.cursor.return_value=cursor
+  approvals={
+   "public.approve_submission_item(uuid,uuid,jsonb)":False,
+   "public.approve_edit_submission_item(uuid,uuid,jsonb)":True,
+  }
   with tempfile.TemporaryDirectory() as raw:
    artifact=Path(raw)/"artifact.json"; artifact.write_text(json.dumps({"ledgerExpectedTerminal":terminal}),encoding="utf8")
-   def query(conn,sql,params=None):
+   def query(actual_conn,sql,params=None):
+    self.assertIs(actual_conn,conn)
     if "schema_migrations" in sql: return [(terminal,)]
     if "to_regclass('public.restaurants_backup')" in sql: return [(True,)]
-    if "pg_class" in sql or "pg_proc" in sql: return [(True,)]
+    if "pg_class" in sql: return [(True,)]
     if "pg_locks" in sql: return [(0,)]
     if "pg_roles" in sql: return [(3,)]
     raise AssertionError(sql)
-   with patch.object(recovery,"_query_conn",side_effect=query):
-    actual=recovery._g034_live_fingerprints(object(),artifact)
-  prerequisites={"ledgerTerminalMatches":True,"publicRestaurants":True,"publicRestaurantsBackup":True,"storageObjects":True,"publicApproveSubmissionItem":True,"publicApproveEditSubmissionItem":True,"noWaitingLocks":True,"requiredRolesPresent":True}
+   with patch.object(recovery,"_query_conn",side_effect=query),patch.object(recovery.g034_preflight,"approval_catalog_contract",return_value=approvals) as approval,patch.object(recovery.g034_preflight,"catalog_retirement_dependency_exists",return_value=False) as retired:
+    actual=recovery._g034_live_fingerprints(conn,artifact)
+  prerequisites={"ledgerTerminalMatches":True,"publicRestaurants":True,"publicRestaurantsBackup":True,"storageObjects":True,"publicApproveSubmissionItem":False,"publicApproveEditSubmissionItem":True,"noWaitingLocks":True,"requiredRolesPresent":True}
   self.assertEqual({"ledger_sha256":recovery.digest([terminal]),"catalog_sha256":recovery.digest(prerequisites)},actual)
+  approval.assert_called_once_with(cursor); retired.assert_called_once_with(cursor); cursor.close.assert_called_once_with()
  def test_commit_is_git_rev_parse_output_not_git_head_hash(self):
   completed=subprocess.CompletedProcess([],0,"b"*40+"\n","")
   with patch.object(recovery.subprocess,"run",return_value=completed) as run:
