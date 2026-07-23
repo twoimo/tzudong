@@ -61,13 +61,20 @@ RESTORE_TRANSIENT_MEMBERSHIP_ROWS = tuple(sorted((
     *TRANSIENT_MANAGED_ROWS[:2],
 )))
 RESTORE_TERMINAL_MEMBERSHIP_ROWS = tuple(sorted(TRANSIENT_MANAGED_ROWS[:2]))
-RESTORE_TRANSIENT_SCHEMA_ACL = (
+RESTORE_TERMINAL_SCHEMA_ACL = (
+    ("postgres", "anon", "USAGE", False),
+    ("postgres", "authenticated", "USAGE", False),
+    ("postgres", "dashboard_user", "CREATE", False),
+    ("postgres", "dashboard_user", "USAGE", False),
     ("postgres", "postgres", "CREATE", False),
     ("postgres", "postgres", "USAGE", False),
+    ("postgres", "service_role", "USAGE", False),
+)
+RESTORE_TRANSIENT_SCHEMA_ACL = (
+    *RESTORE_TERMINAL_SCHEMA_ACL,
     ("postgres", "supabase_admin", "CREATE", False),
     ("postgres", "supabase_admin", "USAGE", False),
 )
-RESTORE_TERMINAL_SCHEMA_ACL = RESTORE_TRANSIENT_SCHEMA_ACL[:2]
 _TOOL_CUSTODY = {
     "docker": ("eade1c3a5dda47534dc776f2f534c99cc94cfcf9ce07c4bf09e98258d13e7d7a", ("--version",), "Docker version 29.6.2, build dfc4efb1e2"),
     "git": ("179301dcb41ea78accc3fa0048a7e6f6710d891945a751a34addd622020c1818", ("--version",), "git version 2.50.1 (Apple Git-155)"),
@@ -669,6 +676,10 @@ SELECT pg_catalog.json_build_object(
             )
         ):
             _fail("restore_authority")
+        self._assert_restore_authority(
+            clone, RESTORE_TERMINAL_MEMBERSHIP_ROWS,
+            RESTORE_TERMINAL_SCHEMA_ACL, database="postgres",
+        )
         role_names = ",".join(repr(name) for name in RESTORE_OWNER_ROLES[:3])
         self._role_psql(clone, user="supabase_admin", database="postgres", sql=f"""
 BEGIN;
@@ -683,8 +694,7 @@ BEGIN
            WHERE member='postgres'::regrole
              AND roleid IN (SELECT oid FROM pg_catalog.pg_roles
                              WHERE rolname = ANY (ARRAY[{role_names}]::name[]))
-     )
-     OR pg_catalog.to_regnamespace('extensions') IS NOT NULL THEN
+     ) THEN
     RAISE EXCEPTION 'restore authority precondition drift';
   END IF;
 END;
@@ -695,7 +705,6 @@ COMMIT;
 """)
         self._role_psql(clone, user="postgres", database="postgres", sql="""
 BEGIN;
-CREATE SCHEMA extensions AUTHORIZATION postgres;
 GRANT USAGE, CREATE ON SCHEMA extensions TO supabase_admin GRANTED BY postgres;
 COMMIT;
 """)

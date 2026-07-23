@@ -803,6 +803,46 @@ LOCAL_CLONE_VECTOR_RELOCATION_SQL = (
  "ALTER EXTENSION vector SET SCHEMA extensions;",
  "DO $$ BEGIN IF (SELECT n.nspname FROM pg_catalog.pg_extension e JOIN pg_catalog.pg_namespace n ON n.oid=e.extnamespace WHERE e.extname='vector') <> 'extensions' THEN RAISE EXCEPTION 'local vector compatibility postcondition failed'; END IF; END $$;",
 )
+PRE_DATA_SCHEMA_TOC = (
+ ("public","pg_database_owner"),
+ ("auth","supabase_admin"),
+ ("storage","supabase_admin"),
+)
+def _pre_data_use_list(raw):
+ if type(raw) is not bytes: raise RecoveryError("archive TOC unavailable")
+ try: lines=raw.decode("utf-8").splitlines(keepends=True)
+ except UnicodeDecodeError as exc: raise RecoveryError("archive TOC invalid") from exc
+ matches={name:[] for name,_ in PRE_DATA_SCHEMA_TOC}
+ expected=dict(PRE_DATA_SCHEMA_TOC)
+ for index,line in enumerate(lines):
+  body=line.rstrip("\r\n")
+  if not body or body.startswith(";"): continue
+  parts=body.split()
+  if len(parts)>=4 and parts[3]=="SCHEMA":
+   if len(parts)!=7 or not parts[0].endswith(";") or not parts[0][:-1].isdigit() or not parts[1].isdigit() or not parts[2].isdigit() or parts[4]!="-":
+    raise RecoveryError("archive schema TOC drift")
+   name,owner=parts[5],parts[6]
+   if name in expected:
+    if owner!=expected[name]: raise RecoveryError("archive schema TOC drift")
+    matches[name].append(index)
+ if any(len(matches[name])!=1 for name in expected): raise RecoveryError("archive schema TOC drift")
+ public_index=matches["public"][0]
+ lines[public_index]=";"+lines[public_index]
+ return "".join(lines).encode("utf-8")
+def _owned_pre_data_use_list(path,raw):
+ payload=_pre_data_use_list(raw); fd=None; identity=None
+ try:
+  fd,identity=_owned_output(path,"restore use-list")
+  offset=0
+  while offset<len(payload): offset+=os.write(fd,payload[offset:])
+  os.fsync(fd)
+  _require_temporary_file_identity(fd,path)
+  return fd,identity
+ except Exception:
+  if fd is not None:
+   _unlink_owned_output(fd,path,identity)
+   os.close(fd)
+  raise
 
 
 def _normalize_restored_vector_extension(conn):
@@ -816,7 +856,7 @@ def run_restore_verify(args,manifest):
  if dump.is_symlink() or not dump.is_file() or sha256_file(dump)!=capture["evidence"].get("dump_sha256"): raise RecoveryError("ciphertext input mismatch")
  decryptor,restore=command_exists(args.decrypt_command),command_exists(args.pg_restore)
  with _owned_identity_stream(args) as identity_stream, _restricted_restore_directory() as workspace:
-  service=_copy_local_service(workspace,Path(args.service_file),"g035-local"); env=safe_environment(service); plain=workspace/"database.pgdump"; plain_fd=None; plain_identity=None
+  service=_copy_local_service(workspace,Path(args.service_file),"g035-local"); env=safe_environment(service); plain=workspace/"database.pgdump"; use_list=workspace/"pre-data.list"; plain_fd=None; plain_identity=None; use_list_fd=None; use_list_identity=None
   try:
    plain_fd,plain_identity=_owned_output(plain,"plaintext restore")
    with os.fdopen(os.dup(plain_fd),"wb",closefd=True) as plain_stream:
@@ -824,16 +864,23 @@ def run_restore_verify(args,manifest):
     except (OSError,subprocess.TimeoutExpired,subprocess.CalledProcessError) as exc: raise RecoveryError("external command failed") from exc
    os.fsync(plain_fd)
    _require_temporary_file_identity(plain_fd,plain)
+   toc=run([restore,"--list",str(plain)],env=env)
+   _require_temporary_file_identity(plain_fd,plain)
+   use_list_fd,use_list_identity=_owned_pre_data_use_list(use_list,toc.stdout)
    conn=_connect("g035-local",env)
    try:
     for schema in (LOCAL_REMEDIATION_SCHEMA,"public","auth","storage"): _query_conn(conn,f"DROP SCHEMA IF EXISTS {schema} CASCADE")
+    _query_conn(conn,"CREATE SCHEMA public AUTHORIZATION pg_database_owner")
+    _query_conn(conn,"GRANT USAGE, CREATE ON SCHEMA public TO privacy_workflow_owner")
     conn.commit()
    except Exception:
     conn.rollback()
     raise
    finally: conn.close()
    _require_temporary_file_identity(plain_fd,plain)
-   run([restore,"--section=pre-data","--dbname=service=g035-local",str(plain)],env=env)
+   _require_temporary_file_identity(use_list_fd,use_list)
+   run([restore,"--section=pre-data",f"--use-list={use_list}","--dbname=service=g035-local",str(plain)],env=env)
+   _require_temporary_file_identity(use_list_fd,use_list)
    _require_temporary_file_identity(plain_fd,plain)
    run([restore,"--section=data","--dbname=service=g035-local",str(plain)],env=env)
    conn=_connect("g035-local",env)
@@ -857,6 +904,9 @@ def run_restore_verify(args,manifest):
     raise
    finally: conn.close()
   finally:
+   if use_list_fd is not None:
+    _unlink_owned_output(use_list_fd,use_list,use_list_identity)
+    os.close(use_list_fd)
    if plain_fd is not None:
     _unlink_owned_output(plain_fd,plain,plain_identity)
     os.close(plain_fd)
