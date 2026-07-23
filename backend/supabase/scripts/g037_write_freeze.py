@@ -196,7 +196,7 @@ G014_TERMINAL_ORDINARY_ACL_ALLOWLIST=frozenset((
   for name in _G014_SERVICE_FULL_PUBLIC_RELATIONS for privilege in _TABLE_PRIVILEGES
  ),
  *(
-  ("public",name,"supabase_admin",grantee,privilege,False)
+  ("public",name,"postgres",grantee,privilege,False)
   for name in _G014_INCIDENT_PUBLIC_RELATIONS
   for grantee,privileges in (
    ("postgres",_TABLE_PRIVILEGES),
@@ -219,6 +219,12 @@ G014_TERMINAL_ORDINARY_ACL_ALLOWLIST=frozenset((
   for grantee in ("privacy_retention_legal_approver","privacy_retention_operator_approver")
  ),
  ("storage","objects","supabase_storage_admin","privacy_workflow_owner","SELECT",False),
+))
+G014_TERMINAL_GRANTOR_OVERRIDE_ACL_ALLOWLIST=frozenset((
+ ("auth","identities","supabase_auth_admin","postgres","privacy_workflow_owner","SELECT",False),
+ ("auth","refresh_tokens","supabase_auth_admin","postgres","privacy_workflow_owner","SELECT",False),
+ ("auth","sessions","supabase_auth_admin","postgres","privacy_workflow_owner","SELECT",False),
+ ("storage","objects","supabase_storage_admin","postgres","privacy_workflow_owner","SELECT",False),
 ))
 PROVIDER_STORAGE_CLIENT_ACL_ALLOWLIST=frozenset(
  ("storage",name,"supabase_storage_admin",privilege)
@@ -277,6 +283,10 @@ def validate_table_acl_rows(rows, relations, *, terminal=False):
    continue
   if ((relation_record.schema,relation_record.name,owner,grantee,privilege) in PUBLIC_ORDINARY_ACL_ALLOWLIST
       and grantor==owner and not grantable):
+   continue
+  if (terminal
+      and (relation_record.schema,relation_record.name,owner,grantor,grantee,privilege,grantable)
+      in G014_TERMINAL_GRANTOR_OVERRIDE_ACL_ALLOWLIST):
    continue
   if (terminal and grantor==owner
       and (relation_record.schema,relation_record.name,owner,grantee,privilege,grantable)
