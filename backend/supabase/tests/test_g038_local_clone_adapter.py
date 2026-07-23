@@ -110,6 +110,118 @@ class AdmissionOps:
         self.events.append("survivors")
         return ()
 
+def _clone_inspection(*, network_options=None):
+    labels = {
+        adapter.RUN_LABEL: "nonce",
+        adapter.CLONE_LABEL: "1",
+    }
+    container = {
+        "Image": adapter.IMAGE_ID,
+        "Config": {
+            "Image": adapter.IMAGE,
+            "User": "postgres",
+            "Labels": labels,
+        },
+        "HostConfig": {
+            "Privileged": False,
+            "Binds": None,
+            "Mounts": None,
+            "CapAdd": None,
+            "CapDrop": ["ALL"],
+            "SecurityOpt": ["no-new-privileges"],
+            "PortBindings": {
+                "5432/tcp": [{"HostIp": "127.0.0.1", "HostPort": ""}],
+            },
+        },
+        "Mounts": [],
+        "NetworkSettings": {
+            "Ports": {
+                "5432/tcp": [{"HostIp": "127.0.0.1", "HostPort": "32768"}],
+            },
+        },
+    }
+    network = {
+        "Driver": "bridge",
+        "Internal": False,
+        "Attachable": False,
+        "Labels": labels,
+        "Options": network_options or {
+            "com.docker.network.bridge.enable_ip_masquerade": "false",
+            "com.docker.network.bridge.enable_icc": "false",
+        },
+    }
+    return container, network
+
+
+def test_clone_uses_nonroot_capability_free_egress_disabled_loopback_network():
+    container, network = _clone_inspection()
+    commands = []
+
+    def command(argv, **kwargs):
+        commands.append(tuple(argv))
+        if tuple(argv[1:3]) == ("inspect", "g038-nonce-1-db"):
+            return completed(json.dumps([container]))
+        if tuple(argv[1:4]) == ("network", "inspect", "g038-nonce-1-net"):
+            return completed(json.dumps([network]))
+        return completed()
+
+    ops = adapter.LocalCloneOps(type("Inputs", (), {"docker": "/docker"})(), "nonce")
+    ops.command = command
+    clone = ops.create_clone(1)
+
+    assert clone["port"] == 32768
+    assert commands[0] == (
+        "/docker", "network", "create", "--driver", "bridge",
+        "--opt", "com.docker.network.bridge.enable_ip_masquerade=false",
+        "--opt", "com.docker.network.bridge.enable_icc=false",
+        "--label", "io.tzudong.g038.rehearsal=nonce",
+        "--label", "io.tzudong.g038.clone=1",
+        "g038-nonce-1-net",
+    )
+    assert "--user" in commands[1]
+    assert commands[1][commands[1].index("--user") + 1] == "postgres"
+    assert "--cap-drop=ALL" in commands[1]
+    assert not any(item.startswith("--cap-add") for item in commands[1])
+    assert "127.0.0.1::5432" in commands[1]
+
+
+@pytest.mark.parametrize("mutation", [
+    {"com.docker.network.bridge.enable_ip_masquerade": "true",
+     "com.docker.network.bridge.enable_icc": "false"},
+    {"com.docker.network.bridge.enable_ip_masquerade": "false"},
+])
+def test_clone_rejects_network_that_can_egress_or_communicate(mutation):
+    container, network = _clone_inspection(network_options=mutation)
+
+    def command(argv, **kwargs):
+        if tuple(argv[1:3]) == ("inspect", "g038-nonce-1-db"):
+            return completed(json.dumps([container]))
+        if tuple(argv[1:4]) == ("network", "inspect", "g038-nonce-1-net"):
+            return completed(json.dumps([network]))
+        return completed()
+
+    ops = adapter.LocalCloneOps(type("Inputs", (), {"docker": "/docker"})(), "nonce")
+    ops.command = command
+    with pytest.raises(adapter.LocalCloneError, match="custody_drift"):
+        ops.create_clone(1)
+
+
+def test_clone_rejects_host_binding_request_without_assigned_loopback_port():
+    container, network = _clone_inspection()
+    container["NetworkSettings"]["Ports"]["5432/tcp"] = None
+
+    def command(argv, **kwargs):
+        if tuple(argv[1:3]) == ("inspect", "g038-nonce-1-db"):
+            return completed(json.dumps([container]))
+        if tuple(argv[1:4]) == ("network", "inspect", "g038-nonce-1-net"):
+            return completed(json.dumps([network]))
+        return completed()
+
+    ops = adapter.LocalCloneOps(type("Inputs", (), {"docker": "/docker"})(), "nonce")
+    ops.command = command
+    with pytest.raises(adapter.LocalCloneError, match="endpoint_custody"):
+        ops.create_clone(1)
+
 def _attestation(receipt: Path, receipt_sha: str, commit: str) -> list[dict]:
     certificate = {
         "issuer": "https://token.actions.githubusercontent.com",
