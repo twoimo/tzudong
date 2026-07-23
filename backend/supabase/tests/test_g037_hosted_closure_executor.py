@@ -754,15 +754,24 @@ class G037ExecutorTests(unittest.TestCase):
     self.assertGreaterEqual(record["start"],previous)
     self.assertEqual(item["raw"][record["start"]:record["end"]],record["old"])
     previous=record["end"]
- def test_managed_role_creation_requires_explicit_pg17_membership_grants(self):
+ def test_managed_role_automatic_membership_mutation_is_rejected(self):
+  root=Path(__file__).parents[3]; manifest=c.load_manifest(root)
+  records=tuple(dict(record) for record in c.ROLE_SPLICES)
+  records[0]["new"]=records[0]["new"].replace(b"'supabase_admin',true,false,false",b"'supabase_admin',false,false,false",1)
+  with patch.object(e,"ROLE_SPLICES",records),self.assertRaisesRegex(e.ClosureError,"literal hash drift"):
+   e._splice_specs(root,manifest)
+ def test_managed_role_creation_accepts_only_exact_pg17_automatic_memberships(self):
   workflow=c._WORKFLOW_OWNER_SQL.decode("ascii")
   retention=c._RETENTION_ROLES_SQL.decode("ascii")
-  self.assertIn("unexpected workflow-owner membership after create",workflow)
-  self.assertIn("GRANT privacy_workflow_owner TO postgres WITH ADMIN TRUE, INHERIT FALSE, SET FALSE GRANTED BY supabase_admin",workflow)
-  self.assertNotIn("automatic workflow-owner membership drift",workflow)
+  self.assertIn("automatic workflow-owner membership drift",workflow)
+  self.assertIn("('privacy_workflow_owner','postgres','supabase_admin',true,false,false)",workflow)
+  self.assertIn("GRANT privacy_workflow_owner TO postgres WITH ADMIN FALSE, INHERIT TRUE, SET TRUE GRANTED BY postgres",workflow)
+  self.assertIn("GRANT USAGE, CREATE ON SCHEMA public TO privacy_workflow_owner",workflow)
+  self.assertNotIn("GRANT privacy_workflow_owner TO postgres WITH ADMIN TRUE, INHERIT FALSE, SET FALSE GRANTED BY supabase_admin",workflow)
   for role in ("privacy_retention_operator_approver","privacy_retention_legal_approver","privacy_retention_activation_operator"):
-   self.assertIn(f"GRANT {role} TO postgres WITH ADMIN TRUE, INHERIT FALSE, SET FALSE GRANTED BY supabase_admin",retention)
-  self.assertIn("unexpected retention role membership after create",retention)
+   self.assertNotIn(f"GRANT {role}",retention)
+   self.assertIn(f"('{role}','postgres','supabase_admin',true,false,false)",retention)
+  self.assertIn("automatic retention role membership drift",retention)
   schema=c._WORKFLOW_SCHEMA_SQL.decode("ascii")
   self.assertIn("to_regnamespace('privacy_retention') IS NULL",schema)
   self.assertIn("NOT IN ('postgres','supabase_admin')",schema)
