@@ -1045,31 +1045,62 @@ def test_restore_authority_is_source_pinned_exact_and_asserted_before_restore():
     })()
     calls = []
 
+    catalog_reads = 0
+
     def command(argv, **kwargs):
+        nonlocal catalog_reads
         sql = kwargs.get("input_text", "")
         calls.append((tuple(argv), sql))
-        raw = json.dumps(_restore_authority_catalog()) if "json_build_object" in sql else ""
+        raw = ""
+        if "json_build_object" in sql:
+            schema_acl = (
+                adapter.RESTORE_TERMINAL_SCHEMA_ACL
+                if catalog_reads == 0 else adapter.RESTORE_TRANSIENT_SCHEMA_ACL
+            )
+            memberships = (
+                adapter.RESTORE_TERMINAL_MEMBERSHIP_ROWS
+                if catalog_reads == 0 else adapter.RESTORE_TRANSIENT_MEMBERSHIP_ROWS
+            )
+            raw = json.dumps(_restore_authority_catalog(memberships, schema_acl))
+            catalog_reads += 1
         return completed(raw)
 
     ops.command = command
     ops.bootstrap_restore_authority({"container": "clone"})
-    assert len(calls) == 3
-    grant_sql, schema_sql, assertion_sql = (call[1] for call in calls)
+    assert len(calls) == 4
+    baseline_assertion_sql, grant_sql, schema_sql, transient_assertion_sql = (
+        call[1] for call in calls
+    )
+    assert "json_build_object" in baseline_assertion_sql
     assert grant_sql.index("restore authority precondition drift") < grant_sql.index(
         "GRANT supabase_admin, supabase_auth_admin, supabase_storage_admin TO postgres"
     )
     assert "WITH ADMIN FALSE, INHERIT TRUE, SET TRUE GRANTED BY supabase_admin" in grant_sql
-    assert "CREATE SCHEMA extensions AUTHORIZATION postgres;" in schema_sql
+    assert "CREATE SCHEMA extensions" not in schema_sql
     assert (
         "GRANT USAGE, CREATE ON SCHEMA extensions TO supabase_admin "
         "GRANTED BY postgres;" in schema_sql
     )
-    assert "json_build_object" in assertion_sql
+    assert "json_build_object" in transient_assertion_sql
     combined = "\n".join(sql for _, sql in calls)
     assert " TO PUBLIC" not in combined and " FROM PUBLIC" not in combined
     assert "SUPERUSER" not in combined
     assert "--no-owner" not in combined and "--no-acl" not in combined
     assert all(sql not in argv for argv, sql in calls)
+    assert adapter.RESTORE_TERMINAL_SCHEMA_ACL == (
+        ("postgres", "anon", "USAGE", False),
+        ("postgres", "authenticated", "USAGE", False),
+        ("postgres", "dashboard_user", "CREATE", False),
+        ("postgres", "dashboard_user", "USAGE", False),
+        ("postgres", "postgres", "CREATE", False),
+        ("postgres", "postgres", "USAGE", False),
+        ("postgres", "service_role", "USAGE", False),
+    )
+    assert adapter.RESTORE_TRANSIENT_SCHEMA_ACL == (
+        *adapter.RESTORE_TERMINAL_SCHEMA_ACL,
+        ("postgres", "supabase_admin", "CREATE", False),
+        ("postgres", "supabase_admin", "USAGE", False),
+    )
 
 
 def test_restore_authority_terminalization_revokes_only_temporary_grants_and_asserts():

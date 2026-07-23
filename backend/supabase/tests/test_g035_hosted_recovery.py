@@ -9,6 +9,14 @@ recovery_source._establish_isolated_bootstrap(Path(__file__).parents[3],"a"*40,"
 import g035_hosted_recovery_contract as contract
 spec=importlib.util.spec_from_file_location("recovery",SCRIPTS/"g035_hosted_recovery.py"); recovery=importlib.util.module_from_spec(spec); spec.loader.exec_module(recovery)
 ROOT=Path(__file__).parents[3]
+SCHEMA_TOC=(
+ b"; Archive created at 2026-07-23\n"
+ b"10; 2615 2200 SCHEMA - public pg_database_owner\n"
+ b"11; 0 0 COMMENT - SCHEMA public pg_database_owner\n"
+ b"12; 0 0 ACL - SCHEMA public pg_database_owner\n"
+ b"13; 2615 16400 SCHEMA - auth supabase_admin\n"
+ b"14; 2615 16401 SCHEMA - storage supabase_admin\n"
+)
 OLD_REMEDIATION_PUBLIC_KEY_PEM="-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEA1aTLvmOtTWC1LZTYK8ocOBGlhWnC6k8a/ePCKSFdWPI=\n-----END PUBLIC KEY-----\n"
 PINNED_SUPABASE_CA=b"""-----BEGIN CERTIFICATE-----
 MIIDxDCCAqygAwIBAgIUbLxMod62P2ktCiAkxnKJwtE9VPYwDQYJKoZIhvcNAQEL
@@ -963,6 +971,27 @@ class ControllerTests(unittest.TestCase):
      recovery._windows_restrict_temporary_file(plain)
      self.assertTrue(recovery._windows_dacl_restrictive(service))
      self.assertTrue(recovery._windows_dacl_restrictive(plain))
+ def test_pre_data_use_list_comments_only_exact_public_schema_and_rejects_toc_drift(self):
+  expected=SCHEMA_TOC.replace(
+   b"10; 2615 2200 SCHEMA - public pg_database_owner\n",
+   b";10; 2615 2200 SCHEMA - public pg_database_owner\n",
+  )
+  self.assertEqual(expected,recovery._pre_data_use_list(SCHEMA_TOC))
+  self.assertIn(b"COMMENT - SCHEMA public pg_database_owner",expected)
+  self.assertIn(b"ACL - SCHEMA public pg_database_owner",expected)
+  mutations=(
+   SCHEMA_TOC.replace(b"pg_database_owner",b"postgres",1),
+   SCHEMA_TOC.replace(b"10; 2615 2200 SCHEMA - public pg_database_owner\n",b""),
+   SCHEMA_TOC.replace(
+    b"10; 2615 2200 SCHEMA - public pg_database_owner\n",
+    b"10; 2615 2200 SCHEMA - public pg_database_owner\n15; 2615 2200 SCHEMA - public pg_database_owner\n",
+   ),
+   SCHEMA_TOC.replace(b"13; 2615 16400 SCHEMA - auth supabase_admin\n",b"13; 2615 16400 SCHEMA - auth postgres\n"),
+   SCHEMA_TOC.replace(b"14; 2615 16401 SCHEMA - storage supabase_admin\n",b""),
+  )
+  for mutation in mutations:
+   with self.subTest(mutation=mutation),self.assertRaisesRegex(recovery.RecoveryError,"schema TOC drift"):
+    recovery._pre_data_use_list(mutation)
  def test_restore_verify_passes_only_stdin_identity_to_age(self):
   class Conn:
    def commit(self): pass
@@ -973,16 +1002,38 @@ class ControllerTests(unittest.TestCase):
    dump=Path(raw)/"dump.enc"; dump.write_bytes(b"ciphertext")
    args=Namespace(destination_service="g035-local",capture_receipt="capture",dump=str(dump),decrypt_command="age",pg_restore="pg_restore",service_file=str(self.service(raw)),identity_fd="3",identity_handle=None)
    capture={"receipt_sha256":"capture-receipt","evidence":{"recipient_fingerprint":contract.APPROVED_AGE_RECIPIENT_SHA256,"dump_sha256":hashlib.sha256(b"ciphertext").hexdigest(),"extension_scope":[{"name":name,"schema":schema} for name,schema in recovery.RECOVERY_EXTENSIONS],**self.managed_capture_scope(),**observed}}
-   def execute(argv,**kwargs): self.assertEqual("pg_restore",argv[0])
+   events=[]
+   def execute(argv,**kwargs):
+    self.assertEqual("pg_restore",argv[0])
+    events.append(("restore",tuple(argv)))
+    return subprocess.CompletedProcess(argv,0,stdout=SCHEMA_TOC if "--list" in argv else b"",stderr=b"")
    def decrypt(argv,**kwargs):
     self.assertEqual(["age","--decrypt","--identity","-",str(dump)],argv)
     self.assertIsInstance(kwargs["stdin"],io.BytesIO)
     kwargs["stdout"].write(b"plain")
     return subprocess.CompletedProcess(argv,0)
-   with patch.object(recovery,"sha256_file",return_value=capture["evidence"]["dump_sha256"]),patch.object(recovery,"_owned_identity_stream",return_value=io.BytesIO(b"key")),patch.object(recovery,"_require_prior",return_value=capture),patch.object(recovery,"command_exists",side_effect=lambda command:command),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"run",side_effect=execute),patch.object(recovery.subprocess,"run",side_effect=decrypt) as decrypt_run,patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",return_value=[]),patch.object(recovery,"_create_auth_user_placeholders"),patch.object(recovery,"_normalize_restored_vector_extension",return_value="public"),patch.object(recovery,"_fingerprints",return_value=observed):
+   def query(unused,sql,*args):
+    events.append(("sql",sql))
+    return []
+   with patch.object(recovery,"sha256_file",return_value=capture["evidence"]["dump_sha256"]),patch.object(recovery,"_owned_identity_stream",return_value=io.BytesIO(b"key")),patch.object(recovery,"_require_prior",return_value=capture),patch.object(recovery,"command_exists",side_effect=lambda command:command),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"run",side_effect=execute),patch.object(recovery.subprocess,"run",side_effect=decrypt) as decrypt_run,patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",side_effect=query),patch.object(recovery,"_create_auth_user_placeholders"),patch.object(recovery,"_normalize_restored_vector_extension",return_value="public"),patch.object(recovery,"_fingerprints",return_value=observed):
     result=recovery.run_restore_verify(args,None)
    self.assertEqual(["age","--decrypt","--identity","-",str(dump)],decrypt_run.call_args.args[0])
    self.assertNotIn("key",json.dumps(result))
+   list_index=next(index for index,event in enumerate(events) if event[0]=="restore" and "--list" in event[1])
+   drop_index=next(index for index,event in enumerate(events) if event==("sql","DROP SCHEMA IF EXISTS public CASCADE"))
+   create_index=next(index for index,event in enumerate(events) if event==("sql","CREATE SCHEMA public AUTHORIZATION pg_database_owner"))
+   grant_index=next(index for index,event in enumerate(events) if event==("sql","GRANT USAGE, CREATE ON SCHEMA public TO privacy_workflow_owner"))
+   pre_index=next(index for index,event in enumerate(events) if event[0]=="restore" and "--section=pre-data" in event[1])
+   post_index=next(index for index,event in enumerate(events) if event[0]=="restore" and "--section=post-data" in event[1])
+   self.assertLess(list_index,drop_index)
+   self.assertLess(drop_index,create_index)
+   self.assertLess(create_index,grant_index)
+   self.assertLess(grant_index,pre_index)
+   self.assertLess(pre_index,post_index)
+   pre_argv=events[pre_index][1]
+   self.assertEqual(1,sum(argument.startswith("--use-list=") for argument in pre_argv))
+   self.assertNotIn("--no-owner",pre_argv)
+   self.assertNotIn("--no-acl",pre_argv)
  def test_restore_preserves_hosted_vector_extension_schema(self):
   queries=[]
   with patch.object(recovery,"_query_conn",side_effect=lambda unused,sql: queries.append(sql) or [("public",)]):
@@ -1145,17 +1196,23 @@ class ControllerTests(unittest.TestCase):
    args=Namespace(destination_service="g035-local",capture_receipt="capture",dump=str(dump),identity_fd="3",identity_handle=None,decrypt_command="age",pg_restore="pg_restore",service_file=str(self.service(raw)))
    capture={"receipt_sha256":"capture-receipt","evidence":{"recipient_fingerprint":contract.APPROVED_AGE_RECIPIENT_SHA256,"dump_sha256":hashlib.sha256(b"ciphertext").hexdigest(),"extension_scope":[{"name":"pg_trgm","schema":"extensions"},{"name":"uuid-ossp","schema":"extensions"},{"name":"btree_gin","schema":"extensions"},{"name":"vector","schema":"public"},{"name":"pgcrypto","schema":"extensions"}],**self.managed_capture_scope(),**observed}}
    def execute(argv,**unused):
-    events.append(argv[0])
+    if "--list" in argv:
+     events.append("pg_restore --list")
+     return subprocess.CompletedProcess(argv,0,stdout=SCHEMA_TOC,stderr=b"")
+    events.append("pg_restore pre-data")
     raise recovery.RecoveryError("external command failed")
    def decrypt(argv,**kwargs):
     kwargs["stdout"].write(b"plain")
     return subprocess.CompletedProcess(argv,0)
    with patch.object(recovery,"_copy_local_service",side_effect=lambda *unused: events.append("fence") or Path(raw)/"service.conf"),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",side_effect=lambda conn,sql: events.append(sql) or []),patch.object(recovery,"_require_prior",return_value=capture),patch.object(recovery,"sha256_file",return_value=capture["evidence"]["dump_sha256"]),patch.object(recovery,"command_exists",side_effect=lambda command:command),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_owned_identity_stream",return_value=io.BytesIO(b"key")),patch.object(recovery,"run",side_effect=execute),patch.object(recovery.subprocess,"run",side_effect=decrypt),self.assertRaisesRegex(recovery.RecoveryError,"external command failed"):
     recovery.run_restore_verify(args,None)
-  self.assertLess(events.index("fence"),events.index("DROP SCHEMA IF EXISTS public CASCADE"))
+  self.assertLess(events.index("fence"),events.index("pg_restore --list"))
+  self.assertLess(events.index("pg_restore --list"),events.index("DROP SCHEMA IF EXISTS public CASCADE"))
   self.assertLess(events.index("DROP SCHEMA IF EXISTS public CASCADE"),events.index("DROP SCHEMA IF EXISTS auth CASCADE"))
   self.assertLess(events.index("DROP SCHEMA IF EXISTS auth CASCADE"),events.index("DROP SCHEMA IF EXISTS storage CASCADE"))
-  self.assertLess(events.index("DROP SCHEMA IF EXISTS storage CASCADE"),events.index("pg_restore"))
+  self.assertLess(events.index("DROP SCHEMA IF EXISTS storage CASCADE"),events.index("CREATE SCHEMA public AUTHORIZATION pg_database_owner"))
+  self.assertLess(events.index("CREATE SCHEMA public AUTHORIZATION pg_database_owner"),events.index("GRANT USAGE, CREATE ON SCHEMA public TO privacy_workflow_owner"))
+  self.assertLess(events.index("GRANT USAGE, CREATE ON SCHEMA public TO privacy_workflow_owner"),events.index("pg_restore pre-data"))
  def test_restore_rejection_is_silent_and_does_not_publish_receipt(self):
   output=io.StringIO()
   argv=["restore-verify","--dump","dump","--capture-receipt","capture","--restore-receipt","C:/receipt","--service-file","service","--destination-service","g035-local","--identity-handle","3","--decrypt-command","age"]
