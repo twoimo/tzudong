@@ -1290,7 +1290,12 @@ def _classify_read_only_state(cur: Any, reference: Any, *, start: Mapping[str, A
                 _valid_probe(catalog, full=False)
                 return "TERMINAL"
             return "AMBIGUOUS"
-        terminal_readback = terminal_readback_assert(cur, Path(__file__).resolve().parents[3], manifest)
+        terminal_readback = terminal_readback_assert(
+            cur,
+            Path(__file__).resolve().parents[3],
+            manifest,
+            runtime_rpc_matrix=executor.g040_runtime_rpc_matrix(),
+        )
         data_root = probe_terminal_data_root(cur, reference)
         observed_terminal = {
             "terminal_rows": executor._TERMINAL_ROWS, "ledger": terminal_readback["ledger_root"],
