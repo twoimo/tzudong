@@ -743,6 +743,33 @@ def test_isolation_mismatch_is_denied_before_mutation():
     ]
 
 
+def test_readiness_waits_for_final_postgres_pid_after_entrypoint_initialization(monkeypatch):
+    ops = object.__new__(adapter.LocalCloneOps)
+    ops.inputs = type("Inputs", (), {"docker": "docker", "deadline_monotonic": 100.0})()
+    commands = []
+    responses = iter((
+        completed("bash\n"),
+        completed("postgres\n"),
+        completed("accepting connections\n"),
+    ))
+
+    def command(argv, **kwargs):
+        commands.append((tuple(argv), kwargs))
+        return next(responses)
+
+    ops.command = command
+    monkeypatch.setattr(adapter.time, "monotonic", lambda: 0.0)
+    monkeypatch.setattr(adapter.time, "sleep", lambda value: None)
+
+    ops.wait_ready({"container": "clone-1"})
+
+    assert commands == [
+        (("docker", "exec", "clone-1", "cat", "/proc/1/comm"), {"check": False}),
+        (("docker", "exec", "clone-1", "cat", "/proc/1/comm"), {"check": False}),
+        (("docker", "exec", "clone-1", "pg_isready", "-U", "postgres", "-d", "postgres"),
+         {"check": False}),
+    ]
+
 def test_generated_service_file_has_exact_g035_application_name_and_is_admitted(tmp_path):
     ops = object.__new__(adapter.LocalCloneOps)
     ops.inputs = type("Inputs", (), {"docker": "docker", "run_root": tmp_path})()

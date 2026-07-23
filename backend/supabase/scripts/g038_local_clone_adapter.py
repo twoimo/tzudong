@@ -389,13 +389,18 @@ class LocalCloneOps:
 
     def wait_ready(self, clone: Mapping[str, Any]) -> None:
         while time.monotonic() < self.inputs.deadline_monotonic:
-            result = self.command(
-                (self.inputs.docker, "exec", str(clone["container"]), "pg_isready",
-                 "-U", "postgres", "-d", "postgres"),
+            init = self.command(
+                (self.inputs.docker, "exec", str(clone["container"]), "cat", "/proc/1/comm"),
                 check=False,
             )
-            if result.returncode == 0:
-                return
+            if init.returncode == 0 and init.stdout == "postgres\n":
+                ready = self.command(
+                    (self.inputs.docker, "exec", str(clone["container"]), "pg_isready",
+                     "-U", "postgres", "-d", "postgres"),
+                    check=False,
+                )
+                if ready.returncode == 0:
+                    return
             time.sleep(min(0.1, max(0.0, self.inputs.deadline_monotonic - time.monotonic())))
         _fail("deadline")
 
