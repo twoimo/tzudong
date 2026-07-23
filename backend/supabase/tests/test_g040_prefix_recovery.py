@@ -226,18 +226,33 @@ class Tests(unittest.TestCase):
             data_shape_sha256=g.TERMINAL_DATA_SHA256,
         )
         self.assertEqual(g.validate_terminal_data_root(terminal), g.TERMINAL_DATA_SHA256)
-        self.assertIn("'notifications_operational'", g.TERMINAL_DATA_PROBE)
-        self.assertIn("'privacy_retention_run_audit'", g.TERMINAL_DATA_PROBE)
-        self.assertIn("(c.classes_count=12 AND c.exact_seed_count=12)", g.TERMINAL_DATA_PROBE)
+        self.assertIn("'notifications_operational'", g.TERMINAL_DATA_PROJECTION)
+        self.assertIn("'privacy_retention_run_audit'", g.TERMINAL_DATA_PROJECTION)
+        self.assertIn("(c.classes_count=12 AND c.exact_seed_count=12)", g.TERMINAL_DATA_PROJECTION)
+        self.assertNotIn("privacy_retention_classes", g.TERMINAL_DATA_PROBE)
+        self.assertEqual(
+            g.TERMINAL_DATA_PROBE,
+            "SELECT * FROM privacy_retention.g040_terminal_data_probe()",
+        )
         with self.assertRaisesRegex(g.Denial, "partial_or_ambiguous"):
             g.validate_terminal_data_root({**terminal, "classes_count": 10})
         terminal_reference = reference(terminal_data_root=g.TERMINAL_DATA_SHA256)
-        cursor = Cursor(terminal)
+        cursor = Cursor({"identity_ok": True}, terminal)
         self.assertEqual(
             g.probe_terminal_data_root(cursor, terminal_reference),
             g.TERMINAL_DATA_SHA256,
         )
-        self.assertEqual(cursor.sql, [g.TERMINAL_DATA_PROBE])
+        self.assertEqual(
+            cursor.sql,
+            [g.TERMINAL_DATA_IDENTITY_PROBE, g.TERMINAL_DATA_PROBE],
+        )
+        for identity in ({"identity_ok": False}, {"identity_ok": True, "extra": False}, None):
+            with self.subTest(identity=identity):
+                with self.assertRaisesRegex(g.Denial, "terminal_probe_identity|probe_shape"):
+                    g.probe_terminal_data_root(
+                        Cursor(identity, terminal),
+                        terminal_reference,
+                    )
 
     def test_classification_uses_the_supplied_deadline_statement_adapter(self):
         executed = []

@@ -44,7 +44,7 @@ catalog_rows(kind,body) AS (SELECT 'schema',n.nspname||'|'||pg_get_userbyid(n.ns
 fingerprint AS (SELECT pg_catalog.encode(extensions.digest(pg_catalog.convert_to(coalesce(string_agg(kind||chr(30)||body,chr(31) ORDER BY kind,body),''),'UTF8'),'sha256'),'hex') catalog_sha256 FROM catalog_rows)
 SELECT l.ledger_count,l.v00400_count,(l.ledger_count=28 AND l.v00300_count=1 AND l.after_00300_count=0 AND l.v00400_count=0) ledger_prefix_shape_ok,l.ledger_sha256,(to_regnamespace('privacy_retention') IS NOT NULL) schema_exists,(SELECT count(*) FROM table_oids) expected_table_count,(SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='privacy_retention' AND c.relkind IN ('r','p')) schema_table_count,(SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='privacy_retention' AND c.relkind='i') schema_index_count,(SELECT count(*) FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='privacy_retention' AND a.attnum>0 AND NOT a.attisdropped) column_count,(SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='privacy_retention' AND c.relkind NOT IN ('r','p','i')) schema_other_relation_count,(SELECT count(*) FROM actual_functions) touched_function_count,(SELECT count(*) FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='privacy_retention' AND NOT t.tgisinternal) schema_trigger_count,(SELECT count(*) FROM table_oids WHERE relrowsecurity) rls_table_count,(SELECT count(*) FROM pg_policy p JOIN table_oids t ON t.oid=p.polrelid) policy_count,(NOT coalesce(has_schema_privilege('anon',to_regnamespace('privacy_retention'),'USAGE'),false) AND NOT coalesce(has_schema_privilege('authenticated',to_regnamespace('privacy_retention'),'USAGE'),false) AND NOT EXISTS (SELECT 1 FROM table_oids WHERE has_table_privilege('anon',oid,'SELECT') OR has_table_privilege('authenticated',oid,'SELECT')) AND NOT EXISTS (SELECT 1 FROM actual_functions WHERE has_function_privilege('anon',oid,'EXECUTE') OR has_function_privilege('authenticated',oid,'EXECUTE'))) acl_contract_ok,(current_setting('server_version_num')::int=170006) exact_pg,current_setting('server_version_num')::int server_version_num,f.catalog_sha256 FROM ledger l CROSS JOIN fingerprint f;"""
 DATA_PROBE = """WITH c AS (SELECT count(*)::bigint classes_count,count(*) FILTER (WHERE code=ANY(ARRAY['access_log_1y','access_log_2y','ecommerce_advertising_6m','ecommerce_contract_5y','ecommerce_payment_supply_5y','ecommerce_dispute_3y','privacy_identity_audit','privacy_marketing_audit','privacy_account_deletion_audit','privacy_incident_audit']) AND status='disabled' AND data_class IS NULL AND basis_code IS NULL AND trigger_type IS NULL AND retention_period IS NULL AND approved_evidence_ref IS NULL AND version IS NULL AND activated_at IS NULL AND created_at IS NOT NULL AND updated_at IS NOT NULL)::bigint exact_seed_count,pg_catalog.encode(extensions.digest(pg_catalog.convert_to(coalesce(string_agg(code||chr(30)||status||chr(30)||coalesce(data_class,'∅')||chr(30)||coalesce(basis_code,'∅')||chr(30)||coalesce(trigger_type,'∅')||chr(30)||coalesce(retention_period::text,'∅')||chr(30)||coalesce(approved_evidence_ref,'∅')||chr(30)||coalesce(version,'∅')||chr(30)||coalesce(activated_at::text,'∅'),chr(29) ORDER BY code),''),'UTF8'),'sha256'),'hex') seed_projection_sha256 FROM privacy_retention.privacy_retention_classes),x AS (SELECT (SELECT count(*) FROM privacy_retention.privacy_retention_class_sources)::bigint class_source_count,(SELECT count(*) FROM privacy_retention.privacy_legal_holds)::bigint legal_hold_count,(SELECT count(*) FROM privacy_retention.privacy_retention_work_items)::bigint work_item_count,(SELECT count(*) FROM privacy_retention.privacy_retained_records)::bigint retained_record_count,(SELECT count(*) FROM privacy_retention.privacy_retention_runs)::bigint run_count,(SELECT count(*) FROM privacy_retention.privacy_retention_run_items)::bigint run_item_count) SELECT c.classes_count,c.exact_seed_count,(c.classes_count=10 AND c.exact_seed_count=10) seed_rows_exact,x.class_source_count,x.legal_hold_count,x.work_item_count,x.retained_record_count,x.run_count,x.run_item_count,(x.class_source_count+x.legal_hold_count+x.work_item_count+x.retained_record_count+x.run_count+x.run_item_count=0) runtime_tables_empty,c.seed_projection_sha256,pg_catalog.encode(extensions.digest(pg_catalog.convert_to(c.seed_projection_sha256||chr(30)||c.classes_count||chr(30)||x.class_source_count||chr(30)||x.legal_hold_count||chr(30)||x.work_item_count||chr(30)||x.retained_record_count||chr(30)||x.run_count||chr(30)||x.run_item_count,'UTF8'),'sha256'),'hex') data_shape_sha256 FROM c CROSS JOIN x;"""
-TERMINAL_DATA_PROBE = DATA_PROBE.replace(
+TERMINAL_DATA_PROJECTION = DATA_PROBE.replace(
     "'privacy_incident_audit']",
     "'privacy_incident_audit','notifications_operational','privacy_retention_run_audit']",
     1,
@@ -53,11 +53,13 @@ TERMINAL_DATA_PROBE = DATA_PROBE.replace(
     "(c.classes_count=12 AND c.exact_seed_count=12)",
     1,
 )
-if TERMINAL_DATA_PROBE == DATA_PROBE:
+if TERMINAL_DATA_PROJECTION == DATA_PROBE:
     raise RuntimeError("terminal data probe derivation failed")
-PROBE_TEXT_SHA256 = hashlib.sha256((CATALOG_PROBE + "\n" + DATA_PROBE + "\n" + TERMINAL_DATA_PROBE).encode()).hexdigest()
+TERMINAL_DATA_PROBE = "SELECT * FROM privacy_retention.g040_terminal_data_probe()"
+TERMINAL_DATA_IDENTITY_PROBE = """SELECT ((SELECT count(*) FROM pg_catalog.pg_proc candidate JOIN pg_catalog.pg_namespace candidate_namespace ON candidate_namespace.oid=candidate.pronamespace WHERE candidate_namespace.nspname='privacy_retention' AND candidate.proname='g040_terminal_data_probe')=1 AND pg_catalog.pg_get_userbyid(p.proowner)='privacy_workflow_owner' AND p.prosecdef AND p.prokind='f' AND pg_catalog.pg_get_function_identity_arguments(p.oid)='' AND p.proconfig=ARRAY['search_path=""']::text[] AND (SELECT count(*)=2 AND count(*) FILTER (WHERE e.privilege_type='EXECUTE' AND NOT e.is_grantable AND e.grantee IN (p.proowner,(SELECT oid FROM pg_catalog.pg_roles WHERE rolname='postgres')))=2 FROM pg_catalog.aclexplode(coalesce(p.proacl,pg_catalog.acldefault('f',p.proowner))) e)) identity_ok FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='privacy_retention' AND p.proname='g040_terminal_data_probe'"""
+PROBE_TEXT_SHA256 = hashlib.sha256((CATALOG_PROBE + "\n" + DATA_PROBE + "\n" + TERMINAL_DATA_PROJECTION + "\n" + TERMINAL_DATA_IDENTITY_PROBE + "\n" + TERMINAL_DATA_PROBE).encode()).hexdigest()
 DATA_PROBE_SHA256 = hashlib.sha256(DATA_PROBE.encode()).hexdigest()
-TERMINAL_DATA_PROBE_SHA256 = hashlib.sha256(TERMINAL_DATA_PROBE.encode()).hexdigest()
+TERMINAL_DATA_PROBE_SHA256 = hashlib.sha256((TERMINAL_DATA_IDENTITY_PROBE + "\n" + TERMINAL_DATA_PROBE).encode()).hexdigest()
 
 class Denial(RuntimeError):
     def __init__(self, code: str):
@@ -163,14 +165,21 @@ def validate_terminal_data_root(data: Any, expected_data_root: Any = TERMINAL_DA
             and data["data_shape_sha256"] == TERMINAL_DATA_SHA256):
         raise Denial("partial_or_ambiguous")
     return data["data_shape_sha256"]
+def validate_terminal_data_probe_identity(data: Any) -> None:
+    if type(data) is not dict or data != {"identity_ok": True}:
+        raise Denial("terminal_probe_identity")
+
 
 def probe_full_data_root(cursor: Any, reference: Any, *, statement_executor: Callable[[str], None] | None = None) -> str:
     """Run the single source-pinned terminal data probe and validate its full root."""
     reference = _reference(reference)
     return validate_full_data_root(_row(cursor, DATA_PROBE, statement_executor=statement_executor), reference.full_data_sha256)
 def probe_terminal_data_root(cursor: Any, reference: Any, *, statement_executor: Callable[[str], None] | None = None) -> str:
-    """Run the source-pinned post-migration data probe and validate its terminal root."""
+    """Validate the permanent aggregate-only probe identity, then its terminal root."""
     reference = _reference(reference)
+    validate_terminal_data_probe_identity(
+        _row(cursor, TERMINAL_DATA_IDENTITY_PROBE, statement_executor=statement_executor)
+    )
     return validate_terminal_data_root(
         _row(cursor, TERMINAL_DATA_PROBE, statement_executor=statement_executor),
         reference.terminal_data_root,
