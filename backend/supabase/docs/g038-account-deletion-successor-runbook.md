@@ -144,7 +144,7 @@ python -I g038_isolated_bootstrap.py \
   --recipient <approved-age-recipient> \
   --g034-artifact <private-g034-artifact> \
   --pg-dump <absolute-pinned-postgresql-17.10-pg-dump> \
-  --encrypt-command <absolute-approved-encrypt-command> \
+  --encrypt-executable <absolute-pinned-age-1.3.1> \
   --output <new-private-backup-receipt>
 ```
 

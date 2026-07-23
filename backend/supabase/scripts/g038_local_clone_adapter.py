@@ -387,7 +387,7 @@ class LocalCloneOps:
                       "createdb", "-U", "postgres", DATABASE))
         path = self.inputs.run_root / f"service-{clone['slot']}"
         fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-        raw = f"[{SERVICE}]\nhost=127.0.0.1\nport={clone['port']}\ndbname={DATABASE}\nuser=postgres\nsslmode=disable\n".encode("ascii")
+        raw = f"[{SERVICE}]\nhost=127.0.0.1\nport={clone['port']}\ndbname={DATABASE}\nuser=postgres\napplication_name={SERVICE}\nsslmode=disable\n".encode("ascii")
         with os.fdopen(fd, "wb") as stream:
             stream.write(raw)
             stream.flush()
@@ -408,12 +408,26 @@ class LocalCloneOps:
         g035._publish_restore_receipt(args, evidence)
         return _json(restore_path)
 
-    def connect(self, service: Path):
+    def connect(self, service: Path, *, autocommit: bool = False):
         try:
             import psycopg
-            return psycopg.connect(f"service={SERVICE}", servicefile=str(service), autocommit=False)
+            return psycopg.connect(
+                f"service={SERVICE}", servicefile=str(service), autocommit=autocommit,
+            )
         except Exception:
             _fail("database_connection")
+
+    def rehearsal_connection(self, service: Path):
+        return self.connect(service, autocommit=True)
+
+    def begin_rehearsal_transaction(self, cursor: Any) -> None:
+        cursor.execute("BEGIN ISOLATION LEVEL REPEATABLE READ")
+        cursor.execute("SHOW transaction_isolation")
+        row = cursor.fetchone()
+        values = (tuple(row.values()) if type(row) is dict
+                  else tuple(row) if type(row) in (tuple, list) else ())
+        if values != ("repeatable read",):
+            _fail("transaction_isolation")
 
     def database_identity(self, service: Path) -> tuple[str, str]:
         with self.connect(service) as conn:
@@ -825,11 +839,11 @@ def run(inputs: Inputs, *, ops_factory: Callable[[Inputs, str], LocalCloneOps] =
             ops.assert_clone_custody(clones[slot])
             if _sha_file(services[slot]) != service_hashes[slot]:
                 _fail("custody_drift")
-            with ops.connect(services[slot]) as conn:
+            with ops.rehearsal_connection(services[slot]) as conn:
                 try:
                     with conn.cursor() as cursor:
+                        ops.begin_rehearsal_transaction(cursor)
                         sentinel = secrets.token_hex(32)
-                        cursor.execute("BEGIN ISOLATION LEVEL REPEATABLE READ")
                         cursor.execute("SELECT pg_catalog.set_config('g038.rehearsal_sentinel', %s, true)", (sentinel,))
                         cursor.execute("SELECT pg_catalog.pg_current_xact_id()::text")
                         row = cursor.fetchone()
