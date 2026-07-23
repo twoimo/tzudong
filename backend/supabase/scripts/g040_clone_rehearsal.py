@@ -374,6 +374,40 @@ def _internal_exec_identity(container: str, docker: str) -> Mapping[str, Any]:
             or not fields[-1].isdigit()):
         _fail("docker_identity")
     return MappingProxyType({**dict(zip(keys[:-1], fields[:-1])), "server_version_num": int(fields[-1])})
+def _stable_container_custody(item: Mapping[str, Any]) -> Mapping[str, Any]:
+    """Project only immutable custody fields; Docker health/log state is intentionally excluded."""
+    config = item.get("Config") if type(item) is dict else None
+    host = item.get("HostConfig") if type(item) is dict else None
+    settings = item.get("NetworkSettings") if type(item) is dict else None
+    return MappingProxyType({
+        "Id": item.get("Id") if type(item) is dict else None,
+        "Image": item.get("Image") if type(item) is dict else None,
+        "Config": {
+            key: config.get(key) if type(config) is dict else None
+            for key in ("Image", "ExposedPorts", "Labels")
+        },
+        "HostConfig": {
+            key: host.get(key) if type(host) is dict else None
+            for key in (
+                "NetworkMode", "Privileged", "Binds", "Mounts",
+                "CapAdd", "CapDrop", "PortBindings",
+            )
+        },
+        "Mounts": item.get("Mounts") if type(item) is dict else None,
+        "NetworkSettings": {
+            key: settings.get(key) if type(settings) is dict else None
+            for key in ("Networks", "Ports")
+        },
+    })
+
+
+def _stable_network_custody(network: Mapping[str, Any]) -> Mapping[str, Any]:
+    return MappingProxyType({
+        key: network.get(key) if type(network) is dict else None
+        for key in ("Id", "Internal", "Attachable", "Labels", "Containers")
+    })
+
+
 
 
 def _docker_clone_proof(container: str, service_port: int, live_identity: Mapping[str, Any] | None = None,
@@ -440,7 +474,12 @@ def _docker_clone_proof(container: str, service_port: int, live_identity: Mappin
                 stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
                 timeout=20, check=True,
             ).stdout.decode("utf-8"))
-            if rechecked_item != [item] or rechecked_network != [network]:
+            if (
+                _stable_container_custody(rechecked_item[0] if type(rechecked_item) is list and len(rechecked_item) == 1 else {})
+                != _stable_container_custody(item)
+                or _stable_network_custody(rechecked_network[0] if type(rechecked_network) is list and len(rechecked_network) == 1 else {})
+                != _stable_network_custody(network)
+            ):
                 _fail("docker_identity")
             endpoint = _sha(_canonical({
                 "domain": "internal-docker-exec-proxy-v1", "host": "127.0.0.1",
