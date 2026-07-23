@@ -260,7 +260,7 @@ class G040PrefixRecoveryWorkflowTests(unittest.TestCase):
             self.runbook,
         )
         self.assertIn(
-            "requires a direct `postgres` session and `postgres` database ownership",
+            "requires a direct non-superuser `postgres` session with `CREATEROLE` and `postgres` database ownership",
             self.runbook,
         )
         self.assertIn("It neither grants local custody nor switches roles", self.runbook)
