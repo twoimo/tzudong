@@ -716,6 +716,43 @@ class ControllerTests(unittest.TestCase):
             "statement": statement,
         }}]
 
+    def test_gh_runner_uses_ephemeral_restrictive_environment_outside_checkout(self):
+        captured = {}
+
+        def run(command, **kwargs):
+            env = kwargs["env"]
+            roots = {
+                env["HOME"],
+                env["XDG_CONFIG_HOME"],
+                env["XDG_DATA_HOME"],
+                env["XDG_STATE_HOME"],
+                env["GH_CONFIG_DIR"],
+            }
+            self.assertEqual(len(roots), 1)
+            home = Path(roots.pop())
+            self.assertTrue(home.is_dir())
+            self.assertEqual(home.stat().st_mode & 0o777, 0o700)
+            self.assertEqual(
+                env,
+                {
+                    "GH_CONFIG_DIR": os.fspath(home),
+                    "GH_NO_UPDATE_NOTIFIER": "1",
+                    "HOME": os.fspath(home),
+                    "NO_COLOR": "1",
+                    "XDG_CONFIG_HOME": os.fspath(home),
+                    "XDG_DATA_HOME": os.fspath(home),
+                    "XDG_STATE_HOME": os.fspath(home),
+                },
+            )
+            captured["home"] = home
+            captured["command"] = command
+            return subprocess.CompletedProcess(command, 0, stdout=b"verified", stderr=b"")
+
+        with patch.object(controller.subprocess, "run", side_effect=run):
+            self.assertEqual(controller._run_gh(["/pinned/gh", "--version"]), b"verified")
+
+        self.assertEqual(captured["command"], ["/pinned/gh", "--version"])
+        self.assertFalse(captured["home"].exists())
     def test_attestation_verification_uses_exact_offline_cli_policy_and_binds_bundle(self):
         result = self._attestation_result()
         calls = []

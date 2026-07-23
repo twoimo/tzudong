@@ -314,16 +314,27 @@ class SourceEvidence:
 
 def _run_gh(command: list[str]) -> bytes:
     try:
-        completed = subprocess.run(
-            command,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            env={"GH_NO_UPDATE_NOTIFIER": "1", "NO_COLOR": "1"},
-            shell=False,
-            timeout=30,
-            check=False,
-        )
+        with tempfile.TemporaryDirectory(prefix="g038-gh-") as raw:
+            home = Path(raw)
+            os.chmod(home, 0o700)
+            completed = subprocess.run(
+                command,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                env={
+                    "GH_CONFIG_DIR": os.fspath(home),
+                    "GH_NO_UPDATE_NOTIFIER": "1",
+                    "HOME": os.fspath(home),
+                    "NO_COLOR": "1",
+                    "XDG_CONFIG_HOME": os.fspath(home),
+                    "XDG_DATA_HOME": os.fspath(home),
+                    "XDG_STATE_HOME": os.fspath(home),
+                },
+                shell=False,
+                timeout=30,
+                check=False,
+            )
     except (OSError, subprocess.SubprocessError):
         _deny("source_attestation")
     if (completed.returncode != 0 or len(completed.stdout) > _ATTESTATION_MAX_OUTPUT
