@@ -1,0 +1,4 @@
+version: 2
+secret:
+  ignored_paths:
+    - '.github/g038-account-deletion-successor.v1.json' # Canonical public hashes and Git object IDs only.
