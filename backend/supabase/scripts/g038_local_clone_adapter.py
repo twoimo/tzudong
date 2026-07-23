@@ -42,6 +42,7 @@ RUN_LABEL = "io.tzudong.g038.rehearsal"
 CLONE_LABEL = "io.tzudong.g038.clone"
 SERVICE = "g035-local"
 DATABASE = "g035_local"
+_FINAL_POSTGRES_COMM = ".postgres-wrapp\n"
 _TOOL_CUSTODY = {
     "docker": ("eade1c3a5dda47534dc776f2f534c99cc94cfcf9ce07c4bf09e98258d13e7d7a", ("--version",), "Docker version 29.6.2, build dfc4efb1e2"),
     "git": ("179301dcb41ea78accc3fa0048a7e6f6710d891945a751a34addd622020c1818", ("--version",), "git version 2.50.1 (Apple Git-155)"),
@@ -278,13 +279,16 @@ class LocalCloneOps:
         self.run_nonce = run_nonce
 
     def command(self, argv: Sequence[str], *, check: bool = True,
-                enforce_deadline: bool = True) -> subprocess.CompletedProcess[str]:
+                enforce_deadline: bool = True,
+                input_text: str | None = None) -> subprocess.CompletedProcess[str]:
         if enforce_deadline and time.monotonic() >= self.inputs.deadline_monotonic:
             _fail("deadline")
         timeout = max(1, self.inputs.deadline_monotonic - time.monotonic()) if enforce_deadline else 30
         try:
-            result = subprocess.run(list(argv), check=False, capture_output=True, text=True, timeout=timeout,
-                                    env={"PATH": os.environ.get("PATH", "")})
+            result = subprocess.run(
+                list(argv), check=False, capture_output=True, text=True, timeout=timeout,
+                input=input_text, env={"PATH": os.environ.get("PATH", "")},
+            )
         except Exception:
             _fail("tool_failure")
         if check and result.returncode != 0:
@@ -393,7 +397,7 @@ class LocalCloneOps:
                 (self.inputs.docker, "exec", str(clone["container"]), "cat", "/proc/1/comm"),
                 check=False,
             )
-            if init.returncode == 0 and init.stdout == "postgres\n":
+            if init.returncode == 0 and init.stdout == _FINAL_POSTGRES_COMM:
                 ready = self.command(
                     (self.inputs.docker, "exec", str(clone["container"]), "pg_isready",
                      "-U", "postgres", "-d", "postgres"),
@@ -407,9 +411,19 @@ class LocalCloneOps:
     def service_file(self, clone: Mapping[str, Any]) -> Path:
         self.command((self.inputs.docker, "exec", str(clone["container"]),
                       "createdb", "-U", "postgres", DATABASE))
+        password = secrets.token_urlsafe(32)
+        self.command(
+            (self.inputs.docker, "exec", "-i", str(clone["container"]),
+             "psql", "-U", "supabase_admin", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-q"),
+            input_text=f"ALTER ROLE postgres PASSWORD '{password}';\n",
+        )
         path = self.inputs.run_root / f"service-{clone['slot']}"
         fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-        raw = f"[{SERVICE}]\nhost=127.0.0.1\nport={clone['port']}\ndbname={DATABASE}\nuser=postgres\napplication_name={SERVICE}\nsslmode=disable\n".encode("ascii")
+        raw = (
+            f"[{SERVICE}]\nhost=127.0.0.1\nport={clone['port']}\n"
+            f"dbname={DATABASE}\nuser=postgres\npassword={password}\n"
+            f"application_name={SERVICE}\nsslmode=disable\n"
+        ).encode("ascii")
         with os.fdopen(fd, "wb") as stream:
             stream.write(raw)
             stream.flush()
@@ -433,9 +447,28 @@ class LocalCloneOps:
     def connect(self, service: Path, *, autocommit: bool = False):
         try:
             import psycopg
+            raw, entries = g035._parse_service_entries(service, SERVICE)
+            if (g035._parse_local_service(service, SERVICE) != raw
+                    or set(entries) != {
+                        "host", "port", "dbname", "user", "password",
+                        "application_name", "sslmode",
+                    }
+                    or entries["host"] != "127.0.0.1"
+                    or entries["dbname"] != DATABASE
+                    or entries["user"] != "postgres"
+                    or not entries["password"]
+                    or entries["application_name"] != SERVICE
+                    or entries["sslmode"] != "disable"):
+                _fail("database_connection")
             return psycopg.connect(
-                f"service={SERVICE}", servicefile=str(service), autocommit=autocommit,
+                host=entries["host"], port=int(entries["port"]),
+                dbname=entries["dbname"], user=entries["user"],
+                password=entries["password"],
+                application_name=entries["application_name"],
+                sslmode=entries["sslmode"], autocommit=autocommit,
             )
+        except LocalCloneError:
+            raise
         except Exception:
             _fail("database_connection")
 

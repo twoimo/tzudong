@@ -750,6 +750,7 @@ def test_readiness_waits_for_final_postgres_pid_after_entrypoint_initialization(
     responses = iter((
         completed("bash\n"),
         completed("postgres\n"),
+        completed(adapter._FINAL_POSTGRES_COMM),
         completed("accepting connections\n"),
     ))
 
@@ -766,15 +767,22 @@ def test_readiness_waits_for_final_postgres_pid_after_entrypoint_initialization(
     assert commands == [
         (("docker", "exec", "clone-1", "cat", "/proc/1/comm"), {"check": False}),
         (("docker", "exec", "clone-1", "cat", "/proc/1/comm"), {"check": False}),
+        (("docker", "exec", "clone-1", "cat", "/proc/1/comm"), {"check": False}),
         (("docker", "exec", "clone-1", "pg_isready", "-U", "postgres", "-d", "postgres"),
          {"check": False}),
     ]
 
-def test_generated_service_file_has_exact_g035_application_name_and_is_admitted(tmp_path):
+def test_generated_service_file_has_exact_g035_application_name_and_is_admitted(monkeypatch, tmp_path):
     ops = object.__new__(adapter.LocalCloneOps)
     ops.inputs = type("Inputs", (), {"docker": "docker", "run_root": tmp_path})()
     commands = []
-    ops.command = lambda argv: commands.append(tuple(argv)) or completed()
+    monkeypatch.setattr(adapter.secrets, "token_urlsafe", lambda length: "ephemeral-password")
+
+    def command(argv, **kwargs):
+        commands.append((tuple(argv), kwargs))
+        return completed()
+
+    ops.command = command
 
     service = ops.service_file({"slot": 1, "container": "clone-1", "port": 55401})
     expected = (
@@ -783,6 +791,7 @@ def test_generated_service_file_has_exact_g035_application_name_and_is_admitted(
         b"port=55401\n"
         b"dbname=g035_local\n"
         b"user=postgres\n"
+        b"password=ephemeral-password\n"
         b"application_name=g035-local\n"
         b"sslmode=disable\n"
     )
@@ -790,5 +799,78 @@ def test_generated_service_file_has_exact_g035_application_name_and_is_admitted(
     assert service.read_bytes() == expected
     assert adapter.g035._parse_local_service(service, adapter.SERVICE) == expected
     assert commands == [
-        ("docker", "exec", "clone-1", "createdb", "-U", "postgres", "g035_local"),
+        (("docker", "exec", "clone-1", "createdb", "-U", "postgres", "g035_local"), {}),
+        (("docker", "exec", "-i", "clone-1", "psql", "-U", "supabase_admin",
+          "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-q"),
+         {"input_text": "ALTER ROLE postgres PASSWORD 'ephemeral-password';\n"}),
     ]
+
+
+def test_connection_uses_exact_parsed_loopback_parameters_without_servicefile(monkeypatch, tmp_path):
+    service = tmp_path / "service"
+    service.write_text(
+        "[g035-local]\n"
+        "host=127.0.0.1\n"
+        "port=55401\n"
+        "dbname=g035_local\n"
+        "user=postgres\n"
+        "password=ephemeral-password\n"
+        "application_name=g035-local\n"
+        "sslmode=disable\n",
+        encoding="ascii",
+    )
+    service.chmod(0o600)
+    observed = {}
+
+    def connect(**kwargs):
+        observed.update(kwargs)
+        return "connection"
+
+    monkeypatch.setitem(
+        sys.modules,
+        "psycopg",
+        type("Psycopg", (), {"connect": staticmethod(connect)}),
+    )
+    ops = object.__new__(adapter.LocalCloneOps)
+
+    assert ops.connect(service, autocommit=True) == "connection"
+    assert observed == {
+        "host": "127.0.0.1",
+        "port": 55401,
+        "dbname": "g035_local",
+        "user": "postgres",
+        "password": "ephemeral-password",
+        "application_name": "g035-local",
+        "sslmode": "disable",
+        "autocommit": True,
+    }
+    assert "servicefile" not in observed
+    assert "service" not in observed
+
+
+def test_connection_rejects_extra_service_keys_before_psycopg(monkeypatch, tmp_path):
+    service = tmp_path / "service"
+    service.write_text(
+        "[g035-local]\n"
+        "host=127.0.0.1\n"
+        "port=55401\n"
+        "dbname=g035_local\n"
+        "user=postgres\n"
+        "password=ephemeral-password\n"
+        "connect_timeout=5\n"
+        "application_name=g035-local\n"
+        "sslmode=disable\n",
+        encoding="ascii",
+    )
+    service.chmod(0o600)
+    calls = []
+    monkeypatch.setitem(
+        sys.modules,
+        "psycopg",
+        type("Psycopg", (), {"connect": staticmethod(lambda **kwargs: calls.append(kwargs))}),
+    )
+    ops = object.__new__(adapter.LocalCloneOps)
+
+    with pytest.raises(adapter.LocalCloneError, match="database_connection"):
+        ops.connect(service)
+    assert calls == []
