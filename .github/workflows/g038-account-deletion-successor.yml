@@ -1,0 +1,77 @@
+name: G038 account-deletion successor source validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit_sha:
+        description: Exact protected main commit SHA
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
+concurrency:
+  group: g038-account-deletion-successor-source-validation
+  cancel-in-progress: false
+
+jobs:
+  source-validate:
+    if: github.repository == 'twoimo/tzudong' && github.ref == 'refs/heads/main' && github.sha == inputs.commit_sha
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact detached protected main revision
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Set up pinned Python
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # actions/setup-python@v5
+        with:
+          python-version: '3.12.10'
+          cache: false
+      - name: Install pinned source-test dependencies
+        shell: bash
+        run: >-
+          python -m pip install --disable-pip-version-check --no-input
+          PyYAML==6.0.2 pytest==8.3.5 cryptography==44.0.2
+          iniconfig==2.0.0 packaging==24.2 pluggy==1.5.0 Pygments==2.19.1
+          cffi==1.17.1 pycparser==2.22
+      - name: Run full offline G038 source-test suite
+        shell: bash
+        run: python -I -m pytest -q backend/supabase/tests/test_g038*.py
+      - name: Create source receipt after successful source tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p -- "$RUNNER_TEMP/g038-source-receipt"
+          python -I backend/supabase/scripts/g038_isolated_bootstrap.py \
+            --repository-root "$GITHUB_WORKSPACE" \
+            --authorized-final-commit '${{ inputs.commit_sha }}' \
+            --entrypoint backend/supabase/scripts/g038_production_controller.py \
+            validate-source \
+            --repository-root "$GITHUB_WORKSPACE" \
+            --source-commit '${{ inputs.commit_sha }}' \
+            --source-receipt "$RUNNER_TEMP/g038-source-receipt/receipt.json"
+      - name: Attest exact source receipt
+        id: source-attestation
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be
+        with:
+          subject-path: ${{ runner.temp }}/g038-source-receipt/receipt.json
+      - name: Upload authenticated source receipt and exact attestation bundle
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # actions/upload-artifact@v4
+        with:
+          name: g038-account-deletion-successor-source-receipt
+          path: |
+            ${{ runner.temp }}/g038-source-receipt/receipt.json
+            ${{ steps.source-attestation.outputs.bundle-path }}
+          if-no-files-found: error
+      - name: Remove temporary source receipt
+        if: always()
+        shell: bash
+        run: rm -f -- "$RUNNER_TEMP/g038-source-receipt/receipt.json"
