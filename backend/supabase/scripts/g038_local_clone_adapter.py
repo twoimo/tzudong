@@ -23,6 +23,10 @@ from pathlib import Path
 from types import MappingProxyType, SimpleNamespace
 from typing import Any, Callable, Mapping, Sequence
 
+from g037_hosted_closure_contract import (
+    MANAGED_ROLES, ROLE_FLAGS, ROLE_PROTOCOL_VERSION, TERMINAL_MANAGED_ROWS,
+    TRANSIENT_MANAGED_ROWS,
+)
 import g035_hosted_recovery as g035
 import g038_clone_rehearsal as receipt
 import g038_production_controller as production
@@ -43,6 +47,7 @@ CLONE_LABEL = "io.tzudong.g038.clone"
 SERVICE = "g035-local"
 DATABASE = "g035_local"
 _FINAL_POSTGRES_COMM = ".postgres-wrapp\n"
+ROLE_PROTOCOL_DESCRIPTOR_ROOT = "e6dd631c38cbcf5b048cd7b6c8a3c251fe5ca7097ab3a8e34079655af66dc0e3"
 _TOOL_CUSTODY = {
     "docker": ("eade1c3a5dda47534dc776f2f534c99cc94cfcf9ce07c4bf09e98258d13e7d7a", ("--version",), "Docker version 29.6.2, build dfc4efb1e2"),
     "git": ("179301dcb41ea78accc3fa0048a7e6f6710d891945a751a34addd622020c1818", ("--version",), "git version 2.50.1 (Apple Git-155)"),
@@ -429,6 +434,164 @@ class LocalCloneOps:
             stream.flush()
             os.fsync(stream.fileno())
         return path
+
+
+    def _role_psql(self, clone: Mapping[str, Any], *, user: str, database: str,
+                   sql: str) -> str:
+        if user not in ("postgres", "supabase_admin") or database not in ("postgres", DATABASE):
+            _fail("role_protocol")
+        result = self.command((
+            self.inputs.docker, "exec", "-i", str(clone["container"]),
+            "psql", "-U", user, "-d", database, "-v", "ON_ERROR_STOP=1", "-qAt",
+        ), check=False, input_text=sql)
+        if result.returncode != 0:
+            _fail("role_protocol")
+        return result.stdout
+
+    @staticmethod
+    def _validate_role_catalog(
+        raw: str,
+        expected_rows: Sequence[tuple[str, str, str, bool, bool, bool]], *,
+        database: str = "postgres",
+    ) -> None:
+        try:
+            value = json.loads(raw)
+            expected_roles = [
+                [name, *ROLE_FLAGS] for name in sorted(MANAGED_ROLES)
+            ]
+            expected_memberships = [
+                list(row) for row in sorted(expected_rows)
+            ]
+            if (
+                type(value) is not dict
+                or set(value) != {"database", "memberships", "roles", "server_version_num",
+                                  "session_user", "user"}
+                or value["database"] != database
+                or type(value["server_version_num"]) is not int
+                or value["server_version_num"] // 10000 != 17
+                or value["user"] != "postgres"
+                or value["session_user"] != "postgres"
+                or value["roles"] != expected_roles
+                or value["memberships"] != expected_memberships
+            ):
+                _fail("role_protocol")
+        except LocalCloneError:
+            raise
+        except Exception:
+            _fail("role_protocol")
+
+    def _assert_role_protocol(
+        self, clone: Mapping[str, Any],
+        expected_rows: Sequence[tuple[str, str, str, bool, bool, bool]], *,
+        database: str,
+        restored_owner: bool = False,
+    ) -> None:
+        names = ",".join(repr(name) for name in MANAGED_ROLES)
+        raw = self._role_psql(clone, user="postgres", database=database, sql=f"""
+SELECT pg_catalog.json_build_object(
+  'database', current_database(),
+  'memberships', (
+    SELECT pg_catalog.coalesce(
+      pg_catalog.json_agg(pg_catalog.json_build_array(
+        roleid::regrole::text,member::regrole::text,grantor::regrole::text,
+        admin_option,inherit_option,set_option)
+        ORDER BY roleid::regrole::text,member::regrole::text,
+                 grantor::regrole::text,admin_option,inherit_option,set_option),
+      '[]'::json)
+      FROM pg_catalog.pg_auth_members
+     WHERE roleid IN (SELECT oid FROM pg_catalog.pg_roles
+                       WHERE rolname = ANY (ARRAY[{names}]::name[]))
+        OR member IN (SELECT oid FROM pg_catalog.pg_roles
+                       WHERE rolname = ANY (ARRAY[{names}]::name[]))
+  ),
+  'roles', (
+    SELECT pg_catalog.coalesce(
+      pg_catalog.json_agg(pg_catalog.json_build_array(
+        rolname,rolsuper,rolinherit,rolcreaterole,rolcreatedb,rolreplication,
+        rolbypassrls,rolcanlogin) ORDER BY rolname),
+      '[]'::json)
+      FROM pg_catalog.pg_roles
+     WHERE rolname = ANY (ARRAY[{names}]::name[])
+  ),
+  'server_version_num', current_setting('server_version_num')::integer,
+  'session_user', session_user,
+  'user', current_user
+)::text;
+""")
+        self._validate_role_catalog(raw, expected_rows, database=database)
+        if restored_owner:
+            self._role_psql(clone, user="postgres", database=database, sql="""
+DO $g038_restored_owner$
+BEGIN
+  IF (SELECT pg_catalog.pg_get_userbyid(nspowner)
+        FROM pg_catalog.pg_namespace
+       WHERE nspname='privacy_retention') IS DISTINCT FROM 'privacy_workflow_owner'
+     OR pg_catalog.to_regprocedure(
+          'privacy_retention.assert_g014_workflow_owner_contract()') IS NULL THEN
+    RAISE EXCEPTION 'restored workflow-owner assertion drift';
+  END IF;
+  PERFORM privacy_retention.assert_g014_workflow_owner_contract();
+END;
+$g038_restored_owner$;
+""")
+
+    def bootstrap_role_protocol(self, clone: Mapping[str, Any]) -> None:
+        if (
+            ROLE_PROTOCOL_VERSION != "g037-pg17-hosted-createrole-splice-v4"
+            or MANAGED_ROLES != (
+                "privacy_workflow_owner",
+                "privacy_retention_operator_approver",
+                "privacy_retention_legal_approver",
+                "privacy_retention_activation_operator",
+            )
+            or ROLE_FLAGS != (False, False, False, False, False, False, False)
+            or canonical_sha256({
+                "version": ROLE_PROTOCOL_VERSION,
+                "roles": MANAGED_ROLES,
+                "flags": ROLE_FLAGS,
+                "transient_rows": TRANSIENT_MANAGED_ROWS,
+                "terminal_rows": TERMINAL_MANAGED_ROWS,
+            }) != ROLE_PROTOCOL_DESCRIPTOR_ROOT
+        ):
+            _fail("role_protocol")
+        names = ",".join(repr(name) for name in MANAGED_ROLES)
+        role_sql = "\n".join(
+            f"CREATE ROLE {name} NOSUPERUSER NOINHERIT NOCREATEROLE NOCREATEDB "
+            f"NOLOGIN NOREPLICATION NOBYPASSRLS;\n"
+            f"GRANT {name} TO postgres WITH ADMIN TRUE, INHERIT FALSE, SET FALSE "
+            f"GRANTED BY supabase_admin;"
+            for name in MANAGED_ROLES
+        )
+        self._role_psql(clone, user="supabase_admin", database="postgres", sql=f"""
+BEGIN;
+DO $g038_role_preflight$
+BEGIN
+  IF current_setting('server_version_num')::integer / 10000 <> 17
+     OR current_user <> 'supabase_admin' OR session_user <> 'supabase_admin'
+     OR EXISTS (SELECT 1 FROM pg_catalog.pg_roles
+                 WHERE rolname = ANY (ARRAY[{names}]::name[])) THEN
+    RAISE EXCEPTION 'managed role bootstrap precondition drift';
+  END IF;
+END;
+$g038_role_preflight$;
+{role_sql}
+COMMIT;
+""")
+        self._role_psql(clone, user="postgres", database="postgres", sql="""
+GRANT privacy_workflow_owner TO postgres
+  WITH ADMIN FALSE, INHERIT TRUE, SET TRUE GRANTED BY postgres;
+""")
+        self._assert_role_protocol(
+            clone, TRANSIENT_MANAGED_ROWS, database="postgres",
+        )
+
+    def terminalize_role_protocol(self, clone: Mapping[str, Any]) -> None:
+        self._role_psql(clone, user="postgres", database=DATABASE, sql="""
+REVOKE privacy_workflow_owner FROM postgres GRANTED BY postgres;
+""")
+        self._assert_role_protocol(
+            clone, TERMINAL_MANAGED_ROWS, database=DATABASE, restored_owner=True,
+        )
 
     def restore(self, clone: Mapping[str, Any], service: Path, identity_fd: int, restore_path: Path, manifest: Any) -> Mapping[str, Any]:
         if os.name == "nt":
@@ -851,8 +1014,10 @@ def run(inputs: Inputs, *, ops_factory: Callable[[Inputs, str], LocalCloneOps] =
             clone = ops.create_clone(slot)
             ops.wait_ready(clone)
             service = ops.service_file(clone)
+            ops.bootstrap_role_protocol(clone)
             restore_path = inputs.run_root / f"restore-{slot}.json"
             restored = ops.restore(clone, service, inputs.identity_channels[slot - 1], restore_path, manifest)
+            ops.terminalize_role_protocol(clone)
             ops.assert_clone_custody(clone)
             clone["restore"] = restored
             clones.append(clone)
@@ -940,6 +1105,8 @@ def run(inputs: Inputs, *, ops_factory: Callable[[Inputs, str], LocalCloneOps] =
                 "g035_restore_receipt_sha256": _sha_file(inputs.run_root / f"restore-{slot}.json"),
                 "service_file_sha256": service_hashes[slot - 1],
                 "clone_nonce": f"g038-clone-{slot}-{run_nonce}",
+                "role_protocol_version": ROLE_PROTOCOL_VERSION,
+                "role_protocol_descriptor_root": ROLE_PROTOCOL_DESCRIPTOR_ROOT,
             })
             system_identifier, database_oid = ops.database_identity(services[slot - 1])
             handles.append(receipt.CloneHandle(subject=slot - 1, clone_nonce=f"g038-clone-{slot}-{run_nonce}",
