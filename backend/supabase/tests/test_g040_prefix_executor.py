@@ -584,6 +584,24 @@ class ExecutorTests(unittest.TestCase):
         self.assertNotIn("secret", str(error.exception))
         self.assertEqual(cursor.calls[-1][0], "00400-inner")
         self.assertFalse(any(sql == LEDGER_INSERT_SQL for sql, _ in cursor.calls))
+    def test_lock_failure_has_bounded_exact_statement_identity(self):
+        plan, attempt, observation, _, _ = self.build_plan()
+        cursor = Cursor(fail_sql=executor._LOCK_SQL[1])
+        with self.assertRaises(executor.ExecutionDenial) as error:
+            executor.apply_locked_cursor(
+                cursor,
+                plan=plan,
+                attempt=attempt,
+                deadline_monotonic=time.monotonic() + 60,
+            )
+        self.assertEqual(error.exception.evidence, {
+            "version": "g040-lock",
+            "ordinal": 2,
+            "statement_sha256": hashlib.sha256(
+                executor._LOCK_SQL[1].encode("utf-8")
+            ).hexdigest(),
+        })
+        self.assertEqual(str(error.exception), "execution_failed")
     def test_source_pin_drift_is_denied_before_compilation_or_cursor_mutation(self):
         m = manifest()
         source, reference, observation, authorization, _ = artifacts()
