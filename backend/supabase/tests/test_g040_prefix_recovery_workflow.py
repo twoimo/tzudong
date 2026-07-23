@@ -259,6 +259,12 @@ class G040PrefixRecoveryWorkflowTests(unittest.TestCase):
             "reopens and revalidates the exact finalized G037 assertion, all five evidence files, and every G040 custody and authorization input before mutation",
             self.runbook,
         )
+        self.assertIn(
+            "requires a direct `postgres` session and `postgres` database ownership",
+            self.runbook,
+        )
+        self.assertIn("It neither grants local custody nor switches roles", self.runbook)
+        self.assertNotIn("strict `supabase_admin` session/database custody", self.runbook)
 
     def test_execute_revalidates_g040_custody_before_its_only_mutation_call(self):
         functions = {
