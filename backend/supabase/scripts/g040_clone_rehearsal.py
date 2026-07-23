@@ -195,7 +195,7 @@ def _parse_local_service(raw: bytes, service_name: str) -> Mapping[str, Any]:
     required = {"host", "port", "dbname", "user", "application_name", "sslmode", "password"}
     if (set(values) != required or values["host"] != "127.0.0.1" or not values["port"].isdigit()
             or not 1 <= int(values["port"]) <= 65535 or values["dbname"] != "g035_local"
-            or values["user"] != "supabase_admin" or values["sslmode"] != "disable"
+            or values["user"] != "postgres" or values["sslmode"] != "disable"
             or "g035-local" not in values["application_name"]):
         _fail("nonlocal_service")
     if any("//" in values[key] for key in ("host", "dbname", "application_name")):
@@ -257,6 +257,11 @@ def _connect_service(service_file: str | Path, service_name: str, *, readonly: b
         info = conn.info
         if info.host != "127.0.0.1" or info.port != service["port"]:
             _fail("service_endpoint")
+        identity_cursor = conn.cursor()
+        try:
+            _assert_reference_custody(identity_cursor, current_user="postgres")
+        finally:
+            identity_cursor.close()
         return conn, service
     except RehearsalError:
         if conn is not None:
@@ -717,7 +722,7 @@ def _open_read_only_snapshot(conn: Any, cur: Any) -> None:
 def _assert_reference_custody(cursor: Any, *, current_user: str) -> None:
     row = _query_one(cursor, _REFERENCE_CUSTODY_QUERY)
     if (
-        row.get("session_user") != "supabase_admin"
+        row.get("session_user") != "postgres"
         or row.get("current_user") != current_user
         or row.get("database_name") != "g035_local"
     ):
