@@ -1334,6 +1334,7 @@ def _classify_read_only_state(cur: Any, reference: Any, *, start: Mapping[str, A
             Path(__file__).resolve().parents[3],
             manifest,
             runtime_rpc_matrix=executor.g040_runtime_rpc_matrix(),
+            allow_provider_vector_extension_members=True,
         )
         data_root = probe_terminal_data_root(cur, reference)
         observed_terminal = {

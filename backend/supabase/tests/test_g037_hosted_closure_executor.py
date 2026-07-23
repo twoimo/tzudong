@@ -526,6 +526,38 @@ class G037ExecutorTests(unittest.TestCase):
  def test_runtime_rpc_matrix_shape_is_fail_closed(self):
   with self.assertRaisesRegex(e.ClosureError,"noncanonical"):
    e._g014_public_rpc_acl_assert(object(), ())
+ def test_provider_vector_runtime_acl_exception_is_exact_and_opt_in(self):
+  with self.assertRaisesRegex(e.ClosureError,"noncanonical"):
+   e._g014_public_rpc_acl_assert(
+    object(), e.STATIC_RPC_MATRIX,
+    allow_provider_vector_extension_members="yes",
+   )
+  required=(
+   "pg_get_userbyid(procedure.proowner) = 'supabase_admin'",
+   "dependency.deptype = 'e'",
+   "extension.extname = 'vector'",
+   "extension_namespace.nspname = 'public'",
+   "pg_get_userbyid(extension.extowner) = 'supabase_admin'",
+  )
+  with patch.object(
+   e,"q",
+   side_effect=[[],tuple(sorted(e.STATIC_RPC_MATRIX)),[],[],[]],
+  ) as query:
+   e._g014_public_rpc_acl_assert(
+    object(),e.STATIC_RPC_MATRIX,
+    allow_provider_vector_extension_members=True,
+   )
+  for index in (2,3):
+   sql=query.call_args_list[index].args[1]
+   for token in required:
+    self.assertIn(token,sql)
+  with patch.object(
+   e,"q",
+   side_effect=[[],tuple(sorted(e.STATIC_RPC_MATRIX)),[],[],[]],
+  ) as query:
+   e._g014_public_rpc_acl_assert(object(),e.STATIC_RPC_MATRIX)
+  for index in (2,3):
+   self.assertNotIn("dependency.deptype = 'e'",query.call_args_list[index].args[1])
  def test_terminal_readback_rechecks_deadline_after_queries(self):
   manifest=SimpleNamespace(migrations=())
   with patch.object(e,"_terminal_assert",return_value=()),patch.object(e,"_stable_projection_roots",return_value=("catalog","acl")),patch.object(e,"_source_binding",return_value=("commit","source","terminal")),patch.object(e,"_assert_capability_not_expired",side_effect=(None,e.ClosureError("controller capability expired"))):
