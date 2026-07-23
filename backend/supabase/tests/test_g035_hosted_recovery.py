@@ -883,20 +883,29 @@ class ControllerTests(unittest.TestCase):
     self.assertIsInstance(kwargs["stdin"],io.BytesIO)
     kwargs["stdout"].write(b"plain")
     return subprocess.CompletedProcess(argv,0)
-   with patch.object(recovery,"sha256_file",return_value=capture["evidence"]["dump_sha256"]),patch.object(recovery,"_owned_identity_stream",return_value=io.BytesIO(b"key")),patch.object(recovery,"_require_prior",return_value=capture),patch.object(recovery,"command_exists",side_effect=lambda command:command),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"run",side_effect=execute),patch.object(recovery.subprocess,"run",side_effect=decrypt) as decrypt_run,patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",return_value=[]),patch.object(recovery,"_create_auth_user_placeholders"),patch.object(recovery,"_normalize_restored_vector_extension",return_value="extensions"),patch.object(recovery,"_fingerprints",return_value=observed):
+   with patch.object(recovery,"sha256_file",return_value=capture["evidence"]["dump_sha256"]),patch.object(recovery,"_owned_identity_stream",return_value=io.BytesIO(b"key")),patch.object(recovery,"_require_prior",return_value=capture),patch.object(recovery,"command_exists",side_effect=lambda command:command),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"run",side_effect=execute),patch.object(recovery.subprocess,"run",side_effect=decrypt) as decrypt_run,patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",return_value=[]),patch.object(recovery,"_create_auth_user_placeholders"),patch.object(recovery,"_normalize_restored_vector_extension",return_value="public"),patch.object(recovery,"_fingerprints",return_value=observed):
     result=recovery.run_restore_verify(args,None)
    self.assertEqual(["age","--decrypt","--identity","-",str(dump)],decrypt_run.call_args.args[0])
    self.assertNotIn("key",json.dumps(result))
- def test_restore_normalizes_vector_extension_to_source_terminal_schema(self):
+ def test_restore_preserves_hosted_vector_extension_schema(self):
   queries=[]
-  def query(unused,sql):
-   queries.append(sql)
-   if len(queries)==1: return [("public",)]
-   if sql.startswith("ALTER EXTENSION"): return []
-   return [("extensions",)]
-  with patch.object(recovery,"_query_conn",side_effect=query):
-   self.assertEqual(recovery._normalize_restored_vector_extension(object()),"extensions")
-  self.assertTrue(any(sql.startswith("ALTER EXTENSION vector SET SCHEMA extensions") for sql in queries))
+  with patch.object(recovery,"_query_conn",side_effect=lambda unused,sql: queries.append(sql) or [("public",)]):
+   self.assertEqual(recovery._normalize_restored_vector_extension(object()),"public")
+  self.assertEqual(len(queries),1)
+  self.assertNotIn("ALTER EXTENSION",queries[0])
+  self.assertEqual(
+   recovery.RESTORED_VECTOR_LAYOUT_CONTRACT,
+   ("preserve-hosted-vector-schema-v1","public"),
+  )
+  self.assertEqual(
+   recovery._local_clone_compatibility_sql("20260713002000"),
+   recovery.LOCAL_CLONE_VECTOR_RELOCATION_SQL,
+  )
+  self.assertEqual(recovery._local_clone_compatibility_sql("20260713002100"), ())
+  self.assertEqual(
+   sum("ALTER EXTENSION vector SET SCHEMA extensions" in statement for statement in recovery.LOCAL_CLONE_VECTOR_RELOCATION_SQL),
+   1,
+  )
  def test_restore_rejects_unknown_vector_extension_layout(self):
   with patch.object(recovery,"_query_conn",return_value=[("unexpected",)]),self.assertRaisesRegex(recovery.RecoveryError,"vector extension layout"):
    recovery._normalize_restored_vector_extension(object())

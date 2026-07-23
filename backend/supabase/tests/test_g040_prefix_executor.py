@@ -340,13 +340,34 @@ class ExecutorTests(unittest.TestCase):
             for item in migration_manifest.migrations
         )
         with patch.object(executor, "_precompute_execution_plan", return_value=(canonical, object())) as canonical_plan, \
-                patch.object(executor, "_compatibility_sql", side_effect=lambda version: (f"hook-{version}",)):
+                patch.object(executor, "_compatibility_sql", side_effect=lambda version: (f"hook-{version}",)), \
+                patch.object(executor, "_provider_vector_schema_sql", side_effect=lambda _version, statements: statements):
             compiled = executor._compiled(ROOT, migration_manifest)
         canonical_plan.assert_called_once_with(ROOT, migration_manifest)
         self.assertEqual(len(compiled), len(migration_manifest.migrations))
         for item, full, executable in compiled:
             self.assertEqual(full, (item.version,))
             self.assertEqual(executable, (f"hook-{item.version}", f"transformed-{item.version}"))
+
+    def test_provider_vector_schema_transform_is_exact_and_fail_closed(self):
+        source_02000 = ("before extensions.vector middle extensions.vector after", "extensions.vector extensions.vector")
+        source_02400 = ("extensions.vector", "extensions.vector extensions.vector", "extensions.vector")
+        self.assertEqual(
+            executor._provider_vector_schema_sql("20260713002000", source_02000),
+            tuple(statement.replace("extensions.vector", "public.vector") for statement in source_02000),
+        )
+        self.assertEqual(
+            executor._provider_vector_schema_sql("20260713002400", source_02400),
+            tuple(statement.replace("extensions.vector", "public.vector") for statement in source_02400),
+        )
+        for version, statements in (
+            ("20260713002000", ("extensions.vector",)),
+            ("20260713002400", ("public.vector",)),
+            ("20260713002300", ("extensions.vector",)),
+        ):
+            with self.subTest(version=version):
+                with self.assertRaisesRegex(Denial, "vector_compile"):
+                    executor._provider_vector_schema_sql(version, statements)
     def test_empty_params_do_not_activate_psycopg_percent_placeholder_parsing(self):
         class StrictCursor:
             def __init__(self):
