@@ -72,12 +72,14 @@ _PROVIDER_VECTOR_SCHEMA_OCCURRENCES = {
     "20260713002000": 4,
     "20260713002400": 4,
 }
-_PROVIDER_OWNER_PREDICATE_VERSION = "20260713002000"
+_PROVIDER_POLICY_VERSION = "20260713002000"
 _PROVIDER_OWNER_PREDICATE = "pg_catalog.pg_get_userbyid(procedure.proowner) NOT IN ('postgres', 'privacy_workflow_owner')"
-_PROVIDER_OWNER_REPLACEMENT = """NOT (
-        pg_catalog.pg_get_userbyid(procedure.proowner) IN ('postgres', 'privacy_workflow_owner')
-        OR (
-          pg_catalog.pg_get_userbyid(procedure.proowner) = 'supabase_admin'
+_PROVIDER_EFFECTIVE_ACL_PREDICATE = """WHERE namespace.nspname = 'public'
+      AND pg_catalog.has_function_privilege(role_matrix.grantee, procedure.oid, 'EXECUTE')"""
+_PROVIDER_PUBLIC_ACL_PREDICATE = """WHERE namespace.nspname = 'public'
+      AND acl.grantee = 0
+      AND acl.privilege_type = 'EXECUTE'"""
+_PROVIDER_VECTOR_EXTENSION_MEMBER = """pg_catalog.pg_get_userbyid(procedure.proowner) = 'supabase_admin'
           AND EXISTS (
             SELECT 1
             FROM pg_catalog.pg_depend AS dependency
@@ -92,9 +94,24 @@ _PROVIDER_OWNER_REPLACEMENT = """NOT (
               AND extension.extname = 'vector'
               AND extension_namespace.nspname = 'public'
               AND pg_catalog.pg_get_userbyid(extension.extowner) = 'supabase_admin'
-          )
+          )"""
+_PROVIDER_OWNER_REPLACEMENT = f"""NOT (
+        pg_catalog.pg_get_userbyid(procedure.proowner) IN ('postgres', 'privacy_workflow_owner')
+        OR (
+          {_PROVIDER_VECTOR_EXTENSION_MEMBER}
         )
       )"""
+_PROVIDER_EFFECTIVE_ACL_REPLACEMENT = f"""WHERE namespace.nspname = 'public'
+      AND NOT (
+          {_PROVIDER_VECTOR_EXTENSION_MEMBER}
+      )
+      AND pg_catalog.has_function_privilege(role_matrix.grantee, procedure.oid, 'EXECUTE')"""
+_PROVIDER_PUBLIC_ACL_REPLACEMENT = f"""WHERE namespace.nspname = 'public'
+      AND NOT (
+          {_PROVIDER_VECTOR_EXTENSION_MEMBER}
+      )
+      AND acl.grantee = 0
+      AND acl.privilege_type = 'EXECUTE'"""
 
 
 _CLONE_CAPABILITIES: dict[int, Any] = {}
@@ -336,19 +353,30 @@ def _ledger(cursor: Any) -> tuple[tuple[str, str, tuple[str, ...]], ...]:
 def _provider_vector_schema_sql(version: str, statements: tuple[str, ...]) -> tuple[str, ...]:
     expected = _PROVIDER_VECTOR_SCHEMA_OCCURRENCES.get(version, 0)
     vector_occurrences = sum(statement.count("extensions.vector") for statement in statements)
-    owner_occurrences = sum(statement.count(_PROVIDER_OWNER_PREDICATE) for statement in statements)
-    expected_owner_occurrences = 1 if version == _PROVIDER_OWNER_PREDICATE_VERSION else 0
-    if vector_occurrences != expected or owner_occurrences != expected_owner_occurrences:
+    policy_occurrences = tuple(
+        sum(statement.count(predicate) for statement in statements)
+        for predicate in (
+            _PROVIDER_OWNER_PREDICATE,
+            _PROVIDER_EFFECTIVE_ACL_PREDICATE,
+            _PROVIDER_PUBLIC_ACL_PREDICATE,
+        )
+    )
+    expected_policy_occurrences = (1, 1, 1) if version == _PROVIDER_POLICY_VERSION else (0, 0, 0)
+    if vector_occurrences != expected or policy_occurrences != expected_policy_occurrences:
         _deny("vector_compile")
     transformed = tuple(
-        statement.replace("extensions.vector", "public.vector").replace(
-            _PROVIDER_OWNER_PREDICATE,
-            _PROVIDER_OWNER_REPLACEMENT,
-        )
+        statement.replace("extensions.vector", "public.vector")
+        .replace(_PROVIDER_OWNER_PREDICATE, _PROVIDER_OWNER_REPLACEMENT)
+        .replace(_PROVIDER_EFFECTIVE_ACL_PREDICATE, _PROVIDER_EFFECTIVE_ACL_REPLACEMENT)
+        .replace(_PROVIDER_PUBLIC_ACL_PREDICATE, _PROVIDER_PUBLIC_ACL_REPLACEMENT)
         for statement in statements
     )
     if (any("extensions.vector" in statement for statement in transformed)
-            or any(_PROVIDER_OWNER_PREDICATE in statement for statement in transformed)):
+            or any(predicate in statement for statement in transformed for predicate in (
+                _PROVIDER_OWNER_PREDICATE,
+                _PROVIDER_EFFECTIVE_ACL_PREDICATE,
+                _PROVIDER_PUBLIC_ACL_PREDICATE,
+            ))):
         _deny("vector_compile")
     return transformed
 
