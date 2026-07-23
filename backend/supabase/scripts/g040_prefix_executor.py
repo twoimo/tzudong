@@ -675,6 +675,7 @@ def _terminal_readback(cursor: Any, *, repository_root: Path, manifest: Manifest
             repository_root,
             manifest,
             runtime_rpc_matrix=g040_runtime_rpc_matrix(),
+            allow_provider_vector_extension_members=True,
         )
     except Denial:
         raise
