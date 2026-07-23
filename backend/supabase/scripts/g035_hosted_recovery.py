@@ -872,6 +872,11 @@ def run_restore_verify(args,manifest):
     for schema in (LOCAL_REMEDIATION_SCHEMA,"public","auth","storage"): _query_conn(conn,f"DROP SCHEMA IF EXISTS {schema} CASCADE")
     _query_conn(conn,"CREATE SCHEMA public AUTHORIZATION pg_database_owner")
     _query_conn(conn,"GRANT USAGE, CREATE ON SCHEMA public TO privacy_workflow_owner")
+    _query_conn(conn,"DO $$ BEGIN IF pg_catalog.to_regnamespace('extensions') IS NOT NULL THEN RAISE EXCEPTION 'local extensions schema reset drift'; END IF; END $$")
+    _query_conn(conn,"CREATE SCHEMA extensions AUTHORIZATION postgres")
+    _query_conn(conn,"GRANT USAGE ON SCHEMA extensions TO anon, authenticated, service_role")
+    _query_conn(conn,"GRANT USAGE, CREATE ON SCHEMA extensions TO dashboard_user")
+    _query_conn(conn,"GRANT USAGE, CREATE ON SCHEMA extensions TO supabase_admin")
     conn.commit()
    except Exception:
     conn.rollback()
