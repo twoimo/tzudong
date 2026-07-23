@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import inspect
 import json
 import os
 import stat
@@ -874,3 +875,119 @@ def test_connection_rejects_extra_service_keys_before_psycopg(monkeypatch, tmp_p
     with pytest.raises(adapter.LocalCloneError, match="database_connection"):
         ops.connect(service)
     assert calls == []
+
+
+def _role_catalog(rows=adapter.TRANSIENT_MANAGED_ROWS):
+    return {
+        "database": "postgres",
+        "memberships": [list(row) for row in sorted(rows)],
+        "roles": [[name, *adapter.ROLE_FLAGS] for name in sorted(adapter.MANAGED_ROLES)],
+        "server_version_num": 170010,
+        "session_user": "postgres",
+        "user": "postgres",
+    }
+
+
+@pytest.mark.parametrize(
+    "mutate",
+    [
+        lambda value: value["roles"].pop(),
+        lambda value: value["roles"].append(["privacy_extra", *adapter.ROLE_FLAGS]),
+        lambda value: value["roles"].__setitem__(
+            0, [value["roles"][0][0], True, *adapter.ROLE_FLAGS[1:]],
+        ),
+        lambda value: value["memberships"].__setitem__(
+            0, [*value["memberships"][0][:2], "attacker", *value["memberships"][0][3:]],
+        ),
+        lambda value: value["memberships"].__setitem__(
+            0, [*value["memberships"][0][:3], True, False, True],
+        ),
+        lambda value: value["memberships"].append(
+            ["privacy_workflow_owner", "attacker", "postgres", False, True, True],
+        ),
+    ],
+)
+def test_role_catalog_rejects_absent_extra_attribute_grantor_and_option_drift(mutate):
+    value = _role_catalog()
+    mutate(value)
+    with pytest.raises(adapter.LocalCloneError, match="role_protocol"):
+        adapter.LocalCloneOps._validate_role_catalog(
+            json.dumps(value), adapter.TRANSIENT_MANAGED_ROWS,
+        )
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("server_version_num", 160010),
+        ("session_user", "supabase_admin"),
+        ("user", "supabase_admin"),
+        ("database", "attacker"),
+    ],
+)
+def test_role_catalog_rejects_version_and_identity_drift(field, value):
+    catalog = _role_catalog()
+    catalog[field] = value
+    with pytest.raises(adapter.LocalCloneError, match="role_protocol"):
+        adapter.LocalCloneOps._validate_role_catalog(
+            json.dumps(catalog), adapter.TRANSIENT_MANAGED_ROWS,
+        )
+
+
+def test_role_bootstrap_is_source_pinned_explicit_and_keeps_sql_off_argv():
+    ops = object.__new__(adapter.LocalCloneOps)
+    ops.inputs = type("Inputs", (), {
+        "docker": "docker", "deadline_monotonic": time.monotonic() + 60,
+    })()
+    calls = []
+
+    def command(argv, **kwargs):
+        calls.append((tuple(argv), kwargs.get("input_text", "")))
+        stdout = json.dumps(_role_catalog()) if "json_build_object" in kwargs.get("input_text", "") else ""
+        return completed(stdout)
+
+    ops.command = command
+    ops.bootstrap_role_protocol({"container": "clone"})
+    assert len(calls) == 3
+    admin_sql, self_sql, assertion_sql = (call[1] for call in calls)
+    assert admin_sql.index("managed role bootstrap precondition drift") < admin_sql.index("CREATE ROLE")
+    assert admin_sql.count("CREATE ROLE ") == 4
+    assert admin_sql.count("GRANTED BY supabase_admin") == 4
+    assert "IF NOT EXISTS" not in admin_sql
+    assert "02500" not in admin_sql and "G026" not in admin_sql
+    assert "GRANTED BY postgres" in self_sql
+    assert "json_build_object" in assertion_sql
+    assert all(sql not in argv for argv, sql in calls)
+    assert all("password" not in " ".join(argv).lower() for argv, _ in calls)
+
+
+def test_terminalization_revokes_only_self_grant_then_verifies_terminal_and_owner():
+    ops = object.__new__(adapter.LocalCloneOps)
+    ops.inputs = type("Inputs", (), {
+        "docker": "docker", "deadline_monotonic": time.monotonic() + 60,
+    })()
+    calls = []
+
+    def command(argv, **kwargs):
+        sql = kwargs.get("input_text", "")
+        calls.append(sql)
+        catalog = _role_catalog(adapter.TERMINAL_MANAGED_ROWS)
+        catalog["database"] = adapter.DATABASE
+        return completed(json.dumps(catalog) if "json_build_object" in sql else "")
+
+    ops.command = command
+    ops.terminalize_role_protocol({"container": "clone"})
+    assert calls[0].strip() == (
+        "REVOKE privacy_workflow_owner FROM postgres GRANTED BY postgres;"
+    )
+    assert "json_build_object" in calls[1]
+    assert "assert_g014_workflow_owner_contract()" in calls[2]
+
+
+def test_each_clone_bootstraps_before_restore_and_terminalizes_before_observation():
+    body = inspect.getsource(adapter.run)
+    bootstrap = body.index("ops.bootstrap_role_protocol(clone)")
+    restore = body.index("restored = ops.restore(")
+    terminal = body.index("ops.terminalize_role_protocol(clone)")
+    observation = body.index("def observe(")
+    assert bootstrap < restore < terminal < observation
