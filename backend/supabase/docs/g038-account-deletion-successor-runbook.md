@@ -139,10 +139,11 @@ python -I g038_isolated_bootstrap.py \
   --freeze-assertion <private-current-freeze-assertion> \
   --destination <private-empty-backup-directory> \
   --capture-receipt <new-private-capture-receipt> \
-  --archive <new-private-encrypted-archive> \
+  --archive <private-empty-backup-directory>/g035-dump.enc \
   --service-file <restricted-locked-service-file> \
   --recipient <approved-age-recipient> \
   --g034-artifact <private-g034-artifact> \
+  --pg-dump <absolute-pinned-postgresql-17.10-pg-dump> \
   --encrypt-command <absolute-approved-encrypt-command> \
   --output <new-private-backup-receipt>
 ```

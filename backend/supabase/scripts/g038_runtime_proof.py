@@ -195,8 +195,14 @@ class RetentionPreview:
 
 @dataclass(frozen=True)
 class RetentionConfirmation:
+    operation_id: str
+    preview_hash: str
     operation_binding_sha256: str
+    confirmation_binding_sha256: str
     status: str
+    confirmed_at: int
+    expires_at: int
+    replayed: bool
 
 
 @dataclass(frozen=True)
@@ -254,7 +260,7 @@ class AccountDeletionAdapter(Protocol):
 class RetentionAdapter(Protocol):
     def preview_bound(self, class_code: str, cutoff: str, operation_binding_sha256: str, *, deadline_unix: int) -> RetentionPreview: ...
     def confirm_bound(self, preview: RetentionPreview, *, deadline_unix: int) -> RetentionConfirmation: ...
-    def finalize_bound(self, preview: RetentionPreview, *, deadline_unix: int) -> RetentionFinalReceipt: ...
+    def finalize_bound(self, preview: RetentionPreview, confirmation: RetentionConfirmation, *, deadline_unix: int) -> RetentionFinalReceipt: ...
 
 
 class ResultSigner(Protocol):
@@ -680,11 +686,36 @@ def build_runtime_proof(
     confirmation = _call(retention.confirm_bound, retention_preview, deadline_unix=deadline)
     if (
         type(confirmation) is not RetentionConfirmation
-        or confirmation.operation_binding_sha256 != binding.retention_operation_binding_sha256
+        or confirmation.operation_id != retention_preview.operation_id
+        or confirmation.preview_hash != retention_preview.preview_hash
+        or confirmation.operation_binding_sha256 != retention_preview.operation_binding_sha256
         or confirmation.status != "confirmed"
+        or type(confirmation.confirmed_at) is not int
+        or type(confirmation.expires_at) is not int
+        or confirmation.confirmed_at < now
+        or confirmation.confirmed_at >= deadline
+        or confirmation.expires_at <= confirmation.confirmed_at
+        or confirmation.expires_at > deadline
+        or confirmation.replayed is not False
+        or type(confirmation.confirmation_binding_sha256) is not str
+        or not _HEX64.fullmatch(confirmation.confirmation_binding_sha256)
+        or confirmation.confirmation_binding_sha256 != _hash({
+            "operation_id": confirmation.operation_id,
+            "preview_hash": confirmation.preview_hash,
+            "operation_binding_sha256": confirmation.operation_binding_sha256,
+            "status": confirmation.status,
+            "confirmed_at": confirmation.confirmed_at,
+            "expires_at": confirmation.expires_at,
+            "replayed": confirmation.replayed,
+        })
     ):
         _deny("RETENTION_CONFIRMATION_INVALID")
-    retention_final = _call(retention.finalize_bound, retention_preview, deadline_unix=deadline)
+    retention_final = _call(
+        retention.finalize_bound,
+        retention_preview,
+        confirmation,
+        deadline_unix=deadline,
+    )
     if (
         type(retention_final) is not RetentionFinalReceipt
         or retention_final.operation_binding_sha256 != binding.retention_operation_binding_sha256

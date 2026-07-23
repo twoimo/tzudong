@@ -219,6 +219,60 @@ class ControllerTests(unittest.TestCase):
                 self.assertRaisesRegex(controller.ControllerError, "artifact_invalid"):
             controller._load_source_receipt(args, source, manifest)
 
+    def test_stale_source_evidence_is_historical_only_and_still_verifies_attestation(self):
+        source = type("S", (), {"final_commit": "b" * 40, "runtime_source_root": "1" * 64})()
+        manifest = type("M", (), {
+            "statement_vector_root": "4" * 64,
+            "terminal_spec_root": "5" * 64,
+        })()
+        body = {
+            "schema": controller._SOURCE_RECEIPT_SCHEMA,
+            "status": "source-valid",
+            "source_commit": source.final_commit,
+            "runtime_source_root": source.runtime_source_root,
+            "manifest_root": "2" * 64,
+            "source_root": "3" * 64,
+            "vector_root": manifest.statement_vector_root,
+            "terminal_spec_root": manifest.terminal_spec_root,
+            "selected_versions": list(controller.SELECTED_VERSIONS),
+            "repository": controller._SOURCE_REPOSITORY,
+            "ref": controller._SOURCE_REF,
+            "workflow": controller._SOURCE_WORKFLOW,
+            "run_id": 123,
+            "run_attempt": 1,
+            "artifact_name": controller._SOURCE_ARTIFACT,
+            "issued_at": 100,
+        }
+        body["receipt_sha256"] = controller.canonical_sha256(body)
+        raw = controller.canonical_json_bytes(body) + b"\n"
+        args = Namespace(repository_root="/checkout", source_receipt="/receipt")
+        evidence = controller.SourceEvidence(H, "7" * 64, "8" * 64, "9" * 64)
+        with patch.object(controller, "_root", return_value=Path("/checkout")), \
+                patch.object(controller, "_outside", return_value=Path("/receipt")), \
+                patch.object(controller, "_stable_bytes", return_value=raw), \
+                patch.object(controller, "_manifest_roots", return_value=("2" * 64, "3" * 64)), \
+                patch.object(controller.time, "time", return_value=100 + controller._SOURCE_RECEIPT_MAX_AGE + 1), \
+                patch.object(controller, "_verify_source_attestation", return_value=evidence) as verify:
+            with self.assertRaisesRegex(controller.ControllerError, "source_receipt_invalid"):
+                controller._load_source_receipt(args, source, manifest)
+            self.assertEqual(
+                controller._load_source_receipt(args, source, manifest, require_fresh=False),
+                evidence,
+            )
+        verify.assert_called_once_with(
+            args, Path("/checkout"), Path("/receipt"), hashlib.sha256(raw).hexdigest(),
+            source.final_commit,
+        )
+
+        with patch.object(controller, "_source", return_value=source), \
+                patch.object(controller, "validate_sources", return_value=manifest), \
+                patch.object(controller, "_root", return_value=Path("/checkout")), \
+                patch.object(controller, "_load_source_receipt", return_value=evidence) as load, \
+                patch.object(controller, "_authorization", side_effect=controller.ControllerError("stop")):
+            with self.assertRaisesRegex(controller.ControllerError, "stop"):
+                controller.readback(Namespace())
+        self.assertEqual(load.call_args.kwargs, {"require_fresh": False})
+
     def test_source_provenance_fails_closed_on_absence_mismatch_and_noncanonical_ids(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw).resolve()
@@ -686,6 +740,83 @@ class ControllerTests(unittest.TestCase):
                     self.assertRaisesRegex(controller.ControllerError, "source_attestation"):
                 controller._pinned_gh(args, checkout)
 
+    def test_pinned_pg_dump_rejects_missing_replacement_mode_and_version(self):
+        with tempfile.TemporaryDirectory() as raw:
+            parent = Path(raw)
+            parent.chmod(0o700)
+            checkout = parent / "checkout"
+            checkout.mkdir(mode=0o700)
+            executable = parent / "pg_dump"
+            args = Namespace(pg_dump=executable)
+            with self.assertRaisesRegex(controller.ControllerError, "backup_tool"):
+                controller._pinned_pg_dump(args, checkout)
+            executable.write_bytes(b"trusted pg_dump")
+            executable.chmod(0o700)
+            digest = hashlib.sha256(executable.read_bytes()).hexdigest()
+            with patch.object(controller, "_PG_DUMP_SHA256", digest), \
+                    patch.object(controller, "_run_pg_dump_version",
+                                 return_value=controller._PG_DUMP_VERSION_OUTPUT.encode("ascii")):
+                self.assertEqual(controller._pinned_pg_dump(args, checkout), executable)
+            executable.chmod(0o755)
+            with patch.object(controller, "_PG_DUMP_SHA256", digest), \
+                    self.assertRaisesRegex(controller.ControllerError, "backup_tool"):
+                controller._pinned_pg_dump(args, checkout)
+            executable.chmod(0o700)
+            executable.write_bytes(b"replacement")
+            with patch.object(controller, "_PG_DUMP_SHA256", digest), \
+                    self.assertRaisesRegex(controller.ControllerError, "backup_tool"):
+                controller._pinned_pg_dump(args, checkout)
+            executable.write_bytes(b"trusted pg_dump")
+            with patch.object(controller, "_PG_DUMP_SHA256", digest), \
+                    patch.object(controller, "_run_pg_dump_version",
+                                 return_value=b"pg_dump (PostgreSQL) 17.11\n"), \
+                    self.assertRaisesRegex(controller.ControllerError, "backup_tool"):
+                controller._pinned_pg_dump(args, checkout)
+            with self.assertRaisesRegex(controller.ControllerError, "backup_tool"):
+                controller._pinned_pg_dump(Namespace(pg_dump="pg_dump"), checkout)
+
+    def test_backup_preflights_output_archive_and_tool_before_capture(self):
+        with tempfile.TemporaryDirectory() as raw:
+            parent = Path(raw)
+            parent.chmod(0o700)
+            checkout = parent / "checkout"
+            checkout.mkdir(mode=0o700)
+            custody = parent / "custody"
+            custody.mkdir(mode=0o700)
+            destination = custody / "destination"
+            destination.mkdir(mode=0o700)
+            base = {
+                "repository_root": checkout,
+                "output": custody / "backup.json",
+                "destination": destination,
+                "archive": destination / "g035-dump.enc",
+                "capture_receipt": custody / "capture.json",
+                "pg_dump": custody / "pg_dump",
+            }
+            with patch.object(controller, "_source") as source, \
+                    patch.object(controller.g035, "capture_to_custody") as capture:
+                Path(base["output"]).write_bytes(b"existing")
+                with self.assertRaisesRegex(controller.ControllerError, "receipt_exists"):
+                    controller.production_backup(Namespace(**base))
+                source.assert_not_called()
+                capture.assert_not_called()
+
+            Path(base["output"]).unlink()
+            mismatched = {**base, "archive": custody / "unrelated.enc"}
+            with patch.object(controller, "_source") as source, \
+                    patch.object(controller.g035, "capture_to_custody") as capture, \
+                    self.assertRaisesRegex(controller.ControllerError, "backup_archive"):
+                controller.production_backup(Namespace(**mismatched))
+            source.assert_not_called()
+            capture.assert_not_called()
+
+            with patch.object(controller, "_source") as source, \
+                    patch.object(controller.g035, "capture_to_custody") as capture, \
+                    self.assertRaisesRegex(controller.ControllerError, "backup_tool"):
+                controller.production_backup(Namespace(**base))
+            source.assert_not_called()
+            capture.assert_not_called()
+
     def test_every_post_validation_mode_requires_attestation_bundle_and_pinned_gh(self):
         for mode in controller.MODES - {"validate-source"}:
             with self.subTest(mode=mode):
@@ -700,5 +831,6 @@ class ControllerTests(unittest.TestCase):
         self.assertIn("postcommit-checkpoint-receipt", execute)
         self.assertIn("continuity-parent-receipt", readback)
         self.assertIn("historical-checkpoint-receipt", readback)
+        self.assertIn("pg-dump", controller._MODE_OPTIONS["production-backup"])
 
 if __name__ == "__main__": unittest.main()
