@@ -81,6 +81,10 @@ def assert_safe_workflow(test: unittest.TestCase, workflow: dict) -> None:
     ], names)
     actions = [step["uses"] for step in steps if "uses" in step]
     test.assertEqual([CHECKOUT, SETUP_PYTHON, ATTEST, UPLOAD], actions)
+    test.assertEqual(
+        {"ref": "${{ inputs.commit_sha }}", "fetch-depth": 0, "persist-credentials": False},
+        steps[0]["with"],
+    )
     test.assertEqual({"python-version": "3.12.10"}, steps[1]["with"])
     for action in actions:
         test.assertRegex(action, ACTION_PIN)
