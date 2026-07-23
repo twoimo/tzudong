@@ -81,6 +81,7 @@ def assert_safe_workflow(test: unittest.TestCase, workflow: dict) -> None:
     ], names)
     actions = [step["uses"] for step in steps if "uses" in step]
     test.assertEqual([CHECKOUT, SETUP_PYTHON, ATTEST, UPLOAD], actions)
+    test.assertEqual({"python-version": "3.12.10"}, steps[1]["with"])
     for action in actions:
         test.assertRegex(action, ACTION_PIN)
     test.assertEqual(FULL_SUITE_COMMAND, steps[3]["run"])
