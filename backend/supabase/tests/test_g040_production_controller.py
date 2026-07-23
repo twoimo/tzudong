@@ -419,9 +419,10 @@ class G040ProductionControllerTests(unittest.TestCase):
         conn = Connection(native)
         terminal = {"catalog_root": H, "acl_root": H, "ledger_root": H, "terminal_spec": H}
         args = Namespace(repository_root="/checkout")
-        def assert_terminal(cur, root, manifest, *, deadline, runtime_rpc_matrix):
+        def assert_terminal(cur, root, manifest, *, deadline, runtime_rpc_matrix, allow_provider_vector_extension_members):
             self.assertEqual(deadline, 230)
             self.assertEqual(runtime_rpc_matrix, controller.g040_runtime_rpc_matrix())
+            self.assertIs(allow_provider_vector_extension_members, True)
             cur.execute("SELECT terminal")
             return terminal
         with patch.object(controller, "_connect_service", return_value=conn), \
