@@ -27,7 +27,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # actions/checkout@v4
         with:
           ref: ${{ inputs.commit_sha }}
-          fetch-depth: 1
+          fetch-depth: 0
           persist-credentials: false
       - name: Set up pinned Python
         uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # actions/setup-python@v5
