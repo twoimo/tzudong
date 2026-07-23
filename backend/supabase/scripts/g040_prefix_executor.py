@@ -12,7 +12,7 @@ from pathlib import Path
 from g037_hosted_closure_contract import BASELINE_PAIRS, ROLE_PROTOCOL_EPILOGUE, Manifest, canonical_bytes, terminal_spec, validate_sources
 from g037_hosted_closure_executor import ClosureError, _precompute_execution_plan, terminal_readback_assert
 from g035_hosted_recovery import _compatibility_sql
-from g040_prefix_recovery import DATA_PROBE, Denial, PrefixObservation, SOURCE_COMMIT, TABLES, TERMINAL_DATA_PROBE, classify_mutation_cursor, probe_full_data_root, validate_full_data_root, validate_terminal_data_root
+from g040_prefix_recovery import DATA_PROBE, Denial, PrefixObservation, SOURCE_COMMIT, TABLES, TERMINAL_DATA_IDENTITY_PROBE, TERMINAL_DATA_PROBE, TERMINAL_DATA_PROJECTION, classify_mutation_cursor, probe_full_data_root, validate_full_data_root, validate_terminal_data_probe_identity, validate_terminal_data_root
 from g040_recovery_authorization import AttemptStarted, VerifiedAuthorization
 from g040_recovery_source import SourceBinding
 from g040_reference_evidence import VerifiedReference
@@ -41,6 +41,32 @@ _LOCK_SQL = (
 )
 _DATA_LOCK_SQL = tuple(
     f"LOCK TABLE privacy_retention.{table} IN SHARE ROW EXCLUSIVE MODE" for table in TABLES
+)
+_TERMINAL_DATA_PROBE_INSTALL = (
+    """CREATE OR REPLACE FUNCTION privacy_retention.g040_terminal_data_probe()
+RETURNS TABLE (
+  classes_count bigint,
+  exact_seed_count bigint,
+  seed_rows_exact boolean,
+  class_source_count bigint,
+  legal_hold_count bigint,
+  work_item_count bigint,
+  retained_record_count bigint,
+  run_count bigint,
+  run_item_count bigint,
+  runtime_tables_empty boolean,
+  seed_projection_sha256 text,
+  data_shape_sha256 text
+)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = ''
+AS $g040$
+""" + TERMINAL_DATA_PROJECTION + """
+$g040$""",
+    "ALTER FUNCTION privacy_retention.g040_terminal_data_probe() OWNER TO privacy_workflow_owner",
+    "REVOKE ALL ON FUNCTION privacy_retention.g040_terminal_data_probe() FROM PUBLIC, anon, authenticated, service_role, supabase_admin",
+    "GRANT EXECUTE ON FUNCTION privacy_retention.g040_terminal_data_probe() TO postgres",
 )
 _CLONE_CAPABILITIES: dict[int, Any] = {}
 
@@ -470,6 +496,12 @@ def _source_initial_data_root(cursor: Any, expected_data_root: str, *, deadline_
 
 
 def _source_full_data_root(cursor: Any, expected_data_root: str, *, deadline_monotonic: float) -> str:
+    _execute(cursor, TERMINAL_DATA_IDENTITY_PROBE, deadline_monotonic=deadline_monotonic)
+    try:
+        identity = cursor.fetchone()
+    except Exception:
+        _deny("probe_error")
+    validate_terminal_data_probe_identity(identity)
     _execute(cursor, TERMINAL_DATA_PROBE, deadline_monotonic=deadline_monotonic)
     try:
         data = cursor.fetchone()
@@ -505,6 +537,15 @@ def _terminal_mutation_core(cursor: Any, *, compiled: tuple[tuple[Any, tuple[str
                      version=item.version, ordinal=ordinal)
             applied += 1
         _insert(cursor, item, full, deadline_monotonic=deadline_monotonic)
+    for ordinal, statement in enumerate(_TERMINAL_DATA_PROBE_INSTALL, start=1):
+        _execute(
+            cursor,
+            statement,
+            deadline_monotonic=deadline_monotonic,
+            version="g040-terminal-data-probe",
+            ordinal=ordinal,
+        )
+        applied += 1
     _execute(
         cursor,
         ROLE_PROTOCOL_EPILOGUE.decode("ascii"),
@@ -558,6 +599,7 @@ def _derivation_plan_sha256(plan: SourceValidationPlan, *, branch: str,
         } for item, full, executable in plan.compiled),
         "expected_initial_data_root": expected_initial_data_root,
         "expected_terminal_data_root": expected_terminal_data_root,
+        "terminal_data_probe_install": _TERMINAL_DATA_PROBE_INSTALL,
         "source": {
             "final_commit": plan.source.final_commit,
             "runtime_source_root": plan.source.runtime_source_root,

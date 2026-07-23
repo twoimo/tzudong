@@ -86,6 +86,7 @@ class DerivationCursor(Cursor):
         self.fetchone_values = [
             ("off",),
             {"data_shape_sha256": H},
+            {"identity_ok": True},
             {"data_shape_sha256": H},
         ]
 
@@ -112,6 +113,7 @@ class CloneDerivationCursor(DerivationCursor):
             identity,
             {"transaction_read_only": "off"},
             {"data_shape_sha256": H},
+            {"identity_ok": True},
             {"data_shape_sha256": H},
         ]
         self.connection = None
@@ -388,6 +390,7 @@ class ExecutorTests(unittest.TestCase):
         for _, _, executable in vectors[17:]:
             expected_sql.extend(executable)
             expected_sql.append(LEDGER_INSERT_SQL)
+        expected_sql.extend(executor._TERMINAL_DATA_PROBE_INSTALL)
         expected_sql.append(executor.ROLE_PROTOCOL_EPILOGUE.decode("ascii"))
         self.assertEqual([sql for sql, _ in calls], expected_sql)
 
@@ -399,14 +402,34 @@ class ExecutorTests(unittest.TestCase):
         result, cursor, vectors, _ = self.invoke()
         self.assert_complete_execution_order("UNAPPLIED", cursor, vectors)
         self.assertEqual(result.terminal_rows, 40)
-        self.assertEqual(result.applied_statement_count, sum(len(executable) for _, _, executable in vectors[16:]) + 1)
+        self.assertEqual(result.applied_statement_count, sum(len(executable) for _, _, executable in vectors[16:]) + len(executor._TERMINAL_DATA_PROBE_INSTALL) + 1)
         with self.assertRaises(FrozenInstanceError):
             result.branch = "FULL_ESCAPED"
 
     def test_full_escaped_ledgers_matching_full_vectors_without_00400_sql(self):
         result, cursor, vectors, _ = self.invoke("FULL_ESCAPED")
         self.assert_complete_execution_order("FULL_ESCAPED", cursor, vectors)
-        self.assertEqual(result.applied_statement_count, sum(len(executable) for _, _, executable in vectors[17:]) + 1)
+        self.assertEqual(result.applied_statement_count, sum(len(executable) for _, _, executable in vectors[17:]) + len(executor._TERMINAL_DATA_PROBE_INSTALL) + 1)
+
+    def test_terminal_probe_install_is_source_pinned_least_privilege_and_precedes_epilogue(self):
+        create, owner, revoke, grant = executor._TERMINAL_DATA_PROBE_INSTALL
+        self.assertIn(executor.TERMINAL_DATA_PROJECTION, create)
+        self.assertIn("SECURITY DEFINER", create)
+        self.assertIn("SET search_path = ''", create)
+        self.assertIn("OWNER TO privacy_workflow_owner", owner)
+        self.assertEqual(
+            revoke,
+            "REVOKE ALL ON FUNCTION privacy_retention.g040_terminal_data_probe() FROM PUBLIC, anon, authenticated, service_role, supabase_admin",
+        )
+        self.assertEqual(
+            grant,
+            "GRANT EXECUTE ON FUNCTION privacy_retention.g040_terminal_data_probe() TO postgres",
+        )
+        _, cursor, _, _ = self.invoke()
+        sql = [statement for statement, _ in cursor.calls if statement != STATEMENT_TIMEOUT_SQL]
+        self.assertLess(sql.index(grant), sql.index(executor.ROLE_PROTOCOL_EPILOGUE.decode("ascii")))
+        self.assertIn("pg_catalog.aclexplode", executor.TERMINAL_DATA_IDENTITY_PROBE)
+        self.assertIn("privacy_workflow_owner", executor.TERMINAL_DATA_IDENTITY_PROBE)
 
     def test_exact_locks_precede_reclassification_and_executor_never_controls_transaction(self):
         cursor = Cursor()

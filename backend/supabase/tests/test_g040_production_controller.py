@@ -428,7 +428,7 @@ class G040ProductionControllerTests(unittest.TestCase):
                 patch.object(controller.prefix, "begin_read_only_snapshot"), \
                 patch.object(controller, "_require_live_target"), \
                 patch.object(controller, "terminal_readback_assert", side_effect=assert_terminal), \
-                patch.object(controller.prefix, "probe_full_data_root", return_value=H), \
+                patch.object(controller.prefix, "probe_terminal_data_root", return_value=H), \
                 patch.object(controller.time, "monotonic", return_value=100), \
                 patch.object(controller.time, "time", return_value=200):
             controller._terminal_readback(args, source, reference, object(), authorization)
