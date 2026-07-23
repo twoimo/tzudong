@@ -68,6 +68,11 @@ $g040$""",
     "REVOKE ALL ON FUNCTION privacy_retention.g040_terminal_data_probe() FROM PUBLIC, anon, authenticated, service_role, supabase_admin",
     "GRANT EXECUTE ON FUNCTION privacy_retention.g040_terminal_data_probe() TO postgres",
 )
+_PROVIDER_VECTOR_SCHEMA_OCCURRENCES = {
+    "20260713002000": 4,
+    "20260713002400": 4,
+}
+
 _CLONE_CAPABILITIES: dict[int, Any] = {}
 
 
@@ -304,6 +309,19 @@ def _ledger(cursor: Any) -> tuple[tuple[str, str, tuple[str, ...]], ...]:
         _deny("ledger_shape")
     return result
 
+def _provider_vector_schema_sql(version: str, statements: tuple[str, ...]) -> tuple[str, ...]:
+    expected = _PROVIDER_VECTOR_SCHEMA_OCCURRENCES.get(version, 0)
+    observed = sum(statement.count("extensions.vector") for statement in statements)
+    if observed != expected:
+        _deny("vector_compile")
+    transformed = tuple(
+        statement.replace("extensions.vector", "public.vector")
+        for statement in statements
+    )
+    if any("extensions.vector" in statement for statement in transformed):
+        _deny("vector_compile")
+    return transformed
+
 
 def _compiled(root: Path, manifest: Manifest) -> tuple[tuple[Any, tuple[str, ...], tuple[str, ...]], ...]:
     result = []
@@ -319,7 +337,7 @@ def _compiled(root: Path, manifest: Manifest) -> tuple[tuple[Any, tuple[str, ...
                 _deny("vector_duplicate")
             seen_versions.add(item.version)
             seen_vectors.add(original_full)
-            result.append((item, original_full, (*compatibility, *transformed_inner)))
+            result.append((item, original_full, (*compatibility, *_provider_vector_schema_sql(item.version, transformed_inner))))
     except (ClosureError, OSError, ValueError):
         _deny("vector_compile")
     return tuple(result)
