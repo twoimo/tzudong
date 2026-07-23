@@ -1,5 +1,9 @@
 import { describe, expect, mock, test } from 'bun:test';
 import type { NextRequest } from 'next/server';
+import * as actualRetrieval from '../lib/admin/youtube-thumbnail-generator/retrieval';
+import * as actualBackendAgent from '../lib/admin/youtube-thumbnail-generator/backend-agent';
+import * as actualProviders from '../lib/admin/youtube-thumbnail-generator/providers';
+import * as actualAnyCapReadiness from '../lib/admin/anycap-gpt-image-readiness';
 
 const nonReadyAnyCap = {
   providerId: 'anycap' as const,
@@ -96,24 +100,28 @@ describe('thumbnail AnyCap gpt-image-2 readiness gate', () => {
       requireAdmin: async () => ({ ok: true, userId: 'admin-user' }),
     }));
     mock.module('@/lib/admin/anycap-gpt-image-readiness', () => ({
+      ...actualAnyCapReadiness,
       probeAnyCapGptImageReadiness: async () => {
         readinessCalls += 1;
         return nonReadyAnyCap;
       },
     }));
     mock.module('@/lib/admin/youtube-thumbnail-generator/retrieval', () => ({
+      ...actualRetrieval,
       resolveThumbnailRetrievalReferences: async () => {
         retrievalCalls += 1;
         throw new Error('retrieval should not run when readiness blocks');
       },
     }));
     mock.module('@/lib/admin/youtube-thumbnail-generator/providers', () => ({
+      ...actualProviders,
       generateYoutubeThumbnail: async () => {
         providerCalls += 1;
         throw new Error('provider should not run when readiness blocks');
       },
     }));
     mock.module('@/lib/admin/youtube-thumbnail-generator/backend-agent', () => ({
+      ...actualBackendAgent,
       generateYoutubeThumbnailWithBackendAgent: async () => {
         backendAgentCalls += 1;
         throw new Error('backend agent should not run when readiness blocks');
@@ -152,9 +160,11 @@ describe('thumbnail AnyCap gpt-image-2 readiness gate', () => {
       requireAdmin: async () => ({ ok: true, userId: 'admin-user' }),
     }));
     mock.module('@/lib/admin/anycap-gpt-image-readiness', () => ({
+      ...actualAnyCapReadiness,
       probeAnyCapGptImageReadiness: async () => nonReadyAnyCap,
     }));
     mock.module('@/lib/admin/youtube-thumbnail-generator/backend-agent', () => ({
+      ...actualBackendAgent,
       generateYoutubeThumbnailChatWithBackendAgent: async () => {
         backendAgentCalls += 1;
         throw new Error('chat backend agent should not run when readiness blocks');
@@ -194,12 +204,14 @@ describe('thumbnail AnyCap gpt-image-2 readiness gate', () => {
       requireAdmin: async () => ({ ok: true, userId: 'admin-user' }),
     }));
     mock.module('@/lib/admin/anycap-gpt-image-readiness', () => ({
+      ...actualAnyCapReadiness,
       probeAnyCapGptImageReadiness: async () => {
         readinessCalls += 1;
         throw new Error('help chat should not check provider readiness');
       },
     }));
     mock.module('@/lib/admin/youtube-thumbnail-generator/backend-agent', () => ({
+      ...actualBackendAgent,
       generateYoutubeThumbnailChatWithBackendAgent: async () => {
         backendAgentCalls += 1;
         return {
