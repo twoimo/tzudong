@@ -523,6 +523,9 @@ class G037ExecutorTests(unittest.TestCase):
     self.assertIsNone(raised.exception.__cause__)
     self.assertIsNone(raised.exception.__context__)
     self.assertNotIn(marker,"".join(traceback.format_exception(raised.exception)))
+ def test_runtime_rpc_matrix_shape_is_fail_closed(self):
+  with self.assertRaisesRegex(e.ClosureError,"noncanonical"):
+   e._g014_public_rpc_acl_assert(object(), ())
  def test_terminal_readback_rechecks_deadline_after_queries(self):
   manifest=SimpleNamespace(migrations=())
   with patch.object(e,"_terminal_assert",return_value=()),patch.object(e,"_stable_projection_roots",return_value=("catalog","acl")),patch.object(e,"_source_binding",return_value=("commit","source","terminal")),patch.object(e,"_assert_capability_not_expired",side_effect=(None,e.ClosureError("controller capability expired"))):
