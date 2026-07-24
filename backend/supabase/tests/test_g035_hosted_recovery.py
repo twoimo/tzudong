@@ -1143,6 +1143,9 @@ class ControllerTests(unittest.TestCase):
   for mutation in contract_mutations:
    with self.subTest(contract=mutation),patch.object(recovery,"POST_DATA_TRIGGER_FUNCTION_AUTHORITY",mutation),self.assertRaisesRegex(recovery.RecoveryError,"contract invalid"):
     recovery._validate_post_data_trigger_authority_contract()
+  self.assertNotIn("coalesce(procedure.proacl,'{}'::aclitem[])",recovery.POST_DATA_FUNCTION_AUTHORITY_SQL)
+  self.assertNotIn("coalesce(namespace.nspacl,'{}'::aclitem[])",recovery.POST_DATA_SCHEMA_AUTHORITY_SQL)
+  self.assertNotIn("coalesce(class.relacl,'{}'::aclitem[])",recovery.POST_DATA_TABLE_TRIGGER_STATE_SQL)
   def query(unused,sql,params=None):
    if sql==recovery.POST_DATA_FUNCTION_AUTHORITY_SQL:
     target_role,target_signature=params
