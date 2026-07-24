@@ -1080,10 +1080,12 @@ def _prepare_material(args: Any, *, fresh: bool) -> tuple[Any, ...]:
     observed_roots = {
         "ledger": observation.ledger_root, "catalog": observation.catalog_root,
         "acl": observation.acl_root, "data": observation.data_root,
-        "spec": observation.terminal_spec_root,
+    }
+    predecessor_roots = {
+        key: predecessor.roots[key] for key in observed_roots
     }
     if (observation.status != EXACT_40 or observation.ledger_rows != 40
-            or observed_roots != dict(predecessor.roots)):
+            or observed_roots != predecessor_roots):
         _deny("destructive_admission")
     freeze = _freeze(args, source, manifest, predecessor)
     backup, backup_sha = _load_backup(args, source, source_evidence, observation_sha, freeze, require_fresh=fresh)
