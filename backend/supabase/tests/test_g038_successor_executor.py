@@ -294,6 +294,11 @@ class SuccessorExecutorTests(unittest.TestCase):
         )
         self.assertNotIn("conname || ':' || contype,", sql)
         self.assertIn(
+            "roles = ARRAY['privacy_workflow_owner']::name[]",
+            sql,
+        )
+        self.assertNotIn("roles = ARRAY['privacy_workflow_owner']\n", sql)
+        self.assertIn(
             "('privacy_workflow_owner', 'privacy_workflow_owner', 'CREATE', false)",
             sql,
         )
