@@ -1127,6 +1127,9 @@ def _restore_authority_catalog(
             ["postgres", "supabase_admin", "CREATE", True],
         ),
         lambda value: value["extension_dependencies"]["functions"][0]["acl"].clear(),
+        lambda value: value["extension_dependencies"]["functions"][0]["acl"][1].__setitem__(
+            1, "unknown (OID=0)",
+        ),
         lambda value: value["extension_dependencies"]["functions"][0]["acl"][0].__setitem__(
             0, "supabase_admin",
         ),
@@ -1222,6 +1225,7 @@ def test_restore_authority_baseline_and_restore_window_are_exact_before_restore(
     ] == ["postgres", "supabase_admin", "postgres", "postgres"]
     assert "json_build_object" in baseline_assertion_sql
     assert "pg_catalog.aclexplode(procedure.proacl)" in baseline_assertion_sql
+    assert "CASE WHEN acl.grantee = 0 THEN 'PUBLIC'" in baseline_assertion_sql
     assert grant_sql.index("restore authority precondition drift") < grant_sql.index(
         "GRANT supabase_admin, supabase_auth_admin, supabase_storage_admin TO postgres"
     )
@@ -1249,9 +1253,15 @@ def test_restore_authority_baseline_and_restore_window_are_exact_before_restore(
     assert "SUPERUSER" not in combined
     assert "--no-owner" not in combined and "--no-acl" not in combined
     assert all(sql not in argv for argv, sql in calls)
-    assert adapter.RESTORE_BASELINE_EXTENSION_DEPENDENCY_FUNCTION_ACL == ()
+    assert adapter.RESTORE_BASELINE_EXTENSION_DEPENDENCY_FUNCTION_ACL == (
+        ("supabase_admin", "PUBLIC", "EXECUTE", False),
+        ("supabase_admin", "dashboard_user", "EXECUTE", False),
+        ("supabase_admin", "postgres", "EXECUTE", True),
+        ("supabase_admin", "supabase_admin", "EXECUTE", False),
+    )
     assert adapter.RESTORE_SOURCE_EXTENSION_DEPENDENCY_FUNCTION_ACL == (
         ("postgres", "privacy_workflow_owner", "EXECUTE", False),
+        *adapter.RESTORE_BASELINE_EXTENSION_DEPENDENCY_FUNCTION_ACL,
     )
     assert adapter.RESTORE_TERMINAL_SCHEMA_ACL == (
         ("postgres", "anon", "USAGE", False),
