@@ -1053,6 +1053,8 @@ class ControllerTests(unittest.TestCase):
   self.assertIn(f"GRANT INSERT ON TABLE {expected_targets} TO privacy_workflow_owner",sql)
   self.assertIn(f"REVOKE INSERT ON TABLE {expected_targets} FROM privacy_workflow_owner",sql)
   self.assertEqual(2,conn.commits); self.assertEqual(0,conn.rollbacks)
+  self.assertIn("pg_catalog.aclexplode(class.relacl)",recovery.PRIVACY_RELATION_STATE_SQL)
+  self.assertNotIn("COALESCE",recovery.PRIVACY_RELATION_STATE_SQL)
   self.assertNotIn("SELECT ON TABLE"," ".join(sql))
   self.assertNotIn("UPDATE ON TABLE"," ".join(sql))
   self.assertNotIn("DELETE ON TABLE"," ".join(sql))
