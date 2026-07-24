@@ -865,6 +865,31 @@ def _post_data_use_lists(raw):
   payload="".join(line if index in active_indices or not line.rstrip("\r\n") or line.startswith(";") else ";"+line for index,line in enumerate(lines)).encode("utf-8")
   result.append((owner,payload)); cursor+=count
  result=tuple(result); _validate_post_data_use_lists(raw,result); return result
+POST_DATA_PRIVACY_TRIGGER_RUN = 11
+POST_DATA_PRIVACY_TRIGGER_RELATION_COUNT = 38
+POST_DATA_PRIVACY_TRIGGER_RELATION_ROOT = "b28942637535bd11178674f4821a3f0fad6f49308d43b6e0dc0f7138181f5c4d"
+POST_DATA_PRIVACY_TRIGGER_DESCRIPTOR = re.compile(r"^TRIGGER (?P<schema>\S+) (?P<table>\S+) (?P<trigger>\S+)$")
+def _validate_post_data_privacy_trigger_contract():
+ if POST_DATA_PRIVACY_TRIGGER_RUN!=11 or POST_DATA_PRIVACY_TRIGGER_RELATION_COUNT!=38 or POST_DATA_PRIVACY_TRIGGER_RELATION_ROOT!="b28942637535bd11178674f4821a3f0fad6f49308d43b6e0dc0f7138181f5c4d" or POST_DATA_PRIVACY_TRIGGER_DESCRIPTOR.pattern!=r"^TRIGGER (?P<schema>\S+) (?P<table>\S+) (?P<trigger>\S+)$": raise RecoveryError("post-data privacy trigger contract invalid")
+def _post_data_privacy_trigger_relations(runs):
+ _validate_post_data_privacy_trigger_contract()
+ if type(runs) is not tuple or len(runs)!=len(POST_DATA_OWNER_RUNS) or tuple(owner for owner,unused_payload in runs)!=tuple(owner for owner,unused_count in POST_DATA_OWNER_RUNS): raise RecoveryError("post-data privacy trigger run invalid")
+ if POST_DATA_PRIVACY_TRIGGER_RUN!=11 or POST_DATA_OWNER_RUNS[POST_DATA_PRIVACY_TRIGGER_RUN-1]!=(PRIVACY_DATA_ROLE,56): raise RecoveryError("post-data privacy trigger run contract invalid")
+ payload=runs[POST_DATA_PRIVACY_TRIGGER_RUN-1][1]
+ unused_lines,rows=_post_data_rows(payload)
+ if len(rows)!=56 or any(owner!=PRIVACY_DATA_ROLE for unused_index,unused_dump_id,owner in rows): raise RecoveryError("post-data privacy trigger run invalid")
+ relations=[]; relation_set=set(); triggers=set()
+ for index,unused_dump_id,unused_owner in rows:
+  toc=POST_DATA_TOC.fullmatch(payload.decode("utf-8").splitlines()[index])
+  descriptor=POST_DATA_PRIVACY_TRIGGER_DESCRIPTOR.fullmatch(toc.group("body")) if toc is not None else None
+  if descriptor is None: raise RecoveryError("post-data privacy trigger descriptor invalid")
+  relation=(descriptor.group("schema"),descriptor.group("table")); trigger=(*relation,descriptor.group("trigger"))
+  if trigger in triggers: raise RecoveryError("duplicate post-data privacy trigger descriptor")
+  triggers.add(trigger)
+  if relation not in relation_set: relation_set.add(relation); relations.append(relation)
+ result=tuple(relations)
+ if len(result)!=POST_DATA_PRIVACY_TRIGGER_RELATION_COUNT or hashlib.sha256(canonical_bytes([list(relation) for relation in result])).hexdigest()!=POST_DATA_PRIVACY_TRIGGER_RELATION_ROOT: raise RecoveryError("post-data privacy trigger relation inventory drift")
+ return result
 def _pre_data_use_list(raw):
  if type(raw) is not bytes: raise RecoveryError("archive TOC unavailable")
  try: lines=raw.decode("utf-8").splitlines(keepends=True)
@@ -1108,12 +1133,84 @@ def _with_post_data_trigger_authority_connection(env,operation,*args):
  conn=_connect(LOCAL_SERVICE,env)
  try: return operation(conn,*args)
  finally: conn.close()
-def _restore_post_data_with_trigger_authority(restore,plain_fd,plain,env,workspace,runs):
- baseline=_with_post_data_trigger_authority_connection(env,_open_post_data_trigger_authority_window)
+POST_DATA_TABLE_TRIGGER_STATE_SQL = "SELECT namespace.nspname,class.relname,owner.rolname,class.relrowsecurity,class.relforcerowsecurity,coalesce((SELECT pg_catalog.jsonb_agg(pg_catalog.jsonb_build_array(CASE WHEN acl.grantee=0 THEN 'PUBLIC' ELSE grantee.rolname END,grantor.rolname,acl.privilege_type,acl.is_grantable) ORDER BY CASE WHEN acl.grantee=0 THEN 'PUBLIC' ELSE grantee.rolname END,grantor.rolname,acl.privilege_type,acl.is_grantable) FROM pg_catalog.aclexplode(coalesce(class.relacl,'{}'::aclitem[])) AS acl LEFT JOIN pg_catalog.pg_roles AS grantee ON grantee.oid=acl.grantee JOIN pg_catalog.pg_roles AS grantor ON grantor.oid=acl.grantor),'[]'::jsonb),pg_catalog.has_table_privilege(target.oid,class.oid,'TRIGGER') FROM pg_catalog.pg_class AS class JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid=class.relnamespace JOIN pg_catalog.pg_roles AS owner ON owner.oid=class.relowner JOIN pg_catalog.pg_roles AS target ON target.rolname=%s WHERE namespace.nspname=%s AND class.relname=%s AND class.relkind IN ('r','p')"
+def _read_post_data_table_trigger_state(conn,relations,baseline=False):
+ if type(relations) is not tuple or len(relations)!=POST_DATA_PRIVACY_TRIGGER_RELATION_COUNT or len(relations)!=len(set(relations)): raise RecoveryError("post-data table trigger relation inventory invalid")
+ result=[]
+ for schema,table in relations:
+  rows=_query_conn(conn,POST_DATA_TABLE_TRIGGER_STATE_SQL,(PRIVACY_DATA_ROLE,schema,table))
+  if len(rows)!=1 or type(rows[0]) is not tuple or len(rows[0])!=7: raise RecoveryError("post-data table trigger state invalid")
+  actual_schema,actual_table,owner,rls,force,raw_acl,effective_trigger=rows[0]
+  acl=_canonical_authority_acl(raw_acl,PRIVACY_TABLE_PRIVILEGES)
+  if (actual_schema,actual_table)!=(schema,table) or owner!=PRIVACY_DATA_ROLE or type(rls) is not bool or type(force) is not bool or type(effective_trigger) is not bool: raise RecoveryError("post-data table trigger state invalid")
+  direct_trigger=any(item[0]==PRIVACY_DATA_ROLE and item[2]=="TRIGGER" for item in acl)
+  if baseline and (not effective_trigger and direct_trigger): raise RecoveryError("post-data table trigger state invalid")
+  result.append((schema,table,owner,rls,force,acl,effective_trigger))
+ return tuple(result)
+def _validate_post_data_table_trigger_baseline(relations,baseline):
+ if type(baseline) is not tuple or len(baseline)!=len(relations): raise RecoveryError("post-data table trigger baseline invalid")
+ for relation,item in zip(relations,baseline):
+  if type(item) is not tuple or len(item)!=7 or item[:2]!=relation or item[2]!=PRIVACY_DATA_ROLE or type(item[3]) is not bool or type(item[4]) is not bool or type(item[6]) is not bool or _canonical_authority_acl(list(item[5]),PRIVACY_TABLE_PRIVILEGES)!=item[5]: raise RecoveryError("post-data table trigger baseline invalid")
+  if not item[6] and any(acl[0]==PRIVACY_DATA_ROLE and acl[2]=="TRIGGER" for acl in item[5]): raise RecoveryError("post-data table trigger baseline invalid")
+def _post_data_table_trigger_window_state(baseline):
+ return tuple(item if item[6] else (*item[:5],tuple(sorted((*item[5],(PRIVACY_DATA_ROLE,PRIVACY_DATA_ROLE,"TRIGGER",False)))),True) for item in baseline)
+def _verify_post_data_table_trigger_state(conn,relations,expected):
+ if _read_post_data_table_trigger_state(conn,relations)!=expected: raise RecoveryError("post-data table trigger state invalid")
+def _post_data_table_trigger_statement(relations,grant):
+ if not relations: return None
+ return ("GRANT" if grant else "REVOKE")+" TRIGGER ON TABLE "+",".join(f"{_quoted_identifier(schema)}.{_quoted_identifier(table)}" for schema,table in relations)+(" TO " if grant else " FROM ")+PRIVACY_DATA_ROLE
+def _open_post_data_table_trigger_window(conn,relations):
  try:
-  _restore_post_data_runs(restore,plain_fd,plain,env,workspace,runs)
+  _query_conn(conn,"BEGIN")
+  baseline=_read_post_data_table_trigger_state(conn,relations,baseline=True)
+  added_relations=tuple(item[:2] for item in baseline if not item[6])
+  statement=_post_data_table_trigger_statement(added_relations,True)
+  if statement is not None:
+   _query_conn(conn,"SET LOCAL ROLE "+PRIVACY_DATA_ROLE)
+   _query_conn(conn,statement)
+  _verify_post_data_table_trigger_state(conn,relations,_post_data_table_trigger_window_state(baseline))
+  conn.commit()
+  return baseline,added_relations
+ except Exception:
+  conn.rollback()
+  raise
+def _close_post_data_table_trigger_window(conn,relations,baseline,added_relations):
+ _validate_post_data_table_trigger_baseline(relations,baseline)
+ if type(added_relations) is not tuple or added_relations!=tuple(item[:2] for item in baseline if not item[6]): raise RecoveryError("post-data table trigger baseline invalid")
+ expected_window=_post_data_table_trigger_window_state(baseline)
+ try:
+  _query_conn(conn,"BEGIN")
+  precondition_error=None
+  try: _verify_post_data_table_trigger_state(conn,relations,expected_window)
+  except Exception as exc: precondition_error=exc
+  statement=_post_data_table_trigger_statement(added_relations,False)
+  if statement is not None:
+   _query_conn(conn,"SET LOCAL ROLE "+PRIVACY_DATA_ROLE)
+   _query_conn(conn,statement)
+  readback_error=None
+  try: _verify_post_data_table_trigger_state(conn,relations,baseline)
+  except Exception as exc: readback_error=exc
+  conn.commit()
+  if precondition_error is not None: raise precondition_error
+  if readback_error is not None: raise readback_error
+ except Exception:
+  conn.rollback()
+  raise
+def _with_post_data_table_trigger_connection(env,operation,*args):
+ conn=_connect(LOCAL_SERVICE,env)
+ try: return operation(conn,*args)
+ finally: conn.close()
+def _restore_post_data_with_trigger_authority(restore,plain_fd,plain,env,workspace,runs):
+ relations=_post_data_privacy_trigger_relations(runs)
+ authority_baseline=_with_post_data_trigger_authority_connection(env,_open_post_data_trigger_authority_window)
+ try:
+  table_baseline,added_relations=_with_post_data_table_trigger_connection(env,_open_post_data_table_trigger_window,relations)
+  try:
+   _restore_post_data_runs(restore,plain_fd,plain,env,workspace,runs)
+  finally:
+   _with_post_data_table_trigger_connection(env,_close_post_data_table_trigger_window,relations,table_baseline,added_relations)
  finally:
-  _with_post_data_trigger_authority_connection(env,_close_post_data_trigger_authority_window,baseline)
+  _with_post_data_trigger_authority_connection(env,_close_post_data_trigger_authority_window,authority_baseline)
 
 PRIVACY_DATA_ROLE = "privacy_workflow_owner"
 PRIVACY_RELATION_STATE_SQL = "SELECT role.rolname,class.relrowsecurity,class.relforcerowsecurity,ARRAY(SELECT acl.privilege_type FROM pg_catalog.aclexplode(class.relacl) AS acl JOIN pg_catalog.pg_roles AS grantee ON grantee.oid=acl.grantee WHERE grantee.rolname=%s ORDER BY acl.privilege_type),pg_catalog.has_table_privilege(role.oid,class.oid,'INSERT') FROM pg_catalog.pg_class AS class JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid=class.relnamespace JOIN pg_catalog.pg_roles AS role ON role.oid=class.relowner WHERE namespace.nspname=%s AND class.relname=%s AND class.relkind IN ('r','p')"
