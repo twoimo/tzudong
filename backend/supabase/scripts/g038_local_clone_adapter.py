@@ -61,10 +61,16 @@ RESTORE_TRANSIENT_MEMBERSHIP_ROWS = tuple(sorted((
     *TRANSIENT_MANAGED_ROWS[:2],
 )))
 RESTORE_TERMINAL_MEMBERSHIP_ROWS = tuple(sorted(TRANSIENT_MANAGED_ROWS[:2]))
-RESTORE_BASELINE_EXTENSION_DEPENDENCY_FUNCTION_ACL = ()
-RESTORE_SOURCE_EXTENSION_DEPENDENCY_FUNCTION_ACL = (
-    ("postgres", "privacy_workflow_owner", "EXECUTE", False),
+RESTORE_BASELINE_EXTENSION_DEPENDENCY_FUNCTION_ACL = (
+    ("supabase_admin", "PUBLIC", "EXECUTE", False),
+    ("supabase_admin", "dashboard_user", "EXECUTE", False),
+    ("supabase_admin", "postgres", "EXECUTE", True),
+    ("supabase_admin", "supabase_admin", "EXECUTE", False),
 )
+RESTORE_SOURCE_EXTENSION_DEPENDENCY_FUNCTION_ACL = tuple(sorted((
+    *RESTORE_BASELINE_EXTENSION_DEPENDENCY_FUNCTION_ACL,
+    ("postgres", "privacy_workflow_owner", "EXECUTE", False),
+)))
 RESTORE_EXTENSION_DEPENDENCY_FUNCTIONS = (
     ("digest", "text, text"),
     ("gen_random_uuid", ""),
@@ -745,11 +751,13 @@ SELECT pg_catalog.json_build_object(
         'acl', (
           SELECT COALESCE(pg_catalog.json_agg(pg_catalog.json_build_array(
             pg_catalog.pg_get_userbyid(acl.grantor),
-            pg_catalog.pg_get_userbyid(acl.grantee),
+            CASE WHEN acl.grantee = 0 THEN 'PUBLIC'
+                 ELSE pg_catalog.pg_get_userbyid(acl.grantee) END,
             acl.privilege_type,
             acl.is_grantable)
             ORDER BY pg_catalog.pg_get_userbyid(acl.grantor),
-                     pg_catalog.pg_get_userbyid(acl.grantee),
+                     CASE WHEN acl.grantee = 0 THEN 'PUBLIC'
+                          ELSE pg_catalog.pg_get_userbyid(acl.grantee) END,
                      acl.privilege_type, acl.is_grantable), '[]'::json)
             FROM pg_catalog.aclexplode(procedure.proacl) AS acl
         ),
