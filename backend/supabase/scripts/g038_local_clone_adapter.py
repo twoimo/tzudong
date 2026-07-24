@@ -67,14 +67,32 @@ RESTORE_BASELINE_EXTENSION_DEPENDENCY_FUNCTION_ACL = (
     ("supabase_admin", "postgres", "EXECUTE", True),
     ("supabase_admin", "supabase_admin", "EXECUTE", False),
 )
-RESTORE_SOURCE_EXTENSION_DEPENDENCY_FUNCTION_ACL = tuple(sorted((
-    *RESTORE_BASELINE_EXTENSION_DEPENDENCY_FUNCTION_ACL,
-    ("postgres", "privacy_workflow_owner", "EXECUTE", False),
-)))
 RESTORE_EXTENSION_DEPENDENCY_FUNCTIONS = (
     ("digest", "text, text"),
     ("gen_random_uuid", ""),
 )
+RESTORE_BASELINE_EXTENSION_DEPENDENCY_FUNCTION_ACLS = MappingProxyType({
+    identity: RESTORE_BASELINE_EXTENSION_DEPENDENCY_FUNCTION_ACL
+    for identity in RESTORE_EXTENSION_DEPENDENCY_FUNCTIONS
+})
+RESTORE_SOURCE_EXTENSION_DEPENDENCY_FUNCTION_ACLS = MappingProxyType({
+    ("digest", "text, text"): (
+        ("postgres", "dashboard_user", "EXECUTE", False),
+        ("postgres", "privacy_workflow_owner", "EXECUTE", False),
+        ("supabase_admin", "PUBLIC", "EXECUTE", False),
+        ("supabase_admin", "postgres", "EXECUTE", True),
+        ("supabase_admin", "supabase_admin", "EXECUTE", False),
+    ),
+    ("gen_random_uuid", ""): (
+        ("postgres", "dashboard_user", "EXECUTE", False),
+        ("postgres", "privacy_retention_legal_approver", "EXECUTE", False),
+        ("postgres", "privacy_retention_operator_approver", "EXECUTE", False),
+        ("postgres", "privacy_workflow_owner", "EXECUTE", False),
+        ("supabase_admin", "PUBLIC", "EXECUTE", False),
+        ("supabase_admin", "postgres", "EXECUTE", True),
+        ("supabase_admin", "supabase_admin", "EXECUTE", False),
+    ),
+})
 RESTORE_BASELINE_SCHEMA_ACL = (
     ("postgres", "anon", "USAGE", False),
     ("postgres", "authenticated", "USAGE", False),
@@ -657,7 +675,9 @@ SELECT pg_catalog.json_build_object(
         raw: str,
         expected_memberships: Sequence[tuple[str, str, str, bool, bool, bool]],
         expected_schema_acl: Sequence[tuple[str, str, str, bool]],
-        expected_function_acl: Sequence[tuple[str, str, str, bool]],
+        expected_function_acls: Mapping[
+            tuple[str, str], Sequence[tuple[str, str, str, bool]]
+        ],
         *,
         database: str,
         expected_schema_usage: bool,
@@ -689,7 +709,10 @@ SELECT pg_catalog.json_build_object(
                     "functions": [
                         {
                             "acl": [
-                                list(row) for row in expected_function_acl
+                                list(row)
+                                for row in expected_function_acls[
+                                    (name, identity_arguments)
+                                ]
                             ],
                             "effective_execute": True,
                             "identity_arguments": identity_arguments,
@@ -714,7 +737,9 @@ SELECT pg_catalog.json_build_object(
         self, clone: Mapping[str, Any],
         expected_memberships: Sequence[tuple[str, str, str, bool, bool, bool]],
         expected_schema_acl: Sequence[tuple[str, str, str, bool]],
-        expected_function_acl: Sequence[tuple[str, str, str, bool]],
+        expected_function_acls: Mapping[
+            tuple[str, str], Sequence[tuple[str, str, str, bool]]
+        ],
         *,
         database: str,
         expected_schema_usage: bool,
@@ -817,7 +842,7 @@ SELECT pg_catalog.json_build_object(
 )::text;
 """)
         self._validate_restore_authority_catalog(
-            raw, expected_memberships, expected_schema_acl, expected_function_acl,
+            raw, expected_memberships, expected_schema_acl, expected_function_acls,
             database=database, expected_schema_usage=expected_schema_usage,
         )
 
@@ -845,7 +870,7 @@ SELECT pg_catalog.json_build_object(
         self._assert_restore_authority(
             clone, RESTORE_TERMINAL_MEMBERSHIP_ROWS,
             RESTORE_BASELINE_SCHEMA_ACL,
-            RESTORE_BASELINE_EXTENSION_DEPENDENCY_FUNCTION_ACL,
+            RESTORE_BASELINE_EXTENSION_DEPENDENCY_FUNCTION_ACLS,
             database="postgres", expected_schema_usage=False,
         )
         role_names = ",".join(repr(name) for name in RESTORE_OWNER_ROLES[:3])
@@ -903,7 +928,7 @@ COMMIT;
         self._assert_restore_authority(
             clone, RESTORE_TRANSIENT_MEMBERSHIP_ROWS,
             RESTORE_TRANSIENT_SCHEMA_ACL,
-            RESTORE_BASELINE_EXTENSION_DEPENDENCY_FUNCTION_ACL,
+            RESTORE_BASELINE_EXTENSION_DEPENDENCY_FUNCTION_ACLS,
             database="postgres", expected_schema_usage=True,
         )
 
@@ -911,7 +936,7 @@ COMMIT;
         self._assert_restore_authority(
             clone, RESTORE_TRANSIENT_MEMBERSHIP_ROWS,
             RESTORE_BASELINE_SCHEMA_ACL,
-            RESTORE_SOURCE_EXTENSION_DEPENDENCY_FUNCTION_ACL,
+            RESTORE_SOURCE_EXTENSION_DEPENDENCY_FUNCTION_ACLS,
             database=DATABASE, expected_schema_usage=False,
         )
         self._role_psql(clone, user="postgres", database=DATABASE, sql="""
@@ -925,7 +950,7 @@ REVOKE supabase_admin, supabase_auth_admin, supabase_storage_admin
         self._assert_restore_authority(
             clone, RESTORE_TERMINAL_MEMBERSHIP_ROWS,
             RESTORE_TERMINAL_SCHEMA_ACL,
-            RESTORE_SOURCE_EXTENSION_DEPENDENCY_FUNCTION_ACL,
+            RESTORE_SOURCE_EXTENSION_DEPENDENCY_FUNCTION_ACLS,
             database=DATABASE, expected_schema_usage=True,
         )
 

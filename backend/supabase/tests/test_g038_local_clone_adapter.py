@@ -1070,7 +1070,7 @@ def test_terminalization_verifies_transient_then_revokes_and_reads_terminal_cata
 def _restore_authority_catalog(
     memberships=adapter.RESTORE_TRANSIENT_MEMBERSHIP_ROWS,
     schema_acl=adapter.RESTORE_TRANSIENT_SCHEMA_ACL,
-    function_acl=adapter.RESTORE_BASELINE_EXTENSION_DEPENDENCY_FUNCTION_ACL,
+    function_acls=adapter.RESTORE_BASELINE_EXTENSION_DEPENDENCY_FUNCTION_ACLS,
     *,
     database="postgres",
     schema_usage=True,
@@ -1085,7 +1085,10 @@ def _restore_authority_catalog(
         "extension_dependencies": {
             "functions": [
                 {
-                    "acl": [list(row) for row in function_acl],
+                    "acl": [
+                        list(row)
+                        for row in function_acls[(name, identity_arguments)]
+                    ],
                     "effective_execute": True,
                     "identity_arguments": identity_arguments,
                     "name": name,
@@ -1167,7 +1170,7 @@ def _restore_authority_catalog(
 )
 def test_restore_authority_rejects_session_owner_membership_schema_and_grantor_drift(mutate):
     catalog = _restore_authority_catalog(
-        function_acl=adapter.RESTORE_SOURCE_EXTENSION_DEPENDENCY_FUNCTION_ACL,
+        function_acls=adapter.RESTORE_SOURCE_EXTENSION_DEPENDENCY_FUNCTION_ACLS,
     )
     mutate(catalog)
     with pytest.raises(adapter.LocalCloneError, match="restore_authority"):
@@ -1175,7 +1178,28 @@ def test_restore_authority_rejects_session_owner_membership_schema_and_grantor_d
             json.dumps(catalog),
             adapter.RESTORE_TRANSIENT_MEMBERSHIP_ROWS,
             adapter.RESTORE_TRANSIENT_SCHEMA_ACL,
-            adapter.RESTORE_SOURCE_EXTENSION_DEPENDENCY_FUNCTION_ACL,
+            adapter.RESTORE_SOURCE_EXTENSION_DEPENDENCY_FUNCTION_ACLS,
+            database="postgres",
+            expected_schema_usage=True,
+        )
+
+
+def test_restore_authority_rejects_per_function_acl_swap():
+    catalog = _restore_authority_catalog(
+        function_acls=adapter.RESTORE_SOURCE_EXTENSION_DEPENDENCY_FUNCTION_ACLS,
+    )
+    functions = catalog["extension_dependencies"]["functions"]
+    functions[0]["acl"], functions[1]["acl"] = (
+        functions[1]["acl"],
+        functions[0]["acl"],
+    )
+
+    with pytest.raises(adapter.LocalCloneError, match="restore_authority"):
+        adapter.LocalCloneOps._validate_restore_authority_catalog(
+            json.dumps(catalog),
+            adapter.RESTORE_TRANSIENT_MEMBERSHIP_ROWS,
+            adapter.RESTORE_TRANSIENT_SCHEMA_ACL,
+            adapter.RESTORE_SOURCE_EXTENSION_DEPENDENCY_FUNCTION_ACLS,
             database="postgres",
             expected_schema_usage=True,
         )
@@ -1200,14 +1224,14 @@ def test_restore_authority_baseline_and_restore_window_are_exact_before_restore(
                 catalog = _restore_authority_catalog(
                     adapter.RESTORE_TERMINAL_MEMBERSHIP_ROWS,
                     adapter.RESTORE_BASELINE_SCHEMA_ACL,
-                    adapter.RESTORE_BASELINE_EXTENSION_DEPENDENCY_FUNCTION_ACL,
+                    adapter.RESTORE_BASELINE_EXTENSION_DEPENDENCY_FUNCTION_ACLS,
                     schema_usage=False,
                 )
             else:
                 catalog = _restore_authority_catalog(
                     adapter.RESTORE_TRANSIENT_MEMBERSHIP_ROWS,
                     adapter.RESTORE_TRANSIENT_SCHEMA_ACL,
-                    adapter.RESTORE_BASELINE_EXTENSION_DEPENDENCY_FUNCTION_ACL,
+                    adapter.RESTORE_BASELINE_EXTENSION_DEPENDENCY_FUNCTION_ACLS,
                     schema_usage=True,
                 )
             raw = json.dumps(catalog)
@@ -1259,10 +1283,24 @@ def test_restore_authority_baseline_and_restore_window_are_exact_before_restore(
         ("supabase_admin", "postgres", "EXECUTE", True),
         ("supabase_admin", "supabase_admin", "EXECUTE", False),
     )
-    assert adapter.RESTORE_SOURCE_EXTENSION_DEPENDENCY_FUNCTION_ACL == (
-        ("postgres", "privacy_workflow_owner", "EXECUTE", False),
-        *adapter.RESTORE_BASELINE_EXTENSION_DEPENDENCY_FUNCTION_ACL,
-    )
+    assert dict(adapter.RESTORE_SOURCE_EXTENSION_DEPENDENCY_FUNCTION_ACLS) == {
+        ("digest", "text, text"): (
+            ("postgres", "dashboard_user", "EXECUTE", False),
+            ("postgres", "privacy_workflow_owner", "EXECUTE", False),
+            ("supabase_admin", "PUBLIC", "EXECUTE", False),
+            ("supabase_admin", "postgres", "EXECUTE", True),
+            ("supabase_admin", "supabase_admin", "EXECUTE", False),
+        ),
+        ("gen_random_uuid", ""): (
+            ("postgres", "dashboard_user", "EXECUTE", False),
+            ("postgres", "privacy_retention_legal_approver", "EXECUTE", False),
+            ("postgres", "privacy_retention_operator_approver", "EXECUTE", False),
+            ("postgres", "privacy_workflow_owner", "EXECUTE", False),
+            ("supabase_admin", "PUBLIC", "EXECUTE", False),
+            ("supabase_admin", "postgres", "EXECUTE", True),
+            ("supabase_admin", "supabase_admin", "EXECUTE", False),
+        ),
+    }
     assert adapter.RESTORE_TERMINAL_SCHEMA_ACL == (
         ("postgres", "anon", "USAGE", False),
         ("postgres", "authenticated", "USAGE", False),
@@ -1294,7 +1332,7 @@ def test_restore_authority_terminalization_revokes_only_temporary_grants_and_ass
             catalog = _restore_authority_catalog(
                 adapter.RESTORE_TRANSIENT_MEMBERSHIP_ROWS,
                 adapter.RESTORE_BASELINE_SCHEMA_ACL,
-                adapter.RESTORE_SOURCE_EXTENSION_DEPENDENCY_FUNCTION_ACL,
+                adapter.RESTORE_SOURCE_EXTENSION_DEPENDENCY_FUNCTION_ACLS,
                 database=adapter.DATABASE,
                 schema_usage=False,
             )
@@ -1302,7 +1340,7 @@ def test_restore_authority_terminalization_revokes_only_temporary_grants_and_ass
             catalog = _restore_authority_catalog(
                 adapter.RESTORE_TERMINAL_MEMBERSHIP_ROWS,
                 adapter.RESTORE_TERMINAL_SCHEMA_ACL,
-                adapter.RESTORE_SOURCE_EXTENSION_DEPENDENCY_FUNCTION_ACL,
+                adapter.RESTORE_SOURCE_EXTENSION_DEPENDENCY_FUNCTION_ACLS,
                 database=adapter.DATABASE,
                 schema_usage=True,
             )
@@ -1345,7 +1383,12 @@ def test_restore_authority_terminalization_validates_source_acl_before_mutation(
         catalog = _restore_authority_catalog(
             adapter.RESTORE_TRANSIENT_MEMBERSHIP_ROWS,
             adapter.RESTORE_BASELINE_SCHEMA_ACL,
-            (("supabase_admin", "privacy_workflow_owner", "EXECUTE", False),),
+            {
+                identity: (
+                    ("supabase_admin", "privacy_workflow_owner", "EXECUTE", False),
+                )
+                for identity in adapter.RESTORE_EXTENSION_DEPENDENCY_FUNCTIONS
+            },
             database=adapter.DATABASE,
             schema_usage=False,
         )
