@@ -811,6 +811,60 @@ PRE_DATA_SCHEMA_TOC = (
 TABLE_DATA_OWNER_COUNTS = (("postgres",59),("privacy_workflow_owner",46))
 TABLE_DATA_OWNERS = frozenset(owner for owner,_ in TABLE_DATA_OWNER_COUNTS)
 TABLE_DATA_TOC = re.compile(r"^(?P<dump_id>[1-9][0-9]*); (?P<table_oid>[0-9]+) (?P<object_oid>[0-9]+) TABLE DATA (?P<schema>\S+) (?P<name>\S+) (?P<owner>\S+)$")
+POST_DATA_OWNER_COUNTS = (("postgres",550),("privacy_workflow_owner",350),("supabase_admin",3),("supabase_auth_admin",128),("supabase_storage_admin",45))
+POST_DATA_OWNER_RUNS = (("supabase_auth_admin",33),("privacy_workflow_owner",97),("postgres",96),("supabase_storage_admin",9),("postgres",1),("supabase_auth_admin",56),("privacy_workflow_owner",26),("postgres",154),("supabase_storage_admin",8),("supabase_auth_admin",2),("privacy_workflow_owner",56),("postgres",41),("supabase_storage_admin",5),("supabase_auth_admin",18),("privacy_workflow_owner",61),("postgres",71),("supabase_storage_admin",5),("supabase_auth_admin",16),("privacy_workflow_owner",110),("postgres",180),("supabase_storage_admin",18),("supabase_auth_admin",3),("postgres",1),("supabase_admin",1),("postgres",1),("supabase_admin",1),("postgres",1),("supabase_admin",1),("postgres",4))
+POST_DATA_OWNERS = frozenset(owner for owner,_ in POST_DATA_OWNER_COUNTS)
+POST_DATA_TOC = re.compile(r"^(?P<dump_id>[1-9][0-9]*); (?P<catalog_oid>[0-9]+) (?P<object_oid>[0-9]+) (?P<body>\S(?:.*\S)?) (?P<owner>\S+)$")
+def _post_data_rows(raw):
+ if type(raw) is not bytes: raise RecoveryError("post-data archive TOC unavailable")
+ try: lines=raw.decode("utf-8").splitlines(keepends=True)
+ except UnicodeDecodeError as exc: raise RecoveryError("post-data archive TOC invalid") from exc
+ rows=[]; dump_ids=set()
+ for index,line in enumerate(lines):
+  body=line.rstrip("\r\n")
+  if not body or body.startswith(";"): continue
+  match=POST_DATA_TOC.fullmatch(body)
+  if match is None: raise RecoveryError("post-data archive TOC malformed")
+  dump_id=match.group("dump_id"); owner=match.group("owner")
+  if dump_id in dump_ids: raise RecoveryError("duplicate post-data archive TOC dump id")
+  if owner not in POST_DATA_OWNERS: raise RecoveryError("post-data archive TOC owner drift")
+  dump_ids.add(dump_id); rows.append((index,dump_id,owner))
+ return lines,tuple(rows)
+def _validate_post_data_contract(rows):
+ expected_counts=dict(POST_DATA_OWNER_COUNTS)
+ if len(expected_counts)!=len(POST_DATA_OWNER_COUNTS) or set(expected_counts)!=POST_DATA_OWNERS or any(type(owner) is not str or type(count) is not int or count<=0 for owner,count in POST_DATA_OWNER_COUNTS): raise RecoveryError("post-data owner count contract invalid")
+ if type(POST_DATA_OWNER_RUNS) is not tuple or len(POST_DATA_OWNER_RUNS)!=29 or any(type(run) is not tuple or len(run)!=2 or run[0] not in POST_DATA_OWNERS or type(run[1]) is not int or run[1]<=0 for run in POST_DATA_OWNER_RUNS): raise RecoveryError("post-data owner run contract invalid")
+ counts={owner:0 for owner in POST_DATA_OWNERS}; observed_runs=[]
+ for unused_index,unused_dump_id,owner in rows:
+  counts[owner]+=1
+  if observed_runs and observed_runs[-1][0]==owner: observed_runs[-1]=(owner,observed_runs[-1][1]+1)
+  else: observed_runs.append((owner,1))
+ if counts!=expected_counts: raise RecoveryError("post-data owner count drift")
+ if tuple(observed_runs)!=POST_DATA_OWNER_RUNS: raise RecoveryError("post-data owner run drift")
+def _validate_post_data_use_lists(raw,use_lists):
+ source_lines,source_rows=_post_data_rows(raw); _validate_post_data_contract(source_rows)
+ if type(use_lists) is not tuple or len(use_lists)!=len(POST_DATA_OWNER_RUNS): raise RecoveryError("post-data use-list coverage invalid")
+ selected=[]; cursor=0
+ for (expected_owner,expected_count),item in zip(POST_DATA_OWNER_RUNS,use_lists):
+  if type(item) is not tuple or len(item)!=2 or item[0]!=expected_owner or type(item[1]) is not bytes: raise RecoveryError("post-data use-list coverage invalid")
+  try: candidate_lines=item[1].decode("utf-8").splitlines(keepends=True)
+  except UnicodeDecodeError as exc: raise RecoveryError("post-data use-list invalid") from exc
+  if len(candidate_lines)!=len(source_lines): raise RecoveryError("post-data use-list coverage invalid")
+  active_indices={index for index,unused_dump_id,unused_owner in source_rows[cursor:cursor+expected_count]}
+  for index,(source,candidate) in enumerate(zip(source_lines,candidate_lines)):
+   expected=source if index in active_indices or not source.rstrip("\r\n") or source.startswith(";") else ";"+source
+   if candidate!=expected: raise RecoveryError("post-data use-list coverage invalid")
+  candidate_rows=_post_data_rows(item[1])[1]
+  if tuple(owner for unused_index,unused_dump_id,owner in candidate_rows)!=(expected_owner,)*expected_count: raise RecoveryError("post-data use-list coverage invalid")
+  selected.extend(dump_id for unused_index,dump_id,unused_owner in candidate_rows); cursor+=expected_count
+ if cursor!=len(source_rows) or tuple(selected)!=tuple(dump_id for unused_index,dump_id,unused_owner in source_rows) or len(selected)!=len(set(selected)): raise RecoveryError("post-data use-list coverage invalid")
+def _post_data_use_lists(raw):
+ lines,rows=_post_data_rows(raw); _validate_post_data_contract(rows); result=[]; cursor=0
+ for owner,count in POST_DATA_OWNER_RUNS:
+  active_indices={index for index,unused_dump_id,unused_owner in rows[cursor:cursor+count]}
+  payload="".join(line if index in active_indices or not line.rstrip("\r\n") or line.startswith(";") else ";"+line for index,line in enumerate(lines)).encode("utf-8")
+  result.append((owner,payload)); cursor+=count
+ result=tuple(result); _validate_post_data_use_lists(raw,result); return result
 def _pre_data_use_list(raw):
  if type(raw) is not bytes: raise RecoveryError("archive TOC unavailable")
  try: lines=raw.decode("utf-8").splitlines(keepends=True)
@@ -888,6 +942,24 @@ def _owned_restore_use_list(path,payload):
    _unlink_owned_output(fd,path,identity)
    os.close(fd)
   raise
+def _restore_post_data_runs(restore,plain_fd,plain,env,workspace,runs):
+ owned=[]
+ try:
+  if type(runs) is not tuple or tuple(owner for owner,unused_payload in runs)!=tuple(owner for owner,unused_count in POST_DATA_OWNER_RUNS): raise RecoveryError("post-data owner run contract invalid")
+  for index,(owner,payload) in enumerate(runs,1):
+   path=workspace/f"post-data-{index:02d}-{owner}.list"
+   fd,identity=_owned_restore_use_list(path,payload)
+   owned.append((owner,path,fd,identity))
+  for owner,path,unused_fd,unused_identity in owned:
+   _require_temporary_file_identity(plain_fd,plain)
+   for unused_owner,check_path,check_fd,unused_check_identity in owned: _require_temporary_file_identity(check_fd,check_path)
+   run([restore,"--section=post-data",f"--use-list={path}",f"--role={owner}","--dbname=service=g035-local",str(plain)],env=env)
+   _require_temporary_file_identity(plain_fd,plain)
+   for unused_owner,check_path,check_fd,unused_check_identity in owned: _require_temporary_file_identity(check_fd,check_path)
+ finally:
+  for unused_owner,path,fd,identity in reversed(owned):
+   _unlink_owned_output(fd,path,identity)
+   os.close(fd)
 
 PRIVACY_DATA_ROLE = "privacy_workflow_owner"
 PRIVACY_RELATION_STATE_SQL = "SELECT role.rolname,class.relrowsecurity,class.relforcerowsecurity,ARRAY(SELECT acl.privilege_type FROM pg_catalog.aclexplode(class.relacl) AS acl JOIN pg_catalog.pg_roles AS grantee ON grantee.oid=acl.grantee WHERE grantee.rolname=%s ORDER BY acl.privilege_type),pg_catalog.has_table_privilege(role.oid,class.oid,'INSERT') FROM pg_catalog.pg_class AS class JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid=class.relnamespace JOIN pg_catalog.pg_roles AS role ON role.oid=class.relowner WHERE namespace.nspname=%s AND class.relname=%s AND class.relkind IN ('r','p')"
@@ -990,10 +1062,13 @@ def run_restore_verify(args,manifest):
    _require_temporary_file_identity(plain_fd,plain)
    toc=run([restore,"--list",str(plain)],env=env)
    _require_temporary_file_identity(plain_fd,plain)
+   post_data_toc=run([restore,"--section=post-data","--list",str(plain)],env=env)
+   _require_temporary_file_identity(plain_fd,plain)
    use_list_fd,use_list_identity=_owned_pre_data_use_list(use_list,toc.stdout)
    postgres_data,privacy_data,privacy_relations=_data_use_lists(toc.stdout)
    postgres_data_list_fd,postgres_data_list_identity=_owned_restore_use_list(postgres_data_list,postgres_data)
    privacy_data_list_fd,privacy_data_list_identity=_owned_restore_use_list(privacy_data_list,privacy_data)
+   post_data_runs=_post_data_use_lists(post_data_toc.stdout)
    conn=_connect("g035-local",env)
    try:
     for schema in (LOCAL_REMEDIATION_SCHEMA,"public","auth","storage"): _query_conn(conn,f"DROP SCHEMA IF EXISTS {schema} CASCADE")
@@ -1033,10 +1108,8 @@ def run_restore_verify(args,manifest):
     conn.rollback()
     raise
    finally: conn.close()
-   _require_temporary_file_identity(plain_fd,plain)
-   run([restore,"--section=post-data","--dbname=service=g035-local",str(plain)],env=env)
+   _restore_post_data_runs(restore,plain_fd,plain,env,workspace,post_data_runs)
    restored_vector_schema=None
-   _require_temporary_file_identity(plain_fd,plain)
    conn=_connect("g035-local",env)
    try:
     restored_vector_schema=_normalize_restored_vector_extension(conn)
