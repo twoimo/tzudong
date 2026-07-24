@@ -326,8 +326,9 @@ class ControllerTests(unittest.TestCase):
    def is_symlink(self): return False
    def is_file(self): return True
    def stat(self): raise AssertionError("mode fallback")
-  with patch.object(recovery.os,"name","nt"),patch.object(recovery.subprocess,"run",side_effect=OSError()):
+  with patch.object(recovery.os,"name","nt"),patch.object(recovery,"_windows_dacl_restrictive",return_value=False) as native:
    self.assertFalse(recovery._restrictive(File()))
+  native.assert_called_once()
  def test_restrictive_directory_requires_real_directory_custody(self):
   if recovery.os.name=="nt": self.skipTest("POSIX mode custody assertion")
   with tempfile.TemporaryDirectory() as raw:
@@ -1031,32 +1032,39 @@ class ControllerTests(unittest.TestCase):
   for mutation in mutations:
    with self.subTest(mutation=mutation),self.assertRaises(recovery.RecoveryError):
     recovery._data_use_lists(mutation)
- def test_privacy_insert_window_preserves_heterogeneous_baseline_and_targets_exact_subset(self):
+ def test_privacy_insert_window_preserves_effective_insert_matrix_and_targets_exact_subset(self):
   relations=recovery._data_use_lists(SCHEMA_TOC)[2]
-  original={relation:(("INSERT","SELECT") if index%3==0 else ("DELETE","SELECT") if index%3==1 else ("SELECT",)) for index,relation in enumerate(relations)}
+  original={relation:((),True) if index%3==0 else (("DELETE","SELECT"),False) if index%3==1 else (("INSERT","SELECT"),True) for index,relation in enumerate(relations)}
   state=dict(original); statements=[]
   class Conn:
    def __init__(self): self.commits=0; self.rollbacks=0
    def commit(self): self.commits+=1
    def rollback(self): self.rollbacks+=1
   conn=Conn()
+  added=tuple(relation for relation in relations if not original[relation][1])
   def query(unused,sql,params=None):
    statements.append((sql,params))
    if sql==recovery.PRIVACY_RELATION_STATE_SQL:
-    relation=params[1:]
-    return [(recovery.PRIVACY_DATA_ROLE,False,True,list(state[relation]))]
+    privileges,effective_insert=state[params[1:]]
+    return [(recovery.PRIVACY_DATA_ROLE,False,True,list(privileges),effective_insert)]
    if sql.startswith("GRANT INSERT ON TABLE "):
-    for relation in relations:
-     if "INSERT" not in state[relation]: state[relation]=tuple(sorted((*state[relation],"INSERT")))
+    for relation in added:
+     privileges,unused_effective=state[relation]
+     state[relation]=(tuple(sorted((*privileges,"INSERT"))),True)
    if sql.startswith("REVOKE INSERT ON TABLE "):
-    for relation in added: state[relation]=tuple(privilege for privilege in state[relation] if privilege!="INSERT")
+    for relation in added:
+     privileges,unused_effective=state[relation]
+     state[relation]=(tuple(privilege for privilege in privileges if privilege!="INSERT"),False)
    return []
-  added=tuple(relation for relation in relations if "INSERT" not in original[relation])
   with patch.object(recovery,"_query_conn",side_effect=query):
    baseline,observed_added=recovery._open_privacy_insert_window(conn,relations)
    self.assertEqual(added,observed_added)
-   self.assertEqual(tuple((*relation,original[relation]) for relation in relations),baseline)
-   for relation in relations: self.assertEqual(tuple(sorted((*original[relation],"INSERT"))) if relation in added else original[relation],state[relation])
+   self.assertEqual(tuple((*relation,*original[relation]) for relation in relations),baseline)
+   for relation in relations:
+    privileges,effective_insert=state[relation]
+    self.assertTrue(effective_insert)
+    expected_privileges=tuple(sorted((*original[relation][0],"INSERT"))) if relation in added else original[relation][0]
+    self.assertEqual(expected_privileges,privileges)
    recovery._close_privacy_insert_window(conn,relations,baseline,observed_added)
   expected_targets=",".join(f'"{schema}"."{relation}"' for schema,relation in added)
   sql=[statement for statement,unused in statements]
@@ -1065,33 +1073,40 @@ class ControllerTests(unittest.TestCase):
   self.assertEqual(original,state)
   self.assertEqual(2,conn.commits); self.assertEqual(0,conn.rollbacks)
   self.assertIn("pg_catalog.aclexplode(class.relacl)",recovery.PRIVACY_RELATION_STATE_SQL)
+  self.assertIn("pg_catalog.has_table_privilege(role.oid,class.oid,'INSERT')",recovery.PRIVACY_RELATION_STATE_SQL)
   self.assertNotIn("DISTINCT",recovery.PRIVACY_RELATION_STATE_SQL)
   self.assertNotIn("COALESCE",recovery.PRIVACY_RELATION_STATE_SQL)
- def test_privacy_insert_window_issues_no_grant_or_revoke_when_all_baselines_have_insert(self):
+ def test_privacy_insert_window_issues_no_grant_or_revoke_when_all_effective_baselines_have_insert(self):
   relations=recovery._data_use_lists(SCHEMA_TOC)[2]; statements=[]
   class Conn:
    def commit(self): pass
    def rollback(self): pass
   def query(unused,sql,params=None):
    statements.append(sql)
-   if sql==recovery.PRIVACY_RELATION_STATE_SQL: return [(recovery.PRIVACY_DATA_ROLE,False,True,["INSERT","SELECT"])]
+   if sql==recovery.PRIVACY_RELATION_STATE_SQL:
+    privileges=[] if relations.index(params[1:])%2==0 else ["INSERT","SELECT"]
+    return [(recovery.PRIVACY_DATA_ROLE,False,True,privileges,True)]
    return []
   with patch.object(recovery,"_query_conn",side_effect=query):
    baseline,added=recovery._open_privacy_insert_window(Conn(),relations)
    recovery._close_privacy_insert_window(Conn(),relations,baseline,added)
   self.assertEqual((),added)
   self.assertFalse(any(sql.startswith(("GRANT INSERT","REVOKE INSERT")) for sql in statements))
- def test_privacy_insert_window_rejects_catalog_inventory_and_privilege_mutations(self):
+ def test_privacy_insert_window_rejects_catalog_inventory_privilege_and_boolean_mutations(self):
   relations=recovery._data_use_lists(SCHEMA_TOC)[2]
-  valid=(recovery.PRIVACY_DATA_ROLE,False,True,["DELETE","SELECT"])
+  valid=(recovery.PRIVACY_DATA_ROLE,False,True,["DELETE","SELECT"],False)
   mutations=(
    (),
-   (("postgres",False,True,["DELETE","SELECT"]),),
-   ((recovery.PRIVACY_DATA_ROLE,True,True,["DELETE","SELECT"]),),
-   ((recovery.PRIVACY_DATA_ROLE,False,False,["DELETE","SELECT"]),),
-   ((recovery.PRIVACY_DATA_ROLE,False,True,["CONNECT"]),),
-   ((recovery.PRIVACY_DATA_ROLE,False,True,["SELECT","DELETE"]),),
-   ((recovery.PRIVACY_DATA_ROLE,False,True,["SELECT","SELECT"]),),
+   (("postgres",False,True,["DELETE","SELECT"],False),),
+   ((recovery.PRIVACY_DATA_ROLE,True,True,["DELETE","SELECT"],False),),
+   ((recovery.PRIVACY_DATA_ROLE,False,False,["DELETE","SELECT"],False),),
+   ((recovery.PRIVACY_DATA_ROLE,False,True,["CONNECT"],False),),
+   ((recovery.PRIVACY_DATA_ROLE,False,True,["SELECT","DELETE"],False),),
+   ((recovery.PRIVACY_DATA_ROLE,False,True,["SELECT","SELECT"],False),),
+   ((recovery.PRIVACY_DATA_ROLE,False,True,["INSERT","SELECT"],False),),
+   ((recovery.PRIVACY_DATA_ROLE,False,True,["DELETE","SELECT"],None),),
+   ((recovery.PRIVACY_DATA_ROLE,False,True,["DELETE","SELECT"],1),),
+   ((recovery.PRIVACY_DATA_ROLE,False,True,["DELETE","SELECT"]),),
    (valid,valid),
   )
   for rows in mutations:
@@ -1101,27 +1116,34 @@ class ControllerTests(unittest.TestCase):
    recovery._read_privacy_relation_baseline(object(),relations[:-1])
  def test_privacy_insert_cleanup_detects_drift_and_still_revokes_only_added_subset(self):
   relations=recovery._data_use_lists(SCHEMA_TOC)[2]
-  baseline=tuple((*relation,("INSERT","SELECT") if index==0 else ("SELECT",)) for index,relation in enumerate(relations))
-  added=tuple(relations[1:]); state={(schema,relation):privileges for schema,relation,privileges in baseline}; state[relations[0]]=("INSERT",)
+  baseline=tuple((*relation,("INSERT","SELECT"),True) if index==0 else (*relation,("DELETE","SELECT"),False) for index,relation in enumerate(relations))
+  added=tuple(relations[1:])
+  state={(schema,relation):(tuple(sorted((*privileges,"INSERT"))),True) for schema,relation,privileges,effective_insert in baseline}
+  state[relations[0]]=(("INSERT",),True)
   statements=[]
   class Conn:
    def commit(self): statements.append("commit")
    def rollback(self): statements.append("rollback")
   def query(unused,sql,params=None):
    statements.append(sql)
-   if sql==recovery.PRIVACY_RELATION_STATE_SQL: return [(recovery.PRIVACY_DATA_ROLE,False,True,list(state[params[1:]]))]
+   if sql==recovery.PRIVACY_RELATION_STATE_SQL:
+    privileges,effective_insert=state[params[1:]]
+    return [(recovery.PRIVACY_DATA_ROLE,False,True,list(privileges),effective_insert)]
    if sql.startswith("REVOKE INSERT ON TABLE "):
-    for relation in added: state[relation]=tuple(privilege for privilege in state[relation] if privilege!="INSERT")
+    for relation in added:
+     privileges,unused_effective=state[relation]
+     state[relation]=(tuple(privilege for privilege in privileges if privilege!="INSERT"),False)
    return []
   with patch.object(recovery,"_query_conn",side_effect=query),self.assertRaisesRegex(recovery.RecoveryError,"privilege state"):
    recovery._close_privacy_insert_window(Conn(),relations,baseline,added)
-  self.assertEqual(("INSERT",),state[relations[0]])
-  self.assertEqual(("SELECT",),state[relations[1]])
-  self.assertTrue(any(sql.startswith("REVOKE INSERT ON TABLE ") for sql in statements if isinstance(sql,str)))
- def test_privacy_insert_cleanup_exactly_restores_baseline_after_failed_restore(self):
+  self.assertEqual((("INSERT",),True),state[relations[0]])
+  self.assertEqual((("DELETE","SELECT"),False),state[relations[1]])
+  expected_targets=",".join(f'"{schema}"."{relation}"' for schema,relation in added)
+  self.assertIn(f"REVOKE INSERT ON TABLE {expected_targets} FROM privacy_workflow_owner",statements)
+ def test_privacy_insert_cleanup_exactly_restores_direct_and_effective_baseline_after_failed_restore(self):
   relations=recovery._data_use_lists(SCHEMA_TOC)[2]
-  original={relation:(("INSERT","SELECT") if index==0 else ("DELETE","SELECT")) for index,relation in enumerate(relations)}
-  state=dict(original); connections=[]
+  original={relation:((),True) if index==0 else (("DELETE","SELECT"),False) for index,relation in enumerate(relations)}
+  state=dict(original); connections=[]; added=tuple(relations[1:])
   class Conn:
    def commit(self): pass
    def rollback(self): pass
@@ -1129,12 +1151,17 @@ class ControllerTests(unittest.TestCase):
   def connect(unused,env):
    connection=Conn(); connections.append(connection); return connection
   def query(unused,sql,params=None):
-   if sql==recovery.PRIVACY_RELATION_STATE_SQL: return [(recovery.PRIVACY_DATA_ROLE,False,True,list(state[params[1:]]))]
+   if sql==recovery.PRIVACY_RELATION_STATE_SQL:
+    privileges,effective_insert=state[params[1:]]
+    return [(recovery.PRIVACY_DATA_ROLE,False,True,list(privileges),effective_insert)]
    if sql.startswith("GRANT INSERT ON TABLE "):
-    for relation in relations:
-     if "INSERT" not in state[relation]: state[relation]=tuple(sorted((*state[relation],"INSERT")))
+    for relation in added:
+     privileges,unused_effective=state[relation]
+     state[relation]=(tuple(sorted((*privileges,"INSERT"))),True)
    if sql.startswith("REVOKE INSERT ON TABLE "):
-    for relation in relations[1:]: state[relation]=tuple(privilege for privilege in state[relation] if privilege!="INSERT")
+    for relation in added:
+     privileges,unused_effective=state[relation]
+     state[relation]=(tuple(privilege for privilege in privileges if privilege!="INSERT"),False)
    return []
   with patch.object(recovery,"_connect",side_effect=connect),patch.object(recovery,"_query_conn",side_effect=query),patch.object(recovery,"run",side_effect=recovery.RecoveryError("data restore failed")),self.assertRaisesRegex(recovery.RecoveryError,"data restore failed"):
    recovery._restore_privacy_data("pg_restore",Path("privacy.list"),Path("database.pgdump"),{},relations)
@@ -1171,7 +1198,7 @@ class ControllerTests(unittest.TestCase):
     exact=operation_args[0]
     if operation is recovery._open_privacy_insert_window:
      events.append(("privacy-insert",True,exact))
-     return tuple((*relation,()) for relation in exact),exact
+     return tuple((*relation,(),False) for relation in exact),exact
     events.append(("privacy-insert",False,exact))
    with patch.object(recovery,"sha256_file",return_value=capture["evidence"]["dump_sha256"]),patch.object(recovery,"_owned_identity_stream",return_value=io.BytesIO(b"key")),patch.object(recovery,"_require_prior",return_value=capture),patch.object(recovery,"command_exists",side_effect=lambda command:command),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"run",side_effect=execute),patch.object(recovery.subprocess,"run",side_effect=decrypt) as decrypt_run,patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",side_effect=query),patch.object(recovery,"_with_privacy_connection",side_effect=privacy_connection),patch.object(recovery,"_create_auth_user_placeholders"),patch.object(recovery,"_normalize_restored_vector_extension",return_value="public"),patch.object(recovery,"_fingerprints",return_value=observed):
     result=recovery.run_restore_verify(args,None)
@@ -1707,7 +1734,7 @@ class ControllerTests(unittest.TestCase):
   self.assertIn("source_row_sha256<>encode(digest(source_row_jsonb::text,'sha256'),'hex')",source)
   self.assertIn("digest(source_row_jsonb->>'target_url','sha256')",source)
   self.assertIn("information_schema.columns WHERE table_schema='g035_recovery_control'",source)
-  self.assertNotIn("has_table_privilege",source)
+  self.assertEqual(1,source.count("pg_catalog.has_table_privilege(role.oid,class.oid,'INSERT')"))
   self.assertNotIn("has_schema_privilege",source)
   self.assertIn("pg_catalog.aclexplode",source)
   self.assertIn("coalesce(namespace.nspacl,pg_catalog.acldefault('n',namespace.nspowner))",source)
