@@ -1073,6 +1073,7 @@ def run_restore_verify(args,manifest):
    try:
     for schema in (LOCAL_REMEDIATION_SCHEMA,"public","auth","storage"): _query_conn(conn,f"DROP SCHEMA IF EXISTS {schema} CASCADE")
     _query_conn(conn,"CREATE SCHEMA public AUTHORIZATION pg_database_owner")
+    _query_conn(conn,"GRANT USAGE ON SCHEMA public TO PUBLIC, anon, authenticated, service_role, postgres")
     _query_conn(conn,"GRANT USAGE, CREATE ON SCHEMA public TO privacy_workflow_owner")
     _query_conn(conn,"CREATE SCHEMA auth AUTHORIZATION supabase_admin")
     _query_conn(conn,"GRANT USAGE, CREATE ON SCHEMA auth TO supabase_auth_admin")
