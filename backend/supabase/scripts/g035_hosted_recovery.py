@@ -849,7 +849,7 @@ def _data_use_lists(raw):
  if type(raw) is not bytes: raise RecoveryError("archive TOC unavailable")
  try: lines=raw.decode("utf-8").splitlines(keepends=True)
  except UnicodeDecodeError as exc: raise RecoveryError("archive TOC invalid") from exc
- postgres_lines=list(lines); privacy_lines=list(lines); counts={owner:0 for owner in TABLE_DATA_OWNERS}; dump_ids=set(); relations=set()
+ postgres_lines=list(lines); privacy_lines=list(lines); counts={owner:0 for owner in TABLE_DATA_OWNERS}; dump_ids=set(); relations=set(); privacy_relations=[]
  for index,line in enumerate(lines):
   body=line.rstrip("\r\n")
   if not body or body.startswith(";"): continue
@@ -867,11 +867,12 @@ def _data_use_lists(raw):
   dump_ids.add(dump_id); relations.add(relation); counts[owner]+=1
   if owner=="privacy_workflow_owner":
    postgres_lines[index]=";"+line
+   privacy_relations.append(relation)
   else:
    privacy_lines[index]=";"+line
  expected=dict(TABLE_DATA_OWNER_COUNTS)
  if counts!=expected: raise RecoveryError("archive TABLE DATA owner count drift")
- return ("".join(postgres_lines).encode("utf-8"),"".join(privacy_lines).encode("utf-8"))
+ return ("".join(postgres_lines).encode("utf-8"),"".join(privacy_lines).encode("utf-8"),tuple(privacy_relations))
 
 def _owned_restore_use_list(path,payload):
  fd=None; identity=None
@@ -887,6 +888,54 @@ def _owned_restore_use_list(path,payload):
    _unlink_owned_output(fd,path,identity)
    os.close(fd)
   raise
+
+PRIVACY_DATA_ROLE = "privacy_workflow_owner"
+PRIVACY_RELATION_STATE_SQL = "SELECT role.rolname,class.relrowsecurity,class.relforcerowsecurity,ARRAY(SELECT DISTINCT acl.privilege_type FROM pg_catalog.aclexplode(COALESCE(class.relacl,'{}'::pg_catalog.aclitem[])) AS acl JOIN pg_catalog.pg_roles AS grantee ON grantee.oid=acl.grantee WHERE grantee.rolname=%s ORDER BY acl.privilege_type) FROM pg_catalog.pg_class AS class JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid=class.relnamespace JOIN pg_catalog.pg_roles AS role ON role.oid=class.relowner WHERE namespace.nspname=%s AND class.relname=%s AND class.relkind IN ('r','p')"
+def _quoted_identifier(value):
+ if type(value) is not str or not value or "\x00" in value: raise RecoveryError("privacy TABLE DATA inventory invalid")
+ return '"'+value.replace('"','""')+'"'
+def _privacy_relation_state(conn,relations,expected_privileges):
+ if type(relations) is not tuple or len(relations)!=dict(TABLE_DATA_OWNER_COUNTS)[PRIVACY_DATA_ROLE] or len(set(relations))!=len(relations) or any(type(relation) is not tuple or len(relation)!=2 for relation in relations): raise RecoveryError("privacy TABLE DATA inventory invalid")
+ expected=(PRIVACY_DATA_ROLE,False,True,list(expected_privileges))
+ for schema,relation in relations:
+  rows=_query_conn(conn,PRIVACY_RELATION_STATE_SQL,(PRIVACY_DATA_ROLE,schema,relation))
+  if rows!=[expected]: raise RecoveryError("privacy TABLE DATA privilege state invalid")
+def _privacy_insert_privilege(conn,relations,grant):
+ before=() if grant else ("INSERT",)
+ after=("INSERT",) if grant else ()
+ statement=("GRANT" if grant else "REVOKE")+" INSERT ON TABLE "+",".join(f"{_quoted_identifier(schema)}.{_quoted_identifier(relation)}" for schema,relation in relations)+(" TO " if grant else " FROM ")+PRIVACY_DATA_ROLE
+ try:
+  _query_conn(conn,"BEGIN")
+  if grant:
+   _privacy_relation_state(conn,relations,before)
+   _query_conn(conn,statement)
+   _privacy_relation_state(conn,relations,after)
+   conn.commit()
+   return
+  precondition_error=None
+  try: _privacy_relation_state(conn,relations,before)
+  except Exception as exc: precondition_error=exc
+  _query_conn(conn,statement)
+  readback_error=None
+  try: _privacy_relation_state(conn,relations,after)
+  except Exception as exc: readback_error=exc
+  conn.commit()
+  if precondition_error is not None: raise precondition_error
+  if readback_error is not None: raise readback_error
+ except Exception:
+  conn.rollback()
+  raise
+def _set_privacy_insert_privilege(env,relations,grant):
+ conn=_connect(LOCAL_SERVICE,env)
+ try: _privacy_insert_privilege(conn,relations,grant)
+ finally: conn.close()
+def _restore_privacy_data(restore,use_list,plain,env,relations):
+ _set_privacy_insert_privilege(env,relations,True)
+ try:
+  run([restore,"--section=data",f"--use-list={use_list}","--role=privacy_workflow_owner","--dbname=service=g035-local",str(plain)],env=env)
+ finally:
+  _set_privacy_insert_privilege(env,relations,False)
+
 
 
 
@@ -912,7 +961,7 @@ def run_restore_verify(args,manifest):
    toc=run([restore,"--list",str(plain)],env=env)
    _require_temporary_file_identity(plain_fd,plain)
    use_list_fd,use_list_identity=_owned_pre_data_use_list(use_list,toc.stdout)
-   postgres_data,privacy_data=_data_use_lists(toc.stdout)
+   postgres_data,privacy_data,privacy_relations=_data_use_lists(toc.stdout)
    postgres_data_list_fd,postgres_data_list_identity=_owned_restore_use_list(postgres_data_list,postgres_data)
    privacy_data_list_fd,privacy_data_list_identity=_owned_restore_use_list(privacy_data_list,privacy_data)
    conn=_connect("g035-local",env)
@@ -944,7 +993,7 @@ def run_restore_verify(args,manifest):
    run([restore,"--section=data",f"--use-list={postgres_data_list}","--role=postgres","--dbname=service=g035-local",str(plain)],env=env)
    _require_temporary_file_identity(postgres_data_list_fd,postgres_data_list)
    _require_temporary_file_identity(privacy_data_list_fd,privacy_data_list)
-   run([restore,"--section=data",f"--use-list={privacy_data_list}","--role=privacy_workflow_owner","--dbname=service=g035-local",str(plain)],env=env)
+   _restore_privacy_data(restore,privacy_data_list,plain,env,privacy_relations)
    _require_temporary_file_identity(postgres_data_list_fd,postgres_data_list)
    _require_temporary_file_identity(privacy_data_list_fd,privacy_data_list)
    conn=_connect("g035-local",env)
