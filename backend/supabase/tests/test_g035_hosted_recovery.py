@@ -9,7 +9,7 @@ recovery_source._establish_isolated_bootstrap(Path(__file__).parents[3],"a"*40,"
 import g035_hosted_recovery_contract as contract
 spec=importlib.util.spec_from_file_location("recovery",SCRIPTS/"g035_hosted_recovery.py"); recovery=importlib.util.module_from_spec(spec); spec.loader.exec_module(recovery)
 ROOT=Path(__file__).parents[3]
-SCHEMA_TOC=(
+SCHEMA_ONLY_TOC=(
  b"; Archive created at 2026-07-23\n"
  b"10; 2615 2200 SCHEMA - public pg_database_owner\n"
  b"11; 0 0 COMMENT - SCHEMA public pg_database_owner\n"
@@ -17,6 +17,13 @@ SCHEMA_TOC=(
  b"13; 2615 16400 SCHEMA - auth supabase_admin\n"
  b"14; 2615 16401 SCHEMA - storage supabase_admin\n"
 )
+POSTGRES_TABLE_DATA=tuple(f"{1000+index}; 0 {2000+index} TABLE DATA public postgres_{index} postgres\n".encode() for index in range(59))
+PRIVACY_TABLE_DATA=tuple(f"{1100+index}; 0 {2100+index} TABLE DATA privacy_retention privacy_{index} privacy_workflow_owner\n".encode() for index in range(46))
+NON_TABLE_DATA=(
+ b"1200; 0 0 SEQUENCE SET public canonical_id_seq postgres\n"
+ b"1201; 0 2201 MATERIALIZED VIEW DATA public canonical_rollup postgres\n"
+)
+SCHEMA_TOC=SCHEMA_ONLY_TOC+b"".join(POSTGRES_TABLE_DATA+PRIVACY_TABLE_DATA)+NON_TABLE_DATA
 OLD_REMEDIATION_PUBLIC_KEY_PEM="-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEA1aTLvmOtTWC1LZTYK8ocOBGlhWnC6k8a/ePCKSFdWPI=\n-----END PUBLIC KEY-----\n"
 PINNED_SUPABASE_CA=b"""-----BEGIN CERTIFICATE-----
 MIIDxDCCAqygAwIBAgIUbLxMod62P2ktCiAkxnKJwtE9VPYwDQYJKoZIhvcNAQEL
@@ -995,6 +1002,34 @@ class ControllerTests(unittest.TestCase):
   for mutation in mutations:
    with self.subTest(mutation=mutation),self.assertRaisesRegex(recovery.RecoveryError,"schema TOC drift"):
     recovery._pre_data_use_list(mutation)
+ def test_data_use_lists_partition_exact_source_pinned_owners_and_all_other_data_once(self):
+  postgres,privacy=recovery._data_use_lists(SCHEMA_TOC)
+  self.assertEqual((postgres,privacy),recovery._data_use_lists(SCHEMA_TOC))
+  for entry in POSTGRES_TABLE_DATA:
+   self.assertIn(entry,postgres)
+   self.assertIn(b";"+entry,privacy)
+  for entry in PRIVACY_TABLE_DATA:
+   self.assertIn(b";"+entry,postgres)
+   self.assertIn(entry,privacy)
+  for entry in NON_TABLE_DATA.splitlines(keepends=True):
+   self.assertIn(entry,postgres)
+   self.assertIn(b";"+entry,privacy)
+  self.assertEqual(59,sum(not line.startswith(b";") and b" TABLE DATA " in line for line in postgres.splitlines()))
+  self.assertEqual(46,sum(not line.startswith(b";") and b" TABLE DATA " in line for line in privacy.splitlines()))
+
+ def test_data_use_lists_reject_owner_count_owner_alias_managed_data_and_classification_drift(self):
+  mutations=(
+   SCHEMA_TOC.replace(POSTGRES_TABLE_DATA[0],b"",1),
+   SCHEMA_TOC.replace(b" postgres\n",b" rds_superuser\n",1),
+   SCHEMA_TOC.replace(b"privacy_retention privacy_0",b"auth privacy_0",1),
+   SCHEMA_TOC.replace(b"TABLE DATA public postgres_0",b"TABLE  DATA public postgres_0",1),
+   SCHEMA_TOC.replace(b"public postgres_58 postgres",b"public postgres_0 postgres",1),
+   SCHEMA_TOC.replace(b"1058; 0 2058 TABLE DATA",b"1000; 0 2058 TABLE DATA",1),
+   SCHEMA_TOC.replace(b"privacy_workflow_owner\n",b"privacy_workflow_owner extra\n",1),
+  )
+  for mutation in mutations:
+   with self.subTest(mutation=mutation),self.assertRaises(recovery.RecoveryError):
+    recovery._data_use_lists(mutation)
  def test_restore_verify_passes_only_stdin_identity_to_age(self):
   class Conn:
    def commit(self): pass
@@ -1005,10 +1040,14 @@ class ControllerTests(unittest.TestCase):
    dump=Path(raw)/"dump.enc"; dump.write_bytes(b"ciphertext")
    args=Namespace(destination_service="g035-local",capture_receipt="capture",dump=str(dump),decrypt_command="age",pg_restore="pg_restore",service_file=str(self.service(raw)),identity_fd="3",identity_handle=None)
    capture={"receipt_sha256":"capture-receipt","evidence":{"recipient_fingerprint":contract.APPROVED_AGE_RECIPIENT_SHA256,"dump_sha256":hashlib.sha256(b"ciphertext").hexdigest(),"extension_scope":[{"name":name,"schema":schema} for name,schema in recovery.RECOVERY_EXTENSIONS],**self.managed_capture_scope(),**observed}}
-   events=[]
+   events=[]; data_use_lists={}; restore_paths=[]
    def execute(argv,**kwargs):
     self.assertEqual("pg_restore",argv[0])
     events.append(("restore",tuple(argv)))
+    for argument in argv:
+     if argument.startswith("--use-list="):
+      path=Path(argument.split("=",1)[1]); restore_paths.append(path)
+      if "--section=data" in argv: data_use_lists[next(item for item in argv if item.startswith("--role="))]=path.read_bytes()
     return subprocess.CompletedProcess(argv,0,stdout=SCHEMA_TOC if "--list" in argv else b"",stderr=b"")
    def decrypt(argv,**kwargs):
     self.assertEqual(["age","--decrypt","--identity","-",str(dump)],argv)
@@ -1036,6 +1075,7 @@ class ControllerTests(unittest.TestCase):
    extensions_dashboard_index=next(index for index,event in enumerate(events) if event==("sql","GRANT USAGE, CREATE ON SCHEMA extensions TO dashboard_user"))
    extensions_admin_index=next(index for index,event in enumerate(events) if event==("sql","GRANT USAGE, CREATE ON SCHEMA extensions TO supabase_admin"))
    pre_index=next(index for index,event in enumerate(events) if event[0]=="restore" and "--section=pre-data" in event[1])
+   data_indices=[index for index,event in enumerate(events) if event[0]=="restore" and "--section=data" in event[1]]
    post_index=next(index for index,event in enumerate(events) if event[0]=="restore" and "--section=post-data" in event[1])
    self.assertLess(list_index,drop_index)
    self.assertLess(drop_index,create_index)
@@ -1052,11 +1092,40 @@ class ControllerTests(unittest.TestCase):
    self.assertLess(extensions_public_index,extensions_dashboard_index)
    self.assertLess(extensions_dashboard_index,extensions_admin_index)
    self.assertLess(extensions_admin_index,pre_index)
+   self.assertEqual(2,len(data_indices))
+   self.assertLess(pre_index,data_indices[0])
+   self.assertLess(data_indices[0],data_indices[1])
+   self.assertLess(data_indices[1],post_index)
+   plain_path=events[data_indices[0]][1][-1]
+   postgres_list=next(argument.split("=",1)[1] for argument in events[data_indices[0]][1] if argument.startswith("--use-list="))
+   privacy_list=next(argument.split("=",1)[1] for argument in events[data_indices[1]][1] if argument.startswith("--use-list="))
+   self.assertEqual(("pg_restore","--section=data",f"--use-list={postgres_list}","--role=postgres","--dbname=service=g035-local",plain_path),events[data_indices[0]][1])
+   self.assertEqual(("pg_restore","--section=data",f"--use-list={privacy_list}","--role=privacy_workflow_owner","--dbname=service=g035-local",plain_path),events[data_indices[1]][1])
+   self.assertEqual(recovery._data_use_lists(SCHEMA_TOC),(data_use_lists["--role=postgres"],data_use_lists["--role=privacy_workflow_owner"]))
+   self.assertTrue(all(not path.exists() for path in restore_paths))
+   for event in events:
+    if event[0]=="restore":
+     self.assertNotIn("--no-owner",event[1])
+     self.assertNotIn("--no-acl",event[1])
+     self.assertNotIn("--disable-triggers",event[1])
    self.assertLess(pre_index,post_index)
    pre_argv=events[pre_index][1]
    self.assertEqual(1,sum(argument.startswith("--use-list=") for argument in pre_argv))
    self.assertNotIn("--no-owner",pre_argv)
    self.assertNotIn("--no-acl",pre_argv)
+ def test_owned_restore_use_list_preserves_existing_file_and_cleanup_is_identity_safe(self):
+  with tempfile.TemporaryDirectory() as raw:
+   first=Path(raw)/"postgres.list"; second=Path(raw)/"privacy.list"
+   fd,identity=recovery._owned_restore_use_list(first,b"postgres")
+   try:
+    second.write_bytes(b"occupied")
+    with self.assertRaises(recovery.RecoveryError):
+     recovery._owned_restore_use_list(second,b"privacy")
+   finally:
+    recovery._unlink_owned_output(fd,first,identity)
+    os.close(fd)
+   self.assertFalse(first.exists())
+   self.assertEqual(b"occupied",second.read_bytes())
  def test_restore_preserves_hosted_vector_extension_schema(self):
   queries=[]
   with patch.object(recovery,"_query_conn",side_effect=lambda unused,sql: queries.append(sql) or [("public",)]):
