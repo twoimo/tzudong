@@ -24,6 +24,10 @@ NON_TABLE_DATA=(
  b"1201; 0 2201 MATERIALIZED VIEW DATA public canonical_rollup postgres\n"
 )
 SCHEMA_TOC=SCHEMA_ONLY_TOC+b"".join(POSTGRES_TABLE_DATA+PRIVACY_TABLE_DATA)+NON_TABLE_DATA
+EXPECTED_POST_DATA_OWNER_COUNTS=(("postgres",550),("privacy_workflow_owner",350),("supabase_admin",3),("supabase_auth_admin",128),("supabase_storage_admin",45))
+EXPECTED_POST_DATA_OWNER_RUNS=(("supabase_auth_admin",33),("privacy_workflow_owner",97),("postgres",96),("supabase_storage_admin",9),("postgres",1),("supabase_auth_admin",56),("privacy_workflow_owner",26),("postgres",154),("supabase_storage_admin",8),("supabase_auth_admin",2),("privacy_workflow_owner",56),("postgres",41),("supabase_storage_admin",5),("supabase_auth_admin",18),("privacy_workflow_owner",61),("postgres",71),("supabase_storage_admin",5),("supabase_auth_admin",16),("privacy_workflow_owner",110),("postgres",180),("supabase_storage_admin",18),("supabase_auth_admin",3),("postgres",1),("supabase_admin",1),("postgres",1),("supabase_admin",1),("postgres",1),("supabase_admin",1),("postgres",4))
+POST_DATA_ROWS=tuple(f"{3000+index}; {12000+index} {22000+index} CONSTRAINT public object_{index} constraint_{index} {owner}\n".encode() for index,owner in enumerate(owner for owner,count in EXPECTED_POST_DATA_OWNER_RUNS for unused in range(count)))
+POST_DATA_TOC_BYTES=b"; canonical post-data TOC\n\n"+b"".join(POST_DATA_ROWS)+b"; canonical trailer\n"
 OLD_REMEDIATION_PUBLIC_KEY_PEM="-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEA1aTLvmOtTWC1LZTYK8ocOBGlhWnC6k8a/ePCKSFdWPI=\n-----END PUBLIC KEY-----\n"
 PINNED_SUPABASE_CA=b"""-----BEGIN CERTIFICATE-----
 MIIDxDCCAqygAwIBAgIUbLxMod62P2ktCiAkxnKJwtE9VPYwDQYJKoZIhvcNAQEL
@@ -1032,6 +1036,61 @@ class ControllerTests(unittest.TestCase):
   for mutation in mutations:
    with self.subTest(mutation=mutation),self.assertRaises(recovery.RecoveryError):
     recovery._data_use_lists(mutation)
+ def test_post_data_use_lists_pin_exact_totals_runs_order_and_canonical_bytes(self):
+  self.assertEqual(EXPECTED_POST_DATA_OWNER_COUNTS,recovery.POST_DATA_OWNER_COUNTS)
+  self.assertEqual(EXPECTED_POST_DATA_OWNER_RUNS,recovery.POST_DATA_OWNER_RUNS)
+  use_lists=recovery._post_data_use_lists(POST_DATA_TOC_BYTES)
+  self.assertEqual(tuple(owner for owner,unused in use_lists),tuple(owner for owner,unused in EXPECTED_POST_DATA_OWNER_RUNS))
+  self.assertEqual(29,len(use_lists))
+  source_lines=POST_DATA_TOC_BYTES.splitlines(keepends=True); selected=[]
+  for (owner,count),(actual_owner,payload) in zip(EXPECTED_POST_DATA_OWNER_RUNS,use_lists):
+   self.assertEqual(owner,actual_owner)
+   candidate_lines=payload.splitlines(keepends=True)
+   self.assertEqual(len(source_lines),len(candidate_lines))
+   self.assertTrue(all(candidate==source or candidate==b";"+source for source,candidate in zip(source_lines,candidate_lines)))
+   active=[line for line in candidate_lines if line.strip() and not line.startswith(b";")]
+   self.assertEqual(count,len(active)); self.assertTrue(all(line.rstrip().endswith(b" "+owner.encode()) for line in active))
+   selected.extend(int(line.split(b";",1)[0]) for line in active)
+   self.assertEqual(b"; canonical post-data TOC\n\n",b"".join(candidate_lines[:2]))
+   self.assertEqual(b"; canonical trailer\n",candidate_lines[-1])
+  self.assertEqual([3000+index for index in range(len(POST_DATA_ROWS))],selected)
+ def test_post_data_toc_rejects_malformed_duplicate_unknown_owner_count_and_run_drift(self):
+  malformed=(
+   POST_DATA_TOC_BYTES.replace(b"3000;",b"0;",1),
+   POST_DATA_TOC_BYTES.replace(b"12000 22000",b"x 22000",1),
+   POST_DATA_TOC_BYTES.replace(POST_DATA_ROWS[0],b"3000; 12000 22000 supabase_auth_admin\n",1),
+   POST_DATA_TOC_BYTES.replace(b"supabase_auth_admin\n",b"rds_superuser\n",1),
+   POST_DATA_TOC_BYTES.replace(b"3001;",b"3000;",1),
+   POST_DATA_TOC_BYTES.replace(POST_DATA_ROWS[0],b"",1),
+   POST_DATA_TOC_BYTES.replace(b"supabase_auth_admin\n",b"privacy_workflow_owner\n",1),
+  )
+  for raw in malformed:
+   with self.subTest(raw=raw[:100]),self.assertRaises(recovery.RecoveryError):
+    recovery._post_data_use_lists(raw)
+  runs=list(EXPECTED_POST_DATA_OWNER_RUNS); runs[0]=("supabase_auth_admin",32); runs[1]=("privacy_workflow_owner",98)
+  with patch.object(recovery,"POST_DATA_OWNER_RUNS",tuple(runs)),self.assertRaisesRegex(recovery.RecoveryError,"run drift"):
+   recovery._post_data_use_lists(POST_DATA_TOC_BYTES)
+  counts=list(EXPECTED_POST_DATA_OWNER_COUNTS); counts[0]=("postgres",549)
+  with patch.object(recovery,"POST_DATA_OWNER_COUNTS",tuple(counts)),self.assertRaisesRegex(recovery.RecoveryError,"count drift"):
+   recovery._post_data_use_lists(POST_DATA_TOC_BYTES)
+ def test_post_data_use_list_validation_rejects_omission_duplication_and_owner_mutation(self):
+  valid=recovery._post_data_use_lists(POST_DATA_TOC_BYTES)
+  owner,payload=valid[0]; omitted=((owner,payload.replace(POST_DATA_ROWS[0],b";"+POST_DATA_ROWS[0],1)),)+valid[1:]
+  with self.assertRaisesRegex(recovery.RecoveryError,"coverage"):
+   recovery._validate_post_data_use_lists(POST_DATA_TOC_BYTES,omitted)
+  second_run_row=POST_DATA_ROWS[EXPECTED_POST_DATA_OWNER_RUNS[0][1]]
+  duplicated=((owner,payload.replace(b";"+second_run_row,second_run_row,1)),)+valid[1:]
+  with self.assertRaisesRegex(recovery.RecoveryError,"coverage"):
+   recovery._validate_post_data_use_lists(POST_DATA_TOC_BYTES,duplicated)
+  mutated=(("postgres",valid[0][1]),)+valid[1:]
+  with self.assertRaisesRegex(recovery.RecoveryError,"coverage"):
+   recovery._validate_post_data_use_lists(POST_DATA_TOC_BYTES,mutated)
+ def test_post_data_source_requires_canonical_section_list_owner_runs_and_no_monolithic_fallback(self):
+  source=(SCRIPTS/"g035_hosted_recovery.py").read_text(encoding="utf-8")
+  self.assertIn('post_data_toc=run([restore,"--section=post-data","--list",str(plain)]',source)
+  self.assertIn('run([restore,"--section=post-data",f"--use-list={path}",f"--role={owner}","--dbname=service=g035-local",str(plain)]',source)
+  self.assertNotIn('run([restore,"--section=post-data","--dbname=service=g035-local",str(plain)]',source)
+  self.assertNotIn("--no-owner",source); self.assertNotIn("--no-acl",source)
  def test_privacy_insert_window_preserves_effective_insert_matrix_and_targets_exact_subset(self):
   relations=recovery._data_use_lists(SCHEMA_TOC)[2]
   original={relation:((),True) if index%3==0 else (("DELETE","SELECT"),False) if index%3==1 else (("INSERT","SELECT"),True) for index,relation in enumerate(relations)}
@@ -1177,7 +1236,7 @@ class ControllerTests(unittest.TestCase):
    dump=Path(raw)/"dump.enc"; dump.write_bytes(b"ciphertext")
    args=Namespace(destination_service="g035-local",capture_receipt="capture",dump=str(dump),decrypt_command="age",pg_restore="pg_restore",service_file=str(self.service(raw)),identity_fd="3",identity_handle=None)
    capture={"receipt_sha256":"capture-receipt","evidence":{"recipient_fingerprint":contract.APPROVED_AGE_RECIPIENT_SHA256,"dump_sha256":hashlib.sha256(b"ciphertext").hexdigest(),"extension_scope":[{"name":name,"schema":schema} for name,schema in recovery.RECOVERY_EXTENSIONS],**self.managed_capture_scope(),**observed}}
-   events=[]; data_use_lists={}; restore_paths=[]
+   events=[]; data_use_lists={}; post_use_lists=[]; restore_paths=[]
    def execute(argv,**kwargs):
     self.assertEqual("pg_restore",argv[0])
     events.append(("restore",tuple(argv)))
@@ -1185,7 +1244,9 @@ class ControllerTests(unittest.TestCase):
      if argument.startswith("--use-list="):
       path=Path(argument.split("=",1)[1]); restore_paths.append(path)
       if "--section=data" in argv: data_use_lists[next(item for item in argv if item.startswith("--role="))]=path.read_bytes()
-    return subprocess.CompletedProcess(argv,0,stdout=SCHEMA_TOC if "--list" in argv else b"",stderr=b"")
+      if "--section=post-data" in argv: post_use_lists.append((next(item for item in argv if item.startswith("--role=")),path.read_bytes()))
+    stdout=POST_DATA_TOC_BYTES if "--list" in argv and "--section=post-data" in argv else SCHEMA_TOC if "--list" in argv else b""
+    return subprocess.CompletedProcess(argv,0,stdout=stdout,stderr=b"")
    def decrypt(argv,**kwargs):
     self.assertEqual(["age","--decrypt","--identity","-",str(dump)],argv)
     self.assertIsInstance(kwargs["stdin"],io.BytesIO)
@@ -1204,7 +1265,8 @@ class ControllerTests(unittest.TestCase):
     result=recovery.run_restore_verify(args,None)
    self.assertEqual(["age","--decrypt","--identity","-",str(dump)],decrypt_run.call_args.args[0])
    self.assertNotIn("key",json.dumps(result))
-   list_index=next(index for index,event in enumerate(events) if event[0]=="restore" and "--list" in event[1])
+   list_index=next(index for index,event in enumerate(events) if event[0]=="restore" and event[1][1]=="--list")
+   post_toc_index=next(index for index,event in enumerate(events) if event[0]=="restore" and event[1][1:3]==("--section=post-data","--list"))
    drop_index=next(index for index,event in enumerate(events) if event==("sql","DROP SCHEMA IF EXISTS public CASCADE"))
    create_index=next(index for index,event in enumerate(events) if event==("sql","CREATE SCHEMA public AUTHORIZATION pg_database_owner"))
    grant_index=next(index for index,event in enumerate(events) if event==("sql","GRANT USAGE, CREATE ON SCHEMA public TO privacy_workflow_owner"))
@@ -1219,8 +1281,10 @@ class ControllerTests(unittest.TestCase):
    extensions_admin_index=next(index for index,event in enumerate(events) if event==("sql","GRANT USAGE, CREATE ON SCHEMA extensions TO supabase_admin"))
    pre_index=next(index for index,event in enumerate(events) if event[0]=="restore" and "--section=pre-data" in event[1])
    data_indices=[index for index,event in enumerate(events) if event[0]=="restore" and "--section=data" in event[1]]
-   post_index=next(index for index,event in enumerate(events) if event[0]=="restore" and "--section=post-data" in event[1])
+   post_indices=[index for index,event in enumerate(events) if event[0]=="restore" and "--section=post-data" in event[1] and "--list" not in event[1]]
+   post_index=post_indices[0]
    self.assertLess(list_index,drop_index)
+   self.assertLess(list_index,post_toc_index); self.assertLess(post_toc_index,drop_index)
    self.assertLess(drop_index,create_index)
    self.assertLess(create_index,grant_index)
    self.assertLess(grant_index,auth_create_index)
@@ -1239,6 +1303,8 @@ class ControllerTests(unittest.TestCase):
    self.assertLess(pre_index,data_indices[0])
    self.assertLess(data_indices[0],data_indices[1])
    self.assertLess(data_indices[1],post_index)
+   self.assertEqual(29,len(post_indices))
+   self.assertEqual(list(range(post_indices[0],post_indices[-1]+1)),post_indices)
    plain_path=events[data_indices[0]][1][-1]
    postgres_list=next(argument.split("=",1)[1] for argument in events[data_indices[0]][1] if argument.startswith("--use-list="))
    privacy_list=next(argument.split("=",1)[1] for argument in events[data_indices[1]][1] if argument.startswith("--use-list="))
@@ -1246,6 +1312,12 @@ class ControllerTests(unittest.TestCase):
    self.assertEqual(("pg_restore","--section=data",f"--use-list={privacy_list}","--role=privacy_workflow_owner","--dbname=service=g035-local",plain_path),events[data_indices[1]][1])
    expected_postgres,expected_privacy,expected_relations=recovery._data_use_lists(SCHEMA_TOC)
    self.assertEqual((expected_postgres,expected_privacy),(data_use_lists["--role=postgres"],data_use_lists["--role=privacy_workflow_owner"]))
+   expected_post_runs=recovery._post_data_use_lists(POST_DATA_TOC_BYTES)
+   self.assertEqual(tuple(("--role="+owner,payload) for owner,payload in expected_post_runs),tuple(post_use_lists))
+   for index,((owner,unused_count),event_index) in enumerate(zip(EXPECTED_POST_DATA_OWNER_RUNS,post_indices),1):
+    path=next(argument.split("=",1)[1] for argument in events[event_index][1] if argument.startswith("--use-list="))
+    self.assertEqual(("pg_restore","--section=post-data",f"--use-list={path}",f"--role={owner}","--dbname=service=g035-local",plain_path),events[event_index][1])
+   self.assertFalse(any(event[0]=="restore" and event[1]==("pg_restore","--section=post-data","--dbname=service=g035-local",plain_path) for event in events))
    grant_event=events.index(("privacy-insert",True,expected_relations)); revoke_event=events.index(("privacy-insert",False,expected_relations))
    self.assertLess(data_indices[0],grant_event)
    self.assertLess(grant_event,data_indices[1])
@@ -1275,6 +1347,24 @@ class ControllerTests(unittest.TestCase):
     os.close(fd)
    self.assertFalse(first.exists())
    self.assertEqual(b"occupied",second.read_bytes())
+ def test_post_data_run_identity_drift_and_invocation_failure_delete_every_owned_list(self):
+  runs=recovery._post_data_use_lists(POST_DATA_TOC_BYTES)
+  for mode in ("failure","drift"):
+   with self.subTest(mode=mode),tempfile.TemporaryDirectory() as raw:
+    workspace=Path(raw); plain=workspace/"database.pgdump"; plain_fd,plain_identity=recovery._owned_output(plain,"plaintext restore")
+    try:
+     os.write(plain_fd,b"plain"); os.fsync(plain_fd)
+     def execute(argv,**unused):
+      if mode=="failure": raise recovery.RecoveryError("post-data invocation failed")
+      paths=sorted(workspace.glob("post-data-*.list"))
+      os.chmod(paths[-1],0o644)
+      return subprocess.CompletedProcess(argv,0,stdout=b"",stderr=b"")
+     expected="post-data invocation failed" if mode=="failure" else "custody lost"
+     with patch.object(recovery,"run",side_effect=execute),self.assertRaisesRegex(recovery.RecoveryError,expected):
+      recovery._restore_post_data_runs("pg_restore",plain_fd,plain,{},workspace,runs)
+     self.assertEqual([],list(workspace.glob("post-data-*.list")))
+    finally:
+     recovery._unlink_owned_output(plain_fd,plain,plain_identity); os.close(plain_fd)
  def test_restore_preserves_hosted_vector_extension_schema(self):
   queries=[]
   with patch.object(recovery,"_query_conn",side_effect=lambda unused,sql: queries.append(sql) or [("public",)]):
@@ -1438,8 +1528,8 @@ class ControllerTests(unittest.TestCase):
    capture={"receipt_sha256":"capture-receipt","evidence":{"recipient_fingerprint":contract.APPROVED_AGE_RECIPIENT_SHA256,"dump_sha256":hashlib.sha256(b"ciphertext").hexdigest(),"extension_scope":[{"name":"pg_trgm","schema":"extensions"},{"name":"uuid-ossp","schema":"extensions"},{"name":"btree_gin","schema":"extensions"},{"name":"vector","schema":"public"},{"name":"pgcrypto","schema":"extensions"}],**self.managed_capture_scope(),**observed}}
    def execute(argv,**unused):
     if "--list" in argv:
-     events.append("pg_restore --list")
-     return subprocess.CompletedProcess(argv,0,stdout=SCHEMA_TOC,stderr=b"")
+     events.append("pg_restore post-data --list" if "--section=post-data" in argv else "pg_restore --list")
+     return subprocess.CompletedProcess(argv,0,stdout=POST_DATA_TOC_BYTES if "--section=post-data" in argv else SCHEMA_TOC,stderr=b"")
     events.append("pg_restore pre-data")
     raise recovery.RecoveryError("external command failed")
    def decrypt(argv,**kwargs):
@@ -1449,6 +1539,8 @@ class ControllerTests(unittest.TestCase):
     recovery.run_restore_verify(args,None)
   self.assertLess(events.index("fence"),events.index("pg_restore --list"))
   self.assertLess(events.index("pg_restore --list"),events.index("DROP SCHEMA IF EXISTS public CASCADE"))
+  self.assertLess(events.index("pg_restore --list"),events.index("pg_restore post-data --list"))
+  self.assertLess(events.index("pg_restore post-data --list"),events.index("DROP SCHEMA IF EXISTS public CASCADE"))
   self.assertLess(events.index("DROP SCHEMA IF EXISTS public CASCADE"),events.index("DROP SCHEMA IF EXISTS auth CASCADE"))
   self.assertLess(events.index("DROP SCHEMA IF EXISTS auth CASCADE"),events.index("DROP SCHEMA IF EXISTS storage CASCADE"))
   self.assertLess(events.index("DROP SCHEMA IF EXISTS storage CASCADE"),events.index("CREATE SCHEMA public AUTHORIZATION pg_database_owner"))
