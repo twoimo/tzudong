@@ -808,11 +808,21 @@ PRE_DATA_SCHEMA_TOC = (
  ("auth","supabase_admin"),
  ("storage","supabase_admin"),
 )
-TABLE_DATA_OWNER_COUNTS = (("postgres",59),("privacy_workflow_owner",46))
+REQUIRED_HOSTED_SCHEMA_TOC = (
+ ("ocr_private","postgres"),
+ ("provider_budget_private","postgres"),
+)
+TABLE_DATA_OWNER_COUNTS = (("postgres",63),("privacy_workflow_owner",46))
+REQUIRED_HOSTED_TABLE_DATA_RELATIONS = frozenset((
+ ("ocr_private","ocr_daily_quota_reservations"),
+ ("provider_budget_private","admin_provider_budget_policies"),
+ ("provider_budget_private","admin_provider_budget_counters"),
+ ("provider_budget_private","admin_provider_budget_decisions"),
+))
 TABLE_DATA_OWNERS = frozenset(owner for owner,_ in TABLE_DATA_OWNER_COUNTS)
 TABLE_DATA_TOC = re.compile(r"^(?P<dump_id>[1-9][0-9]*); (?P<table_oid>[0-9]+) (?P<object_oid>[0-9]+) TABLE DATA (?P<schema>\S+) (?P<name>\S+) (?P<owner>\S+)$")
-POST_DATA_OWNER_COUNTS = (("postgres",550),("privacy_workflow_owner",350),("supabase_admin",3),("supabase_auth_admin",128),("supabase_storage_admin",45))
-POST_DATA_OWNER_RUNS = (("supabase_auth_admin",33),("privacy_workflow_owner",97),("postgres",96),("supabase_storage_admin",9),("postgres",1),("supabase_auth_admin",56),("privacy_workflow_owner",26),("postgres",154),("supabase_storage_admin",8),("supabase_auth_admin",2),("privacy_workflow_owner",56),("postgres",41),("supabase_storage_admin",5),("supabase_auth_admin",18),("privacy_workflow_owner",61),("postgres",71),("supabase_storage_admin",5),("supabase_auth_admin",16),("privacy_workflow_owner",110),("postgres",180),("supabase_storage_admin",18),("supabase_auth_admin",3),("postgres",1),("supabase_admin",1),("postgres",1),("supabase_admin",1),("postgres",1),("supabase_admin",1),("postgres",4))
+POST_DATA_OWNER_COUNTS = (("postgres",572),("privacy_workflow_owner",350),("supabase_admin",3),("supabase_auth_admin",128),("supabase_storage_admin",45))
+POST_DATA_OWNER_RUNS = (("supabase_auth_admin",33),("postgres",2),("privacy_workflow_owner",97),("postgres",99),("supabase_storage_admin",9),("postgres",1),("supabase_auth_admin",56),("postgres",2),("privacy_workflow_owner",26),("postgres",156),("supabase_storage_admin",8),("supabase_auth_admin",2),("privacy_workflow_owner",56),("postgres",42),("supabase_storage_admin",5),("supabase_auth_admin",18),("postgres",1),("privacy_workflow_owner",61),("postgres",74),("supabase_storage_admin",5),("supabase_auth_admin",16),("postgres",2),("privacy_workflow_owner",110),("postgres",186),("supabase_storage_admin",18),("supabase_auth_admin",3),("postgres",1),("supabase_admin",1),("postgres",1),("supabase_admin",1),("postgres",1),("supabase_admin",1),("postgres",4))
 POST_DATA_OWNERS = frozenset(owner for owner,_ in POST_DATA_OWNER_COUNTS)
 POST_DATA_TOC = re.compile(r"^(?P<dump_id>[1-9][0-9]*); (?P<catalog_oid>[0-9]+) (?P<object_oid>[0-9]+) (?P<body>\S(?:.*\S)?) (?P<owner>\S+)$")
 def _post_data_rows(raw):
@@ -833,7 +843,7 @@ def _post_data_rows(raw):
 def _validate_post_data_contract(rows):
  expected_counts=dict(POST_DATA_OWNER_COUNTS)
  if len(expected_counts)!=len(POST_DATA_OWNER_COUNTS) or set(expected_counts)!=POST_DATA_OWNERS or any(type(owner) is not str or type(count) is not int or count<=0 for owner,count in POST_DATA_OWNER_COUNTS): raise RecoveryError("post-data owner count contract invalid")
- if type(POST_DATA_OWNER_RUNS) is not tuple or len(POST_DATA_OWNER_RUNS)!=29 or any(type(run) is not tuple or len(run)!=2 or run[0] not in POST_DATA_OWNERS or type(run[1]) is not int or run[1]<=0 for run in POST_DATA_OWNER_RUNS): raise RecoveryError("post-data owner run contract invalid")
+ if type(POST_DATA_OWNER_RUNS) is not tuple or len(POST_DATA_OWNER_RUNS)!=33 or any(type(run) is not tuple or len(run)!=2 or run[0] not in POST_DATA_OWNERS or type(run[1]) is not int or run[1]<=0 for run in POST_DATA_OWNER_RUNS): raise RecoveryError("post-data owner run contract invalid")
  counts={owner:0 for owner in POST_DATA_OWNERS}; observed_runs=[]
  for unused_index,unused_dump_id,owner in rows:
   counts[owner]+=1
@@ -865,16 +875,16 @@ def _post_data_use_lists(raw):
   payload="".join(line if index in active_indices or not line.rstrip("\r\n") or line.startswith(";") else ";"+line for index,line in enumerate(lines)).encode("utf-8")
   result.append((owner,payload)); cursor+=count
  result=tuple(result); _validate_post_data_use_lists(raw,result); return result
-POST_DATA_PRIVACY_TRIGGER_RUN = 11
+POST_DATA_PRIVACY_TRIGGER_RUN = 13
 POST_DATA_PRIVACY_TRIGGER_RELATION_COUNT = 38
 POST_DATA_PRIVACY_TRIGGER_RELATION_ROOT = "b28942637535bd11178674f4821a3f0fad6f49308d43b6e0dc0f7138181f5c4d"
 POST_DATA_PRIVACY_TRIGGER_DESCRIPTOR = re.compile(r"^TRIGGER (?P<schema>\S+) (?P<table>\S+) (?P<trigger>\S+)$")
 def _validate_post_data_privacy_trigger_contract():
- if POST_DATA_PRIVACY_TRIGGER_RUN!=11 or POST_DATA_PRIVACY_TRIGGER_RELATION_COUNT!=38 or POST_DATA_PRIVACY_TRIGGER_RELATION_ROOT!="b28942637535bd11178674f4821a3f0fad6f49308d43b6e0dc0f7138181f5c4d" or POST_DATA_PRIVACY_TRIGGER_DESCRIPTOR.pattern!=r"^TRIGGER (?P<schema>\S+) (?P<table>\S+) (?P<trigger>\S+)$": raise RecoveryError("post-data privacy trigger contract invalid")
+ if POST_DATA_PRIVACY_TRIGGER_RUN!=13 or POST_DATA_PRIVACY_TRIGGER_RELATION_COUNT!=38 or POST_DATA_PRIVACY_TRIGGER_RELATION_ROOT!="b28942637535bd11178674f4821a3f0fad6f49308d43b6e0dc0f7138181f5c4d" or POST_DATA_PRIVACY_TRIGGER_DESCRIPTOR.pattern!=r"^TRIGGER (?P<schema>\S+) (?P<table>\S+) (?P<trigger>\S+)$": raise RecoveryError("post-data privacy trigger contract invalid")
 def _post_data_privacy_trigger_relations(runs):
  _validate_post_data_privacy_trigger_contract()
  if type(runs) is not tuple or len(runs)!=len(POST_DATA_OWNER_RUNS) or tuple(owner for owner,unused_payload in runs)!=tuple(owner for owner,unused_count in POST_DATA_OWNER_RUNS): raise RecoveryError("post-data privacy trigger run invalid")
- if POST_DATA_PRIVACY_TRIGGER_RUN!=11 or POST_DATA_OWNER_RUNS[POST_DATA_PRIVACY_TRIGGER_RUN-1]!=(PRIVACY_DATA_ROLE,56): raise RecoveryError("post-data privacy trigger run contract invalid")
+ if POST_DATA_PRIVACY_TRIGGER_RUN!=13 or POST_DATA_OWNER_RUNS[POST_DATA_PRIVACY_TRIGGER_RUN-1]!=(PRIVACY_DATA_ROLE,56): raise RecoveryError("post-data privacy trigger run contract invalid")
  payload=runs[POST_DATA_PRIVACY_TRIGGER_RUN-1][1]
  unused_lines,rows=_post_data_rows(payload)
  if len(rows)!=56 or any(owner!=PRIVACY_DATA_ROLE for unused_index,unused_dump_id,owner in rows): raise RecoveryError("post-data privacy trigger run invalid")
@@ -894,8 +904,9 @@ def _pre_data_use_list(raw):
  if type(raw) is not bytes: raise RecoveryError("archive TOC unavailable")
  try: lines=raw.decode("utf-8").splitlines(keepends=True)
  except UnicodeDecodeError as exc: raise RecoveryError("archive TOC invalid") from exc
- matches={name:[] for name,_ in PRE_DATA_SCHEMA_TOC}
- expected=dict(PRE_DATA_SCHEMA_TOC)
+ schema_toc=PRE_DATA_SCHEMA_TOC+REQUIRED_HOSTED_SCHEMA_TOC
+ matches={name:[] for name,_ in schema_toc}
+ expected=dict(schema_toc)
  for index,line in enumerate(lines):
   body=line.rstrip("\r\n")
   if not body or body.startswith(";"): continue
@@ -944,6 +955,7 @@ def _data_use_lists(raw):
   dump_id=match.group("dump_id"); relation=(schema,match.group("name"))
   if dump_id in dump_ids or relation in relations: raise RecoveryError("duplicate TABLE DATA classification")
   dump_ids.add(dump_id); relations.add(relation); counts[owner]+=1
+  if relation in REQUIRED_HOSTED_TABLE_DATA_RELATIONS and owner!="postgres": raise RecoveryError("required hosted TABLE DATA owner drift")
   if owner=="privacy_workflow_owner":
    postgres_lines[index]=";"+line
    privacy_relations.append(relation)
@@ -951,6 +963,7 @@ def _data_use_lists(raw):
    privacy_lines[index]=";"+line
  expected=dict(TABLE_DATA_OWNER_COUNTS)
  if counts!=expected: raise RecoveryError("archive TABLE DATA owner count drift")
+ if not REQUIRED_HOSTED_TABLE_DATA_RELATIONS.issubset(relations): raise RecoveryError("required hosted TABLE DATA relation drift")
  return ("".join(postgres_lines).encode("utf-8"),"".join(privacy_lines).encode("utf-8"),tuple(privacy_relations))
 
 def _owned_restore_use_list(path,payload):
@@ -967,9 +980,9 @@ def _owned_restore_use_list(path,payload):
    _unlink_owned_output(fd,path,identity)
    os.close(fd)
   raise
-POST_DATA_STORAGE_AUTH_SCHEMA_AUTHORITY = (21,"supabase_storage_admin","auth","supabase_admin")
+POST_DATA_STORAGE_AUTH_SCHEMA_AUTHORITY = (25,"supabase_storage_admin","auth","supabase_admin")
 def _validate_post_data_storage_auth_schema_contract():
- if type(POST_DATA_STORAGE_AUTH_SCHEMA_AUTHORITY) is not tuple or POST_DATA_STORAGE_AUTH_SCHEMA_AUTHORITY!=(21,"supabase_storage_admin","auth","supabase_admin"): raise RecoveryError("post-data storage auth schema authority contract invalid")
+ if type(POST_DATA_STORAGE_AUTH_SCHEMA_AUTHORITY) is not tuple or POST_DATA_STORAGE_AUTH_SCHEMA_AUTHORITY!=(25,"supabase_storage_admin","auth","supabase_admin"): raise RecoveryError("post-data storage auth schema authority contract invalid")
  run,role,unused_schema,unused_owner=POST_DATA_STORAGE_AUTH_SCHEMA_AUTHORITY
  if POST_DATA_OWNER_RUNS[run-1][0]!=role: raise RecoveryError("post-data storage auth schema authority contract invalid")
 def _restore_post_data_owner_run(restore,plain,env,index,owner,path):
@@ -1508,6 +1521,7 @@ def run_restore_verify(args,manifest):
  require_local(args.destination_service); capture=_require_prior(args.capture_receipt,"capture"); source_binding=_require_recovery_source_binding(capture["evidence"],repository_root(Path(__file__).resolve())); dump=Path(args.dump)
  if capture["evidence"].get("recipient_fingerprint")!=APPROVED_AGE_RECIPIENT_SHA256: raise RecoveryError("capture recipient binding mismatch")
  if capture["evidence"].get("extension_scope")!=[{"name":name,"schema":schema} for name,schema in RECOVERY_EXTENSIONS] or capture["evidence"].get("managed_metadata_schema_scope")!=list(MANAGED_METADATA_SCHEMAS) or capture["evidence"].get("managed_table_data_exclusions")!=list(MANAGED_TABLE_DATA_EXCLUSIONS): raise RecoveryError("capture managed metadata scope mismatch")
+ if capture["evidence"].get("schema_scope")!=list(APPLICATION_SCHEMAS): raise RecoveryError("capture application schema scope mismatch")
  if dump.is_symlink() or not dump.is_file() or sha256_file(dump)!=capture["evidence"].get("dump_sha256"): raise RecoveryError("ciphertext input mismatch")
  decryptor,restore=command_exists(args.decrypt_command),command_exists(args.pg_restore)
  with _owned_identity_stream(args) as identity_stream, _restricted_restore_directory() as workspace:

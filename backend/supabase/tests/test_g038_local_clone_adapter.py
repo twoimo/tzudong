@@ -1205,7 +1205,24 @@ def test_restore_authority_rejects_per_function_acl_swap():
         )
 
 
+def test_restore_authority_rejects_incomplete_dump_schema_scope(monkeypatch):
+    ops = object.__new__(adapter.LocalCloneOps)
+    ops.inputs = type("Inputs", (), {
+        "docker": "docker", "deadline_monotonic": time.monotonic() + 60,
+    })()
+    monkeypatch.setattr(adapter.g035, "DUMP_SCHEMAS", (
+        "public", "shortener_private", "account_deletion_private",
+        "privacy_retention", "supabase_migrations", "auth", "storage",
+    ))
+    with pytest.raises(adapter.LocalCloneError, match="restore_authority"):
+        ops.bootstrap_restore_authority({"container": "clone"})
+
 def test_restore_authority_baseline_and_restore_window_are_exact_before_restore():
+    assert adapter.g035.DUMP_SCHEMAS == (
+        "public", "shortener_private", "account_deletion_private",
+        "privacy_retention", "ocr_private", "provider_budget_private",
+        "supabase_migrations", "auth", "storage",
+    )
     ops = object.__new__(adapter.LocalCloneOps)
     ops.inputs = type("Inputs", (), {
         "docker": "docker", "deadline_monotonic": time.monotonic() + 60,
