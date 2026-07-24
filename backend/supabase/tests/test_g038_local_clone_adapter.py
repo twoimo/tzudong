@@ -1072,6 +1072,7 @@ def _restore_authority_catalog(
     schema_acl=adapter.RESTORE_TRANSIENT_SCHEMA_ACL,
     *,
     database="postgres",
+    dependency_access=True,
 ):
     return {
         "database": database,
@@ -1079,6 +1080,25 @@ def _restore_authority_catalog(
             "acl": [list(row) for row in schema_acl],
             "name": "extensions",
             "owner": "postgres",
+        },
+        "extension_dependencies": {
+            "functions": [
+                {
+                    "acl": (
+                        [list(row) for row in adapter.RESTORE_EXTENSION_DEPENDENCY_FUNCTION_ACL]
+                        if dependency_access else []
+                    ),
+                    "effective_execute": True,
+                    "identity_arguments": identity_arguments,
+                    "name": name,
+                    "owner": "postgres",
+                    "schema": "extensions",
+                }
+                for name, identity_arguments
+                in adapter.RESTORE_EXTENSION_DEPENDENCY_FUNCTIONS
+            ],
+            "schema_effective_create": False,
+            "schema_effective_usage": dependency_access,
         },
         "memberships": [list(row) for row in sorted(memberships)],
         "owner_roles": sorted(adapter.RESTORE_OWNER_ROLES),
@@ -1106,6 +1126,37 @@ def _restore_authority_catalog(
         lambda value: value["extensions"]["acl"].append(
             ["postgres", "supabase_admin", "CREATE", True],
         ),
+        lambda value: value["extension_dependencies"]["functions"][0]["acl"].clear(),
+        lambda value: value["extension_dependencies"]["functions"][0]["acl"][0].__setitem__(
+            0, "supabase_admin",
+        ),
+        lambda value: value["extension_dependencies"]["functions"][0].__setitem__(
+            "identity_arguments", "bytea, text",
+        ),
+        lambda value: value["extension_dependencies"]["functions"][0]["acl"][0].__setitem__(
+            3, True,
+        ),
+        lambda value: value["extension_dependencies"]["functions"][0].__setitem__(
+            "owner", "supabase_admin",
+        ),
+        lambda value: value["extensions"]["acl"][6].__setitem__(
+            0, "supabase_admin",
+        ),
+        lambda value: value["extension_dependencies"]["functions"].append({
+            "acl": [["postgres", "privacy_workflow_owner", "EXECUTE", False]],
+            "effective_execute": True,
+            "identity_arguments": "text",
+            "name": "hmac",
+            "owner": "postgres",
+            "schema": "extensions",
+        }),
+        lambda value: value["extension_dependencies"]["functions"].reverse(),
+        lambda value: value["extension_dependencies"].__setitem__(
+            "schema_effective_create", True,
+        ),
+        lambda value: value["extension_dependencies"]["functions"][0].__setitem__(
+            "effective_execute", False,
+        ),
     ],
 )
 def test_restore_authority_rejects_owner_membership_schema_and_broad_grant_drift(mutate):
@@ -1117,6 +1168,7 @@ def test_restore_authority_rejects_owner_membership_schema_and_broad_grant_drift
             adapter.RESTORE_TRANSIENT_MEMBERSHIP_ROWS,
             adapter.RESTORE_TRANSIENT_SCHEMA_ACL,
             database="postgres",
+            expected_dependency_access=True,
         )
 
 
@@ -1135,34 +1187,60 @@ def test_restore_authority_is_source_pinned_exact_and_asserted_before_restore():
         calls.append((tuple(argv), sql))
         raw = ""
         if "json_build_object" in sql:
-            schema_acl = (
-                adapter.RESTORE_TERMINAL_SCHEMA_ACL
-                if catalog_reads == 0 else adapter.RESTORE_TRANSIENT_SCHEMA_ACL
-            )
-            memberships = (
-                adapter.RESTORE_TERMINAL_MEMBERSHIP_ROWS
-                if catalog_reads == 0 else adapter.RESTORE_TRANSIENT_MEMBERSHIP_ROWS
-            )
-            raw = json.dumps(_restore_authority_catalog(memberships, schema_acl))
+            if catalog_reads == 0:
+                schema_acl = adapter.RESTORE_BASELINE_SCHEMA_ACL
+                memberships = adapter.RESTORE_TERMINAL_MEMBERSHIP_ROWS
+                dependency_access = False
+            else:
+                schema_acl = adapter.RESTORE_TRANSIENT_SCHEMA_ACL
+                memberships = adapter.RESTORE_TRANSIENT_MEMBERSHIP_ROWS
+                dependency_access = True
+            raw = json.dumps(_restore_authority_catalog(
+                memberships, schema_acl, dependency_access=dependency_access,
+            ))
             catalog_reads += 1
         return completed(raw)
 
     ops.command = command
     ops.bootstrap_restore_authority({"container": "clone"})
-    assert len(calls) == 4
-    baseline_assertion_sql, grant_sql, schema_sql, transient_assertion_sql = (
-        call[1] for call in calls
-    )
+    assert len(calls) == 5
+    (
+        baseline_assertion_sql, grant_sql, dependency_sql,
+        temporary_schema_sql, transient_assertion_sql,
+    ) = (call[1] for call in calls)
     assert "json_build_object" in baseline_assertion_sql
     assert grant_sql.index("restore authority precondition drift") < grant_sql.index(
         "GRANT supabase_admin, supabase_auth_admin, supabase_storage_admin TO postgres"
     )
     assert "WITH ADMIN FALSE, INHERIT TRUE, SET TRUE GRANTED BY supabase_admin" in grant_sql
-    assert "CREATE SCHEMA extensions" not in schema_sql
+    assert "CREATE SCHEMA extensions" not in dependency_sql
     assert (
         "GRANT USAGE, CREATE ON SCHEMA extensions TO supabase_admin "
-        "GRANTED BY postgres;" in schema_sql
+        "GRANTED BY postgres;" in temporary_schema_sql
     )
+    assert "privacy_workflow_owner" not in temporary_schema_sql
+    assert "supabase_admin" not in dependency_sql
+    assert (
+        "GRANT USAGE ON SCHEMA extensions TO privacy_workflow_owner\n"
+        "  GRANTED BY postgres;" in dependency_sql
+    )
+    assert (
+        "GRANT EXECUTE ON FUNCTION extensions.gen_random_uuid(), "
+        "extensions.digest(text, text)\n"
+        "  TO privacy_workflow_owner GRANTED BY postgres;" in dependency_sql
+    )
+    assert dependency_sql.index("restore extension dependency precondition drift") < (
+        dependency_sql.index("GRANT USAGE ON SCHEMA extensions TO privacy_workflow_owner")
+    )
+    assert dependency_sql.index(
+        "GRANT USAGE ON SCHEMA extensions TO privacy_workflow_owner"
+    ) < dependency_sql.index(
+        "GRANT EXECUTE ON FUNCTION extensions.gen_random_uuid(), "
+        "extensions.digest(text, text)"
+    )
+    assert "GRANT ALL" not in dependency_sql
+    assert " TO privacy_workflow_owner WITH GRANT OPTION" not in dependency_sql
+    assert "GRANT privacy_workflow_owner TO" not in dependency_sql
     assert "json_build_object" in transient_assertion_sql
     combined = "\n".join(sql for _, sql in calls)
     assert " TO PUBLIC" not in combined and " FROM PUBLIC" not in combined
@@ -1176,6 +1254,7 @@ def test_restore_authority_is_source_pinned_exact_and_asserted_before_restore():
         ("postgres", "dashboard_user", "USAGE", False),
         ("postgres", "postgres", "CREATE", False),
         ("postgres", "postgres", "USAGE", False),
+        ("postgres", "privacy_workflow_owner", "USAGE", False),
         ("postgres", "service_role", "USAGE", False),
     )
     assert adapter.RESTORE_TRANSIENT_SCHEMA_ACL == (
@@ -1215,6 +1294,11 @@ def test_restore_authority_terminalization_revokes_only_temporary_grants_and_ass
     )
     assert "json_build_object" in calls[2]
     assert " TO PUBLIC" not in "\n".join(calls)
+    revoke_sql = "\n".join(calls[:2])
+    assert "privacy_workflow_owner" not in revoke_sql
+    assert "gen_random_uuid" not in revoke_sql and "digest" not in revoke_sql
+    assert "pg_catalog.has_schema_privilege" in calls[2]
+    assert "pg_catalog.has_function_privilege" in calls[2]
 
 
 def test_each_clone_bootstraps_before_restore_and_terminalizes_before_observation():
