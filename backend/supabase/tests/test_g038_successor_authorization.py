@@ -62,6 +62,17 @@ class AuthorizationTests(unittest.TestCase):
             hashlib.sha256(g038.PUBLIC_KEY_PEM.encode("ascii")).hexdigest(),
             g038.PUBLIC_KEY_SHA256,
         )
+        expected_journal = (
+            Path("C:/ProgramData/TzudongRecovery/g038-successor-attempt-journal")
+            if os.name == "nt"
+            else (
+                Path.home()
+                / "Library/Application Support/TzudongRecovery/g038-successor-attempt-journal"
+                if sys.platform == "darwin"
+                else Path("/var/lib/tzudong-recovery/g038-successor-attempt-journal")
+            )
+        )
+        self.assertEqual(g038.CANONICAL_JOURNAL_DIRECTORY, expected_journal)
         value = authority()
         for name in ("schema", "purpose", "policy"):
             changed = dict(value); changed[name] = "wrong-domain"

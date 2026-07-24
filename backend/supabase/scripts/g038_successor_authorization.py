@@ -10,6 +10,7 @@ import os
 import re
 import stat
 import time
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Mapping
@@ -23,7 +24,19 @@ MCowBQYDK2VwAyEAfXabraZsV+AqqaFjH32scMPqBGC8TQmgrVna9j4SEZ8=
 """
 PUBLIC_KEY_SHA256 = "723cae40a86087e1206ca0449e34cbc14a3233bb53c7ae04710b97952e405473"
 JOURNAL_SCHEMA = "g038-successor-attempt-started-v1"
-CANONICAL_JOURNAL_DIRECTORY = Path("C:/ProgramData/TzudongRecovery/g038-successor-attempt-journal") if os.name == "nt" else Path("/var/lib/tzudong-recovery/g038-successor-attempt-journal")
+if os.name == "nt":
+    CANONICAL_JOURNAL_DIRECTORY = Path(
+        "C:/ProgramData/TzudongRecovery/g038-successor-attempt-journal"
+    )
+elif sys.platform == "darwin":
+    CANONICAL_JOURNAL_DIRECTORY = (
+        Path.home()
+        / "Library/Application Support/TzudongRecovery/g038-successor-attempt-journal"
+    )
+else:
+    CANONICAL_JOURNAL_DIRECTORY = Path(
+        "/var/lib/tzudong-recovery/g038-successor-attempt-journal"
+    )
 PREDECESSOR_COMMIT = "664cee04a4f239d6cf8fe2eebab8de9c8404b316"
 PREDECESSOR_REPORT_SHA256 = "85f6b1e6e34e3311bbffd7146232ca41d6393bdd43688d4ebd7b230bdf929114"
 SELECTED_VERSIONS = ("20260713002600", "20260713002700")
