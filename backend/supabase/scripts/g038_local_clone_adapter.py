@@ -61,6 +61,22 @@ RESTORE_TRANSIENT_MEMBERSHIP_ROWS = tuple(sorted((
     *TRANSIENT_MANAGED_ROWS[:2],
 )))
 RESTORE_TERMINAL_MEMBERSHIP_ROWS = tuple(sorted(TRANSIENT_MANAGED_ROWS[:2]))
+RESTORE_EXTENSION_DEPENDENCY_FUNCTION_ACL = (
+    ("postgres", "privacy_workflow_owner", "EXECUTE", False),
+)
+RESTORE_EXTENSION_DEPENDENCY_FUNCTIONS = (
+    ("digest", "text, text"),
+    ("gen_random_uuid", ""),
+)
+RESTORE_BASELINE_SCHEMA_ACL = (
+    ("postgres", "anon", "USAGE", False),
+    ("postgres", "authenticated", "USAGE", False),
+    ("postgres", "dashboard_user", "CREATE", False),
+    ("postgres", "dashboard_user", "USAGE", False),
+    ("postgres", "postgres", "CREATE", False),
+    ("postgres", "postgres", "USAGE", False),
+    ("postgres", "service_role", "USAGE", False),
+)
 RESTORE_TERMINAL_SCHEMA_ACL = (
     ("postgres", "anon", "USAGE", False),
     ("postgres", "authenticated", "USAGE", False),
@@ -68,6 +84,7 @@ RESTORE_TERMINAL_SCHEMA_ACL = (
     ("postgres", "dashboard_user", "USAGE", False),
     ("postgres", "postgres", "CREATE", False),
     ("postgres", "postgres", "USAGE", False),
+    ("postgres", "privacy_workflow_owner", "USAGE", False),
     ("postgres", "service_role", "USAGE", False),
 )
 RESTORE_TRANSIENT_SCHEMA_ACL = (
@@ -638,14 +655,16 @@ SELECT pg_catalog.json_build_object(
         expected_memberships: Sequence[tuple[str, str, str, bool, bool, bool]],
         expected_schema_acl: Sequence[tuple[str, str, str, bool]], *,
         database: str,
+        expected_dependency_access: bool,
     ) -> None:
         try:
             value = json.loads(raw)
             if (
                 type(value) is not dict
                 or set(value) != {
-                    "database", "extensions", "memberships", "owner_roles",
-                    "server_version_num", "session_user", "user",
+                    "database", "extension_dependencies", "extensions",
+                    "memberships", "owner_roles", "server_version_num",
+                    "session_user", "user",
                 }
                 or value["database"] != database
                 or type(value["server_version_num"]) is not int
@@ -661,6 +680,28 @@ SELECT pg_catalog.json_build_object(
                     "name": "extensions",
                     "owner": "postgres",
                 }
+                or value["extension_dependencies"] != {
+                    "functions": [
+                        {
+                            "acl": (
+                                [
+                                    list(row)
+                                    for row in RESTORE_EXTENSION_DEPENDENCY_FUNCTION_ACL
+                                ]
+                                if expected_dependency_access else []
+                            ),
+                            "effective_execute": True,
+                            "identity_arguments": identity_arguments,
+                            "name": name,
+                            "owner": "postgres",
+                            "schema": "extensions",
+                        }
+                        for name, identity_arguments
+                        in RESTORE_EXTENSION_DEPENDENCY_FUNCTIONS
+                    ],
+                    "schema_effective_create": False,
+                    "schema_effective_usage": expected_dependency_access,
+                }
             ):
                 _fail("restore_authority")
         except LocalCloneError:
@@ -673,6 +714,7 @@ SELECT pg_catalog.json_build_object(
         expected_memberships: Sequence[tuple[str, str, str, bool, bool, bool]],
         expected_schema_acl: Sequence[tuple[str, str, str, bool]], *,
         database: str,
+        expected_dependency_access: bool,
     ) -> None:
         names = ",".join(repr(name) for name in RESTORE_OWNER_ROLES)
         raw = self._role_psql(clone, user="postgres", database=database, sql=f"""
@@ -700,6 +742,55 @@ SELECT pg_catalog.json_build_object(
        WHERE nspname='extensions'
     )
   ),
+  'extension_dependencies', pg_catalog.json_build_object(
+    'functions', (
+      SELECT COALESCE(pg_catalog.json_agg(pg_catalog.json_build_object(
+        'acl', (
+          SELECT COALESCE(pg_catalog.json_agg(pg_catalog.json_build_array(
+            pg_catalog.pg_get_userbyid(acl.grantor),
+            pg_catalog.pg_get_userbyid(acl.grantee),
+            acl.privilege_type,
+            acl.is_grantable)
+            ORDER BY pg_catalog.pg_get_userbyid(acl.grantor),
+                     acl.privilege_type, acl.is_grantable), '[]'::json)
+            FROM pg_catalog.aclexplode(COALESCE(
+              procedure.proacl,
+              pg_catalog.acldefault('f', procedure.proowner))) AS acl
+           WHERE acl.grantee = 'privacy_workflow_owner'::regrole
+        ),
+        'effective_execute', pg_catalog.has_function_privilege(
+          'privacy_workflow_owner', procedure.oid, 'EXECUTE'),
+        'identity_arguments',
+          pg_catalog.pg_get_function_identity_arguments(procedure.oid),
+        'name', procedure.proname,
+        'owner', pg_catalog.pg_get_userbyid(procedure.proowner),
+        'schema', namespace.nspname
+      ) ORDER BY procedure.proname,
+                 pg_catalog.pg_get_function_identity_arguments(procedure.oid)),
+      '[]'::json)
+      FROM pg_catalog.pg_proc AS procedure
+      JOIN pg_catalog.pg_namespace AS namespace
+        ON namespace.oid = procedure.pronamespace
+     WHERE namespace.nspname = 'extensions'
+       AND (
+         procedure.oid IN (
+           pg_catalog.to_regprocedure('extensions.gen_random_uuid()'),
+           pg_catalog.to_regprocedure('extensions.digest(text,text)')
+         )
+         OR EXISTS (
+           SELECT 1
+             FROM pg_catalog.aclexplode(COALESCE(
+               procedure.proacl,
+               pg_catalog.acldefault('f', procedure.proowner))) AS acl
+            WHERE acl.grantee = 'privacy_workflow_owner'::regrole
+         )
+       )
+    ),
+    'schema_effective_create', pg_catalog.has_schema_privilege(
+      'privacy_workflow_owner', 'extensions', 'CREATE'),
+    'schema_effective_usage', pg_catalog.has_schema_privilege(
+      'privacy_workflow_owner', 'extensions', 'USAGE')
+  ),
   'memberships', (
     SELECT COALESCE(pg_catalog.json_agg(pg_catalog.json_build_array(
       roleid::regrole::text,member::regrole::text,grantor::regrole::text,
@@ -724,6 +815,7 @@ SELECT pg_catalog.json_build_object(
 """)
         self._validate_restore_authority_catalog(
             raw, expected_memberships, expected_schema_acl, database=database,
+            expected_dependency_access=expected_dependency_access,
         )
 
     def bootstrap_restore_authority(self, clone: Mapping[str, Any]) -> None:
@@ -749,7 +841,8 @@ SELECT pg_catalog.json_build_object(
             _fail("restore_authority")
         self._assert_restore_authority(
             clone, RESTORE_TERMINAL_MEMBERSHIP_ROWS,
-            RESTORE_TERMINAL_SCHEMA_ACL, database="postgres",
+            RESTORE_BASELINE_SCHEMA_ACL, database="postgres",
+            expected_dependency_access=False,
         )
         role_names = ",".join(repr(name) for name in RESTORE_OWNER_ROLES[:3])
         self._role_psql(clone, user="supabase_admin", database="postgres", sql=f"""
@@ -776,12 +869,38 @@ COMMIT;
 """)
         self._role_psql(clone, user="postgres", database="postgres", sql="""
 BEGIN;
+DO $g038_extension_dependency_preflight$
+BEGIN
+  IF pg_catalog.to_regprocedure('extensions.gen_random_uuid()') IS NULL
+     OR pg_catalog.to_regprocedure('extensions.digest(text,text)') IS NULL
+     OR EXISTS (
+       SELECT 1
+         FROM pg_catalog.pg_proc AS procedure
+        WHERE procedure.oid IN (
+          pg_catalog.to_regprocedure('extensions.gen_random_uuid()'),
+          pg_catalog.to_regprocedure('extensions.digest(text,text)')
+        )
+          AND pg_catalog.pg_get_userbyid(procedure.proowner) <> 'postgres'
+     ) THEN
+    RAISE EXCEPTION 'restore extension dependency precondition drift';
+  END IF;
+END;
+$g038_extension_dependency_preflight$;
+GRANT USAGE ON SCHEMA extensions TO privacy_workflow_owner
+  GRANTED BY postgres;
+GRANT EXECUTE ON FUNCTION extensions.gen_random_uuid(), extensions.digest(text, text)
+  TO privacy_workflow_owner GRANTED BY postgres;
+COMMIT;
+""")
+        self._role_psql(clone, user="postgres", database="postgres", sql="""
+BEGIN;
 GRANT USAGE, CREATE ON SCHEMA extensions TO supabase_admin GRANTED BY postgres;
 COMMIT;
 """)
         self._assert_restore_authority(
             clone, RESTORE_TRANSIENT_MEMBERSHIP_ROWS,
             RESTORE_TRANSIENT_SCHEMA_ACL, database="postgres",
+            expected_dependency_access=True,
         )
 
     def terminalize_restore_authority(self, clone: Mapping[str, Any]) -> None:
@@ -796,6 +915,7 @@ REVOKE USAGE, CREATE ON SCHEMA extensions
         self._assert_restore_authority(
             clone, RESTORE_TERMINAL_MEMBERSHIP_ROWS,
             RESTORE_TERMINAL_SCHEMA_ACL, database=DATABASE,
+            expected_dependency_access=True,
         )
 
     def bootstrap_role_protocol(self, clone: Mapping[str, Any]) -> None:
