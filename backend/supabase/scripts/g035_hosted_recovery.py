@@ -890,7 +890,7 @@ def _owned_restore_use_list(path,payload):
   raise
 
 PRIVACY_DATA_ROLE = "privacy_workflow_owner"
-PRIVACY_RELATION_STATE_SQL = "SELECT role.rolname,class.relrowsecurity,class.relforcerowsecurity,ARRAY(SELECT acl.privilege_type FROM pg_catalog.aclexplode(class.relacl) AS acl JOIN pg_catalog.pg_roles AS grantee ON grantee.oid=acl.grantee WHERE grantee.rolname=%s ORDER BY acl.privilege_type) FROM pg_catalog.pg_class AS class JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid=class.relnamespace JOIN pg_catalog.pg_roles AS role ON role.oid=class.relowner WHERE namespace.nspname=%s AND class.relname=%s AND class.relkind IN ('r','p')"
+PRIVACY_RELATION_STATE_SQL = "SELECT role.rolname,class.relrowsecurity,class.relforcerowsecurity,ARRAY(SELECT acl.privilege_type FROM pg_catalog.aclexplode(class.relacl) AS acl JOIN pg_catalog.pg_roles AS grantee ON grantee.oid=acl.grantee WHERE grantee.rolname=%s ORDER BY acl.privilege_type),pg_catalog.has_table_privilege(role.oid,class.oid,'INSERT') FROM pg_catalog.pg_class AS class JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid=class.relnamespace JOIN pg_catalog.pg_roles AS role ON role.oid=class.relowner WHERE namespace.nspname=%s AND class.relname=%s AND class.relkind IN ('r','p')"
 PRIVACY_TABLE_PRIVILEGES = frozenset(("DELETE","INSERT","MAINTAIN","REFERENCES","SELECT","TRIGGER","TRUNCATE","UPDATE"))
 def _quoted_identifier(value):
  if type(value) is not str or not value or "\x00" in value: raise RecoveryError("privacy TABLE DATA inventory invalid")
@@ -901,21 +901,21 @@ def _read_privacy_relation_baseline(conn,relations):
  _validate_privacy_relations(relations); baseline=[]
  for schema,relation in relations:
   rows=_query_conn(conn,PRIVACY_RELATION_STATE_SQL,(PRIVACY_DATA_ROLE,schema,relation))
-  if len(rows)!=1 or type(rows[0]) is not tuple or len(rows[0])!=4: raise RecoveryError("privacy TABLE DATA privilege state invalid")
-  owner,rls,force,raw_privileges=rows[0]
-  if owner!=PRIVACY_DATA_ROLE or rls is not False or force is not True or type(raw_privileges) is not list or any(type(privilege) is not str or privilege not in PRIVACY_TABLE_PRIVILEGES for privilege in raw_privileges): raise RecoveryError("privacy TABLE DATA privilege state invalid")
+  if len(rows)!=1 or type(rows[0]) is not tuple or len(rows[0])!=5: raise RecoveryError("privacy TABLE DATA privilege state invalid")
+  owner,rls,force,raw_privileges,effective_insert=rows[0]
+  if owner!=PRIVACY_DATA_ROLE or rls is not False or force is not True or type(raw_privileges) is not list or type(effective_insert) is not bool or any(type(privilege) is not str or privilege not in PRIVACY_TABLE_PRIVILEGES for privilege in raw_privileges): raise RecoveryError("privacy TABLE DATA privilege state invalid")
   privileges=tuple(raw_privileges)
-  if privileges!=tuple(sorted(privileges)) or len(privileges)!=len(set(privileges)): raise RecoveryError("privacy TABLE DATA privilege state invalid")
-  baseline.append((schema,relation,privileges))
+  if privileges!=tuple(sorted(privileges)) or len(privileges)!=len(set(privileges)) or ("INSERT" in privileges and not effective_insert): raise RecoveryError("privacy TABLE DATA privilege state invalid")
+  baseline.append((schema,relation,privileges,effective_insert))
  return tuple(baseline)
 def _validate_privacy_baseline(relations,baseline):
  _validate_privacy_relations(relations)
  if type(baseline) is not tuple or len(baseline)!=len(relations): raise RecoveryError("privacy TABLE DATA privilege baseline invalid")
  for relation,item in zip(relations,baseline):
-  if type(item) is not tuple or len(item)!=3 or item[:2]!=relation or type(item[2]) is not tuple or item[2]!=tuple(sorted(item[2])) or len(item[2])!=len(set(item[2])) or any(type(privilege) is not str or privilege not in PRIVACY_TABLE_PRIVILEGES for privilege in item[2]): raise RecoveryError("privacy TABLE DATA privilege baseline invalid")
+  if type(item) is not tuple or len(item)!=4 or item[:2]!=relation or type(item[2]) is not tuple or type(item[3]) is not bool or item[2]!=tuple(sorted(item[2])) or len(item[2])!=len(set(item[2])) or any(type(privilege) is not str or privilege not in PRIVACY_TABLE_PRIVILEGES for privilege in item[2]) or ("INSERT" in item[2] and not item[3]): raise RecoveryError("privacy TABLE DATA privilege baseline invalid")
 def _privacy_window_baseline(baseline,added_relations):
  added=frozenset(added_relations)
- return tuple((schema,relation,tuple(sorted((*privileges,"INSERT")))) if (schema,relation) in added else item for item in baseline for schema,relation,privileges in (item,))
+ return tuple((schema,relation,tuple(sorted((*privileges,"INSERT"))) if (schema,relation) in added else privileges,True) for schema,relation,privileges,effective_insert in baseline)
 def _verify_privacy_relation_baseline(conn,relations,expected):
  _validate_privacy_baseline(relations,expected)
  if _read_privacy_relation_baseline(conn,relations)!=expected: raise RecoveryError("privacy TABLE DATA privilege state invalid")
@@ -926,7 +926,7 @@ def _open_privacy_insert_window(conn,relations):
  try:
   _query_conn(conn,"BEGIN")
   baseline=_read_privacy_relation_baseline(conn,relations)
-  added_relations=tuple((schema,relation) for schema,relation,privileges in baseline if "INSERT" not in privileges)
+  added_relations=tuple((schema,relation) for schema,relation,privileges,effective_insert in baseline if not effective_insert)
   statement=_privacy_insert_statement(added_relations,True)
   if statement is not None: _query_conn(conn,statement)
   _verify_privacy_relation_baseline(conn,relations,_privacy_window_baseline(baseline,added_relations))
@@ -937,7 +937,7 @@ def _open_privacy_insert_window(conn,relations):
   raise
 def _close_privacy_insert_window(conn,relations,baseline,added_relations):
  _validate_privacy_baseline(relations,baseline)
- if type(added_relations) is not tuple or added_relations!=tuple((schema,relation) for schema,relation,privileges in baseline if "INSERT" not in privileges): raise RecoveryError("privacy TABLE DATA privilege baseline invalid")
+ if type(added_relations) is not tuple or added_relations!=tuple((schema,relation) for schema,relation,privileges,effective_insert in baseline if not effective_insert): raise RecoveryError("privacy TABLE DATA privilege baseline invalid")
  expected_window=_privacy_window_baseline(baseline,added_relations)
  try:
   _query_conn(conn,"BEGIN")
