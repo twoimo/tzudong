@@ -1003,8 +1003,9 @@ class ControllerTests(unittest.TestCase):
    with self.subTest(mutation=mutation),self.assertRaisesRegex(recovery.RecoveryError,"schema TOC drift"):
     recovery._pre_data_use_list(mutation)
  def test_data_use_lists_partition_exact_source_pinned_owners_and_all_other_data_once(self):
-  postgres,privacy=recovery._data_use_lists(SCHEMA_TOC)
-  self.assertEqual((postgres,privacy),recovery._data_use_lists(SCHEMA_TOC))
+  postgres,privacy,privacy_relations=recovery._data_use_lists(SCHEMA_TOC)
+  self.assertEqual((postgres,privacy,privacy_relations),recovery._data_use_lists(SCHEMA_TOC))
+  self.assertEqual(tuple(("privacy_retention",f"privacy_{index}") for index in range(46)),privacy_relations)
   for entry in POSTGRES_TABLE_DATA:
    self.assertIn(entry,postgres)
    self.assertIn(b";"+entry,privacy)
@@ -1030,6 +1031,65 @@ class ControllerTests(unittest.TestCase):
   for mutation in mutations:
    with self.subTest(mutation=mutation),self.assertRaises(recovery.RecoveryError):
     recovery._data_use_lists(mutation)
+ def test_privacy_insert_window_grants_and_revokes_only_exact_parser_inventory(self):
+  relations=recovery._data_use_lists(SCHEMA_TOC)[2]
+  class Conn:
+   def __init__(self): self.privileges=[]; self.commits=0; self.rollbacks=0
+   def commit(self): self.commits+=1
+   def rollback(self): self.rollbacks+=1
+  conn=Conn(); statements=[]
+  def query(unused,sql,params=None):
+   statements.append((sql,params))
+   if sql==recovery.PRIVACY_RELATION_STATE_SQL:
+    return [(recovery.PRIVACY_DATA_ROLE,False,True,conn.privileges)]
+   if sql.startswith("GRANT INSERT ON TABLE "): conn.privileges=["INSERT"]
+   if sql.startswith("REVOKE INSERT ON TABLE "): conn.privileges=[]
+   return []
+  expected_targets=",".join(f'"privacy_retention"."privacy_{index}"' for index in range(46))
+  with patch.object(recovery,"_query_conn",side_effect=query):
+   recovery._privacy_insert_privilege(conn,relations,True)
+   recovery._privacy_insert_privilege(conn,relations,False)
+  sql=[statement for statement,unused in statements]
+  self.assertIn(f"GRANT INSERT ON TABLE {expected_targets} TO privacy_workflow_owner",sql)
+  self.assertIn(f"REVOKE INSERT ON TABLE {expected_targets} FROM privacy_workflow_owner",sql)
+  self.assertEqual(2,conn.commits); self.assertEqual(0,conn.rollbacks)
+  self.assertNotIn("SELECT ON TABLE"," ".join(sql))
+  self.assertNotIn("UPDATE ON TABLE"," ".join(sql))
+  self.assertNotIn("DELETE ON TABLE"," ".join(sql))
+  self.assertNotIn("TRUNCATE ON TABLE"," ".join(sql))
+  self.assertNotIn("TRIGGER ON TABLE"," ".join(sql))
+ def test_privacy_insert_window_rejects_catalog_and_inventory_mutations(self):
+  relations=recovery._data_use_lists(SCHEMA_TOC)[2]
+  valid=(recovery.PRIVACY_DATA_ROLE,False,True,[])
+  mutations=(
+   (),
+   (("postgres",False,True,[]),),
+   ((recovery.PRIVACY_DATA_ROLE,True,True,[]),),
+   ((recovery.PRIVACY_DATA_ROLE,False,False,[]),),
+   ((recovery.PRIVACY_DATA_ROLE,False,True,["SELECT"]),),
+  )
+  class Conn:
+   def commit(self): pass
+   def rollback(self): pass
+  for rows in mutations:
+   with self.subTest(rows=rows),patch.object(recovery,"_query_conn",side_effect=lambda unused,sql,params=None: list(rows) if sql==recovery.PRIVACY_RELATION_STATE_SQL else []),self.assertRaisesRegex(recovery.RecoveryError,"privilege state"):
+    recovery._privacy_insert_privilege(Conn(),relations,True)
+  with patch.object(recovery,"_query_conn",return_value=[]),self.assertRaisesRegex(recovery.RecoveryError,"inventory"):
+   recovery._privacy_insert_privilege(Conn(),relations[:-1],True)
+ def test_privacy_insert_cleanup_runs_on_restore_failure_and_readback_failure_is_fatal(self):
+  relations=recovery._data_use_lists(SCHEMA_TOC)[2]; events=[]
+  with patch.object(recovery,"_set_privacy_insert_privilege",side_effect=lambda unused,exact,grant: events.append((grant,exact))),patch.object(recovery,"run",side_effect=recovery.RecoveryError("data restore failed")),self.assertRaisesRegex(recovery.RecoveryError,"data restore failed"):
+   recovery._restore_privacy_data("pg_restore",Path("privacy.list"),Path("database.pgdump"),{},relations)
+  self.assertEqual([(True,relations),(False,relations)],events)
+  class Conn:
+   def commit(self): events.append("commit")
+   def rollback(self): events.append("rollback")
+  def failed_readback(unused,sql,params=None):
+   if sql==recovery.PRIVACY_RELATION_STATE_SQL: return [(recovery.PRIVACY_DATA_ROLE,False,True,["INSERT"])]
+   return []
+  with patch.object(recovery,"_query_conn",side_effect=failed_readback),self.assertRaisesRegex(recovery.RecoveryError,"privilege state"):
+   recovery._privacy_insert_privilege(Conn(),relations,False)
+  self.assertIn("rollback",events)
  def test_restore_verify_passes_only_stdin_identity_to_age(self):
   class Conn:
    def commit(self): pass
@@ -1057,7 +1117,7 @@ class ControllerTests(unittest.TestCase):
    def query(unused,sql,*args):
     events.append(("sql",sql))
     return []
-   with patch.object(recovery,"sha256_file",return_value=capture["evidence"]["dump_sha256"]),patch.object(recovery,"_owned_identity_stream",return_value=io.BytesIO(b"key")),patch.object(recovery,"_require_prior",return_value=capture),patch.object(recovery,"command_exists",side_effect=lambda command:command),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"run",side_effect=execute),patch.object(recovery.subprocess,"run",side_effect=decrypt) as decrypt_run,patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",side_effect=query),patch.object(recovery,"_create_auth_user_placeholders"),patch.object(recovery,"_normalize_restored_vector_extension",return_value="public"),patch.object(recovery,"_fingerprints",return_value=observed):
+   with patch.object(recovery,"sha256_file",return_value=capture["evidence"]["dump_sha256"]),patch.object(recovery,"_owned_identity_stream",return_value=io.BytesIO(b"key")),patch.object(recovery,"_require_prior",return_value=capture),patch.object(recovery,"command_exists",side_effect=lambda command:command),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"run",side_effect=execute),patch.object(recovery.subprocess,"run",side_effect=decrypt) as decrypt_run,patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",side_effect=query),patch.object(recovery,"_set_privacy_insert_privilege",side_effect=lambda unused,relations,grant: events.append(("privacy-insert",grant,relations))),patch.object(recovery,"_create_auth_user_placeholders"),patch.object(recovery,"_normalize_restored_vector_extension",return_value="public"),patch.object(recovery,"_fingerprints",return_value=observed):
     result=recovery.run_restore_verify(args,None)
    self.assertEqual(["age","--decrypt","--identity","-",str(dump)],decrypt_run.call_args.args[0])
    self.assertNotIn("key",json.dumps(result))
@@ -1101,7 +1161,13 @@ class ControllerTests(unittest.TestCase):
    privacy_list=next(argument.split("=",1)[1] for argument in events[data_indices[1]][1] if argument.startswith("--use-list="))
    self.assertEqual(("pg_restore","--section=data",f"--use-list={postgres_list}","--role=postgres","--dbname=service=g035-local",plain_path),events[data_indices[0]][1])
    self.assertEqual(("pg_restore","--section=data",f"--use-list={privacy_list}","--role=privacy_workflow_owner","--dbname=service=g035-local",plain_path),events[data_indices[1]][1])
-   self.assertEqual(recovery._data_use_lists(SCHEMA_TOC),(data_use_lists["--role=postgres"],data_use_lists["--role=privacy_workflow_owner"]))
+   expected_postgres,expected_privacy,expected_relations=recovery._data_use_lists(SCHEMA_TOC)
+   self.assertEqual((expected_postgres,expected_privacy),(data_use_lists["--role=postgres"],data_use_lists["--role=privacy_workflow_owner"]))
+   grant_event=events.index(("privacy-insert",True,expected_relations)); revoke_event=events.index(("privacy-insert",False,expected_relations))
+   self.assertLess(data_indices[0],grant_event)
+   self.assertLess(grant_event,data_indices[1])
+   self.assertLess(data_indices[1],revoke_event)
+   self.assertLess(revoke_event,post_index)
    self.assertTrue(all(not path.exists() for path in restore_paths))
    for event in events:
     if event[0]=="restore":
