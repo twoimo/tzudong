@@ -31,6 +31,50 @@ _LEDGER_INSERT_SQL = "INSERT INTO supabase_migrations.schema_migrations(version,
 _TIMEOUT_SQL = "SELECT pg_catalog.set_config('statement_timeout', %s, true)"
 _LOCK_TIMEOUT_SQL = "SELECT pg_catalog.set_config('lock_timeout', %s, true)"
 _IDLE_TIMEOUT_SQL = "SELECT pg_catalog.set_config('idle_in_transaction_session_timeout', %s, true)"
+_AUTHORITY_PRECONDITION_SQL = (
+    "DO $g038_authority_precondition$ BEGIN "
+    "IF current_user <> 'postgres' OR session_user <> 'postgres' "
+    "OR (SELECT pg_catalog.count(*) FROM pg_catalog.pg_auth_members AS membership "
+    "JOIN pg_catalog.pg_roles AS role ON role.oid=membership.roleid "
+    "JOIN pg_catalog.pg_roles AS member ON member.oid=membership.member "
+    "WHERE role.rolname='privacy_workflow_owner' AND member.rolname='postgres') <> 1 "
+    "OR NOT EXISTS (SELECT 1 FROM pg_catalog.pg_auth_members AS membership "
+    "JOIN pg_catalog.pg_roles AS role ON role.oid=membership.roleid "
+    "JOIN pg_catalog.pg_roles AS member ON member.oid=membership.member "
+    "JOIN pg_catalog.pg_roles AS grantor ON grantor.oid=membership.grantor "
+    "WHERE role.rolname='privacy_workflow_owner' AND member.rolname='postgres' "
+    "AND grantor.rolname='supabase_admin' AND membership.admin_option "
+    "AND NOT membership.inherit_option AND NOT membership.set_option) "
+    "THEN RAISE EXCEPTION 'G038 workflow-owner authority precondition drift'; END IF; "
+    "END $g038_authority_precondition$"
+)
+_AUTHORITY_PRELUDE_SQL = (
+    "GRANT privacy_workflow_owner TO postgres "
+    "WITH ADMIN FALSE, INHERIT TRUE, SET TRUE GRANTED BY postgres"
+)
+_AUTHORITY_POSTCONDITION_SQL = (
+    "DO $g038_authority_postcondition$ BEGIN "
+    "IF (SELECT pg_catalog.count(*) FROM pg_catalog.pg_auth_members AS membership "
+    "JOIN pg_catalog.pg_roles AS role ON role.oid=membership.roleid "
+    "JOIN pg_catalog.pg_roles AS member ON member.oid=membership.member "
+    "WHERE role.rolname='privacy_workflow_owner' AND member.rolname='postgres') <> 2 "
+    "OR NOT EXISTS (SELECT 1 FROM pg_catalog.pg_auth_members AS membership "
+    "JOIN pg_catalog.pg_roles AS role ON role.oid=membership.roleid "
+    "JOIN pg_catalog.pg_roles AS member ON member.oid=membership.member "
+    "JOIN pg_catalog.pg_roles AS grantor ON grantor.oid=membership.grantor "
+    "WHERE role.rolname='privacy_workflow_owner' AND member.rolname='postgres' "
+    "AND grantor.rolname='supabase_admin' AND membership.admin_option "
+    "AND NOT membership.inherit_option AND NOT membership.set_option) "
+    "OR NOT EXISTS (SELECT 1 FROM pg_catalog.pg_auth_members AS membership "
+    "JOIN pg_catalog.pg_roles AS role ON role.oid=membership.roleid "
+    "JOIN pg_catalog.pg_roles AS member ON member.oid=membership.member "
+    "JOIN pg_catalog.pg_roles AS grantor ON grantor.oid=membership.grantor "
+    "WHERE role.rolname='privacy_workflow_owner' AND member.rolname='postgres' "
+    "AND grantor.rolname='postgres' AND NOT membership.admin_option "
+    "AND membership.inherit_option AND membership.set_option) "
+    "THEN RAISE EXCEPTION 'G038 workflow-owner authority postcondition drift'; END IF; "
+    "END $g038_authority_postcondition$"
+)
 _STABLE_SCHEMAS = (
     "public", "auth", "storage", "shortener_private", "ocr_private",
     "provider_budget_private", "privacy_retention", "account_deletion_private",
@@ -579,7 +623,11 @@ def _locks(cursor: Any, *, deadline_monotonic: float) -> None:
     remaining = str(_deadline(deadline_monotonic))
     _execute(cursor, _LOCK_TIMEOUT_SQL, (remaining,), deadline_monotonic=deadline_monotonic)
     _execute(cursor, _IDLE_TIMEOUT_SQL, (remaining,), deadline_monotonic=deadline_monotonic)
-    for statement in _LOCK_SQL:
+    _execute(cursor, _LOCK_SQL[0], deadline_monotonic=deadline_monotonic)
+    _execute(cursor, _AUTHORITY_PRECONDITION_SQL, deadline_monotonic=deadline_monotonic)
+    _execute(cursor, _AUTHORITY_PRELUDE_SQL, deadline_monotonic=deadline_monotonic)
+    _execute(cursor, _AUTHORITY_POSTCONDITION_SQL, deadline_monotonic=deadline_monotonic)
+    for statement in _LOCK_SQL[1:]:
         _execute(cursor, statement, deadline_monotonic=deadline_monotonic)
 
 
