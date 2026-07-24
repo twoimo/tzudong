@@ -33,8 +33,8 @@ import g038_production_controller as production
 import g038_successor_executor as executor
 from g038_successor_contract import (
     EXCLUDED_ROOT, RUNTIME_INVENTORY_ROOT, STATEMENT_VECTOR_ROOT,
-    TARGET_FINGERPRINT, TERMINAL_SPEC_ROOT, canonical_sha256, load_manifest,
-    repository_root,
+    TARGET_FINGERPRINT, TERMINAL_SPEC_ROOT, canonical_json_bytes,
+    canonical_sha256, load_manifest, repository_root,
 )
 import g038_successor_source
 import g038_write_freeze
@@ -1299,14 +1299,14 @@ def _sign_and_publish(
     if (type(unsigned_value) is not dict or unsigned_value.get("schema") != receipt.SCHEMA
             or unsigned_value.get("kind") != receipt.KIND
             or type(unsigned_value.get("body")) is not dict
-            or executor.canonical_json_bytes(unsigned_value) != result.unsigned):
+            or canonical_json_bytes(unsigned_value) != result.unsigned):
         _fail("rehearsal_contract")
     envelope = {
         "schema": receipt.SCHEMA, "kind": receipt.KIND,
         "body": unsigned_value["body"],
         "signature_b64": __import__("base64").b64encode(signature).decode("ascii"),
     }
-    raw = executor.canonical_json_bytes(envelope) + b"\n"
+    raw = canonical_json_bytes(envelope) + b"\n"
     if len(raw) > receipt.MAX_RECEIPT_BYTES:
         _fail("receipt_bounds")
     receipt._publish(output, raw)

@@ -717,6 +717,12 @@ def test_signing_key_accepts_loaded_pinned_ed25519_implementation(monkeypatch):
         if write_fd >= 0:
             os.close(write_fd)
 
+def test_receipt_publication_uses_contract_canonicalizer():
+    source = Path(adapter.__file__).read_text(encoding="utf-8")
+    assert "canonical_json_bytes(unsigned_value)" in source
+    assert "canonical_json_bytes(envelope)" in source
+    assert "executor.canonical_json_bytes" not in source
+
 
 def test_deadline_is_absolute_and_expired_deadline_is_denied():
     with pytest.raises(adapter.LocalCloneError, match="deadline"):
