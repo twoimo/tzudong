@@ -1091,7 +1091,7 @@ def _restore_authority_catalog(
                     "effective_execute": True,
                     "identity_arguments": identity_arguments,
                     "name": name,
-                    "owner": "postgres",
+                    "owner": "supabase_admin",
                     "schema": "extensions",
                 }
                 for name, identity_arguments
@@ -1113,6 +1113,8 @@ def _restore_authority_catalog(
     [
         lambda value: value["owner_roles"].pop(),
         lambda value: value["owner_roles"].append("attacker_owner"),
+        lambda value: value.__setitem__("session_user", "supabase_admin"),
+        lambda value: value.__setitem__("user", "supabase_admin"),
         lambda value: value["memberships"].__setitem__(
             0, [*value["memberships"][0][:2], "attacker", *value["memberships"][0][3:]],
         ),
@@ -1128,7 +1130,7 @@ def _restore_authority_catalog(
         ),
         lambda value: value["extension_dependencies"]["functions"][0]["acl"].clear(),
         lambda value: value["extension_dependencies"]["functions"][0]["acl"][0].__setitem__(
-            0, "supabase_admin",
+            0, "postgres",
         ),
         lambda value: value["extension_dependencies"]["functions"][0].__setitem__(
             "identity_arguments", "bytea, text",
@@ -1137,17 +1139,17 @@ def _restore_authority_catalog(
             3, True,
         ),
         lambda value: value["extension_dependencies"]["functions"][0].__setitem__(
-            "owner", "supabase_admin",
+            "owner", "postgres",
         ),
         lambda value: value["extensions"]["acl"][6].__setitem__(
             0, "supabase_admin",
         ),
         lambda value: value["extension_dependencies"]["functions"].append({
-            "acl": [["postgres", "privacy_workflow_owner", "EXECUTE", False]],
+            "acl": [["supabase_admin", "privacy_workflow_owner", "EXECUTE", False]],
             "effective_execute": True,
             "identity_arguments": "text",
             "name": "hmac",
-            "owner": "postgres",
+            "owner": "supabase_admin",
             "schema": "extensions",
         }),
         lambda value: value["extension_dependencies"]["functions"].reverse(),
@@ -1159,7 +1161,7 @@ def _restore_authority_catalog(
         ),
     ],
 )
-def test_restore_authority_rejects_owner_membership_schema_and_broad_grant_drift(mutate):
+def test_restore_authority_rejects_session_owner_membership_schema_and_grantor_drift(mutate):
     catalog = _restore_authority_catalog()
     mutate(catalog)
     with pytest.raises(adapter.LocalCloneError, match="restore_authority"):
@@ -1205,48 +1207,72 @@ def test_restore_authority_is_source_pinned_exact_and_asserted_before_restore():
     ops.bootstrap_restore_authority({"container": "clone"})
     assert len(calls) == 5
     (
-        baseline_assertion_sql, grant_sql, dependency_sql,
-        temporary_schema_sql, transient_assertion_sql,
+        baseline_assertion_sql, grant_sql, schema_sql,
+        function_sql, transient_assertion_sql,
     ) = (call[1] for call in calls)
+    assert [
+        argv[argv.index("-U") + 1] for argv, _ in calls
+    ] == ["postgres", "supabase_admin", "postgres", "supabase_admin", "postgres"]
     assert "json_build_object" in baseline_assertion_sql
     assert grant_sql.index("restore authority precondition drift") < grant_sql.index(
         "GRANT supabase_admin, supabase_auth_admin, supabase_storage_admin TO postgres"
     )
     assert "WITH ADMIN FALSE, INHERIT TRUE, SET TRUE GRANTED BY supabase_admin" in grant_sql
-    assert "CREATE SCHEMA extensions" not in dependency_sql
+    assert "CREATE SCHEMA extensions" not in schema_sql
     assert (
         "GRANT USAGE, CREATE ON SCHEMA extensions TO supabase_admin "
-        "GRANTED BY postgres;" in temporary_schema_sql
+        "GRANTED BY postgres;" in schema_sql
     )
-    assert "privacy_workflow_owner" not in temporary_schema_sql
-    assert "supabase_admin" not in dependency_sql
     assert (
         "GRANT USAGE ON SCHEMA extensions TO privacy_workflow_owner\n"
-        "  GRANTED BY postgres;" in dependency_sql
+        "  GRANTED BY postgres;" in schema_sql
+    )
+    assert "GRANT EXECUTE" not in schema_sql
+    assert "GRANT USAGE ON SCHEMA" not in function_sql
+    assert (
+        "current_user <> 'supabase_admin' OR session_user <> 'supabase_admin'"
+        in function_sql
+    )
+    assert (
+        "pg_catalog.pg_get_userbyid(procedure.proowner) <> 'supabase_admin'"
+        in schema_sql
+    )
+    assert (
+        "pg_catalog.pg_get_userbyid(procedure.proowner) <> 'supabase_admin'"
+        in function_sql
     )
     assert (
         "GRANT EXECUTE ON FUNCTION extensions.gen_random_uuid(), "
         "extensions.digest(text, text)\n"
-        "  TO privacy_workflow_owner GRANTED BY postgres;" in dependency_sql
+        "  TO privacy_workflow_owner GRANTED BY supabase_admin;" in function_sql
     )
-    assert dependency_sql.index("restore extension dependency precondition drift") < (
-        dependency_sql.index("GRANT USAGE ON SCHEMA extensions TO privacy_workflow_owner")
+    assert schema_sql.index("restore extension dependency precondition drift") < (
+        schema_sql.index("GRANT USAGE ON SCHEMA extensions TO privacy_workflow_owner")
     )
-    assert dependency_sql.index(
-        "GRANT USAGE ON SCHEMA extensions TO privacy_workflow_owner"
-    ) < dependency_sql.index(
+    assert function_sql.index(
+        "restore extension dependency owner precondition drift"
+    ) < function_sql.index(
         "GRANT EXECUTE ON FUNCTION extensions.gen_random_uuid(), "
         "extensions.digest(text, text)"
     )
-    assert "GRANT ALL" not in dependency_sql
-    assert " TO privacy_workflow_owner WITH GRANT OPTION" not in dependency_sql
-    assert "GRANT privacy_workflow_owner TO" not in dependency_sql
+    assert "GRANT ALL" not in schema_sql and "GRANT ALL" not in function_sql
+    assert all(
+        " TO privacy_workflow_owner WITH GRANT OPTION" not in sql
+        for sql in (schema_sql, function_sql)
+    )
+    assert all(
+        "GRANT privacy_workflow_owner TO" not in sql
+        for sql in (schema_sql, function_sql)
+    )
     assert "json_build_object" in transient_assertion_sql
     combined = "\n".join(sql for _, sql in calls)
     assert " TO PUBLIC" not in combined and " FROM PUBLIC" not in combined
     assert "SUPERUSER" not in combined
     assert "--no-owner" not in combined and "--no-acl" not in combined
     assert all(sql not in argv for argv, sql in calls)
+    assert adapter.RESTORE_EXTENSION_DEPENDENCY_FUNCTION_ACL == (
+        ("supabase_admin", "privacy_workflow_owner", "EXECUTE", False),
+    )
     assert adapter.RESTORE_TERMINAL_SCHEMA_ACL == (
         ("postgres", "anon", "USAGE", False),
         ("postgres", "authenticated", "USAGE", False),
