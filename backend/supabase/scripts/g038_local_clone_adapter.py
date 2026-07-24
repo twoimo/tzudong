@@ -1263,10 +1263,11 @@ def _load_signer(fd: int) -> Callable[[bytes], bytes]:
     try:
         from cryptography.hazmat.primitives.serialization import load_pem_private_key
         key = load_pem_private_key(bytes(raw), password=None)
-        public = key.public_key().public_bytes_raw()
+        public_key = key.public_key()
         from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
-        if type(key.public_key()) is not Ed25519PublicKey:
+        if not isinstance(public_key, Ed25519PublicKey):
             _fail("signing_key")
+        public = public_key.public_bytes_raw()
         expected = receipt.PUBLIC_KEY_PEM.encode("ascii")
         from cryptography.hazmat.primitives.serialization import load_pem_public_key
         if load_pem_public_key(expected).public_bytes_raw() != public:
