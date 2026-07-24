@@ -1133,6 +1133,113 @@ def _with_post_data_trigger_authority_connection(env,operation,*args):
  conn=_connect(LOCAL_SERVICE,env)
  try: return operation(conn,*args)
  finally: conn.close()
+POST_DATA_FK_TABLE_AUTHORITY = (
+ ("postgres","privacy_retention","privacy_audit_events","privacy_workflow_owner"),
+ ("postgres","privacy_retention","privacy_consent_events","privacy_workflow_owner"),
+ ("privacy_workflow_owner","auth","users","supabase_auth_admin"),
+ ("privacy_workflow_owner","privacy_retention","marketing_campaign_batch_recipients","privacy_workflow_owner"),
+ ("privacy_workflow_owner","privacy_retention","privacy_audit_events","privacy_workflow_owner"),
+ ("privacy_workflow_owner","privacy_retention","privacy_consent_events","privacy_workflow_owner"),
+ ("privacy_workflow_owner","privacy_retention","privacy_guardian_verifications","privacy_workflow_owner"),
+ ("privacy_workflow_owner","privacy_retention","privacy_onboarding_challenges","privacy_workflow_owner"),
+ ("privacy_workflow_owner","public","marketing_campaign_recipients","postgres"),
+)
+POST_DATA_FK_SCHEMA_AUTHORITY = (("auth","privacy_workflow_owner","supabase_admin"),)
+POST_DATA_FK_TABLE_AUTHORITY_SQL = "SELECT namespace.nspname,class.relname,owner.rolname,coalesce((SELECT pg_catalog.jsonb_agg(pg_catalog.jsonb_build_array(CASE WHEN acl.grantee=0 THEN 'PUBLIC' ELSE grantee.rolname END,grantor.rolname,acl.privilege_type,acl.is_grantable) ORDER BY CASE WHEN acl.grantee=0 THEN 'PUBLIC' ELSE grantee.rolname END,grantor.rolname,acl.privilege_type,acl.is_grantable) FROM pg_catalog.aclexplode(coalesce(class.relacl,pg_catalog.acldefault('r',class.relowner))) AS acl LEFT JOIN pg_catalog.pg_roles AS grantee ON grantee.oid=acl.grantee JOIN pg_catalog.pg_roles AS grantor ON grantor.oid=acl.grantor),'[]'::jsonb),pg_catalog.has_table_privilege(target.oid,class.oid,'REFERENCES'),EXISTS (SELECT 1 FROM pg_catalog.aclexplode(class.relacl) AS direct_acl WHERE direct_acl.grantee=target.oid AND direct_acl.privilege_type='REFERENCES') FROM pg_catalog.pg_class AS class JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid=class.relnamespace JOIN pg_catalog.pg_roles AS owner ON owner.oid=class.relowner JOIN pg_catalog.pg_roles AS target ON target.rolname=%s WHERE namespace.nspname=%s AND class.relname=%s AND class.relkind IN ('r','p')"
+def _validate_post_data_fk_authority_contract():
+ expected=(
+  ("postgres","privacy_retention","privacy_audit_events","privacy_workflow_owner"),
+  ("postgres","privacy_retention","privacy_consent_events","privacy_workflow_owner"),
+  ("privacy_workflow_owner","auth","users","supabase_auth_admin"),
+  ("privacy_workflow_owner","privacy_retention","marketing_campaign_batch_recipients","privacy_workflow_owner"),
+  ("privacy_workflow_owner","privacy_retention","privacy_audit_events","privacy_workflow_owner"),
+  ("privacy_workflow_owner","privacy_retention","privacy_consent_events","privacy_workflow_owner"),
+  ("privacy_workflow_owner","privacy_retention","privacy_guardian_verifications","privacy_workflow_owner"),
+  ("privacy_workflow_owner","privacy_retention","privacy_onboarding_challenges","privacy_workflow_owner"),
+  ("privacy_workflow_owner","public","marketing_campaign_recipients","postgres"),
+ )
+ if type(POST_DATA_FK_TABLE_AUTHORITY) is not tuple or POST_DATA_FK_TABLE_AUTHORITY!=expected or type(POST_DATA_FK_SCHEMA_AUTHORITY) is not tuple or POST_DATA_FK_SCHEMA_AUTHORITY!=(("auth","privacy_workflow_owner","supabase_admin"),): raise RecoveryError("post-data FK authority contract invalid")
+def _read_post_data_fk_authority_state(conn,baseline=False):
+ _validate_post_data_fk_authority_contract(); tables=[]
+ for role,schema,table,expected_owner in POST_DATA_FK_TABLE_AUTHORITY:
+  rows=_query_conn(conn,POST_DATA_FK_TABLE_AUTHORITY_SQL,(role,schema,table))
+  if len(rows)!=1 or type(rows[0]) is not tuple or len(rows[0])!=6: raise RecoveryError("post-data FK table authority state invalid")
+  actual_schema,actual_table,owner,raw_acl,effective,direct=rows[0]
+  acl=_canonical_authority_acl(raw_acl,PRIVACY_TABLE_PRIVILEGES)
+  direct_acl=(role,owner,"REFERENCES",False) in acl
+  if (actual_schema,actual_table,owner)!=(schema,table,expected_owner) or type(effective) is not bool or type(direct) is not bool or direct is not direct_acl or (baseline and (effective is not False or direct is not False)): raise RecoveryError("post-data FK table authority state invalid")
+  tables.append((role,schema,table,owner,acl,effective,direct))
+ schemas=[]
+ for schema,role,expected_owner in POST_DATA_FK_SCHEMA_AUTHORITY:
+  rows=_query_conn(conn,POST_DATA_SCHEMA_AUTHORITY_SQL,(role,schema))
+  if len(rows)!=1 or type(rows[0]) is not tuple or len(rows[0])!=7: raise RecoveryError("post-data FK schema authority state invalid")
+  actual_schema,owner,raw_acl,effective_usage,effective_create,direct_usage,direct_create=rows[0]
+  acl=_canonical_authority_acl(raw_acl,{"CREATE","USAGE"})
+  direct_acl=(role,owner,"USAGE",False) in acl
+  if (actual_schema,owner)!=(schema,expected_owner) or any(type(value) is not bool for value in (effective_usage,effective_create,direct_usage,direct_create)) or direct_usage is not direct_acl or effective_create is not False or direct_create is not False or (baseline and (effective_usage is not False or direct_usage is not False)): raise RecoveryError("post-data FK schema authority state invalid")
+  schemas.append((schema,role,owner,acl,effective_usage,effective_create,direct_usage,direct_create))
+ return tuple(tables),tuple(schemas)
+def _validate_post_data_fk_baseline(baseline):
+ _validate_post_data_fk_authority_contract()
+ if type(baseline) is not tuple or len(baseline)!=2: raise RecoveryError("post-data FK authority baseline invalid")
+ tables,schemas=baseline
+ if type(tables) is not tuple or len(tables)!=9 or type(schemas) is not tuple or len(schemas)!=1: raise RecoveryError("post-data FK authority baseline invalid")
+ for expected,item in zip(POST_DATA_FK_TABLE_AUTHORITY,tables):
+  if type(item) is not tuple or len(item)!=7 or item[:4]!=expected or item[5:]!=(False,False) or _canonical_authority_acl(list(item[4]),PRIVACY_TABLE_PRIVILEGES)!=item[4] or any(acl[0]==item[0] and acl[2]=="REFERENCES" for acl in item[4]): raise RecoveryError("post-data FK authority baseline invalid")
+ for expected,item in zip(POST_DATA_FK_SCHEMA_AUTHORITY,schemas):
+  if type(item) is not tuple or len(item)!=8 or item[:3]!=expected or item[4:]!=(False,False,False,False) or _canonical_authority_acl(list(item[3]),{"CREATE","USAGE"})!=item[3] or any(acl[0]==item[1] and acl[2] in {"CREATE","USAGE"} for acl in item[3]): raise RecoveryError("post-data FK authority baseline invalid")
+def _post_data_fk_window_state(baseline):
+ tables,schemas=baseline
+ return (
+  tuple((*item[:4],tuple(sorted((*item[4],(item[0],item[3],"REFERENCES",False)))),True,True) for item in tables),
+  tuple((*item[:3],tuple(sorted((*item[3],(item[1],item[2],"USAGE",False)))),True,False,True,False) for item in schemas),
+ )
+def _verify_post_data_fk_authority_state(conn,expected):
+ if _read_post_data_fk_authority_state(conn)!=expected: raise RecoveryError("post-data FK authority state invalid")
+def _post_data_fk_table_statement(role,schema,table,grant):
+ return ("GRANT" if grant else "REVOKE")+" REFERENCES ON TABLE "+_quoted_identifier(schema)+"."+_quoted_identifier(table)+(" TO " if grant else " FROM ")+role
+def _open_post_data_fk_authority_window(conn):
+ try:
+  _query_conn(conn,"BEGIN")
+  baseline=_read_post_data_fk_authority_state(conn,baseline=True)
+  for role,schema,table,owner in POST_DATA_FK_TABLE_AUTHORITY:
+   _query_conn(conn,"SET LOCAL ROLE "+owner)
+   _query_conn(conn,_post_data_fk_table_statement(role,schema,table,True))
+  for schema,role,owner in POST_DATA_FK_SCHEMA_AUTHORITY:
+   _query_conn(conn,"SET LOCAL ROLE "+owner)
+   _query_conn(conn,_post_data_schema_authority_statement(schema,role,True))
+  _verify_post_data_fk_authority_state(conn,_post_data_fk_window_state(baseline))
+  conn.commit()
+  return baseline
+ except Exception:
+  conn.rollback()
+  raise
+def _close_post_data_fk_authority_window(conn,baseline):
+ _validate_post_data_fk_baseline(baseline); expected_window=_post_data_fk_window_state(baseline)
+ try:
+  _query_conn(conn,"BEGIN")
+  precondition_error=None
+  try: _verify_post_data_fk_authority_state(conn,expected_window)
+  except Exception as exc: precondition_error=exc
+  for role,schema,table,owner in POST_DATA_FK_TABLE_AUTHORITY:
+   _query_conn(conn,"SET LOCAL ROLE "+owner)
+   _query_conn(conn,_post_data_fk_table_statement(role,schema,table,False))
+  for schema,role,owner in POST_DATA_FK_SCHEMA_AUTHORITY:
+   _query_conn(conn,"SET LOCAL ROLE "+owner)
+   _query_conn(conn,_post_data_schema_authority_statement(schema,role,False))
+  readback_error=None
+  try: _verify_post_data_fk_authority_state(conn,baseline)
+  except Exception as exc: readback_error=exc
+  conn.commit()
+  if precondition_error is not None: raise precondition_error
+  if readback_error is not None: raise readback_error
+ except Exception:
+  conn.rollback()
+  raise
+def _with_post_data_fk_authority_connection(env,operation,*args):
+ conn=_connect(LOCAL_SERVICE,env)
+ try: return operation(conn,*args)
+ finally: conn.close()
 POST_DATA_TABLE_TRIGGER_STATE_SQL = "SELECT namespace.nspname,class.relname,owner.rolname,class.relrowsecurity,class.relforcerowsecurity,coalesce((SELECT pg_catalog.jsonb_agg(pg_catalog.jsonb_build_array(CASE WHEN acl.grantee=0 THEN 'PUBLIC' ELSE grantee.rolname END,grantor.rolname,acl.privilege_type,acl.is_grantable) ORDER BY CASE WHEN acl.grantee=0 THEN 'PUBLIC' ELSE grantee.rolname END,grantor.rolname,acl.privilege_type,acl.is_grantable) FROM pg_catalog.aclexplode(class.relacl) AS acl LEFT JOIN pg_catalog.pg_roles AS grantee ON grantee.oid=acl.grantee JOIN pg_catalog.pg_roles AS grantor ON grantor.oid=acl.grantor),'[]'::jsonb),pg_catalog.has_table_privilege(target.oid,class.oid,'TRIGGER') FROM pg_catalog.pg_class AS class JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid=class.relnamespace JOIN pg_catalog.pg_roles AS owner ON owner.oid=class.relowner JOIN pg_catalog.pg_roles AS target ON target.rolname=%s WHERE namespace.nspname=%s AND class.relname=%s AND class.relkind IN ('r','p')"
 def _read_post_data_table_trigger_state(conn,relations,baseline=False):
  if type(relations) is not tuple or len(relations)!=POST_DATA_PRIVACY_TRIGGER_RELATION_COUNT or len(relations)!=len(set(relations)): raise RecoveryError("post-data table trigger relation inventory invalid")
@@ -1206,7 +1313,11 @@ def _restore_post_data_with_trigger_authority(restore,plain_fd,plain,env,workspa
  try:
   table_baseline,added_relations=_with_post_data_table_trigger_connection(env,_open_post_data_table_trigger_window,relations)
   try:
-   _restore_post_data_runs(restore,plain_fd,plain,env,workspace,runs)
+   fk_baseline=_with_post_data_fk_authority_connection(env,_open_post_data_fk_authority_window)
+   try:
+    _restore_post_data_runs(restore,plain_fd,plain,env,workspace,runs)
+   finally:
+    _with_post_data_fk_authority_connection(env,_close_post_data_fk_authority_window,fk_baseline)
   finally:
    _with_post_data_table_trigger_connection(env,_close_post_data_table_trigger_window,relations,table_baseline,added_relations)
  finally:
