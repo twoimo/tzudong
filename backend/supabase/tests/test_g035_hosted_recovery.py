@@ -1203,6 +1203,100 @@ class ControllerTests(unittest.TestCase):
   privilege_statements=[sql for sql in statements if sql.startswith(("GRANT ","REVOKE "))]
   self.assertFalse(any(any(forbidden in sql for forbidden in (" PUBLIC"," ALL "," CREATE ","BYPASSRLS","SUPERUSER")) for sql in privilege_statements))
   self.assertEqual(2,conn.commits); self.assertEqual(0,conn.rollbacks)
+ def test_post_data_fk_authority_pins_exact_contract_and_rejects_alias_order_and_type_mutations(self):
+  expected=(
+   ("postgres","privacy_retention","privacy_audit_events","privacy_workflow_owner"),
+   ("postgres","privacy_retention","privacy_consent_events","privacy_workflow_owner"),
+   ("privacy_workflow_owner","auth","users","supabase_auth_admin"),
+   ("privacy_workflow_owner","privacy_retention","marketing_campaign_batch_recipients","privacy_workflow_owner"),
+   ("privacy_workflow_owner","privacy_retention","privacy_audit_events","privacy_workflow_owner"),
+   ("privacy_workflow_owner","privacy_retention","privacy_consent_events","privacy_workflow_owner"),
+   ("privacy_workflow_owner","privacy_retention","privacy_guardian_verifications","privacy_workflow_owner"),
+   ("privacy_workflow_owner","privacy_retention","privacy_onboarding_challenges","privacy_workflow_owner"),
+   ("privacy_workflow_owner","public","marketing_campaign_recipients","postgres"),
+  )
+  self.assertEqual(expected,recovery.POST_DATA_FK_TABLE_AUTHORITY)
+  self.assertEqual((("auth","privacy_workflow_owner","supabase_admin"),),recovery.POST_DATA_FK_SCHEMA_AUTHORITY)
+  recovery._validate_post_data_fk_authority_contract()
+  mutations=(list(expected),expected[::-1],(("postgres","privacy_retention","privacy_audit_events","postgres"),)+expected[1:],(("postgres","privacy_retention","privacy-audit-events","privacy_workflow_owner"),)+expected[1:])
+  for mutation in mutations:
+   with self.subTest(mutation=mutation),patch.object(recovery,"POST_DATA_FK_TABLE_AUTHORITY",mutation),self.assertRaisesRegex(recovery.RecoveryError,"contract invalid"):
+    recovery._validate_post_data_fk_authority_contract()
+  for mutation in ([("auth","privacy_workflow_owner","supabase_admin")],(("privacy_retention","privacy_workflow_owner","supabase_admin"),),(("auth","authenticated","supabase_admin"),)):
+   with self.subTest(schema_mutation=mutation),patch.object(recovery,"POST_DATA_FK_SCHEMA_AUTHORITY",mutation),self.assertRaisesRegex(recovery.RecoveryError,"contract invalid"):
+    recovery._validate_post_data_fk_authority_contract()
+  self.assertIn("pg_catalog.acldefault('r',class.relowner)",recovery.POST_DATA_FK_TABLE_AUTHORITY_SQL)
+  self.assertIn("pg_catalog.has_table_privilege(target.oid,class.oid,'REFERENCES')",recovery.POST_DATA_FK_TABLE_AUTHORITY_SQL)
+  self.assertNotIn("'{}'::aclitem[]",recovery.POST_DATA_FK_TABLE_AUTHORITY_SQL)
+ def test_post_data_fk_authority_rejects_missing_owner_effective_direct_acl_and_create_drift(self):
+  first=recovery.POST_DATA_FK_TABLE_AUTHORITY[0]
+  def query(unused,sql,params=None,mutation=None):
+   if sql==recovery.POST_DATA_FK_TABLE_AUTHORITY_SQL:
+    role,schema,table=params; item=next(item for item in recovery.POST_DATA_FK_TABLE_AUTHORITY if item[:3]==(role,schema,table))
+    row=(schema,table,item[3],[[item[3],item[3],"SELECT",False]],False,False)
+    return mutation(item,row) if item==first and mutation is not None else [row]
+   schema,role=params
+   return [(schema,"supabase_admin",[["supabase_admin","supabase_admin","CREATE",False],["supabase_admin","supabase_admin","USAGE",False]],False,False,False,False)]
+  mutations=(
+   lambda item,row:[],
+   lambda item,row:[(row[0],row[1],"postgres",*row[3:])],
+   lambda item,row:[(*row[:4],True,False)],
+   lambda item,row:[(*row[:5],True)],
+   lambda item,row:[(*row[:3],[[item[0],item[3],"REFERENCES",False]],False,False)],
+  )
+  for mutation in mutations:
+   with self.subTest(mutation=mutation),patch.object(recovery,"_query_conn",side_effect=lambda conn,sql,params=None,m=mutation:query(conn,sql,params,m)),self.assertRaisesRegex(recovery.RecoveryError,"table authority state"):
+    recovery._read_post_data_fk_authority_state(object(),baseline=True)
+  def schema_query(unused,sql,params=None):
+   if sql==recovery.POST_DATA_FK_TABLE_AUTHORITY_SQL: return query(unused,sql,params)
+   return [("auth","supabase_admin",[["supabase_admin","supabase_admin","USAGE",False]],False,True,False,False)]
+  with patch.object(recovery,"_query_conn",side_effect=schema_query),self.assertRaisesRegex(recovery.RecoveryError,"schema authority state"):
+   recovery._read_post_data_fk_authority_state(object(),baseline=True)
+ def test_post_data_fk_authority_preserves_heterogeneous_acl_and_restores_exact_baseline(self):
+  states={}
+  for index,(role,schema,table,owner) in enumerate(recovery.POST_DATA_FK_TABLE_AUTHORITY):
+   acl=[[owner,owner,"SELECT",False]]
+   if index%2: acl.append(["auditor","postgres","REFERENCES",False])
+   states[(role,schema,table)]={"owner":owner,"acl":sorted(acl),"effective":False,"direct":False}
+  schema_state={"owner":"supabase_admin","acl":[["auditor","supabase_admin","USAGE",False],["supabase_admin","supabase_admin","CREATE",False],["supabase_admin","supabase_admin","USAGE",False]],"usage":False,"create":False,"direct_usage":False,"direct_create":False}
+  original=json.loads(json.dumps({"tables":{"|".join(key):value for key,value in states.items()},"schema":schema_state}))
+  statements=[]; current_role=None
+  class Conn:
+   def __init__(self): self.commits=0; self.rollbacks=0
+   def commit(self): self.commits+=1
+   def rollback(self): self.rollbacks+=1
+  conn=Conn()
+  def query(unused,sql,params=None):
+   nonlocal current_role
+   statements.append(sql)
+   if sql==recovery.POST_DATA_FK_TABLE_AUTHORITY_SQL:
+    role,schema,table=params; state=states[(role,schema,table)]
+    return [(schema,table,state["owner"],state["acl"],state["effective"],state["direct"])]
+   if sql==recovery.POST_DATA_SCHEMA_AUTHORITY_SQL:
+    role,schema=params
+    return [(schema,schema_state["owner"],schema_state["acl"],schema_state["usage"],schema_state["create"],schema_state["direct_usage"],schema_state["direct_create"])]
+   if sql.startswith("SET LOCAL ROLE "): current_role=sql.removeprefix("SET LOCAL ROLE "); return []
+   for role,schema,table,owner in recovery.POST_DATA_FK_TABLE_AUTHORITY:
+    state=states[(role,schema,table)]
+    if sql==recovery._post_data_fk_table_statement(role,schema,table,True):
+     self.assertEqual(owner,current_role); state["acl"].append([role,owner,"REFERENCES",False]); state["acl"].sort(); state["effective"]=state["direct"]=True; return []
+    if sql==recovery._post_data_fk_table_statement(role,schema,table,False):
+     self.assertEqual(owner,current_role); state["acl"].remove([role,owner,"REFERENCES",False]); state["effective"]=state["direct"]=False; return []
+   if sql==recovery._post_data_schema_authority_statement("auth","privacy_workflow_owner",True):
+    self.assertEqual("supabase_admin",current_role); schema_state["acl"].append(["privacy_workflow_owner","supabase_admin","USAGE",False]); schema_state["acl"].sort(); schema_state["usage"]=schema_state["direct_usage"]=True; return []
+   if sql==recovery._post_data_schema_authority_statement("auth","privacy_workflow_owner",False):
+    self.assertEqual("supabase_admin",current_role); schema_state["acl"].remove(["privacy_workflow_owner","supabase_admin","USAGE",False]); schema_state["usage"]=schema_state["direct_usage"]=False; return []
+   return []
+  with patch.object(recovery,"_query_conn",side_effect=query):
+   baseline=recovery._open_post_data_fk_authority_window(conn)
+   self.assertTrue(all(state["effective"] and state["direct"] for state in states.values()))
+   self.assertTrue(schema_state["usage"] and schema_state["direct_usage"]); self.assertFalse(schema_state["create"]); self.assertFalse(schema_state["direct_create"])
+   recovery._close_post_data_fk_authority_window(conn,baseline)
+  self.assertEqual(original,{"tables":{"|".join(key):value for key,value in states.items()},"schema":schema_state})
+  privilege_sql=[sql for sql in statements if sql.startswith(("GRANT ","REVOKE "))]
+  self.assertEqual(20,len(privilege_sql))
+  self.assertFalse(any("*" in sql or " PUBLIC" in sql or " ALL " in sql or " CREATE " in sql or any(privilege in sql for privilege in (" INSERT "," SELECT "," UPDATE "," DELETE "," TRIGGER "," TRUNCATE "," MAINTAIN ")) for sql in privilege_sql))
+  self.assertEqual(2,conn.commits); self.assertEqual(0,conn.rollbacks)
  def test_post_data_table_trigger_scope_is_strictly_derived_from_exact_run_and_root(self):
   self.assertEqual(11,recovery.POST_DATA_PRIVACY_TRIGGER_RUN)
   self.assertEqual(38,recovery.POST_DATA_PRIVACY_TRIGGER_RELATION_COUNT)
@@ -1292,28 +1386,42 @@ class ControllerTests(unittest.TestCase):
    recovery._close_post_data_table_trigger_window(Conn(),relations,baseline,relations)
   self.assertEqual(2,calls)
  def test_post_data_trigger_authority_cleanup_runs_on_owner_restore_failure_and_preserves_failure(self):
-  events=[]; authority_baseline=("authority-baseline",); table_baseline=("table-baseline",); added=(TEST_TRIGGER_RELATIONS[0],)
+  events=[]; authority_baseline=("authority-baseline",); table_baseline=("table-baseline",); fk_baseline=("fk-baseline",); added=(TEST_TRIGGER_RELATIONS[0],)
   def authority_connection(unused_env,operation,*args):
    events.append(("authority",operation,args))
    return authority_baseline if operation is recovery._open_post_data_trigger_authority_window else None
   def table_connection(unused_env,operation,*args):
    events.append(("table",operation,args))
    return (table_baseline,added) if operation is recovery._open_post_data_table_trigger_window else None
-  patches=(patch.object(recovery.hashlib,"sha256",side_effect=_test_trigger_sha256),patch.object(recovery,"_with_post_data_trigger_authority_connection",side_effect=authority_connection),patch.object(recovery,"_with_post_data_table_trigger_connection",side_effect=table_connection),patch.object(recovery,"_restore_post_data_runs",side_effect=recovery.RecoveryError("owner run failed")))
-  with patches[0],patches[1],patches[2],patches[3],self.assertRaisesRegex(recovery.RecoveryError,"owner run failed"):
+  def fk_connection(unused_env,operation,*args):
+   events.append(("fk",operation,args))
+   return fk_baseline if operation is recovery._open_post_data_fk_authority_window else None
+  patches=(patch.object(recovery.hashlib,"sha256",side_effect=_test_trigger_sha256),patch.object(recovery,"_with_post_data_trigger_authority_connection",side_effect=authority_connection),patch.object(recovery,"_with_post_data_table_trigger_connection",side_effect=table_connection),patch.object(recovery,"_with_post_data_fk_authority_connection",side_effect=fk_connection),patch.object(recovery,"_restore_post_data_runs",side_effect=recovery.RecoveryError("owner run failed")))
+  with patches[0],patches[1],patches[2],patches[3],patches[4],self.assertRaisesRegex(recovery.RecoveryError,"owner run failed"):
    recovery._restore_post_data_with_trigger_authority("pg_restore",3,Path("database.pgdump"),{},Path("."),TEST_TRIGGER_RUNS)
   self.assertEqual([
    ("authority",recovery._open_post_data_trigger_authority_window,()),
    ("table",recovery._open_post_data_table_trigger_window,(TEST_TRIGGER_RELATIONS,)),
+   ("fk",recovery._open_post_data_fk_authority_window,()),
+   ("fk",recovery._close_post_data_fk_authority_window,(fk_baseline,)),
    ("table",recovery._close_post_data_table_trigger_window,(TEST_TRIGGER_RELATIONS,table_baseline,added)),
    ("authority",recovery._close_post_data_trigger_authority_window,(authority_baseline,)),
   ],events)
+  events.clear()
+  def failed_fk_cleanup(unused_env,operation,*args):
+   events.append(("fk",operation,args))
+   if operation is recovery._open_post_data_fk_authority_window: return fk_baseline
+   raise recovery.RecoveryError("FK cleanup failed")
+  with patch.object(recovery.hashlib,"sha256",side_effect=_test_trigger_sha256),patch.object(recovery,"_with_post_data_trigger_authority_connection",side_effect=authority_connection),patch.object(recovery,"_with_post_data_table_trigger_connection",side_effect=table_connection),patch.object(recovery,"_with_post_data_fk_authority_connection",side_effect=failed_fk_cleanup),patch.object(recovery,"_restore_post_data_runs",side_effect=recovery.RecoveryError("owner run failed")),self.assertRaisesRegex(recovery.RecoveryError,"FK cleanup failed"):
+   recovery._restore_post_data_with_trigger_authority("pg_restore",3,Path("database.pgdump"),{},Path("."),TEST_TRIGGER_RUNS)
+  self.assertEqual(recovery._close_post_data_trigger_authority_window,events[-1][1])
+  self.assertIn(("table",recovery._close_post_data_table_trigger_window,(TEST_TRIGGER_RELATIONS,table_baseline,added)),events)
   events.clear()
   def failed_table_cleanup(unused_env,operation,*args):
    events.append(("table",operation,args))
    if operation is recovery._open_post_data_table_trigger_window: return table_baseline,added
    raise recovery.RecoveryError("table cleanup failed")
-  with patch.object(recovery.hashlib,"sha256",side_effect=_test_trigger_sha256),patch.object(recovery,"_with_post_data_trigger_authority_connection",side_effect=authority_connection),patch.object(recovery,"_with_post_data_table_trigger_connection",side_effect=failed_table_cleanup),patch.object(recovery,"_restore_post_data_runs",side_effect=recovery.RecoveryError("owner run failed")),self.assertRaisesRegex(recovery.RecoveryError,"table cleanup failed"):
+  with patch.object(recovery.hashlib,"sha256",side_effect=_test_trigger_sha256),patch.object(recovery,"_with_post_data_trigger_authority_connection",side_effect=authority_connection),patch.object(recovery,"_with_post_data_table_trigger_connection",side_effect=failed_table_cleanup),patch.object(recovery,"_with_post_data_fk_authority_connection",side_effect=fk_connection),patch.object(recovery,"_restore_post_data_runs",side_effect=recovery.RecoveryError("owner run failed")),self.assertRaisesRegex(recovery.RecoveryError,"table cleanup failed"):
    recovery._restore_post_data_with_trigger_authority("pg_restore",3,Path("database.pgdump"),{},Path("."),TEST_TRIGGER_RUNS)
   self.assertEqual(recovery._close_post_data_trigger_authority_window,events[-1][1])
   events.clear()
