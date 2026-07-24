@@ -78,14 +78,14 @@ private_acl AS (
 function_expected(signature, grantor, grantee) AS (
   VALUES
     ('public.apply_account_deletion_database_cleanup(uuid,uuid,uuid,text,text,text)', 'privacy_workflow_owner', 'privacy_workflow_owner'),
-    ('public.apply_account_deletion_database_cleanup(uuid,uuid,uuid,text,text,text)', 'postgres', 'service_role'),
+    ('public.apply_account_deletion_database_cleanup(uuid,uuid,uuid,text,text,text)', 'privacy_workflow_owner', 'service_role'),
     ('public.read_current_account_deletion_status(uuid,text,text)', 'privacy_workflow_owner', 'privacy_workflow_owner'),
-    ('public.read_current_account_deletion_status(uuid,text,text)', 'postgres', 'authenticated'),
+    ('public.read_current_account_deletion_status(uuid,text,text)', 'privacy_workflow_owner', 'authenticated'),
     ('public.issue_account_deletion_reauth_proof(uuid)', 'privacy_workflow_owner', 'privacy_workflow_owner'),
-    ('public.issue_account_deletion_reauth_proof(uuid)', 'postgres', 'authenticated'),
+    ('public.issue_account_deletion_reauth_proof(uuid)', 'privacy_workflow_owner', 'authenticated'),
     ('public.consume_account_deletion_reauth_proof(uuid,uuid,uuid,text)', 'privacy_workflow_owner', 'privacy_workflow_owner'),
     ('public.begin_account_deletion_apply_with_reauth(uuid,uuid,uuid,uuid,text,text,text,text)', 'privacy_workflow_owner', 'privacy_workflow_owner'),
-    ('public.begin_account_deletion_apply_with_reauth(uuid,uuid,uuid,uuid,text,text,text,text)', 'postgres', 'authenticated')
+    ('public.begin_account_deletion_apply_with_reauth(uuid,uuid,uuid,uuid,text,text,text,text)', 'privacy_workflow_owner', 'authenticated')
 ),
 function_oids AS (
   SELECT e.signature, pg_catalog.to_regprocedure(e.signature) AS oid
@@ -140,10 +140,10 @@ SELECT
           AND string_agg(conname || ':' || contype::text, ',' ORDER BY conname) =
           'reauth_proofs_consumption_metadata_check:c,reauth_proofs_expiry_check:c,reauth_proofs_pkey:p,reauth_proofs_self_target_check:c'
          FROM constraint_rows) AS table_exact,
-  (SELECT count(*) = 7 AND bool_and(grantor_name = 'privacy_workflow_owner'
+  (SELECT count(*) = 8 AND bool_and(grantor_name = 'privacy_workflow_owner'
           AND grantee_name = 'privacy_workflow_owner' AND NOT is_grantable)
           AND array_agg(privilege_type ORDER BY privilege_type) =
-              ARRAY['DELETE','INSERT','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']
+              ARRAY['DELETE','INSERT','MAINTAIN','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']
      FROM private_acl) AS table_acl_exact,
   (SELECT count(*) = 1 AND bool_and(polname = 'g028_reauth_proof_owner_access'
           AND polcmd = '*' AND polpermissive AND roles = ARRAY['privacy_workflow_owner']::name[]

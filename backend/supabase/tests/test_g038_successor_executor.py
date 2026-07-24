@@ -278,7 +278,12 @@ class SuccessorExecutorTests(unittest.TestCase):
             sum("'privacy_workflow_owner', 'privacy_workflow_owner'" in row for row in expected_rows),
             5,
         )
-        self.assertEqual(sum("'postgres'," in row for row in expected_rows), 4)
+        self.assertEqual(sum("'privacy_workflow_owner', 'authenticated'" in row for row in expected_rows), 3)
+        self.assertEqual(sum("'privacy_workflow_owner', 'service_role'" in row for row in expected_rows), 1)
+        self.assertIn(
+            "ARRAY['DELETE','INSERT','MAINTAIN','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']",
+            sql,
+        )
     def test_terminal_sql_rejects_hostile_acl_and_membership_rows(self):
         sql = (
             Path(__file__).parent / "g038_terminal_readback.sql"
