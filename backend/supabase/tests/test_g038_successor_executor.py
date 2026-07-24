@@ -289,6 +289,11 @@ class SuccessorExecutorTests(unittest.TestCase):
         )
         self.assertNotIn("has_schema_privilege", sql)
         self.assertIn(
+            "string_agg(conname || ':' || contype::text, ',' ORDER BY conname)",
+            sql,
+        )
+        self.assertNotIn("conname || ':' || contype,", sql)
+        self.assertIn(
             "('privacy_workflow_owner', 'privacy_workflow_owner', 'CREATE', false)",
             sql,
         )
