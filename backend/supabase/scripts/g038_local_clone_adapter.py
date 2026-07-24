@@ -102,6 +102,27 @@ RESTORE_BASELINE_SCHEMA_ACL = (
     ("postgres", "postgres", "USAGE", False),
     ("postgres", "service_role", "USAGE", False),
 )
+RESTORE_WINDOW_SCHEMA_ACL = (
+    ("postgres", "anon", "USAGE", False),
+    ("postgres", "authenticated", "USAGE", False),
+    ("postgres", "dashboard_user", "CREATE", False),
+    ("postgres", "dashboard_user", "USAGE", False),
+    ("postgres", "postgres", "CREATE", False),
+    ("postgres", "postgres", "USAGE", False),
+    ("postgres", "privacy_workflow_owner", "USAGE", False),
+    ("postgres", "service_role", "USAGE", False),
+)
+RESTORE_SOURCE_RESTORED_SCHEMA_ACL = (
+    ("postgres", "anon", "USAGE", False),
+    ("postgres", "authenticated", "USAGE", False),
+    ("postgres", "dashboard_user", "CREATE", False),
+    ("postgres", "dashboard_user", "USAGE", False),
+    ("postgres", "postgres", "CREATE", False),
+    ("postgres", "postgres", "USAGE", False),
+    ("postgres", "service_role", "USAGE", False),
+    ("postgres", "supabase_admin", "CREATE", False),
+    ("postgres", "supabase_admin", "USAGE", False),
+)
 RESTORE_TERMINAL_SCHEMA_ACL = (
     ("postgres", "anon", "USAGE", False),
     ("postgres", "authenticated", "USAGE", False),
@@ -112,7 +133,6 @@ RESTORE_TERMINAL_SCHEMA_ACL = (
     ("postgres", "privacy_workflow_owner", "USAGE", False),
     ("postgres", "service_role", "USAGE", False),
 )
-RESTORE_TRANSIENT_SCHEMA_ACL = RESTORE_TERMINAL_SCHEMA_ACL
 TERMINAL_WORKFLOW_ASSERTION_ACL = (
     ("privacy_workflow_owner", "privacy_workflow_owner", "EXECUTE", False),
 )
@@ -927,7 +947,7 @@ COMMIT;
 """)
         self._assert_restore_authority(
             clone, RESTORE_TRANSIENT_MEMBERSHIP_ROWS,
-            RESTORE_TRANSIENT_SCHEMA_ACL,
+            RESTORE_WINDOW_SCHEMA_ACL,
             RESTORE_BASELINE_EXTENSION_DEPENDENCY_FUNCTION_ACLS,
             database="postgres", expected_schema_usage=True,
         )
@@ -935,12 +955,16 @@ COMMIT;
     def terminalize_restore_authority(self, clone: Mapping[str, Any]) -> None:
         self._assert_restore_authority(
             clone, RESTORE_TRANSIENT_MEMBERSHIP_ROWS,
-            RESTORE_BASELINE_SCHEMA_ACL,
+            RESTORE_SOURCE_RESTORED_SCHEMA_ACL,
             RESTORE_SOURCE_EXTENSION_DEPENDENCY_FUNCTION_ACLS,
             database=DATABASE, expected_schema_usage=False,
         )
         self._role_psql(clone, user="postgres", database=DATABASE, sql="""
 GRANT USAGE ON SCHEMA extensions TO privacy_workflow_owner
+  GRANTED BY postgres;
+""")
+        self._role_psql(clone, user="postgres", database=DATABASE, sql="""
+REVOKE USAGE, CREATE ON SCHEMA extensions FROM supabase_admin
   GRANTED BY postgres;
 """)
         self._role_psql(clone, user="supabase_admin", database=DATABASE, sql="""
