@@ -876,7 +876,8 @@ SELECT pg_catalog.json_build_object(
             )
             or g035.DUMP_SCHEMAS != (
                 "public", "shortener_private", "account_deletion_private",
-                "privacy_retention", "supabase_migrations", "auth", "storage",
+                "privacy_retention", "ocr_private", "provider_budget_private",
+                "supabase_migrations", "auth", "storage",
             )
             or g035.RECOVERY_EXTENSIONS != (
                 ("pg_trgm", "extensions"),
