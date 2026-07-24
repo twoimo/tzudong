@@ -808,6 +808,9 @@ PRE_DATA_SCHEMA_TOC = (
  ("auth","supabase_admin"),
  ("storage","supabase_admin"),
 )
+TABLE_DATA_OWNER_COUNTS = (("postgres",59),("privacy_workflow_owner",46))
+TABLE_DATA_OWNERS = frozenset(owner for owner,_ in TABLE_DATA_OWNER_COUNTS)
+TABLE_DATA_TOC = re.compile(r"^(?P<dump_id>[1-9][0-9]*); (?P<table_oid>[0-9]+) (?P<object_oid>[0-9]+) TABLE DATA (?P<schema>\S+) (?P<name>\S+) (?P<owner>\S+)$")
 def _pre_data_use_list(raw):
  if type(raw) is not bytes: raise RecoveryError("archive TOC unavailable")
  try: lines=raw.decode("utf-8").splitlines(keepends=True)
@@ -842,6 +845,49 @@ def _owned_pre_data_use_list(path,raw):
    _unlink_owned_output(fd,path,identity)
    os.close(fd)
   raise
+def _data_use_lists(raw):
+ if type(raw) is not bytes: raise RecoveryError("archive TOC unavailable")
+ try: lines=raw.decode("utf-8").splitlines(keepends=True)
+ except UnicodeDecodeError as exc: raise RecoveryError("archive TOC invalid") from exc
+ postgres_lines=list(lines); privacy_lines=list(lines); counts={owner:0 for owner in TABLE_DATA_OWNERS}; dump_ids=set(); relations=set()
+ for index,line in enumerate(lines):
+  body=line.rstrip("\r\n")
+  if not body or body.startswith(";"): continue
+  match=TABLE_DATA_TOC.fullmatch(body)
+  if "TABLE DATA" in body and match is None: raise RecoveryError("archive TABLE DATA TOC drift")
+  if match is None:
+   privacy_lines[index]=";"+line
+   continue
+  owner=match.group("owner")
+  if owner not in TABLE_DATA_OWNERS: raise RecoveryError("archive TABLE DATA owner drift")
+  schema=match.group("schema")
+  if schema in MANAGED_METADATA_SCHEMAS: raise RecoveryError("managed TABLE DATA present")
+  dump_id=match.group("dump_id"); relation=(schema,match.group("name"))
+  if dump_id in dump_ids or relation in relations: raise RecoveryError("duplicate TABLE DATA classification")
+  dump_ids.add(dump_id); relations.add(relation); counts[owner]+=1
+  if owner=="privacy_workflow_owner":
+   postgres_lines[index]=";"+line
+  else:
+   privacy_lines[index]=";"+line
+ expected=dict(TABLE_DATA_OWNER_COUNTS)
+ if counts!=expected: raise RecoveryError("archive TABLE DATA owner count drift")
+ return ("".join(postgres_lines).encode("utf-8"),"".join(privacy_lines).encode("utf-8"))
+
+def _owned_restore_use_list(path,payload):
+ fd=None; identity=None
+ try:
+  fd,identity=_owned_output(path,"restore use-list")
+  offset=0
+  while offset<len(payload): offset+=os.write(fd,payload[offset:])
+  os.fsync(fd)
+  _require_temporary_file_identity(fd,path)
+  return fd,identity
+ except Exception:
+  if fd is not None:
+   _unlink_owned_output(fd,path,identity)
+   os.close(fd)
+  raise
+
 
 
 def _normalize_restored_vector_extension(conn):
@@ -855,7 +901,7 @@ def run_restore_verify(args,manifest):
  if dump.is_symlink() or not dump.is_file() or sha256_file(dump)!=capture["evidence"].get("dump_sha256"): raise RecoveryError("ciphertext input mismatch")
  decryptor,restore=command_exists(args.decrypt_command),command_exists(args.pg_restore)
  with _owned_identity_stream(args) as identity_stream, _restricted_restore_directory() as workspace:
-  service=_copy_local_service(workspace,Path(args.service_file),"g035-local"); env=safe_environment(service); plain=workspace/"database.pgdump"; use_list=workspace/"pre-data.list"; plain_fd=None; plain_identity=None; use_list_fd=None; use_list_identity=None
+  service=_copy_local_service(workspace,Path(args.service_file),"g035-local"); env=safe_environment(service); plain=workspace/"database.pgdump"; use_list=workspace/"pre-data.list"; postgres_data_list=workspace/"data-postgres.list"; privacy_data_list=workspace/"data-privacy-workflow-owner.list"; plain_fd=None; plain_identity=None; use_list_fd=None; use_list_identity=None; postgres_data_list_fd=None; postgres_data_list_identity=None; privacy_data_list_fd=None; privacy_data_list_identity=None
   try:
    plain_fd,plain_identity=_owned_output(plain,"plaintext restore")
    with os.fdopen(os.dup(plain_fd),"wb",closefd=True) as plain_stream:
@@ -866,6 +912,9 @@ def run_restore_verify(args,manifest):
    toc=run([restore,"--list",str(plain)],env=env)
    _require_temporary_file_identity(plain_fd,plain)
    use_list_fd,use_list_identity=_owned_pre_data_use_list(use_list,toc.stdout)
+   postgres_data,privacy_data=_data_use_lists(toc.stdout)
+   postgres_data_list_fd,postgres_data_list_identity=_owned_restore_use_list(postgres_data_list,postgres_data)
+   privacy_data_list_fd,privacy_data_list_identity=_owned_restore_use_list(privacy_data_list,privacy_data)
    conn=_connect("g035-local",env)
    try:
     for schema in (LOCAL_REMEDIATION_SCHEMA,"public","auth","storage"): _query_conn(conn,f"DROP SCHEMA IF EXISTS {schema} CASCADE")
@@ -890,7 +939,14 @@ def run_restore_verify(args,manifest):
    run([restore,"--section=pre-data",f"--use-list={use_list}","--dbname=service=g035-local",str(plain)],env=env)
    _require_temporary_file_identity(use_list_fd,use_list)
    _require_temporary_file_identity(plain_fd,plain)
-   run([restore,"--section=data","--dbname=service=g035-local",str(plain)],env=env)
+   _require_temporary_file_identity(postgres_data_list_fd,postgres_data_list)
+   _require_temporary_file_identity(privacy_data_list_fd,privacy_data_list)
+   run([restore,"--section=data",f"--use-list={postgres_data_list}","--role=postgres","--dbname=service=g035-local",str(plain)],env=env)
+   _require_temporary_file_identity(postgres_data_list_fd,postgres_data_list)
+   _require_temporary_file_identity(privacy_data_list_fd,privacy_data_list)
+   run([restore,"--section=data",f"--use-list={privacy_data_list}","--role=privacy_workflow_owner","--dbname=service=g035-local",str(plain)],env=env)
+   _require_temporary_file_identity(postgres_data_list_fd,postgres_data_list)
+   _require_temporary_file_identity(privacy_data_list_fd,privacy_data_list)
    conn=_connect("g035-local",env)
    try:
     _create_auth_user_placeholders(conn); conn.commit()
@@ -912,6 +968,12 @@ def run_restore_verify(args,manifest):
     raise
    finally: conn.close()
   finally:
+   if privacy_data_list_fd is not None:
+    _unlink_owned_output(privacy_data_list_fd,privacy_data_list,privacy_data_list_identity)
+    os.close(privacy_data_list_fd)
+   if postgres_data_list_fd is not None:
+    _unlink_owned_output(postgres_data_list_fd,postgres_data_list,postgres_data_list_identity)
+    os.close(postgres_data_list_fd)
    if use_list_fd is not None:
     _unlink_owned_output(use_list_fd,use_list,use_list_identity)
     os.close(use_list_fd)
