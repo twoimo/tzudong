@@ -62,7 +62,7 @@ RESTORE_TRANSIENT_MEMBERSHIP_ROWS = tuple(sorted((
 )))
 RESTORE_TERMINAL_MEMBERSHIP_ROWS = tuple(sorted(TRANSIENT_MANAGED_ROWS[:2]))
 RESTORE_EXTENSION_DEPENDENCY_FUNCTION_ACL = (
-    ("postgres", "privacy_workflow_owner", "EXECUTE", False),
+    ("supabase_admin", "privacy_workflow_owner", "EXECUTE", False),
 )
 RESTORE_EXTENSION_DEPENDENCY_FUNCTIONS = (
     ("digest", "text, text"),
@@ -693,7 +693,7 @@ SELECT pg_catalog.json_build_object(
                             "effective_execute": True,
                             "identity_arguments": identity_arguments,
                             "name": name,
-                            "owner": "postgres",
+                            "owner": "supabase_admin",
                             "schema": "extensions",
                         }
                         for name, identity_arguments
@@ -871,7 +871,13 @@ COMMIT;
 BEGIN;
 DO $g038_extension_dependency_preflight$
 BEGIN
-  IF pg_catalog.to_regprocedure('extensions.gen_random_uuid()') IS NULL
+  IF current_user <> 'postgres' OR session_user <> 'postgres'
+     OR (
+       SELECT pg_catalog.pg_get_userbyid(nspowner)
+         FROM pg_catalog.pg_namespace
+        WHERE nspname = 'extensions'
+     ) <> 'postgres'
+     OR pg_catalog.to_regprocedure('extensions.gen_random_uuid()') IS NULL
      OR pg_catalog.to_regprocedure('extensions.digest(text,text)') IS NULL
      OR EXISTS (
        SELECT 1
@@ -880,7 +886,7 @@ BEGIN
           pg_catalog.to_regprocedure('extensions.gen_random_uuid()'),
           pg_catalog.to_regprocedure('extensions.digest(text,text)')
         )
-          AND pg_catalog.pg_get_userbyid(procedure.proowner) <> 'postgres'
+          AND pg_catalog.pg_get_userbyid(procedure.proowner) <> 'supabase_admin'
      ) THEN
     RAISE EXCEPTION 'restore extension dependency precondition drift';
   END IF;
@@ -888,13 +894,31 @@ END;
 $g038_extension_dependency_preflight$;
 GRANT USAGE ON SCHEMA extensions TO privacy_workflow_owner
   GRANTED BY postgres;
-GRANT EXECUTE ON FUNCTION extensions.gen_random_uuid(), extensions.digest(text, text)
-  TO privacy_workflow_owner GRANTED BY postgres;
+GRANT USAGE, CREATE ON SCHEMA extensions TO supabase_admin GRANTED BY postgres;
 COMMIT;
 """)
-        self._role_psql(clone, user="postgres", database="postgres", sql="""
+        self._role_psql(clone, user="supabase_admin", database="postgres", sql="""
 BEGIN;
-GRANT USAGE, CREATE ON SCHEMA extensions TO supabase_admin GRANTED BY postgres;
+DO $g038_extension_dependency_owner_preflight$
+BEGIN
+  IF current_user <> 'supabase_admin' OR session_user <> 'supabase_admin'
+     OR pg_catalog.to_regprocedure('extensions.gen_random_uuid()') IS NULL
+     OR pg_catalog.to_regprocedure('extensions.digest(text,text)') IS NULL
+     OR EXISTS (
+       SELECT 1
+         FROM pg_catalog.pg_proc AS procedure
+        WHERE procedure.oid IN (
+          pg_catalog.to_regprocedure('extensions.gen_random_uuid()'),
+          pg_catalog.to_regprocedure('extensions.digest(text,text)')
+        )
+          AND pg_catalog.pg_get_userbyid(procedure.proowner) <> 'supabase_admin'
+     ) THEN
+    RAISE EXCEPTION 'restore extension dependency owner precondition drift';
+  END IF;
+END;
+$g038_extension_dependency_owner_preflight$;
+GRANT EXECUTE ON FUNCTION extensions.gen_random_uuid(), extensions.digest(text, text)
+  TO privacy_workflow_owner GRANTED BY supabase_admin;
 COMMIT;
 """)
         self._assert_restore_authority(
