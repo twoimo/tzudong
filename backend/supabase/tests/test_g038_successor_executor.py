@@ -79,6 +79,7 @@ class Cursor:
         self.calls = []
         self.fail_sql = None
         self.transaction = ("off", None, False)
+        self.rehearsal = None
         self.readback = {field: True for field in executor._TERMINAL_FIELDS}
         self.catalog_rows = CATALOG_ROWS
         self.acl_rows = ACL_ROWS
@@ -92,6 +93,8 @@ class Cursor:
             self.result = list(self.rows)
         elif sql == executor._TRANSACTION_SQL:
             self.result = [self.transaction]
+        elif "g038.rehearsal_sentinel" in sql:
+            self.result = [self.rehearsal]
         elif sql == executor._LEDGER_INSERT_SQL:
             self.rows.append((params[0], params[1], tuple(params[2])))
             self.result = []
@@ -144,6 +147,28 @@ class SuccessorExecutorTests(unittest.TestCase):
             return actual == expected
         self.assertTrue(membership_contract(expected))
         self.assertFalse(membership_contract(expected | {transient}))
+
+    def test_authority_prelude_and_027_source_grant_revoke_are_exact(self):
+        self.assertEqual(
+            executor._AUTHORITY_PRELUDE_SQL,
+            "GRANT privacy_workflow_owner TO postgres "
+            "WITH ADMIN FALSE, INHERIT TRUE, SET TRUE GRANTED BY postgres",
+        )
+        self.assertIn("current_user <> 'postgres'", executor._AUTHORITY_PRECONDITION_SQL)
+        self.assertIn("grantor.rolname='supabase_admin'", executor._AUTHORITY_PRECONDITION_SQL)
+        self.assertIn("membership.admin_option", executor._AUTHORITY_PRECONDITION_SQL)
+        self.assertIn("NOT membership.inherit_option", executor._AUTHORITY_PRECONDITION_SQL)
+        self.assertIn("NOT membership.set_option", executor._AUTHORITY_PRECONDITION_SQL)
+        self.assertIn("grantor.rolname='postgres'", executor._AUTHORITY_POSTCONDITION_SQL)
+        self.assertIn("NOT membership.admin_option", executor._AUTHORITY_POSTCONDITION_SQL)
+        self.assertIn("membership.inherit_option", executor._AUTHORITY_POSTCONDITION_SQL)
+        self.assertIn("membership.set_option", executor._AUTHORITY_POSTCONDITION_SQL)
+        source = _pinned_027_source().decode("utf-8")
+        source_grant = "GRANT privacy_workflow_owner TO postgres;"
+        source_revoke = "REVOKE privacy_workflow_owner FROM postgres;"
+        self.assertEqual(source.count(source_grant), 1)
+        self.assertEqual(source.count(source_revoke), 1)
+        self.assertLess(source.index(source_grant), source.index(source_revoke))
 
     def test_compile_rejects_026_transaction_control_and_027_wrapper_drift(self):
         original_26 = ("BEGIN",)
@@ -357,6 +382,110 @@ class SuccessorExecutorTests(unittest.TestCase):
             )
         self.assertEqual(evidence.classification, executor.EXACT_42)
         self.assertEqual(len(cursor.rows), 42)
+
+    def test_authority_prelude_is_serialized_and_asserted_before_table_locks_and_sources(self):
+        p = plan()
+        cursor = Cursor(ledger())
+        authorization = _authorization(p, cursor.rows)
+        _own_transaction(cursor, authorization)
+        with patch.object(Path, "read_text", return_value="SELECT terminal_memberships_exact"):
+            executor.apply_cursor(
+                cursor, plan=p, authorization=authorization, attempt=_attempt(authorization),
+                deadline_monotonic=time.monotonic() + 10,
+            )
+        sql = [statement for statement, _ in cursor.calls if statement != executor._TIMEOUT_SQL]
+        advisory = sql.index(executor._LOCK_SQL[0])
+        precondition = sql.index(executor._AUTHORITY_PRECONDITION_SQL)
+        prelude = sql.index(executor._AUTHORITY_PRELUDE_SQL)
+        postcondition = sql.index(executor._AUTHORITY_POSTCONDITION_SQL)
+        self.assertEqual(sql.count(executor._AUTHORITY_PRECONDITION_SQL), 1)
+        self.assertEqual(sql.count(executor._AUTHORITY_PRELUDE_SQL), 1)
+        self.assertEqual(sql.count(executor._AUTHORITY_POSTCONDITION_SQL), 1)
+        self.assertLess(sql.index(executor._LOCK_TIMEOUT_SQL), advisory)
+        self.assertLess(sql.index(executor._IDLE_TIMEOUT_SQL), advisory)
+        self.assertLess(advisory, precondition)
+        self.assertLess(precondition, prelude)
+        self.assertLess(prelude, postcondition)
+        for statement in executor._LOCK_SQL[1:] + tuple(
+                source for entry in p.compiled for source in entry.executable):
+            self.assertLess(postcondition, sql.index(statement))
+
+    def test_rehearsal_authority_failure_is_sanitized_after_advisory_before_table_locks_or_mutation(self):
+        p = plan()
+        starting = _observe(Cursor(ledger()), p)
+        deadline = time.monotonic() + 10
+        sentinel = "rehearsal-sentinel-" + "a" * 32
+        cursor = Cursor(ledger())
+        cursor.rehearsal = ("off", sentinel, "123")
+        cursor.fail_sql = executor._AUTHORITY_PRELUDE_SQL
+        capability = executor._new_rehearsal_capability(
+            plan=p, starting=starting, target=None, transaction_sentinel=sentinel,
+            transaction_xid="123", deadline_monotonic=deadline,
+        )
+        with self.assertRaises(executor.SuccessorError) as caught:
+            executor.apply_rehearsal_cursor(cursor, capability=capability)
+        self.assertEqual(caught.exception.code, "database_failure")
+        self.assertEqual(caught.exception.evidence, {})
+        self.assertNotIn("secret", str(caught.exception))
+        sql = tuple(statement for statement, _ in cursor.calls)
+        self.assertIn(executor._LOCK_SQL[0], sql)
+        self.assertIn(executor._AUTHORITY_PRECONDITION_SQL, sql)
+        self.assertIn(executor._AUTHORITY_PRELUDE_SQL, sql)
+        self.assertNotIn(executor._AUTHORITY_POSTCONDITION_SQL, sql)
+        self.assertFalse(any(statement in executor._LOCK_SQL[1:] for statement in sql))
+        self.assertFalse(any(
+            statement in sql for entry in p.compiled for statement in entry.executable
+        ))
+        self.assertNotIn(executor._LEDGER_INSERT_SQL, sql)
+        self.assertEqual(len(cursor.rows), 40)
+        self.assertFalse(any(
+            statement.strip().upper() in {"BEGIN", "COMMIT", "ROLLBACK"} for statement in sql
+        ))
+
+    def test_preexisting_authority_drift_denies_after_advisory_before_grant_or_mutation(self):
+        p = plan()
+        starting = _observe(Cursor(ledger()), p)
+        deadline = time.monotonic() + 10
+        sentinel = "rehearsal-sentinel-" + "b" * 32
+        cursor = Cursor(ledger())
+        cursor.rehearsal = ("off", sentinel, "124")
+        cursor.fail_sql = executor._AUTHORITY_PRECONDITION_SQL
+        capability = executor._new_rehearsal_capability(
+            plan=p, starting=starting, target=None, transaction_sentinel=sentinel,
+            transaction_xid="124", deadline_monotonic=deadline,
+        )
+        with self.assertRaisesRegex(executor.SuccessorError, "database_failure"):
+            executor.apply_rehearsal_cursor(cursor, capability=capability)
+        sql = tuple(statement for statement, _ in cursor.calls)
+        self.assertIn(executor._LOCK_SQL[0], sql)
+        self.assertIn(executor._AUTHORITY_PRECONDITION_SQL, sql)
+        self.assertNotIn(executor._AUTHORITY_PRELUDE_SQL, sql)
+        self.assertNotIn(executor._AUTHORITY_POSTCONDITION_SQL, sql)
+        self.assertFalse(any(statement in executor._LOCK_SQL[1:] for statement in sql))
+        self.assertFalse(any(
+            statement in sql for entry in p.compiled for statement in entry.executable
+        ))
+
+    def test_terminal_readback_still_requires_transient_membership_absence(self):
+        p = plan()
+        before = ledger()
+        authorization = _authorization(p, before)
+        for field in ("transient_membership_absent", "terminal_memberships_exact"):
+            with self.subTest(field=field):
+                cursor = Cursor(before)
+                _own_transaction(cursor, authorization)
+                cursor.readback[field] = False
+                with patch.object(Path, "read_text", return_value="SELECT terminal_memberships_exact"), \
+                        self.assertRaisesRegex(executor.SuccessorError, "terminal_readback"):
+                    executor.apply_cursor(
+                        cursor, plan=p, authorization=authorization,
+                        attempt=_attempt(authorization),
+                        deadline_monotonic=time.monotonic() + 10,
+                    )
+                self.assertIn(
+                    executor._AUTHORITY_PRELUDE_SQL,
+                    tuple(statement for statement, _ in cursor.calls),
+                )
 
     def test_autocommit_false_xid_readonly_and_wrong_sentinel_fail_before_locks_or_mutation(self):
         p = plan()
