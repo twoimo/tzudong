@@ -1435,7 +1435,7 @@ class ControllerTests(unittest.TestCase):
    acl=[[recovery.PRIVACY_DATA_ROLE,recovery.PRIVACY_DATA_ROLE,"SELECT",False]]
    if index%5==0: acl.append(["auditor","postgres","REFERENCES",False])
    state[relation]={"owner":recovery.PRIVACY_DATA_ROLE,"rls":bool(index%2),"force":bool(index%4),"acl":sorted(acl),"effective":effective}
-  original=json.loads(json.dumps({f"{key[0]}.{key[1]}":value for key,value in state.items()}))
+  baseline_state=json.loads(json.dumps({f"{key[0]}.{key[1]}":value for key,value in state.items()}))
   added=tuple(relation for relation in relations if not state[relation]["effective"])
   grant=recovery._post_data_table_trigger_statement(added,True); revoke=recovery._post_data_table_trigger_statement(added,False)
   statements=[]
@@ -1454,13 +1454,24 @@ class ControllerTests(unittest.TestCase):
      item=state[relation]; item["acl"].append([recovery.PRIVACY_DATA_ROLE,recovery.PRIVACY_DATA_ROLE,"TRIGGER",False]); item["acl"].sort(); item["effective"]=True
    elif sql==revoke:
     for relation in added:
-     item=state[relation]; item["acl"].remove([recovery.PRIVACY_DATA_ROLE,recovery.PRIVACY_DATA_ROLE,"TRIGGER",False]); item["effective"]=False
+     item=state[relation]; item["acl"].remove([recovery.PRIVACY_DATA_ROLE,recovery.PRIVACY_DATA_ROLE,"TRIGGER",False])
+     item["effective"]=any(acl[2]=="TRIGGER" and acl[0] in (recovery.PRIVACY_DATA_ROLE,"PUBLIC") for acl in item["acl"])
    return []
   with patch.object(recovery,"_query_conn",side_effect=query):
    baseline,actual_added=recovery._open_post_data_table_trigger_window(conn,relations)
+   changed=added[0]; inherited=added[1]
+   state[changed]["rls"]=not state[changed]["rls"]; state[changed]["force"]=not state[changed]["force"]
+   state[changed]["acl"].append(["auditor","postgres","UPDATE",True]); state[changed]["acl"].sort()
+   state[inherited]["acl"].append(["PUBLIC","postgres","TRIGGER",False]); state[inherited]["acl"].sort()
+   desired=json.loads(json.dumps({f"{key[0]}.{key[1]}":value for key,value in state.items()}))
+   for relation in added:
+    item=desired[f"{relation[0]}.{relation[1]}"]
+    item["acl"].remove([recovery.PRIVACY_DATA_ROLE,recovery.PRIVACY_DATA_ROLE,"TRIGGER",False])
+    item["effective"]=any(acl[2]=="TRIGGER" and acl[0] in (recovery.PRIVACY_DATA_ROLE,"PUBLIC") for acl in item["acl"])
    self.assertEqual(added,actual_added); self.assertTrue(all(item["effective"] for item in state.values()))
    recovery._close_post_data_table_trigger_window(conn,relations,baseline,actual_added)
-  self.assertEqual(original,{f"{key[0]}.{key[1]}":value for key,value in state.items()})
+  self.assertNotEqual(baseline_state,{f"{key[0]}.{key[1]}":value for key,value in state.items()})
+  self.assertEqual(desired,{f"{key[0]}.{key[1]}":value for key,value in state.items()})
   self.assertEqual(1,statements.count(grant)); self.assertEqual(1,statements.count(revoke))
   privilege_sql=[sql for sql in statements if sql.startswith(("GRANT ","REVOKE "))]
   self.assertEqual([grant,revoke],privilege_sql)
@@ -1472,7 +1483,9 @@ class ControllerTests(unittest.TestCase):
   for mutation in (
    ("wrong",relations[0][1],recovery.PRIVACY_DATA_ROLE,True,False,[],False),
    (relations[0][0],relations[0][1],"postgres",True,False,[],False),
-   (relations[0][0],relations[0][1],recovery.PRIVACY_DATA_ROLE,True,False,[["bad","postgres","EXECUTE",False]],False),
+   (relations[0][0],relations[0][1],recovery.PRIVACY_DATA_ROLE,True,False,None,False),
+   (relations[0][0],relations[0][1],recovery.PRIVACY_DATA_ROLE,True,False,[["bad","postgres","CREATE",False]],False),
+   (relations[0][0],relations[0][1],recovery.PRIVACY_DATA_ROLE,True,False,[["bad","postgres","SELECT",False],["bad","postgres","SELECT",False]],False),
    (relations[0][0],relations[0][1],recovery.PRIVACY_DATA_ROLE,True,False,[[recovery.PRIVACY_DATA_ROLE,"postgres","TRIGGER",False]],False),
   ):
    def query(unused,unused_sql,params=None,mutation=mutation):
@@ -1480,19 +1493,45 @@ class ControllerTests(unittest.TestCase):
     return [mutation if relation==relations[0] else valid(relation)]
    with self.subTest(mutation=mutation),patch.object(recovery,"_query_conn",side_effect=query),self.assertRaises(recovery.RecoveryError):
     recovery._read_post_data_table_trigger_state(object(),relations,baseline=True)
+  duplicate=(*relations[:-1],relations[0])
+  with self.assertRaisesRegex(recovery.RecoveryError,"inventory invalid"):
+   recovery._read_post_data_table_trigger_state(object(),duplicate)
+ def test_post_data_table_trigger_cleanup_proves_live_grant_order_and_revoke_isolation(self):
+  relations=TEST_TRIGGER_RELATIONS
   baseline=tuple((*relation,recovery.PRIVACY_DATA_ROLE,False,False,(),False) for relation in relations)
-  calls=0
+  temporary=(recovery.PRIVACY_DATA_ROLE,recovery.PRIVACY_DATA_ROLE,"TRIGGER",False)
+  live=tuple((*item[:5],(temporary,),True) for item in baseline)
+  revoke=recovery._post_data_table_trigger_statement(relations,False)
   class Conn:
-   def commit(self): pass
-   def rollback(self): pass
-  def verify(unused_conn,unused_relations,expected):
-   nonlocal calls
-   calls+=1
-   if calls==1: raise recovery.RecoveryError("window drift")
-   self.assertEqual(baseline,expected)
-  with patch.object(recovery,"_verify_post_data_table_trigger_state",side_effect=verify),patch.object(recovery,"_query_conn",return_value=[]),self.assertRaisesRegex(recovery.RecoveryError,"window drift"):
-   recovery._close_post_data_table_trigger_window(Conn(),relations,baseline,relations)
-  self.assertEqual(2,calls)
+   def __init__(self): self.commits=0; self.rollbacks=0
+   def commit(self): self.commits+=1
+   def rollback(self): self.rollbacks+=1
+  def run(first,second):
+   events=[]; reads=iter((first,second)); conn=Conn()
+   def read(unused_conn,unused_relations):
+    events.append("READ")
+    return next(reads)
+   def query(unused_conn,sql,params=None):
+    events.append(sql)
+    return []
+   with patch.object(recovery,"_read_post_data_table_trigger_state",side_effect=read),patch.object(recovery,"_query_conn",side_effect=query):
+    recovery._close_post_data_table_trigger_window(conn,relations,baseline,relations)
+   return conn,events
+  conn,events=run(live,baseline)
+  self.assertEqual(["BEGIN","READ","SET LOCAL ROLE "+recovery.PRIVACY_DATA_ROLE,revoke,"READ"],events)
+  self.assertEqual((1,0),(conn.commits,conn.rollbacks))
+  missing=((*live[0][:5],(),True),*live[1:])
+  with patch.object(recovery,"_read_post_data_table_trigger_state",side_effect=(missing,baseline)),patch.object(recovery,"_query_conn",return_value=[]):
+   conn=Conn()
+   with self.assertRaisesRegex(recovery.RecoveryError,"state invalid"):
+    recovery._close_post_data_table_trigger_window(conn,relations,baseline,relations)
+  self.assertEqual((1,1),(conn.commits,conn.rollbacks))
+  mutated=((*baseline[0][:3],True,*baseline[0][4:]),*baseline[1:])
+  with patch.object(recovery,"_read_post_data_table_trigger_state",side_effect=(live,mutated)),patch.object(recovery,"_query_conn",return_value=[]):
+   conn=Conn()
+   with self.assertRaisesRegex(recovery.RecoveryError,"state invalid"):
+    recovery._close_post_data_table_trigger_window(conn,relations,baseline,relations)
+  self.assertEqual((1,1),(conn.commits,conn.rollbacks))
  def test_post_data_trigger_authority_cleanup_runs_on_owner_restore_failure_and_preserves_failure(self):
   events=[]; authority_baseline=("authority-baseline",); table_baseline=("table-baseline",); fk_baseline=("fk-baseline",); added=(TEST_TRIGGER_RELATIONS[0],)
   def authority_connection(unused_env,operation,*args):
