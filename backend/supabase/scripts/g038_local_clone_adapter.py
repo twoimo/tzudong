@@ -61,8 +61,9 @@ RESTORE_TRANSIENT_MEMBERSHIP_ROWS = tuple(sorted((
     *TRANSIENT_MANAGED_ROWS[:2],
 )))
 RESTORE_TERMINAL_MEMBERSHIP_ROWS = tuple(sorted(TRANSIENT_MANAGED_ROWS[:2]))
-RESTORE_EXTENSION_DEPENDENCY_FUNCTION_ACL = (
-    ("supabase_admin", "privacy_workflow_owner", "EXECUTE", False),
+RESTORE_BASELINE_EXTENSION_DEPENDENCY_FUNCTION_ACL = ()
+RESTORE_SOURCE_EXTENSION_DEPENDENCY_FUNCTION_ACL = (
+    ("postgres", "privacy_workflow_owner", "EXECUTE", False),
 )
 RESTORE_EXTENSION_DEPENDENCY_FUNCTIONS = (
     ("digest", "text, text"),
@@ -87,11 +88,7 @@ RESTORE_TERMINAL_SCHEMA_ACL = (
     ("postgres", "privacy_workflow_owner", "USAGE", False),
     ("postgres", "service_role", "USAGE", False),
 )
-RESTORE_TRANSIENT_SCHEMA_ACL = (
-    *RESTORE_TERMINAL_SCHEMA_ACL,
-    ("postgres", "supabase_admin", "CREATE", False),
-    ("postgres", "supabase_admin", "USAGE", False),
-)
+RESTORE_TRANSIENT_SCHEMA_ACL = RESTORE_TERMINAL_SCHEMA_ACL
 TERMINAL_WORKFLOW_ASSERTION_ACL = (
     ("privacy_workflow_owner", "privacy_workflow_owner", "EXECUTE", False),
 )
@@ -653,9 +650,11 @@ SELECT pg_catalog.json_build_object(
     def _validate_restore_authority_catalog(
         raw: str,
         expected_memberships: Sequence[tuple[str, str, str, bool, bool, bool]],
-        expected_schema_acl: Sequence[tuple[str, str, str, bool]], *,
+        expected_schema_acl: Sequence[tuple[str, str, str, bool]],
+        expected_function_acl: Sequence[tuple[str, str, str, bool]],
+        *,
         database: str,
-        expected_dependency_access: bool,
+        expected_schema_usage: bool,
     ) -> None:
         try:
             value = json.loads(raw)
@@ -683,13 +682,9 @@ SELECT pg_catalog.json_build_object(
                 or value["extension_dependencies"] != {
                     "functions": [
                         {
-                            "acl": (
-                                [
-                                    list(row)
-                                    for row in RESTORE_EXTENSION_DEPENDENCY_FUNCTION_ACL
-                                ]
-                                if expected_dependency_access else []
-                            ),
+                            "acl": [
+                                list(row) for row in expected_function_acl
+                            ],
                             "effective_execute": True,
                             "identity_arguments": identity_arguments,
                             "name": name,
@@ -700,7 +695,7 @@ SELECT pg_catalog.json_build_object(
                         in RESTORE_EXTENSION_DEPENDENCY_FUNCTIONS
                     ],
                     "schema_effective_create": False,
-                    "schema_effective_usage": expected_dependency_access,
+                    "schema_effective_usage": expected_schema_usage,
                 }
             ):
                 _fail("restore_authority")
@@ -712,9 +707,11 @@ SELECT pg_catalog.json_build_object(
     def _assert_restore_authority(
         self, clone: Mapping[str, Any],
         expected_memberships: Sequence[tuple[str, str, str, bool, bool, bool]],
-        expected_schema_acl: Sequence[tuple[str, str, str, bool]], *,
+        expected_schema_acl: Sequence[tuple[str, str, str, bool]],
+        expected_function_acl: Sequence[tuple[str, str, str, bool]],
+        *,
         database: str,
-        expected_dependency_access: bool,
+        expected_schema_usage: bool,
     ) -> None:
         names = ",".join(repr(name) for name in RESTORE_OWNER_ROLES)
         raw = self._role_psql(clone, user="postgres", database=database, sql=f"""
@@ -752,11 +749,9 @@ SELECT pg_catalog.json_build_object(
             acl.privilege_type,
             acl.is_grantable)
             ORDER BY pg_catalog.pg_get_userbyid(acl.grantor),
+                     pg_catalog.pg_get_userbyid(acl.grantee),
                      acl.privilege_type, acl.is_grantable), '[]'::json)
-            FROM pg_catalog.aclexplode(COALESCE(
-              procedure.proacl,
-              pg_catalog.acldefault('f', procedure.proowner))) AS acl
-           WHERE acl.grantee = 'privacy_workflow_owner'::regrole
+            FROM pg_catalog.aclexplode(procedure.proacl) AS acl
         ),
         'effective_execute', pg_catalog.has_function_privilege(
           'privacy_workflow_owner', procedure.oid, 'EXECUTE'),
@@ -814,8 +809,8 @@ SELECT pg_catalog.json_build_object(
 )::text;
 """)
         self._validate_restore_authority_catalog(
-            raw, expected_memberships, expected_schema_acl, database=database,
-            expected_dependency_access=expected_dependency_access,
+            raw, expected_memberships, expected_schema_acl, expected_function_acl,
+            database=database, expected_schema_usage=expected_schema_usage,
         )
 
     def bootstrap_restore_authority(self, clone: Mapping[str, Any]) -> None:
@@ -841,8 +836,9 @@ SELECT pg_catalog.json_build_object(
             _fail("restore_authority")
         self._assert_restore_authority(
             clone, RESTORE_TERMINAL_MEMBERSHIP_ROWS,
-            RESTORE_BASELINE_SCHEMA_ACL, database="postgres",
-            expected_dependency_access=False,
+            RESTORE_BASELINE_SCHEMA_ACL,
+            RESTORE_BASELINE_EXTENSION_DEPENDENCY_FUNCTION_ACL,
+            database="postgres", expected_schema_usage=False,
         )
         role_names = ",".join(repr(name) for name in RESTORE_OWNER_ROLES[:3])
         self._role_psql(clone, user="supabase_admin", database="postgres", sql=f"""
@@ -894,52 +890,35 @@ END;
 $g038_extension_dependency_preflight$;
 GRANT USAGE ON SCHEMA extensions TO privacy_workflow_owner
   GRANTED BY postgres;
-GRANT USAGE, CREATE ON SCHEMA extensions TO supabase_admin GRANTED BY postgres;
-COMMIT;
-""")
-        self._role_psql(clone, user="supabase_admin", database="postgres", sql="""
-BEGIN;
-DO $g038_extension_dependency_owner_preflight$
-BEGIN
-  IF current_user <> 'supabase_admin' OR session_user <> 'supabase_admin'
-     OR pg_catalog.to_regprocedure('extensions.gen_random_uuid()') IS NULL
-     OR pg_catalog.to_regprocedure('extensions.digest(text,text)') IS NULL
-     OR EXISTS (
-       SELECT 1
-         FROM pg_catalog.pg_proc AS procedure
-        WHERE procedure.oid IN (
-          pg_catalog.to_regprocedure('extensions.gen_random_uuid()'),
-          pg_catalog.to_regprocedure('extensions.digest(text,text)')
-        )
-          AND pg_catalog.pg_get_userbyid(procedure.proowner) <> 'supabase_admin'
-     ) THEN
-    RAISE EXCEPTION 'restore extension dependency owner precondition drift';
-  END IF;
-END;
-$g038_extension_dependency_owner_preflight$;
-GRANT EXECUTE ON FUNCTION extensions.gen_random_uuid(), extensions.digest(text, text)
-  TO privacy_workflow_owner GRANTED BY supabase_admin;
 COMMIT;
 """)
         self._assert_restore_authority(
             clone, RESTORE_TRANSIENT_MEMBERSHIP_ROWS,
-            RESTORE_TRANSIENT_SCHEMA_ACL, database="postgres",
-            expected_dependency_access=True,
+            RESTORE_TRANSIENT_SCHEMA_ACL,
+            RESTORE_BASELINE_EXTENSION_DEPENDENCY_FUNCTION_ACL,
+            database="postgres", expected_schema_usage=True,
         )
 
     def terminalize_restore_authority(self, clone: Mapping[str, Any]) -> None:
+        self._assert_restore_authority(
+            clone, RESTORE_TRANSIENT_MEMBERSHIP_ROWS,
+            RESTORE_BASELINE_SCHEMA_ACL,
+            RESTORE_SOURCE_EXTENSION_DEPENDENCY_FUNCTION_ACL,
+            database=DATABASE, expected_schema_usage=False,
+        )
+        self._role_psql(clone, user="postgres", database=DATABASE, sql="""
+GRANT USAGE ON SCHEMA extensions TO privacy_workflow_owner
+  GRANTED BY postgres;
+""")
         self._role_psql(clone, user="supabase_admin", database=DATABASE, sql="""
 REVOKE supabase_admin, supabase_auth_admin, supabase_storage_admin
   FROM postgres GRANTED BY supabase_admin;
 """)
-        self._role_psql(clone, user="postgres", database=DATABASE, sql="""
-REVOKE USAGE, CREATE ON SCHEMA extensions
-  FROM supabase_admin GRANTED BY postgres;
-""")
         self._assert_restore_authority(
             clone, RESTORE_TERMINAL_MEMBERSHIP_ROWS,
-            RESTORE_TERMINAL_SCHEMA_ACL, database=DATABASE,
-            expected_dependency_access=True,
+            RESTORE_TERMINAL_SCHEMA_ACL,
+            RESTORE_SOURCE_EXTENSION_DEPENDENCY_FUNCTION_ACL,
+            database=DATABASE, expected_schema_usage=True,
         )
 
     def bootstrap_role_protocol(self, clone: Mapping[str, Any]) -> None:

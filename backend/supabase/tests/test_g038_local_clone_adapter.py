@@ -1070,9 +1070,10 @@ def test_terminalization_verifies_transient_then_revokes_and_reads_terminal_cata
 def _restore_authority_catalog(
     memberships=adapter.RESTORE_TRANSIENT_MEMBERSHIP_ROWS,
     schema_acl=adapter.RESTORE_TRANSIENT_SCHEMA_ACL,
+    function_acl=adapter.RESTORE_BASELINE_EXTENSION_DEPENDENCY_FUNCTION_ACL,
     *,
     database="postgres",
-    dependency_access=True,
+    schema_usage=True,
 ):
     return {
         "database": database,
@@ -1084,10 +1085,7 @@ def _restore_authority_catalog(
         "extension_dependencies": {
             "functions": [
                 {
-                    "acl": (
-                        [list(row) for row in adapter.RESTORE_EXTENSION_DEPENDENCY_FUNCTION_ACL]
-                        if dependency_access else []
-                    ),
+                    "acl": [list(row) for row in function_acl],
                     "effective_execute": True,
                     "identity_arguments": identity_arguments,
                     "name": name,
@@ -1098,7 +1096,7 @@ def _restore_authority_catalog(
                 in adapter.RESTORE_EXTENSION_DEPENDENCY_FUNCTIONS
             ],
             "schema_effective_create": False,
-            "schema_effective_usage": dependency_access,
+            "schema_effective_usage": schema_usage,
         },
         "memberships": [list(row) for row in sorted(memberships)],
         "owner_roles": sorted(adapter.RESTORE_OWNER_ROLES),
@@ -1130,13 +1128,16 @@ def _restore_authority_catalog(
         ),
         lambda value: value["extension_dependencies"]["functions"][0]["acl"].clear(),
         lambda value: value["extension_dependencies"]["functions"][0]["acl"][0].__setitem__(
-            0, "postgres",
+            0, "supabase_admin",
         ),
         lambda value: value["extension_dependencies"]["functions"][0].__setitem__(
             "identity_arguments", "bytea, text",
         ),
         lambda value: value["extension_dependencies"]["functions"][0]["acl"][0].__setitem__(
             3, True,
+        ),
+        lambda value: value["extension_dependencies"]["functions"][0]["acl"].append(
+            ["postgres", "attacker", "EXECUTE", False],
         ),
         lambda value: value["extension_dependencies"]["functions"][0].__setitem__(
             "owner", "postgres",
@@ -1145,7 +1146,7 @@ def _restore_authority_catalog(
             0, "supabase_admin",
         ),
         lambda value: value["extension_dependencies"]["functions"].append({
-            "acl": [["supabase_admin", "privacy_workflow_owner", "EXECUTE", False]],
+            "acl": [["postgres", "privacy_workflow_owner", "EXECUTE", False]],
             "effective_execute": True,
             "identity_arguments": "text",
             "name": "hmac",
@@ -1162,19 +1163,22 @@ def _restore_authority_catalog(
     ],
 )
 def test_restore_authority_rejects_session_owner_membership_schema_and_grantor_drift(mutate):
-    catalog = _restore_authority_catalog()
+    catalog = _restore_authority_catalog(
+        function_acl=adapter.RESTORE_SOURCE_EXTENSION_DEPENDENCY_FUNCTION_ACL,
+    )
     mutate(catalog)
     with pytest.raises(adapter.LocalCloneError, match="restore_authority"):
         adapter.LocalCloneOps._validate_restore_authority_catalog(
             json.dumps(catalog),
             adapter.RESTORE_TRANSIENT_MEMBERSHIP_ROWS,
             adapter.RESTORE_TRANSIENT_SCHEMA_ACL,
+            adapter.RESTORE_SOURCE_EXTENSION_DEPENDENCY_FUNCTION_ACL,
             database="postgres",
-            expected_dependency_access=True,
+            expected_schema_usage=True,
         )
 
 
-def test_restore_authority_is_source_pinned_exact_and_asserted_before_restore():
+def test_restore_authority_baseline_and_restore_window_are_exact_before_restore():
     ops = object.__new__(adapter.LocalCloneOps)
     ops.inputs = type("Inputs", (), {
         "docker": "docker", "deadline_monotonic": time.monotonic() + 60,
@@ -1190,88 +1194,64 @@ def test_restore_authority_is_source_pinned_exact_and_asserted_before_restore():
         raw = ""
         if "json_build_object" in sql:
             if catalog_reads == 0:
-                schema_acl = adapter.RESTORE_BASELINE_SCHEMA_ACL
-                memberships = adapter.RESTORE_TERMINAL_MEMBERSHIP_ROWS
-                dependency_access = False
+                catalog = _restore_authority_catalog(
+                    adapter.RESTORE_TERMINAL_MEMBERSHIP_ROWS,
+                    adapter.RESTORE_BASELINE_SCHEMA_ACL,
+                    adapter.RESTORE_BASELINE_EXTENSION_DEPENDENCY_FUNCTION_ACL,
+                    schema_usage=False,
+                )
             else:
-                schema_acl = adapter.RESTORE_TRANSIENT_SCHEMA_ACL
-                memberships = adapter.RESTORE_TRANSIENT_MEMBERSHIP_ROWS
-                dependency_access = True
-            raw = json.dumps(_restore_authority_catalog(
-                memberships, schema_acl, dependency_access=dependency_access,
-            ))
+                catalog = _restore_authority_catalog(
+                    adapter.RESTORE_TRANSIENT_MEMBERSHIP_ROWS,
+                    adapter.RESTORE_TRANSIENT_SCHEMA_ACL,
+                    adapter.RESTORE_BASELINE_EXTENSION_DEPENDENCY_FUNCTION_ACL,
+                    schema_usage=True,
+                )
+            raw = json.dumps(catalog)
             catalog_reads += 1
         return completed(raw)
 
     ops.command = command
     ops.bootstrap_restore_authority({"container": "clone"})
-    assert len(calls) == 5
+    assert len(calls) == 4
     (
-        baseline_assertion_sql, grant_sql, schema_sql,
-        function_sql, transient_assertion_sql,
+        baseline_assertion_sql, grant_sql, schema_sql, transient_assertion_sql,
     ) = (call[1] for call in calls)
     assert [
         argv[argv.index("-U") + 1] for argv, _ in calls
-    ] == ["postgres", "supabase_admin", "postgres", "supabase_admin", "postgres"]
+    ] == ["postgres", "supabase_admin", "postgres", "postgres"]
     assert "json_build_object" in baseline_assertion_sql
+    assert "pg_catalog.aclexplode(procedure.proacl)" in baseline_assertion_sql
     assert grant_sql.index("restore authority precondition drift") < grant_sql.index(
         "GRANT supabase_admin, supabase_auth_admin, supabase_storage_admin TO postgres"
     )
     assert "WITH ADMIN FALSE, INHERIT TRUE, SET TRUE GRANTED BY supabase_admin" in grant_sql
     assert "CREATE SCHEMA extensions" not in schema_sql
-    assert (
-        "GRANT USAGE, CREATE ON SCHEMA extensions TO supabase_admin "
-        "GRANTED BY postgres;" in schema_sql
-    )
+    assert "TO supabase_admin" not in schema_sql
     assert (
         "GRANT USAGE ON SCHEMA extensions TO privacy_workflow_owner\n"
         "  GRANTED BY postgres;" in schema_sql
     )
     assert "GRANT EXECUTE" not in schema_sql
-    assert "GRANT USAGE ON SCHEMA" not in function_sql
-    assert (
-        "current_user <> 'supabase_admin' OR session_user <> 'supabase_admin'"
-        in function_sql
-    )
     assert (
         "pg_catalog.pg_get_userbyid(procedure.proowner) <> 'supabase_admin'"
         in schema_sql
     )
-    assert (
-        "pg_catalog.pg_get_userbyid(procedure.proowner) <> 'supabase_admin'"
-        in function_sql
-    )
-    assert (
-        "GRANT EXECUTE ON FUNCTION extensions.gen_random_uuid(), "
-        "extensions.digest(text, text)\n"
-        "  TO privacy_workflow_owner GRANTED BY supabase_admin;" in function_sql
-    )
     assert schema_sql.index("restore extension dependency precondition drift") < (
         schema_sql.index("GRANT USAGE ON SCHEMA extensions TO privacy_workflow_owner")
     )
-    assert function_sql.index(
-        "restore extension dependency owner precondition drift"
-    ) < function_sql.index(
-        "GRANT EXECUTE ON FUNCTION extensions.gen_random_uuid(), "
-        "extensions.digest(text, text)"
-    )
-    assert "GRANT ALL" not in schema_sql and "GRANT ALL" not in function_sql
-    assert all(
-        " TO privacy_workflow_owner WITH GRANT OPTION" not in sql
-        for sql in (schema_sql, function_sql)
-    )
-    assert all(
-        "GRANT privacy_workflow_owner TO" not in sql
-        for sql in (schema_sql, function_sql)
-    )
+    assert "GRANT ALL" not in schema_sql
+    assert "WITH GRANT OPTION" not in schema_sql
+    assert "GRANT privacy_workflow_owner TO" not in schema_sql
     assert "json_build_object" in transient_assertion_sql
     combined = "\n".join(sql for _, sql in calls)
     assert " TO PUBLIC" not in combined and " FROM PUBLIC" not in combined
     assert "SUPERUSER" not in combined
     assert "--no-owner" not in combined and "--no-acl" not in combined
     assert all(sql not in argv for argv, sql in calls)
-    assert adapter.RESTORE_EXTENSION_DEPENDENCY_FUNCTION_ACL == (
-        ("supabase_admin", "privacy_workflow_owner", "EXECUTE", False),
+    assert adapter.RESTORE_BASELINE_EXTENSION_DEPENDENCY_FUNCTION_ACL == ()
+    assert adapter.RESTORE_SOURCE_EXTENSION_DEPENDENCY_FUNCTION_ACL == (
+        ("postgres", "privacy_workflow_owner", "EXECUTE", False),
     )
     assert adapter.RESTORE_TERMINAL_SCHEMA_ACL == (
         ("postgres", "anon", "USAGE", False),
@@ -1283,14 +1263,66 @@ def test_restore_authority_is_source_pinned_exact_and_asserted_before_restore():
         ("postgres", "privacy_workflow_owner", "USAGE", False),
         ("postgres", "service_role", "USAGE", False),
     )
-    assert adapter.RESTORE_TRANSIENT_SCHEMA_ACL == (
-        *adapter.RESTORE_TERMINAL_SCHEMA_ACL,
-        ("postgres", "supabase_admin", "CREATE", False),
-        ("postgres", "supabase_admin", "USAGE", False),
-    )
+    assert adapter.RESTORE_TRANSIENT_SCHEMA_ACL == adapter.RESTORE_TERMINAL_SCHEMA_ACL
 
 
 def test_restore_authority_terminalization_revokes_only_temporary_grants_and_asserts():
+    ops = object.__new__(adapter.LocalCloneOps)
+    ops.inputs = type("Inputs", (), {
+        "docker": "docker", "deadline_monotonic": time.monotonic() + 60,
+    })()
+    calls = []
+    catalog_reads = 0
+
+    def command(argv, **kwargs):
+        nonlocal catalog_reads
+        sql = kwargs.get("input_text", "")
+        calls.append(sql)
+        if "json_build_object" not in sql:
+            return completed("")
+        if catalog_reads == 0:
+            catalog = _restore_authority_catalog(
+                adapter.RESTORE_TRANSIENT_MEMBERSHIP_ROWS,
+                adapter.RESTORE_BASELINE_SCHEMA_ACL,
+                adapter.RESTORE_SOURCE_EXTENSION_DEPENDENCY_FUNCTION_ACL,
+                database=adapter.DATABASE,
+                schema_usage=False,
+            )
+        else:
+            catalog = _restore_authority_catalog(
+                adapter.RESTORE_TERMINAL_MEMBERSHIP_ROWS,
+                adapter.RESTORE_TERMINAL_SCHEMA_ACL,
+                adapter.RESTORE_SOURCE_EXTENSION_DEPENDENCY_FUNCTION_ACL,
+                database=adapter.DATABASE,
+                schema_usage=True,
+            )
+        catalog_reads += 1
+        return completed(json.dumps(catalog))
+
+    ops.command = command
+    ops.terminalize_restore_authority({"container": "clone"})
+    assert len(calls) == 4
+    assert "json_build_object" in calls[0]
+    assert calls[1].strip() == (
+        "GRANT USAGE ON SCHEMA extensions TO privacy_workflow_owner\n"
+        "  GRANTED BY postgres;"
+    )
+    assert calls[2].strip() == (
+        "REVOKE supabase_admin, supabase_auth_admin, supabase_storage_admin\n"
+        "  FROM postgres GRANTED BY supabase_admin;"
+    )
+    assert "json_build_object" in calls[3]
+    assert " TO PUBLIC" not in "\n".join(calls)
+    assert "GRANT EXECUTE" not in "\n".join(calls)
+    assert "REVOKE USAGE" not in "\n".join(calls)
+    assert "gen_random_uuid" not in "\n".join(calls[1:3])
+    assert "digest" not in "\n".join(calls[1:3])
+    assert "pg_catalog.has_schema_privilege" in calls[0]
+    assert "pg_catalog.has_function_privilege" in calls[0]
+    assert "pg_catalog.has_schema_privilege" in calls[3]
+    assert "pg_catalog.has_function_privilege" in calls[3]
+
+def test_restore_authority_terminalization_validates_source_acl_before_mutation():
     ops = object.__new__(adapter.LocalCloneOps)
     ops.inputs = type("Inputs", (), {
         "docker": "docker", "deadline_monotonic": time.monotonic() + 60,
@@ -1301,30 +1333,22 @@ def test_restore_authority_terminalization_revokes_only_temporary_grants_and_ass
         sql = kwargs.get("input_text", "")
         calls.append(sql)
         catalog = _restore_authority_catalog(
-            adapter.RESTORE_TERMINAL_MEMBERSHIP_ROWS,
-            adapter.RESTORE_TERMINAL_SCHEMA_ACL,
+            adapter.RESTORE_TRANSIENT_MEMBERSHIP_ROWS,
+            adapter.RESTORE_BASELINE_SCHEMA_ACL,
+            (("supabase_admin", "privacy_workflow_owner", "EXECUTE", False),),
             database=adapter.DATABASE,
+            schema_usage=False,
         )
-        return completed(json.dumps(catalog) if "json_build_object" in sql else "")
+        return completed(json.dumps(catalog))
 
     ops.command = command
-    ops.terminalize_restore_authority({"container": "clone"})
-    assert len(calls) == 3
-    assert calls[0].strip() == (
-        "REVOKE supabase_admin, supabase_auth_admin, supabase_storage_admin\n"
-        "  FROM postgres GRANTED BY supabase_admin;"
-    )
-    assert calls[1].strip() == (
-        "REVOKE USAGE, CREATE ON SCHEMA extensions\n"
-        "  FROM supabase_admin GRANTED BY postgres;"
-    )
-    assert "json_build_object" in calls[2]
-    assert " TO PUBLIC" not in "\n".join(calls)
-    revoke_sql = "\n".join(calls[:2])
-    assert "privacy_workflow_owner" not in revoke_sql
-    assert "gen_random_uuid" not in revoke_sql and "digest" not in revoke_sql
-    assert "pg_catalog.has_schema_privilege" in calls[2]
-    assert "pg_catalog.has_function_privilege" in calls[2]
+    with pytest.raises(adapter.LocalCloneError, match="restore_authority"):
+        ops.terminalize_restore_authority({"container": "clone"})
+
+    assert len(calls) == 1
+    assert "json_build_object" in calls[0]
+    assert "GRANT USAGE" not in calls[0]
+    assert "REVOKE " not in calls[0]
 
 
 def test_each_clone_bootstraps_before_restore_and_terminalizes_before_observation():
