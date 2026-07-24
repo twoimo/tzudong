@@ -1093,50 +1093,56 @@ class ControllerTests(unittest.TestCase):
   self.assertNotIn("--no-owner",source); self.assertNotIn("--no-acl",source)
  def test_post_data_trigger_authority_pins_exact_roles_signatures_owners_and_schema(self):
   self.assertEqual((
-   ("postgres","privacy_retention.g014_account_deletion_admin_removal_fence()","privacy_workflow_owner"),
-   ("postgres","privacy_retention.g014_account_deletion_item_binding_guard()","privacy_workflow_owner"),
-   ("postgres","privacy_retention.g014_account_deletion_prevent_activated_class_mutation()","privacy_workflow_owner"),
-   ("postgres","privacy_retention.g014_account_deletion_prevent_activated_policy_mutation()","privacy_workflow_owner"),
-   ("postgres","privacy_retention.g014_account_deletion_request_binding_guard()","privacy_workflow_owner"),
-   ("postgres","privacy_retention.g014_account_deletion_seed_external_jobs()","privacy_workflow_owner"),
-   ("postgres","privacy_retention.g014_reject_audit_mutation()","privacy_workflow_owner"),
-   ("postgres","public.g014_marketing_batch_transition()","privacy_workflow_owner"),
-   ("postgres","public.g014_marketing_operation_terminal_guard()","privacy_workflow_owner"),
-   ("postgres","public.g014_marketing_public_recipient_transition()","privacy_workflow_owner"),
-   ("supabase_auth_admin","public.handle_new_user()","postgres"),
-   ("supabase_auth_admin","public.handle_new_user_avatar()","postgres"),
-   ("supabase_storage_admin","privacy_retention.g014_account_deletion_storage_write_fence()","privacy_workflow_owner"),
+   ("postgres","privacy_retention.g014_account_deletion_admin_removal_fence()","privacy_workflow_owner",True),
+   ("postgres","privacy_retention.g014_account_deletion_item_binding_guard()","privacy_workflow_owner",True),
+   ("postgres","privacy_retention.g014_account_deletion_prevent_activated_class_mutation()","privacy_workflow_owner",True),
+   ("postgres","privacy_retention.g014_account_deletion_prevent_activated_policy_mutation()","privacy_workflow_owner",True),
+   ("postgres","privacy_retention.g014_account_deletion_request_binding_guard()","privacy_workflow_owner",True),
+   ("postgres","privacy_retention.g014_account_deletion_seed_external_jobs()","privacy_workflow_owner",True),
+   ("postgres","privacy_retention.g014_reject_audit_mutation()","privacy_workflow_owner",True),
+   ("postgres","public.g014_marketing_batch_transition()","privacy_workflow_owner",True),
+   ("postgres","public.g014_marketing_operation_terminal_guard()","privacy_workflow_owner",True),
+   ("postgres","public.g014_marketing_public_recipient_transition()","privacy_workflow_owner",True),
+   ("supabase_auth_admin","public.handle_new_user()","postgres",False),
+   ("supabase_auth_admin","public.handle_new_user_avatar()","postgres",False),
+   ("supabase_storage_admin","privacy_retention.g014_account_deletion_storage_write_fence()","privacy_workflow_owner",False),
   ),recovery.POST_DATA_TRIGGER_FUNCTION_AUTHORITY)
   self.assertEqual((("privacy_retention","supabase_storage_admin","privacy_workflow_owner"),),recovery.POST_DATA_TRIGGER_SCHEMA_AUTHORITY)
   recovery._validate_post_data_trigger_authority_contract()
- def test_post_data_trigger_authority_rejects_missing_extra_signature_owner_effective_and_acl_drift(self):
-  role,signature,owner=recovery.POST_DATA_TRIGGER_FUNCTION_AUTHORITY[0]
-  valid=(signature,owner,[[owner,owner,"EXECUTE",False]],False,False)
+ def test_post_data_trigger_authority_rejects_contract_mutation_and_baseline_drift(self):
+  role,signature,owner,expected_effective=recovery.POST_DATA_TRIGGER_FUNCTION_AUTHORITY[0]
+  valid=(signature,owner,[[owner,owner,"EXECUTE",False]],expected_effective,False)
   mutations=(
    [],
    [valid,valid],
-   [("public.wrong()",owner,valid[2],False,False)],
-   [(signature,"postgres",valid[2],False,False)],
-   [(signature,owner,valid[2],True,False)],
-   [(signature,owner,valid[2],False,True)],
-   [(signature,owner,[[owner,owner,"UPDATE",False]],False,False)],
-   [(signature,owner,[[owner,owner,"EXECUTE",False],[owner,owner,"EXECUTE",False]],False,False)],
+   [("public.wrong()",owner,valid[2],expected_effective,False)],
+   [(signature,"postgres",valid[2],expected_effective,False)],
+   [(signature,owner,valid[2],False,False)],
+   [(signature,owner,valid[2],expected_effective,True)],
+   [(signature,owner,[[role,owner,"EXECUTE",False]],expected_effective,False)],
+   [(signature,owner,[[owner,owner,"UPDATE",False]],expected_effective,False)],
+   [(signature,owner,[[owner,owner,"EXECUTE",False],[owner,owner,"EXECUTE",False]],expected_effective,False)],
   )
   for rows in mutations:
    with self.subTest(rows=rows),patch.object(recovery,"_query_conn",return_value=rows),self.assertRaises(recovery.RecoveryError):
     recovery._read_post_data_trigger_authority_baseline(object())
+  contract=recovery.POST_DATA_TRIGGER_FUNCTION_AUTHORITY
+  contract_mutations=(list(contract),contract[::-1],((contract[0][0],contract[0][1],"postgres",True),)+contract[1:],(contract[0][:3]+(False,),)+contract[1:])
+  for mutation in contract_mutations:
+   with self.subTest(contract=mutation),patch.object(recovery,"POST_DATA_TRIGGER_FUNCTION_AUTHORITY",mutation),self.assertRaisesRegex(recovery.RecoveryError,"contract invalid"):
+    recovery._validate_post_data_trigger_authority_contract()
   def query(unused,sql,params=None):
    if sql==recovery.POST_DATA_FUNCTION_AUTHORITY_SQL:
     target_role,target_signature=params
-    target_owner=next(item[2] for item in recovery.POST_DATA_TRIGGER_FUNCTION_AUTHORITY if item[:2]==(target_role,target_signature))
-    return [(target_signature,target_owner,[[target_owner,target_owner,"EXECUTE",False]],False,False)]
+    target=next(item for item in recovery.POST_DATA_TRIGGER_FUNCTION_AUTHORITY if item[:2]==(target_role,target_signature))
+    return [(target_signature,target[2],[[target[2],target[2],"EXECUTE",False]],target[3],False)]
    return [("privacy_retention","privacy_workflow_owner",[["privacy_workflow_owner","privacy_workflow_owner","CREATE",False],["privacy_workflow_owner","privacy_workflow_owner","USAGE",False]],False,True,False,False)]
   with patch.object(recovery,"_query_conn",side_effect=query),self.assertRaisesRegex(recovery.RecoveryError,"schema authority state"):
    recovery._read_post_data_trigger_authority_baseline(object())
  def test_post_data_trigger_authority_grants_and_revokes_only_exact_acl_delta_and_restores_baseline(self):
-  function_state={(role,signature):{"owner":owner,"acl":[[owner,owner,"EXECUTE",False]],"effective":False,"direct":False} for role,signature,owner in recovery.POST_DATA_TRIGGER_FUNCTION_AUTHORITY}
+  function_state={(role,signature):{"owner":owner,"acl":[[owner,owner,"EXECUTE",False]],"baseline_effective":effective,"effective":effective,"direct":False} for role,signature,owner,effective in recovery.POST_DATA_TRIGGER_FUNCTION_AUTHORITY}
   schema_state={("privacy_retention","supabase_storage_admin"):{"owner":"privacy_workflow_owner","acl":[["privacy_workflow_owner","privacy_workflow_owner","CREATE",False],["privacy_workflow_owner","privacy_workflow_owner","USAGE",False]],"usage":False,"create":False,"direct_usage":False,"direct_create":False}}
-  original_functions={key:{"owner":state["owner"],"acl":[list(item) for item in state["acl"]],"effective":state["effective"],"direct":state["direct"]} for key,state in function_state.items()}; original_schemas={key:{"owner":state["owner"],"acl":[list(item) for item in state["acl"]],"usage":state["usage"],"create":state["create"],"direct_usage":state["direct_usage"],"direct_create":state["direct_create"]} for key,state in schema_state.items()}; statements=[]; current_role=None
+  original_functions={key:{"owner":state["owner"],"acl":[list(item) for item in state["acl"]],"baseline_effective":state["baseline_effective"],"effective":state["effective"],"direct":state["direct"]} for key,state in function_state.items()}; original_schemas={key:{"owner":state["owner"],"acl":[list(item) for item in state["acl"]],"usage":state["usage"],"create":state["create"],"direct_usage":state["direct_usage"],"direct_create":state["direct_create"]} for key,state in schema_state.items()}; statements=[]; current_role=None
   class Conn:
    def __init__(self): self.commits=0; self.rollbacks=0
    def commit(self): self.commits+=1
@@ -1153,12 +1159,12 @@ class ControllerTests(unittest.TestCase):
     return [(schema,state["owner"],state["acl"],state["usage"],state["create"],state["direct_usage"],state["direct_create"])]
    if sql.startswith("SET LOCAL ROLE "):
     current_role=sql.removeprefix("SET LOCAL ROLE "); return []
-   for role,signature,owner in recovery.POST_DATA_TRIGGER_FUNCTION_AUTHORITY:
+   for role,signature,owner,baseline_effective in recovery.POST_DATA_TRIGGER_FUNCTION_AUTHORITY:
     state=function_state[(role,signature)]
     if sql==recovery._post_data_function_authority_statement(role,signature,True):
-     self.assertEqual(owner,current_role); state["acl"].append([role,owner,"EXECUTE",False]); state["acl"].sort(); state["effective"]=state["direct"]=True; return []
+     self.assertFalse(baseline_effective); self.assertEqual(owner,current_role); state["acl"].append([role,owner,"EXECUTE",False]); state["acl"].sort(); state["effective"]=state["direct"]=True; return []
     if sql==recovery._post_data_function_authority_statement(role,signature,False):
-     self.assertEqual(owner,current_role); state["acl"].remove([role,owner,"EXECUTE",False]); state["effective"]=state["direct"]=False; return []
+     self.assertFalse(baseline_effective); self.assertEqual(owner,current_role); state["acl"].remove([role,owner,"EXECUTE",False]); state["effective"]=state["baseline_effective"]; state["direct"]=False; return []
    for schema,role,owner in recovery.POST_DATA_TRIGGER_SCHEMA_AUTHORITY:
     state=schema_state[(schema,role)]
     if sql==recovery._post_data_schema_authority_statement(schema,role,True):
@@ -1168,14 +1174,15 @@ class ControllerTests(unittest.TestCase):
    return []
   with patch.object(recovery,"_query_conn",side_effect=query):
    baseline=recovery._open_post_data_trigger_authority_window(conn)
-   self.assertTrue(all(state["effective"] and state["direct"] for state in function_state.values()))
+   self.assertTrue(all(state["effective"] for state in function_state.values())); self.assertTrue(all(state["direct"] is (not state["baseline_effective"]) for state in function_state.values()))
    self.assertTrue(schema_state[("privacy_retention","supabase_storage_admin")]["usage"])
    self.assertFalse(schema_state[("privacy_retention","supabase_storage_admin")]["create"])
    recovery._close_post_data_trigger_authority_window(conn,baseline)
   self.assertEqual(original_functions,function_state); self.assertEqual(original_schemas,schema_state)
-  for role,signature,unused_owner in recovery.POST_DATA_TRIGGER_FUNCTION_AUTHORITY:
-   self.assertEqual(1,statements.count(f"GRANT EXECUTE ON FUNCTION {signature} TO {role}"))
-   self.assertEqual(1,statements.count(f"REVOKE EXECUTE ON FUNCTION {signature} FROM {role}"))
+  for role,signature,unused_owner,baseline_effective in recovery.POST_DATA_TRIGGER_FUNCTION_AUTHORITY:
+   expected_count=0 if baseline_effective else 1
+   self.assertEqual(expected_count,statements.count(f"GRANT EXECUTE ON FUNCTION {signature} TO {role}"))
+   self.assertEqual(expected_count,statements.count(f"REVOKE EXECUTE ON FUNCTION {signature} FROM {role}"))
   self.assertEqual(1,statements.count("GRANT USAGE ON SCHEMA privacy_retention TO supabase_storage_admin"))
   self.assertEqual(1,statements.count("REVOKE USAGE ON SCHEMA privacy_retention FROM supabase_storage_admin"))
   privilege_statements=[sql for sql in statements if sql.startswith(("GRANT ","REVOKE "))]
