@@ -1100,9 +1100,79 @@ class ControllerTests(unittest.TestCase):
  def test_post_data_source_requires_canonical_section_list_owner_runs_and_no_monolithic_fallback(self):
   source=(SCRIPTS/"g035_hosted_recovery.py").read_text(encoding="utf-8")
   self.assertIn('post_data_toc=run([restore,"--section=post-data","--list",str(plain)]',source)
-  self.assertIn('run([restore,"--section=post-data",f"--use-list={path}",f"--role={owner}","--dbname=service=g035-local",str(plain)]',source)
+  self.assertIn('argv=[restore,"--section=post-data",f"--use-list={path}",f"--role={owner}","--dbname=service=g035-local",str(plain)]',source)
   self.assertNotIn('run([restore,"--section=post-data","--dbname=service=g035-local",str(plain)]',source)
   self.assertNotIn("--no-owner",source); self.assertNotIn("--no-acl",source)
+ def test_post_data_storage_auth_schema_authority_pins_run_role_schema_owner_and_rejects_mutation(self):
+  self.assertEqual((21,"supabase_storage_admin","auth","supabase_admin"),recovery.POST_DATA_STORAGE_AUTH_SCHEMA_AUTHORITY)
+  self.assertEqual(("supabase_storage_admin",18),recovery.POST_DATA_OWNER_RUNS[20])
+  recovery._validate_post_data_storage_auth_schema_contract()
+  mutations=([21,"supabase_storage_admin","auth","supabase_admin"],(20,"supabase_storage_admin","auth","supabase_admin"),(21,"postgres","auth","supabase_admin"),(21,"supabase_storage_admin","storage","supabase_admin"),(21,"supabase_storage_admin","auth","postgres"))
+  for mutation in mutations:
+   with self.subTest(mutation=mutation),patch.object(recovery,"POST_DATA_STORAGE_AUTH_SCHEMA_AUTHORITY",mutation),self.assertRaisesRegex(recovery.RecoveryError,"contract invalid"):
+    recovery._validate_post_data_storage_auth_schema_contract()
+  self.assertIn("coalesce(namespace.nspacl,pg_catalog.acldefault('n',namespace.nspowner))",recovery.POST_DATA_SCHEMA_AUTHORITY_SQL)
+  self.assertIn("pg_catalog.has_schema_privilege(target.oid,namespace.oid,'USAGE')",recovery.POST_DATA_SCHEMA_AUTHORITY_SQL)
+  self.assertIn("EXISTS (SELECT 1 FROM pg_catalog.aclexplode(namespace.nspacl)",recovery.POST_DATA_SCHEMA_AUTHORITY_SQL)
+  for row in (
+   ("auth","postgres",[],False,False,False,False),
+   ("auth","supabase_admin",None,False,False,False,False),
+   ("auth","supabase_admin",[],True,False,False,False),
+   ("auth","supabase_admin",[],False,False,True,False),
+   ("auth","supabase_admin",[],False,True,False,False),
+  ):
+   with self.subTest(row=row),patch.object(recovery,"_query_conn",return_value=[row]),self.assertRaises(recovery.RecoveryError):
+    recovery._read_post_data_storage_auth_schema_state(object(),baseline=True)
+ def test_post_data_storage_auth_schema_authority_restores_exact_acl_and_effective_state(self):
+  state={"owner":"supabase_admin","acl":[["auditor","supabase_admin","USAGE",False],["supabase_admin","supabase_admin","CREATE",False],["supabase_admin","supabase_admin","USAGE",False]],"usage":False,"create":False,"direct_usage":False,"direct_create":False}
+  original=json.loads(json.dumps(state)); statements=[]; current_role=None
+  class Conn:
+   def __init__(self): self.commits=0; self.rollbacks=0
+   def commit(self): self.commits+=1
+   def rollback(self): self.rollbacks+=1
+  conn=Conn()
+  def query(unused,sql,params=None):
+   nonlocal current_role
+   statements.append(sql)
+   if sql==recovery.POST_DATA_SCHEMA_AUTHORITY_SQL:
+    self.assertEqual(("supabase_storage_admin","auth"),params)
+    return [("auth",state["owner"],state["acl"],state["usage"],state["create"],state["direct_usage"],state["direct_create"])]
+   if sql.startswith("SET LOCAL ROLE "): current_role=sql.removeprefix("SET LOCAL ROLE "); return []
+   if sql=="GRANT USAGE ON SCHEMA auth TO supabase_storage_admin":
+    self.assertEqual("supabase_admin",current_role); state["acl"].append(["supabase_storage_admin","supabase_admin","USAGE",False]); state["acl"].sort(); state["usage"]=state["direct_usage"]=True; return []
+   if sql=="REVOKE USAGE ON SCHEMA auth FROM supabase_storage_admin":
+    self.assertEqual("supabase_admin",current_role); state["acl"].remove(["supabase_storage_admin","supabase_admin","USAGE",False]); state["usage"]=state["direct_usage"]=False; return []
+   return []
+  with patch.object(recovery,"_query_conn",side_effect=query):
+   baseline=recovery._open_post_data_storage_auth_schema_window(conn)
+   self.assertTrue(state["usage"] and state["direct_usage"]); self.assertFalse(state["create"] or state["direct_create"])
+   recovery._close_post_data_storage_auth_schema_window(conn,baseline)
+  self.assertEqual(original,state)
+  self.assertEqual(1,statements.count("GRANT USAGE ON SCHEMA auth TO supabase_storage_admin"))
+  self.assertEqual(1,statements.count("REVOKE USAGE ON SCHEMA auth FROM supabase_storage_admin"))
+  privilege_sql=[sql for sql in statements if sql.startswith(("GRANT ","REVOKE "))]
+  self.assertFalse(any(any(forbidden in sql for forbidden in (" PUBLIC"," ALL "," CREATE ","privacy_workflow_owner")) for sql in privilege_sql))
+  self.assertEqual(2,conn.commits); self.assertEqual(0,conn.rollbacks)
+ def test_post_data_storage_auth_schema_window_is_bounded_to_run_21_and_cleans_up_on_failure(self):
+  events=[]; baseline=("baseline",)
+  def authority(unused_env,operation,*args):
+   events.append(("authority",operation,args))
+   return baseline if operation is recovery._open_post_data_storage_auth_schema_window else None
+  def execute(argv,**unused):
+   events.append(("run",argv))
+   if "--use-list=run-21.list" in argv: raise recovery.RecoveryError("run 21 failed")
+  with patch.object(recovery,"_with_post_data_storage_auth_schema_connection",side_effect=authority),patch.object(recovery,"run",side_effect=execute):
+   recovery._restore_post_data_owner_run("pg_restore",Path("database.pgdump"),{},20,"postgres",Path("run-20.list"))
+   with self.assertRaisesRegex(recovery.RecoveryError,"run 21 failed"):
+    recovery._restore_post_data_owner_run("pg_restore",Path("database.pgdump"),{},21,"supabase_storage_admin",Path("run-21.list"))
+   recovery._restore_post_data_owner_run("pg_restore",Path("database.pgdump"),{},22,"supabase_auth_admin",Path("run-22.list"))
+  self.assertEqual([
+   ("run",["pg_restore","--section=post-data","--use-list=run-20.list","--role=postgres","--dbname=service=g035-local","database.pgdump"]),
+   ("authority",recovery._open_post_data_storage_auth_schema_window,()),
+   ("run",["pg_restore","--section=post-data","--use-list=run-21.list","--role=supabase_storage_admin","--dbname=service=g035-local","database.pgdump"]),
+   ("authority",recovery._close_post_data_storage_auth_schema_window,(baseline,)),
+   ("run",["pg_restore","--section=post-data","--use-list=run-22.list","--role=supabase_auth_admin","--dbname=service=g035-local","database.pgdump"]),
+  ],events)
  def test_post_data_trigger_authority_pins_exact_roles_signatures_owners_and_schema(self):
   self.assertEqual((
    ("postgres","privacy_retention.g014_account_deletion_admin_removal_fence()","privacy_workflow_owner",True),
@@ -1645,7 +1715,9 @@ class ControllerTests(unittest.TestCase):
     events.append(("privacy-insert",False,exact))
    def post_data_with_authority(*operation_args):
     events.append(("trigger-authority",True))
-    try: return recovery._restore_post_data_runs(*operation_args)
+    try:
+     with patch.object(recovery,"_with_post_data_storage_auth_schema_connection",side_effect=lambda unused_env,operation,*args: () if operation is recovery._open_post_data_storage_auth_schema_window else None):
+      return recovery._restore_post_data_runs(*operation_args)
     finally: events.append(("trigger-authority",False))
    with patch.object(recovery,"sha256_file",return_value=capture["evidence"]["dump_sha256"]),patch.object(recovery,"_owned_identity_stream",return_value=io.BytesIO(b"key")),patch.object(recovery,"_require_prior",return_value=capture),patch.object(recovery,"command_exists",side_effect=lambda command:command),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"run",side_effect=execute),patch.object(recovery.subprocess,"run",side_effect=decrypt) as decrypt_run,patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",side_effect=query),patch.object(recovery,"_with_privacy_connection",side_effect=privacy_connection),patch.object(recovery,"_restore_post_data_with_trigger_authority",side_effect=post_data_with_authority),patch.object(recovery,"_create_auth_user_placeholders"),patch.object(recovery,"_normalize_restored_vector_extension",side_effect=lambda unused:events.append(("postflight",True)) or "public"),patch.object(recovery,"_fingerprints",return_value=observed):
     result=recovery.run_restore_verify(args,None)
