@@ -890,7 +890,7 @@ def _owned_restore_use_list(path,payload):
   raise
 
 PRIVACY_DATA_ROLE = "privacy_workflow_owner"
-PRIVACY_RELATION_STATE_SQL = "SELECT role.rolname,class.relrowsecurity,class.relforcerowsecurity,ARRAY(SELECT DISTINCT acl.privilege_type FROM pg_catalog.aclexplode(COALESCE(class.relacl,'{}'::pg_catalog.aclitem[])) AS acl JOIN pg_catalog.pg_roles AS grantee ON grantee.oid=acl.grantee WHERE grantee.rolname=%s ORDER BY acl.privilege_type) FROM pg_catalog.pg_class AS class JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid=class.relnamespace JOIN pg_catalog.pg_roles AS role ON role.oid=class.relowner WHERE namespace.nspname=%s AND class.relname=%s AND class.relkind IN ('r','p')"
+PRIVACY_RELATION_STATE_SQL = "SELECT role.rolname,class.relrowsecurity,class.relforcerowsecurity,ARRAY(SELECT DISTINCT acl.privilege_type FROM pg_catalog.aclexplode(class.relacl) AS acl JOIN pg_catalog.pg_roles AS grantee ON grantee.oid=acl.grantee WHERE grantee.rolname=%s ORDER BY acl.privilege_type) FROM pg_catalog.pg_class AS class JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid=class.relnamespace JOIN pg_catalog.pg_roles AS role ON role.oid=class.relowner WHERE namespace.nspname=%s AND class.relname=%s AND class.relkind IN ('r','p')"
 def _quoted_identifier(value):
  if type(value) is not str or not value or "\x00" in value: raise RecoveryError("privacy TABLE DATA inventory invalid")
  return '"'+value.replace('"','""')+'"'
