@@ -146,7 +146,7 @@ SELECT
               ARRAY['DELETE','INSERT','REFERENCES','SELECT','TRIGGER','TRUNCATE','UPDATE']
      FROM private_acl) AS table_acl_exact,
   (SELECT count(*) = 1 AND bool_and(polname = 'g028_reauth_proof_owner_access'
-          AND polcmd = '*' AND polpermissive AND roles = ARRAY['privacy_workflow_owner']
+          AND polcmd = '*' AND polpermissive AND roles = ARRAY['privacy_workflow_owner']::name[]
           AND qual = 'true' AND with_check = 'true') FROM policy_rows) AS policies_exact,
   (SELECT count(*) = 2
           AND count(*) FILTER (WHERE relname = 'reauth_proofs_pkey' AND indisprimary AND indisunique) = 1
