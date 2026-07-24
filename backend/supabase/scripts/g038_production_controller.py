@@ -28,9 +28,9 @@ import g038_successor_authorization as authority
 from g037_hosted_closure_contract import validate_sources as validate_g040_sources
 from g038_successor_contract import (
     EXCLUDED_ROOT, MANIFEST_RELATIVE_PATH, PREDECESSOR_COMMIT, PREDECESSOR_LEDGER_ROOT,
-    PREDECESSOR_REPORT_SHA256, PREDECESSOR_ROWS, SELECTED_VERSIONS, STATEMENT_VECTOR_ROOT,
-    TARGET_FINGERPRINT, TERMINAL_SPEC_ROOT, canonical_json_bytes, canonical_sha256,
-    validate_sources,
+    PREDECESSOR_REPORT_SHA256, PREDECESSOR_ROWS, RUNTIME_INVENTORY_ROOT,
+    SELECTED_VERSIONS, STATEMENT_VECTOR_ROOT, TARGET_FINGERPRINT,
+    TERMINAL_SPEC_ROOT, canonical_json_bytes, canonical_sha256, validate_sources,
 )
 from g038_successor_executor import (
     EXACT_40, EXACT_42, PARTIAL_OR_AMBIGUOUS, LiveState, SuccessorError,
@@ -1011,7 +1011,7 @@ def _load_clone(args: Any, source: SourceBinding, manifest: Any, predecessor: Pr
         "source_commit": source.final_commit, "runtime_source_root": source.runtime_source_root,
         "source_root": source_root, "manifest_root": manifest_root, "vector_root": STATEMENT_VECTOR_ROOT,
         "terminal_spec_root": TERMINAL_SPEC_ROOT, "exclusions_root": EXCLUDED_ROOT,
-        "inventory_root": freeze.inventory_root, "target_fingerprint": TARGET_FINGERPRINT,
+        "inventory_root": RUNTIME_INVENTORY_ROOT, "target_fingerprint": TARGET_FINGERPRINT,
         "predecessor_report_sha256": predecessor.report_sha256,
         "predecessor_outcome_sha256": predecessor.final_receipt_sha256,
         "predecessor_readback_sha256": predecessor.readback_receipt_sha256,
