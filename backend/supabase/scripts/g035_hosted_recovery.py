@@ -1184,14 +1184,25 @@ def _validate_post_data_fk_baseline(baseline):
  if type(baseline) is not tuple or len(baseline)!=2: raise RecoveryError("post-data FK authority baseline invalid")
  tables,schemas=baseline
  if type(tables) is not tuple or len(tables)!=9 or type(schemas) is not tuple or len(schemas)!=1: raise RecoveryError("post-data FK authority baseline invalid")
+ objects={}
  for expected,item in zip(POST_DATA_FK_TABLE_AUTHORITY,tables):
   if type(item) is not tuple or len(item)!=7 or item[:4]!=expected or item[5:]!=(False,False) or _canonical_authority_acl(list(item[4]),PRIVACY_TABLE_PRIVILEGES)!=item[4] or any(acl[0]==item[0] and acl[2]=="REFERENCES" for acl in item[4]): raise RecoveryError("post-data FK authority baseline invalid")
+  relation=item[1:3]; object_state=item[3:]
+  if relation in objects and objects[relation]!=object_state: raise RecoveryError("post-data FK authority baseline invalid")
+  objects[relation]=object_state
  for expected,item in zip(POST_DATA_FK_SCHEMA_AUTHORITY,schemas):
   if type(item) is not tuple or len(item)!=8 or item[:3]!=expected or item[4:]!=(False,False,False,False) or _canonical_authority_acl(list(item[3]),{"CREATE","USAGE"})!=item[3] or any(acl[0]==item[1] and acl[2] in {"CREATE","USAGE"} for acl in item[3]): raise RecoveryError("post-data FK authority baseline invalid")
 def _post_data_fk_window_state(baseline):
- tables,schemas=baseline
+ _validate_post_data_fk_baseline(baseline); tables,schemas=baseline
+ grants={}
+ for role,schema,table,owner in POST_DATA_FK_TABLE_AUTHORITY:
+  grants.setdefault((schema,table,owner),[]).append((role,owner,"REFERENCES",False))
+ window_acl={}
+ for item in tables:
+  key=item[1:4]
+  if key not in window_acl: window_acl[key]=tuple(sorted((*item[4],*grants[key])))
  return (
-  tuple((*item[:4],tuple(sorted((*item[4],(item[0],item[3],"REFERENCES",False)))),True,True) for item in tables),
+  tuple((*item[:4],window_acl[item[1:4]],True,True) for item in tables),
   tuple((*item[:3],tuple(sorted((*item[3],(item[1],item[2],"USAGE",False)))),True,False,True,False) for item in schemas),
  )
 def _verify_post_data_fk_authority_state(conn,expected):
