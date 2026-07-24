@@ -43,6 +43,16 @@ class ControllerTests(unittest.TestCase):
             stream = io.StringIO()
             with redirect_stderr(stream), self.assertRaises(SystemExit): controller.main([*base, option, "secret"])
             self.assertNotIn("secret", stream.getvalue())
+    def test_destructive_admission_compares_live_predecessor_roots_not_successor_spec(self):
+        source = Path(controller.__file__).read_text(encoding="utf-8")
+        material = source[source.index("def _prepare_material"):source.index("def prepare(")]
+        self.assertIn('"acl": observation.acl_root, "data": observation.data_root', material)
+        self.assertIn("predecessor.roots[key] for key in observed_roots", material)
+        self.assertNotIn('"spec": observation.terminal_spec_root', material)
+        self.assertIn(
+            "value.terminal_spec_root != TERMINAL_SPEC_ROOT",
+            source[source.index("def _load_observation"):source.index("def observe(")],
+        )
     def test_runbook_pins_non_authorizing_controller_recovery_and_ambiguity_handling(self):
         runbook = (
             Path(__file__).resolve().parents[1]
