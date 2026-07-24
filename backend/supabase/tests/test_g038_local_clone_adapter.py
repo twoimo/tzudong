@@ -686,6 +686,37 @@ def test_signing_key_must_match_clone_public_key():
         if write_fd >= 0:
             os.close(write_fd)
 
+def test_signing_key_accepts_loaded_pinned_ed25519_implementation(monkeypatch):
+    from cryptography.hazmat.primitives.serialization import load_pem_public_key
+
+    public_key = load_pem_public_key(adapter.receipt.PUBLIC_KEY_PEM.encode("ascii"))
+
+    class LoadedPrivateKey:
+        def public_key(self):
+            return public_key
+
+        def sign(self, payload):
+            return b"signed:" + payload
+
+    monkeypatch.setattr(
+        "cryptography.hazmat.primitives.serialization.load_pem_private_key",
+        lambda raw, password: LoadedPrivateKey(),
+    )
+    read_fd, write_fd = os.pipe()
+    try:
+        os.write(write_fd, b"private-key-channel")
+        os.close(write_fd)
+        write_fd = -1
+        signer = adapter._load_signer(read_fd)
+        assert signer(b"payload") == b"signed:payload"
+    finally:
+        try:
+            os.close(read_fd)
+        except OSError:
+            pass
+        if write_fd >= 0:
+            os.close(write_fd)
+
 
 def test_deadline_is_absolute_and_expired_deadline_is_denied():
     with pytest.raises(adapter.LocalCloneError, match="deadline"):
