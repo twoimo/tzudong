@@ -1252,12 +1252,40 @@ class ControllerTests(unittest.TestCase):
    return [("auth","supabase_admin",[["supabase_admin","supabase_admin","USAGE",False]],False,True,False,False)]
   with patch.object(recovery,"_query_conn",side_effect=schema_query),self.assertRaisesRegex(recovery.RecoveryError,"schema authority state"):
    recovery._read_post_data_fk_authority_state(object(),baseline=True)
+ def test_post_data_fk_window_aggregates_shared_object_grants_and_rejects_disagreement(self):
+  object_acl={}
+  tables=[]
+  for role,schema,table,owner in recovery.POST_DATA_FK_TABLE_AUTHORITY:
+   acl=object_acl.setdefault((schema,table,owner),((owner,owner,"SELECT",False),))
+   tables.append((role,schema,table,owner,acl,False,False))
+  schemas=(("auth","privacy_workflow_owner","supabase_admin",(("supabase_admin","supabase_admin","USAGE",False),),False,False,False,False),)
+  baseline=(tuple(tables),schemas)
+  window_tables,unused_schemas=recovery._post_data_fk_window_state(baseline)
+  for table in ("privacy_audit_events","privacy_consent_events"):
+   views=tuple(item for item in window_tables if item[1:3]==("privacy_retention",table))
+   self.assertEqual(2,len(views))
+   self.assertEqual(views[0][4],views[1][4])
+   self.assertEqual((True,True),views[0][5:])
+   self.assertEqual((True,True),views[1][5:])
+   self.assertIn(("postgres","privacy_workflow_owner","REFERENCES",False),views[0][4])
+   self.assertIn(("privacy_workflow_owner","privacy_workflow_owner","REFERENCES",False),views[0][4])
+  audit_duplicate=next(index for index,item in enumerate(tables) if item[:3]==("privacy_workflow_owner","privacy_retention","privacy_audit_events"))
+  contradictions=(
+   (*tables[audit_duplicate][:3],"postgres",*tables[audit_duplicate][4:]),
+   (*tables[audit_duplicate][:4],tuple(sorted((*tables[audit_duplicate][4],("auditor","postgres","REFERENCES",False)))),False,False),
+   (*tables[audit_duplicate][:5],True,False),
+   (*tables[audit_duplicate][:5],False,True),
+  )
+  for contradiction in contradictions:
+   changed=(*tables[:audit_duplicate],contradiction,*tables[audit_duplicate+1:])
+   with self.subTest(contradiction=contradiction),self.assertRaisesRegex(recovery.RecoveryError,"baseline invalid"):
+    recovery._post_data_fk_window_state((changed,schemas))
  def test_post_data_fk_authority_preserves_heterogeneous_acl_and_restores_exact_baseline(self):
   states={}
-  for index,(role,schema,table,owner) in enumerate(recovery.POST_DATA_FK_TABLE_AUTHORITY):
+  for index,(schema,table,owner) in enumerate(dict.fromkeys((item[1],item[2],item[3]) for item in recovery.POST_DATA_FK_TABLE_AUTHORITY)):
    acl=[[owner,owner,"SELECT",False]]
    if index%2: acl.append(["auditor","postgres","REFERENCES",False])
-   states[(role,schema,table)]={"owner":owner,"acl":sorted(acl),"effective":False,"direct":False}
+   states[(schema,table)]={"owner":owner,"acl":sorted(acl)}
   schema_state={"owner":"supabase_admin","acl":[["auditor","supabase_admin","USAGE",False],["supabase_admin","supabase_admin","CREATE",False],["supabase_admin","supabase_admin","USAGE",False]],"usage":False,"create":False,"direct_usage":False,"direct_create":False}
   original=json.loads(json.dumps({"tables":{"|".join(key):value for key,value in states.items()},"schema":schema_state}))
   statements=[]; current_role=None
@@ -1270,18 +1298,19 @@ class ControllerTests(unittest.TestCase):
    nonlocal current_role
    statements.append(sql)
    if sql==recovery.POST_DATA_FK_TABLE_AUTHORITY_SQL:
-    role,schema,table=params; state=states[(role,schema,table)]
-    return [(schema,table,state["owner"],state["acl"],state["effective"],state["direct"])]
+    role,schema,table=params; state=states[(schema,table)]
+    direct=[role,state["owner"],"REFERENCES",False] in state["acl"]
+    return [(schema,table,state["owner"],state["acl"],direct,direct)]
    if sql==recovery.POST_DATA_SCHEMA_AUTHORITY_SQL:
     role,schema=params
     return [(schema,schema_state["owner"],schema_state["acl"],schema_state["usage"],schema_state["create"],schema_state["direct_usage"],schema_state["direct_create"])]
    if sql.startswith("SET LOCAL ROLE "): current_role=sql.removeprefix("SET LOCAL ROLE "); return []
    for role,schema,table,owner in recovery.POST_DATA_FK_TABLE_AUTHORITY:
-    state=states[(role,schema,table)]
+    state=states[(schema,table)]
     if sql==recovery._post_data_fk_table_statement(role,schema,table,True):
-     self.assertEqual(owner,current_role); state["acl"].append([role,owner,"REFERENCES",False]); state["acl"].sort(); state["effective"]=state["direct"]=True; return []
+     self.assertEqual(owner,current_role); state["acl"].append([role,owner,"REFERENCES",False]); state["acl"].sort(); return []
     if sql==recovery._post_data_fk_table_statement(role,schema,table,False):
-     self.assertEqual(owner,current_role); state["acl"].remove([role,owner,"REFERENCES",False]); state["effective"]=state["direct"]=False; return []
+     self.assertEqual(owner,current_role); state["acl"].remove([role,owner,"REFERENCES",False]); return []
    if sql==recovery._post_data_schema_authority_statement("auth","privacy_workflow_owner",True):
     self.assertEqual("supabase_admin",current_role); schema_state["acl"].append(["privacy_workflow_owner","supabase_admin","USAGE",False]); schema_state["acl"].sort(); schema_state["usage"]=schema_state["direct_usage"]=True; return []
    if sql==recovery._post_data_schema_authority_statement("auth","privacy_workflow_owner",False):
@@ -1289,10 +1318,19 @@ class ControllerTests(unittest.TestCase):
    return []
   with patch.object(recovery,"_query_conn",side_effect=query):
    baseline=recovery._open_post_data_fk_authority_window(conn)
-   self.assertTrue(all(state["effective"] and state["direct"] for state in states.values()))
+   for role,schema,table,owner in recovery.POST_DATA_FK_TABLE_AUTHORITY:
+    self.assertIn([role,owner,"REFERENCES",False],states[(schema,table)]["acl"])
    self.assertTrue(schema_state["usage"] and schema_state["direct_usage"]); self.assertFalse(schema_state["create"]); self.assertFalse(schema_state["direct_create"])
    recovery._close_post_data_fk_authority_window(conn,baseline)
   self.assertEqual(original,{"tables":{"|".join(key):value for key,value in states.items()},"schema":schema_state})
+  table_privilege_sql=[]
+  for role,schema,table,unused_owner in recovery.POST_DATA_FK_TABLE_AUTHORITY:
+   grant=recovery._post_data_fk_table_statement(role,schema,table,True)
+   revoke=recovery._post_data_fk_table_statement(role,schema,table,False)
+   self.assertEqual(1,statements.count(grant))
+   self.assertEqual(1,statements.count(revoke))
+   table_privilege_sql.extend((grant,revoke))
+  self.assertEqual(18,len(table_privilege_sql))
   privilege_sql=[sql for sql in statements if sql.startswith(("GRANT ","REVOKE "))]
   self.assertEqual(20,len(privilege_sql))
   self.assertFalse(any("*" in sql or " PUBLIC" in sql or " ALL " in sql or " CREATE " in sql or any(privilege in sql for privilege in (" INSERT "," SELECT "," UPDATE "," DELETE "," TRIGGER "," TRUNCATE "," MAINTAIN ")) for sql in privilege_sql))
