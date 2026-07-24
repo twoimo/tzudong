@@ -137,7 +137,7 @@ SELECT
           AND count(*) FILTER (WHERE attname NOT IN ('proof_id', 'issued_at') AND default_expression IS NOT NULL) = 0
          FROM column_rows)
     AND (SELECT count(*) = 4
-          AND string_agg(conname || ':' || contype, ',' ORDER BY conname) =
+          AND string_agg(conname || ':' || contype::text, ',' ORDER BY conname) =
           'reauth_proofs_consumption_metadata_check:c,reauth_proofs_expiry_check:c,reauth_proofs_pkey:p,reauth_proofs_self_target_check:c'
          FROM constraint_rows) AS table_exact,
   (SELECT count(*) = 7 AND bool_and(grantor_name = 'privacy_workflow_owner'
