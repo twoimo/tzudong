@@ -1,4 +1,5 @@
 import contextlib, hashlib, importlib.util, io, json, os, subprocess, sys, tempfile, threading, time, unittest
+REAL_SHA256=hashlib.sha256
 from argparse import Namespace
 from pathlib import Path
 from unittest.mock import ANY, Mock, patch
@@ -28,6 +29,17 @@ EXPECTED_POST_DATA_OWNER_COUNTS=(("postgres",550),("privacy_workflow_owner",350)
 EXPECTED_POST_DATA_OWNER_RUNS=(("supabase_auth_admin",33),("privacy_workflow_owner",97),("postgres",96),("supabase_storage_admin",9),("postgres",1),("supabase_auth_admin",56),("privacy_workflow_owner",26),("postgres",154),("supabase_storage_admin",8),("supabase_auth_admin",2),("privacy_workflow_owner",56),("postgres",41),("supabase_storage_admin",5),("supabase_auth_admin",18),("privacy_workflow_owner",61),("postgres",71),("supabase_storage_admin",5),("supabase_auth_admin",16),("privacy_workflow_owner",110),("postgres",180),("supabase_storage_admin",18),("supabase_auth_admin",3),("postgres",1),("supabase_admin",1),("postgres",1),("supabase_admin",1),("postgres",1),("supabase_admin",1),("postgres",4))
 POST_DATA_ROWS=tuple(f"{3000+index}; {12000+index} {22000+index} CONSTRAINT public object_{index} constraint_{index} {owner}\n".encode() for index,owner in enumerate(owner for owner,count in EXPECTED_POST_DATA_OWNER_RUNS for unused in range(count)))
 POST_DATA_TOC_BYTES=b"; canonical post-data TOC\n\n"+b"".join(POST_DATA_ROWS)+b"; canonical trailer\n"
+TEST_TRIGGER_RELATIONS=tuple(("privacy_retention" if index%2 else "public",f"trigger_table_{index}") for index in range(38))
+TEST_TRIGGER_DESCRIPTORS=tuple((*relation,f"trigger_{index}") for index,relation in enumerate((*TEST_TRIGGER_RELATIONS[:18],*TEST_TRIGGER_RELATIONS)))
+TEST_TRIGGER_RUN_START=sum(count for unused_owner,count in EXPECTED_POST_DATA_OWNER_RUNS[:10])
+TEST_TRIGGER_ROWS=tuple(f"{3000+TEST_TRIGGER_RUN_START+index}; {12000+TEST_TRIGGER_RUN_START+index} {22000+TEST_TRIGGER_RUN_START+index} TRIGGER {schema} {table} {trigger} privacy_workflow_owner\n".encode() for index,(schema,table,trigger) in enumerate(TEST_TRIGGER_DESCRIPTORS))
+TEST_TRIGGER_TOC_BYTES=b"; canonical post-data TOC\n\n"+b"".join((*POST_DATA_ROWS[:TEST_TRIGGER_RUN_START],*TEST_TRIGGER_ROWS,*POST_DATA_ROWS[TEST_TRIGGER_RUN_START+56:]))+b"; canonical trailer\n"
+TEST_TRIGGER_RUNS=recovery._post_data_use_lists(TEST_TRIGGER_TOC_BYTES)
+TEST_TRIGGER_ROOT=hashlib.sha256(recovery.canonical_bytes([list(relation) for relation in TEST_TRIGGER_RELATIONS])).hexdigest()
+def _test_trigger_sha256(payload):
+ actual=REAL_SHA256(payload)
+ if actual.hexdigest()==TEST_TRIGGER_ROOT: return Mock(hexdigest=lambda:recovery.POST_DATA_PRIVACY_TRIGGER_RELATION_ROOT)
+ return actual
 OLD_REMEDIATION_PUBLIC_KEY_PEM="-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEA1aTLvmOtTWC1LZTYK8ocOBGlhWnC6k8a/ePCKSFdWPI=\n-----END PUBLIC KEY-----\n"
 PINNED_SUPABASE_CA=b"""-----BEGIN CERTIFICATE-----
 MIIDxDCCAqygAwIBAgIUbLxMod62P2ktCiAkxnKJwtE9VPYwDQYJKoZIhvcNAQEL
@@ -1188,23 +1200,130 @@ class ControllerTests(unittest.TestCase):
   privilege_statements=[sql for sql in statements if sql.startswith(("GRANT ","REVOKE "))]
   self.assertFalse(any(any(forbidden in sql for forbidden in (" PUBLIC"," ALL "," CREATE ","BYPASSRLS","SUPERUSER")) for sql in privilege_statements))
   self.assertEqual(2,conn.commits); self.assertEqual(0,conn.rollbacks)
+ def test_post_data_table_trigger_scope_is_strictly_derived_from_exact_run_and_root(self):
+  self.assertEqual(11,recovery.POST_DATA_PRIVACY_TRIGGER_RUN)
+  self.assertEqual(38,recovery.POST_DATA_PRIVACY_TRIGGER_RELATION_COUNT)
+  self.assertEqual("b28942637535bd11178674f4821a3f0fad6f49308d43b6e0dc0f7138181f5c4d",recovery.POST_DATA_PRIVACY_TRIGGER_RELATION_ROOT)
+  with patch.object(recovery.hashlib,"sha256",side_effect=_test_trigger_sha256):
+   self.assertEqual(TEST_TRIGGER_RELATIONS,recovery._post_data_privacy_trigger_relations(TEST_TRIGGER_RUNS))
+   run_payload=TEST_TRIGGER_RUNS[10][1]
+   mutations=(
+    run_payload.replace(b"TRIGGER public trigger_table_0 trigger_0",b"CONSTRAINT public trigger_table_0 trigger_0",1),
+    run_payload.replace(b"TRIGGER public trigger_table_0 trigger_0",b"TRIGGER public trigger_table_0 trigger_18",1),
+    run_payload.replace(b"TRIGGER public trigger_table_0",b"TRIGGER changed trigger_table_0",1),
+    run_payload.replace(b"trigger_0 privacy_workflow_owner\n",b"trigger_0 postgres\n",1),
+    run_payload.replace(TEST_TRIGGER_ROWS[0],b";"+TEST_TRIGGER_ROWS[0],1),
+    run_payload.replace(b";"+POST_DATA_ROWS[33],POST_DATA_ROWS[33],1),
+   )
+   for payload in mutations:
+    runs=(*TEST_TRIGGER_RUNS[:10],(recovery.PRIVACY_DATA_ROLE,payload),*TEST_TRIGGER_RUNS[11:])
+    with self.subTest(payload=payload),self.assertRaises(recovery.RecoveryError):
+     recovery._post_data_privacy_trigger_relations(runs)
+  self.assertNotIn("relations",recovery._restore_post_data_with_trigger_authority.__code__.co_varnames[:6])
+  with patch.object(recovery,"POST_DATA_PRIVACY_TRIGGER_RELATION_ROOT","0"*64),self.assertRaisesRegex(recovery.RecoveryError,"contract invalid"):
+   recovery._validate_post_data_privacy_trigger_contract()
+ def test_post_data_table_trigger_window_preserves_heterogeneous_acl_and_grants_exact_subset(self):
+  relations=TEST_TRIGGER_RELATIONS
+  state={}
+  for index,relation in enumerate(relations):
+   effective=index%3==0
+   acl=[[recovery.PRIVACY_DATA_ROLE,recovery.PRIVACY_DATA_ROLE,"SELECT",False]]
+   if index%5==0: acl.append(["auditor","postgres","REFERENCES",False])
+   state[relation]={"owner":recovery.PRIVACY_DATA_ROLE,"rls":bool(index%2),"force":bool(index%4),"acl":sorted(acl),"effective":effective}
+  original=json.loads(json.dumps({f"{key[0]}.{key[1]}":value for key,value in state.items()}))
+  added=tuple(relation for relation in relations if not state[relation]["effective"])
+  grant=recovery._post_data_table_trigger_statement(added,True); revoke=recovery._post_data_table_trigger_statement(added,False)
+  statements=[]
+  class Conn:
+   def __init__(self): self.commits=0; self.rollbacks=0
+   def commit(self): self.commits+=1
+   def rollback(self): self.rollbacks+=1
+  conn=Conn()
+  def query(unused,sql,params=None):
+   statements.append(sql)
+   if sql==recovery.POST_DATA_TABLE_TRIGGER_STATE_SQL:
+    unused_role,schema,table=params; item=state[(schema,table)]
+    return [(schema,table,item["owner"],item["rls"],item["force"],item["acl"],item["effective"])]
+   if sql==grant:
+    for relation in added:
+     item=state[relation]; item["acl"].append([recovery.PRIVACY_DATA_ROLE,recovery.PRIVACY_DATA_ROLE,"TRIGGER",False]); item["acl"].sort(); item["effective"]=True
+   elif sql==revoke:
+    for relation in added:
+     item=state[relation]; item["acl"].remove([recovery.PRIVACY_DATA_ROLE,recovery.PRIVACY_DATA_ROLE,"TRIGGER",False]); item["effective"]=False
+   return []
+  with patch.object(recovery,"_query_conn",side_effect=query):
+   baseline,actual_added=recovery._open_post_data_table_trigger_window(conn,relations)
+   self.assertEqual(added,actual_added); self.assertTrue(all(item["effective"] for item in state.values()))
+   recovery._close_post_data_table_trigger_window(conn,relations,baseline,actual_added)
+  self.assertEqual(original,{f"{key[0]}.{key[1]}":value for key,value in state.items()})
+  self.assertEqual(1,statements.count(grant)); self.assertEqual(1,statements.count(revoke))
+  privilege_sql=[sql for sql in statements if sql.startswith(("GRANT ","REVOKE "))]
+  self.assertEqual([grant,revoke],privilege_sql)
+  self.assertFalse(any("*" in sql or any(privilege in sql for privilege in (" INSERT "," SELECT "," UPDATE "," DELETE "," REFERENCES "," TRUNCATE "," MAINTAIN "," ALL ")) for sql in privilege_sql))
+  self.assertEqual(2,conn.commits); self.assertEqual(0,conn.rollbacks)
+ def test_post_data_table_trigger_rejects_identity_owner_acl_and_window_drift(self):
+  relations=TEST_TRIGGER_RELATIONS
+  valid=lambda relation:(relation[0],relation[1],recovery.PRIVACY_DATA_ROLE,True,False,[[recovery.PRIVACY_DATA_ROLE,recovery.PRIVACY_DATA_ROLE,"SELECT",False]],False)
+  for mutation in (
+   ("wrong",relations[0][1],recovery.PRIVACY_DATA_ROLE,True,False,[],False),
+   (relations[0][0],relations[0][1],"postgres",True,False,[],False),
+   (relations[0][0],relations[0][1],recovery.PRIVACY_DATA_ROLE,True,False,[["bad","postgres","EXECUTE",False]],False),
+   (relations[0][0],relations[0][1],recovery.PRIVACY_DATA_ROLE,True,False,[[recovery.PRIVACY_DATA_ROLE,"postgres","TRIGGER",False]],False),
+  ):
+   def query(unused,unused_sql,params=None,mutation=mutation):
+    relation=(params[1],params[2])
+    return [mutation if relation==relations[0] else valid(relation)]
+   with self.subTest(mutation=mutation),patch.object(recovery,"_query_conn",side_effect=query),self.assertRaises(recovery.RecoveryError):
+    recovery._read_post_data_table_trigger_state(object(),relations,baseline=True)
+  baseline=tuple((*relation,recovery.PRIVACY_DATA_ROLE,False,False,(),False) for relation in relations)
+  calls=0
+  class Conn:
+   def commit(self): pass
+   def rollback(self): pass
+  def verify(unused_conn,unused_relations,expected):
+   nonlocal calls
+   calls+=1
+   if calls==1: raise recovery.RecoveryError("window drift")
+   self.assertEqual(baseline,expected)
+  with patch.object(recovery,"_verify_post_data_table_trigger_state",side_effect=verify),patch.object(recovery,"_query_conn",return_value=[]),self.assertRaisesRegex(recovery.RecoveryError,"window drift"):
+   recovery._close_post_data_table_trigger_window(Conn(),relations,baseline,relations)
+  self.assertEqual(2,calls)
  def test_post_data_trigger_authority_cleanup_runs_on_owner_restore_failure_and_preserves_failure(self):
-  events=[]
-  baseline=("baseline",)
+  events=[]; authority_baseline=("authority-baseline",); table_baseline=("table-baseline",); added=(TEST_TRIGGER_RELATIONS[0],)
   def authority_connection(unused_env,operation,*args):
    events.append(("authority",operation,args))
-   return baseline if operation is recovery._open_post_data_trigger_authority_window else None
-  with patch.object(recovery,"_with_post_data_trigger_authority_connection",side_effect=authority_connection),patch.object(recovery,"_restore_post_data_runs",side_effect=recovery.RecoveryError("owner run failed")),self.assertRaisesRegex(recovery.RecoveryError,"owner run failed"):
-   recovery._restore_post_data_with_trigger_authority("pg_restore",3,Path("database.pgdump"),{},Path("."),())
+   return authority_baseline if operation is recovery._open_post_data_trigger_authority_window else None
+  def table_connection(unused_env,operation,*args):
+   events.append(("table",operation,args))
+   return (table_baseline,added) if operation is recovery._open_post_data_table_trigger_window else None
+  patches=(patch.object(recovery.hashlib,"sha256",side_effect=_test_trigger_sha256),patch.object(recovery,"_with_post_data_trigger_authority_connection",side_effect=authority_connection),patch.object(recovery,"_with_post_data_table_trigger_connection",side_effect=table_connection),patch.object(recovery,"_restore_post_data_runs",side_effect=recovery.RecoveryError("owner run failed")))
+  with patches[0],patches[1],patches[2],patches[3],self.assertRaisesRegex(recovery.RecoveryError,"owner run failed"):
+   recovery._restore_post_data_with_trigger_authority("pg_restore",3,Path("database.pgdump"),{},Path("."),TEST_TRIGGER_RUNS)
   self.assertEqual([
    ("authority",recovery._open_post_data_trigger_authority_window,()),
-   ("authority",recovery._close_post_data_trigger_authority_window,(baseline,)),
+   ("table",recovery._open_post_data_table_trigger_window,(TEST_TRIGGER_RELATIONS,)),
+   ("table",recovery._close_post_data_table_trigger_window,(TEST_TRIGGER_RELATIONS,table_baseline,added)),
+   ("authority",recovery._close_post_data_trigger_authority_window,(authority_baseline,)),
   ],events)
-  def failed_cleanup(unused_env,operation,*args):
-   if operation is recovery._open_post_data_trigger_authority_window: return baseline
-   raise recovery.RecoveryError("cleanup failed")
-  with patch.object(recovery,"_with_post_data_trigger_authority_connection",side_effect=failed_cleanup),patch.object(recovery,"_restore_post_data_runs",side_effect=recovery.RecoveryError("owner run failed")),self.assertRaisesRegex(recovery.RecoveryError,"cleanup failed"):
-   recovery._restore_post_data_with_trigger_authority("pg_restore",3,Path("database.pgdump"),{},Path("."),())
+  events.clear()
+  def failed_table_cleanup(unused_env,operation,*args):
+   events.append(("table",operation,args))
+   if operation is recovery._open_post_data_table_trigger_window: return table_baseline,added
+   raise recovery.RecoveryError("table cleanup failed")
+  with patch.object(recovery.hashlib,"sha256",side_effect=_test_trigger_sha256),patch.object(recovery,"_with_post_data_trigger_authority_connection",side_effect=authority_connection),patch.object(recovery,"_with_post_data_table_trigger_connection",side_effect=failed_table_cleanup),patch.object(recovery,"_restore_post_data_runs",side_effect=recovery.RecoveryError("owner run failed")),self.assertRaisesRegex(recovery.RecoveryError,"table cleanup failed"):
+   recovery._restore_post_data_with_trigger_authority("pg_restore",3,Path("database.pgdump"),{},Path("."),TEST_TRIGGER_RUNS)
+  self.assertEqual(recovery._close_post_data_trigger_authority_window,events[-1][1])
+  events.clear()
+  def failed_table_open(unused_env,operation,*args):
+   events.append(("table",operation,args))
+   raise recovery.RecoveryError("table open failed")
+  with patch.object(recovery.hashlib,"sha256",side_effect=_test_trigger_sha256),patch.object(recovery,"_with_post_data_trigger_authority_connection",side_effect=authority_connection),patch.object(recovery,"_with_post_data_table_trigger_connection",side_effect=failed_table_open),self.assertRaisesRegex(recovery.RecoveryError,"table open failed"):
+   recovery._restore_post_data_with_trigger_authority("pg_restore",3,Path("database.pgdump"),{},Path("."),TEST_TRIGGER_RUNS)
+  self.assertEqual([
+   ("authority",recovery._open_post_data_trigger_authority_window,()),
+   ("table",recovery._open_post_data_table_trigger_window,(TEST_TRIGGER_RELATIONS,)),
+   ("authority",recovery._close_post_data_trigger_authority_window,(authority_baseline,)),
+  ],events)
  def test_privacy_insert_window_preserves_effective_insert_matrix_and_targets_exact_subset(self):
   relations=recovery._data_use_lists(SCHEMA_TOC)[2]
   original={relation:((),True) if index%3==0 else (("DELETE","SELECT"),False) if index%3==1 else (("INSERT","SELECT"),True) for index,relation in enumerate(relations)}
