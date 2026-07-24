@@ -967,18 +967,33 @@ def _owned_restore_use_list(path,payload):
    _unlink_owned_output(fd,path,identity)
    os.close(fd)
   raise
+POST_DATA_STORAGE_AUTH_SCHEMA_AUTHORITY = (21,"supabase_storage_admin","auth","supabase_admin")
+def _validate_post_data_storage_auth_schema_contract():
+ if type(POST_DATA_STORAGE_AUTH_SCHEMA_AUTHORITY) is not tuple or POST_DATA_STORAGE_AUTH_SCHEMA_AUTHORITY!=(21,"supabase_storage_admin","auth","supabase_admin"): raise RecoveryError("post-data storage auth schema authority contract invalid")
+ run,role,unused_schema,unused_owner=POST_DATA_STORAGE_AUTH_SCHEMA_AUTHORITY
+ if POST_DATA_OWNER_RUNS[run-1][0]!=role: raise RecoveryError("post-data storage auth schema authority contract invalid")
+def _restore_post_data_owner_run(restore,plain,env,index,owner,path):
+ _validate_post_data_storage_auth_schema_contract()
+ if type(index) is not int or index<1 or index>len(POST_DATA_OWNER_RUNS) or owner!=POST_DATA_OWNER_RUNS[index-1][0]: raise RecoveryError("post-data owner run contract invalid")
+ argv=[restore,"--section=post-data",f"--use-list={path}",f"--role={owner}","--dbname=service=g035-local",str(plain)]
+ if index!=POST_DATA_STORAGE_AUTH_SCHEMA_AUTHORITY[0]:
+  return run(argv,env=env)
+ baseline=_with_post_data_storage_auth_schema_connection(env,_open_post_data_storage_auth_schema_window)
+ try: return run(argv,env=env)
+ finally: _with_post_data_storage_auth_schema_connection(env,_close_post_data_storage_auth_schema_window,baseline)
 def _restore_post_data_runs(restore,plain_fd,plain,env,workspace,runs):
  owned=[]
  try:
+  _validate_post_data_storage_auth_schema_contract()
   if type(runs) is not tuple or tuple(owner for owner,unused_payload in runs)!=tuple(owner for owner,unused_count in POST_DATA_OWNER_RUNS): raise RecoveryError("post-data owner run contract invalid")
   for index,(owner,payload) in enumerate(runs,1):
    path=workspace/f"post-data-{index:02d}-{owner}.list"
    fd,identity=_owned_restore_use_list(path,payload)
    owned.append((owner,path,fd,identity))
-  for owner,path,unused_fd,unused_identity in owned:
+  for index,(owner,path,unused_fd,unused_identity) in enumerate(owned,1):
    _require_temporary_file_identity(plain_fd,plain)
    for unused_owner,check_path,check_fd,unused_check_identity in owned: _require_temporary_file_identity(check_fd,check_path)
-   run([restore,"--section=post-data",f"--use-list={path}",f"--role={owner}","--dbname=service=g035-local",str(plain)],env=env)
+   _restore_post_data_owner_run(restore,plain,env,index,owner,path)
    _require_temporary_file_identity(plain_fd,plain)
    for unused_owner,check_path,check_fd,unused_check_identity in owned: _require_temporary_file_identity(check_fd,check_path)
  finally:
@@ -1004,6 +1019,58 @@ POST_DATA_TRIGGER_FUNCTION_AUTHORITY = (
 POST_DATA_TRIGGER_SCHEMA_AUTHORITY = (("privacy_retention","supabase_storage_admin","privacy_workflow_owner"),)
 POST_DATA_FUNCTION_AUTHORITY_SQL = "SELECT namespace.nspname||'.'||procedure.proname||'('||pg_catalog.pg_get_function_identity_arguments(procedure.oid)||')',owner.rolname,coalesce((SELECT pg_catalog.jsonb_agg(pg_catalog.jsonb_build_array(CASE WHEN acl.grantee=0 THEN 'PUBLIC' ELSE grantee.rolname END,grantor.rolname,acl.privilege_type,acl.is_grantable) ORDER BY CASE WHEN acl.grantee=0 THEN 'PUBLIC' ELSE grantee.rolname END,grantor.rolname,acl.privilege_type,acl.is_grantable) FROM pg_catalog.aclexplode(coalesce(procedure.proacl,pg_catalog.acldefault('f',procedure.proowner))) AS acl LEFT JOIN pg_catalog.pg_roles AS grantee ON grantee.oid=acl.grantee JOIN pg_catalog.pg_roles AS grantor ON grantor.oid=acl.grantor),'[]'::jsonb),pg_catalog.has_function_privilege(target.oid,procedure.oid,'EXECUTE'),EXISTS (SELECT 1 FROM pg_catalog.aclexplode(procedure.proacl) AS direct_acl WHERE direct_acl.grantee=target.oid AND direct_acl.privilege_type='EXECUTE') FROM pg_catalog.pg_proc AS procedure JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid=procedure.pronamespace JOIN pg_catalog.pg_roles AS owner ON owner.oid=procedure.proowner JOIN pg_catalog.pg_roles AS target ON target.rolname=%s WHERE procedure.oid=pg_catalog.to_regprocedure(%s)"
 POST_DATA_SCHEMA_AUTHORITY_SQL = "SELECT namespace.nspname,owner.rolname,coalesce((SELECT pg_catalog.jsonb_agg(pg_catalog.jsonb_build_array(CASE WHEN acl.grantee=0 THEN 'PUBLIC' ELSE grantee.rolname END,grantor.rolname,acl.privilege_type,acl.is_grantable) ORDER BY CASE WHEN acl.grantee=0 THEN 'PUBLIC' ELSE grantee.rolname END,grantor.rolname,acl.privilege_type,acl.is_grantable) FROM pg_catalog.aclexplode(coalesce(namespace.nspacl,pg_catalog.acldefault('n',namespace.nspowner))) AS acl LEFT JOIN pg_catalog.pg_roles AS grantee ON grantee.oid=acl.grantee JOIN pg_catalog.pg_roles AS grantor ON grantor.oid=acl.grantor),'[]'::jsonb),pg_catalog.has_schema_privilege(target.oid,namespace.oid,'USAGE'),pg_catalog.has_schema_privilege(target.oid,namespace.oid,'CREATE'),EXISTS (SELECT 1 FROM pg_catalog.aclexplode(namespace.nspacl) AS direct_acl WHERE direct_acl.grantee=target.oid AND direct_acl.privilege_type='USAGE'),EXISTS (SELECT 1 FROM pg_catalog.aclexplode(namespace.nspacl) AS direct_acl WHERE direct_acl.grantee=target.oid AND direct_acl.privilege_type='CREATE') FROM pg_catalog.pg_namespace AS namespace JOIN pg_catalog.pg_roles AS owner ON owner.oid=namespace.nspowner JOIN pg_catalog.pg_roles AS target ON target.rolname=%s WHERE namespace.nspname=%s"
+def _read_post_data_storage_auth_schema_state(conn,baseline=False):
+ _validate_post_data_storage_auth_schema_contract()
+ unused_run,role,schema,expected_owner=POST_DATA_STORAGE_AUTH_SCHEMA_AUTHORITY
+ rows=_query_conn(conn,POST_DATA_SCHEMA_AUTHORITY_SQL,(role,schema))
+ if len(rows)!=1 or type(rows[0]) is not tuple or len(rows[0])!=7: raise RecoveryError("post-data storage auth schema authority state invalid")
+ actual_schema,owner,raw_acl,effective_usage,effective_create,direct_usage,direct_create=rows[0]
+ acl=_canonical_authority_acl(raw_acl,{"CREATE","USAGE"})
+ direct_acl=any(item[0]==role and item[2]=="USAGE" for item in acl)
+ if (actual_schema,owner)!=(schema,expected_owner) or any(type(value) is not bool for value in (effective_usage,effective_create,direct_usage,direct_create)) or direct_usage is not direct_acl or effective_create is not False or direct_create is not False or (baseline and (effective_usage is not False or direct_usage is not False)): raise RecoveryError("post-data storage auth schema authority state invalid")
+ return (schema,role,owner,acl,effective_usage,effective_create,direct_usage,direct_create)
+def _validate_post_data_storage_auth_schema_baseline(baseline):
+ _validate_post_data_storage_auth_schema_contract()
+ if type(baseline) is not tuple or len(baseline)!=8 or baseline[:3]!=(POST_DATA_STORAGE_AUTH_SCHEMA_AUTHORITY[2],POST_DATA_STORAGE_AUTH_SCHEMA_AUTHORITY[1],POST_DATA_STORAGE_AUTH_SCHEMA_AUTHORITY[3]) or baseline[4:]!=(False,False,False,False) or _canonical_authority_acl(list(baseline[3]),{"CREATE","USAGE"})!=baseline[3] or any(item[0]==baseline[1] and item[2] in {"CREATE","USAGE"} for item in baseline[3]): raise RecoveryError("post-data storage auth schema authority baseline invalid")
+def _post_data_storage_auth_schema_window_state(baseline):
+ _validate_post_data_storage_auth_schema_baseline(baseline)
+ return (*baseline[:3],tuple(sorted((*baseline[3],(baseline[1],baseline[2],"USAGE",False)))),True,False,True,False)
+def _verify_post_data_storage_auth_schema_state(conn,expected):
+ if _read_post_data_storage_auth_schema_state(conn)!=expected: raise RecoveryError("post-data storage auth schema authority state invalid")
+def _open_post_data_storage_auth_schema_window(conn):
+ try:
+  _query_conn(conn,"BEGIN")
+  baseline=_read_post_data_storage_auth_schema_state(conn,baseline=True)
+  _query_conn(conn,"SET LOCAL ROLE "+baseline[2])
+  _query_conn(conn,_post_data_schema_authority_statement(baseline[0],baseline[1],True))
+  _verify_post_data_storage_auth_schema_state(conn,_post_data_storage_auth_schema_window_state(baseline))
+  conn.commit()
+  return baseline
+ except Exception:
+  conn.rollback()
+  raise
+def _close_post_data_storage_auth_schema_window(conn,baseline):
+ _validate_post_data_storage_auth_schema_baseline(baseline); expected_window=_post_data_storage_auth_schema_window_state(baseline)
+ try:
+  _query_conn(conn,"BEGIN")
+  precondition_error=None
+  try: _verify_post_data_storage_auth_schema_state(conn,expected_window)
+  except Exception as exc: precondition_error=exc
+  _query_conn(conn,"SET LOCAL ROLE "+baseline[2])
+  _query_conn(conn,_post_data_schema_authority_statement(baseline[0],baseline[1],False))
+  readback_error=None
+  try: _verify_post_data_storage_auth_schema_state(conn,baseline)
+  except Exception as exc: readback_error=exc
+  conn.commit()
+  if precondition_error is not None: raise precondition_error
+  if readback_error is not None: raise readback_error
+ except Exception:
+  conn.rollback()
+  raise
+def _with_post_data_storage_auth_schema_connection(env,operation,*args):
+ conn=_connect(LOCAL_SERVICE,env)
+ try: return operation(conn,*args)
+ finally: conn.close()
 def _validate_post_data_trigger_authority_contract():
  expected=(
   ("postgres","privacy_retention.g014_account_deletion_admin_removal_fence()","privacy_workflow_owner",True),
