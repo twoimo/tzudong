@@ -886,6 +886,27 @@ def _role_catalog(rows=adapter.TRANSIENT_MANAGED_ROWS):
         "session_user": "postgres",
         "user": "postgres",
     }
+def _restored_owner_catalog():
+    return {
+        "function": {
+            "acl": [
+                list(row) for row in adapter.TERMINAL_WORKFLOW_ASSERTION_ACL
+            ],
+            "body_sha256": adapter.TERMINAL_WORKFLOW_ASSERTION_BODY_SHA256,
+            "config": ['search_path=""'],
+            "identity_arguments": "",
+            "language": "plpgsql",
+            "name": "assert_g014_workflow_owner_contract",
+            "owner": "privacy_workflow_owner",
+            "postgres_execute": False,
+            "result": "void",
+            "schema": "privacy_retention",
+            "security_definer": False,
+        },
+        "schema_owner": "privacy_workflow_owner",
+    }
+
+
 
 
 @pytest.mark.parametrize(
@@ -933,6 +954,38 @@ def test_role_catalog_rejects_version_and_identity_drift(field, value):
             json.dumps(catalog), adapter.TRANSIENT_MANAGED_ROWS,
         )
 
+def test_terminal_role_catalog_rejects_transient_membership():
+    with pytest.raises(adapter.LocalCloneError, match="role_protocol"):
+        adapter.LocalCloneOps._validate_role_catalog(
+            json.dumps(_role_catalog(adapter.TRANSIENT_MANAGED_ROWS)),
+            adapter.TERMINAL_MANAGED_ROWS,
+        )
+
+
+@pytest.mark.parametrize(
+    "mutate",
+    [
+        lambda value: value.__setitem__("schema_owner", "postgres"),
+        lambda value: value.__setitem__("function", None),
+        lambda value: value["function"].__setitem__("name", "attacker"),
+        lambda value: value["function"].__setitem__("identity_arguments", "text"),
+        lambda value: value["function"].__setitem__("owner", "postgres"),
+        lambda value: value["function"].__setitem__("body_sha256", "0" * 64),
+        lambda value: value["function"].__setitem__("config", None),
+        lambda value: value["function"].__setitem__("security_definer", True),
+        lambda value: value["function"]["acl"].append(
+            ["privacy_workflow_owner", "postgres", "EXECUTE", False],
+        ),
+        lambda value: value["function"].__setitem__("postgres_execute", True),
+    ],
+)
+def test_restored_owner_catalog_rejects_owner_function_acl_and_execute_drift(mutate):
+    value = _restored_owner_catalog()
+    mutate(value)
+    with pytest.raises(adapter.LocalCloneError, match="role_protocol"):
+        adapter.LocalCloneOps._validate_restored_owner_catalog(json.dumps(value))
+
+
 
 def test_role_bootstrap_is_source_pinned_explicit_and_keeps_sql_off_argv():
     ops = object.__new__(adapter.LocalCloneOps)
@@ -963,27 +1016,56 @@ def test_role_bootstrap_is_source_pinned_explicit_and_keeps_sql_off_argv():
     assert all("password" not in " ".join(argv).lower() for argv, _ in calls)
 
 
-def test_terminalization_revokes_only_self_grant_then_verifies_terminal_and_owner():
+def test_terminalization_verifies_transient_then_revokes_and_reads_terminal_catalog():
     ops = object.__new__(adapter.LocalCloneOps)
     ops.inputs = type("Inputs", (), {
         "docker": "docker", "deadline_monotonic": time.monotonic() + 60,
     })()
     calls = []
+    role_catalog_calls = 0
 
     def command(argv, **kwargs):
+        nonlocal role_catalog_calls
         sql = kwargs.get("input_text", "")
         calls.append(sql)
-        catalog = _role_catalog(adapter.TERMINAL_MANAGED_ROWS)
-        catalog["database"] = adapter.DATABASE
-        return completed(json.dumps(catalog) if "json_build_object" in sql else "")
+        if "'schema_owner'" in sql:
+            return completed(json.dumps(_restored_owner_catalog()))
+        if "json_build_object" in sql:
+            rows = (
+                adapter.TRANSIENT_MANAGED_ROWS
+                if role_catalog_calls == 0
+                else adapter.TERMINAL_MANAGED_ROWS
+            )
+            role_catalog_calls += 1
+            catalog = _role_catalog(rows)
+            catalog["database"] = adapter.DATABASE
+            return completed(json.dumps(catalog))
+        return completed()
 
     ops.command = command
     ops.terminalize_role_protocol({"container": "clone"})
-    assert calls[0].strip() == (
+
+    assert len(calls) == 4
+    transient_catalog_sql, revoke_sql, terminal_catalog_sql, owner_sql = calls
+    assert "json_build_object" in transient_catalog_sql
+    assert revoke_sql.strip() == (
         "REVOKE privacy_workflow_owner FROM postgres GRANTED BY postgres;"
     )
-    assert "json_build_object" in calls[1]
-    assert "assert_g014_workflow_owner_contract()" in calls[2]
+    assert "json_build_object" in terminal_catalog_sql
+    assert "assert_g014_workflow_owner_contract()" not in terminal_catalog_sql
+    assert "PERFORM privacy_retention.assert_g014_workflow_owner_contract()" not in owner_sql
+    assert "pg_catalog.to_regprocedure" in owner_sql
+    assert "pg_catalog.aclexplode" in owner_sql
+    assert "pg_catalog.has_function_privilege" in owner_sql
+    assert "extensions.digest" in owner_sql
+    assert "procedure.proconfig" in owner_sql
+    assert "procedure.prosecdef" in owner_sql
+    assert "'postgres', procedure.oid, 'EXECUTE'" in owner_sql
+    assert "PERFORM privacy_retention.assert_g014_workflow_owner_contract()" not in "\n".join(calls)
+    assert all(
+        forbidden not in "\n".join(calls)
+        for forbidden in ("SECURITY DEFINER", "GRANT EXECUTE", "SET ROLE")
+    )
 
 def _restore_authority_catalog(
     memberships=adapter.RESTORE_TRANSIENT_MEMBERSHIP_ROWS,

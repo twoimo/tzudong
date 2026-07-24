@@ -75,6 +75,12 @@ RESTORE_TRANSIENT_SCHEMA_ACL = (
     ("postgres", "supabase_admin", "CREATE", False),
     ("postgres", "supabase_admin", "USAGE", False),
 )
+TERMINAL_WORKFLOW_ASSERTION_ACL = (
+    ("privacy_workflow_owner", "privacy_workflow_owner", "EXECUTE", False),
+)
+TERMINAL_WORKFLOW_ASSERTION_BODY_SHA256 = (
+    "538264bd59607f4b2dcd1c4f4600f63a7961f4d9c761c975319e3a7804b56399"
+)
 _TOOL_CUSTODY = {
     "docker": ("eade1c3a5dda47534dc776f2f534c99cc94cfcf9ce07c4bf09e98258d13e7d7a", ("--version",), "Docker version 29.6.2, build dfc4efb1e2"),
     "git": ("179301dcb41ea78accc3fa0048a7e6f6710d891945a751a34addd622020c1818", ("--version",), "git version 2.50.1 (Apple Git-155)"),
@@ -511,7 +517,6 @@ class LocalCloneOps:
         self, clone: Mapping[str, Any],
         expected_rows: Sequence[tuple[str, str, str, bool, bool, bool]], *,
         database: str,
-        restored_owner: bool = False,
     ) -> None:
         names = ",".join(repr(name) for name in MANAGED_ROLES)
         raw = self._role_psql(clone, user="postgres", database=database, sql=f"""
@@ -546,21 +551,87 @@ SELECT pg_catalog.json_build_object(
 )::text;
 """)
         self._validate_role_catalog(raw, expected_rows, database=database)
-        if restored_owner:
-            self._role_psql(clone, user="postgres", database=database, sql="""
-DO $g038_restored_owner$
-BEGIN
-  IF (SELECT pg_catalog.pg_get_userbyid(nspowner)
-        FROM pg_catalog.pg_namespace
-       WHERE nspname='privacy_retention') IS DISTINCT FROM 'privacy_workflow_owner'
-     OR pg_catalog.to_regprocedure(
-          'privacy_retention.assert_g014_workflow_owner_contract()') IS NULL THEN
-    RAISE EXCEPTION 'restored workflow-owner assertion drift';
-  END IF;
-  PERFORM privacy_retention.assert_g014_workflow_owner_contract();
-END;
-$g038_restored_owner$;
+    @staticmethod
+    def _validate_restored_owner_catalog(raw: str) -> None:
+        try:
+            value = json.loads(raw)
+            if (
+                type(value) is not dict
+                or set(value) != {"function", "schema_owner"}
+                or value["schema_owner"] != "privacy_workflow_owner"
+                or type(value["function"]) is not dict
+                or value["function"] != {
+                    "acl": [list(row) for row in TERMINAL_WORKFLOW_ASSERTION_ACL],
+                    "body_sha256": TERMINAL_WORKFLOW_ASSERTION_BODY_SHA256,
+                    "config": ['search_path=""'],
+                    "identity_arguments": "",
+                    "language": "plpgsql",
+                    "name": "assert_g014_workflow_owner_contract",
+                    "owner": "privacy_workflow_owner",
+                    "postgres_execute": False,
+                    "result": "void",
+                    "schema": "privacy_retention",
+                    "security_definer": False,
+                }
+            ):
+                _fail("role_protocol")
+        except LocalCloneError:
+            raise
+        except Exception:
+            _fail("role_protocol")
+
+    def _assert_restored_owner_catalog(self, clone: Mapping[str, Any]) -> None:
+        raw = self._role_psql(clone, user="postgres", database=DATABASE, sql="""
+SELECT pg_catalog.json_build_object(
+  'schema_owner', (
+    SELECT pg_catalog.pg_get_userbyid(nspowner)
+      FROM pg_catalog.pg_namespace
+     WHERE nspname = 'privacy_retention'
+  ),
+  'function', (
+    SELECT pg_catalog.json_build_object(
+      'acl', (
+        SELECT COALESCE(
+          pg_catalog.json_agg(pg_catalog.json_build_array(
+            pg_catalog.pg_get_userbyid(acl.grantor),
+            pg_catalog.pg_get_userbyid(acl.grantee),
+            acl.privilege_type,
+            acl.is_grantable)
+            ORDER BY pg_catalog.pg_get_userbyid(acl.grantor),
+                     pg_catalog.pg_get_userbyid(acl.grantee),
+                     acl.privilege_type, acl.is_grantable),
+          '[]'::json)
+          FROM pg_catalog.aclexplode(COALESCE(
+            procedure.proacl,
+            pg_catalog.acldefault('f', procedure.proowner)
+          )) AS acl
+      ),
+      'body_sha256', pg_catalog.encode(extensions.digest(
+        pg_catalog.convert_to(procedure.prosrc, 'UTF8'), 'sha256'), 'hex'),
+      'config', procedure.proconfig,
+      'identity_arguments',
+        pg_catalog.pg_get_function_identity_arguments(procedure.oid),
+      'language', language.lanname,
+      'name', procedure.proname,
+      'owner', pg_catalog.pg_get_userbyid(procedure.proowner),
+      'postgres_execute', pg_catalog.has_function_privilege(
+        'postgres', procedure.oid, 'EXECUTE'),
+      'result', pg_catalog.pg_get_function_result(procedure.oid),
+      'schema', namespace.nspname,
+      'security_definer', procedure.prosecdef
+    )
+      FROM pg_catalog.pg_proc AS procedure
+      JOIN pg_catalog.pg_namespace AS namespace
+        ON namespace.oid = procedure.pronamespace
+      JOIN pg_catalog.pg_language AS language
+        ON language.oid = procedure.prolang
+     WHERE procedure.oid = pg_catalog.to_regprocedure(
+       'privacy_retention.assert_g014_workflow_owner_contract()')
+  )
+)::text;
 """)
+        self._validate_restored_owner_catalog(raw)
+
     @staticmethod
     def _validate_restore_authority_catalog(
         raw: str,
@@ -778,12 +849,16 @@ GRANT privacy_workflow_owner TO postgres
         )
 
     def terminalize_role_protocol(self, clone: Mapping[str, Any]) -> None:
+        self._assert_role_protocol(
+            clone, TRANSIENT_MANAGED_ROWS, database=DATABASE,
+        )
         self._role_psql(clone, user="postgres", database=DATABASE, sql="""
 REVOKE privacy_workflow_owner FROM postgres GRANTED BY postgres;
 """)
         self._assert_role_protocol(
-            clone, TERMINAL_MANAGED_ROWS, database=DATABASE, restored_owner=True,
+            clone, TERMINAL_MANAGED_ROWS, database=DATABASE,
         )
+        self._assert_restored_owner_catalog(clone)
 
     def restore(self, clone: Mapping[str, Any], service: Path, identity_fd: int, restore_path: Path, manifest: Any) -> Mapping[str, Any]:
         if os.name == "nt":
