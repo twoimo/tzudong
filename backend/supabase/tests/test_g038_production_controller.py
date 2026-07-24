@@ -53,6 +53,11 @@ class ControllerTests(unittest.TestCase):
             "value.terminal_spec_root != TERMINAL_SPEC_ROOT",
             source[source.index("def _load_observation"):source.index("def observe(")],
         )
+    def test_clone_receipt_binds_runtime_inventory_not_freeze_relation_inventory(self):
+        source = Path(controller.__file__).read_text(encoding="utf-8")
+        clone_loader = source[source.index("def _load_clone"):source.index("def _exact_bindings")]
+        self.assertIn('"inventory_root": RUNTIME_INVENTORY_ROOT', clone_loader)
+        self.assertNotIn('"inventory_root": freeze.inventory_root', clone_loader)
     def test_runbook_pins_non_authorizing_controller_recovery_and_ambiguity_handling(self):
         runbook = (
             Path(__file__).resolve().parents[1]
@@ -913,7 +918,7 @@ class ControllerTests(unittest.TestCase):
             "vector_root": controller.STATEMENT_VECTOR_ROOT,
             "terminal_spec_root": controller.TERMINAL_SPEC_ROOT,
             "exclusions_root": controller.EXCLUDED_ROOT,
-            "inventory_root": freeze.inventory_root,
+            "inventory_root": controller.RUNTIME_INVENTORY_ROOT,
             "target_fingerprint": controller.TARGET_FINGERPRINT,
             "tool_identity_root": "f" * 64,
             "docker_daemon_root": "0" * 64,
