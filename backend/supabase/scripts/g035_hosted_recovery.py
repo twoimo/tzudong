@@ -1333,6 +1333,7 @@ def _read_post_data_table_trigger_state(conn,relations,baseline=False):
   result.append((schema,table,owner,rls,force,acl,effective_trigger))
  return tuple(result)
 def _validate_post_data_table_trigger_baseline(relations,baseline):
+ if type(relations) is not tuple or len(relations)!=POST_DATA_PRIVACY_TRIGGER_RELATION_COUNT or len(relations)!=len(set(relations)): raise RecoveryError("post-data table trigger relation inventory invalid")
  if type(baseline) is not tuple or len(baseline)!=len(relations): raise RecoveryError("post-data table trigger baseline invalid")
  for relation,item in zip(relations,baseline):
   if type(item) is not tuple or len(item)!=7 or item[:2]!=relation or item[2]!=PRIVACY_DATA_ROLE or type(item[3]) is not bool or type(item[4]) is not bool or type(item[6]) is not bool or _canonical_authority_acl(list(item[5]),PRIVACY_TABLE_PRIVILEGES)!=item[5]: raise RecoveryError("post-data table trigger baseline invalid")
@@ -1341,6 +1342,21 @@ def _post_data_table_trigger_window_state(baseline):
  return tuple(item if item[6] else (*item[:5],tuple(sorted((*item[5],(PRIVACY_DATA_ROLE,PRIVACY_DATA_ROLE,"TRIGGER",False)))),True) for item in baseline)
 def _verify_post_data_table_trigger_state(conn,relations,expected):
  if _read_post_data_table_trigger_state(conn,relations)!=expected: raise RecoveryError("post-data table trigger state invalid")
+def _validate_live_post_data_table_trigger_window(relations,live,added_relations):
+ if type(live) is not tuple or len(live)!=len(relations): raise RecoveryError("post-data table trigger state invalid")
+ added=frozenset(added_relations); temporary=(PRIVACY_DATA_ROLE,PRIVACY_DATA_ROLE,"TRIGGER",False)
+ for relation,item in zip(relations,live):
+  if item[:2]!=relation: raise RecoveryError("post-data table trigger state invalid")
+  if relation in added and (temporary not in item[5] or item[6] is not True): raise RecoveryError("post-data table trigger state invalid")
+def _verify_post_data_table_trigger_cleanup(conn,relations,live,added_relations):
+ readback=_read_post_data_table_trigger_state(conn,relations)
+ added=frozenset(added_relations); temporary=(PRIVACY_DATA_ROLE,PRIVACY_DATA_ROLE,"TRIGGER",False)
+ for before,after in zip(live,readback):
+  relation=before[:2]
+  expected_acl=tuple(acl for acl in before[5] if relation not in added or acl!=temporary)
+  if after[:5]!=before[:5] or after[5]!=expected_acl: raise RecoveryError("post-data table trigger state invalid")
+  if relation not in added and after[6] is not before[6]: raise RecoveryError("post-data table trigger state invalid")
+  if relation in added and any(acl[0] in (PRIVACY_DATA_ROLE,"PUBLIC") and acl[2]=="TRIGGER" for acl in expected_acl) and after[6] is not True: raise RecoveryError("post-data table trigger state invalid")
 def _post_data_table_trigger_statement(relations,grant):
  if not relations: return None
  return ("GRANT" if grant else "REVOKE")+" TRIGGER ON TABLE "+",".join(f"{_quoted_identifier(schema)}.{_quoted_identifier(table)}" for schema,table in relations)+(" TO " if grant else " FROM ")+PRIVACY_DATA_ROLE
@@ -1361,19 +1377,22 @@ def _open_post_data_table_trigger_window(conn,relations):
   raise
 def _close_post_data_table_trigger_window(conn,relations,baseline,added_relations):
  _validate_post_data_table_trigger_baseline(relations,baseline)
- if type(added_relations) is not tuple or added_relations!=tuple(item[:2] for item in baseline if not item[6]): raise RecoveryError("post-data table trigger baseline invalid")
- expected_window=_post_data_table_trigger_window_state(baseline)
+ if type(added_relations) is not tuple or len(added_relations)!=len(set(added_relations)) or added_relations!=tuple(item[:2] for item in baseline if not item[6]): raise RecoveryError("post-data table trigger baseline invalid")
  try:
   _query_conn(conn,"BEGIN")
-  precondition_error=None
-  try: _verify_post_data_table_trigger_state(conn,relations,expected_window)
+  live=None; precondition_error=None
+  try:
+   live=_read_post_data_table_trigger_state(conn,relations)
+   _validate_live_post_data_table_trigger_window(relations,live,added_relations)
   except Exception as exc: precondition_error=exc
   statement=_post_data_table_trigger_statement(added_relations,False)
   if statement is not None:
    _query_conn(conn,"SET LOCAL ROLE "+PRIVACY_DATA_ROLE)
    _query_conn(conn,statement)
   readback_error=None
-  try: _verify_post_data_table_trigger_state(conn,relations,baseline)
+  try:
+   if live is None: _read_post_data_table_trigger_state(conn,relations)
+   else: _verify_post_data_table_trigger_cleanup(conn,relations,live,added_relations)
   except Exception as exc: readback_error=exc
   conn.commit()
   if precondition_error is not None: raise precondition_error
