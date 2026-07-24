@@ -826,8 +826,7 @@ def _pre_data_use_list(raw):
     if owner!=expected[name]: raise RecoveryError("archive schema TOC drift")
     matches[name].append(index)
  if any(len(matches[name])!=1 for name in expected): raise RecoveryError("archive schema TOC drift")
- public_index=matches["public"][0]
- lines[public_index]=";"+lines[public_index]
+ for name,_ in PRE_DATA_SCHEMA_TOC: lines[matches[name][0]]=";"+lines[matches[name][0]]
  return "".join(lines).encode("utf-8")
 def _owned_pre_data_use_list(path,raw):
  payload=_pre_data_use_list(raw); fd=None; identity=None
@@ -872,6 +871,10 @@ def run_restore_verify(args,manifest):
     for schema in (LOCAL_REMEDIATION_SCHEMA,"public","auth","storage"): _query_conn(conn,f"DROP SCHEMA IF EXISTS {schema} CASCADE")
     _query_conn(conn,"CREATE SCHEMA public AUTHORIZATION pg_database_owner")
     _query_conn(conn,"GRANT USAGE, CREATE ON SCHEMA public TO privacy_workflow_owner")
+    _query_conn(conn,"CREATE SCHEMA auth AUTHORIZATION supabase_admin")
+    _query_conn(conn,"GRANT USAGE, CREATE ON SCHEMA auth TO supabase_auth_admin")
+    _query_conn(conn,"CREATE SCHEMA storage AUTHORIZATION supabase_admin")
+    _query_conn(conn,"GRANT USAGE, CREATE ON SCHEMA storage TO supabase_storage_admin")
     _query_conn(conn,"DO $$ BEGIN IF pg_catalog.to_regnamespace('extensions') IS NOT NULL THEN RAISE EXCEPTION 'local extensions schema reset drift'; END IF; END $$")
     _query_conn(conn,"CREATE SCHEMA extensions AUTHORIZATION postgres")
     _query_conn(conn,"GRANT USAGE ON SCHEMA extensions TO anon, authenticated, service_role")

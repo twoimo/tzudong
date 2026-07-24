@@ -971,11 +971,14 @@ class ControllerTests(unittest.TestCase):
      recovery._windows_restrict_temporary_file(plain)
      self.assertTrue(recovery._windows_dacl_restrictive(service))
      self.assertTrue(recovery._windows_dacl_restrictive(plain))
- def test_pre_data_use_list_comments_only_exact_public_schema_and_rejects_toc_drift(self):
-  expected=SCHEMA_TOC.replace(
+ def test_pre_data_use_list_comments_only_exact_schema_creation_and_rejects_toc_drift(self):
+  expected=SCHEMA_TOC
+  for entry in (
    b"10; 2615 2200 SCHEMA - public pg_database_owner\n",
-   b";10; 2615 2200 SCHEMA - public pg_database_owner\n",
-  )
+   b"13; 2615 16400 SCHEMA - auth supabase_admin\n",
+   b"14; 2615 16401 SCHEMA - storage supabase_admin\n",
+  ):
+   expected=expected.replace(entry,b";"+entry)
   self.assertEqual(expected,recovery._pre_data_use_list(SCHEMA_TOC))
   self.assertIn(b"COMMENT - SCHEMA public pg_database_owner",expected)
   self.assertIn(b"ACL - SCHEMA public pg_database_owner",expected)
@@ -1023,6 +1026,10 @@ class ControllerTests(unittest.TestCase):
    drop_index=next(index for index,event in enumerate(events) if event==("sql","DROP SCHEMA IF EXISTS public CASCADE"))
    create_index=next(index for index,event in enumerate(events) if event==("sql","CREATE SCHEMA public AUTHORIZATION pg_database_owner"))
    grant_index=next(index for index,event in enumerate(events) if event==("sql","GRANT USAGE, CREATE ON SCHEMA public TO privacy_workflow_owner"))
+   auth_create_index=next(index for index,event in enumerate(events) if event==("sql","CREATE SCHEMA auth AUTHORIZATION supabase_admin"))
+   auth_grant_index=next(index for index,event in enumerate(events) if event==("sql","GRANT USAGE, CREATE ON SCHEMA auth TO supabase_auth_admin"))
+   storage_create_index=next(index for index,event in enumerate(events) if event==("sql","CREATE SCHEMA storage AUTHORIZATION supabase_admin"))
+   storage_grant_index=next(index for index,event in enumerate(events) if event==("sql","GRANT USAGE, CREATE ON SCHEMA storage TO supabase_storage_admin"))
    extensions_reset_index=next(index for index,event in enumerate(events) if event==("sql","DO $$ BEGIN IF pg_catalog.to_regnamespace('extensions') IS NOT NULL THEN RAISE EXCEPTION 'local extensions schema reset drift'; END IF; END $$"))
    extensions_create_index=next(index for index,event in enumerate(events) if event==("sql","CREATE SCHEMA extensions AUTHORIZATION postgres"))
    extensions_public_index=next(index for index,event in enumerate(events) if event==("sql","GRANT USAGE ON SCHEMA extensions TO anon, authenticated, service_role"))
@@ -1033,6 +1040,11 @@ class ControllerTests(unittest.TestCase):
    self.assertLess(list_index,drop_index)
    self.assertLess(drop_index,create_index)
    self.assertLess(create_index,grant_index)
+   self.assertLess(grant_index,auth_create_index)
+   self.assertLess(auth_create_index,auth_grant_index)
+   self.assertLess(auth_grant_index,storage_create_index)
+   self.assertLess(storage_create_index,storage_grant_index)
+   self.assertLess(storage_grant_index,extensions_reset_index)
    self.assertLess(grant_index,pre_index)
    self.assertLess(grant_index,extensions_reset_index)
    self.assertLess(extensions_reset_index,extensions_create_index)
@@ -1223,6 +1235,11 @@ class ControllerTests(unittest.TestCase):
   self.assertLess(events.index("DROP SCHEMA IF EXISTS auth CASCADE"),events.index("DROP SCHEMA IF EXISTS storage CASCADE"))
   self.assertLess(events.index("DROP SCHEMA IF EXISTS storage CASCADE"),events.index("CREATE SCHEMA public AUTHORIZATION pg_database_owner"))
   self.assertLess(events.index("CREATE SCHEMA public AUTHORIZATION pg_database_owner"),events.index("GRANT USAGE, CREATE ON SCHEMA public TO privacy_workflow_owner"))
+  self.assertLess(events.index("GRANT USAGE, CREATE ON SCHEMA public TO privacy_workflow_owner"),events.index("CREATE SCHEMA auth AUTHORIZATION supabase_admin"))
+  self.assertLess(events.index("CREATE SCHEMA auth AUTHORIZATION supabase_admin"),events.index("GRANT USAGE, CREATE ON SCHEMA auth TO supabase_auth_admin"))
+  self.assertLess(events.index("GRANT USAGE, CREATE ON SCHEMA auth TO supabase_auth_admin"),events.index("CREATE SCHEMA storage AUTHORIZATION supabase_admin"))
+  self.assertLess(events.index("CREATE SCHEMA storage AUTHORIZATION supabase_admin"),events.index("GRANT USAGE, CREATE ON SCHEMA storage TO supabase_storage_admin"))
+  self.assertLess(events.index("GRANT USAGE, CREATE ON SCHEMA storage TO supabase_storage_admin"),events.index("DO $$ BEGIN IF pg_catalog.to_regnamespace('extensions') IS NOT NULL THEN RAISE EXCEPTION 'local extensions schema reset drift'; END IF; END $$"))
   self.assertLess(events.index("GRANT USAGE, CREATE ON SCHEMA public TO privacy_workflow_owner"),events.index("DO $$ BEGIN IF pg_catalog.to_regnamespace('extensions') IS NOT NULL THEN RAISE EXCEPTION 'local extensions schema reset drift'; END IF; END $$"))
   self.assertLess(events.index("DO $$ BEGIN IF pg_catalog.to_regnamespace('extensions') IS NOT NULL THEN RAISE EXCEPTION 'local extensions schema reset drift'; END IF; END $$"),events.index("CREATE SCHEMA extensions AUTHORIZATION postgres"))
   self.assertLess(events.index("CREATE SCHEMA extensions AUTHORIZATION postgres"),events.index("GRANT USAGE, CREATE ON SCHEMA extensions TO supabase_admin"))
